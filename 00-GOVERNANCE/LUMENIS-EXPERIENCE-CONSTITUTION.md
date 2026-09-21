@@ -1,13 +1,19 @@
 # LUMENIS Experience Constitution — CURRENT
 
 > Status: **CANONICAL / SOLE EXPERIENCE DESIGN AUTHORITY**  
-> Internal version: **3.1**
+> Internal version: **3.2**
 > Effective: 2026-09-21
 > Stable path: `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md`
 
 This file is the **only human-authored UI / UX / visual / interaction / motion / responsive / presentation design authority in the repository**.
 
 No feature, domain, handoff, audit, research note, reference pack, screenshot pack, design-system document, component registry, motion specification, logo specification, page specification, AI prompt, historical artifact or code comment may create a competing presentation authority.
+
+PDFs, taskbooks, reports, spreadsheets, screenshots, wireframes, Figma frames and
+AI-generated visual proposals are non-authoritative working artifacts. They remain
+`DESIGN_EXPLORATION` until their applicable screen/page decisions are deliberately
+restated in this Constitution or in a reviewed detailed specification governed by it.
+No artifact may promote itself or be copied directly into production UI.
 
 Product/runtime/data truth still outranks presentation truth. This Constitution does not authorize changing backend facts, permissions, Evidence, canonical data or runtime semantics merely to make a screen easier to design.
 
@@ -712,7 +718,7 @@ Do not begin feature implementation for any screen until its screen-specific spe
 5. Every read/write action's owner, actor/scope, permission decision, side effect, idempotency/reversal behavior and Evidence lineage; UI affordances are never authorization.
 6. Stable test IDs and executable acceptance cases covering the real task, state/error paths, responsive behavior and Trace/Return; include widget, API/integration and runtime/E2E cases as applicable.
 
-The design review records pass/fail per screen in `contracts/experience/screen-specifications/<SCREEN-ID>.md`, using `SCREEN_SPEC_TEMPLATE.md`. These detailed specifications are a post-plan, pre-implementation gate: the current 44 rows below are distinct UX blueprints, not proof that every field, route, state and action is implementation-ready. A screen with unresolved owner/API/permission/lineage or missing acceptance evidence can proceed only as a clearly labeled design exploration; it cannot be marked implementation-ready or shipped. Reusable tokens and accessible behaviors are allowed, but this gate does not permit a shared renderer or substituted-title template.
+The design review records pass/fail per screen in `contracts/experience/screen-specifications/<SCREEN-ID>.md`, using `SCREEN_SPEC_TEMPLATE.md`. These detailed specifications are a post-plan, pre-implementation gate: the current 44 rows below are distinct UX blueprints, not proof that every field, route, state and action is implementation-ready. A screen with unresolved owner/API/permission/lineage or missing acceptance evidence can proceed only as a clearly labeled `DESIGN_EXPLORATION`; it cannot be marked `DESIGN_READY`, implementation-ready or shipped. `DESIGN_READY` requires a Sol-reviewed detailed specification with its authority basis, artifact disposition, surface matrix, anti-template check and executable acceptance complete. Reusable tokens and accessible behaviors are allowed, but this gate does not permit a shared renderer or substituted-title template.
 
 | Screen | Purpose-built information composition and visual language | Primary interaction and result | PC → mobile recomposition |
 | --- | --- | --- | --- |
@@ -768,3 +774,4 @@ The design review records pass/fail per screen in `contracts/experience/screen-s
 3. Derive screen-specific typography, data density and visualization from its task. Reuse semantic tokens and accessibility behavior, never a universal card grid, generic dashboard or template-based page builder.
 4. Keep the design blueprint, binding registry and implementation state separate: the blueprint says how a verified task should work; the binding registry says where truth and authorization come from; tests/runtime evidence say whether implementation works.
 5. Complete visual regression only after live binding and action behavior pass. Review each applicable screen in Web Workspace, Desktop, tablet and Mobile Companion contexts with realistic long text, missing data and permission denial; review Public Website pages against their separate commercial-entry contract.
+6. Treat audit/taskbook sketches, screenshots, prototypes and Figma output as references with status `DESIGN_EXPLORATION`. If code follows one of those artifacts without a current `DESIGN_READY` specification, or reproduces its repeated frame as a generic template, the Sol acceptance decision is `REWORK`.

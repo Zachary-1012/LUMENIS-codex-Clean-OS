@@ -9,6 +9,11 @@
 
 This document owns product/domain/runtime boundaries. It does not define visual style. The Experience Constitution is the only UI/UX/presentation authority.
 
+The ROUND 01 audit, taskbook, missing register, sketches and generated delivery
+artifacts are approved execution evidence, not Product Architecture. They cannot add
+an owner, API, surface, workflow or product function, and they cannot authorize UI
+implementation without the current Experience and screen-specification gates.
+
 ## 1. Only One / All-in
 
 LUMENIS is one product, not a collection of historical versions.
@@ -181,6 +186,13 @@ platform/core  runtime connectivity; future post-beta account/session,
 ```
 
 Do not implement one catch-all screen renderer driven by `sectionTypes`, a page-family skin with only swapped labels, or a global store that merges SubjectContext and BrandFocus. Reusable elements are limited to behavior contracts (focus, form validation, chart semantics, evidence citation, empty/error states, motion and density); each of the 44 screens owns its question, information hierarchy, composition and primary action. Route state may restore a user's working context but cannot grant authorization. Every server request rechecks the actor and product/domain scope. Public Website content may explain a capability but cannot execute or own its business workflow.
+
+Generated or audit design artifacts remain `DESIGN_EXPLORATION`. A screen becomes
+`DESIGN_READY` only through a current reviewed specification under
+`contracts/experience/screen-specifications/` that resolves owner, binding,
+Permission, Evidence, state, surface composition and executable acceptance. Direct
+implementation from a PDF, screenshot, fixture, Figma frame or repeated wireframe is
+forbidden.
 
 Cache is a presentation aid only: show its capture time and stale state; never silently promote it to current truth. Retry is bounded and safe for the operation's idempotency contract. Offline mode allows inspection of explicitly cached material and drafting when safe; it cannot imply that a write, approval, publication or collection completed. Provider, platform and API errors remain distinguishable for recovery.
 

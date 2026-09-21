@@ -8,6 +8,12 @@
 
 This decision records how the approved commercial surfaces are delivered. It is not a second Product Architecture, Experience authority, data owner, runtime owner, or completion claim. Current executable source and runtime evidence remain authoritative.
 
+The Product Owner also accepted the ROUND 01 audit, missing-capability register and
+15-round mapping on 2026-09-21. That approval authorizes the ordered execution
+baseline, not implementation from the audit PDF or its sketches. All generated visual
+artifacts remain `DESIGN_EXPLORATION` until the sole Experience authority and a
+current detailed screen specification establish `DESIGN_READY`.
+
 ## 1. Approved product-surface structure
 
 ```text

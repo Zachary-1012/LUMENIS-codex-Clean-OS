@@ -3,6 +3,12 @@
 > Purpose: model-neutral routing, evidence, safety and completion rules for coding agents.  
 > This file is not a second README, architecture book, handoff log, or proof of runtime state.
 
+This root file is the **only repository execution router**. Product Architecture,
+Experience Constitution, source-owner and screen contracts remain authoritative only
+for their named domains; reports, taskbooks, PDFs, spreadsheets, screenshots,
+wireframes and generated prompts are evidence or working artifacts, never competing
+execution instructions.
+
 ## 1. Authority
 
 When evidence conflicts:
@@ -21,6 +27,20 @@ Current Production Source
 Never use old chat, old commit messages, stale README text, static prototypes or handoff claims to override executable truth.
 
 Documentation merged into `main` proves only that the rule/document exists. It does not prove the production capability is implemented, tested, live-verified or released.
+
+For implementation decisions, apply this routing order without turning it into a
+second product or design authority:
+
+```text
+Current source / runtime / DB / API / Permission / Evidence truth
+→ this AGENTS.md execution router
+→ sole Product Architecture
+→ sole Experience Constitution for user-visible work
+→ Source Owner Index and approved Multi-Surface Decision
+→ current detailed Screen Specification for the active screen
+→ bounded Sol Task Card
+→ taskbook/report/PDF/sketch as non-authoritative evidence only
+```
 
 ### Mandatory Codex bootstrap
 
@@ -128,6 +148,12 @@ All current product execution follows the approved 15-round dependency order in 
 
 The 15 rounds are exactly 15 sequential Codex tasks: one Sol-controlled task for each round. A round task may contain bounded Luna Batches, but it must finish Sol acceptance, publish the next round's Task Card and stop; it must not enter another round. Each Luna receives exactly one Batch and may not continue automatically. At the start of every new round task, resolve current `origin/main`, local state, dependencies and protected work again.
 
+The Product Owner accepted the ROUND 01 source audit, missing-capability register,
+multi-surface direction and 15-round mapping on 2026-09-21 as the execution baseline.
+That approval closes the planning gate only. It does not accept an implementation,
+screen, provider, migration, release claim or the next round in the same Codex task.
+ROUND 02 begins in its own Sol-controlled task after a fresh remote/local resolve.
+
 Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE are Experience-principle references only and never authorize new product features. OpenCode/Codex are engineering runtimes; Ollama and the approved Jev candidate are providers behind the one SYSTEM AI Gateway. Jev is limited to typed decision/evaluation tasks and cannot own Permission, Evidence, Production Truth or effects. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. The LUMENIS account is deferred until after internal beta; pre-beta product access must not be blocked by an account wall, while server Permission and effect fences remain enforced.
 
 Default loop:
@@ -226,6 +252,14 @@ All UI/UX/visual/presentation decisions remain subordinate to the sole authority
 `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md`
 
 Historical UI/UX documents, screenshots, copied Apple/GPT reference packs and old design systems are forbidden development inputs. The only permitted external-reference input is the bounded abstract principle mapping recorded in the current Experience Constitution; it cannot add features, copy layouts or become a second design authority.
+
+The approved audit PDF, its 44 sketches and any later AI/Figma/wireframe output are
+`DESIGN_EXPLORATION` unless the applicable `<SCREEN-ID>.md` has been reviewed and
+promoted to `DESIGN_READY` under the Experience Constitution. They may illustrate
+questions and surface deltas, but they may not be copied directly into code, used to
+authorize a shared renderer, or treated as acceptance evidence. If an implementation
+copies a PDF/sketch or generic repeated frame without the current screen-specific gate,
+Sol returns `REWORK`.
 
 ## 5. No duplicate truth
 
@@ -495,6 +529,15 @@ For any user-visible Experience/UI task, the **sole design authority** is:
 No nested router, archived screen, or prototype document may define a second design authority.
 
 The product owner accepted §§30–36, including all 44 screen-specific UX blueprints, on 2026-09-20. App implementation proceeds through reviewed screen specifications under `contracts/experience/screen-specifications/` and source-backed vertical slices; this approval is not evidence that a screen or workflow is implemented or accepted. Each specification must pass §36's owner, binding, entry/return, field-priority, state, desktop/mobile, permission/effect, accessibility and executable-acceptance gates. The 54-row binding registry is a data/permission/Evidence truth ledger only; it is not a layout system. Any `UNKNOWN` owner, callable, permission or lineage blocks the dependent behavior. Legacy `sectionTypes` must not drive a generic renderer or swapped-title page template. Reusable components may share accessible behavior and design tokens, while each screen keeps its own task, hierarchy, composition and interaction path.
+
+Screen design states are distinct from implementation states:
+
+```text
+DESIGN_EXPLORATION → DESIGN_READY → IMPLEMENTED → ACCEPTED
+```
+
+Only a Sol-reviewed detailed screen specification may establish `DESIGN_READY`.
+PDFs, screenshots, prototypes, Figma frames and fixtures cannot self-promote.
 
 Before claiming Experience work complete, run all three blocking checks:
 

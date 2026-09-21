@@ -5,7 +5,10 @@
 > CI status: resolve from GitHub checks for the exact current origin/main; no historical SHA is a current acceptance result.
 > **Never treat this document's commit, any pasted SHA, or any historical handoff SHA as the current HEAD. Codex must fetch and resolve `origin/main` at session start.**
 
-This file records the current Codex execution path and authority order. It does **not** upgrade source evidence into LIVE / RELEASED / OPERATING claims.
+This file records the current Codex execution path and authority order. Root
+`AGENTS.md` remains the only repository execution router; this file is its CURRENT
+handoff, not a second instruction system. It does **not** upgrade source evidence into
+LIVE / RELEASED / OPERATING claims.
 
 ## 1. Mandatory Codex bootstrap and authority
 
@@ -50,7 +53,7 @@ If the active task touches any user-visible Experience/UI, read the sole design 
 
 Then inspect the current Source / ViewModel / State / Action / Permission / Evidence / Runtime owners for the active slice.
 
-The product owner approved the Multi-Surface Decision and Jev candidate boundary on 2026-09-21. This approval authorizes the 15-round plan and architecture record; it does not prove implementation or waive per-round/per-screen entry gates. Source-backed Flutter work remains under `app/`; Public Website, Flutter Web Workspace and Jev implementation are absent until their scheduled rounds. Before implementing a screen, complete and review its specification with current source/API, canonical owner, actor scope, Permission, Evidence lineage, surface matrix, purpose-built composition, states and executable acceptance. `contracts/experience/lumenis_app_binding_registry.json` records data/actor/permission/Evidence bindings; it is not a UI template, and legacy `sectionTypes` do not determine layout.
+The product owner approved the Multi-Surface Decision, Jev candidate boundary, ROUND 01 audit/missing register and the exact 15-round mapping on 2026-09-21. This approval authorizes the ordered execution baseline; it does not prove implementation, permit direct implementation from an audit PDF/sketch, or waive per-round/per-screen entry gates. ROUND 02 starts only in a new Sol-controlled task after current remote/local truth is resolved. Source-backed Flutter work remains under `app/`; Public Website, Flutter Web Workspace and Jev implementation are absent until their scheduled rounds. Before implementing a screen, complete and review its specification with current source/API, canonical owner, actor scope, Permission, Evidence lineage, surface matrix, purpose-built composition, states and executable acceptance, and record `DESIGN_READY`. `contracts/experience/lumenis_app_binding_registry.json` records data/actor/permission/Evidence bindings; it is not a UI template, and legacy `sectionTypes` do not determine layout.
 
 Historical browser presentation material was removed from `main`; it must not be restored. Retained operational-surface contracts are canonical under `contracts/experience/`.
 
@@ -207,7 +210,7 @@ Current source establishes these boundaries:
 - `lumenis/system/ai_gateway/` is the canonical SYSTEM AI runtime owner. Ollama is a local provider behind that gateway; `local_ai_client.py` and `/api/local-ai/*` are current compatibility callers to reconcile, not a reason to create a second gateway. A configured provider is not `ACTIVE` until its daemon, model, real caller, fallback and Evidence pass runtime acceptance.
 - Jev is Product Owner approved only as a future typed decision/evaluation provider behind that same gateway. ROUND 02 records the boundary; ROUND 07 must prove contract, pinned version, secret handling, shadow evaluation, cost/legal/privacy, low-confidence behavior and trace before activation. Jev cannot own Permission, Evidence, Production Truth or effects.
 - `lumenis/system/collector/` and `lumenis/system/browser/runtime/` are the canonical collector/browser owners. `xhs_cookie_bridge.py` remains an active compatibility caller for the existing XHS/RedNote Cookie chain until migrated with behavior parity.
-- Product Core currently contains an App account gate. The approved delivery boundary defers the LUMENIS product account until after internal beta. Round 1 must remove that global pre-beta blocker while keeping server Permission/effect fences and platform Cookie/session safety intact.
+- The approved delivery boundary defers the LUMENIS product account until after internal beta. Any remaining pre-beta global account blocker is handled only in its scheduled identity/access or Experience round with current-source proof, while server Permission/effect fences and platform Cookie/session safety remain intact. ROUND 01 is read-only and never implements that change.
 
 ## 6. Screenshot architecture intake — disposition
 

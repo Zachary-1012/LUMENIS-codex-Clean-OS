@@ -4,19 +4,21 @@ This folder holds the reviewed implementation specification for each canonical A
 
 ## Rules
 
-- Create one `<SCREEN-ID>.md` from [`SCREEN_SPEC_TEMPLATE.md`](SCREEN_SPEC_TEMPLATE.md) for each screen before implementing that screen.
+- Create one `<SCREEN-ID>.md` from [`SCREEN_SPEC_TEMPLATE.md`](SCREEN_SPEC_TEMPLATE.md) for each screen before implementing that screen. A file existing is not enough: Sol must record `DESIGN_READY` before implementation begins.
 - Use `contracts/experience/lumenis_app_binding_registry.json` as the binding inventory. Update it only from current source/runtime evidence; never treat historical `BOUND`, task assignee or ViewModel labels as proof.
 - Keep CTH Subject-first, BMP Brand/Market-first, Shared lineage and SYSTEM infrastructure boundaries intact.
 - Do not copy screen layouts into a shared renderer. Shared tokens and semantic interaction primitives may be referenced, while each specification must define its own information hierarchy, composition and task choreography.
-- `UNKNOWN` owner, callable, field source, actor scope, permission or evidence lineage blocks the dependent behavior. Record a design exploration separately if useful; never describe it as production-ready.
+- `UNKNOWN` owner, callable, field source, actor scope, permission or evidence lineage blocks the dependent behavior. Record it as `DESIGN_EXPLORATION` if useful; never describe it as production-ready.
+- PDFs, taskbooks, screenshots, wireframes, Figma frames, fixtures and generated visual proposals are non-authoritative references. List their disposition in the spec; never copy them directly or infer approval from visual polish.
+- A repeated audit sketch frame does not authorize a shared renderer, universal card grid or substituted-title screen. Direct implementation without a current `DESIGN_READY` decision is `REWORK`.
 - Set `APPROVED` only after the product owner or delegated design owner has reviewed the specification and its open questions. Record reviewer, date and the accepted change/review reference. A batch approval must list every covered screen ID and cannot silently approve unreviewed exceptions.
 - Implementation, test and runtime status must cite current artifacts. A spec approval is not implementation acceptance.
 
 ## Status lifecycle
 
-`DRAFT` → `OWNER_REVIEW` → `APPROVED` → `IMPLEMENTED` → `ACCEPTED`
+`DESIGN_EXPLORATION` → `OWNER_REVIEW` → `DESIGN_READY` → `IMPLEMENTED` → `ACCEPTED`
 
-Use `BLOCKED` when a verified owner, contract, authorization or acceptance dependency is missing. Do not skip states or infer status from code presence.
+Use `BLOCKED` when a verified owner, contract, authorization or acceptance dependency is missing. `DESIGN_READY` is the only pre-implementation pass state. Do not skip states or infer status from code presence.
 
 ## Delivery order
 

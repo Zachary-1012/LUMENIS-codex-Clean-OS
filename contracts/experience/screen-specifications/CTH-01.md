@@ -10,6 +10,9 @@ binding_ids:
   - BACKEND-GAP-006
   - BACKEND-GAP-007
 product_owner_approval: APPROVED — user approved App architecture and Experience Constitution §§30–36 for implementation on 2026-09-20; this is not per-screen acceptance
+design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
+design_decision: BLOCKED
+artifact_disposition: NON_AUTHORITATIVE_EXPLORATION_ONLY
 reviewer: Codex delegated CTH-01 source review
 reviewed_at: 2026-09-20
 approval_reference: Product Owner instruction approving App / UX §§30–36 and requiring business-language UI copy; source baseline origin/main b4608331eacb868ff13ef74e770aa54c309ebef3

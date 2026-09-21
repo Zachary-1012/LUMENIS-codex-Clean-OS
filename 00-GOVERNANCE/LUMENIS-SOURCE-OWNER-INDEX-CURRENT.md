@@ -3,7 +3,7 @@
 > Status: **CURRENT EXECUTION INDEX / FIFTEEN-ROUND CLOSED LOOP**
 >
 > Updated: 2026-09-21
-> Audit baseline: `c3036aa714ff3236e1267d33cbfb9d2aa33ed000` (provenance only; resolve the live `origin/main` before every change)
+> Approved ROUND 01 source-audit baseline: `df15a99de6f5ffc3eb85e2c9924afb59c1c3c781` (provenance only; resolve the live `origin/main` before every change)
 
 This file is the fixed repository navigation and delivery index for 序境 / LUMENIS. It classifies current source by owner and tells Codex where to look after the one-time source audit. It is not a second product architecture, Experience authority, progress ledger, or proof that a runtime capability works.
 
@@ -45,6 +45,8 @@ These are blocking rules for all 15 rounds:
 8. Each of the 44 screen blueprints keeps its own task, information hierarchy, composition and interaction path. PC and mobile share business truth but use purpose-built semantic recomposition; neither is a scaled copy of the other.
 9. A local problem may change only its bounded owner/callers. It may not trigger a global auth, database, naming, architecture or design-system rewrite. Remove a path only after its unique behavior is preserved and accepted in the current owner.
 10. Every change proves the requested improvement and preservation of affected behavior with proportional tests and, for user-visible workflows, real runtime/E2E evidence. A build, fixture, HTTP 200, screenshot or document alone is insufficient.
+11. The approved ROUND 01 PDF/report/register are evidence and coverage indexes only. Their sketches remain `DESIGN_EXPLORATION`; implementation requires a current Sol-reviewed `DESIGN_READY` screen specification. Direct PDF/sketch implementation is `REWORK`.
+12. Product Skill Store is a named P0 capability under Shared Agent Skills and AI-04. Preserve discovery, trust/license, input/output, Permission, enablement, verified run, history, update, disable and uninstall semantics; do not reduce it to the historical `FUNCTION_MAP`.
 
 ## 3. Fixed source lookup map
 
@@ -54,7 +56,7 @@ After bootstrap, locate work here. Root-level compatibility callers remain class
 | --- | --- | --- |
 | Agent execution | `AGENTS.md`; `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`; this index | `scripts/audit_tools/verify_codex_takeover_governance.py`; `.github/workflows/platform-verify.yml` |
 | Product/domain architecture | `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`; `00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md` | Exact CTH/BMP caller and contract for the active slice; do not infer ownership from a filename |
-| Experience authority | `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md` | `contracts/experience/screen-specifications/<SCREEN-ID>.md`; Experience validators |
+| Experience authority | `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md` | `contracts/experience/README.md`; `contracts/experience/screen-specifications/<SCREEN-ID>.md`; only a reviewed `DESIGN_READY` spec may guide implementation; Experience validators |
 | Multi-surface decision | `00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md` under the sole Product Architecture and Experience Constitution | Surface capability matrix, deployment boundary and blocking validators; never treat the decision as implementation evidence |
 | Public Website | future `website/` presentation/acquisition root; currently `ABSENT` | Product copy, demo/case truth, trial/contact/help and workspace entry only; no business workflow/data/Permission/Evidence owner |
 | Flutter operational surfaces | `app/lib/product/`, `app/lib/shell/`, `app/lib/features/` | Flutter Web Workspace, Desktop and Mobile targets; `app/lib/core/`; matching `app/test/`; `app/README.md` |

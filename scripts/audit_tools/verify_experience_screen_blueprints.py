@@ -10,6 +10,10 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY = ROOT / "contracts" / "experience" / "lumenis_app_binding_registry.json"
 CONSTITUTION = ROOT / "00-GOVERNANCE" / "LUMENIS-EXPERIENCE-CONSTITUTION.md"
+CONTRACT_README = ROOT / "contracts" / "experience" / "README.md"
+SPEC_DIR = ROOT / "contracts" / "experience" / "screen-specifications"
+SPEC_README = SPEC_DIR / "README.md"
+SPEC_TEMPLATE = SPEC_DIR / "SCREEN_SPEC_TEMPLATE.md"
 BLUEPRINT_HEADING = "## 36. The 44 screen-specific UX blueprints"
 BLUEPRINT_TABLE_END = "### Blueprint implementation rules"
 SCREEN_ID = re.compile(r"^(?:ACC|CTH|BMP|AI|SYS|SH)-\d{2}$")
@@ -234,7 +238,56 @@ def _blueprint_rows() -> dict[str, list[str]]:
     return rows
 
 
+def _validate_design_gate_contract() -> None:
+    required_markers = {
+        CONTRACT_README: (
+            "DESIGN_EXPLORATION",
+            "DESIGN_READY",
+            "cannot become a second authority",
+            "REWORK",
+        ),
+        SPEC_README: (
+            "DESIGN_EXPLORATION",
+            "DESIGN_READY",
+            "Direct implementation",
+            "REWORK",
+        ),
+        SPEC_TEMPLATE: (
+            "design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+            "design_decision: PENDING",
+            "Authority basis and artifact disposition",
+            "Web Workspace composition and desktop-only capability boundary",
+        ),
+    }
+    for path, markers in required_markers.items():
+        if not path.is_file():
+            raise AssertionError(f"missing Experience design-gate contract: {path.relative_to(ROOT)}")
+        text = path.read_text(encoding="utf-8")
+        missing = [marker for marker in markers if marker not in text]
+        if missing:
+            raise AssertionError(
+                f"{path.relative_to(ROOT)} missing design-gate markers: {missing}"
+            )
+
+    allowed = {"DESIGN_EXPLORATION", "OWNER_REVIEW", "DESIGN_READY", "BLOCKED"}
+    for path in sorted(SPEC_DIR.glob("*.md")):
+        if path.name in {"README.md", "SCREEN_SPEC_TEMPLATE.md"}:
+            continue
+        text = path.read_text(encoding="utf-8")
+        screen_match = re.search(r"(?m)^screen_id:\s*([^\s]+)\s*$", text)
+        if not screen_match:
+            raise AssertionError(f"{path.relative_to(ROOT)} missing screen_id")
+        decision_match = re.search(r"(?m)^design_decision:\s*([^\s]+)\s*$", text)
+        if not decision_match or decision_match.group(1) not in allowed:
+            raise AssertionError(
+                f"{path.relative_to(ROOT)} must declare design_decision in {sorted(allowed)}"
+            )
+        if "design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md" not in text:
+            raise AssertionError(f"{path.relative_to(ROOT)} is not bound to the sole design authority")
+
+
 def validate() -> tuple[int, int]:
+    _validate_design_gate_contract()
     registry = _load_registry()
     sources = _validate_source_snapshot(registry)
     _validate_source_ids(registry, sources)

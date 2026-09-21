@@ -1,7 +1,7 @@
 # 序境 / LUMENIS
 
 > **Production Core · Production Truth Owner**  
-> 当前阶段 / Current phase: **PRODUCTION CONVERGENCE**
+> 当前阶段 / Current phase: **FIFTEEN-ROUND CLOSED-LOOP EXECUTION**
 >
 > Canonical repository: Zachary-1012/LUMENIS-codex-Clean-OS (default branch: main).
 
@@ -22,6 +22,7 @@ Before changing product code, read:
 AGENTS.md
 → 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
 → 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md
+→ 00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md
 → 00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md
 → README.md
 → 00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md
@@ -92,7 +93,7 @@ CTH 与 BMP 可以共享 Subject Context 与基础设施，但不得静默合并
 - CTH and BMP are distinct LUMENIS business domains. Shared services do not merge their data, metrics, actions or user tasks.
 - `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md` is the fixed source classification and resume map. Normal work follows its exact owner/caller/contract/test row instead of repeating a repository-wide audit.
 
-The Experience plan covers **44 distinct screen-specific UX blueprints** plus **54 fail-closed data/permission/Evidence binding records**. The product owner approved the overall App architecture and Experience Constitution §§30–36 on 2026-09-20; implementation is active. That approval does not accept an individual screen, API, permission or workflow. Before implementing each screen, record its verified source fields, owner, route, states, separate PC/mobile composition, authorization/effects and executable acceptance in `contracts/experience/screen-specifications/` using `SCREEN_SPEC_TEMPLATE.md`. The machine-readable binding registry at `contracts/experience/lumenis_app_binding_registry.json` constrains data/actor/permission/Evidence truth and is not a UI template. Legacy `sectionTypes` are inventory only; one generic renderer with substituted titles is prohibited. Continue source-backed vertical slices and mark unresolved behavior as blocked or unverified until its owner and acceptance evidence exist.
+The Experience plan covers **44 distinct screen-specific UX blueprints** plus **54 fail-closed data/permission/Evidence binding records**. The Product Owner approved the ROUND 01 audit/missing register/multi-surface/15-round baseline on 2026-09-21, but that approval does not accept an individual screen, API, permission, workflow or implementation. Before implementing each screen, record its verified source fields, owner, route, states, separate Web/Desktop/Mobile composition, authorization/effects and executable acceptance in `contracts/experience/screen-specifications/` using `SCREEN_SPEC_TEMPLATE.md`, then obtain the screen's `DESIGN_READY` decision. The machine-readable binding registry at `contracts/experience/lumenis_app_binding_registry.json` constrains data/actor/permission/Evidence truth and is not a UI template. PDF sketches, screenshots, prototypes and Figma frames remain `DESIGN_EXPLORATION`; they may not be copied directly into code or treated as acceptance. Legacy `sectionTypes` are inventory only; one generic renderer with substituted titles is prohibited. Continue source-backed vertical slices and mark unresolved behavior as blocked or unverified until its owner and acceptance evidence exist.
 
 Architecture documents describe intended boundaries. Production capability is established only by the current implementation and its scoped acceptance evidence.
 
@@ -246,7 +247,7 @@ git ls-remote --heads origin
 
 Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)，随后读取 [`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)。
 
-当前产品执行只分三回：**App 前端 UI/布局/UX 动效 → 后端与既有功能找回/绑定 → 真实闭环内测**。OpenCode/Codex 属于研发工具层；Ollama 属于 SYSTEM AI 运行能力；媒体平台继续使用既有 Cookie/session/browser 采集链。序境产品账号延后到内测后，前期不得用账号墙阻断产品，但 Permission 与外部 effect fence 继续由后端执行。完整边界与固定查找路径见 [`00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)。
+当前产品执行固定为 **ROUND 01 至 ROUND 15 共 15 个顺序 Codex 任务**。每轮由 Sol 总控，可包含多个边界明确的 Luna Batch；每个 Luna 只执行一个 Batch，本轮验收并发布下一轮 Task Card 后必须停止，下一轮重新解析 `origin/main` 后另开任务。不得恢复旧“三回”或 App-only 执行法。OpenCode/Codex 属于研发工具层；Ollama 与获批候选 Jev 均位于单一 SYSTEM AI Gateway 边界内；媒体平台继续使用既有 Cookie/session/browser 采集链。序境产品账号延后到内测后，前期不得用账号墙阻断产品，但 Permission 与外部 effect fence 继续由后端执行。完整轮次、owner 和固定查找路径见 [`00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)。
 
 默认执行方式：
 
@@ -359,6 +360,9 @@ Tests/staging 必须显式使用 isolated/disposable DB；任何 persistence 变
 
 - [`AGENTS.md`](AGENTS.md)
 - [`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)
+- [`00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)
+- [`00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md`](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)
+- [`00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md`](00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md)
 - [`00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)
 - [`00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md`](00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md)
 - [`00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md`](00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md)

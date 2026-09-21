@@ -1,13 +1,29 @@
 name: LUMENIS App Gate
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "contracts/experience/**"
+      - "AGENTS.md"
+      - "README.md"
+      - "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
+      - "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
+      - "00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md"
+      - "scripts/audit_tools/verify_experience_*.py"
+      - ".github/workflows/app-verify.yml"
   pull_request:
     branches: [main]
     paths:
       - "app/**"
+      - "contracts/experience/**"
+      - "AGENTS.md"
+      - "README.md"
       - "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
       - "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
       - "00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md"
+      - "scripts/audit_tools/verify_experience_*.py"
       - ".github/workflows/app-verify.yml"
   workflow_dispatch:
 
@@ -28,6 +44,7 @@ jobs:
         run: |
           python3 scripts/audit_tools/verify_experience_authority_exclusive.py
           python3 scripts/audit_tools/verify_experience_anti_template.py --strict
+          python3 scripts/audit_tools/verify_experience_screen_blueprints.py
 
       - name: Install Flutter 3.47.2 stable (EXECUTION-LAYER)
         shell: bash

@@ -15,8 +15,12 @@ PATHS = {
     "agents": ROOT / "AGENTS.md",
     "readme": ROOT / "README.md",
     "takeover": ROOT / "00-GOVERNANCE" / "LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+    "architecture": ROOT / "00-GOVERNANCE" / "LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+    "experience": ROOT / "00-GOVERNANCE" / "LUMENIS-EXPERIENCE-CONSTITUTION.md",
     "surface_decision": ROOT / "00-GOVERNANCE" / "LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
     "source_index": ROOT / "00-GOVERNANCE" / "LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "launch_plan": ROOT / "00-GOVERNANCE" / "LAUNCH-CONVERGENCE-MASTER-PLAN-V1.md",
+    "experience_contracts": ROOT / "contracts" / "experience" / "README.md",
     "registry": ROOT / "00-GOVERNANCE" / "CROSS-REPO-CANONICAL-REGISTRY-V1.md",
     "contract": ROOT / "00-GOVERNANCE" / CONTRACT_BASENAME,
     "platform_workflow": ROOT / ".github" / "workflows" / "platform-verify.yml",
@@ -55,8 +59,12 @@ def validate() -> None:
     agents = _read("agents")
     readme = _read("readme")
     takeover = _read("takeover")
+    architecture = _read("architecture")
+    experience = _read("experience")
     surface_decision = _read("surface_decision")
     source_index = _read("source_index")
+    launch_plan = _read("launch_plan")
+    experience_contracts = _read("experience_contracts")
     registry = _read("registry")
     platform_workflow = _read("platform_workflow")
     contract = json.loads(_read("contract"))
@@ -95,7 +103,30 @@ def validate() -> None:
         "version     = 1.1.0",
         EXPECTED_FINGERPRINT,
         "verify_codex_takeover_governance.py",
+        "only repository execution router",
+        "ROUND 02 starts only in a new Sol-controlled task",
+        "DESIGN_READY",
         label="CURRENT takeover",
+    )
+
+    _require(
+        architecture,
+        "CANONICAL / SOLE PRODUCT ARCHITECTURE AUTHORITY",
+        "DESIGN_EXPLORATION",
+        "DESIGN_READY",
+        "implementation from a PDF, screenshot, fixture, Figma frame",
+        label="CURRENT product architecture",
+    )
+
+    _require(
+        experience,
+        "CANONICAL / SOLE EXPERIENCE DESIGN AUTHORITY",
+        "Internal version: **3.2**",
+        "DESIGN_EXPLORATION",
+        "DESIGN_READY",
+        "copied directly into production UI",
+        "Sol acceptance decision is `REWORK`",
+        label="CURRENT Experience Constitution",
     )
 
     _require(
@@ -107,6 +138,8 @@ def validate() -> None:
         "Mobile Companion",
         "Jev product decision",
         "ROUND 07",
+        "DESIGN_EXPLORATION",
+        "DESIGN_READY",
         label="CURRENT multi-surface decision",
     )
 
@@ -122,7 +155,26 @@ def validate() -> None:
         "lumenis/system/collector/",
         "LUMENIS product account remains deferred until its approved identity/tenant gate after internal beta",
         "Do not repeat a full-repository audit for normal work",
+        "Product Skill Store is a named P0 capability",
+        "Direct PDF/sketch implementation is `REWORK`",
         label="CURRENT source owner index",
+    )
+
+    _require(
+        launch_plan,
+        "SUBORDINATE ROUND 15 LAUNCH GATE / NOT THE TASK-SEQUENCE AUTHORITY",
+        "D:\\LUMENIS_REBUILD\\序\\序境",
+        "exact 15-round sequence",
+        label="launch convergence plan",
+    )
+
+    _require(
+        experience_contracts,
+        "DESIGN_EXPLORATION",
+        "DESIGN_READY",
+        "direct code target",
+        "REWORK",
+        label="Experience contract router",
     )
 
     for required_path in (
@@ -150,6 +202,11 @@ def validate() -> None:
         "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
         "00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
         "### Fifteen-round closed-loop red line",
+        "only repository execution router",
+        "ROUND 02 begins in its own Sol-controlled task",
+        "DESIGN_EXPLORATION",
+        "DESIGN_READY",
+        "Sol returns `REWORK`",
         "git rev-parse origin/main",
         "v1.1.0",
         EXPECTED_FINGERPRINT,

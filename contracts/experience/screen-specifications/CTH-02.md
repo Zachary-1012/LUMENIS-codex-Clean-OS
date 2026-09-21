@@ -8,6 +8,9 @@ owner_domain: CTH
 binding_ids:
   - BACKEND-GAP-008
 product_owner_approval: OVERALL_EXPERIENCE_CONSTITUTION_30_36_ONLY
+design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
+design_decision: BLOCKED
+artifact_disposition: NON_AUTHORITATIVE_EXPLORATION_ONLY
 reviewer: Codex delegated CTH-02 source review
 reviewed_at: 2026-09-20
 approval_reference: Product Owner approval of App / Experience Constitution §§30–36; this is not CTH-02 acceptance

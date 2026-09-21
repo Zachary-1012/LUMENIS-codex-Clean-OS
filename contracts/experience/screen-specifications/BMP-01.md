@@ -6,6 +6,9 @@ revision: 2
 owner_domain: BMP
 binding_ids: [BACKEND-GAP-018]
 product_owner_approval: APPROVED_OVERALL_EXPERIENCE_CONSTITUTION_30_36
+design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
+design_decision: BLOCKED
+artifact_disposition: NON_AUTHORITATIVE_EXPLORATION_ONLY
 reviewer: Codex delegated BMP-01 specification review
 reviewed_at: 2026-09-20
 approval_reference: Product Owner instruction in current task; implementation copy update against origin/main b4608331eacb868ff13ef74e770aa54c309ebef3

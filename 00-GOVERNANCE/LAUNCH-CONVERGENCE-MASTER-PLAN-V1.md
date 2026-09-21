@@ -1,8 +1,13 @@
 # LUMENIS Launch Convergence Master Plan v1.0
 
-Status: CANONICAL EXECUTION PLAN
+Status: SUBORDINATE ROUND 15 LAUNCH GATE / NOT THE TASK-SEQUENCE AUTHORITY
 Scope: Current Windows production-development workstation and `main`
 Primary objective: Move LUMENIS from Production Convergence into Launch Convergence with minimum rework, minimum Codex quota waste, and maximum launch velocity.
+
+Execution authority remains root `AGENTS.md` plus the exact 15-round sequence in
+`LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. This plan applies only inside the active
+round's accepted scope, primarily ROUND 15; it may not replace, skip or reorder a
+round, start a Luna Batch, or act as a second Product/Experience authority.
 
 ---
 
@@ -14,7 +19,7 @@ The active phase is now:
 LAUNCH CONVERGENCE
 ```
 
-The execution sequence is:
+The launch lifecycle inside its approved round is:
 
 ```text
 START
@@ -44,7 +49,7 @@ The only writable development, integration, and production-candidate branch is:
 main
 ```
 
-At the time this plan was created, the verified remote `main` HEAD is:
+At the time this historical plan was created, the then-verified remote `main` HEAD was:
 
 ```text
 1f73070d20ee9183ef244f8da2163fe2edb38869
@@ -54,7 +59,8 @@ That commit contains the previously validated production-convergence implementat
 
 The corresponding `Verify LUMENIS` workflow run #123 completed successfully. Blocking compile, CI-manifest validation, and clean-checkout hermetic pytest all completed successfully.
 
-These facts establish the remote launch baseline. They do not prove the current Windows working tree or current local runtime state.
+These are provenance only. They do not establish the current remote HEAD, CI,
+Windows working tree or runtime state; every round/task resolves those live.
 
 ---
 
@@ -63,7 +69,7 @@ These facts establish the remote launch baseline. They do not prove the current 
 The next executor must verify only the local facts that cannot be proven from GitHub:
 
 ```text
-D:\LUMENIS_REBUILD local HEAD
+D:\LUMENIS_REBUILD\序\序境 local HEAD
 working tree state
 unpushed commits
 local-vs-origin/main relationship
@@ -169,13 +175,13 @@ then the task direction must be re-evaluated immediately.
 Start only from:
 
 ```text
-D:\LUMENIS_REBUILD
+D:\LUMENIS_REBUILD\序\序境
 ```
 
 Verify repository identity and local state:
 
 ```powershell
-Set-Location D:\LUMENIS_REBUILD
+Set-Location D:\LUMENIS_REBUILD\序\序境
 git rev-parse --show-toplevel
 git remote -v
 git branch --show-current
@@ -208,7 +214,7 @@ Do not expand L0 into repository archaeology.
 Use the existing launcher. Do not create a second launcher.
 
 ```powershell
-Set-Location D:\LUMENIS_REBUILD
+Set-Location D:\LUMENIS_REBUILD\序\序境
 powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
 ```
 

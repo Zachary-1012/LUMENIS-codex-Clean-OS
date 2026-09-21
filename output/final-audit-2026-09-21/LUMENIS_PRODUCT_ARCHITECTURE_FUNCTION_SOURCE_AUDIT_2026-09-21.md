@@ -1,6 +1,6 @@
 # LUMENIS 产品架构、功能与完整映射源码审计
 
-> 审计日期：2026-09-21  |  证据基线：当前 origin/main 与本地源码  |  状态：只读审计，未启动 ROUND 02，未派发序境09
+> 审计日期：2026-09-21  |  源码证据基线：ROUND 01 只读快照  |  状态：Product Owner 已批准执行基线；ROUND 02 须在新的 Sol 任务中开始，当前未派发序境09
 
 ## 结论先行
 
@@ -186,13 +186,13 @@
 | MISS-039 | P2 | Public commercial funnel | Trial/contact/help/case/demo/enterprise purchase funnel absent | ABSENT | No Public Website | Define truthful content and CRM/contact handoff without product data ownership | 8 | Public→trial/contact/login path works and privacy/analytics are approved |
 | MISS-040 | P2 | API/OpenAPI parity | Static route volume and compatibility paths exceed current canonical contract | PARTIAL | 800 decorators; generated docs/history not current proof | Generate canonical API truth from active app and verify consumers | 2 | One operation/owner/schema/error/state per consumer route |
 
-## H. ROUND 02 FIRST TASK CARD — NOT DISPATCHED
+## H. ROUND 02 FIRST TASK CARD — APPROVED FOR NEXT SOL TASK / NOT DISPATCHED HERE
 
 TASK ID：R02-B001-AUTHORITY-MULTISURFACE
 
 ROUND：02
 
-ROLE：Bounded implementation worker。只有在 Product Owner 审核本交付并明确批准后才可派发。
+ROLE：Bounded implementation worker。仅可在新的 ROUND 02 Sol 任务重新解析 remote/local truth 后派发。
 
 BASE REMOTE SHA：`df15a99de6f5ffc3eb85e2c9924afb59c1c3c781`（派发前必须重新 resolve）
 
@@ -269,7 +269,7 @@ APP ONLY 会提高试用、购买、登录、跨设备访问、企业审批与�
 
 ## O. PRODUCT OWNER DECISIONS REQUIRED
 
-本交付请求 Product Owner 只确认一项：是否接受本次源码审计、40 项缺失登记、44 屏草图和 15 轮顺序映射作为执行基线。确认前不启动序境09、不派发 Luna、不写业务代码。后续每轮如涉及成本、外部账号、数据迁移、生产 effect 或无法从当前 owner 推导的架构变化，仍单独返回 Product Owner gate。
+Product Owner 已接受本次源码审计、40 项缺失登记、44 屏 DESIGN_EXPLORATION 草图和 15 轮顺序映射作为执行基线。该批准不等于草图可直接实现，也不接受任何 Screen/API/Permission/Evidence/runtime/release 状态。ROUND 02 仍须在下一独立 Sol 任务重新 resolve 后启动；后续每轮如涉及成本、外部账号、数据迁移、生产 effect 或无法从当前 owner 推导的架构变化，仍单独返回 Product Owner gate。
 
 ## 产品能力完整源码矩阵（60 项）
 

@@ -8,6 +8,10 @@ owner_domain: SYSTEM / RuntimeGuardian
 binding_ids:
   - BACKEND-GAP-036
 product_owner_approval: APPROVED
+design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
+design_decision: DESIGN_READY
+design_scope: READ_ONLY_RUNTIME_GUARDIAN_SLICE
+artifact_disposition: NON_AUTHORITATIVE_EXPLORATION_ONLY
 reviewer: Codex source review under Product Owner direction
 reviewed_at: 2026-09-20
 approval_reference: Product Owner instruction to implement the approved App / UX plan and Experience Constitution §§30–36

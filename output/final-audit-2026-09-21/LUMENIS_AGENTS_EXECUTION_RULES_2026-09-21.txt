@@ -1,6 +1,6 @@
 LUMENIS / 序境 — AGENTS 执行规则文字版
 版本：2026-09-21 源码审计基线
-状态：候选执行合同；Product Owner 审核前不启动 ROUND 02，不派发序境09。
+状态：PRODUCT OWNER APPROVED EXECUTION CONTRACT；本文件是执行摘要，仓库根 AGENTS.md 是唯一执行路由。
 
 1. 唯一产品与仓库
 - Canonical workspace：D:\LUMENIS_REBUILD\序\序境。
@@ -18,7 +18,7 @@ LUMENIS / 序境 — AGENTS 执行规则文字版
 - 产品开发闭环严格由 ROUND 01 至 ROUND 15 共十五个顺序 Codex 任务组成；一轮就是一个独立任务。
 - 一个任务只闭合当前 Round，发布 Sol 的 PASS / REWORK / BLOCKED / SPLIT / REORDER 和下一 Task Card 后停止。
 - 不同时创建十五任务，不跳轮，不让同一 Luna 自动进入下一 Batch；最多两个经 Sol 明确批准、无文件/owner/测试/迁移冲突的 Luna 并行。
-- 当前 ROUND 01 只读审计完成后，必须等待 Product Owner 批准；序境09保持冻结。
+- ROUND 01 执行基线已获批准；ROUND 02 必须在新的 Sol 任务中重新 resolve remote/local truth 后开始，当前任务不派发序境09。
 
 4. 产品范围完整性
 - ONE Product / ONE Repository / ONE Main / ONE Product Architecture / ONE Product Core。
@@ -46,7 +46,7 @@ LUMENIS / 序境 — AGENTS 执行规则文字版
 - 面向用户的能力必须返回真实结果，或诚实返回 unavailable/error/blocked；禁止 missing→0、fixture→production、HTTP 200→business success、provider registered→healthy。
 
 7. Source-first 审计与状态
-- 文件名、PDF、README、历史交接和聊天都不是当前完成证明；当前可执行源码、调用链、数据、测试和运行证据优先。
+- 文件名、PDF、README、历史交接和聊天都不是当前完成证明；当前可执行源码、调用链、数据、测试和运行证据优先。PDF/草图/Figma/截图均为 DESIGN_EXPLORATION，只有 Sol 审核的详细 Screen Spec 可进入 DESIGN_READY；直接照图实现必须 REWORK。
 - 每个领域必须映射 Owner → implementation → callers → API/contract → database → Permission → Evidence → tests → runtime → surface binding → compatibility/duplicate。
 - 状态只使用 VERIFIED / IMPLEMENTED / TESTED / PARTIAL / EXISTS_BUT_UNSCOPED / LOCAL_ONLY / ABSENT / BLOCKED / LIVE_UNVERIFIED / RELEASED / OPERATING。
 - 不能把 IMPLEMENTED 写成 VERIFIED，不能把 TESTED 写成 live/release verified。
@@ -81,4 +81,4 @@ LUMENIS / 序境 — AGENTS 执行规则文字版
 - 当前审计基线 SHA：df15a99de6f5ffc3eb85e2c9924afb59c1c3c781。派发时必须重新读取，不得复用。
 - 当前 protected runtime item：lumenis/system/collector/data/schedule_state.json 已由 auto-watch 纳入 df15a99d；未经 owner/data migration 判断不得删除或迁移。
 - 当前 Product/App Gate 不能称绿；OpenCode Zhipu route 当前认证失败；Jev adapter 当前 ABSENT。
-- Product Owner 明确批准本次报告、缺失表、草图和 15 轮映射之前，不启动 ROUND 02，不允许序境09或 Luna 修改产品源码。
+- Product Owner 已批准本次报告、缺失表、DESIGN_EXPLORATION 草图和 15 轮映射。此批准只关闭 ROUND 01 规划门；下一独立任务才可启动 ROUND 02，且仍需遵守每轮/每屏/每 Batch gate。

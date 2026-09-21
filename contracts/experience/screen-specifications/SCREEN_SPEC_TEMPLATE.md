@@ -2,15 +2,26 @@
 
 ```yaml
 screen_id: <SCREEN-ID>
-status: DRAFT
+status: DESIGN_EXPLORATION
 revision: 1
 owner_domain: UNKNOWN
 binding_ids: []
 product_owner_approval: PENDING
+design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
+design_decision: PENDING
 reviewer: UNKNOWN
 reviewed_at: UNKNOWN
 approval_reference: UNKNOWN
 ```
+
+## 0. Authority basis and artifact disposition
+
+- Constitution sections applied:
+- Product/workflow contract applied:
+- Audit PDF/taskbook/sketch/screenshot/Figma references (non-authoritative):
+- For each reference: `KEEP_AS_EXPLORATION` / `REJECT` / `RESTATED_IN_THIS_SPEC`:
+- Anti-template check: explain why this is not a generic dashboard/card grid/shared renderer:
+- Sol design decision: `DESIGN_EXPLORATION` / `DESIGN_READY` / `BLOCKED`:
 
 ## 1. User problem and product invariant
 
@@ -59,6 +70,13 @@ List exact route/method, request and response fields, pagination/cancellation be
 - Density/resize behavior and comparison needs:
 - What makes this composition specific to this screen:
 
+## 5A. Web Workspace composition and desktop-only capability boundary
+
+- Browser-first task, URL/deep-link and keyboard/pointer behavior:
+- Shared Product Core/ViewModel/state semantics:
+- Desktop-only capabilities and honest state (`DESKTOP_REQUIRED` / `UNAVAILABLE` / other):
+- Authorized handoff/task tracking and Return behavior:
+
 ## 6. Purpose-built mobile composition
 
 - Single active task and context that stays visible:
@@ -92,7 +110,7 @@ Acceptance must prove the real owner callable, server-side authorization, origin
 
 ## 10. Review decision and open questions
 
-- Decision: `PENDING`
+- Decision: `DESIGN_EXPLORATION` / `DESIGN_READY` / `BLOCKED`
 - Reviewer and date:
 - Open questions with owners and next action:
 - Changes required before implementation:
