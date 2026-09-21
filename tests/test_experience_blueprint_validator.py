@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -70,3 +71,35 @@ def test_blueprint_first_column_rejects_screen_id_suffix(
 
     with pytest.raises(AssertionError, match="invalid screen blueprint ID/title cell"):
         validator._blueprint_rows()
+
+
+def test_screen_spec_without_design_decision_fails_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    contract_dir = tmp_path / "contracts" / "experience"
+    spec_dir = contract_dir / "screen-specifications"
+    spec_dir.mkdir(parents=True)
+
+    contract_readme = contract_dir / "README.md"
+    spec_readme = spec_dir / "README.md"
+    spec_template = spec_dir / "SCREEN_SPEC_TEMPLATE.md"
+    screen_spec = spec_dir / "SYS-01.md"
+    shutil.copyfile(REPO_ROOT / "contracts/experience/README.md", contract_readme)
+    shutil.copyfile(REPO_ROOT / "contracts/experience/screen-specifications/README.md", spec_readme)
+    shutil.copyfile(
+        REPO_ROOT / "contracts/experience/screen-specifications/SCREEN_SPEC_TEMPLATE.md",
+        spec_template,
+    )
+    source_spec = REPO_ROOT / "contracts/experience/screen-specifications/SYS-01.md"
+    contents = source_spec.read_text(encoding="utf-8")
+    contents = re.sub(r"(?m)^design_decision:.*\n", "", contents, count=1)
+    screen_spec.write_text(contents, encoding="utf-8")
+
+    monkeypatch.setattr(validator, "ROOT", tmp_path)
+    monkeypatch.setattr(validator, "CONTRACT_README", contract_readme)
+    monkeypatch.setattr(validator, "SPEC_DIR", spec_dir)
+    monkeypatch.setattr(validator, "SPEC_README", spec_readme)
+    monkeypatch.setattr(validator, "SPEC_TEMPLATE", spec_template)
+
+    with pytest.raises(AssertionError, match="must declare design_decision"):
+        validator._validate_design_gate_contract()

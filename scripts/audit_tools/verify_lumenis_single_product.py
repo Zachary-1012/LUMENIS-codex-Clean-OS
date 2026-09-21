@@ -176,7 +176,25 @@ def main() -> int:
         errors.append("missing current product positioning and ownership contract")
     else:
         positioning_text = PRODUCT_POSITIONING.read_text(encoding="utf-8")
-        for marker in ("CTH", "BMP", "Shared Capability", "SYSTEM", "Windows", "macOS", "Linux", "Android", "iOS"):
+        for marker in (
+            "CTH",
+            "BMP",
+            "Shared Capability",
+            "SYSTEM",
+            "Public Website",
+            "Web Workspace",
+            "Desktop App",
+            "Mobile Companion",
+            "ONE Product Core",
+            "ONE Canonical API / ViewModel contract",
+            "DESIGN_EXPLORATION",
+            "DESIGN_READY",
+            "Windows",
+            "macOS",
+            "Linux",
+            "Android",
+            "iOS",
+        ):
             if marker not in positioning_text:
                 errors.append(f"current product positioning marker missing: {marker}")
     if not README.is_file():

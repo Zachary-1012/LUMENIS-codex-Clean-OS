@@ -174,7 +174,7 @@ README.md                       人类产品 + 工程入口
 AGENTS.md                       Coding Agent 执行路由
 LICENSE                         LUMENIS 源码许可边界
 00-GOVERNANCE/                 权威规则、验收、handoff evidence
-00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md  固定源码 owner / 三回交付路由
+00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md  固定源码 owner / 十五轮交付路由
 02-ARCHITECTURE/               架构资料
 app/                           唯一 Flutter 用户端
 contracts/experience/          Screen / Action / State / Permission / Evidence / ViewModel 契约
