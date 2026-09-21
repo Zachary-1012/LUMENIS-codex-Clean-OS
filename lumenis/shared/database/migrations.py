@@ -19,6 +19,7 @@ from typing import Optional, List, Dict, Any
 
 # Database path selection is owned by LUMENIS Shared Database.
 from .paths import main_db_path
+from .business_schema import apply_business_schema
 DB_PATH = main_db_path()
 BACKUP_DIR = os.path.join(os.path.dirname(DB_PATH), 'backups')
 
@@ -537,14 +538,68 @@ def migration_12_to_13(conn):
     apply_platform_schema(conn)
 
 
-def _ensure_migration_prerequisites(conn, target_version: int) -> None:
+def _ensure_migration_prerequisites(
+    conn, current_version: int, target_version: int
+) -> int:
     """Create owner-managed base schemas required by the historical migrations.
 
-    The versioned upgrade predates the current Canonical Data and Evidence
-    owners. Fresh databases need those owner schemas before v9→v10 and
-    v10→v11 can add their versioned fields. Call the existing idempotent
-    initializers only when their required tables are absent.
+    The versioned upgrade predates the current business, Canonical Data, and
+    Evidence owners. A genuinely empty v0 database needs those owner schemas
+    before the historical migrations can add their versioned fields. Existing
+    databases keep their historical DDL/data semantics: this function never
+    reapplies the current business schema over a versioned or partial database.
     """
+    if current_version == 0 and target_version >= 1:
+        base_tables = {"notes", "daily_reports", "collection_logs"}
+        existing_base_tables = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+            if row[0] in base_tables
+        }
+        if not existing_base_tables:
+            apply_business_schema(conn)
+            conn.commit()
+        elif existing_base_tables != base_tables:
+            missing = sorted(base_tables - existing_base_tables)
+            raise RuntimeError(
+                "v0 database has a partial historical base schema; "
+                f"refusing current-schema repair (missing: {missing})"
+            )
+        else:
+            reference = sqlite3.connect(":memory:")
+            try:
+                apply_business_schema(reference)
+                for table in sorted(base_tables):
+                    expected = {
+                        row[1]: (row[2], row[3], row[4], row[5])
+                        for row in reference.execute(
+                            f"PRAGMA table_info({table})"
+                        ).fetchall()
+                    }
+                    actual = {
+                        row[1]: (row[2], row[3], row[4], row[5])
+                        for row in conn.execute(
+                            f"PRAGMA table_info({table})"
+                        ).fetchall()
+                    }
+                    missing_or_changed = sorted(
+                        column
+                        for column, contract in expected.items()
+                        if actual.get(column) != contract
+                    )
+                    if missing_or_changed:
+                        raise RuntimeError(
+                            "v0 database does not match the canonical business "
+                            f"schema for {table}: {missing_or_changed}"
+                        )
+            finally:
+                reference.close()
+
+        set_version(conn, 1, MIGRATION_HISTORY[1])
+        current_version = 1
+
     if target_version >= 10 and conn.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='canonical_data'"
     ).fetchone() is None:
@@ -558,6 +613,8 @@ def _ensure_migration_prerequisites(conn, target_version: int) -> None:
         from lumenis.shared.evidence.chain import init_db as init_evidence_chain_db
 
         init_evidence_chain_db(main_db_path())
+
+    return current_version
 
 
 def _migrate_add_publish_datetime_index():
@@ -610,7 +667,9 @@ def migrate(target_version: Optional[int] = None) -> bool:
     backup_database(f"before_migration_v{current_version}_to_v{target_version}.db")
 
     try:
-        _ensure_migration_prerequisites(conn, target_version)
+        current_version = _ensure_migration_prerequisites(
+            conn, current_version, target_version
+        )
     except Exception as e:
         print(f"❌ 迁移前共享 schema 初始化失败: {e}")
         conn.close()

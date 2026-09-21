@@ -16,10 +16,11 @@ SPECIALIZED_ENV = [
 
 @pytest.fixture
 def iso_db(tmp_path, monkeypatch):
-    monkeypatch.delenv("ZBC_DB_PATH", raising=False)
+    isolated_path = os.path.abspath(str(tmp_path / "iso_monitor.db"))
+    monkeypatch.setenv("ZBC_DB_PATH", isolated_path)
     for key in SPECIALIZED_ENV:
         monkeypatch.delenv(key, raising=False)
-    return os.path.abspath(str(tmp_path / "iso_monitor.db"))
+    return isolated_path
 
 def _norm(path):
     return os.path.normcase(os.path.abspath(path))
@@ -44,10 +45,13 @@ def _production_db_fingerprint():
         for suffix in ("", "-wal", "-shm")
     }
 
-def test_default_path_unchanged_when_no_env(iso_db):
+def test_default_path_unchanged_when_no_env(iso_db, monkeypatch):
     expected = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "monitor.db")
-    assert _norm(main_db_path()) == _norm(expected)
-    assert _norm(DEFAULT_DB_PATH) == _norm(expected)
+    with monkeypatch.context() as default_path_env:
+        default_path_env.delenv("ZBC_DB_PATH", raising=False)
+        assert _norm(main_db_path()) == _norm(expected)
+        assert _norm(DEFAULT_DB_PATH) == _norm(expected)
+    assert _norm(main_db_path()) == _norm(iso_db)
 
 def test_single_canonical_env_redirects_every_domain(iso_db, monkeypatch):
     monkeypatch.setenv("ZBC_DB_PATH", iso_db)

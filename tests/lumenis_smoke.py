@@ -42,14 +42,11 @@ app.config["TESTING"] = True
 init_v4_modules()
 app.register_blueprint(create_v4_blueprint())
 
-# 临时库建最小 notes 表 + 样本（隔离验证 data_cleanup / importer 列对齐）
+# 临时库通过 Shared Database canonical owner 建 schema，再插入原样样本。
 import sqlite3
+from lumenis.shared.database import apply_business_schema
 c = sqlite3.connect(TMP)
-c.execute("""CREATE TABLE IF NOT EXISTS notes(
-  id INTEGER PRIMARY KEY, note_id TEXT, title TEXT, content TEXT, url TEXT,
-  author_nickname TEXT, publish_date TEXT, collected_at TEXT, xsec_token TEXT,
-  source_platform TEXT, sentiment TEXT, sentiment_score REAL, topics TEXT,
-  category TEXT, summary TEXT)""")
+apply_business_schema(c)
 c.execute("INSERT INTO notes(note_id,title,content,publish_date,collected_at) VALUES('n1','空正文笔记','','3小时前','2026-08-29 10:00:00')")
 c.execute("INSERT INTO notes(note_id,title,content,publish_date,collected_at) VALUES('n2','正常笔记','太古汇商场环境很舒适，很喜欢','2026-08-28','2026-08-29 10:00:00')")
 c.commit(); c.close()
@@ -145,7 +142,7 @@ check("analyze_text 规则回退产出笔记", len(notes)>=1 and notes[0].title,
 # 16) 数据清洗（隔离库样本）
 from lumenis.data_cleanup.fix_publish_date import fix_publish_dates, find_empty_content_notes, generate_backfill_tasks
 dry = fix_publish_dates(dry_run=True)
-check("publish_date dry-run 识别脏数据", dry["dirty_count"]>=1, str({k:dry[k] for k in ('total_checked','dirty_count')}))
+check("publish_date dry-run 识别脏数据", dry["fixed_count"]>=1, str({k:dry[k] for k in ('total_checked','fixed_count')}))
 emp = find_empty_content_notes()
 check("空正文笔记识别", emp["total"]>=1, f"total={emp['total']} by={emp['by_platform']}")
 bt = generate_backfill_tasks(10)
