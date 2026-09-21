@@ -3,7 +3,7 @@
 > Task: `ROUND-04-B001 / LUNA-007`
 > Baseline: `07013dcd4a82e87272f4bc1aaff0525404ad5995`
 > Evidence date: 2026-09-21
-> Status: **PRE-BETA APP GATE REMOVED / SERVER PERMISSION RETAINED / PACKAGED UI UNVERIFIED**
+> Status: **PRE-BETA APP GATE REMOVED / AUTH BOUNDARIES TESTED / PACKAGED UI UNVERIFIED**
 
 This evidence is subordinate to executable source, the Product Architecture,
 the Experience Constitution, the Source Owner Index, and current runtime truth.
@@ -56,13 +56,20 @@ only for read-only contract checks. It reported auth disabled, returned HTTP
 printed. This confirms the running backend did not convert Core transport
 state into a product-account bypass; it is not packaged Flutter UI acceptance.
 
-The focused Python Auth/API Domain, Permission, request-context, and Subject
-Registry regression command was attempted but did not collect tests. The
-pytest database gate detected the active runtime's repository
-`monitor.db-wal` and `monitor.db-shm` sidecars and failed closed with exit `4`.
-The runtime was not stopped, and its database or sidecars were not copied,
-checkpointed, removed, or restored. Python regression therefore remains
-**BLOCKED BY ACTIVE RUNTIME**, not PASS or FAIL.
+The first focused Python Auth/API Domain, Permission, request-context, and
+Subject Registry regression command did not collect tests. The pytest database
+gate detected the active runtime's repository `monitor.db-wal` and
+`monitor.db-shm` sidecars and failed closed with exit `4`. The runtime was not
+stopped, and its database or sidecars were not copied, checkpointed, removed,
+or restored.
+
+Sol then used the test harness's explicit external-seed path. The preserved
+seed was verified as 53248 bytes with SHA-256
+`F69208CFBA914E455B0BF34424E78E382940EE3C155F7F9C7CA4714E641E40DD`;
+pytest copied it into its OS-temporary database and never opened the active
+repository database. The five focused Python suites completed with exit `0`
+and `75 passed`, with no background-thread leak reported. This closes the
+Python regression blocker without weakening the live-database sidecar gate.
 
 ## Disposition
 
@@ -70,7 +77,8 @@ checkpointed, removed, or restored. Python regression therefore remains
 - Live backend identity-versus-registry contract: **READ-ONLY VERIFIED** for
   the observed local runtime state.
 - Server Permission implementation: **PRESERVED**, not replaced by App logic.
-- Python Auth/API regression: **BLOCKED** by the active production DB sidecar
-  safety gate.
+- Python Auth/API regression: **TESTED / PASS** (`75 passed`) through the
+  verified external-seed isolation path; the active production DB sidecar gate
+  remained fail closed.
 - Packaged desktop/mobile launch, remote Core deployment transport, and future
   product-account identity/tenant design: **UNVERIFIED / DEFERRED**.
