@@ -183,15 +183,15 @@ _CAPABILITY_MODEL_MAP = {
     },
     'strong_reasoning': {
         'provider': 'zhipu',
-        'model': 'glm-5.3',
+        'model': 'glm-4.7',
         'fallback_chain': ['zhipu:glm-4.5-air', 'ark', 'ollama'],
         'description': '强推理（复杂分析/逻辑链/深度研判）',
     },
     'daily': {
-        'provider': 'ark',
-        'model': 'doubao-lite-4k',
-        'fallback_chain': ['zhipu:glm-4.5-air', 'ollama'],
-        'description': '日常最小输出（摘要/分类/情绪/轻量对话，豆包 lite 省额度，失败自动降智谱）',
+        'provider': 'zhipu',
+        'model': 'glm-4.5-air',
+        'fallback_chain': ['ollama'],
+        'description': '日常最小输出（摘要/分类/情绪/轻量对话，使用已授权智谱资源包）',
         'thinking_disabled': True,
     },
     'offline_fallback': {
@@ -209,7 +209,7 @@ def select_model_by_capability(capability='daily'):
     capability 可选值:
       - 'vision'           -> glm-4.6v（智谱视觉）
       - 'web_search'       -> web-search-pro（智谱联网）
-      - 'strong_reasoning' -> glm-5.3（智谱强推理）
+      - 'strong_reasoning' -> glm-4.7（当前已授权智谱强推理资源）
       - 'daily'            -> glm-4.5-air（智谱日常，关思考）
       - 'offline_fallback' -> ollama 本地模型
 
@@ -269,6 +269,52 @@ def redact_for_cloud(text):
             out = out.replace(name, '[客户]')
     return out
 
+
+def _call_local_chat(provider, model, base, system, user, temperature, max_tokens, timeout):
+    """Call the canonical local chat runtime and record honest usage metadata.
+
+    The current production workstation uses Ollama's native ``/api/chat``
+    contract.  Qwen 3 reasoning is disabled for bounded fallback work so a
+    small CPU model cannot spend the whole response budget on hidden thinking.
+    """
+    payload = {
+        'model': model,
+        'messages': [
+            {'role': 'system', 'content': system},
+            {'role': 'user', 'content': user},
+        ],
+        'stream': False,
+        'options': {'temperature': temperature, 'num_predict': max_tokens},
+    }
+    if provider == 'ollama':
+        payload['think'] = False
+    req = urllib.request.Request(
+        base + '/api/chat',
+        data=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+        headers={'Content-Type': 'application/json'},
+        method='POST',
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        data = json.loads(resp.read().decode('utf-8', 'replace'))
+    usage = data.get('usage', {}) or {}
+    try:
+        prompt_tokens = int(usage.get('prompt_tokens', 0) or data.get('prompt_eval_count', 0) or 0)
+        completion_tokens = int(usage.get('completion_tokens', 0) or data.get('eval_count', 0) or 0)
+        total_tokens = int(usage.get('total_tokens', 0) or 0) or (prompt_tokens + completion_tokens)
+    except Exception:
+        prompt_tokens, completion_tokens, total_tokens = 0, 0, 0
+    content = (data.get('message', {}).get('content') or '').strip()
+    if not content:
+        raise ValueError('empty local response content')
+    _set_call_meta(
+        provider=provider,
+        model=model,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=total_tokens,
+    )
+    return content, provider
+
 def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
     """AI 对话核心。
 
@@ -296,27 +342,20 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
         provider,model_default,base=d
         model = model or model_default
         try:
-            req=urllib.request.Request(base+'/api/chat',data=json.dumps({'model':model,'messages':[{'role':'system','content':system},{'role':'user','content':user}],'stream':False,'options':{'temperature':temperature,'num_predict':max_tokens}},ensure_ascii=False).encode('utf-8'),headers={'Content-Type':'application/json'},method='POST')
-            with urllib.request.urlopen(req,timeout=_to) as resp:
-                data=json.loads(resp.read().decode('utf-8','replace'))
-            _tu = data.get('usage',{}) or {}
-            try:
-                _pt = int(_tu.get('prompt_tokens', 0) or data.get('prompt_eval_count', 0) or 0)
-                _ct = int(_tu.get('completion_tokens', 0) or data.get('eval_count', 0) or 0)
-                _tt = int(_tu.get('total_tokens', 0) or 0) or (_pt + _ct)
-            except Exception:
-                _pt, _ct, _tt = 0, 0, 0
-            _set_call_meta(provider=provider, model=model, prompt_tokens=_pt, completion_tokens=_ct, total_tokens=_tt)
-            return data.get('message',{}).get('content'), provider
+            return _call_local_chat(
+                provider, model, base, system, user,
+                temperature, max_tokens, _to,
+            )
         except Exception as exc:
             print('[AI] local failed, falling back to local rule:',exc)
             _set_call_meta(provider='rule', model='deterministic_rule', prompt_tokens=0, completion_tokens=0, total_tokens=0)
             return None, 'rule'
 
-    # 云端：多 Provider 故障转移（智谱 L1 → ark L2 → qwen L3 → rule L6）
+    # 云端：多 Provider 故障转移（智谱 L1 → ark L2 → qwen L3 → Ollama L5 → rule L6）
     system_r, user_r = redact_for_cloud(system), redact_for_cloud(user)
     # V1.0: 构建 cloud fallback 链（zhipu L1 → ark L2 → qwen L3）
-    # 本地 Provider（ollama/lmstudio）由 _provider_config 单独处理，不混入 cloud 链
+    # Cloud providers share the redacted request.  Ollama is attempted only
+    # after that chain is exhausted and receives the original local prompt.
     # 根据传入 model 前缀判断主 provider：最小输出豆包优先，大算力智谱优先
     _model_lower = str(model or '').lower()
     if _model_lower.startswith(('doubao', 'ark-')):
@@ -392,11 +431,28 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
         if isinstance(result, tuple) and len(result) >= 3:
             _cloud_meta = result[2] if isinstance(result[2], dict) else _cloud_meta
             result = result[0]
-        return result, used
+        if used != 'rule' and result is not None:
+            return result, used
     except Exception as exc:
         print('[AI] all providers failed:', exc)
-        _set_call_meta(provider='rule', model='deterministic_rule', prompt_tokens=0, completion_tokens=0, total_tokens=0)
-        return None, 'rule'
+
+    local = _detect_local()
+    if local and local[0] == 'ollama':
+        provider, local_model, base = local
+        try:
+            try:
+                local_timeout = int(_env('OLLAMA_TIMEOUT_SECONDS', '180'))
+            except (TypeError, ValueError):
+                local_timeout = 180
+            return _call_local_chat(
+                provider, local_model, base, system, user,
+                temperature, max_tokens, local_timeout,
+            )
+        except Exception as exc:
+            print('[AI] Ollama fallback failed, using local rule:', exc)
+
+    _set_call_meta(provider='rule', model='deterministic_rule', prompt_tokens=0, completion_tokens=0, total_tokens=0)
+    return None, 'rule'
 
 def vision_chat(system, user_text, image_base64, model=None, temperature=0.2, max_tokens=2000, level='medium'):
     """视觉模型对话（glm-4.6v），支持图片输入。

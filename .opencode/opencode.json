@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "zhipu/glm-5.3",
+  "model": "zhipu/glm-4.7",
   "small_model": "zhipu/glm-4.5-air",
   "permission": {
     "read": {

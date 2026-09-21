@@ -9,6 +9,12 @@
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = 'Stop'
 
+# Background processes inherit the Windows console code page by default.
+# Keep every Python child on UTF-8 so non-ASCII migration/runtime diagnostics
+# cannot crash production startup before the real health gate is reached.
+$env:PYTHONUTF8 = '1'
+$env:PYTHONIOENCODING = 'utf-8'
+
 # Single-instance mutex. Keep the historical mutex name for process compatibility.
 $mutex = New-Object System.Threading.Mutex($false, 'Global\ZBrandCoreLauncher8201')
 if (-not $mutex.WaitOne(0)) {

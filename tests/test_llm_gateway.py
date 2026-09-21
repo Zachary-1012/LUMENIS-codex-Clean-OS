@@ -5,6 +5,7 @@
 """
 import os
 import sys
+import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["AI_TIMEOUT_SECONDS"] = "20"
 import intelligence
@@ -22,7 +23,7 @@ def test_openai_failure_falls_back():
     raw, prov = intelligence._chat("只输出OK", "测试", 0, 20)
     # 当前架构：多 Provider 故障转移（openai 失败 → zhipu/ark/qwen → rule）
     # 不再是单 Provider 直接到 rule
-    valid_providers = ("rule", "zhipu", "ark", "qwen", "deepseek", "openai")
+    valid_providers = ("rule", "zhipu", "ark", "qwen", "deepseek", "openai", "ollama")
     assert prov in valid_providers, f"unexpected provider: {prov}"
     if prov == "rule":
         assert raw is None
@@ -40,7 +41,7 @@ def test_zhipu_wired_and_safe():
     else:
         assert st["provider"] == "local_rule" and st["runtime"] == "rule"
     raw, prov = intelligence._chat("只输出JSON：{\"ok\":1}", "测试", 0, 300)
-    assert prov in ("zhipu", "rule")
+    assert prov in ("zhipu", "ollama", "rule")
     if prov == "zhipu":
         assert raw
     print("[PASS] 智谱接线正确，在线出数/失败回退均安全 ->", prov)
@@ -51,6 +52,18 @@ def test_auto_priority():
     st = use("auto")
     assert st["provider"] in ("zhipu", "local_rule") + LOCAL_PROVIDERS, st
     print("[PASS] auto 选择 ->", st["provider"], st.get("model"))
+
+
+def test_daily_capability_uses_authorized_zhipu_pack():
+    selected = intelligence.select_model_by_capability("daily")
+    assert selected["provider"] == "zhipu"
+    assert selected["model"] == "glm-4.5-air"
+
+
+def test_strong_reasoning_uses_authorized_glm_47_pack():
+    selected = intelligence.select_model_by_capability("strong_reasoning")
+    assert selected["provider"] == "zhipu"
+    assert selected["model"] == "glm-4.7"
 
 
 def test_local_chat_does_not_consume_cloud_pack(monkeypatch):
@@ -88,6 +101,84 @@ def test_explicit_local_failure_falls_back_to_rule_only(monkeypatch):
     raw, provider = intelligence._chat("只回复结果", "本地测试", 0.0, 8)
     assert raw is None
     assert provider == "rule"
+
+
+def test_cloud_failure_falls_back_to_ollama_with_thinking_disabled(monkeypatch):
+    """云端链耗尽后应使用本机 Ollama，并禁用 Qwen3 隐式思考。"""
+    monkeypatch.setenv("AI_PROVIDER", "zhipu")
+    monkeypatch.setenv("ZHIPU_API_KEY", "test-key")
+    monkeypatch.setattr(
+        intelligence,
+        "_provider_config",
+        lambda: ("zhipu", "glm-4.7", "https://example.invalid/v1"),
+    )
+    monkeypatch.setattr(
+        intelligence.ai_channel,
+        "route_with_fallback",
+        lambda *args, **kwargs: (None, "rule"),
+    )
+    monkeypatch.setattr(
+        intelligence,
+        "_detect_local",
+        lambda: ("ollama", "qwen3:4b", "http://127.0.0.1:11434"),
+    )
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps({
+                "message": {"content": "LOCAL_OK"},
+                "prompt_eval_count": 5,
+                "eval_count": 2,
+            }).encode("utf-8")
+
+    def fake_urlopen(request, timeout=None):
+        captured["payload"] = json.loads(request.data.decode("utf-8"))
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(intelligence.urllib.request, "urlopen", fake_urlopen)
+    raw, provider = intelligence._chat("system-local", "user-local", 0.0, 16)
+    assert (raw, provider) == ("LOCAL_OK", "ollama")
+    assert captured["payload"]["think"] is False
+    assert captured["payload"]["messages"][1]["content"] == "user-local"
+    assert intelligence._get_call_meta()["total_tokens"] == 7
+
+
+def test_cloud_and_ollama_failure_falls_back_to_rule(monkeypatch):
+    """云端和 Ollama 都不可用时，最终状态必须诚实标记为规则降级。"""
+    monkeypatch.setenv("AI_PROVIDER", "zhipu")
+    monkeypatch.setenv("ZHIPU_API_KEY", "test-key")
+    monkeypatch.setattr(
+        intelligence,
+        "_provider_config",
+        lambda: ("zhipu", "glm-4.7", "https://example.invalid/v1"),
+    )
+    monkeypatch.setattr(
+        intelligence.ai_channel,
+        "route_with_fallback",
+        lambda *args, **kwargs: (None, "rule"),
+    )
+    monkeypatch.setattr(
+        intelligence,
+        "_detect_local",
+        lambda: ("ollama", "qwen3:4b", "http://127.0.0.1:11434"),
+    )
+    monkeypatch.setattr(
+        intelligence.urllib.request,
+        "urlopen",
+        lambda *args, **kwargs: (_ for _ in ()).throw(OSError("offline")),
+    )
+    raw, provider = intelligence._chat("system", "user", 0.0, 16)
+    assert raw is None
+    assert provider == "rule"
+    assert intelligence._get_call_meta()["model"] == "deterministic_rule"
 
 
 def test_ollama_hint_reflects_reachable_models(monkeypatch):
