@@ -1,6 +1,12 @@
 """Only-One guard for Shared Database path ownership."""
 from pathlib import Path
 
+from scripts.audit_tools.verify_database_authority import (
+    DIRECT_CONNECT_OWNERS,
+    audit_repository,
+    find_direct_sqlite_calls,
+)
+
 REPO = Path(__file__).resolve().parents[1]
 
 def test_shared_database_is_canonical_path_owner():
@@ -145,3 +151,24 @@ def test_production_modules_do_not_bypass_database_repository():
         if "sqlite3.connect(" in source:
             violations.append(rel)
     assert not violations, "Direct SQLite bypasses: " + ", ".join(sorted(violations))
+
+
+def test_ast_guard_detects_supported_sqlite_alias_forms():
+    samples = (
+        "import sqlite3 as db\ndb.connect(':memory:')\n",
+        "from sqlite3 import connect as open_db\nopen_db(':memory:')\n",
+        "import sqlite3\nopen_db = sqlite3.connect\nopen_db(':memory:')\n",
+    )
+    for source in samples:
+        assert find_direct_sqlite_calls(source), source
+
+
+def test_ast_guard_accepts_only_canonical_direct_connection_owners():
+    _, direct_findings, _ = audit_repository()
+    assert not direct_findings, "Direct SQLite bypasses: " + ", ".join(
+        finding.render() for finding in direct_findings
+    )
+    assert DIRECT_CONNECT_OWNERS == {
+        "lumenis/shared/database/connection.py",
+        "lumenis/shared/database/migrations.py",
+    }

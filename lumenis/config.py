@@ -4,6 +4,8 @@ V4 模块配置
 """
 import os
 
+from lumenis.shared.database import main_db_path
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # 认证配置
@@ -75,12 +77,8 @@ IMPORTER_CONFIG = {
     "preview_limit": 100,  # 导入预览最多显示100条
 }
 
-# 数据库路径（复用现有数据库）
-DB_PATH = os.path.abspath(
-    os.environ.get("ZBC_DB_PATH")
-    or os.environ.get("MONITOR_DB_PATH")
-    or os.path.join(BASE_DIR, "..", "data", "monitor.db")
-)
+# 兼容属性；路径选择由 Shared Database 唯一 owner 负责。
+DB_PATH = main_db_path()
 
 # 受限工作区（ZBMP）访问密钥配置
 WORKSPACE_CONFIG = {

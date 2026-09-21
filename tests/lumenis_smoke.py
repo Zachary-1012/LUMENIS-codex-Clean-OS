@@ -6,7 +6,7 @@ sys.path.insert(0, ROOT)
 TMP = os.path.join(ROOT, "tests", "_v4_smoke.db")
 if os.path.exists(TMP):
     os.remove(TMP)
-os.environ["MONITOR_DB_PATH"] = TMP  # 必须在 import lumenis 之前
+os.environ["ZBC_DB_PATH"] = TMP  # 必须在 import lumenis 之前
 os.environ["V4_TOKEN_SECRET"] = "smoke-test-secret"
 # D7: 密钥登录走与生产一致的“环境变量注入”路径（生产由 .env V4_ACCESS_KEY 提供），
 # 测试用固定假密钥自洽验证，不再硬编码历史默认值、也不依赖真实 .env / 真实密钥。

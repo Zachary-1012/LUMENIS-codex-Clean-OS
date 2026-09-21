@@ -39,6 +39,9 @@ jobs:
       - name: Validate Only-One multi-surface product architecture (BLOCKING)
         run: python scripts/audit_tools/verify_lumenis_single_product.py
 
+      - name: Validate Shared Database authority (BLOCKING)
+        run: python scripts/audit_tools/verify_database_authority.py
+
       - name: Validate sole Experience design authority (BLOCKING)
         run: python scripts/audit_tools/verify_experience_authority_exclusive.py
 
@@ -115,6 +118,14 @@ jobs:
           for path in result['leaks']:
               print('tracked-boundary-path:', path)
           PY
+
+      - name: Run hermetic Shared Database acceptance (BLOCKING)
+        run: >-
+          python -m pytest -q
+          tests/test_database.py
+          tests/test_db_isolation_contract.py
+          tests/test_shared_database_owner.py
+          tests/test_shared_database_migrations.py
 
       - name: Run clean-checkout hermetic pytest (BLOCKING)
         shell: bash
