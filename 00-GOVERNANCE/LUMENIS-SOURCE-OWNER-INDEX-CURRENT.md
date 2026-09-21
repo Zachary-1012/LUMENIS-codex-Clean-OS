@@ -1,34 +1,44 @@
 # LUMENIS Source Owner Index — CURRENT
 
-> Status: **CURRENT EXECUTION INDEX / THREE-DELIVERY RED LINE**
+> Status: **CURRENT EXECUTION INDEX / FIFTEEN-ROUND CLOSED LOOP**
 >
-> Updated: 2026-09-20
-> Audit baseline: `1b78783f41628046f25b4a79f57985d18054b9a2` (provenance only; resolve the live `origin/main` before every change)
+> Updated: 2026-09-21
+> Audit baseline: `c3036aa714ff3236e1267d33cbfb9d2aa33ed000` (provenance only; resolve the live `origin/main` before every change)
 
 This file is the fixed repository navigation and delivery index for 序境 / LUMENIS. It classifies current source by owner and tells Codex where to look after the one-time source audit. It is not a second product architecture, Experience authority, progress ledger, or proof that a runtime capability works.
 
 When this index conflicts with current executable source or runtime evidence, current source/runtime wins and this index must be repaired in the same coherent change.
 
-## 1. Locked delivery sequence
+## 1. Locked 15-round delivery sequence
 
-Product work is delivered in exactly three ordered rounds. Do not split the product into a new architecture or intermingle unrelated rewrites.
+Product work is delivered in exactly 15 ordered rounds. Complete and accept the current round before starting its dependent successor; a round may contain sequential bounded Luna batches, but no worker may auto-continue into another batch.
 
 | Round | Delivery | Scope | Exit gate |
 | --- | --- | --- | --- |
-| 1 | **App Experience** | Existing product functions expressed through distinct Flutter UI, layout, responsive PC/mobile composition, accessibility, state feedback and purposeful motion. Complete the App Shell, five Golden Pages, nested CTH-02, then the remaining approved screen workflows. | A real App can be operated against current Product Core contracts; every completed screen has its own specification, honest states, representative PC/mobile runtime evidence and no generic 44-screen template. |
-| 2 | **Backend and capability recovery** | Trace existing callers to current owners; recover, adapt and bind valid capability; close API, Permission, Evidence, workflow and data gaps. Preserve Ollama, media Cookie collection and existing functions. Use OpenCode/Codex as engineering runtimes, not product-truth owners. | Each included workflow proves callable source → Permission → canonical read/write → real result → Evidence/trace → regression. No `UNKNOWN` or `BACKEND_GAP` is treated as a missing API until current source is checked. |
-| 3 | **Closed-loop internal beta** | Run the complete product with real permitted data and current platform sessions; execute PC/mobile E2E, failure/recovery, security, packaging and release evidence. | The selected beta workflows pass user-entry → action → result → return/evaluation on supported devices. `TESTED`, `VERIFIED`, `RELEASED` and `OPERATING` remain separate claims. |
-
-Round 1 may use existing Product Core reads and actions needed to make the current App real. If a missing backend behavior blocks a workflow, record the exact owner/caller/contract and hand it to Round 2; never invent mock success or a parallel API.
+| 1 | **Current truth and PDF coverage** | Remote/local/PDF audit, owner map, protection items and complete 15-round mapping; read-only. | Three-source comparison and every PDF page/task are accounted for; no source mutation. |
+| 2 | **Authority, Only-One and multi-surface decision** | Reconcile sole authorities, naming, compatibility classification, approved Public Website/Web Workspace/Desktop/Mobile route and Jev placement. | No App-only conflict or duplicate owner; decisions are enforced by blocking governance checks; no Web/Jev runtime is prematurely created. |
+| 3 | **Database and Canonical Truth** | Database paths, migrations, repository, root callers, direct SQLite and isolated test protection. | One canonical business schema/path and protected migration/rollback evidence. |
+| 4 | **Identity, context, Permission and Evidence** | Actor identity, Subject/BrandFocus, access timing, read/write/approval/effect fences and lineage. | Context cannot grant authorization; decisions/actions trace to Evidence and Return. |
+| 5 | **Runtime, health and recovery** | Startup, supervisor, honest health, queue/worker/DLQ, logging, recovery and operations stores. | Health represents real dependencies; failure/recovery paths are tested. |
+| 6 | **Collector, browser and acquisition** | One collector/browser, scheduler/adapters, Cookie/session/CDP, rate limits, provenance and ingestion. | Authorized source → collection → Evidence closes without duplicate runtime or unsafe browser behavior. |
+| 7 | **AI, Agent and Shared engines** | One AI Gateway, Ollama/providers, approved Jev typed decision candidate, Agent/skills, reporting, evaluation and learning. | Provider state and derivative output are honest; Jev passes its staged contract/evaluation gate before activation; AI never owns truth/effects. |
+| 8 | **Cross-Surface Experience Foundation** | Public Website foundation, Flutter Web Workspace/Desktop/Mobile shells, shared contract/state/accessibility/localization and capability boundary. | Four surfaces have distinct roles over one Product Core; no generic screen template or second truth. |
+| 9 | **Golden Pages and CTH-02** | AI-01, CTH-01/02, BMP-01, SH-01 and SYS-01 with surface matrix and live binding. | Applicable Web/Desktop/Mobile paths complete real tasks with Permission/Evidence and truthful states. |
+| 10 | **CTH monitoring and analysis** | CTH-03..07 source-backed monitoring, events, calendar, sentiment, trend and trace. | Real Subject-scoped monitoring/analysis closes with source lineage. |
+| 11 | **CTH case, risk and decision** | CTH-08..10 Case → Insight → Decision → Action → Outcome plus report/export. | Authorized CTH response loop and Evidence lineage are verifiable. |
+| 12 | **BMP portfolio, market and propagation** | BMP-02..05 BrandFocus, competitor, market intelligence, propagation and creators. | Brand-first workflows preserve source/evidence and scope semantics. |
+| 13 | **BMP content, campaign and evaluation** | BMP-06..11 content lifecycle, campaign, podcast, evaluation, risk and benchmark. | Approved action/result/evaluation loop is real and traceable. |
+| 14 | **Remaining ACC, AI, Shared and SYSTEM Experience** | ACC-01..04, AI-02..05, SH-02..06 and SYS-02..08, respecting pre-beta account timing. | Each applicable surface role is explicit; deferred identity capability is honestly blocked/deferred, not simulated. |
+| 15 | **Closed-loop internal beta and release** | Cross-surface real-data E2E, PC/mobile, security, accessibility, performance, packaging, clean clone, recovery/rollback and release evidence. | Public → Web → real context/workflow/Evidence → Desktop advanced execution if applicable → Web result → Mobile approval/notification if applicable → Report/Evaluation/Learning passes; unresolved items remain explicit. |
 
 ## 2. Product preservation contract
 
-These are blocking rules for all three rounds:
+These are blocking rules for all 15 rounds:
 
 1. Inspect the current owner, callers, contract, tests and runtime path before changing code. `UNKNOWN` and `BACKEND_GAP` are investigation states, not instructions to create an API.
 2. Preserve existing product position, functions, business rules, data sources, object meanings and workflow outcomes. Work may strengthen or adapt an approved capability; it may not invent, expand or replace product scope.
 3. Media platforms continue through the existing SYSTEM Cookie/session/browser collection chain. Do not add a platform-login step, a second collector or a new account model.
-4. The LUMENIS product account is deferred until after internal beta. Pre-beta browsing and existing product use must not be blocked by a LUMENIS account wall. This decision does not remove server-side Permission, effect fences or platform-session safety.
+4. The LUMENIS product account remains deferred until its approved identity/tenant gate after internal beta. Pre-beta browsing and existing product use must not be blocked by a LUMENIS account wall. Public Website trial/contact and workspace entry do not authorize a second identity store. This decision does not remove server-side Permission, effect fences or platform-session safety.
 5. Platform Cookie/session authorization and a future LUMENIS product account are separate identities. Never migrate, display, log or commit platform credentials as product-account data.
 6. Apple contributes restraint, content priority and clear primary actions. ChatGPT contributes a single intent entry and progressive complexity. TRAE contributes the visible rhythm “task → execution → result”. These are Experience principles only; they do not authorize new search, chat, project, task or account features.
 7. The frontend presents business intent, state, progress, result and recovery. Collection, routing, tool execution, model selection, Evidence creation and other processing remain in their current backend/runtime owners.
@@ -45,7 +55,9 @@ After bootstrap, locate work here. Root-level compatibility callers remain class
 | Agent execution | `AGENTS.md`; `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`; this index | `scripts/audit_tools/verify_codex_takeover_governance.py`; `.github/workflows/platform-verify.yml` |
 | Product/domain architecture | `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`; `00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md` | Exact CTH/BMP caller and contract for the active slice; do not infer ownership from a filename |
 | Experience authority | `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md` | `contracts/experience/screen-specifications/<SCREEN-ID>.md`; Experience validators |
-| Flutter App | `app/lib/product/`, `app/lib/shell/`, `app/lib/features/` | `app/lib/core/`; matching `app/test/`; `app/README.md` |
+| Multi-surface decision | `00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md` under the sole Product Architecture and Experience Constitution | Surface capability matrix, deployment boundary and blocking validators; never treat the decision as implementation evidence |
+| Public Website | future `website/` presentation/acquisition root; currently `ABSENT` | Product copy, demo/case truth, trial/contact/help and workspace entry only; no business workflow/data/Permission/Evidence owner |
+| Flutter operational surfaces | `app/lib/product/`, `app/lib/shell/`, `app/lib/features/` | Flutter Web Workspace, Desktop and Mobile targets; `app/lib/core/`; matching `app/test/`; `app/README.md` |
 | Screen truth binding | `contracts/experience/lumenis_app_binding_registry.json`; `contracts/experience/screens/<SCREEN-ID>/` | `actions/`, `permissions/`, `evidence/`, `states/`, `viewmodels/`; current API owner and tests |
 | Product Core composition/API | `app.py`; `lumenis_app_api.py`; current registered routes | `experience_runtime.py`; `experience_screens.py`; exact route/service/repository tests |
 | CTH/BMP business callers | Current root/domain modules such as `subject_context.py`, `subject_registry.py`, `api_dual_domain.py`, campaign/brand/event/case/risk modules | Trace each caller to its actual data, Permission, Evidence and test owner before moving or renaming it |
@@ -55,7 +67,7 @@ After bootstrap, locate work here. Root-level compatibility callers remain class
 | Shared Evaluation/Learning/Reporting | `lumenis/shared/evaluation/`; `lumenis/shared/learning/`; `lumenis/shared/reporting/` | Current root callers and domain regression tests |
 | Shared skills/agent execution | `lumenis/shared/agents/skills/` | `account/api.py`; `agent_runtime/`; `agent_capability/`; `agent_smart_tool/`; `ai_api.py`; `ai_task_engine.py` |
 | SYSTEM Permission/effects | `lumenis/system/security/` | Active API/action callers; permission, denial, approval and effect-fence tests |
-| SYSTEM AI runtime | `lumenis/system/ai_gateway/` | `local_ai_client.py`; `lumenis/ai_hub/`; `ai_api.py`; `ai_task_engine.py`; `content_generation.py`; `system_features_api.py`; `experience_runtime.py`; AI tests |
+| SYSTEM AI runtime | `lumenis/system/ai_gateway/` | Generative/local providers plus the approved Jev typed-decision candidate; `local_ai_client.py`; `lumenis/ai_hub/`; `ai_api.py`; `ai_task_engine.py`; `content_generation.py`; `system_features_api.py`; `experience_runtime.py`; AI tests. Jev implementation remains ROUND 07 and may not form a second gateway or truth owner. |
 | SYSTEM collection | `lumenis/system/collector/` | Platform adapters, guard, runtime, scheduler and collection/Evidence tests |
 | SYSTEM browser/session | `lumenis/system/browser/runtime/` | `xhs_cookie_bridge.py`; `xhs_p0_orchestrator.py`; `xhs_cdp_collector.py`; Cookie/path/HK-policy/lineage tests |
 | Engineering AI | `.opencode/opencode.json` for OpenCode; Codex user/runtime configuration outside product source | Engineering audit/test/automation only; never count it as a LUMENIS user model, API owner or Production Truth |
@@ -69,7 +81,7 @@ After bootstrap, locate work here. Root-level compatibility callers remain class
 
 ### File placement rule
 
-New production code goes into the canonical owner above. New Flutter code goes into the owning `app/lib/features/<owner>/<screen>` slice, with stable cross-feature primitives promoted only after proven reuse. New Experience contracts go into the existing `contracts/experience/` family. Do not add a new top-level frontend, collector, AI gateway, database, permission system, evidence store or design authority.
+New production code goes into the canonical owner above. New Flutter code goes into the owning `app/lib/features/<owner>/<screen>` slice, with stable cross-feature primitives promoted only after proven reuse. New Experience contracts go into the existing `contracts/experience/` family. The approved future `website/` root is restricted to Public Website presentation/acquisition and requires the ROUND 08 entry gate; it cannot own operational product logic. Do not add any other top-level frontend, collector, AI gateway, database, permission system, evidence store or design authority.
 
 ## 4. Fixed per-task inspection route
 
@@ -111,12 +123,27 @@ Routine commits, runner/DNS failures, stale historical documents and a single `U
 
 | Area | Source-backed finding | Status for execution |
 | --- | --- | --- |
-| Flutter Experience | `app/` is the only user-facing product. Five top-level Golden Page slices and nested CTH-02 exist; 44 screen IDs exist, while only six reviewed screen specifications exist. Current UI contains responsive compositions but limited motion/accessibility/runtime coverage. | **PARTIAL / ROUND 1**. Existing source is preserved; remaining screens and real interaction acceptance are not claimed complete. |
-| Product account | The current launch flow contains Basic/Auth + `/v4/auth/login` and can gate the App. | **CONFLICT TO RESOLVE IN ROUND 1** against the approved pre-beta no-account-wall boundary. Preserve backend Permission; do not touch media Cookie sessions. |
+| Multi-surface Experience | `app/` contains the only current user-facing implementation. Public Website, Flutter Web Workspace and multi-surface deployment are absent. Five top-level Golden Page slices and nested CTH-02 exist; 44 screen IDs exist, while only six reviewed screen specifications exist. | **PARTIAL / ROUND 08+**. The approved architecture is not implementation evidence; current Flutter/local work is preserved. |
+| Product account | The `origin/main` baseline launch flow contains Basic/Auth + `/v4/auth/login` and can gate the App. The protected local worktree contains an uncommitted attempt to remove the global launch wall; it is not accepted implementation evidence. | **PARTIAL / LOCAL_ONLY / UNVERIFIED** against the approved pre-beta no-account-wall boundary. Accept or rework the protected App slice only through its own source, test and runtime gate. Preserve backend Permission; do not touch media Cookie sessions. |
 | OpenCode | `.opencode/opencode.json` configures a bounded engineering runtime and explicitly restricts secrets/network/task behavior. Flutter and Product Core do not call OpenCode as a user feature. | **ENGINEERING CONFIG PRESENT**. Preserve and use for development/audit where available; do not report it as an implemented product capability. |
-| Ollama | Local Ollama is represented by `lumenis/system/ai_gateway/`, provider discovery/fallback, `local_ai_client.py`, backend callers and AI-01 provider state. The canonical registry promotes it to `ACTIVE` only after probe; an older provider matrix currently claims `ACTIVE` and must not override runtime. | **IMPLEMENTED SOURCE / LIVE UNVERIFIED IN THIS AUDIT**. Round 2 reconciles the duplicate client/status wording and validates the configured model, real caller behavior, fallback and Evidence. |
+| Ollama and Jev | Local Ollama is represented by the canonical AI Gateway and current compatibility callers; its live state remains probe-dependent. Jev has Product Owner approval only as a future typed decision/evaluation provider and has no current adapter or runtime evidence. | **OLLAMA IMPLEMENTED SOURCE / LIVE UNVERIFIED; JEV ABSENT / ROUND 07**. Neither provider may be called directly from a surface or promoted to `ACTIVE` without its provider-specific gate. |
 | Media Cookie collection | SYSTEM collector/browser owners, XHS/RedNote bridges, HK-policy checks, Cookie path and lineage tests exist. Secrets are runtime-only and excluded from Git. | **IMPLEMENTED SOURCE / LIVE SESSION UNVERIFIED IN THIS AUDIT**. Preserve existing Cookie flow and verify only through authorized runtime acceptance. |
 | Backend gaps | The registry contains 54 fail-closed binding rows, and current backend capability is distributed across canonical and compatibility callers. Source audit also found duplicate `/api/ai/tasks` declarations, a canonical AI Gateway plus `local_ai_client.py`, and compatibility Skill/Cookie callers that must be reconciled. | **SOURCE CHECK REQUIRED PER ROW**. Preserve unique behavior and converge on existing owners; do not manufacture 54 APIs or a third execution path. |
 | Legacy-looking root callers | Root modules still carry active compatibility/caller behavior. | **CLASSIFIED, NOT DELETION-READY**. Move/delete only after call graph, behavior, data and tests converge on the canonical owner. |
 
 This disposition freezes where work starts; it does not freeze code. Each delivered slice updates its own specification, evidence and affected index row so future work resumes from the fixed path rather than rediscovering the repository.
+
+## 6. ROUND 02 Root Caller convergence decision
+
+`LUMENIS-ROOT-PYTHON-CALLER-INVENTORY-ROUND-02.md` is the accepted LUNA-004 evidence inventory for baseline `c3036aa714ff3236e1267d33cbfb9d2aa33ed000`. SOL-005 independently verified its 191/191 tracked-root coverage, unique rows, path existence, status/disposition enums, current SHA and blocking validators. The inventory remains evidence; this index owns the decision below.
+
+| Decision queue | Count | SOL decision | Exit before move/removal |
+| --- | ---: | --- | --- |
+| KEEP | 131 | Keep the current executable owner/caller. A later owner-specific round may adapt it, but location or legacy spelling is not a removal reason. | Current contract/tests preserved; owner change requires explicit task and affected regression. |
+| ABSORB WITH PARITY GATE | 37 | Send to its named canonical owner in the scheduled DB, Permission/Evidence, Runtime, Collector/Browser or AI/Agent round. `ABSORB-CANDIDATE` is not deletion approval. | Direct and dynamic callers, API/CLI/data behavior, Permission, Evidence, migration/rollback and tests are proven on the canonical path. |
+| PROVENANCE / LAST REVIEW | 20 | Retain until dynamic import, CLI, workflow, manual-operation and reproducibility dependencies are checked. | No unique behavior or operational dependency remains; Sol issues a separate retire decision. |
+| OWNER UNKNOWN / BLOCKED | 3 | `evaluate_system_timing.py`, `review_workflow.py` and `topic_monitor_policy.py` stay in place. They are excluded from migration/removal until an owner and runtime scope are proved. | Owner, callers, contract, data/Permission/Evidence effects and tests are explicit. |
+
+`domain_adapter.py` remains KEEP as the only proved current implementation, although its higher-level owner family still needs domain review. No root Python file is approved for retirement or deletion in ROUND 02. Destructive cleanup remains closed until the sole behavior has migrated and passed its owner-specific gate.
+
+Decision order is fixed: Database/Auth-Permission/Evidence seams first; then SYSTEM Runtime/Collector/Browser; then AI/Agent; then API composition and CTH/BMP/Shared; provenance/no-caller/no-test material last. Jev remains `ABSENT` and outside this caller-cleanup matrix until ROUND 07.

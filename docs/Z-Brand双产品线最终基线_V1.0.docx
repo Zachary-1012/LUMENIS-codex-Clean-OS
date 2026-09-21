@@ -1,5 +1,8 @@
 # Z-Brand 系统 · 双产品线最终产品与技术基线 V1.0（唯一最终基线）
 
+> **HISTORICAL / PROVENANCE ONLY / NOT CURRENT AUTHORITY**
+> This UTF-8/Markdown text is retained under its historical `.docx` filename as provenance only. It does not define current product architecture, source ownership, implementation, runtime or release state. Use the current [`LUMENIS Product Architecture`](../00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md) and [`LUMENIS Source Owner Index`](../00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md).
+
 > 本基线整合 7 版方案（1.6 定稿）+ 2026-08-29 源码深度审计（见《7版方案x当前源码_深度匹配审计报告.md》）+ 你的最新调整。
 > 一切后续开发/交接/Codex/豆包接管以本文件为唯一基准；与旧文档冲突时以本基线为准（冲突清单见审计报告 §5/§6）。
 > 状态标记：✅已落地（有源码证据）　🔵有壳未跑通　❌未建。

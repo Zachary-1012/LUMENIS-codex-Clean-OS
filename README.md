@@ -37,7 +37,7 @@ The sole product/domain architecture authority is:
 
 `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`
 
-LUMENIS is now **App-only as the final user-facing product**. The canonical Experience is one Flutter application codebase for Windows, macOS, Linux, Android and iOS. The legacy browser/Jinja/static surfaces have been removed from `main`; retained Experience contracts live under `contracts/experience/` and bind the Flutter App to Product Core/API.
+LUMENIS is **one product with four approved Experience surfaces**: Public Website, Web Workspace, Desktop App and Mobile Companion. The operational Experience uses one Flutter codebase for Web, Windows, macOS, Linux, Android and iOS over one Product Core/API; the future SEO-capable Public Website is presentation/acquisition only. The legacy browser/Jinja/static surfaces have been removed from `main` and must not be restored. Current implementation remains partial: Public Website and Flutter Web Workspace are not yet shipped. See `00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md`.
 
 ## 1. 产品定位 / Product definition
 
@@ -281,7 +281,7 @@ Tier C  Production / Live / Environment required acceptance evidence
 
 详见 [`tests/CI_TEST_TIERS.md`](tests/CI_TEST_TIERS.md)。
 
-当前自动 CI 只保留两类正式 Gate：`LUMENIS Product Gate`（唯一的跨产品契约 / Only-One / App-only / Python hermetic 产品 Gate）与按 App 变更触发的 `LUMENIS App Gate`（Flutter analyze/test）。重复的独立 LUMENIS-GGI workflow 已退休。Product Gate 会先执行不依赖外网的治理、App-only 架构、源码编译与 test-tier manifest 检查，再进入 dependency install / hermetic pytest；App Gate 也先执行 App-only Experience 审计，再获取 Flutter SDK/依赖。Production/Live 环境套件不会因为被 clean CI 排除而自动视为 PASS。Runner 0-step、DNS、package registry 等执行层故障必须记为 `EXECUTION-LAYER UNVERIFIED`，不得冒充产品 PASS/FAIL。
+当前自动 CI 保留两类正式 Gate：`LUMENIS Product Gate`（唯一的跨产品契约 / Only-One / multi-surface / Python hermetic 产品 Gate）与按 Flutter App 变更触发的 `LUMENIS App Gate`（Flutter analyze/test）。重复的独立 LUMENIS-GGI workflow 已退休。Product Gate 会先执行不依赖外网的治理、多终端架构、源码编译与 test-tier manifest 检查，再进入 dependency install / hermetic pytest；App Gate 也先执行唯一 Experience authority 与 anti-template 审计，再获取 Flutter SDK/依赖。Public Website 的实现和专用 Gate 属于 ROUND 08，当前不存在即不得视为已验证。Production/Live 环境套件不会因为被 clean CI 排除而自动视为 PASS。Runner 0-step、DNS、package registry 等执行层故障必须记为 `EXECUTION-LAYER UNVERIFIED`，不得冒充产品 PASS/FAIL。
 
 重要用户功能应证明：
 

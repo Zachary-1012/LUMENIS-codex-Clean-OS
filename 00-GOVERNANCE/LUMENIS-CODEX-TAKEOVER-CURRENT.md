@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**  
-> Updated: 2026-09-20
+> Updated: 2026-09-21
 > CI status: resolve from GitHub checks for the exact current origin/main; no historical SHA is a current acceptance result.
 > **Never treat this document's commit, any pasted SHA, or any historical handoff SHA as the current HEAD. Codex must fetch and resolve `origin/main` at session start.**
 
@@ -14,13 +14,14 @@ Root `AGENTS.md` is the first coding-agent instruction boundary. After reading i
 1. `AGENTS.md`
 2. this file: `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`
 3. `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`
-4. `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`
-5. `README.md`
-6. `00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md`
-7. `00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json`
-8. `00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md`
-9. `00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md`
-10. the exact current Source / Route / API / DB / Permission / Evidence / Runtime / Tests for the active slice
+4. `00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md`
+5. `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`
+6. `README.md`
+7. `00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md`
+8. `00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json`
+9. `00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md`
+10. `00-GOVERNANCE/LUMENIS-PRODUCTION-ACCEPTANCE-MASTER-CHECKLIST-V1.md`
+11. the exact current Source / Route / API / DB / Permission / Evidence / Runtime / Tests for the active slice
 
 When evidence conflicts:
 
@@ -49,9 +50,9 @@ If the active task touches any user-visible Experience/UI, read the sole design 
 
 Then inspect the current Source / ViewModel / State / Action / Permission / Evidence / Runtime owners for the active slice.
 
-The product owner approved the overall App architecture and Experience Constitution §§30–36 on 2026-09-20; source-backed App implementation is active under `app/`. Continue the five distinct Golden Page vertical slices and the nested CTH-02 selection-only directory without asking for overall-plan approval again. Before implementing another screen, complete and review its specification with current source/API, canonical owner, actor scope, Permission, Evidence lineage, purpose-built PC/mobile composition, states and executable acceptance. Overall-plan approval is not per-screen acceptance. `contracts/experience/lumenis_app_binding_registry.json` records data/actor/permission/Evidence bindings; it is not a UI template, and legacy `sectionTypes` do not determine layout.
+The product owner approved the Multi-Surface Decision and Jev candidate boundary on 2026-09-21. This approval authorizes the 15-round plan and architecture record; it does not prove implementation or waive per-round/per-screen entry gates. Source-backed Flutter work remains under `app/`; Public Website, Flutter Web Workspace and Jev implementation are absent until their scheduled rounds. Before implementing a screen, complete and review its specification with current source/API, canonical owner, actor scope, Permission, Evidence lineage, surface matrix, purpose-built composition, states and executable acceptance. `contracts/experience/lumenis_app_binding_registry.json` records data/actor/permission/Evidence bindings; it is not a UI template, and legacy `sectionTypes` do not determine layout.
 
-Historical browser presentation material was removed from `main`; retained App contracts are canonical under `contracts/experience/`.
+Historical browser presentation material was removed from `main`; it must not be restored. Retained operational-surface contracts are canonical under `contracts/experience/`.
 
 Required design gates:
 
@@ -166,9 +167,9 @@ Shared Capability Content & Creation / Evidence / Research / Evaluation / Learni
 SYSTEM            Collector / Runtime / Scheduler / AI Gateway / DB / Security / Permission / Settings / Recovery / Observability
 ```
 
-### App-only target
+### Approved multi-surface target
 
-The final LUMENIS Experience is a single Flutter application for Windows, macOS, Linux, Android and iOS. The legacy browser/Jinja/static presentation surface has been removed from `main`. No new public web product surface, parallel frontend or legacy visual reference path may be introduced. Retained contracts under `contracts/experience/` are binding inputs for Flutter surfaces.
+The final LUMENIS Experience has four approved surfaces over one Product Core: Public Website, Web Workspace, Desktop App and Mobile Companion. The approved hybrid route keeps Public Website presentation/acquisition separate from one Flutter codebase for Web/Desktop/Mobile. `00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md` records roles and capability boundaries without becoming a second architecture or design authority. Legacy browser/Jinja/static implementations remain retired and may not be restored. Retained contracts under `contracts/experience/` are binding inputs for approved operational surfaces.
 
 ## 5. Current source/runtime facts — source-audited, not live-certified by this handoff
 
@@ -204,6 +205,7 @@ Current source establishes these boundaries:
 
 - `.opencode/opencode.json` is a bounded **engineering** runtime configuration for development, audit, test and automation. OpenCode is not a Flutter feature, model provider, API owner or Production Truth owner.
 - `lumenis/system/ai_gateway/` is the canonical SYSTEM AI runtime owner. Ollama is a local provider behind that gateway; `local_ai_client.py` and `/api/local-ai/*` are current compatibility callers to reconcile, not a reason to create a second gateway. A configured provider is not `ACTIVE` until its daemon, model, real caller, fallback and Evidence pass runtime acceptance.
+- Jev is Product Owner approved only as a future typed decision/evaluation provider behind that same gateway. ROUND 02 records the boundary; ROUND 07 must prove contract, pinned version, secret handling, shadow evaluation, cost/legal/privacy, low-confidence behavior and trace before activation. Jev cannot own Permission, Evidence, Production Truth or effects.
 - `lumenis/system/collector/` and `lumenis/system/browser/runtime/` are the canonical collector/browser owners. `xhs_cookie_bridge.py` remains an active compatibility caller for the existing XHS/RedNote Cookie chain until migrated with behavior parity.
 - Product Core currently contains an App account gate. The approved delivery boundary defers the LUMENIS product account until after internal beta. Round 1 must remove that global pre-beta blocker while keeping server Permission/effect fences and platform Cookie/session safety intact.
 
@@ -268,17 +270,11 @@ preserve unknown/uncommitted/unpushed valid work
 
 Never reset/clean valid local work merely to match remote. Never treat local-only code as GitHub-complete.
 
-### Three-delivery red line
+### Fifteen-round closed-loop red line
 
-Execute and report product delivery in this order only:
+Execute and report the fixed 15-round dependency sequence in `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. The sequence starts with current truth, reconciles authority/Only-One and the approved multi-surface decision, then closes Database, Permission/Evidence, Runtime, Collector/Browser and AI/Agent/Shared owners before Cross-Surface foundations and workflow rounds. Closed-loop internal beta/release remains ROUND 15. Do not skip stages, run all rounds together or let a bounded Luna worker auto-continue into another batch.
 
-```text
-Round 1  App Experience: UI + layout + PC/mobile semantic recomposition + UX motion
-Round 2  Backend/recovery: existing capability + API/Permission/Evidence + Ollama/Cookie binding
-Round 3  Closed-loop internal beta: real workflow E2E + recovery + release evidence
-```
-
-Apple, ChatGPT and TRAE inform only restraint, content hierarchy, progressive complexity and visible task/execution/result feedback. They do not add or replace features. OpenCode/Codex stay in the engineering layer. Product functions and business semantics must survive all three rounds.
+Apple, ChatGPT and TRAE inform only restraint, content hierarchy, progressive complexity and visible task/execution/result feedback. They do not add or replace features. OpenCode/Codex stay in the engineering layer. Product functions and business semantics must survive all 15 rounds.
 
 ## 9. Non-regression boundaries
 
@@ -309,9 +305,9 @@ python scripts/audit_tools/verify_experience_authority_exclusive.py
 python scripts/audit_tools/verify_experience_anti_template.py
 ```
 
-The Experience checks are App-only. Historical browser implementation has been removed from `main`; retained contracts under `contracts/experience/` may inform Flutter binding but never act as a second Experience authority.
+The Experience checks enforce one multi-surface Experience authority and reject legacy/template revival. Historical browser implementation has been removed from `main`; the approved Public Website and Flutter Web Workspace must be implemented only in their scheduled rounds over the canonical Product Core. Retained contracts under `contracts/experience/` may inform surface binding but never act as a second Experience authority.
 
 The second check prevents regression of the CURRENT takeover path, v1.1 protocol identity, root agent routing and human/machine contract alignment. A runner-level 0-step failure means the check did not execute; it is not a passing or failing repository assertion.
 ## Historical remote cutover checkpoint
 
-Commit `3ba304f5d752dabcdc40531ce176f189527c29af` is the historical checkpoint at which the App-only surface cutover was recorded. It is not evidence of the current remote HEAD or branch inventory. Before any takeover, release or cleanup claim, fetch `origin` and verify local `main`, remote-tracking `origin/main`, and live `git ls-remote --heads origin`; only a live result containing `refs/heads/main` is current evidence. See the branch-cleanup gate in `AGENTS.md` §2 and `README.md` §7.
+Commit `3ba304f5d752dabcdc40531ce176f189527c29af` is the historical checkpoint at which the former App-only surface cutover was recorded. It remains provenance, not current architecture, implementation evidence, remote HEAD or branch inventory. Before any takeover, release or cleanup claim, fetch `origin` and verify local `main`, remote-tracking `origin/main`, and live `git ls-remote --heads origin`; only a live result containing `refs/heads/main` is current evidence. See the branch-cleanup gate in `AGENTS.md` §2 and `README.md` §7.

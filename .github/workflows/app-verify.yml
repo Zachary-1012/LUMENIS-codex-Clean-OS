@@ -7,6 +7,7 @@ on:
       - "app/**"
       - "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
       - "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
+      - "00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md"
       - ".github/workflows/app-verify.yml"
   workflow_dispatch:
 
@@ -22,7 +23,7 @@ jobs:
       - name: Checkout LUMENIS
         uses: actions/checkout@v5
 
-      - name: Validate App-only Experience authority (BLOCKING)
+      - name: Validate multi-surface Experience authority (BLOCKING)
         shell: bash
         run: |
           python3 scripts/audit_tools/verify_experience_authority_exclusive.py

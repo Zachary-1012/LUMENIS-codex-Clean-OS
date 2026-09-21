@@ -30,6 +30,7 @@ This root `AGENTS.md` is the first coding-agent instruction boundary. Before cha
 AGENTS.md
 → 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
 → 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md
+→ 00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md
 → 00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md
 → 00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md
 → README.md
@@ -121,17 +122,11 @@ Do not begin every task with a full-repository rediscovery. Load only the owners
 
 The fixed source classification and resume path is `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. Use its owner row for normal work. A full-repository re-audit is permitted only for the structural triggers listed there; a local gap, stale historical note or runner failure is not a trigger.
 
-### Three-delivery product red line
+### Fifteen-round closed-loop red line
 
-All current product execution follows exactly this order:
+All current product execution follows the approved 15-round dependency order in `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`: current truth; authority/Only-One; database; identity/Permission/Evidence; runtime; collector/browser; AI/Agent/Shared engines; cross-surface foundation; Golden Pages; CTH monitoring; CTH decision loop; BMP market loop; BMP content/campaign loop; remaining ACC/AI/Shared/SYSTEM Experience; then closed-loop internal beta/release. Do not skip a round, start all rounds together, or treat a later dependency as proof for the active round.
 
-```text
-1. App Experience — UI / layout / responsive PC-mobile composition / UX motion
-2. Backend and capability recovery — current owners / Ollama / media Cookie chain / workflow binding
-3. Closed-loop internal beta — real data / E2E / recovery / release evidence
-```
-
-Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE are Experience-principle references only and never authorize new product features. OpenCode/Codex are engineering runtimes; Ollama is a SYSTEM AI runtime provider. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. The LUMENIS account is deferred until after internal beta; pre-beta App access must not be blocked by an account wall, while server Permission and effect fences remain enforced.
+Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE are Experience-principle references only and never authorize new product features. OpenCode/Codex are engineering runtimes; Ollama and the approved Jev candidate are providers behind the one SYSTEM AI Gateway. Jev is limited to typed decision/evaluation tasks and cannot own Permission, Evidence, Production Truth or effects. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. The LUMENIS account is deferred until after internal beta; pre-beta product access must not be blocked by an account wall, while server Permission and effect fences remain enforced.
 
 Default loop:
 
@@ -197,11 +192,11 @@ Source
 → Learning Asset
 ```
 
-### App-only Experience direction
+### Multi-surface Experience direction
 
-The final user-facing LUMENIS product is one cross-platform Flutter application for Windows, macOS, Linux, Android and iOS.
+LUMENIS is one product with four approved surfaces: Public Website, Web Workspace, Desktop App and Mobile Companion. `00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md` records their approved roles and delivery route; it is subordinate to the sole Product Architecture and Experience Constitution.
 
-The Flutter application under `app/` is the sole user-facing LUMENIS Experience. Flask routes serve Product Core/API/ViewModel contracts and must not become a parallel web frontend. Before removing any remaining user-visible capability, trace its business purpose, ViewModel, permission, state, Evidence and acceptance evidence into the canonical App/API path.
+The Flutter application under `app/` is the shared implementation for Web Workspace, Windows/macOS/Linux Desktop and Android/iOS Mobile. A future `website/` may implement the Public Website only. Flask routes remain the one Product Core/API/ViewModel boundary; neither surface may create parallel business logic, data, Permission, Evidence or runtime truth. Historical `templates/`, `static/` and `experience_v2/` must not be restored. Before removing any remaining user-visible capability, trace its business purpose, ViewModel, permission, state, Evidence and acceptance evidence into the canonical Product Core and approved surfaces.
 
 All UI/UX/visual/presentation decisions remain subordinate to the sole authority:
 
@@ -642,8 +637,8 @@ Stop for user input only when required by a real blocker such as:
 
 Large code volume, many files, long tests or context size are not themselves blockers.
 
-## 23. Current App-only product surface
+## 23. Current multi-surface product state
 
-The canonical user-facing application is `app/` (Flutter); binding experience contracts live under `contracts/experience/`. `experience_runtime.py` provides the API/ViewModel boundary and `lumenis_app_api.py` provides JSON APIs.
+The approved experience surfaces are Public Website, Web Workspace, Desktop App and Mobile Companion. Current source contains only the partial Flutter implementation under `app/`; Public Website, Flutter Web Workspace and multi-surface deployment are `ABSENT` until implemented and accepted in their scheduled rounds. Binding contracts live under `contracts/experience/`; `experience_runtime.py` provides the API/ViewModel boundary and `lumenis_app_api.py` provides JSON APIs.
 
-A launch shell, route, or contract does not establish that an end-to-end product workflow is complete. App screens must bind real Product Core/API, Canonical Data, Evidence, Permission, and Evaluation behavior before they can be described as complete.
+A launch shell, route, contract, generated Web target or provider registration does not establish an end-to-end product workflow. Operational surfaces must bind real Product Core/API, Canonical Data, Evidence, Permission and Evaluation behavior before they can be described as complete.

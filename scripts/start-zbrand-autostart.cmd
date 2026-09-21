@@ -1,4 +1,7 @@
 @echo off
-rem Z-Brand Core auto-start at Windows logon (no admin required). Launches idempotent production starter.
+setlocal
+rem LEGACY compatibility wrapper. Keep this path for external Task Scheduler and shortcut callers.
 chcp 65001 >nul
-powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "D:\Taikoo-monitor-new\scripts\start_production.ps1"
+call "%~dp0start-lumenis-autostart.cmd"
+set "exitCode=%ERRORLEVEL%"
+endlocal & exit /b %exitCode%

@@ -1,8 +1,8 @@
 # LUMENIS Experience Constitution — CURRENT
 
 > Status: **CANONICAL / SOLE EXPERIENCE DESIGN AUTHORITY**  
-> Internal version: **3.0**  
-> Effective: 2026-09-18  
+> Internal version: **3.1**
+> Effective: 2026-09-21
 > Stable path: `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md`
 
 This file is the **only human-authored UI / UX / visual / interaction / motion / responsive / presentation design authority in the repository**.
@@ -25,14 +25,14 @@ This Constitution governs every current and future user-visible or user-operable
 - internal browser and evidence-acquisition surfaces;
 - reports, exports, notifications, calendars and task surfaces;
 - data visualization, tables, forms, editors, logs, status, empty/error/offline/blocked/loading states;
-- desktop, tablet and mobile;
+- Public Website, Web Workspace, Desktop App, tablet and Mobile Companion;
 - Chinese / English / Korean presentation;
 - brand identity in product UI, logo usage and launch/re-entry motion;
 - any future surface added to this product.
 
 Feature contracts may define **objects, fields, states, permissions, workflows and truth semantics**. They may not define a separate visual language or page-composition authority.
 
-Historical browser presentation material was removed from `main`. Retained contracts under `contracts/experience/` do not grant a second Experience design authority.
+Historical browser presentation material was removed from `main`. Its templates/static implementations remain forbidden. The approved Public Website and Flutter Web Workspace are new surfaces under this same Constitution; retained contracts under `contracts/experience/` do not grant a second Experience design authority.
 
 Historical design material is recoverable from Git history. It does not belong in the current main tree.
 
@@ -512,12 +512,12 @@ IMPLEMENTATION MIGRATION REQUIRED
 
 Current production CSS/JS/assets may temporarily contain legacy implementation structure until migrated. They are implementation, not design precedent.
 
-## 30. Canonical App architecture and feature ownership
+## 30. Canonical multi-surface architecture and feature ownership
 
-The product is delivered through one Flutter application. Platform targets share business semantics and contracts while adapting layout and input to Windows, macOS, Linux, Android and iOS.
+The product is delivered through an SEO-capable Public Website plus one Flutter implementation for Web Workspace, Desktop App and Mobile Companion. All surfaces share business semantics and contracts while adapting composition and input to browser, Windows, macOS, Linux, Android and iOS. The approved roles and capability boundary are recorded in `LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md`; this Constitution remains the sole design authority.
 
 ```text
-app composition root
+Flutter composition root
 ├─ core        transport, typed contract decoding, auth/session, errors, cancellation
 ├─ account     post-beta product identity/sign-in/recovery; absent as a pre-beta global gate
 ├─ cth         SubjectContext, commercial operations, events, cases, decisions/actions
@@ -527,7 +527,7 @@ app composition root
 └─ navigation  routes, deep links, restored work context
 ```
 
-The folder map is an implementation boundary, not a second truth owner. App state may hold presentation state and a restorable navigation context; it must not become Canonical Data, Evidence, Metric, Permission, Runtime or business-state truth. Agent Groups remain the cross-product execution/collaboration layer and are not a product domain.
+The folder map is an implementation boundary, not a second truth owner. Surface state may hold presentation state and a restorable navigation context; it must not become Canonical Data, Evidence, Metric, Permission, Runtime or business-state truth. The Public Website may own public content presentation and acquisition forms only. Agent Groups remain the cross-product execution/collaboration layer and are not a product domain.
 
 Before implementing each screen or action, complete this binding:
 
@@ -549,17 +549,19 @@ Use `contracts/experience/` as a binding contract, never as proof that an endpoi
 - **CTH** starts from an authorized Subject. Selecting or changing a Subject changes working context and filters only; it never rewrites Evidence, Canonical Data, original ownership or confirmed outcomes.
 - **BMP** starts from a Brand/Market focus. The selected brand is the primary focus while competitors, creators, content, consumers and market movement remain visible relationships. BMP is not a CTH subject page with different labels.
 - **Shared Capability** preserves `originDomain`, source object and lineage when a capability is opened from CTH or BMP; it does not take over their business ownership.
-- **SYSTEM** actions are effect- and permission-gated by the Core. Hiding or disabling a control in Flutter is not authorization.
+- **SYSTEM** actions are effect- and permission-gated by the Core. Hiding or disabling a control on any surface is not authorization.
 
-## 31. PC and mobile composition
+## 31. Cross-surface composition
 
-Responsive acceptance uses the widths in §20 and verifies a semantic recomposition, not a scaled desktop screenshot.
+Responsive acceptance uses the widths in §20 and verifies a semantic recomposition, not a scaled desktop screenshot. Public Website and Web Workspace are distinct products surfaces: the former explains/acquires, while the latter operates real workflows.
 
 | Form factor | Composition contract |
 | --- | --- |
+| Public Website | SEO-readable product narrative, capability proof, truthful demo/case material, trial/contact/help and a clear login/workspace entry. It cannot resemble or execute the operational workspace. |
+| Web Workspace | Browser-first primary operating surface with URL/deep-link semantics, keyboard/pointer access and responsive evidence/workflow composition. Desktop-only capability exposes a truthful handoff/state, never simulated success. |
 | Wide desktop (≥1280 logical px) | Persistent product/domain navigation, a compact active-context bar, workflow-specific work surface, and an optional Evidence/inspector region. The inspector may resize but cannot obscure the primary task. |
 | Compact desktop/tablet (768–1279 px) | Collapsible navigation rail, one primary work surface, and Evidence/inspector as a reversible panel. Keep keyboard navigation and selected context visible. |
-| Phone (≤767 px) | Top-level authorized Subject or Brand focus, one task surface at a time, a small set of primary destinations, and Evidence/Case detail as a returnable full-screen or bottom-sheet surface. Preserve source context on return. |
+| Mobile Companion / phone (≤767 px) | Notifications, events, AI results, approvals, task state, report reading and bounded quick action. Keep the authorized Subject or Brand focus visible and preserve source context on return. |
 
 The breakpoints guide composition; measured content and platform window size determine the final layout. Desktop favors parallel comparison and precise pointer/keyboard work. Mobile favors a single active task, touch-sized actions and context that remains visible without consuming the work area. Platform-specific navigation must not create different business meaning.
 
@@ -588,9 +590,9 @@ For Korean product-app craft, study public product-engineering documentation suc
 
 Do not copy another product's assets, source code, signature layout, visual identity, interaction sequence or implementation recipe. The supplied [motion-web repository](https://github.com/Zachary-1012/motion-web) is a fork of `feitangyuan/motion-web`; its [LICENSE](https://github.com/Zachary-1012/motion-web/blob/main/LICENSE) identifies CC BY-NC 4.0 and expressly restricts commercial integration of its Skill, prompts, cases and derived workflows. No code, case, asset, parameter set or derivative workflow from it is admitted into this commercial product. Inspiration is not a runtime dependency or a competing design authority.
 
-## 34. Ordered App delivery and acceptance
+## 34. Ordered cross-surface delivery and acceptance
 
-This section is the internal execution order for Round 1 of the three-delivery red line in `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. Round 2 recovers/binds backend capability; Round 3 proves the closed-loop internal beta. Do not mix a new product feature or global backend rewrite into Round 1.
+This section supports the approved 15-round dependency program in `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. Cross-surface foundations belong to ROUND 08; workflow surfaces are accepted in ROUND 09–14; complete cross-surface internal-beta evidence belongs to ROUND 15. Do not implement a future surface or provider before its owner, contract and entry gate are approved.
 
 Do not build all screens from a generic template. Work in this order, with a capability-parity gate between phases:
 
@@ -598,7 +600,7 @@ Do not build all screens from a generic template. Work in this order, with a cap
 2. **Make the shell real:** implement Product Core connectivity, current context, routing, error/offline/retry states, keyboard/focus behavior and restorable navigation. The LUMENIS product account is deferred until after internal beta and must not block pre-beta browsing or existing product use. Keep server Permission/effect fences intact, and keep media Cookie/session authorization entirely inside the SYSTEM collector/browser chain. Keep CTH SubjectContext separate from BMP BrandFocus.
 3. **Prove the five Golden Pages:** AI-01, CTH-01, BMP-01, SH-01 and SYS-01 each use their semantic signature in §25 and bind to live owners. Do not mark a fixture-backed page complete.
 4. **Migrate by workflow family:** bind remaining contract screens only after their source/API/Permission/Evidence owner is verified. Preserve established behavior before removing any migrated surface.
-5. **Reach platform parity:** run PC and mobile interaction, accessibility, responsive, error/recovery and screenshot checks at §20 widths on representative target platforms.
+5. **Reach surface parity:** run applicable Web Workspace, Desktop and Mobile interaction, accessibility, responsive, error/recovery and screenshot checks at §20 widths. Verify Public Website acquisition/workspace-entry separately; do not require identical layouts.
 6. **Release evidence:** require widget and repository tests, affected Python/API integration tests, critical runtime/E2E, clean-clone acceptance and current-main CI evidence. Record unavailable infrastructure as `UNVERIFIED`, never as PASS.
 
 For each domain, acceptance must include its invariant in §30, real ViewModel truth, permission response, Evidence trace and return, honest missing/error states, keyboard/touch operation, reduced motion, persistence or explicit non-persistence, and the result after a real action. A screen is complete only when its user task completes end to end.
@@ -625,8 +627,10 @@ The 44 screen IDs and 54 binding records (`BACKEND-GAP-001..054`) define the sco
 
 ### Required interaction patterns by form factor
 
-- **PC:** optimize for dense, multi-source decisions: context remains pinned; comparisons can be viewed side by side; timelines, tables and graph relationships support keyboard sorting/filtering; an inspector exposes lineage without obscuring the task; bulk actions preview impact and require the owning product's authorization.
-- **Mobile:** optimize for timely review and a single owned action: keep Subject or Brand focus visible; provide a compact signal feed, prioritized alerts and a one-task action sheet; allow capture/review/approval and source trace; restore the exact originating campaign, case, filters and scroll position on Return. Dense analysis can be summarized, but its definition, uncertainty and source remain inspectable.
+- **Web Workspace:** primary browser entry for real workflows; optimize for URL/deep-link restoration, keyboard/pointer work and responsive evidence inspection over the same canonical contracts.
+- **Desktop:** optimize for dense, multi-source decisions and approved local capability: context remains pinned; comparisons can be viewed side by side; timelines, tables and graph relationships support keyboard sorting/filtering; an inspector exposes lineage without obscuring the task; bulk actions preview impact and require the owning product's authorization.
+- **Mobile Companion:** optimize for timely review and a single owned action: keep Subject or Brand focus visible; provide a compact signal feed, prioritized alerts and a one-task action sheet; allow capture/review/approval and source trace; restore the exact originating campaign, case, filters and scroll position on Return. Dense analysis can be summarized, but its definition, uncertainty and source remain inspectable.
+- **Public Website:** optimize product comprehension, credible capability demonstration and low-friction trial/contact/workspace entry. It never presents marketing fixtures as live production results.
 - **Shared UI:** loading, no data, not collected, stale, blocked, permission denied, offline, partial result and failure have distinct copy and recovery actions. Charts, AI summaries and status badges always disclose the selected scope and time window.
 - **Signature behavior:** Trace / Return follows a signal or creative through source → interpretation → decision → authorized action → observed result, then returns to the same working context. This causal continuity, coupled with the Point → Axis → Trace → Field → Strata → Boundary spatial grammar, is the LUMENIS-owned interaction signature. Visual novelty must follow this workflow and must never disguise missing data or authorization.
 
@@ -671,10 +675,10 @@ The supplied [`motion-web` repository](https://github.com/Zachary-1012/motion-we
 
 1. **Freeze product semantics:** validate CTH Subject-first, BMP Brand/Market-first, Shared lineage and SYSTEM infrastructure boundaries against the current owner map. Reject a screen proposal that merges or changes these starts.
 2. **Resolve all 54 bindings:** one registry row per `BACKEND-GAP-001..054`; inspect code and live contracts, assign the canonical owner, record exact callable/route and typed fields, actor/scope, permission operation, evidence fields, side effects, truth status and test. Unknown remains blocked with an explicit next action.
-3. **Implement foundations:** typed API clients, session and context boundaries, deep links, cancellation/retry, offline/error handling, accessibility, event logging without sensitive content, and state restoration. Establish desktop keyboard and mobile touch baselines before screens.
+3. **Implement foundations:** typed API clients, session and context boundaries, deep links, cancellation/retry, offline/error handling, accessibility, event logging without sensitive content, state restoration and explicit surface capability state. Establish browser/desktop keyboard and mobile touch baselines before screens.
 4. **Deliver workflow slices:** for each capability, finish read → explain → decide → authorize → act → observe → Trace/Return before moving on. Prioritize AI-01, CTH-01, BMP-01, SH-01 and SYS-01 as distinct Golden Pages, then migrate by shared interaction/workflow family while preserving parity.
 5. **Optimize analytical and operational modules:** measure decision completion time, signal-to-action time, evidence coverage, freshness, false-positive rate, campaign delivery/impact attribution quality, workflow SLA and recovery success. Each metric has a canonical definition, owner, denominator and freshness; do not optimize engagement at the cost of trust or business outcomes.
-6. **Prove PC and mobile parity:** exercise supported desktop widths, tablet and phone with real endpoints; test pointer, keyboard, touch, screen reader, reduced motion, localization, slow/offline connection, empty/stale/partial/error states, permission denial, persistence and return. Compare screenshots only after semantic and functional checks pass.
+6. **Prove cross-surface parity:** exercise applicable Web Workspace, Desktop, tablet and Mobile Companion paths with real endpoints; test pointer, keyboard, touch, screen reader, reduced motion, localization, slow/offline connection, empty/stale/partial/error states, permission denial, persistence and return. Verify Public Website entry/demo truth separately. Compare screenshots only after semantic and functional checks pass.
 7. **Release by evidence:** attach the binding ID and test/runtime evidence to every completed capability. A package import, generic renderer, fixture, screenshot or CI pass alone does not make a user workflow complete. Mark unavailable platform accounts, device coverage or production data as `UNVERIFIED` with an owner and follow-up.
 
 ### Definition of done per capability
@@ -685,7 +689,7 @@ AND canonical definition/source and version are traceable
 AND actor, scope, permission and effect are verified server-side
 AND read/write path preserves domain ownership and Evidence lineage
 AND success, partial, empty, stale, blocked, offline and error states are truthful
-AND desktop and mobile complete the same business task with suitable composition
+AND each approved operational surface completes its assigned part of the business task with suitable composition
 AND keyboard, touch, screen reader and reduced motion have equivalent paths
 AND a real action result can be inspected and returned to its origin
 AND focused tests plus affected integration/runtime regressions pass
@@ -704,7 +708,7 @@ Do not begin feature implementation for any screen until its screen-specific spe
 1. Intended role, user task, entry route/context, exit paths and Trace/Return restoration behavior.
 2. Key fields and their visual priority, with each field tied to its verified source/ViewModel contract; unresolved fields remain `UNKNOWN` and block implementation of dependent behavior.
 3. A state matrix for loading, empty, not collected, stale, partial, offline, blocked, permission denied, error and success, with truthful copy and recovery action for each applicable state.
-4. Separate PC and mobile layout anatomy, navigation, responsive transition, primary/secondary interactions, keyboard/touch behavior and screen-reader order.
+4. A surface matrix covering Public Website (explanation/demo only), Web Workspace (primary/available), Desktop (enhanced/exclusive) and Mobile Companion (view/notify/approve/light action), plus separate applicable layout anatomy, navigation, responsive transition, interactions, keyboard/touch behavior and screen-reader order.
 5. Every read/write action's owner, actor/scope, permission decision, side effect, idempotency/reversal behavior and Evidence lineage; UI affordances are never authorization.
 6. Stable test IDs and executable acceptance cases covering the real task, state/error paths, responsive behavior and Trace/Return; include widget, API/integration and runtime/E2E cases as applicable.
 
@@ -760,7 +764,7 @@ The design review records pass/fail per screen in `contracts/experience/screen-s
 ### Blueprint implementation rules
 
 1. Validate each row's user problem with its intended role; amend composition where a real workflow contradicts the proposal without changing owner semantics.
-2. Build each row's PC and mobile composition as separate layout decisions over the same typed owner contract. Do not equate responsive resizing with mobile UX.
+2. Build each row's applicable Web Workspace, Desktop and Mobile Companion composition as separate layout decisions over the same typed owner contract. Public Website may explain or demo the capability only. Do not equate responsive resizing with mobile UX or browser availability with local capability.
 3. Derive screen-specific typography, data density and visualization from its task. Reuse semantic tokens and accessibility behavior, never a universal card grid, generic dashboard or template-based page builder.
 4. Keep the design blueprint, binding registry and implementation state separate: the blueprint says how a verified task should work; the binding registry says where truth and authorization come from; tests/runtime evidence say whether implementation works.
-5. Complete visual regression only after live binding and action behavior pass. Review each screen at desktop, tablet and phone sizes with realistic long text, missing data and permission denial.
+5. Complete visual regression only after live binding and action behavior pass. Review each applicable screen in Web Workspace, Desktop, tablet and Mobile Companion contexts with realistic long text, missing data and permission denial; review Public Website pages against their separate commercial-entry contract.

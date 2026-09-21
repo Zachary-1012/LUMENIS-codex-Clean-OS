@@ -1,4 +1,4 @@
-"""Blocking guard for LUMENIS Only-One / App-first convergence."""
+"""Blocking guard for LUMENIS Only-One / multi-surface convergence."""
 from __future__ import annotations
 
 import ast
@@ -13,6 +13,7 @@ if hasattr(sys.stdout, "reconfigure"):
 ROOT = Path(__file__).resolve().parents[2]
 ARCH = ROOT / "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
 EXPERIENCE = ROOT / "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
+SURFACE_DECISION = ROOT / "00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md"
 SECURITY_BOUNDARY = ROOT / "00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md"
 PRODUCT_POSITIONING = ROOT / "00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md"
 README = ROOT / "README.md"
@@ -117,7 +118,12 @@ REQUIRED_ARCH_MARKERS = (
     "Shared Capability Layer",
     "Agent Groups",
     "SYSTEM",
-    "App-only product direction",
+    "Multi-surface product direction",
+    "Public Website",
+    "Web Workspace",
+    "Desktop App",
+    "Mobile Companion",
+    "Jev typed decision provider candidate",
     "Flutter",
     "Windows",
     "macOS",
@@ -148,6 +154,22 @@ def main() -> int:
                 errors.append(f"architecture marker missing: {marker}")
     if not EXPERIENCE.is_file():
         errors.append("missing sole Experience authority")
+    if not SURFACE_DECISION.is_file():
+        errors.append("missing approved multi-surface decision")
+    else:
+        decision_text = SURFACE_DECISION.read_text(encoding="utf-8")
+        for marker in (
+            "PRODUCT OWNER APPROVED / ARCHITECTURE DECISION",
+            "ONE Product Core",
+            "Public Website",
+            "Web Workspace",
+            "Desktop App",
+            "Mobile Companion",
+            "Jev product decision",
+            "ROUND 07",
+        ):
+            if marker not in decision_text:
+                errors.append(f"multi-surface decision marker missing: {marker}")
     if not SECURITY_BOUNDARY.is_file():
         errors.append("missing current layered security boundary")
     if not PRODUCT_POSITIONING.is_file():
@@ -369,14 +391,15 @@ def main() -> int:
         errors.append("retired owner imports in production source:\n" + "\n".join(sorted(retired_imports)))
 
     if errors:
-        print("LUMENIS Only-One/App-first architecture guard: FAIL")
+        print("LUMENIS Only-One/multi-surface architecture guard: FAIL")
         for error in errors:
             print(f"- {error}")
         return 1
 
-    print("LUMENIS Only-One/App-first architecture guard: PASS")
+    print("LUMENIS Only-One/multi-surface architecture guard: PASS")
     print("product_architecture=00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md")
     print("experience_authority=00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md")
+    print("surface_decision=00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md")
     print("legacy_ui_reference_paths=0")
     return 0
 

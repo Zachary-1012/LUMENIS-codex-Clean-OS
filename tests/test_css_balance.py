@@ -1,4 +1,4 @@
-"""App-only surface guard: legacy browser asset roots must stay absent."""
+"""Multi-surface guard: retired browser asset roots must stay absent."""
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 

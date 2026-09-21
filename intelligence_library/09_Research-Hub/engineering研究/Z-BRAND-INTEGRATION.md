@@ -1,5 +1,8 @@
 # Z-Brand 集成与研发优先级基线
 
+> **HISTORICAL / PROVENANCE ONLY / NOT CURRENT AUTHORITY**
+> This file preserves historical engineering provenance; it does not define current product architecture, source ownership, implementation, runtime or release state. Use the current [`LUMENIS Product Architecture`](../../../00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md) and [`LUMENIS Source Owner Index`](../../../00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md).
+
 > 生效日期：2026-08-30
 > 适用：Development-Command-Console（内部 AI 研发中枢）
 > 对应业务仓库：Zachary-1012/Z-Brand-Core

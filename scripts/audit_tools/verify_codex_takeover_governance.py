@@ -15,6 +15,7 @@ PATHS = {
     "agents": ROOT / "AGENTS.md",
     "readme": ROOT / "README.md",
     "takeover": ROOT / "00-GOVERNANCE" / "LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+    "surface_decision": ROOT / "00-GOVERNANCE" / "LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
     "source_index": ROOT / "00-GOVERNANCE" / "LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
     "registry": ROOT / "00-GOVERNANCE" / "CROSS-REPO-CANONICAL-REGISTRY-V1.md",
     "contract": ROOT / "00-GOVERNANCE" / CONTRACT_BASENAME,
@@ -54,6 +55,7 @@ def validate() -> None:
     agents = _read("agents")
     readme = _read("readme")
     takeover = _read("takeover")
+    surface_decision = _read("surface_decision")
     source_index = _read("source_index")
     registry = _read("registry")
     platform_workflow = _read("platform_workflow")
@@ -97,15 +99,28 @@ def validate() -> None:
     )
 
     _require(
+        surface_decision,
+        "PRODUCT OWNER APPROVED / ARCHITECTURE DECISION",
+        "Public Website",
+        "Web Workspace",
+        "Desktop App",
+        "Mobile Companion",
+        "Jev product decision",
+        "ROUND 07",
+        label="CURRENT multi-surface decision",
+    )
+
+    _require(
         source_index,
-        "CURRENT EXECUTION INDEX / THREE-DELIVERY RED LINE",
-        "App Experience",
-        "Backend and capability recovery",
+        "CURRENT EXECUTION INDEX / FIFTEEN-ROUND CLOSED LOOP",
+        "Authority, Only-One and multi-surface decision",
+        "Cross-Surface Experience Foundation",
         "Closed-loop internal beta",
+        "Jev",
         ".opencode/opencode.json",
         "lumenis/system/ai_gateway/",
         "lumenis/system/collector/",
-        "LUMENIS product account is deferred until after internal beta",
+        "LUMENIS product account remains deferred until its approved identity/tenant gate after internal beta",
         "Do not repeat a full-repository audit for normal work",
         label="CURRENT source owner index",
     )
@@ -133,7 +148,8 @@ def validate() -> None:
         "00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md",
         "00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json",
         "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
-        "### Three-delivery product red line",
+        "00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
+        "### Fifteen-round closed-loop red line",
         "git rev-parse origin/main",
         "v1.1.0",
         EXPECTED_FINGERPRINT,

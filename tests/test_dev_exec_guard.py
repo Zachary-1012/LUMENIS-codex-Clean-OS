@@ -1,4 +1,4 @@
-"""App-only boundary: legacy arbitrary code execution endpoints are retired."""
+"""Multi-surface boundary: legacy arbitrary code execution endpoints are retired."""
 import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

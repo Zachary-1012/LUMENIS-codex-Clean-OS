@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""LUMENIS App-only Experience anti-template gate.
+"""LUMENIS multi-surface Experience anti-template gate.
 
-The canonical user Experience is app/. Historical browser/Jinja/static surfaces
-are migration sources only and must never become a second presentation truth.
+The sole Experience authority governs Public Website and the Flutter Web,
+Desktop and Mobile surfaces. Historical browser/Jinja/static implementations
+must never return as a second presentation truth.
 
 This gate is intentionally network-independent. Flutter analyze/test remains in
 the App Gate when the GitHub execution layer can reach Flutter/pub infrastructure.
@@ -19,6 +20,7 @@ APP = ROOT / "app"
 LIB = APP / "lib"
 CONSTITUTION = ROOT / "00-GOVERNANCE" / "LUMENIS-EXPERIENCE-CONSTITUTION.md"
 ARCHITECTURE = ROOT / "00-GOVERNANCE" / "LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
+SURFACE_DECISION = ROOT / "00-GOVERNANCE" / "LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md"
 
 REQUIRED = (
     APP / "pubspec.yaml",
@@ -27,8 +29,10 @@ REQUIRED = (
     LIB / "product" / "product_domain.dart",
     LIB / "product" / "lumenis_app.dart",
     LIB / "features" / "launch" / "launch_surface.dart",
+    LIB / "features" / "cth" / "cth02" / "cth02_repository.dart",
     CONSTITUTION,
     ARCHITECTURE,
+    SURFACE_DECISION,
 )
 
 FORBIDDEN_APP_REFERENCES = (
@@ -45,11 +49,6 @@ FORBIDDEN_APP_REFERENCES = (
     "Admin template",
     "glassmorphism",
     "dart:html",
-    "package:flutter_web_plugins",
-)
-
-FORBIDDEN_CANONICAL_TARGETS = (
-    APP / "web",
 )
 
 
@@ -63,11 +62,7 @@ def main() -> int:
     errors: list[str] = []
     for path in REQUIRED:
         if not path.is_file():
-            errors.append(f"required App-only authority file missing: {path.relative_to(ROOT)}")
-
-    for path in FORBIDDEN_CANONICAL_TARGETS:
-        if path.exists():
-            errors.append(f"web target must not become canonical Experience: {path.relative_to(ROOT)}")
+            errors.append(f"required multi-surface authority file missing: {path.relative_to(ROOT)}")
 
     dart_files = sorted(LIB.rglob("*.dart")) if LIB.is_dir() else []
     if not dart_files:
@@ -78,7 +73,7 @@ def main() -> int:
         for marker in FORBIDDEN_APP_REFERENCES:
             if marker.lower() in text.lower():
                 errors.append(
-                    f"canonical App references legacy/web presentation authority: "
+                    f"canonical Flutter Experience references legacy presentation authority: "
                     f"{path.relative_to(ROOT)} -> {marker}"
                 )
 
@@ -97,14 +92,28 @@ def main() -> int:
     launch = LIB / "features" / "launch" / "launch_surface.dart"
     if launch.is_file():
         text = launch.read_text(encoding="utf-8", errors="replace")
-        for contract in ("runtimeIdentity()", "subjects()", "ProductDomain.values"):
+        for contract in ("runtimeIdentity()", "LumenisWorkspaceShell("):
             if contract not in text:
                 errors.append(f"LaunchSurface lost canonical Core/Product binding: {contract}")
+
+    product_domain = LIB / "product" / "product_domain.dart"
+    if product_domain.is_file():
+        text = product_domain.read_text(encoding="utf-8", errors="replace")
+        for contract in ("enum ProductDomain", "cth", "bmp", "shared", "system"):
+            if contract not in text:
+                errors.append(f"canonical ProductDomain contract missing: {contract}")
+
+    cth02_repository = LIB / "features" / "cth" / "cth02" / "cth02_repository.dart"
+    if cth02_repository.is_file():
+        text = cth02_repository.read_text(encoding="utf-8", errors="replace")
+        if "settingsSubjects()" not in text:
+            errors.append("CTH-02 lost its protected Subject-directory Core binding")
 
     summary = {
         "ok": not errors,
         "mode": "strict" if args.strict else "baseline",
-        "canonical_experience": "app/",
+        "canonical_experience": "public-website + app/web-desktop-mobile",
+        "experience_authority": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
         "dart_file_count": len(dart_files),
         "legacy_web_authority": False,
     }

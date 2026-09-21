@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Enforce one App-only LUMENIS Experience design authority in current main."""
+"""Enforce one multi-surface LUMENIS Experience design authority in current main."""
 from __future__ import annotations
 
 import re
@@ -242,7 +242,7 @@ def main() -> int:
 
     print("LUMENIS Experience authority exclusivity: PASS")
     print(f"sole_authority={CANONICAL}")
-    print("canonical_experience_surface=app/")
+    print("approved_experience_surfaces=public-website,web-workspace,desktop-app,mobile-companion")
     print("legacy_design_authorities=0")
     return 0
 

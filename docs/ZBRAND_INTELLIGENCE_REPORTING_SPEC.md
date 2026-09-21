@@ -1,5 +1,8 @@
 # Z-Brand Intelligence Reporting Specification
 
+> **HISTORICAL / PROVENANCE ONLY / NOT CURRENT AUTHORITY**
+> This file preserves historical reporting intent; it does not define current product architecture, source ownership, implementation, runtime or release state. Use the current [`LUMENIS Product Architecture`](../00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md) and [`LUMENIS Source Owner Index`](../00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md).
+
 > 生效：2026-09-01
 > 性质：增量报告规范；不改变 CTH-POMS 现有业务逻辑，不替换现有报告实现。
 > 目标：为 CTH-POMS、ZBMP 及后续研究输出建立统一、可复用、可审计的 Intelligence 报告内容模型。
