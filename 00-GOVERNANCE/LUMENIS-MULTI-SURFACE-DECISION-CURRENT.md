@@ -83,11 +83,11 @@ Surface capability must be explicit: `AVAILABLE`, `DEGRADED`, `DESKTOP_REQUIRED`
 
 The pre-beta product-account decision remains in force until the identity/tenant architecture is approved in its scheduled round. Multi-surface approval does not authorize a new login database, browser-side credential store or bypass of protected server routes.
 
-## 5. Jev product decision
+## 5. Jev product decision — superseded by open-source-only model requirement
 
-Jev is approved as a candidate **typed decision and evaluation provider** behind the one canonical `lumenis/system/ai_gateway/`. Jev is not a replacement for a generative language provider and is not an independent AI gateway.
+The Product Owner's newer open-source-only requirement supersedes the former Jev candidate decision. Jev requires a hosted API key and is `OFF / EXCLUDED` from product activation. Its protected local code is retained for audit/disposition only. The one canonical `lumenis/system/ai_gateway/` may use a locally hosted, appropriately licensed open-weight model for bounded typed decisions and a LUMENIS-specific adaptation of that base. Neither creates an independent gateway.
 
-Approved candidate uses:
+The approved open-source route may support:
 
 - routing and classification over source-backed state;
 - Evidence relevance/quality scoring and uncertainty disclosure;
@@ -102,19 +102,19 @@ Forbidden ownership:
 - no promotion of probabilities, confidence or model output to Production Truth;
 - no silent fallback that changes a typed decision into unrelated free-text generation.
 
-Required provider lifecycle:
+Required open-source model lifecycle:
 
 ```text
 OFF
-→ ROUND 07 adapter/contract implementation
-→ SHADOW evaluation against named datasets and human decisions
-→ legal/security/privacy/cost/runtime review
+→ ROUND 07 local adapter/contract and license verification
+→ SHADOW evaluation against authorized real jobs and human decisions
+→ Permission/Evidence, security/privacy/runtime and rollback review
 → ACTIVE only for explicitly approved typed tasks
 ```
 
-Production configuration must pin an accepted model version; a moving alias is limited to development/probing. Every persisted decision record must identify provider, model/version, input/output schema, probabilities, confidence, request ID, latency, token/cost data when supplied, input/output hashes, actor/domain/object scope and Evidence references. Low confidence or schema failure remains `UNKNOWN` or requires human review.
+Production configuration must pin an accepted model revision; a moving alias is limited to development/probing. Every persisted decision record must identify provider, model/version, input/output schema, uncertainty/calibration when valid, request ID, latency, input/output hashes, actor/domain/object scope and Evidence references. Low confidence or schema failure remains `UNKNOWN` or requires human review. A local model's self-reported score is not a calibrated probability without measured calibration.
 
-Vendor references used for this decision: [System One / Jev launch](https://typesafe.ai/blog/introducing-system-one-models-and-jev), [API](https://docs.typesafe.ai/api), [models](https://docs.typesafe.ai/models), [primitives](https://docs.typesafe.ai/primitives), [confidence](https://docs.typesafe.ai/confidence), and [Master Customer Agreement](https://typesafe.ai/legal/mca). These references describe a candidate external provider; current source/runtime must independently verify every production claim.
+Historical Jev references remain in the [superseded candidate audit](evidence/round-07/ROUND-07-JEV-CANDIDATE-AUDIT-2026-09-23.md). The current open-weight candidate's license and runtime must be verified from its exact model revision; the separate ROUND 07 decision record owns that evidence.
 
 ## 6. Current implementation truth
 
@@ -130,12 +130,12 @@ Historical approval-time baseline (not a live status table):
 | Jev adapter/provider configuration | `ABSENT` |
 | Jev runtime/evaluation evidence | `LIVE_UNVERIFIED` |
 
-Approval is not implementation evidence. Since this baseline, `website/` has a committed trilingual foundation; Flutter Web Workspace source, build and same-origin host have local verification, but protected CTH/BMP browser access and commercial entry are not accepted. Jev source remains local-only pending its provider gate. None may be reported as released or operating from this table.
+Approval is not implementation evidence. Since this historical baseline, `website/` has a committed trilingual foundation; Flutter Web Workspace source, build and same-origin host have local verification, but protected CTH/BMP browser access and commercial entry are not accepted. Jev source remains protected local-only and excluded; the open-source product model has not passed its provider gate. None may be reported as released or operating from this table.
 
 ## 7. Fifteen-round placement and gates
 
-- ROUND 02: record this decision; reconcile sole authorities, naming, validators and compatibility classification. No Web/Jev implementation.
-- ROUND 07: implement and evaluate Jev, if its Task Card confirms owner/contract/legal/security prerequisites, inside the one AI Gateway.
+- ROUND 02: retain the approved sole authorities and multi-surface route; record the superseded Jev decision without adding a second architecture.
+- ROUND 07: implement and evaluate the open-source local model and LUMENIS-specific adaptation inside the one AI Gateway after owner, license, Permission, Evidence and runtime prerequisites are met. Do not activate Jev.
 - ROUND 08: build the Cross-Surface Experience Foundation: Public Website foundation, Flutter Web Workspace shell, Desktop shell, Mobile Companion shell, shared state/accessibility/localization and capability boundary.
 - ROUND 09–14: every workflow specification records a surface matrix: Web primary/available, Desktop enhanced/exclusive, Mobile view/notify/approve/light action, Public Website explanation/demo only.
 - ROUND 15: prove Public Website → trial/login entry → Web Workspace → real context/workflow/Evidence → Desktop advanced execution when applicable → Web result → Mobile notification/approval when applicable → Report/Evaluation/Learning.

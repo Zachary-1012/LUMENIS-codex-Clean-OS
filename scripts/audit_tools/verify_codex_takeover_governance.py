@@ -193,6 +193,7 @@ def validate() -> None:
         "DESIGN_EXPLORATION",
         "DESIGN_READY",
         "implementation from a PDF, screenshot, fixture, Figma frame",
+        "former Jev hosted candidate is `OFF / EXCLUDED`",
         label="CURRENT product architecture",
     )
 
@@ -216,6 +217,7 @@ def validate() -> None:
         "Desktop App",
         "Mobile Companion",
         "Jev product decision",
+        "superseded by open-source-only model requirement",
         "ROUND 07",
         "DESIGN_EXPLORATION",
         "DESIGN_READY",
@@ -229,6 +231,7 @@ def validate() -> None:
         "Cross-Surface Experience Foundation",
         "Closed-loop internal beta",
         "Jev",
+        "Open-source product model and LUMENIS-specific adaptation; Jev excluded",
         ".opencode/opencode.json",
         "lumenis/system/ai_gateway/",
         "lumenis/system/collector/",
@@ -244,7 +247,7 @@ def validate() -> None:
         "Cross-round capability gap register",
         "LUMENIS-Ollama-Autostart",
         "qwen2.5-coder:7b-agent",
-        "qwen3:1.7b",
+        "Open-source product model and LUMENIS-specific adaptation; Jev excluded",
         "bge-m3",
         label="CURRENT source owner index",
     )
@@ -329,7 +332,8 @@ def validate() -> None:
         "LUMENIS-Ollama-Autostart",
         "FUTURE TASK CARD INPUT / NOT EXECUTABLE BEFORE ROUND 07 ENTRY",
         "qwen2.5-coder:7b-agent",
-        "qwen3:1.7b",
+        "keyless open-source model route",
+        "Jev `OFF / EXCLUDED`",
         "bge-m3",
         label="CURRENT real-delivery overlay",
     )

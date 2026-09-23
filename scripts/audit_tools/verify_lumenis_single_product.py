@@ -123,7 +123,7 @@ REQUIRED_ARCH_MARKERS = (
     "Web Workspace",
     "Desktop App",
     "Mobile Companion",
-    "Jev typed decision provider candidate",
+    "Locally hosted open-source typed decision/evaluation route",
     "Flutter",
     "Windows",
     "macOS",

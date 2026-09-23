@@ -29,10 +29,10 @@ ROUND 02 owns classification and enforcement of:
 - legacy naming/compatibility boundaries;
 - API route truth and duplicate route ownership scheduling;
 - the one internal full-universe context/data-maturity contract: default `GLOBAL / ALL`, focus-only selection, one existing owner stack and compatibility classification for the legacy Guangzhou Taikoo Hui fallback;
-- Jev as an absent ROUND 07 typed decision/evaluation candidate behind the one AI Gateway;
+- Jev as an absent ROUND 07 typed decision/evaluation candidate behind the one AI Gateway at ROUND 02 acceptance time; the later open-source-only Product Owner direction supersedes its activation;
 - the persistent `REAL USER WORK E2E ACCEPTANCE` gate for ROUND 02–15.
 
-ROUND 02 does not implement ROUND 03 database convergence, create Website/Web Workspace/Jev runtime, delete compatibility callers, migrate protected production data or claim release readiness.
+ROUND 02 does not implement ROUND 03 database convergence, create Website/Web Workspace/model runtime, delete compatibility callers, migrate protected production data or claim release readiness.
 
 ## ONE INTERNAL EDITION / context decision
 
