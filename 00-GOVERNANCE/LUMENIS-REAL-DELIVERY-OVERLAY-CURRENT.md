@@ -579,9 +579,9 @@ Discover
 
 FUTURE TASK CARD INPUT / NOT EXECUTABLE BEFORE ROUND 07 ENTRY：
 
-- preserve historical Zhipu `glm-4.5-air` integration evidence without making a hosted key or paid call a launch dependency; validate the keyless open-source model route through the canonical AI Gateway and separately verify `bge-m3` embedding behavior; preserve provider/model/scope/exit/adopted evidence;
+- revalidate canonical AI Gateway → Zhipu `glm-4.5-air`, AI Gateway → Ollama `qwen3:1.7b`, and `bge-m3` embedding behavior; preserve provider/model/scope/exit/adopted evidence;
 - converge stale `qwen2.5-coder:7b-agent` references in `local_ai_client.py` and current governance to installed, evaluated models through the one canonical gateway;
-- keep Jev `OFF / EXCLUDED` under the newer open-source-only Product Owner requirement; verify the local model's exact Apache-2.0 revision and notices, runtime, typed contract, Permission/Evidence, shadow evaluation, low-confidence behavior, trace, observability and rollback before activation;
+- keep Jev `ABSENT` until its typed decision/evaluation adapter, pinned contract/version, secret boundary, legal/cost/privacy, shadow evaluation, low-confidence behavior, trace, observability and rollback pass;
 - OpenCode/Zhipu/Ollama output remains derivative execution evidence, not Permission, Evidence, Canonical Truth, Product Truth or effect authority.
 
 ROUND 07 EXIT：

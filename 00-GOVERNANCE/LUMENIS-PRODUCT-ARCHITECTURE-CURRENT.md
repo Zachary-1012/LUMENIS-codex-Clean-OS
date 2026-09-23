@@ -205,12 +205,12 @@ Generative providers (including Zhipu and Local AI)
        ├── drafting / explanation / transformation
        └── advisory analysis
 
-Locally hosted open-source typed decision/evaluation route
+Jev typed decision provider candidate
        ├── routing / classification / scoring
-       └── verification / evaluation with calibrated uncertainty
+       └── verification / evaluation with probabilities and confidence
 
-LUMENIS-specific adaptation of an open-weight base
-       └── the same bounded jobs, evaluated against real LUMENIS work
+LUMENIS-specific self-developed model candidate
+       └── the same bounded typed jobs, evaluated against real LUMENIS work
 ```
 
 A Provider is ACTIVE only when real callers, health verification and tests prove it. Historical configuration is not runtime truth.
@@ -218,10 +218,10 @@ A Provider is ACTIVE only when real callers, health verification and tests prove
 Runtime and engineering roles are separate:
 
 - `lumenis/system/ai_gateway/` is the single SYSTEM AI runtime owner. Ollama is the local provider direction behind that owner; `local_ai_client.py` and existing `/api/local-ai/*` routes are compatibility callers that must converge without changing behavior or creating another gateway.
-- Product model inference must use a freely available open-source/open-weight model that can run without a hosted provider API key or per-call fee. ROUND 07 verifies the exact model revision, license and notices, local runtime capacity, typed schema, Permission/Evidence binding, low-confidence behavior, trace, real job result and rollback before any active use. Local compute and operations still have real costs. The former Jev hosted candidate is `OFF / EXCLUDED`; its protected local code is audit material, not an activation path.
-- The Product Owner also requires a LUMENIS-specific self-developed adaptation to reach a real, reviewable closed loop before prelaunch review. It remains behind the same Gateway and is evaluated against the open-source base on the same authorized jobs, Evidence, Permission, language, uncertainty, outcome and rollback gates. Neither route may self-promote or replace Product Truth.
-- The adaptation may use publicly documented typed-question, rubric and calibration principles with independently authorized data and human-verified labels. Do not train on Jev API output or proprietary model material. No Jev API key or hosted-call dependency is needed for this route.
-- Local Codex engineering may separately use an open-source model through workstation configuration. Its local smoke result does not establish product Gateway or user-work acceptance.
+- Jev is approved only as a typed decision/evaluation provider behind that gateway. It is not a free-text fallback, Permission/Evidence owner, final business decision maker or effect authorizer. Its implementation remains `ABSENT` until ROUND 07 proves typed contracts, pinned version, secret handling, cost/legal/privacy review, shadow evaluation, low-confidence behavior and complete trace metadata.
+- The Product Owner also requires a LUMENIS-specific self-developed model candidate to reach a real, reviewable closed loop before prelaunch review. Keep it behind the same Gateway and evaluate it alongside Jev on the same authorized typed jobs, Evidence, Permission, language, confidence, outcome and rollback gates. Jev is a transitional comparison candidate: preserve both now, then retire the external path only after the self-developed candidate passes the matched real-work accuracy, calibration, latency, failure-state and rollback gates and the prelaunch review approves the change. Neither candidate may self-promote or replace Product Truth.
+- The self-developed candidate may adopt publicly documented typed-question, rubric and calibration principles. It must use independently authorized data and evaluation labels; training on Jev API outputs or copying proprietary model material requires an explicit license and data-use review.
+- Local Codex engineering may use an open-source model through separate workstation configuration. That model is not a product Gateway provider, does not replace Sol's product and release authority, and does not establish product-provider acceptance.
 - `.opencode/opencode.json` configures OpenCode for repository development, audit, test and automation. OpenCode/Codex are engineering runtimes, not user-facing model providers, Product Core dependencies or Production Truth owners.
 - Public Website, Flutter Web, Desktop and Mobile consume typed Product Core results and provider state. They do not hold provider keys, run OpenCode, choose hidden tool chains or own model routing.
 

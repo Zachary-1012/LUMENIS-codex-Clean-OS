@@ -1,6 +1,6 @@
 # ROUND 07 — Jev candidate and replacement gate (2026-09-23)
 
-Status: `SUPERSEDED HISTORICAL AUDIT / JEV OFF / EXCLUDED`. The newer [open-source-only model decision](ROUND-07-OPEN-MODEL-DECISION-2026-09-23.md) replaces its activation plan. This record preserves the earlier candidate inspection; it is not a current instruction to request a Jev key, call its API, or activate it.
+Status: `AUDIT ONLY / PRODUCT PROVIDER NOT ACCEPTED`. This is a bounded input to ROUND 07 and ROUND 15, not a new round or an AI Gateway implementation claim.
 
 ## Current source and runtime truth
 
