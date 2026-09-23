@@ -1,5 +1,7 @@
 """Canonical CTH/BMP/Shared business schema and idempotent application logic."""
 
+import sqlite3
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -242,7 +244,14 @@ EVENT_MIGRATIONS = {
 
 
 def apply_business_schema(conn):
-    conn.executescript(SCHEMA)
+    statement = []
+    for character in SCHEMA:
+        statement.append(character)
+        if character == ";" and sqlite3.complete_statement("".join(statement)):
+            conn.execute("".join(statement))
+            statement.clear()
+    if "".join(statement).strip():
+        conn.execute("".join(statement))
     cols = {r[1] for r in conn.execute('PRAGMA table_info(notes)').fetchall()}
     for col, ddl in NOTE_MIGRATIONS.items():
         if col not in cols:
