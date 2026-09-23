@@ -10,7 +10,8 @@
 | --- | --- |
 | Round | `ROUND 02 — Authority, Only-One and multi-surface decision` |
 | Sol execution base | `a13ff0cf19de894e917031a2fe7e62c751d58344` |
-| Current committed candidate | `542ee83164f3bcee1583d3ad20a64208bc066b06` (external `auto-watch` commit; revalidated after push) |
+| Current committed candidate | `5ba1aefc53a1babc293e990c23c62f841724c843` (freshly fetched `origin/main`, 2026-09-23) |
+| Local working tree | Uncommitted product work is protected; current local source must be validated separately from the committed candidate. The prior `542ee831` E2E evidence is historical. |
 | Branch | `main` |
 | Repository | `Zachary-1012/LUMENIS-codex-Clean-OS` |
 | Decision owner | Sol |
@@ -58,7 +59,7 @@ ROUND 02 therefore closes the owner/consumer/compatibility decision only. It doe
 | Naming boundary | PASS FOR CLASSIFICATION | LUMENIS/BMP presentation; compatibility identifiers preserved and targeted tests pass |
 | One internal full-universe authority | PASS FOR CLASSIFICATION | One subordinate contract; no second Context/Data/Evidence/Permission/API/product owner |
 | Global selector / maturity runtime | NOT IN ROUND / NOT YET IMPLEMENTED | Current legacy fallback is explicitly a gap; implementation remains with ROUND 03–08 owners |
-| REAL USER WORK E2E | REWORK / PARTIAL LIVE EVIDENCE | Real Windows Desktop ready and Core-unavailable states are captured; visible retry was invoked and Core/API returned a new live trace, but a recovered target-surface capture could not be obtained after the Windows Computer Use connector exposed no native-app API. |
+| REAL USER WORK E2E | REWORK / HISTORICAL PARTIAL EVIDENCE | Windows Desktop ready and Core-unavailable captures plus retry/Core trace belong to the 2026-09-21 older candidate. On the current 2026-09-23 dirty candidate, isolated Core returned a live SYS-01 observation and the Windows binary launched, but the target window could not be activated/captured. Current ready → unavailable → recovered target-surface E2E is unverified. |
 | ROUND 02 Sol decision | REWORK | Cannot become PASS until every row above required for this round and the E2E assertion pass |
 
 ## REAL USER WORK E2E ACCEPTANCE
@@ -159,11 +160,24 @@ Selector matrix A–D is `NOT YET IMPLEMENTED`: global discovery/selection, one 
 
 Every later related round must produce rotating, reproducible, non-fixture samples and real applicable-surface evidence. A covered/mature sampled entity with a silent blank/all-zero/placeholder result forces that round to `REWORK` or `BLOCKED`.
 
+## CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION
+
+Current ROUND 02 gaps are operational truth visibility, adaptive/accessibility acceptance and honest trace provenance. The dated evidence and source ledger is `00-GOVERNANCE/evidence/round-02/ROUND-02-CONTINUOUS-FRONTIER-RESEARCH.md`.
+
+| Source class | Decision | ROUND 02 mapping |
+| --- | --- | --- |
+| Current official Flutter adaptive/responsive and accessibility guidance | `ADOPT` as acceptance practice | Keep SYS-01 content-driven across window sizes and validate semantics, focus, contrast and text scaling without adding a dependency or a second UI owner. |
+| Microsoft Fluent 2 accessibility/layout guidance | `ADAPT` principles only | Focus visibility, contrast, reflow and content-driven layout reinforce the existing Experience Constitution; no Fluent component, token, layout or visual identity is copied. |
+| W3C Trace Context and OpenTelemetry context-propagation guidance | `DEFER` implementation to the owning runtime/observability round | The local deterministic `sys01rt-*` identifier remains operational correlation only; it is not promoted to W3C distributed trace or canonical business Evidence. |
+| Grafana source/UI | `REJECT` for source, template and UI adoption | AGPL and anti-template boundaries make adoption unjustified; it remains a comparison case only, with no copied code, layout, assets or workflow. |
+
+`RESEARCH COMPLETE / NO JUSTIFIED UPGRADE`: no new package, model, Skill, design authority or Experience Constitution amendment is justified for ROUND 02. The only in-scope evolution is a versioned, read-only operational observation/candidate boundary plus explicit controlled promotion; its tests, runtime proof, observability and rollback evidence remain subject to Sol acceptance.
+
 ## REAL DELIVERY CARD
 
 | Field | ROUND 02 value |
 | --- | --- |
-| ROUND / CURRENT SHA | ROUND 02 / `542ee83164f3bcee1583d3ad20a64208bc066b06` |
+| ROUND / CURRENT SHA | ROUND 02 / `5ba1aefc53a1babc293e990c23c62f841724c843` plus protected uncommitted work |
 | REAL USER | Internal SYSTEM operator on Windows Desktop |
 | REAL USER JOB | Inspect the one Product Core runtime, understand source/time/trace, observe honest Core failure and recover through retry. |
 | REAL INPUT | Current source, live isolated Core process, disposable database, real RuntimeGuardian observation. |
@@ -172,11 +186,11 @@ Every later related round must produce rotating, reproducible, non-fixture sampl
 | PERMISSION | Read-only Core transport boundary; no Subject/BrandFocus selection and no external effect. |
 | FAILURE STATE | Core unavailable is visible with retry; missing runtime metrics are unavailable, never synthetic zero. |
 | NOT_COLLECTED | Global universe/business data is outside this SYSTEM job and is not fabricated. |
-| LIVE TEST | `PARTIAL`: real Desktop ready/unavailable states and post-restart Core/API trace verified; recovered Desktop state not captured, so full E2E is not claimed. |
+| LIVE TEST | `REWORK`: the 2026-09-21 Desktop ready/unavailable and Core recovery evidence belongs to an older candidate. On 2026-09-23 the isolated current Core returned a real SYS-01 observation and the current Windows binary launched, but the Windows automation helper could not activate its target window; current ready/unavailable/recovered UI was not verified. |
 | CONTINUOUS TEST | `NOT VERIFIED`; ROUND 02 does not claim sustained operation. |
 | USER ACCEPTANCE | Agent-operated real desktop path; independent Product Owner `USER_VERIFIED` is not claimed. |
 | EXTERNAL DEPENDENCIES | Windows Flutter Unicode build-path workaround and current CI execution-layer status are reported separately. |
-| FINAL STATUS | `TESTED / PARTIAL LIVE VERIFIED / REWORK`; `USER_VERIFIED` and `OPERATING` not claimed. |
+| FINAL STATUS | `REWORK`; historical targeted tests and partial live evidence do not accept the current dirty candidate. `USER_VERIFIED` and `OPERATING` are not claimed. |
 | NEXT GAP | Capture and verify the actual recovered Windows target after retry on the same candidate, then rerun final gates and only then publish ROUND 03 Task Card. |
 
 ## COMMERCIAL OVERLAY IMPACT

@@ -147,6 +147,16 @@ RANDOM ENTITY DATA ACCEPTANCE：
 - empty-state defects
 - maturity delta since prior round
 
+CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION：
+- current business / engineering / page gap
+- official sources / industry cases / papers or standards / high-quality GitHub projects / applicable UI/UX flows
+- source URL / accessed date / version or commit / license / maintenance / commercial and security boundary
+- decision: `ADOPT / ADAPT / DEFER / REJECT`, with reason
+- mapping to LUMENIS business objects / Evidence / Permission / workflow / Experience
+- versioned capability / Skill / model / configuration / design improvement produced this round
+- real E2E / page / effect evaluation / regression / observability / rollback evidence
+- if no reasonable improvement applies: `RESEARCH COMPLETE / NO JUSTIFIED UPGRADE`, with evidence
+
 REAL USER：
 本轮面向什么真实用户？
 
@@ -418,6 +428,13 @@ empty success
 
 RUNTIME FAILURE MATRIX
 
+FUTURE TASK CARD INPUT / NOT EXECUTABLE BEFORE ROUND 05 ENTRY：
+
+- revalidate the current Ollama process, canonical AI Gateway route and host startup ownership;
+- the disabled `LUMENIS-Ollama-Autostart` task points to missing legacy `D:\audit-four-source\keepalive\start-ollama.ps1` and must not be re-enabled;
+- decide and verify one canonical durable startup path with boot, failure, recovery, observability and rollback evidence;
+- a currently running Ollama process is not persistent-startup or `OPERATING` proof.
+
 ROUND 05 EXIT：
 
 至少一个完整失败恢复流程真实跑通。
@@ -545,6 +562,13 @@ Discover
 → Disable
 
 至少一个 Skill 必须真实完成业务任务。
+
+FUTURE TASK CARD INPUT / NOT EXECUTABLE BEFORE ROUND 07 ENTRY：
+
+- revalidate canonical AI Gateway → Zhipu `glm-4.5-air`, AI Gateway → Ollama `qwen3:1.7b`, and `bge-m3` embedding behavior; preserve provider/model/scope/exit/adopted evidence;
+- converge stale `qwen2.5-coder:7b-agent` references in `local_ai_client.py` and current governance to installed, evaluated models through the one canonical gateway;
+- keep Jev `ABSENT` until its typed decision/evaluation adapter, pinned contract/version, secret boundary, legal/cost/privacy, shadow evaluation, low-confidence behavior, trace, observability and rollback pass;
+- OpenCode/Zhipu/Ollama output remains derivative execution evidence, not Permission, Evidence, Canonical Truth, Product Truth or effect authority.
 
 ROUND 07 EXIT：
 
@@ -1057,3 +1081,15 @@ DEFERRED
 `COMMERCIAL_READY=YES` 前必须存在并验收 onboarding、support/escalation、upgrade/migration policy、service status、usage/quota/entitlement、release communication、rollback/support path。
 
 上述任一项为 BLOCKED，最终不得输出 `COMMERCIAL_READY=YES`。任何一项未闭合，只能令 `COMMERCIAL_READY=NO`，不能由 `ENGINEERING_READY`、`RELEASE_READY`、CI 绿色或其他状态替代。不得把真实密钥、Cookie、Token 或个人凭证复制进协议、日志、源码、测试、Evidence 或提交历史。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+二十四、持续前沿研究与能力演进门
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+每个 ROUND Charter、相关 Luna Task Card 和 Sol Acceptance 必须包含 `CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION`。研究是本 Overlay 下的交付证据，不是第二产品、架构、设计或研究权威。每轮必须先记录当前业务/工程/页面差距，再核验与本轮直接相关的当前官方资料、行业案例、论文/标准、高质量 GitHub 项目及适用产品交互；保存 URL、访问日期、版本/commit、许可证、维护状态、商业可用性和安全边界，并作出 `ADOPT / ADAPT / DEFER / REJECT` 决策。
+
+涉及页面的 Round 必须主动研究当前前沿、原创、非模板化体验，且不得把 Toss Shopping、KakaoTalk Channel、Toss Design System、`motion-web` 或任何后续样本当作白名单或范围上限。外部输入只能提炼原则；禁止复制布局、视觉身份、代码、资产、参数、交互序列或受限衍生工作流。禁止 AdminLTE/Tabler 式通用后台、通用 Dashboard、Bento、Card Grid 批量套屏。只有长期 canonical 原则才可更新唯一 `LUMENIS-EXPERIENCE-CONSTITUTION.md`；研究记录、截图、Figma、模型输出和 GitHub star 都不是设计权威或 Production Truth。
+
+Collector、Browser、AI、Content、Agent、Reporting、Evaluation、Learning 与 CTH/BMP workflow 依据真实 Evidence 持续演进。候选改进必须映射回 canonical owner、对象、Permission、Evidence、workflow 和 LUMENIS Experience，并经过版本化资产、测试、真实运行/E2E、效果评估、可观测性、回滚与 Sol 验收后才可晋级。注册、import、模型输出、论文结论或外部项目活跃度都不能直接成为产品能力。
+
+若本轮研究后没有适用升级，仍必须记录 `RESEARCH COMPLETE / NO JUSTIFIED UPGRADE` 和拒绝/延后证据；不得省略研究门。外部账号、许可证或商业授权不清仅阻止对应采用，不得拖延无冲突研发。

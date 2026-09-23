@@ -146,9 +146,29 @@ The fixed source classification and resume path is `00-GOVERNANCE/LUMENIS-SOURCE
 
 ### Fifteen-round closed-loop red line
 
-All current product execution follows the approved 15-round dependency order in `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`: current truth; authority/Only-One; database; identity/Permission/Evidence; runtime; collector/browser; AI/Agent/Shared engines; cross-surface foundation; Golden Pages; CTH monitoring; CTH decision loop; BMP market loop; BMP content/campaign loop; remaining ACC/AI/Shared/SYSTEM Experience; then closed-loop internal beta/release. Do not skip a round, start all rounds together, or treat a later dependency as proof for the active round.
+All current product execution preserves the approved 15-round coverage and dependency
+map in `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`: current truth; authority/Only-One;
+database; identity/Permission/Evidence; runtime; collector/browser; AI/Agent/Shared
+engines; cross-surface foundation; Golden Pages; CTH monitoring; CTH decision loop;
+BMP market loop; BMP content/campaign loop; remaining ACC/AI/Shared/SYSTEM
+Experience; then closed-loop internal beta/release. The rounds are fifteen acceptance
+checkpoints, not fifteen mutually blocking implementation windows. Do not omit a
+checkpoint or use a later implementation as proof that an unmet dependency passed.
 
-The 15 rounds are exactly 15 sequential Codex tasks: one Sol-controlled task for each round. A round task may contain bounded Luna Batches, but it must finish Sol acceptance, publish the next round's Task Card and stop; it must not enter another round. Each Luna receives exactly one Batch and may not continue automatically. At the start of every new round task, resolve current `origin/main`, local state, dependencies and protected work again.
+Sol may run bounded Luna Batches from multiple rounds concurrently in one product
+war room when their actual entry dependencies are satisfied and their files,
+canonical owners, migrations, tests and runtime resources do not conflict. The
+approved operating ceiling is ten concurrent Luna workers. Sol owns the shared
+worktree, integration order, conflict resolution and every PASS / REWORK / BLOCKED /
+SPLIT / REORDER decision. Each Luna receives exactly one Batch and may not cross
+into another Batch automatically. A completed Batch is only a report until Sol
+reads its base/final state, diff, tests, runtime/E2E evidence and blockers. Publish
+overall progress against all fifteen checkpoints as each closes; a separate Codex
+window is not required. Before assigning a new Batch, resolve current `origin/main`,
+local state, dependencies, protected work and overlapping active owners again.
+Parallel implementation does not permit a dependent round to be accepted before
+its predecessor exit gate; the Source Owner Index retains the ordered acceptance
+sequence.
 
 ### REAL USER WORK E2E ACCEPTANCE — ROUND 02 through ROUND 15
 
@@ -160,13 +180,16 @@ Every ROUND 02–15 task must define and pass at least one `REAL USER WORK E2E A
 
 Every related round also runs `RANDOM ENTITY DATA ACCEPTANCE` against the canonical registry with a recorded rotating/stratified seed and non-reference commercial, brand and cross-region samples. Covered/mature samples may not return silent blank, all-zero, missing→0, placeholder or invented content; a real defect forces `REWORK`/`BLOCKED`. If the canonical sample population does not yet exist, record sample count zero and the owning gap rather than fabricating data. ROUND 15 expands cumulative inspection and is never the first random check.
 
+Every ROUND Charter, relevant Luna Task Card and Sol acceptance also includes `CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION`. Research the current business, engineering and page gap against directly relevant official sources, industry cases, papers or standards, maintained high-quality GitHub projects and applicable UI/UX flows. Record URL, accessed date, version or commit, license, maintenance status, commercial/security boundary, `ADOPT / ADAPT / DEFER / REJECT` decision and the exact mapping back to canonical LUMENIS owners, Evidence, Permission, workflow and Experience. External material is principle-only and cannot become a second product/design authority or Production Truth. Any improvement must be versioned and pass applicable real E2E/page/effect evaluation, regression, observability and rollback gates. If research finds no justified in-scope upgrade, record `RESEARCH COMPLETE / NO JUSTIFIED UPGRADE` with evidence rather than inventing work.
+
 When a round involves a page, deliver and run the actual operable page on every target surface promised by that round under the sole Experience Constitution and a Sol-approved `DESIGN_READY` specification. Commercial-readiness gaps are recorded as `COMMERCIAL READINESS GAP / BLOCKED FOR COMMERCIAL_READY`; they set `COMMERCIAL_READY=NO` but do not stop unrelated in-scope engineering work.
 
 The Product Owner accepted the ROUND 01 source audit, missing-capability register,
 multi-surface direction and 15-round mapping on 2026-09-21 as the execution baseline.
 That approval closes the planning gate only. It does not accept an implementation,
-screen, provider, migration, release claim or the next round in the same Codex task.
-ROUND 02 begins in its own Sol-controlled task after a fresh remote/local resolve.
+screen, provider, migration or release claim. Implementation may proceed through the
+parallel war-room rule above; every round still closes only through its own Sol
+acceptance checkpoint and current remote/local evidence.
 
 Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE are Experience-principle references only and never authorize new product features. OpenCode/Codex are engineering runtimes; Ollama and the approved Jev candidate are providers behind the one SYSTEM AI Gateway. Jev is limited to typed decision/evaluation tasks and cannot own Permission, Evidence, Production Truth or effects. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. The LUMENIS account is deferred until after internal beta; pre-beta product access must not be blocked by an account wall, while server Permission and effect fences remain enforced.
 
@@ -446,6 +469,18 @@ Evidence is provenance-bearing source truth and must not be overwritten by analy
 
 When touching XHS/RedNote or any new acquisition path:
 
+- production XHS/RedNote acquisition may use only the approved Hong Kong / international
+  allowlisted identity, Cookie/session and browser profile;
+- the locally signed-in Mainland China XHS/RedNote profile is the Product Owner's
+  personal work account, not a collection asset: never read, export, import, inject,
+  refresh, probe, automate, test, recover, rotate to, or otherwise touch that identity;
+- legacy Mainland-cookie helpers, ports, profiles and tests may be inspected as source
+  only. They must remain outside every startup, scheduler, collector, browser, recovery,
+  E2E and release path unless the Product Owner explicitly changes this rule;
+- resolve other platform capability from existing secret-safe configuration and
+  registered owners before asking the Product Owner for credentials. Never print or
+  commit a secret; report unavailable/blocked honestly when a real integration cannot
+  authenticate;
 - primary ingestion must not be broken by a non-critical Evidence side-write failure unless the canonical contract explicitly changes;
 - preserve source identity, source URL, capture time, provider, domain/product context and trace metadata where available;
 - do not collapse distinct source provenance merely because normalized content text matches;
@@ -719,6 +754,6 @@ Large code volume, many files, long tests or context size are not themselves blo
 
 ## 23. Current multi-surface product state
 
-The approved experience surfaces are Public Website, Web Workspace, Desktop App and Mobile Companion. Current source contains only the partial Flutter implementation under `app/`; Public Website, Flutter Web Workspace and multi-surface deployment are `ABSENT` until implemented and accepted in their scheduled rounds. Binding contracts live under `contracts/experience/`; `experience_runtime.py` provides the API/ViewModel boundary and `lumenis_app_api.py` provides JSON APIs.
+The approved experience surfaces are Public Website, Web Workspace, Desktop App and Mobile Companion. Do not freeze their implementation status in this router: inspect the current `origin/main`, protected local `app/` and `website/` work, active routes, builds and real runtime evidence separately. Local-only source must not be reported as absent, while a page file or build must not be reported as an accepted product surface. Binding contracts live under `contracts/experience/`; `experience_runtime.py` provides the API/ViewModel boundary and `lumenis_app_api.py` provides JSON APIs.
 
 A launch shell, route, contract, generated Web target or provider registration does not establish an end-to-end product workflow. Operational surfaces must bind real Product Core/API, Canonical Data, Evidence, Permission and Evaluation behavior before they can be described as complete.
