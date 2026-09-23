@@ -1,0 +1,60 @@
+# ROUND 03 Charter — Database Repository and Canonical Truth
+
+Status: ACTIVE / REWORK / NOT ACCEPTED. Sol controls only ROUND 03. This Charter is an execution record under the root `AGENTS.md`, current Product Architecture, Source Owner Index, Real Delivery Overlay, and Global Universe contract. It does not authorize ROUND 04. The current scoped results are recorded in [ROUND-03-2026-09-23-PROVISIONAL.md](evidence/round-03/ROUND-03-2026-09-23-PROVISIONAL.md).
+
+## Entry and coverage
+
+- 2026-09-23 entry: `git fetch origin --prune` succeeded. Local `main` HEAD, `origin/main`, and live `refs/heads/main` are all `519ea7fb0329cd17b21c2f5dea2c5b49a59eec7b`; no local-only commit. The working tree has 152 modified and 314 untracked paths, with zero staged paths. Every existing path is protected pending exact classification. No reset, clean, checkout, blanket add, or runtime restart.
+- The source-audited taskbook PDF `output/final-audit-2026-09-21/LUMENIS_PRODUCT_COMPLETE_15_ROUND_TASKBOOK_SOURCE_AUDITED_2026-09-21.pdf` has 105 physical pages. Its physical page 22 maps ROUND 03 to original taskbook page 17, one task. Physical page 80 maps original page 17 to `LUNA-006`, Shared Database Authority. The original 235-page taskbook was not present in the current PDF inventory, so its page 17 was verified through this approved 225-task mapping, not represented as directly inspected.
+- ROUND 02 handoff commit is the current remote/local HEAD, but ROUND 02 acceptance does not establish ROUND 03 source, runtime, DB, or E2E completion.
+- Owner: `lumenis/shared/database/` for the one business path, connection, schema, repository, and migration authority. `database.py`, `db_paths.py`, root migration names, `canonical_data.py`, `subject_registry.py`, `lumenis/adapters/persist.py`, Evidence/reporting paths, and Product Core are callers or adjacent owners. `data/monitor.db` selected by `ZBC_DB_PATH` is the protected business DB. SYSTEM task queue is a separately owned operational store with no business truth.
+- Protected production fingerprint at entry: `data/monitor.db` length 1,458,176, UTC mtime `2026-09-21T20:03:21.3668965Z`, SHA-256 `A3EB3EF45EF877BBF93B303245248DA1160BBD561473A83AF71B2A326A4A0B45`; `-wal` and `-shm` absent. File hashing is read-only. No SQLite connection, test seed, checkpoint, migration, or repair may target these three paths. Repeat all fingerprints after each database test and at exit.
+
+## Entry dependencies and execution batches
+
+| Batch | Dependency and owner boundary | Evidence / stop rule |
+| --- | --- | --- |
+| `ROUND-03-B001-CANONICAL-DB-PATH-MIGRATION` | First. Inspect the protected local candidate against `origin/main`; integrate only an independently buildable Shared Database path, connection, migration, and root compatibility slice. Allowed code: `lumenis/shared/database/`, `database.py`, `canonical_data.py` and directly paired isolated tests, only after exact hunk classification. No Evidence, Permission, Collector, App, or report-owner edit. | v0 bootstrap, existing-version upgrade, unchanged row/NULL/source identity, fail-closed partial schema, real rollback or honest refusal, call-time `ZBC_DB_PATH`, one owner, clean-source replay, isolated tests and before/after fingerprints. Any inseparable mixed hunk returns SPLIT. |
+| `ROUND-03-B001A-REPOSITORY-SCRIPT-ATOMICITY` | After B001 returned SPLIT, Sol reproduced an independent `DatabaseRepository.executescript()` rollback defect in a disposable DB. Its separate [Task Card](LUMENIS-ROUND-03-B001A-TASK-CARD-CURRENT.md) restricts edits to the clean repository method and a paired new test. | An invalid multi-statement script leaves no partial DDL/DML; successful script commits; clean-source replay and production fingerprint invariance. This cannot accept B001's mixed candidate or pass the Round. |
+| `ROUND-03-B002-CALLER-PARITY` | Only after Sol accepts B001. Trace the exact current root/registry/canonical/reporting callers through the canonical repository; preserve API and stored behavior. Keep adjacent Evidence/Permission changes out of this batch. | Caller parity and isolated read/write tests; no alternate business store, stale path, silent schema repair, or missing→0. If an adjacent owner is required, return SPLIT and assign the owning future round. |
+| `ROUND-03-B003-REAL-RECORD-ACCEPTANCE` | Only after dependency-closed code and Sol inspection. Sol owns the real user E2E and final acceptance. | One authorized real source and source ID → Evidence ID → canonical row/object/metric → actual Product Core ViewModel → operable user read and Return; honest denied, unavailable, not collected and recovery states; DB path/version/row ID/timestamps/rollback; GLOBAL samples. An HTTP 200, fixture, unit test, or source presence cannot pass the round. |
+
+The older B002/B003 audit is provenance, not acceptance. Current local `database.py` contains an unrelated scoped-report candidate; local migration v14–v17 and `scope.py` depend on Subject/Evidence work. Sol must classify these individually. No Luna worker may absorb them by default or continue into another Batch.
+
+## 真实用户工作闭环验收 / REAL USER WORK E2E ACCEPTANCE
+
+| Gate | ROUND 03 assertion |
+| --- | --- |
+| REAL USER | A permitted CTH operator investigating a real commercial Subject; the default product context remains GLOBAL / ALL. |
+| REAL USER JOB | Find a traceable real fact, understand its scope and freshness, and return to the same user workflow without mistaking uncollected or denied data for zero. |
+| ENTRY | An actual applicable Web Workspace or Desktop user entry and Product Core route, with the current actor/Permission decision recorded. A protected route returning 401 is a blocked entry, not success. |
+| REAL INPUT | An authorized public source with source URL, capture time, lawful use boundary and source identity; never the personal Mainland XHS identity. Use an isolated staging DB. |
+| END-TO-END PATH | Source → write → Shared Evidence ID → Shared Database canonical row → metric/object → canonical API/ViewModel → visible result → Return. Record exact DB path, migration version, row/source identity and timestamps. |
+| USER-VISIBLE RESULT | The real fact and Evidence trace appear in the actual page with truthful scope, time and state; a user can complete the investigation without reading source. |
+| FAILURE / RECOVERY | Missing, not collected, unknown, stale, offline, error and access restricted remain distinct. Failed migration or unavailable source preserves committed data and gives an honest recovery path. |
+| EVIDENCE / ACCEPTANCE ASSERTION | Sol records source URL, request/response identity without secrets, Evidence ID, canonical row ID, UI action/result/return, protected fingerprints, regression and rollback proof. PASS requires the complete chain and no production DB mutation. |
+
+## GLOBAL UNIVERSE / DATA MATURITY IMPACT
+
+ROUND 03 must preserve GLOBAL / ALL as the default and make Subject/BrandFocus a focus key, not collection ownership or Permission. It owns canonical storage keys, row identity, nullable/unknown state and consistent reads. It does not by itself establish global acquisition depth or Guangzhou Taikoo Hui as product default. Current status: `Global Commercial Coverage=NO / NOT YET VERIFIED`; `Global Brand Coverage=NO / NOT YET VERIFIED`; `Guangzhou Taikoo Hui Reference Coverage=PARTIAL / LOCAL_LIVE_SOURCE_ONLY`; therefore `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=NO`. Reassess these at exit from real evidence.
+
+`RANDOM ENTITY DATA ACCEPTANCE` will record a reproducible seed, canonical registry version/population, rotating stratified non-reference commercial and brand IDs, cross-region IDs, the fixed Guangzhou reference, request/surface, valid/empty/stale/blocked rates and Evidence trace rate. If no authorized real population exists, record sample count zero and the owning gap. Fixtures and a single Guangzhou sample are not coverage proof.
+
+## CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION
+
+Current engineering gap: safe SQLite migrations and backups in the presence of WAL, plus one observable repository path without silent data changes. On 2026-09-23, Sol checked SQLite's maintained official [ALTER TABLE documentation](https://www.sqlite.org/lang_altertable.html), [WAL documentation](https://www.sqlite.org/wal.html), [Backup API](https://www.sqlite.org/backup.html), [transaction documentation](https://www.sqlite.org/transactional.html), and [public-domain notice](https://www.sqlite.org/copyright.html). The local `python` runtime reports SQLite 3.50.4; upstream documentation is a maintained project reference and SQLite's deliverable code/documentation is public domain, including commercial use. This round adds no dependency. Decision: ADAPT the transaction, WAL and backup principles inside the existing Shared Database owner, subject to isolated clean-source tests and runtime acceptance. Never use an upstream recipe as authorization to checkpoint or migrate production. No second owner, external service, or new commercial integration is justified. Record exact version, maintenance, licensing and security/commercial implications again if implementation adopts new third-party code.
+
+## COMMERCIAL OVERLAY IMPACT
+
+1. Data governance/compliance: record source legality, allowed use, retention and exit for the chosen real source; unresolved commercial rights set `COMMERCIAL_READY=NO`.
+2. Secret/credential governance: no production default key, Cookie or token in source, DB test seed or evidence; use existing secret-safe owners.
+3. Contract/version compatibility: one canonical schema and API/ViewModel state contract; prove migration and root caller parity.
+4. Retention/backup/disaster recovery: isolated backup, restore, failure rollback and Evidence/canonical lineage checks are ROUND 03 responsibilities; a file copy of a live WAL database is not accepted as a consistent backup.
+5. Tenant/workspace lifecycle: preserve Subject/BrandFocus keys and permission boundaries; full member onboarding/revoke/customer exit remains later-round evidence.
+6. Commercial operations: onboarding, support, quotas, release communication and operating recovery remain unverified; no commercial-ready claim.
+
+ROUND 03 exit is `PASS` only after Sol independently inspects every Batch base/final SHA, exact diff, isolated test results, real runtime/E2E, blockers, fingerprints and all gates above. Otherwise Sol returns `REWORK` or `BLOCKED`, records a `REAL DELIVERY CARD`, and does not publish the next round as executable.
+
+## Current Sol checkpoint — 2026-09-23
+
+B001 is `SPLIT` with no worker edits. Sol's external-seed tests passed 33/33 on both the dirty checkout and a clean `origin/main` archive, and the database authority/Only-One static gates passed. B001A is `PASS` for its narrow repository-script atomicity contract: Luna changed only `repository.py` and its paired test, replayed the patch at clean `origin/main`, and reported 25/25 targeted tests passing there and locally. Sol inspected the exact diff, independently reran the 25 tests, confirmed the protected database fingerprint was unchanged, then committed and pushed the exact two-file change as `e2084dd9` on `main`. B001A does not accept the mixed B001 candidate. A real public source was collected into an isolated local v17 candidate: one source note, one linked canonical row, one writer-authenticated Evidence row and one reopenable report. This is `LOCAL_ONLY` evidence because v14–v17, reporting and scope changes are uncommitted. The actual Web Workspace browser probe failed three assertions: static assets returned 404, console errors followed, and UI return to GLOBAL/ALL was not observed. API 200 and report generation do not close those failures. No non-reference canonical registry sample or source-rights/retention acceptance exists. The 519ea7f GitHub Product Gate run failed without job steps/logs; its execution is unverified. ROUND 03 remains `REWORK`; ROUND 04 is not executable from this checkpoint.

@@ -1,0 +1,16 @@
+# ROUND-03-B001A — Repository script rollback, one bounded Luna Batch
+
+Status: SOL-ACCEPTED FOR THIS BATCH ONLY. Luna implemented and verified the bounded patch at base `519ea7f`; Sol independently reviewed it and committed/pushed `e2084dd9` to `origin/main`. This Task Card is under `LUMENIS-ROUND-03-CHARTER-CURRENT.md`; it does not accept the original B001 dirty candidate or authorize another round.
+
+| Field | Contract |
+| --- | --- |
+| Task ID / role | `ROUND-03-B001A-REPOSITORY-SCRIPT-ATOMICITY`; one GPT-6 Luna implementation Batch. Sol owns acceptance. |
+| Current base | Fresh `git fetch origin --prune`: `main` HEAD = `origin/main` = `519ea7fb0329cd17b21c2f5dea2c5b49a59eec7b`. Preserve 150+ unrelated modified and 300+ untracked paths; zero staged. Recheck immediately before editing. |
+| Reproduced defect | `DatabaseRepository.executescript()` advertises transaction/rollback semantics by calling `conn.executescript(sql)` inside `self.transaction()`. On a new isolated temp DB, a script containing `CREATE TABLE`, `INSERT`, then an invalid `INSERT` raised `OperationalError` yet left the table and first row committed. Python sqlite3 `executescript()` commits a pending transaction before the script. |
+| Goal | Make this one repository method atomic for a normal multi-statement SQL script: all statements commit on success; failure rolls back earlier DDL/DML and leaves no partial row or schema. Preserve `DatabaseRepository` API and call-time `ZBC_DB_PATH` behavior. No schema/version change. |
+| Allowed edits | Only clean `lumenis/shared/database/repository.py` and one directly paired new isolated repository regression test under `tests/`. No edit to dirty database/schema/migration/Evidence/Permission/Subject/reporting/Collector/App files. |
+| Forbidden | Open, copy, checkpoint, migrate or use `data/monitor.db` or sidecars as seed. No weakened guard, alternate DB authority, manual SQL tokenizer, legacy-caller removal, broad refactor, unrelated cleanup, commit or push by Luna. |
+| Test | Use a new OS-temp SQLite DB and verified external `LUMENIS_TEST_SEED_DB` before pytest. Reproduce failure then verify complete rollback; verify success commits all statements; verify no production fingerprint changes. Run exact new test plus `tests/test_db_isolation_contract.py` and existing repository/owner test; clean `origin/main` replay of the exact two-file candidate is required. |
+| Stop / report | If existing usage relies on partial `executescript` commits, explicit nested transaction statements, or PRAGMA outside transaction, return SPLIT with exact callers. Return base/final SHA, diff, test commands/results, fingerprints, runtime applicability and blocker list. Stop after this Batch. |
+
+The real-user Round 03 job remains Source → Evidence → Canonical → ViewModel → visible Return, including GLOBAL/ALL, honest states and Permission. This infrastructure Batch cannot pass the Round, the random-entity acceptance or commercial readiness. The only relevant frontier reference is the maintained upstream [SQLite transactions](https://www.sqlite.org/transactional.html) and [Python sqlite3 `executescript()` documentation](https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.executescript); no third party is added. Decision: ADAPT inside the existing owner, subject to the real E2E and rollback gates.
