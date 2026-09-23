@@ -13,7 +13,7 @@ LUMENIS Shared Database - canonical migration engine
 import os
 import sys
 import sqlite3
-import shutil
+import tempfile
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
@@ -104,22 +104,65 @@ def set_version(conn: sqlite3.Connection, version: int, description: str = ""):
 
 
 def backup_database(backup_name: Optional[str] = None) -> str:
-    """备份数据库"""
-    os.makedirs(BACKUP_DIR, exist_ok=True)
-    
+    """Create a validated, WAL-consistent backup of the call-time canonical DB."""
+    db_path = get_db_path()
+    backup_dir = os.path.join(os.path.dirname(db_path), "backups")
+
     if not backup_name:
+        version_conn = get_connection()
+        try:
+            current_version = get_current_version(version_conn)
+        finally:
+            version_conn.close()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_name = f"monitor_db_v{get_current_version(get_connection())}_{timestamp}.db"
-    
-    backup_path = os.path.join(BACKUP_DIR, backup_name)
-    
-    if os.path.exists(DB_PATH):
-        shutil.copy2(DB_PATH, backup_path)
-        print(f"✅ 数据库已备份到: {backup_path}")
-        print(f"   备份大小: {os.path.getsize(backup_path) / 1024 / 1024:.2f} MB")
+        backup_name = f"monitor_db_v{current_version}_{timestamp}.db"
     else:
-        print(f"⚠️  数据库不存在: {DB_PATH}")
-    
+        backup_name = os.fspath(backup_name)
+        if (
+            backup_name in {".", ".."}
+            or os.path.basename(backup_name) != backup_name
+        ):
+            raise ValueError("backup_name must be a filename within the canonical backup folder")
+
+    os.makedirs(backup_dir, exist_ok=True)
+    backup_path = os.path.join(backup_dir, backup_name)
+    if not os.path.isfile(db_path):
+        raise FileNotFoundError(f"数据库不存在: {db_path}")
+
+    temp_path = None
+    source = None
+    destination = None
+    try:
+        fd, temp_path = tempfile.mkstemp(
+            prefix=f".{os.path.basename(backup_path)}.",
+            suffix=".tmp",
+            dir=backup_dir,
+        )
+        os.close(fd)
+        source = sqlite3.connect(db_path)
+        destination = sqlite3.connect(temp_path)
+        source.backup(destination)
+        result = destination.execute("PRAGMA integrity_check").fetchone()
+        if not result or result[0] != "ok":
+            raise sqlite3.DatabaseError(f"备份完整性校验失败: {result!r}")
+        destination.close()
+        destination = None
+        source.close()
+        source = None
+        os.replace(temp_path, backup_path)
+        temp_path = None
+    except Exception:
+        if destination is not None:
+            destination.close()
+        if source is not None:
+            source.close()
+        raise
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+    print(f"✅ 数据库已备份到: {backup_path}")
+    print(f"   备份大小: {os.path.getsize(backup_path) / 1024 / 1024:.2f} MB")
     return backup_path
 
 
@@ -657,14 +700,28 @@ def migrate(target_version: Optional[int] = None) -> bool:
     print(f"📊 当前数据库版本: v{current_version}")
     print(f"🎯 目标版本: v{target_version}")
     
-    if current_version >= target_version:
-        print("✅ 数据库已是最新版本，无需迁移")
+    if target_version < current_version:
+        print(f"❌ 拒绝 schema 降级: 当前 v{current_version}，目标 v{target_version}")
+        conn.close()
+        return False
+
+    if current_version == target_version:
+        print("✅ 数据库已是目标版本，无需迁移")
         conn.close()
         return True
-    
-    # 迁移前自动备份
+
+    # 迁移前自动备份。A missing or failed snapshot must stop all schema writes.
     print("\n📦 迁移前自动备份数据库...")
-    backup_database(f"before_migration_v{current_version}_to_v{target_version}.db")
+    try:
+        backup_path = backup_database(
+            f"before_migration_v{current_version}_to_v{target_version}.db"
+        )
+        if not backup_path or not os.path.isfile(backup_path):
+            raise OSError("备份函数未生成可用文件")
+    except Exception as e:
+        print(f"❌ 迁移前备份失败，已拒绝迁移: {e}")
+        conn.close()
+        return False
 
     try:
         current_version = _ensure_migration_prerequisites(
@@ -700,32 +757,9 @@ def migrate(target_version: Optional[int] = None) -> bool:
 
 
 def rollback() -> bool:
-    """回滚到上一个版本（简化版，仅记录，不实际删除表）"""
-    conn = get_connection()
-    current_version = get_current_version(conn)
-    
-    if current_version <= 0:
-        print("⚠️  数据库已是初始版本，无法回滚")
-        conn.close()
-        return False
-    
-    print(f"📊 当前版本: v{current_version}")
-    print(f"⏪ 回滚到: v{current_version - 1}")
-    
-    # 回滚前备份
-    backup_database(f"before_rollback_v{current_version}.db")
-    
-    # 记录回滚（简化版，不实际删除表）
-    conn.execute(
-        "INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)",
-        (current_version - 1, f"回滚从 v{current_version}", datetime.now().isoformat())
-    )
-    conn.commit()
-    
-    print(f"✅ 已记录回滚到 v{current_version - 1}")
-    print("⚠️  注意：表结构未实际删除，仅版本号回退")
-    conn.close()
-    return True
+    """Refuse downgrade until reversible schema migrations are implemented."""
+    print("❌ 当前 schema 迁移没有可执行的反向步骤，拒绝回滚")
+    return False
 
 
 def show_status():
