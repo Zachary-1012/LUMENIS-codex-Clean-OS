@@ -170,6 +170,20 @@ Parallel implementation does not permit a dependent round to be accepted before
 its predecessor exit gate; the Source Owner Index retains the ordered acceptance
 sequence.
 
+### Continuity after a Sol decision
+
+The fifteen rounds are acceptance checkpoints, not one-attempt or session stop
+points. `REWORK`, `SPLIT` and `REORDER` require Sol to re-resolve current
+remote/local truth and select the next safe executable Batch; a Luna stopping at
+its one-Batch boundary does not stop the active Round or the product program.
+A localized `BLOCKED` owner pauses only that owner; continue independent work
+whose entry gates are met. When a Round truly passes and the Product Owner has
+authorized continuous delivery, publish its evidence and hand off or start the
+next eligible Sol task before closing the prior task. If continuation cannot
+be confirmed, report it as idle rather than claiming work is running. Stop
+the overall program only on an explicit user pause or a genuine §22 blocker
+that leaves no safe in-scope work; never weaken an exit gate to avoid a pause.
+
 ### REAL USER WORK E2E ACCEPTANCE — ROUND 02 through ROUND 15
 
 `00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md` is the single content owner for the eight real-delivery questions, per-round constraints, `REAL DELIVERY CARD`, completion semantics, final seven statuses and the six Section 23 commercial-readiness gates. It is an execution/acceptance overlay, not a second Product Architecture or Experience authority, and it does not add a sixteenth round.
