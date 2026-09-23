@@ -114,10 +114,17 @@ def validate() -> None:
         EXPECTED_FINGERPRINT,
         "verify_codex_takeover_governance.py",
         "only repository execution router",
-        "ROUND 02 starts only in a new Sol-controlled task",
+        "Online reader's current-state snapshot",
+        "The local working tree is not visible to a reader",
         "DESIGN_READY",
         label="CURRENT takeover",
     )
+    for stale_claim in (
+        "ROUND 02 starts only in a new Sol-controlled task",
+        "Public Website, Flutter Web Workspace and Jev implementation are absent until their scheduled rounds",
+    ):
+        if stale_claim in takeover:
+            raise AssertionError(f"CURRENT takeover contains stale status claim: {stale_claim}")
 
     _require(
         architecture,

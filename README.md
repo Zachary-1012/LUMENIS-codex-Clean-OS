@@ -10,6 +10,8 @@
 本仓库承载当前生产实现、运行时、数据契约、Evidence、API、Permission、Metric、Experience、测试与发布证据。`README.md` 是人类工程入口，不是历史进度日志；文档、提交说明、CI 绿色或页面可打开，都不能单独证明功能已经 `VERIFIED / RELEASED / OPERATING`。
 
 > Coding Agent / Codex 的当前执行入口固定为：`AGENTS.md` → `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`。当前 HEAD 必须通过 `git fetch origin` + `git rev-parse origin/main` 动态解析，不得从 README、历史 handoff、截图或粘贴 SHA 推断。
+>
+> 只读取 GitHub 的审查者：先看 [CURRENT 远端／本地／验收状态快照](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md#0-online-readers-current-state-snapshot)。GitHub 不包含受保护的本地未提交候选；快照有时间边界，不能代替实时源码、测试或运行验收。
 
 Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)。
 
@@ -38,7 +40,7 @@ The sole product/domain architecture authority is:
 
 `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`
 
-LUMENIS is **one product with four approved Experience surfaces**: Public Website, Web Workspace, Desktop App and Mobile Companion. The operational Experience uses one Flutter codebase for Web, Windows, macOS, Linux, Android and iOS over one Product Core/API; the future SEO-capable Public Website is presentation/acquisition only. The legacy browser/Jinja/static surfaces have been removed from `main` and must not be restored. Current implementation remains partial: Public Website and Flutter Web Workspace are not yet shipped. See `00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md`.
+LUMENIS is **one product with four approved Experience surfaces**: Public Website, Web Workspace, Desktop App and Mobile Companion. The operational Experience uses one Flutter codebase for Web, Windows, macOS, Linux, Android and iOS over one Product Core/API; the separate SEO-capable Public Website is presentation/acquisition only. The legacy browser/Jinja/static surfaces have been removed from `main` and must not be restored. A Public Website foundation is committed, but neither it nor the local Flutter Web Workspace candidate is shipped or accepted as a complete commercial surface. See the CURRENT snapshot above and `00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md`.
 
 ## 1. 产品定位 / Product definition
 
@@ -282,7 +284,7 @@ Tier C  Production / Live / Environment required acceptance evidence
 
 详见 [`tests/CI_TEST_TIERS.md`](tests/CI_TEST_TIERS.md)。
 
-当前自动 CI 保留两类正式 Gate：`LUMENIS Product Gate`（唯一的跨产品契约 / Only-One / multi-surface / Python hermetic 产品 Gate）与按 Flutter App 变更触发的 `LUMENIS App Gate`（Flutter analyze/test）。重复的独立 LUMENIS-GGI workflow 已退休。Product Gate 会先执行不依赖外网的治理、多终端架构、源码编译与 test-tier manifest 检查，再进入 dependency install / hermetic pytest；App Gate 也先执行唯一 Experience authority 与 anti-template 审计，再获取 Flutter SDK/依赖。Public Website 的实现和专用 Gate 属于 ROUND 08，当前不存在即不得视为已验证。Production/Live 环境套件不会因为被 clean CI 排除而自动视为 PASS。Runner 0-step、DNS、package registry 等执行层故障必须记为 `EXECUTION-LAYER UNVERIFIED`，不得冒充产品 PASS/FAIL。
+当前自动 CI 保留两类正式 Gate：`LUMENIS Product Gate`（唯一的跨产品契约 / Only-One / multi-surface / Python hermetic 产品 Gate）与按 Flutter App 变更触发的 `LUMENIS App Gate`（Flutter analyze/test）。重复的独立 LUMENIS-GGI workflow 已退休。Product Gate 会先执行不依赖外网的治理、多终端架构、源码编译与 test-tier manifest 检查，再进入 dependency install / hermetic pytest；App Gate 也先执行唯一 Experience authority 与 anti-template 审计，再获取 Flutter SDK/依赖。Public Website 基础已进入 `main`；其完整商业入口和专用 Gate 仍未验收，不能因基础文件存在就视为已验证。Production/Live 环境套件不会因为被 clean CI 排除而自动视为 PASS。Runner 0-step、DNS、package registry 等执行层故障必须记为 `EXECUTION-LAYER UNVERIFIED`，不得冒充产品 PASS/FAIL。
 
 重要用户功能应证明：
 

@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**  
-> Updated: 2026-09-21
+> Updated: 2026-09-23 (14:37 Asia/Shanghai source/local snapshot)
 > CI status: resolve from GitHub checks for the exact current origin/main; no historical SHA is a current acceptance result.
 > **Never treat this document's commit, any pasted SHA, or any historical handoff SHA as the current HEAD. Codex must fetch and resolve `origin/main` at session start.**
 
@@ -9,6 +9,28 @@ This file records the current Codex execution path and authority order. Root
 `AGENTS.md` remains the only repository execution router; this file is its CURRENT
 handoff, not a second instruction system. It does **not** upgrade source evidence into
 LIVE / RELEASED / OPERATING claims.
+
+## 0. Online reader's current-state snapshot
+
+This is an observed checkpoint, not a substitute for a fresh `git fetch origin`
+and source/runtime inspection. The local working tree is not visible to a reader
+of GitHub alone. Do not infer that a local-only candidate is absent, merged,
+accepted or safe to publish merely from the remote tree.
+
+| Layer | Observed 2026-09-23 14:37 +08:00 | Meaning for an online-only reader |
+| --- | --- | --- |
+| Repository | `Zachary-1012/LUMENIS-codex-Clean-OS`, private, sole `main`; local `HEAD`, `origin/main` and live remote main were `dc60d7f1ba43046e7f2300356536a180e397dd08` before this status update. | Resolve the live SHA again. This row is provenance, not a permanently current HEAD. |
+| Accepted checkpoints | ROUND 01 source/coverage baseline accepted; [ROUND 02](LUMENIS-ROUND-02-CHARTER-CURRENT.md) `PASS` for its bounded authority and real Windows SYS-01 operational job. | Neither decision accepts the full App, all 44 Screens, global data maturity or release. |
+| Active checkpoint | [ROUND 03 provisional evidence](evidence/round-03/ROUND-03-2026-09-23-PROVISIONAL.md) is `REWORK / NOT ACCEPTED`. Committed Shared Database slices include transaction rollback, backup/refusal and `dc60d7f1` business-schema transaction behavior; v14–v17 cross-owner migration and rendered user E2E remain open. ROUND 04–15 have no Sol exit acceptance. | Source commits are narrow implementation evidence. Do not advance a dependent round or claim a complete product from them. |
+| Protected local-only work | The local checkout had 474 modified/untracked porcelain entries at the snapshot. Examples include candidate `app/web/`, `app/lib/l10n/`, trilingual copy deltas, Shared Agent Skill Store changes, a Jev adapter, database v14–v17 scope/migration changes and many CTH/BMP/Shared/SYSTEM screens/tests. This is a count of paths, **not** completed tasks. | These candidates are not all on `origin/main` and are not collectively accepted. Preserve them; inspect exact owner, diff, tests and runtime before a scoped commit. GitHub cannot show their current contents. |
+| Surface truth | `website/` has a committed Public Website foundation, not configured commercial entry or release proof. Windows Desktop SYS-01 has a bounded ROUND 02 E2E. Flutter Web Workspace, other Desktop workflows and Mobile Companion are not accepted end-to-end merely because local UI source/builds exist. | Do not say `APP ONLY`, but do not say four surfaces are operational or released. |
+| Product data and capabilities | Global Commercial Coverage = `NO / NOT VERIFIED`; Global Brand Coverage = `NO / NOT VERIFIED`; Guangzhou Taikoo Hui Reference Coverage = `PARTIAL` in current round evidence. Skill Store, Jev, three-language operational UI and continuing AI/Collector/learning upgrades are scheduled or local candidates until their owner-specific E2E gates pass. | `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=NO`; missing or uncollected data must remain honest, never fabricated. |
+| CI and release | [Product Gate at `dc60d7f1`](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/35826256320) and the preceding [App Gate](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/35826188130) failed before any job step. Their annotation says recent account payments failed or the spending limit needs increasing. | `EXECUTION-LAYER UNVERIFIED`, not a product-test PASS or FAIL. Local tests and Git pushes can continue; hosted CI/release evidence remains missing. `RELEASED=NO`, `OPERATING=NO`, `COMMERCIAL_READY=NO`. |
+
+The active local Sol task may progress after this snapshot. It must update its
+own bounded Round evidence and publish accepted source before an online reader
+can claim more. The repo's root `AGENTS.md` continuity rule requires `REWORK`
+to continue through the next safe Batch, not terminate the product program.
 
 ## 1. Mandatory Codex bootstrap and authority
 
@@ -59,7 +81,7 @@ If the active task touches any user-visible Experience/UI, read the sole design 
 
 Then inspect the current Source / ViewModel / State / Action / Permission / Evidence / Runtime owners for the active slice.
 
-The product owner approved the Multi-Surface Decision, Jev candidate boundary, ROUND 01 audit/missing register and the exact 15-round mapping on 2026-09-21. This approval authorizes the ordered execution baseline; it does not prove implementation, permit direct implementation from an audit PDF/sketch, or waive per-round/per-screen entry gates. ROUND 02 starts only in a new Sol-controlled task after current remote/local truth is resolved. Source-backed Flutter work remains under `app/`; Public Website, Flutter Web Workspace and Jev implementation are absent until their scheduled rounds. Before implementing a screen, complete and review its specification with current source/API, canonical owner, actor scope, Permission, Evidence lineage, surface matrix, purpose-built composition, states and executable acceptance, and record `DESIGN_READY`. `contracts/experience/lumenis_app_binding_registry.json` records data/actor/permission/Evidence bindings; it is not a UI template, and legacy `sectionTypes` do not determine layout.
+The product owner approved the Multi-Surface Decision, Jev candidate boundary, ROUND 01 audit/missing register and the exact 15-round mapping on 2026-09-21. This approval authorizes the ordered execution baseline; it does not prove implementation, permit direct implementation from an audit PDF/sketch, or waive per-round/per-screen entry gates. ROUND 02 has since passed only its bounded scope; ROUND 03 is current `REWORK` at the snapshot above. Source-backed Flutter work remains under `app/`; Public Website foundation is committed under `website/`, while Flutter Web Workspace and Jev have protected local candidates without product acceptance. Before implementing a screen, complete and review its specification with current source/API, canonical owner, actor scope, Permission, Evidence lineage, surface matrix, purpose-built composition, states and executable acceptance, and record `DESIGN_READY`. `contracts/experience/lumenis_app_binding_registry.json` records data/actor/permission/Evidence bindings; it is not a UI template, and legacy `sectionTypes` do not determine layout.
 
 Historical browser presentation material was removed from `main`; it must not be restored. Retained operational-surface contracts are canonical under `contracts/experience/`.
 
@@ -180,9 +202,10 @@ SYSTEM            Collector / Runtime / Scheduler / AI Gateway / DB / Security /
 
 The final LUMENIS Experience has four approved surfaces over one Product Core: Public Website, Web Workspace, Desktop App and Mobile Companion. The approved hybrid route keeps Public Website presentation/acquisition separate from one Flutter codebase for Web/Desktop/Mobile. `00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md` records roles and capability boundaries without becoming a second architecture or design authority. Legacy browser/Jinja/static implementations remain retired and may not be restored. Retained contracts under `contracts/experience/` are binding inputs for approved operational surfaces.
 
-## 5. Current source/runtime facts — source-audited, not live-certified by this handoff
+## 5. Source/runtime owner baseline — revalidate against the snapshot and live source
 
-The latest source audit identifies these existing owners/contracts:
+The earlier source audit identified these existing owners/contracts. It is a
+navigation baseline, not a claim that every listed runtime is healthy now:
 
 ```text
 scripts/start_production.ps1              canonical Windows launcher
@@ -314,7 +337,7 @@ python scripts/audit_tools/verify_experience_authority_exclusive.py
 python scripts/audit_tools/verify_experience_anti_template.py
 ```
 
-The Experience checks enforce one multi-surface Experience authority and reject legacy/template revival. Historical browser implementation has been removed from `main`; the approved Public Website and Flutter Web Workspace must be implemented only in their scheduled rounds over the canonical Product Core. Retained contracts under `contracts/experience/` may inform surface binding but never act as a second Experience authority.
+The Experience checks enforce one multi-surface Experience authority and reject legacy/template revival. Historical browser implementation has been removed from `main`; the committed Public Website foundation and any Flutter Web Workspace candidate must remain over the canonical Product Core and pass their owner-round gates before acceptance. Retained contracts under `contracts/experience/` may inform surface binding but never act as a second Experience authority.
 
 The second check prevents regression of the CURRENT takeover path, v1.1 protocol identity, root agent routing and human/machine contract alignment. A runner-level 0-step failure means the check did not execute; it is not a passing or failing repository assertion.
 ## Historical remote cutover checkpoint
