@@ -29,6 +29,8 @@ accepted or safe to publish merely from the remote tree.
 
 Latest bounded update: [ROUND 06's legacy topic campaign identity fence](evidence/round-06/ROUND-06-TOPIC-CAMPAIGN-IDENTITY-FENCE-2026-09-23.md) passed Sol's clean replay as a safety Batch. The old Mainland-default collection, health, recovery and backfill routes now fail closed; even an explicitly approved HK endpoint reports `CANONICAL_COLLECTOR_BINDING_REQUIRED` until those callers use SYSTEM Collector. This is not a ROUND 06 exit or a real collection result. [ROUND 03 v15](evidence/round-03/ROUND-03-B001L-V15-BRAND-FOCUS-2026-09-23.md) is the current published migration baseline; v16 is under separate bounded work and ROUND 03 remains `REWORK`. The [Product Gate at `d621a9cc`](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/35847788961) completed with failure before any job step ran (`steps=0`); hosted CI remains `EXECUTION-LAYER UNVERIFIED` pending a fresh check for this update's commit.
 
+Post-publication check for safety commit `15ece66f`: local `HEAD`, `origin/main` and live `refs/heads/main` matched. Its [Product Gate](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/35850660770) failed with zero job steps; GitHub annotated account payment failure or a spending-limit increase as the job-start condition. This remains an execution-layer blocker, not a product-test result. The Source Owner Index's legacy topic-campaign row is corrected to the now-published fenced source state.
+
 The active local Sol task may progress after this snapshot. It must update its
 own bounded Round evidence and publish accepted source **and this CURRENT online
 status in the same delivery cycle** before an online reader can claim more.
