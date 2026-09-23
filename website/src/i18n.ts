@@ -9,7 +9,7 @@ export const copy = {
     metadata: {
       title: "序境 LUMENIS｜让每条线索都能回到来处",
       description:
-        "认识序境 LUMENIS：以商业运营、品牌与市场、共享创作和系统基础组成的一体化产品。沿着线索前行，也回到原始脉络。",
+        "认识序境 LUMENIS：面向商业运营与品牌市场工作，连接有来源的资料、业务判断、内容计划与复盘。",
     },
     navigation: [
       { href: "#structure", label: "产品结构" },
@@ -23,7 +23,7 @@ export const copy = {
       eyebrow: "一条线索，不止一个终点",
       title: "沿着变化，看见来处与去向。",
       description:
-        "序境 LUMENIS 把商业运营、品牌与市场、共享创作和系统基础放在同一产品脉络中。顺着一条线索向前，也能回到它开始的地方。",
+        "面向商业运营与品牌市场团队，把有来源的资料、待核实的问题、业务判断和交付物放在同一条工作脉络里。",
       primary: "看一段示意线索",
       secondary: "了解产品结构",
       note: "本页是产品介绍；示意内容为虚构，不连接真实产品数据。",
@@ -50,21 +50,21 @@ export const copy = {
         ordinal: "01 / 商业运营",
         title: "从主体与时间开始",
         description:
-          "沿着一个经营主体的变化，梳理前因、过程与后续问题，并能返回相关来源。",
+          "围绕项目、门店、活动与顾客反馈，核对真实资源和变化，形成有依据的运营判断与待办事项。",
         lens: "主体 → 时间 → 因果线索",
       },
       brand: {
         ordinal: "02 / 品牌与市场",
         title: "从品牌与关系开始",
         description:
-          "沿着品牌或市场议题，观察关系如何展开、线索如何传播，再回到原始脉络。",
+          "对照消费者需求、竞品和渠道变化，梳理品牌表达、内容方向与合作选择所需的依据。",
         lens: "品牌 → 关系 → 传播脉络",
       },
       shared: {
         ordinal: "03 / 共享能力",
         title: "创作、研究与评估，共同生长",
         description:
-          "创作、研究、评估、学习与 AI 增强由共享能力承接，不另起一套产品核心。",
+          "让研究发现进入 Brief、内容、报告与评估，保留来源、待确认事项和实际反馈。",
       },
       system: {
         ordinal: "04 / 系统基础",
@@ -78,18 +78,18 @@ export const copy = {
       title: "让下一步有来由。",
       intro: "以下是适合序境观察方式的典型问题，不是客户案例或效果承诺。",
       commerce: {
-        title: "经营变化，发生在一段时间里",
-        question: "某个经营主体的情况为什么变了？",
+        title: "从场内资源到内容计划",
+        question: "下个月哪些资源值得采编，哪些还需要门店确认？",
         description:
-          "把变化放回时间轴，沿着相关线索向前梳理，再回看最初的来源与尚待确认之处。",
-        path: ["主体", "时间变化", "关联线索", "返回来源"],
+          "核对项目目录、品牌动态与现场资料，区分已证实的资源和待确认信息，再为内容计划留下依据。",
+        path: ["项目任务", "核对资源", "形成计划", "保留依据"],
       },
       brand: {
-        title: "品牌议题，展开在关系网络里",
-        question: "一个市场信号如何关联并传播？",
+        title: "从市场研究到品牌 Brief",
+        question: "新系列该向谁表达，选择什么内容与合作对象？",
         description:
-          "把品牌与市场放在关系网络中观察，辨认线索之间的连接，再沿迹返回起点。",
-        path: ["品牌 / 市场", "关系", "传播", "返回来源"],
+          "对照消费者情境、竞品、渠道与创作者资料，把有依据的选择和未知项带入 Brief。",
+        path: ["品牌任务", "比较依据", "内容选择", "待核实项"],
       },
     },
     demo: {
@@ -178,7 +178,7 @@ export const copy = {
     metadata: {
       title: "LUMENIS — Follow a trace, return to its source",
       description:
-        "Meet LUMENIS: one product across commercial operations, brand and market work, shared creation, and system foundations. Follow a trace forward and return to its source.",
+        "Meet LUMENIS: a product for commercial operations and brand-market work, connecting sourced material, decisions, content plans, and review.",
     },
     navigation: [
       { href: "#structure", label: "Product structure" },
@@ -192,7 +192,7 @@ export const copy = {
       eyebrow: "One trace, more than one destination",
       title: "Follow change. See where it came from and where it leads.",
       description:
-        "LUMENIS brings commercial operations, brand and market work, shared creation, and system foundations into one product. Follow a trace forward—and return to where it began.",
+        "For commercial operations and brand-market teams: keep sourced material, open questions, business decisions, and deliverables in one continuous line of work.",
       primary: "Explore an illustrative trace",
       secondary: "See how the product is shaped",
       note: "This is a public product introduction. Its example is fictional and uses no live product data.",
@@ -219,21 +219,21 @@ export const copy = {
         ordinal: "01 / Commercial operations",
         title: "Start with a subject and time",
         description:
-          "Follow change around a commercial subject, trace the before and after, and return to the relevant source.",
+          "Check real resources and changes across projects, stores, events, and customer feedback; carry the evidence into operational decisions and next tasks.",
         lens: "Subject → time → causal trace",
       },
       brand: {
         ordinal: "02 / Brand and market",
         title: "Start with a brand and its relationships",
         description:
-          "Follow a brand or market question through its relationships and how a trace propagates, then return to its context.",
+          "Compare consumer needs, competitors, and channels to support choices about brand expression, content, and partners.",
         lens: "Brand → relationships → propagation",
       },
       shared: {
         ordinal: "03 / Shared capabilities",
         title: "Creation, research, and evaluation—together",
         description:
-          "Creation, research, evaluation, learning, and AI enhancement are shared capabilities, not a second product core.",
+          "Carry research into briefs, content, reports, and evaluation while retaining sources, open questions, and actual feedback.",
       },
       system: {
         ordinal: "04 / System foundations",
@@ -247,18 +247,18 @@ export const copy = {
       title: "Make the next question traceable.",
       intro: "These are representative questions for LUMENIS—not customer stories or claims of outcome.",
       commerce: {
-        title: "Commercial change unfolds over time",
-        question: "Why did a commercial subject change?",
+        title: "From on-site resources to a content plan",
+        question: "Which resources merit coverage next month, and what must stores confirm?",
         description:
-          "Place a change on a timeline, follow the related traces, then return to the source and what still needs confirmation.",
-        path: ["Subject", "Change over time", "Related traces", "Return to source"],
+          "Check project directories, brand updates, and on-site material. Separate verified resources from open questions before planning content.",
+        path: ["Project task", "Check resources", "Plan content", "Keep sources"],
       },
       brand: {
-        title: "Brand questions unfold through relationships",
-        question: "How might a market signal connect and propagate?",
+        title: "From market research to a brand brief",
+        question: "Who is a new range for, and which content and partners fit?",
         description:
-          "Look at a brand and its market as a network of relationships, follow the connections, and trace back to the starting point.",
-        path: ["Brand / market", "Relationships", "Propagation", "Return to source"],
+          "Compare consumer situations, competitors, channels, and creator material. Carry supported choices and unknowns into the brief.",
+        path: ["Brand task", "Compare evidence", "Choose content", "Open questions"],
       },
     },
     demo: {
@@ -347,7 +347,7 @@ export const copy = {
     metadata: {
       title: "서경 LUMENIS | 흔적을 따라가고, 출발점으로 돌아오다",
       description:
-        "서경 LUMENIS를 소개합니다. 상업 운영, 브랜드와 시장, 공동 창작, 시스템 기반을 하나의 제품으로 연결합니다. 흔적을 따라가고 출처로 돌아갈 수 있습니다.",
+        "서경 LUMENIS를 소개합니다. 상업 운영과 브랜드·시장 업무에서 출처가 있는 자료, 판단, 콘텐츠 계획과 회고를 연결합니다.",
     },
     navigation: [
       { href: "#structure", label: "제품 구조" },
@@ -361,7 +361,7 @@ export const copy = {
       eyebrow: "하나의 흔적, 여러 갈래의 맥락",
       title: "변화를 따라가며, 시작과 다음을 봅니다.",
       description:
-        "서경 LUMENIS는 상업 운영, 브랜드와 시장, 공동 창작, 시스템 기반을 하나의 제품 맥락으로 연결합니다. 흔적을 따라가고, 시작점으로 돌아올 수 있습니다.",
+        "상업 운영과 브랜드·시장 팀을 위해 출처가 있는 자료, 확인할 질문, 업무 판단과 결과물을 하나의 작업 흐름으로 연결합니다.",
       primary: "예시 흔적 살펴보기",
       secondary: "제품 구조 알아보기",
       note: "이 페이지는 제품 소개입니다. 예시는 허구이며 실제 제품 데이터를 사용하지 않습니다.",
@@ -388,21 +388,21 @@ export const copy = {
         ordinal: "01 / 상업 운영",
         title: "대상과 시간에서 시작합니다",
         description:
-          "운영 대상의 변화를 시간에 따라 살피고, 전후의 맥락을 따라간 뒤 관련 출처로 돌아옵니다.",
+          "프로젝트, 매장, 행사와 고객 피드백의 실제 자원과 변화를 확인하고 근거 있는 운영 판단과 다음 할 일로 이어갑니다.",
         lens: "대상 → 시간 → 인과의 흔적",
       },
       brand: {
         ordinal: "02 / 브랜드와 시장",
         title: "브랜드와 관계에서 시작합니다",
         description:
-          "브랜드 또는 시장의 질문을 관계망 속에서 살펴보고, 흔적의 확산을 따라 맥락으로 돌아옵니다.",
+          "소비자 수요, 경쟁 브랜드와 채널 변화를 비교해 브랜드 표현, 콘텐츠 방향과 협업 선택의 근거를 정리합니다.",
         lens: "브랜드 → 관계 → 확산의 흐름",
       },
       shared: {
         ordinal: "03 / 공동 역량",
         title: "창작, 연구, 평가가 함께 자랍니다",
         description:
-          "창작, 연구, 평가, 학습, AI 강화는 별도 제품 코어가 아닌 공동 역량으로 다룹니다.",
+          "연구 결과를 브리프, 콘텐츠, 보고서와 평가로 이어가며 출처, 미확인 사항과 실제 피드백을 남깁니다.",
       },
       system: {
         ordinal: "04 / 시스템 기반",
@@ -416,18 +416,18 @@ export const copy = {
       title: "다음 질문에 이르는 과정을 따라갑니다.",
       intro: "아래는 서경의 관점에 맞는 대표적인 질문이며, 고객 사례나 성과 약속이 아닙니다.",
       commerce: {
-        title: "상업적 변화는 시간 속에서 일어납니다",
-        question: "어떤 운영 대상에 변화가 생긴 이유는 무엇일까요?",
+        title: "현장 자원에서 콘텐츠 계획까지",
+        question: "다음 달 어떤 자원을 취재하고, 매장에 무엇을 확인해야 할까요?",
         description:
-          "변화를 시간축에 놓고 관련 흔적을 따라간 다음, 출처와 아직 확인이 필요한 부분으로 돌아옵니다.",
-        path: ["대상", "시간에 따른 변화", "관련 흔적", "출처로 돌아가기"],
+          "프로젝트 목록, 브랜드 소식과 현장 자료를 확인하고 검증된 자원과 미확인 정보를 구분해 콘텐츠 계획의 근거로 삼습니다.",
+        path: ["프로젝트 과제", "자원 확인", "콘텐츠 계획", "근거 보존"],
       },
       brand: {
-        title: "브랜드 질문은 관계망을 따라 펼쳐집니다",
-        question: "시장 신호는 어떤 관계를 맺고 확산될 수 있을까요?",
+        title: "시장 조사에서 브랜드 브리프까지",
+        question: "신제품은 누구에게, 어떤 콘텐츠와 협업으로 전해야 할까요?",
         description:
-          "브랜드와 시장을 관계망으로 바라보고 연결을 따라가며 시작점으로 돌아옵니다.",
-        path: ["브랜드 / 시장", "관계", "확산", "출처로 돌아가기"],
+          "소비자 상황, 경쟁사, 채널과 크리에이터 자료를 비교해 근거 있는 선택과 미확인 사항을 브리프에 담습니다.",
+        path: ["브랜드 과제", "근거 비교", "콘텐츠 선택", "미확인 사항"],
       },
     },
     demo: {
