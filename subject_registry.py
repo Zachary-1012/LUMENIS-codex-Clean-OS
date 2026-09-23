@@ -18,6 +18,7 @@ import hashlib
 import json
 import logging
 import os
+import sqlite3
 import re
 from datetime import datetime
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -45,6 +46,10 @@ TABLE_NAME = "lumenis_subject_registry"
 
 class SubjectValidationError(ValueError):
     """请求字段不满足主体契约。"""
+
+
+class SubjectRegistryUnavailableError(RuntimeError):
+    """The canonical registry is absent or behind its migration."""
 
 
 def _now() -> str:
@@ -119,10 +124,62 @@ def _db_ready():
     return db.get_db()
 
 
+def _schema_version(conn):
+    exists = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_version'"
+    ).fetchone()
+    if exists is None:
+        return None
+    versions = []
+    for (value,) in conn.execute("SELECT version FROM schema_version").fetchall():
+        try:
+            versions.append(int(value))
+        except (TypeError, ValueError):
+            continue
+    return max(versions) if versions else 0
+
+
+def _require_registry_schema(conn) -> None:
+    """Read the migrated registry contract without repairing it."""
+    try:
+        table = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+            (TABLE_NAME,),
+        ).fetchone()
+        if table is None:
+            raise SubjectRegistryUnavailableError("canonical subject registry is unavailable")
+        columns = {row[1] for row in conn.execute(f"PRAGMA table_info({TABLE_NAME})").fetchall()}
+        if "brand_focus_id" not in columns:
+            raise SubjectRegistryUnavailableError("canonical subject registry migration is required")
+        version = _schema_version(conn)
+        if version is not None and version < 15:
+            raise SubjectRegistryUnavailableError("canonical subject registry migration is required")
+        brand_focus_unique = False
+        for index_row in conn.execute(f"PRAGMA index_list({TABLE_NAME})").fetchall():
+            if not bool(index_row[2]):
+                continue
+            index_name = str(index_row[1]).replace("\"", "\"\"")
+            index_columns = tuple(
+                item[2]
+                for item in conn.execute(f'PRAGMA index_info("{index_name}")').fetchall()
+            )
+            if index_columns == ("brand_focus_id",):
+                brand_focus_unique = True
+                break
+        if not brand_focus_unique:
+            raise SubjectRegistryUnavailableError("canonical subject registry migration is required")
+    except SubjectRegistryUnavailableError:
+        raise
+    except sqlite3.Error as exc:
+        raise SubjectRegistryUnavailableError("canonical subject registry is unavailable") from exc
+
+
 def ensure_schema(conn) -> None:
+    """Migration helper: add BrandFocus identity to the canonical registry."""
     conn.execute(
         f"""CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
             subject_id TEXT PRIMARY KEY,
+            brand_focus_id TEXT,
             domain_id TEXT NOT NULL,
             subject_type TEXT NOT NULL,
             name_en TEXT NOT NULL,
@@ -136,6 +193,27 @@ def ensure_schema(conn) -> None:
             updated_at TEXT NOT NULL,
             UNIQUE(domain_id, subject_type, name_en_norm, name_zh_norm)
         )"""
+    )
+    columns = {row[1] for row in conn.execute(f"PRAGMA table_info({TABLE_NAME})").fetchall()}
+    if "brand_focus_id" not in columns:
+        conn.execute(f"ALTER TABLE {TABLE_NAME} ADD COLUMN brand_focus_id TEXT")
+
+    missing_bmp_ids = conn.execute(
+        f"SELECT subject_id, subject_type, name_en_norm, name_zh_norm FROM {TABLE_NAME} "
+        "WHERE domain_id='BMP' AND (brand_focus_id IS NULL OR TRIM(brand_focus_id)='')"
+    ).fetchall()
+    for row in missing_bmp_ids:
+        digest = hashlib.sha256(
+            f"BMP|{row[1]}|{row[2]}|{row[3]}".encode("utf-8")
+        ).hexdigest()[:24]
+        conn.execute(
+            f"UPDATE {TABLE_NAME} SET brand_focus_id=? WHERE subject_id=? "
+            "AND (brand_focus_id IS NULL OR TRIM(brand_focus_id)='')",
+            (f"BRAND-{digest}", row[0]),
+        )
+    conn.execute(
+        f"CREATE UNIQUE INDEX IF NOT EXISTS idx_{TABLE_NAME}_brand_focus "
+        f"ON {TABLE_NAME}(brand_focus_id) WHERE brand_focus_id IS NOT NULL"
     )
     conn.execute(
         f"CREATE INDEX IF NOT EXISTS idx_{TABLE_NAME}_domain ON {TABLE_NAME}(domain_id, status)"
@@ -160,17 +238,17 @@ def _row_to_dict(row) -> Dict[str, Any]:
 def list_subjects(domain_id: Optional[str] = None) -> List[Dict[str, Any]]:
     normalized = normalize_domain(domain_id) if domain_id else None
     with _db_ready() as conn:
-        ensure_schema(conn)
+        _require_registry_schema(conn)
         if normalized:
             rows = conn.execute(
-                f"SELECT subject_id, domain_id, subject_type, name_en, name_zh, industry, "
+                f"SELECT subject_id, brand_focus_id, domain_id, subject_type, name_en, name_zh, industry, "
                 f"keywords_json, status, created_at, updated_at FROM {TABLE_NAME} "
                 "WHERE domain_id=? AND status != 'archived' ORDER BY updated_at DESC, name_en_norm",
                 (normalized,),
             ).fetchall()
         else:
             rows = conn.execute(
-                f"SELECT subject_id, domain_id, subject_type, name_en, name_zh, industry, "
+                f"SELECT subject_id, brand_focus_id, domain_id, subject_type, name_en, name_zh, industry, "
                 f"keywords_json, status, created_at, updated_at FROM {TABLE_NAME} "
                 "WHERE status != 'archived' ORDER BY updated_at DESC, name_en_norm"
             ).fetchall()
@@ -194,12 +272,27 @@ def add_subject(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
         f"{domain_id}|{subject_type}|{en_norm}|{zh_norm}".encode("utf-8")
     ).hexdigest()[:24]
     subject_id = f"SUBJ-{digest}"
+    brand_focus_id = f"BRAND-{digest}" if domain_id == "BMP" else None
     now = _now()
 
     with _db_ready() as conn:
-        ensure_schema(conn)
+        version = _schema_version(conn)
+        table_exists = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+            (TABLE_NAME,),
+        ).fetchone() is not None
+        if version is not None and version < 15:
+            raise SubjectRegistryUnavailableError("canonical subject registry migration is required")
+        if table_exists:
+            _require_registry_schema(conn)
+        elif version is None:
+            # Preserve the legacy unversioned bootstrap used by isolated tools/tests.
+            # Versioned databases are changed only by the Shared Database migrator.
+            ensure_schema(conn)
+        else:
+            raise SubjectRegistryUnavailableError("canonical subject registry is unavailable")
         existing = conn.execute(
-            f"SELECT subject_id, domain_id, subject_type, name_en, name_zh, industry, "
+            f"SELECT subject_id, brand_focus_id, domain_id, subject_type, name_en, name_zh, industry, "
             f"keywords_json, status, created_at, updated_at FROM {TABLE_NAME} "
             "WHERE domain_id=? AND subject_type=? AND name_en_norm=? AND name_zh_norm=?",
             (domain_id, subject_type, en_norm, zh_norm),
@@ -207,14 +300,14 @@ def add_subject(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
         if existing:
             return _row_to_dict(existing), False
         conn.execute(
-            f"INSERT INTO {TABLE_NAME} (subject_id, domain_id, subject_type, name_en, name_zh, "
+            f"INSERT INTO {TABLE_NAME} (subject_id, brand_focus_id, domain_id, subject_type, name_en, name_zh, "
             "name_en_norm, name_zh_norm, industry, keywords_json, status, created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'configured', ?, ?)",
-            (subject_id, domain_id, subject_type, name_en, name_zh, en_norm, zh_norm,
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'configured', ?, ?)",
+            (subject_id, brand_focus_id, domain_id, subject_type, name_en, name_zh, en_norm, zh_norm,
              industry, json.dumps(keywords, ensure_ascii=False), now, now),
         )
         row = conn.execute(
-            f"SELECT subject_id, domain_id, subject_type, name_en, name_zh, industry, "
+            f"SELECT subject_id, brand_focus_id, domain_id, subject_type, name_en, name_zh, industry, "
             f"keywords_json, status, created_at, updated_at FROM {TABLE_NAME} WHERE subject_id=?",
             (subject_id,),
         ).fetchone()
@@ -268,6 +361,10 @@ def get_subjects():
         ]
     except SubjectValidationError as exc:
         return jsonify({"ok": False, "error": str(exc), "code": "INVALID_SUBJECT_SCOPE"}), 400
+    except SubjectRegistryUnavailableError:
+        logger.exception("Canonical subject registry is unavailable")
+        return jsonify({"ok": False, "code": "SUBJECT_REGISTRY_UNAVAILABLE",
+                        "error": "主体注册表暂不可用"}), 503
 
     return jsonify({
         "ok": True,
@@ -300,6 +397,10 @@ def create_subject():
         subject, created = add_subject(request.get_json(silent=True) or {})
     except SubjectValidationError as exc:
         return jsonify({"ok": False, "error": str(exc), "code": "INVALID_SUBJECT"}), 400
+    except SubjectRegistryUnavailableError:
+        logger.exception("Canonical subject registry migration is required for writes")
+        return jsonify({"ok": False, "code": "SUBJECT_REGISTRY_UNAVAILABLE",
+                        "error": "主体注册表暂不可用"}), 503
     if not created:
         return jsonify({"ok": True, "created": False, "duplicate": True,
                         "selection_only": True, "subject": subject}), 200
@@ -311,6 +412,7 @@ __all__ = [
     "DOMAINS",
     "SUBJECT_TYPES",
     "TABLE_NAME",
+    "SubjectRegistryUnavailableError",
     "add_subject",
     "ensure_schema",
     "list_subjects",

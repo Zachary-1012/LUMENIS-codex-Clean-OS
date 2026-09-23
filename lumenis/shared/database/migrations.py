@@ -24,7 +24,7 @@ DB_PATH = main_db_path()
 BACKUP_DIR = os.path.join(os.path.dirname(DB_PATH), 'backups')
 
 # 当前最新版本
-CURRENT_VERSION = 14
+CURRENT_VERSION = 15
 
 # 迁移历史记录
 MIGRATION_HISTORY = {
@@ -42,6 +42,7 @@ MIGRATION_HISTORY = {
     12: "P0-2 性能修复: notes.publish_datetime 添加索引 idx_notes_publish_datetime（趋势API日期范围查询加速）",
     13: "SYSTEM Collector 数据中心平台 schema 与静态目录接入 Shared Database；既存 registry 运行状态保持不变",
     14: "Add nullable Subject/BrandFocus scope keys and Evidence references; historical rows remain UNASSIGNED",
+    15: "Canonical Subject Registry BrandFocus identity; BMP rows receive deterministic IDs",
 }
 
 
@@ -595,6 +596,17 @@ def migration_13_to_14(conn: sqlite3.Connection):
     ensure_canonical_scope_columns(conn)
 
 
+def migration_14_to_15(conn: sqlite3.Connection):
+    """Add deterministic BrandFocus identity to the canonical Subject Registry."""
+    # sqlite3 does not implicitly wrap DDL in the caller's DML transaction.
+    # Keep the column, backfill, unique index and schema-version row atomic.
+    if not conn.in_transaction:
+        conn.execute("BEGIN")
+    from subject_registry import ensure_schema
+
+    ensure_schema(conn)
+
+
 def _ensure_migration_prerequisites(
     conn, current_version: int, target_version: int
 ) -> int:
@@ -701,6 +713,7 @@ MIGRATIONS = {
     11: migration_11_to_12,
     12: migration_12_to_13,
     13: migration_13_to_14,
+    14: migration_14_to_15,
 }
 
 
