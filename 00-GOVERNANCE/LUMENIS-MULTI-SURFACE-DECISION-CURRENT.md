@@ -58,7 +58,7 @@ Mobile Companion   Flutter Android/iOS targets from app/
 Product Core       existing Python/Flask canonical API and runtime owners
 ```
 
-`website/` is reserved for a future Public Website implementation. It may contain presentation and acquisition integration only. It must not own CTH/BMP/Shared/SYSTEM workflow logic, production persistence, Permission or Evidence.
+`website/` now contains a committed trilingual Public Website foundation (`77648c3b`, 2026-09-23). Its commercial destinations remain unconfigured; this is not proof of deployed acquisition or ROUND 08 acceptance. The root may contain presentation and acquisition integration only. It must not own CTH/BMP/Shared/SYSTEM workflow logic, production persistence, Permission or Evidence.
 
 `app/` remains the single Flutter Experience implementation for Web Workspace, Desktop and Mobile. A future `app/web/` platform target is generated/configuration support, not a second Web product or design authority.
 

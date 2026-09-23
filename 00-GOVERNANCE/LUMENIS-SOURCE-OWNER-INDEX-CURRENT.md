@@ -61,7 +61,7 @@ After bootstrap, locate work here. Root-level compatibility callers remain class
 | Product/domain architecture | `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`; `00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md` | Exact CTH/BMP caller and contract for the active slice; do not infer ownership from a filename |
 | Experience authority | `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md` | `contracts/experience/README.md`; `contracts/experience/screen-specifications/<SCREEN-ID>.md`; only a reviewed `DESIGN_READY` spec may guide implementation; Experience validators |
 | Multi-surface decision | `00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md` under the sole Product Architecture and Experience Constitution | Surface capability matrix, deployment boundary and blocking validators; never treat the decision as implementation evidence |
-| Public Website | future `website/` presentation/acquisition root; currently `ABSENT` | Product copy, demo/case truth, trial/contact/help and workspace entry only; no business workflow/data/Permission/Evidence owner |
+| Public Website | `website/` presentation/acquisition root; trilingual foundation committed at `77648c3b`, commercial destinations still unconfigured | Product copy, demo/case truth, trial/contact/help and workspace entry only; no business workflow/data/Permission/Evidence owner |
 | Flutter operational surfaces | `app/lib/product/`, `app/lib/shell/`, `app/lib/features/` | Flutter Web Workspace, Desktop and Mobile targets; `app/lib/core/`; matching `app/test/`; `app/README.md` |
 | Screen truth binding | `contracts/experience/lumenis_app_binding_registry.json`; `contracts/experience/screens/<SCREEN-ID>/` | `actions/`, `permissions/`, `evidence/`, `states/`, `viewmodels/`; current API owner and tests |
 | Product Core composition/API | `app.py`; `lumenis_app_api.py`; current registered routes | `experience_runtime.py`; `experience_screens.py`; exact route/service/repository tests |
@@ -88,7 +88,7 @@ After bootstrap, locate work here. Root-level compatibility callers remain class
 
 ### File placement rule
 
-New production code goes into the canonical owner above. New Flutter code goes into the owning `app/lib/features/<owner>/<screen>` slice, with stable cross-feature primitives promoted only after proven reuse. New Experience contracts go into the existing `contracts/experience/` family. The approved future `website/` root is restricted to Public Website presentation/acquisition and requires the ROUND 08 entry gate; it cannot own operational product logic. Do not add any other top-level frontend, collector, AI gateway, database, permission system, evidence store or design authority.
+New production code goes into the canonical owner above. New Flutter code goes into the owning `app/lib/features/<owner>/<screen>` slice, with stable cross-feature primitives promoted only after proven reuse. New Experience contracts go into the existing `contracts/experience/` family. The approved `website/` root is restricted to Public Website presentation/acquisition; its committed foundation does not pass the ROUND 08 business-entry or release gate and cannot own operational product logic. Do not add any other top-level frontend, collector, AI gateway, database, permission system, evidence store or design authority.
 
 ## 4. Fixed per-task inspection route
 
@@ -169,7 +169,7 @@ This table is a scheduling input, not permission to start a later round. Each ow
 
 ## 8. Business end-state to current implementation — 2026-09-23 local delta
 
-This is a Task Card input derived from the Product Owner's business calibration, not another Product Architecture or evidence of round acceptance. It was mapped against local `main` at `5ba1aefc53a1babc293e990c23c62f841724c843` with protected, uncommitted work. Local source presence is not a released user outcome; recheck the active source and evidence at each owning round. ROUND 02 remains `REWORK` on its Windows SYS-01 recovery assertion and is not enlarged by the business rows below.
+This is a Task Card input derived from the Product Owner's business calibration, not another Product Architecture or evidence of round acceptance. It was mapped against local `main` at `5ba1aefc53a1babc293e990c23c62f841724c843` with protected, uncommitted work. Local source presence is not a released user outcome; recheck the active source and evidence at each owning round. The later 2026-09-23 Windows SYS-01 recovery job passed on the dirty local candidate; ROUND 02 remains `REWORK` for coherent executable-source integration on remote `main` and is not enlarged by the business rows below.
 
 | Real user / job / deliverable | Need | Existing owner and local implementation | Current evidence limit | Owning rounds and minimum exit proof |
 | --- | --- | --- | --- | --- |

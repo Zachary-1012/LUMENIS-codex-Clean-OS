@@ -1,6 +1,6 @@
 # LUMENIS ROUND 02 Charter — CURRENT
 
-> Status: **ACTIVE / REWORK UNTIL REAL USER WORK E2E PASSES**
+> Status: **ACTIVE / LOCAL E2E VERIFIED / REWORK FOR SOURCE INTEGRATION**
 >
 > This Charter is subordinate to `AGENTS.md`, the sole Product Architecture, the sole Experience Constitution and `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. It controls only ROUND 02 and cannot authorize ROUND 03 implementation.
 
@@ -10,8 +10,8 @@
 | --- | --- |
 | Round | `ROUND 02 — Authority, Only-One and multi-surface decision` |
 | Sol execution base | `a13ff0cf19de894e917031a2fe7e62c751d58344` |
-| Current committed candidate | `5ba1aefc53a1babc293e990c23c62f841724c843` (freshly fetched `origin/main`, 2026-09-23) |
-| Local working tree | Uncommitted product work is protected; current local source must be validated separately from the committed candidate. The prior `542ee831` E2E evidence is historical. |
+| Last validated committed base | `77648c3b010d7f1ec1ce516f4d15ed99e7c34378` (Public Website foundation push, 2026-09-23); the SYS-01 executable source remains uncommitted. Resolve live `origin/main` before the next acceptance. |
+| Local working tree | Uncommitted product work is protected. The Windows SYS-01 job was live-verified on this local executable candidate, not on the committed/pushed App source. The prior `542ee831` E2E evidence is historical. |
 | Branch | `main` |
 | Repository | `Zachary-1012/LUMENIS-codex-Clean-OS` |
 | Decision owner | Sol |
@@ -59,8 +59,8 @@ ROUND 02 therefore closes the owner/consumer/compatibility decision only. It doe
 | Naming boundary | PASS FOR CLASSIFICATION | LUMENIS/BMP presentation; compatibility identifiers preserved and targeted tests pass |
 | One internal full-universe authority | PASS FOR CLASSIFICATION | One subordinate contract; no second Context/Data/Evidence/Permission/API/product owner |
 | Global selector / maturity runtime | NOT IN ROUND / NOT YET IMPLEMENTED | Current legacy fallback is explicitly a gap; implementation remains with ROUND 03–08 owners |
-| REAL USER WORK E2E | REWORK / HISTORICAL PARTIAL EVIDENCE | Windows Desktop ready and Core-unavailable captures plus retry/Core trace belong to the 2026-09-21 older candidate. On the current 2026-09-23 dirty candidate, isolated Core returned a live SYS-01 observation and the Windows binary launched, but the target window could not be activated/captured. Current ready → unavailable → recovered target-surface E2E is unverified. |
-| ROUND 02 Sol decision | REWORK | Cannot become PASS until every row above required for this round and the E2E assertion pass |
+| REAL USER WORK E2E | LIVE VERIFIED / LOCAL CANDIDATE | On 2026-09-23 the current local Windows build displayed ready → real Core unavailable → visible retry → recovered ready with a new trace on the same target window. Three PNGs and source/test/protection facts are in `evidence/round-02/ROUND-02-2026-09-23-CURRENT-LOCAL-E2E.md`. This does not prove the pushed App source. |
+| ROUND 02 Sol decision | REWORK / SOURCE INTEGRATION | The E2E job passed locally, but interleaved uncommitted App/Core changes span later owners and cannot be staged as a safe Round 02-only commit. Integrate coherently and revalidate the resulting remote candidate before PASS. |
 
 ## REAL USER WORK E2E ACCEPTANCE
 
@@ -127,8 +127,8 @@ Sol may set this Charter to `PASS` only after the current executable evidence pr
 | R02-B01 | Read-only exit revalidation | COMPLETE / found API authority gaps |
 | R02-B02A | OpenAPI current route truth and duplicate-candidate disclosure | IMPLEMENTED / SOL TESTED |
 | R02-B02B | Legacy Function Map classification | IMPLEMENTED / SOL TESTED |
-| R02-B03 | SYS-01 runtime observation trace and regression tests | IMPLEMENTED / SOL TESTED / PARTIAL LIVE VERIFIED |
-| Sol final | E2E run, governance, regression, diff, commit/push and ROUND 03 Task Card | REWORK — recovered target-surface proof still missing; ROUND 03 Task Card is not executable |
+| R02-B03 | SYS-01 runtime observation trace and regression tests | IMPLEMENTED / SOL TESTED / LIVE VERIFIED ON LOCAL CANDIDATE |
+| Sol final | E2E run, governance, regression, diff, commit/push and ROUND 03 Task Card | REWORK — local E2E passed; the dirty App/Core candidate is not safely integrated on remote main. ROUND 03 Task Card is not yet executable. |
 
 No Luna batch may commit, push or enter ROUND 03. Sol owns the final `PASS`/`REWORK`/`BLOCKED` decision.
 
@@ -177,7 +177,7 @@ Current ROUND 02 gaps are operational truth visibility, adaptive/accessibility a
 
 | Field | ROUND 02 value |
 | --- | --- |
-| ROUND / CURRENT SHA | ROUND 02 / `5ba1aefc53a1babc293e990c23c62f841724c843` plus protected uncommitted work |
+| ROUND / VALIDATED BASE SHA | ROUND 02 / `77648c3b010d7f1ec1ce516f4d15ed99e7c34378` plus protected uncommitted App/Core work; live remote SHA must be re-resolved |
 | REAL USER | Internal SYSTEM operator on Windows Desktop |
 | REAL USER JOB | Inspect the one Product Core runtime, understand source/time/trace, observe honest Core failure and recover through retry. |
 | REAL INPUT | Current source, live isolated Core process, disposable database, real RuntimeGuardian observation. |
@@ -186,12 +186,12 @@ Current ROUND 02 gaps are operational truth visibility, adaptive/accessibility a
 | PERMISSION | Read-only Core transport boundary; no Subject/BrandFocus selection and no external effect. |
 | FAILURE STATE | Core unavailable is visible with retry; missing runtime metrics are unavailable, never synthetic zero. |
 | NOT_COLLECTED | Global universe/business data is outside this SYSTEM job and is not fabricated. |
-| LIVE TEST | `REWORK`: the 2026-09-21 Desktop ready/unavailable and Core recovery evidence belongs to an older candidate. On 2026-09-23 the isolated current Core returned a real SYS-01 observation and the current Windows binary launched, but the Windows automation helper could not activate its target window; current ready/unavailable/recovered UI was not verified. |
+| LIVE TEST | `LIVE VERIFIED LOCAL`: the current Windows target showed ready, real Core-unavailable/retry, and recovered ready with a new trace. See the dated three-image E2E bundle. This is not remote executable acceptance. |
 | CONTINUOUS TEST | `NOT VERIFIED`; ROUND 02 does not claim sustained operation. |
 | USER ACCEPTANCE | Agent-operated real desktop path; independent Product Owner `USER_VERIFIED` is not claimed. |
 | EXTERNAL DEPENDENCIES | Windows Flutter Unicode build-path workaround and current CI execution-layer status are reported separately. |
-| FINAL STATUS | `REWORK`; historical targeted tests and partial live evidence do not accept the current dirty candidate. `USER_VERIFIED` and `OPERATING` are not claimed. |
-| NEXT GAP | Capture and verify the actual recovered Windows target after retry on the same candidate, then rerun final gates and only then publish ROUND 03 Task Card. |
+| FINAL STATUS | `REWORK / LOCAL E2E VERIFIED`; current dirty executable source spans later owners and is not integrated on remote `main`. `USER_VERIFIED`, `RELEASED` and `OPERATING` are not claimed. |
+| NEXT GAP | Reconcile overlapping local App/Core source by canonical owner without overwriting user work, commit/push a coherent executable candidate, rerun its affected gates, then make the Round 02 Sol acceptance decision. |
 
 ## COMMERCIAL OVERLAY IMPACT
 

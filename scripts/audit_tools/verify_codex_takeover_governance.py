@@ -22,6 +22,7 @@ PATHS = {
     "real_delivery_overlay": ROOT / "00-GOVERNANCE" / "LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
     "global_universe_contract": ROOT / "00-GOVERNANCE" / "LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
     "round02_charter": ROOT / "00-GOVERNANCE" / "LUMENIS-ROUND-02-CHARTER-CURRENT.md",
+    "round02_frontier_research": ROOT / "00-GOVERNANCE" / "evidence" / "round-02" / "ROUND-02-CONTINUOUS-FRONTIER-RESEARCH.md",
     "launch_plan": ROOT / "00-GOVERNANCE" / "LAUNCH-CONVERGENCE-MASTER-PLAN-V1.md",
     "experience_contracts": ROOT / "contracts" / "experience" / "README.md",
     "registry": ROOT / "00-GOVERNANCE" / "CROSS-REPO-CANONICAL-REGISTRY-V1.md",
@@ -69,6 +70,7 @@ def validate() -> None:
     real_delivery_overlay = _read("real_delivery_overlay")
     global_universe_contract = _read("global_universe_contract")
     round02_charter = _read("round02_charter")
+    round02_frontier_research = _read("round02_frontier_research")
     launch_plan = _read("launch_plan")
     experience_contracts = _read("experience_contracts")
     registry = _read("registry")
@@ -168,6 +170,11 @@ def validate() -> None:
         "LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
         "LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
         "LUMENIS_INTERNAL_FULL_UNIVERSE_READY",
+        "Cross-round capability gap register",
+        "LUMENIS-Ollama-Autostart",
+        "qwen2.5-coder:7b-agent",
+        "qwen3:1.7b",
+        "bge-m3",
         label="CURRENT source owner index",
     )
 
@@ -242,6 +249,15 @@ def validate() -> None:
         "LUMENIS_INTERNAL_FULL_UNIVERSE_READY",
         "RANDOM ENTITY DATA ACCEPTANCE",
         "sample seed / sample count / sample IDs",
+        "CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION",
+        "ADOPT / ADAPT / DEFER / REJECT",
+        "RESEARCH COMPLETE / NO JUSTIFIED UPGRADE",
+        "FUTURE TASK CARD INPUT / NOT EXECUTABLE BEFORE ROUND 05 ENTRY",
+        "LUMENIS-Ollama-Autostart",
+        "FUTURE TASK CARD INPUT / NOT EXECUTABLE BEFORE ROUND 07 ENTRY",
+        "qwen2.5-coder:7b-agent",
+        "qwen3:1.7b",
+        "bge-m3",
         label="CURRENT real-delivery overlay",
     )
     for round_number in range(1, 16):
@@ -251,7 +267,7 @@ def validate() -> None:
 
     _require(
         round02_charter,
-        "ACTIVE / REWORK UNTIL REAL USER WORK E2E PASSES",
+        "ACTIVE / LOCAL E2E VERIFIED / REWORK FOR SOURCE INTEGRATION",
         "REAL USER WORK E2E ACCEPTANCE",
         "REAL USER JOB",
         "Windows Desktop App",
@@ -270,11 +286,31 @@ def validate() -> None:
         "RANDOM ENTITY DATA ACCEPTANCE",
         "Sample count / IDs",
         "0 / []",
+        "CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION",
+        "RESEARCH COMPLETE / NO JUSTIFIED UPGRADE",
+        "ROUND-02-CONTINUOUS-FRONTIER-RESEARCH.md",
         "REAL DELIVERY CARD",
         "COMMERCIAL OVERLAY IMPACT",
         "COMMERCIAL_READY=NO",
         "Sol final",
         label="ROUND 02 Charter",
+    )
+
+    _require(
+        round02_frontier_research,
+        "ROUND 02 CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION",
+        "Flutter adaptive and responsive design",
+        "Flutter accessibility testing",
+        "W3C Trace Context",
+        "OpenTelemetry context propagation",
+        "Microsoft Fluent 2",
+        "Grafana",
+        "ADOPT",
+        "ADAPT",
+        "DEFER",
+        "REJECT",
+        "RESEARCH COMPLETE / NO JUSTIFIED UPGRADE",
+        label="ROUND 02 continuous frontier research",
     )
 
     _require(
@@ -320,7 +356,9 @@ def validate() -> None:
         "00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
         "### Fifteen-round closed-loop red line",
         "only repository execution router",
-        "ROUND 02 begins in its own Sol-controlled task",
+        "not fifteen mutually blocking implementation windows",
+        "approved operating ceiling is ten concurrent Luna workers",
+        "parallel war-room rule above",
         "REAL USER WORK E2E ACCEPTANCE — ROUND 02 through ROUND 15",
         "Missing E2E evidence forces Sol to return `REWORK` or `BLOCKED`",
         "REAL USER JOB",
@@ -339,6 +377,9 @@ def validate() -> None:
         "LUMENIS_INTERNAL_FULL_UNIVERSE_READY=YES",
         "RANDOM ENTITY DATA ACCEPTANCE",
         "sample count zero",
+        "CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION",
+        "ADOPT / ADAPT / DEFER / REJECT",
+        "RESEARCH COMPLETE / NO JUSTIFIED UPGRADE",
         "COMMERCIAL_READY=NO",
         "fixtures, mocks, hard-coded examples",
         "DESIGN_EXPLORATION",
