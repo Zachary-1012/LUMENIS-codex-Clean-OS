@@ -1,6 +1,6 @@
 # LUMENIS ROUND 02 Charter — CURRENT
 
-> Status: **ACTIVE / LOCAL E2E VERIFIED / REWORK FOR SOURCE INTEGRATION**
+> Status: **PASS / CLOSED FOR ROUND 02 SCOPE**. The clean-main Windows SYS-01 job and truthful health correction were verified; later product rounds and commercial release remain open.
 >
 > This Charter is subordinate to `AGENTS.md`, the sole Product Architecture, the sole Experience Constitution and `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. It controls only ROUND 02 and cannot authorize ROUND 03 implementation.
 
@@ -10,8 +10,8 @@
 | --- | --- |
 | Round | `ROUND 02 — Authority, Only-One and multi-surface decision` |
 | Sol execution base | `a13ff0cf19de894e917031a2fe7e62c751d58344` |
-| Last validated committed base | `77648c3b010d7f1ec1ce516f4d15ed99e7c34378` (Public Website foundation push, 2026-09-23); the SYS-01 executable source remains uncommitted. Resolve live `origin/main` before the next acceptance. |
-| Local working tree | Uncommitted product work is protected. The Windows SYS-01 job was live-verified on this local executable candidate, not on the committed/pushed App source. The prior `542ee831` E2E evidence is historical. |
+| Accepted executable SHA | `7781403e2fedcfa8290922f5469dd8d6a365533b` on `origin/main` after a clean `a419d4d3` archive plus the exact scoped SYSTEM ViewModel patch. Resolve live `origin/main` again at ROUND 03 entry. |
+| Local working tree | Broad unrelated uncommitted product work remains protected and is **not** included in the ROUND 02 acceptance. The Windows SYS-01 job was rerun on a clean-main App and candidate Core, not inferred from that dirty tree. The prior `542ee831` E2E evidence is historical. |
 | Branch | `main` |
 | Repository | `Zachary-1012/LUMENIS-codex-Clean-OS` |
 | Decision owner | Sol |
@@ -59,8 +59,8 @@ ROUND 02 therefore closes the owner/consumer/compatibility decision only. It doe
 | Naming boundary | PASS FOR CLASSIFICATION | LUMENIS/BMP presentation; compatibility identifiers preserved and targeted tests pass |
 | One internal full-universe authority | PASS FOR CLASSIFICATION | One subordinate contract; no second Context/Data/Evidence/Permission/API/product owner |
 | Global selector / maturity runtime | NOT IN ROUND / NOT YET IMPLEMENTED | Current legacy fallback is explicitly a gap; implementation remains with ROUND 03–08 owners |
-| REAL USER WORK E2E | LIVE VERIFIED / LOCAL CANDIDATE | On 2026-09-23 the current local Windows build displayed ready → real Core unavailable → visible retry → recovered ready with a new trace on the same target window. Three PNGs and source/test/protection facts are in `evidence/round-02/ROUND-02-2026-09-23-CURRENT-LOCAL-E2E.md`. This does not prove the pushed App source. |
-| ROUND 02 Sol decision | REWORK / SOURCE INTEGRATION | The E2E job passed locally, but interleaved uncommitted App/Core changes span later owners and cannot be staged as a safe Round 02-only commit. Integrate coherently and revalidate the resulting remote candidate before PASS. |
+| REAL USER WORK E2E | PASS / CLEAN-MAIN CANDIDATE | The clean-main Windows App and exact scoped Core patch displayed the real operational result, honest `degraded` state for a stopped reaper, actual Core outage/retry, recovered observation and a new trace in the same target window. The source, nine target-window PNGs, hashes, tests and protected-data checks are in `evidence/round-02/ROUND-02-2026-09-23-CLEAN-MAIN-SYS01-ACCEPTANCE.md`. |
+| ROUND 02 Sol decision | PASS / BOUNDED SCOPE | The exact correction and E2E evidence are committed at `7781403e` and pushed. Only the ROUND 02 authority/compatibility decision and SYSTEM read-only job pass; the dirty local App/Core work and downstream product/business surfaces are not accepted. |
 
 ## REAL USER WORK E2E ACCEPTANCE
 
@@ -127,10 +127,10 @@ Sol may set this Charter to `PASS` only after the current executable evidence pr
 | R02-B01 | Read-only exit revalidation | COMPLETE / found API authority gaps |
 | R02-B02A | OpenAPI current route truth and duplicate-candidate disclosure | IMPLEMENTED / SOL TESTED |
 | R02-B02B | Legacy Function Map classification | IMPLEMENTED / SOL TESTED |
-| R02-B03 | SYS-01 runtime observation trace and regression tests | IMPLEMENTED / SOL TESTED / LIVE VERIFIED ON LOCAL CANDIDATE |
-| Sol final | E2E run, governance, regression, diff, commit/push and ROUND 03 Task Card | REWORK — local E2E passed; the dirty App/Core candidate is not safely integrated on remote main. ROUND 03 Task Card is not yet executable. |
+| R02-B03 | SYS-01 runtime observation trace and regression tests | PASS — clean-main App plus scoped Core correction, 120 candidate Python regressions, 16 clean App tests and actual Windows outage/recovery target evidence |
+| Sol final | E2E run, governance, regression, diff, commit/push and ROUND 03 Task Card | PASS for ROUND 02 only; executable commit `7781403e` is on `origin/main`. The ROUND 03 first Task Card is published separately and requires a fresh round entry. |
 
-No Luna batch may commit, push or enter ROUND 03. Sol owns the final `PASS`/`REWORK`/`BLOCKED` decision.
+ROUND 03 may begin only in its own Sol-controlled task after fresh remote/local resolution, protection of unknown work and its entry gate. No ROUND 02 Luna worker continues automatically. Sol owns the final `PASS` decision recorded here.
 
 ## GLOBAL UNIVERSE / DATA MATURITY IMPACT
 
@@ -177,7 +177,7 @@ Current ROUND 02 gaps are operational truth visibility, adaptive/accessibility a
 
 | Field | ROUND 02 value |
 | --- | --- |
-| ROUND / VALIDATED BASE SHA | ROUND 02 / `77648c3b010d7f1ec1ce516f4d15ed99e7c34378` plus protected uncommitted App/Core work; live remote SHA must be re-resolved |
+| ROUND / ACCEPTED EXECUTABLE SHA | ROUND 02 / `7781403e2fedcfa8290922f5469dd8d6a365533b` on `origin/main`; fresh SHA resolution remains mandatory for ROUND 03 |
 | REAL USER | Internal SYSTEM operator on Windows Desktop |
 | REAL USER JOB | Inspect the one Product Core runtime, understand source/time/trace, observe honest Core failure and recover through retry. |
 | REAL INPUT | Current source, live isolated Core process, disposable database, real RuntimeGuardian observation. |
@@ -186,12 +186,12 @@ Current ROUND 02 gaps are operational truth visibility, adaptive/accessibility a
 | PERMISSION | Read-only Core transport boundary; no Subject/BrandFocus selection and no external effect. |
 | FAILURE STATE | Core unavailable is visible with retry; missing runtime metrics are unavailable, never synthetic zero. |
 | NOT_COLLECTED | Global universe/business data is outside this SYSTEM job and is not fabricated. |
-| LIVE TEST | `LIVE VERIFIED LOCAL`: the current Windows target showed ready, real Core-unavailable/retry, and recovered ready with a new trace. See the dated three-image E2E bundle. This is not remote executable acceptance. |
+| LIVE TEST | `PASS / CLEAN-MAIN CANDIDATE`: the actual Windows target showed real RuntimeGuardian fields, honest degraded guardrail status, real Core-unavailable/retry and recovered observation with a new trace. Exact source patch and evidence are in the clean-main dated bundle; the executable commit is pushed. |
 | CONTINUOUS TEST | `NOT VERIFIED`; ROUND 02 does not claim sustained operation. |
 | USER ACCEPTANCE | Agent-operated real desktop path; independent Product Owner `USER_VERIFIED` is not claimed. |
 | EXTERNAL DEPENDENCIES | Windows Flutter Unicode build-path workaround and current CI execution-layer status are reported separately. |
-| FINAL STATUS | `REWORK / LOCAL E2E VERIFIED`; current dirty executable source spans later owners and is not integrated on remote `main`. `USER_VERIFIED`, `RELEASED` and `OPERATING` are not claimed. |
-| NEXT GAP | Reconcile overlapping local App/Core source by canonical owner without overwriting user work, commit/push a coherent executable candidate, rerun its affected gates, then make the Round 02 Sol acceptance decision. |
+| FINAL STATUS | `PASS / ROUND 02 ONLY`; protected dirty later-round source is not integrated or accepted. `USER_VERIFIED`, `RELEASED`, `OPERATING` and `COMMERCIAL_READY` are not claimed. |
+| NEXT GAP | ROUND 03 Shared Database/Canonical Truth must reconcile its protected dirty changes by exact owner and independent clean candidate, then prove isolated migration, caller parity, Evidence lineage and real applicable user result. Global coverage remains unverified. |
 
 ## COMMERCIAL OVERLAY IMPACT
 

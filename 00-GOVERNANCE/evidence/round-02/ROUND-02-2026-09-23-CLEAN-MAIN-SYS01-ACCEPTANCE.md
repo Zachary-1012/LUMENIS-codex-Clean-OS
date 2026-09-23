@@ -1,6 +1,6 @@
 # ROUND 02 — clean-main Windows SYS-01 acceptance
 
-Status: **candidate E2E PASS for the bounded SYSTEM user job; Sol/remote decision pending commit verification**. This is not a whole-product, account, collection, Web Workspace, Mobile, beta or release acceptance.
+Status: **Sol PASS for the bounded ROUND 02 SYSTEM user job**. The corrected executable-source commit `7781403e2fedcfa8290922f5469dd8d6a365533b` was pushed to `origin/main` and re-resolved there. This is not a whole-product, account, collection, Web Workspace, Mobile, beta or release acceptance.
 
 ## Source and isolation
 

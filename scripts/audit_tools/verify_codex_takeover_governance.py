@@ -267,7 +267,9 @@ def validate() -> None:
 
     _require(
         round02_charter,
-        "ACTIVE / LOCAL E2E VERIFIED / REWORK FOR SOURCE INTEGRATION",
+        "PASS / CLOSED FOR ROUND 02 SCOPE",
+        "7781403e2fedcfa8290922f5469dd8d6a365533b",
+        "ROUND-02-2026-09-23-CLEAN-MAIN-SYS01-ACCEPTANCE.md",
         "REAL USER WORK E2E ACCEPTANCE",
         "REAL USER JOB",
         "Windows Desktop App",
