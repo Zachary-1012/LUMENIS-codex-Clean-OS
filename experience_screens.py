@@ -663,6 +663,22 @@ def _build_sys01() -> Dict[str, Any]:
     worker_total = _int(workers.get("total"))
     worker_failed = _int(workers.get("failed"))
     dlq_total = _int(dlq.get("total"))
+    reaper_value = hc.get("reaper_running")
+
+    # RuntimeGuardian's `overall` covers workers and circuit breakers, not the
+    # reaper.  A screen titled "system overall" must not promote that narrower
+    # status to healthy while the service guardrail is stopped or unobserved.
+    if overall in {"healthy", "ok"}:
+        if reaper_value is False:
+            overall = "degraded"
+        elif (
+            reaper_value is not True
+            or worker_total is None
+            or worker_failed is None
+            or dlq_total is None
+            or breakers is None
+        ):
+            overall = None
 
     source = "runtime_guardian.legacy_health_check"
     captured_at = None
@@ -699,6 +715,7 @@ def _build_sys01() -> Dict[str, Any]:
             "workers_total": worker_total,
             "workers_failed": worker_failed,
             "dlq_total": dlq_total,
+            "reaper_running": reaper_value,
             "open_breakers": open_breaker_count,
             "registered_breakers": registered_breaker_count,
         }
@@ -752,7 +769,6 @@ def _build_sys01() -> Dict[str, Any]:
             f"open={open_breaker_count} · registered={registered_breaker_count}"
         )
 
-    reaper_value = hc.get("reaper_running")
     rt_items = [
         {"name": "总体状态", "state": overall_state, "detail": str(overall or "unknown")},
         {
