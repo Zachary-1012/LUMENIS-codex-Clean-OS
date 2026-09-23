@@ -243,6 +243,57 @@ EVENT_MIGRATIONS = {
 
 
 
+
+SCOPE_STATUS_UNASSIGNED = "UNASSIGNED"
+SCOPE_STORAGE_COLUMNS = {
+    "subject_id": "TEXT",
+    "brand_focus_id": "TEXT",
+    "scope_status": "TEXT NOT NULL DEFAULT 'UNASSIGNED'",
+    "scope_evidence_ref": "TEXT",
+}
+SCOPE_STORAGE_INDEXES = {
+    "notes": (
+        "CREATE INDEX IF NOT EXISTS idx_notes_scope_subject "
+        "ON notes(subject_id, scope_status)",
+        "CREATE INDEX IF NOT EXISTS idx_notes_scope_brand "
+        "ON notes(brand_focus_id, scope_status)",
+    ),
+    "web_mentions": (
+        "CREATE INDEX IF NOT EXISTS idx_web_mentions_scope_subject "
+        "ON web_mentions(subject_id, scope_status)",
+        "CREATE INDEX IF NOT EXISTS idx_web_mentions_scope_brand "
+        "ON web_mentions(brand_focus_id, scope_status)",
+    ),
+    "events": (
+        "CREATE INDEX IF NOT EXISTS idx_events_scope_subject "
+        "ON events(subject_id, scope_status)",
+        "CREATE INDEX IF NOT EXISTS idx_events_scope_brand "
+        "ON events(brand_focus_id, scope_status)",
+    ),
+}
+
+
+def ensure_business_scope_storage(conn):
+    """Add v14 scope keys and scope Evidence refs without inferring history."""
+    for table, index_statements in SCOPE_STORAGE_INDEXES.items():
+        columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+        if not columns:
+            raise sqlite3.OperationalError(
+                f"{table} must exist before v14 scope storage is applied"
+            )
+        for column, definition in SCOPE_STORAGE_COLUMNS.items():
+            if column not in columns:
+                conn.execute(
+                    f"ALTER TABLE {table} ADD COLUMN {column} {definition}"
+                )
+        conn.execute(
+            f"UPDATE {table} SET scope_status=? "
+            "WHERE scope_status IS NULL OR TRIM(scope_status)=''",
+            (SCOPE_STATUS_UNASSIGNED,),
+        )
+        for statement in index_statements:
+            conn.execute(statement)
+
 def apply_business_schema(conn):
     statement = []
     for character in SCHEMA:

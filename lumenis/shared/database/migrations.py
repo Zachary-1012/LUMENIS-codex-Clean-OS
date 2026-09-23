@@ -24,7 +24,7 @@ DB_PATH = main_db_path()
 BACKUP_DIR = os.path.join(os.path.dirname(DB_PATH), 'backups')
 
 # 当前最新版本
-CURRENT_VERSION = 13
+CURRENT_VERSION = 14
 
 # 迁移历史记录
 MIGRATION_HISTORY = {
@@ -41,6 +41,7 @@ MIGRATION_HISTORY = {
     11: "Evidence Chain/Canonical Data bypass: collection_quality_log table, zbc_canonical_data domain_id/product_id, notes domain_id, daily_reports evidence_ids",
     12: "P0-2 性能修复: notes.publish_datetime 添加索引 idx_notes_publish_datetime（趋势API日期范围查询加速）",
     13: "SYSTEM Collector 数据中心平台 schema 与静态目录接入 Shared Database；既存 registry 运行状态保持不变",
+    14: "Add nullable Subject/BrandFocus scope keys and Evidence references; historical rows remain UNASSIGNED",
 }
 
 
@@ -581,6 +582,19 @@ def migration_12_to_13(conn):
     apply_platform_schema(conn)
 
 
+def migration_13_to_14(conn: sqlite3.Connection):
+    """Add nullable scope keys and Evidence references without backfilling identity."""
+    from .business_schema import ensure_business_scope_storage
+    from canonical_data import ensure_canonical_scope_columns
+
+    # SQLite otherwise autocommits each DDL statement on a connection with no
+    # active transaction. Keep this version's schema and history row atomic.
+    if not conn.in_transaction:
+        conn.execute("BEGIN")
+    ensure_business_scope_storage(conn)
+    ensure_canonical_scope_columns(conn)
+
+
 def _ensure_migration_prerequisites(
     conn, current_version: int, target_version: int
 ) -> int:
@@ -686,6 +700,7 @@ MIGRATIONS = {
     10: migration_10_to_11,
     11: migration_11_to_12,
     12: migration_12_to_13,
+    13: migration_13_to_14,
 }
 
 

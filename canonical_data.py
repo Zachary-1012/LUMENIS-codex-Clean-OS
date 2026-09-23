@@ -447,6 +447,47 @@ CANONICAL_INDEXES = [
 ]
 
 
+
+def ensure_canonical_scope_columns(conn: sqlite3.Connection) -> None:
+    """Add v14 scope storage through the caller's canonical connection."""
+    table_exists = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+        (CANONICAL_TABLE,),
+    ).fetchone()
+    if table_exists is None:
+        raise sqlite3.OperationalError(
+            "canonical_data must exist before v14 scope storage is applied"
+        )
+
+    columns = {
+        row[1] for row in conn.execute(f"PRAGMA table_info({CANONICAL_TABLE})")
+    }
+    # subject_id and evidence_ref belong to the existing Canonical Data contract.
+    # Preserve them; scope_evidence_ref is a separate explicit v14 scope reference.
+    additions = {
+        "subject_id": "TEXT",
+        "brand_focus_id": "TEXT",
+        "scope_status": "TEXT NOT NULL DEFAULT 'UNASSIGNED'",
+        "scope_evidence_ref": "TEXT",
+    }
+    for column, definition in additions.items():
+        if column not in columns:
+            conn.execute(
+                f"ALTER TABLE {CANONICAL_TABLE} ADD COLUMN {column} {definition}"
+            )
+    conn.execute(
+        "UPDATE canonical_data SET scope_status='UNASSIGNED' "
+        "WHERE scope_status IS NULL OR TRIM(scope_status)=''"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_canonical_scope_subject "
+        "ON canonical_data(subject_id, scope_status)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_canonical_scope_brand "
+        "ON canonical_data(brand_focus_id, scope_status)"
+    )
+
 def ensure_canonical_table(db_path: str) -> None:
     """确保 canonical_data 表存在（幂等，不破坏现有数据）。"""
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
