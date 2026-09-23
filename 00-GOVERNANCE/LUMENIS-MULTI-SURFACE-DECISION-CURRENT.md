@@ -118,7 +118,7 @@ Vendor references used for this decision: [System One / Jev launch](https://type
 
 ## 6. Current implementation truth
 
-At approval time:
+Historical approval-time baseline (not a live status table):
 
 | Item | Current status |
 | --- | --- |
@@ -130,7 +130,7 @@ At approval time:
 | Jev adapter/provider configuration | `ABSENT` |
 | Jev runtime/evaluation evidence | `LIVE_UNVERIFIED` |
 
-Approval is not implementation evidence. No absent surface/provider may be reported as shipped, tested, verified, released or operating.
+Approval is not implementation evidence. Since this baseline, `website/` has a committed trilingual foundation; Flutter Web Workspace source, build and same-origin host have local verification, but protected CTH/BMP browser access and commercial entry are not accepted. Jev source remains local-only pending its provider gate. None may be reported as released or operating from this table.
 
 ## 7. Fifteen-round placement and gates
 

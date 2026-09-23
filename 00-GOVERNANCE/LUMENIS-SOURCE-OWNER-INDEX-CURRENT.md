@@ -128,6 +128,8 @@ Routine commits, runner/DNS failures, stale historical documents and a single `U
 
 ## 5. Source-audit disposition at the baseline
 
+The table below records the earlier audit baseline, not live source status. The current Public Website foundation is committed under `website/`; the Flutter Web Workspace build and host have local evidence but protected CTH/BMP browser access remains blocked. Use the current owner matrix above and dated Round 08 evidence for present status, without treating either source presence as release acceptance.
+
 | Area | Source-backed finding | Status for execution |
 | --- | --- | --- |
 | Multi-surface Experience | `app/` contains the only current user-facing implementation. Public Website, Flutter Web Workspace and multi-surface deployment are absent. Five top-level Golden Page slices and nested CTH-02 exist; 44 screen IDs exist, while only six reviewed screen specifications exist. | **PARTIAL / ROUND 08+**. The approved architecture is not implementation evidence; current Flutter/local work is preserved. |
