@@ -208,6 +208,9 @@ Generative providers (including Zhipu and Local AI)
 Jev typed decision provider candidate
        ├── routing / classification / scoring
        └── verification / evaluation with probabilities and confidence
+
+LUMENIS-specific self-developed model candidate
+       └── the same bounded typed jobs, evaluated against real LUMENIS work
 ```
 
 A Provider is ACTIVE only when real callers, health verification and tests prove it. Historical configuration is not runtime truth.
@@ -216,6 +219,8 @@ Runtime and engineering roles are separate:
 
 - `lumenis/system/ai_gateway/` is the single SYSTEM AI runtime owner. Ollama is the local provider direction behind that owner; `local_ai_client.py` and existing `/api/local-ai/*` routes are compatibility callers that must converge without changing behavior or creating another gateway.
 - Jev is approved only as a typed decision/evaluation provider behind that gateway. It is not a free-text fallback, Permission/Evidence owner, final business decision maker or effect authorizer. Its implementation remains `ABSENT` until ROUND 07 proves typed contracts, pinned version, secret handling, cost/legal/privacy review, shadow evaluation, low-confidence behavior and complete trace metadata.
+- The Product Owner also requires a LUMENIS-specific self-developed model candidate to reach a real, reviewable closed loop before prelaunch review. Keep it behind the same Gateway and evaluate it alongside Jev on the same authorized typed jobs, Evidence, Permission, language, confidence, outcome and rollback gates. Preserve both candidates until the prelaunch comparison supports an explicit retention or exit decision; neither candidate may self-promote or replace Product Truth.
+- Jev used as an optional local Codex engineering decision aid is workstation configuration, separate from the product Gateway. It does not replace Codex's coding model and does not establish product-provider acceptance.
 - `.opencode/opencode.json` configures OpenCode for repository development, audit, test and automation. OpenCode/Codex are engineering runtimes, not user-facing model providers, Product Core dependencies or Production Truth owners.
 - Public Website, Flutter Web, Desktop and Mobile consume typed Product Core results and provider state. They do not hold provider keys, run OpenCode, choose hidden tool chains or own model routing.
 

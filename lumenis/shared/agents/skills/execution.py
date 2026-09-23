@@ -189,10 +189,127 @@ def effect_fence(ctx):
     return decision.to_dict()
 
 
+_NON_SUCCESS_RESULT_STATES = frozenset({
+    "blocked", "rejected", "denied", "unavailable", "input_required",
+    "error", "failed", "failure", "partial", "not_collected",
+    "not_available", "pending", "offline", "not_ready", "no_handler",
+    "timeout", "cancelled", "canceled",
+})
+_RESULT_STATE_FIELDS = ("status", "state", "data_state")
+_RESULT_METADATA_FIELDS = frozenset({
+    "status", "state", "data_state", "ok", "success", "isError", "allowed",
+    "error", "errors", "code", "message", "source", "provider", "model",
+    "connected", "skill_id", "tool", "tool_name", "tool_definition", "server_info",
+    "protocol_version", "transport", "security", "trace", "warnings", "duration_ms",
+    "implementation_state", "external_fetch", "provider_call", "production_truth_write",
+    "query", "task", "version", "timestamp", "created_at", "updated_at", "type",
+})
+_RESULT_VALUE_FIELDS = frozenset({
+    "result", "output", "osai", "structuredContent", "content", "data", "value",
+    "answer", "response", "text", "artifact", "records", "items", "resources",
+    "research_assets", "notes", "stats",
+})
+
+
+def _normalized_result_state(value: Any) -> str:
+    if isinstance(value, Enum):
+        value = value.value
+    if not isinstance(value, str):
+        return ""
+    return value.strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def _has_result_content(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (dict, list, tuple, set)):
+        return bool(value)
+    return True
+
+
+def _product_result_is_success(value: Any) -> bool:
+    """Accept real output and explicit no-record states, never error-shaped output."""
+    if not _has_result_content(value):
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        text = value.strip()
+        state = _normalized_result_state(text.split(":", 1)[0])
+        return state not in _NON_SUCCESS_RESULT_STATES
+    if isinstance(value, (list, tuple, set)):
+        return all(_product_result_is_success(item) for item in value)
+    if not isinstance(value, dict):
+        return True
+
+    for flag in ("ok", "success", "allowed"):
+        flag_value = value.get(flag)
+        if flag_value is False or (
+            isinstance(flag_value, (int, float)) and not isinstance(flag_value, bool)
+            and flag_value == 0
+        ) or (
+            isinstance(flag_value, str)
+            and flag_value.strip().lower() in {"false", "no", "0"}
+        ):
+            return False
+    if value.get("isError") is True or value.get("error") or value.get("errors"):
+        return False
+
+    states = {
+        _normalized_result_state(value.get(field))
+        for field in _RESULT_STATE_FIELDS
+        if value.get(field) is not None
+    }
+    if states & _NON_SUCCESS_RESULT_STATES:
+        return False
+
+    # A declared no-record outcome is a valid completed read, even when its
+    # records list is empty. A status/transport/message-only object is not a
+    # business result, even when it claims success.
+    explicit_no_records = bool(states & {"no_record", "no_records"})
+    business_fields = [
+        (key, item) for key, item in value.items()
+        if str(key) not in _RESULT_METADATA_FIELDS
+    ]
+    populated = [
+        (key, item) for key, item in business_fields if _has_result_content(item)
+    ]
+    if not populated:
+        return explicit_no_records
+    for key, item in populated:
+        if key in _RESULT_VALUE_FIELDS or isinstance(item, (dict, list, tuple, set)):
+            if not _product_result_is_success(item):
+                return False
+    return True
+
+
+def _product_result_error(value: Any) -> str:
+    if isinstance(value, dict):
+        errors = value.get("errors")
+        if isinstance(errors, (list, tuple)):
+            messages = [str(item).strip() for item in errors if str(item).strip()]
+            if messages:
+                return "; ".join(messages)[:240]
+        for key in ("error", "code", "message", "status", "state", "data_state"):
+            message = value.get(key)
+            if isinstance(message, str) and message.strip():
+                return message.strip()[:240]
+    return "Skill adapter returned a non-success result"
+
+
 def execute_skill(ctx, handler=None, skill_info=None):
     if handler is not None:
         try:
-            return {"success": True, "result": handler(ctx), "source": "custom_handler"}
+            result = handler(ctx)
+            success = _product_result_is_success(result)
+            return {
+                "success": success,
+                "result": result,
+                "source": "custom_handler",
+                "error": None if success else _product_result_error(result),
+            }
         except Exception as e:
             return {"success": False, "error": str(e), "traceback": traceback.format_exc()[-500:], "source": "custom_handler"}
     # Registered MCP Skills use the same execution chain as built-ins.  The
@@ -205,12 +322,17 @@ def execute_skill(ctx, handler=None, skill_info=None):
                 {"skill_id": skill_info.skill_id, **(skill_info.config or {})},
                 ctx.input_payload,
             )
+            success = (
+                isinstance(mcp_result, dict)
+                and mcp_result.get("ok") is True
+                and "result" in mcp_result
+                and _product_result_is_success(mcp_result)
+            )
             return {
-                "success": bool(mcp_result.get("ok")),
+                "success": success,
                 "result": mcp_result,
                 "source": "registered_mcp",
-                "error": ("; ".join(mcp_result.get("errors") or [])
-                          if not mcp_result.get("ok") else None),
+                "error": None if success else _product_result_error(mcp_result),
             }
         except Exception as e:
             return {"success": False, "error": str(e),
@@ -226,7 +348,14 @@ def execute_skill(ctx, handler=None, skill_info=None):
                 user_permissions=["READ", "AUDIT", "ANALYZE", "RESEARCH", "PLAN", "PATCH_PREVIEW", "TEST", "VERIFY"],
                 timeout=60.0)
             if osai_result.get("connected"):
-                return {"success": True, "result": osai_result.get("osai"), "source": "osai_adapter"}
+                result = osai_result.get("osai")
+                success = _product_result_is_success(osai_result)
+                return {
+                    "success": success,
+                    "result": result,
+                    "source": "osai_adapter",
+                    "error": None if success else _product_result_error(result),
+                }
             # OSAI 不可用，回退到内置本地
     except Exception:
         pass
@@ -237,7 +366,13 @@ def execute_skill(ctx, handler=None, skill_info=None):
         if meta:
             local = _execute_builtin_local(ctx, meta)
             if local is not None:
-                return {"success": True, "result": local, "source": "builtin_local"}
+                success = _product_result_is_success(local)
+                return {
+                    "success": success,
+                    "result": local,
+                    "source": "builtin_local",
+                    "error": None if success else _product_result_error(local),
+                }
     except Exception:
         pass
     return {"success": False, "error": "no executable handler available", "source": "none", "code": "NO_HANDLER"}
