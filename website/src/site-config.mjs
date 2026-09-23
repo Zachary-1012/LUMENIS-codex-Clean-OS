@@ -1,3 +1,5 @@
+import { isReservedPublicHost } from "./public-host.mjs";
+
 function readPublicUrl(name) {
   const value = process.env[name];
   if (!value) return undefined;
@@ -11,6 +13,10 @@ function readPublicUrl(name) {
 
   if (parsed.protocol !== "https:" || parsed.username || parsed.password) {
     throw new Error(`${name} must be an HTTPS URL without embedded credentials.`);
+  }
+
+  if (isReservedPublicHost(parsed.hostname)) {
+    throw new Error(`${name} must use a real public host, not a reserved example host.`);
   }
 
   return parsed.href;

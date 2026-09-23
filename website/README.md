@@ -21,14 +21,15 @@ npm test
 
 `npm run build` is a preview build when no public origin is supplied. Preview
 output includes `noindex,nofollow`, blocks robots, and omits canonical URLs and
-`hreflang` links. The deployed build should set an HTTPS origin:
+`hreflang` links. A deployed build must use a verified public HTTPS origin and
+reachable destinations. Set `LUMENIS_PUBLIC_SITE_ORIGIN` and, when available,
+`LUMENIS_PUBLIC_TRIAL_URL`, `LUMENIS_PUBLIC_CONTACT_URL`,
+`LUMENIS_PUBLIC_HELP_URL`, and `LUMENIS_PUBLIC_WORKSPACE_URL` to the actual
+deployment URLs before building. Reserved example hosts such as
+`example.invalid`, `example.com`, `.test`, and localhost fail the build when
+supplied as public URLs.
 
 ```powershell
-$env:LUMENIS_PUBLIC_SITE_ORIGIN = "https://example.invalid"
-$env:LUMENIS_PUBLIC_TRIAL_URL = "https://example.invalid/trial"
-$env:LUMENIS_PUBLIC_CONTACT_URL = "https://example.invalid/contact"
-$env:LUMENIS_PUBLIC_HELP_URL = "https://example.invalid/help"
-$env:LUMENIS_PUBLIC_WORKSPACE_URL = "https://example.invalid/workspace"
 npm run build
 ```
 

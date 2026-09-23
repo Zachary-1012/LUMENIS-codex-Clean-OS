@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import { join } from "node:path";
+import { isReservedPublicHost } from "../src/public-host.mjs";
 
 const root = new URL("../dist/", import.meta.url);
 const pages = ["index.html", "en/index.html", "ko/index.html"];
@@ -90,4 +91,19 @@ test("access actions never imply a configured destination", async () => {
     const url = new URL(process.env[name]);
     assert.ok(html.includes(`href="${url.href.replaceAll("&", "&amp;")}"`));
   }
+});
+
+test("reserved example hosts cannot stand in for public destinations", () => {
+  for (const host of [
+    "example.invalid",
+    "public.example.invalid",
+    "example.com",
+    "workspace.example.com",
+    "localhost",
+    "app.localhost",
+    "sample.test",
+  ]) {
+    assert.equal(isReservedPublicHost(host), true, host);
+  }
+  assert.equal(isReservedPublicHost("lumenis.example-business.cn"), false);
 });

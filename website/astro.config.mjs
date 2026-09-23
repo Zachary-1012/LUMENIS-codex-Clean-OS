@@ -1,4 +1,5 @@
 import { defineConfig } from "astro/config";
+import { isReservedPublicHost } from "./src/public-host.mjs";
 
 const siteOrigin = process.env.LUMENIS_PUBLIC_SITE_ORIGIN;
 
@@ -23,6 +24,10 @@ function validateSiteOrigin(value) {
     throw new Error(
       "LUMENIS_PUBLIC_SITE_ORIGIN must be an HTTPS origin without a path, credentials, query, or fragment.",
     );
+  }
+
+  if (isReservedPublicHost(parsed.hostname)) {
+    throw new Error("LUMENIS_PUBLIC_SITE_ORIGIN must use a real public host, not a reserved example host.");
   }
 
   return parsed.origin;
