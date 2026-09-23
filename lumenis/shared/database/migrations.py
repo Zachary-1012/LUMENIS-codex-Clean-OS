@@ -24,7 +24,7 @@ DB_PATH = main_db_path()
 BACKUP_DIR = os.path.join(os.path.dirname(DB_PATH), 'backups')
 
 # 当前最新版本
-CURRENT_VERSION = 15
+CURRENT_VERSION = 16
 
 # 迁移历史记录
 MIGRATION_HISTORY = {
@@ -43,6 +43,7 @@ MIGRATION_HISTORY = {
     13: "SYSTEM Collector 数据中心平台 schema 与静态目录接入 Shared Database；既存 registry 运行状态保持不变",
     14: "Add nullable Subject/BrandFocus scope keys and Evidence references; historical rows remain UNASSIGNED",
     15: "Canonical Subject Registry BrandFocus identity; BMP rows receive deterministic IDs",
+    16: "Content Evidence source references, parent cleanup, and query indexes",
 }
 
 
@@ -607,6 +608,70 @@ def migration_14_to_15(conn: sqlite3.Connection):
     ensure_schema(conn)
 
 
+def migration_15_to_16(conn: sqlite3.Connection):
+    """Additive Content Evidence lineage and query indexes in Shared DB.
+
+    The content feature owns its tables; this versioned migration only adapts
+    tables that already exist. Legacy source references stay NULL, while blank
+    ancestry is normalized to the canonical NULL representation.
+    """
+    if not conn.in_transaction:
+        conn.execute("BEGIN")
+
+    tables = {
+        row[0]
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+    }
+
+    if "content_generation_evidence" in tables:
+        columns = {
+            row[1]
+            for row in conn.execute(
+                "PRAGMA table_info(content_generation_evidence)"
+            ).fetchall()
+        }
+        if "source_evidence_ref" not in columns:
+            conn.execute(
+                "ALTER TABLE content_generation_evidence "
+                "ADD COLUMN source_evidence_ref TEXT"
+            )
+            columns.add("source_evidence_ref")
+
+        if "parent_evidence_id" in columns:
+            conn.execute(
+                "UPDATE content_generation_evidence "
+                "SET parent_evidence_id=NULL "
+                "WHERE parent_evidence_id IS NOT NULL "
+                "AND TRIM(parent_evidence_id)=''"
+            )
+
+        for index_name, column in (
+            ("idx_cge_type", "content_type"),
+            ("idx_cge_created", "created_at"),
+            ("idx_cge_source_evidence_ref", "source_evidence_ref"),
+        ):
+            if column in columns:
+                conn.execute(
+                    f"CREATE INDEX IF NOT EXISTS {index_name} "
+                    f"ON content_generation_evidence({column})"
+                )
+
+    if "content_evaluation" in tables:
+        evaluation_columns = {
+            row[1]
+            for row in conn.execute(
+                "PRAGMA table_info(content_evaluation)"
+            ).fetchall()
+        }
+        if "evidence_id" in evaluation_columns:
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_ce_evidence "
+                "ON content_evaluation(evidence_id)"
+            )
+
+
 def _ensure_migration_prerequisites(
     conn, current_version: int, target_version: int
 ) -> int:
@@ -714,6 +779,7 @@ MIGRATIONS = {
     12: migration_12_to_13,
     13: migration_13_to_14,
     14: migration_14_to_15,
+    15: migration_15_to_16,
 }
 
 
