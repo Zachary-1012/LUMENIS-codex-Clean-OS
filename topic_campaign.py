@@ -81,6 +81,64 @@ def _node_bin():
     except Exception:
         return 'node'
 
+
+def _canonical_campaign_identity(auto_trigger=False):
+    """Resolve the only permitted RedNote campaign identity without side effects.
+
+    This is a configuration/policy check only: it never connects to CDP, opens a
+    profile, reads a Cookie, starts a process, or reads the business database.
+    """
+    account = 'XHS_RETINAUT'
+    region = 'intl'
+    try:
+        from lumenis.system.collector.adapters import rednote_policy
+        gate = rednote_policy.collection_gate(account=account, region=region)
+        policy = rednote_policy.effective_policy()
+    except Exception as exc:
+        return {'ok': False, 'code': 'POLICY_UNAVAILABLE',
+                'reason': f'RedNote policy unavailable; collection is blocked: {exc}'}
+
+    if (gate.get('ok') is not True or gate.get('account') != account
+            or gate.get('region') != region or gate.get('cdp_port') != 9223
+            or gate.get('host') != 'www.rednote.com'):
+        return {'ok': False, 'code': 'IDENTITY_BLOCKED',
+                'reason': gate.get('reason') or 'Canonical policy did not allow the HK/international route',
+                'policy': gate}
+    if not policy.can_run_kind('topic'):
+        return {'ok': False, 'code': 'TOPIC_COLLECTION_DISABLED',
+                'reason': 'Canonical RedNote policy has disabled topic collection', 'policy': gate}
+    if auto_trigger and not policy.auto_run_enabled:
+        return {'ok': False, 'code': 'AUTO_RUN_DISABLED',
+                'reason': 'Automatic RedNote collection requires REDNOTE_AUTO_RUN=true', 'policy': gate}
+
+    endpoint = os.environ.get('XHS_CDP_URL') or ''
+    if not endpoint:
+        return {'ok': False, 'code': 'COLLECTOR_ENDPOINT_NOT_CONFIGURED',
+                'reason': 'No explicit HK browser endpoint is configured', 'policy': gate}
+    if endpoint != 'http://127.0.0.1:9223':
+        return {'ok': False, 'code': 'COLLECTOR_ENDPOINT_INVALID',
+                'reason': 'Only the explicit approved HK endpoint http://127.0.0.1:9223 is permitted',
+                'policy': gate}
+
+    return {'ok': True, 'account': account, 'region': region, 'cdp_port': 9223,
+            'host': 'www.rednote.com', 'cdp_url': endpoint,
+            'policy_version': gate.get('policy_version'), 'policy': gate}
+
+
+def _legacy_campaign_route_status(auto_trigger=False):
+    """Fail closed: the legacy campaign worker is Mainland-only and cannot be reused.
+
+    The JavaScript worker and detail-backfill script still target the Mainland
+    host and retain legacy browser/profile fallbacks. This owner is deliberately
+    disabled until a bounded follow-up binds these callers to SYSTEM Collector.
+    """
+    identity = _canonical_campaign_identity(auto_trigger=auto_trigger)
+    if not identity.get('ok'):
+        return identity
+    return {'ok': False, 'code': 'CANONICAL_COLLECTOR_BINDING_REQUIRED',
+            'reason': 'Campaign collection is unavailable until this legacy caller is bound to the canonical SYSTEM Collector',
+            'identity': identity}
+
 # ========== 专题配置 ==========
 DEFAULT_TOPICS = [
     '#广州太古汇十五周年',
@@ -320,57 +378,10 @@ def _save_notes(conn, campaign_key, topic, notes):
     return new
 
 def _run_collector(topic):
-    """调用 Node.js 采集脚本获取话题数据（独立配额，单次最长50分钟）。
-
-    优先使用 CDP 连接已登录浏览器；若未配置 CDP 则使用持久化 profile 启动 Playwright。
-    绝不伪造数据：采集失败返回错误信息，由调用方记录错误快照。
-    """
-    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'xhs_campaign_monitor.js')
-    if not os.path.exists(script):
-        return {'ok': False, 'error': f'采集脚本不存在: {script}', 'topic': topic}
-
-    node = _node_bin()
-    if not node:
-        # 不进 subprocess（避免裸 'node' 在常驻进程 PATH 缺失时抛 WinError 2），产出结构化错误快照
-        return {'ok': False, 'error': 'Node 运行时不可用：未在 PATH、项目 nodejs/ 或 NODE_EXE 中找到 node', 'topic': topic}
-
-    # 默认连 9222 已登录采集浏览器（app 主进程自身未必注入该 env，这里补缺省，避免误走 headless 未登录 profile）；
-    # 仍可用 XHS_CDP_URL 环境变量覆盖
-    cdp = (os.getenv('XHS_CDP_URL', '') or 'http://127.0.0.1:9222').strip()
-    profile_dir = os.getenv('XHS_PROFILE_DIR', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'taikoo_browser_profile'))
-
-    # 中频率充分采集：滚动6次，单次最长50分钟
-    cmd = [node, script, '--topic', topic, '--max-scroll', str(CAMPAIGN_MAX_SCROLL)]
-    if cdp:
-        cmd.extend(['--cdp', cdp])
-    elif os.path.isdir(profile_dir):
-        cmd.extend(['--profile', profile_dir])
-
-    try:
-        p = subprocess.run(
-            cmd, capture_output=True, text=True,
-            timeout=CAMPAIGN_COLLECT_TIMEOUT
-        )
-        out = (p.stdout or '').strip()
-        idx = out.find('{')
-        data = json.loads(out[idx:]) if idx >= 0 else {}
-        if not data:
-            # stdout 为空或非 JSON：脚本可能 CDP 连接失败/页面异常无输出，绝不静默成"空错误"
-            data = {'ok': False,
-                    'error': (p.stderr or out or '采集脚本无结构化输出（CDP 连接失败或页面异常），未伪造数据')[-1500:],
-                    'topic': topic}
-        if p.returncode != 0:
-            if data.get('risk_status'):
-                # node 风控退出码（3=NEED_VERIFY / 4=IP_RISK）：结构化状态已在 stdout，保留 risk_status，不用整段输出覆盖
-                data['ok'] = False
-                data.setdefault('topic', topic)
-            else:
-                data.update(ok=False, error=(p.stderr or out)[-1500:])
-        return data
-    except subprocess.TimeoutExpired:
-        return {'ok': False, 'error': f'专题采集超时（{CAMPAIGN_COLLECT_TIMEOUT}秒）', 'topic': topic}
-    except Exception as e:
-        return {'ok': False, 'error': str(e), 'topic': topic}
+    """Fail closed until this legacy caller is bound to the SYSTEM Collector."""
+    route = _legacy_campaign_route_status()
+    return {'ok': False, 'error': route.get('reason', 'Campaign collection is blocked'),
+            'status': route.get('code', 'COLLECTION_BLOCKED'), 'topic': topic}
 
 # ========== 专题级风控熔断（NEED_VERIFY 须人工恢复，IP_RISK 定时冷却；绝不把验证页伪装成 0 条） ==========
 def _trip_campaign_circuit(status, reason=''):
@@ -416,159 +427,50 @@ def clear_campaign_circuit():
     except Exception as e: logger.warning("Unhandled exception: %s", e)
 
 def _probe_xhs_health_via_cdp(test_search=False):
-    """连 9222 已登录浏览器做一次轻量健康探活：访问 explore，判断是否仍被重定向到 captcha/登录页。
-
-    Args:
-        test_search: 是否额外做一次搜索测试（recover 时启用）。只有搜索也不跳验证页才判定完全健康。
-    返回 (healthy:bool, detail:str)。绝不绕过验证——只有真实会话正常才判定健康。"""
-    page = None
-    browser = None
-    try:
-        try:
-            from cdp_helper import reset_cdp_targets
-            from urllib.parse import urlparse
-            _u = (os.getenv('XHS_CDP_URL', '') or 'http://127.0.0.1:9222')
-            try: reset_cdp_targets(urlparse(_u).port or 9222, timeout=6)
-            except Exception as e: logger.warning("Unhandled exception: %s", e)
-        except Exception:
-            _u = os.getenv('XHS_CDP_URL', '') or 'http://127.0.0.1:9222'
-        from playwright.sync_api import sync_playwright
-        with sync_playwright() as pw:
-            browser = pw.chromium.connect_over_cdp(_u, timeout=15000)
-            ctx = browser.contexts[0]
-            page = ctx.new_page()
-            # 第一步：explore 首页检查
-            page.goto('https://www.xiaohongshu.com/explore', wait_until='domcontentloaded', timeout=15000)
-            page.wait_for_timeout(2500)
-            u = page.url or ''
-            body = ''
-            try: body = page.evaluate("() => document.body ? document.body.innerText.slice(0,600) : ''") or ''
-            except Exception as e: logger.warning("Unhandled exception: %s", e)
-            bad_url = ('captcha' in u) or ('/website-login' in u) or ('/login' in u)
-            bad_txt = any(k in body for k in ('扫码验证', '安全验证', '拖动滑块', '完成验证', '人机验证', '验证码'))
-            if bad_url or bad_txt:
-                try: page.goto('about:blank', timeout=4000)
-                except Exception as e: logger.warning("Unhandled exception: %s", e)
-                try: browser.close()
-                except Exception as e: logger.warning("Unhandled exception: %s", e)
-                return False, 'explore 仍停留在登录/安全验证页，请在已登录浏览器完成扫码验证后再检测'
-            # 第二步：搜索测试（recover 时启用）——在同一个 page/browser 上做，不提前关闭
-            if test_search:
-                page.goto('https://www.xiaohongshu.com/search_result?keyword=太古汇', wait_until='domcontentloaded', timeout=20000)
-                page.wait_for_timeout(3500)
-                su = page.url or ''
-                sbody = ''
-                try: sbody = page.evaluate("() => document.body ? document.body.innerText.slice(0,400) : ''") or ''
-                except Exception as e: logger.warning("Unhandled exception: %s", e)
-                s_bad_url = ('captcha' in su) or ('/website-login' in su) or ('/login' in su)
-                s_bad_txt = any(k in sbody for k in ('扫码验证', '安全验证', '拖动滑块', '完成验证', '人机验证', '二维码1分钟失效'))
-                try: page.goto('about:blank', timeout=4000)
-                except Exception as e: logger.warning("Unhandled exception: %s", e)
-                try: browser.close()
-                except Exception as e: logger.warning("Unhandled exception: %s", e)
-                if s_bad_url or s_bad_txt:
-                    return False, 'explore 正常，但搜索仍触发安全验证页（需小红书App扫码）。请在9222浏览器手动搜索一次并完成扫码，再点重新检测'
-                return True, 'explore + 搜索均正常，会话完全健康'
-            # 非搜索测试模式：explore 通过即返回
-            try: page.goto('about:blank', timeout=4000)
-            except Exception as e: logger.warning("Unhandled exception: %s", e)
-            try: browser.close()
-            except Exception as e: logger.warning("Unhandled exception: %s", e)
-        return True, '会话正常（explore 未跳验证页）'
-    except Exception as e:
-        try:
-            if page: page.goto('about:blank', timeout=3000)
-        except Exception as e: logger.warning("Unhandled exception: %s", e)
-        try:
-            if browser: browser.close()
-        except Exception as e: logger.warning("Unhandled exception: %s", e)
-        return False, f'健康探活失败：{str(e)[:120]}'
+    """Fail closed until health probes use the canonical RedNote Collector owner."""
+    route = _legacy_campaign_route_status()
+    if route.get('code') == 'CANONICAL_COLLECTOR_BINDING_REQUIRED':
+        return False, route['reason']
+    return False, f"{route.get('code', 'COLLECTION_BLOCKED')}: {route.get('reason', 'RedNote collection is blocked')}"
 
 # ========== V2.0 P0-1：统一 Runtime State 六态探活 ==========
 
 def _probe_runtime_state():
-    """统一六态探活：加载熔断 → CDP 真实探活 → 聚合 XhsRuntimeState。
-
-    返回 XhsRuntimeState 对象（to_dict() 可直接给前端）。
-    与 _probe_xhs_health_via_cdp 的区别：返回结构化六态，不只是 bool+str。
-    """
-    if not _RUNTIME_STATE_AVAILABLE:
-        # 降级：用旧探活 + 熔断文件拼一个最小 dict
-        healthy, detail = _probe_xhs_health_via_cdp()
-        cb = _campaign_circuit_state()
+    """Return an honest unavailable state without probing legacy identity paths."""
+    route = _legacy_campaign_route_status()
+    if not route.get('ok'):
+        unavailable = route.get('code') == 'CANONICAL_COLLECTOR_BINDING_REQUIRED'
         return {
-            'overall': 'circuit_open' if cb else ('healthy' if healthy else 'unhealthy'),
-            'healthy': healthy and not cb,
-            'auth_state': 'valid' if healthy else 'required',
-            'session_state': 'real_session_valid' if healthy else 'browser_disconnected',
-            'platform_state': 'reachable' if healthy else 'unreachable',
-            'collector_state': 'idle',
-            'circuit_state': 'open' if cb else 'closed',
-            'recovery_state': 'idle',
+            'overall': 'unavailable' if unavailable else 'blocked',
+            'healthy': False,
+            'auth_state': 'unknown',
+            'session_state': 'unknown',
+            'platform_state': 'unknown',
+            'collector_state': 'unavailable',
+            'circuit_state': 'unknown',
+            'recovery_state': 'blocked',
             'last_check': _now(),
-            'circuit': cb,
-            'detail': {'health_detail': detail, 'runtime_state_unavailable': _RUNTIME_STATE_IMPORT_ERROR},
+            'detail': {'code': route.get('code'), 'reason': route.get('reason')},
+        }
+    if not _RUNTIME_STATE_AVAILABLE:
+        return {
+            'overall': 'unknown', 'healthy': False, 'auth_state': 'unknown',
+            'session_state': 'unknown', 'platform_state': 'unknown',
+            'collector_state': 'unavailable', 'circuit_state': 'unknown',
+            'recovery_state': 'idle', 'last_check': _now(),
+            'detail': {'runtime_state_unavailable': _RUNTIME_STATE_IMPORT_ERROR},
         }
     state = state_from_circuit(_CAMPAIGN_CIRCUIT)
-    # 只有熔断不是 OPEN 时才做真实探活（OPEN 时探活无意义且可能撞风控）
-    if state.circuit == CircuitState.OPEN:
-        state.last_check = _now()
-        state.detail['skipped_probe'] = 'circuit open, skip live probe to avoid hitting platform'
-        return state
-    healthy, detail = _probe_xhs_health_via_cdp()
-    state.set_health_probe_result(healthy, {'health_detail': detail})
+    state.last_check = _now()
+    state.detail['health_probe'] = 'unavailable until canonical Collector binding is implemented'
     return state
 
-
 def _half_open_probe():
-    """IP_RISK 冷却结束后的半开探测：小流量、单话题、短超时，成功才完全解除熔断。
-
-    返回 (success:bool, detail:str)。
-    半开探测只做 1 个话题、滚动 1 次、超时 60 秒，绝不做全量采集。
-    """
-    if not _RUNTIME_STATE_AVAILABLE:
-        # 降级：直接做健康探活
-        return _probe_xhs_health_via_cdp()
-    state = state_from_circuit(_CAMPAIGN_CIRCUIT)
-    if state.circuit != CircuitState.HALF_OPEN:
-        return False, f'当前非半开状态（{state.circuit.value}），无需半开探测'
-    # 半开第一步：CDP 健康探活
-    healthy, detail = _probe_xhs_health_via_cdp()
-    if not healthy:
-        # 探活失败 → 回到 COOLING，重新计时
-        _trip_campaign_circuit('IP_RISK', f'半开探活失败：{detail}')
-        return False, f'半开探活失败，已重新冷却：{detail}'
-    # 半开第二步：单话题小流量采集验证（1话题、滚动1次、60秒超时）
-    try:
-        script = os.path.join(_BASE_DIR, 'xhs_campaign_monitor.js')
-        cdp = (os.getenv('XHS_CDP_URL', '') or 'http://127.0.0.1:9222').strip()
-        # 取第一个启用的话题做探针
-        db = _db()
-        with db.get_db() as conn:
-            row = conn.execute(
-                'SELECT topic FROM topic_campaign_topics WHERE campaign_key=? AND enabled=1 LIMIT 1',
-                (CAMPAIGN_KEY,)).fetchone()
-        probe_topic = row['topic'] if row else '#广州太古汇'
-        node = _node_bin()
-        if not node:
-            return False, '半开探测中止：Node 运行时不可用（PATH/项目 nodejs/NODE_EXE 均未找到），保持熔断'
-        cmd = [node, script, '--topic', probe_topic, '--max-scroll', '1', '--cdp', cdp]
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
-        out = (p.stdout or '').strip()
-        idx = out.find('{')
-        data = json.loads(out[idx:]) if idx >= 0 else {}
-        if p.returncode == 0 and data.get('ok', True) and data.get('notes'):
-            # 半开成功 → 解除熔断，标记 recovery=RECOVERED
-            clear_campaign_circuit()
-            return True, f'半开探测成功（话题「{probe_topic}」获 {len(data.get("notes",[]))} 条），已解除熔断'
-        if data.get('risk_status'):
-            _trip_campaign_circuit(data['risk_status'], f'半开探测命中风控：{data.get("risk_detail","")}')
-            return False, f'半开探测命中风控（{data["risk_status"]}），已重新熔断'
-        return False, f'半开探测未获数据（exit={p.returncode}），保持熔断'
-    except subprocess.TimeoutExpired:
-        return False, '半开探测超时（90秒），保持熔断'
-    except Exception as e:
-        return False, f'半开探测异常：{str(e)[:120]}'
+    """Fail closed until half-open recovery uses the canonical RedNote Collector."""
+    route = _legacy_campaign_route_status()
+    if route.get('code') == 'CANONICAL_COLLECTOR_BINDING_REQUIRED':
+        return False, route['reason']
+    return False, f"{route.get('code', 'COLLECTION_BLOCKED')}: {route.get('reason', 'RedNote collection is blocked')}"
 
 # ========== 专题独立频率控制（不占用主舆情采集配额） ==========
 def _clean_today_runs():
@@ -647,7 +549,7 @@ def _campaign_in_window(campaign_key):
     except Exception:
         return True
 
-def run_campaign(campaign_key=CAMPAIGN_KEY):
+def run_campaign(campaign_key=CAMPAIGN_KEY, auto_trigger=False):
     """执行一次专题采集（所有话题）。
 
     独立配额：不占用主舆情每日12次采集配额，专题自己计数（每日上限8次）。
@@ -655,6 +557,12 @@ def run_campaign(campaign_key=CAMPAIGN_KEY):
     绝不伪造数据：采集失败记录错误快照，浏览量/讨论量采不到就存0并标注状态。
     """
     global _last_run
+    route = _legacy_campaign_route_status(auto_trigger=auto_trigger)
+    if not route.get('ok'):
+        return {'ok': False, 'blocked': route.get('code') != 'CANONICAL_COLLECTOR_BINDING_REQUIRED',
+                'unavailable': route.get('code') == 'CANONICAL_COLLECTOR_BINDING_REQUIRED',
+                'status': route.get('code', 'COLLECTION_BLOCKED'),
+                'error': route.get('reason', 'Campaign collection is blocked')}
     if not _campaign_in_window(campaign_key):
         return {'ok': True, 'skipped': True, 'reason': 'outside task window or paused'}
     # 专题独立频率检查
@@ -784,6 +692,10 @@ def _campaign_scheduler_loop():
 
     while True:
         try:
+            route = _legacy_campaign_route_status(auto_trigger=True)
+            if not route.get('ok'):
+                time.sleep(60)
+                continue
             now = datetime.now()
             today_str = now.strftime('%Y-%m-%d')
 
@@ -827,7 +739,7 @@ def _campaign_scheduler_loop():
                 for _ck in _keys:
                     if not _campaign_in_window(_ck):
                         continue
-                    _r = run_campaign(_ck)
+                    _r = run_campaign(_ck, auto_trigger=True)
                     if _r.get('busy'):
                         print(f'[TopicCampaign] 任务 {_ck} 让行（主采集中）')
                         continue
@@ -848,6 +760,10 @@ def start_scheduler():
         return False  # 测试隔离：不启动生产采集调度线程（避免测试期真实采集/解释器退出时崩溃）
     if os.environ.get('ZBC_ENV') == 'staging' or os.environ.get('XHS_PRODUCTION', '').lower() in ('false', '0', 'off'):
         print('[TopicCampaign] Staging/no-collect: campaign scheduler thread disabled')
+        return False
+    route = _legacy_campaign_route_status(auto_trigger=True)
+    if not route.get('ok'):
+        print(f"[TopicCampaign] Scheduler disabled: {route.get('code')} - {route.get('reason')}")
         return False
     if not _scheduler_running:
         t = threading.Thread(target=_campaign_scheduler_loop, daemon=True, name='topic-campaign-scheduler')
@@ -895,12 +811,8 @@ def register_topic_campaign(app, collect_lock=None):
             total = conn.execute(
                 'SELECT COUNT(*) c FROM topic_campaign_notes WHERE campaign_key=?', (ck,)
             ).fetchone()['c']
-        # V2.0 P0-1：统一六态（仅加载熔断文件，不做实时CDP探活，避免status接口变慢）
-        if _RUNTIME_STATE_AVAILABLE:
-            _rs = state_from_circuit(_CAMPAIGN_CIRCUIT)
-            runtime_state = _rs.to_dict()
-        else:
-            runtime_state = {'overall': 'unknown', 'runtime_state_unavailable': _RUNTIME_STATE_IMPORT_ERROR}
+        # Report collection availability, not a stale circuit-derived healthy state.
+        runtime_state = _probe_runtime_state()
         return jsonify({
             'ok': True,
             'module_version': MODULE_VERSION,
@@ -929,6 +841,11 @@ def register_topic_campaign(app, collect_lock=None):
 
     @app.route('/api/topic-campaign/run', methods=['POST'])
     def topic_run():
+        route = _legacy_campaign_route_status()
+        if not route.get('ok'):
+            status_code = 423 if route.get('code') != 'CANONICAL_COLLECTOR_BINDING_REQUIRED' else 503
+            return jsonify({'ok': False, 'blocked': status_code == 423,
+                            'status': route.get('code'), 'error': route.get('reason')}), status_code
         d = request.get_json(silent=True) or {}
         ck = (d.get('campaign_key') or request.args.get('campaign_key') or CAMPAIGN_KEY).strip()
         if not _campaign_in_window(ck):
@@ -945,6 +862,12 @@ def register_topic_campaign(app, collect_lock=None):
 
     @app.route('/api/topic-campaign/recover', methods=['POST'])
     def topic_recover():
+        route = _legacy_campaign_route_status()
+        if not route.get('ok'):
+            status_code = 423 if route.get('code') != 'CANONICAL_COLLECTOR_BINDING_REQUIRED' else 503
+            return jsonify({'ok': False, 'recovered': False, 'blocked': status_code == 423,
+                            'status': route.get('code'), 'error': route.get('reason'),
+                            'runtime_state': _probe_runtime_state()}), status_code
         # V2.0 P0-2/P0-4：人工完成扫码/验证后调用，做完整探活（explore + 搜索测试），通过才解除熔断
         # 注意：不调用 _probe_runtime_state()，因为它在熔断 OPEN 时会跳过实时探活
         healthy, detail = _probe_xhs_health_via_cdp(test_search=True)
@@ -1022,37 +945,11 @@ def register_topic_campaign(app, collect_lock=None):
 
     @app.route('/api/topic-campaign/backfill-detail', methods=['POST'])
     def topic_backfill_detail():
-        """V2.0 P0-5：触发笔记详情补抓（单条 note_id 或批量 limit）。
-
-        熔断中拒绝（423），避免撞风控。补抓在后台线程执行。
-        """
-        d = request.get_json(silent=True) or {}
-        ck = (d.get('campaign_key') or CAMPAIGN_KEY).strip()
-        note_id = (d.get('note_id') or '').strip()
-        limit = min(int(d.get('limit') or 20), 50)
-
-        # 熔断检查
-        cb = _campaign_circuit_state()
-        if cb:
-            return jsonify({'ok': False, 'circuit_open': True,
-                            'error': f'熔断中（{cb.get("status")}），请先解除熔断再补抓'}), 423
-
-        def _backfill_worker():
-            try:
-                import subprocess as _sp
-                cmd = [sys.executable, os.path.join(_BASE_DIR, 'topic_note_detail_backfill.py'),
-                       '--campaign-key', ck]
-                if note_id:
-                    cmd.extend(['--note-id', note_id])
-                else:
-                    cmd.extend(['--limit', str(limit)])
-                _sp.run(cmd, capture_output=True, text=True, timeout=1800, cwd=_BASE_DIR)
-            except Exception as _e:
-                print(f'[backfill] worker error: {_e}')
-
-        threading.Thread(target=_backfill_worker, daemon=True, name='topic-detail-backfill').start()
-        scope = f'note_id={note_id}' if note_id else f'limit={limit}'
-        return jsonify({'ok': True, 'message': f'详情补抓已启动（{scope}），后台执行中', 'campaign_key': ck})
+        """Return an honest unavailable state until detail collection has an HK owner."""
+        route = _legacy_campaign_route_status()
+        status_code = 423 if route.get('code') != 'CANONICAL_COLLECTOR_BINDING_REQUIRED' else 503
+        return jsonify({'ok': False, 'blocked': status_code == 423,
+                        'status': route.get('code'), 'error': route.get('reason')}), status_code
 
     @app.route('/api/topic-campaign/timeline')
     def topic_timeline():
@@ -1253,10 +1150,14 @@ def register_topic_campaign(app, collect_lock=None):
 # ===== 话题APP端采集集成 =====
 def _app_topic_collect(topic_keyword, max_notes=20):
     """通过小红书APP端采集话题笔记（与Web端互补，APP端数据更全）。"""
+    route = _legacy_campaign_route_status()
+    if not route.get('ok'):
+        return {'enabled': False, 'status': route.get('code'),
+                'reason': route.get('reason', 'APP topic collection is blocked')}
     if not APP_TOPIC_ENABLED or XHSAppTopicAdapter is None:
         return {'enabled': False, 'reason': 'APP采集adapter未启用'}
     try:
-        adapter = XHSAppTopicAdapter()
+        adapter = XHSAppTopicAdapter(cdp_port=route['identity']['cdp_port'])
         if not adapter.is_enabled():
             return {'enabled': False, 'reason': 'APP采集未启用（检查配置）'}
         result = adapter.search(topic_keyword, max_results=max_notes)

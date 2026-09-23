@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**  
-> Updated: 2026-09-23 (15:07 Asia/Shanghai source/local snapshot; later commits must be resolved live)
+> Updated: 2026-09-23 (bounded safety update after the 15:07 snapshot; resolve the current SHA live)
 > CI status: resolve from GitHub checks for the exact current origin/main; no historical SHA is a current acceptance result.
 > **Never treat this document's commit, any pasted SHA, or any historical handoff SHA as the current HEAD. Codex must fetch and resolve `origin/main` at session start.**
 
@@ -26,6 +26,8 @@ accepted or safe to publish merely from the remote tree.
 | Surface truth | `website/` has a committed Public Website foundation and reserved-example URL guard. The trilingual preview now names CTH/BMP user jobs in its hero and scenarios, and the Chinese browser rendering was checked; examples remain explicitly fictional. Real public destinations and deployed commercial entry remain absent. Windows Desktop SYS-01 has a bounded ROUND 02 E2E. Flutter Web Workspace, other Desktop workflows and Mobile Companion are not accepted end-to-end merely because local UI source/builds exist. | Do not say `APP ONLY`, but do not say four surfaces are operational or released. The Public Website copy/guard is source/build evidence, not a deployed acquisition path or business-job result. |
 | Product data and capabilities | Global Commercial Coverage = `NO / NOT VERIFIED`; Global Brand Coverage = `NO / NOT VERIFIED`; Guangzhou Taikoo Hui Reference Coverage = `PARTIAL` in current round evidence. Skill Store, Jev, three-language operational UI and continuing AI/Collector/learning upgrades are scheduled or local candidates until their owner-specific E2E gates pass. | `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=NO`; missing or uncollected data must remain honest, never fabricated. |
 | CI and release | [Product Gate at `920a46cc`](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/35828231185) failed before any job step; its annotation says recent account payments failed or the spending limit needs increasing. App Gate status must be resolved for the exact live commit, not inherited from an older run. | `EXECUTION-LAYER UNVERIFIED`, not a product-test PASS or FAIL. Local tests and Git pushes can continue; hosted CI/release evidence remains missing. `RELEASED=NO`, `OPERATING=NO`, `COMMERCIAL_READY=NO`. |
+
+Latest bounded update: [ROUND 06's legacy topic campaign identity fence](evidence/round-06/ROUND-06-TOPIC-CAMPAIGN-IDENTITY-FENCE-2026-09-23.md) passed Sol's clean replay as a safety Batch. The old Mainland-default collection, health, recovery and backfill routes now fail closed; even an explicitly approved HK endpoint reports `CANONICAL_COLLECTOR_BINDING_REQUIRED` until those callers use SYSTEM Collector. This is not a ROUND 06 exit or a real collection result. [ROUND 03 v15](evidence/round-03/ROUND-03-B001L-V15-BRAND-FOCUS-2026-09-23.md) is the current published migration baseline; v16 is under separate bounded work and ROUND 03 remains `REWORK`. The [Product Gate at `d621a9cc`](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/35847788961) completed with failure before any job step ran (`steps=0`); hosted CI remains `EXECUTION-LAYER UNVERIFIED` pending a fresh check for this update's commit.
 
 The active local Sol task may progress after this snapshot. It must update its
 own bounded Round evidence and publish accepted source **and this CURRENT online
