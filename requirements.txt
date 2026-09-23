@@ -31,7 +31,7 @@ playwright>=1.30.0
 psutil>=5.9.0
 
 # ===== 网络 / WebSocket =====
-requests>=2.28.0
+requests>=2.32.3  # public-source pinned transport requires HTTPAdapter.get_connection_with_tls_context
 httpx>=0.24.0
 websocket-client>=1.6.0
 
