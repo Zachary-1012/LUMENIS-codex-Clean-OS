@@ -58,7 +58,10 @@ class DatabaseRepository:
 
     def executescript(self, sql: str) -> None:
         with self.transaction() as conn:
-            conn.executescript(sql)
+            # sqlite3.executescript() commits any active transaction before
+            # running the script. Start the transaction inside the script so
+            # DDL and DML statements share the repository's rollback boundary.
+            conn.executescript(f"BEGIN;\n{sql}\n;\nCOMMIT;")
 
     def query_one(self, sql: str, params: Sequence[Any] = ()):
         with self.connection() as conn:
