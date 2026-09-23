@@ -1,0 +1,396 @@
+---
+import { copy, locales, type Locale } from "../i18n";
+import { publicDestinations } from "../site-config.mjs";
+import "../styles/site.css";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const c = copy[locale];
+const localePath: Record<Locale, string> = {
+  "zh-CN": "/",
+  en: "/en/",
+  ko: "/ko/",
+};
+const languageLabels: Record<Locale, string> = {
+  "zh-CN": "简中",
+  en: "EN",
+  ko: "한국어",
+};
+const openGraphLocale: Record<Locale, string> = {
+  "zh-CN": "zh_CN",
+  en: "en_US",
+  ko: "ko_KR",
+};
+const canonicalUrl = Astro.site
+  ? new URL(Astro.url.pathname, Astro.site).href
+  : undefined;
+const absoluteLocalePath = (path: string) =>
+  Astro.site ? new URL(path, Astro.site).href : undefined;
+const isIndexableBuild = Boolean(Astro.site);
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: c.productName,
+  ...(canonicalUrl ? { url: canonicalUrl } : {}),
+  inLanguage: c.lang,
+};
+
+const accessItems = [
+  {
+    key: "trial",
+    title: c.access.trial.title,
+    action: c.access.trial.action,
+    href: publicDestinations.trial,
+    statusId: c.access.trialStateId,
+  },
+  {
+    key: "contact",
+    title: c.access.contact.title,
+    action: c.access.contact.action,
+    href: publicDestinations.contact,
+    statusId: c.access.contactStateId,
+  },
+  {
+    key: "help",
+    title: c.access.help.title,
+    action: c.access.help.action,
+    href: publicDestinations.help,
+    statusId: c.access.helpStateId,
+  },
+  {
+    key: "workspace",
+    title: c.access.workspace.title,
+    action: c.access.workspace.action,
+    href: publicDestinations.workspace,
+    statusId: c.access.workspaceStateId,
+  },
+];
+---
+
+<!doctype html>
+<html lang={c.lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#17221f" />
+    <meta name="description" content={c.metadata.description} />
+    <meta name="robots" content={isIndexableBuild ? "index,follow" : "noindex,nofollow"} />
+    <title>{c.metadata.title}</title>
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    {canonicalUrl && locales.map((alternate) => (
+      <link
+        rel="alternate"
+        hreflang={alternate}
+        href={absoluteLocalePath(localePath[alternate])}
+      />
+    ))}
+    {canonicalUrl && (
+      <link rel="alternate" hreflang="x-default" href={absoluteLocalePath(localePath["zh-CN"])} />
+    )}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={c.metadata.title} />
+    <meta property="og:description" content={c.metadata.description} />
+    <meta property="og:locale" content={openGraphLocale[locale]} />
+    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+    <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+  </head>
+  <body>
+    {!isIndexableBuild && <p class="preview-status">{c.status.preview}</p>}
+    <a class="skip-link" href="#main">{c.skipLabel}</a>
+
+    <header class="site-header">
+      <div class="site-header__top wrap">
+        <a class="wordmark" href={localePath[locale]} aria-label={c.productName}>
+          <svg class="wordmark__mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+            <path d="M20 4v13m0 0 11 7M20 17 9 25m11-8v19" />
+            <circle cx="20" cy="5" r="2.5" />
+            <circle cx="9" cy="25" r="2.5" />
+            <circle cx="31" cy="24" r="2.5" />
+            <circle cx="20" cy="35" r="2.5" />
+          </svg>
+          <span>{c.productName}</span>
+        </a>
+        <nav class="language-nav" aria-label={c.languageNavigationLabel}>
+          {locales.map((supported) => (
+            <a
+              href={localePath[supported]}
+              lang={supported}
+              aria-current={supported === locale ? "page" : undefined}
+              class:list={["language-nav__link", { "is-current": supported === locale }]}
+            >
+              {languageLabels[supported]}
+            </a>
+          ))}
+        </nav>
+      </div>
+      <div class="site-header__bottom wrap">
+        <nav class="primary-nav" aria-label={locale === "ko" ? "주요 탐색" : locale === "en" ? "Primary navigation" : "主要导航"}>
+          {c.navigation.map((item) => <a href={item.href}>{item.label}</a>)}
+        </nav>
+        <span class="header-index" aria-hidden="true">PUBLIC / 01</span>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero__inner wrap">
+          <div class="hero__copy">
+            <p class="eyebrow eyebrow--light">{c.hero.eyebrow}</p>
+            <h1 id="hero-title">{c.hero.title}</h1>
+            <p class="hero__description">{c.hero.description}</p>
+            <div class="hero__actions">
+              <a class="text-link text-link--light" href="#demo">
+                {c.hero.primary}<span aria-hidden="true">↗</span>
+              </a>
+              <a class="text-link text-link--quiet" href="#structure">
+                {c.hero.secondary}<span aria-hidden="true">↓</span>
+              </a>
+            </div>
+            <p class="hero__note">{c.hero.note}</p>
+          </div>
+          <figure class="hero__figure" aria-label={c.hero.diagramLabel}>
+            <span class="hero__figure-label" aria-hidden="true">POINT / RETURN</span>
+            <div class="hero-orbit" aria-hidden="true">
+              <span class="hero-orbit__ring hero-orbit__ring--outer"></span>
+              <span class="hero-orbit__ring hero-orbit__ring--inner"></span>
+              <span class="hero-orbit__axis"></span>
+              <span class="hero-orbit__point hero-orbit__point--start"></span>
+              <span class="hero-orbit__point hero-orbit__point--turn"></span>
+              <span class="hero-orbit__point hero-orbit__point--return"></span>
+              <span class="hero-orbit__word hero-orbit__word--one">TRACE</span>
+              <span class="hero-orbit__word hero-orbit__word--two">FIELD</span>
+              <span class="hero-orbit__word hero-orbit__word--three">RETURN</span>
+            </div>
+            <figcaption>{c.hero.diagramLabel}</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="sequence-section" aria-labelledby="sequence-title">
+        <div class="wrap">
+          <div class="section-heading section-heading--wide">
+            <div>
+              <p class="eyebrow">01 / TRACE LOGIC</p>
+              <h2 id="sequence-title">{c.sequence.heading}</h2>
+            </div>
+            <p>{c.sequence.intro}</p>
+          </div>
+          <ol class="sequence-list" aria-label={c.hero.diagramLabel}>
+            {c.sequence.nodes.map((node, index) => (
+              <li class="sequence-node">
+                <span class="sequence-node__index">0{index + 1}</span>
+                <span class="sequence-node__name">{node.name}</span>
+                <span class="sequence-node__english">{node.english}</span>
+                <span class="sequence-node__meaning">{node.meaning}</span>
+              </li>
+            ))}
+          </ol>
+          <p class="return-line"><span aria-hidden="true">↶</span> {c.sequence.returnLabel}</p>
+        </div>
+      </section>
+
+      <section class="structure-section section-pad" id="structure" aria-labelledby="structure-title">
+        <div class="wrap">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">{c.structure.eyebrow}</p>
+              <h2 id="structure-title">{c.structure.title}</h2>
+            </div>
+            <p>{c.structure.intro}</p>
+          </div>
+
+          <div class="domain-split">
+            <article class="domain domain--commerce" aria-labelledby="commerce-title">
+              <p class="domain__ordinal">{c.structure.commerce.ordinal}</p>
+              <h3 id="commerce-title">{c.structure.commerce.title}</h3>
+              <p>{c.structure.commerce.description}</p>
+              <p class="domain__lens">{c.structure.commerce.lens}</p>
+              <div class="domain__axis" aria-hidden="true"><span></span><span></span><span></span></div>
+            </article>
+            <article class="domain domain--brand" aria-labelledby="brand-title">
+              <p class="domain__ordinal">{c.structure.brand.ordinal}</p>
+              <h3 id="brand-title">{c.structure.brand.title}</h3>
+              <p>{c.structure.brand.description}</p>
+              <p class="domain__lens">{c.structure.brand.lens}</p>
+              <div class="domain__network" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+            </article>
+          </div>
+
+          <div class="foundation-rows">
+            <article class="foundation-row" aria-labelledby="shared-title">
+              <p class="foundation-row__ordinal">{c.structure.shared.ordinal}</p>
+              <h3 id="shared-title">{c.structure.shared.title}</h3>
+              <p>{c.structure.shared.description}</p>
+            </article>
+            <article class="foundation-row" aria-labelledby="system-title">
+              <p class="foundation-row__ordinal">{c.structure.system.ordinal}</p>
+              <h3 id="system-title">{c.structure.system.title}</h3>
+              <p>{c.structure.system.description}</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="scenarios-section section-pad" id="scenarios" aria-labelledby="scenarios-title">
+        <div class="wrap">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">{c.scenarios.eyebrow}</p>
+              <h2 id="scenarios-title">{c.scenarios.title}</h2>
+            </div>
+            <p>{c.scenarios.intro}</p>
+          </div>
+          <div class="scenario-list">
+            {[c.scenarios.commerce, c.scenarios.brand].map((scenario, index) => (
+              <article class:list={["scenario", { "scenario--brand": index === 1 }]}>
+                <span class="scenario__index">0{index + 1}</span>
+                <div class="scenario__story">
+                  <h3>{scenario.title}</h3>
+                  <p class="scenario__question">{scenario.question}</p>
+                  <p>{scenario.description}</p>
+                </div>
+                <ol class="scenario__path">
+                  {scenario.path.map((step, stepIndex) => (
+                    <li><span>0{stepIndex + 1}</span>{step}</li>
+                  ))}
+                </ol>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section class="demo-section section-pad" id="demo" aria-labelledby="demo-title">
+        <div class="wrap">
+          <div class="section-heading section-heading--demo">
+            <div>
+              <p class="eyebrow eyebrow--light">{c.demo.eyebrow}</p>
+              <h2 id="demo-title">{c.demo.title}</h2>
+            </div>
+            <p>{c.demo.intro}</p>
+          </div>
+          <div class="demo-ribbon" aria-hidden="true">
+            <span>{c.demo.sourceLabel}</span><b>→</b><span>{c.demo.changeLabel}</span><b>→</b><span>{c.demo.traceLabel}</span><b>↶</b><span>{c.demo.returnLabel}</span>
+          </div>
+          <div class="demo-examples">
+            {[c.demo.commerce, c.demo.brand].map((example, index) => (
+              <details class="demo-example" open={index === 0}>
+                <summary>
+                  <span class="demo-example__tag">{c.demo.illustrativeLabel}</span>
+                  <span>{example.title}</span>
+                  <span class="demo-example__toggle" aria-hidden="true">+</span>
+                </summary>
+                <ol class="demo-steps">
+                  <li id={example.sourceId}>
+                    <span class="demo-steps__label">{c.demo.sourceLabel}</span>
+                    <p>{example.source}</p>
+                  </li>
+                  <li>
+                    <span class="demo-steps__label">{c.demo.changeLabel}</span>
+                    <p>{example.change}</p>
+                  </li>
+                  <li>
+                    <span class="demo-steps__label">{c.demo.traceLabel}</span>
+                    <p>{example.trace}</p>
+                  </li>
+                  <li class="demo-steps__return">
+                    <span class="demo-steps__label">{c.demo.returnLabel}</span>
+                    <p><a href={`#${example.sourceId}`}>{example.back}<span aria-hidden="true">↶</span></a></p>
+                  </li>
+                </ol>
+              </details>
+            ))}
+          </div>
+          <p class="demo-return-note"><span aria-hidden="true">↶</span> {c.demo.returnNote}</p>
+        </div>
+      </section>
+
+      <section class="surfaces-section section-pad" aria-labelledby="surfaces-title">
+        <div class="wrap">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">{c.surfaces.eyebrow}</p>
+              <h2 id="surfaces-title">{c.surfaces.title}</h2>
+            </div>
+            <p>{c.surfaces.intro}</p>
+          </div>
+          <dl class="surface-ledger">
+            {[c.surfaces.public, c.surfaces.web, c.surfaces.desktop, c.surfaces.mobile].map((surface, index) => (
+              <div class="surface-row">
+                <dt><span>0{index + 1}</span><strong>{surface.title}</strong><small>{surface.label}</small></dt>
+                <dd>{surface.description}</dd>
+              </div>
+            ))}
+          </dl>
+          <p class="surface-note">{c.surfaces.note}</p>
+        </div>
+      </section>
+
+      <section class="access-section section-pad" id="access" aria-labelledby="access-title">
+        <div class="wrap">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">{c.access.eyebrow}</p>
+              <h2 id="access-title">{c.access.title}</h2>
+            </div>
+            <p>{c.access.intro}</p>
+          </div>
+          <ul class="access-list">
+            {accessItems.map((item) => (
+              <li class="access-item" id={item.statusId}>
+                <h3>{item.title}</h3>
+                <p class="access-item__state">
+                  <span class:list={["status-dot", { "status-dot--configured": Boolean(item.href) }]} aria-hidden="true"></span>
+                  {item.href ? c.access.configured : c.access.unconfigured}
+                </p>
+                {item.href ? (
+                  <a
+                    class="text-link"
+                    href={item.href}
+                    aria-describedby={`${item.statusId}-description`}
+                  >
+                    {item.action}<span aria-hidden="true">↗</span>
+                  </a>
+                ) : (
+                  <span
+                    class="text-link text-link--disabled"
+                    aria-describedby={`${item.statusId}-description`}
+                  >
+                    {item.action}<span aria-hidden="true">—</span>
+                  </span>
+                )}
+                <span id={`${item.statusId}-description`} class="visually-hidden">
+                  {item.href ? c.access.configured : c.access.unconfigured}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap site-footer__inner">
+        <div>
+          <a class="wordmark wordmark--footer" href={localePath[locale]}>
+            <svg class="wordmark__mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+              <path d="M20 4v13m0 0 11 7M20 17 9 25m11-8v19" />
+              <circle cx="20" cy="5" r="2.5" /><circle cx="9" cy="25" r="2.5" />
+              <circle cx="31" cy="24" r="2.5" /><circle cx="20" cy="35" r="2.5" />
+            </svg>
+            <span>{c.footer.product}</span>
+          </a>
+          <p>{c.footer.note}</p>
+        </div>
+        <nav class="footer-nav" aria-label={c.footer.navigationLabel}>
+          {c.navigation.map((item) => <a href={item.href}>{item.label}</a>)}
+          <a href="#access">{c.access.workspace.title}</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>
