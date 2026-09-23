@@ -115,6 +115,26 @@ origin/main
 
 Do not claim local-only work exists on GitHub. If local valid work is ahead, preserve it, integrate the newest `origin/main` without destructive overwrite, run proportional regression, then commit/push coherently.
 
+### Accepted Batch online-publication gate
+
+For every Sol-accepted implementation Batch, close local work and online truth in
+the same delivery cycle. Sol must inspect the exact staged files and diff,
+record the Batch's tests, runtime/E2E evidence and unresolved limits, update the
+owning Round evidence **and** this repository's CURRENT online status, then make
+a coherent mainline commit and push it. Before calling the Batch delivered or
+starting a dependent acceptance gate, fetch again and verify `HEAD`,
+`origin/main`, live `refs/heads/main`, and the published status/evidence paths
+refer to that accepted source. A progress-only commit never substitutes for
+unpublished implementation. Conversely, a source commit without its online
+status update is an incomplete handoff. The blocking governance validator
+checks this co-publication on the current commit.
+
+If a push or remote read fails, preserve the work and report its exact local
+commit, `LOCAL_ONLY / NOT_PUBLISHED` state and blocker. Continue independent
+safe work, but do not tell an online reader that the Batch or Round is delivered.
+Never bulk-stage a dirty tree to satisfy this gate: classify and protect every
+unrelated or unverified path, including credentials, Cookies and production DBs.
+
 ### Single-mainline hard rules
 
 - do not create routine task/feature/codex/production/integration/handoff/research branches;
@@ -158,7 +178,13 @@ checkpoint or use a later implementation as proof that an unmet dependency passe
 Sol may run bounded Luna Batches from multiple rounds concurrently in one product
 war room when their actual entry dependencies are satisfied and their files,
 canonical owners, migrations, tests and runtime resources do not conflict. The
-approved operating ceiling is ten concurrent Luna workers. Sol owns the shared
+Product Owner's parallelism target is ten **safe, active** Luna workers when
+the host actually supports ten; ten is also the approved operating ceiling,
+never permission to exceed a lower host limit. Keep a ready/active/blocked
+Batch queue, fill available safe slots without serializing independent work,
+and report the observed host capacity, actual active count, queued count and
+the reason for any shortfall. Never claim ten workers are running when fewer
+are, or invent a conflicting Batch solely to fill a slot. Sol owns the shared
 worktree, integration order, conflict resolution and every PASS / REWORK / BLOCKED /
 SPLIT / REORDER decision. Each Luna receives exactly one Batch and may not cross
 into another Batch automatically. A completed Batch is only a report until Sol
@@ -206,6 +232,16 @@ parallel war-room rule above; every round still closes only through its own Sol
 acceptance checkpoint and current remote/local evidence.
 
 Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE are Experience-principle references only and never authorize new product features. OpenCode/Codex are engineering runtimes; Ollama and the approved Jev candidate are providers behind the one SYSTEM AI Gateway. Jev is limited to typed decision/evaluation tasks and cannot own Permission, Evidence, Production Truth or effects. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. The LUMENIS account is deferred until after internal beta; pre-beta product access must not be blocked by an account wall, while server Permission and effect fences remain enforced.
+
+Business work is selected in this order: Product Positioning → Industry Business
+Logic → Real User Jobs → Deliverable Outcomes → Experience → Data/Runtime
+Requirements → source implementation. Audit current owners before adding work;
+an absent module is a gap to map into an existing Round, not automatic authority
+for a new product surface or feature. External competitors and the named design
+research sites are non-exclusive inspiration, never product authority or a limit
+on relevant current Web/GitHub research. Users see tasks, content, results and
+available actions; internal agents, tools and research axes remain behind the
+canonical product boundary.
 
 Default loop:
 

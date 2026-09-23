@@ -50,6 +50,39 @@ These are blocking rules for all 15 rounds:
 13. ROUND 02–15 cannot close on source, tests or governance evidence alone. Route every Round Charter, Luna Task Card and Sol decision through `LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`, including its real-user E2E, per-round `REAL DELIVERY CARD` and Section 23 `COMMERCIAL OVERLAY IMPACT`; a commercial gap sets `COMMERCIAL_READY=NO` without falsely failing unrelated engineering work.
 14. Route every context/data-related round through `LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md`. The product default is `GLOBAL / ALL`; Subject/BrandFocus selection changes focus only and never grants Permission or controls background execution. Report `Global Commercial Coverage`, `Global Brand Coverage` and `Guangzhou Taikoo Hui Reference Coverage` as three acceptance dimensions of the same internal full-universe edition. They must not create separate products, releases or truth stacks. All three `YES` is required for `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=YES`.
 15. Every related round runs the contract's `RANDOM ENTITY DATA ACCEPTANCE` with rotating stratified non-fixture samples and preserves seed/list/version/request/surface/Evidence/result evidence. A covered/mature blank or fabricated sample forces `REWORK`/`BLOCKED`; an unavailable registry is reported as sample count zero and assigned to its owning round, never postponed silently to ROUND 15.
+16. An accepted Batch is not an online delivery until its reviewed source, Round evidence and CURRENT status are coherently committed, pushed and verified against live `origin/main` in the same delivery cycle under `AGENTS.md` §2. Preserve unaccepted work as `LOCAL_ONLY`; a documentation-only push does not make its source visible to GitHub readers.
+17. Sol targets ten concurrently active, independent Luna Batches only where real host capacity and owner/file/test/runtime isolation permit. Fill safe available slots and disclose actual capacity, active and queued counts; never manufacture work or claim ten active workers when the host allows fewer. Acceptance dependencies remain ordered.
+18. Chinese, English and Korean are product-surface commitments, not merely Public Website copy. Apply the sole Experience Constitution's per-screen three-language and responsive/accessibility gate to every promised operational surface; unverified Korean UI is an explicit gap, never a silently dropped requirement.
+
+### Product Owner requirement routing check
+
+This table routes the Product Owner's durable requirements into existing sole
+authorities. It is a completeness index, **not** another architecture, design
+system, product scope, source-status claim or release approval. At each Round
+Charter and final release review, mark every applicable row covered by current
+source and evidence or assign its unresolved gap to the owning Round; a document
+mention alone cannot be marked implemented.
+
+| Requirement family | Sole content owner / execution gate |
+| --- | --- |
+| One product, CTH/BMP/Shared/SYSTEM jobs, preserved legacy capability and no duplicate truths | Product Architecture and Product Positioning; `AGENTS.md` §§4–6; exact caller row below |
+| Current remote/local truth, protected work, PDF page/task coverage and exactly 15 Round checkpoints | `AGENTS.md` §§1–3; this index §1; approved ROUND 01 coverage evidence |
+| Safe parallel Sol/Luna roles, one Batch per Luna, continuous REWORK and actual host capacity | `AGENTS.md` §3; current Round Charter and Task Card |
+| Accepted source + tests/E2E + Round evidence + CURRENT online status + verified push | `AGENTS.md` §2 online-publication gate; current Round evidence and CURRENT takeover |
+| Business end-state, industry logic, real job and deliverable outcome before adding a feature | Product Positioning; `AGENTS.md` §3 business-work selection; Real Delivery Overlay |
+| Public Website versus Web Workspace, Desktop advanced capabilities and Mobile Companion | approved Multi-Surface Decision; Product Architecture; Experience Constitution |
+| Distinct 44 screen compositions, anti-template rule, PC/mobile behavior, accessibility and `DESIGN_READY` | sole Experience Constitution; detailed `contracts/experience/screen-specifications/` |
+| Chinese, English and Korean on every promised user-visible surface | sole Experience Constitution §22 and executable localization thresholds; active screen/round evidence |
+| `GLOBAL / ALL`, focus-only Subject/BrandFocus, internal full-universe data and honest permission-limited commercial views | sole Global Universe Context/Data Maturity contract; Shared DB/Evidence and SYSTEM Permission owners |
+| Global commercial, global brand and Guangzhou Taikoo Hui maturity plus rotating non-reference entity tests | sole Global Universe Context/Data Maturity contract; relevant Round `REAL DELIVERY CARD` |
+| Collector/Browser/authorized sessions, public sources and Hong Kong-only XHS collection | SYSTEM Collector/Browser owners; `AGENTS.md` §§8–10; Real Delivery Overlay ROUND 06 |
+| One AI Gateway, Ollama, Zhipu and typed Jev candidate; no AI Production Truth | Product Architecture AI boundary; SYSTEM AI owner; Round 07 gates |
+| Product Skill Store discovery, trust/license, guarded run, history, update/disable/uninstall | Shared Agent Skills owner; this index §2 item 12; Real Delivery Overlay ROUND 07 and AI-04 |
+| Creation, reporting, evaluation, learning and per-round frontier research/controlled capability upgrades | Product Architecture chain; `AGENTS.md` §§3–4; Real Delivery Overlay research and workflow gates |
+| Real permitted user E2E, operable page, Evidence Trace/Return and honest failure/recovery every related Round | sole Real Delivery Overlay; Experience Constitution; current Round Charter |
+| Data/source legality, secrets, version compatibility, backup/restore/deletion, tenant lifecycle and commercial operations | Real Delivery Overlay §23; `COMMERCIAL_READY=NO` until its six gates pass |
+| Windows/macOS/Linux/Android/iOS, clean clone, cross-surface return, rollback, internal beta and release | this index ROUND 15; Real Delivery Overlay release matrix; platform-specific runtime evidence |
+| Workstation Codex/OpenCode/Zhipu/Ollama routing without exposing credentials or granting product authority | workstation AGENTS defaults; repo `AGENTS.md` security/effects rules; current AI/Agent owners |
 
 ## 3. Fixed source lookup map
 
@@ -171,7 +204,7 @@ This table is a scheduling input, not permission to start a later round. Each ow
 
 ## 8. Business end-state to current implementation — 2026-09-23 local delta
 
-This is a Task Card input derived from the Product Owner's business calibration, not another Product Architecture or evidence of round acceptance. It was mapped against local `main` at `5ba1aefc53a1babc293e990c23c62f841724c843` with protected, uncommitted work. Local source presence is not a released user outcome; recheck the active source and evidence at each owning round. The later 2026-09-23 Windows SYS-01 recovery job passed on the dirty local candidate; ROUND 02 remains `REWORK` for coherent executable-source integration on remote `main` and is not enlarged by the business rows below.
+This is a Task Card input derived from the Product Owner's business calibration, not another Product Architecture or evidence of round acceptance. It was mapped against local `main` at `5ba1aefc53a1babc293e990c23c62f841724c843` with protected, uncommitted work. Local source presence is not a released user outcome; recheck the active source and evidence at each owning round. At that historical mapping, ROUND 02 still needed coherent executable-source integration; the later committed [ROUND 02 Charter](LUMENIS-ROUND-02-CHARTER-CURRENT.md) records a bounded `PASS` for its actual Windows SYS-01 job. Neither status enlarges acceptance to the App or business rows below.
 
 | Real user / job / deliverable | Need | Existing owner and local implementation | Current evidence limit | Owning rounds and minimum exit proof |
 | --- | --- | --- | --- | --- |

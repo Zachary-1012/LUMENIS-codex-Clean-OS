@@ -130,6 +130,20 @@ REAL DELIVERY CARD
 ROUND：
 CURRENT SHA：
 
+ONLINE DELIVERY / LOCAL-TO-MAIN CLOSURE：
+- accepted Batch source paths and exact local commit/remote `origin/main` SHA
+- owning Round evidence and CURRENT status published with the accepted source
+- fresh live remote main SHA and online file verification after push
+- staged/unstaged/untracked protected work still `LOCAL_ONLY`, with owner and next gate
+- CI job step count and result; a zero-step billing failure is not test evidence
+- if publication fails: `LOCAL_ONLY / NOT_PUBLISHED`, not online PASS
+
+THREE-LANGUAGE SURFACE ACCEPTANCE：
+- promised Public Website / Web Workspace / Desktop / Mobile screen matrix
+- `zh-CN` / `en` / `ko` user task, result, error, denied and unavailable copy
+- locale switch, persistence, Trace/Return, responsive and accessibility evidence
+- missing locale or key remains an explicit screen/surface acceptance gap
+
 GLOBAL UNIVERSE / DATA MATURITY IMPACT：
 - GLOBAL CTH maturity impact：本轮责任、已验证、未成熟、后续 owner/round
 - GLOBAL BMP maturity impact：本轮责任、已验证、未成熟、后续 owner/round

@@ -401,6 +401,16 @@ Real Subject names, Brand names, Event titles, Evidence and business records rem
 
 Chinese / English / Korean preserve meaning and hierarchy rather than identical string length.
 
+The product commitment is three user-visible language versions (`zh-CN`, `en`,
+`ko`) across the Public Website and every operational Web Workspace, Desktop
+and Mobile workflow that a Round promises to deliver. A committed website
+translation or a local App copy registry does not establish a released locale.
+Each applicable screen specification and Round acceptance must name its three
+locale paths, state/error/permission/accessibility copy, switching and restored
+context, missing-key behavior and tested responsive layouts. If one promised
+locale is absent or unusable, that screen/surface is not accepted; it is not
+silently deferred or replaced by untranslated implementation text.
+
 ## 23. Brand identity
 
 Product assets may live in implementation directories, but there is no independent logo/design specification outside this Constitution.
@@ -644,7 +654,7 @@ The 44 screen IDs and 54 binding records (`BACKEND-GAP-001..054`) define the sco
 
 - **Tokens:** define semantic foreground/background/status colors, type roles, spacing, density, focus, elevation and motion as named tokens before composing screens. Color expresses meaning and never carries status alone. Text and interactive states meet WCAG 2.2 AA contrast; standard text contrast is at least 4.5:1, large text at least 3:1, and keyboard focus is visible against adjacent colors.
 - **Input and size:** interactive touch targets are at least 44 × 44 logical px where the platform permits. Keyboard-only users can reach, operate and leave each control in logical order; pointer, touch and keyboard actions produce the same authorized business result.
-- **Text and localization:** the production shell supports Chinese and English; Korean remains a planned/verified locale before claiming Korean support. Test short/long translations, mixed CJK/Latin numerals, wrapping, font scaling to 200%, right-sized desktop windows and screen reader names. Never bake translated labels into metric/API identifiers.
+- **Text and localization:** the observed shell may support fewer locales than the three-language product commitment; that is an implementation gap, not permission to drop Korean. Before claiming a promised screen or surface accepted, verify `zh-CN`, `en` and `ko` copy from the canonical registry, locale switching/persistence and Return, all business/error/permission states, short/long translations, mixed CJK/Latin numerals, wrapping, font scaling to 200%, right-sized desktop windows and screen reader names. Never bake translated labels into metric/API identifiers or treat a fallback string as a completed translation.
 - **Responsive navigation:** desktop uses a persistent or collapsible domain rail plus restored work context; tablet uses a compact rail and reversible detail panel; phone uses one primary task surface with a clear back path. Test portrait and landscape, desktop narrow-window transitions, keyboard shortcuts and hardware back. Return restores selected Subject/Brand, filters, tab, selection, scroll and originating route.
 - **Motion:** establish named duration/easing tokens and use motion only where it explains causality, progress or a reversible transition. Every transition is interruptible and has a reduced-motion path; reduced motion removes spatial travel/parallax and keeps state-change feedback immediate. Motion must not be the only status signal.
 - **Performance:** target 60 fps on supported reference devices and keep p95 frame work within 16.7 ms during defined Golden Page interactions. Defer non-visible work, virtualize long lists and provide a no-motion/low-cost rendering fallback on constrained devices. Record the reference device, build mode and measured interaction; a simulator screenshot is not a performance result.

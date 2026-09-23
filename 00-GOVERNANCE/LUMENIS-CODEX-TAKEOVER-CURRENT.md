@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**  
-> Updated: 2026-09-23 (14:37 Asia/Shanghai source/local snapshot)
+> Updated: 2026-09-23 (15:07 Asia/Shanghai source/local snapshot; later commits must be resolved live)
 > CI status: resolve from GitHub checks for the exact current origin/main; no historical SHA is a current acceptance result.
 > **Never treat this document's commit, any pasted SHA, or any historical handoff SHA as the current HEAD. Codex must fetch and resolve `origin/main` at session start.**
 
@@ -17,20 +17,25 @@ and source/runtime inspection. The local working tree is not visible to a reader
 of GitHub alone. Do not infer that a local-only candidate is absent, merged,
 accepted or safe to publish merely from the remote tree.
 
-| Layer | Observed 2026-09-23 14:37 +08:00 | Meaning for an online-only reader |
+| Layer | Observed 2026-09-23 15:07 +08:00 | Meaning for an online-only reader |
 | --- | --- | --- |
-| Repository | `Zachary-1012/LUMENIS-codex-Clean-OS`, private, sole `main`; local `HEAD`, `origin/main` and live remote main were `dc60d7f1ba43046e7f2300356536a180e397dd08` before this status update. | Resolve the live SHA again. This row is provenance, not a permanently current HEAD. |
+| Repository | `Zachary-1012/LUMENIS-codex-Clean-OS`, private, sole `main`; local `HEAD`, `origin/main` and live remote main were `920a46cce69200170bacd35b82f56021a14cb922` before this status update. | Resolve the live SHA again. This row is provenance, not a permanently current HEAD. |
 | Accepted checkpoints | ROUND 01 source/coverage baseline accepted; [ROUND 02](LUMENIS-ROUND-02-CHARTER-CURRENT.md) `PASS` for its bounded authority and real Windows SYS-01 operational job. | Neither decision accepts the full App, all 44 Screens, global data maturity or release. |
-| Active checkpoint | [ROUND 03 provisional evidence](evidence/round-03/ROUND-03-2026-09-23-PROVISIONAL.md) is `REWORK / NOT ACCEPTED`. Committed Shared Database slices include transaction rollback, backup/refusal and `dc60d7f1` business-schema transaction behavior; v14–v17 cross-owner migration and rendered user E2E remain open. ROUND 04–15 have no Sol exit acceptance. | Source commits are narrow implementation evidence. Do not advance a dependent round or claim a complete product from them. |
-| Protected local-only work | The local checkout had 474 modified/untracked porcelain entries at the snapshot. Examples include candidate `app/web/`, `app/lib/l10n/`, trilingual copy deltas, Shared Agent Skill Store changes, a Jev adapter, database v14–v17 scope/migration changes and many CTH/BMP/Shared/SYSTEM screens/tests. This is a count of paths, **not** completed tasks. | These candidates are not all on `origin/main` and are not collectively accepted. Preserve them; inspect exact owner, diff, tests and runtime before a scoped commit. GitHub cannot show their current contents. |
+| Active checkpoint | [ROUND 03 provisional evidence](evidence/round-03/ROUND-03-2026-09-23-PROVISIONAL.md) is `REWORK / NOT ACCEPTED`. Committed Shared Database slices include transaction rollback, backup/refusal, business-schema transaction behavior and `920a46cc` v14 scope storage. Remaining cross-owner v14–v17 integration and rendered user E2E are not accepted. ROUND 04–15 have no Sol exit acceptance. | Source commits are narrow implementation evidence. Do not advance a dependent round or claim a complete product from them. |
+| Protected local-only work | The local checkout had 477 modified/untracked porcelain entries at the snapshot. Examples include candidate `app/web/`, `app/lib/l10n/`, trilingual copy deltas, Shared Agent Skill Store changes, a Jev adapter, later cross-owner migration work and many CTH/BMP/Shared/SYSTEM screens/tests. This is a count of paths, **not** completed tasks. | These candidates are not all on `origin/main` and are not collectively accepted. Preserve them; inspect exact owner, diff, tests and runtime before a scoped commit. GitHub cannot show their current contents. |
 | Surface truth | `website/` has a committed Public Website foundation, not configured commercial entry or release proof. Windows Desktop SYS-01 has a bounded ROUND 02 E2E. Flutter Web Workspace, other Desktop workflows and Mobile Companion are not accepted end-to-end merely because local UI source/builds exist. | Do not say `APP ONLY`, but do not say four surfaces are operational or released. |
 | Product data and capabilities | Global Commercial Coverage = `NO / NOT VERIFIED`; Global Brand Coverage = `NO / NOT VERIFIED`; Guangzhou Taikoo Hui Reference Coverage = `PARTIAL` in current round evidence. Skill Store, Jev, three-language operational UI and continuing AI/Collector/learning upgrades are scheduled or local candidates until their owner-specific E2E gates pass. | `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=NO`; missing or uncollected data must remain honest, never fabricated. |
-| CI and release | [Product Gate at `dc60d7f1`](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/35826256320) and the preceding [App Gate](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/35826188130) failed before any job step. Their annotation says recent account payments failed or the spending limit needs increasing. | `EXECUTION-LAYER UNVERIFIED`, not a product-test PASS or FAIL. Local tests and Git pushes can continue; hosted CI/release evidence remains missing. `RELEASED=NO`, `OPERATING=NO`, `COMMERCIAL_READY=NO`. |
+| CI and release | [Product Gate at `920a46cc`](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/35828231185) failed before any job step; its annotation says recent account payments failed or the spending limit needs increasing. App Gate status must be resolved for the exact live commit, not inherited from an older run. | `EXECUTION-LAYER UNVERIFIED`, not a product-test PASS or FAIL. Local tests and Git pushes can continue; hosted CI/release evidence remains missing. `RELEASED=NO`, `OPERATING=NO`, `COMMERCIAL_READY=NO`. |
 
 The active local Sol task may progress after this snapshot. It must update its
-own bounded Round evidence and publish accepted source before an online reader
-can claim more. The repo's root `AGENTS.md` continuity rule requires `REWORK`
-to continue through the next safe Batch, not terminate the product program.
+own bounded Round evidence and publish accepted source **and this CURRENT online
+status in the same delivery cycle** before an online reader can claim more.
+After push, verify live remote SHA and online file contents; if publication is
+blocked, report `LOCAL_ONLY / NOT_PUBLISHED`, not an online PASS. The repo's root
+`AGENTS.md` continuity rule requires `REWORK` to continue through the next safe
+Batch, not terminate the product program. Its parallelism target is ten safe
+active Luna Batches only when actual host capacity and owner isolation allow;
+report the real active/queued counts and host cap rather than inventing workers.
 
 ## 1. Mandatory Codex bootstrap and authority
 

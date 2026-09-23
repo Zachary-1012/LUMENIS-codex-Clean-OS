@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -10,6 +11,65 @@ EXPECTED_VERSION = "1.1.0"
 EXPECTED_FINGERPRINT = "68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f"
 EXPECTED_LOCAL_REPO = "Zachary-1012/LUMENIS-codex-Clean-OS"
 CONTRACT_BASENAME = "LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json"
+ONLINE_STATUS_PATH = "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md"
+
+
+def _requires_online_progress(path: str) -> bool:
+    if path == "AGENTS.md" or path.startswith(
+        (
+            ".github/workflows/",
+            "account/",
+            "agent_",
+            "app/",
+            "contracts/",
+            "lumenis/",
+            "scripts/",
+            "tests/",
+            "website/",
+            "00-GOVERNANCE/evidence/round-",
+            "00-GOVERNANCE/LUMENIS-ROUND-",
+        )
+    ):
+        return True
+    return "/" not in path and path.endswith(
+        (".py", ".ps1", ".json", ".toml", ".yaml", ".yml")
+    )
+
+
+def _assert_online_progress_for_paths(changed_paths: set[str]) -> None:
+    delivered_paths = sorted(
+        path for path in changed_paths if _requires_online_progress(path)
+    )
+    if delivered_paths and ONLINE_STATUS_PATH not in changed_paths:
+        raise AssertionError(
+            "source/round evidence changed without CURRENT online progress in "
+            f"the same commit: {delivered_paths[:12]}"
+        )
+
+
+def _assert_head_online_progress() -> None:
+    result = subprocess.run(
+        [
+            "git",
+            "diff-tree",
+            "--root",
+            "--first-parent",
+            "--no-commit-id",
+            "--name-only",
+            "-r",
+            "HEAD",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise AssertionError(
+            "cannot verify CURRENT online progress against HEAD: "
+            f"{result.stderr.strip()}"
+        )
+    _assert_online_progress_for_paths(set(result.stdout.splitlines()))
 
 PATHS = {
     "agents": ROOT / "AGENTS.md",
@@ -116,6 +176,7 @@ def validate() -> None:
         "only repository execution router",
         "Online reader's current-state snapshot",
         "The local working tree is not visible to a reader",
+        "same delivery cycle",
         "DESIGN_READY",
         label="CURRENT takeover",
     )
@@ -143,6 +204,7 @@ def validate() -> None:
         "DESIGN_READY",
         "copied directly into production UI",
         "Sol acceptance decision is `REWORK`",
+        "three user-visible language versions",
         label="CURRENT Experience Constitution",
     )
 
@@ -173,6 +235,8 @@ def validate() -> None:
         "LUMENIS product account remains deferred until its approved identity/tenant gate after internal beta",
         "Do not repeat a full-repository audit for normal work",
         "Product Skill Store is a named P0 capability",
+        "Product Owner requirement routing check",
+        "Chinese, English and Korean",
         "Direct PDF/sketch implementation is `REWORK`",
         "LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
         "LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
@@ -228,6 +292,8 @@ def validate() -> None:
         "CURRENT SUBORDINATE REAL-DELIVERY OVERLAY / NOT A SECOND PRODUCT OR EXPERIENCE AUTHORITY",
         "REAL DELIVERY OVERLAY FOR ALL 15 ROUNDS",
         "REAL DELIVERY CARD",
+        "ONLINE DELIVERY / LOCAL-TO-MAIN CLOSURE",
+        "THREE-LANGUAGE SURFACE ACCEPTANCE",
         "OWNER → CALLER → USER CAPABILITY MATRIX",
         "CURRENT CAPABILITY TRUTH MATRIX",
         "RUNTIME FAILURE MATRIX",
@@ -364,9 +430,12 @@ def validate() -> None:
         "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
         "00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
         "### Fifteen-round closed-loop red line",
+        "### Accepted Batch online-publication gate",
+        "Product Owner's parallelism target is ten",
+        "Industry Business",
         "only repository execution router",
         "not fifteen mutually blocking implementation windows",
-        "approved operating ceiling is ten concurrent Luna workers",
+        "ten is also the approved operating ceiling",
         "parallel war-room rule above",
         "REAL USER WORK E2E ACCEPTANCE — ROUND 02 through ROUND 15",
         "Missing E2E evidence forces Sol to return `REWORK` or `BLOCKED`",
@@ -421,11 +490,13 @@ def validate() -> None:
     if "current HEAD = READ WITH git fetch + git rev-parse origin/main" not in takeover:
         raise AssertionError("CURRENT takeover must resolve origin/main dynamically")
 
+    _assert_head_online_progress()
+
 
 if __name__ == "__main__":
     validate()
     print(
         "CODEX TAKEOVER GOVERNANCE OK "
         f"{EXPECTED_CONTRACT_ID} v{EXPECTED_VERSION} {EXPECTED_FINGERPRINT} "
-        "single-machine-contract=PASS workflow-guards=PASS"
+        "single-machine-contract=PASS workflow-guards=PASS online-progress=PASS"
     )
