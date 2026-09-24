@@ -104,6 +104,7 @@ def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2', *,
             publish_datetime=note_data.get('publish_datetime') or note_data.get('publish_date') or None,
             subject_scope=subject_scope,
             provider=provider,
+            dedupe_by_source=True,
             domain_id=domain_id,
             product_id=product_id,
         )

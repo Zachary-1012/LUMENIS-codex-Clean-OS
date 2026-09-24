@@ -41,6 +41,8 @@ The subsequent [ROUND 07 Jev candidate audit](evidence/round-07/ROUND-07-JEV-CAN
 
 2026-09-24 bounded ROUND 06 update: [Sitemap XML root failure isolation](evidence/round-06/ROUND-06-SITEMAP-ROOT-FAILURE-ISOLATION-2026-09-24.md) is accepted only as a source/test Batch. A clean `HEAD` plus exact staged patch passed 8/8 isolated adapter tests, and the protected current working-tree snapshot passed 20/20 with its separate exact-scope candidate. Non-Sitemap XML now fails before Canonical import; valid `sitemapindex` remains supported. No live public source, real user-work E2E, Round 06 exit, global coverage or commercial readiness is claimed. The local dirty Collector/Permission/Scope changes remain unaccepted; online status applies only after this exact source/evidence/status commit and remote-ref verification.
 
+2026-09-24 bounded ROUND 04 update: [XHS Evidence source identity binding](evidence/round-04/ROUND-04-XHS-EVIDENCE-SOURCE-IDENTITY-2026-09-24.md) explicitly uses the existing source-scoped Evidence deduplication contract. A clean staged replay passed 56/56 mock and store tests; protected production DB bytes and hash stayed unchanged, and no XHS identity/browser was touched. This is only a caller-binding Batch, not live Evidence, real user-work E2E or ROUND 04 exit. Other local XHS, Permission, Scope and DB candidates remain unaccepted. Online status applies only after exact source/evidence/status publication and live-ref verification.
+
 The active local Sol task may progress after this snapshot. It must update its
 own bounded Round evidence and publish accepted source **and this CURRENT online
 status in the same delivery cycle** before an online reader can claim more.
