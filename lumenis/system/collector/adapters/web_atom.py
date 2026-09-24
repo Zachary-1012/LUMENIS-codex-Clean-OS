@@ -37,8 +37,10 @@ class AtomAdapter(BasePlatformAdapter):
 
     def search(self, keyword: str, **kwargs: Any) -> CollectionResult:
         feed_url = str(kwargs.get("feed_url") or keyword or "").strip()
+        source_url = feed_url
         try:
             response = self.fetcher(feed_url)
+            source_url = str(response.url or feed_url).strip()
             parsed = feedparser.parse(response.content)
             if getattr(parsed, "bozo", False) and not parsed.entries:
                 raise PublicSourceError("Atom feed could not be parsed")
@@ -48,7 +50,7 @@ class AtomAdapter(BasePlatformAdapter):
                 link = str(entry.get("link") or "").strip()
                 identity = str(entry.get("id") or link).strip()
                 if not identity:
-                    continue
+                    raise PublicSourceError("Atom entry is missing a stable identity")
                 item_id = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:32]
                 content = str(entry.get("summary") or "")
                 if not content and entry.get("content"):
@@ -77,7 +79,7 @@ class AtomAdapter(BasePlatformAdapter):
                 status=CollectionStatus.PROVIDER_UNAVAILABLE,
                 platform=self.platform,
                 message="public Atom source is unavailable",
-                metadata={"provider": "feedparser_atom", "error_type": type(exc).__name__},
+                metadata={"provider": "feedparser_atom", "source": source_url, "error_type": type(exc).__name__},
             )
 
     def detail(self, content_id: str, **kwargs: Any) -> CollectionResult:

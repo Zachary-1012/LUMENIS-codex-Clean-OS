@@ -199,3 +199,53 @@ def test_sitemap_index_root_remains_supported():
     assert result.items[0]["url"] == "https://public.example.test/child-sitemap.xml"
     assert result.items[0]["raw"]["entry_kind"] == "sitemap"
     assert result.metadata["entry_kind"] == "sitemapindex"
+
+
+def test_atom_entry_without_stable_identity_fails_before_canonical_import(monkeypatch):
+    import lumenis.system.collector.adapters.multi_platform_import as importer
+    import lumenis.system.collector.adapters.secondary_collection as surface
+
+    atom = """<?xml version=\"1.0\" encoding=\"utf-8\"?>
+    <feed xmlns=\"http://www.w3.org/2005/Atom\">
+      <title>Example feed</title>
+      <id>https://public.example.test/feed.atom</id>
+      <updated>2026-09-18T04:00:00Z</updated>
+      <author><name>Publisher</name></author>
+      <entry>
+        <title>Identity-less entry</title>
+        <updated>2026-09-18T04:00:00Z</updated>
+        <content>Entry content</content>
+      </entry>
+    </feed>"""
+    response = _response(atom, "application/atom+xml")
+    adapter = AtomAdapter(fetcher=lambda _: response)
+    evidence = {}
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("an entry without source identity must not reach Canonical")
+
+    monkeypatch.setattr(surface, "_get_runtime_adapter", lambda _platform: adapter)
+    monkeypatch.setattr(surface, "_adapter_health", lambda _platform: {
+        "status": "SUCCESS", "ready": True, "can_attempt": True, "message": "ok", "metadata": {},
+    })
+    monkeypatch.setattr(surface, "_daily_action_count", lambda _platform, _at: 0)
+    monkeypatch.setattr(surface, "_write_run_log", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        surface, "_write_evidence",
+        lambda _platform, _keyword, result, **_kwargs: evidence.update(result) or 11,
+    )
+    monkeypatch.setattr(surface, "_mark_subject_and_sync", fail_if_called)
+    monkeypatch.setattr(importer, "import_multi_platform_records", fail_if_called)
+    monkeypatch.setitem(surface._last_action, "web_atom", 0.0)
+
+    result = surface.collect_search(
+        "web_atom", "https://public.example.test/feed.atom", max_results=1, operator="human",
+    )
+
+    assert result["ok"] is False
+    assert result["status"] == "PROVIDER_UNAVAILABLE"
+    assert result["imported"] == 0
+    assert result["canonical_synced"] == 0
+    assert result["evidence_recorded"] is True
+    assert evidence["status"] == "PROVIDER_UNAVAILABLE"
+    assert evidence["provenance"]["source"] == response.url
