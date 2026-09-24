@@ -90,6 +90,8 @@ The subsequent [ROUND 07 Jev candidate audit](evidence/round-07/ROUND-07-JEV-CAN
 
 2026-09-24 bounded ROUND 06 update: [Atom stable identity and failure Evidence](evidence/round-06/ROUND-06-ATOM-STABLE-IDENTITY-2026-09-24.md) stops an identity-less parsed entry from becoming a false `NO_NEW_DATA`/PASS result. Sol's exact staged clean replay passed 9/9 adapter tests and proved the final source URL reaches failure Evidence while Canonical import stays closed. No live public source, user-work E2E, ROUND 06 exit, full-universe or commercial-readiness claim follows. Online status applies only after exact source/evidence/status publication and live-ref verification.
 
+2026-09-24 bounded ROUND 06 update: [RSS source URL failure truth](evidence/round-06/ROUND-06-RSS-SOURCE-URL-FAILURE-2026-09-24.md) prevents a Google News item without a source URL from being silently skipped and reported as `NO_NEW_DATA`. Sol's exact staged clean replay passed 10/10 adapter tests and kept failure Evidence provenance while Canonical import stayed closed. RSS may validly omit a link; this Batch enforces the current article-import identity contract. No live public source, user-work E2E, ROUND 06 exit, full-universe or commercial-readiness claim follows. Online status applies only after exact source/evidence/status publication and live-ref verification.
+
 The active local Sol task may progress after this snapshot. It must update its
 own bounded Round evidence and publish accepted source **and this CURRENT online
 status in the same delivery cycle** before an online reader can claim more.

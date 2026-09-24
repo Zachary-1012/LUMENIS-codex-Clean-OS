@@ -249,3 +249,57 @@ def test_atom_entry_without_stable_identity_fails_before_canonical_import(monkey
     assert result["evidence_recorded"] is True
     assert evidence["status"] == "PROVIDER_UNAVAILABLE"
     assert evidence["provenance"]["source"] == response.url
+
+
+def test_web_rss_missing_item_url_fails_before_canonical_import(monkeypatch):
+    import web_discovery
+    import lumenis.system.collector.adapters.multi_platform_import as importer
+    import lumenis.system.collector.adapters.secondary_collection as surface
+
+    outcome = {
+        "ok": True,
+        "collected_at": "2026-09-24T04:00:00+00:00",
+        "provider": "google_news_rss",
+        "source": "news.google.com/rss/search",
+        "items": [{
+            "title": "RSS item without stable URL",
+            "url": "",
+            "source": "Example Publisher",
+            "published_at": "2026-09-24T03:00:00+00:00",
+        }],
+    }
+    monkeypatch.setattr(
+        web_discovery, "fetch_google_news_rss", lambda _query, max_results=20: outcome,
+    )
+    adapter = WebRSSAdapter()
+    evidence = {}
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("an RSS item without a source URL must not reach Canonical")
+
+    monkeypatch.setattr(surface, "_get_runtime_adapter", lambda _platform: adapter)
+    monkeypatch.setattr(surface, "_adapter_health", lambda _platform: {
+        "status": "SUCCESS", "ready": True, "can_attempt": True, "message": "ok", "metadata": {},
+    })
+    monkeypatch.setattr(surface, "_daily_action_count", lambda _platform, _at: 0)
+    monkeypatch.setattr(surface, "_write_run_log", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        surface, "_write_evidence",
+        lambda _platform, _keyword, result, **_kwargs: evidence.update(result) or 11,
+    )
+    monkeypatch.setattr(surface, "_mark_subject_and_sync", fail_if_called)
+    monkeypatch.setattr(importer, "import_multi_platform_records", fail_if_called)
+    monkeypatch.setitem(surface._last_action, "web_rss", 0.0)
+
+    result = surface.collect_search("web_rss", "lumenis", max_results=1, operator="human")
+
+    assert result["ok"] is False
+    assert result["status"] == "PROVIDER_UNAVAILABLE"
+    assert result["raw_count"] == 1
+    assert result["returned_count"] == 0
+    assert result["imported"] == 0
+    assert result["canonical_synced"] == 0
+    assert result["evidence_recorded"] is True
+    assert result["provenance"]["error_type"] == "MISSING_SOURCE_IDENTITY"
+    assert evidence["status"] == "PROVIDER_UNAVAILABLE"
+    assert evidence["provenance"]["source"] == "news.google.com/rss/search"

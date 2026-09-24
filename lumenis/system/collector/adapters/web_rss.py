@@ -50,11 +50,20 @@ class WebRSSAdapter(BasePlatformAdapter):
                 metadata=metadata,
             )
 
+        source_items = outcome.get("items") or []
         items = []
-        for source_item in outcome.get("items") or []:
+        for source_item in source_items:
             url = str(source_item.get("url") or "").strip()
             if not url:
-                continue
+                metadata["error_type"] = "MISSING_SOURCE_IDENTITY"
+                return CollectionResult(
+                    status=CollectionStatus.PROVIDER_UNAVAILABLE,
+                    platform=self.platform,
+                    message="public RSS item is missing a stable source URL",
+                    raw_count=len(source_items),
+                    new_count=0,
+                    metadata=metadata,
+                )
             item_id = hashlib.sha256(url.encode("utf-8")).hexdigest()[:32]
             source_name = str(source_item.get("source") or "").strip()
             items.append(self.normalize_item({
