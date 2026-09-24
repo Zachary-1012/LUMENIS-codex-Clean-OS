@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Zachary OS AI · Resident Browser Health Monitor（驻场浏览器运行时健康监控）
 
-双身份独立健康检查 + 自动恢复 + 状态持久化。三层探测：
+批准身份独立健康检查 + 自动恢复 + 状态持久化。三层探测：
   L1 端口存活  — socket 连接 CDP 调试端口（0.5s）
   L2 CDP 连通  — HTTP /json/version + WebSocket ping/pong（标杆：cdp-connect-kit endpoint uptime）
   L3 登录态有效 — CDP Network.getAllCookies 检查 web_session+id_token 存在 + 当前页 URL 非登录重定向
@@ -38,6 +38,24 @@ MAX_AUTO_RECOVERIES = 3
 RECOVER_GRACE_SEC = 8
 
 _lock = threading.Lock()
+
+# Active resident health is deliberately narrower than the legacy bridge
+# registry.  Legacy account constants remain source-only compatibility data;
+# they must never enter a probe, recovery, evidence, or persistence path.
+_ACTIVE_ACCOUNT = bridge.DEFAULT_COLLECTION_ACCOUNT
+
+
+def _account_is_active(account: str) -> bool:
+    return account in {_ACTIVE_ACCOUNT, bridge.XHS_RETINAUT_NAME}
+
+
+def _blocked_account_result(account: str, *, action: str = "health_check") -> dict[str, Any]:
+    return {
+        "account": account,
+        "status": "POLICY_BLOCKED",
+        "action": action,
+        "detail": "This browser account is unavailable for active health monitoring.",
+    }
 
 
 logger = logging.getLogger(__name__)
@@ -80,8 +98,8 @@ def _check_cdp_ws(port: int, timeout: float = 2.0) -> bool:
         return False
 
 
-def _cdp_get_cookies(port: int, timeout: float = 3.0) -> list[dict]:
-    """L3：通过 CDP page-level WebSocket（先 Network.enable）调用 Network.getAllCookies，返回 cookie 列表（不打印值）。
+def _cdp_get_cookies(port: int, timeout: float = 3.0) -> list[dict] | None:
+    """L3：通过 CDP page-level WebSocket 读取 cookie 列表；None 表示控制面不可用（不打印 cookie 值）。
 
     Network domain 是 page-level，必须连 page target 的 WS 并先启用；Browser-level WS 不支持 Network domain。
     """
@@ -90,9 +108,11 @@ def _cdp_get_cookies(port: int, timeout: float = 3.0) -> list[dict]:
         # 取 page targets
         with ur.urlopen(f"http://127.0.0.1:{port}/json/list", timeout=1.0) as r:
             targets = json.loads(r.read().decode("utf-8", "replace"))
+        if not isinstance(targets, list) or any(not isinstance(target, dict) for target in targets):
+            return None
         pages = [t for t in targets if t.get("type") == "page" and t.get("webSocketDebuggerUrl")]
         if not pages:
-            return []
+            return None
         ws = websocket.create_connection(pages[0]["webSocketDebuggerUrl"], timeout=timeout)
         # page-level：先启用 Network domain
         ws.send(json.dumps({"id": 1, "method": "Network.enable"}))
@@ -100,19 +120,30 @@ def _cdp_get_cookies(port: int, timeout: float = 3.0) -> list[dict]:
         ws.send(json.dumps({"id": 2, "method": "Network.getAllCookies"}))
         resp = json.loads(ws.recv())
         ws.close()
-        return resp.get("result", {}).get("cookies", [])
+        result = resp.get("result")
+        if not isinstance(result, dict):
+            return None
+        cookies = result.get("cookies")
+        if not isinstance(cookies, list) or any(not isinstance(cookie, dict) for cookie in cookies):
+            return None
+        return cookies
     except Exception:
-        return []
+        return None
 
 
-def _cdp_page_urls(port: int, timeout: float = 2.0) -> list[str]:
-    """L3：通过 CDP HTTP /json/list 获取所有 page target 的当前 URL。"""
+def _cdp_page_urls(port: int, timeout: float = 2.0) -> list[str] | None:
+    """L3：通过 CDP HTTP /json/list 获取所有 page target URL；None 表示控制面不可用。"""
     try:
         with ur.urlopen(f"http://127.0.0.1:{port}/json/list", timeout=timeout) as r:
             targets = json.loads(r.read().decode("utf-8", "replace"))
-        return [t.get("url", "") for t in targets if t.get("type") == "page"]
+        if not isinstance(targets, list) or any(not isinstance(target, dict) for target in targets):
+            return None
+        pages = [t.get("url", "") for t in targets if t.get("type") == "page"]
+        if not pages or any(not isinstance(url, str) for url in pages):
+            return None
+        return pages
     except Exception:
-        return []
+        return None
 
 
 def _login_keywords(account: str) -> tuple[str, ...]:
@@ -124,6 +155,8 @@ def _login_keywords(account: str) -> tuple[str, ...]:
 
 def check_account(account: str) -> dict[str, Any]:
     """对单个逻辑身份执行三层健康检查，返回结构化结果（不含 cookie 值）。"""
+    if not _account_is_active(account):
+        return _blocked_account_result(account)
     port = bridge.cdp_port_for(account)
     home = bridge.home_url_for(account)
     result: dict[str, Any] = {
@@ -163,11 +196,21 @@ def check_account(account: str) -> dict[str, Any]:
 
     # L3 登录态
     cookies = _cdp_get_cookies(port)
+    if cookies is None:
+        result["status"] = "CDP_DEGRADED"
+        result["detail"] = "CDP 控制面在读取登录态期间不可用，无法确认会话状态"
+        return result
+
     result["cookie_count"] = len(cookies)
     cookie_names = {c.get("name", "") for c in cookies}
     result["has_web_session"] = "web_session" in cookie_names
     result["has_id_token"] = "id_token" in cookie_names
-    result["page_urls"] = _cdp_page_urls(port)[:5]
+    page_urls = _cdp_page_urls(port)
+    if page_urls is None:
+        result["status"] = "CDP_DEGRADED"
+        result["detail"] = "CDP 控制面在读取页面状态期间不可用，无法确认会话状态"
+        return result
+    result["page_urls"] = page_urls[:5]
 
     login_redirect = any(
         any(kw in (u or "").lower() for kw in _login_keywords(account))
@@ -199,6 +242,8 @@ def check_account_with_evidence(account: str) -> dict[str, Any]:
     """执行健康检查并写入 Evidence 记录。失败也落证据（禁止只存状态不存证据）。
     P0-BR-11：增加 last_success_at / last_failure_at 字段，从 state 读取历史，
     根据当前 status 更新并持久化。向后兼容，只增不删。"""
+    if not _account_is_active(account):
+        return _blocked_account_result(account, action="health_check_evidence")
     result = check_account(account)
     # P0-BR-11: 从 state 读取历史 last_success_at / last_failure_at
     try:
@@ -250,8 +295,8 @@ def check_account_with_evidence(account: str) -> dict[str, Any]:
 
 
 def check_all() -> dict[str, Any]:
-    """检查所有双身份，返回汇总结果。"""
-    accounts = [bridge.XHS_CN_PRIMARY_NAME, bridge.XHS_RETINAUT_NAME]
+    """检查当前批准的驻场身份，返回汇总结果。"""
+    accounts = [_ACTIVE_ACCOUNT]
     results = {a: check_account_with_evidence(a) for a in accounts}
     summary = {
         "checked_at": _now_iso(),
@@ -271,6 +316,9 @@ def recover_account(account: str, force: bool = False) -> dict[str, Any]:
 
     返回恢复结果。连续恢复超过 MAX_AUTO_RECOVERIES 次后标记 UNRECOVERABLE。
     """
+    if not _account_is_active(account):
+        return _blocked_account_result(account, action="recovery")
+
     with _lock:
         state = _load_state()
         rec = state.setdefault("recoveries", {}).setdefault(account, {"count": 0, "last_at": None, "last_result": None})
@@ -316,8 +364,8 @@ def recover_account(account: str, force: bool = False) -> dict[str, Any]:
 
 
 def recover_all(force: bool = False) -> dict[str, Any]:
-    """恢复所有非 HEALTHY 身份。"""
-    accounts = [bridge.XHS_CN_PRIMARY_NAME, bridge.XHS_RETINAUT_NAME]
+    """恢复批准身份中非 HEALTHY 的身份。"""
+    accounts = [_ACTIVE_ACCOUNT]
     return {a: recover_account(a, force=force) for a in accounts}
 
 

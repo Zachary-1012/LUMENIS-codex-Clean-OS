@@ -86,6 +86,8 @@ The subsequent [ROUND 07 Jev candidate audit](evidence/round-07/ROUND-07-JEV-CAN
 
 2026-09-24 bounded ROUND 04 update: [exact Subject/BrandFocus Permission decision](evidence/round-04/ROUND-04-EXACT-RESOURCE-PERMISSION-2026-09-24.md) is available through the existing SYSTEM Permission owner. Sol's clean staged replay passed 148/148 exact-scope and neighboring tests using disposable actor/grant/registry data. The checker has no accepted production Context route caller yet; a domain-level grant or UI selection is not exact-resource authorization. Durable audit, real actor sessions, user-work E2E, ROUND 04 exit, global coverage and commercial readiness remain open. Online status applies after exact source/evidence/status publication and live-ref verification.
 
+2026-09-24 bounded ROUND 05 update: [approved resident identity and CDP failure states](evidence/round-05/ROUND-05-RESIDENT-HEALTH-HK-FAILURE-STATE-2026-09-24.md) restricts active health/recovery to the approved HK/international identity and reports disconnected, empty-target or malformed CDP state as degraded/unknown. Sol's exact staged clean replay passed 22/22 mock-only tests. The unsafe old baseline was not run; no personal Mainland account, live CDP, Cookie, production DB, real user-work E2E, ROUND 05 exit or commercial readiness is claimed. Online status applies only after source/evidence/status publication and live-ref verification.
+
 The active local Sol task may progress after this snapshot. It must update its
 own bounded Round evidence and publish accepted source **and this CURRENT online
 status in the same delivery cycle** before an online reader can claim more.
