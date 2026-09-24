@@ -139,7 +139,7 @@ def test_migrate_only_bootstraps_empty_database_through_canonical_owners(
         "zbc_canonical_data": 0,
     }
 
-    pre_migration_backup = backup_dir / "before_migration_v0_to_v16.db"
+    pre_migration_backup = backup_dir / "before_migration_v0_to_v17.db"
     assert pre_migration_backup.is_file()
     with sqlite3.connect(pre_migration_backup) as conn:
         backup_tables = {
@@ -201,7 +201,7 @@ def test_existing_versioned_data_and_null_semantics_are_preserved(
         None,
         None,
     )
-    assert numeric_history == [9, 10, 11, 12, 13, 14, 15, 16]
+    assert numeric_history == [9, 10, 11, 12, 13, 14, 15, 16, 17]
 
 
 def test_failed_migration_step_rolls_back_data_and_version(tmp_path, monkeypatch):

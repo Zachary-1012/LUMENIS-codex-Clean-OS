@@ -24,7 +24,7 @@ DB_PATH = main_db_path()
 BACKUP_DIR = os.path.join(os.path.dirname(DB_PATH), 'backups')
 
 # 当前最新版本
-CURRENT_VERSION = 16
+CURRENT_VERSION = 17
 
 # 迁移历史记录
 MIGRATION_HISTORY = {
@@ -44,6 +44,7 @@ MIGRATION_HISTORY = {
     14: "Add nullable Subject/BrandFocus scope keys and Evidence references; historical rows remain UNASSIGNED",
     15: "Canonical Subject Registry BrandFocus identity; BMP rows receive deterministic IDs",
     16: "Content Evidence source references, parent cleanup, and query indexes",
+    17: "Add nullable full-record integrity metadata to canonical Evidence records",
 }
 
 
@@ -672,6 +673,16 @@ def migration_15_to_16(conn: sqlite3.Connection):
             )
 
 
+def migration_16_to_17(conn: sqlite3.Connection):
+    """Add nullable full-record integrity storage through the Evidence owner."""
+    if not conn.in_transaction:
+        conn.execute("BEGIN")
+
+    from lumenis.shared.evidence.store import ensure_evidence_schema
+
+    ensure_evidence_schema(conn)
+
+
 def _ensure_migration_prerequisites(
     conn, current_version: int, target_version: int
 ) -> int:
@@ -780,6 +791,7 @@ MIGRATIONS = {
     13: migration_13_to_14,
     14: migration_14_to_15,
     15: migration_15_to_16,
+    16: migration_16_to_17,
 }
 
 
