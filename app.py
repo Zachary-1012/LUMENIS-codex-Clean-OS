@@ -134,6 +134,9 @@ import trend_api
 app=Flask(__name__)
 # 全局上传大小限制：500MB（对齐 INGESTION_AND_TERMINOLOGY_STANDARD）
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
+# SYSTEM Runtime serves the generated Flutter Workspace; Flask retains Product Core ownership.
+from lumenis.system.runtime.workspace_host import register_workspace_host
+register_workspace_host(app)
 # 注册系统控制中心蓝图
 app.register_blueprint(system_health_api.system_health_bp)
 app.register_blueprint(system_creator_ops_api.system_creator_ops_bp)

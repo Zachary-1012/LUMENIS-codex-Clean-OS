@@ -82,6 +82,8 @@ The subsequent [ROUND 07 Jev candidate audit](evidence/round-07/ROUND-07-JEV-CAN
 
 2026-09-24 bounded ROUND 03 update: [B001P v17 Evidence integrity storage](evidence/round-03/ROUND-03-B001P-V17-EVIDENCE-INTEGRITY-2026-09-24.md) delegates the additive nullable schema change to the published Shared Evidence owner in the migration caller's transaction. Sol's exact-patch clean replay passed 28/28 migration, owner and Evidence tests with an isolated database; protected production DB fingerprint stayed unchanged. This is storage capability only, with no digest attestation, live source, real user-work E2E, ROUND 03 exit or commercial readiness. Online status applies only after the exact source/evidence/status commit is pushed and live refs are verified.
 
+2026-09-24 bounded ROUND 08 update: [canonical Web Workspace artifact host and cache policy](evidence/round-08/ROUND-08-WORKSPACE-HOST-CACHE-2026-09-24.md) registers the generated Flutter build with the existing Flask Product Core. Isolated host tests cover deep links, API exclusion, missing build/assets, traversal, no-store index, immutable hashed files, and revalidation of changed non-hashed bootstrap bytes. No real Product Core startup, authorized business API flow, real user-work E2E, ROUND 08 exit or commercial readiness follows from this adapter. Online status applies only after source/evidence/status publication and live-ref verification.
+
 The active local Sol task may progress after this snapshot. It must update its
 own bounded Round evidence and publish accepted source **and this CURRENT online
 status in the same delivery cycle** before an online reader can claim more.
