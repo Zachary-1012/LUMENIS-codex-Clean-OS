@@ -32,7 +32,6 @@ from lumenis.shared.database.business_schema import (
 )
 
 def init_db():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     with get_db() as conn:
         apply_business_schema(conn)
 
