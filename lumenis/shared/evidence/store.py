@@ -1357,6 +1357,8 @@ def get_stats() -> dict:
 __all__ = [
 
     "init_evidence_store",
+    "ensure_evidence_schema",
+    "EVIDENCE_INTEGRITY_NEW_COLUMNS",
     "record_evidence",
 
     "record_collection_evidence",
@@ -1452,3 +1454,88 @@ def migrate_evidence_contract_fields(db_path: str = None) -> dict:
         }
     finally:
         conn.close()
+
+
+# Shared Database v17 storage for full-record Evidence integrity.
+# All fields stay nullable so adding the schema never upgrades legacy rows.
+EVIDENCE_INTEGRITY_NEW_COLUMNS = [
+    ("integrity_version", "INTEGER", "NULL"),
+    ("integrity_algorithm", "TEXT", "NULL"),
+    ("integrity_key_id", "TEXT", "NULL"),
+    ("integrity_digest", "TEXT", "NULL"),
+]
+
+
+def ensure_evidence_schema(conn: sqlite3.Connection) -> dict:
+    """Ensure additive integrity storage on the canonical Evidence table.
+
+    The caller owns the transaction. Existing Evidence values are never
+    rewritten, and legacy integrity fields remain NULL until explicitly
+    verified and upgraded by the Evidence writer.
+    """
+    statements = [
+        statement.strip()
+        for statement in EVIDENCE_TABLE_SCHEMA.split(";")
+        if statement.strip()
+    ]
+    if not statements:
+        raise sqlite3.OperationalError("canonical Evidence table schema is empty")
+
+    # Create the canonical table only when absent. Defer its indexes until
+    # after additive integrity columns have been installed.
+    conn.execute(statements[0])
+    existing = {
+        row[1]
+        for row in conn.execute(
+            "PRAGMA table_info(app_evidence_records)"
+        ).fetchall()
+    }
+    if not existing:
+        raise sqlite3.OperationalError("canonical Evidence table is unavailable")
+
+    added = []
+    skipped = []
+    for column, column_type, _default in EVIDENCE_INTEGRITY_NEW_COLUMNS:
+        if column in existing:
+            skipped.append(column)
+            continue
+        conn.execute(
+            "ALTER TABLE app_evidence_records ADD COLUMN "
+            f"{_safe_identifier(column)} {column_type}"
+        )
+        added.append(column)
+        existing.add(column)
+
+    # Recreate the existing owner indexes after the column pass. This is
+    # idempotent and avoids executing them against a partial legacy table.
+    for statement in statements[1:]:
+        if not statement.upper().startswith("CREATE INDEX"):
+            continue
+        index_match = re.search(
+            r"\bON\s+app_evidence_records\s*\(([^)]+)\)",
+            statement,
+            flags=re.IGNORECASE,
+        )
+        if index_match is None:
+            continue
+        indexed_columns = {
+            item.strip().strip('"[]')
+            for item in index_match.group(1).split(",")
+        }
+        if indexed_columns <= existing:
+            conn.execute(statement)
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_app_evidence_integrity_digest "
+        "ON app_evidence_records(integrity_digest)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_app_evidence_integrity_scheme "
+        "ON app_evidence_records("
+        "integrity_version, integrity_algorithm, integrity_key_id)"
+    )
+    return {
+        "added": added,
+        "skipped": skipped,
+        "total_existing_columns": len(existing),
+    }

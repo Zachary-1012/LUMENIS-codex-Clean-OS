@@ -45,6 +45,8 @@ The subsequent [ROUND 07 Jev candidate audit](evidence/round-07/ROUND-07-JEV-CAN
 
 2026-09-24 bounded ROUND 04 update: [XHS live side-write database path](evidence/round-04/ROUND-04-XHS-LIVE-DB-PATH-2026-09-24.md) resolves the existing Shared Database owner's `main_db_path()` at call time for both Evidence and Canonical side-writes. Sol's isolated clean-source replay compiled and passed 62/62 mock/neighbor tests; protected production DB fingerprint stayed unchanged. This is caller-path parity only. No browser, account, live source, user-visible E2E, ROUND 04 exit, full-universe or commercial-readiness claim follows from it. Other local XHS/Permission/Scope work remains unaccepted. Online status applies after this source/evidence/status commit and live-ref verification.
 
+2026-09-24 bounded ROUND 04 update: [Shared Evidence integrity schema owner](evidence/round-04/ROUND-04-EVIDENCE-SCHEMA-OWNER-2026-09-24.md) provides an additive, caller-transaction-safe helper for nullable integrity storage. Sol independently replayed clean staged source with a disposable DB and passed 58/58 focused/neighbour Evidence tests; protected production DB fingerprint stayed unchanged. This is a prerequisite for separately reviewed v17 migration, not that migration, real Evidence capture, user-work E2E, ROUND 04/03 exit or commercial readiness. The broader local dirty Evidence candidate remains unaccepted. Online status applies after exact source/evidence/status publication and live-ref verification.
+
 The active local Sol task may progress after this snapshot. It must update its
 own bounded Round evidence and publish accepted source **and this CURRENT online
 status in the same delivery cycle** before an online reader can claim more.
