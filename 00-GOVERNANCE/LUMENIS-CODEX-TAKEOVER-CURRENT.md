@@ -43,6 +43,8 @@ The subsequent [ROUND 07 Jev candidate audit](evidence/round-07/ROUND-07-JEV-CAN
 
 2026-09-24 bounded ROUND 04 update: [XHS Evidence source identity binding](evidence/round-04/ROUND-04-XHS-EVIDENCE-SOURCE-IDENTITY-2026-09-24.md) explicitly uses the existing source-scoped Evidence deduplication contract. A clean staged replay passed 56/56 mock and store tests; protected production DB bytes and hash stayed unchanged, and no XHS identity/browser was touched. This is only a caller-binding Batch, not live Evidence, real user-work E2E or ROUND 04 exit. Other local XHS, Permission, Scope and DB candidates remain unaccepted. Online status applies only after exact source/evidence/status publication and live-ref verification.
 
+2026-09-24 bounded ROUND 04 update: [XHS live side-write database path](evidence/round-04/ROUND-04-XHS-LIVE-DB-PATH-2026-09-24.md) resolves the existing Shared Database owner's `main_db_path()` at call time for both Evidence and Canonical side-writes. Sol's isolated clean-source replay compiled and passed 62/62 mock/neighbor tests; protected production DB fingerprint stayed unchanged. This is caller-path parity only. No browser, account, live source, user-visible E2E, ROUND 04 exit, full-universe or commercial-readiness claim follows from it. Other local XHS/Permission/Scope work remains unaccepted. Online status applies after this source/evidence/status commit and live-ref verification.
+
 The active local Sol task may progress after this snapshot. It must update its
 own bounded Round evidence and publish accepted source **and this CURRENT online
 status in the same delivery cycle** before an online reader can claim more.

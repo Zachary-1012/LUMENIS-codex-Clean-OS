@@ -83,8 +83,10 @@ def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2', *,
     """
     try:
         from lumenis.shared.evidence import EvidenceChain
+        from lumenis.shared.database import main_db_path
+        db_path = main_db_path()
         _raw = (str(note_data.get('title','')) + ' ' + str(note_data.get('content',''))).strip()
-        _chain = EvidenceChain(database.DB_PATH)
+        _chain = EvidenceChain(db_path)
         _chain.capture_and_canonicalize(
             source_type='xhs_note',
             source_url=str(note_data.get('url','')),
@@ -112,9 +114,11 @@ def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2', *,
         print(f"[bypass][shared_evidence][live] side-write skipped (non-fatal): {_e}")
     try:
         import canonical_data as _cd
-        _cd.ensure_canonical_table(database.DB_PATH)
+        from lumenis.shared.database import main_db_path
+        db_path = main_db_path()
+        _cd.ensure_canonical_table(db_path)
         _rec = _cd.note_to_canonical(note_data, product_id=product_id)
-        _con = _cd.get_connection(database.DB_PATH)
+        _con = _cd.get_connection(db_path)
         try:
             _cd.persist_canonical(_con, _rec)
             _con.commit()
