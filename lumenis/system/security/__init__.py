@@ -12,6 +12,8 @@ from .permission import (
     PermissionGate,
     PermissionLevel,
     PermissionResult,
+    ActorScopePermissionResult,
+    check_actor_scope_permission,
     RiskLevel,
     get_permission_gate,
     is_testing_bypass_enabled,
@@ -31,6 +33,7 @@ from .effect_fence import EffectFence, FenceDecision, get_effect_fence
 __all__ = [
     "ApprovalToken", "AuditEntry", "OperationSpec", "OperationType",
     "PermissionGate", "PermissionLevel", "PermissionResult", "RiskLevel",
+    "ActorScopePermissionResult", "check_actor_scope_permission",
     "get_permission_gate", "is_testing_bypass_enabled", "require_permission",
     "reset_permission_gate", "set_testing_bypass",
     "ActionRequest", "AgentAction", "FirewallResult", "FirewallRisk",

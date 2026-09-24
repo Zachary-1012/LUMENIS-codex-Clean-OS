@@ -29,7 +29,7 @@ import uuid
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -221,6 +221,343 @@ class PermissionResult:
 # ═══════════════════════════════════════════════════════════════
 # 4. 人工审批令牌
 # ═══════════════════════════════════════════════════════════════
+
+@dataclass
+class ActorScopePermissionResult(PermissionResult):
+    """Exact actor/resource decision while keeping the legacy serializer stable."""
+
+    actor_id: Optional[int] = None
+    subject_id: Optional[str] = None
+    brand_focus_id: Optional[str] = None
+    global_scope: bool = False
+    scope_action: Optional[str] = None
+    scope_audit_id: Optional[str] = None
+    verification_state: str = "verified"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Keep existing PermissionResult JSON keys for compatibility."""
+        return {
+            name: getattr(self, name)
+            for name in PermissionResult.__dataclass_fields__
+        }
+
+    def to_scope_dict(self) -> Dict[str, Any]:
+        """Serialize exact-scope evidence only for callers that opt in."""
+        payload = self.to_dict()
+        payload.update({
+            "actor_id": self.actor_id,
+            "subject_id": self.subject_id,
+            "brand_focus_id": self.brand_focus_id,
+            "global_scope": self.global_scope,
+            "scope_action": self.scope_action,
+            "scope_audit_id": self.scope_audit_id,
+            "verification_state": self.verification_state,
+        })
+        return payload
+
+
+_RESOURCE_SCOPE_DOMAINS = {
+    "cth": ("CTH", "subject_ids", "CTH", "company"),
+    "bmp": ("ZBMP", "brand_focus_ids", "BMP", "brand"),
+}
+_RESOURCE_SCOPE_ACTIONS = frozenset({"read", "write"})
+
+
+def _is_valid_scope_id(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and bool(value)
+        and value == value.strip()
+        and len(value) <= 256
+        and not any(ord(character) < 32 for character in value)
+    )
+
+
+def _scope_grant_matches(
+    data_scope: Any,
+    *,
+    domain_id: str,
+    subject_id: Optional[str],
+    brand_focus_id: Optional[str],
+    global_scope: bool,
+) -> bool:
+    """Match the account owner's explicit, domain-specific JSON data_scope."""
+    if not isinstance(data_scope, str) or not data_scope.strip():
+        return False
+    try:
+        scope = json.loads(data_scope)
+    except (TypeError, ValueError):
+        return False
+    if not isinstance(scope, dict):
+        return False
+
+    domain_config = _RESOURCE_SCOPE_DOMAINS.get(domain_id)
+    if domain_config is None:
+        return False
+    _product_id, scope_key, _registry_domain, _subject_type = domain_config
+    if not set(scope).issubset({"global", scope_key}):
+        return False
+    global_grant = scope.get("global", False)
+    if type(global_grant) is not bool:
+        return False
+
+    scoped_ids = scope.get(scope_key, [])
+    if not isinstance(scoped_ids, list) or any(
+        not _is_valid_scope_id(value) for value in scoped_ids
+    ):
+        return False
+    if global_scope:
+        return global_grant is True
+    requested_id = subject_id if domain_id == "cth" else brand_focus_id
+    return global_grant is True or requested_id in scoped_ids
+
+
+def _registered_resource_scope_exists(
+    domain_id: str,
+    *,
+    subject_id: Optional[str],
+    brand_focus_id: Optional[str],
+) -> bool:
+    """Require an active canonical registry row for every selected focus."""
+    from subject_registry import list_subjects
+
+    _product_id, _scope_key, registry_domain, subject_type = (
+        _RESOURCE_SCOPE_DOMAINS[domain_id]
+    )
+    rows = list_subjects(registry_domain)
+    if not isinstance(rows, list):
+        raise RuntimeError("canonical subject registry response is invalid")
+
+    if domain_id == "cth":
+        matches = [
+            row for row in rows
+            if isinstance(row, Mapping)
+            and row.get("domain_id") == registry_domain
+            and row.get("subject_type") == subject_type
+            and row.get("subject_id") == subject_id
+        ]
+    else:
+        matches = [
+            row for row in rows
+            if isinstance(row, Mapping)
+            and row.get("domain_id") == registry_domain
+            and row.get("subject_type") == subject_type
+            and row.get("brand_focus_id") == brand_focus_id
+        ]
+    if len(matches) > 1:
+        raise RuntimeError("canonical resource scope is not unique")
+    return len(matches) == 1
+
+
+def _load_actor_scope_role(actor_id: int) -> Optional[str]:
+    """Resolve the active role from the account owner, never from request data."""
+    from account.models import get_db
+
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT role FROM v4_users WHERE id = ? AND status = 'active'",
+            (actor_id,),
+        ).fetchone()
+        return str(row["role"]).strip().lower() if row else None
+    finally:
+        conn.close()
+
+
+def _load_actor_scope_grants(actor_id: int) -> List[Dict[str, Any]]:
+    """Read existing account grants; their data_scope is evaluated here."""
+    from account.authorization import get_member_authorizations
+
+    grants = get_member_authorizations(actor_id)
+    if not isinstance(grants, list):
+        raise RuntimeError("account authorization response is invalid")
+    return grants
+
+
+def _actor_has_scope_action(
+    actor_id: int, product_id: str, module: str, action: str
+) -> bool:
+    """Retain the account owner's active-user and product/module/action gate."""
+    from account.authorization import check_dual_domain_permission
+
+    return bool(check_dual_domain_permission(
+        actor_id, product_id, module=module, action=action
+    ))
+
+
+def check_actor_scope_permission(
+    actor: Optional[Mapping[str, Any]],
+    *,
+    domain_id: str,
+    action: str,
+    module: str,
+    subject_id: Optional[str] = None,
+    brand_focus_id: Optional[str] = None,
+    global_scope: bool = False,
+    gate: Optional["PermissionGate"] = None,
+) -> ActorScopePermissionResult:
+    """Check one authenticated actor against one exact CTH Subject or BMP focus.
+
+    Actor identity must come from the server-authenticated session. Context
+    selects a resource but never grants permission. Non-owner grants require an
+    explicit matching JSON data_scope; only a literal global=true is global.
+    Selected resources are verified against the canonical subject registry.
+    """
+    normalized_domain = (
+        domain_id.strip().lower() if isinstance(domain_id, str) else ""
+    )
+    if normalized_domain == "zbmp":
+        normalized_domain = "bmp"
+    domain_config = _RESOURCE_SCOPE_DOMAINS.get(normalized_domain)
+
+    try:
+        actor_id = actor.get("id") if isinstance(actor, Mapping) else None
+    except Exception:
+        actor_id = None
+    valid_actor_id = type(actor_id) is int and actor_id > 0
+
+    action_value = action.strip().lower() if isinstance(action, str) else ""
+    module_value = module.strip() if isinstance(module, str) else ""
+    scope_subject_id: Optional[str] = None
+    scope_brand_focus_id: Optional[str] = None
+    valid_scope_form = False
+    if domain_config is not None and type(global_scope) is bool:
+        if global_scope:
+            valid_scope_form = subject_id is None and brand_focus_id is None
+        elif normalized_domain == "cth":
+            valid_scope_form = (
+                brand_focus_id is None and _is_valid_scope_id(subject_id)
+            )
+            if valid_scope_form:
+                scope_subject_id = subject_id
+        else:
+            valid_scope_form = (
+                subject_id is None and _is_valid_scope_id(brand_focus_id)
+            )
+            if valid_scope_form:
+                scope_brand_focus_id = brand_focus_id
+
+    valid_request = (
+        valid_actor_id
+        and domain_config is not None
+        and action_value in _RESOURCE_SCOPE_ACTIONS
+        and 0 < len(module_value) <= 128
+        and module_value != "*"
+        and not any(ord(character) < 32 for character in module_value)
+        and type(global_scope) is bool
+        and valid_scope_form
+    )
+    allowed = False
+    verified = True
+    reason = "actor or requested resource scope is invalid"
+
+    if valid_request:
+        product_id = domain_config[0]
+        try:
+            if not _actor_has_scope_action(
+                actor_id, product_id, module_value, action_value
+            ):
+                reason = "actor lacks active product, module, or action permission"
+            else:
+                role = _load_actor_scope_role(actor_id)
+                if role is None:
+                    raise RuntimeError("active actor role unavailable")
+                if not global_scope and not _registered_resource_scope_exists(
+                    normalized_domain,
+                    subject_id=scope_subject_id,
+                    brand_focus_id=scope_brand_focus_id,
+                ):
+                    reason = "requested resource is not a registered active scope"
+                elif role in {"owner", "admin"}:
+                    # An active owner/admin role is an explicit account-wide
+                    # authority, not an empty or missing data_scope grant.
+                    allowed = True
+                    reason = "active account role has account-wide authority"
+                else:
+                    grants = _load_actor_scope_grants(actor_id)
+                    for grant in grants:
+                        if not isinstance(grant, Mapping):
+                            continue
+                        grant_product = grant.get("product_id")
+                        grant_module = grant.get("module")
+                        grant_action = grant.get("action")
+                        time_range = grant.get("time_range")
+                        if (
+                            not isinstance(grant_product, str)
+                            or grant_product.upper() != product_id
+                            or grant_module not in {"*", module_value}
+                            or grant_action != action_value
+                            # No time-window contract exists in this checker.
+                            # Do not silently widen a grant that declares one.
+                            or time_range not in (None, "")
+                        ):
+                            continue
+                        if _scope_grant_matches(
+                            grant.get("data_scope"),
+                            domain_id=normalized_domain,
+                            subject_id=scope_subject_id,
+                            brand_focus_id=scope_brand_focus_id,
+                            global_scope=global_scope,
+                        ):
+                            allowed = True
+                            break
+                    reason = (
+                        "actor has an explicit grant for the requested scope"
+                        if allowed
+                        else "actor has no explicit grant for the requested scope"
+                    )
+        except Exception:
+            logger.exception("Resource scope permission lookup failed")
+            verified = False
+            reason = "resource scope permission could not be verified"
+
+    selected_resource = (
+        "GLOBAL / ALL"
+        if global_scope is True
+        else (scope_subject_id or scope_brand_focus_id or "missing")
+    )
+    audit_id: Optional[str] = None
+    try:
+        permission_gate = gate if gate is not None else get_permission_gate()
+        audit_id = permission_gate._write_audit(
+            operation_type=f"resource_scope_{action_value or 'invalid'}",
+            resource=f"{normalized_domain or 'unknown'}:{selected_resource}",
+            risk_level="low" if action_value == "read" else "medium",
+            permission_required=action_value or "read",
+            caller=f"actor:{actor_id}" if valid_actor_id else "anonymous",
+            result="allowed" if allowed else "denied",
+            reason=reason,
+            operation_id=None,
+            approval_token=None,
+        )
+        if not isinstance(audit_id, str) or not audit_id:
+            raise RuntimeError("permission audit identifier unavailable")
+    except Exception:
+        logger.exception("Resource scope permission audit failed")
+        allowed = False
+        verified = False
+        audit_id = None
+        reason = "resource scope permission could not be verified"
+
+    return ActorScopePermissionResult(
+        allowed=allowed,
+        reason=reason,
+        audit_id=audit_id,
+        operation_type=f"resource_scope_{action_value or 'invalid'}",
+        resource=f"{normalized_domain or 'unknown'}:{selected_resource}",
+        risk_level="low" if action_value == "read" else "medium",
+        permission_required=action_value or "read",
+        caller=f"actor:{actor_id}" if valid_actor_id else "anonymous",
+        domain_id=normalized_domain or None,
+        actor_id=actor_id if valid_actor_id else None,
+        subject_id=scope_subject_id,
+        brand_focus_id=scope_brand_focus_id,
+        global_scope=global_scope is True,
+        scope_action=action_value or None,
+        scope_audit_id=audit_id,
+        verification_state="verified" if verified else "unavailable",
+    )
+
 
 @dataclass
 class ApprovalToken:
@@ -1071,6 +1408,8 @@ __all__ = [
     "OperationType",
     "OperationSpec",
     "PermissionResult",
+    "ActorScopePermissionResult",
+    "check_actor_scope_permission",
     "ApprovalToken",
     "AuditEntry",
     "PermissionGate",
