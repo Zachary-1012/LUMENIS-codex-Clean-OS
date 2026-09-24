@@ -71,7 +71,7 @@ mention alone cannot be marked implemented.
 | Accepted source + tests/E2E + Round evidence + CURRENT online status + verified push | `AGENTS.md` §2 online-publication gate; current Round evidence and CURRENT takeover |
 | Business end-state, industry logic, real job and deliverable outcome before adding a feature | Product Positioning; `AGENTS.md` §3 business-work selection; Real Delivery Overlay |
 | Public Website versus Web Workspace, Desktop advanced capabilities and Mobile Companion | approved Multi-Surface Decision; Product Architecture; Experience Constitution |
-| Distinct 44 screen compositions, anti-template rule, PC/mobile behavior, accessibility and `DESIGN_READY` | sole Experience Constitution; detailed `contracts/experience/screen-specifications/` |
+| Business-job frontend reconstruction; historical 44-screen capability inventory is not a fixed page count; PC/mobile behavior, accessibility and `DESIGN_READY` | sole Experience Constitution including 2026-09-24 Product Owner direction; detailed `contracts/experience/screen-specifications/` |
 | Chinese, English and Korean on every promised user-visible surface | sole Experience Constitution §22 and executable localization thresholds; active screen/round evidence |
 | `GLOBAL / ALL`, focus-only Subject/BrandFocus, internal full-universe data and honest permission-limited commercial views | sole Global Universe Context/Data Maturity contract; Shared DB/Evidence and SYSTEM Permission owners |
 | Global commercial, global brand and Guangzhou Taikoo Hui maturity plus rotating non-reference entity tests | sole Global Universe Context/Data Maturity contract; relevant Round `REAL DELIVERY CARD` |

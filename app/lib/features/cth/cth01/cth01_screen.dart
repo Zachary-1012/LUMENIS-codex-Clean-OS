@@ -1,15 +1,17 @@
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
+import '../../../l10n/lumenis_localizations.dart';
 import 'cth01_repository.dart';
 import 'cth01_view_model.dart';
 
 class Cth01Screen extends StatefulWidget {
-  const Cth01Screen({required this.client, super.key});
+  const Cth01Screen({required this.client, this.onNavigate, super.key});
 
   final LumenisCoreClient client;
+  final ValueChanged<String>? onNavigate;
 
   @override
   State<Cth01Screen> createState() => _Cth01ScreenState();
@@ -42,31 +44,40 @@ class _Cth01ScreenState extends State<Cth01Screen> {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: LumenisTheme.canvas,
+      color: LumenisTheme.of(context).canvas,
       child: SafeArea(
         child: AnimatedBuilder(
           animation: _viewModel,
-          builder: (context, _) => switch (_viewModel.status) {
-            Cth01LoadStatus.loading => const _LoadingState(),
-            Cth01LoadStatus.blocked => _UnavailableState(
-              title: '经营主体信息暂不可用',
-              detail: _viewModel.message ?? '请刷新后重试。',
-              actionLabel: '重试',
-              onAction: _viewModel.load,
-            ),
-            Cth01LoadStatus.failed => _UnavailableState(
-              title: '运营信息暂不可用',
-              detail: _viewModel.message ?? '请检查连接后重试。',
-              actionLabel: '重试',
-              onAction: _viewModel.load,
-            ),
-            Cth01LoadStatus.loaded => _Cth01Workspace(
-              data: _viewModel.data!,
-              selectedSignalIndex: _viewModel.selectedSignalIndex,
-              onSelectSignal: _viewModel.selectSignal,
-              onReturnToSignals: _viewModel.returnToSignals,
-              onRetry: _viewModel.load,
-            ),
+          builder: (context, _) {
+            final copy = context.lumenisL10n;
+            return switch (_viewModel.status) {
+              Cth01LoadStatus.loading => const _LoadingState(),
+              Cth01LoadStatus.blocked => _UnavailableState(
+                title: copy.text('cth01.subject_unavailable'),
+                detail: copy.text(
+                  _viewModel.message == Cth01LoadMessage.pageNotBound
+                      ? 'context.screen_binding_unavailable'
+                      : 'cth01.context_unavailable',
+                ),
+                actionLabel: copy.text('cth01.retry'),
+                onAction: _viewModel.load,
+                onNavigate: widget.onNavigate,
+              ),
+              Cth01LoadStatus.failed => _UnavailableState(
+                title: copy.text('cth01.operation_unavailable'),
+                detail: copy.text(_failureCopyKey(_viewModel.message)),
+                actionLabel: copy.text('cth01.retry'),
+                onAction: _viewModel.load,
+                onNavigate: widget.onNavigate,
+              ),
+              Cth01LoadStatus.loaded => _Cth01Workspace(
+                data: _viewModel.data!,
+                selectedSignalIndex: _viewModel.selectedSignalIndex,
+                onSelectSignal: _viewModel.selectSignal,
+                onReturnToSignals: _viewModel.returnToSignals,
+                onRetry: _viewModel.load,
+              ),
+            };
           },
         ),
       ),
@@ -74,14 +85,22 @@ class _Cth01ScreenState extends State<Cth01Screen> {
   }
 }
 
+String _failureCopyKey(Cth01LoadMessage? message) => switch (message) {
+  Cth01LoadMessage.loginRequired => 'cth01.login_required',
+  Cth01LoadMessage.accessUnavailable => 'cth01.access_unavailable',
+  Cth01LoadMessage.connectionUnavailable => 'cth01.connection_unavailable',
+  _ => 'cth01.generic_unavailable',
+};
+
 class _LoadingState extends StatelessWidget {
   const _LoadingState();
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     return Semantics(
       liveRegion: true,
-      label: '正在加载经营主体与运营动态',
+      label: copy.text('cth01.loading'),
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
@@ -92,10 +111,10 @@ class _LoadingState extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '商业运营总览',
+                Text(
+                  copy.text('screen.CTH-01'),
                   style: TextStyle(
-                    color: LumenisTheme.foreground,
+                    color: LumenisTheme.of(context).foreground,
                     fontSize: 26,
                     fontWeight: FontWeight.w600,
                   ),
@@ -126,7 +145,7 @@ class _SkeletonLine extends StatelessWidget {
       width: width,
       height: 13,
       decoration: BoxDecoration(
-        color: LumenisTheme.surface,
+        color: LumenisTheme.of(context).surface,
         borderRadius: BorderRadius.circular(4),
       ),
     );
@@ -139,12 +158,14 @@ class _UnavailableState extends StatelessWidget {
     required this.detail,
     required this.actionLabel,
     required this.onAction,
+    this.onNavigate,
   });
 
   final String title;
   final String detail;
   final String actionLabel;
   final VoidCallback onAction;
+  final ValueChanged<String>? onNavigate;
 
   @override
   Widget build(BuildContext context) {
@@ -153,25 +174,38 @@ class _UnavailableState extends StatelessWidget {
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
-          child: Padding(
+          child: SingleChildScrollView(
             padding: EdgeInsets.all(constraints.maxWidth < 480 ? 22 : 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (onNavigate != null) ...[
+                  Text(
+                    context.lumenisL10n.text('workflow.observe'),
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  _OperationsEntries(onNavigate: onNavigate!),
+                  const SizedBox(height: 32),
+                  const Divider(),
+                  const SizedBox(height: 20),
+                ],
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: LumenisTheme.foreground,
-                    fontSize: 25,
+                  style: TextStyle(
+                    color: LumenisTheme.of(context).foreground,
+                    fontSize: 20,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   detail,
-                  style: const TextStyle(
-                    color: LumenisTheme.muted,
+                  style: TextStyle(
+                    color: LumenisTheme.of(context).muted,
                     height: 1.5,
                   ),
                 ),
@@ -184,6 +218,44 @@ class _UnavailableState extends StatelessWidget {
       ),
     );
   }
+}
+
+class _OperationsEntries extends StatelessWidget {
+  const _OperationsEntries({required this.onNavigate});
+  final ValueChanged<String> onNavigate;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      for (final entry in const [
+        ('workflow.observe', 'CTH-03', Icons.radar_rounded),
+        ('workflow.resolve', 'CTH-04', Icons.view_timeline_outlined),
+        ('workflow.plan', 'CTH-10', Icons.article_outlined),
+      ])
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Material(
+            color: LumenisTheme.of(context).surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: LumenisTheme.of(context).line),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 12,
+              ),
+              leading: Icon(entry.$3, color: LumenisTheme.of(context).cth),
+              title: Text(context.lumenisL10n.text(entry.$1)),
+              subtitle: Text(context.lumenisL10n.text('screen.${entry.$2}')),
+              trailing: const Icon(Icons.arrow_outward_rounded, size: 18),
+              onTap: () => onNavigate(entry.$2),
+            ),
+          ),
+        ),
+    ],
+  );
 }
 
 class _Cth01Workspace extends StatelessWidget {
@@ -247,10 +319,12 @@ class _Cth01Workspace extends StatelessWidget {
                   children: [
                     _PageHeader(data: data, onRetry: onRetry),
                     const SizedBox(height: 24),
-                    _ScopeNotice(),
+                    _ScopeNotice(data: data),
                     const SizedBox(height: 22),
-                    _MetricSpine(data: data, compact: !wide),
-                    const SizedBox(height: 28),
+                    if (wide) ...[
+                      _MetricSpine(data: data, compact: false),
+                      const SizedBox(height: 28),
+                    ],
                     if (wide)
                       Row(
                         key: const ValueKey('cth01/layout-desktop'),
@@ -284,6 +358,8 @@ class _Cth01Workspace extends StatelessWidget {
                           ],
                           const SizedBox(height: 28),
                           insights,
+                          const SizedBox(height: 24),
+                          _MetricSpine(data: data, compact: true),
                         ],
                       ),
                   ],
@@ -305,6 +381,15 @@ class _PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
+    final locale = Localizations.localeOf(context);
+    final contextName = data.contextMode == 'GLOBAL_ALL'
+        ? copy.text('context.mode.global_all')
+        : data.contextDisplayName?[locale.toLanguageTag()] ??
+              data.contextDisplayName?[locale.languageCode] ??
+              data.contextDisplayName?['en'] ??
+              data.contextDisplayName?['zh-CN'] ??
+              copy.text('context.selector.unnamed_subject');
     return Wrap(
       alignment: WrapAlignment.spaceBetween,
       crossAxisAlignment: WrapCrossAlignment.center,
@@ -316,10 +401,10 @@ class _PageHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '商业运营总览',
+              Text(
+                copy.text('screen.CTH-01'),
                 style: TextStyle(
-                  color: LumenisTheme.foreground,
+                  color: LumenisTheme.of(context).foreground,
                   fontSize: 28,
                   height: 1.2,
                   fontWeight: FontWeight.w600,
@@ -328,24 +413,24 @@ class _PageHeader extends StatelessWidget {
               const SizedBox(height: 13),
               Semantics(
                 key: const ValueKey('cth01/current-subject'),
-                label: '当前经营主体',
+                label: contextName,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
                       width: 7,
                       height: 7,
-                      decoration: const BoxDecoration(
-                        color: LumenisTheme.cth,
+                      decoration: BoxDecoration(
+                        color: LumenisTheme.of(context).cth,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 10),
                     Flexible(
                       child: Text(
-                        '当前经营主体',
-                        style: const TextStyle(
-                          color: LumenisTheme.foreground,
+                        contextName,
+                        style: TextStyle(
+                          color: LumenisTheme.of(context).foreground,
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
                         ),
@@ -355,38 +440,68 @@ class _PageHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 7),
-              const Text(
-                '这里汇总当前经营主体的运营信息。',
-                style: TextStyle(color: LumenisTheme.muted, height: 1.45),
+              Text(
+                copy.text('cth01.summary'),
+                style: TextStyle(
+                  color: LumenisTheme.of(context).muted,
+                  height: 1.45,
+                ),
               ),
             ],
           ),
         ),
-        _CthTextButton(label: '刷新数据', onPressed: onRetry),
+        _CthTextButton(label: copy.text('cth01.refresh'), onPressed: onRetry),
       ],
     );
   }
 }
 
 class _ScopeNotice extends StatelessWidget {
-  const _ScopeNotice();
+  const _ScopeNotice({required this.data});
+
+  final Cth01ScreenData data;
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
+    final complete =
+        data.footfall.hasValue &&
+        data.memberSales.hasValue &&
+        data.negativeVoice.hasValue;
+    final detail = copy.text(
+      complete ? 'cth01.scope.complete' : 'cth01.scope.partial',
+    );
+
     return Semantics(
+      key: const ValueKey('cth01/data-boundary'),
       liveRegion: true,
-      label: '部分运营信息暂不可用；仅显示当前可确认的内容。',
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-        decoration: BoxDecoration(
-          color: LumenisTheme.surface,
-          border: Border.all(color: LumenisTheme.line),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: const Text(
-          '部分运营信息暂不可用；仅显示当前可确认的内容。',
-          style: TextStyle(color: LumenisTheme.caution, height: 1.45),
+      label: detail,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 6, right: 11),
+              child: Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: LumenisTheme.of(context).caution,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                detail,
+                style: TextStyle(
+                  color: LumenisTheme.of(context).caution,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -401,73 +516,79 @@ class _MetricSpine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 17),
+    final copy = context.lumenisL10n;
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: LumenisTheme.surface,
-        border: Border.all(color: LumenisTheme.line),
-        borderRadius: BorderRadius.circular(12),
+        border: Border(
+          top: BorderSide(color: LumenisTheme.of(context).line),
+          bottom: BorderSide(color: LumenisTheme.of(context).line),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _SectionHeading(title: '经营概况', detail: '当前经营主体的重点运营信息'),
-          const SizedBox(height: 15),
-          if (compact)
-            Column(
-              children: [
-                _MetricLine(
-                  key: const ValueKey('cth01/metric-negative-voice'),
-                  label: '在线负面记录',
-                  metric: data.negativeVoice,
-                  readyUnit: '条',
-                ),
-                const _ThinRule(),
-                _MetricLine(
-                  key: const ValueKey('cth01/metric-footfall'),
-                  label: '到店客流',
-                  metric: data.footfall,
-                ),
-                const _ThinRule(),
-                _MetricLine(
-                  key: const ValueKey('cth01/metric-member-sales'),
-                  label: '会员销售占比',
-                  metric: data.memberSales,
-                ),
-              ],
-            )
-          else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _MetricLine(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SectionHeading(
+              title: copy.text('cth01.metrics.heading'),
+              detail: copy.text('cth01.metrics.detail'),
+            ),
+            const SizedBox(height: 15),
+            if (compact)
+              Column(
+                children: [
+                  _MetricLine(
                     key: const ValueKey('cth01/metric-negative-voice'),
-                    label: '在线负面记录',
+                    label: copy.text('cth01.metric.negative_voice'),
                     metric: data.negativeVoice,
-                    readyUnit: '条',
+                    readyUnit: copy.text('cth01.metric.unit.records'),
                   ),
-                ),
-                const _VerticalRule(),
-                Expanded(
-                  child: _MetricLine(
+                  const _ThinRule(),
+                  _MetricLine(
                     key: const ValueKey('cth01/metric-footfall'),
-                    label: '到店客流',
+                    label: copy.text('cth01.metric.footfall'),
                     metric: data.footfall,
                   ),
-                ),
-                const _VerticalRule(),
-                Expanded(
-                  child: _MetricLine(
+                  const _ThinRule(),
+                  _MetricLine(
                     key: const ValueKey('cth01/metric-member-sales'),
-                    label: '会员销售占比',
+                    label: copy.text('cth01.metric.member_sales'),
                     metric: data.memberSales,
                   ),
-                ),
-              ],
-            ),
-        ],
+                ],
+              )
+            else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _MetricLine(
+                      key: const ValueKey('cth01/metric-negative-voice'),
+                      label: copy.text('cth01.metric.negative_voice'),
+                      metric: data.negativeVoice,
+                      readyUnit: copy.text('cth01.metric.unit.records'),
+                    ),
+                  ),
+                  const _VerticalRule(),
+                  Expanded(
+                    child: _MetricLine(
+                      key: const ValueKey('cth01/metric-footfall'),
+                      label: copy.text('cth01.metric.footfall'),
+                      metric: data.footfall,
+                    ),
+                  ),
+                  const _VerticalRule(),
+                  Expanded(
+                    child: _MetricLine(
+                      key: const ValueKey('cth01/metric-member-sales'),
+                      label: copy.text('cth01.metric.member_sales'),
+                      metric: data.memberSales,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -490,12 +611,12 @@ class _MetricLine extends StatelessWidget {
     final stateText = metric.hasValue
         ? _formatNumber(metric.value!) +
               (readyUnit.isEmpty ? metric.unit : readyUnit)
-        : _metricAvailabilityLabel(metric.state);
+        : _metricAvailabilityLabel(context, metric.state);
     final stateColor = metric.hasValue
-        ? LumenisTheme.foreground
+        ? LumenisTheme.of(context).foreground
         : metric.state == Cth01BackendState.notCollected
-        ? LumenisTheme.caution
-        : LumenisTheme.muted;
+        ? LumenisTheme.of(context).caution
+        : LumenisTheme.of(context).muted;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       child: Column(
@@ -503,7 +624,10 @@ class _MetricLine extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(color: LumenisTheme.muted, fontSize: 13),
+            style: TextStyle(
+              color: LumenisTheme.of(context).muted,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 6),
           Semantics(
@@ -536,18 +660,22 @@ class _SignalFlow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeading(title: '运营动态', detail: '查看当前经营主体的最新变化'),
+        _SectionHeading(
+          title: copy.text('cth01.activity.heading'),
+          detail: copy.text('cth01.activity.detail'),
+        ),
         const SizedBox(height: 10),
         _TrendAvailability(),
         const SizedBox(height: 16),
         if (data.signals.isEmpty)
           _UnavailableInline(
             key: const ValueKey('cth01/events-empty-or-unknown'),
-            title: _signalEmptyTitle(data.eventState),
-            detail: _signalEmptyDetail(data.eventState),
+            title: _signalEmptyTitle(context, data.eventState),
+            detail: _signalEmptyDetail(context, data.eventState),
           )
         else ...[
           for (var index = 0; index < data.signals.length; index++)
@@ -584,14 +712,20 @@ class _SignalRowState extends State<_SignalRow> {
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     final signal = widget.signal;
     final time = [
       signal.date,
       signal.time,
     ].where((value) => value.isNotEmpty && value != '—').join(' · ');
-    final severity = _severityLabel(signal.level);
-    final dateLabel = time.isEmpty ? '时间未提供' : time;
-    final semanticLabel = '$dateLabel，$severity，${signal.title}';
+    final severity = _severityLabel(context, signal.level);
+    final dateLabel = time.isEmpty
+        ? copy.text('cth01.signal.time_missing')
+        : time;
+    final title = signal.title.isEmpty
+        ? copy.text('cth01.signal.unnamed')
+        : signal.title;
+    final semanticLabel = '$dateLabel，$severity，$title';
 
     return FocusableActionDetector(
       mouseCursor: SystemMouseCursors.click,
@@ -620,21 +754,23 @@ class _SignalRowState extends State<_SignalRow> {
             constraints: const BoxConstraints(minHeight: 58),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              color: widget.selected ? LumenisTheme.surfaceRaised : null,
+              color: widget.selected
+                  ? LumenisTheme.of(context).surfaceRaised
+                  : null,
               border: Border(
                 top: _showFocus || widget.selected
-                    ? const BorderSide(color: LumenisTheme.cth)
+                    ? BorderSide(color: LumenisTheme.of(context).cth)
                     : BorderSide.none,
-                bottom: const BorderSide(color: LumenisTheme.line),
+                bottom: BorderSide(color: LumenisTheme.of(context).line),
                 left: BorderSide(
                   color: _showFocus
-                      ? LumenisTheme.cth
+                      ? LumenisTheme.of(context).cth
                       : const Color(0x00000000),
                   width: 1,
                 ),
                 right: BorderSide(
                   color: _showFocus
-                      ? LumenisTheme.cth
+                      ? LumenisTheme.of(context).cth
                       : const Color(0x00000000),
                   width: 1,
                 ),
@@ -649,7 +785,7 @@ class _SignalRowState extends State<_SignalRow> {
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: _severityColor(signal.level),
+                      color: _severityColor(context, signal.level),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -658,8 +794,8 @@ class _SignalRowState extends State<_SignalRow> {
                   width: 100,
                   child: Text(
                     dateLabel,
-                    style: const TextStyle(
-                      color: LumenisTheme.quiet,
+                    style: TextStyle(
+                      color: LumenisTheme.of(context).quiet,
                       fontSize: 12,
                       height: 1.45,
                     ),
@@ -676,9 +812,9 @@ class _SignalRowState extends State<_SignalRow> {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Text(
-                            signal.title,
-                            style: const TextStyle(
-                              color: LumenisTheme.foreground,
+                            title,
+                            style: TextStyle(
+                              color: LumenisTheme.of(context).foreground,
                               fontWeight: FontWeight.w600,
                               height: 1.4,
                             ),
@@ -686,7 +822,7 @@ class _SignalRowState extends State<_SignalRow> {
                           Text(
                             severity,
                             style: TextStyle(
-                              color: _severityColor(signal.level),
+                              color: _severityColor(context, signal.level),
                               fontSize: 12,
                             ),
                           ),
@@ -698,8 +834,8 @@ class _SignalRowState extends State<_SignalRow> {
                           signal.summary,
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: LumenisTheme.muted,
+                          style: TextStyle(
+                            color: LumenisTheme.of(context).muted,
                             fontSize: 13,
                             height: 1.45,
                           ),
@@ -730,6 +866,7 @@ class _SignalInspection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     if (selectedSignalIndex == null ||
         selectedSignalIndex! >= data.signals.length) {
       return const SizedBox.shrink();
@@ -745,19 +882,26 @@ class _SignalInspection extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(17, 16, 17, 15),
       decoration: BoxDecoration(
-        color: LumenisTheme.surface,
-        border: Border.all(color: LumenisTheme.cth.withValues(alpha: 0.55)),
+        color: LumenisTheme.of(context).surface,
+        border: Border.all(
+          color: LumenisTheme.of(context).cth.withValues(alpha: 0.55),
+        ),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionHeading(title: '动态详情', detail: '查看事件时间、风险级别与摘要'),
+          _SectionHeading(
+            title: copy.text('cth01.signal.detail_heading'),
+            detail: copy.text('cth01.signal.detail_description'),
+          ),
           const SizedBox(height: 12),
           Text(
-            signal.title,
-            style: const TextStyle(
-              color: LumenisTheme.foreground,
+            signal.title.isEmpty
+                ? copy.text('cth01.signal.unnamed')
+                : signal.title,
+            style: TextStyle(
+              color: LumenisTheme.of(context).foreground,
               fontSize: 17,
               fontWeight: FontWeight.w600,
               height: 1.4,
@@ -765,21 +909,38 @@ class _SignalInspection extends StatelessWidget {
           ),
           const SizedBox(height: 9),
           _DetailLine(
-            label: '时间',
-            value: timestamp.isEmpty ? '未提供' : timestamp,
+            label: copy.text('cth01.field.time'),
+            value: timestamp.isEmpty
+                ? copy.text('cth01.field.not_provided')
+                : timestamp,
           ),
-          _DetailLine(label: '风险级别', value: _severityLabel(signal.level)),
+          _DetailLine(
+            label: copy.text('cth01.field.severity'),
+            value: _severityLabel(context, signal.level),
+          ),
           if (signal.summary.isNotEmpty)
-            _DetailLine(label: '摘要', value: signal.summary),
+            _DetailLine(
+              label: copy.text('cth01.field.summary'),
+              value: signal.summary,
+            ),
           if (signal.tags.isNotEmpty)
-            _DetailLine(label: '标签', value: signal.tags.join(' · ')),
+            _DetailLine(
+              label: copy.text('cth01.field.tags'),
+              value: signal.tags.join(' · '),
+            ),
           const SizedBox(height: 8),
-          const Text(
-            '此条动态暂时没有可查看的来源链接。',
-            style: TextStyle(color: LumenisTheme.quiet, fontSize: 12),
+          Text(
+            copy.text('cth01.source.unavailable'),
+            style: TextStyle(
+              color: LumenisTheme.of(context).quiet,
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 11),
-          _CthTextButton(label: '返回运营动态', onPressed: onReturn),
+          _CthTextButton(
+            label: copy.text('cth01.signal.return'),
+            onPressed: onReturn,
+          ),
         ],
       ),
     );
@@ -813,43 +974,47 @@ class _DailySummaryView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     return _ReadSection(
       key: const ValueKey('cth01/daily-summary'),
-      title: '今日关键指标',
-      detail: '当前经营主体的今日运营情况',
+      title: copy.text('cth01.summary.heading'),
+      detail: copy.text('cth01.summary.detail'),
       child: summary.hasValues
           ? Column(
               children: [
                 if (summary.riskIndex != null)
                   _FactLine(
-                    label: '风险指数',
+                    label: copy.text('cth01.summary.risk_index'),
                     value: '${_formatNumber(summary.riskIndex!)} / 100',
                   ),
                 if (summary.subjectHealthScore != null)
                   _FactLine(
-                    label: '经营主体健康分',
+                    label: copy.text('cth01.summary.health_score'),
                     value:
                         '${_formatNumber(summary.subjectHealthScore!)} / 100',
                   ),
                 if (summary.mediumHighRiskNoteCount != null)
                   _FactLine(
-                    label: '中 / 高风险内容',
+                    label: copy.text('cth01.summary.risk_content'),
                     value: _formatNumber(summary.mediumHighRiskNoteCount!),
                   ),
                 const SizedBox(height: 9),
-                const Text(
-                  '风险记录按今日数据统计，不代表全部运营事件总数。',
+                Text(
+                  copy.text('cth01.summary.note'),
                   style: TextStyle(
-                    color: LumenisTheme.quiet,
+                    color: LumenisTheme.of(context).quiet,
                     fontSize: 12,
                     height: 1.45,
                   ),
                 ),
               ],
             )
-          : const Text(
-              '今日运营指标暂不可用，请稍后刷新。',
-              style: TextStyle(color: LumenisTheme.muted, height: 1.5),
+          : Text(
+              copy.text('cth01.summary.unavailable'),
+              style: TextStyle(
+                color: LumenisTheme.of(context).muted,
+                height: 1.5,
+              ),
             ),
     );
   }
@@ -862,14 +1027,18 @@ class _RiskNotesView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     return _ReadSection(
       key: const ValueKey('cth01/risk-notes'),
-      title: '风险记录',
-      detail: '需要关注的运营记录',
+      title: copy.text('cth01.risks.heading'),
+      detail: copy.text('cth01.risks.detail'),
       child: risks.isEmpty
-          ? const Text(
-              '风险信息暂不可用，请稍后刷新。',
-              style: TextStyle(color: LumenisTheme.muted, height: 1.5),
+          ? Text(
+              copy.text('cth01.risks.unavailable'),
+              style: TextStyle(
+                color: LumenisTheme.of(context).muted,
+                height: 1.5,
+              ),
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -891,8 +1060,16 @@ class _RiskNoteLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final details = <String>[_severityLabel(risk.level)];
-    if (risk.score != null) details.add('风险分 ${_formatNumber(risk.score!)}');
+    final copy = context.lumenisL10n;
+    final details = <String>[_severityLabel(context, risk.level)];
+    if (risk.score != null) {
+      details.add(
+        copy.text(
+          'cth01.risks.score',
+          values: {'score': _formatNumber(risk.score!)},
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -900,23 +1077,26 @@ class _RiskNoteLine extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            risk.title,
-            style: const TextStyle(
-              color: LumenisTheme.foreground,
+            risk.title.isEmpty ? copy.text('cth01.risk.unnamed') : risk.title,
+            style: TextStyle(
+              color: LumenisTheme.of(context).foreground,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 5),
           Text(
             details.join(' · '),
-            style: TextStyle(color: _severityColor(risk.level), fontSize: 12),
+            style: TextStyle(
+              color: _severityColor(context, risk.level),
+              fontSize: 12,
+            ),
           ),
           if (risk.description.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
               risk.description,
-              style: const TextStyle(
-                color: LumenisTheme.muted,
+              style: TextStyle(
+                color: LumenisTheme.of(context).muted,
                 fontSize: 13,
                 height: 1.45,
               ),
@@ -933,10 +1113,11 @@ class _TrendAvailability extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _UnavailableInline(
+    final copy = context.lumenisL10n;
+    return _UnavailableInline(
       key: ValueKey('cth01/trend-blocked'),
-      title: '14 日趋势暂不可用',
-      detail: '当前无法可靠展示每日变化，请稍后刷新。',
+      title: copy.text('cth01.trend.unavailable_title'),
+      detail: copy.text('cth01.trend.unavailable_detail'),
     );
   }
 }
@@ -946,10 +1127,11 @@ class _EvidenceLineageState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _UnavailableInline(
+    final copy = context.lumenisL10n;
+    return _UnavailableInline(
       key: ValueKey('cth01/evidence-scope-blocked'),
-      title: '信息来源',
-      detail: '当前暂无可查看的来源说明。',
+      title: copy.text('cth01.evidence.unavailable_title'),
+      detail: copy.text('cth01.evidence.unavailable_detail'),
     );
   }
 }
@@ -966,31 +1148,43 @@ class _UnavailableInline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
-      decoration: BoxDecoration(
-        color: LumenisTheme.surface,
-        border: Border.all(color: LumenisTheme.line),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: LumenisTheme.foreground,
-              fontWeight: FontWeight.w600,
+          Padding(
+            padding: const EdgeInsets.only(top: 5, right: 11),
+            child: Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: LumenisTheme.of(context).quiet,
+                shape: BoxShape.circle,
+              ),
             ),
           ),
-          const SizedBox(height: 5),
-          Text(
-            detail,
-            style: const TextStyle(
-              color: LumenisTheme.muted,
-              fontSize: 12,
-              height: 1.45,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: LumenisTheme.of(context).foreground,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  detail,
+                  style: TextStyle(
+                    color: LumenisTheme.of(context).muted,
+                    fontSize: 12,
+                    height: 1.45,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -1013,21 +1207,20 @@ class _ReadSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: LumenisTheme.surface,
-        border: Border.all(color: LumenisTheme.line),
-        borderRadius: BorderRadius.circular(12),
+        border: Border(top: BorderSide(color: LumenisTheme.of(context).line)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SectionHeading(title: title, detail: detail),
-          const SizedBox(height: 12),
-          child,
-        ],
+      child: Padding(
+        padding: const EdgeInsets.only(top: 17),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SectionHeading(title: title, detail: detail),
+            const SizedBox(height: 12),
+            child,
+          ],
+        ),
       ),
     );
   }
@@ -1046,8 +1239,8 @@ class _SectionHeading extends StatelessWidget {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: LumenisTheme.foreground,
+          style: TextStyle(
+            color: LumenisTheme.of(context).foreground,
             fontSize: 17,
             fontWeight: FontWeight.w600,
           ),
@@ -1055,8 +1248,8 @@ class _SectionHeading extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           detail,
-          style: const TextStyle(
-            color: LumenisTheme.quiet,
+          style: TextStyle(
+            color: LumenisTheme.of(context).quiet,
             fontSize: 12,
             height: 1.45,
           ),
@@ -1082,7 +1275,7 @@ class _FactLine extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(color: LumenisTheme.muted),
+              style: TextStyle(color: LumenisTheme.of(context).muted),
             ),
           ),
           const SizedBox(width: 12),
@@ -1091,8 +1284,8 @@ class _FactLine extends StatelessWidget {
               value,
               textAlign: TextAlign.end,
               softWrap: true,
-              style: const TextStyle(
-                color: LumenisTheme.foreground,
+              style: TextStyle(
+                color: LumenisTheme.of(context).foreground,
                 fontWeight: FontWeight.w600,
                 fontFeatures: [FontFeature.tabularFigures()],
               ),
@@ -1121,14 +1314,17 @@ class _DetailLine extends StatelessWidget {
             width: 82,
             child: Text(
               label,
-              style: const TextStyle(color: LumenisTheme.quiet, fontSize: 12),
+              style: TextStyle(
+                color: LumenisTheme.of(context).quiet,
+                fontSize: 12,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                color: LumenisTheme.muted,
+              style: TextStyle(
+                color: LumenisTheme.of(context).muted,
                 fontSize: 13,
                 height: 1.45,
               ),
@@ -1144,9 +1340,12 @@ class _ThinRule extends StatelessWidget {
   const _ThinRule();
 
   @override
-  Widget build(BuildContext context) => const Padding(
+  Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.symmetric(vertical: 12),
-    child: SizedBox(height: 1, child: ColoredBox(color: LumenisTheme.line)),
+    child: SizedBox(
+      height: 1,
+      child: ColoredBox(color: LumenisTheme.of(context).line),
+    ),
   );
 }
 
@@ -1154,12 +1353,12 @@ class _VerticalRule extends StatelessWidget {
   const _VerticalRule();
 
   @override
-  Widget build(BuildContext context) => const Padding(
+  Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.symmetric(horizontal: 15),
     child: SizedBox(
       height: 76,
       width: 1,
-      child: ColoredBox(color: LumenisTheme.line),
+      child: ColoredBox(color: LumenisTheme.of(context).line),
     ),
   );
 }
@@ -1206,16 +1405,18 @@ class _CthTextButtonState extends State<_CthTextButton> {
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
             decoration: BoxDecoration(
-              color: LumenisTheme.surfaceRaised,
+              color: LumenisTheme.of(context).surfaceRaised,
               border: Border.all(
-                color: _showFocus ? LumenisTheme.cth : LumenisTheme.line,
+                color: _showFocus
+                    ? LumenisTheme.of(context).cth
+                    : LumenisTheme.of(context).line,
               ),
               borderRadius: BorderRadius.circular(9),
             ),
             child: Text(
               widget.label,
-              style: const TextStyle(
-                color: LumenisTheme.foreground,
+              style: TextStyle(
+                color: LumenisTheme.of(context).foreground,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1226,51 +1427,65 @@ class _CthTextButtonState extends State<_CthTextButton> {
   }
 }
 
-String _metricAvailabilityLabel(Cth01BackendState state) => switch (state) {
-  Cth01BackendState.ready => '暂不可用',
-  Cth01BackendState.empty => '暂无记录',
-  Cth01BackendState.notCollected => '尚未采集',
-  Cth01BackendState.offline || Cth01BackendState.error => '暂不可用',
-  Cth01BackendState.unknown => '状态未确认',
-  Cth01BackendState.stale => '数据可能已过期',
-  Cth01BackendState.partial => '部分数据暂不可用',
-  Cth01BackendState.blocked => '暂时无法查看',
-};
+String _metricAvailabilityLabel(
+  BuildContext context,
+  Cth01BackendState state,
+) => context.lumenisL10n.text(switch (state) {
+  Cth01BackendState.ready ||
+  Cth01BackendState.offline ||
+  Cth01BackendState.error => 'cth01.metric.state.unavailable',
+  Cth01BackendState.empty => 'cth01.metric.state.empty',
+  Cth01BackendState.notCollected => 'cth01.metric.state.not_collected',
+  Cth01BackendState.unknown => 'cth01.metric.state.unconfirmed',
+  Cth01BackendState.stale => 'cth01.metric.state.stale',
+  Cth01BackendState.partial => 'cth01.metric.state.partial',
+  Cth01BackendState.blocked => 'cth01.metric.state.blocked',
+});
 
-String _signalEmptyTitle(Cth01BackendState state) => switch (state) {
-  Cth01BackendState.empty || Cth01BackendState.ready => '暂无运营动态',
-  Cth01BackendState.notCollected => '运营动态尚未采集',
-  Cth01BackendState.offline => '暂时无法获取运营动态',
-  Cth01BackendState.stale => '暂无最新运营动态',
-  Cth01BackendState.partial => '暂无可展示的运营动态',
-  Cth01BackendState.blocked => '运营动态暂不可查看',
-  Cth01BackendState.error || Cth01BackendState.unknown => '运营动态暂不可用',
-};
+String _signalEmptyTitle(BuildContext context, Cth01BackendState state) {
+  final suffix = switch (state) {
+    Cth01BackendState.empty || Cth01BackendState.ready => 'empty',
+    Cth01BackendState.notCollected => 'not_collected',
+    Cth01BackendState.offline => 'offline',
+    Cth01BackendState.stale => 'stale',
+    Cth01BackendState.partial => 'partial',
+    Cth01BackendState.blocked => 'blocked',
+    Cth01BackendState.error || Cth01BackendState.unknown => 'error',
+  };
+  return context.lumenisL10n.text('cth01.activity.$suffix.title');
+}
 
-String _signalEmptyDetail(Cth01BackendState state) => switch (state) {
-  Cth01BackendState.empty || Cth01BackendState.ready => '当前没有可展示的运营动态。',
-  Cth01BackendState.notCollected => '目前没有可用的运营动态信息。',
-  Cth01BackendState.offline => '请检查连接后重试。',
-  Cth01BackendState.stale => '请刷新以确认最新信息。',
-  Cth01BackendState.partial => '部分信息暂不可用，请稍后刷新。',
-  Cth01BackendState.blocked => '请确认当前账号与经营主体后重试。',
-  Cth01BackendState.error || Cth01BackendState.unknown => '请稍后刷新。',
-};
+String _signalEmptyDetail(BuildContext context, Cth01BackendState state) {
+  final suffix = switch (state) {
+    Cth01BackendState.empty || Cth01BackendState.ready => 'empty',
+    Cth01BackendState.notCollected => 'not_collected',
+    Cth01BackendState.offline => 'offline',
+    Cth01BackendState.stale => 'stale',
+    Cth01BackendState.partial => 'partial',
+    Cth01BackendState.blocked => 'blocked',
+    Cth01BackendState.error || Cth01BackendState.unknown => 'error',
+  };
+  return context.lumenisL10n.text('cth01.activity.$suffix.detail');
+}
 
-String _severityLabel(String level) => switch (level.toLowerCase()) {
-  'critical' => '严重风险',
-  'high' => '高风险',
-  'medium' || 'med' => '中风险',
-  'low' => '低风险',
-  _ => '未评级',
-};
+String _severityLabel(BuildContext context, String level) {
+  final key = switch (level.toLowerCase()) {
+    'critical' => 'critical',
+    'high' => 'high',
+    'medium' || 'med' => 'medium',
+    'low' => 'low',
+    _ => 'unrated',
+  };
+  return context.lumenisL10n.text('cth01.severity.$key');
+}
 
-Color _severityColor(String level) => switch (level.toLowerCase()) {
-  'critical' || 'high' => LumenisTheme.danger,
-  'medium' || 'med' => LumenisTheme.caution,
-  'low' => LumenisTheme.positive,
-  _ => LumenisTheme.muted,
-};
+Color _severityColor(BuildContext context, String level) =>
+    switch (level.toLowerCase()) {
+      'critical' || 'high' => LumenisTheme.of(context).danger,
+      'medium' || 'med' => LumenisTheme.of(context).caution,
+      'low' => LumenisTheme.of(context).positive,
+      _ => LumenisTheme.of(context).muted,
+    };
 
 String _formatNumber(num value) {
   if (value % 1 == 0) return value.toInt().toString();

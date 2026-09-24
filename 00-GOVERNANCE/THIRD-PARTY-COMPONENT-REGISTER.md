@@ -77,7 +77,33 @@ The current `requirements.txt` mentions, but does not require-install: `openai`,
 
 Current root package metadata still carries historical naming. Metadata cleanup is allowed, but script/behavior changes require runtime verification.
 
-## 5. Built-in / platform dependencies
+## 5. Flutter direct dependencies observed in `app/pubspec.yaml`
+
+Versions below come from the current `app/pubspec.lock`. Flutter SDK packages
+use the SDK-managed `0.0.0` lockfile marker rather than an independently
+released package version.
+
+| Component | Locked version | Class | Purpose | Integration / replacement boundary | License status | Replaceable |
+| --- | --- | --- | --- | --- | --- | --- |
+| Flutter SDK | SDK-managed | PRODUCTION | Shared Web/Desktop/Mobile Experience runtime | Experience surface only; never Product Core or business truth | VERIFY_BEFORE_RELEASE | High-cost |
+| flutter_localizations | SDK (`0.0.0` marker) | PRODUCTION | zh-CN/en/ko framework localization support | Canonical copy/localization adapter | VERIFY_BEFORE_RELEASE | Coupled to Flutter |
+| flutter_web_plugins | SDK (`0.0.0` marker) | PRODUCTION | Web URL-strategy integration | Web platform adapter | VERIFY_BEFORE_RELEASE | Coupled to Flutter Web |
+| cupertino_icons | 1.0.9 | PRODUCTION ASSET | Cupertino icon font required by Flutter mobile/Web builds | Experience icon asset only | MIT (pub.dev publisher metadata; notice reconciliation still required) | Yes |
+| go_router | 18.0.1 | PRODUCTION | Declarative workspace URL and browser-history synchronization | Presentation routing only | VERIFY_BEFORE_RELEASE | Yes, medium-cost |
+| http | 1.6.0 | PRODUCTION | Browser-safe Product Core HTTP transport | `app/lib/core/transport` adapter | VERIFY_BEFORE_RELEASE | Yes |
+| [file_selector](https://github.com/flutter/packages/tree/main/packages/file_selector/file_selector) | 1.1.0 | PRODUCTION | Local wallpaper image picker in SYS-05 | `sys05_appearance_editor.dart`; user-selected bytes only | BSD-3-Clause (installed package `LICENSE`) | Yes |
+| [shared_preferences](https://github.com/flutter/packages/tree/main/packages/shared_preferences/shared_preferences) | 2.5.5 | PRODUCTION | Device-local SYS-05 appearance and wallpaper preference persistence | `Sys05AppearanceController` via `SharedPreferencesAsync`; no server or business-data ownership | BSD-3-Clause (installed package `LICENSE`) | Yes |
+| [flutter_acrylic](https://github.com/alexmercerind/flutter_acrylic) | 1.1.4 | PRODUCTION | Windows acrylic host-window material adapter | `lumenis_window_material_io.dart`; Windows native appearance only | MIT (installed package `LICENSE`) | Yes |
+| [macos_window_utils](https://github.com/Adrian-Samoticha/macos_window_utils.dart) | 1.9.1 | PRODUCTION | macOS window material and brightness adapter | `lumenis_window_material_io.dart`; macOS native appearance only | MIT (installed package `LICENSE`) | Yes |
+
+For these four rows, exact versions are from `app/pubspec.lock`; repository
+URLs and licenses were checked against each installed package's `pubspec.yaml`
+and `LICENSE` under the local Pub cache. The Flutter Authors packages use the
+three-clause BSD license text; `flutter_acrylic` and `macos_window_utils`
+include MIT license text. This records local package evidence only and does not
+replace shipped-artifact notice reconciliation at release.
+
+## 6. Built-in / platform dependencies
 
 These are not third-party packages in the manifests but materially affect operation:
 
@@ -87,7 +113,7 @@ These are not third-party packages in the manifests but materially affect operat
 | Windows PowerShell 5.1 | PLATFORM | Current canonical production launcher | Current production launch path is Windows-specific |
 | Microsoft Edge | EXTERNAL PLATFORM | Resident browser/CDP path in current launcher | Installation path/browser availability must be detected rather than assumed long-term |
 
-## 6. Evaluated future OSS adapters — not installed by this register
+## 7. Evaluated future OSS adapters — not installed by this register
 
 These names are architectural candidates only. Their inclusion here does **not** authorize installation or imply current usage.
 
@@ -97,7 +123,7 @@ These names are architectural candidates only. Their inclusion here does **not**
 | Langfuse OSS | AI trace/evaluation/prompt observation | AI observability only; never Evidence/Metric/Permission/Business Truth owner |
 | Temporal | Durable long-running workflow/recovery | Adopt only if current scheduler/runtime/recovery is proven insufficient; use a workflow adapter |
 
-## 7. Required pre-release reconciliation
+## 8. Required pre-release reconciliation
 
 Before a production release:
 
@@ -110,3 +136,14 @@ Before a production release:
 7. Record any component that cannot yet be reasonably replaced and why.
 
 Unknown licensing or unregistered shipped third-party code is a release blocker, not a documentation footnote.
+
+### 2026-09-24 bundled CJK text rendering
+
+Decision: ADOPT unmodified Noto Sans SC and KR variable fonts from the official Google Fonts repository. The real browser preview exposed missing Chinese glyphs when dynamic remote fallback was unavailable. These fonts cover product copy and user-provided Chinese/Korean text through the existing Flutter Theme owner, without a remote font-service dependency.
+
+| Font | Official source | License | SHA-256 of bundled original |
+| --- | --- | --- | --- |
+| Noto Sans SC | https://github.com/google/fonts/tree/main/ofl/notosanssc | SIL OFL 1.1; bundled NotoSansSC-OFL.txt | a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da |
+| Noto Sans KR | https://github.com/google/fonts/tree/main/ofl/notosanskr | SIL OFL 1.1; bundled NotoSansKR-OFL.txt | 194018e6b2b293a7964f037b25c0249ce1418bc9ab3c971060a03aa57861e252 |
+
+Source and LICENSE inspected 2026-09-24 through the public GitHub content API and original files. Unmodified binaries are retained under app/assets/fonts; their license text is registered with Flutter LicenseRegistry. They are bundled with the application, never sold separately. Assets add approximately 28.2 MB before transport compression; browser/network and current-build rendering verification remain required. No reference screenshot, private video frame, or proprietary system font is bundled.

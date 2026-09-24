@@ -2,91 +2,130 @@ import 'package:flutter/material.dart';
 
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
+import '../../../l10n/lumenis_localizations.dart';
 import 'sh01_repository.dart';
 import 'sh01_snapshot.dart';
 import 'sh01_view_model.dart';
 
 String _catalogFailureCopy(String? error) => switch (error) {
-  '登录已失效，请重新登录后读取。' => '登录状态已过期，请重新登录后查看工具目录。',
-  '当前账号无权读取共享能力目录。' => '当前账号暂不能查看工具目录。',
-  'Product Core 暂时不可用。' => '工具目录服务暂时无法连接，请检查网络后重试。',
-  _ => '工具目录数据暂不可用，请稍后重试。',
+  '登录已失效，请重新登录后读取。' => 'sh01.failure.auth',
+  '当前账号无权读取共享能力目录。' => 'sh01.failure.permission',
+  'Product Core 暂时不可用。' => 'sh01.failure.offline',
+  _ => 'sh01.failure.other',
 };
 
-String _catalogTitle(String title) => switch (title.trim()) {
-  'Shared Content & Creation' => '共享内容与创作',
-  '' => '研究与创作服务',
-  final value
-      when value.runes.any((rune) => rune >= 0x4e00 && rune <= 0x9fff) =>
-    value,
-  _ => '研究与创作服务',
-};
-
-String _providerTeam(String owner) => switch (owner.trim()) {
-  'Shared Capability / Content Studio' => '共享内容与创作团队',
-  final value
-      when value.runes.any((rune) => rune >= 0x4e00 && rune <= 0x9fff) =>
-    value,
-  '' => '目录未注明',
-  _ => '目录已登记的提供团队',
-};
-
-String _categoryLabel(String category) =>
-    switch (category.trim().toUpperCase()) {
-      'RESEARCH' => '研究资料',
-      'CONTENT' => '内容创作',
-      '' => '未分类',
-      final value
-          when value.runes.any((rune) => rune >= 0x4e00 && rune <= 0x9fff) =>
-        category.trim(),
-      _ => '未分类',
+String _consumerLabel(BuildContext context, String consumer) =>
+    switch (consumer.trim().toUpperCase()) {
+      'CTH' ||
+      'COMMERCE' ||
+      'COMMERCE OPERATIONS' => context.lumenisL10n.text('navgroup.cth'),
+      'BMP' ||
+      'ZBMP' ||
+      'BRAND' ||
+      'BRAND MARKET' => context.lumenisL10n.text('navgroup.bmp'),
+      _ => context.lumenisL10n.text('navgroup.shared'),
     };
 
-String _permissionLabel(String permission) {
-  const labels = {
-    'READ': '读取',
-    'RESEARCH': '研究资料',
-    'ANALYZE': '分析',
-    'SUGGEST': '提供建议',
-    'AUDIT': '检查',
-    'WRITE': '修改',
-    'EXPORT': '导出',
-    'PUBLISH': '发布',
+String _categoryLabel(BuildContext context, String category) =>
+    switch (category.trim().toUpperCase()) {
+      'RESEARCH' ||
+      '研究与证据' ||
+      '研究资料' => context.lumenisL10n.text('sh01.category.research'),
+      'CONTENT' ||
+      '内容制作' ||
+      '内容创作' => context.lumenisL10n.text('sh01.category.content'),
+      '' => context.lumenisL10n.text('sh01.category.other'),
+      _ => context.lumenisL10n.text('sh01.category.other'),
+    };
+
+String _permissionLabel(BuildContext context, String permission) {
+  final labels = {
+    'READ': context.lumenisL10n.text('sh01.permission.read'),
+    'RESEARCH': context.lumenisL10n.text('sh01.permission.research'),
+    'ANALYZE': context.lumenisL10n.text('sh01.permission.analyze'),
+    'SUGGEST': context.lumenisL10n.text('sh01.permission.suggest'),
+    'AUDIT': context.lumenisL10n.text('sh01.permission.audit'),
+    'WRITE': context.lumenisL10n.text('sh01.permission.write'),
+    'EXPORT': context.lumenisL10n.text('sh01.permission.export'),
+    'PUBLISH': context.lumenisL10n.text('sh01.permission.publish'),
   };
   final parts = permission
       .split(RegExp(r'\s*/\s*'))
       .map((part) => part.trim().toUpperCase())
       .toList(growable: false);
   if (parts.isEmpty || parts.any((part) => !labels.containsKey(part))) {
-    return '以当前账号权限为准';
+    return context.lumenisL10n.text('sh01.permission.other');
   }
   return parts.map((part) => labels[part]!).join('、');
 }
 
-String _riskLabel(String risk) => switch (risk.trim().toUpperCase()) {
-  'LOW' => '低',
-  'MEDIUM' => '中',
-  'HIGH' => '高',
-  _ => '未说明',
-};
+String _riskLabel(BuildContext context, String risk) =>
+    switch (risk.trim().toUpperCase()) {
+      'LOW' => context.lumenisL10n.text('sh01.risk.low'),
+      'MEDIUM' => context.lumenisL10n.text('sh01.risk.medium'),
+      'HIGH' => context.lumenisL10n.text('sh01.risk.high'),
+      _ => context.lumenisL10n.text('sh01.risk.unknown'),
+    };
 
-String _useLimitLabel(String policy) => switch (policy.trim().toUpperCase()) {
-  'READ_ONLY' => '仅读取资料，不修改原始内容',
-  'NO_EXTERNAL_WRITE' => '不会直接向外部平台提交内容',
-  'APPROVAL_REQUIRED' => '操作前需要审核',
-  'AUDIT_ONLY' => '仅供检查',
-  _ => '目录暂未说明',
-};
+String _useLimitLabel(BuildContext context, String policy) =>
+    switch (policy.trim().toUpperCase()) {
+      'READ_ONLY' => context.lumenisL10n.text('sh01.limit.read_only'),
+      'NO_EXTERNAL_WRITE' => context.lumenisL10n.text(
+        'sh01.limit.no_external_write',
+      ),
+      'APPROVAL_REQUIRED' => context.lumenisL10n.text('sh01.limit.approval'),
+      'AUDIT_ONLY' => context.lumenisL10n.text('sh01.limit.audit'),
+      _ => context.lumenisL10n.text('sh01.limit.unknown'),
+    };
 
-String _businessDescription(String description) => description
-    .replaceAll('已入库 Evidence', '已入库资料')
-    .replaceAll(RegExp('Evidence', caseSensitive: false), '资料依据')
-    .replaceAll(RegExp(r'\bBrief\b', caseSensitive: false), '需求说明')
-    .replaceAll(RegExp(r'Canonical Data', caseSensitive: false), '正式业务数据')
-    .replaceAll(RegExp(r'\bCanonical\b', caseSensitive: false), '正式记录')
-    .replaceAll(RegExp(r'\bSVG\b', caseSensitive: false), '矢量图')
-    .replaceAll(RegExp(r'\bArtifact\b', caseSensitive: false), '成果')
-    .replaceAll(RegExp(r'(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])'), '');
+String? _safeBusinessCopy(String value) {
+  final normalized = value.trim();
+  if (normalized.isEmpty || normalized.length > 280) return null;
+  if (RegExp(
+    r'(api|database|sqlite|\bdb\b|provider|model|permission|evidence|owner|runtime|contract|canonical|viewmodel|subject|brandfocus|cth|bmp|zbmp|token|cookie|secret|internal|private|path|https?)',
+    caseSensitive: false,
+  ).hasMatch(normalized)) {
+    return null;
+  }
+  if (normalized.runes.any((rune) => !_isAllowedBusinessRune(rune))) {
+    return null;
+  }
+  return normalized;
+}
+
+bool _isAllowedBusinessRune(int rune) {
+  final asciiLetterOrDigit =
+      rune >= 0x30 && rune <= 0x39 ||
+      rune >= 0x41 && rune <= 0x5a ||
+      rune >= 0x61 && rune <= 0x7a;
+  final naturalLanguageRange =
+      rune >= 0x3400 && rune <= 0x9fff ||
+      rune >= 0xac00 && rune <= 0xd7af ||
+      rune >= 0x00c0 && rune <= 0x024f;
+  const punctuation = ' \t\n\r&·、，。！？：；（）()“”‘’+-—–';
+  return asciiLetterOrDigit ||
+      naturalLanguageRange ||
+      punctuation.runes.contains(rune);
+}
+
+String _businessDescription(String description) {
+  final normalized = description
+      .replaceAll('已入库 Evidence', '已入库资料')
+      .replaceAll(RegExp('Evidence', caseSensitive: false), '资料依据')
+      .replaceAll(RegExp(r'\bBrief\b', caseSensitive: false), '需求说明')
+      .replaceAll(RegExp(r'Canonical Data', caseSensitive: false), '正式业务数据')
+      .replaceAll(RegExp(r'\bCanonical\b', caseSensitive: false), '正式记录')
+      .replaceAll(RegExp(r'\bSVG\b', caseSensitive: false), '矢量图')
+      .replaceAll(RegExp(r'\bArtifact\b', caseSensitive: false), '成果')
+      .replaceAll(RegExp(r'(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])'), '');
+  return _safeBusinessCopy(normalized) ?? '';
+}
+
+String _capabilityName(BuildContext context, String name) =>
+    _safeBusinessCopy(name) ?? context.lumenisL10n.text('sh01.detail.empty');
+
+String _catalogTitle(BuildContext context, String _) =>
+    context.lumenisL10n.text('sh01.charter.title');
 
 class Sh01Screen extends StatefulWidget {
   const Sh01Screen({required this.client, this.repository, super.key});
@@ -117,14 +156,14 @@ class _Sh01ScreenState extends State<Sh01Screen> {
 
   @override
   Widget build(BuildContext context) => ColoredBox(
-    color: LumenisTheme.canvas,
+    color: LumenisTheme.of(context).canvas,
     child: SafeArea(
       child: AnimatedBuilder(
         animation: _viewModel,
         builder: (context, _) => switch (_viewModel.phase) {
           Sh01LoadPhase.loading => const _LoadingState(),
           Sh01LoadPhase.failed => _FailureState(
-            message: _catalogFailureCopy(_viewModel.error),
+            messageKey: _catalogFailureCopy(_viewModel.error),
             onRetry: _viewModel.refresh,
           ),
           Sh01LoadPhase.ready => _Workspace(
@@ -209,7 +248,7 @@ class _Workspace extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: viewModel.refresh,
                     icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('重新读取能力目录'),
+                    label: Text(context.lumenisL10n.text('sh01.refresh')),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(48, 48),
                     ),
@@ -237,15 +276,15 @@ class _Heading extends StatelessWidget {
             width: 8,
             height: 28,
             decoration: BoxDecoration(
-              color: LumenisTheme.shared,
+              color: LumenisTheme.of(context).shared,
               borderRadius: BorderRadius.circular(8),
             ),
           ),
           const SizedBox(width: 11),
           Text(
-            '研究与创作',
+            context.lumenisL10n.text('sh01.eyebrow'),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: LumenisTheme.shared,
+              color: LumenisTheme.of(context).shared,
               letterSpacing: 1,
               fontWeight: FontWeight.w700,
             ),
@@ -254,19 +293,19 @@ class _Heading extends StatelessWidget {
       ),
       const SizedBox(height: 13),
       Text(
-        '研究与创作工具',
+        context.lumenisL10n.text('sh01.title'),
         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-          color: LumenisTheme.foreground,
+          color: LumenisTheme.of(context).foreground,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.5,
         ),
       ),
       const SizedBox(height: 7),
       Text(
-        '查看可供 CTH 与 BMP 使用的研究和内容工具；条目介绍用途，不代表此刻可以使用。',
+        context.lumenisL10n.text('sh01.subtitle'),
         style: Theme.of(
           context,
-        ).textTheme.bodyMedium?.copyWith(color: LumenisTheme.muted),
+        ).textTheme.bodyMedium?.copyWith(color: LumenisTheme.of(context).muted),
       ),
     ],
   );
@@ -282,51 +321,52 @@ class _SharedCharter extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _Eyebrow('服务提供方'),
+        _Eyebrow(context.lumenisL10n.text('sh01.charter.eyebrow')),
         const SizedBox(height: 16),
         Container(
           width: 52,
           height: 52,
           decoration: BoxDecoration(
-            color: LumenisTheme.shared.withValues(alpha: 0.1),
+            color: LumenisTheme.of(context).shared.withValues(alpha: 0.1),
             border: Border.all(
-              color: LumenisTheme.shared.withValues(alpha: 0.35),
+              color: LumenisTheme.of(context).shared.withValues(alpha: 0.35),
             ),
             borderRadius: BorderRadius.circular(15),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.hub_outlined,
-            color: LumenisTheme.shared,
+            color: LumenisTheme.of(context).shared,
             size: 25,
           ),
         ),
         const SizedBox(height: 14),
         Text(
-          _catalogTitle(catalog.capability),
+          _catalogTitle(context, catalog.capability),
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
-        const Text(
-          '这些服务供 CTH 与 BMP 的业务流程共同使用，但不会替代各自的经营主体、品牌资料或业务结论。',
-          style: TextStyle(color: LumenisTheme.muted, height: 1.5),
+        Text(
+          context.lumenisL10n.text('sh01.charter.detail'),
+          style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.5),
         ),
         const SizedBox(height: 17),
         const Divider(height: 1),
         const SizedBox(height: 14),
-        const _Eyebrow('适用产品'),
+        _Eyebrow(context.lumenisL10n.text('sh01.charter.products')),
         const SizedBox(height: 9),
         Wrap(
           spacing: 7,
           runSpacing: 7,
           children: [
-            for (final consumer in catalog.consumers) _MetaChip(consumer),
+            for (final consumer in catalog.consumers)
+              _MetaChip(_consumerLabel(context, consumer)),
           ],
         ),
         const SizedBox(height: 16),
-        const Text(
-          '此处只查看工具介绍，不会运行工具。实际使用前还需确认业务对象和当前账号权限。',
+        Text(
+          context.lumenisL10n.text('sh01.charter.note'),
           style: TextStyle(
-            color: LumenisTheme.quiet,
+            color: LumenisTheme.of(context).quiet,
             fontSize: 12,
             height: 1.5,
           ),
@@ -354,11 +394,13 @@ class _CapabilityIndex extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Expanded(child: _Eyebrow('工具列表')),
+            Expanded(
+              child: _Eyebrow(context.lumenisL10n.text('sh01.index.title')),
+            ),
             Text(
               catalog.skills.length.toString(),
-              style: const TextStyle(
-                color: LumenisTheme.shared,
+              style: TextStyle(
+                color: LumenisTheme.of(context).shared,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -366,7 +408,7 @@ class _CapabilityIndex extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         if (catalog.skills.isEmpty)
-          const _InfoMessage('当前没有可展示的研究或创作工具。')
+          _InfoMessage(context.lumenisL10n.text('sh01.index.empty'))
         else
           for (final item in catalog.skills)
             _CapabilityRow(
@@ -395,8 +437,8 @@ class _CapabilityRow extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 7),
     child: Material(
       color: selected
-          ? LumenisTheme.shared.withValues(alpha: 0.09)
-          : LumenisTheme.surfaceRaised,
+          ? LumenisTheme.of(context).shared.withValues(alpha: 0.09)
+          : LumenisTheme.of(context).surfaceRaised,
       borderRadius: BorderRadius.circular(11),
       child: InkWell(
         key: Key('sh01-capability-${item.id}'),
@@ -408,8 +450,8 @@ class _CapabilityRow extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border.all(
               color: selected
-                  ? LumenisTheme.shared.withValues(alpha: 0.55)
-                  : LumenisTheme.line,
+                  ? LumenisTheme.of(context).shared.withValues(alpha: 0.55)
+                  : LumenisTheme.of(context).line,
             ),
             borderRadius: BorderRadius.circular(11),
           ),
@@ -420,13 +462,15 @@ class _CapabilityRow extends StatelessWidget {
                 height: 30,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: LumenisTheme.canvas,
+                  color: LumenisTheme.of(context).canvas,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   Icons.extension_outlined,
                   size: 17,
-                  color: selected ? LumenisTheme.shared : LumenisTheme.quiet,
+                  color: selected
+                      ? LumenisTheme.of(context).shared
+                      : LumenisTheme.of(context).quiet,
                 ),
               ),
               const SizedBox(width: 10),
@@ -435,15 +479,15 @@ class _CapabilityRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.name,
+                      _capabilityName(context, item.name),
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     if (item.category.isNotEmpty) ...[
                       const SizedBox(height: 3),
                       Text(
-                        _categoryLabel(item.category),
-                        style: const TextStyle(
-                          color: LumenisTheme.muted,
+                        _categoryLabel(context, item.category),
+                        style: TextStyle(
+                          color: LumenisTheme.of(context).muted,
                           fontSize: 11,
                         ),
                       ),
@@ -451,9 +495,9 @@ class _CapabilityRow extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: LumenisTheme.quiet,
+                color: LumenisTheme.of(context).quiet,
               ),
             ],
           ),
@@ -471,7 +515,7 @@ class _CapabilityDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _Panel(
     child: capability == null
-        ? const _InfoMessage('目录中暂时没有可查看的工具。')
+        ? _InfoMessage(context.lumenisL10n.text('sh01.detail.empty'))
         : _CapabilityFacts(capability: capability!),
   );
 }
@@ -485,27 +529,52 @@ class _CapabilityFacts extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Row(children: [const Expanded(child: _Eyebrow('工具介绍'))]),
+      Row(
+        children: [
+          Expanded(
+            child: _Eyebrow(context.lumenisL10n.text('sh01.detail.title')),
+          ),
+        ],
+      ),
       const SizedBox(height: 17),
-      Text(capability.name, style: Theme.of(context).textTheme.headlineSmall),
-      if (capability.description.isNotEmpty) ...[
+      Text(
+        _capabilityName(context, capability.name),
+        style: Theme.of(context).textTheme.headlineSmall,
+      ),
+      if (_businessDescription(capability.description).isNotEmpty) ...[
         const SizedBox(height: 10),
         Text(
           _businessDescription(capability.description),
-          style: const TextStyle(color: LumenisTheme.muted, height: 1.6),
+          style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.6),
         ),
       ],
       const SizedBox(height: 22),
-      const _Eyebrow('使用信息'),
+      _Eyebrow(context.lumenisL10n.text('sh01.detail.info')),
       const SizedBox(height: 11),
-      _FactRow('提供团队', _providerTeam(capability.owner)),
-      _FactRow('内容类别', _categoryLabel(capability.category)),
-      _FactRow('适用产品', capability.consumers.join(' · ')),
-      _FactRow('可处理内容', _permissionLabel(capability.permission)),
-      _FactRow('操作风险', _riskLabel(capability.risk)),
-      _FactRow('使用限制', _useLimitLabel(capability.executionPolicy)),
+      _FactRow(
+        context.lumenisL10n.text('sh01.detail.category'),
+        _categoryLabel(context, capability.category),
+      ),
+      _FactRow(
+        context.lumenisL10n.text('sh01.detail.products'),
+        capability.consumers
+            .map((consumer) => _consumerLabel(context, consumer))
+            .join(' · '),
+      ),
+      _FactRow(
+        context.lumenisL10n.text('sh01.detail.permission'),
+        _permissionLabel(context, capability.permission),
+      ),
+      _FactRow(
+        context.lumenisL10n.text('sh01.detail.risk'),
+        _riskLabel(context, capability.risk),
+      ),
+      _FactRow(
+        context.lumenisL10n.text('sh01.detail.limit'),
+        _useLimitLabel(context, capability.executionPolicy),
+      ),
       const SizedBox(height: 15),
-      const _InfoMessage('以上为目录介绍，不表示工具当前可用或已替你执行。能否使用取决于所选业务对象和当前账号权限。'),
+      _InfoMessage(context.lumenisL10n.text('sh01.detail.note')),
     ],
   );
 }
@@ -528,14 +597,14 @@ class _FactRow extends StatelessWidget {
             width: 150,
             child: Text(
               label,
-              style: const TextStyle(color: LumenisTheme.quiet),
+              style: TextStyle(color: LumenisTheme.of(context).quiet),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: SelectableText(
               value,
-              style: const TextStyle(color: LumenisTheme.foreground),
+              style: TextStyle(color: LumenisTheme.of(context).foreground),
             ),
           ),
         ],
@@ -552,28 +621,36 @@ class _EvidenceBoundary extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: LumenisTheme.caution.withValues(alpha: 0.07),
-      border: Border.all(color: LumenisTheme.caution.withValues(alpha: 0.28)),
+      color: LumenisTheme.of(context).caution.withValues(alpha: 0.07),
+      border: Border.all(
+        color: LumenisTheme.of(context).caution.withValues(alpha: 0.28),
+      ),
       borderRadius: BorderRadius.circular(14),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(
+        Icon(
           Icons.lock_outline_rounded,
-          color: LumenisTheme.caution,
+          color: LumenisTheme.of(context).caution,
           size: 19,
         ),
         const SizedBox(width: 11),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('业务资料依据暂不显示', style: TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                context.lumenisL10n.text('sh01.evidence.title'),
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
               SizedBox(height: 5),
               Text(
-                '当前资料还未按你的账号和经营主体或品牌完成查看权限核对，因此暂不展示记录数量、详情或内容。',
-                style: TextStyle(color: LumenisTheme.muted, height: 1.5),
+                context.lumenisL10n.text('sh01.evidence.detail'),
+                style: TextStyle(
+                  color: LumenisTheme.of(context).muted,
+                  height: 1.5,
+                ),
               ),
             ],
           ),
@@ -591,7 +668,7 @@ class _InfoMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     message,
-    style: const TextStyle(color: LumenisTheme.muted, height: 1.5),
+    style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.5),
   );
 }
 
@@ -604,13 +681,13 @@ class _MetaChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
     decoration: BoxDecoration(
-      color: LumenisTheme.canvas,
-      border: Border.all(color: LumenisTheme.line),
+      color: LumenisTheme.of(context).canvas,
+      border: Border.all(color: LumenisTheme.of(context).line),
       borderRadius: BorderRadius.circular(20),
     ),
     child: Text(
       label,
-      style: const TextStyle(color: LumenisTheme.muted, fontSize: 11),
+      style: TextStyle(color: LumenisTheme.of(context).muted, fontSize: 11),
     ),
   );
 }
@@ -623,8 +700,8 @@ class _Eyebrow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     label,
-    style: const TextStyle(
-      color: LumenisTheme.quiet,
+    style: TextStyle(
+      color: LumenisTheme.of(context).quiet,
       fontSize: 10,
       letterSpacing: 0.9,
       fontWeight: FontWeight.w700,
@@ -642,9 +719,9 @@ class _Panel extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(18),
     decoration: BoxDecoration(
-      color: LumenisTheme.surface,
+      color: LumenisTheme.of(context).surface,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: LumenisTheme.line),
+      border: Border.all(color: LumenisTheme.of(context).line),
     ),
     child: child,
   );
@@ -657,16 +734,16 @@ class _LoadingState extends StatelessWidget {
   Widget build(BuildContext context) => Center(
     child: Semantics(
       liveRegion: true,
-      label: '正在读取研究与创作工具',
-      child: const CircularProgressIndicator(color: LumenisTheme.shared),
+      label: context.lumenisL10n.text('sh01.loading'),
+      child: CircularProgressIndicator(color: LumenisTheme.of(context).shared),
     ),
   );
 }
 
 class _FailureState extends StatelessWidget {
-  const _FailureState({required this.message, required this.onRetry});
+  const _FailureState({required this.messageKey, required this.onRetry});
 
-  final String message;
+  final String messageKey;
   final VoidCallback onRetry;
 
   @override
@@ -680,14 +757,20 @@ class _FailureState extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('工具目录暂不可用', style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                context.lumenisL10n.text('sh01.failure.title'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 8),
-              Text(message, style: Theme.of(context).textTheme.bodyMedium),
+              Text(
+                context.lumenisL10n.text(messageKey),
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text('重新读取工具目录'),
+                label: Text(context.lumenisL10n.text('sh01.failure.retry')),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(48, 48),
                 ),

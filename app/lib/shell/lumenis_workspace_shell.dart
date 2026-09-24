@@ -1,27 +1,135 @@
 import 'package:flutter/material.dart';
+import '../features/system/sys05/sys05_appearance_editor.dart';
 
 import '../core/lumenis_core_client.dart';
 import '../core/lumenis_theme.dart';
+import '../features/account/acc01/acc01_screen.dart';
+import '../features/account/acc02/acc02_screen.dart';
+import '../features/account/acc03/acc03_screen.dart';
+import '../features/account/acc04/acc04_screen.dart';
 import '../features/ai01/ai01_screen.dart';
+import '../features/ai02/ai02_screen.dart';
+import '../features/ai03/ai03_screen.dart';
+import '../features/ai04/ai04_screen.dart';
+import '../features/ai05/ai05_screen.dart';
 import '../features/bmp01/bmp01_screen.dart';
+import '../features/bmp02/bmp02_screen.dart';
+import '../features/bmp03/bmp03_screen.dart';
+import '../features/bmp04/bmp04_screen.dart';
+import '../features/bmp05/bmp05_screen.dart';
+import '../features/bmp06/bmp06_screen.dart';
+import '../features/bmp07/bmp07_screen.dart';
+import '../features/bmp08/bmp08_screen.dart';
+import '../features/bmp09/bmp09_screen.dart';
+import '../features/bmp10/bmp10_screen.dart';
+import '../features/bmp11/bmp11_screen.dart';
 import '../features/cth/cth01/cth01_screen.dart';
 import '../features/cth/cth02/cth02_screen.dart';
+import '../features/cth/cth03/cth03_screen.dart';
+import '../features/cth/cth04/cth04_screen.dart';
+import '../features/cth/cth05/cth05_screen.dart';
+import '../features/cth/cth06/cth06_screen.dart';
+import '../features/cth/cth07/cth07_screen.dart';
+import '../features/cth/cth08/cth08_screen.dart';
+import '../features/cth/cth09/cth09_screen.dart';
+import '../features/cth/cth10/cth10_screen.dart';
 import '../features/shared/sh01/sh01_screen.dart';
+import '../features/shared/sh02/sh02_screen.dart';
+import '../features/shared/sh03/sh03_screen.dart';
+import '../features/shared/sh04/sh04_screen.dart';
+import '../features/shared/sh05/sh05_screen.dart';
+import '../features/shared/sh06/sh06_screen.dart';
 import '../features/system/sys01/sys01_screen.dart';
+import '../features/system/sys02/sys02_screen.dart';
+import '../features/system/sys03/sys03_screen.dart';
+import '../features/system/sys04/sys04_screen.dart';
+import '../features/system/sys05/sys05_screen.dart';
+import '../features/system/sys07/sys07_screen.dart';
+import '../features/system/sys08/sys08_screen.dart';
+import '../l10n/lumenis_localizations.dart';
+import '../navigation/lumenis_workspace_routes.dart';
+
+Widget buildLumenisWorkspaceScreen({
+  required String screenId,
+  required LumenisCoreClient client,
+  ValueChanged<String>? onNavigate,
+}) {
+  if (!LumenisWorkspaceRoutes.supportsWorkspaceScreen(screenId)) {
+    throw ArgumentError.value(
+      screenId,
+      'screenId',
+      'Screen is not available in Web Workspace',
+    );
+  }
+  return switch (screenId) {
+    'ACC-01' => Acc01Screen(client: client),
+    'ACC-02' => Acc02Screen(client: client),
+    'ACC-03' => Acc03Screen(client: client),
+    'ACC-04' => Acc04Screen(client: client),
+    'AI-01' => Ai01Screen(client: client),
+    'AI-02' => Ai02Screen(client: client),
+    'AI-03' => Ai03Screen(client: client),
+    'AI-04' => Ai04Screen(client: client),
+    'AI-05' => Ai05Screen(client: client),
+    'CTH-01' => Cth01Screen(client: client, onNavigate: onNavigate),
+    'CTH-02' => Cth02Screen(client: client),
+    'CTH-03' => Cth03Screen(client: client),
+    'CTH-04' => Cth04Screen(client: client),
+    'CTH-05' => Cth05Screen(client: client),
+    'CTH-06' => Cth06Screen(client: client),
+    'CTH-07' => Cth07Screen(client: client),
+    'CTH-08' => Cth08Screen(client: client),
+    'CTH-09' => Cth09Screen(client: client),
+    'CTH-10' => Cth10Screen(client: client),
+    'BMP-01' => Bmp01Screen(client: client),
+    'BMP-02' => Bmp02Screen(client: client),
+    'BMP-03' => Bmp03Screen(client: client),
+    'BMP-04' => Bmp04Screen(client: client),
+    'BMP-05' => Bmp05Screen(client: client),
+    'BMP-06' => Bmp06Screen(client: client),
+    'BMP-07' => Bmp07Screen(client: client),
+    'BMP-08' => Bmp08Screen(client: client),
+    'BMP-09' => Bmp09Screen(client: client),
+    'BMP-10' => Bmp10Screen(client: client),
+    'BMP-11' => Bmp11Screen(client: client),
+    'SH-01' => Sh01Screen(client: client),
+    'SH-02' => Sh02Screen(client: client),
+    'SH-03' => Sh03Screen(client: client),
+    'SH-04' => Sh04Screen(client: client),
+    'SH-05' => Sh05Screen(client: client),
+    'SH-06' => Sh06Screen(client: client),
+    'SYS-01' => Sys01Screen(client: client),
+    'SYS-02' => Sys02Screen(client: client),
+    'SYS-03' => Sys03Screen(client: client),
+    'SYS-04' => Sys04Screen(client: client),
+    'SYS-05' => Sys05Screen(client: client),
+    'SYS-07' => Sys07Screen(client: client),
+    'SYS-08' => Sys08Screen(client: client),
+    _ => throw StateError('Unmapped workspace Screen ID: $screenId'),
+  };
+}
 
 class LumenisWorkspaceShell extends StatefulWidget {
   const LumenisWorkspaceShell({
     required this.client,
     required this.runtime,
     required this.subjects,
+    this.contextEnvelope,
     this.subjectDirectoryMessage,
+    this.initialScreenId = 'CTH-01',
+    this.onScreenSelected,
+    this.onLocaleChanged,
     super.key,
   });
 
   final LumenisCoreClient client;
   final Map<String, dynamic> runtime;
   final List<Map<String, dynamic>> subjects;
+  final Map<String, dynamic>? contextEnvelope;
   final String? subjectDirectoryMessage;
+  final String initialScreenId;
+  final ValueChanged<String>? onScreenSelected;
+  final ValueChanged<Locale?>? onLocaleChanged;
 
   @override
   State<LumenisWorkspaceShell> createState() => _LumenisWorkspaceShellState();
@@ -30,49 +138,83 @@ class LumenisWorkspaceShell extends StatefulWidget {
 class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     with RestorationMixin {
   final RestorableString _activeScreen = RestorableString('CTH-01');
+  Map<String, dynamic>? _contextEnvelope;
+
+  @override
+  void initState() {
+    super.initState();
+    _contextEnvelope =
+        widget.contextEnvelope ?? widget.client.currentContextEnvelope;
+  }
+
+  @override
+  void didUpdateWidget(covariant LumenisWorkspaceShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.contextEnvelope != widget.contextEnvelope &&
+        widget.contextEnvelope != null) {
+      _contextEnvelope = widget.contextEnvelope;
+    }
+    if (oldWidget.initialScreenId != widget.initialScreenId &&
+        LumenisWorkspaceRoutes.supportsWorkspaceScreen(
+          widget.initialScreenId,
+        ) &&
+        _activeScreen.value != widget.initialScreenId) {
+      setState(() => _activeScreen.value = widget.initialScreenId);
+    }
+  }
 
   static const _destinations = <_WorkspaceDestination>[
     _WorkspaceDestination(
       id: 'CTH-01',
-      label: '商业运营',
-      mobileLabel: '经营',
-      group: 'CTH · 商业运营',
+      labelKey: 'navgroup.cth',
+      mobileLabelKey: 'nav.mobile.commerce',
+      groupKey: 'domain.cth',
       icon: Icons.timeline_rounded,
       color: LumenisTheme.cth,
     ),
     _WorkspaceDestination(
       id: 'BMP-01',
-      label: '品牌市场',
-      mobileLabel: '品牌',
-      group: 'BMP · 品牌市场',
+      labelKey: 'navgroup.bmp',
+      mobileLabelKey: 'nav.mobile.brand',
+      groupKey: 'domain.zbmp',
       icon: Icons.hub_outlined,
       color: LumenisTheme.bmp,
     ),
     _WorkspaceDestination(
       id: 'AI-01',
-      label: 'AI 助理',
-      mobileLabel: 'AI',
-      group: 'AI · 智能助理',
+      labelKey: 'navgroup.ai',
+      mobileLabelKey: 'nav.mobile.ai',
+      groupKey: 'navgroup.ai',
       icon: Icons.auto_awesome_outlined,
       color: LumenisTheme.ai,
     ),
     _WorkspaceDestination(
       id: 'SH-01',
-      label: '共享服务',
-      mobileLabel: '共享',
-      group: '共享服务',
+      labelKey: 'navgroup.shared',
+      mobileLabelKey: 'nav.mobile.shared',
+      groupKey: 'navgroup.shared',
       icon: Icons.edit_note_rounded,
       color: LumenisTheme.shared,
     ),
     _WorkspaceDestination(
       id: 'SYS-01',
-      label: '运行健康',
-      mobileLabel: '运行',
-      group: '系统运行',
+      labelKey: 'navgroup.system',
+      mobileLabelKey: 'nav.mobile.system',
+      groupKey: 'navgroup.system',
       icon: Icons.monitor_heart_outlined,
       color: LumenisTheme.system,
     ),
   ];
+
+  static _WorkspaceDestination _accountDestination(Color accent) =>
+      _WorkspaceDestination(
+        id: 'ACC-01',
+        labelKey: 'screen.ACC-01',
+        mobileLabelKey: 'screen.ACC-01',
+        groupKey: 'screen.ACC-03',
+        icon: Icons.person_outline_rounded,
+        color: accent,
+      );
 
   @override
   String get restorationId => 'workspace-shell';
@@ -80,9 +222,14 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
   @override
   void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
     registerForRestoration(_activeScreen, 'active-screen');
-    if (_activeScreen.value != 'CTH-02' &&
-        !_destinations.any((item) => item.id == _activeScreen.value)) {
-      _activeScreen.value = 'CTH-01';
+    if (LumenisWorkspaceRoutes.supportsWorkspaceScreen(
+      widget.initialScreenId,
+    )) {
+      _activeScreen.value = widget.initialScreenId;
+    } else if (!LumenisWorkspaceRoutes.supportsWorkspaceScreen(
+      _activeScreen.value,
+    )) {
+      _activeScreen.value = LumenisWorkspaceRoutes.rootScreenId;
     }
   }
 
@@ -97,39 +244,61 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 768) {
-          return _buildPhone();
+          return _buildPhone(context);
         }
         if (constraints.maxWidth < 1280) {
-          return _buildCompactWorkspace();
+          return _buildCompactWorkspace(context);
         }
-        return _buildWideWorkspace(showInspector: constraints.maxWidth >= 1720);
+        return _buildWideWorkspace(
+          context,
+          showInspector: constraints.maxWidth >= 1720,
+        );
       },
     );
   }
 
-  int get _selectedIndex => _destinations.indexWhere(
-    (item) =>
-        item.id ==
-        (_activeScreen.value == 'CTH-02' ? 'CTH-01' : _activeScreen.value),
-  );
+  String get _activeGroup =>
+      LumenisWorkspaceRoutes.groupForScreen(_activeScreen.value);
 
-  _WorkspaceDestination get _selectedDestination =>
-      _destinations[_selectedIndex < 0 ? 0 : _selectedIndex];
+  int get _selectedIndex =>
+      _destinations.indexWhere((item) => item.id.startsWith('$_activeGroup-'));
+
+  _WorkspaceDestination get _selectedDestination => _activeGroup == 'ACC'
+      ? _accountDestination(LumenisTheme.of(context).accent)
+      : _destinations[_selectedIndex < 0 ? 0 : _selectedIndex];
+
+  List<String> get _secondaryScreenIds {
+    final groupScreenIds =
+        LumenisWorkspaceRoutes.screenIdsByGroup[_activeGroup] ?? const [];
+    if (_activeGroup == 'ACC' || groupScreenIds.length < 2) {
+      return groupScreenIds;
+    }
+    return groupScreenIds.skip(1).toList(growable: false);
+  }
 
   void _select(int index) {
     if (index < 0 || index >= _destinations.length) return;
-    setState(() => _activeScreen.value = _destinations[index].id);
+    _activateScreen(_destinations[index].id);
   }
 
-  Widget _screen() => switch (_activeScreen.value) {
-    'CTH-01' => Cth01Screen(client: widget.client),
-    'CTH-02' => Cth02Screen(client: widget.client),
-    'BMP-01' => Bmp01Screen(client: widget.client),
-    'AI-01' => Ai01Screen(client: widget.client),
-    'SH-01' => Sh01Screen(client: widget.client),
-    'SYS-01' => Sys01Screen(client: widget.client),
-    _ => Cth01Screen(client: widget.client),
-  };
+  void _activateScreen(String screenId, {bool notifyRoute = true}) {
+    if (!LumenisWorkspaceRoutes.supportsScreen(screenId)) {
+      return;
+    }
+    if (LumenisWorkspaceRoutes.desktopRequiredScreenIds.contains(screenId)) {
+      if (notifyRoute) widget.onScreenSelected?.call(screenId);
+      return;
+    }
+    if (_activeScreen.value == screenId) return;
+    setState(() => _activeScreen.value = screenId);
+    if (notifyRoute) widget.onScreenSelected?.call(screenId);
+  }
+
+  Widget _screen() => buildLumenisWorkspaceScreen(
+    screenId: _activeScreen.value,
+    client: widget.client,
+    onNavigate: _activateScreen,
+  );
 
   Widget _screenTransition() {
     final reduceMotion =
@@ -144,10 +313,9 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeInCubic,
       transitionBuilder: (child, animation) {
-        if (reduceMotion) return child;
         final position = animation.drive(
           Tween<Offset>(
-            begin: const Offset(0.012, 0),
+            begin: reduceMotion ? Offset.zero : const Offset(0.012, 0),
             end: Offset.zero,
           ).chain(CurveTween(curve: Curves.easeOutCubic)),
         );
@@ -156,60 +324,86 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
           child: SlideTransition(position: position, child: child),
         );
       },
-      child: KeyedSubtree(key: ValueKey(_activeScreen.value), child: _screen()),
+      child: KeyedSubtree(
+        key: ValueKey('${_activeScreen.value}:$_contextFingerprint'),
+        child: _screen(),
+      ),
     );
   }
 
-  Widget _buildPhone() {
+  Widget _buildPhone(BuildContext context) {
     final destination = _selectedDestination;
     return Scaffold(
-      backgroundColor: LumenisTheme.canvas,
+      backgroundColor: LumenisTheme.of(context).canvas,
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
             _PhoneHeader(
               destination: destination,
-              contextLabel: _contextLabel(destination),
+              contextLabel: _contextLabel(),
               coreLabel: _coreLabel,
+              onOpenContextPicker: _openContextPicker,
+              onOpenAccount: _openAccount,
+              onLocaleChanged: widget.onLocaleChanged,
               onOpenCth02: _openCth02,
               onReturnToCth: _returnFromCth02,
               isCth02: _activeScreen.value == 'CTH-02',
+              accountActive: _activeGroup == 'ACC',
+            ),
+            _SecondaryNavigation(
+              screenIds: _secondaryScreenIds,
+              activeScreenId: _activeScreen.value,
+              color: LumenisTheme.of(
+                context,
+              ).resolveSemantic(destination.color),
+              onSelected: _activateScreen,
             ),
             Expanded(child: _screenTransition()),
           ],
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex < 0 ? 0 : _selectedIndex,
-        onDestinationSelected: _select,
-        backgroundColor: LumenisTheme.surface,
-        indicatorColor: LumenisTheme.accent.withValues(alpha: 0.13),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: [
-          for (final item in _destinations)
-            NavigationDestination(
-              icon: Icon(item.icon),
-              selectedIcon: Icon(item.icon, color: item.color),
-              label: item.mobileLabel,
-              tooltip: item.label,
+      bottomNavigationBar: _activeGroup == 'ACC'
+          ? null
+          : NavigationBar(
+              selectedIndex: _selectedIndex < 0 ? 0 : _selectedIndex,
+              onDestinationSelected: _select,
+              backgroundColor: LumenisTheme.of(context).surface,
+              indicatorColor: LumenisTheme.of(
+                context,
+              ).accent.withValues(alpha: 0.13),
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              destinations: [
+                for (final item in _destinations)
+                  NavigationDestination(
+                    icon: Icon(item.icon),
+                    selectedIcon: Icon(
+                      item.icon,
+                      color: LumenisTheme.of(
+                        context,
+                      ).resolveSemantic(item.color),
+                    ),
+                    label: context.lumenisL10n.text(item.mobileLabelKey),
+                    tooltip: context.lumenisL10n.text(item.labelKey),
+                  ),
+              ],
             ),
-        ],
-      ),
     );
   }
 
-  Widget _buildCompactWorkspace() {
+  Widget _buildCompactWorkspace(BuildContext context) {
     final destination = _selectedDestination;
     return Scaffold(
-      backgroundColor: LumenisTheme.canvas,
+      backgroundColor: LumenisTheme.of(context).canvas,
       body: Row(
         children: [
           NavigationRail(
-            selectedIndex: _selectedIndex < 0 ? 0 : _selectedIndex,
+            selectedIndex: _selectedIndex < 0 ? null : _selectedIndex,
             onDestinationSelected: _select,
-            backgroundColor: LumenisTheme.surface,
-            indicatorColor: LumenisTheme.accent.withValues(alpha: 0.13),
+            backgroundColor: LumenisTheme.of(context).surface,
+            indicatorColor: LumenisTheme.of(
+              context,
+            ).accent.withValues(alpha: 0.13),
             labelType: NavigationRailLabelType.none,
             leading: const Padding(
               padding: EdgeInsets.only(bottom: 18, top: 16),
@@ -218,9 +412,15 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
             destinations: [
               for (final item in _destinations)
                 NavigationRailDestination(
-                  icon: Tooltip(message: item.label, child: Icon(item.icon)),
-                  selectedIcon: Icon(item.icon, color: item.color),
-                  label: Text(item.label),
+                  icon: Tooltip(
+                    message: context.lumenisL10n.text(item.labelKey),
+                    child: Icon(item.icon),
+                  ),
+                  selectedIcon: Icon(
+                    item.icon,
+                    color: LumenisTheme.of(context).resolveSemantic(item.color),
+                  ),
+                  label: Text(context.lumenisL10n.text(item.labelKey)),
                 ),
             ],
           ),
@@ -230,12 +430,24 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
               children: [
                 _WorkspaceHeader(
                   destination: destination,
-                  contextLabel: _contextLabel(destination),
+                  contextLabel: _contextLabel(),
                   coreLabel: _coreLabel,
+                  onOpenContextPicker: _openContextPicker,
+                  onOpenAccount: _openAccount,
+                  onLocaleChanged: widget.onLocaleChanged,
                   compact: true,
                   onOpenCth02: _openCth02,
                   onReturnToCth: _returnFromCth02,
                   isCth02: _activeScreen.value == 'CTH-02',
+                  accountActive: _activeGroup == 'ACC',
+                ),
+                _SecondaryNavigation(
+                  screenIds: _secondaryScreenIds,
+                  activeScreenId: _activeScreen.value,
+                  color: LumenisTheme.of(
+                    context,
+                  ).resolveSemantic(destination.color),
+                  onSelected: _activateScreen,
                 ),
                 Expanded(child: _screenTransition()),
               ],
@@ -246,16 +458,27 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     );
   }
 
-  Widget _buildWideWorkspace({required bool showInspector}) {
+  Widget _buildWideWorkspace(
+    BuildContext context, {
+    required bool showInspector,
+  }) {
     final destination = _selectedDestination;
     return Scaffold(
-      backgroundColor: LumenisTheme.canvas,
+      backgroundColor: LumenisTheme.of(context).canvas,
       body: Row(
         children: [
           _WideNavigation(
             destinations: _destinations,
-            selectedIndex: _selectedIndex < 0 ? 0 : _selectedIndex,
+            selectedIndex: _selectedIndex,
             onSelected: _select,
+            accountDestination: _accountDestination(
+              LumenisTheme.of(context).accent,
+            ),
+            accountSelected: _activeGroup == 'ACC',
+            onAccountSelected: _openAccount,
+            screenIds: _secondaryScreenIds,
+            activeScreenId: _activeScreen.value,
+            onScreenSelected: _activateScreen,
           ),
           const VerticalDivider(width: 1, thickness: 1),
           Expanded(
@@ -263,11 +486,15 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
               children: [
                 _WorkspaceHeader(
                   destination: destination,
-                  contextLabel: _contextLabel(destination),
+                  contextLabel: _contextLabel(),
                   coreLabel: _coreLabel,
+                  onOpenContextPicker: _openContextPicker,
+                  onOpenAccount: _openAccount,
+                  onLocaleChanged: widget.onLocaleChanged,
                   onOpenCth02: _openCth02,
                   onReturnToCth: _returnFromCth02,
                   isCth02: _activeScreen.value == 'CTH-02',
+                  accountActive: _activeGroup == 'ACC',
                 ),
                 Expanded(child: _screenTransition()),
               ],
@@ -277,10 +504,9 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
             const VerticalDivider(width: 1, thickness: 1),
             _ContextInspector(
               destination: destination,
-              contextLabel: _contextLabel(destination),
-              runtime: widget.runtime,
-              subjects: widget.subjects,
-              subjectDirectoryMessage: widget.subjectDirectoryMessage,
+              contextLabel: _contextLabel(),
+              selectionContext: _contextMap,
+              contextUnavailable: _contextEnvelope == null,
             ),
           ],
         ],
@@ -288,43 +514,256 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     );
   }
 
-  String get _coreLabel {
-    return widget.runtime['ok'] == true ? '服务已连接' : '连接状态待确认';
+  String get _coreLabel => context.lumenisL10n.text(
+    widget.runtime['ok'] == true ? 'shell.connected' : 'shell.pending',
+  );
+
+  Map<String, dynamic>? get _contextMap {
+    final value = _contextEnvelope?['context'];
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return value.map((key, value) => MapEntry('$key', value));
+    return null;
   }
 
-  String _contextLabel(_WorkspaceDestination destination) {
-    final rawScope = widget.runtime['subject'];
-    final scope = rawScope is Map ? rawScope : const <Object?, Object?>{};
-    final subjectId = scope['subject_id'];
-    final brandKey = scope['brand_key'];
-    final product = scope['product'];
-    final domain = '${widget.runtime['domain'] ?? ''}'.toLowerCase();
-    return switch (destination.id) {
-      _ when _activeScreen.value == 'CTH-02' => '经营主体目录 · 当前经营主体不变',
-      'CTH-01' =>
-        domain != 'cth' ||
-                product != 'CTH' ||
-                subjectId == null ||
-                '$subjectId'.trim().isEmpty
-            ? '当前经营主体尚未确认'
-            : '当前经营主体：$subjectId',
-      'BMP-01' =>
-        domain != 'zbmp' ||
-                product != 'ZBMP' ||
-                brandKey == null ||
-                '$brandKey'.trim().isEmpty
-            ? '当前品牌尚未确认'
-            : '当前品牌：$brandKey',
-      'AI-01' => 'AI 助理 · 输出供你审阅',
-      'SH-01' => '共享服务目录',
-      'SYS-01' => '系统运行状态',
-      _ => destination.group,
-    };
+  String get _contextFingerprint {
+    final selection = _contextMap;
+    return '${selection?['mode']}:${selection?['domain_id']}:${selection?['subject_id']}';
   }
 
-  void _openCth02() => setState(() => _activeScreen.value = 'CTH-02');
+  String _contextLabel() {
+    final copy = context.lumenisL10n;
+    if (_activeScreen.value == 'CTH-02') {
+      return copy.text('shell.cth.directory_context');
+    }
+    final selection = _contextMap;
+    if (selection == null) return copy.text('shell.context.unavailable');
+    if (selection['mode'] == 'GLOBAL_ALL') {
+      return copy.text('context.mode.global_all');
+    }
+    if (selection['mode'] != 'FOCUS') {
+      return copy.text('shell.context.unavailable');
+    }
+    final displayName = _localizedDisplayName(selection['display_name']);
+    if (displayName != null) return displayName;
+    return copy.text('context.selector.unnamed_subject');
+  }
 
-  void _returnFromCth02() => setState(() => _activeScreen.value = 'CTH-01');
+  String? _localizedDisplayName(Object? value) {
+    if (value is! Map) return null;
+    final locale = Localizations.localeOf(context);
+    final name =
+        value[locale.toLanguageTag()] ??
+        value[locale.languageCode] ??
+        value['en'] ??
+        value['zh-CN'];
+    return name is String && name.trim().isNotEmpty ? name.trim() : null;
+  }
+
+  Future<void> _openContextPicker() async {
+    final selected = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => _ContextPickerDialog(client: widget.client),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _contextEnvelope = selected);
+  }
+
+  void _openCth02() => _activateScreen('CTH-02');
+
+  void _returnFromCth02() => _activateScreen('CTH-01');
+
+  void _openAccount() => _activateScreen(
+    _activeGroup == 'ACC' ? LumenisWorkspaceRoutes.rootScreenId : 'ACC-01',
+  );
+}
+
+class _SecondaryNavigation extends StatefulWidget {
+  const _SecondaryNavigation({
+    required this.screenIds,
+    required this.activeScreenId,
+    required this.color,
+    required this.onSelected,
+  });
+
+  final List<String> screenIds;
+  final String activeScreenId;
+  final Color color;
+  final ValueChanged<String> onSelected;
+
+  @override
+  State<_SecondaryNavigation> createState() => _SecondaryNavigationState();
+}
+
+class _SecondaryNavigationState extends State<_SecondaryNavigation> {
+  final GlobalKey _activeItemKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _revealActiveItem();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SecondaryNavigation oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.activeScreenId != widget.activeScreenId ||
+        oldWidget.screenIds != widget.screenIds) {
+      _revealActiveItem();
+    }
+  }
+
+  void _revealActiveItem() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final itemContext = _activeItemKey.currentContext;
+      if (!mounted || itemContext == null) return;
+      final reduceMotion =
+          MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+      Scrollable.ensureVisible(
+        itemContext,
+        alignment: 0.5,
+        duration: reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
+    final workflows =
+        LumenisWorkspaceRoutes
+            .workflowsByGroup[LumenisWorkspaceRoutes.groupForScreen(
+          widget.activeScreenId,
+        )]!;
+    final activeWorkflow = LumenisWorkspaceRoutes.workflowForScreen(
+      widget.activeScreenId,
+    );
+    final stages = workflows[activeWorkflow]!;
+    return SizedBox(
+      height: 52,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: LumenisTheme.of(context).canvas,
+          border: Border(
+            bottom: BorderSide(color: LumenisTheme.of(context).line),
+          ),
+        ),
+        child: SingleChildScrollView(
+          key: ValueKey(
+            'workspace-secondary-${widget.activeScreenId.split('-').first}',
+          ),
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Row(
+            children: [
+              PopupMenuButton<String>(
+                tooltip: copy.text(activeWorkflow),
+                onSelected: (workflow) =>
+                    widget.onSelected(workflows[workflow]!.first),
+                itemBuilder: (context) => [
+                  for (final workflow in workflows.keys)
+                    PopupMenuItem(
+                      value: workflow,
+                      child: Text(copy.text(workflow)),
+                    ),
+                ],
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 14,
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        copy.text(activeWorkflow),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.expand_more, size: 16),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20, child: VerticalDivider(width: 12)),
+              for (var index = 0; index < stages.length; index++) ...[
+                if (index > 0) const SizedBox(width: 4),
+                Builder(
+                  builder: (context) {
+                    final screenId = stages[index];
+                    final selected = screenId == widget.activeScreenId;
+                    final desktopRequired = LumenisWorkspaceRoutes
+                        .desktopRequiredScreenIds
+                        .contains(screenId);
+                    return Semantics(
+                      button: true,
+                      selected: selected,
+                      label: copy.text('screen.$screenId'),
+                      child: InkWell(
+                        key: ValueKey('workspace-nav-$screenId'),
+                        onTap: () => widget.onSelected(screenId),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          key: selected ? _activeItemKey : null,
+                          constraints: const BoxConstraints(
+                            minWidth: 48,
+                            minHeight: 48,
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: selected
+                                    ? widget.color
+                                    : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                copy.text('screen.$screenId'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: selected
+                                      ? LumenisTheme.of(context).foreground
+                                      : LumenisTheme.of(context).muted,
+                                  fontSize: 13,
+                                  fontWeight: selected
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                ),
+                              ),
+                              if (desktopRequired) ...[
+                                const SizedBox(width: 6),
+                                Icon(
+                                  Icons.desktop_windows_outlined,
+                                  size: 14,
+                                  color: LumenisTheme.of(context).quiet,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _WideNavigation extends StatelessWidget {
@@ -332,45 +771,85 @@ class _WideNavigation extends StatelessWidget {
     required this.destinations,
     required this.selectedIndex,
     required this.onSelected,
+    required this.accountDestination,
+    required this.accountSelected,
+    required this.onAccountSelected,
+    required this.screenIds,
+    required this.activeScreenId,
+    required this.onScreenSelected,
   });
 
   final List<_WorkspaceDestination> destinations;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
+  final _WorkspaceDestination accountDestination;
+  final bool accountSelected;
+  final VoidCallback onAccountSelected;
+  final List<String> screenIds;
+  final String activeScreenId;
+  final ValueChanged<String> onScreenSelected;
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     return SizedBox(
-      width: 244,
+      width: 216,
       child: DecoratedBox(
-        decoration: const BoxDecoration(color: LumenisTheme.surface),
+        decoration: BoxDecoration(color: LumenisTheme.of(context).canvas),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Padding(
-              padding: EdgeInsets.fromLTRB(22, 24, 18, 34),
+              padding: EdgeInsets.fromLTRB(20, 20, 16, 26),
               child: _LumenisMark(),
             ),
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(22, 0, 16, 12),
-              child: _SectionLabel('工作区'),
+              child: _SectionLabel(copy.text('shell.workspace')),
             ),
             Expanded(
-              child: ListView.builder(
+              child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
-                itemCount: destinations.length,
-                itemBuilder: (context, index) => _WideDestinationRow(
-                  destination: destinations[index],
-                  selected: index == selectedIndex,
-                  onTap: () => onSelected(index),
-                ),
+                children: [
+                  for (var index = 0; index < destinations.length; index++) ...[
+                    _WideDestinationRow(
+                      destination: destinations[index],
+                      selected: index == selectedIndex,
+                      onTap: () => onSelected(index),
+                    ),
+                    if (index == selectedIndex)
+                      _NavigationTree(
+                        screenIds: screenIds,
+                        activeScreenId: activeScreenId,
+                        onSelected: onScreenSelected,
+                      ),
+                  ],
+                  if (accountSelected)
+                    _NavigationTree(
+                      screenIds: screenIds,
+                      activeScreenId: activeScreenId,
+                      onSelected: onScreenSelected,
+                    ),
+                ],
               ),
             ),
-            const Padding(
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+              child: _WideDestinationRow(
+                destination: accountDestination,
+                selected: accountSelected,
+                onTap: onAccountSelected,
+              ),
+            ),
+            Padding(
               padding: EdgeInsets.fromLTRB(22, 16, 20, 22),
               child: Text(
-                '经营 · 品牌 · 智能助理',
-                style: TextStyle(color: LumenisTheme.quiet, height: 1.7),
+                copy.text('shell.workspace_summary'),
+                style: TextStyle(
+                  color: LumenisTheme.of(context).quiet,
+                  height: 1.7,
+                ),
               ),
             ),
           ],
@@ -378,6 +857,101 @@ class _WideNavigation extends StatelessWidget {
       ),
     );
   }
+}
+
+class _NavigationTree extends StatelessWidget {
+  const _NavigationTree({
+    required this.screenIds,
+    required this.activeScreenId,
+    required this.onSelected,
+  });
+
+  final List<String> screenIds;
+  final String activeScreenId;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    key: ValueKey('workspace-secondary-${activeScreenId.split('-').first}'),
+    padding: const EdgeInsets.only(left: 14, bottom: 14),
+    child: Column(
+      children: [
+        for (final workflow
+            in LumenisWorkspaceRoutes
+                .workflowsByGroup[LumenisWorkspaceRoutes.groupForScreen(
+                  activeScreenId,
+                )]!
+                .entries)
+          ExpansionTile(
+            key: ValueKey('workflow-group-${workflow.key}'),
+            initiallyExpanded: workflow.value.contains(activeScreenId),
+            tilePadding: const EdgeInsets.symmetric(horizontal: 8),
+            childrenPadding: EdgeInsets.zero,
+            shape: const Border(),
+            collapsedShape: const Border(),
+            dense: true,
+            title: Text(
+              context.lumenisL10n.text(workflow.key),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            children: [
+              for (final screenId in workflow.value)
+                Semantics(
+                  selected: screenId == activeScreenId,
+                  button: true,
+                  child: Material(
+                    color: screenId == activeScreenId
+                        ? LumenisTheme.of(context).surfaceRaised
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    child: InkWell(
+                      key: ValueKey('workspace-nav-$screenId'),
+                      onTap: () => onSelected(screenId),
+                      borderRadius: BorderRadius.circular(8),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 44),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 9,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                LumenisWorkspaceRoutes.desktopRequiredScreenIds
+                                        .contains(screenId)
+                                    ? Icons.desktop_windows_outlined
+                                    : Icons.description_outlined,
+                                size: 16,
+                                color: LumenisTheme.of(context).quiet,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  context.lumenisL10n.text('screen.$screenId'),
+                                  style: TextStyle(
+                                    color: screenId == activeScreenId
+                                        ? LumenisTheme.of(context).foreground
+                                        : LumenisTheme.of(context).muted,
+                                    fontSize: 13,
+                                    fontWeight: screenId == activeScreenId
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+      ],
+    ),
+  );
 }
 
 class _WideDestinationRow extends StatelessWidget {
@@ -393,12 +967,15 @@ class _WideDestinationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = selected ? destination.color : LumenisTheme.muted;
+    final copy = context.lumenisL10n;
+    final foreground = selected
+        ? LumenisTheme.of(context).foreground
+        : LumenisTheme.of(context).muted;
     return Padding(
       padding: const EdgeInsets.only(bottom: 5),
       child: Material(
         color: selected
-            ? destination.color.withValues(alpha: 0.10)
+            ? LumenisTheme.of(context).surfaceRaised
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
@@ -407,7 +984,8 @@ class _WideDestinationRow extends StatelessWidget {
           child: Semantics(
             button: true,
             selected: selected,
-            label: '${destination.label}，${destination.group}',
+            label:
+                '${copy.text(destination.labelKey)}，${copy.text(destination.groupKey)}',
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               child: Row(
@@ -416,9 +994,11 @@ class _WideDestinationRow extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      destination.label,
+                      copy.text(destination.labelKey),
                       style: TextStyle(
-                        color: selected ? LumenisTheme.foreground : foreground,
+                        color: selected
+                            ? LumenisTheme.of(context).foreground
+                            : foreground,
                         fontSize: 14,
                         fontWeight: selected
                             ? FontWeight.w600
@@ -431,7 +1011,9 @@ class _WideDestinationRow extends StatelessWidget {
                       width: 5,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: destination.color,
+                        color: LumenisTheme.of(
+                          context,
+                        ).resolveSemantic(destination.color),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -450,35 +1032,48 @@ class _WorkspaceHeader extends StatelessWidget {
     required this.destination,
     required this.contextLabel,
     required this.coreLabel,
+    required this.onOpenContextPicker,
+    required this.onOpenAccount,
+    required this.onLocaleChanged,
     required this.onOpenCth02,
     required this.onReturnToCth,
     required this.isCth02,
+    required this.accountActive,
     this.compact = false,
   });
 
   final _WorkspaceDestination destination;
   final String contextLabel;
   final String coreLabel;
+  final VoidCallback onOpenContextPicker;
+  final VoidCallback onOpenAccount;
+  final ValueChanged<Locale?>? onLocaleChanged;
   final VoidCallback onOpenCth02;
   final VoidCallback onReturnToCth;
   final bool isCth02;
+  final bool accountActive;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     return Container(
-      height: 78,
-      padding: EdgeInsets.symmetric(horizontal: compact ? 24 : 34),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: LumenisTheme.line)),
+      height: 64,
+      padding: EdgeInsets.symmetric(horizontal: compact ? 20 : 26),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: LumenisTheme.of(context).line),
+        ),
       ),
       child: Row(
         children: [
           Container(
             width: 3,
-            height: 32,
+            height: 24,
             decoration: BoxDecoration(
-              color: destination.color,
+              color: LumenisTheme.of(
+                context,
+              ).resolveSemantic(destination.color),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -489,21 +1084,21 @@ class _WorkspaceHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  destination.group,
-                  style: const TextStyle(
-                    color: LumenisTheme.quiet,
-                    fontSize: 10,
-                    letterSpacing: 1.25,
+                  copy.text(destination.groupKey),
+                  style: TextStyle(
+                    color: LumenisTheme.of(context).quiet,
+                    fontSize: 12,
+                    letterSpacing: 0,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  destination.label,
+                  copy.text(destination.labelKey),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: LumenisTheme.foreground,
+                  style: TextStyle(
+                    color: LumenisTheme.of(context).foreground,
                     fontSize: 17,
                     fontWeight: FontWeight.w600,
                   ),
@@ -523,22 +1118,49 @@ class _WorkspaceHeader extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.right,
-              style: const TextStyle(color: LumenisTheme.muted, fontSize: 12),
+              style: TextStyle(
+                color: LumenisTheme.of(context).muted,
+                fontSize: 13,
+              ),
             ),
           ),
+          IconButton(
+            tooltip: copy.text('context.selector.open'),
+            onPressed: onOpenContextPicker,
+            icon: const Icon(Icons.tune_rounded),
+            color: LumenisTheme.of(context).muted,
+          ),
+          IconButton(
+            key: const ValueKey('workspace-account-navigation'),
+            tooltip: copy.text(
+              accountActive ? 'navgroup.cth' : 'screen.ACC-01',
+            ),
+            onPressed: onOpenAccount,
+            icon: Icon(
+              accountActive
+                  ? Icons.space_dashboard_outlined
+                  : Icons.person_outline_rounded,
+            ),
+            color: accountActive
+                ? LumenisTheme.of(context).accent
+                : LumenisTheme.of(context).muted,
+          ),
+          if (onLocaleChanged != null)
+            _LocaleSwitcher(onLocaleChanged: onLocaleChanged!),
+          const Sys05AppearanceButton(),
           if (isCth02)
             IconButton(
-              tooltip: '返回商业运营总览',
+              tooltip: copy.text('shell.return_to_overview'),
               onPressed: onReturnToCth,
               icon: const Icon(Icons.arrow_back_rounded),
-              color: LumenisTheme.muted,
+              color: LumenisTheme.of(context).muted,
             )
           else if (destination.id == 'CTH-01')
             IconButton(
-              tooltip: '查看经营主体目录',
+              tooltip: copy.text('shell.open_subject_directory'),
               onPressed: onOpenCth02,
               icon: const Icon(Icons.account_tree_outlined),
-              color: LumenisTheme.muted,
+              color: LumenisTheme.of(context).muted,
             ),
         ],
       ),
@@ -551,40 +1173,51 @@ class _PhoneHeader extends StatelessWidget {
     required this.destination,
     required this.contextLabel,
     required this.coreLabel,
+    required this.onOpenContextPicker,
+    required this.onOpenAccount,
+    required this.onLocaleChanged,
     required this.onOpenCth02,
     required this.onReturnToCth,
     required this.isCth02,
+    required this.accountActive,
   });
 
   final _WorkspaceDestination destination;
   final String contextLabel;
   final String coreLabel;
+  final VoidCallback onOpenContextPicker;
+  final VoidCallback onOpenAccount;
+  final ValueChanged<Locale?>? onLocaleChanged;
   final VoidCallback onOpenCth02;
   final VoidCallback onReturnToCth;
   final bool isCth02;
+  final bool accountActive;
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
-      decoration: const BoxDecoration(
-        color: LumenisTheme.surface,
-        border: Border(bottom: BorderSide(color: LumenisTheme.line)),
+      decoration: BoxDecoration(
+        color: LumenisTheme.of(context).surface,
+        border: Border(
+          bottom: BorderSide(color: LumenisTheme.of(context).line),
+        ),
       ),
       child: Row(
         children: [
           const _LumenisMark(compact: true),
           const SizedBox(width: 13),
-          Container(width: 1, height: 30, color: LumenisTheme.line),
+          Container(width: 1, height: 30, color: LumenisTheme.of(context).line),
           const SizedBox(width: 13),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  destination.label,
-                  style: const TextStyle(
-                    color: LumenisTheme.foreground,
+                  copy.text(destination.labelKey),
+                  style: TextStyle(
+                    color: LumenisTheme.of(context).foreground,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -593,9 +1226,9 @@ class _PhoneHeader extends StatelessWidget {
                   contextLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: LumenisTheme.muted,
-                    fontSize: 11,
+                  style: TextStyle(
+                    color: LumenisTheme.of(context).muted,
+                    fontSize: 12,
                   ),
                 ),
               ],
@@ -603,21 +1236,50 @@ class _PhoneHeader extends StatelessWidget {
           ),
           Tooltip(
             message: coreLabel,
-            child: const Icon(Icons.circle, color: LumenisTheme.quiet, size: 9),
+            child: Icon(
+              Icons.circle,
+              color: LumenisTheme.of(context).quiet,
+              size: 9,
+            ),
           ),
+          IconButton(
+            tooltip: copy.text('context.selector.open'),
+            onPressed: onOpenContextPicker,
+            icon: const Icon(Icons.tune_rounded, size: 20),
+            color: LumenisTheme.of(context).muted,
+          ),
+          IconButton(
+            key: const ValueKey('workspace-account-navigation'),
+            tooltip: copy.text(
+              accountActive ? 'navgroup.cth' : 'screen.ACC-01',
+            ),
+            onPressed: onOpenAccount,
+            icon: Icon(
+              accountActive
+                  ? Icons.space_dashboard_outlined
+                  : Icons.person_outline_rounded,
+              size: 20,
+            ),
+            color: accountActive
+                ? LumenisTheme.of(context).accent
+                : LumenisTheme.of(context).muted,
+          ),
+          if (onLocaleChanged != null)
+            _LocaleSwitcher(onLocaleChanged: onLocaleChanged!),
+          const Sys05AppearanceButton(),
           if (isCth02)
             IconButton(
-              tooltip: '返回商业运营总览',
+              tooltip: copy.text('shell.return_to_overview'),
               onPressed: onReturnToCth,
               icon: const Icon(Icons.arrow_back_rounded, size: 20),
-              color: LumenisTheme.muted,
+              color: LumenisTheme.of(context).muted,
             )
           else if (destination.id == 'CTH-01')
             IconButton(
-              tooltip: '查看经营主体目录',
+              tooltip: copy.text('shell.open_subject_directory'),
               onPressed: onOpenCth02,
               icon: const Icon(Icons.account_tree_outlined, size: 20),
-              color: LumenisTheme.muted,
+              color: LumenisTheme.of(context).muted,
             ),
         ],
       ),
@@ -629,30 +1291,30 @@ class _ContextInspector extends StatelessWidget {
   const _ContextInspector({
     required this.destination,
     required this.contextLabel,
-    required this.runtime,
-    required this.subjects,
-    required this.subjectDirectoryMessage,
+    required this.selectionContext,
+    required this.contextUnavailable,
   });
 
   final _WorkspaceDestination destination;
   final String contextLabel;
-  final Map<String, dynamic> runtime;
-  final List<Map<String, dynamic>> subjects;
-  final String? subjectDirectoryMessage;
+  final Map<String, dynamic>? selectionContext;
+  final bool contextUnavailable;
 
   @override
   Widget build(BuildContext context) {
-    final rawSubject = runtime['subject'];
-    final subject = rawSubject is Map ? rawSubject : const <Object?, Object?>{};
-    final domain = '${runtime['domain'] ?? ''}'.toLowerCase();
-    final product = subject['product'];
-    final isCthContext =
-        destination.id == 'CTH-01' && domain == 'cth' && product == 'CTH';
-    final productCode = product?.toString();
-    final productLabel = productCode == 'ZBMP' ? 'BMP' : productCode;
-    final scopeText = productLabel == null || productLabel.trim().isEmpty
-        ? '当前产品尚未确认'
-        : '产品：$productLabel';
+    final copy = context.lumenisL10n;
+    final domainKey = switch (selectionContext?['domain_id']) {
+      'CTH' => 'domain.cth',
+      'BMP' => 'domain.zbmp',
+      _ => null,
+    };
+    final scopeText = contextUnavailable
+        ? copy.text('shell.context.unavailable')
+        : selectionContext?['mode'] == 'GLOBAL_ALL'
+        ? copy.text('context.mode.global_all')
+        : domainKey == null
+        ? copy.text('context.selector.unnamed_subject')
+        : copy.text(domainKey);
 
     return SizedBox(
       width: 258,
@@ -661,73 +1323,566 @@ class _ContextInspector extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _SectionLabel('当前工作对象'),
+            _SectionLabel(copy.text('shell.current_object')),
             const SizedBox(height: 16),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: LumenisTheme.surface,
-                border: Border.all(color: LumenisTheme.line),
+                color: LumenisTheme.of(context).surface,
+                border: Border.all(color: LumenisTheme.of(context).line),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(destination.icon, color: destination.color, size: 18),
+                  Icon(
+                    destination.icon,
+                    color: LumenisTheme.of(
+                      context,
+                    ).resolveSemantic(destination.color),
+                    size: 18,
+                  ),
                   const SizedBox(height: 14),
                   Text(contextLabel, style: const TextStyle(height: 1.4)),
                   const SizedBox(height: 8),
                   Text(
                     scopeText,
-                    style: const TextStyle(
-                      color: LumenisTheme.muted,
-                      fontSize: 11,
+                    style: TextStyle(
+                      color: LumenisTheme.of(context).muted,
+                      fontSize: 12,
                     ),
                   ),
                 ],
               ),
             ),
             const Spacer(),
-            const Text(
-              '切换页面只改变查看内容，不会更改当前经营主体或品牌。',
+            Text(
+              copy.text('shell.context_rule'),
               style: TextStyle(
-                color: LumenisTheme.quiet,
-                fontSize: 11,
+                color: LumenisTheme.of(context).quiet,
+                fontSize: 12,
                 height: 1.6,
               ),
             ),
-            if (isCthContext) ...[
-              const SizedBox(height: 24),
-              _SectionLabel('可浏览经营主体 · ${subjects.length}'),
-              const SizedBox(height: 10),
-              if (subjects.isEmpty)
-                Text(
-                  subjectDirectoryMessage == null
-                      ? '当前没有可浏览的经营主体。'
-                      : '经营主体列表暂不可用。请打开经营主体目录查看详情。',
-                  style: TextStyle(
-                    color: LumenisTheme.quiet,
-                    fontSize: 11,
-                    height: 1.6,
-                  ),
-                )
-              else
-                ...subjects.take(4).map(_RegisteredSubjectLine.new),
-              if (subjects.length > 4)
-                Text(
-                  '另有 ${subjects.length - 4} 个经营主体',
-                  style: const TextStyle(
-                    color: LumenisTheme.quiet,
-                    fontSize: 11,
-                  ),
-                ),
-            ],
           ],
         ),
       ),
     );
   }
+}
+
+class _ContextPickerDialog extends StatefulWidget {
+  const _ContextPickerDialog({required this.client});
+
+  final LumenisCoreClient client;
+
+  @override
+  State<_ContextPickerDialog> createState() => _ContextPickerDialogState();
+}
+
+class _ContextPickerDialogState extends State<_ContextPickerDialog> {
+  Map<String, dynamic>? _envelope;
+  List<Map<String, dynamic>> _domains = const [];
+  List<Map<String, dynamic>> _subjects = const [];
+  String? _domainId;
+  String? _messageKey;
+  String _query = '';
+  bool _loadingContext = true;
+  bool _loadingSubjects = false;
+  bool _selecting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshContext();
+  }
+
+  Future<void> _refreshContext() async {
+    if (mounted) {
+      setState(() {
+        _loadingContext = true;
+        _messageKey = null;
+      });
+    }
+    try {
+      final envelope = await widget.client.settingsContext();
+      final domains = _readDomains(envelope['authorized_domains']);
+      final contextValue = _asMap(envelope['context']);
+      final currentDomain = contextValue?['domain_id'];
+      final nextDomain = domains.any((item) => item['id'] == currentDomain)
+          ? currentDomain as String
+          : domains.isEmpty
+          ? null
+          : domains.first['id'] as String;
+      if (!mounted) return;
+      setState(() {
+        _envelope = envelope;
+        _domains = domains;
+        _domainId = nextDomain;
+        _loadingContext = false;
+        _messageKey = null;
+      });
+      if (nextDomain != null) await _loadSubjects(nextDomain);
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadingContext = false;
+        _messageKey = _errorMessageKey(error, forDirectory: false);
+      });
+    }
+  }
+
+  Future<void> _loadSubjects(String domainId) async {
+    setState(() {
+      _domainId = domainId;
+      _subjects = const [];
+      _loadingSubjects = true;
+      _messageKey = null;
+    });
+    try {
+      final response = await widget.client.settingsSubjects(domainId: domainId);
+      final domains = _readDomains(response['domains']);
+      if (response['ok'] != true ||
+          response['source'] != 'lumenis_subject_registry' ||
+          response['selection_only'] != true ||
+          !domains.any((item) => item['id'] == domainId)) {
+        throw const FormatException('Invalid subject directory response.');
+      }
+      final rawSubjects = response['subjects'];
+      if (rawSubjects is! List) {
+        throw const FormatException('Subject directory list was not returned.');
+      }
+      final subjects = rawSubjects
+          .map(_asMap)
+          .whereType<Map<String, dynamic>>()
+          .where((item) => item['domain_id'] == domainId)
+          .toList(growable: false);
+      if (!mounted) return;
+      setState(() {
+        _subjects = subjects;
+        _loadingSubjects = false;
+        _messageKey = null;
+      });
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadingSubjects = false;
+        _messageKey = _errorMessageKey(error, forDirectory: true);
+      });
+    }
+  }
+
+  Future<void> _select(String domainId, String subjectId) async {
+    setState(() {
+      _selecting = true;
+      _messageKey = null;
+    });
+    try {
+      final envelope = await widget.client.selectContext(
+        domainId: domainId,
+        subjectId: subjectId,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(envelope);
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _selecting = false;
+        _messageKey = _errorMessageKey(error, forDirectory: false);
+      });
+    }
+  }
+
+  Future<void> _clear() async {
+    setState(() {
+      _selecting = true;
+      _messageKey = null;
+    });
+    try {
+      final envelope = await widget.client.clearContext();
+      if (!mounted) return;
+      Navigator.of(context).pop(envelope);
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _selecting = false;
+        _messageKey = _errorMessageKey(error, forDirectory: false);
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> _readDomains(Object? value) {
+    if (value is! List) return const [];
+    return value
+        .map(_asMap)
+        .whereType<Map<String, dynamic>>()
+        .where((item) => item['id'] == 'CTH' || item['id'] == 'BMP')
+        .toList(growable: false);
+  }
+
+  static Map<String, dynamic>? _asMap(Object? value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return value.map((key, value) => MapEntry('$key', value));
+    return null;
+  }
+
+  String _errorMessageKey(Object error, {required bool forDirectory}) {
+    if (error is LumenisCoreException) {
+      const accepted = {
+        'context.error.auth_required',
+        'context.error.authorization_unavailable',
+        'context.error.invalid_selection',
+        'context.error.permission_denied',
+        'context.error.subject_unavailable',
+        'context.error.registry_unavailable',
+        'context.error.unavailable',
+      };
+      if (error.messageKey != null && accepted.contains(error.messageKey)) {
+        return error.messageKey!;
+      }
+      return switch (error.statusCode) {
+        401 => 'context.error.auth_required',
+        403 => 'context.error.permission_denied',
+        503 => 'context.error.authorization_unavailable',
+        _ =>
+          forDirectory
+              ? 'context.error.registry_unavailable'
+              : 'context.error.unavailable',
+      };
+    }
+    return forDirectory
+        ? 'context.error.registry_unavailable'
+        : 'context.error.unavailable';
+  }
+
+  String _subjectName(Map<String, dynamic> subject, BuildContext context) {
+    final display = _asMap(subject['display_name']);
+    final locale = Localizations.localeOf(context);
+    final name =
+        display?[locale.toLanguageTag()] ??
+        display?[locale.languageCode] ??
+        (locale.languageCode == 'zh' ? subject['name_zh'] : null) ??
+        display?['en'] ??
+        display?['zh-CN'] ??
+        subject['name_en'] ??
+        subject['name_zh'];
+    return name is String && name.trim().isNotEmpty
+        ? name.trim()
+        : context.lumenisL10n.text('context.selector.unnamed_subject');
+  }
+
+  List<Map<String, dynamic>> _filteredSubjects(BuildContext context) {
+    final query = _query.trim().toLowerCase();
+    if (query.isEmpty) return _subjects;
+    return _subjects
+        .where((subject) {
+          final fields = [
+            _subjectName(subject, context),
+            subject['industry'],
+            subject['subject_type_name'],
+          ];
+          return fields.whereType<String>().any(
+            (value) => value.toLowerCase().contains(query),
+          );
+        })
+        .toList(growable: false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
+    final current = _asMap(_envelope?['context']);
+    final currentSubjectId = current?['subject_id'];
+    final filteredSubjects = _filteredSubjects(context);
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      backgroundColor: LumenisTheme.of(context).surface,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 620,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.86,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      copy.text('context.selector.open'),
+                      style: TextStyle(
+                        color: LumenisTheme.of(context).foreground,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: copy.text('context.selector.close'),
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                copy.text('context.selector.scope_note'),
+                style: TextStyle(
+                  color: LumenisTheme.of(context).muted,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 18),
+              if (_loadingContext)
+                Semantics(
+                  liveRegion: true,
+                  label: copy.text('context.selector.loading'),
+                  child: const LinearProgressIndicator(minHeight: 2),
+                )
+              else if (_domains.isEmpty)
+                _ContextPickerMessage(
+                  text: copy.text(_messageKey ?? 'context.selector.no_domains'),
+                  onRetry: _refreshContext,
+                )
+              else ...[
+                _ScopeModeRow(
+                  current: current,
+                  currentLabel: current?['mode'] == 'GLOBAL_ALL'
+                      ? copy.text('context.mode.global_all')
+                      : current == null
+                      ? copy.text('shell.context.unavailable')
+                      : _subjectName(current, context),
+                  selecting: _selecting,
+                  onClear: _clear,
+                ),
+                const SizedBox(height: 18),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final domain in _domains)
+                      ChoiceChip(
+                        label: Text(_domainLabel(domain['id'], copy)),
+                        selected: _domainId == domain['id'],
+                        onSelected: _loadingSubjects || _selecting
+                            ? null
+                            : (_) => _loadSubjects(domain['id'] as String),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  enabled: !_loadingSubjects && !_selecting,
+                  onChanged: (value) => setState(() => _query = value),
+                  decoration: InputDecoration(
+                    hintText: copy.text('context.selector.search_hint'),
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    filled: true,
+                    fillColor: LumenisTheme.of(context).canvas,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: LumenisTheme.of(context).line,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: LumenisTheme.of(context).line,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (_loadingSubjects)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    child: Semantics(
+                      liveRegion: true,
+                      label: copy.text('context.selector.loading_subjects'),
+                      child: const LinearProgressIndicator(minHeight: 2),
+                    ),
+                  )
+                else if (_messageKey != null)
+                  _ContextPickerMessage(
+                    text: copy.text(_messageKey!),
+                    onRetry: _domainId == null
+                        ? _refreshContext
+                        : () => _loadSubjects(_domainId!),
+                  )
+                else if (filteredSubjects.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Text(
+                      copy.text('context.selector.empty'),
+                      style: TextStyle(
+                        color: LumenisTheme.of(context).muted,
+                        height: 1.5,
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: filteredSubjects.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final subject = filteredSubjects[index];
+                        final subjectId = subject['subject_id'];
+                        if (subjectId is! String || subjectId.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        final subjectDomain = subject['domain_id'];
+                        if (subjectDomain != _domainId) {
+                          return const SizedBox.shrink();
+                        }
+                        final name = _subjectName(subject, context);
+                        final metadata = [
+                          subject['subject_type_name'],
+                          subject['industry'],
+                        ].whereType<String>().where((item) => item.isNotEmpty);
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          enabled: !_selecting,
+                          leading: Icon(
+                            _domainId == 'BMP'
+                                ? Icons.sell_outlined
+                                : Icons.apartment_rounded,
+                            color: _domainId == 'BMP'
+                                ? LumenisTheme.of(context).bmp
+                                : LumenisTheme.of(context).cth,
+                          ),
+                          title: Text(name),
+                          subtitle: metadata.isEmpty
+                              ? null
+                              : Text(metadata.join(' · ')),
+                          trailing: currentSubjectId == subjectId
+                              ? Text(
+                                  copy.text('context.selector.selected'),
+                                  style: TextStyle(
+                                    color: LumenisTheme.of(context).accent,
+                                    fontSize: 13,
+                                  ),
+                                )
+                              : const Icon(Icons.chevron_right_rounded),
+                          onTap: _selecting || _domainId == null
+                              ? null
+                              : () => _select(_domainId!, subjectId),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+              if (_selecting)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: LinearProgressIndicator(minHeight: 2),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _domainLabel(Object? id, LumenisLocalizations copy) => switch (id) {
+    'CTH' => copy.text('domain.cth'),
+    'BMP' => copy.text('domain.zbmp'),
+    _ => copy.text('context.selector.unnamed_subject'),
+  };
+}
+
+class _ScopeModeRow extends StatelessWidget {
+  const _ScopeModeRow({
+    required this.current,
+    required this.currentLabel,
+    required this.selecting,
+    required this.onClear,
+  });
+
+  final Map<String, dynamic>? current;
+  final String currentLabel;
+  final bool selecting;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
+    final isGlobal = current?['mode'] == 'GLOBAL_ALL';
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: LumenisTheme.of(context).line),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    copy.text('context.selector.selected'),
+                    style: TextStyle(
+                      color: LumenisTheme.of(context).quiet,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    currentLabel,
+                    style: TextStyle(
+                      color: LumenisTheme.of(context).foreground,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (!isGlobal)
+              TextButton(
+                onPressed: selecting ? null : onClear,
+                child: Text(copy.text('context.mode.global_all')),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ContextPickerMessage extends StatelessWidget {
+  const _ContextPickerMessage({required this.text, required this.onRetry});
+
+  final String text;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: LumenisTheme.of(context).muted,
+              height: 1.5,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: onRetry,
+          child: Text(context.lumenisL10n.text('context.selector.retry')),
+        ),
+      ],
+    ),
+  );
 }
 
 class _LumenisMark extends StatelessWidget {
@@ -737,6 +1892,7 @@ class _LumenisMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     return Row(
       mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
       children: [
@@ -745,16 +1901,16 @@ class _LumenisMark extends StatelessWidget {
           height: 34,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: LumenisTheme.accent.withValues(alpha: 0.10),
+            color: LumenisTheme.of(context).accent.withValues(alpha: 0.10),
             border: Border.all(
-              color: LumenisTheme.accent.withValues(alpha: 0.38),
+              color: LumenisTheme.of(context).accent.withValues(alpha: 0.38),
             ),
             borderRadius: BorderRadius.circular(11),
           ),
-          child: const Text(
+          child: Text(
             '序',
             style: TextStyle(
-              color: LumenisTheme.accent,
+              color: LumenisTheme.of(context).accent,
               fontSize: 19,
               fontWeight: FontWeight.w600,
             ),
@@ -762,14 +1918,14 @@ class _LumenisMark extends StatelessWidget {
         ),
         if (!compact) ...[
           const SizedBox(width: 11),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'LUMENIS',
                   style: TextStyle(
-                    color: LumenisTheme.foreground,
+                    color: LumenisTheme.of(context).foreground,
                     letterSpacing: 1.15,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
@@ -777,9 +1933,9 @@ class _LumenisMark extends StatelessWidget {
                 ),
                 SizedBox(height: 3),
                 Text(
-                  '经营与品牌工作台',
+                  copy.text('shell.workspace_summary'),
                   style: TextStyle(
-                    color: LumenisTheme.quiet,
+                    color: LumenisTheme.of(context).quiet,
                     letterSpacing: 0.45,
                     fontSize: 9,
                   ),
@@ -802,37 +1958,11 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(
-        color: LumenisTheme.quiet,
-        fontSize: 10,
-        letterSpacing: 1.1,
+      style: TextStyle(
+        color: LumenisTheme.of(context).quiet,
+        fontSize: 12,
+        letterSpacing: 0,
         fontWeight: FontWeight.w600,
-      ),
-    );
-  }
-}
-
-class _RegisteredSubjectLine extends StatelessWidget {
-  const _RegisteredSubjectLine(this.subject);
-
-  final Map<String, dynamic> subject;
-
-  @override
-  Widget build(BuildContext context) {
-    final name =
-        subject['name'] ??
-        subject['display_name'] ??
-        subject['subject_name'] ??
-        subject['id'] ??
-        '未命名主体';
-    final identifier = subject['id'] ?? subject['subject_id'];
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Text(
-        identifier == null ? '$name' : '$name · $identifier',
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(color: LumenisTheme.muted, fontSize: 11),
       ),
     );
   }
@@ -848,18 +1978,23 @@ class _StatusPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: LumenisTheme.quiet.withValues(alpha: 0.08),
-        border: Border.all(color: LumenisTheme.quiet.withValues(alpha: 0.22)),
+        color: LumenisTheme.of(context).quiet.withValues(alpha: 0.08),
+        border: Border.all(
+          color: LumenisTheme.of(context).quiet.withValues(alpha: 0.22),
+        ),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.circle, color: LumenisTheme.quiet, size: 6),
+          Icon(Icons.circle, color: LumenisTheme.of(context).quiet, size: 6),
           const SizedBox(width: 7),
           Text(
             label,
-            style: const TextStyle(color: LumenisTheme.muted, fontSize: 10),
+            style: TextStyle(
+              color: LumenisTheme.of(context).muted,
+              fontSize: 12,
+            ),
           ),
         ],
       ),
@@ -867,20 +2002,50 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
+class _LocaleSwitcher extends StatelessWidget {
+  const _LocaleSwitcher({required this.onLocaleChanged});
+
+  final ValueChanged<Locale?> onLocaleChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
+    return PopupMenuButton<String>(
+      tooltip: copy.text('shell.locale.tooltip'),
+      icon: const Icon(Icons.language_rounded),
+      onSelected: (selection) {
+        final locale = switch (selection) {
+          'zh-CN' => const Locale('zh', 'CN'),
+          'en' => const Locale('en'),
+          'ko' => const Locale('ko'),
+          _ => null,
+        };
+        onLocaleChanged(locale);
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(value: 'system', child: Text(copy.text('locale.system'))),
+        PopupMenuItem(value: 'zh-CN', child: Text(copy.text('locale.zh-CN'))),
+        PopupMenuItem(value: 'en', child: Text(copy.text('locale.en'))),
+        PopupMenuItem(value: 'ko', child: Text(copy.text('locale.ko'))),
+      ],
+    );
+  }
+}
+
 class _WorkspaceDestination {
   const _WorkspaceDestination({
     required this.id,
-    required this.label,
-    required this.mobileLabel,
-    required this.group,
+    required this.labelKey,
+    required this.mobileLabelKey,
+    required this.groupKey,
     required this.icon,
     required this.color,
   });
 
   final String id;
-  final String label;
-  final String mobileLabel;
-  final String group;
+  final String labelKey;
+  final String mobileLabelKey;
+  final String groupKey;
   final IconData icon;
   final Color color;
 }

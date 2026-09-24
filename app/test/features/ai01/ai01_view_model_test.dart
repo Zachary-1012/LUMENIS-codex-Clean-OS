@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumenis_app/core/transport/lumenis_http_transport.dart';
 import 'package:lumenis_app/features/ai01/ai01_repository.dart';
 import 'package:lumenis_app/features/ai01/ai01_snapshot.dart';
 import 'package:lumenis_app/features/ai01/ai01_view_model.dart';
@@ -46,7 +45,7 @@ void main() {
   test('classifies an offline failure distinctly', () async {
     final viewModel = Ai01ViewModel(
       repository: _FakeAi01Repository(
-        failures: [const SocketException('connection refused')],
+        failures: [const LumenisTransportException('connection refused')],
         snapshot: _snapshot(),
       ),
     );

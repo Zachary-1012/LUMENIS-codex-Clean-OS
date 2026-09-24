@@ -85,7 +85,7 @@ abstract interface class Cth02Repository {
 }
 
 class CoreCth02Repository implements Cth02Repository {
-  CoreCth02Repository({required LumenisCoreClient client}) : _client = client;
+  CoreCth02Repository({required this._client});
 
   final LumenisCoreClient _client;
 

@@ -8,8 +8,7 @@ enum Bmp01LoadPhase { loading, ready, failed }
 enum Bmp01FailureKind { authentication, permissionDenied, offline, server }
 
 class Bmp01ViewModel extends ChangeNotifier {
-  Bmp01ViewModel({required Bmp01Repository repository})
-    : _repository = repository;
+  Bmp01ViewModel({required this._repository});
 
   final Bmp01Repository _repository;
 

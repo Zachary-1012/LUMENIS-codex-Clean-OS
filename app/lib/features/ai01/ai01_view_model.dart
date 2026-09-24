@@ -1,7 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 
+import '../../core/transport/lumenis_http_transport.dart';
 import 'ai01_repository.dart';
 import 'ai01_snapshot.dart';
 
@@ -10,8 +9,7 @@ enum Ai01LoadPhase { loading, ready, failed }
 enum Ai01FailureKind { authentication, permissionDenied, offline, server }
 
 class Ai01ViewModel extends ChangeNotifier {
-  Ai01ViewModel({required Ai01Repository repository})
-    : _repository = repository;
+  Ai01ViewModel({required this._repository});
 
   final Ai01Repository _repository;
 
@@ -56,7 +54,7 @@ class Ai01ViewModel extends ChangeNotifier {
   }
 
   void useSuggestion(Ai01Suggestion suggestion) {
-    final intent = suggestion.intent;
+    final intent = suggestion.safeIntent;
     if (intent == null || intent.isEmpty) return;
     updateDraft(intent);
   }
@@ -69,7 +67,7 @@ class Ai01ViewModel extends ChangeNotifier {
     if (message.contains('http 403')) {
       return Ai01FailureKind.permissionDenied;
     }
-    if (error is SocketException ||
+    if (isLumenisConnectionError(error) ||
         message.contains('core unavailable') ||
         message.contains('connection timed out')) {
       return Ai01FailureKind.offline;

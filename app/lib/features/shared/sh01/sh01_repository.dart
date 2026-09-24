@@ -11,9 +11,9 @@ abstract interface class Sh01Repository {
 /// and detail routes are deliberately outside this repository boundary.
 class CoreSh01Repository implements Sh01Repository {
   const CoreSh01Repository({
-    required LumenisCoreClient client,
+    required this._client,
     this.catalogReader,
-  }) : _client = client;
+  });
 
   final LumenisCoreClient _client;
   final Sh01CatalogReader? catalogReader;

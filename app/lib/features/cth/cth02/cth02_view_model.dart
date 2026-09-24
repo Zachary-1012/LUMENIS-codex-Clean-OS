@@ -15,8 +15,7 @@ enum Cth02FailureKind {
 }
 
 class Cth02ViewModel extends ChangeNotifier {
-  Cth02ViewModel({required Cth02Repository repository})
-    : _repository = repository;
+  Cth02ViewModel({required this._repository});
 
   final Cth02Repository _repository;
 

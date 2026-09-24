@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
+import '../../../l10n/lumenis_localizations.dart';
 import 'sys01_repository.dart';
 import 'sys01_snapshot.dart';
 import 'sys01_view_model.dart';
@@ -37,7 +38,7 @@ class _Sys01ScreenState extends State<Sys01Screen> {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: LumenisTheme.canvas,
+      color: LumenisTheme.of(context).canvas,
       child: SafeArea(
         child: AnimatedBuilder(
           animation: _viewModel,
@@ -65,7 +66,7 @@ class _LoadingState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       liveRegion: true,
-      label: '正在读取系统运行状态',
+      label: context.lumenisL10n.text('sys01.loading'),
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
@@ -77,9 +78,9 @@ class _LoadingState extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '运行状态',
+                  context.lumenisL10n.text('sys01.title'),
                   style: TextStyle(
-                    color: LumenisTheme.foreground,
+                    color: LumenisTheme.of(context).foreground,
                     fontSize: 27,
                     fontWeight: FontWeight.w600,
                   ),
@@ -107,7 +108,7 @@ class _LoadingLine extends StatelessWidget {
     width: width,
     height: 14,
     decoration: BoxDecoration(
-      color: LumenisTheme.surface,
+      color: LumenisTheme.of(context).surface,
       borderRadius: BorderRadius.circular(4),
     ),
   );
@@ -121,15 +122,28 @@ class _FailureState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     final (title, detail, canRetry) = switch (kind) {
-      Sys01FailureKind.authentication => ('需要登录', '请登录后查看系统运行状态。', false),
-      Sys01FailureKind.permissionDenied => (
-        '当前账号无法查看',
-        '如需查看系统运行状态，请联系系统管理员。',
+      Sys01FailureKind.authentication => (
+        copy.text('sys01.failure.auth.title'),
+        copy.text('sys01.failure.auth.detail'),
         false,
       ),
-      Sys01FailureKind.offline => ('系统服务暂不可用', '暂时无法读取当前运行状态。请检查连接后重试。', true),
-      Sys01FailureKind.response => ('运行状态暂不可用', '系统暂时无法提供有效状态，请稍后重试。', true),
+      Sys01FailureKind.permissionDenied => (
+        copy.text('sys01.failure.permission.title'),
+        copy.text('sys01.failure.permission.detail'),
+        false,
+      ),
+      Sys01FailureKind.offline => (
+        copy.text('sys01.failure.offline.title'),
+        copy.text('sys01.failure.offline.detail'),
+        true,
+      ),
+      Sys01FailureKind.response => (
+        copy.text('sys01.failure.response.title'),
+        copy.text('sys01.failure.response.detail'),
+        true,
+      ),
     };
 
     return Align(
@@ -142,12 +156,12 @@ class _FailureState extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _Eyebrow('系统运行'),
+              _Eyebrow(copy.text('sys01.eyebrow')),
               const SizedBox(height: 16),
               Text(
                 title,
-                style: const TextStyle(
-                  color: LumenisTheme.foreground,
+                style: TextStyle(
+                  color: LumenisTheme.of(context).foreground,
                   fontSize: 26,
                   fontWeight: FontWeight.w600,
                 ),
@@ -155,13 +169,16 @@ class _FailureState extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 detail,
-                style: const TextStyle(color: LumenisTheme.muted, height: 1.5),
+                style: TextStyle(
+                  color: LumenisTheme.of(context).muted,
+                  height: 1.5,
+                ),
               ),
               if (canRetry) ...[
                 const SizedBox(height: 20),
                 FilledButton.tonal(
                   onPressed: onRetry,
-                  child: const Text('重新检查'),
+                  child: Text(copy.text('sys01.retry')),
                 ),
               ],
             ],
@@ -194,6 +211,7 @@ class _RuntimeDashboard extends StatelessWidget {
         final header = _PageHeader(snapshot: snapshot, onRefresh: onRefresh);
         final overview = _OverallStatus(snapshot: snapshot);
         final sourceRail = _SourceRail(snapshot: snapshot);
+        final copy = context.lumenisL10n;
         final desktopSpine = Column(
           key: const ValueKey('sys01/layout-desktop'),
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,20 +223,27 @@ class _RuntimeDashboard extends StatelessWidget {
               children: [
                 Expanded(
                   flex: 7,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _CountStack(
-                        counts: [
-                          _CountEntry('后台进程总数', snapshot.registeredWorkers),
-                          _CountEntry('异常后台进程', snapshot.failedWorkers),
-                          _CountEntry('失败队列记录总数', snapshot.dlqTotal),
-                        ],
+                  child: _CountStack(
+                    counts: [
+                      _CountEntry(
+                        copy.text('sys01.count.total'),
+                        snapshot.registeredWorkers,
                       ),
-                      const SizedBox(height: 18),
-                      _GuardrailPanel(snapshot: snapshot),
+                      _CountEntry(
+                        copy.text('sys01.count.failed'),
+                        snapshot.failedWorkers,
+                      ),
+                      _CountEntry(
+                        copy.text('sys01.count.dlq'),
+                        snapshot.dlqTotal,
+                      ),
                     ],
                   ),
+                ),
+                const SizedBox(width: 18),
+                SizedBox(
+                  width: 250,
+                  child: _GuardrailPanel(snapshot: snapshot),
                 ),
                 const SizedBox(width: 26),
                 Expanded(flex: 4, child: sourceRail),
@@ -233,11 +258,23 @@ class _RuntimeDashboard extends StatelessWidget {
           children: [
             overview,
             const SizedBox(height: 16),
-            _CountCard(label: '异常后台进程', count: snapshot.failedWorkers),
+            _CountCard(
+              keyName: 'failed-workers',
+              label: copy.text('sys01.count.failed'),
+              count: snapshot.failedWorkers,
+            ),
             const SizedBox(height: 10),
-            _CountCard(label: '失败队列记录总数', count: snapshot.dlqTotal),
+            _CountCard(
+              keyName: 'dlq',
+              label: copy.text('sys01.count.dlq'),
+              count: snapshot.dlqTotal,
+            ),
             const SizedBox(height: 10),
-            _CountCard(label: '后台进程总数', count: snapshot.registeredWorkers),
+            _CountCard(
+              keyName: 'registered-workers',
+              label: copy.text('sys01.count.total'),
+              count: snapshot.registeredWorkers,
+            ),
             const SizedBox(height: 18),
             _GuardrailPanel(snapshot: snapshot),
             const SizedBox(height: 14),
@@ -253,9 +290,15 @@ class _RuntimeDashboard extends StatelessWidget {
             const SizedBox(height: 16),
             _CountStack(
               counts: [
-                _CountEntry('后台进程总数', snapshot.registeredWorkers),
-                _CountEntry('异常后台进程', snapshot.failedWorkers),
-                _CountEntry('失败队列记录总数', snapshot.dlqTotal),
+                _CountEntry(
+                  copy.text('sys01.count.total'),
+                  snapshot.registeredWorkers,
+                ),
+                _CountEntry(
+                  copy.text('sys01.count.failed'),
+                  snapshot.failedWorkers,
+                ),
+                _CountEntry(copy.text('sys01.count.dlq'), snapshot.dlqTotal),
               ],
             ),
             const SizedBox(height: 12),
@@ -311,15 +354,15 @@ class _PageHeader extends StatelessWidget {
       spacing: 18,
       runSpacing: 14,
       children: [
-        const Column(
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _Eyebrow('系统运行'),
+            _Eyebrow(context.lumenisL10n.text('sys01.eyebrow')),
             SizedBox(height: 8),
             Text(
-              '运行状态',
+              context.lumenisL10n.text('sys01.title'),
               style: TextStyle(
-                color: LumenisTheme.foreground,
+                color: LumenisTheme.of(context).foreground,
                 fontSize: 28,
                 height: 1.2,
                 fontWeight: FontWeight.w600,
@@ -327,8 +370,11 @@ class _PageHeader extends StatelessWidget {
             ),
             SizedBox(height: 6),
             Text(
-              '后台任务、失败队列与服务保护状态',
-              style: TextStyle(color: LumenisTheme.muted, fontSize: 13),
+              context.lumenisL10n.text('sys01.subtitle'),
+              style: TextStyle(
+                color: LumenisTheme.of(context).muted,
+                fontSize: 13,
+              ),
             ),
           ],
         ),
@@ -336,15 +382,20 @@ class _PageHeader extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              snapshot.hasCompleteRuntimeSample ? '当前状态' : '部分数据',
-              style: const TextStyle(color: LumenisTheme.muted, fontSize: 12),
+              snapshot.hasCompleteRuntimeSample
+                  ? context.lumenisL10n.text('sys01.status.current')
+                  : context.lumenisL10n.text('sys01.status.partial'),
+              style: TextStyle(
+                color: LumenisTheme.of(context).muted,
+                fontSize: 12,
+              ),
             ),
             const SizedBox(width: 8),
             IconButton(
-              tooltip: '刷新运行状态',
+              tooltip: context.lumenisL10n.text('sys01.refresh.tooltip'),
               onPressed: onRefresh,
               icon: const Icon(Icons.refresh_rounded),
-              color: LumenisTheme.system,
+              color: LumenisTheme.of(context).system,
             ),
           ],
         ),
@@ -360,8 +411,9 @@ class _OverallStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = _overallLabel(snapshot.overall);
-    final color = _stateColor(snapshot.overallState);
+    final copy = context.lumenisL10n;
+    final label = _overallLabel(context, snapshot.overall);
+    final color = _stateColor(snapshot.overallState, LumenisTheme.of(context));
     final overall = snapshot.overall;
     final available =
         overall != null &&
@@ -373,65 +425,92 @@ class _OverallStatus extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 19),
       decoration: BoxDecoration(
-        color: LumenisTheme.surface,
+        color: LumenisTheme.of(context).surface,
         border: Border.all(
-          color: available ? color.withValues(alpha: 0.48) : LumenisTheme.line,
+          color: available
+              ? color.withValues(alpha: 0.48)
+              : LumenisTheme.of(context).line,
         ),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final summary = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                copy.text('sys01.status.overall'),
+                style: TextStyle(
+                  color: LumenisTheme.of(context).muted,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Semantics(
+                liveRegion: true,
+                label:
+                    '${copy.text('sys01.status.overall')}：${available ? label : copy.text('sys01.unavailable')}',
+                child: Text(
+                  available ? label : copy.text('sys01.unavailable'),
+                  style: TextStyle(
+                    color: available ? color : LumenisTheme.of(context).muted,
+                    fontSize: 23,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                available
+                    ? copy.text('sys01.status.confirmed')
+                    : copy.text('sys01.status.unavailable'),
+                style: TextStyle(
+                  color: available
+                      ? LumenisTheme.of(context).quiet
+                      : LumenisTheme.of(context).muted,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          );
+          final stateTag = _StateTag(
+            label: available ? label : copy.text('sys01.unavailable'),
+            color: color,
+          );
+          final dot = Container(
             width: 10,
             height: 10,
             margin: const EdgeInsets.only(top: 7),
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
+          );
+          if (constraints.maxWidth < 520) {
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '系统整体状态',
-                  style: TextStyle(color: LumenisTheme.muted, fontSize: 13),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    dot,
+                    const SizedBox(width: 14),
+                    Expanded(child: summary),
+                  ],
                 ),
-                const SizedBox(height: 6),
-                Semantics(
-                  liveRegion: true,
-                  label: '系统整体状态：${available ? label : '暂不可用'}',
-                  child: Text(
-                    available ? label : '暂不可用',
-                    style: TextStyle(
-                      color: available ? color : LumenisTheme.muted,
-                      fontSize: 23,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                if (available) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    '本次系统状态检查已完成',
-                    style: const TextStyle(
-                      color: LumenisTheme.quiet,
-                      fontSize: 12,
-                    ),
-                  ),
-                ] else ...[
-                  const SizedBox(height: 4),
-                  const Text(
-                    '当前无法确认系统整体状态',
-                    style: TextStyle(color: LumenisTheme.muted, fontSize: 12),
-                  ),
-                ],
+                const SizedBox(height: 12),
+                stateTag,
               ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          _StateTag(label: available ? label : '暂不可用', color: color),
-        ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              dot,
+              const SizedBox(width: 14),
+              Expanded(child: summary),
+              const SizedBox(width: 8),
+              stateTag,
+            ],
+          );
+        },
       ),
     );
   }
@@ -453,8 +532,8 @@ class _CountStack extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Panel(
       key: const ValueKey('sys01/counts'),
-      title: '后台任务与失败队列',
-      detail: '展示当前已确认的数量；暂未提供的数据会单独标明。',
+      title: context.lumenisL10n.text('sys01.counts.title'),
+      detail: context.lumenisL10n.text('sys01.counts.detail'),
       child: Column(
         children: [
           for (var index = 0; index < counts.length; index++) ...[
@@ -468,15 +547,20 @@ class _CountStack extends StatelessWidget {
 }
 
 class _CountCard extends StatelessWidget {
-  const _CountCard({required this.label, required this.count});
+  const _CountCard({
+    required this.keyName,
+    required this.label,
+    required this.count,
+  });
 
+  final String keyName;
   final String label;
   final Sys01Count count;
 
   @override
   Widget build(BuildContext context) {
     return _Panel(
-      key: ValueKey('sys01/count-${_countKey(label)}'),
+      key: ValueKey('sys01/count-$keyName'),
       title: label,
       child: _CountValue(count: count, compact: false),
     );
@@ -498,7 +582,7 @@ class _CountLine extends StatelessWidget {
           Expanded(
             child: Text(
               entry.label,
-              style: const TextStyle(color: LumenisTheme.muted),
+              style: TextStyle(color: LumenisTheme.of(context).muted),
             ),
           ),
           _CountValue(count: entry.count, compact: true),
@@ -519,14 +603,18 @@ class _CountValue extends StatelessWidget {
     final value = count.value;
     final available = value != null;
     return Semantics(
-      label: available ? '$value' : '系统状态暂不可用',
+      label: available
+          ? '$value'
+          : context.lumenisL10n.text('sys01.unavailable'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(
             available ? '$value' : '—',
             style: TextStyle(
-              color: available ? LumenisTheme.foreground : LumenisTheme.muted,
+              color: available
+                  ? LumenisTheme.of(context).foreground
+                  : LumenisTheme.of(context).muted,
               fontSize: compact ? 20 : 30,
               height: 1.15,
               fontWeight: FontWeight.w600,
@@ -536,8 +624,13 @@ class _CountValue extends StatelessWidget {
           if (!available) ...[
             const SizedBox(height: 3),
             Text(
-              count.state == 'offline' ? '当前不可用' : '暂未提供',
-              style: const TextStyle(color: LumenisTheme.quiet, fontSize: 11),
+              count.state == 'offline'
+                  ? context.lumenisL10n.text('sys01.unavailable.current')
+                  : context.lumenisL10n.text('sys01.unavailable.not_provided'),
+              style: TextStyle(
+                color: LumenisTheme.of(context).quiet,
+                fontSize: 11,
+              ),
             ),
           ],
         ],
@@ -555,32 +648,41 @@ class _GuardrailPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Panel(
       key: const ValueKey('sys01/guardrails'),
-      title: '服务保护状态',
-      detail: snapshot.hasCompleteRuntimeSample ? '本次检查数据完整' : '部分服务状态暂无法确认',
+      title: context.lumenisL10n.text('sys01.guardrails.title'),
+      detail: snapshot.hasCompleteRuntimeSample
+          ? context.lumenisL10n.text('sys01.guardrails.complete')
+          : context.lumenisL10n.text('sys01.guardrails.partial'),
       child: Column(
         children: [
           _GuardrailLine(
-            label: '过期任务回收服务',
-            value: _reaperLabel(snapshot.reaperRunning),
+            label: context.lumenisL10n.text('sys01.guardrails.reaper'),
+            value: _reaperLabel(context, snapshot.reaperRunning),
             color: snapshot.reaperRunning == true
-                ? LumenisTheme.positive
+                ? LumenisTheme.of(context).positive
                 : snapshot.reaperRunning == false
-                ? LumenisTheme.caution
-                : LumenisTheme.muted,
+                ? LumenisTheme.of(context).caution
+                : LumenisTheme.of(context).muted,
           ),
           const _Rule(),
           _GuardrailLine(
-            label: '已触发的调用保护',
-            value: snapshot.openBreakers?.toString() ?? '暂不可用',
-            color: _breakerColor(snapshot.openBreakers),
+            label: context.lumenisL10n.text('sys01.guardrails.open'),
+            value:
+                snapshot.openBreakers?.toString() ??
+                context.lumenisL10n.text('sys01.unavailable'),
+            color: _breakerColor(
+              snapshot.openBreakers,
+              LumenisTheme.of(context),
+            ),
           ),
           const _Rule(),
           _GuardrailLine(
-            label: '已配置的调用保护',
-            value: snapshot.registeredBreakers?.toString() ?? '暂不可用',
+            label: context.lumenisL10n.text('sys01.guardrails.registered'),
+            value:
+                snapshot.registeredBreakers?.toString() ??
+                context.lumenisL10n.text('sys01.unavailable'),
             color: snapshot.registeredBreakers == null
-                ? LumenisTheme.muted
-                : LumenisTheme.foreground,
+                ? LumenisTheme.of(context).muted
+                : LumenisTheme.of(context).foreground,
           ),
         ],
       ),
@@ -597,21 +699,29 @@ class _GuardrailDisclosure extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: LumenisTheme.surface,
-        border: Border.all(color: LumenisTheme.line),
+        color: LumenisTheme.of(context).surface,
+        border: Border.all(color: LumenisTheme.of(context).line),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: ExpansionTile(
-        key: const ValueKey('sys01/guardrail-inspector'),
-        title: const Text('服务保护状态'),
-        subtitle: Text(
-          snapshot.hasCompleteRuntimeSample ? '查看任务回收与调用保护' : '部分服务状态暂无法确认',
-          style: const TextStyle(color: LumenisTheme.muted, fontSize: 12),
+      child: Material(
+        color: Colors.transparent,
+        child: ExpansionTile(
+          key: const ValueKey('sys01/guardrail-inspector'),
+          title: Text(context.lumenisL10n.text('sys01.guardrails.title')),
+          subtitle: Text(
+            snapshot.hasCompleteRuntimeSample
+                ? context.lumenisL10n.text('sys01.guardrail.inspect')
+                : context.lumenisL10n.text('sys01.guardrail.partial'),
+            style: TextStyle(
+              color: LumenisTheme.of(context).muted,
+              fontSize: 12,
+            ),
+          ),
+          iconColor: LumenisTheme.of(context).system,
+          collapsedIconColor: LumenisTheme.of(context).muted,
+          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          children: [_GuardrailPanel(snapshot: snapshot)],
         ),
-        iconColor: LumenisTheme.system,
-        collapsedIconColor: LumenisTheme.muted,
-        childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-        children: [_GuardrailPanel(snapshot: snapshot)],
       ),
     );
   }
@@ -637,12 +747,15 @@ class _GuardrailLine extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(color: LumenisTheme.muted),
+              style: TextStyle(color: LumenisTheme.of(context).muted),
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(color: color, fontWeight: FontWeight.w600),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: TextStyle(color: color, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -659,39 +772,54 @@ class _SourceRail extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Panel(
       key: const ValueKey('sys01/source-rail'),
-      title: '数据来源与更新时间',
-      detail: '每次打开或刷新时读取当前状态',
+      title: context.lumenisL10n.text('sys01.source.title'),
+      detail: context.lumenisL10n.text('sys01.source.detail'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SourceLine(label: '状态来源', value: '系统运行监测'),
+          _SourceLine(
+            label: context.lumenisL10n.text('sys01.source.source'),
+            value: context.lumenisL10n.text('sys01.source.monitoring'),
+          ),
           const _Rule(),
           _SourceLine(
-            label: '观测状态',
-            value: snapshot.observationAvailable ? '已读取当前观测' : '暂无可用观测',
+            label: context.lumenisL10n.text('sys01.source.observation'),
+            value: snapshot.observationAvailable
+                ? context.lumenisL10n.text('sys01.source.observation_ready')
+                : context.lumenisL10n.text('sys01.source.no_observation'),
           ),
           if (snapshot.guardianName != null) ...[
             const _Rule(),
-            const _SourceLine(label: '运行服务状态', value: '已识别'),
+            _SourceLine(
+              label: context.lumenisL10n.text('sys01.source.runtime'),
+              value: context.lumenisL10n.text('sys01.source.identified'),
+            ),
           ],
           const _Rule(),
           _SourceLine(
-            label: '状态检查时间',
-            value: snapshot.sampleTimestamp ?? '暂不可用',
+            label: context.lumenisL10n.text('sys01.source.time'),
+            value:
+                snapshot.sampleTimestamp ??
+                context.lumenisL10n.text('sys01.unavailable'),
             emphasize: true,
           ),
           const _Rule(),
           _SourceLine(
-            label: '观测编号',
-            value: snapshot.observationTraceId ?? '暂不可用',
+            label: context.lumenisL10n.text('sys01.source.trace'),
+            value:
+                snapshot.observationTraceId ??
+                context.lumenisL10n.text('sys01.unavailable'),
           ),
           const _Rule(),
-          const _SourceLine(label: '访问边界', value: '只读，不修改运行状态'),
+          _SourceLine(
+            label: context.lumenisL10n.text('sys01.source.boundary'),
+            value: context.lumenisL10n.text('sys01.source.read_only'),
+          ),
           const SizedBox(height: 12),
-          const Text(
-            '来源、时间与观测编号对应同一次系统状态读取。',
+          Text(
+            context.lumenisL10n.text('sys01.source.detail'),
             style: TextStyle(
-              color: LumenisTheme.quiet,
+              color: LumenisTheme.of(context).quiet,
               fontSize: 11,
               height: 1.45,
             ),
@@ -722,13 +850,18 @@ class _SourceLine extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(color: LumenisTheme.quiet, fontSize: 11),
+            style: TextStyle(
+              color: LumenisTheme.of(context).quiet,
+              fontSize: 11,
+            ),
           ),
           const SizedBox(height: 4),
           SelectableText(
             value,
             style: TextStyle(
-              color: emphasize ? LumenisTheme.system : LumenisTheme.foreground,
+              color: emphasize
+                  ? LumenisTheme.of(context).system
+                  : LumenisTheme.of(context).foreground,
               fontSize: 13,
               height: 1.4,
               fontWeight: emphasize ? FontWeight.w500 : FontWeight.w400,
@@ -758,8 +891,8 @@ class _Panel extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 15, 16, 14),
       decoration: BoxDecoration(
-        color: LumenisTheme.surface,
-        border: Border.all(color: LumenisTheme.line),
+        color: LumenisTheme.of(context).surface,
+        border: Border.all(color: LumenisTheme.of(context).line),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -767,8 +900,8 @@ class _Panel extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: LumenisTheme.foreground,
+            style: TextStyle(
+              color: LumenisTheme.of(context).foreground,
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
@@ -777,8 +910,8 @@ class _Panel extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               detail!,
-              style: const TextStyle(
-                color: LumenisTheme.quiet,
+              style: TextStyle(
+                color: LumenisTheme.of(context).quiet,
                 fontSize: 11,
                 height: 1.4,
               ),
@@ -826,8 +959,8 @@ class _Eyebrow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     label,
-    style: const TextStyle(
-      color: LumenisTheme.system,
+    style: TextStyle(
+      color: LumenisTheme.of(context).system,
       fontSize: 10,
       letterSpacing: 1.2,
       fontWeight: FontWeight.w600,
@@ -839,40 +972,35 @@ class _Rule extends StatelessWidget {
   const _Rule();
 
   @override
-  Widget build(BuildContext context) =>
-      const SizedBox(height: 1, child: ColoredBox(color: LumenisTheme.line));
+  Widget build(BuildContext context) => SizedBox(
+    height: 1,
+    child: ColoredBox(color: LumenisTheme.of(context).line),
+  );
 }
 
-String _overallLabel(String? value) => switch (value?.toLowerCase()) {
-  'healthy' || 'ok' => '正常',
-  'degraded' => '部分异常',
-  'unhealthy' => '异常',
-  'error' => '异常',
-  _ => '暂不可用',
+String _overallLabel(BuildContext context, String? value) => switch (value
+    ?.toLowerCase()) {
+  'healthy' || 'ok' => context.lumenisL10n.text('sys01.state.healthy'),
+  'degraded' => context.lumenisL10n.text('sys01.state.degraded'),
+  'unhealthy' || 'error' => context.lumenisL10n.text('sys01.state.unhealthy'),
+  _ => context.lumenisL10n.text('sys01.unavailable'),
 };
 
-String _reaperLabel(bool? running) => switch (running) {
-  true => '运行中',
-  false => '已停止',
-  null => '暂不可用',
+String _reaperLabel(BuildContext context, bool? running) => switch (running) {
+  true => context.lumenisL10n.text('status.running'),
+  false => context.lumenisL10n.text('sys01.state.stopped'),
+  null => context.lumenisL10n.text('sys01.unavailable'),
 };
 
-Color _stateColor(String state) => switch (state) {
-  'ok' || 'ready' => LumenisTheme.positive,
-  'warn' || 'idle' => LumenisTheme.caution,
-  'bad' || 'error' => LumenisTheme.danger,
-  _ => LumenisTheme.muted,
+Color _stateColor(String state, LumenisPalette palette) => switch (state) {
+  'ok' || 'ready' => palette.positive,
+  'warn' || 'idle' => palette.caution,
+  'bad' || 'error' => palette.danger,
+  _ => palette.muted,
 };
 
-Color _breakerColor(int? count) => count == null
-    ? LumenisTheme.muted
+Color _breakerColor(int? count, LumenisPalette palette) => count == null
+    ? palette.muted
     : count > 0
-    ? LumenisTheme.danger
-    : LumenisTheme.positive;
-
-String _countKey(String label) => switch (label) {
-  '后台进程总数' => 'registered-workers',
-  '异常后台进程' => 'failed-workers',
-  '失败队列记录总数' => 'dlq',
-  _ => 'metric',
-};
+    ? palette.danger
+    : palette.positive;

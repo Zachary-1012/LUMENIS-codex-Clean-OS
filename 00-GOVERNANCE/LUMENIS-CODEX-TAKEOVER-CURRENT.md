@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**  
-> Updated: 2026-09-24 (ROUND 03 B001M bounded source publication; resolve the current SHA live)
+> Updated: 2026-09-24 (bounded frontend integration candidate; resolve the current SHA live)
 > CI status: resolve from GitHub checks for the exact current origin/main; no historical SHA is a current acceptance result.
 > **Never treat this document's commit, any pasted SHA, or any historical handoff SHA as the current HEAD. Codex must fetch and resolve `origin/main` at session start.**
 
@@ -11,6 +11,39 @@ handoff, not a second instruction system. It does **not** upgrade source evidenc
 LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
+
+### Latest frontend source update — 2026-09-24
+
+The containing source/status commit publishes the previously local Flutter
+frontend and Web adapters together with device appearance, bundled licensed CJK
+fonts, restrained typography, 13–18 px local UI size, zh-CN/en/ko copy, task-specific
+AI entry/script work/material exploration and the Public Website's interactive
+business explanation. Historical route IDs remain compatibility identifiers,
+not a screen quota or shared page template. Reference-to-owner mapping and exact
+verification/limits are in [ROUND 08 frontend evidence](evidence/round-08/FRONTEND-REFERENCE-ADAPTATION-2026-09-24.md).
+
+This is a **FRONTEND INTEGRATION CANDIDATE**, not full-product or Round acceptance.
+Root verified the bounded Web appearance job (local wallpaper choose/restore/
+remove, font/black/frosted/reduced-motion changes, draft preservation, mobile
+layout and language rendering), plus scoped static/tests/builds. Native rendered
+effects and complete CTH/BMP/Shared/AI jobs remain unaccepted. The source-owned
+bootstrap stops registering Flutter's deprecated worker; canonical host cache
+revalidation remains a separate backend dependency.
+
+At this update's base, `lumenis/system/runtime/workspace_host.py`, its tests and
+the `app.py` host registration are still protected local backend candidates;
+clean online main therefore cannot yet be claimed to serve the Web Workspace.
+Trusted `/api/settings/context`, scope/Permission and execution-to-Evidence
+bindings also remain with the product controller. Frontend code and guarded
+pages do not prove those backend capabilities. Preview ran on a disposable DB;
+no production DB, credentials or workstation model configuration were changed.
+
+ROUND 03 retains `REWORK`; no ROUND 04–15 exit is promoted here. Hosted CI remains
+`EXECUTION-LAYER UNVERIFIED` under the known billing constraint; no repeated
+billing diagnosis is required. `RELEASED=NO`, `OPERATING=NO`, `COMMERCIAL_READY=NO`,
+`LUMENIS_INTERNAL_FULL_UNIVERSE_READY=NO`. Verify the containing commit against
+fresh `HEAD`, `origin/main`, live main and these published evidence paths after
+push; the older observations below are historical checkpoints.
 
 This is an observed checkpoint, not a substitute for a fresh `git fetch origin`
 and source/runtime inspection. The local working tree is not visible to a reader

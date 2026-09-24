@@ -1,8 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 
 import '../../../core/lumenis_core_client.dart';
+import '../../../core/transport/lumenis_http_transport.dart';
 import 'sys01_repository.dart';
 import 'sys01_snapshot.dart';
 
@@ -11,8 +10,7 @@ enum Sys01LoadPhase { loading, ready, failed }
 enum Sys01FailureKind { authentication, permissionDenied, offline, response }
 
 class Sys01ViewModel extends ChangeNotifier {
-  Sys01ViewModel({required Sys01Repository repository})
-    : _repository = repository;
+  Sys01ViewModel({required this._repository});
 
   final Sys01Repository _repository;
   Sys01LoadPhase _phase = Sys01LoadPhase.loading;
@@ -60,7 +58,10 @@ class Sys01ViewModel extends ChangeNotifier {
     if (message.contains('http 403')) {
       return Sys01FailureKind.permissionDenied;
     }
-    if (error is SocketException ||
+    if (isLumenisConnectionError(error) ||
+        message.contains('socketexception') ||
+        message.contains('connection refused') ||
+        message.contains('failed host lookup') ||
         (error is LumenisCoreException &&
             (message.contains('core unavailable') ||
                 message.contains('connection timed out')))) {

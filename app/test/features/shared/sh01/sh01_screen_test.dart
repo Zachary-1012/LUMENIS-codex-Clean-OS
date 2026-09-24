@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
+import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import 'package:lumenis_app/features/shared/sh01/sh01_repository.dart';
 import 'package:lumenis_app/features/shared/sh01/sh01_screen.dart';
 import 'package:lumenis_app/features/shared/sh01/sh01_snapshot.dart';
@@ -51,12 +53,32 @@ void main() {
     await tester.tap(capability);
     await tester.pumpAndSettle();
 
-    expect(find.text('提供团队'), findsOneWidget);
-    expect(find.text('共享内容与创作团队'), findsOneWidget);
-    expect(find.text('研究资料'), findsOneWidget);
+    expect(find.text('提供团队'), findsNothing);
+    expect(find.text('共享内容与创作团队'), findsNothing);
+    expect(find.text('CTH'), findsNothing);
+    expect(find.text('BMP'), findsNothing);
+    expect(find.text('商业运营'), findsWidgets);
+    expect(find.text('品牌市场'), findsWidgets);
+    expect(find.text('研究资料'), findsWidgets);
     expect(find.text('仅读取资料，不修改原始内容'), findsOneWidget);
     expect(find.text('执行此能力'), findsNothing);
     _expectNoImplementationTerms(tester);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tablet uses the localized shared capability surface', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1024, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _app(_FakeSh01Repository(_catalog), locale: const Locale('en')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Research & creation tools'), findsOneWidget);
+    expect(find.text('Available to'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -108,6 +130,61 @@ void main() {
     _expectNoImplementationTerms(tester);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'rejects API-shaped capability copy before Text or SelectableText',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final unsafeSkill = <String, dynamic>{
+        'skill_id': 'shared.unsafe_copy',
+        'tool_name': 'provider_internal_tool',
+        'name': 'Provider model=ollama-prod',
+        'description': 'DB Permission Evidence /api/v1 /private/path',
+        'owner': 'internal owner',
+        'product': 'SHARED',
+        'domain': 'content',
+        'consumers': ['CTH', 'BMP'],
+        'category': 'Database Permission',
+        'version': '1.0.0',
+        'permission_level': 'READ',
+        'risk_level': 'LOW',
+        'execution_policy': 'READ_ONLY',
+        'evaluation_status': 'PARTIAL',
+        'implementation_state': 'BOUND_LOCAL_READ',
+      };
+
+      await tester.pumpWidget(
+        _app(
+          _FakeSh01Repository({
+            ..._catalog,
+            'skills': [unsafeSkill],
+          }),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final capability = find.byKey(
+        const Key('sh01-capability-shared.unsafe_copy'),
+      );
+      await tester.ensureVisible(capability);
+      await tester.tap(capability);
+      await tester.pumpAndSettle();
+
+      final selectableCopy = tester
+          .widgetList<SelectableText>(find.byType(SelectableText))
+          .map((widget) => widget.data)
+          .join('\n');
+      expect(find.textContaining('Provider'), findsNothing);
+      expect(find.textContaining('ollama'), findsNothing);
+      expect(selectableCopy, isNot(contains('/api/v1')));
+      expect(selectableCopy, isNot(contains('Permission')));
+      expect(selectableCopy, isNot(contains('private/path')));
+      _expectNoImplementationTerms(tester);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('untrusted global Evidence output and identifiers never render', (
     tester,
@@ -209,16 +286,27 @@ void main() {
   });
 }
 
-Widget _app(Sh01Repository repository, {LumenisCoreClient? client}) =>
-    MaterialApp(
-      theme: LumenisTheme.dark,
-      home: Scaffold(
-        body: Sh01Screen(
-          client: client ?? LumenisCoreClient(),
-          repository: repository,
-        ),
-      ),
-    );
+Widget _app(
+  Sh01Repository repository, {
+  LumenisCoreClient? client,
+  Locale locale = const Locale('zh', 'CN'),
+}) => MaterialApp(
+  theme: LumenisTheme.dark,
+  locale: locale,
+  supportedLocales: LumenisLocalizations.supportedLocales,
+  localizationsDelegates: const [
+    LumenisLocalizations.delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+  ],
+  home: Scaffold(
+    body: Sh01Screen(
+      client: client ?? LumenisCoreClient(),
+      repository: repository,
+    ),
+  ),
+);
 
 class _FakeSh01Repository implements Sh01Repository {
   _FakeSh01Repository(this.response, {this.failure});
@@ -342,6 +430,9 @@ String _visibleCopy(WidgetTester tester) => <String>[
   ...tester
       .widgetList<Semantics>(find.byType(Semantics))
       .map((widget) => widget.properties.label ?? ''),
+  ...tester
+      .widgetList<SelectableText>(find.byType(SelectableText))
+      .map((widget) => widget.data ?? ''),
 ].join('\n');
 
 void _expectNoImplementationTerms(WidgetTester tester) {
@@ -350,7 +441,7 @@ void _expectNoImplementationTerms(WidgetTester tester) {
     isNot(
       matches(
         RegExp(
-          r'\b(core|viewmodel|evidence|owner|scope|contract|provider|runtime|subject|brandfocus|canonical|permission|shared capability|execution policy|registered consumers)\b',
+          r'\b(core|viewmodel|evidence|owner|scope|contract|provider|runtime|subject|brandfocus|canonical|permission|shared capability|service owner|service team|content studio|cth|bmp|execution policy|registered consumers)\b',
           caseSensitive: false,
         ),
       ),

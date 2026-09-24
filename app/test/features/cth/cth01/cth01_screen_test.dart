@@ -1,60 +1,63 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/features/cth/cth01/cth01_screen.dart';
+import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 
 void main() {
-  testWidgets(
-    'desktop renders the current business context and returned fields',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(1440, 1000));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets('desktop leads with the real signal stream and returned fields', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      final client = _ContractClient();
-      await tester.pumpWidget(_app(client));
-      await tester.pumpAndSettle();
+    final client = _ContractClient();
+    await tester.pumpWidget(_app(client));
+    await tester.pumpAndSettle();
 
-      expect(find.text('当前经营主体'), findsOneWidget);
-      expect(find.text('在线负面记录'), findsOneWidget);
-      expect(find.text('2条'), findsOneWidget);
-      expect(find.text('尚未采集'), findsNWidgets(2));
-      expect(find.text('线上负面反馈增加'), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey('cth01/layout-desktop')),
-        findsOneWidget,
-      );
-      expect(find.text('41.8'), findsNothing);
-      expect(find.text('38214'), findsNothing);
-      expect(client.identityCalls, 1);
-      expect(client.screenCalls, 1);
-      _expectNoImplementationCopy(tester);
-      expect(tester.takeException(), isNull);
-    },
-  );
+    expect(find.text('全部可访问范围'), findsOneWidget);
+    expect(find.text('商业运营总览'), findsOneWidget);
+    expect(find.text('在线负面记录'), findsOneWidget);
+    expect(find.text('2条'), findsOneWidget);
+    expect(find.text('尚未采集'), findsNWidgets(2));
+    expect(find.textContaining('到店客流'), findsOneWidget);
+    expect(find.text('部分指标尚不可用。未返回的数据不会按零展示。'), findsOneWidget);
+    expect(find.textContaining('CTH-SUBJECT-7'), findsNothing);
+    expect(find.text('线上负面反馈增加'), findsOneWidget);
+    expect(find.byKey(const ValueKey('cth01/layout-desktop')), findsOneWidget);
+    expect(find.text('41.8'), findsNothing);
+    expect(find.text('38214'), findsNothing);
+    expect(client.identityCalls, 0);
+    expect(client.contextCalls, 1);
+    expect(client.screenCalls, 1);
+    _expectNoImplementationCopy(tester);
+    expect(tester.takeException(), isNull);
+  });
 
-  testWidgets('missing current Subject blocks the aggregate request', (
+  testWidgets('invalid context contract blocks the aggregate request', (
     tester,
   ) async {
     final client = _ContractClient(
-      identity: const {'ok': true, 'domain': 'cth', 'subject': null},
+      contextResponse: const {'ok': true, 'context': null},
     );
     await tester.pumpWidget(_app(client));
     await tester.pumpAndSettle();
 
     expect(find.text('经营主体信息暂不可用'), findsOneWidget);
     expect(find.textContaining('当前经营主体暂不可用'), findsOneWidget);
-    expect(client.identityCalls, 1);
+    expect(client.identityCalls, 0);
     expect(client.screenCalls, 0);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('non-CTH context and unbound page stay blocked', (tester) async {
     final otherProduct = _ContractClient(
-      identity: const {
+      contextResponse: const {
         'ok': true,
-        'domain': 'cth',
-        'subject': {'subject_id': 'OTHER-SUBJECT', 'product': 'BMP'},
+        'contract': 'lumenis.context.v1',
+        'context': {'mode': 'FOCUS', 'domain_id': 'BMP'},
       },
     );
     await tester.pumpWidget(_app(otherProduct));
@@ -68,7 +71,7 @@ void main() {
     await tester.pumpWidget(_app(unbound));
     await tester.pumpAndSettle();
     expect(find.text('经营主体信息暂不可用'), findsOneWidget);
-    expect(find.textContaining('商业运营信息暂不可用'), findsOneWidget);
+    expect(find.textContaining('页面尚未接入所选范围的数据'), findsOneWidget);
     expect(unbound.screenCalls, 1);
     expect(tester.takeException(), isNull);
   });
@@ -78,7 +81,10 @@ void main() {
   ) async {
     for (final status in [401, 403]) {
       final client = _ContractClient(
-        screenError: LumenisCoreException('HTTP $status private server detail'),
+        screenError: LumenisCoreException(
+          'HTTP $status private server detail',
+          statusCode: status,
+        ),
       );
       await tester.pumpWidget(_app(client));
       await tester.pumpAndSettle();
@@ -135,7 +141,7 @@ void main() {
     await tester.tap(find.text('返回运营动态'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('cth01/signal-inspection')), findsNothing);
-    expect(find.text('当前经营主体'), findsOneWidget);
+    expect(find.text('全部可访问范围'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -159,7 +165,7 @@ void main() {
     }
   });
 
-  testWidgets('layout adapts from desktop to phone without overflow', (
+  testWidgets('layout recomposes across desktop, tablet and phone widths', (
     tester,
   ) async {
     final client = _ContractClient();
@@ -168,22 +174,42 @@ void main() {
 
     await tester.pumpWidget(_app(client));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('cth01/layout-desktop')), findsOneWidget);
-    expect(tester.takeException(), isNull);
 
-    await tester.binding.setSurfaceSize(const Size(390, 844));
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey('cth01/layout-single-task')),
-      findsOneWidget,
-    );
-    expect(find.text('尚未采集'), findsNWidgets(2));
-    expect(tester.takeException(), isNull);
+    for (final width in [1440.0, 1280, 1024, 768, 430, 390, 360]) {
+      await tester.binding.setSurfaceSize(Size(width.toDouble(), 1000));
+      await tester.pumpAndSettle();
+      if (width >= 1100) {
+        expect(
+          find.byKey(const ValueKey('cth01/layout-desktop')),
+          findsOneWidget,
+          reason: 'expected desktop composition at $width logical px',
+        );
+      } else {
+        expect(
+          find.byKey(const ValueKey('cth01/layout-single-task')),
+          findsOneWidget,
+          reason: 'expected single task composition at $width logical px',
+        );
+      }
+      expect(find.text('尚未采集'), findsNWidgets(2));
+      expect(tester.takeException(), isNull, reason: 'overflow at $width px');
+    }
   });
 }
 
-Widget _app(LumenisCoreClient client) => MaterialApp(
+Widget _app(
+  LumenisCoreClient client, {
+  Locale locale = const Locale('zh', 'CN'),
+}) => MaterialApp(
+  locale: locale,
   theme: LumenisTheme.dark,
+  supportedLocales: LumenisLocalizations.supportedLocales,
+  localizationsDelegates: const [
+    LumenisLocalizations.delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+  ],
   home: Scaffold(body: Cth01Screen(client: client)),
 );
 
@@ -210,30 +236,36 @@ void _expectNoImplementationCopy(WidgetTester tester) {
 /// Contract-shaped data for widget assertions; the screen never ships it.
 class _ContractClient extends LumenisCoreClient {
   _ContractClient({
-    Map<String, dynamic>? identity,
-    Map<String, dynamic>? response,
-    Object? screenError,
-  }) : _identity = identity,
-       _response = response,
-       _screenError = screenError;
+    this._contextResponse,
+    this._response,
+    this._screenError,
+  });
 
-  final Map<String, dynamic>? _identity;
+  final Map<String, dynamic>? _contextResponse;
   final Map<String, dynamic>? _response;
   final Object? _screenError;
   int identityCalls = 0;
+  int contextCalls = 0;
   int screenCalls = 0;
 
   @override
   Future<Map<String, dynamic>> runtimeIdentity() async {
     identityCalls++;
-    return _identity ??
+    return const {'ok': true};
+  }
+
+  @override
+  Future<Map<String, dynamic>> settingsContext() async {
+    contextCalls++;
+    return _contextResponse ??
         const {
           'ok': true,
-          'domain': 'cth',
-          'subject': {
-            'subject_id': 'CTH-SUBJECT-7',
-            'brand_key': 'cth-brand',
-            'product': 'CTH',
+          'contract': 'lumenis.context.v1',
+          'context': {
+            'mode': 'GLOBAL_ALL',
+            'mode_label_key': 'context.mode.global_all',
+            'domain_id': null,
+            'subject_id': null,
           },
         };
   }
@@ -252,6 +284,7 @@ const Map<String, dynamic> _screenResponse = {
   'ok': true,
   'screen': 'CTH-01',
   'bound': true,
+  'focus_binding': {'state': 'applied', 'applied': true},
   'generated_at': '2026-09-20T10:00:00',
   'sections': [
     {

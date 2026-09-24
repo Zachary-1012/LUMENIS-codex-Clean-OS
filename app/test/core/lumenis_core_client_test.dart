@@ -102,6 +102,34 @@ void main() {
     expect(server.requests.last.authorization, _authorization);
   });
 
+  test('Core redirects fail closed without forwarding context', () async {
+    final server = await _CoreStub.start(redirectCatalog: true);
+    addTearDown(server.close);
+    final client = LumenisCoreClient(baseUrl: server.baseUrl);
+
+    await client.runtimeIdentity();
+    await expectLater(
+      client.sharedSkillsCatalog(),
+      throwsA(
+        isA<LumenisCoreException>().having(
+          (error) => error.statusCode,
+          'statusCode',
+          HttpStatus.found,
+        ),
+      ),
+    );
+    expect(
+      server.requests.where(
+        (request) => request.path == '/api/experience/shared-skills',
+      ),
+      hasLength(1),
+    );
+    expect(
+      server.requests.any((request) => request.path == '/redirected'),
+      isFalse,
+    );
+  });
+
   for (final scheme in ['http', 'https']) {
     test(
       'remote $scheme skips config and never sends Core credentials',
@@ -149,6 +177,7 @@ class _CoreStub {
     required this.authEnabled,
     required this.catalogStatus,
     required this.subjectStatus,
+    required this.redirectCatalog,
   }) {
     server.listen(_handle);
   }
@@ -157,6 +186,7 @@ class _CoreStub {
   final bool authEnabled;
   final int catalogStatus;
   final int subjectStatus;
+  final bool redirectCatalog;
   final List<_RecordedRequest> requests = [];
 
   String get baseUrl => 'http://127.0.0.1:${server.port}';
@@ -165,6 +195,7 @@ class _CoreStub {
     bool authEnabled = true,
     int catalogStatus = HttpStatus.ok,
     int subjectStatus = HttpStatus.ok,
+    bool redirectCatalog = false,
   }) async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     return _CoreStub._(
@@ -172,6 +203,7 @@ class _CoreStub {
       authEnabled: authEnabled,
       catalogStatus: catalogStatus,
       subjectStatus: subjectStatus,
+      redirectCatalog: redirectCatalog,
     );
   }
 
@@ -218,6 +250,12 @@ class _CoreStub {
       return;
     }
     if (path == '/api/experience/shared-skills') {
+      if (redirectCatalog) {
+        request.response.statusCode = HttpStatus.found;
+        request.response.headers.set(HttpHeaders.locationHeader, '/redirected');
+        await request.response.close();
+        return;
+      }
       await _reply(
         request,
         authorized ? catalogStatus : HttpStatus.unauthorized,
@@ -229,6 +267,10 @@ class _CoreStub {
           'skills': [],
         },
       );
+      return;
+    }
+    if (path == '/redirected') {
+      await _reply(request, HttpStatus.ok, const {'ok': true});
       return;
     }
     if (path.startsWith('/api/experience/content/evidence/')) {

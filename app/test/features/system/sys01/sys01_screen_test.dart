@@ -1,9 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
+import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import 'package:lumenis_app/features/system/sys01/sys01_repository.dart';
 import 'package:lumenis_app/features/system/sys01/sys01_screen.dart';
 import 'package:lumenis_app/features/system/sys01/sys01_snapshot.dart';
@@ -55,6 +57,24 @@ void main() {
     expect(find.byKey(const ValueKey('sys01/counts')), findsOneWidget);
     expect(find.byKey(const ValueKey('sys01/guardrails')), findsOneWidget);
     expect(find.byKey(const ValueKey('sys01/source-rail')), findsOneWidget);
+    final countOrigin = tester.getTopLeft(
+      find.byKey(const ValueKey('sys01/counts')),
+    );
+    final guardrailOrigin = tester.getTopLeft(
+      find.byKey(const ValueKey('sys01/guardrails')),
+    );
+    final sourceOrigin = tester.getTopLeft(
+      find.byKey(const ValueKey('sys01/source-rail')),
+    );
+    final countWidth = tester
+        .getSize(find.byKey(const ValueKey('sys01/counts')))
+        .width;
+    final guardrailWidth = tester
+        .getSize(find.byKey(const ValueKey('sys01/guardrails')))
+        .width;
+    expect(countOrigin.dx, lessThan(guardrailOrigin.dx));
+    expect(guardrailOrigin.dx, lessThan(sourceOrigin.dx));
+    expect(guardrailWidth, lessThan(countWidth));
     expect(find.text('状态检查时间'), findsOneWidget);
     expect(find.text('系统运行监测'), findsOneWidget);
     expect(find.text('观测编号'), findsOneWidget);
@@ -78,6 +98,22 @@ void main() {
     ]) {
       expect(find.textContaining(internalTerm), findsNothing);
     }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tablet keeps the operational status readable in English', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1024, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _app(_FakeSys01Repository(_snapshot()), locale: const Locale('en')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Runtime status'), findsOneWidget);
+    expect(find.byKey(const ValueKey('sys01/layout-tablet')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -175,9 +211,22 @@ void main() {
   );
 }
 
-Widget _app(Sys01Repository repository) => MaterialApp(
+Widget _app(
+  Sys01Repository repository, {
+  Locale locale = const Locale('zh', 'CN'),
+}) => MaterialApp(
   theme: LumenisTheme.dark,
-  home: Sys01Screen(client: LumenisCoreClient(), repository: repository),
+  locale: locale,
+  supportedLocales: LumenisLocalizations.supportedLocales,
+  localizationsDelegates: const [
+    LumenisLocalizations.delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+  ],
+  home: Scaffold(
+    body: Sys01Screen(client: LumenisCoreClient(), repository: repository),
+  ),
 );
 
 class _FakeSys01Repository implements Sys01Repository {

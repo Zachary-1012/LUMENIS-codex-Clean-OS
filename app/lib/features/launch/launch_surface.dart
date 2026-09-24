@@ -2,12 +2,22 @@ import 'package:flutter/material.dart';
 
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
+import '../../l10n/lumenis_localizations.dart';
 import '../../shell/lumenis_workspace_shell.dart';
 
 class LaunchSurface extends StatefulWidget {
-  const LaunchSurface({required this.client, super.key});
+  const LaunchSurface({
+    required this.client,
+    this.initialScreenId = 'CTH-01',
+    this.onScreenSelected,
+    this.onLocaleChanged,
+    super.key,
+  });
 
   final LumenisCoreClient client;
+  final String initialScreenId;
+  final ValueChanged<String>? onScreenSelected;
+  final ValueChanged<Locale?>? onLocaleChanged;
 
   @override
   State<LaunchSurface> createState() => _LaunchSurfaceState();
@@ -45,10 +55,20 @@ class _LaunchSurfaceState extends State<LaunchSurface> {
       );
     }
 
+    Map<String, dynamic>? contextEnvelope;
+    try {
+      contextEnvelope = await widget.client.settingsContext();
+    } on Object {
+      // Context is a separate, recoverable workspace capability. Do not turn
+      // a context lookup failure into a product-account launch gate.
+      contextEnvelope = null;
+    }
+
     return _LaunchState(
       runtime: runtime,
+      contextEnvelope: contextEnvelope,
       subjects: const [],
-      subjectDirectoryMessage: '主体目录授权尚未接入；其他工作区不受影响。',
+      subjectDirectoryMessage: null,
     );
   }
 
@@ -62,29 +82,33 @@ class _LaunchSurfaceState extends State<LaunchSurface> {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: LumenisTheme.canvas,
+      color: LumenisTheme.of(context).canvas,
       child: SafeArea(
         child: FutureBuilder<_LaunchState>(
           future: _future,
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
-              return const _Status(
-                title: '序境',
-                detail: '正在连接 LUMENIS Production Core…',
+              final copy = context.lumenisL10n;
+              return _Status(
+                title: copy.text('launch.connecting.title'),
+                detail: copy.text('launch.connecting.detail'),
               );
             }
             if (snapshot.hasError) {
               final error = snapshot.error;
               if (error is LumenisCoreException &&
                   (error.statusCode == 401 || error.statusCode == 403)) {
-                return _AccessDenied(
-                  statusCode: error.statusCode!,
-                  onRetry: _retry,
-                );
+                return _AccessDenied(onRetry: _retry);
               }
               return _Failure(onRetry: _retry);
             }
-            return _Ready(client: widget.client, state: snapshot.requireData);
+            return _Ready(
+              client: widget.client,
+              state: snapshot.requireData,
+              initialScreenId: widget.initialScreenId,
+              onScreenSelected: widget.onScreenSelected,
+              onLocaleChanged: widget.onLocaleChanged,
+            );
           },
         ),
       ),
@@ -93,36 +117,43 @@ class _LaunchSurfaceState extends State<LaunchSurface> {
 }
 
 class _Ready extends StatelessWidget {
-  const _Ready({required this.client, required this.state});
+  const _Ready({
+    required this.client,
+    required this.state,
+    required this.initialScreenId,
+    required this.onScreenSelected,
+    required this.onLocaleChanged,
+  });
 
   final LumenisCoreClient client;
   final _LaunchState state;
+  final String initialScreenId;
+  final ValueChanged<String>? onScreenSelected;
+  final ValueChanged<Locale?>? onLocaleChanged;
 
   @override
   Widget build(BuildContext context) {
     return LumenisWorkspaceShell(
       client: client,
       runtime: state.runtime,
+      contextEnvelope: state.contextEnvelope,
       subjects: state.subjects,
       subjectDirectoryMessage: state.subjectDirectoryMessage,
+      initialScreenId: initialScreenId,
+      onScreenSelected: onScreenSelected,
+      onLocaleChanged: onLocaleChanged,
     );
   }
 }
 
 class _AccessDenied extends StatelessWidget {
-  const _AccessDenied({required this.statusCode, required this.onRetry});
+  const _AccessDenied({required this.onRetry});
 
-  final int statusCode;
   final VoidCallback onRetry;
-
-  String get _title => statusCode == 403 ? '当前核心请求被拒绝' : '序境核心暂不可访问';
-
-  String get _detail => statusCode == 403
-      ? 'LUMENIS Core 返回 HTTP 403。请检查当前运行范围与权限后重试。'
-      : 'LUMENIS Core 返回 HTTP 401。请检查服务端连接配置后重试。';
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(28),
@@ -132,15 +163,15 @@ class _AccessDenied extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
+              Icon(
                 Icons.lock_outline_rounded,
-                color: LumenisTheme.caution,
+                color: LumenisTheme.of(context).caution,
               ),
               const SizedBox(height: 14),
               Text(
-                _title,
-                style: const TextStyle(
-                  color: LumenisTheme.foreground,
+                copy.text('launch.access_denied.title'),
+                style: TextStyle(
+                  color: LumenisTheme.of(context).foreground,
                   fontSize: 24,
                   fontWeight: FontWeight.w600,
                 ),
@@ -149,9 +180,9 @@ class _AccessDenied extends StatelessWidget {
               Semantics(
                 liveRegion: true,
                 child: Text(
-                  _detail,
-                  style: const TextStyle(
-                    color: LumenisTheme.muted,
+                  copy.text('launch.access_denied.detail'),
+                  style: TextStyle(
+                    color: LumenisTheme.of(context).muted,
                     height: 1.5,
                   ),
                 ),
@@ -164,7 +195,7 @@ class _AccessDenied extends StatelessWidget {
                   OutlinedButton.icon(
                     onPressed: onRetry,
                     icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('重新连接'),
+                    label: Text(copy.text('launch.retry')),
                   ),
                 ],
               ),
@@ -183,6 +214,7 @@ class _Failure extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(28),
@@ -192,24 +224,27 @@ class _Failure extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'LUMENIS Core 未连接',
+              Text(
+                copy.text('launch.service_unavailable.title'),
                 style: TextStyle(
-                  color: LumenisTheme.foreground,
+                  color: LumenisTheme.of(context).foreground,
                   fontSize: 24,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
-                '无法读取 LUMENIS Core。请检查 Core 地址与网络连接后重试。',
-                style: TextStyle(color: LumenisTheme.muted, height: 1.5),
+              Text(
+                copy.text('launch.service_unavailable.detail'),
+                style: TextStyle(
+                  color: LumenisTheme.of(context).muted,
+                  height: 1.5,
+                ),
               ),
               const SizedBox(height: 22),
               OutlinedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text('重新连接'),
+                label: Text(copy.text('launch.retry')),
               ),
             ],
           ),
@@ -241,14 +276,17 @@ class _Status extends StatelessWidget {
             const SizedBox(height: 20),
             Text(
               title,
-              style: const TextStyle(
-                color: LumenisTheme.foreground,
+              style: TextStyle(
+                color: LumenisTheme.of(context).foreground,
                 fontSize: 30,
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 10),
-            Text(detail, style: const TextStyle(color: LumenisTheme.muted)),
+            Text(
+              detail,
+              style: TextStyle(color: LumenisTheme.of(context).muted),
+            ),
           ],
         ),
       ),
@@ -259,11 +297,13 @@ class _Status extends StatelessWidget {
 class _LaunchState {
   const _LaunchState({
     required this.runtime,
+    required this.contextEnvelope,
     required this.subjects,
     required this.subjectDirectoryMessage,
   });
 
   final Map<String, dynamic> runtime;
+  final Map<String, dynamic>? contextEnvelope;
   final List<Map<String, dynamic>> subjects;
   final String? subjectDirectoryMessage;
 }

@@ -28,7 +28,8 @@ void main() {
 
     pending.complete(_directory());
     await tester.pumpAndSettle();
-    expect(find.text('SUBJ-PRIVATE-01'), findsOneWidget);
+    expect(find.text('主体敏感名称'), findsOneWidget);
+    expect(find.text('SUBJ-PRIVATE-01'), findsNothing);
   });
 
   testWidgets(
@@ -115,7 +116,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('主体敏感名称'), findsOneWidget);
-      expect(find.text('SUBJ-PRIVATE-01'), findsOneWidget);
+      expect(find.text('SUBJ-PRIVATE-01'), findsNothing);
       expect(find.text('商业主体'), findsOneWidget);
       expect(find.text('服装零售'), findsOneWidget);
       expect(find.textContaining('名单可见不代表可以查看名单内任一主体的经营数据'), findsOneWidget);

@@ -2,10 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
+import 'package:lumenis_app/features/cth/cth01/cth01_screen.dart';
 import 'package:lumenis_app/features/launch/launch_surface.dart';
+import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 
 void main() {
   testWidgets('opens the existing workspace without a product account', (
@@ -21,7 +24,13 @@ void main() {
       );
       await _pumpNetwork(tester);
 
-      expect(find.text('商业运营总览'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(Cth01Screen),
+          matching: find.text('商业运营总览'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('登录序境'), findsNothing);
       expect(find.byTooltip('退出登录'), findsNothing);
       expect(
@@ -29,6 +38,7 @@ void main() {
         containsAllInOrder([
           '/api/auth/config',
           '/api/experience/runtime/identity',
+          '/api/settings/context',
           '/api/experience/screen/CTH-01',
         ]),
       );
@@ -68,7 +78,13 @@ void main() {
       );
       await _pumpNetwork(tester);
 
-      expect(find.text('商业运营总览'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(Cth01Screen),
+          matching: find.text('商业运营总览'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('登录序境'), findsNothing);
       expect(server.requests.last.path, '/api/experience/screen/CTH-01');
       expect(
@@ -91,9 +107,9 @@ void main() {
     await tester.tap(find.byTooltip('查看经营主体目录'));
     await tester.pumpAndSettle();
 
-    expect(find.text('经营主体目录 · 当前经营主体不变'), findsOneWidget);
+    expect(find.text('经营主体目录 · 当前经营范围不变'), findsOneWidget);
     expect(find.textContaining('主体名单授权尚未接入'), findsOneWidget);
-    expect(find.text('商业运营总览'), findsNothing);
+    expect(find.byType(Cth01Screen), findsNothing);
     expect(find.text('登录序境'), findsNothing);
     expect(find.byTooltip('返回商业运营总览'), findsOneWidget);
     expect(client.settingsSubjectsCalls, 1);
@@ -115,7 +131,7 @@ void main() {
       );
       await _pumpNetwork(tester);
 
-      expect(find.text('序境核心暂不可访问'), findsOneWidget);
+      expect(find.text('当前访问暂不可用'), findsOneWidget);
       expect(find.text('登录序境'), findsNothing);
       expect(find.text('重新连接'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -137,8 +153,8 @@ void main() {
       );
       await _pumpNetwork(tester);
 
-      expect(find.text('当前核心请求被拒绝'), findsOneWidget);
-      expect(find.textContaining('HTTP 403'), findsOneWidget);
+      expect(find.text('当前访问暂不可用'), findsOneWidget);
+      expect(find.textContaining('请检查当前访问范围'), findsOneWidget);
       expect(find.text('登录序境'), findsNothing);
       expect(tester.takeException(), isNull);
     });
@@ -162,7 +178,15 @@ class _RealHttpOverrides extends HttpOverrides {
 }
 
 Widget _app(LumenisCoreClient client) => MaterialApp(
+  locale: const Locale('zh', 'CN'),
   theme: LumenisTheme.dark,
+  supportedLocales: LumenisLocalizations.supportedLocales,
+  localizationsDelegates: const [
+    LumenisLocalizations.delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+  ],
   home: Scaffold(body: LaunchSurface(client: client)),
 );
 
@@ -197,7 +221,9 @@ class _DeniedDirectoryClient extends LumenisCoreClient {
   Future<Map<String, dynamic>> screen(String screenId) async => _cthScreen;
 
   @override
-  Future<Map<String, dynamic>> settingsSubjects() async {
+  Future<Map<String, dynamic>> settingsSubjects({
+    String domainId = 'CTH',
+  }) async {
     settingsSubjectsCalls += 1;
     throw const LumenisCoreException(
       'GET /api/settings/subjects?domain_id=CTH failed with HTTP 401',
@@ -273,6 +299,26 @@ class _TestCoreServer {
       );
       return;
     }
+    if (path == '/api/settings/context' && authorized) {
+      await _reply(request, HttpStatus.ok, const {
+        'ok': true,
+        'contract': 'lumenis.context.v1',
+        'context': {
+          'mode': 'GLOBAL_ALL',
+          'mode_label_key': 'context.mode.global_all',
+          'domain_id': null,
+          'product_id': null,
+          'subject_id': null,
+          'display_name': null,
+          'display_state': 'not_applicable',
+        },
+        'authorized_domains': [
+          {'id': 'CTH', 'name': 'Business', 'product': 'CTH'},
+        ],
+        'selection_only': true,
+      });
+      return;
+    }
     if (path == '/api/experience/screen/CTH-01' && authorized) {
       await _reply(request, HttpStatus.ok, _cthScreen);
       return;
@@ -315,6 +361,7 @@ const Map<String, dynamic> _cthScreen = {
   'ok': true,
   'screen': 'CTH-01',
   'bound': true,
+  'focus_binding': {'state': 'applied', 'applied': true},
   'sections': [
     {
       'type': 'kpis',

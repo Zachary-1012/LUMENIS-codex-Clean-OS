@@ -111,7 +111,8 @@ class Cth01DailySummary {
 
 class Cth01ScreenData {
   const Cth01ScreenData({
-    required this.subjectId,
+    required this.contextMode,
+    required this.contextDisplayName,
     required this.generatedAt,
     required this.negativeVoice,
     required this.footfall,
@@ -122,7 +123,8 @@ class Cth01ScreenData {
     required this.dailySummary,
   });
 
-  final String subjectId;
+  final String contextMode;
+  final Map<String, String>? contextDisplayName;
   final String generatedAt;
   final Cth01Metric negativeVoice;
   final Cth01Metric footfall;
@@ -133,10 +135,12 @@ class Cth01ScreenData {
   final Cth01DailySummary dailySummary;
 }
 
-class Cth01ContextUnavailable implements Exception {
-  const Cth01ContextUnavailable(this.message);
+enum Cth01BlockReason { contextUnavailable, pageNotBound }
 
-  final String message;
+class Cth01ContextUnavailable implements Exception {
+  const Cth01ContextUnavailable(this.reason);
+
+  final Cth01BlockReason reason;
 }
 
 class Cth01Repository {
@@ -145,19 +149,17 @@ class Cth01Repository {
   final LumenisCoreClient _client;
 
   Future<Cth01ScreenData> load() async {
-    final identity = await _client.runtimeIdentity();
-    if (identity['ok'] != true) {
-      throw const FormatException(
-        'runtime identity response is not successful',
-      );
+    final selection = await _client.settingsContext();
+    final context = _map(selection['context']);
+    if (selection['ok'] != true ||
+        selection['contract'] != 'lumenis.context.v1' ||
+        context == null) {
+      throw const Cth01ContextUnavailable(Cth01BlockReason.contextUnavailable);
     }
-
-    final currentSubject = _map(identity['subject']);
-    final subjectId = _text(currentSubject?['subject_id']);
-    final product = _text(currentSubject?['product']);
-    final domain = _text(identity['domain']).toLowerCase();
-    if (subjectId.isEmpty || product != 'CTH' || domain != 'cth') {
-      throw const Cth01ContextUnavailable('当前经营主体暂不可用，请刷新后重试。');
+    final mode = _text(context['mode']);
+    final domain = _text(context['domain_id']);
+    if (mode != 'GLOBAL_ALL' && (mode != 'FOCUS' || domain != 'CTH')) {
+      throw const Cth01ContextUnavailable(Cth01BlockReason.contextUnavailable);
     }
 
     final response = await _client.screen('CTH-01');
@@ -166,17 +168,26 @@ class Cth01Repository {
         'CTH-01 response does not match its contract',
       );
     }
-    if (response['bound'] != true) {
-      throw const Cth01ContextUnavailable('商业运营信息暂不可用，请稍后重试。');
+    final focusBinding = _map(response['focus_binding']);
+    if (focusBinding?['applied'] != true || response['bound'] != true) {
+      throw const Cth01ContextUnavailable(Cth01BlockReason.pageNotBound);
     }
 
-    return _decodeScreen(subjectId, response);
+    final displayName = _map(context['display_name']);
+    return _decodeScreen(
+      response,
+      contextMode: mode,
+      contextDisplayName: displayName?.map(
+        (key, value) => MapEntry(key, '$value'),
+      ),
+    );
   }
 
   Cth01ScreenData _decodeScreen(
-    String subjectId,
-    Map<String, dynamic> response,
-  ) {
+    Map<String, dynamic> response, {
+    required String contextMode,
+    required Map<String, String>? contextDisplayName,
+  }) {
     final sections = _maps(response['sections']);
     final kpis = _firstSection(sections, 'kpis');
     final split = _firstSection(sections, 'split');
@@ -188,7 +199,8 @@ class Cth01Repository {
     final canonical = _map(truth?['canonical']);
 
     return Cth01ScreenData(
-      subjectId: subjectId,
+      contextMode: contextMode,
+      contextDisplayName: contextDisplayName,
       generatedAt: _text(response['generated_at']),
       negativeVoice: _metric(kpis, 'cth.negative_voice'),
       footfall: _metric(kpis, 'cth.footfall'),
@@ -227,7 +239,7 @@ class Cth01Repository {
   }
 
   Cth01Signal _signal(Map<String, dynamic> record) => Cth01Signal(
-    title: _text(record['title']).isEmpty ? '未命名事件' : _text(record['title']),
+    title: _text(record['title']),
     level: _text(record['level']),
     date: _text(record['date']),
     time: _text(record['time']),
@@ -239,7 +251,7 @@ class Cth01Repository {
   );
 
   Cth01RiskNote _risk(Map<String, dynamic> record) => Cth01RiskNote(
-    title: _text(record['title']).isEmpty ? '未命名风险记录' : _text(record['title']),
+    title: _text(record['title']),
     level: _text(record['level']),
     description: _text(record['desc']),
     noteReference: _text(record['evidence']),

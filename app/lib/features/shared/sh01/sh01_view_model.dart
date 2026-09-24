@@ -6,8 +6,7 @@ import 'sh01_snapshot.dart';
 enum Sh01LoadPhase { loading, ready, failed }
 
 class Sh01ViewModel extends ChangeNotifier {
-  Sh01ViewModel({required Sh01Repository repository})
-    : _repository = repository;
+  Sh01ViewModel({required this._repository});
 
   final Sh01Repository _repository;
 

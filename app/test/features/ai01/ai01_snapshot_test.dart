@@ -27,6 +27,25 @@ void main() {
     expect(snapshot.suggestions.single.title, '风险变化');
   });
 
+  test('drops suggestions that contain provider or internal identifiers', () {
+    final response = _response();
+    final sections = response['sections'] as List<Object?>;
+    final cards = sections.first as Map<String, dynamic>;
+    cards['items'] = [
+      ...(cards['items'] as List<Object?>),
+      {
+        'title': 'model=ollama-prod',
+        'desc': 'DB Permission Evidence /private/path',
+        'action': {'intent': 'Call /api/v1 provider=internal'},
+      },
+    ];
+
+    final snapshot = Ai01Snapshot.fromResponse(response);
+
+    expect(snapshot.suggestions, hasLength(1));
+    expect(snapshot.suggestions.single.title, '风险变化');
+  });
+
   test('rejects a response for a different screen', () {
     expect(
       () => Ai01Snapshot.fromResponse({'ok': true, 'screen': 'AI-02'}),

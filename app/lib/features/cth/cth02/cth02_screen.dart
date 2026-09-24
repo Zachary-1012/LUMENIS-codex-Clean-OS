@@ -41,7 +41,7 @@ class _Cth02ScreenState extends State<Cth02Screen> {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: LumenisTheme.canvas,
+      color: LumenisTheme.of(context).canvas,
       child: SafeArea(
         child: AnimatedBuilder(
           animation: _viewModel,
@@ -108,15 +108,15 @@ class _FailureState extends StatelessWidget {
                 Text(
                   '经营主体与关联信息',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: LumenisTheme.foreground,
+                    color: LumenisTheme.of(context).foreground,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   _message,
-                  style: const TextStyle(
-                    color: LumenisTheme.muted,
+                  style: TextStyle(
+                    color: LumenisTheme.of(context).muted,
                     height: 1.6,
                   ),
                 ),
@@ -216,7 +216,7 @@ class _PageHeading extends StatelessWidget {
               child: Text(
                 '经营主体与关联信息',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: LumenisTheme.foreground,
+                  color: LumenisTheme.of(context).foreground,
                   fontWeight: FontWeight.w600,
                   letterSpacing: -0.4,
                 ),
@@ -232,17 +232,20 @@ class _PageHeading extends StatelessWidget {
         const SizedBox(height: 5),
         Text(
           '仅展示 CTH 经营主体名单中的基本资料。名单可见不代表可以查看名单内任一主体的经营数据；本页不会切换当前主体。',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: LumenisTheme.muted),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: LumenisTheme.of(context).muted,
+          ),
         ),
         const SizedBox(height: 12),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
-            _StatusChip(label: 'CTH 主体名单', color: LumenisTheme.cth),
-            _StatusChip(label: '名单中 $count 个主体', color: LumenisTheme.quiet),
+            _StatusChip(label: 'CTH 主体名单', color: LumenisTheme.of(context).cth),
+            _StatusChip(
+              label: '名单中 $count 个主体',
+              color: LumenisTheme.of(context).quiet,
+            ),
           ],
         ),
       ],
@@ -264,9 +267,12 @@ class _DirectoryPanel extends StatelessWidget {
         children: [
           const _PanelHeading(eyebrow: 'CTH 主体名单', title: '经营主体名单'),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             '名单只展示主体基本资料，不会切换当前经营主体或显示主体经营数据。',
-            style: TextStyle(color: LumenisTheme.muted, height: 1.5),
+            style: TextStyle(
+              color: LumenisTheme.of(context).muted,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 16),
           if (directory.subjects.isEmpty)
@@ -302,7 +308,6 @@ class _SubjectMetadataRow extends StatelessWidget {
         container: true,
         label: [
           subject.name,
-          subject.id,
           if (subject.type.isNotEmpty) subject.type,
           if (subject.industry.isNotEmpty) subject.industry,
         ].join(' · '),
@@ -311,8 +316,8 @@ class _SubjectMetadataRow extends StatelessWidget {
           children: [
             Text(
               subject.name,
-              style: const TextStyle(
-                color: LumenisTheme.foreground,
+              style: TextStyle(
+                color: LumenisTheme.of(context).foreground,
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
@@ -322,7 +327,6 @@ class _SubjectMetadataRow extends StatelessWidget {
               spacing: 8,
               runSpacing: 3,
               children: [
-                _MetadataText(subject.id),
                 if (subject.type.isNotEmpty) _MetadataText(subject.type),
                 if (subject.industry.isNotEmpty)
                   _MetadataText(subject.industry),
@@ -339,11 +343,11 @@ class _EmptyDirectory extends StatelessWidget {
   const _EmptyDirectory();
 
   @override
-  Widget build(BuildContext context) => const Padding(
+  Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.symmetric(vertical: 26),
     child: Text(
       '当前 CTH 经营主体名单中暂无主体。',
-      style: TextStyle(color: LumenisTheme.muted, height: 1.5),
+      style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.5),
     ),
   );
 }
@@ -360,16 +364,19 @@ class _OwnershipAvailabilityPanel extends StatelessWidget {
         children: [
           const _PanelHeading(eyebrow: '主体关联信息', title: '主体关联信息'),
           const SizedBox(height: 9),
-          const Text(
+          Text(
             '经营主体 → 业务单元 → 品牌 / 业态',
-            style: TextStyle(color: LumenisTheme.foreground, fontSize: 16),
+            style: TextStyle(
+              color: LumenisTheme.of(context).foreground,
+              fontSize: 16,
+            ),
           ),
           const SizedBox(height: 7),
           Text(
             '当前名单未提供已核实的主体与业务单元、品牌及业态关联资料。',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: LumenisTheme.muted),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: LumenisTheme.of(context).muted,
+            ),
           ),
           const SizedBox(height: 22),
           const _RelationshipRecord(
@@ -407,8 +414,8 @@ class _RelationshipRecord extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
         decoration: BoxDecoration(
-          color: LumenisTheme.surfaceRaised,
-          border: Border.all(color: LumenisTheme.line),
+          color: LumenisTheme.of(context).surfaceRaised,
+          border: Border.all(color: LumenisTheme.of(context).line),
           borderRadius: BorderRadius.circular(14),
         ),
         padding: const EdgeInsets.all(16),
@@ -417,8 +424,8 @@ class _RelationshipRecord extends StatelessWidget {
           children: [
             Text(
               index,
-              style: const TextStyle(
-                color: LumenisTheme.cth,
+              style: TextStyle(
+                color: LumenisTheme.of(context).cth,
                 fontFeatures: [FontFeature.tabularFigures()],
                 fontWeight: FontWeight.w700,
               ),
@@ -430,16 +437,16 @@ class _RelationshipRecord extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: LumenisTheme.foreground,
+                    style: TextStyle(
+                      color: LumenisTheme.of(context).foreground,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 5),
                   Text(
                     detail,
-                    style: const TextStyle(
-                      color: LumenisTheme.muted,
+                    style: TextStyle(
+                      color: LumenisTheme.of(context).muted,
                       height: 1.45,
                     ),
                   ),
@@ -447,7 +454,7 @@ class _RelationshipRecord extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            const _StatusChip(label: '资料暂缺', color: LumenisTheme.caution),
+            _StatusChip(label: '资料暂缺', color: LumenisTheme.of(context).caution),
           ],
         ),
       ),
@@ -461,20 +468,29 @@ class _LineageNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
-      color: LumenisTheme.cth.withValues(alpha: 0.07),
+      color: LumenisTheme.of(context).cth.withValues(alpha: 0.07),
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: LumenisTheme.cth.withValues(alpha: 0.22)),
+      border: Border.all(
+        color: LumenisTheme.of(context).cth.withValues(alpha: 0.22),
+      ),
     ),
     padding: const EdgeInsets.all(15),
-    child: const Row(
+    child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.info_outline_rounded, color: LumenisTheme.cth, size: 19),
+        Icon(
+          Icons.info_outline_rounded,
+          color: LumenisTheme.of(context).cth,
+          size: 19,
+        ),
         SizedBox(width: 10),
         Expanded(
           child: Text(
             '本页不会根据其他资料推断主体之间的关联，也不会自动切换当前经营主体。',
-            style: TextStyle(color: LumenisTheme.muted, height: 1.55),
+            style: TextStyle(
+              color: LumenisTheme.of(context).muted,
+              height: 1.55,
+            ),
           ),
         ),
       ],
@@ -491,9 +507,9 @@ class _Panel extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: double.infinity,
     decoration: BoxDecoration(
-      color: LumenisTheme.surface,
+      color: LumenisTheme.of(context).surface,
       borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: LumenisTheme.line),
+      border: Border.all(color: LumenisTheme.of(context).line),
     ),
     padding: const EdgeInsets.all(20),
     child: child,
@@ -515,7 +531,7 @@ class _PanelHeading extends StatelessWidget {
       Text(
         title,
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          color: LumenisTheme.foreground,
+          color: LumenisTheme.of(context).foreground,
           fontSize: 20,
         ),
       ),
@@ -531,8 +547,8 @@ class _Eyebrow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     label,
-    style: const TextStyle(
-      color: LumenisTheme.cth,
+    style: TextStyle(
+      color: LumenisTheme.of(context).cth,
       fontSize: 10,
       letterSpacing: 1.1,
       fontWeight: FontWeight.w700,
@@ -569,7 +585,7 @@ class _MetadataText extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     value,
-    style: const TextStyle(color: LumenisTheme.quiet, fontSize: 11),
+    style: TextStyle(color: LumenisTheme.of(context).quiet, fontSize: 11),
   );
 }
 

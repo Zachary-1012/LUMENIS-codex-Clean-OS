@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
+import '../../l10n/lumenis_localizations.dart';
 import 'ai01_repository.dart';
 import 'ai01_snapshot.dart';
 import 'ai01_view_model.dart';
-
-const _submitBlockedReason = '当前尚未确认可处理的经营主体或品牌，暂不能开始分析。';
 
 class Ai01Screen extends StatefulWidget {
   const Ai01Screen({required this.client, this.repository, super.key});
@@ -53,13 +52,61 @@ class _Ai01ScreenState extends State<Ai01Screen> {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
-      color: LumenisTheme.canvas,
-      child: SafeArea(
-        child: AnimatedBuilder(
-          animation: _viewModel,
-          builder: (context, _) => _buildState(context),
-        ),
+    return DecoratedBox(
+      decoration: BoxDecoration(color: LumenisTheme.of(context).canvas),
+      child: Stack(
+        children: [
+          const IgnorePointer(
+            child: ExcludeSemantics(
+              child: Stack(
+                children: [
+                  Positioned(
+                    top: -130,
+                    right: -100,
+                    child: _SoftGlow(
+                      size: 360,
+                      colors: [
+                        Color(0x1F8A6CC2),
+                        Color(0x0D7C9BD8),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    top: 300,
+                    left: -170,
+                    child: _SoftGlow(
+                      size: 380,
+                      colors: [
+                        Color(0x15E9A16F),
+                        Color(0x08E9A16F),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    right: 20,
+                    bottom: -230,
+                    child: _SoftGlow(
+                      size: 420,
+                      colors: [
+                        Color(0x147B9BE0),
+                        Color(0x087B9BE0),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SafeArea(
+            child: AnimatedBuilder(
+              animation: _viewModel,
+              builder: (context, _) => _buildState(context),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -88,18 +135,14 @@ class _Ai01ScreenState extends State<Ai01Screen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1440),
             child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(inset, 26, inset, 40),
+              padding: EdgeInsets.fromLTRB(inset, phone ? 18 : 30, inset, 40),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _PageHeading(),
-                  const SizedBox(height: 22),
+                  _PageHeading(compact: phone),
+                  SizedBox(height: phone ? 16 : 26),
                   const _ContextBoundary(),
-                  const SizedBox(height: 22),
-                  if (!snapshot.isBound) ...[
-                    const _RuntimeUnboundNotice(),
-                    const SizedBox(height: 18),
-                  ],
+                  SizedBox(height: phone ? 16 : 22),
                   if (wide)
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,27 +151,39 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                           flex: 7,
                           child: _ComposerPane(
                             controller: _draftController,
-                            blockedReason: _submitBlockedReason,
+                            blockedReason: context.lumenisL10n.text(
+                              'ai01.blocked_reason',
+                            ),
                             suggestions: snapshot.suggestions,
                             onChooseSuggestion: _chooseSuggestion,
+                            compact: false,
                           ),
                         ),
                         const SizedBox(width: 18),
                         Expanded(
                           flex: 5,
-                          child: _EvidenceInspector(snapshot: snapshot),
+                          child: _EvidenceInspector(
+                            snapshot: snapshot,
+                            showRuntimeNotice: !snapshot.isBound,
+                          ),
                         ),
                       ],
                     )
                   else ...[
                     _ComposerPane(
                       controller: _draftController,
-                      blockedReason: _submitBlockedReason,
+                      blockedReason: context.lumenisL10n.text(
+                        'ai01.blocked_reason',
+                      ),
                       suggestions: snapshot.suggestions,
                       onChooseSuggestion: _chooseSuggestion,
+                      compact: phone,
                     ),
                     if (phone)
-                      _MobileEvidenceSections(snapshot: snapshot)
+                      _MobileEvidenceSections(
+                        snapshot: snapshot,
+                        showRuntimeNotice: !snapshot.isBound,
+                      )
                     else ...[
                       const SizedBox(height: 14),
                       Align(
@@ -141,7 +196,13 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                                 ? Icons.expand_less
                                 : Icons.account_tree_outlined,
                           ),
-                          label: Text(_showInspector ? '收起资料依据' : '查看资料依据'),
+                          label: Text(
+                            context.lumenisL10n.text(
+                              _showInspector
+                                  ? 'ai01.inspector.hide'
+                                  : 'ai01.inspector.show',
+                            ),
+                          ),
                         ),
                       ),
                       AnimatedSize(
@@ -154,7 +215,10 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                         child: _showInspector
                             ? Padding(
                                 padding: const EdgeInsets.only(top: 12),
-                                child: _EvidenceInspector(snapshot: snapshot),
+                                child: _EvidenceInspector(
+                                  snapshot: snapshot,
+                                  showRuntimeNotice: !snapshot.isBound,
+                                ),
                               )
                             : const SizedBox.shrink(),
                       ),
@@ -173,7 +237,9 @@ class _Ai01ScreenState extends State<Ai01Screen> {
 }
 
 class _PageHeading extends StatelessWidget {
-  const _PageHeading();
+  const _PageHeading({required this.compact});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -185,30 +251,37 @@ class _PageHeading extends StatelessWidget {
             const _AccentMark(),
             const SizedBox(width: 10),
             Text(
-              'AI 助手',
+              context.lumenisL10n.text('ai01.eyebrow'),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: LumenisTheme.ai,
-                letterSpacing: 1.2,
-                fontWeight: FontWeight.w700,
+                color: LumenisTheme.of(context).ai,
+                letterSpacing: 0,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: compact ? 8 : 14),
         Text(
-          'AI 意图入口',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: LumenisTheme.foreground,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.6,
-          ),
+          context.lumenisL10n.text('ai01.title'),
+          style:
+              (compact
+                      ? Theme.of(context).textTheme.headlineMedium
+                      : Theme.of(context).textTheme.displaySmall)
+                  ?.copyWith(
+                    color: LumenisTheme.of(context).foreground,
+                    fontSize: compact ? 24 : 28,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0,
+                  ),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: compact ? 4 : 8),
         Text(
-          '描述想弄清的问题，查看可用资料和模型服务状态。',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: LumenisTheme.muted),
+          context.lumenisL10n.text('ai01.subtitle'),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: LumenisTheme.of(context).muted,
+            fontSize: 14,
+          ),
         ),
       ],
     );
@@ -223,8 +296,8 @@ class _AccentMark extends StatelessWidget {
     return Container(
       width: 9,
       height: 9,
-      decoration: const BoxDecoration(
-        color: LumenisTheme.ai,
+      decoration: BoxDecoration(
+        color: LumenisTheme.of(context).ai,
         shape: BoxShape.circle,
       ),
     );
@@ -239,33 +312,44 @@ class _ContextBoundary extends StatelessWidget {
     return Semantics(
       container: true,
       liveRegion: true,
-      label: '尚未确认可用的经营主体或品牌',
+      label: context.lumenisL10n.text('ai01.context.label'),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
         decoration: BoxDecoration(
-          color: LumenisTheme.surface,
+          color: LumenisTheme.of(context).surface,
           border: Border.all(
-            color: LumenisTheme.caution.withValues(alpha: 0.48),
+            color: LumenisTheme.of(context).caution.withValues(alpha: 0.32),
           ),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A604A34),
+              blurRadius: 18,
+              offset: Offset(0, 6),
+            ),
+          ],
         ),
-        child: const Wrap(
+        child: Wrap(
           spacing: 10,
           runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Icon(Icons.lock_outline, color: LumenisTheme.caution, size: 18),
+            Icon(
+              Icons.lock_outline,
+              color: LumenisTheme.of(context).caution,
+              size: 18,
+            ),
             Text(
-              '尚未确认可用的经营对象',
+              context.lumenisL10n.text('ai01.context.label'),
               style: TextStyle(
-                color: LumenisTheme.foreground,
+                color: LumenisTheme.of(context).foreground,
                 fontWeight: FontWeight.w600,
               ),
             ),
             Text(
-              '当前尚未确认可处理的经营主体或品牌，暂不能开始分析。',
-              style: TextStyle(color: LumenisTheme.muted),
+              context.lumenisL10n.text('ai01.context.detail'),
+              style: TextStyle(color: LumenisTheme.of(context).muted),
             ),
           ],
         ),
@@ -279,18 +363,31 @@ class _RuntimeUnboundNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SurfacePanel(
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: LumenisTheme.of(context).ai.withValues(alpha: 0.06),
+        border: Border.all(
+          color: LumenisTheme.of(context).ai.withValues(alpha: 0.18),
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.sync_problem, color: LumenisTheme.caution, size: 20),
+          Icon(
+            Icons.sync_problem,
+            color: LumenisTheme.of(context).caution,
+            size: 20,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              '暂未读取到完整的 AI 服务状态；未确认的信息不会用示例补齐。',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: LumenisTheme.muted),
+              context.lumenisL10n.text('ai01.unbound'),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: LumenisTheme.of(context).muted,
+              ),
             ),
           ),
         ],
@@ -305,140 +402,244 @@ class _ComposerPane extends StatelessWidget {
     required this.blockedReason,
     required this.suggestions,
     required this.onChooseSuggestion,
+    required this.compact,
   });
 
   final TextEditingController controller;
   final String blockedReason;
   final List<Ai01Suggestion> suggestions;
   final ValueChanged<Ai01Suggestion> onChooseSuggestion;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final safeSuggestions = suggestions
+        .where((suggestion) => suggestion.isProductSafe)
+        .toList(growable: false);
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(compact ? 17 : 26),
+      decoration: BoxDecoration(
+        color: LumenisTheme.of(context).surface,
+        borderRadius: BorderRadius.circular(compact ? 28 : 32),
+        border: Border.all(color: LumenisTheme.of(context).line),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x14725D8F),
+            blurRadius: 34,
+            offset: Offset(0, 15),
+          ),
+          BoxShadow(
+            color: LumenisTheme.of(context).surface.withValues(alpha: .8),
+            blurRadius: 1,
+            offset: Offset(-1, -1),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            runSpacing: 8,
+            children: [
+              Text(
+                context.lumenisL10n.text('ai01.draft.title'),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              _StatusTag(
+                label: context.lumenisL10n.text('ai01.draft.badge'),
+                color: LumenisTheme.of(context).ai,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: controller,
+            style: Theme.of(context).textTheme.bodyLarge,
+            minLines: compact ? 4 : 6,
+            maxLines: compact ? 8 : 10,
+            maxLength: 4000,
+            textInputAction: TextInputAction.newline,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: LumenisTheme.of(
+                context,
+              ).surfaceRaised.withValues(alpha: 0.65),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: compact ? 16 : 21,
+                vertical: compact ? 17 : 22,
+              ),
+              counterStyle: TextStyle(color: LumenisTheme.of(context).quiet),
+              hintText: context.lumenisL10n.text('ai01.draft.hint'),
+              alignLabelWithHint: true,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(24),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(24),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(24),
+                borderSide: BorderSide(
+                  color: LumenisTheme.of(context).ai.withValues(alpha: 0.65),
+                  width: 1.4,
+                ),
+              ),
+            ),
+          ),
+          if (safeSuggestions.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              context.lumenisL10n.text('ai01.suggestions.title'),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: LumenisTheme.of(context).muted,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                for (final suggestion in safeSuggestions)
+                  ActionChip(
+                    onPressed: () => onChooseSuggestion(suggestion),
+                    label: Text(suggestion.safeTitle!),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    backgroundColor: LumenisTheme.of(
+                      context,
+                    ).ai.withValues(alpha: 0.08),
+                    side: BorderSide(
+                      color: LumenisTheme.of(
+                        context,
+                      ).ai.withValues(alpha: 0.18),
+                    ),
+                    shape: const StadiumBorder(),
+                    labelStyle: TextStyle(color: LumenisTheme.of(context).ai),
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 12),
+          Divider(height: 1, color: LumenisTheme.of(context).line),
+          const SizedBox(height: 12),
+          if (compact)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  blockedReason,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: LumenisTheme.of(context).caution,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 48,
+                  child: _submitButton(context, blockedReason),
+                ),
+              ],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    blockedReason,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: LumenisTheme.of(context).caution,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _submitButton(context, blockedReason),
+              ],
+            ),
+          const SizedBox(height: 10),
+          Text(
+            context.lumenisL10n.text('ai01.draft.notice'),
+            style: TextStyle(
+              color: LumenisTheme.of(context).quiet,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Widget _submitButton(BuildContext context, String blockedReason) => Tooltip(
+  message: blockedReason,
+  child: FilledButton.icon(
+    onPressed: null,
+    icon: const Icon(Icons.arrow_forward, size: 18),
+    label: Text(context.lumenisL10n.text('ai01.submit')),
+    style: FilledButton.styleFrom(shape: const StadiumBorder()),
+  ),
+);
+
+class _EvidenceInspector extends StatelessWidget {
+  const _EvidenceInspector({
+    required this.snapshot,
+    required this.showRuntimeNotice,
+  });
+
+  final Ai01Snapshot snapshot;
+  final bool showRuntimeNotice;
 
   @override
   Widget build(BuildContext context) {
     return _SurfacePanel(
       padding: const EdgeInsets.all(20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Text('意图草稿', style: Theme.of(context).textTheme.titleMedium),
-              const Spacer(),
-              const _StatusTag(label: '不会自动发送', color: LumenisTheme.ai),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: controller,
-            minLines: 5,
-            maxLines: 9,
-            maxLength: 4000,
-            textInputAction: TextInputAction.newline,
-            decoration: const InputDecoration(
-              hintText: '描述要分析的问题。离开页面后，草稿不会保留。',
-              alignLabelWithHint: true,
-              border: InputBorder.none,
-            ),
-          ),
-          if (suggestions.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              '可参考的分析问题',
-              style: Theme.of(
-                context,
-              ).textTheme.labelMedium?.copyWith(color: LumenisTheme.muted),
-            ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                for (final suggestion in suggestions)
-                  if (suggestion.intent != null)
-                    TextButton(
-                      onPressed: () => onChooseSuggestion(suggestion),
-                      child: Text(suggestion.title),
-                    ),
-              ],
-            ),
+          if (showRuntimeNotice) ...[
+            const _RuntimeUnboundNotice(),
+            const SizedBox(height: 18),
           ],
-          const SizedBox(height: 12),
-          const Divider(height: 1),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  blockedReason,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: LumenisTheme.caution),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Tooltip(
-                message: blockedReason,
-                child: FilledButton.icon(
-                  onPressed: null,
-                  icon: const Icon(Icons.arrow_forward, size: 18),
-                  label: const Text('开始分析'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            '草稿只保留在此页面；目前还不能开始分析。',
-            style: TextStyle(color: LumenisTheme.quiet, fontSize: 12),
-          ),
+          _EvidencePanel(contained: true),
+          Divider(height: 30, color: LumenisTheme.of(context).line),
+          _ProviderPanel(providers: snapshot.providers, contained: true),
+          Divider(height: 30, color: LumenisTheme.of(context).line),
+          _ExecutionPanel(contained: true),
         ],
       ),
-    );
-  }
-}
-
-class _EvidenceInspector extends StatelessWidget {
-  const _EvidenceInspector({required this.snapshot});
-
-  final Ai01Snapshot snapshot;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _EvidencePanel(),
-        const SizedBox(height: 12),
-        _ProviderPanel(providers: snapshot.providers),
-        const SizedBox(height: 12),
-        _ExecutionPanel(),
-      ],
     );
   }
 }
 
 class _EvidencePanel extends StatelessWidget {
-  const _EvidencePanel();
+  const _EvidencePanel({this.contained = false});
+
+  final bool contained;
 
   @override
   Widget build(BuildContext context) {
-    return _SurfacePanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _PanelEyebrow(label: '业务资料依据'),
-          const SizedBox(height: 12),
-          Text(
-            '当前账号与经营主体或品牌的查看权限尚未确认，因此暂不展示资料总数或历史内容。',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: LumenisTheme.muted),
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _PanelEyebrow(label: context.lumenisL10n.text('ai01.evidence.title')),
+        const SizedBox(height: 12),
+        Text(
+          context.lumenisL10n.text('ai01.evidence.detail'),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: LumenisTheme.of(context).muted,
           ),
-          const SizedBox(height: 14),
-          const _TraceBoundary(),
-        ],
-      ),
+        ),
+        const SizedBox(height: 14),
+        const _TraceBoundary(),
+      ],
     );
+    return contained ? content : _SurfacePanel(child: content);
   }
 }
 
@@ -450,43 +651,43 @@ class _TraceBoundary extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: LumenisTheme.canvas,
-      border: Border.all(color: LumenisTheme.line),
+      color: LumenisTheme.of(context).canvas,
+      border: Border.all(color: LumenisTheme.of(context).line),
       borderRadius: BorderRadius.circular(10),
     ),
-    child: const Text(
-      '当前账号与经营主体或品牌的查看权限尚未确认，因此不展示资料总数或历史明细。',
-      style: TextStyle(color: LumenisTheme.muted, height: 1.5),
+    child: Text(
+      context.lumenisL10n.text('ai01.evidence.trace'),
+      style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.5),
     ),
   );
 }
 
 class _ProviderPanel extends StatelessWidget {
-  const _ProviderPanel({required this.providers});
+  const _ProviderPanel({required this.providers, this.contained = false});
 
   final List<Ai01ProviderState> providers;
+  final bool contained;
 
   @override
   Widget build(BuildContext context) {
-    return _SurfacePanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _PanelEyebrow(label: '模型服务状态'),
-          const SizedBox(height: 9),
-          if (providers.isEmpty)
-            const Text(
-              '暂未收到模型服务的状态。',
-              style: TextStyle(color: LumenisTheme.muted),
-            )
-          else
-            for (final provider in providers) ...[
-              _ProviderRow(provider: provider),
-              if (provider != providers.last) const Divider(height: 1),
-            ],
-        ],
-      ),
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _PanelEyebrow(label: context.lumenisL10n.text('ai01.providers.title')),
+        const SizedBox(height: 9),
+        if (providers.isEmpty)
+          Text(
+            context.lumenisL10n.text('ai01.providers.empty'),
+            style: TextStyle(color: LumenisTheme.of(context).muted),
+          )
+        else
+          for (final provider in providers) ...[
+            _ProviderRow(provider: provider),
+            if (provider != providers.last) const Divider(height: 1),
+          ],
+      ],
     );
+    return contained ? content : _SurfacePanel(child: content);
   }
 }
 
@@ -498,10 +699,10 @@ class _ProviderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (provider.state) {
-      'ok' => LumenisTheme.positive,
-      'idle' => LumenisTheme.caution,
-      'offline' => LumenisTheme.danger,
-      _ => LumenisTheme.quiet,
+      'ok' => LumenisTheme.of(context).positive,
+      'idle' => LumenisTheme.of(context).caution,
+      'offline' => LumenisTheme.of(context).danger,
+      _ => LumenisTheme.of(context).quiet,
     };
 
     return Padding(
@@ -519,7 +720,7 @@ class _ProviderRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _providerDisplayName(provider.name),
+                  _providerDisplayName(context, provider.name),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
@@ -527,7 +728,7 @@ class _ProviderRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            _providerStateLabel(provider.state),
+            _providerStateLabel(context, provider.state),
             style: TextStyle(color: color, fontSize: 12),
           ),
         ],
@@ -537,32 +738,37 @@ class _ProviderRow extends StatelessWidget {
 }
 
 class _ExecutionPanel extends StatelessWidget {
-  const _ExecutionPanel();
+  const _ExecutionPanel({this.contained = false});
+
+  final bool contained;
 
   @override
   Widget build(BuildContext context) {
-    return _SurfacePanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _PanelEyebrow(label: '近期分析记录'),
-          const SizedBox(height: 9),
-          Text(
-            '当前账号可查看的经营范围尚未确认，暂时无法显示近期分析记录。',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: LumenisTheme.muted),
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _PanelEyebrow(label: context.lumenisL10n.text('ai01.executions.title')),
+        const SizedBox(height: 9),
+        Text(
+          context.lumenisL10n.text('ai01.executions.detail'),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: LumenisTheme.of(context).muted,
           ),
-        ],
-      ),
+        ),
+      ],
     );
+    return contained ? content : _SurfacePanel(child: content);
   }
 }
 
 class _MobileEvidenceSections extends StatelessWidget {
-  const _MobileEvidenceSections({required this.snapshot});
+  const _MobileEvidenceSections({
+    required this.snapshot,
+    required this.showRuntimeNotice,
+  });
 
   final Ai01Snapshot snapshot;
+  final bool showRuntimeNotice;
 
   @override
   Widget build(BuildContext context) {
@@ -570,21 +776,29 @@ class _MobileEvidenceSections extends StatelessWidget {
       children: [
         const SizedBox(height: 12),
         _DisclosureSection(
-          title: '数据依据',
+          title: context.lumenisL10n.text('ai01.disclosure.evidence'),
           icon: Icons.account_tree_outlined,
-          child: _EvidencePanel(),
+          child: _EvidencePanel(contained: true),
         ),
         const SizedBox(height: 8),
         _DisclosureSection(
-          title: '模型服务状态',
+          title: context.lumenisL10n.text('ai01.disclosure.providers'),
           icon: Icons.hub_outlined,
-          child: _ProviderPanel(providers: snapshot.providers),
+          child: Column(
+            children: [
+              if (showRuntimeNotice) ...[
+                const _RuntimeUnboundNotice(),
+                const SizedBox(height: 8),
+              ],
+              _ProviderPanel(providers: snapshot.providers, contained: true),
+            ],
+          ),
         ),
         const SizedBox(height: 8),
         _DisclosureSection(
-          title: '近期分析记录',
+          title: context.lumenisL10n.text('ai01.disclosure.executions'),
           icon: Icons.history,
-          child: _ExecutionPanel(),
+          child: _ExecutionPanel(contained: true),
         ),
       ],
     );
@@ -607,20 +821,20 @@ class _DisclosureSection extends StatelessWidget {
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
-        leading: Icon(icon, color: LumenisTheme.shared),
+        leading: Icon(icon, color: LumenisTheme.of(context).shared),
         title: Text(title),
         tilePadding: const EdgeInsets.symmetric(horizontal: 12),
-        childrenPadding: const EdgeInsets.only(bottom: 8),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
         collapsedShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: LumenisTheme.line),
+          side: BorderSide(color: LumenisTheme.of(context).line),
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: LumenisTheme.line),
+          side: BorderSide(color: LumenisTheme.of(context).line),
         ),
-        backgroundColor: LumenisTheme.surface,
-        collapsedBackgroundColor: LumenisTheme.surface,
+        backgroundColor: LumenisTheme.of(context).surface,
+        collapsedBackgroundColor: LumenisTheme.of(context).surface,
         children: [child],
       ),
     );
@@ -633,10 +847,10 @@ class _TruthBoundaryNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      'AI 提供整理与建议；经营数据、原始资料、授权范围和业务结论仍以各自业务记录为准。',
+      context.lumenisL10n.text('ai01.truth'),
       style: Theme.of(
         context,
-      ).textTheme.bodySmall?.copyWith(color: LumenisTheme.quiet),
+      ).textTheme.bodySmall?.copyWith(color: LumenisTheme.of(context).quiet),
     );
   }
 }
@@ -651,7 +865,7 @@ class _PanelEyebrow extends StatelessWidget {
     return Text(
       label,
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        color: LumenisTheme.quiet,
+        color: LumenisTheme.of(context).quiet,
         letterSpacing: 0.9,
         fontWeight: FontWeight.w700,
       ),
@@ -709,13 +923,31 @@ class _SurfacePanel extends StatelessWidget {
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: LumenisTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: LumenisTheme.line),
+        color: LumenisTheme.of(context).surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: LumenisTheme.of(context).line),
       ),
       child: child,
     );
   }
+}
+
+class _SoftGlow extends StatelessWidget {
+  const _SoftGlow({required this.size, required this.colors});
+
+  final double size;
+  final List<Color> colors;
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: size,
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(colors: colors, stops: const [0, 0.48, 1]),
+      ),
+    ),
+  );
 }
 
 class _LoadingState extends StatelessWidget {
@@ -723,15 +955,18 @@ class _LoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(28),
+        padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: LumenisTheme.ai),
+            CircularProgressIndicator(color: LumenisTheme.of(context).ai),
             SizedBox(height: 14),
-            Text('正在读取 AI 服务状态', style: TextStyle(color: LumenisTheme.muted)),
+            Text(
+              context.lumenisL10n.text('ai01.loading'),
+              style: TextStyle(color: LumenisTheme.of(context).muted),
+            ),
           ],
         ),
       ),
@@ -747,17 +982,22 @@ class _FailureState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     final title = switch (kind) {
-      Ai01FailureKind.authentication => '需要登录',
-      Ai01FailureKind.permissionDenied => '暂时无法查看',
-      Ai01FailureKind.offline => 'AI 服务暂时无法连接',
-      Ai01FailureKind.server => '暂时无法读取 AI 服务状态',
+      Ai01FailureKind.authentication => copy.text('ai01.failure.auth.title'),
+      Ai01FailureKind.permissionDenied => copy.text(
+        'ai01.failure.permission.title',
+      ),
+      Ai01FailureKind.offline => copy.text('ai01.failure.offline.title'),
+      Ai01FailureKind.server => copy.text('ai01.failure.server.title'),
     };
     final explanation = switch (kind) {
-      Ai01FailureKind.authentication => '请登录后再查看 AI 服务状态。',
-      Ai01FailureKind.permissionDenied => '当前账号没有查看 AI 服务状态的权限。',
-      Ai01FailureKind.offline => '请检查网络连接后重试。',
-      Ai01FailureKind.server => '请稍后重新读取服务状态。',
+      Ai01FailureKind.authentication => copy.text('ai01.failure.auth.detail'),
+      Ai01FailureKind.permissionDenied => copy.text(
+        'ai01.failure.permission.detail',
+      ),
+      Ai01FailureKind.offline => copy.text('ai01.failure.offline.detail'),
+      Ai01FailureKind.server => copy.text('ai01.failure.server.detail'),
     };
 
     return Center(
@@ -780,7 +1020,7 @@ class _FailureState extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: onRetry,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('重新读取'),
+                  label: Text(copy.text('ai01.retry')),
                 ),
               ],
             ),
@@ -791,15 +1031,13 @@ class _FailureState extends StatelessWidget {
   }
 }
 
-String _providerDisplayName(String name) => switch (name.trim()) {
-  '' || 'Provider' => 'AI 模型服务',
-  _ => name,
-};
+String _providerDisplayName(BuildContext context, String _) =>
+    context.lumenisL10n.text('ai01.provider.default');
 
-String _providerStateLabel(String state) =>
+String _providerStateLabel(BuildContext context, String state) =>
     switch (state.trim().toLowerCase()) {
-      'ok' => '可用',
-      'idle' => '未启动',
-      'offline' => '暂不可用',
-      _ => '状态待确认',
+      'ok' => context.lumenisL10n.text('ai01.provider.available'),
+      'idle' => context.lumenisL10n.text('ai01.provider.idle'),
+      'offline' => context.lumenisL10n.text('ai01.provider.offline'),
+      _ => context.lumenisL10n.text('ai01.provider.unknown'),
     };

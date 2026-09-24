@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
+import '../../l10n/lumenis_localizations.dart';
 import 'bmp01_repository.dart';
 import 'bmp01_snapshot.dart';
 import 'bmp01_view_model.dart';
@@ -36,7 +37,7 @@ class _Bmp01ScreenState extends State<Bmp01Screen> {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: LumenisTheme.canvas,
+      color: LumenisTheme.of(context).canvas,
       child: SafeArea(
         child: AnimatedBuilder(
           animation: _viewModel,
@@ -85,7 +86,10 @@ class _ScopeWorkspace extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(width: 278, child: _BrandFocusRail()),
+                        SizedBox(
+                          width: 278,
+                          child: _BrandFocusRail(snapshot: snapshot),
+                        ),
                         const SizedBox(width: 18),
                         Expanded(
                           child: _MarketOverview(
@@ -96,7 +100,7 @@ class _ScopeWorkspace extends StatelessWidget {
                       ],
                     )
                   else ...[
-                    const _BrandFocusRail(),
+                    _BrandFocusRail(snapshot: snapshot),
                     const SizedBox(height: 14),
                     _MarketOverview(snapshot: snapshot, onRefresh: onRefresh),
                   ],
@@ -124,15 +128,15 @@ class _Heading extends StatelessWidget {
               width: 8,
               height: 28,
               decoration: BoxDecoration(
-                color: LumenisTheme.bmp,
+                color: LumenisTheme.of(context).bmp,
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
             const SizedBox(width: 11),
             Text(
-              'BMP · 品牌市场',
+              context.lumenisL10n.text('bmp01.eyebrow'),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: LumenisTheme.bmp,
+                color: LumenisTheme.of(context).bmp,
                 letterSpacing: 1.1,
                 fontWeight: FontWeight.w700,
               ),
@@ -141,19 +145,19 @@ class _Heading extends StatelessWidget {
         ),
         const SizedBox(height: 13),
         Text(
-          '品牌市场总览',
+          context.lumenisL10n.text('bmp01.title'),
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: LumenisTheme.foreground,
+            color: LumenisTheme.of(context).foreground,
             fontWeight: FontWeight.w600,
             letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 7),
         Text(
-          '围绕品牌，持续了解市场变化、竞品动态与消费者关注。',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: LumenisTheme.muted),
+          context.lumenisL10n.text('bmp01.subtitle'),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: LumenisTheme.of(context).muted,
+          ),
         ),
       ],
     );
@@ -161,7 +165,9 @@ class _Heading extends StatelessWidget {
 }
 
 class _BrandFocusRail extends StatelessWidget {
-  const _BrandFocusRail();
+  const _BrandFocusRail({required this.snapshot});
+
+  final Bmp01Snapshot snapshot;
 
   @override
   Widget build(BuildContext context) {
@@ -170,42 +176,80 @@ class _BrandFocusRail extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _Eyebrow('关注品牌'),
+          _Eyebrow(context.lumenisL10n.text('bmp01.focus.eyebrow')),
           const SizedBox(height: 18),
           Container(
             width: 54,
             height: 54,
             decoration: BoxDecoration(
-              color: LumenisTheme.bmp.withValues(alpha: 0.10),
+              color: LumenisTheme.of(context).bmp.withValues(alpha: 0.10),
               border: Border.all(
-                color: LumenisTheme.bmp.withValues(alpha: 0.38),
+                color: LumenisTheme.of(context).bmp.withValues(alpha: 0.38),
               ),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.storefront_outlined,
-              color: LumenisTheme.bmp,
+              color: LumenisTheme.of(context).bmp,
               size: 25,
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            '暂无可展示的品牌信息',
+          if (snapshot.focusContext.isGlobal && snapshot.isNotCollected) ...[
+            Text(
+              context.lumenisL10n.text('bmp01.focus.global'),
+              style: TextStyle(
+                color: LumenisTheme.of(context).bmp,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
+          Text(
+            _focusTitle(context),
             style: TextStyle(
-              color: LumenisTheme.foreground,
+              color: LumenisTheme.of(context).foreground,
               fontSize: 19,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            '目前无法呈现品牌表现。品牌数据准备好后，会在这里汇总品牌与市场动态。',
-            style: TextStyle(color: LumenisTheme.muted, height: 1.6),
+          Text(
+            _focusDetail(context),
+            style: TextStyle(
+              color: LumenisTheme.of(context).muted,
+              height: 1.6,
+            ),
           ),
         ],
       ),
     );
   }
+
+  String _focusTitle(BuildContext context) {
+    final name = snapshot.focusContext.localizedName(
+      Localizations.localeOf(context).languageCode == 'zh'
+          ? 'zh-CN'
+          : Localizations.localeOf(context).languageCode,
+    );
+    if (snapshot.focusContext.isFocus && name != null) {
+      return context.lumenisL10n.text(
+        'bmp01.focus.selected',
+        values: {'name': name},
+      );
+    }
+    if (snapshot.focusContext.isFocus) {
+      return context.lumenisL10n.text('bmp01.focus.unavailable');
+    }
+    if (snapshot.isNotCollected) {
+      return context.lumenisL10n.text('bmp01.focus.empty.title');
+    }
+    return context.lumenisL10n.text('bmp01.focus.global');
+  }
+
+  String _focusDetail(BuildContext context) =>
+      context.lumenisL10n.text('bmp01.focus.empty.detail');
 }
 
 class _MarketOverview extends StatelessWidget {
@@ -216,21 +260,27 @@ class _MarketOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     final ownerMatches = snapshot.isBmpOwner;
+    final metricsReady = snapshot.canDisplayMetrics;
     final title = !ownerMatches
-        ? '品牌市场信息暂不可用'
+        ? copy.text('bmp01.market.blocked.title')
         : snapshot.isNotCollected
-        ? '暂时没有品牌市场数据'
-        : snapshot.dataState == 'READY'
-        ? '尚未选择关注品牌'
-        : '品牌市场信息暂不可用';
+        ? copy.text('bmp01.market.not_collected.title')
+        : metricsReady
+        ? copy.text('bmp01.market.ready.title')
+        : snapshot.focusContext.isGlobal
+        ? copy.text('bmp01.market.global.title')
+        : copy.text('bmp01.market.blocked.title');
     final detail = !ownerMatches
-        ? '请刷新后重试，当前不会展示未经确认的品牌信息。'
+        ? copy.text('bmp01.market.blocked.detail')
         : snapshot.isNotCollected
-        ? '品牌表现、竞品动态与市场变化会在数据可用后呈现。'
-        : snapshot.dataState == 'READY'
-        ? '当前没有已确认的关注品牌，因此暂不展示品牌表现或竞品数据。'
-        : '请刷新后重试，当前不会展示未经确认的品牌信息。';
+        ? copy.text('bmp01.market.not_collected.detail')
+        : metricsReady
+        ? copy.text('bmp01.market.ready.detail')
+        : snapshot.focusContext.isGlobal
+        ? copy.text('bmp01.market.global.detail')
+        : copy.text('bmp01.market.blocked.detail');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -240,7 +290,7 @@ class _MarketOverview extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _Eyebrow('品牌市场动态'),
+              _Eyebrow(copy.text('bmp01.market.eyebrow')),
               const SizedBox(height: 24),
               Center(
                 child: ConstrainedBox(
@@ -249,20 +299,29 @@ class _MarketOverview extends StatelessWidget {
                     children: [
                       const _BrandSignalMark(),
                       const SizedBox(height: 24),
-                      Text(
-                        title,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: LumenisTheme.foreground,
-                          fontWeight: FontWeight.w600,
+                      Semantics(
+                        liveRegion: true,
+                        label: '$title. $detail',
+                        child: Text(
+                          title,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: LumenisTheme.of(context).foreground,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                       ),
+                      if (metricsReady) ...[
+                        const SizedBox(height: 22),
+                        _ScopedMetricSpine(metrics: snapshot.metrics),
+                      ],
                       const SizedBox(height: 9),
                       Text(
                         detail,
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: LumenisTheme.muted,
+                          color: LumenisTheme.of(context).muted,
                           height: 1.6,
                         ),
                       ),
@@ -279,11 +338,57 @@ class _MarketOverview extends StatelessWidget {
           child: OutlinedButton.icon(
             onPressed: onRefresh,
             icon: const Icon(Icons.refresh_rounded),
-            label: const Text('刷新数据'),
+            label: Text(copy.text('bmp01.refresh')),
             style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ScopedMetricSpine extends StatelessWidget {
+  const _ScopedMetricSpine({required this.metrics});
+
+  final List<Bmp01Metric> metrics;
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = metrics.where((metric) => metric.isReady).toList();
+    if (visible.isEmpty) return const SizedBox.shrink();
+    return Semantics(
+      container: true,
+      label: context.lumenisL10n.text('bmp01.metrics.label'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var index = 0; index < visible.length; index++) ...[
+            if (index > 0) const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 11),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      visible[index].label,
+                      style: TextStyle(color: LumenisTheme.of(context).muted),
+                    ),
+                  ),
+                  Text(
+                    visible[index].safeValueText!,
+                    style: TextStyle(
+                      color: LumenisTheme.of(context).foreground,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -306,9 +411,9 @@ class _BrandSignalMark extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: LumenisTheme.bmp.withValues(
-                    alpha: size == 142 ? 0.16 : 0.24,
-                  ),
+                  color: LumenisTheme.of(
+                    context,
+                  ).bmp.withValues(alpha: size == 142 ? 0.16 : 0.24),
                 ),
               ),
             ),
@@ -317,14 +422,14 @@ class _BrandSignalMark extends StatelessWidget {
             height: 42,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: LumenisTheme.bmp.withValues(alpha: 0.12),
+              color: LumenisTheme.of(context).bmp.withValues(alpha: 0.12),
               border: Border.all(
-                color: LumenisTheme.bmp.withValues(alpha: 0.5),
+                color: LumenisTheme.of(context).bmp.withValues(alpha: 0.5),
               ),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.local_offer_outlined,
-              color: LumenisTheme.bmp,
+              color: LumenisTheme.of(context).bmp,
               size: 20,
             ),
           ),
@@ -343,8 +448,8 @@ class _Eyebrow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: const TextStyle(
-        color: LumenisTheme.quiet,
+      style: TextStyle(
+        color: LumenisTheme.of(context).quiet,
         fontSize: 10,
         letterSpacing: 1,
         fontWeight: FontWeight.w700,
@@ -365,9 +470,9 @@ class _Panel extends StatelessWidget {
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: LumenisTheme.surface,
+        color: LumenisTheme.of(context).surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: LumenisTheme.line),
+        border: Border.all(color: LumenisTheme.of(context).line),
       ),
       child: child,
     );
@@ -382,8 +487,8 @@ class _LoadingState extends StatelessWidget {
     return Center(
       child: Semantics(
         liveRegion: true,
-        label: '正在加载品牌市场信息',
-        child: const CircularProgressIndicator(color: LumenisTheme.bmp),
+        label: context.lumenisL10n.text('bmp01.loading'),
+        child: CircularProgressIndicator(color: LumenisTheme.of(context).bmp),
       ),
     );
   }
@@ -397,11 +502,24 @@ class _FailureState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
     final (title, detail) = switch (kind) {
-      Bmp01FailureKind.authentication => ('需要登录', '登录后即可查看品牌市场信息。'),
-      Bmp01FailureKind.permissionDenied => ('当前账号暂时无法查看此内容', '如需访问，请联系管理员。'),
-      Bmp01FailureKind.offline => ('暂时无法连接', '请检查网络连接后重试。'),
-      Bmp01FailureKind.server => ('品牌市场信息暂不可用', '请稍后重试。'),
+      Bmp01FailureKind.authentication => (
+        copy.text('bmp01.failure.auth.title'),
+        copy.text('bmp01.failure.auth.detail'),
+      ),
+      Bmp01FailureKind.permissionDenied => (
+        copy.text('bmp01.failure.permission.title'),
+        copy.text('bmp01.failure.permission.detail'),
+      ),
+      Bmp01FailureKind.offline => (
+        copy.text('bmp01.failure.offline.title'),
+        copy.text('bmp01.failure.offline.detail'),
+      ),
+      Bmp01FailureKind.server => (
+        copy.text('bmp01.failure.server.title'),
+        copy.text('bmp01.failure.server.detail'),
+      ),
     };
 
     return Center(
@@ -421,7 +539,7 @@ class _FailureState extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: onRetry,
                   icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('重试'),
+                  label: Text(copy.text('bmp01.retry')),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(48, 48),
                   ),

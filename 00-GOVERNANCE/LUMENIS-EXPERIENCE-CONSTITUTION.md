@@ -147,6 +147,62 @@ Hierarchy comes from meaning, scale, rhythm and placement before decoration.
 
 ## 6. Color, light and material
 
+### Product Owner direction — 2026-09-24 frontend reconstruction
+
+The Product Owner explicitly rejected the previous visual proposal and requested
+reconstruction around real business jobs, using the supplied desktop production
+desk and focused mobile references. The historical 44-screen inventory is a
+capability preservation checklist, **not a required page count or navigation
+structure**. Merge entries, disclosures and stages where a continuous user task
+benefits; keep existing deep links compatible and preserve every canonical owner,
+data state, Permission boundary and backend contract.
+
+The approved presentation direction is warm light workspaces, fine dividers,
+compact project/task navigation, central working content and contextual tools.
+Creation uses a script/editor/inspector composition; mobile uses one focused task
+with secondary tools in reversible disclosures. Soft optical color and shallow
+material depth may accent intent and creation entry points. Hover, press, drawer
+and selection transitions must stay short and respect reduced motion. Business
+records remain opaque, legible and stable. External screenshots authorize visual
+adaptation through this direction; they do not establish source-code licensing,
+business data, a new feature owner, or successful backend execution.
+
+Frontend composition and reversible local editing may progress alongside backend
+work. An unavailable backend must remain visibly unavailable, with no invented
+audio, chart, result, save, publish or permission success. Existing screen
+specifications retain their binding/effect restrictions while their composition
+is revised under this Product Owner direction. Actual frontend operation and
+business E2E acceptance are recorded separately.
+
+The same Product Owner's subsequent direction adds device-local appearance:
+frosted/translucent background, replaceable user wallpaper, desktop-system blur
+where the platform supports it, pure white, pure black and custom solid color.
+SYS-05 owns these device preferences; the existing Theme owner supplies contrast
+roles to every workflow. A preference change must preserve drafts, selection,
+route and scroll state. Images stay local and must never become Evidence or be
+uploaded as a side effect. Storage or native-material failures remain explicit.
+Web cannot reveal the operating-system desktop behind the browser; offer a
+chosen wallpaper and in-page frosting there. Unsupported system effects must
+not be represented as applied.
+
+The two additional supplied videos are interaction references: orbital and
+depth-based browsing, focused object/detail transitions, immersive backdrops,
+transparent contextual tools and reversible drawers. Map each to an actual
+user task and accessible controls; do not impose a repeated gallery or animated
+card template on editing, data, decisions or settings. The reference inventory
+records which moments were inspected and what is implemented versus pending.
+
+The subsequent GPT/Codex appearance recording adds a typography requirement:
+use a restrained hierarchy, comfortable body leading, readable secondary text
+and aligned settings rows. SYS-05 offers a device-local base text size (14 px by
+default, adjustable from 13 to 18) with a clearly labelled typography preview.
+Apply the preference through the existing Theme/MediaQuery path, preserving
+platform accessibility scaling, active route and drafts. Operational headings
+must not use promotional hero sizing. Product copy uses the same bundled CJK
+font families across workflows; weight, size and spacing express hierarchy.
+Do not introduce a second theme owner or copy the reference application's
+unrelated settings, code-diff viewer or account capabilities.
+
 Color follows information.
 
 Use neutral fields for truth-bearing content. Semantic colors communicate real state: success, warning, risk, blocked, stale, offline, selected or active.

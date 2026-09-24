@@ -6,7 +6,7 @@ abstract interface class Bmp01Repository {
 }
 
 class CoreBmp01Repository implements Bmp01Repository {
-  CoreBmp01Repository({required LumenisCoreClient client}) : _client = client;
+  CoreBmp01Repository({required this._client});
 
   final LumenisCoreClient _client;
 

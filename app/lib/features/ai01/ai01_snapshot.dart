@@ -46,7 +46,10 @@ class Ai01Snapshot {
           .where((provider) => provider['kind'] == 'provider')
           .map(Ai01ProviderState.fromJson)
           .toList(growable: false),
-      suggestions: rawSuggestions.map(Ai01Suggestion.fromJson).toList(),
+      suggestions: rawSuggestions
+          .map(Ai01Suggestion.fromJson)
+          .where((suggestion) => suggestion.isProductSafe)
+          .toList(growable: false),
       unavailableFields: _asStringList(binding?['unavailable']),
     );
   }
@@ -82,6 +85,18 @@ class Ai01Suggestion {
   final String title;
   final String description;
   final String? intent;
+
+  String? get safeTitle => switch (title.trim()) {
+    '风险变化' || '查看风险变化' => title.trim(),
+    _ => null,
+  };
+
+  String? get safeIntent => switch (intent?.trim()) {
+    '检查本周风险变化' || '检查风险变化并列出已有来源' => intent!.trim(),
+    _ => null,
+  };
+
+  bool get isProductSafe => safeTitle != null && safeIntent != null;
 
   factory Ai01Suggestion.fromJson(Map<String, Object?> json) {
     final action = _asMap(json['action']);

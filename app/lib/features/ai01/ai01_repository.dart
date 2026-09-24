@@ -6,7 +6,7 @@ abstract interface class Ai01Repository {
 }
 
 class CoreAi01Repository implements Ai01Repository {
-  CoreAi01Repository({required LumenisCoreClient client}) : _client = client;
+  CoreAi01Repository({required this._client});
 
   final LumenisCoreClient _client;
 

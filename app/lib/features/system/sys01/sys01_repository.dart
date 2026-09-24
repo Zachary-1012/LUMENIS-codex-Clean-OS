@@ -6,7 +6,7 @@ abstract interface class Sys01Repository {
 }
 
 class CoreSys01Repository implements Sys01Repository {
-  CoreSys01Repository({required LumenisCoreClient client}) : _client = client;
+  CoreSys01Repository({required this._client});
 
   final LumenisCoreClient _client;
 

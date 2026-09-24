@@ -1,7 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
+import 'package:lumenis_app/core/transport/lumenis_http_transport.dart';
 import 'package:lumenis_app/features/system/sys01/sys01_repository.dart';
 import 'package:lumenis_app/features/system/sys01/sys01_snapshot.dart';
 import 'package:lumenis_app/features/system/sys01/sys01_view_model.dart';
@@ -67,7 +66,7 @@ void main() {
   test('classifies a raw socket failure as offline', () async {
     final viewModel = Sys01ViewModel(
       repository: _FakeSys01Repository(
-        failures: [const SocketException('connection refused')],
+        failures: [const LumenisTransportException('connection refused')],
       ),
     );
     addTearDown(viewModel.dispose);
