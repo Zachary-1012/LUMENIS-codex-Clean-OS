@@ -29,6 +29,9 @@ class SitemapAdapter(BasePlatformAdapter):
         try:
             response = self.fetcher(sitemap_url)
             root = ElementTree.fromstring(response.content)
+            root_name = root.tag.rsplit("}", 1)[-1]
+            if root_name not in {"sitemapindex", "urlset"}:
+                raise ValueError("public response is not an XML Sitemap document")
             collected_at = datetime.now().isoformat(timespec="seconds")
             items = []
             for node in list(root):
@@ -38,7 +41,7 @@ class SitemapAdapter(BasePlatformAdapter):
                     continue
                 identity = hashlib.sha256(loc.encode("utf-8")).hexdigest()[:32]
                 lastmod = node.findtext(f"{_SITEMAP_NS}lastmod") or node.findtext("lastmod") or ""
-                kind = "sitemap" if root.tag.endswith("sitemapindex") else "url"
+                kind = "sitemap" if root_name == "sitemapindex" else "url"
                 items.append(self.normalize_item({
                     "platform_content_id": f"sitemap:{identity}",
                     "title": loc,
@@ -58,7 +61,7 @@ class SitemapAdapter(BasePlatformAdapter):
                 items=items,
                 raw_count=len(items),
                 new_count=len(items),
-                metadata={"provider": "public_sitemap_xml", "source": response.url, "collected_at": collected_at, "entry_kind": "sitemapindex" if root.tag.endswith("sitemapindex") else "urlset"},
+                metadata={"provider": "public_sitemap_xml", "source": response.url, "collected_at": collected_at, "entry_kind": root_name},
             )
         except (PublicSourceError, ElementTree.ParseError, ValueError, TypeError) as exc:
             return CollectionResult(

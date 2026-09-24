@@ -150,3 +150,52 @@ def test_public_source_runs_through_existing_evidence_boundary(monkeypatch):
     assert result["provenance"]["source"].startswith("https://")
     assert result["external_write"] is False
     assert captured["provenance"]["provider"] == "public_http"
+
+
+def test_sitemap_rejects_non_sitemap_xml_before_canonical_import(monkeypatch):
+    import lumenis.system.collector.adapters.multi_platform_import as importer
+    import lumenis.system.collector.adapters.secondary_collection as surface
+
+    xml = """<?xml version=\"1.0\"?>
+    <rss><url><loc>https://public.example.test/not-a-sitemap</loc></url></rss>"""
+    adapter = SitemapAdapter(fetcher=lambda _: _response(xml, "application/xml"))
+    captured = {}
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("non-Sitemap XML must not reach Canonical import")
+
+    monkeypatch.setattr(surface, "_get_runtime_adapter", lambda platform: adapter)
+    monkeypatch.setattr(surface, "_daily_action_count", lambda platform, at: 0)
+    monkeypatch.setitem(surface._last_action, "sitemap", 0.0)
+    monkeypatch.setattr(surface, "_write_run_log", lambda *args, **kwargs: None)
+    monkeypatch.setattr(surface, "_write_evidence", lambda *args, **kwargs: captured.update(args[2]) or 11)
+    monkeypatch.setattr(surface, "_mark_subject_and_sync", fail_if_called)
+    monkeypatch.setattr(importer, "import_multi_platform_records", fail_if_called)
+
+    result = surface.collect_search(
+        "sitemap", "https://public.example.test/sitemap.xml", max_results=1, operator="human",
+    )
+
+    assert result["ok"] is False
+    assert result["status"] == "PROVIDER_UNAVAILABLE"
+    assert result["raw_count"] == 0
+    assert result["returned_count"] == 0
+    assert result["imported"] == 0
+    assert result["canonical_synced"] == 0
+    assert result["evidence_recorded"] is True
+    assert captured["status"] == "PROVIDER_UNAVAILABLE"
+
+
+def test_sitemap_index_root_remains_supported():
+    xml = """<?xml version=\"1.0\"?>
+    <sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">
+      <sitemap><loc>https://public.example.test/child-sitemap.xml</loc></sitemap>
+    </sitemapindex>"""
+    adapter = SitemapAdapter(fetcher=lambda _: _response(xml, "application/xml"))
+
+    result = adapter.search("https://public.example.test/sitemap-index.xml")
+
+    assert result.status is CollectionStatus.SUCCESS
+    assert result.items[0]["url"] == "https://public.example.test/child-sitemap.xml"
+    assert result.items[0]["raw"]["entry_kind"] == "sitemap"
+    assert result.metadata["entry_kind"] == "sitemapindex"
