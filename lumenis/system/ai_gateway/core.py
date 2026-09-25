@@ -296,6 +296,17 @@ def _call_local_chat(provider, model, base, system, user, temperature, max_token
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read().decode('utf-8', 'replace'))
+    if not isinstance(data, dict):
+        raise ValueError('local response is invalid')
+    message = data.get('message')
+    if not isinstance(message, dict):
+        raise ValueError('local response message is invalid')
+    done_reason = str(data.get('done_reason') or '').strip().lower()
+    if provider == 'ollama':
+        if data.get('done') is not True or done_reason != 'stop':
+            raise ValueError('local response is incomplete')
+    elif data.get('done') is False or done_reason in {'length', 'max_tokens', 'token_limit', 'limit'}:
+        raise ValueError('local response is incomplete')
     usage = data.get('usage', {}) or {}
     try:
         prompt_tokens = int(usage.get('prompt_tokens', 0) or data.get('prompt_eval_count', 0) or 0)
@@ -303,7 +314,7 @@ def _call_local_chat(provider, model, base, system, user, temperature, max_token
         total_tokens = int(usage.get('total_tokens', 0) or 0) or (prompt_tokens + completion_tokens)
     except Exception:
         prompt_tokens, completion_tokens, total_tokens = 0, 0, 0
-    content = (data.get('message', {}).get('content') or '').strip()
+    content = (message.get('content') or '').strip()
     if not content:
         raise ValueError('empty local response content')
     _set_call_meta(
@@ -410,6 +421,20 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
             base.rstrip('/') + '/chat/completions', payload, _hdrs,
             timeout=_to, max_attempts=3, opener=opener)
         data = json.loads(_body[0].decode('utf-8','replace'))
+        if data.get('error'):
+            raise ValueError('provider returned an error response')
+        response_status = str(data.get('status') or '').strip().lower()
+        if response_status in {'incomplete', 'in_progress', 'failed', 'cancelled', 'canceled', 'error'}:
+            raise ValueError('provider returned a non-complete response')
+        choices = data.get('choices') or []
+        if not choices:
+            raise ValueError('provider response is missing choices')
+        choice = choices[0]
+        if not isinstance(choice, dict):
+            raise ValueError('provider response has an invalid choice')
+        finish_reason = str(choice.get('finish_reason') or '').strip().lower()
+        if finish_reason in {'length', 'content_filter', 'tool_calls', 'function_call'}:
+            raise ValueError('provider did not complete a user-facing response')
         # V1.0: 提取 token usage 并记录（修复 token_usage=0 bug）
         try:
             _u = data.get('usage', {}) or {}
@@ -420,7 +445,7 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
             _pt, _ct, _tt = 0, 0, 0
         _set_call_meta(provider=prov, model=m, prompt_tokens=_pt, completion_tokens=_ct, total_tokens=_tt)
         _msg = data['choices'][0]['message']
-        _content = (_msg.get('content') or '').strip() or (_msg.get('reasoning_content') or '').strip()
+        _content = (_msg.get('content') or '').strip()
         if not _content:
             raise ValueError('empty response content')
         return _content, prov

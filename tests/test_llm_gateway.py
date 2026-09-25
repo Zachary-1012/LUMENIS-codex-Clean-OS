@@ -134,6 +134,8 @@ def test_cloud_failure_falls_back_to_ollama_with_thinking_disabled(monkeypatch):
         def read(self):
             return json.dumps({
                 "message": {"content": "LOCAL_OK"},
+                "done": True,
+                "done_reason": "stop",
                 "prompt_eval_count": 5,
                 "eval_count": 2,
             }).encode("utf-8")

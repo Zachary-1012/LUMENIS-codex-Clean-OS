@@ -12,6 +12,20 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 07 Gateway result validity — 2026-09-26
+
+[ROUND 07 Gateway result-validity evidence](evidence/round-07/ROUND-07-GATEWAY-RESULT-VALIDITY-2026-09-26.md)
+records the existing SYSTEM Gateway's bounded cloud and local Ollama
+completion check. Explicit provider error/partial states and local incomplete
+responses now fall back honestly; hidden reasoning alone is not a final answer.
+The exact staged source/tests passed 34/34 mock and neighboring cases on a
+clean archive of the then-current main. No paid or local model was called for
+this Batch, and no user-level model routing was changed. This is source and
+test evidence only. ROUND 07 real user-work E2E and exit remain `REWORK`;
+Jev remains OFF alongside the self-developed candidate pending the prelaunch
+comparison. `COMMERCIAL_READY=NO`. Resolve the containing commit and live main
+again after publication.
+
 ### Bounded frontend entry continuity — 2026-09-26
 
 [ROUND 14 entry navigation evidence](evidence/round-14/ROUND-14-ENTRY-NAVIGATION-2026-09-26.md)
@@ -82,7 +96,7 @@ fonts, restrained typography, 13–18 px local UI size, zh-CN/en/ko copy, task-s
 AI entry/script work/material exploration and the Public Website's interactive
 business explanation. Historical route IDs remain compatibility identifiers,
 not a screen quota or shared page template. Reference-to-owner mapping and exact
-verification/limits are in [ROUND 08 frontend evidence](evidence/round-08/FRONTEND-REFERENCE-ADAPTATION-2026-09-24.md).
+verification/limits are in [ROUND 08 frontend evidence](evidence/round-08/ROUND-08-REFERENCE-ADAPTATION-2026-09-24.md).
 
 This is a **FRONTEND INTEGRATION CANDIDATE**, not full-product or Round acceptance.
 Root verified the bounded Web appearance job (local wallpaper choose/restore/

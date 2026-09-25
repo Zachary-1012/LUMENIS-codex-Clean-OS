@@ -52,7 +52,7 @@ def test_intelligence_chat_model_override(monkeypatch):
 
 
 def test_intelligence_chat_glm53_no_thinking(monkeypatch):
-    """glm-5.3 始终思考：不得传 thinking（否则 400），且 content 空时回退 reasoning_content。"""
+    """GLM-5.3 omits thinking, and reasoning alone is not a final answer."""
     from lumenis.system.ai_gateway import core as intelligence
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-not-real')
     monkeypatch.setattr(intelligence, '_provider_config',
@@ -71,9 +71,10 @@ def test_intelligence_chat_glm53_no_thinking(monkeypatch):
     monkeypatch.setattr(intelligence.urllib.request, 'urlopen', fake_urlopen)
     monkeypatch.setattr(intelligence.urllib.request, 'build_opener',
                         lambda *a, **k: types.SimpleNamespace(open=fake_urlopen))
+    monkeypatch.setattr(intelligence, '_detect_local', lambda: None)
     res, prov = intelligence._chat('s', 'u', model='glm-5.3')
     assert sent['has_thinking'] is False, 'glm-5.3 不应传 thinking'
-    assert res == '思考...', 'content 空时应回退 reasoning_content'
+    assert (res, prov) == (None, 'rule')
 
 
 # ---------- P0B-2 智谱评审发现修复回归（2026-09-03）----------
@@ -100,7 +101,7 @@ def test_provider_config_glm_without_key_returns_none(monkeypatch):
 
 
 def test_glm53_case_insensitive_no_thinking(monkeypatch):
-    """GLM-5.3 大写也应视为始终思考模型，不传 thinking（防 400）。"""
+    """GLM-5.3 returns final content even when it also includes reasoning."""
     from lumenis.system.ai_gateway import core as intelligence
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-not-real')
     monkeypatch.setattr(intelligence, '_provider_config',
@@ -110,7 +111,7 @@ def test_glm53_case_insensitive_no_thinking(monkeypatch):
         def __enter__(self): return self
         def __exit__(self, *a): return False
         def read(self):
-            return ('{"choices":[{"message":{"content":"","reasoning_content":"思考"}}]}').encode('utf-8')
+            return ('{"choices":[{"message":{"content":"最终答案","reasoning_content":"思考"}}]}').encode('utf-8')
     def fake_urlopen(req, timeout=None):
         import json
         sent['has_thinking'] = 'thinking' in json.loads(req.data.decode('utf-8'))
@@ -121,7 +122,7 @@ def test_glm53_case_insensitive_no_thinking(monkeypatch):
                         lambda *a, **k: types.SimpleNamespace(open=fake_urlopen))
     res, prov = intelligence._chat('s', 'u', model='GLM-5.3')
     assert sent['has_thinking'] is False, 'GLM-5.3 大写不应传 thinking'
-    assert res == '思考'
+    assert (res, prov) == ('最终答案', 'zhipu')
 
 
 def test_glm53_flash_variant_no_thinking(monkeypatch):
@@ -144,8 +145,10 @@ def test_glm53_flash_variant_no_thinking(monkeypatch):
     monkeypatch.setattr(intelligence.urllib.request, 'urlopen', fake_urlopen)
     monkeypatch.setattr(intelligence.urllib.request, 'build_opener',
                         lambda *a, **k: types.SimpleNamespace(open=fake_urlopen))
+    monkeypatch.setattr(intelligence, '_detect_local', lambda: None)
     res, prov = intelligence._chat('s', 'u', model='glm-5.3-flash')
     assert sent['has_thinking'] is False, 'glm-5.3-flash 不应传 thinking'
+    assert (res, prov) == (None, 'rule')
 
 
 # ---------- Search-STD 增强搜索修复回归（2026-09-03）----------
