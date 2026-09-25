@@ -4,7 +4,8 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show LogicalKeyboardKey;
+import 'package:flutter/services.dart'
+    show LogicalKeyboardKey, MethodCall, MethodChannel;
 import 'package:flutter/semantics.dart' show SemanticsData, SemanticsNode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -12,6 +13,8 @@ import 'package:lumenis_app/features/system/sys05/sys05_appearance_editor.dart';
 import 'package:lumenis_app/features/system/sys05/sys05_appearance_controller.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+const _fileSelectorChannel = MethodChannel('plugins.flutter.io/file_selector');
 
 class _DeviceStore extends Fake implements SharedPreferencesAsync {
   final values = <String, String>{};
@@ -200,6 +203,50 @@ void main() {
         semantics.dispose();
         controller.dispose();
       }
+    },
+  );
+
+  testWidgets(
+    'selecting wallpaper opens the picker and cancel keeps the current mode',
+    (tester) async {
+      final storage = _DeviceStore();
+      final controller = Sys05AppearanceController(storage: storage);
+      await controller.restore();
+      final update = controller.update(mode: WorkspaceBackdrop.white);
+      await tester.pump(const Duration(milliseconds: 20));
+      await update;
+
+      final calls = <MethodCall>[];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(_fileSelectorChannel, (call) async {
+        calls.add(call);
+        return null;
+      });
+      addTearDown(() {
+        messenger.setMockMethodCallHandler(_fileSelectorChannel, null);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          supportedLocales: LumenisLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            LumenisLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: Scaffold(body: Sys05AppearanceEditor(controller: controller)),
+        ),
+      );
+      await tester.tap(find.byKey(const ValueKey('appearance/wallpaper')));
+      await tester.pumpAndSettle();
+
+      expect(calls, hasLength(1));
+      expect(calls.single.method, 'openFile');
+      expect(controller.mode, WorkspaceBackdrop.white);
+      expect(controller.wallpaper, isNull);
+      controller.dispose();
     },
   );
 

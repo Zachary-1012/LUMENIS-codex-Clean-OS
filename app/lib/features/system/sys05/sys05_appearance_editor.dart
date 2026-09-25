@@ -100,6 +100,14 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
     }
   }
 
+  void _selectMode(WorkspaceBackdrop mode) {
+    if (mode == WorkspaceBackdrop.wallpaper) {
+      _chooseWallpaper();
+      return;
+    }
+    widget.controller.update(mode: mode);
+  }
+
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: widget.controller,
@@ -166,10 +174,13 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                         WorkspaceBackdrop.solid => Icons.color_lens_outlined,
                       }, size: 18),
                       onSelected:
-                          mode == WorkspaceBackdrop.desktop &&
-                              !LumenisWindowMaterial.supported
+                          _choosing ||
+                              (mode == WorkspaceBackdrop.desktop &&
+                                  !LumenisWindowMaterial.supported)
                           ? null
-                          : (_) => c.update(mode: mode),
+                          : (selected) {
+                              if (selected) _selectMode(mode);
+                            },
                     ),
                   ),
               ],

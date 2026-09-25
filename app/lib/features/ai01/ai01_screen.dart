@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
+import 'ai01_draft_actions.dart';
 import 'ai01_repository.dart';
 import 'ai01_snapshot.dart';
 import 'ai01_view_model.dart';
@@ -22,6 +23,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
     repository: widget.repository ?? CoreAi01Repository(client: widget.client),
   );
   final TextEditingController _draftController = TextEditingController();
+  final FocusNode _draftFocus = FocusNode();
   bool _showInspector = false;
 
   @override
@@ -37,6 +39,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
       ..removeListener(_syncDraft)
       ..dispose();
     _viewModel.dispose();
+    _draftFocus.dispose();
     super.dispose();
   }
 
@@ -151,6 +154,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                           flex: 7,
                           child: _ComposerPane(
                             controller: _draftController,
+                            focusNode: _draftFocus,
                             blockedReason: context.lumenisL10n.text(
                               'ai01.blocked_reason',
                             ),
@@ -172,6 +176,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                   else ...[
                     _ComposerPane(
                       controller: _draftController,
+                      focusNode: _draftFocus,
                       blockedReason: context.lumenisL10n.text(
                         'ai01.blocked_reason',
                       ),
@@ -399,6 +404,7 @@ class _RuntimeUnboundNotice extends StatelessWidget {
 class _ComposerPane extends StatelessWidget {
   const _ComposerPane({
     required this.controller,
+    required this.focusNode,
     required this.blockedReason,
     required this.suggestions,
     required this.onChooseSuggestion,
@@ -406,6 +412,7 @@ class _ComposerPane extends StatelessWidget {
   });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final String blockedReason;
   final List<Ai01Suggestion> suggestions;
   final ValueChanged<Ai01Suggestion> onChooseSuggestion;
@@ -460,6 +467,7 @@ class _ComposerPane extends StatelessWidget {
           const SizedBox(height: 12),
           TextField(
             controller: controller,
+            focusNode: focusNode,
             style: Theme.of(context).textTheme.bodyLarge,
             minLines: compact ? 4 : 6,
             maxLines: compact ? 8 : 10,
@@ -563,6 +571,8 @@ class _ComposerPane extends StatelessWidget {
               ],
             ),
           const SizedBox(height: 10),
+          Ai01DraftActions(controller: controller, focusNode: focusNode),
+          const SizedBox(height: 8),
           Text(
             context.lumenisL10n.text('ai01.draft.notice'),
             style: TextStyle(

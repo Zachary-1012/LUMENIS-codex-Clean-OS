@@ -12,7 +12,34 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
-### Latest frontend source update — 2026-09-24
+### Latest bounded frontend update — 2026-09-24; publication check 2026-09-26
+
+[ROUND 14 local draft continuity](evidence/round-14/ROUND-14-LOCAL-DRAFT-CONTINUITY-2026-09-24.md)
+adds user-selected TXT open/save/copy to the existing AI-01 composer, explicit
+replacement confirmation, input validation and return-to-composer focus. SYS-05
+now opens the wallpaper picker before changing the selected backdrop. Root's
+41/41 scoped tests, no-issues analyzer and final Web build passed. Chrome
+downloaded a real 109-byte task file, reopened it after reload with exact text,
+preserved declined replacements and restored focus after accepted replacement.
+Invalid wallpaper selection preserved the current mode; valid selection and
+removal ran in Chrome. Picker cancellation has widget evidence only. Native
+file-dialog E2E and IAB download-to-disk remain unverified.
+
+This accepts only the local drafting interaction and bounded appearance fix.
+AI execution, report generation/export, browser-session authorization, complete
+screens and Round exits remain open. The previously local Web artifact host is
+now published by the separate ROUND 08 Batch recorded below; this frontend
+preview still uses an empty isolated DB and is not a connected business result.
+No production DB, Cookie, provider or Windows model configuration was changed.
+Source/spec/evidence and this status must be in the same mainline commit, with
+fresh remote-ref verification after push. `COMMERCIAL_READY=NO`.
+
+On September 26, the unchanged frontend source passed the same 41 scoped tests
+again. The supplied September 25 low-fidelity HTML is retained as a flow/state
+reference only; its 13 groups / 107 boards and inspected blocked-action
+boundaries are not a new design authority or full-frontend completion evidence.
+
+### Earlier frontend foundation update — 2026-09-24
 
 The containing source/status commit publishes the previously local Flutter
 frontend and Web adapters together with device appearance, bundled licensed CJK
