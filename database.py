@@ -450,6 +450,8 @@ def get_category_distribution():
 
 
 def save_daily_report(report):
+    if 'total_notes' not in report:
+        raise ValueError('daily report is missing total_notes')
     with get_db() as conn:
         rtype=report.get('report_type','daily'); date=report['report_date']
         values=(rtype,date,report.get('period_start',''),report.get('period_end',''),report.get('total_notes',0),report.get('positive_count',0),report.get('neutral_count',0),report.get('negative_count',0),report.get('high_risk_count',0),report.get('medium_risk_count',0),report.get('low_risk_count',0),report.get('total_likes',0),report.get('total_comments',0),report.get('total_engagements',0),json.dumps(report.get('top_topics',[]),ensure_ascii=False),json.dumps(report.get('hot_notes',[]),ensure_ascii=False),json.dumps(report.get('risk_alerts',[]),ensure_ascii=False),json.dumps(report.get('key_events',[]),ensure_ascii=False),report.get('event_summary',''),report.get('sentiment_analysis',''),report.get('summary',''),report.get('report_id',''),report.get('artifact_hash',''),report.get('generator_version',''),report.get('data_version',''),report.get('source_snapshot',''))

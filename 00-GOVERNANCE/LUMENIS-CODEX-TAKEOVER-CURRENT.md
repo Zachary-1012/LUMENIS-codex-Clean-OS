@@ -119,6 +119,8 @@ The subsequent [ROUND 07 Jev candidate audit](evidence/round-07/ROUND-07-JEV-CAN
 
 2026-09-24 bounded ROUND 06 update: [RSS source URL failure truth](evidence/round-06/ROUND-06-RSS-SOURCE-URL-FAILURE-2026-09-24.md) prevents a Google News item without a source URL from being silently skipped and reported as `NO_NEW_DATA`. Sol's exact staged clean replay passed 10/10 adapter tests and kept failure Evidence provenance while Canonical import stayed closed. RSS may validly omit a link; this Batch enforces the current article-import identity contract. No live public source, user-work E2E, ROUND 06 exit, full-universe or commercial-readiness claim follows. Online status applies only after exact source/evidence/status publication and live-ref verification.
 
+2026-09-26 bounded ROUND 07 update: [report total_notes truth](evidence/round-07/ROUND-07-REPORT-TOTAL-NOTES-TRUTH-2026-09-26.md) rejects a missing record count during Shared Reporting artifact verification and daily-report save before DB access, while preserving an explicitly measured zero. Sol replayed the exact source/test patch on clean main and passed 62/62 Reporting artifact and audit tests; the protected production DB fingerprint stayed unchanged. This is a bounded missing-value Batch, not a live generate/reopen/export user-work E2E, ROUND 07 exit or commercial-readiness claim. Online status applies only after source/evidence/status publication and live-ref verification.
+
 The active local Sol task may progress after this snapshot. It must update its
 own bounded Round evidence and publish accepted source **and this CURRENT online
 status in the same delivery cycle** before an online reader can claim more.

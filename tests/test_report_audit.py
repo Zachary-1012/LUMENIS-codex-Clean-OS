@@ -196,6 +196,26 @@ class TestReportDictVerification:
         report = {"report_type": "daily", "report_date": "2026-09-01", "total_notes": "abc"}
         assert ra.verify_report_dict(report)["valid"] is False
 
+    def test_missing_total_notes_fails(self):
+        """未提供 total_notes 时不得把缺失值当作零。"""
+        report = {"report_type": "daily", "report_date": "2026-09-01"}
+        result = ra.verify_report_dict(report)
+        assert result["valid"] is False
+        assert result["reason"] == "缺少 total_notes"
+
+    def test_explicit_zero_total_notes_is_valid(self):
+        """真实的零条记录仍然是有效的明确值。"""
+        report = {"report_type": "daily", "report_date": "2026-09-01", "total_notes": 0}
+        assert ra.verify_report_dict(report)["valid"] is True
+
+    def test_save_daily_report_rejects_missing_total_notes_before_database_open(self):
+        """缺少 total_notes 时必须在打开数据库前拒绝写入。"""
+        import database as db
+        with patch.object(db, 'get_db') as get_db:
+            with pytest.raises(ValueError, match="missing total_notes"):
+                db.save_daily_report({"report_type": "daily", "report_date": "2026-09-24"})
+        get_db.assert_not_called()
+
     def test_report_id_generated_when_missing(self):
         """缺少 report_id 时应自动生成（不影响 valid）。"""
         report = {

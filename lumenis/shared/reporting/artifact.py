@@ -132,7 +132,10 @@ def verify_report_dict(report: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     if not rdate:
         result["reason"] = "缺少 report_date"
         return result
-    total = report.get("total_notes", 0)
+    if "total_notes" not in report:
+        result["reason"] = "缺少 total_notes"
+        return result
+    total = report["total_notes"]
     if not isinstance(total, (int, float)):
         result["reason"] = f"total_notes 非数字: {type(total)}"
         return result
