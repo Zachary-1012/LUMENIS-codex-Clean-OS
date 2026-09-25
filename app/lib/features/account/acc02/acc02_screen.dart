@@ -80,6 +80,8 @@ class _Acc02ScreenState extends State<Acc02Screen> {
     final selected =
         _firstSubject(subjects, _selectedId) ??
         _firstSubject(snapshot.subjects, _selectedId);
+    final selectionPending = _viewModel.selectingId != null;
+    final canContinue = _canContinue(selected);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -95,14 +97,20 @@ class _Acc02ScreenState extends State<Acc02Screen> {
         );
         final detail = _SubjectDetail(
           subject: selected,
-          snapshot: snapshot,
           bounded: wide,
-          selecting: selected != null && _viewModel.selectingId == selected.id,
+          selecting: selectionPending,
+          canContinue: canContinue,
           actionError: _viewModel.actionError,
-          onConfirm: selected == null
+          onConfirm: selected == null || selectionPending
               ? null
               : () => _viewModel.selectSubject(selected),
-          onContinue: widget.onContinue,
+          onContinue: widget.onContinue == null
+              ? null
+              : () {
+                  if (_canContinue(selected)) {
+                    widget.onContinue?.call();
+                  }
+                },
         );
 
         return SingleChildScrollView(
@@ -157,6 +165,20 @@ class _Acc02ScreenState extends State<Acc02Screen> {
         );
       },
     );
+  }
+
+  bool _canContinue(Acc02Subject? subject) {
+    final snapshot = _viewModel.snapshot;
+    return widget.onContinue != null &&
+        subject != null &&
+        _selectedId == subject.id &&
+        _viewModel.phase == Acc02LoadPhase.ready &&
+        snapshot != null &&
+        snapshot.contextState == Acc02ContextState.focused &&
+        snapshot.contextDomainId == subject.domainId &&
+        snapshot.selectedSubjectId == subject.id &&
+        _viewModel.selectingId == null &&
+        _viewModel.actionError == null;
   }
 }
 
@@ -428,18 +450,18 @@ class _SubjectList extends StatelessWidget {
 class _SubjectDetail extends StatelessWidget {
   const _SubjectDetail({
     required this.subject,
-    required this.snapshot,
     required this.bounded,
     required this.selecting,
+    required this.canContinue,
     required this.actionError,
     required this.onConfirm,
     required this.onContinue,
   });
 
   final Acc02Subject? subject;
-  final Acc02Snapshot snapshot;
   final bool bounded;
   final bool selecting;
+  final bool canContinue;
   final String? actionError;
   final VoidCallback? onConfirm;
   final VoidCallback? onContinue;
@@ -551,9 +573,7 @@ class _SubjectDetail extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
-                  onPressed: snapshot.selectedSubjectId == subject!.id
-                      ? onContinue
-                      : null,
+                  onPressed: canContinue ? onContinue : null,
                   child: Text(context.lumenisL10n.text('acc.continue')),
                 ),
               ),

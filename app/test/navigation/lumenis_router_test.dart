@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/features/account/acc01/acc01_screen.dart';
+import 'package:lumenis_app/features/account/acc03/acc03_screen.dart';
 import 'package:lumenis_app/features/account/acc04/acc04_screen.dart';
 import 'package:lumenis_app/features/ai01/ai01_screen.dart';
 import 'package:lumenis_app/features/ai04/ai04_screen.dart';
@@ -144,6 +145,115 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final width in [390.0, 1440.0]) {
+    testWidgets('restricted scope keeps the launch map usable at $width', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(Size(width, 960));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final router = createLumenisRouter(
+        client: _RouterClient(denyContext: true),
+        onLocaleChanged: (_) {},
+        initialLocation: '/workspace/ACC-03',
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(_app(router));
+      await tester.pumpAndSettle();
+      expect(find.text('访问受限'), findsOneWidget);
+      expect(find.text('查看范围访问受限'), findsOneWidget);
+      expect(find.text('全局查看范围（未命名）'), findsNothing);
+      final aiEntry = find.widgetWithText(OutlinedButton, '继续').last;
+      await tester.ensureVisible(aiEntry);
+      await tester.tap(aiEntry);
+      await tester.pumpAndSettle();
+      expect(find.byType(Ai01Screen), findsOneWidget);
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        '/workspace/AI-01',
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+      'unbound access guard can return without changing access at $width',
+      (tester) async {
+        await tester.binding.setSurfaceSize(Size(width, 960));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final router = createLumenisRouter(
+          client: _RouterClient(),
+          onLocaleChanged: (_) {},
+          initialLocation: '/workspace/ACC-04',
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(_app(router));
+        await tester.pumpAndSettle();
+        expect(find.byType(Acc04Screen), findsOneWidget);
+        expect(find.text('切换查看范围'), findsNothing);
+        final back = find.widgetWithText(TextButton, '返回');
+        await tester.ensureVisible(back);
+        await tester.tap(back);
+        await tester.pumpAndSettle();
+        expect(
+          router.routeInformationProvider.value.uri.path,
+          '/workspace/ACC-03',
+        );
+        expect(find.byType(Acc03Screen), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets('entry and launch map navigate and return at width $width', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(Size(width, 960));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final router = createLumenisRouter(
+        client: _RouterClient(),
+        onLocaleChanged: (_) {},
+        initialLocation: '/workspace/ACC-01',
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(_app(router));
+      await tester.pumpAndSettle();
+      final enter = find.widgetWithText(FilledButton, '进入工作区');
+      await tester.ensureVisible(enter);
+      await tester.tap(enter);
+      await tester.pumpAndSettle();
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        '/workspace/ACC-03',
+      );
+      expect(find.byType(Acc03Screen), findsOneWidget);
+
+      final destinations = [
+        ('/workspace/CTH-01', Cth01Screen),
+        ('/workspace/BMP-01', Bmp01Screen),
+        ('/workspace/AI-01', Ai01Screen),
+      ];
+      for (var index = 0; index < destinations.length; index++) {
+        if (index > 0) {
+          await tester.tap(
+            find.byKey(const ValueKey('workspace-account-navigation')),
+          );
+          await tester.pumpAndSettle();
+          await tester.ensureVisible(enter);
+          await tester.tap(enter);
+          await tester.pumpAndSettle();
+        }
+        final open = find.widgetWithText(OutlinedButton, '继续').at(index);
+        await tester.ensureVisible(open);
+        await tester.tap(open);
+        await tester.pumpAndSettle();
+        expect(
+          router.routeInformationProvider.value.uri.path,
+          destinations[index].$1,
+        );
+        expect(find.byType(destinations[index].$2), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+    });
+  }
+
   testWidgets('SYS-06 secondary navigation opens only the desktop boundary', (
     tester,
   ) async {
@@ -273,6 +383,8 @@ Widget _app(GoRouter router) => MaterialApp.router(
 );
 
 class _RouterClient extends LumenisCoreClient {
+  _RouterClient({this.denyContext = false});
+  final bool denyContext;
   int runtimeIdentityCalls = 0;
 
   @override
@@ -282,7 +394,12 @@ class _RouterClient extends LumenisCoreClient {
   }
 
   @override
-  Future<Map<String, dynamic>> settingsContext() async => _globalEnvelope;
+  Future<Map<String, dynamic>> settingsContext() async {
+    if (denyContext) {
+      throw const LumenisCoreException('context denied', statusCode: 403);
+    }
+    return _globalEnvelope;
+  }
 
   @override
   Future<Map<String, dynamic>> screen(String screenId) async => {

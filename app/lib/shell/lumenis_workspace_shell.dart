@@ -6,6 +6,7 @@ import '../core/lumenis_theme.dart';
 import '../features/account/acc01/acc01_screen.dart';
 import '../features/account/acc02/acc02_screen.dart';
 import '../features/account/acc03/acc03_screen.dart';
+import '../features/account/acc03/acc03_snapshot.dart';
 import '../features/account/acc04/acc04_screen.dart';
 import '../features/ai01/ai01_screen.dart';
 import '../features/ai02/ai02_screen.dart';
@@ -62,10 +63,28 @@ Widget buildLumenisWorkspaceScreen({
     );
   }
   return switch (screenId) {
-    'ACC-01' => Acc01Screen(client: client),
-    'ACC-02' => Acc02Screen(client: client),
-    'ACC-03' => Acc03Screen(client: client),
-    'ACC-04' => Acc04Screen(client: client),
+    'ACC-01' => Acc01Screen(
+      client: client,
+      onContinue: onNavigate == null ? null : () => onNavigate('ACC-03'),
+    ),
+    'ACC-02' => Acc02Screen(
+      client: client,
+      onContinue: onNavigate == null ? null : () => onNavigate('ACC-03'),
+    ),
+    'ACC-03' => Acc03Screen(
+      client: client,
+      onOpen: onNavigate == null
+          ? null
+          : (destination) => onNavigate(switch (destination) {
+              Acc03Destination.commerce => 'CTH-01',
+              Acc03Destination.brand => 'BMP-01',
+              Acc03Destination.ai => 'AI-01',
+            }),
+    ),
+    'ACC-04' => Acc04Screen(
+      client: client,
+      onReturn: onNavigate == null ? null : () => onNavigate('ACC-03'),
+    ),
     'AI-01' => Ai01Screen(client: client),
     'AI-02' => Ai02Screen(client: client),
     'AI-03' => Ai03Screen(client: client),
@@ -290,7 +309,11 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       return;
     }
     if (_activeScreen.value == screenId) return;
-    setState(() => _activeScreen.value = screenId);
+    setState(() {
+      _contextEnvelope =
+          widget.client.currentContextEnvelope ?? _contextEnvelope;
+      _activeScreen.value = screenId;
+    });
     if (notifyRoute) widget.onScreenSelected?.call(screenId);
   }
 

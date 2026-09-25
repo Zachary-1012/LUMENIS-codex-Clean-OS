@@ -162,12 +162,32 @@ class _CurrentView extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 snapshot.currentView ??
-                    _copy(
-                      context,
-                      zh: '全局查看范围（未命名）',
-                      en: 'Global view (unnamed)',
-                      ko: '전체 보기(이름 없음)',
-                    ),
+                    switch (snapshot.contextState) {
+                      Acc03RuntimeState.connected => _copy(
+                        context,
+                        zh: '当前查看范围（未命名）',
+                        en: 'Current view (unnamed)',
+                        ko: '현재 보기(이름 없음)',
+                      ),
+                      Acc03RuntimeState.restricted => _copy(
+                        context,
+                        zh: '查看范围访问受限',
+                        en: 'View access is restricted',
+                        ko: '보기 범위 접근이 제한됨',
+                      ),
+                      Acc03RuntimeState.unavailable => _copy(
+                        context,
+                        zh: '查看范围暂不可用',
+                        en: 'View is unavailable',
+                        ko: '보기 범위를 사용할 수 없음',
+                      ),
+                      _ => _copy(
+                        context,
+                        zh: '查看范围尚未确认',
+                        en: 'View is not confirmed',
+                        ko: '보기 범위가 확인되지 않음',
+                      ),
+                    },
                 style: TextStyle(color: LumenisTheme.of(context).muted),
               ),
               const SizedBox(height: 5),
@@ -362,6 +382,10 @@ class _CheckRow extends StatelessWidget {
       Acc03RuntimeState.unavailable => (
         label: _copy(context, zh: '暂不可用', en: 'Unavailable', ko: '사용 불가'),
         color: LumenisTheme.of(context).danger,
+      ),
+      Acc03RuntimeState.restricted => (
+        label: _copy(context, zh: '访问受限', en: 'Access restricted', ko: '접근 제한'),
+        color: LumenisTheme.of(context).caution,
       ),
       Acc03RuntimeState.unknown => (
         label: _copy(context, zh: '待确认', en: 'Unconfirmed', ko: '확인 필요'),

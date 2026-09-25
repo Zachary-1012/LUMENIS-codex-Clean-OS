@@ -2,17 +2,17 @@
 
 ```yaml
 screen_id: ACC-01
-status: BLOCKED
-revision: 1
+status: DESIGN_READY
+revision: 2
 owner_domain: SYSTEM / Experience entry
 binding_ids:
   - CODEX-ACC01-RUNTIME-IDENTITY
 product_owner_approval: APPROVED
 design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
-design_decision: BLOCKED
-artifact_disposition: NON_AUTHORITATIVE_UNTIL_SCREEN_REVIEW
-reviewer: Sol acceptance required
-reviewed_at: 2026-09-22
+design_decision: DESIGN_READY
+artifact_disposition: REVIEWED_BOUNDED_ENTRY_NAVIGATION
+reviewer: Sol root integration review
+reviewed_at: 2026-09-26
 approval_reference: ROUND-14A bounded implementation Task Card
 ```
 
@@ -84,7 +84,7 @@ Feature integration keys to register with the canonical l10n owner: `acc01.betaE
 
 - `REAL USER JOB`: internal-beta user opens the App, confirms the actual entry state, and enters the already authorized workspace without creating a product account.
 - `REAL INPUT`: live Core identity response and the host's real continuation callback.
-- `END-TO-END PATH`: App Shell → ACC-01 → runtime identity → host continuation → originating workspace.
+- `END-TO-END PATH`: App Shell → ACC-01 → runtime identity → ACC-03 launch map → chosen existing workspace; existing shell navigation returns to ACC-01.
 - `USER-VISIBLE RESULT`: real status, explicit account boundary, and a real returned workspace or an honest unavailable state.
 - `FAILURE/RECOVERY`: distinguish 401, 403, offline, malformed response and missing host route.
 - `EVIDENCE`: current commit, live response, callback return, and no product-account side effect.
@@ -101,4 +101,11 @@ Feature integration keys to register with the canonical l10n owner: `acc01.betaE
 
 ## 10. Review decision
 
-Implementation is present but this specification remains `BLOCKED` until the screen-specific design gate, live runtime entry/return and target-surface acceptance are independently recorded. No product-account wall is authorized by this document.
+The existing quiet entry composition is reviewed as `DESIGN_READY` for bounded
+host navigation. The mounted shell supplies Continue to ACC-03, the existing
+workspace launch map; this does not require ACC-02 selection or product login.
+From the map, the user chooses an existing CTH/BMP/AI entry. Runtime status
+remains visible and navigation does not attest health or business permission.
+An unmounted screen without a host callback retains its unavailable button.
+Runtime and target-surface acceptance remain separate and unaccepted until
+recorded in the owning Round evidence. No product-account wall is authorized.

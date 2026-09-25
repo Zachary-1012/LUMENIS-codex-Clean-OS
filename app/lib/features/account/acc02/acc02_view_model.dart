@@ -18,6 +18,7 @@ class Acc02ViewModel extends ChangeNotifier {
   Acc02Snapshot? _snapshot;
   String? _selectingId;
   String? _actionError;
+  bool _disposed = false;
 
   Acc02LoadPhase get phase => _phase;
   Acc02FailureKind? get failureKind => _failureKind;
@@ -26,39 +27,55 @@ class Acc02ViewModel extends ChangeNotifier {
   String? get actionError => _actionError;
 
   bool get canSelect =>
+      !_disposed &&
+      _selectingId == null &&
       _phase == Acc02LoadPhase.ready &&
       _snapshot?.subjectState == Acc02SubjectState.ready;
 
   Future<void> refresh() async {
+    if (_disposed) return;
     _phase = Acc02LoadPhase.loading;
     _failureKind = null;
     _actionError = null;
     notifyListeners();
     try {
-      _snapshot = await _repository.load();
+      final snapshot = await _repository.load();
+      if (_disposed) return;
+      _snapshot = snapshot;
       _phase = Acc02LoadPhase.ready;
     } catch (error) {
+      if (_disposed) return;
       _snapshot = null;
       _failureKind = _classifyFailure(error);
       _phase = Acc02LoadPhase.failed;
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> selectSubject(Acc02Subject subject) async {
-    if (!canSelect) return;
+    if (_disposed || _selectingId != null || !canSelect) return;
     _selectingId = subject.id;
     _actionError = null;
     notifyListeners();
     try {
       await _repository.selectSubject(subject);
-      _snapshot = await _repository.load();
+      if (_disposed) return;
+      final snapshot = await _repository.load();
+      if (_disposed) return;
+      _snapshot = snapshot;
     } catch (error) {
+      if (_disposed) return;
       _actionError = _actionMessage(_classifyFailure(error));
     } finally {
       _selectingId = null;
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 
   static Acc02FailureKind _classifyFailure(Object error) {

@@ -14,11 +14,20 @@ class CoreAcc03Repository implements Acc03Repository {
   Future<Acc03Snapshot> load() async {
     final identity = await _client.runtimeIdentity();
     Map<String, dynamic>? context;
+    Acc03RuntimeState? contextFailure;
     try {
       context = await _client.settingsContext();
-    } on LumenisCoreException catch (error) {
-      if (error.statusCode == 401 || error.statusCode == 403) rethrow;
+    } catch (error) {
+      contextFailure =
+          error is LumenisCoreException &&
+              (error.statusCode == 401 || error.statusCode == 403)
+          ? Acc03RuntimeState.restricted
+          : Acc03RuntimeState.unavailable;
     }
-    return Acc03Snapshot.fromResponses(identity: identity, context: context);
+    return Acc03Snapshot.fromResponses(
+      identity: identity,
+      context: context,
+      contextFailure: contextFailure,
+    );
   }
 }

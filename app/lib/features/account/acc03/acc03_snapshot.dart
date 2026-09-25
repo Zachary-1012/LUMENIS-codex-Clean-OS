@@ -1,4 +1,4 @@
-enum Acc03RuntimeState { connected, degraded, unavailable, unknown }
+enum Acc03RuntimeState { connected, degraded, unavailable, unknown, restricted }
 
 enum Acc03Destination { commerce, brand, ai }
 
@@ -41,6 +41,7 @@ class Acc03Snapshot {
   factory Acc03Snapshot.fromResponses({
     required Map<String, dynamic> identity,
     Map<String, dynamic>? context,
+    Acc03RuntimeState? contextFailure,
   }) {
     if (identity['ok'] != true) {
       throw const FormatException('ACC-03 identity response is not valid.');
@@ -53,17 +54,19 @@ class Acc03Snapshot {
         context?['contract'] == 'lumenis.context.v1' &&
         context?['selection_only'] == true &&
         contextMap != null;
-    final contextState = contextMap == null
-        ? Acc03RuntimeState.unknown
-        : !contextEnvelopeValid
-        ? Acc03RuntimeState.unavailable
-        : switch (contextMap['mode']) {
-            'GLOBAL_ALL' || 'FOCUS' => Acc03RuntimeState.connected,
-            _ => Acc03RuntimeState.unavailable,
-          };
-    final viewName = contextEnvelopeValid
-        ? _safeText(_asMap(contextMap['display_name'])?['zh']) ??
-              _safeText(_asMap(contextMap['display_name'])?['en'])
+    final contextState =
+        contextFailure ??
+        (contextMap == null
+            ? Acc03RuntimeState.unknown
+            : !contextEnvelopeValid
+            ? Acc03RuntimeState.unavailable
+            : switch (contextMap['mode']) {
+                'GLOBAL_ALL' || 'FOCUS' => Acc03RuntimeState.connected,
+                _ => Acc03RuntimeState.unavailable,
+              });
+    final viewName = contextState == Acc03RuntimeState.connected
+        ? _safeText(_asMap(contextMap?['display_name'])?['zh']) ??
+              _safeText(_asMap(contextMap?['display_name'])?['en'])
         : null;
 
     return Acc03Snapshot(

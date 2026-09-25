@@ -2,17 +2,17 @@
 
 ```yaml
 screen_id: ACC-04
-status: BLOCKED
-revision: 1
+status: DESIGN_READY
+revision: 2
 owner_domain: SYSTEM Permission / recovery boundary
 binding_ids:
   - CODEX-ACC04-GUARD
 product_owner_approval: APPROVED
 design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
-design_decision: BLOCKED
-artifact_disposition: NON_AUTHORITATIVE_UNTIL_SCREEN_REVIEW
-reviewer: Sol acceptance required
-reviewed_at: 2026-09-22
+design_decision: DESIGN_READY
+artifact_disposition: REVIEWED_RETURN_ONLY_BOUNDARY
+reviewer: Sol root integration review
+reviewed_at: 2026-09-26
 approval_reference: ROUND-14A bounded implementation Task Card
 ```
 
@@ -76,4 +76,9 @@ Feature keys: `acc04.guardUnavailable`, `acc04.guardBlocked`, `acc04.productAcco
 ## 7. Continuous frontier research / review decision
 
 - `RESEARCH COMPLETE / NO JUSTIFIED UPGRADE` on 2026-09-22. Existing guard/Permission owners and explicit callback boundaries are sufficient; no new auth or recovery dependency is justified.
-- This implementation remains `BLOCKED` pending screen review and live guarded-flow evidence.
+- On 2026-09-26, root reviewed the existing explanation/recovery composition as
+  `DESIGN_READY` for return-only host navigation. The shell supplies Return to
+  ACC-03 without changing the guard state, making a permission grant, retrying
+  a write or exposing access-request/context-switch actions. Recheck remains
+  the same guard GET. The guard binding and real authorized recovery flow stay
+  `BLOCKED_PENDING_LIVE_RUNTIME_E2E`; returning to the map is not recovery proof.

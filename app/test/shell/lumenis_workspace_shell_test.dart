@@ -3,6 +3,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
+import 'package:lumenis_app/features/account/acc03/acc03_screen.dart';
+import 'package:lumenis_app/features/cth/cth01/cth01_screen.dart';
 import 'package:lumenis_app/features/ai04/ai04_screen.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import 'package:lumenis_app/navigation/lumenis_workspace_routes.dart';
@@ -175,6 +177,38 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'confirmed account selection reaches the map and workspace header',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 960));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final client = _ShellClient();
+      final selected = <String>[];
+      await tester.pumpWidget(
+        _app(client, initialScreenId: 'ACC-02', onScreenSelected: selected.add),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('示例商业主体'));
+      await tester.pumpAndSettle();
+      final continueButton = find.widgetWithText(OutlinedButton, '继续');
+      expect(tester.widget<OutlinedButton>(continueButton).onPressed, isNull);
+      await tester.tap(find.widgetWithText(FilledButton, '设为当前范围'));
+      await tester.pumpAndSettle();
+      await tester.tap(continueButton);
+      await tester.pumpAndSettle();
+      expect(find.byType(Acc03Screen), findsOneWidget);
+      expect(find.text('全部可访问范围'), findsNothing);
+      expect(find.text('示例商业主体'), findsOneWidget);
+      await tester.tap(find.widgetWithText(OutlinedButton, '继续').first);
+      await tester.pumpAndSettle();
+      expect(find.byType(Cth01Screen), findsOneWidget);
+      expect(find.text('示例商业主体'), findsOneWidget);
+      expect(selected, ['ACC-03', 'CTH-01']);
+      expect(client.lastSelectedSubject, 'INTERNAL-SUBJECT-ID');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('runtime connection state stays honest', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1440, 1000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -236,6 +270,12 @@ class _ShellClient extends LumenisCoreClient {
   int clearCalls = 0;
 
   Map<String, dynamic> get envelope => _envelope;
+
+  @override
+  Map<String, dynamic>? get currentContextEnvelope => _envelope;
+
+  @override
+  Future<Map<String, dynamic>> runtimeIdentity() async => _legacyRuntime;
 
   @override
   Future<Map<String, dynamic>> settingsContext() async => _envelope;

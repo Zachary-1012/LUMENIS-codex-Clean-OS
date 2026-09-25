@@ -2,18 +2,18 @@
 
 ```yaml
 screen_id: ACC-03
-status: BLOCKED
-revision: 1
+status: DESIGN_READY
+revision: 2
 owner_domain: SYSTEM shell / CTH / BMP / Shared AI entry map
 binding_ids:
   - CODEX-ACC03-RUNTIME
   - CODEX-ACC03-CONTEXT
 product_owner_approval: APPROVED
 design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
-design_decision: BLOCKED
-artifact_disposition: NON_AUTHORITATIVE_UNTIL_SCREEN_REVIEW
-reviewer: Sol acceptance required
-reviewed_at: 2026-09-22
+design_decision: DESIGN_READY
+artifact_disposition: REVIEWED_BOUNDED_LAUNCH_NAVIGATION
+reviewer: Sol root integration review
+reviewed_at: 2026-09-26
 approval_reference: ROUND-14A bounded implementation Task Card
 ```
 
@@ -79,4 +79,22 @@ Feature keys: `acc03.commerce`, `acc03.brandMarket`, `acc03.aiTasks`, `acc03.cur
 ## 7. Continuous frontier research / review decision
 
 - `RESEARCH COMPLETE / NO JUSTIFIED UPGRADE` on 2026-09-22. Existing shell callbacks, LayoutBuilder and shared route owners satisfy the bounded gap; adding a router or route registry here would duplicate truth.
-- Decision: `ADAPT` host navigation and current context owners. This specification remains `BLOCKED` until the screen-specific design gate and real route/return E2E pass.
+- Decision: `ADAPT` host navigation and current context owners. On 2026-09-26,
+  root reviewed the existing launch composition as `DESIGN_READY` for bounded
+  route binding: commerce -> CTH-01, brand -> BMP-01, AI -> AI-01, all through
+  the shell's existing `onNavigate` and canonical URL routing. Current view is
+  retained; route changes grant no access and do not execute AI or collection.
+  Existing shell account navigation returns to ACC-01 and its Continue opens
+  this map again. Browser history and direct links use the existing router.
+  Missing standalone callbacks stay unavailable. Runtime route/return and
+  native/mobile acceptance are separately recorded, not implied by this review.
+
+### Runtime-discovered dependency isolation
+
+Live browser inspection found that a denied optional Context GET prevented the
+whole launch map from opening even when runtime identity was confirmed. Align
+with the existing LaunchSurface boundary: identity failure still blocks entry;
+Context 401/403 is shown as Access restricted, other Context failures as
+Unavailable. The map still opens only existing host routes and every downstream
+request remains server-authorized. No selected Subject, global confirmation or
+permission grant is manufactured from an unavailable Context response.

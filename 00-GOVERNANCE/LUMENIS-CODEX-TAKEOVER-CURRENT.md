@@ -12,6 +12,28 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Bounded frontend entry continuity — 2026-09-26
+
+[ROUND 14 entry navigation evidence](evidence/round-14/ROUND-14-ENTRY-NAVIGATION-2026-09-26.md)
+connects the existing ACC-01/02 continuation to ACC-03 and its three existing
+work areas. ACC-04 can return while recovery remains unbound. ACC-02 rejects
+duplicate/pending confirmations and cannot continue before server-confirmed
+domain/Subject agreement; ACC-01/03 discard obsolete asynchronous responses.
+An optional Context 401/403 now remains visibly restricted without blocking the
+launch map or granting downstream access. Failed scope reads no longer claim a
+global scope. This is a bounded frontend integration candidate.
+
+Root's final 87/87 scoped tests, no-issues analyzer and Web build passed. In Chrome,
+the actual entry -> AI-01 -> TXT download -> return job produced an exact 87-byte
+user task file. CTH and ACC-02 still showed their real access restriction; ACC-04
+returned without a grant. A 390-pixel Web layout and return were checked. The
+preview uses canonical blueprints with an empty isolated DB on loopback 53764;
+it is not connected production business E2E. Authorized Subject selection,
+business/AI execution, native surfaces and all open Round exits remain unaccepted.
+Production DB, credentials and global model configuration were unchanged.
+Source, specs and evidence are co-published with this status; resolve the containing
+commit against live main after push. `COMMERCIAL_READY=NO`.
+
 ### Round 03 migration-test continuity — 2026-09-26
 
 [ROUND 03 B001L v15-to-current test evidence](evidence/round-03/ROUND-03-B001L-V15-TO-CURRENT-TEST-2026-09-26.md)

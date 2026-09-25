@@ -2,18 +2,18 @@
 
 ```yaml
 screen_id: ACC-02
-status: BLOCKED
-revision: 1
+status: DESIGN_READY
+revision: 2
 owner_domain: SYSTEM settings / CTH Subject Registry selection
 binding_ids:
   - CODEX-ACC02-CONTEXT
   - CODEX-ACC02-SUBJECT-REGISTRY
 product_owner_approval: APPROVED
 design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
-design_decision: BLOCKED
-artifact_disposition: NON_AUTHORITATIVE_UNTIL_SCREEN_REVIEW
-reviewer: Sol acceptance required
-reviewed_at: 2026-09-22
+design_decision: DESIGN_READY
+artifact_disposition: REVIEWED_BOUNDED_SELECTION_CONTINUATION
+reviewer: Sol root integration review
+reviewed_at: 2026-09-26
 approval_reference: ROUND-14A bounded implementation Task Card
 ```
 
@@ -102,4 +102,14 @@ Feature integration keys: `acc02.availableSubjects`, `acc02.confirmLens`, `acc02
 
 ## 10. Review decision
 
-Implementation is bounded and honest, but the screen remains `BLOCKED` until the screen-specific design gate and real server-confirmed selection/return E2E pass.
+The existing list/detail composition is reviewed as `DESIGN_READY` for bounded
+selection continuation. Continue opens the existing ACC-03 launch map only
+when the selected domain and Subject match the server-confirmed focused
+context, no confirmation is pending and no confirmation error remains.
+Any in-flight selection disables duplicate confirmation and continuation,
+including after selecting another row. Leaving the page cannot notify a
+disposed view model. The shell displays the client's latest confirmed context
+on continuation; no local permission or business effect is introduced.
+Real authorized selection/return E2E and target-surface acceptance remain
+unaccepted until independently recorded. GLOBAL/ALL remains the default;
+this chooser is optional and is not a mandatory entry gate.
