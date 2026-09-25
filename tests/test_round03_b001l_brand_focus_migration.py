@@ -110,8 +110,8 @@ def test_v14_upgrade_is_deterministic_compatible_and_reusable(tmp_path, monkeypa
     _seed_v14_registry(db_path)
     _bind_migration_database(monkeypatch, db_path)
 
-    assert migrations.CURRENT_VERSION == 15
-    assert migrations.migrate() is True
+    assert migrations.CURRENT_VERSION >= 15
+    assert migrations.migrate(target_version=15) is True
 
     with sqlite3.connect(db_path) as conn:
         columns = {row[1] for row in conn.execute(f"PRAGMA table_info({TABLE})")}
@@ -200,6 +200,14 @@ def test_v14_upgrade_is_deterministic_compatible_and_reusable(tmp_path, monkeypa
     exposed = {row["subject_id"]: row["brand_focus_id"] for row in body["subjects"]}
     assert exposed["SUBJ-LEGACY-BMP-1"] == expected_one
     assert exposed[new_bmp["subject_id"]] == new_bmp["brand_focus_id"]
+
+    before_later_upgrade = _registry_state(db_path)[1]
+    assert migrations.migrate() is True
+    after_later_upgrade = _registry_state(db_path)
+    assert after_later_upgrade[1] == before_later_upgrade
+    assert after_later_upgrade[2][-1][0] == migrations.CURRENT_VERSION
+    assert migrations.migrate() is True
+    assert _registry_state(db_path) == after_later_upgrade
 
 
 def test_v14_registry_read_and_write_require_migration_without_schema_rewrite(

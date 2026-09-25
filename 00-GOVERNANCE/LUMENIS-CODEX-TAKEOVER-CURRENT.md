@@ -12,6 +12,19 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 03 migration-test continuity — 2026-09-26
+
+[ROUND 03 B001L v15-to-current test evidence](evidence/round-03/ROUND-03-B001L-V15-TO-CURRENT-TEST-2026-09-26.md)
+records the narrow correction of an obsolete `CURRENT_VERSION == 15` test
+assumption. The test now checks the v15 transition explicitly, continues to
+the current migration version, and confirms registry identity and repeat-run
+stability. The exact staged test file passed 9/9 migration and neighboring tests
+on a clean archive of the then-current main, with disposable SQLite fixtures.
+The protected product DB was not opened or migrated. This is a bounded test
+Batch only: Round 03 remains `REWORK`, its real-user work E2E is open, and
+later Round exits and commercial release are not accepted. Resolve the
+containing commit and live main again after publication.
+
 ### Latest bounded frontend update — 2026-09-24; publication check 2026-09-26
 
 [ROUND 14 local draft continuity](evidence/round-14/ROUND-14-LOCAL-DRAFT-CONTINUITY-2026-09-24.md)
