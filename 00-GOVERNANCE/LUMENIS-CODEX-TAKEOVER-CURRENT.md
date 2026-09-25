@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**  
-> Updated: 2026-09-24 (bounded frontend integration candidate; resolve the current SHA live)
+> Updated: 2026-09-26 (bounded source and governance candidates; resolve the current SHA live)
 > CI status: resolve from GitHub checks for the exact current origin/main; no historical SHA is a current acceptance result.
 > **Never treat this document's commit, any pasted SHA, or any historical handoff SHA as the current HEAD. Codex must fetch and resolve `origin/main` at session start.**
 
@@ -11,6 +11,16 @@ handoff, not a second instruction system. It does **not** upgrade source evidenc
 LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
+
+### AI-native product principles — 2026-09-26
+
+[The Product Owner's lightweight AI-native constitution](AI-NATIVE-PRODUCT-CONSTITUTION.md)
+is now recorded as a reusable principle layer with its source provenance and
+explicit LUMENIS adaptations. Root `AGENTS.md` remains the sole execution
+router; existing Product Architecture, Experience Constitution, Owner Index and
+Real Delivery Overlay retain their named authority. Product direction and final
+release decisions stay with the Product Owner. This governance addition changes
+no product source, Round exit, model route or commercial-readiness status.
 
 ### Round 07 Gateway result validity — 2026-09-26
 
