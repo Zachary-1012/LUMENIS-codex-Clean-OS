@@ -16,6 +16,8 @@ class Ai02ViewModel extends ChangeNotifier {
   Ai02FailureKind? _failureKind;
   Ai02Snapshot? _snapshot;
   String _draft = '';
+  bool _disposed = false;
+  int _refreshGeneration = 0;
 
   Ai02LoadPhase get phase => _phase;
   Ai02FailureKind? get failureKind => _failureKind;
@@ -25,24 +27,41 @@ class Ai02ViewModel extends ChangeNotifier {
       _snapshot?.isBound == true && _snapshot!.executionProof.ready;
 
   Future<void> refresh() async {
+    if (_disposed) return;
+    final generation = ++_refreshGeneration;
     _phase = Ai02LoadPhase.loading;
     _failureKind = null;
     notifyListeners();
+
+    if (_disposed || generation != _refreshGeneration) return;
+
     try {
-      _snapshot = await _repository.load();
+      final snapshot = await _repository.load();
+      if (_disposed || generation != _refreshGeneration) return;
+      _snapshot = snapshot;
       _phase = Ai02LoadPhase.ready;
     } catch (error) {
+      if (_disposed || generation != _refreshGeneration) return;
       _snapshot = null;
       _failureKind = _classifyFailure(error);
       _phase = Ai02LoadPhase.failed;
     }
+
+    if (_disposed || generation != _refreshGeneration) return;
     notifyListeners();
   }
 
   void updateDraft(String value) {
-    if (value == _draft) return;
+    if (_disposed || value == _draft) return;
     _draft = value;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _refreshGeneration++;
+    super.dispose();
   }
 
   String get blockedReason {

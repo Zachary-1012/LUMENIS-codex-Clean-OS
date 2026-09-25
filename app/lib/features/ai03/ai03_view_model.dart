@@ -16,6 +16,8 @@ class Ai03ViewModel extends ChangeNotifier {
   Ai03FailureKind? _failureKind;
   Ai03Snapshot? _snapshot;
   String? _selectedCitationId;
+  bool _disposed = false;
+  int _refreshGeneration = 0;
 
   Ai03LoadPhase get phase => _phase;
   Ai03FailureKind? get failureKind => _failureKind;
@@ -34,22 +36,33 @@ class Ai03ViewModel extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
+    if (_disposed) return;
+    final generation = ++_refreshGeneration;
     _phase = Ai03LoadPhase.loading;
     _failureKind = null;
     _selectedCitationId = null;
     notifyListeners();
+
+    if (_disposed || generation != _refreshGeneration) return;
+
     try {
-      _snapshot = await _repository.load();
+      final snapshot = await _repository.load();
+      if (_disposed || generation != _refreshGeneration) return;
+      _snapshot = snapshot;
       _phase = Ai03LoadPhase.ready;
     } catch (error) {
+      if (_disposed || generation != _refreshGeneration) return;
       _snapshot = null;
       _failureKind = _classifyFailure(error);
       _phase = Ai03LoadPhase.failed;
     }
+
+    if (_disposed || generation != _refreshGeneration) return;
     notifyListeners();
   }
 
   void selectCitation(String id) {
+    if (_disposed) return;
     if (_snapshot?.thread
             .expand((entry) => entry.citations)
             .any((item) => item.id == id) !=
@@ -58,6 +71,13 @@ class Ai03ViewModel extends ChangeNotifier {
     }
     _selectedCitationId = id;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _refreshGeneration++;
+    super.dispose();
   }
 
   static Ai03FailureKind _classifyFailure(Object error) {

@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumenis_app/features/ai03/ai03_repository.dart';
 import 'package:lumenis_app/features/ai03/ai03_snapshot.dart';
+import 'package:lumenis_app/features/ai03/ai03_view_model.dart';
 
 void main() {
   test(
@@ -95,7 +99,98 @@ void main() {
     expect(snapshot.thread, isEmpty);
     expect(snapshot.hasEvidence, isFalse);
   });
+
+  test('AI-03 ignores a delayed success after disposal', () async {
+    final repository = _ControlledAi03Repository();
+    final viewModel = Ai03ViewModel(repository: repository);
+    final refresh = viewModel.refresh();
+
+    expect(repository.pending, hasLength(1));
+    viewModel.dispose();
+    repository.pending.single.complete(_ai03Snapshot('过期结果'));
+
+    await expectLater(refresh, completes);
+    expect(viewModel.snapshot, isNull);
+    expect(viewModel.phase, Ai03LoadPhase.loading);
+  });
+
+  test('AI-03 ignores a delayed failure after disposal', () async {
+    final repository = _ControlledAi03Repository();
+    final viewModel = Ai03ViewModel(repository: repository);
+    final refresh = viewModel.refresh();
+
+    expect(repository.pending, hasLength(1));
+    viewModel.dispose();
+    repository.pending.single.completeError(StateError('HTTP 403'));
+
+    await expectLater(refresh, completes);
+    expect(viewModel.failureKind, isNull);
+    expect(viewModel.phase, Ai03LoadPhase.loading);
+  });
+
+  test('AI-03 keeps the latest overlapping refresh result', () async {
+    final repository = _ControlledAi03Repository();
+    final viewModel = Ai03ViewModel(repository: repository);
+    final olderRefresh = viewModel.refresh();
+    final latestRefresh = viewModel.refresh();
+
+    expect(repository.pending, hasLength(2));
+    repository.pending[1].complete(_ai03Snapshot('最新结果'));
+    await latestRefresh;
+    repository.pending[0].completeError(StateError('HTTP 403'));
+    await olderRefresh;
+
+    expect(viewModel.phase, Ai03LoadPhase.ready);
+    expect(viewModel.failureKind, isNull);
+    expect(viewModel.snapshot?.thread.single.text, '最新结果');
+    viewModel.dispose();
+  });
+
+  test('AI-03 ignores citation selection after disposal', () async {
+    final repository = _ControlledAi03Repository();
+    final viewModel = Ai03ViewModel(repository: repository);
+    final refresh = viewModel.refresh();
+
+    repository.pending.single.complete(_ai03SnapshotWithCitation());
+    await refresh;
+    final citationId = viewModel.snapshot!.thread.single.citations.single.id;
+    viewModel.dispose();
+
+    expect(() => viewModel.selectCitation(citationId), returnsNormally);
+    expect(viewModel.selectedCitationId, isNull);
+  });
 }
+
+class _ControlledAi03Repository implements Ai03Repository {
+  final List<Completer<Ai03Snapshot>> pending = [];
+
+  @override
+  Future<Ai03Snapshot> load() {
+    final completer = Completer<Ai03Snapshot>();
+    pending.add(completer);
+    return completer.future;
+  }
+}
+
+Ai03Snapshot _ai03Snapshot(String text) => Ai03Snapshot.fromResponse({
+  ..._baseResponse(),
+  'thread': [
+    {'role': 'assistant', 'text': text, 'citations': []},
+  ],
+});
+
+Ai03Snapshot _ai03SnapshotWithCitation() => Ai03Snapshot.fromResponse({
+  ..._baseResponse(),
+  'thread': [
+    {
+      'role': 'assistant',
+      'text': '来源锚点可供检查。',
+      'citations': [
+        {'evidence': _evidenceV2(), 'title': '公开资料'},
+      ],
+    },
+  ],
+});
 
 Map<String, dynamic> _baseResponse() => {
   'ok': true,

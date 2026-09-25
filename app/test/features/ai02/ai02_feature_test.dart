@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
@@ -104,6 +106,61 @@ void main() {
     },
   );
 
+  test('AI-02 ignores a delayed success after disposal', () async {
+    final repository = _ControlledAi02Repository();
+    final viewModel = Ai02ViewModel(repository: repository);
+    final refresh = viewModel.refresh();
+
+    expect(repository.pending, hasLength(1));
+    viewModel.dispose();
+    repository.pending.single.complete(_ai02Snapshot('EV-LATE'));
+
+    await expectLater(refresh, completes);
+    expect(viewModel.snapshot, isNull);
+    expect(viewModel.phase, Ai02LoadPhase.loading);
+  });
+
+  test('AI-02 ignores a delayed failure after disposal', () async {
+    final repository = _ControlledAi02Repository();
+    final viewModel = Ai02ViewModel(repository: repository);
+    final refresh = viewModel.refresh();
+
+    expect(repository.pending, hasLength(1));
+    viewModel.dispose();
+    repository.pending.single.completeError(StateError('HTTP 401'));
+
+    await expectLater(refresh, completes);
+    expect(viewModel.failureKind, isNull);
+    expect(viewModel.phase, Ai02LoadPhase.loading);
+  });
+
+  test('AI-02 keeps the latest overlapping refresh result', () async {
+    final repository = _ControlledAi02Repository();
+    final viewModel = Ai02ViewModel(repository: repository);
+    final olderRefresh = viewModel.refresh();
+    final latestRefresh = viewModel.refresh();
+
+    expect(repository.pending, hasLength(2));
+    repository.pending[1].complete(_ai02Snapshot('EV-LATEST'));
+    await latestRefresh;
+    repository.pending[0].completeError(StateError('HTTP 403'));
+    await olderRefresh;
+
+    expect(viewModel.phase, Ai02LoadPhase.ready);
+    expect(viewModel.failureKind, isNull);
+    expect(viewModel.snapshot?.evidenceRefs, ['EV-LATEST']);
+    viewModel.dispose();
+  });
+
+  test('AI-02 ignores draft updates after disposal', () {
+    final viewModel = Ai02ViewModel(repository: _FakeAi02Repository());
+    viewModel.updateDraft('已保留的草稿');
+    viewModel.dispose();
+
+    expect(() => viewModel.updateDraft('卸载后的草稿'), returnsNormally);
+    expect(viewModel.draft, '已保留的草稿');
+  });
+
   testWidgets('AI-02 enables start only when a real host action is connected', (
     tester,
   ) async {
@@ -164,6 +221,25 @@ class _FakeAi02Repository implements Ai02Repository {
         unavailableFields: ['task_steps'],
       );
 }
+
+class _ControlledAi02Repository implements Ai02Repository {
+  final List<Completer<Ai02Snapshot>> pending = [];
+
+  @override
+  Future<Ai02Snapshot> load() {
+    final completer = Completer<Ai02Snapshot>();
+    pending.add(completer);
+    return completer.future;
+  }
+}
+
+Ai02Snapshot _ai02Snapshot(String evidenceRef) => Ai02Snapshot(
+  bindingState: Ai02BindingState.unavailable,
+  steps: const [],
+  evidenceRefs: [evidenceRef],
+  executionProof: const Ai02ExecutionProof.unverified(),
+  unavailableFields: const [],
+);
 
 Map<String, dynamic> _permissionedResponse() => {
   'ok': true,

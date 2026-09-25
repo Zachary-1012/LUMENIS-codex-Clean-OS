@@ -12,6 +12,23 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Bounded AI page lifecycle repair — 2026-09-26
+
+[ROUND 14 AI read lifecycle evidence](evidence/round-14/ROUND-14-AI-READ-LIFECYCLE-2026-09-26.md)
+repairs late and out-of-order reads in the existing AI-02/03 view models. Eight
+regressions first reproduced the faults; the two feature files then passed
+19/19 tests. Root's combined entry, navigation, AI and appearance regression
+passed 106/106; scoped analysis and the final Web build also passed.
+
+Chrome rapid navigation with temporary network delay retained real unavailable
+states. A timeout recovered through the existing Retry after the delay was
+removed, and the actual saved task TXT reopened with exact content. This was
+an empty isolated preview, with no task execution, permission grant or invented
+analysis. It verifies the bounded frontend recovery job, not AI-02/03 business
+E2E or complete screens. All existing Round/native/business acceptance limits
+remain open; `COMMERCIAL_READY=NO`. This source, evidence and status are published
+together; verify their containing commit against fresh live main.
+
 ### AI-native product principles — 2026-09-26
 
 [The Product Owner's lightweight AI-native constitution](AI-NATIVE-PRODUCT-CONSTITUTION.md)
