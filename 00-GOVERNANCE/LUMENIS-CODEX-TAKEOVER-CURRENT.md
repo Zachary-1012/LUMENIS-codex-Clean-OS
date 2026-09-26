@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 03 collector-quality unknown count — 2026-09-26
+
+[The bounded quality-log evidence](evidence/round-03/ROUND-03-COLLECTOR-QUALITY-UNKNOWN-2026-09-26.md)
+records that canonical collector-quality storage now keeps an omitted/blank
+comment count as NULL while measured zero remains zero. Sol replayed the
+source/test pair on clean main, passed 25 selected database tests,
+compilation, database-authority and constitution gates with disposable
+storage. App and live-collector callers still fabricate zero before this
+writer; live collection and real user-work E2E remain unverified.
+ROUND 03=REWORK; COMMERCIAL_READY=NO.
+
 ### Round 03 XHS source missing-count pass-through — 2026-09-26
 
 [The bounded caller evidence](evidence/round-03/ROUND-03-XHS-CALLER-MISSING-COUNT-2026-09-26.md)

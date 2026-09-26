@@ -858,12 +858,18 @@ def get_effective_notes_count(date_str=None):
 # ===== v5.3.2 live collector additive helpers =====
 def save_collector_quality(note_id, quality):
     """保存采集质量审计信息；不修改主体判定。"""
+    comments_collected = quality.get('comments_collected')
+    if comments_collected is not None:
+        if isinstance(comments_collected, str) and not comments_collected.strip():
+            comments_collected = None
+        else:
+            comments_collected = int(comments_collected)
     with get_db() as conn:
         conn.execute("""INSERT INTO collector_quality_log
             (note_id,status,score,detail_status,comments_collected,collector_version,checked_at,reason)
             VALUES (?,?,?,?,?,?,?,?)""", (
             str(note_id), quality.get('status','unknown'), float(quality.get('score',0) or 0),
-            quality.get('detail_status',''), int(quality.get('comments_collected',0) or 0),
+            quality.get('detail_status',''), comments_collected,
             quality.get('collector_version','xhs-live-v1'), datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             quality.get('reason','') or ''))
 
