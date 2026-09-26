@@ -84,7 +84,10 @@ def init_auth_db():
     try:
         conn.executescript(V4_TABLES_SQL)
         conn.commit()
-        # 确保主账号存在（默认 Zachary/Zachary01，首次启动时创建）
+        from account.models import ensure_auth_user_columns
+        ensure_auth_user_columns(conn)
+        conn.commit()
+        # Compatibility caller uses the canonical account bootstrap policy.
         _ensure_owner_account(conn)
         _ensure_default_security_questions(conn)
     finally:
@@ -92,30 +95,12 @@ def init_auth_db():
 
 
 def _ensure_owner_account(conn):
-    """确保主账号存在，不存在则创建"""
-    from .security import hash_password
-    cur = conn.execute("SELECT COUNT(*) as cnt FROM v4_users WHERE role='owner'")
-    if cur.fetchone()["cnt"] == 0:
-        pwd_hash = hash_password("Zachary01")
-        conn.execute(
-            "INSERT INTO v4_users (username, password_hash, role, display_name, status) VALUES (?,?,?,?,?)",
-            ("Zachary", pwd_hash, "owner", "超级主账号", "active")
-        )
-        conn.commit()
+    """Preserve the legacy caller without a second credential bootstrap policy."""
+    from account.models import _ensure_owner_account as bootstrap_owner
+    bootstrap_owner(conn)
 
 
 def _ensure_default_security_questions(conn):
-    """确保默认安全问答存在"""
-    from .security import hash_password
-    cur = conn.execute("SELECT COUNT(*) as cnt FROM v4_security_questions WHERE is_active=1")
-    if cur.fetchone()["cnt"] == 0:
-        defaults = [
-            ("手机号", hash_password("18504635216")),
-            ("生日", hash_password("1012")),
-        ]
-        for q, a_hash in defaults:
-            conn.execute(
-                "INSERT INTO v4_security_questions (question, answer_hash, is_active) VALUES (?,?,1)",
-                (q, a_hash)
-            )
-        conn.commit()
+    """Delegate recovery initialization to the existing account owner."""
+    from account.models import _ensure_default_security_questions as initialize_recovery
+    initialize_recovery(conn)

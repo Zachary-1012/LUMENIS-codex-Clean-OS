@@ -103,10 +103,9 @@ def test_grant_and_session_access():
     assert ws.session_can_access("", "ZBMP") is False
 
 
-def test_open_owner_session():
+def test_open_owner_session_without_configured_owner():
     s = ws.open_owner_session("127.0.0.1", "pytest")
-    assert s and s["role"] == "owner" and s["token"]
-    assert ws.session_can_access(s["token"], "ZBMP") is False  # 未 grant 前不能进
+    assert s is None
 
 
 if __name__ == "__main__":

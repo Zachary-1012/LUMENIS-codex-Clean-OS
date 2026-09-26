@@ -17,7 +17,7 @@ AUTH_CONFIG = {
     "lockout_minutes": 15,
     "bcrypt_rounds": 12,
     "session_cookie_name": "cth_poms_v4_session",
-    "master_access_key": os.environ.get("V4_ACCESS_KEY", "张志宏"),
+    "master_access_key": os.environ.get("V4_ACCESS_KEY", ""),
 }
 
 # 角色权限（与 lumenis/config.py 保持一致）

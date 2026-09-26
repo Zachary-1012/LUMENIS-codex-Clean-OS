@@ -17,14 +17,11 @@ AUTH_CONFIG = {
     "bcrypt_rounds": 12,                    # 密码哈希轮数
     "session_cookie_name": "cth_poms_v4_session",
     # 密钥登录（替代短信验证码）：密钥正确即以主账号(owner)身份登录；可用环境变量 V4_ACCESS_KEY 覆盖
-    "master_access_key": os.environ.get("V4_ACCESS_KEY", "张志宏"),
+    "master_access_key": os.environ.get("V4_ACCESS_KEY", ""),
 }
 
 # 安全问答配置（主账号可在设置页修改）
-DEFAULT_SECURITY_QUESTIONS = [
-    {"id": "phone", "question": "手机号", "answer": "18504635216"},
-    {"id": "birthday", "question": "生日", "answer": "1012"},
-]
+DEFAULT_SECURITY_QUESTIONS = []  # Recovery configuration is owner-supplied.
 
 # 角色权限定义
 ROLE_PERMISSIONS = {

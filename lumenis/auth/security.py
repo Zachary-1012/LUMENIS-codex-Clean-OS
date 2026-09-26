@@ -122,7 +122,7 @@ def record_login_attempt(username: str, ip: str, success: bool):
 def verify_security_questions(answers: dict) -> bool:
     """
     验证安全问答，全部正确才通过
-    answers: {"手机号": "18504635216", "生日": "1012"}
+    answers: operator-supplied values keyed by configured question
     """
     conn = get_db()
     try:

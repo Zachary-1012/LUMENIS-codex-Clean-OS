@@ -8,6 +8,7 @@ account/models.py — 数据库模型与建表
 数据库路径统一通过 db_paths.main_db_path() 在连接时解析，避免模块 reload / 环境变量切换后
 继续使用 import-time 固化路径，保证测试/生产 DB identity 与全仓 canonical contract 一致。
 """
+import os
 import sqlite3
 
 from lumenis.shared.database import get_repository, main_db_path
@@ -217,6 +218,7 @@ ACCOUNT_TABLES_SQL = (BASE_TABLES_SQL + VERIFICATION_TABLES_SQL +
 
 # 需要对 v4_users 新增的字段（幂等 ALTER）
 _USER_NEW_COLUMNS = [
+    ("must_change_password", "INTEGER DEFAULT 0"),
     ("avatar", "TEXT"),
     ("phone", "TEXT"),
 ]
@@ -273,35 +275,43 @@ def _column_exists(conn, table, column):
     return column in cols
 
 
+def ensure_auth_user_columns(conn):
+    """Apply the canonical additive user columns before account bootstrap."""
+    for col, col_type in _USER_NEW_COLUMNS:
+        if not _column_exists(conn, "v4_users", col):
+            conn.execute(f"ALTER TABLE v4_users ADD COLUMN {col} {col_type}")
+
+
 def _ensure_owner_account(conn):
-    """确保主账号 Zachary 存在"""
+    """Provision an initial owner only from explicit operator injection.
+
+    Existing accounts are never rotated or overwritten by initialization.
+    Unconfigured pre-beta deployments do not acquire a predictable login.
+    """
     from .security import hash_password
     cur = conn.execute("SELECT COUNT(*) as cnt FROM v4_users WHERE role='owner'")
     if cur.fetchone()["cnt"] == 0:
-        pwd_hash = hash_password("Zachary01")
+        username = os.environ.get("LUMENIS_BOOTSTRAP_OWNER_USERNAME", "").strip()
+        password = os.environ.get("LUMENIS_BOOTSTRAP_OWNER_PASSWORD", "")
+        if not username and not password:
+            return
+        if not username or len(password) < 16:
+            raise ValueError("Initial owner requires an explicit username and password of at least 16 characters")
+        pwd_hash = hash_password(password)
         conn.execute(
             "INSERT INTO v4_users (username, password_hash, role, display_name, status, must_change_password) "
             "VALUES (?,?,?,?,?,1)",
-            ("Zachary", pwd_hash, "owner", "超级主账号", "active")
+            (username, pwd_hash, "owner", "超级主账号", "active")
         )
         conn.commit()
 
 
 def _ensure_default_security_questions(conn):
-    """确保默认安全问答存在"""
-    from .security import hash_password
-    cur = conn.execute("SELECT COUNT(*) as cnt FROM v4_security_questions WHERE is_active=1")
-    if cur.fetchone()["cnt"] == 0:
-        defaults = [
-            ("手机号", hash_password("18504635216")),
-            ("生日", hash_password("1012")),
-        ]
-        for q, a_hash in defaults:
-            conn.execute(
-                "INSERT INTO v4_security_questions (question, answer_hash, is_active) VALUES (?,?,1)",
-                (q, a_hash)
-            )
-        conn.commit()
+    """Compatibility hook: recovery answers must be set by an authorized owner.
+
+    Never seed personal or publicly known answers. Existing configured recovery
+    records are deliberately preserved for a separately authorized rotation.
+    """
 
 
 def init_account_db():
@@ -311,9 +321,7 @@ def init_account_db():
         conn.executescript(ACCOUNT_TABLES_SQL)
         conn.commit()
         # 幂等新增列
-        for col, col_type in _USER_NEW_COLUMNS:
-            if not _column_exists(conn, "v4_users", col):
-                conn.execute(f"ALTER TABLE v4_users ADD COLUMN {col} {col_type}")
+        ensure_auth_user_columns(conn)
         for col, col_type in _WS_KEY_NEW_COLUMNS:
             if not _column_exists(conn, "v4_workspace_keys", col):
                 conn.execute(f"ALTER TABLE v4_workspace_keys ADD COLUMN {col} {col_type}")
