@@ -15,7 +15,7 @@ GLOBAL PRODUCT UNIVERSE
 ├─ global commercial-entity universe for CTH
 ├─ global brand-entity universe for BMP
 ├─ legally collected real signals, relationships and business-domain content
-└─ continuously operating Collector / Browser / AI / Content / Report capabilities
+└─ authorized on-demand capabilities and separately opted-in background work
           ↓
 select Subject / BrandFocus
           ↓
@@ -26,7 +26,13 @@ Visibility / Permission / Commercial Policy decides what is visible and actionab
 
 The default product context is `GLOBAL / ALL`. It is neither a blank workspace nor a fixed Subject or BrandFocus. CTH and BMP share the Global Product Universe discovery/context foundation while retaining separate business semantics, metrics, relationships, workflows and owners.
 
-Selection is not authorization and is not a runtime control. Selecting or clearing a Subject/BrandFocus must not start, stop or authorize Collector, Browser, AI, content, report or background-task execution. Those capabilities continue only within their configured, source-authorized and permitted scopes.
+Selection is not authorization and is not a runtime control. Selecting or clearing a Subject/BrandFocus must not start, stop or authorize Collector, Browser, AI, content, report or background-task execution. On-demand work runs only after its explicit request; any opted-in background work remains independent of focus and within its configured, source-authorized and permitted scope.
+
+### Collection mode — Product Owner decision, 2026-09-27
+
+The default collection mode is `MANUAL`: a user explicitly clicks to request a bounded collection for an identified, authorized scope and source. `AUTO` is off by default, including when no prior mode has been saved. It may run only after the user deliberately enables it for a reviewable scope, source set and cadence through the existing SYSTEM Collector, source authorization, actor Permission and effect boundary. The user can turn it off; disabling prevents future scheduled collection without rewriting already captured Evidence. Registration, search, focus selection, clear focus, opening a page and startup never silently opt a user into automatic collection or trigger a manual request.
+
+The prelaunch Global baseline still requires real, traceable CTH and BMP data before a customer arrives. Authorized operators may build and refresh it through explicit manual collection; an explicitly enabled automatic schedule may maintain an authorized portion. Show the actual collection mode, last attempt, freshness, source limits and `NOT_COLLECTED`/`STALE`/`BLOCKED` states. Do not claim continuous freshness where no active schedule or verified manual refresh supports it. This mode decision changes the trigger policy, not the one Source → Evidence → Canonical owner chain or the requirement that focus never controls collection.
 
 Clearing focus returns to `GLOBAL / ALL`. Every result, Evidence reference, AI task, content/report artifact and consequential action must carry its actual scope. A client-supplied header, route parameter, selected card or local UI state never grants access.
 
@@ -62,7 +68,7 @@ Keep these distinct from `READY`, `0`, `NULL`, `UNKNOWN`, `NOT_AVAILABLE`, `STAL
 
 ### Mandatory user-added Subject / BrandFocus path at closure
 
-`LUMENIS_INTERNAL_FULL_UNIVERSE_READY=YES` requires a real user-initiated add path for both a CTH Subject and a BMP BrandFocus. Each path must use the same canonical identity resolution, deduplication/conflict handling and region/industry/relationship metadata, then pass identity/source authorization and actor Permission before scheduled acquisition, Capture, Evidence, Canonical Data binding, and a user-visible result/recovery path. Adding an identity does not grant Permission or silently start collection. A registration-only row, fixture, or selection-only test is not closure evidence.
+`LUMENIS_INTERNAL_FULL_UNIVERSE_READY=YES` requires a real user-initiated add path for both a CTH Subject and a BMP BrandFocus. Each path must use the same canonical identity resolution, deduplication/conflict handling and region/industry/relationship metadata, then pass identity/source authorization and actor Permission before explicit manual acquisition or separately enabled scheduled acquisition, Capture, Evidence, Canonical Data binding, and a user-visible result/recovery path. Adding an identity does not grant Permission or silently start collection. A registration-only row, fixture, or selection-only test is not closure evidence.
 
 ### Best-effort partial collection and time semantics
 
@@ -96,7 +102,7 @@ An entity sample, random sample pass, fixture, or selected reference Subject val
 The mature global foundation exists and refreshes before customer onboarding. A customer's first search, selection, purchase or workspace entry must not be the product's first collection, first entity registration or first creation of baseline data. Before release, the same one Product must already provide the approved versioned inclusion rule and completed baseline inventory required above, plus:
 
 - a continuously maintained canonical global commercial-entity and brand-entity registry/index with stable IDs, aliases, type, region, industry/domain, relationships and controlled deduplication/disambiguation;
-- authorized CTH/BMP sources, scheduled acquisition, Evidence lineage, freshness and quality states operating before a customer arrives;
+- authorized CTH/BMP sources, explicit manual acquisition and only opted-in automatic schedules, Evidence lineage, freshness and quality states established before a customer arrives;
 - a `GLOBAL / ALL` entry with real, mature and traceable product content rather than a fixture, empty shell or wait-for-customer placeholder;
 - honest incremental onboarding/acquisition for new, long-tail or source-restricted entities as extension of the mature base, with real state and source limitations rather than an invented complete profile.
 
@@ -134,7 +140,7 @@ The `YES` conclusion additionally requires cross-Subject selection/workflow vali
 | 03 | Separate Global entity registry, focused-context keys and canonical data/migration boundaries; no synthetic default record. Prove protected-data safety and rollback. |
 | 04 | Implement `GLOBAL / ALL` visibility, controlled internal audit, commercial customer scope, and strict separation of focus from Permission. |
 | 05 | Runtime and recovery remain independent of UI focus; runtime observations carry actual scope where applicable. |
-| 06 | Collector/Browser continuously execute authorized work independent of focus and close Source → Capture → Evidence → Canonical Data for relevant global matrices and the reference Subject. |
+| 06 | Collector/Browser execute explicit authorized manual requests and separately opted-in automatic schedules independent of focus, closing Source → Capture → Evidence → Canonical Data for relevant global matrices and the reference Subject. |
 | 07 | AI/Agent/Shared outputs carry actual scope; no AI-created truth; evaluation/learning preserves lineage and Permission. |
 | 08 | Four-surface contract implements default `GLOBAL / ALL`, search/add/focus/clear/restore interactions without a hard-coded test Subject. |
 | 09 | Golden Pages execute Global → Focus → Return with honest data states and reference-Subject evidence on applicable surfaces. |
@@ -142,8 +148,8 @@ The `YES` conclusion additionally requires cross-Subject selection/workflow vali
 | 11 | CTH case/decision advances the reference loop through outcome, report/export and Return while preserving global CTH maturity evidence. |
 | 12 | BMP portfolio/market advances global BMP entity/relationship/market/competitor/creator maturity and applicable reference relationships. |
 | 13 | BMP content/campaign/evaluation advances authorized content, channel, propagation, campaign, outcome and learning maturity. |
-| 14 | Remaining ACC/AI/Shared/SYSTEM experiences preserve Global → Focus → Return, honest states, scope and continuous background operation. |
-| 15 | Revalidate all three lines on the exact release SHA across promised surfaces and commercial/release gates; verify the approved versioned inclusion rule, completed brand/venue baseline inventories, and both formal user-added Subject and BrandFocus paths through identity/source authorization + actor Permission → scheduled acquisition → Capture → Evidence → Canonical Data → result/recovery. It may not implement accumulated obligations from prior rounds. |
+| 14 | Remaining ACC/AI/Shared/SYSTEM experiences preserve Global → Focus → Return, honest states, scope, manual-default control and independence of any opted-in background operation. |
+| 15 | Revalidate all three lines on the exact release SHA across promised surfaces and commercial/release gates; verify the approved versioned inclusion rule, completed brand/venue baseline inventories, and both formal user-added Subject and BrandFocus paths through identity/source authorization + actor Permission → explicit manual acquisition or separately opted-in scheduled acquisition → Capture → Evidence → Canonical Data → result/recovery. It may not implement accumulated obligations from prior rounds. |
 
 ## 7. Per-round acceptance block
 
@@ -162,7 +168,7 @@ The one-edition selector acceptance matrix is:
 | A | Global Subject/Brand discovery and selection works through the canonical owner. |
 | B | At least one non-Guangzhou-Taikoo-Hui commercial Subject and one non-Guangzhou-Taikoo-Hui brand Subject complete honest selection/state validation; uncollected entities enter onboarding/acquisition rather than receiving synthetic data. |
 | C | Guangzhou Taikoo Hui completes the deep reference workflow required by the active round. |
-| D | Clearing selection restores `GLOBAL / ALL` without stopping other configured background capabilities. |
+| D | Clearing selection restores `GLOBAL / ALL` without starting or stopping any separately opted-in background capability. |
 
 If current source, fixtures, APIs, ViewModels or UI hard-code Guangzhou Taikoo Hui as the sole selectable/default Subject, the round records a real gap and assigns it to the owning scheduled round. A fixture pass is not global selector capability.
 
@@ -207,7 +213,7 @@ The round also evaluates, only where its owned slice can honestly do so:
 5. clear focus and return to `GLOBAL / ALL`;
 6. prove selection grants no Permission;
 7. distinguish no data, not collected, not configured, blocked and denied;
-8. prove other configured acquisition/background tasks continue independently.
+8. prove manual collection requires an explicit click, automatic collection remains off until deliberately enabled, and any opted-in background work continues independently of focus.
 
 Unavailable later-round functionality must be recorded as `NOT IN ROUND / NOT YET IMPLEMENTED`, not simulated and not allowed to block unrelated work. A relevant round cannot claim its own contextual responsibility complete without its required proof.
 
