@@ -12,6 +12,16 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 03 Canonical Data connection boundary — 2026-09-26
+
+[The bounded Canonical connection evidence](evidence/round-03/ROUND-03-CANONICAL-INJECTED-CONNECTION-2026-09-26.md)
+records a caller-owned `connection=` path with no hidden commit, close or
+second database open. A failed legacy backfill now propagates to the caller on
+that path. Exact staged source plus neighboring database tests passed 31/31.
+The versioned migrator has not yet been rewired, and real Source/Evidence →
+Canonical → user result E2E remains open. `ROUND 03 B001=REWORK`;
+`COMMERCIAL_READY=NO`.
+
 ### Round 05 core health readiness contract — 2026-09-26
 
 [The bounded readiness evidence](evidence/round-05/ROUND-05-HEALTH-READINESS-CONTRACT-2026-09-26.md)

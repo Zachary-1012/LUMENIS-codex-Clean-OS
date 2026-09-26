@@ -488,10 +488,27 @@ def ensure_canonical_scope_columns(conn: sqlite3.Connection) -> None:
         "ON canonical_data(brand_focus_id, scope_status)"
     )
 
-def ensure_canonical_table(db_path: str) -> None:
-    """确保 canonical_data 表存在（幂等，不破坏现有数据）。"""
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    con = DatabaseRepository(db_path).connect(timeout=15)
+def ensure_canonical_table(
+    db_path: Optional[str] = None,
+    *,
+    connection: Optional[sqlite3.Connection] = None,
+) -> None:
+    """确保 canonical_data 表存在（幂等，不破坏现有数据）。
+
+    A supplied connection is used as-is; its caller owns commit, rollback, and
+    close. Pass either ``db_path`` or ``connection``, never both.
+    """
+    if connection is not None:
+        if db_path is not None:
+            raise ValueError("pass either db_path or connection, not both")
+        con = connection
+        owns_connection = False
+    else:
+        if db_path is None:
+            raise ValueError("db_path is required when connection is not provided")
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        con = DatabaseRepository(db_path).connect(timeout=15)
+        owns_connection = True
     try:
         con.execute(CANONICAL_TABLE_DDL)
         for idx_sql in CANONICAL_INDEXES:
@@ -505,10 +522,14 @@ def ensure_canonical_table(db_path: str) -> None:
                 con.execute("UPDATE canonical_data SET domain_id='cth' WHERE product_id='CTH' AND (domain_id IS NULL OR domain_id='')")
                 con.execute("UPDATE canonical_data SET domain_id='zbmp' WHERE product_id='ZBMP' AND (domain_id IS NULL OR domain_id='')")
         except Exception as _mig_err:
+            if not owns_connection:
+                raise
             print(f"[canonical_data] domain_id migration skipped: {_mig_err}")
-        con.commit()
+        if owns_connection:
+            con.commit()
     finally:
-        con.close()
+        if owns_connection:
+            con.close()
 
 
 def get_connection(db_path: str) -> sqlite3.Connection:
