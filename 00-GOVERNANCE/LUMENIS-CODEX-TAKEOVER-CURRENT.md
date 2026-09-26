@@ -12,6 +12,18 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 03 comments_collected unknown preservation — 2026-09-26
+
+[The bounded persistence evidence](evidence/round-03/ROUND-03-COMMENTS-COLLECTED-UNKNOWN-2026-09-26.md)
+records that an omitted comment-collection count stays `NULL` on insert and
+preserves a prior measured count on update; explicit zero remains zero. Sol
+replayed only the canonical database source and focused test on fetched main
+with an isolated seed. The pre-fix test reproduced missing→0; the patched
+current snapshot passed 26 database/lineage tests, compilation, constitution
+and database-authority gates. Some upstream callers still synthesize zero, and
+no real source-to-user E2E ran. `ROUND 03=REWORK`;
+`COMMERCIAL_READY=NO`.
+
 ### Round 12 / 13 ad metric missing-value truth — 2026-09-26
 
 [The bounded ad metric evidence](evidence/round-12/ROUND-12-AD-METRIC-MISSING-TRUTH-2026-09-26.md)

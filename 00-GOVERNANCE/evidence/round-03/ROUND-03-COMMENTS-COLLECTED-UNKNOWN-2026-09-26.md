@@ -1,0 +1,22 @@
+# ROUND 03 — comments_collected missing-value preservation
+
+Sol decision: `PASS FOR BOUNDED BATCH / ROUND 03 EXIT NOT ACCEPTED`. In the existing canonical `database.py::insert_note`, an omitted `comments_collected` field now remains SQL `NULL` on insert and preserves an existing measured count on update. An explicitly observed `0` remains `0`. This changes no schema, collector, Evidence owner or historical record.
+
+## Exact source and verification
+
+- Base: fetched `origin/main` and local `main` at `0f93790a879939a998577c4d60648ac883c8d88d`. Sol overlaid only isolated `database.py` and the new `tests/test_database_comments_collected_missing.py` onto a clean archive of that HEAD. The source change adds the column to the existing `_nullable_metric` value map and reuses it in INSERT and UPDATE bindings. Unknown shared-worktree modifications remain unstaged and untouched.
+- Luna first reproduced the missing→0 bug on the unmodified archive (focused test exit 1), then passed its focused and existing database tests after the patch (8 passed, exit 0). Sol independently ran `python -X utf8 -m pytest -q tests/test_database_comments_collected_missing.py tests/test_database.py tests/test_shared_database_owner.py tests/test_xhs_lineage_persistence.py` on the clean current archive with explicit cwd/PYTHONPATH and a fingerprint-matched disposable `LUMENIS_TEST_SEED_DB`: exit 0, 26 tests passed, no background-thread leak. Compilation, the AI-native constitution and Shared Database authority audit passed, exit 0.
+- The test inspects the actual disposable schema (`comments_collected INTEGER DEFAULT 0`, nullable), then proves omitted insert→`NULL`, omitted update→preserve `7`, and explicit zero on insert/update→`0`. Production `data/monitor.db` SHA-256 before and after Sol's test remained `A3EB3EF45EF877BBF93B303245248DA1160BBD561473A83AF71B2A326A4A0B45`; no sidecars were present.
+- Luna's first working-directory attempt wrote one new test file in the shared tree. It verified its exact ownership/content and removed only that file. That attempt is `INVALID / NOT ADOPTED`; final tests ran from the explicit archive. Some upstream callers still synthesize zero before `insert_note`; those caller gaps are outside this Batch.
+
+## REAL DELIVERY CARD / 真实用户工作闭环验收
+
+`REAL USER JOB`: tell whether a collected post has a measured comment-collection count or has not yet been collected. `ENTRY`: existing canonical note write path. `REAL INPUT`: explicit zero, observed seven and omitted field in isolated tests. `END-TO-END PATH`: caller field → `_nullable_metric` → canonical INSERT/UPDATE → database readback. `USER-VISIBLE RESULT`: not tested in App or report. `FAILURE/RECOVERY`: an omitted update no longer erases a prior count; collector may retry with a measured value. `EVIDENCE`: pre-fix failing reproduction, clean-snapshot 26-test regression and static gates. `ACCEPTANCE ASSERTION`: this narrow persistence fix passes after source/evidence/status publication; full ROUND 03 Source/Evidence→Canonical→real user result E2E remains `REWORK`.
+
+`GLOBAL UNIVERSE / DATA MATURITY IMPACT`: no new entity coverage. Global Commercial Coverage=`NO`; Global Brand Coverage=`NO`; Guangzhou Taikoo Hui Reference Coverage=`PARTIAL / NOT REVERIFIED`; `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=NO`. Canonical random-entity population was not sampled in this isolated value-semantics Batch; sample count zero.
+
+`COMMERCIAL OVERLAY IMPACT`: `COMMERCIAL_READY=NO`; a real collected source, authorized Subject/BrandFocus scope, report return path and recovery remain unverified.
+
+`CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION`: [SQLite's official DEFAULT clause](https://www.sqlite.org/lang_createtable.html) and [COALESCE definition](https://www.sqlite.org/lang_corefunc.html) (accessed 2026-09-26) explain that a default applies when an INSERT does not supply a column value, while `coalesce` selects the first non-NULL operand. Decision `ADAPT` these existing SQLite semantics to the canonical repository's nullable column and update contract, with no added dependency or schema owner. `DEFER` upstream caller corrections until each source's actual observation contract is verified. Scoped regression and mainline revert are the rollback route.
+
+`NEXT DEPENDENCY`: audit each upstream zero-producing caller with real source data, then prove unknown and observed-zero states through the canonical ViewModel and a real user workflow.

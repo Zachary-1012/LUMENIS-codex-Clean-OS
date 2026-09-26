@@ -105,6 +105,7 @@ def insert_note(note_data):
             'author_avatar': note_data.get('author_avatar','') or '',
             'likes': _nullable_metric('likes'), 'comments': _nullable_metric('comments'),
             'collects': _nullable_metric('collects'), 'shares': _nullable_metric('shares'),
+            'comments_collected': _nullable_metric('comments_collected'),
             'note_type': note_data.get('type','normal') or 'normal', 'xsec_token': note_data.get('xsec_token','') or '',
             'publish_date': (note_data.get('publish_datetime','') or note_data.get('publish_date','') or '').strip(),
             'is_taikoo_verified': int(note_data.get('is_taikoo_verified',0) or 0),
@@ -183,7 +184,7 @@ def insert_note(note_data):
                 coll_at, coll_at,
                 note_data.get('detail_fetched_at','') or '', note_data.get('detail_fetched_at','') or '',
                 note_data.get('comments_fetched_at','') or '', note_data.get('comments_fetched_at','') or '',
-                int(note_data.get('comments_collected',0) or 0), int(note_data.get('comments_collected',0) or 0),
+                vals['comments_collected'], vals['comments_collected'],
                 note_data.get('data_quality_status','') or '', note_data.get('data_quality_status','') or '',
                 float(note_data.get('data_quality_score',0) or 0), float(note_data.get('data_quality_score',0) or 0),
                 note_data.get('collector_version','') or '', note_data.get('collector_version','') or '', now, nid))
@@ -210,7 +211,7 @@ def insert_note(note_data):
             nid, vals['source_platform'], vals['title'], vals['content'], vals['url'], vals['cover'], vals['author_id'], vals['author_nickname'],
             vals['author_avatar'], vals['likes'], vals['comments'], vals['collects'], vals['shares'], vals['note_type'],
             vals['xsec_token'], vals['publish_date'], pub_dt, coll_at or now, coll_at or now,
-            note_data.get('detail_fetched_at','') or '', note_data.get('comments_fetched_at','') or '', int(note_data.get('comments_collected',0) or 0),
+            note_data.get('detail_fetched_at','') or '', note_data.get('comments_fetched_at','') or '', vals['comments_collected'],
             note_data.get('data_quality_status','unknown') or 'unknown', float(note_data.get('data_quality_score',0) or 0),
             note_data.get('collector_version','') or '', now, 1 if vals['author_nickname']=='广州太古汇' else 0, vals['is_taikoo_verified'], vals['verify_reason']))
         conn.execute('UPDATE notes SET body=?, source_keyword=?, matched_keywords=? WHERE note_id=?', (vals['body'], vals['source_keyword'], vals['matched_keywords'], nid))
