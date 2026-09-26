@@ -12,6 +12,10 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Global comparison entities — 2026-09-26
+
+The Product Owner corrected the fixed prelaunch CTH comparator to 罗湖深圳万象城 / Luohu Shenzhen MixC, distinct from 深圳万象天地. Guangzhou Taikoo Hui remains the deep reference; Nike and Le Labo are named BMP comparisons. The Global Universe contract now records these as controlled test identities alongside rotating random cross-region samples, not as the global inclusion rule or proof of data coverage. Their actual registry, Evidence, Permission, collection and Global → Focus → Clear results remain unverified; all three coverage dimensions and internal full-universe readiness remain NO/PARTIAL as currently recorded.
+
 ### ROUND 07 local video timeline core — 2026-09-26
 
 [Bounded video-core evidence](evidence/round-07/ROUND-07-LOCAL-VIDEO-TIMELINE-CORE-2026-09-26.md)

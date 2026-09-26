@@ -168,6 +168,8 @@ If current source, fixtures, APIs, ViewModels or UI hard-code Guangzhou Taikoo H
 
 ## 8. RANDOM ENTITY DATA ACCEPTANCE
 
+Controlled prelaunch comparison identities are Guangzhou Taikoo Hui (deep CTH reference), 罗湖深圳万象城 / Luohu Shenzhen MixC (additional CTH venue), Nike and Le Labo (BMP brands). 深圳万象天地 is a different venue and must not substitute for 罗湖深圳万象城. These named exercises supplement the rotating, cross-region random sample; they neither define the approved global baseline nor prove its coverage. Record each identity, region/type, actual collection and Evidence state, Global → Focus → Clear behavior, and honest missing/failure/time semantics.
+
 Every context/data/collector/AI/content/report/API/ViewModel/surface/workflow round performs a reproducible rotating sample from the canonical global registry. Sampling is stratified by region, industry, entity type and freshness; it includes Guangzhou Taikoo Hui as the fixed deep reference plus rotating non-reference commercial and brand Subjects and cross-region samples. Fixtures and a fixed all-Guangzhou set are forbidden as live acceptance.
 
 For each sampled entity, the applicable real path is:
