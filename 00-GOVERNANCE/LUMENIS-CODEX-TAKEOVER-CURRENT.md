@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 03 XHS source missing-count pass-through — 2026-09-26
+
+[The bounded caller evidence](evidence/round-03/ROUND-03-XHS-CALLER-MISSING-COUNT-2026-09-26.md)
+records two existing collector paths passing an absent comment count to the
+canonical nullable database writer without inventing zero. Sol rejected
+duplicate caller normalizers, replayed two source expressions on clean main,
+and passed source AST, 8 disposable database tests, compilation and the
+constitution gate. The quality-log path, live approved-identity collection,
+Evidence-to-user result and real user-work E2E remain open.
+ROUND 03=REWORK; COMMERCIAL_READY=NO.
+
 ### Round 07 local AI completion truth — 2026-09-26
 
 [The bounded local AI evidence](evidence/round-07/ROUND-07-LOCAL-AI-RESULT-TRUTH-2026-09-26.md)

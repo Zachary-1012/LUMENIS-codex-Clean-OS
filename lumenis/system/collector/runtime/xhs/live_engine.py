@@ -150,7 +150,7 @@ def persist_live(data: dict, subject_hit: Callable[[str], bool], *,
         n['data_quality_score'] = q.get('score',0)
         n['collector_version'] = 'xhs-live-v2'
         n['captured_at'] = n.get('fetched_at') or datetime.now().isoformat()
-        n['comments_collected'] = int(n.get('comments_collected',0) or 0)
+        n['comments_collected'] = n.get('comments_collected')
         database.insert_note(n)
         # P0-3/P0-4: Evidence Chain + Canonical Data 旁路写入（side-write，失败不影响主入库）
         _bypass_evidence_canonical_live(

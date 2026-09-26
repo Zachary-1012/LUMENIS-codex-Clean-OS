@@ -949,7 +949,7 @@ class CollectorAutomation:
                         'collector_version': n.get('collector_version', 'rednote-v1.0-cdp'),
                         'collected_at': datetime.now().isoformat(),
                         'detail_fetched_at': datetime.now().isoformat(),
-                        'comments_collected': int(n.get('comment_count', 0) or 0),
+                        'comments_collected': n.get('comment_count'),
                     }
                     try:
                         ins_ret = db.insert_note(note_data)
