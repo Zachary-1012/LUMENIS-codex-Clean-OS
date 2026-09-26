@@ -98,13 +98,20 @@ def get_current_version(conn: sqlite3.Connection) -> int:
     return max(versions) if versions else 0
 
 
-def set_version(conn: sqlite3.Connection, version: int, description: str = ""):
+def set_version(
+    conn: sqlite3.Connection,
+    version: int,
+    description: str = "",
+    *,
+    commit: bool = True,
+):
     """设置数据库版本"""
     conn.execute(
         "INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)",
         (version, description, datetime.now().isoformat())
     )
-    conn.commit()
+    if commit:
+        conn.commit()
 
 
 def backup_database(backup_name: Optional[str] = None) -> str:
@@ -695,6 +702,7 @@ def _ensure_migration_prerequisites(
     reapplies the current business schema over a versioned or partial database.
     """
     if current_version == 0 and target_version >= 1:
+        bootstrapped_empty_schema = False
         base_tables = {"notes", "daily_reports", "collection_logs"}
         existing_base_tables = {
             row[0]
@@ -704,8 +712,12 @@ def _ensure_migration_prerequisites(
             if row[0] in base_tables
         }
         if not existing_base_tables:
+            # get_current_version() has already committed the empty schema_version
+            # table. Keep the new base schema and v1 marker in one transaction
+            # with the owner prerequisites below.
+            conn.execute("BEGIN")
             apply_business_schema(conn)
-            conn.commit()
+            bootstrapped_empty_schema = True
         elif existing_base_tables != base_tables:
             missing = sorted(base_tables - existing_base_tables)
             raise RuntimeError(
@@ -742,7 +754,12 @@ def _ensure_migration_prerequisites(
             finally:
                 reference.close()
 
-        set_version(conn, 1, MIGRATION_HISTORY[1])
+        set_version(
+            conn,
+            1,
+            MIGRATION_HISTORY[1],
+            commit=not bootstrapped_empty_schema,
+        )
         current_version = 1
 
     needs_canonical_schema = (
@@ -848,6 +865,9 @@ def migrate(target_version: Optional[int] = None) -> bool:
         current_version = _ensure_migration_prerequisites(
             conn, current_version, target_version
         )
+        if current_version == target_version and conn.in_transaction:
+            # A fresh v0 database has no versioned step to commit its bootstrap.
+            conn.commit()
     except Exception as e:
         print(f"❌ 迁移前共享 schema 初始化失败: {e}")
         conn.rollback()
@@ -866,7 +886,7 @@ def migrate(target_version: Optional[int] = None) -> bool:
                 print(f"   ✅ 迁移成功")
             except Exception as e:
                 print(f"   ❌ 迁移失败: {e}")
-                print(f"   ⚠️  数据库已回滚到 v{current_version}")
+                print("   ⚠️  未提交的迁移更改已回滚")
                 conn.rollback()
                 conn.close()
                 return False

@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 03 empty-v0 bootstrap rollback — 2026-09-26
+
+[The bounded v0 evidence](evidence/round-03/ROUND-03-EMPTY-V0-BOOTSTRAP-ATOMICITY-2026-09-26.md)
+records that a genuinely empty database now keeps its business schema, v1
+marker and prerequisite owner schema in the same rollback boundary until the
+first successful step or explicit target-v1 completion. Exact staged source
+and migration neighbors passed 20/20 after Sol corrected a misleading
+rollback-version message. Existing-base v0 behavior and the real
+Source/Evidence → Canonical → user-result E2E are still open.
+`ROUND 03 B001=REWORK`; `COMMERCIAL_READY=NO`.
+
 ### Round 07 scoped artifact identity helpers — 2026-09-26
 
 [The bounded reporting evidence](evidence/round-07/ROUND-07-SCOPED-ARTIFACT-HASH-2026-09-26.md)

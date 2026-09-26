@@ -64,3 +64,115 @@ def test_schema_bootstrap_and_repeat_application_preserve_existing_rows():
         assert rows == [("schema-atomicity-probe", "preserved", "existing row")]
     finally:
         connection.close()
+
+
+def test_empty_v0_owner_failure_rolls_back_bootstrap_and_version(tmp_path, monkeypatch):
+    from lumenis.shared.database import migrations
+    from lumenis.shared.evidence import chain as evidence_chain
+
+    db_path = tmp_path / "empty-v0.sqlite3"
+    backup_dir = tmp_path / "backups"
+    monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
+    monkeypatch.setattr(migrations, "DB_PATH", str(db_path))
+
+    original_init_db = evidence_chain.init_db
+
+    def fail_after_owner_schema(db_path=None, *, connection=None):
+        original_init_db(db_path=db_path, connection=connection)
+        raise RuntimeError("forced failure after Evidence owner schema")
+
+    monkeypatch.setattr(evidence_chain, "init_db", fail_after_owner_schema)
+
+    assert migrations.migrate(target_version=11) is False
+
+    with sqlite3.connect(db_path) as conn:
+        user_tables = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            )
+        }
+        versions = conn.execute(
+            "SELECT version FROM schema_version "
+            "WHERE typeof(version)='integer' ORDER BY id"
+        ).fetchall()
+
+    assert user_tables == {"schema_version"}
+    assert versions == []
+
+    backup_path = backup_dir / "before_migration_v0_to_v11.db"
+    assert backup_path.is_file()
+    with sqlite3.connect(backup_path) as conn:
+        backup_tables = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            )
+        }
+        backup_versions = conn.execute(
+            "SELECT version FROM schema_version "
+            "WHERE typeof(version)='integer' ORDER BY id"
+        ).fetchall()
+    assert backup_tables == {"schema_version"}
+    assert backup_versions == []
+
+
+def test_empty_v0_first_migration_failure_rolls_back_bootstrap_and_version(
+    tmp_path, monkeypatch
+):
+    from lumenis.shared.database import migrations
+
+    db_path = tmp_path / "empty-v0-first-step.sqlite3"
+    monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
+    monkeypatch.setattr(migrations, "DB_PATH", str(db_path))
+
+    def fail_first_migration(connection):
+        raise RuntimeError("forced first migration failure")
+
+    monkeypatch.setitem(migrations.MIGRATIONS, 1, fail_first_migration)
+
+    assert migrations.migrate(target_version=2) is False
+
+    with sqlite3.connect(db_path) as conn:
+        user_tables = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            )
+        }
+        versions = conn.execute(
+            "SELECT version FROM schema_version "
+            "WHERE typeof(version)='integer' ORDER BY id"
+        ).fetchall()
+
+    assert user_tables == {"schema_version"}
+    assert versions == []
+
+
+def test_empty_v0_target_v1_commits_complete_base_bootstrap(tmp_path, monkeypatch):
+    from lumenis.shared.database import migrations
+
+    db_path = tmp_path / "empty-v0-target-v1.sqlite3"
+    monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
+    monkeypatch.setattr(migrations, "DB_PATH", str(db_path))
+
+    assert migrations.migrate(target_version=1) is True
+
+    with sqlite3.connect(db_path) as conn:
+        tables = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            )
+        }
+        versions = conn.execute(
+            "SELECT version FROM schema_version "
+            "WHERE typeof(version)='integer' ORDER BY id"
+        ).fetchall()
+
+    assert {"notes", "daily_reports", "collection_logs"} <= tables
+    assert versions == [(1,)]
