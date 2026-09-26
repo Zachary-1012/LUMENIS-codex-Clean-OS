@@ -17,6 +17,67 @@ def _cli_option_value(argv, option):
     return matches[0] if len(matches) == 1 else None
 
 
+_INTERNAL_BETA_WORKSPACE_CONTEXT_FLAG = '--internal-beta-workspace-context-acceptance'
+_INTERNAL_BETA_RESERVED_PORTS = frozenset({5000, 5001, 8200, 8201, 9222, 9223, 9224})
+
+
+def _validate_internal_beta_workspace_context_arguments(argv, environ=None):
+    env = os.environ if environ is None else environ
+    flag = _INTERNAL_BETA_WORKSPACE_CONTEXT_FLAG
+    if argv.count(flag) != 1:
+        raise ValueError(f'{flag} must appear exactly once')
+    if any(value.startswith(flag + '=') for value in argv):
+        raise ValueError(f'{flag} is a standalone flag and takes no value')
+    if '--internal-beta-acceptance' in argv:
+        raise ValueError('health-only and Workspace/context acceptance profiles cannot be combined')
+
+    values = {}
+    seen_no_scheduler = False
+    index = 0
+    while index < len(argv):
+        item = argv[index]
+        if item == flag:
+            index += 1
+            continue
+        if item == '--no-scheduler':
+            if seen_no_scheduler:
+                raise ValueError('--no-scheduler may appear only once')
+            seen_no_scheduler = True
+            index += 1
+            continue
+        if item in ('--host', '--port'):
+            if item in values:
+                raise ValueError(f'{item} must appear exactly once')
+            if index + 1 >= len(argv) or argv[index + 1].startswith('--'):
+                raise ValueError(f'{item} requires an explicit value')
+            values[item] = argv[index + 1]
+            index += 2
+            continue
+        if item.startswith('--host=') or item.startswith('--port='):
+            raise ValueError('--host and --port must use separate explicit arguments')
+        raise ValueError(f'unsupported flag for Workspace/context acceptance: {item}')
+
+    if set(values) != {'--host', '--port'}:
+        raise ValueError('Workspace/context acceptance requires explicit --host and --port')
+    if not _is_internal_beta_loopback(values['--host']):
+        raise ValueError('Workspace/context acceptance requires --host 127.0.0.1')
+    try:
+        port = int(values['--port'])
+    except (TypeError, ValueError):
+        raise ValueError('--port must be an integer from 1024 through 65535')
+    if not 1024 <= port <= 65535:
+        raise ValueError('--port must be an integer from 1024 through 65535')
+    protected_ports = set(_INTERNAL_BETA_RESERVED_PORTS)
+    try:
+        configured_production_port = int(env.get('TAIKOO_PORT', '8200'))
+    except (TypeError, ValueError):
+        configured_production_port = 8200
+    protected_ports.add(configured_production_port)
+    if port in protected_ports:
+        raise ValueError(f'--port {port} is reserved for production or resident services')
+    return values['--host'], port
+
+
 def _is_path_within(path, root):
     path = os.path.normcase(os.path.realpath(os.path.abspath(path)))
     root = os.path.normcase(os.path.realpath(os.path.abspath(root)))
@@ -48,9 +109,19 @@ def _validate_internal_beta_storage(environ=None, temp_root=None):
     return db_path, data_dir
 
 
-def _activate_internal_beta_environment(environ=None, temp_root=None):
+def _activate_internal_beta_environment(
+    environ=None, temp_root=None, require_fresh=False, isolate_auth=False
+):
     env = os.environ if environ is None else environ
     db_path, data_dir = _validate_internal_beta_storage(env, temp_root)
+    if require_fresh:
+        # Do not reuse an existing temporary directory or SQLite sidecar: a
+        # temp path is not proof that its contents are disposable.
+        if os.path.lexists(data_dir):
+            raise ValueError('Workspace/context acceptance requires a new, unused ZBC_DATA_DIR')
+        for suffix in ('', '-wal', '-shm', '-journal'):
+            if os.path.lexists(db_path + suffix):
+                raise ValueError('Workspace/context acceptance refuses an existing SQLite database or sidecar')
     # Keep bridge paths inside the disposable data root. The invalid cookie
     # path is lazy: startup never stats, opens, creates, or launches a profile.
     safe_cookie_path = os.path.join(data_dir, 'private', 'acceptance-cookie-unavailable.txt')
@@ -63,6 +134,17 @@ def _activate_internal_beta_environment(environ=None, temp_root=None):
     env['XHS_COOKIES_JSON'] = ''
     env['XHS_CDP_URL'] = ''
     env['XHS_PRODUCTION'] = '0'
+    env['ZB_WSGI'] = ''
+    env['ZBC_PREFLIGHT_ENFORCE'] = '0'
+    env['ZBC_GUARDIAN_ENABLED'] = '0'
+    env.pop('LUMENIS_WORKSPACE_BUILD_DIR', None)
+    env.pop('LUMENIS_FLUTTER_WEB_BUILD_DIR', None)
+    if isolate_auth:
+        # Never inherit a workstation or production Basic credential into this
+        # loopback-only child. The temporary credential is process-local and is
+        # exposed only by the existing explicit auth/config bootstrap contract.
+        env['TAIKOO_AUTH_USER'] = 'lumenis-acceptance-' + secrets.token_hex(8)
+        env['TAIKOO_AUTH_PASSWORD'] = secrets.token_urlsafe(32)
     return db_path, data_dir
 
 
@@ -100,9 +182,26 @@ def _ensure_node_on_path():
     return False
 
 
-# Select the health-only safe probe before application imports. It is not
-# Product E2E: once Flask is created, the first request hook permits only GET /healthz.
+# Select bounded acceptance profiles before any Product Core/application imports.
+# Health-only retains its existing contract. Workspace/context acceptance serves
+# the canonical Workspace plus the exact authenticated context and Evidence GETs.
 INTERNAL_BETA_ACCEPTANCE = '--internal-beta-acceptance' in sys.argv
+if any(value.startswith(_INTERNAL_BETA_WORKSPACE_CONTEXT_FLAG + '=') for value in sys.argv):
+    raise SystemExit(f'{_INTERNAL_BETA_WORKSPACE_CONTEXT_FLAG} is a standalone flag')
+INTERNAL_BETA_WORKSPACE_CONTEXT_ACCEPTANCE = (
+    _INTERNAL_BETA_WORKSPACE_CONTEXT_FLAG in sys.argv
+)
+if INTERNAL_BETA_ACCEPTANCE and INTERNAL_BETA_WORKSPACE_CONTEXT_ACCEPTANCE:
+    raise SystemExit('health-only and Workspace/context acceptance profiles cannot be combined')
+INTERNAL_BETA_SAFE_STARTUP = (
+    INTERNAL_BETA_ACCEPTANCE or INTERNAL_BETA_WORKSPACE_CONTEXT_ACCEPTANCE
+)
+if INTERNAL_BETA_WORKSPACE_CONTEXT_ACCEPTANCE:
+    try:
+        _validate_internal_beta_workspace_context_arguments(sys.argv[1:])
+        _activate_internal_beta_environment(require_fresh=True, isolate_auth=True)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 if INTERNAL_BETA_ACCEPTANCE and not _is_internal_beta_loopback(
         _cli_option_value(sys.argv[1:], '--host')):
     raise SystemExit(
@@ -116,7 +215,11 @@ if INTERNAL_BETA_ACCEPTANCE:
 
 
 def _load_dotenv(path='.env'):
-    if INTERNAL_BETA_ACCEPTANCE:
+    if (
+        INTERNAL_BETA_SAFE_STARTUP
+        or INTERNAL_BETA_ACCEPTANCE
+        or INTERNAL_BETA_WORKSPACE_CONTEXT_ACCEPTANCE
+    ):
         return
     if not os.path.exists(path): return
     try:
@@ -260,6 +363,67 @@ def _internal_beta_health_only_request_fence():
         'status': 'BLOCKED',
         'code': 'INTERNAL_BETA_HEALTH_ONLY',
         'message': 'This health-only safe probe permits only GET /healthz.',
+    }), 403
+
+
+_INTERNAL_BETA_WORKSPACE_ROOT_ENDPOINTS = {
+    'lumenis_workspace_host.root': '/workspace',
+    'lumenis_workspace_host.root_slash': '/workspace/',
+}
+_INTERNAL_BETA_WORKSPACE_API_ENDPOINTS = {
+    ('GET', '/healthz', 'healthz'),
+    ('GET', '/api/auth/config', 'auth_config_api'),
+    ('GET', '/api/experience/runtime/identity', 'experience_runtime.runtime_identity'),
+    ('GET', '/api/runtime/identity', 'experience_runtime.runtime_identity'),
+    ('GET', '/api/settings/context', 'domain_api.api_settings_context'),
+    ('GET', '/api/evidence/stats', 'evidence_api.evidence_stats'),
+    ('GET', '/api/evidence/list', 'evidence_api.evidence_list'),
+    ('GET', '/api/evidence/timeline', 'evidence_api.evidence_timeline'),
+}
+
+
+def _internal_beta_workspace_context_request_allowed():
+    method = request.method
+    path = request.path
+    endpoint = request.endpoint
+    if (method, path, endpoint) in _INTERNAL_BETA_WORKSPACE_API_ENDPOINTS:
+        return True
+    if (
+        method == 'GET'
+        and endpoint == 'evidence_api.evidence_detail'
+        and re.fullmatch(r'/api/evidence/[0-9]+', path)
+        and type((request.view_args or {}).get('record_id')) is int
+    ):
+        return True
+    if method not in {'GET', 'HEAD'}:
+        return False
+    if _INTERNAL_BETA_WORKSPACE_ROOT_ENDPOINTS.get(endpoint) == path:
+        return True
+    if endpoint == 'lumenis_workspace_host.resource' and path.startswith('/workspace/'):
+        return True
+    if endpoint == 'lumenis_workspace_host.asset':
+        resource = (request.view_args or {}).get('resource')
+        view_func = app.view_functions.get(endpoint)
+        host = getattr(view_func, '__self__', None)
+        return (
+            isinstance(resource, str)
+            and host is not None
+            and not host._is_reserved_root_path(resource)
+        )
+    return False
+
+
+@app.before_request
+def _internal_beta_workspace_context_request_fence():
+    if not INTERNAL_BETA_WORKSPACE_CONTEXT_ACCEPTANCE:
+        return None
+    if _internal_beta_workspace_context_request_allowed():
+        return None
+    return jsonify({
+        'ok': False,
+        'status': 'BLOCKED',
+        'code': 'INTERNAL_BETA_WORKSPACE_CONTEXT_ONLY',
+        'message': 'This loopback acceptance profile permits only Workspace, identity, context, and scoped Evidence GET routes.',
     }), 403
 
 # 全局上传大小限制：500MB（对齐 INGESTION_AND_TERMINOLOGY_STANDARD）
@@ -4643,8 +4807,12 @@ def scheduler_loop():
         time.sleep(20)
 
 def _start_app_automations(args):
-    if getattr(args, 'internal_beta_acceptance', False):
-        print('[Runtime] health-only safe probe: automatic collectors, residents, and monitors suppressed')
+    if (
+        INTERNAL_BETA_SAFE_STARTUP
+        or getattr(args, 'internal_beta_acceptance', False)
+        or getattr(args, 'internal_beta_workspace_context_acceptance', False)
+    ):
+        print('[Runtime] safe acceptance profile: automatic collectors, residents, schedulers, and monitors suppressed')
         return False
 
     if not args.no_scheduler:
@@ -4696,14 +4864,21 @@ if __name__=='__main__':
     parser.add_argument('--port',type=int,default=APP_PORT)
     parser.add_argument('--no-scheduler',action='store_true',help='仅启动 Web，不启动自动采集调度器')
     parser.add_argument('--internal-beta-acceptance',action='store_true',help='loopback health-only safe probe; only GET /healthz, not Product E2E')
+    parser.add_argument('--internal-beta-workspace-context-acceptance',action='store_true',help='loopback Workspace/context and scoped Evidence GET acceptance; no automatic runtime services')
     args=parser.parse_args()
     if args.internal_beta_acceptance and not _is_internal_beta_loopback(args.host):
         parser.error('--internal-beta-acceptance requires --host 127.0.0.1')
     if args.internal_beta_acceptance != INTERNAL_BETA_ACCEPTANCE:
         parser.error('internal beta acceptance profile must be selected before app imports')
+    if args.internal_beta_workspace_context_acceptance != INTERNAL_BETA_WORKSPACE_CONTEXT_ACCEPTANCE:
+        parser.error('Workspace/context acceptance profile must be selected before app imports')
+    if args.internal_beta_workspace_context_acceptance and (
+        args.host != '127.0.0.1' or args.port in _INTERNAL_BETA_RESERVED_PORTS
+    ):
+        parser.error('Workspace/context acceptance requires validated loopback host and non-reserved port')
     _start_app_automations(args)
     auth_state='开启' if _auth_enabled() else '关闭（仅建议本机访问）'
-    auto_collection = not args.no_scheduler and not args.internal_beta_acceptance
+    auto_collection = not args.no_scheduler and not INTERNAL_BETA_SAFE_STARTUP
     print(f'广州太古汇舆情监测系统 v{APP_VERSION} | {args.host}:{args.port} | 自动采集：{auto_collection} | HTTP认证：{auth_state}')
 
 # ===== SYSTEM AI Gateway health =====
@@ -6871,8 +7046,8 @@ def api_cookies_import_raw():
                     'secrets_returned': False})
 
 def _start_optional_runtime_services(internal_beta_acceptance):
-    if internal_beta_acceptance:
-        print('[Runtime] health-only safe probe: preflight, CDP, heartbeat, and guardian startup suppressed')
+    if internal_beta_acceptance or INTERNAL_BETA_SAFE_STARTUP:
+        print('[Runtime] safe acceptance profile: preflight, CDP, heartbeat, and guardian startup suppressed')
         return False
 
     # ===== ZBIP Runtime Integrity Preflight（统一启动闸门）=====
@@ -6981,7 +7156,7 @@ def _start_optional_runtime_services(internal_beta_acceptance):
 
 if __name__ == '__main__':
     # 启动前注入 node 运行时 PATH（话题监测/采集脚本依赖 node，8201 worker 进程 PATH 可能不含沙箱 node）
-    _prepare_node_runtime(INTERNAL_BETA_ACCEPTANCE)
+    _prepare_node_runtime(INTERNAL_BETA_SAFE_STARTUP)
 
     import logging
     # 加固:Windows 下多进程共写 system.log 时轮转可能因文件占用失败,绝不允许 logging 内部异常崩溃主进程(此前 PermissionError 致 app.py 退出码=1、话题采集被中断)
@@ -7049,7 +7224,7 @@ if __name__ == '__main__':
     print(f"详细日志: {os.path.join(log_dir, 'system.log')}")
     print("=" * 60)
 
-    _start_optional_runtime_services(INTERNAL_BETA_ACCEPTANCE)
+    _start_optional_runtime_services(INTERNAL_BETA_SAFE_STARTUP)
 
     try:
         # T-P1-1 waitress 可配置化：ZB_WSGI=waitress 时用生产级多线程 WSGI（waitress.serve），
