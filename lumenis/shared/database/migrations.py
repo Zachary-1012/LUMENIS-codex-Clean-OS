@@ -745,19 +745,34 @@ def _ensure_migration_prerequisites(
         set_version(conn, 1, MIGRATION_HISTORY[1])
         current_version = 1
 
-    if target_version >= 10 and conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='canonical_data'"
-    ).fetchone() is None:
+    needs_canonical_schema = (
+        target_version >= 10
+        and conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='canonical_data'"
+        ).fetchone() is None
+    )
+    needs_evidence_schema = (
+        target_version >= 11
+        and conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='zbc_canonical_data'"
+        ).fetchone() is None
+    )
+
+    # The owner initializers preserve caller transactions when given this
+    # connection. Start one here so their DDL remains rollback-safe after the
+    # version-table bootstrap has committed.
+    if (needs_canonical_schema or needs_evidence_schema) and not conn.in_transaction:
+        conn.execute("BEGIN")
+
+    if needs_canonical_schema:
         from canonical_data import ensure_canonical_table
 
-        ensure_canonical_table(main_db_path())
+        ensure_canonical_table(connection=conn)
 
-    if target_version >= 11 and conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='zbc_canonical_data'"
-    ).fetchone() is None:
+    if needs_evidence_schema:
         from lumenis.shared.evidence.chain import init_db as init_evidence_chain_db
 
-        init_evidence_chain_db(main_db_path())
+        init_evidence_chain_db(connection=conn)
 
     return current_version
 
@@ -835,6 +850,7 @@ def migrate(target_version: Optional[int] = None) -> bool:
         )
     except Exception as e:
         print(f"❌ 迁移前共享 schema 初始化失败: {e}")
+        conn.rollback()
         conn.close()
         return False
 

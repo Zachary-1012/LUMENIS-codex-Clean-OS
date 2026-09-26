@@ -12,14 +12,26 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 03 migrator prerequisite transaction — 2026-09-26
+
+[The bounded migrator evidence](evidence/round-03/ROUND-03-MIGRATOR-OWNER-CONNECTION-2026-09-26.md)
+records that the existing versioned migrator now passes its own connection to
+Canonical Data and Evidence Chain, starts a prerequisite transaction when
+needed, and rolls back on owner initialization failure. Exact staged source
+and neighbor tests passed 18/18 after correcting an obsolete v16 test
+assumption that also failed on the unchanged base commit. The v0 bootstrap's
+existing commit behavior, real Source/Evidence → Canonical → report/UI job and
+production migration remain open. `ROUND 03 B001=REWORK`;
+`COMMERCIAL_READY=NO`.
+
 ### Round 03 Evidence Chain connection boundary — 2026-09-26
 
 [The bounded Evidence connection evidence](evidence/round-03/ROUND-03-EVIDENCE-CHAIN-INJECTED-CONNECTION-2026-09-26.md)
 records a caller-owned `connection=` path that avoids `executescript`'s
 implicit commit and propagates legacy schema errors for rollback. Exact staged
 source plus neighboring Evidence, migration and Canonical tests passed 58/58.
-The versioned migrator has not yet been rewired, and real Source/Evidence →
-Canonical → user result E2E remains open. `ROUND 03 B001=REWORK`;
+The versioned migrator is now separately rewired as recorded above; real
+Source/Evidence → Canonical → user result E2E remains open. `ROUND 03 B001=REWORK`;
 `COMMERCIAL_READY=NO`.
 
 ### Round 03 Canonical Data connection boundary — 2026-09-26
@@ -28,8 +40,8 @@ Canonical → user result E2E remains open. `ROUND 03 B001=REWORK`;
 records a caller-owned `connection=` path with no hidden commit, close or
 second database open. A failed legacy backfill now propagates to the caller on
 that path. Exact staged source plus neighboring database tests passed 31/31.
-The versioned migrator has not yet been rewired, and real Source/Evidence →
-Canonical → user result E2E remains open. `ROUND 03 B001=REWORK`;
+The versioned migrator is now separately rewired as recorded above; real
+Source/Evidence → Canonical → user result E2E remains open. `ROUND 03 B001=REWORK`;
 `COMMERCIAL_READY=NO`.
 
 ### Round 05 core health readiness contract — 2026-09-26

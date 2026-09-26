@@ -72,10 +72,8 @@ def test_v15_to_v16_preserves_rows_normalizes_parent_and_is_idempotent(
     _bind_database(monkeypatch, migrations, path)
     _create_v15_database(path, migrations)
 
-    assert migrations.CURRENT_VERSION == 16
     assert 16 in migrations.MIGRATION_HISTORY
     assert 15 in migrations.MIGRATIONS
-    assert 16 not in migrations.MIGRATIONS
 
     assert migrations.migrate(target_version=16) is True
     assert migrations.migrate(target_version=16) is True
