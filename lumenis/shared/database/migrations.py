@@ -702,7 +702,6 @@ def _ensure_migration_prerequisites(
     reapplies the current business schema over a versioned or partial database.
     """
     if current_version == 0 and target_version >= 1:
-        bootstrapped_empty_schema = False
         base_tables = {"notes", "daily_reports", "collection_logs"}
         existing_base_tables = {
             row[0]
@@ -717,7 +716,6 @@ def _ensure_migration_prerequisites(
             # with the owner prerequisites below.
             conn.execute("BEGIN")
             apply_business_schema(conn)
-            bootstrapped_empty_schema = True
         elif existing_base_tables != base_tables:
             missing = sorted(base_tables - existing_base_tables)
             raise RuntimeError(
@@ -754,11 +752,17 @@ def _ensure_migration_prerequisites(
             finally:
                 reference.close()
 
+            # Existing v0 base rows are valid, but the v1 marker must remain
+            # part of the same transaction as all owner prerequisites and the
+            # first versioned migration. A later failure must leave v0 intact.
+            if not conn.in_transaction:
+                conn.execute("BEGIN")
+
         set_version(
             conn,
             1,
             MIGRATION_HISTORY[1],
-            commit=not bootstrapped_empty_schema,
+            commit=False,
         )
         current_version = 1
 

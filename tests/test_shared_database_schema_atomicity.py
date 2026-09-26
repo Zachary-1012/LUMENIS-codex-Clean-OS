@@ -176,3 +176,74 @@ def test_empty_v0_target_v1_commits_complete_base_bootstrap(tmp_path, monkeypatc
 
     assert {"notes", "daily_reports", "collection_logs"} <= tables
     assert versions == [(1,)]
+
+
+def test_existing_v0_owner_failure_preserves_base_rows_and_v0(tmp_path, monkeypatch):
+    from lumenis.shared.database import migrations
+    from lumenis.shared.evidence import chain as evidence_chain
+
+    db_path = tmp_path / "existing-v0-owner-failure.sqlite3"
+    monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
+    with sqlite3.connect(db_path) as conn:
+        business_schema.apply_business_schema(conn)
+        conn.execute(
+            "INSERT INTO notes (note_id, title) VALUES (?, ?)",
+            ("preexisting-v0", "must survive"),
+        )
+        conn.commit()
+
+    original_init = evidence_chain.init_db
+
+    def fail_after_evidence_schema(db_path=None, *, connection=None):
+        original_init(db_path=db_path, connection=connection)
+        raise RuntimeError("forced Evidence owner failure")
+
+    monkeypatch.setattr(evidence_chain, "init_db", fail_after_evidence_schema)
+    assert migrations.migrate(target_version=11) is False
+
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute(
+            "SELECT title FROM notes WHERE note_id='preexisting-v0'"
+        ).fetchone() == ("must survive",)
+        assert conn.execute(
+            "SELECT version FROM schema_version WHERE typeof(version)='integer'"
+        ).fetchall() == []
+        assert conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' "
+            "AND name='zbc_canonical_data'"
+        ).fetchone() is None
+
+
+def test_existing_v0_first_step_failure_preserves_base_rows_and_v0(
+    tmp_path, monkeypatch
+):
+    from lumenis.shared.database import migrations
+
+    db_path = tmp_path / "existing-v0-first-step.sqlite3"
+    monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
+    with sqlite3.connect(db_path) as conn:
+        business_schema.apply_business_schema(conn)
+        conn.execute(
+            "INSERT INTO notes (note_id, title) VALUES (?, ?)",
+            ("preexisting-v0", "must survive"),
+        )
+        conn.commit()
+
+    def fail_first_step(conn):
+        conn.execute("CREATE TABLE partial_first_step (value TEXT)")
+        raise RuntimeError("forced first migration failure")
+
+    monkeypatch.setitem(migrations.MIGRATIONS, 1, fail_first_step)
+    assert migrations.migrate(target_version=2) is False
+
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute(
+            "SELECT title FROM notes WHERE note_id='preexisting-v0'"
+        ).fetchone() == ("must survive",)
+        assert conn.execute(
+            "SELECT version FROM schema_version WHERE typeof(version)='integer'"
+        ).fetchall() == []
+        assert conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' "
+            "AND name='partial_first_step'"
+        ).fetchone() is None

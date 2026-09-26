@@ -602,6 +602,16 @@ Dated takeover/handoff files before this `CURRENT` entry remain historical evide
 
 ## 11. Blocking consistency guard
 
+### 2026-09-26 Round 03 existing-v0 migration atomicity Batch
+
+The Shared Database migration owner now keeps an already-present valid v0 base
+schema, its v1 marker, owner prerequisites and first versioned step in one
+rollback boundary. The co-published evidence is
+`00-GOVERNANCE/evidence/round-03/ROUND-03-EXISTING-V0-ATOMICITY-2026-09-26.md`.
+This is a bounded tested Batch; ROUND 03 remains `REWORK` until real-user work
+E2E and the remaining current charter gates pass. Other dirty local candidates
+remain unaccepted and must not be inferred from the published source.
+
 The LUMENIS Product Gate is the single blocking repository workflow for cross-product contract + takeover governance. Do not create a second workflow for the same assertions.
 
 It must run:
