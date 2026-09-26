@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Shared Content & Creation video requirement — 2026-09-26
+
+The Product Owner requires both an automatic proposed/final cut and a manual
+editing path, including adjustment of a proposed cut or a start from an empty
+timeline. Twelve independently rendered local candidate films and a learning
+card are available for human viewing; they are not an accepted in-product
+Timeline/Artifact/Evidence/Permission workflow or a user-approved quality
+result. The existing Shared owner and ROUND 07, 14–15 carry this requirement;
+no second media owner, UI authority, round or release claim is added. See the
+real-user-job row in `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`.
+
 ### Round 03 RedNote comment truth — 2026-09-26
 
 [The bounded collector and persistence evidence](evidence/round-03/ROUND-03-REDNOTE-COMMENT-TRUTH-2026-09-26.md)
