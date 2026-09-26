@@ -288,6 +288,7 @@ def api_report(report_type):
 def api_generate_report():
     try:
         result=report_engine.generate_all()
+        from lumenis.shared.reporting import artifact as report_artifact
         # ZBC Phase 9: 验证每个报告真实落库（有 _db_row_id 且 artifact_verified）
         verified = {}
         for typ, bundle in result.items():
@@ -297,9 +298,13 @@ def api_generate_report():
                 'report_id': rpt.get('report_id', ''),
                 'artifact_hash': rpt.get('artifact_hash', ''),
                 'artifact_verified': bool(rpt.get('_artifact_verified')),
-                'total_notes': rpt.get('total_notes', 0),
+                'report_valid': 'total_notes' in rpt and report_artifact.verify_report_dict(rpt)['valid'],
+                'total_notes': rpt.get('total_notes'),
             }
-        all_ok = all(v['artifact_verified'] and v['row_id'] for v in verified.values())
+        all_ok = set(verified) == set(report_engine.REPORT_TYPES) and all(
+            v['artifact_verified'] and v['row_id'] and v['report_valid']
+            for v in verified.values()
+        )
         if not all_ok:
             return jsonify({'ok': False, 'error': '部分报告未真实落库', 'verified': verified}), 500
         return jsonify({'ok':True,'message':'日报/周报/月报/年报已生成','reports':result,'verified':verified})

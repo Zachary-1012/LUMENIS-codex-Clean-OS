@@ -12,6 +12,18 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 07 report generation result truth — 2026-09-26
+
+[The bounded report-route evidence](evidence/round-07/ROUND-07-REPORT-GENERATE-STATUS-2026-09-26.md)
+records a direct `missing total_notes → fabricated zero` and empty/partial
+bundle success path. The existing Shared Reporting route now requires all
+declared report types, a persisted row, verified artifact and valid report
+before `ok=true`; an explicit measured zero remains valid. Exact staged source
+and neighbor tests passed 65/65 on a clean archive. This is a source/API Batch,
+not a real actor, live Source/Evidence, report reopen/export or App E2E.
+ROUND 07 remains `REWORK`; `COMMERCIAL_READY=NO`. Resolve the containing
+commit and live main after publication.
+
 ### Bounded AI page lifecycle repair — 2026-09-26
 
 [ROUND 14 AI read lifecycle evidence](evidence/round-14/ROUND-14-AI-READ-LIFECYCLE-2026-09-26.md)
