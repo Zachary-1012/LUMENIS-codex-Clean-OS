@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 05 core health readiness contract — 2026-09-26
+
+[The bounded readiness evidence](evidence/round-05/ROUND-05-HEALTH-READINESS-CONTRACT-2026-09-26.md)
+records that `/healthz` now checks the existing canonical database and base
+schema read-only, while the supervisor and launcher require the same complete
+healthy response. The exact staged snapshot passed 8/8 endpoint/neighbor tests,
+the mocked PowerShell launcher check and two governance guards. No production
+service or resident browser was started. Full-Core loopback startup still
+needs an explicit background-effect suppression gate; real operator recovery
+and real user-work E2E remain open. `ROUND 05=REWORK`; `COMMERCIAL_READY=NO`.
+
 ### Round 05 HealthGuard installer path — 2026-09-26
 
 [The bounded installer evidence](evidence/round-05/ROUND-05-HEALTHGUARD-INSTALLER-PATH-2026-09-26.md)

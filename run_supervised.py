@@ -78,10 +78,19 @@ def write_state(**kw):
 
 
 def http_health(port, timeout=3):
-    """探 /healthz；返回 True/False，不依赖第三方库。"""
+    """只接受 Product Core 的真实 healthy + database-ok 响应。"""
     try:
-        with urllib.request.urlopen(f'http://127.0.0.1:{port}/healthz', timeout=timeout) as r:
-            return 200 <= r.status < 500
+        with urllib.request.urlopen(f'http://127.0.0.1:{port}/healthz', timeout=timeout) as response:
+            if response.status != 200:
+                return False
+            payload = json.loads(response.read(16 * 1024).decode('utf-8'))
+        dependencies = payload.get('dependencies')
+        return (
+            payload.get('ok') is True
+            and payload.get('status') == 'healthy'
+            and isinstance(dependencies, dict)
+            and dependencies.get('database') == 'ok'
+        )
     except Exception:
         return False
 

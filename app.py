@@ -2649,7 +2649,26 @@ def remote_access():
 
 @app.route('/healthz')
 def healthz():
-    return jsonify({'ok':True,'version':APP_VERSION,'service':'taikoo-monitor'})
+    """Core health requires the existing canonical database and its base schema."""
+    database_status = 'ok'
+    try:
+        with get_repository().connection(read_only=True, wal=False) as connection:
+            marker = connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='notes'"
+            ).fetchone()
+        if marker is None:
+            database_status = 'unavailable'
+    except Exception:
+        database_status = 'unavailable'
+
+    healthy = database_status == 'ok'
+    return jsonify({
+        'ok': healthy,
+        'status': 'healthy' if healthy else 'unavailable',
+        'dependencies': {'database': database_status},
+        'version': APP_VERSION,
+        'service': 'taikoo-monitor',
+    }), (200 if healthy else 503)
 
 @app.route('/api/health')
 def api_health():

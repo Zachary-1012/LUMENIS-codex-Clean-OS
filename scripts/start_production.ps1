@@ -55,7 +55,12 @@ Write-Output "Deps:   $check"
 Write-Output ''
 
 function Test-Http([string]$Url, [int]$TimeoutSec=3) {
-    try { Invoke-RestMethod $Url -TimeoutSec $TimeoutSec | Out-Null; return $true } catch { return $false }
+    try {
+        $health = Invoke-RestMethod $Url -TimeoutSec $TimeoutSec
+        return ($health.ok -eq $true -and
+                $health.status -eq 'healthy' -and
+                $health.dependencies.database -eq 'ok')
+    } catch { return $false }
 }
 function Test-ProcExists([string]$CmdPattern) {
     $hit = Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='msedge.exe'" |
