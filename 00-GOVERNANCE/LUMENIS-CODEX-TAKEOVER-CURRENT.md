@@ -12,6 +12,19 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 12 / 13 ad metric missing-value truth — 2026-09-26
+
+[The bounded ad metric evidence](evidence/round-12/ROUND-12-AD-METRIC-MISSING-TRUTH-2026-09-26.md)
+records a source-level correction in existing BMP `AdAnalytics`: missing spend,
+revenue and funnel stages remain unavailable/partial while observed zero remains
+zero. Incomplete inputs no longer trigger performance advice. Sol replayed only
+the analyzer and its focused test on fetched main with a fingerprint-matched
+disposable DB seed; 101 selected analytics, Permission and BMP truth tests passed,
+as did compilation and the constitution gate. Earlier shared-cwd tests are
+`INVALID / NOT ADOPTED`. No production caller, live campaign, ViewModel or user
+job was verified. `ROUND 12=REWORK`; `ROUND 13=REWORK`;
+`COMMERCIAL_READY=NO`.
+
 ### Round 07 / 13 Content Pattern candidate storage — 2026-09-26
 
 [The bounded Content Pattern evidence](evidence/round-07/ROUND-07-CONTENT-PATTERN-CANDIDATE-2026-09-26.md)

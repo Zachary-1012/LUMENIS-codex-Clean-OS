@@ -88,6 +88,74 @@ class TestAdAnalytics:
         assert result.roas == 0.5
         assert result.status == "bad"
 
+    def test_roas_without_metrics_is_unavailable_not_bad(self):
+        from ad_intelligence.analytics.analyzer import AdAnalytics
+
+        result = AdAnalytics().analyze_roas("xhs", [], [])
+        assert result.total_spend is None
+        assert result.total_revenue is None
+        assert result.roas is None
+        assert result.status == "unavailable"
+        assert result.breakdown_by_campaign == {}
+        assert result.trend == []
+        assert "无法计算ROAS" in result.recommendation
+        assert "暂停" not in result.recommendation
+
+    def test_roas_missing_revenue_is_partial_without_zero_fill(self):
+        from ad_intelligence.analytics.analyzer import AdAnalytics
+
+        result = AdAnalytics().analyze_roas(
+            "xhs", [{"spend": 250, "campaign": "A"}], []
+        )
+        assert result.total_spend == 250.0
+        assert result.total_revenue is None
+        assert result.roas is None
+        assert result.status == "partial"
+        assert result.breakdown_by_campaign == {}
+        assert result.trend == [None]
+        assert "数据不完整" in result.recommendation
+        assert "暂停" not in result.recommendation
+
+    def test_roas_missing_fields_make_aggregate_partial(self):
+        from ad_intelligence.analytics.analyzer import AdAnalytics
+
+        result = AdAnalytics().analyze_roas(
+            "xhs",
+            [{"spend": 250, "campaign": "A"}, {"campaign": "B"}],
+            [{"revenue": 500}, {}],
+        )
+        assert result.total_spend == 250.0
+        assert result.total_revenue == 500.0
+        assert result.roas is None
+        assert result.status == "partial"
+        assert result.trend == [None, None]
+        assert "暂停" not in result.recommendation
+
+    def test_roas_preserves_observed_zero_revenue(self):
+        from ad_intelligence.analytics.analyzer import AdAnalytics
+
+        spend = [{"spend": 100, "revenue": 0, "campaign": "A"}]
+        result = AdAnalytics().analyze_roas("xhs", spend, [{"revenue": 0}])
+        assert result.total_spend == 100.0
+        assert result.total_revenue == 0.0
+        assert result.roas == 0.0
+        assert result.status == "bad"
+        assert result.breakdown_by_campaign == {"A": 0.0}
+        assert result.trend == [0.0]
+
+    def test_roas_zero_spend_is_unavailable_but_preserves_observed_zeros(self):
+        from ad_intelligence.analytics.analyzer import AdAnalytics
+
+        spend = [{"spend": 0, "revenue": 0, "campaign": "A"}]
+        result = AdAnalytics().analyze_roas("xhs", spend, [{"revenue": 0}])
+        assert result.total_spend == 0.0
+        assert result.total_revenue == 0.0
+        assert result.roas is None
+        assert result.status == "unavailable"
+        assert result.breakdown_by_campaign == {}
+        assert result.trend == [None]
+        assert "无法计算ROAS" in result.recommendation
+
     def test_funnel_analysis(self):
         from ad_intelligence.analytics.analyzer import AdAnalytics
         analyzer = AdAnalytics()
@@ -103,6 +171,54 @@ class TestAdAnalytics:
         assert result.stages["conversion"] == 20
         assert "click_to_landing" in result.rates
         assert result.bottleneck
+        assert result.status == "complete"
+
+    def test_funnel_without_stages_is_unavailable_not_all_zero(self):
+        from ad_intelligence.analytics.analyzer import AdAnalytics
+
+        result = AdAnalytics().analyze_funnel("xhs", {})
+        assert result.status == "unavailable"
+        assert all(value is None for value in result.stages.values())
+        assert result.rates == {}
+        assert result.drop_off_points == []
+        assert result.bottleneck == "unknown"
+        assert "无法分析" in result.recommendation
+        assert "优化素材" not in result.recommendation
+
+    def test_funnel_partial_data_preserves_zero_without_recommending(self):
+        from ad_intelligence.analytics.analyzer import AdAnalytics
+
+        result = AdAnalytics().analyze_funnel(
+            "xhs", {"impressions": 100, "clicks": 0}
+        )
+        assert result.status == "partial"
+        assert result.stages["impression"] == 100
+        assert result.stages["click"] == 0
+        assert result.stages["landing"] is None
+        assert result.rates == {"impression_to_click": 0.0}
+        assert result.drop_off_points == ["impression_to_click"]
+        assert result.bottleneck == "impression_to_click"
+        assert "数据不完整" in result.recommendation
+        assert "优化素材" not in result.recommendation
+
+    def test_funnel_zero_previous_stage_skips_following_rate(self):
+        from ad_intelligence.analytics.analyzer import AdAnalytics
+
+        result = AdAnalytics().analyze_funnel(
+            "xhs",
+            {
+                "impressions": 100,
+                "clicks": 0,
+                "landings": 0,
+                "engagements": 0,
+                "conversions": 0,
+            },
+        )
+        assert result.status == "complete"
+        assert result.stages["click"] == 0
+        assert result.rates == {"impression_to_click": 0.0}
+        assert result.drop_off_points == ["impression_to_click"]
+        assert result.recommendation.startswith("曝光到点击流失严重")
 
     def test_creative_analysis(self):
         from ad_intelligence.analytics.analyzer import AdAnalytics

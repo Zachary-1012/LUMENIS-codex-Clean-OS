@@ -15,6 +15,25 @@ import math
 logger = logging.getLogger(__name__)
 
 
+def _observed_number(value: Any) -> Optional[float]:
+    """返回有效有限数值，保留已观测的零。"""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    try:
+        number = float(value)
+    except (OverflowError, TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _observed_count(value: Any) -> Optional[int]:
+    """返回非负的已观测整数计数。"""
+    number = _observed_number(value)
+    if number is None or number < 0 or not number.is_integer():
+        return None
+    return int(number)
+
+
 class FunnelStage(str, Enum):
     """漏斗阶段。"""
     IMPRESSION = "impression"    # 曝光
@@ -30,13 +49,13 @@ class ROASAnalysis:
     """ROAS分析结果。"""
     platform: str
     period: str
-    total_spend: float
-    total_revenue: float
-    roas: float
+    total_spend: Optional[float]
+    total_revenue: Optional[float]
+    roas: Optional[float]
     target_roas: float
-    status: str               # good/warning/bad
+    status: str               # good/warning/bad/partial/unavailable
     breakdown_by_campaign: Dict[str, float]
-    trend: List[float]
+    trend: List[Optional[float]]
     recommendation: str
 
 
@@ -44,11 +63,12 @@ class ROASAnalysis:
 class FunnelAnalysis:
     """漏斗分析结果。"""
     platform: str
-    stages: Dict[str, int]
+    stages: Dict[str, Optional[int]]
     rates: Dict[str, float]   # 各阶段转化率
     drop_off_points: List[str]
     bottleneck: str
     recommendation: str
+    status: str = "unknown"  # complete/partial/unavailable
 
 
 @dataclass
@@ -76,35 +96,67 @@ class AdAnalytics:
         revenue_data: List[Dict],
         target_roas: float = 2.0,
     ) -> ROASAnalysis:
-        """ROAS分析（只读）。"""
-        total_spend = sum(d.get("spend", 0) for d in spend_data)
-        total_revenue = sum(d.get("revenue", 0) for d in revenue_data)
-        roas = total_revenue / total_spend if total_spend > 0 else 0
+        """ROAS分析（只读）。缺少的指标不按零处理。"""
+        observed_spend = []
+        for item in spend_data:
+            value = _observed_number(item.get("spend"))
+            if value is not None and value >= 0:
+                observed_spend.append(value)
 
-        if roas >= target_roas:
-            status = "good"
-        elif roas >= target_roas * 0.7:
-            status = "warning"
+        observed_revenue = []
+        for item in revenue_data:
+            value = _observed_number(item.get("revenue"))
+            if value is not None:
+                observed_revenue.append(value)
+
+        spend_complete = bool(spend_data) and len(observed_spend) == len(spend_data)
+        revenue_complete = (
+            bool(revenue_data)
+            and len(observed_revenue) == len(revenue_data)
+        )
+        total_spend = sum(observed_spend) if observed_spend else None
+        total_revenue = sum(observed_revenue) if observed_revenue else None
+        inputs_complete = spend_complete and revenue_complete
+        has_observation = bool(observed_spend or observed_revenue)
+
+        roas = None
+        if not has_observation:
+            status = "unavailable"
+            recommendation = "未提供有效花费或收入数据，无法计算ROAS"
+        elif not inputs_complete:
+            status = "partial"
+            recommendation = "花费或收入数据不完整，无法判断ROAS"
+        elif total_spend is None or total_spend <= 0:
+            status = "unavailable"
+            recommendation = "已观测花费为0，无法计算ROAS"
         else:
-            status = "bad"
+            roas = total_revenue / total_spend
+            if roas >= target_roas:
+                status = "good"
+            elif roas >= target_roas * 0.7:
+                status = "warning"
+            else:
+                status = "bad"
+            recommendation = self._roas_recommendation(status, roas, target_roas)
 
-        # 按计划分解
+        # 按计划汇总仅使用花费、收入均已观测且分母有效的记录。
         breakdown = {}
-        for d in spend_data:
-            campaign = d.get("campaign", "unknown")
-            spend = d.get("spend", 0)
-            revenue = d.get("revenue", 0)
-            if spend > 0:
+        for item in spend_data:
+            spend = _observed_number(item.get("spend"))
+            revenue = _observed_number(item.get("revenue"))
+            if spend is not None and spend > 0 and revenue is not None:
+                campaign = item.get("campaign", "unknown")
                 breakdown[campaign] = revenue / spend
 
-        # 趋势（最近7天）
+        # 保留输入时间槽；无法计算的比率标记为不可用。
         trend = []
-        for i in range(min(7, len(spend_data))):
-            s = spend_data[i].get("spend", 0)
-            r = spend_data[i].get("revenue", 0)
-            trend.append(r / s if s > 0 else 0)
-
-        recommendation = self._roas_recommendation(status, roas, target_roas)
+        for item in spend_data[:7]:
+            spend = _observed_number(item.get("spend"))
+            revenue = _observed_number(item.get("revenue"))
+            if spend is not None and spend > 0 and revenue is not None:
+                trend.append(revenue / spend)
+            else:
+                trend.append(None)
 
         return ROASAnalysis(
             platform=platform,
@@ -124,34 +176,53 @@ class AdAnalytics:
         platform: str,
         funnel_data: Dict[str, int],
     ) -> FunnelAnalysis:
-        """漏斗分析（只读）。"""
+        """漏斗分析（只读）。缺失阶段保持未知，不按零处理。"""
+        stage_inputs = {
+            "impression": "impressions",
+            "click": "clicks",
+            "landing": "landings",
+            "engagement": "engagements",
+            "conversion": "conversions",
+        }
         stages = {
-            "impression": funnel_data.get("impressions", 0),
-            "click": funnel_data.get("clicks", 0),
-            "landing": funnel_data.get("landings", 0),
-            "engagement": funnel_data.get("engagements", 0),
-            "conversion": funnel_data.get("conversions", 0),
+            stage: _observed_count(funnel_data.get(input_name))
+            for stage, input_name in stage_inputs.items()
         }
 
-        # 计算各阶段转化率
+        observed_count = sum(count is not None for count in stages.values())
+        if observed_count == 0:
+            status = "unavailable"
+        elif observed_count < len(stages):
+            status = "partial"
+        else:
+            status = "complete"
+
+        # 仅计算前后阶段均有观测、且前一阶段非零的转化率。
         rates = {}
-        prev_stage = None
-        prev_count = 0
+        previous_stage = None
+        previous_count = None
         for stage, count in stages.items():
-            if prev_stage and prev_count > 0:
-                rates[f"{prev_stage}_to_{stage}"] = count / prev_count * 100
-            prev_stage = stage
-            prev_count = count
+            if (
+                previous_stage
+                and previous_count is not None
+                and previous_count > 0
+                and count is not None
+            ):
+                rates[f"{previous_stage}_to_{stage}"] = count / previous_count * 100
+            previous_stage = stage
+            previous_count = count
 
-        # 找出流失最严重的点
-        drop_off = []
-        for rate_name, rate in rates.items():
-            if rate < 50:
-                drop_off.append(rate_name)
-
+        drop_off = [rate_name for rate_name, rate in rates.items() if rate < 50]
         bottleneck = min(rates, key=rates.get) if rates else "unknown"
 
-        recommendation = self._funnel_recommendation(bottleneck, rates)
+        if status == "unavailable":
+            recommendation = "未提供漏斗阶段数据，无法分析"
+        elif status == "partial":
+            recommendation = "漏斗阶段数据不完整，无法给出优化建议"
+        elif not rates:
+            recommendation = "漏斗阶段数据完整，但没有可计算的转化率"
+        else:
+            recommendation = self._funnel_recommendation(bottleneck, rates)
 
         return FunnelAnalysis(
             platform=platform,
@@ -160,6 +231,7 @@ class AdAnalytics:
             drop_off_points=drop_off,
             bottleneck=bottleneck,
             recommendation=recommendation,
+            status=status,
         )
 
     def analyze_creatives(
