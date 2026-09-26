@@ -1,0 +1,11 @@
+# ROUND 05 — Windows redirected output encoding
+
+Status: bounded SYSTEM Runtime/Shared Database diagnostic fix `TESTED`; ROUND 05 remains `REWORK / LIVE_NOT_VERIFIED`. The source change keeps migration diagnostics writable when a Windows process has GBK stdout. Unrepresentable glyphs are emitted as visible backslash escapes; version, backup, schema, and error decisions are unchanged.
+
+## Exact source and verification
+
+- Base source: `39c83bd72e2dcb50bb6a189edfc54eae274803c3`; only `lumenis/shared/database/migrations.py` and `tests/test_shared_database_migrations.py` are implementation/test paths in this Batch. The isolated candidate did not read, migrate, or repair `data/monitor.db`.
+- The GBK pipe subprocess regression uses an in-memory SQLite connection and current-version no-op path. It reproduced a `UnicodeEncodeError` before the fix; after the fix, the child exits 0 and writes the Chinese status plus escaped emoji. `python -m pytest -q --noconftest tests/test_shared_database_migrations.py`: 7 passed, exit 0. `py_compile`: exit 0. `verify_ai_native_constitution.py`: PASS on the exact clean candidate.
+- `--noconftest` was used because repository conftest rejects the protected local seed DB/WAL state. This test proves output handling, not a real schema migration or a complete startup. The prior loopback runtime probe used process-local UTF-8 as a workaround; a new end-to-end browser/runtime probe remains necessary after identity and Permission closure.
+
+`REAL DELIVERY CARD`: entry = explicit internal-beta Workspace profile; real input = authorized actor and canonical data (pending); end-to-end path = startup → DB diagnostics → account/Permission → Context/Evidence → Workspace; user-visible result = not yet accepted; failure/recovery = GBK redirected output no longer crashes the migration status path; acceptance assertion = **not met**. `COMMERCIAL OVERLAY IMPACT`: no commercial claim. `GLOBAL UNIVERSE / DATA MATURITY IMPACT`: Global Commercial `NO`, Global Brand `NO`, Guangzhou reference `PARTIAL`. `CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION`: Python standard-library [command-line documentation](https://docs.python.org/3/using/cmdline.html) confirms `PYTHONIOENCODING` controls redirected streams; accessed 2026-09-27. Adapted the existing owner without a new dependency or runtime owner; no broader upgrade justified.

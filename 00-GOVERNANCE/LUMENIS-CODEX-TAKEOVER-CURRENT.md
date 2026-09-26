@@ -855,3 +855,7 @@ The existing SYSTEM Runtime owner now has a dedicated loopback-only, disposable-
 ### 2026-09-27 ROUND 04 account bootstrap without default credentials
 
 The existing Account/Auth owners now have a tested source candidate that removes predictable owner, recovery-answer and master-key defaults for a fresh database; existing accounts are preserved. [Round 04 evidence](evidence/round-04/ROUND-04-ACCOUNT-BOOTSTRAP-2026-09-27.md) records 183 isolated tests, the remaining real session/Permission/browser gap and the separate legacy scan limitation. ROUND 04 remains `REWORK / LIVE_NOT_VERIFIED`; product account timing is unchanged.
+
+### 2026-09-27 Round 05 Windows redirected-output diagnostic safety
+
+The existing Shared Database migration output path now escapes glyphs that a GBK redirected stream cannot encode, avoiding the observed no-op migration-status startup exception. [Round 05 evidence](evidence/round-05/ROUND-05-WINDOWS-OUTPUT-ENCODING-2026-09-27.md) records the 7-test isolated regression and Constitution Gate PASS. This is `TESTED` source only; actual DB migration, actor/session browser E2E, ROUND 05 PASS, RELEASED and OPERATING remain unverified.

@@ -1,7 +1,10 @@
 """Fresh Shared Database bootstrap stays isolated and reaches its current schema."""
 from __future__ import annotations
 
+import os
 import sqlite3
+import subprocess
+import sys
 
 
 def _bind_migration_db(monkeypatch, migrations, db_path, backup_dir):
@@ -19,6 +22,39 @@ def _table_contract(conn, table):
 
 def _index_names(conn, table):
     return {row[1] for row in conn.execute(f"PRAGMA index_list({table})")}
+
+
+def test_migrate_output_handles_gbk_redirect_without_db_migration():
+    """Startup migration status must not crash when redirected stdout uses GBK."""
+    repo_root = os.path.dirname(os.path.dirname(__file__))
+    script = "\n".join(
+        (
+            "import sqlite3",
+            "from lumenis.shared.database import migrations",
+            "migrations.get_connection = lambda: sqlite3.connect(':memory:')",
+            "migrations.get_current_version = lambda _conn: migrations.CURRENT_VERSION",
+            "raise SystemExit(0 if migrations.migrate() else 1)",
+        )
+    )
+    child_env = os.environ.copy()
+    child_env["PYTHONIOENCODING"] = "gbk"
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=repo_root,
+        env=child_env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=15,
+        check=False,
+    )
+
+    stderr = result.stderr.decode("gbk", errors="replace")
+    assert result.returncode == 0, stderr
+    output = result.stdout.decode("gbk")
+    assert "当前数据库版本" in output
+    assert "数据库已是目标版本" in output
+    assert "\\U0001f4ca" in output
 
 
 def test_business_schema_preserves_backfills_indexes_and_event_date(tmp_path):

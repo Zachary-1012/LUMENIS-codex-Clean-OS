@@ -10,12 +10,40 @@ LUMENIS Shared Database - canonical migration engine
     python database_migrations.py info            # 查看数据库信息
 """
 
+import builtins
 import os
 import sys
 import sqlite3
 import tempfile
 from datetime import datetime
 from typing import Optional, List, Dict, Any
+
+
+def _safe_print(
+    *values: Any,
+    sep: str = " ",
+    end: str = "\n",
+    file=None,
+    flush: bool = False,
+) -> None:
+    """Keep CLI diagnostics writable when stdout uses a legacy code page."""
+    stream = sys.stdout if file is None else file
+    encoding = getattr(stream, "encoding", None)
+    if encoding:
+        try:
+            def _escape_unencodable(value: str) -> str:
+                encoded = value.encode(encoding, errors="backslashreplace")
+                return encoded.decode(encoding)
+
+            values = tuple(_escape_unencodable(str(value)) for value in values)
+            if isinstance(sep, str):
+                sep = _escape_unencodable(sep)
+            if isinstance(end, str):
+                end = _escape_unencodable(end)
+        except LookupError:
+            pass
+    builtins.print(*values, sep=sep, end=end, file=file, flush=flush)
+
 
 # Database path selection is owned by LUMENIS Shared Database.
 from .paths import main_db_path
@@ -172,8 +200,8 @@ def backup_database(backup_name: Optional[str] = None) -> str:
         if temp_path and os.path.exists(temp_path):
             os.unlink(temp_path)
 
-    print(f"✅ 数据库已备份到: {backup_path}")
-    print(f"   备份大小: {os.path.getsize(backup_path) / 1024 / 1024:.2f} MB")
+    _safe_print(f"✅ 数据库已备份到: {backup_path}")
+    _safe_print(f"   备份大小: {os.path.getsize(backup_path) / 1024 / 1024:.2f} MB")
     return backup_path
 
 
@@ -839,21 +867,21 @@ def migrate(target_version: Optional[int] = None) -> bool:
     conn = get_connection()
     current_version = get_current_version(conn)
     
-    print(f"📊 当前数据库版本: v{current_version}")
-    print(f"🎯 目标版本: v{target_version}")
+    _safe_print(f"📊 当前数据库版本: v{current_version}")
+    _safe_print(f"🎯 目标版本: v{target_version}")
     
     if target_version < current_version:
-        print(f"❌ 拒绝 schema 降级: 当前 v{current_version}，目标 v{target_version}")
+        _safe_print(f"❌ 拒绝 schema 降级: 当前 v{current_version}，目标 v{target_version}")
         conn.close()
         return False
 
     if current_version == target_version:
-        print("✅ 数据库已是目标版本，无需迁移")
+        _safe_print("✅ 数据库已是目标版本，无需迁移")
         conn.close()
         return True
 
     # 迁移前自动备份。A missing or failed snapshot must stop all schema writes.
-    print("\n📦 迁移前自动备份数据库...")
+    _safe_print("\n📦 迁移前自动备份数据库...")
     try:
         backup_path = backup_database(
             f"before_migration_v{current_version}_to_v{target_version}.db"
@@ -861,7 +889,7 @@ def migrate(target_version: Optional[int] = None) -> bool:
         if not backup_path or not os.path.isfile(backup_path):
             raise OSError("备份函数未生成可用文件")
     except Exception as e:
-        print(f"❌ 迁移前备份失败，已拒绝迁移: {e}")
+        _safe_print(f"❌ 迁移前备份失败，已拒绝迁移: {e}")
         conn.close()
         return False
 
@@ -873,7 +901,7 @@ def migrate(target_version: Optional[int] = None) -> bool:
             # A fresh v0 database has no versioned step to commit its bootstrap.
             conn.commit()
     except Exception as e:
-        print(f"❌ 迁移前共享 schema 初始化失败: {e}")
+        _safe_print(f"❌ 迁移前共享 schema 初始化失败: {e}")
         conn.rollback()
         conn.close()
         return False
@@ -881,30 +909,30 @@ def migrate(target_version: Optional[int] = None) -> bool:
     # 执行迁移
     for version in range(current_version, target_version):
         if version in MIGRATIONS:
-            print(f"\n🔄 执行迁移 v{version} → v{version + 1}...")
-            print(f"   {MIGRATION_HISTORY.get(version + 1, '未知迁移')}")
+            _safe_print(f"\n🔄 执行迁移 v{version} → v{version + 1}...")
+            _safe_print(f"   {MIGRATION_HISTORY.get(version + 1, '未知迁移')}")
             
             try:
                 MIGRATIONS[version](conn)
                 set_version(conn, version + 1, MIGRATION_HISTORY.get(version + 1, ''))
-                print(f"   ✅ 迁移成功")
+                _safe_print(f"   ✅ 迁移成功")
             except Exception as e:
-                print(f"   ❌ 迁移失败: {e}")
-                print("   ⚠️  未提交的迁移更改已回滚")
+                _safe_print(f"   ❌ 迁移失败: {e}")
+                _safe_print("   ⚠️  未提交的迁移更改已回滚")
                 conn.rollback()
                 conn.close()
                 return False
         else:
-            print(f"⚠️  跳过未知迁移 v{version} → v{version + 1}")
+            _safe_print(f"⚠️  跳过未知迁移 v{version} → v{version + 1}")
     
-    print(f"\n🎉 数据库迁移完成！当前版本: v{get_current_version(conn)}")
+    _safe_print(f"\n🎉 数据库迁移完成！当前版本: v{get_current_version(conn)}")
     conn.close()
     return True
 
 
 def rollback() -> bool:
     """Refuse downgrade until reversible schema migrations are implemented."""
-    print("❌ 当前 schema 迁移没有可执行的反向步骤，拒绝回滚")
+    _safe_print("❌ 当前 schema 迁移没有可执行的反向步骤，拒绝回滚")
     return False
 
 
@@ -913,18 +941,18 @@ def show_status():
     conn = get_connection()
     current_version = get_current_version(conn)
     
-    print("=" * 60)
-    print("📊 数据库状态")
-    print("=" * 60)
-    print(f"数据库路径: {DB_PATH}")
-    print(f"数据库大小: {os.path.getsize(DB_PATH) / 1024 / 1024:.2f} MB" if os.path.exists(DB_PATH) else "数据库不存在")
-    print(f"当前版本: v{current_version}")
-    print(f"最新版本: v{CURRENT_VERSION}")
-    print(f"更新状态: {'✅ 已是最新' if current_version >= CURRENT_VERSION else '⚠️  需要更新'}")
-    print()
+    _safe_print("=" * 60)
+    _safe_print("📊 数据库状态")
+    _safe_print("=" * 60)
+    _safe_print(f"数据库路径: {DB_PATH}")
+    _safe_print(f"数据库大小: {os.path.getsize(DB_PATH) / 1024 / 1024:.2f} MB" if os.path.exists(DB_PATH) else "数据库不存在")
+    _safe_print(f"当前版本: v{current_version}")
+    _safe_print(f"最新版本: v{CURRENT_VERSION}")
+    _safe_print(f"更新状态: {'✅ 已是最新' if current_version >= CURRENT_VERSION else '⚠️  需要更新'}")
+    _safe_print()
     
     # 表统计
-    print("📋 表统计:")
+    _safe_print("📋 表统计:")
     cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
     tables = [row['name'] for row in cursor.fetchall()]
     
@@ -932,15 +960,15 @@ def show_status():
         try:
             cursor = conn.execute(f"SELECT COUNT(*) as count FROM {table}")
             count = cursor.fetchone()['count']
-            print(f"  {table}: {count} 条记录")
+            _safe_print(f"  {table}: {count} 条记录")
         except:
-            print(f"  {table}: (无法统计)")
+            _safe_print(f"  {table}: (无法统计)")
     
-    print()
-    print("📜 迁移历史:")
+    _safe_print()
+    _safe_print("📜 迁移历史:")
     cursor = conn.execute("SELECT * FROM schema_version ORDER BY version DESC LIMIT 10")
     for row in cursor.fetchall():
-        print(f"  v{row['version']} - {row['description'][:50] if row['description'] else ''} ({row['applied_at']})")
+        _safe_print(f"  v{row['version']} - {row['description'][:50] if row['description'] else ''} ({row['applied_at']})")
     
     conn.close()
 
@@ -949,28 +977,28 @@ def show_info():
     """显示数据库详细信息"""
     conn = get_connection()
     
-    print("=" * 60)
-    print("📋 数据库详细信息")
-    print("=" * 60)
+    _safe_print("=" * 60)
+    _safe_print("📋 数据库详细信息")
+    _safe_print("=" * 60)
     
     # 表结构
     cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
     tables = [row['name'] for row in cursor.fetchall()]
     
     for table in tables:
-        print(f"\n📊 {table}:")
+        _safe_print(f"\n📊 {table}:")
         cursor = conn.execute(f"PRAGMA table_info({table})")
         columns = cursor.fetchall()
         for col in columns:
-            print(f"  {col['name']} ({col['type']}) {'PK' if col['pk'] else ''}")
+            _safe_print(f"  {col['name']} ({col['type']}) {'PK' if col['pk'] else ''}")
         
         # 索引
         cursor = conn.execute(f"PRAGMA index_list({table})")
         indexes = cursor.fetchall()
         if indexes:
-            print(f"  索引:")
+            _safe_print(f"  索引:")
             for idx in indexes:
-                print(f"    {idx['name']} {'UNIQUE' if idx['unique'] else ''}")
+                _safe_print(f"    {idx['name']} {'UNIQUE' if idx['unique'] else ''}")
     
     conn.close()
 
@@ -978,12 +1006,12 @@ def show_info():
 def main():
     """主函数"""
     if len(sys.argv) < 2:
-        print("使用方法:")
-        print("  python database_migrations.py status    # 查看数据库状态")
-        print("  python database_migrations.py migrate   # 升级到最新版本")
-        print("  python database_migrations.py rollback  # 回滚到上一个版本")
-        print("  python database_migrations.py backup    # 备份数据库")
-        print("  python database_migrations.py info      # 查看数据库详细信息")
+        _safe_print("使用方法:")
+        _safe_print("  python database_migrations.py status    # 查看数据库状态")
+        _safe_print("  python database_migrations.py migrate   # 升级到最新版本")
+        _safe_print("  python database_migrations.py rollback  # 回滚到上一个版本")
+        _safe_print("  python database_migrations.py backup    # 备份数据库")
+        _safe_print("  python database_migrations.py info      # 查看数据库详细信息")
         return
     
     command = sys.argv[1].lower()
@@ -999,7 +1027,7 @@ def main():
     elif command == 'info':
         show_info()
     else:
-        print(f"未知命令: {command}")
+        _safe_print(f"未知命令: {command}")
 
 
 if __name__ == '__main__':
