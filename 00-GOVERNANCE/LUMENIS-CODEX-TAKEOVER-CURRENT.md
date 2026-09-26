@@ -12,6 +12,16 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 05 health-only isolated startup probe — 2026-09-26
+
+[The bounded startup evidence](evidence/round-05/ROUND-05-HEALTH-ONLY-SAFE-PROBE-2026-09-26.md)
+records an explicit loopback and disposable-DB profile, an earliest request
+fence that allows only `GET /healthz`, 18 selected tests, and a live local
+200/403 HTTP probe. The protected production DB fingerprint was unchanged.
+This is a safe **health-only** probe; the actual Workspace and real business
+task were blocked. Full-Core safe startup, real user-work E2E and recovery
+remain open. `ROUND 05=REWORK`; `COMMERCIAL_READY=NO`.
+
 ### Round 07 AI Gateway call-record trace — 2026-09-26
 
 [The bounded Gateway trace evidence](evidence/round-07/ROUND-07-GATEWAY-CALL-TRACE-2026-09-26.md)

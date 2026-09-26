@@ -1,8 +1,123 @@
 ﻿"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
-import os, sys, json, threading, time, shutil, sqlite3, secrets, argparse, concurrent.futures, subprocess, csv, io, re
+import os, sys, json, threading, time, shutil, sqlite3, secrets, argparse, concurrent.futures, subprocess, csv, io, re, tempfile
 from pathlib import Path
 
+
+def _is_internal_beta_loopback(host):
+    return str(host or '').strip().lower() == '127.0.0.1'
+
+
+def _cli_option_value(argv, option):
+    matches = []
+    for index, value in enumerate(argv):
+        if value == option:
+            matches.append(argv[index + 1] if index + 1 < len(argv) else None)
+        elif value.startswith(option + '='):
+            matches.append(value.split('=', 1)[1])
+    return matches[0] if len(matches) == 1 else None
+
+
+def _is_path_within(path, root):
+    path = os.path.normcase(os.path.realpath(os.path.abspath(path)))
+    root = os.path.normcase(os.path.realpath(os.path.abspath(root)))
+    try:
+        return os.path.commonpath((path, root)) == root
+    except ValueError:
+        return False
+
+
+def _validate_internal_beta_storage(environ=None, temp_root=None):
+    env = os.environ if environ is None else environ
+    db_value = str(env.get('ZBC_DB_PATH') or '').strip()
+    data_value = str(env.get('ZBC_DATA_DIR') or '').strip()
+    if not db_value or not data_value:
+        raise ValueError('internal beta acceptance requires explicit ZBC_DB_PATH and ZBC_DATA_DIR')
+    if db_value.startswith(('sqlite:', 'file:')) or not os.path.isabs(db_value):
+        raise ValueError('internal beta acceptance requires a plain absolute ZBC_DB_PATH')
+    if not os.path.isabs(data_value):
+        raise ValueError('internal beta acceptance requires an absolute ZBC_DATA_DIR')
+
+    temp_root = temp_root or tempfile.gettempdir()
+    db_path = os.path.realpath(os.path.abspath(db_value))
+    data_dir = os.path.realpath(os.path.abspath(data_value))
+    temp_root = os.path.realpath(os.path.abspath(temp_root))
+    if os.path.normcase(data_dir) == os.path.normcase(temp_root) or not _is_path_within(data_dir, temp_root):
+        raise ValueError('internal beta ZBC_DATA_DIR must be a dedicated directory under the OS temp root')
+    if db_path == data_dir or not _is_path_within(db_path, data_dir):
+        raise ValueError('internal beta ZBC_DB_PATH must be a file path under ZBC_DATA_DIR')
+    return db_path, data_dir
+
+
+def _activate_internal_beta_environment(environ=None, temp_root=None):
+    env = os.environ if environ is None else environ
+    db_path, data_dir = _validate_internal_beta_storage(env, temp_root)
+    # Keep bridge paths inside the disposable data root. The invalid cookie
+    # path is lazy: startup never stats, opens, creates, or launches a profile.
+    safe_cookie_path = os.path.join(data_dir, 'private', 'acceptance-cookie-unavailable.txt')
+    env['ZBC_DB_PATH'] = db_path
+    env['ZBC_DATA_DIR'] = data_dir
+    env['LOG_DIR'] = os.path.join(data_dir, 'logs')
+    env['XHS_COOKIE_FILE'] = safe_cookie_path
+    env['XHS_COOKIE_FILE_OVERRIDE'] = safe_cookie_path
+    env['XHS_COOKIE_HEADER'] = ''
+    env['XHS_COOKIES_JSON'] = ''
+    env['XHS_CDP_URL'] = ''
+    env['XHS_PRODUCTION'] = '0'
+    return db_path, data_dir
+
+
+def _prepare_node_runtime(internal_beta_acceptance):
+    if internal_beta_acceptance:
+        return False
+    return _ensure_node_on_path()
+
+
+def _startup_log_dir():
+    return os.environ.get('LOG_DIR') or os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), 'logs'
+    )
+
+
+def _ensure_node_on_path():
+    import shutil
+    if shutil.which('node'):
+        return True
+    candidates = [
+        os.getenv('NODE_EXE', ''),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nodejs', 'node.exe'),
+    ]
+    # 豆包沙箱常见 node 路径
+    for base in [os.path.expanduser(r'~\AppData\Local\DoubaoWork\User Data\sandbox_runtime\bases')]:
+        if os.path.isdir(base):
+            for d in os.listdir(base):
+                n = os.path.join(base, d, 'node', 'node.exe')
+                if os.path.isfile(n):
+                    candidates.append(n)
+    for c in candidates:
+        if c and os.path.isfile(c):
+            os.environ['PATH'] = os.path.dirname(c) + os.pathsep + os.environ.get('PATH', '')
+            return True
+    return False
+
+
+# Select the health-only safe probe before application imports. It is not
+# Product E2E: once Flask is created, the first request hook permits only GET /healthz.
+INTERNAL_BETA_ACCEPTANCE = '--internal-beta-acceptance' in sys.argv
+if INTERNAL_BETA_ACCEPTANCE and not _is_internal_beta_loopback(
+        _cli_option_value(sys.argv[1:], '--host')):
+    raise SystemExit(
+        'Internal beta acceptance requires an explicit --host 127.0.0.1'
+    )
+if INTERNAL_BETA_ACCEPTANCE:
+    try:
+        _activate_internal_beta_environment()
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+
+
 def _load_dotenv(path='.env'):
+    if INTERNAL_BETA_ACCEPTANCE:
+        return
     if not os.path.exists(path): return
     try:
         for line in open(path,encoding='utf-8'):
@@ -19,7 +134,7 @@ _load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
 import faulthandler as _faulthandler
 import traceback as _fault_tb
 try:
-    _LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+    _LOG_DIR = _startup_log_dir()
     os.makedirs(_LOG_DIR, exist_ok=True)
     _fault_fh = open(os.path.join(_LOG_DIR, 'faulthandler.log'), 'a', encoding='utf-8')
     _faulthandler.enable(file=_fault_fh, all_threads=True)
@@ -132,6 +247,21 @@ import brand_logo_manager
 import trend_api
 
 app=Flask(__name__)
+
+
+@app.before_request
+def _internal_beta_health_only_request_fence():
+    if not INTERNAL_BETA_ACCEPTANCE:
+        return None
+    if request.method == 'GET' and request.path == '/healthz':
+        return None
+    return jsonify({
+        'ok': False,
+        'status': 'BLOCKED',
+        'code': 'INTERNAL_BETA_HEALTH_ONLY',
+        'message': 'This health-only safe probe permits only GET /healthz.',
+    }), 403
+
 # 全局上传大小限制：500MB（对齐 INGESTION_AND_TERMINOLOGY_STANDARD）
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 # SYSTEM Runtime serves the generated Flutter Workspace; Flask retains Product Core ownership.
@@ -4512,12 +4642,11 @@ def scheduler_loop():
             print('[Scheduler]', e)
         time.sleep(20)
 
-if __name__=='__main__':
-    parser=argparse.ArgumentParser(description='广州太古汇舆情监测系统')
-    parser.add_argument('--host',default=APP_HOST,help='监听地址，默认0.0.0.0（支持本地/局域网/5G热点访问）')
-    parser.add_argument('--port',type=int,default=APP_PORT)
-    parser.add_argument('--no-scheduler',action='store_true',help='仅启动 Web，不启动自动采集调度器')
-    args=parser.parse_args()
+def _start_app_automations(args):
+    if getattr(args, 'internal_beta_acceptance', False):
+        print('[Runtime] health-only safe probe: automatic collectors, residents, and monitors suppressed')
+        return False
+
     if not args.no_scheduler:
         # v5.8.6 恢复主采集调度器：固定时钟唤醒 + 动态决策影子对照（周报线程另行评估后启用）
         threading.Thread(target=scheduler_loop, daemon=True, name='scheduler').start()
@@ -4526,10 +4655,10 @@ if __name__=='__main__':
         xhs_p0_orchestrator.start_resident()
         print('[XHS-P0] 小红书 P0 驻场心跳已启动')
     except Exception as _pe:
-        print(f'[XHS-P0] 驻场心跳启动失败: {_pe}')
         # threading.Thread(target=_weekly_scheduler,daemon=True,name='weekly_scheduler').start()
+        print(f'[XHS-P0] 驻场心跳启动失败: {_pe}')
         print('[Scheduler] 主采集调度器已启用（唤醒点+动态影子对照）')
-    
+
     # 启动内存监控（防止OOM崩溃）——崩溃根因(重复endpoint)已修复，重新启用
     try:
         mem_opt = memory_optimizer.get_memory_optimizer()
@@ -4558,9 +4687,24 @@ if __name__=='__main__':
         print('[AIC] 云端 AI 通道 24h 心跳保活已启动')
     except Exception as _e:
         print(f'[AIC] 云端 AI 通道心跳保活启动失败: {_e}')
-    
+    return True
+
+
+if __name__=='__main__':
+    parser=argparse.ArgumentParser(description='广州太古汇舆情监测系统')
+    parser.add_argument('--host',default=APP_HOST,help='监听地址，默认0.0.0.0（支持本地/局域网/5G热点访问）')
+    parser.add_argument('--port',type=int,default=APP_PORT)
+    parser.add_argument('--no-scheduler',action='store_true',help='仅启动 Web，不启动自动采集调度器')
+    parser.add_argument('--internal-beta-acceptance',action='store_true',help='loopback health-only safe probe; only GET /healthz, not Product E2E')
+    args=parser.parse_args()
+    if args.internal_beta_acceptance and not _is_internal_beta_loopback(args.host):
+        parser.error('--internal-beta-acceptance requires --host 127.0.0.1')
+    if args.internal_beta_acceptance != INTERNAL_BETA_ACCEPTANCE:
+        parser.error('internal beta acceptance profile must be selected before app imports')
+    _start_app_automations(args)
     auth_state='开启' if _auth_enabled() else '关闭（仅建议本机访问）'
-    print(f'广州太古汇舆情监测系统 v{APP_VERSION} | {args.host}:{args.port} | 自动采集：{not args.no_scheduler} | HTTP认证：{auth_state}')
+    auto_collection = not args.no_scheduler and not args.internal_beta_acceptance
+    print(f'广州太古汇舆情监测系统 v{APP_VERSION} | {args.host}:{args.port} | 自动采集：{auto_collection} | HTTP认证：{auth_state}')
 
 # ===== SYSTEM AI Gateway health =====
 @app.route('/api/xhs/p0/status', methods=['GET'])
@@ -6726,96 +6870,11 @@ def api_cookies_import_raw():
                     'cookie_count': len(cleaned), 'applied': apply and platform in ('xhs', 'xiaohongshu'),
                     'secrets_returned': False})
 
-if __name__ == '__main__':
-    # 启动前注入 node 运行时 PATH（话题监测/采集脚本依赖 node，8201 worker 进程 PATH 可能不含沙箱 node）
-    def _ensure_node_on_path():
-        import shutil
-        if shutil.which('node'):
-            return True
-        candidates = [
-            os.getenv('NODE_EXE', ''),
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nodejs', 'node.exe'),
-        ]
-        # 豆包沙箱常见 node 路径
-        for base in [os.path.expanduser(r'~\AppData\Local\DoubaoWork\User Data\sandbox_runtime\bases')]:
-            if os.path.isdir(base):
-                for d in os.listdir(base):
-                    n = os.path.join(base, d, 'node', 'node.exe')
-                    if os.path.isfile(n):
-                        candidates.append(n)
-        for c in candidates:
-            if c and os.path.isfile(c):
-                os.environ['PATH'] = os.path.dirname(c) + os.pathsep + os.environ.get('PATH', '')
-                return True
+def _start_optional_runtime_services(internal_beta_acceptance):
+    if internal_beta_acceptance:
+        print('[Runtime] health-only safe probe: preflight, CDP, heartbeat, and guardian startup suppressed')
         return False
-    _ensure_node_on_path()
 
-    import logging
-    # 加固:Windows 下多进程共写 system.log 时轮转可能因文件占用失败,绝不允许 logging 内部异常崩溃主进程(此前 PermissionError 致 app.py 退出码=1、话题采集被中断)
-    logging.raiseExceptions = False
-    from logging.handlers import RotatingFileHandler
-
-    class _SafeRotatingFileHandler(RotatingFileHandler):
-        # 轮转失败时安全降级为直接追加,绝不向上抛异常(多进程共写同一日志的 Windows 场景)
-        def doRollover(self):
-            try:
-                super().doRollover()
-            except Exception:
-                try:
-                    if self.stream:
-                        self.stream.close()
-                except Exception:
-                    pass
-                try:
-                    self.stream = open(self.baseFilename, 'a', encoding=self.encoding)
-                except Exception:
-                    pass
-    
-    # 配置详细日志
-    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
-    os.makedirs(log_dir, exist_ok=True)
-    
-    # 清除已有的日志处理器（避免重复）
-    root_logger = logging.getLogger()
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
-    
-    # 文件日志（详细）
-    file_handler = _SafeRotatingFileHandler(
-        os.path.join(log_dir, 'system.log'),
-        maxBytes=10*1024*1024,  # 10MB
-        backupCount=5,
-        encoding='utf-8'
-    )
-    file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    
-    # 控制台日志（简洁）
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-    
-    # 根日志器
-    root_logger.setLevel(logging.DEBUG)
-    root_logger.addHandler(file_handler)
-    root_logger.addHandler(console_handler)
-    
-    # Flask日志器（不重复添加handler，继承root_logger）
-    werkzeug_logger = logging.getLogger('werkzeug')
-    werkzeug_logger.setLevel(logging.INFO)
-    # 不添加handler，避免重复记录
-    
-    # 命令行 --host/--port 优先于 .env（修复历史 bug：此前末尾 app.run 固定用 .env 的 APP_PORT，
-    # 忽略 --port，导致旁路测试实例抢占现网端口）
-    RUN_HOST = getattr(globals().get('args'), 'host', APP_HOST)
-    RUN_PORT = getattr(globals().get('args'), 'port', APP_PORT)
-    print("=" * 60)
-    print(f"广州太古汇舆情监测系统 v{APP_VERSION}")
-    print(f"启动地址: http://{RUN_HOST}:{RUN_PORT}")
-    print(f"多线程模式: 开启")
-    print(f"详细日志: {os.path.join(log_dir, 'system.log')}")
-    print("=" * 60)
-    
     # ===== ZBIP Runtime Integrity Preflight（统一启动闸门）=====
     # 默认只记录并写 Attestation、不阻断现网；ZBC_PREFLIGHT_ENFORCE=1 时存在 P0 即终止启动。
     try:
@@ -6838,7 +6897,7 @@ if __name__ == '__main__':
             print(f"[CDP] 浏览器未启动，采集时将按需自动启动（避免启动时崩溃）")
     except Exception as e:
         print(f"[CDP] 检查失败: {e}")
-    
+
     # 后台心跳线程（监控系统状态）
     def heartbeat_monitor():
         import time
@@ -6853,25 +6912,25 @@ if __name__ == '__main__':
             except Exception as e:
                 logging.error(f"[Heartbeat] 心跳线程异常: {e}", exc_info=True)
                 time.sleep(5)
-    
+
     # 启动心跳线程（守护线程，主进程退出时自动结束）
     heartbeat_thread = threading.Thread(target=heartbeat_monitor, daemon=True)
     heartbeat_thread.start()
     logging.info("[System] 心跳监控线程已启动")
-    
+
     # 全局异常捕获
     def handle_exception(exc_type, exc_value, exc_traceback):
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
         logging.critical("未捕获的异常:", exc_info=(exc_type, exc_value, exc_traceback))
-    
+
     sys.excepthook = handle_exception
-    
+
     # 线程异常捕获
     def thread_exception_handler(args):
         logging.critical(f"线程异常: {args.exc_type.__name__}: {args.exc_value}", exc_info=(args.exc_type, args.exc_value, args.exc_traceback))
-    
+
     threading.excepthook = thread_exception_handler
 
     # ===== P1-7 三 guardian 模块受控接入（守护 / 自动恢复 / 数据反馈闭环）=====
@@ -6917,7 +6976,81 @@ if __name__ == '__main__':
                 print('[Guardian] RuntimeGuardian 统一生命周期守护已启动(reaper=30s)')
         except Exception as _ge:
             print(f'[Guardian] RuntimeGuardian 启动失败: {_ge}')
-    
+    return True
+
+
+if __name__ == '__main__':
+    # 启动前注入 node 运行时 PATH（话题监测/采集脚本依赖 node，8201 worker 进程 PATH 可能不含沙箱 node）
+    _prepare_node_runtime(INTERNAL_BETA_ACCEPTANCE)
+
+    import logging
+    # 加固:Windows 下多进程共写 system.log 时轮转可能因文件占用失败,绝不允许 logging 内部异常崩溃主进程(此前 PermissionError 致 app.py 退出码=1、话题采集被中断)
+    logging.raiseExceptions = False
+    from logging.handlers import RotatingFileHandler
+
+    class _SafeRotatingFileHandler(RotatingFileHandler):
+        # 轮转失败时安全降级为直接追加,绝不向上抛异常(多进程共写同一日志的 Windows 场景)
+        def doRollover(self):
+            try:
+                super().doRollover()
+            except Exception:
+                try:
+                    if self.stream:
+                        self.stream.close()
+                except Exception:
+                    pass
+                try:
+                    self.stream = open(self.baseFilename, 'a', encoding=self.encoding)
+                except Exception:
+                    pass
+
+    # 配置详细日志
+    log_dir = _startup_log_dir()
+    os.makedirs(log_dir, exist_ok=True)
+
+    # 清除已有的日志处理器（避免重复）
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+
+    # 文件日志（详细）
+    file_handler = _SafeRotatingFileHandler(
+        os.path.join(log_dir, 'system.log'),
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5,
+        encoding='utf-8'
+    )
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+
+    # 控制台日志（简洁）
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+    # 根日志器
+    root_logger.setLevel(logging.DEBUG)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
+
+    # Flask日志器（不重复添加handler，继承root_logger）
+    werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger.setLevel(logging.INFO)
+    # 不添加handler，避免重复记录
+
+    # 命令行 --host/--port 优先于 .env（修复历史 bug：此前末尾 app.run 固定用 .env 的 APP_PORT，
+    # 忽略 --port，导致旁路测试实例抢占现网端口）
+    RUN_HOST = getattr(globals().get('args'), 'host', APP_HOST)
+    RUN_PORT = getattr(globals().get('args'), 'port', APP_PORT)
+    print("=" * 60)
+    print(f"广州太古汇舆情监测系统 v{APP_VERSION}")
+    print(f"启动地址: http://{RUN_HOST}:{RUN_PORT}")
+    print(f"多线程模式: 开启")
+    print(f"详细日志: {os.path.join(log_dir, 'system.log')}")
+    print("=" * 60)
+
+    _start_optional_runtime_services(INTERNAL_BETA_ACCEPTANCE)
+
     try:
         # T-P1-1 waitress 可配置化：ZB_WSGI=waitress 时用生产级多线程 WSGI（waitress.serve），
         # 默认仍 Flask dev server（零影响）。先 Staging 验证再切生产；缺 waitress 自动回落 Flask。
