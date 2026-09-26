@@ -1449,8 +1449,10 @@ def query_scoped_evidence(
     global_scope: bool = False,
     limit: int = 50,
     offset: int = 0,
+    after_created_at: Optional[str] = None,
+    after_id: Optional[int] = None,
 ) -> list[dict]:
-    """Read only records carrying the exact persisted CTH/BMP Evidence scope.
+    """Read exact-scope Evidence with offset or stable keyset pagination.
 
     This is a storage filter, not actor authorization. API callers must first
     enforce the canonical Permission/Context contract. Legacy unassigned or
@@ -1469,14 +1471,29 @@ def query_scoped_evidence(
         raise ValueError("limit must be an integer from 1 to 200")
     if type(offset) is not int or offset < 0:
         raise ValueError("offset must be a non-negative integer")
+    if after_id is not None and (type(after_id) is not int or after_id < 1):
+        raise ValueError("after_id must be a positive integer")
+    if after_created_at is not None and not isinstance(after_created_at, str):
+        raise ValueError("after_created_at must be a string or None")
+    if after_created_at is not None and after_id is None:
+        raise ValueError("keyset cursor requires an id")
+
+    where = ["domain_id=?", "product_id=?"]
+    params = [scope["domain_id"], scope["product_id"]]
+    if after_id is not None:
+        if after_created_at is None:
+            where.append("created_at IS NULL AND id < ?")
+            params.append(after_id)
+        else:
+            where.append("(created_at < ? OR (created_at = ? AND id < ?) OR created_at IS NULL)")
+            params.extend([after_created_at, after_created_at, after_id])
 
     conn = _get_conn()
     try:
         cursor = conn.execute(
-            "SELECT * FROM app_evidence_records "
-            "WHERE domain_id=? AND product_id=? "
-            "ORDER BY created_at DESC, id DESC",
-            (scope["domain_id"], scope["product_id"]),
+            "SELECT * FROM app_evidence_records WHERE " + " AND ".join(where) +
+            " ORDER BY created_at DESC, id DESC",
+            params,
         )
         rows = []
         matched = 0

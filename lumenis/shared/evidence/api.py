@@ -67,63 +67,335 @@ def register_evidence_api(app):
             and not spec.auto_allow
         )
 
+    def _read_error(code, message, status):
+        return jsonify({"ok": False, "code": code, "error": message}), status
+
+    def _authorized_read_scope():
+        """Require a session actor, selected CTH/BMP data scope, and Permission.
+
+        GLOBAL_ALL needs X-Domain-Id on Evidence data routes because the store
+        has separate exact CTH and BMP global markers; this differs from the
+        selection-only /api/settings/context response, whose global context has
+        no domain. It returns only explicitly global-marked Evidence rows.
+        """
+        from lumenis.auth.service import get_current_user
+        from subject_registry import (
+            SubjectValidationError,
+            get_subject_by_id,
+            normalize_domain,
+        )
+        from lumenis.system.security.permission import check_actor_scope_permission
+
+        try:
+            actor = get_current_user()
+        except Exception:
+            return None, _read_error(
+                "AUTH_UNAVAILABLE", "账号会话暂不可用", 503
+            )
+        if not isinstance(actor, dict) or type(actor.get("id")) is not int:
+            return None, _read_error("AUTH_REQUIRED", "需要有效账号会话", 401)
+
+        mode = request.headers.get("X-Lumenis-Context-Mode", "")
+        raw_domain = request.headers.get("X-Domain-Id", "")
+        raw_subject = request.headers.get("X-Subject-ID", "")
+        if mode not in {"FOCUS", "GLOBAL_ALL"} or not raw_domain:
+            return None, _read_error(
+                "EVIDENCE_SCOPE_REQUIRED",
+                "Evidence 查询需要上下文模式及 CTH/BMP 域；GLOBAL_ALL 还需明确域",
+                400,
+            )
+        try:
+            normalized_domain = normalize_domain(raw_domain)
+        except SubjectValidationError:
+            return None, _read_error("INVALID_EVIDENCE_SCOPE", "业务域无效", 400)
+        if normalized_domain not in {"CTH", "BMP"}:
+            return None, _read_error("INVALID_EVIDENCE_SCOPE", "仅支持 CTH 或 BMP Evidence", 400)
+
+        subject_id = None
+        brand_focus_id = None
+        global_scope = mode == "GLOBAL_ALL"
+        if global_scope:
+            if raw_subject or request.headers.get("X-Brand-Focus-ID"):
+                return None, _read_error(
+                    "INVALID_EVIDENCE_SCOPE", "GLOBAL_ALL 不能携带聚焦主体", 400
+                )
+        else:
+            if not raw_subject or raw_subject != raw_subject.strip():
+                return None, _read_error(
+                    "INVALID_EVIDENCE_SCOPE", "FOCUS 需要有效 X-Subject-ID", 400
+                )
+            try:
+                subject = get_subject_by_id(normalized_domain, raw_subject)
+            except Exception:
+                return None, _read_error(
+                    "SUBJECT_REGISTRY_UNAVAILABLE", "主体注册表暂不可用", 503
+                )
+            if not isinstance(subject, dict):
+                return None, _read_error("SUBJECT_NOT_FOUND", "主体未在有效注册表中", 404)
+            expected_type = "company" if normalized_domain == "CTH" else "brand"
+            if subject.get("subject_type") != expected_type:
+                return None, _read_error(
+                    "INVALID_EVIDENCE_SCOPE", "主体类型与业务域不匹配", 400
+                )
+            if normalized_domain == "CTH":
+                subject_id = raw_subject
+            else:
+                brand_focus_id = subject.get("brand_focus_id")
+                if not isinstance(brand_focus_id, str) or not brand_focus_id:
+                    return None, _read_error(
+                        "INVALID_EVIDENCE_SCOPE", "主体未绑定有效 BrandFocus", 400
+                    )
+
+        try:
+            decision = check_actor_scope_permission(
+                actor,
+                domain_id=normalized_domain,
+                action="read",
+                module="evidence",
+                subject_id=subject_id,
+                brand_focus_id=brand_focus_id,
+                global_scope=global_scope,
+            )
+        except Exception:
+            return None, _read_error(
+                "AUTHORIZATION_UNAVAILABLE", "Evidence 范围授权暂不可用", 503
+            )
+        if decision.verification_state != "verified":
+            return None, _read_error(
+                "AUTHORIZATION_UNAVAILABLE", "Evidence 范围授权暂不可用", 503
+            )
+        if not decision.allowed:
+            return None, _read_error(
+                "EVIDENCE_SCOPE_DENIED", "没有读取该 Evidence 范围的权限", 403
+            )
+
+        return {
+            "product": "CTH" if normalized_domain == "CTH" else "ZBMP",
+            "domain_id": "cth" if normalized_domain == "CTH" else "zbmp",
+            "subject_id": subject_id,
+            "brand_focus_id": brand_focus_id,
+            "global_scope": global_scope,
+            "response": {
+                "mode": mode,
+                "domain_id": normalized_domain,
+                "subject_id": subject_id,
+                "brand_focus_id": brand_focus_id,
+                "global_scope": global_scope,
+                "evidence_scope": (
+                    "EXPLICIT_GLOBAL_MARKED_EVIDENCE_ONLY"
+                    if global_scope
+                    else "EXACT_SUBJECT_OR_BRAND_FOCUS_EVIDENCE"
+                ),
+            },
+        }, None
+
+    def _query_scope(scope, *, limit, offset, after_created_at=None, after_id=None):
+        return evidence_store.query_scoped_evidence(
+            product=scope["product"],
+            domain_id=scope["domain_id"],
+            subject_id=scope["subject_id"],
+            brand_focus_id=scope["brand_focus_id"],
+            global_scope=scope["global_scope"],
+            limit=limit,
+            offset=offset,
+            after_created_at=after_created_at,
+            after_id=after_id,
+        )
+
+    def _filtered_page(scope, filters, *, limit, offset):
+        """Apply legacy equality filters after exact scope filtering, then page."""
+        rows = []
+        filtered_offset = 0
+        after_created_at = None
+        after_id = None
+        while len(rows) < limit:
+            page = _query_scope(
+                scope, limit=200, offset=0,
+                after_created_at=after_created_at, after_id=after_id,
+            )
+            if not page:
+                break
+            after_created_at = page[-1].get("created_at")
+            after_id = page[-1].get("id")
+            for record in page:
+                if any(record.get(key) != value for key, value in filters.items()):
+                    continue
+                if filtered_offset < offset:
+                    filtered_offset += 1
+                    continue
+                rows.append(record)
+                if len(rows) == limit:
+                    break
+            if len(page) < 200:
+                break
+        return rows
+
+    def _scoped_pages(scope):
+        after_created_at = None
+        after_id = None
+        while True:
+            page = _query_scope(
+                scope, limit=200, offset=0,
+                after_created_at=after_created_at, after_id=after_id,
+            )
+            if not page:
+                return
+            yield from page
+            after_created_at = page[-1].get("created_at")
+            after_id = page[-1].get("id")
+            if len(page) < 200:
+                return
+
+    def _query_integer(name, default, maximum=None):
+        raw = request.args.get(name)
+        try:
+            value = default if raw is None else int(raw)
+        except (TypeError, ValueError):
+            raise ValueError(f"{name} 必须是整数")
+        if name == "limit" and maximum is not None:
+            value = min(value, maximum)
+        if value < (1 if name == "limit" else 0):
+            raise ValueError(f"{name} 超出允许范围")
+        return value
+
+    def _reject_unknown_query_args(allowed):
+        unknown = set(request.args.keys()) - set(allowed)
+        if unknown:
+            return _read_error(
+                "UNSUPPORTED_EVIDENCE_FILTER",
+                "Evidence 查询包含不支持的参数: " + ", ".join(sorted(unknown)),
+                400,
+            )
+        return None
+
     @bp.route("/api/evidence/stats", methods=["GET"])
     def evidence_stats():
-        """证据统计：总数 + 按 result/level/account/source 分组 + 最近 10 条。"""
+        """Aggregate only records carrying the actor-authorized exact scope."""
+        scope, error = _authorized_read_scope()
+        if error:
+            return error
+        query_error = _reject_unknown_query_args(set())
+        if query_error:
+            return query_error
         try:
-            return jsonify({"ok": True, "stats": evidence_store.get_stats()})
-        except Exception as e:
-            return jsonify({"ok": False, "error": str(e)}), 500
+            stats = {
+                "total": 0,
+                "by_result": {},
+                "by_level": {},
+                "by_account": {},
+                "by_source": {},
+                "null_counts": {},
+                "recent": [],
+            }
+            for row in _scoped_pages(scope):
+                stats["total"] += 1
+                for field, group in (
+                    ("result", "by_result"),
+                    ("level", "by_level"),
+                    ("source", "by_source"),
+                ):
+                    value = row.get(field)
+                    # Keep SQL NULL visible in JSON without inventing a string
+                    # group key that could collide with a real source value.
+                    if value is None:
+                        stats["null_counts"][field] = (
+                            stats["null_counts"].get(field, 0) + 1
+                        )
+                    else:
+                        stats[group][value] = stats[group].get(value, 0) + 1
+                account = row.get("account")
+                if account:
+                    stats["by_account"][account] = stats["by_account"].get(account, 0) + 1
+                if len(stats["recent"]) < 10:
+                    stats["recent"].append({
+                        field: row.get(field)
+                        for field in (
+                            "id", "source", "feature_id", "level", "result",
+                            "account", "actual", "created_at",
+                        )
+                    })
+            return jsonify({"ok": True, "stats": stats, "scope": scope["response"]})
+        except Exception:
+            logger.exception("Scoped Evidence stats query failed")
+            return _read_error("EVIDENCE_READ_UNAVAILABLE", "Evidence 查询暂不可用", 503)
 
     @bp.route("/api/evidence/list", methods=["GET"])
     def evidence_list():
-        """证据列表（支持 source/feature_id/level/result/account/env 筛选 + 分页）。"""
+        """List exact-scope Evidence with the existing equality filters/page."""
+        scope, error = _authorized_read_scope()
+        if error:
+            return error
+        filter_keys = {"source", "feature_id", "level", "result", "account", "env"}
+        query_error = _reject_unknown_query_args(filter_keys | {"limit", "offset"})
+        if query_error:
+            return query_error
         try:
-            rows = evidence_store.query_evidence(
-                source=request.args.get("source", ""),
-                feature_id=request.args.get("feature_id", ""),
-                level=request.args.get("level", ""),
-                result=request.args.get("result", ""),
-                account=request.args.get("account", ""),
-                env=request.args.get("env", ""),
-                limit=min(int(request.args.get("limit", "50")), 200),
-                offset=int(request.args.get("offset", "0")),
-            )
-            return jsonify({"ok": True, "count": len(rows), "records": rows})
-        except ValueError as e:
-            return jsonify({"ok": False, "error": f"参数错误: {e}"}), 400
-        except Exception as e:
-            return jsonify({"ok": False, "error": str(e)}), 500
+            limit = _query_integer("limit", 50, maximum=200)
+            offset = _query_integer("offset", 0)
+            filters = {key: value for key in filter_keys if (value := request.args.get(key, ""))}
+            rows = _filtered_page(scope, filters, limit=limit, offset=offset)
+            return jsonify({
+                "ok": True, "count": len(rows), "records": rows,
+                "scope": scope["response"],
+            })
+        except ValueError as exc:
+            return _read_error("INVALID_EVIDENCE_QUERY", str(exc), 400)
+        except Exception:
+            logger.exception("Scoped Evidence list query failed")
+            return _read_error("EVIDENCE_READ_UNAVAILABLE", "Evidence 查询暂不可用", 503)
 
     @bp.route("/api/evidence/<int:record_id>", methods=["GET"])
     def evidence_detail(record_id):
-        """单条证据详情。"""
+        """Return 404 for records outside the actor's exact Evidence scope."""
+        scope, error = _authorized_read_scope()
+        if error:
+            return error
+        query_error = _reject_unknown_query_args(set())
+        if query_error:
+            return query_error
         try:
-            rows = evidence_store.query_evidence(limit=1000)
-            record = next((r for r in rows if r["id"] == record_id), None)
+            record = next(iter(_filtered_page(
+                scope, {"id": record_id}, limit=1, offset=0
+            )), None)
             if not record:
-                return jsonify({"ok": False, "error": "证据不存在"}), 404
-            return jsonify({"ok": True, "record": record})
-        except Exception as e:
-            return jsonify({"ok": False, "error": str(e)}), 500
+                return _read_error("EVIDENCE_NOT_FOUND", "证据不存在", 404)
+            return jsonify({"ok": True, "record": record, "scope": scope["response"]})
+        except Exception:
+            logger.exception("Scoped Evidence detail query failed")
+            return _read_error("EVIDENCE_READ_UNAVAILABLE", "Evidence 查询暂不可用", 503)
 
     @bp.route("/api/evidence/timeline", methods=["GET"])
     def evidence_timeline():
-        """时间线视图：按 feature_id 分组的最近证据（健康/采集分开）。"""
+        """Return the health/collection timeline inside the exact authorized scope."""
+        scope, error = _authorized_read_scope()
+        if error:
+            return error
+        query_error = _reject_unknown_query_args({"account", "limit"})
+        if query_error:
+            return query_error
         try:
+            limit = _query_integer("limit", 30, maximum=100)
             account = request.args.get("account", "")
-            limit = min(int(request.args.get("limit", "30")), 100)
-            health = evidence_store.query_evidence(
-                feature_id="RESIDENT_HEALTH", account=account, limit=limit)
-            collection = evidence_store.query_evidence(
-                feature_id="XHS_COLLECT", account=account, limit=limit)
+            filters = {"account": account} if account else {}
+            health = _filtered_page(
+                scope, {**filters, "feature_id": "RESIDENT_HEALTH"},
+                limit=limit, offset=0,
+            )
+            collection = _filtered_page(
+                scope, {**filters, "feature_id": "XHS_COLLECT"},
+                limit=limit, offset=0,
+            )
             return jsonify({
                 "ok": True,
                 "health": health,
                 "collection": collection,
+                "scope": scope["response"],
             })
-        except Exception as e:
-            return jsonify({"ok": False, "error": str(e)}), 500
+        except ValueError as exc:
+            return _read_error("INVALID_EVIDENCE_QUERY", str(exc), 400)
+        except Exception:
+            logger.exception("Scoped Evidence timeline query failed")
+            return _read_error("EVIDENCE_READ_UNAVAILABLE", "Evidence 查询暂不可用", 503)
 
     @bp.route("/api/evidence/replay-failed/approval", methods=["POST"])
     def evidence_replay_failed_approval():

@@ -411,26 +411,33 @@ class TestEvidenceApi:
         )
         assert record_id > 0
         resp = evidence_client.get('/api/evidence/stats')
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert data['ok'] is True
-        assert data['stats']['total'] >= 1
+        assert resp.status_code == 401
+        assert resp.get_json()['code'] == 'AUTH_REQUIRED'
 
     def test_list_endpoint_params(self, evidence_client):
         from flask import Flask
         # Test with limit param
         resp = evidence_client.get('/api/evidence/list?limit=10&offset=0')
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert data['ok'] is True
-        assert 'count' in data
-        assert 'records' in data
+        assert resp.status_code == 401
+        assert resp.get_json()['code'] == 'AUTH_REQUIRED'
 
     def test_detail_endpoint_404(self, evidence_client):
         resp = evidence_client.get('/api/evidence/999999')
-        assert resp.status_code == 404
-        data = resp.get_json()
-        assert data['ok'] is False
+        assert resp.status_code == 401
+        assert resp.get_json()['code'] == 'AUTH_REQUIRED'
+
+    def test_authenticated_read_without_context_returns_400(self, evidence_client, monkeypatch):
+        import lumenis.auth.service as auth_service
+        from lumenis.shared.evidence import store
+
+        monkeypatch.setattr(auth_service, "get_current_user", lambda: {"id": 1, "role": "user"})
+        monkeypatch.setattr(
+            store, "query_scoped_evidence",
+            lambda **kwargs: pytest.fail("scope failure must happen before Evidence read"),
+        )
+        response = evidence_client.get("/api/evidence/list")
+        assert response.status_code == 400
+        assert response.get_json()["code"] == "EVIDENCE_SCOPE_REQUIRED"
 
 
 # ═══════════════════════════════════════════════════════════════

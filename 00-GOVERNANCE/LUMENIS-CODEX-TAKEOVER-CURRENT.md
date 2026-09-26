@@ -730,6 +730,10 @@ Dated takeover/handoff files before this `CURRENT` entry remain historical evide
 
 ## 11. Blocking consistency guard
 
+### 2026-09-27 Round 04 exact-scope Evidence read API Batch
+
+The four Shared Evidence GET routes now require a server-authenticated actor, an explicit CTH/BMP data-route scope and verified canonical `evidence/read` Permission before returning exact scoped rows. The co-published source/test evidence is `00-GOVERNANCE/evidence/round-04/ROUND-04-EVIDENCE-READ-API-PERMISSION-2026-09-27.md`. `GLOBAL_ALL` here means only explicitly domain-global-marked Evidence, not full authorized Global Universe coverage. A stale, unconnected ViewModel link lacks the new scope contract. This is isolated `TESTED SOURCE`; real user-work E2E, live Core and frontend binding are not verified. ROUND 04 remains `REWORK`; Global Commercial/Brand coverage remain `NO / NOT VERIFIED`, Guangzhou reference `PARTIAL / NOT REVERIFIED`, internal full-universe readiness and commercial readiness remain `NO`.
+
 ### 2026-09-27 collection mode decision — manual default
 
 The Product Owner requires `MANUAL` collection by explicit click as the default; `AUTO` remains off until deliberately enabled for an authorized scope/source/cadence. Registration, focus selection, clear focus, page entry and startup may not silently trigger collection or enable automation. The existing SYSTEM Collector, Permission, Effect Fence, Evidence and Canonical owners must adapt their trigger policy without creating a second collection stack. The prelaunch Global baseline still needs real, traceable CTH/BMP data and honest coverage/freshness states; manual refresh and any opted-in schedule must be reported as actually operated. `00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md` owns the detailed acceptance rule. This governance update is a Product Owner decision, not implementation, live acquisition or Round 06 PASS.
