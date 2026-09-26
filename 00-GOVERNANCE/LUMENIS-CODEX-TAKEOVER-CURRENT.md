@@ -12,6 +12,16 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### ROUND 07 local video timeline core — 2026-09-26
+
+[Bounded video-core evidence](evidence/round-07/ROUND-07-LOCAL-VIDEO-TIMELINE-CORE-2026-09-26.md)
+records a local media fingerprint and in-memory edit model under the existing
+Shared owner. The exact clean candidate passed 20/20 relevant tests and one
+real local media probe; export remains explicitly blocked. Automatic editing,
+manual product UI, Artifact/Evidence/Permission binding, user-reviewed films,
+ROUND 07 exit and commercial readiness are **not verified**. The evaluation
+and learning candidates remain excluded pending canonical truth checks.
+
 ### Shared Content & Creation video requirement — 2026-09-26
 
 The Product Owner requires both an automatic proposed/final cut and a manual
