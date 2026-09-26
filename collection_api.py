@@ -13,6 +13,7 @@ import collector_automation
 import database as db
 import xhs_cookie_bridge
 from flask import Blueprint, jsonify, request
+from lumenis.system.collector.adapters.rednote_policy import automatic_collection_opt_in_enabled
 
 
 def register_collection_api(app):
@@ -62,9 +63,13 @@ def register_collection_api(app):
             last_run_ts = getattr(xhs_cookie_bridge, '_last_run_time', None)
             last_collect = datetime.fromtimestamp(last_run_ts).strftime('%Y-%m-%d %H:%M:%S') if last_run_ts else (last_insert or '无')
             # 下次计划自动采集
+            auto_enabled = automatic_collection_opt_in_enabled()
             hours = acc.get('auto_collect_hours') or [8, 10, 12, 14, 16, 18, 20, 22, 23]
-            nxt = next((h for h in hours if h > now.hour), None)
-            next_collect = f'今日 {nxt:02d}:05' if nxt is not None else '明日 08:05'
+            nxt = next((h for h in hours if h > now.hour), None) if auto_enabled else None
+            next_collect = (
+                (f'今日 {nxt:02d}:05' if nxt is not None else '明日 08:05')
+                if auto_enabled else '未开启自动采集'
+            )
             # 综合状态机
             cooldown = acc.get('cooldown_remaining_minutes', 0)
             if running:
@@ -91,6 +96,7 @@ def register_collection_api(app):
                             'today_inserted': today_inserted,
                             'last_collect': last_collect,
                             'next_collect': next_collect,
+                            'auto_enabled': auto_enabled,
                             'cooldown_remaining_minutes': cooldown,
                             'circuit': {'open': circ.get('open', False), 'state': circ.get('state', ''),
                                         'detail': circ.get('detail', ''), 'resume_at': circ.get('resume_at', '')},
@@ -105,7 +111,7 @@ def register_collection_api(app):
         try:
             data = request.get_json(silent=True) or {}
             keywords = data.get('keywords')
-            mode = data.get('mode', 'standard')
+            mode = data.get('mode', 'manual')
             account = data.get('account', 'default')
             force = bool(data.get('force', False))
 

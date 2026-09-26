@@ -862,3 +862,6 @@ The existing Shared Database migration output path now escapes glyphs that a GBK
 ### 2026-09-27 Round 06 RedNote manual collection default
 
 The existing SYSTEM RedNote policy, app scheduler/startup and bridge now require a complete explicit supported AUTO opt-in before scheduled collection, resident session probes or auto task creation; manual collection remains through the existing permission and identity path. [Round 06 evidence](evidence/round-06/ROUND-06-MANUAL-COLLECTION-DEFAULT-2026-09-27.md) records 27 isolated affected tests and the remaining user-click/Evidence/live-identity gap. This is TESTED source only, not ROUND 06 PASS or Global data readiness. The protected local candidates are not accepted wholesale.
+### 2026-09-27 Round 06 collector dispatch mode gate
+
+The existing /api/collector/start path now defaults to manual, rejects unknown modes, and requires the same explicit SYSTEM RedNote AUTO opt-in before standard/auto/deep can reach identity preflight; its schedule status no longer advertises an automatic run in manual mode. [Round 06 evidence](evidence/round-06/ROUND-06-COLLECTOR-DISPATCH-MODE-GATE-2026-09-27.md) records 23 isolated affected tests. This closes a request-triggered bypass only; live user collection, Evidence/Canonical result and ROUND 06 acceptance remain REWORK / LIVE_NOT_VERIFIED.

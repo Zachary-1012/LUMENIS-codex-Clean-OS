@@ -439,7 +439,7 @@ class CollectorAutomation:
         self._lease_owner = None
         self._task_start_ts = None
 
-    def start_collection(self, keywords=None, mode='standard', account='default', force=False):
+    def start_collection(self, keywords=None, mode='manual', account='default', force=False):
         """启动采集任务。force=True 跳过 1 小时冷却（测试期使用）。
 
         双子星库 Contract 门控：采集前调用 xhs_cookie_bridge.runtime_preflight_check()。
@@ -447,6 +447,22 @@ class CollectorAutomation:
         - account ∈ {XHS_CN_PRIMARY_NAME, XHS_RETINAUT_NAME}：按 Contract 白名单切换；不在白名单直接拒绝。
         - 任何预检失败（熔断/无Cookie/白名单/冷却/暂停）→ 如实返回错误，绝不静默启动空跑。
         """
+        manual_modes = {'quick', 'manual'}
+        auto_modes = {'standard', 'auto', 'deep'}
+        if not isinstance(mode, str) or mode not in manual_modes | auto_modes:
+            return {'ok': False, 'status': 'ERROR', 'code': 'INVALID_COLLECTION_MODE',
+                    'error': 'Unsupported collection mode'}
+        if mode in auto_modes:
+            try:
+                from lumenis.system.collector.adapters.rednote_policy import automatic_collection_opt_in_enabled
+                auto_enabled = automatic_collection_opt_in_enabled()
+            except Exception:
+                auto_enabled = False
+            if not auto_enabled:
+                return {'ok': False, 'status': 'BLOCKED',
+                        'code': 'AUTO_COLLECTION_OPT_IN_REQUIRED',
+                        'error': 'Automatic collection requires explicit authorized scope, source and cadence'}
+
         with self._lock:
             if self.is_running:
                 logger.warning("采集任务已在运行中")
@@ -525,7 +541,7 @@ class CollectorAutomation:
                         return {'ok': False, 'error': f'采集冷却中，{trigger_type} 采集需间隔 1 小时，约还需 {wait_min} 分钟（测试期可 force 跳过）',
                                 'cooldown_remain': int(self.cooldown_seconds - elapsed)}
             
-            config = mode_config.get(mode, mode_config['standard'])
+            config = mode_config[mode]
             
             import uuid as _uuid_for_domain
             _task_id = f'collect_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
