@@ -705,6 +705,22 @@ Dated takeover/handoff files before this `CURRENT` entry remain historical evide
 
 ## 11. Blocking consistency guard
 
+### 2026-09-26 Round 04 Global / Focus context API selection Batch
+
+The Product Core now serves the existing Flutter `lumenis.context.v1`
+GET/PUT/DELETE contract. Focus resolves a registered CTH Subject or BMP
+BrandFocus through exact actor Permission; clear returns the `GLOBAL_ALL`
+selection. The co-published evidence is
+`00-GOVERNANCE/evidence/round-04/ROUND-04-GLOBAL-FOCUS-CONTEXT-API-2026-09-26.md`.
+This is selection-only source/static-test evidence. Business data consumers
+are not yet bound and reauthorized, and real Global data, four-surface
+real-user E2E and continuous operation remain unverified. ROUND 04 stays
+`REWORK`; Global Commercial = `NO / NOT VERIFIED`, Global Brand =
+`NO / NOT VERIFIED`, Guangzhou Taikoo Hui Reference = `PARTIAL /
+NOT REVERIFIED`, `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=NO` and
+`COMMERCIAL_READY=NO`.
+
+
 ### 2026-09-26 Round 04 exact-scope Evidence storage reader Batch
 
 Shared Evidence now has a storage-level exact CTH Subject / BMP BrandFocus /

@@ -57,6 +57,49 @@ class SubjectContext:
         }
 
 
+@dataclass(frozen=True)
+class ContextSelection:
+    """Typed Product Core focus selection; it carries no permission grant."""
+
+    mode: str
+    domain_id: Optional[str] = None
+    subject_id: Optional[str] = None
+    brand_focus_id: Optional[str] = None
+
+    @classmethod
+    def global_all(cls) -> "ContextSelection":
+        return cls(mode="GLOBAL_ALL")
+
+    @classmethod
+    def focus(
+        cls,
+        *,
+        domain_id: str,
+        subject_id: str,
+        brand_focus_id: Optional[str] = None,
+    ) -> "ContextSelection":
+        return cls(
+            mode="FOCUS",
+            domain_id=domain_id,
+            subject_id=subject_id,
+            brand_focus_id=brand_focus_id,
+        )
+
+    def to_dict(self) -> Dict[str, Optional[str]]:
+        resource_type = (
+            "GLOBAL" if self.mode == "GLOBAL_ALL"
+            else "SUBJECT" if self.domain_id == "CTH"
+            else "BRAND_FOCUS"
+        )
+        return {
+            "mode": self.mode,
+            "domain_id": self.domain_id,
+            "subject_id": self.subject_id,
+            "brand_focus_id": self.brand_focus_id,
+            "resource_type": resource_type,
+        }
+
+
 @dataclass
 class ProductContext:
     """产品上下文：CTH 或 ZBMP。"""

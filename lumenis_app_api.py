@@ -21,6 +21,131 @@ lumenis_bp = Blueprint("lumenis", __name__, url_prefix="/lumenis")
 domain_api_bp = Blueprint("domain_api", __name__)
 
 
+def _context_error(code, message, status):
+    return jsonify({"ok": False, "code": code, "error": message}), status
+
+
+def _context_selection_from_scope(domain_id, subject_id):
+    """Resolve and authorize one registered Subject or BrandFocus selection."""
+    from subject_context import ContextSelection
+    from subject_registry import (
+        SubjectRegistryUnavailableError,
+        SubjectValidationError,
+        get_subject_by_id,
+        normalize_domain,
+    )
+    from lumenis.system.security.permission import check_actor_scope_permission
+    from lumenis.auth.service import get_current_user
+
+    actor = get_current_user()
+    if not isinstance(actor, dict) or type(actor.get("id")) is not int:
+        return None, _context_error("AUTH_REQUIRED", "需要有效账号会话", 401)
+    try:
+        normalized_domain = normalize_domain(domain_id)
+        if normalized_domain not in {"CTH", "BMP"}:
+            raise SubjectValidationError("domain_id 仅支持 CTH 或 BMP")
+        if not isinstance(subject_id, str) or not subject_id or subject_id != subject_id.strip():
+            raise SubjectValidationError("subject_id 无效")
+        subject = get_subject_by_id(normalized_domain, subject_id)
+    except SubjectValidationError as exc:
+        return None, _context_error("INVALID_CONTEXT", str(exc), 400)
+    except SubjectRegistryUnavailableError:
+        return None, _context_error(
+            "SUBJECT_REGISTRY_UNAVAILABLE", "主体注册表暂不可用", 503
+        )
+    except Exception:
+        return None, _context_error(
+            "SUBJECT_REGISTRY_UNAVAILABLE", "主体注册表暂不可用", 503
+        )
+
+    if subject is None:
+        return None, _context_error("SUBJECT_NOT_FOUND", "主体未在有效注册表中", 404)
+
+    is_cth = normalized_domain == "CTH"
+    expected_type = "company" if is_cth else "brand"
+    brand_focus_id = subject.get("brand_focus_id")
+    if subject.get("subject_type") != expected_type or (
+        not is_cth and (not isinstance(brand_focus_id, str) or not brand_focus_id)
+    ):
+        return None, _context_error("INVALID_CONTEXT_SCOPE", "主体类型与业务域不匹配", 400)
+
+    try:
+        decision = check_actor_scope_permission(
+            actor,
+            domain_id=normalized_domain,
+            action="read",
+            module="subject_registry",
+            subject_id=subject_id if is_cth else None,
+            brand_focus_id=None if is_cth else brand_focus_id,
+        )
+    except Exception:
+        return None, _context_error(
+            "AUTHORIZATION_UNAVAILABLE", "主体范围授权暂不可用", 503
+        )
+    if decision.verification_state != "verified":
+        return None, _context_error(
+            "AUTHORIZATION_UNAVAILABLE", "主体范围授权暂不可用", 503
+        )
+    if not decision.allowed:
+        return None, _context_error(
+            "SUBJECT_SCOPE_DENIED", "没有读取该主体范围的权限", 403
+        )
+
+    return ContextSelection.focus(
+        domain_id=normalized_domain,
+        subject_id=subject_id,
+        brand_focus_id=None if is_cth else brand_focus_id,
+    ), None
+
+
+def _context_envelope(selection):
+    return jsonify({
+        "ok": True,
+        "contract": "lumenis.context.v1",
+        "selection_only": True,
+        "context": selection.to_dict(),
+    })
+
+
+@domain_api_bp.route("/api/settings/context", methods=["GET", "PUT", "DELETE"])
+def api_settings_context():
+    """Expose a selection-only context contract; data routes reauthorize use."""
+    from subject_context import ContextSelection
+    from lumenis.auth.service import get_current_user
+
+    actor = get_current_user()
+    if not isinstance(actor, dict) or type(actor.get("id")) is not int:
+        return _context_error("AUTH_REQUIRED", "需要有效账号会话", 401)
+
+    if request.method == "DELETE":
+        return _context_envelope(ContextSelection.global_all())
+
+    if request.method == "PUT":
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict) or set(payload) != {
+            "mode", "domain_id", "subject_id"
+        } or payload.get("mode") != "FOCUS":
+            return _context_error("INVALID_CONTEXT", "需要合法的 FOCUS 主体选择", 400)
+        selection, error = _context_selection_from_scope(
+            payload.get("domain_id"), payload.get("subject_id")
+        )
+        return error if error is not None else _context_envelope(selection)
+
+    mode = request.headers.get("X-Lumenis-Context-Mode", "GLOBAL_ALL")
+    domain_id = request.headers.get("X-Domain-Id")
+    subject_id = request.headers.get("X-Subject-ID")
+    if mode == "GLOBAL_ALL":
+        if domain_id or subject_id:
+            return _context_error(
+                "INVALID_CONTEXT", "GLOBAL_ALL 不能携带聚焦主体", 400
+            )
+        return _context_envelope(ContextSelection.global_all())
+    if mode != "FOCUS" or not domain_id or not subject_id:
+        return _context_error("INVALID_CONTEXT", "聚焦上下文不完整", 400)
+    selection, error = _context_selection_from_scope(domain_id, subject_id)
+    return error if error is not None else _context_envelope(selection)
+
+
 
 # Shared Skill JSON API (App transport)
 # ========== Skill Hub API（Cross-Core Adapter，ZBC 不维护独立 Skill Truth） ==========

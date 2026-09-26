@@ -255,6 +255,24 @@ def list_subjects(domain_id: Optional[str] = None) -> List[Dict[str, Any]]:
     return [_row_to_dict(row) for row in rows]
 
 
+def get_subject_by_id(domain_id: str, subject_id: str) -> Optional[Dict[str, Any]]:
+    """Read one active canonical registry entry by typed domain and stable ID."""
+    normalized = normalize_domain(domain_id)
+    if not isinstance(subject_id, str) or not subject_id or subject_id != subject_id.strip():
+        raise SubjectValidationError("subject_id 无效")
+    with _db_ready() as conn:
+        _require_registry_schema(conn)
+        rows = conn.execute(
+            f"SELECT subject_id, brand_focus_id, domain_id, subject_type, name_en, name_zh, industry, "
+            f"keywords_json, status, created_at, updated_at FROM {TABLE_NAME} "
+            "WHERE domain_id=? AND subject_id=? AND status != 'archived'",
+            (normalized, subject_id),
+        ).fetchall()
+    if len(rows) > 1:
+        raise SubjectRegistryUnavailableError("canonical subject identity is not unique")
+    return _row_to_dict(rows[0]) if rows else None
+
+
 def add_subject(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     if not isinstance(payload, dict):
         raise SubjectValidationError("请求体必须是 JSON 对象")
@@ -415,6 +433,7 @@ __all__ = [
     "SubjectRegistryUnavailableError",
     "add_subject",
     "ensure_schema",
+    "get_subject_by_id",
     "list_subjects",
     "normalize_domain",
     "normalize_subject_type",
