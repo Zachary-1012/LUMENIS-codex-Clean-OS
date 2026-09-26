@@ -1440,6 +1440,63 @@ def query_evidence(
 
 
 
+def query_scoped_evidence(
+    *,
+    product: str,
+    domain_id: str,
+    subject_id: Optional[str] = None,
+    brand_focus_id: Optional[str] = None,
+    global_scope: bool = False,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[dict]:
+    """Read only records carrying the exact persisted CTH/BMP Evidence scope.
+
+    This is a storage filter, not actor authorization. API callers must first
+    enforce the canonical Permission/Context contract. Legacy unassigned or
+    malformed scope metadata never inherits access from a product label.
+    """
+    scope = _normalize_record_evidence_scope(
+        product=product,
+        domain_id=domain_id,
+        subject_id=subject_id,
+        brand_focus_id=brand_focus_id,
+        global_scope=global_scope,
+    )
+    if scope is None:
+        raise ValueError("exact Evidence read scope is required")
+    if type(limit) is not int or not 1 <= limit <= 200:
+        raise ValueError("limit must be an integer from 1 to 200")
+    if type(offset) is not int or offset < 0:
+        raise ValueError("offset must be a non-negative integer")
+
+    conn = _get_conn()
+    try:
+        cursor = conn.execute(
+            "SELECT * FROM app_evidence_records "
+            "WHERE domain_id=? AND product_id=? "
+            "ORDER BY created_at DESC, id DESC",
+            (scope["domain_id"], scope["product_id"]),
+        )
+        rows = []
+        matched = 0
+        for row in cursor:
+            try:
+                inputs = json.loads(row["inputs_json"])
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(inputs, dict) or inputs.get(_EVIDENCE_SCOPE_KEY) != scope:
+                continue
+            if matched >= offset:
+                rows.append(dict(row))
+                if len(rows) == limit:
+                    break
+            matched += 1
+        return rows
+    finally:
+        conn.close()
+
+
 def get_stats() -> dict:
 
     """Evidence 统计：按 result/level/account/source 分组。"""
@@ -1516,6 +1573,7 @@ __all__ = [
     "record_health_evidence",
 
     "query_evidence",
+    "query_scoped_evidence",
 
     "get_stats",
 

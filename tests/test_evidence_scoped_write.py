@@ -84,6 +84,73 @@ def test_scoped_writer_stores_exact_scope(
     assert row[1:] == (expected["domain_id"], expected["product_id"])
 
 
+def test_scoped_reader_isolates_focus_global_and_unassigned_rows(evidence_db):
+    def write(product, domain_id=None, **scope):
+        return store.record_evidence(
+            source="fixture",
+            product=product,
+            feature_id="SCOPED-READ",
+            inputs={"source_id": "fixture"},
+            domain_id=domain_id,
+            **scope,
+        )
+
+    subject_one = write("CTH", "cth", subject_id="SUBJ-1")
+    subject_two = write("CTH", "cth", subject_id="SUBJ-2")
+    cth_global = write("CTH", "cth", global_scope=True)
+    brand_one = write("BMP", "zbmp", brand_focus_id="BRAND-1")
+    bmp_global = write("BMP", "zbmp", global_scope=True)
+    legacy = write("CTH")
+    assert all(record_id > 0 for record_id in (
+        subject_one, subject_two, cth_global, brand_one, bmp_global, legacy
+    ))
+
+    def ids(**scope):
+        return [row["id"] for row in store.query_scoped_evidence(**scope)]
+
+    assert ids(product="CTH", domain_id="cth", subject_id="SUBJ-1") == [subject_one]
+    assert ids(product="CTH", domain_id="CTH", subject_id="SUBJ-2") == [subject_two]
+    assert ids(product="CTH", domain_id="cth", global_scope=True) == [cth_global]
+    assert ids(product="BMP", domain_id="bmp", brand_focus_id="BRAND-1") == [brand_one]
+    assert ids(product="ZBMP", domain_id="zbmp", global_scope=True) == [bmp_global]
+
+
+def test_scoped_reader_skips_malformed_metadata_before_pagination(evidence_db):
+    first = store.record_evidence(
+        product="CTH", domain_id="cth", subject_id="SUBJ-1", feature_id="READ"
+    )
+    second = store.record_evidence(
+        product="CTH", domain_id="cth", subject_id="SUBJ-1", feature_id="READ"
+    )
+    malformed = store.record_evidence(
+        product="CTH", domain_id="cth", subject_id="SUBJ-1", feature_id="READ"
+    )
+    with sqlite3.connect(evidence_db) as conn:
+        conn.execute(
+            "UPDATE app_evidence_records SET inputs_json=? WHERE id=?",
+            ("{not-json", malformed),
+        )
+
+    scope = {"product": "CTH", "domain_id": "cth", "subject_id": "SUBJ-1"}
+    assert [r["id"] for r in store.query_scoped_evidence(**scope, limit=1)] == [second]
+    assert [r["id"] for r in store.query_scoped_evidence(**scope, limit=1, offset=1)] == [first]
+
+
+@pytest.mark.parametrize(
+    "scope",
+    [
+        {"product": "CTH", "domain_id": "cth"},
+        {"product": "CTH", "domain_id": "cth", "subject_id": "SUBJ", "global_scope": True},
+        {"product": "BMP", "domain_id": "cth", "brand_focus_id": "BRAND"},
+        {"product": "CTH", "domain_id": "cth", "subject_id": "SUBJ", "limit": 0},
+        {"product": "CTH", "domain_id": "cth", "subject_id": "SUBJ", "offset": -1},
+    ],
+)
+def test_scoped_reader_rejects_missing_or_invalid_scope(evidence_db, scope):
+    with pytest.raises(ValueError):
+        store.query_scoped_evidence(**scope)
+
+
 def test_legacy_unscoped_writer_keeps_inputs_and_leaves_scope_unassigned(evidence_db):
     record_id = store.record_evidence(
         source="fixture",

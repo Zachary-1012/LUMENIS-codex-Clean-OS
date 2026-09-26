@@ -602,6 +602,16 @@ Dated takeover/handoff files before this `CURRENT` entry remain historical evide
 
 ## 11. Blocking consistency guard
 
+### 2026-09-26 Round 04 exact-scope Evidence storage reader Batch
+
+Shared Evidence now has a storage-level exact CTH Subject / BMP BrandFocus /
+domain-global reader that excludes unassigned and malformed rows. The
+co-published evidence is
+`00-GOVERNANCE/evidence/round-04/ROUND-04-EVIDENCE-EXACT-SCOPE-READER-2026-09-26.md`.
+This reader is not actor authorization and is not yet bound to the existing
+broad Evidence API routes. ROUND 04 remains `REWORK` pending Permission/API,
+real-user E2E and the remaining charter gates.
+
 ### 2026-09-26 BMP competitor creative truth / Jev research Batch
 
 The existing read-only ad creative analyzer now excludes missing CTR/CVR from
