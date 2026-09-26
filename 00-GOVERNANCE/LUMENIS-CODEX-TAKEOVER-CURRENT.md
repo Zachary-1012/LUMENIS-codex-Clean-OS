@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 07 scoped artifact identity helpers — 2026-09-26
+
+[The bounded reporting evidence](evidence/round-07/ROUND-07-SCOPED-ARTIFACT-HASH-2026-09-26.md)
+records stable scoped report keys/tokens and a content hash that excludes only
+the recognized generation-time metadata field. A byte-different CSV cannot
+silently normalize through alternate quoting or line endings. Exact staged
+source and report neighbors passed 66/66; the existing missing `total_notes`
+rejection remains intact. Scoped Evidence storage/read, actor Permission,
+report persistence/reopen and real user-work E2E remain unaccepted.
+`ROUND 07=REWORK`; `COMMERCIAL_READY=NO`.
+
 ### Round 03 migrator prerequisite transaction — 2026-09-26
 
 [The bounded migrator evidence](evidence/round-03/ROUND-03-MIGRATOR-OWNER-CONNECTION-2026-09-26.md)

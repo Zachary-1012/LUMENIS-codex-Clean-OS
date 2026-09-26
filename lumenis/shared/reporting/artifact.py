@@ -12,7 +12,9 @@ G4 (2026-09-06): 新增 verify_report_hash() 读取时 hash 一致性验证。
 """
 from __future__ import annotations
 
+import csv
 import hashlib
+import io
 import json
 import os
 from datetime import datetime
@@ -40,6 +42,106 @@ _FORMAT_MIN_BYTES = {
 def compute_hash(data: bytes) -> str:
     """计算 SHA-256 hash（十六进制字符串）。"""
     return hashlib.sha256(data).hexdigest()
+
+
+_SCOPED_GENERATED_AT_LABELS = {"生成时间", "Generated", "생성 시간"}
+_SCOPED_REPORT_LABELS = {"报告", "Report", "보고서"}
+
+
+def _normalize_scoped_generated_at(artifact_body: str, generated_at: str) -> str:
+    """Normalize only the generated-at metadata field in supported report bodies.
+
+    Unknown or malformed formats are hashed byte-for-byte so user/source text
+    can never be hidden by a global timestamp replacement.
+    """
+    if not generated_at:
+        return artifact_body
+
+    if artifact_body.startswith("# "):
+        lines = artifact_body.splitlines(keepends=True)
+        section_end = next((i for i, line in enumerate(lines) if line.startswith("## ")), None)
+        if section_end is None:
+            return artifact_body
+        prefixes = tuple(f"- {label}: " for label in _SCOPED_GENERATED_AT_LABELS)
+        matches = []
+        for index, line in enumerate(lines[:section_end]):
+            ending = "\r\n" if line.endswith("\r\n") else ("\n" if line.endswith("\n") else "")
+            content = line[:-len(ending)] if ending else line
+            for prefix in prefixes:
+                if content == prefix + generated_at:
+                    matches.append((index, prefix, ending))
+        if len(matches) != 1:
+            return artifact_body
+        index, prefix, ending = matches[0]
+        lines[index] = prefix + "<generated-at>" + ending
+        return "".join(lines)
+
+    try:
+        rows = list(csv.reader(io.StringIO(artifact_body, newline="")))
+    except csv.Error:
+        return artifact_body
+    if (
+        not rows
+        or len(rows[0]) != 12
+        or rows[0][0] not in _SCOPED_REPORT_LABELS
+        or rows[0][8] not in _SCOPED_GENERATED_AT_LABELS
+    ):
+        return artifact_body
+    data_rows = rows[1:]
+    if not data_rows or any(len(row) != 12 or row[8] != generated_at for row in data_rows):
+        return artifact_body
+    canonical = io.StringIO(newline="")
+    csv.writer(canonical, lineterminator="\n").writerows(rows)
+    if canonical.getvalue() != artifact_body:
+        return artifact_body
+    for row in data_rows:
+        row[8] = "<generated-at>"
+    normalized = io.StringIO(newline="")
+    csv.writer(normalized, lineterminator="\n").writerows(rows)
+    return normalized.getvalue()
+
+
+def compute_scoped_content_hash(artifact_body: str, generated_at: str = "") -> str:
+    """Hash supported scoped Markdown/CSV output, excluding only its metadata timestamp.
+
+    The report body remains unchanged. Unknown formats retain their timestamp in
+    the hash until the canonical format has an explicit generated-at field.
+    """
+    body = str(artifact_body or "")
+    timestamp = str(generated_at or "")
+    normalized = _normalize_scoped_generated_at(body, timestamp)
+    return compute_hash(normalized.encode("utf-8"))
+
+
+def compute_scoped_scope_key(
+    domain_id: str,
+    subject_id: str | None,
+    brand_focus_id: str | None,
+    global_scope: bool,
+    period_start: str | None,
+    period_end: str | None,
+    locale: str,
+    report_format: str,
+) -> str:
+    """Build a deterministic uniqueness key for one exact report scope."""
+    material = {
+        "domain_id": str(domain_id or "").strip().lower(),
+        "subject_id": subject_id,
+        "brand_focus_id": brand_focus_id,
+        "global_scope": bool(global_scope),
+        "start_date": period_start,
+        "end_date": period_end,
+        "locale": str(locale or "").strip(),
+        "format": str(report_format or "").strip().lower(),
+    }
+    encoded = json.dumps(material, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return compute_hash(encoded)
+
+
+def compute_scoped_return_token(scope_key: str) -> str:
+    """Build a stable opaque reopen token from the scope key."""
+    token_material = ("scoped-report:" + str(scope_key)).encode("utf-8")
+    return "rpt_" + compute_hash(token_material)[:32]
 
 
 def compute_file_hash(path: str) -> str:

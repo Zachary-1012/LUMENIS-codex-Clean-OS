@@ -78,6 +78,95 @@ class TestReportArtifactModule:
         assert meta1["artifact_hash"] == expected
 
 
+class TestScopedArtifactHelpers:
+    def test_markdown_hash_excludes_only_generated_metadata_and_keeps_body(self):
+        generated_one = "2026-09-26T11:00:00.000001"
+        generated_two = "2026-09-26T11:00:00.000002"
+        body_one = (
+            f"# Report\n\n- Generated: {generated_one}\n\n"
+            f"## Source findings\nCaptured time: {generated_one}\n"
+        )
+        body_two = body_one.replace(
+            f"- Generated: {generated_one}", f"- Generated: {generated_two}"
+        )
+        body_with_changed_source_time = body_two.replace(
+            f"Captured time: {generated_one}", f"Captured time: {generated_two}"
+        )
+
+        original_body = body_one
+        hash_one = ra.compute_scoped_content_hash(body_one, generated_one)
+        hash_two = ra.compute_scoped_content_hash(body_two, generated_two)
+
+        assert hash_one == hash_two
+        assert ra.compute_scoped_content_hash(
+            body_with_changed_source_time, generated_two
+        ) != hash_two
+        assert body_one == original_body
+
+    def test_csv_hash_excludes_only_generated_column(self):
+        generated_one = "2026-09-26T11:00:00.000001"
+        generated_two = "2026-09-26T11:00:00.000002"
+        header = (
+            "Report,Finding,Value,Source,Recorded,Trace,Scope,Scope type,"
+            "Generated,Status,Source records in selected scope,Source trace count\n"
+        )
+
+        def report(captured_at, generated_at):
+            return header + (
+                f"RPT-1,Finding,Value,Source,{captured_at},Trace,Scope,Subject,"
+                f"{generated_at},Available,1,1\n"
+            )
+
+        body_one = report(generated_one, generated_one)
+        body_two = report(generated_one, generated_two)
+        body_with_changed_source_time = report(generated_two, generated_two)
+        original_body = body_one
+
+        assert ra.compute_scoped_content_hash(body_one, generated_one) == ra.compute_scoped_content_hash(
+            body_two, generated_two
+        )
+        assert ra.compute_scoped_content_hash(
+            body_with_changed_source_time, generated_two
+        ) != ra.compute_scoped_content_hash(body_two, generated_two)
+        assert body_one == original_body
+        quoted_body = body_one.replace("Report,", '\"Report\",', 1)
+        crlf_body = body_one.replace("\n", "\r\n")
+        canonical_hash = ra.compute_scoped_content_hash(body_one, generated_one)
+        assert ra.compute_scoped_content_hash(quoted_body, generated_one) != canonical_hash
+        assert ra.compute_scoped_content_hash(crlf_body, generated_one) != canonical_hash
+
+    def test_scope_key_distinguishes_all_identity_dimensions(self):
+        base = ("cth", None, None, False, "2026-09-01", "2026-09-07", "zh-CN", "markdown")
+        base_key = ra.compute_scoped_scope_key(*base)
+        assert base_key == ra.compute_scoped_scope_key(*base)
+        assert base_key == ra.compute_scoped_scope_key(
+            "CTH", None, None, False, "2026-09-01", "2026-09-07", "zh-CN", "MARKDOWN"
+        )
+
+        variants = [
+            ("bmp", None, None, False, "2026-09-01", "2026-09-07", "zh-CN", "markdown"),
+            ("cth", "SUBJ-A", None, False, "2026-09-01", "2026-09-07", "zh-CN", "markdown"),
+            ("cth", None, "BRAND-A", False, "2026-09-01", "2026-09-07", "zh-CN", "markdown"),
+            ("cth", None, None, True, "2026-09-01", "2026-09-07", "zh-CN", "markdown"),
+            ("cth", None, None, False, "2026-09-02", "2026-09-07", "zh-CN", "markdown"),
+            ("cth", None, None, False, "2026-09-01", "2026-09-08", "zh-CN", "markdown"),
+            ("cth", None, None, False, "2026-09-01", "2026-09-07", "en-US", "markdown"),
+            ("cth", None, None, False, "2026-09-01", "2026-09-07", "zh-CN", "csv"),
+        ]
+        assert all(ra.compute_scoped_scope_key(*variant) != base_key for variant in variants)
+
+    def test_return_token_is_deterministic_and_scope_opaque(self):
+        scope_key = ra.compute_scoped_scope_key(
+            "cth", "SUBJ-A", None, False, "2026-09-01", "2026-09-07", "zh-CN", "markdown"
+        )
+        token = ra.compute_scoped_return_token(scope_key)
+
+        assert token == ra.compute_scoped_return_token(scope_key)
+        assert token.startswith("rpt_")
+        assert "SUBJ-A" not in token
+        assert token != ra.compute_scoped_return_token("0" * 64)
+
+
 # ============================================================
 # 2. 文件 artifact 真实性验证
 # ============================================================
