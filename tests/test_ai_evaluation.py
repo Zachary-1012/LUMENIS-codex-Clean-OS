@@ -501,7 +501,7 @@ class TestProviderFallback:
             mock_cfg.return_value = ('ollama', 'qwen2.5:7b', 'http://127.0.0.1:11434')
             with patch('urllib.request.urlopen') as mock_urlopen:
                 mock_resp = MagicMock()
-                mock_resp.read.return_value = b'{"message":{"content":"local reply"}}'
+                mock_resp.read.return_value = b'{"message":{"content":"local reply"},"done":true,"done_reason":"stop"}'
                 mock_resp.__enter__ = MagicMock(return_value=mock_resp)
                 mock_resp.__exit__ = MagicMock(return_value=False)
                 mock_urlopen.return_value = mock_resp
@@ -517,7 +517,8 @@ class TestProviderFallback:
             mock_cfg.return_value = ('zhipu', 'glm-4.5-air', 'https://open.bigmodel.cn/api/paas/v4')
             with patch.object(channel, 'route_with_fallback') as mock_route:
                 mock_route.return_value = (None, 'rule')
-                result, provider = intelligence._chat('sys', 'user')
+                with patch.object(intelligence, '_detect_local', return_value=None):
+                    result, provider = intelligence._chat('sys', 'user')
                 assert result is None
                 assert provider == 'rule'
 

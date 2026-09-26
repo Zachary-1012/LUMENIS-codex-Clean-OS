@@ -950,17 +950,17 @@ def chat(system, user, level='medium', use_cache=False, temperature=None, max_to
     if use_cache:
         hit = _chat_cache_get(key)
         if hit:
-            return hit[0], hit[1], {'cache': True, 'level': level, 'model': p['model']}
+            return hit[0], hit[1], {'cache': True, 'level': level, 'model': p['model'], 'call_id': None}
     # 云端资源包只约束云端调用；本地 Ollama 不应消耗或污染云端配额。
     if not _runtime_local and not _budget_check(pack_id, 1):
-        return None, 'budget_blocked', {'cache': False, 'level': level, 'budget_blocked': True}
+        return None, 'budget_blocked', {'cache': False, 'level': level, 'budget_blocked': True, 'call_id': None}
     t0 = time.time()
     out, provider = _chat(system, user, temperature=p['temperature'], max_tokens=p['max_tokens'], model=p['model'], timeout=p['timeout'])
     # V1.0: 从 _last_call_meta 获取真实 token 用量（修复 token_usage=0 bug）
     _call_meta = _get_call_meta()
     _real_tokens = int(_call_meta.get('total_tokens', 0) or 0)
     resolved_model = p['model'] or (_call_meta.get('model', '') if _runtime_local else '') or _env('ZHIPU_MODEL', '')
-    meta = {'cache': False, 'level': level, 'model': resolved_model,
+    meta = {'cache': False, 'level': level, 'model': resolved_model, 'call_id': None,
             'elapsed_ms': int((time.time() - t0) * 1000), 'provider': provider,
             'token_usage': _real_tokens,
             'prompt_tokens': int(_call_meta.get('prompt_tokens', 0) or 0),
@@ -979,7 +979,7 @@ def chat(system, user, level='medium', use_cache=False, temperature=None, max_to
         # rule 兜底 = 正常降级执行，success=True；真实 AI 调用失败才记 success=False
         _success_log = True if _is_rule else bool(out)
         _fail_reason = '' if _success_log else (f'provider={provider}' if provider else 'unknown')
-        _acl.log_call(
+        _call_id = _acl.log_call(
             provider=provider or 'rule',
             model=_model_log,
             prompt_version=f'chat:{level}',
@@ -991,6 +991,7 @@ def chat(system, user, level='medium', use_cache=False, temperature=None, max_to
             success=_success_log,
             failure_reason=_fail_reason,
         )
+        meta['call_id'] = _call_id
     except Exception:
         pass  # logging must never block the AI call chain
 

@@ -3,6 +3,8 @@
 import json
 import pytest
 
+import ai_call_logger as acl
+from lumenis.shared.database.repository import DatabaseRepository
 from lumenis.system.ai_gateway import core
 
 
@@ -161,3 +163,59 @@ def test_ollama_complete_final_content_remains_success(monkeypatch):
         "done": True,
         "done_reason": "stop",
     }) == ("local final", "ollama")
+
+
+def _mock_local_gateway_chat(monkeypatch, result):
+    monkeypatch.setattr(
+        core,
+        "_provider_config",
+        lambda: ("ollama", "qwen3:4b", "http://127.0.0.1:11434"),
+    )
+    monkeypatch.setattr(core, "_chat", lambda *_args, **_kwargs: result)
+    monkeypatch.setattr(
+        core,
+        "_get_call_meta",
+        lambda: {
+            "model": "qwen3:4b",
+            "prompt_tokens": 2,
+            "completion_tokens": 3,
+            "total_tokens": 5,
+        },
+    )
+
+
+def test_chat_exposes_call_id_for_recorded_provider_result(tmp_path, monkeypatch):
+    repository = DatabaseRepository(str(tmp_path / "gateway_calls.db"))
+    monkeypatch.setattr(acl, "get_repository", lambda: repository)
+    assert acl.init_db() is True
+    _mock_local_gateway_chat(monkeypatch, ("synthetic answer", "ollama"))
+
+    output, provider, meta = core.chat(
+        "synthetic system", "synthetic user", track=False
+    )
+
+    assert output == "synthetic answer"
+    assert provider == "ollama"
+    assert isinstance(meta["call_id"], int)
+    row = repository.query_one(
+        "SELECT provider, model, output, success FROM ai_call_logs WHERE id = ?",
+        (meta["call_id"],),
+    )
+    assert tuple(row) == ("ollama", "qwen3:4b", "synthetic answer", 1)
+
+
+def test_logger_failure_preserves_unavailable_gateway_result(monkeypatch):
+    _mock_local_gateway_chat(monkeypatch, (None, "rule"))
+
+    def fail_database(*_args, **_kwargs):
+        raise RuntimeError("isolated logger database failure")
+
+    monkeypatch.setattr(acl, "_get_conn", fail_database)
+
+    output, provider, meta = core.chat(
+        "synthetic system", "synthetic unavailable-model request", track=False
+    )
+
+    assert output is None
+    assert provider == "rule"
+    assert meta["call_id"] is None

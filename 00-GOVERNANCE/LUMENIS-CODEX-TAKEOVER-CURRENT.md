@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 07 AI Gateway call-record trace — 2026-09-26
+
+[The bounded Gateway trace evidence](evidence/round-07/ROUND-07-GATEWAY-CALL-TRACE-2026-09-26.md)
+records an additive call_id that resolves to the existing AI provider log.
+Sol replayed the source/test pair on clean main and corrected two
+environment-dependent Gateway test fixtures without weakening their outcome
+assertions. The final selected Gateway/Evaluation suite passed 128 tests,
+compilation and the constitution gate. Real inference, human-confirmed
+outcome, model-version promotion and user-work E2E remain unverified.
+ROUND 07=REWORK; COMMERCIAL_READY=NO.
+
 ### Round 03 collector-quality unknown count — 2026-09-26
 
 [The bounded quality-log evidence](evidence/round-03/ROUND-03-COLLECTOR-QUALITY-UNKNOWN-2026-09-26.md)
