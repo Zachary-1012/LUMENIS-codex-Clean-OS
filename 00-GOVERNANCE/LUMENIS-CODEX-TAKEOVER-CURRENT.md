@@ -602,6 +602,18 @@ Dated takeover/handoff files before this `CURRENT` entry remain historical evide
 
 ## 11. Blocking consistency guard
 
+### 2026-09-26 BMP competitor creative truth / Jev research Batch
+
+The existing read-only ad creative analyzer now excludes missing CTR/CVR from
+performance rankings and averages; an observed zero remains valid. The
+co-published source/research evidence is
+`00-GOVERNANCE/evidence/round-12/ROUND-12-COMPETITOR-CREATIVE-JEV-ADAPTATION-2026-09-26.md`.
+The analyzed source has no published production caller, real competitor corpus,
+or real-user E2E at this checkpoint. ROUND 12 remains `REWORK`. Jev and a local
+open-model candidate remain comparison candidates through the prelaunch review;
+this Batch neither activates a paid provider nor changes the Product Owner's
+model-exit decision.
+
 ### 2026-09-26 Round 03 existing-v0 migration atomicity Batch
 
 The Shared Database migration owner now keeps an already-present valid v0 base

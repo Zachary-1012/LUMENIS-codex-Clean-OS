@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
 import logging
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -178,8 +179,19 @@ class AdAnalytics:
                 recommendation="无素材数据",
             )
 
-        # 按CTR排序
-        sorted_by_ctr = sorted(creative_data, key=lambda x: x.get("ctr", 0), reverse=True)
+        def observed_rate(creative: Dict, field: str) -> Optional[float]:
+            value = creative.get(field)
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                return None
+            rate = float(value)
+            return rate if math.isfinite(rate) and rate >= 0 else None
+
+        # Public competitor creatives commonly have no performance metrics.
+        # Only an actually observed CTR can participate in a performance rank.
+        measured = [c for c in creative_data if observed_rate(c, "ctr") is not None]
+        sorted_by_ctr = sorted(
+            measured, key=lambda c: observed_rate(c, "ctr"), reverse=True
+        )
         best = sorted_by_ctr[:3]
         worst = sorted_by_ctr[-3:] if len(sorted_by_ctr) >= 3 else sorted_by_ctr
 
@@ -188,14 +200,23 @@ class AdAnalytics:
         cvr_by_type = {}
         for c in creative_data:
             ctype = c.get("type", "unknown")
-            ctr_by_type.setdefault(ctype, []).append(c.get("ctr", 0))
-            cvr_by_type.setdefault(ctype, []).append(c.get("cvr", 0))
+            ctr = observed_rate(c, "ctr")
+            cvr = observed_rate(c, "cvr")
+            if ctr is not None:
+                ctr_by_type.setdefault(ctype, []).append(ctr)
+            if cvr is not None:
+                cvr_by_type.setdefault(ctype, []).append(cvr)
 
         avg_ctr = {k: sum(v) / len(v) for k, v in ctr_by_type.items() if v}
         avg_cvr = {k: sum(v) / len(v) for k, v in cvr_by_type.items() if v}
 
-        best_type = max(avg_ctr, key=avg_ctr.get) if avg_ctr else "unknown"
-        recommendation = f"建议增加{best_type}类型素材，当前CTR最高"
+        if avg_ctr:
+            best_type = max(avg_ctr, key=avg_ctr.get)
+            recommendation = (
+                f"已观测素材中{best_type}类型CTR最高；需结合样本量和真实业务结果评估"
+            )
+        else:
+            recommendation = "未提供真实CTR，无法判断素材表现"
 
         return CreativeAnalysis(
             platform=platform,

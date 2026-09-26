@@ -124,6 +124,31 @@ class TestAdAnalytics:
         assert result.total_creatives == 0
         assert result.recommendation == "无素材数据"
 
+    def test_public_creatives_without_metrics_are_not_ranked(self):
+        from ad_intelligence.analytics.analyzer import AdAnalytics
+
+        creatives = [
+            {"type": "video", "title": "Observed public creative"},
+            {"type": "image", "ctr": None, "cvr": None},
+            {"type": "video", "ctr": "unknown", "cvr": float("nan")},
+        ]
+        result = AdAnalytics().analyze_creatives("meta_library", creatives)
+        assert result.total_creatives == 3
+        assert result.best_performing == result.worst_performing == []
+        assert result.avg_ctr_by_type == result.avg_cvr_by_type == {}
+        assert result.recommendation == "未提供真实CTR，无法判断素材表现"
+
+    def test_missing_metrics_do_not_dilute_observed_rates(self):
+        from ad_intelligence.analytics.analyzer import AdAnalytics
+
+        measured = {"type": "video", "ctr": 0.05, "cvr": 0.02}
+        creatives = [measured, {"type": "video"}, {"type": "image", "ctr": 0.0}]
+        result = AdAnalytics().analyze_creatives("authorized_account", creatives)
+        assert result.best_performing[0] is measured
+        assert result.avg_ctr_by_type == {"video": 0.05, "image": 0.0}
+        assert result.avg_cvr_by_type == {"video": 0.02}
+        assert "真实业务结果" in result.recommendation
+
 
 class TestJiguangBrowserMode:
 
