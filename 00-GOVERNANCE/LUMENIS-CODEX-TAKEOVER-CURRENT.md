@@ -12,6 +12,16 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 05 HealthGuard installer path — 2026-09-26
+
+[The bounded installer evidence](evidence/round-05/ROUND-05-HEALTHGUARD-INSTALLER-PATH-2026-09-26.md)
+records a source correction from a retired absolute checkout path to this
+script's own repository location. AST parsing and a fully mocked task-action
+capture passed; no OS task was registered. The actual 8201 service and earlier
+preview were not listening, and the committed launcher/App health contracts
+still differ. This is not live recovery or ROUND 05 acceptance. The dirty
+health/startup candidate remains protected; `COMMERCIAL_READY=NO`.
+
 ### Round 07 report generation result truth — 2026-09-26
 
 [The bounded report-route evidence](evidence/round-07/ROUND-07-REPORT-GENERATE-STATUS-2026-09-26.md)
