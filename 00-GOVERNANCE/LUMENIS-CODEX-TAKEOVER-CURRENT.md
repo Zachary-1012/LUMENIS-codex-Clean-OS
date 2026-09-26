@@ -865,3 +865,7 @@ The existing SYSTEM RedNote policy, app scheduler/startup and bridge now require
 ### 2026-09-27 Round 06 collector dispatch mode gate
 
 The existing /api/collector/start path now defaults to manual, rejects unknown modes, and requires the same explicit SYSTEM RedNote AUTO opt-in before standard/auto/deep can reach identity preflight; its schedule status no longer advertises an automatic run in manual mode. [Round 06 evidence](evidence/round-06/ROUND-06-COLLECTOR-DISPATCH-MODE-GATE-2026-09-27.md) records 23 isolated affected tests. This closes a request-triggered bypass only; live user collection, Evidence/Canonical result and ROUND 06 acceptance remain REWORK / LIVE_NOT_VERIFIED.
+
+### 2026-09-27 Round 06 public HTTP native identity binding
+
+The existing SYSTEM Collector native adapter now passes a public HTTP item's stable ID and publication time into the existing canonical importer. [Round 06 evidence](evidence/round-06/ROUND-06-PUBLIC-HTTP-NATIVE-IDENTITY-2026-09-27.md) records 28 isolated adapter/surface tests and the blocked real ONS fetch. This is TESTED source only; explicit global Evidence scope, real actor/session scoped read, live Source-to-Canonical result, Global coverage and ROUND 06 acceptance remain unverified.

@@ -425,6 +425,11 @@ def _native_record(item: Dict[str, Any], platform: str, keyword: str, captured_a
         record.update({"media_id": content_id, "username": item.get("author_id") or "", "taken_at": publish_date})
         record.update({"like_count": item.get("likes"), "comment_count": item.get("comments"),
                        "share_count": item.get("shares")})
+    elif platform == "public_http":
+        record.update({
+            "content_id": content_id,
+            "published_at": publish_date,
+        })
     elif platform == "web_rss":
         record.update({
             "content_id": content_id,

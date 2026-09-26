@@ -120,30 +120,40 @@ def test_public_url_rejects_local_network_targets():
 
 
 def test_public_source_runs_through_existing_evidence_boundary(monkeypatch):
+    import database as db
     import lumenis.system.collector.adapters.secondary_collection as surface
 
     adapter = PublicHttpAdapter(fetcher=lambda _: _response(
-        "<html><head><title>Evidence source</title></head><body>text</body></html>",
+        '<html><head><link rel="canonical" href="/article">'
+        '<title>Evidence source</title><meta property="article:published_time" '
+        'content="2026-09-27T10:00:00+00:00"></head><body>text</body></html>',
         "text/html",
     ))
     captured = {}
+    persisted = []
+
+    def insert_note(payload):
+        persisted.append(payload)
+        return 11, True
+
     monkeypatch.setattr(surface, "get_adapter", lambda platform: adapter)
     monkeypatch.setattr(surface, "_daily_action_count", lambda platform, at: 0)
     monkeypatch.setitem(surface._last_action, "public_http", 0.0)
     monkeypatch.setattr(surface, "_write_run_log", lambda *args, **kwargs: None)
     monkeypatch.setattr(surface, "_write_evidence", lambda platform, keyword, result, **kwargs: captured.update(result) or 11)
+    monkeypatch.setattr(db, "insert_note", insert_note)
     monkeypatch.setattr(surface, "_mark_subject_and_sync", lambda *args, **kwargs: {
         "subject_matches": 0, "canonical_synced": 1, "subjects": [],
     })
-    monkeypatch.setattr(
-        "lumenis.system.collector.adapters.multi_platform_import.import_multi_platform_records",
-        lambda records: {"imported": 1, "updated": 0, "failed": 0,
-                         "details": [{"status": "imported", "note_id": "public-1"}]},
-    )
 
     result = surface.collect_search("public_http", "https://public.example.test/article", max_results=1, operator="human")
 
     assert result["ok"] is True
+    assert result["imported"] == 1
+    assert persisted[0]["note_id"].startswith("public-http:")
+    assert persisted[0]["source_platform"] == "public_http"
+    assert persisted[0]["url"] == "https://public.example.test/article"
+    assert persisted[0]["publish_datetime"] == "2026-09-27T10:00:00+00:00"
     assert result["evidence_recorded"] is True
     assert result["canonical_synced"] == 1
     assert result["provenance"]["provider"] == "public_http"
