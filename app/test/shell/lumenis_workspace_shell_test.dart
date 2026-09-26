@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -133,6 +135,297 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('stale CTH and BMP focus can recover only through server clear', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    for (final domain in const ['CTH', 'BMP']) {
+      final name = domain == 'BMP' ? '示例品牌' : '示例商业主体';
+      final client = _ShellClient(
+        envelope: _focusEnvelope(
+          domain: domain,
+          subjectId: domain == 'BMP'
+              ? 'INTERNAL-BRAND-ID'
+              : 'INTERNAL-SUBJECT-ID',
+          nameZh: name,
+          nameEn: domain == 'BMP' ? 'Example Brand' : 'Example Business',
+        ),
+        settingsContextError: const LumenisCoreException(
+          'subject missing',
+          statusCode: 404,
+          messageKey: 'context.error.subject_unavailable',
+        ),
+      );
+
+      await tester.pumpWidget(_app(client));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('选择查看范围'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('context-picker-return-global')),
+        findsOneWidget,
+      );
+      expect(find.text(name), findsNothing);
+      expect(client.subjectReads, 0);
+
+      await tester.tap(
+        find.byKey(const ValueKey('context-picker-return-global')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(client.clearCalls, 1);
+      expect(client.envelope['context']['mode'], 'GLOBAL_ALL');
+      expect(find.text('全部可访问范围'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('denied stale-focus clear stays unavailable and offers retry', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final client = _ShellClient(
+      envelope: _focusEnvelope(
+        domain: 'CTH',
+        subjectId: 'INTERNAL-SUBJECT-ID',
+        nameZh: '示例商业主体',
+        nameEn: 'Example Business',
+      ),
+      settingsContextError: const LumenisCoreException(
+        'subject missing',
+        statusCode: 404,
+        messageKey: 'context.error.subject_unavailable',
+      ),
+      clearContextError: const LumenisCoreException(
+        'permission denied',
+        statusCode: 403,
+        messageKey: 'context.error.permission_denied',
+      ),
+    );
+
+    await tester.pumpWidget(_app(client));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('选择查看范围'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('context-picker-return-global')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(client.clearCalls, 1);
+    expect(client.envelope['context']['mode'], 'FOCUS');
+    expect(
+      find.byKey(const ValueKey('context-picker-return-global')),
+      findsOneWidget,
+    );
+    expect(find.text('示例商业主体'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'context read failure without a confirmed focus has no clear action',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final client = _ShellClient(
+        hasConfirmedContext: false,
+        settingsContextError: const LumenisCoreException(
+          'context unavailable',
+          statusCode: 503,
+          messageKey: 'context.error.unavailable',
+        ),
+      );
+
+      await tester.pumpWidget(_app(client));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('选择查看范围'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('context-picker-return-global')),
+        findsNothing,
+      );
+      expect(find.text('示例商业主体'), findsNothing);
+      expect(client.subjectReads, 0);
+      expect(client.clearCalls, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('stale-focus recovery disables clear and retry while pending', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final clearGate = Completer<Map<String, dynamic>>();
+    final client = _ShellClient(
+      envelope: _focusEnvelope(
+        domain: 'CTH',
+        subjectId: 'INTERNAL-SUBJECT-ID',
+        nameZh: '示例商业主体',
+        nameEn: 'Example Business',
+      ),
+      settingsContextError: const LumenisCoreException(
+        'subject missing',
+        statusCode: 404,
+        messageKey: 'context.error.subject_unavailable',
+      ),
+      clearContextGate: clearGate.future,
+    );
+
+    await tester.pumpWidget(_app(client));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('选择查看范围'));
+    await tester.pumpAndSettle();
+    final recovery = find.byKey(const ValueKey('context-picker-return-global'));
+    await tester.tap(recovery);
+    await tester.pump();
+
+    expect(client.clearCalls, 1);
+    expect(tester.widget<TextButton>(recovery).onPressed, isNull);
+    final retry = find.byKey(const ValueKey('context-picker-retry'));
+    expect(retry, findsOneWidget);
+    expect(tester.widget<TextButton>(retry).onPressed, isNull);
+
+    clearGate.complete(_globalEnvelope);
+    await tester.pumpAndSettle();
+    expect(client.envelope['context']['mode'], 'GLOBAL_ALL');
+    expect(recovery, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'late context failure after closing picker does not erase scope',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final contextGate = Completer<Map<String, dynamic>>();
+      final client = _ShellClient(
+        envelope: _focusEnvelope(
+          domain: 'CTH',
+          subjectId: 'INTERNAL-SUBJECT-ID',
+          nameZh: '已确认主体',
+          nameEn: 'Confirmed Subject',
+        ),
+        settingsContextGate: contextGate.future,
+      );
+
+      await tester.pumpWidget(_app(client));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('选择查看范围'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.byKey(const ValueKey('context-picker-close')));
+      await tester.pumpAndSettle();
+
+      contextGate.completeError(
+        const LumenisCoreException(
+          'context unavailable',
+          statusCode: 503,
+          messageKey: 'context.error.unavailable',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('已确认主体'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('repeated failed reads keep the original stale scope blocked', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 960));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final client = _ShellClient(
+      envelope: _focusEnvelope(
+        domain: 'CTH',
+        subjectId: 'STALE-SUBJECT',
+        nameZh: '旧查看范围',
+        nameEn: 'Old scope',
+      ),
+      settingsContextError: const LumenisCoreException(
+        'context unavailable',
+        statusCode: 404,
+        messageKey: 'context.error.subject_unavailable',
+      ),
+    );
+
+    await tester.pumpWidget(_app(client));
+    await tester.pumpAndSettle();
+    for (var attempt = 0; attempt < 2; attempt++) {
+      await tester.tap(find.byTooltip('选择查看范围'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('context-picker-return-global')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('context-picker-close')));
+      await tester.pumpAndSettle();
+    }
+
+    await tester.tap(find.text('工作助手'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('workspace-nav-AI-01')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('查看范围暂不可用'), findsOneWidget);
+    expect(find.text('旧查看范围'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'new ACC-02 confirmation restores shell scope after failed read',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 960));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final client = _ShellClient(
+        envelope: _focusEnvelope(
+          domain: 'CTH',
+          subjectId: 'STALE-SUBJECT',
+          nameZh: '旧查看范围',
+          nameEn: 'Old scope',
+        ),
+        settingsContextError: const LumenisCoreException(
+          'context unavailable',
+          statusCode: 404,
+          messageKey: 'context.error.subject_unavailable',
+        ),
+        settingsContextErrorCount: 2,
+      );
+
+      await tester.pumpWidget(_app(client, initialScreenId: 'ACC-02'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('选择查看范围'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('context-picker-return-global')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('context-picker-close')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('示例商业主体').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '设为当前范围'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(OutlinedButton, '继续'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Acc03Screen), findsOneWidget);
+      expect(find.text('示例商业主体'), findsOneWidget);
+      expect(find.text('旧查看范围'), findsNothing);
+      expect(client.lastSelectedSubject, 'INTERNAL-SUBJECT-ID');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'BMP focus displays its official name, never runtime identifiers',
     (tester) async {
@@ -243,7 +536,7 @@ Widget _app(
   home: LumenisWorkspaceShell(
     client: client,
     runtime: runtime,
-    contextEnvelope: client.envelope,
+    contextEnvelope: client.shellEnvelope,
     subjects: const [],
     initialScreenId: initialScreenId,
     onScreenSelected: onScreenSelected,
@@ -261,24 +554,53 @@ const _legacyRuntime = {
 };
 
 class _ShellClient extends LumenisCoreClient {
-  _ShellClient({Map<String, dynamic>? envelope})
-    : _envelope = envelope ?? _globalEnvelope;
+  _ShellClient({
+    Map<String, dynamic>? envelope,
+    this.settingsContextError,
+    this.settingsContextErrorCount,
+    this.settingsContextGate,
+    this.clearContextError,
+    this.clearContextGate,
+    this.hasConfirmedContext = true,
+  }) : _envelope = envelope ?? _globalEnvelope;
 
   Map<String, dynamic> _envelope;
+  final Object? settingsContextError;
+  final int? settingsContextErrorCount;
+  final Future<Map<String, dynamic>>? settingsContextGate;
+  final Object? clearContextError;
+  final Future<Map<String, dynamic>>? clearContextGate;
+  bool hasConfirmedContext;
   String? lastSelectedDomain;
   String? lastSelectedSubject;
   int clearCalls = 0;
+  int subjectReads = 0;
+  int _settingsContextErrorsThrown = 0;
 
   Map<String, dynamic> get envelope => _envelope;
+  Map<String, dynamic>? get shellEnvelope =>
+      hasConfirmedContext ? _envelope : null;
 
   @override
-  Map<String, dynamic>? get currentContextEnvelope => _envelope;
+  Map<String, dynamic>? get currentContextEnvelope => shellEnvelope;
 
   @override
   Future<Map<String, dynamic>> runtimeIdentity() async => _legacyRuntime;
 
   @override
-  Future<Map<String, dynamic>> settingsContext() async => _envelope;
+  Future<Map<String, dynamic>> settingsContext() async {
+    final gate = settingsContextGate;
+    if (gate != null) return await gate;
+    final error = settingsContextError;
+    final errorCount = settingsContextErrorCount;
+    if (error != null &&
+        (errorCount == null || _settingsContextErrorsThrown < errorCount)) {
+      _settingsContextErrorsThrown++;
+      throw error;
+    }
+    hasConfirmedContext = true;
+    return _envelope;
+  }
 
   @override
   Future<Map<String, dynamic>> screen(String screenId) async => {
@@ -298,30 +620,33 @@ class _ShellClient extends LumenisCoreClient {
   @override
   Future<Map<String, dynamic>> settingsSubjects({
     String domainId = 'CTH',
-  }) async => {
-    'ok': true,
-    'source': 'lumenis_subject_registry',
-    'selection_only': true,
-    'domains': [
-      {
-        'id': domainId,
-        'name': domainId,
-        'product': domainId == 'BMP' ? 'ZBMP' : 'CTH',
-      },
-    ],
-    'subjects': [
-      {
-        'subject_id': domainId == 'BMP'
-            ? 'INTERNAL-BRAND-ID'
-            : 'INTERNAL-SUBJECT-ID',
-        'domain_id': domainId,
-        'name_zh': domainId == 'BMP' ? '示例品牌' : '示例商业主体',
-        'name_en': domainId == 'BMP' ? 'Example Brand' : 'Example Business',
-        'subject_type_name': domainId == 'BMP' ? '品牌主体' : '商业主体',
-        'industry': '测试行业',
-      },
-    ],
-  };
+  }) async {
+    subjectReads++;
+    return {
+      'ok': true,
+      'source': 'lumenis_subject_registry',
+      'selection_only': true,
+      'domains': [
+        {
+          'id': domainId,
+          'name': domainId,
+          'product': domainId == 'BMP' ? 'ZBMP' : 'CTH',
+        },
+      ],
+      'subjects': [
+        {
+          'subject_id': domainId == 'BMP'
+              ? 'INTERNAL-BRAND-ID'
+              : 'INTERNAL-SUBJECT-ID',
+          'domain_id': domainId,
+          'name_zh': domainId == 'BMP' ? '示例品牌' : '示例商业主体',
+          'name_en': domainId == 'BMP' ? 'Example Brand' : 'Example Business',
+          'subject_type_name': domainId == 'BMP' ? '品牌主体' : '商业主体',
+          'industry': '测试行业',
+        },
+      ],
+    };
+  }
 
   @override
   Future<Map<String, dynamic>> selectContext({
@@ -336,13 +661,17 @@ class _ShellClient extends LumenisCoreClient {
       nameZh: domainId == 'BMP' ? '示例品牌' : '示例商业主体',
       nameEn: domainId == 'BMP' ? 'Example Brand' : 'Example Business',
     );
+    hasConfirmedContext = true;
     return _envelope;
   }
 
   @override
   Future<Map<String, dynamic>> clearContext() async {
     clearCalls++;
-    _envelope = _globalEnvelope;
+    final error = clearContextError;
+    if (error != null) throw error;
+    _envelope = await (clearContextGate ?? Future.value(_globalEnvelope));
+    hasConfirmedContext = true;
     return _envelope;
   }
 }

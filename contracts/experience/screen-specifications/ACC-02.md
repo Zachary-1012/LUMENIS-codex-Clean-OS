@@ -113,3 +113,23 @@ on continuation; no local permission or business effect is introduced.
 Real authorized selection/return E2E and target-surface acceptance remain
 unaccepted until independently recorded. GLOBAL/ALL remains the default;
 this chooser is optional and is not a mandatory entry gate.
+
+### Shared scope-picker recovery — 2026-09-27
+
+Sol review: `DESIGN_READY` for the bounded recovery of the shell's existing
+GLOBAL/FOCUS selector. This does not widen ACC-02's CTH directory or enable a
+new business action. The shared selector retains its CTH/BMP focus support.
+
+When a current-context read fails, the message remains unavailable or denied.
+If the shell has a previously server-confirmed FOCUS envelope, offer the
+existing clear action without displaying cached domain/Subject rows as newly
+authorized. Call `LumenisCoreClient.clearContext()` (`DELETE
+/api/settings/context`); only a validated GLOBAL_ALL response updates the
+shell and closes the selector. A failed or denied clear retains the failure
+state and must not claim GLOBAL. No previously confirmed focus means no
+cache-derived recovery control. An in-flight clear disables conflicting
+requests and duplicate submission. Selection/clear never invokes collection.
+
+Verification: CTH and BMP expired-focus recovery, clear denial, no known focus,
+and in-flight action controls in the existing shell tests. Real server-bound
+recovery remains `LIVE_NOT_VERIFIED` until the safe Core environment is ready.

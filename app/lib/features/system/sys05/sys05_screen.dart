@@ -8,17 +8,39 @@ import 'sys05_view_model.dart';
 import 'sys05_appearance_controller.dart';
 import 'sys05_appearance_editor.dart';
 
-class Sys05Screen extends StatefulWidget {
+class Sys05Screen extends StatelessWidget {
   const Sys05Screen({required this.client, this.repository, super.key});
 
   final LumenisCoreClient client;
   final Sys05Repository? repository;
 
   @override
-  State<Sys05Screen> createState() => _Sys05ScreenState();
+  Widget build(BuildContext context) {
+    final appearance = Sys05AppearanceScope.maybeOf(context);
+    if (appearance != null) {
+      return Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: SafeArea(child: Sys05AppearanceEditor(controller: appearance)),
+        ),
+      );
+    }
+    return _RemoteSettings(client: client, repository: repository);
+  }
 }
 
-class _Sys05ScreenState extends State<Sys05Screen> {
+class _RemoteSettings extends StatefulWidget {
+  const _RemoteSettings({required this.client, this.repository});
+
+  final LumenisCoreClient client;
+  final Sys05Repository? repository;
+
+  @override
+  State<_RemoteSettings> createState() => _RemoteSettingsState();
+}
+
+class _RemoteSettingsState extends State<_RemoteSettings> {
   late final Sys05ViewModel _viewModel;
 
   @override
@@ -38,16 +60,6 @@ class _Sys05ScreenState extends State<Sys05Screen> {
 
   @override
   Widget build(BuildContext context) {
-    final appearance = Sys05AppearanceScope.maybeOf(context);
-    if (appearance != null) {
-      return Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 760),
-          child: SafeArea(child: Sys05AppearanceEditor(controller: appearance)),
-        ),
-      );
-    }
     return ColoredBox(
       color: LumenisTheme.of(context).canvas,
       child: SafeArea(

@@ -212,7 +212,6 @@ class LumenisCoreClient {
       },
       withContext: false,
     );
-    _acceptContextEnvelope(response);
     final context = response['context'];
     if (context is! Map ||
         context['mode'] != 'FOCUS' ||
@@ -222,6 +221,7 @@ class LumenisCoreClient {
         'Core did not confirm the requested context selection.',
       );
     }
+    _acceptContextEnvelope(response);
     return response;
   }
 
@@ -233,11 +233,11 @@ class LumenisCoreClient {
       '/api/settings/context',
       withContext: false,
     );
-    _acceptContextEnvelope(response);
     final context = response['context'];
     if (context is! Map || context['mode'] != 'GLOBAL_ALL') {
       throw const FormatException('Core did not confirm clearing the focus.');
     }
+    _acceptContextEnvelope(response);
     return response;
   }
 

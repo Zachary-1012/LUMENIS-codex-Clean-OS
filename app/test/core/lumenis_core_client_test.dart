@@ -38,6 +38,70 @@ void main() {
     },
   );
 
+  test(
+    'mismatched context responses preserve the confirmed selection',
+    () async {
+      final server = await _CoreStub.start(
+        contextResponses: [
+          _contextEnvelope('FOCUS', domainId: 'CTH', subjectId: 'shop-1'),
+          _contextEnvelope('FOCUS', domainId: 'CTH', subjectId: 'other-shop'),
+          _contextEnvelope('FOCUS', domainId: 'BMP', subjectId: 'next-shop'),
+          _contextEnvelope('GLOBAL_ALL'),
+          _contextEnvelope('FOCUS', domainId: 'CTH', subjectId: 'other-shop'),
+          _contextEnvelope('GLOBAL_ALL'),
+        ],
+      );
+      addTearDown(server.close);
+      final client = LumenisCoreClient(baseUrl: server.baseUrl);
+
+      await client.runtimeIdentity();
+      final confirmedFocus = await client.selectContext(
+        domainId: 'CTH',
+        subjectId: 'shop-1',
+      );
+
+      Future<void> expectConfirmedFocusRemains() async {
+        expect(client.currentContextEnvelope, same(confirmedFocus));
+        expect((await client.sharedSkillsCatalog())['ok'], isTrue);
+        final request = server.requests.last;
+        expect(request.path, '/api/experience/shared-skills');
+        expect(request.contextMode, 'FOCUS');
+        expect(request.domainId, 'CTH');
+        expect(request.subjectId, 'shop-1');
+      }
+
+      await expectLater(
+        client.selectContext(domainId: 'CTH', subjectId: 'next-shop'),
+        throwsA(isA<FormatException>()),
+      );
+      await expectConfirmedFocusRemains();
+
+      await expectLater(
+        client.selectContext(domainId: 'CTH', subjectId: 'next-shop'),
+        throwsA(isA<FormatException>()),
+      );
+      await expectConfirmedFocusRemains();
+
+      await expectLater(
+        client.selectContext(domainId: 'CTH', subjectId: 'next-shop'),
+        throwsA(isA<FormatException>()),
+      );
+      await expectConfirmedFocusRemains();
+
+      await expectLater(client.clearContext(), throwsA(isA<FormatException>()));
+      await expectConfirmedFocusRemains();
+
+      final cleared = await client.clearContext();
+      expect((cleared['context'] as Map)['mode'], 'GLOBAL_ALL');
+      expect(client.currentContextEnvelope, same(cleared));
+      expect((await client.sharedSkillsCatalog())['ok'], isTrue);
+      final globalRequest = server.requests.last;
+      expect(globalRequest.contextMode, 'GLOBAL_ALL');
+      expect(globalRequest.domainId, isNull);
+      expect(globalRequest.subjectId, isNull);
+    },
+  );
+
   test('Core auth disabled keeps existing public runtime access', () async {
     final server = await _CoreStub.start(authEnabled: false);
     addTearDown(server.close);
@@ -164,11 +228,33 @@ const _password = 'secret';
 final _authorization =
     'Basic ${base64Encode(utf8.encode('$_username:$_password'))}';
 
-class _RecordedRequest {
-  const _RecordedRequest({required this.path, required this.authorization});
+Map<String, dynamic> _contextEnvelope(
+  String mode, {
+  String? domainId,
+  String? subjectId,
+}) => {
+  'ok': true,
+  'contract': 'lumenis.context.v1',
+  'selection_only': true,
+  'context': {'mode': mode, 'domain_id': ?domainId, 'subject_id': ?subjectId},
+};
 
+class _RecordedRequest {
+  const _RecordedRequest({
+    required this.method,
+    required this.path,
+    required this.authorization,
+    required this.contextMode,
+    required this.domainId,
+    required this.subjectId,
+  });
+
+  final String method;
   final String path;
   final String? authorization;
+  final String? contextMode;
+  final String? domainId;
+  final String? subjectId;
 }
 
 class _CoreStub {
@@ -178,7 +264,9 @@ class _CoreStub {
     required this.catalogStatus,
     required this.subjectStatus,
     required this.redirectCatalog,
+    required List<Map<String, dynamic>> contextResponses,
   }) {
+    _contextResponses = List.of(contextResponses);
     server.listen(_handle);
   }
 
@@ -188,6 +276,7 @@ class _CoreStub {
   final int subjectStatus;
   final bool redirectCatalog;
   final List<_RecordedRequest> requests = [];
+  late final List<Map<String, dynamic>> _contextResponses;
 
   String get baseUrl => 'http://127.0.0.1:${server.port}';
 
@@ -196,6 +285,7 @@ class _CoreStub {
     int catalogStatus = HttpStatus.ok,
     int subjectStatus = HttpStatus.ok,
     bool redirectCatalog = false,
+    List<Map<String, dynamic>> contextResponses = const [],
   }) async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     return _CoreStub._(
@@ -204,6 +294,7 @@ class _CoreStub {
       catalogStatus: catalogStatus,
       subjectStatus: subjectStatus,
       redirectCatalog: redirectCatalog,
+      contextResponses: contextResponses,
     );
   }
 
@@ -214,7 +305,16 @@ class _CoreStub {
     final authorization = request.headers.value(
       HttpHeaders.authorizationHeader,
     );
-    requests.add(_RecordedRequest(path: path, authorization: authorization));
+    requests.add(
+      _RecordedRequest(
+        method: request.method,
+        path: path,
+        authorization: authorization,
+        contextMode: request.headers.value('X-Lumenis-Context-Mode'),
+        domainId: request.headers.value('X-Domain-Id'),
+        subjectId: request.headers.value('X-Subject-ID'),
+      ),
+    );
 
     if (path == '/api/auth/config') {
       await _reply(request, HttpStatus.ok, {
@@ -225,6 +325,14 @@ class _CoreStub {
       return;
     }
     final authorized = !authEnabled || authorization == _authorization;
+    if (path == '/api/settings/context') {
+      if (!authorized) {
+        await _reply(request, HttpStatus.unauthorized, const {'ok': false});
+        return;
+      }
+      await _reply(request, HttpStatus.ok, _contextResponses.removeAt(0));
+      return;
+    }
     if (path == '/api/experience/runtime/identity') {
       await _reply(
         request,

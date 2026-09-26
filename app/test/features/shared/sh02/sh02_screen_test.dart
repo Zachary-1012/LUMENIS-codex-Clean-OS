@@ -86,7 +86,16 @@ void main() {
         .transformationController!;
     expect(controller.value.storage, zoomedMatrix);
 
-    await tester.tap(find.byKey(const Key('sh02-space-item-EV-PRIVATE-ID')));
+    final spaceItem = find.byKey(const Key('sh02-space-item-EV-PRIVATE-ID'));
+    final spaceEntry = tester.widget<InkWell>(
+      find.descendant(of: spaceItem, matching: find.byType(InkWell)),
+    );
+    final spaceFocusNode = spaceEntry.focusNode!;
+    spaceFocusNode.requestFocus();
+    await tester.pump();
+    expect(spaceFocusNode.hasFocus, isTrue);
+
+    await tester.tap(spaceItem);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('sh02-focus-return')), findsOneWidget);
     expect(find.byType(InteractiveViewer), findsNothing);
@@ -97,6 +106,169 @@ void main() {
         .widget<InteractiveViewer>(find.byType(InteractiveViewer))
         .transformationController!;
     expect(controller.value.storage, zoomedMatrix);
+    expect(spaceFocusNode.hasFocus, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('list return restores scrolled row position and keyboard focus', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _app(_FakeSh02Repository(_readyResponseWithItems(20))),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('列表'));
+    await tester.pumpAndSettle();
+
+    final scrollView = tester.widget<SingleChildScrollView>(
+      find.byKey(const Key('sh02-workspace-scroll')),
+    );
+    final scrollController = scrollView.controller!;
+    scrollController.jumpTo(scrollController.position.maxScrollExtent);
+    await tester.pumpAndSettle();
+    final priorOffset = scrollController.offset;
+    expect(priorOffset, greaterThan(0));
+
+    final lastRow = find.byKey(const Key('sh02-item-verified-19'));
+    expect(lastRow, findsOneWidget);
+    expect(tester.getRect(lastRow).bottom, lessThan(900));
+    final listEntry = tester.widget<InkWell>(
+      find.descendant(of: lastRow, matching: find.byType(InkWell)),
+    );
+    final rowFocusNode = listEntry.focusNode!;
+    rowFocusNode.requestFocus();
+    await tester.pump();
+    expect(rowFocusNode.hasFocus, isTrue);
+
+    await tester.tap(lastRow);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('sh02-focus-return')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('sh02-focus-return')));
+    await tester.pumpAndSettle();
+
+    expect(scrollController.offset, priorOffset);
+    expect(rowFocusNode.hasFocus, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('material focus node survives list and space transitions', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_app(_FakeSh02Repository(_readyResponse)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('列表'));
+    await tester.pumpAndSettle();
+
+    final row = find.byKey(const Key('sh02-item-EV-PRIVATE-ID'));
+    final rowEntry = tester.widget<InkWell>(
+      find.descendant(of: row, matching: find.byType(InkWell)),
+    );
+    final materialFocusNode = rowEntry.focusNode!;
+    expect(materialFocusNode.context, isNotNull);
+    materialFocusNode.requestFocus();
+    await tester.pump();
+    expect(materialFocusNode.hasFocus, isTrue);
+
+    Future<void> pumpTransitionFrames() async {
+      for (var frame = 0; frame < 5; frame++) {
+        await tester.pump(const Duration(milliseconds: 40));
+        expect(tester.takeException(), isNull);
+      }
+    }
+
+    await tester.tap(find.text('空间'));
+    await pumpTransitionFrames();
+    expect(
+      find.byKey(const Key('sh02-space-item-EV-PRIVATE-ID')),
+      findsOneWidget,
+    );
+    expect(materialFocusNode.context, isNotNull);
+    materialFocusNode.requestFocus();
+    await tester.pump();
+    expect(materialFocusNode.hasFocus, isTrue);
+
+    await tester.tap(find.text('列表'));
+    await pumpTransitionFrames();
+    expect(row, findsOneWidget);
+    expect(materialFocusNode.context, isNotNull);
+    materialFocusNode.requestFocus();
+    await tester.pump();
+    expect(materialFocusNode.hasFocus, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('filtered invoking item returns focus to search safely', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_app(_FakeSh02Repository(_readyResponse)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('列表'));
+    await tester.pumpAndSettle();
+
+    final row = find.byKey(const Key('sh02-item-EV-PRIVATE-ID'));
+    final rowEntry = tester.widget<InkWell>(
+      find.descendant(of: row, matching: find.byType(InkWell)),
+    );
+    final rowFocusNode = rowEntry.focusNode!;
+    rowFocusNode.requestFocus();
+    await tester.pump();
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+
+    final search = find.byKey(const Key('sh02-search'));
+    await tester.enterText(search, 'no matching material');
+    await tester.pumpAndSettle();
+    expect(find.text('资料已不在当前结果中'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('sh02-focus-return')));
+    await tester.pumpAndSettle();
+
+    final searchField = tester.widget<TextField>(search);
+    expect(find.text('当前范围没有匹配的已核实资料。'), findsOneWidget);
+    expect(searchField.controller?.text, 'no matching material');
+    expect(searchField.focusNode?.hasFocus, isTrue);
+    expect(rowFocusNode.hasFocus, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mobile focus return keeps query and avoids overflow', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_app(_FakeSh02Repository(_readyResponse)));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('sh02-search')), '市场信号');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('列表'));
+    await tester.pumpAndSettle();
+
+    final row = find.byKey(const Key('sh02-item-EV-PRIVATE-ID'));
+    await tester.ensureVisible(row);
+    await tester.pumpAndSettle();
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh02-focus-return')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('sh02-search')), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('sh02-search')))
+          .controller
+          ?.text,
+      '市场信号',
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -345,3 +517,21 @@ final _readyResponse = sharedRuntimeResponse('SH-02', {
     },
   ],
 });
+
+Map<String, dynamic> _readyResponseWithItems(int count) {
+  final response = Map<String, dynamic>.from(_readyResponse);
+  final data = Map<String, dynamic>.from(response['data'] as Map);
+  final template = Map<String, dynamic>.from(
+    (data['evidence'] as List).first as Map,
+  );
+  data['evidence'] = [
+    for (var index = 0; index < count; index++)
+      {
+        ...template,
+        'id': index == 0 ? 'EV-PRIVATE-ID' : 'verified-$index',
+        'summary': index == 0 ? '已核实的市场信号' : '已核实资料 $index',
+      },
+  ];
+  response['data'] = data;
+  return response;
+}

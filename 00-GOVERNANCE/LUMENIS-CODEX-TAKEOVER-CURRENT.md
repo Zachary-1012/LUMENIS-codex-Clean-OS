@@ -730,6 +730,21 @@ Dated takeover/handoff files before this `CURRENT` entry remain historical evide
 
 ## 11. Blocking consistency guard
 
+### 2026-09-27 Round 14 bounded appearance and return continuity Batch
+
+The Flutter Workspace now avoids an unused remote SYS-05 settings read when its
+device-local appearance owner is present, validates Focus/clear replies before
+changing context headers, and preserves SH-02 browse position, query and focus
+across detail/return. Source, tests, three existing screen specifications and
+00-GOVERNANCE/evidence/round-14/ROUND-14-LOCAL-APPEARANCE-AND-RETURN-2026-09-27.md
+are co-published. An isolated clean-main candidate passed 93 Flutter tests, full
+App analysis, Web build and six static governance gates. This is bounded
+TESTED SOURCE; actor-bound live Core, SH-02 business Evidence, real user-work
+E2E and native-surface acceptance are LIVE_NOT_VERIFIED. ROUND 14 remains
+REWORK; Global Commercial/Brand coverage remain NO / NOT VERIFIED, Guangzhou
+reference remains PARTIAL / NOT REVERIFIED, and COMMERCIAL_READY=NO.
+
+
 ### 2026-09-27 Round 04 exact-scope Evidence read API Batch
 
 The four Shared Evidence GET routes now require a server-authenticated actor, an explicit CTH/BMP data-route scope and verified canonical `evidence/read` Permission before returning exact scoped rows. The co-published source/test evidence is `00-GOVERNANCE/evidence/round-04/ROUND-04-EVIDENCE-READ-API-PERMISSION-2026-09-27.md`. `GLOBAL_ALL` here means only explicitly domain-global-marked Evidence, not full authorized Global Universe coverage. A stale, unconnected ViewModel link lacks the new scope contract. This is isolated `TESTED SOURCE`; real user-work E2E, live Core and frontend binding are not verified. ROUND 04 remains `REWORK`; Global Commercial/Brand coverage remain `NO / NOT VERIFIED`, Guangzhou reference `PARTIAL / NOT REVERIFIED`, internal full-universe readiness and commercial readiness remain `NO`.

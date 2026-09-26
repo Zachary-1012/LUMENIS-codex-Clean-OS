@@ -158,20 +158,30 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     with RestorationMixin {
   final RestorableString _activeScreen = RestorableString('CTH-01');
   Map<String, dynamic>? _contextEnvelope;
+  Map<String, dynamic>? _unavailableContextEnvelope;
+  bool _hasConfirmedFocusRecoveryHint = false;
 
   @override
   void initState() {
     super.initState();
     _contextEnvelope =
         widget.contextEnvelope ?? widget.client.currentContextEnvelope;
+    _hasConfirmedFocusRecoveryHint = _isConfirmedFocusEnvelope(
+      _contextEnvelope,
+    );
   }
 
   @override
   void didUpdateWidget(covariant LumenisWorkspaceShell oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.contextEnvelope != widget.contextEnvelope &&
-        widget.contextEnvelope != null) {
+        widget.contextEnvelope != null &&
+        !identical(widget.contextEnvelope, _unavailableContextEnvelope)) {
       _contextEnvelope = widget.contextEnvelope;
+      _unavailableContextEnvelope = null;
+      _hasConfirmedFocusRecoveryHint = _isConfirmedFocusEnvelope(
+        widget.contextEnvelope,
+      );
     }
     if (oldWidget.initialScreenId != widget.initialScreenId &&
         LumenisWorkspaceRoutes.supportsWorkspaceScreen(
@@ -309,9 +319,18 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       return;
     }
     if (_activeScreen.value == screenId) return;
+    final currentEnvelope = widget.client.currentContextEnvelope;
+    final shouldAdoptCurrentEnvelope =
+        currentEnvelope != null &&
+        !identical(currentEnvelope, _unavailableContextEnvelope);
     setState(() {
-      _contextEnvelope =
-          widget.client.currentContextEnvelope ?? _contextEnvelope;
+      if (shouldAdoptCurrentEnvelope) {
+        _contextEnvelope = currentEnvelope;
+        _unavailableContextEnvelope = null;
+        _hasConfirmedFocusRecoveryHint = _isConfirmedFocusEnvelope(
+          currentEnvelope,
+        );
+      }
       _activeScreen.value = screenId;
     });
     if (notifyRoute) widget.onScreenSelected?.call(screenId);
@@ -583,12 +602,49 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
   }
 
   Future<void> _openContextPicker() async {
+    final canReturnToGlobal = _hasConfirmedFocusRecoveryHint;
     final selected = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => _ContextPickerDialog(client: widget.client),
+      barrierDismissible: false,
+      builder: (_) => _ContextPickerDialog(
+        client: widget.client,
+        canReturnToGlobal: canReturnToGlobal,
+        onContextConfirmed: _acceptContextEnvelope,
+        onContextUnavailable: _markContextUnavailable,
+      ),
     );
-    if (selected == null || !mounted) return;
-    setState(() => _contextEnvelope = selected);
+    if (selected != null) _acceptContextEnvelope(selected);
+  }
+
+  bool _isConfirmedFocusEnvelope(Map<String, dynamic>? envelope) {
+    final selection = envelope?['context'];
+    if (selection is! Map) return false;
+    final subjectId = selection['subject_id'];
+    return envelope?['ok'] == true &&
+        envelope?['contract'] == 'lumenis.context.v1' &&
+        envelope?['selection_only'] == true &&
+        selection['mode'] == 'FOCUS' &&
+        (selection['domain_id'] == 'CTH' || selection['domain_id'] == 'BMP') &&
+        subjectId is String &&
+        subjectId.trim().isNotEmpty;
+  }
+
+  void _acceptContextEnvelope(Map<String, dynamic> envelope) {
+    if (!mounted) return;
+    setState(() {
+      _contextEnvelope = envelope;
+      _unavailableContextEnvelope = null;
+      _hasConfirmedFocusRecoveryHint = _isConfirmedFocusEnvelope(envelope);
+    });
+  }
+
+  void _markContextUnavailable() {
+    if (!mounted) return;
+    setState(() {
+      _unavailableContextEnvelope ??=
+          _contextEnvelope ?? widget.client.currentContextEnvelope;
+      _contextEnvelope = null;
+    });
   }
 
   void _openCth02() => _activateScreen('CTH-02');
@@ -1396,9 +1452,17 @@ class _ContextInspector extends StatelessWidget {
 }
 
 class _ContextPickerDialog extends StatefulWidget {
-  const _ContextPickerDialog({required this.client});
+  const _ContextPickerDialog({
+    required this.client,
+    required this.canReturnToGlobal,
+    required this.onContextConfirmed,
+    required this.onContextUnavailable,
+  });
 
   final LumenisCoreClient client;
+  final bool canReturnToGlobal;
+  final ValueChanged<Map<String, dynamic>> onContextConfirmed;
+  final VoidCallback onContextUnavailable;
 
   @override
   State<_ContextPickerDialog> createState() => _ContextPickerDialogState();
@@ -1414,6 +1478,7 @@ class _ContextPickerDialogState extends State<_ContextPickerDialog> {
   bool _loadingContext = true;
   bool _loadingSubjects = false;
   bool _selecting = false;
+  bool _contextRequestInFlight = false;
 
   @override
   void initState() {
@@ -1422,14 +1487,23 @@ class _ContextPickerDialogState extends State<_ContextPickerDialog> {
   }
 
   Future<void> _refreshContext() async {
+    if (_contextRequestInFlight || _selecting) return;
+    _contextRequestInFlight = true;
     if (mounted) {
       setState(() {
         _loadingContext = true;
         _messageKey = null;
+        _envelope = null;
+        _domains = const [];
+        _subjects = const [];
+        _domainId = null;
+        _query = '';
       });
     }
     try {
       final envelope = await widget.client.settingsContext();
+      if (!mounted) return;
+      widget.onContextConfirmed(envelope);
       final domains = _readDomains(envelope['authorized_domains']);
       final contextValue = _asMap(envelope['context']);
       final currentDomain = contextValue?['domain_id'];
@@ -1438,19 +1512,21 @@ class _ContextPickerDialogState extends State<_ContextPickerDialog> {
           : domains.isEmpty
           ? null
           : domains.first['id'] as String;
-      if (!mounted) return;
       setState(() {
         _envelope = envelope;
         _domains = domains;
         _domainId = nextDomain;
         _loadingContext = false;
+        _contextRequestInFlight = false;
         _messageKey = null;
       });
       if (nextDomain != null) await _loadSubjects(nextDomain);
     } on Object catch (error) {
       if (!mounted) return;
+      widget.onContextUnavailable();
       setState(() {
         _loadingContext = false;
+        _contextRequestInFlight = false;
         _messageKey = _errorMessageKey(error, forDirectory: false);
       });
     }
@@ -1497,6 +1573,7 @@ class _ContextPickerDialogState extends State<_ContextPickerDialog> {
   }
 
   Future<void> _select(String domainId, String subjectId) async {
+    if (_selecting || _contextRequestInFlight || _loadingContext) return;
     setState(() {
       _selecting = true;
       _messageKey = null;
@@ -1507,6 +1584,7 @@ class _ContextPickerDialogState extends State<_ContextPickerDialog> {
         subjectId: subjectId,
       );
       if (!mounted) return;
+      widget.onContextConfirmed(envelope);
       Navigator.of(context).pop(envelope);
     } on Object catch (error) {
       if (!mounted) return;
@@ -1518,13 +1596,14 @@ class _ContextPickerDialogState extends State<_ContextPickerDialog> {
   }
 
   Future<void> _clear() async {
+    if (_selecting || _contextRequestInFlight || _loadingContext) return;
     setState(() {
       _selecting = true;
-      _messageKey = null;
     });
     try {
       final envelope = await widget.client.clearContext();
       if (!mounted) return;
+      widget.onContextConfirmed(envelope);
       Navigator.of(context).pop(envelope);
     } on Object catch (error) {
       if (!mounted) return;
@@ -1618,193 +1697,231 @@ class _ContextPickerDialogState extends State<_ContextPickerDialog> {
     final current = _asMap(_envelope?['context']);
     final currentSubjectId = current?['subject_id'];
     final filteredSubjects = _filteredSubjects(context);
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      backgroundColor: LumenisTheme.of(context).surface,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 620,
-          maxHeight: MediaQuery.sizeOf(context).height * 0.86,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      copy.text('context.selector.open'),
-                      style: TextStyle(
-                        color: LumenisTheme.of(context).foreground,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
+    return PopScope(
+      canPop: !_selecting,
+      child: Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        backgroundColor: LumenisTheme.of(context).surface,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 620,
+            maxHeight: MediaQuery.sizeOf(context).height * 0.86,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        copy.text('context.selector.open'),
+                        style: TextStyle(
+                          color: LumenisTheme.of(context).foreground,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: copy.text('context.selector.close'),
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                copy.text('context.selector.scope_note'),
-                style: TextStyle(
-                  color: LumenisTheme.of(context).muted,
-                  height: 1.45,
-                ),
-              ),
-              const SizedBox(height: 18),
-              if (_loadingContext)
-                Semantics(
-                  liveRegion: true,
-                  label: copy.text('context.selector.loading'),
-                  child: const LinearProgressIndicator(minHeight: 2),
-                )
-              else if (_domains.isEmpty)
-                _ContextPickerMessage(
-                  text: copy.text(_messageKey ?? 'context.selector.no_domains'),
-                  onRetry: _refreshContext,
-                )
-              else ...[
-                _ScopeModeRow(
-                  current: current,
-                  currentLabel: current?['mode'] == 'GLOBAL_ALL'
-                      ? copy.text('context.mode.global_all')
-                      : current == null
-                      ? copy.text('shell.context.unavailable')
-                      : _subjectName(current, context),
-                  selecting: _selecting,
-                  onClear: _clear,
-                ),
-                const SizedBox(height: 18),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final domain in _domains)
-                      ChoiceChip(
-                        label: Text(_domainLabel(domain['id'], copy)),
-                        selected: _domainId == domain['id'],
-                        onSelected: _loadingSubjects || _selecting
-                            ? null
-                            : (_) => _loadSubjects(domain['id'] as String),
-                      ),
+                    IconButton(
+                      key: const ValueKey('context-picker-close'),
+                      tooltip: copy.text('context.selector.close'),
+                      onPressed: _selecting
+                          ? null
+                          : () => Navigator.of(context).maybePop(),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                TextField(
-                  enabled: !_loadingSubjects && !_selecting,
-                  onChanged: (value) => setState(() => _query = value),
-                  decoration: InputDecoration(
-                    hintText: copy.text('context.selector.search_hint'),
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    filled: true,
-                    fillColor: LumenisTheme.of(context).canvas,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                        color: LumenisTheme.of(context).line,
+                const SizedBox(height: 4),
+                Text(
+                  copy.text('context.selector.scope_note'),
+                  style: TextStyle(
+                    color: LumenisTheme.of(context).muted,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                if (_loadingContext)
+                  Semantics(
+                    liveRegion: true,
+                    label: copy.text('context.selector.loading'),
+                    child: const LinearProgressIndicator(minHeight: 2),
+                  )
+                else if (_domains.isEmpty)
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _ContextPickerMessage(
+                        text: copy.text(
+                          _messageKey ?? 'context.selector.no_domains',
+                        ),
+                        onRetry: _selecting || _contextRequestInFlight
+                            ? null
+                            : _refreshContext,
                       ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                        color: LumenisTheme.of(context).line,
+                      if (widget.canReturnToGlobal && _messageKey != null)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            key: const ValueKey('context-picker-return-global'),
+                            onPressed: _selecting || _contextRequestInFlight
+                                ? null
+                                : _clear,
+                            icon: const Icon(Icons.public_rounded),
+                            label: Text(copy.text('context.mode.global_all')),
+                          ),
+                        ),
+                      if (_selecting)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: LinearProgressIndicator(minHeight: 2),
+                        ),
+                    ],
+                  )
+                else ...[
+                  _ScopeModeRow(
+                    current: current,
+                    currentLabel: current?['mode'] == 'GLOBAL_ALL'
+                        ? copy.text('context.mode.global_all')
+                        : current == null
+                        ? copy.text('shell.context.unavailable')
+                        : _subjectName(current, context),
+                    selecting: _selecting,
+                    onClear: _clear,
+                  ),
+                  const SizedBox(height: 18),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final domain in _domains)
+                        ChoiceChip(
+                          label: Text(_domainLabel(domain['id'], copy)),
+                          selected: _domainId == domain['id'],
+                          onSelected: _loadingSubjects || _selecting
+                              ? null
+                              : (_) => _loadSubjects(domain['id'] as String),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    enabled: !_loadingSubjects && !_selecting,
+                    onChanged: (value) => setState(() => _query = value),
+                    decoration: InputDecoration(
+                      hintText: copy.text('context.selector.search_hint'),
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      filled: true,
+                      fillColor: LumenisTheme.of(context).canvas,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(
+                          color: LumenisTheme.of(context).line,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(
+                          color: LumenisTheme.of(context).line,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                if (_loadingSubjects)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    child: Semantics(
-                      liveRegion: true,
-                      label: copy.text('context.selector.loading_subjects'),
-                      child: const LinearProgressIndicator(minHeight: 2),
-                    ),
-                  )
-                else if (_messageKey != null)
-                  _ContextPickerMessage(
-                    text: copy.text(_messageKey!),
-                    onRetry: _domainId == null
-                        ? _refreshContext
-                        : () => _loadSubjects(_domainId!),
-                  )
-                else if (filteredSubjects.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Text(
-                      copy.text('context.selector.empty'),
-                      style: TextStyle(
-                        color: LumenisTheme.of(context).muted,
-                        height: 1.5,
+                  const SizedBox(height: 10),
+                  if (_loadingSubjects)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      child: Semantics(
+                        liveRegion: true,
+                        label: copy.text('context.selector.loading_subjects'),
+                        child: const LinearProgressIndicator(minHeight: 2),
+                      ),
+                    )
+                  else if (_messageKey != null)
+                    _ContextPickerMessage(
+                      text: copy.text(_messageKey!),
+                      onRetry: _selecting || _contextRequestInFlight
+                          ? null
+                          : _domainId == null
+                          ? _refreshContext
+                          : () => _loadSubjects(_domainId!),
+                    )
+                  else if (filteredSubjects.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        copy.text('context.selector.empty'),
+                        style: TextStyle(
+                          color: LumenisTheme.of(context).muted,
+                          height: 1.5,
+                        ),
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: filteredSubjects.length,
+                        separatorBuilder: (_, _) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final subject = filteredSubjects[index];
+                          final subjectId = subject['subject_id'];
+                          if (subjectId is! String || subjectId.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+                          final subjectDomain = subject['domain_id'];
+                          if (subjectDomain != _domainId) {
+                            return const SizedBox.shrink();
+                          }
+                          final name = _subjectName(subject, context);
+                          final metadata =
+                              [
+                                subject['subject_type_name'],
+                                subject['industry'],
+                              ].whereType<String>().where(
+                                (item) => item.isNotEmpty,
+                              );
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            enabled: !_selecting,
+                            leading: Icon(
+                              _domainId == 'BMP'
+                                  ? Icons.sell_outlined
+                                  : Icons.apartment_rounded,
+                              color: _domainId == 'BMP'
+                                  ? LumenisTheme.of(context).bmp
+                                  : LumenisTheme.of(context).cth,
+                            ),
+                            title: Text(name),
+                            subtitle: metadata.isEmpty
+                                ? null
+                                : Text(metadata.join(' · ')),
+                            trailing: currentSubjectId == subjectId
+                                ? Text(
+                                    copy.text('context.selector.selected'),
+                                    style: TextStyle(
+                                      color: LumenisTheme.of(context).accent,
+                                      fontSize: 13,
+                                    ),
+                                  )
+                                : const Icon(Icons.chevron_right_rounded),
+                            onTap: _selecting || _domainId == null
+                                ? null
+                                : () => _select(_domainId!, subjectId),
+                          );
+                        },
                       ),
                     ),
-                  )
-                else
-                  Expanded(
-                    child: ListView.separated(
-                      itemCount: filteredSubjects.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final subject = filteredSubjects[index];
-                        final subjectId = subject['subject_id'];
-                        if (subjectId is! String || subjectId.isEmpty) {
-                          return const SizedBox.shrink();
-                        }
-                        final subjectDomain = subject['domain_id'];
-                        if (subjectDomain != _domainId) {
-                          return const SizedBox.shrink();
-                        }
-                        final name = _subjectName(subject, context);
-                        final metadata = [
-                          subject['subject_type_name'],
-                          subject['industry'],
-                        ].whereType<String>().where((item) => item.isNotEmpty);
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          enabled: !_selecting,
-                          leading: Icon(
-                            _domainId == 'BMP'
-                                ? Icons.sell_outlined
-                                : Icons.apartment_rounded,
-                            color: _domainId == 'BMP'
-                                ? LumenisTheme.of(context).bmp
-                                : LumenisTheme.of(context).cth,
-                          ),
-                          title: Text(name),
-                          subtitle: metadata.isEmpty
-                              ? null
-                              : Text(metadata.join(' · ')),
-                          trailing: currentSubjectId == subjectId
-                              ? Text(
-                                  copy.text('context.selector.selected'),
-                                  style: TextStyle(
-                                    color: LumenisTheme.of(context).accent,
-                                    fontSize: 13,
-                                  ),
-                                )
-                              : const Icon(Icons.chevron_right_rounded),
-                          onTap: _selecting || _domainId == null
-                              ? null
-                              : () => _select(_domainId!, subjectId),
-                        );
-                      },
-                    ),
+                ],
+                if (_selecting)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: LinearProgressIndicator(minHeight: 2),
                   ),
               ],
-              if (_selecting)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: LinearProgressIndicator(minHeight: 2),
-                ),
-            ],
+            ),
           ),
         ),
       ),
@@ -1883,7 +2000,7 @@ class _ContextPickerMessage extends StatelessWidget {
   const _ContextPickerMessage({required this.text, required this.onRetry});
 
   final String text;
-  final VoidCallback onRetry;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -1900,6 +2017,7 @@ class _ContextPickerMessage extends StatelessWidget {
           ),
         ),
         TextButton(
+          key: const ValueKey('context-picker-retry'),
           onPressed: onRetry,
           child: Text(context.lumenisL10n.text('context.selector.retry')),
         ),

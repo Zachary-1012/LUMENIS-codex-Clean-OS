@@ -72,21 +72,125 @@ class _Workspace extends StatefulWidget {
 
 class _WorkspaceState extends State<_Workspace> {
   final TransformationController _camera = TransformationController();
+  final ScrollController _browseScrollController = ScrollController();
+  final TextEditingController _queryController = TextEditingController();
+  final FocusNode _browseFallbackFocusNode = FocusNode(
+    debugLabel: 'SH-02 search fallback',
+  );
+  final Map<String, FocusNode> _itemFocusNodes = {};
   _BrowseMode _mode = _BrowseMode.space;
   String? _focusedItemId;
+  String? _originItemId;
+  double? _browseOffsetBeforeFocus;
+
+  @override
+  void initState() {
+    super.initState();
+    _queryController.text = widget.viewModel.query;
+    _syncItemFocusNodes();
+  }
+
+  @override
+  void didUpdateWidget(covariant _Workspace oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncItemFocusNodes();
+    final query = widget.viewModel.query;
+    if (_queryController.text != query) {
+      _queryController.value = TextEditingValue(
+        text: query,
+        selection: TextSelection.collapsed(offset: query.length),
+      );
+    }
+  }
+
+  void _syncItemFocusNodes() {
+    final visibleIds = widget.viewModel.visibleEvidence
+        .map((item) => item.internalId)
+        .toSet();
+    for (final item in widget.viewModel.visibleEvidence) {
+      _itemFocusNodes.putIfAbsent(
+        item.internalId,
+        () => FocusNode(debugLabel: 'SH-02 material'),
+      );
+    }
+    final staleIds = _itemFocusNodes.keys
+        .where((itemId) => !visibleIds.contains(itemId))
+        .toList();
+    if (staleIds.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final stillVisibleIds = widget.viewModel.visibleEvidence
+          .map((item) => item.internalId)
+          .toSet();
+      for (final itemId in staleIds) {
+        if (!stillVisibleIds.contains(itemId)) {
+          _itemFocusNodes.remove(itemId)?.dispose();
+        }
+      }
+    });
+  }
 
   @override
   void dispose() {
     _camera.dispose();
+    _browseScrollController.dispose();
+    _queryController.dispose();
+    _browseFallbackFocusNode.dispose();
+    for (final node in _itemFocusNodes.values) {
+      node.dispose();
+    }
     super.dispose();
   }
 
   void _openItem(Sh02Evidence item) {
+    if (!widget.viewModel.visibleEvidence.any(
+      (visibleItem) => visibleItem.internalId == item.internalId,
+    )) {
+      return;
+    }
+    _originItemId = item.internalId;
+    _browseOffsetBeforeFocus = _browseScrollController.hasClients
+        ? _browseScrollController.offset
+        : null;
     widget.viewModel.select(item);
     setState(() => _focusedItemId = item.internalId);
   }
 
-  void _returnFromFocus() => setState(() => _focusedItemId = null);
+  void _returnFromFocus() {
+    final originItemId = _originItemId;
+    final browseOffset = _browseOffsetBeforeFocus;
+    _originItemId = null;
+    _browseOffsetBeforeFocus = null;
+    setState(() => _focusedItemId = null);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (browseOffset != null && _browseScrollController.hasClients) {
+        final position = _browseScrollController.position;
+        _browseScrollController.jumpTo(
+          browseOffset
+              .clamp(position.minScrollExtent, position.maxScrollExtent)
+              .toDouble(),
+        );
+      }
+
+      final itemIsVisible =
+          originItemId != null &&
+          widget.viewModel.visibleEvidence.any(
+            (item) => item.internalId == originItemId,
+          );
+      final itemFocusNode = originItemId == null
+          ? null
+          : _itemFocusNodes[originItemId];
+      if (itemIsVisible &&
+          itemFocusNode != null &&
+          itemFocusNode.context != null &&
+          itemFocusNode.canRequestFocus) {
+        itemFocusNode.requestFocus();
+      } else if (_browseFallbackFocusNode.context != null) {
+        _browseFallbackFocusNode.requestFocus();
+      }
+    });
+  }
 
   void _zoom(double factor, Size viewport) {
     final current = _camera.value.getMaxScaleOnAxis();
@@ -133,6 +237,7 @@ class _WorkspaceState extends State<_Workspace> {
               viewModel: viewModel,
               mode: _mode,
               camera: _camera,
+              focusNodes: _itemFocusNodes,
               onModeChanged: (mode) => setState(() => _mode = mode),
               onOpenItem: _openItem,
               onZoom: _zoom,
@@ -145,6 +250,8 @@ class _WorkspaceState extends State<_Workspace> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1540),
           child: SingleChildScrollView(
+            key: const Key('sh02-workspace-scroll'),
+            controller: _browseScrollController,
             padding: EdgeInsets.fromLTRB(
               wide ? 32 : 18,
               24,
@@ -164,7 +271,11 @@ class _WorkspaceState extends State<_Workspace> {
                     children: [
                       SizedBox(
                         width: 270,
-                        child: _SearchRail(viewModel: viewModel),
+                        child: _SearchRail(
+                          viewModel: viewModel,
+                          queryController: _queryController,
+                          focusNode: _browseFallbackFocusNode,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(child: browser),
@@ -178,7 +289,11 @@ class _WorkspaceState extends State<_Workspace> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _SearchRail(viewModel: viewModel),
+                      _SearchRail(
+                        viewModel: viewModel,
+                        queryController: _queryController,
+                        focusNode: _browseFallbackFocusNode,
+                      ),
                       const SizedBox(height: 14),
                       if (inspector == null)
                         browser
@@ -195,7 +310,11 @@ class _WorkspaceState extends State<_Workspace> {
                   )
                 else ...[
                   if (!isFocused) ...[
-                    _SearchRail(viewModel: viewModel),
+                    _SearchRail(
+                      viewModel: viewModel,
+                      queryController: _queryController,
+                      focusNode: _browseFallbackFocusNode,
+                    ),
                     const SizedBox(height: 14),
                   ],
                   browser,
@@ -314,9 +433,15 @@ class _ScopeBanner extends StatelessWidget {
 }
 
 class _SearchRail extends StatelessWidget {
-  const _SearchRail({required this.viewModel});
+  const _SearchRail({
+    required this.viewModel,
+    required this.queryController,
+    required this.focusNode,
+  });
 
   final Sh02ViewModel viewModel;
+  final TextEditingController queryController;
+  final FocusNode focusNode;
 
   @override
   Widget build(BuildContext context) => _Panel(
@@ -332,6 +457,8 @@ class _SearchRail extends StatelessWidget {
       children: [
         TextField(
           key: const Key('sh02-search'),
+          controller: queryController,
+          focusNode: focusNode,
           onChanged: viewModel.setQuery,
           textInputAction: TextInputAction.search,
           decoration: InputDecoration(
@@ -384,6 +511,7 @@ class _BrowseStage extends StatelessWidget {
     required this.viewModel,
     required this.mode,
     required this.camera,
+    required this.focusNodes,
     required this.onModeChanged,
     required this.onOpenItem,
     required this.onZoom,
@@ -392,6 +520,7 @@ class _BrowseStage extends StatelessWidget {
   final Sh02ViewModel viewModel;
   final _BrowseMode mode;
   final TransformationController camera;
+  final Map<String, FocusNode> focusNodes;
   final ValueChanged<_BrowseMode> onModeChanged;
   final ValueChanged<Sh02Evidence> onOpenItem;
   final void Function(double factor, Size viewport) onZoom;
@@ -411,10 +540,15 @@ class _BrowseStage extends StatelessWidget {
           curve: Curves.easeOutCubic,
           alignment: Alignment.topCenter,
           child: mode == _BrowseMode.list
-              ? _EvidenceList(viewModel: viewModel, onOpenItem: onOpenItem)
+              ? _EvidenceList(
+                  viewModel: viewModel,
+                  focusNodes: focusNodes,
+                  onOpenItem: onOpenItem,
+                )
               : _SpatialDesk(
                   viewModel: viewModel,
                   camera: camera,
+                  focusNodes: focusNodes,
                   onOpenItem: onOpenItem,
                   onZoom: onZoom,
                 ),
@@ -466,12 +600,14 @@ class _SpatialDesk extends StatelessWidget {
   const _SpatialDesk({
     required this.viewModel,
     required this.camera,
+    required this.focusNodes,
     required this.onOpenItem,
     required this.onZoom,
   });
 
   final Sh02ViewModel viewModel;
   final TransformationController camera;
+  final Map<String, FocusNode> focusNodes;
   final ValueChanged<Sh02Evidence> onOpenItem;
   final void Function(double factor, Size viewport) onZoom;
 
@@ -608,6 +744,9 @@ class _SpatialDesk extends StatelessWidget {
                                           ),
                                           item: items[index],
                                           width: cardWidth,
+                                          focusNode:
+                                              focusNodes[items[index]
+                                                  .internalId]!,
                                           selected:
                                               viewModel.selected?.internalId ==
                                               items[index].internalId,
@@ -657,6 +796,7 @@ class _SpaceMaterial extends StatelessWidget {
   const _SpaceMaterial({
     required this.item,
     required this.width,
+    required this.focusNode,
     required this.selected,
     required this.onTap,
     super.key,
@@ -664,6 +804,7 @@ class _SpaceMaterial extends StatelessWidget {
 
   final Sh02Evidence item;
   final double width;
+  final FocusNode focusNode;
   final bool selected;
   final VoidCallback onTap;
 
@@ -684,6 +825,7 @@ class _SpaceMaterial extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         canRequestFocus: true,
+        focusNode: focusNode,
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
@@ -858,9 +1000,14 @@ class _FocusedMaterial extends StatelessWidget {
 }
 
 class _EvidenceList extends StatelessWidget {
-  const _EvidenceList({required this.viewModel, required this.onOpenItem});
+  const _EvidenceList({
+    required this.viewModel,
+    required this.focusNodes,
+    required this.onOpenItem,
+  });
 
   final Sh02ViewModel viewModel;
+  final Map<String, FocusNode> focusNodes;
   final ValueChanged<Sh02Evidence> onOpenItem;
 
   @override
@@ -889,6 +1036,7 @@ class _EvidenceList extends StatelessWidget {
                   _EvidenceRow(
                     key: Key('sh02-item-${item.internalId}'),
                     item: item,
+                    focusNode: focusNodes[item.internalId]!,
                     selected: viewModel.selected?.internalId == item.internalId,
                     onTap: () => onOpenItem(item),
                   ),
@@ -901,12 +1049,14 @@ class _EvidenceList extends StatelessWidget {
 class _EvidenceRow extends StatelessWidget {
   const _EvidenceRow({
     required this.item,
+    required this.focusNode,
     required this.selected,
     required this.onTap,
     super.key,
   });
 
   final Sh02Evidence item;
+  final FocusNode focusNode;
   final bool selected;
   final VoidCallback onTap;
 
@@ -920,6 +1070,7 @@ class _EvidenceRow extends StatelessWidget {
       borderRadius: BorderRadius.circular(11),
       child: InkWell(
         canRequestFocus: true,
+        focusNode: focusNode,
         onTap: onTap,
         borderRadius: BorderRadius.circular(11),
         child: Container(

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
+import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import 'package:lumenis_app/features/system/sys02/sys02_repository.dart';
 import 'package:lumenis_app/features/system/sys02/sys02_screen.dart';
 import 'package:lumenis_app/features/system/sys02/sys02_snapshot.dart';
@@ -13,6 +16,8 @@ import 'package:lumenis_app/features/system/sys04/sys04_repository.dart';
 import 'package:lumenis_app/features/system/sys04/sys04_screen.dart';
 import 'package:lumenis_app/features/system/sys04/sys04_snapshot.dart';
 import 'package:lumenis_app/features/system/sys05/sys05_repository.dart';
+import 'package:lumenis_app/features/system/sys05/sys05_appearance_controller.dart';
+import 'package:lumenis_app/features/system/sys05/sys05_appearance_editor.dart';
 import 'package:lumenis_app/features/system/sys05/sys05_screen.dart';
 import 'package:lumenis_app/features/system/sys05/sys05_snapshot.dart';
 import 'package:lumenis_app/features/system/sys05/sys05_view_model.dart';
@@ -318,6 +323,62 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('SYS-05 device appearance never reads remote settings', (
+    tester,
+  ) async {
+    final appearance = Sys05AppearanceController()..loaded = true;
+    addTearDown(appearance.dispose);
+    final repository = _PendingSys05Repo();
+    await tester.pumpWidget(
+      _host(
+        Sys05AppearanceScope(
+          controller: appearance,
+          child: Sys05Screen(
+            client: LumenisCoreClient(),
+            repository: repository,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Sys05AppearanceEditor), findsOneWidget);
+    expect(repository.loads, 0);
+    appearance.reportError('appearance.saveFailed');
+    await tester.pumpAndSettle();
+    expect(find.byType(Sys05AppearanceEditor), findsOneWidget);
+    expect(repository.loads, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'SYS-05 disposes pending remote settings when local scope enters',
+    (tester) async {
+      final repository = _PendingSys05Repo();
+      final screen = Sys05Screen(
+        client: LumenisCoreClient(),
+        repository: repository,
+      );
+      await tester.pumpWidget(_host(screen));
+      await tester.pump();
+      expect(repository.loads, 1);
+
+      final appearance = Sys05AppearanceController()..loaded = true;
+      addTearDown(appearance.dispose);
+      await tester.pumpWidget(
+        _host(Sys05AppearanceScope(controller: appearance, child: screen)),
+      );
+      repository.result.completeError(
+        StateError('Remote settings unavailable'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Sys05AppearanceEditor), findsOneWidget);
+      expect(repository.loads, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   test(
     'SYS-06 filters account, port, profile and session fields before the UI model',
     () {
@@ -563,6 +624,7 @@ Widget _host(Widget child, {Locale locale = const Locale('zh', 'CN')}) {
     locale: locale,
     supportedLocales: const [Locale('zh', 'CN'), Locale('en'), Locale('ko')],
     localizationsDelegates: const [
+      LumenisLocalizations.delegate,
       GlobalMaterialLocalizations.delegate,
       GlobalWidgetsLocalizations.delegate,
       GlobalCupertinoLocalizations.delegate,
@@ -812,6 +874,17 @@ class _Sys05Repo implements Sys05Repository {
   final Sys05Snapshot snapshot;
   @override
   Future<Sys05Snapshot> load() async => snapshot;
+}
+
+class _PendingSys05Repo implements Sys05Repository {
+  int loads = 0;
+  final result = Completer<Sys05Snapshot>();
+
+  @override
+  Future<Sys05Snapshot> load() {
+    loads++;
+    return result.future;
+  }
 }
 
 class _Sys06Repo implements Sys06Repository {
