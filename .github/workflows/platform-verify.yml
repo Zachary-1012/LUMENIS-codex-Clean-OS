@@ -30,6 +30,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Validate AI-native product constitution execution chain (BLOCKING)
+        run: python scripts/audit_tools/verify_ai_native_constitution.py
+
       - name: Validate four-product contract and LUMENIS authority (BLOCKING)
         run: >-
           python scripts/audit_tools/verify_lumenis_ggi_contract.py

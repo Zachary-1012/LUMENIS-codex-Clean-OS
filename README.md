@@ -9,7 +9,7 @@
 
 本仓库承载当前生产实现、运行时、数据契约、Evidence、API、Permission、Metric、Experience、测试与发布证据。`README.md` 是人类工程入口，不是历史进度日志；文档、提交说明、CI 绿色或页面可打开，都不能单独证明功能已经 `VERIFIED / RELEASED / OPERATING`。
 
-> Coding Agent / Codex 的当前执行入口固定为：`AGENTS.md` → `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`。当前 HEAD 必须通过 `git fetch origin` + `git rev-parse origin/main` 动态解析，不得从 README、历史 handoff、截图或粘贴 SHA 推断。
+> Coding Agent / Codex 的当前执行入口固定为：`AGENTS.md` → `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md` → `00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md`。当前 HEAD 必须通过 `git fetch origin` + `git rev-parse origin/main` 动态解析，不得从 README、历史 handoff、截图或粘贴 SHA 推断。
 >
 > 只读取 GitHub 的审查者：先看 [CURRENT 远端／本地／验收状态快照](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md#0-online-readers-current-state-snapshot)。GitHub 不包含受保护的本地未提交候选；快照有时间边界，不能代替实时源码、测试或运行验收。
 
@@ -23,6 +23,7 @@ Before changing product code, read:
 ```text
 AGENTS.md
 → 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
+→ 00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md
 → 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md
 → 00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md
 → 00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md

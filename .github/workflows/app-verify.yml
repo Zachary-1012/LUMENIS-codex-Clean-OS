@@ -8,9 +8,11 @@ on:
       - "contracts/experience/**"
       - "AGENTS.md"
       - "README.md"
+      - "00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md"
       - "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
       - "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
       - "00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md"
+      - "scripts/audit_tools/verify_ai_native_constitution.py"
       - "scripts/audit_tools/verify_experience_*.py"
       - ".github/workflows/app-verify.yml"
   pull_request:
@@ -20,9 +22,11 @@ on:
       - "contracts/experience/**"
       - "AGENTS.md"
       - "README.md"
+      - "00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md"
       - "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
       - "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
       - "00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md"
+      - "scripts/audit_tools/verify_ai_native_constitution.py"
       - "scripts/audit_tools/verify_experience_*.py"
       - ".github/workflows/app-verify.yml"
   workflow_dispatch:
@@ -38,6 +42,9 @@ jobs:
     steps:
       - name: Checkout LUMENIS
         uses: actions/checkout@v5
+
+      - name: Validate AI-native product constitution execution chain (BLOCKING)
+        run: python3 scripts/audit_tools/verify_ai_native_constitution.py
 
       - name: Validate multi-surface Experience authority (BLOCKING)
         shell: bash

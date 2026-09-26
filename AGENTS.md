@@ -34,6 +34,7 @@ second product or design authority:
 ```text
 Current source / runtime / DB / API / Permission / Evidence truth
 → this AGENTS.md execution router
+→ AI-native product constitution principle layer
 → sole Product Architecture
 → sole Experience Constitution for user-visible work
 → Source Owner Index and approved Multi-Surface Decision
@@ -49,6 +50,7 @@ This root `AGENTS.md` is the first coding-agent instruction boundary. Before cha
 ```text
 AGENTS.md
 → 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
+→ 00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md
 → 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md
 → 00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md
 → 00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md
@@ -65,11 +67,49 @@ AGENTS.md
 Hard rules:
 
 - current HEAD comes from `git fetch origin` + `git rev-parse origin/main`, never from a document, screenshot, chat or pasted SHA;
+- `00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md` is the mandatory principle layer for every coding-agent task; it adds no second product, architecture, design, data, Permission or release authority;
 - the active cross-product contract is `lumenis-ggi-cross-product` **v1.1.0** with fingerprint `68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f`;
 - the Markdown registry is a human-readable mirror; the JSON contract plus blocking validators are the machine gate;
 - if CURRENT governance artifacts disagree, fail closed and reconcile them before cross-product work;
 - dated handoffs, archived audits and legacy repositories are provenance only unless current executable evidence revalidates them;
 - do not write to another repository merely because it is listed in the cross-repo registry; that repository must be explicitly in the active task scope.
+
+### AI-native constitution execution chain — NON-BYPASS
+
+Every coding-agent task must travel through this existing execution chain; the
+constitution is a principle layer inside the chain, not a parallel authority:
+
+```text
+origin/main truth
+→ AGENTS.md
+→ AI-NATIVE-PRODUCT-CONSTITUTION.md
+→ current Product / Architecture / Owner / Contract
+→ bounded Task Card
+→ current source and runtime truth
+→ implementation
+→ proportional automated tests
+→ Integration / E2E when applicable
+→ runtime / recovery evidence when applicable
+→ blocking gates
+→ commit
+→ push
+→ remote verify
+```
+
+Classify unresolved requirements honestly: `MACHINE_BLOCKING` failures block
+delivery; live/environment evidence that is unavailable is `LIVE_NOT_VERIFIED`
+or `BLOCKED`; product/commercial choices that belong to the Product Owner are
+`HUMAN_DECISION_REQUIRED`. None of those states may be rewritten as PASS.
+
+Non-bypass red lines:
+
+- never delete, skip, weaken, quarantine or move a legitimate failing test to another tier solely to obtain green;
+- never turn a blocking gate into advisory / informational or add `continue-on-error` solely to bypass a failure;
+- never convert missing/unknown/uncollected data to zero, fabricate HTTP success, or use Mock/fixture/demo data as production acceptance;
+- never bypass the current Permission, Evidence, Canonical owner, Effect Fence or approval boundary to complete a task;
+- never use reset/clean/checkout/restore or broad staging to overwrite a protected dirty worktree; reconcile stale candidates against current `origin/main` in an isolated clean worktree/archive, then reapply only validated unique work;
+- never expand product scope, add a new product/owner/architecture/design authority, or activate a new external effect without explicit Product Owner authorization;
+- before a delivery commit, run `python scripts/audit_tools/verify_ai_native_constitution.py`; its failure is `MACHINE_BLOCKING`.
 
 ## 2. Canonical workspace and mainline
 

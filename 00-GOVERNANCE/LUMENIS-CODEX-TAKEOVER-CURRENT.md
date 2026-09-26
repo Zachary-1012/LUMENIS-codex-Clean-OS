@@ -119,12 +119,19 @@ together; verify their containing commit against fresh live main.
 ### AI-native product principles — 2026-09-26
 
 [The Product Owner's lightweight AI-native constitution](AI-NATIVE-PRODUCT-CONSTITUTION.md)
-is now recorded as a reusable principle layer with its source provenance and
-explicit LUMENIS adaptations. Root `AGENTS.md` remains the sole execution
-router; existing Product Architecture, Experience Constitution, Owner Index and
-Real Delivery Overlay retain their named authority. Product direction and final
-release decisions stay with the Product Owner. This governance addition changes
-no product source, Round exit, model route or commercial-readiness status.
+is now a mandatory principle layer inside the existing execution router. Root
+`AGENTS.md` routes every coding-agent task through it before Product Architecture
+and owner-specific work; the Product and App Gates invoke
+`scripts/audit_tools/verify_ai_native_constitution.py` as a blocking governance
+check. Machine-checkable failures are `MACHINE_BLOCKING`; missing approved live
+evidence remains `LIVE_NOT_VERIFIED` / `BLOCKED`; Product Owner choices remain
+`HUMAN_DECISION_REQUIRED`. The validator also protects the non-bypass rules
+against weakening tests/Gates, missing-to-zero acceptance and destructive dirty
+worktree reconciliation. Existing Product Architecture, Experience Constitution,
+Owner Index and Real Delivery Overlay retain their named authority. Product
+direction and final release decisions stay with the Product Owner. This changes
+no product feature, Round exit, model route or commercial-readiness status by
+itself; hosted CI and business E2E still require evidence on the exact commit.
 
 ### Round 07 Gateway result validity — 2026-09-26
 

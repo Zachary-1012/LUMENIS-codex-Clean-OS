@@ -76,6 +76,12 @@ AI 不自行扩大需求或自证完成；Mock 不冒充真实数据；权限未
 
 快速创造服务于持续创造可信价值。AI 提高速度，工程保证质量，产品定义价值，商业验证结果。
 
+## 执行链与不可绕过状态
+
+序境通过根 `AGENTS.md` 把本宪法接入既有研发链，而不是另建第二套治理。机器能够客观验证的红线属于 `MACHINE_BLOCKING`；缺真实环境或线上证据时只能标记 `LIVE_NOT_VERIFIED` / `BLOCKED`；需要 Product Owner 作产品或商业选择时标记 `HUMAN_DECISION_REQUIRED`。任何 AI、测试、CI 或文档都不得把这些状态改写成 PASS，也不得通过弱化测试、Gate 或真实数据要求来绕过。
+
+本仓库的机器入口为 `python scripts/audit_tools/verify_ai_native_constitution.py`，并由 Product Gate 以 blocking step 执行。该 Gate 只验证治理链没有被绕开；具体业务事实仍由对应 Owner、测试、E2E、Runtime 与 Release Gate 证明。
+
 ## 序境采用边界
 
 - `ADOPT`：人类最终决策、业务任务优先、唯一事实来源、数据真实性、权限、真实用户验收、运行恢复、商业价值证明和红线；这些原则已经由现有权威文件承接，继续按当前证据执行。
