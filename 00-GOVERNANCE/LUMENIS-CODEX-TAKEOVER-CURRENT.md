@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 04 exact-scope Evidence writer — 2026-09-26
+
+[The bounded Evidence writer evidence](evidence/round-04/ROUND-04-EVIDENCE-SCOPE-WRITER-2026-09-26.md)
+records an explicit CTH Subject, BMP BrandFocus, or global write scope stored
+with the Evidence row. Invalid or incomplete scope storage fails closed; a
+failed scoped write cannot replay as an unscoped record. The exact staged
+source and Evidence neighbors passed 40/40 on an isolated database; the
+AI-native constitution and Database authority guards passed. Actor Permission,
+exact-scope query, live source lineage, user-visible outcome and real user-work
+E2E remain open. `ROUND 04=REWORK`; `COMMERCIAL_READY=NO`.
+
 ### Round 03 empty-v0 bootstrap rollback — 2026-09-26
 
 [The bounded v0 evidence](evidence/round-03/ROUND-03-EMPTY-V0-BOOTSTRAP-ATOMICITY-2026-09-26.md)

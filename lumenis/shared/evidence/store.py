@@ -433,6 +433,41 @@ def _record_write_failure(fields: dict, error: Exception) -> None:
 
 
 
+def _validate_replay_scope(fields: dict, existing_cols: set) -> None:
+    """A failed scoped write must never replay as an unscoped record."""
+    has_scope_columns = any(
+        fields.get(column) is not None for column in ("domain_id", "product_id")
+    )
+    raw_inputs = fields.get("inputs_json")
+    try:
+        inputs = json.loads(raw_inputs) if isinstance(raw_inputs, str) else None
+    except (TypeError, ValueError) as exc:
+        if has_scope_columns:
+            raise ValueError("scoped Evidence replay has invalid inputs_json") from exc
+        return
+    marker = inputs.get(_EVIDENCE_SCOPE_KEY) if isinstance(inputs, dict) else None
+    if marker is None and not has_scope_columns:
+        return
+    if not isinstance(marker, dict):
+        raise ValueError("scoped Evidence replay is missing valid scope metadata")
+    required = {"domain_id", "product_id", "inputs_json"}
+    if not required.issubset(fields) or not required.issubset(existing_cols):
+        raise ValueError("Evidence storage cannot replay the requested write scope")
+    expected = _normalize_record_evidence_scope(
+        product=fields.get("product", ""),
+        domain_id=marker.get("domain_id"),
+        subject_id=marker.get("subject_id"),
+        brand_focus_id=marker.get("brand_focus_id"),
+        global_scope=marker.get("global"),
+    )
+    if (
+        marker != expected
+        or fields["domain_id"] != expected["domain_id"]
+        or fields["product_id"] != expected["product_id"]
+    ):
+        raise ValueError("scoped Evidence replay metadata does not match its columns")
+
+
 def replay_failed_evidence(limit: int = 50) -> dict:
 
     """重放最近失败的 evidence 写入（从 runtime_guardian_dlq 读取并重试）。
@@ -498,6 +533,7 @@ def replay_failed_evidence(limit: int = 50) -> dict:
             )
             continue
 
+        retry_conn = None
         try:
 
             # 重试写入
@@ -505,6 +541,8 @@ def replay_failed_evidence(limit: int = 50) -> dict:
             retry_conn = get_repository().connect(timeout=10)
 
             existing_cols = _get_table_columns(retry_conn)
+
+            _validate_replay_scope(fields, existing_cols)
 
             if existing_cols:
 
@@ -529,8 +567,6 @@ def replay_failed_evidence(limit: int = 50) -> dict:
 
             retry_conn.commit()
 
-            retry_conn.close()
-
             succeeded += 1
 
             # 标记 DLQ 为 RESOLVED
@@ -546,6 +582,10 @@ def replay_failed_evidence(limit: int = 50) -> dict:
             new_status = "DEAD_LETTER" if max_attempts and attempts >= max_attempts else "PENDING"
 
             _update_dlq_status(row["id"], new_status, attempts, now, error=str(e)[:300])
+
+        finally:
+            if retry_conn is not None:
+                retry_conn.close()
 
 
 
@@ -657,6 +697,76 @@ def get_evidence_write_failure_count(hours: int = 24) -> int:
 
 
 
+_EVIDENCE_SCOPE_KEY = "_lumenis_scope"
+
+
+def _normalize_record_evidence_scope(
+    *,
+    product: str,
+    domain_id: Optional[str] = None,
+    subject_id: Optional[str] = None,
+    brand_focus_id: Optional[str] = None,
+    global_scope: bool = False,
+) -> Optional[dict]:
+    """Validate an explicit CTH Subject or BMP BrandFocus/global write scope."""
+    if (
+        domain_id is None
+        and subject_id is None
+        and brand_focus_id is None
+        and global_scope is False
+    ):
+        return None
+    if not isinstance(domain_id, str) or not domain_id.strip():
+        raise ValueError("explicit Evidence scope requires a CTH or BMP domain")
+
+    domain = domain_id.strip().lower()
+    if domain == "bmp":
+        domain = "zbmp"
+    products = {
+        "cth": ("cth", "CTH", {"CTH"}),
+        "zbmp": ("zbmp", "ZBMP", {"BMP", "ZBMP"}),
+    }
+    product_scope = products.get(domain)
+    if product_scope is None:
+        raise ValueError("explicit Evidence scope requires a CTH or BMP domain")
+    if type(global_scope) is not bool:
+        raise ValueError("global_scope must be a boolean")
+    if not isinstance(product, str) or product.strip().upper() not in product_scope[2]:
+        raise ValueError("Evidence product does not match its scope domain")
+
+    def validate_focus(value: Optional[str], name: str) -> Optional[str]:
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            raise ValueError(f"{name} must be a non-empty string")
+        normalized = value.strip()
+        if not normalized or normalized != value or len(normalized) > 256:
+            raise ValueError(f"{name} must be a trimmed string of at most 256 characters")
+        return normalized
+
+    subject = validate_focus(subject_id, "subject_id")
+    brand_focus = validate_focus(brand_focus_id, "brand_focus_id")
+    selected = int(subject is not None) + int(brand_focus is not None) + int(global_scope)
+    if selected != 1:
+        raise ValueError("Evidence scope requires exactly one Subject, BrandFocus, or global scope")
+    if (domain == "cth" and brand_focus is not None) or (
+        domain == "zbmp" and subject is not None
+    ):
+        raise ValueError("Evidence focus does not match its scope domain")
+
+    stored_domain, product_id, _ = product_scope
+    scope = {
+        "domain_id": stored_domain,
+        "product_id": product_id,
+        "global": global_scope,
+    }
+    if subject is not None:
+        scope["subject_id"] = subject
+    if brand_focus is not None:
+        scope["brand_focus_id"] = brand_focus
+    return scope
+
+
 def record_evidence(
 
     *,
@@ -741,6 +851,14 @@ def record_evidence(
 
     publish_datetime: str = "",
 
+    domain_id: Optional[str] = None,
+
+    subject_id: Optional[str] = None,
+
+    brand_focus_id: Optional[str] = None,
+
+    global_scope: bool = False,
+
 ) -> int:
 
     """写入一条通用 Evidence 记录。
@@ -752,6 +870,29 @@ def record_evidence(
       新记录的 id
 
     """
+
+    scope = _normalize_record_evidence_scope(
+        product=product,
+        domain_id=domain_id,
+        subject_id=subject_id,
+        brand_focus_id=brand_focus_id,
+        global_scope=global_scope,
+    )
+    if isinstance(inputs, dict) and _EVIDENCE_SCOPE_KEY in inputs:
+        raise ValueError("inputs cannot assign reserved Evidence scope metadata")
+    if scope is not None:
+        if inputs is None:
+            inputs = {}
+        elif not isinstance(inputs, dict) or not all(
+            isinstance(key, str) for key in inputs
+        ):
+            raise ValueError("scoped Evidence inputs must be an object with string keys")
+        inputs = dict(inputs)
+        try:
+            json.dumps(inputs, ensure_ascii=False, allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("scoped Evidence inputs must be valid JSON") from exc
+        inputs[_EVIDENCE_SCOPE_KEY] = scope
 
     now = _now()
 
@@ -849,6 +990,10 @@ def record_evidence(
 
         "publish_datetime": publish_datetime or None,
 
+        "domain_id": scope["domain_id"] if scope else None,
+
+        "product_id": scope["product_id"] if scope else None,
+
     }
 
     # 过滤掉 None 值（空字符串保留，因为是有意义的默认值）
@@ -864,6 +1009,11 @@ def record_evidence(
         # 向后兼容：只插入表中实际存在的列（新字段未迁移时自动跳过，不报错）
 
         existing_cols = _get_table_columns(conn)
+
+        if scope is not None and not {
+            "domain_id", "product_id", "inputs_json"
+        }.issubset(existing_cols):
+            raise ValueError("Evidence storage cannot prove the requested write scope")
 
         if existing_cols:
 
