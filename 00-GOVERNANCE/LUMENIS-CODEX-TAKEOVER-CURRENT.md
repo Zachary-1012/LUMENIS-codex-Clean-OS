@@ -841,3 +841,9 @@ The second check prevents regression of the CURRENT takeover path, v1.1 protocol
 ## Historical remote cutover checkpoint
 
 Commit `3ba304f5d752dabcdc40531ce176f189527c29af` is the historical checkpoint at which the former App-only surface cutover was recorded. It remains provenance, not current architecture, implementation evidence, remote HEAD or branch inventory. Before any takeover, release or cleanup claim, fetch `origin` and verify local `main`, remote-tracking `origin/main`, and live `git ls-remote --heads origin`; only a live result containing `refs/heads/main` is current evidence. See the branch-cleanup gate in `AGENTS.md` §2 and `README.md` §7.
+
+### 2026-09-27 Actions quota and heavy-Gate trigger policy
+
+The Product Owner confirmed GitHub Free Actions included usage at 2,000/2,000 minutes, with no hosted minutes available until the billing-cycle reset. The current Product/App Gate push runs completed in 2–3 seconds with zero job steps; `HOSTED_CI = EXECUTION_LAYER_UNAVAILABLE / QUOTA_EXHAUSTED`, not a product-test failure or pass. Do not rerun these zero-step jobs before reset.
+
+This source/evidence/status delivery removes ordinary `main` push events from `.github/workflows/platform-verify.yml` and `.github/workflows/app-verify.yml`. Both retain PR and `workflow_dispatch` entry; all jobs, test assertions, blocking behavior and Tier C honesty remain unchanged. Daily development uses the existing full local blocking Gate. Full hosted Product/App checks are reserved for explicit PR or Release / Internal Beta / RC milestones on the same candidate SHA after quota returns. ROUND 15, product E2E, `RELEASED`, and `OPERATING` are not accepted by this trigger policy. The protected local CI candidates remain unaccepted and must retain this trigger policy when reconciled.

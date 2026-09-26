@@ -285,7 +285,7 @@ Tier C  Production / Live / Environment required acceptance evidence
 
 详见 [`tests/CI_TEST_TIERS.md`](tests/CI_TEST_TIERS.md)。
 
-当前自动 CI 保留两类正式 Gate：`LUMENIS Product Gate`（唯一的跨产品契约 / Only-One / multi-surface / Python hermetic 产品 Gate）与按 Flutter App 变更触发的 `LUMENIS App Gate`（Flutter analyze/test）。重复的独立 LUMENIS-GGI workflow 已退休。Product Gate 会先执行不依赖外网的治理、多终端架构、源码编译与 test-tier manifest 检查，再进入 dependency install / hermetic pytest；App Gate 也先执行唯一 Experience authority 与 anti-template 审计，再获取 Flutter SDK/依赖。Public Website 基础已进入 `main`；其完整商业入口和专用 Gate 仍未验收，不能因基础文件存在就视为已验证。Production/Live 环境套件不会因为被 clean CI 排除而自动视为 PASS。Runner 0-step、DNS、package registry 等执行层故障必须记为 `EXECUTION-LAYER UNVERIFIED`，不得冒充产品 PASS/FAIL。
+当前两类正式 Gate 是 `LUMENIS Product Gate`（唯一的跨产品契约 / Only-One / multi-surface / Python hermetic 产品 Gate）与 `LUMENIS App Gate`（Flutter analyze/test）。普通 `main` push 在本地完整 blocking Gate 通过后可发布，不自动启动这两个云端重型 Gate；必要 PR 验证和明确里程碑的 `workflow_dispatch` 保留，Release / Internal Beta / RC 验收在同一 SHA 上手动运行完整云端 Gate。重复的独立 LUMENIS-GGI workflow 已退休。Product Gate 会先执行不依赖外网的治理、多终端架构、源码编译与 test-tier manifest 检查，再进入 dependency install / hermetic pytest；App Gate 也先执行唯一 Experience authority 与 anti-template 审计，再获取 Flutter SDK/依赖。Public Website 基础已进入 `main`；其完整商业入口和专用 Gate 仍未验收，不能因基础文件存在就视为已验证。Production/Live 环境套件不会因为被 clean CI 排除而自动视为 PASS。Runner 0-step、DNS、package registry 等执行层故障必须记为 `EXECUTION-LAYER UNVERIFIED`，不得冒充产品 PASS/FAIL。
 
 重要用户功能应证明：
 

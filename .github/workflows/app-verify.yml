@@ -1,20 +1,6 @@
 name: LUMENIS App Gate
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "app/**"
-      - "contracts/experience/**"
-      - "AGENTS.md"
-      - "README.md"
-      - "00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md"
-      - "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
-      - "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
-      - "00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md"
-      - "scripts/audit_tools/verify_ai_native_constitution.py"
-      - "scripts/audit_tools/verify_experience_*.py"
-      - ".github/workflows/app-verify.yml"
   pull_request:
     branches: [main]
     paths:
