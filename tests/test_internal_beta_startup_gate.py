@@ -154,3 +154,113 @@ def test_acceptance_profile_suppresses_all_app_automations(monkeypatch):
 
 
 _original_import = builtins.__import__
+
+
+def test_automatic_collection_startup_is_manual_without_full_opt_in(monkeypatch):
+    for name in (
+        'REDNOTE_AUTO_RUN', 'REDNOTE_AUTO_SCOPE', 'REDNOTE_AUTO_SOURCE',
+        'REDNOTE_AUTO_CADENCE_MINUTES',
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    assert app._automatic_collection_opted_in() is False
+
+    monkeypatch.setenv('REDNOTE_AUTO_RUN', 'true')
+    assert app._automatic_collection_opted_in() is False
+
+    monkeypatch.setenv('REDNOTE_AUTO_SCOPE', 'GUANGZHOU_TAIKOO_HUI')
+    monkeypatch.setenv('REDNOTE_AUTO_SOURCE', 'rednote_hk')
+    monkeypatch.setenv('REDNOTE_AUTO_CADENCE_MINUTES', '720')
+    assert app._automatic_collection_opted_in() is True
+
+
+def test_bridge_rejects_scheduled_collection_before_identity_checks(monkeypatch):
+    for name in (
+        'REDNOTE_AUTO_RUN', 'REDNOTE_AUTO_SCOPE', 'REDNOTE_AUTO_SOURCE',
+        'REDNOTE_AUTO_CADENCE_MINUTES',
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    identity_checks = []
+    monkeypatch.setattr(
+        app.xhs_cookie_bridge, 'collection_policy_gate',
+        lambda **_kwargs: identity_checks.append('policy'),
+    )
+
+    with pytest.raises(RuntimeError, match='Automatic collection is blocked'):
+        app.xhs_cookie_bridge.create_task(run_type='auto')
+
+    assert identity_checks == []
+
+
+def test_manual_mode_suppresses_rednote_resident_until_explicit_auto_opt_in(monkeypatch):
+    events = []
+    monkeypatch.setattr(app, 'INTERNAL_BETA_SAFE_STARTUP', False)
+    monkeypatch.setattr(
+        app.threading, 'Thread',
+        lambda **_kwargs: SimpleNamespace(start=lambda: events.append('scheduler')),
+    )
+    monkeypatch.setattr(app.xhs_p0_orchestrator, 'start_resident', lambda: events.append('resident'))
+    monkeypatch.setattr(
+        app.memory_optimizer, 'get_memory_optimizer',
+        lambda: SimpleNamespace(start_monitoring=lambda: None),
+    )
+    monkeypatch.setattr(
+        app.stability_monitor, 'get_stability_monitor',
+        lambda: SimpleNamespace(start_monitoring=lambda: None),
+    )
+    from lumenis.system.ai_gateway import channel
+    monkeypatch.setattr(channel, 'start_health_monitor', lambda *_args, **_kwargs: None)
+    for name in (
+        'REDNOTE_AUTO_RUN', 'REDNOTE_AUTO_SCOPE', 'REDNOTE_AUTO_SOURCE',
+        'REDNOTE_AUTO_CADENCE_MINUTES',
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    args = SimpleNamespace(
+        no_scheduler=False, internal_beta_acceptance=False,
+        internal_beta_workspace_context_acceptance=False,
+    )
+    assert app._start_app_automations(args) is True
+    assert events == ['scheduler']
+
+    monkeypatch.setenv('REDNOTE_AUTO_RUN', 'true')
+    monkeypatch.setenv('REDNOTE_AUTO_SCOPE', 'GUANGZHOU_TAIKOO_HUI')
+    monkeypatch.setenv('REDNOTE_AUTO_SOURCE', 'rednote_hk')
+    monkeypatch.setenv('REDNOTE_AUTO_CADENCE_MINUTES', '720')
+    assert app._start_app_automations(args) is True
+    assert events == ['scheduler', 'scheduler', 'resident']
+
+    args.no_scheduler = True
+    assert app._start_app_automations(args) is True
+    assert events == ['scheduler', 'scheduler', 'resident']
+
+
+def test_manual_scheduler_does_not_probe_rednote_session(monkeypatch):
+    from datetime import datetime as real_datetime
+    for name in (
+        'REDNOTE_AUTO_RUN', 'REDNOTE_AUTO_SCOPE', 'REDNOTE_AUTO_SOURCE',
+        'REDNOTE_AUTO_CADENCE_MINUTES',
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError('manual mode must not probe session or collection scheduler')
+
+    class FixedDatetime:
+        @staticmethod
+        def now():
+            return real_datetime(2026, 9, 27, 10, 10)
+
+    monkeypatch.setattr(app, 'datetime', FixedDatetime)
+    monkeypatch.setattr(app, '_get_shadow_planner', forbidden)
+    monkeypatch.setattr(app.xhs_cookie_bridge, 'check_rate_limit', forbidden)
+    monkeypatch.setitem(sys.modules, 'xhs_collection_optimizer',
+                        SimpleNamespace(recheck_keepalive=forbidden))
+
+    def stop_after_first_tick(_seconds):
+        raise StopIteration
+
+    monkeypatch.setattr(app.time, 'sleep', stop_after_first_tick)
+    with pytest.raises(StopIteration):
+        app.scheduler_loop()

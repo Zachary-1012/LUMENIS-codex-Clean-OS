@@ -34,6 +34,13 @@ DEFAULT_COLLECTION_ACCOUNT = "XHS_RETINAUT"
 POLICY_VERSION = "rednote-hk-only-v1"
 CN_PAUSED = True
 
+# Automatic collection is only supported for the existing narrow scheduler
+# contract. These values must be explicitly configured together with
+# REDNOTE_AUTO_RUN; missing, broad, or mismatched configuration stays manual.
+AUTO_COLLECTION_SCOPE = "GUANGZHOU_TAIKOO_HUI"
+AUTO_COLLECTION_SOURCE = "rednote_hk"
+AUTO_COLLECTION_CADENCE_MINUTES = 720
+
 # 真人节奏保守占位（秒）。NOT_VERIFIED：待最新一轮真人频率实测后用实测值覆盖；
 # 这里宁慢勿快，避免把未实测数值当作结论。
 HUMAN_CADENCE_PLACEHOLDER = {
@@ -57,6 +64,20 @@ def _env_bool(name: str, default: bool) -> bool:
     if v is None or v == "":
         return default
     return v.strip().lower() in ("1", "true", "yes", "on")
+
+
+def automatic_collection_opt_in_enabled() -> bool:
+    """Return true only for the explicit scope/source/cadence this scheduler runs."""
+    if not _env_bool("REDNOTE_AUTO_RUN", False):
+        return False
+    scope = (os.environ.get("REDNOTE_AUTO_SCOPE") or "").strip().upper()
+    source = (os.environ.get("REDNOTE_AUTO_SOURCE") or "").strip().lower()
+    cadence = (os.environ.get("REDNOTE_AUTO_CADENCE_MINUTES") or "").strip()
+    return (
+        scope == AUTO_COLLECTION_SCOPE
+        and source == AUTO_COLLECTION_SOURCE
+        and cadence == str(AUTO_COLLECTION_CADENCE_MINUTES)
+    )
 
 
 @dataclass(frozen=True)
@@ -116,7 +137,7 @@ def effective_policy() -> RedNotePolicy:
     return RedNotePolicy(
         primary_region=(os.environ.get("REDNOTE_PRIMARY_REGION") or DEFAULT_PRIMARY_REGION).strip().lower(),
         cn_paused=cn_paused,
-        auto_run_enabled=_env_bool("REDNOTE_AUTO_RUN", False),
+        auto_run_enabled=automatic_collection_opt_in_enabled(),
         daily_login_keepalive=_env_bool("REDNOTE_DAILY_LOGIN_KEEPALIVE", False),
         kind_enabled=kind,
         human_cadence=dict(HUMAN_CADENCE_PLACEHOLDER),

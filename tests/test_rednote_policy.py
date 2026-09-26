@@ -9,7 +9,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def test_default_policy_matches_signed_off_strategy(monkeypatch):
-    for k in ("REDNOTE_AUTO_RUN", "REDNOTE_DAILY_LOGIN_KEEPALIVE",
+    for k in ("REDNOTE_AUTO_RUN", "REDNOTE_AUTO_SCOPE", "REDNOTE_AUTO_SOURCE",
+              "REDNOTE_AUTO_CADENCE_MINUTES", "REDNOTE_DAILY_LOGIN_KEEPALIVE",
               "REDNOTE_KIND_TOPIC", "REDNOTE_KIND_PUBLIC_OPINION",
               "REDNOTE_KIND_EVENT", "REDNOTE_PRIMARY_REGION", "REDNOTE_CN_PAUSED"):
         monkeypatch.delenv(k, raising=False)
@@ -33,11 +34,42 @@ def test_unknown_kind_denied_by_default(monkeypatch):
 
 def test_env_overrides_are_explicit(monkeypatch):
     monkeypatch.setenv("REDNOTE_AUTO_RUN", "true")
+    monkeypatch.setenv("REDNOTE_AUTO_SCOPE", "GUANGZHOU_TAIKOO_HUI")
+    monkeypatch.setenv("REDNOTE_AUTO_SOURCE", "rednote_hk")
+    monkeypatch.setenv("REDNOTE_AUTO_CADENCE_MINUTES", "720")
     monkeypatch.setenv("REDNOTE_DAILY_LOGIN_KEEPALIVE", "true")
     monkeypatch.setenv("REDNOTE_KIND_EVENT", "true")
     from lumenis.system.collector.adapters.rednote_policy import effective_policy
     p = effective_policy()
     assert p.auto_run_enabled and p.daily_login_keepalive and p.can_run_kind("event")
+
+
+def test_auto_run_flag_without_explicit_scope_source_and_cadence_stays_manual(monkeypatch):
+    from lumenis.system.collector.adapters.rednote_policy import effective_policy
+
+    monkeypatch.setenv("REDNOTE_AUTO_RUN", "true")
+    monkeypatch.delenv("REDNOTE_AUTO_SCOPE", raising=False)
+    monkeypatch.delenv("REDNOTE_AUTO_SOURCE", raising=False)
+    monkeypatch.delenv("REDNOTE_AUTO_CADENCE_MINUTES", raising=False)
+    assert effective_policy().auto_run_enabled is False
+
+
+def test_auto_opt_in_rejects_scope_source_or_cadence_outside_current_scheduler(monkeypatch):
+    from lumenis.system.collector.adapters.rednote_policy import effective_policy
+
+    monkeypatch.setenv("REDNOTE_AUTO_RUN", "true")
+    monkeypatch.setenv("REDNOTE_AUTO_SCOPE", "GLOBAL/ALL")
+    monkeypatch.setenv("REDNOTE_AUTO_SOURCE", "rednote_hk")
+    monkeypatch.setenv("REDNOTE_AUTO_CADENCE_MINUTES", "720")
+    assert effective_policy().auto_run_enabled is False
+
+    monkeypatch.setenv("REDNOTE_AUTO_SCOPE", "GUANGZHOU_TAIKOO_HUI")
+    monkeypatch.setenv("REDNOTE_AUTO_SOURCE", "xhs_cn")
+    assert effective_policy().auto_run_enabled is False
+
+    monkeypatch.setenv("REDNOTE_AUTO_SOURCE", "rednote_hk")
+    monkeypatch.setenv("REDNOTE_AUTO_CADENCE_MINUTES", "90")
+    assert effective_policy().auto_run_enabled is False
 
 
 def test_mainland_pause_cannot_be_unlocked_by_runtime_env(monkeypatch):

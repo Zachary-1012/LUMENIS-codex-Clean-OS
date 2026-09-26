@@ -4654,6 +4654,15 @@ def _get_shadow_planner():
     return _shadow_schedule_planner or None
 
 
+def _automatic_collection_opted_in():
+    """Use the SYSTEM collection policy as the only automatic-mode authority."""
+    try:
+        from lumenis.system.collector.adapters.rednote_policy import automatic_collection_opt_in_enabled
+        return automatic_collection_opt_in_enabled()
+    except Exception:
+        return False
+
+
 def scheduler_loop():
     """自动采集调度器：固定时间点作为唤醒检查点，叠加账号频率保护；
     v5.8.6 起由统一动态决策器做影子对照(动态间隔/状态驱动/next_run_at)，门控后续灰度。"""
@@ -4689,7 +4698,7 @@ def scheduler_loop():
             # ===== 香港/国际 RedNote 登录保活定时检查（掉线自动再弹核心） =====
             # 内地采集已暂停，本调度循环不得探测或触发 xhs_cn 采集上下文。
             _kbucket = (now.hour * 60 + now.minute) // 30
-            if _kbucket != _last_keepalive_min:
+            if _automatic_collection_opted_in() and _kbucket != _last_keepalive_min:
                 _last_keepalive_min = _kbucket
                 try:
                     import xhs_collection_optimizer as _xco
@@ -4705,19 +4714,20 @@ def scheduler_loop():
             # 自适应调度（GAP-05 门控，2026-09-02 用户签字）：不再用固定时间点，
             # 由 ShadowPlanner 根据状态（上次采集/成功率/熔断/频率）决定此刻是否采集；
             # gate 只收紧不放松，异常 fail-open 回退允许，绝不因新组件卡死既有调度。
-            _should_run = True
-            _gate_mode = 'no-planner'
+            _auto_opted_in = _automatic_collection_opted_in()
+            _should_run = _auto_opted_in
+            _gate_mode = 'no-planner' if _auto_opted_in else 'manual-only'
             _sd = None
-            _sp = _get_shadow_planner()
-            if _sp is not None:
+            _sp = _get_shadow_planner() if _auto_opted_in else None
+            if _auto_opted_in and _sp is not None:
                 try:
                     from lumenis.system.collector.adapters.scheduling.gate import gate_should_run
                     _should_run, _sd, _gate_mode = gate_should_run(
-                        _sp, 'xhs', now=now, hard_allow=True, persist=True)
+                        _sp, 'xhs', now=now, hard_allow=_auto_opted_in, persist=True)
                     if _sd is not None:
                         print(f'[Scheduler] gate={_gate_mode} should_run={_should_run} code={_sd.reason_code} next={_sd.next_run_at}')
                 except Exception as _e:
-                    _should_run, _gate_mode = True, 'fallback'
+                    _should_run, _gate_mode = _auto_opted_in, 'fallback'
                     print(f'[Scheduler] gate eval fail-open: {_e}')
 
             # 序境采集安全窗口（2026-09-04 最高基线）：仅 00:00 / 12:00 允许自动采集，且每窗口当日只一次
@@ -4818,14 +4828,16 @@ def _start_app_automations(args):
     if not args.no_scheduler:
         # v5.8.6 恢复主采集调度器：固定时钟唤醒 + 动态决策影子对照（周报线程另行评估后启用）
         threading.Thread(target=scheduler_loop, daemon=True, name='scheduler').start()
-    # 双子星库 Contract: 小红书 P0 长期驻场心跳（Session 失效→扫码恢复→白名单采集）
-    try:
-        xhs_p0_orchestrator.start_resident()
-        print('[XHS-P0] 小红书 P0 驻场心跳已启动')
-    except Exception as _pe:
-        # threading.Thread(target=_weekly_scheduler,daemon=True,name='weekly_scheduler').start()
-        print(f'[XHS-P0] 驻场心跳启动失败: {_pe}')
-        print('[Scheduler] 主采集调度器已启用（唤醒点+动态影子对照）')
+    # The RedNote resident probes a session and can request scan recovery.
+    # Manual mode must not start it before an explicit automatic opt-in.
+    if not args.no_scheduler and _automatic_collection_opted_in():
+        try:
+            xhs_p0_orchestrator.start_resident()
+            print('[XHS-P0] 小红书 P0 驻场心跳已启动')
+        except Exception as _pe:
+            print(f'[XHS-P0] 驻场心跳启动失败: {_pe}')
+    else:
+        print('[XHS-P0] 人工采集模式：驻场会话探测未启动')
 
     # 启动内存监控（防止OOM崩溃）——崩溃根因(重复endpoint)已修复，重新启用
     try:
@@ -4878,7 +4890,11 @@ if __name__=='__main__':
         parser.error('Workspace/context acceptance requires validated loopback host and non-reserved port')
     _start_app_automations(args)
     auth_state='开启' if _auth_enabled() else '关闭（仅建议本机访问）'
-    auto_collection = not args.no_scheduler and not INTERNAL_BETA_SAFE_STARTUP
+    auto_collection = (
+        not args.no_scheduler
+        and not INTERNAL_BETA_SAFE_STARTUP
+        and _automatic_collection_opted_in()
+    )
     print(f'广州太古汇舆情监测系统 v{APP_VERSION} | {args.host}:{args.port} | 自动采集：{auto_collection} | HTTP认证：{auth_state}')
 
 # ===== SYSTEM AI Gateway health =====

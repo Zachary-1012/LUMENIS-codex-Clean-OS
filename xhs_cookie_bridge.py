@@ -987,6 +987,20 @@ def create_task(keywords=None,max_scroll=6,run_type='manual',account=None):
     """创建采集任务
     run_type: 'manual'（一键实时更新）或 'auto'（定时自动采集）
     """
+    if run_type not in ('manual', 'auto'):
+        raise ValueError("run_type must be 'manual' or 'auto'")
+    if run_type == 'auto':
+        try:
+            from lumenis.system.collector.adapters import rednote_policy
+            auto_opted_in = rednote_policy.automatic_collection_opt_in_enabled()
+        except Exception as exc:
+            raise RuntimeError('Automatic collection is blocked because SYSTEM policy is unavailable') from exc
+        if not auto_opted_in:
+            raise RuntimeError(
+                'Automatic collection is blocked until REDNOTE_AUTO_RUN, '
+                'REDNOTE_AUTO_SCOPE, REDNOTE_AUTO_SOURCE, and '
+                'REDNOTE_AUTO_CADENCE_MINUTES explicitly match the authorized schedule'
+            )
     resolved_account = account or DEFAULT_COLLECTION_ACCOUNT
     policy_gate = collection_policy_gate(account=resolved_account, region='intl')
     if not policy_gate.get('ok'):
