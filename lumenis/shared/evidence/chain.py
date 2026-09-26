@@ -361,15 +361,46 @@ def _get_conn(db_path: Optional[str] = None) -> sqlite3.Connection:
     return conn
 
 
-def init_db(db_path: Optional[str] = None) -> None:
-    """初始化证据链表（独立表，不碰现有生产表）。Track3：自动迁移补列。"""
-    conn = _get_conn(db_path)
+def _execute_schema_statements(conn: sqlite3.Connection, schema: str) -> None:
+    """Execute schema statements individually without an implicit script commit."""
+    statement = ""
+    for character in schema:
+        statement += character
+        if character == ";" and sqlite3.complete_statement(statement):
+            conn.execute(statement)
+            statement = ""
+    if statement.strip():
+        raise sqlite3.OperationalError("incomplete SQL statement in evidence-chain schema")
+
+
+def init_db(
+    db_path: Optional[str] = None,
+    *,
+    connection: Optional[sqlite3.Connection] = None,
+) -> None:
+    """初始化证据链表（独立表，不碰现有生产表）。Track3：自动迁移补列。
+
+    A supplied connection stays owned by its caller: this function does not
+    commit or close it, and executes schema statements individually so an
+    existing caller transaction remains intact.
+    """
+    if connection is not None and db_path is not None:
+        raise ValueError("db_path must be omitted when supplying a connection")
+
+    owns_connection = connection is None
+    conn = _get_conn(db_path) if owns_connection else connection
+    assert conn is not None
     try:
-        conn.executescript(SCHEMA)
-        _migrate_evidence_chain(conn)
-        conn.commit()
+        if owns_connection:
+            conn.executescript(SCHEMA)
+        else:
+            _execute_schema_statements(conn, SCHEMA)
+        _migrate_evidence_chain(conn, propagate_errors=not owns_connection)
+        if owns_connection:
+            conn.commit()
     finally:
-        conn.close()
+        if owns_connection:
+            conn.close()
 
 
 # Track3：旧表迁移——为已存在的表补齐缺失列（幂等）
@@ -391,19 +422,23 @@ _LIFECYCLE_NEW_COLS = [
 ]
 
 
-def _migrate_evidence_chain(conn):
+def _migrate_evidence_chain(conn, *, propagate_errors=False):
     """对已存在的表执行 ALTER TABLE 补列（忽略已存在的列）。"""
     for table, cols in (("zbc_evidence", _EVIDENCE_NEW_COLS),
                          ("zbc_lifecycle_tracking", _LIFECYCLE_NEW_COLS)):
         try:
             existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
         except Exception:
+            if propagate_errors:
+                raise
             continue
         for col, col_def in cols:
             if col not in existing:
                 try:
                     conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_def}")
                 except Exception:
+                    if propagate_errors:
+                        raise
                     pass
 
 

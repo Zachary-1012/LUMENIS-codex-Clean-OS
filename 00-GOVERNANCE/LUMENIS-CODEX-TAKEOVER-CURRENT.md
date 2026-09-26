@@ -12,6 +12,16 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 03 Evidence Chain connection boundary — 2026-09-26
+
+[The bounded Evidence connection evidence](evidence/round-03/ROUND-03-EVIDENCE-CHAIN-INJECTED-CONNECTION-2026-09-26.md)
+records a caller-owned `connection=` path that avoids `executescript`'s
+implicit commit and propagates legacy schema errors for rollback. Exact staged
+source plus neighboring Evidence, migration and Canonical tests passed 58/58.
+The versioned migrator has not yet been rewired, and real Source/Evidence →
+Canonical → user result E2E remains open. `ROUND 03 B001=REWORK`;
+`COMMERCIAL_READY=NO`.
+
 ### Round 03 Canonical Data connection boundary — 2026-09-26
 
 [The bounded Canonical connection evidence](evidence/round-03/ROUND-03-CANONICAL-INJECTED-CONNECTION-2026-09-26.md)
