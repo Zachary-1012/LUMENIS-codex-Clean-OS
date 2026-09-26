@@ -12,6 +12,19 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 07 / 13 Content Pattern candidate storage — 2026-09-26
+
+[The bounded Content Pattern evidence](evidence/round-07/ROUND-07-CONTENT-PATTERN-CANDIDATE-2026-09-26.md)
+records an opt-in adapter over Shared Learning's existing `patterns` collection.
+It persists and reopens scoped, source-referenced `EXPERIMENT` candidates, rejects
+forged `ADOPT`/`REVISE`, and refuses promotion while canonical Evaluation and
+Permission review remain unconnected. Sol replayed only the Learning source and
+focused test on the fetched main snapshot; the selected Learning regressions,
+compile check and constitution gate passed. The separate video/Evaluation and
+mixed-test candidates remain local and unaccepted. No real Brief, user-visible
+result, approved video Artifact or user-work E2E exists from this Batch.
+`ROUND 07=REWORK`; `ROUND 13=REWORK`; `COMMERCIAL_READY=NO`.
+
 ### Round 04 exact-scope Evidence writer — 2026-09-26
 
 [The bounded Evidence writer evidence](evidence/round-04/ROUND-04-EVIDENCE-SCOPE-WRITER-2026-09-26.md)
