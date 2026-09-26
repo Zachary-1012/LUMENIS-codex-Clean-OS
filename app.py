@@ -1622,7 +1622,7 @@ def persist_rednote_data(data, subject_hit_fn=None):
                 'author_nickname': n.get('detail_author') or n.get('author',''),
                 'author_avatar': n.get('author_avatar',''),
                 'likes': int(n.get('likes',0) or 0),
-                'comments': int(n.get('comments',0) or 0),
+                'comments': n.get('comments'),
                 'collects': int(n.get('collects',0) or 0),
                 'shares': int(n.get('shares',0) or 0),
                 'xsec_token': n.get('xsec_token',''),
@@ -1636,7 +1636,7 @@ def persist_rednote_data(data, subject_hit_fn=None):
                 'collector_version': n.get('collector_version','rednote-v1.0'),
                 'captured_at': n.get('captured_at') or datetime.now().isoformat(),
                 'detail_fetched_at': n.get('detail_fetched_at') or datetime.now().isoformat(),
-                'comments_collected': int(n.get('comment_count',0) or 0),
+                'comments_collected': n.get('comment_count'),
             }
             db.insert_note(note_data)
             persisted += 1
@@ -1652,7 +1652,7 @@ def persist_rednote_data(data, subject_hit_fn=None):
                 'status': n.get('quality_status','unknown'),
                 'score': float(n.get('quality_score',0) or 0),
                 'detail_status': 'success' if n.get('detail_fetched') else 'failed',
-                'comments_collected': int(n.get('comment_count',0) or 0),
+                'comments_collected': n.get('comment_count'),
                 'collector_version': n.get('collector_version','rednote-v1.0'),
             })
         except Exception as e:

@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 03 RedNote comment truth — 2026-09-26
+
+[The bounded collector and persistence evidence](evidence/round-03/ROUND-03-REDNOTE-COMMENT-TRUTH-2026-09-26.md)
+records the revised source/caller path that keeps failed or ambiguous post comment
+counts unknown, while retaining a measured loaded-comment count including zero.
+Sol rejected the first unscoped `.count` inference, replayed the revised patch
+on fetched main, and passed 4 Node producer tests, 4 Python disposable-DB
+and neighbor tests, syntax/compile, and the constitution gate. No approved
+identity collection, Evidence-to-ViewModel result or real user-work E2E ran.
+`ROUND 03=REWORK`; `COMMERCIAL_READY=NO`.
+
 ### Round 05 health-only isolated startup probe — 2026-09-26
 
 [The bounded startup evidence](evidence/round-05/ROUND-05-HEALTH-ONLY-SAFE-PROBE-2026-09-26.md)

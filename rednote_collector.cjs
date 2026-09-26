@@ -67,6 +67,20 @@ function normalizePublishTime(raw) {
 
 // ========== 主采集逻辑 ==========
 
+function detailCommentFields(detailFetched, detail) {
+  // The broad `.count` selector has no semantic label and can include comment likes.
+  // Keep the post-wide comments metric unknown until a dedicated source is available.
+  const knownCount = value => Number.isInteger(value) && value >= 0 ? value : null;
+  const observedCommentCount = detailFetched === true
+    ? knownCount(detail && detail.comment_count)
+    : null;
+  return {
+    comments: null,
+    comment_count: observedCommentCount,
+    comments_collected: observedCommentCount
+  };
+}
+
 async function collect(options) {
   const { keyword, output, maxDetails, maxScroll } = options;
   const collectionHost = (process.env.XHS_COLLECTION_HOST || 'www.rednote.com').trim().toLowerCase();
@@ -263,7 +277,7 @@ async function collect(options) {
       const counts = detail.all_counts.filter(c => /^\d+$/.test(c)).map(Number);
       const likes = counts.length >= 3 ? counts[counts.length - 3] : (counts[counts.length - 1] || note.likes);
       const collects = counts.length >= 2 ? counts[counts.length - 2] : 0;
-      const comments = counts.length >= 1 ? counts[counts.length - 1] : 0;
+      const commentFields = detailCommentFields(true, detail);
 
       // 数据质量评分
       let qualityScore = 0;
@@ -289,8 +303,7 @@ async function collect(options) {
         detail_publish_time: normalizePublishTime(detail.publish_time_raw),
         likes,
         collects,
-        comments,
-        comment_count: detail.comment_count,
+        ...commentFields,
         comment_list: detail.comment_list,
         quality_score: qualityScore,
         quality_status: qualityStatus,
@@ -314,7 +327,7 @@ async function collect(options) {
       allResults.push(record);
 
       console.log(`  正文: ${(detail.desc || '').slice(0, 50)}...`);
-      console.log(`  互动: 赞=${likes} 藏=${collects} 评=${comments}`);
+      console.log(`  互动: 赞=${likes} 藏=${collects} 评=${commentFields.comments}`);
       console.log(`  评论数: ${detail.comment_count}`);
       console.log(`  质量: ${qualityStatus} (${qualityScore}分) | 主体命中: ${subjectHit}`);
 
@@ -323,15 +336,14 @@ async function collect(options) {
       allResults.push({
         ...note,
         detail_fetched: false,
+        ...detailCommentFields(false),
         error: e.message,
         detail_status: 'failed',
         data_quality: { status: 'poor', score: 20 },
         data_quality_status: 'poor',
         data_quality_score: 20,
         comments_data: [],
-        comments_collected: 0,
         comment_list: [],
-        comment_count: 0,
         quality_status: 'poor',
         quality_score: 20,
         subject_hit: false,
@@ -398,4 +410,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { collect, parseCount, normalizePublishTime };
+module.exports = { collect, parseCount, normalizePublishTime, detailCommentFields };
