@@ -83,9 +83,14 @@ class LocalAIClient:
 
             if response.status_code == 200:
                 data = response.json()
+                if data.get('done') is False:
+                    return {'ok': False, 'error': '本地模型尚未完成响应'}
+                content = data.get('response')
+                if not isinstance(content, str) or not content.strip():
+                    return {'ok': False, 'error': '本地模型返回空内容'}
                 return {
                     'ok': True,
-                    'response': data.get('response', ''),
+                    'response': content,
                     'model': model,
                     'total_duration': data.get('total_duration', 0) / 1e9,
                     'eval_count': data.get('eval_count', 0)
@@ -124,9 +129,15 @@ class LocalAIClient:
 
             if response.status_code == 200:
                 data = response.json()
+                if data.get('done') is False:
+                    return {'ok': False, 'error': '本地模型尚未完成响应'}
+                message = data.get('message')
+                content = message.get('content') if isinstance(message, dict) else None
+                if not isinstance(content, str) or not content.strip():
+                    return {'ok': False, 'error': '本地模型返回空内容'}
                 return {
                     'ok': True,
-                    'message': data.get('message', {}).get('content', ''),
+                    'message': content,
                     'model': model
                 }
             else:

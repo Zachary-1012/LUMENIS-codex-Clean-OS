@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### Round 07 local AI completion truth — 2026-09-26
+
+[The bounded local AI evidence](evidence/round-07/ROUND-07-LOCAL-AI-RESULT-TRUTH-2026-09-26.md)
+records that the existing compatibility client now rejects empty, reasoning-only
+and explicitly unfinished Ollama replies instead of reporting HTTP 200 as
+business success. Sol replayed the isolated source/test pair on current main,
+added the unfinished-response boundary and passed 42 selected tests,
+compilation and the constitution gate using a disposable DB seed. Live model
+inference, a running product task and real user-work E2E remain unverified.
+ROUND 07=REWORK; COMMERCIAL_READY=NO.
+
 ### Round 03 comments_collected unknown preservation — 2026-09-26
 
 [The bounded persistence evidence](evidence/round-03/ROUND-03-COMMENTS-COLLECTED-UNKNOWN-2026-09-26.md)
