@@ -705,6 +705,25 @@ Dated takeover/handoff files before this `CURRENT` entry remain historical evide
 
 ## 11. Blocking consistency guard
 
+### 2026-09-26 Global baseline and formal add-path acceptance clarification
+
+The Product Owner's Global / Focus closure criteria are now explicit in
+`00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md`.
+Before internal full-universe readiness, the versioned, approved inclusion rule
+and complete baseline inventories of globally influential brands and major
+commercial venues must exist, and both formal user-added Subject and BrandFocus
+paths must work through existing identity, Permission, acquisition, Evidence,
+Canonical, result and recovery owners. Test samples never prove baseline
+completeness. Partial real collection and missing states remain honest; capture,
+publication, occurrence, trend window and derived times keep separate meaning.
+The contract records bounded Wikidata/WDQS/OSM source research, not adoption or
+data coverage. No baseline inventory, source integration or user E2E is claimed
+by this governance update. Global Commercial = `NO / NOT VERIFIED`, Global
+Brand = `NO / NOT VERIFIED`, Guangzhou Taikoo Hui Reference = `PARTIAL /
+NOT REVERIFIED`, `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=NO` and
+`COMMERCIAL_READY=NO`.
+
+
 ### 2026-09-26 Round 04 Global / Focus context API selection Batch
 
 The Product Core now serves the existing Flutter `lumenis.context.v1`

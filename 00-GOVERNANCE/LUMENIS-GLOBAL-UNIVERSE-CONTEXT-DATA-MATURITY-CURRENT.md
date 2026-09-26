@@ -60,6 +60,16 @@ NOT_COLLECTED | COLLECTING | NOT_CONFIGURED | BLOCKED
 
 Keep these distinct from `READY`, `0`, `NULL`, `UNKNOWN`, `NOT_AVAILABLE`, `STALE`, `OFFLINE` and `ERROR`. The `GLOBAL / ALL` entry may prioritize entities, signals and content that meet the applicable data-maturity gate; it must not imply that every world entity has complete data or mix immature entities into the same ready state.
 
+### Mandatory user-added Subject / BrandFocus path at closure
+
+`LUMENIS_INTERNAL_FULL_UNIVERSE_READY=YES` requires a real user-initiated add path for both a CTH Subject and a BMP BrandFocus. Each path must use the same canonical identity resolution, deduplication/conflict handling and region/industry/relationship metadata, then pass identity/source authorization and actor Permission before scheduled acquisition, Capture, Evidence, Canonical Data binding, and a user-visible result/recovery path. Adding an identity does not grant Permission or silently start collection. A registration-only row, fixture, or selection-only test is not closure evidence.
+
+### Best-effort partial collection and time semantics
+
+Authorized collection may return a useful partial result, but it must identify each missing or failed source/entity/signal, its last attempt outcome, and whether a retry is `PENDING / SCHEDULED` with the existing next-attempt evidence or is not scheduled and why. Preserve the applicable `NOT_COLLECTED`, `NOT_CONFIGURED`, `BLOCKED`, `STALE`, `OFFLINE`, `ERROR` and retry states at their actual scope. Never represent an unavailable portion as zero, empty success or AI-filled fact; report real measured zero only when the source measured zero.
+
+Keep `captured_at` and `collected_at` according to their existing owner-specific meanings, distinct from `published_at` (source publication time), `occurred_at` (real-world event time), the metric/trend window, and `derived_at` (calculation time) throughout Evidence, Canonical Data, APIs, reports and acceptance evidence. Do not substitute one for another. If source time is absent, retain `NULL / UNKNOWN`; do not infer it from capture, collection, publication, current time or a neighboring event.
+
 ## 4. DATA_MATURE minimum contract
 
 Record count, a non-empty page, a global directory, a few connected platforms or one successful Subject is never sufficient. For the active round and capability slice, `DATA_MATURE` requires auditable evidence that:
@@ -75,9 +85,15 @@ Record count, a non-empty page, a global directory, a few connected platforms or
 
 Global maturity additionally requires an approved, auditable coverage matrix for regions, languages, industries and sources, freshness SLA, Evidence coverage, entity-disambiguation/relationship quality, data quality, continuous operation, recovery and an extensible add-entity path. Uncovered entities remain honest and enter the add/collection workflow; the product must never claim complete data for every world entity without executable evidence.
 
+### Baseline inclusion and completion gate — acceptance specification v1.0.0
+
+Before either global coverage dimension may be `YES`, the existing canonical registry/Evidence owners must support a completed baseline inventory of globally influential brands (BMP) and major representative commercial venues (CTH), together with an immutable, Product-Owner-approved inclusion-rule version. The rule must define its declared regions, industries and venue classes; named source and edition/reference window for each population; measurable inclusion/exclusion and tie rules; identity, alias, relationship and deduplication handling; corroboration requirements; refresh/review cadence; and the applicable legal/commercial use boundary. The inventory must enumerate every qualifying entry under that rule with its canonical identity, region, industry/type, relationships, Source/Evidence provenance, observation time and honest collection/maturity state. It remains inside the existing canonical registry and Evidence owners; it does not create a second baseline store.
+
+An entity sample, random sample pass, fixture, or selected reference Subject validates only the sampled records against the declared baseline. It never defines or completes the baseline population, inclusion rule, or global coverage denominator. A missing source, unapproved threshold, incomplete region/category, unresolved duplicate or unverified list leaves the relevant global dimension `NO / NOT VERIFIED`. Here `v1.0.0` versions this acceptance specification only; no Product-Owner-approved entity inclusion-rule version or completed baseline inventory is asserted, and the current coverage values below remain unchanged.
+
 ### PRE-LAUNCH GLOBAL FOUNDATION
 
-The mature global foundation exists and refreshes before customer onboarding. A customer's first search, selection, purchase or workspace entry must not be the product's first collection, first entity registration or first creation of baseline data. Before release, the same one Product must already provide:
+The mature global foundation exists and refreshes before customer onboarding. A customer's first search, selection, purchase or workspace entry must not be the product's first collection, first entity registration or first creation of baseline data. Before release, the same one Product must already provide the approved versioned inclusion rule and completed baseline inventory required above, plus:
 
 - a continuously maintained canonical global commercial-entity and brand-entity registry/index with stable IDs, aliases, type, region, industry/domain, relationships and controlled deduplication/disambiguation;
 - authorized CTH/BMP sources, scheduled acquisition, Evidence lineage, freshness and quality states operating before a customer arrives;
@@ -96,11 +112,11 @@ The following are three supporting coverage dimensions of one internal edition. 
 
 | Gate | Required proof | Current baseline at ROUND 02 |
 | --- | --- | --- |
-| `Global Commercial Coverage` | Global commercial-entity universe, relationships, industries/domains, legal sources, acquisition coverage, signals, Evidence, Canonical Data, freshness, quality, continuous operation, recovery and extensible entity addition meet the approved delivery threshold. | `NO / NOT YET VERIFIED`; ROUND 02 establishes authority and consumer semantics only. |
-| `Global Brand Coverage` | Global brand universe plus authorized market, competitor, creator, channel, content, propagation, campaign and evaluation data meet the same auditable threshold. | `NO / NOT YET VERIFIED`; ROUND 02 establishes authority and consumer semantics only. |
+| `Global Commercial Coverage` | Global commercial-entity universe, including the completed major-venue baseline under the approved versioned inclusion rule, relationships, industries/domains, legal sources, acquisition coverage, signals, Evidence, Canonical Data, freshness, quality, continuous operation, recovery and the mandatory user-added Subject path meet the approved delivery threshold. | `NO / NOT YET VERIFIED`; ROUND 02 establishes authority and consumer semantics only. |
+| `Global Brand Coverage` | Global brand universe, including the completed globally influential-brand baseline under the approved versioned inclusion rule, plus authorized market, competitor, creator, channel, content, propagation, campaign and evaluation data, and the mandatory user-added BrandFocus path, meet the same auditable threshold. | `NO / NOT YET VERIFIED`; ROUND 02 establishes authority and consumer semantics only. |
 | `Guangzhou Taikoo Hui Reference Coverage` | `GLOBAL / ALL` → locate/add/focus/clear → Source → Capture → Evidence → Canonical Data → applicable CTH/BMP workflow → AI/content/report/action → Outcome → Evaluation/Learning → Return, with other configured work continuing. | `NO / PARTIAL`; controlled test identity exists, but the complete loop is not implemented or accepted. |
 
-Only when all three coverage dimensions are `YES` may Sol set the single top-level conclusion:
+Only when all three coverage dimensions are `YES`, the approved rule and both baseline lists are complete, and the user-added Subject and BrandFocus paths pass the full real-data chain above, may Sol set the single top-level conclusion:
 
 ```text
 LUMENIS_INTERNAL_FULL_UNIVERSE_READY = YES
@@ -127,7 +143,7 @@ The `YES` conclusion additionally requires cross-Subject selection/workflow vali
 | 12 | BMP portfolio/market advances global BMP entity/relationship/market/competitor/creator maturity and applicable reference relationships. |
 | 13 | BMP content/campaign/evaluation advances authorized content, channel, propagation, campaign, outcome and learning maturity. |
 | 14 | Remaining ACC/AI/Shared/SYSTEM experiences preserve Global → Focus → Return, honest states, scope and continuous background operation. |
-| 15 | Revalidate all three lines on the exact release SHA across promised surfaces and commercial/release gates. It may not implement accumulated obligations from prior rounds. |
+| 15 | Revalidate all three lines on the exact release SHA across promised surfaces and commercial/release gates; verify the approved versioned inclusion rule, completed brand/venue baseline inventories, and both formal user-added Subject and BrandFocus paths through identity/source authorization + actor Permission → scheduled acquisition → Capture → Evidence → Canonical Data → result/recovery. It may not implement accumulated obligations from prior rounds. |
 
 ## 7. Per-round acceptance block
 
@@ -178,7 +194,7 @@ empty-state defects
 maturity delta since prior round
 ```
 
-If the canonical registry or required maturity fields do not yet exist, record `sample count = 0`, `NOT YET IMPLEMENTED` and the exact owning round. Never manufacture a sample or percentage. ROUND 15 expands and revalidates cumulative coverage; it is not the first random inspection.
+If the canonical registry or required maturity fields do not yet exist, record `sample count = 0`, `NOT YET IMPLEMENTED` and the exact owning round. Never manufacture a sample or percentage. Report sample counts separately from the approved baseline's total and covered counts; passing a sample cannot satisfy the baseline inclusion or completeness gate. ROUND 15 expands and revalidates cumulative coverage; it is not the first random inspection.
 
 The round also evaluates, only where its owned slice can honestly do so:
 
@@ -192,3 +208,14 @@ The round also evaluates, only where its owned slice can honestly do so:
 8. prove other configured acquisition/background tasks continue independently.
 
 Unavailable later-round functionality must be recorded as `NOT IN ROUND / NOT YET IMPLEMENTED`, not simulated and not allowed to block unrelated work. A relevant round cannot claim its own contextual responsibility complete without its required proof.
+
+## 9. Baseline-source research — accessed 2026-09-26
+
+| Candidate | Version / maintenance evidence | License and service boundary | Decision and owner mapping |
+| --- | --- | --- | --- |
+| [Wikidata structured-data downloads](https://www.wikidata.org/wiki/Wikidata:Database_download) | Official download page, last edited 2026-04-09 (revision `oldid=2479770906`); JSON/RDF are documented stable interfaces; full JSON is weekly and add/change dumps cover the previous 24 hours. No specific dump snapshot is pinned here. | Main, Property, Lexeme and EntitySchema structured data are CC0 and may be used commercially and offline; other namespace text and media have separate terms/licenses. | `ADAPT` as a candidate identity cross-reference through the existing SYSTEM Collector → Source/Evidence → Canonical Data owners after snapshot/version and lineage review. Wikidata IDs do not establish brand influence, venue representativeness, or Production Truth; corroborate baseline claims with approved primary sources. |
+| [Wikidata Query Service User Manual](https://www.mediawiki.org/wiki/Wikidata_Query_Service/User_Manual) | Live official service documentation accessed 2026-09-26; no immutable service release or dump snapshot is pinned, and limits may change. | Public endpoint documents a 60-second query deadline, 60 seconds processing per 60 seconds per client, 30 error queries/minute, five parallel queries per IP, and HTTP 429 with `Retry-After`; a compliant identifying User-Agent is required. | `DEFER` as the required baseline acquisition path. If a bounded query is later justified, use the existing Collector with those limits, backoff, provenance and honest retry state; prefer versioned dumps for baseline population. |
+| [Wikidata Query RDF GitHub mirror](https://github.com/wikimedia/wikidata-query-rdf) | Accessed 2026-09-26; the repository identifies itself as a GitHub mirror and says the actual code is hosted on Gerrit. No immutable upstream commit/release was pinned in this review. | README identifies `blazegraph` and `war` as GPLv2, while `tools`, `common`, `testTools` and `dist` are Apache-licensed; this is not one uniform package license. | `DEFER` self-hosted WDQS as a product dependency. Dataset CC0 does not transfer to query-service software; any future self-hosting decision requires pinned upstream source, module-level license/security review and an approved SYSTEM deployment path. |
+| [OpenStreetMap Foundation Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/) | Live policy page accessed 2026-09-26; no fixed version is published and the policy may change without notice. | ODbL imposes attribution/share-alike obligations on adapted databases; the public service has a maximum of one request/second, requires an identifying User-Agent/Referer and attribution, discourages periodic/bulk use, and forbids systematic POI/list extraction. Commercial users must account for policy changes and service withdrawal. | `DEFER` as a global baseline source. It is not a complete venue inventory. Any bounded geocoding use must pass a deliberate commercial/license review and route through the existing acquisition owner with caching, rate limits and attribution. |
+
+Research adds no dependency or new owner. Source/service status, terms, and version pins must be rechecked when a source is actually selected; no source availability or baseline coverage is claimed by this table.
