@@ -12,6 +12,19 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-27 — SYS-06 reading-surface design refinement
+
+[SYS-06 revision 2](../contracts/experience/screen-specifications/SYS-06.md)
+remains `DESIGN_EXPLORATION`: wide-source reading with optional details, a focused
+mobile reader, exact task Return, explicit session/target/page-revision frame
+invalidation and honest capacity/permission failures. Four Experience/constitution
+gates and four blueprint-validator tests passed on this document candidate; the
+test used an explicit disposable seed. No frontend route/API binding changed.
+The existing SYS-06 route still reaches a desktop-required boundary, including
+on desktop; viewport implementation, authenticated user-work E2E, native surfaces
+and ROUND 14 acceptance remain open. Backend frame fields mentioned in the spec
+are unaccepted candidate requirements and must be rechecked before binding.
+
 ### 2026-09-27 — AI Browser request-thread safety
 
 [Round 06 Browser thread-affinity evidence](evidence/round-06/ROUND-06-AI-BROWSER-THREAD-AFFINITY-2026-09-27.md)
