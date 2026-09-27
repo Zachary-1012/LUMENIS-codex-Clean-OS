@@ -791,7 +791,7 @@ Current source establishes these boundaries:
 - `lumenis/system/ai_gateway/` is the canonical SYSTEM AI runtime owner. Ollama is a local provider behind that gateway; `local_ai_client.py` and `/api/local-ai/*` are current compatibility callers to reconcile, not a reason to create a second gateway. A configured provider is not `ACTIVE` until its daemon, model, real caller, fallback and Evidence pass runtime acceptance.
 - Jev is Product Owner approved only as a future typed decision/evaluation provider behind that same gateway. ROUND 02 records the boundary; ROUND 07 must prove contract, pinned version, secret handling, shadow evaluation, cost/legal/privacy, low-confidence behavior and trace before activation. Jev cannot own Permission, Evidence, Production Truth or effects.
 - `lumenis/system/collector/` and `lumenis/system/browser/runtime/` are the canonical collector/browser owners. `xhs_cookie_bridge.py` remains an active compatibility caller for the existing XHS/RedNote Cookie chain until migrated with behavior parity.
-- The approved delivery boundary defers the LUMENIS product account until after internal beta. Any remaining pre-beta global account blocker is handled only in its scheduled identity/access or Experience round with current-source proof, while server Permission/effect fences and platform Cookie/session safety remain intact. ROUND 01 is read-only and never implements that change.
+- The current Product Owner decision defers product account/password design until product closure reaches 100%, followed by a separate redesign. Any pre-closure account wall is handled in its existing identity/access or Experience owner with current-source proof, while server Permission/effect fences and platform Cookie/session safety remain intact. ROUND 01 is read-only and never implements that change.
 
 ## 6. Screenshot architecture intake — disposition
 
@@ -1024,3 +1024,28 @@ records 130 targeted/adjacent test passes and one disposable-DB live
 Source-to-Evidence-to-Canonical-to-report result. This is `TESTED` source only:
 the actual product DB, real Owner user path, global population and ROUND 06
 exit remain unverified.
+
+### 2026-09-27 Product Owner account/password timing correction
+
+The latest explicit Product Owner decision defers product account and password
+design until product closure reaches 100%, then requires a new design review.
+Pre-closure product work must proceed without an account wall. This does not
+relax server Permission, explicit import/effect approval, Evidence or media
+platform session rules. The observed Context API `401 AUTH_REQUIRED` is a
+current real-user access gap for the existing identity/access owner, not a
+reason to request a password or to declare a user E2E PASS.
+
+### 2026-09-27 Round 06 public article-quality Batch and research adoption
+
+The existing public HTTP adapter now prefers substantial article text over a
+publisher-wide description, retains an explicit source `PubDate`, and keeps
+same-host source identity/provenance. [Round 06 evidence](evidence/round-06/ROUND-06-PUBLIC-ARTICLE-QUALITY-2026-09-27.md)
+records the 43-test clean-archive result and bounded current-snapshot result.
+The CTH and BMP research adoption candidates are discoverable through their
+existing `intelligence_library` indexes; they add no owner or production fact.
+The actual local v17 product DB has 112 scoped raw/Canonical/Evidence rows,
+including four requested reference entities and a 100-brand edition cohort,
+but its 112 publication dates are unknown and quality statuses are `error`.
+The local import scripts and dependent collector/scope changes remain
+`LOCAL_ONLY / NOT_PUBLISHED`; the DB is not an online artifact. Global CTH/BMP
+coverage, user E2E, Round 06 acceptance and release remain `NO / REWORK`.

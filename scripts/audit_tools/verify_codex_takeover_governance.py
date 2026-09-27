@@ -232,7 +232,7 @@ def validate() -> None:
         ".opencode/opencode.json",
         "lumenis/system/ai_gateway/",
         "lumenis/system/collector/",
-        "LUMENIS product account remains deferred until its approved identity/tenant gate after internal beta",
+        "Product account and password design remains deferred until product closure reaches 100%",
         "Do not repeat a full-repository audit for normal work",
         "Product Skill Store is a named P0 capability",
         "Product Owner requirement routing check",

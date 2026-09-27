@@ -9,4 +9,4 @@
 - `播客研究/`
 
 ## 文件
-- 无
+- [BMP 数据情报与品牌决策采用建议](BMP-DATA-INTELLIGENCE-ADOPTION-2026-09-27.md) — 2026-09-27 研究候选；既有规划、来源质量、Nike / Le Labo、字段与 Round 归属。不是运行或验收证据。

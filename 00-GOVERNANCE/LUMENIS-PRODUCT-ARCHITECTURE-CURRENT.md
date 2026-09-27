@@ -225,7 +225,7 @@ Runtime and engineering roles are separate:
 - `.opencode/opencode.json` configures OpenCode for repository development, audit, test and automation. OpenCode/Codex are engineering runtimes, not user-facing model providers, Product Core dependencies or Production Truth owners.
 - Public Website, Flutter Web, Desktop and Mobile consume typed Product Core results and provider state. They do not hold provider keys, run OpenCode, choose hidden tool chains or own model routing.
 
-The platform identity boundary is also explicit: media Cookie/session/browser authorization belongs to the SYSTEM collector/browser chain and stays separate from the future LUMENIS product account. The product account is deferred until after internal beta; this timing does not weaken server-side Permission, approval or effect-fence enforcement.
+The platform identity boundary is also explicit: media Cookie/session/browser authorization belongs to the SYSTEM collector/browser chain and stays separate from the future LUMENIS product account. Product account and password design is deferred until product closure reaches 100%, followed by a Product Owner redesign; this timing does not weaken server-side Permission, approval or effect-fence enforcement.
 
 Production write chain:
 
