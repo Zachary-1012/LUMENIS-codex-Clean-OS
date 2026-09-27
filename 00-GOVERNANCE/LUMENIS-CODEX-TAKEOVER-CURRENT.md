@@ -12,6 +12,16 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-27 — AI Browser selected-engine session boundary
+
+[Round 06 AI Browser evidence](evidence/round-06/ROUND-06-AI-BROWSER-SESSION-BOUNDARY-2026-09-27.md)
+records the existing AI Browser API/runtime bound to the verified default-browser
+engine. Arbitrary ports/profiles are rejected. One real isolated runtime session
+navigated an allowed source and recorded a legacy BrowserEvidenceStore ID;
+actor/account-session gates are implemented with focused tests. Authenticated product HTTP/UI E2E,
+multi-session operation and the SYS-06 page viewport remain unaccepted. ROUND
+06/14 remain `REWORK`; release is NO.
+
 ### 2026-09-27 — Controlled default-browser engine prerequisite
 
 [Round 06 browser evidence](evidence/round-06/ROUND-06-DEFAULT-BROWSER-ENGINE-2026-09-27.md)

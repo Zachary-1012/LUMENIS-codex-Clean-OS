@@ -1164,6 +1164,8 @@ class AIBrowserRuntime:
         cdp_port: int = 9224,
         headless: bool = True,
         user_data_dir: Optional[str] = None,
+        owner_actor_id: Optional[int] = None,
+        owner_account_session_id: Optional[int] = None,
         idle_timeout: int = DEFAULT_SESSION_IDLE_TIMEOUT,
         max_lifetime: int = DEFAULT_SESSION_MAX_LIFETIME,
     ):
@@ -1171,6 +1173,8 @@ class AIBrowserRuntime:
         self.cdp_port = cdp_port
         self.headless = headless
         self.user_data_dir = user_data_dir
+        self.owner_actor_id = owner_actor_id
+        self.owner_account_session_id = owner_account_session_id
         self.idle_timeout = idle_timeout
         self.max_lifetime = max_lifetime
 
@@ -1210,39 +1214,25 @@ class AIBrowserRuntime:
     # ──────────────────────────────────────────────────────────
 
     def start(self) -> bool:
-        """启动 Browser Session（连接 CDP 或启动新浏览器）。"""
+        """Attach only to the verified LUMENIS browser and own a fresh context."""
         try:
+            import browser_surface
+
+            if self.cdp_port != browser_surface.GENERAL_CDP_PORT or not self.headless or self.user_data_dir:
+                raise PermissionError("AI Browser requires the isolated LUMENIS browser session")
+            ready = browser_surface.ensure_general_browser()
+            if not ready.get("ok") or not browser_surface.general_browser_online():
+                raise PermissionError("LUMENIS browser session is unavailable or unverified")
+
             from playwright.sync_api import sync_playwright
             self._playwright = sync_playwright().start()
 
-            # 尝试连接已有 CDP
-            try:
-                self._browser = self._playwright.chromium.connect_over_cdp(
-                    f"http://127.0.0.1:{self.cdp_port}"
-                )
-                logger.info(f"[AIBrowserRuntime] 已连接 CDP 端口 {self.cdp_port}")
-                # CDP 连接的 browser 从 context 获取 page
-                contexts = self._browser.contexts
-                if contexts:
-                    self._context = contexts[0]
-                    if self._context.pages:
-                        self._page = self._context.pages[0]
-            except Exception:
-                # 没有 CDP，启动新浏览器（独立 profile，与用户日常浏览隔离）
-                profile_dir = self.user_data_dir or os.path.join(
-                    os.path.dirname(DB_PATH), "browser_profiles", f"ai_runtime_{self.session_id}"
-                )
-                os.makedirs(profile_dir, exist_ok=True)
-                self._context = self._playwright.chromium.launch_persistent_context(
-                    user_data_dir=profile_dir,
-                    headless=self.headless,
-                    args=[
-                        '--disable-blink-features=AutomationControlled',
-                        '--no-sandbox',
-                    ],
-                )
-                self._page = self._context.new_page()
-                logger.info(f"[AIBrowserRuntime] 已启动新浏览器（独立 profile）")
+            self._browser = self._playwright.chromium.connect_over_cdp(
+                f"http://127.0.0.1:{self.cdp_port}"
+            )
+            self._context = self._browser.new_context()
+            self._page = self._context.new_page()
+            logger.info("[AIBrowserRuntime] 已连接序境隔离浏览器并创建专属页面")
 
             # 注册控制台错误监听
             if self._page:
@@ -1254,7 +1244,15 @@ class AIBrowserRuntime:
             return True
         except Exception as e:
             self.status = SessionStatus.ERROR
-            logger.error(f"[AIBrowserRuntime] 启动失败: {e}")
+            try:
+                if self._context:
+                    self._context.close()
+                if self._playwright:
+                    self._playwright.stop()
+            except Exception:
+                pass
+            self._page = self._context = self._browser = self._playwright = None
+            logger.error("[AIBrowserRuntime] 启动失败: %s", sanitize_sensitive(str(e)))
             return False
 
     def _on_console(self, msg):
@@ -1304,7 +1302,7 @@ class AIBrowserRuntime:
             except Exception:
                 pass
             try:
-                if self._context and not self._browser:
+                if self._context:
                     self._context.close()
             except Exception:
                 pass
@@ -1746,6 +1744,11 @@ class AIBrowserRuntime:
         if action_type == BrowserActionType.NAVIGATE:
             if not url:
                 raise ValueError("navigate requires url parameter")
+            import browser_surface
+
+            navigation = browser_surface.evaluate_navigation(url)
+            if not navigation.get("allowed"):
+                raise PermissionError("AI Browser navigation is blocked by the existing browser policy")
             self._page.goto(url, wait_until="domcontentloaded", timeout=DEFAULT_ACTION_TIMEOUT)
 
         elif action_type == BrowserActionType.BACK:
@@ -1923,14 +1926,20 @@ class BrowserSessionManager:
         cdp_port: int = 9224,
         headless: bool = True,
         user_data_dir: Optional[str] = None,
+        owner_actor_id: Optional[int] = None,
+        owner_account_session_id: Optional[int] = None,
         idle_timeout: int = DEFAULT_SESSION_IDLE_TIMEOUT,
         max_lifetime: int = DEFAULT_SESSION_MAX_LIFETIME,
     ) -> AIBrowserRuntime:
-        """创建新的 Browser Session。"""
+        """Create only a session on the verified isolated product browser."""
+        if cdp_port != 9224 or headless is not True or user_data_dir not in (None, ""):
+            raise ValueError("AI Browser session must use the isolated LUMENIS browser")
         session = AIBrowserRuntime(
             cdp_port=cdp_port,
             headless=headless,
             user_data_dir=user_data_dir,
+            owner_actor_id=owner_actor_id,
+            owner_account_session_id=owner_account_session_id,
             idle_timeout=idle_timeout,
             max_lifetime=max_lifetime,
         )
@@ -1973,6 +1982,14 @@ class BrowserSessionManager:
             if s.is_alive():
                 result.append(s.get_status())
         return result
+
+    def list_sessions_for_actor(self, actor_id: int, account_session_id: int) -> List[Dict[str, Any]]:
+        """Expose only sessions created by this authenticated product login."""
+        with self._lock:
+            sessions = [s for s in self._sessions.values()
+                        if s.owner_actor_id == actor_id
+                        and s.owner_account_session_id == account_session_id]
+        return [s.get_status() for s in sessions if s.is_alive()]
 
     def cleanup_idle_sessions(self) -> int:
         """清理空闲/过期 Session。返回清理数量。"""

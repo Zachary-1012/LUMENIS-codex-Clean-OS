@@ -181,7 +181,7 @@ class TestAIBrowserRuntimeCore(unittest.TestCase):
         self.mock_page.evaluate.side_effect = ["New page text", 5]
         result = self.runtime.execute_action(
             BrowserActionType.NAVIGATE,
-            url="http://example.com/page2",
+            url="https://www.bing.com/",
         )
         self.mock_page.goto.assert_called_once()
         self.assertIn(result.result, [ActionResult.PASS, ActionResult.FAIL])

@@ -33,9 +33,28 @@ logger = logging.getLogger(__name__)
 
 def register_ai_browser_api(app):
     """在 Flask app 上注册 AI Browser Runtime API 蓝图。"""
-    from flask import Blueprint, jsonify, request
+    from flask import Blueprint, g, jsonify, request
 
     bp = Blueprint("ai_browser_runtime", __name__)
+
+    @bp.before_request
+    def _require_browser_actor():
+        """Bind every AI Browser request to an active account and SYSTEM grant."""
+        try:
+            from account.service import get_current_user
+            from account.authorization import check_dual_domain_permission
+
+            actor = get_current_user()
+            if not actor or type(actor.get("id")) is not int or type(actor.get("session_id")) is not int:
+                return jsonify({"ok": False, "error_code": "BROWSER_ACTOR_REQUIRED"}), 401
+            action = "read" if request.method == "GET" else "write"
+            if not check_dual_domain_permission(actor["id"], "SYSTEM", module="browser", action=action):
+                return jsonify({"ok": False, "error_code": "BROWSER_PERMISSION_DENIED"}), 403
+            g.browser_actor_id = actor["id"]
+            g.browser_account_session_id = actor["session_id"]
+        except Exception:
+            logger.exception("AI Browser actor authorization unavailable")
+            return jsonify({"ok": False, "error_code": "BROWSER_PERMISSION_UNAVAILABLE"}), 503
 
     # 延迟导入（避免循环依赖）
     from ai_browser_runtime import (
@@ -64,6 +83,9 @@ def register_ai_browser_api(app):
                 "error": f"Session not found or expired: {session_id}",
                 "error_code": "SESSION_NOT_FOUND",
             }), 404)
+        if (session.owner_actor_id != g.browser_actor_id or
+                session.owner_account_session_id != g.browser_account_session_id):
+            return None, (jsonify({"ok": False, "error_code": "SESSION_NOT_FOUND"}), 404)
         return session, None
 
     def _parse_expected_state(data: Dict[str, Any]) -> Optional[ExpectedState]:
@@ -122,12 +144,19 @@ def register_ai_browser_api(app):
         """
         try:
             data = request.get_json(silent=True) or {}
+            if (data.get("cdp_port", 9224) != 9224 or
+                    data.get("headless", True) is not True or
+                    data.get("user_data_dir") not in (None, "")):
+                return jsonify({"ok": False, "error_code": "BROWSER_SESSION_BLOCKED",
+                                "error": "AI Browser must use the isolated LUMENIS browser"}), 400
             mgr = get_session_manager()
 
             session = mgr.create_session(
-                cdp_port=int(data.get("cdp_port", 9224)),
-                headless=bool(data.get("headless", True)),
-                user_data_dir=data.get("user_data_dir"),
+                cdp_port=9224,
+                headless=True,
+                user_data_dir=None,
+                owner_actor_id=g.browser_actor_id,
+                owner_account_session_id=g.browser_account_session_id,
                 idle_timeout=int(data.get("idle_timeout", 600)),
                 max_lifetime=int(data.get("max_lifetime", 3600)),
             )
@@ -140,6 +169,16 @@ def register_ai_browser_api(app):
                 except Exception as e:
                     start_error = sanitize_sensitive(str(e)[:300])
                     logger.warning(f"[AI Browser API] Session 启动失败: {start_error}")
+
+            if data.get("auto_start", True) and not started:
+                failed_status = session.status.value
+                mgr.close_session(session.session_id)
+                return jsonify({
+                    "ok": False,
+                    "error_code": "BROWSER_START_UNAVAILABLE",
+                    "status": failed_status,
+                    "started": False,
+                }), 503
 
             return jsonify({
                 "ok": True,
@@ -163,7 +202,8 @@ def register_ai_browser_api(app):
         """列出所有活跃 Session。"""
         try:
             mgr = get_session_manager()
-            sessions = mgr.list_sessions()
+            sessions = mgr.list_sessions_for_actor(
+                g.browser_actor_id, g.browser_account_session_id)
             return jsonify({
                 "ok": True,
                 "count": len(sessions),
@@ -187,6 +227,9 @@ def register_ai_browser_api(app):
     @bp.route("/api/browser/sessions/<session_id>/stop", methods=["POST"])
     def stop_session(session_id: str):
         """关闭 Session。"""
+        session, err = _get_session_or_404(session_id)
+        if err:
+            return err
         try:
             mgr = get_session_manager()
             closed = mgr.close_session(session_id)
@@ -464,6 +507,11 @@ def register_ai_browser_api(app):
         try:
             store = get_evidence_store()
             session_id = request.args.get("session_id", "")
+            if not session_id:
+                return jsonify({"ok": False, "error_code": "SESSION_ID_REQUIRED"}), 400
+            session, err = _get_session_or_404(session_id)
+            if err:
+                return err
             stats = store.get_stats(session_id=session_id or None)
             return jsonify({"ok": True, **stats})
         except Exception as e:
