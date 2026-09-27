@@ -26,8 +26,10 @@ from __future__ import annotations
 import threading
 import time
 import sys
+import hashlib
+import getpass
 from datetime import datetime, timedelta
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Mapping
 
 from .base import CollectionResult, CollectionStatus
 from .config import PLATFORM_CAPABILITIES
@@ -426,10 +428,7 @@ def _native_record(item: Dict[str, Any], platform: str, keyword: str, captured_a
         record.update({"like_count": item.get("likes"), "comment_count": item.get("comments"),
                        "share_count": item.get("shares")})
     elif platform == "public_http":
-        record.update({
-            "content_id": content_id,
-            "published_at": publish_date,
-        })
+        record.update({"content_id": content_id, "published_at": publish_date})
     elif platform == "web_rss":
         record.update({
             "content_id": content_id,
@@ -553,6 +552,146 @@ def _ensure_evidence_schema() -> None:
         _evidence_schema_paths.add(db_path)
 
 
+
+
+def _prelaunch_scope(scope: Mapping[str, Any] | None) -> Dict[str, Any]:
+    if not isinstance(scope, Mapping):
+        raise ValueError("scope required")
+    domain = str(scope.get("domain_id") or "").strip().lower()
+    if domain == "zbmp":
+        domain = "bmp"
+    subject, brand = scope.get("subject_id"), scope.get("brand_focus_id")
+    key = subject if domain == "cth" else brand
+    other = brand if domain == "cth" else subject
+    if domain not in {"cth", "bmp"} or scope.get("global_scope") is True:
+        raise ValueError("exact CTH/BMP scope required")
+    if not isinstance(key, str) or not key or key.strip() != key or other not in (None, ""):
+        raise ValueError("one exact registry identity required")
+    return {"domain_id": domain, "subject_id": subject if domain == "cth" else None,
+            "brand_focus_id": brand if domain == "bmp" else None}
+
+
+def _prelaunch_public_import_resource(
+    scope: Mapping[str, Any], source_url: str, *, platform: str = "public_http",
+) -> str:
+    """Bind one local import approval to a registered entity and public URL."""
+    exact = _prelaunch_scope(scope)
+    if platform != "public_http" or not source_url.startswith("https://"):
+        raise ValueError("public HTTPS source required")
+    entity_id = exact["subject_id"] or exact["brand_focus_id"]
+    digest = hashlib.sha256(source_url.encode("utf-8")).hexdigest()
+    return f"prelaunch-public-http:{exact['domain_id']}:{entity_id}:{digest}"
+
+
+def _authorize_prelaunch_public(scope: Mapping[str, Any], source: str, platform: str) -> bool:
+    try:
+        from lumenis.system.security import OperationType, get_permission_gate, is_testing_bypass_enabled
+        if is_testing_bypass_enabled():
+            return False
+        resource = _prelaunch_public_import_resource(scope, source, platform=platform)
+        return get_permission_gate().check(
+            OperationType.DATA_IMPORT, resource,
+            caller=f"local_prelaunch_operator:{getpass.getuser()}",
+            domain_id=scope["domain_id"], exact_approval_required=True,
+        ).allowed is True
+    except Exception:
+        return False
+
+
+def _validate_prelaunch_registry(scope: Mapping[str, Any]) -> None:
+    from lumenis.shared.database import get_repository
+    from lumenis.shared.database.scope import resolve_scope
+    conn = get_repository().connect(timeout=10)
+    try:
+        resolve_scope(conn, product_id="CTH" if scope["domain_id"] == "cth" else "ZBMP",
+                      subject_id=scope.get("subject_id"), brand_focus_id=scope.get("brand_focus_id"),
+                      requested_status="UNVERIFIED")
+    finally:
+        conn.close()
+
+
+def _existing_prelaunch_evidence(note_ids: List[str], scope: Mapping[str, Any]) -> int | None:
+    if not note_ids:
+        return None
+    import database as db
+    domain = "cth" if scope["domain_id"] == "cth" else "zbmp"
+    key = scope.get("subject_id") or scope.get("brand_focus_id")
+    with db.get_db() as conn:
+        rows = [conn.execute(
+            "SELECT domain_id, subject_id, brand_focus_id, scope_status, scope_evidence_ref "
+            "FROM notes WHERE note_id=?", (note_id,)
+        ).fetchone() for note_id in note_ids]
+    refs = set()
+    for row in rows:
+        if row is None:
+            return None
+        if row[0] == domain and row[3] == "VERIFIED" and (row[1] or row[2]) == key and row[4]:
+            refs.add(int(row[4]))
+    return refs.pop() if len(refs) == 1 else None
+
+
+def _prelaunch_scope_conflict(records: List[Dict[str, Any]], scope: Mapping[str, Any]) -> bool:
+    """Reject known cross-scope raw identities before the existing importer writes."""
+    ids = [record.get("content_id") for record in records]
+    if any(not isinstance(note_id, str) or not note_id for note_id in ids):
+        return True
+    if len(set(ids)) != len(ids):
+        return True
+    import database as db
+    expected_domain = "zbmp" if scope["domain_id"] == "bmp" else "cth"
+    expected_subject = scope.get("subject_id")
+    expected_brand = scope.get("brand_focus_id")
+    with db.get_db() as conn:
+        rows = conn.execute(
+            "SELECT domain_id, subject_id, brand_focus_id FROM notes WHERE note_id IN ("
+            + ",".join("?" for _ in ids) + ")", ids,
+        ).fetchall() if ids else []
+    return any(
+        (row[0] not in (None, "", expected_domain))
+        or (row[1] not in (None, "", expected_subject))
+        or (row[2] not in (None, "", expected_brand))
+        for row in rows
+    )
+
+
+def _write_prelaunch_evidence(platform: str, keyword: str, result: Dict[str, Any], *,
+                              started: str, scope: Mapping[str, Any], source_ids: List[str]) -> int | None:
+    try:
+        _ensure_evidence_schema()
+        from lumenis.shared.evidence.store import record_evidence
+        bmp = scope["domain_id"] == "bmp"
+        evidence_id = record_evidence(
+            source="collector", project="LUMENIS", product="ZBMP" if bmp else "CTH",
+            feature_id=f"PRELAUNCH_{platform.upper()}_COLLECT", level="L8",
+            test_name=f"prelaunch_collection_{platform}",
+            result="PASS" if result.get("ok") else "FAIL", started_at=started,
+            inputs={"platform": platform, "source_ids": source_ids, "keywords": [keyword]},
+            outputs={"notes_collected": result.get("raw_count", 0),
+                     "notes_inserted": result.get("imported", 0),
+                     "notes_updated": result.get("updated", 0)},
+            actual=result.get("status", "COLLECT_ERROR"), account=f"PRELAUNCH_{platform.upper()}",
+            provider=(result.get("provenance") or {}).get("provider", "platform_adapter"),
+            collection_metadata=result.get("provenance"),
+            domain_id="zbmp" if bmp else "cth", subject_id=scope.get("subject_id"),
+            brand_focus_id=scope.get("brand_focus_id"),
+        )
+        return evidence_id if type(evidence_id) is int and evidence_id > 0 else None
+    except Exception:
+        return None
+
+
+def _persist_prelaunch_scope(note_ids: List[str], scope: Mapping[str, Any], evidence_id: int) -> int:
+    import database as db
+    from lumenis.adapters.persist import persist_existing_note_scope
+    bmp = scope["domain_id"] == "bmp"
+    with db.get_db() as conn:
+        return persist_existing_note_scope(
+            conn, note_ids, product_id="ZBMP" if bmp else "CTH",
+            domain_id="zbmp" if bmp else "cth", subject_id=scope.get("subject_id"),
+            brand_focus_id=scope.get("brand_focus_id"), scope_evidence_ref=evidence_id,
+        )
+
+
 def _write_evidence(platform: str, keyword: str, result: Dict[str, Any], *, started: str) -> int | None:
     try:
         _ensure_evidence_schema()
@@ -587,11 +726,26 @@ def _write_evidence(platform: str, keyword: str, result: Dict[str, Any], *, star
 
 
 def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULTS,
-                   operator: str = "human") -> Dict[str, Any]:
+                   operator: str = "human", scope: Mapping[str, Any] | None = None,
+                   actor: Mapping[str, Any] | None = None,
+                   prelaunch_local_import: bool = False) -> Dict[str, Any]:
     """Run one explicit, read-only platform search and persist its evidence."""
     if str(operator or "").strip().lower() not in {"human", "human_ui"}:
         raise PermissionError("该采集入口只接受人工触发")
     platform, keyword, max_results = _validate_request(platform, keyword, max_results)
+    prelaunch_scope = None
+    if prelaunch_local_import:
+        if actor is not None or operator != "human" or platform != "public_http":
+            return {"ok": False, "status": "SCOPE_UNAUTHORIZED", "platform": platform,
+                    "keyword": keyword, "read_only": True, "external_write": False}
+        try:
+            prelaunch_scope = _prelaunch_scope(scope)
+            if not _authorize_prelaunch_public(prelaunch_scope, keyword, platform):
+                raise PermissionError("exact import approval unavailable")
+            _validate_prelaunch_registry(prelaunch_scope)
+        except Exception:
+            return {"ok": False, "status": "SCOPE_UNAUTHORIZED", "platform": platform,
+                    "keyword": keyword, "read_only": True, "external_write": False}
     policy = CollectionHygienePolicy(
         platform=platform,
         read_only=True,
@@ -698,6 +852,10 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         items = [item for item in (collection.items or []) if isinstance(item, dict)]
         captured_at = _now()
         records = [_native_record(item, platform, keyword, captured_at) for item in items]
+        prelaunch_scope_conflict = bool(
+            prelaunch_scope is not None and items
+            and _prelaunch_scope_conflict(records, prelaunch_scope)
+        )
         metadata = collection.metadata if isinstance(collection.metadata, dict) else {}
         provenance = {
             "provider": str(metadata.get("provider") or metadata.get("engine") or "platform_adapter")[:100],
@@ -710,7 +868,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         import_result: Dict[str, Any] = {"imported": 0, "updated": 0, "failed": 0, "details": []}
         subject = {"subject_matches": 0, "canonical_synced": 0, "subjects": []}
         note_ids: List[str] = []
-        if items and collection.ok:
+        if items and collection.ok and not prelaunch_scope_conflict:
             from .multi_platform_import import import_multi_platform_records
 
             import_result = import_multi_platform_records(records)
@@ -719,16 +877,25 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 for detail in import_result.get("details", [])
                 if detail.get("note_id") and detail.get("status") in {"imported", "updated"}
             ]
-            subject = _mark_subject_and_sync(note_ids, keyword)
+            if prelaunch_scope is None:
+                subject = _mark_subject_and_sync(note_ids, keyword)
 
-        canonical_failed = bool(note_ids) and int(subject.get("canonical_synced", 0) or 0) != len(note_ids)
-        final_status = "CANONICAL_SYNC_FAILED" if canonical_failed else status
-        if not canonical_failed and collection.ok and import_result.get("failed"):
+        prelaunch_import_incomplete = (
+            prelaunch_scope is not None and bool(items)
+            and (len(note_ids) != len(records) or len(set(note_ids)) != len(note_ids))
+        )
+        canonical_failed = (prelaunch_scope is None and bool(note_ids)
+                           and int(subject.get("canonical_synced", 0) or 0) != len(note_ids))
+        final_status = ("SCOPE_CONFLICT" if prelaunch_scope_conflict else
+                        "CANONICAL_SYNC_FAILED" if canonical_failed else status)
+        if (not prelaunch_scope_conflict and not canonical_failed and collection.ok
+                and (import_result.get("failed") or prelaunch_import_incomplete)):
             final_status = "IMPORT_FAILED"
         finished = _now()
         error = "" if final_status in {"SUCCESS", "NO_NEW_DATA"} else f"{final_status}: {_status_message(final_status)}"
         result = {
-            "ok": bool(collection.ok and not import_result.get("failed") and not canonical_failed),
+            "ok": bool(collection.ok and not prelaunch_scope_conflict and not import_result.get("failed")
+                       and not prelaunch_import_incomplete and not canonical_failed),
             "status": final_status,
             "platform": platform,
             "keyword": keyword,
@@ -750,15 +917,32 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             "consumer_views": ["CTH", "BMP"],
             "provenance": provenance,
         }
-        evidence_id = _write_evidence(platform, keyword, result, started=started_at)
-        result["evidence_recorded"] = evidence_id is not None
-        if evidence_id is None:
+        if prelaunch_scope is not None:
+            evidence_id = _existing_prelaunch_evidence(note_ids, prelaunch_scope)
+            if evidence_id is None:
+                evidence_id = _write_prelaunch_evidence(
+                    platform, keyword, result, started=started_at,
+                    scope=prelaunch_scope, source_ids=note_ids,
+                )
+        else:
+            evidence_id = _write_evidence(platform, keyword, result, started=started_at)
+        result["evidence_recorded"] = isinstance(evidence_id, int) and evidence_id > 0
+        if not isinstance(evidence_id, int) or evidence_id <= 0:
             result.update({
                 "ok": False,
                 "status": "EVIDENCE_WRITE_FAILED",
                 "error_type": "EVIDENCE_WRITE_FAILED",
                 "error": f"EVIDENCE_WRITE_FAILED: {_status_message('EVIDENCE_WRITE_FAILED')}",
             })
+        elif prelaunch_scope is not None and note_ids and result["ok"]:
+            try:
+                _persist_prelaunch_scope(note_ids, prelaunch_scope, evidence_id)
+                result["canonical_synced"] = len(note_ids)
+                result["scope_status"] = "VERIFIED"
+            except Exception:
+                result.update({"ok": False, "status": "CANONICAL_SYNC_FAILED",
+                               "error_type": "CANONICAL_SYNC_FAILED",
+                               "error": _status_message("CANONICAL_SYNC_FAILED")})
         _write_run_log(
             platform, keyword, started=started_at, finished=finished,
             fetched=int(collection.raw_count or len(items) or 0),

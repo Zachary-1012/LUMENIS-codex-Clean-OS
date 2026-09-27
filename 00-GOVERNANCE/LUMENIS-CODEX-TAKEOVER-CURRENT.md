@@ -1194,3 +1194,16 @@ chain. Global Commercial and Brand Coverage remain `NO / NOT VERIFIED`,
 Guangzhou reference `PARTIAL`, ROUND 06 `REWORK`, and Full Universe,
 RELEASED and OPERATING remain `NO`.
 See [Round 06 evidence](evidence/round-06/ROUND-06-OVERTURE-PARQUET-CANDIDATES-2026-09-27.md).
+
+### 2026-09-27 Round 06 exact prelaunch public import
+
+The existing SYSTEM Collector has a bounded local prelaunch Public HTTP path
+for one approved CTH Subject or BMP BrandFocus and source URL. It reuses the
+existing Registry, Raw importer, signed Evidence and exact-scope Canonical
+writer. A real Nike official article completed the chain in a disposable v18
+database copy, repeated without duplicate Raw/Canonical identity, and survived
+database reopen. The product DB was not the test target; no Global coverage or
+real-user Job is claimed. [Round 06 evidence](evidence/round-06/ROUND-06-PRELAUNCH-EXACT-PUBLIC-IMPORT-2026-09-27.md)
+records the 34 passing affected tests and remaining limits. Global Commercial
+and Brand Coverage remain `NO / NOT VERIFIED`, Guangzhou reference `PARTIAL`,
+ROUND 06 `REWORK`, and Full Universe, RELEASED and OPERATING remain `NO`.
