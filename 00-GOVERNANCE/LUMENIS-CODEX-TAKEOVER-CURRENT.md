@@ -1399,3 +1399,18 @@ tests PASS; real clone search rejected the bad association before import.
 [Round 06 evidence](evidence/round-06/ROUND-06-SOURCE-ENTITY-ADMISSION-2026-09-28.md).
 Existing product DB correction is pending this follow-up owner batch. ROUND 06
 REWORK; Global/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY remain NO.
+
+
+### 2026-09-28 - preserve unresolved platform observations
+
+Unassigned social results now remain in signed Evidence as review candidates,
+without appearing among admitted source IDs or exposing raw payloads in the
+response. Mixed batches retain useful accepted data and honest partial status.
+Current 20 focused tests PASS. A real disposable-clone Shenzhen run accepted one
+explicitly named Luohu post and left two candidates pending (1 Raw/Canonical/native,
+no product DB write); the earlier 3 wrong product assignments still await correction.
+Bilibili search no longer equates an unverified review field with comment count;
+original raw fields remain. 31 focused Bilibili/SYSTEM tests PASS. Real Bilibili
+search remains unverified (anonymous request challenged; no challenge retry).
+[Round 06 evidence](evidence/round-06/ROUND-06-SOURCE-ENTITY-ADMISSION-2026-09-28.md).
+No overall closure status promoted.

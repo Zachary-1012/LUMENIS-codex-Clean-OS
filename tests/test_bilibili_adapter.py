@@ -52,6 +52,9 @@ class TestBilibiliAdapterSearch:
         assert result.notes[0].author == "up主A"
         assert result.notes[0].url == "https://www.bilibili.com/video/BV1xx"
         assert result.notes[0].collects == 30
+        # video_review has no verified comment-count semantics; do not map it to comments.
+        assert result.notes[0].comments is None
+        assert result.notes[0].raw_data["video_review"] == 50
         assert result.notes[0].source_platform == "bilibili"
         # publish_date 应为 ISO 格式
         assert result.notes[0].publish_date.startswith("2023-")

@@ -89,7 +89,7 @@ class BilibiliAdapter(BaseAdapter):
                     author_id="",
                     publish_date=self._ts_to_iso(v.get("pubdate")),
                     likes=None,
-                    comments=optional_int(v.get("video_review")),
+                    comments=None,  # Search review fields lack verified comment semantics.
                     collects=optional_int(v.get("favorites")),
                     shares=None,
                     source_platform="bilibili",
@@ -163,7 +163,7 @@ class BilibiliAdapter(BaseAdapter):
                     author_id="",  # 搜索API不返回mid，留空不臆造
                     publish_date=self._ts_to_iso(v.get("pubdate")),
                     likes=None,    # 搜索API不返回点赞数
-                    comments=optional_int(v.get("video_review")),
+                    comments=None,  # Search review fields lack verified comment semantics.
                     collects=optional_int(v.get("favorites")),
                     shares=None,
                     cover="",      # 搜索API不返回封面
@@ -174,6 +174,7 @@ class BilibiliAdapter(BaseAdapter):
                         "bvid": v.get("bvid"),
                         "play": v.get("play"),
                         "video_review": v.get("video_review"),
+                        "review": v.get("review"),
                         "duration": v.get("duration"),
                         "pubdate_ts": v.get("pubdate"),
                         "media_type": v.get("type", "video"),

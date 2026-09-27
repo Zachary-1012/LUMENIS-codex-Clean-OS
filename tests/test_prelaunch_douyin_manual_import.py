@@ -254,6 +254,10 @@ def test_douyin_manual_import_requires_exact_approval_and_binds_native_evidence(
         scope_ref = conn.execute("SELECT scope_evidence_ref FROM canonical_data WHERE external_id=?", (accepted_id,)).fetchone()[0]
         evidence_input = json.loads(conn.execute("SELECT inputs_json FROM app_evidence_records WHERE id=?", (scope_ref,)).fetchone()[0])
         assert evidence_input["source_ids"] == [accepted_id]
+        pending_sources = evidence_input["unassigned_review_candidates"]
+        assert [row["content_id"] for row in pending_sources] == [raw["aweme_id"]]
+        assert pending_sources[0]["title"] == "深圳湾万象城"
+        assert "unassigned_review_candidates" not in partial
         assert conn.execute("SELECT content FROM notes WHERE note_id=?", (raw["aweme_id"],)).fetchone()[0] == "隔离验收 Changed source content"
 
 

@@ -799,7 +799,8 @@ def _prelaunch_scope_conflict(records: List[Dict[str, Any]], scope: Mapping[str,
 
 
 def _write_prelaunch_evidence(platform: str, keyword: str, result: Dict[str, Any], *,
-                              started: str, scope: Mapping[str, Any], source_ids: List[str]) -> int | None:
+                              started: str, scope: Mapping[str, Any], source_ids: List[str],
+                              review_candidates: List[Dict[str, Any]] | None = None) -> int | None:
     try:
         _ensure_evidence_schema()
         from lumenis.shared.evidence.store import record_evidence
@@ -810,7 +811,8 @@ def _write_prelaunch_evidence(platform: str, keyword: str, result: Dict[str, Any
             test_name=f"prelaunch_collection_{platform}",
             result="PASS" if result.get("ok") else "FAIL", started_at=started,
             inputs={"platform": platform, "source_url": keyword,
-                    "source_ids": source_ids, "keywords": [keyword]},
+                    "source_ids": source_ids, "keywords": [keyword],
+                    "unassigned_review_candidates": review_candidates or []},
             outputs={"notes_collected": result.get("raw_count", 0),
                      "notes_inserted": result.get("imported", 0),
                      "notes_updated": result.get("updated", 0),
@@ -1140,10 +1142,12 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         source_item_count = len(items)
         entity_mentions = []
         review_pending = []
+        review_candidates = []
         if platform == "douyin" and prelaunch_scope is not None and collection.ok and records:
             entity_mentions = _prelaunch_entity_mentions(records, prelaunch_scope)
             review_pending = [item for item in entity_mentions if item["status"] != "EXACT_NAME_MENTION"]
             accepted_indices = [i for i, item in enumerate(entity_mentions) if item["status"] == "EXACT_NAME_MENTION"]
+            review_candidates = [record for i, record in enumerate(records) if i not in accepted_indices]
             records = [records[i] for i in accepted_indices]
             items = [items[i] for i in accepted_indices]
             if not records:
@@ -1160,7 +1164,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 }
                 evidence_id = _write_prelaunch_evidence(
                     platform, keyword, result, started=started_at,
-                    scope=prelaunch_scope, source_ids=[],
+                    scope=prelaunch_scope, source_ids=[], review_candidates=review_candidates,
                 )
                 result["evidence_recorded"] = evidence_id is not None
                 if evidence_id is None:
@@ -1274,7 +1278,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         if prelaunch_scope is not None and platform in {"public_http", "web_atom", "douyin"}:
             result["refresh_verified"] = False
         if prelaunch_scope is not None:
-            if prelaunch_observation_changed:
+            if prelaunch_observation_changed or review_candidates:
                 evidence_id = None
             elif platform in {"public_http", "web_atom", "douyin"}:
                 evidence_id = _existing_prelaunch_observation_evidence(note_ids, platform)
@@ -1284,6 +1288,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 evidence_id = _write_prelaunch_evidence(
                     platform, keyword, result, started=started_at,
                     scope=prelaunch_scope, source_ids=note_ids,
+                    review_candidates=review_candidates,
                 )
         else:
             evidence_id = _write_evidence(platform, keyword, result, started=started_at)

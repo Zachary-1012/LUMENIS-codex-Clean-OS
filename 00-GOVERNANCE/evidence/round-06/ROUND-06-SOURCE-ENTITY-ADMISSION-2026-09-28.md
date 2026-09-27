@@ -56,3 +56,22 @@ for other entities. This is a runtime-defect repair, no new dependency adopted.
 GLOBAL UNIVERSE / DATA MATURITY IMPACT: contamination is a blocker, counts do not
 prove coverage. COMMERCIAL OVERLAY IMPACT: no readiness promotion.
 ROUND 06 REWORK; full-universe, RELEASED, OPERATING, COMMERCIAL_READY NO.
+
+## Follow-up: candidate preservation and native field truth
+
+Unresolved native source records are retained inside existing signed Evidence
+inputs as unassigned_review_candidates. They are excluded from source_ids and
+exact-scope Raw/Canonical writes. The HTTP response contains only review status,
+IDs and hashes. Current 20 scoped tests passed (exit 0), including preservation
+and partial-admission source_ids; two changed Python files AST parse PASS.
+A real disposable clone run through the partial path returned three Luohu search
+records: one admitted and persisted through Raw/Canonical/native, two pending.
+Overall ok=false/PARTIAL_SCOPE_REVIEW_REQUIRED, integrity OK/FK0. This is partial
+runtime proof, not a complete Shenzhen dataset or production/user E2E.
+
+Bilibili's native video_review field has no first-party comment semantics proven
+in this environment. Search comments stay None; video_review/review remain raw.
+Source and tests match the 31-test isolated candidate (exit 0). Research with
+first-party and GitHub source boundaries is stored in
+intelligence_library/07_Data-Evidence-Evaluation/BILIBILI-PUBLIC-NATIVE-CAPABILITY-CANDIDATE-20260928.md.
+No Cookie imported, challenge bypassed, or Bilibili business data written by this fix.
