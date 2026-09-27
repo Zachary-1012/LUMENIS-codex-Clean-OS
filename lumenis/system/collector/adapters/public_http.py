@@ -17,7 +17,7 @@ from .registry import register_adapter
 MAX_PUBLIC_BODY_CHARS = 16_000
 _CONTENT_SELECTORS = (
     'article, [itemprop="articleBody"], .zw, [class*="-body-"], '
-    '.float100, .content_article, .block-text-only .container-sm, main'
+    '.float100, .content_article, .block-text-only .container-sm, main, [role="main"]'
 )
 _CHROME_MARKERS = ("header", "footer", "menu", "navigation", "breadcrumb")
 
@@ -41,7 +41,8 @@ def _substantive_body(soup: BeautifulSoup) -> str:
         ):
             chrome.decompose()
         body = cleaned.get_text(" ", strip=True)
-        if not 500 <= len(body) <= 100_000:
+        semantic = node.name in {"article", "main"} or node.get("itemprop") == "articleBody" or node.get("role") == "main"
+        if not body or len(body) > 100_000 or (not semantic and len(body) < 500):
             continue
         priority = (
             0 if node.name == "article" or node.get("itemprop") == "articleBody"
@@ -142,13 +143,15 @@ class PublicHttpAdapter(BasePlatformAdapter):
                 and proposed.hostname == fetched.hostname
                 and proposed.port == fetched.port
                 and not proposed.username and not proposed.password
+                # A site-wide homepage canonical must not collapse different
+                # location/news pages into the same content identity.
+                and not (fetched.path.strip("/") and not proposed.path.strip("/"))
             ):
                 canonical_url = candidate
         title = soup.title.get_text(" ", strip=True) if soup.title else ""
         description = soup.find("meta", attrs={"name": re.compile("^description$", re.I)})
-        # A site-wide meta description can describe the publisher rather than
-        # the article. Prefer a substantial content container when one exists;
-        # otherwise retain the short-page/description behavior.
+        # Semantic main/article content remains authoritative even when short;
+        # a site-wide description must not replace a directory or address.
         article_text = _substantive_body(soup)
         text = article_text or (soup.body.get_text(" ", strip=True) if soup.body else "")
         if len(text) > MAX_PUBLIC_BODY_CHARS:

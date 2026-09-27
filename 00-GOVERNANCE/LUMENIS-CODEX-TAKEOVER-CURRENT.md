@@ -1246,3 +1246,15 @@ ROUND 03 remains REWORK, both Global coverage dimensions NO, Guangzhou PARTIAL,
 Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO. This is not country population
 or platform-data closure. The current user priority is all-platform collection
 and due-only daily prelaunch baseline maintenance, using the existing owners.
+
+### 2026-09-28 — public collection retains short native content
+
+SYSTEM PublicHttpAdapter now retains short semantic article/main content and
+prevents a site-wide homepage canonical from merging different detail pages.
+42 scoped parser/ingestion/transport regressions and Constitution Gate passed.
+Two real Korean source captures confirm native address/store-name retention;
+the English-anchor mismatch was sent to the country task for correction.
+[Round 06 evidence](evidence/round-06/ROUND-06-PUBLIC-SHORT-BODY-2026-09-28.md)
+distinguishes captured-response verification from product DB and user E2E,
+which remain unverified. No DB write; no Global coverage or operating promotion.
+ROUND 06 REWORK; Full Universe/RELEASED/OPERATING/COMMERCIAL_READY remain NO.

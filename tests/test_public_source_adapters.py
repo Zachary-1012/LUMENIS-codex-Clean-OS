@@ -28,7 +28,7 @@ def test_public_http_normalizes_html_and_keeps_provenance():
 
     assert result.status is CollectionStatus.SUCCESS
     assert result.items[0]["title"] == "Public title"
-    assert result.items[0]["content"] == "Public summary"
+    assert result.items[0]["content"] == "Public body"
     assert result.items[0]["source_platform"] == "public_http"
     assert result.metadata["provider"] == "public_http"
     assert result.metadata["source"].startswith("https://")
