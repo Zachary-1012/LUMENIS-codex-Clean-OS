@@ -121,12 +121,22 @@ def test_frame_capture_has_fresh_id_and_real_png_dimensions(isolated_runtime):
     session._target_id = "bt_test"
     png = b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR" + struct.pack(">II", 640, 360)
     session._page = MagicMock()
+    session._page.url = "https://example.org/"
+    session._page.evaluate.return_value = 30
     session._page.screenshot.return_value = png
     first = session.capture_frame()
     second = session.capture_frame()
     assert first["image"] == png
     assert (first["width"], first["height"]) == (640, 360)
     assert first["frame_id"] != second["frame_id"]
+    session._page.evaluate.return_value = 0
+    session._last_navigation_at = runtime.time.monotonic()
+    with pytest.raises(runtime.BrowserFramePending):
+        session.capture_frame()
+    session._last_navigation_at = runtime.time.monotonic() - 4
+    with pytest.raises(runtime.BrowserFrameEmpty):
+        session.capture_frame()
+    session._page.evaluate.return_value = 30
     session._page.screenshot.return_value = b"invalid"
     with pytest.raises(RuntimeError, match="valid PNG"):
         session.capture_frame()
@@ -241,6 +251,24 @@ def test_frame_api_returns_only_owned_uncached_image(monkeypatch, isolated_runti
     actor["session_id"] = 501
     session.status = runtime.SessionStatus.CREATED
     assert client.get(path).get_json()["error_code"] == "BROWSER_FRAME_UNAVAILABLE"
+    isolated_runtime.close_session(session.session_id)
+
+
+def test_frame_api_reports_pending_instead_of_blank_success(monkeypatch, isolated_runtime):
+    client, _actor = _authorized_client(monkeypatch, isolated_runtime)
+    session = isolated_runtime.create_session(owner_actor_id=101, owner_account_session_id=501)
+    session.status = runtime.SessionStatus.RUNNING
+    def pending():
+        raise runtime.BrowserFramePending("painting")
+    session.capture_frame = pending
+    response = client.get(f"/api/browser/sessions/{session.session_id}/frame")
+    assert response.status_code == 202
+    assert response.get_json()["error_code"] == "BROWSER_FRAME_PENDING"
+    assert response.headers["Cache-Control"] == "no-store, private"
+    session.capture_frame = lambda: (_ for _ in ()).throw(runtime.BrowserFrameEmpty("empty"))
+    empty = client.get(f"/api/browser/sessions/{session.session_id}/frame")
+    assert empty.status_code == 503
+    assert empty.get_json()["error_code"] == "BROWSER_FRAME_EMPTY"
     isolated_runtime.close_session(session.session_id)
 
 

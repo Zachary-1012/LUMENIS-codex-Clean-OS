@@ -65,6 +65,8 @@ def register_ai_browser_api(app):
         get_injection_guard,
         BrowserActionType,
         BrowserCapacityError,
+        BrowserFramePending,
+        BrowserFrameEmpty,
         ExpectedState,
         SessionStatus,
         sanitize_sensitive,
@@ -238,6 +240,14 @@ def register_ai_browser_api(app):
             return jsonify({"ok": False, "error_code": "BROWSER_FRAME_UNAVAILABLE"}), 409
         try:
             frame = session.capture_frame()
+        except BrowserFramePending:
+            response = jsonify({"ok": False, "error_code": "BROWSER_FRAME_PENDING"})
+            response.headers["Cache-Control"] = "no-store, private"
+            return response, 202
+        except BrowserFrameEmpty:
+            response = jsonify({"ok": False, "error_code": "BROWSER_FRAME_EMPTY"})
+            response.headers["Cache-Control"] = "no-store, private"
+            return response, 503
         except Exception:
             logger.exception("AI Browser frame capture unavailable")
             return jsonify({"ok": False, "error_code": "BROWSER_FRAME_UNAVAILABLE"}), 503

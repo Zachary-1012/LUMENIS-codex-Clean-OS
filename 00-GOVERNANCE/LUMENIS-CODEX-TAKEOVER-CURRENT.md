@@ -12,6 +12,16 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-27 — Browser frame paint readiness
+
+[Round 06 frame readiness evidence](evidence/round-06/ROUND-06-BROWSER-FRAME-PAINT-READINESS-2026-09-27.md)
+corrects a real all-white frame returned immediately after navigation.
+The current frame API reports `202 BROWSER_FRAME_PENDING` during paint and
+bounded `503 BROWSER_FRAME_EMPTY` when content stays unusably sparse; a real
+isolated browser probe progressed from pending to a visibly populated PNG.
+202 focused tests passed. The heuristic and test Actor are not a real SYS-06
+user E2E; ROUND 06/14 remain `REWORK / LIVE_NOT_VERIFIED`.
+
 ### 2026-09-27 — Authorized AI Browser frame for SYS-06 binding
 
 [Round 06 Browser frame evidence](evidence/round-06/ROUND-06-AI-BROWSER-AUTHORIZED-FRAME-2026-09-27.md)

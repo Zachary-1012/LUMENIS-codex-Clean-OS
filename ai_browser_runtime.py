@@ -1213,6 +1213,7 @@ class AIBrowserRuntime:
         self._pages: Dict[str, Any] = {}  # tab_id -> page
         self._target_id: Optional[str] = None
         self._page_revision = 0
+        self._last_navigation_at = 0.0
         self.engine_label = ""
 
         # 组件
@@ -1288,6 +1289,7 @@ class AIBrowserRuntime:
             self._page = self._context.new_page()
             self._target_id = f"bt_{uuid.uuid4().hex}"
             self._page_revision = 0
+            self._last_navigation_at = 0.0
             self.engine_label = "Chrome" if engine == "chrome" else "Edge"
             logger.info("[AIBrowserRuntime] 已连接序境隔离浏览器并创建专属页面")
 
@@ -1522,6 +1524,9 @@ class AIBrowserRuntime:
                 task_id, run_id, step_id, agent_id, skill_id, risk_level,
             ))
         self._page_revision += 1
+        if action_type in {BrowserActionType.NAVIGATE, BrowserActionType.RELOAD,
+                           BrowserActionType.BACK, BrowserActionType.FORWARD}:
+            self._last_navigation_at = time.monotonic()
         self.last_activity = time.time()
         timestamp = datetime.now().isoformat()
 
@@ -2003,6 +2008,16 @@ class AIBrowserRuntime:
         width, height = struct.unpack(">II", image[16:24])
         if width <= 0 or height <= 0:
             raise RuntimeError("Browser frame dimensions are invalid")
+        if self._page.url != "about:blank":
+            text_length = self._page.evaluate(
+                "document.body ? document.body.innerText.trim().length : 0"
+            )
+            sparse_image = len(image) < max(8192, width * height // 64)
+            recently_navigated = time.monotonic() - self._last_navigation_at < 3.0
+            if sparse_image and text_length < 16:
+                if recently_navigated:
+                    raise BrowserFramePending("Browser page is still painting")
+                raise BrowserFrameEmpty("Browser page has no usable visible content")
         frame_id = f"bf_{uuid.uuid4().hex}"
         return {
             "frame_id": frame_id,
@@ -2025,6 +2040,14 @@ class AIBrowserRuntime:
 
 class BrowserCapacityError(RuntimeError):
     """The single synchronous browser slot belongs to another login."""
+
+
+class BrowserFramePending(RuntimeError):
+    """The page has not painted enough content for a useful product frame."""
+
+
+class BrowserFrameEmpty(RuntimeError):
+    """The page remained visually empty after the bounded paint window."""
 
 
 class BrowserSessionManager:
