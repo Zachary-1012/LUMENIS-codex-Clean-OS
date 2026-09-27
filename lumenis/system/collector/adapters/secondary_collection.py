@@ -30,6 +30,7 @@ import hashlib
 import getpass
 from datetime import datetime, timedelta
 from typing import Any, Dict, Iterable, List, Mapping
+from urllib.parse import urlsplit
 
 from .base import CollectionResult, CollectionStatus
 from .config import PLATFORM_CAPABILITIES
@@ -388,6 +389,14 @@ def _validate_request(platform: str, keyword: str, max_results: int) -> tuple[st
     return canonical, query, limit
 
 
+def _blocked_youtube_atom_feed(platform: str, source_url: str) -> bool:
+    if platform != "web_atom":
+        return False
+    parts = urlsplit(source_url)
+    host = (parts.hostname or "").lower()
+    return (host == "youtube.com" or host.endswith(".youtube.com")) and parts.path == "/feeds/videos.xml"
+
+
 def _native_record(item: Dict[str, Any], platform: str, keyword: str, captured_at: str) -> Dict[str, Any]:
     """Adapt the main normalized item to platform-native mapping keys.
 
@@ -439,6 +448,15 @@ def _native_record(item: Dict[str, Any], platform: str, keyword: str, captured_a
             "comment_count": item.get("comments"),
             "collect_count": item.get("collects"),
             "share_count": item.get("shares"),
+        })
+    elif platform == "web_atom":
+        record.update({
+            "content_id": content_id,
+            "author_id": item.get("author_id") or "",
+            "author_name": item.get("author_nickname") or "",
+            "published_at": publish_date,
+            "view_count": raw.get("view_count"),
+            "content_type": "video" if raw.get("video_id") else "article",
         })
     return record
 
@@ -576,11 +594,21 @@ def _prelaunch_public_import_resource(
 ) -> str:
     """Bind one local import approval to a registered entity and public URL."""
     exact = _prelaunch_scope(scope)
-    if platform != "public_http" or not source_url.startswith("https://"):
+    parts = urlsplit(source_url)
+    host = (parts.hostname or "").lower()
+    if (
+        platform not in {"public_http", "web_atom"}
+        or parts.scheme != "https"
+        or not host
+        or host == "youtube.com"
+        or host.endswith(".youtube.com")
+        or host == "youtu.be"
+        or host.endswith(".youtu.be")
+    ):
         raise ValueError("public HTTPS source required")
     entity_id = exact["subject_id"] or exact["brand_focus_id"]
     digest = hashlib.sha256(source_url.encode("utf-8")).hexdigest()
-    return f"prelaunch-public-http:{exact['domain_id']}:{entity_id}:{digest}"
+    return f"prelaunch-{platform}:{exact['domain_id']}:{entity_id}:{digest}"
 
 
 def _authorize_prelaunch_public(scope: Mapping[str, Any], source: str, platform: str) -> bool:
@@ -665,7 +693,8 @@ def _write_prelaunch_evidence(platform: str, keyword: str, result: Dict[str, Any
             feature_id=f"PRELAUNCH_{platform.upper()}_COLLECT", level="L8",
             test_name=f"prelaunch_collection_{platform}",
             result="PASS" if result.get("ok") else "FAIL", started_at=started,
-            inputs={"platform": platform, "source_ids": source_ids, "keywords": [keyword]},
+            inputs={"platform": platform, "source_url": keyword,
+                    "source_ids": source_ids, "keywords": [keyword]},
             outputs={"notes_collected": result.get("raw_count", 0),
                      "notes_inserted": result.get("imported", 0),
                      "notes_updated": result.get("updated", 0)},
@@ -690,6 +719,38 @@ def _persist_prelaunch_scope(note_ids: List[str], scope: Mapping[str, Any], evid
             domain_id="zbmp" if bmp else "cth", subject_id=scope.get("subject_id"),
             brand_focus_id=scope.get("brand_focus_id"), scope_evidence_ref=evidence_id,
         )
+
+
+def _prelaunch_scope_note_ids_needing_verification(
+    note_ids: List[str], scope: Mapping[str, Any],
+) -> List[str]:
+    """Return only rows that still need their first exact-scope Evidence link."""
+    import database as db
+
+    product = "ZBMP" if scope["domain_id"] == "bmp" else "CTH"
+    domain = "zbmp" if scope["domain_id"] == "bmp" else "cth"
+    with db.get_db() as conn:
+        pending = []
+        for note_id in note_ids:
+            note = conn.execute(
+                "SELECT product_id, domain_id, subject_id, brand_focus_id, "
+                "scope_status, scope_evidence_ref FROM notes WHERE note_id=?",
+                (note_id,),
+            ).fetchone()
+            canonical = conn.execute(
+                "SELECT product_id, domain_id, subject_id, brand_focus_id, "
+                "scope_status, scope_evidence_ref FROM canonical_data "
+                "WHERE source_id=? AND product_id=? LIMIT 1", (note_id, product),
+            ).fetchone()
+            expected = (product, domain, scope.get("subject_id"),
+                        scope.get("brand_focus_id"), "VERIFIED")
+            if (note is None or canonical is None
+                    or (note[0], note[1], note[2] or None, note[3] or None, note[4]) != expected
+                    or (canonical[0], canonical[1], canonical[2] or None,
+                        canonical[3] or None, canonical[4]) != expected
+                    or not note[5] or str(note[5]) != str(canonical[5])):
+                pending.append(note_id)
+        return pending
 
 
 def _write_evidence(platform: str, keyword: str, result: Dict[str, Any], *, started: str) -> int | None:
@@ -733,9 +794,15 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
     if str(operator or "").strip().lower() not in {"human", "human_ui"}:
         raise PermissionError("该采集入口只接受人工触发")
     platform, keyword, max_results = _validate_request(platform, keyword, max_results)
+    if _blocked_youtube_atom_feed(platform, keyword):
+        return {
+            "ok": False, "status": "BLOCKED", "platform": platform,
+            "keyword": keyword, "read_only": True, "external_write": False,
+            "error_type": "SOURCE_POLICY",
+        }
     prelaunch_scope = None
     if prelaunch_local_import:
-        if actor is not None or operator != "human" or platform != "public_http":
+        if actor is not None or operator != "human" or platform not in {"public_http", "web_atom"}:
             return {"ok": False, "status": "SCOPE_UNAUTHORIZED", "platform": platform,
                     "keyword": keyword, "read_only": True, "external_write": False}
         try:
@@ -808,8 +875,10 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
 
         health = (
             _adapter_health(platform, url=keyword)
-            if platform == "public_http" else _adapter_health(platform)
+            if platform in {"public_http", "web_atom"} else _adapter_health(platform)
         )
+
+
         health_status = health.get("status", "UNAVAILABLE")
         if not health.get("can_attempt", health.get("ready", False)):
             finished = _now()
@@ -852,6 +921,11 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         items = [item for item in (collection.items or []) if isinstance(item, dict)]
         captured_at = _now()
         records = [_native_record(item, platform, keyword, captured_at) for item in items]
+        prelaunch_observation_changed = False
+        if prelaunch_scope is not None and platform == "web_atom" and records:
+            from lumenis.shared.database.platform_content import platform_records_changed
+
+            prelaunch_observation_changed = platform_records_changed(records, platform=platform)
         prelaunch_scope_conflict = bool(
             prelaunch_scope is not None and items
             and _prelaunch_scope_conflict(records, prelaunch_scope)
@@ -918,7 +992,10 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             "provenance": provenance,
         }
         if prelaunch_scope is not None:
-            evidence_id = _existing_prelaunch_evidence(note_ids, prelaunch_scope)
+            evidence_id = (
+                None if prelaunch_observation_changed
+                else _existing_prelaunch_evidence(note_ids, prelaunch_scope)
+            )
             if evidence_id is None:
                 evidence_id = _write_prelaunch_evidence(
                     platform, keyword, result, started=started_at,
@@ -936,9 +1013,20 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             })
         elif prelaunch_scope is not None and note_ids and result["ok"]:
             try:
-                _persist_prelaunch_scope(note_ids, prelaunch_scope, evidence_id)
+                pending_scope_ids = _prelaunch_scope_note_ids_needing_verification(
+                    note_ids, prelaunch_scope,
+                )
+                if pending_scope_ids:
+                    _persist_prelaunch_scope(pending_scope_ids, prelaunch_scope, evidence_id)
                 result["canonical_synced"] = len(note_ids)
                 result["scope_status"] = "VERIFIED"
+                if platform == "web_atom":
+                    from lumenis.shared.database.platform_content import persist_verified_platform_records
+
+                    result["native_fields_synced"] = persist_verified_platform_records(
+                        records, platform=platform, note_ids=note_ids,
+                        evidence_id=evidence_id, scope=prelaunch_scope,
+                    )
             except Exception:
                 result.update({"ok": False, "status": "CANONICAL_SYNC_FAILED",
                                "error_type": "CANONICAL_SYNC_FAILED",

@@ -26,9 +26,8 @@ def test_scope_resolves_exact_cth_and_bmp_keys_in_v18_database(tmp_path, monkeyp
     monkeypatch.setattr(migrations, "DB_PATH", str(path))
     monkeypatch.setattr(migrations, "BACKUP_DIR", str(tmp_path / "backups"))
     # Build the Shared Database and Evidence owner schemas in this isolated DB,
-    # then invoke the actual v18 schema migration. The current full migration
-    # runner does not add the Evidence domain/product columns its v18 prerequisite
-    # check requires, so this fixture supplies those declared v17 columns.
+    # then invoke the actual v18 schema migration. The canonical Evidence owner
+    # supplies nullable domain/product columns required by v18.
     with sqlite3.connect(path) as conn:
         apply_business_schema(conn)
         conn.execute("ALTER TABLE notes ADD COLUMN domain_id TEXT DEFAULT 'cth'")
@@ -37,8 +36,6 @@ def test_scope_resolves_exact_cth_and_bmp_keys_in_v18_database(tmp_path, monkeyp
         migrations.migration_13_to_14(conn)
         subject_registry.ensure_schema(conn)
         ensure_evidence_schema(conn)
-        conn.execute("ALTER TABLE app_evidence_records ADD COLUMN domain_id TEXT")
-        conn.execute("ALTER TABLE app_evidence_records ADD COLUMN product_id TEXT")
         migrations.init_version_table(conn)
         migrations.set_version(conn, 17, migrations.MIGRATION_HISTORY[17])
         migrations.migration_17_to_18(conn)

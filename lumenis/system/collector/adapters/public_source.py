@@ -48,6 +48,12 @@ class PublicResponse:
     resolution_trace: tuple[dict[str, str], ...] = ()
 
 
+def _is_blocked_youtube_feed(url: str) -> bool:
+    parts = urlsplit(url)
+    host = (parts.hostname or "").lower()
+    return (host == "youtube.com" or host.endswith(".youtube.com")) and parts.path == "/feeds/videos.xml"
+
+
 def public_source_provenance(response: PublicResponse, requested_url: str) -> dict[str, str]:
     """Return bounded transport lineage without URL query or response body."""
     def safe_url(value: str) -> str:
@@ -382,6 +388,8 @@ def fetch_public_url(
     session: requests.Session | None = None,
 ) -> PublicResponse:
     """Fetch a small public response with bounded, revalidated redirects."""
+    if _is_blocked_youtube_feed(url):
+        raise PublicSourceError("YouTube video feeds are blocked pending an authorized access route")
     if max_bytes <= 0 or max_bytes > MAX_RESPONSE_BYTES:
         raise ValueError("max_bytes is outside the public-source safety bound")
     host_pins = load_public_source_host_pins()
@@ -406,6 +414,8 @@ def fetch_public_url(
     headers = {"User-Agent": USER_AGENT, "Accept": "text/html,application/xml,application/rss+xml,application/atom+xml,*/*;q=0.1"}
     try:
         for _ in range(MAX_REDIRECTS + 1):
+            if _is_blocked_youtube_feed(current):
+                raise PublicSourceError("YouTube video feeds are blocked pending an authorized access route")
             response = None
             try:
                 response = client.get(

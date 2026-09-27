@@ -1217,3 +1217,17 @@ real-user Job is claimed. [Round 06 evidence](evidence/round-06/ROUND-06-PRELAUN
 records the 34 passing affected tests and remaining limits. Global Commercial
 and Brand Coverage remain `NO / NOT VERIFIED`, Guangzhou reference `PARTIAL`,
 ROUND 06 `REWORK`, and Full Universe, RELEASED and OPERATING remain `NO`.
+
+### 2026-09-28 Round 06 exact prelaunch Atom import and refresh
+
+The existing Collector/Shared DB chain now has a bounded manual Atom path for
+one exact registered CTH or BMP entity, native fields, immutable first-scope
+Evidence, signed changed-observation Evidence and append-only view snapshots.
+Fresh v0→v18 Evidence schema and mixed old/new feed regressions passed 11/11
+in an isolated archive; the Constitution gate passed. The YouTube video-feed
+path is blocked by current source policy. No approved live Atom feed or
+product-DB write was completed by this Batch, so this is tested source rather
+than real platform-data closure. [Round 06 evidence](evidence/round-06/ROUND-06-ATOM-EXACT-PRELAUNCH-REFRESH-2026-09-28.md)
+records the exact tests and limitations. Global Commercial and Brand Coverage
+remain `NO / NOT VERIFIED`, Guangzhou reference `PARTIAL`, ROUND 06 `REWORK`,
+and Full Universe, RELEASED, OPERATING and COMMERCIAL_READY remain `NO`.

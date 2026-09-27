@@ -25,6 +25,12 @@ def _entry_time(entry: Any) -> str:
     return str(entry.get("published") or entry.get("updated") or "")[:80]
 
 
+def _is_blocked_youtube_feed(url: str) -> bool:
+    parts = urlsplit(url)
+    host = (parts.hostname or "").lower()
+    return (host == "youtube.com" or host.endswith(".youtube.com")) and parts.path == "/feeds/videos.xml"
+
+
 class AtomAdapter(BasePlatformAdapter):
     """Keyless Atom feed adapter using the same Evidence boundary as RSS."""
 
@@ -47,8 +53,22 @@ class AtomAdapter(BasePlatformAdapter):
             )
         parts = urlsplit(feed_url)
         source_url = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+        if _is_blocked_youtube_feed(feed_url):
+            return CollectionResult(
+                status=CollectionStatus.BLOCKED,
+                platform=self.platform,
+                message="This YouTube feed is blocked pending an authorized access route.",
+                metadata={"provider": "feedparser_atom", "blocked_reason": "source_policy"},
+            )
         try:
             response = self.fetcher(feed_url)
+            if _is_blocked_youtube_feed(response.url):
+                return CollectionResult(
+                    status=CollectionStatus.BLOCKED,
+                    platform=self.platform,
+                    message="This YouTube feed is blocked pending an authorized access route.",
+                    metadata={"provider": "feedparser_atom", "blocked_reason": "source_policy"},
+                )
             parts = urlsplit(response.url)
             source_url = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
             parsed = feedparser.parse(response.content)

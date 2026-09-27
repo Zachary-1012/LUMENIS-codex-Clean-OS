@@ -12,6 +12,7 @@ INTEGRITY_COLUMNS = {
     "integrity_key_id",
     "integrity_digest",
 }
+SCOPE_COLUMNS = {"domain_id", "product_id"}
 
 
 def _legacy_db() -> sqlite3.Connection:
@@ -56,13 +57,16 @@ def test_integrity_schema_adds_nullable_fields_without_rewriting_legacy_row():
             for row in conn.execute("PRAGMA index_list(app_evidence_records)")
         }
 
-        assert INTEGRITY_COLUMNS <= set(columns)
-        assert all(columns[name][3] == 0 for name in INTEGRITY_COLUMNS)
+        assert (INTEGRITY_COLUMNS | SCOPE_COLUMNS) <= set(columns)
+        assert all(columns[name][3] == 0 for name in INTEGRITY_COLUMNS | SCOPE_COLUMNS)
         assert row == (
             41, "archive", "kept value", "topic-a", "verified", "hash-a",
             "2024-01-02", None, None, None, None,
         )
-        assert set(result["added"]) == INTEGRITY_COLUMNS
+        assert set(result["added"]) == INTEGRITY_COLUMNS | SCOPE_COLUMNS
+        assert conn.execute(
+            "SELECT domain_id, product_id FROM app_evidence_records WHERE id=41"
+        ).fetchone() == (None, None)
         assert {"idx_app_evidence_integrity_digest", "idx_app_evidence_integrity_scheme"} <= indexes
     finally:
         conn.close()
@@ -78,7 +82,7 @@ def test_integrity_schema_respects_caller_transaction_and_rolls_back_atomically(
         conn.execute("BEGIN")
         store.ensure_evidence_schema(conn)
         assert conn.in_transaction
-        assert INTEGRITY_COLUMNS <= {
+        assert (INTEGRITY_COLUMNS | SCOPE_COLUMNS) <= {
             row[1]
             for row in conn.execute("PRAGMA table_info(app_evidence_records)")
         }
@@ -113,10 +117,10 @@ def test_integrity_schema_is_idempotent_and_creates_fresh_table():
             for row in conn.execute("PRAGMA index_list(app_evidence_records)")
         }
 
-        assert set(first["added"]) == INTEGRITY_COLUMNS
+        assert set(first["added"]) == INTEGRITY_COLUMNS | SCOPE_COLUMNS
         assert second["added"] == []
-        assert set(second["skipped"]) == INTEGRITY_COLUMNS
-        assert INTEGRITY_COLUMNS <= {
+        assert set(second["skipped"]) == INTEGRITY_COLUMNS | SCOPE_COLUMNS
+        assert (INTEGRITY_COLUMNS | SCOPE_COLUMNS) <= {
             row[1]
             for row in conn.execute("PRAGMA table_info(app_evidence_records)")
         }

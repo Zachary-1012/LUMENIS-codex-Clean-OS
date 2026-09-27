@@ -1888,8 +1888,13 @@ def migrate_evidence_contract_fields(db_path: str = None) -> dict:
         conn.close()
 
 
-# Shared Database v17 storage for full-record Evidence integrity.
+# Shared Database v17 storage for exact scope and full-record Evidence integrity.
 # All fields stay nullable so adding the schema never upgrades legacy rows.
+EVIDENCE_SCOPE_NEW_COLUMNS = [
+    ("domain_id", "TEXT"),
+    ("product_id", "TEXT"),
+]
+
 EVIDENCE_INTEGRITY_NEW_COLUMNS = [
     ("integrity_version", "INTEGER", "NULL"),
     ("integrity_algorithm", "TEXT", "NULL"),
@@ -1927,6 +1932,17 @@ def ensure_evidence_schema(conn: sqlite3.Connection) -> dict:
 
     added = []
     skipped = []
+    for column, column_type in EVIDENCE_SCOPE_NEW_COLUMNS:
+        if column in existing:
+            skipped.append(column)
+            continue
+        conn.execute(
+            "ALTER TABLE app_evidence_records ADD COLUMN "
+            f"{_safe_identifier(column)} {column_type}"
+        )
+        added.append(column)
+        existing.add(column)
+
     for column, column_type, _default in EVIDENCE_INTEGRITY_NEW_COLUMNS:
         if column in existing:
             skipped.append(column)

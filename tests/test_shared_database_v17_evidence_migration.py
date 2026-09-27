@@ -65,16 +65,18 @@ def test_v17_uses_evidence_owner_and_preserves_the_callers_transaction():
             "integrity_key_id",
             "integrity_digest",
         }
-        assert integrity <= set(columns)
-        assert all(columns[name][3] == 0 for name in integrity)
-        assert all(columns[name][4] is None for name in integrity)
+        scope = {"domain_id", "product_id"}
+        assert (integrity | scope) <= set(columns)
+        assert all(columns[name][3] == 0 for name in integrity | scope)
+        assert all(columns[name][4] is None for name in integrity | scope)
         assert conn.execute(
             "SELECT id, source, actual, topic, status, evidence_hash, created_at, "
-            "integrity_version, integrity_algorithm, integrity_key_id, integrity_digest "
+            "integrity_version, integrity_algorithm, integrity_key_id, integrity_digest, "
+            "domain_id, product_id "
             "FROM app_evidence_records WHERE id=41"
         ).fetchone() == (
             41, "archive", "kept value", "topic-a", "verified", "hash-a",
-            "2024-01-02", None, None, None, None,
+            "2024-01-02", None, None, None, None, None, None,
         )
         assert {
             "idx_app_evidence_topic",
@@ -109,17 +111,18 @@ def test_v17_migration_runner_records_version_and_keeps_legacy_evidence(
     monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
     monkeypatch.setattr(migrations, "DB_PATH", str(db_path))
 
-    assert migrations.migrate() is True
+    assert migrations.migrate(target_version=17) is True
 
     with sqlite3.connect(db_path) as conn:
         assert migrations.get_current_version(conn) == 17
         assert conn.execute(
             "SELECT id, source, actual, topic, status, evidence_hash, created_at, "
-            "integrity_version, integrity_algorithm, integrity_key_id, integrity_digest "
+            "integrity_version, integrity_algorithm, integrity_key_id, integrity_digest, "
+            "domain_id, product_id "
             "FROM app_evidence_records WHERE id=41"
         ).fetchone() == (
             41, "archive", "kept value", "topic-a", "verified", "hash-a",
-            "2024-01-02", None, None, None, None,
+            "2024-01-02", None, None, None, None, None, None,
         )
         assert {
             "idx_app_evidence_integrity_digest",
