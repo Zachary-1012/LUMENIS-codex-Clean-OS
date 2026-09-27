@@ -14,6 +14,46 @@ from .public_source import PublicResponse, PublicSourceError, fetch_public_url, 
 from .registry import register_adapter
 
 
+MAX_PUBLIC_BODY_CHARS = 16_000
+_CONTENT_SELECTORS = (
+    'article, [itemprop="articleBody"], .zw, [class*="-body-"], '
+    '.float100, .content_article, .block-text-only .container-sm, main'
+)
+_CHROME_MARKERS = ("header", "footer", "menu", "navigation", "breadcrumb")
+
+
+def _substantive_body(soup: BeautifulSoup) -> str:
+    """Select article content without mistaking a site menu/footer for the article."""
+    candidates: list[tuple[int, int, str]] = []
+    for node in soup.select(_CONTENT_SELECTORS):
+        if node.name in {"script", "style", "nav", "header", "footer", "aside"}:
+            continue
+        if node.find_parent(("nav", "header", "footer", "aside")):
+            continue
+        labels = " ".join(str(value) for value in (
+            node.get("id") or "", *(node.get("class") or []),
+        )).lower()
+        if any(marker in labels for marker in _CHROME_MARKERS):
+            continue
+        cleaned = BeautifulSoup(str(node), "html.parser")
+        for chrome in cleaned.select(
+            "script, style, noscript, nav, header, footer, aside, form, [role=navigation]"
+        ):
+            chrome.decompose()
+        body = cleaned.get_text(" ", strip=True)
+        if not 500 <= len(body) <= 100_000:
+            continue
+        priority = (
+            0 if node.name == "article" or node.get("itemprop") == "articleBody"
+            else 1 if "content_article" in labels or node.find_parent(class_="block-text-only")
+            else 2 if node.name != "main" else 3
+        )
+        candidates.append((priority, len(body), body))
+    if candidates:
+        return min(candidates, key=lambda item: (item[0], item[1]))[2]
+    return ""
+
+
 def _publication_signals(soup: BeautifulSoup) -> tuple[str, str, str]:
     """Accept a declared publication date only when page signals agree by day."""
     signals: list[tuple[str, str]] = []
@@ -109,20 +149,10 @@ class PublicHttpAdapter(BasePlatformAdapter):
         # A site-wide meta description can describe the publisher rather than
         # the article. Prefer a substantial content container when one exists;
         # otherwise retain the short-page/description behavior.
-        candidates = []
-        for node in soup.select(
-            'article, [itemprop="articleBody"], .zw, [class*="-body-"], '
-            '.float100, .content_article, .block-text-only .container-sm, main'
-        ):
-            if node.name in {"script", "style", "nav", "header", "footer"}:
-                continue
-            body = node.get_text(" ", strip=True)
-            if 500 <= len(body) <= 100_000:
-                candidates.append(body)
-        article_text = min(candidates, key=len) if candidates else ""
+        article_text = _substantive_body(soup)
         text = article_text or (soup.body.get_text(" ", strip=True) if soup.body else "")
-        if len(text) > 1000:
-            text = text[:1000].rstrip() + "…"
+        if len(text) > MAX_PUBLIC_BODY_CHARS:
+            text = text[:MAX_PUBLIC_BODY_CHARS].rstrip() + "…"
         published, date_source, date_state = _publication_signals(soup)
         item_id = hashlib.sha256(canonical_url.encode("utf-8")).hexdigest()[:32]
         return {

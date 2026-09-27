@@ -1072,3 +1072,14 @@ scope and Canonical quality `ok`. The remaining 112 earlier rows still have
 unknown publication times and quality `error`. The local operator scripts and
 dependent scope source are not published; the DB itself is local. Global
 coverage, product user E2E and ROUND 06 acceptance remain `NO / REWORK`.
+
+### 2026-09-27 Round 06 public body quality
+
+The existing public HTTP adapter now excludes navigation/footer candidates and
+retains a bounded 16,000-character article excerpt. [Round 06 evidence](evidence/round-06/ROUND-06-PUBLIC-BODY-QUALITY-2026-09-27.md)
+records 12 clean-archive tests plus the Constitution gate, 23 shared-checkout
+targeted tests, and live source reads from ELC, Swire and Nike. The ELC
+Le Labo mention is now inside the returned excerpt, while its conflicting
+publisher dates remain unknown. No new actual DB record, non-HTTP platform
+capture or user E2E is claimed by this Batch; Global coverage and ROUND 06
+remain `NO / REWORK`.
