@@ -202,6 +202,8 @@ Explicit Completion Criteria
 
 Do not begin every task with a full-repository rediscovery. Load only the owners, callers, contracts, tests and runtime paths required by the active gate.
 
+Before changing one capability, run `python scripts/audit_tools/locate_capability_context.py --capability <existing-family> --query <specific-task-term>` (or `--path <source-path> --query <specific-task-term>` when ownership is unambiguous). Read its pinned current rules, then inspect the matching source, tests, related documents and historical research for that exact slice. The locator is a navigation aid: it does not promote research, an old plan or a missing candidate to Production Truth. If the path has no unique owner, resolve the row in the Source Owner Index before editing; record a missing historical input explicitly instead of silently narrowing the capability. Do not run a full-repository audit merely to locate one capability.
+
 The fixed source classification and resume path is `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. Use its owner row for normal work. A full-repository re-audit is permitted only for the structural triggers listed there; a local gap, stale historical note or runner failure is not a trigger.
 
 ### Fifteen-round closed-loop red line

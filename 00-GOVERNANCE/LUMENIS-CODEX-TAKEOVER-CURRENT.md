@@ -12,6 +12,16 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-27 — Bounded capability context lookup
+
+`scripts/audit_tools/locate_capability_context.py` routes one named capability or
+source path through the existing Source Owner Index, current rules, matching
+source/tests and historical research. The root execution router now requires
+that lookup before changing a capability. Content & Creation lookup was checked
+with podcast, video and pitch queries; a removed research source is pinned to
+its immutable historical Git blob. These are navigation/static checks only:
+the related product workflows and historical callers are not thereby accepted.
+
 ### 2026-09-27 — Wallpaper adaptation and local frontend continuity
 
 [Bounded Round 14 evidence](evidence/round-14/ROUND-14-WALLPAPER-AND-LOCAL-CONTINUITY-2026-09-27.md)

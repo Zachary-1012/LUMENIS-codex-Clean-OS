@@ -3,7 +3,7 @@
 > Status: **CANONICAL SHARED-CAPABILITY LEARNING CONTRACT**  
 > Effective: 2026-09-11  
 > Scope: `Shared Capability / Content & Creation` only  
-> Upstream learning source: `00-GOVERNANCE/LUMENIS-EXPERIENCE-RESEARCH-LEARNING-ASSET-V1-20260911.md`  
+> Upstream learning source: historical Git blob `8c305e71b9bec7d902d71677c62554702abe6be4:00-GOVERNANCE/LUMENIS-EXPERIENCE-RESEARCH-LEARNING-ASSET-V1-20260911.md` (read-only research provenance; removed from the current tree by `6ef49524`, not a current Experience authority).
 > Rule: **Learning Source ≠ Production Truth ≠ automatic model training.**
 
 ---
@@ -446,9 +446,9 @@ Never allow translation convenience to alter factual claims, dates, names, quant
 
 # 12. Relationship to Experience Research & Learning Asset
 
-The upstream file remains the broad reusable research library:
+The upstream research remains available as an immutable historical Git blob:
 
-`00-GOVERNANCE/LUMENIS-EXPERIENCE-RESEARCH-LEARNING-ASSET-V1-20260911.md`
+`8c305e71b9bec7d902d71677c62554702abe6be4:00-GOVERNANCE/LUMENIS-EXPERIENCE-RESEARCH-LEARNING-ASSET-V1-20260911.md`
 
 This contract promotes selected parts of that research into content-production intelligence.
 
