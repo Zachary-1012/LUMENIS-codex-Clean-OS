@@ -20,9 +20,11 @@ import time
 import sqlite3
 import hashlib
 import datetime
-from typing import List, Dict
+import re
+from typing import List, Dict, Optional
 from .base import CollectedNote, AdapterResult
 from lumenis.shared.database import get_repository, main_db_path
+from lumenis.shared.database.scope import ScopeValidationError, normalize_product_domain
 
 import logging
 logger = logging.getLogger(__name__)
@@ -197,6 +199,321 @@ def persist_existing_note_scope(
     except Exception:
         con.execute("ROLLBACK TO SAVEPOINT persist_existing_note_scope")
         con.execute("RELEASE SAVEPOINT persist_existing_note_scope")
+        raise
+
+
+def _scope_correction_resource(
+    *, platform: str, domain_id: str, entity_id: str,
+    old_evidence_id: int, source_ids: List[str], correction_key: str,
+) -> str:
+    digest = hashlib.sha256("\n".join(sorted(source_ids)).encode("utf-8")).hexdigest()
+    return (
+        f"scope-correction:unassign:{platform}:{domain_id}:{entity_id}:"
+        f"evidence:{old_evidence_id}:ids:{digest}:change:{correction_key}"
+    )
+
+
+def scope_correction_approval_resource(
+    *, platform: str, product_id: str, domain_id: str,
+    expected_subject_id: Optional[str], expected_brand_focus_id: Optional[str],
+    expected_scope_evidence_ref: int, source_ids: List[str], reason: str, actor: str,
+) -> str:
+    """Return the exact resource that must receive DATA_IMPORT approval."""
+    product, domain = normalize_product_domain(product_id, domain_id)
+    ids = sorted(source_ids)
+    entity_id = expected_subject_id or expected_brand_focus_id or ""
+    payload = {
+        "platform": str(platform or "").strip().lower(), "product_id": product,
+        "domain_id": domain, "expected_subject_id": expected_subject_id,
+        "expected_brand_focus_id": expected_brand_focus_id,
+        "expected_scope_evidence_ref": expected_scope_evidence_ref,
+        "target_scope_status": "UNASSIGNED", "target_subject_id": None,
+        "target_brand_focus_id": None, "source_ids": ids,
+        "reason": reason.strip(), "actor": actor.strip(),
+    }
+    key = hashlib.sha256(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True,
+                   separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    return _scope_correction_resource(
+        platform=payload["platform"], domain_id=domain, entity_id=entity_id,
+        old_evidence_id=expected_scope_evidence_ref, source_ids=ids,
+        correction_key=key,
+    )
+
+
+def _find_scope_correction(
+    con: sqlite3.Connection, correction_key: str,
+) -> Optional[Dict[str, object]]:
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+
+    cursor = con.execute(
+        "SELECT * FROM app_evidence_records WHERE feature_id='SCOPE_CORRECTION'"
+    )
+    names = [column[0] for column in cursor.description]
+    for row in cursor.fetchall():
+        evidence = dict(zip(names, row))
+        try:
+            inputs = json.loads(evidence.get("inputs_json") or "")
+        except (TypeError, ValueError):
+            continue
+        correction = inputs.get("scope_correction") if isinstance(inputs, dict) else None
+        if not isinstance(correction, dict) or correction.get("idempotency_key") != correction_key:
+            continue
+        if not classify_evidence_integrity(evidence).get("verified"):
+            raise ScopeValidationError("prior scope correction Evidence is not signed")
+        return evidence
+    return None
+
+
+def _validate_unassigned_correction_state(
+    con: sqlite3.Connection, ids: List[str], platform: str,
+    product: str, domain: str, correction_ref: int,
+) -> None:
+    from canonical_data import CANONICAL_TABLE
+
+    for note_id in ids:
+        raw = con.execute(
+            "SELECT product_id,domain_id,subject_id,brand_focus_id,scope_status,"
+            "scope_evidence_ref,source_platform FROM notes WHERE note_id=? LIMIT 1",
+            (note_id,),
+        ).fetchone()
+        canonical = con.execute(
+            f"SELECT product_id,domain_id,subject_id,brand_focus_id,scope_status,"
+            f"scope_evidence_ref FROM {CANONICAL_TABLE} WHERE external_id=? LIMIT 1",
+            (note_id,),
+        ).fetchone()
+        native = con.execute(
+            "SELECT raw_data FROM platform_contents WHERE platform=? AND platform_content_id=? LIMIT 1",
+            (platform, note_id),
+        ).fetchone()
+        try:
+            native_data = json.loads(native[0] or "{}") if native else {}
+        except (TypeError, ValueError):
+            raise ScopeValidationError("corrected native source projection is invalid") from None
+        if (
+            raw is None
+            or tuple(raw) != (product, domain, None, None, "UNASSIGNED", "", platform)
+            or canonical is None
+            or tuple(canonical) != (product, domain, "", "", "UNASSIGNED", "")
+            or native is None
+            or not isinstance(native_data, dict)
+            or native_data.get("_lumenis_scope_correction_ref")
+            != correction_ref
+        ):
+            raise ScopeValidationError(
+                "prior correction Evidence exists but Raw and Canonical are not unassigned"
+            )
+
+
+def correct_existing_note_scope_to_unassigned(
+    con: sqlite3.Connection,
+    source_ids: List[str],
+    *,
+    platform: str,
+    product_id: str,
+    domain_id: str,
+    expected_subject_id: Optional[str],
+    expected_brand_focus_id: Optional[str],
+    expected_scope_evidence_ref: int,
+    reason: str,
+    actor: str,
+) -> Dict[str, object]:
+    """Atomically append signed correction Evidence and unassign exact notes.
+
+    Source content, timestamps, native metrics, author identity and the original
+    collection Evidence are left untouched. Normal refresh cannot reassign a
+    source once its correction Evidence exists.
+    """
+    from canonical_data import (
+        CANONICAL_TABLE, ensure_canonical_table, persist_scope_correction,
+    )
+    from lumenis.shared.evidence.store import classify_evidence_integrity, record_evidence
+    from lumenis.system.security import (
+        OperationType, get_permission_gate, is_testing_bypass_enabled,
+    )
+
+    platform_key = str(platform or "").strip().lower()
+    if not re.fullmatch(r"[a-z0-9_]{1,40}", platform_key):
+        raise ScopeValidationError("an exact source platform is required")
+    product, domain = normalize_product_domain(product_id, domain_id)
+    if (
+        (domain == "cth" and (not expected_subject_id or expected_brand_focus_id is not None))
+        or (domain == "zbmp" and (not expected_brand_focus_id or expected_subject_id is not None))
+    ):
+        raise ScopeValidationError("the expected old scope must be one exact Subject or BrandFocus")
+    if type(expected_scope_evidence_ref) is not int or expected_scope_evidence_ref < 1:
+        raise ScopeValidationError("the expected old signed Evidence id is required")
+    ids = list(source_ids) if isinstance(source_ids, (list, tuple)) else []
+    if (
+        not ids or len(ids) > 100 or len(set(ids)) != len(ids)
+        or any(type(value) is not str or not value or value != value.strip() for value in ids)
+    ):
+        raise ScopeValidationError("source identities must be a bounded unique exact list")
+    ids.sort()
+    reason = reason.strip() if isinstance(reason, str) else ""
+    actor = actor.strip() if isinstance(actor, str) else ""
+    if not 8 <= len(reason) <= 1000 or not actor or len(actor) > 160:
+        raise ScopeValidationError("an explicit correction reason and operator identity are required")
+
+    entity_id = expected_subject_id or expected_brand_focus_id or ""
+    correction_payload = {
+        "platform": platform_key, "product_id": product, "domain_id": domain,
+        "expected_subject_id": expected_subject_id,
+        "expected_brand_focus_id": expected_brand_focus_id,
+        "expected_scope_evidence_ref": expected_scope_evidence_ref,
+        "target_scope_status": "UNASSIGNED", "target_subject_id": None,
+        "target_brand_focus_id": None, "source_ids": ids,
+        "reason": reason, "actor": actor,
+    }
+    correction_key = hashlib.sha256(
+        json.dumps(correction_payload, ensure_ascii=False, sort_keys=True,
+                   separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    prior_correction = _find_scope_correction(con, correction_key)
+    if prior_correction is not None:
+        _validate_unassigned_correction_state(
+            con, ids, platform_key, product, domain, int(prior_correction["id"]),
+        )
+        return {
+            "corrected": 0, "evidence_id": int(prior_correction["id"]), "idempotent": True,
+        }
+
+    if is_testing_bypass_enabled():
+        raise ScopeValidationError("testing bypass cannot authorize a scope correction")
+    resource = _scope_correction_resource(
+        platform=platform_key, domain_id=domain, entity_id=entity_id,
+        old_evidence_id=expected_scope_evidence_ref, source_ids=ids,
+        correction_key=correction_key,
+    )
+    permission = get_permission_gate().check(
+        OperationType.DATA_IMPORT, resource,
+        caller=actor, domain_id=domain, exact_approval_required=True,
+    )
+    if permission.allowed is not True or not permission.audit_id:
+        raise PermissionError("exact DATA_IMPORT approval is required for this scope correction")
+
+    cursor = con.execute(
+        "SELECT * FROM app_evidence_records WHERE id=? LIMIT 1",
+        (expected_scope_evidence_ref,),
+    )
+    prior_row = cursor.fetchone()
+    if prior_row is None:
+        raise ScopeValidationError("original scope Evidence is missing")
+    prior_evidence = dict(zip((column[0] for column in cursor.description), prior_row))
+    if (
+        not classify_evidence_integrity(prior_evidence).get("verified")
+        or prior_evidence.get("product_id") != product
+        or prior_evidence.get("domain_id") != domain
+        or str(prior_evidence.get("result") or "").upper() != "PASS"
+        or str(prior_evidence.get("status") or "").lower() != "verified"
+    ):
+        raise ScopeValidationError("original scope Evidence is not signed and verified")
+    try:
+        prior_inputs = json.loads(prior_evidence.get("inputs_json") or "")
+    except (TypeError, ValueError):
+        raise ScopeValidationError("original scope Evidence inputs are invalid") from None
+    old_scope = {"domain_id": domain, "product_id": product, "global": False}
+    old_scope["subject_id" if domain == "cth" else "brand_focus_id"] = entity_id
+    if (
+        not isinstance(prior_inputs, dict)
+        or prior_inputs.get("_lumenis_scope") != old_scope
+        or not isinstance(prior_inputs.get("source_ids"), list)
+        or any(value not in prior_inputs["source_ids"] for value in ids)
+    ):
+        raise ScopeValidationError("original scope Evidence does not cover the exact IDs and old scope")
+
+    ensure_canonical_table(connection=con)
+    con.execute("SAVEPOINT correct_existing_note_scope")
+    try:
+        for note_id in ids:
+            raw = con.execute(
+                "SELECT product_id,domain_id,subject_id,brand_focus_id,scope_status,"
+                "scope_evidence_ref,source_platform FROM notes WHERE note_id=? LIMIT 1",
+                (note_id,),
+            ).fetchone()
+            expected_raw = (
+                product, domain, expected_subject_id, expected_brand_focus_id,
+                "VERIFIED", str(expected_scope_evidence_ref), platform_key,
+            )
+            if raw is None or tuple(raw) != expected_raw:
+                raise ScopeValidationError(f"Raw scope changed since correction review: {note_id}")
+            canonical = con.execute(
+                f"SELECT product_id,domain_id,subject_id,brand_focus_id,scope_status,"
+                f"scope_evidence_ref FROM {CANONICAL_TABLE} WHERE external_id=? LIMIT 1",
+                (note_id,),
+            ).fetchone()
+            expected_canonical = (
+                product, domain, expected_subject_id or "", expected_brand_focus_id or "",
+                "VERIFIED", str(expected_scope_evidence_ref),
+            )
+            if canonical is None or tuple(canonical) != expected_canonical:
+                raise ScopeValidationError(f"Canonical scope differs from expected old scope: {note_id}")
+            native = con.execute(
+                "SELECT raw_data FROM platform_contents WHERE platform=? AND platform_content_id=? LIMIT 1",
+                (platform_key, note_id),
+            ).fetchone()
+            if native is None:
+                raise ScopeValidationError(f"native source projection is missing: {note_id}")
+            try:
+                native_data = json.loads(native[0] or "{}")
+            except (TypeError, ValueError):
+                raise ScopeValidationError(f"native source projection is invalid: {note_id}") from None
+            if not isinstance(native_data, dict) or native_data.get("_lumenis_scope_correction_ref"):
+                raise ScopeValidationError(f"native projection already has a scope correction: {note_id}")
+
+        correction = dict(correction_payload)
+        correction.update({
+            "idempotency_key": correction_key, "permission_resource": resource,
+            "permission_audit_id": permission.audit_id,
+        })
+        correction_evidence_id = record_evidence(
+            source="manual_scope_correction", project="LUMENIS", product=product,
+            feature_id="SCOPE_CORRECTION", level="L8",
+            test_name="explicit source scope correction", result="PASS",
+            status="verified", inputs={"source_ids": ids, "scope_correction": correction},
+            outputs={"target_scope_status": "UNASSIGNED", "corrected_source_ids": ids},
+            actual=f"actor={actor}; reason={reason}", notes=reason,
+            account=actor, domain_id=domain,
+            subject_id=expected_subject_id, brand_focus_id=expected_brand_focus_id,
+            global_scope=False, connection=con,
+        )
+        if type(correction_evidence_id) is not int or correction_evidence_id < 1:
+            raise ScopeValidationError("signed scope correction Evidence could not be appended")
+
+        for note_id in ids:
+            native = con.execute(
+                "SELECT raw_data FROM platform_contents WHERE platform=? AND platform_content_id=?",
+                (platform_key, note_id),
+            ).fetchone()
+            native_data = json.loads(native[0] or "{}")
+            native_data["_lumenis_scope_correction_ref"] = correction_evidence_id
+            con.execute(
+                "UPDATE platform_contents SET raw_data=? WHERE platform=? AND platform_content_id=?",
+                (json.dumps(native_data, ensure_ascii=False, sort_keys=True), platform_key, note_id),
+            )
+            con.execute(
+                "UPDATE notes SET subject_id=NULL, brand_focus_id=NULL, "
+                "scope_status='UNASSIGNED', scope_evidence_ref='' "
+                "WHERE note_id=? AND product_id=? AND domain_id=? AND subject_id IS ? "
+                "AND brand_focus_id IS ? AND scope_status='VERIFIED' AND scope_evidence_ref=?",
+                (note_id, product, domain, expected_subject_id, expected_brand_focus_id,
+                 str(expected_scope_evidence_ref)),
+            )
+            if con.execute("SELECT changes()").fetchone()[0] != 1:
+                raise ScopeValidationError(f"Raw scope correction lost compare-and-set: {note_id}")
+            persist_scope_correction(
+                con, source_id=note_id, product_id=product, domain_id=domain,
+                expected_subject_id=expected_subject_id,
+                expected_brand_focus_id=expected_brand_focus_id,
+                expected_scope_evidence_ref=expected_scope_evidence_ref,
+                correction_evidence_id=correction_evidence_id,
+            )
+        con.execute("RELEASE SAVEPOINT correct_existing_note_scope")
+        return {"corrected": len(ids), "evidence_id": correction_evidence_id, "idempotent": False}
+    except Exception:
+        con.execute("ROLLBACK TO SAVEPOINT correct_existing_note_scope")
+        con.execute("RELEASE SAVEPOINT correct_existing_note_scope")
         raise
 
 # 平台分流：社媒 → notes；其余搜索/网页 → web_mentions

@@ -1050,6 +1050,8 @@ def record_evidence(
 
     global_scope: bool = False,
 
+    connection=None,
+
 ) -> int:
 
     """写入一条通用 Evidence 记录。
@@ -1194,9 +1196,12 @@ def record_evidence(
 
 
 
+    owns_connection = connection is None
+    conn = connection
     try:
 
-        conn = _get_conn()
+        if conn is None:
+            conn = _get_conn()
 
         # 向后兼容：只插入表中实际存在的列（新字段未迁移时自动跳过，不报错）
 
@@ -1234,7 +1239,8 @@ def record_evidence(
         ) or os.environ.get("LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID"):
             _sign_evidence_record(conn, cursor.lastrowid)
 
-        conn.commit()
+        if owns_connection:
+            conn.commit()
 
         return cursor.lastrowid
 
@@ -1242,6 +1248,8 @@ def record_evidence(
 
         # P1 非静默健康：写入失败必须记录+降级+可重放，不中断业务
 
+        if not owns_connection:
+            raise
         try:
 
             conn.rollback()
@@ -1256,13 +1264,14 @@ def record_evidence(
 
     finally:
 
-        try:
+        if owns_connection:
+            try:
 
-            conn.close()
+                conn.close()
 
-        except Exception:
+            except Exception:
 
-            pass
+                pass
 
 
 

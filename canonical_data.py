@@ -629,6 +629,37 @@ def _reject_verified_scope_rewrite(existing: dict, record: CanonicalRecord) -> N
         raise ValueError("verified Canonical scope cannot be downgraded or rebound")
 
 
+def _has_scope_correction(con: sqlite3.Connection, source_id: str, *,
+                          source_platform: str, product_id: str, domain_id: str) -> bool:
+    """Check the existing signed Evidence owner for an unassignment tombstone."""
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+
+    cursor = con.execute(
+        "SELECT * FROM app_evidence_records WHERE feature_id='SCOPE_CORRECTION' "
+        "AND product_id=? AND domain_id=?", (product_id, domain_id),
+    )
+    names = [column[0] for column in cursor.description]
+    for row in cursor.fetchall():
+        evidence = dict(zip(names, row))
+        try:
+            inputs = json.loads(evidence.get("inputs_json") or "")
+            correction = inputs.get("scope_correction") if isinstance(inputs, dict) else None
+            source_ids = inputs.get("source_ids") if isinstance(inputs, dict) else None
+        except (TypeError, ValueError):
+            raise ValueError("scope correction Evidence inputs are invalid") from None
+        if not isinstance(correction, dict) or correction.get("target_scope_status") != "UNASSIGNED":
+            continue
+        if correction.get("platform") != source_platform:
+            continue
+        if not isinstance(source_ids, list) or any(type(item) is not str for item in source_ids):
+            raise ValueError("scope correction Evidence source identities are invalid")
+        if not classify_evidence_integrity(evidence).get("verified"):
+            raise ValueError("scope correction Evidence signature is invalid")
+        if source_id in source_ids:
+            return True
+    return False
+
+
 def persist_canonical(con: sqlite3.Connection, record: CanonicalRecord) -> str:
     """写入或更新一条 Canonical 记录。返回 inserted/updated。
 
@@ -637,6 +668,11 @@ def persist_canonical(con: sqlite3.Connection, record: CanonicalRecord) -> str:
     等若已有非默认值则保留）。
     """
     _validate_canonical_scope(con, record)
+    if record.scope_status == "VERIFIED" and record.source_id and _has_scope_correction(
+        con, record.source_id, source_platform=record.source_platform,
+        product_id=record.product_id, domain_id=record.domain_id,
+    ):
+        raise ValueError("an explicitly corrected source scope cannot be restored")
     if not record.content_hash:
         record.compute_hash()
     record.updated_at = _now_str()
@@ -689,6 +725,91 @@ def persist_canonical(con: sqlite3.Connection, record: CanonicalRecord) -> str:
         tuple(values)
     )
     return "inserted"
+
+
+def persist_scope_correction(
+    con: sqlite3.Connection,
+    *,
+    source_id: str,
+    product_id: str,
+    domain_id: str,
+    expected_subject_id: Optional[str],
+    expected_brand_focus_id: Optional[str],
+    expected_scope_evidence_ref: int,
+    correction_evidence_id: int,
+) -> None:
+    """Clear one exact VERIFIED Canonical scope under signed correction Evidence.
+
+    This is deliberately separate from ordinary Canonical upsert: the normal
+    no-rebind fence remains unchanged. The caller owns the transaction and
+    must update the matching Raw row in the same transaction.
+    """
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+
+    if (type(correction_evidence_id) is not int or correction_evidence_id < 1
+            or type(expected_scope_evidence_ref) is not int
+            or expected_scope_evidence_ref < 1 or not source_id):
+        raise ValueError("exact correction Evidence and source identity are required")
+    cursor = con.execute(
+        "SELECT * FROM app_evidence_records WHERE id=? LIMIT 1",
+        (correction_evidence_id,),
+    )
+    evidence_row = cursor.fetchone()
+    if evidence_row is None:
+        raise ValueError("scope correction Evidence is missing")
+    evidence = dict(zip((item[0] for item in cursor.description), evidence_row))
+    if (
+        not classify_evidence_integrity(evidence).get("verified")
+        or evidence.get("feature_id") != "SCOPE_CORRECTION"
+        or str(evidence.get("result") or "").upper() != "PASS"
+        or str(evidence.get("status") or "").lower() != "verified"
+        or evidence.get("product_id") != product_id
+        or evidence.get("domain_id") != domain_id
+    ):
+        raise ValueError("scope correction Evidence is not signed for this product/domain")
+    try:
+        inputs = json.loads(evidence.get("inputs_json") or "")
+        correction = inputs.get("scope_correction") if isinstance(inputs, dict) else None
+        source_ids = inputs.get("source_ids") if isinstance(inputs, dict) else None
+    except (TypeError, ValueError):
+        raise ValueError("scope correction Evidence inputs are invalid") from None
+    old_scope = {"domain_id": domain_id, "product_id": product_id, "global": False}
+    old_scope["subject_id" if domain_id == "cth" else "brand_focus_id"] = (
+        expected_subject_id if domain_id == "cth" else expected_brand_focus_id
+    )
+    if (
+        not isinstance(correction, dict)
+        or correction.get("expected_scope_evidence_ref") != expected_scope_evidence_ref
+        or correction.get("target_scope_status") != "UNASSIGNED"
+        or correction.get("target_subject_id") is not None
+        or correction.get("target_brand_focus_id") is not None
+        or not isinstance(source_ids, list)
+        or source_id not in source_ids
+        or inputs.get("_lumenis_scope") != old_scope
+    ):
+        raise ValueError("scope correction Evidence does not bind the expected old scope and source")
+
+    row = con.execute(
+        f"SELECT product_id, domain_id, subject_id, brand_focus_id, scope_status, "
+        f"scope_evidence_ref FROM {CANONICAL_TABLE} WHERE external_id=? LIMIT 1",
+        (source_id,),
+    ).fetchone()
+    expected = (
+        product_id, domain_id, expected_subject_id or "",
+        expected_brand_focus_id or "", "VERIFIED", str(expected_scope_evidence_ref),
+    )
+    if row is None or tuple(row) != expected:
+        raise ValueError("Canonical source scope changed since the correction was reviewed")
+    updated = con.execute(
+        f"UPDATE {CANONICAL_TABLE} SET subject_id='', brand_focus_id='', "
+        "scope_status='UNASSIGNED', scope_evidence_ref='' "
+        "WHERE external_id=? AND product_id=? AND domain_id=? AND subject_id=? "
+        "AND brand_focus_id=? AND scope_status='VERIFIED' AND scope_evidence_ref=?",
+        (source_id, product_id, domain_id, expected_subject_id or "",
+         expected_brand_focus_id or "", str(expected_scope_evidence_ref)),
+    )
+    if updated.rowcount != 1:
+        raise ValueError("Canonical scope correction lost its expected-old compare-and-set")
 
 
 # ============================================================

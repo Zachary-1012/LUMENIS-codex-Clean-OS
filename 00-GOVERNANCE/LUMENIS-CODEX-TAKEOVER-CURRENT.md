@@ -1425,3 +1425,19 @@ remain in their owners. 7 focused URL/exact-scope tests PASS; final source AST
 PASS. Longer live URL acceptance remains to be demonstrated by country collection.
 [Round 06 evidence](evidence/round-06/ROUND-06-PUBLIC-URL-IDENTITY-2026-09-28.md).
 No coverage/round/release status promoted.
+
+
+### 2026-09-28 - mistaken Shenzhen scope corrected in actual DB
+
+The three Shenzhen Bay Douyin records wrongly assigned to Shenzhen MixC Luohu
+are now UNASSIGNED in Raw and Canonical. Signed correction Evidence 358 records
+the exact old scope/source IDs, local operator, reason and Permission audit.
+Original Evidence 292 and every source field/timestamp/metric remain unchanged;
+native records retain their original observation ref and add the correction ref.
+Actual repeat was idempotent; reopen/integrity/FK checks PASS. On a product clone,
+no approval denied the write, a second-item injected failure rolled back Evidence
+plus every projection, and ordinary refresh/direct upsert could not rebind.
+43 focused regressions PASS (3 correction, 40 Evidence/Canonical).
+[Round 06 evidence](evidence/round-06/ROUND-06-SCOPE-CORRECTION-2026-09-28.md).
+This repairs data contamination; platform/country/user E2E closure remains open.
+ROUND 06 REWORK; Global/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.
