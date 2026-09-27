@@ -167,10 +167,13 @@ def test_xhs_detail_and_worker_health_are_explicitly_degraded():
             self.error = error
             self.reachable = reachable
 
-        def _resolve_server_cdp_url(self):
+        def _collection_policy_gate(self, region=None, account=None):
+            return {'ok': True, 'account': 'XHS_RETINAUT', 'region': 'intl'}
+
+        def _resolve_server_cdp_url(self, *, account=None, region=None):
             return self.endpoint, self.error
 
-        def _cdp_online(self, timeout=2.0, cdp_url=None):
+        def _cdp_online(self, timeout=2.0, cdp_url=None, *, account=None, region=None):
             assert cdp_url == self.endpoint
             return self.reachable
 

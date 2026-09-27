@@ -1274,3 +1274,17 @@ as 34 sections / 910 nonempty paragraphs in the existing intelligence library,
 with a current/deferred owner mapping. Historical source and API counts remain
 research input. The current priority remains real multi-platform ingestion
 and due-only daily maintenance, not additional architecture.
+
+
+### 2026-09-28 - approved HK worker identity and login recovery
+
+The existing Collector accepts only the explicit registered HK local worker
+and verifies its existing official self-profile before new-page effects.
+66 targeted regressions and Constitution Gate passed. Actual HK identity
+was verified; real search then exposed the platform device-login limit.
+SESSION_EXPIRED now remains distinct from captcha/risk, and successful
+ingestion is still BLOCKED pending approved-session re-login. No product DB
+write or Mainland account access occurred.
+[Round 06 evidence](evidence/round-06/ROUND-06-HK-WORKER-IDENTITY-2026-09-28.md)
+records the real failure and recovery. ROUND 06 REWORK; Global coverage NO,
+Guangzhou PARTIAL; Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.

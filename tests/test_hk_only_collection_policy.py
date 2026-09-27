@@ -52,7 +52,7 @@ def test_collector_default_artifact_path_is_protected(monkeypatch):
     seen = {}
     worker = 'https://browser-worker.example:9223'
 
-    monkeypatch.setattr(collector, '_resolve_server_cdp_url', lambda cdp_url=None: (worker, ''))
+    monkeypatch.setattr(collector, '_resolve_server_cdp_url', lambda cdp_url=None, **kwargs: (worker, ''))
     monkeypatch.setattr(collector, '_cdp_online', lambda **kwargs: True)
     monkeypatch.setattr(collector, 'CDP_SCRIPT', collector.__file__)
     monkeypatch.setattr(collector.os, 'makedirs', lambda *args, **kwargs: None)
@@ -79,7 +79,7 @@ def test_collector_without_explicit_worker_fails_closed_before_collection(monkey
 
     monkeypatch.setattr(
         collector, '_resolve_server_cdp_url',
-        lambda cdp_url=None: ('', 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'),
+        lambda cdp_url=None, **kwargs: ('', 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'),
     )
 
     def fail_if_called(*args, **kwargs):

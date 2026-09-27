@@ -107,43 +107,77 @@ def _collection_env(account=None, region='intl', cdp_url=None):
     """Inject the server-owned account vault and remote worker URL, never shell-local credentials."""
     env = os.environ.copy()
     env.pop('XHS_COOKIE_FILE', None)
-    env['XHS_COLLECTION_REGION'] = region or 'intl'
-    env['XHS_COLLECTION_HOST'] = 'www.rednote.com' if env['XHS_COLLECTION_REGION'] == 'intl' else 'www.xiaohongshu.com'
+    env.pop('XHS_EXPECTED_COLLECTION_USER_ID', None)
+    selected_region = region or 'intl'
+    env['XHS_COLLECTION_REGION'] = selected_region
+    env['XHS_COLLECTION_HOST'] = 'www.rednote.com'
     if cdp_url:
         env['XHS_CDP_URL'] = cdp_url
-    try:
-        from xhs_cookie_bridge import ACCOUNT_PROFILES, DEFAULT_COLLECTION_ACCOUNT
-        selected = account or DEFAULT_COLLECTION_ACCOUNT
-        profile = ACCOUNT_PROFILES.get(selected)
-        if profile and profile[0]:
-            env['XHS_COOKIE_FILE'] = str(profile[0])
-    except Exception:
-        pass
+    from xhs_cookie_bridge import ACCOUNT_PROFILES, DEFAULT_COLLECTION_ACCOUNT, XHS_RETINAUT_NAME, XHS_RETINAUT
+    selected = account or DEFAULT_COLLECTION_ACCOUNT
+    profile = ACCOUNT_PROFILES.get(selected)
+    if selected != XHS_RETINAUT_NAME or selected_region != 'intl' or not XHS_RETINAUT or not profile:
+        raise PermissionError('POLICY_BLOCKED: approved HK identity/profile unavailable')
+    env['XHS_COOKIE_FILE'] = str(profile[0])
+    env['XHS_EXPECTED_COLLECTION_USER_ID'] = XHS_RETINAUT
     env['PYTHONIOENCODING'] = 'utf-8'
     env['PYTHONUTF8'] = '1'
     return env
 
 
-def _resolve_server_cdp_url(cdp_url=None):
-    """Resolve a configured browser-worker endpoint; implicit loopback is forbidden."""
+def _approved_local_profile_contract(account=None, region=None):
+    """Return the existing approved HK identity only for its registered profile."""
+    if account != 'XHS_RETINAUT' or region != 'intl':
+        return None
+    try:
+        from xhs_cookie_bridge import (
+            ACCOUNT_CDP_PORTS, ACCOUNT_PROFILES, DEFAULT_COLLECTION_ACCOUNT,
+            PRIVATE_DATA_DIR, XHS_RETINAUT,
+        )
+        profile = ACCOUNT_PROFILES.get(account)
+        expected_profile = os.path.normcase(os.path.abspath(os.path.join(
+            PRIVATE_DATA_DIR, 'profiles', 'xhs-retinaut')))
+        if (account != DEFAULT_COLLECTION_ACCOUNT or not XHS_RETINAUT
+                or ACCOUNT_CDP_PORTS.get(account) != 9223
+                or not isinstance(profile, tuple) or len(profile) != 2
+                or not profile[0] or not profile[1]
+                or os.path.normcase(os.path.abspath(profile[1])) != expected_profile):
+            return None
+        return XHS_RETINAUT
+    except Exception:
+        return None
+
+
+def _resolve_server_cdp_url(cdp_url=None, *, account=None, region=None):
+    """Resolve a configured remote worker or the one approved HK loopback worker."""
     candidate = str(cdp_url or os.getenv('XHS_CDP_URL') or CDP_URL or '').strip()
     if not candidate:
         return '', 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'
     try:
         parsed = urlsplit(candidate)
         hostname = (parsed.hostname or '').strip('[]').lower()
-        if parsed.scheme not in {'http', 'https'} or not hostname or parsed.path not in {'', '/'}:
+        if parsed.scheme not in {'http', 'https'} or not hostname:
             return '', 'COLLECTOR_ENDPOINT_INVALID'
         if parsed.username or parsed.password or parsed.fragment:
             return '', 'COLLECTOR_ENDPOINT_INVALID'
-        if hostname in {'localhost', 'localhost.localdomain'}:
-            return '', 'LOCAL_COLLECTOR_ENDPOINT_FORBIDDEN'
+        if parsed.port == 9222:
+            return '', 'POLICY_BLOCKED'
         try:
             ip = ipaddress.ip_address(hostname)
-            if ip.is_loopback or ip.is_unspecified:
-                return '', 'LOCAL_COLLECTOR_ENDPOINT_FORBIDDEN'
         except ValueError:
-            pass
+            ip = None
+        is_loopback = hostname in {'localhost', 'localhost.localdomain'} or bool(
+            ip and (ip.is_loopback or ip.is_unspecified)
+        )
+        if is_loopback:
+            expected_user_id = _approved_local_profile_contract(account, region)
+            if (hostname != '127.0.0.1' or parsed.scheme != 'http'
+                    or parsed.port != 9223 or parsed.path not in {'', '/'}
+                    or parsed.query or not expected_user_id):
+                return '', 'LOCAL_COLLECTOR_ENDPOINT_FORBIDDEN'
+            return 'http://127.0.0.1:9223', ''
+        if parsed.path not in {'', '/'}:
+            return '', 'COLLECTOR_ENDPOINT_INVALID'
         return candidate.rstrip('/'), ''
     except Exception:
         return '', 'COLLECTOR_ENDPOINT_INVALID'
@@ -242,10 +276,11 @@ def _feed_risk_engine(risk, *, error, guard_state, count, kw, is_core, results):
     return False
 
 
-def _cdp_online(timeout=2.0, cdp_url=None):
+def _cdp_online(timeout=2.0, cdp_url=None, *, account=None, region=None):
     """Probe a configured remote browser worker; never assume a local browser."""
     import urllib.request
-    _url, endpoint_error = _resolve_server_cdp_url(cdp_url)
+    _url, endpoint_error = _resolve_server_cdp_url(
+        cdp_url, account=account, region=region)
     if endpoint_error:
         return False
 
@@ -324,7 +359,8 @@ def _norm_cdp_note(rec):
 
 def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=None, region=None, account=None):
     """Use the configured server browser worker with the existing XHS collector."""
-    _cdp, endpoint_error = _resolve_server_cdp_url(cdp_url)
+    _cdp, endpoint_error = _resolve_server_cdp_url(
+        cdp_url, account=account, region=region or 'intl')
     if endpoint_error:
         return {'keyword': keyword, 'total': 0, 'notes': [], 'error': endpoint_error, 'channel': 'cdp'}
     env = _collection_env(account=account, region=region or 'intl', cdp_url=_cdp)
@@ -346,6 +382,8 @@ def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=No
     notes = [_norm_cdp_note(r) for r in data.get('notes', []) if r.get('note_id')]
     if summ.get('ip_blocked'):
         err = 'IP_RISK_OR_300012'
+    elif summ.get('session_expired'):
+        err = 'SESSION_EXPIRED'
     elif summ.get('verification_required'):
         err = 'NEED_VERIFY'
     elif not notes and not data.get('ok'):
@@ -427,7 +465,9 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
         }
     region = 'intl'
     cdp_port = 9223  # legacy policy identity only; it is not a host-local endpoint
-    cdp_url, endpoint_error = _resolve_server_cdp_url()
+    selected_account = policy_gate.get('account') or account
+    cdp_url, endpoint_error = _resolve_server_cdp_url(
+        account=selected_account, region='intl')
     if endpoint_error:
         return {
             'keyword': keyword, 'total': 0, 'notes': [], 'error': endpoint_error,
@@ -456,11 +496,11 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
     if not os.path.exists(CDP_SCRIPT):
         return {'keyword': keyword, 'total': 0, 'notes': [], 'error': 'COLLECTOR_SCRIPT_UNAVAILABLE',
                 'channel': 'worker', 'region': region}
-    if not _cdp_online(cdp_url=cdp_url):
+    if not _cdp_online(cdp_url=cdp_url, account=selected_account, region='intl'):
         return {'keyword': keyword, 'total': 0, 'notes': [], 'error': 'COLLECTOR_ENDPOINT_UNAVAILABLE',
                 'channel': 'worker', 'region': region}
     result = _search_via_cdp(keyword, max_scroll, output_path, max_details=max_details,
-                             cdp_url=cdp_url, region=region, account=account)
+                             cdp_url=cdp_url, region=region, account=selected_account)
     result['region'] = region
     result['channel'] = 'authorized_browser_worker'
     return result
@@ -650,6 +690,8 @@ def classify_collect_state(error='', guard_state='', count=0):
         return 'AUTH_REQUIRED'
     if gs == 'NEED_VERIFY':
         return 'CAPTCHA'
+    if gs in {'SESSION_EXPIRED', 'AUTH_REQUIRED'}:
+        return 'AUTH_REQUIRED'
     # 2) 无错误信号：有内容=SUCCESS，确无内容=EMPTY（EMPTY 不是风控）
     if not err:
         return 'SUCCESS' if count and count > 0 else 'EMPTY'

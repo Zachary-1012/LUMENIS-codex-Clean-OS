@@ -48,11 +48,14 @@ class XiaohongshuAdapter(BasePlatformAdapter):
             error_code = str(error or "").strip().upper()
             if error_code == "IP_RISK_OR_300012":
                 status = CollectionStatus.RISK_WARNING
+            elif error_code == "SESSION_EXPIRED":
+                status = CollectionStatus.SESSION_EXPIRED
             elif error_code == "NEED_VERIFY":
                 status = CollectionStatus.NEED_VERIFY
             elif error_code in {
                 "COLLECTOR_ENDPOINT_NOT_CONFIGURED",
                 "COLLECTOR_ENDPOINT_INVALID",
+                "POLICY_BLOCKED",
                 "LOCAL_COLLECTOR_ENDPOINT_FORBIDDEN",
             }:
                 status = CollectionStatus.NOT_CONFIGURED
@@ -80,6 +83,7 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                 CollectionStatus.PROVIDER_UNAVAILABLE: "香港/国际小红书采集 Worker 暂不可用",
                 CollectionStatus.RISK_WARNING: "平台返回风险信号，已停止采集",
                 CollectionStatus.NEED_VERIFY: "平台要求人工完成安全验证",
+                CollectionStatus.SESSION_EXPIRED: "小红书登录会话失效或设备登录受限，请在获准的香港/国际账号上重新登录",
                 CollectionStatus.COLLECT_ERROR: "现有小红书采集链未能完成本次请求",
             }
             return CollectionResult(
@@ -126,6 +130,30 @@ class XiaohongshuAdapter(BasePlatformAdapter):
     def health_check(self, **kwargs: Any) -> CollectionResult:
         try:
             backend = self._load_backend()
+            region = kwargs.get("region") or "intl"
+            account = kwargs.get("account")
+            policy_gate = getattr(backend, "_collection_policy_gate", None)
+            if not callable(policy_gate):
+                return CollectionResult(
+                    status=CollectionStatus.NOT_CONFIGURED,
+                    platform=self.platform,
+                    message="小红书生产身份策略不可用",
+                    metadata={"provider": "authorized_browser_worker",
+                              "endpoint_configured": False,
+                              "healthcheck_scope": "configuration_only",
+                              "error_type": "policy_unavailable"},
+                )
+            gate = policy_gate(region=region, account=account)
+            if not gate.get("ok"):
+                return CollectionResult(
+                    status=CollectionStatus.NOT_CONFIGURED,
+                    platform=self.platform,
+                    message="小红书生产身份或区域策略拒绝当前健康检查",
+                    metadata={"provider": "authorized_browser_worker",
+                              "endpoint_configured": False,
+                              "healthcheck_scope": "configuration_only",
+                              "error_type": str(gate.get("code") or "policy_blocked")},
+                )
             resolve_endpoint = getattr(backend, "_resolve_server_cdp_url", None)
             if not callable(resolve_endpoint):
                 return CollectionResult(
@@ -135,12 +163,15 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                     metadata={"provider": "authorized_browser_worker", "endpoint_configured": False,
                               "healthcheck_scope": "configuration_only"},
                 )
-            cdp_url, endpoint_error = resolve_endpoint()
+            selected_account = gate.get("account") or account
+            selected_region = gate.get("region") or region
+            cdp_url, endpoint_error = resolve_endpoint(
+                account=selected_account, region=selected_region)
             if endpoint_error:
                 status = (
                     CollectionStatus.NOT_CONFIGURED
                     if endpoint_error in {"COLLECTOR_ENDPOINT_NOT_CONFIGURED", "COLLECTOR_ENDPOINT_INVALID",
-                                          "LOCAL_COLLECTOR_ENDPOINT_FORBIDDEN"}
+                                          "LOCAL_COLLECTOR_ENDPOINT_FORBIDDEN", "POLICY_BLOCKED"}
                     else CollectionStatus.PROVIDER_UNAVAILABLE
                 )
                 return CollectionResult(
@@ -152,7 +183,8 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                 )
             cdp = getattr(backend, "_cdp_online", None)
             if callable(cdp):
-                ok = bool(cdp(timeout=float(kwargs.get("timeout", 2)), cdp_url=cdp_url))
+                ok = bool(cdp(timeout=float(kwargs.get("timeout", 2)), cdp_url=cdp_url,
+                              account=selected_account, region=selected_region))
                 return CollectionResult(
                     status=CollectionStatus.NEED_VERIFY if ok else CollectionStatus.PROVIDER_UNAVAILABLE,
                     platform=self.platform,

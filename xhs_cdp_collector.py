@@ -22,6 +22,7 @@ collector 通过 venv python 子进程调用本脚本以隔离崩溃；stdout �
 ============================================================
 """
 import argparse
+import hmac
 import json
 import math
 import os
@@ -30,6 +31,7 @@ import re
 import sys
 import time
 from datetime import datetime, timedelta
+from urllib.parse import urlsplit
 
 CDP_URL = os.getenv('XHS_CDP_URL', '').strip()
 COLLECTION_HOST = os.environ.get('XHS_COLLECTION_HOST', 'www.rednote.com').strip().lower()
@@ -41,8 +43,101 @@ def _assert_collection_host():
     if COLLECTION_HOST != 'www.rednote.com':
         raise RuntimeError('当前生产采集仅允许香港/国际 RedNote 主机 www.rednote.com')
 
+def _assert_collection_identity(context):
+    """Verify the existing RedNote UI identifies the approved HK account."""
+    expected = os.environ.get('XHS_EXPECTED_COLLECTION_USER_ID', '').strip()
+    if not expected:
+        raise RuntimeError('COLLECTOR_IDENTITY_NOT_CONFIGURED')
+    try:
+        cookies = context.cookies([COLLECTION_ORIGIN])
+    except Exception as exc:
+        raise RuntimeError('COLLECTOR_IDENTITY_UNAVAILABLE') from exc
+    cookie_names = {
+        str(cookie.get('name') or '').lower()
+        for cookie in cookies if str(cookie.get('value') or '').strip()
+    }
+    if 'web_session' not in cookie_names:
+        raise RuntimeError('COLLECTOR_IDENTITY_NOT_VERIFIED')
+    user_ids = {
+        str(cookie.get('value') or '').strip()
+        for cookie in cookies
+        if cookie.get('name') == 'x-user-id-pro' and cookie.get('value')
+    }
+    if len(user_ids) > 1 or (user_ids and not hmac.compare_digest(next(iter(user_ids)), expected)):
+        raise RuntimeError('COLLECTOR_IDENTITY_MISMATCH')
+    holder_countries = {
+        str(cookie.get('value') or '').strip().upper()
+        for cookie in cookies
+        if str(cookie.get('name') or '').lower() == 'x-rednote-holderctry' and cookie.get('value')
+    }
+    if holder_countries and holder_countries != {'HK'}:
+        raise RuntimeError('COLLECTOR_IDENTITY_MISMATCH')
+
+    try:
+        pages = getattr(context, 'pages', None) or []
+        if not pages:
+            raise RuntimeError('COLLECTOR_IDENTITY_NOT_VERIFIED')
+        rednote_pages = []
+        for page in pages:
+            page_url = urlsplit(str(page.url or ''))
+            if page_url.scheme == 'https' and page_url.hostname == 'www.rednote.com':
+                rednote_pages.append(page)
+        if not rednote_pages:
+            raise RuntimeError('COLLECTOR_IDENTITY_NOT_VERIFIED')
+        candidates = []
+        for page in rednote_pages:
+            candidates.extend(page.locator('a.link-wrapper, a.bottom-channel').evaluate_all(
+                """els => els.map(el => ({
+                    classes: Array.from(el.classList),
+                    text: (el.innerText || el.textContent || '').trim(),
+                    href: el.getAttribute('href') || ''
+                }))"""
+            ))
+    except RuntimeError:
+        raise
+    except Exception as exc:
+        raise RuntimeError('COLLECTOR_IDENTITY_NOT_VERIFIED') from exc
+
+    self_ids = set()
+    for item in candidates or []:
+        classes = set(item.get('classes') or [])
+        text = re.sub(r'\s+', '', str(item.get('text') or ''))
+        href = str(item.get('href') or '').strip()
+        if text != '我' or not classes.intersection({'link-wrapper', 'bottom-channel'}):
+            continue
+        parsed = urlsplit(href)
+        if parsed.scheme and (parsed.scheme != 'https' or parsed.hostname != 'www.rednote.com'):
+            raise RuntimeError('COLLECTOR_IDENTITY_MISMATCH')
+        if parsed.netloc and parsed.netloc != 'www.rednote.com':
+            raise RuntimeError('COLLECTOR_IDENTITY_MISMATCH')
+        match = re.fullmatch(r'/user/profile/([0-9a-fA-F]{24})/?', parsed.path)
+        if not match:
+            raise RuntimeError('COLLECTOR_IDENTITY_MISMATCH')
+        self_ids.add(match.group(1).lower())
+    if not self_ids:
+        raise RuntimeError('COLLECTOR_IDENTITY_NOT_VERIFIED')
+    if len(self_ids) != 1 or not hmac.compare_digest(next(iter(self_ids)), expected.lower()):
+        raise RuntimeError('COLLECTOR_IDENTITY_MISMATCH')
+
+
+def _existing_collection_context(browser):
+    """Use only a pre-existing approved browser context; never create one."""
+    contexts = getattr(browser, 'contexts', None) or []
+    if not contexts:
+        raise RuntimeError('COLLECTOR_IDENTITY_CONTEXT_UNAVAILABLE')
+    return contexts[0]
+
+
+def _connect_verified_collection_context(playwright, cdp_url):
+    """Connect read-only, then verify approved identity before creating any page."""
+    browser = playwright.chromium.connect_over_cdp(cdp_url, timeout=30000)
+    context = _existing_collection_context(browser)
+    _assert_collection_identity(context)
+    return browser, context
+
 _IP_WORDS = ['300012', 'IP存在风险', 'ip存在风险', '安全限制', '访问受限', '当前访问出现异常', '网络有点忙', '操作频繁', '访问过于频繁']
 _VERIFY_WORDS = ['验证码', '安全验证', '人机验证', '请完成验证', '请通过验证', '滑块', '拖动下方', 'captcha', '安全检测']
+_LOGIN_LIMIT_WORDS = ('电脑设备登录超限',)
 
 
 def log(msg):
@@ -515,12 +610,17 @@ _DETAIL_JS = r"""
 
 
 def classify_page(text):
-    for w in _VERIFY_WORDS:
-        if w in text:
-            return 'verify', w
+    normalized = str(text or '')
     for w in _IP_WORDS:
-        if w in text:
+        if w in normalized:
             return 'ip', w
+    if any(word in normalized for word in _LOGIN_LIMIT_WORDS) or (
+            '请重新登录' in normalized and
+            any(word in normalized for word in ('扫码登录', '手机号登录', '获取验证码'))):
+        return 'session_expired', 'SESSION_EXPIRED'
+    for w in _VERIFY_WORDS:
+        if w in normalized:
+            return 'verify', w
     return None, ''
 
 
@@ -542,6 +642,10 @@ def _risk_check(page, result):
     except Exception:
         return False
     kind, hit = classify_page(text)
+    if kind == 'session_expired':
+        result['summary'] = {'session_expired': True, 'matched': hit}
+        result['error'] = 'SESSION_EXPIRED'
+        return True
     if kind == 'ip':
         result['summary'] = {'ip_blocked': True, 'matched': hit}
         result['error'] = 'IP_RISK_OR_300012'
@@ -582,14 +686,7 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
     result = {'ok': False, 'keyword': keyword, 'mode': 'human', 'notes': [], 'summary': {}, 'human_trace': []}
     trace = result['human_trace']
     with sync_playwright() as p:
-        try:
-            from cdp_helper import reset_cdp_targets
-            _port = int(str(cdp_url).split(':')[-1].split('/')[0])
-            reset_cdp_targets(_port)
-        except Exception:
-            pass
-        browser = p.chromium.connect_over_cdp(cdp_url, timeout=30000)
-        ctx = browser.contexts[0] if browser.contexts else browser.new_context()
+        browser, ctx = _connect_verified_collection_context(p, cdp_url)
         page = ctx.new_page()
         try:
             from urllib.parse import quote
@@ -787,14 +884,7 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
     from playwright.sync_api import sync_playwright
     result = {'ok': False, 'keyword': keyword, 'mode': 'direct', 'notes': [], 'summary': {}}
     with sync_playwright() as p:
-        try:
-            from cdp_helper import reset_cdp_targets
-            _port = int(str(cdp_url).split(':')[-1].split('/')[0])
-            reset_cdp_targets(_port)
-        except Exception:
-            pass
-        browser = p.chromium.connect_over_cdp(cdp_url, timeout=30000)
-        ctx = browser.contexts[0] if browser.contexts else browser.new_context()
+        browser, ctx = _connect_verified_collection_context(p, cdp_url)
         page = ctx.new_page()
         try:
             from urllib.parse import quote
@@ -805,6 +895,10 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
 
             text = page.evaluate("() => document.body ? document.body.innerText : ''") or ''
             kind, hit = classify_page(text)
+            if kind == 'session_expired':
+                result['summary'] = {'session_expired': True, 'matched': hit}
+                result['error'] = 'SESSION_EXPIRED'
+                return result
             if kind == 'ip':
                 result['summary'] = {'ip_blocked': True, 'matched': hit}
                 result['error'] = 'IP_RISK_OR_300012'
@@ -834,6 +928,9 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
             if not cards:
                 t2 = page.evaluate("() => document.body ? document.body.innerText : ''") or ''
                 kind, hit = classify_page(t2)
+                if kind == 'session_expired':
+                    result['summary'] = {'session_expired': True, 'matched': hit}
+                    result['error'] = 'SESSION_EXPIRED'; return result
                 if kind == 'ip':
                     result['summary'] = {'ip_blocked': True, 'matched': hit}; result['error'] = 'IP_RISK_OR_300012'; return result
                 if kind == 'verify':
