@@ -5,6 +5,8 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from lumenis.adapters.base import optional_int
+
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
 from .registry import register_adapter
 
@@ -252,10 +254,10 @@ class InstagramAdapter(BasePlatformAdapter):
             "author_nickname": item.get("author", ""),
             "publish_datetime": item.get("publish_date", ""),
             "url": item.get("url", ""),
-            "likes": item.get("likes", 0),
-            "comments": item.get("comments", 0),
-            "collects": item.get("collects", 0),
-            "shares": item.get("shares", 0),
+            "likes": optional_int(item.get("likes")),
+            "comments": optional_int(item.get("comments")),
+            "collects": optional_int(item.get("collects")),
+            "shares": optional_int(item.get("shares")),
             "captured_at": item.get("captured_at"),
             "raw": raw_data,
         }

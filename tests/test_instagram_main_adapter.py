@@ -85,6 +85,24 @@ def test_normalize_item_extracts_shortcode_from_url_when_raw_missing():
     assert item["platform_content_id"] == "ABC123"
 
 
+def test_normalize_item_preserves_zero_and_maps_missing_or_invalid_counts_to_unknown():
+    adapter = InstagramAdapter(engine=MagicMock())
+    note = _make_note(
+        likes=0,
+        comments=None,
+        collects="not-a-count",
+        shares="",
+    )
+
+    item = adapter.normalize_item(note.__dict__)
+
+    assert item["platform_content_id"] == "ABC123"
+    assert item["likes"] == 0
+    assert item["comments"] is None
+    assert item["collects"] is None
+    assert item["shares"] is None
+
+
 # ---------------------------------------------------------------------------
 # 3-8. Status mapping via search()
 # ---------------------------------------------------------------------------

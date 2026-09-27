@@ -1258,3 +1258,19 @@ the English-anchor mismatch was sent to the country task for correction.
 distinguishes captured-response verification from product DB and user E2E,
 which remain unverified. No DB write; no Global coverage or operating promotion.
 ROUND 06 REWORK; Full Universe/RELEASED/OPERATING/COMMERCIAL_READY remain NO.
+
+
+### 2026-09-28 — Instagram metrics and retained capability input
+
+The existing Instagram adapter preserves UNKNOWN metrics instead of defaulting
+missing/invalid values to zero. 21 affected tests and Constitution Gate passed
+with a disposable DB. Live Instagram acquisition and real-user E2E remain
+unverified; no account access or product DB writes occurred.
+[Round 06 evidence](evidence/round-06/ROUND-06-INSTAGRAM-MISSING-METRICS-2026-09-28.md)
+records the scope and limits. ROUND 06 remains REWORK; both Global coverage
+dimensions NO, Guangzhou PARTIAL, Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.
+The supplied capability Word document has now been read in full and preserved
+as 34 sections / 910 nonempty paragraphs in the existing intelligence library,
+with a current/deferred owner mapping. Historical source and API counts remain
+research input. The current priority remains real multi-platform ingestion
+and due-only daily maintenance, not additional architecture.
