@@ -2,7 +2,7 @@
 """序境 Xujing · 平台内置浏览器能力层（Browser Surface）
 
 定位（Canonical）：
-    在不改动 internal_browser 采集身份链路（双账号 9222/9223）的前提下，
+    在不改动 internal_browser 的批准香港/国际采集身份链路前提下，
     为「平台内置、不跳站外」的通用浏览补齐对标 Safari/Chrome 的基础能力：
       1. Tab 管理：list / new / close / activate（CDP HTTP Target 端点）
       2. 指定 Tab 附着：按 target_id 连接任意标签页 WebSocket（不再固定 pages[0]）
@@ -22,6 +22,7 @@
 from __future__ import annotations
 
 import ipaddress
+import hashlib
 import json
 import os
 import socket
@@ -223,10 +224,23 @@ def evaluate_navigation(url: str, mode: Optional[str] = None) -> dict:
 # ─────────────────────────── CDP HTTP 底层 ───────────────────────────
 
 def _resolve_port(account=None, port: Optional[int] = None) -> int:
-    """端口解析：显式 port 优先，其次走 internal_browser 双账号映射。"""
-    if port:
-        return int(port)
-    return ib._port_for(ib._canonical_account(account))
+    """Resolve an approved HK/international or general-browser endpoint."""
+    if port is not None:
+        resolved = int(port)
+        if resolved == GENERAL_CDP_PORT and account in (None, ""):
+            if not _verified_general_browser():
+                raise PermissionError("POLICY_BLOCKED: general browser session is not LUMENIS-owned")
+            return resolved
+        if resolved != 9223:
+            raise PermissionError("POLICY_BLOCKED: browser surface endpoint is not approved")
+        # An explicit approved port is still associated with the approved identity.
+        ib._canonical_account(account)
+        return resolved
+    if account in (None, ""):
+        if not _verified_general_browser():
+            raise PermissionError("POLICY_BLOCKED: general browser session is not LUMENIS-owned")
+        return GENERAL_CDP_PORT
+    return ib._port_for(account)
 
 
 def _http_json(url: str, method: str = "GET", timeout: float = 3.0):
@@ -575,7 +589,7 @@ def clear_history() -> dict:
 def capability_report() -> dict:
     """供 Runtime/Health 与前端能力面板消费：不动作，只陈述当前能力与配置状态。"""
     accounts = []
-    for acct in ("XHS_CN_PRIMARY", "XHS_RETINAUT"):
+    for acct in ("XHS_RETINAUT",):
         accounts.append(ib.get_state(acct))
     return {
         "ok": True,
@@ -586,7 +600,7 @@ def capability_report() -> dict:
         "websocket_available": websocket is not None,
         "residents": accounts,
         "general_browser": {"port": GENERAL_CDP_PORT, "online": general_browser_online(),
-                            "profile": GENERAL_PROFILE_DIR, "mode": "on_demand"},
+                            "mode": "on_demand"},
         "capabilities": [
             "tabs.list", "tabs.new", "tabs.close", "tabs.activate", "tabs.navigate",
             "extract.meta", "extract.text", "extract.dom",
@@ -599,11 +613,66 @@ def capability_report() -> dict:
 
 
 # ─────────────────────────── 通用浏览实例（按需，与采集物理隔离）───────────────────────────
-# 采集双账号 9222/9223 保持不动（双身份登录态物理隔离，Chrome profile 硬限制，不可合并）。
-# 通用浏览用独立第 3 实例 9224 + 独立 profile，按需拉起、不自动常驻，与采集互不污染。
+# 通用浏览使用独立第 3 实例 9224 + 独立 profile，按需拉起、不自动常驻。
 GENERAL_CDP_PORT = 9224
-GENERAL_PROFILE_DIR = os.path.join(ROOT, "edge-cdp-general")
-GENERAL_HOME_URL = "https://www.bing.com"
+GENERAL_PROFILE_BASE = os.path.join(ROOT, "data", "private", "browser-cdp-general")
+GENERAL_HOME_URL = "about:blank"
+
+
+def _general_profile_dir(browser: str) -> str:
+    return f"{GENERAL_PROFILE_BASE}-{browser}"
+
+
+def _general_session_marker(profile_dir: str) -> str:
+    return os.path.join(profile_dir, ".lumenis-session.json")
+
+
+def _verified_general_browser(browser: Optional[str] = None) -> bool:
+    """Reject a port owned by another browser/profile, including personal Chrome."""
+    try:
+        import cdp_helper
+
+        browser = browser or cdp_helper.system_default_cdp_browser()
+        if browser not in {"chrome", "edge"} or not cdp_helper.is_cdp_port_open(GENERAL_CDP_PORT):
+            return False
+        profile = _general_profile_dir(browser)
+        with open(_general_session_marker(profile), encoding="utf-8") as handle:
+            marker = json.load(handle)
+        version = _http_json(f"http://127.0.0.1:{GENERAL_CDP_PORT}/json/version")
+        browser_version = str(version.get("Browser") or "").casefold()
+        expected_prefixes = ("chrome/", "headlesschrome/") if browser == "chrome" else ("edg/", "edge/")
+        websocket_url = str(version.get("webSocketDebuggerUrl") or "")
+        return (
+            marker.get("browser") == browser
+            and marker.get("profile") == os.path.normcase(os.path.abspath(profile))
+            and browser_version.startswith(expected_prefixes)
+            and bool(websocket_url)
+            and marker.get("websocket_sha256") == hashlib.sha256(websocket_url.encode()).hexdigest()
+        )
+    except Exception:
+        return False
+
+
+def _write_general_session_marker(browser: str, profile: str) -> bool:
+    try:
+        version = _http_json(f"http://127.0.0.1:{GENERAL_CDP_PORT}/json/version")
+        websocket_url = str(version.get("webSocketDebuggerUrl") or "")
+        browser_version = str(version.get("Browser") or "").casefold()
+        expected_prefixes = ("chrome/", "headlesschrome/") if browser == "chrome" else ("edg/", "edge/")
+        if not websocket_url or not browser_version.startswith(expected_prefixes):
+            return False
+        marker = _general_session_marker(profile)
+        temporary = f"{marker}.{os.getpid()}.tmp"
+        with open(temporary, "w", encoding="utf-8") as handle:
+            json.dump({
+                "browser": browser,
+                "profile": os.path.normcase(os.path.abspath(profile)),
+                "websocket_sha256": hashlib.sha256(websocket_url.encode()).hexdigest(),
+            }, handle)
+        os.replace(temporary, marker)
+        return True
+    except Exception:
+        return False
 
 # 产品内置浏览器的浏览范围。它决定浏览器内的“平台域”视觉/门禁状态，
 # 不会启用相应平台采集器，也不会改变当前仅香港 XHS 生产采集的身份规则。
@@ -615,39 +684,55 @@ BROWSER_PLATFORM_DOMAINS = (
 
 
 def general_browser_online() -> bool:
-    try:
-        import cdp_helper
-        return cdp_helper.is_cdp_port_open(GENERAL_CDP_PORT)
-    except Exception:
-        return False
+    return _verified_general_browser()
 
 
 def ensure_general_browser(force: bool = False) -> dict:
-    """按需拉起通用浏览实例（9224，独立 profile）。幂等：已在线则复用。"""
+    """Launch the OS default Chromium engine headlessly with its own profile."""
+    if force:
+        return {"ok": False, "code": "FORCED_BROWSER_RESTART_UNAVAILABLE", "online": False}
     try:
         import cdp_helper
     except Exception as e:
         return {"ok": False, "error": f"cdp_helper 不可用: {e}", "port": GENERAL_CDP_PORT}
-    if not force and cdp_helper.is_cdp_port_open(GENERAL_CDP_PORT):
-        return {"ok": True, "port": GENERAL_CDP_PORT, "action": "already_online",
-                "profile": GENERAL_PROFILE_DIR, "online": True}
-    os.makedirs(GENERAL_PROFILE_DIR, exist_ok=True)
+    browser = cdp_helper.system_default_cdp_browser()
+    if browser not in {"chrome", "edge"}:
+        return {"ok": False, "code": "UNSUPPORTED_DEFAULT_BROWSER", "online": False}
+    if cdp_helper.is_cdp_port_open(GENERAL_CDP_PORT):
+        if _verified_general_browser(browser):
+            return {"ok": True, "port": GENERAL_CDP_PORT, "browser": browser,
+                    "action": "already_online", "online": True}
+        return {"ok": False, "code": "UNVERIFIED_BROWSER_SESSION", "online": False}
+    profile = _general_profile_dir(browser)
+    os.makedirs(profile, exist_ok=True)
     res = cdp_helper.start_cdp_browser(
-        port=GENERAL_CDP_PORT, profile_dir=GENERAL_PROFILE_DIR,
-        launch_url=GENERAL_HOME_URL, direct_connection=True, browser="edge",
+        port=GENERAL_CDP_PORT, profile_dir=profile, headless=True,
+        launch_url=GENERAL_HOME_URL, direct_connection=False,
+        browser=browser, loopback_only=True,
     )
-    online = cdp_helper.is_cdp_port_open(GENERAL_CDP_PORT)
-    return {"ok": bool(res.get("success") or online), "port": GENERAL_CDP_PORT,
-            "action": "started" if online else f"failed: {res.get('message')}",
-            "profile": GENERAL_PROFILE_DIR, "online": online}
+    online = (
+        bool(res.get("success"))
+        and type(res.get("pid")) is int
+        and cdp_helper.is_cdp_port_open(GENERAL_CDP_PORT)
+    )
+    verified = online and _write_general_session_marker(browser, profile) and _verified_general_browser(browser)
+    return {"ok": bool(verified), "port": GENERAL_CDP_PORT, "browser": browser,
+            "action": "started" if verified else "unavailable",
+            "code": None if verified else "BROWSER_START_UNVERIFIED", "online": bool(verified)}
 
 
 def stop_general_browser() -> dict:
-    """关闭通用浏览实例（仅 9224，不动采集 9222/9223）。best-effort。"""
+    """关闭通用浏览实例（仅 9224）。best-effort。"""
     try:
         import cdp_helper
         if not cdp_helper.is_cdp_port_open(GENERAL_CDP_PORT):
             return {"ok": True, "port": GENERAL_CDP_PORT, "action": "not_running"}
+        if not any(_verified_general_browser(browser) for browser in ("chrome", "edge")):
+            return {"ok": False, "port": GENERAL_CDP_PORT,
+                    "code": "UNVERIFIED_BROWSER_SESSION"}
+        if websocket is None:
+            return {"ok": False, "port": GENERAL_CDP_PORT,
+                    "code": "BROWSER_CONTROL_DEPENDENCY_UNAVAILABLE"}
         ws_url = None
         try:
             ver = _http_json(f"http://127.0.0.1:{GENERAL_CDP_PORT}/json/version", timeout=3.0)

@@ -88,14 +88,21 @@ class TestDownloadManager:
 
 
 class TestDownloadAPI:
-    def test_monitor_status_endpoint(self, client):
-        r = client.get("/api/browser-surface/downloads/monitor/status?port=19007").get_json()
-        assert r["port"] == 19007
+    def test_monitor_status_endpoint(self, client, monkeypatch):
+        monkeypatch.setattr(bs, "_verified_general_browser", lambda *args: True)
+        r = client.get("/api/browser-surface/downloads/monitor/status").get_json()
+        assert r["port"] == bs.GENERAL_CDP_PORT
         assert "running" in r
 
-    def test_active_endpoint(self, client):
-        r = client.get("/api/browser-surface/downloads/active?port=19008").get_json()
+    def test_active_endpoint(self, client, monkeypatch):
+        monkeypatch.setattr(bs, "_verified_general_browser", lambda *args: True)
+        r = client.get("/api/browser-surface/downloads/active").get_json()
         assert r["ok"] and r["downloads"] == []
+
+    def test_unowned_port_is_blocked(self, client):
+        response = client.get("/api/browser-surface/downloads/active?port=19008")
+        assert response.status_code == 403
+        assert response.get_json()["code"] == "BROWSER_SESSION_BLOCKED"
 
     def test_cancel_requires_guid(self, client):
         r = client.post("/api/browser-surface/downloads/cancel", json={})

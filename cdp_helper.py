@@ -1,6 +1,6 @@
 """
 CDP浏览器管理辅助函数
-在采集前自动检查并启动带CDP调试端口的Edge浏览器
+在采集前自动检查并启动带CDP调试端口的受控 Chromium 浏览器
 """
 import os
 import sys
@@ -8,6 +8,7 @@ import subprocess
 import time
 import socket
 import logging
+import ntpath
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +116,38 @@ def find_chrome_path():
     return find_browser_path("chrome")
 
 
+def _https_associated_executable():
+    """Read the Windows HTTPS handler through the supported shell association API."""
+    if sys.platform != "win32":
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        query = ctypes.WinDLL("Shlwapi").AssocQueryStringW
+        query.argtypes = (
+            wintypes.DWORD, wintypes.DWORD, wintypes.LPCWSTR,
+            wintypes.LPCWSTR, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD),
+        )
+        query.restype = ctypes.c_long
+        buffer = ctypes.create_unicode_buffer(32768)
+        length = wintypes.DWORD(len(buffer))
+        # ASSOCSTR_EXECUTABLE=2; "https" asks Windows for the current handler.
+        if query(0, 2, "https", None, buffer, ctypes.byref(length)) != 0:
+            return None
+        return buffer.value or None
+    except (AttributeError, OSError, ValueError):
+        return None
+
+
+def system_default_cdp_browser():
+    """Return the installed Chrome/Edge HTTPS handler, or None without fallback."""
+    executable = _https_associated_executable()
+    name = ntpath.basename(executable or "").casefold()
+    browser = {"chrome.exe": "chrome", "msedge.exe": "edge"}.get(name)
+    return browser if browser and find_browser_path(browser) else None
+
+
 def default_profile_for(browser="edge"):
     """返回某内核的默认持久 Profile 目录。"""
     conf = BROWSER_REGISTRY.get((browser or "edge").lower())
@@ -123,9 +156,10 @@ def default_profile_for(browser="edge"):
 
 def start_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, headless=False,
                       proxy_server=None, launch_url="https://www.xiaohongshu.com",
-                      anti_automation=True, browser="edge", direct_connection=False):
+                      anti_automation=True, browser="edge", direct_connection=False,
+                      loopback_only=False):
     """
-    启动带CDP调试端口的Edge浏览器
+    启动带 CDP 调试端口的指定 Chromium 浏览器。
     
     Args:
         port: CDP调试端口
@@ -166,6 +200,8 @@ def start_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, headless=False,
         # 否则 Playwright connect_over_cdp 会在 ws 握手阶段挂起直至 Timeout（话题端口曾因此全 0）。
         "--remote-allow-origins=*",
     ]
+    if loopback_only:
+        args.append("--remote-debugging-address=127.0.0.1")
     
     if anti_automation:
         args.append("--disable-blink-features=AutomationControlled")
@@ -202,19 +238,19 @@ def start_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, headless=False,
             proc._active = False
         except Exception:
             pass
-        logger.info(f"已启动独立 Edge 浏览器 (PID: {proc.pid}), CDP端口: {port}")
+        logger.info("已启动独立 %s 浏览器 (PID: %s), CDP端口: %s", browser, proc.pid, port)
         
         # 等待CDP端口就绪
         for i in range(15):
             time.sleep(1)
             if is_cdp_port_open(port):
-                return {"success": True, "message": f"Edge浏览器已启动，CDP端口 {port} 就绪", "port": port, "pid": proc.pid}
+                return {"success": True, "message": f"{browser} 浏览器已启动，CDP端口 {port} 就绪", "port": port, "pid": proc.pid}
         
-        return {"success": False, "message": f"Edge浏览器已启动但CDP端口 {port} 未就绪，请检查浏览器状态", "port": port, "pid": proc.pid}
+        return {"success": False, "message": f"{browser} 浏览器已启动但CDP端口 {port} 未就绪，请检查浏览器状态", "port": port, "pid": proc.pid}
     
     except Exception as e:
-        logger.error(f"启动Edge浏览器失败: {e}")
-        return {"success": False, "message": f"启动Edge浏览器失败: {str(e)}", "port": port, "pid": None}
+        logger.error("启动 %s 浏览器失败: %s", browser, e)
+        return {"success": False, "message": f"启动 {browser} 浏览器失败: {str(e)}", "port": port, "pid": None}
 
 
 def ensure_cdp_browser(port=DEFAULT_CDP_PORT, profile_dir=None, auto_start=True, **launch_kwargs):

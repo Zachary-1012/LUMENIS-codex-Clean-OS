@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-27 — Controlled default-browser engine prerequisite
+
+[Round 06 browser evidence](evidence/round-06/ROUND-06-DEFAULT-BROWSER-ENGINE-2026-09-27.md)
+records a bounded existing-owner change: on this Windows host, HTTPS default
+selection resolves to Chrome, and an isolated headless/loopback instance
+actually started, navigated an allowed public page, returned a screenshot and
+page metadata, then closed. Unknown port ownership fails closed. The current
+SYS-06 screen remains a `DESIGN_EXPLORATION` capacity view; Product Actor
+authorization, in-app viewport/actions, Evidence return and real user E2E are
+not accepted. ROUND 06 and 14 remain `REWORK`; release is NO.
+
 ### 2026-09-27 — Bounded capability context lookup
 
 `scripts/audit_tools/locate_capability_context.py` routes one named capability or

@@ -16,8 +16,13 @@ def register_browser_surface_api(app):
 
     bp = Blueprint("browser_surface", __name__)
 
+    @bp.errorhandler(PermissionError)
+    def _blocked_browser_session(_error):
+        return jsonify({"ok": False, "code": "BROWSER_SESSION_BLOCKED",
+                        "error": "当前浏览器会话未经序境验证"}), 403
+
     def _acct():
-        """账号/profile（双账号 9222/9223）；显式 port 优先于 account。"""
+        """Approved account/profile selector; explicit port remains an override."""
         return (request.args.get("account") or
                 (request.get_json(silent=True) or {}).get("account") or "")
 
@@ -28,7 +33,7 @@ def register_browser_surface_api(app):
             if raw:
                 return int(raw)
             # 产品内置浏览器默认使用独立通用实例；只有显式传入 account
-            # 时才回到对应的采集身份端口，避免旧 9222/9223 逻辑覆盖浏览器。
+            # 时才回到获批的采集身份端口。
             return None if _acct() else bs.GENERAL_CDP_PORT
         except (TypeError, ValueError):
             return bs.GENERAL_CDP_PORT
@@ -191,12 +196,11 @@ def register_browser_surface_api(app):
             return jsonify({"ok": False, "error": "需提供 mode 或 extra_domains"}), 400
         return jsonify(bs.set_nav_config(mode=mode, extra_domains=extra, append=bool(append)))
 
-    # ── 通用浏览实例（9224，按需，与采集 9222/9223 物理隔离）─────
+    # ── 通用浏览实例（9224，按需，与获批采集端口物理隔离）─────
     @bp.route("/api/browser-surface/general-browser/status", methods=["GET"])
     def api_general_status():
         return jsonify({"ok": True, "port": bs.GENERAL_CDP_PORT,
-                        "online": bs.general_browser_online(),
-                        "profile": bs.GENERAL_PROFILE_DIR})
+                        "online": bs.general_browser_online()})
 
     @bp.route("/api/browser-surface/general-browser/ensure", methods=["POST"])
     def api_general_ensure():

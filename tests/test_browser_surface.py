@@ -217,6 +217,7 @@ def test_api_capabilities_and_policy(client):
 def test_browser_surface_api_defaults_to_product_browser(monkeypatch, client):
     """未指定端口的产品浏览器 API 必须走独立通用实例 9224。"""
     seen = {}
+    monkeypatch.setattr(bs, "_verified_general_browser", lambda *args: True)
 
     def fake_list_tabs(account=None, port=None):
         seen.update(account=account, port=port)
@@ -277,29 +278,32 @@ def test_nav_config_invalid_mode_rejected(tmp_path, monkeypatch):
     assert bs.set_nav_config(mode="hack")["ok"] is False
 
 
-def test_general_browser_online_mock(monkeypatch):
-    import types
-    fake = types.SimpleNamespace(is_cdp_port_open=lambda port: port == 9224)
-    monkeypatch.setitem(sys.modules, "cdp_helper", fake)
+def test_general_browser_online_requires_verified_owned_session(monkeypatch):
+    monkeypatch.setattr(bs, "_verified_general_browser", lambda: False)
+    assert bs.general_browser_online() is False
+    monkeypatch.setattr(bs, "_verified_general_browser", lambda: True)
     assert bs.general_browser_online() is True
 
 
 def test_find_in_page_offline_graceful(monkeypatch):
-    # 9222 可能在线也可能不在线；强制让 _find_tab_ws 抛异常，验证不崩
+    # Use the verified product browser endpoint; the retired 9222 port stays blocked.
+    monkeypatch.setattr(bs, "_verified_general_browser", lambda *args: True)
     monkeypatch.setattr(bs, "_find_tab_ws", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("offline")))
-    r = bs.find_in_page("test", port=9222)
+    r = bs.find_in_page("test", port=bs.GENERAL_CDP_PORT)
     assert r["ok"] is False and "offline" in r["error"]
 
 
 def test_stop_find_offline_graceful(monkeypatch):
+    monkeypatch.setattr(bs, "_verified_general_browser", lambda *args: True)
     monkeypatch.setattr(bs, "_find_tab_ws", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("offline")))
-    r = bs.stop_find_in_page(port=9222)
+    r = bs.stop_find_in_page(port=bs.GENERAL_CDP_PORT)
     assert r["ok"] is False
 
 
 def test_set_download_behavior_offline(monkeypatch):
+    monkeypatch.setattr(bs, "_verified_general_browser", lambda *args: True)
     monkeypatch.setattr(bs, "_find_tab_ws", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("offline")))
-    r = bs.set_download_behavior(enabled=True, port=9222)
+    r = bs.set_download_behavior(enabled=True, port=bs.GENERAL_CDP_PORT)
     assert r["ok"] is False
 
 
@@ -324,6 +328,59 @@ def test_api_nav_config_endpoint(client, tmp_path, monkeypatch):
 def test_api_general_status(client):
     r = client.get("/api/browser-surface/general-browser/status").get_json()
     assert r["ok"] and r["port"] == 9224 and "online" in r
+    assert "profile" not in r
+
+
+def test_general_browser_uses_supported_system_default_without_edge_fallback(monkeypatch):
+    import cdp_helper
+
+    monkeypatch.setattr(cdp_helper, "find_browser_path", lambda name: f"/{name}" if name in {"chrome", "edge"} else None)
+    monkeypatch.setattr(cdp_helper, "_https_associated_executable", lambda: r"C:\Program Files\Google\Chrome\Application\chrome.exe")
+    assert cdp_helper.system_default_cdp_browser() == "chrome"
+    monkeypatch.setattr(cdp_helper, "_https_associated_executable", lambda: r"C:\Program Files\Mozilla Firefox\firefox.exe")
+    assert cdp_helper.system_default_cdp_browser() is None
+
+
+def test_general_browser_launch_is_headless_isolated_and_reuses_only_its_session(tmp_path, monkeypatch):
+    import cdp_helper
+
+    monkeypatch.setattr(bs, "GENERAL_PROFILE_BASE", str(tmp_path / "general"))
+    monkeypatch.setattr(cdp_helper, "system_default_cdp_browser", lambda: "chrome")
+    online = {"value": False}
+    monkeypatch.setattr(cdp_helper, "is_cdp_port_open", lambda _port: online["value"])
+    version = {"Browser": "HeadlessChrome/140.0", "webSocketDebuggerUrl": "ws://127.0.0.1:9224/devtools/browser/owned"}
+    monkeypatch.setattr(bs, "_http_json", lambda *_args, **_kwargs: version)
+    launched = {}
+
+    def start(**kwargs):
+        launched.update(kwargs)
+        online["value"] = True
+        return {"success": True, "pid": 321}
+
+    monkeypatch.setattr(cdp_helper, "start_cdp_browser", start)
+    assert bs.ensure_general_browser(force=True)["code"] == "FORCED_BROWSER_RESTART_UNAVAILABLE"
+    assert launched == {}
+    first = bs.ensure_general_browser()
+    assert first["ok"] and first["browser"] == "chrome"
+    assert launched["headless"] is True and launched["loopback_only"] is True
+    assert launched["direct_connection"] is False
+    assert launched["launch_url"] == "about:blank"
+    assert launched["profile_dir"] == str(tmp_path / "general-chrome")
+    assert bs._resolve_port() == bs.GENERAL_CDP_PORT
+    assert bs._resolve_port(port=bs.GENERAL_CDP_PORT) == bs.GENERAL_CDP_PORT
+    assert bs.ensure_general_browser()["action"] == "already_online"
+    version["webSocketDebuggerUrl"] = "ws://127.0.0.1:9224/devtools/browser/other"
+    assert bs.general_browser_online() is False
+    assert bs.ensure_general_browser()["code"] == "UNVERIFIED_BROWSER_SESSION"
+    with pytest.raises(PermissionError, match="not LUMENIS-owned"):
+        bs._resolve_port(port=bs.GENERAL_CDP_PORT)
+
+
+def test_browser_surface_api_rejects_unverified_product_session(monkeypatch, client):
+    monkeypatch.setattr(bs, "_verified_general_browser", lambda *args: False)
+    response = client.get("/api/browser-surface/tabs")
+    assert response.status_code == 403
+    assert response.get_json()["code"] == "BROWSER_SESSION_BLOCKED"
 
 
 def test_api_find_requires_query(client):
