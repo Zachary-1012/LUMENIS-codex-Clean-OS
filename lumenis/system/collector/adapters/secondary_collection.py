@@ -244,10 +244,10 @@ def _xhs_primary_last_run() -> Dict[str, Any] | None:
         return None
 
 
-def _adapter_health(platform: str) -> Dict[str, Any]:
+def _adapter_health(platform: str, **source_kwargs: Any) -> Dict[str, Any]:
     try:
         adapter = _get_runtime_adapter(platform)
-        result = adapter.health_check()
+        result = adapter.health_check(**source_kwargs)
         status = _canonical_status(result)
         metadata = result.metadata if isinstance(result.metadata, dict) else {}
         # Only expose non-sensitive readiness and provenance facts. Cookie
@@ -652,7 +652,10 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 }
             _last_action[platform] = time.monotonic()
 
-        health = _adapter_health(platform)
+        health = (
+            _adapter_health(platform, url=keyword)
+            if platform == "public_http" else _adapter_health(platform)
+        )
         health_status = health.get("status", "UNAVAILABLE")
         if not health.get("can_attempt", health.get("ready", False)):
             finished = _now()

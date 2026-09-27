@@ -1049,3 +1049,15 @@ but its 112 publication dates are unknown and quality statuses are `error`.
 The local import scripts and dependent collector/scope changes remain
 `LOCAL_ONLY / NOT_PUBLISHED`; the DB is not an online artifact. Global CTH/BMP
 coverage, user E2E, Round 06 acceptance and release remain `NO / REWORK`.
+
+### 2026-09-27 Round 06 public publication-date truth and clean-main preflight
+
+The existing public HTML adapter now reads bounded structured publication
+signals, retains ISO 8601 timezone timestamps, and leaves conflicting page
+dates unknown. The existing SYSTEM collector now passes a supplied public URL
+to its health preflight while missing-source checks remain `NOT_CONFIGURED`.
+[Round 06 evidence](evidence/round-06/ROUND-06-PUBLIC-DATE-TRUTH-2026-09-27.md)
+records 45 clean-main and 77 current-snapshot test passes plus two read-only
+live page probes. The
+actual product DB was not rewritten; its 112 prior quality errors and the
+GLOBAL / real-user E2E gaps remain open.

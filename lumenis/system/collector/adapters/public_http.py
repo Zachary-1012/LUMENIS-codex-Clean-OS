@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from datetime import datetime
 from typing import Any, Callable
@@ -11,6 +12,63 @@ from bs4 import BeautifulSoup
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
 from .public_source import PublicResponse, PublicSourceError, fetch_public_url, public_source_provenance
 from .registry import register_adapter
+
+
+def _publication_signals(soup: BeautifulSoup) -> tuple[str, str, str]:
+    """Accept a declared publication date only when page signals agree by day."""
+    signals: list[tuple[str, str]] = []
+    for selector in (
+        {"property": "article:published_time"},
+        {"name": "date"},
+        {"name": re.compile("^pubdate$", re.I)},
+        {"itemprop": "datePublished"},
+    ):
+        tag = soup.find("meta", attrs=selector)
+        if tag and tag.get("content"):
+            signals.append(("meta", str(tag["content"]).strip()[:64]))
+    for tag in soup.find_all("script", type="application/ld+json", limit=12):
+        payload = tag.string or tag.get_text()
+        if not payload or len(payload) > 100_000:
+            continue
+        try:
+            parsed = json.loads(payload)
+        except (TypeError, ValueError):
+            continue
+        records = parsed if isinstance(parsed, list) else [parsed]
+        for record in records[:20]:
+            if not isinstance(record, dict):
+                continue
+            kinds = record.get("@type")
+            if isinstance(kinds, str):
+                kinds = [kinds]
+            if not isinstance(kinds, list) or not {item for item in kinds if isinstance(item, str)} & {"NewsArticle", "Article", "BlogPosting"}:
+                continue
+            value = record.get("datePublished")
+            if isinstance(value, str) and value.strip():
+                signals.append(("json_ld", value.strip()[:64]))
+    for tag in soup.find_all("time", datetime=True, limit=3):
+        signals.append(("time", str(tag["datetime"]).strip()[:64]))
+    for tag in soup.select(".section-date")[:3]:
+        value = tag.get_text(" ", strip=True).strip().strip(",").strip()
+        try:
+            normalized = datetime.strptime(value, "%b %d, %Y").strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+        signals.append(("visible_date", normalized))
+    if not signals:
+        return "", "unknown", "unknown"
+
+    days = set()
+    for _, value in signals:
+        try:
+            days.add(datetime.fromisoformat(value.replace("Z", "+00:00")).date())
+        except ValueError:
+            # An unrecognized date is retained for review, never promoted.
+            return "", "unknown", "unparseable"
+    if len(days) != 1:
+        return "", "unknown", "conflict"
+    source, value = signals[0]
+    return value, source, "declared"
 
 
 class PublicHttpAdapter(BasePlatformAdapter):
@@ -57,17 +115,7 @@ class PublicHttpAdapter(BasePlatformAdapter):
         text = article_text or (soup.body.get_text(" ", strip=True) if soup.body else "")
         if len(text) > 1000:
             text = text[:1000].rstrip() + "…"
-        published = ""
-        for selector in (
-            {"property": "article:published_time"},
-            {"name": "date"},
-            {"name": re.compile("^pubdate$", re.I)},
-            {"itemprop": "datePublished"},
-        ):
-            tag = soup.find("meta", attrs=selector)
-            if tag and tag.get("content"):
-                published = str(tag["content"]).strip()
-                break
+        published, date_source, date_state = _publication_signals(soup)
         item_id = hashlib.sha256(canonical_url.encode("utf-8")).hexdigest()[:32]
         return {
             "platform_content_id": f"public-http:{item_id}",
@@ -82,7 +130,11 @@ class PublicHttpAdapter(BasePlatformAdapter):
             "collects": None,
             "shares": None,
             "captured_at": datetime.now().isoformat(timespec="seconds"),
-            "raw": {"content_type": "text/html", "canonical_url": canonical_url},
+            "raw": {
+                "content_type": "text/html", "canonical_url": canonical_url,
+                "publication_date_source": date_source,
+                "publication_date_state": date_state,
+            },
         }
 
     def search(self, keyword: str, **kwargs: Any) -> CollectionResult:
@@ -119,6 +171,8 @@ class PublicHttpAdapter(BasePlatformAdapter):
                     "provider": "public_http",
                     "source": response.url,
                     "collected_at": collected_at,
+                    "publication_date_source": item["raw"]["publication_date_source"],
+                    "publication_date_state": item["raw"]["publication_date_state"],
                     **public_source_provenance(response, target),
                 },
             )

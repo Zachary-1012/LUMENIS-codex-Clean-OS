@@ -59,3 +59,56 @@ def test_title_only_page_is_not_reported_as_captured_content():
     assert result.status is CollectionStatus.PROVIDER_UNAVAILABLE
     assert result.items == []
     assert result.metadata["error_type"] == "EMPTY_CONTENT"
+
+
+def test_json_ld_publication_time_is_preserved_with_timezone():
+    from data_quality_gate import DataQualityGate
+
+    response = PublicResponse(
+        url="https://public.example.test/news",
+        content=(
+            '<html><head><title>Brand news</title>'
+            '<script type="application/ld+json">'
+            '{"@type":"NewsArticle","datePublished":"2026-09-09T07:00:00-07:00"}'
+            '</script></head><body>Brand release body.</body></html>'
+        ).encode("utf-8"),
+        content_type="text/html",
+        status_code=200,
+    )
+    result = PublicHttpAdapter(fetcher=lambda _: response).search(response.url)
+
+    assert result.status is CollectionStatus.SUCCESS
+    assert result.items[0]["publish_datetime"] == "2026-09-09T07:00:00-07:00"
+    assert result.metadata["publication_date_state"] == "declared"
+    assert DataQualityGate().validate("note", {
+        "title": "Brand news", "url": response.url, "risk_level": "low",
+        "publish_date": result.items[0]["publish_datetime"],
+    })["valid"] is True
+
+
+def test_conflicting_visible_and_structured_publication_dates_remain_unknown():
+    response = PublicResponse(
+        url="https://public.example.test/news",
+        content=(
+            '<html><head><title>Brand news</title>'
+            '<script type="application/ld+json">'
+            '{"@type":"NewsArticle","datePublished":"2026-08-25"}'
+            '</script></head><body><span class="section-date">, \n Aug 19, 2026</span>'
+            'Brand release body.</body></html>'
+        ).encode("utf-8"),
+        content_type="text/html",
+        status_code=200,
+    )
+    result = PublicHttpAdapter(fetcher=lambda _: response).search(response.url)
+
+    assert result.status is CollectionStatus.SUCCESS
+    assert result.items[0]["publish_datetime"] == ""
+    assert result.metadata["publication_date_state"] == "conflict"
+
+
+def test_adapter_health_distinguishes_missing_source_from_a_manual_attempt():
+    adapter = PublicHttpAdapter(fetcher=lambda _: None)
+
+    assert adapter.health_check().status is CollectionStatus.NOT_CONFIGURED
+    assert adapter.health_check(url="https://public.example.test/article").status is CollectionStatus.NEED_VERIFY
+    assert adapter.search("").status is CollectionStatus.NOT_CONFIGURED
