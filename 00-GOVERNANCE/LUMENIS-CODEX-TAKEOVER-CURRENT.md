@@ -1384,3 +1384,18 @@ not granted by public maintenance. 54 focused tests plus final 26 routing tests
 PASS. [Round 06 evidence](evidence/round-06/ROUND-06-DOUYIN-EXACT-INGESTION-2026-09-28.md).
 This is bounded ingestion proof, not full platform or real-user workflow closure.
 ROUND 06 REWORK; Global/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.
+
+
+### 2026-09-28 - social source identity admission repair
+
+Exact query Permission did not establish content/entity relevance. A later real
+Shenzhen search returned three Shenzhen Bay items that Root incorrectly bound to
+Shenzhen MixC Luohu. Those three require an audited scope correction; their prior
+VERIFIED label is not accepted semantic truth. No deletion or silent DB repair.
+The Collector now checks source text independently of queries/author labels and
+keeps ambiguous/unnamed results pending. Mixed batches save the admitted subset
+while reporting PARTIAL_SCOPE_REVIEW_REQUIRED. Isolated current source: 20 focused
+tests PASS; real clone search rejected the bad association before import.
+[Round 06 evidence](evidence/round-06/ROUND-06-SOURCE-ENTITY-ADMISSION-2026-09-28.md).
+Existing product DB correction is pending this follow-up owner batch. ROUND 06
+REWORK; Global/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY remain NO.

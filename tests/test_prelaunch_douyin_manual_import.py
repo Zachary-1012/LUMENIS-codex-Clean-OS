@@ -36,6 +36,9 @@ def test_douyin_manual_import_requires_exact_approval_and_binds_native_evidence(
     monkeypatch.setattr(database, "DB_PATH", str(db_path))
     with sqlite3.connect(db_path) as conn:
         baseline_evidence = conn.execute("SELECT COUNT(*) FROM app_evidence_records").fetchone()[0]
+        baseline_douyin_evidence = conn.execute(
+            "SELECT COUNT(*) FROM app_evidence_records WHERE feature_id='PRELAUNCH_DOUYIN_COLLECT'"
+        ).fetchone()[0]
 
     entity, _ = subject_registry.add_subject({
         "domain_id": domain, "subject_type": "brand" if domain == "BMP" else "company",
@@ -57,18 +60,19 @@ def test_douyin_manual_import_requires_exact_approval_and_binds_native_evidence(
     }
     item = {
         "platform_content_id": raw["aweme_id"], "title": "Fixture post",
-        "content": "Fixture content", "url": "https://www.douyin.com/video/7342000000000000001",
+        "content": "隔离验收 Fixture content", "url": "https://www.douyin.com/video/7342000000000000001",
         "author_id": raw["author_id"], "author_nickname": raw["nickname"],
         "publish_datetime": "2025-09-04T00:00:00Z", "likes": 19,
         "comments": 3, "shares": 2, "collects": None, "raw": raw,
     }
     calls = []
+    returned_items = [item]
     class FixtureAdapter:
         def search(self, query, *, max_results):
             calls.append((query, max_results))
             return CollectionResult(
-                status=CollectionStatus.SUCCESS, platform="douyin", items=[item],
-                raw_count=1, metadata={"provider": "fixture_only", "source": "fixture"},
+                status=CollectionStatus.SUCCESS, platform="douyin", items=returned_items,
+                raw_count=len(returned_items), metadata={"provider": "fixture_only", "source": "fixture"},
             )
     adapter = FixtureAdapter()
     monkeypatch.setattr(surface, "_get_runtime_adapter", lambda _platform: adapter)
@@ -115,8 +119,8 @@ def test_douyin_manual_import_requires_exact_approval_and_binds_native_evidence(
             (raw["aweme_id"],),
         )
         conn.commit()
-    item.update({"title": "Changed fixture post", "content": "Changed source content", "likes": 27})
-    raw["desc"] = "Changed source content"
+    item.update({"title": "Changed fixture post", "content": "隔离验收 Changed source content", "likes": 27})
+    raw["desc"] = "隔离验收 Changed source content"
     raw["digg_count"] = 27
     monkeypatch.setitem(surface._last_action, "douyin", time.monotonic() - surface.MIN_INTERVAL_SECONDS - 1)
     changed = surface.collect_search(
@@ -169,10 +173,10 @@ def test_douyin_manual_import_requires_exact_approval_and_binds_native_evidence(
     assert note[6] == expected_published_at
     assert note[7] and note[6] != note[7]
     assert note[5] == initial_scope_evidence_ref
-    assert note[8:10] == ("Changed fixture post", "Changed source content")
-    assert canonical[6:8] == ("Changed fixture post", "Changed source content")
+    assert note[8:10] == ("Changed fixture post", "隔离验收 Changed source content")
+    assert canonical[6:8] == ("Changed fixture post", "隔离验收 Changed source content")
     assert canonical[8:10] == ("negative", "high")
-    assert evidence_rows == 2
+    assert evidence_rows == baseline_douyin_evidence + 2
     assert classify_evidence_integrity(dict(zip(evidence_columns, evidence))) ["assurance"] == "writer-authenticated"
     native_data = json.loads(native[0])
     assert native_data["aweme_id"] == raw["aweme_id"]
@@ -191,7 +195,7 @@ def test_douyin_manual_import_requires_exact_approval_and_binds_native_evidence(
         ).fetchone()
         assert conn.execute(
             "SELECT COUNT(*) FROM app_evidence_records WHERE feature_id='PRELAUNCH_DOUYIN_COLLECT'"
-        ).fetchone()[0] == 2
+        ).fetchone()[0] == baseline_douyin_evidence + 2
     assert classify_evidence_integrity(
         dict(zip(evidence_columns, latest_evidence))
     )["assurance"] == "writer-authenticated"
@@ -212,6 +216,45 @@ def test_douyin_manual_import_requires_exact_approval_and_binds_native_evidence(
     )
     assert rejected["status"] == "SCOPE_UNAUTHORIZED"
     assert len(calls) == 4
+
+    # An approved query is not proof that its returned item belongs to the
+    # selected entity. A different real-world venue must not refresh even an
+    # already assigned source identity, or create a new exact-scoped row.
+    item.update({"title": "深圳湾万象城", "content": "与指定主体没有来源关联"})
+    monkeypatch.setitem(surface._last_action, "douyin", time.monotonic() - surface.MIN_INTERVAL_SECONDS - 1)
+    rejected = surface.collect_search(
+        "douyin", keyword, max_results=1, scope=scope, actor=None,
+        operator="human", prelaunch_local_import=True,
+    )
+    assert rejected["ok"] is False
+    assert rejected["status"] == "SCOPE_REVIEW_REQUIRED"
+    assert rejected["imported"] == rejected["updated"] == rejected["canonical_synced"] == 0
+    assert rejected["evidence_recorded"] is True
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("SELECT content FROM notes WHERE note_id=?", (raw["aweme_id"],)).fetchone()[0] == "隔离验收 Changed source content"
+        assert conn.execute("SELECT content FROM canonical_data WHERE external_id=?", (raw["aweme_id"],)).fetchone()[0] == "隔离验收 Changed source content"
+
+    accepted_id = "7342000000000000002"
+    returned_items.append({**item, "platform_content_id": accepted_id,
+        "url": f"https://www.douyin.com/video/{accepted_id}",
+        "title": "隔离验收 New relevant post", "content": "隔离验收",
+        "raw": {**raw, "aweme_id": accepted_id}})
+    monkeypatch.setitem(surface._last_action, "douyin", time.monotonic() - surface.MIN_INTERVAL_SECONDS - 1)
+    partial = surface.collect_search(
+        "douyin", keyword, max_results=2, scope=scope, actor=None,
+        operator="human", prelaunch_local_import=True,
+    )
+    assert partial["ok"] is False
+    assert partial["status"] == "PARTIAL_SCOPE_REVIEW_REQUIRED"
+    assert partial["returned_count"] == 2
+    assert partial["canonical_synced"] == partial["native_fields_synced"] == 1
+    assert partial["review_pending_count"] == 1
+    assert partial["refresh_verified"] is False
+    with sqlite3.connect(db_path) as conn:
+        scope_ref = conn.execute("SELECT scope_evidence_ref FROM canonical_data WHERE external_id=?", (accepted_id,)).fetchone()[0]
+        evidence_input = json.loads(conn.execute("SELECT inputs_json FROM app_evidence_records WHERE id=?", (scope_ref,)).fetchone()[0])
+        assert evidence_input["source_ids"] == [accepted_id]
+        assert conn.execute("SELECT content FROM notes WHERE note_id=?", (raw["aweme_id"],)).fetchone()[0] == "隔离验收 Changed source content"
 
 
 @pytest.mark.parametrize("value", [True, float("inf"), float("nan"), 10**100])

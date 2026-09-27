@@ -29,6 +29,8 @@ import sys
 import hashlib
 import json
 import getpass
+import re
+import unicodedata
 from datetime import datetime, timedelta
 from typing import Any, Dict, Iterable, List, Mapping
 from urllib.parse import urlsplit
@@ -111,6 +113,8 @@ def _status_message(status: str, *, detail: str = "") -> str:
         "POLICY_STATE_UNAVAILABLE": "无法读取采集限额状态，已阻止外部请求",
         "IMPORT_FAILED": "部分记录未能写入现有业务数据，结果未标记完成",
         "CANONICAL_SYNC_FAILED": "原始记录已保留，但 Canonical Data 同步未完成",
+        "SCOPE_REVIEW_REQUIRED": "内容与所选主体的关联尚待核对，未归入该主体",
+        "PARTIAL_SCOPE_REVIEW_REQUIRED": "已保存确认关联的内容，其余内容仍待核对",
         "EVIDENCE_WRITE_FAILED": "Evidence 未能持久化，本次采集不标记为完成",
         "COLLECT_ERROR": "采集引擎未完成本次请求",
         "UNAVAILABLE": "采集引擎未就绪",
@@ -151,6 +155,10 @@ def _last_run(platform: str) -> Dict[str, Any] | None:
                 state = "RATE_LIMITED"
             elif "CANONICAL_SYNC_FAILED" in error_text:
                 state = "CANONICAL_SYNC_FAILED"
+            elif "PARTIAL_SCOPE_REVIEW_REQUIRED" in error_text:
+                state = "PARTIAL_SCOPE_REVIEW_REQUIRED"
+            elif "SCOPE_REVIEW_REQUIRED" in error_text:
+                state = "SCOPE_REVIEW_REQUIRED"
             elif "IMPORT_FAILED" in error_text:
                 state = "IMPORT_FAILED"
             elif "RISK" in error_text or "风控" in str(row[7] or ""):
@@ -692,6 +700,60 @@ def _validate_prelaunch_registry(scope: Mapping[str, Any]) -> None:
         conn.close()
 
 
+def _prelaunch_entity_mentions(records: List[Dict[str, Any]], scope: Mapping[str, Any]) -> List[dict]:
+    """Check source text, never the query, before a social result gets exact scope.
+
+    A unique registered-name mention is bounded association evidence, not a
+    claim that every statement concerns that entity or that the source is true.
+    Unnamed or ambiguous results need review; location, author and query text
+    cannot silently supply a missing content-level identity.
+    """
+    from lumenis.shared.database import get_repository
+
+    def normalized(value):
+        return " ".join(unicodedata.normalize("NFKC", str(value or "")).casefold().split())
+
+    expected = scope.get("subject_id") or scope.get("brand_focus_id")
+    domain = "CTH" if scope["domain_id"] == "cth" else "BMP"
+    with get_repository().transaction() as conn:
+        rows = conn.execute(
+            "SELECT subject_id, brand_focus_id, name_zh, name_en "
+            "FROM lumenis_subject_registry WHERE domain_id=? "
+            "AND status NOT IN ('archived','disabled','deleted')", (domain,),
+        ).fetchall()
+    names: dict[str, set[str]] = {}
+    for subject, brand, chinese, english in rows:
+        for name in (chinese, english):
+            key = normalized(name)
+            if len(key) >= 2:
+                names.setdefault(key, set()).add(brand if domain == "BMP" else subject)
+    target_names = {name: ids for name, ids in names.items() if expected in ids}
+    decisions = []
+    for record in records:
+        text = normalized(" ".join(str(record.get(key) or "") for key in ("title", "content")))
+        mentions = []
+        for name, ids in target_names.items():
+            # Latin names must not match a substring of another word. Chinese
+            # names keep their full registry spelling (深圳湾 != 深圳).
+            pattern = re.escape(name)
+            if name[0].isascii() and name[0].isalnum():
+                pattern = r"(?<![a-z0-9])" + pattern
+            if name[-1].isascii() and name[-1].isalnum():
+                pattern += r"(?![a-z0-9])"
+            if re.search(pattern, text):
+                mentions.append((name, ids))
+        unique = [name for name, ids in mentions if ids == {expected}]
+        decisions.append({
+            "source_id": record.get("content_id"),
+            "status": "EXACT_NAME_MENTION" if unique else "REVIEW_REQUIRED",
+            "matched_names": sorted(unique),
+            "reason": "source_name_mention" if unique else (
+                "ambiguous_registered_name" if mentions else "no_exact_source_name"),
+            "source_text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        })
+    return decisions
+
+
 def _existing_prelaunch_evidence(note_ids: List[str], scope: Mapping[str, Any]) -> int | None:
     if not note_ids:
         return None
@@ -751,7 +813,8 @@ def _write_prelaunch_evidence(platform: str, keyword: str, result: Dict[str, Any
                     "source_ids": source_ids, "keywords": [keyword]},
             outputs={"notes_collected": result.get("raw_count", 0),
                      "notes_inserted": result.get("imported", 0),
-                     "notes_updated": result.get("updated", 0)},
+                     "notes_updated": result.get("updated", 0),
+                     "entity_mentions": result.get("entity_mentions")},
             actual=result.get("status", "COLLECT_ERROR"), account=f"PRELAUNCH_{platform.upper()}",
             provider=(result.get("provenance") or {}).get("provider", "platform_adapter"),
             collection_metadata=result.get("provenance"),
@@ -1074,6 +1137,38 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         items = [item for item in (collection.items or []) if isinstance(item, dict)]
         captured_at = _now()
         records = [_native_record(item, platform, keyword, captured_at) for item in items]
+        source_item_count = len(items)
+        entity_mentions = []
+        review_pending = []
+        if platform == "douyin" and prelaunch_scope is not None and collection.ok and records:
+            entity_mentions = _prelaunch_entity_mentions(records, prelaunch_scope)
+            review_pending = [item for item in entity_mentions if item["status"] != "EXACT_NAME_MENTION"]
+            accepted_indices = [i for i, item in enumerate(entity_mentions) if item["status"] == "EXACT_NAME_MENTION"]
+            records = [records[i] for i in accepted_indices]
+            items = [items[i] for i in accepted_indices]
+            if not records:
+                result = {
+                    "ok": False, "status": "SCOPE_REVIEW_REQUIRED",
+                    "error_type": "SOURCE_ENTITY_IDENTITY_UNCONFIRMED",
+                    "platform": platform, "keyword": keyword,
+                    "raw_count": source_item_count, "returned_count": source_item_count,
+                    "imported": 0, "updated": 0, "canonical_synced": 0,
+                    "read_only": True, "external_write": False,
+                    "entity_mentions": entity_mentions,
+                    "review_pending_count": len(review_pending),
+                    "error": _status_message("SCOPE_REVIEW_REQUIRED"),
+                }
+                evidence_id = _write_prelaunch_evidence(
+                    platform, keyword, result, started=started_at,
+                    scope=prelaunch_scope, source_ids=[],
+                )
+                result["evidence_recorded"] = evidence_id is not None
+                if evidence_id is None:
+                    result["status"] = "EVIDENCE_WRITE_FAILED"
+                _write_run_log(platform, keyword, started=started_at, finished=_now(),
+                               fetched=source_item_count, accepted=0, rejected=source_item_count,
+                               error=result["status"])
+                return result
         if (maintenance_operator and prelaunch_scope is not None
                 and not _authorize_prelaunch_public(
                     prelaunch_scope, keyword, platform,
@@ -1154,7 +1249,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             "platform": platform,
             "keyword": keyword,
             "raw_count": int(collection.raw_count or len(items) or 0),
-            "returned_count": len(items),
+            "returned_count": source_item_count,
             "imported": int(import_result.get("imported", 0) or 0),
             "updated": int(import_result.get("updated", 0) or 0),
             "failed": int(import_result.get("failed", 0) or 0),
@@ -1173,6 +1268,8 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             ),
             "consumer_views": ["CTH", "BMP"],
             "provenance": provenance,
+            "entity_mentions": entity_mentions,
+            "review_pending_count": len(review_pending),
         }
         if prelaunch_scope is not None and platform in {"public_http", "web_atom", "douyin"}:
             result["refresh_verified"] = False
@@ -1241,11 +1338,21 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 result.update({"ok": False, "status": "CANONICAL_SYNC_FAILED",
                                "error_type": "CANONICAL_SYNC_FAILED",
                                "error": _status_message("CANONICAL_SYNC_FAILED")})
+        # The signed success above covers only admitted source_ids. Keep the
+        # overall request partial when other returned items still need review.
+        if review_pending and result["ok"]:
+            result.update({
+                "ok": False, "status": "PARTIAL_SCOPE_REVIEW_REQUIRED",
+                "error_type": "SOURCE_ENTITY_IDENTITY_UNCONFIRMED",
+                "error": _status_message("PARTIAL_SCOPE_REVIEW_REQUIRED"),
+                "scope_status": "PARTIAL", "refresh_verified": False,
+            })
+        accepted_count = int(result.get("canonical_synced", 0) or 0)
         _write_run_log(
             platform, keyword, started=started_at, finished=finished,
             fetched=int(collection.raw_count or len(items) or 0),
-            accepted=int(subject.get("subject_matches", 0) or 0),
-            rejected=max(0, len(items) - int(subject.get("subject_matches", 0) or 0)),
+            accepted=accepted_count,
+            rejected=max(0, source_item_count - accepted_count),
             error=result["error"],
         )
         return result
