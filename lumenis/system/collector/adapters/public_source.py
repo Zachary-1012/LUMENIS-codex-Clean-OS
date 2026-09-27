@@ -15,6 +15,7 @@ import re
 import socket
 from collections import OrderedDict
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Iterable
 from urllib.parse import urljoin, urlparse, urlsplit, urlunsplit
 
@@ -27,6 +28,8 @@ MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_REDIRECTS = 3
 PUBLIC_SCHEMES = {"http", "https"}
 USER_AGENT = "LUMENIS-Public-Collector/1.0 (+read-only; evidence-bound)"
+DOH_JSON_URL = "https://dns.google/resolve"
+MAX_DOH_BYTES = 16 * 1024
 _HOST_LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$", re.IGNORECASE)
 
 
@@ -40,6 +43,32 @@ class PublicResponse:
     content: bytes
     content_type: str
     status_code: int
+    requested_url: str = ""
+    redirect_chain: tuple[str, ...] = ()
+    resolution_trace: tuple[dict[str, str], ...] = ()
+
+
+def public_source_provenance(response: PublicResponse, requested_url: str) -> dict[str, str]:
+    """Return bounded transport lineage without URL query or response body."""
+    def safe_url(value: str) -> str:
+        parsed = urlsplit(value)
+        authority = parsed.hostname or ""
+        if ":" in authority:
+            authority = f"[{authority}]"
+        if parsed.port:
+            authority = f"{authority}:{parsed.port}"
+        return urlunsplit((parsed.scheme, authority, parsed.path, "", ""))[:240]
+
+    return {
+        "requested_source_url": safe_url(response.requested_url or requested_url),
+        "final_source_url": safe_url(response.url),
+        "redirect_chain": json.dumps(
+            [safe_url(url) for url in response.redirect_chain], ensure_ascii=False,
+        ),
+        "resolution_trace": json.dumps(response.resolution_trace, ensure_ascii=False),
+        "source_access_mode": "public_read_only",
+        "commercial_license_state": "pending_review",
+    }
 
 
 def _resolved_addresses(hostname: str) -> Iterable[str]:
@@ -51,6 +80,63 @@ def _resolved_addresses(hostname: str) -> Iterable[str]:
     if not addresses:
         raise PublicSourceError("public source hostname has no address")
     return addresses
+
+
+def _doh_addresses(hostname: str) -> tuple[str, ...]:
+    """Resolve one already validated public hostname over authenticated HTTPS.
+
+    This is an opt-in fallback for workstation DNS that returns only fake or
+    private addresses. The source transport still pins and TLS-verifies the
+    original hostname; DNS results never authorize an unapproved source.
+    """
+    response = None
+    try:
+        response = requests.get(
+            DOH_JSON_URL,
+            params={"name": hostname, "type": "A"},
+            headers={"Accept": "application/json", "User-Agent": USER_AGENT},
+            timeout=(3, 6), allow_redirects=False, stream=True,
+        )
+        if response.status_code != 200:
+            raise PublicSourceError("public source secure DNS unavailable")
+        chunks: list[bytes] = []
+        size = 0
+        for chunk in response.iter_content(chunk_size=4096):
+            size += len(chunk)
+            if size > MAX_DOH_BYTES:
+                raise PublicSourceError("public source secure DNS response too large")
+            chunks.append(chunk)
+        payload = json.loads(b"".join(chunks))
+        if not isinstance(payload, dict) or payload.get("Status") != 0:
+            raise PublicSourceError("public source secure DNS did not resolve")
+        answers = payload.get("Answer") or []
+        if not isinstance(answers, list) or len(answers) > 32:
+            raise PublicSourceError("public source secure DNS response invalid")
+        names = {hostname.lower().rstrip(".")}
+        for _ in range(8):
+            additional = {
+                _canonical_hostname(str(item.get("data") or "").rstrip("."))
+                for item in answers if isinstance(item, dict)
+                and item.get("type") == 5
+                and str(item.get("name") or "").lower().rstrip(".") in names
+            }
+            if not additional - names:
+                break
+            names.update(additional)
+        addresses = tuple(dict.fromkeys(
+            str(item.get("data") or "")
+            for item in answers if isinstance(item, dict)
+            and item.get("type") == 1
+            and str(item.get("name") or "").lower().rstrip(".") in names
+        ))
+        if not addresses or any(not _is_globally_routable(ip) for ip in addresses):
+            raise PublicSourceError("public source secure DNS returned no public address")
+        return addresses
+    except (requests.RequestException, ValueError, TypeError) as exc:
+        raise PublicSourceError("public source secure DNS unavailable") from exc
+    finally:
+        if response is not None:
+            response.close()
 
 
 def _canonical_hostname(hostname: str) -> str:
@@ -143,6 +229,7 @@ def _validate_public_url_and_pin(
     value: str,
     *,
     host_pins: dict[str, tuple[str, ...]] | None = None,
+    resolution_trace: list[dict[str, str]] | None = None,
 ) -> tuple[str, dict[str, tuple[str, ...]]]:
     """Validate an HTTP(S) URL and reject loopback/private/link-local targets."""
     raw = str(value or "").strip()
@@ -160,18 +247,51 @@ def _validate_public_url_and_pin(
     if not hostname or port is not None and not (1 <= port <= 65535):
         raise PublicSourceError("public source URL is invalid")
     hostname = hostname.lower()
+    is_dns_name = True
+    try:
+        ipaddress.ip_address(hostname)
+    except ValueError:
+        hostname = _canonical_hostname(hostname)
+    else:
+        is_dns_name = False
     pins = load_public_source_host_pins() if host_pins is None else host_pins
     pinned = _host_pin(hostname, pins)
-    addresses = (pinned,) if pinned else tuple(_resolved_addresses(hostname))
+    resolver = "operator_pin" if pinned else "system_dns"
+    if pinned:
+        addresses = (pinned,)
+    else:
+        try:
+            addresses = tuple(_resolved_addresses(hostname))
+        except PublicSourceError:
+            if not is_dns_name or os.environ.get("LUMENIS_PUBLIC_SOURCE_DOH_FALLBACK", "").lower() not in {"1", "true", "on"}:
+                raise
+            addresses = _doh_addresses(hostname)
+            resolver = "doh_google"
     if not addresses:
         raise PublicSourceError("public source address could not be resolved")
+    if (
+        not pinned and is_dns_name
+        and addresses
+        and all(not _is_globally_routable(ip) for ip in addresses)
+        and os.environ.get("LUMENIS_PUBLIC_SOURCE_DOH_FALLBACK", "").lower() in {"1", "true", "on"}
+    ):
+        addresses = _doh_addresses(hostname)
+        resolver = "doh_google"
     for address in addresses:
         if not _is_globally_routable(address):
             raise PublicSourceError("private or local network sources are not allowed")
     # Bind this exact request authority to one address that was checked above.
     # Requests/urllib3 must never resolve the hostname again while connecting.
     canonical_hostname = hostname.rstrip(".").lower()
-    return raw, {**pins, canonical_hostname: (str(ipaddress.ip_address(addresses[0])),)}
+    selected = str(ipaddress.ip_address(addresses[0]))
+    if resolution_trace is not None:
+        resolution_trace.append({
+            "host": canonical_hostname,
+            "address": selected,
+            "resolver": resolver,
+            "resolved_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        })
+    return raw, {**pins, canonical_hostname: (selected,)}
 
 
 def validate_public_url(
@@ -265,7 +385,11 @@ def fetch_public_url(
     if max_bytes <= 0 or max_bytes > MAX_RESPONSE_BYTES:
         raise ValueError("max_bytes is outside the public-source safety bound")
     host_pins = load_public_source_host_pins()
-    current, host_pins = _validate_public_url_and_pin(url, host_pins=host_pins)
+    resolution_trace: list[dict[str, str]] = []
+    redirect_chain: list[str] = []
+    current, host_pins = _validate_public_url_and_pin(
+        url, host_pins=host_pins, resolution_trace=resolution_trace,
+    )
     client = session or requests.Session()
     # Caller-owned sessions retain their normal proxy configuration; only the
     # HTTP transport is replaced with the pin-aware equivalent.  Replacing the
@@ -293,9 +417,11 @@ def fetch_public_url(
                     verify=True,
                 )
                 if 300 <= response.status_code < 400 and response.headers.get("Location"):
+                    redirect_chain.append(current)
                     current, host_pins = _validate_public_url_and_pin(
                         urljoin(current, response.headers["Location"]),
                         host_pins=host_pins,
+                        resolution_trace=resolution_trace,
                     )
                     for adapter in transport_adapters:
                         adapter.host_pins = host_pins
@@ -324,6 +450,9 @@ def fetch_public_url(
                     content=b"".join(chunks),
                     content_type=str(response.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower(),
                     status_code=response.status_code,
+                    requested_url=url,
+                    redirect_chain=tuple(redirect_chain),
+                    resolution_trace=tuple(resolution_trace),
                 )
             finally:
                 if response is not None:

@@ -43,6 +43,38 @@ def test_unpinned_fake_dns_address_is_rejected(monkeypatch):
             transport.validate_public_url("https://unresolved.example.test/source")
 
 
+def test_opt_in_secure_dns_recovers_fake_workstation_dns_and_stays_pinned(monkeypatch):
+    monkeypatch.setenv("LUMENIS_PUBLIC_SOURCE_DOH_FALLBACK", "1")
+    monkeypatch.setattr(transport, "_resolved_addresses", lambda _: ("198.18.0.10",))
+    looked_up = []
+
+    def secure_lookup(host):
+        looked_up.append(host)
+        return ("8.8.8.8",)
+
+    monkeypatch.setattr(transport, "_doh_addresses", secure_lookup)
+    trace = []
+    _, pins = transport._validate_public_url_and_pin(
+        "https://www.example.test/source", resolution_trace=trace,
+    )
+    assert looked_up == ["www.example.test"]
+    assert pins["www.example.test"] == ("8.8.8.8",)
+    assert trace[0]["resolver"] == "doh_google"
+
+
+def test_secure_dns_fallback_never_promotes_literal_or_mixed_private_dns(monkeypatch):
+    monkeypatch.setenv("LUMENIS_PUBLIC_SOURCE_DOH_FALLBACK", "1")
+    looked_up = []
+    monkeypatch.setattr(transport, "_doh_addresses", lambda host: looked_up.append(host) or ("8.8.8.8",))
+    monkeypatch.setattr(transport, "_resolved_addresses", lambda _: ("127.0.0.1",))
+    with pytest.raises(transport.PublicSourceError):
+        transport.validate_public_url("http://127.0.0.1/private")
+    monkeypatch.setattr(transport, "_resolved_addresses", lambda _: ("8.8.8.8", "127.0.0.1"))
+    with pytest.raises(transport.PublicSourceError):
+        transport.validate_public_url("https://www.example.test/source")
+    assert looked_up == []
+
+
 def test_pinned_https_proxy_uses_literal_pool_and_original_tls_name():
     adapter = transport.PublicSourceHTTPAdapter(
         host_pins={"www.example.test": ("203.0.113.10",)}

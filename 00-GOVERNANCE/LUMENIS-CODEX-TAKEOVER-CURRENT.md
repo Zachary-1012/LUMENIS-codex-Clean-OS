@@ -1013,3 +1013,14 @@ The existing /api/collector/start path now defaults to manual, rejects unknown m
 ### 2026-09-27 Round 06 public HTTP native identity binding
 
 The existing SYSTEM Collector native adapter now passes a public HTTP item's stable ID and publication time into the existing canonical importer. [Round 06 evidence](evidence/round-06/ROUND-06-PUBLIC-HTTP-NATIVE-IDENTITY-2026-09-27.md) records 28 isolated adapter/surface tests and the blocked real ONS fetch. This is TESTED source only; explicit global Evidence scope, real actor/session scoped read, live Source-to-Canonical result, Global coverage and ROUND 06 acceptance remain unverified.
+
+### 2026-09-27 Round 06 public-source resolution and provenance Batch
+
+The existing SYSTEM Collector transport has an opt-in, TLS-verified secure-DNS
+fallback for the current workstation's unusable public DNS responses. It
+retains original-host TLS verification, exact public-IP pinning, redirect
+revalidation and bounded source-resolution provenance. [Round 06 evidence](evidence/round-06/ROUND-06-PUBLIC-SOURCE-DNS-PROVENANCE-2026-09-27.md)
+records 130 targeted/adjacent test passes and one disposable-DB live
+Source-to-Evidence-to-Canonical-to-report result. This is `TESTED` source only:
+the actual product DB, real Owner user path, global population and ROUND 06
+exit remain unverified.
