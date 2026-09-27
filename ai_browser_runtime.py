@@ -26,15 +26,17 @@ import logging
 import os
 import re
 import sqlite3
+import struct
 import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, asdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Callable
+from urllib.parse import urlsplit, urlunsplit
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +180,25 @@ def sanitize_sensitive(text: str) -> str:
     for pattern, replacement in _COMPILED_SENSITIVE:
         result = pattern.sub(replacement, result)
     return result
+
+
+def safe_browser_display_url(value: Any) -> str:
+    """Show a page address without URL credentials, query tokens or fragments."""
+    if value == "about:blank":
+        return value
+    if not isinstance(value, str):
+        return ""
+    try:
+        parsed = urlsplit(value)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            return ""
+        host = parsed.hostname
+        if ":" in host:
+            host = f"[{host}]"
+        netloc = f"{host}:{parsed.port}" if parsed.port else host
+        return sanitize_sensitive(urlunsplit((parsed.scheme, netloc, parsed.path, "", "")))
+    except ValueError:
+        return ""
 
 
 # 敏感 key 列表（用于 sanitize_dict 中按 key 脱敏值）
@@ -1190,6 +1211,9 @@ class AIBrowserRuntime:
         self._context = None
         self._page = None
         self._pages: Dict[str, Any] = {}  # tab_id -> page
+        self._target_id: Optional[str] = None
+        self._page_revision = 0
+        self.engine_label = ""
 
         # 组件
         self.verifier = ActionVerifier()
@@ -1250,6 +1274,9 @@ class AIBrowserRuntime:
             ready = browser_surface.ensure_general_browser()
             if not ready.get("ok") or not browser_surface.general_browser_online():
                 raise PermissionError("LUMENIS browser session is unavailable or unverified")
+            engine = ready.get("browser")
+            if engine not in {"chrome", "edge"}:
+                raise PermissionError("LUMENIS browser engine is unverified")
 
             from playwright.sync_api import sync_playwright
             self._playwright = sync_playwright().start()
@@ -1259,6 +1286,9 @@ class AIBrowserRuntime:
             )
             self._context = self._browser.new_context()
             self._page = self._context.new_page()
+            self._target_id = f"bt_{uuid.uuid4().hex}"
+            self._page_revision = 0
+            self.engine_label = "Chrome" if engine == "chrome" else "Edge"
             logger.info("[AIBrowserRuntime] 已连接序境隔离浏览器并创建专属页面")
 
             # 注册控制台错误监听
@@ -1279,6 +1309,8 @@ class AIBrowserRuntime:
             except Exception:
                 pass
             self._page = self._context = self._browser = self._playwright = None
+            self._target_id = None
+            self.engine_label = ""
             logger.error("[AIBrowserRuntime] 启动失败: %s", sanitize_sensitive(str(e)))
             return False
 
@@ -1351,6 +1383,7 @@ class AIBrowserRuntime:
             self._context = None
             self._browser = None
             self._playwright = None
+            self._target_id = None
             logger.info(f"[AIBrowserRuntime] Session 已关闭: {self.session_id}")
 
     def get_status(self) -> Dict[str, Any]:
@@ -1367,8 +1400,13 @@ class AIBrowserRuntime:
             "lifetime_seconds": int(now - self.created_at),
             "idle_timeout": self.idle_timeout,
             "max_lifetime": self.max_lifetime,
-            "current_url": sanitize_sensitive(self._page.url if self._page else ""),
+            "current_url": safe_browser_display_url(self._page.url if self._page else ""),
             "current_title": sanitize_sensitive(self._page.title() if self._page else ""),
+            "target_id": self._target_id,
+            "page_revision": self._page_revision,
+            "engine_label": self.engine_label,
+            "allowed_actions": ["navigate", "reload", "frame"]
+            if self.status == SessionStatus.RUNNING and self._page else [],
             "circuit_breaker": self.recovery.circuit_breaker.get_state(),
             "console_errors_count": len(self._console_errors),
         }
@@ -1483,6 +1521,7 @@ class AIBrowserRuntime:
                 action_type, target, selector, text, value, url, expected,
                 task_id, run_id, step_id, agent_id, skill_id, risk_level,
             ))
+        self._page_revision += 1
         self.last_activity = time.time()
         timestamp = datetime.now().isoformat()
 
@@ -1842,6 +1881,7 @@ class AIBrowserRuntime:
                 tab_id = f"tab_{uuid.uuid4().hex[:8]}"
                 self._pages[tab_id] = new_page
                 self._page = new_page
+                self._target_id = f"bt_{uuid.uuid4().hex}"
                 if url:
                     new_page.goto(url, wait_until="domcontentloaded", timeout=DEFAULT_ACTION_TIMEOUT)
             else:
@@ -1851,6 +1891,7 @@ class AIBrowserRuntime:
             tab_id = target or selector
             if tab_id in self._pages:
                 self._page = self._pages[tab_id]
+                self._target_id = f"bt_{uuid.uuid4().hex}"
             else:
                 raise ValueError(f"Tab not found: {tab_id}")
 
@@ -1861,6 +1902,10 @@ class AIBrowserRuntime:
                 del self._pages[tab_id]
                 if self._pages:
                     self._page = list(self._pages.values())[-1]
+                    self._target_id = f"bt_{uuid.uuid4().hex}"
+                else:
+                    self._page = None
+                    self._target_id = None
             else:
                 raise ValueError(f"Tab not found: {tab_id}")
 
@@ -1945,6 +1990,29 @@ class AIBrowserRuntime:
         if not self._page:
             raise RuntimeError("No active page")
         return self._page.screenshot(full_page=full_page)
+
+    def capture_frame(self) -> Dict[str, Any]:
+        """Capture only this session's active page for the authorized product UI."""
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            return self._run_on_browser_thread(self.capture_frame)
+        if self.status != SessionStatus.RUNNING or not self._target_id:
+            raise RuntimeError("Browser frame has no active authorized target")
+        image = self.screenshot(full_page=False)
+        if len(image) < 24 or image[:8] != b"\x89PNG\r\n\x1a\n":
+            raise RuntimeError("Browser frame is not a valid PNG")
+        width, height = struct.unpack(">II", image[16:24])
+        if width <= 0 or height <= 0:
+            raise RuntimeError("Browser frame dimensions are invalid")
+        frame_id = f"bf_{uuid.uuid4().hex}"
+        return {
+            "frame_id": frame_id,
+            "target_id": self._target_id,
+            "page_revision": self._page_revision,
+            "captured_at": datetime.now(timezone.utc).isoformat(),
+            "width": width,
+            "height": height,
+            "image": image,
+        }
 
     def get_console_errors(self) -> List[str]:
         """获取控制台错误（已脱敏）。"""

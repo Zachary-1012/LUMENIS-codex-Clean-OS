@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-27 — Authorized AI Browser frame for SYS-06 binding
+
+[Round 06 Browser frame evidence](evidence/round-06/ROUND-06-AI-BROWSER-AUTHORIZED-FRAME-2026-09-27.md)
+records a real isolated-engine HTTP probe and 201 focused tests for the
+actor/session-bound, uncached PNG frame API. Status and navigation now expose
+an opaque current target and page revision, safe address/title, verified engine
+label and currently advertised actions. Frames carry target/revision headers
+so the future UI can reject older responses. The probe used a test Actor and
+disposable DB; canonical Evidence, real account Permission, SYS-06 UI/user E2E
+and ROUND 06/14 acceptance remain `REWORK / LIVE_NOT_VERIFIED`.
+
 ### 2026-09-27 — SYS-06 reading-surface design refinement
 
 [SYS-06 revision 2](../contracts/experience/screen-specifications/SYS-06.md)

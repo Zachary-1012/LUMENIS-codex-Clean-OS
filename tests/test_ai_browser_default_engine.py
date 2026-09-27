@@ -1,6 +1,7 @@
 """AI Browser must never attach a caller-selected or personal browser profile."""
 
 import threading
+import struct
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import MagicMock
 
@@ -25,6 +26,14 @@ def test_manager_rejects_personal_port_profile_and_visible_browser(isolated_runt
     assert isolated_runtime.list_sessions() == []
 
 
+def test_browser_address_projection_drops_credentials_and_query_secrets():
+    assert runtime.safe_browser_display_url(
+        "https://user:password@example.org/path?code=secret#token"
+    ) == "https://example.org/path"
+    assert runtime.safe_browser_display_url("file:///C:/private") == ""
+    assert runtime.safe_browser_display_url("about:blank") == "about:blank"
+
+
 def test_manager_reuses_one_login_and_reports_other_login_capacity(isolated_runtime):
     first = isolated_runtime.create_session(owner_actor_id=101, owner_account_session_id=501)
     first.status = runtime.SessionStatus.RUNNING
@@ -46,7 +55,7 @@ def test_start_fails_closed_when_product_browser_is_unverified(isolated_runtime,
 def test_start_uses_fresh_context_and_closes_only_its_pages(isolated_runtime, monkeypatch):
     import playwright.sync_api
 
-    monkeypatch.setattr(browser_surface, "ensure_general_browser", lambda: {"ok": True})
+    monkeypatch.setattr(browser_surface, "ensure_general_browser", lambda: {"ok": True, "browser": "chrome"})
     monkeypatch.setattr(browser_surface, "general_browser_online", lambda: True)
     factory = MagicMock()
     monkeypatch.setattr(playwright.sync_api, "sync_playwright", lambda: factory)
@@ -67,7 +76,7 @@ def test_start_uses_fresh_context_and_closes_only_its_pages(isolated_runtime, mo
 def test_playwright_calls_use_creation_thread_across_request_threads(isolated_runtime, monkeypatch):
     import playwright.sync_api as playwright_api
 
-    monkeypatch.setattr(browser_surface, "ensure_general_browser", lambda: {"ok": True})
+    monkeypatch.setattr(browser_surface, "ensure_general_browser", lambda: {"ok": True, "browser": "chrome"})
     monkeypatch.setattr(browser_surface, "general_browser_online", lambda: True)
     owner_threads = []
 
@@ -104,6 +113,24 @@ def test_playwright_calls_use_creation_thread_across_request_threads(isolated_ru
     assert len(owner_threads) >= 6
     assert len(set(owner_threads)) == 1
     assert session._browser_worker is None
+
+
+def test_frame_capture_has_fresh_id_and_real_png_dimensions(isolated_runtime):
+    session = isolated_runtime.create_session(owner_actor_id=101, owner_account_session_id=501)
+    session.status = runtime.SessionStatus.RUNNING
+    session._target_id = "bt_test"
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR" + struct.pack(">II", 640, 360)
+    session._page = MagicMock()
+    session._page.screenshot.return_value = png
+    first = session.capture_frame()
+    second = session.capture_frame()
+    assert first["image"] == png
+    assert (first["width"], first["height"]) == (640, 360)
+    assert first["frame_id"] != second["frame_id"]
+    session._page.screenshot.return_value = b"invalid"
+    with pytest.raises(RuntimeError, match="valid PNG"):
+        session.capture_frame()
+    isolated_runtime.close_session(session.session_id)
 
 
 def test_navigation_respects_existing_browser_policy(isolated_runtime):
@@ -187,6 +214,33 @@ def test_api_reuses_owned_running_session_and_reports_other_login_busy(monkeypat
     busy = client.post("/api/browser/sessions", json={})
     assert busy.status_code == 409
     assert busy.get_json()["error_code"] == "BROWSER_CAPACITY_OCCUPIED"
+    isolated_runtime.close_session(session.session_id)
+
+
+def test_frame_api_returns_only_owned_uncached_image(monkeypatch, isolated_runtime):
+    client, actor = _authorized_client(monkeypatch, isolated_runtime)
+    session = isolated_runtime.create_session(owner_actor_id=101, owner_account_session_id=501)
+    session.status = runtime.SessionStatus.RUNNING
+    session.capture_frame = lambda: {
+        "frame_id": "bf_test", "captured_at": "2026-09-27T00:00:00+00:00",
+        "target_id": "bt_test", "page_revision": 3,
+        "width": 640, "height": 360, "image": b"png-bytes",
+    }
+    path = f"/api/browser/sessions/{session.session_id}/frame"
+    response = client.get(path)
+    assert response.status_code == 200
+    assert response.mimetype == "image/png"
+    assert response.data == b"png-bytes"
+    assert response.headers["X-LUMENIS-Frame-Id"] == "bf_test"
+    assert response.headers["X-LUMENIS-Target-Id"] == "bt_test"
+    assert response.headers["X-LUMENIS-Page-Revision"] == "3"
+    assert response.headers["X-LUMENIS-Frame-Width"] == "640"
+    assert response.headers["Cache-Control"] == "no-store, private"
+    actor["session_id"] = 502
+    assert client.get(path).status_code == 404
+    actor["session_id"] = 501
+    session.status = runtime.SessionStatus.CREATED
+    assert client.get(path).get_json()["error_code"] == "BROWSER_FRAME_UNAVAILABLE"
     isolated_runtime.close_session(session.session_id)
 
 

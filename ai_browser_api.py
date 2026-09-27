@@ -6,6 +6,7 @@ ZBC AI Browser Runtime API — REST Contract
 
   POST   /api/browser/sessions                              创建 Session
   GET    /api/browser/sessions/<session_id>                 Session 状态
+  GET    /api/browser/sessions/<session_id>/frame           已授权会话当前画面
   POST   /api/browser/sessions/<session_id>/navigate        导航
   POST   /api/browser/sessions/<session_id>/observe         观察页面（脱敏）
   POST   /api/browser/sessions/<session_id>/action          执行 Action（带 Verification）
@@ -17,7 +18,7 @@ ZBC AI Browser Runtime API — REST Contract
   GET    /api/browser/evidence/stats                          Evidence 统计
 
 设计原则：
-  - 所有响应中的页面内容经过敏感信息脱敏
+  - 文本状态脱敏；原始画面只返回给当前已授权 Actor，且不得缓存
   - 所有写操作经过 Action Firewall + Permission Gate
   - 失败不静默，返回分类错误和 Recovery 状态
   - 不返回 Cookie/Token/Session 明文
@@ -33,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 def register_ai_browser_api(app):
     """在 Flask app 上注册 AI Browser Runtime API 蓝图。"""
-    from flask import Blueprint, g, jsonify, request
+    from flask import Blueprint, Response, g, jsonify, request
 
     bp = Blueprint("ai_browser_runtime", __name__)
 
@@ -188,6 +189,10 @@ def register_ai_browser_api(app):
                 "status": session.status.value,
                 "started": started,
                 "start_error": start_error,
+                "engine_label": session.engine_label,
+                "target_id": session._target_id,
+                "page_revision": session._page_revision,
+                "allowed_actions": ["navigate", "reload", "frame"] if started else [],
                 "idle_timeout": session.idle_timeout,
                 "max_lifetime": session.max_lifetime,
                 "message": "浏览会话已就绪" if started else "浏览会话已创建，尚未启动",
@@ -222,6 +227,32 @@ def register_ai_browser_api(app):
             return jsonify({"ok": True, **status})
         except Exception as e:
             return jsonify({"ok": False, "error": sanitize_sensitive(str(e)[:300])}), 500
+
+    @bp.route("/api/browser/sessions/<session_id>/frame", methods=["GET"])
+    def read_session_frame(session_id: str):
+        """Return an uncached frame from the calling login's isolated page."""
+        session, err = _get_session_or_404(session_id)
+        if err:
+            return err
+        if session.status != SessionStatus.RUNNING:
+            return jsonify({"ok": False, "error_code": "BROWSER_FRAME_UNAVAILABLE"}), 409
+        try:
+            frame = session.capture_frame()
+        except Exception:
+            logger.exception("AI Browser frame capture unavailable")
+            return jsonify({"ok": False, "error_code": "BROWSER_FRAME_UNAVAILABLE"}), 503
+        response = Response(frame["image"], mimetype="image/png")
+        response.headers["Cache-Control"] = "no-store, private"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["X-LUMENIS-Frame-Id"] = frame["frame_id"]
+        response.headers["X-LUMENIS-Target-Id"] = frame["target_id"]
+        response.headers["X-LUMENIS-Page-Revision"] = str(frame["page_revision"])
+        response.headers["X-LUMENIS-Captured-At"] = frame["captured_at"]
+        response.headers["X-LUMENIS-Frame-Width"] = str(frame["width"])
+        response.headers["X-LUMENIS-Frame-Height"] = str(frame["height"])
+        return response
 
     @bp.route("/api/browser/sessions/<session_id>/stop", methods=["POST"])
     def stop_session(session_id: str):
@@ -273,7 +304,9 @@ def register_ai_browser_api(app):
                 agent_id=data.get("agent_id"),
                 skill_id=data.get("skill_id"),
             )
-            return jsonify({"ok": result.success, **_action_result_to_dict(result)})
+            return jsonify({"ok": result.success, "page_revision": session._page_revision,
+                            "target_id": session._target_id,
+                            **_action_result_to_dict(result)})
         except Exception as e:
             logger.error(f"[AI Browser API] navigate error: {e}")
             return jsonify({"ok": False, "error": sanitize_sensitive(str(e)[:300])}), 500
@@ -383,7 +416,9 @@ def register_ai_browser_api(app):
                 risk_level=data.get("risk_level", "medium"),
             )
 
-            response = {"ok": result.success, **_action_result_to_dict(result)}
+            response = {"ok": result.success, "page_revision": session._page_revision,
+                        "target_id": session._target_id,
+                        **_action_result_to_dict(result)}
 
             # 如果需要人工升级，返回 400 + escalation 信息
             if result.human_escalation_required:
