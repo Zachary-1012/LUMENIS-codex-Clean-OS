@@ -63,6 +63,7 @@ def register_ai_browser_api(app):
         get_action_firewall,
         get_injection_guard,
         BrowserActionType,
+        BrowserCapacityError,
         ExpectedState,
         SessionStatus,
         sanitize_sensitive,
@@ -135,9 +136,7 @@ def register_ai_browser_api(app):
         """创建 Browser Session。
 
         Request JSON:
-          - cdp_port: int (默认 9224，产品内置浏览器通用实例)
-          - headless: bool (默认 True)
-          - user_data_dir: str (可选，独立 profile 路径)
+          - Browser engine, port and profile are selected only by SYSTEM Browser.
           - idle_timeout: int (秒，默认 600)
           - max_lifetime: int (秒，默认 3600)
           - auto_start: bool (是否自动启动浏览器，默认 True)
@@ -151,19 +150,22 @@ def register_ai_browser_api(app):
                                 "error": "AI Browser must use the isolated LUMENIS browser"}), 400
             mgr = get_session_manager()
 
-            session = mgr.create_session(
-                cdp_port=9224,
-                headless=True,
-                user_data_dir=None,
-                owner_actor_id=g.browser_actor_id,
-                owner_account_session_id=g.browser_account_session_id,
-                idle_timeout=int(data.get("idle_timeout", 600)),
-                max_lifetime=int(data.get("max_lifetime", 3600)),
-            )
+            try:
+                session = mgr.create_session(
+                    cdp_port=9224,
+                    headless=True,
+                    user_data_dir=None,
+                    owner_actor_id=g.browser_actor_id,
+                    owner_account_session_id=g.browser_account_session_id,
+                    idle_timeout=int(data.get("idle_timeout", 600)),
+                    max_lifetime=int(data.get("max_lifetime", 3600)),
+                )
+            except BrowserCapacityError:
+                return jsonify({"ok": False, "error_code": "BROWSER_CAPACITY_OCCUPIED"}), 409
 
-            started = False
+            started = session.status == SessionStatus.RUNNING
             start_error = None
-            if data.get("auto_start", True):
+            if data.get("auto_start", True) and not started:
                 try:
                     started = session.start()
                 except Exception as e:
@@ -186,12 +188,9 @@ def register_ai_browser_api(app):
                 "status": session.status.value,
                 "started": started,
                 "start_error": start_error,
-                "cdp_port": session.cdp_port,
-                "headless": session.headless,
                 "idle_timeout": session.idle_timeout,
                 "max_lifetime": session.max_lifetime,
-                "message": "Session created. AI Browser Session与用户日常浏览Session隔离（独立profile）。"
-                           if not start_error else f"Session created but start failed: {start_error}",
+                "message": "浏览会话已就绪" if started else "浏览会话已创建，尚未启动",
             })
         except Exception as e:
             logger.error(f"[AI Browser API] create_session error: {e}")

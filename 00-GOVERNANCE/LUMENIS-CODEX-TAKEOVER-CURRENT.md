@@ -12,6 +12,15 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-27 — AI Browser capacity is explicit
+
+[Round 06 Browser capacity evidence](evidence/round-06/ROUND-06-AI-BROWSER-CAPACITY-2026-09-27.md)
+records the tested existing-owner limit: a login reuses its active opaque browser
+session; a different login receives `409 BROWSER_CAPACITY_OCCUPIED`. Session
+creation no longer returns CDP port or headless transport fields. The local
+probe exposed a separate cross-thread Playwright issue, so authenticated
+threaded-server/SYS-06 user work is still `REWORK / LIVE_NOT_VERIFIED`.
+
 ### 2026-09-27 — Mobile composition and adaptive appearance return
 
 [Round 14 mobile evidence](evidence/round-14/ROUND-14-MOBILE-WORKSPACE-REFINEMENT-2026-09-27.md) and its JSON receipt

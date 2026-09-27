@@ -23,6 +23,15 @@ def test_manager_rejects_personal_port_profile_and_visible_browser(isolated_runt
     assert isolated_runtime.list_sessions() == []
 
 
+def test_manager_reuses_one_login_and_reports_other_login_capacity(isolated_runtime):
+    first = isolated_runtime.create_session(owner_actor_id=101, owner_account_session_id=501)
+    first.status = runtime.SessionStatus.RUNNING
+    assert isolated_runtime.create_session(owner_actor_id=101, owner_account_session_id=501) is first
+    with pytest.raises(runtime.BrowserCapacityError):
+        isolated_runtime.create_session(owner_actor_id=102, owner_account_session_id=502)
+    isolated_runtime.close_session(first.session_id)
+
+
 def test_start_fails_closed_when_product_browser_is_unverified(isolated_runtime, monkeypatch):
     session = isolated_runtime.create_session()
     monkeypatch.setattr(browser_surface, "ensure_general_browser",
@@ -62,11 +71,13 @@ def test_navigation_respects_existing_browser_policy(isolated_runtime):
     session._page.goto.assert_not_called()
 
 
-def _authorized_client(monkeypatch):
+def _authorized_client(monkeypatch, manager=None):
     from flask import Flask
     import account.service
     import account.authorization
 
+    if manager is not None:
+        monkeypatch.setattr(runtime, "get_session_manager", lambda: manager)
     app = Flask(__name__)
     ai_browser_api.register_ai_browser_api(app)
     actor = {"id": 101, "session_id": 501}
@@ -101,12 +112,13 @@ def test_api_requires_actor_and_exact_system_browser_grant(monkeypatch):
 
 
 def test_api_session_is_visible_only_to_creating_login(monkeypatch, isolated_runtime):
-    client, actor = _authorized_client(monkeypatch)
-    monkeypatch.setattr(runtime, "get_session_manager", lambda: isolated_runtime)
+    client, actor = _authorized_client(monkeypatch, isolated_runtime)
 
     created = client.post("/api/browser/sessions", json={"auto_start": False})
     assert created.status_code == 200
     session_id = created.get_json()["session_id"]
+    assert "cdp_port" not in created.get_json()
+    assert "headless" not in created.get_json()
     assert client.get("/api/browser/sessions").get_json()["count"] == 1
 
     actor["session_id"] = 502
@@ -118,9 +130,24 @@ def test_api_session_is_visible_only_to_creating_login(monkeypatch, isolated_run
     assert client.post(f"/api/browser/sessions/{session_id}/stop").get_json()["closed"] is True
 
 
+def test_api_reuses_owned_running_session_and_reports_other_login_busy(monkeypatch, isolated_runtime):
+    client, actor = _authorized_client(monkeypatch, isolated_runtime)
+    session = isolated_runtime.create_session(owner_actor_id=101, owner_account_session_id=501)
+    session.status = runtime.SessionStatus.RUNNING
+
+    response = client.post("/api/browser/sessions", json={})
+    assert response.status_code == 200
+    assert response.get_json()["session_id"] == session.session_id
+    assert response.get_json()["started"] is True
+    actor.update(id=102, session_id=502)
+    busy = client.post("/api/browser/sessions", json={})
+    assert busy.status_code == 409
+    assert busy.get_json()["error_code"] == "BROWSER_CAPACITY_OCCUPIED"
+    isolated_runtime.close_session(session.session_id)
+
+
 def test_api_reports_unverified_start_as_unavailable(monkeypatch, isolated_runtime):
-    client, _actor = _authorized_client(monkeypatch)
-    monkeypatch.setattr(runtime, "get_session_manager", lambda: isolated_runtime)
+    client, _actor = _authorized_client(monkeypatch, isolated_runtime)
     monkeypatch.setattr(browser_surface, "ensure_general_browser",
                         lambda: {"ok": False, "code": "UNVERIFIED_BROWSER_SESSION"})
     response = client.post("/api/browser/sessions", json={})

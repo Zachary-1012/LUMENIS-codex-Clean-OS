@@ -1906,6 +1906,10 @@ class AIBrowserRuntime:
 # 9. Session Manager（全局 Session 管理）
 # ═══════════════════════════════════════════════════════════════
 
+class BrowserCapacityError(RuntimeError):
+    """The single synchronous browser slot belongs to another login."""
+
+
 class BrowserSessionManager:
     """全局 Browser Session 管理器。
 
@@ -1934,16 +1938,25 @@ class BrowserSessionManager:
         """Create only a session on the verified isolated product browser."""
         if cdp_port != 9224 or headless is not True or user_data_dir not in (None, ""):
             raise ValueError("AI Browser session must use the isolated LUMENIS browser")
-        session = AIBrowserRuntime(
-            cdp_port=cdp_port,
-            headless=headless,
-            user_data_dir=user_data_dir,
-            owner_actor_id=owner_actor_id,
-            owner_account_session_id=owner_account_session_id,
-            idle_timeout=idle_timeout,
-            max_lifetime=max_lifetime,
-        )
         with self._lock:
+            if type(owner_actor_id) is int and type(owner_account_session_id) is int:
+                for existing in self._sessions.values():
+                    if (existing.owner_actor_id is not None and
+                            existing.status not in {SessionStatus.CLOSED, SessionStatus.ERROR} and
+                            existing.is_alive()):
+                        if (existing.owner_actor_id == owner_actor_id and
+                                existing.owner_account_session_id == owner_account_session_id):
+                            return existing
+                        raise BrowserCapacityError("AI Browser is busy with another product login")
+            session = AIBrowserRuntime(
+                cdp_port=cdp_port,
+                headless=headless,
+                user_data_dir=user_data_dir,
+                owner_actor_id=owner_actor_id,
+                owner_account_session_id=owner_account_session_id,
+                idle_timeout=idle_timeout,
+                max_lifetime=max_lifetime,
+            )
             self._sessions[session.session_id] = session
         logger.info(f"[SessionManager] Session 创建: {session.session_id}")
         return session
