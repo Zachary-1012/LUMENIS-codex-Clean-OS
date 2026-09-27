@@ -12,9 +12,16 @@ from lumenis.shared.evidence import store
 def evidence_db(tmp_path, monkeypatch):
     path = tmp_path / "scoped-evidence.db"
     monkeypatch.setenv("ZBC_DB_PATH", str(path))
+    monkeypatch.setenv(
+        "LUMENIS_EVIDENCE_HMAC_KEY_RING",
+        json.dumps({"scoped-write-test": "isolated-scoped-write-secret"}),
+    )
+    monkeypatch.setenv("LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID", "scoped-write-test")
     repository = DatabaseRepository(str(path))
     monkeypatch.setattr(store, "get_repository", lambda: repository)
     store.init_evidence_store(str(path))
+    with sqlite3.connect(path) as conn:
+        store.ensure_evidence_schema(conn)
     return path
 
 
@@ -302,6 +309,11 @@ def test_scoped_write_refuses_incomplete_schema_without_scope_loss(
 def test_failed_scoped_write_replays_only_after_scope_storage_exists(tmp_path, monkeypatch):
     path = tmp_path / "scoped-replay.db"
     monkeypatch.setenv("ZBC_DB_PATH", str(path))
+    monkeypatch.setenv(
+        "LUMENIS_EVIDENCE_HMAC_KEY_RING",
+        json.dumps({"scoped-replay-test": "isolated-scoped-replay-secret"}),
+    )
+    monkeypatch.setenv("LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID", "scoped-replay-test")
     repository = DatabaseRepository(str(path))
     monkeypatch.setattr(store, "get_repository", lambda: repository)
     with sqlite3.connect(path) as conn:
@@ -336,6 +348,7 @@ def test_failed_scoped_write_replays_only_after_scope_storage_exists(tmp_path, m
             "SELECT status FROM runtime_guardian_dlq"
         ).fetchone()[0] == "PENDING"
         conn.execute("ALTER TABLE app_evidence_records ADD COLUMN product_id TEXT")
+        store.ensure_evidence_schema(conn)
 
     second = store.replay_failed_evidence()
     assert second["succeeded"] == 1

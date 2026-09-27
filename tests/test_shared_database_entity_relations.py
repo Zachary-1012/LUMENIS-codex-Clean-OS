@@ -6,7 +6,7 @@ import sqlite3
 
 import pytest
 
-from lumenis.shared.database import migrations
+from lumenis.shared.database import DatabaseRepository, migrations
 from lumenis.shared.database.entity_relations import (
     EntityRelationError,
     EntityRelationRepository,
@@ -19,6 +19,8 @@ from lumenis.shared.evidence import store as evidence_store
 def relation_db(tmp_path, monkeypatch):
     db_path = tmp_path / "entity-relations.sqlite3"
     monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
+    repository = DatabaseRepository(str(db_path))
+    monkeypatch.setattr(evidence_store, "get_repository", lambda: repository)
     monkeypatch.setenv(
         "LUMENIS_EVIDENCE_HMAC_KEY_RING",
         json.dumps({"entity-relations-test": "isolated-test-signing-key"}),
@@ -29,6 +31,15 @@ def relation_db(tmp_path, monkeypatch):
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
     evidence_store.ensure_evidence_schema(conn)
+    evidence_columns = {
+        row[1] for row in conn.execute("PRAGMA table_info(app_evidence_records)")
+    }
+    for column, kind, default in evidence_store.EVIDENCE_CHAIN_NEW_COLUMNS:
+        if column not in evidence_columns:
+            suffix = f" DEFAULT {default}" if default != "NULL" else ""
+            conn.execute(
+                f"ALTER TABLE app_evidence_records ADD COLUMN {column} {kind}{suffix}"
+            )
     conn.executescript("""
         CREATE TABLE lumenis_subject_registry (
             subject_id TEXT PRIMARY KEY,

@@ -1122,6 +1122,16 @@ real-user result. The actual DB remains local only; Global Commercial/Brand
 Coverage stays `NO / NOT VERIFIED`, Guangzhou reference `PARTIAL`, ROUND 06
 `REWORK`, and Full Universe, RELEASED and OPERATING `NO`.
 
+### 2026-09-27 Round 03 Shared Evidence v2 compatibility
+
+[Bounded Evidence verification](evidence/round-03/ROUND-03-EVIDENCE-V2-COMPAT-2026-09-27.md)
+records 36 exact-staged targeted tests and read-only verification of all 192
+existing signed product-DB Evidence rows against the deployed v2 material
+contract. The source Batch does not rewrite those rows or close a real user
+workflow. Round 03 remains REWORK; Global Commercial and Brand Coverage remain
+NO / NOT VERIFIED, Guangzhou reference PARTIAL, and Full Universe, RELEASED
+and OPERATING remain NO.
+
 ### 2026-09-27 Round 06 US venue internal source snapshot
 
 [Round 06 local-data evidence](evidence/round-06/ROUND-06-CTH-US-INTERNAL-SOURCE-SNAPSHOT-2026-09-27.md)

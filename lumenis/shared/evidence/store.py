@@ -49,6 +49,8 @@ import re
 import sqlite3
 
 import hashlib
+import hmac
+import os
 
 from datetime import datetime
 
@@ -179,6 +181,192 @@ def _evidence_hash(fields: dict) -> str:
     content = json.dumps(fields, sort_keys=True, ensure_ascii=False, default=str)
 
     return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
+
+
+EVIDENCE_INTEGRITY_VERSION = 2
+EVIDENCE_INTEGRITY_ALGORITHM = "hmac-sha256"
+INTEGRITY_ASSURANCE_WRITER_AUTHENTICATED = "writer-authenticated"
+INTEGRITY_ASSURANCE_LEGACY_PARTIAL = "legacy-partial"
+INTEGRITY_ASSURANCE_KEY_UNAVAILABLE = "writer-authenticated-key-unavailable"
+INTEGRITY_ASSURANCE_TAMPERED = "tampered"
+INTEGRITY_ASSURANCE_UNVERIFIABLE = "unverifiable"
+
+
+class EvidenceIntegrityError(ValueError):
+    """Evidence cannot be signed or its stored signature cannot be trusted."""
+
+
+_EVIDENCE_V2_MATERIAL_FIELDS = (
+    "id", "source", "project", "product", "feature_id", "asset_id",
+    "commit_sha", "version", "env", "level", "test_name", "result",
+    "started_at", "finished_at", "inputs_json", "outputs_json",
+    "expected", "actual", "log_path", "screenshot_path", "trace_path",
+    "api_request", "api_response", "db_before", "db_after", "root_cause",
+    "resolution", "account", "duration_ms", "capture_mode", "captured_at",
+    "topic", "metric_name", "metric_value", "evidence_hash", "evidence_path",
+    "parse_confidence", "verified_by", "verified_at", "status", "notes",
+    "created_at", "updated_at", "content_hash", "subject_scope",
+    "collection_metadata", "provider", "authenticity_score",
+    "publish_datetime", "domain_id", "product_id",
+)
+
+
+def _integrity_key_ring() -> tuple[dict[str, bytes], str]:
+    raw = os.environ.get("LUMENIS_EVIDENCE_HMAC_KEY_RING", "")
+    active_id = os.environ.get("LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID", "").strip()
+    try:
+        configured = json.loads(raw)
+    except (TypeError, ValueError):
+        raise EvidenceIntegrityError("Evidence HMAC key ring is unavailable") from None
+    if not isinstance(configured, dict) or not active_id:
+        raise EvidenceIntegrityError("Evidence HMAC key ring is unavailable")
+    keys = {
+        str(key_id): value.encode("utf-8")
+        for key_id, value in configured.items()
+        if isinstance(key_id, str) and isinstance(value, str) and value
+    }
+    if active_id not in keys:
+        raise EvidenceIntegrityError("active Evidence HMAC key is unavailable")
+    return keys, active_id
+
+
+def _integrity_payload(record: Any) -> bytes:
+    try:
+        fields = dict(record)
+    except (TypeError, ValueError):
+        raise EvidenceIntegrityError("Evidence record is unavailable") from None
+    if not {"id", "integrity_version", "integrity_algorithm", "integrity_key_id"} <= fields.keys():
+        raise EvidenceIntegrityError("Evidence integrity fields are unavailable")
+    # Preserve the already deployed v2 material contract. Existing product
+    # Evidence is signed over these fields, with JSON columns decoded before
+    # canonical serialization; signing the entire SQL row or the raw JSON text
+    # would invalidate real historical Evidence after a source update.
+    if not set(_EVIDENCE_V2_MATERIAL_FIELDS) <= fields.keys():
+        raise EvidenceIntegrityError("Evidence v2 material fields are unavailable")
+    payload = {}
+    for name in _EVIDENCE_V2_MATERIAL_FIELDS:
+        value = fields[name]
+        if name in {"inputs_json", "outputs_json", "collection_metadata"} and value is not None:
+            if not isinstance(value, str):
+                raise EvidenceIntegrityError("Evidence JSON material is invalid")
+            try:
+                value = json.loads(
+                    value,
+                    parse_constant=lambda _value: (_ for _ in ()).throw(ValueError()),
+                    object_pairs_hook=_unique_json_object,
+                )
+            except (TypeError, ValueError):
+                raise EvidenceIntegrityError("Evidence JSON material is invalid") from None
+        payload[name] = value
+    try:
+        return json.dumps(
+            payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            allow_nan=False,
+        ).encode("utf-8")
+    except (TypeError, ValueError, UnicodeError):
+        raise EvidenceIntegrityError("Evidence record cannot be canonicalized") from None
+
+
+def _unique_json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate Evidence JSON key")
+        result[key] = value
+    return result
+
+
+def _sign_evidence_record(conn: sqlite3.Connection, record_id: int) -> str:
+    """Sign one new row in the caller's transaction; never upgrades legacy rows."""
+    keys, active_id = _integrity_key_ring()
+    columns = {
+        row[1] for row in conn.execute("PRAGMA table_info(app_evidence_records)").fetchall()
+    }
+    required = {
+        "integrity_version", "integrity_algorithm", "integrity_key_id", "integrity_digest"
+    }
+    if not required <= columns:
+        raise EvidenceIntegrityError("Evidence integrity schema is unavailable")
+    conn.execute(
+        "UPDATE app_evidence_records SET integrity_version=?, integrity_algorithm=?, "
+        "integrity_key_id=?, integrity_digest='' WHERE id=?",
+        (EVIDENCE_INTEGRITY_VERSION, EVIDENCE_INTEGRITY_ALGORITHM, active_id, record_id),
+    )
+    cursor = conn.execute("SELECT * FROM app_evidence_records WHERE id=?", (record_id,))
+    row = cursor.fetchone()
+    if row is None:
+        raise EvidenceIntegrityError("new Evidence record is unavailable for signing")
+    digest = hmac.new(
+        keys[active_id], _integrity_payload(dict(zip((col[0] for col in cursor.description), row))),
+        hashlib.sha256,
+    ).hexdigest()
+    conn.execute(
+        "UPDATE app_evidence_records SET integrity_digest=? WHERE id=?",
+        (digest, record_id),
+    )
+    return digest
+
+
+def classify_evidence_integrity(record: Any) -> dict:
+    """Classify a supplied Evidence row without exposing key material."""
+    try:
+        fields = dict(record)
+        version = fields.get("integrity_version")
+        algorithm = fields.get("integrity_algorithm")
+        key_id = fields.get("integrity_key_id")
+        digest = fields.get("integrity_digest")
+        if version in (None, "", 0, 1) and all(
+            fields.get(name) in (None, "")
+            for name in ("integrity_algorithm", "integrity_key_id", "integrity_digest")
+        ):
+            return {
+                "version": 1, "algorithm": "legacy-evidence-hash", "key_id": None,
+                "verified": False, "assurance": INTEGRITY_ASSURANCE_LEGACY_PARTIAL,
+            }
+        if version != EVIDENCE_INTEGRITY_VERSION:
+            return {
+                "version": version, "algorithm": algorithm, "key_id": key_id,
+                "verified": False, "assurance": INTEGRITY_ASSURANCE_UNVERIFIABLE,
+            }
+        if algorithm != EVIDENCE_INTEGRITY_ALGORITHM or not isinstance(key_id, str) \
+                or not isinstance(digest, str) or len(digest) != 64:
+            return {
+                "version": version, "algorithm": algorithm, "key_id": key_id,
+                "verified": False, "assurance": INTEGRITY_ASSURANCE_TAMPERED,
+            }
+        try:
+            keys, _active_id = _integrity_key_ring()
+        except EvidenceIntegrityError:
+            return {
+                "version": version, "algorithm": algorithm, "key_id": key_id,
+                "verified": False, "assurance": INTEGRITY_ASSURANCE_KEY_UNAVAILABLE,
+            }
+        key = keys.get(key_id)
+        if key is None:
+            return {
+                "version": version, "algorithm": algorithm, "key_id": key_id,
+                "verified": False, "assurance": INTEGRITY_ASSURANCE_KEY_UNAVAILABLE,
+            }
+        expected = hmac.new(key, _integrity_payload(fields), hashlib.sha256).hexdigest()
+        verified = hmac.compare_digest(expected, digest)
+        return {
+            "version": version, "algorithm": algorithm, "key_id": key_id,
+            "verified": verified,
+            "assurance": (
+                INTEGRITY_ASSURANCE_WRITER_AUTHENTICATED
+                if verified else INTEGRITY_ASSURANCE_TAMPERED
+            ),
+        }
+    except (EvidenceIntegrityError, TypeError, ValueError, KeyError):
+        return {
+            "version": None, "algorithm": None, "key_id": None,
+            "verified": False, "assurance": INTEGRITY_ASSURANCE_UNVERIFIABLE,
+        }
+
+
+def verify_evidence_record_integrity(record: Any) -> bool:
+    """Verify a supplied Evidence row; legacy and malformed rows fail closed."""
+    return classify_evidence_integrity(record)["verified"]
 
 
 
@@ -791,6 +979,9 @@ def record_evidence(
 
     test_name: str = "",
 
+    capture_mode: str = "automated",
+    captured_at: Optional[str] = None,
+
     result: str = "PASS",
 
     started_at: str = "",
@@ -972,7 +1163,8 @@ def record_evidence(
 
         "topic": topic, "status": status, "notes": notes,
 
-        "evidence_hash": ev_hash, "capture_mode": "automated", "captured_at": now,
+        "evidence_hash": ev_hash, "capture_mode": capture_mode,
+        "captured_at": captured_at or now,
 
         "created_at": now, "updated_at": now,
 
@@ -1036,6 +1228,11 @@ def record_evidence(
             values,
 
         )
+
+        if scope is not None or os.environ.get(
+            "LUMENIS_EVIDENCE_HMAC_KEY_RING"
+        ) or os.environ.get("LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID"):
+            _sign_evidence_record(conn, cursor.lastrowid)
 
         conn.commit()
 
@@ -1583,6 +1780,16 @@ __all__ = [
     "init_evidence_store",
     "ensure_evidence_schema",
     "EVIDENCE_INTEGRITY_NEW_COLUMNS",
+    "EVIDENCE_INTEGRITY_VERSION",
+    "EVIDENCE_INTEGRITY_ALGORITHM",
+    "EvidenceIntegrityError",
+    "INTEGRITY_ASSURANCE_WRITER_AUTHENTICATED",
+    "INTEGRITY_ASSURANCE_LEGACY_PARTIAL",
+    "INTEGRITY_ASSURANCE_KEY_UNAVAILABLE",
+    "INTEGRITY_ASSURANCE_TAMPERED",
+    "INTEGRITY_ASSURANCE_UNVERIFIABLE",
+    "classify_evidence_integrity",
+    "verify_evidence_record_integrity",
     "record_evidence",
 
     "record_collection_evidence",
