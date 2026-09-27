@@ -104,7 +104,7 @@ def test_migration_owner_is_shared_database():
     canonical = (REPO / "lumenis/shared/database/migrations.py").read_text(encoding="utf-8")
     root = (REPO / "database_migrations.py").read_text(encoding="utf-8")
     app = (REPO / "app.py").read_text(encoding="utf-8")
-    assert "CURRENT_VERSION = 17" in canonical
+    assert "CURRENT_VERSION = 18" in canonical
     assert "def migration_16_to_17" in canonical
     assert "16: migration_16_to_17" in canonical
     assert "migration_12_to_13" in canonical

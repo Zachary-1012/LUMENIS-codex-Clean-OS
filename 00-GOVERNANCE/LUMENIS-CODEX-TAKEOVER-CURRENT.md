@@ -1093,3 +1093,17 @@ records clean-main replay, five affected Atom tests, the Constitution gate and
 a live Nike-labelled feed read. This is live Source → Raw only. The actual
 product DB, Normalized/Evidence/Canonical binding, Nike BrandFocus user result,
 14-country entity baseline, Global coverage and ROUND 06 remain unaccepted.
+
+### 2026-09-27 Round 03 Shared Database v18 entity relations
+
+The additive Shared Database v18 owner now stores exact, signed-Evidence-backed
+country-role and venue-tenant source assertions against existing CTH/BMP registry
+identities. [Bounded Round 03 evidence](evidence/round-03/ROUND-03-ENTITY-RELATIONS-V18-2026-09-27.md)
+records 33 current-snapshot relevant tests and Constitution PASS, disposable
+migration/backup-reopen evidence, and actual local DB v18 readback of 5 country plus
+214 Guangzhou directory source assertions. The imported rows are unreviewed;
+the bilingual directory count is not a distinct-store count. The DB and import
+operators remain local-only; this source Batch publishes neither data nor a
+user-visible country/tenant workflow. ROUND 03 remains REWORK, both Global
+coverage dimensions remain NO / NOT VERIFIED, Guangzhou reference PARTIAL,
+and Internal Full Universe, release and operating remain NO.

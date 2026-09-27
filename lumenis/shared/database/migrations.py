@@ -52,7 +52,7 @@ DB_PATH = main_db_path()
 BACKUP_DIR = os.path.join(os.path.dirname(DB_PATH), 'backups')
 
 # 当前最新版本
-CURRENT_VERSION = 17
+CURRENT_VERSION = 18
 
 # 迁移历史记录
 MIGRATION_HISTORY = {
@@ -73,6 +73,7 @@ MIGRATION_HISTORY = {
     15: "Canonical Subject Registry BrandFocus identity; BMP rows receive deterministic IDs",
     16: "Content Evidence source references, parent cleanup, and query indexes",
     17: "Add nullable full-record integrity metadata to canonical Evidence records",
+    18: "Add Evidence-backed exact country relations and source-specific venue tenant assertions",
 }
 
 
@@ -718,6 +719,15 @@ def migration_16_to_17(conn: sqlite3.Connection):
     ensure_evidence_schema(conn)
 
 
+def migration_17_to_18(conn: sqlite3.Connection):
+    """Add Evidence-backed relation assertions without historical backfill."""
+    if not conn.in_transaction:
+        conn.execute("BEGIN")
+    from .entity_relations import ensure_entity_relation_schema
+
+    ensure_entity_relation_schema(conn)
+
+
 def _ensure_migration_prerequisites(
     conn, current_version: int, target_version: int
 ) -> int:
@@ -856,6 +866,7 @@ MIGRATIONS = {
     14: migration_14_to_15,
     15: migration_15_to_16,
     16: migration_16_to_17,
+    17: migration_17_to_18,
 }
 
 
