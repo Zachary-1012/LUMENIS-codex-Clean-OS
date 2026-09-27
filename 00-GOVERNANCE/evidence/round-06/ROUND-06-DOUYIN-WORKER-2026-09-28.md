@@ -34,3 +34,13 @@ and ordinary authenticated browser behavior, preserve source-native fields; no n
 dependency and no challenge bypass. COMMERCIAL OVERLAY IMPACT: rights and launch
 not promoted. GLOBAL UNIVERSE / DATA MATURITY IMPACT: Global Commercial/Brand NO,
 Guangzhou PARTIAL; ROUND 06 REWORK; Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.
+
+## Test artifact correction after ccf730b5
+
+The generated new-file patch headers omitted the line-count component for the
+response-shape and capture tests. Git application created only their docstrings.
+The earlier root 26 count therefore covered worker routing only. Root restored the
+full original 79/89-line files, verified actual test function nodes and reran all
+three changed test files on the current shared snapshot: 30 tests PASS, exit 0,
+no thread leaks. No legitimate test was removed, skipped or weakened. Source
+implementation and the prior real SUCCESS3 observation are unchanged.

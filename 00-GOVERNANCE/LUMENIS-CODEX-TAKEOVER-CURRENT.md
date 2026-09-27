@@ -1339,3 +1339,10 @@ IMPORT_FAILED in an isolated clone and remains a separate unresolved blocker.
 [Round 06 evidence](evidence/round-06/ROUND-06-DOUYIN-WORKER-2026-09-28.md).
 No product DB ingestion or user E2E acceptance is claimed. ROUND 06 REWORK;
 Global coverage/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY remain NO.
+
+### 2026-09-28 - Douyin test artifact correction
+
+Two new-file patch headers had produced docstring-only test files. Full response
+and capture regressions are now restored from the reviewed worker candidate;
+current shared snapshot three-file selection: 30 PASS, exit 0, no thread leaks.
+Previous 26 covered worker routing only. No completion status was promoted.
