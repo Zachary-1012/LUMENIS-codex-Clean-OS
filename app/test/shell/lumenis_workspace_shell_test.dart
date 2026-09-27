@@ -137,6 +137,172 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('phone page chooser keeps drafts and exposes every workflow', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final selected = <String>[];
+    await tester.pumpWidget(
+      _app(
+        _ShellClient(),
+        initialScreenId: 'AI-01',
+        onScreenSelected: selected.add,
+      ),
+    );
+    await tester.pumpAndSettle();
+    final draft = '手机上写到一半的任务';
+    await tester.enterText(find.byType(TextField), draft);
+    await tester.pump();
+    final screenState = tester.state(find.byType(Ai01Screen));
+
+    expect(find.byKey(const ValueKey('workspace-secondary-AI')), findsNothing);
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('workspace-phone-header')))
+          .height,
+      lessThan(72),
+    );
+    await tester.tap(find.byKey(const ValueKey('workspace-phone-pages')));
+    await tester.pumpAndSettle();
+    for (final id in LumenisWorkspaceRoutes.screenIdsByGroup['AI']!) {
+      expect(find.byKey(ValueKey('workspace-nav-$id')), findsOneWidget);
+    }
+    await tester.tap(find.byKey(const ValueKey('workspace-nav-AI-01')));
+    await tester.pumpAndSettle();
+    expect(tester.state(find.byType(Ai01Screen)), same(screenState));
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      draft,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('workspace-phone-tools')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('workspace-sheet-close')));
+    await tester.pumpAndSettle();
+    expect(tester.state(find.byType(Ai01Screen)), same(screenState));
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      draft,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('workspace-phone-pages')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('workspace-nav-AI-04')),
+    );
+    await tester.tap(find.byKey(const ValueKey('workspace-nav-AI-04')));
+    await tester.pumpAndSettle();
+    expect(selected, ['AI-04']);
+    expect(find.byType(Ai04Screen), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('workspace-phone-tools')));
+    await tester.pumpAndSettle();
+    expect(find.text('服务已连接'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('workspace-account-navigation')),
+    );
+    await tester.pumpAndSettle();
+    expect(selected.last, 'ACC-01');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'phone header, pages and tools stay usable at 320px with large text and safe insets',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 780));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final selected = <String>[];
+      final localeChanges = <Locale?>[];
+      const safeInsets = EdgeInsets.only(top: 24, bottom: 28);
+
+      await tester.pumpWidget(
+        _app(
+          _ShellClient(),
+          initialScreenId: 'AI-01',
+          onScreenSelected: selected.add,
+          onLocaleChanged: localeChanges.add,
+          textScaler: TextScaler.linear(2),
+          testViewPadding: safeInsets,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final header = find.byKey(const ValueKey('workspace-phone-header'));
+      expect(tester.getTopLeft(header).dy, greaterThanOrEqualTo(24));
+      for (final key in const [
+        ValueKey('workspace-phone-pages'),
+        ValueKey('workspace-phone-tools'),
+      ]) {
+        final size = tester.getSize(find.byKey(key));
+        expect(size.width, greaterThanOrEqualTo(44));
+        expect(size.height, greaterThanOrEqualTo(44));
+      }
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byKey(const ValueKey('workspace-phone-pages')));
+      await tester.pumpAndSettle();
+      final servicePage = find.byKey(const ValueKey('workspace-nav-AI-04'));
+      final closeButton = find.byKey(const ValueKey('workspace-sheet-close'));
+      final closeBeforeScroll = tester.getRect(closeButton);
+      await tester.ensureVisible(servicePage);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(closeButton), closeBeforeScroll);
+      await tester.tap(servicePage);
+      await tester.pumpAndSettle();
+      expect(selected, ['AI-04']);
+      expect(find.byType(Ai04Screen), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byKey(const ValueKey('workspace-phone-tools')));
+      await tester.pumpAndSettle();
+      expect(find.text('服务已连接'), findsOneWidget);
+      final english = find.text('English');
+      await tester.ensureVisible(english);
+      await tester.tap(english);
+      await tester.pumpAndSettle();
+      expect(localeChanges, [const Locale('en')]);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'phone tools opens the CTH directory and returns at 320px with large text',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 780));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final selected = <String>[];
+
+      await tester.pumpWidget(
+        _app(
+          _ShellClient(),
+          onScreenSelected: selected.add,
+          textScaler: TextScaler.linear(2),
+          testViewPadding: const EdgeInsets.only(top: 24, bottom: 28),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byKey(const ValueKey('workspace-phone-tools')));
+      await tester.pumpAndSettle();
+      final directory = find.text('查看经营主体目录');
+      await tester.ensureVisible(directory);
+      await tester.tap(directory);
+      await tester.pumpAndSettle();
+
+      expect(selected, ['CTH-02']);
+      final returnButton = find.byTooltip('返回商业运营总览');
+      expect(returnButton, findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(returnButton);
+      await tester.pumpAndSettle();
+      expect(selected, ['CTH-02', 'CTH-01']);
+      expect(find.byType(Cth01Screen), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('AI-01 screen and confirmed context changes rebind its state', (
     tester,
   ) async {
@@ -606,7 +772,24 @@ Widget _app(
   Map<String, dynamic> runtime = _legacyRuntime,
   String initialScreenId = 'CTH-01',
   ValueChanged<String>? onScreenSelected,
+  ValueChanged<Locale?>? onLocaleChanged,
+  TextScaler? textScaler,
+  EdgeInsets? testViewPadding,
 }) => MaterialApp(
+  builder: textScaler == null && testViewPadding == null
+      ? null
+      : (context, child) {
+          final mediaQuery = MediaQuery.of(context);
+          final padding = testViewPadding ?? mediaQuery.padding;
+          return MediaQuery(
+            data: mediaQuery.copyWith(
+              textScaler: textScaler ?? mediaQuery.textScaler,
+              padding: padding,
+              viewPadding: padding,
+            ),
+            child: child!,
+          );
+        },
   locale: locale,
   theme: LumenisTheme.dark,
   supportedLocales: LumenisLocalizations.supportedLocales,
@@ -623,6 +806,7 @@ Widget _app(
     subjects: const [],
     initialScreenId: initialScreenId,
     onScreenSelected: onScreenSelected,
+    onLocaleChanged: onLocaleChanged,
   ),
 );
 

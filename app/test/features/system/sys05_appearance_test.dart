@@ -198,6 +198,10 @@ void main() {
           expect(fontSemantics.value, '14 px');
           expect(fontSemantics.hasAction(ui.SemanticsAction.increase), isTrue);
           expect(fontSemantics.hasAction(ui.SemanticsAction.decrease), isTrue);
+          expect(
+            tester.widget<Text>(find.text(sample)).style?.fontSize,
+            controller.uiFontSize,
+          );
         }
 
         final blurNode = tester.getSemantics(
@@ -224,9 +228,131 @@ void main() {
           find.text('${controller.uiFontSize.round()} px'),
           findsOneWidget,
         );
+        expect(
+          tester.widget<Text>(find.text(cases.last.$4)).style?.fontSize,
+          controller.uiFontSize,
+        );
       } finally {
         semantics.dispose();
         controller.dispose();
+      }
+    },
+  );
+
+  testWidgets(
+    'wallpaper editor keeps one-row modes and preview-first order across widths',
+    (tester) async {
+      final storage = _DeviceStore()..state.writes = 1;
+      late final Sys05AppearanceController controller;
+      await tester.runAsync(() async {
+        controller = Sys05AppearanceController(storage: storage);
+        await controller.restore();
+        await controller.setWallpaper(await _validPngBytes());
+      });
+      addTearDown(controller.dispose);
+
+      final cases = [
+        (const Size(390, 844), 1.0),
+        (const Size(320, 720), 1.7),
+        (const Size(1120, 900), 1.0),
+      ];
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      for (final (size, textScale) in cases) {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        await tester.pumpWidget(
+          MaterialApp(
+            supportedLocales: LumenisLocalizations.supportedLocales,
+            localizationsDelegates: const [
+              LumenisLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(textScale)),
+              child: child!,
+            ),
+            home: Scaffold(
+              body: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 760),
+                  child: Sys05AppearanceEditor(controller: controller),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final modeTops =
+            ['frosted', 'wallpaper', 'desktop', 'white', 'black', 'solid'].map((
+              mode,
+            ) {
+              return tester
+                  .getTopLeft(find.byKey(ValueKey('appearance/$mode')))
+                  .dy;
+            });
+        expect(
+          modeTops.toSet(),
+          hasLength(1),
+          reason:
+              'Backdrop choices should stay in one horizontal row at $size.',
+        );
+        expect(
+          tester
+              .widget<SingleChildScrollView>(
+                find.byKey(const ValueKey('appearance/modes-scroll')),
+              )
+              .scrollDirection,
+          Axis.horizontal,
+        );
+
+        final preset = find.byKey(
+          const ValueKey('appearance/preset/crimson-sunset'),
+        );
+        final presetButton = tester.widget<OutlinedButton>(preset);
+        final presetShape = presetButton.style!.shape!.resolve({});
+        expect(presetShape, isA<RoundedRectangleBorder>());
+        expect(
+          (presetShape! as RoundedRectangleBorder).borderRadius,
+          BorderRadius.circular(14),
+        );
+        expect(tester.getSize(preset).height, greaterThanOrEqualTo(44));
+
+        final orderedTopEdges = [
+          tester.getTopLeft(preset).dy,
+          tester
+              .getTopLeft(
+                find.byKey(const ValueKey('appearance/wallpaper-preview')),
+              )
+              .dy,
+          tester
+              .getTopLeft(
+                find.byKey(const ValueKey('appearance/choose-wallpaper')),
+              )
+              .dy,
+          tester
+              .getTopLeft(find.byKey(const ValueKey('appearance/uiFontSize')))
+              .dy,
+          tester
+              .getTopLeft(find.byKey(const ValueKey('appearance/compact')))
+              .dy,
+          tester
+              .getTopLeft(find.byKey(const ValueKey('appearance/reduceMotion')))
+              .dy,
+        ];
+        for (var index = 1; index < orderedTopEdges.length; index++) {
+          expect(
+            orderedTopEdges[index],
+            greaterThan(orderedTopEdges[index - 1]),
+            reason: 'Choose → preview → adjust order should hold at $size.',
+          );
+        }
+        expect(tester.takeException(), isNull);
       }
     },
   );

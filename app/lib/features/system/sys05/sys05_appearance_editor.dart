@@ -18,19 +18,50 @@ class Sys05AppearanceButton extends StatelessWidget {
       icon: const Icon(Icons.palette_outlined, size: 20),
       onPressed: () {
         FocusManager.instance.primaryFocus?.unfocus();
+        if (MediaQuery.sizeOf(context).width >= 768) {
+          showDialog<void>(
+            context: context,
+            barrierColor: Colors.black.withValues(alpha: .12),
+            builder: (context) => Dialog(
+              key: const ValueKey('appearance/desktop-panel'),
+              alignment: Alignment.centerRight,
+              insetPadding: const EdgeInsets.all(16),
+              backgroundColor: Theme.of(
+                context,
+              ).bottomSheetTheme.modalBackgroundColor,
+              surfaceTintColor: Colors.transparent,
+              clipBehavior: Clip.antiAlias,
+              child: SizedBox(
+                key: const ValueKey('appearance/desktop-content'),
+                width: 460,
+                height: MediaQuery.sizeOf(context).height - 32,
+                child: Sys05AppearanceEditor(
+                  controller: controller,
+                  onClose: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ),
+          );
+          return;
+        }
         showModalBottomSheet<void>(
           context: context,
           isScrollControlled: true,
-          showDragHandle: true,
+          useSafeArea: true,
+          showDragHandle: false,
           constraints: const BoxConstraints(maxWidth: 620),
           builder: (context) => SafeArea(
             child: Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.viewInsetsOf(context).bottom,
               ),
-              child: Sys05AppearanceEditor(
-                controller: controller,
-                onClose: () => Navigator.of(context).pop(),
+              child: SizedBox(
+                key: const ValueKey('appearance/phone-panel'),
+                height: MediaQuery.sizeOf(context).height * .92,
+                child: Sys05AppearanceEditor(
+                  controller: controller,
+                  onClose: () => Navigator.of(context).pop(),
+                ),
               ),
             ),
           ),
@@ -145,68 +176,86 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
       String copy(String key, {Map<String, Object?> values = const {}}) =>
           context.lumenisL10n.text(key, values: values);
       final error = _localError ?? c.errorKey;
-      return SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 6, 24, 28),
+      final compact = MediaQuery.sizeOf(context).width < 480;
+      final horizontalPadding = compact ? 18.0 : 24.0;
+      final heading = Row(
+        children: [
+          Expanded(
+            child: Text(
+              copy('appearance.title'),
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+          ),
+          if (widget.onClose != null)
+            IconButton(
+              key: const ValueKey('appearance/close'),
+              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+              onPressed: widget.onClose,
+              icon: const Icon(Icons.close),
+            ),
+        ],
+      );
+      final content = SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          horizontalPadding,
+          6,
+          horizontalPadding,
+          28,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    copy('appearance.title'),
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                ),
-                if (widget.onClose != null)
-                  IconButton(
-                    key: const ValueKey('appearance/close'),
-                    tooltip: MaterialLocalizations.of(
-                      context,
-                    ).closeButtonTooltip,
-                    onPressed: widget.onClose,
-                    icon: const Icon(Icons.close),
-                  ),
-              ],
-            ),
+            if (widget.onClose == null) heading,
             const SizedBox(height: 8),
             Text(
               copy('appearance.deviceOnly'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 24),
-            Wrap(
-              spacing: 10,
-              runSpacing: 12,
-              children: [
-                for (final mode in WorkspaceBackdrop.values)
-                  Semantics(
-                    selected: c.mode == mode,
-                    child: ChoiceChip(
-                      key: ValueKey('appearance/${mode.name}'),
-                      label: Text(copy('appearance.mode.${mode.name}')),
-                      selected: c.mode == mode,
-                      avatar: Icon(switch (mode) {
-                        WorkspaceBackdrop.frosted => Icons.blur_on,
-                        WorkspaceBackdrop.wallpaper => Icons.image_outlined,
-                        WorkspaceBackdrop.desktop =>
-                          Icons.desktop_windows_outlined,
-                        WorkspaceBackdrop.white => Icons.light_mode_outlined,
-                        WorkspaceBackdrop.black => Icons.dark_mode_outlined,
-                        WorkspaceBackdrop.solid => Icons.color_lens_outlined,
-                      }, size: 18),
-                      onSelected:
-                          _choosing ||
-                              c.resetting ||
-                              (mode == WorkspaceBackdrop.desktop &&
-                                  !LumenisWindowMaterial.supported)
-                          ? null
-                          : (selected) {
-                              if (selected) _selectMode(mode);
-                            },
-                    ),
-                  ),
-              ],
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: SingleChildScrollView(
+                key: const ValueKey('appearance/modes-scroll'),
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final mode in WorkspaceBackdrop.values)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Semantics(
+                          selected: c.mode == mode,
+                          child: ChoiceChip(
+                            key: ValueKey('appearance/${mode.name}'),
+                            label: Text(copy('appearance.mode.${mode.name}')),
+                            selected: c.mode == mode,
+                            avatar: Icon(switch (mode) {
+                              WorkspaceBackdrop.frosted => Icons.blur_on,
+                              WorkspaceBackdrop.wallpaper =>
+                                Icons.image_outlined,
+                              WorkspaceBackdrop.desktop =>
+                                Icons.desktop_windows_outlined,
+                              WorkspaceBackdrop.white =>
+                                Icons.light_mode_outlined,
+                              WorkspaceBackdrop.black =>
+                                Icons.dark_mode_outlined,
+                              WorkspaceBackdrop.solid =>
+                                Icons.color_lens_outlined,
+                            }, size: 18),
+                            onSelected:
+                                _choosing ||
+                                    c.resetting ||
+                                    (mode == WorkspaceBackdrop.desktop &&
+                                        !LumenisWindowMaterial.supported)
+                                ? null
+                                : (selected) {
+                                    if (selected) _selectMode(mode);
+                                  },
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
             if (!LumenisWindowMaterial.supported) ...[
               const SizedBox(height: 12),
@@ -221,139 +270,98 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                for (final (id, assetPath, labelKey) in const [
-                  (
-                    'crimson-sunset',
-                    'assets/wallpapers/crimson-sunset.jpg',
-                    'appearance.preset.crimson',
-                  ),
-                  (
-                    'cobalt-dusk',
-                    'assets/wallpapers/cobalt-dusk.jpg',
-                    'appearance.preset.cobalt',
-                  ),
-                ])
-                  OutlinedButton(
-                    key: ValueKey('appearance/preset/$id'),
-                    onPressed: _choosing || c.resetting
-                        ? null
-                        : () => _choosePresetWallpaper(assetPath),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.all(8),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.asset(
-                            assetPath,
-                            width: 100,
-                            height: 56,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                SizedBox(
-                                  width: 100,
-                                  height: 56,
-                                  child: Icon(
-                                    Icons.image_not_supported_outlined,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                const spacing = 12.0;
+                final tileWidth = (constraints.maxWidth - spacing) / 2;
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: [
+                    for (final (id, assetPath, labelKey) in const [
+                      (
+                        'crimson-sunset',
+                        'assets/wallpapers/crimson-sunset.jpg',
+                        'appearance.preset.crimson',
+                      ),
+                      (
+                        'cobalt-dusk',
+                        'assets/wallpapers/cobalt-dusk.jpg',
+                        'appearance.preset.cobalt',
+                      ),
+                    ])
+                      SizedBox(
+                        width: tileWidth,
+                        child: OutlinedButton(
+                          key: ValueKey('appearance/preset/$id'),
+                          onPressed: _choosing || c.resetting
+                              ? null
+                              : () => _choosePresetWallpaper(assetPath),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.all(8),
+                            minimumSize: const Size(0, 48),
+                            tapTargetSize: MaterialTapTargetSize.padded,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.asset(
+                                  assetPath,
+                                  width: tileWidth - 16,
+                                  height: (tileWidth - 16) * .56,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      SizedBox(
+                                        width: tileWidth - 16,
+                                        height: (tileWidth - 16) * .56,
+                                        child: Icon(
+                                          Icons.image_not_supported_outlined,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
                                 ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                copy(labelKey),
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.labelLarge,
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Text(copy(labelKey)),
-                      ],
-                    ),
-                  ),
-              ],
+                      ),
+                  ],
+                );
+              },
             ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    copy('appearance.uiFontSize'),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                Text(
-                  copy(
-                    'appearance.uiFontSizeValue',
-                    values: {'size': c.uiFontSize.round()},
-                  ),
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-              ],
-            ),
-            Semantics(
-              label: copy('appearance.uiFontSize'),
-              child: Slider(
-                key: const ValueKey('appearance/uiFontSize'),
-                value: c.uiFontSize,
-                min: Sys05AppearanceController.minUiFontSize,
-                max: Sys05AppearanceController.maxUiFontSize,
-                divisions: 5,
-                label: '${c.uiFontSize.round()} px',
-                semanticFormatterCallback: (value) => copy(
-                  'appearance.uiFontSizeValue',
-                  values: {'size': value.round()},
-                ),
-                onChanged: c.resetting
-                    ? null
-                    : (value) => c.update(uiFontSize: value),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest.withValues(alpha: .45),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: scheme.outlineVariant),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    copy('appearance.uiFontSizePreview'),
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    copy('appearance.uiFontSizeSample'),
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontSize: Sys05AppearanceController.defaultUiFontSize,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
             if (c.mode == WorkspaceBackdrop.wallpaper) ...[
+              const SizedBox(height: 18),
               if (c.wallpaper != null)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: Image.memory(
+                    key: const ValueKey('appearance/wallpaper-preview'),
                     c.wallpaper!,
-                    height: 140,
+                    height: compact ? 156 : 190,
                     fit: BoxFit.cover,
                     cacheWidth: 900,
                   ),
                 ),
               const SizedBox(height: 10),
               Wrap(
-                spacing: 8,
+                spacing: 10,
+                runSpacing: 8,
                 children: [
                   FilledButton.icon(
+                    key: const ValueKey('appearance/choose-wallpaper'),
                     onPressed: _choosing || c.resetting
                         ? null
                         : _chooseWallpaper,
@@ -362,6 +370,7 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                   ),
                   if (c.wallpaper != null)
                     TextButton(
+                      key: const ValueKey('appearance/remove-wallpaper'),
                       onPressed: c.resetting ? null : c.removeWallpaper,
                       child: Text(copy('appearance.removeWallpaper')),
                     ),
@@ -491,7 +500,66 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                 ),
               ),
             ],
+            const Divider(height: 32),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    copy('appearance.uiFontSize'),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                Text(
+                  copy(
+                    'appearance.uiFontSizeValue',
+                    values: {'size': c.uiFontSize.round()},
+                  ),
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ],
+            ),
+            Semantics(
+              label: copy('appearance.uiFontSize'),
+              child: Slider(
+                key: const ValueKey('appearance/uiFontSize'),
+                value: c.uiFontSize,
+                min: Sys05AppearanceController.minUiFontSize,
+                max: Sys05AppearanceController.maxUiFontSize,
+                divisions: 5,
+                label: '${c.uiFontSize.round()} px',
+                semanticFormatterCallback: (value) => copy(
+                  'appearance.uiFontSizeValue',
+                  values: {'size': value.round()},
+                ),
+                onChanged: c.resetting
+                    ? null
+                    : (value) => c.update(uiFontSize: value),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    copy('appearance.uiFontSizePreview'),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    copy('appearance.uiFontSizeSample'),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.copyWith(fontSize: c.uiFontSize),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 28),
             SwitchListTile.adaptive(
+              key: const ValueKey('appearance/compact'),
               contentPadding: EdgeInsets.zero,
               title: Text(copy('appearance.compact')),
               value: c.compact,
@@ -499,7 +567,9 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                   ? null
                   : (value) => c.update(compact: value),
             ),
+            const Divider(height: 1),
             SwitchListTile.adaptive(
+              key: const ValueKey('appearance/reduceMotion'),
               contentPadding: EdgeInsets.zero,
               title: Text(copy('appearance.reduceMotion')),
               value: c.reducedMotion,
@@ -562,6 +632,17 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
             ),
           ],
         ),
+      );
+      if (widget.onClose == null) return content;
+      return Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(horizontalPadding, 12, 12, 8),
+            child: heading,
+          ),
+          const Divider(height: 1),
+          Expanded(child: content),
+        ],
       );
     },
   );

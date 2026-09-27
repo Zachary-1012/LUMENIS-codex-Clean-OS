@@ -3,7 +3,7 @@
 ```yaml
 screen_id: SYS-05
 status: DESIGN_READY
-revision: 5
+revision: 6
 owner_domain: SYSTEM Settings
 binding_ids:
   - BACKEND-GAP-040 (read-only SYS-05 screen snapshot)
@@ -12,9 +12,9 @@ design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
 design_decision: DESIGN_READY
 presentation_design_decision: DESIGN_READY
 reviewer: Root (presentation review); Sol owns remaining runtime acceptance
-reviewed_at: 2026-09-24
+reviewed_at: 2026-09-27
 presentation_reviewed_by: root
-presentation_reviewed_at: 2026-09-24
+presentation_reviewed_at: 2026-09-27
 approval_reference: Device-local appearance direction in the Experience Constitution
 implementation_state: SOURCE_PRESENT_LOCAL_ONLY
 runtime_acceptance: PENDING
@@ -94,8 +94,8 @@ Do not turn any local-storage failure into a successful server save. Do not send
 ## 5. Composition and responsive behavior
 
 - Entry is a shell palette button, with a tooltip and semantic label. It opens one purpose-built appearance editor, not a generic settings dashboard.
-- The editor uses a scrollable, maximum-620-px sheet. On narrow screens the mode chips wrap; the wallpaper/color controls appear only for the selected mode; sliders and switches remain in the same task flow; the bottom sheet accounts for keyboard insets and safe areas. On wider surfaces it stays a focused preference sheet rather than adding a repeated card grid.
-- The two built-in wallpaper buttons sit immediately after the backdrop mode choices and wrap on narrow screens. Each includes a thumbnail, localized label, keyboard/touch activation and button semantics; the preset choices stay available even when the active mode is not Wallpaper.
+- The editor uses a scrollable, maximum-620-px sheet. On narrow screens the six mode choices remain in one horizontally scrollable row; wallpaper/color controls appear only for the selected mode; sliders and switches remain in the same task flow; the bottom sheet accounts for keyboard insets and safe areas. On wider surfaces it stays a focused preference sheet rather than adding a repeated card grid.
+- The two built-in wallpaper buttons sit immediately after the backdrop mode choices in a two-column thumbnail layout, with 12–16 px corners, visible localized labels, keyboard/touch activation and button semantics. The presets remain available in every backdrop mode. In Wallpaper mode, the active image preview and choose/remove controls follow the presets before the appearance-adjustment settings.
 - The active workspace is the live preview: changing mode, compact density, motion, opacity or blur updates the current application theme/backdrop. The typography sample demonstrates actual body copy. Representative CTH/BMP workflow appearance is checked on the actual guarded screens; no fictitious business records are introduced into the preview.
 - A palette choice must preserve the caller's route, unsaved form text, selected entity, scroll position and other draft state. A bounded guarded-Web run preserved the dirty draft across the appearance change. Native desktop and broader route/scroll preservation remain unverified; repeat those checks before overall runtime acceptance. The mobile viewport check below covers the appearance editor layout, not every route's state.
 - Do not create a navigation reset, route replacement, keyed subtree, or account/server write to apply a local theme.
@@ -137,6 +137,14 @@ Do not turn any local-storage failure into a successful server save. Do not send
 | Windows native material effect | `UNVERIFIED` | Requires actual native visual verification |
 | macOS, iOS and Android runtime | `UNVERIFIED` | No platform runtime result is claimed |
 | Appearance-modal readability and live black/light adaptation | `PASS` | Final Web build inspected; near-opaque modal surface keeps workspace text from interfering |
+
+### R14 mobile and desktop composition review — 2026-09-27
+
+- Within the existing `DESIGN_READY` device-local appearance workflow, the editor order is mode choice → preset choice → active wallpaper preview and file actions when Wallpaper is selected → mode-specific appearance controls → separated typography, density and motion preferences.
+- The six mode choices use one horizontal row on narrow widths instead of wrapping into multiple chip rows. Presets keep their original bundled bytes and existing controller path; their rectangular thumbnails use explicit 14 px corners, readable localized labels and at least a 48 px action target. The type sample is unboxed and reflects the selected base size.
+- The SYS-05 route maximum width remains 760 px. Opening appearance from a phone retains a visible strip of the originating task behind a safe-area sheet, capped at 92% of available height. At 768 px and wider, appearance opens in a 460 px right-side panel so the original workspace remains visible while preferences change. Both use the same controller and editor, keep the title/close action fixed while settings scroll, and return to the unchanged caller on close/Escape.
+- The Product Owner's 47.367-second phone recording was reviewed on 2026-09-27 (20 keyframes plus transition sampling; source SHA-256 `a621b320ff76dff07ff6ed7f2b8974a91f78234ae21ce087f1da960950e970e1`). ADAPT only the principles of persistent return, grouped readable controls and a visible underlying task. Its account data, product features, logos and exact screen layouts are not product inputs. The root approves the bounded composition above under the existing Experience Constitution; the recording grants no account or browser automation authority.
+- This is a presentation-only source adjustment. No controller, preference, Theme, API, business state, localization key or effect boundary changes. The `DESIGN_READY` interaction/business contract and overall `PENDING` runtime acceptance are unchanged. The scoped widget regression is added but was not run in this batch; no browser or device evidence is claimed.
 
 ## 8. Cross-cutting impact and decision
 

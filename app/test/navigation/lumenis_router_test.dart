@@ -232,6 +232,12 @@ void main() {
       ];
       for (var index = 0; index < destinations.length; index++) {
         if (index > 0) {
+          if (width < 768) {
+            await tester.tap(
+              find.byKey(const ValueKey('workspace-phone-tools')),
+            );
+            await tester.pumpAndSettle();
+          }
           await tester.tap(
             find.byKey(const ValueKey('workspace-account-navigation')),
           );

@@ -22,13 +22,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('今天，想完成什么？'), findsOneWidget);
+    expect(find.text('AI 助手'), findsNothing);
     expect(find.text('尚未确认可用的经营对象'), findsOneWidget);
+    expect(
+      find.text('当前尚未确认可处理的经营主体或品牌，暂不能开始分析。'),
+      findsNothing,
+      reason: 'Keep the longer blocked paragraph out of the composer body.',
+    );
     expect(find.text('开始分析'), findsOneWidget);
     expect(find.text('数据依据'), findsOneWidget);
-    final editorRect = tester.getRect(find.byType(TextField));
+    _expectComposerSurface(tester);
+    final editorRect = tester.getRect(
+      find.byKey(const ValueKey('ai01-task-input')),
+    );
     expect(editorRect.top, lessThan(380));
-    expect(editorRect.bottom, lessThan(640));
+    expect(editorRect.bottom, lessThan(420));
     _expectNoImplementationTerms(tester);
+
+    final actionButtons = find.descendant(
+      of: find.byKey(const ValueKey('ai01-draft-actions')),
+      matching: find.byType(TextButton),
+    );
+    expect(actionButtons.evaluate().length, greaterThanOrEqualTo(2));
+    for (var index = 0; index < actionButtons.evaluate().length; index++) {
+      expect(
+        tester.getSize(actionButtons.at(index)).height,
+        greaterThanOrEqualTo(44),
+      );
+    }
 
     await tester.ensureVisible(find.text('查看风险变化'));
     await tester.tap(find.text('查看风险变化'));
@@ -73,6 +94,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('写下你的任务'), findsOneWidget);
+    expect(find.text('AI 助手'), findsNothing);
+    expect(find.text('尚未确认可用的经营对象'), findsOneWidget);
+    expect(find.text('当前尚未确认可处理的经营主体或品牌，暂不能开始分析。'), findsNothing);
+    _expectComposerSurface(tester);
     expect(find.text('业务资料依据'), findsOneWidget);
     expect(find.text('模型服务状态'), findsOneWidget);
     expect(find.text('近期分析记录'), findsOneWidget);
@@ -90,6 +115,31 @@ void main() {
     expect(find.text('What would you like to work on?'), findsOneWidget);
     expect(find.text('Describe your task'), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('narrow English phone keeps the unbound composer usable', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_app(locale: const Locale('en')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('What would you like to work on?'), findsOneWidget);
+    expect(
+      find.text('No usable business subject or brand is confirmed'),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'A usable business subject or brand is not confirmed, so analysis cannot start.',
+      ),
+      findsNothing,
+    );
+    expect(find.text('AI assistant'), findsNothing);
+    _expectComposerSurface(tester);
     expect(tester.takeException(), isNull);
   });
 
@@ -270,6 +320,23 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+}
+
+void _expectComposerSurface(WidgetTester tester) {
+  final surface = tester.widget<Container>(
+    find.byKey(const ValueKey('ai01-composer-surface')),
+  );
+  final decoration = surface.decoration! as BoxDecoration;
+  expect(decoration.borderRadius, BorderRadius.circular(16));
+
+  final editor = tester.widget<TextField>(
+    find.byKey(const ValueKey('ai01-task-input')),
+  );
+  expect(editor.style?.fontSize, 16);
+  expect(editor.style?.height, 1.5);
+  expect(editor.decoration?.filled, isFalse);
+  expect(editor.decoration?.border, InputBorder.none);
+  expect(editor.decoration?.focusedBorder, isA<UnderlineInputBorder>());
 }
 
 void _expectSubmitDisabled(WidgetTester tester) {

@@ -15,24 +15,42 @@ class Acc04ViewModel extends ChangeNotifier {
   Acc04LoadPhase _phase = Acc04LoadPhase.loading;
   Acc04FailureKind? _failureKind;
   Acc04Snapshot? _snapshot;
+  bool _disposed = false;
+  int _refreshGeneration = 0;
 
   Acc04LoadPhase get phase => _phase;
   Acc04FailureKind? get failureKind => _failureKind;
   Acc04Snapshot? get snapshot => _snapshot;
 
   Future<void> refresh() async {
+    if (_disposed) return;
+    final generation = ++_refreshGeneration;
     _phase = Acc04LoadPhase.loading;
     _failureKind = null;
     notifyListeners();
+    if (_disposed || generation != _refreshGeneration) return;
+
     try {
-      _snapshot = await _repository.load();
+      final snapshot = await _repository.load();
+      if (_disposed || generation != _refreshGeneration) return;
+      _snapshot = snapshot;
       _phase = Acc04LoadPhase.ready;
     } catch (error) {
+      if (_disposed || generation != _refreshGeneration) return;
       _snapshot = null;
       _failureKind = _classifyFailure(error);
       _phase = Acc04LoadPhase.failed;
     }
+
+    if (_disposed || generation != _refreshGeneration) return;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _refreshGeneration++;
+    super.dispose();
   }
 
   static Acc04FailureKind _classifyFailure(Object error) {

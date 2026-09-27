@@ -12,6 +12,23 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-27 — Mobile composition and adaptive appearance return
+
+[Round 14 mobile evidence](evidence/round-14/ROUND-14-MOBILE-WORKSPACE-REFINEMENT-2026-09-27.md) and its JSON receipt
+co-publish the compact phone navigation, focused AI writing surface, reordered
+wallpaper controls and ACC-04 read-lifecycle guards. Global appearance opens as
+a wide-window right inspector or a phone sheet with visible origin; close stays
+fixed while settings scroll. Existing routes, controller and draft State remain.
+
+The exact candidate passed 125 affected Flutter tests, full app analysis, release
+Web build and six governance gates. 16 actual isolated Web assertions
+cover original images, exact draft bytes, mobile navigation/return, touch close,
+320 px enlarged text, offline/403 and explicit corrupt-preference recovery.
+These are bounded local LIVE_VERIFIED results. Entire frontend/ROUND 14 remain
+incomplete; native surfaces are LIVE_NOT_VERIFIED; USER_VERIFIED, RELEASED and
+COMMERCIAL_READY remain NO. Unrelated protected candidates are excluded.
+
+
 ### 2026-09-27 — Browser Surface HTTP transport fence
 
 [Round 06 Browser Surface API evidence](evidence/round-06/ROUND-06-BROWSER-SURFACE-API-FENCE-2026-09-27.md)

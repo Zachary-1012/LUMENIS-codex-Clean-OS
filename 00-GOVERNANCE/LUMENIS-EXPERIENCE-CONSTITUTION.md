@@ -637,6 +637,29 @@ Responsive acceptance uses the widths in §20 and verifies a semantic recomposit
 
 The breakpoints guide composition; measured content and platform window size determine the final layout. Desktop favors parallel comparison and precise pointer/keyboard work. Mobile favors a single active task, touch-sized actions and context that remains visible without consuming the work area. Platform-specific navigation must not create different business meaning.
 
+Phone refinement reviewed by root on 2026-09-27, following the Product Owner's
+request to remove the templated mobile composition and fix desktop details:
+one compact header keeps the current page and authorized context visible; a
+labelled page chooser reveals the existing workflow groups in a reversible
+sheet instead of a second permanent horizontal navigation strip. The five
+domain destinations remain directly reachable. Account, language and service
+status stay available from the header's tools menu; appearance remains a direct
+action. No route, context selection, permission or data meaning changes. The
+existing screen host retains its State across width changes. AI-01 keeps a
+single writing surface on phone; SYS-05 groups wallpaper selection, preview and
+adjustment in that order. Their detailed specifications own the corresponding
+presentation decisions. This is a presentation approval, not business, native
+runtime, complete frontend or Round acceptance.
+
+The Product Owner's 2026-09-27 phone recording adds a bounded abstract mapping:
+retain the current work beneath a settings layer, group controls by task, and
+keep return/close visible while content scrolls. Navigation/tools sheets have
+a fixed title and explicit close action. Device appearance uses a phone sheet
+with a visible originating page and a right-side inspector at wider widths;
+both retain the same preference owner and unsent work. This mapping does not
+import the reference application's accounts, subscription, memory, plugins or
+OS settings, and is not authority to reproduce its feature set or layout.
+
 ## 32. LUMENIS interaction signature and motion contract
 
 LUMENIS’s distinctive interface is the **Trace / Return** relationship expressed through its existing spatial grammar: Point → Axis → Trace → Field → Strata → Boundary. A conclusion can reveal its evidence lineage along the relevant time, relationship, creation or runtime axis; Return restores the exact prior focus, filters, selection and scroll position. This behavior is implemented in each domain’s own composition, not as a generic detail drawer repeated everywhere.

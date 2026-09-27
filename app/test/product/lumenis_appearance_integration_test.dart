@@ -103,6 +103,14 @@ void main() {
     final disableAnimationsBefore = _disableAnimations(tester);
 
     await _openAppearance(tester);
+    final panel = find.byKey(const ValueKey('appearance/desktop-panel'));
+    expect(panel, findsOneWidget);
+    expect(
+      tester
+          .getRect(find.byKey(const ValueKey('appearance/desktop-content')))
+          .left,
+      greaterThan(800),
+    );
     expect(find.byKey(const ValueKey('appearance/black')), findsOneWidget);
     expect(controller.text, draft);
 
@@ -136,6 +144,7 @@ void main() {
     final disableAnimationsBefore = _disableAnimations(tester);
 
     await _openAppearance(tester);
+    await tester.ensureVisible(find.byKey(const ValueKey('appearance/black')));
     await tester.tap(find.byKey(const ValueKey('appearance/black')));
     await tester.pumpAndSettle();
 
@@ -143,10 +152,9 @@ void main() {
       find.byKey(const ValueKey('appearance/black')),
     );
     expect(blackChip.selected, isTrue);
-    final sheetContext = tester.element(find.byType(BottomSheet));
-    final sheetColor = Theme.of(
-      sheetContext,
-    ).bottomSheetTheme.modalBackgroundColor!;
+    final sheetColor = tester
+        .widget<Dialog>(find.byKey(const ValueKey('appearance/desktop-panel')))
+        .backgroundColor!;
     expect(sheetColor.a, greaterThanOrEqualTo(.98));
     expect(sheetColor.computeLuminance(), lessThan(.1));
     expect(controller.text, draft);
@@ -171,6 +179,7 @@ void main() {
   ) async {
     await _openAi01(tester);
     await tester.binding.setSurfaceSize(const Size(390, 844));
+    tester.view.physicalSize = const Size(390, 844);
     await tester.pumpAndSettle();
     const draft = 'Keep this working draft while changing text size.';
     await tester.enterText(_draftField(), draft);
@@ -187,8 +196,18 @@ void main() {
       18,
     );
     await _openAppearance(tester);
+    final phonePanel = find.byKey(const ValueKey('appearance/phone-panel'));
+    expect(phonePanel, findsOneWidget);
+    expect(tester.getRect(phonePanel).top, greaterThan(24));
+    final close = find.byKey(const ValueKey('appearance/close'));
+    final closeBeforeScroll = tester.getRect(close);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('appearance/reduceMotion')),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getRect(close), closeBeforeScroll);
     expect(tester.takeException(), isNull);
-    await tester.tap(find.byKey(const ValueKey('appearance/close')));
+    await tester.tap(close);
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(_draftField()).controller!.text, draft);
     expect(tester.takeException(), isNull);
@@ -198,6 +217,10 @@ void main() {
 _AppearanceClient? _lastClient;
 
 Future<void> _openAi01(WidgetTester tester) async {
+  tester.view.physicalSize = const Size(1440, 1000);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
   await tester.binding.setSurfaceSize(const Size(1440, 1000));
   addTearDown(() => tester.binding.setSurfaceSize(null));
   final client = _AppearanceClient();

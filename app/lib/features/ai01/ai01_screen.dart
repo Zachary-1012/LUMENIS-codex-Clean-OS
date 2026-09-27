@@ -149,9 +149,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _PageHeading(compact: phone),
-                  SizedBox(height: phone ? 16 : 26),
-                  const _ContextBoundary(),
-                  SizedBox(height: phone ? 16 : 22),
+                  SizedBox(height: phone ? 12 : 20),
                   if (wide)
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,21 +268,6 @@ class _PageHeading extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            const _AccentMark(),
-            const SizedBox(width: 10),
-            Text(
-              context.lumenisL10n.text('ai01.eyebrow'),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: LumenisTheme.of(context).ai,
-                letterSpacing: 0,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: compact ? 8 : 14),
         Text(
           context.lumenisL10n.text('ai01.title'),
           style:
@@ -294,90 +277,22 @@ class _PageHeading extends StatelessWidget {
                   ?.copyWith(
                     color: LumenisTheme.of(context).foreground,
                     fontSize: compact ? 24 : 28,
-                    height: 1.35,
+                    height: 1.25,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0,
                   ),
         ),
-        SizedBox(height: compact ? 4 : 8),
-        Text(
-          context.lumenisL10n.text('ai01.subtitle'),
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: LumenisTheme.of(context).muted,
-            fontSize: 14,
+        if (!compact) ...[
+          const SizedBox(height: 6),
+          Text(
+            context.lumenisL10n.text('ai01.subtitle'),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: LumenisTheme.of(context).muted,
+              fontSize: 14,
+            ),
           ),
-        ),
+        ],
       ],
-    );
-  }
-}
-
-class _AccentMark extends StatelessWidget {
-  const _AccentMark();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 9,
-      height: 9,
-      decoration: BoxDecoration(
-        color: LumenisTheme.of(context).ai,
-        shape: BoxShape.circle,
-      ),
-    );
-  }
-}
-
-class _ContextBoundary extends StatelessWidget {
-  const _ContextBoundary();
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      liveRegion: true,
-      label: context.lumenisL10n.text('ai01.context.label'),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-        decoration: BoxDecoration(
-          color: LumenisTheme.of(context).surface,
-          border: Border.all(
-            color: LumenisTheme.of(context).caution.withValues(alpha: 0.32),
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0A604A34),
-              blurRadius: 18,
-              offset: Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Wrap(
-          spacing: 10,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Icon(
-              Icons.lock_outline,
-              color: LumenisTheme.of(context).caution,
-              size: 18,
-            ),
-            Text(
-              context.lumenisL10n.text('ai01.context.label'),
-              style: TextStyle(
-                color: LumenisTheme.of(context).foreground,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Text(
-              context.lumenisL10n.text('ai01.context.detail'),
-              style: TextStyle(color: LumenisTheme.of(context).muted),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -420,6 +335,43 @@ class _RuntimeUnboundNotice extends StatelessWidget {
   }
 }
 
+class _ContextBoundary extends StatelessWidget {
+  const _ContextBoundary();
+
+  @override
+  Widget build(BuildContext context) {
+    final label = context.lumenisL10n.text('ai01.context.label');
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      liveRegion: true,
+      label: label,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(
+              Icons.lock_outline,
+              color: LumenisTheme.of(context).caution,
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: LumenisTheme.of(context).muted,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ComposerPane extends StatelessWidget {
   const _ComposerPane({
     required this.controller,
@@ -443,24 +395,13 @@ class _ComposerPane extends StatelessWidget {
         .where((suggestion) => suggestion.isProductSafe)
         .toList(growable: false);
     return Container(
+      key: const ValueKey('ai01-composer-surface'),
       width: double.infinity,
-      padding: EdgeInsets.all(compact ? 17 : 26),
+      padding: EdgeInsets.all(compact ? 16 : 22),
       decoration: BoxDecoration(
         color: LumenisTheme.of(context).surface,
-        borderRadius: BorderRadius.circular(compact ? 28 : 32),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: LumenisTheme.of(context).line),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x14725D8F),
-            blurRadius: 34,
-            offset: Offset(0, 15),
-          ),
-          BoxShadow(
-            color: LumenisTheme.of(context).surface.withValues(alpha: .8),
-            blurRadius: 1,
-            offset: Offset(-1, -1),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,44 +426,59 @@ class _ComposerPane extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           TextField(
+            key: const ValueKey('ai01-task-input'),
             controller: controller,
             focusNode: focusNode,
-            style: Theme.of(context).textTheme.bodyLarge,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(fontSize: 16, height: 1.5),
             minLines: compact ? 4 : 6,
             maxLines: compact ? 8 : 10,
             maxLength: 4000,
             textInputAction: TextInputAction.newline,
             decoration: InputDecoration(
-              filled: true,
-              fillColor: LumenisTheme.of(
-                context,
-              ).surfaceRaised.withValues(alpha: 0.65),
+              filled: false,
+              isDense: true,
               contentPadding: EdgeInsets.symmetric(
-                horizontal: compact ? 16 : 21,
-                vertical: compact ? 17 : 22,
+                horizontal: 0,
+                vertical: compact ? 8 : 10,
               ),
               counterStyle: TextStyle(color: LumenisTheme.of(context).quiet),
               hintText: context.lumenisL10n.text('ai01.draft.hint'),
               alignLabelWithHint: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(24),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(24),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(24),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: UnderlineInputBorder(
                 borderSide: BorderSide(
-                  color: LumenisTheme.of(context).ai.withValues(alpha: 0.65),
-                  width: 1.4,
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 1.5,
                 ),
               ),
             ),
           ),
+          const SizedBox(height: 8),
+          Theme(
+            data: Theme.of(context).copyWith(
+              textButtonTheme: TextButtonThemeData(
+                style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
+              ),
+            ),
+            child: Ai01DraftActions(
+              key: const ValueKey('ai01-draft-actions'),
+              controller: controller,
+              focusNode: focusNode,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            context.lumenisL10n.text('ai01.draft.notice'),
+            style: TextStyle(
+              color: LumenisTheme.of(context).quiet,
+              fontSize: 12,
+            ),
+          ),
           if (safeSuggestions.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
               context.lumenisL10n.text('ai01.suggestions.title'),
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -553,19 +509,14 @@ class _ComposerPane extends StatelessWidget {
               ],
             ),
           ],
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Divider(height: 1, color: LumenisTheme.of(context).line),
           const SizedBox(height: 12),
           if (compact)
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  blockedReason,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: LumenisTheme.of(context).caution,
-                  ),
-                ),
+                const _ContextBoundary(),
                 const SizedBox(height: 10),
                 SizedBox(
                   height: 48,
@@ -577,32 +528,12 @@ class _ComposerPane extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    blockedReason,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: LumenisTheme.of(context).caution,
-                    ),
-                  ),
-                ),
+                const Expanded(child: _ContextBoundary()),
                 const SizedBox(width: 12),
                 _submitButton(context, blockedReason),
               ],
             ),
           const SizedBox(height: 10),
-          Ai01DraftActions(
-            key: const ValueKey('ai01-draft-actions'),
-            controller: controller,
-            focusNode: focusNode,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            context.lumenisL10n.text('ai01.draft.notice'),
-            style: TextStyle(
-              color: LumenisTheme.of(context).quiet,
-              fontSize: 12,
-            ),
-          ),
         ],
       ),
     );
