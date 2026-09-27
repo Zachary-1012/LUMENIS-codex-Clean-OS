@@ -1187,7 +1187,7 @@ The Product Owner cancelled the old daily/manual Collector count quotas. The
 existing SYSTEM Collector no longer blocks authorized collection after an
 arbitrary daily count, and the legacy scheduler/API no longer display 12/3/9
 as product limits. Source-specific authorization, request resource bounds,
-short spacing, risk stops and user AUTO opt-in remain. [Round 06 evidence](evidence/round-06/ROUND-06-COLLECTOR-LEGACY-DAILY-QUOTA-2026-09-27.md)
+short spacing, risk stops and user AUTO opt-in remain. [Round 06 evidence](evidence/round-06/ROUND-06-COLLECTOR-DAILY-QUOTA-2026-09-27.md)
 records 41 passing affected tests; this source change alone is not P0 Global
 data closure or ROUND 06 acceptance.
 See [Round 06 evidence](evidence/round-06/ROUND-06-EXACT-RAW-CANONICAL-BIND-2026-09-27.md).
