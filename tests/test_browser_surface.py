@@ -199,9 +199,16 @@ def test_history_rejects_non_http(isolated_store):
 # ─────────────────────────── API 层（最小 Flask，离线）───────────────────────────
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
     from flask import Flask
     import browser_surface_api
+    import account.service
+    import account.authorization
+
+    monkeypatch.setattr(account.service, "get_current_user",
+                        lambda: {"id": 101, "session_id": 501})
+    monkeypatch.setattr(account.authorization, "check_dual_domain_permission",
+                        lambda *_args, **_kwargs: True)
     app = Flask(__name__)
     browser_surface_api.register_browser_surface_api(app)
     return app.test_client()
@@ -221,12 +228,26 @@ def test_browser_surface_api_defaults_to_product_browser(monkeypatch, client):
 
     def fake_list_tabs(account=None, port=None):
         seen.update(account=account, port=port)
-        return {"ok": True, "cdp_port": port, "tabs": [], "count": 0}
+        return {"ok": True, "cdp_port": port,
+                "tabs": [{"target_id": "owned", "ws_url": "ws://127.0.0.1:9224/private"}],
+                "count": 1}
 
     monkeypatch.setattr(bs, "list_tabs", fake_list_tabs)
     response = client.get("/api/browser-surface/tabs")
     assert response.status_code == 200
     assert seen["port"] == bs.GENERAL_CDP_PORT == 9224
+    assert "cdp_port" not in response.get_json()
+    assert "ws_url" not in response.get_json()["tabs"][0]
+
+
+def test_browser_surface_api_requires_actor_and_forbids_client_port(monkeypatch, client):
+    import account.service
+
+    response = client.get("/api/browser-surface/tabs?port=9223")
+    assert response.status_code == 400
+    assert response.get_json()["code"] == "CLIENT_BROWSER_SELECTOR_FORBIDDEN"
+    monkeypatch.setattr(account.service, "get_current_user", lambda: None)
+    assert client.get("/api/browser-surface/tabs").status_code == 401
 
 
 def test_browser_surface_history_endpoint_rejects_unknown_action(client):
@@ -327,7 +348,7 @@ def test_api_nav_config_endpoint(client, tmp_path, monkeypatch):
 
 def test_api_general_status(client):
     r = client.get("/api/browser-surface/general-browser/status").get_json()
-    assert r["ok"] and r["port"] == 9224 and "online" in r
+    assert r["ok"] and "port" not in r and "online" in r
     assert "profile" not in r
 
 

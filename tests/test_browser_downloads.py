@@ -5,10 +5,16 @@ import browser_surface as bs
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
     """独立 Flask app（只注册 browser_surface_api，无全局 Basic Auth）。"""
     from flask import Flask
     import browser_surface_api
+    import account.service
+    import account.authorization
+    monkeypatch.setattr(account.service, "get_current_user",
+                        lambda: {"id": 101, "session_id": 501})
+    monkeypatch.setattr(account.authorization, "check_dual_domain_permission",
+                        lambda *_args, **_kwargs: True)
     app = Flask(__name__)
     browser_surface_api.register_browser_surface_api(app)
     return app.test_client()
@@ -91,7 +97,7 @@ class TestDownloadAPI:
     def test_monitor_status_endpoint(self, client, monkeypatch):
         monkeypatch.setattr(bs, "_verified_general_browser", lambda *args: True)
         r = client.get("/api/browser-surface/downloads/monitor/status").get_json()
-        assert r["port"] == bs.GENERAL_CDP_PORT
+        assert "port" not in r
         assert "running" in r
 
     def test_active_endpoint(self, client, monkeypatch):
@@ -101,8 +107,8 @@ class TestDownloadAPI:
 
     def test_unowned_port_is_blocked(self, client):
         response = client.get("/api/browser-surface/downloads/active?port=19008")
-        assert response.status_code == 403
-        assert response.get_json()["code"] == "BROWSER_SESSION_BLOCKED"
+        assert response.status_code == 400
+        assert response.get_json()["code"] == "CLIENT_BROWSER_SELECTOR_FORBIDDEN"
 
     def test_cancel_requires_guid(self, client):
         r = client.post("/api/browser-surface/downloads/cancel", json={})

@@ -11,10 +11,16 @@ def verified_product_browser(monkeypatch):
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
     """独立 Flask app（只注册 browser_surface_api，无全局 Basic Auth），与 test_browser_surface.py 一致。"""
     from flask import Flask
     import browser_surface_api
+    import account.service
+    import account.authorization
+    monkeypatch.setattr(account.service, "get_current_user",
+                        lambda: {"id": 101, "session_id": 501})
+    monkeypatch.setattr(account.authorization, "check_dual_domain_permission",
+                        lambda *_args, **_kwargs: True)
     app = Flask(__name__)
     browser_surface_api.register_browser_surface_api(app)
     return app.test_client()
@@ -101,8 +107,8 @@ class TestHybridAPI:
     def test_legacy_personal_port_is_blocked(self, client):
         response = client.post("/api/browser-surface/hybrid/analyze",
                                json={"prefer": "dom", "port": 9222})
-        assert response.status_code == 403
-        assert response.get_json()["code"] == "BROWSER_SESSION_BLOCKED"
+        assert response.status_code == 400
+        assert response.get_json()["code"] == "CLIENT_BROWSER_SELECTOR_FORBIDDEN"
 
     def test_api_invalid_prefer(self, client):
         r = client.post("/api/browser-surface/hybrid/analyze", json={"prefer": "invalid"})

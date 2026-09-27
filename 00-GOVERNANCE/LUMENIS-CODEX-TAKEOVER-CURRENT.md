@@ -12,6 +12,14 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-27 — Browser Surface HTTP transport fence
+
+[Round 06 Browser Surface API evidence](evidence/round-06/ROUND-06-BROWSER-SURFACE-API-FENCE-2026-09-27.md)
+records server Actor/session and SYSTEM/browser grant checks, rejection of
+client account/port selectors, and redaction of CDP transport/profile fields
+on the old compatibility API. Target ownership, an approved SYS-06 viewport and
+real-user E2E remain unverified; ROUND 06/14 remain `REWORK`.
+
 ### 2026-09-27 — AI Browser selected-engine session boundary
 
 [Round 06 AI Browser evidence](evidence/round-06/ROUND-06-AI-BROWSER-SESSION-BOUNDARY-2026-09-27.md)

@@ -16,27 +16,56 @@ def register_browser_surface_api(app):
 
     bp = Blueprint("browser_surface", __name__)
 
+    @bp.before_request
+    def _require_product_browser_actor():
+        """Keep the legacy surface on the same account/Permission boundary."""
+        try:
+            from account.service import get_current_user
+            from account.authorization import check_dual_domain_permission
+
+            actor = get_current_user()
+            if not actor or type(actor.get("id")) is not int or type(actor.get("session_id")) is not int:
+                return jsonify({"ok": False, "code": "BROWSER_ACTOR_REQUIRED"}), 401
+            action = "read" if request.method == "GET" else "write"
+            if not check_dual_domain_permission(actor["id"], "SYSTEM", module="browser", action=action):
+                return jsonify({"ok": False, "code": "BROWSER_PERMISSION_DENIED"}), 403
+        except Exception:
+            return jsonify({"ok": False, "code": "BROWSER_PERMISSION_UNAVAILABLE"}), 503
+
+        data = request.get_json(silent=True) or {}
+        if ("account" in request.args or "port" in request.args or
+                (isinstance(data, dict) and ("account" in data or "port" in data))):
+            return jsonify({"ok": False, "code": "CLIENT_BROWSER_SELECTOR_FORBIDDEN"}), 400
+
+    @bp.after_request
+    def _hide_browser_transport(response):
+        """Never return CDP transport/profile fields to the product client."""
+        private_keys = {"cdp_port", "port", "profile", "ws_url", "websocketdebuggerurl", "account"}
+
+        def public(value):
+            if isinstance(value, dict):
+                return {key: public(item) for key, item in value.items()
+                        if str(key).casefold() not in private_keys}
+            if isinstance(value, list):
+                return [public(item) for item in value]
+            return value
+
+        payload = response.get_json(silent=True)
+        if payload is not None:
+            response.set_data(app.json.dumps(public(payload)))
+        return response
+
     @bp.errorhandler(PermissionError)
     def _blocked_browser_session(_error):
         return jsonify({"ok": False, "code": "BROWSER_SESSION_BLOCKED",
                         "error": "当前浏览器会话未经序境验证"}), 403
 
     def _acct():
-        """Approved account/profile selector; explicit port remains an override."""
-        return (request.args.get("account") or
-                (request.get_json(silent=True) or {}).get("account") or "")
+        """Product requests never select an acquisition identity."""
+        return ""
 
     def _port():
-        data = request.get_json(silent=True) or {}
-        raw = request.args.get("port") or data.get("port")
-        try:
-            if raw:
-                return int(raw)
-            # 产品内置浏览器默认使用独立通用实例；只有显式传入 account
-            # 时才回到获批的采集身份端口。
-            return None if _acct() else bs.GENERAL_CDP_PORT
-        except (TypeError, ValueError):
-            return bs.GENERAL_CDP_PORT
+        return bs.GENERAL_CDP_PORT
 
     def _target_id():
         data = request.get_json(silent=True) or {}
