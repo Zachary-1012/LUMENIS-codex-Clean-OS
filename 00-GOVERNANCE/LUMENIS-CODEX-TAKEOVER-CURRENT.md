@@ -1414,3 +1414,14 @@ original raw fields remain. 31 focused Bilibili/SYSTEM tests PASS. Real Bilibili
 search remains unverified (anonymous request challenged; no challenge retry).
 [Round 06 evidence](evidence/round-06/ROUND-06-SOURCE-ENTITY-ADMISSION-2026-09-28.md).
 No overall closure status promoted.
+
+
+### 2026-09-28 - public source URL identity length
+
+Country collection exposed a valid public URL rejected by the old 120-character
+social keyword guard. Public HTTP/RSS/Atom/Sitemap now retain URLs up to 4096
+characters without truncation; source authorization, DNS and redirect checks
+remain in their owners. 7 focused URL/exact-scope tests PASS; final source AST
+PASS. Longer live URL acceptance remains to be demonstrated by country collection.
+[Round 06 evidence](evidence/round-06/ROUND-06-PUBLIC-URL-IDENTITY-2026-09-28.md).
+No coverage/round/release status promoted.

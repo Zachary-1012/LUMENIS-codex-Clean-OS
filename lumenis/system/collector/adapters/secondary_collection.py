@@ -387,8 +387,11 @@ def _validate_request(platform: str, keyword: str, max_results: int) -> tuple[st
     if canonical not in SECONDARY_COLLECTION_PLATFORMS:
         raise ValueError("当前采集入口不支持该平台；大陆小红书仍按现有区域门禁暂停")
     query = str(keyword or "").strip()
-    if not query or len(query) > 120:
-        raise ValueError("keyword 必须为 1-120 个字符")
+    # Public adapters receive a source URL, not a social search keyword. Keep
+    # that URL intact so path/query identity, authorization and provenance agree.
+    max_length = 4096 if canonical in {"public_http", "web_rss", "web_atom", "sitemap"} else 120
+    if not query or len(query) > max_length:
+        raise ValueError(f"keyword/source URL 必须为 1-{max_length} 个字符")
     try:
         limit = int(max_results)
     except (TypeError, ValueError):
