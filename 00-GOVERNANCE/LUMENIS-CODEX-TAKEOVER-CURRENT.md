@@ -1121,3 +1121,20 @@ This is a derived classification correction, not new Global coverage or a
 real-user result. The actual DB remains local only; Global Commercial/Brand
 Coverage stays `NO / NOT VERIFIED`, Guangzhou reference `PARTIAL`, ROUND 06
 `REWORK`, and Full Universe, RELEASED and OPERATING `NO`.
+
+### 2026-09-27 Round 06 US venue internal source snapshot
+
+[Round 06 local-data evidence](evidence/round-06/ROUND-06-CTH-US-INTERNAL-SOURCE-SNAPSHOT-2026-09-27.md)
+records a real, backed-up v18 local product-DB increment: 50 distinct US CTH
+venue pages from one operator, each linked to Raw, Canonical, signed Evidence
+and an `UNREVIEWED` `VENUE_LOCATION=US` assertion. Local totals are Registry
+157 (BMP 101 / CTH 56), Raw/Canonical 219, Evidence/web runs 192 and
+relations 269; integrity is `ok`, FK violations and orphan scope Evidence are
+zero. Immediate repeat was 50/50 already verified with no duplicate rows.
+The 50-row online snapshot is metadata/evidence only: source content, the
+product DB and the intertwined local import implementation were not pushed.
+Regency source rights are internal-only/pending review; this cohort is not
+commercially distributable or approved for automatic maintenance. The
+14-country 50-per-domain floor is now recorded in the existing Global contract,
+but neither Global coverage dimension is accepted. ROUND 06 stays REWORK;
+Full Universe, RELEASED and OPERATING remain NO.
