@@ -1132,6 +1132,15 @@ workflow. Round 03 remains REWORK; Global Commercial and Brand Coverage remain
 NO / NOT VERIFIED, Guangzhou reference PARTIAL, and Full Universe, RELEASED
 and OPERATING remain NO.
 
+### 2026-09-27 Round 03 exact CTH/BMP Canonical scope
+
+[Bounded Canonical source evidence](evidence/round-03/ROUND-03-CANONICAL-EXACT-SCOPE-2026-09-27.md)
+records the existing-registry scope resolver and Evidence-checked Canonical
+writer for exact CTH Subject and BMP BrandFocus. This is source-only until a
+real Collector→Raw→Evidence→Canonical run uses it. Round 03 remains REWORK;
+Global Commercial/Brand Coverage remains NO / NOT VERIFIED, Guangzhou
+reference PARTIAL, and Full Universe, RELEASED and OPERATING remain NO.
+
 ### 2026-09-27 Round 06 US venue internal source snapshot
 
 [Round 06 local-data evidence](evidence/round-06/ROUND-06-CTH-US-INTERNAL-SOURCE-SNAPSHOT-2026-09-27.md)

@@ -251,6 +251,9 @@ class CanonicalRecord:
     product_id: str = PRODUCT_CTH
     domain_id: str = ""  # 双域核心：cth/zbmp/system，__post_init__ 从 product_id 映射
     subject_id: str = ""
+    brand_focus_id: str = ""
+    scope_status: str = "UNASSIGNED"
+    scope_evidence_ref: str = ""
     scope: str = "default"
     source_id: str = ""
     external_id: str = ""
@@ -525,6 +528,7 @@ def ensure_canonical_table(
             if not owns_connection:
                 raise
             print(f"[canonical_data] domain_id migration skipped: {_mig_err}")
+        ensure_canonical_scope_columns(con)
         if owns_connection:
             con.commit()
     finally:
@@ -542,6 +546,89 @@ def get_connection(db_path: str) -> sqlite3.Connection:
 # ============================================================
 # 写入：persist_canonical（幂等）
 # ============================================================
+def _validate_canonical_scope(con: sqlite3.Connection, record: CanonicalRecord) -> None:
+    """Reject mixed scope identities and require signed Evidence for VERIFIED."""
+    def exact_text(value: Any, field_name: str) -> str:
+        if value is None and field_name in {"subject_id", "brand_focus_id", "scope_evidence_ref"}:
+            return ""
+        if not isinstance(value, str) or value != value.strip():
+            raise ValueError(f"Canonical {field_name} must be an exact trimmed string")
+        return value
+
+    product = exact_text(record.product_id, "product_id")
+    domain = exact_text(record.domain_id, "domain_id")
+    status = exact_text(record.scope_status, "scope_status")
+    subject = exact_text(record.subject_id, "subject_id")
+    brand = exact_text(record.brand_focus_id, "brand_focus_id")
+    evidence_ref = exact_text(record.scope_evidence_ref, "scope_evidence_ref")
+    expected_domain = {PRODUCT_CTH: "cth", PRODUCT_ZBMP: "zbmp"}.get(product)
+
+    if not status or status != status.upper():
+        raise ValueError("Canonical scope_status must be a non-empty uppercase value")
+    if subject and brand:
+        raise ValueError("Canonical scope cannot mix Subject and BrandFocus")
+    if expected_domain is not None and domain != expected_domain:
+        raise ValueError("Canonical product_id and domain_id conflict")
+    if subject and product != PRODUCT_CTH:
+        raise ValueError("only CTH Canonical records may carry subject_id")
+    if brand and product != PRODUCT_ZBMP:
+        raise ValueError("only BMP Canonical records may carry brand_focus_id")
+    if (subject or brand) and expected_domain is None:
+        raise ValueError("scoped Canonical records require a supported product")
+    if status != "VERIFIED":
+        return
+
+    focus = subject if product == PRODUCT_CTH else brand if product == PRODUCT_ZBMP else ""
+    if not focus or not evidence_ref or not record.source_id:
+        raise ValueError("VERIFIED Canonical scope requires one exact focus and Evidence")
+    try:
+        from lumenis.shared.evidence.store import classify_evidence_integrity
+    except (ImportError, AttributeError) as exc:
+        raise RuntimeError("signed Evidence verification is unavailable") from exc
+
+    cursor = con.execute("SELECT * FROM app_evidence_records WHERE id=?", (evidence_ref,))
+    row = cursor.fetchone()
+    if row is None:
+        raise ValueError("Canonical scope Evidence is missing")
+    evidence = dict(zip((column[0] for column in cursor.description), row))
+    assurance = classify_evidence_integrity(evidence)
+    if (
+        assurance.get("verified") is not True
+        or assurance.get("assurance") != "writer-authenticated"
+        or str(evidence.get("result") or "").upper() != "PASS"
+        or str(evidence.get("status") or "").lower() != "verified"
+        or evidence.get("product_id") != product
+        or evidence.get("domain_id") != domain
+    ):
+        raise ValueError("Canonical scope Evidence is not signed and verified for this domain")
+    try:
+        inputs = json.loads(evidence.get("inputs_json") or "")
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Canonical scope Evidence inputs are invalid") from exc
+    expected_scope = {"domain_id": domain, "product_id": product, "global": False}
+    expected_scope["subject_id" if product == PRODUCT_CTH else "brand_focus_id"] = focus
+    if (
+        not isinstance(inputs, dict)
+        or inputs.get("_lumenis_scope") != expected_scope
+        or not isinstance(inputs.get("source_ids"), list)
+        or record.source_id not in inputs["source_ids"]
+    ):
+        raise ValueError("Canonical scope Evidence does not cover the exact source and focus")
+
+
+def _reject_verified_scope_rewrite(existing: dict, record: CanonicalRecord) -> None:
+    if str(existing.get("scope_status") or "").upper() != "VERIFIED":
+        return
+    prior = tuple(str(existing.get(key) or "") for key in (
+        "product_id", "domain_id", "subject_id", "brand_focus_id",
+    ))
+    current = tuple(str(getattr(record, key) or "") for key in (
+        "product_id", "domain_id", "subject_id", "brand_focus_id",
+    ))
+    if record.scope_status != "VERIFIED" or current != prior:
+        raise ValueError("verified Canonical scope cannot be downgraded or rebound")
+
+
 def persist_canonical(con: sqlite3.Connection, record: CanonicalRecord) -> str:
     """写入或更新一条 Canonical 记录。返回 inserted/updated。
 
@@ -549,6 +636,7 @@ def persist_canonical(con: sqlite3.Connection, record: CanonicalRecord) -> str:
     不覆盖已有人工标注（verification_status/relevance_status/subject_type/content_type
     等若已有非默认值则保留）。
     """
+    _validate_canonical_scope(con, record)
     if not record.content_hash:
         record.compute_hash()
     record.updated_at = _now_str()
@@ -574,6 +662,7 @@ def persist_canonical(con: sqlite3.Connection, record: CanonicalRecord) -> str:
             (record.canonical_id,)
         ).fetchone()
         existing_dict = dict(row) if row else {}
+        _reject_verified_scope_rewrite(existing_dict, record)
 
         for f in fields:
             if f == "canonical_id":
@@ -623,6 +712,11 @@ def note_to_canonical(note_row: Dict[str, Any], product_id: str = PRODUCT_CTH) -
     rec = CanonicalRecord(
         canonical_id=f"can_note_{note_id}" if note_id else _new_canonical_id("can_note"),
         product_id=product_id,
+        domain_id=_safe_str(note_row.get("domain_id")),
+        subject_id=_safe_str(note_row.get("subject_id")),
+        brand_focus_id=_safe_str(note_row.get("brand_focus_id")),
+        scope_status=_safe_str(note_row.get("scope_status") or "UNASSIGNED").upper(),
+        scope_evidence_ref=_safe_str(note_row.get("scope_evidence_ref")),
         source_id=note_id,
         external_id=note_id,
         source_type=SOURCE_TYPE_NOTE,
