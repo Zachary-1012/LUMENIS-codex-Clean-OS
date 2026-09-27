@@ -12,6 +12,7 @@ class Bmp05ViewModel extends ChangeNotifier {
   Bmp05ViewModel({required this._repository});
 
   final Bmp05Repository _repository;
+  bool _disposed = false;
 
   Bmp05LoadPhase _phase = Bmp05LoadPhase.loading;
   Bmp05FailureKind? _failureKind;
@@ -46,11 +47,15 @@ class Bmp05ViewModel extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
+    if (_disposed) return;
     _phase = Bmp05LoadPhase.loading;
     _failureKind = null;
     notifyListeners();
+    if (_disposed) return;
     try {
-      _snapshot = await _repository.load();
+      final snapshot = await _repository.load();
+      if (_disposed) return;
+      _snapshot = snapshot;
       _phase = Bmp05LoadPhase.ready;
       if (!_snapshot!.creators.any(
         (creator) => creator.id == _selectedCreatorId,
@@ -60,10 +65,12 @@ class Bmp05ViewModel extends ChangeNotifier {
             : _snapshot!.creators.first.id;
       }
     } catch (error) {
+      if (_disposed) return;
       _snapshot = null;
       _failureKind = _classify(error);
       _phase = Bmp05LoadPhase.failed;
     }
+    if (_disposed) return;
     notifyListeners();
   }
 
@@ -100,5 +107,11 @@ class Bmp05ViewModel extends ChangeNotifier {
       return Bmp05FailureKind.offline;
     }
     return Bmp05FailureKind.server;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

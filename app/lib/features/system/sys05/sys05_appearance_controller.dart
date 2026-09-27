@@ -32,10 +32,13 @@ class Sys05AppearanceController extends ChangeNotifier {
   Uint8List? wallpaper;
   bool loaded = false;
   bool saving = false;
+  bool resetting = false;
   String? errorKey;
+  String? statusKey;
   bool _disposed = false;
   int _preferenceRevision = 0;
   Future<void> _pendingSave = Future.value();
+  Future<void> _pendingWallpaperOperation = Future.value();
 
   bool get isDark => switch (mode) {
     WorkspaceBackdrop.black => true,
@@ -119,6 +122,7 @@ class Sys05AppearanceController extends ChangeNotifier {
     double? panelOpacity,
     double? uiFontSize,
   }) {
+    if (resetting) return Future<void>.value();
     this.mode = mode ?? this.mode;
     this.solidColor = solidColor ?? this.solidColor;
     this.darkGlass = darkGlass ?? this.darkGlass;
@@ -166,33 +170,118 @@ class Sys05AppearanceController extends ChangeNotifier {
     return _pendingSave;
   }
 
-  Future<bool> setWallpaper(Uint8List bytes) async {
-    _clearNonNativeError();
-    try {
-      await _validateImage(bytes);
-      // Persist before replacing the visible wallpaper; quota failures preserve it.
-      await _storage.setString(wallpaperKey, base64Encode(bytes));
-      wallpaper = bytes;
-      await update(mode: WorkspaceBackdrop.wallpaper);
-      return errorKey != 'appearance.saveFailed';
-    } on FormatException {
-      errorKey = 'appearance.invalidImage';
-    } catch (_) {
-      errorKey = 'appearance.saveFailed';
-    }
+  Future<bool> resetLocalAppearance() async {
+    if (resetting) return false;
+    resetting = true;
+    saving = true;
+    statusKey = null;
+    final revision = ++_preferenceRevision;
     _notify();
-    return false;
+
+    // Wallpaper operations are serialized separately because setting an image
+    // also queues a preference write. Wait for those operations first, then
+    // wait for every preference write they may have queued before removing keys.
+    await _pendingWallpaperOperation;
+    await _pendingSave;
+
+    var succeeded = false;
+    _pendingSave = _pendingSave.then((_) async {
+      Object? failure;
+      for (final key in const [preferenceKey, wallpaperKey]) {
+        try {
+          await _storage.remove(key);
+        } on Object catch (error) {
+          failure ??= error;
+        }
+      }
+
+      if (revision == _preferenceRevision) {
+        succeeded = failure == null;
+        if (succeeded) {
+          mode = WorkspaceBackdrop.frosted;
+          solidColor = const Color(0xFFE8E4EC);
+          darkGlass = false;
+          compact = false;
+          reducedMotion = false;
+          blur = 24;
+          panelOpacity = .9;
+          uiFontSize = defaultUiFontSize;
+          wallpaper = null;
+          errorKey = null;
+          statusKey = 'appearance.resetLocalComplete';
+        } else {
+          errorKey = 'appearance.resetLocalFailed';
+          statusKey = null;
+        }
+        resetting = false;
+        saving = false;
+        _notify();
+      }
+    });
+    await _pendingSave;
+    return succeeded;
   }
 
-  Future<void> removeWallpaper() async {
-    try {
-      await _storage.remove(wallpaperKey);
-      wallpaper = null;
-      await update(mode: WorkspaceBackdrop.frosted);
-    } catch (_) {
-      errorKey = 'appearance.saveFailed';
+  Future<bool> setWallpaper(Uint8List bytes) {
+    if (resetting) return Future<bool>.value(false);
+    final operation = _pendingWallpaperOperation.then((_) async {
+      if (resetting) return false;
+      _clearNonNativeError();
+      try {
+        await _validateImage(bytes);
+        if (resetting) return false;
+        // Persist before replacing the visible wallpaper; quota failures preserve it.
+        await _storage.setString(wallpaperKey, base64Encode(bytes));
+        if (resetting) return false;
+        wallpaper = bytes;
+        await update(mode: WorkspaceBackdrop.wallpaper);
+        return errorKey != 'appearance.saveFailed';
+      } on FormatException {
+        if (resetting) return false;
+        errorKey = 'appearance.invalidImage';
+      } catch (_) {
+        if (resetting) return false;
+        errorKey = 'appearance.saveFailed';
+      }
       _notify();
-    }
+      return false;
+    });
+    _pendingWallpaperOperation = operation.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {
+        // A failed image operation must not poison later recovery operations.
+      },
+    );
+    return operation;
+  }
+
+  Future<void> removeWallpaper() {
+    if (resetting) return Future<void>.value();
+    final operation = _pendingWallpaperOperation.then((_) async {
+      if (resetting) return;
+      try {
+        await _storage.remove(wallpaperKey);
+        wallpaper = null;
+        if (resetting) {
+          if (mode == WorkspaceBackdrop.wallpaper) {
+            mode = WorkspaceBackdrop.frosted;
+          }
+          return;
+        }
+        await update(mode: WorkspaceBackdrop.frosted);
+      } catch (_) {
+        if (resetting) return;
+        errorKey = 'appearance.saveFailed';
+        _notify();
+      }
+    });
+    _pendingWallpaperOperation = operation.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {
+        // A failed image operation must not poison later recovery operations.
+      },
+    );
+    return operation;
   }
 
   Future<void> _validateImage(Uint8List bytes) async {
@@ -235,8 +324,11 @@ class Sys05AppearanceController extends ChangeNotifier {
   }
 
   void _clearNonNativeError() {
+    statusKey = null;
     if (errorKey != 'appearance.nativeFailed' &&
-        errorKey != 'appearance.nativeResetFailed') {
+        errorKey != 'appearance.nativeResetFailed' &&
+        errorKey != 'appearance.resetLocalFailed' &&
+        errorKey != 'appearance.restoreFailed') {
       errorKey = null;
     }
   }

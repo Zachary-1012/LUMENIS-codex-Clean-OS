@@ -12,6 +12,7 @@ class Bmp04ViewModel extends ChangeNotifier {
   Bmp04ViewModel({required this._repository});
 
   final Bmp04Repository _repository;
+  bool _disposed = false;
 
   Bmp04LoadPhase _phase = Bmp04LoadPhase.loading;
   Bmp04FailureKind? _failureKind;
@@ -32,11 +33,15 @@ class Bmp04ViewModel extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
+    if (_disposed) return;
     _phase = Bmp04LoadPhase.loading;
     _failureKind = null;
     notifyListeners();
+    if (_disposed) return;
     try {
-      _snapshot = await _repository.load();
+      final snapshot = await _repository.load();
+      if (_disposed) return;
+      _snapshot = snapshot;
       _phase = Bmp04LoadPhase.ready;
       if (!_snapshot!.channels.any(
         (channel) => channel.id == _selectedChannelId,
@@ -46,10 +51,12 @@ class Bmp04ViewModel extends ChangeNotifier {
             : _snapshot!.channels.first.id;
       }
     } catch (error) {
+      if (_disposed) return;
       _snapshot = null;
       _failureKind = _classify(error);
       _phase = Bmp04LoadPhase.failed;
     }
+    if (_disposed) return;
     notifyListeners();
   }
 
@@ -76,5 +83,11 @@ class Bmp04ViewModel extends ChangeNotifier {
       return Bmp04FailureKind.offline;
     }
     return Bmp04FailureKind.server;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

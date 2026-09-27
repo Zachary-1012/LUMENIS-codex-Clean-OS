@@ -12,6 +12,7 @@ class Bmp03ViewModel extends ChangeNotifier {
   Bmp03ViewModel({required this._repository});
 
   final Bmp03Repository _repository;
+  bool _disposed = false;
 
   Bmp03LoadPhase _phase = Bmp03LoadPhase.loading;
   Bmp03FailureKind? _failureKind;
@@ -40,11 +41,15 @@ class Bmp03ViewModel extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
+    if (_disposed) return;
     _phase = Bmp03LoadPhase.loading;
     _failureKind = null;
     notifyListeners();
+    if (_disposed) return;
     try {
-      _snapshot = await _repository.load();
+      final snapshot = await _repository.load();
+      if (_disposed) return;
+      _snapshot = snapshot;
       _phase = Bmp03LoadPhase.ready;
       if (!_snapshot!.signals.any((signal) => signal.id == _selectedSignalId)) {
         _selectedSignalId = _snapshot!.signals.isEmpty
@@ -52,10 +57,12 @@ class Bmp03ViewModel extends ChangeNotifier {
             : _snapshot!.signals.first.id;
       }
     } catch (error) {
+      if (_disposed) return;
       _snapshot = null;
       _failureKind = _classify(error);
       _phase = Bmp03LoadPhase.failed;
     }
+    if (_disposed) return;
     notifyListeners();
   }
 
@@ -86,5 +93,11 @@ class Bmp03ViewModel extends ChangeNotifier {
       return Bmp03FailureKind.offline;
     }
     return Bmp03FailureKind.server;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

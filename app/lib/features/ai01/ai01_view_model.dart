@@ -18,6 +18,8 @@ class Ai01ViewModel extends ChangeNotifier {
   Ai01Snapshot? _snapshot;
   String? _failureMessage;
   String _draft = '';
+  int _requestGeneration = 0;
+  bool _disposed = false;
 
   Ai01LoadPhase get phase => _phase;
   Ai01FailureKind? get failureKind => _failureKind;
@@ -29,34 +31,57 @@ class Ai01ViewModel extends ChangeNotifier {
       '当前没有服务端确认的 Subject 或 Brand Lens，暂不提交 AI 意图。';
 
   Future<void> refresh() async {
+    if (_disposed) return;
+
+    final requestGeneration = ++_requestGeneration;
     _phase = Ai01LoadPhase.loading;
     _failureKind = null;
     _failureMessage = null;
-    notifyListeners();
+    _snapshot = null;
+    _notifyIfAlive();
 
     try {
-      _snapshot = await _repository.load();
+      final snapshot = await _repository.load();
+      if (_isStale(requestGeneration)) return;
+
+      _snapshot = snapshot;
       _phase = Ai01LoadPhase.ready;
     } catch (error) {
+      if (_isStale(requestGeneration)) return;
+
       _snapshot = null;
       _failureKind = _classifyFailure(error);
       _failureMessage = _failureText(_failureKind!);
       _phase = Ai01LoadPhase.failed;
     }
 
-    notifyListeners();
+    _notifyIfAlive();
   }
 
   void updateDraft(String value) {
-    if (value == _draft) return;
+    if (_disposed || value == _draft) return;
     _draft = value;
-    notifyListeners();
+    _notifyIfAlive();
   }
 
   void useSuggestion(Ai01Suggestion suggestion) {
     final intent = suggestion.safeIntent;
     if (intent == null || intent.isEmpty) return;
     updateDraft(intent);
+  }
+
+  bool _isStale(int requestGeneration) =>
+      _disposed || requestGeneration != _requestGeneration;
+
+  void _notifyIfAlive() {
+    if (!_disposed) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _requestGeneration++;
+    super.dispose();
   }
 
   static Ai01FailureKind _classifyFailure(Object error) {

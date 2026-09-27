@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
@@ -154,6 +157,126 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets(
+    'keeps local draft and actions through read failure, retry, and recovery',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      String? copiedText;
+      messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData') {
+          final arguments = call.arguments as Map<Object?, Object?>;
+          copiedText = arguments['text'] as String?;
+        }
+        return null;
+      });
+      addTearDown(
+        () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+      );
+
+      final initialRead = Completer<Ai01Snapshot>();
+      final retryRead = Completer<Ai01Snapshot>();
+      final repository = _ControlledAi01Repository([initialRead, retryRead]);
+      await tester.pumpWidget(_app(repository: repository));
+
+      expect(find.text('今天，想完成什么？'), findsOneWidget);
+      expect(find.text('正在读取 AI 服务状态'), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
+      _expectSubmitDisabled(tester);
+
+      await tester.enterText(find.byType(TextField), '本地草稿待续');
+      await tester.pump();
+      final controller = tester
+          .widget<TextField>(find.byType(TextField))
+          .controller!;
+      controller.selection = const TextSelection(
+        baseOffset: 1,
+        extentOffset: 4,
+      );
+      var editable = tester.widget<EditableText>(find.byType(EditableText));
+      editable.focusNode.requestFocus();
+      await tester.pump();
+
+      await tester.ensureVisible(find.text('复制草稿'));
+      await tester.tap(find.text('复制草稿'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.text('草稿已复制，可粘贴到你选择的位置。'), findsOneWidget);
+      expect(copiedText, '本地草稿待续');
+
+      final actionsFinder = find.byKey(const ValueKey('ai01-draft-actions'));
+      final actionsState = tester.state(actionsFinder);
+      controller.selection = const TextSelection(
+        baseOffset: 1,
+        extentOffset: 4,
+      );
+      editable = tester.widget<EditableText>(find.byType(EditableText));
+      editable.focusNode.requestFocus();
+      await tester.pump();
+
+      initialRead.completeError(Exception('Core unavailable'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('AI 服务暂时无法连接'), findsOneWidget);
+      expect(find.text('请检查网络连接后重试。'), findsOneWidget);
+      expect(find.text('你仍可在本机打开、编辑和复制任务草稿。'), findsOneWidget);
+      expect(find.text('草稿已复制，可粘贴到你选择的位置。'), findsOneWidget);
+      expect(find.text('查看风险变化'), findsNothing);
+      expect(find.text('近期分析记录'), findsNothing);
+      expect(tester.state(actionsFinder), same(actionsState));
+      expect(controller.text, '本地草稿待续');
+      expect(
+        controller.selection,
+        const TextSelection(baseOffset: 1, extentOffset: 4),
+      );
+      expect(editable.focusNode.hasFocus, isTrue);
+      _expectSubmitDisabled(tester);
+
+      await tester.ensureVisible(find.text('重新读取'));
+      await tester.tap(find.text('重新读取'));
+      await tester.pump();
+
+      expect(find.text('正在读取 AI 服务状态'), findsOneWidget);
+      expect(find.text('草稿已复制，可粘贴到你选择的位置。'), findsOneWidget);
+      expect(tester.state(actionsFinder), same(actionsState));
+      expect(controller.text, '本地草稿待续');
+      expect(
+        controller.selection,
+        const TextSelection(baseOffset: 1, extentOffset: 4),
+      );
+      _expectSubmitDisabled(tester);
+
+      editable = tester.widget<EditableText>(find.byType(EditableText));
+      editable.focusNode.requestFocus();
+      await tester.pump();
+      retryRead.complete(_readySnapshot());
+      await tester.pumpAndSettle();
+
+      editable = tester.widget<EditableText>(find.byType(EditableText));
+      expect(find.text('查看风险变化'), findsOneWidget);
+      expect(find.text('正在读取 AI 服务状态'), findsNothing);
+      expect(find.text('草稿已复制，可粘贴到你选择的位置。'), findsOneWidget);
+      expect(tester.state(actionsFinder), same(actionsState));
+      expect(controller.text, '本地草稿待续');
+      expect(
+        controller.selection,
+        const TextSelection(baseOffset: 1, extentOffset: 4),
+      );
+      expect(editable.focusNode.hasFocus, isTrue);
+      _expectSubmitDisabled(tester);
+      expect(tester.takeException(), isNull);
+    },
+  );
+}
+
+void _expectSubmitDisabled(WidgetTester tester) {
+  final submit = tester.widget<FilledButton>(
+    find.widgetWithText(FilledButton, '开始分析'),
+  );
+  expect(submit.onPressed, isNull);
 }
 
 Widget _app({
@@ -216,6 +339,30 @@ class _FakeAi01Repository implements Ai01Repository {
     );
   }
 }
+
+class _ControlledAi01Repository implements Ai01Repository {
+  _ControlledAi01Repository(this._responses);
+
+  final List<Completer<Ai01Snapshot>> _responses;
+  int _loadCount = 0;
+
+  @override
+  Future<Ai01Snapshot> load() => _responses[_loadCount++].future;
+}
+
+Ai01Snapshot _readySnapshot() => const Ai01Snapshot(
+  isBound: true,
+  generatedAt: '2026-09-27T10:00:00',
+  providers: [],
+  suggestions: [
+    Ai01Suggestion(
+      title: '查看风险变化',
+      description: '查看变化和来源',
+      intent: '检查风险变化并列出已有来源',
+    ),
+  ],
+  unavailableFields: [],
+);
 
 const _failureCases = <({String name, String error, String message})>[
   (

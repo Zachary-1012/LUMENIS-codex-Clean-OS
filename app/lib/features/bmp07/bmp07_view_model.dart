@@ -13,6 +13,7 @@ class Bmp07ViewModel extends ChangeNotifier {
   Bmp07ViewModel({required this._repository});
 
   final Bmp07Repository _repository;
+  bool _disposed = false;
   Bmp07LoadPhase _phase = Bmp07LoadPhase.loading;
   Bmp07FailureKind? _failureKind;
   Bmp07Snapshot? _snapshot;
@@ -26,19 +27,25 @@ class Bmp07ViewModel extends ChangeNotifier {
   String? get actionId => _actionId;
 
   Future<void> refresh() async {
+    if (_disposed) return;
     _phase = Bmp07LoadPhase.loading;
     _failureKind = null;
     _snapshot = null;
     _actionState = Bmp07ActionState.idle;
     _actionId = null;
     notifyListeners();
+    if (_disposed) return;
     try {
-      _snapshot = await _repository.load();
+      final snapshot = await _repository.load();
+      if (_disposed) return;
+      _snapshot = snapshot;
       _phase = Bmp07LoadPhase.ready;
     } catch (error) {
+      if (_disposed) return;
       _failureKind = _classify(error);
       _phase = Bmp07LoadPhase.failed;
     }
+    if (_disposed) return;
     notifyListeners();
   }
 
@@ -62,5 +69,11 @@ class Bmp07ViewModel extends ChangeNotifier {
       return Bmp07FailureKind.offline;
     }
     return Bmp07FailureKind.server;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

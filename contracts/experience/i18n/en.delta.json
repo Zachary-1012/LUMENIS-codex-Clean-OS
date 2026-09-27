@@ -652,6 +652,14 @@
   "appearance.uiFontSize": "Workspace base text size",
   "appearance.uiFontSizeValue": "{size} px",
   "appearance.uiFontSizePreview": "Appearance preview",
-  "appearance.uiFontSizeSample": "LUMENIS · text size sample"
+  "appearance.uiFontSizeSample": "LUMENIS · text size sample",
+  "ai01.local.available": "You can still open, edit, and copy a task draft on this device.",
+  "appearance.resetLocal": "Reset local appearance",
+  "appearance.resetLocalComplete": "Local appearance preferences were cleared. Defaults are active.",
+  "appearance.resetLocalFailed": "Local appearance preferences could not be fully cleared. Try again.",
+  "bmp02.filters.clear": "Clear filters",
+  "appearance.presets": "Preset wallpapers",
+  "appearance.preset.crimson": "Crimson sunset",
+  "appearance.preset.cobalt": "Cobalt dusk"
  }
 }

@@ -652,6 +652,14 @@
   "appearance.uiFontSize": "작업 공간 기본 글자 크기",
   "appearance.uiFontSizeValue": "{size} px",
   "appearance.uiFontSizePreview": "모양 미리보기",
-  "appearance.uiFontSizeSample": "LUMENIS · 글자 크기 예시"
+  "appearance.uiFontSizeSample": "LUMENIS · 글자 크기 예시",
+  "ai01.local.available": "이 기기에서 작업 초안을 열고 편집하고 복사할 수 있습니다.",
+  "appearance.resetLocal": "로컬 모양 초기화",
+  "appearance.resetLocalComplete": "로컬 모양 설정을 지웠습니다. 기본값이 적용되었습니다.",
+  "appearance.resetLocalFailed": "로컬 모양 설정을 모두 지우지 못했습니다. 다시 시도하세요.",
+  "bmp02.filters.clear": "필터 지우기",
+  "appearance.presets": "기본 배경화면",
+  "appearance.preset.crimson": "붉은 노을",
+  "appearance.preset.cobalt": "푸른 황혼"
  }
 }

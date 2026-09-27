@@ -33,6 +33,8 @@ flutter:
   assets:
     - assets/fonts/NotoSansSC-OFL.txt
     - assets/fonts/NotoSansKR-OFL.txt
+    - assets/wallpapers/crimson-sunset.jpg
+    - assets/wallpapers/cobalt-dusk.jpg
   fonts:
     - family: LumenisSansSC
       fonts:

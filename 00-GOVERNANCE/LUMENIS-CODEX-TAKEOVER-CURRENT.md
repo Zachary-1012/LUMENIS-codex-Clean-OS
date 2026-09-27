@@ -12,6 +12,27 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-27 — Wallpaper adaptation and local frontend continuity
+
+[Bounded Round 14 evidence](evidence/round-14/ROUND-14-WALLPAPER-AND-LOCAL-CONTINUITY-2026-09-27.md)
+and its adjacent JSON receipt accompany this source commit. SYS-05 bundles the
+Product Owner's two unchanged photographs and explicit corrupt-preference reset.
+The existing Theme computes wallpaper contrast protection for text, actions and
+status tones; light/dark colors switch atomically. AI-01 local drafting remains
+available during service-read failure and retry; the Shell preserves same-screen,
+same-scope State across window breakpoints. BMP-02 filter recovery, disposed-read
+guards and a bundled Web renderer are included through existing owners.
+
+The exact source candidate passed 233 affected Flutter tests, full app analysis
+and release Web build (all exit 0). Actual isolated Web checks covered original
+image bytes, minimum-opacity/zero-blur light/dark modes, page reopening, exact
+draft copy/download/reopen, offline/403 recovery, phone resizing and explicit
+local reset. These are bounded local LIVE_VERIFIED results, not business/AI task
+acceptance or a native-surface claim. ROUND 14 remains REWORK; USER_VERIFIED,
+RELEASED, COMMERCIAL_READY and full-universe readiness remain NO. All other
+protected local candidates retain their previous state.
+
+
 ### Global comparison entities — 2026-09-26
 
 The Product Owner corrected the fixed prelaunch CTH comparator to 罗湖深圳万象城 / Luohu Shenzhen MixC, distinct from 深圳万象天地. Guangzhou Taikoo Hui remains the deep reference; Nike and Le Labo are named BMP comparisons. The Global Universe contract now records these as controlled test identities alongside rotating random cross-region samples, not as the global inclusion rule or proof of data coverage. Their actual registry, Evidence, Permission, collection and Global → Focus → Clear results remain unverified; all three coverage dimensions and internal full-universe readiness remain NO/PARTIAL as currently recorded.

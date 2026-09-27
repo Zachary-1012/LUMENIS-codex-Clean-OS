@@ -5,7 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
-    show LogicalKeyboardKey, MethodCall, MethodChannel;
+    show LogicalKeyboardKey, MethodCall, MethodChannel, rootBundle;
 import 'package:flutter/semantics.dart' show SemanticsData, SemanticsNode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -19,6 +19,9 @@ const _fileSelectorChannel = MethodChannel('plugins.flutter.io/file_selector');
 class _DeviceStore extends Fake implements SharedPreferencesAsync {
   final values = <String, String>{};
   final state = _StoreState();
+  final removalFailures = <String, int>{};
+  Completer<void>? get nextRemovalGate => state.nextRemovalGate;
+  set nextRemovalGate(Completer<void>? value) => state.nextRemovalGate = value;
   bool get fail => state.fail;
   set fail(bool value) => state.fail = value;
   @override
@@ -34,6 +37,14 @@ class _DeviceStore extends Fake implements SharedPreferencesAsync {
 
   @override
   Future<void> remove(String key) async {
+    final gate = nextRemovalGate;
+    nextRemovalGate = null;
+    if (gate != null) await gate.future;
+    final failuresLeft = removalFailures[key] ?? 0;
+    if (failuresLeft > 0) {
+      removalFailures[key] = failuresLeft - 1;
+      throw StateError('Storage removal failed');
+    }
     values.remove(key);
   }
 }
@@ -41,6 +52,7 @@ class _DeviceStore extends Fake implements SharedPreferencesAsync {
 class _StoreState {
   bool fail = false;
   int writes = 0;
+  Completer<void>? nextRemovalGate;
 }
 
 class _WriteAttempt {
@@ -57,6 +69,10 @@ class _WriteAttempt {
 class _ControlledStore extends Fake implements SharedPreferencesAsync {
   final values = <String, String>{};
   final attempts = <_WriteAttempt>[];
+  final removals = <String>[];
+  final state = _StoreState();
+  Completer<void>? get nextRemovalGate => state.nextRemovalGate;
+  set nextRemovalGate(Completer<void>? value) => state.nextRemovalGate = value;
   final _attemptsChanged = StreamController<int>.broadcast(sync: true);
 
   @override
@@ -69,6 +85,15 @@ class _ControlledStore extends Fake implements SharedPreferencesAsync {
     _attemptsChanged.add(attempts.length);
     await attempt.completion.future;
     values[key] = value;
+  }
+
+  @override
+  Future<void> remove(String key) async {
+    removals.add(key);
+    final gate = nextRemovalGate;
+    nextRemovalGate = null;
+    if (gate != null) await gate.future;
+    values.remove(key);
   }
 
   Future<void> waitForAttempts(int count) async {
@@ -436,6 +461,279 @@ void main() {
       c.dispose();
     },
   );
+
+  testWidgets(
+    'restore failure stays recoverable through settings edits and partial reset failure',
+    (tester) async {
+      final storage = _DeviceStore()
+        ..state.writes = 1
+        ..values[Sys05AppearanceController.preferenceKey] = '{broken'
+        ..values[Sys05AppearanceController.wallpaperKey] = 'not-base64';
+      final controller = Sys05AppearanceController(storage: storage);
+      await controller.restore();
+      expect(controller.errorKey, 'appearance.restoreFailed');
+      expect(
+        storage.values.containsKey(Sys05AppearanceController.wallpaperKey),
+        isTrue,
+      );
+
+      await controller.update(blur: 30);
+      expect(controller.errorKey, 'appearance.restoreFailed');
+      expect(
+        storage.values.containsKey(Sys05AppearanceController.wallpaperKey),
+        isTrue,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          supportedLocales: LumenisLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            LumenisLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: Scaffold(body: Sys05AppearanceEditor(controller: controller)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final resetButton = find.byKey(const ValueKey('appearance/reset-local'));
+      expect(resetButton, findsOneWidget);
+
+      final removeGate = Completer<void>();
+      storage.nextRemovalGate = removeGate;
+      storage.removalFailures[Sys05AppearanceController.wallpaperKey] = 1;
+      await tester.ensureVisible(resetButton);
+      await tester.pumpAndSettle();
+      await tester.tap(resetButton);
+      await tester.pump();
+
+      expect(controller.resetting, isTrue);
+      expect(resetButton, findsOneWidget);
+      expect(tester.widget<TextButton>(resetButton).onPressed, isNull);
+      expect(
+        find.descendant(
+          of: resetButton,
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsOneWidget,
+      );
+      removeGate.complete();
+      await tester.pumpAndSettle();
+
+      expect(controller.errorKey, 'appearance.resetLocalFailed');
+      expect(
+        storage.values.containsKey(Sys05AppearanceController.preferenceKey),
+        isFalse,
+      );
+      expect(
+        storage.values.containsKey(Sys05AppearanceController.wallpaperKey),
+        isTrue,
+      );
+      expect(resetButton, findsOneWidget);
+
+      await tester.ensureVisible(resetButton);
+      await tester.pumpAndSettle();
+      await tester.tap(resetButton);
+      await tester.pumpAndSettle();
+      expect(controller.errorKey, isNull);
+      expect(controller.statusKey, 'appearance.resetLocalComplete');
+      expect(controller.mode, WorkspaceBackdrop.frosted);
+      expect(controller.blur, 24);
+      expect(
+        controller.uiFontSize,
+        Sys05AppearanceController.defaultUiFontSize,
+      );
+      expect(
+        storage.values.containsKey(Sys05AppearanceController.preferenceKey),
+        isFalse,
+      );
+      expect(
+        storage.values.containsKey(Sys05AppearanceController.wallpaperKey),
+        isFalse,
+      );
+      expect(resetButton, findsNothing);
+
+      final reopened = Sys05AppearanceController(storage: storage);
+      await reopened.restore();
+      expect(reopened.mode, WorkspaceBackdrop.frosted);
+      expect(reopened.blur, 24);
+      expect(reopened.wallpaper, isNull);
+      controller.dispose();
+      reopened.dispose();
+    },
+  );
+
+  test(
+    'local reset waits for pending preference writes before removing both keys',
+    () async {
+      final storage = _ControlledStore()
+        ..values[Sys05AppearanceController.wallpaperKey] = 'old-wallpaper';
+      final controller = Sys05AppearanceController(storage: storage);
+      await controller.restore();
+
+      final pendingUpdate = controller.update(mode: WorkspaceBackdrop.white);
+      await storage.waitForAttempts(1);
+      final reset = controller.resetLocalAppearance();
+      expect(controller.resetting, isTrue);
+      await controller.update(mode: WorkspaceBackdrop.black);
+      await Future<void>.delayed(Duration.zero);
+      expect(storage.removals, isEmpty);
+      expect(storage.attempts, hasLength(1));
+
+      storage.attempts.single.succeed();
+      await pendingUpdate;
+      expect(await reset, isTrue);
+      expect(storage.removals, [
+        Sys05AppearanceController.preferenceKey,
+        Sys05AppearanceController.wallpaperKey,
+      ]);
+      expect(storage.values, isEmpty);
+      expect(controller.mode, WorkspaceBackdrop.frosted);
+      expect(controller.resetting, isFalse);
+
+      final reopened = Sys05AppearanceController(storage: storage);
+      await reopened.restore();
+      expect(reopened.mode, WorkspaceBackdrop.frosted);
+      expect(reopened.wallpaper, isNull);
+      controller.dispose();
+      reopened.dispose();
+      await storage.dispose();
+    },
+  );
+
+  test('local reset waits for an in-flight wallpaper write', () async {
+    final bytes = await _validPngBytes();
+    final storage = _ControlledStore();
+    final controller = Sys05AppearanceController(storage: storage);
+    await controller.restore();
+
+    final settingWallpaper = controller.setWallpaper(bytes);
+    await storage.waitForAttempts(1);
+    expect(storage.attempts.single.key, Sys05AppearanceController.wallpaperKey);
+    final reset = controller.resetLocalAppearance();
+    await Future<void>.delayed(Duration.zero);
+    expect(storage.removals, isEmpty);
+
+    storage.attempts.single.succeed();
+    expect(await settingWallpaper, isFalse);
+    expect(await reset, isTrue);
+    expect(storage.removals, [
+      Sys05AppearanceController.preferenceKey,
+      Sys05AppearanceController.wallpaperKey,
+    ]);
+    expect(storage.values, isEmpty);
+    expect(storage.attempts, hasLength(1));
+    expect(controller.mode, WorkspaceBackdrop.frosted);
+    controller.dispose();
+    await storage.dispose();
+  });
+
+  test('local reset waits for an in-flight wallpaper removal', () async {
+    final storage = _ControlledStore()
+      ..values[Sys05AppearanceController.wallpaperKey] = 'old-wallpaper';
+    final controller = Sys05AppearanceController(storage: storage);
+    await controller.restore();
+    final removeGate = Completer<void>();
+    storage.nextRemovalGate = removeGate;
+
+    final removingWallpaper = controller.removeWallpaper();
+    await Future<void>.delayed(Duration.zero);
+    expect(storage.removals, [Sys05AppearanceController.wallpaperKey]);
+    final reset = controller.resetLocalAppearance();
+    await Future<void>.delayed(Duration.zero);
+    expect(storage.removals, [Sys05AppearanceController.wallpaperKey]);
+
+    removeGate.complete();
+    await removingWallpaper;
+    expect(await reset, isTrue);
+    expect(storage.removals, [
+      Sys05AppearanceController.wallpaperKey,
+      Sys05AppearanceController.preferenceKey,
+      Sys05AppearanceController.wallpaperKey,
+    ]);
+    expect(storage.values, isEmpty);
+    expect(storage.attempts, isEmpty);
+    controller.dispose();
+    await storage.dispose();
+  });
+
+  testWidgets(
+    'built-in wallpaper preset stores and restores the bundled bytes',
+    (tester) async {
+      final storage = _DeviceStore()..state.writes = 1;
+      late final Sys05AppearanceController controller;
+      await tester.runAsync(() async {
+        controller = Sys05AppearanceController(storage: storage);
+        await controller.restore();
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          supportedLocales: LumenisLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            LumenisLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: Scaffold(body: Sys05AppearanceEditor(controller: controller)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final expectedBytes = await tester.runAsync(() async {
+        final image = await rootBundle.load(
+          'assets/wallpapers/crimson-sunset.jpg',
+        );
+        return Uint8List.fromList(
+          image.buffer.asUint8List(image.offsetInBytes, image.lengthInBytes),
+        );
+      });
+      expect(expectedBytes, isNotNull);
+      final bytes = expectedBytes!;
+      final preset = find.byKey(
+        const ValueKey('appearance/preset/crimson-sunset'),
+      );
+      expect(preset, findsOneWidget);
+      await tester.runAsync(() async {
+        final wallpaperApplied = Completer<void>();
+        void onAppearanceChanged() {
+          if (controller.mode == WorkspaceBackdrop.wallpaper &&
+              controller.wallpaper != null &&
+              !controller.saving &&
+              !wallpaperApplied.isCompleted) {
+            wallpaperApplied.complete();
+          }
+        }
+
+        controller.addListener(onAppearanceChanged);
+        try {
+          await tester.tap(preset);
+          await wallpaperApplied.future.timeout(const Duration(seconds: 10));
+        } finally {
+          controller.removeListener(onAppearanceChanged);
+        }
+      });
+      await tester.pumpAndSettle();
+
+      expect(controller.mode, WorkspaceBackdrop.wallpaper);
+      expect(controller.wallpaper, orderedEquals(bytes));
+      expect(
+        storage.values[Sys05AppearanceController.wallpaperKey],
+        base64Encode(bytes),
+      );
+
+      late final Sys05AppearanceController reopened;
+      await tester.runAsync(() async {
+        reopened = Sys05AppearanceController(storage: storage);
+        await reopened.restore();
+      });
+      expect(reopened.mode, WorkspaceBackdrop.wallpaper);
+      expect(reopened.wallpaper, orderedEquals(bytes));
+      controller.dispose();
+      reopened.dispose();
+    },
+  );
 }
 
 // Flutter exposes the named parent and adjustable range as separate nodes.
@@ -460,4 +758,25 @@ SemanticsData _rangeSemantics(SemanticsNode root) {
     reason: 'The named control must expose an adjustable range.',
   );
   return range!;
+}
+
+Future<Uint8List> _validPngBytes() async {
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  canvas.drawRect(
+    const Rect.fromLTWH(0, 0, 8, 8),
+    Paint()..color = Colors.orange,
+  );
+  final picture = recorder.endRecording();
+  ui.Image? image;
+  try {
+    image = await picture.toImage(8, 8);
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    return Uint8List.fromList(
+      data!.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+    );
+  } finally {
+    image?.dispose();
+    picture.dispose();
+  }
 }

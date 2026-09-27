@@ -208,22 +208,32 @@ class _PortfolioView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final allBrands = viewModel.snapshot?.brands ?? const <Bmp02Brand>[];
     final brands = viewModel.filteredBrands;
     final selected = viewModel.selectedBrand;
-    final filterRoles = brands.map((brand) => brand.role).toSet().toList();
+    final filterRoles = allBrands.map((brand) => brand.role).toSet().toList();
+    final hasActiveFilters =
+        viewModel.query.trim().isNotEmpty || viewModel.roleFilter != null;
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _PortfolioControls(
           controller: queryController,
           roles: filterRoles,
-          brands: brands,
+          brands: allBrands,
           selectedRole: viewModel.roleFilter,
           onRoleChanged: viewModel.setRoleFilter,
         ),
         const SizedBox(height: 18),
         if (brands.isEmpty)
-          const _FilteredEmpty()
+          _FilteredEmpty(
+            onClear: hasActiveFilters
+                ? () {
+                    queryController.clear();
+                    viewModel.setRoleFilter(null);
+                  }
+                : null,
+          )
         else if (compact)
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -554,7 +564,9 @@ class _MetricLine extends StatelessWidget {
 }
 
 class _FilteredEmpty extends StatelessWidget {
-  const _FilteredEmpty();
+  const _FilteredEmpty({this.onClear});
+
+  final VoidCallback? onClear;
 
   @override
   Widget build(BuildContext context) {
@@ -575,6 +587,16 @@ class _FilteredEmpty extends StatelessWidget {
               context.lumenisL10n.text('state.empty_filter_d'),
               style: TextStyle(color: LumenisTheme.of(context).muted),
             ),
+            if (onClear != null) ...[
+              const SizedBox(height: 14),
+              TextButton.icon(
+                onPressed: onClear,
+                icon: const Icon(Icons.filter_alt_off_outlined),
+                label: Text(
+                  context.lumenisL10n.text('bmp02.filters.clear'),
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -14,6 +14,7 @@ class LumenisPalette extends ThemeExtension<LumenisPalette> {
     required this.accent,
     required this.accentStrong,
     required this.brightness,
+    this.contrastBackground,
   });
 
   final Color canvas;
@@ -27,6 +28,9 @@ class LumenisPalette extends ThemeExtension<LumenisPalette> {
   final Color accentStrong;
   final Brightness brightness;
 
+  /// Worst-case backdrop after wallpaper protection; null for other modes.
+  final Color? contrastBackground;
+
   Color get cth => _semantic(LumenisTheme.cth);
   Color get bmp => _semantic(LumenisTheme.bmp);
   Color get ai => _semantic(LumenisTheme.ai);
@@ -36,9 +40,31 @@ class LumenisPalette extends ThemeExtension<LumenisPalette> {
   Color get caution => _semantic(LumenisTheme.caution);
   Color get danger => _semantic(LumenisTheme.danger);
 
-  Color _semantic(Color source) => brightness == Brightness.dark
-      ? Color.lerp(source, const Color(0xFFFFFFFF), 0.35)!
-      : source;
+  Color _semantic(Color source) {
+    final color = brightness == Brightness.dark
+        ? Color.lerp(source, const Color(0xFFFFFFFF), 0.35)!
+        : source;
+    final background = contrastBackground;
+    if (background == null ||
+        LumenisTheme._contrast(color, background) >= 4.5) {
+      return color;
+    }
+    var lower = 0.0;
+    var upper = 1.0;
+    for (var step = 0; step < 16; step++) {
+      final middle = (lower + upper) / 2;
+      if (LumenisTheme._contrast(
+            Color.lerp(color, foreground, middle)!,
+            background,
+          ) >=
+          4.5) {
+        upper = middle;
+      } else {
+        lower = middle;
+      }
+    }
+    return Color.lerp(color, foreground, (upper + 1 / 255).clamp(0, 1))!;
+  }
 
   /// Resolves the legacy static destination color into this palette.
   Color resolveSemantic(Color source) {
@@ -65,6 +91,7 @@ class LumenisPalette extends ThemeExtension<LumenisPalette> {
     Color? accent,
     Color? accentStrong,
     Brightness? brightness,
+    Color? contrastBackground,
   }) => LumenisPalette(
     canvas: canvas ?? this.canvas,
     surface: surface ?? this.surface,
@@ -76,6 +103,7 @@ class LumenisPalette extends ThemeExtension<LumenisPalette> {
     accent: accent ?? this.accent,
     accentStrong: accentStrong ?? this.accentStrong,
     brightness: brightness ?? this.brightness,
+    contrastBackground: contrastBackground ?? this.contrastBackground,
   );
 
   @override
@@ -94,6 +122,11 @@ class LumenisPalette extends ThemeExtension<LumenisPalette> {
       accentStrong:
           Color.lerp(accentStrong, other.accentStrong, t) ?? accentStrong,
       brightness: t < 0.5 ? brightness : other.brightness,
+      contrastBackground: Color.lerp(
+        contrastBackground,
+        other.contrastBackground,
+        t,
+      ),
     );
   }
 }
@@ -111,6 +144,49 @@ abstract final class LumenisTheme {
   static const quiet = Color(0xFF6D6E73);
   static const accent = Color(0xFF242529);
   static const accentStrong = Color(0xFF121315);
+
+  /// The least neutral tint that keeps the current text roles readable over
+  /// any image pixel. Using the worst possible region avoids sampling misses
+  /// on small highlights, dark edges, resized images, and mixed exposures.
+  static Color wallpaperScrim(LumenisPalette palette) {
+    final dark = palette.brightness == Brightness.dark;
+    final tint = dark ? Colors.black : Colors.white;
+    final worstRegion = dark ? Colors.white : Colors.black;
+    bool readable(double opacity) {
+      final background = Color.alphaBlend(
+        tint.withValues(alpha: opacity),
+        worstRegion,
+      );
+      return [
+        palette.foreground,
+        palette.muted,
+        palette.quiet,
+        palette.accent,
+        palette.accentStrong,
+      ].every((ink) => _contrast(ink, background) >= 4.5);
+    }
+
+    var lower = 0.0;
+    var upper = 1.0;
+    for (var step = 0; step < 16; step++) {
+      final middle = (lower + upper) / 2;
+      if (readable(middle)) {
+        upper = middle;
+      } else {
+        lower = middle;
+      }
+    }
+    // Keep a one-channel rounding margin for the rasterized background.
+    return tint.withValues(alpha: (upper + 1 / 255).clamp(0, 1));
+  }
+
+  static double _contrast(Color ink, Color background) {
+    final text = Color.alphaBlend(ink, background).computeLuminance();
+    final paper = background.computeLuminance();
+    return text > paper
+        ? (text + .05) / (paper + .05)
+        : (paper + .05) / (text + .05);
+  }
 
   static const cth = Color(0xFF865523);
   static const bmp = Color(0xFF326D66);

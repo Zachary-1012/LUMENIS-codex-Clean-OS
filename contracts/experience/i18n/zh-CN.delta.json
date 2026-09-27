@@ -652,6 +652,14 @@
   "appearance.uiFontSize": "界面基础字号",
   "appearance.uiFontSizeValue": "{size} px",
   "appearance.uiFontSizePreview": "外观预览",
-  "appearance.uiFontSizeSample": "序境 LUMENIS · 字号示例"
+  "appearance.uiFontSizeSample": "序境 LUMENIS · 字号示例",
+  "ai01.local.available": "你仍可在本机打开、编辑和复制任务草稿。",
+  "appearance.resetLocal": "重置本机外观",
+  "appearance.resetLocalComplete": "已清除本机外观偏好，当前使用默认外观。",
+  "appearance.resetLocalFailed": "本机外观偏好未能全部清除，请重试。",
+  "bmp02.filters.clear": "清除筛选",
+  "appearance.presets": "预设壁纸",
+  "appearance.preset.crimson": "绯色晚霞",
+  "appearance.preset.cobalt": "蓝调暮空"
  }
 }

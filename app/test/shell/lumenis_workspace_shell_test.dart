@@ -8,6 +8,7 @@ import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/features/account/acc03/acc03_screen.dart';
 import 'package:lumenis_app/features/cth/cth01/cth01_screen.dart';
 import 'package:lumenis_app/features/ai04/ai04_screen.dart';
+import 'package:lumenis_app/features/ai01/ai01_screen.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import 'package:lumenis_app/navigation/lumenis_workspace_routes.dart';
 import 'package:lumenis_app/shell/lumenis_workspace_shell.dart';
@@ -98,6 +99,88 @@ void main() {
     expect(find.byType(NavigationDestination), findsNWidgets(5));
     expect(find.byTooltip('选择查看范围'), findsOneWidget);
     expect(find.text('全部可访问范围'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('AI-01 draft state survives desktop, tablet, phone and desktop', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final client = _ShellClient();
+
+    await tester.pumpWidget(_app(client, initialScreenId: 'AI-01'));
+    await tester.pumpAndSettle();
+
+    final screenState = tester.state(find.byType(Ai01Screen));
+    await tester.enterText(find.byType(TextField), '待续的 AI 任务草稿');
+    await tester.pump();
+    final controller = tester
+        .widget<TextField>(find.byType(TextField))
+        .controller!;
+
+    for (final size in const [
+      Size(1024, 900),
+      Size(390, 844),
+      Size(1440, 1000),
+    ]) {
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpAndSettle();
+
+      expect(tester.state(find.byType(Ai01Screen)), same(screenState));
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller,
+        same(controller),
+      );
+      expect(controller.text, '待续的 AI 任务草稿');
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('AI-01 screen and confirmed context changes rebind its state', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final client = _ShellClient();
+
+    await tester.pumpWidget(_app(client, initialScreenId: 'AI-01'));
+    await tester.pumpAndSettle();
+    final firstState = tester.state(find.byType(Ai01Screen));
+    await tester.enterText(find.byType(TextField), '离开页面即丢弃');
+    await tester.pump();
+
+    await tester.tap(find.text('能力与服务'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('workspace-nav-AI-04')));
+    await tester.pumpAndSettle();
+    expect(find.byType(Ai01Screen), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('workspace-nav-AI-01')));
+    await tester.pumpAndSettle();
+
+    final routeReturnedState = tester.state(find.byType(Ai01Screen));
+    expect(routeReturnedState, isNot(same(firstState)));
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      '',
+    );
+
+    await tester.enterText(find.byType(TextField), '范围变化即重建');
+    await tester.pump();
+    final beforeContextChange = tester.state(find.byType(Ai01Screen));
+    await tester.tap(find.byTooltip('选择查看范围'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.tap(find.text('示例商业主体'));
+    await tester.pumpAndSettle();
+
+    final afterContextChange = tester.state(find.byType(Ai01Screen));
+    expect(afterContextChange, isNot(same(beforeContextChange)));
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      '',
+    );
+    expect(client.envelope['context']['mode'], 'FOCUS');
     expect(tester.takeException(), isNull);
   });
 

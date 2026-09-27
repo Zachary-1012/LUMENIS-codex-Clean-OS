@@ -3,7 +3,7 @@
 ```yaml
 screen_id: SYS-05
 status: DESIGN_READY
-revision: 3
+revision: 5
 owner_domain: SYSTEM Settings
 binding_ids:
   - BACKEND-GAP-040 (read-only SYS-05 screen snapshot)
@@ -61,13 +61,15 @@ The editor presents six mutually exclusive backdrop modes. Their names and avail
 | Mode | Intended visible result | Current source behavior and constraint |
 | --- | --- | --- |
 | Frosted | Soft in-app optical field, with translucent surfaces | Draws the in-app optical field and applies the shared surface opacity. User can choose light/dark treatment, blur, and panel opacity. |
-| Wallpaper | User-selected local image with in-app blur and translucent surfaces | Accepts PNG, JPG/JPEG, or WebP. The editor checks a 3 MiB file limit; the controller checks non-empty bytes, the same byte limit, maximum 8192 px per edge and maximum 32 million pixels. Blur and panel opacity remain adjustable. |
+| Wallpaper | Built-in preset or user-selected local image with in-app blur and translucent surfaces | Built-in presets and user images share the same local `setWallpaper` path and wallpaper key. User images accept PNG, JPG/JPEG, or WebP. The editor checks a 3 MiB file limit; the controller checks non-empty bytes, the same byte limit, maximum 8192 px per edge and maximum 32 million pixels. Blur and panel opacity remain adjustable. |
 | Desktop material | Native host window material, where the adapter supports it | Current adapter reports support only for non-Web Windows and macOS. Windows calls `flutter_acrylic` acrylic; macOS calls `macos_window_utils` material/brightness APIs. Linux, mobile and Web report unsupported, and the mode control is disabled there. API completion cannot prove the OS rendered the requested effect. |
 | White | Opaque white workspace canvas | Uses the light semantic palette. |
 | Black | Opaque black workspace canvas | Uses the dark semantic palette. |
 | Solid color | One opaque user-selected color | Provides six presets and a six-hex-digit custom color field. Foreground roles switch to black/white based on color luminance. |
 
 Glass modes share `darkGlass`, blur (0–48), and panel opacity (.65–1.0); the desktop material mode omits the in-app blur slider. Compact density, reduced motion and a 13–18 px base UI text-size preference (default 14) are global controls in every mode. The text-size control includes a clearly labelled appearance sample, not sample business records. The App composes this factor with the operating system's text scaler, including nonlinear accessibility scaling. `reducedMotion` sets the theme transition duration to zero and combines with the operating system's `MediaQuery.disableAnimations` preference.
+
+Two built-in wallpaper choices, Crimson Sunset and Cobalt Dusk, remain visible in every backdrop mode between the mode chips and base-font controls. Their localized, keyboard-operable buttons load the original bundled asset bytes and pass them through the existing `setWallpaper` validation and local persistence path. They do not create a preset identifier, a second storage key, or a network request; the current image preview shows the selected bytes. A bundle-load failure preserves the current appearance and reports the existing wallpaper-choice error.
 
 Web cannot expose the operating-system desktop behind a browser. Web therefore uses the chosen local wallpaper with in-page frosting, or the in-app optical field, and does not offer the desktop material mode. A native material failure is surfaced as `appearance.nativeFailed`; the in-app optical field remains the visual fallback. Unsupported effects must never be described as active.
 
@@ -79,7 +81,7 @@ Appearance controls update the in-memory theme immediately and asynchronously wr
 | --- | --- | --- |
 | Initial restore | Keep the editor in a loading state until local preferences are read; then use the restored values. | The editor shows a progress indicator while `loaded` is false. App surfaces initially build from controller defaults while restore is pending; verify whether this is perceptible at runtime. |
 | Missing preferences | Use documented safe defaults. | Frosted, light glass, standard density, motion enabled, blur 24, opacity .9, UI base size 14 px, default solid color. |
-| Corrupt preference/image data or storage read failure | Use safe defaults, show a localized restore failure, and do not claim restoration succeeded. | `restore()` catches errors, resets controller fields, clears the in-memory wallpaper and sets `appearance.restoreFailed`. It does not delete the corrupt stored value, so the failure can recur on a later launch. |
+| Corrupt preference/image data or storage read failure | Use safe defaults and show a localized restore failure. Never delete local preferences automatically. Offer a user-triggered reset that clears only the appearance and wallpaper keys; report partial storage failure and keep the action available for retry. | `restore()` keeps the corrupt keys and sets `appearance.restoreFailed`. Ordinary appearance edits preserve the recovery action. The active editor offers `appearance.resetLocal`; reset waits for in-flight wallpaper operations and preference writes before attempting both key removals. Defaults become active only when both removals complete, and a partial failure remains visible as `appearance.resetLocalFailed` for retry. |
 | Wallpaper mode without a stored image | Do not imply that a wallpaper is active; offer file selection or fall back visibly to frosted mode. | Restore changes this mode to frosted. Selecting Wallpaper opens the image picker before changing mode; cancellation preserves the previous mode and image. The mode changes only after valid selected image bytes are accepted by the existing controller. Mode chips are disabled while picking. |
 | Invalid/oversized image or decode failure | Reject it, preserve the previously selected image, and show the localized validation error. | Controller returns `appearance.invalidImage`; size, dimensions and pixel area are bounded. |
 | File-picker failure/cancel | Cancel makes no change; a picker exception shows a localized failure. | Cancel returns without mutation; exceptions set the editor-local `appearance.chooseFailed`. |
@@ -93,6 +95,7 @@ Do not turn any local-storage failure into a successful server save. Do not send
 
 - Entry is a shell palette button, with a tooltip and semantic label. It opens one purpose-built appearance editor, not a generic settings dashboard.
 - The editor uses a scrollable, maximum-620-px sheet. On narrow screens the mode chips wrap; the wallpaper/color controls appear only for the selected mode; sliders and switches remain in the same task flow; the bottom sheet accounts for keyboard insets and safe areas. On wider surfaces it stays a focused preference sheet rather than adding a repeated card grid.
+- The two built-in wallpaper buttons sit immediately after the backdrop mode choices and wrap on narrow screens. Each includes a thumbnail, localized label, keyboard/touch activation and button semantics; the preset choices stay available even when the active mode is not Wallpaper.
 - The active workspace is the live preview: changing mode, compact density, motion, opacity or blur updates the current application theme/backdrop. The typography sample demonstrates actual body copy. Representative CTH/BMP workflow appearance is checked on the actual guarded screens; no fictitious business records are introduced into the preview.
 - A palette choice must preserve the caller's route, unsaved form text, selected entity, scroll position and other draft state. A bounded guarded-Web run preserved the dirty draft across the appearance change. Native desktop and broader route/scroll preservation remain unverified; repeat those checks before overall runtime acceptance. The mobile viewport check below covers the appearance editor layout, not every route's state.
 - Do not create a navigation reset, route replacement, keyed subtree, or account/server write to apply a local theme.
@@ -101,8 +104,10 @@ Do not turn any local-storage failure into a successful server save. Do not send
 
 - Mode chips expose selected state. Preset colors have semantic labels. The custom color text field is keyboard-editable and validates exactly six hexadecimal digits before applying. File selection, remove, controls and modal dismissal remain reachable by keyboard and touch.
 - Validation and persistence errors use a live-region semantic; use text alongside color for success, unavailable, saving and failure states.
-- All visible strings use the current zh-CN/en/ko localization keys. Locale choice remains with the shell locale switcher and is not written into the appearance preference record.
+- All visible strings use the current zh-CN/en/ko localization keys, including `appearance.resetLocal`, `appearance.resetLocalComplete`, and `appearance.resetLocalFailed`. Locale choice remains with the shell locale switcher and is not written into the appearance preference record.
 - Reduced motion applies immediately; preserve OS-level motion reduction even when the user has not enabled the app preference. Blur/image rendering cost and text contrast over wallpaper need real-device inspection at low-power and high-contrast conditions.
+- Wallpaper mode automatically computes the minimum light/dark protective scrim from the active text and primary-action colors, with a raster rounding margin. It uses the worst possible image region, rather than a photo-specific value or an average-color sample that could miss a highlight or dark edge. The existing Theme owner strengthens small secondary text and adjusts domain/status tones toward readable ink only as needed; normal text, text buttons and semantic status text must retain at least 4.5:1 contrast over white, black, saturated and mixed regions. AI-01's decorative glows yield to the selected wallpaper so they cannot repaint the protected backdrop. Mode selection and panel opacity remain local controls; source image bytes are unchanged.
+- Wallpaper theme colors and the protective backdrop switch together without interpolating through low-contrast middle colors. Other modes retain their existing theme motion; reduced-motion preference still applies.
 
 ## 7. Acceptance matrix — overall acceptance pending
 
@@ -110,6 +115,8 @@ Do not turn any local-storage failure into a successful server save. Do not send
 | --- | --- | --- |
 | SYS05-MODE-01 | All six modes report the active effect honestly; desktop material is disabled outside supported Windows/macOS hosts; Web uses only in-page materials. | Current source review plus Web, Windows and macOS runtime captures; actual OS render check for native material. |
 | SYS05-LOCAL-01 | Appearance and wallpaper restore from the correct local preference owner after restart without a server write or cross-device claim. | Isolated preference test plus app restart on Web and at least one native platform; verify browser origin/profile scope. |
+| SYS05-RESET-01 | After a corrupt restore, the user can explicitly remove only the two local appearance keys, return to defaults, and retry if either removal fails. | Controller and active-editor tests prove no automatic deletion, waiting for pending wallpaper and preference storage operations, truthful partial failure, retry, and successful default restoration. |
+| SYS05-PRESET-01 | A user can choose either bundled wallpaper preset from any backdrop mode; the original bytes use the existing local wallpaper owner and restore after reopening. | Active-editor asset-tap test verifies the bundled bytes reach the existing controller and reopen from local preferences; no separate preset state or server request is introduced. |
 | SYS05-FAIL-01 | Corrupt preferences, rejected images, browser quota/write failure, picker failure and native failure show their correct state and retain or fall back to valid prior appearance. | Existing targeted tests reviewed/run by owner plus controlled adapter failures and runtime recovery; include partial image/prefs write case. |
 | SYS05-DRAFT-01 | Changing appearance leaves the active route, dirty form draft, selection and scroll position intact and returns to that same work. | Real Web Workspace and native desktop E2E with a real screen and local unsaved draft. |
 | SYS05-A11Y-01 | Mode/color/file controls are keyboard/touch operable and announced; reduced motion and readable contrast hold across wallpaper and solid colors. | Keyboard and screen-reader check, reduced-motion run, contrast sampling on actual surfaces. |

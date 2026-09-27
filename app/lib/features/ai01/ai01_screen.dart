@@ -59,50 +59,51 @@ class _Ai01ScreenState extends State<Ai01Screen> {
       decoration: BoxDecoration(color: LumenisTheme.of(context).canvas),
       child: Stack(
         children: [
-          const IgnorePointer(
-            child: ExcludeSemantics(
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: -130,
-                    right: -100,
-                    child: _SoftGlow(
-                      size: 360,
-                      colors: [
-                        Color(0x1F8A6CC2),
-                        Color(0x0D7C9BD8),
-                        Colors.transparent,
-                      ],
+          if (LumenisTheme.of(context).contrastBackground == null)
+            const IgnorePointer(
+              child: ExcludeSemantics(
+                child: Stack(
+                  children: [
+                    Positioned(
+                      top: -130,
+                      right: -100,
+                      child: _SoftGlow(
+                        size: 360,
+                        colors: [
+                          Color(0x1F8A6CC2),
+                          Color(0x0D7C9BD8),
+                          Colors.transparent,
+                        ],
+                      ),
                     ),
-                  ),
-                  Positioned(
-                    top: 300,
-                    left: -170,
-                    child: _SoftGlow(
-                      size: 380,
-                      colors: [
-                        Color(0x15E9A16F),
-                        Color(0x08E9A16F),
-                        Colors.transparent,
-                      ],
+                    Positioned(
+                      top: 300,
+                      left: -170,
+                      child: _SoftGlow(
+                        size: 380,
+                        colors: [
+                          Color(0x15E9A16F),
+                          Color(0x08E9A16F),
+                          Colors.transparent,
+                        ],
+                      ),
                     ),
-                  ),
-                  Positioned(
-                    right: 20,
-                    bottom: -230,
-                    child: _SoftGlow(
-                      size: 420,
-                      colors: [
-                        Color(0x147B9BE0),
-                        Color(0x087B9BE0),
-                        Colors.transparent,
-                      ],
+                    Positioned(
+                      right: 20,
+                      bottom: -230,
+                      child: _SoftGlow(
+                        size: 420,
+                        colors: [
+                          Color(0x147B9BE0),
+                          Color(0x087B9BE0),
+                          Colors.transparent,
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
           SafeArea(
             child: AnimatedBuilder(
               animation: _viewModel,
@@ -115,17 +116,22 @@ class _Ai01ScreenState extends State<Ai01Screen> {
   }
 
   Widget _buildState(BuildContext context) {
-    return switch (_viewModel.phase) {
-      Ai01LoadPhase.loading => const _LoadingState(),
-      Ai01LoadPhase.failed => _FailureState(
-        kind: _viewModel.failureKind!,
-        onRetry: _viewModel.refresh,
-      ),
-      Ai01LoadPhase.ready => _buildWorkbench(_viewModel.snapshot!),
-    };
+    return _buildWorkbench(
+      context,
+      snapshot: _viewModel.snapshot,
+      phase: _viewModel.phase,
+      failureKind: _viewModel.failureKind,
+      onRetry: _viewModel.refresh,
+    );
   }
 
-  Widget _buildWorkbench(Ai01Snapshot snapshot) {
+  Widget _buildWorkbench(
+    BuildContext context, {
+    required Ai01Snapshot? snapshot,
+    required Ai01LoadPhase phase,
+    required Ai01FailureKind? failureKind,
+    required VoidCallback onRetry,
+  }) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -158,7 +164,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                             blockedReason: context.lumenisL10n.text(
                               'ai01.blocked_reason',
                             ),
-                            suggestions: snapshot.suggestions,
+                            suggestions: snapshot?.suggestions ?? const [],
                             onChooseSuggestion: _chooseSuggestion,
                             compact: false,
                           ),
@@ -166,10 +172,16 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                         const SizedBox(width: 18),
                         Expanded(
                           flex: 5,
-                          child: _EvidenceInspector(
-                            snapshot: snapshot,
-                            showRuntimeNotice: !snapshot.isBound,
-                          ),
+                          child: snapshot == null
+                              ? _ServiceReadStatus(
+                                  phase: phase,
+                                  failureKind: failureKind,
+                                  onRetry: onRetry,
+                                )
+                              : _EvidenceInspector(
+                                  snapshot: snapshot,
+                                  showRuntimeNotice: !snapshot.isBound,
+                                ),
                         ),
                       ],
                     )
@@ -180,11 +192,18 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                       blockedReason: context.lumenisL10n.text(
                         'ai01.blocked_reason',
                       ),
-                      suggestions: snapshot.suggestions,
+                      suggestions: snapshot?.suggestions ?? const [],
                       onChooseSuggestion: _chooseSuggestion,
                       compact: phone,
                     ),
-                    if (phone)
+                    if (snapshot == null) ...[
+                      SizedBox(height: phone ? 12 : 18),
+                      _ServiceReadStatus(
+                        phase: phase,
+                        failureKind: failureKind,
+                        onRetry: onRetry,
+                      ),
+                    ] else if (phone)
                       _MobileEvidenceSections(
                         snapshot: snapshot,
                         showRuntimeNotice: !snapshot.isBound,
@@ -571,7 +590,11 @@ class _ComposerPane extends StatelessWidget {
               ],
             ),
           const SizedBox(height: 10),
-          Ai01DraftActions(controller: controller, focusNode: focusNode),
+          Ai01DraftActions(
+            key: const ValueKey('ai01-draft-actions'),
+            controller: controller,
+            focusNode: focusNode,
+          ),
           const SizedBox(height: 8),
           Text(
             context.lumenisL10n.text('ai01.draft.notice'),
@@ -960,81 +983,103 @@ class _SoftGlow extends StatelessWidget {
   );
 }
 
-class _LoadingState extends StatelessWidget {
-  const _LoadingState();
+class _ServiceReadStatus extends StatelessWidget {
+  const _ServiceReadStatus({
+    required this.phase,
+    required this.failureKind,
+    required this.onRetry,
+  });
 
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(color: LumenisTheme.of(context).ai),
-            SizedBox(height: 14),
-            Text(
-              context.lumenisL10n.text('ai01.loading'),
-              style: TextStyle(color: LumenisTheme.of(context).muted),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FailureState extends StatelessWidget {
-  const _FailureState({required this.kind, required this.onRetry});
-
-  final Ai01FailureKind kind;
+  final Ai01LoadPhase phase;
+  final Ai01FailureKind? failureKind;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     final copy = context.lumenisL10n;
-    final title = switch (kind) {
+    final failed = phase == Ai01LoadPhase.failed && failureKind != null;
+    final title = switch (failed ? failureKind : null) {
       Ai01FailureKind.authentication => copy.text('ai01.failure.auth.title'),
       Ai01FailureKind.permissionDenied => copy.text(
         'ai01.failure.permission.title',
       ),
       Ai01FailureKind.offline => copy.text('ai01.failure.offline.title'),
       Ai01FailureKind.server => copy.text('ai01.failure.server.title'),
+      _ => copy.text('ai01.loading'),
     };
-    final explanation = switch (kind) {
+    final explanation = switch (failed ? failureKind : null) {
       Ai01FailureKind.authentication => copy.text('ai01.failure.auth.detail'),
       Ai01FailureKind.permissionDenied => copy.text(
         'ai01.failure.permission.detail',
       ),
       Ai01FailureKind.offline => copy.text('ai01.failure.offline.detail'),
       Ai01FailureKind.server => copy.text('ai01.failure.server.detail'),
+      _ => null,
     };
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: _SurfacePanel(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+    return _SurfacePanel(
+      padding: const EdgeInsets.all(14),
+      child: Semantics(
+        container: true,
+        liveRegion: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 8),
-                Text(
-                  explanation,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 14),
-                FilledButton.icon(
-                  onPressed: onRetry,
-                  icon: const Icon(Icons.refresh),
-                  label: Text(copy.text('ai01.retry')),
+                if (!failed)
+                  SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: LumenisTheme.of(context).ai,
+                    ),
+                  )
+                else
+                  Icon(
+                    Icons.info_outline,
+                    size: 18,
+                    color: LumenisTheme.of(context).caution,
+                  ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      if (explanation != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          explanation,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: LumenisTheme.of(context).muted),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 8),
+            Text(
+              copy.text('ai01.local.available'),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: LumenisTheme.of(context).muted,
+              ),
+            ),
+            if (failed) ...[
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: Text(copy.text('ai01.retry')),
+              ),
+            ],
+          ],
         ),
       ),
     );

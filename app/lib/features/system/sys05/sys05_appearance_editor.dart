@@ -1,5 +1,6 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 import '../../../l10n/lumenis_localizations.dart';
 import '../../../platform/lumenis_window_material.dart';
@@ -72,6 +73,7 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
   }
 
   Future<void> _chooseWallpaper() async {
+    if (_choosing || widget.controller.resetting) return;
     setState(() {
       _choosing = true;
       _localError = null;
@@ -93,6 +95,26 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
         return;
       }
       await widget.controller.setWallpaper(await file.readAsBytes());
+    } catch (_) {
+      if (mounted) setState(() => _localError = 'appearance.chooseFailed');
+    } finally {
+      if (mounted) setState(() => _choosing = false);
+    }
+  }
+
+  Future<void> _choosePresetWallpaper(String assetPath) async {
+    if (_choosing || widget.controller.resetting) return;
+    setState(() {
+      _choosing = true;
+      _localError = null;
+    });
+    try {
+      final image = await rootBundle.load(assetPath);
+      final bytes = image.buffer.asUint8List(
+        image.offsetInBytes,
+        image.lengthInBytes,
+      );
+      await widget.controller.setWallpaper(bytes);
     } catch (_) {
       if (mounted) setState(() => _localError = 'appearance.chooseFailed');
     } finally {
@@ -175,6 +197,7 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                       }, size: 18),
                       onSelected:
                           _choosing ||
+                              c.resetting ||
                               (mode == WorkspaceBackdrop.desktop &&
                                   !LumenisWindowMaterial.supported)
                           ? null
@@ -192,6 +215,66 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
+            const SizedBox(height: 20),
+            Text(
+              copy('appearance.presets'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final (id, assetPath, labelKey) in const [
+                  (
+                    'crimson-sunset',
+                    'assets/wallpapers/crimson-sunset.jpg',
+                    'appearance.preset.crimson',
+                  ),
+                  (
+                    'cobalt-dusk',
+                    'assets/wallpapers/cobalt-dusk.jpg',
+                    'appearance.preset.cobalt',
+                  ),
+                ])
+                  OutlinedButton(
+                    key: ValueKey('appearance/preset/$id'),
+                    onPressed: _choosing || c.resetting
+                        ? null
+                        : () => _choosePresetWallpaper(assetPath),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.all(8),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.asset(
+                            assetPath,
+                            width: 100,
+                            height: 56,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                SizedBox(
+                                  width: 100,
+                                  height: 56,
+                                  child: Icon(
+                                    Icons.image_not_supported_outlined,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(copy(labelKey)),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 20),
             Row(
               children: [
@@ -223,7 +306,9 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                   'appearance.uiFontSizeValue',
                   values: {'size': value.round()},
                 ),
-                onChanged: (value) => c.update(uiFontSize: value),
+                onChanged: c.resetting
+                    ? null
+                    : (value) => c.update(uiFontSize: value),
               ),
             ),
             Container(
@@ -269,13 +354,15 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                 spacing: 8,
                 children: [
                   FilledButton.icon(
-                    onPressed: _choosing ? null : _chooseWallpaper,
+                    onPressed: _choosing || c.resetting
+                        ? null
+                        : _chooseWallpaper,
                     icon: const Icon(Icons.add_photo_alternate_outlined),
                     label: Text(copy('appearance.chooseWallpaper')),
                   ),
                   if (c.wallpaper != null)
                     TextButton(
-                      onPressed: c.removeWallpaper,
+                      onPressed: c.resetting ? null : c.removeWallpaper,
                       child: Text(copy('appearance.removeWallpaper')),
                     ),
                 ],
@@ -303,14 +390,16 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                           '#${color.toARGB32().toRadixString(16).substring(2)}',
                       button: true,
                       child: InkWell(
-                        onTap: () {
-                          _hex.text = color
-                              .toARGB32()
-                              .toRadixString(16)
-                              .substring(2)
-                              .toUpperCase();
-                          c.update(solidColor: color);
-                        },
+                        onTap: c.resetting
+                            ? null
+                            : () {
+                                _hex.text = color
+                                    .toARGB32()
+                                    .toRadixString(16)
+                                    .substring(2)
+                                    .toUpperCase();
+                                c.update(solidColor: color);
+                              },
                         borderRadius: BorderRadius.circular(24),
                         child: Container(
                           width: 46,
@@ -329,6 +418,7 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
               TextField(
                 key: const ValueKey('appearance/hex'),
                 controller: _hex,
+                enabled: !c.resetting,
                 maxLength: 6,
                 decoration: InputDecoration(
                   labelText: copy('appearance.hex'),
@@ -336,17 +426,23 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                   suffixIcon: IconButton(
                     tooltip: copy('appearance.applyColor'),
                     icon: const Icon(Icons.check),
-                    onPressed: () {
-                      final value = _hex.text.trim();
-                      if (!RegExp(r'^[a-fA-F0-9]{6}$').hasMatch(value)) {
-                        setState(() => _localError = 'appearance.invalidColor');
-                        return;
-                      }
-                      setState(() => _localError = null);
-                      c.update(
-                        solidColor: Color(int.parse('FF$value', radix: 16)),
-                      );
-                    },
+                    onPressed: c.resetting
+                        ? null
+                        : () {
+                            final value = _hex.text.trim();
+                            if (!RegExp(r'^[a-fA-F0-9]{6}$').hasMatch(value)) {
+                              setState(
+                                () => _localError = 'appearance.invalidColor',
+                              );
+                              return;
+                            }
+                            setState(() => _localError = null);
+                            c.update(
+                              solidColor: Color(
+                                int.parse('FF$value', radix: 16),
+                              ),
+                            );
+                          },
                   ),
                 ),
               ),
@@ -356,7 +452,9 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                 contentPadding: EdgeInsets.zero,
                 title: Text(copy('appearance.darkGlass')),
                 value: c.darkGlass,
-                onChanged: (value) => c.update(darkGlass: value),
+                onChanged: c.resetting
+                    ? null
+                    : (value) => c.update(darkGlass: value),
               ),
               if (c.mode != WorkspaceBackdrop.desktop) ...[
                 Text(copy('appearance.blur')),
@@ -369,7 +467,9 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                     divisions: 24,
                     label: '${c.blur.round()} px',
                     semanticFormatterCallback: (value) => '${value.round()} px',
-                    onChanged: (value) => c.update(blur: value),
+                    onChanged: c.resetting
+                        ? null
+                        : (value) => c.update(blur: value),
                   ),
                 ),
               ],
@@ -385,7 +485,9 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                   label: '${(c.panelOpacity * 100).round()}%',
                   semanticFormatterCallback: (value) =>
                       '${(value * 100).round()}%',
-                  onChanged: (value) => c.update(panelOpacity: value),
+                  onChanged: c.resetting
+                      ? null
+                      : (value) => c.update(panelOpacity: value),
                 ),
               ),
             ],
@@ -393,19 +495,58 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
               contentPadding: EdgeInsets.zero,
               title: Text(copy('appearance.compact')),
               value: c.compact,
-              onChanged: (value) => c.update(compact: value),
+              onChanged: c.resetting
+                  ? null
+                  : (value) => c.update(compact: value),
             ),
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
               title: Text(copy('appearance.reduceMotion')),
               value: c.reducedMotion,
-              onChanged: (value) => c.update(reducedMotion: value),
+              onChanged: c.resetting
+                  ? null
+                  : (value) => c.update(reducedMotion: value),
             ),
             if (error != null) ...[
               const SizedBox(height: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      copy(error),
+                      style: TextStyle(color: scheme.error),
+                    ),
+                  ),
+                  if (c.errorKey == 'appearance.restoreFailed' ||
+                      c.errorKey == 'appearance.resetLocalFailed')
+                    TextButton.icon(
+                      key: const ValueKey('appearance/reset-local'),
+                      onPressed: c.resetting || _choosing
+                          ? null
+                          : () async {
+                              await c.resetLocalAppearance();
+                            },
+                      icon: c.resetting
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.restart_alt_rounded),
+                      label: Text(copy('appearance.resetLocal')),
+                    ),
+                ],
+              ),
+            ],
+            if (c.statusKey != null) ...[
+              const SizedBox(height: 8),
               Semantics(
                 liveRegion: true,
-                child: Text(copy(error), style: TextStyle(color: scheme.error)),
+                child: Text(
+                  copy(c.statusKey!),
+                  style: TextStyle(color: scheme.primary),
+                ),
               ),
             ],
             const SizedBox(height: 12),

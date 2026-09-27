@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
+import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/features/ai01/ai01_screen.dart';
 import 'package:lumenis_app/features/system/sys05/sys05_appearance_controller.dart';
 import 'package:lumenis_app/navigation/lumenis_workspace_routes.dart';
@@ -16,6 +17,74 @@ void main() {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
   });
+
+  testWidgets(
+    'wallpaper text stays readable over light and dark image regions',
+    (tester) async {
+      await _openAi01(tester);
+      final appearance = Sys05AppearanceScope.maybeOf(
+        tester.element(find.byType(Ai01Screen)),
+      )!;
+      for (final dark in [false, true]) {
+        await appearance.update(
+          mode: WorkspaceBackdrop.wallpaper,
+          darkGlass: dark,
+        );
+        await tester.pump();
+        // Inspect where a normal theme transition would still interpolate;
+        // wallpaper text and its protective backdrop must switch together.
+        await tester.pump(const Duration(milliseconds: 80));
+        final palette = LumenisTheme.of(
+          tester.element(find.byType(Ai01Screen)),
+        );
+        final scrim = tester
+            .widget<ColoredBox>(
+              find.byKey(const ValueKey('workspace/backdrop-scrim')),
+            )
+            .color;
+        expect(
+          scrim.a,
+          lessThan(.75),
+          reason: 'Retain visible wallpaper color.',
+        );
+        for (final region in [
+          Colors.white,
+          Colors.black,
+          const Color(0xFFFF0000),
+          const Color(0xFF00FF00),
+          const Color(0xFF0000FF),
+          const Color(0xFFFF00FF),
+          const Color(0xFFFFFF00),
+          const Color(0xFF00FFFF),
+          const Color(0xFF808080),
+        ]) {
+          final background = Color.alphaBlend(scrim, region);
+          for (final ink in [
+            palette.foreground,
+            palette.muted,
+            palette.quiet,
+            palette.accent,
+            palette.accentStrong,
+            palette.cth,
+            palette.bmp,
+            palette.ai,
+            palette.shared,
+            palette.system,
+            palette.positive,
+            palette.caution,
+            palette.danger,
+          ]) {
+            final text = Color.alphaBlend(ink, background).computeLuminance();
+            final paper = background.computeLuminance();
+            final contrast = text > paper
+                ? (text + .05) / (paper + .05)
+                : (paper + .05) / (text + .05);
+            expect(contrast, greaterThanOrEqualTo(4.5));
+          }
+        }
+      }
+    },
+  );
 
   testWidgets('AI-01 draft survives opening and dismissing appearance', (
     tester,

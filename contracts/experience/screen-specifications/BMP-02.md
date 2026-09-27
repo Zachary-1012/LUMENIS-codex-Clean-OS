@@ -49,6 +49,8 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 | P1 | Selected entity profile | BMP canonical owner + Shared Evidence | Same entity row plus optional typed metrics, category, capture time and window | Each value remains source-backed and scope-matched | Null stays unavailable; no missing→0 conversion | BACKEND-GAP-019 | `Bmp02Brand` parser and dossier are bounded to verified rows |
 | P2 | Search and role filter | App presentation state | `Bmp02ViewModel` local filters | No server mutation | Empty filter state keeps the focus banner and offers clear filter | BMP02-UI-LOCAL | `bmp02_view_model.dart` |
 
+Local filter recovery semantics: role options come from the complete verified in-memory portfolio; the highlighted row always matches the visible dossier; filtering may temporarily show a fallback without replacing the user's explicit selection; and the filtered-empty state offers one action that clears the query and role filter locally.
+
 The current backend builder is intentionally treated as unscoped. A successful HTTP response or a curated brand directory does not satisfy this table.
 
 ## 4. State and recovery matrix

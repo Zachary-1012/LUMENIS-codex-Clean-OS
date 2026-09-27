@@ -157,6 +157,9 @@ class LumenisWorkspaceShell extends StatefulWidget {
 class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     with RestorationMixin {
   final RestorableString _activeScreen = RestorableString('CTH-01');
+  final GlobalKey _screenHostKey = GlobalKey(
+    debugLabel: 'workspace-screen-host',
+  );
   Map<String, dynamic>? _contextEnvelope;
   Map<String, dynamic>? _unavailableContextEnvelope;
   bool _hasConfirmedFocusRecoveryHint = false;
@@ -350,6 +353,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
         : const Duration(milliseconds: 180);
 
     return AnimatedSwitcher(
+      key: _screenHostKey,
       duration: duration,
       reverseDuration: duration,
       switchInCurve: Curves.easeOutCubic,

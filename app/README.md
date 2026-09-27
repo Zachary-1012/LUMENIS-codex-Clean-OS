@@ -53,7 +53,12 @@ The App consumes LUMENIS Product Core. It must not create a second Evidence, Can
 
 ## Web Workspace build and host contract
 
-Build the same Flutter product target with `flutter build web --release`. The
+Build the same Flutter product target with
+`flutter build web --release --no-web-resources-cdn`. The source-owned bootstrap
+also resolves CanvasKit from the document base URL, so deep links use the bundled
+renderer without requiring access to Google's CDN. Deploy the complete
+`build/web/` directory, including `canvaskit/`; this does not make backend reads
+or AI execution available offline. The
 canonical Flask adapter in `lumenis/system/runtime/workspace_host.py` serves the
 generated artifact and rewrites extensionless `/workspace/*` document requests
 to `index.html`. Missing asset files remain 404; missing builds remain

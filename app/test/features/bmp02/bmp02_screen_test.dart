@@ -200,6 +200,91 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('portfolio filters keep roles, selection, and a clear path', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _app(
+        _FakeRepository(
+          _response(
+            brands: [
+              _brand('BRAND-ONE', 'Primary'),
+              _brand(
+                'BRAND-COMP',
+                'Competitor',
+                role: 'competitor',
+                roleLabel: {
+                  'zh-CN': '竞品',
+                  'en': 'Competitor',
+                  'ko': '경쟁 브랜드',
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final competitorTile = find.byKey(
+      const Key('bmp02-brand-BRAND-COMP-ENTITY'),
+    );
+    await tester.ensureVisible(competitorTile);
+    await tester.tap(competitorTile);
+    await tester.pumpAndSettle();
+
+    final ownedRole = find.widgetWithText(FilterChip, '自有品牌');
+    await tester.ensureVisible(ownedRole);
+    await tester.tap(ownedRole);
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(FilterChip, '竞品'), findsOneWidget);
+    expect(competitorTile, findsNothing);
+    final primaryTile = find.byKey(const Key('bmp02-brand-BRAND-ONE-ENTITY'));
+    expect(primaryTile, findsOneWidget);
+    expect(
+      find.ancestor(
+        of: primaryTile,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics && widget.properties.selected == true,
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Primary'), findsWidgets);
+
+    await tester.enterText(find.byType(TextField), 'no matching brand');
+    await tester.pumpAndSettle();
+    expect(primaryTile, findsNothing);
+    expect(find.text('Primary'), findsNothing);
+    final clearFilters = find.text('清除筛选');
+    expect(clearFilters, findsOneWidget);
+    await tester.ensureVisible(clearFilters);
+
+    await tester.tap(clearFilters);
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(FilterChip, '自有品牌'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, '竞品'), findsOneWidget);
+    expect(competitorTile, findsOneWidget);
+    expect(
+      find.ancestor(
+        of: competitorTile,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics && widget.properties.selected == true,
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Competitor'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
   test('not collected remains distinct from an empty ready response', () {
     final notCollected = Bmp02Snapshot.fromResponse(
       _response(dataState: 'NOT_COLLECTED', brands: []),

@@ -14,6 +14,8 @@ class Sh01ViewModel extends ChangeNotifier {
   Sh01Catalog? _catalog;
   Sh01Capability? _selected;
   String? _error;
+  bool _disposed = false;
+  int _refreshGeneration = 0;
 
   Sh01LoadPhase get phase => _phase;
   Sh01Catalog? get catalog => _catalog;
@@ -21,16 +23,22 @@ class Sh01ViewModel extends ChangeNotifier {
   String? get error => _error;
 
   Future<void> refresh() async {
+    if (_disposed) return;
+    final generation = ++_refreshGeneration;
     _phase = Sh01LoadPhase.loading;
     _catalog = null;
     _selected = null;
     _error = null;
     notifyListeners();
+    if (_disposed || generation != _refreshGeneration) return;
     try {
-      _catalog = await _repository.loadCatalog();
+      final catalog = await _repository.loadCatalog();
+      if (_disposed || generation != _refreshGeneration) return;
+      _catalog = catalog;
       _selected = null;
       _phase = Sh01LoadPhase.ready;
     } catch (error) {
+      if (_disposed || generation != _refreshGeneration) return;
       _error = _message(error);
       _phase = Sh01LoadPhase.failed;
     }
@@ -38,8 +46,16 @@ class Sh01ViewModel extends ChangeNotifier {
   }
 
   void select(Sh01Capability capability) {
+    if (_disposed) return;
     _selected = capability;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _refreshGeneration++;
+    super.dispose();
   }
 
   static String _message(Object error) {

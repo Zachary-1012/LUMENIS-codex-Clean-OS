@@ -74,15 +74,19 @@ class _LumenisAppState extends State<LumenisApp> {
     final base = _appearance.isDark
         ? LumenisTheme.darkPalette
         : LumenisTheme.lightPalette;
-    final palette = base.copyWith(
+    final usesWallpaper = _appearance.mode == WorkspaceBackdrop.wallpaper;
+    var palette = base.copyWith(
       foreground: _appearance.mode == WorkspaceBackdrop.solid
           ? (_appearance.isDark ? Colors.white : Colors.black)
           : base.foreground,
-      muted: _appearance.mode == WorkspaceBackdrop.solid
+      muted: usesWallpaper
+          ? base.foreground
+          : _appearance.mode == WorkspaceBackdrop.solid
           ? (_appearance.isDark ? Colors.white : Colors.black).withValues(
               alpha: .85,
             )
           : base.muted,
+      quiet: usesWallpaper ? base.foreground : base.quiet,
       canvas: _appearance.isGlass
           ? Colors.transparent
           : _appearance.backgroundColor,
@@ -93,6 +97,14 @@ class _LumenisAppState extends State<LumenisApp> {
         alpha: _appearance.isGlass ? _appearance.panelOpacity : 1,
       ),
     );
+    if (usesWallpaper) {
+      palette = palette.copyWith(
+        contrastBackground: Color.alphaBlend(
+          LumenisTheme.wallpaperScrim(palette),
+          palette.brightness == Brightness.dark ? Colors.white : Colors.black,
+        ),
+      );
+    }
     return MaterialApp.router(
       title: '序境 · LUMENIS',
       locale: _locale,
@@ -110,7 +122,7 @@ class _LumenisAppState extends State<LumenisApp> {
             ? VisualDensity.compact
             : VisualDensity.standard,
       ),
-      themeAnimationDuration: _appearance.reducedMotion
+      themeAnimationDuration: _appearance.reducedMotion || usesWallpaper
           ? Duration.zero
           : const Duration(milliseconds: 160),
       builder: (context, child) {
@@ -231,9 +243,12 @@ class _WorkspaceBackdrop extends StatelessWidget {
               ),
             ),
           ColoredBox(
-            color: (appearance.isDark ? Colors.black : Colors.white).withValues(
-              alpha: .18,
-            ),
+            key: const ValueKey('workspace/backdrop-scrim'),
+            color: appearance.mode == WorkspaceBackdrop.wallpaper
+                ? LumenisTheme.wallpaperScrim(LumenisTheme.of(context))
+                : (appearance.isDark ? Colors.black : Colors.white).withValues(
+                    alpha: .18,
+                  ),
           ),
         ],
       ),

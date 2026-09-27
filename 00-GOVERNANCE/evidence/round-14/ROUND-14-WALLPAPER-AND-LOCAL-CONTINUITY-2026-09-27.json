@@ -1,0 +1,214 @@
+{
+  "base_commit": "801adbf8cb0cd96312bd2bdc2b722cfc3fb53b39",
+  "date": "2026-09-27",
+  "scope": "Local wallpaper, local draft/recovery, responsive continuity; not a full Round acceptance",
+  "tested_working_file_sha256": {
+    "app/README.md": "8b60965855c7d95247895834085316fc99faf31d04ee074d22126cd87264c2b5",
+    "app/assets/wallpapers/README.md": "5e54ee48226d4266e6da09a28a714add0c9223aa1772078101a6688be5637153",
+    "app/assets/wallpapers/cobalt-dusk.jpg": "f50de0951c1a106b139dc606d13626748c8fbcc18ebedcfc4353eeab4c45c587",
+    "app/assets/wallpapers/crimson-sunset.jpg": "dbd5e3375d13ea0faedc97ae0312ac4c3294a2577a01afbed27063d8251ab8f1",
+    "app/lib/features/ai01/ai01_screen.dart": "22314ffe9016b18d4da5cc6be632810133e81c9edd35915f2bc44e63d3143cbd",
+    "app/lib/features/ai01/ai01_view_model.dart": "0c3a21856550ad26d9d09f3a6fd4b9ed8faac3da6601b080c10aa68bcc25593f",
+    "app/lib/features/bmp01/bmp01_view_model.dart": "bd4e7e6b046e380482a3b57e4853f130facc8d84a79ea2cf326a14a80c5667bf",
+    "app/lib/features/bmp02/bmp02_screen.dart": "5c413e86b8e3fc8a4904bb835efb4d775ea7d96ed40eb975caae2d769c32fd47",
+    "app/lib/features/bmp02/bmp02_view_model.dart": "29534621fa595f0503fb10c6b607ef51cf8983a6df9cbc2431c71e32f7091f95",
+    "app/lib/features/bmp03/bmp03_view_model.dart": "2693d08af24316061b6f6fb237319cd1dce067aa78af88dc01e6e86c04d253f1",
+    "app/lib/features/bmp04/bmp04_view_model.dart": "1a2303382b25760eebb90264cc241adcd486ff1ceb0dfcf0060da89996b7134d",
+    "app/lib/features/bmp05/bmp05_view_model.dart": "141e36098557256c8ce5d295ec3b83bafdf243616d611326b251b749a62ec12a",
+    "app/lib/features/bmp06/bmp06_view_model.dart": "980bca1ea08aab7559f7211b731a237e364fef8be6a54d05f38d1db658bc953d",
+    "app/lib/features/bmp07/bmp07_view_model.dart": "f7be51dac54ba2885c4c570f6c9d17a9d22b43af6ee5e95554acbc48e86795ee",
+    "app/lib/features/bmp08/bmp08_view_model.dart": "e2db834a8f1c635a408b77722cf16e99b4cc89c292138b17154428afa31ff516",
+    "app/lib/features/bmp09/bmp09_view_model.dart": "4288f11fa0d641b8ec456ab3d096cd72cad8d1c5afcc02231078d3765c312fc5",
+    "app/lib/features/bmp10/bmp10_view_model.dart": "1ed32316b0a1334a5cbb1286ddb04e337626ccc139a16f9c2cb6eeb10d91e091",
+    "app/lib/features/bmp11/bmp11_view_model.dart": "eb7a11288c8a84fefc0fa6dc9c926238f933f803b856eb2809739ab7c1e1957d",
+    "app/lib/features/shared/sh01/sh01_view_model.dart": "05993a2029ac77889547b74d9e2f04447215a0b6432e50969eef50c400440444",
+    "app/lib/features/system/sys05/sys05_appearance_controller.dart": "25f09dbc32570e5e70a4527838b756f2fdf81a8ddfbe640be771ae9ca26e5ac0",
+    "app/lib/features/system/sys05/sys05_appearance_editor.dart": "55e0b5db0de00ea1b58aa85fb7cbd2423bcaabe24748d8493c3f0d1764fcaca4",
+    "app/lib/l10n/lumenis_copy.g.dart": "10817992c408f3ce82d124971e08bc1dfb457817164f39ca1bc30362c9817d1f",
+    "app/pubspec.yaml": "1666ce84e4ee6fc18d5d2d1f02bd878c4d093f81ce07f916ab6a08f3ba07154d",
+    "app/test/features/ai01/ai01_screen_test.dart": "0842e1aa76520e3f1cba7a5e1bf7ddee667b72f8581d15865f3a2384cfbea4be",
+    "app/test/features/ai01/ai01_view_model_test.dart": "37b6c07a4fe3d415c1b9ca6fb2715976d27c3c0b0e729662061468ef9caf6451",
+    "app/test/features/async_read_lifecycle_test.dart": "e909e83d5f6d363a24f4c58dfdd9390e3edbb6236c1c0d762c559f29276a6719",
+    "app/test/features/bmp02/bmp02_screen_test.dart": "7abd18f3c86c5071495cd1849f71e76bfeee3b55b38191d108226e40c6e75c27",
+    "app/test/features/bmp_read_lifecycle_test.dart": "84163419dbbcace6b037ea27fdcee1e209cd48b1c0552eefe88f2ef4b258eb90",
+    "app/test/features/system/sys05_appearance_test.dart": "a75a9bf9e027891ec63954ba108dd59a86ec7384e139ef26c4f06a78a3851d47",
+    "app/web/flutter_bootstrap.js": "89d4e9968cba282503b1f8445fca7247e1619b3ff2c4b5113b7b9ce6f3009e82",
+    "contracts/experience/i18n/en.delta.json": "7017d8f9e07f4be24aa893e64548f46da3eb9399f489694262e98c647734858e",
+    "contracts/experience/i18n/ko.delta.json": "7f930d63934122712fc3c607908966b60623d1861c2417c24d5c6e05960595d2",
+    "contracts/experience/i18n/zh-CN.delta.json": "7ee6e6e2180f7cf4fbad617deeb72da4aa58a6b65d5610e6c7cc274542fe0b08",
+    "contracts/experience/screen-specifications/AI-01.md": "bec0bc021a92e150fd9011697ef11862b0cb2ccd49cf31687c113675766f8438",
+    "contracts/experience/screen-specifications/BMP-02.md": "952492771e57e0d2d7bd055022fa96fadf4fe6c3cce127357bce1bf6a717b66a",
+    "contracts/experience/screen-specifications/SYS-05.md": "ea46f9520549c6c3a360013cbba9a5b2a3952d5df11a614821eb13978b579e96",
+    "contracts/experience/i18n/copy-registry.json": "7df9652cbf72abd9d4d7542bd227c5bf45358698121f6cc1826c0282faa26ef5",
+    "app/lib/core/lumenis_theme.dart": "ee15d04fc2a2506693082d6d2113b30e560572a2642911e74c28ebd641a6d1ec",
+    "app/lib/product/lumenis_app.dart": "8fcafc744e5ef224eaf3d1cf059171705ae85fda49e629b7f4cc7806d16498a3",
+    "app/test/product/lumenis_appearance_integration_test.dart": "d1674f9bdf46dec9d0fc01ef44559df59908f4f0a290d0fe1fbea6257f4d37b4",
+    "app/lib/shell/lumenis_workspace_shell.dart": "9ee9d55518c9ac7b23cc13755b38e6963b75871068ca17c6095ed302f7d42a5f",
+    "app/test/shell/lumenis_workspace_shell_test.dart": "d6c66fe768afb5c30afeb75e37afed6f915cf4c2d27df169df51d3dd401f5037"
+  },
+  "normalized_git_blob_ids": {
+    "app/README.md": "8c7e0422d6a650d079f2a2b32b5329b9b4ae19e5",
+    "app/assets/wallpapers/README.md": "3dce20f7dd5ea4a8f2934f0b2fd0a37e7bfce47a",
+    "app/assets/wallpapers/cobalt-dusk.jpg": "51dc1017b311e17885ba4c2be459f2a424f4681d",
+    "app/assets/wallpapers/crimson-sunset.jpg": "ac4700850076ec94b005cee4376c8faa063a08ee",
+    "app/lib/features/ai01/ai01_screen.dart": "146c0002bb3f64e47ec8deb8a075de4e206b47d9",
+    "app/lib/features/ai01/ai01_view_model.dart": "61dd601012bdf2ef95cfa9c26f3f7fae54bd460d",
+    "app/lib/features/bmp01/bmp01_view_model.dart": "5fe9302e16c2d62705b2dc59d5b3bb592a396000",
+    "app/lib/features/bmp02/bmp02_screen.dart": "25a17bf856470f908d023736d29c6af1d3f2558f",
+    "app/lib/features/bmp02/bmp02_view_model.dart": "cafd81f64c76399a7969a7f99fb740261dcc35b0",
+    "app/lib/features/bmp03/bmp03_view_model.dart": "ef100e68d670f438b84a0b08deec67aaf6cb0346",
+    "app/lib/features/bmp04/bmp04_view_model.dart": "bf6e42931138f87216fc8e0ec433a714bd6e02ea",
+    "app/lib/features/bmp05/bmp05_view_model.dart": "2e804013cbddb8f6ea1e77b924f3af214f20360e",
+    "app/lib/features/bmp06/bmp06_view_model.dart": "e18c2d8b46426ed43d810a533df457522cf76335",
+    "app/lib/features/bmp07/bmp07_view_model.dart": "d2617eef366f61e0c6f54091492dbfb83076de28",
+    "app/lib/features/bmp08/bmp08_view_model.dart": "28fb59383afa1870f5baa7514dcdabbf8d16f24e",
+    "app/lib/features/bmp09/bmp09_view_model.dart": "b78b537f26a1f8910c6a6d8031e7728af7aba454",
+    "app/lib/features/bmp10/bmp10_view_model.dart": "18339c624bf061f1fdb0f1605fdbf5d66b649400",
+    "app/lib/features/bmp11/bmp11_view_model.dart": "b777f37ba5206d175427d7dac9280336511d67fe",
+    "app/lib/features/shared/sh01/sh01_view_model.dart": "907a2f7e3ab3061b30c0d93e50dbda491efe8ceb",
+    "app/lib/features/system/sys05/sys05_appearance_controller.dart": "7d57d4503b3f3e0aed04a7f7151500b393ad3e07",
+    "app/lib/features/system/sys05/sys05_appearance_editor.dart": "92928fefccfbd047c9d22957b7fde8e27561f0fb",
+    "app/lib/l10n/lumenis_copy.g.dart": "a344aee095e86226a8b4903ca5b4dcde4bdad068",
+    "app/pubspec.yaml": "6339895c2fbaa5a3526f2a8056f765e7cb031883",
+    "app/test/features/ai01/ai01_screen_test.dart": "5dab02fd8c65df612e22bafbbeb7de781306cfb0",
+    "app/test/features/ai01/ai01_view_model_test.dart": "4e3710bba0baae1d3fba7f878d49b742c8fdb25f",
+    "app/test/features/async_read_lifecycle_test.dart": "52cde93549bee28224adcdd3b32ee32cbd40591b",
+    "app/test/features/bmp02/bmp02_screen_test.dart": "d07b41e2d7e03344860778de0e9dcfbc72a30646",
+    "app/test/features/bmp_read_lifecycle_test.dart": "4e846c2234b24fc9bdd1c7c596381a1596170eb5",
+    "app/test/features/system/sys05_appearance_test.dart": "3e05644e2aad73fbb0a79eafbe37678ee99c7255",
+    "app/web/flutter_bootstrap.js": "8548a0cbf2c93f79c20aaecf33a24e42480a38fb",
+    "contracts/experience/i18n/en.delta.json": "9707d9e1b2004852209f6eb5840b75255452e225",
+    "contracts/experience/i18n/ko.delta.json": "62d23d4ec19576861fa9fc8be9d4332059e3fb60",
+    "contracts/experience/i18n/zh-CN.delta.json": "825556c95feb1cb5be9211606c5973adf81b08d6",
+    "contracts/experience/screen-specifications/AI-01.md": "9efdfcaad0fef1a7d2403f4acd95466540c5b5fb",
+    "contracts/experience/screen-specifications/BMP-02.md": "bd7dc4b561c83e8b6f36d27ee3bf7a31d0e78f77",
+    "contracts/experience/screen-specifications/SYS-05.md": "9e8d4d23073b480f3747b3c42b493f9a88a26f4c",
+    "contracts/experience/i18n/copy-registry.json": "d52aa786bbf7cbe70d55b4b10a4a9ab5e671e980",
+    "app/lib/core/lumenis_theme.dart": "56dc39145b97cc326f704b52b9f843737fa49823",
+    "app/lib/product/lumenis_app.dart": "ed762cc14bab3ef81abff8b988dd6d2440499a6e",
+    "app/test/product/lumenis_appearance_integration_test.dart": "4b5a69806c943e5ba12f060126c8303b614762f3",
+    "app/lib/shell/lumenis_workspace_shell.dart": "ab84300f8f0eb02ca27ad6c7b44b6800c275a756",
+    "app/test/shell/lumenis_workspace_shell_test.dart": "6f546b4a8bdde662ccbe52c24e3790d8215a5501"
+  },
+  "automated": {
+    "targeted-tests": {
+      "command": [
+        "D:\\codex\\2026-09-19\\new-chat\\_tools\\flutter\\bin\\flutter.bat",
+        "test",
+        "--no-pub",
+        "test/features/ai01",
+        "test/features/async_read_lifecycle_test.dart",
+        "test/features/bmp_read_lifecycle_test.dart",
+        "test/features/bmp01",
+        "test/features/bmp02",
+        "test/features/bmp03",
+        "test/features/bmp04",
+        "test/features/bmp05",
+        "test/features/bmp08",
+        "test/features/bmp_creation",
+        "test/features/shared/sh01",
+        "test/features/system",
+        "test/product/lumenis_appearance_integration_test.dart",
+        "test/l10n",
+        "test/shell",
+        "test/navigation"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 36.18,
+      "unchanged": true
+    },
+    "analyze": {
+      "command": [
+        "D:\\codex\\2026-09-19\\new-chat\\_tools\\flutter\\bin\\flutter.bat",
+        "analyze",
+        "--no-pub"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 16.4,
+      "unchanged": true
+    },
+    "web-build": {
+      "command": [
+        "D:\\codex\\2026-09-19\\new-chat\\_tools\\flutter\\bin\\flutter.bat",
+        "build",
+        "web",
+        "--no-pub",
+        "--release",
+        "--no-web-resources-cdn",
+        "--no-wasm-dry-run"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 61.4,
+      "unchanged": true
+    }
+  },
+  "targeted_tests_passed": 233,
+  "browser": {
+    "checks": [
+      {
+        "name": "served_build_matches_snapshot",
+        "passed": true,
+        "sha256": "203bb9e68688a99a21c30d9a880e6b4f8bf6e2fe2090e49985bfc6450e96ca98"
+      },
+      {
+        "name": "zero_blur_and_minimum_panel_opacity",
+        "passed": true
+      },
+      {
+        "name": "original_crimson_selected_and_persisted",
+        "passed": true,
+        "sha256": "dbd5e3375d13ea0faedc97ae0312ac4c3294a2577a01afbed27063d8251ab8f1"
+      },
+      {
+        "name": "cobalt_dark_restored_after_page_reopen",
+        "passed": true,
+        "sha256": "f50de0951c1a106b139dc606d13626748c8fbcc18ebedcfc4353eeab4c45c587"
+      },
+      {
+        "name": "real_typed_draft_copy_and_download_exact",
+        "passed": true,
+        "bytes": 119
+      },
+      {
+        "name": "draft_preserved_after_preset_change",
+        "passed": true
+      },
+      {
+        "name": "offline_retry_and_real_permission_denial_preserve_draft",
+        "passed": true
+      },
+      {
+        "name": "download_reopened_through_file_picker_exact",
+        "passed": true
+      },
+      {
+        "name": "mobile_draft_and_wallpaper_layout_390",
+        "passed": true
+      },
+      {
+        "name": "mobile_preset_switch_390",
+        "passed": true
+      },
+      {
+        "name": "corrupt_local_appearance_reset_and_reopen",
+        "passed": true
+      },
+      {
+        "name": "preset_removal_returns_to_frosted",
+        "passed": true
+      },
+      {
+        "name": "bundled_renderer_without_google_cdn_and_no_page_errors",
+        "passed": true
+      }
+    ],
+    "exit_code": 0,
+    "errors": [],
+    "source_unchanged": true
+  },
+  "live_limitations": [
+    "Isolated Core with disposable DB and generated transport Basic credentials, no real product actor",
+    "Native OS picker/material and native application E2E not verified",
+    "Business/AI execution, entity coverage, complete Round and release not accepted"
+  ]
+}

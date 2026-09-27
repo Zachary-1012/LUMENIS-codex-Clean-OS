@@ -11,6 +11,7 @@ class Bmp11ViewModel extends ChangeNotifier {
   Bmp11ViewModel({required this._repository});
 
   final Bmp11Repository _repository;
+  bool _disposed = false;
   Bmp11LoadPhase _phase = Bmp11LoadPhase.loading;
   Bmp11FailureKind? _failureKind;
   Bmp11Snapshot? _snapshot;
@@ -20,17 +21,23 @@ class Bmp11ViewModel extends ChangeNotifier {
   Bmp11Snapshot? get snapshot => _snapshot;
 
   Future<void> refresh() async {
+    if (_disposed) return;
     _phase = Bmp11LoadPhase.loading;
     _failureKind = null;
     _snapshot = null;
     notifyListeners();
+    if (_disposed) return;
     try {
-      _snapshot = await _repository.load();
+      final snapshot = await _repository.load();
+      if (_disposed) return;
+      _snapshot = snapshot;
       _phase = Bmp11LoadPhase.ready;
     } catch (error) {
+      if (_disposed) return;
       _failureKind = _classify(error);
       _phase = Bmp11LoadPhase.failed;
     }
+    if (_disposed) return;
     notifyListeners();
   }
 
@@ -45,5 +52,11 @@ class Bmp11ViewModel extends ChangeNotifier {
       return Bmp11FailureKind.offline;
     }
     return Bmp11FailureKind.server;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

@@ -15,26 +15,42 @@ class Bmp01ViewModel extends ChangeNotifier {
   Bmp01LoadPhase _phase = Bmp01LoadPhase.loading;
   Bmp01FailureKind? _failureKind;
   Bmp01Snapshot? _snapshot;
+  bool _disposed = false;
+  int _refreshGeneration = 0;
 
   Bmp01LoadPhase get phase => _phase;
   Bmp01FailureKind? get failureKind => _failureKind;
   Bmp01Snapshot? get snapshot => _snapshot;
 
   Future<void> refresh() async {
+    if (_disposed) return;
+    final generation = ++_refreshGeneration;
     _phase = Bmp01LoadPhase.loading;
     _failureKind = null;
+    _snapshot = null;
     notifyListeners();
+    if (_disposed || generation != _refreshGeneration) return;
 
     try {
-      _snapshot = await _repository.load();
+      final snapshot = await _repository.load();
+      if (_disposed || generation != _refreshGeneration) return;
+      _snapshot = snapshot;
       _phase = Bmp01LoadPhase.ready;
     } catch (error) {
+      if (_disposed || generation != _refreshGeneration) return;
       _snapshot = null;
       _failureKind = _classify(error);
       _phase = Bmp01LoadPhase.failed;
     }
 
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _refreshGeneration++;
+    super.dispose();
   }
 
   static Bmp01FailureKind _classify(Object error) {

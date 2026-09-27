@@ -12,6 +12,7 @@ class Bmp02ViewModel extends ChangeNotifier {
   Bmp02ViewModel({required this._repository});
 
   final Bmp02Repository _repository;
+  bool _disposed = false;
 
   Bmp02LoadPhase _phase = Bmp02LoadPhase.loading;
   Bmp02FailureKind? _failureKind;
@@ -25,7 +26,7 @@ class Bmp02ViewModel extends ChangeNotifier {
   Bmp02Snapshot? get snapshot => _snapshot;
   String get query => _query;
   String? get roleFilter => _roleFilter;
-  String? get selectedBrandId => _selectedBrandId;
+  String? get selectedBrandId => selectedBrand?.id;
 
   List<Bmp02Brand> get filteredBrands {
     final brands = _snapshot?.brands ?? const <Bmp02Brand>[];
@@ -50,20 +51,26 @@ class Bmp02ViewModel extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
+    if (_disposed) return;
     _phase = Bmp02LoadPhase.loading;
     _failureKind = null;
     notifyListeners();
+    if (_disposed) return;
     try {
-      _snapshot = await _repository.load();
+      final snapshot = await _repository.load();
+      if (_disposed) return;
+      _snapshot = snapshot;
       _phase = Bmp02LoadPhase.ready;
       if (!_snapshot!.brands.any((brand) => brand.id == _selectedBrandId)) {
         _selectedBrandId = _snapshot!.brands.firstOrNull?.id;
       }
     } catch (error) {
+      if (_disposed) return;
       _snapshot = null;
       _failureKind = _classify(error);
       _phase = Bmp02LoadPhase.failed;
     }
+    if (_disposed) return;
     notifyListeners();
   }
 
@@ -100,6 +107,12 @@ class Bmp02ViewModel extends ChangeNotifier {
       return Bmp02FailureKind.offline;
     }
     return Bmp02FailureKind.server;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }
 
