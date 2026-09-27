@@ -29,6 +29,7 @@ import sqlite3
 import threading
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from enum import Enum
@@ -1203,6 +1204,9 @@ class AIBrowserRuntime:
         # 锁
         self._lock = threading.Lock()
         self._closed = False
+        self._worker_lock = threading.Lock()
+        self._browser_worker: Optional[ThreadPoolExecutor] = None
+        self._browser_thread_id: Optional[int] = None
 
         logger.info(
             f"[AIBrowserRuntime] Session 创建: {self.session_id}, "
@@ -1213,8 +1217,31 @@ class AIBrowserRuntime:
     # Session 生命周期
     # ──────────────────────────────────────────────────────────
 
+    def _run_on_browser_thread(self, operation: Callable[[], Any], *, start_worker: bool = False) -> Any:
+        """Keep Playwright's synchronous objects on the thread that created them."""
+        if threading.get_ident() == self._browser_thread_id:
+            return operation()
+        with self._worker_lock:
+            if self._browser_worker is None and start_worker and not self._closed:
+                self._browser_worker = ThreadPoolExecutor(
+                    max_workers=1, thread_name_prefix="lumenis-ai-browser"
+                )
+            worker = self._browser_worker
+            future = worker.submit(self._browser_thread_operation, operation) if worker else None
+        return future.result() if future else operation()
+
+    def _browser_thread_operation(self, operation: Callable[[], Any]) -> Any:
+        self._browser_thread_id = threading.get_ident()
+        return operation()
+
     def start(self) -> bool:
         """Attach only to the verified LUMENIS browser and own a fresh context."""
+        if self._closed:
+            return False
+        if threading.get_ident() != self._browser_thread_id:
+            return self._run_on_browser_thread(self.start, start_worker=True)
+        if self.status == SessionStatus.RUNNING:
+            return True
         try:
             import browser_surface
 
@@ -1291,6 +1318,15 @@ class AIBrowserRuntime:
 
     def close(self):
         """关闭 Browser Session，释放资源。"""
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            worker = self._browser_worker
+            try:
+                return self._run_on_browser_thread(self.close)
+            finally:
+                worker.shutdown(wait=True)
+                with self._worker_lock:
+                    if self._browser_worker is worker:
+                        self._browser_worker = None
         with self._lock:
             if self._closed:
                 return
@@ -1319,6 +1355,8 @@ class AIBrowserRuntime:
 
     def get_status(self) -> Dict[str, Any]:
         """获取 Session 状态。"""
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            return self._run_on_browser_thread(self.get_status)
         now = time.time()
         return {
             "session_id": self.session_id,
@@ -1349,6 +1387,10 @@ class AIBrowserRuntime:
 
         网页内容标记为 untrusted_content，经过 Prompt Injection 扫描和敏感信息脱敏。
         """
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            return self._run_on_browser_thread(
+                lambda: self.observe(include_dom, include_accessibility, max_text_length)
+            )
         self.last_activity = time.time()
         state = BrowserPageState()
 
@@ -1436,6 +1478,11 @@ class AIBrowserRuntime:
 
         这是核心方法。所有 Action 必须经过此方法。
         """
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            return self._run_on_browser_thread(lambda: self.execute_action(
+                action_type, target, selector, text, value, url, expected,
+                task_id, run_id, step_id, agent_id, skill_id, risk_level,
+            ))
         self.last_activity = time.time()
         timestamp = datetime.now().isoformat()
 
@@ -1893,6 +1940,8 @@ class AIBrowserRuntime:
 
     def screenshot(self, full_page: bool = False) -> bytes:
         """获取当前页面截图（不经过 Action 闭环，仅供 Observe/Evidence 使用）。"""
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            return self._run_on_browser_thread(lambda: self.screenshot(full_page))
         if not self._page:
             raise RuntimeError("No active page")
         return self._page.screenshot(full_page=full_page)

@@ -12,6 +12,16 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-27 — AI Browser request-thread safety
+
+[Round 06 Browser thread-affinity evidence](evidence/round-06/ROUND-06-AI-BROWSER-THREAD-AFFINITY-2026-09-27.md)
+records one dedicated execution thread for each active synchronous Playwright
+session. Distinct request threads completed a real isolated default-engine
+navigate/status/screenshot/close sequence; 198 focused tests and blocking
+local gates passed. The probe's legacy BrowserEvidenceStore record is not
+canonical Evidence or authenticated SYS-06 user work. Target/frame binding,
+real Actor/session E2E and ROUND 06/14 acceptance remain open.
+
 ### 2026-09-27 — AI Browser capacity is explicit
 
 [Round 06 Browser capacity evidence](evidence/round-06/ROUND-06-AI-BROWSER-CAPACITY-2026-09-27.md)

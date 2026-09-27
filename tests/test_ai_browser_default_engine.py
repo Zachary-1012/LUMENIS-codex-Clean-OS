@@ -1,5 +1,7 @@
 """AI Browser must never attach a caller-selected or personal browser profile."""
 
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import MagicMock
 
 import pytest
@@ -60,6 +62,48 @@ def test_start_uses_fresh_context_and_closes_only_its_pages(isolated_runtime, mo
     context.close.assert_called_once_with()
     factory.start.return_value.stop.assert_called_once_with()
     browser.close.assert_not_called()
+
+
+def test_playwright_calls_use_creation_thread_across_request_threads(isolated_runtime, monkeypatch):
+    import playwright.sync_api as playwright_api
+
+    monkeypatch.setattr(browser_surface, "ensure_general_browser", lambda: {"ok": True})
+    monkeypatch.setattr(browser_surface, "general_browser_online", lambda: True)
+    owner_threads = []
+
+    def record(value=None):
+        owner_threads.append(threading.get_ident())
+        return value
+
+    factory = MagicMock()
+    playwright_instance = factory.start.return_value
+    playwright_instance.chromium.connect_over_cdp.side_effect = lambda *_: record(browser)
+    browser = MagicMock()
+    context = browser.new_context.return_value
+    context.new_page.side_effect = lambda: record(page)
+    page = MagicMock()
+    page.url = "https://example.org/"
+    page.title.side_effect = lambda: record("Example")
+    page.screenshot.side_effect = lambda **_: record(b"png")
+    page.close.side_effect = lambda: record()
+    context.close.side_effect = lambda: record()
+    playwright_instance.stop.side_effect = lambda: record()
+    monkeypatch.setattr(playwright_api, "sync_playwright", lambda: factory)
+    session = isolated_runtime.create_session(owner_actor_id=101, owner_account_session_id=501)
+
+    def request(call):
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            return executor.submit(call).result()
+
+    assert request(session.start) is True
+    assert request(session.start) is True
+    context.new_page.assert_called_once_with()
+    assert request(session.get_status)["current_title"] == "Example"
+    assert request(session.screenshot) == b"png"
+    request(session.close)
+    assert len(owner_threads) >= 6
+    assert len(set(owner_threads)) == 1
+    assert session._browser_worker is None
 
 
 def test_navigation_respects_existing_browser_policy(isolated_runtime):
