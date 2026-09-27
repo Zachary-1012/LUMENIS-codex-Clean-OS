@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
@@ -24,6 +25,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
   );
   final TextEditingController _draftController = TextEditingController();
   final FocusNode _draftFocus = FocusNode();
+  final GlobalKey _composerKey = GlobalKey(debugLabel: 'ai01-composer');
   bool _showInspector = false;
 
   @override
@@ -51,6 +53,24 @@ class _Ai01ScreenState extends State<Ai01Screen> {
       text: _viewModel.draft,
       selection: TextSelection.collapsed(offset: _viewModel.draft.length),
     );
+  }
+
+  Future<void> _openFocusedEditor() async {
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    await showDialog<void>(
+      context: context,
+      useSafeArea: false,
+      animationStyle: reduceMotion
+          ? AnimationStyle.noAnimation
+          : const AnimationStyle(
+              duration: Duration(milliseconds: 180),
+              reverseDuration: Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+            ),
+      builder: (context) => _FocusedDraftEditor(controller: _draftController),
+    );
+    if (mounted) _draftFocus.requestFocus();
   }
 
   @override
@@ -157,6 +177,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                         Expanded(
                           flex: 7,
                           child: _ComposerPane(
+                            key: _composerKey,
                             controller: _draftController,
                             focusNode: _draftFocus,
                             blockedReason: context.lumenisL10n.text(
@@ -164,6 +185,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                             ),
                             suggestions: snapshot?.suggestions ?? const [],
                             onChooseSuggestion: _chooseSuggestion,
+                            onExpand: _openFocusedEditor,
                             compact: false,
                           ),
                         ),
@@ -185,6 +207,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                     )
                   else ...[
                     _ComposerPane(
+                      key: _composerKey,
                       controller: _draftController,
                       focusNode: _draftFocus,
                       blockedReason: context.lumenisL10n.text(
@@ -192,6 +215,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                       ),
                       suggestions: snapshot?.suggestions ?? const [],
                       onChooseSuggestion: _chooseSuggestion,
+                      onExpand: _openFocusedEditor,
                       compact: phone,
                     ),
                     if (snapshot == null) ...[
@@ -379,7 +403,9 @@ class _ComposerPane extends StatelessWidget {
     required this.blockedReason,
     required this.suggestions,
     required this.onChooseSuggestion,
+    required this.onExpand,
     required this.compact,
+    super.key,
   });
 
   final TextEditingController controller;
@@ -387,6 +413,7 @@ class _ComposerPane extends StatelessWidget {
   final String blockedReason;
   final List<Ai01Suggestion> suggestions;
   final ValueChanged<Ai01Suggestion> onChooseSuggestion;
+  final VoidCallback onExpand;
   final bool compact;
 
   @override
@@ -421,6 +448,13 @@ class _ComposerPane extends StatelessWidget {
               _StatusTag(
                 label: context.lumenisL10n.text('ai01.draft.badge'),
                 color: LumenisTheme.of(context).ai,
+              ),
+              TextButton.icon(
+                key: const ValueKey('ai01-focus-open'),
+                onPressed: onExpand,
+                icon: const Icon(Icons.open_in_full_rounded, size: 17),
+                label: Text(context.lumenisL10n.text('ai01.focus.open')),
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
               ),
             ],
           ),
@@ -535,6 +569,130 @@ class _ComposerPane extends StatelessWidget {
             ),
           const SizedBox(height: 10),
         ],
+      ),
+    );
+  }
+}
+
+class _FocusedDraftEditor extends StatefulWidget {
+  const _FocusedDraftEditor({required this.controller});
+
+  final TextEditingController controller;
+
+  @override
+  State<_FocusedDraftEditor> createState() => _FocusedDraftEditorState();
+}
+
+class _FocusedDraftEditorState extends State<_FocusedDraftEditor> {
+  final FocusNode _focus = FocusNode();
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
+    final theme = LumenisTheme.of(context);
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () =>
+            Navigator.of(context).pop(),
+      },
+      child: Dialog.fullscreen(
+        key: const ValueKey('ai01-focus-dialog'),
+        backgroundColor: theme.surface.withValues(alpha: 1),
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 940),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final short = constraints.maxHeight < 340;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            key: const ValueKey('ai01-focus-return'),
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: const Icon(
+                              Icons.arrow_back_rounded,
+                              size: 20,
+                            ),
+                            label: Text(copy.text('ai01.focus.return')),
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(48, 48),
+                            ),
+                          ),
+                        ),
+                        if (!short)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Text(
+                              copy.text('ai01.draft.title'),
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                          ),
+                        Expanded(
+                          child: TextField(
+                            key: const ValueKey('ai01-focus-input'),
+                            controller: widget.controller,
+                            focusNode: _focus,
+                            autofocus: true,
+                            expands: true,
+                            minLines: null,
+                            maxLines: null,
+                            maxLength: 4000,
+                            textAlignVertical: TextAlignVertical.top,
+                            textInputAction: TextInputAction.newline,
+                            style: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(
+                                  fontSize: 16,
+                                  height: 1.5,
+                                  color: theme.foreground,
+                                ),
+                            decoration: InputDecoration(
+                              hintText: copy.text('ai01.draft.hint'),
+                              filled: false,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                              ),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              counterStyle: TextStyle(color: theme.quiet),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: short ? 4 : 12,
+                          ),
+                          child: Text(
+                            copy.text(
+                              short
+                                  ? 'ai01.focus.localOnly'
+                                  : 'ai01.focus.notice',
+                            ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(color: theme.muted),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

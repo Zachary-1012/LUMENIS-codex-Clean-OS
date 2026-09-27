@@ -12,6 +12,22 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-28 — Expanded local draft editing and exact file return
+
+[Round 14 focused draft evidence](evidence/round-14/ROUND-14-FOCUSED-DRAFT-2026-09-28.md)
+and its source receipt co-publish an explicitly opened full-screen editor using
+the existing AI-01 draft controller. Return, Escape/Back and width changes retain
+text, selection and the original file-action State. Four three-language copy keys
+are added through the canonical generator. Analysis, 75 affected Flutter tests
+and release Web build returned exit 0. Actual 1440/390 px Web file work passed
+14 assertions including exact UTF-8 download and reopening the actual file, with
+no API writes or page errors. These are local-draft results, not AI execution.
+An observed initial emoji fallback delay remains a cross-cutting font/offline gap;
+the settled glyph rendered and the original bytes were intact. Native device E2E,
+real product Actor, whole frontend, ROUND 14, USER_VERIFIED, RELEASED and
+COMMERCIAL_READY remain unaccepted. Online truth requires co-publication and
+verification of the exact delivered main commit; no hosted CI pass is inherited.
+
 ### 2026-09-28 — Restrained identity, navigation and subject confirmation
 
 [Round 14 restrained navigation evidence](evidence/round-14/ROUND-14-RESTRAINED-NAVIGATION-2026-09-28.md)

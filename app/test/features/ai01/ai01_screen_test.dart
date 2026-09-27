@@ -320,6 +320,275 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'expanded draft returns exact text, selection, and focus at each width',
+    (tester) async {
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final width in <double>[320, 390, 768, 1440]) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        await tester.binding.setSurfaceSize(Size(width, 900));
+        await tester.pumpWidget(_app());
+        await tester.pumpAndSettle();
+
+        final sourceField = tester.widget<TextField>(
+          find.byKey(const ValueKey('ai01-task-input')),
+        );
+        final controller = sourceField.controller!;
+        final sourceFocus = sourceField.focusNode!;
+        controller.value = const TextEditingValue(
+          text: 'local draft — 任务 👩🏻‍💻\nnotes',
+          selection: TextSelection(baseOffset: 2, extentOffset: 9),
+        );
+        await tester.pump();
+        final draftActions = tester.state(
+          find.byKey(const ValueKey('ai01-draft-actions'), skipOffstage: false),
+        );
+
+        await tester.tap(find.byKey(const ValueKey('ai01-focus-open')));
+        await tester.pumpAndSettle();
+
+        final dialog = find.byKey(const ValueKey('ai01-focus-dialog'));
+        final focusedFieldFinder = find.byKey(
+          const ValueKey('ai01-focus-input'),
+        );
+        final focusedField = tester.widget<TextField>(focusedFieldFinder);
+        expect(dialog, findsOneWidget);
+        expect(focusedField.controller, same(controller));
+        expect(focusedField.maxLength, 4000);
+        expect(focusedField.style?.fontSize, 16);
+        expect(
+          find.descendant(
+            of: dialog,
+            matching: find.byKey(const ValueKey('ai01-draft-actions')),
+          ),
+          findsNothing,
+        );
+        expect(
+          tester.state(
+            find.byKey(
+              const ValueKey('ai01-draft-actions'),
+              skipOffstage: false,
+            ),
+          ),
+          same(draftActions),
+        );
+
+        const finalText = 'revised — exact text 你好\nnext line';
+        const finalSelection = TextSelection(baseOffset: 4, extentOffset: 12);
+        await tester.enterText(focusedFieldFinder, finalText);
+        controller.selection = finalSelection;
+        await tester.pump();
+
+        if (width == 1440) {
+          await tester.binding.setSurfaceSize(const Size(390, 900));
+          await tester.pumpAndSettle();
+          expect(controller.text, finalText);
+          expect(controller.selection, finalSelection);
+          expect(
+            tester.state(
+              find.byKey(
+                const ValueKey('ai01-draft-actions'),
+                skipOffstage: false,
+              ),
+            ),
+            same(draftActions),
+          );
+
+          await tester.binding.setSurfaceSize(const Size(1440, 900));
+          await tester.pumpAndSettle();
+          expect(controller.text, finalText);
+          expect(controller.selection, finalSelection);
+          expect(
+            tester.state(
+              find.byKey(
+                const ValueKey('ai01-draft-actions'),
+                skipOffstage: false,
+              ),
+            ),
+            same(draftActions),
+          );
+        }
+
+        await tester.tap(find.byKey(const ValueKey('ai01-focus-return')));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const ValueKey('ai01-focus-dialog')), findsNothing);
+        expect(controller.text, finalText);
+        expect(controller.selection, finalSelection);
+        expect(sourceFocus.hasFocus, isTrue);
+        expect(
+          tester.state(
+            find.byKey(
+              const ValueKey('ai01-draft-actions'),
+              skipOffstage: false,
+            ),
+          ),
+          same(draftActions),
+        );
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
+  testWidgets(
+    'Escape and system Back return without losing local draft state',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final initialRead = Completer<Ai01Snapshot>();
+      final retryRead = Completer<Ai01Snapshot>();
+      await tester.pumpWidget(
+        _app(repository: _ControlledAi01Repository([initialRead, retryRead])),
+      );
+      await tester.pump();
+
+      final sourceField = tester.widget<TextField>(
+        find.byKey(const ValueKey('ai01-task-input')),
+      );
+      final controller = sourceField.controller!;
+      final sourceFocus = sourceField.focusNode!;
+      await tester.enterText(
+        find.byKey(const ValueKey('ai01-task-input')),
+        'local draft before failure',
+      );
+      controller.selection = const TextSelection(
+        baseOffset: 6,
+        extentOffset: 11,
+      );
+      await tester.pump();
+      final draftActions = tester.state(
+        find.byKey(const ValueKey('ai01-draft-actions'), skipOffstage: false),
+      );
+
+      await tester.tap(find.byKey(const ValueKey('ai01-focus-open')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.enterText(
+        find.byKey(const ValueKey('ai01-focus-input')),
+        'local draft kept after service failure',
+      );
+      const finalSelection = TextSelection(baseOffset: 2, extentOffset: 17);
+      controller.selection = finalSelection;
+      await tester.pump();
+
+      initialRead.completeError(Exception('Core unavailable'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('ai01-focus-dialog')), findsOneWidget);
+      expect(find.text('AI 服务暂时无法连接', skipOffstage: false), findsOneWidget);
+      expect(controller.text, 'local draft kept after service failure');
+      expect(controller.selection, finalSelection);
+      expect(
+        tester.state(
+          find.byKey(const ValueKey('ai01-draft-actions'), skipOffstage: false),
+        ),
+        same(draftActions),
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('ai01-focus-dialog')), findsNothing);
+      expect(controller.text, 'local draft kept after service failure');
+      expect(controller.selection, finalSelection);
+      expect(sourceFocus.hasFocus, isTrue);
+      expect(
+        tester.state(
+          find.byKey(const ValueKey('ai01-draft-actions'), skipOffstage: false),
+        ),
+        same(draftActions),
+      );
+
+      await tester.tap(find.byKey(const ValueKey('ai01-focus-open')));
+      await tester.pumpAndSettle();
+      const backSelection = TextSelection(baseOffset: 5, extentOffset: 14);
+      controller.selection = backSelection;
+      await tester.pump();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('ai01-focus-dialog')), findsNothing);
+      expect(controller.text, 'local draft kept after service failure');
+      expect(controller.selection, backSelection);
+      expect(sourceFocus.hasFocus, isTrue);
+      expect(
+        tester.state(
+          find.byKey(const ValueKey('ai01-draft-actions'), skipOffstage: false),
+        ),
+        same(draftActions),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'expanded editor scales text and stays above phone keyboard insets',
+    (tester) async {
+      addTearDown(() {
+        tester.binding.setSurfaceSize(null);
+        tester.view.resetViewInsets();
+      });
+
+      for (final width in <double>[320, 390, 768, 1440]) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        final height = width <= 390 ? 480.0 : 900.0;
+        await tester.binding.setSurfaceSize(Size(width, height));
+        tester.view.resetViewInsets();
+        await tester.pumpWidget(_app(textScale: 2));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('ai01-focus-open')));
+        await tester.pumpAndSettle();
+
+        final keyboardInset = width <= 390 ? 220.0 : 0.0;
+        if (keyboardInset > 0) {
+          tester.view.viewInsets = FakeViewPadding(
+            bottom: keyboardInset * tester.view.devicePixelRatio,
+          );
+          await tester.pumpAndSettle();
+        }
+
+        final dialog = find.byKey(const ValueKey('ai01-focus-dialog'));
+        final input = find.byKey(const ValueKey('ai01-focus-input'));
+        final returnButton = find.byKey(const ValueKey('ai01-focus-return'));
+        final footerCopy = LumenisLocalizations(const Locale('zh', 'CN')).text(
+          height - keyboardInset < 340
+              ? 'ai01.focus.localOnly'
+              : 'ai01.focus.notice',
+        );
+        final footerFinder = find.descendant(
+          of: dialog,
+          matching: find.text(footerCopy),
+        );
+
+        expect(dialog, findsOneWidget);
+        expect(tester.widget<TextField>(input).style?.fontSize, 16);
+        expect(MediaQuery.textScalerOf(tester.element(input)).scale(16), 32);
+        expect(footerFinder, findsOneWidget);
+        final returnRect = tester.getRect(returnButton);
+        expect(returnRect.top, greaterThanOrEqualTo(0));
+        if (keyboardInset > 0) {
+          final availableBottom = height - keyboardInset;
+          expect(
+            tester.getRect(input).bottom,
+            lessThanOrEqualTo(availableBottom),
+          );
+          expect(
+            tester.getRect(footerFinder).bottom,
+            lessThanOrEqualTo(availableBottom),
+          );
+          expect(returnRect.bottom, lessThanOrEqualTo(availableBottom));
+        }
+        expect(tester.takeException(), isNull);
+
+        await tester.tap(returnButton);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('ai01-focus-dialog')), findsNothing);
+      }
+    },
+  );
 }
 
 void _expectComposerSurface(WidgetTester tester) {
@@ -349,10 +618,17 @@ void _expectSubmitDisabled(WidgetTester tester) {
 Widget _app({
   Ai01Repository? repository,
   Locale locale = const Locale('zh', 'CN'),
+  double textScale = 1,
 }) {
   return MaterialApp(
     theme: LumenisTheme.dark,
     locale: locale,
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(textScaler: TextScaler.linear(textScale)),
+      child: child ?? const SizedBox.shrink(),
+    ),
     supportedLocales: LumenisLocalizations.supportedLocales,
     localizationsDelegates: const [
       LumenisLocalizations.delegate,
