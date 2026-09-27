@@ -90,3 +90,20 @@ The register/control scripts are repeatable deployment helpers for the existing
 scheduler, not a second scheduler. Installer refuses unknown existing task or
 launcher overwrite. The actual source pipeline and all product release statuses
 remain as stated above; global/multiplatform/user-E2E/OPERATING are not completed.
+
+
+## Runtime archive placement correction
+
+Frontend release validation exposed a duplicate machine contract because the
+accepted source archive had been deployed under ignored data/private/runtime.
+Ignored content still participates in the repository's unique-contract gate.
+The validator was not changed. With the scheduled task idle, the exact archive
+was moved to D:/devtools/lumenis-runtime/prelaunch-baseline-8d6e510309747607a2ce8e3253a02ce5119c05d9.
+The task action was updated and re-enabled; runner SHA-256 stayed identical.
+Product DB, .env, signed plan and private log paths stayed unchanged. A subsequent
+06:11:50 scheduled cycle completed with 8 success / 0 failure, exit 0.
+The existing installer now rejects an archive inside the product repository
+before creating a launcher/task. PowerShell parsing and the actual rejected
+inside-repository invocation both pass; no test or validator was weakened.
+Frontend independently reran the takeover gate successfully after relocation.
+This is local runtime recovery evidence, not whole-product OPERATING acceptance.

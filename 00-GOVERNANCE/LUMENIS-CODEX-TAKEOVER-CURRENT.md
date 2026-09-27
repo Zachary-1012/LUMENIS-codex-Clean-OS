@@ -1362,3 +1362,13 @@ Two new-file patch headers had produced docstring-only test files. Full response
 and capture regressions are now restored from the reviewed worker candidate;
 current shared snapshot three-file selection: 30 PASS, exit 0, no thread leaks.
 Previous 26 covered worker routing only. No completion status was promoted.
+
+
+### 2026-09-28 - public maintenance archive placement repaired
+
+The pinned runtime archive now lives outside the product repository; the existing
+Windows task resumed with unchanged runner hash and completed its 06:11:50 cycle
+(8 succeeded, 0 failed, exit 0). The installer rejects in-repository archives
+before effects, preserving the unique-contract gate. PowerShell parse/negative
+invocation PASS; takeover gate passed after relocation. No product completion
+state was promoted. [Runtime evidence](evidence/round-06/ROUND-06-PUBLIC-BASELINE-MAINTENANCE-2026-09-28.md).

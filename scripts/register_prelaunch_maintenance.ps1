@@ -26,6 +26,11 @@ if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
 }
 
 $projectRoot = Split-Path -Parent $envFile
+$projectPrefix = [IO.Path]::GetFullPath($projectRoot).TrimEnd('\') + '\'
+if ($sourceRoot.Equals($projectRoot, [StringComparison]::OrdinalIgnoreCase) -or
+    $sourceRoot.StartsWith($projectPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'CommittedSourceArchiveRoot must be outside the product repository; keep one canonical governance tree.'
+}
 $privateRoot = [IO.Path]::GetFullPath((Join-Path $projectRoot 'data\private')).TrimEnd('\')
 $privatePath = [IO.Path]::GetFullPath($PrivateDirectory).TrimEnd('\')
 $privatePrefix = $privateRoot + '\'
