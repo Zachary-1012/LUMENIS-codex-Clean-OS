@@ -74,6 +74,42 @@ def is_cdp_port_open(port=DEFAULT_CDP_PORT):
         return False
 
 
+def is_cdp_profile_running(port, profile_dir):
+    """Return true only when a local Chromium command line binds this port to this profile."""
+    try:
+        import psutil
+        expected_profile = os.path.normcase(os.path.abspath(os.path.normpath(profile_dir)))
+        expected_port = f"--remote-debugging-port={int(port)}".casefold()
+        expected_bind_arg = "--remote-debugging-address=127.0.0.1"
+        for proc in psutil.process_iter(["name", "cmdline"]):
+            try:
+                name = str(proc.info.get("name") or "").casefold()
+                if name not in {"msedge.exe", "chrome.exe"}:
+                    continue
+                args = [str(arg).strip().strip('"') for arg in (proc.info.get("cmdline") or [])]
+                normalized_args = [arg.casefold() for arg in args]
+                has_port = expected_port in normalized_args
+                if not has_port:
+                    for index, arg in enumerate(normalized_args[:-1]):
+                        if arg == "--remote-debugging-port" and normalized_args[index + 1] == str(int(port)):
+                            has_port = True
+                            break
+                has_profile = any(
+                    arg.startswith("--user-data-dir=")
+                    and os.path.normcase(os.path.abspath(os.path.normpath(arg.split("=", 1)[1])))
+                    == expected_profile
+                    for arg in args
+                )
+                has_loopback_bind = expected_bind_arg in normalized_args
+                if has_port and has_profile and has_loopback_bind:
+                    return True
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess, OSError, ValueError):
+                continue
+    except Exception:
+        return False
+    return False
+
+
 def find_edge_path():
     """查找Edge浏览器路径"""
     for path in DEFAULT_EDGE_PATHS:

@@ -60,7 +60,8 @@ def _load_project_env():
         return
 
 
-_load_project_env()
+if __name__ == "__main__":
+    _load_project_env()
 
 # 仅在脚本作为进程入口时设置 UTF-8 输出；被 pytest/Runtime import 时不得重包
 # 宿主输出流，否则会关闭测试捕获器并造成与业务无关的连锁错误。
@@ -86,6 +87,18 @@ GENERAL_BROWSER = {
     "home": "https://www.bing.com",
     "direct": True,
 }
+
+
+def douyin_worker_spec(private_data_dir=None):
+    """Return the fixed isolated read-only Douyin worker plan without starting it."""
+    base = private_data_dir or bridge.PRIVATE_DATA_DIR
+    return {
+        "account": "DOUYIN_READONLY",
+        "port": 9225,
+        "profile": os.path.join(base, "profiles", "douyin-readonly"),
+        "home": "https://www.douyin.com",
+        "direct": False,
+    }
 
 
 def _http_json(url, method="GET", timeout=5):
@@ -188,6 +201,41 @@ def launch_general(status_only=False):
     return row
 
 
+def launch_douyin_readonly(status_only=False):
+    """Provision Douyin only through explicit --account; never reuse an unknown port owner."""
+    worker = douyin_worker_spec()
+    browser = cdp_helper.system_default_cdp_browser()
+    port_open = port_online(worker["port"])
+    row = {**worker, "browser": browser, "online": False,
+           "port_open": port_open, "action": "", "pages": []}
+    if port_open:
+        if cdp_helper.is_cdp_profile_running(worker["port"], worker["profile"]):
+            row["online"] = True
+            row["action"] = "already_online"
+        else:
+            row["action"] = "port_in_use_unverified"
+        return row
+    if browser not in {"chrome", "edge"}:
+        row["action"] = "unsupported_system_default_browser"
+        return row
+    if status_only:
+        row["action"] = "offline"
+        return row
+
+    os.makedirs(worker["profile"], exist_ok=True)
+    res = cdp_helper.start_cdp_browser(
+        port=worker["port"],
+        profile_dir=worker["profile"],
+        launch_url=worker["home"],
+        direct_connection=worker["direct"],
+        browser=browser,
+        loopback_only=True,
+    )
+    row["online"] = bool(res.get("success")) and res.get("pid") is not None and port_online(worker["port"])
+    row["action"] = "started" if row["online"] else f"failed: {res.get('message')}"
+    return row
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--account", default=None, help="只拉起指定逻辑身份；默认全部")
@@ -195,8 +243,17 @@ def main():
     args = ap.parse_args()
 
     plan = [(a, d) for (a, d) in RESIDENT_PLAN if (not args.account or a == args.account)]
+    if args.account == "DOUYIN_READONLY":
+        row = launch_douyin_readonly(status_only=args.status)
+        print(f"\n● {row['account']}（显式请求的只读抖音驻场实例）")
+        print(f"   port={row['port']}  online={row['online']}  browser={row['browser']}")
+        print(f"   profile = {row['profile']}")
+        print(f"   home    = {row['home']}")
+        print(f"   action  = {row['action']}")
+        return 0 if row["online"] else 1
+
     if args.account and args.account != "GENERAL_BROWSE" and not plan:
-        print(f"[FATAL] 未知身份 {args.account}；可选：{[a for a,_ in RESIDENT_PLAN] + ['GENERAL_BROWSE']}")
+        print(f"[FATAL] 未知身份 {args.account}；可选：{[a for a,_ in RESIDENT_PLAN] + ['GENERAL_BROWSE', 'DOUYIN_READONLY']}")
         return 2
 
     print("=" * 72)

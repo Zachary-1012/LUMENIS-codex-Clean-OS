@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-抖音全网搜索采集适配器（真人浏览器 + 结构化接口双通道）
+抖音全网搜索采集适配器（DOUYIN_READONLY 专用真人浏览器 + 结构化接口双通道）
 -------------------------------------------------
 定位：抖音网页端强依赖登录态与 JS 渲染，纯 requests 不可行。本适配器走
-“真实有头 Edge（9222 采集专用持久 Profile）+ connectOverCDP + 拟人操作”，
+“真实有头系统默认浏览器（9225 专用持久 Profile）+ connectOverCDP + 拟人操作”，
 登录态由持久 Profile 与 cookie_vault 注入双通道桥接，绝不把 Cookie 写进代码。
 
 数据主路径（准、全、稳）：拦截搜索接口 XHR
@@ -38,7 +38,7 @@ _SEARCH_API_KEYS = ("general/search/single", "general/search/stream")
 
 
 def _configured_browser_worker_url() -> str:
-    """Require an explicitly provisioned remote worker; never infer localhost."""
+    """Require an explicit remote worker or the opted-in isolated local Douyin worker."""
     value = str(os.getenv("DOUYIN_CDP_URL") or "").strip()
     if not value:
         raise RuntimeError("DOUYIN_CDP_URL is not configured")
@@ -47,7 +47,8 @@ def _configured_browser_worker_url() -> str:
             or parsed.username or parsed.password or parsed.query or parsed.fragment
             or parsed.path not in {"", "/"}):
         raise RuntimeError("DOUYIN_CDP_URL must be a plain worker endpoint URL")
-    host = parsed.hostname.lower().rstrip(".")
+    original_host = parsed.hostname.lower()
+    host = original_host.rstrip(".")
     if host in {"localhost", "localhost.localdomain"}:
         raise RuntimeError("DOUYIN_CDP_URL must identify a remote browser worker")
     try:
@@ -55,7 +56,23 @@ def _configured_browser_worker_url() -> str:
     except ValueError:
         address = None
     if address is not None and (address.is_loopback or address.is_unspecified):
-        raise RuntimeError("DOUYIN_CDP_URL must not use a loopback endpoint")
+        local_opt_in = str(os.getenv("DOUYIN_LOCAL_WORKER_ENABLED") or "").strip().lower()
+        local_account = str(os.getenv("DOUYIN_LOCAL_WORKER_ACCOUNT") or "").strip().upper()
+        exact_local = (
+            parsed.scheme == "http" and original_host == "127.0.0.1" and parsed.port == 9225
+            and parsed.path in {"", "/"} and not parsed.query and not parsed.fragment
+            and local_opt_in in {"1", "true", "yes"}
+            and local_account == "DOUYIN_READONLY"
+        )
+        if not exact_local:
+            raise RuntimeError("DOUYIN_CDP_URL loopback is restricted to the opted-in DOUYIN_READONLY worker")
+        from pathlib import Path
+        from .cookie_vault import _current_data_dir
+        import cdp_helper
+        profile_dir = Path(_current_data_dir()) / "private" / "profiles" / "douyin-readonly"
+        if not cdp_helper.is_cdp_profile_running(9225, str(profile_dir)):
+            raise RuntimeError("DOUYIN_READONLY worker profile is not bound to the configured loopback port")
+        return "http://127.0.0.1:9225"
     return value
 
 
@@ -127,7 +144,9 @@ class DouyinAdapter(BaseAdapter):
 
         page = None
         try:
-            page = hb.new_page()
+            # Use the retained browser's normal page behavior; do not patch
+            # navigator/runtime properties on the authenticated collection tab.
+            page = hb.new_page(stealth=False)
             page.on("response", _on_response)
             url = ("https://www.douyin.com/search/"
                    f"{urllib.parse.quote(keyword)}?type=general")
@@ -182,6 +201,11 @@ class DouyinAdapter(BaseAdapter):
                     PageState.BLOCKED: "抖音访问频繁/风控，按熔断退避不硬刚",
                 }.get(state, f"抖音页面状态={state}")
                 return AdapterResult(success=False, error=hint)
+            if not self._has_verified_empty_search_response(api_bags):
+                return AdapterResult(
+                    success=False,
+                    error="抖音搜索未返回可验证的结构化结果，不能确认为无新内容",
+                )
             return AdapterResult(success=True, notes=[], raw_count=0)
         finally:
             if page is not None:
@@ -194,6 +218,24 @@ class DouyinAdapter(BaseAdapter):
     # ----------------------------------------------------------
     # 主路径：搜索接口 aweme_info → CollectedNote
     # ----------------------------------------------------------
+    @staticmethod
+    def _has_verified_empty_search_response(bags):
+        """Only a successful, explicit empty data array can mean a genuine empty search."""
+        successful_empty = any(
+            isinstance(bag, dict)
+            and bag.get("status_code") == 0
+            and isinstance(bag.get("data"), list)
+            and not bag["data"]
+            for bag in bags or []
+        )
+        has_candidates = any(
+            isinstance(bag, dict)
+            and isinstance(bag.get("data"), list)
+            and bool(bag["data"])
+            for bag in bags or []
+        )
+        return successful_empty and not has_candidates
+
     def _notes_from_bags(self, bags, max_results):
         notes, seen = [], set()
         for bag in bags:
@@ -219,6 +261,7 @@ class DouyinAdapter(BaseAdapter):
                     content=desc,
                     url=f"https://www.douyin.com/video/{wid}",
                     author=(au.get("nickname") or "抖音用户").strip() or "抖音用户",
+                    author_id=str(au.get("uid") or au.get("short_id") or ""),
                     publish_date=self._ts_to_date(ai.get("create_time")),
                     likes=self._to_int(st.get("digg_count")),
                     comments=self._to_int(st.get("comment_count")),

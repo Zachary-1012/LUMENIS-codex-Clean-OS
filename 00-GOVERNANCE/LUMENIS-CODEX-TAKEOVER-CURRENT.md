@@ -1328,3 +1328,14 @@ was saved. Protected dirty collector candidates are not the deployed runtime.
 [Round 06 runtime evidence](evidence/round-06/ROUND-06-PUBLIC-BASELINE-MAINTENANCE-2026-09-28.md).
 This establishes one scheduled cycle only; global coverage/real user E2E and
 long-running OPERATING remain NOT VERIFIED / NO. ROUND 06 stays REWORK.
+
+### 2026-09-28 - Douyin real SYSTEM search acquisition
+
+Dedicated loopback/default-browser worker now returns 3 real Guangzhou search
+records through SYSTEM; ordinary-page capture and honest empty-state handling,
+plus author-ID preservation, are in source. Root new focused tests: 26 passed;
+agent wider focused selection: 43 passed. Exact-scope persistence exposed a real
+IMPORT_FAILED in an isolated clone and remains a separate unresolved blocker.
+[Round 06 evidence](evidence/round-06/ROUND-06-DOUYIN-WORKER-2026-09-28.md).
+No product DB ingestion or user E2E acceptance is claimed. ROUND 06 REWORK;
+Global coverage/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY remain NO.
