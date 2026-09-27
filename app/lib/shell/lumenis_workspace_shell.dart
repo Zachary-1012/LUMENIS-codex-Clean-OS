@@ -317,7 +317,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     if (!LumenisWorkspaceRoutes.supportsScreen(screenId)) {
       return;
     }
-    if (LumenisWorkspaceRoutes.desktopRequiredScreenIds.contains(screenId)) {
+    if (LumenisWorkspaceRoutes.unavailableScreenIds.contains(screenId)) {
       if (notifyRoute) widget.onScreenSelected?.call(screenId);
       return;
     }
@@ -488,9 +488,9 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
                       selected: screenId == _activeScreen.value,
                       trailing: screenId == _activeScreen.value
                           ? const Icon(Icons.check_rounded, size: 20)
-                          : LumenisWorkspaceRoutes.desktopRequiredScreenIds
+                          : LumenisWorkspaceRoutes.unavailableScreenIds
                                 .contains(screenId)
-                          ? const Icon(Icons.desktop_windows_outlined, size: 20)
+                          ? const Icon(Icons.info_outline_rounded, size: 20)
                           : null,
                       onTap: () => Navigator.of(sheetContext).pop(screenId),
                     ),
@@ -938,8 +938,8 @@ class _SecondaryNavigationState extends State<_SecondaryNavigation> {
                   builder: (context) {
                     final screenId = stages[index];
                     final selected = screenId == widget.activeScreenId;
-                    final desktopRequired = LumenisWorkspaceRoutes
-                        .desktopRequiredScreenIds
+                    final unavailable = LumenisWorkspaceRoutes
+                        .unavailableScreenIds
                         .contains(screenId);
                     return Semantics(
                       button: true,
@@ -984,10 +984,10 @@ class _SecondaryNavigationState extends State<_SecondaryNavigation> {
                                       : FontWeight.w400,
                                 ),
                               ),
-                              if (desktopRequired) ...[
+                              if (unavailable) ...[
                                 const SizedBox(width: 6),
                                 Icon(
-                                  Icons.desktop_windows_outlined,
+                                  Icons.info_outline_rounded,
                                   size: 14,
                                   color: LumenisTheme.of(context).quiet,
                                 ),
@@ -1160,9 +1160,9 @@ class _NavigationTree extends StatelessWidget {
                           child: Row(
                             children: [
                               Icon(
-                                LumenisWorkspaceRoutes.desktopRequiredScreenIds
+                                LumenisWorkspaceRoutes.unavailableScreenIds
                                         .contains(screenId)
-                                    ? Icons.desktop_windows_outlined
+                                    ? Icons.info_outline_rounded
                                     : Icons.description_outlined,
                                 size: 16,
                                 color: LumenisTheme.of(context).quiet,

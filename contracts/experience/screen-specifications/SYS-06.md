@@ -45,18 +45,19 @@ approval_reference: UNKNOWN
 | P1 | Capability boundary | feature-local copy and current report state | No new-tab/snapshot/extract action is inferred | `browser_surface.py`; current builder |
 
 The capability-report binding is not an authorized viewport binding. Published
-Browser prerequisites at `6a23ddc4a17d4680658c0c7f209267f47a6029ec` include
+Browser prerequisites through `6cf66ce8463a98effc99d05f806d6136f0c0a4ec` include
 Actor/login ownership checks, same-login session reuse, an explicit single-session
 capacity limit and execution on the browser's dedicated thread. Those changes do
-not make the legacy report or SYS-06 operable. Target/frame ownership, safe public
-metadata, action capabilities and authenticated product-user E2E remain required
-for the new surface. A local frame endpoint candidate is not an accepted contract.
+not make the legacy report or SYS-06 operable. Published frame responses now carry
+target/revision, safe metadata and the advertised navigation/reload/frame scope;
+real product Actor entry, frontend binding and authenticated product-user E2E
+remain open. The app's Basic transport credential is not a product Actor session.
 
 Current routing also matters: `lumenis_workspace_routes.dart` excludes SYS-06 from
-`workspaceScreenIds`; `lumenis_router.dart` returns the desktop-required boundary
-without testing the running platform. The capacity widget exists as source but is
-not an accepted PC, Web or mobile destination. Opening a native desktop build does
-not by itself remove that route boundary.
+`workspaceScreenIds`. The host navigation correction reviewed under ACC-03's
+`DESIGN_READY` contract presents a browser-unavailable boundary on every surface,
+and preserves an originating task for Return. It does not instantiate the capacity
+widget or a viewport. Opening a native desktop build does not remove that boundary.
 
 ## 4. State and recovery matrix
 
@@ -117,8 +118,9 @@ not by itself remove that route boundary.
 
 This section defines the proposed next composition under Constitution §§11,
 30–36. Sections 2–9 describe the existing, unaccepted capacity candidate; they do
-not describe an implemented viewport. This revision changes no route, API, owner,
-Permission, identity or release state. Review decision remains
+not describe an implemented viewport. This reading-surface proposal authorizes no
+viewport route, API, owner, Permission, identity or release change. The independent
+host unavailable/Return correction is governed by ACC-03. Review decision remains
 `DESIGN_EXPLORATION / IMPLEMENTATION BLOCKED ON BINDINGS`.
 
 ### 11.1 Real task and completion boundary
@@ -194,21 +196,25 @@ before `DESIGN_READY`; this table creates neither an endpoint nor a parallel DTO
 authority. Single-login session reuse is server-owned. Closing this UI returns to
 the task; an explicit permitted End session action is required to stop the engine.
 
-Backend-owner candidate reported during this review (not yet published/accepted):
+Backend-owner fields published at `6cf66ce8`, rechecked as source in this review:
 `engine_label`, opaque `target_id`, integer `page_revision`, filtered
 `current_title/current_url` and `allowed_actions = [navigate, reload, frame]`.
 The authenticated frame response adds `X-LUMENIS-Target-Id` and
 `X-LUMENIS-Page-Revision` alongside frame ID/time/dimensions. Navigation returns
 the current target and new revision. The eventual client must compare both
 target and revision, and invalidate pending reads as soon as navigation begins.
-Back/Forward and coordinate input remain unadvertised. Recheck the published
-source and real response before accepting these names as a binding.
+Back/Forward and coordinate input remain unadvertised. The backend probe used a
+test Actor/Permission stub; recheck real Actor entry and responses before accepting
+these names as an operable frontend binding. On 401/403, never substitute Basic
+transport access or a locally generated Actor; show unavailable and keep Return.
 
 ### 11.5 State and recovery additions
 
 | State | Visible result and permitted recovery |
 | --- | --- |
 | Starting / navigating / reading frame | Show the actual pending step; retain editable input but prevent duplicate effects; Return remains available |
+| Pending frame (`202 BROWSER_FRAME_PENDING`, backend published at `3ccc8307`) | Keep the reading/loading state with bounded retry; do not decode the response as PNG or classify it as empty, failed or complete. A retained preview must match the same target/revision and remain labelled with its original observation time |
+| Empty frame (`503 BROWSER_FRAME_EMPTY`) | End the pending state and offer Retry/Return; never decode the error response as PNG or keep retrying indefinitely |
 | No page yet | Address entry only when navigation is supported; no fabricated start page or example screenshot |
 | Capacity occupied (`409 BROWSER_CAPACITY_OCCUPIED`) | Explain another active use occupies capacity; Retry/Return, without identifying the other user or stealing/closing that session |
 | Navigation rejected | Keep the attempted address locally editable and show the safe reason; no destination-success state |

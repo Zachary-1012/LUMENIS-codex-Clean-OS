@@ -98,10 +98,10 @@ abstract final class LumenisWorkspaceRoutes {
     screenIdsByGroup.values.expand((screenIds) => screenIds),
   );
 
-  static const desktopRequiredScreenIds = <String>{'SYS-06'};
+  static const unavailableScreenIds = <String>{'SYS-06'};
 
   static final Set<String> workspaceScreenIds = Set.unmodifiable(
-    screenIds.difference(desktopRequiredScreenIds),
+    screenIds.difference(unavailableScreenIds),
   );
 
   static String pathForScreen(String screenId) {

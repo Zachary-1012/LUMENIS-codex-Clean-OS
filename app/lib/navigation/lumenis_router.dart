@@ -33,10 +33,8 @@ GoRouter createLumenisRouter({
       path: '/workspace/:screenId',
       builder: (context, state) {
         final screenId = state.pathParameters['screenId'] ?? '';
-        if (LumenisWorkspaceRoutes.desktopRequiredScreenIds.contains(
-          screenId,
-        )) {
-          return const LumenisRouteBoundary.desktopRequired();
+        if (LumenisWorkspaceRoutes.unavailableScreenIds.contains(screenId)) {
+          return const LumenisRouteBoundary.browserUnavailable();
         }
         if (LumenisWorkspaceRoutes.supportsWorkspaceScreen(screenId)) {
           return _workspace(
@@ -64,35 +62,41 @@ Widget _workspace(
   onScreenSelected: (nextScreenId) {
     final path = LumenisWorkspaceRoutes.pathForScreen(nextScreenId);
     if (GoRouterState.of(context).uri.path != path) {
-      context.go(path);
+      if (LumenisWorkspaceRoutes.unavailableScreenIds.contains(nextScreenId)) {
+        context.push(path);
+      } else {
+        context.go(path);
+      }
     }
   },
   onLocaleChanged: onLocaleChanged,
 );
 
 class LumenisRouteBoundary extends StatelessWidget {
-  const LumenisRouteBoundary.unavailable({super.key}) : desktopRequired = false;
+  const LumenisRouteBoundary.unavailable({super.key})
+    : _titleKey = 'workspace.route.unavailable.title',
+      _detailKey = 'workspace.route.unavailable.detail',
+      _icon = Icons.route_outlined;
 
-  const LumenisRouteBoundary.desktopRequired({super.key})
-    : desktopRequired = true;
+  const LumenisRouteBoundary.browserUnavailable({super.key})
+    : _titleKey = 'workspace.capability.browser_unavailable.title',
+      _detailKey = 'workspace.capability.browser_unavailable.detail',
+      _icon = Icons.info_outline_rounded;
 
-  final bool desktopRequired;
+  final String _titleKey;
+  final String _detailKey;
+  final IconData _icon;
 
   @override
   Widget build(BuildContext context) {
     final copy = context.lumenisL10n;
-    final titleKey = desktopRequired
-        ? 'workspace.capability.desktop_required.title'
-        : 'workspace.route.unavailable.title';
-    final detailKey = desktopRequired
-        ? 'workspace.capability.desktop_required.detail'
-        : 'workspace.route.unavailable.detail';
     return Scaffold(
       backgroundColor: LumenisTheme.of(context).canvas,
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(28),
+        child: SingleChildScrollView(
+          key: const ValueKey('workspace-route-boundary-scroll'),
+          padding: const EdgeInsets.all(28),
+          child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 620),
               child: Column(
@@ -100,9 +104,7 @@ class LumenisRouteBoundary extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(
-                    desktopRequired
-                        ? Icons.desktop_windows_outlined
-                        : Icons.route_outlined,
+                    _icon,
                     color: LumenisTheme.of(context).caution,
                     size: 30,
                   ),
@@ -110,7 +112,7 @@ class LumenisRouteBoundary extends StatelessWidget {
                   Semantics(
                     liveRegion: true,
                     child: Text(
-                      copy.text(titleKey),
+                      copy.text(_titleKey),
                       style: TextStyle(
                         color: LumenisTheme.of(context).foreground,
                         fontSize: 26,
@@ -120,7 +122,7 @@ class LumenisRouteBoundary extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    copy.text(detailKey),
+                    copy.text(_detailKey),
                     style: TextStyle(
                       color: LumenisTheme.of(context).muted,
                       height: 1.55,
@@ -128,7 +130,13 @@ class LumenisRouteBoundary extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   OutlinedButton.icon(
-                    onPressed: () => context.go(LumenisWorkspaceRoutes.root),
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go(LumenisWorkspaceRoutes.root);
+                      }
+                    },
                     icon: const Icon(Icons.arrow_back_rounded),
                     label: Text(copy.text('workspace.route.return')),
                   ),

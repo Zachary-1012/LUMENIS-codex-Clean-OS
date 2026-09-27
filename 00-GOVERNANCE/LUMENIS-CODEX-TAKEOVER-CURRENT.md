@@ -12,6 +12,19 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-27 — Honest unavailable browser entry and preserved task return
+
+[Round 14 entry/return evidence](evidence/round-14/ROUND-14-BROWSER-ENTRY-TRUTH-2026-09-27.md)
+and its JSON receipt co-publish the existing host's truthful unavailable message,
+three-language copy and preserved task return. The previous instruction to switch
+to Desktop was inaccurate on every target. This local Web job passed 56 affected
+Flutter tests, app analysis, release Web build, six governance gates and 8 actual
+browser assertions over 1440/390 px plus small direct-link recovery. Unapplied
+appearance text survives both Return and browser Back. No Browser API is called.
+The host correction is reviewed under ACC-03; SYS-06 remains DESIGN_EXPLORATION
+and unmounted. Full browser, real product session binding, native user E2E and
+ROUND 14 remain incomplete; USER_VERIFIED/RELEASED/COMMERCIAL_READY remain NO.
+
 ### 2026-09-27 — Browser frame paint readiness
 
 [Round 06 frame readiness evidence](evidence/round-06/ROUND-06-BROWSER-FRAME-PAINT-READINESS-2026-09-27.md)
@@ -41,10 +54,11 @@ mobile reader, exact task Return, explicit session/target/page-revision frame
 invalidation and honest capacity/permission failures. Four Experience/constitution
 gates and four blueprint-validator tests passed on this document candidate; the
 test used an explicit disposable seed. No frontend route/API binding changed.
-The existing SYS-06 route still reaches a desktop-required boundary, including
-on desktop; viewport implementation, authenticated user-work E2E, native surfaces
-and ROUND 14 acceptance remain open. Backend frame fields mentioned in the spec
-are unaccepted candidate requirements and must be rechecked before binding.
+At that design-only checkpoint the route still reached a desktop-required
+boundary, including on desktop; the later bounded entry/return batch above
+corrects it. Viewport implementation, authenticated user-work E2E, native surfaces
+and ROUND 14 acceptance remain open. Published backend fields were subsequently
+reconciled in the spec; their frontend binding is still unaccepted.
 
 ### 2026-09-27 — AI Browser request-thread safety
 

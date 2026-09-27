@@ -12,6 +12,7 @@ import 'package:lumenis_app/features/ai04/ai04_screen.dart';
 import 'package:lumenis_app/features/bmp01/bmp01_screen.dart';
 import 'package:lumenis_app/features/cth/cth01/cth01_screen.dart';
 import 'package:lumenis_app/features/cth/cth02/cth02_screen.dart';
+import 'package:lumenis_app/features/system/sys05/sys05_appearance_controller.dart';
 import 'package:lumenis_app/features/system/sys06/sys06_screen.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import 'package:lumenis_app/navigation/lumenis_router.dart';
@@ -37,6 +38,7 @@ void main() {
     expect(LumenisWorkspaceRoutes.screenIds, _canonicalScreenIds);
     expect(LumenisWorkspaceRoutes.screenIds, hasLength(44));
     expect(LumenisWorkspaceRoutes.workspaceScreenIds, hasLength(43));
+    expect(LumenisWorkspaceRoutes.unavailableScreenIds, {'SYS-06'});
     expect(
       LumenisWorkspaceRoutes.workspaceScreenIds,
       isNot(contains('SYS-06')),
@@ -260,30 +262,31 @@ void main() {
     });
   }
 
-  testWidgets('SYS-06 secondary navigation opens only the desktop boundary', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(1440, 960));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    final router = createLumenisRouter(
-      client: _RouterClient(),
-      onLocaleChanged: (_) {},
-      initialLocation: LumenisWorkspaceRoutes.sys01,
-    );
-    addTearDown(router.dispose);
+  testWidgets(
+    'SYS-06 shows the truthful unavailable boundary on phone and PC',
+    (tester) async {
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      for (final size in const [Size(390, 844), Size(1440, 960)]) {
+        await tester.binding.setSurfaceSize(size);
+        final router = createLumenisRouter(
+          client: _RouterClient(),
+          onLocaleChanged: (_) {},
+          initialLocation: LumenisWorkspaceRoutes.pathForScreen('SYS-06'),
+        );
 
-    await tester.pumpWidget(_app(router));
-    await tester.pumpAndSettle();
-    final sys06Navigation = find.byKey(const ValueKey('workspace-nav-SYS-06'));
-    await tester.ensureVisible(sys06Navigation);
-    await tester.tap(sys06Navigation);
-    await tester.pumpAndSettle();
+        await tester.pumpWidget(_app(router));
+        await tester.pumpAndSettle();
 
-    expect(router.routeInformationProvider.value.uri.path, '/workspace/SYS-06');
-    expect(find.text('该能力需要序境 Desktop'), findsOneWidget);
-    expect(find.byType(Sys06Screen), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+        expect(find.text('内置浏览暂不可用'), findsOneWidget);
+        expect(find.text('当前工作区尚未接通浏览页面。你可以返回继续原来的工作。'), findsOneWidget);
+        expect(find.byType(Sys06Screen), findsNothing);
+        expect(tester.takeException(), isNull);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        router.dispose();
+      }
+    },
+  );
 
   testWidgets('unknown IDs fail safely without querying Product Core', (
     tester,
@@ -306,24 +309,137 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('desktop-only URL reports the capability boundary honestly', (
+  testWidgets('a direct SYS-06 link returns to the workspace root', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     final client = _RouterClient();
     final router = createLumenisRouter(
       client: client,
       onLocaleChanged: (_) {},
-      initialLocation: '/workspace/SYS-06',
+      initialLocation: LumenisWorkspaceRoutes.pathForScreen('SYS-06'),
     );
     addTearDown(router.dispose);
 
     await tester.pumpWidget(_app(router));
     await tester.pumpAndSettle();
 
-    expect(find.text('该能力需要序境 Desktop'), findsOneWidget);
-    expect(find.textContaining('不会模拟成功'), findsOneWidget);
+    expect(find.text('内置浏览暂不可用'), findsOneWidget);
     expect(find.byType(Sys06Screen), findsNothing);
     expect(client.runtimeIdentityCalls, 0);
+
+    await tester.tap(find.widgetWithText(OutlinedButton, '返回工作区'));
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routerDelegate.currentConfiguration.uri.path,
+      LumenisWorkspaceRoutes.root,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('SYS-05 un-applied local editor input survives SYS-06 return', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 960));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final appearance = Sys05AppearanceController()
+      ..loaded = true
+      ..mode = WorkspaceBackdrop.solid;
+    final router = createLumenisRouter(
+      client: _RouterClient(),
+      onLocaleChanged: (_) {},
+      initialLocation: LumenisWorkspaceRoutes.pathForScreen('SYS-05'),
+    );
+
+    await tester.pumpWidget(_app(router, appearanceController: appearance));
+    await tester.pumpAndSettle();
+    final hexField = find.byKey(const ValueKey('appearance/hex'));
+    expect(hexField, findsOneWidget);
+    await tester.enterText(hexField, 'A1F');
+    expect(
+      tester
+          .widget<EditableText>(
+            find.descendant(of: hexField, matching: find.byType(EditableText)),
+          )
+          .focusNode
+          .hasFocus,
+      isTrue,
+    );
+
+    final operationsGroup = find.byKey(
+      const ValueKey('workflow-group-workflow.operations'),
+    );
+    await tester.ensureVisible(operationsGroup);
+    await tester.tap(operationsGroup);
+    await tester.pumpAndSettle();
+    final sys06Navigation = find.byKey(const ValueKey('workspace-nav-SYS-06'));
+    await tester.ensureVisible(sys06Navigation);
+    await tester.tap(sys06Navigation);
+    await tester.pumpAndSettle();
+
+    expect(
+      GoRouterState.of(
+        tester.element(find.byType(LumenisRouteBoundary)),
+      ).uri.path,
+      LumenisWorkspaceRoutes.pathForScreen('SYS-06'),
+    );
+    expect(find.text('内置浏览暂不可用'), findsOneWidget);
+    expect(find.byType(Sys06Screen), findsNothing);
+
+    await tester.tap(find.widgetWithText(OutlinedButton, '返回工作区'));
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routerDelegate.currentConfiguration.uri.path,
+      LumenisWorkspaceRoutes.pathForScreen('SYS-05'),
+    );
+    expect(tester.widget<TextField>(hexField).controller!.text, 'A1F');
+    expect(appearance.solidColor, const Color(0xFFE8E4EC));
+    expect(
+      tester
+          .widget<EditableText>(
+            find.descendant(of: hexField, matching: find.byType(EditableText)),
+          )
+          .focusNode
+          .hasFocus,
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    router.dispose();
+    appearance.dispose();
+  });
+
+  testWidgets('browser boundary scrolls to Return at 320px and 200% text', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 420);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final router = createLumenisRouter(
+      client: _RouterClient(),
+      onLocaleChanged: (_) {},
+      initialLocation: LumenisWorkspaceRoutes.pathForScreen('SYS-06'),
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(_app(router, textScaler: TextScaler.linear(2)));
+    await tester.pumpAndSettle();
+
+    final returnButton = find.widgetWithText(OutlinedButton, '返回工作区');
+    expect(
+      find.byKey(const ValueKey('workspace-route-boundary-scroll')),
+      findsOneWidget,
+    );
+    expect(tester.getRect(returnButton).bottom, greaterThan(420));
+    await tester.ensureVisible(returnButton);
+    await tester.pumpAndSettle();
+
+    expect(tester.getRect(returnButton).bottom, lessThanOrEqualTo(420));
     expect(tester.takeException(), isNull);
   });
 }
@@ -375,10 +491,30 @@ const _canonicalScreenIds = <String>{
   'SYS-08',
 };
 
-Widget _app(GoRouter router) => MaterialApp.router(
+Widget _app(
+  GoRouter router, {
+  Sys05AppearanceController? appearanceController,
+  TextScaler? textScaler,
+}) => MaterialApp.router(
   routerConfig: router,
   locale: const Locale('zh', 'CN'),
   theme: LumenisTheme.dark,
+  builder: (context, child) {
+    Widget result = child ?? const SizedBox.shrink();
+    if (appearanceController != null) {
+      result = Sys05AppearanceScope(
+        controller: appearanceController,
+        child: result,
+      );
+    }
+    if (textScaler != null) {
+      result = MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+        child: result,
+      );
+    }
+    return result;
+  },
   supportedLocales: LumenisLocalizations.supportedLocales,
   localizationsDelegates: const [
     LumenisLocalizations.delegate,

@@ -98,3 +98,20 @@ Context 401/403 is shown as Access restricted, other Context failures as
 Unavailable. The map still opens only existing host routes and every downstream
 request remains server-authorized. No selected Subject, global confirmation or
 permission grant is manufactured from an unavailable Context response.
+
+### 2026-09-27 — Review of unavailable destination and task return
+
+Sol approves this bounded correction under the existing `DESIGN_READY` host
+navigation/recovery contract: SYS-06 has no operable viewport on any target yet,
+so its entry must say browsing is unavailable, rather than direct users to a
+desktop build that has the same route boundary. Entry from a current task pushes
+the existing boundary route without disposing the task; Return pops that route.
+A direct link with no prior task returns to the existing workspace root. Unknown
+addresses retain the separate route-unavailable message. At narrow height and
+200% text the explanation and Return must remain scrollable and reachable.
+
+This review changes only the host route boundary, copy and Return behavior. It
+does not promote SYS-06's `DESIGN_EXPLORATION`, start a browser, treat Basic
+transport credentials as a product Actor, or grant access. Its acceptance is
+an actual local draft → unavailable entry → Return → exact draft preservation
+flow plus direct-link recovery; full browser and native-device E2E remain open.
