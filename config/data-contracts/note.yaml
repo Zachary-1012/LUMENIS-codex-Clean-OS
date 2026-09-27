@@ -1,7 +1,7 @@
 # 笔记数据契约（DataQualityGate · write-time validation）
 contract:
   name: note
-  version: "1.0"
+  version: "1.1"
   owner: "ZBC Collector"
   status: active
   rules:
@@ -22,7 +22,8 @@ contract:
     - name: publish_date_format
       type: date_format
       field: publish_date
-      format: ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%Y-%m-%dT%H:%M:%S%z"]
+      format: ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%Y-%m-%dT%H:%M:%S%z", "%a, %d %b %Y %H:%M:%S %z"]
+      missing_state: missing
       severity: error
     - name: title_length
       type: max_length

@@ -1107,3 +1107,17 @@ operators remain local-only; this source Batch publishes neither data nor a
 user-visible country/tenant workflow. ROUND 03 remains REWORK, both Global
 coverage dimensions remain NO / NOT VERIFIED, Guangzhou reference PARTIAL,
 and Internal Full Universe, release and operating remain NO.
+
+### 2026-09-27 Round 06 publication quality truth
+
+The existing DataQuality note contract now marks absent source publication
+times as `missing` and accepts the real RFC 2822 format from Atom, while a
+malformed supplied time remains `error`. [Bounded Round 06 evidence](evidence/round-06/ROUND-06-PUBLISH-QUALITY-TRUTH-2026-09-27.md)
+records 19 affected test passes, Constitution PASS, backup and disposable
+idempotence proof, and a bounded local v18 product-DB quality correction:
+Raw and Canonical quality are both `missing=135`, `ok=34`, with the 34 known
+source publication times, 169 rows and signed Evidence lineage preserved.
+This is a derived classification correction, not new Global coverage or a
+real-user result. The actual DB remains local only; Global Commercial/Brand
+Coverage stays `NO / NOT VERIFIED`, Guangzhou reference `PARTIAL`, ROUND 06
+`REWORK`, and Full Universe, RELEASED and OPERATING `NO`.

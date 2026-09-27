@@ -129,12 +129,12 @@ class DataQualityGate:
         return sorted(self._contracts.keys())
 
     def validate(self, contract_name, record):
-        """校验一条记录。返回 {"valid", "errors", "warnings", "contract", "version"}。"""
+        """校验一条记录。缺失与格式错误分列，均不得算完整有效。"""
         c = self._contracts.get(contract_name)
         if c is None:
             return {"valid": False, "errors": [{"rule": "_contract", "message": "未知契约: %s" % contract_name}],
-                    "warnings": [], "contract": contract_name, "version": None}
-        errors, warnings = [], []
+                    "missing": [], "warnings": [], "contract": contract_name, "version": None}
+        errors, missing, warnings = [], [], []
         for rule in c.get("rules") or []:
             rname = rule.get("name", rule.get("type", "?"))
             rtype = rule.get("type")
@@ -147,13 +147,18 @@ class DataQualityGate:
             if cond and record.get(cond.get("field")) != cond.get("equals"):
                 continue
             v = record.get(field)
+            if rule.get("missing_state") == "missing" and (v is None or str(v).strip() == ""):
+                missing.append({"rule": rname, "field": field,
+                                "message": "字段缺失", "severity": "missing"})
+                continue
             ok, msg = check(v, rule)
             sev = rule.get("severity", "error")
             item = {"rule": rname, "field": field, "message": msg, "severity": sev}
             if ok:
                 continue
             (errors if sev == "error" else warnings).append(item)
-        return {"valid": not errors, "errors": errors, "warnings": warnings,
+        return {"valid": not errors and not missing, "errors": errors,
+                "missing": missing, "warnings": warnings,
                 "contract": contract_name, "version": c.get("version")}
 
     def validate_batch(self, contract_name, records):
@@ -180,20 +185,24 @@ class DataQualityGate:
         """生产接线：把质量校验结果转为 DB data_quality_* 标记字段（软门，不拒绝写入）。
 
         返回 dict（可直接并入写入记录，数据零丢失）：
-          data_quality_status: ok / warning / error
-          data_quality_score:  100 / 90 / max(0, 100-10*nerror)
+          data_quality_status: ok / warning / missing / error
+          data_quality_score:  100 / 90 / 80 / max(0, 100-10*nerror)
           data_quality_errors: 失败明细摘要（限 5 条）
         """
         res = self.validate(contract_name, record)
         nerr = len(res["errors"])
+        nmissing = len(res["missing"])
         nwarn = len(res["warnings"])
-        if nerr == 0 and nwarn == 0:
-            status, score = "ok", 100
-        elif nerr == 0:
-            status, score = "warning", 90
-        else:
+        if nerr:
             status, score = "error", max(0, 100 - 10 * nerr)
-        brief = ["%s.%s:%s" % (e["rule"], e["field"], e["message"]) for e in res["errors"][:5]]
+        elif nmissing:
+            status, score = "missing", 80
+        elif nwarn == 0:
+            status, score = "ok", 100
+        else:
+            status, score = "warning", 90
+        issues = res["errors"] + res["missing"]
+        brief = ["%s.%s:%s" % (e["rule"], e["field"], e["message"]) for e in issues[:5]]
         return {"data_quality_status": status, "data_quality_score": score,
                 "data_quality_errors": "|".join(brief)}
 
@@ -232,6 +241,7 @@ def batch_quality_to_evaluation(validation_results, db_path=None):
     valid_count = sum(1 for r in validation_results if r.get("valid", False))
     completeness = round(valid_count / total, 4)
     error_count = sum(len(r.get("errors", [])) for r in validation_results)
+    missing_count = sum(len(r.get("missing", [])) for r in validation_results)
     warn_count = sum(len(r.get("warnings", [])) for r in validation_results)
 
     return [record_evaluation(
@@ -240,6 +250,7 @@ def batch_quality_to_evaluation(validation_results, db_path=None):
         higher_is_better=True, source="data_quality_gate",
         evidence_ref=f"validate_batch | valid={valid_count}/{total}",
         metadata={"total": total, "valid": valid_count,
-                  "errors": error_count, "warnings": warn_count},
+                  "errors": error_count, "missing": missing_count,
+                  "warnings": warn_count},
         db_path=db_path,
     )]

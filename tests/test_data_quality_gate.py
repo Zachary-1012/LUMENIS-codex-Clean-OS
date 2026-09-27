@@ -36,6 +36,32 @@ def test_invalid_note_rejected(gate):
     assert "title" in fields and "url" in fields and "publish_date" in fields
 
 
+def test_publish_time_missing_is_distinct_from_invalid(gate):
+    record = {"title": "Official release", "url": "https://example.com/release",
+              "risk_level": "low"}
+    missing = gate.validate("note", record)
+    assert missing["valid"] is False
+    assert missing["errors"] == []
+    assert [item["field"] for item in missing["missing"]] == ["publish_date"]
+    quality = gate.enrich_quality_record("note", record)
+    assert quality["data_quality_status"] == "missing"
+    assert "publish_date" in quality["data_quality_errors"]
+
+    invalid = gate.validate("note", {**record, "publish_date": "not-a-date"})
+    assert invalid["valid"] is False
+    assert invalid["missing"] == []
+    assert [item["field"] for item in invalid["errors"]] == ["publish_date"]
+    assert gate.enrich_quality_record("note", {**record, "publish_date": "not-a-date"})[
+        "data_quality_status"] == "error"
+
+
+def test_atom_rfc2822_publish_time_is_valid(gate):
+    record = {"title": "Official Atom item", "url": "https://example.com/item",
+              "risk_level": "low", "publish_date": "Thu, 24 Sep 2026 14:02:37 +0000"}
+    assert gate.validate("note", record)["valid"] is True
+    assert gate.enrich_quality_record("note", record)["data_quality_status"] == "ok"
+
+
 def test_warning_severity_does_not_block(gate):
     # risk_level=unknown -> warning（不阻止），title 正常
     res = gate.validate("note", {
@@ -74,7 +100,7 @@ def test_batch_unique_topic(gate):
 def test_condition_rule_skip(gate):
     # condition 仅当条件字段等于值时应用（用 note 契约无 condition，验证不报错）
     res = gate.validate("note", {})
-    assert res["valid"] is False  # 缺 title/url/date 都 error
+    assert res["valid"] is False  # title/url 错误，日期缺失单独标记
 
 
 def test_enrich_quality_record(gate):
