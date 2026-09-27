@@ -55,6 +55,13 @@ def _publication_signals(soup: BeautifulSoup) -> tuple[str, str, str]:
         except ValueError:
             continue
         signals.append(("visible_date", normalized))
+    for tag in soup.select(".container-sm p.small")[:6]:
+        value = tag.get_text(" ", strip=True).strip()
+        try:
+            normalized = datetime.strptime(value, "%d %b %Y").strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+        signals.append(("visible_date", normalized))
     if not signals:
         return "", "unknown", "unknown"
 
@@ -104,7 +111,8 @@ class PublicHttpAdapter(BasePlatformAdapter):
         # otherwise retain the short-page/description behavior.
         candidates = []
         for node in soup.select(
-            'article, [itemprop="articleBody"], .zw, [class*="-body-"], .float100, main'
+            'article, [itemprop="articleBody"], .zw, [class*="-body-"], '
+            '.float100, .content_article, .block-text-only .container-sm, main'
         ):
             if node.name in {"script", "style", "nav", "header", "footer"}:
                 continue

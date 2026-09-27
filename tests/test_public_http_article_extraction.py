@@ -112,3 +112,24 @@ def test_adapter_health_distinguishes_missing_source_from_a_manual_attempt():
     assert adapter.health_check().status is CollectionStatus.NOT_CONFIGURED
     assert adapter.health_check(url="https://public.example.test/article").status is CollectionStatus.NEED_VERIFY
     assert adapter.search("").status is CollectionStatus.NOT_CONFIGURED
+
+
+def test_publisher_article_body_and_visible_date_beat_a_generic_description():
+    article = "Taikoo Hui Guangzhou's tenant programme. " * 20
+    response = PublicResponse(
+        url="https://public.example.test/news",
+        content=(
+            '<html><head><title>Venue update</title>'
+            '<meta name="description" content="Publisher home page"></head><body>'
+            '<div class="block-text-only"><div class="container-sm">'
+            '<p class="small">10 Sep 2021</p><p>' + article + '</p>'
+            '</div></div></body></html>'
+        ).encode("utf-8"),
+        content_type="text/html",
+        status_code=200,
+    )
+    result = PublicHttpAdapter(fetcher=lambda _: response).search(response.url)
+
+    assert result.status is CollectionStatus.SUCCESS
+    assert result.items[0]["content"].startswith("10 Sep 2021 Taikoo Hui Guangzhou")
+    assert result.items[0]["publish_datetime"] == "2021-09-10"

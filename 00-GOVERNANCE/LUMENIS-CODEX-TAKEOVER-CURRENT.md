@@ -1061,3 +1061,14 @@ records 45 clean-main and 77 current-snapshot test passes plus two read-only
 live page probes. The
 actual product DB was not rewritten; its 112 prior quality errors and the
 GLOBAL / real-user E2E gaps remain open.
+
+### 2026-09-27 Round 06 CTH/BMP dated public capture
+
+The public article adapter now reads Swire's relevant body and visible date
+through its existing SYSTEM owner. [Round 06 evidence](evidence/round-06/ROUND-06-CTH-BMP-DATED-REAL-CAPTURE-2026-09-27.md)
+records one dated Nike BMP and one historical Guangzhou Taikoo Hui CTH
+source in the actual local v17 product DB, each with signed Evidence, exact
+scope and Canonical quality `ok`. The remaining 112 earlier rows still have
+unknown publication times and quality `error`. The local operator scripts and
+dependent scope source are not published; the DB itself is local. Global
+coverage, product user E2E and ROUND 06 acceptance remain `NO / REWORK`.
