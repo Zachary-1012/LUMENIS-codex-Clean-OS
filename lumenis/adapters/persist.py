@@ -56,6 +56,149 @@ def _canonical_bypass(con, n, keyword, source_platform=""):
     except Exception as e:
         logger.warning(f"[T4] canonical 旁路写入失败（不影响主流程）: {e}")
 
+
+def persist_existing_note_scope(
+    con: sqlite3.Connection,
+    note_ids: List[str],
+    *,
+    product_id: str,
+    domain_id: str,
+    subject_id: str = None,
+    brand_focus_id: str = None,
+    scope_evidence_ref: int,
+) -> int:
+    """Bind imported raw notes and Canonical rows to one signed exact scope.
+
+    The collector supplies the raw identities and its completed Evidence id.
+    The caller owns the connection and transaction; this savepoint keeps a
+    partial raw/Canonical promotion from escaping if any item fails.
+    """
+    from canonical_data import ensure_canonical_table, note_to_canonical
+    from lumenis.shared.database.scope import (
+        ScopeValidationError, normalize_product_domain, resolve_scope,
+    )
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+
+    if not _CANONICAL_AVAILABLE:
+        raise ScopeValidationError("Canonical writer is unavailable")
+    product, domain = normalize_product_domain(product_id, domain_id)
+    exact = resolve_scope(
+        con, product_id=product, domain_id=domain,
+        subject_id=subject_id, brand_focus_id=brand_focus_id,
+    )
+    if exact.status != "UNVERIFIED":
+        raise ScopeValidationError("an exact registered Subject or BrandFocus is required")
+    if type(scope_evidence_ref) is not int or scope_evidence_ref < 1:
+        raise ScopeValidationError("a positive signed Evidence id is required")
+    if not isinstance(note_ids, (list, tuple)):
+        raise ScopeValidationError("raw note ids must be a bounded sequence")
+    ids = [value for value in note_ids if isinstance(value, str) and value]
+    if not ids or len(ids) > 100 or len(ids) != len(note_ids) or len(set(ids)) != len(ids):
+        raise ScopeValidationError("raw note ids must be nonempty and unique")
+
+    evidence_cursor = con.execute(
+        "SELECT * FROM app_evidence_records WHERE id=?", (scope_evidence_ref,)
+    )
+    evidence_row = evidence_cursor.fetchone()
+    if evidence_row is None:
+        raise ScopeValidationError("scope Evidence is missing")
+    evidence = dict(zip((item[0] for item in evidence_cursor.description), evidence_row))
+    assurance = classify_evidence_integrity(evidence)
+    if (
+        not assurance.get("verified")
+        or assurance.get("assurance") != "writer-authenticated"
+        or str(evidence.get("result") or "").upper() != "PASS"
+        or str(evidence.get("status") or "").lower() != "verified"
+        or evidence.get("product_id") != product
+        or evidence.get("domain_id") != domain
+    ):
+        raise ScopeValidationError("scope Evidence is not verified for this domain")
+    try:
+        inputs = json.loads(evidence.get("inputs_json") or "")
+    except (TypeError, ValueError) as exc:
+        raise ScopeValidationError("scope Evidence inputs are invalid") from exc
+    marker = {"domain_id": domain, "product_id": product, "global": False}
+    marker["subject_id" if domain == "cth" else "brand_focus_id"] = (
+        exact.subject_id if domain == "cth" else exact.brand_focus_id
+    )
+    if (
+        not isinstance(inputs, dict)
+        or inputs.get("_lumenis_scope") != marker
+        or not isinstance(inputs.get("source_ids"), list)
+        or any(note_id not in inputs["source_ids"] for note_id in ids)
+    ):
+        raise ScopeValidationError("scope Evidence does not cover these exact raw notes")
+
+    columns = {
+        row[1] for row in con.execute("PRAGMA table_info(notes)").fetchall()
+    }
+    required = {
+        "note_id", "product_id", "domain_id", "subject_id", "brand_focus_id",
+        "scope_status", "scope_evidence_ref",
+    }
+    if not required.issubset(columns):
+        raise ScopeValidationError("raw note scope storage is unavailable")
+    con.execute("SAVEPOINT persist_existing_note_scope")
+    try:
+        ensure_canonical_table(connection=con)
+        synced = 0
+        for note_id in ids:
+            note_cursor = con.execute("SELECT * FROM notes WHERE note_id=?", (note_id,))
+            row = note_cursor.fetchone()
+            if row is None:
+                raise ScopeValidationError("imported raw note is missing")
+            note = dict(zip((item[0] for item in note_cursor.description), row))
+            prior_subject = note.get("subject_id") or None
+            prior_brand = note.get("brand_focus_id") or None
+            prior_status = str(note.get("scope_status") or "").upper()
+            if prior_subject not in (None, exact.subject_id) or prior_brand not in (
+                None, exact.brand_focus_id
+            ):
+                raise ScopeValidationError("existing raw identity belongs to another scope")
+            if prior_status == "VERIFIED":
+                if str(note.get("scope_evidence_ref") or "") != str(scope_evidence_ref):
+                    raise ScopeValidationError("verified raw provenance cannot be rewritten")
+                canonical_row = con.execute(
+                    "SELECT subject_id, brand_focus_id, scope_status, scope_evidence_ref "
+                    "FROM canonical_data WHERE external_id=? AND product_id=? LIMIT 1",
+                    (note_id, product),
+                ).fetchone()
+                if (
+                    canonical_row is None
+                    or (canonical_row[0] or None) != exact.subject_id
+                    or (canonical_row[1] or None) != exact.brand_focus_id
+                    or canonical_row[2] != "VERIFIED"
+                    or str(canonical_row[3] or "") != str(scope_evidence_ref)
+                ):
+                    raise ScopeValidationError("verified raw note lacks matching Canonical data")
+                continue
+            con.execute(
+                "UPDATE notes SET product_id=?, domain_id=?, subject_id=?, "
+                "brand_focus_id=?, scope_status='VERIFIED', scope_evidence_ref=? "
+                "WHERE note_id=?",
+                (product, domain, exact.subject_id, exact.brand_focus_id,
+                 str(scope_evidence_ref), note_id),
+            )
+            note.update({
+                "product_id": product, "domain_id": domain,
+                "subject_id": exact.subject_id, "brand_focus_id": exact.brand_focus_id,
+                "scope_status": "VERIFIED", "scope_evidence_ref": str(scope_evidence_ref),
+            })
+            canonical = note_to_canonical(note, product_id=product)
+            canonical.domain_id = domain
+            canonical.subject_id = exact.subject_id or ""
+            canonical.brand_focus_id = exact.brand_focus_id or ""
+            canonical.scope_status = "VERIFIED"
+            canonical.scope_evidence_ref = str(scope_evidence_ref)
+            persist_canonical(con, canonical)
+            synced += 1
+        con.execute("RELEASE SAVEPOINT persist_existing_note_scope")
+        return synced
+    except Exception:
+        con.execute("ROLLBACK TO SAVEPOINT persist_existing_note_scope")
+        con.execute("RELEASE SAVEPOINT persist_existing_note_scope")
+        raise
+
 # 平台分流：社媒 → notes；其余搜索/网页 → web_mentions
 SOCIAL_PLATFORMS = {
     "douyin", "instagram", "xiaohongshu", "rednote", "zhihu",

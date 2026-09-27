@@ -1168,3 +1168,16 @@ product DB. The new research maps the source and licensing boundaries to the
 existing Collector/Evidence/Registry owners. Global Commercial and Brand
 Coverage remain `NO / NOT VERIFIED`, Guangzhou reference `PARTIAL`, ROUND 06
 `REWORK`, and Full Universe, RELEASED and OPERATING `NO`.
+
+### 2026-09-27 Round 06 existing Raw exact-scope binding candidate
+
+The existing persistence owner now has a bounded writer to bind already imported
+Raw notes to an exact CTH Subject or BMP BrandFocus using writer-authenticated,
+source-id-matched Evidence. Raw and Canonical changes share a savepoint; repeat
+binding is idempotent and a mismatch fails closed. Disposable regression proves
+both domains, restart/reopen, rollback, tamper rejection, and no invented publish
+time. This is a source capability, not a claim that every current product row is
+already bound or that a new live collection has been completed. Global Commercial
+and Brand Coverage remain `NO / NOT VERIFIED`, Guangzhou reference `PARTIAL`,
+ROUND 06 `REWORK`, and Full Universe, RELEASED and OPERATING remain `NO`.
+See [Round 06 evidence](evidence/round-06/ROUND-06-EXACT-RAW-CANONICAL-BIND-2026-09-27.md).
