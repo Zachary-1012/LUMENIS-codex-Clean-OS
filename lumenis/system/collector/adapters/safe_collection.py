@@ -113,7 +113,6 @@ def redact_record(record: Any, pii_fields=None) -> Tuple[Any, List[str]]:
 # --- 2. Hygiene policy + pure rate/risk decisions ---------------------------
 MIN_INTERVAL_FLOOR = 2.0
 DEFAULT_MIN_INTERVAL = 3.0
-DEFAULT_DAILY_CAP = 200
 DEFAULT_MAX_BATCH = 20
 
 # 与 collector_guard 七态/analyzer 对齐的风控停止信号（XHS 300012、验证码等）。
@@ -135,7 +134,9 @@ class CollectionHygienePolicy:
     allow_account_pool: bool = False
     allow_proxy_pool: bool = False
     min_interval_seconds: float = DEFAULT_MIN_INTERVAL
-    daily_cap: int = DEFAULT_DAILY_CAP
+    # No product-wide daily quota. A source-specific cap may still be set
+    # explicitly when its authorization or rate policy requires one.
+    daily_cap: int | None = None
     max_batch: int = DEFAULT_MAX_BATCH
     stop_on_risk_signal: bool = True
     write_enabled: bool = False
@@ -156,7 +157,7 @@ class CollectionHygienePolicy:
             errors.append("proxy_pool_forbidden")
         if self.min_interval_seconds < MIN_INTERVAL_FLOOR:
             errors.append(f"min_interval_below_{MIN_INTERVAL_FLOOR}s")
-        if self.daily_cap <= 0:
+        if self.daily_cap is not None and self.daily_cap <= 0:
             errors.append("daily_cap_must_be_positive")
         if self.max_batch <= 0:
             errors.append("max_batch_must_be_positive")
@@ -192,7 +193,7 @@ class RateGovernor:
         return False, max(0.0, self.policy.min_interval_seconds - elapsed)
 
     def within_daily_cap(self, used_today: int, planned: int = 1) -> bool:
-        return used_today + planned <= self.policy.daily_cap
+        return self.policy.daily_cap is None or used_today + planned <= self.policy.daily_cap
 
     def within_batch(self, batch_size: int) -> bool:
         return batch_size <= self.policy.max_batch

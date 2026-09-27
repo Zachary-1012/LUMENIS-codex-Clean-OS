@@ -80,6 +80,9 @@ def test_public_prelaunch_import_binds_exact_scope_and_repeats_idempotently(
         adapter = PublicHttpAdapter(fetcher=response)
     monkeypatch.setattr(surface, "_get_runtime_adapter", lambda _platform: adapter)
     monkeypatch.setitem(surface._last_action, platform, 0.0)
+    def obsolete_daily_quota(*_args):
+        raise AssertionError("default collection must not read an obsolete daily quota")
+    monkeypatch.setattr(surface, "_daily_action_count", obsolete_daily_quota)
     gate = PermissionGate()
     monkeypatch.setattr(security, "get_permission_gate", lambda: gate)
 

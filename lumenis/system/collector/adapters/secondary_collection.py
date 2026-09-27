@@ -770,20 +770,20 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             "error_type": "BATCH_LIMIT",
         }
 
-    now_local = datetime.now()
-    used_today = _daily_action_count(platform, now_local)
-    if used_today is None:
-        return {
-            "ok": False, "status": "POLICY_STATE_UNAVAILABLE", "platform": platform,
-            "keyword": keyword, "read_only": True, "external_write": False,
-            "error_type": "COLLECTION_LIMIT_STATE_UNAVAILABLE",
-        }
-    if not governor.within_daily_cap(used_today):
-        return {
-            "ok": False, "status": "RATE_LIMITED", "platform": platform,
-            "keyword": keyword, "read_only": True, "external_write": False,
-            "error_type": "DAILY_COLLECTION_CAP",
-        }
+    if policy.daily_cap is not None:
+        used_today = _daily_action_count(platform, datetime.now())
+        if used_today is None:
+            return {
+                "ok": False, "status": "POLICY_STATE_UNAVAILABLE", "platform": platform,
+                "keyword": keyword, "read_only": True, "external_write": False,
+                "error_type": "COLLECTION_LIMIT_STATE_UNAVAILABLE",
+            }
+        if not governor.within_daily_cap(used_today):
+            return {
+                "ok": False, "status": "RATE_LIMITED", "platform": platform,
+                "keyword": keyword, "read_only": True, "external_write": False,
+                "error_type": "DAILY_COLLECTION_CAP",
+            }
 
     lock = _locks[platform]
     if not lock.acquire(blocking=False):

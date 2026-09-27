@@ -59,10 +59,6 @@ class CollectorJob:
 class Scheduler:
     """采集调度器"""
     
-    # 每日采集次数限制
-    DAILY_LIMIT = 12
-    # 手动一键更新次数
-    MANUAL_LIMIT = 3
     # 冷却时间（分钟）
     COOLDOWN_MINUTES = 15
     # 新账号前N次极轻量
@@ -131,16 +127,8 @@ class Scheduler:
         """
         self._check_new_day()
         
-        # 1. 每日总次数限制
-        if self.state['total_count'] >= self.DAILY_LIMIT:
-            return False, f"今日采集次数已达上限({self.DAILY_LIMIT}次)", 0
-        
-        # 2. 手动次数限制
-        if mode == CollectMode.MANUAL:
-            if self.state['manual_count'] >= self.MANUAL_LIMIT:
-                return False, f"今日手动采集次数已达上限({self.MANUAL_LIMIT}次)", 0
-        
-        # 3. 冷却时间检查
+        # Keep the safety cooldown; historical daily/manual product quotas no
+        # longer determine whether an authorized collection may run.
         last_time = self.state.get('last_collect_time')
         if last_time:
             try:
@@ -179,8 +167,8 @@ class Scheduler:
             self.state['auto_count'] += 1
         
         self._save_state()
-        print(f"[Scheduler] 采集记录: 今日{self.state['total_count']}/{self.DAILY_LIMIT}次, "
-              f"手动{self.state['manual_count']}/{self.MANUAL_LIMIT}次, "
+        print(f"[Scheduler] 采集记录: 今日{self.state['total_count']}次, "
+              f"手动{self.state['manual_count']}次, "
               f"自动{self.state['auto_count']}次, "
               f"累计{self.state['total_collect_count']}次")
     
@@ -206,12 +194,12 @@ class Scheduler:
         self._check_new_day()
         return {
             'today': self.state['today'],
-            'daily_limit': self.DAILY_LIMIT,
+            'daily_limit': None,
             'total_count': self.state['total_count'],
-            'remaining': self.DAILY_LIMIT - self.state['total_count'],
+            'remaining': None,
             'manual_count': self.state['manual_count'],
-            'manual_limit': self.MANUAL_LIMIT,
-            'manual_remaining': self.MANUAL_LIMIT - self.state['manual_count'],
+            'manual_limit': None,
+            'manual_remaining': None,
             'auto_count': self.state['auto_count'],
             'total_collect_count': self.state['total_collect_count'],
             'is_new_account': self.is_new_account(),

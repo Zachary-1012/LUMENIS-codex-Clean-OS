@@ -5544,9 +5544,9 @@ def api_collection_counter_v580():
         'circuit_state': circuit,
         'last_task_status': last_status,
         'last_success_at': last_success_at,
-        'daily_limit': 12,
-        'manual_limit': 3,
-        'auto_limit': 9,
+        'daily_limit': None,
+        'manual_limit': None,
+        'auto_limit': None,
         'last_collect_at': last_collect_at,
         'source': 'live:notes+collection_logs+collector_stats'
     })

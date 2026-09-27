@@ -43,7 +43,10 @@ def test_sanitize_strips_credential_keys_recursively():
 
 # ---------- 策略 ----------
 def test_default_policy_is_safe():
-    assert CollectionHygienePolicy().is_safe()
+    policy = CollectionHygienePolicy()
+    assert policy.is_safe()
+    assert policy.daily_cap is None
+    assert RateGovernor(policy).within_daily_cap(100_000)
 
 
 def test_pooling_and_public_web_violations():
@@ -68,6 +71,19 @@ def test_rate_governor_nonblocking_and_caps():
     assert gov.permit(3.0, 0.0)[0] is True
     assert gov.within_daily_cap(199, 1) and not gov.within_daily_cap(200, 1)
     assert gov.within_batch(20) and not gov.within_batch(21)
+
+
+def test_legacy_scheduler_has_no_daily_or_manual_product_quota(tmp_path):
+    from lumenis.system.collector.runtime.scheduler.collector_job import Scheduler, CollectMode
+
+    scheduler = Scheduler(state_file=str(tmp_path / "collector-state.json"))
+    scheduler.state.update(total_count=100, manual_count=100, last_collect_time=None)
+    assert scheduler.can_collect(CollectMode.MANUAL)[0] is True
+    status = scheduler.get_status()
+    assert status["daily_limit"] is None
+    assert status["manual_limit"] is None
+    assert status["remaining"] is None
+    assert status["manual_remaining"] is None
 
 
 def test_risk_signal_aligned_with_collector_guard():
