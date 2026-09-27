@@ -1083,3 +1083,13 @@ Le Labo mention is now inside the returned excerpt, while its conflicting
 publisher dates remain unknown. No new actual DB record, non-HTTP platform
 capture or user E2E is claimed by this Batch; Global coverage and ROUND 06
 remain `NO / REWORK`.
+
+### 2026-09-27 Round 06 Atom native source fields
+
+The existing SYSTEM `web_atom` adapter now retains a real channel entry's
+video/channel IDs, observed views and thumbnail in Raw, while unavailable
+engagement fields stay unknown. [Round 06 evidence](evidence/round-06/ROUND-06-ATOM-NATIVE-SOURCE-FIELDS-2026-09-27.md)
+records clean-main replay, five affected Atom tests, the Constitution gate and
+a live Nike-labelled feed read. This is live Source → Raw only. The actual
+product DB, Normalized/Evidence/Canonical binding, Nike BrandFocus user result,
+14-country entity baseline, Global coverage and ROUND 06 remain unaccepted.
