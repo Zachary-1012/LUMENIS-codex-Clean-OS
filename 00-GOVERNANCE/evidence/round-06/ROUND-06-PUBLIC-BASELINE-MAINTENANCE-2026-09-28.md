@@ -60,3 +60,33 @@ COLLECTOR-CONTINUITY-RESEARCH-20260928.md. COMMERCIAL OVERLAY IMPACT: no commerc
 rights or launch promotion. GLOBAL UNIVERSE / DATA MATURITY IMPACT: commercial and
 brand coverage NO / NOT VERIFIED; Guangzhou PARTIAL. ROUND 06 REWORK;
 Full Universe/RELEASED/OPERATING/COMMERCIAL_READY remain NO.
+
+## Actual scheduled activation — 2026-09-28 05:31 Asia/Shanghai
+
+Runtime is a fixed git archive of accepted `8d6e510309747607a2ce8e3253a02ce5119c05d9`
+under ignored data/private/runtime. It is independent of the protected dirty app
+worktree. Three conflicting older local candidates (secondary_collection,
+platform_naming, Atom test) remain protected; they were not bulk-overwritten or
+accepted as part of deployment. Daily data work must use accepted source until
+those candidates are reconciled. The scheduled process never starts Flask or
+performs schema migration.
+
+Windows task LUMENIS-Prelaunch-Maintenance-5m was registered with least privilege,
+InteractiveToken, no saved account password, hidden execution, IgnoreNew overlap,
+10-minute bound, StartWhenAvailable, five-minute due evaluation and logon recovery.
+It first ran from its future timer at 05:31:01 and completed at 05:31:52, exit 0:
+8 succeeded, 0 failed, 182 deferred. Combined manual + scheduled attempts: 16
+SUCCESS. Raw/Canonical 220/220, Evidence 209, native rows 46; integrity OK, FK 0.
+This is one real scheduled cycle, not long-running operation acceptance.
+
+The user must be logged into Windows; shutdown/logout suspends local execution.
+The following login resumes evaluation. Disabled/revoked signed plans cause no
+collection. Control script disables/removes only this task and preserves data.
+Updating the runtime requires a newly verified accepted archive and an explicit
+scheduler action update; dirty source is never automatically promoted. Private
+.env, signed plan, keys, browser profiles, product DB and logs are not committed.
+
+The register/control scripts are repeatable deployment helpers for the existing
+scheduler, not a second scheduler. Installer refuses unknown existing task or
+launcher overwrite. The actual source pipeline and all product release statuses
+remain as stated above; global/multiplatform/user-E2E/OPERATING are not completed.

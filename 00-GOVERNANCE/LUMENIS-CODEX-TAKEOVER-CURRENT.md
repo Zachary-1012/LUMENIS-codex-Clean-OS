@@ -1316,3 +1316,15 @@ Windows scheduled activation and true user E2E are not claimed here.
 [Round 06 evidence](evidence/round-06/ROUND-06-PUBLIC-BASELINE-MAINTENANCE-2026-09-28.md).
 Global coverage NO; Guangzhou PARTIAL; ROUND 06 REWORK;
 Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.
+
+### 2026-09-28 - public maintenance actual scheduled cycle
+
+The Windows task now calls fixed accepted source 8d6e5103 every five minutes
+(due-only, signed public plans, end-user AUTO still off). Its first timer-triggered
+run completed at 05:31:52 Asia/Shanghai, exit 0, 8 success / 0 failure. Total 16
+successful attempts; Raw/Canonical 220, Evidence 209, native 46, integrity OK/FK0.
+It runs while the Windows user is logged in and recovers on login; no password
+was saved. Protected dirty collector candidates are not the deployed runtime.
+[Round 06 runtime evidence](evidence/round-06/ROUND-06-PUBLIC-BASELINE-MAINTENANCE-2026-09-28.md).
+This establishes one scheduled cycle only; global coverage/real user E2E and
+long-running OPERATING remain NOT VERIFIED / NO. ROUND 06 stays REWORK.
