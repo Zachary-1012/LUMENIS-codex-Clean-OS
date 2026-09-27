@@ -1372,3 +1372,15 @@ Windows task resumed with unchanged runner hash and completed its 06:11:50 cycle
 before effects, preserving the unique-contract gate. PowerShell parse/negative
 invocation PASS; takeover gate passed after relocation. No product completion
 state was promoted. [Runtime evidence](evidence/round-06/ROUND-06-PUBLIC-BASELINE-MAINTENANCE-2026-09-28.md).
+
+
+### 2026-09-28 - Douyin real exact-scope product ingestion
+
+Guangzhou CTH 3 + Nike BMP 3 real records now persist in the actual v18 DB via
+Raw, signed Evidence, native fields and Canonical. Immediate real re-run updated
+6 with 0 new rows; native/Raw/Canonical remain 6 and Douyin Evidence 2. Overall
+Canonical 226, integrity OK/FK0. Exact manual Permission remains; social AUTO is
+not granted by public maintenance. 54 focused tests plus final 26 routing tests
+PASS. [Round 06 evidence](evidence/round-06/ROUND-06-DOUYIN-EXACT-INGESTION-2026-09-28.md).
+This is bounded ingestion proof, not full platform or real-user workflow closure.
+ROUND 06 REWORK; Global/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.

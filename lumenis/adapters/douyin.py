@@ -127,12 +127,18 @@ class DouyinAdapter(BaseAdapter):
         logger.info("抖音采集：注入 Cookie %d 条", injected)
         api_bags = []
 
-        def _on_response(resp):
+        def _on_request_finished(request):
             try:
-                u = resp.url
+                u = request.url
                 if not any(k in u for k in _SEARCH_API_KEYS):
                     return
-                if resp.request.resource_type not in ("xhr", "fetch"):
+                if request.resource_type not in ("xhr", "fetch"):
+                    return
+                # Playwright's response event fires when headers arrive; reading
+                # a streamed body there can block the sync dispatcher. The
+                # requestfinished event means the response body is available.
+                resp = request.response()
+                if resp is None:
                     return
                 if "stream" in u:
                     api_bags.extend(_iter_json_objects(resp.text()))
@@ -147,7 +153,7 @@ class DouyinAdapter(BaseAdapter):
             # Use the retained browser's normal page behavior; do not patch
             # navigator/runtime properties on the authenticated collection tab.
             page = hb.new_page(stealth=False)
-            page.on("response", _on_response)
+            page.on("requestfinished", _on_request_finished)
             url = ("https://www.douyin.com/search/"
                    f"{urllib.parse.quote(keyword)}?type=general")
             page.goto(url, wait_until="domcontentloaded", timeout=30000)

@@ -96,7 +96,7 @@ def douyin_worker_spec(private_data_dir=None):
         "account": "DOUYIN_READONLY",
         "port": 9225,
         "profile": os.path.join(base, "profiles", "douyin-readonly"),
-        "home": "https://www.douyin.com",
+        "home": "about:blank",
         "direct": False,
     }
 

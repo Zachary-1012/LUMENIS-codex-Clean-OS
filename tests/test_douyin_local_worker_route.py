@@ -131,7 +131,7 @@ def test_douyin_resident_profile_plan_is_exact_and_isolated(tmp_path):
         'account': 'DOUYIN_READONLY',
         'port': 9225,
         'profile': str(tmp_path / 'profiles' / 'douyin-readonly'),
-        'home': 'https://www.douyin.com',
+        'home': 'about:blank',
         'direct': False,
     }
 
@@ -141,7 +141,7 @@ def test_douyin_launch_uses_system_default_and_loopback_only(monkeypatch, tmp_pa
 
     plan = {'account': 'DOUYIN_READONLY', 'port': 9225,
             'profile': str(tmp_path / 'profiles' / 'douyin-readonly'),
-            'home': 'https://www.douyin.com', 'direct': False}
+            'home': 'about:blank', 'direct': False}
     monkeypatch.setattr(launcher, 'douyin_worker_spec', lambda: plan)
     monkeypatch.setattr(launcher, 'port_online', lambda _port: False)
     monkeypatch.setattr(launcher.cdp_helper, 'system_default_cdp_browser', lambda: 'chrome')
@@ -185,7 +185,7 @@ def test_douyin_launcher_reuses_only_exact_existing_profile(monkeypatch, tmp_pat
 
     plan = {'account': 'DOUYIN_READONLY', 'port': 9225,
             'profile': str(tmp_path / 'profiles' / 'douyin-readonly'),
-            'home': 'https://www.douyin.com', 'direct': False}
+            'home': 'about:blank', 'direct': False}
     monkeypatch.setattr(launcher, 'douyin_worker_spec', lambda: plan)
     monkeypatch.setattr(launcher, 'port_online', lambda _port: True)
     monkeypatch.setattr(launcher.cdp_helper, 'system_default_cdp_browser', lambda: 'edge')
@@ -230,7 +230,7 @@ def test_explicit_douyin_account_selects_only_douyin_launcher(monkeypatch):
     monkeypatch.setattr(launcher, 'launch_douyin_readonly', lambda status_only=False:
                         {'account': 'DOUYIN_READONLY', 'port': 9225, 'online': True,
                          'browser': 'edge', 'profile': 'isolated-profile',
-                         'home': 'https://www.douyin.com', 'action': 'started'})
+                         'home': 'about:blank', 'action': 'started'})
     monkeypatch.setattr(launcher, 'launch_one', lambda *_args, **_kwargs:
                         calls.append('existing resident'))
     monkeypatch.setattr(launcher, 'launch_general', lambda *_args, **_kwargs:

@@ -15,6 +15,8 @@
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
+import math
 from typing import Any, Dict, List, Optional
 
 from lumenis.system.collector.adapters.platform_naming import (
@@ -24,6 +26,24 @@ from lumenis.system.collector.adapters.platform_naming import (
     to_canonical_record,
     build_content_url,
 )
+
+
+def _normalize_douyin_publish_datetime(value: Any) -> str:
+    """Convert Douyin's native Unix-seconds timestamp to the notes ISO field."""
+    if value is None or value == "":
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError("invalid Douyin create_time type")
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError("invalid Douyin create_time value")
+    try:
+        published = datetime.fromtimestamp(value, tz=timezone.utc)
+    except (OverflowError, OSError, ValueError) as exc:
+        raise ValueError("Douyin create_time is outside the supported timestamp range") from exc
+    timespec = "microseconds" if published.microsecond else "seconds"
+    return published.isoformat(timespec=timespec).replace("+00:00", "Z")
 
 
 def _to_note_payload(canonical: Dict[str, Any], raw: Dict[str, Any]) -> Dict[str, Any]:
@@ -45,6 +65,22 @@ def _to_note_payload(canonical: Dict[str, Any], raw: Dict[str, Any]) -> Dict[str
     plat = canonical.get("platform")
     spec = get_platform_fields(plat) if plat else None
 
+    published_at = canonical.get("published_at")
+    if published_at is None or published_at == "":
+        published_at = raw.get("publish_datetime")
+    if published_at is None or published_at == "":
+        published_at = raw.get("publish_date")
+    if plat == "douyin":
+        published_at = _normalize_douyin_publish_datetime(published_at)
+
+    author_id = canonical.get("author_id")
+    if plat == "douyin" and not author_id:
+        # Search responses can expose uid without sec_uid. Retain the known uid
+        # in the generic author field; never relabel it as native sec_uid.
+        native_author_id = raw.get("author_id")
+        if isinstance(native_author_id, str):
+            author_id = native_author_id
+
     payload: Dict[str, Any] = {
         "note_id": canonical.get("content_id"),
         "source_platform": plat or "unknown",
@@ -59,7 +95,7 @@ def _to_note_payload(canonical: Dict[str, Any], raw: Dict[str, Any]) -> Dict[str
         ),
         "url": canonical.get("url") or raw.get("url") or "",
         "cover": raw.get("cover") or raw.get("image") or raw.get("thumbnail") or raw.get("cover_url") or "",
-        "author_id": canonical.get("author_id") or "",
+        "author_id": author_id or "",
         "author_nickname": (
             raw.get("author_nickname")
             or raw.get("nickname")
@@ -74,12 +110,7 @@ def _to_note_payload(canonical: Dict[str, Any], raw: Dict[str, Any]) -> Dict[str
         "collects": canonical.get("collect_count"),
         "shares": canonical.get("share_count"),
         "type": canonical.get("content_type") or raw.get("type") or "normal",
-        "publish_datetime": (
-            canonical.get("published_at")
-            or raw.get("publish_datetime")
-            or raw.get("publish_date")
-            or ""
-        ),
+        "publish_datetime": published_at or "",
         "captured_at": (
             canonical.get("captured_at")
             or raw.get("captured_at")

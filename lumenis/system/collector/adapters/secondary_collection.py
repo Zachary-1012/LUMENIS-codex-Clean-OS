@@ -422,9 +422,21 @@ def _native_record(item: Dict[str, Any], platform: str, keyword: str, captured_a
         "matched_keywords": keyword,
     })
     if platform == "douyin":
-        record.update({"aweme_id": content_id, "sec_uid": item.get("author_id") or "", "create_time": publish_date})
-        record.update({"digg_count": item.get("likes"), "comment_count": item.get("comments"),
-                       "collect_count": item.get("collects"), "share_count": item.get("shares")})
+        record.update({"content_id": content_id, "aweme_id": content_id,
+                       "desc": item.get("content") or item.get("title") or ""})
+        author_name = item.get("author_nickname")
+        if (isinstance(author_name, str) and author_name.strip()
+                and author_name.strip() != "抖音用户" and not record.get("nickname")):
+            record["nickname"] = author_name.strip()
+        if not item.get("author_id") and raw.get("author_id") is not None:
+            record["author_id"] = raw["author_id"]
+        for native_field, item_field in (("digg_count", "likes"),
+                                         ("comment_count", "comments"),
+                                         ("collect_count", "collects"),
+                                         ("share_count", "shares")):
+            value = item.get(item_field)
+            if value is not None:
+                record[native_field] = value
     elif platform == "weibo":
         record.update({"mid": content_id, "idstr": content_id, "created_at": publish_date})
         record.update({"attitudes_count": item.get("likes"), "comments_count": item.get("comments"),
@@ -628,6 +640,41 @@ def _authorize_prelaunch_public(scope: Mapping[str, Any], source: str, platform:
             OperationType.DATA_IMPORT, resource,
             caller=f"local_prelaunch_operator:{getpass.getuser()}",
             domain_id=scope["domain_id"], exact_approval_required=True,
+        ).allowed is True
+    except Exception:
+        return False
+
+
+def _prelaunch_douyin_manual_import_resource(
+    scope: Mapping[str, Any], keyword: str, *, platform: str,
+) -> str:
+    """Bind human-only Douyin import approval to platform, query, and exact entity."""
+    exact = _prelaunch_scope(scope)
+    if platform != "douyin" or not isinstance(keyword, str) or not 1 <= len(keyword) <= 120:
+        raise ValueError("exact Douyin manual source required")
+    entity_id = exact["subject_id"] or exact["brand_focus_id"]
+    digest = hashlib.sha256(keyword.encode("utf-8")).hexdigest()
+    return f"prelaunch-manual:{platform}:{exact['domain_id']}:{entity_id}:{digest}"
+
+
+def _authorize_prelaunch_douyin_manual(
+    scope: Mapping[str, Any], keyword: str, *, platform: str,
+) -> bool:
+    """Require the existing exact-resource human DATA_IMPORT approval."""
+    try:
+        from lumenis.system.security import (
+            OperationType, get_permission_gate, is_testing_bypass_enabled,
+        )
+        if is_testing_bypass_enabled():
+            return False
+        exact = _prelaunch_scope(scope)
+        resource = _prelaunch_douyin_manual_import_resource(
+            exact, keyword, platform=platform,
+        )
+        return get_permission_gate().check(
+            OperationType.DATA_IMPORT, resource,
+            caller=f"local_prelaunch_operator:{getpass.getuser()}",
+            domain_id=exact["domain_id"], exact_approval_required=True,
         ).allowed is True
     except Exception:
         return False
@@ -888,7 +935,9 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         }
     prelaunch_scope = None
     if prelaunch_local_import:
-        if (actor is not None or platform not in {"public_http", "web_atom"}
+        if (actor is not None
+                or platform not in {"public_http", "web_atom", "douyin"}
+                or (maintenance_operator and platform not in {"public_http", "web_atom"})
                 or (operator != "human" and not maintenance_operator)):
             return {"ok": False, "status": "SCOPE_UNAUTHORIZED", "platform": platform,
                     "keyword": keyword, "read_only": True, "external_write": False}
@@ -900,12 +949,17 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                         or not prelaunch_authorization.matches_request(
                             source_url=keyword, platform=platform, scope=prelaunch_scope)):
                     raise PermissionError("signed exact baseline plan required")
-            authorized = (
-                _authorize_prelaunch_public(prelaunch_scope, keyword, platform,
-                                            maintenance_authorization=prelaunch_authorization)
-                if maintenance_operator
-                else _authorize_prelaunch_public(prelaunch_scope, keyword, platform)
-            )
+            if maintenance_operator:
+                authorized = _authorize_prelaunch_public(
+                    prelaunch_scope, keyword, platform,
+                    maintenance_authorization=prelaunch_authorization,
+                )
+            elif platform == "douyin":
+                authorized = _authorize_prelaunch_douyin_manual(
+                    prelaunch_scope, keyword, platform=platform,
+                )
+            else:
+                authorized = _authorize_prelaunch_public(prelaunch_scope, keyword, platform)
             if not authorized:
                 raise PermissionError("exact import approval unavailable")
             _validate_prelaunch_registry(prelaunch_scope)
@@ -1031,8 +1085,19 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 "read_only": True, "external_write": False,
                 "publish_authority": "human_manual_only",
             }
+        if (platform == "douyin" and prelaunch_scope is not None
+                and not maintenance_operator
+                and not _authorize_prelaunch_douyin_manual(
+                    prelaunch_scope, keyword, platform=platform,
+                )):
+            return {
+                "ok": False, "status": "SCOPE_UNAUTHORIZED",
+                "platform": platform, "keyword": keyword,
+                "read_only": True, "external_write": False,
+                "publish_authority": "human_manual_only",
+            }
         prelaunch_observation_changed = False
-        if prelaunch_scope is not None and platform in {"web_atom", "public_http"} and records:
+        if prelaunch_scope is not None and platform in {"web_atom", "public_http", "douyin"} and records:
             from lumenis.shared.database.platform_content import platform_records_changed
 
             prelaunch_observation_changed = platform_records_changed(records, platform=platform)
@@ -1109,12 +1174,12 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             "consumer_views": ["CTH", "BMP"],
             "provenance": provenance,
         }
-        if prelaunch_scope is not None and platform in {"public_http", "web_atom"}:
+        if prelaunch_scope is not None and platform in {"public_http", "web_atom", "douyin"}:
             result["refresh_verified"] = False
         if prelaunch_scope is not None:
             if prelaunch_observation_changed:
                 evidence_id = None
-            elif platform in {"public_http", "web_atom"}:
+            elif platform in {"public_http", "web_atom", "douyin"}:
                 evidence_id = _existing_prelaunch_observation_evidence(note_ids, platform)
             else:
                 evidence_id = _existing_prelaunch_evidence(note_ids, prelaunch_scope)
@@ -1149,14 +1214,14 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                     canonical_synced = len(note_ids)
                 result["canonical_synced"] = canonical_synced
                 result["scope_status"] = "VERIFIED"
-                if platform in {"web_atom", "public_http"}:
+                if platform in {"web_atom", "public_http", "douyin"}:
                     from lumenis.shared.database.platform_content import persist_verified_platform_records
 
                     result["native_fields_synced"] = persist_verified_platform_records(
                         records, platform=platform, note_ids=note_ids,
                         evidence_id=evidence_id, scope=prelaunch_scope,
                     )
-                if platform in {"public_http", "web_atom"}:
+                if platform in {"public_http", "web_atom", "douyin"}:
                     refresh_verified = (
                         bool(records)
                         and len(note_ids) == len(records)
