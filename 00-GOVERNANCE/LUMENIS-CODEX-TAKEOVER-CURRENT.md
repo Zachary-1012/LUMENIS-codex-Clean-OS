@@ -1181,3 +1181,16 @@ already bound or that a new live collection has been completed. Global Commercia
 and Brand Coverage remain `NO / NOT VERIFIED`, Guangzhou reference `PARTIAL`,
 ROUND 06 `REWORK`, and Full Universe, RELEASED and OPERATING remain `NO`.
 See [Round 06 evidence](evidence/round-06/ROUND-06-EXACT-RAW-CANONICAL-BIND-2026-09-27.md).
+
+### 2026-09-27 Round 06 Overture Places candidate reader
+
+The SYSTEM Collector now has a local Overture Places Parquet reader that
+preserves stable record IDs, country location, upstream source/license metadata
+and explicit missing fields. Its tested output is a **review queue**, not
+Registry, Raw, Evidence or Canonical product data. The pinned Singapore Parquet
+snapshot parsed successfully without a product DB write; promotion still needs
+source-by-source rights/identity review and the existing Collector/Evidence
+chain. Global Commercial and Brand Coverage remain `NO / NOT VERIFIED`,
+Guangzhou reference `PARTIAL`, ROUND 06 `REWORK`, and Full Universe,
+RELEASED and OPERATING remain `NO`.
+See [Round 06 evidence](evidence/round-06/ROUND-06-OVERTURE-PARQUET-CANDIDATES-2026-09-27.md).

@@ -34,6 +34,7 @@ The table records direct manifest entries, not every transitive dependency.
 | waitress | PRODUCTION | WSGI serving | Process/server boundary | VERIFY_BEFORE_RELEASE | Yes |
 | APScheduler | PRODUCTION | Scheduling | Scheduler/runtime boundary | VERIFY_BEFORE_RELEASE | Yes |
 | schedule | PRODUCTION | Lightweight scheduling | Scheduler/runtime boundary | VERIFY_BEFORE_RELEASE | Yes |
+| [DuckDB](https://pypi.org/project/duckdb/1.5.5/) 1.5.5 | PRODUCTION | Local Overture Places Parquet file reader | SYSTEM Collector adapter; in-memory connection only, no business DB ownership | MIT ([v1.5.5 license](https://github.com/duckdb/duckdb/blob/v1.5.5/LICENSE)) | Yes |
 | pandas | PRODUCTION | Tabular data processing | Data transformation boundary | VERIFY_BEFORE_RELEASE | Yes, medium-cost |
 | openpyxl | PRODUCTION | XLSX read/write | Import/export adapter | VERIFY_BEFORE_RELEASE | Yes |
 | xlsxwriter | PRODUCTION | XLSX generation | Export adapter | VERIFY_BEFORE_RELEASE | Yes |
