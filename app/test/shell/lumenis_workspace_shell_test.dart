@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
@@ -38,7 +39,7 @@ void main() {
     );
   });
 
-  testWidgets('grouped secondary navigation selects a screen and reports it', (
+  testWidgets('navigation preview changes only after selecting a screen', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(1280, 900));
@@ -54,18 +55,182 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await _openWorkspaceNavigation(tester);
     expect(
       find.byKey(const ValueKey('workspace-secondary-AI')),
       findsOneWidget,
     );
     await tester.tap(find.text('能力与服务'));
     await tester.pumpAndSettle();
+    expect(selected, isEmpty);
+    expect(find.byType(Ai01Screen), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('workspace-nav-AI-04')));
     await tester.pumpAndSettle();
 
     expect(selected, ['AI-04']);
     expect(find.byType(Ai04Screen), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'navigation exposes each registered route without preview routing',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final selected = <String>[];
+
+      await tester.pumpWidget(
+        _app(
+          _ShellClient(),
+          initialScreenId: 'AI-01',
+          onScreenSelected: selected.add,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _openWorkspaceNavigation(tester);
+
+      for (final group in LumenisWorkspaceRoutes.workflowsByGroup.keys) {
+        final groupRow = find.byKey(ValueKey('workspace-domain-$group'));
+        await tester.ensureVisible(groupRow);
+        await tester.tap(groupRow);
+        await tester.pumpAndSettle();
+
+        final rootScreenId =
+            LumenisWorkspaceRoutes.screenIdsByGroup[group]!.first;
+        for (final workflow
+            in LumenisWorkspaceRoutes.workflowsByGroup[group]!.entries) {
+          final workflowTile = find.byKey(
+            ValueKey('workflow-group-${workflow.key}'),
+          );
+          await tester.ensureVisible(workflowTile);
+          if (!workflow.value.contains(rootScreenId)) {
+            await tester.tap(workflowTile);
+            await tester.pumpAndSettle();
+          }
+          for (final screenId in workflow.value) {
+            final route = find.byKey(ValueKey('workspace-nav-$screenId'));
+            expect(route, findsOneWidget, reason: '$group / ${workflow.key}');
+            await tester.ensureVisible(route);
+          }
+        }
+      }
+
+      expect(selected, isEmpty);
+      expect(find.byType(Ai01Screen), findsOneWidget);
+      final systemRow = find.byKey(const ValueKey('workspace-domain-SYS'));
+      await tester.ensureVisible(systemRow);
+      await tester.tap(systemRow);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('workspace-nav-SYS-06')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('workspace-nav-SYS-06')));
+      await tester.pumpAndSettle();
+      expect(selected, ['SYS-06']);
+      expect(find.byType(Ai01Screen), findsOneWidget);
+
+      await _openWorkspaceNavigation(tester);
+      await tester.tap(find.byKey(const ValueKey('workspace-domain-BMP')));
+      await tester.pumpAndSettle();
+      final createWorkflow = find.byKey(
+        const ValueKey('workflow-group-workflow.create'),
+      );
+      await tester.ensureVisible(createWorkflow);
+      await tester.tap(createWorkflow);
+      await tester.pumpAndSettle();
+      final bmpRoute = find.byKey(const ValueKey('workspace-nav-BMP-08'));
+      await tester.ensureVisible(bmpRoute);
+      await tester.tap(bmpRoute);
+      await tester.pumpAndSettle();
+      expect(selected, ['SYS-06', 'BMP-08']);
+      expect(find.byType(Ai01Screen), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('cancel and Escape preserve the mounted AI-01 draft', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final selected = <String>[];
+    await tester.pumpWidget(
+      _app(
+        _ShellClient(),
+        initialScreenId: 'AI-01',
+        onScreenSelected: selected.add,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final state = tester.state(find.byType(Ai01Screen));
+    final field = tester.widget<TextField>(find.byType(TextField));
+    final controller = field.controller!;
+    await tester.enterText(find.byType(TextField), '保留中的序境草稿');
+    controller.selection = const TextSelection(baseOffset: 2, extentOffset: 5);
+    await tester.pump();
+    final textFieldSelection = controller.selection;
+    final scrollableFinder = find.descendant(
+      of: find.byType(Ai01Screen),
+      matching: find.byType(Scrollable),
+    );
+    final scrollable = tester.state<ScrollableState>(scrollableFinder.first);
+    if (scrollable.position.maxScrollExtent > 0) {
+      scrollable.position.jumpTo(
+        scrollable.position.maxScrollExtent > 64
+            ? 64
+            : scrollable.position.maxScrollExtent,
+      );
+    }
+    await tester.pump();
+    final scrollOffset = scrollable.position.pixels;
+
+    await _openWorkspaceNavigation(tester);
+    await tester.tap(find.byKey(const ValueKey('workspace-domain-BMP')));
+    await tester.pumpAndSettle();
+    expect(selected, isEmpty);
+    expect(tester.state(find.byType(Ai01Screen)), same(state));
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('workspace-navigation-dialog')),
+      findsNothing,
+    );
+    expect(tester.state(find.byType(Ai01Screen)), same(state));
+    expect(controller.text, '保留中的序境草稿');
+    expect(controller.selection, textFieldSelection);
+    expect(scrollable.position.pixels, scrollOffset);
+    expect(selected, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('desktop navigation remains operable with 200% text', (
+    tester,
+  ) async {
+    for (final size in const [Size(768, 900), Size(1440, 900)]) {
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpWidget(
+        _app(_ShellClient(), textScaler: TextScaler.linear(2)),
+      );
+      await tester.pumpAndSettle();
+
+      final open = find.byKey(const ValueKey('workspace-navigation-open'));
+      expect(tester.getSize(open).width, greaterThanOrEqualTo(44));
+      expect(tester.getSize(open).height, greaterThanOrEqualTo(44));
+      expect(tester.takeException(), isNull);
+      await tester.tap(open);
+      await tester.pumpAndSettle();
+
+      final close = find.byKey(const ValueKey('workspace-navigation-close'));
+      expect(tester.getSize(close).width, greaterThanOrEqualTo(44));
+      expect(tester.getSize(close).height, greaterThanOrEqualTo(44));
+      expect(find.bySemanticsLabel('序境 / LUMENIS'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(close);
+      await tester.pumpAndSettle();
+    }
   });
 
   testWidgets('desktop shell keeps the business directory nested in CTH', (
@@ -316,11 +481,19 @@ void main() {
     await tester.enterText(find.byType(TextField), '离开页面即丢弃');
     await tester.pump();
 
-    await tester.tap(find.text('能力与服务'));
+    await _openWorkspaceNavigation(tester);
+    await tester.tap(
+      find.byKey(const ValueKey('workflow-group-workflow.assist_tools')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('workspace-nav-AI-04')));
     await tester.pumpAndSettle();
     expect(find.byType(Ai01Screen), findsNothing);
+    await _openWorkspaceNavigation(tester);
+    await tester.tap(
+      find.byKey(const ValueKey('workflow-group-workflow.assist')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('workspace-nav-AI-01')));
     await tester.pumpAndSettle();
 
@@ -619,7 +792,14 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    await tester.tap(find.text('工作助手'));
+    await _openWorkspaceNavigation(tester);
+    expect(
+      find.byKey(const ValueKey('workspace-navigation-dialog')),
+      findsOneWidget,
+    );
+    final aiDomain = find.byKey(const ValueKey('workspace-domain-AI'));
+    await tester.ensureVisible(aiDomain);
+    await tester.tap(aiDomain);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('workspace-nav-AI-01')));
     await tester.pumpAndSettle();
@@ -693,7 +873,10 @@ void main() {
         _app(client, locale: const Locale('en'), runtime: _legacyRuntime),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Brand & Market').first);
+      await _openWorkspaceNavigation(tester);
+      await tester.tap(find.byKey(const ValueKey('workspace-domain-BMP')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('workspace-nav-BMP-01')));
       await tester.pumpAndSettle();
 
       expect(find.text('Example Brand'), findsNWidgets(2));
@@ -764,6 +947,11 @@ void main() {
     expect(find.textContaining('Core ·'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+}
+
+Future<void> _openWorkspaceNavigation(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('workspace-navigation-open')));
+  await tester.pumpAndSettle();
 }
 
 Widget _app(

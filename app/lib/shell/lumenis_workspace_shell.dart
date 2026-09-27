@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../features/system/sys05/sys05_appearance_editor.dart';
 
 import '../core/lumenis_core_client.dart';
@@ -299,15 +300,6 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       ? _accountDestination(LumenisTheme.of(context).accent)
       : _destinations[_selectedIndex < 0 ? 0 : _selectedIndex];
 
-  List<String> get _secondaryScreenIds {
-    final groupScreenIds =
-        LumenisWorkspaceRoutes.screenIdsByGroup[_activeGroup] ?? const [];
-    if (_activeGroup == 'ACC' || groupScreenIds.length < 2) {
-      return groupScreenIds;
-    }
-    return groupScreenIds.skip(1).toList(growable: false);
-  }
-
   void _select(int index) {
     if (index < 0 || index >= _destinations.length) return;
     _activateScreen(_destinations[index].id);
@@ -451,6 +443,36 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
               ],
             ),
     );
+  }
+
+  Future<void> _openNavigation() async {
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final selected = await showDialog<String>(
+      context: context,
+      animationStyle: reduceMotion
+          ? AnimationStyle.noAnimation
+          : const AnimationStyle(
+              duration: Duration(milliseconds: 180),
+              reverseDuration: Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              reverseCurve: Curves.easeOutCubic,
+            ),
+      builder: (dialogContext) => CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.escape): () =>
+              Navigator.of(dialogContext).pop(),
+        },
+        child: _WorkspaceNavigationDialog(
+          destinations: _destinations,
+          accountDestination: _accountDestination(
+            LumenisTheme.of(dialogContext).accent,
+          ),
+          activeScreenId: _activeScreen.value,
+        ),
+      ),
+    );
+    if (mounted && selected != null) _activateScreen(selected);
   }
 
   Future<void> _openPhonePages() async {
@@ -598,65 +620,24 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     final destination = _selectedDestination;
     return Scaffold(
       backgroundColor: LumenisTheme.of(context).canvas,
-      body: Row(
+      body: Column(
         children: [
-          NavigationRail(
-            selectedIndex: _selectedIndex < 0 ? null : _selectedIndex,
-            onDestinationSelected: _select,
-            backgroundColor: LumenisTheme.of(context).surface,
-            indicatorColor: LumenisTheme.of(
-              context,
-            ).accent.withValues(alpha: 0.13),
-            labelType: NavigationRailLabelType.none,
-            leading: const Padding(
-              padding: EdgeInsets.only(bottom: 18, top: 16),
-              child: _LumenisMark(compact: true),
-            ),
-            destinations: [
-              for (final item in _destinations)
-                NavigationRailDestination(
-                  icon: Tooltip(
-                    message: context.lumenisL10n.text(item.labelKey),
-                    child: Icon(item.icon),
-                  ),
-                  selectedIcon: Icon(
-                    item.icon,
-                    color: LumenisTheme.of(context).resolveSemantic(item.color),
-                  ),
-                  label: Text(context.lumenisL10n.text(item.labelKey)),
-                ),
-            ],
+          _WorkspaceHeader(
+            destination: destination,
+            activeScreenId: _activeScreen.value,
+            contextLabel: _contextLabel(),
+            coreLabel: _coreLabel,
+            onOpenNavigation: _openNavigation,
+            onOpenContextPicker: _openContextPicker,
+            onOpenAccount: _openAccount,
+            onLocaleChanged: widget.onLocaleChanged,
+            compact: true,
+            onOpenCth02: _openCth02,
+            onReturnToCth: _returnFromCth02,
+            isCth02: _activeScreen.value == 'CTH-02',
+            accountActive: _activeGroup == 'ACC',
           ),
-          const VerticalDivider(width: 1, thickness: 1),
-          Expanded(
-            child: Column(
-              children: [
-                _WorkspaceHeader(
-                  destination: destination,
-                  activeScreenId: _activeScreen.value,
-                  contextLabel: _contextLabel(),
-                  coreLabel: _coreLabel,
-                  onOpenContextPicker: _openContextPicker,
-                  onOpenAccount: _openAccount,
-                  onLocaleChanged: widget.onLocaleChanged,
-                  compact: true,
-                  onOpenCth02: _openCth02,
-                  onReturnToCth: _returnFromCth02,
-                  isCth02: _activeScreen.value == 'CTH-02',
-                  accountActive: _activeGroup == 'ACC',
-                ),
-                _SecondaryNavigation(
-                  screenIds: _secondaryScreenIds,
-                  activeScreenId: _activeScreen.value,
-                  color: LumenisTheme.of(
-                    context,
-                  ).resolveSemantic(destination.color),
-                  onSelected: _activateScreen,
-                ),
-                Expanded(child: _screenTransition()),
-              ],
-            ),
-          ),
+          Expanded(child: _screenTransition()),
         ],
       ),
     );
@@ -671,20 +652,6 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       backgroundColor: LumenisTheme.of(context).canvas,
       body: Row(
         children: [
-          _WideNavigation(
-            destinations: _destinations,
-            selectedIndex: _selectedIndex,
-            onSelected: _select,
-            accountDestination: _accountDestination(
-              LumenisTheme.of(context).accent,
-            ),
-            accountSelected: _activeGroup == 'ACC',
-            onAccountSelected: _openAccount,
-            screenIds: _secondaryScreenIds,
-            activeScreenId: _activeScreen.value,
-            onScreenSelected: _activateScreen,
-          ),
-          const VerticalDivider(width: 1, thickness: 1),
           Expanded(
             child: Column(
               children: [
@@ -693,6 +660,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
                   activeScreenId: _activeScreen.value,
                   contextLabel: _contextLabel(),
                   coreLabel: _coreLabel,
+                  onOpenNavigation: _openNavigation,
                   onOpenContextPicker: _openContextPicker,
                   onOpenAccount: _openAccount,
                   onLocaleChanged: widget.onLocaleChanged,
@@ -819,296 +787,12 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
   );
 }
 
-class _SecondaryNavigation extends StatefulWidget {
-  const _SecondaryNavigation({
-    required this.screenIds,
-    required this.activeScreenId,
-    required this.color,
-    required this.onSelected,
-  });
-
-  final List<String> screenIds;
-  final String activeScreenId;
-  final Color color;
-  final ValueChanged<String> onSelected;
-
-  @override
-  State<_SecondaryNavigation> createState() => _SecondaryNavigationState();
-}
-
-class _SecondaryNavigationState extends State<_SecondaryNavigation> {
-  final GlobalKey _activeItemKey = GlobalKey();
-
-  @override
-  void initState() {
-    super.initState();
-    _revealActiveItem();
-  }
-
-  @override
-  void didUpdateWidget(covariant _SecondaryNavigation oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.activeScreenId != widget.activeScreenId ||
-        oldWidget.screenIds != widget.screenIds) {
-      _revealActiveItem();
-    }
-  }
-
-  void _revealActiveItem() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final itemContext = _activeItemKey.currentContext;
-      if (!mounted || itemContext == null) return;
-      final reduceMotion =
-          MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-      Scrollable.ensureVisible(
-        itemContext,
-        alignment: 0.5,
-        duration: reduceMotion
-            ? Duration.zero
-            : const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final copy = context.lumenisL10n;
-    final workflows =
-        LumenisWorkspaceRoutes
-            .workflowsByGroup[LumenisWorkspaceRoutes.groupForScreen(
-          widget.activeScreenId,
-        )]!;
-    final activeWorkflow = LumenisWorkspaceRoutes.workflowForScreen(
-      widget.activeScreenId,
-    );
-    final stages = workflows[activeWorkflow]!;
-    return SizedBox(
-      height: 52,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: LumenisTheme.of(context).canvas,
-          border: Border(
-            bottom: BorderSide(color: LumenisTheme.of(context).line),
-          ),
-        ),
-        child: SingleChildScrollView(
-          key: ValueKey(
-            'workspace-secondary-${widget.activeScreenId.split('-').first}',
-          ),
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Row(
-            children: [
-              PopupMenuButton<String>(
-                tooltip: copy.text(activeWorkflow),
-                onSelected: (workflow) =>
-                    widget.onSelected(workflows[workflow]!.first),
-                itemBuilder: (context) => [
-                  for (final workflow in workflows.keys)
-                    PopupMenuItem(
-                      value: workflow,
-                      child: Text(copy.text(workflow)),
-                    ),
-                ],
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 14,
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        copy.text(activeWorkflow),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.expand_more, size: 16),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20, child: VerticalDivider(width: 12)),
-              for (var index = 0; index < stages.length; index++) ...[
-                if (index > 0) const SizedBox(width: 4),
-                Builder(
-                  builder: (context) {
-                    final screenId = stages[index];
-                    final selected = screenId == widget.activeScreenId;
-                    final unavailable = LumenisWorkspaceRoutes
-                        .unavailableScreenIds
-                        .contains(screenId);
-                    return Semantics(
-                      button: true,
-                      selected: selected,
-                      label: copy.text('screen.$screenId'),
-                      child: InkWell(
-                        key: ValueKey('workspace-nav-$screenId'),
-                        onTap: () => widget.onSelected(screenId),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          key: selected ? _activeItemKey : null,
-                          constraints: const BoxConstraints(
-                            minWidth: 48,
-                            minHeight: 48,
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: selected
-                                    ? widget.color
-                                    : Colors.transparent,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                copy.text('screen.$screenId'),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: selected
-                                      ? LumenisTheme.of(context).foreground
-                                      : LumenisTheme.of(context).muted,
-                                  fontSize: 13,
-                                  fontWeight: selected
-                                      ? FontWeight.w600
-                                      : FontWeight.w400,
-                                ),
-                              ),
-                              if (unavailable) ...[
-                                const SizedBox(width: 6),
-                                Icon(
-                                  Icons.info_outline_rounded,
-                                  size: 14,
-                                  color: LumenisTheme.of(context).quiet,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _WideNavigation extends StatelessWidget {
-  const _WideNavigation({
-    required this.destinations,
-    required this.selectedIndex,
-    required this.onSelected,
-    required this.accountDestination,
-    required this.accountSelected,
-    required this.onAccountSelected,
-    required this.screenIds,
-    required this.activeScreenId,
-    required this.onScreenSelected,
-  });
-
-  final List<_WorkspaceDestination> destinations;
-  final int selectedIndex;
-  final ValueChanged<int> onSelected;
-  final _WorkspaceDestination accountDestination;
-  final bool accountSelected;
-  final VoidCallback onAccountSelected;
-  final List<String> screenIds;
-  final String activeScreenId;
-  final ValueChanged<String> onScreenSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final copy = context.lumenisL10n;
-    return SizedBox(
-      width: 216,
-      child: DecoratedBox(
-        decoration: BoxDecoration(color: LumenisTheme.of(context).canvas),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 16, 26),
-              child: _LumenisMark(),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(22, 0, 16, 12),
-              child: _SectionLabel(copy.text('shell.workspace')),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                children: [
-                  for (var index = 0; index < destinations.length; index++) ...[
-                    _WideDestinationRow(
-                      destination: destinations[index],
-                      selected: index == selectedIndex,
-                      onTap: () => onSelected(index),
-                    ),
-                    if (index == selectedIndex)
-                      _NavigationTree(
-                        screenIds: screenIds,
-                        activeScreenId: activeScreenId,
-                        onSelected: onScreenSelected,
-                      ),
-                  ],
-                  if (accountSelected)
-                    _NavigationTree(
-                      screenIds: screenIds,
-                      activeScreenId: activeScreenId,
-                      onSelected: onScreenSelected,
-                    ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
-              child: _WideDestinationRow(
-                destination: accountDestination,
-                selected: accountSelected,
-                onTap: onAccountSelected,
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(22, 16, 20, 22),
-              child: Text(
-                copy.text('shell.workspace_summary'),
-                style: TextStyle(
-                  color: LumenisTheme.of(context).quiet,
-                  height: 1.7,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _NavigationTree extends StatelessWidget {
   const _NavigationTree({
-    required this.screenIds,
     required this.activeScreenId,
     required this.onSelected,
   });
 
-  final List<String> screenIds;
   final String activeScreenId;
   final ValueChanged<String> onSelected;
 
@@ -1198,6 +882,7 @@ class _NavigationTree extends StatelessWidget {
 
 class _WideDestinationRow extends StatelessWidget {
   const _WideDestinationRow({
+    super.key,
     required this.destination,
     required this.selected,
     required this.onTap,
@@ -1228,38 +913,44 @@ class _WideDestinationRow extends StatelessWidget {
             selected: selected,
             label:
                 '${copy.text(destination.labelKey)}，${copy.text(destination.groupKey)}',
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              child: Row(
-                children: [
-                  Icon(destination.icon, size: 19, color: foreground),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      copy.text(destination.labelKey),
-                      style: TextStyle(
-                        color: selected
-                            ? LumenisTheme.of(context).foreground
-                            : foreground,
-                        fontSize: 14,
-                        fontWeight: selected
-                            ? FontWeight.w600
-                            : FontWeight.w500,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    Icon(destination.icon, size: 19, color: foreground),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        copy.text(destination.labelKey),
+                        style: TextStyle(
+                          color: selected
+                              ? LumenisTheme.of(context).foreground
+                              : foreground,
+                          fontSize: 14,
+                          fontWeight: selected
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                        ),
                       ),
                     ),
-                  ),
-                  if (selected)
-                    Container(
-                      width: 5,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: LumenisTheme.of(
-                          context,
-                        ).resolveSemantic(destination.color),
-                        shape: BoxShape.circle,
+                    if (selected)
+                      Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: LumenisTheme.of(
+                            context,
+                          ).resolveSemantic(destination.color),
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1269,12 +960,120 @@ class _WideDestinationRow extends StatelessWidget {
   }
 }
 
+class _WorkspaceNavigationDialog extends StatefulWidget {
+  const _WorkspaceNavigationDialog({
+    required this.destinations,
+    required this.accountDestination,
+    required this.activeScreenId,
+  });
+
+  final List<_WorkspaceDestination> destinations;
+  final _WorkspaceDestination accountDestination;
+  final String activeScreenId;
+
+  @override
+  State<_WorkspaceNavigationDialog> createState() =>
+      _WorkspaceNavigationDialogState();
+}
+
+class _WorkspaceNavigationDialogState
+    extends State<_WorkspaceNavigationDialog> {
+  late String _previewGroup = LumenisWorkspaceRoutes.groupForScreen(
+    widget.activeScreenId,
+  );
+
+  String get _previewScreenId {
+    final activeGroup = LumenisWorkspaceRoutes.groupForScreen(
+      widget.activeScreenId,
+    );
+    if (_previewGroup == activeGroup) return widget.activeScreenId;
+    return LumenisWorkspaceRoutes.screenIdsByGroup[_previewGroup]!.first;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
+    final theme = LumenisTheme.of(context);
+
+    return Dialog(
+      key: const ValueKey('workspace-navigation-dialog'),
+      backgroundColor: theme.surface.withValues(alpha: 1),
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(20),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 600,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.86,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 8, 10),
+              child: Row(
+                children: [
+                  const Expanded(child: _LumenisMark()),
+                  IconButton(
+                    key: const ValueKey('workspace-navigation-close'),
+                    autofocus: true,
+                    tooltip: copy.text('common.close'),
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: theme.line),
+            Flexible(
+              child: SingleChildScrollView(
+                key: const ValueKey('workspace-navigation-list'),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final destination in widget.destinations) ...[
+                        _domainRow(destination),
+                        if (_previewGroup == destination.id.split('-').first)
+                          _navigationTree(),
+                      ],
+                      _domainRow(widget.accountDestination),
+                      if (_previewGroup == 'ACC') _navigationTree(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _domainRow(_WorkspaceDestination destination) {
+    final group = destination.id.split('-').first;
+    return _WideDestinationRow(
+      key: ValueKey('workspace-domain-$group'),
+      destination: destination,
+      selected: _previewGroup == group,
+      onTap: () => setState(() => _previewGroup = group),
+    );
+  }
+
+  Widget _navigationTree() => _NavigationTree(
+    activeScreenId: _previewScreenId,
+    onSelected: (screenId) => Navigator.of(context).pop(screenId),
+  );
+}
+
 class _WorkspaceHeader extends StatelessWidget {
   const _WorkspaceHeader({
     required this.destination,
     required this.activeScreenId,
     required this.contextLabel,
     required this.coreLabel,
+    required this.onOpenNavigation,
     required this.onOpenContextPicker,
     required this.onOpenAccount,
     required this.onLocaleChanged,
@@ -1289,6 +1088,7 @@ class _WorkspaceHeader extends StatelessWidget {
   final String activeScreenId;
   final String contextLabel;
   final String coreLabel;
+  final VoidCallback onOpenNavigation;
   final VoidCallback onOpenContextPicker;
   final VoidCallback onOpenAccount;
   final ValueChanged<Locale?>? onLocaleChanged;
@@ -1311,6 +1111,15 @@ class _WorkspaceHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
+          IconButton(
+            key: const ValueKey('workspace-navigation-open'),
+            tooltip: copy.text('shell.pages'),
+            onPressed: onOpenNavigation,
+            icon: CustomPaint(
+              size: const Size(28, 28),
+              painter: _OpenContoursMark(LumenisTheme.of(context).muted),
+            ),
+          ),
           Expanded(
             child: Text(
               copy.text('screen.$activeScreenId'),
@@ -2192,67 +2001,77 @@ class _ContextPickerMessage extends StatelessWidget {
 }
 
 class _LumenisMark extends StatelessWidget {
-  const _LumenisMark({this.compact = false});
-
-  final bool compact;
+  const _LumenisMark();
 
   @override
   Widget build(BuildContext context) {
-    final copy = context.lumenisL10n;
-    return Row(
-      mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
-      children: [
-        Container(
-          width: 34,
-          height: 34,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: LumenisTheme.of(context).accent.withValues(alpha: 0.10),
-            border: Border.all(
-              color: LumenisTheme.of(context).accent.withValues(alpha: 0.38),
+    final theme = LumenisTheme.of(context);
+    return Semantics(
+      container: true,
+      label: '序境 / LUMENIS',
+      child: ExcludeSemantics(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CustomPaint(
+              size: const Size(30, 30),
+              painter: _OpenContoursMark(theme.muted),
             ),
-            borderRadius: BorderRadius.circular(11),
-          ),
-          child: Text(
-            '序',
-            style: TextStyle(
-              color: LumenisTheme.of(context).accent,
-              fontSize: 19,
-              fontWeight: FontWeight.w600,
+            const SizedBox(width: 10),
+            Text(
+              '序境 / LUMENIS',
+              style: TextStyle(
+                color: theme.foreground,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
+          ],
         ),
-        if (!compact) ...[
-          const SizedBox(width: 11),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'LUMENIS',
-                  style: TextStyle(
-                    color: LumenisTheme.of(context).foreground,
-                    letterSpacing: 1.15,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-                SizedBox(height: 3),
-                Text(
-                  copy.text('shell.workspace_summary'),
-                  style: TextStyle(
-                    color: LumenisTheme.of(context).quiet,
-                    letterSpacing: 0.45,
-                    fontSize: 9,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
+      ),
     );
   }
+}
+
+class _OpenContoursMark extends CustomPainter {
+  const _OpenContoursMark(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.35
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: 11),
+      0.55,
+      5.15,
+      false,
+      stroke,
+    );
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: 7),
+      0.95,
+      4.9,
+      false,
+      stroke,
+    );
+    canvas.drawCircle(
+      center,
+      1.5,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.fill,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _OpenContoursMark oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _SectionLabel extends StatelessWidget {

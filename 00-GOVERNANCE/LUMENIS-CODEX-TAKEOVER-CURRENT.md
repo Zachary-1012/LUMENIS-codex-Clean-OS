@@ -12,6 +12,21 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-28 — Restrained identity, navigation and subject confirmation
+
+[Round 14 restrained navigation evidence](evidence/round-14/ROUND-14-RESTRAINED-NAVIGATION-2026-09-28.md)
+and its exact-source JSON receipt co-publish a point/open-contour mark, on-demand
+desktop navigation, preserved task return and ACC-02's phone confirmation layer.
+Uncertain scope writes require read-only server confirmation before retry or
+Continue. The heavier AIGC sculpture remains deferred and outside product assets.
+85 affected Flutter tests, analysis and release Web build passed; actual Web
+verification records 15 local draft/navigation/wallpaper assertions and 12
+denial/offline/recovery assertions. Real permitted subject selection, production
+Actor binding and native user E2E remain LIVE_NOT_VERIFIED. This is a bounded
+increment; full frontend, ROUND 14, USER_VERIFIED, RELEASED and COMMERCIAL_READY
+remain incomplete. Online publication applies only to the co-published source,
+evidence and status after live remote-ref verification.
+
 ### 2026-09-27 — Honest unavailable browser entry and preserved task return
 
 [Round 14 entry/return evidence](evidence/round-14/ROUND-14-BROWSER-ENTRY-TRUTH-2026-09-27.md)

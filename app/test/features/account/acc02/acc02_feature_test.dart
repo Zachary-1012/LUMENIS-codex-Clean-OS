@@ -92,7 +92,10 @@ void main() {
         subjectType: '商场',
         scope: 'focus',
       );
-      final repository = _FakeAcc02Repository(snapshot: _readySnapshot);
+      final repository = _FakeAcc02Repository(
+        snapshot: _globalSnapshot,
+        snapshotAfterSelection: _confirmedSubject1Snapshot,
+      );
       final viewModel = Acc02ViewModel(repository: repository);
       addTearDown(viewModel.dispose);
 
@@ -108,8 +111,9 @@ void main() {
   test('ACC-02 rejects duplicate confirmation while one is pending', () async {
     final gate = Completer<void>();
     final repository = _FakeAcc02Repository(
-      snapshot: _readySnapshot,
+      snapshot: _globalSnapshot,
       selectionGate: gate.future,
+      snapshotAfterSelection: _confirmedSubject1Snapshot,
     );
     final viewModel = Acc02ViewModel(repository: repository);
     addTearDown(viewModel.dispose);
@@ -128,6 +132,157 @@ void main() {
     expect(viewModel.actionError, isNull);
   });
 
+  test(
+    'ACC-02 does not refresh while Subject confirmation is pending',
+    () async {
+      final gate = Completer<void>();
+      final repository = _FakeAcc02Repository(
+        snapshot: _globalSnapshot,
+        selectionGate: gate.future,
+        snapshotAfterSelection: _confirmedSubject1Snapshot,
+      );
+      final viewModel = Acc02ViewModel(repository: repository);
+      addTearDown(viewModel.dispose);
+
+      await viewModel.refresh();
+      final selection = viewModel.selectSubject(_subject1);
+      expect(viewModel.selectingId, _subject1.id);
+
+      await viewModel.refresh();
+      expect(repository.loadCount, 1);
+      expect(viewModel.selectingId, _subject1.id);
+
+      gate.complete();
+      await selection;
+      expect(repository.loadCount, 2);
+      expect(viewModel.actionError, isNull);
+    },
+  );
+
+  test('ACC-02 coalesces overlapping refresh calls', () async {
+    final gate = Completer<void>();
+    final repository = _FakeAcc02Repository(
+      snapshot: _readySnapshot,
+      loadGate: gate.future,
+    );
+    final viewModel = Acc02ViewModel(repository: repository);
+    addTearDown(viewModel.dispose);
+
+    final firstRefresh = viewModel.refresh();
+    expect(repository.loadCount, 1);
+    await viewModel.refresh();
+    expect(repository.loadCount, 1);
+    expect(viewModel.phase, Acc02LoadPhase.loading);
+
+    gate.complete();
+    await firstRefresh;
+    expect(repository.loadCount, 1);
+    expect(viewModel.phase, Acc02LoadPhase.ready);
+  });
+
+  test(
+    'ACC-02 refresh failure after confirmation blocks stale reuse',
+    () async {
+      final repository = _FakeAcc02Repository(
+        snapshot: _globalSnapshot,
+        loadSequence: [
+          _globalSnapshot,
+          _confirmedSubject1Snapshot,
+          StateError('Core unavailable'),
+          _confirmedSubject1Snapshot,
+        ],
+      );
+      final viewModel = Acc02ViewModel(repository: repository);
+      addTearDown(viewModel.dispose);
+
+      await viewModel.refresh();
+      await viewModel.selectSubject(_subject1);
+      expect(
+        viewModel.confirmationStatusFor(_subject1),
+        Acc02ConfirmationStatus.confirmed,
+      );
+
+      await viewModel.refresh();
+      expect(viewModel.phase, Acc02LoadPhase.ready);
+      expect(viewModel.needsReadback, isTrue);
+      expect(viewModel.isCandidateNavigationLocked, isTrue);
+      expect(viewModel.canConfirm(_subject2), isFalse);
+      expect(viewModel.actionErrorFor(_subject1), contains('变更结果待确认'));
+
+      await viewModel.refresh();
+      expect(viewModel.needsReadback, isFalse);
+      expect(
+        viewModel.confirmationStatusFor(_subject1),
+        Acc02ConfirmationStatus.confirmed,
+      );
+      expect(viewModel.hasMatchingServerContext(_subject1), isTrue);
+    },
+  );
+
+  test(
+    'ACC-02 readback mismatch remains unconfirmed for the candidate',
+    () async {
+      const otherDomain = Acc02Snapshot(
+        contextState: Acc02ContextState.focused,
+        subjectState: Acc02SubjectState.ready,
+        subjects: [_subject1, _subject2],
+        selectionOnly: true,
+        contextDomainId: 'BMP',
+        selectedSubjectId: 'subject-1',
+      );
+      final repository = _FakeAcc02Repository(
+        snapshot: _globalSnapshot,
+        loadSequence: [
+          _globalSnapshot,
+          StateError('Core unavailable during readback'),
+          otherDomain,
+        ],
+      );
+      final viewModel = Acc02ViewModel(repository: repository);
+      addTearDown(viewModel.dispose);
+
+      await viewModel.refresh();
+      await viewModel.selectSubject(_subject1);
+      expect(viewModel.needsReadback, isTrue);
+      expect(
+        viewModel.confirmationStatusFor(_subject1),
+        Acc02ConfirmationStatus.readbackUnavailable,
+      );
+
+      await viewModel.refresh();
+      expect(viewModel.needsReadback, isFalse);
+      expect(viewModel.hasMatchingServerContext(_subject1), isFalse);
+      expect(
+        viewModel.confirmationStatusFor(_subject1),
+        Acc02ConfirmationStatus.mismatch,
+      );
+      expect(viewModel.actionErrorFor(_subject1), contains('不一致'));
+    },
+  );
+
+  test(
+    'ACC-02 uncertain write failure does not claim the server had no effect',
+    () async {
+      final repository = _FakeAcc02Repository(
+        snapshot: _globalSnapshot,
+        selectionError: StateError('Connection reset while posting context'),
+      );
+      final viewModel = Acc02ViewModel(repository: repository);
+      addTearDown(viewModel.dispose);
+
+      await viewModel.refresh();
+      await viewModel.selectSubject(_subject1);
+
+      expect(
+        viewModel.confirmationStatusFor(_subject1),
+        Acc02ConfirmationStatus.outcomeUnknown,
+      );
+      expect(viewModel.needsReadback, isTrue);
+      expect(viewModel.actionErrorFor(_subject1), contains('变更结果待确认'));
+      expect(viewModel.actionErrorFor(_subject1), isNot(contains('没有被切换')));
+    },
+  );
+
   testWidgets('ACC-02 mobile list stays bounded inside the scroll surface', (
     tester,
   ) async {
@@ -145,6 +300,612 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('经营主体一'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ACC-02 long mobile list scrolls independently to the last row', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final subjects = List.generate(
+      25,
+      (index) => Acc02Subject(
+        id: 'subject-${index + 1}',
+        name: 'Subject ${index + 1}',
+        domainId: 'CTH',
+        subjectType: '商场',
+        scope: 'focus',
+      ),
+    );
+    final repository = _FakeAcc02Repository(
+      snapshot: Acc02Snapshot(
+        contextState: Acc02ContextState.globalAll,
+        subjectState: Acc02SubjectState.ready,
+        subjects: subjects,
+        selectionOnly: true,
+      ),
+    );
+
+    await tester.pumpWidget(
+      sharedTestApp(
+        Acc02Screen(client: LumenisCoreClient(), repository: repository),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    const listKey = ValueKey<String>('acc02-subject-list-scroll');
+    final list = find.byKey(listKey);
+    expect(list, findsOneWidget);
+    final listScrollable = find.descendant(
+      of: list,
+      matching: find.byType(Scrollable),
+    );
+    final position = tester.state<ScrollableState>(listScrollable).position;
+    expect(position.maxScrollExtent, greaterThan(0));
+
+    await tester.drag(list, const Offset(0, -1600));
+    await tester.pumpAndSettle();
+    expect(position.pixels, greaterThan(0));
+
+    final lastRow = find.byKey(
+      const ValueKey<String>('acc02-subject-subject-25'),
+    );
+    expect(lastRow, findsOneWidget);
+    await tester.ensureVisible(lastRow);
+    await tester.tap(lastRow);
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<ListTile>(lastRow).selected, isTrue);
+    expect(
+      find.byKey(const ValueKey<String>('acc02-candidate-page-view')),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('acc02-close-candidates')),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ACC-02 candidate sheet preserves the query and list position', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final subjects = List.generate(
+      25,
+      (index) => Acc02Subject(
+        id: 'subject-${index + 1}',
+        name: 'Subject ${index + 1}',
+        domainId: 'CTH',
+        subjectType: '商场',
+        scope: 'focus',
+      ),
+    );
+    await tester.pumpWidget(
+      sharedTestApp(
+        Acc02Screen(
+          client: LumenisCoreClient(),
+          repository: _FakeAcc02Repository(
+            snapshot: Acc02Snapshot(
+              contextState: Acc02ContextState.globalAll,
+              subjectState: Acc02SubjectState.ready,
+              subjects: subjects,
+              selectionOnly: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final search = find.byKey(
+      const ValueKey<String>('acc02-subject-search-field'),
+    );
+    await tester.enterText(search, 'Subject');
+    await tester.pumpAndSettle();
+    final list = find.byKey(
+      const ValueKey<String>('acc02-subject-list-scroll'),
+    );
+    await tester.drag(list, const Offset(0, -1600));
+    await tester.pumpAndSettle();
+    final listScrollable = find.descendant(
+      of: list,
+      matching: find.byType(Scrollable),
+    );
+    final position = tester.state<ScrollableState>(listScrollable).position;
+    final lastRow = find.byKey(
+      const ValueKey<String>('acc02-subject-subject-25'),
+    );
+    await tester.ensureVisible(lastRow);
+    await tester.pumpAndSettle();
+    final pixelsBeforeOpen = position.pixels;
+    await tester.tap(lastRow);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey<String>('acc02-close-candidates')),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('acc02-close-candidates')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextField>(search).controller!.text, 'Subject');
+    expect(position.pixels, pixelsBeforeOpen);
+    expect(tester.widget<ListTile>(lastRow).selected, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'ACC-02 phone flow browses then confirms the displayed candidate',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      var continueCalls = 0;
+      final repository = _FakeAcc02Repository(
+        snapshot: _globalSnapshot,
+        snapshotAfterSelection: _confirmedSubject2Snapshot,
+      );
+      await tester.pumpWidget(
+        sharedTestApp(
+          Acc02Screen(
+            client: LumenisCoreClient(),
+            repository: repository,
+            onContinue: () => continueCalls++,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('acc02-subject-subject-1')),
+      );
+      await tester.pumpAndSettle();
+
+      final pageView = find.byKey(
+        const ValueKey<String>('acc02-candidate-page-view'),
+      );
+      await tester.drag(pageView, const Offset(-300, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('候选 2 / 2'), findsOneWidget);
+      expect(repository.selectedIds, isEmpty);
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('acc02-previous-candidate')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('候选 1 / 2'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('acc02-next-candidate')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('候选 2 / 2'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('acc02-confirm-candidate')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(repository.selectedIds, [_subject2.id]);
+      final continueButton = find.byKey(
+        const ValueKey<String>('acc02-continue-current'),
+      );
+      expect(
+        tester.widget<OutlinedButton>(continueButton).onPressed,
+        isNotNull,
+      );
+      await tester.tap(continueButton);
+      await tester.pumpAndSettle();
+      expect(continueCalls, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('ACC-02 Previous and Next work with reduced motion enabled', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      sharedTestApp(
+        Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: Acc02Screen(
+              client: LumenisCoreClient(),
+              repository: _FakeAcc02Repository(snapshot: _globalSnapshot),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey<String>('acc02-subject-subject-1')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey<String>('acc02-next-candidate')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('候选 2 / 2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'ACC-02 refreshes an uncertain result after closing and restores Continue',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      var continueCalls = 0;
+      final repository = _FakeAcc02Repository(
+        snapshot: _globalSnapshot,
+        loadSequence: [_globalSnapshot, _confirmedSubject1Snapshot],
+        selectionError: StateError('Connection reset while posting context'),
+      );
+      await tester.pumpWidget(
+        sharedTestApp(
+          Acc02Screen(
+            client: LumenisCoreClient(),
+            repository: repository,
+            onContinue: () => continueCalls++,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('acc02-subject-subject-1')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('acc02-confirm-candidate')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('变更结果待确认'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('acc02-close-candidates')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('查看范围待确认'), findsOneWidget);
+      expect(find.text('全局查看范围'), findsNothing);
+      expect(
+        tester
+            .widget<ListTile>(
+              find.byKey(const ValueKey<String>('acc02-subject-subject-1')),
+            )
+            .onTap,
+        isNull,
+      );
+
+      await tester.tap(find.byIcon(Icons.refresh));
+      await tester.pumpAndSettle();
+      expect(repository.loadCount, 2);
+      expect(find.text('查看范围待确认'), findsNothing);
+      expect(
+        tester
+            .widget<ListTile>(
+              find.byKey(const ValueKey<String>('acc02-subject-subject-1')),
+            )
+            .onTap,
+        isNotNull,
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('acc02-subject-subject-1')),
+      );
+      await tester.pumpAndSettle();
+      final continueButton = find.byKey(
+        const ValueKey<String>('acc02-continue-current'),
+      );
+      expect(
+        tester.widget<OutlinedButton>(continueButton).onPressed,
+        isNotNull,
+      );
+      await tester.tap(continueButton);
+      await tester.pumpAndSettle();
+      expect(continueCalls, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('ACC-02 no-match search can be cleared to restore the rows', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      sharedTestApp(
+        Acc02Screen(
+          client: LumenisCoreClient(),
+          repository: _FakeAcc02Repository(snapshot: _readySnapshot),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final search = find.byKey(
+      const ValueKey<String>('acc02-subject-search-field'),
+    );
+    await tester.enterText(search, 'no matching subject');
+    await tester.pumpAndSettle();
+    expect(find.text('没有匹配项'), findsOneWidget);
+    expect(find.text(_subject1.name), findsNothing);
+
+    await tester.tap(find.byTooltip('清除搜索'));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextField>(search).controller!.text, isEmpty);
+    expect(find.text(_subject1.name), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'ACC-02 blocked, unavailable and unknown lists retry without zero',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final state in [
+        Acc02SubjectState.blocked,
+        Acc02SubjectState.unavailable,
+        Acc02SubjectState.unknown,
+      ]) {
+        final repository = _FakeAcc02Repository(
+          snapshot: Acc02Snapshot(
+            contextState: Acc02ContextState.globalAll,
+            subjectState: state,
+            subjects: const [],
+            selectionOnly: true,
+          ),
+        );
+        await tester.pumpWidget(
+          sharedTestApp(
+            Acc02Screen(
+              key: ValueKey<String>('acc02-error-${state.name}'),
+              client: LumenisCoreClient(),
+              repository: repository,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('0'), findsNothing);
+        expect(
+          tester
+              .widget<TextField>(
+                find.byKey(
+                  const ValueKey<String>('acc02-subject-search-field'),
+                ),
+              )
+              .enabled,
+          isFalse,
+        );
+        final retry = find.byIcon(Icons.refresh);
+        expect(retry, findsOneWidget);
+        await tester.tap(retry);
+        await tester.pumpAndSettle();
+        expect(repository.loadCount, 2);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
+  testWidgets('ACC-02 context refresh is disabled during confirmation', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final gate = Completer<void>();
+
+    await tester.pumpWidget(
+      sharedTestApp(
+        Acc02Screen(
+          client: LumenisCoreClient(),
+          repository: _FakeAcc02Repository(
+            snapshot: _snapshot(
+              contextState: Acc02ContextState.unavailable,
+              contextDomainId: null,
+              selectedSubjectId: null,
+            ),
+            selectionGate: gate.future,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey<String>('acc02-subject-subject-1')),
+    );
+    await tester.pump();
+    await tester.ensureVisible(find.byType(FilledButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FilledButton));
+    await tester.pump();
+
+    final refreshButton = tester.widget<TextButton>(
+      find.ancestor(
+        of: find.byIcon(Icons.refresh),
+        matching: find.byType(TextButton),
+      ),
+    );
+    expect(refreshButton.onPressed, isNull);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ACC-02 failure panel stays usable at 320px and 200% text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 720));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = _FakeAcc02Repository(
+      snapshot: _readySnapshot,
+      loadError: StateError('Core unavailable'),
+    );
+
+    await tester.pumpWidget(
+      sharedTestApp(
+        Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: Acc02Screen(
+              client: LumenisCoreClient(),
+              repository: repository,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('主体目录暂时离线'), findsOneWidget);
+    expect(find.byIcon(Icons.refresh), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byIcon(Icons.refresh));
+    await tester.pumpAndSettle();
+    expect(repository.loadCount, 2);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ACC-02 list state and selected detail fit at 320px and 200%', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    Widget largeTextApp(Widget child) => sharedTestApp(
+      Builder(
+        builder: (context) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      largeTextApp(
+        Acc02Screen(
+          key: const ValueKey<String>('acc02-large-blocked'),
+          client: LumenisCoreClient(),
+          repository: _FakeAcc02Repository(
+            snapshot: const Acc02Snapshot(
+              contextState: Acc02ContextState.unavailable,
+              subjectState: Acc02SubjectState.blocked,
+              subjects: [],
+              selectionOnly: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('主体列表暂不可访问'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    final longSubject = Acc02Subject(
+      id: 'subject-long-mobile',
+      name: List.filled(5, 'Long selected Subject name').join(' '),
+      domainId: 'CTH',
+      subjectType: List.filled(3, '商场与商业运营类型').join(' '),
+      scope: 'focus',
+    );
+    await tester.pumpWidget(
+      largeTextApp(
+        Acc02Screen(
+          key: const ValueKey<String>('acc02-large-ready'),
+          client: LumenisCoreClient(),
+          repository: _FakeAcc02Repository(
+            snapshot: Acc02Snapshot(
+              contextState: Acc02ContextState.globalAll,
+              subjectState: Acc02SubjectState.ready,
+              subjects: [longSubject],
+              selectionOnly: true,
+            ),
+          ),
+          onContinue: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final row = find.byKey(
+      const ValueKey<String>('acc02-subject-subject-long-mobile'),
+    );
+    final pageScroll = tester.widget<SingleChildScrollView>(
+      find.byKey(const ValueKey<String>('acc02-page-scroll')),
+    );
+    final pageController = pageScroll.controller!;
+    expect(pageController.position.maxScrollExtent, greaterThan(0));
+    pageController.jumpTo(pageController.position.maxScrollExtent);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(row);
+    await tester.pumpAndSettle();
+    final rowRect = tester.getRect(row);
+    expect(rowRect.overlaps(const Rect.fromLTWH(0, 0, 320, 900)), isTrue);
+    await tester.tapAt(Offset(rowRect.center.dx, rowRect.top + 36));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey<String>('acc02-confirm-candidate')),
+      findsOneWidget,
+    );
+    expect(find.text(longSubject.name), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ACC-02 long selected Subject wraps in the desktop detail pane', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final longSubject = Acc02Subject(
+      id: 'subject-long',
+      name: List.filled(9, 'Long selected Subject name').join(' '),
+      domainId: 'CTH',
+      subjectType: List.filled(5, '商场与商业运营类型').join(' '),
+      scope: 'focus',
+    );
+
+    await tester.pumpWidget(
+      _largeTextApp(
+        Acc02Screen(
+          client: LumenisCoreClient(),
+          repository: _FakeAcc02Repository(
+            snapshot: Acc02Snapshot(
+              contextState: Acc02ContextState.globalAll,
+              subjectState: Acc02SubjectState.ready,
+              subjects: [longSubject],
+              selectionOnly: true,
+            ),
+          ),
+          onContinue: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final longRow = find.byKey(
+      const ValueKey<String>('acc02-subject-subject-long'),
+    );
+    final pageScroll = tester.widget<SingleChildScrollView>(
+      find.byKey(const ValueKey<String>('acc02-page-scroll')),
+    );
+    pageScroll.controller!.jumpTo(
+      pageScroll.controller!.position.maxScrollExtent,
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(longRow);
+    await tester.pumpAndSettle();
+    final rowRect = tester.getRect(longRow);
+    expect(rowRect.overlaps(const Rect.fromLTWH(0, 0, 1280, 900)), isTrue);
+    await tester.tapAt(Offset(rowRect.center.dx, rowRect.top + 36));
+    await tester.pumpAndSettle();
+
     expect(tester.takeException(), isNull);
   });
 
@@ -184,13 +945,19 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.text(_subject1.name).first);
-        await tester.pump();
+        await tester.tap(
+          find.byKey(const ValueKey<String>('acc02-subject-subject-1')),
+        );
+        await tester.pumpAndSettle();
 
         final button = tester.widget<OutlinedButton>(
           find.byType(OutlinedButton),
         );
         expect(button.onPressed, isNull);
+        await tester.tap(
+          find.byKey(const ValueKey<String>('acc02-close-candidates')),
+        );
+        await tester.pumpAndSettle();
       }
 
       await tester.pumpWidget(const SizedBox.shrink());
@@ -205,7 +972,7 @@ void main() {
       final gate = Completer<void>();
       var continueCalls = 0;
       final repository = _FakeAcc02Repository(
-        snapshot: _readySnapshot,
+        snapshot: _globalSnapshot,
         selectionGate: gate.future,
         selectionError: StateError('HTTP 403 permission denied'),
       );
@@ -220,12 +987,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text(_subject1.name).first);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('acc02-subject-subject-1')),
+      );
       await tester.pump();
 
       expect(
         tester.widget<OutlinedButton>(find.byType(OutlinedButton)).onPressed,
-        isNotNull,
+        isNull,
       );
       await tester.ensureVisible(find.byType(FilledButton));
       await tester.pumpAndSettle();
@@ -240,10 +1009,10 @@ void main() {
         isNull,
       );
 
-      await tester.ensureVisible(find.text(_subject2.name).first);
-      await tester.pump();
-      await tester.tap(find.text(_subject2.name).first);
-      await tester.pump();
+      final nextCandidate = tester.widget<TextButton>(
+        find.byKey(const ValueKey<String>('acc02-next-candidate')),
+      );
+      expect(nextCandidate.onPressed, isNull);
       expect(
         tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
         isNull,
@@ -257,7 +1026,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(repository.selectedIds, [_subject1.id]);
-      expect(find.textContaining('主体没有被切换'), findsWidgets);
+      expect(find.textContaining('服务器拒绝了这次范围变更'), findsWidgets);
       expect(
         tester.widget<OutlinedButton>(find.byType(OutlinedButton)).onPressed,
         isNull,
@@ -288,8 +1057,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text(_subject2.name).first);
-    await tester.pump();
+    await tester.tap(
+      find.byKey(const ValueKey<String>('acc02-subject-subject-2')),
+    );
+    await tester.pumpAndSettle();
     expect(
       tester.widget<OutlinedButton>(find.byType(OutlinedButton)).onPressed,
       isNull,
@@ -319,8 +1090,9 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final gate = Completer<void>();
       final repository = _FakeAcc02Repository(
-        snapshot: _readySnapshot,
+        snapshot: _globalSnapshot,
         selectionGate: gate.future,
+        snapshotAfterSelection: _confirmedSubject1Snapshot,
       );
 
       await tester.pumpWidget(
@@ -329,7 +1101,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text(_subject1.name).first);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('acc02-subject-subject-1')),
+      );
       await tester.pump();
       await tester.ensureVisible(find.byType(FilledButton));
       await tester.pumpAndSettle();
@@ -402,24 +1176,63 @@ const _confirmedSubject2Snapshot = Acc02Snapshot(
   selectedSubjectId: 'subject-2',
 );
 
+const _confirmedSubject1Snapshot = Acc02Snapshot(
+  contextState: Acc02ContextState.focused,
+  subjectState: Acc02SubjectState.ready,
+  subjects: [_subject1, _subject2],
+  selectionOnly: true,
+  contextDomainId: 'CTH',
+  selectedSubjectId: 'subject-1',
+);
+
+Widget _largeTextApp(Widget child) => sharedTestApp(
+  Builder(
+    builder: (context) => MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(textScaler: const TextScaler.linear(2)),
+      child: child,
+    ),
+  ),
+);
+
 class _FakeAcc02Repository implements Acc02Repository {
   _FakeAcc02Repository({
     required this.snapshot,
     this.selectionGate,
     this.snapshotAfterSelection,
     this.selectionError,
-  });
+    this.loadGate,
+    this.loadError,
+    List<Object>? loadSequence,
+  }) : _loadSequence = loadSequence == null
+           ? null
+           : List<Object>.of(loadSequence);
 
   Acc02Snapshot snapshot;
   final Future<void>? selectionGate;
   final Acc02Snapshot? snapshotAfterSelection;
   final Object? selectionError;
+  final Future<void>? loadGate;
+  final Object? loadError;
+  final List<Object>? _loadSequence;
   final selectedIds = <String>[];
   int loadCount = 0;
 
   @override
   Future<Acc02Snapshot> load() async {
     loadCount++;
+    final gate = loadGate;
+    if (gate != null) await gate;
+    if (_loadSequence != null && _loadSequence.isNotEmpty) {
+      final result = _loadSequence.removeAt(0);
+      if (result is Acc02Snapshot) {
+        snapshot = result;
+        return result;
+      }
+      throw result;
+    }
+    if (loadError != null) throw loadError!;
     return snapshot;
   }
 

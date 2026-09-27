@@ -475,6 +475,53 @@ Identity should feel precise, restrained, spatial, evidence-led and contemporary
 
 Existing logo/icon assets are assets, not authorities. Future brand changes are decided here first, then implemented.
 
+### Restrained identity and content space — 2026-09-28
+
+The Product Owner asks for less spectacle, a replacement for the boxed single
+character mark, and adaptation from creative industries. Sol presentation review:
+`DESIGN_READY` for the following bounded shell changes. This does not accept a
+complete screen, native surface, product or Round.
+
+Express 芥子纳须弥 through a small point and open, nested contours, alongside the
+plain product name when space permits. The shell mark is monochrome, unboxed,
+static and subordinate to the user's content. It has an accessible product name;
+it does not indicate connection, processing, confidence or data completeness.
+Do not use an oversized sculpture, rotating orb, breathing logo or generic AI
+gradient as the identity. This is the in-product mark; package icons and the
+public website remain separately reviewed surfaces.
+
+At desktop and compact-workspace widths, keep a visible navigation trigger and
+the current task/context; expose the existing domain/workflow hierarchy in a
+reversible navigation layer rather than an always-present application catalogue.
+All registered destinations and deep links remain available. Closing navigation
+without choosing a destination restores the mounted task, draft, focus and scroll;
+choosing a destination uses the existing route/context owner. Escape, explicit
+close, keyboard traversal and touch must work. Avoid hover-only discovery,
+invisible gesture-only navigation or new project/recent/search capabilities.
+Mobile retains its focused task and existing navigation until a separate change
+proves the same reachability; it is not a compressed desktop catalogue.
+
+Creative-industry research, accessed 2026-09-28, principle-only:
+
+- [Figma UI3 design review](https://www.figma.com/blog/our-approach-to-designing-ui3/)
+  (2024-10-01, official maintained site, proprietary editorial material): ADAPT
+  content priority and explicit minimized navigation. Its reported floating-panel
+  reversal is a reason to test task speed and available space. Do not copy the
+  layout, assets or add the Figma product model.
+- [Are.na material attribution](https://help.are.na/docs/guides/handling-blocks-with-care)
+  (current official guide, proprietary product/content): ADAPT context and source
+  attribution as existing Trace/Return behavior. DEFER a general-purpose board or
+  social collection workflow; no new owner, API or data store is authorized.
+- Flutter 3.47.5 at `6a19cca56475dbfba1478ee68d7bd0c2ef891da1`, BSD-3-Clause,
+  maintained upstream: reuse existing route, dialog, focus and paint primitives.
+  No new runtime dependency, copied asset, external effect or account is needed.
+
+AIGC remains a method for making original frontend materials; it does not create
+a new user-facing generation feature. The generated optical sculpture explored
+on this date is `DESIGN_EXPLORATION / DEFER`, excluded from the production asset
+bundle pending a restrained, task-specific review. Depth/motion must clarify a
+real layer or selection, be interruptible, and become immediate in reduced motion.
+
 ## 24. Anti-template hard failures
 
 Unless a current product requirement proves a narrow exception, fail review when:

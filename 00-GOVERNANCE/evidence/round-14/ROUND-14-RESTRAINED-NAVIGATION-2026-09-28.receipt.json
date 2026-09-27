@@ -1,0 +1,163 @@
+{
+  "batch": "R14-RESTRAINED-SHELL / R14-ACC02-LAYERED-SELECTION",
+  "verified_source_base": "8a67abe1934df7b25b970207e55f74cde91ccdb0",
+  "backend_runtime_base": "15a994bbf172a783b9b8dd2bf8a8d43359829fec",
+  "source_manifest": {
+    "app/lib/features/account/acc02/acc02_screen.dart": "29cbf5fd572bf3a0d4f29f68b4e2a295746f52d1c6c2ded5a2dc29c5c6df5aa3",
+    "app/lib/features/account/acc02/acc02_view_model.dart": "5a19981a1da3affac0cc94e8eeacb7eb1c2187ed31cef37a182b4bea4de790a9",
+    "app/test/features/account/acc02/acc02_feature_test.dart": "12274c58e903a2091f947ea39819a26542d2ecf37a9e222ec0f4e02219bd76ab",
+    "contracts/experience/screen-specifications/ACC-02.md": "32443f75773ea205fbc0db120015f792c3e339050c5b0a78626fd7edf8eb8493",
+    "app/lib/shell/lumenis_workspace_shell.dart": "1ec1784a9b47d3bb0094d93ada71e714df23d471685acf7dd46f89b8aedb3421",
+    "app/test/shell/lumenis_workspace_shell_test.dart": "f9afd83712784224a06da5d04b10b7239a5ef5878f44edd42a9fb48d25c0dff2",
+    "contracts/experience/screen-specifications/AI-01.md": "b9d849bb52b0eae61b0baa51d9b611767acac768ba8208de2e4814a00e3b4da5",
+    "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md": "30ed92a4faee9ea77d884fe219cf9f0cb82a90f4251d947161d7db486130aa41",
+    "contracts/experience/screen-specifications/ACC-03.md": "8a94741c202761a7f0b65f3d32169b202aae27ce41903deb53ff1694c7029eca",
+    "app/test/navigation/lumenis_router_test.dart": "0bc5ca10a370427aec6315e53231092549792f9d91432347c9d4ba0ea9312499"
+  },
+  "app_files_compared_ignoring_CRLF": 206,
+  "web_main_dart_js_sha256": "12d83ccc19f848af1655acc303c62414d2df6f929b6f276b49d6cf62261eb3ac",
+  "automated": {
+    "dart_analyze_exit": 0,
+    "flutter_tests_exit": 0,
+    "flutter_tests_count": 85,
+    "web_build_exit": 0
+  },
+  "local_draft_and_navigation": {
+    "checks": [
+      "draft_text_after_navigation_cancel_1440",
+      "draft_after_escape_1440",
+      "local_draft_deliverable_after_return_1440",
+      "saturated_wallpaper_navigation_retains_draft_crimson_1440",
+      "saturated_wallpaper_navigation_retains_draft_cobalt_1440",
+      "current_served_build_1440",
+      "draft_text_after_navigation_cancel_768",
+      "draft_after_escape_768",
+      "local_draft_deliverable_after_return_768",
+      "current_served_build_768",
+      "draft_text_after_navigation_cancel_390",
+      "local_draft_deliverable_after_return_390",
+      "saturated_wallpaper_navigation_retains_draft_crimson_390",
+      "saturated_wallpaper_navigation_retains_draft_cobalt_390",
+      "current_served_build_390"
+    ],
+    "page_errors": [],
+    "effects": [],
+    "passed": true
+  },
+  "real_denial_and_recovery": {
+    "checks": [
+      "actual_denied_registry_retry_1440",
+      "actual_offline_and_restore_1440",
+      "restricted_directory_does_not_block_local_work_1440",
+      "served_candidate_1440",
+      "actual_denied_registry_retry_390",
+      "actual_offline_and_restore_390",
+      "restricted_directory_does_not_block_local_work_390",
+      "served_candidate_390",
+      "actual_denied_registry_retry_320",
+      "actual_offline_and_restore_320",
+      "restricted_directory_does_not_block_local_work_320",
+      "served_candidate_320"
+    ],
+    "errors": [],
+    "effects": [],
+    "reads": [
+      {
+        "path": "/api/settings/context",
+        "status": 401
+      },
+      {
+        "path": "/api/settings/context",
+        "status": 401
+      },
+      {
+        "path": "/api/settings/subjects?domain_id=CTH",
+        "status": 403
+      },
+      {
+        "path": "/api/settings/context",
+        "status": 401
+      },
+      {
+        "path": "/api/settings/subjects?domain_id=CTH",
+        "status": 403
+      },
+      {
+        "path": "/api/settings/context",
+        "status": 401
+      },
+      {
+        "path": "/api/settings/subjects?domain_id=CTH",
+        "status": 403
+      },
+      {
+        "path": "/api/settings/context",
+        "status": 401
+      },
+      {
+        "path": "/api/settings/context",
+        "status": 401
+      },
+      {
+        "path": "/api/settings/subjects?domain_id=CTH",
+        "status": 403
+      },
+      {
+        "path": "/api/settings/context",
+        "status": 401
+      },
+      {
+        "path": "/api/settings/subjects?domain_id=CTH",
+        "status": 403
+      },
+      {
+        "path": "/api/settings/context",
+        "status": 401
+      },
+      {
+        "path": "/api/settings/subjects?domain_id=CTH",
+        "status": 403
+      },
+      {
+        "path": "/api/settings/context",
+        "status": 401
+      },
+      {
+        "path": "/api/settings/context",
+        "status": 401
+      },
+      {
+        "path": "/api/settings/subjects?domain_id=CTH",
+        "status": 403
+      },
+      {
+        "path": "/api/settings/context",
+        "status": 401
+      },
+      {
+        "path": "/api/settings/subjects?domain_id=CTH",
+        "status": 403
+      },
+      {
+        "path": "/api/settings/context",
+        "status": 401
+      },
+      {
+        "path": "/api/settings/subjects?domain_id=CTH",
+        "status": 403
+      }
+    ],
+    "passed": true,
+    "authorized_selection": "LIVE_NOT_VERIFIED: real product session unavailable in this runtime"
+  },
+  "clipboard_comparison": "Windows CRLF normalized to LF; downloaded files compared as exact UTF-8 bytes",
+  "evidence_directory": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-acc02-recovery-20260928",
+  "limits": [
+    "Real authorized ACC-02 subject selection LIVE_NOT_VERIFIED",
+    "Native Windows/macOS/Linux/Android/iOS E2E LIVE_NOT_VERIFIED",
+    "USER_VERIFIED=NO",
+    "ROUND_14=REWORK",
+    "RELEASED=NO",
+    "COMMERCIAL_READY=NO"
+  ]
+}

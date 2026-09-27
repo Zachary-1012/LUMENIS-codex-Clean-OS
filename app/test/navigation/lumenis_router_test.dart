@@ -117,7 +117,15 @@ void main() {
 
     await tester.pumpWidget(_app(router));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('工作助手').first);
+    await tester.tap(find.byKey(const ValueKey('workspace-navigation-open')));
+    await tester.pumpAndSettle();
+    final aiDomain = find.byKey(const ValueKey('workspace-domain-AI'));
+    await tester.ensureVisible(aiDomain);
+    await tester.tap(aiDomain);
+    await tester.pumpAndSettle();
+    final aiEntry = find.byKey(const ValueKey('workspace-nav-AI-01'));
+    await tester.ensureVisible(aiEntry);
+    await tester.tap(aiEntry);
     await tester.pumpAndSettle();
 
     expect(
@@ -126,9 +134,17 @@ void main() {
     );
     expect(find.byType(Ai01Screen), findsOneWidget);
 
-    await tester.tap(find.text('能力与服务'));
+    await tester.tap(find.byKey(const ValueKey('workspace-navigation-open')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('workspace-nav-AI-04')));
+    final tools = find.byKey(
+      const ValueKey('workflow-group-workflow.assist_tools'),
+    );
+    await tester.ensureVisible(tools);
+    await tester.tap(tools);
+    await tester.pumpAndSettle();
+    final aiTools = find.byKey(const ValueKey('workspace-nav-AI-04'));
+    await tester.ensureVisible(aiTools);
+    await tester.tap(aiTools);
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/workspace/AI-04');
     expect(find.byType(Ai04Screen), findsOneWidget);
@@ -140,7 +156,11 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, '/workspace/ACC-01');
     expect(find.byType(Acc01Screen), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('workspace-nav-ACC-04')));
+    await tester.tap(find.byKey(const ValueKey('workspace-navigation-open')));
+    await tester.pumpAndSettle();
+    final accountHistory = find.byKey(const ValueKey('workspace-nav-ACC-04'));
+    await tester.ensureVisible(accountHistory);
+    await tester.tap(accountHistory);
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/workspace/ACC-04');
     expect(find.byType(Acc04Screen), findsOneWidget);
@@ -368,6 +388,8 @@ void main() {
       isTrue,
     );
 
+    await tester.tap(find.byKey(const ValueKey('workspace-navigation-open')));
+    await tester.pumpAndSettle();
     final operationsGroup = find.byKey(
       const ValueKey('workflow-group-workflow.operations'),
     );

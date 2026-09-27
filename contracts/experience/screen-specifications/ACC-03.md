@@ -3,7 +3,7 @@
 ```yaml
 screen_id: ACC-03
 status: DESIGN_READY
-revision: 2
+revision: 3
 owner_domain: SYSTEM shell / CTH / BMP / Shared AI entry map
 binding_ids:
   - CODEX-ACC03-RUNTIME
@@ -13,7 +13,7 @@ design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
 design_decision: DESIGN_READY
 artifact_disposition: REVIEWED_BOUNDED_LAUNCH_NAVIGATION
 reviewer: Sol root integration review
-reviewed_at: 2026-09-26
+reviewed_at: 2026-09-28
 approval_reference: ROUND-14A bounded implementation Task Card
 ```
 
@@ -22,6 +22,19 @@ approval_reference: ROUND-14A bounded implementation Task Card
 - User job: see the three approved workspace destinations, confirm the current view lens and choose an entry supplied by the host shell.
 - CTH remains Subject-first, BMP remains Brand/Market-first and Shared AI remains derivative. ACC-03 owns spatial entry only; it owns no business data or duplicate navigation truth.
 - The composition is a launch map with a current-view rail and startup checks, not a dashboard of invented health metrics.
+
+### Host navigation refinement — 2026-09-28
+
+Sol review: `DESIGN_READY` for the existing Shell's bounded presentation under
+Constitution §23. Desktop/compact navigation becomes an explicit reversible layer
+above the mounted task. Browsing a domain in that layer changes only its preview;
+choosing a route leaf invokes the existing host callback. Close/Escape preserve
+the current route, draft, selection and scroll. All workflow destinations,
+including ACC and the unavailable SYS-06 boundary, remain reachable. Mobile keeps
+its focused-page navigation and tools. The unboxed, restrained in-product mark
+uses the same Theme owner and does not signal runtime or data state. Verify
+keyboard/touch, 200% text and reduced motion; preserve current Context/Permission
+semantics. This host refinement does not pass ACC-03's business E2E or all surfaces.
 
 ## 1. Routes and fields
 

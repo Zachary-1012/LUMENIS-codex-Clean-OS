@@ -3,7 +3,7 @@
 ```yaml
 screen_id: ACC-02
 status: DESIGN_READY
-revision: 2
+revision: 3
 owner_domain: SYSTEM settings / CTH Subject Registry selection
 binding_ids:
   - CODEX-ACC02-CONTEXT
@@ -13,8 +13,8 @@ design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
 design_decision: DESIGN_READY
 artifact_disposition: REVIEWED_BOUNDED_SELECTION_CONTINUATION
 reviewer: Sol root integration review
-reviewed_at: 2026-09-26
-approval_reference: ROUND-14A bounded implementation Task Card
+reviewed_at: 2026-09-28
+approval_reference: R14-ACC02-LAYERED-SELECTION bounded Task Card
 ```
 
 ## 0. Authority and invariant
@@ -57,7 +57,7 @@ Paths, tokens, provider/model strings, raw errors and arbitrary domains are neve
 ## 4. Desktop and mobile composition
 
 - Desktop at ≥1000px: bounded list and confirmation detail side by side, with the context banner above both.
-- Narrow layouts: searchable Subject list has a bounded 300px viewport, followed by confirmation detail in one scroll flow; no unbounded flex list is used.
+- Narrow layouts: the searchable list is the browsing stage. Selecting a returned Subject opens a focused confirmation layer; the list, search and scroll position remain underneath for Return. Detail is not appended beneath a long list.
 - Keyboard order is context banner → search → returned rows → selected Subject → confirm → continue. Rows are reachable by keyboard and have visible selected state.
 
 ## 5. Authorization, effects, and accessibility
@@ -102,8 +102,8 @@ Feature integration keys: `acc02.availableSubjects`, `acc02.confirmLens`, `acc02
 
 ## 10. Review decision
 
-The existing list/detail composition is reviewed as `DESIGN_READY` for bounded
-selection continuation. Continue opens the existing ACC-03 launch map only
+The existing list/detail ownership is reviewed as `DESIGN_READY` for bounded
+selection continuation, with the interaction revision below. Continue opens the existing ACC-03 launch map only
 when the selected domain and Subject match the server-confirmed focused
 context, no confirmation is pending and no confirmation error remains.
 Any in-flight selection disables duplicate confirmation and continuation,
@@ -133,3 +133,81 @@ requests and duplicate submission. Selection/clear never invokes collection.
 Verification: CTH and BMP expired-focus recovery, clear denial, no known focus,
 and in-flight action controls in the existing shell tests. Real server-bound
 recovery remains `LIVE_NOT_VERIFIED` until the safe Core environment is ready.
+
+### Search/list recovery review — 2026-09-28
+
+Sol review: `DESIGN_READY` for bounded repairs to the existing chooser. The
+mobile list must scroll independently so every returned Subject can be
+reached; the wide split composition remains. Search has a labelled clear action
+that restores the returned list without changing focus or sending a mutation.
+Blocked/unavailable/unknown list states do not display a numeric zero and disable
+search. Partial read failure offers a retry through the existing repository,
+with no duplicate retry during confirmation. Empty and no-search-match remain
+separate states. State explanations, long names, retry and confirmation controls
+must remain readable/reachable at 320 px and 200% text, including wide-window
+enlarged text. Retry never grants permission or confirms a locally selected row.
+
+This review does not widen the CTH-only directory API, add entity registration,
+invent country/relationship fields or alter GLOBAL/FOCUS/Permission. Those
+approved product requirements remain with their canonical contracts and future
+bindings. Account/password design stays deferred until product closure reaches
+100%; there is no new account wall. The public product default remains GLOBAL.
+
+Research accessed 2026-09-28: official Flutter
+[ListView](https://api.flutter.dev/flutter/widgets/ListView-class.html) and
+[TextField](https://api.flutter.dev/flutter/material/TextField-class.html)
+references, checked against the installed Flutter 3.47.5 SDK (BSD-3-Clause,
+actively maintained upstream). ADAPT existing bounded scrolling and text controls;
+no package upgrade, new design system or copied visual assets. The capability
+locator found no separate historical research for `ACC-02`; the reviewed current
+spec and existing implementation remain the applicable design inputs.
+
+Acceptance: long-list last-row selection, clear-search restoration, actual retry,
+unknown-count suppression and enlarged-text recovery; synthetic widget rows are
+regression evidence only. Real authorized selection through the workspace and
+native-surface acceptance remain separate required gates.
+
+### Layered selection interaction — 2026-09-28
+
+Sol review: `DESIGN_READY`, implementing the Product Owner's explicit instruction
+to use meaningful hierarchy, direct manipulation and motion instead of treating
+every mobile task as a vertical settings page. This is a revision of the same
+Subject-selection job under Constitution §§32 and 36, not a new surface family.
+
+- **Phone / compact window:** browse the actual searchable directory; tap a row
+  to open the Subject confirmation sheet. Keep the originating list mounted.
+  Within that sheet, horizontal paging compares the filtered returned Subjects,
+  with explicit Previous/Next controls for keyboard and assistive users. A visible
+  position label describes the candidate set, never collection coverage. Closing
+  or Back returns to the same query/scroll position and performs no write.
+- **Wide window:** retain the searchable directory beside the selected Subject
+  inspector. Selecting a different row changes that inspector with a short
+  directional transition. Outgoing content cannot receive input. The inspector
+  remains usable for long names and enlarged text; no fixed-height overflow.
+- **Action hierarchy:** browsing/paging changes only a local candidate. Confirm
+  invokes the existing repository exactly once; Continue stays disabled until
+  the live server context matches the shown candidate and no operation/error is
+  pending. During confirmation, paging and duplicate confirmation/retry are
+  disabled. A response for another candidate never enables Continue. Dismissal
+  does not pretend to cancel a server write already sent.
+- **Motion thesis:** list → candidate layer → confirmed context → Return. Use
+  the existing shell's 180 ms / ease-out-cubic vocabulary for short disclosure
+  and selection feedback. Respect `MediaQuery.disableAnimations`; reduced motion
+  removes spatial travel while retaining immediate selection and status feedback.
+  No idle pulse, decorative particle system, forced scroll or fabricated progress.
+- **Reachability:** fixed visible Close/Return and action region, safe insets,
+  content scrolling within the detail layer, 320 px / 200% text, accessible names
+  in Chinese/English/Korean. Drag is an optional equivalent of labelled controls.
+
+Interaction acceptance adds: open → swipe/Next → confirm exact candidate → server
+response → Continue; cancel/Back preserves query and list position; denied writes
+retain the candidate and retry; rapid actions cannot overlap; reduced-motion and
+wide/phone transitions remain operable. Widget fixtures prove controls only.
+Authorized real-registry selection and native OS acceptance remain required.
+
+Research accessed 2026-09-28: official Flutter
+[PageView](https://api.flutter.dev/flutter/widgets/PageView-class.html),
+[modal sheet](https://api.flutter.dev/flutter/material/showModalBottomSheet.html)
+and [reduced-motion query](https://api.flutter.dev/flutter/widgets/MediaQuery/disableAnimationsOf.html).
+ADAPT Flutter 3.47.5 primitives already available in the app; BSD-3-Clause,
+maintained by Flutter. No external UI assets, library or provider is introduced.
