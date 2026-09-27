@@ -426,6 +426,8 @@ def fetch_public_url(
                     stream=True,
                     verify=True,
                 )
+                if session is None:
+                    client.cookies.clear()
                 if 300 <= response.status_code < 400 and response.headers.get("Location"):
                     redirect_chain.append(current)
                     current, host_pins = _validate_public_url_and_pin(

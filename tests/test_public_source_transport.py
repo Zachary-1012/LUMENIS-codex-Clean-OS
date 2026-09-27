@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import socket
+from email.message import Message
+from types import SimpleNamespace
 
 import pytest
 import requests
@@ -282,3 +284,125 @@ def test_public_transport_rejects_prepared_auth_and_cookie_headers():
         ).prepare()
         with pytest.raises(requests.exceptions.InvalidHeader):
             adapter.send(request, verify=True, proxies={})
+
+
+def _synthetic_response(request, status, headers, content=b""):
+    response = requests.Response()
+    response.status_code = status
+    response.headers = requests.structures.CaseInsensitiveDict(headers)
+    response.url = request.url
+    response.request = request
+    response.reason = "Synthetic"
+    raw_headers = Message()
+    for name, value in headers.items():
+        raw_headers[name] = value
+    response.raw = SimpleNamespace(_original_response=SimpleNamespace(msg=raw_headers))
+    response._content = content
+    response._content_consumed = True
+    return response
+
+
+def _forbid_test_network_egress(*_args, **_kwargs):
+    raise AssertionError("network egress forbidden in test")
+
+
+def test_anonymous_internal_session_drops_redirect_set_cookie(monkeypatch):
+    monkeypatch.setattr(transport, "load_public_source_host_pins", lambda: {})
+    monkeypatch.setattr(
+        transport,
+        "_validate_public_url_and_pin",
+        lambda value, **_kwargs: (value, {"example.test": ("93.184.216.34",)}),
+    )
+    session_instances = []
+    real_session = requests.Session
+
+    sent_headers = []
+    cookies_after_response = []
+
+    original_get = real_session.get
+
+    def offline_send(_adapter, request, **_kwargs):
+        sent_headers.append({name.lower() for name in request.headers})
+        if request.url.endswith("/start"):
+            return _synthetic_response(request, 301, {
+                "Location": "https://example.test/final",
+                "Set-Cookie": "redirect_marker=synthetic; Path=/",
+            })
+        return _synthetic_response(request, 200, {"Content-Type": "text/plain"}, b"public")
+
+    def observed_get(session, url, **kwargs):
+        response = original_get(session, url, **kwargs)
+        cookies_after_response.append({cookie.name for cookie in session.cookies})
+        return response
+
+    def anonymous_session():
+        session = real_session()
+        session.trust_env = False
+        session.get = lambda url, **kwargs: observed_get(session, url, **kwargs)
+        session_instances.append(session)
+        return session
+
+    monkeypatch.setattr(requests, "Session", anonymous_session)
+    monkeypatch.setattr(requests.adapters.HTTPAdapter, "send", offline_send)
+    result = transport.fetch_public_url("https://example.test/start")
+
+    assert result.content == b"public"
+    assert len(sent_headers) == 2
+    assert "cookie" not in sent_headers[0]
+    assert "cookie" not in sent_headers[1]
+    assert cookies_after_response[0] == {"redirect_marker"}
+    assert cookies_after_response[1] == set()
+    assert not session_instances[0].cookies
+
+
+@pytest.mark.parametrize(
+    "header,value",
+    [("Authorization", "Basic synthetic"), ("Cookie", "caller=synthetic")],
+)
+def test_public_fetch_rejects_explicit_caller_session_credentials(monkeypatch, header, value):
+    monkeypatch.setattr(transport, "load_public_source_host_pins", lambda: {})
+    monkeypatch.setattr(
+        transport,
+        "_validate_public_url_and_pin",
+        lambda url, **_kwargs: (url, {"example.test": ("93.184.216.34",)}),
+    )
+    session = requests.Session()
+    session.trust_env = False
+    session.headers[header] = value
+    monkeypatch.setattr(
+        requests.adapters.HTTPAdapter,
+        "send",
+        _forbid_test_network_egress,
+    )
+
+    with pytest.raises(transport.PublicSourceError) as exc_info:
+        transport.fetch_public_url("https://example.test/source", session=session)
+
+    assert isinstance(exc_info.value.__cause__, requests.exceptions.InvalidHeader)
+
+
+def test_public_fetch_rejects_netrc_auth_before_egress(monkeypatch, tmp_path):
+    netrc_file = tmp_path / "synthetic-netrc"
+    netrc_file.write_text(
+        "machine example.test login synthetic-user password synthetic-password\n",
+        encoding="ascii",
+    )
+    monkeypatch.setenv("NETRC", str(netrc_file))
+    monkeypatch.setattr(transport, "load_public_source_host_pins", lambda: {})
+    monkeypatch.setattr(
+        transport,
+        "_validate_public_url_and_pin",
+        lambda url, **_kwargs: (url, {"example.test": ("93.184.216.34",)}),
+    )
+    session = requests.Session()
+    session.trust_env = True
+    monkeypatch.setattr(
+        requests.adapters.HTTPAdapter,
+        "send",
+        _forbid_test_network_egress,
+    )
+
+    with pytest.raises(transport.PublicSourceError) as exc_info:
+        transport.fetch_public_url("https://example.test/source", session=session)
+
+    assert isinstance(exc_info.value.__cause__, requests.exceptions.InvalidHeader)

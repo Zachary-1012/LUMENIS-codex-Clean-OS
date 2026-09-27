@@ -1441,3 +1441,19 @@ plus every projection, and ordinary refresh/direct upsert could not rebind.
 [Round 06 evidence](evidence/round-06/ROUND-06-SCOPE-CORRECTION-2026-09-28.md).
 This repairs data contamination; platform/country/user E2E closure remains open.
 ROUND 06 REWORK; Global/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.
+
+
+### 2026-09-28 - anonymous redirects and actual Luohu source follow-up
+
+An internally created anonymous public HTTP session now discards server-issued
+cookies after each response. Caller Cookie/Auth and netrc credentials remain
+rejected; DNS pins, redirect validation, TLS and response bounds are unchanged.
+23 current focused transport tests PASS, exit 0. Real Pantene Brazil request
+followed its redirect without sending a session cookie and returned 65,704 bytes.
+This verifies transport, not country coverage or reuse rights.
+The narrow Luohu Douyin collection now added one explicitly named record to the
+actual DB, signed Evidence 375, with two unresolved source observations retained
+inside Evidence. The collection remains PARTIAL_SCOPE_REVIEW_REQUIRED; the three
+previous wrong Shenzhen Bay records remain UNASSIGNED. Integrity OK/FK0.
+[Round 06 evidence](evidence/round-06/ROUND-06-ANONYMOUS-REDIRECT-2026-09-28.md).
+ROUND 06 REWORK; Global/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.
