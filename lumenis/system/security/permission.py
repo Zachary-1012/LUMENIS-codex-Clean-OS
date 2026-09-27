@@ -733,6 +733,56 @@ class PermissionGate:
     # 核心：权限检查
     # ──────────────────────────────────────────────────────────
 
+    def check_prelaunch_maintenance(self, authorization, *, source_url: str,
+                                   platform: str, scope: Dict[str, Any]) -> PermissionResult:
+        """Evaluate a revocable signed service grant for one public source.
+
+        The durable plan records the owner's explicit prelaunch authorization.
+        Reloading it on every effect keeps revocation and restart behavior real;
+        this does not grant COMMIT, issue human approvals, or authorize user AUTO.
+        """
+        allowed = False
+        reason = "PRELAUNCH_SERVICE_AUTHORIZATION_REQUIRED"
+        resource = "prelaunch:invalid"
+        domain = scope.get("domain_id") if isinstance(scope, dict) else None
+        try:
+            from lumenis.system.collector.adapters.secondary_collection import (
+                _prelaunch_public_import_resource,
+            )
+            from lumenis.system.collector.adapters.scheduling.prelaunch_baseline import (
+                PrelaunchMaintenanceAuthorization, load_prelaunch_baseline_config,
+            )
+            if _TESTING_BYPASS_ENABLED or os.environ.get("PERMISSION_GATE_TESTING") == "1":
+                raise ValueError("testing bypass cannot authorize maintenance")
+            resource = _prelaunch_public_import_resource(scope, source_url, platform=platform)
+            if isinstance(authorization, PrelaunchMaintenanceAuthorization):
+                loaded = load_prelaunch_baseline_config(
+                    os.environ.get("LUMENIS_PRELAUNCH_BASELINE_CONFIG") or None,
+                )
+                for plan in loaded.get("plans", []):
+                    if authorization.matches(plan, source_url=source_url,
+                                             platform=platform, scope=scope):
+                        allowed = True
+                        reason = "SIGNED_PRELAUNCH_SERVICE_GRANT"
+                        break
+        except Exception:
+            # Config errors must not leak key values or become implicit grants.
+            allowed = False
+        caller = "prelaunch_baseline_maintenance"
+        audit_id = self._write_audit(
+            operation_type=OperationType.DATA_IMPORT.value, resource=resource,
+            risk_level=RiskLevel.HIGH.value, permission_required="signed_prelaunch_service_grant",
+            caller=caller, result="allowed" if allowed else "denied", reason=reason,
+            operation_id=None, approval_token=None,
+        )
+        return PermissionResult(
+            allowed=allowed, reason=reason, requires_approval=not allowed,
+            audit_id=audit_id, operation_type=OperationType.DATA_IMPORT.value,
+            resource=resource, risk_level=RiskLevel.HIGH.value,
+            permission_required="signed_prelaunch_service_grant", caller=caller,
+            domain_id=domain,
+        )
+
     def check(
         self,
         operation_type: OperationType,

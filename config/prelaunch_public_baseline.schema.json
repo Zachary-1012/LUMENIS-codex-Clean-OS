@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lumenis.invalid/config/prelaunch_public_baseline.schema.json",
+  "title": "LUMENIS signed prelaunch public baseline plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "plan_version", "policy_id", "enabled", "end_user_auto", "sources", "hmac"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "plan_version": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9._-]+$"},
+    "policy_id": {"const": "public-read-only-exact-import-v1"},
+    "enabled": {"type": "boolean"},
+    "end_user_auto": {"const": false},
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source_key", "source_version", "platform", "source_url", "domain_id", "scope_version", "cadence_seconds", "authorization_ref"],
+        "properties": {
+          "source_key": {"type": "string", "minLength": 1, "maxLength": 180},
+          "source_version": {"type": "string", "minLength": 1, "maxLength": 64},
+          "platform": {"enum": ["public_http", "web_atom"]},
+          "source_url": {"type": "string", "format": "uri", "pattern": "^https://"},
+          "domain_id": {"enum": ["cth", "bmp"]},
+          "subject_id": {"type": ["string", "null"], "minLength": 1, "maxLength": 160},
+          "brand_focus_id": {"type": ["string", "null"], "minLength": 1, "maxLength": 160},
+          "scope_version": {"type": "string", "minLength": 1, "maxLength": 64},
+          "cadence_seconds": {"type": "integer", "minimum": 60, "maximum": 2678400},
+          "authorization_ref": {"type": "string", "minLength": 1, "maxLength": 200},
+          "max_results": {"type": "integer", "minimum": 1, "maximum": 20}
+        },
+        "oneOf": [
+          {"required": ["subject_id"], "properties": {
+            "domain_id": {"const": "cth"}, "subject_id": {"type": "string"},
+            "brand_focus_id": {"type": "null"}}},
+          {"required": ["brand_focus_id"], "properties": {
+            "domain_id": {"const": "bmp"}, "brand_focus_id": {"type": "string"},
+            "subject_id": {"type": "null"}}}
+        ]
+      }
+    },
+    "hmac": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": {"const": "HMAC-SHA256"},
+        "value": {"type": "string", "pattern": "^$|^[0-9a-f]{64}$"}
+      },
+      "description": "HMAC-SHA256 over UTF-8 compact sorted-key JSON of the full object with only the top-level hmac property omitted. Key comes from LUMENIS_PRELAUNCH_BASELINE_HMAC_KEY; never store the key in this file."
+    }
+  }
+}

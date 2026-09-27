@@ -488,6 +488,13 @@ PLATFORM_FIELD_MAPPING: Dict[str, Dict[str, str]] = {
         "share_count": "share_count", "collect_count": "collect_count",
         "view_count": "view_count", "location": "location",
     },
+    "public_http": {
+        "platform_content_id": "content_id", "content_type": "content_type",
+        "author_id": "author_id", "author_name": "author_name",
+        "title": "title", "content": "content",
+        "published_at": "published_at", "url": "url",
+        "collected_at": "captured_at",
+    },
     "web_atom": {
         "platform_content_id": "content_id", "content_type": "content_type",
         "author_id": "author_id", "author_name": "author_name",

@@ -8,6 +8,13 @@ from .decision import ScheduleDecider, ScheduleDecision, PlatformScheduleState
 from .planner import PlatformSchedulePlanner
 from .store import ScheduleDecisionStore
 from .gate import gate_should_run, gate_mode, canary_platforms
+from .prelaunch_baseline import (
+    PublicBaselinePlan, BaselineRunHistory, BaselineDueDecision,
+    evaluate_baseline_due, run_due_public_baseline,
+    BaselineConfigError, PrelaunchMaintenanceAuthorization,
+    load_prelaunch_baseline_config, maintenance_authorization,
+    run_due_prelaunch_baseline,
+)
 from . import state_map
 import os as _os
 import threading as _threading
@@ -35,4 +42,8 @@ __all__ = [
     "ScheduleDecider", "ScheduleDecision", "PlatformScheduleState",
     "PlatformSchedulePlanner", "ScheduleDecisionStore", "state_map",
     "get_planner", "gate_should_run", "gate_mode", "canary_platforms",
+    "PublicBaselinePlan", "BaselineRunHistory", "BaselineDueDecision",
+    "evaluate_baseline_due", "run_due_public_baseline", "BaselineConfigError",
+    "PrelaunchMaintenanceAuthorization", "load_prelaunch_baseline_config",
+    "maintenance_authorization", "run_due_prelaunch_baseline",
 ]

@@ -27,6 +27,7 @@ import threading
 import time
 import sys
 import hashlib
+import json
 import getpass
 from datetime import datetime, timedelta
 from typing import Any, Dict, Iterable, List, Mapping
@@ -611,11 +612,17 @@ def _prelaunch_public_import_resource(
     return f"prelaunch-{platform}:{exact['domain_id']}:{entity_id}:{digest}"
 
 
-def _authorize_prelaunch_public(scope: Mapping[str, Any], source: str, platform: str) -> bool:
+def _authorize_prelaunch_public(scope: Mapping[str, Any], source: str, platform: str,
+                               *, maintenance_authorization=None) -> bool:
     try:
         from lumenis.system.security import OperationType, get_permission_gate, is_testing_bypass_enabled
         if is_testing_bypass_enabled():
             return False
+        if maintenance_authorization is not None:
+            return get_permission_gate().check_prelaunch_maintenance(
+                maintenance_authorization, source_url=source, platform=platform,
+                scope=dict(scope),
+            ).allowed is True
         resource = _prelaunch_public_import_resource(scope, source, platform=platform)
         return get_permission_gate().check(
             OperationType.DATA_IMPORT, resource,
@@ -753,6 +760,79 @@ def _prelaunch_scope_note_ids_needing_verification(
         return pending
 
 
+def _sync_prelaunch_canonical_source_fields(
+    note_ids: List[str], scope: Mapping[str, Any],
+) -> int:
+    """Refresh source fields through the existing Canonical Data owner."""
+    import database as db
+    from canonical_data import (
+        ensure_canonical_table, get_connection, note_to_canonical, persist_canonical,
+    )
+    from lumenis.shared.database import main_db_path
+
+    product = "ZBMP" if scope["domain_id"] == "bmp" else "CTH"
+    expected = (
+        product, "zbmp" if product == "ZBMP" else "cth",
+        scope.get("subject_id"), scope.get("brand_focus_id"), "VERIFIED",
+    )
+    notes = []
+    with db.get_db() as conn:
+        for note_id in note_ids:
+            cursor = conn.execute("SELECT * FROM notes WHERE note_id=?", (note_id,))
+            row = cursor.fetchone()
+            if row is None:
+                raise ValueError(f"imported note is missing: {note_id}")
+            note = dict(zip((column[0] for column in cursor.description), row))
+            actual = (
+                note.get("product_id"), note.get("domain_id"),
+                note.get("subject_id") or None, note.get("brand_focus_id") or None,
+                note.get("scope_status"),
+            )
+            if actual != expected or not note.get("scope_evidence_ref"):
+                raise ValueError(f"imported note has no matching signed scope: {note_id}")
+            notes.append(note)
+
+    db_path = main_db_path()
+    ensure_canonical_table(db_path)
+    conn = get_connection(db_path)
+    try:
+        for note in notes:
+            persist_canonical(conn, note_to_canonical(note, product_id=product))
+        conn.commit()
+    finally:
+        conn.close()
+    return len(notes)
+
+
+def _existing_prelaunch_observation_evidence(
+    note_ids: List[str], platform: str,
+) -> int | None:
+    """Reuse the latest matching observation Evidence on an unchanged public page."""
+    if not note_ids:
+        return None
+    from lumenis.shared.database import get_repository
+
+    evidence_ids = set()
+    with get_repository().transaction() as conn:
+        for note_id in note_ids:
+            row = conn.execute(
+                "SELECT raw_data FROM platform_contents "
+                "WHERE platform=? AND platform_content_id=?",
+                (platform, note_id),
+            ).fetchone()
+            if row is None:
+                return None
+            try:
+                observation = json.loads(row[0] or "{}")
+            except (TypeError, ValueError):
+                return None
+            evidence_id = observation.get("_lumenis_evidence_id")
+            if type(evidence_id) is not int or evidence_id <= 0:
+                return None
+            evidence_ids.add(evidence_id)
+    return next(iter(evidence_ids)) if len(evidence_ids) == 1 else None
+
+
 def _write_evidence(platform: str, keyword: str, result: Dict[str, Any], *, started: str) -> int | None:
     try:
         _ensure_evidence_schema()
@@ -789,10 +869,16 @@ def _write_evidence(platform: str, keyword: str, result: Dict[str, Any], *, star
 def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULTS,
                    operator: str = "human", scope: Mapping[str, Any] | None = None,
                    actor: Mapping[str, Any] | None = None,
-                   prelaunch_local_import: bool = False) -> Dict[str, Any]:
+                   prelaunch_local_import: bool = False,
+                   prelaunch_authorization: Any = None) -> Dict[str, Any]:
     """Run one explicit, read-only platform search and persist its evidence."""
-    if str(operator or "").strip().lower() not in {"human", "human_ui"}:
-        raise PermissionError("该采集入口只接受人工触发")
+    operator = str(operator or "").strip().lower()
+    maintenance_operator = operator == "prelaunch_maintenance"
+    if operator not in {"human", "human_ui", "prelaunch_maintenance"}:
+        raise PermissionError("该采集入口只接受人工触发或签名预发布维护计划")
+    if maintenance_operator and not prelaunch_local_import:
+        return {"ok": False, "status": "SCOPE_UNAUTHORIZED", "platform": platform,
+                "keyword": keyword, "read_only": True, "external_write": False}
     platform, keyword, max_results = _validate_request(platform, keyword, max_results)
     if _blocked_youtube_atom_feed(platform, keyword):
         return {
@@ -802,12 +888,25 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         }
     prelaunch_scope = None
     if prelaunch_local_import:
-        if actor is not None or operator != "human" or platform not in {"public_http", "web_atom"}:
+        if (actor is not None or platform not in {"public_http", "web_atom"}
+                or (operator != "human" and not maintenance_operator)):
             return {"ok": False, "status": "SCOPE_UNAUTHORIZED", "platform": platform,
                     "keyword": keyword, "read_only": True, "external_write": False}
         try:
             prelaunch_scope = _prelaunch_scope(scope)
-            if not _authorize_prelaunch_public(prelaunch_scope, keyword, platform):
+            if maintenance_operator:
+                from .scheduling.prelaunch_baseline import PrelaunchMaintenanceAuthorization
+                if (not isinstance(prelaunch_authorization, PrelaunchMaintenanceAuthorization)
+                        or not prelaunch_authorization.matches_request(
+                            source_url=keyword, platform=platform, scope=prelaunch_scope)):
+                    raise PermissionError("signed exact baseline plan required")
+            authorized = (
+                _authorize_prelaunch_public(prelaunch_scope, keyword, platform,
+                                            maintenance_authorization=prelaunch_authorization)
+                if maintenance_operator
+                else _authorize_prelaunch_public(prelaunch_scope, keyword, platform)
+            )
+            if not authorized:
                 raise PermissionError("exact import approval unavailable")
             _validate_prelaunch_registry(prelaunch_scope)
         except Exception:
@@ -921,8 +1020,19 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         items = [item for item in (collection.items or []) if isinstance(item, dict)]
         captured_at = _now()
         records = [_native_record(item, platform, keyword, captured_at) for item in items]
+        if (maintenance_operator and prelaunch_scope is not None
+                and not _authorize_prelaunch_public(
+                    prelaunch_scope, keyword, platform,
+                    maintenance_authorization=prelaunch_authorization,
+                )):
+            return {
+                "ok": False, "status": "SCOPE_UNAUTHORIZED",
+                "platform": platform, "keyword": keyword,
+                "read_only": True, "external_write": False,
+                "publish_authority": "human_manual_only",
+            }
         prelaunch_observation_changed = False
-        if prelaunch_scope is not None and platform == "web_atom" and records:
+        if prelaunch_scope is not None and platform in {"web_atom", "public_http"} and records:
             from lumenis.shared.database.platform_content import platform_records_changed
 
             prelaunch_observation_changed = platform_records_changed(records, platform=platform)
@@ -938,6 +1048,11 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         }
         if metadata.get("error_type"):
             provenance["error_type"] = str(metadata["error_type"])[:80]
+        if maintenance_operator:
+            provenance["maintenance_plan_id"] = prelaunch_authorization.plan_id
+            provenance["authorization_ref"] = prelaunch_authorization.authorization_ref
+            provenance["source_version"] = prelaunch_authorization.source_version
+            provenance["scope_version"] = prelaunch_authorization.scope_version
 
         import_result: Dict[str, Any] = {"imported": 0, "updated": 0, "failed": 0, "details": []}
         subject = {"subject_matches": 0, "canonical_synced": 0, "subjects": []}
@@ -987,15 +1102,22 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             "read_only": True,
             "external_write": False,
             "publish_authority": "human_manual_only",
-            "product_owner": "CTH",
+            "product_owner": (
+                "BMP" if prelaunch_scope and prelaunch_scope.get("domain_id") == "bmp"
+                else "CTH"
+            ),
             "consumer_views": ["CTH", "BMP"],
             "provenance": provenance,
         }
+        if prelaunch_scope is not None and platform in {"public_http", "web_atom"}:
+            result["refresh_verified"] = False
         if prelaunch_scope is not None:
-            evidence_id = (
-                None if prelaunch_observation_changed
-                else _existing_prelaunch_evidence(note_ids, prelaunch_scope)
-            )
+            if prelaunch_observation_changed:
+                evidence_id = None
+            elif platform in {"public_http", "web_atom"}:
+                evidence_id = _existing_prelaunch_observation_evidence(note_ids, platform)
+            else:
+                evidence_id = _existing_prelaunch_evidence(note_ids, prelaunch_scope)
             if evidence_id is None:
                 evidence_id = _write_prelaunch_evidence(
                     platform, keyword, result, started=started_at,
@@ -1018,15 +1140,38 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 )
                 if pending_scope_ids:
                     _persist_prelaunch_scope(pending_scope_ids, prelaunch_scope, evidence_id)
-                result["canonical_synced"] = len(note_ids)
+                canonical_synced = len(pending_scope_ids)
+                if prelaunch_observation_changed:
+                    canonical_synced = _sync_prelaunch_canonical_source_fields(
+                        note_ids, prelaunch_scope,
+                    )
+                elif not prelaunch_observation_changed:
+                    canonical_synced = len(note_ids)
+                result["canonical_synced"] = canonical_synced
                 result["scope_status"] = "VERIFIED"
-                if platform == "web_atom":
+                if platform in {"web_atom", "public_http"}:
                     from lumenis.shared.database.platform_content import persist_verified_platform_records
 
                     result["native_fields_synced"] = persist_verified_platform_records(
                         records, platform=platform, note_ids=note_ids,
                         evidence_id=evidence_id, scope=prelaunch_scope,
                     )
+                if platform in {"public_http", "web_atom"}:
+                    refresh_verified = (
+                        bool(records)
+                        and len(note_ids) == len(records)
+                        and canonical_synced == len(records)
+                        and result.get("native_fields_synced") == len(records)
+                        and result.get("evidence_recorded") is True
+                    )
+                    result["refresh_verified"] = refresh_verified
+                    if not refresh_verified:
+                        result.update({
+                            "ok": False,
+                            "status": "CANONICAL_SYNC_FAILED",
+                            "error_type": "CANONICAL_SYNC_FAILED",
+                            "error": _status_message("CANONICAL_SYNC_FAILED"),
+                        })
             except Exception:
                 result.update({"ok": False, "status": "CANONICAL_SYNC_FAILED",
                                "error_type": "CANONICAL_SYNC_FAILED",

@@ -7,7 +7,10 @@ import sqlite3
 import time
 
 
-def _feed(view_count: int | None, *, include_second: bool = False) -> bytes:
+def _feed(
+    view_count: int | None, *, include_second: bool = False,
+    title: str = "Observed public item",
+) -> bytes:
     statistics = (
         f'<media:statistics views="{view_count}" />'
         if view_count is not None else "<media:statistics />"
@@ -26,9 +29,8 @@ def _feed(view_count: int | None, *, include_second: bool = False) -> bytes:
       <title>Approved fixture feed</title>
       <entry><id>tag:public.example.test,2026:item-1</id>
       <yt:videoId>fixture-video-01</yt:videoId><yt:channelId>fixture-channel-01</yt:channelId>
-      <title>Observed public item</title>
+      <title>{title}</title>
       <link href="https://public.example.test/items/fixture-video-01" />
-      <published>2026-09-24T14:02:37+00:00</published>
       <media:group><media:thumbnail url="https://public.example.test/thumb.jpg" />
       <media:community>{statistics}</media:community></media:group>
       </entry>{second_entry}</feed>'''.encode()
@@ -69,11 +71,14 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
     }
     source_url = "https://public.example.test/feed.atom"
     counts = [1234]
+    titles = ["Observed public item"]
     include_second = [False]
     fetches: list[str] = []
     adapter = AtomAdapter(fetcher=lambda url: (
         fetches.append(url) or PublicResponse(
-            url=url, content=_feed(counts[0], include_second=include_second[0]),
+            url=url, content=_feed(
+                counts[0], include_second=include_second[0], title=titles[0],
+            ),
             content_type="application/atom+xml", status_code=200,
         )
     ))
@@ -95,8 +100,10 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
         OperationType.DATA_IMPORT.value, resource=resource, granted_by="fixture_test",
     )
 
-    def collect(view_count: int | None):
+    def collect(view_count: int | None, *, title: str | None = None):
         counts[0] = view_count
+        if title is not None:
+            titles[0] = title
         monkeypatch.setitem(
             surface._last_action, "web_atom",
             time.monotonic() - surface.MIN_INTERVAL_SECONDS - 1,
@@ -110,6 +117,8 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
     second = collect(1234)
     assert first["ok"] is True, first
     assert second["ok"] is True, second
+    assert first["refresh_verified"] is True, first
+    assert second["refresh_verified"] is True, second
     assert first["native_fields_synced"] == second["native_fields_synced"] == 1
     assert first["evidence_recorded"] and second["evidence_recorded"]
 
@@ -123,6 +132,12 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
             "scope_status, scope_evidence_ref, evidence_ref FROM canonical_data"
         ).fetchone()
         first_evidence_id = int(note[6])
+        first_title = conn.execute(
+            "SELECT title FROM notes WHERE note_id=?", (note[0],),
+        ).fetchone()[0]
+        first_published_at = conn.execute(
+            "SELECT publish_datetime FROM canonical_data WHERE source_id=?", (note[0],),
+        ).fetchone()[0]
         evidence_count_after_repeat = conn.execute(
             "SELECT COUNT(*) FROM app_evidence_records"
         ).fetchone()[0]
@@ -144,13 +159,22 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
     assert canonical[6] == str(first_evidence_id)
     assert canonical[7] in (None, "")
     assert first_evidence_id == int(canonical[6])
+    assert first_title == "Observed public item"
+    assert first_published_at in (None, "")
     assert evidence_count_after_repeat == 1
     assert source_row_counts == (1, 1, 1)
     assert native[:5] == ("web_atom", note[0], "video", "fixture-channel-01", 1234)
     assert len(metric_rows_after_repeat) == 1
 
-    changed = collect(1250)
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            "UPDATE canonical_data SET sentiment='negative', risk_level='high' "
+            "WHERE source_id=?", (note[0],),
+        )
+        conn.commit()
+    changed = collect(1250, title="Changed public item")
     assert changed["ok"] is True, changed
+    assert changed["refresh_verified"] is True, changed
     with sqlite3.connect(db_path) as conn:
         note_after_change = conn.execute(
             "SELECT note_id, scope_evidence_ref FROM notes"
@@ -196,9 +220,40 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
     assert all(row["product_id"] == "ZBMP" and row["domain_id"] == "zbmp" for row in metric_history)
     assert all(row["brand_focus_id"] == brand["brand_focus_id"] for row in metric_history)
 
+    with sqlite3.connect(db_path) as conn:
+        changed_source = conn.execute(
+            "SELECT title, publish_datetime, captured_at, scope_evidence_ref "
+            "FROM notes WHERE note_id=?", (note[0],),
+        ).fetchone()
+        changed_canonical = conn.execute(
+            "SELECT title, publish_datetime, captured_at, scope_evidence_ref, "
+            "sentiment, risk_level FROM canonical_data WHERE source_id=?", (note[0],),
+        ).fetchone()
+    assert changed_source[0] == changed_canonical[0] == "Changed public item"
+    assert changed_source[1] in (None, "")
+    assert changed_canonical[1] in (None, "")
+    assert changed_source[2] and changed_canonical[2]
+    assert changed_source[3] == changed_canonical[3] == str(first_evidence_id)
+    assert changed_canonical[4:] == ("negative", "high")
+
+    unchanged = collect(1250, title="Changed public item")
+    assert unchanged["ok"] is True, unchanged
+    assert unchanged["refresh_verified"] is True, unchanged
+    with sqlite3.connect(db_path) as conn:
+        evidence_count_after_unchanged = conn.execute(
+            "SELECT COUNT(*) FROM app_evidence_records"
+        ).fetchone()[0]
+        native_after_unchanged = conn.execute(
+            "SELECT raw_data FROM platform_contents WHERE platform_content_id=?", (note[0],),
+        ).fetchone()[0]
+    assert evidence_count_after_unchanged == 2
+    assert int(json.loads(native_after_unchanged)["_lumenis_evidence_id"]) == observation_evidence_id
+
     include_second[0] = True
-    mixed = collect(1250)
+    mixed = collect(1250, title="Changed public item")
     assert mixed["ok"] is True, mixed
+    assert mixed["refresh_verified"] is True, mixed
+    assert mixed["canonical_synced"] == 2
     with sqlite3.connect(db_path) as conn:
         mixed_notes = conn.execute(
             "SELECT note_id, scope_evidence_ref FROM notes ORDER BY note_id"
@@ -222,6 +277,29 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
     second_native = next(row for row in mixed_native if row[0] == second_mixed_note[0])
     mixed_evidence_id = int(json.loads(second_native[1])["_lumenis_evidence_id"])
     assert int(second_mixed_note[1]) == mixed_evidence_id
+    first_mixed_note = next(row for row in mixed_notes if row[0] == note[0])
+    first_mixed_native = next(row for row in mixed_native if row[0] == note[0])
+    assert int(first_mixed_note[1]) == first_evidence_id
+    assert int(json.loads(first_mixed_native[1])["_lumenis_evidence_id"]) == mixed_evidence_id
+    with sqlite3.connect(db_path) as conn:
+        mixed_first_canonical = conn.execute(
+            "SELECT title, publish_datetime, captured_at, scope_evidence_ref, "
+            "sentiment, risk_level FROM canonical_data WHERE source_id=?", (note[0],),
+        ).fetchone()
+        mixed_observation_row = conn.execute(
+            "SELECT * FROM app_evidence_records WHERE id=?", (mixed_evidence_id,),
+        ).fetchone()
+        mixed_evidence_columns = [column[1] for column in conn.execute(
+            "PRAGMA table_info(app_evidence_records)"
+        )]
+    assert mixed_first_canonical[0] == "Changed public item"
+    assert mixed_first_canonical[1] in (None, "")
+    assert mixed_first_canonical[2]
+    assert mixed_first_canonical[3] == str(first_evidence_id)
+    assert mixed_first_canonical[4:] == ("negative", "high")
+    assert classify_evidence_integrity(
+        dict(zip(mixed_evidence_columns, mixed_observation_row))
+    )["assurance"] == "writer-authenticated"
     assert sum(row[0] == f"web_atom:{note[0]}" for row in mixed_metrics) == 2
     assert sum(row[0] == f"web_atom:{second_mixed_note[0]}" for row in mixed_metrics) == 1
 
@@ -238,7 +316,7 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
         ).fetchone()[0]
     assert current_view_count is None
     assert metric_count == 2
-    assert fetches == [source_url] * 5
+    assert fetches == [source_url] * 6
 
     for blocked_url in (
         "https://www.youtube.com/feeds/videos.xml?channel_id=blocked",

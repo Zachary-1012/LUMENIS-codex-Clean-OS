@@ -1303,3 +1303,16 @@ write or Mainland account access occurred.
 [Round 06 evidence](evidence/round-06/ROUND-06-HK-WORKER-IDENTITY-2026-09-28.md)
 records the real failure and recovery. ROUND 06 REWORK; Global coverage NO,
 Guangzhou PARTIAL; Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.
+
+
+### 2026-09-28 - durable public baseline maintenance
+
+Existing Collector/Scheduler now support signed, revocable exact public
+plans, due-only refresh and restart/recovery. 38 focused regressions passed.
+The actual 190-source private plan ran 8 successful refreshes with signed
+Evidence; 182 deferred include queued items. Raw/Canonical remain 220,
+Evidence 201, native records 38, integrity OK and FK 0. End-user AUTO off.
+Windows scheduled activation and true user E2E are not claimed here.
+[Round 06 evidence](evidence/round-06/ROUND-06-PUBLIC-BASELINE-MAINTENANCE-2026-09-28.md).
+Global coverage NO; Guangzhou PARTIAL; ROUND 06 REWORK;
+Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.

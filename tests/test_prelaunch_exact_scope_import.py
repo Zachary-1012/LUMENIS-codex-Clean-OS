@@ -66,11 +66,11 @@ def test_public_prelaunch_import_binds_exact_scope_and_repeats_idempotently(
       <entry><id>tag:example.test,2026:item-1</id><title>Public item</title>
       <link href="https://public.example.test/items/1"/><updated>2026-09-27T00:00:00Z</updated>
       <content>Observed public source.</content></entry></feed>'''
-    payload = atom if platform == "web_atom" else html
+    payload = {"content": atom if platform == "web_atom" else html}
     content_type = "application/atom+xml" if platform == "web_atom" else "text/html"
     fetches = []
     response = lambda url: fetches.append(url) or PublicResponse(
-        url=url, content=payload, content_type=content_type, status_code=200,
+        url=url, content=payload["content"], content_type=content_type, status_code=200,
     )
     if platform == "web_atom":
         from lumenis.system.collector.adapters.web_atom import AtomAdapter
@@ -118,6 +118,46 @@ def test_public_prelaunch_import_binds_exact_scope_and_repeats_idempotently(
     assert first["evidence_recorded"] and second["evidence_recorded"]
     assert len(fetches) == 2
 
+    if platform == "public_http":
+        with sqlite3.connect(db_path) as conn:
+            note_before = conn.execute(
+                "SELECT note_id, scope_evidence_ref, publish_datetime "
+                "FROM notes WHERE url=?", (source,),
+            ).fetchone()
+            assert note_before is not None
+            conn.execute(
+                "UPDATE canonical_data SET sentiment='negative', risk_level='high' "
+                "WHERE source_id=?", (note_before[0],),
+            )
+            conn.commit()
+
+        payload["content"] = (
+            b"<html><head><title>Changed title</title></head>"
+            b"<body><article>Changed source body.</article></body></html>"
+        )
+        monkeypatch.setitem(
+            surface._last_action, platform,
+            time.monotonic() - surface.MIN_INTERVAL_SECONDS - 1,
+        )
+        changed = surface.collect_search(
+            platform, source, max_results=1, scope=scope, actor=None,
+            prelaunch_local_import=True,
+        )
+        monkeypatch.setitem(
+            surface._last_action, platform,
+            time.monotonic() - surface.MIN_INTERVAL_SECONDS - 1,
+        )
+        unchanged = surface.collect_search(
+            platform, source, max_results=1, scope=scope, actor=None,
+            prelaunch_local_import=True,
+        )
+        assert changed["ok"] is True, changed
+        assert changed["refresh_verified"] is True, changed
+        assert unchanged["ok"] is True, unchanged
+        assert unchanged["refresh_verified"] is True, unchanged
+        assert changed["product_owner"] == unchanged["product_owner"] == domain
+        assert len(fetches) == 4
+
     with sqlite3.connect(db_path) as conn:
         note = conn.execute(
             "SELECT note_id, product_id, domain_id, subject_id, brand_focus_id, "
@@ -134,6 +174,19 @@ def test_public_prelaunch_import_binds_exact_scope_and_repeats_idempotently(
             (int(note[6]),),
         ).fetchone()
         evidence_count = conn.execute("SELECT COUNT(*) FROM app_evidence_records").fetchone()[0]
+        if platform == "public_http":
+            refreshed_note = conn.execute(
+                "SELECT title, content, captured_at, publish_datetime, scope_evidence_ref "
+                "FROM notes WHERE note_id=?", (note[0],),
+            ).fetchone()
+            refreshed_canonical = conn.execute(
+                "SELECT title, content, captured_at, publish_datetime, scope_evidence_ref, "
+                "sentiment, risk_level FROM canonical_data WHERE source_id=?", (note[0],),
+            ).fetchone()
+            native = conn.execute(
+                "SELECT raw_data FROM platform_contents "
+                "WHERE platform=? AND platform_content_id=?", (platform, note[0]),
+            ).fetchone()
     expected_domain = "zbmp" if domain == "BMP" else "cth"
     expected_product = "ZBMP" if domain == "BMP" else "CTH"
     expected_identity = entity["brand_focus_id"] if domain == "BMP" else entity["subject_id"]
@@ -155,7 +208,33 @@ def test_public_prelaunch_import_binds_exact_scope_and_repeats_idempotently(
         columns = [c[1] for c in conn.execute("PRAGMA table_info(app_evidence_records)")]
     assert classify_evidence_integrity(dict(zip(columns, row)))["assurance"] == "writer-authenticated"
     assert int(note[6]) == evidence[0]
-    assert evidence_count == baseline_evidence_count + 1
+    assert evidence_count == baseline_evidence_count + (2 if platform == "public_http" else 1)
+    if platform == "public_http":
+        assert changed["evidence_recorded"] is True
+        assert unchanged["evidence_recorded"] is True
+        assert refreshed_note[0:2] == ("Changed title", "Changed source body.")
+        assert refreshed_note[2]
+        assert refreshed_note[3] in (None, "")
+        assert refreshed_note[4] == note_before[1]
+        assert refreshed_canonical[0:2] == refreshed_note[0:2]
+        assert refreshed_canonical[2]
+        assert refreshed_canonical[3] in (None, "")
+        assert refreshed_canonical[4] == note_before[1]
+        assert refreshed_canonical[5:] == ("negative", "high")
+        native_observation = json.loads(native[0])
+        assert native_observation["content"] == "Changed source body."
+        assert native_observation["_lumenis_evidence_id"] != int(note_before[1])
+        observation_id = native_observation["_lumenis_evidence_id"]
+        with sqlite3.connect(db_path) as conn:
+            observation = conn.execute(
+                "SELECT * FROM app_evidence_records WHERE id=?", (observation_id,),
+            ).fetchone()
+            observation_columns = [
+                column[1] for column in conn.execute("PRAGMA table_info(app_evidence_records)")
+            ]
+        assert classify_evidence_integrity(
+            dict(zip(observation_columns, observation))
+        )["assurance"] == "writer-authenticated"
 
     other, _ = subject_registry.add_subject({
         "domain_id": domain, "subject_type": "brand" if domain == "BMP" else "company",

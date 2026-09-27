@@ -4687,6 +4687,21 @@ def scheduler_loop():
         try:
             now = datetime.now()
             today_str = now.strftime('%Y-%m-%d')
+
+            # Signed, exact-scope prelaunch public maintenance has an independent
+            # SYSTEM schedule. It never opts end-user AUTO or XHS accounts in.
+            try:
+                from lumenis.system.collector.adapters.scheduling.prelaunch_baseline import (
+                    run_due_prelaunch_baseline,
+                )
+                _baseline = run_due_prelaunch_baseline(now=now.astimezone())
+                if _baseline.get('status') not in {'DISABLED', 'COMPLETED'}:
+                    print(f"[PrelaunchBaseline] status={_baseline.get('status')} reason={_baseline.get('reason')} summary={_baseline.get('summary')}")
+                elif _baseline.get('runs'):
+                    print(f"[PrelaunchBaseline] completed plan_version={_baseline.get('plan_version')} runs={len(_baseline['runs'])}")
+            except Exception as _baseline_error:
+                # Public-baseline failure must not stop the existing XHS loop.
+                print(f"[PrelaunchBaseline] isolated failure type={type(_baseline_error).__name__}")
             
             # 跨天重置已执行小时记录
             if last_date_check != today_str:

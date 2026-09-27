@@ -106,3 +106,135 @@ class ScheduleDecisionStore:
     def last_decision(self, platform: str) -> Optional[Dict[str, Any]]:
         rows = self.recent(platform, 1)
         return rows[0] if rows else None
+
+    @staticmethod
+    def _baseline_history(rows):
+        from .prelaunch_baseline import BaselineRunHistory
+
+        def parse(value):
+            try:
+                parsed = datetime.fromisoformat(value) if value else None
+                return parsed.replace(tzinfo=__import__("datetime").timezone.utc) if parsed and parsed.tzinfo is None else parsed
+            except (TypeError, ValueError):
+                return None
+
+        last_attempt = parse(rows[0]["started_at"]) if rows else None
+        running = bool(rows and rows[0]["result_status"] == "RUNNING")
+        failures = 0
+        last_failure = None
+        last_success = None
+        for row in rows:
+            status = row["result_status"]
+            if status == "FAILED":
+                failures += 1
+                if last_failure is None:
+                    last_failure = parse(row["finished_at"]) or parse(row["started_at"])
+            elif status == "SUCCESS":
+                last_success = parse(row["finished_at"]) or parse(row["started_at"])
+                break
+            elif status == "RUNNING":
+                continue
+        return BaselineRunHistory(last_attempt_at=last_attempt,
+                                  last_failure_at=last_failure,
+                                  last_success_at=last_success,
+                                  consecutive_failures=failures,
+                                  attempt_in_progress=running)
+
+    def _baseline_rows(self, conn, plan_id):
+        return [dict(row) for row in conn.execute(
+            """SELECT id, started_at, finished_at, result_status
+                 FROM schedule_decisions
+                WHERE platform='prelaunch_public_baseline' AND task_id=?
+                ORDER BY id DESC""", (plan_id,)
+        ).fetchall()]
+
+    def claim_public_baseline_attempt(self, plan, *, now: datetime,
+                                      lease_seconds: int = 3600):
+        """Atomically claim one due attempt in the existing SYSTEM audit store."""
+        from .prelaunch_baseline import BaselineConfigError, evaluate_baseline_due
+
+        if not getattr(plan, "_signed_config_digest", ""):
+            raise BaselineConfigError("HMAC_UNAVAILABLE")
+        if lease_seconds < 1:
+            raise ValueError("lease_seconds must be positive")
+        self.ensure_schema()
+        c = self._conn()
+        try:
+            c.execute("BEGIN IMMEDIATE")
+            rows = self._baseline_rows(c, plan.plan_id)
+            history = self._baseline_history(rows)
+            if history.attempt_in_progress:
+                started = history.last_attempt_at
+                if started is None or (now - started).total_seconds() < lease_seconds:
+                    decision = evaluate_baseline_due(plan, history, now=now)
+                    c.commit()
+                    return None, decision
+                c.execute(
+                    """UPDATE schedule_decisions
+                          SET result_status='FAILED', finished_at=?,
+                              error_code='WORKER_LEASE_EXPIRED',
+                              scheduler_decision='WORKER_LEASE_EXPIRED'
+                        WHERE id=? AND result_status='RUNNING'""",
+                    (now.isoformat(timespec="seconds"), rows[0]["id"]),
+                )
+                rows = self._baseline_rows(c, plan.plan_id)
+                history = self._baseline_history(rows)
+            decision = evaluate_baseline_due(plan, history, now=now)
+            if not decision.due:
+                c.commit()
+                return None, decision
+            stamp = now.isoformat(timespec="seconds")
+            cur = c.execute(
+                """INSERT INTO schedule_decisions
+                   (platform, task_id, started_at, result_status, trigger_source,
+                    allow, scheduler_decision, created_at)
+                   VALUES ('prelaunch_public_baseline', ?, ?, 'RUNNING',
+                           'prelaunch_baseline', 1, 'BASELINE_ATTEMPT_CLAIMED', ?)""",
+                (plan.plan_id, stamp, stamp),
+            )
+            attempt_id = int(cur.lastrowid)
+            c.commit()
+            return attempt_id, decision
+        except Exception:
+            c.rollback()
+            raise
+        finally:
+            c.close()
+
+    def finish_public_baseline_attempt(self, plan, attempt_id: int, *,
+                                       success: bool, now: datetime,
+                                       error_code: Optional[str] = None) -> bool:
+        """Persist one honest terminal outcome; a claimed attempt is completed once."""
+        from .prelaunch_baseline import BaselineConfigError
+        if not getattr(plan, "_signed_config_digest", ""):
+            raise BaselineConfigError("HMAC_UNAVAILABLE")
+        if not isinstance(success, bool):
+            raise ValueError("success must be an explicit boolean")
+        if not success and not error_code:
+            raise ValueError("failed attempts require an error_code")
+        c = self._conn()
+        try:
+            cur = c.execute(
+                """UPDATE schedule_decisions
+                      SET finished_at=?, result_status=?, error_code=?,
+                          scheduler_decision=?
+                    WHERE id=? AND platform='prelaunch_public_baseline'
+                      AND task_id=? AND result_status='RUNNING'""",
+                (now.isoformat(timespec="seconds"),
+                 "SUCCESS" if success else "FAILED", None if success else error_code,
+                 "BASELINE_SUCCESS" if success else "BASELINE_FAILED",
+                 int(attempt_id), plan.plan_id),
+            )
+            c.commit()
+            return cur.rowcount == 1
+        finally:
+            c.close()
+
+    def public_baseline_history(self, plan):
+        """Read durable due state after process restart; never resets/reseeds it."""
+        self.ensure_schema()
+        c = self._conn()
+        try:
+            return self._baseline_history(self._baseline_rows(c, plan.plan_id))
+        finally:
+            c.close()
