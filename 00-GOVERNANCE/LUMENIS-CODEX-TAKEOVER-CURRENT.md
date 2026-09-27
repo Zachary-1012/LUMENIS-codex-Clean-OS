@@ -1231,3 +1231,18 @@ than real platform-data closure. [Round 06 evidence](evidence/round-06/ROUND-06-
 records the exact tests and limitations. Global Commercial and Brand Coverage
 remain `NO / NOT VERIFIED`, Guangzhou reference `PARTIAL`, ROUND 06 `REWORK`,
 and Full Universe, RELEASED, OPERATING and COMMERCIAL_READY remain `NO`.
+
+### 2026-09-28 — existing Subject Registry consumes country assertions
+
+The existing `/api/settings/subjects` GET now accepts an explicit domain,
+`country_iso` and `relation_type`, returning real v18 assertions with signed
+Evidence and honest review/coverage states. This avoids treating headquarters
+as an operating market. 35 targeted regressions and the Constitution Gate passed;
+read-only product-data projection returned 50 US CTH venues, 2 CN CTH venues,
+1 US BMP HQ and 1 CN BMP operating-market membership, all UNREVIEWED. No DB write
+or migration was performed. [Round 03 evidence](evidence/round-03/ROUND-03-COUNTRY-SELECTOR-PROJECTION-2026-09-28.md)
+records the exact scope. Frontend/session user E2E remains LIVE_NOT_VERIFIED;
+ROUND 03 remains REWORK, both Global coverage dimensions NO, Guangzhou PARTIAL,
+Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO. This is not country population
+or platform-data closure. The current user priority is all-platform collection
+and due-only daily prelaunch baseline maintenance, using the existing owners.

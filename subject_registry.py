@@ -332,6 +332,29 @@ def add_subject(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     return _row_to_dict(row), True
 
 
+def _country_subject_projection(domain_id, country_iso, relation_type):
+    """Read existing relation assertions without selecting focus or collecting."""
+    from lumenis.shared.database import get_repository
+    from lumenis.shared.database.entity_relations import EntityRelationRepository
+
+    with get_repository().connection(read_only=True) as conn:
+        projection = EntityRelationRepository(conn).query_country_entities(
+            domain_id=domain_id, country_iso=country_iso, relation_type=relation_type,
+        )
+    # Rejected/archived assertions remain in the diagnostic claims, but cannot
+    # become a selectable country membership. Unreviewed claims stay explicit.
+    projection["entities"] = [
+        entity for entity in projection["entities"]
+        if str(entity.get("registry_status") or "").lower() not in {
+            "archived", "disabled", "deleted",
+        } and any(claim.get("status") != "REJECTED" for claim in entity["claims"])
+    ]
+    projection["observed_entity_count"] = len(projection["entities"])
+    projection["coverage_total"] = None
+    projection["coverage_status"] = "NOT_VERIFIED"
+    return projection
+
+
 @subject_registry_bp.route("/api/settings/subjects", methods=["GET"])
 def get_subjects():
     # Listing is scoped to the authenticated account and this registry module.
@@ -371,12 +394,36 @@ def get_subjects():
         return jsonify({"ok": False, "code": "SUBJECT_SCOPE_DENIED",
                         "error": "没有读取该主体范围的权限"}), 403
 
+    country = request.args.get("country_iso")
+    relation = request.args.get("relation_type")
+    if (country is not None or relation is not None) and (
+        not requested_domain or not country or not relation
+    ):
+        return jsonify({"ok": False, "code": "INVALID_COUNTRY_FILTER",
+                        "error": "国家筛选需同时指定业务领域、国家和关系类型"}), 400
+
+    country_projection = None
     try:
         subjects = [
             subject
             for domain in authorized_domains
             for subject in list_subjects(domain)
         ]
+        if country is not None:
+            from lumenis.shared.database.entity_relations import EntityRelationError
+            try:
+                country_projection = _country_subject_projection(
+                    requested_domain, country, relation,
+                )
+            except EntityRelationError:
+                return jsonify({"ok": False, "code": "INVALID_COUNTRY_FILTER",
+                                "error": "国家或关系类型无效"}), 400
+            except (sqlite3.Error, RuntimeError):
+                logger.exception("Country relation projection unavailable")
+                return jsonify({"ok": False, "code": "COUNTRY_RELATIONS_UNAVAILABLE",
+                                "error": "国家与市场关系暂不可用，请稍后重试"}), 503
+            visible_ids = {item["subject_id"] for item in country_projection["entities"]}
+            subjects = [item for item in subjects if item["subject_id"] in visible_ids]
     except SubjectValidationError as exc:
         return jsonify({"ok": False, "error": str(exc), "code": "INVALID_SUBJECT_SCOPE"}), 400
     except SubjectRegistryUnavailableError:
@@ -396,6 +443,11 @@ def get_subjects():
             {"id": key, "name": value} for key, value in SUBJECT_TYPES.items()
         ],
         "subjects": subjects,
+        "country_categories": [
+            "CN", "KR", "JP", "GB", "FR", "US", "CA", "AU", "MY", "SG",
+            "TH", "BR", "NO", "OTHER",
+        ],
+        "country_projection": country_projection,
     })
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import contextmanager
 
 import pytest
 
@@ -13,6 +14,116 @@ from lumenis.shared.database.entity_relations import (
     country_bucket,
 )
 from lumenis.shared.evidence import store as evidence_store
+
+
+@pytest.fixture
+def country_client(relation_db, monkeypatch):
+    from flask import Flask
+    import subject_registry
+    import lumenis.auth.service as auth
+    import account.authorization as authorization
+
+    @contextmanager
+    def read_connection():
+        conn = sqlite3.connect(f"file:{relation_db['path'].as_posix()}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
+        try:
+            yield conn
+        finally:
+            conn.close()
+
+    def list_subjects(domain):
+        with read_connection() as conn:
+            return [dict(row) for row in conn.execute(
+                "SELECT * FROM lumenis_subject_registry WHERE domain_id=?", (domain,)
+            )]
+
+    monkeypatch.setattr(subject_registry, "list_subjects", list_subjects)
+    monkeypatch.setattr(auth, "get_current_user", lambda: {"id": 71})
+    monkeypatch.setattr(authorization, "check_dual_domain_permission", lambda *a, **k: True)
+    app = Flask(__name__)
+    app.register_blueprint(subject_registry.subject_registry_bp)
+    return app.test_client()
+
+
+def test_country_selector_keeps_country_roles_separate_and_does_not_write(
+    relation_db, country_client,
+):
+    conn = relation_db["conn"]
+    repo = EntityRelationRepository(conn)
+    for role, country in [("HQ", "US"), ("OPERATES_IN", "CN")]:
+        repo.record_country_relation(
+            domain_id="BMP", subject_id="SUBJ-BMP", relation_type=role,
+            country_iso=country, source_evidence_ref=relation_db["bmp_ref"],
+            source_note_id="note-bmp",
+        )
+    conn.commit()
+    before = relation_db["path"].read_bytes()
+    response = country_client.get(
+        "/api/settings/subjects?domain_id=BMP&country_iso=US&relation_type=HQ"
+    )
+    assert response.status_code == 200
+    result = response.get_json()
+    assert len(result["country_categories"]) == 14
+    assert [row["brand_focus_id"] for row in result["subjects"]] == ["BRAND-1"]
+    projection = result["country_projection"]
+    assert projection["status"] == "UNREVIEWED"
+    assert projection["observed_entity_count"] == 1
+    assert projection["coverage_total"] is None
+    assert projection["coverage_status"] == "NOT_VERIFIED"
+    assert projection["claims"][0]["source_evidence_ref"] == relation_db["bmp_ref"]
+    response = country_client.get(
+        "/api/settings/subjects?domain_id=BMP&country_iso=US&relation_type=OPERATES_IN"
+    )
+    result = response.get_json()
+    assert result["subjects"] == []
+    assert result["country_projection"]["status"] == "NOT_COLLECTED"
+    assert result["country_projection"]["coverage_total"] is None
+    assert relation_db["path"].read_bytes() == before
+
+
+@pytest.mark.parametrize("query", [
+    "country_iso=US", "domain_id=BMP&country_iso=US", "domain_id=BMP&relation_type=HQ",
+    "domain_id=BMP&country_iso=OTHER&relation_type=TENANT_OF",
+])
+def test_country_selector_rejects_ambiguous_filters(country_client, query):
+    response = country_client.get("/api/settings/subjects?" + query)
+    assert response.status_code == 400
+    assert response.get_json()["code"] == "INVALID_COUNTRY_FILTER"
+
+
+@pytest.mark.parametrize("signed_in,allowed,expected", [(False, True, 401), (True, False, 403)])
+def test_country_selector_denies_before_read(country_client, monkeypatch, signed_in, allowed, expected):
+    import subject_registry
+    import lumenis.auth.service as auth
+    import account.authorization as authorization
+
+    monkeypatch.setattr(auth, "get_current_user", lambda: {"id": 71} if signed_in else None)
+    monkeypatch.setattr(authorization, "check_dual_domain_permission", lambda *a, **k: allowed)
+    def forbidden_read(*args):
+        pytest.fail("denied request reached the relation reader")
+    monkeypatch.setattr(subject_registry, "_country_subject_projection", forbidden_read)
+    monkeypatch.setattr(subject_registry, "list_subjects", forbidden_read)
+    assert country_client.get(
+        "/api/settings/subjects?domain_id=CTH&country_iso=CN&relation_type=VENUE_LOCATION"
+    ).status_code == expected
+
+
+def test_country_selector_never_selects_rejected_membership(relation_db, country_client):
+    conn = relation_db["conn"]
+    relation_id = EntityRelationRepository(conn).record_country_relation(
+        domain_id="BMP", subject_id="SUBJ-BMP", relation_type="HQ", country_iso="DE",
+        source_evidence_ref=relation_db["bmp_ref"], source_note_id="note-bmp",
+    )
+    conn.execute("UPDATE lumenis_entity_relation_assertions SET review_status='REJECTED' WHERE assertion_id=?", (relation_id,))
+    conn.commit()
+    result = country_client.get(
+        "/api/settings/subjects?domain_id=BMP&country_iso=OTHER&relation_type=HQ"
+    ).get_json()
+    assert result["subjects"] == []
+    assert result["country_projection"]["observed_entity_count"] == 0
+    assert result["country_projection"]["claims"][0]["country_iso"] == "DE"
+    assert result["country_projection"]["claims"][0]["review_status"] == "REJECTED"
 
 
 @pytest.fixture

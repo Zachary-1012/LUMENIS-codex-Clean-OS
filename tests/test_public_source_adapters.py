@@ -235,7 +235,7 @@ def test_atom_entry_without_stable_identity_fails_before_canonical_import(monkey
         raise AssertionError("an entry without source identity must not reach Canonical")
 
     monkeypatch.setattr(surface, "_get_runtime_adapter", lambda _platform: adapter)
-    monkeypatch.setattr(surface, "_adapter_health", lambda _platform: {
+    monkeypatch.setattr(surface, "_adapter_health", lambda _platform, **_source: {
         "status": "SUCCESS", "ready": True, "can_attempt": True, "message": "ok", "metadata": {},
     })
     monkeypatch.setattr(surface, "_daily_action_count", lambda _platform, _at: 0)
@@ -288,7 +288,7 @@ def test_web_rss_missing_item_url_fails_before_canonical_import(monkeypatch):
         raise AssertionError("an RSS item without a source URL must not reach Canonical")
 
     monkeypatch.setattr(surface, "_get_runtime_adapter", lambda _platform: adapter)
-    monkeypatch.setattr(surface, "_adapter_health", lambda _platform: {
+    monkeypatch.setattr(surface, "_adapter_health", lambda _platform, **_source: {
         "status": "SUCCESS", "ready": True, "can_attempt": True, "message": "ok", "metadata": {},
     })
     monkeypatch.setattr(surface, "_daily_action_count", lambda _platform, _at: 0)
