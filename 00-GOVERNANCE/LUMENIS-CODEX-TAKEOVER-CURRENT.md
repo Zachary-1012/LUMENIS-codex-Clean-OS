@@ -1138,3 +1138,14 @@ commercially distributable or approved for automatic maintenance. The
 14-country 50-per-domain floor is now recorded in the existing Global contract,
 but neither Global coverage dimension is accepted. ROUND 06 stays REWORK;
 Full Universe, RELEASED and OPERATING remain NO.
+
+### 2026-09-27 Round 06 Singapore open-data review queues
+
+[Bounded source evidence](evidence/round-06/ROUND-06-SG-OPEN-DATA-CANDIDATES-2026-09-27.md)
+records 50 Singapore CTH venue candidates and 30 Singapore BMP market-activity
+leads from pinned, openly licensed source snapshots. They are `REVIEW_PENDING`,
+not registered/collected/accepted product data; these queues did not write the
+product DB. The new research maps the source and licensing boundaries to the
+existing Collector/Evidence/Registry owners. Global Commercial and Brand
+Coverage remain `NO / NOT VERIFIED`, Guangzhou reference `PARTIAL`, ROUND 06
+`REWORK`, and Full Universe, RELEASED and OPERATING `NO`.

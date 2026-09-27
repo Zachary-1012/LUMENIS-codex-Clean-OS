@@ -1,0 +1,13 @@
+{
+  "created_utc": "2026-09-27T12:04:02.776301+00:00",
+  "candidate_only": true,
+  "accepted_subjects": 0,
+  "source_rows": 54,
+  "review_queue_rows": 50,
+  "open_data_exact_name_postcode": 43,
+  "operator_source_discovered_needs_review": 7,
+  "overture_release": "2026-09-23.1",
+  "crosscheck_commit": "4845a413545993bd0b807ba2a46535f63cc27fd1",
+  "no_product_db_write": true,
+  "sha256_jsonl": "5fe7104fc8955137bd76e79fdedd88be386c7b05b1ccd1935d30e7cd2f9f9c70"
+}
