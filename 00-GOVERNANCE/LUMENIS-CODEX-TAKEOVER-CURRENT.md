@@ -1650,3 +1650,15 @@ An isolated real Chrome loopback HTTP check covered binary bytes and response
 states. [Round 08 evidence](evidence/round-08/ROUND-08-BINARY-TRANSPORT-2026-09-28.md).
 This is a transport prerequisite only: SYS-06 Actor/session and frame binding,
 user E2E, Round 08 exit, release and operating are not verified.
+
+### 2026-09-28 - actual MY/SG and US/CA country data admission
+
+The local v18 product DB now has Registry 179, Raw/Canonical 267, Evidence 421
+and relation assertions 293 after serialized MY/SG four-entity Source chains and
+US/CA fifteen exact country/market relation bindings. Sol's read-only check
+found integrity `ok` and FK0; the second runs were idempotent. All new relation
+assertions remain `UNREVIEWED` and source reuse rights are not cleared. Several
+US/CA terms restrict automated access, so repeat collection is not approved.
+[Round 06 actual DB evidence](evidence/round-06/ROUND-06-MY-SG-US-CA-ACTUAL-DB-2026-09-28.md).
+Global Commercial/Brand Coverage, the 14-country 50+50 floor, real user E2E,
+Round 06 exit, release and operating remain NO/NOT VERIFIED.
