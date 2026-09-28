@@ -155,6 +155,40 @@ class TestBilibiliAdapterTimestamp:
         assert BilibiliAdapter._ts_to_iso("not_a_number") == ""
 
 
+def test_detail_keeps_verified_native_metrics_and_missing_values():
+    from lumenis.system.collector.adapters.platform_naming import to_canonical_record
+
+    response = MagicMock()
+    response.json.return_value = {"code": 0, "data": {
+        "aid": 123, "bvid": "BV1xx", "title": "真实标题", "desc": "真实描述",
+        "pubdate": 1700000000, "owner": {"mid": 456, "name": "UP主"},
+        "stat": {"view": 120, "danmaku": 7, "coin": 3,
+                 "like": 11, "reply": 2, "favorite": 5},
+    }}
+    adapter = BilibiliAdapter()
+    with patch.object(adapter, "_cookie_ok", return_value=True), \
+         patch.object(adapter, "_load_cookies", return_value={"test": "redacted"}), \
+         patch("requests.get", return_value=response):
+        result = adapter.detail("BV1xx")
+
+    assert result.success is True
+    note = result.notes[0]
+    native = note.raw_data
+    assert native["bvid"] == "BV1xx"
+    assert native["mid"] == 456
+    assert native["pubdate"] == 1700000000
+    assert (native["view"], native["danmaku"], native["coin"]) == (120, 7, 3)
+    assert (native["like"], native["reply"], native["favorite"]) == (11, 2, 5)
+    assert native["share"] is None
+    canonical = to_canonical_record(native, "bilibili")
+    assert canonical["content_id"] == "BV1xx"
+    assert canonical["author_id"] == 456
+    assert canonical["like_count"] == 11
+    assert canonical["comment_count"] == 2
+    assert canonical["collect_count"] == 5
+    assert canonical["share_count"] is None
+
+
 class TestBilibiliAdapterRegistry:
 
     def test_registry_can_get_bilibili(self):

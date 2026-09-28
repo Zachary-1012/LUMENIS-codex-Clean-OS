@@ -1608,3 +1608,12 @@ real FFprobe and `Timeline.from_dict` model reopen without changing media or
 opening a database. [ROUND 07 evidence](evidence/round-07/ROUND-07-TIMELINE-DOCUMENT-REOPEN-2026-09-28.md).
 Artifact lookup/Permission, render/export, UI and real user E2E remain open;
 ROUND 07=REWORK and release/operating/commercial status remains NO.
+
+### 2026-09-28 - bounded Bilibili detail provenance
+
+The existing Bilibili detail adapter now retains the first-party author,
+publication and engagement keys expected by the current native-to-Canonical
+mapping. A 70-test targeted replay and the blocking Constitution gate passed.
+[ROUND 06 evidence](evidence/round-06/ROUND-06-BILIBILI-NATIVE-DETAIL-FIELDS-2026-09-28.md).
+The adapter remains disabled; no live platform Source/Evidence, authorized
+session, user E2E, Global Coverage or ROUND 06 exit follows from this mapping.
