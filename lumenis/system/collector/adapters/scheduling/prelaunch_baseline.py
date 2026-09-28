@@ -11,9 +11,11 @@ from datetime import datetime, timedelta
 import hashlib
 import hmac
 import json
+import math
 import os
 from pathlib import Path
 import re
+import time
 from typing import Any, Callable, Optional
 from urllib.parse import parse_qsl, urlsplit
 
@@ -434,11 +436,27 @@ def run_due_prelaunch_baseline(*, now: Optional[datetime] = None,
                  "brand_focus_id": plan.brand_focus_id}
         auth = maintenance_authorization(plan)
         def execute(plan=plan, scope=scope, auth=auth):
-            return collect(
-                plan.platform, plan.source_url, max_results=plan.max_results,
-                operator="prelaunch_maintenance", scope=scope,
-                prelaunch_local_import=True, prelaunch_authorization=auth,
-            )
+            def collect_once():
+                return collect(
+                    plan.platform, plan.source_url, max_results=plan.max_results,
+                    operator="prelaunch_maintenance", scope=scope,
+                    prelaunch_local_import=True, prelaunch_authorization=auth,
+                )
+
+            result = collect_once()
+            if (isinstance(result, dict)
+                    and result.get("status") == "RATE_LIMITED"
+                    and result.get("error_type") == "LOCAL_RATE_LIMIT"
+                    and result.get("network_attempted") is not True
+                    and result.get("persistence_attempted") is not True):
+                wait_seconds = result.get("wait_seconds")
+                if (isinstance(wait_seconds, (int, float))
+                        and not isinstance(wait_seconds, bool)
+                        and 0 < wait_seconds <= 60
+                        and math.isfinite(wait_seconds)):
+                    time.sleep(wait_seconds + 0.1)
+                    return collect_once()
+            return result
         try:
             item = run_due_public_baseline(
                 plan, store, now=now, execute=execute, finish_now=finish_now,

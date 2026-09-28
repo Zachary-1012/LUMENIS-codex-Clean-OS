@@ -8,6 +8,7 @@ import hmac
 import os
 import sys
 import tempfile
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -299,6 +300,89 @@ class PrelaunchBaselineDueTests(unittest.TestCase):
             with self.assertRaises(BaselineConfigError) as tampered:
                 load_prelaunch_baseline_config(path, hmac_key="fixture-key")
             self.assertEqual(tampered.exception.code, "HMAC_MISMATCH")
+
+    def test_local_rate_limit_retries_once_with_same_claim_and_scope(self):
+        class CountingStore(ScheduleDecisionStore):
+            def __init__(self, path):
+                self.claim_count = 0
+                self.outcome_count = 0
+                super().__init__(path)
+
+            def claim_public_baseline_attempt(self, *args, **kwargs):
+                self.claim_count += 1
+                return super().claim_public_baseline_attempt(*args, **kwargs)
+
+            def finish_public_baseline_attempt(self, *args, **kwargs):
+                self.outcome_count += 1
+                return super().finish_public_baseline_attempt(*args, **kwargs)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path, _ = self.signed_config(tmp)
+            store = CountingStore(os.path.join(tmp, "scheduler.db"))
+            responses = [
+                {"ok": False, "status": "RATE_LIMITED",
+                 "error_type": "LOCAL_RATE_LIMIT", "wait_seconds": 0.25},
+                {"ok": True, "status": "SUCCESS", "evidence_recorded": True,
+                 "returned_count": 1, "canonical_synced": 1,
+                 "scope_status": "VERIFIED", "refresh_verified": True},
+            ]
+            calls = []
+
+            def collect(*args, **kwargs):
+                calls.append((args, kwargs))
+                return responses.pop(0)
+
+            with patch("lumenis.system.collector.adapters.scheduling.prelaunch_baseline.time.sleep") as sleep:
+                result = run_due_prelaunch_baseline(
+                    now=NOW, config_path=path, hmac_key="fixture-key", store=store,
+                    collect=collect, finish_now=lambda: NOW + timedelta(seconds=1),
+                )
+
+            self.assertEqual(result["summary"]["succeeded"], 1)
+            self.assertEqual(len(calls), 2)
+            self.assertEqual(store.claim_count, 1)
+            self.assertEqual(store.outcome_count, 1)
+            self.assertEqual(calls[0][0], calls[1][0])
+            self.assertIs(calls[0][1]["scope"], calls[1][1]["scope"])
+            self.assertIs(calls[0][1]["prelaunch_authorization"],
+                          calls[1][1]["prelaunch_authorization"])
+            sleep.assert_called_once()
+            self.assertAlmostEqual(sleep.call_args.args[0], 0.35)
+
+    def test_nonlocal_and_invalid_rate_limits_do_not_wait_or_retry(self):
+        cases = [
+            {"status": "RATE_LIMITED", "error_type": "HTTP_429", "wait_seconds": 1},
+            {"status": "CHALLENGE_REQUIRED", "error_type": "CHALLENGE", "wait_seconds": 1},
+            {"status": "AUTH_FAILED", "error_type": "AUTH_FAILURE", "wait_seconds": 1},
+            {"status": "RATE_LIMITED", "error_type": "OTHER_RATE_LIMIT", "wait_seconds": 1},
+            {"status": "RATE_LIMITED", "error_type": "LOCAL_RATE_LIMIT", "wait_seconds": 1,
+             "network_attempted": True},
+            {"status": "RATE_LIMITED", "error_type": "LOCAL_RATE_LIMIT", "wait_seconds": 1,
+             "persistence_attempted": True},
+        ]
+        cases.extend(
+            {"status": "RATE_LIMITED", "error_type": "LOCAL_RATE_LIMIT",
+             "wait_seconds": wait}
+            for wait in (True, 0, -1, 60.01, float("nan"), float("inf"), "1", 10 ** 400)
+        )
+        for response in cases:
+            with self.subTest(response=response):
+                with tempfile.TemporaryDirectory() as tmp:
+                    path, _ = self.signed_config(tmp)
+                    calls = []
+
+                    def collect(*args, **kwargs):
+                        calls.append((args, kwargs))
+                        return {"ok": False, **response}
+
+                    with patch("lumenis.system.collector.adapters.scheduling.prelaunch_baseline.time.sleep") as sleep:
+                        run_due_prelaunch_baseline(
+                            now=NOW, config_path=path, hmac_key="fixture-key",
+                            store=ScheduleDecisionStore(os.path.join(tmp, "scheduler.db")),
+                            collect=collect, finish_now=lambda: NOW + timedelta(seconds=1),
+                        )
+                    self.assertEqual(len(calls), 1)
+                    sleep.assert_not_called()
 
     def test_scheduler_executor_claims_once_and_fails_closed_without_hmac(self):
         with tempfile.TemporaryDirectory() as tmp:

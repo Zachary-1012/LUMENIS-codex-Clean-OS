@@ -144,3 +144,35 @@ deployment evidence, pending at this source commit. Apple and MECCA automation
 remain outside new additions pending source-specific access authorization.
 Commercial reuse is NOT VERIFIED. ROUND 06 REWORK; full-universe, user E2E,
 RELEASED, OPERATING and COMMERCIAL_READY remain NO / NOT VERIFIED.
+
+
+## Deployment recovery and local pacing — 2026-09-28
+
+The first real v2 timer cycle preserved the 190 original plan IDs and attempted
+only five additions: one succeeded; four were rejected by the existing local
+three-second Collector spacing (not remote HTTP 429). This was PARTIAL, exit 1.
+A concurrently running older App hook interpreted the inventory version using
+its old parser and recorded TypeError attempts under obsolete plan IDs. No
+success or data acceptance was inferred from these failures.
+
+The former shared-App config is now a disabled stub. The existing scheduled task
+uses its own secret-safe service env and the one active signed 195-source plan.
+The canonical scheduler store/Collector/DB remain the same; no second scheduler
+or data store was created. The old process was not killed or its profile touched.
+Observed obsolete attempts stopped after 12:45:59. Private config/task XML and
+SQLite backups retain rollback. The task stays briefly disabled until this source
+revision is deployed; no future cycle is claimed here.
+
+The canonical scheduler now honors only exact LOCAL_RATE_LIMIT before any
+network/persistence attempt: a finite positive wait up to 60 seconds, then one
+retry under the same claim and authorization. Remote 429, authentication failure,
+challenge, invalid waits or already attempted effects are not retried. The
+Collector spacing and source-level backoff remain enforced.
+23 current targeted scheduler tests PASS, exit 0; two source files AST PASS.
+
+Separately, Le Labo X collection ran clone-first then through the actual exact
+manual import chain: 3 Raw/native/Canonical rows with verified signed Evidence,
+explicit brand mentions, actual publication dates and source metric values.
+Overall X Raw/native/Canonical now 6/6/6. Integrity OK, FK 0. Public posts are
+source opinions, not verified celebrity/product claims or inferred sentiment.
+Social AUTO remains off. Country/global and user E2E are still unaccepted.

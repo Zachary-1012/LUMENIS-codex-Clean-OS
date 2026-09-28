@@ -1526,3 +1526,18 @@ remains with existing owners and gates. Old runtime/test claims are historical.
 This is requirement retention and task routing, not product closure progress.
 No global-data, social-field, video, podcast or general-creation requirement is
 removed. No Round or release status is promoted.
+
+
+### 2026-09-28 - maintenance recovery and Le Labo source observations
+
+Five signed public-source plans were added with all 190 prior plan IDs preserved.
+First scheduled v2 tick was PARTIAL: one success/four local spacing rejections.
+An old App hook was isolated through a disabled former config; the accepted
+Windows task owns the active 195-source service config. The small scheduler
+repair respects local spacing and retries once before any network/effect;
+23 tests PASS with no remote-429/auth/challenge bypass. Runtime redeployment and
+future successful recovery remain to be observed after this commit.
+Le Labo X added 3 actual source-native, signed, correctly scoped observations;
+X now has 6/6/6 Raw/native/Canonical, DB integrity OK/FK0. Social AUTO off.
+[Round 06 evidence](evidence/round-06/ROUND-06-PUBLIC-BASELINE-MAINTENANCE-2026-09-28.md).
+ROUND 06 REWORK; Global/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.
