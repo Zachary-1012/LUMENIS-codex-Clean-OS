@@ -101,6 +101,18 @@ def douyin_worker_spec(private_data_dir=None):
     }
 
 
+def x_readonly_worker_spec(private_data_dir=None):
+    """Return the fixed, isolated X read-only worker plan without starting it."""
+    base = private_data_dir or bridge.PRIVATE_DATA_DIR
+    return {
+        "account": "X_READONLY",
+        "port": 9226,
+        "profile": os.path.join(base, "profiles", "x-readonly"),
+        "home": "about:blank",
+        "direct": False,
+    }
+
+
 def _http_json(url, method="GET", timeout=5):
     req = urllib.request.Request(url, method=method)
     with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -236,6 +248,41 @@ def launch_douyin_readonly(status_only=False):
     return row
 
 
+def launch_x_readonly(status_only=False):
+    """Provision X only through explicit --account; reject unknown port owners."""
+    worker = x_readonly_worker_spec()
+    browser = cdp_helper.system_default_cdp_browser()
+    port_open = port_online(worker["port"])
+    row = {**worker, "browser": browser, "online": False,
+           "port_open": port_open, "action": "", "pages": []}
+    if port_open:
+        if cdp_helper.is_cdp_profile_running(worker["port"], worker["profile"]):
+            row["online"] = True
+            row["action"] = "already_online"
+        else:
+            row["action"] = "port_in_use_unverified"
+        return row
+    if browser not in {"chrome", "edge"}:
+        row["action"] = "unsupported_system_default_browser"
+        return row
+    if status_only:
+        row["action"] = "offline"
+        return row
+
+    os.makedirs(worker["profile"], exist_ok=True)
+    res = cdp_helper.start_cdp_browser(
+        port=worker["port"],
+        profile_dir=worker["profile"],
+        launch_url=worker["home"],
+        direct_connection=worker["direct"],
+        browser=browser,
+        loopback_only=True,
+    )
+    row["online"] = bool(res.get("success")) and res.get("pid") is not None and port_online(worker["port"])
+    row["action"] = "started" if row["online"] else f"failed: {res.get('message')}"
+    return row
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--account", default=None, help="只拉起指定逻辑身份；默认全部")
@@ -252,8 +299,17 @@ def main():
         print(f"   action  = {row['action']}")
         return 0 if row["online"] else 1
 
+    if args.account == "X_READONLY":
+        row = launch_x_readonly(status_only=args.status)
+        print(f"\n● {row['account']}（显式请求的只读 X 驻场实例）")
+        print(f"   port={row['port']}  online={row['online']}  browser={row['browser']}")
+        print(f"   profile = {row['profile']}")
+        print(f"   home    = {row['home']}")
+        print(f"   action  = {row['action']}")
+        return 0 if row["online"] else 1
+
     if args.account and args.account != "GENERAL_BROWSE" and not plan:
-        print(f"[FATAL] 未知身份 {args.account}；可选：{[a for a,_ in RESIDENT_PLAN] + ['GENERAL_BROWSE', 'DOUYIN_READONLY']}")
+        print(f"[FATAL] 未知身份 {args.account}；可选：{[a for a,_ in RESIDENT_PLAN] + ['GENERAL_BROWSE', 'DOUYIN_READONLY', 'X_READONLY']}")
         return 2
 
     print("=" * 72)

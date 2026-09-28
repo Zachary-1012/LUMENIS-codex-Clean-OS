@@ -1457,3 +1457,21 @@ inside Evidence. The collection remains PARTIAL_SCOPE_REVIEW_REQUIRED; the three
 previous wrong Shenzhen Bay records remain UNASSIGNED. Integrity OK/FK0.
 [Round 06 evidence](evidence/round-06/ROUND-06-ANONYMOUS-REDIRECT-2026-09-28.md).
 ROUND 06 REWORK; Global/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.
+
+
+### 2026-09-28 - X real manual ingestion and country source follow-through
+
+X now uses the explicitly enabled 127.0.0.1:9226 x-readonly profile and existing
+private vault. Real Nike search passed the exact manual DATA_IMPORT/COMMIT gate,
+source-name admission, signed Evidence, native fields and Canonical: 3 actual
+records, Raw/native/Canonical counts 3/3/3, integrity OK/FK0. Clone-first proof
+and 53 targeted current tests PASS; unknown counts remain NULL. Unproven reply
+relationships return NOT_SUPPORTED, not invented comments. No social AUTO.
+Apple Canada store-list and Coca-Cola US brand page also entered the actual BMP
+chain (Evidence 391/392), using source-specific robots checks and existing IDs.
+Scheduled public maintenance now runs immutable accepted 4ef4a038 source; its
+real 07:31 and later cycles correctly deferred all 190 not-due plans. New sources
+are awaiting versioned plan addition without resetting existing history.
+[Round 06 evidence](evidence/round-06/ROUND-06-X-MANUAL-INGESTION-2026-09-28.md).
+Source acquisition is not full social/country/user E2E closure. ROUND 06 REWORK;
+Global/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY remain NO.

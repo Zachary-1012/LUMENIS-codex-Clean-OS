@@ -83,7 +83,7 @@ class TestXAdapter:
         from lumenis.adapters.x_platform import XAdapter
         tweet = MagicMock()
         tweet.query_selector.return_value = None
-        assert XAdapter._extract_metric(tweet, '[data-testid="like"]') == 0
+        assert XAdapter._extract_metric(tweet, '[data-testid="like"]') is None
 
     def test_auto_load_cookie_list_format(self):
         """_auto_load_cookie 通过 cookie_vault.to_cookie_string 将 {name,value} 列表格式化为 name=value 字符串。
@@ -96,3 +96,116 @@ class TestXAdapter:
                    return_value=[{"name": "auth_token", "value": "abc"}]):
             result = XAdapter._auto_load_cookie()
             assert "auth_token=abc" in result
+
+
+def _x_element(text="", **attributes):
+    element = MagicMock()
+    element.inner_text.return_value = text
+    element.get_attribute.side_effect = attributes.get
+    return element
+
+
+def test_x_parser_preserves_native_id_explicit_zero_unknown_counts_and_publish_time():
+    from lumenis.adapters.x_platform import XAdapter
+
+    tweet = MagicMock()
+    tweet.query_selector.side_effect = {
+        '[data-testid="tweetText"]': _x_element("A source post"),
+        'a[href*="/status/"]': _x_element(href="/brand/status/12345678901234567890?s=20"),
+        '[data-testid="like"]': _x_element(**{"aria-label": "0 Likes"}),
+        '[data-testid="reply"]': _x_element(**{"aria-label": "unavailable"}),
+        '[data-testid="retweet"]': _x_element("1.2K", **{"aria-label": "1.2K Reposts"}),
+        "time": _x_element(**{"datetime": "2026-09-28T01:02:03Z"}),
+    }.get
+    tweet.query_selector_all.return_value = []
+
+    note = XAdapter(cookie_string="test-only")._parse_x_tweet(tweet)
+
+    assert note.raw_data["tweet_id"] == "12345678901234567890"
+    assert note.likes == 0
+    assert note.comments is None
+    assert note.shares is None
+    assert note.collects is None
+    assert note.publish_date == "2026-09-28T01:02:03Z"
+    assert note.raw_data["metric_display"]["shares"] == {
+        "aria_label": "1.2K Reposts", "text": "1.2K",
+    }
+
+
+def test_x_metric_parser_falls_back_to_text_and_rejects_approximate_or_bad_grouping():
+    from lumenis.adapters.x_platform import XAdapter
+
+    def extract(label, text):
+        tweet = MagicMock()
+        tweet.query_selector.return_value = _x_element(text, **{"aria-label": label})
+        return XAdapter._extract_metric_observation(tweet, "metric")
+
+    approximate, approximate_display = extract("1.2K Likes", "1.2K")
+    exact_grouped, _ = extract("Like", "1,234")
+    malformed_grouped, malformed_display = extract("1,2 Likes", "1,2")
+
+    assert approximate is None
+    assert approximate_display["aria_label"] == "1.2K Likes"
+    assert exact_grouped == 1234
+    assert malformed_grouped is None
+    assert malformed_display["aria_label"] == "1,2 Likes"
+
+
+def test_x_parser_keeps_missing_identity_and_publish_time_unknown():
+    from lumenis.adapters.x_platform import XAdapter
+
+    tweet = MagicMock()
+    tweet.query_selector.side_effect = {
+        '[data-testid="tweetText"]': _x_element("Post without a status link"),
+    }.get
+    tweet.query_selector_all.return_value = []
+    note = XAdapter(cookie_string="test-only")._parse_x_tweet(tweet)
+
+    assert note.raw_data["tweet_id"] is None
+    assert note.publish_date == ""
+    assert note.likes is None
+
+
+def test_main_x_adapter_maps_id_and_unknown_counts_without_zero_defaults():
+    from types import SimpleNamespace
+    from lumenis.system.collector.adapters.x_platform import XAdapter
+
+    note = SimpleNamespace(
+        raw_data={"tweet_id": "12345678901234567890"},
+        title="Post", content="Body", author_id="@brand", author="Brand",
+        publish_date="", url="https://x.com/brand/status/12345678901234567890",
+        likes=0, comments=None, collects=None, shares=None,
+    )
+
+    item = XAdapter(backend=object())._v4_notes_to_items([note])[0]
+
+    assert item["platform_content_id"] == "12345678901234567890"
+    assert item["likes"] == 0
+    assert item["comments"] is None
+    assert item["collects"] is None
+    assert item["shares"] is None
+    assert item["publish_datetime"] == ""
+
+
+def test_main_x_adapter_health_check_uses_vault_metadata(monkeypatch):
+    from lumenis.system.collector.adapters.x_platform import XAdapter, CollectionStatus
+
+    monkeypatch.setattr(
+        "lumenis.adapters.cookie_vault.check_cookie_status",
+        lambda platform: {"platform": platform, "has_auth_cookie": True},
+    )
+
+    result = XAdapter(backend=object()).health_check()
+
+    assert result.status == CollectionStatus.NEED_VERIFY
+    assert "need verification" in result.message
+
+    monkeypatch.setattr(
+        "lumenis.adapters.cookie_vault.check_cookie_status",
+        lambda platform: {"platform": platform, "has_auth_cookie": False},
+    )
+    missing = XAdapter(backend=object()).health_check()
+
+    assert missing.status == CollectionStatus.NOT_CONFIGURED
+    assert missing.platform == "x"
+    assert "metadata missing" in missing.message

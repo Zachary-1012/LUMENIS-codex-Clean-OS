@@ -38,12 +38,16 @@ class XAdapter(BasePlatformAdapter):
         if success:
             return CollectionStatus.SUCCESS if notes else CollectionStatus.NO_NEW_DATA
         err_lower = (error or "").lower()
+        if any(k in err_lower for k in ("not supported", "unsupported", "review required")):
+            return CollectionStatus.NOT_SUPPORTED
         if any(k in err_lower for k in ("登录", "login", "cookie", "session", "失效", "未登录")):
             return CollectionStatus.SESSION_EXPIRED
-        if any(k in err_lower for k in ("风控", "验证", "captcha", "verify", "risk", "频控")):
+        if any(k in err_lower for k in ("风控", "验证", "captcha", "verify", "verification", "challenge", "risk", "频控")):
             return CollectionStatus.RISK_WARNING
         if any(k in err_lower for k in ("block", "封禁", "不可用")):
             return CollectionStatus.BLOCKED
+        if any(k in err_lower for k in ("network error", "timeout", "connection", "dns")):
+            return CollectionStatus.PROVIDER_UNAVAILABLE
         return CollectionStatus.COLLECT_ERROR
 
     def _v4_notes_to_items(self, notes: list) -> list[dict]:
@@ -51,17 +55,17 @@ class XAdapter(BasePlatformAdapter):
         for n in notes or []:
             raw = getattr(n, "raw_data", {}) or {}
             items.append(self.normalize_item({
-                "platform_content_id": raw.get("tweet_id", "") if isinstance(raw, dict) else "",
+                "platform_content_id": raw.get("tweet_id") if isinstance(raw, dict) else None,
                 "title": getattr(n, "title", ""),
                 "content": getattr(n, "content", ""),
                 "author_id": getattr(n, "author_id", ""),
                 "author_nickname": getattr(n, "author", ""),
                 "publish_datetime": getattr(n, "publish_date", ""),
                 "url": getattr(n, "url", ""),
-                "likes": getattr(n, "likes", 0),
-                "comments": getattr(n, "comments", 0),
-                "collects": getattr(n, "collects", 0),
-                "shares": getattr(n, "shares", 0),
+                "likes": getattr(n, "likes", None),
+                "comments": getattr(n, "comments", None),
+                "collects": getattr(n, "collects", None),
+                "shares": getattr(n, "shares", None),
                 "raw": raw,
             }))
         return items
@@ -75,13 +79,14 @@ class XAdapter(BasePlatformAdapter):
             items = self._v4_notes_to_items(result.notes)
             return CollectionResult(
                 status=status,
+                platform=self.platform,
                 items=items,
                 raw_count=result.raw_count,
                 message=result.error or "",
             )
         except Exception as exc:
             logger.exception("X 主链路采集失败")
-            return CollectionResult(status=CollectionStatus.COLLECT_ERROR, message=str(exc))
+            return CollectionResult(status=CollectionStatus.COLLECT_ERROR, platform=self.platform, message=str(exc))
 
     def detail(self, content_id: str, **kwargs: Any) -> CollectionResult:
         return self._delegate_v4("detail", content_id)
@@ -98,17 +103,26 @@ class XAdapter(BasePlatformAdapter):
             result = getattr(backend, method)(*args, **kwargs)
             status = self._v4_status_to_main(result.success, result.notes, result.error)
             items = self._v4_notes_to_items(result.notes)
-            return CollectionResult(status=status, items=items, raw_count=result.raw_count, message=result.error or "")
+            return CollectionResult(status=status, platform=self.platform, items=items, raw_count=result.raw_count, message=result.error or "")
         except Exception as exc:
-            return CollectionResult(status=CollectionStatus.COLLECT_ERROR, message=str(exc))
+            return CollectionResult(status=CollectionStatus.COLLECT_ERROR, platform=self.platform, message=str(exc))
 
     def health_check(self) -> CollectionResult:
-        """纯本地检查：cookie 文件存在性。"""
-        from pathlib import Path
-        cookie_path = Path(__file__).parent.parent / "data" / "cookies" / "x.json"
-        if cookie_path.exists():
-            return CollectionResult(status=CollectionStatus.SUCCESS, message="X adapter ready (cookie configured)")
-        return CollectionResult(status=CollectionStatus.COLLECT_ERROR, message="X missing: cookie")
+        """Check the existing vault's non-secret X authentication metadata."""
+        from lumenis.adapters.cookie_vault import check_cookie_status
+
+        status = check_cookie_status("x")
+        if status.get("has_auth_cookie"):
+            return CollectionResult(
+                status=CollectionStatus.NEED_VERIFY,
+                platform=self.platform,
+                message="X auth-cookie metadata present; login and collection access need verification",
+            )
+        return CollectionResult(
+            status=CollectionStatus.NOT_CONFIGURED,
+            platform=self.platform,
+            message="X auth-cookie metadata missing",
+        )
 
 
 register_adapter("x", XAdapter)

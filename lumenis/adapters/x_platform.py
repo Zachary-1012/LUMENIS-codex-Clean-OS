@@ -12,7 +12,7 @@ X (Twitter) 内容采集适配器
 
 状态映射：
   - 有结果       → SUCCESS
-  - 正常空       → success=True, notes=[]
+  - 空/未验证    → success=False（不把不可验证结果报告为空成功）
   - 登录失效     → SESSION_EXPIRED 语义
   - 异常         → COLLECT_ERROR
 
@@ -20,12 +20,67 @@ X (Twitter) 内容采集适配器
 """
 import re
 import logging
+import os
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
 from .base import BaseAdapter, AdapterResult, CollectedNote
-from .cookie_vault import to_cookie_string
+from .cookie_vault import inject_into_context, to_cookie_string
+from .human_browser import HumanBrowser
 
 logger = logging.getLogger(__name__)
+
+_X_READONLY_CDP_URL = "http://127.0.0.1:9226"
+
+
+def _configured_browser_worker_url() -> str:
+    """Require the explicitly opted-in, process-bound X read-only worker."""
+    value = str(os.getenv("X_READONLY_CDP_URL") or "").strip()
+    enabled = str(os.getenv("X_READONLY_LOCAL_WORKER_ENABLED") or "").strip().lower()
+    account = str(os.getenv("X_READONLY_LOCAL_WORKER_ACCOUNT") or "").strip().upper()
+    if value != _X_READONLY_CDP_URL:
+        raise RuntimeError("X_READONLY_CDP_URL must be the fixed loopback worker endpoint")
+    if enabled not in {"1", "true", "yes"} or account != "X_READONLY":
+        raise RuntimeError("X_READONLY worker requires explicit account opt-in")
+
+    from pathlib import Path
+    from .cookie_vault import _current_data_dir
+    import cdp_helper
+
+    profile_dir = Path(_current_data_dir()) / "private" / "profiles" / "x-readonly"
+    if not cdp_helper.is_cdp_profile_running(9226, str(profile_dir)):
+        raise RuntimeError("X_READONLY worker profile is not bound to the configured loopback port")
+    return _X_READONLY_CDP_URL
+
+
+def _new_browser_worker():
+    return HumanBrowser(
+        cdp_url=_configured_browser_worker_url(),
+        auto_ensure=False,
+        launch_url="about:blank",
+    )
+
+
+def _x_page_failure(url: str, _body: str = "", error: str = "", *, title: str = "") -> str:
+    """Classify page state from route/title/browser errors, never arbitrary post text."""
+    route = (urlsplit(str(url or "")).path or "").lower()
+    page_title = str(title or "").lower().strip()
+    browser_error = str(error or "").lower()
+    if "/i/flow/login" in route or route.rstrip("/") == "/login" or any(
+        marker in page_title for marker in ("log in to x", "sign in to x", "login to x")
+    ):
+        return "X login/session required or expired"
+    if "/challenge" in route or any(
+        marker in page_title for marker in ("captcha challenge", "verify your account", "verification required")
+    ):
+        return "X verification challenge detected"
+    if any(marker in route for marker in ("/blocked", "/account/access")) or any(
+        marker in page_title for marker in ("account suspended", "account locked", "temporarily blocked")
+    ):
+        return "X access blocked or rate limited"
+    if any(value in browser_error for value in ("net::err_", "timed out", "timeout", "connection", "dns", "network", "无法访问此网站")):
+        return "X network error"
+    return ""
 
 
 class XAdapter(BaseAdapter):
@@ -56,27 +111,33 @@ class XAdapter(BaseAdapter):
         return self._search_browser(keyword, max_results)
 
     def _search_browser(self, keyword: str, max_results: int) -> AdapterResult:
-        """浏览器 CDP 采集 X 搜索结果。"""
+        """Collect search results only through the opted-in isolated X worker."""
+        hb = None
+        page = None
         try:
-            from .human_browser import HumanBrowser
-            from .cookie_vault import inject_into_context
             from urllib.parse import quote
 
-            hb = HumanBrowser(port=9222, launch_url="about:blank")
+            hb = _new_browser_worker()
             hb.connect()
             inject_into_context(hb._context, "x")
-            page = hb.new_page()
+            page = hb.new_page(stealth=False)
             url = f"https://x.com/search?q={quote(keyword.strip())}&src=typed_query"
-            page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            try:
+                page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            except Exception as exc:
+                message = _x_page_failure("", "", str(exc)) or f"X network error: {exc}"
+                return AdapterResult(success=False, error=message)
             hb.pause(5.0, 5.0)
 
-            # 检测登录态
-            if "login" in page.url.lower() or "signup" in page.url.lower():
-                page.close()
-                hb.close()
-                return AdapterResult(success=False, error="X 登录态失效，请更新 cookie 或重新登录")
+            page_url = str(getattr(page, "url", "") or "")
+            try:
+                page_title = page.title()
+            except Exception:
+                page_title = ""
+            failure = _x_page_failure(page_url, title=page_title)
+            if failure:
+                return AdapterResult(success=False, error=failure)
 
-            # 滚动加载更多
             for _ in range(2):
                 page.mouse.wheel(0, 2000)
                 hb.pause(1.5, 1.5)
@@ -94,16 +155,25 @@ class XAdapter(BaseAdapter):
                 except Exception:
                     continue
 
-            page.close()
-            hb.close()
-
             if notes:
                 return AdapterResult(success=True, notes=notes, raw_count=len(notes))
-            return AdapterResult(success=True, notes=[], raw_count=0)
+            return AdapterResult(success=False, error="X search returned no verifiable posts")
 
         except Exception as e:
             logger.exception("X 浏览器采集异常")
-            return AdapterResult(success=False, error=f"X 采集异常: {e}")
+            failure = _x_page_failure("", "", str(e))
+            return AdapterResult(success=False, error=failure or f"X collection error: {e}")
+        finally:
+            if page is not None:
+                try:
+                    page.close()
+                except Exception:
+                    pass
+            if hb is not None:
+                try:
+                    hb.close()
+                except Exception:
+                    pass
 
     def _parse_x_tweet(self, tweet) -> CollectedNote | None:
         """解析单个 X 推文。"""
@@ -126,6 +196,7 @@ class XAdapter(BaseAdapter):
 
         # 链接
         url = ""
+        tweet_id = None
         link_el = tweet.query_selector('a[href*="/status/"]')
         if link_el:
             href = link_el.get_attribute("href") or ""
@@ -133,12 +204,17 @@ class XAdapter(BaseAdapter):
                 url = "https://x.com" + href
             elif href:
                 url = href
+            status_match = re.search(r"/status/(\d+)(?:/|$)", urlsplit(href).path)
+            if status_match:
+                tweet_id = status_match.group(1)
 
         # 互动数据
-        likes = self._extract_metric(tweet, '[data-testid="like"]')
-        comments = self._extract_metric(tweet, '[data-testid="reply"]')
-        shares = self._extract_metric(tweet, '[data-testid="retweet"]')
-        views = self._extract_metric(tweet, '[data-testid="app-text-transition-container"]')
+        likes, likes_display = self._extract_metric_observation(tweet, '[data-testid="like"]')
+        comments, comments_display = self._extract_metric_observation(tweet, '[data-testid="reply"]')
+        shares, shares_display = self._extract_metric_observation(tweet, '[data-testid="retweet"]')
+        _, views_display = self._extract_metric_observation(
+            tweet, '[data-testid="app-text-transition-container"]',
+        )
 
         # 发布时间
         publish_date = ""
@@ -161,138 +237,157 @@ class XAdapter(BaseAdapter):
             publish_date=publish_date,
             likes=likes,
             comments=comments,
-            collects=0,
+            collects=None,
             shares=shares,
             cover="",
             source_platform="x",
-            raw_data={"handle": handle, "views": views, "url": url},
+            raw_data={
+                "tweet_id": tweet_id,
+                "handle": handle,
+                "views": None,
+                "unclassified_counter_display": views_display,
+                "url": url,
+                "metric_display": {
+                    "likes": likes_display,
+                    "comments": comments_display,
+                    "shares": shares_display,
+                    "views": None,
+                },
+            },
         )
 
     @staticmethod
-    def _extract_metric(tweet, selector: str) -> int:
-        """从推文中提取互动数字。"""
+    def _parse_exact_metric(value: str) -> int | None:
+        """Parse an exact integer label, rejecting compact and malformed groups."""
+        match = re.match(r"^(?:0|[1-9]\d*|[1-9]\d{0,2}(?:,\d{3})+)(?=\s|$)", value)
+        if not match:
+            return None
+        return int(match.group(0).replace(",", ""))
+
+    @classmethod
+    def _extract_metric_observation(cls, tweet, selector: str) -> tuple[int | None, dict | None]:
+        """Keep the observed label while returning only exact counts as metrics."""
         try:
             el = tweet.query_selector(selector)
             if not el:
-                return 0
-            # X 使用 aria-label 或子元素显示数字
-            label = el.get_attribute("aria-label") or ""
-            digits = "".join(c for c in label if c.isdigit())
-            if digits:
-                return int(digits)
-            text = el.inner_text().strip()
-            digits = "".join(c for c in text if c.isdigit())
-            return int(digits) if digits else 0
+                return None, None
+            aria_label = el.get_attribute("aria-label")
+            aria_label = aria_label.strip() if isinstance(aria_label, str) else ""
+            text = el.inner_text()
+            text = text.strip() if isinstance(text, str) else ""
+            display = {
+                key: value for key, value in (("aria_label", aria_label), ("text", text))
+                if value
+            } or None
+            count = cls._parse_exact_metric(aria_label) if aria_label else None
+            if count is None and text:
+                count = cls._parse_exact_metric(text)
+            return count, display
         except Exception:
-            return 0
+            return None, None
+
+    @classmethod
+    def _extract_metric(cls, tweet, selector: str) -> int | None:
+        """Return an exact count; retain non-exact labels only in raw observations."""
+        return cls._extract_metric_observation(tweet, selector)[0]
+
+    @staticmethod
+    def _canonical_status_url(tweet_id: str) -> str | None:
+        value = str(tweet_id or "").strip()
+        if value.isdigit():
+            return f"https://x.com/i/web/status/{value}"
+        parsed = urlsplit(value)
+        if parsed.scheme != "https" or parsed.hostname not in {"x.com", "www.x.com"}:
+            return None
+        match = re.search(r"/status/(\d+)(?:/|$)", parsed.path)
+        return f"https://x.com/i/web/status/{match.group(1)}" if match else None
+
+    @staticmethod
+    def _close_worker_page(worker, page) -> None:
+        if page is not None:
+            try:
+                page.close()
+            except Exception:
+                pass
+        if worker is not None:
+            try:
+                worker.close()
+            except Exception:
+                pass
+
+    def _open_readonly_page(self, url: str, wait_seconds: float):
+        worker = None
+        page = None
+        try:
+            worker = _new_browser_worker()
+            worker.connect()
+            inject_into_context(worker._context, "x")
+            page = worker.new_page(stealth=False)
+            page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            worker.pause(wait_seconds, wait_seconds)
+            page_title = page.title()
+            failure = _x_page_failure(str(getattr(page, "url", "") or ""), title=page_title)
+            return worker, page, failure
+        except Exception as exc:
+            self._close_worker_page(worker, page)
+            failure = _x_page_failure(str(getattr(page, "url", "") or ""), "", str(exc))
+            return None, None, failure or "X network error"
 
     def detail(self, tweet_id: str) -> AdapterResult:
-        """X 推文详情（浏览器 CDP）。"""
+        """Read a post through the explicitly configured X read-only worker."""
+        url = self._canonical_status_url(tweet_id)
+        if not url:
+            return AdapterResult(success=False, error="X detail requires a numeric post ID or canonical x.com status URL")
+        worker, page, failure = self._open_readonly_page(url, 4.0)
+        if failure:
+            self._close_worker_page(worker, page)
+            return AdapterResult(success=False, error=failure)
         try:
-            from .human_browser import HumanBrowser
-            from .cookie_vault import inject_into_context
-
-            hb = HumanBrowser(port=9222, launch_url="about:blank")
-            hb.connect()
-            inject_into_context(hb._context, "x")
-            page = hb.new_page()
-            url = tweet_id if tweet_id.startswith("http") else f"https://x.com/i/web/status/{tweet_id}"
-            page.goto(url, wait_until="domcontentloaded", timeout=30000)
-            hb.pause(4.0, 4.0)
-
             article = page.query_selector("article")
-            note = None
-            if article:
-                note = self._parse_x_tweet(article)
-
-            page.close()
-            hb.close()
-
+            note = self._parse_x_tweet(article) if article else None
             if note:
                 return AdapterResult(success=True, notes=[note], raw_count=1)
-            return AdapterResult(success=False, error="X 详情未返回数据")
-        except Exception as e:
-            return AdapterResult(success=False, error=f"X 详情异常: {e}")
+            return AdapterResult(success=False, error="X detail returned no verifiable post")
+        except Exception as exc:
+            failure = _x_page_failure(str(getattr(page, "url", "") or ""), "", str(exc))
+            return AdapterResult(success=False, error=failure or "X detail collection failed")
+        finally:
+            self._close_worker_page(worker, page)
 
     def comments(self, tweet_id: str, max_comments: int = 20) -> AdapterResult:
-        """X 评论采集（浏览器 CDP，滚动加载）。"""
-        try:
-            from .human_browser import HumanBrowser
-            from .cookie_vault import inject_into_context
-
-            hb = HumanBrowser(port=9222, launch_url="about:blank")
-            hb.connect()
-            inject_into_context(hb._context, "x")
-            page = hb.new_page()
-            url = tweet_id if tweet_id.startswith("http") else f"https://x.com/i/web/status/{tweet_id}"
-            page.goto(url, wait_until="domcontentloaded", timeout=30000)
-            hb.pause(3.0, 3.0)
-
-            # 滚动加载评论
-            for _ in range(2):
-                page.mouse.wheel(0, 2000)
-                hb.pause(1.5, 1.5)
-
-            articles = page.query_selector_all("article")
-            notes = []
-            # 第一个article是原推文，后面是评论
-            for article in articles[1:max_comments + 1]:
-                try:
-                    note = self._parse_x_tweet(article)
-                    if note:
-                        note.source_platform = "x_comment"
-                        notes.append(note)
-                except Exception:
-                    continue
-
-            page.close()
-            hb.close()
-            return AdapterResult(success=True, notes=notes, raw_count=len(notes))
-        except Exception as e:
-            return AdapterResult(success=False, error=f"X 评论异常: {e}")
+        """Replies stay unavailable until parent relationships can be verified."""
+        return AdapterResult(
+            success=False,
+            error="X comments not supported: reply-to-post relationships cannot be verified from the current page",
+        )
 
     def creator(self, username: str) -> AdapterResult:
-        """X 用户主页信息采集。"""
+        """Read a creator profile through the explicitly configured X worker."""
+        handle = str(username or "").strip().lstrip("@")
+        if not re.fullmatch(r"[A-Za-z0-9_]{1,15}", handle):
+            return AdapterResult(success=False, error="X creator requires a valid handle")
+        url = f"https://x.com/{handle}"
+        worker, page, failure = self._open_readonly_page(url, 4.0)
+        if failure:
+            self._close_worker_page(worker, page)
+            return AdapterResult(success=False, error=failure)
         try:
-            from .human_browser import HumanBrowser
-            from .cookie_vault import inject_into_context
-
-            hb = HumanBrowser(port=9222, launch_url="about:blank")
-            hb.connect()
-            inject_into_context(hb._context, "x")
-            page = hb.new_page()
-            handle = username.lstrip("@")
-            url = f"https://x.com/{handle}"
-            page.goto(url, wait_until="domcontentloaded", timeout=30000)
-            hb.pause(4.0, 4.0)
-
             name_el = page.query_selector('[data-testid="UserName"] div, h2')
-            name = name_el.inner_text().strip() if name_el else handle
-
-            # 粉丝数
-            followers = 0
             follower_el = page.query_selector('a[href*="/verified_followers"] span')
-            if follower_el:
-                digits = "".join(c for c in follower_el.inner_text() if c.isdigit())
-                followers = int(digits) if digits else 0
-
-            page.close()
-            hb.close()
-
+            if not name_el and not follower_el:
+                return AdapterResult(success=False, error="X creator profile returned no verifiable profile fields")
+            name = name_el.inner_text().strip() if name_el else ""
+            follower_text = follower_el.inner_text().strip() if follower_el else ""
+            followers = self._parse_exact_metric(follower_text)
             return AdapterResult(success=True, notes=[CollectedNote(
-                title=name,
-                content="",
-                url=url,
-                author=name,
-                author_id=f"@{handle}",
-                publish_date="",
-                likes=followers,
-                comments=0,
-                collects=0,
-                shares=0,
-                cover="",
-                source_platform="x_creator",
-                raw_data={"username": handle, "followers": followers},
+                title=name or f"@{handle}", content="", url=url, author=name or f"@{handle}",
+                author_id=f"@{handle}", publish_date="", likes=None, comments=None,
+                collects=None, shares=None, cover="", source_platform="x_creator",
+                raw_data={"username": handle, "followers": followers,
+                           "followers_display": follower_text or None},
             )], raw_count=1)
-        except Exception as e:
-            return AdapterResult(success=False, error=f"X 主页异常: {e}")
+        except Exception as exc:
+            failure = _x_page_failure(str(getattr(page, "url", "") or ""), "", str(exc))
+            return AdapterResult(success=False, error=failure or "X creator collection failed")
+        finally:
+            self._close_worker_page(worker, page)
