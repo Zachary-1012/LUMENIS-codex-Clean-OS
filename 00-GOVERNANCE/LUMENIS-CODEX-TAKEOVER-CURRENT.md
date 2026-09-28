@@ -1513,3 +1513,16 @@ or full Unicode coverage is not claimed. Native devices, real Actor/AI execution
 whole frontend, Round acceptance, USER_VERIFIED, RELEASED and COMMERCIAL_READY
 remain unaccepted. Online delivery requires this status/evidence/source to be
 co-published and the resulting main commit verified; no hosted CI pass is inferred.
+
+
+### 2026-09-28 - supplemental requirements research retained and routed
+
+The requested Sol Ultra research read all 1,193 DOCX paragraphs and mapped 23
+items to existing R04/R06/R08/R14/R15, retaining R03/R05 and business dependencies.
+[Full adaptation report](../intelligence_library/09_Research-Hub/engineering研究/补充需求-20260928/adaptation-report.md)
+includes the full extraction, inventory, source anchors and official research.
+B0 source/session seam mapping and B3 SYS-06 design are dispatched; implementation
+remains with existing owners and gates. Old runtime/test claims are historical.
+This is requirement retention and task routing, not product closure progress.
+No global-data, social-field, video, podcast or general-creation requirement is
+removed. No Round or release status is promoted.
