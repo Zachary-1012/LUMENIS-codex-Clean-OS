@@ -39,13 +39,19 @@ def test_topic_score_full_marks_is_90():
 
 def test_topic_score_zero_is_minimum():
     # 无正向、风险与成本拉满：positive=0，penalty 被 clamp 到 0
-    sig = TopicSignals(risk=1.0, cost=1.0)
+    sig = TopicSignals(
+        demand=0, timeliness=0, novelty=0, human_relevance=0, guest_fit=0,
+        evidence=0, content_yield=0, distribution=0, risk=1.0, cost=1.0,
+    )
     assert score_topic(sig) == 0.0
 
 
 def test_topic_score_deterministic():
-    sig = TopicSignals(demand=0.7, timeliness=0.6, novelty=0.5, evidence=0.8)
-    assert score_topic(sig) == score_topic(sig)
+    sig = TopicSignals(
+        demand=0.7, timeliness=0.6, novelty=0.5, evidence=0.8, human_relevance=0,
+        guest_fit=0, content_yield=0, distribution=0, risk=0, cost=0,
+    )
+    assert score_topic(sig) == score_topic(sig) == 31.4
 
 
 def test_classify_topic_buckets():

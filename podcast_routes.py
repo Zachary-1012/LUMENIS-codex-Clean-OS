@@ -39,75 +39,36 @@ def _store():
     return podcast_store
 
 
+def _entity_scope_unavailable():
+    # Legacy podcast_entities has no canonical domain/focus/actor columns.
+    # Do not infer ownership from a header or silently expose all rows.
+    return jsonify({
+        "ok": False,
+        "code": "PODCAST_ENTITY_SCOPE_UNAVAILABLE",
+        "status": "blocked",
+        "message": "Podcast entities need a scoped migration before use",
+    }), 503
+
+
 # ---------- 实体图 ----------
 @podcast_bp.route("/overview", methods=["GET"])
 def api_overview():
-    try:
-        ps = _store()
-        stats = ps.get_stats()
-        caps = [
-            {"key": "topic_scoring", "name": "选题打分", "type": "deterministic", "dimensions": 10},
-            {"key": "story_nodes", "name": "故事节点提取", "type": "deterministic"},
-            {"key": "episode_runtime", "name": "运行时分段校验", "type": "deterministic"},
-            {"key": "content_yield", "name": "内容产出规划", "type": "deterministic"},
-            {"key": "breakout", "name": "破圈分类", "type": "deterministic"},
-            {"key": "research_pipeline", "name": "研究管线", "type": "deterministic"},
-        ]
-        return _ok(stats=stats, capabilities=caps)
-    except Exception as e:
-        return _err(f"overview失败: {e}", 500)
+    return _entity_scope_unavailable()
 
 
 @podcast_bp.route("/entities", methods=["GET"])
 def api_entities():
-    try:
-        etype = request.args.get("type") or None
-        parent = request.args.get("parent_id") or None
-        evidence = request.args.get("evidence_status") or None
-        limit = min(int(request.args.get("limit", 100)), 500)
-        offset = max(int(request.args.get("offset", 0)), 0)
-        ps = _store()
-        rows = ps.list_entities(etype, parent, evidence, limit, offset)
-        return _ok(entities=rows, returned=len(rows))
-    except Exception as e:
-        return _err(f"查询失败: {e}", 500)
+    return _entity_scope_unavailable()
 
 
 @podcast_bp.route("/entity", methods=["GET"])
 def api_get_entity():
-    eid = request.args.get("entity_id")
-    if not eid:
-        return _err("entity_id required")
-    ent = _store().get_entity(eid)
-    if not ent:
-        return _err("not found", 404)
-    return _ok(entity=ent)
+    return _entity_scope_unavailable()
 
 
 @podcast_bp.route("/entity", methods=["POST"])
 def api_create_entity():
-    try:
-        b = request.get_json(force=True, silent=True) or {}
-        etype = b.get("entity_type")
-        if not etype:
-            return _err("entity_type required")
-        # 手动录入来源固定 manual，证据状态默认 observed（人工录入即观察事实）
-        source = b.get("source") or {"type": "manual", "locator": b.get("locator", "manual_input")}
-        ps = _store()
-        eid = ps.upsert_entity(
-            etype, entity_id=b.get("entity_id"), title=b.get("title"),
-            parent_id=b.get("parent_id"), start_ms=b.get("start_ms"), end_ms=b.get("end_ms"),
-            speaker_id=b.get("speaker_id"), attributes=b.get("attributes"),
-            relations=b.get("relations"), evidence_ids=b.get("evidence_ids"),
-            evidence_status=b.get("evidence_status", "observed"), confidence=b.get("confidence"),
-            source=source, observed_at=b.get("observed_at"), runtime_seconds=b.get("runtime_seconds"),
-            published_at=b.get("published_at"), metrics=b.get("metrics"), tags=b.get("tags"),
-        )
-        return _ok(entity_id=eid)
-    except ValueError as ve:
-        return _err(ve)
-    except Exception as e:
-        return _err(f"创建失败: {e}", 500)
+    return _entity_scope_unavailable()
 
 
 # ---------- 确定性智能算法（不依赖外部模型，结果可复现） ----------
@@ -121,23 +82,30 @@ def api_topic_score():
     """
     try:
         import topic_scoring as ts
-        b = request.get_json(force=True, silent=True) or {}
+        b = request.get_json(silent=True)
+        if not isinstance(b, dict):
+            raise ValueError("INVALID_TOPIC_SIGNALS")
         sig_in = b.get("signals", b)
         fields_def = ts.TopicSignals.__dataclass_fields__
-        kwargs = {}
-        for k in fields_def:
-            if k in sig_in and sig_in[k] is not None:
-                kwargs[k] = max(0.0, min(1.0, float(sig_in[k])))  # 钳制 0..1
-        sig = ts.TopicSignals(**kwargs)
+        if not isinstance(sig_in, dict) or set(sig_in) - set(fields_def):
+            raise ValueError("INVALID_TOPIC_SIGNALS")
+        sig = ts.TopicSignals(**sig_in)
+        missing = [name for name in fields_def if getattr(sig, name) is None]
         score = ts.score_topic(sig)
-        stage = ts.classify_topic(score, float(getattr(sig, "timeliness", 0)))
+        stage = ts.classify_topic(score, sig.timeliness)
         return _ok(
-            score=round(score, 2), stage=stage,
-            signals={k: round(float(getattr(sig, k)), 3) for k in fields_def},
+            state="scored" if score is not None else "input_required",
+            score=score, stage=stage, missing_signals=missing,
+            signals={k: round(float(getattr(sig, k)), 3) if getattr(sig, k) is not None else None
+                     for k in fields_def},
             weights=getattr(ts, "WEIGHTS", None),
         )
-    except Exception as e:
-        return _err(f"选题打分失败: {e}", 500)
+    except (ValueError, TypeError):
+        return jsonify({"ok": False, "state": "invalid_input", "score": None, "stage": None,
+                        "code": "PODCAST_TOPIC_SIGNALS_INVALID"}), 400
+    except Exception:
+        return jsonify({"ok": False, "state": "unavailable", "score": None, "stage": None,
+                        "code": "PODCAST_TOPIC_SCORING_UNAVAILABLE"}), 503
 
 
 @podcast_bp.route("/story-nodes", methods=["POST"])
@@ -243,11 +211,5 @@ def _dataclass_to_dict(obj, deep=False):
 
 def register_podcast_api(app):
     """在 app.py 中调用以注册播客蓝图。"""
-    # 启动即建表（幂等）
-    try:
-        import podcast_store
-        podcast_store.init_db()
-    except Exception as e:
-        print(f"[podcast] init_db warning: {e}")
     app.register_blueprint(podcast_bp)
     print("[podcast_routes] Podcast API registered: /api/podcast/*")

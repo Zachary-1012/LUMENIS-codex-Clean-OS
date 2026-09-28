@@ -1541,3 +1541,17 @@ Le Labo X added 3 actual source-native, signed, correctly scoped observations;
 X now has 6/6/6 Raw/native/Canonical, DB integrity OK/FK0. Social AUTO off.
 [Round 06 evidence](evidence/round-06/ROUND-06-PUBLIC-BASELINE-MAINTENANCE-2026-09-28.md).
 ROUND 06 REWORK; Global/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.
+
+
+### 2026-09-28 - podcast input truth and existing entity scope fence
+
+Podcast topic evaluation now keeps missing/null inputs as input_required with
+null score/stage; explicit zero remains zero and complete-input weights stay
+unchanged. Invalid bool/nonfinite/type/range data is rejected. The previously
+local-only entity fence is also included: legacy unscoped entity endpoints cannot
+read/write all records or initialize tables at registration. Scoped persistence
+remains a genuine pending migration/Permission integration, not a passed workflow.
+Integrated current snapshot: 173 tests PASS; four Python AST checks PASS; eight
+real isolated HTTP cases PASS with zero DB access. User workbench E2E remains open.
+[Round 13 evidence](evidence/round-13/ROUND-13-PODCAST-TOPIC-INPUT-TRUTH-2026-09-28.md).
+No product/round/release/operating promotion.
