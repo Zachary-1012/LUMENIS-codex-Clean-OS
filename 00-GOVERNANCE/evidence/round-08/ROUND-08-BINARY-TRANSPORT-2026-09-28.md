@@ -1,0 +1,7 @@
+# Round 08 — binary-safe Flutter transport (bounded source batch)
+
+Base: `27bfb358fccc46763461b0bec21af8c408c38b3d`. The existing Flutter Core transport now retains response bytes and a fixed allowlist of response headers; text callers continue to receive strict UTF-8 decoding. No Product Core, Permission, browser session, or screen binding was changed.
+
+Sol applied the isolated six-file patch to previously clean paths and verified the current working-tree snapshot: `dart analyze lib/core/transport test/core` exit 0; five targeted and neighboring Flutter VM test files passed 23/23; AI-native Constitution and the three Experience validators all passed. The isolated handoff also ran a real Chrome loopback HTTP check with 20 assertions for binary PNG bytes, header filtering, Chinese POST/JSON and response errors. The initial `flutter analyze` process on the shared workstation exited 1 due to a malformed analysis-server LSP message; direct `dart analyze` on the applied snapshot passed. Flutter's Chrome unit runner remains separately blocked by its Windows path issue; the HTTP check is bounded transport evidence, not a product user flow.
+
+This is `TESTED` transport source only. SYS-06 Actor/session, task/frame binding, UI, real user work E2E, four-surface continuity, Round 08 exit, release and operating remain unverified. The public data universe and country coverage are unaffected.

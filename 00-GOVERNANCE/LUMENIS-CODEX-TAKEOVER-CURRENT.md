@@ -1639,3 +1639,14 @@ test copy reopened successfully. No production DB was touched.
 [ROUND 07 evidence](evidence/round-07/ROUND-07-ARTIFACT-READ-INTEGRITY-2026-09-28.md).
 The direct test registration is not a product authorized Artifact write;
 Permission, stable streaming, Evidence, UI and real-user E2E stay open.
+
+### 2026-09-28 - binary-safe Flutter response transport
+
+The shared Flutter Core transport now carries immutable response bytes and a
+fixed response-header allowlist while preserving existing text callers. Sol
+verified the applied snapshot with direct Dart analysis (exit 0), 23 scoped
+Flutter VM tests and all four blocking Constitution/Experience validators.
+An isolated real Chrome loopback HTTP check covered binary bytes and response
+states. [Round 08 evidence](evidence/round-08/ROUND-08-BINARY-TRANSPORT-2026-09-28.md).
+This is a transport prerequisite only: SYS-06 Actor/session and frame binding,
+user E2E, Round 08 exit, release and operating are not verified.

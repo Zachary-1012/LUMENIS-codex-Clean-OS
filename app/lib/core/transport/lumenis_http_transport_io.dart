@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'lumenis_http_transport_types.dart';
 
@@ -18,9 +18,18 @@ Future<LumenisTransportResponse> sendLumenisHttpRequest(
       outgoing.write(body);
     }
     final incoming = await outgoing.close();
-    return LumenisTransportResponse(
+    final bytes = BytesBuilder(copy: false);
+    await for (final chunk in incoming) {
+      bytes.add(chunk);
+    }
+    final headers = <String, String>{};
+    incoming.headers.forEach((name, values) {
+      headers[name] = values.join(', ');
+    });
+    return LumenisTransportResponse.bytes(
       statusCode: incoming.statusCode,
-      body: await utf8.decoder.bind(incoming).join(),
+      bodyBytes: bytes.takeBytes(),
+      headers: headers,
     );
   } on IOException catch (error) {
     throw LumenisTransportException(error.toString());

@@ -20,9 +20,10 @@ Future<LumenisTransportResponse> sendLumenisHttpRequest(
     final incoming = await client
         .send(outgoing)
         .timeout(request.connectionTimeout);
-    return LumenisTransportResponse(
+    return LumenisTransportResponse.bytes(
       statusCode: incoming.statusCode,
-      body: await incoming.stream.bytesToString(),
+      bodyBytes: await incoming.stream.toBytes(),
+      headers: incoming.headers,
     );
   } on http.ClientException catch (error) {
     throw LumenisTransportException(error.toString());
