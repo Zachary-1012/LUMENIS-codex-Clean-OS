@@ -29,7 +29,18 @@ ALLOWED_OPERATIONS = frozenset({"trim", "split", "reorder", "delete", "transitio
 MAX_EDIT_TIME_SEC = 24 * 60 * 60
 MAX_TRANSITION_DURATION_SEC = 30.0
 MAX_SERIALIZED_INTEGER = 1_000_000_000
+# File-only protocols still allow playlist demuxers to open other local files.
+# User sources are self-contained media; generated concat lists belong only to
+# the renderer's private working directory, never to this input boundary.
+MEDIA_INPUT_DEMUXERS = "mov,matroska,avi,wav,mp3,flac,ogg,aac,aiff"
 _MEDIA_ASSET_FACTORY_TOKEN = object()
+
+
+@dataclass(frozen=True)
+class _MediaProbe:
+    duration_sec: float
+    has_video: bool
+    audio_stream_count: int
 
 
 def _id(prefix: str) -> str:
@@ -95,6 +106,8 @@ class MediaAsset:
     path: str
     evidence_refs: Tuple[str, ...] = field(default_factory=tuple)
     rights_status: str = "unknown"
+    has_video: bool = True
+    audio_stream_count: int = 0
     _factory_token: object = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
@@ -118,10 +131,24 @@ class MediaAsset:
             or self.asset_id != f"MEDIA-{self.sha256[:16]}"
         ):
             raise VideoEditingError("MEDIA_ASSET_FINGERPRINT_INVALID")
+        if (
+            type(self.has_video) is not bool
+            or type(self.audio_stream_count) is not int
+            or self.audio_stream_count < 0
+            or self.audio_stream_count > 256
+            or (not self.has_video and self.audio_stream_count == 0)
+        ):
+            raise VideoEditingError("MEDIA_ASSET_STREAM_INVENTORY_INVALID")
         if self.evidence_refs:
             raise VideoEditingError("CANONICAL_EVIDENCE_BINDING_UNAVAILABLE")
         if self.rights_status != "unknown":
             raise VideoEditingError("RIGHTS_STATUS_REQUIRES_CANONICAL_REVIEW")
+
+    @property
+    def media_kind(self) -> str:
+        if self.has_video:
+            return "video_audio" if self.audio_stream_count else "video"
+        return "audio"
 
     def to_dict(self) -> Dict[str, Any]:
         self.validate()
@@ -131,6 +158,9 @@ class MediaAsset:
             "filename": self.filename,
             "sha256": self.sha256,
             "duration_sec": self.duration_sec,
+            "media_kind": self.media_kind,
+            "has_video": self.has_video,
+            "audio_stream_count": self.audio_stream_count,
             "evidence_refs": list(self.evidence_refs),
             "rights_status": self.rights_status,
         }
@@ -157,6 +187,8 @@ def fingerprint_local_media(
         raise VideoEditingError("RIGHTS_STATUS_REQUIRES_CANONICAL_REVIEW")
 
     raw = str(path or "").strip()
+    if raw.startswith(("//", "\\\\")):
+        raise VideoEditingError("LOCAL_MEDIA_ONLY")
     parsed = urlsplit(raw)
     windows_drive = len(raw) >= 3 and raw[1] == ":" and raw[2] in {"\\", "/"}
     if not raw or (parsed.scheme and not windows_drive) or parsed.netloc:
@@ -182,7 +214,8 @@ def fingerprint_local_media(
                 digest.update(chunk)
     except OSError as exc:
         raise VideoEditingError("LOCAL_MEDIA_NOT_READABLE") from exc
-    duration = _probe_media_duration(resolved)
+    probe = _probe_media_info(resolved)
+    duration = probe.duration_sec
     try:
         after = resolved.stat()
     except OSError as exc:
@@ -199,6 +232,8 @@ def fingerprint_local_media(
         path=str(resolved),
         evidence_refs=(),
         rights_status="unknown",
+        has_video=probe.has_video,
+        audio_stream_count=probe.audio_stream_count,
         _factory_token=_MEDIA_ASSET_FACTORY_TOKEN,
     )
 
@@ -229,8 +264,8 @@ def _ffprobe_path() -> Optional[str]:
     return None
 
 
-def _probe_media_duration(path: Path) -> float:
-    """Read actual video stream duration using the installed local ffprobe."""
+def _probe_media_info(path: Path) -> _MediaProbe:
+    """Read real local audio/video streams and duration using the existing FFprobe."""
     ffprobe = _ffprobe_path()
     if not ffprobe:
         raise VideoEditingError("MEDIA_DURATION_PROBE_UNAVAILABLE")
@@ -239,10 +274,11 @@ def _probe_media_duration(path: Path) -> float:
             [
                 ffprobe,
                 "-v", "error",
-                "-select_streams", "v:0",
+                "-protocol_whitelist", "file",
+                "-format_whitelist", MEDIA_INPUT_DEMUXERS,
                 "-show_entries", "stream=codec_type,duration:format=duration",
                 "-of", "json",
-                str(path),
+                "-i", str(path),
             ],
             check=True,
             capture_output=True,
@@ -254,13 +290,20 @@ def _probe_media_duration(path: Path) -> float:
     except (OSError, subprocess.SubprocessError, TypeError, ValueError, json.JSONDecodeError) as exc:
         raise VideoEditingError("MEDIA_DURATION_PROBE_FAILED") from exc
     streams = payload.get("streams") if isinstance(payload, dict) else None
+    if not isinstance(streams, list):
+        raise VideoEditingError("MEDIA_DURATION_PROBE_FAILED")
     video_streams = [
-        stream for stream in streams or []
+        stream for stream in streams
         if isinstance(stream, dict) and stream.get("codec_type") == "video"
     ]
-    if not video_streams:
-        raise VideoEditingError("LOCAL_MEDIA_HAS_NO_VIDEO_STREAM")
-    raw_duration = video_streams[0].get("duration")
+    audio_streams = [
+        stream for stream in streams
+        if isinstance(stream, dict) and stream.get("codec_type") == "audio"
+    ]
+    if not video_streams and not audio_streams:
+        raise VideoEditingError("LOCAL_MEDIA_HAS_NO_AUDIO_OR_VIDEO_STREAM")
+    duration_stream = video_streams[0] if video_streams else audio_streams[0]
+    raw_duration = duration_stream.get("duration")
     if raw_duration in (None, "", "N/A"):
         format_info = payload.get("format")
         raw_duration = format_info.get("duration") if isinstance(format_info, dict) else None
@@ -270,7 +313,16 @@ def _probe_media_duration(path: Path) -> float:
         raise VideoEditingError("MEDIA_DURATION_PROBE_FAILED") from exc
     if not math.isfinite(duration) or duration <= 0 or duration > MAX_EDIT_TIME_SEC:
         raise VideoEditingError("MEDIA_DURATION_PROBE_FAILED")
-    return duration
+    return _MediaProbe(
+        duration_sec=duration,
+        has_video=bool(video_streams),
+        audio_stream_count=len(audio_streams),
+    )
+
+
+def _probe_media_duration(path: Path) -> float:
+    """Compatibility helper exposing the real duration only."""
+    return _probe_media_info(path).duration_sec
 
 
 @dataclass(frozen=True)
@@ -308,6 +360,8 @@ class AudioMix:
             )
             if fade_in > duration or fade_out > duration:
                 raise VideoEditingError("INVALID_AUDIO_MIX")
+            if fade_in + fade_out > duration:
+                raise VideoEditingError("INVALID_AUDIO_MIX")
 
     def to_dict(self) -> Dict[str, Any]:
         self.validate()
@@ -331,6 +385,7 @@ class TimelineClip:
     audio_role: str = "original"
     audio_mix: AudioMix = field(default_factory=AudioMix)
     evidence_refs: Tuple[str, ...] = field(default_factory=tuple)
+    audio_stream_index: Optional[int] = None
 
     def __post_init__(self) -> None:
         self.validate()
@@ -368,6 +423,12 @@ class TimelineClip:
             or not self.track_id
         ):
             raise VideoEditingError("INVALID_CLIP_RANGE")
+        if self.audio_role not in {"original", "muted", "voiceover", "bgm", "sfx"}:
+            raise VideoEditingError("AUDIO_TRACK_ROLE_NOT_ALLOWED")
+        if self.audio_stream_index is not None and (
+            type(self.audio_stream_index) is not int or self.audio_stream_index < 0
+        ):
+            raise VideoEditingError("AUDIO_STREAM_INDEX_OUT_OF_RANGE")
         if self.evidence_refs:
             raise VideoEditingError("CANONICAL_EVIDENCE_BINDING_UNAVAILABLE")
         if not isinstance(self.audio_mix, AudioMix):
@@ -387,6 +448,7 @@ class TimelineClip:
             "audio_role": self.audio_role,
             "audio_mix": self.audio_mix.to_dict(),
             "evidence_refs": list(self.evidence_refs),
+            "audio_stream_index": self.audio_stream_index,
         }
 
 
@@ -547,8 +609,31 @@ class Timeline:
             for clip in track.clips:
                 if clip.track_id != track.track_id or clip.media_asset_id not in assets:
                     raise VideoEditingError("TIMELINE_CLIP_SOURCE_INVALID")
-                if clip.source_out > assets[clip.media_asset_id].duration_sec:
+                asset = assets[clip.media_asset_id]
+                if clip.source_out > asset.duration_sec:
                     raise VideoEditingError("CLIP_RANGE_OUTSIDE_MEDIA_ASSET")
+                if track.kind == "video" and not asset.has_video:
+                    raise VideoEditingError("VIDEO_TRACK_REQUIRES_VIDEO_ASSET")
+                if track.kind != "video":
+                    if asset.audio_stream_count < 1:
+                        raise VideoEditingError("AUDIO_TRACK_REQUIRES_AUDIO_ASSET")
+                    if clip.audio_role != track.kind:
+                        raise VideoEditingError("AUDIO_TRACK_ROLE_MISMATCH")
+                    if clip.audio_stream_index is None:
+                        raise VideoEditingError("AUDIO_STREAM_SELECTION_REQUIRED")
+                elif clip.audio_role not in {"original", "muted"}:
+                    raise VideoEditingError("AUDIO_TRACK_ROLE_NOT_ALLOWED")
+                elif clip.audio_role == "muted" and clip.audio_stream_index is not None:
+                    raise VideoEditingError("MUTED_VIDEO_CLIP_CANNOT_SELECT_AUDIO")
+                if clip.audio_stream_index is not None and clip.audio_stream_index >= asset.audio_stream_count:
+                    raise VideoEditingError("AUDIO_STREAM_INDEX_OUT_OF_RANGE")
+                if (
+                    track.kind == "video"
+                    and clip.audio_role == "original"
+                    and asset.audio_stream_count > 1
+                    and clip.audio_stream_index is None
+                ):
+                    raise VideoEditingError("MULTIPLE_SOURCE_AUDIO_TRACKS_REQUIRE_EXPLICIT_SELECTION")
                 if clip.clip_id in clip_ids:
                     raise VideoEditingError("TIMELINE_DUPLICATE_CLIP")
                 clip_ids.add(clip.clip_id)
@@ -658,6 +743,8 @@ class Timeline:
         track_id: str = "video",
         purpose: str = "",
         audio_role: str = "original",
+        timeline_start: Optional[float] = None,
+        audio_stream_index: Optional[int] = None,
     ) -> "Timeline":
         self.validate()
         asset = self._asset(media_asset_id)
@@ -673,18 +760,58 @@ class Timeline:
         )
         if out > asset.duration_sec or out <= source_start:
             raise VideoEditingError("CLIP_RANGE_OUTSIDE_MEDIA_ASSET")
+        if track.kind == "video":
+            if not asset.has_video:
+                raise VideoEditingError("VIDEO_TRACK_REQUIRES_VIDEO_ASSET")
+            if timeline_start is not None:
+                raise VideoEditingError("VIDEO_TRACK_TIMELINE_POSITION_AUTOMATIC")
+            if audio_role not in {"original", "muted"}:
+                raise VideoEditingError("AUDIO_TRACK_ROLE_NOT_ALLOWED")
+            if audio_role == "original" and asset.audio_stream_count > 1 and audio_stream_index is None:
+                raise VideoEditingError("MULTIPLE_SOURCE_AUDIO_TRACKS_REQUIRE_EXPLICIT_SELECTION")
+            if audio_role == "original" and audio_stream_index is None and asset.audio_stream_count == 1:
+                audio_stream_index = 0
+            if audio_role == "muted" and audio_stream_index is not None:
+                raise VideoEditingError("MUTED_VIDEO_CLIP_CANNOT_SELECT_AUDIO")
+            timeline_position = 0.0
+            clip_audio_role = audio_role
+        else:
+            if asset.audio_stream_count < 1:
+                raise VideoEditingError("AUDIO_TRACK_REQUIRES_AUDIO_ASSET")
+            if audio_role not in {"original", track.kind}:
+                raise VideoEditingError("AUDIO_TRACK_ROLE_MISMATCH")
+            if audio_stream_index is None:
+                if asset.audio_stream_count > 1:
+                    raise VideoEditingError("MULTIPLE_SOURCE_AUDIO_TRACKS_REQUIRE_EXPLICIT_SELECTION")
+                audio_stream_index = 0
+            if type(audio_stream_index) is not int or not 0 <= audio_stream_index < asset.audio_stream_count:
+                raise VideoEditingError("AUDIO_STREAM_INDEX_OUT_OF_RANGE")
+            timeline_position = 0.0 if timeline_start is None else _bounded_number(
+                timeline_start,
+                error_code="INVALID_CLIP_RANGE",
+                minimum=0,
+                maximum=MAX_EDIT_TIME_SEC,
+            )
+            if timeline_position + (out - source_start) > MAX_EDIT_TIME_SEC:
+                raise VideoEditingError("TIMELINE_DURATION_OUT_OF_RANGE")
+            clip_audio_role = track.kind
         clip = TimelineClip(
             clip_id=_id("CLIP"),
             media_asset_id=media_asset_id,
             source_in=source_start,
             source_out=out,
-            timeline_start=0.0,
+            timeline_start=timeline_position,
             track_id=track_id,
             purpose=purpose,
-            audio_role=audio_role,
+            audio_role=clip_audio_role,
             evidence_refs=asset.evidence_refs,
+            audio_stream_index=audio_stream_index,
         )
-        updated = self._reflow(track, (*track.clips, clip))
+        updated = (
+            self._reflow(track, (*track.clips, clip))
+            if track.kind == "video"
+            else replace(track, clips=(*track.clips, clip))
+        )
         tracks = tuple(updated if item.track_id == track_id else item for item in self.tracks)
         return self._commit(tracks=tracks)
 
@@ -723,8 +850,28 @@ class Timeline:
         )
         if not clip.source_in < at < clip.source_out:
             raise VideoEditingError("SPLIT_POINT_OUTSIDE_CLIP")
-        first = replace(clip, clip_id=f"{clip.clip_id}-a", source_out=at)
-        second = replace(clip, clip_id=f"{clip.clip_id}-b", source_in=at)
+        first_duration = round(at - clip.source_in, 6)
+        second_duration = round(clip.source_out - at, 6)
+        first_mix = replace(
+            clip.audio_mix,
+            fade_in_sec=min(clip.audio_mix.fade_in_sec, first_duration),
+            fade_out_sec=0.0,
+        )
+        second_mix = replace(
+            clip.audio_mix,
+            fade_in_sec=0.0,
+            fade_out_sec=min(clip.audio_mix.fade_out_sec, second_duration),
+        )
+        first = replace(
+            clip, clip_id=f"{clip.clip_id}-a", source_out=at, audio_mix=first_mix
+        )
+        second = replace(
+            clip,
+            clip_id=f"{clip.clip_id}-b",
+            source_in=at,
+            timeline_start=round(clip.timeline_start + (at - clip.source_in), 6),
+            audio_mix=second_mix,
+        )
         clips: List[TimelineClip] = []
         for item in track.clips:
             clips.extend((first, second) if item.clip_id == clip_id else (item,))
@@ -796,6 +943,22 @@ class Timeline:
         track, clip = self._find_clip(clip_id)
         mix.validate(duration_sec=clip.duration_sec)
         return self._replace_clip(track, replace(clip, audio_mix=mix))
+
+    def move_audio_clip(self, clip_id: str, *, timeline_start: float) -> "Timeline":
+        """Move one manually positioned audio-track clip without changing its source range."""
+        self.validate()
+        track, clip = self._find_clip(clip_id)
+        if track.kind == "video":
+            raise VideoEditingError("MOVE_AUDIO_CLIP_AUDIO_TRACK_ONLY")
+        start = _bounded_number(
+            timeline_start,
+            error_code="INVALID_CLIP_RANGE",
+            minimum=0,
+            maximum=MAX_EDIT_TIME_SEC,
+        )
+        if start + clip.duration_sec > MAX_EDIT_TIME_SEC:
+            raise VideoEditingError("TIMELINE_DURATION_OUT_OF_RANGE")
+        return self._replace_clip(track, replace(clip, timeline_start=start))
 
     def add_caption(self, start_sec: float, end_sec: float, text: str) -> "Timeline":
         return self._add_overlay("caption", start_sec, end_sec, text)

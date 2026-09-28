@@ -1568,3 +1568,16 @@ shared-App maintenance entry is disabled; active service continues due-only.
 [Recovery receipt](evidence/round-06/ROUND-06-MAINTENANCE-RECOVERY-2026-09-28.json).
 This is local scheduled source recovery, not complete global/platform/user E2E.
 ROUND 06 REWORK; Full Universe/RELEASED/OPERATING/COMMERCIAL_READY remain NO.
+
+
+### 2026-09-28 - bounded Shared timeline audio core
+
+The existing Shared `video_editing.py` now fingerprints real local audio/video
+streams and supports a manually positioned audio track with exact stream choice,
+split/fade preservation and local source-protocol restrictions. The protected
+local candidate was reconciled with this bounded owner change. On the integrated
+source, 28 targeted tests passed and one user-provided MP4 completed FFprobe and
+typed timeline data-model roundtrip with its source unchanged and zero DB opens.
+[ROUND 07 evidence](evidence/round-07/ROUND-07-TIMELINE-AUDIO-CORE-2026-09-28.md).
+The renderer, Artifact/Permission/Evidence binding, UI and user E2E remain open;
+ROUND 07=REWORK and release/operating/commercial status stays NO.
