@@ -1581,3 +1581,18 @@ typed timeline data-model roundtrip with its source unchanged and zero DB opens.
 [ROUND 07 evidence](evidence/round-07/ROUND-07-TIMELINE-AUDIO-CORE-2026-09-28.md).
 The renderer, Artifact/Permission/Evidence binding, UI and user E2E remain open;
 ROUND 07=REWORK and release/operating/commercial status stays NO.
+
+
+### 2026-09-28 - three exact Brazil/Thailand brand sources and market assertions
+
+The actual private product database added Downy, Ready and Sponsor with three
+exact BMP BrandFocus identities, three source-native/Raw/Canonical records and
+writer-authenticated Evidence 404–406. Each passed a disposable-clone two-pass
+check before production admission and an actual DB reopen after an integrity-
+checked backup. Three v18 `MARKET_ACTIVITY` assertions were separately backed up,
+deduplicated and reopened as `UNREVIEWED`; Attack was excluded for missing brand
+identity in extracted source text. Registry 167, relations 274, integrity OK/FK0.
+[ROUND 06 source and relation evidence](evidence/round-06/ROUND-06-TH-BR-BRAND-MARKET-SOURCES-2026-09-28.md).
+Publication times stay unknown where not supplied. No social-platform coverage,
+AUTO plan, commercial right or full country/global coverage is claimed.
+ROUND 06 REWORK; Full Universe/RELEASED/OPERATING/COMMERCIAL_READY remain NO.
