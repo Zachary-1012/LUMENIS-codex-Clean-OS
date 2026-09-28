@@ -79,51 +79,6 @@ class _Ai01ScreenState extends State<Ai01Screen> {
       decoration: BoxDecoration(color: LumenisTheme.of(context).canvas),
       child: Stack(
         children: [
-          if (LumenisTheme.of(context).contrastBackground == null)
-            const IgnorePointer(
-              child: ExcludeSemantics(
-                child: Stack(
-                  children: [
-                    Positioned(
-                      top: -130,
-                      right: -100,
-                      child: _SoftGlow(
-                        size: 360,
-                        colors: [
-                          Color(0x1F8A6CC2),
-                          Color(0x0D7C9BD8),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      top: 300,
-                      left: -170,
-                      child: _SoftGlow(
-                        size: 380,
-                        colors: [
-                          Color(0x15E9A16F),
-                          Color(0x08E9A16F),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      right: 20,
-                      bottom: -230,
-                      child: _SoftGlow(
-                        size: 420,
-                        colors: [
-                          Color(0x147B9BE0),
-                          Color(0x087B9BE0),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           SafeArea(
             child: AnimatedBuilder(
               animation: _viewModel,
@@ -1052,24 +1007,6 @@ class _SurfacePanel extends StatelessWidget {
       child: child,
     );
   }
-}
-
-class _SoftGlow extends StatelessWidget {
-  const _SoftGlow({required this.size, required this.colors});
-
-  final double size;
-  final List<Color> colors;
-
-  @override
-  Widget build(BuildContext context) => SizedBox.square(
-    dimension: size,
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(colors: colors, stops: const [0, 0.48, 1]),
-      ),
-    ),
-  );
 }
 
 class _ServiceReadStatus extends StatelessWidget {

@@ -1492,3 +1492,24 @@ complete social/consumer or country coverage. Runtime/config rollout remains
 a separate step; no unobserved future cycle is claimed.
 [Round 06 evidence](evidence/round-06/ROUND-06-PUBLIC-BASELINE-MAINTENANCE-2026-09-28.md).
 ROUND 06 REWORK; Global/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.
+
+### 2026-09-28 — Local glyph fallback and quiet task canvas
+
+[Round 08 Web emoji evidence](evidence/round-08/ROUND-08-WEB-EMOJI-FALLBACK-2026-09-28.md)
+and [Round 14 quiet-canvas evidence](evidence/round-14/ROUND-14-QUIET-CANVAS-2026-09-28.md)
+record a licensed bundled Web emoji fallback and removal of AI-01 three decorative
+glows. Existing CJK/native fallback, resolved canvas/wallpaper, draft and recovery
+states remain intact. The final six-source-file snapshot passed analysis, 14 AI-01
+tests, five governance checks, release Web build and 12 actual PC/phone local-file
+and vivid-wallpaper assertions. No API writes or page errors occurred. The earlier
+font-only snapshot separately passed 57 existing tests and ten browser checks.
+
+Reelfolio was inspected through its official editor; content priority and
+reversible disclosure were mapped into the sole Experience Constitution. No
+third-party template, render API or asset was integrated. Preview 52526 uses an
+isolated older backend and explicit fresh Temp data; formal 53764 is unchanged.
+CJK external fallback attempts were denied during tests, so zero external requests
+or full Unicode coverage is not claimed. Native devices, real Actor/AI execution,
+whole frontend, Round acceptance, USER_VERIFIED, RELEASED and COMMERCIAL_READY
+remain unaccepted. Online delivery requires this status/evidence/source to be
+co-published and the resulting main commit verified; no hosted CI pass is inferred.

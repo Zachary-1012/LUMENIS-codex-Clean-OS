@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 /// Immutable neutral colors resolved from the nearest Material theme.
@@ -238,7 +239,7 @@ abstract final class LumenisTheme {
     return ThemeData(
       useMaterial3: true,
       fontFamily: 'LumenisSansSC',
-      fontFamilyFallback: const ['LumenisSansKR'],
+      fontFamilyFallback: const ['LumenisSansKR', if (kIsWeb) 'LumenisEmoji'],
       brightness: palette.brightness,
       colorScheme: ColorScheme(
         brightness: palette.brightness,

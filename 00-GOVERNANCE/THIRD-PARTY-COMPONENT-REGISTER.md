@@ -148,3 +148,22 @@ Decision: ADOPT unmodified Noto Sans SC and KR variable fonts from the official 
 | Noto Sans KR | https://github.com/google/fonts/tree/main/ofl/notosanskr | SIL OFL 1.1; bundled NotoSansKR-OFL.txt | 194018e6b2b293a7964f037b25c0249ce1418bc9ab3c971060a03aa57861e252 |
 
 Source and LICENSE inspected 2026-09-24 through the public GitHub content API and original files. Unmodified binaries are retained under app/assets/fonts; their license text is registered with Flutter LicenseRegistry. They are bundled with the application, never sold separately. Assets add approximately 28.2 MB before transport compression; browser/network and current-build rendering verification remain required. No reference screenshot, private video frame, or proprietary system font is bundled.
+
+### 2026-09-28 Web composite-emoji fallback
+
+ADOPT unmodified Noto Color Emoji 2.057, official `googlefonts/noto-emoji` commit
+`e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e`, path `2D/fonts/NotoColorEmoji.ttf`:
+https://github.com/googlefonts/noto-emoji/tree/e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/2D/fonts .
+Maintained upstream; source and bundled `2D/fonts/LICENSE` inspected 2026-09-28.
+SIL OFL 1.1 permits application redistribution with the font's copyright/license
+notice. The original font and `NotoColorEmoji-OFL.txt` ship together as Flutter
+assets, never as a standalone sold font. No font modification/subsetting occurs.
+
+Class: PRODUCTION ASSET behind the existing Theme's Web-only fallback list,
+after SC/KR. Replaceable; no new package, account or paid API. Native fallback
+order is unchanged. The original adds 10,730,124 bytes before compression.
+Font SHA256 `15671215ab769fdc7162a045d56fd7d7e477c51b04e6b3c761d914d8fdd6cc44`;
+notice SHA256 `6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2`.
+Sampled composite-glyph rendering and exact local-file return are recorded in
+`evidence/round-08/ROUND-08-WEB-EMOJI-FALLBACK-2026-09-28.md`.
+This is not a claim of complete Unicode coverage or native-device acceptance.

@@ -8,7 +8,7 @@ import 'product/lumenis_app.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   LicenseRegistry.addLicense(() async* {
-    for (final family in ['NotoSansSC', 'NotoSansKR']) {
+    for (final family in ['NotoSansSC', 'NotoSansKR', 'NotoColorEmoji']) {
       yield LicenseEntryWithLineBreaks([
         family,
       ], await rootBundle.loadString('assets/fonts/$family-OFL.txt'));

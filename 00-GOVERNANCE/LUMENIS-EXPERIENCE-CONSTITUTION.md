@@ -145,6 +145,13 @@ Semantic roles:
 
 Hierarchy comes from meaning, scale, rhythm and placement before decoration.
 
+Web glyph fallback — 2026-09-28: keep the bundled SC/KR interface fonts and native
+platform fallback. A licensed, version-pinned local emoji font may follow SC/KR
+on Web to preserve user-authored Unicode without waiting for external font
+services. This is missing-glyph recovery, not brand typography or decorative
+emoji. Verify representative sequences, exact text return and package-size impact;
+do not claim universal Unicode or native-device coverage from Web evidence.
+
 ## 6. Color, light and material
 
 ### Product Owner direction — 2026-09-24 frontend reconstruction
@@ -521,6 +528,36 @@ a new user-facing generation feature. The generated optical sculpture explored
 on this date is `DESIGN_EXPLORATION / DEFER`, excluded from the production asset
 bundle pending a restrained, task-specific review. Depth/motion must clarify a
 real layer or selection, be interruptible, and become immediate in reduced motion.
+
+### Order with a human scale; Reelfolio research — 2026-09-28
+
+The Product Owner asks for order, precision and consistency balanced by humanity,
+culture and brand awareness. Express 芥子纳须弥 through restrained framing and
+progressive access to meaningful detail. Give real language, work and source
+material room to breathe. Do not turn cultural identity into ornamental symbols
+or equate warmth with a compulsory gradient, animation or invented personal data.
+
+Official [Reelfolio editor](https://reelfolio.io/dashboard), accessed 2026-09-28:
+Sol inspected its Riffle example, paused playback, and collapsed both Templates
+and Settings. The resulting media area retained explicit reopening controls.
+The live service has no inspected public source revision or reusable code/asset
+license; treat it as proprietary reference material, not an OSS dependency.
+
+- ADAPT clear content priority, explicit reversible secondary controls, and
+  depth that identifies the currently selected object. Existing Shell navigation,
+  AI-01 expanded draft/Return and SYS-05 preference preview own these principles.
+- DEFER material-stack/spatial media exploration to a real, scoped content
+  selection/preview task. SH-01's three creation paths, Permission, missing data
+  and read-only limits remain intact; no generic carousel replaces them.
+- REJECT autoplay loops, cursor trails, robot/liquid spectacle, copied layouts,
+  templates/assets, or a new render API solely to reproduce the reference.
+  Critical text, Evidence, metrics and actions remain flat, stable and readable.
+
+Sol presentation decision: `DESIGN_READY` for removing AI-01's three decorative
+background glows. Keep the current resolved canvas/wallpaper material, every
+business and recovery state, typography, local draft and reversible focused
+editor. This is a bounded simplification of the existing owner. It authorizes no
+new page, effect, data meaning, brand asset or overall frontend acceptance.
 
 ## 24. Anti-template hard failures
 

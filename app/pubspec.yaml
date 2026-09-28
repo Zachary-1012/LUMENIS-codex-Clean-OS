@@ -33,6 +33,7 @@ flutter:
   assets:
     - assets/fonts/NotoSansSC-OFL.txt
     - assets/fonts/NotoSansKR-OFL.txt
+    - assets/fonts/NotoColorEmoji-OFL.txt
     - assets/wallpapers/crimson-sunset.jpg
     - assets/wallpapers/cobalt-dusk.jpg
   fonts:
@@ -42,3 +43,6 @@ flutter:
     - family: LumenisSansKR
       fonts:
         - asset: assets/fonts/NotoSansKR.ttf
+    - family: LumenisEmoji
+      fonts:
+        - asset: assets/fonts/NotoColorEmoji.ttf
