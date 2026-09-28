@@ -1617,3 +1617,14 @@ mapping. A 70-test targeted replay and the blocking Constitution gate passed.
 [ROUND 06 evidence](evidence/round-06/ROUND-06-BILIBILI-NATIVE-DETAIL-FIELDS-2026-09-28.md).
 The adapter remains disabled; no live platform Source/Evidence, authorized
 session, user E2E, Global Coverage or ROUND 06 exit follows from this mapping.
+
+### 2026-09-28 - actual single-clip MP4 render
+
+The existing Shared Content & Creation Timeline now has a bounded single-video-
+clip renderer. Sol replayed 18 targeted tests and independently rendered one
+user-provided source into original-audio and muted 2.000-second MP4s with 60
+decoded frames each; source fingerprint stayed unchanged and DB opens were zero.
+[ROUND 07 evidence](evidence/round-07/ROUND-07-SINGLE-CLIP-RENDER-2026-09-28.md).
+This is real media transformation, not an authorized Product Artifact/export or
+user E2E. Rights, Permission, Evidence, UI, review and evaluation stay open;
+ROUND 07, release, operating and commercial readiness remain NO/REWORK.
