@@ -176,3 +176,23 @@ explicit brand mentions, actual publication dates and source metric values.
 Overall X Raw/native/Canonical now 6/6/6. Integrity OK, FK 0. Public posts are
 source opinions, not verified celebrity/product claims or inferred sentiment.
 Social AUTO remains off. Country/global and user E2E are still unaccepted.
+
+
+## Actual recovery cycle accepted — 2026-09-28 13:01 Asia/Shanghai
+
+The original Windows task now runs immutable accepted source 55b90b3c with the
+one active signed service config. Its real future timer completed at 13:01:19:
+4 SUCCESS, 0 failed, 191 deferred, process exit 0. Combined with the earlier
+Coca-Cola success, all five additions now have successful durable plan history.
+The original 190 plan IDs remained identical; their history was not reset.
+
+Read-only reopen checked all five exact source identities: one Canonical row each,
+correct CTH Subject/BMP BrandFocus, verified signed scope Evidence, unknown source
+publication dates still unknown. Integrity OK and FK 0. Failure records remain
+for audit; no plan timestamps were forged or reseeded. The former shared-App
+config remains disabled, preventing its stale parser from executing this plan.
+Task is enabled for the next regular due evaluation.
+
+[Machine receipt](ROUND-06-MAINTENANCE-RECOVERY-2026-09-28.json) pins runtime SHA
+and the five successful plan outcomes. This proves local scheduled recovery for
+these public sources, not whole-product OPERATING or complete global/social data.

@@ -1555,3 +1555,16 @@ Integrated current snapshot: 173 tests PASS; four Python AST checks PASS; eight
 real isolated HTTP cases PASS with zero DB access. User workbench E2E remains open.
 [Round 13 evidence](evidence/round-13/ROUND-13-PODCAST-TOPIC-INPUT-TRUTH-2026-09-28.md).
 No product/round/release/operating promotion.
+
+
+### 2026-09-28 - real public-maintenance recovery cycle verified
+
+At 13:01 the enabled Windows task, using immutable 55b90b3c, completed its next
+real scheduled cycle: 4 SUCCESS, 0 failure, 191 deferred, exit 0. All five added
+public sources now have successful history; all original 190 plan IDs were
+preserved. Reopened data has one Canonical identity per source, signed exact
+scope Evidence, unknown publication dates preserved, integrity OK/FK0. Former
+shared-App maintenance entry is disabled; active service continues due-only.
+[Recovery receipt](evidence/round-06/ROUND-06-MAINTENANCE-RECOVERY-2026-09-28.json).
+This is local scheduled source recovery, not complete global/platform/user E2E.
+ROUND 06 REWORK; Full Universe/RELEASED/OPERATING/COMMERCIAL_READY remain NO.
