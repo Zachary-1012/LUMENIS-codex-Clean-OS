@@ -386,7 +386,7 @@ def get_artifact(artifact_id: str) -> Optional[Dict[str, Any]]:
 
 
 def artifact_file_path(artifact_id: str) -> Optional[Path]:
-    """Resolve an artifact file only after DB metadata and root confinement."""
+    """Resolve only a root-confined file matching its registered size and hash."""
     item = get_artifact(artifact_id)
     if not item:
         return None
@@ -394,6 +394,27 @@ def artifact_file_path(artifact_id: str) -> Optional[Path]:
     candidate = (root / str(item["relative_path"])).resolve()
     if not _is_relative_to(candidate, root) or not candidate.is_file():
         return None
+    expected_hash = item.get("sha256")
+    expected_size = item.get("size_bytes")
+    if (
+        not isinstance(expected_hash, str) or len(expected_hash) != 64
+        or any(character not in "0123456789abcdef" for character in expected_hash.lower())
+        or type(expected_size) is not int or expected_size <= 0
+    ):
+        raise LocalArtifactError("ARTIFACT_INTEGRITY_UNVERIFIED")
+    try:
+        before = candidate.stat()
+        if before.st_size != expected_size:
+            raise LocalArtifactError("ARTIFACT_INTEGRITY_FAILED")
+        actual_hash = _hash_file(candidate)
+        after = candidate.stat()
+    except OSError as exc:
+        raise LocalArtifactError("ARTIFACT_READ_UNAVAILABLE") from exc
+    if (
+        actual_hash != expected_hash.lower()
+        or (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns)
+    ):
+        raise LocalArtifactError("ARTIFACT_INTEGRITY_FAILED")
     return candidate
 
 

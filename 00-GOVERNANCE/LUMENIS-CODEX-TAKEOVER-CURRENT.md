@@ -1628,3 +1628,14 @@ decoded frames each; source fingerprint stayed unchanged and DB opens were zero.
 This is real media transformation, not an authorized Product Artifact/export or
 user E2E. Rights, Permission, Evidence, UI, review and evaluation stay open;
 ROUND 07, release, operating and commercial readiness remain NO/REWORK.
+
+### 2026-09-28 - actual Artifact file read integrity
+
+The existing Shared Artifact reader now checks its stored size and SHA-256
+before returning a registered file. Sol replayed 11 targeted and 22 neighboring
+tests, then used the actual 179,512-byte rendered MP4 in an isolated registry:
+normal reopen passed, a same-size byte change was refused and restoring the
+test copy reopened successfully. No production DB was touched.
+[ROUND 07 evidence](evidence/round-07/ROUND-07-ARTIFACT-READ-INTEGRITY-2026-09-28.md).
+The direct test registration is not a product authorized Artifact write;
+Permission, stable streaming, Evidence, UI and real-user E2E stay open.
