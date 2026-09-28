@@ -1596,3 +1596,15 @@ identity in extracted source text. Registry 167, relations 274, integrity OK/FK0
 Publication times stay unknown where not supplied. No social-platform coverage,
 AUTO plan, commercial right or full country/global coverage is claimed.
 ROUND 06 REWORK; Full Universe/RELEASED/OPERATING/COMMERCIAL_READY remain NO.
+
+
+### 2026-09-28 - bounded timeline document reopening
+
+The existing Shared Timeline now reopens a saved edit document only against
+freshly fingerprinted local media. Forged paths, Evidence or rights metadata,
+missing/replaced source bytes and invalid edit fields are rejected. On the
+integrated source, 43 targeted tests passed and one user-provided MP4 completed
+real FFprobe and `Timeline.from_dict` model reopen without changing media or
+opening a database. [ROUND 07 evidence](evidence/round-07/ROUND-07-TIMELINE-DOCUMENT-REOPEN-2026-09-28.md).
+Artifact lookup/Permission, render/export, UI and real user E2E remain open;
+ROUND 07=REWORK and release/operating/commercial status remains NO.

@@ -657,6 +657,178 @@ class Timeline:
             overlay.validate()
 
     @classmethod
+    def from_dict(
+        cls,
+        payload: Mapping[str, Any],
+        *,
+        assets: Iterable[MediaAsset],
+    ) -> "Timeline":
+        """Reopen a sanitized timeline against freshly fingerprinted local assets.
+
+        The document supplies edit intent only. Asset paths, factory tokens,
+        Evidence, rights claims, and other unrecognized fields are never loaded
+        from stored data.
+        """
+
+        def document_object(value: Any, fields: Tuple[str, ...]) -> Dict[str, Any]:
+            if type(value) is not dict or set(value) != set(fields):
+                raise VideoEditingError("TIMELINE_DOCUMENT_FIELDS_INVALID")
+            return value
+
+        def document_list(value: Any) -> List[Any]:
+            if type(value) is not list:
+                raise VideoEditingError("TIMELINE_DOCUMENT_LIST_INVALID")
+            return value
+
+        def document_string(value: Any) -> str:
+            if not isinstance(value, str):
+                raise VideoEditingError("TIMELINE_DOCUMENT_VALUE_INVALID")
+            return value
+
+        root = document_object(
+            payload,
+            ("version", "format_ratio", "assets", "tracks", "transitions", "overlays", "approval_required"),
+        )
+        if type(root["version"]) is not int or root["version"] < 1:
+            raise VideoEditingError("TIMELINE_VERSION_INVALID")
+        if type(root["approval_required"]) is not bool or root["approval_required"] is not True:
+            raise VideoEditingError("TIMELINE_DOCUMENT_VALUE_INVALID")
+
+        fresh_assets: Dict[str, MediaAsset] = {}
+        for asset in assets:
+            if not isinstance(asset, MediaAsset):
+                raise VideoEditingError("TIMELINE_MEDIA_ASSETS_INVALID")
+            asset.validate()
+            if asset.asset_id in fresh_assets:
+                raise VideoEditingError("TIMELINE_DUPLICATE_MEDIA_ASSET")
+            try:
+                confirmed = fingerprint_local_media(asset.path)
+            except VideoEditingError as exc:
+                raise VideoEditingError("TIMELINE_REOPEN_ASSET_UNAVAILABLE") from exc
+            if confirmed.to_dict() != asset.to_dict():
+                raise VideoEditingError("TIMELINE_REOPEN_ASSET_MISMATCH")
+            fresh_assets[asset.asset_id] = confirmed
+
+        stored_assets = document_list(root["assets"])
+        ordered_assets: List[MediaAsset] = []
+        stored_asset_ids = set()
+        asset_fields = (
+            "asset_id", "filename", "sha256", "duration_sec", "media_kind",
+            "has_video", "audio_stream_count", "evidence_refs", "rights_status",
+        )
+        for stored in stored_assets:
+            item = document_object(stored, asset_fields)
+            asset_id = document_string(item["asset_id"])
+            if asset_id in stored_asset_ids:
+                raise VideoEditingError("TIMELINE_DUPLICATE_MEDIA_ASSET")
+            stored_asset_ids.add(asset_id)
+            asset = fresh_assets.get(asset_id)
+            if asset is None:
+                raise VideoEditingError("TIMELINE_REOPEN_ASSET_MISSING")
+            duration = _bounded_number(
+                item["duration_sec"], error_code="TIMELINE_DOCUMENT_VALUE_INVALID",
+                minimum=0.000001, maximum=MAX_EDIT_TIME_SEC,
+            )
+            if (
+                item["filename"] != asset.filename
+                or item["sha256"] != asset.sha256
+                or duration != asset.duration_sec
+                or item["media_kind"] != asset.media_kind
+                or type(item["has_video"]) is not bool
+                or item["has_video"] is not asset.has_video
+                or type(item["audio_stream_count"]) is not int
+                or item["audio_stream_count"] != asset.audio_stream_count
+                or item["evidence_refs"] != []
+                or item["rights_status"] != "unknown"
+            ):
+                raise VideoEditingError("TIMELINE_REOPEN_ASSET_MISMATCH")
+            ordered_assets.append(asset)
+        if not stored_assets or stored_asset_ids != set(fresh_assets):
+            raise VideoEditingError("TIMELINE_REOPEN_ASSET_MISMATCH")
+
+        tracks: List[TimelineTrack] = []
+        track_fields = ("track_id", "kind", "clips")
+        clip_fields = (
+            "clip_id", "media_asset_id", "source_in", "source_out", "timeline_start",
+            "track_id", "purpose", "audio_role", "audio_mix", "evidence_refs",
+            "audio_stream_index",
+        )
+        mix_fields = ("volume", "fade_in_sec", "fade_out_sec", "ducking")
+        for stored_track in document_list(root["tracks"]):
+            track_data = document_object(stored_track, track_fields)
+            track_id = document_string(track_data["track_id"])
+            kind = document_string(track_data["kind"])
+            clips: List[TimelineClip] = []
+            for stored_clip in document_list(track_data["clips"]):
+                clip_data = document_object(stored_clip, clip_fields)
+                mix_data = document_object(clip_data["audio_mix"], mix_fields)
+                if type(clip_data["evidence_refs"]) is not list or clip_data["evidence_refs"]:
+                    raise VideoEditingError("CANONICAL_EVIDENCE_BINDING_UNAVAILABLE")
+                if type(mix_data["ducking"]) is not bool:
+                    raise VideoEditingError("TIMELINE_DOCUMENT_VALUE_INVALID")
+                audio_index = clip_data["audio_stream_index"]
+                if audio_index is not None and type(audio_index) is not int:
+                    raise VideoEditingError("AUDIO_STREAM_INDEX_OUT_OF_RANGE")
+                try:
+                    mix = AudioMix(
+                        volume=mix_data["volume"],
+                        fade_in_sec=mix_data["fade_in_sec"],
+                        fade_out_sec=mix_data["fade_out_sec"],
+                        ducking=mix_data["ducking"],
+                    )
+                    clips.append(TimelineClip(
+                        clip_id=document_string(clip_data["clip_id"]),
+                        media_asset_id=document_string(clip_data["media_asset_id"]),
+                        source_in=clip_data["source_in"],
+                        source_out=clip_data["source_out"],
+                        timeline_start=clip_data["timeline_start"],
+                        track_id=document_string(clip_data["track_id"]),
+                        purpose=document_string(clip_data["purpose"]),
+                        audio_role=document_string(clip_data["audio_role"]),
+                        audio_mix=mix,
+                        evidence_refs=(),
+                        audio_stream_index=audio_index,
+                    ))
+                except (TypeError, ValueError) as exc:
+                    if isinstance(exc, VideoEditingError):
+                        raise
+                    raise VideoEditingError("TIMELINE_DOCUMENT_VALUE_INVALID") from exc
+            tracks.append(TimelineTrack(track_id=track_id, kind=kind, clips=tuple(clips)))
+
+        transitions: List[Transition] = []
+        transition_fields = ("from_clip", "to_clip", "transition_type", "duration_sec", "reason")
+        for stored_transition in document_list(root["transitions"]):
+            item = document_object(stored_transition, transition_fields)
+            transitions.append(Transition(
+                from_clip=document_string(item["from_clip"]),
+                to_clip=document_string(item["to_clip"]),
+                transition_type=document_string(item["transition_type"]),
+                duration_sec=item["duration_sec"],
+                reason=document_string(item["reason"]),
+            ))
+
+        overlays: List[TimedOverlay] = []
+        overlay_fields = ("overlay_id", "kind", "start_sec", "end_sec", "text")
+        for stored_overlay in document_list(root["overlays"]):
+            item = document_object(stored_overlay, overlay_fields)
+            overlays.append(TimedOverlay(
+                overlay_id=document_string(item["overlay_id"]),
+                kind=document_string(item["kind"]),
+                start_sec=item["start_sec"],
+                end_sec=item["end_sec"],
+                text=document_string(item["text"]),
+            ))
+
+        return cls(
+            assets=tuple(ordered_assets),
+            tracks=tuple(tracks),
+            transitions=tuple(transitions),
+            overlays=tuple(overlays),
+            format_ratio=document_string(root["format_ratio"]),
+            version=root["version"],
+        )
+
+    @classmethod
     def from_assets(cls, assets: Iterable[MediaAsset], format_ratio: str = "9:16") -> "Timeline":
         assets_by_id: Dict[str, MediaAsset] = {}
         for asset in assets:

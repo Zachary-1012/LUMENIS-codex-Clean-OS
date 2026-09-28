@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 import json
+from copy import deepcopy
 import math
 
 import pytest
@@ -383,3 +384,174 @@ def test_ffprobe_duration_must_be_finite_and_within_product_bound(tmp_path, monk
     monkeypatch.setattr(video_editing.subprocess, "run", lambda *args, **kwargs: ProbeResult())
     with pytest.raises(VideoEditingError, match="MEDIA_DURATION_PROBE_FAILED"):
         fingerprint_local_media(str(source))
+
+
+def test_timeline_sanitized_document_roundtrips_against_fresh_assets(tmp_path, monkeypatch):
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"fingerprinted source for timeline reopen")
+    monkeypatch.setattr(
+        video_editing, "_probe_media_info",
+        lambda _path: video_editing._MediaProbe(12.0, True, 1),
+    )
+    asset = fingerprint_local_media(str(source))
+    timeline = Timeline.from_assets((asset,), format_ratio="16:9")
+    timeline = timeline.add_clip(asset.asset_id, source_out=5.0)
+    first_clip_id = timeline.tracks[0].clips[0].clip_id
+    timeline = timeline.add_clip(asset.asset_id, source_in=5.0, source_out=10.0)
+    second_clip_id = timeline.tracks[0].clips[1].clip_id
+    timeline = timeline.add_transition(
+        first_clip_id, second_clip_id, transition_type="dissolve", duration_sec=0.5,
+        reason="soft scene change",
+    )
+    timeline = timeline.add_audio_track("music", audio_role="bgm")
+    timeline = timeline.add_clip(
+        asset.asset_id, source_in=1.0, source_out=4.0, track_id="music", timeline_start=2.5,
+    )
+    timeline = timeline.set_audio_mix(
+        timeline.tracks[1].clips[0].clip_id,
+        AudioMix(volume=0.4, fade_in_sec=0.5, fade_out_sec=0.75),
+    )
+    timeline = timeline.add_caption(0.5, 1.5, "A reviewed caption")
+
+    document = timeline.to_dict()
+    assert str(source.resolve()) not in repr(document)
+    reopened = Timeline.from_dict(document, assets=(asset,))
+    assert reopened.to_dict() == document
+    assert [track.track_id for track in reopened.tracks] == ["video", "music"]
+    assert [clip.clip_id for clip in reopened.tracks[0].clips] == [first_clip_id, second_clip_id]
+    assert reopened.transitions == timeline.transitions
+    assert reopened.overlays == timeline.overlays
+    assert reopened.version == timeline.version
+
+
+def test_timeline_deserializer_rejects_missing_tampered_and_forged_asset_data(tmp_path, monkeypatch):
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"freshly fingerprinted media")
+    monkeypatch.setattr(
+        video_editing, "_probe_media_info",
+        lambda _path: video_editing._MediaProbe(8.0, True, 1),
+    )
+    asset = fingerprint_local_media(str(source))
+    document = Timeline.from_assets((asset,)).add_clip(asset.asset_id).to_dict()
+
+    with pytest.raises(VideoEditingError, match="TIMELINE_REOPEN_ASSET_MISSING"):
+        Timeline.from_dict(document, assets=())
+
+    for field, value in (
+        ("sha256", "0" * 64),
+        ("duration_sec", 7.0),
+        ("audio_stream_count", 2),
+        ("has_video", False),
+        ("media_kind", "audio"),
+    ):
+        altered = deepcopy(document)
+        altered["assets"][0][field] = value
+        with pytest.raises(VideoEditingError, match="TIMELINE_REOPEN_ASSET_MISMATCH"):
+            Timeline.from_dict(altered, assets=(asset,))
+
+    for field, value in (("evidence_refs", ["forged-evidence"]), ("rights_status", "cleared")):
+        altered = deepcopy(document)
+        altered["assets"][0][field] = value
+        with pytest.raises(VideoEditingError, match="TIMELINE_REOPEN_ASSET_MISMATCH"):
+            Timeline.from_dict(altered, assets=(asset,))
+
+    with pytest.raises(VideoEditingError, match="TIMELINE_DOCUMENT_FIELDS_INVALID"):
+        Timeline.from_dict({**document, "source_path": str(source)}, assets=(asset,))
+    path_injected = deepcopy(document)
+    path_injected["assets"][0]["path"] = str(source)
+    with pytest.raises(VideoEditingError, match="TIMELINE_DOCUMENT_FIELDS_INVALID"):
+        Timeline.from_dict(path_injected, assets=(asset,))
+
+    evidence_injected = deepcopy(document)
+    evidence_injected["tracks"][0]["clips"][0]["evidence_refs"] = ["forged-evidence"]
+    with pytest.raises(VideoEditingError, match="CANONICAL_EVIDENCE_BINDING_UNAVAILABLE"):
+        Timeline.from_dict(evidence_injected, assets=(asset,))
+
+
+def test_timeline_deserializer_rejects_unknown_fields_and_invalid_times(tmp_path, monkeypatch):
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"source for malformed document")
+    monkeypatch.setattr(
+        video_editing, "_probe_media_info",
+        lambda _path: video_editing._MediaProbe(8.0, True, 1),
+    )
+    asset = fingerprint_local_media(str(source))
+    document = Timeline.from_assets((asset,)).add_clip(asset.asset_id).to_dict()
+
+    unknown = deepcopy(document)
+    unknown["tracks"][0]["clips"][0]["extra"] = "unexpected"
+    with pytest.raises(VideoEditingError, match="TIMELINE_DOCUMENT_FIELDS_INVALID"):
+        Timeline.from_dict(unknown, assets=(asset,))
+
+    malformed_time = deepcopy(document)
+    malformed_time["tracks"][0]["clips"][0]["source_in"] = math.nan
+    with pytest.raises(VideoEditingError, match="INVALID_CLIP_RANGE"):
+        Timeline.from_dict(malformed_time, assets=(asset,))
+
+
+@pytest.mark.parametrize("mutation", ["missing", "bytes", "duration", "inventory", "path"])
+def test_reopen_revalidates_actual_file_even_when_supplied_asset_is_stale(tmp_path, monkeypatch, mutation):
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"original media")
+    monkeypatch.setattr(video_editing, "_probe_media_info", lambda path: video_editing._MediaProbe(8, True, 1))
+    asset = fingerprint_local_media(str(source))
+    document = Timeline.from_assets((asset,)).add_clip(asset.asset_id).to_dict()
+    if mutation == "missing":
+        source.unlink()
+    elif mutation == "bytes":
+        source.write_bytes(b"replaced media")
+    elif mutation == "duration":
+        asset = replace(asset, duration_sec=9)
+    elif mutation == "inventory":
+        asset = replace(asset, audio_stream_count=2)
+    else:
+        replacement = tmp_path / "other.mp4"
+        replacement.write_bytes(b"different media")
+        asset = replace(asset, path=str(replacement))
+    with pytest.raises(VideoEditingError, match="TIMELINE_REOPEN_ASSET_UNAVAILABLE|TIMELINE_REOPEN_ASSET_MISMATCH"):
+        Timeline.from_dict(document, assets=(asset,))
+
+
+@pytest.mark.parametrize("field,value", [
+    ("version", True), ("approval_required", False), ("tracks", {}),
+    ("assets", None), ("overlays", "bad"), ("transitions", 0),
+])
+def test_reopen_rejects_malformed_document_shapes(tmp_path, monkeypatch, field, value):
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"actual local media")
+    monkeypatch.setattr(video_editing, "_probe_media_info", lambda path: video_editing._MediaProbe(8, True, 1))
+    asset = fingerprint_local_media(str(source))
+    document = Timeline.from_assets((asset,)).add_clip(asset.asset_id).to_dict()
+    document[field] = value
+    with pytest.raises(VideoEditingError):
+        Timeline.from_dict(document, assets=(asset,))
+
+
+def test_reopen_never_reads_paths_or_approval_from_untrusted_document(tmp_path, monkeypatch):
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"actual local media")
+    monkeypatch.setattr(video_editing, "_probe_media_info", lambda path: video_editing._MediaProbe(8, True, 1))
+    asset = fingerprint_local_media(str(source))
+    timeline = Timeline.from_assets((asset,)).add_clip(asset.asset_id)
+    document = timeline.to_dict()
+    calls = []
+    original = video_editing.fingerprint_local_media
+
+    def observed(path):
+        calls.append(path)
+        return original(path)
+
+    monkeypatch.setattr(video_editing, "fingerprint_local_media", observed)
+    for key in ("path", "source_ref", "artifact_id"):
+        malicious = deepcopy(document)
+        malicious["assets"][0][key] = "untrusted-secret-file"
+        with pytest.raises(VideoEditingError, match="TIMELINE_DOCUMENT_FIELDS_INVALID"):
+            Timeline.from_dict(malicious, assets=(asset,))
+    assert calls == [asset.path] * 3
+    with pytest.raises(VideoEditingError, match="TIMELINE_MEDIA_ASSETS_INVALID"):
+        Timeline.from_dict(document, assets=document["assets"])
+    with pytest.raises(VideoEditingError, match="TIMELINE_DUPLICATE_MEDIA_ASSET"):
+        Timeline.from_dict(document, assets=(asset, asset))
+    restored = Timeline.from_dict(document, assets=(asset,))
+    assert restored.to_export_request()["status"] == "blocked"
+    assert restored.to_dict()["approval_required"] is True
