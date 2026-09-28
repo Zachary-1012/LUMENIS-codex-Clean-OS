@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-28 — Default Global context no longer requires an account session
+
+[Round 04 Global/Focus context evidence](evidence/round-04/ROUND-04-GLOBAL-FOCUS-CONTEXT-API-2026-09-26.md)
+records the selection-only correction: unauthenticated `GLOBAL_ALL` read and clear
+return the static context envelope without exposing business data or causing an
+effect. `FOCUS` still requires an authenticated Actor and exact resource permission;
+data routes continue to authorize independently. The route probe and six focused
+API tests passed. This closes the workspace's initial no-focus context `401` only;
+real-user browser E2E, Global data coverage, ROUND 04, release and operating status
+remain open.
+
 ### 2026-09-28 — Expanded local draft editing and exact file return
 
 [Round 14 focused draft evidence](evidence/round-14/ROUND-14-FOCUSED-DRAFT-2026-09-28.md)

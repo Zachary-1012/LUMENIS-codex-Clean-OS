@@ -109,15 +109,12 @@ def _context_envelope(selection):
 
 @domain_api_bp.route("/api/settings/context", methods=["GET", "PUT", "DELETE"])
 def api_settings_context():
-    """Expose a selection-only context contract; data routes reauthorize use."""
+    """Expose selection-only context; data routes reauthorize every use."""
     from subject_context import ContextSelection
-    from lumenis.auth.service import get_current_user
-
-    actor = get_current_user()
-    if not isinstance(actor, dict) or type(actor.get("id")) is not int:
-        return _context_error("AUTH_REQUIRED", "需要有效账号会话", 401)
 
     if request.method == "DELETE":
+        # Clearing focus only returns the static GLOBAL selection. It reads no
+        # business data and performs no persistent or external effect.
         return _context_envelope(ContextSelection.global_all())
 
     if request.method == "PUT":
