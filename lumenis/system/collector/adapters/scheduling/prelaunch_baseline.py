@@ -335,6 +335,10 @@ def load_prelaunch_baseline_config(path: Optional[str] = None, *,
     for source in sources:
         if not isinstance(source, dict):
             raise BaselineConfigError("SOURCE_ENTRY_INVALID")
+        source_plan_version = source.get("plan_version", version)
+        if not isinstance(source_plan_version, str) or not re.fullmatch(
+                r"[A-Za-z0-9._-]{1,64}", source_plan_version):
+            raise BaselineConfigError("SOURCE_PLAN_VERSION_INVALID")
         try:
             plan = PublicBaselinePlan(
                 source_key=source["source_key"],
@@ -353,7 +357,7 @@ def load_prelaunch_baseline_config(path: Optional[str] = None, *,
                 subject_id=source.get("subject_id"),
                 brand_focus_id=source.get("brand_focus_id"),
                 max_results=source.get("max_results", 20),
-                plan_version=version,
+                plan_version=source_plan_version,
                 policy_id=config["policy_id"],
                 _signed_config_digest=digest,
             )

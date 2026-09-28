@@ -216,6 +216,65 @@ class PrelaunchBaselineDueTests(unittest.TestCase):
             json.dump(config, handle)
         return path, config
 
+    def test_signed_source_plan_versions_preserve_history_across_config_bump(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path, config = self.signed_config(tmp)
+            template = config["sources"][0]
+            config["plan_version"] = "config-v1"
+            unchanged = [
+                {**template, "source_key": f"feed:{index:03d}",
+                 "source_url": f"https://example.org/feed-{index:03d}.atom"}
+                for index in range(190)
+            ]
+            additions = [
+                {**template, "source_key": "feed:new-one",
+                 "source_url": "https://example.org/new-one.atom"},
+                {**template, "source_key": "feed:new-two",
+                 "source_url": "https://example.org/new-two.atom"},
+            ]
+            config["sources"] = unchanged + additions
+            self._write_signed_config(path, config)
+            before = load_prelaunch_baseline_config(path, hmac_key="fixture-key")
+            before_ids = {plan.source_key: plan.plan_id for plan in before["plans"]}
+            self.assertTrue(all(plan.plan_version == "config-v1" for plan in before["plans"]))
+
+            config["plan_version"] = "config-v2"
+            config["sources"] = [
+                {**source, "plan_version": "config-v1"} for source in unchanged
+            ] + [
+                {**source, "plan_version": "source-v2"} for source in additions
+            ]
+            self._write_signed_config(path, config)
+            current = load_prelaunch_baseline_config(path, hmac_key="fixture-key")
+            current_by_key = {plan.source_key: plan for plan in current["plans"]}
+            old_keys = {source["source_key"] for source in unchanged}
+            new_keys = {source["source_key"] for source in additions}
+            self.assertEqual(current["plan_version"], "config-v2")
+            self.assertEqual(len(current["plans"]), 192)
+            self.assertEqual(
+                {key: current_by_key[key].plan_id for key in old_keys},
+                {key: before_ids[key] for key in old_keys},
+            )
+            self.assertTrue(all(current_by_key[key].plan_version == "source-v2"
+                                for key in new_keys))
+            self.assertTrue(all(current_by_key[key].plan_id != before_ids[key]
+                                for key in new_keys))
+
+            config["sources"][-1]["plan_version"] = "invalid/version"
+            self._write_signed_config(path, config)
+            with self.assertRaises(BaselineConfigError) as invalid:
+                load_prelaunch_baseline_config(path, hmac_key="fixture-key")
+            self.assertEqual(invalid.exception.code, "SOURCE_PLAN_VERSION_INVALID")
+
+            config["sources"][-1]["plan_version"] = "source-v2"
+            self._write_signed_config(path, config)
+            config["sources"][-1]["plan_version"] = "source-v3"
+            with open(path, "w", encoding="utf-8") as handle:
+                json.dump(config, handle)
+            with self.assertRaises(BaselineConfigError) as tampered:
+                load_prelaunch_baseline_config(path, hmac_key="fixture-key")
+            self.assertEqual(tampered.exception.code, "HMAC_MISMATCH")
+
     def test_signed_config_requires_hmac_and_exact_typed_authorization(self):
         with tempfile.TemporaryDirectory() as tmp:
             path, config = self.signed_config(tmp)

@@ -107,3 +107,40 @@ before creating a launcher/task. PowerShell parsing and the actual rejected
 inside-repository invocation both pass; no test or validator was weakened.
 Frontend independently reran the takeover gate successfully after relocation.
 This is local runtime recovery evidence, not whole-product OPERATING acceptance.
+
+
+## Source-plan revision without resetting existing history
+
+The signed configuration may now carry a validated per-source plan_version.
+An unchanged source keeps its existing version and plan identity when the
+inventory configuration gains sources. The full configuration remains covered
+by HMAC; invalid versions and unsigned edits are rejected. No scheduler owner,
+schema, cadence, permission or end-user AUTO semantics changed.
+
+Current isolated verification: all 21 prelaunch baseline tests PASS, exit 0,
+including 190 stable identities across an inventory revision, changed-version
+identity separation, malformed version rejection and signature tamper rejection.
+Three affected Python files also parsed successfully. The exact platform launch
+allowlist regression now includes the already accepted X adapter; its full
+assertion remains blocking. The 20 surface/X-ingestion tests PASS, exit 0.
+The large unrelated dirty surface-test candidate is preserved, not accepted.
+
+Actual data follow-through (clone before apply, existing owners and backup):
+Pampers/L'Oreal Paris Brazil Evidence 394/395; new Multiplan company CTH
+SUBJ-e0fd6ef82109ec0040152ac0 Evidence 401; new Pantene BMP
+BRAND-1ae4e34a5f242d9259bd8a46 Evidence 402. Each has one source-native Raw,
+signed Evidence and VERIFIED Canonical row. Integrity OK, FK violations 0.
+Unknown publication times remain unknown. Multiplan is an operator company,
+not an invented shopping venue. Prior temporary IDs are not production IDs.
+
+Existing relation owner recorded Apple OPERATES_IN Canada and Coca-Cola
+MARKET_ACTIVITY United States from explicit official source facts (391/392).
+They remain UNREVIEWED. Domain suffix or language alone did not create country
+claims for the Brazil pages. These pages establish identity/source facts, not
+social, consumer, propagation or all-country coverage.
+
+Config/runtime promotion and a subsequent real scheduled cycle are separate
+deployment evidence, pending at this source commit. Apple and MECCA automation
+remain outside new additions pending source-specific access authorization.
+Commercial reuse is NOT VERIFIED. ROUND 06 REWORK; full-universe, user E2E,
+RELEASED, OPERATING and COMMERCIAL_READY remain NO / NOT VERIFIED.

@@ -1475,3 +1475,20 @@ are awaiting versioned plan addition without resetting existing history.
 [Round 06 evidence](evidence/round-06/ROUND-06-X-MANUAL-INGESTION-2026-09-28.md).
 Source acquisition is not full social/country/user E2E closure. ROUND 06 REWORK;
 Global/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY remain NO.
+
+
+### 2026-09-28 - preserve maintenance history when sources expand
+
+Signed maintenance inventory now supports per-source plan versions so adding
+sources does not reset the existing 190 source histories. 21 scheduler tests
+PASS; 20 surface/X tests PASS after retaining the exact launch allowlist and
+adding accepted X. Source AST checks PASS. No permission or HMAC gate weakened.
+Pampers, L'Oreal Paris, Multiplan and Pantene official sources are now in the
+actual DB with signed Evidence 394/395/401/402, exact domain/scope, integrity
+OK/FK0. Multiplan and Pantene used real Add Subject/BrandFocus owner paths.
+Apple Canada OPERATES_IN and Coca-Cola US MARKET_ACTIVITY were recorded through
+the existing relation owner and remain UNREVIEWED. Public pages do not establish
+complete social/consumer or country coverage. Runtime/config rollout remains
+a separate step; no unobserved future cycle is claimed.
+[Round 06 evidence](evidence/round-06/ROUND-06-PUBLIC-BASELINE-MAINTENANCE-2026-09-28.md).
+ROUND 06 REWORK; Global/Full Universe/RELEASED/OPERATING/COMMERCIAL_READY NO.

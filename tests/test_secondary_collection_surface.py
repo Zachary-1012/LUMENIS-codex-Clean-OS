@@ -31,7 +31,7 @@ def test_surface_has_exact_launch_allowlist(monkeypatch):
     assert result["product"] == "LUMENIS"
     assert result["domain"] == "CTH"
     assert [item["platform"] for item in result["platforms"]] == [
-        "bilibili", "weibo", "douyin", "kuaishou", "web_rss",
+        "bilibili", "weibo", "douyin", "x", "kuaishou", "web_rss",
         "public_http", "web_atom", "sitemap", "zhihu", "instagram"
     ]
     assert result["manual_only"] is True
@@ -412,7 +412,7 @@ def test_douyin_requires_explicit_remote_browser_worker(monkeypatch):
 def test_requested_adapters_expose_uniform_capability_contract():
     from lumenis.system.collector.adapters import get_adapter, list_adapters
 
-    required_platforms = {"xhs", "bilibili", "weibo", "douyin", "kuaishou", "web_rss"}
+    required_platforms = {"xhs", "bilibili", "weibo", "douyin", "x", "kuaishou", "web_rss"}
     assert required_platforms.issubset(set(list_adapters()))
     required_capabilities = {
         "search", "detail", "comments", "author", "author_posts", "healthcheck",
