@@ -60,6 +60,7 @@ yyds-logger>=0.8.0      # lumenis/unified_logger 统一日志增强；缺省时�
 # win32-setctime：仅 Windows 下 yyds-logger 需要（非 Windows 忽略）
 # docx2pdf / pypdf：仅 lumenis 报告导出(word_pdf_export)与导入器(importer)旁路使用，接管前不强制
 tenacity>=9.1.0        # 网络层指数退避重试（可选增强：CDP探测瞬断重试等；缺省时回落原生单次重试）
+markitdown[pptx]==0.1.8  # 可选本地 PPTX/HTML 文档转换；仅经 importer 边界使用，不接管 Evidence/Canonical
 
 # alembic>=1.19.1：T-P1-3 可回滚 DB 迁移（stamp-only baseline，生产接入前需满足 DB-MIGRATION-PLAYBOOK Gate）
 alembic>=1.19.1

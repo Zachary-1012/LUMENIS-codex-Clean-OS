@@ -5,6 +5,7 @@
 """
 import os
 import re
+import hashlib
 from typing import List, Dict
 from ..config import IMPORTER_CONFIG
 
@@ -34,8 +35,60 @@ def parse_file(file_path: str) -> ParseResult:
         return parse_csv(file_path)
     elif ext == ".txt":
         return parse_txt(file_path)
+    elif ext in (".pptx", ".html", ".htm"):
+        return parse_markitdown(file_path)
     else:
         raise ValueError(f"不支持的文件格式: {ext}")
+
+
+def parse_markitdown(file_path: str) -> ParseResult:
+    """Convert one bounded local document through optional MarkItDown.
+
+    MarkItDown is an importer implementation, not a source, Evidence or
+    Canonical owner.  It is deliberately lazy and local-only: a missing
+    optional dependency is reported honestly and remote URI inputs are never
+    handed to a third-party converter.
+    """
+    if not isinstance(file_path, str) or not file_path.strip():
+        raise ValueError("文档路径为空")
+    local_path = os.path.abspath(file_path)
+    if not os.path.isfile(local_path):
+        raise FileNotFoundError(local_path)
+    if os.path.getsize(local_path) > IMPORTER_CONFIG["max_file_size_mb"] * 1024 * 1024:
+        raise ValueError(f"文件超过{IMPORTER_CONFIG['max_file_size_mb']}MB")
+
+    try:
+        from markitdown import MarkItDown
+    except ImportError as exc:
+        raise ImportError(
+            "PPTX/HTML 解析需要可选依赖 markitdown；请按 requirements.txt 安装后重试"
+        ) from exc
+
+    result = ParseResult()
+    result.metadata.update({
+        "format": os.path.splitext(local_path)[1].lstrip(".").lower(),
+        "parser": "markitdown",
+        "network_mode": "local_only",
+        "source_name": os.path.basename(local_path),
+    })
+    digest = hashlib.sha256()
+    with open(local_path, "rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    result.metadata["source_fingerprint"] = digest.hexdigest()
+
+    converter = MarkItDown(enable_plugins=False)
+    convert_local = getattr(converter, "convert_local", None)
+    converted = convert_local(local_path) if callable(convert_local) else converter.convert(local_path)
+    markdown = getattr(converted, "markdown", None)
+    if markdown is None:
+        markdown = getattr(converted, "text_content", None)
+    if not isinstance(markdown, str) or not markdown.strip():
+        raise ValueError("MarkItDown 未返回可用文本")
+    result.text = markdown
+    result.paragraphs = [line.strip() for line in markdown.splitlines() if line.strip()]
+    result.metadata["parser_version"] = str(getattr(__import__("markitdown"), "__version__", "unknown"))
+    return result
 
 
 def parse_txt(file_path: str) -> ParseResult:

@@ -42,16 +42,27 @@ class SitemapAdapter(BasePlatformAdapter):
                 identity = hashlib.sha256(loc.encode("utf-8")).hexdigest()[:32]
                 lastmod = node.findtext(f"{_SITEMAP_NS}lastmod") or node.findtext("lastmod") or ""
                 kind = "sitemap" if root_name == "sitemapindex" else "url"
+                # Sitemap ``lastmod`` is the source's last modification time,
+                # not evidence that the URL was first published at that time.
+                # Keep publication unknown unless the detail source declares it
+                # and retain the update signal in the raw lineage for downstream
+                # freshness decisions.
+                raw = {
+                    "sitemap_url": response.url,
+                    "entry_kind": kind,
+                }
+                if str(lastmod).strip():
+                    raw["source_updated_at"] = str(lastmod).strip()
                 items.append(self.normalize_item({
                     "platform_content_id": f"sitemap:{identity}",
                     "title": loc,
                     "content": "",
                     "author_id": None,
                     "author_nickname": None,
-                    "publish_datetime": str(lastmod).strip(),
+                    "publish_datetime": "",
                     "url": loc,
                     "captured_at": collected_at,
-                    "raw": {"sitemap_url": response.url, "entry_kind": kind},
+                    "raw": raw,
                 }))
             limit = max(1, min(int(kwargs.get("max_results", 100)), 5000))
             items = items[:limit]

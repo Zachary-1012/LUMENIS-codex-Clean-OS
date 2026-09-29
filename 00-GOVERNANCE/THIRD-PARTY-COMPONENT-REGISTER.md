@@ -57,6 +57,7 @@ The table records direct manifest entries, not every transitive dependency.
 | tenacity | OPTIONAL ENHANCEMENT | Retry/backoff | Retry policy boundary | VERIFY_BEFORE_RELEASE | Yes |
 | alembic | PRODUCTION TOOLING | DB migration tooling | Migration boundary; migration gate required | VERIFY_BEFORE_RELEASE | Yes |
 | feedparser | PRODUCTION | RSS / Atom public-feed parsing, as declared in `requirements.txt` | Public-feed acquisition adapter | VERIFY_BEFORE_RELEASE | Yes |
+| markitdown[pptx] 0.1.8 | PRODUCTION / OPTIONAL IMPORTER ENHANCEMENT | Local HTML/PPTX to Markdown conversion behind `lumenis/importer/parser.py`; no network, Evidence or Canonical ownership | Importer adapter only; existing PDF/Word/Excel parsers remain authoritative; remove or replace by the same ParseResult contract | MIT for MarkItDown; `python-pptx` and transitive dependencies require separate notice/license reconciliation | Yes |
 
 ### Commented / optional entries observed but not required by the current manifest
 

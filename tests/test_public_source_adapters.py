@@ -106,7 +106,10 @@ def test_sitemap_discovers_urls_without_creating_content_store():
     assert [item["url"] for item in result.items] == [
         "https://public.example.test/a", "https://public.example.test/b",
     ]
-    assert result.items[0]["publish_datetime"] == "2026-09-17"
+    # Sitemap ``lastmod`` describes a source update, not publication time.
+    # Publication remains unknown until the detail source declares it.
+    assert result.items[0]["publish_datetime"] == ""
+    assert result.items[0]["raw"]["source_updated_at"] == "2026-09-17"
     assert result.metadata["entry_kind"] == "urlset"
 
 
@@ -199,7 +202,7 @@ def test_sitemap_rejects_non_sitemap_xml_before_canonical_import(monkeypatch):
 def test_sitemap_index_root_remains_supported():
     xml = """<?xml version=\"1.0\"?>
     <sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">
-      <sitemap><loc>https://public.example.test/child-sitemap.xml</loc></sitemap>
+      <sitemap><loc>https://public.example.test/child-sitemap.xml</loc><lastmod>2026-09-26T12:00:00Z</lastmod></sitemap>
     </sitemapindex>"""
     adapter = SitemapAdapter(fetcher=lambda _: _response(xml, "application/xml"))
 
@@ -207,6 +210,8 @@ def test_sitemap_index_root_remains_supported():
 
     assert result.status is CollectionStatus.SUCCESS
     assert result.items[0]["url"] == "https://public.example.test/child-sitemap.xml"
+    assert result.items[0]["publish_datetime"] == ""
+    assert result.items[0]["raw"]["source_updated_at"] == "2026-09-26T12:00:00Z"
     assert result.items[0]["raw"]["entry_kind"] == "sitemap"
     assert result.metadata["entry_kind"] == "sitemapindex"
 

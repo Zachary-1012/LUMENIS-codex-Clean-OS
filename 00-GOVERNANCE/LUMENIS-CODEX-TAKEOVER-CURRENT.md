@@ -1673,3 +1673,11 @@ US/CA terms restrict automated access, so repeat collection is not approved.
 [Round 06 actual DB evidence](evidence/round-06/ROUND-06-MY-SG-US-CA-ACTUAL-DB-2026-09-28.md).
 Global Commercial/Brand Coverage, the 14-country 50+50 floor, real user E2E,
 Round 06 exit, release and operating remain NO/NOT VERIFIED.
+
+### 2026-09-29 - controlled OSS acquisition adaptation
+
+The supplied OSS comparison was reviewed against the current source-owner map and official repository metadata. The only bounded adoption in this batch is `markitdown[pptx]==0.1.8` behind the existing local importer for HTML/PPTX; plugins are disabled, inputs are local files only, and the parser records format, parser version, local-only mode and a SHA-256 source fingerprint. It does not own Source, Evidence or Canonical truth.
+
+The existing Sitemap adapter now preserves `lastmod` as `raw.source_updated_at` and leaves `publish_datetime` unknown until a detail source declares publication. Firecrawl, Crawl4AI, Browser Use, Crawlee, Scrapy, Scrapling, AutoScraper and curl-impersonate remain research-only candidates; scrcpy is rejected for structured acquisition. No second Collector, scheduler, browser, Evidence or Canonical store was introduced.
+
+Targeted importer/public-source tests and the blocking constitution check must pass before this batch is published. Live commercial authorization, social-platform sessions and full user E2E remain unverified and are not promoted by this entry.
