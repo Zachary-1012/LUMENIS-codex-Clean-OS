@@ -12,6 +12,32 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-29 — Whole-product research and China-priority direction
+
+The Product Owner requested frontier research and a reviewable execution plan for
+the whole product, including CTH/BMP, original general creation and client pitches,
+video, audio-first podcast, research/library/reporting, AI/Agent/Skill Store,
+evaluation/learning, collection/data, Experience and operating/release. The
+[research and closure plan](../intelligence_library/01_序境产品研究/FULL-PRODUCT-UPGRADE-CLOSURE-RESEARCH-20260929.md)
+maps 25 capability families to existing owners and the original 15 rounds, preserves
+the 34-section capability input and 44 screen-capability references, and records
+official/GitHub sources, adoption boundaries and real-work acceptance packages.
+It is a research deliverable, not an implementation, design authority, runtime
+acceptance or release claim. New components have not been installed by this work.
+
+The latest Product Owner direction prioritizes excellent, regional, specialist and
+niche brands/commercial subjects operating in China. Preserve and reconcile the
+country candidates already produced, retain country navigation and global reference
+coverage, and stop indiscriminate expansion driven solely by the older per-country
+50+50 target. Route the next versioned inventory and dimensions through the existing
+Global contract; retain field-level coverage, identity/market-role distinctions,
+Evidence, freshness, maintenance and business-consumption acceptance. Product
+accounts/password redesign remains deferred; server scope/effect checks remain.
+
+This research publication changes no product code or production data. It does not
+advance any Round, Global coverage, USER_VERIFIED, RELEASED, OPERATING or
+COMMERCIAL_READY status.
+
 ### 2026-09-28 — Default Global context no longer requires an account session
 
 [Round 04 Global/Focus context evidence](evidence/round-04/ROUND-04-GLOBAL-FOCUS-CONTEXT-API-2026-09-26.md)
