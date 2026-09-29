@@ -546,7 +546,9 @@ def get_connection(db_path: str) -> sqlite3.Connection:
 # ============================================================
 # 写入：persist_canonical（幂等）
 # ============================================================
-def _validate_canonical_scope(con: sqlite3.Connection, record: CanonicalRecord) -> None:
+def _validate_canonical_scope(
+    con: sqlite3.Connection, record: CanonicalRecord,
+) -> Optional[Dict[str, Any]]:
     """Reject mixed scope identities and require signed Evidence for VERIFIED."""
     def exact_text(value: Any, field_name: str) -> str:
         if value is None and field_name in {"subject_id", "brand_focus_id", "scope_evidence_ref"}:
@@ -576,7 +578,7 @@ def _validate_canonical_scope(con: sqlite3.Connection, record: CanonicalRecord) 
     if (subject or brand) and expected_domain is None:
         raise ValueError("scoped Canonical records require a supported product")
     if status != "VERIFIED":
-        return
+        return None
 
     focus = subject if product == PRODUCT_CTH else brand if product == PRODUCT_ZBMP else ""
     if not focus or not evidence_ref or not record.source_id:
@@ -614,6 +616,25 @@ def _validate_canonical_scope(con: sqlite3.Connection, record: CanonicalRecord) 
         or record.source_id not in inputs["source_ids"]
     ):
         raise ValueError("Canonical scope Evidence does not cover the exact source and focus")
+    return {
+        "id": evidence.get("id"),
+        "source_id": record.source_id,
+        "stored_scope": {
+            "product_id": product,
+            "domain_id": domain,
+            "subject_id": subject,
+            "brand_focus_id": brand,
+            "scope_status": status,
+        },
+        "integrity": {
+            "integrity_version": assurance.get("version"),
+            "verified": True,
+            "lineage_verified": True,
+            "algorithm": assurance.get("algorithm"),
+            "digest": evidence.get("integrity_digest"),
+            "assurance": assurance.get("assurance"),
+        },
+    }
 
 
 def _reject_verified_scope_rewrite(existing: dict, record: CanonicalRecord) -> None:
@@ -1106,6 +1127,94 @@ def list_canonical(con: sqlite3.Connection, source_type: str = "",
     params.extend([limit, offset])
     rows = con.execute(sql, tuple(params)).fetchall()
     return [dict(r) for r in rows]
+
+
+def list_scoped_canonical(
+    con: sqlite3.Connection, *, product_id: str, subject_id: Optional[str] = None,
+    brand_focus_id: Optional[str] = None, limit: int = 30,
+) -> Dict[str, Any]:
+    """Read Canonical rows only when their exact signed scope still verifies."""
+    if not isinstance(con, sqlite3.Connection):
+        raise TypeError("con must be a SQLite connection")
+    if type(product_id) is not str:
+        raise TypeError("product_id must be a string")
+    products = {"CTH": (PRODUCT_CTH, "cth"), "cth": (PRODUCT_CTH, "cth"),
+                "ZBMP": (PRODUCT_ZBMP, "zbmp"), "zbmp": (PRODUCT_ZBMP, "zbmp")}
+    if product_id not in products:
+        raise ValueError("product_id must be CTH/cth or ZBMP/zbmp")
+    if type(limit) is not int:
+        raise TypeError("limit must be an integer")
+    if not 1 <= limit <= 100:
+        raise ValueError("limit must be between 1 and 100")
+
+    def validate_focus(value: Optional[str], name: str) -> Optional[str]:
+        if value is None:
+            return None
+        if type(value) is not str:
+            raise TypeError(f"{name} must be a string or None")
+        if not value or value != value.strip():
+            raise ValueError(f"{name} must be a non-empty exact string")
+        return value
+
+    subject_id = validate_focus(subject_id, "subject_id")
+    brand_focus_id = validate_focus(brand_focus_id, "brand_focus_id")
+    if subject_id is not None and brand_focus_id is not None:
+        raise ValueError("subject_id and brand_focus_id cannot be mixed")
+    product, domain = products[product_id]
+    if product == PRODUCT_CTH and brand_focus_id is not None:
+        raise ValueError("CTH reads accept subject_id only")
+    if product == PRODUCT_ZBMP and subject_id is not None:
+        raise ValueError("ZBMP reads accept brand_focus_id only")
+
+    where = ["product_id=?", "domain_id=?"]
+    params: List[Any] = [product, domain]
+    focus = subject_id if product == PRODUCT_CTH else brand_focus_id
+    focus_column = "subject_id" if product == PRODUCT_CTH else "brand_focus_id"
+    other_column = "brand_focus_id" if product == PRODUCT_CTH else "subject_id"
+    if focus is not None:
+        where.extend([f"{focus_column}=?", f"({other_column} IS NULL OR {other_column}='')"])
+        params.append(focus)
+    predicate = " AND ".join(where)
+    candidate_count = con.execute(
+        f"SELECT COUNT(*) FROM {CANONICAL_TABLE} WHERE {predicate}", tuple(params),
+    ).fetchone()[0]
+    cursor = con.execute(
+        f"SELECT * FROM {CANONICAL_TABLE} WHERE {predicate} "
+        "ORDER BY captured_at DESC, canonical_id ASC LIMIT ?",
+        tuple(params + [limit]),
+    )
+    columns = [column[0] for column in cursor.description]
+    rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    records: List[Dict[str, Any]] = []
+    rejected_count = 0
+    for row in rows:
+        record = CanonicalRecord()
+        for field_name in (
+            "canonical_id", "product_id", "domain_id", "subject_id",
+            "brand_focus_id", "scope_status", "scope_evidence_ref", "source_id",
+        ):
+            setattr(record, field_name, row.get(field_name))
+        try:
+            proof = _validate_canonical_scope(con, record)
+        except ValueError:
+            rejected_count += 1
+            continue
+        if proof is None:
+            rejected_count += 1
+            continue
+        row["scope_evidence"] = proof
+        records.append(row)
+
+    scanned_count = len(rows)
+    return {
+        "records": records,
+        "candidate_count": candidate_count,
+        "scanned_count": scanned_count,
+        "rejected_count": rejected_count,
+        "returned_count": len(records),
+        "limit": limit,
+        "truncated": candidate_count > scanned_count,
+    }
 
 
 def count_canonical(con: sqlite3.Connection) -> Dict[str, int]:

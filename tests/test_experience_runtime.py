@@ -72,6 +72,9 @@ def isolated_client(tmp_path, monkeypatch):
     import experience_runtime
     from flask import Flask
     app = Flask(__name__)
+    app.config["LUMENIS_OPEN_WORKSPACE"] = True
+    from canonical_data import ensure_canonical_table
+    ensure_canonical_table(str(db_file))
     app.register_blueprint(experience_runtime.experience_bp)
     return app.test_client(), str(db_file)
 

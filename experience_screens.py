@@ -374,24 +374,69 @@ def _build_cth02() -> Dict[str, Any]:
     return _envelope("CTH-02", sections, blocked=blocked)
 
 
-def _build_cth03() -> Dict[str, Any]:
-    """实时监测流：真实最新笔记/负面流。"""
-    import database as db
+def _build_cth03(*, binding: Dict[str, Any]) -> Dict[str, Any]:
+    """Read exact Canonical scope; each returned row carries verified lineage."""
+    from canonical_data import list_scoped_canonical
+    from lumenis.shared.database import get_repository
 
-    recent = _safe(db.get_notes, {"limit": 30}, default=[])
-    neg = _safe(db.get_negative_comments, 30, default=[])
-    n_all = len(recent) if isinstance(recent, list) else 0
-    n_neg = len(neg) if isinstance(neg, list) else 0
+    with get_repository().connection(read_only=True) as con:
+        result = list_scoped_canonical(
+            con, product_id="CTH", subject_id=binding["subject_id"], limit=100,
+        )
+    mode = binding["canonical_scope"]
+    view_scope = {
+        "mode": mode, "domain_id": "CTH", "product_id": "CTH",
+        "global_all_granted": binding["global_all_granted"],
+    }
+    if mode == "FOCUS":
+        view_scope["subject_id"] = binding["subject_id"]
+    rows = []
+    for record in result["records"]:
+        proof = record["scope_evidence"]
+        projection = {
+            "contract": "lumenis.shared.experience-row-projection", "version": 2,
+            "read_allowed": True, "scope": dict(view_scope),
+            "canonical_reference": record["canonical_id"],
+            "stored_scope": {**proof["stored_scope"], "global": False},
+            "evidence": {
+                "canonical_reference": f"evidence:canonical:{proof['id']}",
+                "evidence_id": str(proof["id"]), "source_id": proof["source_id"],
+            },
+            "integrity": proof["integrity"],
+        }
+        rows.append({
+            "note_id": record["canonical_id"], "subject_id": record["subject_id"],
+            "title": record["title"] or record["content"][:120],
+            "date": record["publish_datetime"] or None,
+            "captured_at": record["captured_at"] or None,
+            "platform": record["source_platform"],
+            "source_url": record["canonical_url"] or record["url"] or None,
+            # Scope verification does not verify an analysis or risk judgement.
+            "sentiment": None, "risk": None,
+            "analysis_state": "not_verified", "quality_status": record["quality_status"],
+            "scope_mode": mode, "canonical_scope": mode, "read_allowed": True,
+            "projection": projection,
+        })
+    partial = bool(result["truncated"] or result["rejected_count"] or any(
+        row["quality_status"] != "ok" or row["date"] is None for row in rows
+    ))
+    stream_state = STATE_READY if rows else "blocked" if result["rejected_count"] else STATE_NOT_COLLECTED
     kpis = [
-        metric("cth03.recent", "近窗记录", value=n_all, state=STATE_READY,
-               icon="event", source="database.get_notes"),
-        metric("cth03.negative", "其中负面", value=n_neg, state=STATE_READY,
-               icon="risk", source="database.get_negative_comments"),
+        metric("cth03.recent", "近窗记录", value=None, state=STATE_NOT_COLLECTED,
+               icon="event", note="来源时间与完整窗口尚未验证", source="canonical_data"),
+        metric("cth03.negative", "其中负面", value=None, state=STATE_NOT_COLLECTED,
+               icon="risk", note="情感评估尚未验证", source="canonical_data"),
     ]
     platform_sec = _platform_collection_section(consumer="CTH")
-    stream = _notes_table("实时记录流（真实）", recent if isinstance(recent, list) else [], 15)
+    stream = section("table", stream_state, title="已采集记录", rows=rows)
     sections = [_head("CTH-03"), section("kpis", STATE_READY, items=kpis), platform_sec, stream]
-    return _envelope("CTH-03", sections)
+    response = _envelope("CTH-03", sections, truth={
+        "data_state": "partial" if partial else "available" if rows else stream_state,
+        "coverage": "NOT_VERIFIED", "source_freshness": "UNKNOWN",
+        **{key: value for key, value in result.items() if key != "records"},
+    })
+    response["global_binding" if mode == "GLOBAL_ALL" else "focus_binding"] = binding
+    return response
 
 
 def _build_cth04() -> Dict[str, Any]:

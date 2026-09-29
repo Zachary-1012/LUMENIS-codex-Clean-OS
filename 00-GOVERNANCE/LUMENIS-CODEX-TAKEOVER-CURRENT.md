@@ -12,6 +12,20 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-29 — J1 Canonical records bound to the CTH03 read stream
+
+[Scoped stream evidence](evidence/round-10/ROUND-10-J1-SCOPED-STREAM-2026-09-29.md)
+records the existing Canonical verifier's bounded read path and CTH03 API binding.
+Actual local reads returned 91 CTH GLOBAL, 27 Taikoo Hui and four Luohu MixC rows
+with exact signed scope; three unassigned records stayed withheld. Row evidence
+and the server read decision are separate. Unknown dates/analysis/window metrics
+remain unknown, and coverage/freshness are not inferred from those counts.
+Twenty Canonical regressions, 11 route/projection tests and the full existing
+Experience runtime test file passed on isolated databases. Live malformed scope,
+foreign-Origin and forwarding requests were denied without records; a subsequent
+valid request recovered. Frontend integration/E2E is in progress. J1 and ROUND 10
+are still PARTIAL/REWORK; this does not close the full data or business workflow.
+
 ### 2026-09-29 — J1 open local Context and subject selection
 
 [The local Context evidence](evidence/round-04/ROUND-04-J1-OPEN-CONTEXT-2026-09-29.md)

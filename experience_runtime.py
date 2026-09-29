@@ -679,10 +679,68 @@ def screen_viewmodel(screen_id: str):
                         "classification": "BLOCKED_BY_EXTERNAL_DEPENDENCY",
                         "note": _unbound_reason(screen_id)}), 200
     try:
+        if screen_id == "CTH-03":
+            binding, error = _cth03_read_scope()
+            if error is not None:
+                return error
+            return jsonify(builder(binding=binding))
         return jsonify(builder())
     except Exception as exc:  # noqa: BLE001
+        if screen_id == "CTH-03":
+            from flask import current_app
+            current_app.logger.warning("CTH03 scoped read unavailable: %s", type(exc).__name__)
+            return jsonify({"ok": False, "screen": screen_id, "bound": False,
+                            "code": "SCOPED_DATA_UNAVAILABLE",
+                            "error": "监测记录暂不可用，请重试"}), 503
         return jsonify({"ok": False, "screen": screen_id, "bound": True, "error": str(exc),
                         "trace": _tb.format_exc(limit=2)}), 500
+
+
+def _cth03_read_scope():
+    """Authorize the requested viewing scope independently of row provenance."""
+    from lumenis.auth.service import get_current_user
+    from lumenis.system.security.permission import (
+        check_actor_scope_permission, local_workspace_read_allowed,
+    )
+    from lumenis_app_api import _context_error, _context_selection_from_scope
+
+    mode = request.headers.get("X-Lumenis-Context-Mode", "GLOBAL_ALL")
+    domain = request.headers.get("X-Domain-Id")
+    subject = request.headers.get("X-Subject-ID")
+    if mode == "GLOBAL_ALL":
+        if domain or subject:
+            return None, _context_error("INVALID_CONTEXT", "全局范围不能携带聚焦主体", 400)
+    elif mode == "FOCUS" and domain == "CTH" and subject:
+        _selection, error = _context_selection_from_scope(domain, subject)
+        if error is not None:
+            return None, error
+    else:
+        return None, _context_error("INVALID_CONTEXT", "需要有效的商业主体范围", 400)
+
+    module = "commercial_realtime_stream"
+    local_read = local_workspace_read_allowed(module)
+    if not local_read:
+        actor = get_current_user()
+        if not isinstance(actor, dict) or type(actor.get("id")) is not int:
+            return None, _context_error("AUTH_REQUIRED", "当前请求没有读取授权", 401)
+        decision = check_actor_scope_permission(
+            actor, domain_id="CTH", action="read", module=module,
+            subject_id=subject, global_scope=mode == "GLOBAL_ALL",
+        )
+        if decision.verification_state != "verified":
+            return None, _context_error("AUTHORIZATION_UNAVAILABLE", "读取授权暂不可用", 503)
+        if not decision.allowed:
+            return None, _context_error("SUBJECT_SCOPE_DENIED", "当前范围不可读取", 403)
+    return {
+        "contract": "lumenis.scope-read-binding.v1",
+        "module": module,
+        "policy": "local-workspace-read-v1" if local_read else "actor-exact-scope-v1",
+        "domain_id": "CTH", "product_id": "CTH", "canonical_scope": mode,
+        "subject_id": subject, "applied": True, "read_allowed": True,
+        "scope_verified": True,
+        "actor_scope": "anonymous_read" if local_read else "authenticated",
+        "global_all_granted": mode == "GLOBAL_ALL" and not local_read,
+    }, None
 
 
 @experience_bp.route("/api/experience/shared-skills")
