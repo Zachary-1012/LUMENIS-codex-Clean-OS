@@ -10,7 +10,7 @@ import sys
 
 import pytest
 
-from lumenis.shared.content_creation import video_editing
+from lumenis.shared.content_creation import rendering, video_editing
 from lumenis.shared.content_creation.video_editing import AudioMix, Timeline, VideoEditingError
 from lumenis.shared.content_creation.rendering import render_timeline
 
@@ -145,7 +145,7 @@ def test_overlapping_tracks_have_headroom_without_clipping_or_added_delay(genera
     assert .8 < max(abs(sample) for sample in samples) / 32768 <= .8913
     assert next(index for index, sample in enumerate(samples) if abs(sample) > 100) < 5
     assert result["audio_processing"]["limiter_latency_compensated"] is True
-    assert result["audio_processing"]["true_peak_verified"] is False
+    assert result["audio_processing"]["true_peak_verified"] is True
     loudness = result["measurement"]["loudness"]
     assert loudness["state"] == "measured"
     assert math.isfinite(loudness["integrated_lufs"])
@@ -162,6 +162,48 @@ def test_muted_audio_stays_silent_and_has_no_invented_loudness(generated_media, 
     assert loudness["state"] == "silent"
     assert loudness["integrated_lufs"] is None
     assert loudness["true_peak_dbtp"] is None
+    assert result["audio_processing"]["true_peak_status"] == "silent"
+    assert result["audio_processing"]["peak_correction_passes"] == 0
+
+
+def test_actual_aac_peak_correction_preserves_frames_and_audio_placement(generated_media, tmp_path, monkeypatch):
+    asset, source, ffmpeg = generated_media
+    before = hashlib.sha256(source.read_bytes()).hexdigest()
+    timeline = Timeline.from_assets([asset]).add_clip(asset.asset_id, source_out=.9, audio_role="muted")
+    for index in range(8):
+        track = f"voice{index}"
+        timeline = timeline.add_audio_track(track, audio_role="voiceover")
+        timeline = timeline.add_clip(asset.asset_id, track_id=track, source_out=.9, audio_stream_index=1)
+        timeline = timeline.set_audio_mix(timeline.tracks[-1].clips[0].clip_id, AudioMix(volume=2))
+    calls = []
+    original_run = rendering._run
+    def observe(command, **kwargs):
+        calls.append(command)
+        return original_run(command, **kwargs)
+    monkeypatch.setattr(rendering, "_run", observe)
+    output = tmp_path / "aac-final-peak.mp4"
+    result = render_timeline(timeline, output)
+    processing = result["audio_processing"]
+    print(f"aac_peak_processing={processing} final={result['measurement']}")
+    assert processing["initial_true_peak_dbtp"] > -1
+    assert processing["peak_correction_passes"] == 1
+    assert processing["peak_correction_db"] < 0
+    assert processing["true_peak_verified"] is True
+    assert result["measurement"]["loudness"]["true_peak_dbtp"] <= -1
+    assert result["measurement"]["video_frames"] == 27
+    assert result["measurement"]["actual_duration_sec"] == pytest.approx(.9, abs=2 / 30)
+    assert result["measurement"]["stream_start_seconds"] == [0, 0]
+    correction = [command for command in calls if Path(command[-1]).name == "peak-safe.mp4"]
+    assert len(correction) == 1
+    assert correction[0][correction[0].index("-c:v") + 1] == "copy"
+    pcm = _run([ffmpeg, "-v", "error", "-nostdin", "-i", str(output), "-map", "0:a:0",
+                "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le", "-f", "s16le", "pipe:1"])
+    samples = array.array("h", pcm.stdout)
+    if sys.byteorder != "little":
+        samples.byteswap()
+    assert max(abs(value) for value in samples[:round(.15 * SAMPLE_RATE)]) < 100
+    assert max(abs(value) for value in samples[round(.25 * SAMPLE_RATE):round(.8 * SAMPLE_RATE)]) > 1000
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == before
 
 
 def test_ducking_without_explicit_voiceover_is_rejected(generated_media, tmp_path):

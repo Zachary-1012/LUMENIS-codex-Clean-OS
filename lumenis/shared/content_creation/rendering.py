@@ -32,6 +32,8 @@ SAMPLE_RATE = 48000
 FRAME_RATE = 30
 MAX_RENDER_CLIPS = 128
 MIX_SAMPLE_PEAK_LIMIT = 0.891251  # -1 dBFS sample peak; not a true-peak/LUFS guarantee.
+FINAL_TRUE_PEAK_LIMIT_DBTP = -1.0
+PEAK_CORRECTION_HEADROOM_DB = .5  # Codec response can change with gain; remeasure, never assume.
 FRAME_SIZES = {"9:16": (720, 1280), "16:9": (1280, 720), "3:4": (810, 1080), "4:5": (864, 1080)}
 
 
@@ -283,6 +285,52 @@ def _measure_loudness(path: Path, ffmpeg: str, *,
     }
 
 
+def _verify_final_audio_peak(rendered: Path, audio: Path, *, ffmpeg: str,
+                             output_kind: str, duration: float,
+                             check_continue: Callable[[], None] | None = None
+                             ) -> tuple[Path, dict[str, Any], dict[str, Any]]:
+    run_options = {"check_continue": check_continue} if check_continue else {}
+    loudness = _measure_loudness(rendered, ffmpeg, **run_options)
+    initial = dict(loudness)
+    peak = loudness["true_peak_dbtp"]
+    correction_db = 0.0
+    if peak is not None and peak > FINAL_TRUE_PEAK_LIMIT_DBTP:
+        # One constant attenuation of the lossless mix preserves relative gains,
+        # fades and dynamics. Never cascade lossy generations or boost quiet mixes.
+        correction_db = FINAL_TRUE_PEAK_LIMIT_DBTP - peak - PEAK_CORRECTION_HEADROOM_DB
+        corrected = rendered.with_name("peak-safe" + rendered.suffix)
+        command = [ffmpeg, "-v", "error", "-nostdin", "-n", "-filter_threads", "1", "-threads", "1"]
+        if output_kind == "video":
+            command += ["-protocol_whitelist", "file", "-format_whitelist", "mov", "-i", str(rendered)]
+        command += ["-protocol_whitelist", "file", "-format_whitelist", "wav", "-i", str(audio)]
+        if output_kind == "video":
+            command += ["-map", "0:v:0", "-c:v", "copy", "-map", "1:a:0", "-c:a", "aac", "-b:a", "192k",
+                        "-movflags", "+faststart"]
+        else:
+            command += ["-map", "0:a:0", "-c:a", "pcm_s24le"]
+        samples = round(duration * SAMPLE_RATE)
+        command += ["-af", f"volume={_number(correction_db)}dB,apad=whole_len={samples},"
+                    f"atrim=end_sample={samples},asetpts=N/SR/TB",
+                    "-ar", str(SAMPLE_RATE), "-ac", "2", "-threads:a", "1", "-t", _number(duration),
+                    "-map_metadata", "-1", "-metadata", "comment=Demo - source rights not verified", str(corrected)]
+        _run(command, cwd=rendered.parent, **run_options)
+        rendered = corrected
+        loudness = _measure_loudness(rendered, ffmpeg, **run_options)
+        peak = loudness["true_peak_dbtp"]
+    if (peak is None and loudness["state"] != "silent"
+            or peak is not None and (not math.isfinite(peak) or peak > FINAL_TRUE_PEAK_LIMIT_DBTP)):
+        raise VideoEditingError("AUDIO_TRUE_PEAK_VERIFICATION_FAILED")
+    return rendered, loudness, {
+        "true_peak_verified": True,
+        "true_peak_status": "silent" if peak is None else "verified",
+        "final_true_peak_limit_dbtp": FINAL_TRUE_PEAK_LIMIT_DBTP,
+        "initial_true_peak_dbtp": initial["true_peak_dbtp"],
+        "initial_loudness": initial,
+        "peak_correction_db": correction_db,
+        "peak_correction_passes": int(correction_db < 0),
+    }
+
+
 def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "video",
                     check_continue: Callable[[], None] | None = None) -> dict[str, Any]:
     """Render a bounded manual timeline to new private-Temp media; never authorize export."""
@@ -403,10 +451,17 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
         else:
             raise VideoEditingError("AUDIO_EXPORT_REQUIRES_AUDIO_SOURCE")
 
+        peak_processing = {"true_peak_verified": False, "true_peak_status": "not_applicable",
+                           "final_true_peak_limit_dbtp": None, "initial_true_peak_dbtp": None,
+                           "initial_loudness": None, "peak_correction_db": 0.0, "peak_correction_passes": 0}
+        if has_audio:
+            rendered, loudness, peak_processing = _verify_final_audio_peak(
+                rendered, audio, ffmpeg=ffmpeg, output_kind=output_kind, duration=duration, **run_options,
+            )
         measured = _probe_output(rendered, ffprobe, output_kind=output_kind,
                                  duration=duration, has_audio=has_audio)
         if has_audio:
-            measured["loudness"] = _measure_loudness(rendered, ffmpeg, **run_options)
+            measured["loudness"] = loudness
         _verify_sources(timeline)
         if check_continue:
             check_continue()
@@ -426,9 +481,9 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
             digest.update(block)
     return {"state": "rendered_verified", "output_kind": output_kind, "timeline_version": timeline.version,
             "media_sha256": digest.hexdigest(), "size_bytes": output.stat().st_size,
-            "measurement": measured, "renderer": "lumenis-timeline-2",
+            "measurement": measured, "renderer": "lumenis-timeline-3",
             "audio_processing": {"pre_encode_sample_peak_limit_dbfs": -1 if has_audio else None,
                                  "limiter_latency_compensated": has_audio,
                                  "ducked_music_clips": len(ducked_clips),
-                                 "loudness_normalized": False, "true_peak_verified": False},
+                                 "loudness_normalized": False, **peak_processing},
             "rights_state": "unknown", "publish_status": "not_performed"}

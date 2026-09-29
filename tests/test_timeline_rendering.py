@@ -48,7 +48,7 @@ def render_calls(monkeypatch, tmp_path):
 
     monkeypatch.setattr(rendering, "_run", run)
     monkeypatch.setattr(rendering, "_probe_output", lambda *a, **k: {"duration": k["duration"], "has_audio": k["has_audio"]})
-    monkeypatch.setattr(rendering, "_measure_loudness", lambda *a, **k: {"state": "test_stub"})
+    monkeypatch.setattr(rendering, "_measure_loudness", lambda *a, **k: {"state": "measured", "true_peak_dbtp": -2})
     return calls
 
 
@@ -65,7 +65,7 @@ def test_trim_selected_audio_gain_fades_and_fixed_decoder_arguments(media, rende
     assert command[command.index("-format_whitelist") + 1] == video_editing.MEDIA_INPUT_DEMUXERS
     assert command.index("-protocol_whitelist") < command.index("-i")
     assert "-n" in command and "-y" not in command and "concat" not in command
-    assert result["measurement"] == {"duration": 2, "has_audio": True, "loudness": {"state": "test_stub"}}
+    assert result["measurement"] == {"duration": 2, "has_audio": True, "loudness": {"state": "measured", "true_peak_dbtp": -2}}
     assert result["rights_state"] == "unknown" and result["publish_status"] == "not_performed"
 
 
@@ -75,6 +75,95 @@ def test_muted_clip_creates_no_audio_stream(media, render_calls, tmp_path):
     assert "-an" in render_calls[-1][0]
     assert "[a]" not in render_calls[-1][1]
     assert result["measurement"]["has_audio"] is False
+    assert result["audio_processing"]["true_peak_verified"] is False
+    assert result["audio_processing"]["true_peak_status"] == "not_applicable"
+
+
+@pytest.mark.parametrize("output_kind", ["video", "audio"])
+def test_encoded_peak_correction_uses_lossless_mix_once_and_rechecks_final_file(
+    media, render_calls, tmp_path, monkeypatch, output_kind,
+):
+    timeline = Timeline.from_assets([media])
+    track = "video"
+    if output_kind == "audio":
+        timeline = timeline.add_audio_track("voice", audio_role="voiceover")
+        track = "voice"
+    timeline = timeline.add_clip(media.asset_id, track_id=track, source_out=1, audio_stream_index=0)
+    measurements = []
+    def measure(path, *args, **kwargs):
+        measurements.append(path)
+        return {"state": "measured", "true_peak_dbtp": 2.04 if len(measurements) == 1 else -1.48}
+    monkeypatch.setattr(rendering, "_measure_loudness", measure)
+    suffix = ".mp4" if output_kind == "video" else ".wav"
+    result = rendering.render_timeline(timeline, tmp_path / ("safe" + suffix), output_kind=output_kind)
+    assert len(measurements) == 2 and measurements[0] != measurements[1]
+    correction = render_calls[-1][0]
+    inputs = [Path(correction[index + 1]).name for index, value in enumerate(correction) if value == "-i"]
+    assert inputs == (["media.mp4", "audio.wav"] if output_kind == "video" else ["audio.wav"])
+    assert "volume=-3.540000dB" in correction[correction.index("-af") + 1]
+    assert "loudnorm" not in correction[correction.index("-af") + 1]
+    if output_kind == "video":
+        assert correction[correction.index("-c:v") + 1] == "copy"
+    assert "-n" in correction and "-y" not in correction
+    assert result["measurement"]["loudness"]["true_peak_dbtp"] == -1.48
+    processing = result["audio_processing"]
+    assert processing["true_peak_verified"] is True
+    assert processing["initial_true_peak_dbtp"] == 2.04
+    assert processing["peak_correction_db"] == pytest.approx(-3.54)
+    assert processing["peak_correction_passes"] == 1
+    assert processing["final_true_peak_limit_dbtp"] == -1
+    assert processing["loudness_normalized"] is False
+
+
+@pytest.mark.parametrize("peak,state", [(-1, "measured"), (-45, "below_integrated_gate"), (None, "silent")])
+def test_safe_encoded_audio_is_not_boosted_or_reencoded(media, render_calls, tmp_path, monkeypatch, peak, state):
+    timeline = Timeline.from_assets([media]).add_clip(media.asset_id, source_out=1, audio_stream_index=0)
+    measurements = []
+    def measure(path, *args, **kwargs):
+        measurements.append(path)
+        return {"state": state, "true_peak_dbtp": peak}
+    monkeypatch.setattr(rendering, "_measure_loudness", measure)
+    result = rendering.render_timeline(timeline, tmp_path / "unchanged.mp4")
+    assert len(measurements) == 1 and len(render_calls) == 3
+    assert result["audio_processing"]["peak_correction_passes"] == 0
+    assert result["audio_processing"]["peak_correction_db"] == 0
+    assert result["audio_processing"]["true_peak_verified"] is True
+    assert result["measurement"]["loudness"]["true_peak_dbtp"] == peak
+
+
+@pytest.mark.parametrize("failure", ["still_over", "measurement", "cancelled"])
+def test_failed_peak_correction_never_retries_or_replaces_previous_output(
+    media, render_calls, tmp_path, monkeypatch, failure,
+):
+    timeline = Timeline.from_assets([media]).add_clip(media.asset_id, source_out=1, audio_stream_index=0)
+    previous = tmp_path / "previous.mp4"
+    previous.write_bytes(b"previous verified output")
+    measurements = []
+    def measure(path, *args, **kwargs):
+        measurements.append(path)
+        if len(measurements) == 2 and failure == "measurement":
+            raise VideoEditingError("AUDIO_LOUDNESS_MEASUREMENT_FAILED")
+        return {"state": "measured", "true_peak_dbtp": 2.04}
+    monkeypatch.setattr(rendering, "_measure_loudness", measure)
+    original_run = rendering._run
+    def run(command, *, check_continue=None, **kwargs):
+        if check_continue:
+            check_continue()
+        return original_run(command, **kwargs)
+    monkeypatch.setattr(rendering, "_run", run)
+    def check_continue():
+        if failure == "cancelled" and measurements:
+            raise VideoEditingError("MEDIA_RENDER_CANCELLED")
+    with pytest.raises(VideoEditingError, match={
+        "still_over": "AUDIO_TRUE_PEAK_VERIFICATION_FAILED",
+        "measurement": "AUDIO_LOUDNESS_MEASUREMENT_FAILED",
+        "cancelled": "MEDIA_RENDER_CANCELLED",
+    }[failure]):
+        rendering.render_timeline(timeline, tmp_path / "new.mp4", check_continue=check_continue)
+    assert len(measurements) <= 2 and len(render_calls) <= 4
+    assert previous.read_bytes() == b"previous verified output"
+    assert not (tmp_path / "new.mp4").exists()
+    assert not list(tmp_path.glob("timeline-render-*"))
 
 
 @pytest.mark.parametrize("phase", ["before", "after"])

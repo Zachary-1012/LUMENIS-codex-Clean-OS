@@ -12,6 +12,19 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-30 — encoded-media audio peak correction
+
+The existing renderer now measures the final encoded audio and performs at most
+one attenuation/re-encode from its lossless mix, preserving video bytes and
+relative track balance. Failed final verification cannot produce an accepted
+output. Genuine user source 09 reproduced +2.04 dBTP and corrected to -4.19 dBTP;
+independent measurement/strict decoding and frame/timing checks succeeded.
+[Renderer evidence](evidence/round-07/ROUND-07-FINAL-MEDIA-PEAK-2026-09-30.md)
+records the limitation of earlier tests and root's final 96-test frozen group,
+exit 0. This is a measured media-processing correction; the running Core still
+needs to load it. Old Artifacts are preserved, and J5/J6, artistic quality,
+rights, visible workflow and release remain unaccepted.
+
 ### 2026-09-30 — find saved work and reopen actual user media
 
 The existing Artifact/Experience owners now expose scope-safe project discovery
