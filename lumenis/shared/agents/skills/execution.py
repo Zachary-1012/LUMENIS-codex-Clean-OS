@@ -48,6 +48,8 @@ class SkillExecutionContext:
     content_source_import: Any = field(default=None, repr=False)
     # Opaque server-created domain/focus context carried to the existing handler.
     request_context: Any = field(default=None, repr=False)
+    # Sealed server principal for account-free local Content operations.
+    workspace_principal: Any = field(default=None, repr=False)
     action_type: ActionType = ActionType.ANALYZE
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     permission_result: Optional[Dict[str, Any]] = None
@@ -60,12 +62,15 @@ class SkillExecutionContext:
     error: Optional[str] = None
     def to_dict(self):
         # Exclude opaque server objects before asdict traverses/deep-copies them.
-        public_context = replace(self, content_source_import=None, request_context=None)
+        public_context = replace(
+            self, content_source_import=None, request_context=None, workspace_principal=None,
+        )
         d = asdict(public_context)
         d["action_type"] = self.action_type.value
         d["status"] = self.status.value
         d.pop("content_source_import", None)
         d.pop("request_context", None)
+        d.pop("workspace_principal", None)
         return d
 
 @dataclass
@@ -138,18 +143,29 @@ def check_permission(ctx, user_role="user", skill_info=None):
 
     if ctx.content_source_import is not None:
         from lumenis.system.security import (
-            ContentSourceImport, check_content_source_import_permission,
+            ContentSourceImport, LocalWorkspacePrincipal, check_content_source_import_permission,
         )
 
         upload = ctx.content_source_import
+        local_import = ctx.workspace_principal is not None
+        identity_matches = (
+            type(ctx.workspace_principal) is LocalWorkspacePrincipal
+            and ctx.user_id is None and type(upload) is ContentSourceImport
+            and upload.actor_id is None
+            and upload.principal_kind == "local_workspace"
+            and upload.principal_ref == "workspace:local"
+        ) if local_import else (
+            type(ctx.user_id) is int and ctx.user_id > 0
+            and type(upload) is ContentSourceImport
+            and upload.actor_id == ctx.user_id
+        )
         domain_aliases = {"cth": "cth", "bmp": "bmp", "zbmp": "bmp"}
         product_aliases = {"cth": "cth", "bmp": "bmp", "zbmp": "bmp"}
         context_matches = (
             type(upload) is ContentSourceImport
             and ctx.skill_id == "shared.content_project"
             and ctx.action_type is ActionType.WRITE
-            and type(ctx.user_id) is int and ctx.user_id > 0
-            and upload.actor_id == ctx.user_id
+            and identity_matches
             and domain_aliases.get(str(ctx.domain or "").strip().lower()) == upload.domain_id
             and product_aliases.get(str(ctx.product or "").strip().lower()) == upload.domain_id
             and skill_info is not None
@@ -163,14 +179,21 @@ def check_permission(ctx, user_role="user", skill_info=None):
                 "reason": "content source import execution context does not match its server descriptor",
                 "code": "CONTENT_SOURCE_CONTEXT_MISMATCH",
             }
-        decision = check_content_source_import_permission(
-            {"id": ctx.user_id}, upload,
-        )
+        if local_import:
+            decision = check_content_source_import_permission(
+                None, upload, principal=ctx.workspace_principal,
+            )
+        else:
+            decision = check_content_source_import_permission({"id": ctx.user_id}, upload)
         payload = decision.to_dict()
         payload["code"] = "PERMISSION_GRANTED" if decision.allowed else (
             "APPROVAL_REQUIRED" if decision.requires_approval else "PERMISSION_DENIED"
         )
         return payload
+
+    if ctx.workspace_principal is not None:
+        return {"allowed": False, "reason": "local principal requires an exact Content import",
+                "code": "LOCAL_PRINCIPAL_ACTION_UNSUPPORTED"}
 
     from lumenis.system.security import get_permission_gate
     target = str(ctx.input_payload.get("target") or f"skill:{ctx.skill_id}")
@@ -605,14 +628,15 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
                         user_id=None, user_role="user", product="SYSTEM", domain="global",
                         permission_role=None,
                         skill_info=None, handler=None, content_source_import=None,
-                        request_context=None):
+                        request_context=None, workspace_principal=None):
     import time
     start = time.time()
     ctx = SkillExecutionContext(skill_id=skill_id, task=task, input_payload=input_payload or {},
                                  action_type=action_type, user_id=user_id, product=product, domain=domain,
                                  permission_role=permission_role,
                                  content_source_import=content_source_import,
-                                 request_context=request_context)
+                                 request_context=request_context,
+                                 workspace_principal=workspace_principal)
     source_import = content_source_import is not None
     if source_import and not callable(handler):
         ctx.status = ExecutionStatus.REJECTED
@@ -642,7 +666,8 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
         # handler boundary. The descriptor is frozen and must remain the exact
         # object supplied by the trusted caller; its approval/account scope is
         # freshly checked without an operation_id or cached receipt.
-        if ctx.content_source_import is not content_source_import:
+        if (ctx.content_source_import is not content_source_import
+                or ctx.workspace_principal is not workspace_principal):
             ctx.status = ExecutionStatus.REJECTED
             ctx.error = "content source import descriptor changed before handler execution"
             try:

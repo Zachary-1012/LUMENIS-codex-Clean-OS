@@ -8,6 +8,9 @@ owners 提供。本模块只负责把这些事实以受约束的 API contract �
 from __future__ import annotations
 
 import datetime as _dt
+import hashlib
+import tempfile
+from urllib.parse import urlsplit
 import os
 import json
 import re
@@ -21,6 +24,7 @@ from flask import Blueprint, jsonify, request, send_file
 # 路径与蓝图
 # ---------------------------------------------------------------------------
 experience_bp = Blueprint("experience_runtime", __name__)
+_CONTENT_SOURCE_IMPORT_MAX_BYTES = 128 * 1024 * 1024
 
 # 已完成真实后端绑定的屏幕（其余屏幕由前端保持原型，服务端明确返回 bound=False）
 BOUND_SCREENS = ("CTH-01", "AI-01")
@@ -975,6 +979,346 @@ def inspect_content_project_media():
         return _content_project_error(exc)
     except Exception:
         return jsonify({"ok": False, "code": "CONTENT_INSPECTION_UNAVAILABLE"}), 503
+
+
+def _content_project_execution_context(scope):
+    """Adapt the server-authorized content scope to the existing Skill context contract."""
+    domain = "bmp" if scope["domain_id"] == "zbmp" else "cth"
+    return {
+        "domain_context": {"domain_id": domain},
+        "lumenis_focus_context": {
+            "domain_id": domain, "state": "available",
+            "mode": "GLOBAL_ALL" if scope["global_scope"] else "FOCUS",
+            "subject_type": "company" if domain == "cth" else "brand",
+            "subject_id": scope["subject_id"], "brand_focus_id": scope["brand_focus_id"],
+        },
+    }
+
+
+def _content_source_same_origin():
+    """Reject cross-origin browser uploads while allowing native clients without Origin."""
+    fetch_site = request.headers.get("Sec-Fetch-Site", "").strip().lower()
+    if fetch_site in {"cross-site", "cross-origin"}:
+        return False
+    origin = request.headers.get("Origin")
+    referer = request.headers.get("Referer")
+    candidate = origin if origin is not None else referer
+    if candidate is None:
+        return True
+    if candidate.strip().lower() == "null":
+        return False
+    try:
+        parsed = urlsplit(candidate)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            return False
+        return parsed.scheme.lower() == request.scheme.lower() and parsed.netloc.lower() == request.host.lower()
+    except (TypeError, ValueError):
+        return False
+
+
+@experience_bp.route("/api/experience/content-sources", methods=["POST"])
+def import_content_source():
+    """Import one bounded local media body into the scoped Artifact owner."""
+    from werkzeug.exceptions import RequestEntityTooLarge
+    from shared_artifacts import LocalArtifactError, artifact_root, stage_content_source_artifact
+    from shared_artifacts import _safe_content_source_filename
+    from lumenis.shared.agents.skills.execution import ActionType, SkillRuntimeInfo, run_execution_chain
+    from lumenis.system.security.permission import ContentSourceImport
+
+    try:
+        if request.headers.get("X-Lumenis-Action", "").strip().upper() != "WRITE":
+            raise LocalArtifactError("CONTENT_SOURCE_IMPORT_REQUIRES_WRITE")
+        actor, scope = _content_project_scope("write")
+        local_principal = actor if not isinstance(actor, dict) else None
+        account_actor = actor if local_principal is None else None
+        actor_id = account_actor["id"] if account_actor is not None else None
+        if not _content_source_same_origin():
+            raise LocalArtifactError("CONTENT_SOURCE_ORIGIN_DENIED")
+        if request.mimetype != "application/octet-stream":
+            raise LocalArtifactError("CONTENT_SOURCE_CONTENT_TYPE_INVALID")
+        filenames = request.args.getlist("filename")
+        if len(filenames) != 1:
+            raise LocalArtifactError("CONTENT_SOURCE_FILENAME_INVALID")
+        filename = _safe_content_source_filename(filenames[0])
+        declared_length = request.content_length
+        if declared_length is not None and declared_length > _CONTENT_SOURCE_IMPORT_MAX_BYTES:
+            raise RequestEntityTooLarge()
+        # Independently bound observed bytes; the supported Flask >=2 range
+        # does not always expose a writable per-request max_content_length.
+
+        runtime_info = SkillRuntimeInfo(
+            skill_id="shared.content_project",
+            name="导入内容素材",
+            description="将用户明确选择的单个本地媒体文件存入受限共享 Artifact",
+            product="SHARED",
+            domain="content",
+            version="1.0.0",
+            enabled=True,
+            source="shared_artifacts",
+            cross_domain_allowed=["CTH", "BMP"],
+        )
+        artifact_root().mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="content-source-upload-", dir=str(artifact_root())) as work_dir:
+            upload_path = os.path.join(work_dir, filename)
+            observed = 0
+            body_digest = hashlib.sha256()
+            with open(upload_path, "xb") as output:
+                while True:
+                    chunk = request.stream.read(min(1024 * 1024, _CONTENT_SOURCE_IMPORT_MAX_BYTES - observed + 1))
+                    if not chunk:
+                        break
+                    observed += len(chunk)
+                    if observed > _CONTENT_SOURCE_IMPORT_MAX_BYTES:
+                        raise RequestEntityTooLarge()
+                    body_digest.update(chunk)
+                    output.write(chunk)
+            if observed <= 0:
+                raise LocalArtifactError("CONTENT_SOURCE_EMPTY")
+            if declared_length is not None and observed != declared_length:
+                raise LocalArtifactError("CONTENT_SOURCE_BODY_LENGTH_MISMATCH")
+
+            body_sha256 = body_digest.hexdigest()
+            resource_binding = {"actor_id": actor_id, "scope": scope,
+                                "filename": filename, "size_bytes": observed,
+                                "body_sha256": body_sha256}
+            upload = ContentSourceImport(
+                actor_id=actor_id, domain_id="bmp" if scope["domain_id"] == "zbmp" else "cth",
+                subject_id=scope["subject_id"], brand_focus_id=scope["brand_focus_id"],
+                global_scope=scope["global_scope"], filename=filename,
+                size_bytes=observed, body_sha256=body_sha256,
+                principal_kind=local_principal.principal_kind if local_principal else None,
+                principal_ref=local_principal.principal_ref if local_principal else None,
+            )
+
+            def import_asset(ctx):
+                return stage_content_source_artifact(
+                    upload_path,
+                    filename=filename,
+                    actor=actor,
+                    source_execution_id=ctx.execution_id,
+                    expected_sha256=body_sha256,
+                    **scope,
+                )
+
+            context = run_execution_chain(
+                skill_id="shared.content_project",
+                task=f"导入媒体素材 {filename}",
+                input_payload={**resource_binding, "effect_mode": "staging"},
+                content_source_import=upload,
+                request_context=_content_project_execution_context(scope),
+                action_type=ActionType.WRITE,
+                user_id=actor_id,
+                user_role=account_actor.get("role", "user") if account_actor else "user",
+                workspace_principal=local_principal,
+                permission_role="cth_operator" if scope["domain_id"] == "cth" else "zbmp_operator",
+                product="CTH" if scope["domain_id"] == "cth" else "ZBMP",
+                domain=scope["domain_id"],
+                skill_info=runtime_info,
+                handler=import_asset,
+            )
+        execution = context.execute_result or {}
+        result = execution.get("result") if isinstance(execution, dict) else None
+        permission = context.permission_result or {}
+        if permission.get("allowed") is False:
+            from lumenis.system.security.permission import prepare_content_source_import_confirmation
+
+            confirmation = prepare_content_source_import_confirmation(
+                account_actor, upload, principal=local_principal,
+            )
+            if confirmation.get("allowed") is not True:
+                return jsonify({"ok": False, "code": confirmation.get("code"),
+                                "publish_status": "not_performed"}), 403
+            return jsonify({"ok": False,
+                            "code": "CONTENT_SOURCE_APPROVAL_REQUIRED",
+                            "execution_id": context.execution_id, "status": context.status.value,
+                            "requires_approval": True, "confirmation": confirmation,
+                            "publish_status": "not_performed"}), 403
+        if context.status.value != "completed" or not isinstance(result, dict) or not result.get("artifact"):
+            code = _content_project_error_code(context.error or "CONTENT_SOURCE_IMPORT_FAILED")
+            return jsonify({"ok": False, "code": code, "execution_id": context.execution_id,
+                            "status": context.status.value, "publish_status": "not_performed"}), 503
+        return jsonify({
+            "ok": True,
+            "result": {"artifact": result["artifact"], "asset": result["asset"]},
+            "execution_id": context.execution_id,
+            "evidence_recorded": bool((getattr(context, "evidence_record", None) or {}).get("ok")),
+            "publish_status": "not_performed",
+        }), 201
+    except RequestEntityTooLarge:
+        return jsonify({"ok": False, "code": "CONTENT_SOURCE_TOO_LARGE", "publish_status": "not_performed"}), 413
+    except ValueError as exc:
+        return _content_project_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "CONTENT_SOURCE_IMPORT_UNAVAILABLE",
+                        "publish_status": "not_performed"}), 503
+
+
+@experience_bp.route("/api/experience/content-source-confirmations/<confirmation_id>", methods=["POST"])
+def confirm_content_source_import_request(confirmation_id: str):
+    """Confirm or cancel one server-prepared, actor-bound local import request."""
+    from lumenis.system.security.permission import (
+        confirm_content_source_import, cancel_content_source_import_confirmation,
+    )
+    from shared_artifacts import LocalArtifactError
+
+    try:
+        actor, scope = _content_project_scope("write")
+        local_principal = actor if not isinstance(actor, dict) else None
+        account_actor = actor if local_principal is None else None
+        if not _content_source_same_origin():
+            raise LocalArtifactError("CONTENT_SOURCE_ORIGIN_DENIED")
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or set(body) != {"confirmed"} or type(body["confirmed"]) is not bool:
+            raise LocalArtifactError("CONTENT_SOURCE_CONFIRMATION_REQUIRED")
+        normalized_scope = {**scope, "domain_id": "bmp" if scope["domain_id"] == "zbmp" else "cth"}
+        if not body["confirmed"]:
+            cancelled = cancel_content_source_import_confirmation(
+                account_actor, confirmation_id, current_scope=normalized_scope,
+                principal=local_principal,
+            )
+            return jsonify({"ok": bool(cancelled), "status": "cancelled" if cancelled else "not_found",
+                            "publish_status": "not_performed"}), (200 if cancelled else 404)
+        decision = confirm_content_source_import(
+            account_actor, confirmation_id, confirmed=True,
+            principal=local_principal, **normalized_scope,
+        )
+        if not decision.allowed:
+            status = 503 if decision.verification_state == "unavailable" else 403
+            return jsonify({"ok": False, "code": "CONTENT_SOURCE_CONFIRMATION_DENIED",
+                            "publish_status": "not_performed"}), status
+        # The private token remains inside Permission. Retrying different bytes
+        # cannot use this confirmation, and no file has been imported yet.
+        return jsonify({"ok": True, "status": "ready_for_retry", "confirmation_id": confirmation_id,
+                        "purpose": "local_content_draft", "publish_status": "not_performed"})
+    except ValueError as exc:
+        return _content_project_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "CONTENT_SOURCE_CONFIRMATION_UNAVAILABLE",
+                        "publish_status": "not_performed"}), 503
+
+
+@experience_bp.route("/api/experience/content-sources/<artifact_id>")
+def content_source_detail(artifact_id: str):
+    from shared_artifacts import read_content_source_artifact
+
+    try:
+        actor, scope = _content_project_scope("read")
+        source = read_content_source_artifact(artifact_id, actor=actor, **scope)
+        return jsonify({"ok": True, "result": source, "publish_status": "not_performed"})
+    except ValueError as exc:
+        return _content_project_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "CONTENT_SOURCE_UNAVAILABLE",
+                        "publish_status": "not_performed"}), 503
+
+
+@experience_bp.route("/api/experience/content-projects/export", methods=["POST"])
+def export_content_project():
+    from lumenis.shared.content_creation.video_editing import Timeline
+    from shared_artifacts import LocalArtifactError, stage_timeline_artifact
+    from lumenis.shared.agents.skills.execution import ActionType, SkillRuntimeInfo, run_execution_chain
+
+    try:
+        actor, scope = _content_project_scope("write")
+        account_actor = actor if isinstance(actor, dict) else None
+        if not _content_source_same_origin():
+            raise LocalArtifactError("CONTENT_SOURCE_ORIGIN_DENIED")
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or body.get("action_type") != "EXPORT":
+            raise LocalArtifactError("CONTENT_EXPORT_REQUIRES_EXPORT")
+        payload = body.get("input")
+        allowed = {"asset_paths", "asset_refs", "timeline", "output_kind", "demo_acknowledged", "previous_artifact_id"}
+        if not isinstance(payload, dict) or set(payload) - allowed:
+            raise LocalArtifactError("INVALID_CONTENT_INPUT")
+        task = str(body.get("task") or "导出可继续编辑的内容工程")[:2000]
+        info = SkillRuntimeInfo(skill_id="shared.content_project", name="内容工程导出",
+                               description="真实媒体与可回开的编辑版本", product="SHARED", domain="content",
+                               version="1.0.0", enabled=True, source="shared_artifacts",
+                               cross_domain_allowed=["CTH", "BMP"])
+        with _content_project_assets(payload, actor, scope) as (_, assets, source_refs):
+            timeline = Timeline.from_dict(payload.get("timeline"), assets=assets)
+            normalized = {"timeline": timeline.to_dict(), "scope": scope,
+                          "source_artifact_refs": source_refs,
+                          "output_kind": payload.get("output_kind", "video"),
+                          "demo_acknowledged": payload.get("demo_acknowledged") is True,
+                          "previous_artifact_id": payload.get("previous_artifact_id")}
+
+            def render(ctx):
+                return stage_timeline_artifact(
+                    timeline, actor=actor, **scope, source_execution_id=ctx.execution_id,
+                    output_kind=normalized["output_kind"], demo_acknowledged=normalized["demo_acknowledged"],
+                    previous_artifact_id=normalized["previous_artifact_id"],
+                    source_artifact_refs=source_refs,
+                )
+
+            ctx = run_execution_chain(
+                skill_id="shared.content_project", task=task, input_payload=normalized,
+                action_type=ActionType.EXPORT,
+                user_id=account_actor["id"] if account_actor else None,
+                user_role=account_actor.get("role", "user") if account_actor else "user",
+                product="CTH" if scope["domain_id"] == "cth" else "ZBMP", domain=scope["domain_id"],
+                skill_info=info, handler=render, request_context=_content_project_execution_context(scope),
+            )
+            execution = ctx.execute_result or {}
+            result = execution.get("result") if isinstance(execution, dict) else None
+            if ctx.status.value != "completed" or not isinstance(result, dict) or not result.get("artifact"):
+                code = _content_project_error_code(ctx.error or "CONTENT_EXPORT_FAILED")
+                return jsonify({"ok": False, "code": code, "execution_id": ctx.execution_id,
+                                "status": ctx.status.value, "publish_status": "not_performed"}), 503
+            return jsonify({"ok": True, "result": result, "execution_id": ctx.execution_id,
+                            "evidence_recorded": bool((getattr(ctx, "evidence_record", None) or {}).get("ok")),
+                            "publish_status": "not_performed"})
+    except ValueError as exc:
+        return _content_project_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "CONTENT_EXPORT_UNAVAILABLE"}), 503
+
+
+@experience_bp.route("/api/experience/content-projects/<artifact_id>")
+def content_project_detail(artifact_id: str):
+    from shared_artifacts import read_content_project
+
+    try:
+        actor, scope = _content_project_scope("read")
+        project = read_content_project(artifact_id, actor=actor, **scope)
+        return jsonify({"ok": True, "project": project,
+                        "package_url": f"/api/experience/content-projects/{artifact_id}/package",
+                        "preview_url": f"/api/experience/content-projects/{artifact_id}/media",
+                        "publish_status": "not_performed"})
+    except ValueError as exc:
+        return _content_project_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "CONTENT_PROJECT_UNAVAILABLE"}), 503
+
+
+@experience_bp.route("/api/experience/content-projects/<artifact_id>/package")
+def content_project_package(artifact_id: str):
+    from shared_artifacts import _verified_content_project
+
+    try:
+        actor, scope = _content_project_scope("read")
+        _, _, _, path = _verified_content_project(artifact_id, actor=actor, **scope)
+        return send_file(path, mimetype="application/zip", as_attachment=True, download_name=f"{artifact_id}.zip")
+    except ValueError as exc:
+        return _content_project_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "CONTENT_PROJECT_UNAVAILABLE"}), 503
+
+
+@experience_bp.route("/api/experience/content-projects/<artifact_id>/media")
+def content_project_media(artifact_id: str):
+    from io import BytesIO
+    from shared_artifacts import authorized_project_media
+
+    try:
+        actor, scope = _content_project_scope("read")
+        media = authorized_project_media(artifact_id, actor=actor, **scope)
+        return send_file(BytesIO(media["data"]), mimetype=media["media_type"],
+                         download_name=media["filename"], conditional=True)
+    except ValueError as exc:
+        return _content_project_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "CONTENT_PROJECT_UNAVAILABLE"}), 503
 
 
 @experience_bp.route("/api/experience/shared-skills/shared.video_shotcraft/render", methods=["POST"])

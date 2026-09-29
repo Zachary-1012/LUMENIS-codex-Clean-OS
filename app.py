@@ -1476,6 +1476,16 @@ def _permission_gate_write_check():
         pass
     if request.method not in _PG_WRITE_METHODS:
         return None
+    if (request.method == 'POST' and (
+            (request.path == '/api/experience/content-sources'
+             and request.endpoint == 'experience_runtime.import_content_source')
+            or (request.path == '/api/experience/content-projects/export'
+                and request.endpoint == 'experience_runtime.export_content_project')
+            or (request.path.startswith('/api/experience/content-source-confirmations/')
+                and request.endpoint == 'experience_runtime.confirm_content_source_import_request'))):
+        # The registered handlers bind actual bytes and exact scope to the
+        # canonical Permission confirmation. A path-level grant cannot do so.
+        return None
     # This handler only returns a validated, stateless viewing selection. It
     # neither persists settings nor starts collection; data routes authorize
     # their own reads. Match the resolved endpoint as well as the exact path.

@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-30 — open local Content import/export/reopen API
+
+The existing Experience API/Skill chain now binds local source confirmation,
+import, timeline export, project download/reopen and version preservation to the
+accepted Permission/Artifact owners without product accounts. Root's 35-test
+actual-media API group and 78-test execution compatibility group both passed
+with exit 0. [Round 07 evidence](evidence/round-07/ROUND-07-LOCAL-CONTENT-API-2026-09-30.md).
+The running Core still needs a controlled update, followed by frontend integration
+and real user workflow acceptance. This commit does not accept a J package,
+creative quality, four-surface operation, release or global coverage.
+
 ### 2026-09-30 — local Content sources and editable artifacts
 
 The existing Artifact owner now preserves sealed local workspace ownership and
