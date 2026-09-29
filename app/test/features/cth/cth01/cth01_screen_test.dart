@@ -90,16 +90,32 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('运营信息暂不可用'), findsOneWidget);
-      expect(
-        find.textContaining(
-          status == 401 ? '请登录后查看商业运营信息' : '当前账号暂时无法查看商业运营信息',
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('运营信息暂不可用，请稍后重试。'), findsOneWidget);
+      expect(find.textContaining('请登录后查看商业运营信息'), findsNothing);
+      expect(find.textContaining('当前账号暂时无法查看商业运营信息'), findsNothing);
       expect(find.textContaining('private server detail'), findsNothing);
       expect(client.screenCalls, 1);
       _expectNoImplementationCopy(tester);
     }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('authentication failure stays inside the open workspace', (
+    tester,
+  ) async {
+    final client = _ContractClient(
+      screenError: LumenisCoreException(
+        'HTTP 401 private server detail',
+        statusCode: 401,
+      ),
+    );
+    await tester.pumpWidget(_app(client));
+    await tester.pumpAndSettle();
+
+    expect(find.text('请登录后查看商业运营信息。'), findsNothing);
+    expect(find.text('当前账号暂时无法查看商业运营信息。'), findsNothing);
+    expect(find.text('运营信息暂不可用，请稍后重试。'), findsOneWidget);
+    expect(find.text('领域登录入口'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -200,6 +216,7 @@ void main() {
 Widget _app(
   LumenisCoreClient client, {
   Locale locale = const Locale('zh', 'CN'),
+  ValueChanged<String>? onNavigate,
 }) => MaterialApp(
   locale: locale,
   theme: LumenisTheme.dark,
@@ -210,7 +227,9 @@ Widget _app(
     GlobalWidgetsLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
   ],
-  home: Scaffold(body: Cth01Screen(client: client)),
+  home: Scaffold(
+    body: Cth01Screen(client: client, onNavigate: onNavigate),
+  ),
 );
 
 void _expectNoImplementationCopy(WidgetTester tester) {
@@ -235,11 +254,7 @@ void _expectNoImplementationCopy(WidgetTester tester) {
 
 /// Contract-shaped data for widget assertions; the screen never ships it.
 class _ContractClient extends LumenisCoreClient {
-  _ContractClient({
-    this._contextResponse,
-    this._response,
-    this._screenError,
-  });
+  _ContractClient({this._contextResponse, this._response, this._screenError});
 
   final Map<String, dynamic>? _contextResponse;
   final Map<String, dynamic>? _response;

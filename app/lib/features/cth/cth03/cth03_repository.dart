@@ -144,13 +144,24 @@ class CoreCth03Repository implements Cth03Repository {
 
   Cth03ScreenData _decode(Map<String, dynamic> response, Cth03Context context) {
     final sections = _maps(response['sections']);
+    final binding = _map(
+      context.isGlobal ? response['global_binding'] : response['focus_binding'],
+    );
+    final allowAnonymousGlobal =
+        context.isGlobal && _isAnonymousGlobalRead(binding);
     final kpis = _firstSection(sections, 'kpis');
     final channels = _firstSection(sections, 'platforms');
     final stream = _firstSection(sections, 'table');
 
     final rawRecords = _maps(stream?['rows']);
     final records = rawRecords
-        .where((record) => _rowIsAuthorized(record, context))
+        .where(
+          (record) => _rowIsAuthorized(
+            record,
+            context,
+            allowAnonymousGlobal: allowAnonymousGlobal,
+          ),
+        )
         .map(_record)
         .whereType<Cth03Record>()
         .toList(growable: false);
@@ -159,11 +170,25 @@ class CoreCth03Repository implements Cth03Repository {
     return Cth03ScreenData(
       context: context,
       generatedAt: _text(response['generated_at']),
-      recentCount: _metric(kpis, 'cth03.recent', context),
-      negativeCount: _metric(kpis, 'cth03.negative', context),
+      recentCount: _metric(
+        kpis,
+        'cth03.recent',
+        context,
+        allowAnonymousGlobal: allowAnonymousGlobal,
+      ),
+      negativeCount: _metric(
+        kpis,
+        'cth03.negative',
+        context,
+        allowAnonymousGlobal: allowAnonymousGlobal,
+      ),
       channels: _maps(channels?['items'])
           .where(
-            (channel) => _projectionMatches(channel['projection'], context),
+            (channel) => _projectionMatches(
+              channel['projection'],
+              context,
+              allowAnonymousGlobal: allowAnonymousGlobal,
+            ),
           )
           .map(_channel)
           .where((channel) => channel.name.isNotEmpty)
@@ -179,10 +204,15 @@ class CoreCth03Repository implements Cth03Repository {
     Map<String, dynamic>? section,
     String id,
     Cth03Context context,
+    {bool allowAnonymousGlobal = false}
   ) {
     final item = _maps(section?['items']).where((entry) => entry['id'] == id);
     if (item.isEmpty ||
-        !_projectionMatches(item.first['projection'], context)) {
+        !_projectionMatches(
+          item.first['projection'],
+          context,
+          allowAnonymousGlobal: allowAnonymousGlobal,
+        )) {
       return Cth03Metric(id: id, state: Cth03DataState.unknown);
     }
     final record = item.first;
@@ -232,15 +262,25 @@ class CoreCth03Repository implements Cth03Repository {
       return false;
     }
     if (context.isGlobal) {
-      return binding['global_all_granted'] == true &&
-          _projectionMatches(binding['projection'], context);
+      final allowAnonymousGlobal = _isAnonymousGlobalRead(binding);
+      return (binding['global_all_granted'] == true ||
+              allowAnonymousGlobal) &&
+          _projectionMatches(
+            binding['projection'],
+            context,
+            allowAnonymousGlobal: allowAnonymousGlobal,
+          );
     }
     return binding['subject_id'] == context.subjectId &&
         binding['global_all_granted'] != true &&
         _projectionMatches(binding['projection'], context);
   }
 
-  static bool _rowIsAuthorized(Map<String, dynamic> row, Cth03Context context) {
+  static bool _rowIsAuthorized(
+    Map<String, dynamic> row,
+    Cth03Context context, {
+    bool allowAnonymousGlobal = false,
+  }) {
     final scopeMatches = context.isGlobal
         ? row['scope_mode'] == 'GLOBAL_ALL' &&
               row['canonical_scope'] == 'GLOBAL_ALL'
@@ -249,10 +289,18 @@ class CoreCth03Repository implements Cth03Repository {
               row['subject_id'] == context.subjectId;
     return scopeMatches &&
         row['read_allowed'] == true &&
-        _projectionMatches(row['projection'], context);
+        _projectionMatches(
+          row['projection'],
+          context,
+          allowAnonymousGlobal: allowAnonymousGlobal,
+        );
   }
 
-  static bool _projectionMatches(Object? value, Cth03Context context) {
+  static bool _projectionMatches(
+    Object? value,
+    Cth03Context context, {
+    bool allowAnonymousGlobal = false,
+  }) {
     final projection = _map(value);
     if (projection == null ||
         projection['contract'] != 'lumenis.shared.experience-row-projection' ||
@@ -269,8 +317,11 @@ class CoreCth03Repository implements Cth03Repository {
       return false;
     }
     if (context.isGlobal) {
-      if (scope['global_all_granted'] != true ||
-          _text(scope['subject_id']).isNotEmpty) {
+      final granted = scope['global_all_granted'] == true;
+      final anonymousProjection =
+          allowAnonymousGlobal && _hasStoredSubjectProjection(projection);
+      if ((!granted && !anonymousProjection) ||
+          (granted && _text(scope['subject_id']).isNotEmpty)) {
         return false;
       }
     } else if (scope['subject_id'] != context.subjectId ||
@@ -298,6 +349,20 @@ class CoreCth03Repository implements Cth03Repository {
         honestAssurance &&
         consistentAssurance &&
         RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(digest);
+  }
+
+  static bool _isAnonymousGlobalRead(Map<String, dynamic>? binding) =>
+      _text(binding?['actor_scope']) == 'anonymous_read' &&
+      binding?['read_allowed'] == true &&
+      binding?['scope_verified'] == true &&
+      binding?['evidence_lineage'] == 'verified';
+
+  static bool _hasStoredSubjectProjection(Map<String, dynamic> projection) {
+    final storedScope = _map(projection['stored_scope']);
+    return storedScope != null &&
+        storedScope['global'] == false &&
+        _text(storedScope['product_id']) == 'CTH' &&
+        _text(storedScope['subject_id']).isNotEmpty;
   }
 
   static Cth03Context? _parseContext(Map<String, dynamic> response) {

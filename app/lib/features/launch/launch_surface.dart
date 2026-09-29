@@ -48,11 +48,26 @@ class _LaunchSurfaceState extends State<LaunchSurface> {
   }
 
   Future<_LaunchState> _load() async {
-    final runtime = await widget.client.runtimeIdentity();
-    if (runtime['ok'] != true) {
-      throw const LumenisCoreException(
-        'LUMENIS Core returned an invalid runtime identity.',
-      );
+    Map<String, dynamic> runtime;
+    try {
+      runtime = await widget.client.runtimeIdentity();
+      if (runtime['ok'] != true) {
+        throw const LumenisCoreException(
+          'LUMENIS Core returned an invalid runtime identity.',
+        );
+      }
+    } on LumenisCoreException catch (error) {
+      if (error.statusCode != 401 && error.statusCode != 403) rethrow;
+      // Runtime identity is observability, not a product account gate. Keep
+      // the real failure state in the shell while allowing the open workspace
+      // to render its own truthful screen/data state.
+      runtime = <String, dynamic>{
+        'ok': false,
+        'state': error.statusCode == 401
+            ? 'AUTH_REQUIRED'
+            : 'ACCESS_UNAVAILABLE',
+        'runtime_available': false,
+      };
     }
 
     Map<String, dynamic>? contextEnvelope;
@@ -94,14 +109,7 @@ class _LaunchSurfaceState extends State<LaunchSurface> {
                 detail: copy.text('launch.connecting.detail'),
               );
             }
-            if (snapshot.hasError) {
-              final error = snapshot.error;
-              if (error is LumenisCoreException &&
-                  (error.statusCode == 401 || error.statusCode == 403)) {
-                return _AccessDenied(onRetry: _retry);
-              }
-              return _Failure(onRetry: _retry);
-            }
+            if (snapshot.hasError) return _Failure(onRetry: _retry);
             return _Ready(
               client: widget.client,
               state: snapshot.requireData,
@@ -142,67 +150,6 @@ class _Ready extends StatelessWidget {
       initialScreenId: initialScreenId,
       onScreenSelected: onScreenSelected,
       onLocaleChanged: onLocaleChanged,
-    );
-  }
-}
-
-class _AccessDenied extends StatelessWidget {
-  const _AccessDenied({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final copy = context.lumenisL10n;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.lock_outline_rounded,
-                color: LumenisTheme.of(context).caution,
-              ),
-              const SizedBox(height: 14),
-              Text(
-                copy.text('launch.access_denied.title'),
-                style: TextStyle(
-                  color: LumenisTheme.of(context).foreground,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Semantics(
-                liveRegion: true,
-                child: Text(
-                  copy.text('launch.access_denied.detail'),
-                  style: TextStyle(
-                    color: LumenisTheme.of(context).muted,
-                    height: 1.5,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 22),
-              Wrap(
-                spacing: 12,
-                runSpacing: 10,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: onRetry,
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: Text(copy.text('launch.retry')),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

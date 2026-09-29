@@ -131,9 +131,10 @@ void main() {
       );
       await _pumpNetwork(tester);
 
-      expect(find.text('当前访问暂不可用'), findsOneWidget);
+      expect(find.byType(Cth01Screen), findsOneWidget);
+      expect(find.text('当前访问暂不可用'), findsNothing);
       expect(find.text('登录序境'), findsNothing);
-      expect(find.text('重新连接'), findsOneWidget);
+      expect(find.text('领域登录入口'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   });
@@ -153,9 +154,10 @@ void main() {
       );
       await _pumpNetwork(tester);
 
-      expect(find.text('当前访问暂不可用'), findsOneWidget);
-      expect(find.textContaining('请检查当前访问范围'), findsOneWidget);
+      expect(find.byType(Cth01Screen), findsOneWidget);
+      expect(find.text('当前访问暂不可用'), findsNothing);
       expect(find.text('登录序境'), findsNothing);
+      expect(find.text('领域登录入口'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   });

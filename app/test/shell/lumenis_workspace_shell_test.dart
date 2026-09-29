@@ -90,6 +90,7 @@ void main() {
       await _openWorkspaceNavigation(tester);
 
       for (final group in LumenisWorkspaceRoutes.workflowsByGroup.keys) {
+        if (group == 'ACC') continue;
         final groupRow = find.byKey(ValueKey('workspace-domain-$group'));
         await tester.ensureVisible(groupRow);
         await tester.tap(groupRow);
@@ -361,15 +362,14 @@ void main() {
     expect(selected, ['AI-04']);
     expect(find.byType(Ai04Screen), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('workspace-phone-tools')));
-    await tester.pumpAndSettle();
-    expect(find.text('服务已连接'), findsOneWidget);
-    await tester.tap(
-      find.byKey(const ValueKey('workspace-account-navigation')),
-    );
-    await tester.pumpAndSettle();
-    expect(selected.last, 'ACC-01');
-    expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const ValueKey('workspace-phone-tools')));
+      await tester.pumpAndSettle();
+      expect(find.text('服务已连接'), findsOneWidget);
+      expect(find.byKey(const ValueKey('workspace-account-navigation')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('workspace-sheet-close')));
+      await tester.pumpAndSettle();
+      expect(selected, ['AI-04']);
+      expect(tester.takeException(), isNull);
   });
 
   testWidgets(

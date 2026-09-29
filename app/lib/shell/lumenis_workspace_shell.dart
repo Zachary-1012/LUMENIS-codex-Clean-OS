@@ -239,16 +239,6 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     ),
   ];
 
-  static _WorkspaceDestination _accountDestination(Color accent) =>
-      _WorkspaceDestination(
-        id: 'ACC-01',
-        labelKey: 'screen.ACC-01',
-        mobileLabelKey: 'screen.ACC-01',
-        groupKey: 'screen.ACC-03',
-        icon: Icons.person_outline_rounded,
-        color: accent,
-      );
-
   @override
   String get restorationId => 'workspace-shell';
 
@@ -296,9 +286,11 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
   int get _selectedIndex =>
       _destinations.indexWhere((item) => item.id.startsWith('$_activeGroup-'));
 
-  _WorkspaceDestination get _selectedDestination => _activeGroup == 'ACC'
-      ? _accountDestination(LumenisTheme.of(context).accent)
-      : _destinations[_selectedIndex < 0 ? 0 : _selectedIndex];
+  // Account screens remain addressable for legacy deep links, but are not a
+  // product destination in the open workspace. A restored account route
+  // therefore falls back to the first business destination for shell chrome.
+  _WorkspaceDestination get _selectedDestination =>
+      _destinations[_selectedIndex < 0 ? 0 : _selectedIndex];
 
   void _select(int index) {
     if (index < 0 || index >= _destinations.length) return;
@@ -389,59 +381,55 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
           ],
         ),
       ),
-      bottomNavigationBar: _activeGroup == 'ACC'
-          ? null
-          : NavigationBar(
-              height: 68,
-              elevation: 0,
-              surfaceTintColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              selectedIndex: _selectedIndex < 0 ? 0 : _selectedIndex,
-              onDestinationSelected: _select,
-              backgroundColor: LumenisTheme.of(
-                context,
-              ).surface.withValues(alpha: .94),
-              indicatorColor: Colors.transparent,
-              labelTextStyle: WidgetStateProperty.resolveWith(
-                (states) => TextStyle(
-                  fontSize: 12,
-                  height: 1.3,
-                  fontWeight: states.contains(WidgetState.selected)
-                      ? FontWeight.w700
-                      : FontWeight.w400,
-                  color: LumenisTheme.of(context).foreground,
-                ),
-              ),
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              destinations: [
-                for (final item in _destinations)
-                  NavigationDestination(
-                    icon: Icon(item.icon),
-                    selectedIcon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Icon(
-                          item.icon,
-                          color: LumenisTheme.of(
-                            context,
-                          ).resolveSemantic(item.color),
-                        ),
-                        Positioned(
-                          bottom: -5,
-                          left: 8,
-                          right: 8,
-                          child: Container(
-                            height: 2,
-                            color: LumenisTheme.of(context).foreground,
-                          ),
-                        ),
-                      ],
-                    ),
-                    label: context.lumenisL10n.text(item.mobileLabelKey),
-                    tooltip: context.lumenisL10n.text(item.labelKey),
+      bottomNavigationBar: NavigationBar(
+        height: 68,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        selectedIndex: _selectedIndex < 0 ? 0 : _selectedIndex,
+        onDestinationSelected: _select,
+        backgroundColor: LumenisTheme.of(
+          context,
+        ).surface.withValues(alpha: .94),
+        indicatorColor: Colors.transparent,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontSize: 12,
+            height: 1.3,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w400,
+            color: LumenisTheme.of(context).foreground,
+          ),
+        ),
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        destinations: [
+          for (final item in _destinations)
+            NavigationDestination(
+              icon: Icon(item.icon),
+              selectedIcon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    item.icon,
+                    color: LumenisTheme.of(context).resolveSemantic(item.color),
                   ),
-              ],
+                  Positioned(
+                    bottom: -5,
+                    left: 8,
+                    right: 8,
+                    child: Container(
+                      height: 2,
+                      color: LumenisTheme.of(context).foreground,
+                    ),
+                  ),
+                ],
+              ),
+              label: context.lumenisL10n.text(item.mobileLabelKey),
+              tooltip: context.lumenisL10n.text(item.labelKey),
             ),
+        ],
+      ),
     );
   }
 
@@ -465,9 +453,6 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
         },
         child: _WorkspaceNavigationDialog(
           destinations: _destinations,
-          accountDestination: _accountDestination(
-            LumenisTheme.of(dialogContext).accent,
-          ),
           activeScreenId: _activeScreen.value,
         ),
       ),
@@ -548,21 +533,6 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
                     style: Theme.of(sheetContext).textTheme.bodySmall,
                   ),
                 ),
-                ListTile(
-                  key: const ValueKey('workspace-account-navigation'),
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    _activeGroup == 'ACC'
-                        ? Icons.arrow_back_rounded
-                        : Icons.person_outline_rounded,
-                  ),
-                  title: Text(
-                    copy.text(
-                      _activeGroup == 'ACC' ? 'navgroup.cth' : 'screen.ACC-01',
-                    ),
-                  ),
-                  onTap: () => Navigator.of(sheetContext).pop('account'),
-                ),
                 if (_activeGroup == 'CTH')
                   ListTile(
                     contentPadding: EdgeInsets.zero,
@@ -602,8 +572,6 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     );
     if (!mounted || selection == null) return;
     switch (selection) {
-      case 'account':
-        _openAccount();
       case 'directory':
         _openCth02();
       default:
@@ -629,13 +597,11 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
             coreLabel: _coreLabel,
             onOpenNavigation: _openNavigation,
             onOpenContextPicker: _openContextPicker,
-            onOpenAccount: _openAccount,
             onLocaleChanged: widget.onLocaleChanged,
             compact: true,
             onOpenCth02: _openCth02,
             onReturnToCth: _returnFromCth02,
             isCth02: _activeScreen.value == 'CTH-02',
-            accountActive: _activeGroup == 'ACC',
           ),
           Expanded(child: _screenTransition()),
         ],
@@ -662,12 +628,10 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
                   coreLabel: _coreLabel,
                   onOpenNavigation: _openNavigation,
                   onOpenContextPicker: _openContextPicker,
-                  onOpenAccount: _openAccount,
                   onLocaleChanged: widget.onLocaleChanged,
                   onOpenCth02: _openCth02,
                   onReturnToCth: _returnFromCth02,
                   isCth02: _activeScreen.value == 'CTH-02',
-                  accountActive: _activeGroup == 'ACC',
                 ),
                 Expanded(child: _screenTransition()),
               ],
@@ -781,10 +745,6 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
   void _openCth02() => _activateScreen('CTH-02');
 
   void _returnFromCth02() => _activateScreen('CTH-01');
-
-  void _openAccount() => _activateScreen(
-    _activeGroup == 'ACC' ? LumenisWorkspaceRoutes.rootScreenId : 'ACC-01',
-  );
 }
 
 class _NavigationTree extends StatelessWidget {
@@ -963,12 +923,10 @@ class _WideDestinationRow extends StatelessWidget {
 class _WorkspaceNavigationDialog extends StatefulWidget {
   const _WorkspaceNavigationDialog({
     required this.destinations,
-    required this.accountDestination,
     required this.activeScreenId,
   });
 
   final List<_WorkspaceDestination> destinations;
-  final _WorkspaceDestination accountDestination;
   final String activeScreenId;
 
   @override
@@ -1038,8 +996,6 @@ class _WorkspaceNavigationDialogState
                         if (_previewGroup == destination.id.split('-').first)
                           _navigationTree(),
                       ],
-                      _domainRow(widget.accountDestination),
-                      if (_previewGroup == 'ACC') _navigationTree(),
                     ],
                   ),
                 ),
@@ -1075,12 +1031,10 @@ class _WorkspaceHeader extends StatelessWidget {
     required this.coreLabel,
     required this.onOpenNavigation,
     required this.onOpenContextPicker,
-    required this.onOpenAccount,
     required this.onLocaleChanged,
     required this.onOpenCth02,
     required this.onReturnToCth,
     required this.isCth02,
-    required this.accountActive,
     this.compact = false,
   });
 
@@ -1090,12 +1044,10 @@ class _WorkspaceHeader extends StatelessWidget {
   final String coreLabel;
   final VoidCallback onOpenNavigation;
   final VoidCallback onOpenContextPicker;
-  final VoidCallback onOpenAccount;
   final ValueChanged<Locale?>? onLocaleChanged;
   final VoidCallback onOpenCth02;
   final VoidCallback onReturnToCth;
   final bool isCth02;
-  final bool accountActive;
   final bool compact;
 
   @override
@@ -1155,21 +1107,6 @@ class _WorkspaceHeader extends StatelessWidget {
             onPressed: onOpenContextPicker,
             icon: const Icon(Icons.tune_rounded),
             color: LumenisTheme.of(context).muted,
-          ),
-          IconButton(
-            key: const ValueKey('workspace-account-navigation'),
-            tooltip: copy.text(
-              accountActive ? 'navgroup.cth' : 'screen.ACC-01',
-            ),
-            onPressed: onOpenAccount,
-            icon: Icon(
-              accountActive
-                  ? Icons.space_dashboard_outlined
-                  : Icons.person_outline_rounded,
-            ),
-            color: accountActive
-                ? LumenisTheme.of(context).accent
-                : LumenisTheme.of(context).muted,
           ),
           if (onLocaleChanged != null)
             _LocaleSwitcher(onLocaleChanged: onLocaleChanged!),

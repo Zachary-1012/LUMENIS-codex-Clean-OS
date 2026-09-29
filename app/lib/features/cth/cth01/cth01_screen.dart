@@ -86,8 +86,11 @@ class _Cth01ScreenState extends State<Cth01Screen> {
 }
 
 String _failureCopyKey(Cth01LoadMessage? message) => switch (message) {
-  Cth01LoadMessage.loginRequired => 'cth01.login_required',
-  Cth01LoadMessage.accessUnavailable => 'cth01.access_unavailable',
+  // The local product opens directly. Authentication remains a server-side
+  // boundary for protected scopes, but the workspace never sends the user to
+  // an account wall from the default GLOBAL/ALL surface.
+  Cth01LoadMessage.loginRequired => 'cth01.generic_unavailable',
+  Cth01LoadMessage.accessUnavailable => 'cth01.generic_unavailable',
   Cth01LoadMessage.connectionUnavailable => 'cth01.connection_unavailable',
   _ => 'cth01.generic_unavailable',
 };
