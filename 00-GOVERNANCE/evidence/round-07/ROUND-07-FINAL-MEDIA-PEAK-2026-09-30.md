@@ -61,3 +61,28 @@ determine acceptance, not model output.
 GLOBAL UNIVERSE / DATA MATURITY IMPACT: unchanged.
 COMMERCIAL OVERLAY IMPACT: this closes a measured encoding defect, not the whole
 video/podcast workflow, media rights, artistic review or release.
+
+## Running product follow-through
+
+After `bdd524509418229ecdd49ae08e420d2b06ece776` was pushed and remote-verified,
+the existing supervisor reloaded its Core child. Root edited the original
+five-second timeline with a 0.1-second fade-in, then exported through the real
+product API. New Artifact `ART-fc76b28dd8d942cc`, execution `bc94978f255f4020`,
+recorded Evidence and measured **-1.52 dBTP** in its final encoded file.
+Media SHA-256 is `d5a19fcc06717d033916f8a4a82e87541decde02c80644c65b6f27435011de90`.
+After a further controlled Core-child restart, the media hash and stored renderer
+measurements remained identical. Both earlier packages were also preserved.
+
+The first attempt supplied an unchanged timeline as a new revision and was
+correctly rejected before creating an Artifact. Its API response was misleadingly
+503; the follow-up API correction maps this specific input error to 400 and adds
+a regression asserting no extra saved work. Real service/render failures retain
+their failure classification. This does not weaken revision or approval checks.
+All **12 affected local source/project API tests passed in 35.65 seconds,
+exit 0**, with actual isolated WAV import, export and revision recovery. AST,
+diff and Constitution checks passed. The new 400 classification is source-tested;
+its Core reload is deferred while the frontend owns the live UI acceptance slot.
+
+Private `data/private/content-api-upgrade-20260930/live-list-and-peak.json`
+records the actual sequence. Database integrity remained ok with zero FK
+violations. Actual UI operation remains the independent frontend acceptance.

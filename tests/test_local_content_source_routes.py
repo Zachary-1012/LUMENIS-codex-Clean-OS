@@ -194,6 +194,10 @@ def test_real_import_export_revision_and_reopen_api(local_client):
     media = client.get(media_url, headers=HEADERS)
     assert media.status_code == 200 and media.data[:4] == b"RIFF"
     assert len(rows(store)) == 2
+    unchanged = export_project(client, {**payload, "previous_artifact_id": project_id})
+    assert unchanged.status_code == 400, unchanged.get_json()
+    assert unchanged.get_json()["code"] == "CONTENT_PROJECT_PARENT_REVISION_REQUIRED"
+    assert len(rows(store)) == 2
     # Revision must persist separately and preserve the earlier editable package.
     from lumenis.shared.content_creation.video_editing import Timeline, fingerprint_local_media
     revised = Timeline.from_dict(payload["timeline"], assets=[fingerprint_local_media(store["source"])]).add_audio_track("music", audio_role="bgm")

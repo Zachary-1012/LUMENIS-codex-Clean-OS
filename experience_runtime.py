@@ -1263,8 +1263,9 @@ def export_content_project():
             result = execution.get("result") if isinstance(execution, dict) else None
             if ctx.status.value != "completed" or not isinstance(result, dict) or not result.get("artifact"):
                 code = _content_project_error_code(ctx.error or "CONTENT_EXPORT_FAILED")
+                status_code = 400 if code == "CONTENT_PROJECT_PARENT_REVISION_REQUIRED" else 503
                 return jsonify({"ok": False, "code": code, "execution_id": ctx.execution_id,
-                                "status": ctx.status.value, "publish_status": "not_performed"}), 503
+                                "status": ctx.status.value, "publish_status": "not_performed"}), status_code
             return jsonify({"ok": True, "result": result, "execution_id": ctx.execution_id,
                             "evidence_recorded": bool((getattr(ctx, "evidence_record", None) or {}).get("ok")),
                             "publish_status": "not_performed"})

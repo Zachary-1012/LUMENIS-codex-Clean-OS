@@ -49,3 +49,14 @@ COMMERCIAL OVERLAY IMPACT: discoverability advances; creative quality, final
 visible E2E, all J packages, release and operating remain unaccepted.
 CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION: reuse the accepted Artifact
 integrity/context verifier and existing Flask boundary; no new dependency.
+
+## Running-Core follow-through
+
+At the published renderer/discovery source, the actual API listed the two
+existing user-media edits with `limit=1` and exact continuation. After the genuine
+fade-in revision was exported, a fresh paged listing returned all three distinct
+projects; a CTH request returned none of these BMP projects. Following a
+controlled Core-child restart, the old process cursor returned explicit
+`CONTENT_PROJECT_CURSOR_INVALID` / 400. A fresh listing recovered all three
+durable projects, and the new media/metadata reopened with matching hashes.
+This is live API discovery and restart recovery, not yet visual App acceptance.

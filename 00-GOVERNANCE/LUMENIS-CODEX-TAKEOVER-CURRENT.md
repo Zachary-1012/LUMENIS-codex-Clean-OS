@@ -12,6 +12,22 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-30 — discovery and corrected media survive actual Core restart
+
+The running Core loaded the accepted discovery/renderer source. It found the
+two earlier user-media edits, exported a genuine fade-in revision with Evidence
+and -1.52 dBTP final audio, and preserved all three across a controlled restart.
+Expired process cursors are explicitly rejected; refreshing recovers the durable
+project list. Earlier media packages remain byte-identical. The specific
+unchanged-parent revision error now uses HTTP 400 instead of a misleading service
+503; actual renderer/server failures are unchanged.
+All 12 affected API tests passed, exit 0. The 400 classification is not yet loaded
+in the running Core while frontend UI acceptance owns the stable runtime slot.
+[Discovery/recovery](evidence/round-07/ROUND-07-CONTENT-PROJECT-DISCOVERY-2026-09-30.md)
+and [final-media evidence](evidence/round-07/ROUND-07-FINAL-MEDIA-PEAK-2026-09-30.md)
+contain the actual identifiers and limits. Visible workflow acceptance is in
+progress in the independent frontend task; no J package or release is accepted.
+
 ### 2026-09-30 — encoded-media audio peak correction
 
 The existing renderer now measures the final encoded audio and performs at most
