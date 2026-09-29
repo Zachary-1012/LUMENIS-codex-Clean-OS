@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional
 
 from lumenis.shared.database import get_repository, main_db_path
+from lumenis.system.security.permission import LocalWorkspacePrincipal
 
 
 _IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
@@ -289,14 +290,16 @@ def _register_artifact(
 
 def _content_project_scope(
     *,
-    actor: Mapping[str, Any],
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
     domain_id: str,
     subject_id: Optional[str],
     brand_focus_id: Optional[str],
     global_scope: bool,
-) -> tuple[int, Dict[str, Any]]:
+) -> tuple[Optional[int], Dict[str, Any]]:
     actor_id = actor.get("id") if isinstance(actor, Mapping) else None
-    if type(actor_id) is not int or actor_id <= 0:
+    if type(actor) is not LocalWorkspacePrincipal and (
+        type(actor_id) is not int or actor_id <= 0
+    ):
         raise LocalArtifactError("ACTOR_SCOPE_PERMISSION_DENIED")
     if not isinstance(domain_id, str) or not domain_id.strip():
         raise LocalArtifactError("ACTOR_SCOPE_PERMISSION_DENIED")
@@ -316,14 +319,14 @@ def _content_project_scope(
 
 
 def _authorize_content_project(
-    actor: Mapping[str, Any],
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
     *,
     domain_id: str,
     subject_id: Optional[str],
     brand_focus_id: Optional[str],
     global_scope: bool,
     action: str,
-) -> tuple[int, Dict[str, Any]]:
+) -> tuple[Optional[int], Dict[str, Any]]:
     actor_id, scope = _content_project_scope(
         actor=actor,
         domain_id=domain_id,
@@ -331,9 +334,15 @@ def _authorize_content_project(
         brand_focus_id=brand_focus_id,
         global_scope=global_scope,
     )
-    from lumenis.system.security.permission import check_actor_scope_permission
+    from lumenis.system.security.permission import (
+        check_actor_scope_permission, check_local_workspace_scope_permission,
+    )
 
-    decision = check_actor_scope_permission(
+    scope_checker = (
+        check_local_workspace_scope_permission
+        if type(actor) is LocalWorkspacePrincipal else check_actor_scope_permission
+    )
+    decision = scope_checker(
         actor,
         action=action,
         module="content",
@@ -342,6 +351,19 @@ def _authorize_content_project(
     if decision.allowed is not True or decision.verification_state != "verified":
         raise LocalArtifactError("ACTOR_SCOPE_PERMISSION_DENIED")
     return actor_id, scope
+
+
+def _content_artifact_context(
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
+    actor_id: Optional[int], scope: Mapping[str, Any],
+) -> Dict[str, Any]:
+    """Serialize ownership after authorization; keep account manifests unchanged."""
+    context = {"actor_id": actor_id, **scope}
+    if type(actor) is LocalWorkspacePrincipal:
+        context.update(
+            principal_kind=actor.principal_kind, principal_ref=actor.principal_ref,
+        )
+    return context
 
 
 def _artifact_record(artifact_id: str) -> Optional[Dict[str, Any]]:
@@ -389,7 +411,7 @@ def _json_bytes(value: Mapping[str, Any]) -> bytes:
 def _verified_content_project(
     artifact_id: str,
     *,
-    actor: Mapping[str, Any],
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
     domain_id: str,
     subject_id: Optional[str],
     brand_focus_id: Optional[str],
@@ -420,13 +442,7 @@ def _verified_content_project(
     if _hash_file(candidate) != record.get("sha256"):
         raise LocalArtifactError("CONTENT_PROJECT_INTEGRITY_FAILED")
 
-    expected_context = {
-        "actor_id": actor_id,
-        "domain_id": scope["domain_id"],
-        "subject_id": subject_id,
-        "brand_focus_id": brand_focus_id,
-        "global_scope": global_scope,
-    }
+    expected_context = _content_artifact_context(actor, actor_id, scope)
     try:
         with zipfile.ZipFile(candidate, "r") as archive:
             infos = archive.infolist()
@@ -503,6 +519,7 @@ def _verified_content_project(
         not isinstance(parent_id, str) or not parent_id.startswith("ART-")
     ):
         raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
+    _authorize_content_project(actor, action="read", **scope)
     return project_data, render_data, {**record, "media_member": expected_media}, candidate
 
 
@@ -565,7 +582,7 @@ def _source_asset_metadata_is_valid(asset: Any, media_filename: str) -> bool:
 def _verified_content_source(
     artifact_id: str,
     *,
-    actor: Mapping[str, Any],
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
     domain_id: str,
     subject_id: Optional[str],
     brand_focus_id: Optional[str],
@@ -599,13 +616,7 @@ def _verified_content_source(
     if _hash_file(candidate) != record.get("sha256"):
         raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
 
-    expected_context = {
-        "actor_id": actor_id,
-        "domain_id": scope["domain_id"],
-        "subject_id": subject_id,
-        "brand_focus_id": brand_focus_id,
-        "global_scope": global_scope,
-    }
+    expected_context = _content_artifact_context(actor, actor_id, scope)
     try:
         with zipfile.ZipFile(candidate, "r") as archive:
             infos = archive.infolist()
@@ -648,13 +659,14 @@ def _verified_content_source(
         raise LocalArtifactError("CONTENT_SOURCE_CONTEXT_MISMATCH")
     if record.get("media_type") != "application/zip":
         raise LocalArtifactError("CONTENT_SOURCE_CONTEXT_MISMATCH")
+    _authorize_content_project(actor, action=action, **scope)
     return metadata, {**record, "media_member": media_filename, "media_size_bytes": media_info.file_size}, expected_context, candidate
 
 
 def _validate_content_source_refs(
     artifact_refs: Any,
     *,
-    actor: Mapping[str, Any],
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
     domain_id: str,
     subject_id: Optional[str],
     brand_focus_id: Optional[str],
@@ -695,7 +707,7 @@ def stage_content_source_artifact(
     asset_path: Any,
     *,
     filename: str,
-    actor: Mapping[str, Any],
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
     domain_id: str,
     subject_id: Optional[str] = None,
     brand_focus_id: Optional[str] = None,
@@ -730,12 +742,18 @@ def stage_content_source_artifact(
     )
 
     gate = get_permission_gate()
+    principal = actor if type(actor) is LocalWorkspacePrincipal else None
+    permission_actor = None if principal is not None else actor
     upload = ContentSourceImport(
         actor_id=actor_id, domain_id="bmp" if scope["domain_id"] == "zbmp" else "cth",
         subject_id=subject_id, brand_focus_id=brand_focus_id, global_scope=global_scope,
         filename=safe_filename, size_bytes=source_stat.st_size, body_sha256=observed_sha256,
+        principal_kind=principal.principal_kind if principal is not None else None,
+        principal_ref=principal.principal_ref if principal is not None else None,
     )
-    permission = check_content_source_import_permission(actor, upload, gate=gate)
+    permission = check_content_source_import_permission(
+        permission_actor, upload, principal=principal, gate=gate,
+    )
     if not permission.allowed:
         raise LocalArtifactError("CONTENT_SOURCE_APPROVAL_REQUIRED")
     from lumenis.shared.content_creation.video_editing import fingerprint_local_media
@@ -745,13 +763,7 @@ def stage_content_source_artifact(
         raise LocalArtifactError("CONTENT_SOURCE_CHANGED_DURING_IMPORT")
     if asset.filename != safe_filename or asset.rights_status != "unknown" or asset.evidence_refs:
         raise LocalArtifactError("CONTENT_SOURCE_METADATA_INVALID")
-    expected_context = {
-        "actor_id": actor_id,
-        "domain_id": scope["domain_id"],
-        "subject_id": subject_id,
-        "brand_focus_id": brand_focus_id,
-        "global_scope": global_scope,
-    }
+    expected_context = _content_artifact_context(actor, actor_id, scope)
     source_metadata = {
         "schema_version": 1,
         "context": expected_context,
@@ -797,7 +809,9 @@ def stage_content_source_artifact(
         ):
             raise LocalArtifactError("CONTENT_SOURCE_CHANGED_DURING_IMPORT")
         # Decoding/packaging can take time. Recheck before registering a result.
-        permission = check_content_source_import_permission(actor, upload, gate=gate)
+        permission = check_content_source_import_permission(
+            permission_actor, upload, principal=principal, gate=gate,
+        )
         if not permission.allowed:
             raise LocalArtifactError("CONTENT_SOURCE_APPROVAL_REQUIRED")
         record = _register_artifact(
@@ -834,7 +848,7 @@ def stage_content_source_artifact(
 def read_content_source_artifact(
     artifact_id: str,
     *,
-    actor: Mapping[str, Any],
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
     domain_id: str,
     subject_id: Optional[str] = None,
     brand_focus_id: Optional[str] = None,
@@ -864,7 +878,7 @@ def read_content_source_artifact(
 def resolve_content_source_assets(
     artifact_refs: Any,
     *,
-    actor: Mapping[str, Any],
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
     domain_id: str,
     subject_id: Optional[str] = None,
     brand_focus_id: Optional[str] = None,
@@ -916,13 +930,17 @@ def resolve_content_source_assets(
             except (OSError, zipfile.BadZipFile, RuntimeError, KeyError) as exc:
                 raise LocalArtifactError("CONTENT_SOURCE_ARCHIVE_INVALID") from exc
             resolved.append({"artifact_ref": refs[index], "path": destination, "asset": fresh_asset})
+        _authorize_content_project(
+            actor, domain_id=domain_id, subject_id=subject_id,
+            brand_focus_id=brand_focus_id, global_scope=global_scope, action="read",
+        )
         yield resolved
 
 
 def stage_timeline_artifact(
     timeline: Any,
     *,
-    actor: Mapping[str, Any],
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
     domain_id: str,
     subject_id: Optional[str] = None,
     brand_focus_id: Optional[str] = None,
@@ -978,13 +996,7 @@ def stage_timeline_artifact(
         if [asset.to_dict() for asset in timeline.assets] != source_assets:
             raise LocalArtifactError("CONTENT_SOURCE_TIMELINE_MISMATCH")
 
-    expected_context = {
-        "actor_id": actor_id,
-        "domain_id": scope["domain_id"],
-        "subject_id": subject_id,
-        "brand_focus_id": brand_focus_id,
-        "global_scope": global_scope,
-    }
+    expected_context = _content_artifact_context(actor, actor_id, scope)
     parent_project: Optional[Dict[str, Any]] = None
     if previous_artifact_id is not None:
         parent_project, _, _, _ = _verified_content_project(
@@ -1020,9 +1032,10 @@ def stage_timeline_artifact(
         "demo_acknowledged": demo_acknowledged,
     })).hexdigest()
     gate = get_permission_gate()
+    caller = expected_context["principal_ref"] if actor_id is None else f"actor:{actor_id}"
     export_permission = gate.check(
         OperationType.DATA_EXPORT, resource=export_resource,
-        caller=f"actor:{actor_id}", domain_id="bmp" if scope["domain_id"] == "zbmp" else "cth",
+        caller=caller, domain_id="bmp" if scope["domain_id"] == "zbmp" else "cth",
     )
     if not export_permission.allowed:
         raise LocalArtifactError("CONTENT_EXPORT_PERMISSION_DENIED")
@@ -1032,7 +1045,7 @@ def stage_timeline_artifact(
         _authorize_content_project(actor, action="write", **scope)
         current = gate.check(
             OperationType.DATA_EXPORT, resource=export_resource,
-            caller=f"actor:{actor_id}", domain_id="bmp" if scope["domain_id"] == "zbmp" else "cth",
+            caller=caller, domain_id="bmp" if scope["domain_id"] == "zbmp" else "cth",
         )
         if not current.allowed or is_testing_bypass_enabled():
             raise LocalArtifactError("CONTENT_EXPORT_PERMISSION_DENIED")
@@ -1143,7 +1156,7 @@ def stage_timeline_artifact(
 def read_content_project(
     artifact_id: str,
     *,
-    actor: Mapping[str, Any],
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
     domain_id: str,
     subject_id: Optional[str] = None,
     brand_focus_id: Optional[str] = None,
@@ -1164,7 +1177,7 @@ def read_content_project(
 def authorized_project_media(
     artifact_id: str,
     *,
-    actor: Mapping[str, Any],
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
     domain_id: str,
     subject_id: Optional[str] = None,
     brand_focus_id: Optional[str] = None,
@@ -1188,6 +1201,10 @@ def authorized_project_media(
     extension = ".mp4" if project["output_kind"] == "video" else ".wav"
     if len(data) != render.get("size_bytes") or hashlib.sha256(data).hexdigest() != render.get("media_sha256"):
         raise LocalArtifactError("CONTENT_PROJECT_INTEGRITY_FAILED")
+    _authorize_content_project(
+        actor, domain_id=domain_id, subject_id=subject_id,
+        brand_focus_id=brand_focus_id, global_scope=global_scope, action="read",
+    )
     return {
         "artifact_id": artifact_id,
         "filename": f"{artifact_id}{extension}",

@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-30 — local Content sources and editable artifacts
+
+The existing Artifact owner now preserves sealed local workspace ownership and
+rechecks access on import/render/reopen without an account. Final 70-test targeted
+regression exited 0. Real licensed sources yielded two MP4 and three WAV versions;
+separate-process reopen preserved original versions. An initially silent-track
+edit was explicitly excluded as proof of audible mixing, then replaced by a
+verified audible-track revision. [Round 07 evidence](evidence/round-07/ROUND-07-LOCAL-CONTENT-ARTIFACT-2026-09-30.md).
+Source/API/App integration and real creative quality remain separate acceptance;
+no J package or Round is newly accepted.
+
 ### 2026-09-30 — local workspace media confirmation lifecycle
 
 Exact source confirmation now accepts the server-issued local Content principal

@@ -7,6 +7,7 @@ import sqlite3
 import struct
 import subprocess
 import wave
+import zipfile
 
 import pytest
 
@@ -117,6 +118,37 @@ def test_real_source_round_trip_consumes_exact_approval_and_hides_legacy_downloa
     with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_SOURCE_APPROVAL_REQUIRED"):
         import_source(media_store)
     assert len(rows(media_store)) == 1
+
+
+def test_account_source_manifest_is_not_implicitly_transferred_to_local_workspace(media_store):
+    from flask import Flask
+
+    approve(media_store)
+    source = import_source(media_store)
+    artifact_id = source["artifact"]["artifact_id"]
+    package = media_store["root"] / f"{artifact_id}.zip"
+    original = package.read_bytes()
+    with zipfile.ZipFile(package) as archive:
+        metadata = json.loads(archive.read("source.json"))
+    assert metadata["context"] == {
+        "actor_id": 1, "domain_id": "zbmp", "subject_id": None,
+        "brand_focus_id": None, "global_scope": True,
+    }
+    app = Flask(__name__)
+    app.config["LUMENIS_OPEN_WORKSPACE"] = True
+    with app.test_request_context(
+        "/", headers={"Host": "localhost"},
+        environ_overrides={"REMOTE_ADDR": "127.0.0.1"},
+    ):
+        principal = p.resolve_local_workspace_principal(module="content", action="read")
+        assert type(principal) is p.LocalWorkspacePrincipal
+        with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_SOURCE_CONTEXT_MISMATCH"):
+            artifacts.read_content_source_artifact(artifact_id, actor=principal, **SCOPE)
+        with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_SOURCE_CONTEXT_MISMATCH"):
+            with artifacts.resolve_content_source_assets([artifact_id], actor=principal, **SCOPE):
+                raise AssertionError("account source was implicitly reassigned to workspace")
+    assert package.read_bytes() == original
+    assert artifacts.read_content_source_artifact(artifact_id, actor=ACTOR, **SCOPE) == source
 
 
 def test_changed_source_bytes_are_denied_before_decoding_or_packaging(media_store, monkeypatch):
@@ -238,6 +270,10 @@ def test_audio_project_real_render_reopen_revision_and_download(media_store):
         )
     project_id = result["artifact"]["artifact_id"]
     reopened = artifacts.read_content_project(project_id, actor=ACTOR, **SCOPE)
+    assert reopened["project"]["context"] == {
+        "actor_id": 1, "domain_id": "zbmp", "subject_id": None,
+        "brand_focus_id": None, "global_scope": True,
+    }
     assert artifacts.get_artifact(project_id) is None
     assert artifacts.artifact_file_path(project_id) is None
     with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_PROJECT_CONTEXT_MISMATCH"):
@@ -305,3 +341,275 @@ def test_access_revoked_during_encoding_stops_process_and_preserves_reopenable_v
         recovered = artifacts.stage_timeline_artifact(revision, previous_artifact_id=previous_id, **arguments)
         assert recovered["project"]["parent_artifact_id"] == previous_id
         assert len(rows(media_store)) == 3
+
+
+@pytest.fixture
+def local_store(tmp_path, monkeypatch):
+    """Actual local Flask transport and a server-issued principal, no account row."""
+    from flask import Flask
+
+    database = tmp_path / "local-workspace.sqlite3"
+    root = tmp_path / "artifacts"
+    monkeypatch.setenv("ZBC_DB_PATH", str(database))
+    monkeypatch.setenv("ZBC_ARTIFACT_DIR", str(root))
+    monkeypatch.setenv("LUMENIS_LOCAL_ASSET_DIR", str(tmp_path))
+    monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
+    monkeypatch.setattr(p, "_TESTING_BYPASS_ENABLED", False)
+    repository = DatabaseRepository(str(database))
+    monkeypatch.setattr(artifacts, "get_repository", lambda: repository)
+    gate = p.PermissionGate()
+    monkeypatch.setattr(p, "get_permission_gate", lambda: gate)
+
+    def account_lookup_forbidden(*args, **kwargs):
+        raise AssertionError("workspace operation must not borrow an account actor")
+
+    monkeypatch.setattr(p, "_actor_has_scope_action", account_lookup_forbidden)
+    source = tmp_path / "local-voice.wav"
+    with wave.open(str(source), "wb") as audio:
+        audio.setnchannels(1)
+        audio.setsampwidth(2)
+        audio.setframerate(48000)
+        samples = (int(7000 * math.sin(2 * math.pi * 440 * n / 48000)) for n in range(24000))
+        audio.writeframes(b"".join(struct.pack("<h", sample) for sample in samples))
+    app = Flask(__name__)
+    app.config["LUMENIS_OPEN_WORKSPACE"] = True
+    with app.test_request_context(
+        "/", headers={"Host": "localhost"},
+        environ_overrides={"REMOTE_ADDR": "127.0.0.1"},
+    ):
+        principal = p.resolve_local_workspace_principal(module="content", action="write")
+        assert type(principal) is p.LocalWorkspacePrincipal
+        yield {
+            "source": source, "root": root, "gate": gate, "repository": repository,
+            "app": app, "principal": principal,
+        }
+
+
+def local_scope(store, **changes):
+    arguments = {
+        "actor": store["principal"], "domain_id": "bmp", "subject_id": None,
+        "brand_focus_id": None, "global_scope": True, "action": "read",
+    }
+    return artifacts._authorize_content_project(**{**arguments, **changes})
+
+
+def test_local_ownership_is_explicit_and_never_an_account_actor(local_store):
+    actor_id, scope = local_scope(local_store)
+    assert actor_id is None
+    assert artifacts._content_artifact_context(local_store["principal"], actor_id, scope) == {
+        "actor_id": None, "domain_id": "zbmp", "subject_id": None,
+        "brand_focus_id": None, "global_scope": True,
+        "principal_kind": "local_workspace", "principal_ref": "workspace:local",
+    }
+    assert not local_store["gate"].has_permission(p.PermissionLevel.COMMIT)
+    assert not local_store["gate"]._approvals
+
+
+@pytest.mark.parametrize("actor", [
+    None, {"id": None}, {"id": 0},
+    {"actor_id": None, "principal_kind": "local_workspace", "principal_ref": "workspace:local"},
+])
+def test_local_actor_cannot_be_supplied_as_json_or_an_empty_account(local_store, actor):
+    with pytest.raises(artifacts.LocalArtifactError, match="ACTOR_SCOPE_PERMISSION_DENIED"):
+        local_scope(local_store, actor=actor)
+
+
+def test_local_ownership_rechecks_the_workspace_flag_without_discarding_principal(local_store):
+    assert local_scope(local_store)[0] is None
+    local_store["app"].config["LUMENIS_OPEN_WORKSPACE"] = False
+    with pytest.raises(artifacts.LocalArtifactError, match="ACTOR_SCOPE_PERMISSION_DENIED"):
+        local_scope(local_store)
+    local_store["app"].config["LUMENIS_OPEN_WORKSPACE"] = True
+    assert local_scope(local_store)[0] is None
+
+
+@pytest.mark.parametrize("headers,remote_addr", [
+    ({"Host": "remote.invalid"}, "127.0.0.1"),
+    ({"Host": "localhost"}, "192.0.2.7"),
+    ({"Host": "localhost", "X-Forwarded-For": "127.0.0.1"}, "127.0.0.1"),
+    ({"Host": "localhost", "X-Actor-ID": "1"}, "127.0.0.1"),
+    ({"Host": "localhost", "Authorization": "Bearer ignored"}, "127.0.0.1"),
+    ({"Host": "localhost", "Cookie": "cth_poms_v4_session=present"}, "127.0.0.1"),
+])
+def test_saved_local_principal_does_not_authorize_another_transport(local_store, headers, remote_addr):
+    with local_store["app"].test_request_context(
+        "/", headers=headers, environ_overrides={"REMOTE_ADDR": remote_addr},
+    ):
+        with pytest.raises(artifacts.LocalArtifactError, match="ACTOR_SCOPE_PERMISSION_DENIED"):
+            local_scope(local_store)
+
+
+@pytest.mark.parametrize("changes", [
+    {"domain_id": "other"}, {"global_scope": 1},
+    {"global_scope": True, "brand_focus_id": "brand-a"},
+    {"subject_id": "subject-a", "brand_focus_id": "brand-a"},
+])
+def test_local_principal_cannot_widen_invalid_resource_selection(local_store, changes):
+    with pytest.raises(artifacts.LocalArtifactError, match="ACTOR_SCOPE_PERMISSION_DENIED"):
+        local_scope(local_store, **changes)
+
+
+def prepare_local_import(store):
+    source = store["source"]
+    principal = store["principal"]
+    upload = p.ContentSourceImport(
+        actor_id=None, domain_id="bmp", subject_id=None, brand_focus_id=None,
+        global_scope=True, filename=source.name, size_bytes=source.stat().st_size,
+        body_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
+        principal_kind=principal.principal_kind, principal_ref=principal.principal_ref,
+    )
+    pending = p.prepare_content_source_import_confirmation(
+        None, upload, principal=principal, gate=store["gate"],
+    )
+    assert pending["allowed"], pending
+    return pending, upload
+
+
+def confirm_local_import(store, pending):
+    decision = p.confirm_content_source_import(
+        None, pending["confirmation_id"], principal=store["principal"],
+        confirmed=True, gate=store["gate"], **SCOPE,
+    )
+    assert decision.allowed, decision
+    assert decision.approval_token is None
+
+
+def import_local_source(store):
+    return artifacts.stage_content_source_artifact(
+        store["source"], filename=store["source"].name, actor=store["principal"],
+        source_execution_id="isolated-local-workspace-import", **SCOPE,
+    )
+
+
+def test_local_source_requires_real_confirmation_and_consumes_it_without_account_or_commit(local_store):
+    with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_SOURCE_APPROVAL_REQUIRED"):
+        import_local_source(local_store)
+    assert rows(local_store) == [] and not local_store["root"].exists()
+    pending, upload = prepare_local_import(local_store)
+    with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_SOURCE_APPROVAL_REQUIRED"):
+        import_local_source(local_store)
+    confirm_local_import(local_store, pending)
+    receipt = p.check_content_source_import_permission(
+        None, upload, principal=local_store["principal"], gate=local_store["gate"],
+    )
+    assert receipt.allowed
+    result = import_local_source(local_store)
+    assert local_store["gate"]._approvals[receipt.approval_token].revoked
+    assert not local_store["gate"].has_permission(p.PermissionLevel.COMMIT)
+    artifact_id = result["artifact"]["artifact_id"]
+    with zipfile.ZipFile(local_store["root"] / f"{artifact_id}.zip") as archive:
+        metadata = json.loads(archive.read("source.json"))
+    assert metadata["context"] == {
+        "actor_id": None, "domain_id": "zbmp", "subject_id": None,
+        "brand_focus_id": None, "global_scope": True,
+        "principal_kind": "local_workspace", "principal_ref": "workspace:local",
+    }
+    assert artifacts.read_content_source_artifact(
+        artifact_id, actor=local_store["principal"], **SCOPE,
+    ) == result
+    with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_SOURCE_CONTEXT_MISMATCH"):
+        artifacts.read_content_source_artifact(
+            artifact_id, actor=local_store["principal"], domain_id="cth", global_scope=True,
+        )
+    with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_SOURCE_APPROVAL_REQUIRED"):
+        import_local_source(local_store)
+    with local_store["repository"].connect() as connection:
+        assert not connection.execute("SELECT 1 FROM sqlite_master WHERE name='v4_users'").fetchone()
+    assert len(rows(local_store)) == 1
+
+
+@pytest.mark.parametrize("confirmed", [False, True])
+def test_local_import_cancel_creates_no_artifact_and_retry_needs_a_new_confirmation(local_store, confirmed):
+    pending, _ = prepare_local_import(local_store)
+    if confirmed:
+        confirm_local_import(local_store, pending)
+    assert p.cancel_content_source_import_confirmation(
+        None, pending["confirmation_id"], SCOPE,
+        principal=local_store["principal"], gate=local_store["gate"],
+    )
+    with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_SOURCE_APPROVAL_REQUIRED"):
+        import_local_source(local_store)
+    assert rows(local_store) == [] and not local_store["root"].exists()
+    retry, _ = prepare_local_import(local_store)
+    assert retry["confirmation_id"] != pending["confirmation_id"]
+    confirm_local_import(local_store, retry)
+    assert import_local_source(local_store)["asset"]["media_kind"] == "audio"
+
+
+def test_local_source_rechecks_flag_after_read_and_reopens_after_reenable(local_store, monkeypatch):
+    pending, _ = prepare_local_import(local_store)
+    confirm_local_import(local_store, pending)
+    result = import_local_source(local_store)
+    artifact_id = result["artifact"]["artifact_id"]
+    original_hash = artifacts._hash_file
+
+    def close_after_hash(path):
+        digest = original_hash(path)
+        local_store["app"].config["LUMENIS_OPEN_WORKSPACE"] = False
+        return digest
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(artifacts, "_hash_file", close_after_hash)
+        with pytest.raises(artifacts.LocalArtifactError, match="ACTOR_SCOPE_PERMISSION_DENIED"):
+            artifacts.read_content_source_artifact(artifact_id, actor=local_store["principal"], **SCOPE)
+    local_store["app"].config["LUMENIS_OPEN_WORKSPACE"] = True
+    assert artifacts.read_content_source_artifact(artifact_id, actor=local_store["principal"], **SCOPE) == result
+
+
+def test_local_render_reopen_revision_revalidates_export_and_transport(local_store, monkeypatch):
+    pending, _ = prepare_local_import(local_store)
+    confirm_local_import(local_store, pending)
+    source = import_local_source(local_store)
+    source_id = source["artifact"]["artifact_id"]
+    actor = local_store["principal"]
+    with artifacts.resolve_content_source_assets([source_id], actor=actor, **SCOPE) as sources:
+        timeline = Timeline.from_assets([sources[0]["asset"]]).add_audio_track("voice", audio_role="voiceover")
+        timeline = timeline.add_clip(sources[0]["asset"].asset_id, track_id="voice", source_out=.4)
+        arguments = dict(
+            actor=actor, **SCOPE, source_execution_id="isolated-local-export",
+            demo_acknowledged=True, output_kind="audio", source_artifact_refs=[source_id],
+        )
+        gate = local_store["gate"]
+        gate.revoke_permission(p.PermissionLevel.VERIFY)
+        with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_EXPORT_PERMISSION_DENIED"):
+            artifacts.stage_timeline_artifact(timeline, **arguments)
+        assert len(rows(local_store)) == 1
+        gate.grant_permission(p.PermissionLevel.VERIFY)
+        first = artifacts.stage_timeline_artifact(timeline, **arguments)
+        project_id = first["artifact"]["artifact_id"]
+        reopened = artifacts.read_content_project(project_id, actor=actor, **SCOPE)
+        context = reopened["project"]["context"]
+        assert context["actor_id"] is None
+        assert context["principal_kind"] == "local_workspace"
+        assert context["principal_ref"] == "workspace:local"
+        previous_bytes = artifacts.authorized_project_media(project_id, actor=actor, **SCOPE)["data"]
+        restored = Timeline.from_dict(reopened["project"]["timeline"], assets=[item["asset"] for item in sources])
+        revised = restored.add_audio_track("music", audio_role="bgm")
+        processes = []
+        popen = subprocess.Popen
+
+        def close_on_encoder_launch(command, **kwargs):
+            process = popen(command, **kwargs)
+            if Path(command[0]).stem.lower() == "ffmpeg":
+                processes.append(process)
+                local_store["app"].config["LUMENIS_OPEN_WORKSPACE"] = False
+            return process
+
+        with monkeypatch.context() as scoped:
+            scoped.setattr(subprocess, "Popen", close_on_encoder_launch)
+            with pytest.raises(artifacts.LocalArtifactError, match="ACTOR_SCOPE_PERMISSION_DENIED"):
+                artifacts.stage_timeline_artifact(revised, previous_artifact_id=project_id, **arguments)
+        assert len(processes) == 1 and processes[0].poll() is not None
+        assert len(rows(local_store)) == 2
+        with pytest.raises(artifacts.LocalArtifactError, match="ACTOR_SCOPE_PERMISSION_DENIED"):
+            artifacts.read_content_project(project_id, actor=actor, **SCOPE)
+        with pytest.raises(artifacts.LocalArtifactError, match="ACTOR_SCOPE_PERMISSION_DENIED"):
+            artifacts.authorized_project_media(project_id, actor=actor, **SCOPE)
+        local_store["app"].config["LUMENIS_OPEN_WORKSPACE"] = True
+        assert artifacts.authorized_project_media(project_id, actor=actor, **SCOPE)["data"] == previous_bytes
+        second = artifacts.stage_timeline_artifact(revised, previous_artifact_id=project_id, **arguments)
+        assert second["project"]["parent_artifact_id"] == project_id
+        assert artifacts.read_content_project(project_id, actor=actor, **SCOPE) == reopened
+        export_audits = gate.get_audit_log(operation_type="data_export")
+        assert export_audits and all(entry["caller"] == "workspace:local" for entry in export_audits)
+        assert len(rows(local_store)) == 3
