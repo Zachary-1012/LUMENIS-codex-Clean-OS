@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-30 — read-only local media inspection API
+
+Existing Experience runtime now routes Content media inspection through exact
+CTH/BMP scope and the new server-issued local workspace principal. It reads real
+file properties without requiring a product account, fetching a URL or registering
+an Artifact. Fifteen targeted API tests passed with real ffprobe, strict local
+Permission and missing-file restoration/retry.
+[Round 07 evidence](evidence/round-07/ROUND-07-LOCAL-MEDIA-INSPECTION-2026-09-30.md)
+separates this tested read endpoint from pending live App import/export and
+imported-source local-principal binding. No J package is newly accepted.
+
 ### 2026-09-30 — CTH03 readable sources and honest publication time
 
 The real commercial-record view now presents localized source names and separates

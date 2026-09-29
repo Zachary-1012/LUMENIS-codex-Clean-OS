@@ -826,6 +826,157 @@ def cth_platform_collection_search():
         return jsonify({"ok": False, "status": "error", "error_type": type(exc).__name__}), 503
 
 
+def _content_project_scope(action: str):
+    """Resolve selectors through the canonical registry, then ask Permission."""
+    from lumenis.auth.service import get_current_user
+    from lumenis.system.security.permission import (
+        check_actor_scope_permission, check_local_workspace_scope_permission,
+        resolve_local_workspace_principal,
+    )
+    from subject_registry import get_subject_by_id, normalize_domain
+    from shared_artifacts import LocalArtifactError
+
+    try:
+        local_principal = resolve_local_workspace_principal(module="content", action=action)
+        actor = local_principal if local_principal is not None else get_current_user()
+    except Exception as exc:
+        raise LocalArtifactError("AUTH_UNAVAILABLE") from exc
+    if local_principal is None and (
+        not isinstance(actor, dict) or type(actor.get("id")) is not int or actor["id"] <= 0
+    ):
+        raise LocalArtifactError("AUTH_REQUIRED")
+    try:
+        selected_domain = normalize_domain(request.headers.get("X-Domain-Id", ""))
+    except ValueError as exc:
+        raise LocalArtifactError("DOMAIN_REQUIRED") from exc
+    if selected_domain not in {"CTH", "BMP"}:
+        raise LocalArtifactError("DOMAIN_REQUIRED")
+    domain = "cth" if selected_domain == "CTH" else "zbmp"
+    product = request.headers.get("X-Product-Id", selected_domain)
+    if product not in ({"CTH"} if domain == "cth" else {"BMP", "ZBMP"}):
+        raise LocalArtifactError("CONTEXT_SCOPE_MISMATCH")
+    mode = request.headers.get("X-Lumenis-Context-Mode", "GLOBAL_ALL")
+    selected_subject = request.headers.get("X-Subject-ID", "") or None
+    selected_brand = request.headers.get("X-Brand-Focus-ID", "") or None
+    if any(value is not None and value != value.strip() for value in (selected_subject, selected_brand)):
+        raise LocalArtifactError("CONTEXT_SCOPE_MISMATCH")
+    subject, brand = None, None
+    if mode == "GLOBAL_ALL":
+        if selected_subject or selected_brand:
+            raise LocalArtifactError("CONTEXT_SCOPE_MISMATCH")
+    elif mode == "FOCUS":
+        if selected_subject:
+            try:
+                entry = get_subject_by_id(selected_domain, selected_subject)
+            except Exception as exc:
+                raise LocalArtifactError("CONTENT_SCOPE_UNAVAILABLE") from exc
+            if not isinstance(entry, dict):
+                raise LocalArtifactError("CONTENT_SCOPE_NOT_FOUND")
+            if domain == "cth":
+                if entry.get("subject_type") != "company" or selected_brand:
+                    raise LocalArtifactError("CONTEXT_SCOPE_MISMATCH")
+                subject = selected_subject
+            else:
+                brand = entry.get("brand_focus_id")
+                if entry.get("subject_type") != "brand" or not brand or (selected_brand and selected_brand != brand):
+                    raise LocalArtifactError("CONTEXT_SCOPE_MISMATCH")
+        elif domain == "zbmp" and selected_brand:
+            # Direct BrandFocus selection is still verified against the registry by Permission.
+            brand = selected_brand
+        else:
+            raise LocalArtifactError("CONTEXT_SCOPE_MISMATCH")
+    else:
+        raise LocalArtifactError("CONTEXT_SCOPE_MISMATCH")
+    scope = {"domain_id": domain, "subject_id": subject, "brand_focus_id": brand,
+             "global_scope": mode == "GLOBAL_ALL"}
+    checker = (
+        check_local_workspace_scope_permission if local_principal is not None
+        else check_actor_scope_permission
+    )
+    decision = checker(actor, action=action, module="content", **scope)
+    if decision.verification_state != "verified":
+        raise LocalArtifactError("CONTENT_SCOPE_UNAVAILABLE")
+    if decision.allowed is not True:
+        raise LocalArtifactError("CONTENT_SCOPE_DENIED")
+    return actor, scope
+
+
+def _content_project_error_code(exc):
+    code = str(exc)
+    # Only known code-shaped errors are safe to serialize; never return filesystem paths.
+    if not code or len(code) > 100 or any(character not in "ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789" for character in code):
+        code = "CONTENT_PROJECT_FAILED"
+    return code
+
+
+def _content_project_error(exc):
+    code = _content_project_error_code(exc)
+    status = 503 if code.endswith("_UNAVAILABLE") else 404 if code.endswith("_NOT_FOUND") else 401 if code == "AUTH_REQUIRED" else 403 if code in {
+        "CONTENT_SCOPE_DENIED", "ACTOR_SCOPE_PERMISSION_DENIED", "DOMAIN_REQUIRED", "CONTEXT_SCOPE_MISMATCH",
+        "CONTENT_PROJECT_CONTEXT_MISMATCH", "CONTENT_PROJECT_PARENT_SCOPE_MISMATCH",
+        "CONTENT_SOURCE_CONTEXT_MISMATCH", "CONTENT_SOURCE_SCOPE_DENIED",
+        "CONTENT_SOURCE_ORIGIN_DENIED",
+        "CONTENT_SOURCE_APPROVAL_REQUIRED", "CONTENT_EXPORT_PERMISSION_DENIED",
+    } else 400
+    return jsonify({"ok": False, "code": code, "publish_status": "not_performed"}), status
+
+
+def _content_project_assets(payload, actor, scope):
+    """Yield freshly fingerprinted local assets or authorized imported source refs."""
+    from contextlib import contextmanager
+
+    @contextmanager
+    def _open():
+        from lumenis.shared.content_creation.video_editing import fingerprint_local_media
+        from shared_artifacts import LocalArtifactError, resolve_content_source_assets, validate_local_asset
+
+        has_paths = "asset_paths" in payload
+        has_refs = "asset_refs" in payload
+        if has_paths == has_refs:
+            raise LocalArtifactError("CONTENT_ASSET_INPUT_REQUIRED")
+        if has_refs:
+            refs = payload.get("asset_refs")
+            with resolve_content_source_assets(refs, actor=actor, **scope) as resolved:
+                yield [str(item["path"]) for item in resolved], [item["asset"] for item in resolved], list(refs)
+            return
+
+        paths = payload.get("asset_paths")
+        if not isinstance(paths, list) or not 1 <= len(paths) <= 64:
+            raise LocalArtifactError("LOCAL_ASSETS_REQUIRED")
+        normalized_paths = [validate_local_asset(value) for value in paths]
+        if sum(path.stat().st_size for path in normalized_paths) > 500 * 1024 * 1024:
+            raise LocalArtifactError("CONTENT_SOURCE_TOTAL_TOO_LARGE")
+        assets = [fingerprint_local_media(str(path)) for path in normalized_paths]
+        asset_ids = [asset.asset_id for asset in assets]
+        if len(set(asset_ids)) != len(asset_ids):
+            raise LocalArtifactError("CONTENT_SOURCE_ASSET_DUPLICATE")
+        yield [str(path) for path in normalized_paths], assets, []
+
+    return _open()
+
+
+@experience_bp.route("/api/experience/shared-skills/shared.content_project/inspect", methods=["POST"])
+def inspect_content_project_media():
+    from shared_artifacts import LocalArtifactError
+
+    try:
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or body.get("action_type") != "READ":
+            raise LocalArtifactError("CONTENT_INSPECT_REQUIRES_READ")
+        payload = body.get("input")
+        if not isinstance(payload, dict) or set(payload) not in ({"asset_paths"}, {"asset_refs"}):
+            raise LocalArtifactError("INVALID_CONTENT_INPUT")
+        actor, scope = _content_project_scope("read")
+        with _content_project_assets(payload, actor, scope) as (_, assets, source_refs):
+            return jsonify({"ok": True, "assets": [asset.to_dict() for asset in assets],
+                            "source_artifact_refs": source_refs, "rights_state": "unknown",
+                            "external_fetch": False})
+    except ValueError as exc:
+        return _content_project_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "CONTENT_INSPECTION_UNAVAILABLE"}), 503
+
+
 @experience_bp.route("/api/experience/shared-skills/shared.video_shotcraft/render", methods=["POST"])
 def render_shared_video_artifact():
     """Render explicitly supplied local assets into a staged video artifact.
