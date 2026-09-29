@@ -19,10 +19,9 @@ def _loop():
     g = gm()
     while True:
         try:
-            cfg = g.load_config()
             # 每 60s 巡检一次是否到点，到点由 manager 内部按 interval 防抖
             time.sleep(60)
-            if cfg.get("auto_commit", True):
+            if g.load_config().get("auto_commit") is True:
                 g.auto_save_if_changed()
         except Exception as e:  # noqa: BLE001  版本守护永不影响主系统
             print(f"[version-watcher] 巡检异常(已忽略): {type(e).__name__}: {e}")
@@ -37,7 +36,10 @@ def start_version_watcher():
             return False
         if os.environ.get('ZBC_TEST_OFFLINE') == '1':
             return False  # 测试隔离：不启动 git 自动提交守护（测试期严禁自动 commit 工作区）
-        if not gm().is_repo():
+        g = gm()
+        if g.load_config().get("auto_commit") is not True:
+            return False
+        if not g.is_repo():
             return False
         t = threading.Thread(target=_loop, name="version-center-watcher", daemon=True)
         t.start()

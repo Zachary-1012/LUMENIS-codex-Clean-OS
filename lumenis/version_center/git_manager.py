@@ -363,12 +363,16 @@ class GitVersionManager:
 
     # ---------- 自动保存配置（本地 data，不入库） ----------
     def load_config(self) -> dict:
-        default = {"auto_commit": True, "auto_push": True,
+        default = {"auto_commit": False, "auto_push": False,
                    "interval_minutes": 30, "last_auto": ""}
         try:
             if self._cfg_path.exists():
                 import json
-                default.update(json.loads(self._cfg_path.read_text(encoding="utf-8")))
+                loaded = json.loads(self._cfg_path.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    default.update(loaded)
+                    for key in ("auto_commit", "auto_push"):
+                        default[key] = loaded.get(key) is True
         except Exception:  # noqa: BLE001
             pass
         return default
@@ -378,7 +382,7 @@ class GitVersionManager:
         cfg = self.load_config()
         for k in ("auto_commit", "auto_push"):
             if k in updates:
-                cfg[k] = bool(updates[k])
+                cfg[k] = updates[k] if type(updates[k]) is bool else False
         if "interval_minutes" in updates:
             try:
                 cfg["interval_minutes"] = max(5, min(720, int(updates["interval_minutes"])))
@@ -392,7 +396,7 @@ class GitVersionManager:
                              do_push: bool | None = None) -> dict:
         """供守护线程调用：到点且确有源码改动才自动成版本，带防抖。"""
         cfg = self.load_config()
-        if not cfg.get("auto_commit", True):
+        if cfg.get("auto_commit") is not True:
             return {"ok": True, "skipped": "auto_commit_off"}
         interval = min_interval_sec if min_interval_sec is not None else cfg["interval_minutes"] * 60
         if time.time() - self._last_auto_ts < interval:
@@ -404,7 +408,7 @@ class GitVersionManager:
         if not st.get("ok") or st["changed_count"] == 0:
             self._last_auto_ts = time.time()
             return {"ok": True, "skipped": "no_change"}
-        push = cfg.get("auto_push", True) if do_push is None else do_push
+        push = cfg.get("auto_push") is True if do_push is None else do_push is True
         ts = datetime.now().strftime("%H:%M")
         return self.save_version(f"自动保存版本（{ts} 巡检）", do_push=push, author="auto-watch")
 

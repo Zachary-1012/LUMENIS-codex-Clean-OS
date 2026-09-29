@@ -110,7 +110,7 @@ After bootstrap, locate work here. Root-level compatibility callers remain class
 | SYSTEM collection | `lumenis/system/collector/` | Platform adapters, guard, runtime, scheduler and collection/Evidence tests |
 | SYSTEM browser/session | `lumenis/system/browser/runtime/` | `xhs_cookie_bridge.py`; `xhs_p0_orchestrator.py`; `xhs_cdp_collector.py`; Cookie/path/HK-policy/lineage tests |
 | Engineering AI | `.opencode/opencode.json` for OpenCode; Codex user/runtime configuration outside product source | Engineering audit/test/automation only; never count it as a LUMENIS user model, API owner or Production Truth |
-| Startup/runtime | `scripts/start_production.ps1`; `app.py`; `run_supervised.py` | `/healthz`; required initialization; critical API/App runtime evidence |
+| Startup/runtime | `scripts/start_production.ps1`; `app.py`; `run_supervised.py`; existing `lumenis/blueprint.py` → `lumenis/version_center/` compatibility startup caller | `/healthz`; required initialization; critical API/App runtime evidence. Version-center background saving must default off; it is not a second mainline acceptance/publishing authority. Manual version actions remain separately authorized. |
 | Operations/deployment | Existing `scripts/`, `deployment/` and environment manifests | Use only the launcher/deployment artifact named by the active acceptance gate; scripts do not become product owners |
 | Tests and release evidence | `tests/`; `app/test/`; `tests/CI_TEST_TIERS.md` | `.github/workflows/`; exact release/production acceptance artifact for the current commit |
 | Historical/provenance material | Dated handoff/audit/archive and `intelligence_library/` | Read only when the active owner trace needs provenance; never use it as current runtime truth |

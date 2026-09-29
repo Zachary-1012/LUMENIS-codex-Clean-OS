@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**  
-> Updated: 2026-09-29 (bounded source and governance candidates; resolve the current SHA live)
+> Updated: 2026-09-30 (bounded source and governance candidates; resolve the current SHA live)
 > CI status: resolve from GitHub checks for the exact current origin/main; no historical SHA is a current acceptance result.
 > **Never treat this document's commit, any pasted SHA, or any historical handoff SHA as the current HEAD. Codex must fetch and resolve `origin/main` at session start.**
 
@@ -11,6 +11,34 @@ handoff, not a second instruction system. It does **not** upgrade source evidenc
 LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
+
+### 2026-09-30 — J1 maintenance runtime and bounded media integration
+
+[Maintenance evidence](evidence/round-06/ROUND-06-J1-MAINTENANCE-RUNTIME-2026-09-30.md)
+records the installed public task's move from the verified old archive to
+accepted `3d6e0924`, including the correct verified-NO_NEW_DATA scheduling
+semantics. All 2,676 archived files were checked. Online SQLite backup and
+isolated invocation passed; only the task's source argument changed. Its real
+00:06 scheduled evaluation completed, with all 195 sources not yet due. This
+does not count as 195 refreshes or full OPERATING acceptance.
+
+[Renderer integration evidence](evidence/round-07/ROUND-07-TIMELINE-RENDERER-INTEGRATION-2026-09-30.md)
+records the exact existing-owner renderer and two tests selected from the frozen
+Content candidate. All 35 renderer tests passed without skips using actual
+development FFmpeg, and existing Timeline/Artifact regressions passed. Source
+import/project API, frontend integration and actual completed user programs
+remain unaccepted; the other candidate files were not bulk copied.
+
+The old Core version watcher unexpectedly pushed `06d156c7` during verification,
+including these selected files and a frontend SH-01 specification. This was not
+root acceptance or a DESIGN_READY promotion. History was preserved; actual
+auto_commit/auto_push were disabled. The existing startup/runtime owner now
+defaults both switches off and accepts only explicit JSON booleans; ten isolated
+regressions passed. The watcher checks the switch before startup and again before
+saving. [Incident and corrective evidence](evidence/round-05/ROUND-05-VERSION-WATCHER-DEFAULT-OFF-2026-09-30.md)
+retains the original co-publication gate failure rather than relabelling it PASS.
+J1–J8 remain partial/unaccepted;
+Global coverage, release, operating and commercial statuses do not advance.
 
 ### 2026-09-29 — J1 Canonical records bound to the CTH03 read stream
 
