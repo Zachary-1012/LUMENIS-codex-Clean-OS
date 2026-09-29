@@ -12,6 +12,20 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-30 — exact content-source confirmation integrated
+
+The existing Permission owner now binds an import confirmation to server-derived
+file bytes/name and the exact actor/business scope. Expired, cancelled, changed
+or borrowed confirmations are refused. A root review caught and fixed expired
+grant cleanup leaving its underlying token reusable as ordinary DB-write
+approval. The final six-file regression group passed 273 tests; all 419 observed
+SQLite connections stayed in disposable temporary paths. Three baseline Evidence
+test-fixture failures were repaired without changing their 67 assertions.
+[Round 04 evidence](evidence/round-04/ROUND-04-CONTENT-IMPORT-CONFIRMATION-2026-09-30.md).
+This is tested Permission integration, not real source upload, Artifact consume,
+open-workspace creation or J4/J5/J6 acceptance. Existing local-read policy is
+unchanged; no account was created. Product and Round statuses remain unaccepted.
+
 ### 2026-09-30 — J1 maintenance runtime and bounded media integration
 
 [Maintenance evidence](evidence/round-06/ROUND-06-J1-MAINTENANCE-RUNTIME-2026-09-30.md)

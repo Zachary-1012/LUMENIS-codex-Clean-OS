@@ -8,8 +8,14 @@ import pytest
 def isolated_scope_database(tmp_path, monkeypatch):
     path = tmp_path / "permission-exact-scope.sqlite3"
     monkeypatch.setenv("ZBC_DB_PATH", str(path))
+    monkeypatch.setenv(
+        "LUMENIS_EVIDENCE_HMAC_KEY_RING",
+        json.dumps({"scope-fixture": "public-test-only-scope-fixture-not-production"}),
+    )
+    monkeypatch.setenv("LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID", "scope-fixture")
 
     import subject_registry
+    from lumenis.shared.evidence.store import ensure_evidence_schema
 
     with sqlite3.connect(path) as conn:
         conn.executescript(
@@ -67,6 +73,7 @@ def isolated_scope_database(tmp_path, monkeypatch):
             """,
             rows,
         )
+        ensure_evidence_schema(conn)
 
     return path
 
@@ -402,7 +409,8 @@ def test_evidence_api_exact_subject_paging_stats_timeline_and_hidden_detail(
     target_ids = [
         store.record_evidence(
             source="fixture", product="CTH", feature_id="API_BULK",
-            result="PASS", level="L4", account="cth-a",
+            result="PASS" if index else None, level="L4" if index else None,
+            metric_value="PASS" if index else "unknown", account="cth-a",
             inputs={"index": index}, domain_id="cth", subject_id="SUBJ-CTH-A",
         )
         for index in range(205)
@@ -420,13 +428,6 @@ def test_evidence_api_exact_subject_paging_stats_timeline_and_hidden_detail(
         result="PASS", domain_id="cth", subject_id="SUBJ-CTH-B",
     )
     store.record_evidence(source="legacy", product="CTH", feature_id="API_BULK")
-    import sqlite3
-    with sqlite3.connect(isolated_scope_database) as conn:
-        conn.execute(
-            "UPDATE app_evidence_records SET result=NULL, level=NULL WHERE id=?",
-            (target_ids[0],),
-        )
-
     client = _scoped_evidence_api_client(monkeypatch, {"id": 1, "role": "user"})
     headers = _focus_headers("CTH", "SUBJ-CTH-A")
     page = client.get("/api/evidence/list?feature_id=API_BULK&limit=10&offset=200", headers=headers)
