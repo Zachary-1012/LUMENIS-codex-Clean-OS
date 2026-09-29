@@ -559,6 +559,19 @@ Do not delete, rewrite, migrate or repair real production data without required 
 
 Evidence is provenance-bearing source truth and must not be overwritten by analysis output.
 
+Product Owner clarification (2026-09-29): the HK/international allowlist and
+protected Mainland personal account below are this workstation's development,
+test and prelaunch-operation boundary. They remain enforced here. A future
+user-authorized deployment must not inherit this developer's personal identity
+or a hard-coded regional eligibility restriction; it uses the existing platform
+authorization/session owners, exact user consent, revocation and account safety.
+This distinction is not permission to access the protected local account now.
+Preserve official API/OAuth adapters for future granted scopes; do not assert
+availability before actual authorization. AI may request one named platform;
+do not silently widen that request or enable AUTO. Session continuity uses
+permitted refresh, conservative pacing, bounded retries and human re-login when
+needed, never an immunity-to-ban claim or bypass of platform challenges.
+
 When touching XHS/RedNote or any new acquisition path:
 
 - production XHS/RedNote acquisition may use only the approved Hong Kong / international

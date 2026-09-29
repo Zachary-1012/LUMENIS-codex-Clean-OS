@@ -12,6 +12,36 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-29 — J1 real-data date-quality correction
+
+[The bounded J1 evidence](evidence/round-06/ROUND-06-J1-QUALITY-2026-09-29.md)
+co-publishes note contract v1.2 and its regression cases. Six real X fractional
+ISO timestamps now validate; one absent publication date is honestly missing.
+The existing backed-up correction changed only derived Raw/Canonical quality,
+passed source/lineage fingerprint, integrity and FK checks, and is idempotent.
+Actual local data remains 267 Raw/267 Canonical, now 57 ok/210 missing/0 error;
+three scope-unassigned Shenzhen Bay MixC records are not relabelled as Luohu MixC.
+Sixteen owner tests and the Constitution gate passed. The local Core health check
+is healthy; full user-visible Global/Focus work remains unaccepted. J1 is PARTIAL;
+no Round, Global coverage, release or operating status is advanced.
+
+### 2026-09-29 — J1–J8 execution authorized with parallel business validation
+
+The Product Owner approved execution of the eight real-job delivery packages in
+the [whole-product plan](../intelligence_library/01_序境产品研究/FULL-PRODUCT-UPGRADE-CLOSURE-RESEARCH-20260929.md#11-product-owner-补充与执行调整2026-09-29).
+The plan now retains AI-initiated single-platform collection, distinguishes this
+workstation's protected XHS identity boundary from future user-authorized accounts,
+preserves official API/OAuth paths, and requires real file understanding, cited
+analysis/creative work and claim-level verification of condensed news.
+China/global inventory work and task-sufficient CTH/BMP validation proceed in
+parallel; a full directory is not a business-job entry gate. Local interruption,
+retry/revocation, reopening and applicable restart recovery belong in every job;
+J8 adds cross-system/surface/release recovery. The Global contract reflects the
+new China-priority decision rather than continuing equal-country quota expansion.
+Each J package gets an actual-result report; a partial Batch does not count as
+one of eight completed packages. No J/ROUND/coverage/release status is advanced
+by this requirement update alone.
+
 ### 2026-09-29 — Whole-product research and China-priority direction
 
 The Product Owner requested frontier research and a reviewable execution plan for

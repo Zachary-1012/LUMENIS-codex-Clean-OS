@@ -55,6 +55,35 @@ def test_publish_time_missing_is_distinct_from_invalid(gate):
         "data_quality_status"] == "error"
 
 
+@pytest.mark.parametrize("publish_date", [
+    "2026-09-23T16:41:24.000Z",
+    "2026-09-23T16:41:24.123+08:00",
+])
+def test_fractional_iso_publish_time_with_timezone_is_valid(gate, publish_date):
+    record = {"title": "Official release", "url": "https://example.com/release",
+              "risk_level": "low", "publish_date": publish_date}
+    result = gate.validate("note", record)
+    assert result["valid"] is True
+    assert result["errors"] == []
+    assert result["missing"] == []
+    assert gate.enrich_quality_record("note", record)["data_quality_status"] == "ok"
+
+
+@pytest.mark.parametrize("publish_date", [
+    "2026-02-30T16:41:24.000Z",
+    "2026-09-23T16:41:24.000+08:99",
+])
+def test_invalid_fractional_iso_publish_time_is_rejected(gate, publish_date):
+    result = gate.validate("note", {
+        "title": "Official release",
+        "url": "https://example.com/release",
+        "publish_date": publish_date,
+    })
+    assert result["valid"] is False
+    assert result["missing"] == []
+    assert [item["field"] for item in result["errors"]] == ["publish_date"]
+
+
 def test_atom_rfc2822_publish_time_is_valid(gate):
     record = {"title": "Official Atom item", "url": "https://example.com/item",
               "risk_level": "low", "publish_date": "Thu, 24 Sep 2026 14:02:37 +0000"}
