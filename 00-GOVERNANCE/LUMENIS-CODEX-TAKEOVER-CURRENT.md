@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-30 — CTH03 readable sources and honest publication time
+
+The real commercial-record view now presents localized source names and separates
+publication time from page-read time, preserving timezone/precision and missing
+values. Final 78 Flutter regressions, Dart analysis, Web/Windows builds and four
+static gates passed. Browser acceptance traversed GLOBAL 91 -> Luohu 4 -> offline
+failure/explicit retry -> Clear -> GLOBAL 91 at desktop/mobile Web widths.
+[Round 10 evidence](evidence/round-10/ROUND-10-CTH03-READABLE-SOURCES-2026-09-30.md)
+records exact snapshots and remaining gaps. Native Windows interaction,
+Android/iOS, full CTH03, J1/Round 10 and global coverage are not accepted.
+
 ### 2026-09-30 — Content source/project save, reopen and revision
 
 The frozen Content Artifact slice is now integrated through the existing table,

@@ -282,7 +282,7 @@ class _Header extends StatelessWidget {
               ),
               const SizedBox(height: 7),
               Text(
-                copy.text('cth01.scope.complete'),
+                copy.text('cth03.scope.summary'),
                 style: TextStyle(
                   color: LumenisTheme.of(context).muted,
                   height: 1.5,
@@ -309,6 +309,7 @@ class _PulseBand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final copy = context.lumenisL10n;
+    final pageReadTime = _timePresentation(context, data.generatedAt);
     return Container(
       key: const ValueKey('cth03/pulse-band'),
       decoration: BoxDecoration(
@@ -323,7 +324,7 @@ class _PulseBand extends StatelessWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           _PulseValue(
-            label: copy.text('cth01.activity.heading'),
+            label: copy.text('cth03.recent_count'),
             metric: data.recentCount,
             accent: LumenisTheme.of(context).cth,
           ),
@@ -332,10 +333,10 @@ class _PulseBand extends StatelessWidget {
             metric: data.negativeCount,
             accent: LumenisTheme.of(context).danger,
           ),
-          _Freshness(
-            text: data.generatedAt.isEmpty
-                ? copy.text('freshness.stale')
-                : '${copy.text('common.time')} ${data.generatedAt}',
+          _PageReadTime(
+            text:
+                '${copy.text('cth03.page_read_time.label')} · ${pageReadTime.text}',
+            sourceValue: pageReadTime.sourceValue,
           ),
         ],
       ),
@@ -395,16 +396,15 @@ class _PulseValue extends StatelessWidget {
   }
 }
 
-class _Freshness extends StatelessWidget {
-  const _Freshness({required this.text});
+class _PageReadTime extends StatelessWidget {
+  const _PageReadTime({required this.text, this.sourceValue});
 
   final String text;
+  final String? sourceValue;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    liveRegion: true,
-    label: text,
-    child: LayoutBuilder(
+  Widget build(BuildContext context) {
+    final content = LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.hasBoundedWidth
             ? constraints.maxWidth
@@ -430,8 +430,15 @@ class _Freshness extends StatelessWidget {
           ),
         );
       },
-    ),
-  );
+    );
+    return Semantics(
+      liveRegion: true,
+      label: text,
+      child: sourceValue == null
+          ? content
+          : Tooltip(message: sourceValue!, child: content),
+    );
+  }
 }
 
 class _ChannelPanel extends StatelessWidget {
@@ -450,8 +457,8 @@ class _ChannelPanel extends StatelessWidget {
     final copy = context.lumenisL10n;
     return _Panel(
       key: const ValueKey('cth03/channel-lanes'),
-      title: copy.text('common.status'),
-      detail: copy.text('cth01.metrics.detail'),
+      title: copy.text('cth03.sources.heading'),
+      detail: copy.text('cth03.sources.detail'),
       child: channels.isEmpty
           ? _InlineState(text: copy.text('cth01.metric.state.unavailable'))
           : Column(
@@ -462,7 +469,8 @@ class _ChannelPanel extends StatelessWidget {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Semantics(
                         container: true,
-                        label: '${channel.name}，${channel.status}',
+                        label:
+                            '${_sourceDisplayName(context, channel.name)}，${channel.status}',
                         child: InkWell(
                           onTap: () => onChannelChanged(
                             selectedChannel == channel.name
@@ -503,7 +511,10 @@ class _ChannelPanel extends StatelessWidget {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        channel.name,
+                                        _sourceDisplayName(
+                                          context,
+                                          channel.name,
+                                        ),
                                         style: TextStyle(
                                           color: LumenisTheme.of(
                                             context,
@@ -564,14 +575,14 @@ class _StreamPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final copy = context.lumenisL10n;
-    final streamLabel = copy.text('cth01.activity.heading');
+    final streamLabel = copy.text('cth03.stream.heading');
     final title = selectedChannel == null
         ? streamLabel
-        : '$selectedChannel · $streamLabel';
+        : '${_sourceDisplayName(context, selectedChannel!)} · $streamLabel';
     return _Panel(
       key: const ValueKey('cth03/record-stream'),
       title: title,
-      detail: copy.text('cth01.activity.detail'),
+      detail: copy.text('cth03.stream.detail'),
       child: records.isEmpty
           ? _InlineState(text: _emptyCopy(context, state))
           : Column(
@@ -607,72 +618,97 @@ class _RecordRow extends StatelessWidget {
   final Cth03Record record;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    container: true,
-    label: [
-      record.title,
-      if (record.date.isNotEmpty) record.date,
-      if (record.channel.isNotEmpty) record.channel,
-      if (record.sentiment.isNotEmpty) record.sentiment,
-      if (record.risk.isNotEmpty) record.risk,
-    ].join('，'),
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 15),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: LumenisTheme.of(context).line),
+  Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
+    final publicationTime = _timePresentation(context, record.date);
+    final publicationLabel =
+        '${copy.text('cth03.publication_time.label')} · ${publicationTime.text}';
+    final channelLabel = _sourceDisplayName(context, record.channel);
+    return Semantics(
+      container: true,
+      label: [
+        record.title,
+        publicationLabel,
+        channelLabel,
+        if (record.sentiment.isNotEmpty) record.sentiment,
+        if (record.risk.isNotEmpty) record.risk,
+      ].join('，'),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: LumenisTheme.of(context).line),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              record.title,
+              style: TextStyle(
+                color: LumenisTheme.of(context).foreground,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Wrap(
+              spacing: 12,
+              runSpacing: 5,
+              children: [
+                _Meta(
+                  Icons.schedule_rounded,
+                  publicationLabel,
+                  tooltip: publicationTime.sourceValue,
+                ),
+                _Meta(Icons.public_rounded, channelLabel),
+                if (record.sentiment.isNotEmpty)
+                  _Meta(Icons.mood_rounded, record.sentiment),
+                if (record.risk.isNotEmpty)
+                  _Meta(Icons.warning_amber_rounded, record.risk),
+              ],
+            ),
+          ],
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            record.title,
-            style: TextStyle(
-              color: LumenisTheme.of(context).foreground,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 7),
-          Wrap(
-            spacing: 12,
-            runSpacing: 5,
-            children: [
-              if (record.date.isNotEmpty)
-                _Meta(Icons.schedule_rounded, record.date),
-              if (record.channel.isNotEmpty)
-                _Meta(Icons.public_rounded, record.channel),
-              if (record.sentiment.isNotEmpty)
-                _Meta(Icons.mood_rounded, record.sentiment),
-              if (record.risk.isNotEmpty)
-                _Meta(Icons.warning_amber_rounded, record.risk),
-            ],
-          ),
-        ],
-      ),
-    ),
-  );
+    );
+  }
 }
 
 class _Meta extends StatelessWidget {
-  const _Meta(this.icon, this.text);
+  const _Meta(this.icon, this.text, {this.tooltip});
 
   final IconData icon;
   final String text;
+  final String? tooltip;
 
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Icon(icon, size: 14, color: LumenisTheme.of(context).quiet),
-      const SizedBox(width: 5),
-      Text(
-        text,
-        style: TextStyle(color: LumenisTheme.of(context).muted, fontSize: 12),
-      ),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(icon, size: 14, color: LumenisTheme.of(context).quiet),
+        ),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            text,
+            softWrap: true,
+            style: TextStyle(
+              color: LumenisTheme.of(context).muted,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ],
+    );
+    return tooltip == null
+        ? content
+        : Tooltip(message: tooltip!, child: content);
+  }
 }
 
 class _Panel extends StatelessWidget {
@@ -741,4 +777,100 @@ String _contextLabel(BuildContext context, Cth03Context value) {
       value.displayName?[locale.languageCode] ??
       value.displayName?['zh-CN'] ??
       copy.text('context.mode.focus');
+}
+
+class _TimePresentation {
+  const _TimePresentation(this.text, {this.sourceValue});
+
+  final String text;
+  final String? sourceValue;
+}
+
+final _dateOnlyPattern = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$');
+final _timestampPattern = RegExp(
+  r'^(\d{4})-(\d{2})-(\d{2})[Tt ](\d{2}):(\d{2})(?::(\d{2})(?:[.,](\d{1,9}))?)?(Z|z|[+-]\d{2}:?\d{2})?$',
+);
+
+_TimePresentation _timePresentation(BuildContext context, String rawValue) {
+  final copy = context.lumenisL10n;
+  final raw = rawValue.trim();
+  if (raw.isEmpty) {
+    return _TimePresentation(copy.text('cth03.time.not_provided'));
+  }
+
+  final dateOnly = _dateOnlyPattern.firstMatch(raw);
+  if (dateOnly != null) {
+    return _validCalendarDate(dateOnly)
+        ? _TimePresentation(raw)
+        : _unrecognizedTime(copy, raw);
+  }
+
+  final timestamp = _timestampPattern.firstMatch(raw);
+  if (timestamp == null || !_validTimestampComponents(timestamp)) {
+    return _unrecognizedTime(copy, raw);
+  }
+
+  // Keep source precision and timezone instead of converting to device time.
+  final seconds = timestamp.group(6);
+  final fraction = timestamp.group(7);
+  final zone = timestamp.group(8);
+  final formatted = StringBuffer()
+    ..write('${timestamp.group(1)}-${timestamp.group(2)}-${timestamp.group(3)}')
+    ..write(' ${timestamp.group(4)}:${timestamp.group(5)}');
+  if (seconds != null) formatted.write(':$seconds');
+  if (fraction != null) formatted.write('.$fraction');
+  if (zone != null) {
+    formatted.write(' ${zone.toUpperCase() == 'Z' ? 'UTC' : zone}');
+  }
+
+  final display = formatted.toString();
+  return _TimePresentation(display, sourceValue: display == raw ? null : raw);
+}
+
+_TimePresentation _unrecognizedTime(LumenisLocalizations copy, String raw) =>
+    _TimePresentation(copy.text('cth03.time.unrecognized'), sourceValue: raw);
+
+bool _validTimestampComponents(Match timestamp) {
+  if (!_validCalendarDate(timestamp)) return false;
+  final hour = int.tryParse(timestamp.group(4) ?? '');
+  final minute = int.tryParse(timestamp.group(5) ?? '');
+  final second = int.tryParse(timestamp.group(6) ?? '0');
+  if (hour == null || minute == null || second == null) return false;
+  if (hour > 23 || minute > 59 || second > 59) return false;
+
+  final zone = timestamp.group(8);
+  if (zone == null || zone.toUpperCase() == 'Z') return true;
+  final offset = zone.substring(1).replaceAll(':', '');
+  final offsetHour = int.tryParse(offset.substring(0, 2));
+  final offsetMinute = int.tryParse(offset.substring(2, 4));
+  return offsetHour != null &&
+      offsetMinute != null &&
+      offsetHour <= 23 &&
+      offsetMinute <= 59;
+}
+
+bool _validCalendarDate(Match date) {
+  final year = int.tryParse(date.group(1) ?? '');
+  final month = int.tryParse(date.group(2) ?? '');
+  final day = int.tryParse(date.group(3) ?? '');
+  if (year == null || month == null || day == null) return false;
+  final normalized = DateTime.utc(year, month, day);
+  return normalized.year == year &&
+      normalized.month == month &&
+      normalized.day == day;
+}
+
+String _sourceDisplayName(BuildContext context, String sourceKey) {
+  final copy = context.lumenisL10n;
+  final raw = sourceKey.trim();
+  switch (raw.toLowerCase()) {
+    case 'public_http':
+      return copy.text('cth03.source.public_web');
+    case 'douyin':
+      return copy.text('cth03.source.douyin');
+    case '' || 'unknown':
+      return copy.text('cth03.source.unknown');
+    default:
+      return raw;
+  }
 }

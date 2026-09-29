@@ -3,17 +3,18 @@
 ```yaml
 screen_id: CTH-03
 status: BLOCKED
-revision: 1
+revision: 2
 owner_domain: CTH
 binding_ids:
   - BACKEND-GAP-009
 product_owner_approval: OVERALL_EXPERIENCE_CONSTITUTION_30_36_ONLY
 design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
 design_decision: BLOCKED
+presentation_design_decision: DESIGN_READY_BOUNDED_READABLE_SOURCE_TIME
 artifact_disposition: NON_AUTHORITATIVE_EXPLORATION_ONLY
 reviewer: Codex delegated ROUND-10 bounded source review
-reviewed_at: 2026-09-22
-approval_reference: source baseline origin/main 5ba1aefc53a1babc293e990c23c62f841724c843; this is not per-screen acceptance
+reviewed_at: 2026-09-30
+approval_reference: published read-scope slice 3d6e0924dd883a23616ba2f63a01962e10b76e1e; presentation review in section 11; this is not full-screen or round acceptance
 ```
 
 ## 0. Authority basis and artifact disposition
@@ -35,8 +36,8 @@ approval_reference: source baseline origin/main 5ba1aefc53a1babc293e990c23c62f84
 ## 2. Route, entry, exit and return
 
 - **Entry:** `Cth03Screen(client: ...)` after the existing CTH shell selects the monitoring workflow; this batch adds no route or second navigation owner.
-- **Read sequence:** `settingsContext()` is read first, then `screen('CTH-03')`. The screen request has no verified focus parameter. For `GLOBAL_ALL`, the repository requires a server `global_binding` (or the current canonical equivalent) with `applied`, explicit global grant/scope, CTH product/domain, `scope_verified`, `read_allowed` and verified Evidence lineage. For `FOCUS`, it additionally requires `focus_binding.applied`, exact Subject equality, CTH product/domain, `scope_verified`, `read_allowed` and verified lineage; otherwise it blocks rather than reusing a global aggregate.
-- **Current source:** `experience_screens._build_cth03()` currently reads verified notes/negative comments and returns `kpis`, `platforms` and `table` sections. The current runtime focus allowlist covers CTH-01 and BMP-01, not CTH-03, so focused acceptance is blocked.
+- **Read sequence:** `settingsContext()` is read first, then `screen('CTH-03')` through the existing scoped Core client. The published read slice accepts `lumenis.scope-read-binding.v1` for `commercial_realtime_stream`: `local-workspace-read-v1` or `actor-exact-scope-v1`, with exact CTH product/domain, applied/read-allowed/verified scope and exact GLOBAL or Subject match. A page read decision is not row Evidence. Every displayed row separately needs the verified v2 projection, stored Subject and Evidence integrity; metrics and source lanes need their own projections. Unknown policies, contracts or mismatched scope fail closed.
+- **Current source:** `experience_screens._build_cth03()` reads `canonical_data.list_scoped_canonical()` with the selected Subject or GLOBAL. It returns scope-verified records, their publication time and source platform, while `coverage=NOT_VERIFIED` and `source_freshness=UNKNOWN` remain explicit. Recent-window and negative counts remain unavailable. The published 2026-09-29 read acceptance covered GLOBAL, Guangzhou Taikoo Hui and Shenzhen MixC Luohu, clear-to-GLOBAL, offline clearing and retry recovery. It did not accept live monitoring, source freshness, collector actions or a whole native surface.
 - **Exit / return:** selecting a local source lane filters the mounted stream; clearing it returns to all returned records. The selection is presentation state only and preserves the context label. No deep-link or server mutation is introduced.
 
 ## 3. Verified data and callable bindings
@@ -44,12 +45,12 @@ approval_reference: source baseline origin/main 5ba1aefc53a1babc293e990c23c62f84
 | Priority | UI field / action | Current owner | Exact source/ViewModel field or callable | Definition / units / window | Freshness and missing-data behavior | Binding ID | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | P0 | Current scope label | SYSTEM context read | `LumenisCoreClient.settingsContext()` → `context.mode`, `domain_id`, `subject_id`, `display_name` | `GLOBAL_ALL` or focused CTH context only | Missing or mismatched context blocks the screen; Subject IDs are never rendered | — | Current client and context contract |
-| P1 | Recent and negative pulse | CTH read builder | `_build_cth03()` `kpis.items[id,value,state]` for `cth03.recent` and `cth03.negative` | Returned record counts; no inferred rate or trend | `ready` with a numeric value only; `empty`, `notcollected`, `offline` and unknown remain distinct | BACKEND-GAP-009 | Current source mapping; actor scope and lineage pending |
+| P1 | Recent and negative pulse | CTH read builder | `_build_cth03()` `kpis.items[id,value,state]` for `cth03.recent` and `cth03.negative` | Returned record counts; no inferred rate or trend | Current builder returns no verified numeric value; `empty`, `notcollected`, `offline` and unknown remain distinct | BACKEND-GAP-009 | Current source mapping; metric-level analysis/projection not verified |
 | P1 | Source lanes | CTH read builder | `_build_cth03()` `platforms.items[platform,status,schedule/detail]` | Returned lane availability/status text | A missing lane is not “healthy”; no collector action is inferred | BACKEND-GAP-009 | Current source mapping |
-| P1 | Prioritized stream | CTH read builder | `_build_cth03()` `table.rows[date,title,platform,sentiment,risk]` | Returned business fields only | A row is displayed only with explicit matching scope, read permission, verified Evidence lineage and a trace/evidence reference; otherwise it is withheld | BACKEND-GAP-009 | Current source mapping; source lineage pending |
+| P1 | Prioritized stream | CTH read builder | `_build_cth03()` `table.rows[date,title,platform,sentiment,risk]` | Returned business fields only | A row is displayed only with explicit matching scope, read permission, verified Evidence lineage and a trace/evidence reference; otherwise it is withheld | BACKEND-GAP-009 | Published v2 row projection and writer-authenticated integrity check; sentiment/risk are not verified |
 | BLOCKED | Live pulse/freshness clock and collector health action | CTH/SYSTEM owners unresolved | ViewModel declares `realtime_series` and `collectors`; no verified endpoint or action contract | No verified source-level freshness, realtime series, health command or Permission | Do not label response generation time as source freshness; show unavailable copy where needed | BACKEND-GAP-009 | `collector_v2/realtime` and health action remain UNKNOWN |
 
-The current App adapter uses only the shared `LumenisCoreClient`; it adds no API, database, Evidence, collector or localization owner. Pagination, cancellation, source-level freshness and per-Subject authorization are not part of the verified current callable. The adapter never invents local Permission or lineage defaults: a global aggregate without the server binding is blocked, and an untraceable row is withheld.
+The current App adapter uses only the shared `LumenisCoreClient`; it adds no API, database, Evidence, collector or localization owner. Pagination, cancellation, source-level freshness and collector actions remain unverified. Subject-scoped reads are accepted only by the exact current server/row contracts above. The adapter never invents local Permission or lineage defaults: a response without its valid server binding is blocked, and an untraceable row is withheld.
 
 ## 4. State and recovery matrix
 
@@ -91,7 +92,7 @@ The current App adapter uses only the shared `LumenisCoreClient`; it adds no API
 
 | Action | Server-side owner and actor/scope | Permission operation | Read/write/external effect | Idempotency / reversal | Evidence emitted | Confirmation and failure behavior |
 | --- | --- | --- | --- | --- | --- | --- |
-| Load context and stream | SYSTEM context + CTH read builder; actor/Subject binding UNKNOWN | Optional global auth only; no verified screen READ decision | Read only | N/A | Returned response only; no lineage claim | Render safe fields or honest blocked/error state |
+| Load context and stream | SYSTEM context + CTH read builder; exact server scope binding from §2 | Existing local-workspace or actor-exact-scope READ policy | Read only | N/A | Returned Canonical row projection/Evidence; no new Evidence write | Render verified rows or honest blocked/error state; no account wall |
 | Filter/clear source lane | Flutter local presentation state | None | No server effect | Reversible immediately | None | Local selection is enabled |
 | Refresh | Existing Core read | Same as load | Read only | Repeatable | New response only | Retry; no optimistic values |
 | Pause/resume, pin, open source evidence, health action | Owner/callable/Permission/effect/Trace UNKNOWN | UNKNOWN | UNKNOWN or consequential | UNKNOWN | UNKNOWN | No enabled control |
@@ -102,24 +103,96 @@ The current App adapter uses only the shared `LumenisCoreClient`; it adds no API
 - Loading, blocked, empty and error states use live-region semantics. Sentiment/risk are written as labels and are never color-only.
 - The stream is the non-visual equivalent of any future pulse chart. No canvas is drawn for the unresolved realtime series.
 - No authored motion is required; reduced motion produces the same immediate state changes.
-- The bounded UI uses existing `screen.CTH-03`, context, common, state and `cth01.*` keys; it does not add a local copy owner. Before acceptance, the canonical `LumenisLocalizations` owner must add and review the pending `cth03.pulse`, `cth03.channel_status`, `cth03.stream_state`, `cth03.scope_gap` and `cth03.action_unavailable` copy in zh-CN/en/ko, then replace the temporary generic mappings. This spec creates no second l10n owner.
+- The current UI reuses `screen.CTH-03`, context, common, state and `cth01.*` keys. §11 replaces misleading generic mappings with scoped `cth03.*` copy in the existing zh-CN/en/ko deltas and generated `LumenisLocalizations`; it creates no second localization owner.
 
 ## 9. Executable acceptance
 
 | Acceptance ID | User action and expected result | State/error path | Platform/input | Test layer | Current evidence/reference |
 | --- | --- | --- | --- | --- | --- |
-| CTH03-W-001 | Start the screen with a pending read; loading is announced and returned stream text is hidden until completion | Loading | Widget; desktop/mobile | Widget: `app/test/features/cth/cth03/cth03_screen_test.dart` | Local implementation evidence; runtime pending |
-| CTH03-W-002 | Render source-backed pulse, lanes and stream with internal IDs absent | Ready/partial/empty | Widget; desktop 1440 and mobile 390 | Widget test | Current builder-shaped response; lineage pending |
+| CTH03-W-001 | Start the screen with a pending read; loading is announced and returned stream text is hidden until completion | Loading | Widget; desktop/mobile | Widget: `app/test/features/cth/cth03/cth03_screen_test.dart` | Published 3d6e read-slice tests; each later source snapshot needs its own regression |
+| CTH03-W-002 | Render source-backed pulse, lanes and stream with internal IDs absent | Ready/partial/empty | Widget; desktop 1440 and mobile 390 | Widget + browser | 3d6e read-slice acceptance: 91 GLOBAL rows, 27 Guangzhou Taikoo Hui, 4 Shenzhen MixC Luohu; partial state retained; metric/health completion not claimed |
 | CTH03-W-003 | Return not-collected values | Not collected | Widget | Widget test required before promotion | Current parser preserves state |
-| CTH03-W-004 | Verify live/stale claims are not inferred from `generated_at` | Fresh/stale unknown | Widget/API | Contract test required | Current backend lacks source freshness |
-| CTH03-W-005 | Return offline, malformed and 5xx failure | Offline/error | Widget | Widget test required | Safe copy implemented |
-| CTH03-W-006 | Return focused CTH context without `focus_binding.applied` | Blocked focus | Widget/repository | Widget + repository test | Current runtime does not bind CTH-03 focus |
-| CTH03-W-007 | Resize 1440 → 1024 → 390 and operate lane filter with keyboard/touch | Responsive/accessibility | Widget; pointer, keyboard, touch | Widget test | Desktop/mobile anatomy implemented; runtime E2E pending |
+| CTH03-W-004 | Verify live/stale claims are not inferred from `generated_at` | Fresh/stale unknown | Widget/API | Contract + widget | Source freshness remains UNKNOWN; §11 fixes the ambiguous read-time and historical-record copy before separate presentation acceptance |
+| CTH03-W-005 | Return offline, malformed and 5xx failure | Offline/error | Widget + browser | Widget + actual tab-network failure/retry | 3d6e acceptance verified old rows clear while offline and return only after explicit successful retry |
+| CTH03-W-006 | Return focused CTH context without `focus_binding.applied` | Blocked focus | Widget/repository | Widget + repository test | Invalid binding remains blocked; valid current FOCUS binding separately verified under §2 |
+| CTH03-W-007 | Resize 1440 → 1024 → 390 and operate lane filter with keyboard/touch | Responsive/accessibility | Widget; pointer, keyboard, touch | Widget + browser | Actual 1440/390 scope-read interaction recorded for 3d6e; full breakpoint/filter and native surface acceptance remain separate |
 | CTH03-W-008 | Return `bound=true` with records but no server global grant/lineage; the repository blocks and shows no aggregate or record | Global authorization/lineage block | Repository/widget | Repository test | Implemented hostile fixture |
-| CTH03-W-009 | Return authorized `GLOBAL_ALL` and exact Guangzhou Taikoo Hui `FOCUS`; only the matching scope is decoded | Authorized global/focus read | Repository | Repository test | Implemented legal fixtures; live backend binding pending |
+| CTH03-W-009 | Return authorized `GLOBAL_ALL` and exact Guangzhou Taikoo Hui `FOCUS`; only the matching scope is decoded | Authorized global/focus read | Repository + browser | Repository test + actual scoped read | 3d6e verified GLOBAL → Guangzhou Taikoo Hui → Shenzhen MixC Luohu → clear-to-GLOBAL; no production write or coverage claim |
 
 ## 10. Review decision and open questions
 
-- **Decision:** `BLOCKED` for `DESIGN_READY`, Subject-scoped monitoring and ROUND-10 completion. The bounded implementation is read-only and source-honest for the current global response shape.
-- **Open owners:** SYSTEM/Permission must bind actor-to-Subject read authorization; CTH/Evidence must return source lineage; Collector must define realtime/health/freshness contracts; canonical l10n must add the three locales; Sol must review the screen spec.
-- **Required before acceptance:** a real new event through Source → Event → Evidence → monitoring UI; live/freshness semantics; focused binding; negative/offline/not-collected separation; and Web/Desktop/Mobile E2E.
+- **Decision:** the full live-monitoring design, J1 and ROUND-10 remain `BLOCKED`. The published read/scope/recovery slice and the bounded presentation review below do not close those gates.
+- **Open owners:** Collector must define and demonstrate realtime/health/freshness behavior; CTH must establish the recent-window and analysis contracts before presenting their values. Per-Subject read scope and row lineage now use the published contracts in §2; their existence does not prove the wider business task.
+- **Required before full acceptance:** a real new event through Source → Event → Evidence → monitoring UI; live/freshness semantics; negative/offline/not-collected separation; and applicable Web/Desktop/Mobile E2E. Preserve the historical acceptance rows above as the original gate record; §11 records the newer narrow review and evidence scope.
+
+## 11. Bounded read-presentation review — 2026-09-30
+
+### 11.1 Current task and boundary
+
+The operator opens the already-bound monitoring read view, selects a source or
+Subject and needs to understand where a returned record came from and when it
+was published. The current UI exposes `public_http`, `douyin` and raw date/time
+strings, and reuses a "latest changes" heading for records that may be historical.
+These are presentation defects within the existing read task. This review keeps
+the current route, scope selection, pulse/source/stream anatomy and recovery
+actions. It introduces no new action, data, freshness assertion, owner or design
+system. It creates no account, login or permission-management UI.
+
+### 11.2 Source-backed fields and copy
+
+| Existing field | Presentation decision | Semantic boundary |
+| --- | --- | --- |
+| `table.rows[].platform` / channel `name` | Resolve known `public_http` and `douyin` identifiers to localized human-readable source names. Filtering continues to use the original identity. | Unknown technical identifiers have an honest unknown-source label; never rename one source to another. |
+| `table.rows[].date` | Label as source publication time: `_build_cth03()` maps it from Canonical `publish_datetime`. Show readable dates without inventing missing precision or a timezone. | A date-only value remains date-only. An explicit offset is preserved or explicitly displayed; no implicit local conversion. Invalid or absent values are unavailable, never now/zero/fresh. |
+| Response `generated_at` | Label as page read time. | This is neither source publication/capture time nor source freshness. Absence does not by itself prove stale source data. |
+| Stream and header copy | Use neutral collected/returned-record language and explain the current scope. | Old source records must not be described as newly occurring events or current complete coverage. |
+| State and metric values | Keep PARTIAL, unavailable and not-collected labels and existing values unchanged. | Scope-read acceptance does not establish monitoring-window, sentiment, risk or collector-health truth. |
+
+Copy belongs to the existing three locale deltas and generated
+`LumenisLocalizations` output. The `copy-registry.json` counts must match the
+actual final deltas; it is a derived count update, not a second copy source.
+
+**Research / ADAPT:** [Dart 3.13.4 DateTime.parse documentation](https://api.dart.dev/dart-core/DateTime/parse.html),
+accessed 2026-09-30, matches the installed SDK. The documented parser normalizes
+overflowing components and converts explicit offsets to UTC. Therefore successful
+parsing alone must not authorize a displayed publication date: validate the
+original calendar/time components and preserve original precision and offset.
+Use the existing SDK and localization owner; no new dependency or source-data
+normalizer is introduced. Documentation is CC BY 4.0 and sample code BSD-3-Clause;
+this change adopts the documented behavior, without vendoring sample code.
+
+### 11.3 Surfaces, accessibility and effects
+
+| Surface | Bounded behavior | Required proof / limit |
+| --- | --- | --- |
+| Public Website | No website change or monitoring availability claim. | Not an editing or monitoring entry in this slice. |
+| Web Workspace | Keep existing source lanes and record stream; readable source and distinct time labels in visible text and semantics. | Actual scope/read/retry at the rebuilt snapshot. Source filtering is live-verifiable only when verified lane projections are returned. |
+| Desktop App | Same existing read composition and Core contracts; longer localized labels wrap. | Current Windows build; native interaction remains a separate claim until inspected. |
+| Mobile Companion | Keep the existing source selector and readable record stream, with wrapping metadata and unchanged touch actions. | 390 logical pixels and 200% text; actual browser mobile-layout interaction is not native Android/iOS proof. |
+
+There is no new animation or external effect. Existing keyboard/touch filtering
+must use the original source key and preserve current context. Accessible labels
+use the same localized platform and time meaning as visible labels. No shortened
+date may silently remove an explicit offset or add hours to a date-only source.
+
+### 11.4 Executable acceptance and decision
+
+- **CTH03-PRESENT-01:** `public_http`/`douyin` are human-readable in rows, source
+  selection and semantic labels; filtering still selects the exact source key.
+- **CTH03-PRESENT-02:** historical, date-only, offset-bearing, invalid and missing
+  publication values retain their actual meaning. `generated_at` is labelled
+  only as page read time and never creates a live/fresh/stale-source assertion.
+- **CTH03-PRESENT-03:** Chinese, English and Korean preserve these distinctions;
+  a narrow viewport with 200% text has no clipped record metadata or overflow.
+- **CTH03-PRESENT-04:** current CTH03, localization, launch and Shell regression,
+  the three Experience audits and constitution gate must pass after final edits.
+  Inspect the actual rebuilt UI with real returned records and scope changes.
+  The 2026-09-30 live response has no verified lane projections; preserve that
+  unavailable state and report live source filtering as `LIVE_NOT_VERIFIED`.
+  Widget filtering assertions verify identity preservation, not live lane health.
+  Keep current source/time unknowns visible.
+- **Review decision:** the primary controller approved this exact bounded
+  presentation contract on 2026-09-30 under the existing source-backed UX Batch.
+  `DESIGN_READY_BOUNDED_READABLE_SOURCE_TIME` authorizes only §11's changes.
+  The whole-screen decision above remains `BLOCKED`, regardless of this smaller
+  maintenance acceptance.

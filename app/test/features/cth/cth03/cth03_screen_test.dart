@@ -74,6 +74,230 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('publication time keeps source precision and timezone', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        _PendingRepository(
+          Future.value(
+            _data(
+              generatedAt: '2026-09-30T00:11:24',
+              records: const [
+                Cth03Record(
+                  date: '2021-09-10',
+                  title: 'date-only record',
+                  channel: 'public_http',
+                  sentiment: '',
+                  risk: '',
+                ),
+                Cth03Record(
+                  date: '2021-08-03T09:50:00Z',
+                  title: 'UTC record',
+                  channel: 'douyin',
+                  sentiment: '',
+                  risk: '',
+                ),
+                Cth03Record(
+                  date: '2024-09-12T10:39:28.1234+08:00',
+                  title: 'offset record',
+                  channel: 'douyin',
+                  sentiment: '',
+                  risk: '',
+                ),
+                Cth03Record(
+                  date: '2026-06-10T14:16:31.25',
+                  title: 'no-zone record',
+                  channel: 'public_http',
+                  sentiment: '',
+                  risk: '',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('2021-09-10'), findsOneWidget);
+    expect(find.textContaining('2021-08-03 09:50:00 UTC'), findsOneWidget);
+    expect(
+      find.textContaining('2024-09-12 10:39:28.1234 +08:00'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('2026-06-10 14:16:31.25'), findsOneWidget);
+    expect(find.textContaining('2026-09-30 00:11:24'), findsOneWidget);
+    expect(find.textContaining('2026-09-30 08:11:24'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('missing and malformed publication dates stay explicit', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        _PendingRepository(
+          Future.value(
+            _data(
+              records: const [
+                Cth03Record(
+                  date: '',
+                  title: 'undated record',
+                  channel: 'public_http',
+                  sentiment: '',
+                  risk: '',
+                ),
+                Cth03Record(
+                  date: '2021-02-30T10:00:00Z',
+                  title: 'invalid date record',
+                  channel: 'public_http',
+                  sentiment: '',
+                  risk: '',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('发布时间 · 未提供'), findsOneWidget);
+    expect(find.textContaining('发布时间 · 时间格式无法识别'), findsOneWidget);
+    expect(find.textContaining('2021-03-02'), findsNothing);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Tooltip && widget.message == '2021-02-30T10:00:00Z',
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('source labels are readable while filters retain source keys', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _app(
+        _PendingRepository(
+          Future.value(
+            _data(
+              channels: const [
+                Cth03Channel(name: 'public_http', status: '最近成功', detail: '只读'),
+                Cth03Channel(name: 'douyin', status: '最近成功', detail: '只读'),
+                Cth03Channel(name: '', status: '未知', detail: '只读'),
+                Cth03Channel(name: '已有来源名称', status: '最近成功', detail: '只读'),
+              ],
+              records: const [
+                Cth03Record(
+                  date: '2026-09-10',
+                  title: 'public web record',
+                  channel: 'public_http',
+                  sentiment: '',
+                  risk: '',
+                ),
+                Cth03Record(
+                  date: '2026-09-11',
+                  title: 'douyin record',
+                  channel: 'douyin',
+                  sentiment: '',
+                  risk: '',
+                ),
+                Cth03Record(
+                  date: '2026-09-12',
+                  title: 'unknown source record',
+                  channel: '',
+                  sentiment: '',
+                  risk: '',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('公开网页'), findsWidgets);
+    expect(find.text('抖音'), findsWidgets);
+    expect(find.text('来源未知'), findsWidgets);
+    expect(find.text('已有来源名称'), findsWidgets);
+    expect(find.text('public web record'), findsOneWidget);
+    expect(find.text('douyin record'), findsOneWidget);
+    expect(find.text('unknown source record'), findsOneWidget);
+
+    await tester.tap(find.text('抖音').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('douyin record'), findsOneWidget);
+    expect(find.text('public web record'), findsNothing);
+    expect(find.text('unknown source record'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final copy in const [
+    (
+      locale: Locale('zh', 'CN'),
+      scope: '查看当前范围内的已采集内容。',
+      recent: '近期记录',
+      stream: '已采集记录',
+      publicWeb: '公开网页',
+      douyin: '抖音',
+    ),
+    (
+      locale: Locale('en'),
+      scope: 'View collected content within the current scope.',
+      recent: 'Recent records',
+      stream: 'Collected records',
+      publicWeb: 'Public web',
+      douyin: 'Douyin',
+    ),
+    (
+      locale: Locale('ko'),
+      scope: '현재 범위에서 수집된 콘텐츠를 확인합니다.',
+      recent: '최근 기록',
+      stream: '수집된 기록',
+      publicWeb: '공개 웹',
+      douyin: '더우인',
+    ),
+  ]) {
+    testWidgets('renders CTH-03 business copy in ${copy.locale}', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          _PendingRepository(
+            Future.value(
+              _data(
+                channels: const [
+                  Cth03Channel(
+                    name: 'public_http',
+                    status: '最近成功',
+                    detail: '只读',
+                  ),
+                  Cth03Channel(name: 'douyin', status: '最近成功', detail: '只读'),
+                ],
+              ),
+            ),
+          ),
+          locale: copy.locale,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(copy.scope), findsOneWidget);
+      expect(find.text(copy.recent), findsOneWidget);
+      expect(find.text(copy.stream), findsOneWidget);
+      expect(find.text(copy.publicWeb), findsWidgets);
+      expect(find.text(copy.douyin), findsWidgets);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('focused subject without server binding stays unavailable', (
     tester,
   ) async {
@@ -351,7 +575,7 @@ void main() {
     },
   );
 
-  for (final width in [390.0, 1440.0]) {
+  for (final width in [320.0, 390.0, 1440.0]) {
     for (final includeRejectedRow in [false, true]) {
       testWidgets(
         'partial records remain visibly partial at width $width, rejected=$includeRejectedRow',
@@ -370,7 +594,10 @@ void main() {
           }
 
           await tester.pumpWidget(
-            _app(_ReadRepository(() => _loadAnonymous(response))),
+            _app(
+              _ReadRepository(() => _loadAnonymous(response)),
+              textScale: 2.0,
+            ),
           );
           await tester.pumpAndSettle();
 
@@ -629,8 +856,12 @@ Map<String, dynamic> _localScopeResponse({String? subjectId}) {
   return response;
 }
 
-Widget _app(Cth03Repository repository) => MaterialApp(
-  locale: const Locale('zh', 'CN'),
+Widget _app(
+  Cth03Repository repository, {
+  Locale locale = const Locale('zh', 'CN'),
+  double textScale = 1,
+}) => MaterialApp(
+  locale: locale,
   theme: LumenisTheme.dark,
   supportedLocales: LumenisLocalizations.supportedLocales,
   localizationsDelegates: const [
@@ -639,6 +870,12 @@ Widget _app(Cth03Repository repository) => MaterialApp(
     GlobalWidgetsLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
   ],
+  builder: (context, child) => MediaQuery(
+    data: MediaQuery.of(
+      context,
+    ).copyWith(textScaler: TextScaler.linear(textScale)),
+    child: child!,
+  ),
   home: Scaffold(
     body: Cth03Screen(client: LumenisCoreClient(), repository: repository),
   ),
@@ -669,9 +906,13 @@ class _FakeClient extends LumenisCoreClient {
   }
 }
 
-Cth03ScreenData _data() => Cth03ScreenData(
+Cth03ScreenData _data({
+  String generatedAt = '2026-09-22T10:00:00',
+  List<Cth03Channel>? channels,
+  List<Cth03Record>? records,
+}) => Cth03ScreenData(
   context: const Cth03Context(mode: 'GLOBAL_ALL'),
-  generatedAt: '2026-09-22T10:00:00',
+  generatedAt: generatedAt,
   recentCount: const Cth03Metric(
     id: 'cth03.recent',
     state: Cth03DataState.ready,
@@ -682,19 +923,23 @@ Cth03ScreenData _data() => Cth03ScreenData(
     state: Cth03DataState.ready,
     value: 1,
   ),
-  channels: const [
-    Cth03Channel(name: '公开网页', status: '最近成功', detail: '只读'),
-    Cth03Channel(name: '社交平台', status: '暂未返回', detail: '只读'),
-  ],
-  records: const [
-    Cth03Record(
-      date: '2026-09-22',
-      title: '线上服务反馈',
-      channel: '公开网页',
-      sentiment: '负面',
-      risk: '中风险',
-    ),
-  ],
+  channels:
+      channels ??
+      const [
+        Cth03Channel(name: '公开网页', status: '最近成功', detail: '只读'),
+        Cth03Channel(name: '社交平台', status: '暂未返回', detail: '只读'),
+      ],
+  records:
+      records ??
+      const [
+        Cth03Record(
+          date: '2026-09-22',
+          title: '线上服务反馈',
+          channel: '公开网页',
+          sentiment: '负面',
+          risk: '中风险',
+        ),
+      ],
   recordState: Cth03DataState.ready,
 );
 
