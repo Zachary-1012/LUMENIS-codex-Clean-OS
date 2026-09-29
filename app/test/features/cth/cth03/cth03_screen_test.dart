@@ -7,6 +7,7 @@ import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/features/cth/cth03/cth03_repository.dart';
 import 'package:lumenis_app/features/cth/cth03/cth03_screen.dart';
+import 'package:lumenis_app/features/cth/cth03/cth03_view_model.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 
 import '../cth_test_support.dart';
@@ -165,6 +166,467 @@ void main() {
     expect(data.context.displayName?['zh-CN'], '广州太古汇');
     expect(data.records, isNotEmpty);
   });
+
+  test(
+    'anonymous records retain partial coverage and uncollected metrics',
+    () async {
+      final data = await _loadAnonymous(_anonymousResponse());
+
+      expect(data.context.mode, 'GLOBAL_ALL');
+      expect(data.records.single.title, '线上服务反馈');
+      expect(data.recordState, Cth03DataState.partial);
+      expect(data.recentCount.state, Cth03DataState.notCollected);
+      expect(data.recentCount.value, isNull);
+    },
+  );
+
+  test(
+    'local scope binding reads proved rows without borrowing a header proof',
+    () async {
+      final data = await _loadAnonymous(_localScopeResponse());
+      expect(data.records.single.title, '线上服务反馈');
+      expect(data.recordState, Cth03DataState.partial);
+      expect(data.recentCount.value, isNull);
+    },
+  );
+
+  test(
+    'a confirmed empty local view does not need an arbitrary evidence row',
+    () async {
+      final response = _localScopeResponse();
+      final table = (response['sections'] as List).last as Map;
+      table['state'] = 'notcollected';
+      table['rows'] = <Map<String, Object>>[];
+      final data = await _loadAnonymous(response);
+      expect(data.records, isEmpty);
+      expect(data.recordState, Cth03DataState.notCollected);
+      expect(data.recentCount.value, isNull);
+    },
+  );
+
+  for (final field in [
+    'contract',
+    'module',
+    'policy',
+    'actor_scope',
+    'subject_id',
+    'read_allowed',
+    'scope_verified',
+    'global_all_granted',
+  ]) {
+    test('local scope binding rejects an invalid $field', () async {
+      final response = _localScopeResponse();
+      final binding = response['global_binding'] as Map;
+      binding[field] = switch (field) {
+        'read_allowed' || 'scope_verified' => false,
+        'global_all_granted' => true,
+        _ => 'WRONG',
+      };
+      await expectLater(
+        _loadAnonymous(response),
+        throwsA(isA<Cth03ContextUnavailable>()),
+      );
+    });
+  }
+
+  for (final subjectId in <String?>[null, 'SUBJECT-RETURNED']) {
+    test(
+      'existing actor scope reads only its proved view: $subjectId',
+      () async {
+        final response = _localScopeResponse(subjectId: subjectId);
+        final isGlobal = subjectId == null;
+        final binding =
+            response[isGlobal ? 'global_binding' : 'focus_binding'] as Map;
+        binding['policy'] = 'actor-exact-scope-v1';
+        binding['actor_scope'] = 'authenticated';
+        binding['global_all_granted'] = isGlobal;
+        final row =
+            (((response['sections'] as List).last as Map)['rows'] as List)
+                    .single
+                as Map;
+        final projection = row['projection'] as Map;
+        (projection['scope'] as Map)['global_all_granted'] = isGlobal;
+        final repository = CoreCth03Repository(
+          client: _FakeClient(
+            contextResponse: {
+              'ok': true,
+              'contract': 'lumenis.context.v1',
+              'context': {
+                'mode': isGlobal ? 'GLOBAL_ALL' : 'FOCUS',
+                if (!isGlobal) 'domain_id': 'CTH',
+                if (!isGlobal) 'subject_id': subjectId,
+              },
+            },
+            screenResponse: response,
+          ),
+        );
+        expect((await repository.load()).records, hasLength(1));
+        (projection['integrity'] as Map)['verified'] = false;
+        expect((await repository.load()).records, isEmpty);
+        binding['global_all_granted'] = !isGlobal;
+        await expectLater(
+          repository.load(),
+          throwsA(isA<Cth03ContextUnavailable>()),
+        );
+        binding['global_all_granted'] = isGlobal;
+        binding['actor_scope'] = 'anonymous_read';
+        await expectLater(
+          repository.load(),
+          throwsA(isA<Cth03ContextUnavailable>()),
+        );
+      },
+    );
+  }
+
+  test('local scope approval never replaces a row evidence proof', () async {
+    final response = _localScopeResponse();
+    final row =
+        (((response['sections'] as List).last as Map)['rows'] as List).single
+            as Map;
+    row.remove('projection');
+    final data = await _loadAnonymous(response);
+    expect(data.records, isEmpty);
+    expect(data.recordState, Cth03DataState.blocked);
+  });
+
+  test(
+    'local focus requires the same subject in the view and stored projection',
+    () async {
+      const subjectId = 'SUBJECT-RETURNED';
+      final response = _localScopeResponse(subjectId: subjectId);
+      final client = _FakeClient(
+        contextResponse: const {
+          'ok': true,
+          'contract': 'lumenis.context.v1',
+          'context': {
+            'mode': 'FOCUS',
+            'domain_id': 'CTH',
+            'subject_id': subjectId,
+          },
+        },
+        screenResponse: response,
+      );
+      final repository = CoreCth03Repository(client: client);
+      expect((await repository.load()).records, hasLength(1));
+      final row =
+          (((response['sections'] as List).last as Map)['rows'] as List).single
+              as Map;
+      ((row['projection'] as Map)['stored_scope'] as Map)['subject_id'] =
+          'OTHER';
+      expect((await repository.load()).records, isEmpty);
+      (response['focus_binding'] as Map)['subject_id'] = 'OTHER';
+      await expectLater(
+        repository.load(),
+        throwsA(isA<Cth03ContextUnavailable>()),
+      );
+    },
+  );
+
+  test(
+    'row permission does not authorize a global aggregate or source health',
+    () async {
+      final response = _anonymousResponse();
+      final sections = response['sections'] as List;
+      (sections.first as Map)['items'] = [
+        {
+          'id': 'cth03.recent',
+          'state': 'ready',
+          'value': 999,
+          'projection': _anonymousProjection(),
+        },
+      ];
+      (sections[1] as Map)['items'] = [
+        {
+          'platform': '公开网页',
+          'status': '正常',
+          'projection': _anonymousProjection(),
+        },
+      ];
+      final data = await _loadAnonymous(response);
+
+      expect(data.records, hasLength(1));
+      expect(data.recentCount.hasValue, isFalse);
+      expect(data.recentCount.value, isNull);
+      expect(data.channels, isEmpty);
+    },
+  );
+
+  for (final width in [390.0, 1440.0]) {
+    for (final includeRejectedRow in [false, true]) {
+      testWidgets(
+        'partial records remain visibly partial at width $width, rejected=$includeRejectedRow',
+        (tester) async {
+          await tester.binding.setSurfaceSize(Size(width, 1000));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          final response = _anonymousResponse();
+          final table = (response['sections'] as List).last as Map;
+          final rows = table['rows'] as List;
+          if (includeRejectedRow) {
+            rows.add(<String, Object>{
+              ...Map<String, Object>.from(rows.single as Map),
+              'title': '范围不匹配的记录',
+              'subject_id': 'OTHER',
+            });
+          }
+
+          await tester.pumpWidget(
+            _app(_ReadRepository(() => _loadAnonymous(response))),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text('部分可用'), findsOneWidget);
+          expect(find.text('线上服务反馈'), findsOneWidget);
+          expect(find.text('范围不匹配的记录'), findsNothing);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
+  for (final mismatch in [
+    'domain',
+    'subject',
+    'evidence',
+    'read',
+    'projection_scope',
+  ]) {
+    test(
+      'anonymous stream withholds a row with mismatched $mismatch',
+      () async {
+        final response = _anonymousResponse();
+        final table = (response['sections'] as List).last as Map;
+        final row = (table['rows'] as List).single as Map;
+        final projection = row['projection'] as Map;
+        switch (mismatch) {
+          case 'domain':
+            (projection['stored_scope'] as Map)['domain_id'] = 'zbmp';
+          case 'subject':
+            row['subject_id'] = 'SUBJECT-OTHER';
+          case 'evidence':
+            (projection['integrity'] as Map)['verified'] = false;
+          case 'read':
+            row['read_allowed'] = false;
+          case 'projection_scope':
+            (projection['scope'] as Map)['subject_id'] = 'SUBJECT-OTHER';
+        }
+        final data = await _loadAnonymous(response);
+        expect(data.records, isEmpty);
+        expect(data.recordState, Cth03DataState.blocked);
+      },
+    );
+  }
+
+  test(
+    'anonymous scope must be explicitly allowed and cannot satisfy FOCUS',
+    () async {
+      final response = _anonymousResponse();
+      (response['global_binding'] as Map).remove('actor_scope');
+      await expectLater(
+        _loadAnonymous(response),
+        throwsA(isA<Cth03ContextUnavailable>()),
+      );
+
+      await expectLater(
+        CoreCth03Repository(
+          client: _FakeClient(
+            contextResponse: _guangzhouFocusContext,
+            screenResponse: _anonymousResponse(),
+          ),
+        ).load(),
+        throwsA(isA<Cth03ContextUnavailable>()),
+      );
+    },
+  );
+
+  for (final status in [401, 403]) {
+    testWidgets('a $status response offers retry without a product account', (
+      tester,
+    ) async {
+      var reads = 0;
+      final repository = _ReadRepository(() async {
+        reads++;
+        if (reads == 1) {
+          throw LumenisCoreException('withheld', statusCode: status);
+        }
+        return _data();
+      });
+      await tester.pumpWidget(_app(repository));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('登录'), findsNothing);
+      expect(find.textContaining('账号'), findsNothing);
+      expect(
+        find.text(status == 401 ? '运营信息暂不可用，请稍后重试。' : '暂时无法查看'),
+        findsOneWidget,
+      );
+      expect(find.text('线上服务反馈'), findsNothing);
+      expect(reads, 1);
+      await tester.tap(find.byIcon(Icons.refresh_rounded));
+      await tester.pumpAndSettle();
+      expect(find.text('线上服务反馈'), findsOneWidget);
+      expect(reads, 2);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  test(
+    'pending refresh is not duplicated and a late reply cannot revive a closed page',
+    () async {
+      final pending = Completer<Cth03ScreenData>();
+      var reads = 0;
+      final model = Cth03ViewModel(
+        repository: _ReadRepository(() {
+          reads++;
+          return pending.future;
+        }),
+      );
+      final first = model.refresh();
+      final second = model.refresh();
+      expect(reads, 1);
+      model.dispose();
+      pending.complete(_data());
+      await Future.wait([first, second]);
+      expect(model.data, isNull);
+      await model.refresh();
+      expect(reads, 1);
+    },
+  );
+
+  test(
+    'a failed refresh clears previous rows and a later retry can recover',
+    () async {
+      var reads = 0;
+      final model = Cth03ViewModel(
+        repository: _ReadRepository(() async {
+          reads++;
+          if (reads == 2) throw const LumenisCoreException('offline');
+          return _data();
+        }),
+      );
+      addTearDown(model.dispose);
+      await model.refresh();
+      expect(model.visibleRecords(), hasLength(1));
+      await model.refresh();
+      expect(model.failureKind, Cth03FailureKind.offline);
+      expect(model.visibleRecords(), isEmpty);
+      await model.refresh();
+      expect(model.phase, Cth03LoadPhase.ready);
+      expect(model.visibleRecords(), hasLength(1));
+      expect(reads, 3);
+    },
+  );
+}
+
+class _ReadRepository implements Cth03Repository {
+  const _ReadRepository(this.read);
+  final Future<Cth03ScreenData> Function() read;
+
+  @override
+  Future<Cth03ScreenData> load() => read();
+}
+
+Future<Cth03ScreenData> _loadAnonymous(Map<String, dynamic> response) =>
+    CoreCth03Repository(
+      client: _FakeClient(
+        contextResponse: _globalContext,
+        screenResponse: response,
+      ),
+    ).load();
+
+Map<String, dynamic> _anonymousProjection() => {
+  ...cthGlobalProjection,
+  'scope': {
+    'mode': 'GLOBAL_ALL',
+    'domain_id': 'CTH',
+    'product_id': 'CTH',
+    'global_all_granted': false,
+  },
+  'stored_scope': {
+    'global': false,
+    'domain_id': 'cth',
+    'product_id': 'CTH',
+    'subject_id': 'SUBJECT-RETURNED',
+  },
+  'integrity': {...cthGlobalProjection['integrity'] as Map},
+};
+
+Map<String, dynamic> _anonymousResponse() => {
+  'ok': true,
+  'screen': 'CTH-03',
+  'bound': true,
+  'global_binding': {
+    'applied': true,
+    'actor_scope': 'anonymous_read',
+    'read_allowed': true,
+    'scope_verified': true,
+    'evidence_lineage': 'verified',
+    'canonical_scope': 'GLOBAL_ALL',
+    'domain_id': 'CTH',
+    'product_id': 'CTH',
+    'global_all_granted': false,
+    'projection': _anonymousProjection(),
+  },
+  'truth': {'data_state': 'PARTIAL'},
+  'sections': [
+    {
+      'type': 'kpis',
+      'items': [
+        {'id': 'cth03.recent', 'state': 'notcollected', 'value': null},
+        {'id': 'cth03.negative', 'state': 'notcollected', 'value': null},
+      ],
+    },
+    {'type': 'platforms', 'state': 'notcollected', 'items': <Object>[]},
+    {
+      'type': 'table',
+      'state': 'ready',
+      'rows': [
+        {
+          'title': '线上服务反馈',
+          'date': '2026-09-22',
+          'platform': '公开网页',
+          'scope_mode': 'GLOBAL_ALL',
+          'canonical_scope': 'GLOBAL_ALL',
+          'subject_id': 'SUBJECT-RETURNED',
+          'read_allowed': true,
+          'projection': _anonymousProjection(),
+        },
+      ],
+    },
+  ],
+};
+
+Map<String, dynamic> _localScopeResponse({String? subjectId}) {
+  final response = _anonymousResponse();
+  response.remove('global_binding');
+  final mode = subjectId == null ? 'GLOBAL_ALL' : 'FOCUS';
+  response[subjectId == null
+      ? 'global_binding'
+      : 'focus_binding'] = <String, Object?>{
+    'contract': 'lumenis.scope-read-binding.v1',
+    'module': 'commercial_realtime_stream',
+    'policy': 'local-workspace-read-v1',
+    'domain_id': 'CTH',
+    'product_id': 'CTH',
+    'canonical_scope': mode,
+    'subject_id': subjectId,
+    'applied': true,
+    'read_allowed': true,
+    'scope_verified': true,
+    'actor_scope': 'anonymous_read',
+    'global_all_granted': false,
+  };
+  if (subjectId != null) {
+    final row =
+        (((response['sections'] as List).last as Map)['rows'] as List).single
+            as Map;
+    row['scope_mode'] = mode;
+    row['canonical_scope'] = mode;
+    row['subject_id'] = subjectId;
+    final projection = row['projection'] as Map;
+    (projection['scope'] as Map)['mode'] = mode;
+    (projection['scope'] as Map)['subject_id'] = subjectId;
+    (projection['stored_scope'] as Map)['subject_id'] = subjectId;
+  }
+  return response;
 }
 
 Widget _app(Cth03Repository repository) => MaterialApp(

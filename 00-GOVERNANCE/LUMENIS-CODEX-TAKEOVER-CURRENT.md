@@ -23,8 +23,14 @@ remain unknown, and coverage/freshness are not inferred from those counts.
 Twenty Canonical regressions, 11 route/projection tests and the full existing
 Experience runtime test file passed on isolated databases. Live malformed scope,
 foreign-Origin and forwarding requests were denied without records; a subsequent
-valid request recovered. Frontend integration/E2E is in progress. J1 and ROUND 10
-are still PARTIAL/REWORK; this does not close the full data or business workflow.
+valid request recovered. The four-file frontend integration passed 67 targeted
+Flutter tests, Dart analysis and Web/Windows release builds. Actual responsive
+Web interaction passed GLOBAL 91 → Taikoo 27 → Luohu 4 → Clear/GLOBAL 91,
+with partial coverage shown and offline stale-row removal/explicit retry verified.
+Root reviewed the exact source and captured acceptance evidence. Native-device,
+complete monitoring/analysis and business-result acceptance remain unverified.
+J1 and ROUND 10 are still PARTIAL/REWORK; this does not close the full data or
+business workflow.
 
 ### 2026-09-29 — J1 open local Context and subject selection
 
@@ -36,9 +42,9 @@ independent frontend task also exercised the real Taikoo picker and return to
 GLOBAL. Ninety isolated targeted tests passed. Credential-bearing or non-local
 requests retain existing authorization; writes and collection remain fenced.
 This supersedes the earlier local FOCUS account requirement below, only when
-the explicit local workspace policy is enabled. CTH03 record projection remains
-unavailable, so J1 and ROUND 04 are still unaccepted; no coverage/release status
-advances.
+the explicit local workspace policy is enabled. The later scoped-stream entry
+above supersedes this Batch's then-unavailable CTH03 projection. J1 and ROUND 04
+are still unaccepted; no coverage/release status advances.
 
 ### 2026-09-29 — J1 real-data date-quality correction
 

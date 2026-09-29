@@ -116,8 +116,10 @@ class _Cth03Unavailable extends StatelessWidget {
     ),
     Cth03FailureKind.focusNotBound || Cth03FailureKind.pageNotBound =>
       copy.text('context.screen_binding_unavailable'),
-    Cth03FailureKind.authentication => copy.text('cth01.login_required'),
-    Cth03FailureKind.permissionDenied => copy.text('cth01.access_unavailable'),
+    Cth03FailureKind.authentication => copy.text('cth01.generic_unavailable'),
+    Cth03FailureKind.permissionDenied => copy.text(
+      'cth01.metric.state.blocked',
+    ),
     Cth03FailureKind.offline => copy.text('cth01.connection_unavailable'),
     Cth03FailureKind.server => copy.text('cth01.generic_unavailable'),
   };
@@ -573,9 +575,13 @@ class _StreamPanel extends StatelessWidget {
       child: records.isEmpty
           ? _InlineState(text: _emptyCopy(context, state))
           : Column(
-              children: records
-                  .map((record) => _RecordRow(record: record))
-                  .toList(growable: false),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (state == Cth03DataState.partial ||
+                    state == Cth03DataState.blocked)
+                  _InlineState(text: copy.text('state.partial')),
+                for (final record in records) _RecordRow(record: record),
+              ],
             ),
     );
   }

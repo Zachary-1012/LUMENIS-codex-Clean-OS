@@ -1,6 +1,6 @@
 # J1 / ROUND 10 — Canonical records reach the scoped monitoring stream
 
-Status: **LOCAL API VERIFIED; FRONTEND ACCEPTANCE IN PROGRESS; J1 PARTIAL**.
+Status: **BOUNDED WEB RECORD FLOW VERIFIED; J1 PARTIAL / ROUND 10 REWORK**.
 Base: `5653ee173dea8961112e5b7d1d2a5c8bb384d7dd`. This is a bounded read path,
 not acceptance of ROUND 10 or the whole J1 data package.
 
@@ -60,8 +60,35 @@ Raw/Canonical/Evidence rewrite, migration, or business mutation was invoked.
   per-row projection, unknown date/analysis/aggregates, failure sanitization and
   successful retry. Its projection inputs are isolated unit-test samples; actual
   signed production-source readback is recorded separately above.
-- Frontend acceptance remains in progress. Test-only data does not count as
-  product coverage or user E2E.
+- Frontend source at backend base `93726e0a` passed 67 targeted Flutter tests,
+  four-file Dart analysis, Experience authority/blueprint/anti-template gates,
+  Constitution and diff checks (all exit 0). Web and Windows release builds
+  succeeded. The served Web bundle hash matched the built bundle. Test-only
+  data does not count as product coverage or user E2E.
+
+## Actual Web interaction and recovery — 2026-09-29
+
+The independent frontend owner exercised the running product at 1440x960:
+GLOBAL 91 → Guangzhou Taikoo Hui 27 → Shenzhen MixC Luohu 4. At 390x844,
+clearing focus restored GLOBAL 91. Partial coverage remained visible; unknown
+window aggregates stayed unavailable. Tab-local offline mode plus explicit
+refresh removed the old records; restoring the connection and refreshing
+returned the same four Luohu records. Browser overrides were restored and
+console warnings/errors were empty. The shared backend was not stopped.
+
+Root reviewed the exact four-file diff, acceptance snapshot and actual mobile
+and recovered-page screenshots. Snapshot file hashes were checked against the
+working files before staging. Evidence is in local
+`C:/Users/28049/AppData/Local/Temp/lumenis-cth03-20260929/`:
+`acceptance-snapshot.json`, `api-scope-results.json`, screenshots and accessibility
+trees for global/focus/luohu/mobile/offline/recovered/cleared states.
+
+This proves the bounded read/switch/clear/retry workflow, not a complete monitoring
+or decision job. Native Windows UI was not exercised, and mobile dimensions are
+responsive Web evidence, not a native-device claim. Channel identifiers and ISO
+date presentation remain a known refinement; old source dates are not freshness
+proof. No collection, analysis, complete metrics, report/action/evaluation or
+global inventory acceptance is implied.
 
 ## 真实用户工作闭环验收 / REAL DELIVERY CARD
 
@@ -70,9 +97,9 @@ missing state, switch to another Subject and return to GLOBAL without cross-scop
 residue. Entry: CTH03 in the existing Flutter workspace. Real inputs: the product's
 signed Canonical rows above. Result: scoped, traceable record projection, not a
 completed decision/operating report. Evidence: actual API readback and each row's
-stored scope proof; user-visible acceptance is being executed by the frontend
-owner. Failure/recovery must include denied/offline reads, stale-view removal,
-retry and return. Real source interaction/action/evaluation remain later Job work.
+stored scope proof; actual Web acceptance is recorded above. Denied reads,
+offline failure, stale-view removal, retry and return were exercised. Real
+source interaction/action/evaluation remain later Job work.
 
 ## GLOBAL UNIVERSE / DATA MATURITY IMPACT
 

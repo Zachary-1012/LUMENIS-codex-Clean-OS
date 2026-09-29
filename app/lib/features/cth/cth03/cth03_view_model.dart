@@ -25,36 +25,42 @@ class Cth03ViewModel extends ChangeNotifier {
   Cth03ScreenData? data;
   String? selectedChannel;
   bool _disposed = false;
+  bool _loading = false;
 
   Future<void> refresh() async {
+    if (_disposed || _loading) return;
+    _loading = true;
     phase = Cth03LoadPhase.loading;
     failureKind = null;
     data = null;
     selectedChannel = null;
     _notify();
 
+    Cth03ScreenData? result;
+    Cth03FailureKind? failure;
     try {
-      data = await _repository.load();
-      phase = Cth03LoadPhase.ready;
+      result = await _repository.load();
     } on Cth03ContextUnavailable catch (error) {
-      failureKind = switch (error.reason) {
+      failure = switch (error.reason) {
         Cth03BlockReason.contextUnavailable =>
           Cth03FailureKind.contextUnavailable,
         Cth03BlockReason.pageNotBound => Cth03FailureKind.pageNotBound,
         Cth03BlockReason.focusNotBound => Cth03FailureKind.focusNotBound,
       };
-      phase = Cth03LoadPhase.unavailable;
     } on LumenisCoreException catch (error) {
-      failureKind = _classify(error);
-      phase = Cth03LoadPhase.unavailable;
+      failure = _classify(error);
     } on FormatException {
-      failureKind = Cth03FailureKind.server;
-      phase = Cth03LoadPhase.unavailable;
+      failure = Cth03FailureKind.server;
     } catch (_) {
-      failureKind = Cth03FailureKind.server;
-      phase = Cth03LoadPhase.unavailable;
+      failure = Cth03FailureKind.server;
+    } finally {
+      _loading = false;
     }
 
+    if (_disposed) return;
+    data = result;
+    failureKind = failure;
+    phase = failure == null ? Cth03LoadPhase.ready : Cth03LoadPhase.unavailable;
     _notify();
   }
 
