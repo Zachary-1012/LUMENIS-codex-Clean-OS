@@ -12,6 +12,18 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-30 — local Content principal without a product account
+
+The existing Permission owner now issues a server-only `local_workspace`
+principal with no fabricated account ID. Exact CTH/BMP scope admission rechecks
+open configuration and local transport on each use; it confers no write/export
+approval. Existing anonymous read and account-actor paths remain intact.
+[Round 04 evidence](evidence/round-04/ROUND-04-LOCAL-CONTENT-PRINCIPAL-2026-09-30.md)
+records root's current-snapshot 189-test pass with exit 0, AST/diff/Constitution
+verification and the initial worker run's unrecorded exit status. Content source
+confirmation, Artifact ownership, API and App integration still need this new
+principal bound end to end. No J package or Round is newly accepted.
+
 ### 2026-09-30 — source import connected to the existing execution boundary
 
 The frozen Content candidate's Skill execution slice now carries server-only

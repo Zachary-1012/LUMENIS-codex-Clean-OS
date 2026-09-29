@@ -65,10 +65,20 @@ def _local_workspace_authority_allowed(authority: str) -> bool:
     return port is None or 1 <= int(port) <= 65535
 
 
-def local_workspace_read_allowed(
-    module: str = "subject_registry", action: str = "read"
+_LOCAL_WORKSPACE_IDENTITY_HEADERS = frozenset({
+    "x-actor-id",
+    "x-user-id",
+    "x-lumenis-actor-id",
+    "x-lumenis-user-id",
+    "x-principal-id",
+    "x-principal-ref",
+})
+
+
+def _local_workspace_transport_allowed(
+    *, reject_identity_headers: bool = False,
 ) -> bool:
-    """Allow anonymous loopback reads only when the owner opens the workspace."""
+    """Validate the explicit open-workspace loopback transport boundary."""
     try:
         from flask import current_app, has_request_context, request
 
@@ -76,15 +86,13 @@ def local_workspace_read_allowed(
             return False
         if current_app.config.get("LUMENIS_OPEN_WORKSPACE") is not True:
             return False
-        if type(module) is not str or module not in {
-            "subject_registry", "commercial_realtime_stream"
-        }:
-            return False
-        if type(action) is not str or action != "read":
-            return False
 
         headers = request.headers
         names = {name.casefold() for name in headers.keys()}
+        if reject_identity_headers and names.intersection(
+            _LOCAL_WORKSPACE_IDENTITY_HEADERS
+        ):
+            return False
         if any(
             name == "forwarded" or name.startswith("x-forwarded-")
             for name in names
@@ -133,6 +141,69 @@ def local_workspace_read_allowed(
     except Exception:
         # Missing request/auth context and malformed client input fail closed.
         return False
+
+
+def local_workspace_read_allowed(
+    module: str = "subject_registry", action: str = "read"
+) -> bool:
+    """Allow anonymous loopback reads only when the owner opens the workspace."""
+    if type(module) is not str or module not in {
+        "subject_registry", "commercial_realtime_stream"
+    }:
+        return False
+    if type(action) is not str or action != "read":
+        return False
+    return _local_workspace_transport_allowed()
+
+
+_LOCAL_WORKSPACE_PRINCIPAL_SEAL = object()
+
+
+@dataclass(frozen=True, init=False)
+class LocalWorkspacePrincipal:
+    """Server-issued principal for the one explicitly opened local workspace."""
+
+    principal_kind: str
+    principal_ref: str
+    actor_id: None
+    _issuer: object = field(repr=False, compare=False)
+
+    def __init__(self, *, _issuer: object):
+        if _issuer is not _LOCAL_WORKSPACE_PRINCIPAL_SEAL:
+            raise TypeError("LocalWorkspacePrincipal is server-issued")
+        object.__setattr__(self, "principal_kind", "local_workspace")
+        object.__setattr__(self, "principal_ref", "workspace:local")
+        object.__setattr__(self, "actor_id", None)
+        object.__setattr__(self, "_issuer", _issuer)
+
+
+def _is_server_local_workspace_principal(value: Any) -> bool:
+    try:
+        return (
+            type(value) is LocalWorkspacePrincipal
+            and value._issuer is _LOCAL_WORKSPACE_PRINCIPAL_SEAL
+            and value.principal_kind == "local_workspace"
+            and value.principal_ref == "workspace:local"
+            and value.actor_id is None
+        )
+    except Exception:
+        return False
+
+
+def resolve_local_workspace_principal(
+    *, module: str = "content", action: str = "read",
+) -> Optional[LocalWorkspacePrincipal]:
+    """Resolve the fixed workspace principal from the current server request."""
+    if (
+        type(module) is not str
+        or module != "content"
+        or type(action) is not str
+        or action not in _RESOURCE_SCOPE_ACTIONS
+    ):
+        return None
+    if not _local_workspace_transport_allowed(reject_identity_headers=True):
+        return None
+    return LocalWorkspacePrincipal(_issuer=_LOCAL_WORKSPACE_PRINCIPAL_SEAL)
 
 # ═══════════════════════════════════════════════════════════════
 # 1. 枚举定义
@@ -322,6 +393,8 @@ class ActorScopePermissionResult(PermissionResult):
     scope_audit_id: Optional[str] = None
     verification_state: str = "verified"
     code: Optional[str] = None
+    principal_kind: Optional[str] = None
+    principal_ref: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Keep existing PermissionResult JSON keys for compatibility."""
@@ -342,6 +415,8 @@ class ActorScopePermissionResult(PermissionResult):
             "scope_audit_id": self.scope_audit_id,
             "verification_state": self.verification_state,
             "code": self.code,
+            "principal_kind": self.principal_kind,
+            "principal_ref": self.principal_ref,
         })
         return payload
 
@@ -646,6 +721,151 @@ def check_actor_scope_permission(
         scope_action=action_value or None,
         scope_audit_id=audit_id,
         verification_state="verified" if verified else "unavailable",
+    )
+
+
+def check_local_workspace_scope_permission(
+    principal: Any,
+    *,
+    domain_id: str,
+    action: str,
+    module: str,
+    subject_id: Optional[str] = None,
+    brand_focus_id: Optional[str] = None,
+    global_scope: bool = False,
+    gate: Optional["PermissionGate"] = None,
+) -> ActorScopePermissionResult:
+    """Admit one local workspace principal to an exact Content scope only.
+
+    This is scope admission, not approval or an Effect Fence capability. The
+    workspace transport boundary is revalidated for every call.
+    """
+    principal_valid = _is_server_local_workspace_principal(principal)
+    caller = "workspace:local" if principal_valid else "anonymous"
+    normalized_domain = (
+        domain_id.strip().lower() if isinstance(domain_id, str) else ""
+    )
+    if normalized_domain == "zbmp":
+        normalized_domain = "bmp"
+    domain_config = _RESOURCE_SCOPE_DOMAINS.get(normalized_domain)
+    action_value = action if type(action) is str else ""
+    module_value = module if type(module) is str else ""
+
+    scope_subject_id: Optional[str] = None
+    scope_brand_focus_id: Optional[str] = None
+    valid_scope_form = False
+    if domain_config is not None and type(global_scope) is bool:
+        if global_scope:
+            valid_scope_form = subject_id is None and brand_focus_id is None
+        elif normalized_domain == "cth":
+            valid_scope_form = (
+                brand_focus_id is None and _is_valid_scope_id(subject_id)
+            )
+            if valid_scope_form:
+                scope_subject_id = subject_id
+        else:
+            valid_scope_form = (
+                subject_id is None and _is_valid_scope_id(brand_focus_id)
+            )
+            if valid_scope_form:
+                scope_brand_focus_id = brand_focus_id
+
+    valid_request = (
+        domain_config is not None
+        and module_value == "content"
+        and action_value in _RESOURCE_SCOPE_ACTIONS
+        and type(global_scope) is bool
+        and valid_scope_form
+    )
+    transport_allowed = (
+        principal_valid
+        and _local_workspace_transport_allowed(reject_identity_headers=True)
+    )
+    allowed = False
+    verified = True
+    code: Optional[str] = None
+    if not principal_valid:
+        reason = "local workspace principal is invalid"
+        code = "invalid_principal"
+    elif not transport_allowed:
+        reason = "local workspace request is unavailable"
+        code = "workspace_unavailable"
+    elif not valid_request:
+        reason = "requested Content scope is invalid"
+        code = "invalid_scope"
+    elif global_scope:
+        allowed = True
+        reason = "local workspace may access the explicit canonical global scope"
+    else:
+        try:
+            if _registered_resource_scope_exists(
+                normalized_domain,
+                subject_id=scope_subject_id,
+                brand_focus_id=scope_brand_focus_id,
+            ):
+                allowed = True
+                reason = "local workspace may access the registered exact scope"
+            else:
+                reason = "requested resource is not a registered active scope"
+                code = "scope_not_registered"
+        except Exception:
+            logger.exception("Local workspace scope verification failed")
+            verified = False
+            reason = "resource scope permission could not be verified"
+            code = "scope_unavailable"
+
+    selected_resource = (
+        "GLOBAL / ALL"
+        if global_scope is True and valid_scope_form
+        else (scope_subject_id or scope_brand_focus_id or "invalid")
+    )
+    audit_id: Optional[str] = None
+    try:
+        permission_gate = gate if gate is not None else get_permission_gate()
+        audit_id = permission_gate._write_audit(
+            operation_type=f"resource_scope_{action_value or 'invalid'}",
+            resource=f"{normalized_domain if domain_config else 'unknown'}:{selected_resource}",
+            risk_level="low" if action_value == "read" else "medium",
+            permission_required=action_value or "read",
+            caller=caller,
+            result="allowed" if allowed else "denied",
+            reason=reason,
+            operation_id=None,
+            approval_token=None,
+        )
+        if not isinstance(audit_id, str) or not audit_id:
+            raise RuntimeError("permission audit identifier unavailable")
+    except Exception:
+        logger.exception("Local workspace scope audit failed")
+        allowed = False
+        verified = False
+        code = "audit_unavailable"
+        audit_id = None
+        reason = "resource scope permission could not be verified"
+
+    principal_kind = "local_workspace" if principal_valid else None
+    principal_ref = "workspace:local" if principal_valid else None
+    resource = f"{normalized_domain if domain_config else 'unknown'}:{selected_resource}"
+    return ActorScopePermissionResult(
+        allowed=allowed,
+        reason=reason,
+        audit_id=audit_id,
+        operation_type=f"resource_scope_{action_value or 'invalid'}",
+        resource=resource,
+        risk_level="low" if action_value == "read" else "medium",
+        permission_required=action_value or "read",
+        caller=caller,
+        domain_id=normalized_domain or None,
+        actor_id=None,
+        subject_id=scope_subject_id,
+        brand_focus_id=scope_brand_focus_id,
+        global_scope=global_scope is True,
+        scope_action=action_value or None,
+        scope_audit_id=audit_id,
+        verification_state="verified" if verified else "unavailable",
+        code=code,
+        principal_kind=principal_kind,
+        principal_ref=principal_ref,
     )
 
 
@@ -2234,7 +2454,10 @@ __all__ = [
     "OperationSpec",
     "PermissionResult",
     "ActorScopePermissionResult",
+    "LocalWorkspacePrincipal",
     "check_actor_scope_permission",
+    "check_local_workspace_scope_permission",
+    "resolve_local_workspace_principal",
     "bind_scope_permission_approval",
     "ContentSourceImport",
     "content_source_import_resource",
