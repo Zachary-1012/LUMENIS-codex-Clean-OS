@@ -220,3 +220,44 @@ def test_context_selection_is_read_only_and_does_not_touch_registry(context_clie
             "SELECT COUNT(*) FROM lumenis_subject_registry"
         ).fetchone()[0]
     assert after == before
+
+
+@pytest.mark.parametrize("domain_id", ["CTH", "BMP"])
+def test_explicit_local_workspace_focus_clear_and_revocation(context_client, domain_id, monkeypatch):
+    client, actor, cth, bmp, connect = context_client
+    client.application.config["LUMENIS_OPEN_WORKSPACE"] = True
+    import lumenis.auth.service as auth_service
+    original_reader = auth_service.get_current_user
+    def no_account_initialization():
+        raise AssertionError("local viewing must not initialize account storage")
+    monkeypatch.setattr(auth_service, "get_current_user", no_account_initialization)
+    entry = cth if domain_id == "CTH" else bmp
+    payload = {"mode": "FOCUS", "domain_id": domain_id, "subject_id": entry["subject_id"]}
+    with connect() as conn:
+        before = conn.execute("SELECT COUNT(*) FROM lumenis_subject_registry").fetchone()[0]
+        users_before = conn.execute("SELECT COUNT(*) FROM v4_users").fetchone()[0]
+    global_view = client.get("/api/settings/context").get_json()
+    assert {item["id"] for item in global_view["authorized_domains"]} == {"CTH", "BMP"}
+    assert global_view["access_mode"] == "local_read_only"
+    selected = client.put("/api/settings/context", json=payload)
+    assert selected.status_code == 200
+    assert selected.get_json()["context"]["subject_id"] == entry["subject_id"]
+    assert selected.get_json()["context"]["display_name"]["en"] == entry["name_en"]
+    assert client.delete("/api/settings/context").get_json()["context"]["mode"] == "GLOBAL_ALL"
+    client.application.config["LUMENIS_OPEN_WORKSPACE"] = False
+    monkeypatch.setattr(auth_service, "get_current_user", original_reader)
+    assert client.put("/api/settings/context", json=payload).status_code == 401
+    with connect() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM lumenis_subject_registry").fetchone()[0] == before
+        assert conn.execute("SELECT COUNT(*) FROM v4_users").fetchone()[0] == users_before
+    assert actor["user"] is None
+
+
+def test_open_workspace_does_not_override_known_actor_denial(context_client):
+    client, actor, cth, _bmp, _connect = context_client
+    client.application.config["LUMENIS_OPEN_WORKSPACE"] = True
+    actor["user"] = {"id": 2, "role": "user"}
+    response = client.put("/api/settings/context", json={
+        "mode": "FOCUS", "domain_id": "CTH", "subject_id": cth["subject_id"],
+    }, headers={"Authorization": "Bearer isolated-test-session"})
+    assert response.status_code == 403

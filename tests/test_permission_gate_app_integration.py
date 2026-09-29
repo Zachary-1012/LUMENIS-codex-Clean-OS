@@ -28,6 +28,19 @@ from lumenis.system.security import (
 from lumenis.system.security import set_testing_bypass
 
 
+def test_stateless_context_is_not_a_persistent_settings_write(monkeypatch):
+    monkeypatch.setattr(app_module, '_pg', None)
+    set_testing_bypass(False)
+    for method in ('PUT', 'DELETE'):
+        with app_module.app.test_request_context('/api/settings/context', method=method):
+            assert app_module.request.endpoint == 'domain_api.api_settings_context'
+            assert app_module._permission_gate_write_check() is None
+    with app_module.app.test_request_context('/api/settings/subjects', method='POST'):
+        response, code = app_module._permission_gate_write_check()
+        assert code == 503
+        assert response.get_json()['status'] == 'BLOCKED'
+
+
 # ═══════════════════════════════════════════════════════════════
 # Fixtures
 # ═══════════════════════════════════════════════════════════════

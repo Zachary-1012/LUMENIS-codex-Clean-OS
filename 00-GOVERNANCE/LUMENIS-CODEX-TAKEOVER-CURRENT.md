@@ -12,6 +12,20 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-29 — J1 open local Context and subject selection
+
+[The local Context evidence](evidence/round-04/ROUND-04-J1-OPEN-CONTEXT-2026-09-29.md)
+co-publishes an explicit loopback-only read policy through the existing Permission
+owner. Local viewing no longer initializes/requires a product account. Real
+Taikoo Hui, Luohu MixC, Nike and Le Labo passed API select/reopen/clear; the
+independent frontend task also exercised the real Taikoo picker and return to
+GLOBAL. Ninety isolated targeted tests passed. Credential-bearing or non-local
+requests retain existing authorization; writes and collection remain fenced.
+This supersedes the earlier local FOCUS account requirement below, only when
+the explicit local workspace policy is enabled. CTH03 record projection remains
+unavailable, so J1 and ROUND 04 are still unaccepted; no coverage/release status
+advances.
+
 ### 2026-09-29 — J1 real-data date-quality correction
 
 [The bounded J1 evidence](evidence/round-06/ROUND-06-J1-QUALITY-2026-09-29.md)

@@ -357,13 +357,14 @@ def _country_subject_projection(domain_id, country_iso, relation_type):
 
 @subject_registry_bp.route("/api/settings/subjects", methods=["GET"])
 def get_subjects():
-    # Listing is scoped to the authenticated account and this registry module.
-    # Basic auth alone has no product identity, so it cannot authorize this
-    # domain-sensitive response.
+    # Open local workspace reads are explicitly authorized by the Permission
+    # owner; all other requests retain the account/module boundary.
     from lumenis.auth.service import get_current_user
+    from lumenis.system.security.permission import local_workspace_read_allowed
 
-    user = get_current_user()
-    if not user or not isinstance(user.get("id"), int):
+    local_read = local_workspace_read_allowed("subject_registry")
+    user = None if local_read else get_current_user()
+    if not local_read and (not user or type(user.get("id")) is not int):
         return jsonify({"ok": False, "code": "AUTH_REQUIRED", "error": "需要有效账号会话"}), 401
 
     domain_arg = request.args.get("domain_id") or request.args.get("domain")
@@ -378,7 +379,7 @@ def get_subjects():
         candidates = [requested_domain] if requested_domain else list(DOMAINS)
         authorized_domains = [
             domain for domain in candidates
-            if check_dual_domain_permission(
+            if local_read or check_dual_domain_permission(
                 user["id"],
                 "ZBMP" if domain == "BMP" else "CTH",
                 module="subject_registry",

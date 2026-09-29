@@ -34,11 +34,14 @@ def _context_selection_from_scope(domain_id, subject_id):
         get_subject_by_id,
         normalize_domain,
     )
-    from lumenis.system.security.permission import check_actor_scope_permission
+    from lumenis.system.security.permission import (
+        check_actor_scope_permission, local_workspace_read_allowed,
+    )
     from lumenis.auth.service import get_current_user
 
-    actor = get_current_user()
-    if not isinstance(actor, dict) or type(actor.get("id")) is not int:
+    local_read = local_workspace_read_allowed("subject_registry")
+    actor = None if local_read else get_current_user()
+    if not local_read and (not isinstance(actor, dict) or type(actor.get("id")) is not int):
         return None, _context_error("AUTH_REQUIRED", "需要有效账号会话", 401)
     try:
         normalized_domain = normalize_domain(domain_id)
@@ -70,7 +73,7 @@ def _context_selection_from_scope(domain_id, subject_id):
         return None, _context_error("INVALID_CONTEXT_SCOPE", "主体类型与业务域不匹配", 400)
 
     try:
-        decision = check_actor_scope_permission(
+        decision = None if local_read else check_actor_scope_permission(
             actor,
             domain_id=normalized_domain,
             action="read",
@@ -82,11 +85,11 @@ def _context_selection_from_scope(domain_id, subject_id):
         return None, _context_error(
             "AUTHORIZATION_UNAVAILABLE", "主体范围授权暂不可用", 503
         )
-    if decision.verification_state != "verified":
+    if not local_read and decision.verification_state != "verified":
         return None, _context_error(
             "AUTHORIZATION_UNAVAILABLE", "主体范围授权暂不可用", 503
         )
-    if not decision.allowed:
+    if not local_read and not decision.allowed:
         return None, _context_error(
             "SUBJECT_SCOPE_DENIED", "没有读取该主体范围的权限", 403
         )
@@ -99,11 +102,43 @@ def _context_selection_from_scope(domain_id, subject_id):
 
 
 def _context_envelope(selection):
+    from lumenis.auth.service import get_current_user
+    from lumenis.system.security.permission import local_workspace_read_allowed
+    from subject_registry import DOMAINS, get_subject_by_id
+
+    local_read = local_workspace_read_allowed("subject_registry")
+    actor = None if local_read else get_current_user()
+    domains = []
+    try:
+        if local_read:
+            domains = list(DOMAINS)
+        elif isinstance(actor, dict) and type(actor.get("id")) is int:
+            from account.authorization import check_dual_domain_permission
+            domains = [domain for domain in DOMAINS if check_dual_domain_permission(
+                actor["id"], "ZBMP" if domain == "BMP" else "CTH",
+                module="subject_registry", action="read",
+            )]
+        context = selection.to_dict()
+        if selection.mode == "FOCUS":
+            subject = get_subject_by_id(selection.domain_id, selection.subject_id)
+            if subject is None:
+                return _context_error("SUBJECT_NOT_FOUND", "主体未在有效注册表中", 404)
+            context["display_name"] = {
+                locale: subject[key] for locale, key in (("zh-CN", "name_zh"), ("en", "name_en"))
+                if subject.get(key)
+            }
+    except Exception:
+        return _context_error("CONTEXT_UNAVAILABLE", "工作范围暂不可用，请重试", 503)
     return jsonify({
         "ok": True,
         "contract": "lumenis.context.v1",
         "selection_only": True,
-        "context": selection.to_dict(),
+        "context": context,
+        "authorized_domains": [
+            {"id": domain, "name": DOMAINS[domain]["name"], "product": DOMAINS[domain]["product"]}
+            for domain in domains
+        ],
+        "access_mode": "local_read_only" if local_read else "actor" if actor else "selection_only",
     })
 
 

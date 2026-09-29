@@ -21,15 +21,18 @@ from __future__ import annotations
 
 import functools
 import hashlib
+import ipaddress
 import json
 import logging
 import os
+import re
 import threading
 import uuid
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple
+from urllib.parse import urlsplit
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +48,90 @@ def set_testing_bypass(enabled: bool) -> None:
 def is_testing_bypass_enabled() -> bool:
     """返回显式 TESTING bypass 状态；生产代码不得根据 pytest 自动推断。"""
     return bool(_TESTING_BYPASS_ENABLED) or os.environ.get("PERMISSION_GATE_TESTING") == "1"
+
+
+def _local_workspace_authority_allowed(authority: str) -> bool:
+    if type(authority) is not str:
+        return False
+    match = re.fullmatch(
+        r"(?:localhost|127\.0\.0\.1|\[::1\])(?::([0-9]{1,5}))?",
+        authority,
+        flags=re.IGNORECASE,
+    )
+    if match is None:
+        return False
+    port = match.group(1)
+    return port is None or 1 <= int(port) <= 65535
+
+
+def local_workspace_read_allowed(
+    module: str = "subject_registry", action: str = "read"
+) -> bool:
+    """Allow anonymous loopback reads only when the owner opens the workspace."""
+    try:
+        from flask import current_app, has_request_context, request
+
+        if not has_request_context():
+            return False
+        if current_app.config.get("LUMENIS_OPEN_WORKSPACE") is not True:
+            return False
+        if type(module) is not str or module not in {
+            "subject_registry", "commercial_realtime_stream"
+        }:
+            return False
+        if type(action) is not str or action != "read":
+            return False
+
+        headers = request.headers
+        names = {name.casefold() for name in headers.keys()}
+        if any(
+            name == "forwarded" or name.startswith("x-forwarded-")
+            for name in names
+        ):
+            return False
+        if "authorization" in names:
+            return False
+
+        from lumenis.config import AUTH_CONFIG
+
+        session_cookie = AUTH_CONFIG.get("session_cookie_name")
+        if type(session_cookie) is not str or not session_cookie:
+            return False
+        raw_cookie = headers.get("Cookie", "")
+        if session_cookie in request.cookies or any(
+            part.partition("=")[0].strip() == session_cookie
+            for part in raw_cookie.split(";")
+        ):
+            return False
+
+        if not _local_workspace_authority_allowed(headers.get("Host")):
+            return False
+        origin = headers.get("Origin")
+        if origin is not None:
+            if origin != origin.strip() or any(
+                ord(char) < 32 or ord(char) == 127 for char in origin
+            ):
+                return False
+            if "?" in origin or "#" in origin:
+                return False
+            parsed = urlsplit(origin)
+            if (
+                parsed.scheme.casefold() not in {"http", "https"}
+                or not parsed.netloc
+                or parsed.username is not None
+                or parsed.password is not None
+                or parsed.path
+                or not _local_workspace_authority_allowed(parsed.netloc)
+            ):
+                return False
+
+        remote_addr = request.remote_addr
+        if type(remote_addr) is not str or "%" in remote_addr:
+            return False
+        return ipaddress.ip_address(remote_addr).is_loopback
+    except Exception:
+        # Missing request/auth context and malformed client input fail closed.
+        return False
 
 # ═══════════════════════════════════════════════════════════════
 # 1. 枚举定义
@@ -1460,6 +1547,7 @@ __all__ = [
     "PermissionResult",
     "ActorScopePermissionResult",
     "check_actor_scope_permission",
+    "local_workspace_read_allowed",
     "ApprovalToken",
     "AuditEntry",
     "PermissionGate",

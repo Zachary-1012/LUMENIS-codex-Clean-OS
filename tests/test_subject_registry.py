@@ -210,6 +210,19 @@ def test_subject_registry_route_requires_an_authenticated_account_session(
     assert response.get_json()["code"] == "AUTH_REQUIRED"
 
 
+def test_explicit_local_workspace_lists_domains_without_creating_actor(subject_registry_client):
+    client, current = subject_registry_client
+    client.application.config["LUMENIS_OPEN_WORKSPACE"] = True
+    response = client.get("/api/settings/subjects?domain_id=BMP")
+    assert response.status_code == 200
+    assert {item["domain_id"] for item in response.get_json()["subjects"]} == {"BMP"}
+    assert current["user"] is None
+    denied = client.get("/api/settings/subjects", environ_overrides={"REMOTE_ADDR": "192.0.2.1"})
+    assert denied.status_code == 401
+    client.application.config["LUMENIS_OPEN_WORKSPACE"] = False
+    assert client.get("/api/settings/subjects").status_code == 401
+
+
 def test_hk_cookie_apply_targets_hk_profile_and_rejects_cn(tmp_path, monkeypatch):
     # This assertion exercises the cookie route's file/identity boundary, not
     # the application's full database migration path. The pytest database is

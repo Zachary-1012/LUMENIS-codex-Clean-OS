@@ -350,6 +350,7 @@ import brand_logo_manager
 import trend_api
 
 app=Flask(__name__)
+app.config['LUMENIS_OPEN_WORKSPACE'] = os.environ.get('LUMENIS_OPEN_WORKSPACE') == '1'
 
 
 @app.before_request
@@ -1474,6 +1475,13 @@ def _permission_gate_write_check():
     except Exception:
         pass
     if request.method not in _PG_WRITE_METHODS:
+        return None
+    # This handler only returns a validated, stateless viewing selection. It
+    # neither persists settings nor starts collection; data routes authorize
+    # their own reads. Match the resolved endpoint as well as the exact path.
+    if (request.path == '/api/settings/context'
+            and request.endpoint == 'domain_api.api_settings_context'
+            and request.method in {'PUT', 'DELETE'}):
         return None
     if request.path in _PG_BYPASS_PATHS or request.path.startswith('/api/viz/') or request.path.startswith('/api/system/account/') or request.path.startswith('/v4/auth/') or request.path.startswith('/api/auth/zbmp-entry/') or request.path.startswith('/api/content/') or request.path.startswith('/api/podcast/') or request.path.startswith('/api/ic/'):
         return None
