@@ -6,29 +6,27 @@
 from __future__ import annotations
 
 from .contract import (
-    BrowserContract, BrowserState, FailureClass, FAILURE_POLICY,
+    BrowserContract, BrowserState, BrowserAvailability, FailureClass, FAILURE_POLICY,
     BEEPExecutor, BEEPTrace, BEEPStep, MAX_RETRY,
+    browser_health_result, safe_browser_error, safe_browser_url, sanitize_runtime_value,
 )
 from .policy import (
     BrowserPolicyEngine, PolicyDecision, PolicyCheckResult, browser_policy_engine,
 )
 from .router import BrowserRouter, BrowserRouterError, browser_router
 
-# 注册默认 Adapter（惰性 import，避免破坏现有启动）
-try:
-    from .adapters.cdp_adapter import CDPAdapter
-    browser_router.register("cdp", CDPAdapter)
-except Exception:
-    pass
-try:
-    from .adapters.playwright_adapter import PlaywrightAdapter
-    browser_router.register("playwright", PlaywrightAdapter)
-except Exception:
-    pass
+# Register adapter classes explicitly. Provider dependencies remain lazy inside
+# adapter construction, where their failures can be reported through health().
+from .adapters.cdp_adapter import CDPAdapter
+from .adapters.playwright_adapter import PlaywrightAdapter
+
+browser_router.register("cdp", CDPAdapter)
+browser_router.register("playwright", PlaywrightAdapter)
 
 __all__ = [
-    "BrowserContract", "BrowserState", "FailureClass", "FAILURE_POLICY",
+    "BrowserContract", "BrowserState", "BrowserAvailability", "FailureClass", "FAILURE_POLICY",
     "BEEPExecutor", "BEEPTrace", "BEEPStep", "MAX_RETRY",
+    "browser_health_result", "safe_browser_error", "safe_browser_url", "sanitize_runtime_value",
     "BrowserPolicyEngine", "PolicyDecision", "PolicyCheckResult", "browser_policy_engine",
     "BrowserRouter", "BrowserRouterError", "browser_router",
 ]

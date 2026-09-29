@@ -33,7 +33,12 @@ def is_enabled() -> bool:
     return os.environ.get(FEATURE_GATE_ENV, "").strip() == "1"
 
 
-def probe_xhs_page(cdp_url: str = "http://127.0.0.1:9222",
+def _hk_endpoint_allowed(cdp_url: str) -> bool:
+    """Reject the legacy Mainland debugger before adapter construction or I/O."""
+    return "9222" not in str(cdp_url or "")
+
+
+def probe_xhs_page(cdp_url: str = "http://127.0.0.1:9223",
                     timeout_ms: int = 15000) -> dict[str, Any]:
     """
     旁路探针：使用 browser_runtime.PlaywrightAdapter 连接 CDP，验证小红书页面可访问。
@@ -66,6 +71,10 @@ def probe_xhs_page(cdp_url: str = "http://127.0.0.1:9222",
     if not result["enabled"]:
         result["error"] = f"Feature Gate 关闭，设置 {FEATURE_GATE_ENV}=1 启用"
         return result
+    if not _hk_endpoint_allowed(cdp_url):
+        result["error"] = "POLICY_BLOCKED"
+        result["status"] = "POLICY_BLOCKED"
+        return result
 
     start = time.time()
     adapter = None
@@ -82,12 +91,12 @@ def probe_xhs_page(cdp_url: str = "http://127.0.0.1:9222",
             return result
 
         # 导航到小红书 explore 页
-        nav = adapter.navigate("https://www.xiaohongshu.com/explore")
+        nav = adapter.navigate("https://www.rednote.com/explore")
         result["navigate_ok"] = nav.get("ok", False)
         result["page_url"] = nav.get("url", result["page_url"])
 
         # 验证页面可访问（URL 包含 xiaohongshu）
-        result["xhs_reachable"] = "xiaohongshu.com" in result["page_url"]
+        result["xhs_reachable"] = "rednote.com" in result["page_url"]
 
         # 复用 xhs_cdp_collector 的人类行为：滚动一次（验证 page 对象兼容）
         try:
@@ -113,7 +122,7 @@ def probe_xhs_page(cdp_url: str = "http://127.0.0.1:9222",
 
 
 def collect_keyword_bypass(keyword: str,
-                            cdp_url: str = "http://127.0.0.1:9222",
+                            cdp_url: str = "http://127.0.0.1:9223",
                             max_scroll: int = 2,
                             max_details: int = 3,
                             timeout_ms: int = 20000) -> dict[str, Any]:
@@ -150,6 +159,10 @@ def collect_keyword_bypass(keyword: str,
     }
     if not result["enabled"]:
         result["error"] = f"Feature Gate 关闭，设置 {FEATURE_GATE_ENV}=1 启用"
+        return result
+    if not _hk_endpoint_allowed(cdp_url):
+        result["error"] = "POLICY_BLOCKED"
+        result["status"] = "POLICY_BLOCKED"
         return result
 
     start = time.time()

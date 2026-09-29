@@ -11,9 +11,9 @@ Router 职责：
 """
 from __future__ import annotations
 import os
-from typing import Optional, Type
+from typing import Any, Optional, Type
 
-from .contract import BrowserContract
+from .contract import BrowserContract, safe_browser_error
 from .policy import browser_policy_engine, PolicyDecision
 
 
@@ -24,6 +24,11 @@ class BrowserRouterError(Exception):
 class BrowserRouter:
     """Provider 注册 + 选择 + 降级。"""
 
+    _REQUIRED_METHODS = (
+        "navigate", "snapshot", "screenshot", "click", "type_text",
+        "get_text", "wait_for", "evaluate", "health", "close",
+    )
+
     def __init__(self):
         self._registry: dict[str, Type[BrowserContract]] = {}
         self._instances: dict[str, BrowserContract] = {}
@@ -33,8 +38,15 @@ class BrowserRouter:
         """注册 Adapter 类。"""
         if not isinstance(name, str) or not name:
             raise BrowserRouterError("provider name must be non-empty string")
-        if not callable(getattr(adapter_cls, "navigate", None)):
-            raise BrowserRouterError(f"adapter {name} missing navigate() — not a BrowserContract")
+        missing = [
+            method for method in self._REQUIRED_METHODS
+            if not callable(getattr(adapter_cls, method, None))
+            or getattr(adapter_cls, method, None) is getattr(BrowserContract, method, None)
+        ]
+        if missing:
+            raise BrowserRouterError(
+                f"adapter {name} is missing BrowserContract methods: {', '.join(missing)}"
+            )
         self._registry[name.lower()] = adapter_cls
 
     def unregister(self, name: str):
@@ -48,7 +60,7 @@ class BrowserRouter:
     @staticmethod
     def default_provider() -> str:
         """默认 Provider：环境变量 BRC_PROVIDER 可覆盖；默认 cdp（保持现有驻场行为）。"""
-        return os.environ.get("BRC_PROVIDER", "cdp").lower()
+        return os.environ.get("BRC_PROVIDER", "cdp").strip().lower() or "cdp"
 
     def get(self, name: Optional[str] = None, **adapter_kwargs) -> BrowserContract:
         """获取 Provider 实例（惰性创建）。未知 Provider 报错。"""
@@ -66,9 +78,12 @@ class BrowserRouter:
                           fallback: Optional[str] = None,
                           enable_fallback: bool = False,
                           **adapter_kwargs) -> BrowserContract:
-        """带降级的选择：enable_fallback=True 时，首选失败可降级到备用。
+        """Select a registered provider, with opt-in fallback for an unknown name.
 
-        默认 enable_fallback=False（保证生产稳定性，避免误切 Provider）。
+        A disconnected provider is returned as disconnected by ``health()``;
+        this method never switches browser sessions after a live probe. CDP and
+        Playwright may hold different authentication state, so silently moving
+        between them would turn an unavailable session into a misleading result.
         """
         preferred = (preferred or self.default_provider()).lower()
         if preferred in self._registry:
@@ -88,7 +103,7 @@ class BrowserRouter:
         """Router 层策略门：任何浏览器操作先过 Policy Engine。"""
         result = browser_policy_engine.evaluate(operation, url=url, target=target)
         if result.decision == PolicyDecision.SAFE_STOP:
-            raise BrowserRouterError(f"policy safe_stop: {result.reason}")
+            raise BrowserRouterError(safe_browser_error(f"policy safe_stop: {result.reason}"))
         return result
 
 

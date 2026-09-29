@@ -77,9 +77,75 @@ class TestRouter:
             browser_router.get_with_fallback(preferred="nope", enable_fallback=False)
 
     def test_policy_gate_blocks(self):
-        with pytest.raises(BrowserRouterError):
-            browser_router.policy_gate("navigate", url="https://evil.com/x")
+        with pytest.raises(BrowserRouterError) as error:
+            browser_router.policy_gate("navigate", url="https://evil.com/x?token=private-token")
+        assert "private-token" not in str(error.value)
+        assert "evil.com" not in str(error.value)
 
     def test_policy_gate_allows(self):
         r = browser_router.policy_gate("read", url="https://github.com")
         assert r.decision == PolicyDecision.ALLOW
+
+    def test_registration_requires_the_full_runtime_contract(self):
+        class IncompleteAdapter:
+            def navigate(self, url):
+                return {"ok": True}
+
+        router = BrowserRouter()
+        with pytest.raises(BrowserRouterError, match="BrowserContract methods"):
+            router.register("incomplete", IncompleteAdapter)
+
+    def test_opt_in_fallback_does_not_switch_a_disconnected_session(self):
+        class DisconnectedAdapter(BrowserContract):
+            def navigate(self, url, **kw):
+                return {"ok": False}
+
+            def snapshot(self, **kw):
+                return {}
+
+            def screenshot(self, path=None, **kw):
+                return {"ok": False}
+
+            def click(self, selector, **kw):
+                return {"ok": False}
+
+            def type_text(self, selector, text, **kw):
+                return {"ok": False}
+
+            def get_text(self, selector, **kw):
+                return ""
+
+            def wait_for(self, selector, timeout=10, **kw):
+                return False
+
+            def evaluate(self, js, **kw):
+                return None
+
+            def health(self):
+                return {"state": "unavailable", "available": False}
+
+            def close(self, **kw):
+                return None
+
+        class AvailableAdapter(BrowserContract):
+            navigate = DisconnectedAdapter.navigate
+            snapshot = DisconnectedAdapter.snapshot
+            screenshot = DisconnectedAdapter.screenshot
+            click = DisconnectedAdapter.click
+            type_text = DisconnectedAdapter.type_text
+            get_text = DisconnectedAdapter.get_text
+            wait_for = DisconnectedAdapter.wait_for
+            evaluate = DisconnectedAdapter.evaluate
+            close = DisconnectedAdapter.close
+
+            def health(self):
+                return {"state": "available", "available": True}
+
+        router = BrowserRouter()
+        router.register("cdp", DisconnectedAdapter)
+        router.register("playwright", AvailableAdapter)
+
+        selected = router.get_with_fallback(
+            preferred="cdp", fallback="playwright", enable_fallback=True
+        )
+        assert isinstance(selected, DisconnectedAdapter)

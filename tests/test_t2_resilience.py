@@ -48,17 +48,17 @@ fail_count = [0]
 def always_fail():
     fail_count[0] += 1
     raise RuntimeError("connection timeout")
-trace2 = beep.run("fail_action", always_fail)
+trace2 = beep.run("fail_action", always_fail, retry_safe=True)
 check("BEEP 失败重试达上限", fail_count[0] == 3, f"got {fail_count[0]}")
 check("BEEP 最终 VERIFY_FAILED", trace2.result in ("VERIFY_FAILED", "FAILED"))
-check("BEEP 错误被记录", trace2.error is not None and "timeout" in trace2.error)
+check("BEEP 错误被记录", trace2.error is not None and trace2.failure_class == FailureClass.TRANSIENT)
 
 # verify 失败触发重试
 verify_count = [0]
 def verify_fail_then_pass(result):
     verify_count[0] += 1
     return verify_count[0] >= 2
-trace3 = beep.run("verify_retry", lambda: {"ok": True}, verify_fn=verify_fail_then_pass)
+trace3 = beep.run("verify_retry", lambda: {"ok": True}, verify_fn=verify_fail_then_pass, retry_safe=True)
 check("BEEP verify失败后重试成功", trace3.result == "SUCCESS")
 check("BEEP verify重试2次", trace3.retry_count == 2, f"got {trace3.retry_count}")
 

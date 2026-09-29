@@ -44,8 +44,8 @@ class TestFailureClassification:
 
 # ---------- BEEP 有限重试（禁止无限重试） ----------
 class TestBEEPLimitedRetry:
-    def test_transient_retry_then_success(self):
-        """transient 失败后有限重试直至成功"""
+    def test_idempotent_transient_retry_then_success(self):
+        """幂等动作在 transient 失败后有限重试直至成功"""
         calls = {"n": 0}
 
         def action_fn():
@@ -55,13 +55,13 @@ class TestBEEPLimitedRetry:
             return {"ok": True}
 
         ex = BEEPExecutor(max_retry=3)
-        trace = ex.run("retry_test", action_fn)
+        trace = ex.run("retry_test", action_fn, retry_safe=True)
         assert trace.result == "SUCCESS"
         assert calls["n"] == 3
         assert trace.retry_count == 3
 
-    def test_no_infinite_retry(self):
-        """持续失败时不超过 max_retry，返回 VERIFY_FAILED"""
+    def test_idempotent_retry_is_limited(self):
+        """幂等动作持续失败时不超过 max_retry，返回 VERIFY_FAILED"""
         calls = {"n": 0}
 
         def action_fn():
@@ -69,7 +69,7 @@ class TestBEEPLimitedRetry:
             raise RuntimeError("connection timed out")
 
         ex = BEEPExecutor(max_retry=MAX_RETRY)  # 3
-        trace = ex.run("retry_fail", action_fn)
+        trace = ex.run("retry_fail", action_fn, retry_safe=True)
         assert trace.result == "VERIFY_FAILED"
         assert calls["n"] == MAX_RETRY  # 恰好 3 次，不无限
         assert trace.retry_count == MAX_RETRY
