@@ -12,6 +12,18 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-30 — source import connected to the existing execution boundary
+
+The frozen Content candidate's Skill execution slice now carries server-only
+file/context descriptors, binds the existing firewall/fence to the exact import
+resource and rechecks live permission just before its handler. Root also fixed
+serialization to exclude opaque server objects before traversal. On accepted
+Permission base `984df36f`, all 70 import/execution/account-call regressions passed;
+AST, diff and Constitution checks passed. Importing this module no longer creates
+the Skill trace table. [Round 07 evidence](evidence/round-07/ROUND-07-CONTENT-SOURCE-EXECUTION-2026-09-30.md).
+This does not complete the main Artifact/API/local-workspace/UI integration or
+claim actual user-media import; J4/J5/J6 and Round 07 remain unaccepted.
+
 ### 2026-09-30 — exact content-source confirmation integrated
 
 The existing Permission owner now binds an import confirmation to server-derived

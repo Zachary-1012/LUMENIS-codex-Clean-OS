@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 import json, traceback, uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, asdict, replace
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -43,6 +43,11 @@ class SkillExecutionContext:
     product: str = "SYSTEM"
     task: str = ""
     input_payload: Dict[str, Any] = field(default_factory=dict)
+    # Server-derived upload identity. It is never read from input_payload and
+    # is intentionally omitted from serialized execution context.
+    content_source_import: Any = field(default=None, repr=False)
+    # Opaque server-created domain/focus context carried to the existing handler.
+    request_context: Any = field(default=None, repr=False)
     action_type: ActionType = ActionType.ANALYZE
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     permission_result: Optional[Dict[str, Any]] = None
@@ -54,7 +59,13 @@ class SkillExecutionContext:
     status: ExecutionStatus = ExecutionStatus.PENDING
     error: Optional[str] = None
     def to_dict(self):
-        d = asdict(self); d["action_type"] = self.action_type.value; d["status"] = self.status.value
+        # Exclude opaque server objects before asdict traverses/deep-copies them.
+        public_context = replace(self, content_source_import=None, request_context=None)
+        d = asdict(public_context)
+        d["action_type"] = self.action_type.value
+        d["status"] = self.status.value
+        d.pop("content_source_import", None)
+        d.pop("request_context", None)
         return d
 
 @dataclass
@@ -114,6 +125,7 @@ def check_permission(ctx, user_role="user", skill_info=None):
     ):
         low_write_roles = {
             "cth": "cth_operator",
+            "bmp": "zbmp_operator",
             "zbmp": "zbmp_operator",
             "system": "system_writer",
         }
@@ -123,6 +135,42 @@ def check_permission(ctx, user_role="user", skill_info=None):
         ):
             return {"allowed": False, "reason": f"role '{user_role}' cannot execute {ctx.action_type.value}",
                     "code": "INSUFFICIENT_ROLE"}
+
+    if ctx.content_source_import is not None:
+        from lumenis.system.security import (
+            ContentSourceImport, check_content_source_import_permission,
+        )
+
+        upload = ctx.content_source_import
+        domain_aliases = {"cth": "cth", "bmp": "bmp", "zbmp": "bmp"}
+        product_aliases = {"cth": "cth", "bmp": "bmp", "zbmp": "bmp"}
+        context_matches = (
+            type(upload) is ContentSourceImport
+            and ctx.skill_id == "shared.content_project"
+            and ctx.action_type is ActionType.WRITE
+            and type(ctx.user_id) is int and ctx.user_id > 0
+            and upload.actor_id == ctx.user_id
+            and domain_aliases.get(str(ctx.domain or "").strip().lower()) == upload.domain_id
+            and product_aliases.get(str(ctx.product or "").strip().lower()) == upload.domain_id
+            and skill_info is not None
+            and skill_info.skill_id == "shared.content_project"
+            and skill_info.enabled is True
+            and str(skill_info.product or "").upper() == "SHARED"
+        )
+        if not context_matches:
+            return {
+                "allowed": False,
+                "reason": "content source import execution context does not match its server descriptor",
+                "code": "CONTENT_SOURCE_CONTEXT_MISMATCH",
+            }
+        decision = check_content_source_import_permission(
+            {"id": ctx.user_id}, upload,
+        )
+        payload = decision.to_dict()
+        payload["code"] = "PERMISSION_GRANTED" if decision.allowed else (
+            "APPROVAL_REQUIRED" if decision.requires_approval else "PERMISSION_DENIED"
+        )
+        return payload
 
     from lumenis.system.security import get_permission_gate
     target = str(ctx.input_payload.get("target") or f"skill:{ctx.skill_id}")
@@ -152,7 +200,11 @@ def action_firewall(ctx, extra_policy=None):
     from lumenis.system.security import (
         ActionRequest, AgentAction, PermissionResult, validate_action,
     )
-    target = str(ctx.input_payload.get("target") or f"skill:{ctx.skill_id}")
+    target = str(
+        (ctx.permission_result or {}).get("resource")
+        if ctx.content_source_import is not None
+        else (ctx.input_payload.get("target") or f"skill:{ctx.skill_id}")
+    )
     req = ActionRequest(
         identity=f"skill_executor:{ctx.execution_id}",
         intent=ctx.task or f"execute skill {ctx.skill_id}",
@@ -179,11 +231,20 @@ def action_firewall(ctx, extra_policy=None):
 def effect_fence(ctx):
     """Run the canonical Effect Fence; mutating handlers cannot bypass it."""
     from lumenis.system.security import AgentAction, get_effect_fence
-    target = str(ctx.input_payload.get("target") or f"skill:{ctx.skill_id}")
+    target = str(
+        (ctx.permission_result or {}).get("resource")
+        if ctx.content_source_import is not None
+        else (ctx.input_payload.get("target") or f"skill:{ctx.skill_id}")
+    )
+    payload = (
+        {"staging": True, "content_source_resource": target}
+        if ctx.content_source_import is not None
+        else ctx.input_payload
+    )
     decision = get_effect_fence().check(
         action=AgentAction(ctx.action_type.value),
         target=target,
-        payload=ctx.input_payload,
+        payload=payload,
         operation_id=ctx.execution_id,
     )
     return decision.to_dict()
@@ -451,6 +512,7 @@ def ensure_skill_executions_table():
 
 def write_trace(ctx, duration_ms=0):
     try:
+        ensure_skill_executions_table()
         from account.models import get_db
         conn = get_db()
         try:
@@ -542,26 +604,81 @@ def record_execution_evidence(ctx):
 def run_execution_chain(skill_id, task="", input_payload=None, action_type=ActionType.ANALYZE,
                         user_id=None, user_role="user", product="SYSTEM", domain="global",
                         permission_role=None,
-                        skill_info=None, handler=None):
+                        skill_info=None, handler=None, content_source_import=None,
+                        request_context=None):
     import time
     start = time.time()
     ctx = SkillExecutionContext(skill_id=skill_id, task=task, input_payload=input_payload or {},
                                  action_type=action_type, user_id=user_id, product=product, domain=domain,
-                                 permission_role=permission_role)
+                                 permission_role=permission_role,
+                                 content_source_import=content_source_import,
+                                 request_context=request_context)
+    source_import = content_source_import is not None
+    if source_import and not callable(handler):
+        ctx.status = ExecutionStatus.REJECTED
+        ctx.error = "content source import requires its server-owned execution handler"
+        return ctx
     ctx.permission_result = check_permission(ctx, user_role=user_role, skill_info=skill_info)
     if not ctx.permission_result["allowed"]:
         ctx.status = ExecutionStatus.REJECTED; ctx.error = ctx.permission_result["reason"]
-        write_trace(ctx, int((time.time() - start) * 1000)); return ctx
+        if not source_import:
+            write_trace(ctx, int((time.time() - start) * 1000))
+        return ctx
     ctx.firewall_result = action_firewall(ctx)
     if not ctx.firewall_result["allowed"]:
         ctx.status = ExecutionStatus.REJECTED; ctx.error = ctx.firewall_result.get("reason", "action denied")
-        write_trace(ctx, int((time.time() - start) * 1000)); return ctx
+        if not source_import:
+            write_trace(ctx, int((time.time() - start) * 1000))
+        return ctx
     ctx.effect_fence_result = effect_fence(ctx)
     if not ctx.effect_fence_result.get("allowed", False):
         ctx.status = ExecutionStatus.BLOCKED
         ctx.error = ctx.effect_fence_result.get("reason", "effect fence blocked")
-        write_trace(ctx, int((time.time() - start) * 1000))
+        if not source_import:
+            write_trace(ctx, int((time.time() - start) * 1000))
         return ctx
+    if source_import:
+        # Close the gap between the initial authorization/fence checks and the
+        # handler boundary. The descriptor is frozen and must remain the exact
+        # object supplied by the trusted caller; its approval/account scope is
+        # freshly checked without an operation_id or cached receipt.
+        if ctx.content_source_import is not content_source_import:
+            ctx.status = ExecutionStatus.REJECTED
+            ctx.error = "content source import descriptor changed before handler execution"
+            try:
+                from lumenis.system.security import get_effect_fence
+                get_effect_fence().complete(
+                    ctx.effect_fence_result.get("idempotency_key"), success=False,
+                )
+            except Exception:
+                pass
+            return ctx
+        ctx.permission_result = check_permission(
+            ctx, user_role=user_role, skill_info=skill_info,
+        )
+        if not ctx.permission_result["allowed"]:
+            ctx.status = ExecutionStatus.REJECTED
+            ctx.error = ctx.permission_result["reason"]
+            try:
+                from lumenis.system.security import get_effect_fence
+                get_effect_fence().complete(
+                    ctx.effect_fence_result.get("idempotency_key"), success=False,
+                )
+            except Exception:
+                pass
+            return ctx
+        ctx.firewall_result = action_firewall(ctx)
+        if not ctx.firewall_result["allowed"]:
+            ctx.status = ExecutionStatus.REJECTED
+            ctx.error = ctx.firewall_result.get("reason", "action denied")
+            try:
+                from lumenis.system.security import get_effect_fence
+                get_effect_fence().complete(
+                    ctx.effect_fence_result.get("idempotency_key"), success=False,
+                )
+            except Exception:
+                pass
+            return ctx
     ctx.status = ExecutionStatus.RUNNING
     ctx.execute_result = execute_skill(ctx, handler=handler, skill_info=skill_info)
     try:
@@ -573,12 +690,14 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
     except Exception:
         pass
     ctx.evidence = build_evidence(ctx)
-    ctx.evidence_record = record_execution_evidence(ctx)
     ctx.evaluation = evaluate_execution(ctx)
     if ctx.execute_result.get("success"):
         ctx.status = ExecutionStatus.COMPLETED
     else:
         ctx.status = ExecutionStatus.FAILED; ctx.error = ctx.execute_result.get("error", "execution failed")
+    if source_import and ctx.status is not ExecutionStatus.COMPLETED:
+        return ctx
+    ctx.evidence_record = record_execution_evidence(ctx)
     write_trace(ctx, int((time.time() - start) * 1000))
     return ctx
 
@@ -603,5 +722,3 @@ def get_skills_light_status(product=None):
                 "version": meta.version, "risk_level": meta.risk_level.value, "source": "builtin_registry"})
     except Exception: pass
     return results
-
-ensure_skill_executions_table()
