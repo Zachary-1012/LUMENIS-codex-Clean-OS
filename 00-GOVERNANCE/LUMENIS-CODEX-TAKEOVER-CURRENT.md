@@ -12,6 +12,20 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-30 — J5 editor workflow requirements retained and researched
+
+The Product Owner's magnetic/connected editing, browser/skimmer, portable project,
+professional media basics and device-specific preview requirements are recorded
+in the existing [J1–J8 plan](../intelligence_library/01_序境产品研究/FULL-PRODUCT-UPGRADE-CLOSURE-RESEARCH-20260929.md).
+[Official/vendor and pinned OSS research](../intelligence_library/01_序境产品研究/VIDEO-WORKFLOW-INTERCHANGE-RESEARCH-20260930.md)
+distinguishes Premiere PRPROJ, After Effects AEP and FCP7 XML from modern FCPXML.
+The inspected FCPX adapter does not justify lossless effects, audio or fractional
+frame-rate claims. Existing video reflow also does not provide connected audio
+or caption anchors. Research is reviewed; those implementations remain pending.
+The next bounded renderer work prioritizes making existing captions reach actual
+output; it must preserve the running frontend acceptance slot. This entry records
+requirements/research only, and adds no product-completion or J5 acceptance claim.
+
 ### 2026-09-30 — discovery and corrected media survive actual Core restart
 
 The running Core loaded the accepted discovery/renderer source. It found the
