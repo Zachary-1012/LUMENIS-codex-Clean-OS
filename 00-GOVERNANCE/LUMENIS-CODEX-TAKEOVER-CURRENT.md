@@ -12,6 +12,21 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-30 — find saved work and reopen actual user media
+
+The existing Artifact/Experience owners now expose scope-safe project discovery
+with bounded paging, honest incomplete states and no schema writes on reads.
+Root's frozen five-file integration group passed 96 tests, exit 0, including real
+WAV API discovery/reopen and affected renderer/storage regressions.
+[Discovery evidence](evidence/round-07/ROUND-07-CONTENT-PROJECT-DISCOVERY-2026-09-30.md).
+Separately, the running pre-list Core imported genuine user source 09 and retained
+two edits across a controlled child-process restart, with exact media/package
+hashes preserved. [Actual runtime evidence](evidence/round-07/ROUND-07-REAL-LOCAL-MEDIA-2026-09-30.md).
+This supersedes the API entry below's then-pending Core update only for the
+observed import/export/reopen path. The new list still needs its runtime update
+and frontend acceptance. Encoded audio overshoot was found and is handled in a
+separate renderer Batch. No J package, global coverage or release is accepted.
+
 ### 2026-09-30 — open local Content import/export/reopen API
 
 The existing Experience API/Skill chain now binds local source confirmation,

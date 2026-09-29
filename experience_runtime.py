@@ -1274,6 +1274,26 @@ def export_content_project():
         return jsonify({"ok": False, "code": "CONTENT_EXPORT_UNAVAILABLE"}), 503
 
 
+@experience_bp.route("/api/experience/content-projects")
+def content_project_list():
+    """Discover saved projects through the same scope boundary as reopening."""
+    from shared_artifacts import list_content_projects, LocalArtifactError
+
+    try:
+        actor, scope = _content_project_scope("read")
+        limit = request.args.get("limit", "20")
+        if not limit.isascii() or not limit.isdecimal() or not 1 <= int(limit) <= 20:
+            raise LocalArtifactError("CONTENT_PROJECT_LIMIT_INVALID")
+        result = list_content_projects(
+            actor=actor, **scope, limit=int(limit), cursor=request.args.get("cursor"),
+        )
+        return jsonify({"ok": True, **result, "publish_status": "not_performed"})
+    except ValueError as exc:
+        return _content_project_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "CONTENT_PROJECT_UNAVAILABLE"}), 503
+
+
 @experience_bp.route("/api/experience/content-projects/<artifact_id>")
 def content_project_detail(artifact_id: str):
     from shared_artifacts import read_content_project

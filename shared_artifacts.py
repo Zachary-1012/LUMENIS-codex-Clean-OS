@@ -19,10 +19,12 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import shutil
 import sqlite3
 import subprocess
 import tempfile
+import threading
 import uuid
 import zipfile
 from contextlib import contextmanager
@@ -50,6 +52,10 @@ _MAX_CONTENT_SOURCE_METADATA_BYTES = 64 * 1024
 _MAX_CONTENT_SOURCE_DURATION_SEC = 24 * 60 * 60
 _CONTENT_SOURCE_ARTIFACT_ID = re.compile(r"ART-[0-9a-f]{16}\Z")
 _ARTIFACT_TABLE = "lumenis_shared_artifacts"
+_CONTENT_PROJECT_LIST_SCAN_LIMIT = 100
+_CONTENT_PROJECT_LIST_CURSOR_LIMIT = 256
+_CONTENT_PROJECT_LIST_CURSOR_LOCK = threading.Lock()
+_CONTENT_PROJECT_LIST_CURSORS: Dict[str, tuple[str, str, str]] = {}
 
 
 class LocalArtifactError(ValueError):
@@ -366,11 +372,15 @@ def _content_artifact_context(
     return context
 
 
-def _artifact_record(artifact_id: str) -> Optional[Dict[str, Any]]:
+def _artifact_record(artifact_id: str, *, read_only: bool = False) -> Optional[Dict[str, Any]]:
     if not artifact_id or len(str(artifact_id)) > 80:
         return None
-    ensure_artifact_table()
-    conn = _db_connect()
+    if read_only:
+        conn = get_repository().connect(timeout=10, read_only=True, wal=False)
+        conn.row_factory = sqlite3.Row
+    else:
+        ensure_artifact_table()
+        conn = _db_connect()
     try:
         row = conn.execute(
             f"SELECT * FROM {_ARTIFACT_TABLE} WHERE artifact_id=?", (str(artifact_id),)
@@ -416,6 +426,7 @@ def _verified_content_project(
     subject_id: Optional[str],
     brand_focus_id: Optional[str],
     global_scope: bool,
+    read_only_registry: bool = False,
 ) -> tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Path]:
     actor_id, scope = _authorize_content_project(
         actor,
@@ -425,7 +436,7 @@ def _verified_content_project(
         global_scope=global_scope,
         action="read",
     )
-    record = _artifact_record(artifact_id)
+    record = _artifact_record(artifact_id, read_only=read_only_registry)
     if not record or record.get("kind") != "content_project":
         raise LocalArtifactError("CONTENT_PROJECT_NOT_FOUND")
 
@@ -1174,6 +1185,139 @@ def read_content_project(
     return {"project": project, "render": render}
 
 
+def _content_project_list_cursor(identity: str, boundary: Mapping[str, Any]) -> str:
+    created_at = boundary.get("created_at")
+    artifact_id = boundary.get("artifact_id")
+    if not isinstance(created_at, str) or not isinstance(artifact_id, str):
+        raise LocalArtifactError("CONTENT_PROJECT_LIST_UNAVAILABLE")
+    token = secrets.token_urlsafe(32)
+    with _CONTENT_PROJECT_LIST_CURSOR_LOCK:
+        if len(_CONTENT_PROJECT_LIST_CURSORS) >= _CONTENT_PROJECT_LIST_CURSOR_LIMIT:
+            _CONTENT_PROJECT_LIST_CURSORS.clear()
+        _CONTENT_PROJECT_LIST_CURSORS[token] = (identity, created_at, artifact_id)
+    return token
+
+
+def _content_project_list_boundary(cursor: Optional[str], identity: str) -> Optional[tuple[str, str]]:
+    if cursor is None:
+        return None
+    if not isinstance(cursor, str) or not re.fullmatch(r"[A-Za-z0-9_-]{40,48}", cursor):
+        raise LocalArtifactError("CONTENT_PROJECT_CURSOR_INVALID")
+    with _CONTENT_PROJECT_LIST_CURSOR_LOCK:
+        state = _CONTENT_PROJECT_LIST_CURSORS.get(cursor)
+        if state is None or state[0] != identity:
+            raise LocalArtifactError("CONTENT_PROJECT_CURSOR_INVALID")
+    return state[1], state[2]
+
+
+def _content_project_candidates(scope: Mapping[str, Any], boundary: Optional[tuple[str, str]], limit: int):
+    conn = get_repository().connect(timeout=10, read_only=True, wal=False)
+    conn.row_factory = sqlite3.Row
+    try:
+        exists = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+            (_ARTIFACT_TABLE,),
+        ).fetchone()
+        if not exists:
+            return [], False, False
+        where = ""
+        params = [scope["domain_id"]]
+        if boundary:
+            where = " AND (created_at>? OR (created_at=? AND artifact_id>?))"
+            params.extend((boundary[0], boundary[0], boundary[1]))
+        params.append(limit + 1)
+        rows = conn.execute(
+            f"SELECT artifact_id,created_at,size_bytes FROM {_ARTIFACT_TABLE} "
+            "WHERE kind='content_project' AND domain_id=?" + where +
+            " ORDER BY created_at,artifact_id LIMIT ?", params,
+        ).fetchall()
+    finally:
+        conn.close()
+    return [dict(row) for row in rows[:limit]], len(rows) > limit, True
+
+
+def _content_project_list_result(status: str, projects: List[Dict[str, Any]], identity=None, boundary=None):
+    return {"status": status, "projects": projects,
+            "next_cursor": _content_project_list_cursor(identity, boundary) if identity and boundary else None}
+
+
+def list_content_projects(*, actor: Mapping[str, Any] | LocalWorkspacePrincipal,
+                          domain_id: str, subject_id: Optional[str] = None,
+                          brand_focus_id: Optional[str] = None, global_scope: bool = False,
+                          limit: int = 20, cursor: Optional[str] = None) -> Dict[str, Any]:
+    """List verified project summaries; cursors are opaque process-local keyset handles."""
+    actor_id, scope = _authorize_content_project(
+        actor, domain_id=domain_id, subject_id=subject_id,
+        brand_focus_id=brand_focus_id, global_scope=global_scope, action="read",
+    )
+    if type(limit) is not int or not 1 <= limit <= 20:
+        raise LocalArtifactError("CONTENT_PROJECT_LIST_LIMIT_INVALID")
+    identity = hashlib.sha256(_json_bytes(_content_artifact_context(actor, actor_id, scope))).hexdigest()
+    boundary = _content_project_list_boundary(cursor, identity)
+    try:
+        candidates, has_more, table_exists = _content_project_candidates(
+            scope, boundary, _CONTENT_PROJECT_LIST_SCAN_LIMIT,
+        )
+    except sqlite3.Error as exc:
+        raise LocalArtifactError("CONTENT_PROJECT_LIST_UNAVAILABLE") from exc
+    if not table_exists:
+        return _content_project_list_result("empty", [])
+
+    projects: List[Dict[str, Any]] = []
+    page_boundary: Optional[Mapping[str, Any]] = None
+    verified_bytes = 0
+    last_scanned: Optional[Mapping[str, Any]] = None
+    for candidate in candidates:
+        artifact_id = candidate.get("artifact_id")
+        size_bytes = candidate.get("size_bytes")
+        if type(size_bytes) is not int or not 0 < size_bytes <= _MAX_CONTENT_PROJECT_BYTES:
+            return _content_project_list_result("integrity_incomplete", projects, identity, candidate)
+        if verified_bytes and verified_bytes + size_bytes > _MAX_CONTENT_PROJECT_BYTES:
+            return _content_project_list_result("scan_incomplete", projects, identity, last_scanned)
+        verified_bytes += size_bytes
+        last_scanned = candidate
+        if not isinstance(artifact_id, str) or not _CONTENT_SOURCE_ARTIFACT_ID.fullmatch(artifact_id):
+            return _content_project_list_result("integrity_incomplete", projects, identity, candidate)
+        try:
+            project, _, record, _ = _verified_content_project(
+                artifact_id,
+                actor=actor,
+                domain_id=domain_id,
+                subject_id=subject_id,
+                brand_focus_id=brand_focus_id,
+                global_scope=global_scope,
+                read_only_registry=True,
+            )
+        except LocalArtifactError as exc:
+            code = str(exc)
+            if code == "CONTENT_PROJECT_CONTEXT_MISMATCH":
+                continue
+            if code in {
+                "CONTENT_PROJECT_NOT_FOUND", "CONTENT_PROJECT_INTEGRITY_FAILED",
+                "CONTENT_PROJECT_ARCHIVE_INVALID", "CONTENT_PROJECT_INTEGRITY_UNVERIFIED",
+            }:
+                return _content_project_list_result("integrity_incomplete", projects, identity, candidate)
+            raise
+        except OSError:
+            return _content_project_list_result("integrity_incomplete", projects, identity, candidate)
+        except sqlite3.Error as exc:
+            raise LocalArtifactError("CONTENT_PROJECT_LIST_UNAVAILABLE") from exc
+        projects.append({
+            "artifact_id": artifact_id,
+            "output_kind": project["output_kind"],
+            "created_at": record["created_at"],
+            "updated_at": record["updated_at"],
+            "status": record["status"],
+        })
+        if len(projects) > limit:
+            return _content_project_list_result("ok", projects[:limit], identity, page_boundary)
+        page_boundary = candidate
+
+    if has_more and candidates:
+        return _content_project_list_result("scan_incomplete", projects, identity, last_scanned)
+    return _content_project_list_result("ok" if projects else "empty", projects)
+
+
 def authorized_project_media(
     artifact_id: str,
     *,
@@ -1368,6 +1512,7 @@ __all__ = [
     "authorized_project_media",
     "ensure_artifact_table",
     "get_artifact",
+    "list_content_projects",
     "read_content_source_artifact",
     "read_content_project",
     "resolve_content_source_assets",
