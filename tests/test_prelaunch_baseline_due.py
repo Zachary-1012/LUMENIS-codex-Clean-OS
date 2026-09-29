@@ -457,7 +457,7 @@ class PrelaunchBaselineDueTests(unittest.TestCase):
             self.assertEqual(second["runs"][0]["status"], "RETRY_BACKOFF")
             self.assertEqual(second["summary"]["deferred"], 1)
 
-    def test_empty_or_unverified_refresh_never_records_success(self):
+    def test_no_new_data_refresh_records_idempotent_success(self):
         with tempfile.TemporaryDirectory() as tmp:
             path, _ = self.signed_config(tmp)
             store = ScheduleDecisionStore(os.path.join(tmp, "scheduler.db"))
@@ -469,10 +469,10 @@ class PrelaunchBaselineDueTests(unittest.TestCase):
                 now=NOW, config_path=path, hmac_key="fixture-key",
                 store=store, collect=empty_collect,
                 finish_now=lambda: NOW + timedelta(seconds=1))
-            self.assertEqual(result["runs"][0]["status"], "NO_SOURCE_RESULT")
+            self.assertEqual(result["runs"][0]["status"], "SUCCESS")
             self.assertEqual(store.public_baseline_history(
                 load_prelaunch_baseline_config(path, hmac_key="fixture-key")["plans"][0]
-            ).consecutive_failures, 1)
+            ).consecutive_failures, 0)
 
     def test_disabled_default_config_does_not_require_key(self):
         config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -548,6 +548,69 @@ class PrelaunchBaselineDueTests(unittest.TestCase):
             self.assertEqual(calls[-2:], ["https://example.org/feed-01.atom",
                                           "https://example.org/feed-00.atom"])
             self.assertEqual(second["summary"]["succeeded"], 2)
+
+    def test_maintenance_entry_replaces_old_200_cap_with_auditable_due_batch(self):
+        import sqlite3
+        from types import SimpleNamespace
+        from scripts import run_prelaunch_maintenance as entry
+        from lumenis.shared import database
+        from lumenis.system.collector.adapters import scheduling, secondary_collection
+        from lumenis.system.collector.adapters.safe_collection import (
+            CollectionHygienePolicy, RateGovernor,
+        )
+
+        self.assertTrue(RateGovernor(CollectionHygienePolicy()).within_daily_cap(200))
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = os.path.join(tmp, "isolated-v18.db")
+            connection = sqlite3.connect(db_path)
+            connection.executescript(
+                "CREATE TABLE schema_version(version INTEGER);"
+                "INSERT INTO schema_version VALUES(18);"
+            )
+            connection.close()
+            config_path, config = self.signed_config(tmp)
+            template = {**config["sources"][0], "platform": "public_http"}
+            config["sources"] = [
+                {**template, "source_key": f"source:{index:03d}",
+                 "source_url": f"https://example.org/source-{index:03d}"}
+                for index in range(201)
+            ]
+            self._write_signed_config(config_path, config)
+            store = ScheduleDecisionStore(db_path)
+            planner = SimpleNamespace(store=store)
+            calls = []
+
+            def collect(_platform, source_url, **kwargs):
+                self.assertEqual(kwargs["operator"], "prelaunch_maintenance")
+                self.assertTrue(kwargs["prelaunch_local_import"])
+                self.assertIsNotNone(kwargs["prelaunch_authorization"])
+                calls.append(source_url)
+                return {"ok": True, "status": "SUCCESS", "evidence_recorded": True,
+                        "returned_count": 1, "canonical_synced": 1,
+                        "scope_status": "VERIFIED", "refresh_verified": True}
+
+            with (
+                patch.dict(os.environ, {
+                    "LUMENIS_PRELAUNCH_BASELINE_CONFIG": config_path,
+                    "LUMENIS_PRELAUNCH_BASELINE_HMAC_KEY": "fixture-key",
+                }),
+                patch.object(database, "main_db_path", lambda: db_path),
+                patch.object(scheduling, "get_planner", lambda: planner),
+                patch.object(secondary_collection, "collect_search", collect),
+            ):
+                result = entry.run_once()
+
+            self.assertEqual(result["status"], "COMPLETED")
+            self.assertEqual(result["summary"]["succeeded"], 8)
+            batch = result["summary"]["due_batch"]
+            self.assertEqual(batch, {
+                "eligible_source_count": 201,
+                "selected_source_count": 8,
+                "limit_per_tick": 8,
+                "deferred_source_count": 193,
+            })
+            self.assertEqual(len(calls), 8)
+            self.assertEqual(len(set(calls)), 8)
 
     def test_success_requires_persisted_terminal_outcome(self):
         with tempfile.TemporaryDirectory() as tmp:

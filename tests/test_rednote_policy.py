@@ -82,6 +82,42 @@ def test_mainland_pause_cannot_be_unlocked_by_runtime_env(monkeypatch):
     assert p.to_dict()["mainland_opt_in"] is False
 
 
+def test_production_gate_and_forced_route_remain_hk_only(monkeypatch):
+    from lumenis.system.collector.adapters.rednote_policy import (
+        collection_gate,
+        effective_policy,
+        select_region,
+    )
+
+    # Runtime configuration cannot re-enable the Product Owner's paused
+    # Mainland account or redirect the production route to its local profile.
+    monkeypatch.setenv("REDNOTE_PRIMARY_REGION", "cn")
+    monkeypatch.setenv("REDNOTE_CN_PAUSED", "false")
+    monkeypatch.setenv("REDNOTE_MAINLAND_ENABLE", "true")
+
+    policy = effective_policy()
+    allowed = collection_gate(account="XHS_RETINAUT", region="intl")
+    mainland_account = collection_gate(account="XHS_CN_PRIMARY", region="cn")
+    mainland_region = collection_gate(account="XHS_RETINAUT", region="cn")
+    forced_mainland = select_region(force_region="cn")
+
+    assert policy.cn_paused is True
+    assert allowed["ok"] is True
+    assert allowed["account"] == "XHS_RETINAUT"
+    assert allowed["region"] == "intl"
+    assert allowed["cdp_port"] == 9223
+    assert allowed["host"] == "www.rednote.com"
+    assert mainland_account["ok"] is False
+    assert mainland_account["code"] == "account_paused"
+    assert mainland_region["ok"] is False
+    assert mainland_region["code"] == "region_paused"
+    assert forced_mainland["blocked"] is True
+    assert forced_mainland["requested_region"] == "cn"
+    assert forced_mainland["region"] == "intl"
+    assert forced_mainland["cdp_port"] == 9223
+    assert forced_mainland["host"] == "www.rednote.com"
+
+
 def test_human_cadence_marked_not_verified(monkeypatch):
     from lumenis.system.collector.adapters.rednote_policy import effective_policy, HUMAN_CADENCE_PLACEHOLDER
     # 真人频率在最新实测前必须显式标 NOT_VERIFIED，不得伪装实测值

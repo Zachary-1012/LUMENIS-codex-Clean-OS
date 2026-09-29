@@ -183,6 +183,18 @@ def _verified_source_refresh(result: Any) -> tuple[bool, str]:
         canonical = int(result.get("canonical_synced", 0))
     except (TypeError, ValueError):
         return False, "CANONICAL_REFRESH_UNVERIFIED"
+    # A reachable exact source can legitimately have no delta.  Treat that
+    # result as an idempotent maintenance success only when the collector has
+    # persisted Evidence and explicitly verified the unchanged scope.
+    if (
+        str(result.get("status") or "") == "NO_NEW_DATA"
+        and records == 0
+        and canonical == 0
+        and result.get("evidence_recorded") is True
+        and result.get("refresh_verified") is True
+        and result.get("scope_status") == "VERIFIED"
+    ):
+        return True, "NO_NEW_DATA"
     if records <= 0:
         return False, "NO_SOURCE_RESULT"
     if result.get("evidence_recorded") is not True:
@@ -486,5 +498,11 @@ def run_due_prelaunch_baseline(*, now: Optional[datetime] = None,
     overall = "FAILED" if failed == len(results) else "PARTIAL" if failed else "COMPLETED"
     return {"status": overall, "plan_version": loaded["plan_version"],
             "summary": {"succeeded": succeeded, "failed": failed,
-                        "deferred": deferred},
+                        "deferred": deferred,
+                        "due_batch": {
+                            "eligible_source_count": len(evaluated),
+                            "selected_source_count": len(selected),
+                            "limit_per_tick": MAX_DUE_ATTEMPTS_PER_TICK,
+                            "deferred_source_count": len(evaluated) - len(selected),
+                        }},
             "runs": results}

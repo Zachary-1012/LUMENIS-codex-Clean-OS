@@ -53,6 +53,23 @@ def _stub_primary_sync(monkeypatch, bridge, note):
     monkeypatch.setattr(bridge.threading, "Thread", NoopThread)
 
 
+def _register_validation_subject():
+    """Make the explicit CTH validation subject queryable in the temp DB."""
+    import database
+    from subject_registry import add_subject, ensure_schema
+
+    with database.get_db() as conn:
+        ensure_schema(conn)
+
+    add_subject({
+        "domain_id": "CTH",
+        "subject_type": "company",
+        "name_en": "Taikoo Hui Validation",
+        "name_zh": "广州太古汇",
+        "keywords": ["广州太古汇"],
+    })
+
+
 def _sample_note():
     return {
         "note_id": "hk-test-note-001",
@@ -73,6 +90,7 @@ def test_primary_hk_sync_writes_note_evidence_canonical_and_trace(tmp_path, monk
     db_path = _init_temp_database(tmp_path, monkeypatch)
     import xhs_cookie_bridge as bridge
 
+    _register_validation_subject()
     _stub_primary_sync(monkeypatch, bridge, _sample_note())
     result = bridge.sync(
         keywords=["广州太古汇"],
@@ -156,6 +174,7 @@ def test_primary_note_survives_evidence_sidewrite_failure(tmp_path, monkeypatch)
     # The bridge imports the canonical package API at call time. Patch that
     # public owner surface to inject the same non-fatal side-write failure.
     monkeypatch.setattr(evidence, "capture_note_lineage", fail_lineage)
+    _register_validation_subject()
     _stub_primary_sync(monkeypatch, bridge, _sample_note())
     result = bridge.sync(
         keywords=["广州太古汇"],
