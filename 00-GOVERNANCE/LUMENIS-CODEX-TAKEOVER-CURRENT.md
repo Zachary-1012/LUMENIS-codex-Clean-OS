@@ -12,6 +12,18 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-30 — Content source/project save, reopen and revision
+
+The frozen Content Artifact slice is now integrated through the existing table,
+repository and renderer. Exact file/scope approval, package integrity, old-version
+preservation, interrupted/denied work cleanup and retry are retained. Final
+106-test regression passed with exit 0. Real licensed inputs produced two MP4 and
+two WAV revisions in isolation, and all four reopened in a separate process.
+[Round 07 evidence](evidence/round-07/ROUND-07-CONTENT-ARTIFACT-REOPEN-2026-09-30.md)
+records source hashes, DB isolation, the corrected UNC guard and recovery.
+This does not claim App E2E, local-principal integration, complete business
+Evidence, spoken podcast output, commercial rights or J4/J5/J6 acceptance.
+
 ### 2026-09-30 — local Content principal without a product account
 
 The existing Permission owner now issues a server-only `local_workspace`
