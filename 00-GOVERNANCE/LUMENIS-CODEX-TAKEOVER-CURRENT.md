@@ -12,6 +12,17 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-30 — local workspace media confirmation lifecycle
+
+Exact source confirmation now accepts the server-issued local Content principal
+without creating an account. Existing account hashes and generic effect fences
+remain intact; cancellation, expiry, scope loss and workspace closure invalidate
+the specific import. The seven-file regression invocation exited 0; root's
+dependent API group additionally reported 35 passed, exit 0.
+[Round 04 evidence](evidence/round-04/ROUND-04-LOCAL-SOURCE-CONFIRMATION-2026-09-30.md)
+distinguishes executed tests from a separately collected test count. Artifact/API
+integration is being published separately; no J package or Round is accepted.
+
 ### 2026-09-30 — read-only local media inspection API
 
 Existing Experience runtime now routes Content media inspection through exact

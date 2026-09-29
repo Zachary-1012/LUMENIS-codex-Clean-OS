@@ -979,7 +979,7 @@ def bind_scope_permission_approval(
 @dataclass(frozen=True)
 class ContentSourceImport:
     """Server-derived upload identity, never a client-deserialized permission."""
-    actor_id: int
+    actor_id: Optional[int]
     domain_id: str
     subject_id: Optional[str]
     brand_focus_id: Optional[str]
@@ -987,13 +987,16 @@ class ContentSourceImport:
     filename: str
     size_bytes: int
     body_sha256: str
+    principal_kind: Optional[str] = None
+    principal_ref: Optional[str] = None
 
 
 @dataclass
 class _ContentSourceImportConfirmation:
     """Gate-owned nonce state; stores descriptor metadata, never file bytes."""
     confirmation_id: str
-    actor_id: int
+    actor_id: Optional[int]
+    caller: str
     upload: ContentSourceImport
     resource: str
     expires_at: datetime
@@ -1006,7 +1009,8 @@ class _ContentSourceImportConfirmation:
 class _ContentSourceImportGrant:
     """Caller/resource-bound authority layered over one exact approval token."""
     token: str
-    actor_id: int
+    actor_id: Optional[int]
+    caller: str
     resource: str
     expires_at: datetime
     confirmation_id: str
@@ -1024,6 +1028,44 @@ def _content_source_actor_id(actor: Optional[Mapping[str, Any]]) -> Optional[int
     return actor_id if type(actor_id) is int and actor_id > 0 else None
 
 
+def _content_source_identity(
+    actor: Optional[Mapping[str, Any]],
+    principal: Optional[LocalWorkspacePrincipal],
+) -> Tuple[Optional[int], str, Optional[str], Optional[str], Optional[str]]:
+    """Return the server-derived caller identity; never infer it from JSON."""
+    actor_id = _content_source_actor_id(actor)
+    if principal is not None:
+        if actor is None and _is_server_local_workspace_principal(principal):
+            return None, "workspace:local", "local_workspace", "workspace:local", "local_workspace"
+        return actor_id, "anonymous", None, None, None
+    if actor_id is not None:
+        return actor_id, f"actor:{actor_id}", None, None, "account"
+    return None, "anonymous", None, None, None
+
+
+def _content_source_upload_matches_identity(
+    upload: ContentSourceImport,
+    identity: Tuple[Optional[int], str, Optional[str], Optional[str], Optional[str]],
+) -> bool:
+    actor_id, caller, principal_kind, principal_ref, identity_kind = identity
+    if type(upload) is not ContentSourceImport:
+        return False
+    if identity_kind == "account":
+        return (
+            type(actor_id) is int and actor_id > 0
+            and type(upload.actor_id) is int and upload.actor_id == actor_id
+            and upload.principal_kind is None and upload.principal_ref is None
+        )
+    if identity_kind == "local_workspace":
+        return (
+            caller == "workspace:local" and actor_id is None
+            and upload.actor_id is None
+            and upload.principal_kind == principal_kind
+            and upload.principal_ref == principal_ref
+        )
+    return False
+
+
 def _content_source_confirmation_denial(
     gate: "PermissionGate",
     code: str,
@@ -1033,8 +1075,13 @@ def _content_source_confirmation_denial(
     scope: Optional[ActorScopePermissionResult] = None,
     resource: Optional[str] = None,
     verification_state: str = "not_checked",
+    caller: Optional[str] = None,
+    principal_kind: Optional[str] = None,
+    principal_ref: Optional[str] = None,
 ) -> ActorScopePermissionResult:
-    caller = scope.caller if scope else (f"actor:{actor_id}" if actor_id else "anonymous")
+    caller = scope.caller if scope else caller or (
+        f"actor:{actor_id}" if actor_id else "anonymous"
+    )
     decision = gate._deny(
         OperationType.DB_WRITE, resource, RiskLevel.HIGH, PermissionLevel.COMMIT,
         caller, None, reason=code, requires_approval=True,
@@ -1049,6 +1096,8 @@ def _content_source_confirmation_denial(
         scope_audit_id=scope.audit_id if scope else None,
         verification_state=scope.verification_state if scope else verification_state,
         code=code,
+        principal_kind=scope.principal_kind if scope else principal_kind,
+        principal_ref=scope.principal_ref if scope else principal_ref,
     )
 
 
@@ -1059,6 +1108,24 @@ def content_source_import_resource(
     gate: Optional["PermissionGate"] = None,
 ) -> str:
     """Bind an audited scope to actual upload bytes; grants no rights or effects."""
+    account_identity = (
+        type(upload) is ContentSourceImport
+        and type(upload.actor_id) is int and upload.actor_id > 0
+        and scope_permission.actor_id == upload.actor_id
+        and scope_permission.caller == f"actor:{upload.actor_id}"
+        and upload.principal_kind is None and upload.principal_ref is None
+        and scope_permission.principal_kind is None
+        and scope_permission.principal_ref is None
+    ) if type(scope_permission) is ActorScopePermissionResult else False
+    workspace_identity = (
+        type(upload) is ContentSourceImport
+        and upload.actor_id is None and scope_permission.actor_id is None
+        and upload.principal_kind == "local_workspace"
+        and upload.principal_ref == "workspace:local"
+        and scope_permission.principal_kind == "local_workspace"
+        and scope_permission.principal_ref == "workspace:local"
+        and scope_permission.caller == "workspace:local"
+    ) if type(scope_permission) is ActorScopePermissionResult else False
     if (
         type(scope_permission) is not ActorScopePermissionResult
         or scope_permission.allowed is not True
@@ -1068,9 +1135,8 @@ def content_source_import_resource(
         or not scope_permission.audit_id
         or scope_permission.scope_audit_id != scope_permission.audit_id
         or type(upload) is not ContentSourceImport
-        or type(upload.actor_id) is not int or upload.actor_id < 1
+        or not (account_identity or workspace_identity)
         or type(upload.global_scope) is not bool
-        or scope_permission.caller != f"actor:{upload.actor_id}"
         or any(getattr(upload, key) != getattr(scope_permission, key) for key in (
             "actor_id", "domain_id", "subject_id", "brand_focus_id", "global_scope"
         ))
@@ -1093,6 +1159,23 @@ def content_source_import_resource(
     )
     scope_resource = f"{upload.domain_id}:{'GLOBAL / ALL' if upload.global_scope else focus}"
     permission_gate = gate if gate is not None else get_permission_gate()
+    if workspace_identity:
+        principal = resolve_local_workspace_principal(module="content", action="write")
+        if principal is None:
+            permission_gate._revoke_local_content_source_import(upload)
+            raise ValueError("CONTENT_SOURCE_SCOPE_AUDIT_UNVERIFIED")
+        live_scope = check_local_workspace_scope_permission(
+            principal, domain_id=upload.domain_id, action="write", module="content",
+            subject_id=upload.subject_id, brand_focus_id=upload.brand_focus_id,
+            global_scope=upload.global_scope, gate=permission_gate,
+        )
+        if (
+            live_scope.allowed is not True
+            or live_scope.resource != scope_resource
+            or live_scope.caller != scope_permission.caller
+        ):
+            permission_gate._revoke_local_content_source_import(upload)
+            raise ValueError("CONTENT_SOURCE_SCOPE_AUDIT_UNVERIFIED")
     if not valid_scope or scope_permission.resource != scope_resource or not any(
         entry["audit_id"] == scope_permission.audit_id
         and entry["caller"] == scope_permission.caller
@@ -1103,9 +1186,15 @@ def content_source_import_resource(
         )
     ):
         raise ValueError("CONTENT_SOURCE_SCOPE_AUDIT_UNVERIFIED")
+    descriptor = asdict(upload)
+    if upload.principal_kind is None and upload.principal_ref is None:
+        # Keep the legacy actor resource hash stable for descriptors created
+        # before the optional workspace-principal fields existed.
+        descriptor.pop("principal_kind", None)
+        descriptor.pop("principal_ref", None)
     binding = {
         "operation": OperationType.DB_WRITE.value, "scope_action": "write",
-        "module": "content", **asdict(upload),
+        "module": "content", **descriptor,
     }
     encoded = json.dumps(binding, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     return "content-source-import:v1:" + hashlib.sha256(encoded).hexdigest()
@@ -1115,44 +1204,58 @@ def check_content_source_import_permission(
     actor: Optional[Mapping[str, Any]],
     upload: ContentSourceImport,
     *,
+    principal: Optional[LocalWorkspacePrincipal] = None,
     gate: Optional["PermissionGate"] = None,
 ) -> ActorScopePermissionResult:
-    """Recheck live account scope and exact approval, without importing a file.
+    """Recheck live account/workspace scope and exact approval, without import.
 
     The caller must authenticate actor and derive the descriptor from bytes.
     This decision is a check-time receipt, not a reusable execution permit.
     Approval expiry/revocation is rechecked each call; source rights stay unknown.
     """
     permission_gate = gate if gate is not None else get_permission_gate()
-    actor_id = _content_source_actor_id(actor)
+    identity = _content_source_identity(actor, principal)
+    actor_id, caller, principal_kind, principal_ref, identity_kind = identity
     if type(upload) is not ContentSourceImport:
         # A client dictionary is not a permission descriptor.  Refuse it at
         # the typed boundary instead of attempting attribute access or
         # accepting caller-supplied rights/approval fields.
         raise ValueError("CONTENT_SOURCE_RESOURCE_BINDING_INVALID")
-    if actor_id is None or actor_id != upload.actor_id:
+    if not _content_source_upload_matches_identity(upload, identity):
+        code = (
+            "CONTENT_SOURCE_PRINCIPAL_MISMATCH"
+            if identity_kind == "local_workspace" or upload.principal_kind is not None
+            else "CONTENT_SOURCE_ACTOR_MISMATCH"
+        )
         return _content_source_confirmation_denial(
-            permission_gate, "CONTENT_SOURCE_ACTOR_MISMATCH",
-            actor_id=actor_id, upload=upload,
+            permission_gate, code, actor_id=actor_id, upload=upload,
+            caller=caller, principal_kind=principal_kind, principal_ref=principal_ref,
         )
     try:
-        scope = check_actor_scope_permission(
-            actor, domain_id=upload.domain_id, action="write", module="content",
+        scope = _content_source_scope_receipt(
+            actor, principal=principal, domain_id=upload.domain_id,
             subject_id=upload.subject_id, brand_focus_id=upload.brand_focus_id,
             global_scope=upload.global_scope, gate=permission_gate,
         )
     except Exception:
+        if identity_kind == "local_workspace":
+            permission_gate._revoke_local_content_source_import(upload)
         return _content_source_confirmation_denial(
             permission_gate, "CONTENT_SOURCE_PERMISSION_UNAVAILABLE",
             actor_id=actor_id, upload=upload, verification_state="unavailable",
+            caller=caller, principal_kind=principal_kind, principal_ref=principal_ref,
         )
     if scope.verification_state != "verified":
+        if identity_kind == "local_workspace":
+            permission_gate._revoke_local_content_source_import(upload)
         return _content_source_confirmation_denial(
             permission_gate, "CONTENT_SOURCE_PERMISSION_UNAVAILABLE",
             actor_id=actor_id, upload=upload, scope=scope,
             verification_state="unavailable",
         )
     if scope.allowed is not True:
+        if identity_kind == "local_workspace":
+            permission_gate._revoke_local_content_source_import(upload)
         return _content_source_confirmation_denial(
             permission_gate, "CONTENT_SOURCE_SCOPE_DENIED",
             actor_id=actor_id, upload=upload, scope=scope,
@@ -1161,12 +1264,16 @@ def check_content_source_import_permission(
     try:
         resource = content_source_import_resource(scope, upload, gate=permission_gate)
     except ValueError:
+        if identity_kind == "local_workspace":
+            permission_gate._revoke_local_content_source_import(upload)
         return _content_source_confirmation_denial(
             permission_gate, "CONTENT_SOURCE_RESOURCE_BINDING_INVALID",
             actor_id=actor_id, upload=upload, scope=scope, resource=scope.resource,
             verification_state="verified",
         )
     except Exception:
+        if identity_kind == "local_workspace":
+            permission_gate._revoke_local_content_source_import(upload)
         return _content_source_confirmation_denial(
             permission_gate, "CONTENT_SOURCE_PERMISSION_UNAVAILABLE",
             actor_id=actor_id, upload=upload, scope=scope, resource=scope.resource,
@@ -1217,6 +1324,7 @@ def check_content_source_import_permission(
         global_scope=scope.global_scope, scope_action="write",
         scope_audit_id=scope.audit_id, verification_state="verified",
         code="CONTENT_SOURCE_IMPORT_ALLOWED",
+        principal_kind=scope.principal_kind, principal_ref=scope.principal_ref,
     )
 
 
@@ -1224,7 +1332,19 @@ def _content_source_scope_receipt(
     actor: Optional[Mapping[str, Any]], *, domain_id: str,
     subject_id: Optional[str], brand_focus_id: Optional[str],
     global_scope: bool, gate: "PermissionGate",
+    principal: Optional[LocalWorkspacePrincipal] = None,
 ) -> ActorScopePermissionResult:
+    if principal is not None:
+        if actor is not None:
+            return _content_source_confirmation_denial(
+                gate, "CONTENT_SOURCE_PRINCIPAL_MISMATCH",
+                caller="anonymous", verification_state="verified",
+            )
+        return check_local_workspace_scope_permission(
+            principal, domain_id=domain_id, action="write", module="content",
+            subject_id=subject_id, brand_focus_id=brand_focus_id,
+            global_scope=global_scope, gate=gate,
+        )
     return check_actor_scope_permission(
         actor, domain_id=domain_id, action="write", module="content",
         subject_id=subject_id, brand_focus_id=brand_focus_id,
@@ -1234,6 +1354,7 @@ def _content_source_scope_receipt(
 
 def prepare_content_source_import_confirmation(
     actor: Optional[Mapping[str, Any]], upload: ContentSourceImport, *,
+    principal: Optional[LocalWorkspacePrincipal] = None,
     gate: Optional["PermissionGate"] = None,
 ) -> dict:
     """Create a short-lived in-memory confirmation for a server-derived upload.
@@ -1242,19 +1363,26 @@ def prepare_content_source_import_confirmation(
     records only immutable descriptor metadata; media bytes are never retained.
     """
     permission_gate = gate if gate is not None else get_permission_gate()
-    actor_id = _content_source_actor_id(actor)
+    identity = _content_source_identity(actor, principal)
+    actor_id, caller, principal_kind, principal_ref, identity_kind = identity
     if type(upload) is not ContentSourceImport:
         return {"allowed": False, "code": "CONTENT_SOURCE_RESOURCE_BINDING_INVALID",
                 "verification_state": "unavailable"}
-    if actor_id is None or actor_id != upload.actor_id:
-        return {"allowed": False, "code": "CONTENT_SOURCE_ACTOR_MISMATCH",
+    if not _content_source_upload_matches_identity(upload, identity):
+        code = (
+            "CONTENT_SOURCE_PRINCIPAL_MISMATCH"
+            if identity_kind == "local_workspace" or upload.principal_kind is not None
+            else "CONTENT_SOURCE_ACTOR_MISMATCH"
+        )
+        return {"allowed": False, "code": code,
                 "verification_state": "verified"}
     if is_testing_bypass_enabled():
         return {"allowed": False, "code": "CONTENT_SOURCE_TESTING_BYPASS_FORBIDDEN",
                 "verification_state": "verified"}
     try:
         scope = _content_source_scope_receipt(
-            actor, domain_id=upload.domain_id, subject_id=upload.subject_id,
+            actor, principal=principal, domain_id=upload.domain_id,
+            subject_id=upload.subject_id,
             brand_focus_id=upload.brand_focus_id, global_scope=upload.global_scope,
             gate=permission_gate,
         )
@@ -1283,7 +1411,7 @@ def prepare_content_source_import_confirmation(
         expires_at = now + _CONTENT_SOURCE_CONFIRMATION_TTL
         permission_gate._content_import_confirmations[confirmation_id] = (
             _ContentSourceImportConfirmation(
-                confirmation_id=confirmation_id, actor_id=actor_id,
+                confirmation_id=confirmation_id, actor_id=actor_id, caller=caller,
                 upload=upload, resource=resource, expires_at=expires_at,
             )
         )
@@ -1300,15 +1428,18 @@ def confirm_content_source_import(
     actor: Optional[Mapping[str, Any]], confirmation_id: str, *,
     domain_id: str, subject_id: Optional[str] = None,
     brand_focus_id: Optional[str] = None, global_scope: bool = False,
-    confirmed: bool, gate: Optional["PermissionGate"] = None,
+    confirmed: bool, principal: Optional[LocalWorkspacePrincipal] = None,
+    gate: Optional["PermissionGate"] = None,
 ) -> ActorScopePermissionResult:
     """Bind an explicit user confirmation to one exact live import resource."""
     permission_gate = gate if gate is not None else get_permission_gate()
-    actor_id = _content_source_actor_id(actor)
-    if actor_id is None or type(confirmation_id) is not str or not confirmation_id:
+    identity = _content_source_identity(actor, principal)
+    actor_id, caller, principal_kind, principal_ref, identity_kind = identity
+    if identity_kind is None or type(confirmation_id) is not str or not confirmation_id:
         return _content_source_confirmation_denial(
             permission_gate, "CONTENT_SOURCE_CONFIRMATION_INVALID", actor_id=actor_id,
-            verification_state="unavailable",
+            verification_state="unavailable", caller=caller,
+            principal_kind=principal_kind, principal_ref=principal_ref,
         )
     if confirmed is not True:
         return _content_source_confirmation_denial(
@@ -1326,10 +1457,11 @@ def confirm_content_source_import(
             return _content_source_confirmation_denial(
                 permission_gate, "CONTENT_SOURCE_CONFIRMATION_UNKNOWN", actor_id=actor_id,
             )
-        if confirmation.actor_id != actor_id:
+        if confirmation.actor_id != actor_id or confirmation.caller != caller:
             return _content_source_confirmation_denial(
                 permission_gate, "CONTENT_SOURCE_ACTOR_MISMATCH", actor_id=actor_id,
                 upload=confirmation.upload, resource=confirmation.resource,
+                caller=caller, principal_kind=principal_kind, principal_ref=principal_ref,
             )
         if confirmation.state != "pending":
             return _content_source_confirmation_denial(
@@ -1338,6 +1470,12 @@ def confirm_content_source_import(
                 resource=confirmation.resource,
             )
         upload = confirmation.upload
+        if not _content_source_upload_matches_identity(upload, identity):
+            return _content_source_confirmation_denial(
+                permission_gate, "CONTENT_SOURCE_PRINCIPAL_MISMATCH",
+                actor_id=actor_id, upload=upload, resource=confirmation.resource,
+                caller=caller, principal_kind=principal_kind, principal_ref=principal_ref,
+            )
         if (
             domain_id != upload.domain_id or subject_id != upload.subject_id
             or brand_focus_id != upload.brand_focus_id
@@ -1349,7 +1487,7 @@ def confirm_content_source_import(
             )
         try:
             scope = _content_source_scope_receipt(
-                actor, domain_id=domain_id, subject_id=subject_id,
+                actor, principal=principal, domain_id=domain_id, subject_id=subject_id,
                 brand_focus_id=brand_focus_id, global_scope=global_scope,
                 gate=permission_gate,
             )
@@ -1360,6 +1498,8 @@ def confirm_content_source_import(
                     resource=confirmation.resource, verification_state="unavailable",
                 )
             if scope.allowed is not True:
+                if identity_kind == "local_workspace":
+                    confirmation.state = "cancelled"
                 return _content_source_confirmation_denial(
                     permission_gate, "CONTENT_SOURCE_SCOPE_DENIED", actor_id=actor_id,
                     upload=upload, scope=scope, resource=confirmation.resource,
@@ -1380,18 +1520,20 @@ def confirm_content_source_import(
 
         token = permission_gate.grant_approval(
             OperationType.DB_WRITE.value, duration_minutes=1, resource=resource,
-            granted_by=f"actor:{actor_id}",
+            granted_by=caller,
         )
         confirmation.state = "confirmed"
         confirmation.approval_token = token
         confirmation.approval_expires_at = datetime.now() + _CONTENT_SOURCE_IMPORT_GRANT_TTL
         permission_gate._content_import_grants[token] = _ContentSourceImportGrant(
-            token=token, actor_id=actor_id, resource=resource,
+            token=token, actor_id=actor_id, caller=scope.caller, resource=resource,
             expires_at=confirmation.approval_expires_at,
             confirmation_id=confirmation_id,
         )
 
-    decision = check_content_source_import_permission(actor, upload, gate=permission_gate)
+    decision = check_content_source_import_permission(
+        actor, upload, principal=principal, gate=permission_gate,
+    )
     if decision.allowed is not True:
         permission_gate.revoke_approval(token)
         with permission_gate._content_import_lock:
@@ -1405,12 +1547,15 @@ def confirm_content_source_import(
 
 def cancel_content_source_import_confirmation(
     actor: Optional[Mapping[str, Any]], confirmation_id: str,
-    current_scope: Mapping[str, Any], *, gate: Optional["PermissionGate"] = None,
+    current_scope: Mapping[str, Any], *,
+    principal: Optional[LocalWorkspacePrincipal] = None,
+    gate: Optional["PermissionGate"] = None,
 ) -> bool:
     """Cancel one owner's pending/issued confirmation without revoking others."""
     permission_gate = gate if gate is not None else get_permission_gate()
-    actor_id = _content_source_actor_id(actor)
-    if actor_id is None or not isinstance(current_scope, Mapping):
+    identity = _content_source_identity(actor, principal)
+    actor_id, caller, _principal_kind, _principal_ref, identity_kind = identity
+    if identity_kind is None or not isinstance(current_scope, Mapping):
         return False
     domain_id = current_scope.get("domain_id")
     subject_id = current_scope.get("subject_id")
@@ -1423,21 +1568,29 @@ def cancel_content_source_import_confirmation(
         confirmation = permission_gate._content_import_confirmations.get(confirmation_id)
         if (
             confirmation is None or confirmation.actor_id != actor_id
+            or confirmation.caller != caller
             or confirmation.state not in {"pending", "confirmed"}
         ):
             return False
         upload = confirmation.upload
+        if not _content_source_upload_matches_identity(upload, identity):
+            return False
         if (domain_id != upload.domain_id or subject_id != upload.subject_id
                 or brand_focus_id != upload.brand_focus_id
                 or global_scope is not upload.global_scope):
             return False
         try:
             scope = _content_source_scope_receipt(
-                actor, domain_id=domain_id, subject_id=subject_id,
+                actor, principal=principal, domain_id=domain_id, subject_id=subject_id,
                 brand_focus_id=brand_focus_id, global_scope=global_scope,
                 gate=permission_gate,
             )
             if scope.allowed is not True or scope.verification_state != "verified":
+                if identity_kind == "local_workspace":
+                    confirmation.state = "cancelled"
+                    if confirmation.approval_token:
+                        permission_gate._content_import_grants.pop(confirmation.approval_token, None)
+                        permission_gate.revoke_approval(confirmation.approval_token)
                 return False
             if content_source_import_resource(scope, upload, gate=permission_gate) != confirmation.resource:
                 return False
@@ -1611,6 +1764,29 @@ class PermissionGate:
                     self.revoke_approval(token)
                     self._content_import_grants.pop(token, None)
 
+    def _revoke_local_content_source_import(self, upload: ContentSourceImport) -> None:
+        """Invalidate this workspace descriptor's pending and confirmed grants."""
+        if (
+            type(upload) is not ContentSourceImport
+            or upload.actor_id is not None
+            or upload.principal_kind != "local_workspace"
+            or upload.principal_ref != "workspace:local"
+        ):
+            return
+        with self._content_import_lock:
+            for confirmation in self._content_import_confirmations.values():
+                if (
+                    confirmation.caller != "workspace:local"
+                    or confirmation.upload != upload
+                    or confirmation.state not in {"pending", "confirmed"}
+                ):
+                    continue
+                confirmation.state = "cancelled"
+                token = confirmation.approval_token
+                if token:
+                    self._content_import_grants.pop(token, None)
+                    self.revoke_approval(token)
+
     def _content_import_grant_is_valid(
         self,
         token: Optional[str],
@@ -1626,7 +1802,7 @@ class PermissionGate:
                 grant is None
                 or datetime.now() >= grant.expires_at
                 or grant.resource != resource
-                or caller != f"actor:{grant.actor_id}"
+                or caller != grant.caller
             ):
                 return False
             confirmation = self._content_import_confirmations.get(grant.confirmation_id)
@@ -1636,6 +1812,39 @@ class PermissionGate:
                 or confirmation.approval_token != token
                 or confirmation.resource != resource
                 or confirmation.actor_id != grant.actor_id
+                or confirmation.caller != grant.caller
+            ):
+                return False
+            upload = confirmation.upload
+            if upload.principal_kind == "local_workspace" or upload.principal_ref is not None:
+                principal = resolve_local_workspace_principal(
+                    module="content", action="write",
+                )
+                scope = (
+                    check_local_workspace_scope_permission(
+                        principal, domain_id=upload.domain_id, action="write",
+                        module="content", subject_id=upload.subject_id,
+                        brand_focus_id=upload.brand_focus_id,
+                        global_scope=upload.global_scope, gate=self,
+                    ) if principal is not None else None
+                )
+                if (
+                    upload.actor_id is not None
+                    or upload.principal_kind != "local_workspace"
+                    or upload.principal_ref != "workspace:local"
+                    or principal is None
+                    or scope is None or scope.allowed is not True
+                    or scope.caller != grant.caller
+                    or scope.resource != f"{upload.domain_id}:{'GLOBAL / ALL' if upload.global_scope else (upload.subject_id if upload.domain_id == 'cth' else upload.brand_focus_id)}"
+                ):
+                    confirmation.state = "cancelled"
+                    self._content_import_grants.pop(token, None)
+                    self.revoke_approval(token)
+                    return False
+            elif (
+                type(upload.actor_id) is not int or upload.actor_id < 1
+                or upload.principal_kind is not None or upload.principal_ref is not None
+                or grant.caller != f"actor:{upload.actor_id}"
             ):
                 return False
             return self._approval_token_is_valid(
@@ -1644,7 +1853,7 @@ class PermissionGate:
 
     def _find_content_import_grant(self, resource: str, caller: str) -> Optional[str]:
         with self._content_import_lock:
-            for token in self._content_import_grants:
+            for token in list(self._content_import_grants):
                 if self._content_import_grant_is_valid(
                     token, OperationType.DB_WRITE, resource, caller,
                 ):
