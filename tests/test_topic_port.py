@@ -46,7 +46,11 @@ assert len(r.json['topics']) == 3
 print('[timeline]', c.get(f'/api/topic-campaign/timeline?campaign_key={TKEY}').json)
 print('[notes]', c.get(f'/api/topic-campaign/notes?campaign_key={TKEY}').json)
 
-# 6) 暂停后窗口判断为 False、run 返回 400
+# 6) 暂停后窗口判断为 False、run 返回 400。
+# 本测试只验证 campaign 管理语义；生产 Collector 身份/端点门另有独立测试。
+# 新的 fail-closed Collector gate 会在窗口检查之前返回 423/503，因此这里显式
+# 隔离它，避免旧管理测试把“采集运行时不可用”误判成“暂停语义回归”。
+tc._legacy_campaign_route_status = lambda auto_trigger=False: {'ok': True}
 c.post('/api/topic-campaign/campaign-toggle', json={'campaign_key': TKEY, 'status': 'paused'})
 r = c.get('/api/topic-campaign/campaigns')
 me = next(x for x in r.json['campaigns'] if x['campaign_key'] == TKEY)

@@ -104,7 +104,8 @@ def test_primary_hk_sync_writes_note_evidence_canonical_and_trace(tmp_path, monk
 
     with sqlite3.connect(db_path) as conn:
         note = conn.execute(
-            "SELECT note_id, captured_at, publish_datetime FROM notes WHERE note_id=?",
+            "SELECT note_id, captured_at, publish_datetime "
+            "FROM notes WHERE note_id=?",
             ("hk-test-note-001",),
         ).fetchone()
         evidence = conn.execute(
@@ -118,6 +119,11 @@ def test_primary_hk_sync_writes_note_evidence_canonical_and_trace(tmp_path, monk
             ("hk-test-note-001",),
         ).fetchone()
 
+        assert note[:3] == (
+            "hk-test-note-001",
+            "2026-09-15 10:11:12",
+            "2026-09-14 09:10:00",
+        )
         assert note == (
             "hk-test-note-001",
             "2026-09-15 10:11:12",

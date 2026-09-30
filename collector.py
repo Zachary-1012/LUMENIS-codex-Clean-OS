@@ -49,16 +49,9 @@ def _resolve_search_script():
 SEARCH_SCRIPT = _resolve_search_script()
 INSTANCE_NAME = 'taikoo'
 
-# 监测关键词组
-MONITOR_KEYWORDS = [
-    '广州太古汇',
-    '太古汇 投诉',
-    '太古汇 避雷',
-    '太古汇 活动',
-    '太古汇 新店',
-    '太古汇 方所',
-    '太古汇 停车',
-]
+# Legacy default keywords are deliberately non-authoritative.
+# Runtime collection scope is resolved from the canonical Subject/BrandFocus registry.
+MONITOR_KEYWORDS = None
 
 def _check_profile_lock():
     """检查持久化 Chromium profile 是否可能被其他进程占用。
@@ -556,12 +549,21 @@ def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_
           f"region=intl account={policy_gate.get('account')} "
           f"cadence_status={_pol.human_cadence.get('status')}")
 
-    if keywords is None:
-        keywords = MONITOR_KEYWORDS
+    # Resolve the canonical acquisition plan before touching Guard/browser/network.
+    from lumenis.system.collector.acquisition_plan import build_acquisition_plan
+    query_plan = build_acquisition_plan(keywords)
+    if not query_plan.is_runnable:
+        return [], [{
+            'keyword': '',
+            'count': 0,
+            'error': 'ACQUISITION_PLAN_BLOCKED',
+            'plan_reason_code': query_plan.reason_code,
+            'query_plan': query_plan.to_dict(),
+        }]
 
     # 清洗噪声词 + 去重保序 + 限量（避免英文网页发现的 the/silver 类噪声拖慢采集、徒增风控暴露）
     seen_kw, clean_kw = set(), []
-    for k in keywords:
+    for k in query_plan.keywords:
         k = (k or '').strip()
         if not k or _is_noise_keyword(k) or k.lower() in seen_kw:
             continue
@@ -570,7 +572,7 @@ def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_
 
     all_notes = {}
     collection_results = []
-    core_set = set(MONITOR_KEYWORDS or [])
+    core_set = {query.keyword for query in query_plan.queries if query.priority == 0}
 
     for idx, kw in enumerate(keywords):
         # 首个显式词与主体监测词为核心，深采；其余为扩展反馈词，浅采（提速、降负载、降风控）

@@ -468,7 +468,29 @@ class CollectorAutomation:
                 logger.warning("采集任务已在运行中")
                 return {'ok': False, 'error': '采集任务已在运行中'}
 
-            # ── 双子星库 Contract 预检（在所有调度逻辑之前，fail-fast）──
+            # Canonical Registry/Acquisition Plan is the first executable boundary.
+            # Do not touch identity, CDP, browser or runtime preflight when scope is unresolved.
+            try:
+                import xhs_cookie_bridge as _xcb
+                query_plan = _xcb._resolve_acquisition_plan(keywords)
+            except Exception as exc:
+                return {
+                    'ok': False, 'status': 'BLOCKED',
+                    'code': 'ACQUISITION_PLAN_UNAVAILABLE',
+                    'error': f'采集计划不可用: {type(exc).__name__}',
+                    'query_plan': {'status': 'BLOCKED', 'reason_code': 'PLAN_UNAVAILABLE'},
+                }
+            query_plan_payload = query_plan.to_dict()
+            if not query_plan.is_runnable:
+                return {
+                    'ok': False, 'status': 'BLOCKED',
+                    'code': 'ACQUISITION_PLAN_BLOCKED',
+                    'error': query_plan.reason or query_plan.reason_code,
+                    'query_plan': query_plan_payload,
+                }
+            keywords = list(dict.fromkeys(query_plan.keywords))[:32]
+
+            # ── 双子星库 Contract 预检（Registry/Plan 之后，任何网络动作之前）──
             pre_ok, pre_msg, pre_detail = True, '', {}
             try:
                 import xhs_cookie_bridge as _xcb
@@ -518,10 +540,6 @@ class CollectorAutomation:
                 logger.warning(pre_msg)
                 return {'ok': False, 'error': pre_msg, 'preflight': pre_detail}
 
-            # 配置采集参数
-            if keywords is None:
-                keywords = ['广州太古汇', '太古汇', '广州太古汇 舆情']
-            
             # 采集参数（按用户设定：手动一键20min/冷却1h、自动定时30min/冷却1h，边采边入库）
             mode_config = {
                 'quick':    {'duration': 1200, 'max_pages': 20, 'interval': 3},   # 手动一键更新 = 20 分钟
@@ -559,6 +577,7 @@ class CollectorAutomation:
                 'collector_id': 'xhs_collector_automation',
                 'source_id': 'xiaohongshu',
                 'keywords': keywords,
+                'query_plan': query_plan_payload,
                 'mode': mode,
                 'account': _account_for_check,
                 'trigger_type': trigger_type,

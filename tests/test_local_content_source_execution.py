@@ -19,7 +19,10 @@ def boundary(monkeypatch):
     monkeypatch.setattr(security, "get_permission_gate", lambda: gate)
     calls = {"trace": [], "evidence": [], "handler": []}
     monkeypatch.setattr(e, "write_trace", lambda ctx, *_: calls["trace"].append(ctx))
-    monkeypatch.setattr(e, "record_execution_evidence", lambda ctx: calls["evidence"].append(ctx))
+    monkeypatch.setattr(
+        e, "record_execution_evidence",
+        lambda ctx: calls["evidence"].append(ctx) or {"ok": True},
+    )
     fence = security.get_effect_fence()
     fence.clear_for_testing()
     app = Flask(__name__)
@@ -128,3 +131,20 @@ def test_serialization_never_deepcopies_server_principal():
 
     context = e.SkillExecutionContext(workspace_principal=Opaque())
     assert "workspace_principal" not in context.to_dict()
+
+def test_effectful_success_never_reports_completed_without_required_evidence(boundary, monkeypatch):
+    _app, _gate, principal, upload, calls = boundary
+    confirm(principal, upload)
+    monkeypatch.setattr(
+        e, "record_execution_evidence",
+        lambda ctx: {"ok": False, "error": "INJECTED_EVIDENCE_FAILURE"},
+    )
+
+    result = run(boundary)
+
+    assert len(calls["handler"]) == 1
+    assert result.status is e.ExecutionStatus.FAILED
+    assert result.error == "EVIDENCE_RECORD_FAILED"
+    assert result.evaluation["success"] is False
+    assert result.evaluation["quality_score"] == 0.0
+    assert result.evaluation["validation_status"] == "failed_no_evidence"

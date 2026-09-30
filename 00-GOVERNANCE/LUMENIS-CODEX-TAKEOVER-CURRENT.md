@@ -2035,3 +2035,20 @@ The focused multimodal and scoped-brief tests passed 14/14. These helpers are
 `IMPLEMENTED/TESTED` but are not by themselves a user-visible AI or reporting
 workflow; API/ViewModel binding, Permission, real user E2E and downstream
 evaluation remain open. No product closure or release status changes.
+
+### 2026-09-30 - collector plan-first scope gate
+
+The existing legacy Collector, CollectorAutomation and XHS live entry points now
+resolve the canonical Registry-owned `AcquisitionPlan` before browser/CDP,
+identity or collection work. Hard-coded Guangzhou keyword defaults were removed;
+an unresolved plan returns an explicit blocked result with its reason and plan
+payload. Accepted plans are carried into the task metadata, manual collection
+remains the default, and automatic collection still requires explicit opt-in.
+The existing approved HK/international XHS identity boundary remains unchanged;
+BMP or mixed-domain requests continue to fail closed rather than being written
+through the CTH-only legacy path.
+
+The scoped collector lifecycle, evidence-failure, topic management and XHS
+lineage regressions passed 23/23. This proves plan ordering and honest failure
+semantics only; no live social-platform session or platform data was used in the
+batch, so collection coverage, account health and user E2E remain unverified.

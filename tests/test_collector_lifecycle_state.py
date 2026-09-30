@@ -81,8 +81,24 @@ class TestTaskObjectFields:
     def test_task_has_standard_fields(self):
         """start_collection 创建的 task 必须包含所有标准字段。"""
         ca = CollectorAutomation()
+        # 采集任务现在必须先经过 Registry-owned AcquisitionPlan。该测试验证
+        # task 字段，不应依赖工作区真实 registry 是否恰好包含测试关键词。
+        from lumenis.system.collector.acquisition_plan import build_acquisition_plan
+        valid_plan = build_acquisition_plan(
+            ['太古汇'],
+            registry_loader=lambda: [{
+                'subject_id': 'CTH-TAIKOO-TEST',
+                'domain_id': 'CTH',
+                'subject_type': 'company',
+                'name_zh': '广州太古汇',
+                'name_en': 'Taikoo Hui Guangzhou',
+                'keywords': ['太古汇'],
+                'status': 'configured',
+            }],
+        )
         # 模拟预检通过 + 不实际启动线程
         with patch.object(ca, '_port_for', return_value=9223), \
+             patch('xhs_cookie_bridge._resolve_acquisition_plan', return_value=valid_plan), \
              patch('xhs_cookie_bridge.runtime_preflight_check',
                    return_value={'ok': True, 'overall_state': 'healthy',
                                  'evidence': 'ok', 'active_account': 'XHS_RETINAUT',

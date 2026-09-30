@@ -36,6 +36,19 @@ def run_live(keyword: str, *, max_scroll=5, max_details=20, max_comment_pages=5,
         return {'ok': False, 'code': policy_gate.get('code'),
                 'error': policy_gate.get('reason'), 'notes': [],
                 'collection_policy': policy_gate}
+
+    # Registry scope must resolve before CDP/profile/persistence work.
+    query_plan = _xcb._resolve_acquisition_plan([keyword])
+    query_plan_payload = query_plan.to_dict()
+    if not query_plan.is_runnable:
+        return {
+            'ok': False, 'code': 'ACQUISITION_PLAN_BLOCKED',
+            'error': query_plan.reason or query_plan.reason_code,
+            'notes': [], 'collection_policy': policy_gate,
+            'query_plan': query_plan_payload,
+        }
+    keyword = query_plan.queries[0].keyword
+
     if cdp_url and not cdp_url.rstrip('/').endswith(':9223'):
         gate = dict(policy_gate)
         gate.update({'ok': False, 'code': 'cdp_port_not_allowed',
@@ -72,6 +85,7 @@ def run_live(keyword: str, *, max_scroll=5, max_details=20, max_comment_pages=5,
         data = {'ok': False, 'error': f'JSON解析失败: {e}', 'raw_tail': (p.stderr or stdout)[-1200:]}
     data['_process_returncode'] = p.returncode
     data.setdefault('collection_policy', policy_gate)
+    data.setdefault('query_plan', query_plan_payload)
     return data
 
 
