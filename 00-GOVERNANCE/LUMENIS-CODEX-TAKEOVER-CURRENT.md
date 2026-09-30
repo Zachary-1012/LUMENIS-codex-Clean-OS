@@ -2095,3 +2095,24 @@ worker path could widen an API-approved task with an unregistered feedback term
 and cause the Collector to re-plan or block after the task had started. Registry,
 Collector and Evidence scope ownership remain in the existing chain; this does
 not claim additional source coverage.
+
+### 2026-09-30 - approved local CDP discovery and live RedNote sample
+
+The existing Collector now discovers the fixed `http://127.0.0.1:9223` worker
+when `XHS_RETINAUT` / `intl` passes the existing approved-profile contract and
+the read-only `/json/version` probe is online. Remote worker configuration and
+all fail-closed policy paths remain unchanged; an offline or unapproved route
+still returns `COLLECTOR_ENDPOINT_NOT_CONFIGURED` or the existing policy error.
+This prevents a restarted Product Core process from losing a resident approved
+browser solely because `XHS_CDP_URL` was not inherited.
+
+The isolated route tests passed with `--noconftest`, plus direct online/offline
+resolver checks and `py_compile` passed. A bounded live verification through the
+existing `/api/rednote/collect` route, using the approved `XHS_RETINAUT` account,
+`9223` endpoint and the Guangzhou Taikoo Hui keyword, returned 3 notes and
+persisted them through the existing `notes -> zbc_evidence -> zbc_canonical_data
+and canonical_data` chain. This proves one real sample and lineage persistence;
+it does not claim platform-wide coverage, continuous operation or product
+closure. The runtime preflight still reports the approved identity Cookie file
+as unavailable and must remain honest until the browser session is registered
+through the existing account flow.

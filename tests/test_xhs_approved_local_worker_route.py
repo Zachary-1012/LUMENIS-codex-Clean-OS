@@ -42,6 +42,51 @@ def test_approved_identity_can_resolve_exact_local_worker(monkeypatch, candidate
     assert error == ''
 
 
+def test_approved_online_local_worker_is_discovered_without_config(monkeypatch):
+    import collector
+
+    class _Response:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+    monkeypatch.delenv('XHS_CDP_URL', raising=False)
+    monkeypatch.setattr(collector, 'CDP_URL', '')
+    monkeypatch.setattr(collector, '_approved_local_profile_contract',
+                        lambda account, region: TEST_HK_ID)
+    calls = []
+    monkeypatch.setattr('urllib.request.urlopen',
+                        lambda url, timeout: (calls.append((url, timeout)) or _Response()))
+
+    endpoint, error = collector._resolve_server_cdp_url(
+        account='XHS_RETINAUT', region='intl')
+
+    assert endpoint == 'http://127.0.0.1:9223'
+    assert error == ''
+    assert calls == [('http://127.0.0.1:9223/json/version', 1.5)]
+
+
+def test_approved_offline_local_worker_keeps_fail_closed(monkeypatch):
+    import collector
+
+    monkeypatch.delenv('XHS_CDP_URL', raising=False)
+    monkeypatch.setattr(collector, 'CDP_URL', '')
+    monkeypatch.setattr(collector, '_approved_local_profile_contract',
+                        lambda account, region: TEST_HK_ID)
+    monkeypatch.setattr('urllib.request.urlopen',
+                        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError('offline')))
+
+    endpoint, error = collector._resolve_server_cdp_url(
+        account='XHS_RETINAUT', region='intl')
+
+    assert endpoint == ''
+    assert error == 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'
+
+
 @pytest.mark.parametrize(('candidate', 'account', 'region', 'profile_id', 'expected_error'), [
     ('', 'XHS_RETINAUT', 'intl', TEST_HK_ID, 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'),
     ('http://127.0.0.1:9222', 'XHS_RETINAUT', 'intl', TEST_HK_ID, 'POLICY_BLOCKED'),
@@ -56,6 +101,13 @@ def test_unapproved_local_routes_fail_closed(monkeypatch, candidate, account, re
 
     monkeypatch.setattr(collector, '_approved_local_profile_contract',
                         lambda requested_account, requested_region: profile_id)
+    if not candidate:
+        # The discovery path is covered above; keep this policy case
+        # deterministic and independent of a developer browser being open.
+        monkeypatch.setattr(
+            'urllib.request.urlopen',
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError('offline')),
+        )
     endpoint, error = collector._resolve_server_cdp_url(
         candidate, account=account, region=region)
 

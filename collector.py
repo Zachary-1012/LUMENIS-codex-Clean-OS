@@ -145,6 +145,18 @@ def _resolve_server_cdp_url(cdp_url=None, *, account=None, region=None):
     """Resolve a configured remote worker or the one approved HK loopback worker."""
     candidate = str(cdp_url or os.getenv('XHS_CDP_URL') or CDP_URL or '').strip()
     if not candidate:
+        # The approved local worker may be discovered only through its fixed,
+        # loopback-only endpoint.  This is a read-only health probe; it never
+        # reads cookies or touches the browser profile.
+        if _approved_local_profile_contract(account, region):
+            import urllib.request
+            try:
+                with urllib.request.urlopen(
+                        'http://127.0.0.1:9223/json/version', timeout=1.5) as response:
+                    if getattr(response, 'status', 200) == 200:
+                        return 'http://127.0.0.1:9223', ''
+            except Exception:
+                pass
         return '', 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'
     try:
         parsed = urlsplit(candidate)
