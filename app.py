@@ -1628,7 +1628,7 @@ def _strict_verify(note):
     title=note.get('title','') or ''; content=note.get('content','') or ''
     return ai_analyzer.verify_taikoo_location(title,content)
 
-def _run_collect_task(task_id,keywords,max_scroll):
+def _run_collect_task(task_id,keywords,max_scroll,query_plan=None):
     started=time.time()
     try:
         # 统一采集前置门：用户暂停时全网发现+小红书回搜一律不发起（与 bridge.sync 同一暂停信号，所有采集遵循同一规则）
@@ -1657,10 +1657,19 @@ def _run_collect_task(task_id,keywords,max_scroll):
                 # 不等待超时任务结束，避免采集锁被“假超时”长期占用。
                 _ex.shutdown(wait=False, cancel_futures=True)
         # 反馈词先清洗英文停用词/单字符/纯符号噪声并限量，避免无意义词拖慢采集、徒增风控暴露
+        # The API has already resolved an exact Registry-owned plan. Feedback
+        # may refine an accepted registered alias, but it must never widen the
+        # scope into an unregistered keyword after the worker starts.
+        allowed_keywords = {
+            str(item).strip().casefold()
+            for item in (query_plan or {}).get('keywords', keywords)
+            if str(item).strip()
+        }
         feedback=[]
         for _x in db.get_feedback_keywords(12):
             _kw=(_x.get('keyword') or '').strip()
-            if _kw and _kw not in keywords and not collector._is_noise_keyword(_kw):
+            if (_kw and _kw.casefold() in allowed_keywords and _kw not in keywords
+                    and not collector._is_noise_keyword(_kw)):
                 feedback.append(_kw)
             if len(feedback)>=6:
                 break
@@ -2778,7 +2787,11 @@ def api_collect():
             'created_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'keywords':keywords,'query_plan':query_plan.to_dict(),
         }
-    threading.Thread(target=_run_collect_task,args=(task_id,keywords,max_scroll),daemon=True).start()
+    threading.Thread(
+        target=_run_collect_task,
+        args=(task_id,keywords,max_scroll,query_plan.to_dict()),
+        daemon=True,
+    ).start()
     return jsonify({'ok':True,'task_id':task_id,'query_plan':query_plan.to_dict()})
 @app.route('/api/collect/status/<task_id>')
 def api_collect_status(task_id):

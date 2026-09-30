@@ -2088,3 +2088,10 @@ writer-authenticated Evidence prerequisite without inheriting a developer key or
 weakening the production signature contract. With a v18 disposable seed, the
 targeted acquisition, Permission, workspace-context and scoped Evidence suite
 passed 63 tests; no production DB was changed.
+
+The collection worker also preserves that accepted plan boundary: feedback
+keywords are appended only when they already occur in the resolved plan. An old
+worker path could widen an API-approved task with an unregistered feedback term
+and cause the Collector to re-plan or block after the task had started. Registry,
+Collector and Evidence scope ownership remain in the existing chain; this does
+not claim additional source coverage.
