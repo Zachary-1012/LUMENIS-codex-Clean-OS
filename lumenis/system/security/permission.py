@@ -148,7 +148,7 @@ def local_workspace_read_allowed(
 ) -> bool:
     """Allow anonymous loopback reads only when the owner opens the workspace."""
     if type(module) is not str or module not in {
-        "subject_registry", "commercial_realtime_stream"
+        "subject_registry", "commercial_realtime_stream", "brand_market_overview"
     }:
         return False
     if type(action) is not str or action != "read":

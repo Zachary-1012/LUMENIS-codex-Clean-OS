@@ -688,14 +688,19 @@ def screen_viewmodel(screen_id: str):
             if error is not None:
                 return error
             return jsonify(builder(binding=binding))
+        if screen_id == "BMP-01":
+            binding, error = _bmp01_read_scope()
+            if error is not None:
+                return error
+            return jsonify(builder(binding=binding))
         return jsonify(builder())
     except Exception as exc:  # noqa: BLE001
-        if screen_id == "CTH-03":
+        if screen_id in {"CTH-03", "BMP-01"}:
             from flask import current_app
-            current_app.logger.warning("CTH03 scoped read unavailable: %s", type(exc).__name__)
+            current_app.logger.warning("%s scoped read unavailable: %s", screen_id, type(exc).__name__)
             return jsonify({"ok": False, "screen": screen_id, "bound": False,
                             "code": "SCOPED_DATA_UNAVAILABLE",
-                            "error": "监测记录暂不可用，请重试"}), 503
+                            "error": "当前范围数据暂不可用，请重试"}), 503
         return jsonify({"ok": False, "screen": screen_id, "bound": True, "error": str(exc),
                         "trace": _tb.format_exc(limit=2)}), 500
 
@@ -742,6 +747,59 @@ def _cth03_read_scope():
         "domain_id": "CTH", "product_id": "CTH", "canonical_scope": mode,
         "subject_id": subject, "applied": True, "read_allowed": True,
         "scope_verified": True,
+        "actor_scope": "anonymous_read" if local_read else "authenticated",
+        "global_all_granted": mode == "GLOBAL_ALL" and not local_read,
+    }, None
+
+
+def _bmp01_read_scope():
+    """Authorize GLOBAL or exact BMP BrandFocus view before Canonical projection."""
+    from lumenis.auth.service import get_current_user
+    from lumenis.system.security.permission import (
+        check_actor_scope_permission, local_workspace_read_allowed,
+    )
+    from lumenis_app_api import _context_error, _context_selection_from_scope
+
+    mode = request.headers.get("X-Lumenis-Context-Mode", "GLOBAL_ALL")
+    domain = request.headers.get("X-Domain-Id")
+    subject = request.headers.get("X-Subject-ID")
+    brand_focus = None
+    if mode == "GLOBAL_ALL":
+        if subject or (domain and domain != "BMP"):
+            return None, _context_error("INVALID_CONTEXT", "全局品牌范围不能携带其他主体", 400)
+    elif mode == "FOCUS" and domain == "BMP" and subject:
+        selection, error = _context_selection_from_scope(domain, subject)
+        if error is not None:
+            return None, error
+        brand_focus = selection.brand_focus_id
+        if not brand_focus:
+            return None, _context_error("INVALID_CONTEXT_SCOPE", "品牌关注范围不完整", 400)
+    else:
+        return None, _context_error("INVALID_CONTEXT", "需要有效的品牌关注范围", 400)
+
+    module = "brand_market_overview"
+    local_read = local_workspace_read_allowed(module)
+    if not local_read:
+        actor = get_current_user()
+        if not isinstance(actor, dict) or type(actor.get("id")) is not int:
+            return None, _context_error("AUTH_REQUIRED", "当前请求没有读取授权", 401)
+        decision = check_actor_scope_permission(
+            actor, domain_id="BMP", action="read", module=module,
+            subject_id=subject, brand_focus_id=brand_focus,
+            global_scope=mode == "GLOBAL_ALL",
+        )
+        if decision.verification_state != "verified":
+            return None, _context_error("AUTHORIZATION_UNAVAILABLE", "读取授权暂不可用", 503)
+        if not decision.allowed:
+            return None, _context_error("SUBJECT_SCOPE_DENIED", "当前品牌范围不可读取", 403)
+
+    return {
+        "contract": "lumenis.scope-read-binding.v1",
+        "module": module,
+        "policy": "local-workspace-read-v1" if local_read else "actor-exact-scope-v1",
+        "domain_id": "BMP", "product_id": "ZBMP", "canonical_scope": mode,
+        "subject_id": subject, "brand_focus_id": brand_focus,
+        "applied": True, "read_allowed": True, "scope_verified": True,
         "actor_scope": "anonymous_read" if local_read else "authenticated",
         "global_all_granted": mode == "GLOBAL_ALL" and not local_read,
     }, None

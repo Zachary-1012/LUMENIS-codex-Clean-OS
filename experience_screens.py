@@ -1256,7 +1256,119 @@ def _risk_items(notes: List[Dict[str, Any]], limit: int = 5) -> List[Dict[str, A
     return out
 
 
-def _build_bmp01() -> Dict[str, Any]:
+def _build_bmp01_focus(binding: Dict[str, Any]) -> Dict[str, Any]:
+    """Build one exact BrandFocus overview from signed Canonical rows only."""
+    from canonical_data import list_scoped_canonical
+    from lumenis.shared.database import get_repository
+    from subject_registry import get_subject_by_id
+
+    brand_focus_id = binding.get("brand_focus_id")
+    subject_id = binding.get("subject_id")
+    with get_repository().connection(read_only=True) as con:
+        result = list_scoped_canonical(
+            con, product_id="ZBMP", brand_focus_id=brand_focus_id, limit=100,
+        )
+
+    records = result["records"]
+    truncated = bool(result.get("truncated"))
+    total = len(records)
+    sentiments = [str(row.get("sentiment") or "").lower() for row in records]
+    sentiment_known = bool(records) and all(
+        value in {"positive", "neutral", "negative"} for value in sentiments
+    )
+    negative = sum(value == "negative" for value in sentiments) if sentiment_known else None
+    risks = [str(row.get("risk_level") or "").lower() for row in records]
+    risk_known = bool(records) and all(
+        value in {"none", "low", "medium", "high", "critical"} for value in risks
+    )
+    high_risk = sum(value in {"high", "critical"} for value in risks) if risk_known else None
+    engagement_values = []
+    engagement_complete = bool(records)
+    for row in records:
+        fields = [
+            row.get("engagement_likes"), row.get("engagement_comments"),
+            row.get("engagement_collects"), row.get("engagement_shares"),
+        ]
+        if all(isinstance(value, (int, float)) for value in fields):
+            engagement_values.append(sum(
+                int(value) for value in fields
+            ))
+        else:
+            engagement_complete = False
+    total_engagement = sum(engagement_values) if engagement_values else None
+    state = STATE_READY if records else STATE_NOT_COLLECTED
+
+    kpis = [
+        metric("bmp01.total", "总声量" if not truncated else "已返回记录",
+               value=total if records and not truncated else None,
+               state=state if not truncated else STATE_NOT_COLLECTED,
+               icon="trend", source="canonical_data.exact_brand_focus"),
+        metric("bmp01.neg", "负面声量", value=negative,
+               state=STATE_READY if negative is not None else STATE_NOT_COLLECTED,
+               icon="risk", source="canonical_data.exact_brand_focus"),
+        metric("bmp01.high", "高风险", value=high_risk,
+               state=STATE_READY if high_risk is not None else STATE_NOT_COLLECTED,
+               icon="risk", source="canonical_data.exact_brand_focus"),
+        metric("bmp01.eng", "总互动", value=total_engagement if engagement_complete else None,
+               state=STATE_READY if total_engagement is not None and engagement_complete else STATE_NOT_COLLECTED,
+               icon="trend", source="canonical_data.exact_brand_focus"),
+        metric("bmp01.ri", "风险指数", value=None, decimals=1, state=STATE_NOT_COLLECTED,
+               icon="risk", source="ZBMP canonical metric not yet available",
+               evidence_id="NOT_COLLECTED"),
+        metric("bmp01.health", "品牌健康分", value=None, decimals=1,
+               state=STATE_NOT_COLLECTED, icon="trend",
+               source="ZBMP evaluation output not yet available",
+               evidence_id="NOT_COLLECTED"),
+    ]
+    subject = get_subject_by_id("BMP", subject_id) if subject_id else None
+    display_name = {}
+    if subject:
+        if subject.get("name_zh"):
+            display_name["zh-CN"] = subject["name_zh"]
+        if subject.get("name_en"):
+            display_name["en"] = subject["name_en"]
+
+    blocked = [
+        _block("BMP-01", "risk_index", "缺少 ZBMP 专属风险指标真值源", "ZBMP canonical metric"),
+        _block("BMP-01", "brand_health_score", "缺少 ZBMP 专属品牌健康真值源", "ZBMP evaluation output"),
+        _block("BMP-01", "events", "缺少 ZBMP canonical 事件契约", "ZBMP event source"),
+    ]
+    response = _envelope(
+        "BMP-01",
+        [
+            _head("BMP-01"),
+            section("kpis", state, items=kpis),
+            section("events", STATE_NOT_COLLECTED, title="重点事件", items=[],
+                    description="ZBMP 事件源尚未形成 canonical 事件契约。"),
+            section("risks", STATE_READY if risk_known else STATE_NOT_COLLECTED,
+                    items=_risk_items(records)),
+        ],
+        truth={
+            "domain_id": "zbmp", "product_id": "ZBMP",
+            "data_state": "READY" if records else "NOT_COLLECTED",
+            "canonical_count": total,
+            "returned_count": result.get("returned_count", total),
+            "candidate_count": result.get("candidate_count"),
+            "truncated": truncated,
+            "metric_basis": "exact_brand_focus_returned_rows",
+            "engagement_complete": engagement_complete,
+            "coverage": "NOT_VERIFIED",
+            "source_freshness": "UNKNOWN",
+            **{key: value for key, value in result.items() if key != "records"},
+        },
+        blocked=blocked,
+    )
+    response["focus_context"] = {
+        "mode": "FOCUS", "subject_id": subject_id,
+        "brand_focus_id": brand_focus_id, "display_name": display_name,
+    }
+    response["focus_binding"] = binding
+    return response
+
+
+def _build_bmp01(*, binding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    if binding and binding.get("canonical_scope") == "FOCUS":
+        return _build_bmp01_focus(binding)
     """品牌市场总览：只读 ZBMP canonical snapshot，不借用 CTH 统计。"""
     from api_dual_domain import get_zbmp_product_snapshot
 

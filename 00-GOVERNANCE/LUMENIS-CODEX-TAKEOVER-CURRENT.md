@@ -12,6 +12,27 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-09-30 — bounded BMP-01 BrandFocus read binding and provenance gate correction
+
+The existing Experience runtime now binds BMP-01 FOCUS reads to the exact
+`BrandFocus` resolved from the BMP Subject registry and the existing local
+workspace read permission owner. The view model reads only the existing
+ZBMP Canonical scope and reports truncation, returned/candidate counts and
+incomplete engagement fields honestly; it also exposes source-backed risk
+items without inventing the unavailable risk index, health score or event
+contract. A missing or foreign focus is rejected before the Canonical read.
+The targeted BMP-01/runtime regression group passed 40 tests, exit 0. This is
+an IMPLEMENTED/TESTED slice only: no account was created, no source was
+collected, and BMP global coverage, real-user E2E, four-surface continuity,
+release and operating status remain unaccepted.
+
+The third-party register now pins upstream license evidence for DuckDB 1.5.5
+and MarkItDown 0.1.8 while keeping every other dependency behind
+`VERIFY_BEFORE_RELEASE`; the provenance regression parser now handles linked
+package names and extras without converting prose into approval. Its targeted
+regression group passed 17 tests, exit 0. This does not grant commercial
+release approval for transitive `python-pptx` dependencies.
+
 ### 2026-09-30 — J5 editor workflow requirements retained and researched
 
 The Product Owner's magnetic/connected editing, browser/skimmer, portable project,

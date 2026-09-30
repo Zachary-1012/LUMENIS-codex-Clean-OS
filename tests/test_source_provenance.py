@@ -41,7 +41,16 @@ def _read_utf8(path):
 
 def _canonical_package_name(name):
     """Normalize package separators according to common Python/Node naming."""
-    return re.sub(r"[-_.]+", "-", str(name).strip().lower())
+    text = str(name).strip()
+    # Register rows may carry an authoritative project link and an extra
+    # version marker in the display cell. Parse the package identity only;
+    # keep the link/license evidence in the remaining register columns.
+    # The display name may itself contain an extras suffix such as
+    # ``markitdown[pptx]``; stop at the closing bracket that is followed by
+    # the Markdown URL delimiter rather than the inner extras bracket.
+    text = re.sub(r"^\[(.*?)\]\([^)]*\)", r"\1", text)
+    match = re.match(r"^([a-zA-Z0-9_.-]+)", text)
+    return re.sub(r"[-_.]+", "-", (match.group(1) if match else text).strip().lower())
 
 
 def _parse_requirements(path=REQUIREMENTS):
@@ -92,7 +101,7 @@ def _all_manifest_records():
         ),
         "node": _dependency_records(
             "## 4. Node direct dependencies",
-            "## 5. Built-in / platform dependencies",
+            "## 5. Flutter direct dependencies observed in `app/pubspec.yaml`",
         ),
     }
 
@@ -160,9 +169,22 @@ class TestManifestDependencyCoverage:
         statuses = {name: _license_status(records.get(name)) for name in _parse_requirements()}
         assert set(statuses) == set(_parse_requirements())
         assert statuses
-        assert set(statuses.values()) == {"UNVERIFIED"}, (
-            "当前 register 只记录 VERIFY_BEFORE_RELEASE；不得据此声称 GPL/AGPL 已排除或可商用"
-        )
+        # Only the two packages with a pinned upstream license record are
+        # verified here. Every other package remains behind the release gate;
+        # a license word in prose is not evidence of approval.
+        verified = {
+            "duckdb": (
+                "MIT ([v1.5.5 license](https://github.com/duckdb/duckdb/blob/v1.5.5/LICENSE))"
+            ),
+            "markitdown": (
+                "MIT ([v0.1.8 license](https://github.com/microsoft/markitdown/blob/v0.1.8/LICENSE)); "
+                "python-pptx and transitive dependencies require separate notice/license reconciliation"
+            ),
+        }
+        for name, status in statuses.items():
+            assert status == verified.get(name, "UNVERIFIED"), (
+                f"{name} 的许可证状态必须与当前权威登记一致，不能凭文本猜测"
+            )
 
     def test_dev_dependencies_are_not_misclassified_as_production(self):
         dev_requirements = set(_parse_requirements(DEV_REQUIREMENTS)) - set(_parse_requirements())
@@ -288,11 +310,18 @@ class TestDependencyEvidenceConsistency:
         assert len(records) == len(_parse_requirements())
 
     def test_all_registered_license_states_have_release_gate(self):
+        verified = {
+            "duckdb": "MIT ([v1.5.5 license](https://github.com/duckdb/duckdb/blob/v1.5.5/LICENSE))",
+            "markitdown": (
+                "MIT ([v0.1.8 license](https://github.com/microsoft/markitdown/blob/v0.1.8/LICENSE)); "
+                "python-pptx and transitive dependencies require separate notice/license reconciliation"
+            ),
+        }
         for source, records in _all_manifest_records().items():
             for dependency, record in records.items():
-                assert record["license_status"] == "VERIFY_BEFORE_RELEASE", (
-                    f"{source}:{dependency} 的状态已变化；必须先补齐权威许可证据再调整此验收"
-                )
+                status = record["license_status"]
+                expected = verified.get(dependency, "VERIFY_BEFORE_RELEASE")
+                assert status == expected, f"{source}:{dependency} 缺少可追溯许可证据或 release gate"
 
 
 if __name__ == "__main__":
