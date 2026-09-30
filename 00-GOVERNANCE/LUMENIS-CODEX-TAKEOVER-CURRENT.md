@@ -2066,3 +2066,25 @@ The existing local Content execution regression covers the injected Evidence
 failure and the affected account/content execution tests remain green. This is a
 source-level and targeted-test improvement; external export, artifact review and
 user E2E remain unverified.
+
+### 2026-09-30 - `/api/collect` plan-first dispatch
+
+The existing Product Core collection endpoint now validates input shape and
+resolves the canonical Registry-owned `AcquisitionPlan` before allocating a
+collection task or worker. It returns an explicit `ACQUISITION_PLAN_BLOCKED`
+response with the serializable plan when the requested scope is missing,
+unregistered or unavailable, and carries the accepted plan into task status.
+The endpoint no longer falls back to a legacy hard-coded keyword list or
+silently turns an empty request into a Guangzhou-only collection.
+
+This is a dispatch boundary only; the existing Collector/Scheduler, Source,
+Evidence and Canonical owners still perform collection and persistence. No live
+platform session was started by this change, and real data coverage/user E2E
+remain unverified.
+
+The internal-beta scoped Evidence acceptance profile also now supplies its own
+disposable test-only HMAC key ring. This fixes the isolated profile's legitimate
+writer-authenticated Evidence prerequisite without inheriting a developer key or
+weakening the production signature contract. With a v18 disposable seed, the
+targeted acquisition, Permission, workspace-context and scoped Evidence suite
+passed 63 tests; no production DB was changed.

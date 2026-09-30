@@ -2752,17 +2752,34 @@ def api_cache_snapshots():
 
 @app.route('/api/collect',methods=['POST'])
 def api_collect():
-    data=request.get_json(silent=True) or {}; keywords=data.get('keywords') or collector.MONITOR_KEYWORDS
-    if isinstance(keywords,str): keywords=[x.strip() for x in keywords.split(',') if x.strip()]
-    keywords=list(dict.fromkeys(keywords))[:20]
+    data=request.get_json(silent=True) or {}
+    keywords=data.get('keywords')
+    if isinstance(keywords,str):
+        keywords=[x.strip() for x in keywords.split(',') if x.strip()]
+    elif keywords is not None and not isinstance(keywords,(list,tuple,set)):
+        return jsonify({'ok':False,'error':'keywords 必须为字符串或列表'}),400
+
+    from lumenis.system.collector.acquisition_plan import build_acquisition_plan
+    query_plan=build_acquisition_plan(keywords)
+    if not query_plan.is_runnable:
+        return jsonify({
+            'ok':False,'code':'ACQUISITION_PLAN_BLOCKED',
+            'error':query_plan.reason or query_plan.reason_code,
+            'query_plan':query_plan.to_dict(),
+        }),409
+    keywords=list(dict.fromkeys(query_plan.keywords))[:20]
     try: max_scroll=max(1,min(20,int(data.get('max_scroll',4))))
     except (TypeError,ValueError): return jsonify({'ok':False,'error':'max_scroll 必须为整数'}),400
-    if not keywords: return jsonify({'ok':False,'error':'关键词不能为空'}),400
     if not _collect_lock.acquire(blocking=False): return jsonify({'ok':False,'error':'已有采集任务正在运行，请稍后再试'}),409
     task_id=f"{datetime.now():%Y%m%d%H%M%S}{int(time.time()*1000)%1000:03d}"
-    with _task_lock: collect_tasks[task_id]={'task_id':task_id,'status':'pending','message':'任务已创建','progress':0,'created_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S'),'keywords':keywords}
+    with _task_lock:
+        collect_tasks[task_id]={
+            'task_id':task_id,'status':'pending','message':'任务已创建','progress':0,
+            'created_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'keywords':keywords,'query_plan':query_plan.to_dict(),
+        }
     threading.Thread(target=_run_collect_task,args=(task_id,keywords,max_scroll),daemon=True).start()
-    return jsonify({'ok':True,'task_id':task_id})
+    return jsonify({'ok':True,'task_id':task_id,'query_plan':query_plan.to_dict()})
 @app.route('/api/collect/status/<task_id>')
 def api_collect_status(task_id):
     with _task_lock: task=collect_tasks.get(task_id)

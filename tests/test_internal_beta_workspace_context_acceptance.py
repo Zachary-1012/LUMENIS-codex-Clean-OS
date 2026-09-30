@@ -1,4 +1,5 @@
 import base64
+import json
 import os
 import subprocess
 import sys
@@ -27,6 +28,13 @@ def _isolated_env(tmp_path, *, outside_db=False):
     env["TAIKOO_AUTH_PASSWORD"] = "inherited-auth-password-sentinel"
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
+    # Scoped Evidence writes require the production HMAC contract.  The
+    # workspace profile is disposable, so provide a deterministic test-only
+    # key ring instead of inheriting a developer/production credential.
+    env["LUMENIS_EVIDENCE_HMAC_KEY_RING"] = json.dumps(
+        {"workspace-acceptance-test": "disposable-workspace-acceptance-key"}
+    )
+    env["LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID"] = "workspace-acceptance-test"
     env.pop("LUMENIS_TEST_SEED_DB", None)
     env.pop("LUMENIS_WORKSPACE_BUILD_DIR", None)
     env.pop("LUMENIS_FLUTTER_WEB_BUILD_DIR", None)
