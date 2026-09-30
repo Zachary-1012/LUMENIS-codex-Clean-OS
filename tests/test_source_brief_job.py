@@ -182,3 +182,75 @@ def test_unverified_media_failure_cannot_assert_bound_input(job_db):
         })
     assert result['multimodal']['real_input_bound'] is False
     assert 'input_content_sha256' not in result['multimodal']
+
+
+def test_quality_review_returns_with_report_without_promoting_human_acceptance(job_db):
+    with sqlite3.connect(job_db) as conn:
+        conn.row_factory = sqlite3.Row
+        result = _request(conn)
+    artifact = result["artifact_outcome"]
+    review = jobs.record_evaluation(
+        dimension="report", metric_name="business_usefulness", metric_value=None,
+        pass_threshold=1.0, warn_threshold=0.8, source="engineering_runtime_review",
+        evidence_ref=f"daily_reports:{result['job_id']}:{artifact['artifact_hash']}",
+        metadata={"job_id": result["job_id"], "artifact_hash": artifact["artifact_hash"],
+                  "scope": result["source_brief"]["scope"],
+                  "observations": ["Claim requires source review."],
+                  "required_followup": "Check before client delivery.",
+                  "evaluator": "Engineering inspection", "review_status": "PASS",
+                  "private_diagnostic": "Do not expose arbitrary metadata"},
+    )
+    reopened = jobs.get_source_brief_job(result["job_id"], actor_id="workspace:local")
+    quality = reopened["evaluation"]["quality_review"]
+    assert quality["state"] == "recorded" and len(quality["records"]) == 1
+    assert quality["records"][0]["evaluation_id"] == review.evaluation_id
+    assert quality["records"][0]["status"] == "unknown"
+    assert quality["records"][0]["metric_value"] is None
+    assert quality["records"][0]["observations"] == ["Claim requires source review."]
+    assert quality["review_status"] == reopened["review_status"] == "HUMAN_PENDING"
+    assert "private_diagnostic" not in json.dumps(quality)
+    assert reopened["artifact_outcome"] == artifact
+    with sqlite3.connect(job_db) as conn:
+        conn.row_factory = sqlite3.Row
+        assert _request(conn, job_id=result["job_id"]) == reopened
+
+
+@pytest.mark.parametrize("mismatch", ["job_id", "artifact_hash", "scope", "actor_id", "evidence_ref", "missing_actor"])
+def test_quality_review_excludes_unbound_or_other_actor_feedback(job_db, mismatch):
+    with sqlite3.connect(job_db) as conn:
+        conn.row_factory = sqlite3.Row
+        result = _request(conn)
+    metadata = {"job_id": result["job_id"],
+                "artifact_hash": result["artifact_outcome"]["artifact_hash"],
+                "scope": result["source_brief"]["scope"], "actor_id": "workspace:local"}
+    ref = f"daily_reports:{result['job_id']}:{metadata['artifact_hash']}"
+    if mismatch == "evidence_ref":
+        ref = "app_evidence_records:foreign"
+    elif mismatch == "missing_actor":
+        metadata.pop("actor_id")
+    else:
+        metadata[mismatch] = "other"
+    jobs.record_evaluation(
+        dimension="report", metric_name="business_usefulness", metric_value=1.0,
+        pass_threshold=1.0, warn_threshold=0.8, source="user_review",
+        evidence_ref=ref, metadata=metadata,
+    )
+    reopened = jobs.get_source_brief_job(result["job_id"], actor_id="workspace:local")
+    assert reopened["evaluation"]["quality_review"]["state"] == "not_recorded"
+    assert reopened["evaluation"]["quality_review"]["records"] == []
+
+
+def test_malformed_legacy_evaluation_metadata_does_not_break_report_reopen(job_db):
+    with sqlite3.connect(job_db) as conn:
+        conn.row_factory = sqlite3.Row
+        result = _request(conn)
+    review = jobs.record_evaluation(
+        dimension="report", metric_name="legacy", metric_value=None,
+        pass_threshold=1, warn_threshold=0.8,
+    )
+    with sqlite3.connect(job_db) as conn:
+        conn.execute("UPDATE evaluation_records SET metadata='broken-json' WHERE evaluation_id=?",
+                     (review.evaluation_id,))
+        conn.commit()
+    reopened = jobs.get_source_brief_job(result["job_id"], actor_id="workspace:local")
+    assert reopened["evaluation"]["quality_review"]["state"] == "not_recorded"

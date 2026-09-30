@@ -104,3 +104,28 @@ def test_report_effect_denied_and_nonexistent_resume_never_creates(client):
     assert denied.status_code == 403
     with sqlite3.connect(db) as con:
         assert con.execute("SELECT COUNT(*) FROM daily_reports").fetchone()[0] == 0
+
+
+def test_report_route_reopens_bound_quality_feedback_without_new_generation(client):
+    from lumenis.shared.evaluation.recorder import record_evaluation
+    api, _app, db, entry, _gate = client
+    focus = {**GLOBAL, "X-Lumenis-Context-Mode": "FOCUS", "X-Subject-ID": entry["subject_id"]}
+    result = api.post(URL + "/generate", headers=focus, json={}).get_json()["result"]
+    before = result["artifact_outcome"]
+    record_evaluation(
+        dimension="report", metric_name="business_usefulness", metric_value=None,
+        pass_threshold=1, warn_threshold=0.8, source="engineering_runtime_review",
+        evidence_ref=f"daily_reports:{result['job_id']}:{before['artifact_hash']}",
+        metadata={"job_id": result["job_id"], "artifact_hash": before["artifact_hash"],
+                  "scope": result["source_brief"]["scope"],
+                  "observations": ["Review a business inference before use."]},
+    )
+    reopened = api.get(URL + "/jobs/" + result["job_id"], headers=focus)
+    assert reopened.status_code == 200
+    data = reopened.get_json()["result"]
+    assert data["evaluation"]["quality_review"]["records"][0]["status"] == "unknown"
+    assert data["artifact_outcome"] == before and data["review_status"] == "HUMAN_PENDING"
+    assert api.get(URL + "/jobs/" + result["job_id"], headers=GLOBAL).status_code == 403
+    with sqlite3.connect(db) as con:
+        assert con.execute("SELECT COUNT(*) FROM daily_reports").fetchone()[0] == 1
+        assert con.execute("SELECT COUNT(*) FROM evaluation_records").fetchone()[0] == 4

@@ -278,6 +278,46 @@ def get_evaluation_record(evaluation_id: str, db_path: Optional[str] = None) -> 
     return dict(row) if row else None
 
 
+def get_artifact_evaluations(
+    *, job_id: str, artifact_hash: str, scope: Dict[str, Any], actor_id: str,
+    evidence_refs: set[str], db_path: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Read evaluations bound to an already authorized, verified report artifact.
+
+    The report owner must enforce access before calling. Exact artifact, scope,
+    actor (when recorded), and evidence checks precede any user projection.
+    Legacy engineering reviews can omit actor but cannot omit artifact scope.
+    """
+    if not job_id or not artifact_hash or not scope or not actor_id or not evidence_refs:
+        raise ValueError("Exact report artifact binding is required")
+    conn = DatabaseRepository(db_path or main_db_path()).connect(read_only=True, wal=False)
+    try:
+        rows = conn.execute(
+            """SELECT * FROM evaluation_records WHERE dimension='report'
+               AND json_extract(CASE WHEN json_valid(metadata) THEN metadata ELSE '{}' END,
+                                '$.job_id')=?
+               AND json_extract(CASE WHEN json_valid(metadata) THEN metadata ELSE '{}' END,
+                                '$.artifact_hash')=?
+               ORDER BY evaluated_at DESC, id DESC""",
+            (job_id, artifact_hash),
+        ).fetchall()
+    finally:
+        conn.close()
+    matched = []
+    for row in rows:
+        record = dict(row)
+        metadata = json.loads(record["metadata"])
+        if metadata.get("scope") != scope or record["evidence_ref"] not in evidence_refs:
+            continue
+        if "actor_id" in metadata:
+            if metadata["actor_id"] != actor_id:
+                continue
+        elif record["source"] != "engineering_runtime_review":
+            continue
+        matched.append(record)
+    return matched
+
+
 def record_evaluation_raw(record: EvaluationRecord, db_path: Optional[str] = None) -> EvaluationRecord:
     """直接写入一个已构造的 EvaluationRecord（用于自定义状态场景）。"""
     conn = _get_connection(db_path)

@@ -124,3 +124,36 @@ Apache-2.0 third-party work, not a LUMENIS-developed foundation model. Existing
 runtime digest and license obligations are in the Third-Party Component Register.
 OpenCode Zhipu/GLM-4.7 was attempted by bounded workers but failed authentication
 (exit 1); none of its output was adopted and no credentials were printed.
+
+## Follow-up — quality feedback returned by the same report API
+
+Bounded context: `evaluation_learning`, query `report`; base local and fetched
+origin/main `90c13e6149d4485dd5f79a9475e246ad7db51f08`. Owner remains Shared
+Evaluation/Reporting. Pinned rules are AGENTS, AI-native Constitution, Source
+Owner Index and Real Delivery Overlay; the research above is REFERENCE_ONLY for
+this projection repair. Existing `work/` is preserved. No new store or UI owner.
+Implementation paths: evaluation/recorder.py and reporting/source_brief_job.py.
+
+Previously, the genuine business-quality UNKNOWN record was stored separately
+but omitted when the report was read. The same authorized report now returns
+`evaluation.quality_review`, distinct from the three structural evaluations.
+Matching requires exact job, artifact hash, scope and verified Evidence ref;
+recorded actor must match. Existing actorless engineering reviews are allowed
+only with the engineering-review source and exact artifact binding. Arbitrary
+metadata is excluded. No review can promote HUMAN_PENDING automatically.
+
+Current-snapshot verification: 25 report/service/route tests passed with normal
+conftest, the explicit disposable v18 seed, zero failures/errors/skips and no
+thread leaks. Tests include malformed legacy metadata, wrong job/hash/scope/
+actor/Evidence, absent actor on non-engineering feedback, immutable report,
+reopen/resume and the actual permission-gated route. Python compile,
+Constitution gate and diff check passed.
+
+Actual Core was restarted under the existing supervisor. The real Nike job
+`brief-3751e8b9db2c4bb2903f25f3750fdbfa` returned its existing Evidence 425 quality
+review with status UNKNOWN and value NULL, retained HUMAN_PENDING, and reopened
+identically. Wrong CTH GLOBAL scope returned 403. Source counts stayed 270/270,
+reports 22 and evaluations 34; integrity=ok, FK=0. No new inference or production
+data write was needed for this read projection. This closes the feedback-display
+API gap only; business quality, frontend rendering and user acceptance remain
+unverified. Long-running request recovery is the next separate bounded batch.

@@ -15,7 +15,9 @@ from typing import Any
 import database as report_database
 
 from lumenis.shared.database import get_repository
-from lumenis.shared.evaluation.recorder import get_evaluation_record, record_evaluation
+from lumenis.shared.evaluation.recorder import (
+    get_artifact_evaluations, get_evaluation_record, record_evaluation,
+)
 from .artifact import compute_scoped_scope_key
 from .operational_brief import build_scoped_source_brief
 
@@ -210,6 +212,35 @@ def _record_evaluations(verified: dict[str, Any]) -> list[dict[str, Any]]:
     return records
 
 
+def _quality_reviews(verified: dict[str, Any]) -> dict[str, Any]:
+    row, snapshot = verified["row"], verified["snapshot"]
+    evidence_refs = {f"daily_reports:{row['report_id']}:{row['artifact_hash']}"}
+    media = snapshot["multimodal"]
+    if media.get("state") == "complete" and media.get("evidence_ref"):
+        evidence_refs.add(media["evidence_ref"])
+    records = get_artifact_evaluations(
+        job_id=snapshot["job_id"], artifact_hash=row["artifact_hash"],
+        scope=snapshot["scope"], actor_id=snapshot["actor_id"], evidence_refs=evidence_refs,
+    )
+    reviews = []
+    for record in records:
+        if record["evaluation_id"] in snapshot["evaluation_ids"].values():
+            continue
+        metadata = json.loads(record["metadata"])
+        # Expose business feedback, not arbitrary internal evaluation metadata.
+        review = {key: record[key] for key in (
+            "evaluation_id", "metric_name", "metric_value", "status", "evaluated_at",
+            "source", "evidence_ref",
+        )}
+        observations = metadata.get("observations")
+        review["observations"] = [item for item in observations if isinstance(item, str)] if isinstance(observations, list) else []
+        for key in ("required_followup", "evaluator"):
+            review[key] = metadata.get(key) if isinstance(metadata.get(key), str) else None
+        reviews.append(review)
+    return {"state": "recorded" if reviews else "not_recorded", "records": reviews,
+            "review_status": "HUMAN_PENDING"}
+
+
 def _response(verified: dict[str, Any], evaluations: list[dict[str, Any]]) -> dict[str, Any]:
     row, snapshot, brief = verified["row"], verified["snapshot"], verified["source_brief"]
     return {
@@ -219,7 +250,8 @@ def _response(verified: dict[str, Any], evaluations: list[dict[str, Any]]) -> di
             "artifact_hash": row["artifact_hash"], "source_count": row["total_notes"],
         },
         "source_brief": brief, "multimodal": snapshot["multimodal"],
-        "evaluation": {"state": "recorded", "records": evaluations},
+        "evaluation": {"state": "recorded", "records": evaluations,
+                       "quality_review": _quality_reviews(verified)},
         "requested_image_source_ref": snapshot.get("requested_image_source_ref"),
         "retry_of_job_id": snapshot.get("retry_of_job_id"),
         "review_status": "HUMAN_PENDING",

@@ -2190,3 +2190,14 @@ The independent frontend remains paused by its Product Owner; only its API
 contract is synchronized. Hosted CI retains its recorded execution-layer
 blocker. Codex Cloud configuration is not LUMENIS deployment or proof of
 independent hosted inference. RELEASED/OPERATING/COMMERCIAL_READY remain NO.
+
+### 2026-10-01 — scoped report quality feedback reaches the result
+
+The report API now includes existing business-quality feedback alongside its
+structural evaluations, filtered by exact job/artifact/scope/actor/Evidence.
+The real Nike report reopens with its UNKNOWN engineering quality review and
+HUMAN_PENDING; its artifact and source Evidence are unchanged. Wrong-scope
+access returns 403. 25 targeted tests, Python compile and Constitution passed;
+Core restart/reopen and DB integrity/FK were verified, with counts unchanged.
+See `evidence/round-07/ROUND-07-REPORT-MEDIA-BINDING-2026-10-01.md` follow-up.
+This does not accept business usefulness, frontend UX or repeated human work.
