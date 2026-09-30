@@ -167,6 +167,14 @@ def _verify_report(row: dict[str, Any], *, job_id: str, actor_id: str,
     if isinstance(multimodal, dict) and multimodal.get("state") == "complete":
         if _multimodal_snapshot(multimodal, job_id=job_id, actor_id=actor_id, scope=scope) != multimodal:
             raise RuntimeError("SOURCE_BRIEF_MEDIA_EVIDENCE_MISMATCH")
+    business = snapshot.get("business_analysis")
+    if isinstance(business, dict) and business.get("state") == "draft":
+        from .business_brief import read_business_brief
+        expected = read_business_brief(
+            business.get("evidence_ref"), job_id=job_id, actor_ref=actor_id, scope=_media_scope(scope),
+        )
+        if expected != business or business.get("question") != snapshot.get("business_question"):
+            raise RuntimeError("SOURCE_BRIEF_BUSINESS_EVIDENCE_MISMATCH")
     return {"row": row, "snapshot": snapshot, "source_brief": brief}
 
 
@@ -218,6 +226,9 @@ def _quality_reviews(verified: dict[str, Any]) -> dict[str, Any]:
     media = snapshot["multimodal"]
     if media.get("state") == "complete" and media.get("evidence_ref"):
         evidence_refs.add(media["evidence_ref"])
+    business = snapshot.get("business_analysis") or {}
+    if business.get("state") == "draft" and business.get("evidence_ref"):
+        evidence_refs.add(business["evidence_ref"])
     records = get_artifact_evaluations(
         job_id=snapshot["job_id"], artifact_hash=row["artifact_hash"],
         scope=snapshot["scope"], actor_id=snapshot["actor_id"], evidence_refs=evidence_refs,
@@ -250,6 +261,8 @@ def _response(verified: dict[str, Any], evaluations: list[dict[str, Any]]) -> di
             "artifact_hash": row["artifact_hash"], "source_count": row["total_notes"],
         },
         "source_brief": brief, "multimodal": snapshot["multimodal"],
+        "business_analysis": snapshot.get("business_analysis", {"state": "not_requested"}),
+        "business_question": snapshot.get("business_question"),
         "evaluation": {"state": "recorded", "records": evaluations,
                        "quality_review": _quality_reviews(verified)},
         "requested_image_source_ref": snapshot.get("requested_image_source_ref"),
@@ -265,6 +278,7 @@ def create_source_brief_job(
     limit: int = 30, multimodal_result: dict[str, Any] | None = None,
     image_source_ref: str | None = None, image_actor: Any = None,
     retry_of_job_id: str | None = None,
+    business_question: str | None = None,
 ) -> dict[str, Any]:
     """Create or recover a server-authorized scoped Source Brief report job.
 
@@ -273,6 +287,10 @@ def create_source_brief_job(
     real audit reference and binds all reads/evaluations to actor and exact scope.
     """
     _validate_actor_refs(actor_id, permission_audit_ref, trace_id, job_id)
+    if business_question is not None and (
+        not isinstance(business_question, str) or not 4 <= len(business_question.strip()) <= 1500
+    ):
+        raise ValueError("SOURCE_BRIEF_BUSINESS_QUESTION_INVALID")
     scope = _scope_material(
         product_id=product_id, global_scope=global_scope, entity_label=entity_label,
         subject_id=subject_id, brand_focus_id=brand_focus_id,
@@ -286,6 +304,7 @@ def create_source_brief_job(
     brief = build_scoped_source_brief(
         con, product_id=product_id, global_scope=global_scope, entity_label=entity_label,
         subject_id=subject_id, brand_focus_id=brand_focus_id, limit=limit,
+        include_analysis_text=business_question is not None,
     )
     if brief.get("scope") != scope:
         raise RuntimeError("SOURCE_BRIEF_CANONICAL_SCOPE_MISMATCH")
@@ -318,6 +337,23 @@ def create_source_brief_job(
     multimodal = _multimodal_snapshot(
         multimodal_result, job_id=job_id, actor_id=actor_id, scope=scope,
     )
+    business_analysis = {"state": "not_requested"}
+    if business_question is not None:
+        from .business_brief import analyze_business_brief
+        sources = brief.pop("_analysis_sources", [])
+        try:
+            business_analysis = analyze_business_brief(
+                question=business_question, sources=sources, scope=_media_scope(scope),
+                job_id=job_id, actor_ref=actor_id,
+                sample={"available_brief_count": count, "analyzed_source_count": len(sources),
+                        "selection": "latest verified nonempty bodies; at most 8, 1200 characters each",
+                        "omitted_source_count": count - len(sources),
+                        "has_truncated_bodies": any(source["truncated"] for source in sources),
+                        "coverage": "PARTIAL"},
+            )
+        except Exception:
+            business_analysis = {"state": "error", "reason": "BUSINESS_BRIEF_EXECUTION_OR_PERSISTENCE_FAILED",
+                                 "real_input_bound": False, "review_status": "HUMAN_PENDING"}
     # daily_reports is unique on (report_type, report_date), so identity must
     # include this job as well as its scope; otherwise same-scope jobs today
     # would overwrite one another through the legacy report writer.
@@ -339,6 +375,7 @@ def create_source_brief_job(
             "content_hash": brief["content_hash"],
         },
         "multimodal": multimodal, "evaluation_ids": evaluation_ids,
+        "business_analysis": business_analysis, "business_question": business_question,
         "requested_image_source_ref": image_source_ref, "retry_of_job_id": retry_of_job_id,
         "review_status": "HUMAN_PENDING",
     }

@@ -1038,8 +1038,14 @@ def generate_source_brief_job():
 
     try:
         body = request.get_json(silent=True)
-        if not isinstance(body, dict) or set(body) - {"limit", "resume_job_id", "image_source_ref", "retry_media_job_id"}:
+        if not isinstance(body, dict) or set(body) - {"limit", "resume_job_id", "image_source_ref", "retry_media_job_id", "business_question"}:
             raise ValueError("SOURCE_BRIEF_INPUT_INVALID")
+        question = body.get("business_question")
+        if "business_question" in body and (
+            not isinstance(question, str) or not 4 <= len(question.strip()) <= 1500
+            or "resume_job_id" in body or "retry_media_job_id" in body
+        ):
+            raise ValueError("SOURCE_BRIEF_BUSINESS_QUESTION_INVALID")
         limit = body.get("limit", 30)
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("SOURCE_BRIEF_LIMIT_INVALID")
@@ -1061,6 +1067,7 @@ def generate_source_brief_job():
         if "retry_media_job_id" in body:
             previous = get_source_brief_job(retry_of, actor_id=actor_ref, expected_scope=_scope_material(**scope))
             image_ref = previous.get("requested_image_source_ref")
+            question = previous.get("business_question")
             if (previous["multimodal"].get("state") not in {"unavailable", "error"}
                     or not isinstance(image_ref, str) or not re.fullmatch(r"ART-[0-9a-f]{16}", image_ref)):
                 raise ValueError("SOURCE_BRIEF_MEDIA_NOT_RETRYABLE")
@@ -1077,6 +1084,7 @@ def generate_source_brief_job():
                 trace_id="source-brief:" + job_id, job_id=job_id, limit=limit,
                 image_source_ref=image_ref, image_actor=actor,
                 retry_of_job_id=retry_of,
+                business_question=question,
             )
         finally:
             con.close()

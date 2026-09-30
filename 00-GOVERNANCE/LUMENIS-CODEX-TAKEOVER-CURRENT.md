@@ -2212,3 +2212,21 @@ DB has no new task rows. This repairs a report-recovery prerequisite only:
 the report API is still synchronous; scoped async execution and user acceptance
 remain unverified. See
 `evidence/round-07/ROUND-07-AGENT-CHECKPOINT-PERSISTENCE-2026-10-01.md`.
+
+### 2026-10-01 — source-backed business drafts with explicit quality rejection
+
+The existing scoped report API accepts an optional business question and reads
+verified Canonical bodies through Shared Reporting, local-only AI Gateway and
+signed derivative Evidence. Reports retain source excerpts, interpretations,
+proposed checks, missing inputs and exact scope; no Action/Outcome is fabricated.
+71 current targeted tests passed. Real Guangzhou/Nike artifacts reopened with
+same bytes and wrong-scope 403. Engineering review kept Guangzhou UNKNOWN and
+rejected two Nike drafts: source/citation integrity does not establish business
+quality. Those failures remain stored and visible in report quality feedback.
+The final fragment-context correction is tested; new semantic model acceptance
+remains NOT VERIFIED. Human review, frontend integration, durable async execution
+and useful business outcomes remain open. Protected source counts stay 270/270;
+reports=31, evaluations=64, integrity=ok, FK=0. See
+`evidence/round-07/ROUND-07-BUSINESS-BRIEF-2026-10-01.md`.
+This is a bounded implementation/verification increment, not Round/Product PASS.
+Codex Cloud remains development infrastructure, not LUMENIS product deployment.

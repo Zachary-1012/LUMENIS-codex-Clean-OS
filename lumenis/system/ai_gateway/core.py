@@ -513,26 +513,46 @@ def _ollama_vision_json(base, path, payload, timeout):
     return data
 
 
-def _ollama_vision_chat(system, user_text, image_base64, model, temperature, max_tokens, response_schema=None):
-    base = _env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434').rstrip('/')
+def _ollama_local_chat(system, user_text, image_base64, model, temperature, max_tokens,
+                       response_schema=None, *, required_capability='vision', timeout_seconds=None):
+    response_model = None
+    prompt_tokens = completion_tokens = 0
+    requested_model = str(model or _env('OLLAMA_VISION_MODEL', 'qwen3.5:4b')).strip()
+
+    def _meta(status):
+        return {
+            'provider': 'ollama',
+            'model': response_model,
+            'requested_model': requested_model or None,
+            'prompt_tokens': prompt_tokens,
+            'completion_tokens': completion_tokens,
+            'total_tokens': prompt_tokens + completion_tokens,
+            'status': status,
+        }
+
     try:
+        base = _env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434').rstrip('/')
         parsed = urlsplit(base)
         if (parsed.scheme != 'http' or parsed.hostname not in ('127.0.0.1', 'localhost', '::1')
                 or parsed.username or parsed.password or parsed.path not in ('', '/') or parsed.query or parsed.fragment):
-            return None, 'ollama_unavailable'
-        model = str(model or _env('OLLAMA_VISION_MODEL', 'qwen3.5:4b')).strip()
-        timeout = max(1, min(120, int(_env('OLLAMA_TIMEOUT_SECONDS', '120'))))
+            return None, 'ollama_unavailable', _meta('ollama_unavailable')
+        timeout = (max(1, min(120, int(_env('OLLAMA_TIMEOUT_SECONDS', '120'))))
+                   if timeout_seconds is None else max(1, min(180, int(timeout_seconds))))
         token_limit = max(1, min(2048, int(max_tokens)))
     except (TypeError, ValueError):
-        return None, 'ollama_unavailable'
-    if not model:
-        return None, 'ollama_unavailable'
-    _set_call_meta(provider='ollama', model=model)
+        return None, 'ollama_unavailable', _meta('ollama_unavailable')
+    if not requested_model:
+        return None, 'ollama_unavailable', _meta('ollama_unavailable')
+    _set_call_meta(provider='ollama', model=requested_model)
+
     try:
-        shown = _ollama_vision_json(base, '/api/show', {'model': model}, timeout)
+        shown = _ollama_vision_json(base, '/api/show', {'model': requested_model}, timeout)
         capabilities = shown.get('capabilities')
-        if not isinstance(capabilities, list) or not any(str(item).lower() == 'vision' for item in capabilities):
-            return None, 'ollama_vision_unsupported'
+        if not isinstance(capabilities, list) or not any(
+                str(item).lower() == required_capability.lower() for item in capabilities):
+            return None, f'ollama_{required_capability}_unsupported', _meta(
+                f'ollama_{required_capability}_unsupported',
+            )
         messages = []
         if system:
             messages.append({'role': 'system', 'content': str(system)})
@@ -541,7 +561,7 @@ def _ollama_vision_chat(system, user_text, image_base64, model, temperature, max
             user_message['images'] = [image_base64]
         messages.append(user_message)
         payload = {
-            'model': model,
+            'model': requested_model,
             'messages': messages,
             'stream': False,
             'think': False,
@@ -550,26 +570,43 @@ def _ollama_vision_chat(system, user_text, image_base64, model, temperature, max
         if response_schema is not None:
             payload['format'] = response_schema
         data = _ollama_vision_json(base, '/api/chat', payload, timeout)
-        if data.get('done') is not True or str(data.get('done_reason') or '').lower() not in ('', 'stop'):
-            return None, 'ollama_incomplete'
-        message = data.get('message')
-        content = str(message.get('content') or '').strip() if isinstance(message, dict) else ''
-        if not content:
-            return None, 'ollama_empty'
+        response_model = str(data.get('model') or '').strip() or None
         try:
             prompt_tokens = int(data.get('prompt_eval_count', 0) or 0)
             completion_tokens = int(data.get('eval_count', 0) or 0)
         except (TypeError, ValueError):
             prompt_tokens = completion_tokens = 0
+        if data.get('done') is not True or str(data.get('done_reason') or '').lower() not in ('', 'stop'):
+            return None, 'ollama_incomplete', _meta('ollama_incomplete')
+        message = data.get('message')
+        content = str(message.get('content') or '').strip() if isinstance(message, dict) else ''
+        if not content:
+            return None, 'ollama_empty', _meta('ollama_empty')
         _set_call_meta(
-            provider='ollama', model=model,
+            provider='ollama', model=response_model or requested_model,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             total_tokens=prompt_tokens + completion_tokens,
         )
-        return content, 'ollama'
+        return content, 'ollama', _meta('ok')
     except Exception:
-        return None, 'ollama_error'
+        return None, 'ollama_error', _meta('ollama_error')
+
+
+def _ollama_vision_chat(system, user_text, image_base64, model, temperature, max_tokens, response_schema=None):
+    content, status, _meta = _ollama_local_chat(
+        system, user_text, image_base64, model, temperature, max_tokens, response_schema,
+        required_capability='vision',
+    )
+    return content, status
+
+
+def local_structured_chat(system, user, *, response_schema, model=None, max_tokens=2000, timeout_seconds=None):
+    """Run a schema-constrained text completion through loopback Ollama only."""
+    return _ollama_local_chat(
+        system, user, None, model or 'qwen3.5:4b', 0, max_tokens, response_schema,
+        required_capability='completion', timeout_seconds=timeout_seconds,
+    )
 
 
 def vision_chat(system, user_text, image_base64, model=None, temperature=0.2, max_tokens=2000, level='medium', *, local_only=False, response_schema=None):

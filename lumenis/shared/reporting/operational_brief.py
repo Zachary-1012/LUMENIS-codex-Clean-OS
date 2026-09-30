@@ -1,5 +1,6 @@
 """Read-only, exact-scope source brief projection over Canonical Data."""
 from collections import Counter
+import hashlib
 from html import escape
 import re
 import sqlite3
@@ -48,6 +49,7 @@ def build_scoped_source_brief(
     con: sqlite3.Connection, *, product_id: str, global_scope: bool,
     entity_label: str, subject_id: str | None = None,
     brand_focus_id: str | None = None, limit: int = 30,
+    include_analysis_text: bool = False,
 ) -> dict[str, Any]:
     """Build a deterministic source-only brief; label comes from server registry/context."""
     if type(product_id) is not str or product_id not in {"CTH", "ZBMP"}:
@@ -92,6 +94,7 @@ def build_scoped_source_brief(
         raise RuntimeError("scoped Canonical returned an invalid read envelope")
 
     records = []
+    analysis_sources = []
     unsafe_links = 0
     for row in result["records"]:
         proof = row.get("scope_evidence")
@@ -133,6 +136,15 @@ def build_scoped_source_brief(
             "subject_id": row.get("subject_id") or None, "brand_focus_id": row.get("brand_focus_id") or None,
             "scope_evidence_ref": scope_ref, "evidence_id": str(proof["id"]),
         })
+        body = row.get("content")
+        if include_analysis_text and isinstance(body, str) and body.strip() and len(analysis_sources) < 8:
+            analysis_sources.append({
+                "source_id": source_id, "evidence_ref": scope_ref,
+                "title": title, "text": body[:1200], "truncated": len(body) > 1200,
+                "body_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+                "publish_datetime": publish, "captured_at": captured,
+                "source_platform": row.get("source_platform") or "UNKNOWN",
+            })
 
     withheld_count = counts["rejected_count"] + unsafe_links
     truncated = result["truncated"]
@@ -162,7 +174,7 @@ def build_scoped_source_brief(
             f"scope: {_markdown_text(identity)}; Evidence: {_markdown_text(str(record['scope_evidence_ref']))}"
         )
     markdown = "\n".join(lines)
-    return {
+    result = {
         "status": status, "withheld": withheld_count > 0, "truncated": truncated,
         "scope": {
             "product_id": product_id, "domain_id": domain_id, "global": global_scope,
@@ -179,3 +191,6 @@ def build_scoped_source_brief(
         "records": records, "markdown": markdown,
         "content_hash": compute_scoped_content_hash(markdown),
     }
+    if include_analysis_text:
+        result["_analysis_sources"] = analysis_sources
+    return result
