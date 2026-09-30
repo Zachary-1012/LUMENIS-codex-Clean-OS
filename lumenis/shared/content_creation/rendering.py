@@ -6,13 +6,16 @@ responsibilities. Unsupported timeline features fail instead of disappearing.
 from __future__ import annotations
 
 import hashlib
+from bisect import bisect_left
 import json
 import math
 import os
 import shutil
 import subprocess
+import struct
 import tempfile
 import time
+import unicodedata
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -35,6 +38,7 @@ MIX_SAMPLE_PEAK_LIMIT = 0.891251  # -1 dBFS sample peak; not a true-peak/LUFS gu
 FINAL_TRUE_PEAK_LIMIT_DBTP = -1.0
 PEAK_CORRECTION_HEADROOM_DB = .5  # Codec response can change with gain; remeasure, never assume.
 FRAME_SIZES = {"9:16": (720, 1280), "16:9": (1280, 720), "3:4": (810, 1080), "4:5": (864, 1080)}
+CAPTION_FONT = Path("C:/Windows/Fonts/msyh.ttc")  # Host resource only; never bundled/exported.
 
 
 def _run(command: list[str], *, cwd: Path, timeout: float = 60,
@@ -83,6 +87,134 @@ def _number(value: float) -> str:
 def _frame_at(seconds: float) -> int:
     # Round shared boundaries once so adjacent clips cannot accumulate drift.
     return int(math.floor(round(seconds * FRAME_RATE, 6) + 0.5))
+
+
+def _verify_caption_glyphs(text: str) -> None:
+    """Check the exact TTC face used by drawtext, without font fallback or new libraries."""
+    required = {ord(char) for char in text if char != "\n"}
+    supported: set[int] = set()
+    try:
+        data = CAPTION_FONT.read_bytes()
+        face = struct.unpack_from(">I", data, 12)[0] if data[:4] == b"ttcf" else 0
+        table_count = struct.unpack_from(">H", data, face + 4)[0]
+        records = [face + 12 + index * 16 for index in range(table_count)]
+        cmap_record = next(pos for pos in records if data[pos:pos + 4] == b"cmap")
+        cmap = struct.unpack_from(">I", data, cmap_record + 8)[0]
+        for index in range(struct.unpack_from(">H", data, cmap + 2)[0]):
+            platform, encoding, offset = struct.unpack_from(">HHI", data, cmap + 4 + index * 8)
+            if platform != 0 and (platform, encoding) not in {(3, 1), (3, 10)}:
+                continue
+            sub = cmap + offset
+            form = struct.unpack_from(">H", data, sub)[0]
+            if form == 12:
+                count = struct.unpack_from(">I", data, sub + 12)[0]
+                groups = [struct.unpack_from(">III", data, sub + 16 + i * 12) for i in range(count)]
+                ends = [group[1] for group in groups]
+                for code in required:
+                    i = bisect_left(ends, code)
+                    if i < count and groups[i][0] <= code and groups[i][2] + code - groups[i][0] > 0:
+                        supported.add(code)
+            elif form == 4:
+                count = struct.unpack_from(">H", data, sub + 6)[0] // 2
+                ends = struct.unpack_from(f">{count}H", data, sub + 14)
+                starts = struct.unpack_from(f">{count}H", data, sub + 16 + count * 2)
+                deltas = struct.unpack_from(f">{count}h", data, sub + 16 + count * 4)
+                ranges_at = sub + 16 + count * 6
+                ranges = struct.unpack_from(f">{count}H", data, ranges_at)
+                for code in required:
+                    i = bisect_left(ends, code)
+                    if i >= count or code < starts[i]:
+                        continue
+                    glyph = (struct.unpack_from(">H", data, ranges_at + i * 2 + ranges[i] +
+                                                2 * (code - starts[i]))[0] if ranges[i] else code)
+                    if (not ranges[i] or glyph) and (glyph + deltas[i]) & 0xffff:
+                        supported.add(code)
+    except (OSError, struct.error, StopIteration, ValueError) as exc:
+        raise VideoEditingError("CAPTION_FONT_UNAVAILABLE") from exc
+    if required - supported:
+        raise VideoEditingError("OVERLAY_GLYPH_UNAVAILABLE")
+
+
+def _overlay_filters(timeline: Timeline, *, duration: float, width: int, height: int,
+                     ffmpeg: str, work: Path,
+                     check_continue: Callable[[], None] | None = None) -> list[str]:
+    if not timeline.overlays:
+        return []
+    if len(timeline.overlays) > 64:
+        raise VideoEditingError("OVERLAY_COUNT_EXCEEDED")
+    prepared = []
+    previous_end: dict[str, float] = {}
+    for overlay in sorted(timeline.overlays, key=lambda item: (item.start_sec, item.end_sec)):
+        if check_continue:
+            check_continue()
+        if overlay.end_sec > duration:
+            raise VideoEditingError("OVERLAY_EXTENDS_BEYOND_VIDEO")
+        start = math.ceil(round(overlay.start_sec * FRAME_RATE, 6))
+        end = min(math.ceil(round(overlay.end_sec * FRAME_RATE, 6)), _frame_at(duration))
+        if start >= end:
+            raise VideoEditingError("OVERLAY_SHORTER_THAN_OUTPUT_FRAME")
+        if overlay.start_sec < previous_end.get(overlay.kind, 0):
+            raise VideoEditingError("OVERLAY_SAME_KIND_OVERLAP_NOT_SUPPORTED")
+        previous_end[overlay.kind] = overlay.end_sec
+        if not isinstance(overlay.text, str) or len(overlay.text) > 1024:
+            raise VideoEditingError("OVERLAY_TEXT_NOT_SUPPORTED")
+        text = overlay.text.replace("\r\n", "\n")
+        if any(unicodedata.category(char).startswith("C") and char != "\n" for char in text):
+            raise VideoEditingError("OVERLAY_TEXT_NOT_SUPPORTED")
+        # Preserve every explicit line (including blank lines), space and codepoint.
+        # Wrap only before a base character, never between it and its combining marks.
+        lines = []
+        for original_line in text.split("\n"):
+            line, columns = "", 0
+            for char in original_line:
+                is_mark = unicodedata.category(char).startswith("M")
+                if columns == 28 and not is_mark:
+                    lines.append(line)
+                    line, columns = "", 0
+                line += char
+                columns += int(not is_mark)
+            lines.append(line)
+        if len(lines) > 4:
+            raise VideoEditingError("OVERLAY_LAYOUT_EXCEEDS_FOUR_LINES")
+        prepared.append((overlay.kind, start, end, "\n".join(lines)))
+    if os.name != "nt" or not CAPTION_FONT.is_file():
+        raise VideoEditingError("CAPTION_FONT_UNAVAILABLE")
+    _verify_caption_glyphs("\n".join(item[3] for item in prepared))
+    # Only this fixed installed font is used; no Timeline/API path enters the graph.
+    font = "fontfile='C\\:/Windows/Fonts/msyh.ttc'"
+    cancelled: list[BaseException] = []
+    def check_probe() -> None:
+        if check_continue:
+            try:
+                check_continue()
+            except BaseException as exc:
+                cancelled.append(exc)
+                raise
+    try:
+        _run([ffmpeg, "-v", "error", "-nostdin", "-filter_threads", "1", "-f", "lavfi", "-i",
+              "color=c=black:s=32x32:r=30:d=0.04", "-vf",
+              f"drawtext={font}:text=中文:expansion=none", "-frames:v", "1", "-f", "null", "-"],
+             cwd=work, check_continue=check_probe)
+    except Exception as exc:
+        if cancelled:
+            raise cancelled[0]
+        if isinstance(exc, VideoEditingError) and str(exc) in {"MEDIA_RENDER_FAILED", "MEDIA_RENDER_PROCESS_FAILED"}:
+            raise VideoEditingError("CAPTION_RENDER_UNAVAILABLE") from exc
+        raise
+    size, margin = max(16, width // 36), max(16, height // 24)
+    filters = []
+    for index, (kind, start, end, text) in enumerate(prepared):
+        if check_continue:
+            check_continue()
+        filename = f"caption-{index:03d}.txt"
+        with (work / filename).open("x", encoding="utf-8", newline="\n") as handle:
+            handle.write(text)
+        y = f"h-text_h-{margin}" if kind == "caption" else str(margin)
+        filters.append(f"drawtext={font}:textfile={filename}:expansion=none:reload=0:"
+                       f"fontsize={size}:fontcolor=white:box=1:boxcolor=black@0.6:boxborderw=8:"
+                       f"line_spacing={size // 4}:x=(w-text_w)/2:y={y}:"
+                       f"enable='gte(n,{start})*lt(n,{end})'")
+    return filters
 
 
 def _audio_filter(clip: TimelineClip) -> str:
@@ -345,8 +477,8 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
     output = _validate_output_path(Path(output), output_kind=output_kind)
     if timeline.format_ratio not in FRAME_SIZES:
         raise VideoEditingError("FORMAT_RATIO_NOT_SUPPORTED")
-    if timeline.overlays:
-        raise VideoEditingError("TIMELINE_OVERLAYS_NOT_SUPPORTED_BY_RENDERER")
+    if timeline.overlays and output_kind != "video":
+        raise VideoEditingError("OVERLAYS_REQUIRE_VIDEO_OUTPUT")
     if any(transition.transition_type != "cut" for transition in timeline.transitions):
         raise VideoEditingError("TRANSITION_RENDER_NOT_SUPPORTED")
 
@@ -405,6 +537,8 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
 
     with tempfile.TemporaryDirectory(prefix="timeline-render-", dir=output.parent) as temporary:
         work = Path(temporary)
+        overlays = _overlay_filters(timeline, duration=duration, width=width, height=height,
+                                    ffmpeg=ffmpeg, work=work, **run_options)
         audio = _render_audio(timeline, duration=duration, ffmpeg=ffmpeg, work=work, **run_options)
         rendered = work / ("media.mp4" if output_kind == "video" else "media.wav")
         if video_tracks:
@@ -434,7 +568,8 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
                             "-i", str(audio)]
             graph = [f"[{index}:v:0]setpts=PTS-STARTPTS[v{index}]" for index in range(len(segments))]
             graph.append("".join(f"[v{index}]" for index in range(len(segments))) +
-                         f"concat=n={len(segments)}:v=1:a=0[outv]")
+                         f"concat=n={len(segments)}:v=1:a=0" +
+                         ("," + ",".join(overlays) if overlays else "") + "[outv]")
             command += ["-filter_complex", ";".join(graph), "-map", "[outv]"]
             if audio is not None:
                 command += ["-map", f"{len(segments)}:a:0", "-c:a", "aac", "-b:a", "192k",
@@ -481,7 +616,9 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
             digest.update(block)
     return {"state": "rendered_verified", "output_kind": output_kind, "timeline_version": timeline.version,
             "media_sha256": digest.hexdigest(), "size_bytes": output.stat().st_size,
-            "measurement": measured, "renderer": "lumenis-timeline-3",
+            "measurement": measured, "renderer": "lumenis-timeline-4",
+            "overlay_processing": {"count": len(timeline.overlays),
+                                   "profile": "literal-cjk-windows-v1" if timeline.overlays else None},
             "audio_processing": {"pre_encode_sample_peak_limit_dbfs": -1 if has_audio else None,
                                  "limiter_latency_compensated": has_audio,
                                  "ducked_music_clips": len(ducked_clips),

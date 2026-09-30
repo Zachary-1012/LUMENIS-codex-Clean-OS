@@ -1996,3 +1996,21 @@ The supplied OSS comparison was reviewed against the current source-owner map an
 The existing Sitemap adapter now preserves `lastmod` as `raw.source_updated_at` and leaves `publish_datetime` unknown until a detail source declares publication. Firecrawl, Crawl4AI, Browser Use, Crawlee, Scrapy, Scrapling, AutoScraper and curl-impersonate remain research-only candidates; scrcpy is rejected for structured acquisition. No second Collector, scheduler, browser, Evidence or Canonical store was introduced.
 
 Targeted importer/public-source tests and the blocking constitution check must pass before this batch is published. Live commercial authorization, social-platform sessions and full user E2E remain unverified and are not promoted by this entry.
+
+### 2026-09-30 - bounded caption/text overlay renderer contract
+
+The existing Shared Content & Creation Timeline renderer now accepts bounded
+caption and text overlays through the existing video render path. Literal text is
+written to private UTF-8 text files with `expansion=none`, CJK glyph coverage is
+checked against the installed Windows font before invoking the encoder, overlay
+timing/layout/overlap/count limits fail explicitly, and audio-only output refuses
+overlays instead of silently dropping them. Renderer metadata records the overlay
+profile and count; no alternate timeline or media owner was added.
+
+The targeted renderer suite passed 45 tests and skipped 7 tests that require the
+FFmpeg/FFprobe executables. The current resolver returned `ffmpeg=None` and
+`ffprobe=None`, so this batch is `IMPLEMENTED/TESTED` only: no real media output
+was generated in this environment and caption rendering is not
+`LIVE_VERIFIED`. Artifact Permission/Evidence, reopen/review, user E2E and full
+ROUND 07/Content closure remain open; release/operating/commercial status stays
+NO.

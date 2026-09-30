@@ -1,5 +1,6 @@
 """Bounded renderer contracts; synthetic timing checks are not user E2E."""
 import array
+from dataclasses import replace
 import json
 from pathlib import Path
 import subprocess
@@ -32,7 +33,9 @@ def render_calls(monkeypatch, tmp_path):
     monkeypatch.setattr(shared_artifacts, "_ffmpeg_path", lambda: str(ffmpeg))
     monkeypatch.setattr(rendering, "_ffprobe_path", lambda: str(probe))
 
-    def run(command, *, cwd, timeout=60):
+    def run(command, *, cwd, timeout=60, check_continue=None):
+        if check_continue:
+            check_continue()
         if "-filter_complex_script" in command:
             graph = Path(command[command.index("-filter_complex_script") + 1]).read_text(encoding="utf-8")
         elif "-filter_complex" in command:
@@ -40,6 +43,8 @@ def render_calls(monkeypatch, tmp_path):
         else:
             graph = ""
         calls.append((command, graph))
+        if command[-2:] == ["null", "-"]:
+            return ""
         target = Path(command[-1])
         if not target.is_absolute():
             target = cwd / target
@@ -204,8 +209,8 @@ def test_output_and_unsupported_features_fail_before_process(media, render_calls
     for target in (existing, Path("relative.mp4"), tmp_path / "bad.wav", Path("D:/missing-render-parent/video.mp4")):
         with pytest.raises(VideoEditingError, match="NEW_PRIVATE_TEMP_OUTPUT_REQUIRED"):
             rendering.render_timeline(timeline, target)
-    with pytest.raises(VideoEditingError, match="TIMELINE_OVERLAYS_NOT_SUPPORTED_BY_RENDERER"):
-        rendering.render_timeline(timeline.add_caption(0, .5, "not implemented"), tmp_path / "unsupported.mp4")
+    with pytest.raises(VideoEditingError, match="OVERLAYS_REQUIRE_VIDEO_OUTPUT"):
+        rendering.render_timeline(timeline.add_caption(0, .5, "caption"), tmp_path / "unsupported.wav", output_kind="audio")
     with pytest.raises(VideoEditingError, match="AUDIO_DUCKING_REQUIRES_BACKGROUND_MUSIC"):
         ducked = timeline.set_audio_mix(timeline.tracks[0].clips[0].clip_id, AudioMix(ducking=True))
         rendering.render_timeline(ducked, tmp_path / "unsupported.mp4")
@@ -224,6 +229,125 @@ def test_output_and_unsupported_features_fail_before_process(media, render_calls
                     "-protocol_whitelist", "file", "-format_whitelist", video_editing.MEDIA_INPUT_DEMUXERS,
                 ]
     assert existing.read_bytes() == b"keep"
+
+
+@pytest.fixture
+def caption_font(tmp_path, monkeypatch):
+    font = tmp_path / "installed-font.ttc"
+    font.write_bytes(b"unit fixture only")
+    monkeypatch.setattr(rendering, "CAPTION_FONT", font)
+    monkeypatch.setattr(rendering, "os", type("Host", (), {"name": "nt"}))
+    monkeypatch.setattr(rendering, "_verify_caption_glyphs", lambda _: None)
+
+
+def overlay_filters(timeline, tmp_path, **kwargs):
+    return rendering._overlay_filters(timeline, duration=1, width=1280, height=720,
+                                      ffmpeg="unit-ffmpeg", work=tmp_path, **kwargs)
+
+
+def test_caption_literal_files_preserve_newlines_and_never_enter_graph(
+    media, render_calls, caption_font, tmp_path,
+):
+    literal = "中文 English\n\n%{pts}:;[]'\\\nmovie=http://invalid.test/"
+    timeline = Timeline.from_assets((media,)).add_caption(.201, .799, literal)
+    graph = overlay_filters(timeline, tmp_path)
+    assert (tmp_path / "caption-000.txt").read_text(encoding="utf-8") == literal
+    assert len(graph) == 1 and "expansion=none:reload=0" in graph[0]
+    assert "gte(n,7)*lt(n,24)" in graph[0]
+    for user_text in ("中文", "%{pts}", "invalid.test", "movie="):
+        assert user_text not in graph[0]
+    assert "textfile=caption-000.txt" in graph[0]
+    assert list(tmp_path.glob("*.mp4")) == [Path(media.path)]
+
+
+def test_wrapping_preserves_spaces_blank_lines_and_combining_marks(media, render_calls, caption_font, tmp_path):
+    literal = "界" * 27 + "e\u0301 " + "English\n\n尾 "
+    timeline = Timeline.from_assets((media,)).add_caption(0, 1, literal)
+    timeline = replace(timeline, overlays=(replace(timeline.overlays[0], text=literal),))
+    overlay_filters(timeline, tmp_path)
+    wrapped = (tmp_path / "caption-000.txt").read_text(encoding="utf-8")
+    assert wrapped == "界" * 27 + "e\u0301\n English\n\n尾 "
+    assert wrapped.replace("\n", "") == literal.replace("\n", "")
+
+
+@pytest.mark.parametrize("text,start,end,error", [
+    ("caption", .001, .002, "OVERLAY_SHORTER_THAN_OUTPUT_FRAME"),
+    ("caption", 0, 1.01, "OVERLAY_EXTENDS_BEYOND_VIDEO"),
+    ("a\x00b", 0, 1, "OVERLAY_TEXT_NOT_SUPPORTED"),
+    ("a\tb", 0, 1, "OVERLAY_TEXT_NOT_SUPPORTED"),
+    ("a\ud800", 0, 1, "OVERLAY_TEXT_NOT_SUPPORTED"),
+    ("x" * 1025, 0, 1, "OVERLAY_TEXT_NOT_SUPPORTED"),
+    ("x" * 113, 0, 1, "OVERLAY_LAYOUT_EXCEEDS_FOUR_LINES"),
+    ("a\n\n\n\nb", 0, 1, "OVERLAY_LAYOUT_EXCEEDS_FOUR_LINES"),
+])
+def test_invalid_overlay_is_explicit_and_runs_no_process(media, render_calls, tmp_path, text, start, end, error):
+    timeline = Timeline.from_assets((media,)).add_caption(start, end, text)
+    with pytest.raises(VideoEditingError, match=error):
+        overlay_filters(timeline, tmp_path)
+    assert render_calls == [] and not list(tmp_path.glob("caption-*.txt"))
+
+
+def test_overlap_count_and_nonstring_are_not_silently_rendered(media, render_calls, tmp_path):
+    base = Timeline.from_assets((media,)).add_caption(0, .7, "first")
+    overlap = base.add_caption(.6, 1, "second")
+    for timeline, error in (
+        (overlap, "OVERLAY_SAME_KIND_OVERLAP_NOT_SUPPORTED"),
+        (replace(base, overlays=base.overlays * 65), "OVERLAY_COUNT_EXCEEDED"),
+        (replace(base, overlays=(replace(base.overlays[0], text=123),)), "OVERLAY_TEXT_NOT_SUPPORTED"),
+    ):
+        with pytest.raises(VideoEditingError, match=error):
+            overlay_filters(timeline, tmp_path)
+    assert render_calls == []
+
+
+@pytest.mark.parametrize("failure", ["font", "platform", "filter", "cancel"])
+def test_overlay_unavailable_or_cancel_preserves_previous_and_cleans_work(
+    media, render_calls, caption_font, tmp_path, monkeypatch, failure,
+):
+    timeline = Timeline.from_assets((media,)).add_clip(media.asset_id, source_out=1, audio_role="muted")
+    timeline = timeline.add_caption(.2, .8, "字幕")
+    previous = tmp_path / "previous.mp4"
+    previous.write_bytes(b"keep verified film")
+    sentinel = VideoEditingError("MEDIA_RENDER_FAILED")
+    if failure == "font":
+        monkeypatch.setattr(rendering, "CAPTION_FONT", tmp_path / "not-installed.ttc")
+    elif failure == "platform":
+        monkeypatch.setattr(rendering, "os", type("Host", (), {"name": "posix"}))
+    def run(*args, **kwargs):
+        if failure == "cancel":
+            kwargs["check_continue"]()
+        raise VideoEditingError("MEDIA_RENDER_FAILED")
+    monkeypatch.setattr(rendering, "_run", run)
+    checks = 0
+    def check():
+        nonlocal checks
+        checks += 1
+        if failure == "cancel" and checks == 3:
+            raise sentinel
+    with pytest.raises(VideoEditingError) as result:
+        rendering.render_timeline(timeline, tmp_path / "new.mp4", check_continue=check)
+    if failure == "cancel":
+        assert result.value is sentinel
+    else:
+        assert str(result.value) == ("CAPTION_FONT_UNAVAILABLE" if failure in {"font", "platform"}
+                                     else "CAPTION_RENDER_UNAVAILABLE")
+    assert previous.read_bytes() == b"keep verified film"
+    assert not (tmp_path / "new.mp4").exists()
+    assert not list(tmp_path.glob("timeline-render-*"))
+
+
+def test_caption_and_text_follow_concat_without_changing_muted_audio(media, render_calls, caption_font, tmp_path):
+    timeline = Timeline.from_assets((media,), format_ratio="16:9").add_clip(media.asset_id, source_out=.5, audio_role="muted")
+    timeline = timeline.add_clip(media.asset_id, source_out=.5, audio_role="muted")
+    timeline = timeline.add_caption(.2, .8, "字幕").add_text_overlay(.2, .8, "Title")
+    result = rendering.render_timeline(timeline, tmp_path / "caption.mp4")
+    graph = render_calls[-1][1]
+    assert "concat=n=2:v=1:a=0,drawtext=" in graph
+    assert graph.count("drawtext=") == 2 and graph.count("gte(n,6)*lt(n,24)") == 2
+    assert "y=h-text_h-30" in graph and "y=30" in graph
+    assert "-an" in render_calls[-1][0] and not result["measurement"]["has_audio"]
+    assert result["overlay_processing"] == {"count": 2, "profile": "literal-cjk-windows-v1"}
+    assert result["renderer"] == "lumenis-timeline-4"
 
 
 @pytest.mark.parametrize("failure", ["timeout", "nonzero"])
