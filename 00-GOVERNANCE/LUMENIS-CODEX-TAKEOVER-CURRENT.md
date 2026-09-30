@@ -2052,3 +2052,17 @@ The scoped collector lifecycle, evidence-failure, topic management and XHS
 lineage regressions passed 23/23. This proves plan ordering and honest failure
 semantics only; no live social-platform session or platform data was used in the
 batch, so collection coverage, account health and user E2E remain unverified.
+
+### 2026-09-30 - effectful Skill export Evidence gate
+
+The existing canonical Skill execution chain now treats `EXPORT` like the other
+effectful actions: after the handler returns success, a failed or malformed
+Evidence write changes the execution to `FAILED` with
+`EVIDENCE_RECORD_FAILED`, zero quality and no automatic admission. This adapts
+the Evidence-first rule without introducing another Skill, Agent or Permission
+owner; read/analyze behavior remains unchanged.
+
+The existing local Content execution regression covers the injected Evidence
+failure and the affected account/content execution tests remain green. This is a
+source-level and targeted-test improvement; external export, artifact review and
+user E2E remain unverified.

@@ -511,7 +511,9 @@ def evaluate_execution(ctx):
     success = exec_res.get("success", False)
     return {"evaluated": True, "success": success, "quality_score": 0.8 if success else 0.0,
             "auto_admitted": False,
-            "validation_required": ctx.action_type in (ActionType.WRITE, ActionType.COMMIT, ActionType.PUSH),
+            "validation_required": ctx.action_type in (
+                ActionType.EXPORT, ActionType.WRITE, ActionType.COMMIT, ActionType.PUSH,
+            ),
             "validation_status": "pending_manual_validation" if success else "failed_no_validation",
             "reason": "execution completed; requires manual validation" if success else "execution failed"}
 
@@ -723,6 +725,23 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
     if source_import and ctx.status is not ExecutionStatus.COMPLETED:
         return ctx
     ctx.evidence_record = record_execution_evidence(ctx)
+    evidence_required = ctx.action_type in (
+        ActionType.EXPORT, ActionType.WRITE, ActionType.COMMIT, ActionType.PUSH,
+    )
+    if (ctx.status is ExecutionStatus.COMPLETED and evidence_required
+            and (not isinstance(ctx.evidence_record, dict)
+                 or ctx.evidence_record.get("ok") is not True)):
+        ctx.status = ExecutionStatus.FAILED
+        ctx.error = "EVIDENCE_RECORD_FAILED"
+        ctx.evaluation = {
+            **(ctx.evaluation or {}),
+            "success": False,
+            "quality_score": 0.0,
+            "auto_admitted": False,
+            "validation_required": True,
+            "validation_status": "failed_no_evidence",
+            "reason": "effect completed but required Evidence could not be recorded",
+        }
     write_trace(ctx, int((time.time() - start) * 1000))
     return ctx
 
