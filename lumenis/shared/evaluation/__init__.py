@@ -5,7 +5,7 @@ package; they do not own parallel evaluation implementations.
 """
 from .recorder import (
     DEFAULT_DB_PATH, VALID_DIMENSIONS, VALID_STATUSES, EvaluationRecord,
-    get_evaluation_records, get_evaluation_summary, init_db, judge_status,
+    get_evaluation_record, get_evaluation_records, get_evaluation_summary, init_db, judge_status,
     record_evaluation, record_evaluation_raw, threshold_to_str,
 )
 from .dimensions import (
@@ -19,7 +19,7 @@ from .trajectory import (
 
 __all__ = [
     "DEFAULT_DB_PATH", "VALID_DIMENSIONS", "VALID_STATUSES", "EvaluationRecord",
-    "get_evaluation_records", "get_evaluation_summary", "init_db", "judge_status",
+    "get_evaluation_record", "get_evaluation_records", "get_evaluation_summary", "init_db", "judge_status",
     "record_evaluation", "record_evaluation_raw", "threshold_to_str", "THRESHOLDS",
     "evaluate_ai_dimension", "evaluate_collector_dimension", "evaluate_data_dimension",
     "evaluate_report_dimension", "evaluate_runtime_dimension", "EvaluationRunner",

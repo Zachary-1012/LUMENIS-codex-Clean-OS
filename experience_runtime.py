@@ -888,7 +888,7 @@ def cth_platform_collection_search():
         return jsonify({"ok": False, "status": "error", "error_type": type(exc).__name__}), 503
 
 
-def _content_project_scope(action: str):
+def _content_project_scope(action: str, *, module="content", include_decision=False):
     """Resolve selectors through the canonical registry, then ask Permission."""
     from lumenis.auth.service import get_current_user
     from lumenis.system.security.permission import (
@@ -899,7 +899,7 @@ def _content_project_scope(action: str):
     from shared_artifacts import LocalArtifactError
 
     try:
-        local_principal = resolve_local_workspace_principal(module="content", action=action)
+        local_principal = resolve_local_workspace_principal(module=module, action=action)
         actor = local_principal if local_principal is not None else get_current_user()
     except Exception as exc:
         raise LocalArtifactError("AUTH_UNAVAILABLE") from exc
@@ -955,12 +955,12 @@ def _content_project_scope(action: str):
         check_local_workspace_scope_permission if local_principal is not None
         else check_actor_scope_permission
     )
-    decision = checker(actor, action=action, module="content", **scope)
+    decision = checker(actor, action=action, module=module, **scope)
     if decision.verification_state != "verified":
         raise LocalArtifactError("CONTENT_SCOPE_UNAVAILABLE")
     if decision.allowed is not True:
         raise LocalArtifactError("CONTENT_SCOPE_DENIED")
-    return actor, scope
+    return (actor, scope, decision) if include_decision else (actor, scope)
 
 
 def _content_project_error_code(exc):
@@ -981,6 +981,106 @@ def _content_project_error(exc):
         "CONTENT_SOURCE_APPROVAL_REQUIRED", "CONTENT_EXPORT_PERMISSION_DENIED",
     } else 400
     return jsonify({"ok": False, "code": code, "publish_status": "not_performed"}), status
+
+
+def _source_brief_context(action):
+    """Bind reporting to the same server principal, registry and scope as work."""
+    from lumenis.shared.database import get_repository
+    from subject_registry import TABLE_NAME
+
+    actor, scope, decision = _content_project_scope(
+        action, module="reports", include_decision=True,
+    )
+    label = "全球商业" if scope["domain_id"] == "cth" else "全球品牌"
+    if not scope["global_scope"]:
+        field = "subject_id" if scope["domain_id"] == "cth" else "brand_focus_id"
+        con = get_repository().connect(read_only=True, wal=False)
+        try:
+            row = con.execute(
+                f"SELECT name_zh,name_en FROM {TABLE_NAME} WHERE {field}=? AND domain_id=?",
+                (scope[field], "CTH" if field == "subject_id" else "BMP"),
+            ).fetchone()
+        finally:
+            con.close()
+        if row is None or not (row[0] or row[1]):
+            raise ValueError("CONTENT_SCOPE_NOT_FOUND")
+        label = row[0] or row[1]
+    actor_ref = decision.principal_ref or f"actor:{decision.actor_id}"
+    return actor_ref, decision.audit_id, {
+        "product_id": "CTH" if scope["domain_id"] == "cth" else "ZBMP",
+        "global_scope": scope["global_scope"], "entity_label": label,
+        "subject_id": scope["subject_id"], "brand_focus_id": scope["brand_focus_id"],
+    }
+
+
+def _source_brief_job_error(exc):
+    code = _content_project_error_code(exc)
+    if isinstance(exc, PermissionError):
+        status = 403
+    elif isinstance(exc, LookupError):
+        status = 404
+    elif isinstance(exc, RuntimeError):
+        status = 503
+    else:
+        return _content_project_error(exc)
+    return jsonify({"ok": False, "code": code, "publish_status": "not_performed"}), status
+
+
+@experience_bp.route("/api/experience/reports/source-brief/generate", methods=["POST"])
+def generate_source_brief_job():
+    import uuid
+    from lumenis.shared.database import get_repository
+    from lumenis.shared.reporting.source_brief_job import (
+        create_source_brief_job, get_source_brief_job, _scope_material,
+    )
+    from lumenis.system.security import get_permission_gate, OperationType
+
+    try:
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or set(body) - {"limit", "resume_job_id"}:
+            raise ValueError("SOURCE_BRIEF_INPUT_INVALID")
+        limit = body.get("limit", 30)
+        if type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("SOURCE_BRIEF_LIMIT_INVALID")
+        actor_ref, audit_ref, scope = _source_brief_context("write")
+        allowed = get_permission_gate().check(
+            OperationType.REPORT_GENERATE, resource=request.path, caller=actor_ref,
+        )
+        if not allowed.allowed:
+            raise PermissionError("SOURCE_BRIEF_GENERATE_DENIED")
+        job_id = body.get("resume_job_id")
+        if job_id is not None:
+            # A client can retry an existing server-issued job, never choose a new ID.
+            get_source_brief_job(job_id, actor_id=actor_ref, expected_scope=_scope_material(**scope))
+        else:
+            job_id = "brief-" + uuid.uuid4().hex
+        con = get_repository().connect(read_only=True, wal=False)
+        try:
+            result = create_source_brief_job(
+                con, **scope, actor_id=actor_ref, permission_audit_ref=audit_ref,
+                trace_id="source-brief:" + job_id, job_id=job_id, limit=limit,
+            )
+        finally:
+            con.close()
+        return jsonify({"ok": True, "result": result, "publish_status": "not_performed"})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "SOURCE_BRIEF_JOB_UNAVAILABLE"}), 503
+
+
+@experience_bp.route("/api/experience/reports/source-brief/jobs/<job_id>", methods=["GET"])
+def reopen_source_brief_job(job_id):
+    from lumenis.shared.reporting.source_brief_job import get_source_brief_job, _scope_material
+
+    try:
+        actor_ref, _audit_ref, scope = _source_brief_context("read")
+        result = get_source_brief_job(job_id, actor_id=actor_ref, expected_scope=_scope_material(**scope))
+        return jsonify({"ok": True, "result": result, "publish_status": "not_performed"})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "SOURCE_BRIEF_JOB_UNAVAILABLE"}), 503
 
 
 def _content_project_assets(payload, actor, scope):

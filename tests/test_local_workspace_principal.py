@@ -182,7 +182,7 @@ def test_focus_requires_one_registered_exact_resource(app, monkeypatch):
     "changes",
     [
         {"domain_id": "other", "global_scope": True},
-        {"module": "reports", "global_scope": True},
+        {"module": "unknown_module", "global_scope": True},
         {"action": "export", "global_scope": True},
         {"global_scope": 1},
         {"global_scope": True, "subject_id": "subject-123"},
@@ -231,3 +231,14 @@ def test_scope_admission_does_not_grant_effect_gate_or_change_account_actor_path
     assert account_scope.allowed
     assert account_scope.actor_id == 23
     assert account_scope.caller == "actor:23"
+
+
+@pytest.mark.parametrize("action", ["read", "write"])
+def test_reports_reuses_scoped_workspace_without_granting_effects(app, action):
+    with _request(app):
+        principal = p.resolve_local_workspace_principal(module="reports", action=action)
+    result = _scope(app, principal, module="reports", action=action, global_scope=True)
+    assert result.allowed and result.caller == "workspace:local"
+    assert result.audit_id and result.actor_id is None
+    app.config["LUMENIS_OPEN_WORKSPACE"] = False
+    assert not _scope(app, principal, module="reports", global_scope=True).allowed

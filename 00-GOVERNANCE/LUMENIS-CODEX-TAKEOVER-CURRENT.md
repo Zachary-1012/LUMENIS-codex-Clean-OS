@@ -2142,3 +2142,24 @@ The Product Owner clarified that the cloud being configured is **Codex Cloud
 development tooling**, not deployed LUMENIS hosting or LUMENIS-owned inference.
 Local Codex updates retain the gpt-6.1-sol default/xhigh while preserving the
 active manual Astra selection; no model configuration was changed in this batch.
+
+### 2026-10-01 — real scoped report artifacts and Evaluation
+
+Existing Source Brief is now reachable through a permission-scoped Product Core
+generate/reopen API. The actual product DB contains six report artifacts for
+Guangzhou Taikoo Hui, Shenzhen Luohu MixC, Nike, Le Labo and both GLOBAL domains.
+Evaluation records increased from 0 to 18; artifact integrity and signed-source
+grounding are assessed, while multimodal remains UNKNOWN. This is not business
+impact or human acceptance. Same-job retries are idempotent; distinct reports
+on one day no longer overwrite each other. 113 targeted/regression tests passed
+with normal conftest, explicit disposable DB and the existing media toolchain.
+Details: `evidence/round-07/ROUND-07-SOURCE-BRIEF-JOBS-2026-10-01.md`.
+
+Core 8201 is healthy on loopback and resolves the installed FFmpeg/FFprobe.
+The separate temporary supervisor crash/recovery check passed, then its process
+was stopped: `evidence/round-05/ROUND-05-CORE-RUNTIME-MEDIA-RECOVERY-2026-10-01.md`.
+Product/App hosted dispatches on the same earlier SHA both had zero executed
+steps and explicit account billing/spending annotations, not product-test FAIL:
+`evidence/round-15/ROUND-15-HOSTED-GATE-RECHECK-2026-10-01.md`.
+No rerun is justified until that execution-layer condition changes. Repeated
+real-user acceptance and complete CTH/BMP outcomes remain pending.

@@ -27,6 +27,7 @@ from lumenis.shared.evaluation.recorder import (
     EvaluationRecord,
     judge_status,
     record_evaluation,
+    get_evaluation_record,
     get_evaluation_summary,
     get_evaluation_records,
     init_db,
@@ -182,6 +183,29 @@ class TestEvaluationRecordPersistence:
         assert records[0]["evaluation_id"] == rec.evaluation_id
         assert records[0]["dimension"] == "data"
         assert records[0]["status"] == "pass"
+
+    def test_stable_id_retry_is_idempotent_and_conflicting_evidence_fails(self, temp_db):
+        first = record_evaluation(
+            dimension="report", metric_name="artifact_integrity", metric_value=1.0,
+            pass_threshold=1.0, warn_threshold=0.8, source="daily_reports",
+            evidence_ref="daily_reports:job-a:hash-a", metadata={"job_id": "job-a"},
+            db_path=temp_db, evaluation_id="stable-evaluation-identity",
+        )
+        second = record_evaluation(
+            dimension="report", metric_name="artifact_integrity", metric_value=1.0,
+            pass_threshold=1.0, warn_threshold=0.8, source="daily_reports",
+            evidence_ref="daily_reports:job-a:hash-a", metadata={"job_id": "job-a"},
+            db_path=temp_db, evaluation_id="stable-evaluation-identity",
+        )
+        assert second.evaluated_at == first.evaluated_at
+        assert get_evaluation_record(first.evaluation_id, db_path=temp_db)["status"] == "pass"
+        with pytest.raises(ValueError, match="different evidence"):
+            record_evaluation(
+                dimension="report", metric_name="artifact_integrity", metric_value=0.0,
+                pass_threshold=1.0, warn_threshold=0.8, source="daily_reports",
+                evidence_ref="daily_reports:job-a:tampered", metadata={"job_id": "job-a"},
+                db_path=temp_db, evaluation_id="stable-evaluation-identity",
+            )
 
     def test_record_persistence_multiple(self, temp_db):
         """多条记录持久化。"""

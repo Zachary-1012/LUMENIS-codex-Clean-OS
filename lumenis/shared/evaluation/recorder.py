@@ -187,6 +187,7 @@ def record_evaluation(
     metadata: Optional[Dict[str, Any]] = None,
     db_path: Optional[str] = None,
     evaluated_at: Optional[str] = None,
+    evaluation_id: Optional[str] = None,
 ) -> EvaluationRecord:
     """记录一条评估结果，自动判断状态并持久化。
 
@@ -215,6 +216,7 @@ def record_evaluation(
     """
     status = judge_status(metric_value, pass_threshold, warn_threshold, higher_is_better)
     record = EvaluationRecord(
+        evaluation_id=evaluation_id or str(uuid.uuid4()),
         dimension=dimension,
         metric_name=metric_name,
         metric_value=metric_value,
@@ -229,20 +231,51 @@ def record_evaluation(
 
     conn = _get_connection(db_path)
     try:
-        conn.execute(
-            """INSERT OR REPLACE INTO evaluation_records
-               (evaluation_id, dimension, metric_name, metric_value, threshold,
-                status, evaluated_at, source, evidence_ref, metadata)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (record.evaluation_id, record.dimension, record.metric_name,
-             record.metric_value, record.threshold, record.status,
-             record.evaluated_at, record.source, record.evidence_ref, record.metadata),
-        )
+        existing = None
+        if evaluation_id:
+            existing = conn.execute(
+                "SELECT * FROM evaluation_records WHERE evaluation_id=?", (evaluation_id,)
+            ).fetchone()
+        if existing:
+            current = dict(existing)
+            proposed = record.to_dict()
+            # Caller-supplied stable IDs support retry after a report was saved.
+            # Never replace an existing evaluation with conflicting evidence.
+            fields = ("dimension", "metric_name", "metric_value", "threshold", "status",
+                      "source", "evidence_ref", "metadata")
+            if any(current.get(field) != proposed[field] for field in fields):
+                raise ValueError("evaluation_id already belongs to different evidence")
+            record.evaluated_at = current["evaluated_at"]
+        else:
+            conn.execute(
+                """INSERT INTO evaluation_records
+                   (evaluation_id, dimension, metric_name, metric_value, threshold,
+                    status, evaluated_at, source, evidence_ref, metadata)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (record.evaluation_id, record.dimension, record.metric_name,
+                 record.metric_value, record.threshold, record.status,
+                 record.evaluated_at, record.source, record.evidence_ref, record.metadata),
+            )
         conn.commit()
     finally:
         conn.close()
 
     return record
+
+
+def get_evaluation_record(evaluation_id: str, db_path: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Read one persisted evaluation by its stable owner-assigned identity."""
+    if not isinstance(evaluation_id, str) or not evaluation_id.strip():
+        raise ValueError("evaluation_id is required")
+    conn = _get_connection(db_path)
+    try:
+        row = conn.execute(
+            "SELECT * FROM evaluation_records WHERE evaluation_id=?",
+            (evaluation_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+    return dict(row) if row else None
 
 
 def record_evaluation_raw(record: EvaluationRecord, db_path: Optional[str] = None) -> EvaluationRecord:
