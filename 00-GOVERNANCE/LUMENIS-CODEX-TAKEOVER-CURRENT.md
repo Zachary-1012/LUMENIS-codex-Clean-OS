@@ -2163,3 +2163,30 @@ steps and explicit account billing/spending annotations, not product-test FAIL:
 `evidence/round-15/ROUND-15-HOSTED-GATE-RECHECK-2026-10-01.md`.
 No rerun is justified until that execution-layer condition changes. Repeated
 real-user acceptance and complete CTH/BMP outcomes remain pending.
+
+### 2026-10-01 — real image-to-report binding and honest quality feedback
+
+The existing Content Source owner now imports/reopens real static images without
+inventing video duration. Source Brief jobs can analyze an approved image via the
+existing local-only AI Gateway, persist signed derivative Evidence and reopen
+the exact scoped result. Failed media attempts can produce linked retries;
+same-ID resume never repeats inference or overwrites prior observations.
+TaskEngine now uses the canonical Gateway and preserves noncompletion states.
+
+An actual official Nike image passed import, local Qwen3.5 inference, signed
+Evidence 424/425, report persistence/reopen and structural Evaluation. The final
+attempt correctly read three product labels but made an unsupported positioning
+inference. A separate engineering Evaluation records business usefulness as
+UNKNOWN. The actual Evaluation table has 34 records; source data remains
+270 Raw / 270 Canonical, integrity=ok and FK=0. No model-text-only or product
+quality PASS is claimed. CPU inference took 80–102 seconds; human experience,
+business outcomes and repeated Product Owner acceptance remain pending.
+
+160 isolated tests passed after removing accidental live-model calls from two
+unit fixtures; 43 affected tests passed again after the final media/schema
+changes. Current AST, Constitution and Experience contract checks passed.
+Details: `evidence/round-07/ROUND-07-REPORT-MEDIA-BINDING-2026-10-01.md`.
+The independent frontend remains paused by its Product Owner; only its API
+contract is synchronized. Hosted CI retains its recorded execution-layer
+blocker. Codex Cloud configuration is not LUMENIS deployment or proof of
+independent hosted inference. RELEASED/OPERATING/COMMERCIAL_READY remain NO.

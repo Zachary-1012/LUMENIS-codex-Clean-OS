@@ -983,7 +983,7 @@ def _content_project_error(exc):
     return jsonify({"ok": False, "code": code, "publish_status": "not_performed"}), status
 
 
-def _source_brief_context(action):
+def _source_brief_context(action, *, include_actor=False):
     """Bind reporting to the same server principal, registry and scope as work."""
     from lumenis.shared.database import get_repository
     from subject_registry import TABLE_NAME
@@ -1006,11 +1006,12 @@ def _source_brief_context(action):
             raise ValueError("CONTENT_SCOPE_NOT_FOUND")
         label = row[0] or row[1]
     actor_ref = decision.principal_ref or f"actor:{decision.actor_id}"
-    return actor_ref, decision.audit_id, {
+    result = actor_ref, decision.audit_id, {
         "product_id": "CTH" if scope["domain_id"] == "cth" else "ZBMP",
         "global_scope": scope["global_scope"], "entity_label": label,
         "subject_id": scope["subject_id"], "brand_focus_id": scope["brand_focus_id"],
     }
+    return (*result, actor) if include_actor else result
 
 
 def _source_brief_job_error(exc):
@@ -1037,17 +1038,32 @@ def generate_source_brief_job():
 
     try:
         body = request.get_json(silent=True)
-        if not isinstance(body, dict) or set(body) - {"limit", "resume_job_id"}:
+        if not isinstance(body, dict) or set(body) - {"limit", "resume_job_id", "image_source_ref", "retry_media_job_id"}:
             raise ValueError("SOURCE_BRIEF_INPUT_INVALID")
         limit = body.get("limit", 30)
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("SOURCE_BRIEF_LIMIT_INVALID")
-        actor_ref, audit_ref, scope = _source_brief_context("write")
+        image_ref = body.get("image_source_ref")
+        if "image_source_ref" in body and (
+            not isinstance(image_ref, str) or not re.fullmatch(r"ART-[0-9a-f]{16}", image_ref)
+            or "resume_job_id" in body
+        ):
+            raise ValueError("SOURCE_BRIEF_IMAGE_INPUT_INVALID")
+        if "retry_media_job_id" in body and ("resume_job_id" in body or "image_source_ref" in body):
+            raise ValueError("SOURCE_BRIEF_RETRY_INPUT_INVALID")
+        actor_ref, audit_ref, scope, actor = _source_brief_context("write", include_actor=True)
         allowed = get_permission_gate().check(
             OperationType.REPORT_GENERATE, resource=request.path, caller=actor_ref,
         )
         if not allowed.allowed:
             raise PermissionError("SOURCE_BRIEF_GENERATE_DENIED")
+        retry_of = body.get("retry_media_job_id")
+        if "retry_media_job_id" in body:
+            previous = get_source_brief_job(retry_of, actor_id=actor_ref, expected_scope=_scope_material(**scope))
+            image_ref = previous.get("requested_image_source_ref")
+            if (previous["multimodal"].get("state") not in {"unavailable", "error"}
+                    or not isinstance(image_ref, str) or not re.fullmatch(r"ART-[0-9a-f]{16}", image_ref)):
+                raise ValueError("SOURCE_BRIEF_MEDIA_NOT_RETRYABLE")
         job_id = body.get("resume_job_id")
         if job_id is not None:
             # A client can retry an existing server-issued job, never choose a new ID.
@@ -1059,6 +1075,8 @@ def generate_source_brief_job():
             result = create_source_brief_job(
                 con, **scope, actor_id=actor_ref, permission_audit_ref=audit_ref,
                 trace_id="source-brief:" + job_id, job_id=job_id, limit=limit,
+                image_source_ref=image_ref, image_actor=actor,
+                retry_of_job_id=retry_of,
             )
         finally:
             con.close()

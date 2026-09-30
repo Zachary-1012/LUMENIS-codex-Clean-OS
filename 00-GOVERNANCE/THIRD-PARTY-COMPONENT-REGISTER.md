@@ -63,6 +63,20 @@ The table records direct manifest entries, not every transitive dependency.
 
 The current `requirements.txt` mentions, but does not require-install: `openai`, `ollama`, `docx2pdf`, `pypdf`, and Windows-specific `win32-setctime`. Presence at runtime must be checked before treating any of them as active dependencies.
 
+## 2A. Existing local multimodal runtime (2026-10-01)
+
+| Component | Observed runtime | Boundary / decision | License and distribution obligations |
+| --- | --- | --- | --- |
+| [Ollama](https://github.com/ollama/ollama) | Local service reports 0.34.2 | ADAPT existing SYSTEM AI Gateway; loopback-only image requests, no proxy/redirect; not a second AI owner | [MIT](https://github.com/ollama/ollama/blob/main/LICENSE), retain copyright/license when distributed; recheck shipped binary notices |
+| [Qwen3.5-4B](https://huggingface.co/Qwen/Qwen3.5-4B) | Already installed `qwen3.5:4b`; digest `2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd` | ADAPT optional replaceable vision provider; image observations are derivative, human review pending | Model card declares Apache-2.0; preserve upstream attribution/license/notices on redistribution; quantization packaging must be reconciled before a distributed release |
+
+Sources accessed 2026-10-01. [Ollama vision API](https://docs.ollama.com/capabilities/vision)
+supports base64 images. This batch uses existing installed binaries/weights and
+adds no model download or new package requirement. Upstream weights remain
+third-party work; LUMENIS owns its adapters and business orchestration, not the
+underlying foundation model. Local inference is not proof of operation after
+the developer computer is powered off.
+
 ## 3. Python development/test dependencies observed in `requirements-dev.txt`
 
 `requirements-dev.txt` layers on top of `requirements.txt`; entries here are not production-runtime requirements merely because CI installs them.

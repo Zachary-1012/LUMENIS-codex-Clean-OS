@@ -13,7 +13,7 @@
   5. 验证（Verification）：每个结果必须验证做了什么/为什么/调用了什么/结果/证据/是否成功
   6. 调用链追踪（Trace）：完整记录到 ai_task_trace 表
   7. OSAI 边界：ZBC 不依赖 OSAI Runtime，OSAI DOWN 时核心功能正常
-  8. AI Provider 降级链：智谱 → ARK → 千问 → Ollama → 本地规则（通过 ai_channel，失败则降级）
+  8. AI Provider 路由：复用 SYSTEM AI Gateway，失败时保留明确降级状态
 
 数据库迁移（向后兼容）：
   - ai_task：任务主表
@@ -46,6 +46,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from lumenis.shared.database import get_repository, main_db_path
 
 logger = logging.getLogger(__name__)
+_AI_CALL_TIMEOUT_SECONDS = 15.0
 # ZBC Lifecycle Contract V1.0 (bypass-mode, never breaks main chain)
 try:
     from lifecycle_mixin import LifecycleMixin as _LifecycleMixin
@@ -1021,7 +1022,7 @@ class TaskEngine:
         """根据 Agent 类型分发执行。
 
         所有执行均为只读/分析，不修改生产数据。
-        AI 调用通过 ai_channel（如可用），失败则降级到本地规则。
+        AI 调用通过唯一 SYSTEM AI Gateway；失败时保留显式状态。
         """
         user_input = task.get("user_input", "")
         parameters = task.get("parameters", {})
@@ -1042,7 +1043,7 @@ class TaskEngine:
         if agent_id == "browser_agent":
             return self._execute_browser(task, intent)
 
-        # ── 默认：AI 辅助回答（通过 ai_channel，带降级） ──
+        # ── 默认：AI 辅助回答（通过 SYSTEM AI Gateway） ──
         return self._execute_ai_assist(task, intent)
 
     def _execute_data_query(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
@@ -1069,8 +1070,14 @@ class TaskEngine:
 
         # AI 辅助总结（可选，带降级）
         ai_summary = self._try_ai_summarize(task.get("user_input", ""), result)
-        if ai_summary:
+        if ai_summary and ai_summary.get("status") == "completed":
             result["ai_summary"] = ai_summary
+        else:
+            result["ai_summary"] = None
+        result["ai_summary_status"] = (ai_summary or {}).get("status", "unavailable")
+        result["ai_summary_provider"] = (ai_summary or {}).get("provider", "unknown")
+        if (ai_summary or {}).get("error"):
+            result["ai_summary_error"] = ai_summary["error"]
 
         return result
 
@@ -1084,13 +1091,19 @@ class TaskEngine:
 
         # AI 辅助分析（带降级）
         ai_analysis = self._try_ai_analyze(task.get("user_input", ""))
-        if ai_analysis:
+        if ai_analysis and ai_analysis.get("status") == "completed":
             result["ai_analysis"] = ai_analysis
             result["analysis_provider"] = ai_analysis.get("provider", "unknown")
         else:
             result["ai_analysis"] = None
-            result["analysis_provider"] = "local_rules (AI unavailable, degraded)"
-            result["degradation_note"] = "AI provider unavailable, using local rule-based analysis"
+            result["analysis_provider"] = (ai_analysis or {}).get("provider", "unknown")
+            result["degradation_note"] = (
+                "AI Gateway did not return a completed model response; "
+                "the analysis remains rule-based."
+            )
+        result["ai_analysis_status"] = (ai_analysis or {}).get("status", "unavailable")
+        if (ai_analysis or {}).get("error"):
+            result["ai_analysis_error"] = ai_analysis["error"]
 
         return result
 
@@ -1120,27 +1133,35 @@ class TaskEngine:
         }
 
     def _execute_ai_assist(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
-        """默认 AI 辅助（带 Provider 降级链）。"""
+        """默认 AI 辅助（记录 Gateway 的 provider 和状态）。"""
         ai_result = self._try_ai_analyze(task.get("user_input", ""))
-        if ai_result:
-            return {"ai_response": ai_result, "provider": ai_result.get("provider", "unknown")}
-        return {
+        if ai_result and ai_result.get("status") == "completed":
+            return {
+                "ai_response": ai_result,
+                "provider": ai_result.get("provider", "unknown"),
+                "ai_status": ai_result["status"],
+            }
+        result = {
             "ai_response": None,
-            "provider": "none",
-            "degradation": "All AI providers unavailable, local rules only",
-            "note": "System continues to function without AI (AI is enhancement layer only)",
+            "provider": (ai_result or {}).get("provider", "unknown"),
+            "ai_status": (ai_result or {}).get("status", "unavailable"),
+            "degradation": "AI Gateway did not return a completed model response.",
+            "note": "Task continued without an AI response.",
         }
+        if (ai_result or {}).get("error"):
+            result["ai_error"] = ai_result["error"]
+        return result
 
     # ──────────────────────────────────────────────────────────
-    # AI Provider 降级链（智谱 → ARK → 千问 → Ollama → 本地规则）
+    # Canonical AI Gateway bridge
     # ──────────────────────────────────────────────────────────
 
-    def _try_ai_summarize(self, text: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """尝试 AI 总结，失败返回 None（降级）。"""
+    def _try_ai_summarize(self, text: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """尝试 AI 总结，并返回含 provider/status 的结构化结果。"""
         return self._call_ai_with_fallback("summarize", text, data)
 
-    def _try_ai_analyze(self, text: str) -> Optional[Dict[str, Any]]:
-        """尝试 AI 分析，失败返回 None（降级）。"""
+    def _try_ai_analyze(self, text: str) -> Dict[str, Any]:
+        """尝试 AI 分析，并返回含 provider/status 的结构化结果。"""
         return self._call_ai_with_fallback("analyze", text, {})
 
     def _call_ai_with_fallback(
@@ -1148,44 +1169,103 @@ class TaskEngine:
         operation: str,
         text: str,
         data: Dict[str, Any],
-    ) -> Optional[Dict[str, Any]]:
-        """通过 ai_channel 调用 AI，带 Provider 降级和超时保护。
+    ) -> Dict[str, Any]:
+        """Call the canonical Gateway and preserve its outcome for the task.
 
-        降级链：智谱 → ARK → 千问 → Ollama → 本地规则（返回 None）
-        任何异常/超时都不中断主任务（AI 是增强层）。
-        超时保护：15秒，避免 AI Provider 挂起阻塞主链路。
+        Provider selection, local/cloud policy, budget checks, and fallback are
+        owned by ``core.chat``. A rule fallback is recorded as ``rule`` and is
+        never presented as a completed model response.
         """
         result_holder: Dict[str, Any] = {}
 
-        def _ai_worker():
+        def _ai_worker() -> None:
             try:
-                from lumenis.system.ai_gateway import channel as ai_channel
-                if hasattr(ai_channel, "call_ai_with_fallback"):
-                    r = ai_channel.call_ai_with_fallback(
-                        prompt=text, operation=operation, context=data,
-                    )
-                    if r:
-                        result_holder["result"] = r if isinstance(r, dict) else {"response": str(r)}
-                        return
-                elif hasattr(ai_channel, "AIChannel"):
-                    ch = ai_channel.AIChannel()
-                    if hasattr(ch, "chat"):
-                        resp = ch.chat(text)
-                        if resp:
-                            result_holder["result"] = {"response": str(resp), "provider": "ai_channel"}
-                            return
-            except Exception as _e:
-                logger.debug(f"[TaskEngine] AI worker error: {_e}")
-                result_holder["error"] = str(_e)
+                from lumenis.system.ai_gateway import core as ai_gateway
 
-        import threading as _threading
-        worker = _threading.Thread(target=_ai_worker, daemon=True)
+                route_status = ai_gateway.ai_status()
+                requested_provider = os.environ.get("AI_PROVIDER", "auto").lower()
+                allow_cloud = os.environ.get("ALLOW_CLOUD_AI", "").lower() in (
+                    "1", "true", "yes", "on", "y",
+                )
+                local_providers = {"ollama", "lmstudio", "llama_cpp"}
+                auto_local_only = requested_provider in ("", "auto") and not allow_cloud
+                unavailable_explicit_local = requested_provider in local_providers
+                if not route_status.get("enabled") and (
+                    auto_local_only or unavailable_explicit_local
+                ):
+                    result_holder["result"] = {
+                        "status": "rule",
+                        "provider": "rule",
+                        "response": None,
+                        "model": route_status.get("model") or "deterministic_rule",
+                    }
+                    return
+
+                user_parts = [f"Operation: {operation}", f"Input:\n{text or ''}"]
+                if data:
+                    user_parts.append(
+                        "Context JSON:\n" + json.dumps(data, ensure_ascii=False, default=str)
+                    )
+                response, provider, metadata = ai_gateway.chat(
+                    "You are the LUMENIS task assistant. Complete the requested operation "
+                    "using only the supplied input and context. State uncertainty clearly.",
+                    "\n\n".join(user_parts),
+                    level="medium",
+                    use_cache=False,
+                    track=True,
+                    capability="daily",
+                )
+                metadata = metadata if isinstance(metadata, dict) else {}
+                provider = str(provider or "unknown")
+                content = response.strip() if isinstance(response, str) else ""
+                if provider in ("rule", "local_rule", "local_rules"):
+                    status = "rule"
+                elif provider == "budget_blocked":
+                    status = "budget_blocked"
+                elif provider == "error":
+                    status = "error"
+                elif not content:
+                    status = "empty"
+                elif provider == "unknown":
+                    status = "error"
+                else:
+                    status = "completed"
+                result_holder["result"] = {
+                    "status": status,
+                    "provider": provider,
+                    "response": content or None,
+                    "model": metadata.get("model"),
+                }
+            except Exception as exc:
+                # Store only the exception type: provider exceptions can include
+                # URLs or credential material and must not enter task evidence.
+                result_holder["result"] = {
+                    "status": "error",
+                    "provider": "unknown",
+                    "response": None,
+                    "model": None,
+                    "error": type(exc).__name__,
+                }
+
+        worker = threading.Thread(target=_ai_worker, daemon=True)
         worker.start()
-        worker.join(timeout=15)  # 15秒超时保护
+        worker.join(timeout=_AI_CALL_TIMEOUT_SECONDS)
         if worker.is_alive():
-            logger.warning("[TaskEngine] AI call timed out after 15s, degrading to local rules")
-            return None
-        return result_holder.get("result")
+            logger.warning("[TaskEngine] canonical AI Gateway call timed out")
+            return {
+                "status": "timeout",
+                "provider": "unknown",
+                "response": None,
+                "model": None,
+                "error": "Gateway timeout",
+            }
+        return result_holder.get("result", {
+            "status": "error",
+            "provider": "unknown",
+            "response": None,
+            "model": None,
+            "error": "Gateway returned no result",
+        })
 
     # ──────────────────────────────────────────────────────────
     # 6. 验证（Verification）

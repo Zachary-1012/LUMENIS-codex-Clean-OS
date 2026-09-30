@@ -31,6 +31,33 @@ from ai_task_engine import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _hermetic_ai_gateway(monkeypatch):
+    """Prevent workstation provider settings from starting real inference."""
+    from lumenis.system.ai_gateway import core as ai_gateway
+
+    monkeypatch.setattr(
+        ai_gateway,
+        "ai_status",
+        lambda: {
+            "enabled": False,
+            "provider": "local_rule",
+            "model": "deterministic_rule",
+            "runtime": "rule",
+            "running": False,
+        },
+    )
+    monkeypatch.setattr(
+        ai_gateway,
+        "chat",
+        lambda *args, **kwargs: (
+            None,
+            "rule",
+            {"provider": "rule", "model": "deterministic_rule"},
+        ),
+    )
+
+
 # ═══════════════════════════════════════════════════════════════
 # Fixtures
 # ═══════════════════════════════════════════════════════════════

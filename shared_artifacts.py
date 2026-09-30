@@ -28,6 +28,7 @@ import threading
 import uuid
 import zipfile
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional
@@ -556,6 +557,13 @@ def _safe_content_source_filename(filename: Any) -> str:
 
 
 def _source_asset_metadata_is_valid(asset: Any, media_filename: str) -> bool:
+    if isinstance(asset, dict) and asset.get("media_kind") == "image":
+        try:
+            return asset == _ImageSourceAsset(
+                media_filename, asset["sha256"], asset["width"], asset["height"],
+            ).to_dict()
+        except (KeyError, ValueError, TypeError):
+            return False
     expected_fields = {
         "asset_id", "filename", "sha256", "duration_sec", "media_kind", "has_video",
         "audio_stream_count", "evidence_refs", "rights_status",
@@ -588,6 +596,59 @@ def _source_asset_metadata_is_valid(asset: Any, media_filename: str) -> bool:
         and asset.get("evidence_refs") == []
         and asset.get("rights_status") == "unknown"
     )
+
+
+@dataclass(frozen=True)
+class _ImageSourceAsset:
+    filename: str
+    sha256: str
+    width: int
+    height: int
+    rights_status = "unknown"
+    evidence_refs = ()
+
+    def to_dict(self):
+        if (Path(self.filename).suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp"}
+                or not re.fullmatch(r"[0-9a-f]{64}", str(self.sha256))
+                or type(self.width) is not int or type(self.height) is not int
+                or min(self.width, self.height) < 1 or self.width * self.height > 40_000_000):
+            raise LocalArtifactError("CONTENT_IMAGE_METADATA_INVALID")
+        return {"asset_id": "MEDIA-" + self.sha256[:16], "filename": self.filename,
+                "sha256": self.sha256, "duration_sec": None, "media_kind": "image",
+                "has_video": False, "audio_stream_count": 0, "width": self.width,
+                "height": self.height, "evidence_refs": [], "rights_status": "unknown"}
+
+
+def _fingerprint_content_source(path):
+    """Static images have no duration; never invent a video duration for them."""
+    from lumenis.shared.content_creation.video_editing import fingerprint_local_media, _ffprobe_path
+
+    if path.suffix.lower() not in _IMAGE_EXTENSIONS:
+        return fingerprint_local_media(str(path))
+    ffprobe = _ffprobe_path()
+    if not ffprobe:
+        raise LocalArtifactError("CONTENT_IMAGE_PROBE_UNAVAILABLE")
+    before = path.stat()
+    digest = _hash_file(path)
+    try:
+        output = subprocess.run(
+            [ffprobe, "-v", "error", "-protocol_whitelist", "file",
+             "-format_whitelist", "image2,jpeg_pipe,png_pipe,webp_pipe",
+             "-show_entries", "stream=codec_name,width,height", "-of", "json", "-i", str(path)],
+            check=True, capture_output=True, text=True, timeout=15, shell=False,
+        )
+        streams = json.loads(output.stdout).get("streams", [])
+        expected = {".jpg": "mjpeg", ".jpeg": "mjpeg", ".png": "png", ".webp": "webp"}
+        if len(streams) != 1 or streams[0].get("codec_name") != expected.get(path.suffix.lower()):
+            raise ValueError("unsupported image stream")
+        result = _ImageSourceAsset(path.name, digest, streams[0]["width"], streams[0]["height"])
+        result.to_dict()
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError) as exc:
+        raise LocalArtifactError("CONTENT_IMAGE_PROBE_FAILED") from exc
+    after = path.stat()
+    if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+        raise LocalArtifactError("CONTENT_SOURCE_CHANGED_DURING_IMPORT")
+    return result
 
 
 def _verified_content_source(
@@ -767,9 +828,7 @@ def stage_content_source_artifact(
     )
     if not permission.allowed:
         raise LocalArtifactError("CONTENT_SOURCE_APPROVAL_REQUIRED")
-    from lumenis.shared.content_creation.video_editing import fingerprint_local_media
-
-    asset = fingerprint_local_media(str(path))
+    asset = _fingerprint_content_source(path)
     if asset.sha256 != observed_sha256:
         raise LocalArtifactError("CONTENT_SOURCE_CHANGED_DURING_IMPORT")
     if asset.filename != safe_filename or asset.rights_status != "unknown" or asset.evidence_refs:
@@ -906,7 +965,6 @@ def resolve_content_source_assets(
         brand_focus_id=brand_focus_id,
         global_scope=global_scope,
     )
-    from lumenis.shared.content_creation.video_editing import fingerprint_local_media
 
     resolved: List[Dict[str, Any]] = []
     with tempfile.TemporaryDirectory(prefix="content-source-open-", dir=str(artifact_root())) as work_dir:
@@ -933,7 +991,7 @@ def resolve_content_source_assets(
                             target.write(chunk)
                 if copied != entry["record"]["media_size_bytes"] or digest.hexdigest() != metadata["asset"]["sha256"]:
                     raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
-                fresh_asset = fingerprint_local_media(str(destination))
+                fresh_asset = _fingerprint_content_source(destination)
                 if fresh_asset.to_dict() != metadata["asset"]:
                     raise LocalArtifactError("CONTENT_SOURCE_FINGERPRINT_MISMATCH")
             except LocalArtifactError:

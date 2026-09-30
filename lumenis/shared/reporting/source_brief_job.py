@@ -79,13 +79,21 @@ def _validate_actor_refs(actor_id: str, permission_audit_ref: str, trace_id: str
         raise ValueError("SOURCE_BRIEF_SERVER_JOB_ID_INVALID")
 
 
-def _multimodal_snapshot(result: dict[str, Any] | None) -> dict[str, Any]:
-    """Keep the job honest until a real media read/analyzer owner is bound.
+def _media_scope(scope: dict[str, Any]) -> dict[str, Any]:
+    return {"domain_id": scope["domain_id"], "global_scope": scope["global"],
+            "subject_id": scope["subject_id"], "brand_focus_id": scope["brand_focus_id"]}
 
-    An assessment dictionary is not execution truth; this Reporting adapter has
-    no analyzer-owned execution record to verify, so it never promotes one.
-    """
-    del result
+
+def _multimodal_snapshot(result, *, job_id, actor_id, scope):
+    """Only the signed analyzer execution can establish a completed derivative."""
+    if isinstance(result, dict) and result.get("evidence_ref"):
+        from .media_brief import read_verified_report_media
+        return read_verified_report_media(
+            result["evidence_ref"], job_id=job_id, actor_ref=actor_id, scope=_media_scope(scope),
+        )
+    if isinstance(result, dict) and result.get("state") in {"unavailable", "error"}:
+        return {"state": result["state"], "reason": result.get("reason", "MEDIA_UNAVAILABLE"),
+                "real_input_bound": False, "review_status": "HUMAN_PENDING"}
     return {
         "state": "unavailable", "reason": "MULTIMODAL_ANALYZER_OWNER_NOT_BOUND",
         "real_input_bound": False,
@@ -153,6 +161,10 @@ def _verify_report(row: dict[str, Any], *, job_id: str, actor_id: str,
                 or not record.get("evidence_id") or not record.get("scope_evidence_ref")
                 or record["evidence_id"] != record["scope_evidence_ref"]):
             raise RuntimeError("SOURCE_BRIEF_STORED_EVIDENCE_INVALID")
+    multimodal = snapshot.get("multimodal")
+    if isinstance(multimodal, dict) and multimodal.get("state") == "complete":
+        if _multimodal_snapshot(multimodal, job_id=job_id, actor_id=actor_id, scope=scope) != multimodal:
+            raise RuntimeError("SOURCE_BRIEF_MEDIA_EVIDENCE_MISMATCH")
     return {"row": row, "snapshot": snapshot, "source_brief": brief}
 
 
@@ -208,6 +220,8 @@ def _response(verified: dict[str, Any], evaluations: list[dict[str, Any]]) -> di
         },
         "source_brief": brief, "multimodal": snapshot["multimodal"],
         "evaluation": {"state": "recorded", "records": evaluations},
+        "requested_image_source_ref": snapshot.get("requested_image_source_ref"),
+        "retry_of_job_id": snapshot.get("retry_of_job_id"),
         "review_status": "HUMAN_PENDING",
     }
 
@@ -217,6 +231,8 @@ def create_source_brief_job(
     permission_audit_ref: str, trace_id: str, job_id: str,
     subject_id: str | None = None, brand_focus_id: str | None = None,
     limit: int = 30, multimodal_result: dict[str, Any] | None = None,
+    image_source_ref: str | None = None, image_actor: Any = None,
+    retry_of_job_id: str | None = None,
 ) -> dict[str, Any]:
     """Create or recover a server-authorized scoped Source Brief report job.
 
@@ -257,7 +273,19 @@ def create_source_brief_job(
     if brief["content_hash"] != hashlib.sha256(brief["markdown"].encode("utf-8")).hexdigest():
         raise RuntimeError("SOURCE_BRIEF_CANONICAL_CONTENT_HASH_MISMATCH")
 
-    multimodal = _multimodal_snapshot(multimodal_result)
+    if image_source_ref is not None:
+        from .media_brief import analyze_report_media
+        multimodal_result = analyze_report_media(
+            image_source_ref, actor=image_actor, scope=_media_scope(scope), job_id=job_id,
+            brief_context={"scope": scope, "markdown": _json({
+                "entity": scope["entity_label"], "verified_source_count": count,
+                "coverage": brief.get("coverage", "UNKNOWN"),
+                "sample_titles": [str(record.get("title") or "")[:100] for record in records[:3]],
+            })},
+        )
+    multimodal = _multimodal_snapshot(
+        multimodal_result, job_id=job_id, actor_id=actor_id, scope=scope,
+    )
     # daily_reports is unique on (report_type, report_date), so identity must
     # include this job as well as its scope; otherwise same-scope jobs today
     # would overwrite one another through the legacy report writer.
@@ -279,6 +307,7 @@ def create_source_brief_job(
             "content_hash": brief["content_hash"],
         },
         "multimodal": multimodal, "evaluation_ids": evaluation_ids,
+        "requested_image_source_ref": image_source_ref, "retry_of_job_id": retry_of_job_id,
         "review_status": "HUMAN_PENDING",
     }
     source_snapshot = _json(snapshot_data)

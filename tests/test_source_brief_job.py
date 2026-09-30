@@ -171,3 +171,14 @@ def test_report_tampering_is_rejected_on_reopen(job_db):
         conn.commit()
     with pytest.raises(RuntimeError, match="ARTIFACT_HASH_MISMATCH"):
         jobs.get_source_brief_job(result["job_id"], actor_id="workspace:local")
+
+
+def test_unverified_media_failure_cannot_assert_bound_input(job_db):
+    with sqlite3.connect(job_db) as conn:
+        conn.row_factory = sqlite3.Row
+        result = _request(conn, multimodal_result={
+            "state": "error", "reason": "MODEL_UNAVAILABLE",
+            "real_input_bound": True, "input_content_sha256": "a" * 64,
+        })
+    assert result['multimodal']['real_input_bound'] is False
+    assert 'input_content_sha256' not in result['multimodal']

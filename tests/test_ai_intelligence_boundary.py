@@ -24,6 +24,33 @@ from ai_task_engine import (
 from ai_task_parser import get_task_parser, reset_task_parser
 
 
+@pytest.fixture(autouse=True)
+def _hermetic_ai_gateway(monkeypatch):
+    """Keep task-engine tests on an explicit local-rule Gateway outcome."""
+    from lumenis.system.ai_gateway import core as ai_gateway
+
+    monkeypatch.setattr(
+        ai_gateway,
+        "ai_status",
+        lambda: {
+            "enabled": False,
+            "provider": "local_rule",
+            "model": "deterministic_rule",
+            "runtime": "rule",
+            "running": False,
+        },
+    )
+    monkeypatch.setattr(
+        ai_gateway,
+        "chat",
+        lambda *args, **kwargs: (
+            None,
+            "rule",
+            {"provider": "rule", "model": "deterministic_rule"},
+        ),
+    )
+
+
 @pytest.fixture
 def engine():
     reset_task_engine()

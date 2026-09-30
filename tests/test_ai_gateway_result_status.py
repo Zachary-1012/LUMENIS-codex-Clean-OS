@@ -20,6 +20,8 @@ def _mock_only_gateway(monkeypatch):
     ):
         monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("ZHIPU_API_KEY", "test-only-placeholder-never-sent")
+    # These cases validate the mocked cloud transport, which requires explicit opt-in.
+    monkeypatch.setenv("ALLOW_CLOUD_AI", "true")
     monkeypatch.setenv("ZHIPU_BASE_URL", "https://mock.invalid/v1")
     monkeypatch.setattr(core, "_provider_config", lambda: None)
     monkeypatch.setattr(core, "_detect_local", lambda: None)

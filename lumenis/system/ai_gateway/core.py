@@ -30,6 +30,7 @@ def _get_call_meta():
 否则自动退回可审计的本地规则智能引擎。外部 API Key 永远不是必需项。
 """
 import json, os, re, urllib.request, urllib.error, time, shutil, platform
+from urllib.parse import urlsplit
 from lumenis.system.ai_gateway import channel as ai_channel  # [StableChannel] 云端多层稳固通道（熔断+重试+心跳保活）
 
 # ZBC Phase 7: module status markers
@@ -362,6 +363,12 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
             _set_call_meta(provider='rule', model='deterministic_rule', prompt_tokens=0, completion_tokens=0, total_tokens=0)
             return None, 'rule'
 
+    requested = _env('AI_PROVIDER', 'auto').lower()
+    cloud_allowed = _env('ALLOW_CLOUD_AI', '').lower() in ('1', 'true', 'yes', 'on', 'y')
+    if requested in ('ollama', 'lmstudio', 'llama_cpp') or (requested == 'auto' and not cloud_allowed):
+        _set_call_meta(provider='rule', model='deterministic_rule', prompt_tokens=0, completion_tokens=0, total_tokens=0)
+        return None, 'rule'
+
     # 云端：多 Provider 故障转移（智谱 L1 → ark L2 → qwen L3 → Ollama L5 → rule L6）
     system_r, user_r = redact_for_cloud(system), redact_for_cloud(user)
     # V1.0: 构建 cloud fallback 链（zhipu L1 → ark L2 → qwen L3）
@@ -479,21 +486,123 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
     _set_call_meta(provider='rule', model='deterministic_rule', prompt_tokens=0, completion_tokens=0, total_tokens=0)
     return None, 'rule'
 
-def vision_chat(system, user_text, image_base64, model=None, temperature=0.2, max_tokens=2000, level='medium'):
-    """视觉模型对话（glm-4.6v），支持图片输入。
+class _LocalOnlyRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Do not let a loopback Ollama endpoint redirect image data elsewhere."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _ollama_vision_json(base, path, payload, timeout):
+    req = urllib.request.Request(
+        base + path,
+        data=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+        headers={'Content-Type': 'application/json'},
+        method='POST',
+    )
+    opener = urllib.request.build_opener(
+        urllib.request.ProxyHandler({}), _LocalOnlyRedirectHandler(),
+    )
+    with opener.open(req, timeout=timeout) as resp:
+        final = urlsplit(resp.geturl())
+        if (final.scheme, final.hostname, final.port) != (
+                'http', urlsplit(base).hostname, urlsplit(base).port):
+            raise ValueError('Ollama response escaped loopback')
+        data = json.loads(resp.read().decode('utf-8', 'replace'))
+    if not isinstance(data, dict):
+        raise ValueError('Ollama response is invalid')
+    return data
+
+
+def _ollama_vision_chat(system, user_text, image_base64, model, temperature, max_tokens, response_schema=None):
+    base = _env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434').rstrip('/')
+    try:
+        parsed = urlsplit(base)
+        if (parsed.scheme != 'http' or parsed.hostname not in ('127.0.0.1', 'localhost', '::1')
+                or parsed.username or parsed.password or parsed.path not in ('', '/') or parsed.query or parsed.fragment):
+            return None, 'ollama_unavailable'
+        model = str(model or _env('OLLAMA_VISION_MODEL', 'qwen3.5:4b')).strip()
+        timeout = max(1, min(120, int(_env('OLLAMA_TIMEOUT_SECONDS', '120'))))
+        token_limit = max(1, min(2048, int(max_tokens)))
+    except (TypeError, ValueError):
+        return None, 'ollama_unavailable'
+    if not model:
+        return None, 'ollama_unavailable'
+    _set_call_meta(provider='ollama', model=model)
+    try:
+        shown = _ollama_vision_json(base, '/api/show', {'model': model}, timeout)
+        capabilities = shown.get('capabilities')
+        if not isinstance(capabilities, list) or not any(str(item).lower() == 'vision' for item in capabilities):
+            return None, 'ollama_vision_unsupported'
+        messages = []
+        if system:
+            messages.append({'role': 'system', 'content': str(system)})
+        user_message = {'role': 'user', 'content': str(user_text or '')}
+        if image_base64:
+            user_message['images'] = [image_base64]
+        messages.append(user_message)
+        payload = {
+            'model': model,
+            'messages': messages,
+            'stream': False,
+            'think': False,
+            'options': {'temperature': temperature, 'num_predict': token_limit, 'num_ctx': 8192},
+        }
+        if response_schema is not None:
+            payload['format'] = response_schema
+        data = _ollama_vision_json(base, '/api/chat', payload, timeout)
+        if data.get('done') is not True or str(data.get('done_reason') or '').lower() not in ('', 'stop'):
+            return None, 'ollama_incomplete'
+        message = data.get('message')
+        content = str(message.get('content') or '').strip() if isinstance(message, dict) else ''
+        if not content:
+            return None, 'ollama_empty'
+        try:
+            prompt_tokens = int(data.get('prompt_eval_count', 0) or 0)
+            completion_tokens = int(data.get('eval_count', 0) or 0)
+        except (TypeError, ValueError):
+            prompt_tokens = completion_tokens = 0
+        _set_call_meta(
+            provider='ollama', model=model,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=prompt_tokens + completion_tokens,
+        )
+        return content, 'ollama'
+    except Exception:
+        return None, 'ollama_error'
+
+
+def vision_chat(system, user_text, image_base64, model=None, temperature=0.2, max_tokens=2000, level='medium', *, local_only=False, response_schema=None):
+    """视觉模型对话，默认本地优先；local_only 禁止任何非回环模型请求。
     分级：level 决定超时（low 60s / medium 90s / high 120s / critical 180s，视觉较慢分档更大）。
     预算：检查并记录 glm_4_6v 视觉资源包（600万 tokens；require_confirmation=False（2026-09-04 用户放开，视觉模型随便用））。
     Args:
         system: 系统提示词
         user_text: 用户文本
         image_base64: 图片 base64 编码（不含 data:image/... 前缀）
-        model: 模型名称，None → ZHIPU_VISION_MODEL（默认 glm-4.6v）
+        model: 模型名称；本地默认 qwen3.5:4b，云端默认 ZHIPU_VISION_MODEL
         temperature: 温度
         max_tokens: 最大输出 tokens
         level: low/medium/high/critical 任务分级（决定超时）
     Returns:
-        (content, provider) 元组
+        (content, provider/status) 元组
     """
+    requested = _env('AI_PROVIDER', 'auto').lower()
+    cloud_allowed = _env('ALLOW_CLOUD_AI', '').lower() in ('1', 'true', 'yes', 'on', 'y')
+    if local_only or requested in ('auto', 'ollama'):
+        local_result = _ollama_vision_chat(
+            system, user_text, image_base64, model, temperature, max_tokens, response_schema,
+        )
+        if local_result[0] is not None or local_only or requested == 'ollama' or not cloud_allowed:
+            return local_result
+    if response_schema is not None:
+        return None, 'structured_vision_requires_local'
+    if not cloud_allowed:
+        _set_call_meta(provider='cloud_disabled', model=model)
+        return None, 'cloud_disabled'
+    if requested not in ('zhipu', 'glm', 'auto'):
+        _set_call_meta(provider='provider_unsupported', model=model)
+        return None, 'provider_unsupported'
     if model is None:
         model = _env('ZHIPU_VISION_MODEL', 'glm-4.6v')
     api_key = _env('ZHIPU_API_KEY', '')
