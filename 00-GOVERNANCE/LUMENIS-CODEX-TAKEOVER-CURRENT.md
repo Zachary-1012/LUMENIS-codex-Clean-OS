@@ -2014,3 +2014,24 @@ was generated in this environment and caption rendering is not
 `LIVE_VERIFIED`. Artifact Permission/Evidence, reopen/review, user E2E and full
 ROUND 07/Content closure remain open; release/operating/commercial status stays
 NO.
+
+### 2026-09-30 - bounded multimodal evaluation and scoped source brief
+
+Shared Evaluation now exposes a small source-backed multimodal assessment
+contract for image, video, audio and document inputs. A complete result requires
+an input Source reference, Evidence reference, result reference and explicit
+Evidence grounding; `unavailable` and `error` remain honest non-success states.
+It is a derived evaluator only and does not write AI output into Production
+Truth, Permission or Evidence.
+
+Shared Reporting now provides a deterministic read-only source brief over the
+existing scoped Canonical reader for exact CTH `Subject` and BMP `BrandFocus`
+GLOBAL/FOCUS requests. It verifies writer-authenticated scope Evidence, keeps
+publication time distinct from capture time, withholds unsafe links and reports
+coverage/freshness/collection state as `UNKNOWN` when the Canonical sample cannot
+prove them. No second reporting or data store was introduced.
+
+The focused multimodal and scoped-brief tests passed 14/14. These helpers are
+`IMPLEMENTED/TESTED` but are not by themselves a user-visible AI or reporting
+workflow; API/ViewModel binding, Permission, real user E2E and downstream
+evaluation remain open. No product closure or release status changes.

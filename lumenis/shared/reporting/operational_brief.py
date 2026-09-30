@@ -1,0 +1,181 @@
+"""Read-only, exact-scope source brief projection over Canonical Data."""
+from collections import Counter
+from html import escape
+import re
+import sqlite3
+from typing import Any
+from urllib.parse import urlsplit
+
+import canonical_data
+from .artifact import compute_scoped_content_hash, compute_scoped_scope_key
+
+
+def _markdown_text(value: str) -> str:
+    text = escape(value, quote=False).replace("\r", " ").replace("\n", " ")
+    return re.sub(r"([\\`*_{}\[\]()#+\-.!|])", r"\\\1", text)
+
+
+def _source_url(value: Any) -> tuple[str | None, str]:
+    if not isinstance(value, str) or not value.strip():
+        return None, "UNKNOWN"
+    raw = value.strip()
+    if len(raw) > 2048 or any(ord(char) < 33 for char in raw):
+        return None, "WITHHELD"
+    try:
+        parsed = urlsplit(raw)
+        _ = parsed.port
+    except ValueError:
+        return None, "WITHHELD"
+    if (parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname
+            or parsed.username is not None or parsed.password is not None
+            or parsed.query or parsed.fragment or "?" in raw or "#" in raw
+            or any(char in raw for char in '<>"\\`')
+            or re.search(r"/[A-Za-z0-9_-]{32,}(?:/|$)", parsed.path)
+            or re.search(r"(?i)(token|secret|api[-_]?key|auth|session|signature)", parsed.path)):
+        return None, "WITHHELD"
+    return raw, "AVAILABLE"
+
+
+def _counter(records: list[dict], field: str) -> dict[str, int]:
+    values = []
+    for record in records:
+        value = record.get(field)
+        values.append(value.strip() if isinstance(value, str) and value.strip() else "UNKNOWN")
+    return dict(sorted(Counter(values).items()))
+
+
+def build_scoped_source_brief(
+    con: sqlite3.Connection, *, product_id: str, global_scope: bool,
+    entity_label: str, subject_id: str | None = None,
+    brand_focus_id: str | None = None, limit: int = 30,
+) -> dict[str, Any]:
+    """Build a deterministic source-only brief; label comes from server registry/context."""
+    if type(product_id) is not str or product_id not in {"CTH", "ZBMP"}:
+        raise ValueError("product_id must be exactly CTH or ZBMP")
+    if type(global_scope) is not bool:
+        raise TypeError("global_scope must be an explicit boolean")
+    if type(entity_label) is not str or not entity_label or entity_label != entity_label.strip():
+        raise ValueError("entity_label from the server registry/context is required")
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError("limit must be an integer between 1 and 100")
+    if global_scope and (subject_id is not None or brand_focus_id is not None):
+        raise ValueError("GLOBAL scope cannot include a focused entity")
+    if not global_scope and product_id == "CTH" and (
+        type(subject_id) is not str or not subject_id or subject_id != subject_id.strip()
+        or brand_focus_id is not None
+    ):
+        raise ValueError("CTH focus requires one exact subject_id only")
+    if not global_scope and product_id == "ZBMP" and (
+        type(brand_focus_id) is not str or not brand_focus_id
+        or brand_focus_id != brand_focus_id.strip() or subject_id is not None
+    ):
+        raise ValueError("ZBMP focus requires one exact brand_focus_id only")
+
+    domain_id = "cth" if product_id == "CTH" else "zbmp"
+    focus_key = "subject_id" if product_id == "CTH" else "brand_focus_id"
+    focus_id = subject_id if product_id == "CTH" else brand_focus_id
+    scope_key = compute_scoped_scope_key(
+        domain_id, subject_id, brand_focus_id, global_scope, None, None,
+        "zh-CN", "markdown",
+    )
+    result = canonical_data.list_scoped_canonical(
+        con, product_id=product_id, subject_id=subject_id,
+        brand_focus_id=brand_focus_id, limit=limit,
+    )
+    counts = {}
+    for key in ("candidate_count", "scanned_count", "rejected_count", "returned_count"):
+        value = result.get(key)
+        if type(value) is not int or value < 0:
+            raise RuntimeError(f"scoped Canonical returned invalid {key}")
+        counts[key] = value
+    if type(result.get("truncated")) is not bool or not isinstance(result.get("records"), list):
+        raise RuntimeError("scoped Canonical returned an invalid read envelope")
+
+    records = []
+    unsafe_links = 0
+    for row in result["records"]:
+        proof = row.get("scope_evidence")
+        integrity = proof.get("integrity") if isinstance(proof, dict) else None
+        stored = proof.get("stored_scope") if isinstance(proof, dict) else None
+        scope_ref = row.get("scope_evidence_ref")
+        source_id = row.get("source_id")
+        if (
+            not isinstance(scope_ref, str) or not scope_ref.strip()
+            or row.get("scope_status") != "VERIFIED" or row.get("product_id") != product_id
+            or row.get("domain_id") != domain_id or not isinstance(integrity, dict)
+            or integrity.get("verified") is not True or integrity.get("lineage_verified") is not True
+            or integrity.get("assurance") != "writer-authenticated"
+            or not isinstance(stored, dict) or str(proof.get("id")) != str(scope_ref)
+            or proof.get("source_id") != source_id or not isinstance(source_id, str) or not source_id
+            or stored.get("product_id") != product_id or stored.get("domain_id") != domain_id
+            or stored.get("scope_status") != "VERIFIED"
+            or stored.get("subject_id", "") != (row.get("subject_id") or "")
+            or stored.get("brand_focus_id", "") != (row.get("brand_focus_id") or "")
+        ):
+            raise RuntimeError("scoped Canonical returned a source without verified scope Evidence")
+        if not global_scope and row.get(focus_key) != focus_id:
+            raise RuntimeError("scoped Canonical returned a source outside the requested focus")
+        title = row.get("title") if isinstance(row.get("title"), str) else ""
+        title = "".join(char for char in title if ord(char) >= 32 and ord(char) != 127)
+        title_truncated = len(title) > 240
+        title = title[:240]
+        url, url_status = _source_url(row.get("canonical_url") or row.get("url"))
+        unsafe_links += url_status == "WITHHELD"
+        publish = row.get("publish_datetime")
+        publish = publish.strip() if isinstance(publish, str) and publish.strip() else None
+        captured = row.get("captured_at")
+        captured = captured.strip() if isinstance(captured, str) and captured.strip() else None
+        records.append({
+            "source_id": source_id, "title": title or None, "title_truncated": title_truncated,
+            "source_url": url, "source_link_status": url_status,
+            "source_type": row.get("source_type") or "UNKNOWN", "source_platform": row.get("source_platform") or "UNKNOWN",
+            "publish_datetime": publish, "publish_status": "KNOWN" if publish else "UNKNOWN", "captured_at": captured,
+            "subject_id": row.get("subject_id") or None, "brand_focus_id": row.get("brand_focus_id") or None,
+            "scope_evidence_ref": scope_ref, "evidence_id": str(proof["id"]),
+        })
+
+    withheld_count = counts["rejected_count"] + unsafe_links
+    truncated = result["truncated"]
+    status = "PARTIAL" if withheld_count or truncated else "AVAILABLE" if records else "EMPTY"
+    source_counts, platform_counts = _counter(records, "source_type"), _counter(records, "source_platform")
+    lines = [
+        "# 来源简报", f"- 范围：{_markdown_text(entity_label)}",
+        f"- 模式：{'GLOBAL / ALL' if global_scope else 'FOCUS'}",
+        f"- 结果：{status}", "- 覆盖：UNKNOWN", "- 新鲜度：UNKNOWN",
+        "- 采集状态：UNKNOWN（Canonical 样本不证明是否已采集）",
+        f"- 已验证返回样本：{len(records)} 条；来源类型样本计数："
+        f"{_markdown_text(str(source_counts))}；平台样本计数：{_markdown_text(str(platform_counts))}",
+        f"- 候选 {counts['candidate_count']}；扫描 {counts['scanned_count']}；被拒绝 {counts['rejected_count']}；截断：{truncated}",
+        "", "## 来源样本",
+    ]
+    if not records:
+        lines.append("- 本次查询未返回可展示的已验证来源；这不表示已采集或覆盖为零。")
+    for record in records:
+        title = _markdown_text(record["title"] or "UNKNOWN title")
+        label = f"[{title}](<{record['source_url']}>)" if record["source_url"] else title
+        publish = record["publish_datetime"] or "UNKNOWN"
+        captured = record["captured_at"] or "UNKNOWN"
+        identity = record["subject_id"] or record["brand_focus_id"] or "UNKNOWN"
+        lines.append(
+            f"- {label} — platform: {_markdown_text(str(record['source_platform']))}; "
+            f"published: {_markdown_text(publish)}; captured: {_markdown_text(captured)}; "
+            f"scope: {_markdown_text(identity)}; Evidence: {_markdown_text(str(record['scope_evidence_ref']))}"
+        )
+    markdown = "\n".join(lines)
+    return {
+        "status": status, "withheld": withheld_count > 0, "truncated": truncated,
+        "scope": {
+            "product_id": product_id, "domain_id": domain_id, "global": global_scope,
+            "subject_id": subject_id, "brand_focus_id": brand_focus_id,
+            "entity_label": entity_label, "scope_key": scope_key,
+        },
+        "coverage": "UNKNOWN", "freshness": "UNKNOWN", "collection_state": "UNKNOWN",
+        "sample": {
+            **counts, "returned_verified_count": len(records), "truncated": truncated,
+            "withheld": withheld_count > 0, "withheld_count": withheld_count,
+            "source_type_counts_sample": source_counts, "platform_counts_sample": platform_counts,
+            "counts_basis": "returned verified Canonical records only; not coverage or business metrics",
+        },
+        "records": records, "markdown": markdown,
+        "content_hash": compute_scoped_content_hash(markdown),
+    }
