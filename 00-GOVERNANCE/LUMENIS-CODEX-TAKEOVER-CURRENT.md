@@ -2201,3 +2201,14 @@ access returns 403. 25 targeted tests, Python compile and Constitution passed;
 Core restart/reopen and DB integrity/FK were verified, with counts unchanged.
 See `evidence/round-07/ROUND-07-REPORT-MEDIA-BINDING-2026-10-01.md` follow-up.
 This does not accept business usefulness, frontend UX or repeated human work.
+
+### 2026-10-01 — Agent checkpoint no longer silently falls back to memory
+
+The existing DurableExecutionAdapter now uses the real TaskEngine call/ID and
+persists its full versioned plan/context in existing step storage. Enabled-mode
+permission/storage failures are explicit; fresh reads use the DB. 49 targeted
+tests and a two-process disposable crash/reopen check passed. The production
+DB has no new task rows. This repairs a report-recovery prerequisite only:
+the report API is still synchronous; scoped async execution and user acceptance
+remain unverified. See
+`evidence/round-07/ROUND-07-AGENT-CHECKPOINT-PERSISTENCE-2026-10-01.md`.

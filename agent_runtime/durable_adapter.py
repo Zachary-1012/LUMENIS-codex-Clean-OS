@@ -14,7 +14,8 @@ Durable Execution Adapter — Durable Execution 适配器
 设计原则：
   - 不修改 ai_task_engine 源码
   - 通过组合/包装调用其现有方法
-  - DB 写入失败时降级为内存状态，不阻断 Agent Loop
+  - 启用持久化时，以 TaskEngine 数据库为准；写入失败必须显式返回错误
+  - 仅在显式禁用持久化时使用内存状态
   - 所有写操作经过 permission_gate 检查
 
 与 OSAI Contract 对齐点（C-01 Agent Runtime Contract）：
@@ -29,6 +30,9 @@ import uuid
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
+
+_CHECKPOINT_FORMAT = "lumenis.agent_runtime.checkpoint"
+_CHECKPOINT_VERSION = 1
 
 
 @dataclass
@@ -119,6 +123,74 @@ class DurableExecutionAdapter:
         except Exception:
             return False
 
+    def _require_task_engine(self) -> Any:
+        engine = self._get_task_engine()
+        if engine is None:
+            raise RuntimeError("Durable TaskEngine is unavailable")
+        return engine
+
+    def _require_write_permission(self, resource: str) -> None:
+        try:
+            from lumenis.system.security import OperationType
+        except Exception as exc:
+            raise PermissionError("Durable write permission is unavailable") from exc
+        if not self._check_permission(OperationType.DB_WRITE, resource):
+            raise PermissionError(f"Durable write denied for {resource}")
+
+    @staticmethod
+    def _task_from_db(task: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        if task is None:
+            return None
+        result = dict(task)
+        try:
+            context = json.loads(result.get("context_json") or "{}")
+        except (json.JSONDecodeError, TypeError) as exc:
+            raise RuntimeError("Persisted TaskEngine context is malformed") from exc
+        if not isinstance(context, dict):
+            raise RuntimeError("Persisted TaskEngine context must be an object")
+        result["context"] = context
+        result["goal"] = result.get("user_input", result.get("goal", ""))
+        result["agent_id"] = result.get("agent_id") or ""
+        result["source"] = "db"
+        return result
+
+    @staticmethod
+    def _checkpoint_from_step(step: Dict[str, Any]) -> Optional[Checkpoint]:
+        phase = str(step.get("phase") or "")
+        if not phase.startswith("agent_step_"):
+            return None
+        try:
+            envelope = json.loads(step.get("detail") or "")
+        except (json.JSONDecodeError, TypeError) as exc:
+            raise RuntimeError("Persisted agent checkpoint is malformed") from exc
+        if (not isinstance(envelope, dict) or envelope.get("format") != _CHECKPOINT_FORMAT
+                or envelope.get("version") != _CHECKPOINT_VERSION):
+            raise RuntimeError("Persisted agent checkpoint version is unsupported")
+        payload = envelope.get("checkpoint")
+        if not isinstance(payload, dict):
+            raise RuntimeError("Persisted agent checkpoint payload is missing")
+        try:
+            checkpoint = Checkpoint(**payload)
+        except (TypeError, ValueError) as exc:
+            raise RuntimeError("Persisted agent checkpoint payload is invalid") from exc
+        if (checkpoint.task_id != step.get("task_id")
+                or type(checkpoint.step_index) is not int or checkpoint.step_index < 0
+                or str(checkpoint.step_index) != phase.removeprefix("agent_step_")
+                or not isinstance(checkpoint.plan_snapshot, dict)
+                or not isinstance(checkpoint.context, dict)
+                or not isinstance(checkpoint.metadata, dict)):
+            raise RuntimeError("Persisted agent checkpoint identity does not match its step")
+        return checkpoint
+
+    @classmethod
+    def _db_checkpoints(cls, steps: List[Dict[str, Any]]) -> List[Checkpoint]:
+        checkpoints = []
+        for step in steps:
+            checkpoint = cls._checkpoint_from_step(step)
+            if checkpoint is not None:
+                checkpoints.append(checkpoint)
+        return checkpoints
+
     def create_task(
         self,
         goal: str,
@@ -129,9 +201,36 @@ class DurableExecutionAdapter:
 
         复用 ai_task_engine.create_task()。
         """
-        task_id = f"agent_{uuid.uuid4().hex[:16]}"
+        if self._enabled:
+            engine = self._require_task_engine()
+            self._require_write_permission("ai_task")
+            try:
+                created = engine.create_task(
+                    user_input=goal,
+                    context=context or {},
+                    created_by="agent_runtime",
+                )
+                task_id = created.get("task_id") if isinstance(created, dict) else None
+                if not isinstance(task_id, str) or not task_id:
+                    raise RuntimeError("TaskEngine returned no task ID")
+                engine._db_update_task(task_id, agent_id=agent_id)
+                persisted = engine.get_task(task_id) if task_id else None
+            except Exception as exc:
+                raise RuntimeError("TaskEngine could not persist agent task") from exc
+            if not task_id or persisted is None:
+                raise RuntimeError("TaskEngine did not confirm the persisted agent task")
+            with self._lock:
+                self._memory_tasks[task_id] = {
+                    "task_id": task_id,
+                    "goal": goal,
+                    "agent_id": agent_id,
+                    "context": context or {},
+                    "status": persisted.get("status", "pending"),
+                    "created_at": persisted.get("created_at"),
+                }
+            return task_id
 
-        # 内存记录
+        task_id = f"agent_{uuid.uuid4().hex[:16]}"
         with self._lock:
             self._memory_tasks[task_id] = {
                 "task_id": task_id,
@@ -140,27 +239,8 @@ class DurableExecutionAdapter:
                 "context": context or {},
                 "status": "created",
                 "created_at": datetime.now(timezone.utc).isoformat(),
+                "source": "memory",
             }
-
-        # DB 持久化（复用 ai_task_engine）
-        if self._enabled:
-            engine = self._get_task_engine()
-            if engine is not None:
-                try:
-                    # 检查权限
-                    from lumenis.system.security import OperationType
-                    if not self._check_permission(OperationType.DB_WRITE, "ai_task"):
-                        return task_id  # 权限不足时仅内存
-
-                    db_task_id = engine.create_task(
-                        task_input=goal,
-                        context=context or {},
-                    )
-                    if db_task_id:
-                        task_id = db_task_id
-                except Exception:
-                    pass  # DB 写入失败降级为内存
-
         return task_id
 
     def checkpoint(
@@ -173,6 +253,7 @@ class DurableExecutionAdapter:
         step_detail: str = "",
         step_status: str = "running",
         agent_id: str = "",
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Checkpoint:
         """保存检查点（每步完成后调用）。
 
@@ -185,32 +266,36 @@ class DurableExecutionAdapter:
             state=state,
             plan_snapshot=plan_snapshot or {},
             context=context or {},
+            metadata=metadata or {},
         )
 
-        # 内存记录
-        with self._lock:
-            if task_id not in self._memory_checkpoints:
-                self._memory_checkpoints[task_id] = []
-            self._memory_checkpoints[task_id].append(cp)
-
-        # DB 持久化
         if self._enabled:
-            engine = self._get_task_engine()
-            if engine is not None:
-                try:
-                    from lumenis.system.security import OperationType
-                    if not self._check_permission(OperationType.DB_WRITE, "ai_task_step"):
-                        return cp
+            engine = self._require_task_engine()
+            self._require_write_permission("ai_task_step")
+            try:
+                if engine.get_task(task_id) is None:
+                    raise ValueError("TaskEngine task does not exist")
+                detail = json.dumps({
+                    "format": _CHECKPOINT_FORMAT,
+                    "version": _CHECKPOINT_VERSION,
+                    "checkpoint": cp.to_dict(),
+                    "step_detail": step_detail or state,
+                    "step_status": step_status,
+                }, ensure_ascii=False, separators=(",", ":"))
+                step_id = engine._db_add_step(
+                    task_id=task_id,
+                    phase=f"agent_step_{step_index}",
+                    status=step_status,
+                    detail=detail,
+                    agent_id=agent_id or None,
+                )
+                if not step_id:
+                    raise RuntimeError("TaskEngine returned no checkpoint step ID")
+            except Exception as exc:
+                raise RuntimeError("TaskEngine could not persist agent checkpoint") from exc
 
-                    engine._db_add_step(
-                        task_id=task_id,
-                        phase=f"agent_step_{step_index}",
-                        status=step_status,
-                        detail=step_detail or state,
-                        agent_id=agent_id or None,
-                    )
-                except Exception:
-                    pass  # 降级为内存
+        with self._lock:
+            self._memory_checkpoints.setdefault(task_id, []).append(cp)
 
         return cp
 
@@ -227,8 +312,9 @@ class DurableExecutionAdapter:
             task_id=task_id,
             step_index=step_index,
             state=status,
-            step_detail=json.dumps(result or {}, ensure_ascii=False)[:500],
+            step_detail=json.dumps({"result": result, "error": error}, ensure_ascii=False),
             step_status=status,
+            metadata={"result": result, "error": error},
         )
 
     def save_evidence(
@@ -243,16 +329,10 @@ class DurableExecutionAdapter:
         if not self._enabled:
             return None
 
-        engine = self._get_task_engine()
-        if engine is None:
-            return None
-
+        engine = self._require_task_engine()
+        self._require_write_permission("ai_task_evidence")
         try:
-            from lumenis.system.security import OperationType
-            if not self._check_permission(OperationType.DB_WRITE, "ai_task_evidence"):
-                return None
-
-            return engine._db_add_evidence(
+            evidence_id = engine._db_add_evidence(
                 task_id=task_id,
                 evidence_type=evidence_type,
                 content=content,
@@ -260,61 +340,73 @@ class DurableExecutionAdapter:
                 step_id=step_id,
                 authenticity_score=authenticity_score,
             )
-        except Exception:
-            return None
+        except Exception as exc:
+            raise RuntimeError("TaskEngine could not persist agent evidence") from exc
+        if not evidence_id:
+            raise RuntimeError("TaskEngine returned no persisted evidence ID")
+        return evidence_id
 
     def cancel(self, task_id: str, reason: str = "user_cancelled") -> bool:
         """取消任务（复用 ai_task_engine.cancel_task）。"""
+        if self._enabled:
+            engine = self._require_task_engine()
+            self._require_write_permission("ai_task")
+            try:
+                cancelled = engine.cancel_task(task_id, reason=reason)
+                persisted = engine.get_task(task_id)
+            except Exception as exc:
+                raise RuntimeError("TaskEngine could not persist task cancellation") from exc
+            if (not isinstance(cancelled, dict) or cancelled.get("status") != "cancelled"
+                    or not isinstance(persisted, dict) or persisted.get("status") != "cancelled"):
+                raise RuntimeError("TaskEngine did not confirm persisted task cancellation")
+            with self._lock:
+                if task_id in self._memory_tasks:
+                    self._memory_tasks[task_id].update(status="cancelled", cancel_reason=reason)
+            return True
+
         with self._lock:
             if task_id in self._memory_tasks:
                 self._memory_tasks[task_id]["status"] = "cancelled"
                 self._memory_tasks[task_id]["cancel_reason"] = reason
-
-        if self._enabled:
-            engine = self._get_task_engine()
-            if engine is not None:
-                try:
-                    engine.cancel_task(task_id, reason=reason)
-                    return True
-                except Exception:
-                    pass
-
-        return True  # 内存取消总是成功
+        return True  # 仅内存模式不代表 TaskEngine 持久化取消
 
     def recover(self, task_id: str) -> Optional[Dict[str, Any]]:
         """从检查点恢复任务状态。"""
-        # 先从内存恢复
-        with self._lock:
-            checkpoints = self._memory_checkpoints.get(task_id, [])
-            task = self._memory_tasks.get(task_id)
-
-        if checkpoints:
-            last_cp = checkpoints[-1]
+        if self._enabled:
+            engine = self._require_task_engine()
+            try:
+                task = self._task_from_db(engine.get_task(task_id))
+                if task is None:
+                    return None
+                steps = engine.get_steps(task_id)
+                checkpoints = self._db_checkpoints(steps)
+            except Exception as exc:
+                if isinstance(exc, RuntimeError):
+                    raise
+                raise RuntimeError("TaskEngine could not recover persisted task") from exc
             return {
                 "task_id": task_id,
                 "task": task,
-                "last_checkpoint": last_cp.to_dict(),
+                "steps": steps,
+                "step_count": len(steps),
+                "checkpoints": [item.to_dict() for item in checkpoints],
                 "checkpoint_count": len(checkpoints),
-                "source": "memory",
+                "last_checkpoint": checkpoints[-1].to_dict() if checkpoints else None,
+                "source": "db",
             }
 
-        # 从 DB 恢复
-        if self._enabled:
-            engine = self._get_task_engine()
-            if engine is not None:
-                try:
-                    steps = engine.get_steps(task_id)
-                    if steps:
-                        return {
-                            "task_id": task_id,
-                            "steps": steps,
-                            "step_count": len(steps),
-                            "source": "db",
-                        }
-                except Exception:
-                    pass
-
-        return None
+        with self._lock:
+            checkpoints = self._memory_checkpoints.get(task_id, [])
+            task = self._memory_tasks.get(task_id)
+        if not checkpoints:
+            return None
+        return {
+            "task_id": task_id,
+            "task": task,
+            "last_checkpoint": checkpoints[-1].to_dict(),
+            "checkpoint_count": len(checkpoints),
+            "source": "memory",
+        }
 
     def retry_step(
         self,
@@ -340,16 +432,43 @@ class DurableExecutionAdapter:
 
     def get_checkpoints(self, task_id: str) -> List[Checkpoint]:
         """获取任务的所有检查点。"""
+        if self._enabled:
+            engine = self._require_task_engine()
+            try:
+                return self._db_checkpoints(engine.get_steps(task_id))
+            except Exception as exc:
+                if isinstance(exc, RuntimeError):
+                    raise
+                raise RuntimeError("TaskEngine could not read persisted checkpoints") from exc
         with self._lock:
             return list(self._memory_checkpoints.get(task_id, []))
 
     def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
         """获取任务信息。"""
+        if self._enabled:
+            engine = self._require_task_engine()
+            try:
+                return self._task_from_db(engine.get_task(task_id))
+            except Exception as exc:
+                if isinstance(exc, RuntimeError):
+                    raise
+                raise RuntimeError("TaskEngine could not read persisted task") from exc
         with self._lock:
-            return dict(self._memory_tasks.get(task_id, {}))
+            task = self._memory_tasks.get(task_id)
+            return dict(task) if task is not None else {}
 
     def list_tasks(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
         """列出任务。"""
+        if self._enabled:
+            engine = self._require_task_engine()
+            try:
+                tasks = engine.list_tasks(status=status)
+                return [self._task_from_db(task) for task in tasks
+                        if task.get("created_by") == "agent_runtime"]
+            except Exception as exc:
+                if isinstance(exc, RuntimeError):
+                    raise
+                raise RuntimeError("TaskEngine could not list persisted tasks") from exc
         with self._lock:
             tasks = list(self._memory_tasks.values())
         if status:
