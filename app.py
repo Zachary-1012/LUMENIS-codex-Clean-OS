@@ -1788,7 +1788,7 @@ def _bypass_evidence_canonical(note_data, provider='rednote'):
         return {'ok': False, 'errors': [{'stage': 'lineage', 'error_type': type(_e).__name__}]}
 
 
-def persist_rednote_data(data, subject_hit_fn=None):
+def persist_rednote_data(data, subject_hit_fn=None, *, acquisition_query=None):
     """将 rednote 采集结果入库"""
     if not data or not data.get('ok'):
         return {'ok': False, 'error': data.get('error', '采集失败') if data else '无数据'}
@@ -1797,6 +1797,8 @@ def persist_rednote_data(data, subject_hit_fn=None):
     notes = data.get('notes', [])
     persisted = 0
     comments_total = 0
+    note_ids = []
+    failures = 0
     for n in notes:
         if subject_hit_fn:
             full_text = (n.get('title','') + ' ' + n.get('desc','') + ' ' + n.get('detail_title','')).lower()
@@ -1812,16 +1814,17 @@ def persist_rednote_data(data, subject_hit_fn=None):
                 'author_id': n.get('author_id',''),
                 'author_nickname': n.get('detail_author') or n.get('author',''),
                 'author_avatar': n.get('author_avatar',''),
-                'likes': int(n.get('likes',0) or 0),
+                'likes': n.get('likes'),
                 'comments': n.get('comments'),
-                'collects': int(n.get('collects',0) or 0),
-                'shares': int(n.get('shares',0) or 0),
+                'collects': n.get('collects'),
+                'shares': n.get('shares'),
                 'xsec_token': n.get('xsec_token',''),
                 'publish_date': n.get('detail_publish_time') or n.get('publish_time',''),
                 'publish_datetime': n.get('detail_publish_time') or n.get('publish_time',''),
                 'source_platform': 'xhs',
-                'is_taikoo_verified': 1,
-                'verify_reason': 'rednote采集主体命中',
+                'source_keyword': acquisition_query.keyword if acquisition_query else '',
+                'is_taikoo_verified': 0,
+                'verify_reason': 'source scope pending verification',
                 'data_quality_status': n.get('quality_status','unknown'),
                 'data_quality_score': float(n.get('quality_score',0) or 0),
                 'collector_version': n.get('collector_version','rednote-v1.0'),
@@ -1831,6 +1834,7 @@ def persist_rednote_data(data, subject_hit_fn=None):
             }
             db.insert_note(note_data)
             persisted += 1
+            note_ids.append(note_data['note_id'])
             # P0-3/P0-4: Evidence Chain + Canonical Data 旁路写入（side-write，失败不影响主入库）
             _bypass_evidence_canonical(note_data, provider='rednote')
             # 保存评论
@@ -1847,8 +1851,18 @@ def persist_rednote_data(data, subject_hit_fn=None):
                 'collector_version': n.get('collector_version','rednote-v1.0'),
             })
         except Exception as e:
+            failures += 1
             print(f'[rednote] 入库失败 {n.get("note_id","")}: {e}')
-    return {'ok': True, 'persisted': persisted, 'comments': comments_total, 'total': len(notes)}
+    scope_result = {'status': 'UNASSIGNED', 'verified': 0}
+    if acquisition_query is not None and note_ids:
+        from lumenis.system.collector.adapters.secondary_collection import bind_collected_social_scope
+        scope_result = bind_collected_social_scope(
+            note_ids, scope=acquisition_query.scope, platform='xhs',
+            keyword=acquisition_query.keyword, provider='rednote',
+        )
+    return {'ok': failures == 0 and scope_result.get('ok', True),
+            'persisted': persisted, 'failed': failures, 'comments': comments_total,
+            'total': len(notes), 'scope_binding': scope_result}
 
 
 def _record_rednote_collection_log(data, keyword=''):
@@ -3436,7 +3450,17 @@ def api_status():
 @app.route('/api/rednote/collect', methods=['POST'])
 def api_rednote_collect():
     data = request.get_json(silent=True) or {}
-    keyword = data.get('keyword', '广州太古汇')
+    keyword = str(data.get('keyword') or '').strip()
+    if not keyword:
+        return jsonify({'ok': False, 'code': 'KEYWORD_REQUIRED'}), 400
+    from lumenis.system.collector.acquisition_plan import build_acquisition_plan
+    query_plan = build_acquisition_plan([keyword])
+    if not query_plan.is_runnable or len(query_plan.queries) != 1:
+        return jsonify({'ok': False, 'code': 'EXACT_SCOPE_REQUIRED',
+                        'query_plan': query_plan.to_dict()}), 409
+    query = query_plan.queries[0]
+    if query.domain_id != 'CTH':
+        return jsonify({'ok': False, 'code': 'XHS_TYPED_SCOPE_IMPORT_REQUIRED'}), 409
     max_scroll = max(1, min(10, int(data.get('max_scroll', 3))))
     max_details = max(1, min(50, int(data.get('max_details', 10))))
     account = data.get('account') or xhs_cookie_bridge.DEFAULT_COLLECTION_ACCOUNT
@@ -3481,16 +3505,10 @@ def api_rednote_collect():
             except Exception as _log_e:
                 app.logger.warning('RedNote 采集状态落库失败（不影响主结果）: %s', type(_log_e).__name__)
             if persist and result.get('ok'):
-                def subject_hit(text):
-                    # P0-02 收敛：统一委托 subject_rules 权威主体口径（排除词一票否决+正向词命中），
-                    # 不再用 AI verify 替代，避免口径分叉（对账 GAP-P0-02）。
-                    try:
-                        from subject_rules import subject_hit_text
-                        return subject_hit_text(text)
-                    except Exception:
-                        return False
-                persist_rednote_data(result, subject_hit)
-                check_and_create_alerts()
+                result['persistence'] = persist_rednote_data(result, acquisition_query=query)
+                if not result['persistence']['ok']:
+                    result['ok'] = False
+                    result['error'] = 'Raw/Canonical scope persistence incomplete'
             return result
         finally:
             # Resident Browser 驻场策略：采集结束后保留登录窗口长期驻留（不关闭），
@@ -3505,7 +3523,12 @@ def api_rednote_collect():
             try:
                 result = worker()
                 with _task_lock:
-                    collect_tasks[task_id].update(status='done', message='rednote采集完成', progress=100, result_summary={'notes': len(result.get('notes',[])), 'ok': result.get('ok')})
+                    collect_tasks[task_id].update(
+                        status='done' if result.get('ok') else 'error',
+                        message='rednote采集结束', progress=100,
+                        result_summary={'notes': len(result.get('notes',[])),
+                                        'ok': result.get('ok'),
+                                        'persistence': result.get('persistence')})
             except Exception as e:
                 with _task_lock:
                     collect_tasks[task_id].update(status='error', message=str(e), progress=0)

@@ -930,6 +930,7 @@ def sync(keywords=None, max_scroll=6, account=None):
             pass
         results.append({'stage':'blocked','reason':top_block,'detail':blocked_summary})
     inserted=updated=rejected=0
+    persisted_by_keyword = {}
     for n in raw.values():
         ok,reason=ai_analyzer.verify_taikoo_location(n.get('title',''),n.get('content',''))
         n['is_taikoo_verified']=1 if ok else 0; n['verify_reason']=reason; n['source_platform']='xhs'
@@ -937,6 +938,21 @@ def sync(keywords=None, max_scroll=6, account=None):
         n['captured_at']=str(n.get('captured_at') or n.get('collected_at') or datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         _,new=db.insert_note(n); inserted+=int(new); updated+=int(not new)
         _record_note_lineage(n, provider='xhs_cookie_bridge')
+        persisted_by_keyword.setdefault(n.get('source_keyword'), []).append(n['note_id'])
+    scope_bindings = []
+    from lumenis.system.collector.adapters.secondary_collection import bind_collected_social_scope
+    for query in query_plan.queries:
+        ids = persisted_by_keyword.get(query.keyword, [])
+        if ids:
+            try:
+                binding = bind_collected_social_scope(
+                    ids, scope=query.scope, platform='xhs', keyword=query.keyword,
+                    provider='xhs_cookie_bridge',
+                )
+            except Exception as exc:
+                binding = {'ok': False, 'status': 'SCOPE_BINDING_FAILED',
+                           'error_type': type(exc).__name__}
+            scope_bindings.append(binding)
     analyzed=0
     events=[]
     try:
@@ -996,7 +1012,7 @@ def sync(keywords=None, max_scroll=6, account=None):
         clear_circuit()
 
     return {
-        'ok':True,
+        'ok':all(item.get('ok') for item in scope_bindings),
         'task_state':task_state,
         'state_counts':state_counts,
         'keywords':keywords,
@@ -1017,6 +1033,7 @@ def sync(keywords=None, max_scroll=6, account=None):
         'allowed_accounts': list(ACCOUNT_PROFILES.keys()),
         'collection_policy': policy_gate,
         'query_plan': query_plan_payload,
+        'scope_bindings': scope_bindings,
         'finished_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
 

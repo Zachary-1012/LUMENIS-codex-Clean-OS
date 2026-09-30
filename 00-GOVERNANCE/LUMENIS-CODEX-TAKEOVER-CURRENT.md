@@ -2116,3 +2116,29 @@ it does not claim platform-wide coverage, continuous operation or product
 closure. The runtime preflight still reports the approved identity Cookie file
 as unavailable and must remain honest until the browser session is registered
 through the existing account flow.
+
+### 2026-10-01 — exact XHS source scope and six-record disposition
+
+The RedNote direct endpoint and primary bridge now retain registry query scope
+through the existing signed Collector Evidence -> Raw/Canonical scope writer.
+Search keyword and a legacy Taikoo flag are not source identity evidence.
+Unknown interaction metrics stay NULL; failed scope binding is visible.
+
+Of the six previously UNASSIGNED observations, two explicit Guangzhou Taikoo Hui
+mentions are now linked by signed Evidence 422. Three Shenzhen Bay MixC results
+must not be assigned to Luohu MixC; one outside-bar result has no exact venue
+identity. Those four remain UNASSIGNED with review provenance (422/423).
+Raw/Canonical counts remain 270/270, source text/times unchanged, integrity=ok,
+FK violations=0; repeat application reuses the same IDs and Evidence. See
+`evidence/round-06/ROUND-06-XHS-EXACT-SCOPE-2026-10-01.md`.
+
+61 current targeted tests passed with normal conftest and an explicit disposable
+v18 seed, including the 35 approved-local-CDP tests previously run without
+conftest. Data repair is verified; fresh platform collection and repeated real
+human UI acceptance remain separate. The Product Owner will perform the latter
+at final consolidated review.
+
+The Product Owner clarified that the cloud being configured is **Codex Cloud
+development tooling**, not deployed LUMENIS hosting or LUMENIS-owned inference.
+Local Codex updates retain the gpt-6.1-sol default/xhigh while preserving the
+active manual Astra selection; no model configuration was changed in this batch.

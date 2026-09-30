@@ -15,6 +15,10 @@ def _init_temp_database(tmp_path, monkeypatch):
     monkeypatch.setenv("ZBC_EVIDENCE_DB_PATH", str(db_path))
     monkeypatch.setattr(database, "DB_PATH", str(db_path))
     database.init_db()
+    from lumenis.shared.database.migrations import migrate
+    migrate(target_version=18)
+    monkeypatch.setenv('LUMENIS_EVIDENCE_HMAC_KEY_RING', json.dumps({'test': 'isolated-lineage-test'}))
+    monkeypatch.setenv('LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID', 'test')
     return db_path
 
 

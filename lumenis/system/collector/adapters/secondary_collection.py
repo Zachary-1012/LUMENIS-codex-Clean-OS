@@ -670,7 +670,7 @@ def _prelaunch_manual_import_resource(
 ) -> str:
     """Bind human-only social import approval to platform, query, and exact entity."""
     exact = _prelaunch_scope(scope)
-    if platform not in {"douyin", "x"} or not isinstance(keyword, str) or not 1 <= len(keyword) <= 120:
+    if platform not in {"douyin", "x", "xhs"} or not isinstance(keyword, str) or not 1 <= len(keyword) <= 120:
         raise ValueError("exact social manual source required")
     entity_id = exact["subject_id"] or exact["brand_focus_id"]
     digest = hashlib.sha256(keyword.encode("utf-8")).hexdigest()
@@ -868,6 +868,84 @@ def _persist_prelaunch_scope(note_ids: List[str], scope: Mapping[str, Any], evid
             domain_id="zbmp" if bmp else "cth", subject_id=scope.get("subject_id"),
             brand_focus_id=scope.get("brand_focus_id"), scope_evidence_ref=evidence_id,
         )
+
+
+def bind_collected_social_scope(note_ids, *, scope, platform, keyword, provider):
+    """Bind stored observations after the caller's collection permission gate.
+
+    The requested query is context, never identity evidence. Reuse the signed
+    Collector Evidence and exact Raw/Canonical writer; preserve unmatched data
+    for review. A source mention does not establish a tenant/location relation.
+    """
+    import database as db
+
+    exact = _prelaunch_scope(scope)
+    _validate_prelaunch_registry(exact)
+    ids = list(dict.fromkeys(str(value) for value in note_ids if value))
+    if platform not in {"xhs", "douyin", "x"} or not ids or len(ids) > 100:
+        raise ValueError("a bounded social observation batch is required")
+    with db.get_db() as conn:
+        records = []
+        for source_id in ids:
+            row = conn.execute(
+                "SELECT note_id content_id,title,content,source_platform "
+                "FROM notes WHERE note_id=?", (source_id,),
+            ).fetchone()
+            if row is None or row["source_platform"] != platform:
+                raise ValueError("stored observation/platform mismatch")
+            records.append(dict(row))
+    if _prelaunch_scope_conflict(records, exact):
+        return {"ok": False, "status": "SCOPE_CONFLICT", "verified": 0}
+    mentions = _prelaunch_entity_mentions(records, exact)
+    accepted = [item["source_id"] for item in mentions
+                if item["status"] == "EXACT_NAME_MENTION"]
+    review = [item for item in mentions if item["status"] != "EXACT_NAME_MENTION"]
+    evidence_id = _existing_prelaunch_evidence(accepted, exact) if accepted else None
+    if not accepted:
+        from lumenis.shared.evidence.store import classify_evidence_integrity
+        with db.get_db() as conn:
+            prior_reviews = conn.execute(
+                "SELECT * FROM app_evidence_records WHERE feature_id=? ORDER BY id DESC LIMIT 30",
+                (f'PRELAUNCH_{platform.upper()}_COLLECT',),
+            ).fetchall()
+        for prior_row in prior_reviews:
+            prior_row = dict(prior_row)
+            inputs = json.loads(prior_row.get('inputs_json') or '{}')
+            marker = inputs.get('_lumenis_scope') or {}
+            outputs = json.loads(prior_row.get('outputs_json') or '{}')
+            if (classify_evidence_integrity(prior_row).get('verified')
+                    and marker.get('subject_id') == exact.get('subject_id')
+                    and marker.get('brand_focus_id') == exact.get('brand_focus_id')
+                    and outputs.get('entity_mentions') == mentions):
+                evidence_id = prior_row['id']
+                break
+    if evidence_id is not None:
+        with db.get_db() as conn:
+            row = conn.execute("SELECT outputs_json FROM app_evidence_records WHERE id=?",
+                               (evidence_id,)).fetchone()
+        prior = json.loads(row[0] or '{}').get('entity_mentions') or []
+        hashes = {item.get('source_id'): item.get('source_text_sha256') for item in prior}
+        if any(hashes.get(item['source_id']) != item['source_text_sha256']
+               for item in mentions if item['source_id'] in accepted):
+            return {'ok': False, 'status': 'SOURCE_OBSERVATION_CHANGED', 'verified': 0}
+    if evidence_id is None:
+        evidence_id = _write_prelaunch_evidence(
+            platform, keyword,
+            {"ok": True, "status": "SOURCE_SCOPE_REVIEW", "raw_count": len(ids),
+             "entity_mentions": mentions,
+             "provenance": {"provider": provider, "scope_basis": "source_name_mention",
+                            "tenant_location_asserted": False}},
+            started=datetime.now().isoformat(), scope=exact, source_ids=accepted,
+            review_candidates=review,
+        )
+    if evidence_id is None:
+        return {"ok": False, "status": "SCOPE_EVIDENCE_UNAVAILABLE", "verified": 0}
+    if accepted:
+        _persist_prelaunch_scope(accepted, exact, evidence_id)
+    return {"ok": True, "status": "PARTIAL" if review else "VERIFIED",
+            "verified": len(accepted), "unassigned": len(review),
+            "evidence_ref": evidence_id, "review_candidates": review,
+            "tenant_location_asserted": False}
 
 
 def _prelaunch_scope_note_ids_needing_verification(
