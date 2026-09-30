@@ -6,7 +6,7 @@
 import time
 import pytest
 
-from browser_runtime import (
+from lumenis.system.browser.runtime.contract import (
     BrowserContract, BrowserState, FailureClass, BEEPExecutor, BEEPTrace,
     MAX_RETRY,
 )
@@ -17,13 +17,21 @@ class MockAdapter(BrowserContract):
         self._state = BrowserState.INIT
         self._health_count = 0
         self._fail_next_n = 0
+        self._failure_class = FailureClass.TRANSIENT
         self.navigated_urls = []
         self.closed = False
+
+    def _raise_injected_failure(self, detail):
+        if self._failure_class is FailureClass.UNKNOWN:
+            raise RuntimeError(f"mock unknown failure: {detail}")
+        if self._failure_class is FailureClass.SESSION:
+            raise RuntimeError(f"401 Unauthorized: {detail}")
+        raise RuntimeError(f"connection reset by peer: {detail}")
 
     def navigate(self, url, **kw):
         if self._fail_next_n > 0:
             self._fail_next_n -= 1
-            raise RuntimeError(f"Mock navigation failure: {url}")
+            self._raise_injected_failure(f"navigation {url}")
         self.navigated_urls.append(url)
         self._state = BrowserState.ACTION
         return {"ok": True, "url": url, "state": self._state.value}
@@ -31,31 +39,31 @@ class MockAdapter(BrowserContract):
     def snapshot(self, **kw):
         if self._fail_next_n > 0:
             self._fail_next_n -= 1
-            raise RuntimeError("Mock snapshot failure")
+            self._raise_injected_failure("snapshot")
         return {"ok": True, "title": "Mock Page"}
 
     def screenshot(self, path=None, **kw):
         if self._fail_next_n > 0:
             self._fail_next_n -= 1
-            raise RuntimeError("Mock screenshot failure")
+            self._raise_injected_failure("screenshot")
         return {"ok": True, "path": path or "/tmp/mock.png"}
 
     def click(self, selector, **kw):
         if self._fail_next_n > 0:
             self._fail_next_n -= 1
-            raise RuntimeError(f"Mock click failure: {selector}")
+            self._raise_injected_failure(f"click {selector}")
         return {"ok": True, "selector": selector}
 
     def type_text(self, selector, text, **kw):
         if self._fail_next_n > 0:
             self._fail_next_n -= 1
-            raise RuntimeError(f"Mock type failure: {selector}")
+            self._raise_injected_failure(f"type {selector}")
         return {"ok": True, "selector": selector, "text": text}
 
     def get_text(self, selector, **kw):
         if self._fail_next_n > 0:
             self._fail_next_n -= 1
-            raise RuntimeError(f"Mock get_text failure: {selector}")
+            self._raise_injected_failure(f"get_text {selector}")
         return f"Mock text for {selector}"
 
     def wait_for(self, selector, timeout=10, **kw):
@@ -67,7 +75,7 @@ class MockAdapter(BrowserContract):
     def evaluate(self, js, **kw):
         if self._fail_next_n > 0:
             self._fail_next_n -= 1
-            raise RuntimeError("Mock evaluate failure")
+            self._raise_injected_failure("evaluate")
         return {"ok": True, "result": "mock_result"}
 
     def health(self):
@@ -87,6 +95,7 @@ class MockAdapter(BrowserContract):
 
     def inject_failure(self, n=1, failure_class=FailureClass.TRANSIENT):
         self._fail_next_n = n
+        self._failure_class = failure_class
 
 
 @pytest.fixture
@@ -158,7 +167,7 @@ class TestFailureSimulation:
     def test_transient_failure_retry(self, mock_adapter):
         mock_adapter.inject_failure(n=1)
         executor = BEEPExecutor(max_retry=3)
-        trace = executor.run("navigate", lambda: mock_adapter.navigate("https://example.com"))
+        trace = executor.run("navigate", lambda: mock_adapter.navigate("https://example.com"), retry_safe=True)
         assert trace.result == "SUCCESS"
 
     def test_unknown_failure_exhausted(self, mock_adapter):
@@ -179,9 +188,11 @@ class TestFailureSimulation:
         assert BrowserState.INIT.value in seq
 
     def test_multiple_failures_recovery(self, mock_adapter):
-        mock_adapter.inject_failure(n=3)
-        executor = BEEPExecutor(max_retry=5)
-        trace = executor.run("snapshot", lambda: mock_adapter.snapshot())
+        # The runtime caps retry attempts at MAX_RETRY; prove recovery within
+        # that safety bound instead of relying on a value the contract clamps.
+        mock_adapter.inject_failure(n=2)
+        executor = BEEPExecutor(max_retry=3)
+        trace = executor.run("snapshot", lambda: mock_adapter.snapshot(), retry_safe=True)
         assert trace.result == "SUCCESS"
 
     def test_failure_trace_evidence(self, mock_adapter):
@@ -230,7 +241,7 @@ class TestRecoveryVerification:
     def test_beep_executor_recovery(self, mock_adapter):
         mock_adapter.inject_failure(n=1)
         executor = BEEPExecutor(max_retry=3)
-        t1 = executor.run("navigate", lambda: mock_adapter.navigate("https://retry.com"))
+        t1 = executor.run("navigate", lambda: mock_adapter.navigate("https://retry.com"), retry_safe=True)
         assert t1.result == "SUCCESS"
         t2 = executor.run("snapshot", lambda: mock_adapter.snapshot())
         assert t2.result == "SUCCESS"
@@ -272,7 +283,7 @@ class TestResidentLifecycle:
 
         # Phase 4: 故障模拟 + 自动重试
         mock_adapter.inject_failure(n=2)
-        t3 = executor.run("navigate", lambda: mock_adapter.navigate("https://fail-retry.com"))
+        t3 = executor.run("navigate", lambda: mock_adapter.navigate("https://fail-retry.com"), retry_safe=True)
         assert t3.result == "SUCCESS"
 
         # Phase 5: 恢复验证
