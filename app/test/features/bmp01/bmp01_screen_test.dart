@@ -65,6 +65,76 @@ void main() {
     expect(find.text('99999'), findsNothing);
   });
 
+  testWidgets(
+    'authentication and access copy stay distinct and retry recovers in all locales',
+    (tester) async {
+      const recoveryLocales = [
+        (
+          locale: Locale('zh', 'CN'),
+          authentication: '品牌市场信息暂时无法打开',
+          authenticationDetail: '可重试读取，或返回后稍后再试。',
+          permission: '品牌市场信息不可访问',
+          permissionDetail: '当前页面无法读取该内容。',
+          forbiddenTerms: ['登录', '账号', '账户', '管理员', '检查网络'],
+        ),
+        (
+          locale: Locale('en'),
+          authentication: 'Brand market information cannot be opened right now',
+          authenticationDetail:
+              'You can retry reading it or return and try again later.',
+          permission: 'Brand market information is not accessible',
+          permissionDetail: 'This content cannot be read on the current page.',
+          forbiddenTerms: [
+            'sign in',
+            'login',
+            'account',
+            'administrator',
+            'check the connection',
+          ],
+        ),
+        (
+          locale: Locale('ko'),
+          authentication: '브랜드 시장 정보를 지금 열 수 없습니다',
+          authenticationDetail: '다시 읽기를 시도하거나 돌아간 뒤 나중에 다시 시도할 수 있습니다.',
+          permission: '브랜드 시장 정보에 접근할 수 없습니다',
+          permissionDetail: '현재 페이지에서 이 콘텐츠를 읽을 수 없습니다.',
+          forbiddenTerms: ['로그인', '계정', '관리자', '연결을 확인'],
+        ),
+      ];
+
+      for (final copy in recoveryLocales) {
+        for (final statusCode in [401, 403]) {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          final repository = _RecoveringBmp01Repository(statusCode);
+          await tester.pumpWidget(_app(repository, locale: copy.locale));
+          await tester.pumpAndSettle();
+
+          final title = statusCode == 401
+              ? copy.authentication
+              : copy.permission;
+          final detail = statusCode == 401
+              ? copy.authenticationDetail
+              : copy.permissionDetail;
+          expect(find.text(title), findsOneWidget);
+          expect(find.text(detail), findsOneWidget);
+          _expectNoAuthOrNetworkAdvice(tester, copy.forbiddenTerms);
+          final retryAction = find.byType(OutlinedButton);
+          expect(retryAction, findsOneWidget);
+
+          await tester.ensureVisible(retryAction);
+          await tester.tap(retryAction);
+          await tester.pumpAndSettle();
+
+          expect(repository.calls, 2);
+          expect(find.text(title), findsNothing);
+          expect(find.text(detail), findsNothing);
+          expect(tester.takeException(), isNull);
+        }
+      }
+    },
+  );
+
   test('snapshot parser rejects another screen response', () {
     expect(
       () => Bmp01Snapshot.fromResponse(const {'ok': true, 'screen': 'CTH-01'}),
@@ -115,6 +185,64 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('verified BrandFocus binding exposes exact focused metrics', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1024, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final response = <String, dynamic>{
+      ..._readySnapshot,
+      'focus_context': {
+        'mode': 'FOCUS',
+        'display_name': {'en': 'Nike'},
+      },
+      'focus_binding': {
+        'contract': 'lumenis.scope-read-binding.v1',
+        'module': 'brand_market_overview',
+        'policy': 'local-workspace-read-v1',
+        'domain_id': 'BMP',
+        'product_id': 'ZBMP',
+        'canonical_scope': 'FOCUS',
+        'subject_id': 'SUBJ-NIKE',
+        'brand_focus_id': 'BRAND-NIKE',
+        'applied': true,
+        'read_allowed': true,
+        'scope_verified': true,
+        'actor_scope': 'anonymous_read',
+        'global_all_granted': false,
+      },
+      'truth': {
+        'product_id': 'ZBMP',
+        'domain_id': 'zbmp',
+        'data_state': 'READY',
+        'canonical_count': 42,
+      },
+      'sections': [
+        {
+          'type': 'kpis',
+          'items': [
+            {
+              'id': 'bmp01.total',
+              'label': '总声量',
+              'value': 42,
+              'state': 'READY',
+            },
+          ],
+        },
+      ],
+    };
+
+    await tester.pumpWidget(
+      _app(_FakeRepository(response), locale: const Locale('en')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Current focus: Nike'), findsOneWidget);
+    expect(find.text('42'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   test('BMP metric schema keeps only known scalar business metrics', () {
     final snapshot = Bmp01Snapshot.fromResponse({
@@ -276,6 +404,20 @@ void _expectNoDeveloperCopy(WidgetTester tester) {
   }
 }
 
+void _expectNoAuthOrNetworkAdvice(
+  WidgetTester tester,
+  List<String> forbiddenTerms,
+) {
+  final visibleText = tester
+      .widgetList<Text>(find.byType(Text))
+      .map((text) => text.data ?? text.textSpan?.toPlainText() ?? '')
+      .join('\n')
+      .toLowerCase();
+  for (final term in forbiddenTerms) {
+    expect(visibleText, isNot(contains(term.toLowerCase())));
+  }
+}
+
 Widget _app(
   Bmp01Repository repository, {
   Locale locale = const Locale('zh', 'CN'),
@@ -306,6 +448,25 @@ class _FakeRepository implements Bmp01Repository {
   Future<Bmp01Snapshot> load() async {
     calls++;
     return Bmp01Snapshot.fromResponse(response);
+  }
+}
+
+class _RecoveringBmp01Repository implements Bmp01Repository {
+  _RecoveringBmp01Repository(this.statusCode);
+
+  final int statusCode;
+  int calls = 0;
+
+  @override
+  Future<Bmp01Snapshot> load() async {
+    calls++;
+    if (calls == 1) {
+      throw LumenisCoreException(
+        'HTTP $statusCode private access failure',
+        statusCode: statusCode,
+      );
+    }
+    return Bmp01Snapshot.fromResponse(_readySnapshot);
   }
 }
 

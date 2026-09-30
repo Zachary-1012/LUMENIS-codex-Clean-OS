@@ -50,10 +50,12 @@ import '../features/system/sys07/sys07_screen.dart';
 import '../features/system/sys08/sys08_screen.dart';
 import '../l10n/lumenis_localizations.dart';
 import '../navigation/lumenis_workspace_routes.dart';
+import '../navigation/lumenis_leave_guard.dart';
 
 Widget buildLumenisWorkspaceScreen({
   required String screenId,
   required LumenisCoreClient client,
+  bool contextAvailable = true,
   ValueChanged<String>? onNavigate,
 }) {
   if (!LumenisWorkspaceRoutes.supportsWorkspaceScreen(screenId)) {
@@ -112,7 +114,7 @@ Widget buildLumenisWorkspaceScreen({
     'BMP-09' => Bmp09Screen(client: client),
     'BMP-10' => Bmp10Screen(client: client),
     'BMP-11' => Bmp11Screen(client: client),
-    'SH-01' => Sh01Screen(client: client),
+    'SH-01' => Sh01Screen(client: client, contextAvailable: contextAvailable),
     'SH-02' => Sh02Screen(client: client),
     'SH-03' => Sh03Screen(client: client),
     'SH-04' => Sh04Screen(client: client),
@@ -164,6 +166,11 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
   Map<String, dynamic>? _contextEnvelope;
   Map<String, dynamic>? _unavailableContextEnvelope;
   bool _hasConfirmedFocusRecoveryHint = false;
+  final _localLeaveGuard = LumenisLeaveGuard();
+  int _editorScopeRevision = 0;
+
+  LumenisLeaveGuard get _leaveGuard =>
+      LumenisLeaveScope.maybeOf(context) ?? _localLeaveGuard;
 
   @override
   void initState() {
@@ -259,12 +266,13 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
   @override
   void dispose() {
     _activeScreen.dispose();
+    _localLeaveGuard.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
+    final layout = LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 768) {
           return _buildPhone(context);
@@ -278,6 +286,9 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
         );
       },
     );
+    return LumenisLeaveScope.maybeOf(context) == null
+        ? LumenisLeaveScope(guard: _localLeaveGuard, child: layout)
+        : layout;
   }
 
   String get _activeGroup =>
@@ -297,7 +308,10 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     _activateScreen(_destinations[index].id);
   }
 
-  void _activateScreen(String screenId, {bool notifyRoute = true}) {
+  Future<void> _activateScreen(
+    String screenId, {
+    bool notifyRoute = true,
+  }) async {
     if (!LumenisWorkspaceRoutes.supportsScreen(screenId)) {
       return;
     }
@@ -306,6 +320,15 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       return;
     }
     if (_activeScreen.value == screenId) return;
+    if (notifyRoute &&
+        widget.onScreenSelected != null &&
+        _leaveGuard.routeDriven) {
+      // The router owns acceptance and then updates initialScreenId. Selecting
+      // locally first would discard the editor before onEnter can protect it.
+      widget.onScreenSelected!(screenId);
+      return;
+    }
+    if (!await _leaveGuard.requestLeave() || !mounted) return;
     final currentEnvelope = widget.client.currentContextEnvelope;
     final shouldAdoptCurrentEnvelope =
         currentEnvelope != null &&
@@ -326,6 +349,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
   Widget _screen() => buildLumenisWorkspaceScreen(
     screenId: _activeScreen.value,
     client: widget.client,
+    contextAvailable: _contextEnvelope != null,
     onNavigate: _activateScreen,
   );
 
@@ -355,7 +379,9 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
         );
       },
       child: KeyedSubtree(
-        key: ValueKey('${_activeScreen.value}:$_contextFingerprint'),
+        key: ValueKey(
+          '${_activeScreen.value}:${_activeScreen.value == 'SH-01' ? _editorScopeRevision : _contextFingerprint}',
+        ),
         child: _screen(),
       ),
     );
@@ -705,6 +731,9 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
         client: widget.client,
         canReturnToGlobal: canReturnToGlobal,
         onContextConfirmed: _acceptContextEnvelope,
+        beforeContextChange: _leaveGuard.requestLeave,
+        onContextChanged: (envelope) =>
+            _acceptContextEnvelope(envelope, resetEditor: true),
         onContextUnavailable: _markContextUnavailable,
       ),
     );
@@ -724,9 +753,13 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
         subjectId.trim().isNotEmpty;
   }
 
-  void _acceptContextEnvelope(Map<String, dynamic> envelope) {
+  void _acceptContextEnvelope(
+    Map<String, dynamic> envelope, {
+    bool resetEditor = false,
+  }) {
     if (!mounted) return;
     setState(() {
+      if (resetEditor) _editorScopeRevision++;
       _contextEnvelope = envelope;
       _unavailableContextEnvelope = null;
       _hasConfirmedFocusRecoveryHint = _isConfirmedFocusEnvelope(envelope);
@@ -1367,12 +1400,16 @@ class _ContextPickerDialog extends StatefulWidget {
     required this.client,
     required this.canReturnToGlobal,
     required this.onContextConfirmed,
+    required this.beforeContextChange,
+    required this.onContextChanged,
     required this.onContextUnavailable,
   });
 
   final LumenisCoreClient client;
   final bool canReturnToGlobal;
   final ValueChanged<Map<String, dynamic>> onContextConfirmed;
+  final Future<bool> Function() beforeContextChange;
+  final ValueChanged<Map<String, dynamic>> onContextChanged;
   final VoidCallback onContextUnavailable;
 
   @override
@@ -1489,13 +1526,17 @@ class _ContextPickerDialogState extends State<_ContextPickerDialog> {
       _selecting = true;
       _messageKey = null;
     });
+    if (!await widget.beforeContextChange() || !mounted) {
+      if (mounted) setState(() => _selecting = false);
+      return;
+    }
     try {
       final envelope = await widget.client.selectContext(
         domainId: domainId,
         subjectId: subjectId,
       );
       if (!mounted) return;
-      widget.onContextConfirmed(envelope);
+      widget.onContextChanged(envelope);
       Navigator.of(context).pop(envelope);
     } on Object catch (error) {
       if (!mounted) return;
@@ -1511,10 +1552,14 @@ class _ContextPickerDialogState extends State<_ContextPickerDialog> {
     setState(() {
       _selecting = true;
     });
+    if (!await widget.beforeContextChange() || !mounted) {
+      if (mounted) setState(() => _selecting = false);
+      return;
+    }
     try {
       final envelope = await widget.client.clearContext();
       if (!mounted) return;
-      widget.onContextConfirmed(envelope);
+      widget.onContextChanged(envelope);
       Navigator.of(context).pop(envelope);
     } on Object catch (error) {
       if (!mounted) return;

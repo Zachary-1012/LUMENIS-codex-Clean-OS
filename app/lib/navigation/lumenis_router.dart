@@ -5,71 +5,89 @@ import '../core/lumenis_core_client.dart';
 import '../core/lumenis_theme.dart';
 import '../features/launch/launch_surface.dart';
 import '../l10n/lumenis_localizations.dart';
+import 'lumenis_leave_guard.dart';
 import 'lumenis_workspace_routes.dart';
 
 GoRouter createLumenisRouter({
   required LumenisCoreClient client,
   required ValueChanged<Locale?> onLocaleChanged,
   String? initialLocation,
-}) => GoRouter(
-  initialLocation: initialLocation ?? LumenisWorkspaceRoutes.root,
-  restorationScopeId: 'lumenis-router',
-  routes: [
-    GoRoute(path: '/', redirect: (_, _) => LumenisWorkspaceRoutes.root),
-    GoRoute(
-      path: '/workspace',
-      redirect: (_, _) => LumenisWorkspaceRoutes.root,
-    ),
-    GoRoute(
-      path: LumenisWorkspaceRoutes.cth02,
-      builder: (context, state) => _workspace(
-        context,
-        client: client,
-        screenId: 'CTH-02',
-        onLocaleChanged: onLocaleChanged,
+}) {
+  final leaveGuard = LumenisLeaveGuard(routeDriven: true);
+  return GoRouter(
+    initialLocation: initialLocation ?? LumenisWorkspaceRoutes.root,
+    restorationScopeId: 'lumenis-router',
+    onEnter: (context, current, next, router) async {
+      if (current.uri == next.uri) return const Allow();
+      return await leaveGuard.requestLeave()
+          ? const Allow()
+          : const Block.stop();
+    },
+    routes: [
+      GoRoute(path: '/', redirect: (_, _) => LumenisWorkspaceRoutes.root),
+      GoRoute(
+        path: '/workspace',
+        redirect: (_, _) => LumenisWorkspaceRoutes.root,
       ),
-    ),
-    GoRoute(
-      path: '/workspace/:screenId',
-      builder: (context, state) {
-        final screenId = state.pathParameters['screenId'] ?? '';
-        if (LumenisWorkspaceRoutes.unavailableScreenIds.contains(screenId)) {
-          return const LumenisRouteBoundary.browserUnavailable();
-        }
-        if (LumenisWorkspaceRoutes.supportsWorkspaceScreen(screenId)) {
-          return _workspace(
-            context,
-            client: client,
-            screenId: screenId,
-            onLocaleChanged: onLocaleChanged,
-          );
-        }
-        return const LumenisRouteBoundary.unavailable();
-      },
-    ),
-  ],
-  errorBuilder: (_, _) => const LumenisRouteBoundary.unavailable(),
-);
+      GoRoute(
+        path: LumenisWorkspaceRoutes.cth02,
+        builder: (context, state) => _workspace(
+          context,
+          client: client,
+          leaveGuard: leaveGuard,
+          screenId: 'CTH-02',
+          onLocaleChanged: onLocaleChanged,
+        ),
+      ),
+      GoRoute(
+        path: '/workspace/:screenId',
+        builder: (context, state) {
+          final screenId = state.pathParameters['screenId'] ?? '';
+          if (LumenisWorkspaceRoutes.unavailableScreenIds.contains(screenId)) {
+            return const LumenisRouteBoundary.browserUnavailable();
+          }
+          if (LumenisWorkspaceRoutes.supportsWorkspaceScreen(screenId)) {
+            return _workspace(
+              context,
+              client: client,
+              leaveGuard: leaveGuard,
+              screenId: screenId,
+              onLocaleChanged: onLocaleChanged,
+            );
+          }
+          return const LumenisRouteBoundary.unavailable();
+        },
+      ),
+    ],
+    errorBuilder: (_, _) => const LumenisRouteBoundary.unavailable(),
+  );
+}
 
 Widget _workspace(
   BuildContext context, {
   required LumenisCoreClient client,
+  required LumenisLeaveGuard leaveGuard,
   required String screenId,
   required ValueChanged<Locale?> onLocaleChanged,
-}) => LaunchSurface(
-  client: client,
-  initialScreenId: screenId,
-  onScreenSelected: (nextScreenId) {
-    final path = LumenisWorkspaceRoutes.pathForScreen(nextScreenId);
-    if (GoRouterState.of(context).uri.path != path) {
-      if (LumenisWorkspaceRoutes.unavailableScreenIds.contains(nextScreenId)) {
-        context.push(path);
-      } else {
-        context.go(path);
+}) => LumenisLeaveScope(
+  guard: leaveGuard,
+  child: LaunchSurface(
+    client: client,
+    initialScreenId: screenId,
+    onScreenSelected: (nextScreenId) {
+      final path = LumenisWorkspaceRoutes.pathForScreen(nextScreenId);
+      if (GoRouterState.of(context).uri.path != path) {
+        if (LumenisWorkspaceRoutes.unavailableScreenIds.contains(
+          nextScreenId,
+        )) {
+          context.push(path);
+        } else {
+          context.go(path);
+        }
       }
-    }
-  },
-  onLocaleChanged: onLocaleChanged,
+    },
+    onLocaleChanged: onLocaleChanged,
+  ),
 );
 
 class LumenisRouteBoundary extends StatelessWidget {

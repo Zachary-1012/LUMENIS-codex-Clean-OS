@@ -160,14 +160,14 @@ void main() {
       final failures = [
         (
           error: Exception('HTTP 401 private authentication response'),
-          title: '需要登录',
-          detail: '请登录后查看系统运行状态。',
+          title: '系统运行状态暂时无法打开',
+          detail: '可重试读取，或返回后稍后再试。',
           canRetry: false,
         ),
         (
           error: Exception('HTTP 403 private permission response'),
-          title: '当前账号无法查看',
-          detail: '如需查看系统运行状态，请联系系统管理员。',
+          title: '系统运行状态不可访问',
+          detail: '当前页面无法读取该内容。',
           canRetry: false,
         ),
         (
@@ -191,6 +191,17 @@ void main() {
 
         expect(find.text(failure.title), findsOneWidget);
         expect(find.text(failure.detail), findsOneWidget);
+        if (failure.error.toString().contains('401') ||
+            failure.error.toString().contains('403')) {
+          final visibleText = tester
+              .widgetList<Text>(find.byType(Text))
+              .map((text) => text.data ?? text.textSpan?.toPlainText() ?? '')
+              .join('\n')
+              .toLowerCase();
+          for (final term in ['登录', '账号', '账户', '管理员', '检查连接', '检查网络']) {
+            expect(visibleText, isNot(contains(term)));
+          }
+        }
         expect(
           find.text('重新检查'),
           failure.canRetry ? findsOneWidget : findsNothing,

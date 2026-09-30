@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -15,14 +16,95 @@ const _legacyConfiguredCoreUrl = String.fromEnvironment(
 const _defaultCoreBaseUrl = 'http://127.0.0.1:8201';
 
 class LumenisCoreException implements Exception {
-  const LumenisCoreException(this.message, {this.statusCode, this.messageKey});
+  const LumenisCoreException(
+    this.message, {
+    this.statusCode,
+    this.messageKey,
+    this.errorCode,
+    this.sourceConfirmation,
+  });
 
   final String message;
   final int? statusCode;
   final String? messageKey;
+  final String? errorCode;
+  final ContentSourceConfirmation? sourceConfirmation;
 
   @override
   String toString() => 'LumenisCoreException: $message';
+}
+
+class ContentSourceConfirmation {
+  const ContentSourceConfirmation({
+    required this.confirmationId,
+    required this.resource,
+    required this.expiresAt,
+    required this.filename,
+    required this.sizeBytes,
+    required this.bodySha256,
+  });
+
+  final String confirmationId;
+  final String resource;
+  final DateTime expiresAt;
+  final String filename;
+  final int sizeBytes;
+  final String bodySha256;
+
+  static ContentSourceConfirmation? tryParse(Object? value) {
+    if (value is! Map) return null;
+    final id = value['confirmation_id'];
+    final resource = value['resource'];
+    final expires = value['expires_at'];
+    final filename = value['filename'];
+    final size = value['size_bytes'];
+    final sha256 = value['body_sha256'];
+    final parsedExpiry = expires is String ? DateTime.tryParse(expires) : null;
+    if (id is! String ||
+        id.isEmpty ||
+        id.length > 180 ||
+        RegExp(r'[\x00-\x1f]').hasMatch(id) ||
+        resource is! String ||
+        RegExp(
+              r'^content-source-import:v1:[a-f0-9]{64}$',
+            ).stringMatch(resource) !=
+            resource ||
+        parsedExpiry == null ||
+        filename is! String ||
+        filename.isEmpty ||
+        filename.length > 240 ||
+        RegExp(r'[\\/:\x00-\x1f]').hasMatch(filename) ||
+        size is! int ||
+        size <= 0 ||
+        size > MediaSourceLimits.maxBytes ||
+        sha256 is! String ||
+        !RegExp(r'^[a-f0-9]{64}$').hasMatch(sha256)) {
+      return null;
+    }
+    return ContentSourceConfirmation(
+      confirmationId: id,
+      resource: resource,
+      expiresAt: parsedExpiry,
+      filename: filename,
+      sizeBytes: size,
+      bodySha256: sha256,
+    );
+  }
+}
+
+abstract final class MediaSourceLimits {
+  static const maxBytes = 128 * 1024 * 1024;
+}
+
+class ContentProjectFile {
+  const ContentProjectFile({
+    required this.bytes,
+    required this.filename,
+    required this.mediaType,
+  });
+  final Uint8List bytes;
+  final String filename;
+  final String mediaType;
 }
 
 class LumenisCoreClient {
@@ -288,6 +370,230 @@ class LumenisCoreClient {
   Future<Map<String, dynamic>> screen(String screenId) =>
       _get('/api/experience/screen/${Uri.encodeComponent(screenId)}');
 
+  /// Media actions use canonical focus when selected. GLOBAL_ALL still needs
+  /// an explicit invoking domain; it never supplies a subject or focus grant.
+  Map<String, String> _contentContext(String domainId) {
+    final domain = domainId.trim().toUpperCase();
+    if (domain != 'CTH' && domain != 'BMP') {
+      throw const FormatException('A CTH or BMP creation context is required.');
+    }
+    final mode = _contextHeaders['X-Lumenis-Context-Mode'];
+    if (mode == 'FOCUS' && _contextHeaders['X-Domain-Id'] != domain) {
+      throw const LumenisCoreException(
+        'The selected domain conflicts with the focused workspace context.',
+        errorCode: 'CONTENT_CONTEXT_MISMATCH',
+      );
+    }
+    if (mode != 'FOCUS' && mode != 'GLOBAL_ALL') {
+      throw const LumenisCoreException(
+        'A recognized workspace context is required before using media actions.',
+        errorCode: 'CONTENT_CONTEXT_REQUIRED',
+      );
+    }
+    return {
+      ..._contextHeaders,
+      if (mode == 'GLOBAL_ALL') 'X-Domain-Id': domain,
+      'X-Product-Id': domain == 'BMP' ? 'ZBMP' : 'CTH',
+    };
+  }
+
+  Future<Map<String, dynamic>> inspectContentMedia({
+    required String domainId,
+    List<String>? assetPaths,
+    List<String>? assetRefs,
+  }) => _request(
+    'POST',
+    '/api/experience/shared-skills/shared.content_project/inspect',
+    operationContext: _contentContext(domainId),
+    payload: {
+      'action_type': 'READ',
+      'input': _contentAssets(assetPaths, assetRefs),
+    },
+  );
+
+  Future<Map<String, dynamic>> exportContentProject({
+    required String domainId,
+    List<String>? assetPaths,
+    List<String>? assetRefs,
+    required Map<String, dynamic> timeline,
+    required String outputKind,
+    required bool demoAcknowledged,
+    String? previousArtifactId,
+  }) {
+    if (outputKind != 'video' && outputKind != 'audio') {
+      throw const FormatException('Unsupported content output kind.');
+    }
+    if (previousArtifactId != null) {
+      _validateContentArtifactId(previousArtifactId);
+    }
+    return _request(
+      'POST',
+      '/api/experience/content-projects/export',
+      operationContext: _contentContext(domainId),
+      connectionTimeout: const Duration(minutes: 5),
+      payload: {
+        'action_type': 'EXPORT',
+        'input': {
+          ..._contentAssets(assetPaths, assetRefs),
+          'timeline': timeline,
+          'output_kind': outputKind,
+          'demo_acknowledged': demoAcknowledged,
+          'previous_artifact_id': previousArtifactId,
+        },
+      },
+    ).timeout(
+      const Duration(minutes: 5),
+      onTimeout: () => throw const LumenisCoreException(
+        'Export response timed out; server completion is unknown.',
+        errorCode: 'CONTENT_EXPORT_TIMEOUT',
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> reopenContentProject({
+    required String domainId,
+    required String artifactId,
+  }) {
+    _validateContentArtifactId(artifactId);
+    return _request(
+      'GET',
+      '/api/experience/content-projects/$artifactId',
+      operationContext: _contentContext(domainId),
+    );
+  }
+
+  static void _validateContentArtifactId(String value) {
+    if (!RegExp(r'^ART-[A-Za-z0-9_-]{1,70}$').hasMatch(value)) {
+      throw const FormatException('Invalid content project identifier.');
+    }
+  }
+
+  static Map<String, Object?> _contentAssets(
+    List<String>? paths,
+    List<String>? refs,
+  ) {
+    if ((paths == null) == (refs == null)) {
+      throw const FormatException(
+        'Exactly one media source input is required.',
+      );
+    }
+    if (refs != null) {
+      for (final ref in refs) {
+        _validateContentArtifactId(ref);
+      }
+      return {'asset_refs': refs};
+    }
+    return {'asset_paths': paths};
+  }
+
+  Future<Map<String, dynamic>> importContentSource({
+    required String domainId,
+    required String filename,
+    required Uint8List bytes,
+  }) {
+    if (filename.isEmpty ||
+        filename.length > 240 ||
+        RegExp(r'[\\/:\x00-\x1f]').hasMatch(filename) ||
+        bytes.isEmpty ||
+        bytes.length > MediaSourceLimits.maxBytes) {
+      throw const FormatException('Invalid media file input.');
+    }
+    return _request(
+      'POST',
+      '/api/experience/content-sources?filename=${Uri.encodeQueryComponent(filename)}',
+      operationContext: _contentContext(domainId),
+      connectionTimeout: const Duration(minutes: 4),
+      binaryBody: bytes,
+      requestHeaders: const {'X-Lumenis-Action': 'WRITE'},
+    ).timeout(
+      const Duration(minutes: 4),
+      onTimeout: () => throw const LumenisCoreException(
+        'Import response timed out; server completion is unknown.',
+        errorCode: 'CONTENT_IMPORT_TIMEOUT',
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> confirmContentSource({
+    required String domainId,
+    required String confirmationId,
+    required bool confirmed,
+  }) {
+    if (confirmationId.isEmpty ||
+        confirmationId.length > 180 ||
+        RegExp(r'[\\/\x00-\x1f]').hasMatch(confirmationId)) {
+      throw const FormatException('Invalid source confirmation identifier.');
+    }
+    return _request(
+      'POST',
+      '/api/experience/content-source-confirmations/${Uri.encodeComponent(confirmationId)}',
+      operationContext: _contentContext(domainId),
+      payload: {'confirmed': confirmed},
+    );
+  }
+
+  Future<ContentProjectFile> contentProjectFile({
+    required String domainId,
+    required String artifactId,
+    required bool package,
+  }) async {
+    _validateContentArtifactId(artifactId);
+    final context = _contentContext(domainId);
+    final uri = _uri(
+      '/api/experience/content-projects/$artifactId/${package ? 'package' : 'media'}',
+    );
+    final authorization = _coreAuthorization;
+    if (authorization != null && !_allowsAuthorization(uri)) {
+      throw const LumenisCoreException(
+        'Core credentials require a loopback Core endpoint.',
+      );
+    }
+    try {
+      final response = await sendLumenisBinaryRequest(
+        LumenisTransportRequest(
+          method: 'GET',
+          uri: uri,
+          headers: {
+            ...context,
+            'Accept': package ? 'application/zip' : 'video/mp4, audio/wav',
+            'Authorization': ?authorization,
+          },
+          connectionTimeout: const Duration(minutes: 2),
+          followRedirects: false,
+        ),
+        maxBytes: 512 * 1024 * 1024,
+      );
+      if (response.statusCode != 200) {
+        throw LumenisCoreException(
+          'Content file was not returned.',
+          statusCode: response.statusCode,
+        );
+      }
+      final type = response.contentType?.split(';').first.trim().toLowerCase();
+      final extension = switch (type) {
+        'application/zip' when package => 'zip',
+        'video/mp4' when !package => 'mp4',
+        'audio/wav' when !package => 'wav',
+        _ => null,
+      };
+      if (extension == null || response.bytes.isEmpty) {
+        throw const FormatException(
+          'Content file type does not match the requested artifact.',
+        );
+      }
+      return ContentProjectFile(
+        bytes: response.bytes,
+        filename: '$artifactId.$extension',
+        mediaType: type!,
+      );
+    } on LumenisTransportException {
+      throw const LumenisCoreException(
+        'Content file retrieval is unavailable.',
+        errorCode: 'CONTENT_FILE_UNAVAILABLE',
+      );
+    }
+  }
+
   Future<Map<String, dynamic>> _get(
     String path, {
     bool useCoreAuthorization = true,
@@ -305,7 +611,14 @@ class LumenisCoreClient {
     Map<String, Object?>? payload,
     bool useCoreAuthorization = true,
     bool withContext = true,
+    Map<String, String>? operationContext,
+    Duration connectionTimeout = const Duration(seconds: 8),
+    Uint8List? binaryBody,
+    Map<String, String> requestHeaders = const {},
   }) async {
+    if (payload != null && binaryBody != null) {
+      throw const FormatException('Only one request body is allowed.');
+    }
     final uri = _uri(path);
     final authorization = useCoreAuthorization ? _coreAuthorization : null;
     if (authorization != null && !_allowsAuthorization(uri)) {
@@ -315,17 +628,23 @@ class LumenisCoreClient {
     }
 
     try {
-      final headers = <String, String>{'Accept': 'application/json'};
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        ...requestHeaders,
+      };
       if (authorization != null) {
         headers['Authorization'] = authorization;
       }
       if (withContext) {
-        headers.addAll(_contextHeaders);
+        headers.addAll(operationContext ?? _contextHeaders);
       }
       String? requestBody;
       if (payload != null) {
         headers['Content-Type'] = 'application/json; charset=utf-8';
         requestBody = jsonEncode(payload);
+      }
+      if (binaryBody != null) {
+        headers['Content-Type'] = 'application/octet-stream';
       }
       final reply = await sendLumenisHttpRequest(
         LumenisTransportRequest(
@@ -333,7 +652,8 @@ class LumenisCoreClient {
           uri: uri,
           headers: headers,
           body: requestBody,
-          connectionTimeout: const Duration(seconds: 8),
+          bodyBytes: binaryBody,
+          connectionTimeout: connectionTimeout,
           // Core redirects are a deployment/configuration error. Following
           // them could forward the current Subject/BrandFocus headers to a
           // different origin, so every Product Core request fails closed.
@@ -342,10 +662,26 @@ class LumenisCoreClient {
       );
       if (reply.statusCode < 200 || reply.statusCode >= 300) {
         String? messageKey;
+        String? errorCode;
+        ContentSourceConfirmation? sourceConfirmation;
         try {
           final errorBody = jsonDecode(reply.body);
           if (errorBody is Map && errorBody['message_key'] is String) {
             messageKey = errorBody['message_key'] as String;
+          }
+          if (errorBody is Map && errorBody['code'] is String) {
+            final code = errorBody['code'] as String;
+            if (RegExp(r'^[A-Z][A-Z_0-9]{0,99}$').hasMatch(code)) {
+              errorCode = code;
+            }
+          }
+          if (reply.statusCode == 403 &&
+              errorBody is Map &&
+              errorBody['code'] == 'CONTENT_SOURCE_APPROVAL_REQUIRED' &&
+              errorBody['requires_approval'] == true) {
+            sourceConfirmation = ContentSourceConfirmation.tryParse(
+              errorBody['confirmation'],
+            );
           }
         } on FormatException {
           // Preserve the HTTP status even if an older Core returns non-JSON.
@@ -354,6 +690,8 @@ class LumenisCoreClient {
           '$method $path failed with HTTP ${reply.statusCode}',
           statusCode: reply.statusCode,
           messageKey: messageKey,
+          errorCode: errorCode,
+          sourceConfirmation: sourceConfirmation,
         );
       }
       final decoded = jsonDecode(reply.body);

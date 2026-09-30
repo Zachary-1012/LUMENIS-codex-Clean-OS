@@ -27,6 +27,10 @@ void main() {
     expect(find.text('共享内容与创作'), findsOneWidget);
     expect(find.text('跨平台选题搜索'), findsWidgets);
     expect(find.text('业务资料依据暂不显示'), findsOneWidget);
+    expect(find.text('选择一个工具，查看用途与适用内容。'), findsOneWidget);
+    expect(find.text('目录中暂时没有可查看的工具。'), findsNothing);
+    expect(_visibleCopy(tester), isNot(contains('账号')));
+    expect(_visibleCopy(tester), isNot(contains('登录')));
     _expectNoImplementationTerms(tester);
     expect(find.text('不归因到 CTH 或 BMP'), findsNothing);
     expect(find.text('CGE-PRIVATE-001'), findsNothing);
@@ -404,12 +408,12 @@ const _failureCases = <({String name, String error, String copy})>[
   (
     name: 'authentication',
     error: 'HTTP 401 raw-diagnostic-marker token=secret Core scope',
-    copy: '登录状态已过期，请重新登录后查看工具目录。',
+    copy: '当前请求暂时无法读取工具目录，请重试。',
   ),
   (
     name: 'permission',
     error: 'HTTP 403 raw-diagnostic-marker ViewModel contract',
-    copy: '当前账号暂不能查看工具目录。',
+    copy: '当前范围暂时无法读取工具目录，请重试。',
   ),
   (
     name: 'offline',

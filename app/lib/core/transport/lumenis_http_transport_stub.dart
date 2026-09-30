@@ -7,3 +7,10 @@ Future<LumenisTransportResponse> sendLumenisHttpRequest(
 ) => throw const LumenisTransportException(
   'HTTP transport is unavailable on this platform.',
 );
+
+Future<LumenisBinaryTransportResponse> sendLumenisBinaryRequest(
+  LumenisTransportRequest request, {
+  required int maxBytes,
+}) => throw const LumenisTransportException(
+  'HTTP transport is unavailable on this platform.',
+);

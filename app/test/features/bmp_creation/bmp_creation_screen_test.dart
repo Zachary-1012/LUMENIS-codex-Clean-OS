@@ -673,12 +673,176 @@ void main() {
     expect(find.text('当前品牌'), findsNothing);
     _expectNoDeveloperCopy(tester);
   });
+
+  final recoveryCases = <_RecoveryCase>[
+    (
+      name: 'BMP-06',
+      create: (statusCode) {
+        final repository = _Bmp06Fake(
+          _approvedBmp06,
+          firstFailureStatus: statusCode,
+        );
+        return (
+          screen: Bmp06Screen(
+            client: LumenisCoreClient(),
+            repository: repository,
+          ),
+          repository: repository,
+        );
+      },
+    ),
+    (
+      name: 'BMP-07',
+      create: (statusCode) {
+        final repository = _Bmp07Fake(
+          _approvedBmp07,
+          firstFailureStatus: statusCode,
+        );
+        return (
+          screen: Bmp07Screen(
+            client: LumenisCoreClient(),
+            repository: repository,
+          ),
+          repository: repository,
+        );
+      },
+    ),
+    (
+      name: 'BMP-08',
+      create: (statusCode) {
+        final repository = _Bmp08Fake(
+          _approvedBmp08,
+          firstFailureStatus: statusCode,
+        );
+        return (
+          screen: Bmp08Screen(
+            client: LumenisCoreClient(),
+            repository: repository,
+          ),
+          repository: repository,
+        );
+      },
+    ),
+    (
+      name: 'BMP-09',
+      create: (statusCode) {
+        final repository = _Bmp09Fake(
+          _approvedBmp09,
+          firstFailureStatus: statusCode,
+        );
+        return (
+          screen: Bmp09Screen(
+            client: LumenisCoreClient(),
+            repository: repository,
+          ),
+          repository: repository,
+        );
+      },
+    ),
+    (
+      name: 'BMP-10',
+      create: (statusCode) {
+        final repository = _Bmp10Fake(
+          _approvedBmp10,
+          firstFailureStatus: statusCode,
+        );
+        return (
+          screen: Bmp10Screen(
+            client: LumenisCoreClient(),
+            repository: repository,
+          ),
+          repository: repository,
+        );
+      },
+    ),
+    (
+      name: 'BMP-11',
+      create: (statusCode) {
+        final repository = _Bmp11Fake(
+          _approvedBmp11,
+          firstFailureStatus: statusCode,
+        );
+        return (
+          screen: Bmp11Screen(
+            client: LumenisCoreClient(),
+            repository: repository,
+          ),
+          repository: repository,
+        );
+      },
+    ),
+  ];
+
+  const recoveryLocales = [
+    (
+      locale: Locale('zh', 'CN'),
+      authentication: '当前内容暂时无法打开',
+      permission: '当前内容不可访问',
+      detail: '可重试读取，或返回后稍后再试。',
+      forbiddenTerms: ['登录', '账号', '账户', '检查连接', '检查网络'],
+    ),
+    (
+      locale: Locale('en'),
+      authentication: 'This content cannot be opened right now.',
+      permission: 'This content is not accessible.',
+      detail: 'You can retry reading it or return and try again later.',
+      forbiddenTerms: [
+        'sign in',
+        'login',
+        'account',
+        'check the connection',
+        'check connection',
+      ],
+    ),
+    (
+      locale: Locale('ko'),
+      authentication: '현재 콘텐츠를 지금 열 수 없습니다.',
+      permission: '현재 콘텐츠에 접근할 수 없습니다.',
+      detail: '다시 읽기를 시도하거나 돌아간 뒤 나중에 다시 시도할 수 있습니다.',
+      forbiddenTerms: ['로그인', '계정', '연결을 확인'],
+    ),
+  ];
+
+  for (final recoveryCase in recoveryCases) {
+    testWidgets(
+      '${recoveryCase.name} distinguishes access failures and recovers on retry in all locales',
+      (tester) async {
+        for (final copy in recoveryLocales) {
+          for (final statusCode in [401, 403]) {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            final attempt = recoveryCase.create(statusCode);
+            await tester.pumpWidget(_app(attempt.screen, locale: copy.locale));
+            await tester.pumpAndSettle();
+
+            final expectedTitle = statusCode == 401
+                ? copy.authentication
+                : copy.permission;
+            expect(find.text(expectedTitle), findsOneWidget);
+            expect(find.text(copy.detail), findsOneWidget);
+            _expectNoAuthOrNetworkAdvice(tester, copy.forbiddenTerms);
+            final retryAction = find.byType(OutlinedButton);
+            expect(retryAction, findsOneWidget);
+
+            await tester.ensureVisible(retryAction);
+            await tester.tap(retryAction);
+            await tester.pumpAndSettle();
+
+            expect(attempt.repository.calls, 2);
+            expect(find.text(expectedTitle), findsNothing);
+            expect(find.text(copy.detail), findsNothing);
+            expect(tester.takeException(), isNull);
+          }
+        }
+      },
+    );
+  }
 }
 
-Widget _app(Widget child) {
+Widget _app(Widget child, {Locale locale = const Locale('zh', 'CN')}) {
   return MaterialApp(
     theme: LumenisTheme.dark,
-    locale: const Locale('zh', 'CN'),
+    locale: locale,
     supportedLocales: LumenisLocalizations.supportedLocales,
     localizationsDelegates: const [
       LumenisLocalizations.delegate,
@@ -688,6 +852,20 @@ Widget _app(Widget child) {
     ],
     home: Scaffold(body: child),
   );
+}
+
+void _expectNoAuthOrNetworkAdvice(
+  WidgetTester tester,
+  List<String> forbiddenTerms,
+) {
+  final visibleText = tester
+      .widgetList<Text>(find.byType(Text))
+      .map((text) => text.data ?? text.textSpan?.toPlainText() ?? '')
+      .join('\n')
+      .toLowerCase();
+  for (final term in forbiddenTerms) {
+    expect(visibleText, isNot(contains(term.toLowerCase())));
+  }
 }
 
 void _expectNoDeveloperCopy(WidgetTester tester) {
@@ -939,56 +1117,63 @@ final _approvedGlobalBmp11 = Bmp11Snapshot(
   ],
 );
 
-class _Bmp06Fake implements Bmp06Repository {
-  _Bmp06Fake(this.snapshot);
+typedef _RecoveryCase = ({
+  String name,
+  ({Widget screen, _RecoveryRepository repository}) Function(int statusCode)
+  create,
+});
 
-  final Bmp06Snapshot snapshot;
-
-  @override
-  Future<Bmp06Snapshot> load() async => snapshot;
+abstract interface class _RecoveryRepository {
+  int get calls;
 }
 
-class _Bmp07Fake implements Bmp07Repository {
-  _Bmp07Fake(this.snapshot);
+abstract class _ScriptedRead<T> implements _RecoveryRepository {
+  _ScriptedRead(this.snapshot, {this.firstFailureStatus});
 
-  final Bmp07Snapshot snapshot;
-
+  final T snapshot;
+  final int? firstFailureStatus;
   @override
-  Future<Bmp07Snapshot> load() async => snapshot;
+  int calls = 0;
+
+  Future<T> load() async {
+    calls++;
+    final statusCode = firstFailureStatus;
+    if (calls == 1 && statusCode != null) {
+      throw LumenisCoreException(
+        'HTTP $statusCode private access failure',
+        statusCode: statusCode,
+      );
+    }
+    return snapshot;
+  }
 }
 
-class _Bmp08Fake implements Bmp08Repository {
-  _Bmp08Fake(this.snapshot);
-
-  final Bmp08Snapshot snapshot;
-
-  @override
-  Future<Bmp08Snapshot> load() async => snapshot;
+class _Bmp06Fake extends _ScriptedRead<Bmp06Snapshot>
+    implements Bmp06Repository {
+  _Bmp06Fake(super.snapshot, {super.firstFailureStatus});
 }
 
-class _Bmp09Fake implements Bmp09Repository {
-  _Bmp09Fake(this.snapshot);
-
-  final Bmp09Snapshot snapshot;
-
-  @override
-  Future<Bmp09Snapshot> load() async => snapshot;
+class _Bmp07Fake extends _ScriptedRead<Bmp07Snapshot>
+    implements Bmp07Repository {
+  _Bmp07Fake(super.snapshot, {super.firstFailureStatus});
 }
 
-class _Bmp10Fake implements Bmp10Repository {
-  _Bmp10Fake(this.snapshot);
-
-  final Bmp10Snapshot snapshot;
-
-  @override
-  Future<Bmp10Snapshot> load() async => snapshot;
+class _Bmp08Fake extends _ScriptedRead<Bmp08Snapshot>
+    implements Bmp08Repository {
+  _Bmp08Fake(super.snapshot, {super.firstFailureStatus});
 }
 
-class _Bmp11Fake implements Bmp11Repository {
-  _Bmp11Fake(this.snapshot);
+class _Bmp09Fake extends _ScriptedRead<Bmp09Snapshot>
+    implements Bmp09Repository {
+  _Bmp09Fake(super.snapshot, {super.firstFailureStatus});
+}
 
-  final Bmp11Snapshot snapshot;
+class _Bmp10Fake extends _ScriptedRead<Bmp10Snapshot>
+    implements Bmp10Repository {
+  _Bmp10Fake(super.snapshot, {super.firstFailureStatus});
+}
 
-  @override
-  Future<Bmp11Snapshot> load() async => snapshot;
+class _Bmp11Fake extends _ScriptedRead<Bmp11Snapshot>
+    implements Bmp11Repository {
+  _Bmp11Fake(super.snapshot, {super.firstFailureStatus});
 }

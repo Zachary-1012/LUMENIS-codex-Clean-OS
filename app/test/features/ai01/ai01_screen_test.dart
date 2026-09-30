@@ -209,6 +209,89 @@ void main() {
   }
 
   testWidgets(
+    'authentication and access copy remain distinct and retry recovers in all locales',
+    (tester) async {
+      const recoveryLocales = [
+        (
+          locale: Locale('zh', 'CN'),
+          authentication: 'AI 服务状态暂时无法打开',
+          authenticationDetail: '可重试读取，或返回后稍后再试。',
+          permission: 'AI 服务状态不可访问',
+          permissionDetail: '当前页面无法读取该内容。',
+          retry: '重新读取',
+          forbiddenTerms: ['登录', '账号', '账户', '检查网络', '检查连接'],
+        ),
+        (
+          locale: Locale('en'),
+          authentication: 'AI service status cannot be opened right now',
+          authenticationDetail:
+              'You can retry reading it or return and try again later.',
+          permission: 'AI service status is not accessible',
+          permissionDetail: 'This content cannot be read on the current page.',
+          retry: 'Read again',
+          forbiddenTerms: [
+            'sign in',
+            'login',
+            'account',
+            'check the connection',
+            'check connection',
+          ],
+        ),
+        (
+          locale: Locale('ko'),
+          authentication: 'AI 서비스 상태를 지금 열 수 없습니다',
+          authenticationDetail: '다시 읽기를 시도하거나 돌아간 뒤 나중에 다시 시도할 수 있습니다.',
+          permission: 'AI 서비스 상태에 접근할 수 없습니다',
+          permissionDetail: '현재 페이지에서 이 콘텐츠를 읽을 수 없습니다.',
+          retry: '다시 읽기',
+          forbiddenTerms: ['로그인', '계정', '연결을 확인'],
+        ),
+      ];
+
+      for (final copy in recoveryLocales) {
+        for (final statusCode in [401, 403]) {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          final repository = _RecoveringAi01Repository(statusCode);
+          await tester.pumpWidget(
+            _app(repository: repository, locale: copy.locale),
+          );
+          await tester.pumpAndSettle();
+
+          final title = statusCode == 401
+              ? copy.authentication
+              : copy.permission;
+          final detail = statusCode == 401
+              ? copy.authenticationDetail
+              : copy.permissionDetail;
+          expect(find.text(title), findsOneWidget);
+          expect(find.text(detail), findsOneWidget);
+          for (final term in copy.forbiddenTerms) {
+            expect(
+              _visibleCopy(tester).toLowerCase(),
+              isNot(contains(term.toLowerCase())),
+            );
+          }
+          expect(find.text(copy.retry), findsOneWidget);
+          expect(
+            _visibleCopy(tester),
+            isNot(contains('raw-diagnostic-marker')),
+          );
+
+          await tester.ensureVisible(find.text(copy.retry));
+          await tester.tap(find.text(copy.retry));
+          await tester.pumpAndSettle();
+
+          expect(repository.calls, 2);
+          expect(find.text(title), findsNothing);
+          expect(find.text(detail), findsNothing);
+          expect(tester.takeException(), isNull);
+        }
+      }
+    },
+  );
+
+  testWidgets(
     'keeps local draft and actions through read failure, retry, and recovery',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 844));
@@ -683,6 +766,25 @@ class _FakeAi01Repository implements Ai01Repository {
   }
 }
 
+class _RecoveringAi01Repository implements Ai01Repository {
+  _RecoveringAi01Repository(this.statusCode);
+
+  final int statusCode;
+  int calls = 0;
+
+  @override
+  Future<Ai01Snapshot> load() async {
+    calls++;
+    if (calls == 1) {
+      throw LumenisCoreException(
+        'HTTP $statusCode private access failure',
+        statusCode: statusCode,
+      );
+    }
+    return _readySnapshot();
+  }
+}
+
 class _ControlledAi01Repository implements Ai01Repository {
   _ControlledAi01Repository(this._responses);
 
@@ -711,12 +813,12 @@ const _failureCases = <({String name, String error, String message})>[
   (
     name: 'authentication',
     error: 'HTTP 401 raw-diagnostic-marker token=secret Core scope',
-    message: '请登录后再查看 AI 服务状态。',
+    message: '可重试读取，或返回后稍后再试。',
   ),
   (
     name: 'permission',
     error: 'HTTP 403 raw-diagnostic-marker ViewModel contract',
-    message: '当前账号没有查看 AI 服务状态的权限。',
+    message: '当前页面无法读取该内容。',
   ),
   (
     name: 'offline',

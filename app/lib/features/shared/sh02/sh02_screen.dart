@@ -642,7 +642,11 @@ class _SpatialDesk extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
+              Wrap(
+                alignment: WrapAlignment.start,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 4,
                 children: [
                   _ZoomButton(
                     key: const Key('sh02-space-zoom-out'),
@@ -675,7 +679,6 @@ class _SpatialDesk extends StatelessWidget {
                     onPressed: () =>
                         onZoom(1.2, Size(constraints.maxWidth, viewportHeight)),
                   ),
-                  const Spacer(),
                   TextButton.icon(
                     key: const Key('sh02-space-reset'),
                     onPressed: () => camera.value = Matrix4.identity(),
@@ -1331,15 +1334,15 @@ class _FailureState extends StatelessWidget {
     detail: switch (kind) {
       Sh02FailureKind.authentication => _copy(
         context,
-        '登录状态已过期，请重新登录后查看。',
-        'Your sign-in has expired. Sign in again before viewing this library.',
-        '로그인이 만료되었습니다. 다시 로그인한 뒤 확인하세요.',
+        '当前内容暂时无法打开。可重试读取，或返回后稍后再试。',
+        'This content cannot be opened right now. You can retry reading it or return and try again later.',
+        '현재 콘텐츠를 지금 열 수 없습니다. 다시 읽기를 시도하거나 돌아간 뒤 나중에 다시 시도할 수 있습니다.',
       ),
       Sh02FailureKind.permissionDenied => _copy(
         context,
-        '当前账号暂不能查看资料库。',
-        'This account cannot view the library right now.',
-        '이 계정은 현재 라이브러리를 볼 수 없습니다.',
+        '当前内容不可访问。',
+        'This content is not accessible.',
+        '현재 콘텐츠에 접근할 수 없습니다.',
       ),
       Sh02FailureKind.offline => _copy(
         context,

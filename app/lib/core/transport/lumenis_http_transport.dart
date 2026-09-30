@@ -18,5 +18,10 @@ Future<LumenisTransportResponse> sendLumenisHttpRequest(
   LumenisTransportRequest request,
 ) => platform.sendLumenisHttpRequest(request);
 
+Future<LumenisBinaryTransportResponse> sendLumenisBinaryRequest(
+  LumenisTransportRequest request, {
+  required int maxBytes,
+}) => platform.sendLumenisBinaryRequest(request, maxBytes: maxBytes);
+
 bool isLumenisConnectionError(Object error) =>
     error is LumenisTransportException;

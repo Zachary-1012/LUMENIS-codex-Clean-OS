@@ -8,6 +8,7 @@ class LumenisTransportRequest {
     required this.headers,
     required this.connectionTimeout,
     this.body,
+    this.bodyBytes,
     this.followRedirects = true,
   });
 
@@ -16,7 +17,14 @@ class LumenisTransportRequest {
   final Map<String, String> headers;
   final Duration connectionTimeout;
   final String? body;
+  final Uint8List? bodyBytes;
   final bool followRedirects;
+
+  void validateBody() {
+    if (body != null && bodyBytes != null) {
+      throw ArgumentError('Specify either body or bodyBytes, not both.');
+    }
+  }
 }
 
 class LumenisTransportResponse {
@@ -60,6 +68,18 @@ class LumenisTransportResponse {
   Uint8List get bodyBytes =>
       _bodyBytes ??
       Uint8List.fromList(utf8.encode(_body!)).asUnmodifiableView();
+}
+
+class LumenisBinaryTransportResponse {
+  const LumenisBinaryTransportResponse({
+    required this.statusCode,
+    required this.bytes,
+    required this.contentType,
+  });
+
+  final int statusCode;
+  final Uint8List bytes;
+  final String? contentType;
 }
 
 class LumenisTransportException implements Exception {

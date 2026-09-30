@@ -59,8 +59,7 @@ class Bmp01Snapshot {
       blockedFields: blocked,
       generatedAt: _asString(response['generated_at']),
       focusContext: focus,
-      focusBindingApplied:
-          _asMap(response['focus_binding'])?['applied'] == true,
+      focusBindingApplied: _verifiedBmpFocusBinding(response['focus_binding']),
       metrics: _metrics(response['sections']),
     );
   }
@@ -165,9 +164,29 @@ const _bmp01MetricSchema = <String, _Bmp01MetricSpecification>{
   ),
 };
 
-// The current BMP-01 design decision remains BLOCKED until the backend
-// supplies verified BrandFocus, Permission and Evidence lineage.
-const _bmp01MetricDisplayApproved = false;
+// Focused metrics are displayed only after the backend supplies the exact
+// verified BrandFocus read binding. Incomplete/legacy payloads remain hidden.
+const _bmp01MetricDisplayApproved = true;
+
+bool _verifiedBmpFocusBinding(Object? value) {
+  final binding = _asMap(value);
+  if (binding == null) return false;
+  final policy = _asString(binding['policy']);
+  final actorScope = _asString(binding['actor_scope']);
+  return binding['contract'] == 'lumenis.scope-read-binding.v1' &&
+      binding['module'] == 'brand_market_overview' &&
+      binding['domain_id'] == 'BMP' &&
+      binding['product_id'] == 'ZBMP' &&
+      binding['canonical_scope'] == 'FOCUS' &&
+      binding['applied'] == true &&
+      binding['read_allowed'] == true &&
+      binding['scope_verified'] == true &&
+      binding['global_all_granted'] == false &&
+      _asString(binding['subject_id']) != null &&
+      _asString(binding['brand_focus_id']) != null &&
+      ((policy == 'local-workspace-read-v1' && actorScope == 'anonymous_read') ||
+          (policy == 'actor-exact-scope-v1' && actorScope == 'authenticated'));
+}
 
 List<Bmp01Metric> _metrics(Object? value) {
   final sections = _asMapList(value);

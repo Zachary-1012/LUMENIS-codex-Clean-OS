@@ -2,19 +2,21 @@
 
 ```yaml
 screen_id: ACC-02
-status: DESIGN_READY
-revision: 3
-owner_domain: SYSTEM settings / CTH Subject Registry selection
+status: BLOCKED
+revision: 4
+owner_domain: SYSTEM settings / CTH Subject Registry / BMP BrandFocus
 binding_ids:
   - CODEX-ACC02-CONTEXT
   - CODEX-ACC02-SUBJECT-REGISTRY
 product_owner_approval: APPROVED
 design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
-design_decision: DESIGN_READY
-artifact_disposition: REVIEWED_BOUNDED_SELECTION_CONTINUATION
+design_decision: BLOCKED
+selection_design_decision: DESIGN_READY_BOUNDED_SELECTION_CONTINUATION
+registration_design_decision: DESIGN_READY_BOUNDED_REGISTRATION
+artifact_disposition: REVIEWED_BOUNDED_SELECTION_AND_REGISTRATION
 reviewer: Sol root integration review
-reviewed_at: 2026-09-28
-approval_reference: R14-ACC02-LAYERED-SELECTION bounded Task Card
+reviewed_at: 2026-09-30
+approval_reference: existing R14-ACC02-LAYERED-SELECTION review; primary controller approved bounded registration in section 11 on 2026-09-30
 ```
 
 ## 0. Authority and invariant
@@ -62,7 +64,7 @@ Paths, tokens, provider/model strings, raw errors and arbitrary domains are neve
 
 ## 5. Authorization, effects, and accessibility
 
-- The `PUT` is the only effect and is Core/SYSTEM-owned. It must pass existing auth and server reauthorization.
+- In the existing selection slice, `PUT` confirms focus and the recovery `DELETE` clears focus; both remain Core/SYSTEM-owned and server-authorized. Registration is separately bounded by section 11 and its pending exact-write contract.
 - Selection is not permission. Denied or pending responses do not update the UI to the requested Subject.
 - Announce list count, selected row and confirmation result; do not rely on color. Search and controls remain usable at enlarged text sizes.
 
@@ -211,3 +213,124 @@ Research accessed 2026-09-28: official Flutter
 and [reduced-motion query](https://api.flutter.dev/flutter/widgets/MediaQuery/disableAnimationsOf.html).
 ADAPT Flutter 3.47.5 primitives already available in the app; BSD-3-Clause,
 maintained by Flutter. No external UI assets, library or provider is introduced.
+
+## 11. Bounded Subject / BrandFocus registration — 2026-09-30
+
+### 11.1 Decision, owner and entry gate
+
+The primary controller reviewed this interaction as
+`DESIGN_READY_BOUNDED_REGISTRATION` in the active 序境12 coordination thread.
+The existing selection review remains valid. Overall ACC-02 delivery is
+`BLOCKED` until the new write binding and real user flow are verified; this
+document does not revoke working selection or accept the wider screen/round.
+
+Reuse the current shell scope picker, `LumenisCoreClient`, SYSTEM settings and
+`subject_registry.py`. Add no page, registry, identity service, account screen
+or automatic collection path. Product access remains open without a login or
+account design; server Permission and exact effect confirmation remain enforced.
+
+Implementation of the write call waits for the primary controller's current
+server contract. Do not guess a confirmation endpoint, header, token, principal
+or approval response. Existing `POST /api/settings/subjects` is the sole intended
+registry mutation; a confirmation step is a gate on that operation, not another
+registry owner. A specification approval alone cannot make this call usable.
+
+### 11.2 Task and interaction
+
+- **Job:** a commercial operator or brand practitioner adds a real object absent
+  from the directory, then chooses whether to view it or continue browsing.
+- **Entry:** inside the existing CTH/BMP scope picker, beside search, show
+  “添加主体” / “添加品牌” for the selected business domain. The current domain is
+  visible throughout. This entry supports arbitrary valid registry identities,
+  not a fixed list of reference projects or four samples.
+- **Form:** keep the browsing query, returned rows and scroll position underneath
+  one focused form layer. Show type and Chinese/English names first; optional
+  industry and keywords can expand in place. Back returns to browsing. Dismissing
+  a changed form requires an explicit keep-editing/discard choice.
+- **Review:** after field validation, show the exact business domain, type,
+  names and optional supplied details before the final confirmed write. Editing
+  a field invalidates any prior confirmation for a different payload. Raw
+  identifiers, tokens, hashes and Permission jargon stay out of the main flow.
+- **Result:** only a validated server response produces “已添加” or “已在目录中”.
+  Show the returned object's real name with “查看该对象” and “继续浏览”. Creation
+  leaves GLOBAL/FOCUS unchanged. Viewing invokes existing `selectContext()` and
+  waits for the exact returned context before the shell changes its view.
+- **Copy:** the chooser explains “选择只切换查看范围，不会启动采集”. Registration
+  explains that adding to the directory does not establish data coverage.
+  It never triggers acquisition, AUTO, external publication or a model call.
+
+### 11.3 Existing payload and identity contract
+
+| Field / result | Current source contract | UI handling |
+| --- | --- | --- |
+| `domain_id` | `CTH` or `BMP` | Explicit current business use; never silently substitute BMP. |
+| `subject_type` | `brand` or `company` | Label with the existing business type names. |
+| `name_zh`, `name_en` | Both required, each at most 160 characters | Trim and validate; do not generate an identity or translate a name silently. |
+| `industry` | Optional, at most 120 characters | Preserve supplied text. |
+| `keywords` | Optional list or comma-separated text; at most 50 normalized unique entries, each at most 80 characters | Client convenience validation only; server remains authoritative. |
+| New object | HTTP 201, `ok: true`, `created: true`, `selection_only: true`, `subject` | Validate domain/type/identity and safe text before presenting success. |
+| Existing identity | HTTP 200, `ok: true`, `created: false`, `duplicate: true`, `selection_only: true`, `subject` | Reuse the returned object without overwriting it or claiming a new record. |
+| Stable identity | Server derives `subject_id`; BMP additionally has `brand_focus_id` | Never derive either identifier in the frontend. |
+
+The server's normalized bilingual-name/type/domain identity controls idempotence.
+A user retry cannot create a client-local replacement record. Distinct names are
+not merged merely because a similar display label already appears in the list.
+Country/relationship assertions and collected-data maturity are not form fields
+without their own existing source contract.
+
+### 11.4 States, recovery and accessibility
+
+| State | Required behavior |
+| --- | --- |
+| Invalid field | Explain beside the affected field; keep every other value and focus the first issue. No request. |
+| Confirmation pending | Show the named operation and retain input; duplicate submit, payload changes and conflicting scope actions are disabled. |
+| Declined / expired confirmation | No success claim; return to the same values, obtain a fresh exact confirmation when supported. |
+| Denied / unavailable | Show a business-level failure with retry/return; preserve values and prior focus. No login or access-request diversion. |
+| Timeout / connection loss after submit | Say the result is not yet confirmed; refresh the existing directory to reconcile the stable returned identity. No automatic second mutation. Explicit retry follows server idempotence and confirmation rules. |
+| Created / duplicate | Show the matching returned object. Refresh the directory through its existing read owner; failed refresh must not erase an already confirmed result. |
+| Focus fails after creation | Retain the confirmed object and previous view; allow retrying selection or returning to browsing. Never report that creation itself failed. |
+
+Wide Web/Desktop retain one bounded picker with a focused form/result region.
+Mobile uses one active layer with persistent Return and action controls, safe
+keyboard insets and scrollable fields. Search state survives return; no desktop
+form appended beneath a long list. Verify 320/390 px and 200% text in Chinese,
+English and Korean, 48 px touch targets, keyboard order, focus return and
+reduced motion. Public Website acquires no form or new runtime.
+
+### 11.5 REAL USER WORK E2E and delivery card
+
+- `REAL INPUT`: user-authorized real Subject/BrandFocus details; no fixture
+  promoted to production registry. Persistence tests use an explicit isolated DB.
+- `END-TO-END PATH`: existing picker → form → exact write confirmation → existing
+  registry POST → server result → optional confirmed focus → downstream CTH/BMP
+  read → clear focus and return to GLOBAL.
+- `USER-VISIBLE RESULT`: the real object can be found again; duplicate submission
+  returns the same identity. Uncollected content remains explicitly uncollected.
+- `FAILURE/RECOVERY`: invalid fields, cancellation, expired confirmation, denial,
+  offline, unknown write completion and failed post-create focus as above.
+- `EVIDENCE`: exact reviewed source/contract, current-snapshot tests, server
+  confirmation/result, registry reread, selected-context read and no-collection
+  assertion. Desktop build and browser screenshots alone do not prove native
+  operation or a production write.
+- `ACCEPTANCE ASSERTION`: `BLOCKED_PENDING_EXACT_WRITE_CONTRACT_AND_REAL_E2E`.
+- `GLOBAL UNIVERSE / DATA MATURITY IMPACT`: extends the existing directory while
+  retaining GLOBAL by default. No change to Global Commercial Coverage, Global
+  Brand Coverage or Guangzhou Taikoo Hui Reference Coverage is asserted.
+- `RANDOM ENTITY DATA ACCEPTANCE`: no registration sample run in this design
+  step; sample count 0. Later tests must include real non-reference CTH and BMP
+  objects without treating registration as collected coverage.
+- `COMMERCIAL OVERLAY IMPACT`: `COMMERCIAL_READY=NO`; no release acceptance.
+
+### 11.6 CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION
+
+Accessed 2026-09-30: official Flutter
+[Form](https://api.flutter.dev/flutter/widgets/Form-class.html) and
+[TextFormField](https://api.flutter.dev/flutter/material/TextFormField-class.html)
+documentation, mapped to the installed Flutter 3.47.5 SDK. The APIs support
+grouped field validation and explicit controller lifetime in scrollable forms.
+**ADAPT** these existing BSD-3-Clause, upstream-maintained primitives; no new
+dependency, copied layout, external service, data transmission or design system.
+The exact capability locator found no separate historical research for this
+registration slice. Current registry validation and the Experience Constitution
+remain the implementation inputs. Actual write confirmation and native return
+behavior still require their owner/runtime evidence.

@@ -149,18 +149,14 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, '/workspace/AI-04');
     expect(find.byType(Ai04Screen), findsOneWidget);
 
-    await tester.tap(
-      find.byKey(const ValueKey('workspace-account-navigation')),
-    );
+    // Account screens remain deep-link compatible but are intentionally absent
+    // from the open-workspace product navigation.
+    router.go('/workspace/ACC-01');
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/workspace/ACC-01');
     expect(find.byType(Acc01Screen), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('workspace-navigation-open')));
-    await tester.pumpAndSettle();
-    final accountHistory = find.byKey(const ValueKey('workspace-nav-ACC-04'));
-    await tester.ensureVisible(accountHistory);
-    await tester.tap(accountHistory);
+    router.go('/workspace/ACC-04');
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/workspace/ACC-04');
     expect(find.byType(Acc04Screen), findsOneWidget);
@@ -254,19 +250,12 @@ void main() {
       ];
       for (var index = 0; index < destinations.length; index++) {
         if (index > 0) {
-          if (width < 768) {
-            await tester.tap(
-              find.byKey(const ValueKey('workspace-phone-tools')),
-            );
-            await tester.pumpAndSettle();
-          }
-          await tester.tap(
-            find.byKey(const ValueKey('workspace-account-navigation')),
-          );
+          // The open workspace no longer exposes account navigation. Return to
+          // the still-supported launch-map deep link without reintroducing an
+          // account wall into product chrome.
+          router.go('/workspace/ACC-03');
           await tester.pumpAndSettle();
-          await tester.ensureVisible(enter);
-          await tester.tap(enter);
-          await tester.pumpAndSettle();
+          expect(find.byType(Acc03Screen), findsOneWidget);
         }
         final open = find.widgetWithText(OutlinedButton, '继续').at(index);
         await tester.ensureVisible(open);

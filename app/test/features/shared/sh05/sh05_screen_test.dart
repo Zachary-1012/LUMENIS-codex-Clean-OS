@@ -8,6 +8,68 @@ import 'package:lumenis_app/features/shared/sh05/sh05_snapshot.dart';
 import '../shared_test_support.dart';
 
 void main() {
+  testWidgets(
+    'authentication and access failures remain distinct and retryable in all locales',
+    (tester) async {
+      const recoveryLocales = [
+        (
+          locale: Locale('zh', 'CN'),
+          authentication: '当前内容暂时无法打开。可重试读取，或返回后稍后再试。',
+          permission: '当前内容不可访问。',
+          retry: '重新读取',
+          forbiddenTerms: ['登录', '账号', '账户', '检查连接', '检查网络'],
+        ),
+        (
+          locale: Locale('en'),
+          authentication:
+              'This content cannot be opened right now. You can retry reading it or return and try again later.',
+          permission: 'This content is not accessible.',
+          retry: 'Read again',
+          forbiddenTerms: [
+            'sign in',
+            'login',
+            'account',
+            'check the connection',
+            'check connection',
+          ],
+        ),
+        (
+          locale: Locale('ko'),
+          authentication:
+              '현재 콘텐츠를 지금 열 수 없습니다. 다시 읽기를 시도하거나 돌아간 뒤 나중에 다시 시도할 수 있습니다.',
+          permission: '현재 콘텐츠에 접근할 수 없습니다.',
+          retry: '다시 읽기',
+          forbiddenTerms: ['로그인', '계정', '연결을 확인'],
+        ),
+      ];
+
+      for (final copy in recoveryLocales) {
+        for (final statusCode in [401, 403]) {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          final repository = _RecoveringSh05Repository(statusCode);
+          await tester.pumpWidget(_app(repository, locale: copy.locale));
+          await tester.pumpAndSettle();
+
+          final expected = statusCode == 401
+              ? copy.authentication
+              : copy.permission;
+          expect(find.text(expected), findsOneWidget);
+          _expectNoAuthOrNetworkAdvice(tester, copy.forbiddenTerms);
+          expect(find.text(copy.retry), findsOneWidget);
+          expect(find.textContaining('private access failure'), findsNothing);
+
+          await tester.ensureVisible(find.text(copy.retry));
+          await tester.tap(find.text(copy.retry));
+          await tester.pumpAndSettle();
+
+          expect(repository.calls, 2);
+          expect(find.text(expected), findsNothing);
+          expect(tester.takeException(), isNull);
+        }
+      }
+    },
+  );
   testWidgets('learning shelves keep version and rollback state visible', (
     tester,
   ) async {
@@ -183,6 +245,39 @@ class _FakeSh05Repository implements Sh05Repository {
       Sh05Snapshot.fromResponse(response);
 }
 
+class _RecoveringSh05Repository implements Sh05Repository {
+  _RecoveringSh05Repository(this.statusCode);
+
+  final int statusCode;
+  int calls = 0;
+
+  @override
+  Future<Sh05Snapshot> loadAssets() async {
+    calls++;
+    if (calls == 1) {
+      throw LumenisCoreException(
+        'HTTP $statusCode private access failure',
+        statusCode: statusCode,
+      );
+    }
+    return Sh05Snapshot.fromResponse(_readyResponse);
+  }
+}
+
+void _expectNoAuthOrNetworkAdvice(
+  WidgetTester tester,
+  List<String> forbiddenTerms,
+) {
+  final visibleText = tester
+      .widgetList<Text>(find.byType(Text))
+      .map((text) => text.data ?? text.textSpan?.toPlainText() ?? '')
+      .join('\n')
+      .toLowerCase();
+  for (final term in forbiddenTerms) {
+    expect(visibleText, isNot(contains(term.toLowerCase())));
+  }
+}
+
 final _readyResponse = sharedRuntimeResponse('SH-05', {
   'assets': [
     {
@@ -192,9 +287,7 @@ final _readyResponse = sharedRuntimeResponse('SH-05', {
       'kind': 'SOP',
       'version': '1.2.0',
       'promotion_status': 'DOMAIN_VERIFIED',
-      'projection': sharedProjection(
-        scope: {'mode': 'GLOBAL_ALL'},
-      ),
+      'projection': sharedProjection(scope: {'mode': 'GLOBAL_ALL'}),
       'scope_verified': true,
       'evidence_backed': true,
       'permission': {'read': true, 'decision': 'ALLOW'},
@@ -214,9 +307,7 @@ final _readyResponse = sharedRuntimeResponse('SH-05', {
       'kind': 'PATTERN',
       'version': '0.3.0',
       'promotion_status': 'CANDIDATE',
-      'projection': sharedProjection(
-        scope: {'mode': 'GLOBAL_ALL'},
-      ),
+      'projection': sharedProjection(scope: {'mode': 'GLOBAL_ALL'}),
       'scope_verified': true,
       'evidence_backed': true,
       'permission': {'read': true, 'decision': 'ALLOW'},

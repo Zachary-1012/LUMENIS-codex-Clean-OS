@@ -1,0 +1,1172 @@
+import 'dart:typed_data';
+import 'dart:async';
+
+import 'package:file_selector/file_selector.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lumenis_app/core/lumenis_core_client.dart';
+import 'package:lumenis_app/core/lumenis_theme.dart';
+import 'package:lumenis_app/features/shared/sh01/media_project_controller.dart';
+import 'package:lumenis_app/features/shared/sh01/media_project_files.dart';
+import 'package:lumenis_app/features/shared/sh01/media_project_workbench.dart';
+import 'package:lumenis_app/l10n/lumenis_localizations.dart';
+import 'package:lumenis_app/navigation/lumenis_leave_guard.dart';
+
+// These are widget contract fixtures, never media/render or user E2E evidence.
+class _Client extends LumenisCoreClient {
+  int imports = 0;
+  int importCalls = 0;
+  int inspectCalls = 0;
+  int exports = 0;
+  int confirmationCalls = 0;
+  bool? confirmedImport;
+  bool approvalRequired = false;
+  bool successfulExport = false;
+  String? exportFailureCode;
+  Duration confirmationLifetime = const Duration(minutes: 5);
+  Completer<void>? pendingImport;
+  Completer<void>? pendingRetrieval;
+  String? confirmationFilename;
+  int? confirmationSizeBytes;
+  Completer<void>? pendingExport;
+  String? lastImportDomain;
+  final importedBytes = <List<int>>[];
+  Map<String, dynamic>? contextEnvelope;
+  List<String>? exportedRefs;
+  final asset = <String, Object?>{
+    'asset_id': 'MEDIA-aaaaaaaaaaaaaaaa',
+    'filename': 'interview.mp4',
+    'sha256': 'a' * 64,
+    'duration_sec': 20.0,
+    'media_kind': 'video_audio',
+    'has_video': true,
+    'audio_stream_count': 1,
+    'evidence_refs': [],
+    'rights_status': 'unknown',
+  };
+
+  @override
+  Map<String, dynamic>? get currentContextEnvelope => contextEnvelope;
+
+  @override
+  Future<ContentProjectFile> contentProjectFile({
+    required String domainId,
+    required String artifactId,
+    required bool package,
+  }) async {
+    await pendingRetrieval?.future;
+    return ContentProjectFile(
+      bytes: Uint8List.fromList([1, 2]),
+      filename: 'project.mp4',
+      mediaType: 'video/mp4',
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> inspectContentMedia({
+    required String domainId,
+    List<String>? assetPaths,
+    List<String>? assetRefs,
+  }) async {
+    inspectCalls++;
+    return {
+      'ok': true,
+      'assets': [asset],
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> importContentSource({
+    required String domainId,
+    required String filename,
+    required Uint8List bytes,
+  }) async {
+    imports++;
+    importCalls++;
+    lastImportDomain = domainId;
+    importedBytes.add(List<int>.unmodifiable(bytes));
+    await pendingImport?.future;
+    if (approvalRequired && importCalls == 1) {
+      throw LumenisCoreException(
+        'approval required',
+        statusCode: 403,
+        errorCode: 'CONTENT_SOURCE_APPROVAL_REQUIRED',
+        sourceConfirmation: ContentSourceConfirmation(
+          confirmationId: 'CONF-widget',
+          resource: 'content-source-import:v1:${'b' * 64}',
+          expiresAt: DateTime.now().add(confirmationLifetime),
+          filename: confirmationFilename ?? filename,
+          sizeBytes: confirmationSizeBytes ?? bytes.length,
+          bodySha256: 'd' * 64,
+        ),
+      );
+    }
+    return {
+      'ok': true,
+      'publish_status': 'not_performed',
+      'result': {
+        'artifact': {'artifact_id': 'ART-source'},
+        'asset': asset,
+      },
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> confirmContentSource({
+    required String domainId,
+    required String confirmationId,
+    required bool confirmed,
+  }) async {
+    confirmationCalls++;
+    confirmedImport = confirmed;
+    lastImportDomain = domainId;
+    return confirmed
+        ? {
+            'ok': true,
+            'status': 'ready_for_retry',
+            'purpose': 'local_content_draft',
+          }
+        : {'ok': true, 'status': 'cancelled'};
+  }
+
+  @override
+  Future<Map<String, dynamic>> exportContentProject({
+    required String domainId,
+    List<String>? assetPaths,
+    List<String>? assetRefs,
+    required Map<String, dynamic> timeline,
+    required String outputKind,
+    required bool demoAcknowledged,
+    String? previousArtifactId,
+  }) async {
+    exports++;
+    exportedRefs = assetRefs;
+    await pendingExport?.future;
+    final failureCode = exportFailureCode;
+    if (failureCode != null) {
+      throw LumenisCoreException(
+        'private parent revision diagnostic',
+        statusCode: 409,
+        errorCode: failureCode,
+      );
+    }
+    if (successfulExport) {
+      return {
+        'ok': true,
+        'publish_status': 'not_performed',
+        'evidence_recorded': true,
+        'result': {
+          'status': 'rendered_staged',
+          'artifact': {'artifact_id': 'ART-version'},
+          'project': {
+            'schema_version': 1,
+            'output_kind': outputKind,
+            'timeline': timeline,
+            'rights': {'state': 'unknown', 'demo_acknowledged': true},
+            'source_artifact_refs': assetRefs ?? const <String>[],
+          },
+          'render': {
+            'state': 'rendered_verified',
+            'output_kind': outputKind,
+            'measurement': {'actual_duration_sec': 1.0},
+            'size_bytes': 2,
+            'media_sha256': 'f' * 64,
+          },
+        },
+      };
+    }
+    throw const LumenisCoreException(
+      'private decoder detail',
+      statusCode: 503,
+      errorCode: 'CONTENT_RENDER_FAILED',
+    );
+  }
+}
+
+class _Files extends MediaProjectFiles {
+  @override
+  Future<List<XFile>> choose() async => [
+    XFile.fromData(
+      Uint8List.fromList([1, 2]),
+      path: 'interview.mp4',
+      name: 'interview.mp4',
+    ),
+  ];
+}
+
+Widget _app(
+  _Client client,
+  MediaProjectController? controller, {
+  String? invokingDomain,
+  Locale locale = const Locale('zh', 'CN'),
+  double scale = 1,
+  EdgeInsets viewInsets = EdgeInsets.zero,
+  bool contextAvailable = true,
+  LumenisLeaveGuard? guard,
+  VoidCallback? onBack,
+}) => MaterialApp(
+  theme: LumenisTheme.dark,
+  locale: locale,
+  supportedLocales: LumenisLocalizations.supportedLocales,
+  localizationsDelegates: const [
+    LumenisLocalizations.delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+  ],
+  builder: (context, child) => MediaQuery(
+    data: MediaQuery.of(
+      context,
+    ).copyWith(textScaler: TextScaler.linear(scale), viewInsets: viewInsets),
+    child: child!,
+  ),
+  home: guard == null
+      ? _workbenchHome(
+          client,
+          controller,
+          invokingDomain: invokingDomain,
+          contextAvailable: contextAvailable,
+          onBack: onBack,
+          files: _Files(),
+        )
+      : LumenisLeaveScope(
+          guard: guard,
+          child: _workbenchHome(
+            client,
+            controller,
+            invokingDomain: invokingDomain,
+            contextAvailable: contextAvailable,
+            onBack: onBack,
+            files: _Files(),
+          ),
+        ),
+);
+
+Widget _workbenchHome(
+  _Client client,
+  MediaProjectController? controller, {
+  String? invokingDomain,
+  required bool contextAvailable,
+  VoidCallback? onBack,
+  required MediaProjectFiles files,
+}) => Scaffold(
+  body: MediaProjectWorkbench(
+    client: client,
+    invokingDomain: invokingDomain,
+    controller: controller,
+    contextAvailable: contextAvailable,
+    files: files,
+    onBack: onBack ?? () {},
+  ),
+);
+
+Future<void> _prepareEditableProject(
+  _Client client,
+  MediaProjectController controller,
+) async {
+  await controller.importFile('interview.mp4', Uint8List.fromList([1]));
+  controller.edit(
+    (snapshot) => snapshot.addClip(
+      snapshot.assets.single.assetId,
+      trackId: 'video',
+      sourceOut: 8,
+    ),
+  );
+  controller.selectClip(controller.timeline!.tracks.single.clips.single.clipId);
+}
+
+void main() {
+  late _Client client;
+  late MediaProjectController controller;
+  setUp(() {
+    client = _Client();
+    controller = MediaProjectController(
+      repository: CoreMediaProjectRepository(client),
+      domain: 'BMP',
+    );
+  });
+  tearDown(() => controller.dispose());
+
+  testWidgets('GLOBAL_ALL asks for an explicit business purpose', (
+    tester,
+  ) async {
+    client.contextEnvelope = {
+      'contract': 'lumenis.context.v1',
+      'selection_only': true,
+      'context': {'mode': 'GLOBAL_ALL', 'subject_id': null},
+    };
+    await tester.pumpWidget(_app(client, null));
+    await tester.pumpAndSettle();
+    expect(find.text('请选择本次剪辑的用途：商业运营或品牌市场。'), findsOneWidget);
+    expect(find.text('商业运营'), findsOneWidget);
+    expect(find.text('品牌市场'), findsOneWidget);
+    expect(find.byKey(const Key('media-import')), findsNothing);
+    expect(client.importCalls, 0);
+    await tester.tap(find.byKey(const Key('media-domain-cth')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('media-open-sources')));
+    await tester.tap(find.byKey(const Key('media-open-sources')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('media-import')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('media-import')));
+    await tester.pumpAndSettle();
+    expect(client.lastImportDomain, 'CTH');
+    expect(client.importCalls, 1);
+  });
+
+  testWidgets(
+    'GLOBAL purpose choices scroll at 320 pixels and 200 percent text',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 720));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      for (final locale in const [
+        Locale('zh', 'CN'),
+        Locale('en'),
+        Locale('ko'),
+      ]) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        final scopedClient = _Client()
+          ..contextEnvelope = {
+            'contract': 'lumenis.context.v1',
+            'selection_only': true,
+            'context': {'mode': 'GLOBAL_ALL', 'subject_id': null},
+          };
+        await tester.pumpWidget(
+          _app(scopedClient, null, locale: locale, scale: 2),
+        );
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(const Key('media-domain-bmp')));
+        await tester.tap(find.byKey(const Key('media-domain-bmp')));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(const Key('media-open-sources')));
+        await tester.tap(find.byKey(const Key('media-open-sources')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('media-import')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
+  testWidgets('GLOBAL_ALL CTH and BMP use only the explicit invoking domain', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    client.contextEnvelope = {
+      'contract': 'lumenis.context.v1',
+      'selection_only': true,
+      'context': {'mode': 'GLOBAL_ALL', 'subject_id': null},
+    };
+    for (final domain in ['CTH', 'BMP']) {
+      final candidate = MediaProjectController(
+        repository: CoreMediaProjectRepository(client),
+        domain: domain,
+      );
+      await tester.pumpWidget(_app(client, candidate, invokingDomain: domain));
+      expect(find.byKey(const Key('media-import')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('media-import')));
+      await tester.pumpAndSettle();
+      expect(client.lastImportDomain, domain);
+      await tester.pumpWidget(const SizedBox.shrink());
+      candidate.dispose();
+    }
+  });
+
+  testWidgets(
+    'source import requires the user confirmation and retries same bytes',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1200, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      client.approvalRequired = true;
+      client.contextEnvelope = {
+        'contract': 'lumenis.context.v1',
+        'selection_only': true,
+        'context': {
+          'mode': 'FOCUS',
+          'domain_id': 'BMP',
+          'subject_id': 'SUBJECT-7f23',
+          'display_name': {
+            'zh': '广州太古汇',
+            'en': 'Taikoo Hui Guangzhou',
+            'ko': '광저우 타이쿠후이',
+          },
+        },
+      };
+      await tester.pumpWidget(_app(client, controller));
+      await tester.tap(find.byKey(const Key('media-import')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.textContaining('不会公开发布'), findsOneWidget);
+      expect(find.textContaining('interview.mp4'), findsOneWidget);
+      expect(find.textContaining('本次用途：品牌市场内容制作'), findsOneWidget);
+      expect(find.textContaining('品牌市场 · 广州太古汇 · 所选主体范围'), findsOneWidget);
+      expect(find.textContaining('SUBJECT-7f23'), findsNothing);
+      expect(find.text('d' * 64), findsNothing);
+      expect(find.textContaining('确认有效期至'), findsNothing);
+      await tester.tap(find.byKey(const Key('media-import-technical-details')));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('d' * 64), findsOneWidget);
+      expect(find.textContaining('确认有效期至'), findsOneWidget);
+      expect(find.textContaining('确认编号: CONF-widget'), findsOneWidget);
+      expect(find.textContaining('主体 ID: SUBJECT-7f23'), findsOneWidget);
+      expect(client.importCalls, 1);
+      expect(client.confirmationCalls, 0);
+      await tester.tap(find.text('确认并导入所选文件'));
+      await tester.pumpAndSettle();
+      expect(client.confirmationCalls, 1);
+      expect(client.confirmedImport, isTrue);
+      expect(client.importCalls, 2);
+      expect(client.importedBytes[0], client.importedBytes[1]);
+      expect(controller.sourceRefs, ['ART-source']);
+    },
+  );
+
+  testWidgets('canceling source confirmation keeps the source unimported', (
+    tester,
+  ) async {
+    client.approvalRequired = true;
+    client.contextEnvelope = {
+      'contract': 'lumenis.context.v1',
+      'selection_only': true,
+      'context': {
+        'mode': 'FOCUS',
+        'domain_id': 'BMP',
+        'subject_id': 'SUBJECT-cancel',
+      },
+    };
+    await tester.pumpWidget(_app(client, controller));
+    await tester.ensureVisible(find.byKey(const Key('media-open-sources')));
+    await tester.tap(find.byKey(const Key('media-open-sources')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('media-import')));
+    await tester.tap(find.byKey(const Key('media-import')));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(client.confirmationCalls, 1);
+    expect(client.confirmedImport, isFalse);
+    expect(client.importCalls, 1);
+    expect(controller.sourceRefs, isEmpty);
+    expect(find.textContaining('已取消导入'), findsOneWidget);
+  });
+
+  testWidgets('expired confirmation cannot authorize an import', (
+    tester,
+  ) async {
+    client.approvalRequired = true;
+    client.confirmationLifetime = const Duration(seconds: -1);
+    client.contextEnvelope = {
+      'contract': 'lumenis.context.v1',
+      'selection_only': true,
+      'context': {
+        'mode': 'FOCUS',
+        'domain_id': 'BMP',
+        'subject_id': 'SUBJECT-expired',
+      },
+    };
+    await tester.pumpWidget(_app(client, controller));
+    await tester.ensureVisible(find.byKey(const Key('media-open-sources')));
+    await tester.tap(find.byKey(const Key('media-open-sources')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('media-import')));
+    await tester.tap(find.byKey(const Key('media-import')));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('确认并导入所选文件'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.textContaining('确认已过期'), findsOneWidget);
+    expect(client.confirmationCalls, 0);
+    expect(client.importCalls, 1);
+    expect(controller.sourceRefs, isEmpty);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(client.confirmedImport, isFalse);
+    expect(controller.sourceRefs, isEmpty);
+  });
+
+  testWidgets('server confirmation filename mismatch is rejected', (
+    tester,
+  ) async {
+    client.approvalRequired = true;
+    client.confirmationFilename = 'different.mp4';
+    client.contextEnvelope = {
+      'contract': 'lumenis.context.v1',
+      'selection_only': true,
+      'context': {
+        'mode': 'FOCUS',
+        'domain_id': 'BMP',
+        'subject_id': 'SUBJECT-mismatch',
+      },
+    };
+    await tester.pumpWidget(_app(client, controller));
+    await tester.ensureVisible(find.byKey(const Key('media-open-sources')));
+    await tester.tap(find.byKey(const Key('media-open-sources')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('media-import')));
+    await tester.tap(find.byKey(const Key('media-import')));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(client.confirmationCalls, 0);
+    expect(client.importCalls, 1);
+    expect(controller.sourceRefs, isEmpty);
+    expect(find.textContaining('素材导入需要审核批准'), findsOneWidget);
+  });
+
+  testWidgets('context change while confirmation is open is rejected', (
+    tester,
+  ) async {
+    client.approvalRequired = true;
+    client.contextEnvelope = {
+      'contract': 'lumenis.context.v1',
+      'selection_only': true,
+      'context': {
+        'mode': 'FOCUS',
+        'domain_id': 'BMP',
+        'subject_id': 'SUBJECT-before',
+      },
+    };
+    await tester.pumpWidget(_app(client, controller));
+    await tester.ensureVisible(find.byKey(const Key('media-open-sources')));
+    await tester.tap(find.byKey(const Key('media-open-sources')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('media-import')));
+    await tester.tap(find.byKey(const Key('media-import')));
+    await tester.pump(const Duration(milliseconds: 400));
+    client.contextEnvelope = {
+      'contract': 'lumenis.context.v1',
+      'selection_only': true,
+      'context': {
+        'mode': 'FOCUS',
+        'domain_id': 'BMP',
+        'subject_id': 'SUBJECT-after',
+      },
+    };
+    await tester.tap(find.text('确认并导入所选文件'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.textContaining('查看范围已改变'), findsOneWidget);
+    expect(client.confirmationCalls, 0);
+    expect(client.importCalls, 1);
+    expect(controller.sourceRefs, isEmpty);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(client.confirmationCalls, 0);
+    expect(controller.sourceRefs, isEmpty);
+  });
+
+  testWidgets(
+    'picked bytes create a source; add, edit, undo and failed export preserve draft',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 1100));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(_app(client, controller));
+      await tester.tap(find.byKey(const Key('media-import')));
+      await tester.pumpAndSettle();
+      expect(client.imports, 1);
+      expect(controller.timeline!.tracks.single.clips, isEmpty);
+      await tester.tap(find.text('添加片段'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '添加片段'));
+      await tester.pumpAndSettle();
+      expect(controller.timeline!.tracks.single.clips.single.sourceOut, 20);
+      final endField = find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.labelText == '素材终点（秒）',
+      );
+      await tester.enterText(endField, '8');
+      await tester.ensureVisible(find.text('应用调整'));
+      await tester.tap(find.text('应用调整'));
+      await tester.pumpAndSettle();
+      expect(controller.timeline!.tracks.single.clips.single.sourceOut, 8);
+      await tester.ensureVisible(find.text('撤销'));
+      await tester.tap(find.text('撤销'));
+      await tester.pumpAndSettle();
+      expect(controller.timeline!.tracks.single.clips.single.sourceOut, 20);
+      await tester.ensureVisible(find.byKey(const Key('media-export')));
+      await tester.tap(find.byKey(const Key('media-export')));
+      await tester.pumpAndSettle();
+      expect(client.exports, 0);
+      await tester.ensureVisible(find.byType(CheckboxListTile));
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('media-export')));
+      await tester.tap(find.byKey(const Key('media-export')));
+      await tester.pumpAndSettle();
+      expect(client.exports, 1);
+      expect(client.exportedRefs, ['ART-source']);
+      expect(controller.timeline!.tracks.single.clips.single.sourceOut, 20);
+      expect(controller.version, isNull);
+      expect(find.textContaining('private decoder'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'layers return to the same clip, edit draft and timeline position',
+    (tester) async {
+      await controller.importFile('interview.mp4', Uint8List.fromList([1]));
+      controller.edit(
+        (s) =>
+            s.addClip(s.assets.single.assetId, trackId: 'video', sourceOut: 8),
+      );
+      controller.selectClip(
+        controller.timeline!.tracks.single.clips.single.clipId,
+      );
+      await tester.binding.setSurfaceSize(const Size(1440, 1100));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(_app(client, controller));
+      await tester.pumpAndSettle();
+      final desktopField = find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.labelText == '素材终点（秒）',
+      );
+      await tester.enterText(desktopField, '6.25');
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      await tester.pumpAndSettle();
+
+      final timelineScroll = find.byKey(const Key('media-timeline-scroll'));
+      await tester.drag(timelineScroll, const Offset(-220, 0));
+      await tester.pumpAndSettle();
+      final scrollController = tester
+          .widget<SingleChildScrollView>(timelineScroll)
+          .controller!;
+      final preservedOffset = scrollController.offset;
+      expect(preservedOffset, greaterThan(0));
+      final selectedClipId = controller.selectedClipId;
+      expect(selectedClipId, isNotNull);
+
+      await tester.ensureVisible(find.byKey(const Key('media-open-sources')));
+      await tester.tap(find.byKey(const Key('media-open-sources')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('media-import')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('media-close-layer')));
+      await tester.pumpAndSettle();
+      expect(scrollController.offset, preservedOffset);
+
+      await tester.ensureVisible(
+        find.byKey(const Key('media-open-properties')),
+      );
+      await tester.tap(find.byKey(const Key('media-open-properties')));
+      await tester.pumpAndSettle();
+      final sheetField = find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.labelText == '素材终点（秒）',
+      );
+      expect(tester.widget<TextField>(sheetField).controller!.text, '6.25');
+      await tester.tap(find.byKey(const Key('media-close-layer')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('media-open-properties')),
+      );
+      await tester.tap(find.byKey(const Key('media-open-properties')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(sheetField).controller!.text, '6.25');
+      await tester.ensureVisible(find.text('应用调整'));
+      await tester.tap(find.text('应用调整'));
+      await tester.pumpAndSettle();
+      expect(controller.selectedClipId, selectedClipId);
+      expect(scrollController.offset, preservedOffset);
+      expect(controller.timeline!.tracks.single.clips.single.sourceOut, 6.25);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('open layers refresh for edits, undo and busy state', (
+    tester,
+  ) async {
+    await controller.importFile('interview.mp4', Uint8List.fromList([1]));
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(client, controller));
+    await tester.ensureVisible(find.byKey(const Key('media-open-sources')));
+    await tester.tap(find.byKey(const Key('media-open-sources')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('添加片段'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '添加片段'));
+    await tester.pumpAndSettle();
+    expect(controller.timeline!.tracks.single.clips, hasLength(1));
+    expect(controller.selectedClipId, isNotNull);
+    expect(find.byKey(const Key('media-close-layer')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('media-close-layer')));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('media-open-actions')));
+    await tester.tap(find.byKey(const Key('media-open-actions')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
+    client.pendingExport = Completer<void>();
+    await tester.tap(find.byKey(const Key('media-export')));
+    await tester.pump();
+    expect(controller.busy, isTrue);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('media-export')))
+          .onPressed,
+      isNull,
+    );
+    client.pendingExport!.complete();
+    await tester.pumpAndSettle();
+    expect(controller.busy, isFalse);
+    await tester.tap(find.text('撤销'));
+    await tester.pumpAndSettle();
+    expect(controller.timeline!.tracks.single.clips, isEmpty);
+    expect(
+      tester
+          .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, '撤销'))
+          .onPressed,
+      isNull,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('open actions hide cached versions after context quarantine', (
+    tester,
+  ) async {
+    client.contextEnvelope = {
+      'contract': 'lumenis.context.v1',
+      'selection_only': true,
+      'context': {
+        'mode': 'FOCUS',
+        'domain_id': 'BMP',
+        'subject_id': 'SUBJECT-before',
+      },
+    };
+    client.successfulExport = true;
+    await controller.importFile('interview.mp4', Uint8List.fromList([1]));
+    controller.edit(
+      (s) => s.addClip(s.assets.single.assetId, trackId: 'video', sourceOut: 8),
+    );
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(client, controller));
+    await tester.ensureVisible(find.byKey(const Key('media-open-actions')));
+    await tester.tap(find.byKey(const Key('media-open-actions')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('media-export')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('media-reopen-ART-version')), findsOneWidget);
+    expect(find.byKey(const Key('media-version-preview')), findsOneWidget);
+    expect(find.byKey(const Key('media-version-download')), findsOneWidget);
+
+    controller.edit(
+      (s) => s.addClip(s.assets.single.assetId, trackId: 'video', sourceOut: 5),
+    );
+    expect(controller.hasUnsavedChanges, isTrue);
+    client.contextEnvelope = {
+      'contract': 'lumenis.context.v1',
+      'selection_only': true,
+      'context': {
+        'mode': 'FOCUS',
+        'domain_id': 'BMP',
+        'subject_id': 'SUBJECT-after',
+      },
+    };
+    controller.edit((s) => s.undo());
+    await tester.pumpAndSettle();
+
+    expect(controller.contextMatches, isFalse);
+    expect(controller.hasUnsavedChanges, isTrue);
+    expect(find.byKey(const Key('media-reopen-ART-version')), findsNothing);
+    expect(find.byKey(const Key('media-version-preview')), findsNothing);
+    expect(find.byKey(const Key('media-version-download')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('property sheet keeps apply reachable above the keyboard', (
+    tester,
+  ) async {
+    await controller.importFile('interview.mp4', Uint8List.fromList([1]));
+    controller.edit(
+      (s) => s.addClip(s.assets.single.assetId, trackId: 'video', sourceOut: 8),
+    );
+    controller.selectClip(
+      controller.timeline!.tracks.single.clips.single.clipId,
+    );
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _app(
+        client,
+        controller,
+        scale: 2,
+        viewInsets: const EdgeInsets.only(bottom: 320),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('media-open-properties')));
+    await tester.tap(find.byKey(const Key('media-open-properties')));
+    await tester.pumpAndSettle();
+    final endField = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField && widget.decoration?.labelText == '素材终点（秒）',
+    );
+    await tester.ensureVisible(endField);
+    await tester.enterText(endField, '6.5');
+    await tester.ensureVisible(find.text('应用调整'));
+    expect(
+      tester.getSize(find.widgetWithText(FilledButton, '应用调整')).height,
+      greaterThanOrEqualTo(48),
+    );
+    await tester.tap(find.text('应用调整'));
+    await tester.pumpAndSettle();
+    expect(controller.timeline!.tracks.single.clips.single.sourceOut, 6.5);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'editor Back shares the leave decision and keeps unapplied inspector text on cancel',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 1100));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _prepareEditableProject(client, controller);
+      client.successfulExport = true;
+      final guard = LumenisLeaveGuard();
+      var backCalls = 0;
+
+      await tester.pumpWidget(
+        _app(client, controller, guard: guard, onBack: () => backCalls++),
+      );
+      await tester.pumpAndSettle();
+      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await tester.pumpAndSettle();
+      expect(controller.hasUnsavedChanges, isFalse);
+
+      final endField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.labelText == '素材终点（秒）',
+      );
+      await tester.enterText(endField, '6.5');
+      await tester.pump();
+      expect(guard.needsProtection, isTrue);
+      expect(controller.hasUnsavedChanges, isFalse);
+
+      await tester.tap(
+        find.widgetWithIcon(IconButton, Icons.arrow_back_rounded),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('放弃未导出的修改？'), findsOneWidget);
+      await tester.tap(find.text('取消'));
+      await tester.pumpAndSettle();
+
+      expect(backCalls, 0);
+      expect(tester.widget<TextField>(endField).controller!.text, '6.5');
+      expect(controller.timeline!.tracks.single.clips.single.sourceOut, 8);
+      expect(guard.needsProtection, isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('reopen cancel preserves unapplied inspector text and version', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _prepareEditableProject(client, controller);
+    client.successfulExport = true;
+    final guard = LumenisLeaveGuard();
+
+    await tester.pumpWidget(_app(client, controller, guard: guard));
+    await tester.pumpAndSettle();
+    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await tester.pumpAndSettle();
+    expect(controller.version?.artifactId, 'ART-version');
+    expect(controller.hasUnsavedChanges, isFalse);
+
+    final endField = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField && widget.decoration?.labelText == '素材终点（秒）',
+    );
+    await tester.enterText(endField, '6.5');
+    await tester.pump();
+    final reopen = find.byKey(const Key('media-reopen-ART-version'));
+    await tester.ensureVisible(reopen);
+    await tester.tap(reopen);
+    await tester.pumpAndSettle();
+    expect(find.text('放弃未导出的修改？'), findsOneWidget);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+
+    expect(controller.version?.artifactId, 'ART-version');
+    expect(controller.timeline!.tracks.single.clips.single.sourceOut, 8);
+    expect(tester.widget<TextField>(endField).controller!.text, '6.5');
+    expect(guard.needsProtection, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'unavailable context quarantines cached output until sources are confirmed again',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 1100));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _prepareEditableProject(client, controller);
+      client.successfulExport = true;
+      final guard = LumenisLeaveGuard();
+
+      await tester.pumpWidget(_app(client, controller, guard: guard));
+      await tester.pumpAndSettle();
+      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await tester.pumpAndSettle();
+      final endField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.labelText == '素材终点（秒）',
+      );
+      await tester.enterText(endField, '6.5');
+      await tester.pump();
+      expect(guard.needsProtection, isTrue);
+
+      await tester.pumpWidget(
+        _app(client, controller, guard: guard, contextAvailable: false),
+      );
+      await tester.pumpAndSettle();
+      expect(controller.sourcesNeedRevalidation, isTrue);
+      expect(client.inspectCalls, 0);
+      expect(find.byKey(const Key('media-reopen-ART-version')), findsNothing);
+      expect(find.byKey(const Key('media-timeline-scroll')), findsNothing);
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('media-export')))
+            .onPressed,
+        isNull,
+      );
+      expect(guard.needsProtection, isTrue);
+
+      final leave = guard.requestLeave();
+      await tester.pumpAndSettle();
+      expect(find.text('放弃未导出的修改？'), findsOneWidget);
+      await tester.tap(find.text('取消'));
+      await tester.pumpAndSettle();
+      expect(await leave, isFalse);
+      expect(guard.needsProtection, isTrue);
+
+      await tester.pumpWidget(_app(client, controller, guard: guard));
+      await tester.pumpAndSettle();
+      expect(controller.contextMatches, isFalse);
+      expect(find.byKey(const Key('media-timeline-scroll')), findsNothing);
+      expect(
+        find.byKey(const Key('media-recover-draft-sources')),
+        findsOneWidget,
+      );
+      expect(client.inspectCalls, 0);
+      await tester.tap(find.byKey(const Key('media-recover-draft-sources')));
+      await tester.pumpAndSettle();
+      expect(client.inspectCalls, 1);
+      expect(controller.contextMatches, isTrue);
+      expect(controller.timeline, isNotNull);
+      expect(
+        find.byKey(const Key('media-recover-draft-sources')),
+        findsNothing,
+      );
+      expect(tester.widget<TextField>(endField).controller!.text, '6.5');
+      expect(guard.needsProtection, isTrue);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      expect(guard.needsProtection, isFalse);
+      expect(await guard.requestLeave(), isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('pending import blocks leaving without calling onBack', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final guard = LumenisLeaveGuard();
+    client.pendingImport = Completer<void>();
+    var backCalls = 0;
+    await tester.pumpWidget(
+      _app(client, controller, guard: guard, onBack: () => backCalls++),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('media-import')));
+    await tester.tap(find.byKey(const Key('media-import')));
+    for (var attempt = 0; attempt < 6 && !controller.busy; attempt++) {
+      await tester.pump();
+    }
+    expect(controller.busy, isTrue);
+    await tester.pump();
+    expect(guard.needsProtection, isTrue);
+    final backButton = find.widgetWithIcon(
+      IconButton,
+      Icons.arrow_back_rounded,
+    );
+    expect(tester.widget<IconButton>(backButton).onPressed, isNull);
+    await tester.tap(backButton, warnIfMissed: false);
+    await tester.pump();
+    expect(backCalls, 0);
+    expect(await guard.requestLeave(), isFalse);
+    expect(find.text('放弃未导出的修改？'), findsNothing);
+    expect(backCalls, 0);
+
+    client.pendingImport!.complete();
+    await tester.pumpAndSettle();
+    expect(controller.busy, isFalse);
+    expect(backCalls, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('pending export blocks leaving without calling onBack', (
+    tester,
+  ) async {
+    await _prepareEditableProject(client, controller);
+    await tester.binding.setSurfaceSize(const Size(1440, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final guard = LumenisLeaveGuard();
+    var backCalls = 0;
+    await tester.pumpWidget(
+      _app(client, controller, guard: guard, onBack: () => backCalls++),
+    );
+    await tester.pumpAndSettle();
+    client.pendingExport = Completer<void>();
+    final export = controller.export(
+      outputKind: 'video',
+      demoAcknowledged: true,
+    );
+    await tester.pump();
+    expect(controller.busy, isTrue);
+    expect(guard.needsProtection, isTrue);
+    expect(
+      tester
+          .widget<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.arrow_back_rounded),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(await guard.requestLeave(), isFalse);
+    expect(find.text('放弃未导出的修改？'), findsNothing);
+    expect(backCalls, 0);
+
+    client.pendingExport!.complete();
+    await export;
+    await tester.pumpAndSettle();
+    expect(controller.busy, isFalse);
+    expect(backCalls, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('pending version retrieval blocks leaving without onBack', (
+    tester,
+  ) async {
+    await _prepareEditableProject(client, controller);
+    await tester.binding.setSurfaceSize(const Size(1440, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final guard = LumenisLeaveGuard();
+    var backCalls = 0;
+    client.successfulExport = true;
+    await tester.pumpWidget(
+      _app(client, controller, guard: guard, onBack: () => backCalls++),
+    );
+    await tester.pumpAndSettle();
+    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await tester.pumpAndSettle();
+
+    client.pendingRetrieval = Completer<void>();
+    await tester.ensureVisible(find.byKey(const Key('media-version-preview')));
+    await tester.tap(find.byKey(const Key('media-version-preview')));
+    await tester.pump();
+    expect(guard.needsProtection, isTrue);
+    expect(
+      tester
+          .widget<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.arrow_back_rounded),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(await guard.requestLeave(), isFalse);
+    expect(backCalls, 0);
+    expect(find.text('放弃未导出的修改？'), findsNothing);
+
+    client.pendingRetrieval!.complete();
+    await tester.pumpAndSettle();
+    expect(guard.needsProtection, isFalse);
+    expect(backCalls, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('no-change and stale-parent rejects use safe editor copy', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _prepareEditableProject(client, controller);
+    client.successfulExport = true;
+    await tester.pumpWidget(_app(client, controller));
+    await tester.pumpAndSettle();
+
+    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await tester.pumpAndSettle();
+    expect(controller.version?.artifactId, 'ART-version');
+    expect(client.exports, 1);
+
+    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await tester.pumpAndSettle();
+    expect(controller.failureCode, 'CONTENT_PROJECT_NO_CHANGES');
+    expect(find.text('先修改内容，再保存新版本。当前作品已保留。'), findsOneWidget);
+    expect(client.exports, 1);
+
+    controller.edit((snapshot) => snapshot.undo());
+    expect(controller.hasUnsavedChanges, isTrue);
+    client.exportFailureCode = 'CONTENT_PROJECT_PARENT_REVISION_REQUIRED';
+    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await tester.pumpAndSettle();
+
+    expect(controller.failureCode, 'CONTENT_PROJECT_PARENT_REVISION_REQUIRED');
+    expect(find.text('先修改内容，再保存新版本。当前作品已保留。'), findsOneWidget);
+    expect(
+      find.textContaining('private parent revision diagnostic'),
+      findsNothing,
+    );
+    expect(
+      find.textContaining('CONTENT_PROJECT_PARENT_REVISION_REQUIRED'),
+      findsNothing,
+    );
+    expect(client.exports, 2);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final locale in const [Locale('zh', 'CN'), Locale('en'), Locale('ko')]) {
+    testWidgets('mobile 200 percent text remains operable in $locale', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(320, 720));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        _app(client, controller, locale: locale, scale: 2),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('media-import')), findsNothing);
+      await tester.ensureVisible(find.byKey(const Key('media-open-sources')));
+      await tester.tap(find.byKey(const Key('media-open-sources')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('media-import')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('media-close-layer')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('media-open-properties')),
+      );
+      await tester.tap(find.byKey(const Key('media-open-properties')));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(find.byKey(const Key('media-close-layer'))).shortestSide,
+        greaterThanOrEqualTo(48),
+      );
+      await tester.tap(find.byKey(const Key('media-close-layer')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('media-open-actions')));
+      await tester.tap(find.byKey(const Key('media-open-actions')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('media-export')));
+      expect(
+        tester.getSize(find.byKey(const Key('media-export'))).height,
+        greaterThanOrEqualTo(48),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+}

@@ -6,6 +6,7 @@ import '../../../l10n/lumenis_localizations.dart';
 import 'sh01_repository.dart';
 import 'sh01_snapshot.dart';
 import 'sh01_view_model.dart';
+import 'media_project_workbench.dart';
 
 String _catalogFailureCopy(String? error) => switch (error) {
   '登录已失效，请重新登录后读取。' => 'sh01.failure.auth',
@@ -128,16 +129,25 @@ String _catalogTitle(BuildContext context, String _) =>
     context.lumenisL10n.text('sh01.charter.title');
 
 class Sh01Screen extends StatefulWidget {
-  const Sh01Screen({required this.client, this.repository, super.key});
+  const Sh01Screen({
+    required this.client,
+    this.repository,
+    this.invokingDomain,
+    this.contextAvailable = true,
+    super.key,
+  });
 
   final LumenisCoreClient client;
   final Sh01Repository? repository;
+  final String? invokingDomain;
+  final bool contextAvailable;
 
   @override
   State<Sh01Screen> createState() => _Sh01ScreenState();
 }
 
 class _Sh01ScreenState extends State<Sh01Screen> {
+  bool _editing = false;
   late final Sh01ViewModel _viewModel = Sh01ViewModel(
     repository: widget.repository ?? CoreSh01Repository(client: widget.client),
   );
@@ -155,25 +165,50 @@ class _Sh01ScreenState extends State<Sh01Screen> {
   }
 
   @override
-  Widget build(BuildContext context) => ColoredBox(
-    color: LumenisTheme.of(context).canvas,
-    child: SafeArea(
-      child: AnimatedBuilder(
-        animation: _viewModel,
-        builder: (context, _) => switch (_viewModel.phase) {
-          Sh01LoadPhase.loading => const _LoadingState(),
-          Sh01LoadPhase.failed => _FailureState(
-            messageKey: _catalogFailureCopy(_viewModel.error),
-            onRetry: _viewModel.refresh,
+  Widget build(BuildContext context) => _editing
+      ? MediaProjectWorkbench(
+          client: widget.client,
+          invokingDomain: widget.invokingDomain,
+          contextAvailable: widget.contextAvailable,
+          onBack: () => setState(() => _editing = false),
+        )
+      : ColoredBox(
+          color: LumenisTheme.of(context).canvas,
+          child: SafeArea(
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: OutlinedButton.icon(
+                      key: const Key('sh01-open-video-editor'),
+                      onPressed: () => setState(() => _editing = true),
+                      icon: const Icon(Icons.video_collection_outlined),
+                      label: Text(context.lumenisL10n.text('sh01.media.open')),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: AnimatedBuilder(
+                    animation: _viewModel,
+                    builder: (context, _) => switch (_viewModel.phase) {
+                      Sh01LoadPhase.loading => const _LoadingState(),
+                      Sh01LoadPhase.failed => _FailureState(
+                        messageKey: _catalogFailureCopy(_viewModel.error),
+                        onRetry: _viewModel.refresh,
+                      ),
+                      Sh01LoadPhase.ready => _Workspace(
+                        viewModel: _viewModel,
+                        catalog: _viewModel.catalog!,
+                      ),
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
-          Sh01LoadPhase.ready => _Workspace(
-            viewModel: _viewModel,
-            catalog: _viewModel.catalog!,
-          ),
-        },
-      ),
-    ),
-  );
+        );
 }
 
 class _Workspace extends StatelessWidget {
@@ -193,7 +228,10 @@ class _Workspace extends StatelessWidget {
         selected: viewModel.selected,
         onSelect: viewModel.select,
       );
-      final detail = _CapabilityDetail(capability: viewModel.selected);
+      final detail = _CapabilityDetail(
+        capability: viewModel.selected,
+        hasTools: catalog.skills.isNotEmpty,
+      );
       return Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
@@ -508,14 +546,19 @@ class _CapabilityRow extends StatelessWidget {
 }
 
 class _CapabilityDetail extends StatelessWidget {
-  const _CapabilityDetail({required this.capability});
+  const _CapabilityDetail({required this.capability, required this.hasTools});
 
   final Sh01Capability? capability;
+  final bool hasTools;
 
   @override
   Widget build(BuildContext context) => _Panel(
     child: capability == null
-        ? _InfoMessage(context.lumenisL10n.text('sh01.detail.empty'))
+        ? _InfoMessage(
+            context.lumenisL10n.text(
+              hasTools ? 'sh01.detail.select' : 'sh01.detail.empty',
+            ),
+          )
         : _CapabilityFacts(capability: capability!),
   );
 }

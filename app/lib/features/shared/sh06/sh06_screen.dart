@@ -614,15 +614,15 @@ class _FailureState extends StatelessWidget {
     detail: switch (kind) {
       Sh06FailureKind.authentication => _copy(
         context,
-        '登录状态已过期，请重新登录后查看。',
-        'Your sign-in has expired. Sign in again before viewing.',
-        '로그인이 만료되었습니다. 다시 로그인한 뒤 확인하세요.',
+        '当前内容暂时无法打开。可重试读取，或返回后稍后再试。',
+        'This content cannot be opened right now. You can retry reading it or return and try again later.',
+        '현재 콘텐츠를 지금 열 수 없습니다. 다시 읽기를 시도하거나 돌아간 뒤 나중에 다시 시도할 수 있습니다.',
       ),
       Sh06FailureKind.permissionDenied => _copy(
         context,
-        '当前账号暂不能查看通知与待办。',
-        'This account cannot view the inbox right now.',
-        '이 계정은 현재 받은편지함을 볼 수 없습니다.',
+        '当前内容不可访问。',
+        'This content is not accessible.',
+        '현재 콘텐츠에 접근할 수 없습니다.',
       ),
       Sh06FailureKind.offline => _copy(
         context,

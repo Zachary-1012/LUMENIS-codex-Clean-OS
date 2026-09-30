@@ -923,10 +923,10 @@ class _Bmp11Copy {
       'notCollectedTitle': '还没有收集到品牌基准',
       'notCollectedDetail': '对齐的结果与来源准备好后，才能形成品牌之间的可比基准。',
       'loading': '正在加载品牌基准',
-      'signIn': '需要登录后查看品牌基准',
-      'accessDenied': '当前账号暂时无法查看品牌基准',
+      'signIn': '当前内容暂时无法打开',
+      'accessDenied': '当前内容不可访问',
       'offline': '暂时无法连接品牌基准服务',
-      'retryDetail': '请检查连接后重试；未经确认的比较不会显示。',
+      'retryDetail': '可重试读取，或返回后稍后再试。',
       'retry': '重试',
     },
     'en': {
@@ -959,11 +959,10 @@ class _Bmp11Copy {
       'notCollectedDetail':
           'Aligned results and sources are required before a comparable brand benchmark can be formed.',
       'loading': 'Loading brand benchmark',
-      'signIn': 'Sign in to view the brand benchmark',
-      'accessDenied': 'This account cannot view the brand benchmark right now',
+      'signIn': 'This content cannot be opened right now.',
+      'accessDenied': 'This content is not accessible.',
       'offline': 'Brand benchmark service is unavailable',
-      'retryDetail':
-          'Check the connection and try again. Unconfirmed comparisons stay hidden.',
+      'retryDetail': 'You can retry reading it or return and try again later.',
       'retry': 'Try again',
     },
     'ko': {
@@ -990,10 +989,10 @@ class _Bmp11Copy {
       'notCollectedTitle': '브랜드 벤치마크가 수집되지 않았습니다',
       'notCollectedDetail': '비교 가능한 브랜드 벤치마크에는 정렬된 결과와 출처가 필요합니다.',
       'loading': '브랜드 벤치마크를 불러오는 중',
-      'signIn': '브랜드 벤치마크를 보려면 로그인하세요',
-      'accessDenied': '이 계정은 지금 브랜드 벤치마크를 볼 수 없습니다',
+      'signIn': '현재 콘텐츠를 지금 열 수 없습니다.',
+      'accessDenied': '현재 콘텐츠에 접근할 수 없습니다.',
       'offline': '브랜드 벤치마크 서비스에 연결할 수 없습니다',
-      'retryDetail': '연결을 확인하고 다시 시도하세요. 확인되지 않은 비교는 숨겨집니다.',
+      'retryDetail': '다시 읽기를 시도하거나 돌아간 뒤 나중에 다시 시도할 수 있습니다.',
       'retry': '다시 시도',
     },
   };

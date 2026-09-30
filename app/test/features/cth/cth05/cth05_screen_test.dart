@@ -26,6 +26,47 @@ void main() {
     _expectNoInternalCopy(tester);
   });
 
+  testWidgets(
+    'authentication and access failures remain distinct and retryable',
+    (tester) async {
+      for (final statusCode in [401, 403]) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        final repository = _RecoveringCth05Repository(
+          statusCode,
+          _calendarData(),
+        );
+        await tester.pumpWidget(_app(repository: repository));
+        await tester.pumpAndSettle();
+
+        final expected = statusCode == 401
+            ? '当前内容暂时无法打开。可重试读取，或返回后稍后再试。'
+            : '当前内容不可访问。';
+        expect(find.text(expected), findsOneWidget);
+        final visibleText = tester
+            .widgetList<Text>(find.byType(Text))
+            .map((text) => text.data ?? text.textSpan?.toPlainText() ?? '')
+            .join('\n');
+        for (final term in ['登录', '账号', '账户', '检查连接', '检查网络']) {
+          expect(visibleText, isNot(contains(term)));
+        }
+        final refreshAction = find.ancestor(
+          of: find.byIcon(Icons.refresh_rounded),
+          matching: find.byType(FilledButton),
+        );
+        expect(refreshAction, findsOneWidget);
+
+        await tester.ensureVisible(refreshAction);
+        await tester.tap(refreshAction);
+        await tester.pumpAndSettle();
+
+        expect(repository.calls, 2);
+        expect(find.text(expected), findsNothing);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
   test('a bound global chart without grant or lineage is withheld', () async {
     final hostile = Map<String, dynamic>.from(_chartResponse)
       ..remove('global_binding');
@@ -175,6 +216,26 @@ class _FakeRepository implements Cth05Repository {
 
   @override
   Future<Cth05ScreenData> load() => future;
+}
+
+class _RecoveringCth05Repository implements Cth05Repository {
+  _RecoveringCth05Repository(this.statusCode, this.data);
+
+  final int statusCode;
+  final Cth05ScreenData data;
+  int calls = 0;
+
+  @override
+  Future<Cth05ScreenData> load() async {
+    calls++;
+    if (calls == 1) {
+      throw LumenisCoreException(
+        'HTTP $statusCode private access failure',
+        statusCode: statusCode,
+      );
+    }
+    return data;
+  }
 }
 
 class _FakeClient extends LumenisCoreClient {
