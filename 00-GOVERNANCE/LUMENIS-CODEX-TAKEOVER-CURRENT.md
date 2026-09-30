@@ -33,6 +33,19 @@ package names and extras without converting prose into approval. Its targeted
 regression group passed 17 tests, exit 0. This does not grant commercial
 release approval for transitive `python-pptx` dependencies.
 
+### 2026-09-30 — XHS legacy writer now fails closed on typed non-CTH scope
+
+The existing Registry-owned acquisition plan is now resolved before XHS
+identity, Cookie or network work in `xhs_cookie_bridge.sync`. The legacy writer
+continues to serve its existing CTH path, but explicitly returns
+`XHS_TYPED_SCOPE_IMPORT_REQUIRED` for a BMP or mixed-domain plan instead of
+writing a BrandFocus result into the CTH-only Evidence/Canonical path. This is
+an honest safety boundary, not a claim that BMP XHS persistence is complete;
+the approved next implementation is the existing Permission + signed Evidence
++ `persist_existing_note_scope` owner chain. The acquisition-plan regression
+group passed 25 tests, exit 0. No Cookie, database, or external platform state
+was read or changed by this batch.
+
 ### 2026-09-30 — J5 editor workflow requirements retained and researched
 
 The Product Owner's magnetic/connected editing, browser/skimmer, portable project,

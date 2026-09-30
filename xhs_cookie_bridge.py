@@ -63,9 +63,9 @@ COOKIE_FILE=os.path.abspath(
     os.environ.get('XHS_COOKIE_FILE') or os.path.join(PRIVATE_DATA_DIR, 'xhs_cookie_header.txt')
 )
 STATS_FILE=os.path.join(DATA_DIR,'collector_stats.json')  # 采集计数持久化文件
-DEFAULT_KEYWORDS=['广州太古汇','太古汇 15周年','太古汇 周年庆','太古汇 活动','太古汇 展览','太古汇 快闪',
-                  '太古汇 新店','太古汇 开业','太古汇 美食','太古汇 探店','太古汇 打卡','太古汇 方所','太古汇 品牌',
-                  '太古汇 投诉','太古汇 避雷','太古汇 差评','太古汇 吐槽','太古汇 维权','太古汇 服务','太古汇 停车']
+# Legacy fallback keywords are non-authoritative. The canonical registry owns
+# acquisition identity and query planning.
+DEFAULT_KEYWORDS = None
 
 # ========== 账号安全保护机制（双子星库 Contract：双身份硬白名单） ==========
 # 逻辑身份常量（Contract 入口：Z-Brand Core 所有采集仅接受下面两个身份名）
@@ -130,6 +130,22 @@ def collection_policy_gate(account=None, region='intl'):
     if requested in (None, '', 'default'):
         requested = rednote_policy.DEFAULT_COLLECTION_ACCOUNT
     return rednote_policy.collection_gate(account=requested, region=region)
+
+
+def _resolve_acquisition_plan(
+    keywords=None, *, context_mode='GLOBAL_ALL', domain_id=None,
+    subject_id=None, brand_focus_id=None,
+):
+    """Resolve canonical registry scope before identity/browser/network work."""
+    from lumenis.system.collector.acquisition_plan import build_acquisition_plan
+
+    return build_acquisition_plan(
+        keywords,
+        context_mode=context_mode,
+        domain_id=domain_id,
+        subject_id=subject_id,
+        brand_focus_id=brand_focus_id,
+    )
 
 # 配置一致性断言：逻辑身份在 ACCOUNT_PROFILES 中存在 / 白名单数量匹配
 assert XHS_CN_PRIMARY_NAME in ACCOUNT_PROFILES and XHS_RETINAUT_NAME in ACCOUNT_PROFILES, \
@@ -798,10 +814,46 @@ def _record_note_lineage(note_data, provider="xhs_cookie_bridge"):
 
 
 def sync(keywords=None, max_scroll=6, account=None):
+    query_plan = _resolve_acquisition_plan(keywords)
+    query_plan_payload = query_plan.to_dict()
+    if not query_plan.is_runnable:
+        return {
+            'ok': False, 'task_state': 'BLOCKED', 'state_counts': {},
+            'keywords': [], 'raw_unique': 0, 'verified': 0,
+            'rejected': 0, 'inserted': 0, 'updated': 0, 'analyzed': 0, 'events': 0,
+            'results': [{'stage': 'acquisition_plan', 'status': 'blocked',
+                         'code': 'ACQUISITION_PLAN_BLOCKED',
+                         'message': query_plan.reason or query_plan.reason_code}],
+            'query_plan': query_plan_payload,
+            'network_status': network_adaptive.get_network_status(),
+            'cache_status': cache_manager.get_cache_status(),
+            'blocked': query_plan.reason or query_plan.reason_code,
+            'active_account': None, 'active_user_id': None,
+            'allowed_accounts': list(ACCOUNT_PROFILES.keys()),
+            'finished_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        }
+    plan_domains = {query.domain_id for query in query_plan.queries}
+    if any(domain != 'CTH' for domain in plan_domains):
+        return {
+            'ok': False, 'task_state': 'BLOCKED', 'state_counts': {},
+            'keywords': list(query_plan.keywords), 'raw_unique': 0,
+            'verified': 0, 'rejected': 0, 'inserted': 0, 'updated': 0,
+            'analyzed': 0, 'events': 0,
+            'results': [{'stage': 'scope_persistence', 'status': 'blocked',
+                         'code': 'XHS_TYPED_SCOPE_IMPORT_REQUIRED',
+                         'message': 'XHS legacy writer cannot persist non-CTH scope safely'}],
+            'query_plan': query_plan_payload,
+            'network_status': network_adaptive.get_network_status(),
+            'cache_status': cache_manager.get_cache_status(),
+            'blocked': 'XHS_TYPED_SCOPE_IMPORT_REQUIRED',
+            'active_account': None, 'active_user_id': None,
+            'allowed_accounts': list(ACCOUNT_PROFILES.keys()),
+            'finished_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        }
     resolved_account = account or DEFAULT_COLLECTION_ACCOUNT
     policy_gate = collection_policy_gate(account=resolved_account, region='intl')
     if not policy_gate.get('ok'):
-        requested_keywords = list(dict.fromkeys(keywords or DEFAULT_KEYWORDS))
+        requested_keywords = list(dict.fromkeys(query_plan.keywords))
         return {
             'ok': False, 'task_state': 'POLICY_BLOCKED', 'state_counts': {},
             'keywords': requested_keywords, 'raw_unique': 0, 'verified': 0,
@@ -837,7 +889,7 @@ def sync(keywords=None, max_scroll=6, account=None):
 
     if not cookie_configured():
         raise RuntimeError(f'未配置本机香港/国际 XHS Cookie。请在 {ACCOUNT_PROFILES[resolved_account][0]} 导入合法登录态。')
-    keywords=list(dict.fromkeys(keywords or DEFAULT_KEYWORDS))[:32]
+    keywords=list(dict.fromkeys(query_plan.keywords))[:32]
     raw={}; results=[]; blocked={}; state_counts={}
     _consec_bad=0  # 连续被拦截/失败计数（成功或空结果清零），达到阈值即提前结束本轮保护账号
     for _ki, kw in enumerate(keywords):
@@ -964,6 +1016,7 @@ def sync(keywords=None, max_scroll=6, account=None):
         'active_user_id': ((_cid[:12] + '...') if (_cid := _get_current_user_id()) else None),
         'allowed_accounts': list(ACCOUNT_PROFILES.keys()),
         'collection_policy': policy_gate,
+        'query_plan': query_plan_payload,
         'finished_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
 
@@ -989,6 +1042,16 @@ def create_task(keywords=None,max_scroll=6,run_type='manual',account=None):
     """
     if run_type not in ('manual', 'auto'):
         raise ValueError("run_type must be 'manual' or 'auto'")
+
+    # Resolve registry-owned scope before account/profile/rate-limit work.
+    query_plan = _resolve_acquisition_plan(keywords)
+    if not query_plan.is_runnable:
+        raise RuntimeError(
+            f"采集计划未就绪：{query_plan.reason_code or query_plan.reason or 'ACQUISITION_PLAN_BLOCKED'}"
+        )
+    keywords = list(dict.fromkeys(query_plan.keywords))[:32]
+    query_plan_payload = query_plan.to_dict()
+
     if run_type == 'auto':
         try:
             from lumenis.system.collector.adapters import rednote_policy
@@ -1036,12 +1099,18 @@ def create_task(keywords=None,max_scroll=6,run_type='manual',account=None):
     type_label = '手动触发' if run_type == 'manual' else '自动采集'
     if not _lock.acquire(blocking=False): raise RuntimeError('已有小红书 Cookie 同步任务运行中')
     task_id=f"xhs-{datetime.now():%Y%m%d%H%M%S}-{int(time.time()*1000)%1000:03d}"
-    _tasks[task_id]={'task_id':task_id,'status':'running','progress':5,'run_type':run_type,'account':resolved_account,'collection_policy':policy_gate,'message':f'[{type_label}]正在使用香港/国际登录态检索RedNote…{guard_msg}','created_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    _tasks[task_id]={
+        'task_id':task_id,'status':'running','progress':5,'run_type':run_type,
+        'account':resolved_account,'collection_policy':policy_gate,
+        'query_plan':query_plan_payload,
+        'message':f'[{type_label}]正在按 Registry 采集计划检索 RedNote…{guard_msg}',
+        'created_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    }
     def worker():
         _w_start=time.time()
         try:
             record_run(run_type)  # 记录运行（区分手动/自动）
-            _tasks[task_id].update(progress=20,message=f'[{type_label}]搜索广州太古汇关键词…{guard_msg}')
+            _tasks[task_id].update(progress=20,message=f'[{type_label}]按采集计划搜索已授权关键词…{guard_msg}')
             result=sync(keywords,max_scroll,account=resolved_account)
             ts=result.get('task_state','SUCCESS')
             if ts=='USER_PAUSED':

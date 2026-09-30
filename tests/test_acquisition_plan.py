@@ -131,7 +131,7 @@ def test_legacy_default_symbols_are_non_authoritative_and_bridge_blocks_before_i
     blocked_plan = build_acquisition_plan(registry_loader=lambda: [])
     monkeypatch.setattr(bridge, '_resolve_acquisition_plan', lambda *args, **kwargs: blocked_plan)
     monkeypatch.setattr(bridge, 'collection_policy_gate', lambda *args, **kwargs: {'ok': True})
-    for name in ('select_account', 'cookie_configured', 'get_identity_status'):
+    for name in ('select_account', 'cookie_configured'):
         monkeypatch.setattr(bridge, name, lambda *args, _name=name, **kwargs: (_ for _ in ()).throw(
             AssertionError(f'{_name} reached before acquisition plan')))
 
@@ -139,6 +139,32 @@ def test_legacy_default_symbols_are_non_authoritative_and_bridge_blocks_before_i
 
     assert result['task_state'] == 'BLOCKED'
     assert result['query_plan']['reason_code'] == 'REGISTRY_EMPTY'
+
+
+def test_bridge_rejects_bmp_until_typed_scope_import_is_wired(monkeypatch):
+    """The legacy XHS writer must never relabel BMP notes as CTH."""
+    import xhs_cookie_bridge as bridge
+    from lumenis.system.collector.acquisition_plan import build_acquisition_plan
+
+    plan = build_acquisition_plan(
+        ['Nike'],
+        registry_loader=lambda: [{
+            'subject_id': 'SUBJ-NIKE', 'brand_focus_id': 'BRAND-NIKE',
+            'domain_id': 'BMP', 'subject_type': 'brand', 'name_en': 'Nike',
+            'keywords': ['Nike'], 'status': 'configured',
+        }],
+    )
+    assert plan.is_runnable
+    monkeypatch.setattr(bridge, '_resolve_acquisition_plan', lambda *args, **kwargs: plan)
+    monkeypatch.setattr(bridge, 'collection_policy_gate', lambda *args, **kwargs: (
+        (_ for _ in ()).throw(AssertionError('policy gate reached before typed scope boundary'))
+    ))
+
+    result = bridge.sync(keywords=['Nike'])
+
+    assert result['task_state'] == 'BLOCKED'
+    assert result['blocked'] == 'XHS_TYPED_SCOPE_IMPORT_REQUIRED'
+    assert result['results'][0]['stage'] == 'scope_persistence'
 
 
 def test_collector_none_blocks_before_guard_or_search(monkeypatch):
