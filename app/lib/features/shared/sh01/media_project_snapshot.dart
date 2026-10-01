@@ -65,8 +65,9 @@ bool _boolean(Object? value, String name) {
 
 List<String> _strings(Object? value, String name) {
   final values = _array(value, name);
-  if (values.any((item) => item is! String))
+  if (values.any((item) => item is! String)) {
     throw _invalid('$name must contain strings');
+  }
   return List<String>.unmodifiable(values.cast<String>());
 }
 
@@ -667,8 +668,9 @@ final class MediaProjectSnapshot {
       final b = right[key];
       if (a is List && b is List) {
         if (a.length != b.length ||
-            List.generate(a.length, (i) => a[i] == b[i]).contains(false))
+            List.generate(a.length, (i) => a[i] == b[i]).contains(false)) {
           return false;
+        }
       } else if (a != b) {
         return false;
       }

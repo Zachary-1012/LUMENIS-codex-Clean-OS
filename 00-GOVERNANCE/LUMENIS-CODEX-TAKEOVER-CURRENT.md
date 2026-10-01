@@ -12,6 +12,28 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — full hosted test execution and bounded integration repairs
+
+Product run `36818595409` and App run `36818599237` at `56328436` passed the
+snapshot/governance checks and actually ran their test/analyzer steps. Product
+exposed missing hermetic schema/media prerequisites and integration regressions;
+App exposed three Dart lint violations. These are real failures, not exhausted
+quota. No test, blocking gate or quarantine policy was relaxed.
+
+The current batch prepares a synthetic v18 CI seed and FFmpeg/ffprobe, rejects
+both backup-path separators, isolates import-time campaign test effects, and
+aligns mocked provider tests with the already approved retirement. Transport
+self-description no longer claims READY. Runtime asset routing preserves API
+405/Allow instead of swallowing wrong-method requests. App changes are limited
+to the three analyzer fixes. Product data, browser sessions, and model settings
+are untouched. Exact tests and hosted follow-up are recorded in the existing
+[ROUND 07 evidence](evidence/round-07/ROUND-07-OWNED-AI-MATERIALS-2026-10-01.md).
+
+Same-SHA hosted acceptance awaits the corrected candidate. Owned reasoning and
+useful CTH/BMP outcome remain open; neither a disabled provider nor these
+integration repairs complete the AI milestone. Real-user acceptance is still
+deferred to the Product Owner's final consolidated review.
+
 ### 2026-10-01 — hosted execution restored; exact snapshot portability repaired
 
 GitHub Product run `36817894227` and App run `36817897722` actually executed

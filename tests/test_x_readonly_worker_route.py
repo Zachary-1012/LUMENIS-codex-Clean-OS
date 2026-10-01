@@ -32,12 +32,12 @@ def test_x_worker_requires_exact_opt_in_and_profile_binding(monkeypatch, tmp_pat
         x_platform._configured_browser_worker_url()
 
 
-def test_worker_plan_isolated_and_never_in_default_startup(monkeypatch):
-    spec = resident.x_readonly_worker_spec(r"C:\private\data")
+def test_worker_plan_isolated_and_never_in_default_startup(monkeypatch, tmp_path):
+    spec = resident.x_readonly_worker_spec(str(tmp_path))
     assert spec == {
         "account": "X_READONLY",
         "port": 9226,
-        "profile": r"C:\private\data\profiles\x-readonly",
+        "profile": str(tmp_path / "profiles" / "x-readonly"),
         "home": "about:blank",
         "direct": False,
     }

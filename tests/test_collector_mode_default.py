@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import threading
+from types import SimpleNamespace
 
 from flask import Flask
 
@@ -17,6 +18,14 @@ def _dispatcher():
     obj._lock = threading.Lock()
     obj.is_running = False
     return obj
+
+
+def _runnable_plan(monkeypatch):
+    # Identity-policy unit tests require an explicit in-scope query, independent
+    # of the seed database. Plan resolution itself has separate blocking tests.
+    monkeypatch.setattr(xhs_cookie_bridge, "_resolve_acquisition_plan", lambda *_: SimpleNamespace(
+        is_runnable=True, keywords=("test",), to_dict=lambda: {"status": "READY"},
+    ))
 
 
 def test_auto_and_unknown_modes_stop_before_identity_preflight(monkeypatch):
@@ -44,6 +53,7 @@ def test_auto_and_unknown_modes_stop_before_identity_preflight(monkeypatch):
 
 
 def test_manual_dispatch_reaches_existing_identity_policy(monkeypatch):
+    _runnable_plan(monkeypatch)
     calls = []
     monkeypatch.setattr(
         xhs_cookie_bridge, "collection_policy_gate",
@@ -57,6 +67,7 @@ def test_manual_dispatch_reaches_existing_identity_policy(monkeypatch):
 
 
 def test_supported_auto_opt_in_reaches_existing_identity_policy(monkeypatch):
+    _runnable_plan(monkeypatch)
     calls = []
     monkeypatch.setenv("REDNOTE_AUTO_RUN", "true")
     monkeypatch.setenv("REDNOTE_AUTO_SCOPE", "GUANGZHOU_TAIKOO_HUI")

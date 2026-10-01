@@ -122,6 +122,18 @@ jobs:
               print('tracked-boundary-path:', path)
           PY
 
+      - name: Prepare isolated schema and media tools (BLOCKING)
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version
+          ffprobe -version
+          seed_dir="$(mktemp -d "$RUNNER_TEMP/lumenis-hermetic-seed.XXXXXX")"
+          export ZBC_DB_PATH="$seed_dir/monitor-test-seed.db"
+          python -c "from lumenis.shared.database.migrations import migrate; assert migrate(), 'Disposable schema bootstrap failed'"
+          echo "LUMENIS_TEST_SEED_DB=$ZBC_DB_PATH" >> "$GITHUB_ENV"
+
       - name: Run hermetic Shared Database acceptance (BLOCKING)
         run: >-
           python -m pytest -q

@@ -1,8 +1,8 @@
 # API 路由矩阵（由当前 Flask url_map 自动生成，勿手改）
 
-- Flask url_map rules：**784**（static：**1**；API routes：**783**）
-- 唯一路径：**744**；operation groups：**791**
-- route operation candidates：**805**；重复冲突组：**14**（候选项：**28**）
+- Flask url_map rules：**805**（static：**1**；API routes：**804**）
+- 唯一路径：**765**；operation groups：**814**
+- route operation candidates：**828**；重复冲突组：**14**（候选项：**28**）
 - 认证：public=/healthz；v4Auth=/v4/* 独立 token；其余 httpBasic 或 v4 会话。
 
 | 路径 | 方法 | Endpoint candidate | Flask rule | 认证 | 分组 |
@@ -166,6 +166,7 @@
 | `/api/browser/sessions/{session_id}` | GET | ai_browser_runtime.get_session_status | `/api/browser/sessions/<session_id>` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/action` | POST | ai_browser_runtime.execute_action | `/api/browser/sessions/<session_id>/action` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/evidence` | GET | ai_browser_runtime.get_evidence | `/api/browser/sessions/<session_id>/evidence` | basic/v4 | api/browser |
+| `/api/browser/sessions/{session_id}/frame` | GET | ai_browser_runtime.read_session_frame | `/api/browser/sessions/<session_id>/frame` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/human-approval` | POST | ai_browser_runtime.human_approval | `/api/browser/sessions/<session_id>/human-approval` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/navigate` | POST | ai_browser_runtime.navigate | `/api/browser/sessions/<session_id>/navigate` | basic/v4 | api/browser |
 | `/api/browser/sessions/{session_id}/observe` | POST | ai_browser_runtime.observe | `/api/browser/sessions/<session_id>/observe` | basic/v4 | api/browser |
@@ -299,12 +300,27 @@
 | `/api/experience/ai/publish-requests/{task_id}` | GET | experience_runtime.publish_approval_request_detail | `/api/experience/ai/publish-requests/<task_id>` | basic/v4 | api/experience |
 | `/api/experience/artifacts/{artifact_id}` | GET | experience_runtime.shared_artifact_detail | `/api/experience/artifacts/<artifact_id>` | basic/v4 | api/experience |
 | `/api/experience/artifacts/{artifact_id}/file` | GET | experience_runtime.shared_artifact_file | `/api/experience/artifacts/<artifact_id>/file` | basic/v4 | api/experience |
+| `/api/experience/content-projects` | GET | experience_runtime.content_project_list | `/api/experience/content-projects` | basic/v4 | api/experience |
+| `/api/experience/content-projects/export` | POST | experience_runtime.export_content_project | `/api/experience/content-projects/export` | basic/v4 | api/experience |
+| `/api/experience/content-projects/{artifact_id}` | GET | experience_runtime.content_project_detail | `/api/experience/content-projects/<artifact_id>` | basic/v4 | api/experience |
+| `/api/experience/content-projects/{artifact_id}/media` | GET | experience_runtime.content_project_media | `/api/experience/content-projects/<artifact_id>/media` | basic/v4 | api/experience |
+| `/api/experience/content-projects/{artifact_id}/package` | GET | experience_runtime.content_project_package | `/api/experience/content-projects/<artifact_id>/package` | basic/v4 | api/experience |
+| `/api/experience/content-source-confirmations/{confirmation_id}` | POST | experience_runtime.confirm_content_source_import_request | `/api/experience/content-source-confirmations/<confirmation_id>` | basic/v4 | api/experience |
+| `/api/experience/content-sources` | POST | experience_runtime.import_content_source | `/api/experience/content-sources` | basic/v4 | api/experience |
+| `/api/experience/content-sources/{artifact_id}` | GET | experience_runtime.content_source_detail | `/api/experience/content-sources/<artifact_id>` | basic/v4 | api/experience |
 | `/api/experience/content/evidence/{evidence_id}` | GET | experience_runtime.content_evidence_detail | `/api/experience/content/evidence/<evidence_id>` | basic/v4 | api/experience |
 | `/api/experience/cth/platform-collection` | GET | experience_runtime.cth_platform_collection_surface | `/api/experience/cth/platform-collection` | basic/v4 | api/experience |
 | `/api/experience/cth/platform-collection/search` | POST | experience_runtime.cth_platform_collection_search | `/api/experience/cth/platform-collection/search` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/generate` | POST | experience_runtime.generate_source_brief_job | `/api/experience/reports/source-brief/generate` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/jobs/{job_id}` | GET | experience_runtime.reopen_source_brief_job | `/api/experience/reports/source-brief/jobs/<job_id>` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/jobs/{job_id}/reviews` | POST | experience_runtime.submit_source_brief_review | `/api/experience/reports/source-brief/jobs/<job_id>/reviews` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/start` | POST | experience_runtime.start_source_brief_task | `/api/experience/reports/source-brief/start` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/tasks/{task_id}` | GET | experience_runtime.source_brief_task_status | `/api/experience/reports/source-brief/tasks/<task_id>` | basic/v4 | api/experience |
+| `/api/experience/reports/source-brief/tasks/{task_id}/resume` | POST | experience_runtime.resume_source_brief_task | `/api/experience/reports/source-brief/tasks/<task_id>/resume` | basic/v4 | api/experience |
 | `/api/experience/runtime/identity` | GET | experience_runtime.runtime_identity | `/api/experience/runtime/identity` | basic/v4 | api/experience |
 | `/api/experience/screen/{screen_id}` | GET | experience_runtime.screen_viewmodel | `/api/experience/screen/<screen_id>` | basic/v4 | api/experience |
 | `/api/experience/shared-skills` | GET | experience_runtime.shared_skills_catalog | `/api/experience/shared-skills` | basic/v4 | api/experience |
+| `/api/experience/shared-skills/shared.content_project/inspect` | POST | experience_runtime.inspect_content_project_media | `/api/experience/shared-skills/shared.content_project/inspect` | basic/v4 | api/experience |
 | `/api/experience/shared-skills/shared.video_shotcraft/render` | POST | experience_runtime.render_shared_video_artifact | `/api/experience/shared-skills/shared.video_shotcraft/render` | basic/v4 | api/experience |
 | `/api/experience/shared-skills/{skill_id}/run` | POST | experience_runtime.run_shared_skill_route | `/api/experience/shared-skills/<skill_id>/run` | basic/v4 | api/experience |
 | `/api/experience/subjects` | GET | experience_runtime.runtime_subjects | `/api/experience/subjects` | basic/v4 | api/experience |
@@ -542,6 +558,9 @@
 | `/api/settings` | GET | api_settings_get | `/api/settings` | basic/v4 | api/settings |
 | `/api/settings/config` | GET | settings.get_config | `/api/settings/config` | basic/v4 | api/settings |
 | `/api/settings/config` | POST | settings.update_config | `/api/settings/config` | basic/v4 | api/settings |
+| `/api/settings/context` | DELETE | domain_api.api_settings_context | `/api/settings/context` | basic/v4 | api/settings |
+| `/api/settings/context` | GET | domain_api.api_settings_context | `/api/settings/context` | basic/v4 | api/settings |
+| `/api/settings/context` | PUT | domain_api.api_settings_context | `/api/settings/context` | basic/v4 | api/settings |
 | `/api/settings/developer/execute` | POST | settings.developer_execute | `/api/settings/developer/execute` | basic/v4 | api/settings |
 | `/api/settings/developer/logs` | GET | settings.developer_logs | `/api/settings/developer/logs` | basic/v4 | api/settings |
 | `/api/settings/domain` | GET | settings.get_domain_config | `/api/settings/domain` | basic/v4 | api/settings |
@@ -812,3 +831,7 @@
 | `/v4/version-center/api/rollback` | POST | v4.v4_version.api_rollback | `/v4/version-center/api/rollback` | v4Auth | v4 |
 | `/v4/version-center/api/save` | POST | v4.v4_version.api_save | `/v4/version-center/api/save` | v4Auth | v4 |
 | `/v4/version-center/api/status` | GET | v4.v4_version.api_status | `/v4/version-center/api/status` | v4Auth | v4 |
+| `/workspace` | GET | lumenis_workspace_host.root | `/workspace` | basic/v4 | workspace |
+| `/workspace/` | GET | lumenis_workspace_host.root_slash | `/workspace/` | basic/v4 | workspace |
+| `/workspace/{resource}` | GET | lumenis_workspace_host.resource | `/workspace/<path:resource>` | basic/v4 | workspace |
+| `/{resource}` | GET | lumenis_workspace_host.asset | `/<workspaceasset:resource>` | basic/v4 | root |

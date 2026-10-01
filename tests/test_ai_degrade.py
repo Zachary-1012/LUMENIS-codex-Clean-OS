@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""P1-G AI 分层核验：无 key 全链降级不阻塞系统 + 云端发送脱敏（合规 AI-01）。"""
+"""P1-G AI checks: retired routes fail closed and redaction remains stable."""
 import sys
 import os
 
@@ -10,28 +10,45 @@ from lumenis.system.ai_gateway import channel as ai_channel
 
 
 def test_no_key_ai_status_degrades(monkeypatch):
-    monkeypatch.setattr(intelligence, "_provider_config", lambda: None)
+    monkeypatch.setenv("AI_PROVIDER", "zhipu")
+    monkeypatch.setitem(intelligence._CACHE, "ts", 10**12)
+    monkeypatch.setitem(intelligence._CACHE, "provider", "zhipu")
+    monkeypatch.setitem(intelligence._CACHE, "model", "glm-stale")
+    monkeypatch.setitem(intelligence._CACHE, "base", "https://stale.invalid")
+    probes = []
+    monkeypatch.setattr(intelligence, "_get_json", lambda *a, **k: probes.append(a))
+    monkeypatch.setattr(intelligence, "_detect_local", lambda: probes.append("local-detect"))
+    monkeypatch.setattr(intelligence.urllib.request, "urlopen", lambda *a, **k: probes.append("urlopen"))
     s = intelligence.ai_status()
     assert s["enabled"] is False
-    assert s["runtime"] == "rule"  # 降级到内置规则引擎，系统不依赖付费 API
+    assert s["provider"] == "provider_disabled"
+    assert s["runtime"] == "unavailable"
+    assert s["hints"] == []
+    assert probes == []
+    assert intelligence._CACHE["provider"] is None
 
 
 def test_no_key_ai_enabled_false(monkeypatch):
-    monkeypatch.setattr(intelligence, "_provider_config", lambda: None)
+    monkeypatch.setenv("AI_PROVIDER", "zhipu")
     assert intelligence.ai_enabled() is False
 
 
 def test_no_key_chat_fallback_no_throw(monkeypatch):
-    monkeypatch.setattr(intelligence, "_provider_config", lambda: None)
+    monkeypatch.setenv("AI_PROVIDER", "zhipu")
+    calls = []
 
     def _all_providers_fail(func, providers=None):
-        raise Exception("simulated all providers down")
+        calls.append("route")
+        raise AssertionError("retired provider must not enter fallback")
 
-    # 模拟所有云端 Provider 不可用：route_with_fallback 抛异常 → _chat 降级到 rule
+    monkeypatch.setattr(intelligence, "_provider_config", lambda: calls.append("config"))
+    monkeypatch.setattr(intelligence, "_detect_local", lambda: calls.append("local-detect"))
+    monkeypatch.setattr(intelligence.urllib.request, "urlopen", lambda *a, **k: calls.append("urlopen"))
     monkeypatch.setattr(ai_channel, "route_with_fallback", _all_providers_fail)
     text, tag = intelligence._chat("sys", "user")
     assert text is None
-    assert tag in ("rule", "no_key")  # 优雅降级，不抛异常
+    assert tag == "provider_disabled"
+    assert calls == []
 
 
 def test_redact_api_key():

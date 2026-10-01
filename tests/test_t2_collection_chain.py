@@ -308,6 +308,14 @@ def run_tests():
         async def navigate(self, url, **kw): return {"ok": True, "url": url}
         async def close(self): pass
 
+        # This test exercises registration only. Any browser operation would
+        # be an unintended effect, not evidence of a real collection.
+        async def _not_used(self, *args, **kwargs):
+            raise AssertionError("Registration test must not operate a browser")
+
+        snapshot = screenshot = click = type_text = _not_used
+        get_text = wait_for = evaluate = health = _not_used
+
     router.register("mock", MockBrowser)
     check("注册后 provider 可见", "mock" in router.providers())
     check("get 返回实例", isinstance(router.get("mock"), MockBrowser))

@@ -140,10 +140,34 @@ def test_channel_health_available_flag():
     orig = ai_channel.breaker
     ai_channel.breaker = b
     try:
-        h = ac.channel_health('zhipu', 'glm-x')
-        assert h['available'] is True and h['provider'] == 'zhipu'
+        retired = ac.channel_health('zhipu', 'glm-x')
+        assert retired['available'] is False
+        assert retired['provider'] == 'zhipu'
+        assert retired['provider_status'] == 'DISABLED'
+
+        # Provider retirement must not erase health behavior for an active
+        # non-retired route.
+        h = ac.channel_health('ark', 'doubao-test')
+        assert h['available'] is True and h['provider'] == 'ark'
         b.record_failure('network')
-        h2 = ac.channel_health('zhipu', 'glm-x')
+        h2 = ac.channel_health('ark', 'doubao-test')
         assert h2['available'] is False and h2['state'] == 'OPEN'
     finally:
         ai_channel.breaker = orig
+
+
+def test_retired_local_providers_cannot_be_revived_or_probed(monkeypatch):
+    from lumenis.system.ai_gateway import providers
+
+    probes = []
+    monkeypatch.setattr(providers, '_probe_endpoint', lambda *a, **k: probes.append(a) or True)
+    for name in ('ollama', 'lmstudio', 'llama_cpp'):
+        providers.set_provider_status(name, providers.ACTIVE)
+        assert providers.provider_status(name) == providers.DISABLED
+
+    assert providers.probe_local_providers() == {
+        'ollama': providers.DISABLED,
+        'lmstudio': providers.DISABLED,
+        'llama_cpp': providers.DISABLED,
+    }
+    assert probes == []

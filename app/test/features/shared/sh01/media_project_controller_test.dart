@@ -64,7 +64,7 @@ final class _Repository implements MediaProjectRepository {
     await pending?.future;
     if (failure != null) throw failure!;
     savedProject = {
-      if (refs != null) 'source_artifact_refs': refs,
+      'source_artifact_refs': ?refs,
       'schema_version': 1,
       'output_kind': outputKind,
       'timeline': timeline.toJson(),

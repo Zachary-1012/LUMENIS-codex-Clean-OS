@@ -660,17 +660,21 @@ def reconnect_with_backoff(connect_fn, max_attempts=5, base_delay=1.0,
 # Track B 自描述
 # ============================================================
 def track_b_self_check():
-    """Track B 自检：验证所有组件就绪。"""
+    """Describe implemented transport and configured routing without probing it."""
+    selected = _env("AI_PROVIDER", "zhipu").strip().lower()
+    info = provider_info(selected)
+    status = provider_status(selected) if info else "NOT_CONFIGURED"
     return {
         "connection_keepalive": {
             "heartbeat_24h": "implemented (start_24h_heartbeat, 60s default)",
             "reconnect_backoff": "implemented (reconnect_with_backoff, exp+cap)",
         },
         "multi_channel": {
-            "primary": "zhipu (glm-5.3 / glm-4.5-air)",
-            "backup": "ark (volcengine)",
-            "minimal_fallback": "doubao (doubao-1.5-lite, 256 tokens)",
-            "local_fallback": "rule (local rules engine)",
+            "primary": selected if info else None,
+            "provider_status": status,
+            "backup": "requires explicit routing policy",
+            "minimal_fallback": "requires explicit routing policy",
+            "local_fallback": "deterministic rules are not model analysis",
             "failover_executor": "route_with_fallback (per-provider circuit breaker)",
         },
         "encoding": {
@@ -690,7 +694,8 @@ def track_b_self_check():
             "max_backoff_sec": _MAX_BACKOFF,
             "min_heartbeat_interval_sec": 30,
         },
-        "status": "READY",
+        "status": status if status in {"DISABLED", "BLOCKED", "NOT_CONFIGURED"} else "UNVERIFIED",
+        "readiness_verified": False,
     }
 
 

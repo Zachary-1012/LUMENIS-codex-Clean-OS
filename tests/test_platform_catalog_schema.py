@@ -57,8 +57,8 @@ def platform_db(tmp_path, monkeypatch):
     conn.close()
 
     monkeypatch.setattr(migrations, "get_connection", lambda: sqlite3.connect(db_path))
-    monkeypatch.setattr(migrations, "backup_database", lambda *_args, **_kwargs: "test-backup-skipped")
-    assert migrations.migrate() is True
+    monkeypatch.setenv("ZBC_DB_PATH", db_path)
+    assert migrations.migrate(target_version=13) is True
 
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row

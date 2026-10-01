@@ -84,7 +84,12 @@ def test_backup_rejects_directory_components_in_explicit_name(tmp_path, monkeypa
     _database(db_path)
     monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
 
-    for name in ("../escaped.db", "nested/escaped.db", "..\\escaped.db"):
+    for name in (
+        "../escaped.db",
+        "nested/escaped.db",
+        r"..\escaped.db",
+        r"nested\escaped.db",
+    ):
         try:
             migrations.backup_database(name)
         except ValueError as exc:

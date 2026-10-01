@@ -70,6 +70,10 @@ _CRED_PATH_WHITELIST = [
     r"kos[_-]?monitor[_-]?profiles?",
     r"(^|/)naming[_-]?profile\.json$",          # i18n/design naming profile, not browser login profile
     r"(^|/)secret[_-]?scan[_-]?result\.txt$", # scan result report; contents are separately security-scanned
+    # Flutter build-mode permission manifests, not browser identity profiles.
+    # Contents still pass the separate secret scanner; no profile directory is exempt.
+    r"^app/android/app/src/profile/androidmanifest\.xml$",
+    r"^app/macos/runner/debugprofile\.entitlements$",
 ]
 
 

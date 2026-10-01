@@ -3,6 +3,7 @@
 import asyncio
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -22,8 +23,19 @@ def test_bridge_defaults_to_hk_collection_identity(monkeypatch):
     assert bridge.collection_policy_gate(account=bridge.XHS_RETINAUT_NAME)['ok'] is True
 
 
-def test_bridge_blocks_mainland_before_platform_request():
+def test_bridge_blocks_mainland_before_platform_request(monkeypatch):
     import xhs_cookie_bridge as bridge
+
+    monkeypatch.setattr(bridge, '_resolve_acquisition_plan', lambda *_: SimpleNamespace(
+        is_runnable=True, keywords=('广州太古汇',),
+        queries=(SimpleNamespace(domain_id='CTH'),),
+        to_dict=lambda: {'status': 'READY'},
+    ))
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError('Blocked personal account must not be selected or probed')
+
+    monkeypatch.setattr(bridge, 'select_account', forbidden)
 
     result = bridge.sync(keywords=['广州太古汇'], account=bridge.XHS_CN_PRIMARY_NAME)
     assert result['ok'] is False
@@ -184,7 +196,7 @@ def test_guardian_recovery_uses_hk_resident_launcher(monkeypatch):
     assert calls
     args, kwargs = calls[0]
     assert args[-2:] == ['--account', 'XHS_RETINAUT']
-    assert args[-3].endswith('scripts\\start_resident_browsers.py')
+    assert Path(args[-3]).parts[-2:] == ('scripts', 'start_resident_browsers.py')
     assert '9222' not in ' '.join(args)
     assert kwargs['cwd'] == engine.root_dir
 

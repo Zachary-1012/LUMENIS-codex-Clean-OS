@@ -129,13 +129,11 @@ class TestTrackBObservability:
         pb1.record_failure("test")
         assert pb1.breaker.failure_count > 0
 
-    def test_full_fallback_chain(self):
+    def test_full_fallback_chain(self, monkeypatch):
         from lumenis.system.ai_gateway.channel import full_fallback_chain
+        monkeypatch.delenv("AI_PROVIDER_CHAIN", raising=False)
         chain = full_fallback_chain()
-        assert "zhipu" in chain
-        assert "doubao" in chain
-        assert "rule" in chain
-        assert chain[-1] == "rule"  # 本地规则始终最后兜底
+        assert chain == ["rule"]
 
     def test_doubao_fallback_config(self):
         from lumenis.system.ai_gateway.channel import get_doubao_fallback_config
@@ -145,17 +143,44 @@ class TestTrackBObservability:
         assert config["priority"] == 3
         assert "model" in config
 
-    def test_track_b_self_check(self):
-        from lumenis.system.ai_gateway.channel import track_b_self_check
-        check = track_b_self_check()
-        assert check["status"] == "READY"
+    def test_track_b_self_check(self, monkeypatch):
+        from lumenis.system.ai_gateway import channel, providers
+
+        calls = []
+        def forbidden_call(label):
+            def fail(*args, **kwargs):
+                calls.append(label)
+                raise AssertionError(f"self-check must not call {label}")
+            return fail
+
+        monkeypatch.setattr(channel, "route_with_fallback", forbidden_call("inference"))
+        monkeypatch.setattr(channel.urllib.request, "urlopen", forbidden_call("HTTP"))
+        monkeypatch.setenv("AI_PROVIDER", "zhipu")
+        check = channel.track_b_self_check()
+        assert check["status"] == "DISABLED"
+        assert check["readiness_verified"] is False
         assert "connection_keepalive" in check
-        assert "multi_channel" in check
         assert "encoding" in check
         assert "observability" in check
-        assert "zhipu" in check["multi_channel"]["primary"]
-        assert "doubao" in check["multi_channel"]["minimal_fallback"]
+        assert check["multi_channel"]["primary"] == "zhipu"
+        assert check["multi_channel"]["provider_status"] == providers.DISABLED
         assert "rule" in check["multi_channel"]["local_fallback"]
+
+        monkeypatch.setenv("AI_PROVIDER", "not-registered")
+        unknown = channel.track_b_self_check()
+        assert unknown["status"] == "NOT_CONFIGURED"
+        assert unknown["readiness_verified"] is False
+        assert unknown["multi_channel"]["primary"] is None
+        assert unknown["multi_channel"]["provider_status"] == "NOT_CONFIGURED"
+
+        monkeypatch.setitem(providers.PROVIDER_REGISTRY["ark"], "status", providers.ACTIVE)
+        monkeypatch.setenv("AI_PROVIDER", "ark")
+        active_unverified = channel.track_b_self_check()
+        assert active_unverified["status"] == "UNVERIFIED"
+        assert active_unverified["readiness_verified"] is False
+        assert active_unverified["multi_channel"]["primary"] == "ark"
+        assert active_unverified["multi_channel"]["provider_status"] == providers.ACTIVE
+        assert calls == []
 
 
 # ============================================================

@@ -19,12 +19,12 @@
       }
     }
   },
-  "x-url-map-rule-count": 784,
+  "x-url-map-rule-count": 805,
   "x-static-route-count": 1,
-  "x-route-count": 783,
-  "x-path-count": 744,
-  "x-operation-count": 805,
-  "x-operation-group-count": 791,
+  "x-route-count": 804,
+  "x-path-count": 765,
+  "x-operation-count": 828,
+  "x-operation-group-count": 814,
   "x-duplicate-operation-group-count": 14,
   "x-duplicate-operation-candidate-count": 28,
   "x-duplicate-operation-candidates": [
@@ -4032,6 +4032,38 @@
         "summary": "获取 Session 的 Evidence 列表。"
       }
     },
+    "/api/browser/sessions/{session_id}/frame": {
+      "get": {
+        "tags": [
+          "api/browser"
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "ai_browser_runtime.read_session_frame",
+        "x-flask-rule": "/api/browser/sessions/<session_id>/frame",
+        "summary": "Return an uncached frame from the calling login's isolated page."
+      }
+    },
     "/api/browser/sessions/{session_id}/human-approval": {
       "post": {
         "tags": [
@@ -6952,7 +6984,7 @@
         ],
         "operationId": "evidence_api.evidence_list",
         "x-flask-rule": "/api/evidence/list",
-        "summary": "证据列表（支持 source/feature_id/level/result/account/env 筛选 + 分页）。"
+        "summary": "List exact-scope Evidence with the existing equality filters/page."
       }
     },
     "/api/evidence/replay-failed": {
@@ -7021,7 +7053,7 @@
         ],
         "operationId": "evidence_api.evidence_stats",
         "x-flask-rule": "/api/evidence/stats",
-        "summary": "证据统计：总数 + 按 result/level/account/source 分组 + 最近 10 条。"
+        "summary": "Aggregate only records carrying the actor-authorized exact scope."
       }
     },
     "/api/evidence/timeline": {
@@ -7044,7 +7076,7 @@
         ],
         "operationId": "evidence_api.evidence_timeline",
         "x-flask-rule": "/api/evidence/timeline",
-        "summary": "时间线视图：按 feature_id 分组的最近证据（健康/采集分开）。"
+        "summary": "Return the health/collection timeline inside the exact authorized scope."
       }
     },
     "/api/evidence/{record_id}": {
@@ -7076,7 +7108,7 @@
         ],
         "operationId": "evidence_api.evidence_detail",
         "x-flask-rule": "/api/evidence/<int:record_id>",
-        "summary": "单条证据详情。"
+        "summary": "Return 404 for records outside the actor's exact Evidence scope."
       }
     },
     "/api/experience/ai/intent": {
@@ -7221,6 +7253,230 @@
         "summary": "Stream a staged local artifact after root-confinement validation."
       }
     },
+    "/api/experience/content-projects": {
+      "get": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.content_project_list",
+        "x-flask-rule": "/api/experience/content-projects",
+        "summary": "Discover saved projects through the same scope boundary as reopening."
+      }
+    },
+    "/api/experience/content-projects/export": {
+      "post": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.export_content_project",
+        "x-flask-rule": "/api/experience/content-projects/export"
+      }
+    },
+    "/api/experience/content-projects/{artifact_id}": {
+      "get": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.content_project_detail",
+        "x-flask-rule": "/api/experience/content-projects/<artifact_id>"
+      }
+    },
+    "/api/experience/content-projects/{artifact_id}/media": {
+      "get": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.content_project_media",
+        "x-flask-rule": "/api/experience/content-projects/<artifact_id>/media"
+      }
+    },
+    "/api/experience/content-projects/{artifact_id}/package": {
+      "get": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.content_project_package",
+        "x-flask-rule": "/api/experience/content-projects/<artifact_id>/package"
+      }
+    },
+    "/api/experience/content-source-confirmations/{confirmation_id}": {
+      "post": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [
+          {
+            "name": "confirmation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.confirm_content_source_import_request",
+        "x-flask-rule": "/api/experience/content-source-confirmations/<confirmation_id>",
+        "summary": "Confirm or cancel one server-prepared, actor-bound local import request."
+      }
+    },
+    "/api/experience/content-sources": {
+      "post": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.import_content_source",
+        "x-flask-rule": "/api/experience/content-sources",
+        "summary": "Import one bounded local media body into the scoped Artifact owner."
+      }
+    },
+    "/api/experience/content-sources/{artifact_id}": {
+      "get": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.content_source_detail",
+        "x-flask-rule": "/api/experience/content-sources/<artifact_id>"
+      }
+    },
     "/api/experience/content/evidence/{evidence_id}": {
       "get": {
         "tags": [
@@ -7299,6 +7555,174 @@
         "summary": "Run one explicit, read-only platform search after human confirmation."
       }
     },
+    "/api/experience/reports/source-brief/generate": {
+      "post": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.generate_source_brief_job",
+        "x-flask-rule": "/api/experience/reports/source-brief/generate"
+      }
+    },
+    "/api/experience/reports/source-brief/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.reopen_source_brief_job",
+        "x-flask-rule": "/api/experience/reports/source-brief/jobs/<job_id>"
+      }
+    },
+    "/api/experience/reports/source-brief/jobs/{job_id}/reviews": {
+      "post": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.submit_source_brief_review",
+        "x-flask-rule": "/api/experience/reports/source-brief/jobs/<job_id>/reviews"
+      }
+    },
+    "/api/experience/reports/source-brief/start": {
+      "post": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.start_source_brief_task",
+        "x-flask-rule": "/api/experience/reports/source-brief/start"
+      }
+    },
+    "/api/experience/reports/source-brief/tasks/{task_id}": {
+      "get": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.source_brief_task_status",
+        "x-flask-rule": "/api/experience/reports/source-brief/tasks/<task_id>"
+      }
+    },
+    "/api/experience/reports/source-brief/tasks/{task_id}/resume": {
+      "post": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.resume_source_brief_task",
+        "x-flask-rule": "/api/experience/reports/source-brief/tasks/<task_id>/resume"
+      }
+    },
     "/api/experience/runtime/identity": {
       "get": {
         "tags": [
@@ -7375,6 +7799,28 @@
         "operationId": "experience_runtime.shared_skills_catalog",
         "x-flask-rule": "/api/experience/shared-skills",
         "summary": "Read-only catalog for the single Shared Content & Creation surface."
+      }
+    },
+    "/api/experience/shared-skills/shared.content_project/inspect": {
+      "post": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.inspect_content_project_media",
+        "x-flask-rule": "/api/experience/shared-skills/shared.content_project/inspect"
       }
     },
     "/api/experience/shared-skills/shared.video_shotcraft/render": {
@@ -12831,6 +13277,71 @@
         "summary": "更新系统配置"
       }
     },
+    "/api/settings/context": {
+      "delete": {
+        "tags": [
+          "api/settings"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "domain_api.api_settings_context",
+        "x-flask-rule": "/api/settings/context",
+        "summary": "Expose selection-only context; data routes reauthorize every use."
+      },
+      "get": {
+        "tags": [
+          "api/settings"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "domain_api.api_settings_context",
+        "x-flask-rule": "/api/settings/context",
+        "summary": "Expose selection-only context; data routes reauthorize every use."
+      },
+      "put": {
+        "tags": [
+          "api/settings"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "domain_api.api_settings_context",
+        "x-flask-rule": "/api/settings/context",
+        "summary": "Expose selection-only context; data routes reauthorize every use."
+      }
+    },
     "/api/settings/developer/execute": {
       "post": {
         "tags": [
@@ -15348,7 +15859,7 @@
         ],
         "operationId": "topic_backfill_detail",
         "x-flask-rule": "/api/topic-campaign/backfill-detail",
-        "summary": "V2.0 P0-5：触发笔记详情补抓（单条 note_id 或批量 limit）。"
+        "summary": "Return an honest unavailable state until detail collection has an HK owner."
       }
     },
     "/api/topic-campaign/campaign-save": {
@@ -17418,7 +17929,8 @@
         ],
         "parameters": [],
         "operationId": "healthz",
-        "x-flask-rule": "/healthz"
+        "x-flask-rule": "/healthz",
+        "summary": "Core health requires the existing canonical database and its base schema."
       }
     },
     "/lumenis/api/intelligence/evidence": {
@@ -18653,6 +19165,112 @@
         ],
         "operationId": "v4.v4_version.api_status",
         "x-flask-rule": "/v4/version-center/api/status"
+      }
+    },
+    "/workspace": {
+      "get": {
+        "tags": [
+          "workspace"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "lumenis_workspace_host.root",
+        "x-flask-rule": "/workspace"
+      }
+    },
+    "/workspace/": {
+      "get": {
+        "tags": [
+          "workspace"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "lumenis_workspace_host.root_slash",
+        "x-flask-rule": "/workspace/"
+      }
+    },
+    "/workspace/{resource}": {
+      "get": {
+        "tags": [
+          "workspace"
+        ],
+        "parameters": [
+          {
+            "name": "resource",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "lumenis_workspace_host.resource",
+        "x-flask-rule": "/workspace/<path:resource>"
+      }
+    },
+    "/{resource}": {
+      "get": {
+        "tags": [
+          "root"
+        ],
+        "parameters": [
+          {
+            "name": "resource",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "lumenis_workspace_host.asset",
+        "x-flask-rule": "/<workspaceasset:resource>"
       }
     }
   }

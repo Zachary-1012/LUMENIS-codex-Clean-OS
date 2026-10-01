@@ -14,6 +14,7 @@ from typing import Optional
 from urllib.parse import unquote
 
 from flask import Flask, Response, abort, jsonify, send_file
+from werkzeug.routing import PathConverter
 
 
 DEFAULT_BUILD_DIR_ENV = "LUMENIS_WORKSPACE_BUILD_DIR"
@@ -41,6 +42,15 @@ _RESERVED_ROOT_PATHS = frozenset({
 })
 
 
+class _WorkspaceAssetPath(PathConverter):
+    """Leave reserved API matching, including 405/Allow, to Product Core."""
+
+    part_isolating = False
+    _prefixes = "|".join(re.escape(value) for value in sorted(_RESERVED_ROOT_PREFIXES))
+    _paths = "|".join(re.escape(value) for value in sorted(_RESERVED_ROOT_PATHS))
+    regex = rf"(?!(?i:{_prefixes})(?:/|$))(?!(?:{_paths})$)[^/].*?"
+
+
 def default_build_dir(app: Flask) -> Path:
     """Resolve the build output without depending on a generated artifact."""
 
@@ -65,6 +75,7 @@ class WorkspaceHost:
     def register(self, app: Flask) -> "WorkspaceHost":
         """Register workspace documents and artifact assets on an existing app."""
 
+        app.url_map.converters["workspaceasset"] = _WorkspaceAssetPath
         app.add_url_rule(
             "/workspace",
             endpoint="lumenis_workspace_host.root",
@@ -86,7 +97,7 @@ class WorkspaceHost:
         # Flutter's generated index normally references root-relative assets.
         # This route only serves an existing file and never rewrites a root URL.
         app.add_url_rule(
-            "/<path:resource>",
+            "/<workspaceasset:resource>",
             endpoint="lumenis_workspace_host.asset",
             view_func=self._root_asset,
             methods=["GET", "HEAD"],

@@ -6,7 +6,7 @@ tests/test_ai_evaluation.py — ZBC Phase 7 AI Evaluation 体系测试
 1. AI 调用追踪记录（log_call / @log_ai_call 装饰器）
 2. Evaluation 指标计算（准确率 / 替代率 / 修正率 / 置信度分布 / 失败率 / 回退率 / 延迟 / token）
 3. AI 不替代主体过滤（subject_hit 优先于 AI）
-4. Provider fallback（智谱失败 → 本地 → 规则）
+4. Provider fallback（退役路线 fail closed；active mock routes retain fallback）
 5. 人工修正反馈闭环
 
 所有测试使用临时 SQLite 数据库，不触碰生产库；不执行真实 AI 调用（全部 mock）。
@@ -442,15 +442,17 @@ class TestAINotReplacingRules:
 # 4. Provider Fallback
 # ============================================================
 class TestProviderFallback:
-    def test_provider_chain_default(self):
-        """默认 provider 链应为智谱主 + 其他备。"""
+    def test_provider_chain_default(self, monkeypatch):
+        """Legacy chain metadata is retained, while a retired first route fails closed."""
         from lumenis.system.ai_gateway import channel
+        monkeypatch.delenv('AI_PROVIDER_CHAIN', raising=False)
         chain = channel.provider_chain()
         assert 'zhipu' in chain
-        assert chain[0] == 'zhipu'  # 智谱是主力
+        assert chain[0] == 'zhipu'  # retained compatibility configuration
+        assert channel.full_fallback_chain() == ['rule']
 
     def test_route_with_fallback_all_fail(self):
-        """所有 Provider 失败时应回退到 rule。"""
+        """选中已退役路由时 fail closed，且不启动任何后备通道。"""
         from lumenis.system.ai_gateway import channel
 
         def always_fail(provider):
@@ -458,12 +460,11 @@ class TestProviderFallback:
 
         result, used = channel.route_with_fallback(always_fail, providers=['zhipu', 'ark'])
         assert result is None
-        assert used == 'rule'
+        assert used == 'provider_disabled'
 
     def test_route_with_fallback_primary_success(self):
-        """主 Provider 成功时不应尝试备用。"""
+        """退役主 Provider 不调用传输回调，也不偷偷切换备用。"""
         from lumenis.system.ai_gateway import channel
-        channel.get_provider_breaker('zhipu').breaker.record_success()
 
         call_order = []
 
@@ -472,55 +473,57 @@ class TestProviderFallback:
             return f'result from {provider}', provider
 
         result, used = channel.route_with_fallback(mock_call, providers=['zhipu', 'ark'])
-        assert result == 'result from zhipu'
-        assert used == 'zhipu'
-        assert call_order == ['zhipu']  # 只调用了主通道
+        assert result is None
+        assert used == 'provider_disabled'
+        assert call_order == []
 
-    def test_route_with_fallback_secondary_takes_over(self):
-        """主 Provider 失败时应切到备用。"""
+    def test_route_with_fallback_active_secondary_takes_over(self, monkeypatch):
+        """非退役 Provider 仍支持通过 mock transport 做故障转移验证。"""
         from lumenis.system.ai_gateway import channel
-        channel.get_provider_breaker('zhipu').breaker.record_success()
+        from lumenis.system.ai_gateway import providers
+        monkeypatch.setitem(providers.PROVIDER_REGISTRY['qwen'], 'status', providers.ACTIVE)
+        monkeypatch.setitem(channel._PROVIDER_BREAKERS, 'ark', channel.ProviderBreaker('ark'))
+        monkeypatch.setitem(channel._PROVIDER_BREAKERS, 'qwen', channel.ProviderBreaker('qwen'))
+        channel.get_provider_breaker('ark').breaker.record_success()
+        channel.get_provider_breaker('qwen').breaker.record_success()
 
         call_order = []
 
         def mock_call(provider):
             call_order.append(provider)
-            if provider == 'zhipu':
-                raise ConnectionError('zhipu down')
+            if provider == 'ark':
+                raise ConnectionError('ark down')
             return f'result from {provider}', provider
 
-        result, used = channel.route_with_fallback(mock_call, providers=['zhipu', 'ark'])
-        assert used == 'ark'
-        assert call_order == ['zhipu', 'ark']
+        result, used = channel.route_with_fallback(mock_call, providers=['ark', 'qwen'])
+        assert (result, used) == ('result from qwen', 'qwen')
+        assert call_order == ['ark', 'qwen']
 
-    def test_intelligence_local_fallback_path(self):
-        """intelligence._chat 在本地模型可用时走本地路径。"""
+    def test_intelligence_local_fallback_path(self, monkeypatch):
+        """显式选择退役本地模型时不探测、不调用、也不规则伪成功。"""
         from lumenis.system.ai_gateway import core as intelligence
-        # 模拟 _provider_config 返回本地模型
-        with patch.object(intelligence, '_provider_config') as mock_cfg:
-            mock_cfg.return_value = ('ollama', 'qwen2.5:7b', 'http://127.0.0.1:11434')
-            with patch('urllib.request.urlopen') as mock_urlopen:
-                mock_resp = MagicMock()
-                mock_resp.read.return_value = b'{"message":{"content":"local reply"},"done":true,"done_reason":"stop"}'
-                mock_resp.__enter__ = MagicMock(return_value=mock_resp)
-                mock_resp.__exit__ = MagicMock(return_value=False)
-                mock_urlopen.return_value = mock_resp
-                result, provider = intelligence._chat('sys', 'user')
-                assert provider == 'ollama'
-                assert result == 'local reply'
-
-    def test_intelligence_cloud_fallback_to_rule(self):
-        """云端全部失败时回退到 rule。"""
-        from lumenis.system.ai_gateway import core as intelligence
-        from lumenis.system.ai_gateway import channel
-        with patch.object(intelligence, '_provider_config') as mock_cfg:
-            mock_cfg.return_value = ('zhipu', 'glm-4.5-air', 'https://open.bigmodel.cn/api/paas/v4')
-            with patch.object(channel, 'route_with_fallback') as mock_route:
-                mock_route.return_value = (None, 'rule')
-                with patch.object(intelligence, '_detect_local', return_value=None):
+        monkeypatch.setenv('AI_PROVIDER', 'ollama')
+        calls = []
+        with patch.object(intelligence, '_provider_config', side_effect=lambda: calls.append('config')):
+            with patch.object(intelligence, '_detect_local', side_effect=lambda: calls.append('discover')):
+                with patch('urllib.request.urlopen', side_effect=lambda *a, **k: calls.append('urlopen')):
                     result, provider = intelligence._chat('sys', 'user')
-                assert result is None
-                assert provider == 'rule'
+        assert (result, provider) == (None, 'provider_disabled')
+        assert calls == []
+
+    def test_intelligence_cloud_fallback_to_rule(self, monkeypatch):
+        """显式选择退役智谱时不探测、不请求，也不改报规则成功。"""
+        from lumenis.system.ai_gateway import core as intelligence
+        from lumenis.system.ai_gateway import channel
+        monkeypatch.setenv('AI_PROVIDER', 'zhipu')
+        calls = []
+        with patch.object(intelligence, '_provider_config', side_effect=lambda: calls.append('config')):
+            with patch.object(channel, 'route_with_fallback', side_effect=lambda *a, **k: calls.append('route')):
+                with patch.object(intelligence, '_detect_local', side_effect=lambda: calls.append('discover')):
+                    with patch('urllib.request.urlopen', side_effect=lambda *a, **k: calls.append('urlopen')):
+                        result, provider = intelligence._chat('sys', 'user')
+        assert (result, provider) == (None, 'provider_disabled')
+        assert calls == []
 
 
 # ============================================================
@@ -612,18 +615,27 @@ class TestModuleStatusMarkers:
             import importlib
             mod = importlib.import_module(mod_name)
             assert hasattr(mod, 'MODULE_STATUS'), f'{mod_name} missing MODULE_STATUS'
-            assert mod.MODULE_STATUS in (
+            allowed_statuses = (
                 'ACTIVE', 'ACTIVE_PRIMARY', 'ACTIVE_FALLBACK',
                 'LEGACY', 'LEGACY_PARTIAL', 'RULES_ENGINE_PRIMARY',
-            ), f'{mod_name} has invalid MODULE_STATUS: {mod.MODULE_STATUS}'
+            )
+            if mod_name == 'local_ai_client':
+                assert mod.MODULE_STATUS == 'DISABLED'
+            else:
+                assert mod.MODULE_STATUS in allowed_statuses, (
+                    f'{mod_name} has invalid MODULE_STATUS: {mod.MODULE_STATUS}'
+                )
 
     def test_central_gateway_policy(self):
         """intelligence 作为中央网关应声明 Provider 策略。"""
         from lumenis.system.ai_gateway import core as intelligence
+        from lumenis.system.ai_gateway import providers
         assert intelligence.MODULE_STATUS == 'ACTIVE_PRIMARY'
         assert intelligence.AI_ROLE == 'CENTRAL_GATEWAY'
-        assert 'zhipu' in intelligence.PROVIDER_POLICY.lower()
-        assert 'ollama' in intelligence.PROVIDER_POLICY.lower()
+        assert 'retired' in intelligence.PROVIDER_POLICY.lower()
+        assert 'fail closed' in intelligence.PROVIDER_POLICY.lower()
+        assert providers.provider_status('zhipu') == providers.DISABLED
+        assert providers.provider_status('ollama') == providers.DISABLED
 
     def test_shared_learning_owner_is_current(self):
         """Operation learning remains available through the Shared owner."""

@@ -23,8 +23,22 @@ def _seed_v14_registry(path):
         conn.execute(
             "INSERT INTO schema_version(version, description) VALUES (14, 'v14 fixture')"
         )
-        # Match canonical-table prerequisites already present in real v14 DBs,
-        # so the injected failure isolates only the v14→v15 migration.
+        # Model the note columns required by v18; v14 includes these scope fields.
+        conn.execute(
+            """CREATE TABLE notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                note_id TEXT UNIQUE NOT NULL,
+                url TEXT NOT NULL DEFAULT '',
+                content TEXT NOT NULL DEFAULT '',
+                domain_id TEXT,
+                product_id TEXT,
+                subject_id TEXT,
+                brand_focus_id TEXT,
+                scope_status TEXT NOT NULL DEFAULT 'UNASSIGNED',
+                scope_evidence_ref TEXT
+            )"""
+        )
+        # Keep the injected-failure test isolated to the v14→v15 migration.
         conn.execute("CREATE TABLE canonical_data (canonical_id TEXT PRIMARY KEY)")
         conn.execute("CREATE TABLE zbc_canonical_data (canonical_id TEXT PRIMARY KEY)")
         conn.execute(

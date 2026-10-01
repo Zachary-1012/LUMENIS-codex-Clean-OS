@@ -1,213 +1,196 @@
 # -*- coding: utf-8 -*-
-"""多供应商 LLM 网关健壮性回归（可反复运行）：
-任何一家云端失败都必须自动回退本地规则、绝不抛异常；结构字段必须合法。
-有真实 key 时对应 provider 会真实出数，无 key / 无额度时回退 rule，两种情况都覆盖。
-"""
+"""AI Gateway retirement compatibility checks; all provider transports are mocked."""
 import os
 import sys
-import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-os.environ["AI_TIMEOUT_SECONDS"] = "20"
 import intelligence
+from lumenis.system.ai_gateway import channel as ai_channel
 
-# 本地 provider（本地优先基线：auto 时 Ollama/LMStudio/llama.cpp 优先于云端）
+# Retired local provider names remain accepted by compatibility interfaces.
 LOCAL_PROVIDERS = ("ollama", "lmstudio", "llama_cpp")
 
-def use(p):
-    os.environ["AI_PROVIDER"] = p
-    intelligence._CACHE["ts"] = 0
+def use(p, monkeypatch):
+    monkeypatch.setenv("AI_PROVIDER", p)
+    monkeypatch.setitem(intelligence._CACHE, "ts", 0)
     return intelligence.ai_status()
 
-def test_openai_failure_falls_back():
-    use("openai")  # 该 key 0 额度，应 429 -> 多 Provider 故障转移
-    raw, prov = intelligence._chat("只输出OK", "测试", 0, 20)
-    # 当前架构：多 Provider 故障转移（openai 失败 → zhipu/ark/qwen → rule）
-    # 不再是单 Provider 直接到 rule
-    valid_providers = ("rule", "zhipu", "ark", "qwen", "deepseek", "openai", "ollama")
-    assert prov in valid_providers, f"unexpected provider: {prov}"
-    if prov == "rule":
-        assert raw is None
-    else:
-        assert raw  # 非 rule provider 必须有内容
-    print("[PASS] OpenAI：成功则出数，失败多 Provider 故障转移 ->", prov)
+def _cache_key(system, user):
+    params = intelligence._level_params("medium")
+    return intelligence._cache_key(
+        system, user, params["temperature"], params["max_tokens"], params["model"]
+    )
 
-def test_zhipu_wired_and_safe():
-    st = use("zhipu")
-    # Tests must not read .env or require a cloud credential.  With an
-    # explicitly injected key the configured GLM endpoint is exposed; without
-    # one the production contract is the deterministic local-rule fallback.
-    if st["enabled"]:
-        assert st["base_url"].endswith("/paas/v4") and st["model"].startswith("glm-")
-    else:
-        assert st["provider"] == "local_rule" and st["runtime"] == "rule"
-    raw, prov = intelligence._chat("只输出JSON：{\"ok\":1}", "测试", 0, 300)
-    assert prov in ("zhipu", "ollama", "rule")
-    if prov == "zhipu":
-        assert raw
-    print("[PASS] 智谱接线正确，在线出数/失败回退均安全 ->", prov)
+def _unexpected_call(calls, label):
+    def fail(*args, **kwargs):
+        calls.append(label)
+        raise AssertionError(f"retired provider path must not call {label}")
+    return fail
 
-def test_auto_priority():
+def test_openai_failure_falls_back(monkeypatch):
+    """Explicitly disabled selections do not enter the provider fallback chain."""
+    calls = []
+    monkeypatch.setenv("AI_PROVIDER", "openai")
+    monkeypatch.setattr(intelligence, "_provider_config", _unexpected_call(calls, "config"))
+    monkeypatch.setattr(intelligence, "_detect_local", _unexpected_call(calls, "local discovery"))
+    monkeypatch.setattr(ai_channel, "route_with_fallback", _unexpected_call(calls, "fallback"))
+    monkeypatch.setattr(intelligence.urllib.request, "urlopen", _unexpected_call(calls, "HTTP"))
+    raw, provider = intelligence._chat("Only answer OK", "test", 0, 20)
+    assert (raw, provider) == (None, "provider_disabled")
+    assert calls == []
+
+def test_zhipu_wired_and_safe(monkeypatch):
+    """Stale configuration/cache cannot reactivate Zhipu or return cached output."""
+    calls = []
+    monkeypatch.setitem(intelligence._CACHE, "provider", "zhipu")
+    monkeypatch.setitem(intelligence._CACHE, "model", "stale-glm")
+    monkeypatch.setitem(intelligence._CACHE, "base", "https://stale.invalid")
+    monkeypatch.setattr(intelligence, "_get_json", _unexpected_call(calls, "discovery"))
+    monkeypatch.setattr(intelligence, "_detect_local", _unexpected_call(calls, "local discovery"))
+    monkeypatch.setattr(intelligence.urllib.request, "urlopen", _unexpected_call(calls, "HTTP"))
+    monkeypatch.setattr(intelligence, "_chat", _unexpected_call(calls, "inference"))
+    monkeypatch.setattr(ai_channel, "route_with_fallback", _unexpected_call(calls, "fallback"))
+    st = use("zhipu", monkeypatch)
+    assert st["enabled"] is False
+    assert st["provider"] == "provider_disabled"
+    assert st["runtime"] == "unavailable"
+    assert st["hints"] == []
+    assert intelligence._CACHE["provider"] is None
+    monkeypatch.setattr(intelligence, "_provider_config", _unexpected_call(calls, "config"))
+
+    system, user = "Only JSON", '{"ok":true}'
+    monkeypatch.setitem(intelligence._CHAT_CACHE, _cache_key(system, user), ("stale answer", "zhipu"))
+    cache_reads = []
+    get_cached = intelligence._chat_cache_get
+    monkeypatch.setattr(
+        intelligence, "_chat_cache_get",
+        lambda key: cache_reads.append(key) or get_cached(key),
+    )
+    budget_calls = []
+    monkeypatch.setattr(intelligence, "_budget_check", _unexpected_call(budget_calls, "budget check"))
+    raw, provider, meta = intelligence.chat(system, user, use_cache=True)
+    assert (raw, provider) == (None, "provider_disabled")
+    assert meta["cache"] is False
+    assert cache_reads == []
+    assert budget_calls == []
+    assert calls == []
+
+def test_auto_priority(monkeypatch):
+    """Auto selection remains unavailable and performs no local discovery."""
+    calls = []
     for k in ("ARK_API_KEY", "OPENAI_API_KEY", "DEEPSEEK_API_KEY", "DASHSCOPE_API_KEY"):
-        os.environ.pop(k, None)
-    st = use("auto")
-    assert st["provider"] in ("zhipu", "local_rule") + LOCAL_PROVIDERS, st
-    print("[PASS] auto 选择 ->", st["provider"], st.get("model"))
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setattr(intelligence, "_get_json", _unexpected_call(calls, "discovery"))
+    monkeypatch.setattr(intelligence, "_detect_local", _unexpected_call(calls, "local discovery"))
+    monkeypatch.setattr(intelligence.urllib.request, "urlopen", _unexpected_call(calls, "HTTP"))
+    st = use("auto", monkeypatch)
+    assert st["enabled"] is False
+    assert st["provider"] == "provider_disabled"
+    assert st["runtime"] == "unavailable"
+    assert st["hints"] == []
+    assert calls == []
 
 
 def test_daily_capability_uses_authorized_zhipu_pack():
     selected = intelligence.select_model_by_capability("daily")
     assert selected["provider"] == "zhipu"
     assert selected["model"] == "glm-4.5-air"
+    assert selected["primary_available"] is False
+    assert selected["primary_status"] == "DISABLED"
+    assert selected["fallback_chain"] == []
 
 
 def test_strong_reasoning_uses_authorized_glm_47_pack():
     selected = intelligence.select_model_by_capability("strong_reasoning")
     assert selected["provider"] == "zhipu"
     assert selected["model"] == "glm-4.7"
+    assert selected["primary_available"] is False
+    assert selected["primary_status"] == "DISABLED"
+    assert selected["fallback_chain"] == []
 
 
 def test_local_chat_does_not_consume_cloud_pack(monkeypatch):
-    """Ollama 已就绪时，chat 不应检查或记录云端资源包。"""
+    """Retired Ollama does not probe, read cache, consume budget, or infer."""
     monkeypatch.setenv("AI_PROVIDER", "ollama")
-    local = ("ollama", "qwen2.5-coder:7b-agent", "http://127.0.0.1:11434")
-    monkeypatch.setattr(intelligence, "_provider_config", lambda: local)
-    monkeypatch.setattr(intelligence, "_chat", lambda *args, **kwargs: ("本地结果", "ollama"))
-    budget_checks = []
-    budget_records = []
-    monkeypatch.setattr(intelligence, "_budget_check", lambda *args, **kwargs: budget_checks.append(args) or False)
-    monkeypatch.setattr(intelligence, "_budget_record", lambda *args, **kwargs: budget_records.append(args))
-    raw, provider, meta = intelligence.chat(
-        "只回复结果", "本地测试", level="medium", pack_id="glm_4_5_air", use_cache=False
+    calls = []
+    monkeypatch.setattr(intelligence, "_provider_config", _unexpected_call(calls, "config"))
+    monkeypatch.setattr(intelligence, "_detect_local", _unexpected_call(calls, "local discovery"))
+    monkeypatch.setattr(intelligence, "_chat", _unexpected_call(calls, "inference"))
+    monkeypatch.setattr(intelligence.urllib.request, "urlopen", _unexpected_call(calls, "HTTP"))
+    monkeypatch.setattr(intelligence, "_budget_check", _unexpected_call(calls, "budget check"))
+    monkeypatch.setattr(intelligence, "_budget_record", _unexpected_call(calls, "budget record"))
+    system, user = "Only reply with result", "local test"
+    monkeypatch.setitem(intelligence._CHAT_CACHE, _cache_key(system, user), ("stale local result", "ollama"))
+    cache_reads = []
+    get_cached = intelligence._chat_cache_get
+    monkeypatch.setattr(
+        intelligence, "_chat_cache_get",
+        lambda key: cache_reads.append(key) or get_cached(key),
     )
-    assert (raw, provider) == ("本地结果", "ollama")
-    assert meta["model"] == "qwen2.5-coder:7b-agent"
-    assert budget_checks == []
-    assert budget_records == []
+    raw, provider, meta = intelligence.chat(
+        system, user, level="medium", pack_id="glm_4_5_air", use_cache=True
+    )
+    assert (raw, provider) == (None, "provider_disabled")
+    assert meta["cache"] is False
+    assert cache_reads == []
+    assert calls == []
 
 
 def test_explicit_local_failure_falls_back_to_rule_only(monkeypatch):
-    """显式 Ollama 失败时不得偷偷切到云端 Provider。"""
+    """Explicit Ollama selection fails closed before local or cloud transport."""
     monkeypatch.setenv("AI_PROVIDER", "ollama")
-    monkeypatch.setattr(
-        intelligence,
-        "_provider_config",
-        lambda: ("ollama", "qwen2.5-coder:7b-agent", "http://127.0.0.1:11434"),
-    )
-
-    def fail_urlopen(*args, **kwargs):
-        raise OSError("simulated local outage")
-
-    monkeypatch.setattr(intelligence.urllib.request, "urlopen", fail_urlopen)
+    calls = []
+    monkeypatch.setattr(intelligence, "_provider_config", _unexpected_call(calls, "config"))
+    monkeypatch.setattr(intelligence, "_detect_local", _unexpected_call(calls, "local discovery"))
+    monkeypatch.setattr(intelligence.ai_channel, "route_with_fallback", _unexpected_call(calls, "fallback"))
+    monkeypatch.setattr(intelligence.urllib.request, "urlopen", _unexpected_call(calls, "HTTP"))
     raw, provider = intelligence._chat("只回复结果", "本地测试", 0.0, 8)
-    assert raw is None
-    assert provider == "rule"
+    assert (raw, provider) == (None, "provider_disabled")
+    assert calls == []
 
 
 def test_cloud_failure_falls_back_to_ollama_with_thinking_disabled(monkeypatch):
-    """云端链耗尽后应使用本机 Ollama，并禁用 Qwen3 隐式思考。"""
+    """Retired Zhipu selection cannot probe or fall back to local inference."""
     monkeypatch.setenv("AI_PROVIDER", "zhipu")
     monkeypatch.setenv("ZHIPU_API_KEY", "test-key")
-    monkeypatch.setattr(
-        intelligence,
-        "_provider_config",
-        lambda: ("zhipu", "glm-4.7", "https://example.invalid/v1"),
-    )
-    monkeypatch.setattr(
-        intelligence.ai_channel,
-        "route_with_fallback",
-        lambda *args, **kwargs: (None, "rule"),
-    )
-    monkeypatch.setattr(
-        intelligence,
-        "_detect_local",
-        lambda: ("ollama", "qwen3:4b", "http://127.0.0.1:11434"),
-    )
-    captured = {}
-
-    class FakeResponse:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *args):
-            return False
-
-        def read(self):
-            return json.dumps({
-                "message": {"content": "LOCAL_OK"},
-                "done": True,
-                "done_reason": "stop",
-                "prompt_eval_count": 5,
-                "eval_count": 2,
-            }).encode("utf-8")
-
-    def fake_urlopen(request, timeout=None):
-        captured["payload"] = json.loads(request.data.decode("utf-8"))
-        captured["timeout"] = timeout
-        return FakeResponse()
-
-    monkeypatch.setattr(intelligence.urllib.request, "urlopen", fake_urlopen)
+    calls = []
+    monkeypatch.setattr(intelligence, "_provider_config", _unexpected_call(calls, "config"))
+    monkeypatch.setattr(intelligence, "_detect_local", _unexpected_call(calls, "local discovery"))
+    monkeypatch.setattr(intelligence.ai_channel, "route_with_fallback", _unexpected_call(calls, "fallback"))
+    monkeypatch.setattr(intelligence.urllib.request, "urlopen", _unexpected_call(calls, "HTTP"))
     raw, provider = intelligence._chat("system-local", "user-local", 0.0, 16)
-    assert (raw, provider) == ("LOCAL_OK", "ollama")
-    assert captured["payload"]["think"] is False
-    assert captured["payload"]["messages"][1]["content"] == "user-local"
-    assert intelligence._get_call_meta()["total_tokens"] == 7
+    assert (raw, provider) == (None, "provider_disabled")
+    assert calls == []
 
 
 def test_cloud_and_ollama_failure_falls_back_to_rule(monkeypatch):
-    """云端和 Ollama 都不可用时，最终状态必须诚实标记为规则降级。"""
+    """Retired provider selections do not silently report rule inference success."""
     monkeypatch.setenv("AI_PROVIDER", "zhipu")
     monkeypatch.setenv("ZHIPU_API_KEY", "test-key")
-    monkeypatch.setattr(
-        intelligence,
-        "_provider_config",
-        lambda: ("zhipu", "glm-4.7", "https://example.invalid/v1"),
-    )
-    monkeypatch.setattr(
-        intelligence.ai_channel,
-        "route_with_fallback",
-        lambda *args, **kwargs: (None, "rule"),
-    )
-    monkeypatch.setattr(
-        intelligence,
-        "_detect_local",
-        lambda: ("ollama", "qwen3:4b", "http://127.0.0.1:11434"),
-    )
-    monkeypatch.setattr(
-        intelligence.urllib.request,
-        "urlopen",
-        lambda *args, **kwargs: (_ for _ in ()).throw(OSError("offline")),
-    )
+    calls = []
+    monkeypatch.setattr(intelligence, "_provider_config", _unexpected_call(calls, "config"))
+    monkeypatch.setattr(intelligence, "_detect_local", _unexpected_call(calls, "local discovery"))
+    monkeypatch.setattr(intelligence.ai_channel, "route_with_fallback", _unexpected_call(calls, "fallback"))
+    monkeypatch.setattr(intelligence.urllib.request, "urlopen", _unexpected_call(calls, "HTTP"))
     raw, provider = intelligence._chat("system", "user", 0.0, 16)
-    assert raw is None
-    assert provider == "rule"
-    assert intelligence._get_call_meta()["model"] == "deterministic_rule"
+    assert (raw, provider) == (None, "provider_disabled")
+    assert calls == []
 
 
 def test_ollama_hint_reflects_reachable_models(monkeypatch):
-    """健康提示必须以 /api/tags 的真实结果为准，而不是只看 PATH。"""
+    """Retired Ollama health hints do not probe /api/tags or inspect PATH."""
+    calls = []
     monkeypatch.setenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-    monkeypatch.setattr(
-        intelligence,
-        "_get_json",
-        lambda url, timeout=1.5: {"models": [{"name": "qwen2.5-coder:7b-agent"}]},
-    )
-    hint = next(item for item in intelligence._installed_hints() if item["provider"] == "ollama")
-    assert hint["running"] is True
-    assert hint["model_count"] == 1
-    assert "可调用 1 个模型" in hint["detail"]
+    monkeypatch.setattr(intelligence, "_get_json", _unexpected_call(calls, "discovery HTTP"))
+    monkeypatch.setattr(intelligence.shutil, "which", _unexpected_call(calls, "PATH probe"))
+    assert intelligence._installed_hints() == []
+    assert calls == []
 
-def test_review_note_structure():
+def test_review_note_structure(monkeypatch):
+    monkeypatch.setenv("AI_PROVIDER", "auto")
+    monkeypatch.setattr(intelligence.urllib.request, "urlopen", _unexpected_call([], "HTTP"))
     note = {"title": "太古汇停车排队久", "content": "品牌很全环境好，就是停车场排队太久、引导不清"}
     rule = {"verified": True, "summary": "提及太古汇停车", "topics": ["停车"], "verify_reason": ""}
     res = intelligence.review_note(note, rule)
     assert res["verification"] in ("verified", "review", "suspicious_fake", "rejected")
     assert res.get("summary")
-    assert res.get("provider") in ("zhipu", "rule", "openai", "qwen", "deepseek", "ark") + LOCAL_PROVIDERS
-    print("[PASS] review_note 结构合法，分析来源 ->", res["provider"])
-
-if __name__ == "__main__":
-    test_openai_failure_falls_back()
-    test_zhipu_wired_and_safe()
-    test_auto_priority()
-    test_review_note_structure()
-    print("\n全部用例通过")
+    assert res.get("provider") == "rule"

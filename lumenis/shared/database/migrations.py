@@ -161,6 +161,8 @@ def backup_database(backup_name: Optional[str] = None) -> str:
         if (
             backup_name in {".", ".."}
             or os.path.basename(backup_name) != backup_name
+            or "/" in backup_name
+            or "\\" in backup_name
         ):
             raise ValueError("backup_name must be a filename within the canonical backup folder")
 

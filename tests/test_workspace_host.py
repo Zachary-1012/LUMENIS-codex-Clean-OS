@@ -100,6 +100,30 @@ def test_path_traversal_is_rejected_and_api_routes_are_not_shadowed(tmp_path: Pa
     assert api.get_json() == {"ok": True, "owner": "product-core"}
 
 
+def test_asset_fallback_preserves_api_methods_and_never_serves_reserved_files(tmp_path: Path):
+    build = _write_build(tmp_path)
+    (build / 'api').mkdir()
+    (build / 'api' / 'action').write_text('must not be served', encoding='utf-8')
+    app = _app(build)
+    calls = []
+
+    @app.post('/api/action')
+    def action():
+        calls.append('action')
+        return jsonify(ok=True)
+
+    client = app.test_client()
+    for method in ('GET', 'HEAD'):
+        response = client.open('/api/action', method=method)
+        assert response.status_code == 405
+        assert set(response.headers['Allow'].replace(' ', '').split(',')) == {'POST', 'OPTIONS'}
+    assert client.get('/api/missing').status_code == 404
+    assert client.get('/API/action').status_code == 404
+    assert calls == []
+    assert client.post('/api/action').get_json() == {'ok': True}
+    assert calls == ['action']
+
+
 def test_hashed_assets_receive_immutable_cache_policy(tmp_path: Path):
     client = _app(_write_build(tmp_path, include_hashed_asset=True)).test_client()
 

@@ -5,6 +5,75 @@ Base: `88ed522f00c996982010b9abfc232a17cfefe710`, fetched and verified on
 existing Collector intake. Unknown `work/`, source data, old artifacts and
 user model configuration are protected. No new owner or acceptance round.
 
+## Hosted follow-up — full test execution at 56328436
+
+Product `36818595409` and App `36818599237` both executed at
+`56328436d997ab04a1a1122f536ca6520a745ea3`. Snapshot and governance checks passed.
+Product ran 374 hermetic test files; its failures were actual test/environment
+failures. App reached Dart analysis and failed three lint rules. Quota is restored.
+
+Repairs retain the existing owners and every blocking gate:
+- CI installs FFmpeg/ffprobe and uses the canonical migration owner to construct
+  a new synthetic v18 seed under RUNNER_TEMP; no real DB is uploaded or reseeded.
+- Backup filenames reject both slash forms regardless of host OS. Historical
+  migration fixtures now model required source columns and exercise real backup.
+- A topic-management test no longer writes to the database, starts a scheduler,
+  or permanently overrides the identity fence at module import time.
+- Identity-policy tests provide their prerequisite synthetic acquisition plan;
+  local worker path expectations use native paths. No live account is accessed.
+- Retired AI routes are tested for zero transport, cache reuse, discovery and
+  fallback. Mocked active routes retain their failure/health coverage. Track B
+  self-description reports configured status without claiming runtime READY.
+- Two exact Flutter permission-manifest paths are recognized as build metadata;
+  neighboring private/profile files remain forbidden and content scanning remains.
+- Workspace asset fallback excludes reserved namespaces during URL matching,
+  preserving Product Core 405/Allow semantics, 404 for absent APIs and existing
+  auth. Existing asset traversal/namespace fences remain. Installed Flask 3.1.3 /
+  Werkzeug 3.1.8 and [Werkzeug 3.1 routing documentation](https://werkzeug.palletsprojects.com/en/stable/routing/)
+  informed this bounded adapter change; no dependency change was needed.
+- Three Dart analyzer violations are fixed without UI/layout changes.
+
+Scoped verification (isolated synthetic databases, no model/platform requests):
+- Acquisition/Runtime group: 44 PASS, exit 0.
+- Campaign/identity/collector/browser registration group: 49 PASS, exit 0.
+- Three database migration/backup modules: 72 PASS, exit 0; seed hash unchanged.
+- Five AI compatibility modules: 110 PASS, exit 0, no skips/errors.
+- Workspace host and Cookie import routes: 21 PASS, including actual Flask
+  method matching; no source operation or account action is performed.
+- Dart snapshot/controller group: 25 PASS; direct `dart analyze` exit 0.
+  Local `flutter analyze` launcher failed with truncated LSP initialization;
+  its result is not PASS and hosted analysis must actually execute.
+
+An initial local media test process omitted the existing toolchain environment
+and returned 28 failures / 50 passes. That is recorded as FAIL, not runtime
+toolchain absence: the earlier Core proof used configured FFmpeg/ffprobe 9.0.2.
+The corrected test process uses only those two existing path settings and the
+synthetic seed; its result and the final hosted acceptance are recorded below.
+
+Corrected media process: all 78 tests PASS in 30.51 seconds, exit 0, zero
+failures/errors/skips; the synthetic seed hash was unchanged. The repository and
+persistent environment were not edited for this run. Root review also tightened
+the report-rule regression to require the exact `rule` result (not merely exclude
+retired names); that final assertion passed. Bounded independent review found no
+namespace or path-containment widening in the asset converter.
+
+The API smoke now provisions and removes only its own disposable test identity,
+keeps both live registered health routes under the existing 200/401 checks,
+and asserts four legacy V4 shells remain JSON rather than HTML. Cookie GET
+still requires 405. API snapshots were generated from the isolated real app
+fixture: 805 rules, 804 non-static routes, 765 paths, 828 operations and 14
+unchanged duplicate groups. The final smoke/OpenAPI/Workspace group passed
+17 tests, exit 0; standalone smoke also passed through pytest isolation.
+All three Experience gates pass. Final staged Python parsing, whitespace,
+Constitution and takeover checks must pass before publication.
+
+No product database, Cookie, personal browser, persistent model configuration,
+or user-facing design was changed. All five technical obligations and original
+J1-J8 coverage remain; technical CI success alone cannot accept owned analysis,
+real user work, Release or Operating. The foundation-weight research is retained
+in the existing J1-J8 research plan, with adoption still pending Product Owner
+direction; no new model, external inference or paid training was activated.
+
 ## Hosted follow-up — exact-byte checkout portability
 
 On 2026-10-01, Product run `36817894227` and App run `36817897722` executed

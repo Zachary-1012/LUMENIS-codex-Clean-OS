@@ -377,6 +377,24 @@ Codex Cloud 是已配置的研发资源，不是序境产品部署。停止产�
 未新增依赖；不声称只读文档便获得对应模型能力。既有研究继续保留，过时运行建议
 由本次明确决策覆盖，不能因此删除历史证据或遗漏产品能力。
 
+### 自有推理的基础权重与训练边界（查阅 2026-10-01）
+
+官方 [gpt-oss 发布说明](https://openai.com/index/introducing-gpt-oss/)
+提供 Apache-2.0 开放权重以及自有环境运行/微调的路线；这与调用 OpenAI 托管 API
+是不同部署方式，也不意味着权重由序境从零训练。当前仅作为候选研究，未下载、
+未启用推理、未恢复已停用的本地模型或智谱接口。
+
+官方 [微调示例](https://developers.openai.com/cookbook/articles/gpt-oss/fine-tune-transfomers)
+演示在已有基础模型上用 TRL/LoRA 和监督样本训练，示例环境为 H100 80GB。
+这个示例不能证明本机具备对应训练速度，也不能把少量报告反馈等同于从零预训练。
+此外该模型是文本模型，不能单独兑现本里程碑的图像理解要求。
+
+决策：`DEFER / FOUNDATION_DIRECTION_PENDING`。先由 Product Owner 明确是否允许
+采用许可合适的基础权重再由序境训练部署，或要求全部权重从零训练。
+既有 Reporting、Learning、Evaluation 与 AI Gateway 保持唯一 owner；训练输入、
+样本权利、留出任务、产物质量、推理部署和版本回滚分别需要实证。
+人工选材或确定性摘录仍不是已训练推理；尚未批准任何新依赖、算力开支或外部数据上传。
+
 ## 11. 提效、版本与停止条件
 
 不再按 commit/文件/测试数量报进度。每批说明：关闭哪个 blocker、状态从哪到哪、commit、真实结果路径、剩余缺口及下一步。只跑变化 owner 的必要回归和 blocking gates；Round/集成候选时才 full gate。不通过反复全仓审计制造工作。

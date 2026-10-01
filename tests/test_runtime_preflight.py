@@ -64,6 +64,8 @@ def test_sanitize_mapping_nested():
     ("data/monitor.db", True),
     ("secret/server.pem", True),
     ("data/taikoo_browser_profile/Default/Cookies", True),
+    ("data/profiles/AndroidManifest.xml", True),
+    ("data/private/DebugProfile.entitlements", True),
     # 处理凭证的源码 / 设计 Token / 模板 / 文档：放行（交给内容层）
     ("xhs_cookie_bridge.py", False),
     ("v4_upgrade/adapters/cookie_vault.py", False),
@@ -71,6 +73,8 @@ def test_sanitize_mapping_nested():
     ("inject_cookies.js", False),
     ("app/lib/main.dart", False),
     ("contracts/experience/screen_meta.json", False),
+    ("app/android/app/src/profile/AndroidManifest.xml", False),
+    ("app/macos/Runner/DebugProfile.entitlements", False),
     (".env.example", False),
     ("docs/CAPABILITY_BASELINE.md", False),
 ])
