@@ -37,7 +37,8 @@ def test_revision_uses_saved_feedback_and_preserves_original_through_reopen_resu
         calls.append(json.loads(user))
         answer = _answer(user)
         answer["unknowns"] = ["Baseline is unknown; gather initial observations before comparing change."]
-        return json.dumps(answer), "ollama", {"model": "test-local"}
+        return json.dumps({"changes": [{"section": "unknowns", "reason": "Make the absent baseline explicit."}],
+                           "analysis": answer}), "ollama", {"model": "test-local"}
     monkeypatch.setattr(analysis.ai_core, "local_structured_chat", revised_model)
     reference = {"parent_job_id": parent["job_id"], "review_id": review["review_id"]}
     response = api.post(URL + "/start", headers=headers, json={"revision": reference})
@@ -49,6 +50,8 @@ def test_revision_uses_saved_feedback_and_preserves_original_through_reopen_resu
     assert revised["revision"]["review_evidence_ref"] == review["evidence_ref"]
     assert revised["revision"]["parent_artifact_hash"] == parent["artifact_outcome"]["artifact_hash"]
     assert revised["business_analysis"]["revision"] == revised["revision"]
+    assert revised["business_analysis"]["revision_changes"] == [
+        {"section": "unknowns", "reason": "Make the absent baseline explicit."}]
     assert calls[-1]["revision"]["feedback"] == review["notes"]
     assert calls[-1]["revision"]["previous_analysis"] == parent["business_analysis"]["analysis"]
     assert calls[-1]["question"] == parent["business_question"]
@@ -94,6 +97,38 @@ def test_unchanged_revision_is_unavailable_with_retained_failure_not_new_draft(c
     assert original["artifact_outcome"] == parent["artifact_outcome"]
 
 
+@pytest.mark.parametrize("bad", ["unchanged_section", "duplicate", "unknown_section", "missing", "empty_reason"])
+def test_revision_cannot_claim_an_edit_it_did_not_make(client, monkeypatch, bad):
+    api, _, db, _, _ = client
+    headers, parent, review, _ = _parent(client, monkeypatch)
+    def model(system, user, **kwargs):
+        answer = _answer(user)
+        answer["unknowns"] = ["Baseline has not been measured; do not claim improvement."]
+        changes = [{"section": "unknowns", "reason": "Make missing evidence explicit."}]
+        if bad == "unchanged_section":
+            changes[0]["section"] = "interpretations"
+        elif bad == "duplicate":
+            changes += changes
+        elif bad == "unknown_section":
+            changes[0]["section"] = "source_truth"
+        elif bad == "missing":
+            changes = []
+        else:
+            changes[0]["reason"] = " "
+        return json.dumps({"analysis": answer, "changes": changes}), "ollama", {"model": "test-local"}
+    monkeypatch.setattr(analysis.ai_core, "local_structured_chat", model)
+    response = api.post(URL + "/start", headers=headers, json={"revision": {
+        "parent_job_id": parent["job_id"], "review_id": review["review_id"]}})
+    task = _poll(api, response.get_json()["task"]["task_id"], headers)
+    rejected = task["result"]["business_analysis"]
+    assert rejected["state"] == "unavailable" and "analysis" not in rejected
+    assert rejected["reason"] == "BUSINESS_BRIEF_RESULT_UNGROUNDED_OR_INVALID"
+    with sqlite3.connect(db) as con:
+        assert con.execute("SELECT count(*) FROM app_evidence_records WHERE feature_id='REPORT_BUSINESS_ANALYSIS'").fetchone()[0] == 1
+        assert con.execute("SELECT count(*) FROM app_evidence_records WHERE feature_id='REPORT_BUSINESS_ANALYSIS_REJECTED'").fetchone()[0] == 1
+    assert api.get(URL + "/jobs/" + parent["job_id"], headers=headers).get_json()["result"]["business_analysis"] == parent["business_analysis"]
+
+
 @pytest.mark.parametrize("invalid", ["foreign_scope", "fake_review", "tamper", "override", "non_revision_decision"])
 def test_revision_rejects_untrusted_inputs_before_task_or_model(client, monkeypatch, invalid):
     api, _, db, _, _ = client
@@ -120,7 +155,10 @@ def test_revision_rechecks_permission_before_derivative_evidence(client, monkeyp
     headers, parent, review, _ = _parent(client, monkeypatch)
     def revoke_during_model(system, user, **kwargs):
         gate.revoke_permission(PermissionLevel.ANALYZE)
-        return json.dumps(_answer(user)), "ollama", {"model": "test-local"}
+        answer = _answer(user)
+        answer["unknowns"] = ["Baseline is not measured."]
+        return json.dumps({"analysis": answer, "changes": [
+            {"section": "unknowns", "reason": "Clarify absent baseline."}]}), "ollama", {"model": "test-local"}
     monkeypatch.setattr(analysis.ai_core, "local_structured_chat", revoke_during_model)
     response = api.post(URL + "/start", headers=headers, json={
         "revision": {"parent_job_id": parent["job_id"], "review_id": review["review_id"]}})

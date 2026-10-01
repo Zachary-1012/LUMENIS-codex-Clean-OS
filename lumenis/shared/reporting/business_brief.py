@@ -12,8 +12,8 @@ from .media_brief import _read_row, _scope
 from .operational_brief import _markdown_text
 
 _FEATURE = "REPORT_BUSINESS_ANALYSIS"
-_VERSION = "report-business-brief/6"
-_PILOT_VERSIONS = {"report-business-brief/5", "report-business-brief/6"}
+_VERSION = "report-business-brief/7"
+_PILOT_VERSIONS = {"report-business-brief/5", "report-business-brief/6", "report-business-brief/7"}
 _FIELDS = {"source_observations", "interpretations", "proposed_actions", "unknowns"}
 _PILOT_FIELDS = ("audience", "procedure", "measure", "continue_if", "stop_if")
 
@@ -36,7 +36,7 @@ def _excerpts(source):
     return chunks
 
 
-def _schema(sources):
+def _schema(sources, *, revision=False):
     string = {"type": "string", "minLength": 1, "maxLength": 180}
     source_id = {"type": "string", "enum": [source["source_id"] for source in sources]}
     refs = {"type": "array", "items": source_id, "minItems": 1, "maxItems": 8}
@@ -48,12 +48,39 @@ def _schema(sources):
     if _VERSION in _PILOT_VERSIONS:
         action["pilot"] = {"type": "object", "properties": {key: string for key in _PILOT_FIELDS},
                            "required": list(_PILOT_FIELDS), "additionalProperties": False}
-    return {"type": "object", "properties": {
+    analysis = {"type": "object", "properties": {
         "source_observations": items({"source_id": source_id, "excerpt_index": {"type": "integer", "minimum": 0, "maximum": 6}}),
         "interpretations": items({"text": string, "source_ids": refs}),
         "proposed_actions": items(action),
         "unknowns": {"type": "array", "items": string, "minItems": 1, "maxItems": 2},
     }, "required": sorted(_FIELDS), "additionalProperties": False}
+    if not revision:
+        return analysis
+    return {"type": "object", "properties": {
+        "changes": {"type": "array", "minItems": 1, "maxItems": 4, "items": {
+            "type": "object", "properties": {
+                "section": {"type": "string", "enum": sorted(_FIELDS)},
+                "reason": {"type": "string", "minLength": 1, "maxLength": 180},
+            }, "required": ["section", "reason"], "additionalProperties": False}},
+        "analysis": analysis,
+    }, "required": ["changes", "analysis"], "additionalProperties": False}
+
+
+def _validate_revision_changes(changes, analysis, previous):
+    """A claimed edit must exist; this does not validate semantic improvement."""
+    if not isinstance(changes, list) or not 1 <= len(changes) <= 4:
+        raise ValueError("BUSINESS_BRIEF_REVISION_CHANGES_INVALID")
+    seen = set()
+    for change in changes:
+        if not isinstance(change, dict) or set(change) != {"section", "reason"}:
+            raise ValueError("BUSINESS_BRIEF_REVISION_CHANGES_INVALID")
+        section, reason = change["section"], change["reason"]
+        if (not isinstance(section, str) or section not in _FIELDS or section in seen
+                or not isinstance(reason, str) or not reason.strip() or len(reason) > 180
+                or analysis[section] == previous[section]):
+            raise ValueError("BUSINESS_BRIEF_REVISION_CHANGES_INVALID")
+        seen.add(section)
+    return changes
 
 
 def _resolve_excerpts(value, sources):
@@ -161,8 +188,13 @@ def read_business_brief(evidence_ref, *, job_id, actor_ref, scope):
     analysis = _validate(outputs["analysis"], material["sources"], version=inputs["version"])
     if inputs["version"] in {"report-business-brief/4", *_PILOT_VERSIONS}:
         _validate_generated_prose(analysis)
+    changes = None
+    if inputs["version"] == "report-business-brief/7" and "revision" in material:
+        changes = _validate_revision_changes(
+            outputs.get("revision_changes"), analysis, material["revision"]["previous_analysis"])
     return {"state": "draft", "review_status": "HUMAN_PENDING", "real_input_bound": True,
             **({"revision": material["revision"]} if "revision" in material else {}),
+            **({"revision_changes": changes} if changes is not None else {}),
             "question": material["question"], "analysis": analysis, "evidence_ref": evidence_ref,
             "input_sha256": outputs["input_sha256"], "model": outputs["model"], "provider": "ollama",
             "sample": material["sample"], "markdown": _markdown(material["question"], analysis),
@@ -196,22 +228,32 @@ def analyze_business_brief(*, question, sources, sample, scope, job_id, actor_re
     if revision is not None:
         system += ("本次修订已有草稿。revision 中的 feedback 是审核要求，previous_analysis 是可能有错的旧稿；"
                    "两者都不是来源事实。解决审核指出的问题，不照抄旧稿，不将审核中的数字或主张当成已核实证据。"
-                   "资料不足时明确未知并提出可执行的补证或探索方案，不能虚构基线、效果、共识或已经完成的工作。")
+                   "资料不足时明确未知并提出可执行的补证或探索方案，不能虚构基线、效果、共识或已经完成的工作。"
+                   "先在 changes 中简明列出为落实反馈必须修改的部分及原因，再在 analysis 中完成修改后的全文。"
+                   "changes 不是自我打分；每个列出的部分必须在新稿中实际变化，不能只声明已修改却照抄。")
     raw, provider, meta = ai_core.local_structured_chat(
         system, _json({"domain": normalized["domain_id"], "question": question,
                        **({"revision": revision} if revision is not None else {}),
                        "sources": [{"source_id": source["source_id"], "excerpts": _excerpts(source),
                                     "published": source["publish_datetime"],
                                     "platform": source["source_platform"]} for source in sources]}),
-        response_schema=_schema(sources), max_tokens=1200, timeout_seconds=180,
+        response_schema=_schema(sources, revision=revision is not None), max_tokens=1200, timeout_seconds=180,
     )
     if provider != "ollama" or not isinstance(raw, str) or not isinstance(meta.get("model"), str):
         return {**base, "reason": "BUSINESS_BRIEF_LOCAL_MODEL_UNAVAILABLE"}
     try:
-        analysis = _validate(_resolve_excerpts(json.loads(raw), sources), sources)
+        generated = json.loads(raw)
+        changes = None
+        if revision is not None:
+            if not isinstance(generated, dict) or set(generated) != {"changes", "analysis"}:
+                raise ValueError("BUSINESS_BRIEF_REVISION_CHANGES_INVALID")
+            changes, generated = generated["changes"], generated["analysis"]
+        analysis = _validate(_resolve_excerpts(generated, sources), sources)
         _validate_generated_prose(analysis)
         if revision is not None and analysis == revision["previous_analysis"]:
             raise ValueError("BUSINESS_BRIEF_REVISION_UNCHANGED")
+        if revision is not None:
+            _validate_revision_changes(changes, analysis, revision["previous_analysis"])
     except (ValueError, TypeError) as error:
         reason = ("BUSINESS_BRIEF_REVISION_UNCHANGED" if str(error) == "BUSINESS_BRIEF_REVISION_UNCHANGED"
                   else "BUSINESS_BRIEF_RESULT_UNGROUNDED_OR_INVALID")
@@ -232,6 +274,8 @@ def analyze_business_brief(*, question, sources, sample, scope, job_id, actor_re
                 "rejected_candidate_evidence_ref": f"app_evidence_records:{rejected_id}"}
     outputs = {"analysis": analysis, "analysis_sha256": _digest(analysis),
                "input_sha256": _digest(material), "provider": provider, "model": meta["model"]}
+    if revision is not None:
+        outputs["revision_changes"] = changes
     if before_evidence is not None:
         before_evidence()
     with get_repository().transaction(timeout=10) as con:

@@ -2409,3 +2409,25 @@ independent hosting, self-owned model training, user/Outcome acceptance or a
 Round/Product PASS. Codex Cloud remains a development environment. Product-host
 target, same-SHA hosted execution and final Product Owner repeated Jobs remain
 unverified; product deployment has not been performed by this Batch.
+
+### 2026-10-01 — revision claims checked; real inference timed out
+
+Shared Reporting version7 requires a revision's declared sections to actually
+change, preserving signed feedback, historical readers, no-op rejection and
+Permission/Evidence boundaries. The55 changed/caller tests passed35.19s,exit0;
+this is IMPLEMENTED/TESTED validation, not accepted business quality.
+
+One real Nike revision `brief-7cfdf4c072a4429c94f2cb2c973a99f2` retained the exact
+signed feedback and sources but local CPU inference ended at180s. Its report
+reopens, while business analysis is explicitly unavailable and artifact-bound
+usefulness is UNKNOWN. No new model draft/Evidence or business Outcome was
+fabricated. Raw270/Canonical270 and all45 previous reports were unchanged;
+current reports46/Evaluation118/Evidence439, integrity ok/FK0. Actual Core
+restart and exact report/review/resume reads passed; an initial probe's wrong
+health-status expectation is recorded as failed, not hidden.
+
+See `evidence/round-07/ROUND-07-REVISION-QUALITY-2026-10-01.md`. Useful revision
+remains REWORK; next work addresses observed inference latency/quality without
+repeated identical calls. Final user review remains with PO. Codex Cloud is
+the development environment and supplies no product deployment or owned-AI
+operating proof; same-SHA hosted and release gates remain unaccepted.
