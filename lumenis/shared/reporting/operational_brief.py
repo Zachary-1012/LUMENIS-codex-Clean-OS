@@ -29,7 +29,10 @@ def _source_url(value: Any) -> tuple[str | None, str]:
         return None, "WITHHELD"
     if (parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname
             or parsed.username is not None or parsed.password is not None
-            or parsed.query or parsed.fragment or "?" in raw or "#" in raw
+            # Preserve the exact public pagination URL; unknown query material
+            # stays withheld rather than being stripped into a different source.
+            or ("?" in raw and not re.fullmatch(r"(?:page|p)=[0-9]{1,6}", parsed.query))
+            or parsed.fragment or "#" in raw
             or any(char in raw for char in '<>"\\`')
             or re.search(r"/[A-Za-z0-9_-]{32,}(?:/|$)", parsed.path)
             or re.search(r"(?i)(token|secret|api[-_]?key|auth|session|signature)", parsed.path)):

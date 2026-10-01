@@ -118,6 +118,37 @@ def test_zbmp_focus_is_exact_and_hostile_source_labels_are_escaped(brief_db):
     assert "\\]\\(javascript:alert" in result["markdown"] or "\\]" in result["markdown"]
 
 
+def test_public_pagination_links_keep_distinct_exact_source_identity(brief_db):
+    urls = ["https://source.example/shopping/?page=1", "https://source.example/shopping/?page=2"]
+    with sqlite3.connect(brief_db) as conn:
+        for index, url in enumerate(urls):
+            _add_signed(conn, f"directory-{index}", subject="SUBJECT-A", url=url, published=None)
+        conn.commit()
+    result = _read_brief(brief_db, product_id="CTH", global_scope=False,
+                         entity_label="Subject A", subject_id="SUBJECT-A")
+    assert {row["source_url"] for row in result["records"]} == set(urls)
+    assert all(row["source_link_status"] == "AVAILABLE" for row in result["records"])
+    assert len({row["scope_evidence_ref"] for row in result["records"]}) == 2
+    assert all(url in result["markdown"] for url in urls)
+    assert all(row["publish_datetime"] is None for row in result["records"])
+    assert _read_brief(brief_db, product_id="CTH", global_scope=False,
+                      entity_label="Subject A", subject_id="SUBJECT-A") == result
+
+
+@pytest.mark.parametrize("query", ["page=1&access_token=private-value", "page=1&page=2",
+                                    "page=", "page=%31", "%70age=1", "page=-1",
+                                    "page=1#secret", "page=1234567", "id=1", ""])
+def test_pagination_exception_does_not_expose_unknown_or_credential_queries(brief_db, query):
+    with sqlite3.connect(brief_db) as conn:
+        _add_signed(conn, "unsafe-query", subject="SUBJECT-A", url="https://source.example/?" + query)
+        conn.commit()
+    result = _read_brief(brief_db, product_id="CTH", global_scope=False,
+                         entity_label="Subject A", subject_id="SUBJECT-A")
+    assert result["records"][0]["source_url"] is None
+    assert result["records"][0]["source_link_status"] == "WITHHELD"
+    assert "private-value" not in result["markdown"] and "secret" not in result["markdown"]
+
+
 def test_explicit_selection_rejects_ambiguous_identity_before_limit(brief_db):
     with sqlite3.connect(brief_db) as conn:
         _add_signed(conn, "selected", subject="SUBJECT-A")

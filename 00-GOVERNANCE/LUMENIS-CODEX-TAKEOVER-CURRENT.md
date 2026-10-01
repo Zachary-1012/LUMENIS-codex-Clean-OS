@@ -12,6 +12,30 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — exact public directory links restored in real CTH source brief
+
+Reporting now preserves a single literal numeric `page` / `p` query parameter
+in source links. Unknown, duplicate, encoded and credential-bearing parameters
+remain withheld; the stored URL is never stripped or fetched by this projection.
+The final source snapshot passed 55 isolated Reporting/API regressions, zero
+failures/errors/skips, exit0. The existing supervisor recovered Core2128 healthy
+at8201 after a verified reload.
+
+With a canonical SQLite backup, the real Taikoo Hui source-brief API persisted
+job `brief-350d84ee6a4b4519ab8815837a49b997`: the same29 verified sources now
+retain20 distinct public directory pagination links. Exact reopen and resume
+succeeded; resume created no duplicate artifact/evaluations; Luohu scope was
+denied403. Original report, Canonical records, source Evidence and publication/
+capture times remained unchanged. One report and its three artifact evaluations
+were added; integrityok/FK0. No analysis or model invocation was requested.
+
+This closes a real source-traceability defect, not useful owned reasoning,
+business Outcome or human acceptance. Coverage remains partial. Details are in
+the existing [ROUND07 evidence](evidence/round-07/ROUND-07-OWNED-AI-MATERIALS-2026-10-01.md).
+Hosted PASS remains pinned to source038fe598 and does not cover newer code.
+The next independently executable gap is the persisted CTH Case boundary;
+the owned foundation-weight direction and deferred final human review remain open.
+
 ### 2026-10-01 — real report feedback reaches scoped Shared Learning material
 
 The existing authorized Reporting review path now records a deterministic,

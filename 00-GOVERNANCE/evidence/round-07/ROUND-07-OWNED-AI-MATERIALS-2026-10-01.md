@@ -407,3 +407,54 @@ COMMERCIAL_READY=NO. No Round07/J7 PASS or useful owned-AI claim. Same-SHA hoste
 PASS remains pinned to038fe598; it does not cover this newer implementation.
 Next required increment is useful owned inference and grounded task outcome,
 with these cases available as referenced, unapproved learning material.
+
+## Public source pagination traceability — actual CTH Job, 2026-10-01
+
+Base: HEAD/origin/main61d34ce6d924ff24a5932f44b1d6ed024e86bcd8.
+Existing Reporting owner: `operational_brief._source_url`, SourceBrief Job and
+exact-scope authorized API. No collector, source identity, schema or new owner.
+Capability locator: Reporting path / pagination; current principle/architecture/
+owner/contract routing retained. Frontier research ADAPT: Python3.14 official
+[`urllib.parse`](https://docs.python.org/3.14/library/urllib.parse.html), accessed
+2026-10-01. `urlsplit` is a parser, not URL validation; keep raw-character,
+userinfo, fragment and secret/opaque-path guards plus an explicit query grammar.
+No package or dependency was introduced. Only one literal ASCII numeric
+`page=N` or `p=N` (1–6digits) is exposed, verbatim; other queries stay WITHHELD.
+
+Final scoped verification: 55 isolated tests, zero failures/errors/skips,
+exit0 in19.384s. Tests assert two distinct signed pagination sources, exact
+links/Evidence/times/reopen, and credential, duplicate, empty, encoded, negative,
+oversized, unknown-parameter and fragment rejection. Existing exact actor/scope,
+artifact/retry and Permission regressions remain intact. Changed Python AST and
+diff checks pass; no test or gate weakened.
+
+REAL USER JOB / ENTRY / REAL INPUT: an operator can trace the existing real
+Taikoo Hui source material to distinct public directory pages through
+`POST /api/experience/reports/source-brief/generate`, limit30, exact CTH focus
+`SUBJ-89269ecd7273fb3c4b6d3fbe`. This request did not ask for business analysis.
+SQLite backup: `data/backups/pre-public-source-links-20261001.db`, verified.
+Existing supervisor19440 recovered Core2128 healthy at8201 after the verified
+app child/parent reload. No browser, Cookie, inference or collection was invoked.
+
+USER-VISIBLE RESULT: persisted job `brief-350d84ee6a4b4519ab8815837a49b997`,
+artifact `55d7114b8512a8d4ac2abe59b1f64ad8e2c486d769ee66a4af9361662dc2bf00`.
+Its29 exact source IDs/Evidence refs and publication/capture times match the
+existing source brief. Twenty distinct public pagination URLs changed from
+WITHHELD to AVAILABLE. The preliminary21-link estimate was not accepted as
+runtime proof; actual restored count is20. Other withheld links remain hidden.
+
+FAILURE/RECOVERY: exact GET reopens; authorized resume is NOOP; another Subject
+(Luohu MixC) cannot reopen and returns403. Original stored report/hash remains
+immutable. Canonical/source Evidence logical fingerprints match backup; only
+one daily_report and three artifact evaluations were added. Integrityok/FK0.
+ACCEPTANCE ASSERTION: AUTOMATED_REAL_DATA_REPLAY_NOT_HUMAN_ACCEPTANCE.
+The result is a source brief, not AI analysis or observed business Outcome.
+
+GLOBAL UNIVERSE / DATA MATURITY IMPACT: no new coverage or source facts;
+Global Commercial/Brand coverage remains NO, Taikoo reference PARTIAL.
+COMMERCIAL OVERLAY IMPACT: RELEASED=NO / OPERATING=NO / COMMERCIAL_READY=NO.
+Same-SHA hosted Product/App PASS remains pinned to038fe598, not this newer code.
+The separate CTH trace found the first live Case gap: current CTH-08 returns
+notes/events without a persisted canonical Case/lifecycle/actor-to-Subject
+binding. Its fix stays in existing ROUND11 CTH + Shared DB/Evidence/Permission;
+it does not replace pending owned-AI or the PO's deferred real-user acceptance.
