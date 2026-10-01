@@ -753,3 +753,59 @@ and proposed ungrounded fixed efficacy thresholds. Preserve it as a failed
 candidate, never a positive target. This is a real quality/resource observation,
 not Gateway Job acceptance. Global coverage NO, Taikoo PARTIAL and all release/
 operating/commercial flags remain NO. New source needs its own same-SHA checks.
+
+## Signed Learning export and actual adapter reload — 2026-10-01
+
+Base HEAD/origin/main24ad1155cd41354ca4ff55e5c7f9a81b94f66a4e.
+OSAI live main rechecked with GitHub API: unchanged6487532205067d5d3568b75bc7ea5f842dede578,
+last commit2026-09-19T14:04:33Z. Reuse existing Shared Learning/Reporting,
+Evidence repository, SYSTEM Permission and AI Gateway owners. No other repo
+write, new registry/store or provider activation.
+
+`lumenis/shared/learning/training_cases.py` consumes signed
+OWNED_TRAINING_TARGET_REVIEW and OWNED_TRAINING_RIGHTS_APPROVAL rows, successful
+Source Evidence, exact actor/domain/scope and fresh caller authorization. It
+returns the current Gateway record schema, exact GLOBAL / ALL or registered
+focus identifier; duplicate case IDs and NFKC-normalized prompts are rejected.
+It never manufactures reviews, writes Evidence, repairs rows, trains or
+promotes. Seventeen new isolated tests passed; command
+`python -m pytest tests/test_owned_training_cases.py tests/test_owned_training_permission.py tests/test_owned_ai_training.py -q`
+passed67 tests. Temporary signed SQLite fixtures prove export leaves the DB
+file hash unchanged, rejects tampering/revocation/wrong scope/rights/pending or
+failed sources, and binds export records to canonical MODEL_TRAIN resources.
+These are tests, not product target admissions. The actual review/rights writer
+and qualified product targets remain an explicit next gap; RAW/HUMAN_PENDING
+report cases cannot become positive examples.
+
+The independent free-T4 notebook then loaded the already-saved adapter under
+`saved_smoke`, checked3,264 named tensors against its safetensors file and
+generated2 for a training-set arithmetic prompt; actual reload/check/inference
+elapsed8.27 seconds. Adapter SHA remains
+ffbeacc27fa632fa5274b93c1a8a4680bc3ec4b783cdab7345aa048f7901cabb.
+This proves a same-process saved-weight replay, not generalization, process
+restart, business training or product serving. A first cell's editor-induced
+indentation error was corrected by running the same code with preserved
+indentation; weights were not retrained. Small public proof JSONs were saved
+from the notebook's presented download links into local protected work/;
+the370MB adapter archive's workstation presence is still NOT_VERIFIED.
+
+The Nike short baseline completed103.85 seconds/376 tokens with actual EOS
+<|return|>. A metadata-only parser correction retained both original and reviewed
+outputs. Complete generation is still BUSINESS_QUALITY_FAIL: missing S1
+attribution, excess requested length, consumer-feedback unknown omitted,
+celebrity usage rights unestablished and stop threshold undefined. Preserve
+these as rejected candidates, never positive targets. A separately authored
+correction proposal remains REVIEW_CANDIDATE_NOT_ADMITTED/training_eligible=False.
+No original article body, private DB/repository or credentials were uploaded.
+
+REAL DELIVERY CARD / 真实用户工作闭环验收: ENTRY is the existing Learning exporter
+and independent notebook; REAL INPUT is isolated signed test Evidence plus
+public arithmetic/brand-authored factual material. USER-VISIBLE RESULT is
+validated export shape and saved-adapter inference proof. FAILURE/RECOVERY
+covers changed/tampered Source/review/rights, fresh permission revocation and
+saved-weight reopen. ACCEPTANCE ASSERTION is scoped TESTED source/technical
+GPU verification only, not a real CTH/BMP Job or ROUND07 PASS. CONTINUOUS FRONTIER
+RESEARCH / CAPABILITY EVOLUTION: REUSE canonical admission and persistence,
+ADAPT OSAI Learning assets without copying its old provider or queue. GLOBAL
+UNIVERSE / DATA MATURITY IMPACT and COMMERCIAL OVERLAY IMPACT are unchanged:
+Commercial/Brand coverageNO, TaikooPARTIAL; RELEASED/OPERATING/COMMERCIAL_READY=NO.

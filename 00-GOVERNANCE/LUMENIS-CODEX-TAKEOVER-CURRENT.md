@@ -12,6 +12,33 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — signed Learning export and saved-adapter inference
+
+At base24ad1155cd41354ca4ff55e5c7f9a81b94f66a4e, the existing Shared
+Learning owner adds a read-only exporter for explicitly reviewed targets and
+training-purpose rights Evidence. It reopens signatures, exact actor/domain/
+scope, successful Source references and fresh authorization before returning
+the existing Gateway JSONL schema. GLOBAL / ALL and focused identifiers bind
+the canonical MODEL_TRAIN resource; NFKC prompt duplicates are rejected.
+Seventeen new isolated tests passed; the three affected training/Permission
+suites passed67 tests. No product DB write, review fabrication or model call.
+The actual signed review/rights submission writer and admitted business targets
+are still missing; existing RAW report feedback cannot be exported as positives.
+
+The previously saved free-T4 technical adapter was actually reloaded under a
+new adapter name:3,264 tensors equal the saved file, arithmetic inference
+returned2 in8.27 seconds. This is a same-process technical replay, not restart
+or useful business acceptance. A separate Nike short baseline completed in
+103.85 seconds/376 tokens; its actual EOS is <|return|>. The initial completion
+parser was corrected without rerunning inference. Source attribution, requested
+length, explicit unknown consumer feedback, celebrity rights and stop criteria
+still failed quality review. The failed outputs and a correction candidate
+remain local review material, not admitted positive training data.
+See the existing [ROUND07 proof](evidence/round-07/ROUND-07-OWNED-AI-MATERIALS-2026-10-01.md).
+OSAI main remains6487532205067d5d3568b75bc7ea5f842dede578 on live recheck.
+Owned useful inference, AgentLoop execution resume, deployment and final PO
+acceptance remain open. No ROUND07/J7, coverage or release flag is promoted.
+
 ### 2026-10-01 — exact owned-training Permission and business-domain isolation
 
 At base ad4febf0715d1faaff8fef9a185e8403b2fb8b9c, the existing SYSTEM
