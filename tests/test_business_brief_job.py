@@ -112,3 +112,46 @@ def test_invalid_question_never_writes_report(client, question):
     assert api.post(URL + "/generate", headers=GLOBAL, json={"business_question": question}).status_code == 400
     with sqlite3.connect(path) as con:
         assert con.execute("SELECT COUNT(*) FROM daily_reports").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize("field", ["unknowns", "interpretations", "proposed_actions"])
+def test_model_schema_diagnostic_is_rejected_not_silently_removed(client, monkeypatch, field):
+    def diagnostic(value):
+        if field == "unknowns":
+            value[field][0] = "source_ids_all_not_used"
+        elif field == "interpretations":
+            value[field][0]["text"] = "source_observations_missing"
+        else:
+            value[field][0]["check"] = "Validate excerpt_index first."
+        return value
+    _mock_model(monkeypatch, diagnostic)
+    api, _, path, _, _ = client
+    job = api.post(URL + "/generate", headers=GLOBAL, json={
+        "business_question": "Propose a content research direction and validation method.",
+    }).get_json()["result"]
+    assert job["business_analysis"]["state"] == "unavailable"
+    with sqlite3.connect(path) as con:
+        assert con.execute("SELECT COUNT(*) FROM app_evidence_records WHERE feature_id='REPORT_BUSINESS_ANALYSIS'").fetchone()[0] == 0
+        rejected = con.execute("SELECT outputs_json FROM app_evidence_records WHERE feature_id='REPORT_BUSINESS_ANALYSIS_REJECTED'").fetchone()
+        assert rejected and "rejected_model_output" in json.loads(rejected[0])
+
+
+def test_v3_signed_artifact_remains_reopenable_after_v4_upgrade(client, monkeypatch):
+    api, _, _, _, _ = client
+    calls = _mock_model(monkeypatch)
+    with monkeypatch.context() as previous:
+        previous.setattr(analysis, "_VERSION", "report-business-brief/3")
+        job = api.post(URL + "/generate", headers=GLOBAL, json={
+            "business_question": "Propose an operating research direction.",
+        }).get_json()["result"]
+    assert job["business_analysis"]["state"] == "draft"
+    reopened = api.get(URL + "/jobs/" + job["job_id"], headers=GLOBAL)
+    assert reopened.status_code == 200 and reopened.get_json()["result"] == job
+    assert len(calls) == 1
+
+
+def test_diagnostic_filter_does_not_modify_original_source_quote():
+    value = _answer(json.dumps({"sources": [{"source_id": "source-1"}]}))
+    value["source_observations"] = [{"source_id": "source-1", "excerpt": "The manual calls this field source_ids."}]
+    analysis._validate_generated_prose(value)
+    assert value["source_observations"][0]["excerpt"] == "The manual calls this field source_ids."

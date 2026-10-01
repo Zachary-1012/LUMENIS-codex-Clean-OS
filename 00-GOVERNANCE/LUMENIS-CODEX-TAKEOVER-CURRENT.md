@@ -2249,3 +2249,17 @@ repeated work and frontend binding remain pending; frontend stays paused.
 See `evidence/round-07/ROUND-07-SCOPED-REPORT-TASK-RECOVERY-2026-10-01.md`.
 This advances the recovery/API slice only. Round/Product Closure is not PASS;
 Codex Cloud remains a development environment, not LUMENIS hosting or AI service.
+
+### 2026-10-01 — business analysis v4 quality boundary, still REWORK
+
+Reporting rejects generated schema diagnostics in prose and preserves signed
+historical drafts; task instructions now allow explicit research hypotheses.
+39 targeted tests passed. Actual Nike/Guangzhou async jobs produced signed
+Evidence 430/431 and reopened with separate engineering quality FAIL/UNKNOWN.
+Nike still answered a financial-research task instead of content research;
+Guangzhou's activity suggestion lacks bounded pilot/decision criteria. Neither
+is client-ready acceptance. Repeated prompt-only runs are not the next gate;
+task-relevant source selection and model capability require joint verification.
+DB: 270 Raw/270 Canonical, 35 reports, 79 evaluations, 4 tasks, integrity=ok,
+FK=0. Human acceptance remains pending; frontend stays paused. See
+`evidence/round-07/ROUND-07-BUSINESS-BRIEF-QUALITY-V4-2026-10-01.md`.
