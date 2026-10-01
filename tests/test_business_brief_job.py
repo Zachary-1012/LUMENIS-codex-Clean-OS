@@ -63,6 +63,35 @@ def test_real_route_derivative_and_reopen_are_scoped_immutable_not_business_succ
     assert api.get(URL + "/jobs/" + job["job_id"], headers=focus).status_code != 200
 
 
+@pytest.mark.parametrize("missing_body", [False, True])
+def test_explicit_materials_bind_model_input_or_fail_without_partial_analysis(client, monkeypatch, missing_body):
+    from tests.test_source_brief_job import _source
+    api, _, path, entry, _ = client
+    with sqlite3.connect(path) as con:
+        _source(con, "selected-older", subject=entry["subject_id"])
+        _source(con, "unselected", subject=entry["subject_id"])
+        con.execute("UPDATE canonical_data SET captured_at='2020-01-01' WHERE source_id='selected-older'")
+        if missing_body:
+            con.execute("UPDATE canonical_data SET content='' WHERE source_id='selected-older'")
+    calls = _mock_model(monkeypatch)
+    selected = ["selected-older", "brief-job-source"]
+    focus = {**GLOBAL, "X-Lumenis-Context-Mode": "FOCUS", "X-Subject-ID": entry["subject_id"]}
+    response = api.post(URL + "/generate", headers=focus, json={
+        "source_ids": selected, "limit": 2, "business_question": "Propose a content research direction.",
+    })
+    assert response.status_code == 200, response.get_json()
+    job = response.get_json()["result"]
+    assert job["requested_source_ids"] == selected
+    assert job["artifact_outcome"]["source_count"] == 2
+    if missing_body:
+        assert calls == []
+        assert job["business_analysis"]["reason"] == "SOURCE_BRIEF_SELECTED_BODY_UNAVAILABLE"
+    else:
+        assert [source["source_id"] for source in calls[0]["sources"]] == selected
+        assert job["business_analysis"]["state"] == "draft"
+        assert job["business_analysis"]["sample"]["omitted_source_count"] == 0
+
+
 @pytest.mark.parametrize("bad", ["made_up_excerpt", "foreign_source", "missing_excerpt_index"])
 def test_model_cannot_invent_quote_or_cite_other_scope(client, monkeypatch, bad):
     def corrupt(value):

@@ -75,8 +75,47 @@ def test_generate_reopen_focus_global_and_recovery(client):
         assert con.execute("SELECT COUNT(*) FROM daily_reports").fetchone()[0] == 2
 
 
+def test_explicit_older_materials_preserve_order_and_reopen(client):
+    api, app, db, entry, _gate = client
+    with sqlite3.connect(db) as con:
+        _source(con, "older-selected", subject=entry["subject_id"])
+        _source(con, "new-unselected", subject=entry["subject_id"])
+        con.execute("UPDATE canonical_data SET captured_at='2020-01-01' WHERE source_id='older-selected'")
+    focus = {**GLOBAL, "X-Lumenis-Context-Mode": "FOCUS", "X-Subject-ID": entry["subject_id"]}
+    selected = ["older-selected", "brief-job-source"]
+    response = api.post(URL + "/generate", headers=focus, json={"limit": 2, "source_ids": selected})
+    assert response.status_code == 200, response.get_json()
+    result = response.get_json()["result"]
+    assert result["requested_source_ids"] == selected
+    assert [r["source_id"] for r in result["source_brief"]["records"]] == selected
+    assert result["artifact_outcome"]["source_count"] == 2
+    assert app.test_client().get(URL + "/jobs/" + result["job_id"], headers=focus).get_json()["result"] == result
+
+
+@pytest.mark.parametrize("invalid", ["foreign", "missing", "tampered"])
+def test_selected_materials_are_all_or_nothing_before_analysis_or_artifact(client, monkeypatch, invalid):
+    import lumenis.shared.reporting.business_brief as business
+    api, _app, db, entry, _gate = client
+    with sqlite3.connect(db) as con:
+        _source(con, "foreign", subject="OTHER-SUBJECT")
+        _source(con, "tampered", subject=entry["subject_id"])
+        con.execute("UPDATE app_evidence_records SET inputs_json='{}' WHERE id=(SELECT scope_evidence_ref FROM canonical_data WHERE source_id='tampered')")
+    monkeypatch.setattr(business, "analyze_business_brief", lambda **kwargs: pytest.fail("invalid materials reached model"))
+    focus = {**GLOBAL, "X-Lumenis-Context-Mode": "FOCUS", "X-Subject-ID": entry["subject_id"]}
+    response = api.post(URL + "/generate", headers=focus, json={
+        "source_ids": ["brief-job-source", invalid], "business_question": "Create an activity plan.",
+    })
+    assert response.status_code == 403
+    assert response.get_json()["code"] == "SOURCE_BRIEF_SELECTED_SOURCE_UNAVAILABLE"
+    with sqlite3.connect(db) as con:
+        assert con.execute("SELECT COUNT(*) FROM daily_reports").fetchone()[0] == 0
+
+
 @pytest.mark.parametrize("body", [{"actor_id": "owner"}, {"multimodal_result": {"state": "complete"}},
-                                   {"limit": True}, {"limit": 0}, {"job_id": "chosen-id"}])
+                                   {"limit": True}, {"limit": 0}, {"job_id": "chosen-id"},
+                                   {"source_ids": None}, {"source_ids": []},
+                                   {"source_ids": ["same", "same"]},
+                                   {"source_ids": [str(i) for i in range(9)], "business_question": "Analyze the materials."}])
 def test_client_cannot_supply_trust_or_invalid_limits(client, body):
     api, _app, db, _entry, _gate = client
     response = api.post(URL + "/generate", headers=GLOBAL, json=body)

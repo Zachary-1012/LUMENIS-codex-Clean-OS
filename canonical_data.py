@@ -1129,9 +1129,33 @@ def list_canonical(con: sqlite3.Connection, source_type: str = "",
     return [dict(r) for r in rows]
 
 
+def validate_source_ids(source_ids: list[str] | None, *, limit: int = 100) -> list[str] | None:
+    """Validate an exact, bounded Canonical source selection without reading storage."""
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError("limit must be an integer between 1 and 100")
+    if source_ids is None:
+        return None
+    if type(source_ids) is not list or not 1 <= len(source_ids) <= 100:
+        raise ValueError("source_ids must be a list containing 1 to 100 IDs")
+    if len(source_ids) > limit:
+        raise ValueError("source_ids cannot exceed limit")
+
+    selected: list[str] = []
+    for source_id in source_ids:
+        if (type(source_id) is not str or not source_id
+                or source_id != source_id.strip() or len(source_id) > 512
+                or any(ord(char) < 32 or 127 <= ord(char) <= 159 for char in source_id)):
+            raise ValueError("source_ids must contain exact nonblank strings up to 512 characters without control characters")
+        selected.append(source_id)
+    if len(set(selected)) != len(selected):
+        raise ValueError("source_ids must be unique")
+    return selected
+
+
 def list_scoped_canonical(
     con: sqlite3.Connection, *, product_id: str, subject_id: Optional[str] = None,
     brand_focus_id: Optional[str] = None, limit: int = 30,
+    source_ids: list[str] | None = None,
 ) -> Dict[str, Any]:
     """Read Canonical rows only when their exact signed scope still verifies."""
     if not isinstance(con, sqlite3.Connection):
@@ -1146,6 +1170,7 @@ def list_scoped_canonical(
         raise TypeError("limit must be an integer")
     if not 1 <= limit <= 100:
         raise ValueError("limit must be between 1 and 100")
+    source_ids = validate_source_ids(source_ids, limit=limit)
 
     def validate_focus(value: Optional[str], name: str) -> Optional[str]:
         if value is None:
@@ -1174,6 +1199,9 @@ def list_scoped_canonical(
     if focus is not None:
         where.extend([f"{focus_column}=?", f"({other_column} IS NULL OR {other_column}='')"])
         params.append(focus)
+    if source_ids is not None:
+        where.append("source_id IN (" + ",".join("?" for _ in source_ids) + ")")
+        params.extend(source_ids)
     predicate = " AND ".join(where)
     candidate_count = con.execute(
         f"SELECT COUNT(*) FROM {CANONICAL_TABLE} WHERE {predicate}", tuple(params),

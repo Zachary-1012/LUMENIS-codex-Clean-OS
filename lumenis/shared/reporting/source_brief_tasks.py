@@ -30,13 +30,14 @@ def engine():
 
 
 def create_task(*, actor_ref, scope, permission_audit_ref, limit=30,
-                image_source_ref=None, business_question=None):
+                image_source_ref=None, business_question=None, source_ids=None):
     context = {
         "actor_ref": actor_ref, "scope": scope,
         "job_id": "brief-" + uuid.uuid4().hex,
         "permission_audit_ref": permission_audit_ref,
         "limit": limit, "image_source_ref": image_source_ref,
         "business_question": business_question,
+        "source_ids": source_ids,
     }
     return engine().create_report_task(context)
 
@@ -129,6 +130,7 @@ def dispatch(task, *, authorize, request_wrapper):
                         trace_id="source-brief:" + context["job_id"],
                         limit=context["limit"], image_source_ref=context["image_source_ref"],
                         image_actor=actor, business_question=context["business_question"],
+                        source_ids=context.get("source_ids"),
                         before_persist=authorize,
                     )
                 finally:

@@ -85,13 +85,14 @@ def test_dispatch_failure_is_persisted_and_resume_reopens_same_artifact(client, 
         real(*args, **kwargs)
         raise OSError('test failure after report save')
     monkeypatch.setattr(tasks, 'create_source_brief_job', fail_after_artifact)
-    task = api.post(URL + '/start', json={}, headers=GLOBAL).get_json()['task']
+    task = api.post(URL + '/start', json={'source_ids': ['brief-job-source']}, headers=GLOBAL).get_json()['task']
     failed = _poll(api, task['task_id'])
     assert failed['state'] == 'failed' and failed['can_resume'] is True
     monkeypatch.setattr(tasks, 'create_source_brief_job', real)
     assert api.post(URL + '/tasks/' + task['task_id'] + '/resume', json={}, headers=GLOBAL).status_code == 202
     finished = _poll(api, task['task_id'])
     assert finished['state'] == 'succeeded' and finished['job_id'] == task['job_id']
+    assert finished['result']['requested_source_ids'] == ['brief-job-source']
     with sqlite3.connect(path) as con:
         assert con.execute('SELECT count(*) FROM daily_reports').fetchone()[0] == 1
         assert con.execute('SELECT count(*) FROM evaluation_records').fetchone()[0] == 3
@@ -141,9 +142,18 @@ def test_dead_process_is_reported_interrupted_and_fresh_request_resumes(client, 
     assert finished['state'] == 'succeeded' and finished['job_id'] == initial['job_id']
 
 
-@pytest.mark.parametrize('body', [{'actor_ref': 'actor:1'}, {'resume_job_id': 'forged'}, {'limit': True}, {'business_question': ''}])
+@pytest.mark.parametrize('body', [{'actor_ref': 'actor:1'}, {'resume_job_id': 'forged'}, {'limit': True}, {'business_question': ''}, {'source_ids': None}, {'source_ids': []}])
 def test_client_cannot_inject_task_authority(client, body):
     api, _app, path, _entry, _gate = client
     assert api.post(URL + '/start', json=body, headers=GLOBAL).status_code == 400
     with sqlite3.connect(path) as con:
         assert con.execute('SELECT count(*) FROM ai_task').fetchone()[0] == 0
+
+
+def test_unavailable_material_rejected_before_task_admission(client):
+    api, _app, path, _entry, _gate = client
+    response = api.post(URL + '/start', json={'source_ids': ['brief-job-source', 'missing']}, headers=GLOBAL)
+    assert response.status_code == 403
+    with sqlite3.connect(path) as con:
+        assert con.execute('SELECT count(*) FROM ai_task').fetchone()[0] == 0
+        assert con.execute('SELECT count(*) FROM daily_reports').fetchone()[0] == 0

@@ -50,6 +50,7 @@ def build_scoped_source_brief(
     entity_label: str, subject_id: str | None = None,
     brand_focus_id: str | None = None, limit: int = 30,
     include_analysis_text: bool = False,
+    source_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic source-only brief; label comes from server registry/context."""
     if type(product_id) is not str or product_id not in {"CTH", "ZBMP"}:
@@ -60,6 +61,7 @@ def build_scoped_source_brief(
         raise ValueError("entity_label from the server registry/context is required")
     if type(limit) is not int or not 1 <= limit <= 100:
         raise ValueError("limit must be an integer between 1 and 100")
+    source_ids = canonical_data.validate_source_ids(source_ids, limit=min(limit, 8) if include_analysis_text else limit)
     if global_scope and (subject_id is not None or brand_focus_id is not None):
         raise ValueError("GLOBAL scope cannot include a focused entity")
     if not global_scope and product_id == "CTH" and (
@@ -82,8 +84,15 @@ def build_scoped_source_brief(
     )
     result = canonical_data.list_scoped_canonical(
         con, product_id=product_id, subject_id=subject_id,
-        brand_focus_id=brand_focus_id, limit=limit,
+        brand_focus_id=brand_focus_id, limit=limit, source_ids=source_ids,
     )
+    if source_ids is not None:
+        selected = result.get("records", [])
+        by_id = {row.get("source_id"): row for row in selected}
+        if (result.get("candidate_count") != len(source_ids)
+                or len(selected) != len(source_ids) or set(by_id) != set(source_ids)):
+            raise PermissionError("SOURCE_BRIEF_SELECTED_SOURCE_UNAVAILABLE")
+        result["records"] = [by_id[source_id] for source_id in source_ids]
     counts = {}
     for key in ("candidate_count", "scanned_count", "rejected_count", "returned_count"):
         value = result.get(key)

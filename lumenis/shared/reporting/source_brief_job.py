@@ -153,6 +153,12 @@ def _verify_report(row: dict[str, Any], *, job_id: str, actor_id: str,
         raise RuntimeError("SOURCE_BRIEF_STORED_BRIEF_INVALID")
     if type(sample.get("returned_verified_count")) is not int or sample["returned_verified_count"] != count or len(records) != count:
         raise RuntimeError("SOURCE_BRIEF_STORED_SOURCE_COUNT_MISMATCH")
+    selected_ids = snapshot.get("requested_source_ids")
+    if selected_ids is not None:
+        from canonical_data import validate_source_ids
+        validate_source_ids(selected_ids)
+        if selected_ids != [record.get("source_id") for record in records]:
+            raise RuntimeError("SOURCE_BRIEF_STORED_SELECTION_MISMATCH")
     if brief.get("markdown") != summary:
         raise RuntimeError("SOURCE_BRIEF_STORED_SUMMARY_MISMATCH")
     expected_content_hash = hashlib.sha256(summary.encode("utf-8")).hexdigest()
@@ -263,6 +269,7 @@ def _response(verified: dict[str, Any], evaluations: list[dict[str, Any]]) -> di
         "source_brief": brief, "multimodal": snapshot["multimodal"],
         "business_analysis": snapshot.get("business_analysis", {"state": "not_requested"}),
         "business_question": snapshot.get("business_question"),
+        "requested_source_ids": snapshot.get("requested_source_ids"),
         "evaluation": {"state": "recorded", "records": evaluations,
                        "quality_review": _quality_reviews(verified)},
         "requested_image_source_ref": snapshot.get("requested_image_source_ref"),
@@ -279,6 +286,7 @@ def create_source_brief_job(
     image_source_ref: str | None = None, image_actor: Any = None,
     retry_of_job_id: str | None = None,
     business_question: str | None = None,
+    source_ids: list[str] | None = None,
     before_persist=None,
 ) -> dict[str, Any]:
     """Create or recover a server-authorized scoped Source Brief report job.
@@ -288,6 +296,8 @@ def create_source_brief_job(
     real audit reference and binds all reads/evaluations to actor and exact scope.
     """
     _validate_actor_refs(actor_id, permission_audit_ref, trace_id, job_id)
+    from canonical_data import validate_source_ids
+    source_ids = validate_source_ids(source_ids, limit=min(limit, 8) if business_question is not None else limit)
     if business_question is not None and (
         not isinstance(business_question, str) or not 4 <= len(business_question.strip()) <= 1500
     ):
@@ -308,6 +318,7 @@ def create_source_brief_job(
         con, product_id=product_id, global_scope=global_scope, entity_label=entity_label,
         subject_id=subject_id, brand_focus_id=brand_focus_id, limit=limit,
         include_analysis_text=business_question is not None,
+        source_ids=source_ids,
     )
     if brief.get("scope") != scope:
         raise RuntimeError("SOURCE_BRIEF_CANONICAL_SCOPE_MISMATCH")
@@ -344,16 +355,22 @@ def create_source_brief_job(
     if business_question is not None:
         from .business_brief import analyze_business_brief
         sources = brief.pop("_analysis_sources", [])
+        if source_ids is not None and len(sources) != len(source_ids):
+            business_analysis = {"state": "unavailable", "reason": "SOURCE_BRIEF_SELECTED_BODY_UNAVAILABLE",
+                                 "real_input_bound": False, "review_status": "HUMAN_PENDING"}
         try:
-            business_analysis = analyze_business_brief(
-                question=business_question, sources=sources, scope=_media_scope(scope),
-                job_id=job_id, actor_ref=actor_id,
-                sample={"available_brief_count": count, "analyzed_source_count": len(sources),
-                        "selection": "latest verified nonempty bodies; at most 8, 1200 characters each",
-                        "omitted_source_count": count - len(sources),
-                        "has_truncated_bodies": any(source["truncated"] for source in sources),
-                        "coverage": "PARTIAL"},
-            )
+            if business_analysis["state"] == "not_requested":
+                business_analysis = analyze_business_brief(
+                    question=business_question, sources=sources, scope=_media_scope(scope),
+                    job_id=job_id, actor_ref=actor_id,
+                    sample={"available_brief_count": count, "analyzed_source_count": len(sources),
+                            "selection": ("explicit operator-selected verified sources; 1200 characters each"
+                                          if source_ids is not None else
+                                          "latest verified nonempty bodies; at most 8, 1200 characters each"),
+                            "omitted_source_count": count - len(sources),
+                            "has_truncated_bodies": any(source["truncated"] for source in sources),
+                            "coverage": "PARTIAL"},
+                )
         except Exception:
             business_analysis = {"state": "error", "reason": "BUSINESS_BRIEF_EXECUTION_OR_PERSISTENCE_FAILED",
                                  "real_input_bound": False, "review_status": "HUMAN_PENDING"}
@@ -379,6 +396,7 @@ def create_source_brief_job(
         },
         "multimodal": multimodal, "evaluation_ids": evaluation_ids,
         "business_analysis": business_analysis, "business_question": business_question,
+        "requested_source_ids": source_ids,
         "requested_image_source_ref": image_source_ref, "retry_of_job_id": retry_of_job_id,
         "review_status": "HUMAN_PENDING",
     }

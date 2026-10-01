@@ -1027,6 +1027,15 @@ def _source_brief_job_error(exc):
     return jsonify({"ok": False, "code": code, "publish_status": "not_performed"}), status
 
 
+def _source_brief_material_ids(body, *, question, limit):
+    from canonical_data import validate_source_ids
+    if "source_ids" not in body:
+        return None
+    if body["source_ids"] is None or "resume_job_id" in body or "retry_media_job_id" in body:
+        raise ValueError("SOURCE_BRIEF_MATERIAL_INPUT_INVALID")
+    return validate_source_ids(body["source_ids"], limit=min(limit, 8) if question is not None else limit)
+
+
 @experience_bp.route("/api/experience/reports/source-brief/generate", methods=["POST"])
 def generate_source_brief_job():
     import uuid
@@ -1038,7 +1047,7 @@ def generate_source_brief_job():
 
     try:
         body = request.get_json(silent=True)
-        if not isinstance(body, dict) or set(body) - {"limit", "resume_job_id", "image_source_ref", "retry_media_job_id", "business_question"}:
+        if not isinstance(body, dict) or set(body) - {"limit", "resume_job_id", "image_source_ref", "retry_media_job_id", "business_question", "source_ids"}:
             raise ValueError("SOURCE_BRIEF_INPUT_INVALID")
         question = body.get("business_question")
         if "business_question" in body and (
@@ -1049,6 +1058,7 @@ def generate_source_brief_job():
         limit = body.get("limit", 30)
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("SOURCE_BRIEF_LIMIT_INVALID")
+        source_ids = _source_brief_material_ids(body, question=question, limit=limit)
         image_ref = body.get("image_source_ref")
         if "image_source_ref" in body and (
             not isinstance(image_ref, str) or not re.fullmatch(r"ART-[0-9a-f]{16}", image_ref)
@@ -1068,6 +1078,7 @@ def generate_source_brief_job():
             previous = get_source_brief_job(retry_of, actor_id=actor_ref, expected_scope=_scope_material(**scope))
             image_ref = previous.get("requested_image_source_ref")
             question = previous.get("business_question")
+            source_ids = previous.get("requested_source_ids")
             if (previous["multimodal"].get("state") not in {"unavailable", "error"}
                     or not isinstance(image_ref, str) or not re.fullmatch(r"ART-[0-9a-f]{16}", image_ref)):
                 raise ValueError("SOURCE_BRIEF_MEDIA_NOT_RETRYABLE")
@@ -1085,6 +1096,7 @@ def generate_source_brief_job():
                 image_source_ref=image_ref, image_actor=actor,
                 retry_of_job_id=retry_of,
                 business_question=question,
+                source_ids=source_ids,
             )
         finally:
             con.close()
@@ -1134,7 +1146,7 @@ def start_source_brief_task():
 
     try:
         body = request.get_json(silent=True)
-        if not isinstance(body, dict) or set(body) - {"limit", "image_source_ref", "business_question"}:
+        if not isinstance(body, dict) or set(body) - {"limit", "image_source_ref", "business_question", "source_ids"}:
             raise ValueError("SOURCE_BRIEF_INPUT_INVALID")
         limit = body.get("limit", 30)
         if type(limit) is not int or not 1 <= limit <= 100:
@@ -1142,14 +1154,20 @@ def start_source_brief_task():
         question = body.get("business_question")
         if "business_question" in body and (not isinstance(question, str) or not 4 <= len(question.strip()) <= 1500):
             raise ValueError("SOURCE_BRIEF_BUSINESS_QUESTION_INVALID")
+        source_ids = _source_brief_material_ids(body, question=question, limit=limit)
         image_ref = body.get("image_source_ref")
         if "image_source_ref" in body and (not isinstance(image_ref, str) or not re.fullmatch(r"ART-[0-9a-f]{16}", image_ref)):
             raise ValueError("SOURCE_BRIEF_IMAGE_INPUT_INVALID")
         actor_ref, audit_ref, scope = _source_brief_context("write")
         authorize = lambda: _report_task_authorize(actor_ref, scope)
         authorize()
+        if source_ids is not None:
+            from lumenis.shared.database import get_repository
+            from lumenis.shared.reporting.operational_brief import build_scoped_source_brief
+            with get_repository().connection(read_only=True, wal=False) as con:
+                build_scoped_source_brief(con, **scope, source_ids=source_ids, limit=limit)
         task = tasks.create_task(actor_ref=actor_ref, scope=scope, permission_audit_ref=audit_ref,
-                                 limit=limit, image_source_ref=image_ref, business_question=question)
+                                 limit=limit, image_source_ref=image_ref, business_question=question, source_ids=source_ids)
         tasks.dispatch(task, authorize=authorize, request_wrapper=copy_current_request_context)
         # The worker may already have finished; 202 is admission, not job success.
         result = tasks.status(tasks.scoped_task(task["task_id"], actor_ref=actor_ref, scope=scope))

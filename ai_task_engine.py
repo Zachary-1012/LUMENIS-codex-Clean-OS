@@ -218,7 +218,7 @@ _REPORT_CONTEXT_KEYS = frozenset({
     "actor_ref", "scope", "job_id", "limit", "image_source_ref",
     "business_question", "permission_audit_ref",
 })
-_REPORT_CONTEXT_OPTIONAL_KEYS = frozenset({"operation_audit_ref"})
+_REPORT_CONTEXT_OPTIONAL_KEYS = frozenset({"operation_audit_ref", "source_ids"})
 _REPORT_SCOPE_KEYS = frozenset({
     "product_id", "global_scope", "entity_label", "subject_id",
     "brand_focus_id",
@@ -369,6 +369,8 @@ def _validate_managed_report_context(context: Any) -> Dict[str, Any]:
         or not 4 <= len(question.strip()) <= 1500
     ):
         raise ValueError("managed report business_question is invalid")
+    from canonical_data import validate_source_ids
+    validate_source_ids(context.get("source_ids"), limit=min(limit, 8) if question is not None else limit)
 
     permission_audit_ref = context.get("permission_audit_ref")
     if (

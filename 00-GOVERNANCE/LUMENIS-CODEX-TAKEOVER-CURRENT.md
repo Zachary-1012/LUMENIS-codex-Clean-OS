@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**  
-> Updated: 2026-09-30 (bounded source and governance candidates; resolve the current SHA live)
+> Updated: 2026-10-01 (bounded source and governance candidates; resolve the current SHA live)
 > CI status: resolve from GitHub checks for the exact current origin/main; no historical SHA is a current acceptance result.
 > **Never treat this document's commit, any pasted SHA, or any historical handoff SHA as the current HEAD. Codex must fetch and resolve `origin/main` at session start.**
 
@@ -2288,3 +2288,27 @@ previously confirmed execution-layer quota block; no rerun was submitted.
 The user's shared cloud link refers to Codex development infrastructure only.
 LUMENIS product hosting, independent inference and developer-PC-offline operation
 are NOT established by that environment. No Round/J/Product completion upgrade.
+
+### 2026-10-01 — explicit Brief material inputs bound to real jobs
+
+The existing Source Brief APIs now accept optional exact source IDs, retain
+their order through durable requests/model input/report/reopen, and reject
+absent, foreign, invalid or ambiguous sources without substitution. Selection
+uses the existing signed Canonical reader and never grants access. Legacy
+latest-source behavior remains available; autonomous relevance remains REWORK.
+102 isolated targeted tests, current compile, Constitution and governance gates
+passed. Actual Guangzhou/Nike jobs used two selected sources each through the
+unchanged local Qwen3.5:4b path, produced signed derivatives 434/435, and passed
+reopen, duplicate completed-resume and wrong-scope denial checks. Source tables
+matched their prewrite backup. Engineering quality reviews remain FAIL: bounded
+pilots/decision criteria and careful creator-vs-consumer reasoning are missing.
+This delivers a material-input capability, not accepted business usefulness.
+See `evidence/round-07/ROUND-07-EXPLICIT-BRIEF-MATERIALS-2026-10-01.md`.
+Frontend stays paused; Product Owner's final repeated review is pending. Same-SHA
+hosted acceptance, product hosting and independent inference remain unverified.
+Codex Cloud is a development environment, not LUMENIS product deployment.
+
+This batch's final restart reopened both new reports and five prior artifacts
+without changing their persisted source, analysis or artifact values. Actual
+DB: Raw 270, Canonical 270, reports 42, evaluations 101, report tasks 10,
+integrity ok, FK 0. These are runtime evidence counts, not completion metrics.

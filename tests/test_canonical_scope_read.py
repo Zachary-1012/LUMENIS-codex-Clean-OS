@@ -9,6 +9,7 @@ from canonical_data import (
     ensure_canonical_table,
     list_scoped_canonical,
     persist_canonical,
+    validate_source_ids,
 )
 from lumenis.shared.evidence import store as evidence_store
 
@@ -47,7 +48,8 @@ def _signed_scope_evidence(source_id, *, product, domain, subject=None, brand=No
     )
 
 
-def _persist_verified(conn, source_id, *, product, domain, subject=None, brand=None):
+def _persist_verified(conn, source_id, *, product, domain, subject=None, brand=None,
+                      captured_at="2026-09-28T01:00:00Z"):
     evidence_id = _signed_scope_evidence(
         source_id, product=product, domain=domain, subject=subject, brand=brand,
     )
@@ -56,7 +58,7 @@ def _persist_verified(conn, source_id, *, product, domain, subject=None, brand=N
         subject_id=subject or "", brand_focus_id=brand or "",
         scope_status="VERIFIED", scope_evidence_ref=str(evidence_id),
         source_id=source_id, external_id=source_id, title=source_id,
-        captured_at="2026-09-28T01:00:00Z",
+        captured_at=captured_at,
     )
     persist_canonical(conn, record)
     conn.commit()
@@ -85,9 +87,14 @@ def test_reads_global_and_exact_focus_with_safe_scope_proofs(scope_db):
 
         cth_focus = list_scoped_canonical(conn, product_id="CTH", subject_id="SUBJ-A")
         cth_global = list_scoped_canonical(conn, product_id="cth")
+        cth_global_none = list_scoped_canonical(conn, product_id="cth", source_ids=None)
         cth_limited = list_scoped_canonical(conn, product_id="CTH", limit=1)
         bmp_focus = list_scoped_canonical(conn, product_id="ZBMP", brand_focus_id="BRAND-A")
         bmp_global = list_scoped_canonical(conn, product_id="zbmp")
+        selected_focus = list_scoped_canonical(
+            conn, product_id="CTH", subject_id="SUBJ-A",
+            source_ids=["raw-cth-a", "raw-cth-b", "raw-bmp-a"],
+        )
         injected_focus = list_scoped_canonical(
             conn, product_id="CTH", subject_id="SUBJ-A' OR 1=1 --",
         )
@@ -101,6 +108,9 @@ def test_reads_global_and_exact_focus_with_safe_scope_proofs(scope_db):
         "records": cth_global["records"], "candidate_count": 3, "scanned_count": 3,
         "rejected_count": 1, "returned_count": 2, "limit": 30, "truncated": False,
     }
+    assert cth_global_none == cth_global
+    assert [row["source_id"] for row in selected_focus["records"]] == ["raw-cth-a"]
+    assert selected_focus["candidate_count"] == selected_focus["returned_count"] == 1
     assert cth_limited["candidate_count"] == 3
     assert cth_limited["scanned_count"] == 1
     assert cth_limited["rejected_count"] == 1
@@ -146,7 +156,9 @@ def test_tampered_evidence_and_source_mismatch_are_rejected(scope_db):
         )
         conn.commit()
 
-        result = list_scoped_canonical(conn, product_id="CTH")
+        result = list_scoped_canonical(
+            conn, product_id="CTH", source_ids=["raw-tampered", "raw-not-signed"],
+        )
 
     assert tampered_id != mismatched_id
     assert result["candidate_count"] == 2
@@ -154,6 +166,69 @@ def test_tampered_evidence_and_source_mismatch_are_rejected(scope_db):
     assert result["rejected_count"] == 2
     assert result["returned_count"] == 0
     assert result["records"] == []
+
+
+def test_selected_older_source_is_filtered_before_limit(scope_db):
+    with sqlite3.connect(scope_db) as conn:
+        _persist_verified(
+            conn, "raw-old-selected", product="CTH", domain="cth", subject="SUBJ-A",
+            captured_at="2020-01-01T00:00:00Z",
+        )
+        _persist_verified(
+            conn, "raw-newer-a", product="CTH", domain="cth", subject="SUBJ-A",
+            captured_at="2026-09-28T02:00:00Z",
+        )
+        _persist_verified(
+            conn, "raw-newer-b", product="CTH", domain="cth", subject="SUBJ-A",
+            captured_at="2026-09-28T03:00:00Z",
+        )
+        conn.row_factory = sqlite3.Row
+        latest = list_scoped_canonical(
+            conn, product_id="CTH", subject_id="SUBJ-A", limit=1,
+        )
+        selected = list_scoped_canonical(
+            conn, product_id="CTH", subject_id="SUBJ-A", limit=1,
+            source_ids=["raw-old-selected"],
+        )
+
+    assert [row["source_id"] for row in latest["records"]] == ["raw-newer-b"]
+    assert [row["source_id"] for row in selected["records"]] == ["raw-old-selected"]
+    assert selected["candidate_count"] == selected["scanned_count"] == selected["returned_count"] == 1
+    assert selected["truncated"] is False
+
+
+def test_validate_source_ids_returns_a_detached_exact_selection():
+    supplied = ["raw-source-a"]
+    selected = validate_source_ids(supplied, limit=1)
+    assert selected == supplied and selected is not supplied
+    selected.append("local-only")
+    assert supplied == ["raw-source-a"]
+    assert validate_source_ids(None) is None
+    assert validate_source_ids(["x" * 512]) == ["x" * 512]
+    assert len(validate_source_ids([f"raw-{index}" for index in range(100)])) == 100
+
+
+@pytest.mark.parametrize(
+    ("source_ids", "limit"),
+    [
+        ("raw-source", 30),
+        ((), 30),
+        ([], 30),
+        (["raw-source", "raw-source"], 30),
+        ([None], 30),
+        (["   "], 30),
+        (["x" * 513], 30),
+        (["raw\x01source"], 30),
+        ([f"raw-{index}" for index in range(101)], 100),
+        (["raw-a", "raw-b"], 1),
+    ],
+)
+def test_source_ids_inputs_are_strict(scope_db, source_ids, limit):
+    with sqlite3.connect(scope_db) as conn:
+        with pytest.raises(ValueError, match="source_ids"):
+            list_scoped_canonical(
+                conn, product_id="CTH", limit=limit, source_ids=source_ids,
+            )
 
 
 @pytest.mark.parametrize(

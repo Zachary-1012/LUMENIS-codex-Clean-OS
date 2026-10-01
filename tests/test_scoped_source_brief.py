@@ -118,6 +118,18 @@ def test_zbmp_focus_is_exact_and_hostile_source_labels_are_escaped(brief_db):
     assert "\\]\\(javascript:alert" in result["markdown"] or "\\]" in result["markdown"]
 
 
+def test_explicit_selection_rejects_ambiguous_identity_before_limit(brief_db):
+    with sqlite3.connect(brief_db) as conn:
+        _add_signed(conn, "selected", subject="SUBJECT-A")
+        columns = [row[1] for row in conn.execute("PRAGMA table_info(canonical_data)")]
+        row = list(conn.execute("SELECT * FROM canonical_data").fetchone())
+        row[columns.index("canonical_id")] = "duplicate-canonical-identity"
+        conn.execute("INSERT INTO canonical_data VALUES (" + ",".join("?" for _ in row) + ")", row)
+    with pytest.raises(PermissionError, match="SOURCE_BRIEF_SELECTED_SOURCE_UNAVAILABLE"):
+        _read_brief(brief_db, product_id="CTH", global_scope=False, entity_label="Subject A",
+                    subject_id="SUBJECT-A", source_ids=["selected"], limit=1)
+
+
 @pytest.mark.parametrize(
     ("kwargs", "error"),
     [
