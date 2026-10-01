@@ -12,6 +12,26 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — same-source-SHA hosted Product and App gates PASS
+
+Both required workflows actually executed and passed at source commit
+`038fe598459c51040b8a72df02f6c88e75ca8e90`:
+[Product 36822477383](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/36822477383)
+and [App 36822481130](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/36822481130).
+This closes technical obligation 5 for that exact source snapshot. This later
+documentation update records the immutable runs; it is not another tested SHA.
+
+Product executed blocking governance, compile, isolated database and the full
+selected hermetic suite. App executed analysis and Flutter tests. No tests or
+gates were removed, quarantined or weakened. Existing Tier C exclusions remain
+LIVE_NOT_VERIFIED, and the advisory boundary scan still reports nine MEDIUM and
+eleven INFO findings. Hosted PASS does not imply Release or business acceptance.
+
+Next active blocker is useful owned text/visual reasoning and its real task
+outcome. Existing report/review/revision evidence is retained; its missing Shared
+Learning consumption is a bounded follow-up, not a trained model. The Product
+Owner's repeated human acceptance remains deferred to final consolidated review.
+
 ### 2026-10-01 — App hosted PASS; final Product fixture repair
 
 At `dacbd465ad26bd8236b4ab2191d77e496967701e`, App run `36821499154`

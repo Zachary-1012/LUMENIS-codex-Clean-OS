@@ -5,6 +5,29 @@ Base: `88ed522f00c996982010b9abfc232a17cfefe710`, fetched and verified on
 existing Collector intake. Unknown `work/`, source data, old artifacts and
 user model configuration are protected. No new owner or acceptance round.
 
+## Technical obligation 5 — same-SHA hosted PASS
+
+On 2026-10-01 both completed runs report `conclusion=success` and exact
+`headSha=038fe598459c51040b8a72df02f6c88e75ca8e90`:
+- [Product 36822477383](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/36822477383):
+  blocking governance/compile, isolated Shared Database acceptance and all 374
+  selected hermetic files executed. No background-thread leak was reported.
+- [App 36822481130](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/36822481130):
+  actual Flutter analysis (no issues) and tests passed.
+
+The test log did not expose a reliable aggregate passed-test count; none is
+invented here. Environment/Tier C and existing exact quarantines remain separate,
+unaccepted evidence. The advisory boundary scan reports nine MEDIUM and eleven
+INFO findings, no HIGH/CRITICAL. None of its standards or workflow triggers was
+changed for this result. Future CI remains milestone/PR/manual, not heavy on every
+ordinary main push. Local logs are `lumenis-product-gate-038fe598.log` and
+`lumenis-app-gate-038fe598.log` in the temporary directory; GitHub runs are the
+published evidence. This documentation-only follow-up does not alter the tested
+source or assert its own new SHA was tested by these historical runs.
+
+Acceptance: technical hosted obligation 5 PASS. Useful owned analysis/outcome,
+human acceptance, Release, Operating and Commercial Ready are not promoted.
+
 ## Hosted follow-up — App PASS and final Product fixture at dacbd465
 
 Exact tested source: `dacbd465ad26bd8236b4ab2191d77e496967701e`.
