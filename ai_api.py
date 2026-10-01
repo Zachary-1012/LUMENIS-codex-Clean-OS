@@ -434,6 +434,15 @@ def _get_engine():
     return get_task_engine()
 
 
+@bp.before_request
+def _scoped_report_task_boundary():
+    """Report tasks require Reporting's live actor and exact scope checks."""
+    path = request.path
+    if (path.startswith('/api/ai/tasks/rbrief_')
+            or (path == '/api/ai/trace' and request.args.get('task_id', '').startswith('rbrief_'))):
+        return jsonify({'ok': False, 'code': 'REPORT_TASK_SCOPED_ROUTE_REQUIRED'}), 403
+
+
 @bp.route('/api/ai/tasks', methods=['POST'])
 def api_ai_tasks_create():
     """创建 AI Task。

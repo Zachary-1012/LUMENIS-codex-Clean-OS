@@ -34,6 +34,8 @@ import json
 import logging
 import os
 import hashlib
+import math
+import re
 import sqlite3
 import threading
 import time
@@ -203,6 +205,221 @@ CREATE INDEX IF NOT EXISTS idx_ai_task_step_task ON ai_task_step(task_id);
 CREATE INDEX IF NOT EXISTS idx_ai_task_evidence_task ON ai_task_evidence(task_id);
 CREATE INDEX IF NOT EXISTS idx_ai_task_trace_task ON ai_task_trace(task_id);
 """
+
+
+_MANAGED_REPORT_TASK_PREFIX = "rbrief_"
+_MANAGED_REPORT_TASK_CREATOR = "shared.reporting.source_brief"
+_MANAGED_REPORT_TASK_ID_RE = re.compile(
+    r"^rbrief_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+)
+_REPORT_AUDIT_REF_RE = re.compile(r"^aud_[0-9a-f]{16}$")
+_REPORT_IMAGE_REF_RE = re.compile(r"^ART-[0-9a-f]{16}$")
+_REPORT_CONTEXT_KEYS = frozenset({
+    "actor_ref", "scope", "job_id", "limit", "image_source_ref",
+    "business_question", "permission_audit_ref",
+})
+_REPORT_CONTEXT_OPTIONAL_KEYS = frozenset({"operation_audit_ref"})
+_REPORT_SCOPE_KEYS = frozenset({
+    "product_id", "global_scope", "entity_label", "subject_id",
+    "brand_focus_id",
+})
+
+
+def _is_managed_report_task_id(task_id: Any) -> bool:
+    return type(task_id) is str and task_id.startswith(_MANAGED_REPORT_TASK_PREFIX)
+
+
+def _guard_generic_task_access(task_id: Any) -> None:
+    if _is_managed_report_task_id(task_id):
+        raise PermissionError(
+            "managed report tasks are accessible only through report-task methods"
+        )
+
+
+def _require_managed_report_task_id(task_id: Any) -> str:
+    if not _is_managed_report_task_id(task_id):
+        raise PermissionError("task is not a managed report task")
+    if _MANAGED_REPORT_TASK_ID_RE.fullmatch(task_id) is None:
+        raise ValueError("managed report task id is malformed")
+    return task_id
+
+
+def _strict_json_object_pairs(pairs):
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError("duplicate JSON object key")
+        value[key] = item
+    return value
+
+
+def _strict_json_loads(raw: Any, *, field_name: str) -> Any:
+    if type(raw) is not str:
+        raise ValueError(f"{field_name} must be JSON text")
+    try:
+        return json.loads(
+            raw,
+            object_pairs_hook=_strict_json_object_pairs,
+            parse_constant=lambda value: (_ for _ in ()).throw(
+                ValueError(f"invalid JSON constant: {value}")
+            ),
+        )
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise ValueError(f"{field_name} contains malformed JSON") from exc
+
+
+def _serialize_strict_json(value: Any, *, field_name: str) -> str:
+    try:
+        encoded = json.dumps(
+            value, ensure_ascii=False, allow_nan=False, sort_keys=True,
+            separators=(",", ":"),
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field_name} is not valid JSON data") from exc
+    _strict_json_loads(encoded, field_name=field_name)
+    return encoded
+
+
+def _valid_report_text(value: Any, max_length: int) -> bool:
+    return (
+        type(value) is str
+        and len(value) <= max_length
+        and not any(ord(character) == 0 for character in value)
+    )
+
+
+def _valid_report_scope_id(value: Any) -> bool:
+    return (
+        type(value) is str
+        and bool(value)
+        and value == value.strip()
+        and len(value) <= 256
+        and not any(ord(character) < 32 for character in value)
+    )
+
+
+def _validate_managed_report_context(context: Any) -> Dict[str, Any]:
+    """Validate and snapshot the server-derived Source Brief task context.
+
+    This is a storage contract only. Callers must authorize the real request
+    through SYSTEM Permission before creating or running a managed report task.
+    """
+    if type(context) is not dict:
+        raise ValueError("managed report context must be an object")
+    keys = set(context)
+    if (
+        not _REPORT_CONTEXT_KEYS.issubset(keys)
+        or not keys.issubset(_REPORT_CONTEXT_KEYS | _REPORT_CONTEXT_OPTIONAL_KEYS)
+    ):
+        raise ValueError("managed report context has missing or unsupported fields")
+
+    actor_ref = context.get("actor_ref")
+    valid_actor = (
+        actor_ref == "workspace:local"
+        or (
+            type(actor_ref) is str
+            and re.fullmatch(r"actor:[1-9][0-9]{0,18}", actor_ref) is not None
+        )
+    )
+    if not valid_actor:
+        raise ValueError("managed report actor_ref is invalid")
+
+    scope = context.get("scope")
+    if type(scope) is not dict or set(scope) != _REPORT_SCOPE_KEYS:
+        raise ValueError("managed report scope has missing or unsupported fields")
+    product_id = scope.get("product_id")
+    global_scope = scope.get("global_scope")
+    entity_label = scope.get("entity_label")
+    subject_id = scope.get("subject_id")
+    brand_focus_id = scope.get("brand_focus_id")
+    if (
+        product_id not in {"CTH", "ZBMP"}
+        or type(global_scope) is not bool
+        or not _valid_report_text(entity_label, 256)
+        or not entity_label.strip()
+    ):
+        raise ValueError("managed report scope is invalid")
+    if global_scope:
+        if subject_id is not None or brand_focus_id is not None:
+            raise ValueError("global managed report scope must not carry a focus id")
+    elif product_id == "CTH":
+        if not _valid_report_scope_id(subject_id) or brand_focus_id is not None:
+            raise ValueError("CTH managed report scope requires only subject_id")
+    elif not _valid_report_scope_id(brand_focus_id) or subject_id is not None:
+        raise ValueError("BMP managed report scope requires only brand_focus_id")
+
+    job_id = context.get("job_id")
+    if type(job_id) is not str or re.fullmatch(r"brief-[0-9a-f]{32}", job_id) is None:
+        raise ValueError("managed report job_id is invalid")
+
+    limit = context.get("limit")
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError("managed report limit must be an integer from 1 to 100")
+
+    image_source_ref = context.get("image_source_ref")
+    if image_source_ref is not None and (
+        type(image_source_ref) is not str
+        or _REPORT_IMAGE_REF_RE.fullmatch(image_source_ref) is None
+    ):
+        raise ValueError("managed report image_source_ref is invalid")
+
+    question = context.get("business_question")
+    if question is not None and (
+        not _valid_report_text(question, 1500)
+        or not 4 <= len(question.strip()) <= 1500
+    ):
+        raise ValueError("managed report business_question is invalid")
+
+    permission_audit_ref = context.get("permission_audit_ref")
+    if (
+        type(permission_audit_ref) is not str
+        or _REPORT_AUDIT_REF_RE.fullmatch(permission_audit_ref) is None
+    ):
+        raise ValueError("managed report permission_audit_ref is invalid")
+    if "operation_audit_ref" in context:
+        operation_audit_ref = context["operation_audit_ref"]
+        if (
+            type(operation_audit_ref) is not str
+            or _REPORT_AUDIT_REF_RE.fullmatch(operation_audit_ref) is None
+        ):
+            raise ValueError("managed report operation_audit_ref is invalid")
+
+    # JSON round-trip gives the stored task a detached, immutable-by-caller snapshot.
+    return _strict_json_loads(
+        _serialize_strict_json(context, field_name="managed report context"),
+        field_name="managed report context",
+    )
+
+
+def _validate_managed_report_parameters(value: Any) -> Dict[str, Any]:
+    if type(value) is not dict:
+        raise ValueError("managed report parameters must be an object")
+    if not value:
+        return value
+    if set(value) != {"worker_pid", "worker_started_at"}:
+        raise ValueError("managed report worker identity is malformed")
+    worker_pid = value.get("worker_pid")
+    worker_started_at = value.get("worker_started_at")
+    if (
+        type(worker_pid) is not int or worker_pid <= 0
+        or type(worker_started_at) not in (int, float)
+        or not math.isfinite(worker_started_at) or worker_started_at <= 0
+    ):
+        raise ValueError("managed report worker identity is malformed")
+    return value
+
+
+def _current_report_worker_identity() -> Dict[str, Any]:
+    try:
+        import psutil
+
+        identity = {
+            "worker_pid": os.getpid(),
+            "worker_started_at": psutil.Process().create_time(),
+        }
+    except Exception as exc:
+        raise RuntimeError("cannot verify managed report worker identity") from exc
+    return _validate_managed_report_parameters(identity)
 
 
 def init_task_engine_db() -> None:
@@ -574,12 +791,191 @@ class TaskEngine:
             "user_input": user_input,
         }
 
+    def create_report_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Persist one server-authorized Source Brief task in the existing table.
+
+        Authorization belongs to the existing Reporting route and SYSTEM
+        Permission owner. This method validates the storage shape only; it does
+        not grant authority to create, claim, resume, or publish a report.
+        """
+        report_context = _validate_managed_report_context(context)
+        task_id = f"{_MANAGED_REPORT_TASK_PREFIX}{uuid.uuid4()}"
+        now = self._now()
+        with get_db() as conn:
+            conn.execute(
+                """INSERT INTO ai_task
+                   (task_id, user_input, intent, parameters_json, context_json,
+                    status, risk_level, created_at, updated_at, created_by)
+                   VALUES (?, ?, 'generate_report', '{}', ?, 'pending', 'L0', ?, ?, ?)""",
+                (
+                    task_id,
+                    report_context["business_question"] or "Source Brief",
+                    _serialize_strict_json(
+                        report_context, field_name="managed report context"
+                    ),
+                    now,
+                    now,
+                    _MANAGED_REPORT_TASK_CREATOR,
+                ),
+            )
+        return self.get_report_task(task_id)
+
+    def get_report_task(self, task_id: str) -> Dict[str, Any]:
+        """Return one managed report task, failing closed on malformed JSON."""
+        _require_managed_report_task_id(task_id)
+        with get_db() as conn:
+            row = conn.execute(
+                "SELECT * FROM ai_task WHERE task_id=? AND created_by=?",
+                (task_id, _MANAGED_REPORT_TASK_CREATOR),
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"Managed report task not found: {task_id}")
+
+        task = dict(row)
+        if task.get("created_by") != _MANAGED_REPORT_TASK_CREATOR:
+            raise PermissionError("task is not owned by Source Brief reporting")
+        context = _strict_json_loads(
+            task.get("context_json"), field_name="managed report context"
+        )
+        task["context"] = _validate_managed_report_context(context)
+        parameters = _strict_json_loads(
+            task.get("parameters_json"), field_name="managed report parameters"
+        )
+        task["parameters"] = _validate_managed_report_parameters(parameters)
+        if task.get("result_json") is not None:
+            task["result"] = _strict_json_loads(
+                task["result_json"], field_name="managed report result"
+            )
+        return task
+
+    def claim_report_task(self, task_id: str) -> bool:
+        """Atomically claim an eligible managed report task for this process."""
+        task_id = _require_managed_report_task_id(task_id)
+        task = self.get_report_task(task_id)
+        if task.get("status") not in {"pending", "interrupted", "failed"}:
+            return False
+
+        worker_identity = _current_report_worker_identity()
+
+        expected_status = task["status"]
+        now = self._now()
+        worker_parameters = _serialize_strict_json(
+            {
+                "worker_pid": worker_identity["worker_pid"],
+                "worker_started_at": worker_identity["worker_started_at"],
+            },
+            field_name="managed report worker identity",
+        )
+        with get_db() as conn:
+            cursor = conn.execute(
+                """UPDATE ai_task
+                   SET status='running', started_at=?, finished_at=NULL,
+                       result_json=NULL, error=NULL, parameters_json=?, updated_at=?
+                   WHERE task_id=? AND created_by=? AND status=?""",
+                (
+                    now,
+                    worker_parameters,
+                    now,
+                    task_id,
+                    _MANAGED_REPORT_TASK_CREATOR,
+                    expected_status,
+                ),
+            )
+        return cursor.rowcount == 1
+
+    def finish_report_task(
+        self,
+        task_id: str,
+        *,
+        result: Optional[Dict[str, Any]] = None,
+        error: Optional[str] = None,
+    ) -> bool:
+        """Finish only a currently running managed report task (CAS)."""
+        task_id = _require_managed_report_task_id(task_id)
+        task = self.get_report_task(task_id)
+        if task.get("status") != "running":
+            return False
+        if task["parameters"] != _current_report_worker_identity():
+            return False
+        if (result is None) == (error is None):
+            raise ValueError("provide exactly one of result or error")
+
+        now = self._now()
+        if error is not None:
+            if (
+                not _valid_report_text(error, 2000)
+                or not error.strip()
+            ):
+                raise ValueError("managed report error must be a non-empty string")
+            sql = """UPDATE ai_task
+                     SET status='failed', result_json=NULL, error=?,
+                         finished_at=?, updated_at=?
+                     WHERE task_id=? AND created_by=? AND status='running'
+                       AND parameters_json=?"""
+            params = (
+                error, now, now, task_id, _MANAGED_REPORT_TASK_CREATOR,
+                task["parameters_json"],
+            )
+        else:
+            if type(result) is not dict:
+                raise ValueError("managed report result must be an object")
+            result_json = _serialize_strict_json(
+                result, field_name="managed report result"
+            )
+            sql = """UPDATE ai_task
+                     SET status='succeeded', result_json=?, error=NULL,
+                         finished_at=?, updated_at=?
+                     WHERE task_id=? AND created_by=? AND status='running'
+                       AND parameters_json=?"""
+            params = (
+                result_json, now, now, task_id, _MANAGED_REPORT_TASK_CREATOR,
+                task["parameters_json"],
+            )
+        with get_db() as conn:
+            cursor = conn.execute(sql, params)
+        return cursor.rowcount == 1
+
+    def mark_interrupted_report_task(
+        self, task_id: str, expected_parameters_json: str,
+    ) -> bool:
+        """Mark a dead worker's task interrupted; caller must verify process death."""
+        task_id = _require_managed_report_task_id(task_id)
+        expected_parameters = _validate_managed_report_parameters(
+            _strict_json_loads(
+                expected_parameters_json,
+                field_name="expected managed report worker identity",
+            )
+        )
+        if not expected_parameters:
+            raise ValueError("expected managed report worker identity is missing")
+        task = self.get_report_task(task_id)
+        if task.get("status") != "running":
+            return False
+        now = self._now()
+        with get_db() as conn:
+            cursor = conn.execute(
+                """UPDATE ai_task
+                   SET status='interrupted', error='worker_interrupted',
+                       finished_at=?, updated_at=?
+                   WHERE task_id=? AND created_by=? AND status='running'
+                     AND parameters_json=?""",
+                (
+                    now,
+                    now,
+                    task_id,
+                    _MANAGED_REPORT_TASK_CREATOR,
+                    expected_parameters_json,
+                ),
+            )
+        return cursor.rowcount == 1
+
     # ──────────────────────────────────────────────────────────
     # 2. 解析任务（Parser → Intent）
     # ──────────────────────────────────────────────────────────
 
     def parse_task(self, task_id: str) -> Dict[str, Any]:
         """解析任务：提取 intent/entities/parameters/context。"""
+        _guard_generic_task_access(task_id)
         task = self._db_get_task(task_id)
         if not task:
             raise ValueError(f"Task not found: {task_id}")
@@ -710,6 +1106,7 @@ class TaskEngine:
 
     def select_agent_and_skill(self, task_id: str) -> Dict[str, Any]:
         """选择 Agent 和 Skill。"""
+        _guard_generic_task_access(task_id)
         task = self._db_get_task(task_id)
         if not task:
             raise ValueError(f"Task not found: {task_id}")
@@ -764,6 +1161,7 @@ class TaskEngine:
 
     def check_permission(self, task_id: str) -> Dict[str, Any]:
         """执行权限检查。fail-closed：未通过则任务进入 awaiting_approval 或 failed。"""
+        _guard_generic_task_access(task_id)
         task = self._db_get_task(task_id)
         if not task:
             raise ValueError(f"Task not found: {task_id}")
@@ -878,6 +1276,7 @@ class TaskEngine:
 
     def execute_task(self, task_id: str) -> Dict[str, Any]:
         """执行任务。支持重试（最多 max_retries）、指数退避、熔断。"""
+        _guard_generic_task_access(task_id)
         # Lifecycle: start worker for this task (bypass-mode)
         _lc_started = False
         if self._lifecycle_worker:
@@ -897,6 +1296,7 @@ class TaskEngine:
                     pass
 
     def _execute_task_inner(self, task_id: str) -> Dict[str, Any]:
+        _guard_generic_task_access(task_id)
         task = self._db_get_task(task_id)
         if not task:
             raise ValueError(f"Task not found: {task_id}")
@@ -962,6 +1362,7 @@ class TaskEngine:
 
     def _execute_once(self, task_id: str, attempt: int) -> Dict[str, Any]:
         """单次执行。"""
+        _guard_generic_task_access(task_id)
         task = self._db_get_task(task_id)
         step_id = self._db_add_step(
             task_id, StepPhase.EXECUTE.value, "running",
@@ -1367,6 +1768,7 @@ class TaskEngine:
         approval_note: str = "",
     ) -> Dict[str, Any]:
         """人工审批通过。"""
+        _guard_generic_task_access(task_id)
         task = self._db_get_task(task_id)
         if not task:
             raise ValueError(f"Task not found: {task_id}")
@@ -1413,6 +1815,7 @@ class TaskEngine:
 
     def cancel_task(self, task_id: str, reason: str = "user_cancelled") -> Dict[str, Any]:
         """取消任务。"""
+        _guard_generic_task_access(task_id)
         self._cancelled.add(task_id)
         self._db_update_task(
             task_id, status=TaskStatus.CANCELLED.value,
@@ -1428,6 +1831,7 @@ class TaskEngine:
 
     def run_task(self, task_id: str) -> Dict[str, Any]:
         """完整运行任务：解析 → Agent/Skill选择 → 权限 → 执行。"""
+        _guard_generic_task_access(task_id)
         # 1. 解析
         task = self.parse_task(task_id)
         if task.get("status") in (TaskStatus.FAILED.value, TaskStatus.CANCELLED.value):
@@ -1461,6 +1865,7 @@ class TaskEngine:
     # ──────────────────────────────────────────────────────────
 
     def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
+        _guard_generic_task_access(task_id)
         return self._db_get_task(task_id)
 
     def list_tasks(
@@ -1469,10 +1874,10 @@ class TaskEngine:
         limit: int = 50,
         offset: int = 0,
     ) -> List[Dict[str, Any]]:
-        query = "SELECT * FROM ai_task"
-        params: List[Any] = []
+        query = "SELECT * FROM ai_task WHERE substr(task_id, 1, 7) <> ?"
+        params: List[Any] = [_MANAGED_REPORT_TASK_PREFIX]
         if status:
-            query += " WHERE status=?"
+            query += " AND status=?"
             params.append(status)
         query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
         params.extend([limit, offset])
@@ -1481,6 +1886,7 @@ class TaskEngine:
         return [dict(r) for r in rows]
 
     def get_steps(self, task_id: str) -> List[Dict[str, Any]]:
+        _guard_generic_task_access(task_id)
         with get_db() as conn:
             rows = conn.execute(
                 "SELECT * FROM ai_task_step WHERE task_id=? ORDER BY started_at",
@@ -1489,6 +1895,7 @@ class TaskEngine:
         return [dict(r) for r in rows]
 
     def get_evidence(self, task_id: str) -> List[Dict[str, Any]]:
+        _guard_generic_task_access(task_id)
         with get_db() as conn:
             rows = conn.execute(
                 "SELECT * FROM ai_task_evidence WHERE task_id=? ORDER BY created_at",
@@ -1501,17 +1908,22 @@ class TaskEngine:
         task_id: Optional[str] = None,
         limit: int = 100,
     ) -> List[Dict[str, Any]]:
+        _guard_generic_task_access(task_id)
         if task_id:
             with get_db() as conn:
                 rows = conn.execute(
-                    "SELECT * FROM ai_task_trace WHERE task_id=? ORDER BY started_at",
-                    (task_id,),
+                    """SELECT * FROM ai_task_trace
+                       WHERE task_id=? AND substr(task_id, 1, 7) <> ?
+                       ORDER BY started_at""",
+                    (task_id, _MANAGED_REPORT_TASK_PREFIX),
                 ).fetchall()
         else:
             with get_db() as conn:
                 rows = conn.execute(
-                    "SELECT * FROM ai_task_trace ORDER BY started_at DESC LIMIT ?",
-                    (limit,),
+                    """SELECT * FROM ai_task_trace
+                       WHERE substr(task_id, 1, 7) <> ?
+                       ORDER BY started_at DESC LIMIT ?""",
+                    (_MANAGED_REPORT_TASK_PREFIX, limit),
                 ).fetchall()
         return [dict(r) for r in rows]
 

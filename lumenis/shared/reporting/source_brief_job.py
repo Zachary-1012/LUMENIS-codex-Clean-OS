@@ -279,6 +279,7 @@ def create_source_brief_job(
     image_source_ref: str | None = None, image_actor: Any = None,
     retry_of_job_id: str | None = None,
     business_question: str | None = None,
+    before_persist=None,
 ) -> dict[str, Any]:
     """Create or recover a server-authorized scoped Source Brief report job.
 
@@ -298,6 +299,8 @@ def create_source_brief_job(
     existing = _read_report(job_id)
     if existing:
         verified = _verify_report(existing, job_id=job_id, actor_id=actor_id, expected_scope=scope)
+        if before_persist is not None:
+            before_persist()
         evaluations = _record_evaluations(verified)
         return _response(verified, evaluations)
 
@@ -385,6 +388,8 @@ def create_source_brief_job(
         report_id=job_id, report_type=report_type, report_date=report_date,
         total_notes=count, summary=brief["markdown"], source_snapshot=source_snapshot,
     )
+    if before_persist is not None:
+        before_persist()
     report_database.save_daily_report({
         "report_type": report_type, "report_date": report_date,
         "period_start": "", "period_end": "", "total_notes": count,

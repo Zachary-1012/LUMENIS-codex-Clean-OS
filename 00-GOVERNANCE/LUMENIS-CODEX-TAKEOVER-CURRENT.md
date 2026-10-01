@@ -2230,3 +2230,22 @@ reports=31, evaluations=64, integrity=ok, FK=0. See
 `evidence/round-07/ROUND-07-BUSINESS-BRIEF-2026-10-01.md`.
 This is a bounded implementation/verification increment, not Round/Product PASS.
 Codex Cloud remains development infrastructure, not LUMENIS product deployment.
+
+### 2026-10-01 — real scoped report task start/status/crash recovery
+
+Existing TaskEngine and Reporting now support asynchronous Source Brief start,
+scoped status and explicit authorized resume. Actual Guangzhou/Nike requests
+returned task IDs in 0.577/0.118 seconds; model inference still took about 116
+seconds. Nike's task survived a controlled Core crash as interrupted and resumed
+with the same job/artifact identity. Generic AI task routes cannot access these
+scoped tasks. No new store or automatic authority replay was added.
+
+153 isolated targeted tests passed; current Python compile, Constitution and
+diff checks passed. Protected source counts remain 270 Raw/270 Canonical;
+reports=33, evaluations=71, durable report tasks=2, integrity=ok, FK=0.
+The latest Nike draft remains quality FAIL despite structural/runtime success:
+task relevance and user-facing output quality are not yet accepted. Human
+repeated work and frontend binding remain pending; frontend stays paused.
+See `evidence/round-07/ROUND-07-SCOPED-REPORT-TASK-RECOVERY-2026-10-01.md`.
+This advances the recovery/API slice only. Round/Product Closure is not PASS;
+Codex Cloud remains a development environment, not LUMENIS hosting or AI service.

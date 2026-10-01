@@ -1421,6 +1421,13 @@ def _pg_resolve_operation_type(path, method):
             return OperationType.COLLECTOR_STOP
         return OperationType.COLLECTOR_START
     # 3. 报告生成
+    if method == 'POST' and (
+        p == '/api/experience/reports/source-brief/start'
+        or (p.startswith('/api/experience/reports/source-brief/tasks/rbrief_') and p.endswith('/resume'))
+    ):
+        # Same local report artifact operation; the route also rechecks exact
+        # actor/scope. This does not grant general DB_WRITE or external effects.
+        return OperationType.REPORT_GENERATE
     if ('/report' in p and '/generate' in p) or '/special-report' in p or '/weekly/send-email' in p:
         return OperationType.REPORT_GENERATE
     # 4. 数据导入

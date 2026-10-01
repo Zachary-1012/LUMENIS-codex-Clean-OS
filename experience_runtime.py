@@ -1109,6 +1109,91 @@ def reopen_source_brief_job(job_id):
         return jsonify({"ok": False, "code": "SOURCE_BRIEF_JOB_UNAVAILABLE"}), 503
 
 
+def _report_task_authorize(actor_ref, scope):
+    """Revalidate the actual request on admission, execution and artifact commit."""
+    from lumenis.system.security import get_permission_gate, OperationType
+
+    current_ref, audit_ref, current_scope, actor = _source_brief_context("write", include_actor=True)
+    if current_ref != actor_ref or current_scope != scope:
+        raise PermissionError("SOURCE_BRIEF_TASK_SCOPE_DENIED")
+    domain = "cth" if scope["product_id"] == "CTH" else "zbmp"
+    resource = domain + ":" + (scope["subject_id"] or scope["brand_focus_id"] or "GLOBAL_ALL")
+    allowed = get_permission_gate().check(
+        OperationType.REPORT_GENERATE, resource=resource, caller=actor_ref, domain_id=domain,
+    )
+    if (not allowed.allowed or not allowed.audit_id or allowed.resource != resource
+            or allowed.caller != actor_ref or allowed.domain_id != domain):
+        raise PermissionError("SOURCE_BRIEF_GENERATE_DENIED")
+    return actor, audit_ref
+
+
+@experience_bp.route("/api/experience/reports/source-brief/start", methods=["POST"])
+def start_source_brief_task():
+    from flask import copy_current_request_context
+    from lumenis.shared.reporting import source_brief_tasks as tasks
+
+    try:
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or set(body) - {"limit", "image_source_ref", "business_question"}:
+            raise ValueError("SOURCE_BRIEF_INPUT_INVALID")
+        limit = body.get("limit", 30)
+        if type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("SOURCE_BRIEF_LIMIT_INVALID")
+        question = body.get("business_question")
+        if "business_question" in body and (not isinstance(question, str) or not 4 <= len(question.strip()) <= 1500):
+            raise ValueError("SOURCE_BRIEF_BUSINESS_QUESTION_INVALID")
+        image_ref = body.get("image_source_ref")
+        if "image_source_ref" in body and (not isinstance(image_ref, str) or not re.fullmatch(r"ART-[0-9a-f]{16}", image_ref)):
+            raise ValueError("SOURCE_BRIEF_IMAGE_INPUT_INVALID")
+        actor_ref, audit_ref, scope = _source_brief_context("write")
+        authorize = lambda: _report_task_authorize(actor_ref, scope)
+        authorize()
+        task = tasks.create_task(actor_ref=actor_ref, scope=scope, permission_audit_ref=audit_ref,
+                                 limit=limit, image_source_ref=image_ref, business_question=question)
+        tasks.dispatch(task, authorize=authorize, request_wrapper=copy_current_request_context)
+        # The worker may already have finished; 202 is admission, not job success.
+        result = tasks.status(tasks.scoped_task(task["task_id"], actor_ref=actor_ref, scope=scope))
+        return jsonify({"ok": True, "task": result, "publish_status": "not_performed"}), 202
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "SOURCE_BRIEF_TASK_UNAVAILABLE"}), 503
+
+
+@experience_bp.route("/api/experience/reports/source-brief/tasks/<task_id>", methods=["GET"])
+def source_brief_task_status(task_id):
+    from lumenis.shared.reporting import source_brief_tasks as tasks
+
+    try:
+        actor_ref, _audit, scope = _source_brief_context("read")
+        task = tasks.scoped_task(task_id, actor_ref=actor_ref, scope=scope)
+        return jsonify({"ok": True, "task": tasks.status(task), "publish_status": "not_performed"})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "SOURCE_BRIEF_TASK_UNAVAILABLE"}), 503
+
+
+@experience_bp.route("/api/experience/reports/source-brief/tasks/<task_id>/resume", methods=["POST"])
+def resume_source_brief_task(task_id):
+    from flask import copy_current_request_context
+    from lumenis.shared.reporting import source_brief_tasks as tasks
+
+    try:
+        if request.get_json(silent=True) != {}:
+            raise ValueError("SOURCE_BRIEF_INPUT_INVALID")
+        actor_ref, _audit, scope = _source_brief_context("write")
+        task = tasks.scoped_task(task_id, actor_ref=actor_ref, scope=scope)
+        tasks.dispatch(task, authorize=lambda: _report_task_authorize(actor_ref, scope),
+                       request_wrapper=copy_current_request_context)
+        return jsonify({"ok": True, "task": tasks.status(tasks.scoped_task(
+            task_id, actor_ref=actor_ref, scope=scope)), "publish_status": "not_performed"}), 202
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "SOURCE_BRIEF_TASK_UNAVAILABLE"}), 503
+
+
 def _content_project_assets(payload, actor, scope):
     """Yield freshly fingerprinted local assets or authorized imported source refs."""
     from contextlib import contextmanager
