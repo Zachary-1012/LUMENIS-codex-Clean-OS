@@ -11,7 +11,7 @@ Agent Loop — Goal-driven Agent Runtime 主循环
   - max_cost     : 默认 $2.0
   - max_retries  : 默认 3
   - max_replans  : 默认 2
-  - timeout      : 单步超时
+  - timeout      : 单步超时配置；当前同步执行器不提供硬中断
   - cancellation : 支持外部取消
 
 每步检查：
@@ -24,7 +24,7 @@ Circuit breaker：复用 runtime_guardian / ai_channel 的熔断器。
 
 设计原则：
   - 状态机驱动，每步转换可审计
-  - 预算硬限制，超限即终止（fail-closed）
+  - 每步前检查累计预算，超限不开始下一步（fail-closed）
   - 所有工具执行经过安全检查链
   - AI 输出不直接成为 Production Truth
   - 默认不启用（Feature Flag），不影响现有功能
@@ -38,6 +38,7 @@ Circuit breaker：复用 runtime_guardian / ai_channel 的熔断器。
 from __future__ import annotations
 
 import json
+import math
 import threading
 import time
 import uuid
@@ -50,7 +51,7 @@ from .observation import ObservationLayer, Observation
 from .planner import Plan, PlanStep, Planner, PlanMode
 from .replanner import Replanner, ReplanDecision
 from lumenis.shared.evaluation.trajectory import TrajectoryEvaluator, TrajectoryMetrics, TrajectoryEvaluation
-from .durable_adapter import DurableExecutionAdapter
+from .durable_adapter import DurableExecutionAdapter, _sanitize_checkpoint_value
 
 
 @dataclass
@@ -138,6 +139,10 @@ class AgentLoop:
         self._durable = durable_adapter or DurableExecutionAdapter(
             enabled=self.config.enable_durable_execution)
         self._tool_executor = tool_executor or self._default_tool_executor
+        self._tool_executor_bound = (
+            tool_executor is not None and tool_executor is not self._default_tool_executor
+            and self._tool_executor is tool_executor
+        )
         self._permission_gate = permission_gate
 
         # 运行时状态
@@ -147,6 +152,8 @@ class AgentLoop:
         self._current_cost: float = 0.0
         self._steps_started: int = 0
         self._active_context: Dict[str, Any] = {}
+        self._active_limits: Dict[str, Any] = {}
+        self._resuming = False
         self._consecutive_failures: int = 0
         self._current_plan: Optional[Plan] = None
 
@@ -154,11 +161,232 @@ class AgentLoop:
     # 公共 API
     # ──────────────────────────────────────────────────────────
 
+    def resume(self, task_id: str, *, context: Dict[str, Any]) -> AgentResult:
+        """Resume a durable plan after fresh authorization.
+
+        Cumulative elapsed, cost, step, and replan budgets are restored. The
+        current synchronous tool executor has no hard per-step cancellation;
+        its saved timeout remains policy metadata and is not enforced here.
+        """
+        if not isinstance(task_id, str) or not task_id.strip():
+            raise RuntimeError("A persisted TaskEngine task ID is required")
+        recovered = self._durable.recover(task_id)
+        if not isinstance(recovered, dict) or recovered.get("source") != "db":
+            raise RuntimeError("TaskEngine-backed checkpoint is unavailable")
+        task, checkpoint = recovered.get("task"), recovered.get("last_checkpoint")
+        if not isinstance(task, dict) or not isinstance(checkpoint, dict):
+            raise RuntimeError("Persisted agent checkpoint is missing")
+        if task.get("status") == "cancelled" or checkpoint.get("state") == "cancelled":
+            raise RuntimeError("Cancelled agent tasks cannot be resumed")
+        if task.get("status") not in {"pending", "ready", "running", "failed", "succeeded", "completed"}:
+            raise RuntimeError("Persisted TaskEngine task state is not resumable")
+        if (task.get("created_by") != "agent_runtime" or task.get("agent_id") != checkpoint.get("agent_id")
+                or checkpoint.get("task_id") != task_id or task.get("task_id") != task_id):
+            raise RuntimeError("Persisted agent task identity does not match its checkpoint")
+        metadata = checkpoint.get("metadata")
+        if not isinstance(metadata, dict) or metadata.get("resumable") is not True:
+            raise RuntimeError("Persisted agent checkpoint is not resumable")
+        plan = self._restore_checkpoint_plan(checkpoint.get("plan_snapshot"))
+        if plan.goal != task.get("goal"):
+            raise RuntimeError("Persisted plan goal does not match its TaskEngine task")
+        checkpoint_state = checkpoint.get("state")
+        checkpoint_index = checkpoint.get("step_index")
+        if (checkpoint_state not in {"executing", "completed", "failed"}
+                or type(checkpoint_index) is not int or checkpoint_index < 0
+                or checkpoint_index > len(plan.steps)):
+            raise RuntimeError("Persisted agent checkpoint state or index is malformed")
+        saved_context = checkpoint.get("context")
+        if not isinstance(saved_context, dict) or saved_context != task.get("context"):
+            raise RuntimeError("Persisted agent context binding is malformed")
+        metrics = self._restore_checkpoint_metrics(metadata)
+
+        actor = context.get("actor") if isinstance(context, dict) else None
+        actor_id = context.get("actor_id") if isinstance(context, dict) else None
+        domain_id = context.get("domain_id") if isinstance(context, dict) else None
+        scope = context.get("scope") if isinstance(context, dict) else None
+        if (type(actor_id) is not int or actor_id < 1 or not isinstance(actor, dict)
+                or type(actor.get("id")) is not int or actor.get("id") != actor_id
+                or actor_id != saved_context.get("actor_id")
+                or domain_id != saved_context.get("domain_id")
+                or not self._valid_typed_scope(domain_id, scope)
+                or scope != saved_context.get("scope")):
+            return self._resume_result(task, plan, "blocked", "Fresh actor, domain, and scope do not match the persisted binding")
+        fresh_context, sensitive = _sanitize_checkpoint_value(context)
+        if sensitive or not isinstance(fresh_context, dict):
+            return self._resume_result(task, plan, "blocked", "Fresh resume context contains credential or approval material")
+        module = fresh_context.get("module")
+        if not isinstance(module, str) or not module.strip():
+            return self._resume_result(task, plan, "blocked", "Fresh resume context must identify the authorized module")
+        fresh_context.setdefault("domain", domain_id)
+        self._observation_layer.agent_id = task["agent_id"]
+
+        if self._task_is_completed(task, checkpoint, plan):
+            security = self._check_security(
+                PlanStep(index=0, action="read completed agent result", tool="agent_runtime.resume"),
+                fresh_context, fresh_authorization=True,
+            )
+            if not security.get("allowed"):
+                return self._resume_result(task, plan, "blocked", security.get("reason", "Fresh read permission denied"))
+            return self._resume_result(task, plan, "already_completed", "Task is already completed", include_result=True)
+
+        next_index = next((i for i, step in enumerate(plan.steps)
+                           if step.status not in {"completed", "skipped"}), len(plan.steps))
+        if next_index == len(plan.steps):
+            security = self._check_security(
+                PlanStep(index=0, action="read completed agent result", tool="agent_runtime.resume"),
+                fresh_context, fresh_authorization=True,
+            )
+            if not security.get("allowed"):
+                return self._resume_result(task, plan, "blocked", security.get("reason", "Fresh read permission denied"))
+            return self._resume_result(task, plan, "already_completed", "Task is already completed", include_result=True)
+        if checkpoint_state == "executing":
+            if (checkpoint_index == len(plan.steps)
+                    or plan.steps[checkpoint_index].status != "running"):
+                raise RuntimeError("Persisted executing checkpoint does not match its plan step")
+            next_index = checkpoint_index
+        if checkpoint_state == "completed":
+            if checkpoint_index == len(plan.steps):
+                if any(step.status not in {"completed", "skipped"} for step in plan.steps):
+                    raise RuntimeError("Completed agent checkpoint has incomplete plan steps")
+            elif plan.steps[checkpoint_index].status != "completed":
+                raise RuntimeError("Completed checkpoint does not match its plan step")
+        if checkpoint_state == "failed":
+            if checkpoint_index == len(plan.steps):
+                if not any(step.status == "failed" for step in plan.steps):
+                    raise RuntimeError("Failed agent checkpoint has no failed plan step")
+            elif plan.steps[checkpoint_index].status != "failed":
+                raise RuntimeError("Failed checkpoint does not match its plan step")
+        step = plan.steps[next_index]
+        if (step.status in {"running", "failed"}
+                and self._security_action(step).value in {"WRITE", "EXPORT", "COMMIT", "PUSH", "DEPLOY"}):
+            return self._resume_result(
+                task, plan, "reconciliation_required",
+                f"Step {step.step_id} may have produced a consequential effect; reconcile it before resuming",
+            )
+        if not self._tool_executor_bound:
+            return self._resume_result(
+                task, plan, "blocked", "TOOL_EXECUTOR_NOT_BOUND: resume requires an injected tool executor",
+            )
+
+        current_limits = self._current_budget_limits()
+        saved_limits = metrics["limits"]
+        effective_limits = {key: min(current_limits[key], saved_limits[key]) for key in current_limits}
+        return self.run(
+            task.get("goal", ""), context=fresh_context, agent_id=task["agent_id"],
+            _resume_state={
+                "task_id": task_id, "plan": plan, "next_index": next_index,
+                "elapsed_seconds": metrics["elapsed_seconds"],
+                "estimated_cost": metrics["estimated_cost"],
+                "steps_started": metrics["steps_started"], "replans": metrics["replans"],
+                "limits": effective_limits,
+            },
+        )
+
+    @staticmethod
+    def _valid_typed_scope(domain_id: Any, scope: Any) -> bool:
+        if (not isinstance(domain_id, str) or not isinstance(scope, dict)
+                or set(scope) != {"global_scope", "subject_id", "brand_focus_id"}
+                or type(scope.get("global_scope")) is not bool):
+            return False
+        subject, brand = scope.get("subject_id"), scope.get("brand_focus_id")
+        if scope["global_scope"]:
+            return subject is None and brand is None
+        domain = domain_id.strip().lower()
+        if domain == "cth":
+            return isinstance(subject, str) and bool(subject.strip()) and brand is None
+        if domain in {"bmp", "zbmp"}:
+            return subject is None and isinstance(brand, str) and bool(brand.strip())
+        return False
+
+    @staticmethod
+    def _restore_checkpoint_plan(snapshot: Any) -> Plan:
+        if not isinstance(snapshot, dict) or not snapshot.get("plan_id") or not isinstance(snapshot.get("steps"), list):
+            raise RuntimeError("Persisted agent plan snapshot is malformed")
+        try:
+            fields = set(Plan.__dataclass_fields__)
+            if set(snapshot) - fields:
+                raise ValueError("unknown plan fields")
+            data = {key: value for key, value in snapshot.items() if key != "steps"}
+            data["steps"] = []
+            for index, item in enumerate(snapshot["steps"]):
+                if (not isinstance(item, dict) or set(item) - set(PlanStep.__dataclass_fields__)
+                        or not item.get("step_id") or type(item.get("index")) is not int
+                        or item["index"] != index
+                        or item.get("status") not in {"pending", "running", "completed", "failed", "skipped"}):
+                    raise ValueError("invalid plan step identity or state")
+                data["steps"].append(PlanStep(**item))
+            if (not isinstance(data.get("goal"), str) or not isinstance(data.get("plan_id"), str)
+                    or not data["plan_id"] or not data["steps"]
+                    or len({step.step_id for step in data["steps"]}) != len(data["steps"])
+                    or any(not isinstance(step.step_id, str) or not step.step_id.strip()
+                           or not isinstance(step.action, str) or not isinstance(step.tool, str)
+                           or not isinstance(step.params, dict)
+                           for step in data["steps"])):
+                raise ValueError("empty plan or duplicate step identity")
+            usage = data.get("token_usage", {})
+            if (not isinstance(usage, dict) or any(
+                    type(value) not in (int, float) or not math.isfinite(value) or value < 0
+                    for value in usage.values())):
+                raise ValueError("invalid plan token metrics")
+            return Plan(**data)
+        except (TypeError, ValueError) as exc:
+            raise RuntimeError("Persisted agent plan snapshot is malformed") from exc
+
+    @staticmethod
+    def _restore_checkpoint_metrics(metadata: Dict[str, Any]) -> Dict[str, Any]:
+        limits = metadata.get("limits")
+        values = ("max_steps", "max_time_seconds", "max_cost", "max_retries",
+                  "max_replans", "step_timeout_seconds")
+        numeric = ("elapsed_seconds", "estimated_cost")
+        if (not isinstance(limits, dict) or any(key not in limits for key in values)
+                or any(type(metadata.get(key)) not in (int, float) or not math.isfinite(metadata[key])
+                       or metadata[key] < 0 for key in numeric)
+                or any(type(metadata.get(key)) is not int or metadata[key] < 0 for key in ("steps_started", "replans"))):
+            raise RuntimeError("Persisted agent budget checkpoint is malformed")
+        if any(type(limits[key]) not in (int, float) or not math.isfinite(limits[key])
+               or limits[key] < 0 for key in values):
+            raise RuntimeError("Persisted agent budget limits are malformed")
+        return {key: metadata[key] for key in numeric + ("steps_started", "replans")} | {
+            "limits": {key: limits[key] for key in values}
+        }
+
+    def _task_is_completed(self, task: Dict[str, Any], checkpoint: Dict[str, Any], plan: Plan) -> bool:
+        completed = ((checkpoint.get("state") == "completed"
+                      and checkpoint.get("step_index") == len(plan.steps))
+                     or task.get("status") in {"succeeded", "completed"})
+        if completed and any(step.status not in {"completed", "skipped"} for step in plan.steps):
+            raise RuntimeError("Completed agent task has incomplete plan steps")
+        return completed
+
+    def _resume_result(
+        self, task: Dict[str, Any], plan: Plan, status: str, error: str,
+        include_result: bool = False,
+    ) -> AgentResult:
+        result = AgentResult(
+            agent_id=task.get("agent_id", ""), task_id=task.get("task_id", ""),
+            status=status, goal=task.get("goal", "") if include_result else "",
+            error=None if include_result else error,
+            plan=plan.to_dict() if include_result else None,
+            started_at=datetime.now(timezone.utc).isoformat(),
+            finished_at=datetime.now(timezone.utc).isoformat(),
+        )
+        if include_result:
+            result.result = {
+                "completed_steps": sum(step.status == "completed" for step in plan.steps),
+                "total_steps": len(plan.steps),
+                "final_step_results": [
+                    {"index": step.index, "action": step.action, "status": step.status}
+                    for step in plan.steps
+                ],
+            }
+        return result
+
     def run(
         self,
         goal: str,
         context: Optional[Dict[str, Any]] = None,
         agent_id: Optional[str] = None,
+        _resume_state: Optional[Dict[str, Any]] = None,
     ) -> AgentResult:
         """执行 Agent Loop。
 
@@ -170,17 +398,24 @@ class AgentLoop:
         Returns:
             AgentResult 执行结果
         """
+        resuming = _resume_state is not None
         agent_id = agent_id or f"agent_{uuid.uuid4().hex[:12]}"
         context = context or {}
 
         # 初始化
         self._cancelled = False
-        self._start_time = time.time()
-        self._current_cost = 0.0
-        self._steps_started = 0
+        self._resuming = resuming
+        self._active_limits = (_resume_state["limits"] if resuming else self._current_budget_limits())
+        self._start_time = (time.time() - _resume_state["elapsed_seconds"]
+                            if resuming else time.time())
+        self._current_cost = _resume_state["estimated_cost"] if resuming else 0.0
+        self._steps_started = _resume_state["steps_started"] if resuming else 0
         self._active_context = context
         self._consecutive_failures = 0
         self._replanner.reset()
+        self._replanner._max_replans = self._active_limits["max_replans"]
+        if resuming:
+            self._replanner._replan_count = _resume_state["replans"]
 
         sm = AgentStateMachine(agent_id=agent_id, goal=goal)
         self._observation_layer.agent_id = agent_id
@@ -194,20 +429,19 @@ class AgentLoop:
         )
 
         # 创建 Durable Task
-        task_id = self._durable.create_task(goal, agent_id=agent_id, context=context)
+        task_id = (_resume_state["task_id"] if resuming
+                   else self._durable.create_task(goal, agent_id=agent_id, context=context))
         result.task_id = task_id
 
         try:
-            # 1. PLANNING
-            sm.transition_to(AgentState.PLANNING, reason="start planning")
-            plan = self._planner.plan(
-                goal,
-                mode=PlanMode(self.config.plan_mode),
-                context=context,
-            )
+            sm.transition_to(AgentState.PLANNING, reason="resume checkpoint" if resuming else "start planning")
+            plan = (_resume_state["plan"] if resuming else self._planner.plan(
+                goal, mode=PlanMode(self.config.plan_mode), context=context,
+            ))
             result.plan = plan.to_dict()
             self._current_plan = plan
-            self._current_cost += self._estimate_plan_cost(plan)
+            if not resuming:
+                self._current_cost += self._estimate_plan_cost(plan)
 
             if not plan.steps:
                 sm.fail("planner returned empty plan")
@@ -219,8 +453,11 @@ class AgentLoop:
             sm.transition_to(AgentState.EXECUTING, reason="plan ready",
                              metadata={"total_steps": plan.total_steps})
 
-            step_index = 0
+            step_index = _resume_state["next_index"] if resuming else 0
             while step_index < len(plan.steps):
+                if plan.steps[step_index].status in {"completed", "skipped"}:
+                    step_index += 1
+                    continue
                 # 检查取消
                 if self._is_cancelled():
                     sm.cancel(reason="external cancellation")
@@ -228,7 +465,7 @@ class AgentLoop:
                     return self._finalize(result, sm)
 
                 # 检查预算
-                budget_status = self._check_budget(step_index)
+                budget_status = self._check_budget(self._steps_started)
                 if budget_status != "ok":
                     if budget_status == "max_steps":
                         sm.fail("max_steps exceeded", reason="budget_exceeded")
@@ -251,11 +488,17 @@ class AgentLoop:
                 step.status = "running"
 
                 # 3. 安全检查（每步）
-                security = self._check_security(step, context)
+                security = (self._check_security(step, context, fresh_authorization=True)
+                            if resuming else self._check_security(step, context))
                 if not security["allowed"]:
                     step.status = "failed"
                     step.error = security["reason"]
                     self._consecutive_failures += 1
+                    if resuming:
+                        sm.fail(step.error, reason="fresh_authorization_denied")
+                        result.status = "blocked"
+                        result.error = step.error
+                        return self._finalize(result, sm)
 
                     # 检查是否需要重规划
                     obs = self._observation_layer.observe(
@@ -303,6 +546,11 @@ class AgentLoop:
                     step.status = "failed"
                     step.error = exec_result.get("error", "unknown error")
                     self._consecutive_failures += 1
+                    if resuming:
+                        sm.fail(step.error, reason="resumed_step_failed")
+                        result.status = "failed"
+                        result.error = step.error
+                        return self._finalize(result, sm)
 
                     # 6. REPLAN 检查
                     decision = self._replanner.should_replan(
@@ -310,7 +558,7 @@ class AgentLoop:
                         failed_step=step,
                         retry_count=self._consecutive_failures,
                         max_retries=self.config.max_retries,
-                        budget_exceeded=self._check_budget(step_index) != "ok",
+                        budget_exceeded=self._check_budget(self._steps_started) != "ok",
                     )
                     if decision:
                         plan = self._do_replan(sm, goal, plan, decision, obs, context)
@@ -319,17 +567,21 @@ class AgentLoop:
                     else:
                         step_index += 1
 
-            # 循环结束 → 完成
-            sm.complete(reason="all steps executed")
-            result.status = "completed"
-            result.result = {
-                "completed_steps": sum(1 for s in plan.steps if s.status == "completed"),
-                "total_steps": len(plan.steps),
-                "final_step_results": [
-                    {"index": s.index, "action": s.action, "status": s.status}
-                    for s in plan.steps
-                ],
-            }
+            if any(step.status == "failed" for step in plan.steps):
+                sm.fail("required agent steps remain failed", reason="incomplete_plan")
+                result.status = "failed"
+                result.error = "Required plan steps did not complete"
+            else:
+                sm.complete(reason="all steps executed")
+                result.status = "completed"
+                result.result = {
+                    "completed_steps": sum(1 for s in plan.steps if s.status == "completed"),
+                    "total_steps": len(plan.steps),
+                    "final_step_results": [
+                        {"index": s.index, "action": s.action, "status": s.status}
+                        for s in plan.steps
+                    ],
+                }
 
         except StateTransitionError as e:
             sm.fail(str(e), reason="state_machine_error")
@@ -368,14 +620,20 @@ class AgentLoop:
 
     def _check_budget(self, current_step: int) -> str:
         """检查预算，返回 'ok' 或超限类型。"""
-        if current_step >= self.config.max_steps:
+        limits = self._active_limits or self._current_budget_limits()
+        if current_step >= limits["max_steps"]:
             return "max_steps"
         elapsed = time.time() - self._start_time
-        if elapsed >= self.config.max_time_seconds:
+        if elapsed >= limits["max_time_seconds"]:
             return "max_time"
-        if self._current_cost >= self.config.max_cost:
+        if self._current_cost >= limits["max_cost"]:
             return "max_cost"
         return "ok"
+
+    def _current_budget_limits(self) -> Dict[str, Any]:
+        names = ("max_steps", "max_time_seconds", "max_cost", "max_retries",
+                 "max_replans", "step_timeout_seconds")
+        return {name: getattr(self.config, name) for name in names}
 
     def _checkpoint_metadata(
         self,
@@ -384,15 +642,13 @@ class AgentLoop:
     ) -> Dict[str, Any]:
         """Capture cumulative run usage and its limits without resetting budget."""
         elapsed = max(0.0, time.time() - self._start_time) if self._start_time else 0.0
-        limits = ("max_steps", "max_time_seconds", "max_cost", "max_retries",
-                  "max_replans", "step_timeout_seconds")
         return {
             "elapsed_seconds": round(elapsed, 3),
             "estimated_cost": round(self._current_cost if estimated_cost is None
                                      else estimated_cost, 6),
             "steps_started": self._steps_started if steps_started is None else steps_started,
             "replans": self._replanner.replan_count,
-            "limits": {name: getattr(self.config, name) for name in limits},
+            "limits": dict(self._active_limits or self._current_budget_limits()),
         }
 
     def _checkpoint_plan_snapshot(
@@ -452,7 +708,9 @@ class AgentLoop:
             AgentAction.DEPLOY: OperationType.RUNTIME_OPERATION,
         }[action]
 
-    def _check_security(self, step: PlanStep, context: Dict[str, Any]) -> Dict[str, Any]:
+    def _check_security(
+        self, step: PlanStep, context: Dict[str, Any], *, fresh_authorization: bool = False,
+    ) -> Dict[str, Any]:
         """SYSTEM Permission → Action Firewall → Effect Fence; every error fails closed."""
         from lumenis.system.security import (
             ActionRequest,
@@ -479,15 +737,39 @@ class AgentLoop:
             gate = self._get_permission_gate()
             if gate is None:
                 raise RuntimeError("canonical SYSTEM Permission unavailable")
-            perm_result = gate.check(
-                operation,
-                resource=target,
-                risk_level=risk,
-                caller=f"agent_runtime:{self._observation_layer.agent_id}",
-                operation_id=operation_id,
-                domain_id=str(context.get("domain_id") or "") or None,
-                role=str(context.get("role") or "") or None,
-            )
+            if fresh_authorization:
+                from lumenis.system.security import check_actor_scope_permission
+
+                binding = context.get("scope")
+                actor_scope = check_actor_scope_permission(
+                    context.get("actor"),
+                    domain_id=str(context.get("domain_id") or ""),
+                    action=("write" if action.value in {"WRITE", "COMMIT", "PUSH", "DEPLOY"}
+                            else "read"),
+                    module=str(context.get("module") or ""),
+                    subject_id=binding.get("subject_id") if isinstance(binding, dict) else None,
+                    brand_focus_id=binding.get("brand_focus_id") if isinstance(binding, dict) else None,
+                    global_scope=binding.get("global_scope", False) if isinstance(binding, dict) else False,
+                    gate=gate,
+                )
+                if not actor_scope.allowed:
+                    return {
+                        "allowed": False,
+                        "reason": f"actor scope denied: {actor_scope.reason}",
+                        "layer": "actor_scope",
+                    }
+            gate_args = {
+                "resource": target,
+                "risk_level": risk,
+                "caller": f"agent_runtime:{self._observation_layer.agent_id}",
+                "domain_id": str(context.get("domain_id") or "") or None,
+            }
+            if not fresh_authorization:
+                gate_args.update(
+                    operation_id=operation_id,
+                    role=str(context.get("role") or "") or None,
+                )
+            perm_result = gate.check(operation, **gate_args)
             if not perm_result.allowed:
                 return {
                     "allowed": False,
@@ -715,6 +997,9 @@ class AgentLoop:
             "retries": self._consecutive_failures,
             "final_state": sm.state.value,
         }
+        if self._resuming:
+            result.metrics["step_timeout_enforcement"] = "not_enforced_by_synchronous_executor"
+            result.metrics["effective_budget_limits"] = dict(self._active_limits)
 
         # 轨迹评估
         if self.config.enable_evaluation:
@@ -727,7 +1012,7 @@ class AgentLoop:
                     retry_count=self._consecutive_failures,
                     total_duration_ms=result.duration_ms,
                     estimated_cost=self._current_cost,
-                    budget_cost=self.config.max_cost,
+                    budget_cost=(self._active_limits or self._current_budget_limits())["max_cost"],
                     expected_steps=len(steps),
                     goal_achieved=result.status == "completed",
                     final_error=result.error,
@@ -760,6 +1045,10 @@ class AgentLoop:
                 metadata=self._checkpoint_metadata(),
             )
 
+        if self._resuming and result.status != "completed":
+            result.goal = ""
+            result.plan = None
+            result.result = None
         return result
 
     @staticmethod

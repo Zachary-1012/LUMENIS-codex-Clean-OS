@@ -119,3 +119,49 @@ not its former independent JSON state store. OSAI live main was rechecked as
 reasoning are claimed. GLOBAL UNIVERSE / DATA MATURITY IMPACT: CommercialNO,
 BrandNO, TaikooPARTIAL. COMMERCIAL OVERLAY IMPACT: RELEASED/OPERATING/
 COMMERCIAL_READY=NO. ROUND07 remains REWORK until its real user-work gates close.
+
+## 2026-10-01 — actual execution resume through the same driver
+
+Base HEAD/origin/main 0c54616ea56644945619f5836b7cc4205b3c29e1. Existing
+Agent Runtime / TaskEngine / Shared Database / SYSTEM Permission owners.
+`AgentLoop.resume(task_id, context=...)` validates the durable task/checkpoint,
+restores the exact plan and cumulative usage, and executes only remaining steps
+through the existing run loop. It does not plan again or create a second task.
+Completed-result reads require fresh authorization and add no checkpoints.
+
+Fresh trusted actor, canonical domain, exact typed scope and current DB scope
+grants are required. Resumed PermissionGate checks omit the previous operation
+ID because its cached allow could survive revocation; stable PlanStep IDs remain
+at the Effect Fence. Wrong/revoked bindings return no prior goal/plan/result.
+Interrupted READ may re-execute under the current security chain; uncertain
+WRITE/EXPORT/COMMIT/PUSH/DEPLOY stops for reconciliation before effect checks or
+tool calls. Missing/malformed/cancelled/non-resumable/memory-only checkpoints
+are refused. Missing real executor blocks instead of simulated success.
+
+Elapsed/cost/started steps/replans do not reset. Current/saved limits take the
+minimum. Enforcement checks occur between synchronous tool calls; a hard
+per-step cancellation deadline is NOT_ENFORCED by the existing executor and is
+reported in result metrics. This Batch does not introduce unsafe background
+threads to claim cancellation. Required failed steps cannot produce completion.
+
+Root reviewed the coherent +326/-45 core candidate and accepted its necessary
+validation/security branches above the approximate 200-line target; no cosmetic
+compression, alternate executor or new owner was introduced. The final guard
+and documentation delta remains in the same bounded capability Batch.
+Root replay uses an explicitly created empty SQLite seed in an OS-temp directory
+via LUMENIS_TEST_SEED_DB; each fixture initializes its own isolated tables. The
+repository P0-C guard refused an earlier attempt because protected data/monitor.db
+had WAL/SHM sidecars. Those files were neither removed nor checkpointed. The
+five resume/checkpoint/loop/durable suites passed69 tests (17 new plus52 prior),
+with no thread leaks. Constitution/governance gates remain blocking publication.
+
+REAL DELIVERY CARD / 真实用户工作闭环验收: ENTRY is AgentLoop.resume; REAL INPUT
+is reopened isolated TaskEngine with current canonical authorization tables;
+USER-VISIBLE RESULT is same-task continuation and repeat NOOP. FAILURE/RECOVERY
+covers revoked cached allow, wrong scope/actor, uncertain effect, malformed
+checkpoint and restored budgets. ACCEPTANCE ASSERTION is TESTED source, not an
+actual Source Brief/CTH/BMP report, provider activation or ROUND07 PASS.
+CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION: ADAPT OSAI durable-session
+semantics to this existing owner, preserving fresh permission and one executor.
+GLOBAL UNIVERSE / DATA MATURITY IMPACT and COMMERCIAL OVERLAY IMPACT remain
+Commercial/BrandNO, TaikooPARTIAL, RELEASED/OPERATING/COMMERCIAL_READY=NO.

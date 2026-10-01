@@ -12,6 +12,25 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — fresh-authorized AgentLoop execution resume
+
+At base 0c54616ea56644945619f5836b7cc4205b3c29e1, AgentLoop resumes its
+persisted TaskEngine plan through the existing run driver. Completed steps are
+not replayed; task/plan/step identities and cumulative elapsed/cost/started-step/
+replan budgets are retained, using the stricter current or saved limits.
+Every resumed step rechecks canonical actor/scope and Permission without stale
+approval-cache reuse, followed by the existing firewall/fence. Denied results
+omit prior business content. Interrupted consequential writes require
+reconciliation before tool/fence calls; interrupted reads may continue after
+fresh checks. An unbound default simulation cannot finish remaining work.
+The existing synchronous executor does not enforce hard per-step timeouts;
+that limitation is explicit in source and result metrics. Tests reopen actual
+isolated TaskEngine SQLite with strict canonical Permission checks. No product
+DB, model or real business/user Job is used. Results are in the existing
+[ROUND07 checkpoint proof](evidence/round-07/ROUND-07-AGENT-CHECKPOINT-PERSISTENCE-2026-10-01.md).
+Source Brief API integration, useful self-owned inference/deployment and final
+human acceptance remain open; no Round, coverage or release flag is promoted.
+
 ### 2026-10-01 — exact owned-candidate held-out evaluation
 
 At base fd38f1866d4425986308ba59afd2057073228303, the existing AI Gateway
