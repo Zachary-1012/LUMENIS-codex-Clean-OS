@@ -2312,3 +2312,26 @@ This batch's final restart reopened both new reports and five prior artifacts
 without changing their persisted source, analysis or artifact values. Actual
 DB: Raw 270, Canonical 270, reports 42, evaluations 101, report tasks 10,
 integrity ok, FK 0. These are runtime evidence counts, not completion metrics.
+
+### 2026-10-01 — versioned business pilot proposals and explicit quality limits
+
+Reporting v5 adds required pilot audience, procedure, observation and continue/
+stop conditions to the existing signed derivative. Plans are labeled unexecuted
+proposals; v1–v4 remain verifiable/reopenable with original values. No model or
+cloud configuration changed. 54 isolated targeted tests, compile and Constitution
+passed. Actual Guangzhou/Nike drafts produced Evidence 436/437 and exact scoped
+reopen/resume; both new and both prior v4 reports stayed unchanged on readback.
+Guangzhou now supplies a bounded discussion proposal but needs threshold and
+inconclusive-result review; Nike still overgeneralizes creator content and uses
+an unavailable baseline. Engineering quality is UNKNOWN/FAIL, human acceptance
+pending. This is contract/runtime progress, not accepted AI business usefulness.
+
+Research is retained in
+`intelligence_library/01_序境产品研究/BUSINESS-PILOT-RESEARCH-20261001.md`;
+evidence in `evidence/round-07/ROUND-07-BUSINESS-PILOT-2026-10-01.md`.
+Raw/Canonical remain 270/270 and match backup row digests; reports 44,
+evaluations 109, report tasks 12, integrity ok, FK 0. Next existing blocker:
+operator report review write/recovery through Reporting/Evidence/Evaluation;
+generation alone has no user disposition or observed-business-Outcome route.
+Frontend remains paused; no hosted rerun, product hosting or independent
+inference claim. Codex Cloud remains development infrastructure only.

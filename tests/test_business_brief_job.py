@@ -20,11 +20,20 @@ def test_excerpt_selection_retains_short_source_context_and_merges_tiny_tail():
 
 def _answer(payload):
     source = json.loads(payload)["sources"][0]
-    return {"source_observations": [{"source_id": source["source_id"], "excerpt_index": 0}],
+    value = {"source_observations": [{"source_id": source["source_id"], "excerpt_index": 0}],
             "interpretations": [{"text": "This source alone cannot establish consumer demand.", "source_ids": [source["source_id"]]}],
             "proposed_actions": [{"action": "Check the proposed content with the team.", "reason": "Only one source is available.",
                                   "check": "Ask for actual customer feedback before promotion.", "source_ids": [source["source_id"]]}],
             "unknowns": ["Sales and customer sentiment are unknown."]}
+    if analysis._VERSION == "report-business-brief/5":
+        value["proposed_actions"][0]["pilot"] = {
+            "audience": "Propose inviting five consenting participants.",
+            "procedure": "Show two draft concepts in alternating order during one interview round.",
+            "measure": "Record each person's unaided interpretation, preference and reason.",
+            "continue_if": "Explore the concept further only if its intended meaning is understood.",
+            "stop_if": "Revise if misunderstood; draw no conclusion if feedback is insufficient.",
+        }
+    return value
 
 
 def _mock_model(monkeypatch, transform=lambda value: value):
@@ -49,6 +58,8 @@ def test_real_route_derivative_and_reopen_are_scoped_immutable_not_business_succ
     assert draft["state"] == "draft", draft
     assert draft["review_status"] == "HUMAN_PENDING"
     assert draft["outcome_state"] == "NOT_OBSERVED" and draft["action_state"] == "NOT_EXECUTED"
+    assert set(draft["analysis"]["proposed_actions"][0]["pilot"]) == set(analysis._PILOT_FIELDS)
+    assert "待确认的小规模试验（尚未执行）" in draft["markdown"]
     assert len(calls) == 1 and calls[0]["sources"][0]["excerpts"][0].startswith("Private source body")
     assert draft["sample"]["coverage"] == "PARTIAL"
     assert job["source_brief"]["records"][0].get("text") is None
@@ -165,11 +176,12 @@ def test_model_schema_diagnostic_is_rejected_not_silently_removed(client, monkey
         assert rejected and "rejected_model_output" in json.loads(rejected[0])
 
 
-def test_v3_signed_artifact_remains_reopenable_after_v4_upgrade(client, monkeypatch):
+@pytest.mark.parametrize("version", ["report-business-brief/1", "report-business-brief/2", "report-business-brief/3", "report-business-brief/4"])
+def test_previous_signed_artifact_remains_reopenable_after_v5_upgrade(client, monkeypatch, version):
     api, _, _, _, _ = client
     calls = _mock_model(monkeypatch)
     with monkeypatch.context() as previous:
-        previous.setattr(analysis, "_VERSION", "report-business-brief/3")
+        previous.setattr(analysis, "_VERSION", version)
         job = api.post(URL + "/generate", headers=GLOBAL, json={
             "business_question": "Propose an operating research direction.",
         }).get_json()["result"]
@@ -177,6 +189,34 @@ def test_v3_signed_artifact_remains_reopenable_after_v4_upgrade(client, monkeypa
     reopened = api.get(URL + "/jobs/" + job["job_id"], headers=GLOBAL)
     assert reopened.status_code == 200 and reopened.get_json()["result"] == job
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize("bad", ["missing", "partial", "extra", "empty", "too_long", "wrong_type", "diagnostic"])
+def test_malformed_pilot_is_rejected_without_repairing_model_output(client, monkeypatch, bad):
+    def corrupt(value):
+        action = value["proposed_actions"][0]
+        if bad == "missing":
+            del action["pilot"]
+        elif bad == "partial":
+            del action["pilot"]["stop_if"]
+        elif bad == "extra":
+            action["pilot"]["success"] = True
+        elif bad == "empty":
+            action["pilot"]["measure"] = " "
+        elif bad == "too_long":
+            action["pilot"]["measure"] = "x" * 181
+        elif bad == "wrong_type":
+            action["pilot"] = []
+        else:
+            action["pilot"]["measure"] = "source_ids_unknown"
+        return value
+    _mock_model(monkeypatch, corrupt)
+    api, _, path, _, _ = client
+    job = api.post(URL + "/generate", headers=GLOBAL, json={"business_question": "Plan a small content experiment."}).get_json()["result"]
+    assert job["business_analysis"]["state"] == "unavailable"
+    with sqlite3.connect(path) as con:
+        assert con.execute("SELECT count(*) FROM app_evidence_records WHERE feature_id='REPORT_BUSINESS_ANALYSIS'").fetchone()[0] == 0
+        assert con.execute("SELECT count(*) FROM app_evidence_records WHERE feature_id='REPORT_BUSINESS_ANALYSIS_REJECTED'").fetchone()[0] == 1
 
 
 def test_diagnostic_filter_does_not_modify_original_source_quote():
