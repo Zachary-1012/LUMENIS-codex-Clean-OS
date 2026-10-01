@@ -1,5 +1,12 @@
 # LUMENIS ROUND 02 Charter — CURRENT
 
+> 2026-10-02 routing clarification: this accepted charter is the historical R02
+> coverage proof, not the current execution schedule. Its dated source/status
+> and former next-round assignments remain provenance. Dispatch and unresolved
+> capabilities now follow C1–C6 in `AGENTS.md` and the Source Owner Index;
+> neither its historical provider candidates nor worker model descriptions
+> authorize activation or override today's Product Owner decisions.
+
 > Status: **PASS / CLOSED FOR ROUND 02 SCOPE**. The clean-main Windows SYS-01 job and truthful health correction were verified; later product rounds and commercial release remain open.
 >
 > This Charter is subordinate to `AGENTS.md`, the sole Product Architecture, the sole Experience Constitution and `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. It controls only ROUND 02 and cannot authorize ROUND 03 implementation.

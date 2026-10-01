@@ -9,8 +9,8 @@
 This decision records how the approved commercial surfaces are delivered. It is not a second Product Architecture, Experience authority, data owner, runtime owner, or completion claim. Current executable source and runtime evidence remain authoritative.
 
 The Product Owner also accepted the ROUND 01 audit, missing-capability register and
-15-round mapping on 2026-09-21. That approval authorizes the ordered execution
-baseline, not implementation from the audit PDF or its sketches. All generated visual
+15-round coverage on 2026-09-21. Current dispatch follows C1–C6 in AGENTS.md
+with independent frontend F. The earlier approval is a coverage baseline, not implementation from the audit PDF or its sketches. All generated visual
 artifacts remain `DESIGN_EXPLORATION` until the sole Experience authority and a
 current detailed screen specification establish `DESIGN_READY`.
 
@@ -43,7 +43,7 @@ The surfaces may recompose navigation, density and interaction for their devices
 | --- | --- | --- | --- |
 | Public Website | Commercial introduction and acquisition | Product/domain explanation, industries and use cases, customer cases, truthful demo, trial request, enterprise contact, help, login/workspace entry | No Production Truth, operational workflow, privileged action, Canonical Data owner or client-side provider secret |
 | Web Workspace | Primary commercial workspace | Authorized Subject/BrandFocus selection; CTH/BMP/AI/Shared/SYSTEM workflows; Evidence Trace; Case/Insight/Decision/Action; reporting/export; collaboration, approval and light configuration | Uses canonical Product Core/API/ViewModel; must not recreate local Cookie/CDP/filesystem/local-AI capability in the browser or simulate a desktop result |
-| Desktop App | Power User Client | Full workspace plus local Browser/CDP, Cookie/session, Collector, long-running tasks, local files, Ollama/Local AI, enterprise LAN/private deployment, recovery and advanced execution | Desktop-only capability remains behind SYSTEM Permission/effect fences and explicit capability state; it does not create separate business truth |
+| Desktop App | Power User Client | Full workspace plus local Browser/CDP, Cookie/session, Collector, long-running tasks, local files, approved owned AI capability, enterprise LAN/private deployment, recovery and advanced execution | Desktop-only capability remains behind SYSTEM Permission/effect fences and explicit capability state; it does not create separate business truth |
 | Mobile Companion | Timely review and light action | Notifications, events, AI results, approvals, task state, report reading and bounded quick actions | Not the primary dense-analysis or local-execution environment; unavailable capability is shown honestly and may hand off to an authorized Web/Desktop task |
 
 ## 3. Approved technical route
@@ -81,13 +81,15 @@ actor + tenant/scope
 
 Surface capability must be explicit: `AVAILABLE`, `DEGRADED`, `DESKTOP_REQUIRED`, `PERMISSION_REQUIRED`, `UNAVAILABLE` or `UNKNOWN`. A Web or Mobile request may enqueue or hand off an authorized Desktop/SYSTEM task only through a real canonical contract with status, Evidence and recovery. It may not report success from an optimistic UI, HTTP 200, registration record or fixture.
 
-The pre-beta product-account decision remains in force until the identity/tenant architecture is approved in its scheduled round. Multi-surface approval does not authorize a new login database, browser-side credential store or bypass of protected server routes.
+The pre-beta product-account decision remains in force until product engineering closure and the Product Owner's subsequent redesign. Multi-surface approval does not authorize a new login database, browser-side credential store or bypass of protected server routes.
 
 ## 5. Jev product decision
 
-Jev is approved as a candidate **typed decision and evaluation provider** behind the one canonical `lumenis/system/ai_gateway/`. Jev is not a replacement for a generative language provider and is not an independent AI gateway.
+Historical decision only: Jev was approved as a candidate **typed decision and evaluation provider** behind the one canonical `lumenis/system/ai_gateway/`. Jev is not a replacement for a generative language provider and is not an independent AI gateway.
 
-Approved candidate uses:
+Current policy keeps Jev inactive. The following design/licensing material remains research, not activation authority.
+
+Historical candidate uses:
 
 - routing and classification over source-backed state;
 - Evidence relevance/quality scoring and uncertainty disclosure;
@@ -102,7 +104,7 @@ Forbidden ownership:
 - no promotion of probabilities, confidence or model output to Production Truth;
 - no silent fallback that changes a typed decision into unrelated free-text generation.
 
-Required provider lifecycle:
+Historical lifecycle (inactive under current policy):
 
 ```text
 OFF
@@ -112,7 +114,7 @@ OFF
 → ACTIVE only for explicitly approved typed tasks
 ```
 
-Production configuration must pin an accepted model version; a moving alias is limited to development/probing. Every persisted decision record must identify provider, model/version, input/output schema, probabilities, confidence, request ID, latency, token/cost data when supplied, input/output hashes, actor/domain/object scope and Evidence references. Low confidence or schema failure remains `UNKNOWN` or requires human review.
+Any future separately approved activation must pin an accepted model version; a moving alias is limited to development/probing. Every persisted decision record must identify provider, model/version, input/output schema, probabilities, confidence, request ID, latency, token/cost data when supplied, input/output hashes, actor/domain/object scope and Evidence references. Low confidence or schema failure remains `UNKNOWN` or requires human review.
 
 Vendor references used for this decision: [System One / Jev launch](https://typesafe.ai/blog/introducing-system-one-models-and-jev), [API](https://docs.typesafe.ai/api), [models](https://docs.typesafe.ai/models), [primitives](https://docs.typesafe.ai/primitives), [confidence](https://docs.typesafe.ai/confidence), and [Master Customer Agreement](https://typesafe.ai/legal/mca). These references describe a candidate external provider; current source/runtime must independently verify every production claim.
 

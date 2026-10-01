@@ -198,32 +198,29 @@ Cache is a presentation aid only: show its capture time and stale state; never s
 
 ## 6. AI / Skill / Agent
 
-Provider roles:
+Current provider and engineering roles (2026-10-01/02):
 
-```text
-Generative providers (including Zhipu and Local AI)
-       ├── drafting / explanation / transformation
-       └── advisory analysis
-
-Jev typed decision provider candidate
-       ├── routing / classification / scoring
-       └── verification / evaluation with probabilities and confidence
-
-LUMENIS-specific self-developed model candidate
-       └── the same bounded typed jobs, evaluated against real LUMENIS work
-```
-
-A Provider is ACTIVE only when real callers, health verification and tests prove it. Historical configuration is not runtime truth.
-
-Runtime and engineering roles are separate:
-
-- `lumenis/system/ai_gateway/` is the single SYSTEM AI runtime owner. Ollama is the local provider direction behind that owner; `local_ai_client.py` and existing `/api/local-ai/*` routes are compatibility callers that must converge without changing behavior or creating another gateway.
-- Jev is approved only as a typed decision/evaluation provider behind that gateway. It is not a free-text fallback, Permission/Evidence owner, final business decision maker or effect authorizer. Its implementation remains `ABSENT` until ROUND 07 proves typed contracts, pinned version, secret handling, cost/legal/privacy review, shadow evaluation, low-confidence behavior and complete trace metadata.
-- The Product Owner also requires a LUMENIS-specific self-developed model candidate to reach a real, reviewable closed loop before prelaunch review. Keep it behind the same Gateway and evaluate it alongside Jev on the same authorized typed jobs, Evidence, Permission, language, confidence, outcome and rollback gates. Jev is a transitional comparison candidate: preserve both now, then retire the external path only after the self-developed candidate passes the matched real-work accuracy, calibration, latency, failure-state and rollback gates and the prelaunch review approves the change. Neither candidate may self-promote or replace Product Truth.
-- The self-developed candidate may adopt publicly documented typed-question, rubric and calibration principles. It must use independently authorized data and evaluation labels; training on Jev API outputs or copying proprietary model material requires an explicit license and data-use review.
-- Local Codex engineering may use an open-source model through separate workstation configuration. That model is not a product Gateway provider, does not replace Sol's product and release authority, and does not establish product-provider acceptance.
-- `.opencode/opencode.json` configures OpenCode for repository development, audit, test and automation. OpenCode/Codex are engineering runtimes, not user-facing model providers, Product Core dependencies or Production Truth owners.
-- Public Website, Flutter Web, Desktop and Mobile consume typed Product Core results and provider state. They do not hold provider keys, run OpenCode, choose hidden tool chains or own model routing.
+- lumenis/system/ai_gateway/ remains the sole SYSTEM owner. C2 supplies approved
+  commercially usable open foundation weights, owned training/inference and
+  held-out business evaluation; existing/free resources first. Codex Cloud
+  configuration is not proof of production inference or free GPU capacity.
+- Ollama/LM Studio/llama.cpp/Zhipu/OpenCode model routes are stopped in product
+  and development. Retain interfaces/history; no calls, probes, auto-discovery,
+  fallback or reactivation. Jev is an inactive historical typed candidate,
+  not a prerequisite or default comparison provider.
+- Owned AI must prove understanding, reasoning, original creation, tools,
+  continuity/recovery and controlled learning on real CTH/BMP/creation work.
+  Source Brief, multimodal inputs, uncertainty, latency/cost, feedback,
+  promotion and rollback remain required; excerpts are not analysis.
+- OpenAI, Codex, ChatGPT, Claude and Meta Muse remain public-documentation and
+  observable-behavior research targets. No proprietary internals/weights or
+  unlicensed training targets are presumed available.
+- local_ai_client.py, /api/local-ai/* and .opencode/opencode.json are retained
+  compatibility/history, not permission to revive stopped providers.
+- Codex/Cloud are development resources, not product inference, Evidence,
+  Permission or Truth owners. Surfaces consume the one Core/Gateway result.
+- Realtime conversational voice is deferred; file audio/video/image
+  understanding and podcast/media production remain C2/C4 requirements.
 
 The platform identity boundary is also explicit: media Cookie/session/browser authorization belongs to the SYSTEM collector/browser chain and stays separate from the future LUMENIS product account. Product account and password design is deferred until product closure reaches 100%, followed by a Product Owner redesign; this timing does not weaken server-side Permission, approval or effect-fence enforcement.
 

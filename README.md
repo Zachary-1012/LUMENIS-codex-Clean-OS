@@ -1,7 +1,7 @@
 # 序境 / LUMENIS
 
 > **Production Core · Production Truth Owner**  
-> 当前阶段 / Current phase: **FIFTEEN-ROUND CLOSED-LOOP EXECUTION**
+> 当前阶段 / Current phase: **SIX-ROUND EXECUTION APPROVED / PRODUCT WORK PAUSED**
 >
 > Canonical repository: Zachary-1012/LUMENIS-codex-Clean-OS (default branch: main).
 
@@ -177,7 +177,7 @@ README.md                       人类产品 + 工程入口
 AGENTS.md                       Coding Agent 执行路由
 LICENSE                         LUMENIS 源码许可边界
 00-GOVERNANCE/                 权威规则、验收、handoff evidence
-00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md  固定源码 owner / 十五轮交付路由
+00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md  固定源码 owner / 六轮执行与完整历史验收映射
 02-ARCHITECTURE/               架构资料
 app/                           唯一 Flutter 用户端
 contracts/experience/          Screen / Action / State / Permission / Evidence / ViewModel 契约
@@ -250,7 +250,7 @@ git ls-remote --heads origin
 
 Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)，随后读取 [`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)。
 
-当前产品执行固定为 **ROUND 01 至 ROUND 15 共 15 个顺序 Codex 任务**。每轮由 Sol 总控，可包含多个边界明确的 Luna Batch；每个 Luna 只执行一个 Batch，本轮验收并发布下一轮 Task Card 后必须停止，下一轮重新解析 `origin/main` 后另开任务。不得恢复旧“三回”或 App-only 执行法。OpenCode/Codex 属于研发工具层；Ollama 与获批候选 Jev 均位于单一 SYSTEM AI Gateway 边界内；媒体平台继续使用既有 Cookie/session/browser 采集链。序境产品账号延后到内测后，前期不得用账号墙阻断产品，但 Permission 与外部 effect fence 继续由后端执行。完整轮次、owner 和固定查找路径见 [`00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)。
+当前唯一方案为 **C1–C6 六轮 / W1–W6 六固定窗口**：四个本地 Codex，W3（CTH/BMP）与 W5（资料/共享成果）使用 Codex Cloud；前端 F 独立，主控 M（Sol 或 Astra）把关验收，W6 集成发布。原 R01–R15、J1–J8、六项专项验收映射保留，不再分别派工。当前只修正规则，产品窗口暂停，等 Product Owner 指令。分工/云隔离见 [AGENTS.md](AGENTS.md)，完整映射见 [Source Owner Index](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)。旧本地模型/智谱/OpenCode 模型调用停止、接口保留；C2 完成自有权重训练运行。实时对话语音后置，音频理解/播客保留；账号密码重设计在工程闭环后，开放入口仍保留服务端 Permission/effect fence。
 
 默认执行方式：
 

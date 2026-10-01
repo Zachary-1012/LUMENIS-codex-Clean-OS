@@ -4,16 +4,15 @@ Status: SUBORDINATE ROUND 15 LAUNCH GATE / NOT THE TASK-SEQUENCE AUTHORITY
 Scope: Current Windows production-development workstation and `main`
 Primary objective: Move LUMENIS from Production Convergence into Launch Convergence with minimum rework, minimum Codex quota waste, and maximum launch velocity.
 
-Execution authority remains root `AGENTS.md` plus the exact 15-round sequence in
+Execution authority remains root `AGENTS.md` with the six-round dispatch and complete legacy acceptance coverage in
 `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. This plan applies only inside the active
-round's accepted scope, primarily ROUND 15; it may not replace, skip or reorder a
-round, start a Luna Batch, or act as a second Product/Experience authority.
+C6 integration scope and retained ROUND 15 requirements; it may not bypass a real dependency, start a Luna Batch, or act as a second Product/Experience authority.
 
 ---
 
 ## 1. Phase transition
 
-The active phase is now:
+Historical launch lifecycle (current stage comes from CURRENT):
 
 ```text
 LAUNCH CONVERGENCE

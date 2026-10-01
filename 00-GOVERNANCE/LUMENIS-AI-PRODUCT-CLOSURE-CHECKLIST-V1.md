@@ -4,7 +4,7 @@
 
 用于 LUMENIS 从 AI Runtime 接入到 GPT-level Product Experience 收口阶段的验收清单。
 
-原则：Local-first, Cloud-optional, Evidence-backed, Replaceable.
+原则：Owned inference, Evidence-backed, Replaceable。C2 执行，C5 资料成果，C3/C4 消费，C6 部署恢复。旧本地模型/智谱停止、接口保留；免费/已有资源优先。
 
 ## 1. Chat Memory
 
@@ -53,9 +53,9 @@
 
 SYSTEM AI Gateway 统一管理产品运行模型：
 
-- Ollama Local AI
-- Zhipu
-- Future Models
+- 获批可商用开放基础权重、自有训练与推理
+- 停用 provider 接口/历史（不可调用/探测/自动发现/fallback）
+- 新模型须批准、真实评估与晋升回滚
 
 原则：根据成本、速度、复杂度、隐私、资源自动选择。
 
@@ -70,7 +70,7 @@ LUMENIS Chat Interface
  ↓
 Intelligence Router
  ↓
-Local AI / Approved Cloud AI / Deterministic Rules
+Owned inference / Deterministic functions / explicit failure recovery
  ↓
 Agent + Tools
  ↓
@@ -79,20 +79,20 @@ Evidence
 Response
 ```
 
-## Local AI Independence Gate
+## Owned AI Independence Gate
 
 必须验证：
 
-- Zhipu关闭
-- 云AI关闭
-- 本地模型仍可运行
+- 旧本地模型与智谱停用
+- 外部模型 API 关闭，开发助手不代分析
+- 自有推理实际运行，部署资源有证据
 - 真实业务分析完成
 - Evidence生成
 - 结果返回产品层
 
 ## Engineering AI Boundary
 
-Codex / OpenCode：
+Codex（包括 Cloud）仅作研发：
 
 用于：
 
@@ -101,12 +101,12 @@ Codex / OpenCode：
 - 测试
 - 自动化
 
-OpenCode 的当前仓库配置位于 `.opencode/opencode.json`。Codex/OpenCode 不进入上述产品 Model Routing，不是 Flutter 功能、Product Core 必需依赖、用户聊天模型或 Production Truth owner。工程工具可以调用现有测试和受限本地检查，但不能绕过产品 Permission/Evidence 边界。
+OpenCode 历史配置 .opencode/opencode.json 保留、模型调用停止。Codex Cloud 是研发环境，不是序境生产推理服务；不能绕过 Permission/Evidence。
 
-## Source-audited current disposition
+## Historical source disposition (not current runtime proof)
 
-- Ollama：canonical Gateway、provider probe、真实 backend callers 和 App provider-state binding 已存在；daemon、模型、真实推理、fallback 和 Evidence 必须在 Round 2 现场验证后才能标记 `ACTIVE / VERIFIED`。
-- OpenCode：工程配置已存在；当前产品源码没有 OpenCode runtime caller。其正确状态是 `ENGINEERING CONFIG PRESENT`，不是丢失的产品功能。
+- Ollama/LM Studio/llama.cpp/Zhipu/OpenCode 模型路由停用，接口/历史保留；不得探测、保活或 fallback。
+- OpenCode 历史配置保留，不构成当前执行资源。
 - AI-01：当前 App 只显示 provider/能力状态，真实意图提交与 Evidence Trace 尚未闭环；不得把状态页写成完成的 AI workflow。
 
 ## Research Optimization Layer
@@ -129,8 +129,8 @@ OpenCode 的当前仓库配置位于 `.opencode/opencode.json`。Codex/OpenCode 
 - Skills PASS
 - Evaluation PASS
 - Routing PASS
-- Local AI PASS
-- Fallback PASS
+- Owned useful inference / training / held-out business evaluation PASS
+- Bounded failure / recovery / rollback PASS without retired providers
 - Evidence PASS
 - Security PASS
 
@@ -146,3 +146,23 @@ OpenCode 的当前仓库配置位于 `.opencode/opencode.json`。Codex/OpenCode 
 - PRODUCTION_APPROVED
 
 禁止未验证声明完成。
+
+## C2 research-to-product obligations
+
+OpenAI、Codex、ChatGPT、Claude、Meta Muse 五个学习对象全部保留。学习公开文档和
+可观察行为，不声称拿到私有推理、专有权重或未许可标签。理解、分析判断、
+原创修改、工具执行、上下文/长任务/恢复、受控评价学习六类能力及产品交互必须验证。
+
+OSAI 独特有效资产按来源/许可适配现有 Gateway/Agent/Memory/Retrieval owners，
+不复制平行 runtime/资料库。实际训练需数据/留出隔离、真实获准业务目标、
+权重/配方/数据版本与可重载产物；算术训练或技术样本不等于业务能力。
+
+Source Brief、文档表格、图片、视频分镜和音频必须实际解析并进入 CTH/BMP/创作。
+文本模型不自动具备多模态。Realtime 仅实时对话语音后置，音频文件、视频音轨
+及播客保留。精确 scope、来源真实性、事实/推断/创意、引用、有用性、改稿前后
+评价、工具效果边界、中断续跑、授权撤销和晋升回滚分别证明。
+
+Codex 补足公开取材走 Source/Import → Evidence → Canonical，标明 assisted discovery，
+不冒充产品自主采集。保存报告不是训练，只有审阅且许可合格目标可进入训练。
+摘录、“分析不可用”和非空回复均不能通过 C2。C3/C4 产生真实 Outcome/Feedback，
+C2 通过既有 Evaluation/Learning 做真实对照后晋升，C6 验证独立运行、重载和恢复。

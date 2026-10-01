@@ -206,74 +206,142 @@ Before changing one capability, run `python scripts/audit_tools/locate_capabilit
 
 The fixed source classification and resume path is `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. Use its owner row for normal work. A full-repository re-audit is permitted only for the structural triggers listed there; a local gap, stale historical note or runner failure is not a trigger.
 
-### Fifteen-round closed-loop red line
+### Six-round execution windows and retained acceptance coverage
 
-All current product execution preserves the approved 15-round coverage and dependency
-map in `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`: current truth; authority/Only-One;
-database; identity/Permission/Evidence; runtime; collector/browser; AI/Agent/Shared
-engines; cross-surface foundation; Golden Pages; CTH monitoring; CTH decision loop;
-BMP market loop; BMP content/campaign loop; remaining ACC/AI/Shared/SYSTEM
-Experience; then closed-loop internal beta/release. The rounds are fifteen acceptance
-checkpoints, not fifteen mutually blocking implementation windows. Do not omit a
-checkpoint or use a later implementation as proof that an unmet dependency passed.
+Current delivery uses six fixed execution windows. The C1–C6 labels organize six
+complete user-outcome deliveries; they do not impose a mechanical serial schedule.
+Work may proceed in parallel only when actual entry dependencies, canonical
+owners, files, tests, migrations and runtime resources permit it. A later C
+delivery cannot make an unmet source, Permission, Evidence, dependency or
+acceptance gate pass.
 
-Sol may run bounded Luna Batches from multiple rounds concurrently in one product
-war room when their actual entry dependencies are satisfied and their files,
-canonical owners, migrations, tests and runtime resources do not conflict. The
-Product Owner's parallelism target is ten **safe, active** Luna workers when
-the host actually supports ten; ten is also the approved operating ceiling,
-never permission to exceed a lower host limit. Keep a ready/active/blocked
-Batch queue, fill available safe slots without serializing independent work,
-and report the observed host capacity, actual active count, queued count and
-the reason for any shortfall. Never claim ten workers are running when fewer
-are, or invent a conflicting Batch solely to fill a slot. Sol owns the shared
-worktree, integration order, conflict resolution and every PASS / REWORK / BLOCKED /
-SPLIT / REORDER decision. Each Luna receives exactly one Batch and may not cross
-into another Batch automatically. A completed Batch is only a report until Sol
-reads its base/final state, diff, tests, runtime/E2E evidence and blockers. Publish
-overall progress against all fifteen checkpoints as each closes; a separate Codex
-window is not required. Before assigning a new Batch, resolve current `origin/main`,
-local state, dependencies, protected work and overlapping active owners again.
-Parallel implementation does not permit a dependent round to be accepted before
-its predecessor exit gate; the Source Owner Index retains the ordered acceptance
-sequence.
+| Delivery / window | Execution environment | Responsibility |
+| --- | --- | --- |
+| **C1 / W1 — Data and Collection** | Local Codex | Existing registry and source owners; 14-country categories and approved candidates; platform-native fields and honest unavailable states; Subject/venue/tenant relationships; approved collection and browser sessions; Source → Evidence → Canonical; refresh, review and recovery. Registration never proves collection coverage. |
+| **C2 / W2 — Owned AI and Agent** | Local Codex using approved open base weights and approved free training resources | The single AI Gateway and existing Agent, Skills, Memory, context, Evaluation and Learning owners; LUMENIS-owned model training and inference; grounded CTH/BMP/creation results; multimodal file understanding; version, held-out evaluation, feedback, controlled promotion and rollback. |
+| **C3 / W3 — CTH and BMP Business Workflows** | Codex Cloud | Existing CTH and BMP services, metrics and task workflows; monitoring, market/competitor/creator/consumer work, operations, cases, campaigns, decisions, outcomes and evaluation inputs; call existing Shared and SYSTEM owners. |
+| **C4 / W4 — Original Pitch, Video and Podcast** | Local Codex | Separate customer-ready pitch, editable video and usable podcast results; existing Shared Timeline/Artifact and media owners; editing, review, export, reopen, cancellation and recovery. Each of the three deliverables has its own acceptance. |
+| **C5 / W5 — Importer, Research and Shared Deliverables** | Codex Cloud | Existing Importer/Research, citations, Reporting/Artifact, notifications and shared-preference owners; real material → locatable Evidence/citation → saved/versioned result → search, reopen, revise, export and return. No second database, Evidence store or model service. |
+| **C6 / W6 — Integration, Runtime and Release** | Local Codex | Accepted shared API composition and bindings, canonical database-change coordination, Core/runtime/FFmpeg/supervisor, mainline integration, four-surface operation, packaging, CI, recovery/rollback and final evidence bundle. C6 integrates owned capabilities; it does not replace them. |
 
-### Continuity after a Sol decision
+The separate front-end window F is the seventh execution window, not a seventh
+delivery round. It owns existing Flutter and Website interface work,
+screen-specific DESIGN_READY implementation, real interface binding, responsive
+composition, Chinese/English/Korean localization and accessibility through all
+six deliveries. Backend windows provide field and behavior contracts; F owns
+screen layout and user interaction.
 
-The fifteen rounds are acceptance checkpoints, not one-attempt or session stop
-points. `REWORK`, `SPLIT` and `REORDER` require Sol to re-resolve current
-remote/local truth and select the next safe executable Batch; a Luna stopping at
-its one-Batch boundary does not stop the active Round or the product program.
-A localized `BLOCKED` owner pauses only that owner; continue independent work
-whose entry gates are met. When a Round truly passes and the Product Owner has
-authorized continuous delivery, publish its evidence and hand off or start the
-next eligible Sol task before closing the prior task. If continuation cannot
-be confirmed, report it as idle rather than claiming work is running. Stop
-the overall program only on an explicit user pause or a genuine §22 blocker
-that leaves no safe in-scope work; never weaken an exit gate to avoid a pause.
+The root controller M (Sol or Astra, using the active model and effort
+authorized for the task) is the eighth review and acceptance role. M freezes
+scope, resolves Product Architecture/owner/interface conflicts, reviews
+DESIGN_READY, and accepts or returns complete window outcomes. Product Owner
+human decisions remain separate from M.
 
-### REAL USER WORK E2E ACCEPTANCE — ROUND 02 through ROUND 15
+W6 is the sole writer for accepted shared composition and mainline integration
+paths, including app.py, lumenis_app_api.py, experience_runtime.py and
+experience_screens.py when assigned by the current Source Owner Index. Cloud
+candidates first pass W6 base/SHA/scope/conflict checks, isolated application,
+affected regression and local real-chain validation. M then makes the final
+acceptance decision; only after that may W6 publish the exact accepted patch to
+main and verify remote truth.
 
-`00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md` is the single content owner for the eight real-delivery questions, per-round constraints, `REAL DELIVERY CARD`, completion semantics, final seven statuses and the six Section 23 commercial-readiness gates. It is an execution/acceptance overlay, not a second Product Architecture or Experience authority, and it does not add a sixteenth round.
+R01–R15 remain the complete acceptance and technical-dependency coverage;
+J1–J8 remain the mapped source of user-job requirements. The Source Owner Index
+maps each item into C1–C6; preserve every capability and genuine dependency,
+reuse valid evidence, and never use a mapping as PASS. Do not add a ten-worker
+target, hidden helper window, per-leaf stop rule or competing execution queue.
+Size cards around complete user outcomes; a local blocker pauses only its path.
+Explicit user pauses remain binding.
 
-Every ROUND 02–15 task must define and pass at least one `REAL USER WORK E2E ACCEPTANCE` before Sol may return `PASS` or publish the next round as executable. The Round Charter, contributing Luna Task Cards and Sol report must route through the Overlay's `REAL USER JOB`, `ENTRY`, `REAL INPUT`, `END-TO-END PATH`, `USER-VISIBLE RESULT`, `FAILURE/RECOVERY`, `EVIDENCE` and `ACCEPTANCE ASSERTION` gates and include `真实用户工作闭环验收`, `REAL DELIVERY CARD` and `COMMERCIAL OVERLAY IMPACT`. Missing E2E evidence forces Sol to return `REWORK` or `BLOCKED`; code/HTTP success, fixtures, mocks, hard-coded examples, screenshots, builds, tests, CI or model output cannot pass alone.
+M receives three report types: a complete user-outcome package ready for review;
+a Product Owner, architecture, owner or interface decision that cannot be
+resolved inside the approved scope; or an urgent data/security risk. Routine
+file, function, test and research progress stays in the existing status record
+and is consolidated at the next meaningful integration point.
+
+W6 applies that exact patch in isolation and performs local runtime/E2E validation before M final acceptance and main publication.
+
+#### Codex Cloud window constraints
+
+W3 and W5 use Codex Cloud only as an isolated development environment. Product
+Owner confirmation that Cloud is configured does not prove LUMENIS deployment,
+runtime, model inference or product acceptance. Each Cloud task uses the
+Product Owner-authorized account 2804907467@qq.com and repository Zachary-1012/LUMENIS-codex-Clean-OS, an explicit fixed base SHA,
+current repository rules, exact allowed/forbidden paths, shared-interface
+contracts and acceptance target. Do not change account or infer a base SHA.
+
+Cloud inputs are approved minimal/public sample inputs and task materials with
+source, scope, time and permitted-use provenance. Never upload secrets,
+credentials, Cookies, private sessions, browser state or a complete production
+database. Do not expose personal workstation configuration; attach only the
+exact repository rules and approved task inputs needed for the work.
+
+Cloud workers must not create a branch, open a PR, directly push main or
+deploy. They return an exact patch with its fixed base SHA, changed-file list
+and hashes, diff, scoped verification, runtime evidence when applicable, and
+blockers. W6 checks the candidate base SHA, allowed scope and conflicts; applies
+it in an isolated validation workspace; runs affected regression and the local
+real product chain; and prepares the candidate for M's final decision. Only
+after M acceptance may W6 publish that exact patch to main and verify remote
+truth. Cloud execution by itself never proves a live product outcome. Keep each
+Cloud task on its fixed source snapshot; synchronize only at an explicit safe
+point and never let a background watcher replace files during work or
+verification.
+
+### REAL USER WORK E2E ACCEPTANCE — C1 through C6 and mapped R checkpoints
+
+Mandatory REAL DELIVERY CARD / 真实用户工作闭环验收 fields: REAL USER JOB, ENTRY, REAL INPUT, END-TO-END PATH, USER-VISIBLE RESULT, FAILURE/RECOVERY, EVIDENCE, ACCEPTANCE ASSERTION and COMMERCIAL OVERLAY IMPACT.
+
+The Real Delivery Overlay is the single content owner for the eight real-delivery
+questions, six-window cards, mapped R-checkpoint constraints, REAL DELIVERY CARD,
+completion semantics, final statuses and commercial-readiness gates.
+
+Every C1–C6 window must define and pass at least one real-user E2E for its
+assigned user outcome before M may accept it. Each relevant R02–R15 requirement
+remains mapped and must pass its actual gate; mapped checkpoints do not create
+another task or report queue. Each window card and M acceptance uses the
+Overlay's real user job, entry, real input, end-to-end path, user-visible result,
+failure/recovery, evidence and acceptance assertion. Missing E2E evidence
+forces REWORK or BLOCKED; code/HTTP success, fixtures, mocks, hard-coded
+examples, screenshots, builds, tests, CI or model output cannot pass alone.
+
+The Product Owner performs the repeated core-job acceptance only after
+engineering is fully operable; development window E2E does not mark
+USER_VERIFIED, RELEASED or OPERATING.
 
 `00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md` is the single subordinate contract for default `GLOBAL / ALL`, focus-only Subject/BrandFocus selection, honest uncollected states and data-maturity acceptance. It governs one internal full-universe edition over one Product/Core/Data/Evidence/Permission/API/Context/Experience stack; no acceptance dimension may become a separate product or release. Every related Round Charter and `REAL DELIVERY CARD` must add `GLOBAL UNIVERSE / DATA MATURITY IMPACT` and report `Global Commercial Coverage`, `Global Brand Coverage` and `Guangzhou Taikoo Hui Reference Coverage`. Guangzhou Taikoo Hui is the controlled depth-reference Subject, never the product default or a substitute for global coverage. Only all three `YES` permits `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=YES`; later-round functionality must be reported honestly and must not block unrelated work.
 
-Every related round also runs `RANDOM ENTITY DATA ACCEPTANCE` against the canonical registry with a recorded rotating/stratified seed and non-reference commercial, brand and cross-region samples. Covered/mature samples may not return silent blank, all-zero, missing→0, placeholder or invented content; a real defect forces `REWORK`/`BLOCKED`. If the canonical sample population does not yet exist, record sample count zero and the owning gap rather than fabricating data. ROUND 15 expands cumulative inspection and is never the first random check.
+Every C window whose deliverable consumes registry data runs RANDOM ENTITY DATA
+ACCEPTANCE against the canonical registry with a recorded rotating/stratified
+seed and non-reference commercial, brand and cross-region samples. Covered or
+mature samples may not return silent blank, all-zero, missing-to-zero,
+placeholder or invented content; a real defect forces REWORK or BLOCKED. If
+the sample population does not exist, record sample count zero and the owning C
+window. R15 retains cumulative inspection and is never the first random check.
 
-Every ROUND Charter, relevant Luna Task Card and Sol acceptance also includes `CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION`. Research the current business, engineering and page gap against directly relevant official sources, industry cases, papers or standards, maintained high-quality GitHub projects and applicable UI/UX flows. Record URL, accessed date, version or commit, license, maintenance status, commercial/security boundary, `ADOPT / ADAPT / DEFER / REJECT` decision and the exact mapping back to canonical LUMENIS owners, Evidence, Permission, workflow and Experience. External material is principle-only and cannot become a second product/design authority or Production Truth. Any improvement must be versioned and pass applicable real E2E/page/effect evaluation, regression, observability and rollback gates. If research finds no justified in-scope upgrade, record `RESEARCH COMPLETE / NO JUSTIFIED UPGRADE` with evidence rather than inventing work.
+Each C window Task Card and M acceptance includes CONTINUOUS FRONTIER
+RESEARCH / CAPABILITY EVOLUTION for directly relevant business, engineering
+and page gaps. Record URL, access date, version or commit, license, maintenance,
+commercial/security boundary, ADOPT / ADAPT / DEFER / REJECT decision and exact
+mapping to canonical owners, Evidence, Permission, workflow and Experience.
+External material is principle-only and cannot become a second authority or
+Production Truth. Improvements are versioned and pass applicable real E2E,
+page/effect evaluation, regression, observability and rollback. If no upgrade
+is justified, record RESEARCH COMPLETE / NO JUSTIFIED UPGRADE with evidence.
 
 When a round involves a page, deliver and run the actual operable page on every target surface promised by that round under the sole Experience Constitution and a Sol-approved `DESIGN_READY` specification. Commercial-readiness gaps are recorded as `COMMERCIAL READINESS GAP / BLOCKED FOR COMMERCIAL_READY`; they set `COMMERCIAL_READY=NO` but do not stop unrelated in-scope engineering work.
 
-The Product Owner accepted the ROUND 01 source audit, missing-capability register,
-multi-surface direction and 15-round mapping on 2026-09-21 as the execution baseline.
-That approval closes the planning gate only. It does not accept an implementation,
-screen, provider, migration or release claim. Implementation may proceed through the
-parallel war-room rule above; every round still closes only through its own Sol
-acceptance checkpoint and current remote/local evidence.
+The Product Owner accepted the ROUND 01 source audit, missing-capability
+register and multi-surface direction on 2026-09-21 as planning evidence. The
+current C1–C6 window map above governs execution; R01–R15 remain mapped
+acceptance/dependency coverage. Neither planning decision accepts an
+implementation, screen, provider, migration or release claim. M accepts each
+complete C-window outcome against current source/local/remote evidence and the
+applicable mapped R gates.
 
-Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE are Experience-principle references only and never authorize new product features. OpenCode/Codex are engineering runtimes; Ollama and the approved Jev candidate are providers behind the one SYSTEM AI Gateway. Jev is limited to typed decision/evaluation tasks and cannot own Permission, Evidence, Production Truth or effects. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. Product account and password design is deferred until product closure reaches 100%; only then may the Product Owner redesign it. Until then, product access must not be blocked by an account wall, while server Permission and effect fences remain enforced.
+
+
+Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE remain Experience-principle references only. OpenCode/Codex are engineering runtimes. Legacy Ollama/local-model-provider, Zhipu and Jev routes are retired: retain compatibility interfaces and historical artifacts, but do not call, auto-discover, probe, fall back to or reactivate them. C2/W2 owns the approved LUMENIS-specific model route using commercially permitted open base weights and approved training resources behind the one SYSTEM AI Gateway; training, inference, held-out quality, failure/recovery and user outcomes require evidence. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. Product account and password redesign is deferred until the current engineering/product closure is complete; before then, do not block product access behind a new account wall, and keep server Permission and effect fences enforced.
 
 Business work is selected in this order: Product Positioning → Industry Business
 Logic → Real User Jobs → Deliverable Outcomes → Experience → Data/Runtime
@@ -351,7 +419,7 @@ Source
 
 ### Continuous capability evolution contract
 
-Collection, browser acquisition, creation, AI, agents, reporting, evaluation, learning and every CTH/BMP/Shared/SYSTEM workflow are versioned capabilities, not frozen modules. During the 15-round build and after release, improve a capability when real Evidence, outcome feedback or evaluation identifies a bounded gap. Reuse its canonical owner and preserve the Product Architecture, workflow meaning, Permission, Evidence lineage and state semantics; never create an alternate owner in order to learn faster.
+Collection, browser acquisition, creation, AI, agents, reporting, evaluation, learning and every CTH/BMP/Shared/SYSTEM workflow are versioned capabilities, not frozen modules. During the six-window delivery and after release, improve a capability when real Evidence, outcome feedback or evaluation identifies a bounded gap. Reuse its canonical owner and preserve the Product Architecture, workflow meaning, Permission, Evidence lineage and state semantics; never create an alternate owner in order to learn faster.
 
 Controlled evolution path:
 
@@ -423,21 +491,18 @@ Verify each capability claim against the source, contracts, routes, runtime beha
 
 ## 7. Codex local development tools
 
-### 2026-10-01 Product Owner AI milestone correction
+### Current LUMENIS-owned AI route and retired provider paths
 
-The Product Owner has stopped use of local model providers and Zhipu in both
-LUMENIS and this development program. Keep their interfaces and historical
-artifacts; do not call, auto-discover, probe, fall back to, or reactivate them.
-This explicit instruction supersedes older workstation/local-first routing.
-Do not change the user's persistent Codex model selection or Windows user
-environment to enforce this product policy. Codex Cloud remains a development
-environment, not a deployed LUMENIS AI service.
-
-OpenAI, Codex, ChatGPT, Claude and Meta Muse are the named research targets for
-reasoning, tool operation, product interaction, recovery and evaluation. Learn
-from public documentation and observable behavior; do not claim access to
-proprietary reasoning internals, model weights or a trained replacement merely
-because their documentation was read.
+The Product Owner retired legacy Ollama/local-model-provider, Zhipu and Jev
+provider paths. Keep compatibility interfaces and historical artifacts, but
+do not call, auto-discover, probe, fall back to, or reactivate them. This
+supersedes older local-first, Ollama, Zhipu and Jev activation guidance. It does
+not retire approved C2/W2 work to build and validate a LUMENIS-owned model using
+commercially permitted open base weights and approved free training resources
+behind the existing SYSTEM AI Gateway. Do not change the user's persistent
+Codex model selection or Windows user environment to enforce this policy.
+Codex Cloud remains a development environment, not a deployed LUMENIS model or
+AI service.
 
 Development may supplement incomplete collection with verified public-web
 materials through the existing Source/Import -> Evidence -> Canonical path.

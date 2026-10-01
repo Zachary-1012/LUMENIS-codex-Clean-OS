@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -12,6 +13,47 @@ EXPECTED_FINGERPRINT = "68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a2
 EXPECTED_LOCAL_REPO = "Zachary-1012/LUMENIS-codex-Clean-OS"
 CONTRACT_BASENAME = "LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json"
 ONLINE_STATUS_PATH = "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md"
+
+SIX_ROUND_ASSIGNMENTS = {
+    "C1": ("Local Codex", ("data", "collection")),
+    "C2": ("Local Codex", ("owned ai", "agent")),
+    "C3": ("Codex Cloud", ("cth", "bmp", "business")),
+    "C4": ("Local Codex", ("original pitch", "video", "podcast")),
+    "C5": (
+        "Codex Cloud",
+        ("importer", "research", "reporting", "artifact", "notification"),
+    ),
+    "C6": ("Local Codex", ("integration", "runtime", "release")),
+}
+
+ROUND_COVERAGE = {
+    "R01": {"M", "W6"},
+    "R02": {"M", "W6"},
+    "R03": {"C1", "C6"},
+    "R04": {"C1", "C2", "C5", "C6"},
+    "R05": {"C1", "C2", "C6"},
+    "R06": {"C1", "C6", "F"},
+    "R07": {"C2", "C4", "C5"},
+    "R08": {"C6", "F"},
+    "R09": {"C1", "C2", "C3", "C5", "C6", "F"},
+    "R10": {"C1", "C3"},
+    "R11": {"C2", "C3", "C4", "C5"},
+    "R12": {"C1", "C2", "C3"},
+    "R13": {"C2", "C3", "C4", "C5"},
+    "R14": {"C1", "C2", "C5", "C6", "F"},
+    "R15": {"C6", "M", "PO"},
+}
+
+JOB_COVERAGE = {
+    "J1": {"C1", "C6"},
+    "J2": {"C3"},
+    "J3": {"C3"},
+    "J4": {"C4"},
+    "J5": {"C4"},
+    "J6": {"C4"},
+    "J7": {"C2"},
+    "J8": {"C6", "F"},
+}
 
 
 def _requires_online_progress(path: str) -> bool:
@@ -85,6 +127,11 @@ PATHS = {
     "round02_frontier_research": ROOT / "00-GOVERNANCE" / "evidence" / "round-02" / "ROUND-02-CONTINUOUS-FRONTIER-RESEARCH.md",
     "launch_plan": ROOT / "00-GOVERNANCE" / "LAUNCH-CONVERGENCE-MASTER-PLAN-V1.md",
     "experience_contracts": ROOT / "contracts" / "experience" / "README.md",
+    "skill_current_truth": ROOT / ".agents" / "skills" / "lumenis-current-truth" / "SKILL.md",
+    "skill_task_router": ROOT / ".agents" / "skills" / "lumenis-task-router" / "SKILL.md",
+    "skill_release_completion": ROOT / ".agents" / "skills" / "lumenis-release-completion" / "SKILL.md",
+    "skill_progressive_context": ROOT / ".agents" / "skills" / "lumenis-progressive-context" / "SKILL.md",
+    "skill_ai_agent": ROOT / ".agents" / "skills" / "lumenis-ai-agent" / "SKILL.md",
     "registry": ROOT / "00-GOVERNANCE" / "CROSS-REPO-CANONICAL-REGISTRY-V1.md",
     "contract": ROOT / "00-GOVERNANCE" / CONTRACT_BASENAME,
     "platform_workflow": ROOT / ".github" / "workflows" / "platform-verify.yml",
@@ -99,9 +146,172 @@ def _read(name: str) -> str:
 
 
 def _require(text: str, *needles: str, label: str) -> None:
-    missing = [needle for needle in needles if needle not in text]
+    normalized = re.sub(r"\s+", " ", text)
+    missing = [needle for needle in needles if re.sub(r"\s+", " ", needle) not in normalized]
     if missing:
         raise AssertionError(f"{label} missing required current markers: {missing}")
+
+
+def _require_collapsed(text: str, *needles: str, label: str) -> None:
+    _require(re.sub(r"\s+", " ", text), *needles, label=label)
+
+
+def _routing_rows(text: str) -> dict[str, str]:
+    rows: dict[str, str] = {}
+    for line in text.splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        match = re.search(r"\b(C[1-6])\s*/\s*W([1-6])\b", line)
+        if not match:
+            continue
+        round_id, window_number = match.groups()
+        if round_id != f"C{window_number}":
+            raise AssertionError(
+                f"six-round routing mismatch: {round_id} must map to W{round_id[1:]}"
+            )
+        if round_id in rows:
+            raise AssertionError(f"six-round routing duplicates {round_id}/W{window_number}")
+        rows[round_id] = line
+    return rows
+
+
+def _assert_six_round_routing(agents: str) -> None:
+    rows = _routing_rows(agents)
+    missing = sorted(set(SIX_ROUND_ASSIGNMENTS) - set(rows))
+    extra = sorted(set(rows) - set(SIX_ROUND_ASSIGNMENTS))
+    if missing or extra:
+        raise AssertionError(
+            f"AGENTS.md six-round execution matrix mismatch: missing={missing}, extra={extra}"
+        )
+
+    for round_id, (environment, terms) in SIX_ROUND_ASSIGNMENTS.items():
+        line = rows[round_id].casefold()
+        if environment.casefold() not in line:
+            raise AssertionError(
+                f"{round_id} must use {environment} in its canonical AGENTS.md row"
+            )
+        missing_terms = [term for term in terms if term not in line]
+        if missing_terms:
+            raise AssertionError(
+                f"{round_id} row is missing its approved responsibilities: {missing_terms}"
+            )
+
+    lowered = re.sub(r"\s+", " ", agents).casefold()
+    frontend_route = (
+        "front-end window f" in lowered
+        and ("all six deliveries" in lowered or "all six rounds" in lowered)
+    )
+    if not frontend_route:
+        raise AssertionError("AGENTS.md must route front-end window F through all six deliveries")
+    if not re.search(r"root (?:sol )?controller m", lowered) or "review" not in lowered or "acceptance" not in lowered:
+        raise AssertionError("AGENTS.md must identify root M as Sol/Astra's review and acceptance role")
+    if "only repository execution router" not in lowered:
+        raise AssertionError("AGENTS.md must remain the only repository execution router")
+
+
+def _assert_current_round_statuses(current: str) -> None:
+    rows = _routing_rows(current)
+    missing = sorted(set(SIX_ROUND_ASSIGNMENTS) - set(rows))
+    extra = sorted(set(rows) - set(SIX_ROUND_ASSIGNMENTS))
+    if missing or extra:
+        raise AssertionError(
+            f"CURRENT status table must report C1–C6 exactly once: missing={missing}, extra={extra}"
+        )
+    _require(
+        current,
+        "AGENTS.md",
+        "LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+        label="CURRENT six-round snapshot",
+    )
+
+
+def _mapping_tokens(text: str) -> set[str]:
+    tokens = {f"C{value}" for value in re.findall(r"\bC([1-6])\b", text)}
+    tokens.update(f"W{value}" for value in re.findall(r"\bW([1-6])\b", text))
+    tokens.update(re.findall(r"\b[FM]\b", text))
+    if re.search(r"\bProduct Owner\b", text, flags=re.IGNORECASE):
+        tokens.add("PO")
+    return tokens
+
+
+def _assert_legacy_coverage_mapping(source_index: str) -> None:
+    observed: dict[str, set[str]] = {}
+    for line in source_index.splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) < 2:
+            continue
+        first_cell = cells[0].strip("`* ")
+        identifiers = re.findall(r"\bR(?:0[1-9]|1[0-5])\b|\bJ[1-8]\b", first_cell)
+        if not identifiers:
+            continue
+        mapping = _mapping_tokens(" ".join(cells[1:]))
+        for identifier in identifiers:
+            if identifier in observed:
+                raise AssertionError(f"Source Owner Index duplicates coverage mapping {identifier}")
+            observed[identifier] = mapping
+
+    expected = {**ROUND_COVERAGE, **JOB_COVERAGE}
+    missing = sorted(set(expected) - set(observed))
+    extra = sorted(set(observed) - set(expected))
+    if missing or extra:
+        raise AssertionError(
+            f"Source Owner Index legacy coverage map mismatch: missing={missing}, extra={extra}"
+        )
+    for identifier, required_tokens in expected.items():
+        missing_tokens = sorted(required_tokens - observed[identifier])
+        if missing_tokens:
+            raise AssertionError(
+                f"Source Owner Index {identifier} coverage omits {missing_tokens}"
+            )
+
+
+def _assert_execution_boundaries(agents: str) -> None:
+    required = (
+        "fixed base SHA",
+        "approved minimal/public sample inputs",
+        "never upload secrets",
+        "Cookies",
+        "private sessions",
+        "complete production database",
+        "must not create a branch",
+        "open a PR",
+        "directly push main",
+        "or deploy",
+        "W6 applies that exact patch",
+        "local runtime/E2E validation",
+        "do not call, auto-discover, probe, fall back to, or reactivate them",
+        "legacy Ollama/local-model-provider, Zhipu",
+        "Jev",
+        "interfaces and historical artifacts",
+        "The Product Owner performs the repeated core-job acceptance only after engineering is fully operable",
+        "development window E2E does not mark USER_VERIFIED, RELEASED or OPERATING",
+    )
+    normalized = re.sub(r"\s+", " ", agents)
+    missing = [term for term in required if term.casefold() not in normalized.casefold()]
+    if missing:
+        raise AssertionError(f"AGENTS.md six-round execution boundaries missing: {missing}")
+
+    obsolete_active_routes = (
+        "Product Owner's parallelism target is ten",
+        "ten is also the approved operating ceiling",
+        "Use OpenCode with the configured Zhipu provider first",
+        "Use Ollama first",
+    )
+    present = [phrase for phrase in obsolete_active_routes if phrase in normalized]
+    if present:
+        raise AssertionError(f"AGENTS.md contains obsolete active execution routes: {present}")
+
+
+def _assert_readme_routing_consistent(readme: str) -> None:
+    obsolete_routes = (
+        "15 个顺序 Codex 任务",
+        "Ollama 与获批候选 Jev 均位于单一 SYSTEM AI Gateway 边界内",
+    )
+    present = [phrase for phrase in obsolete_routes if phrase in readme]
+    if present:
+        raise AssertionError(f"README.md contains obsolete execution/provider routes: {present}")
 
 
 def _assert_single_machine_contract() -> None:
@@ -133,11 +343,21 @@ def validate() -> None:
     round02_frontier_research = _read("round02_frontier_research")
     launch_plan = _read("launch_plan")
     experience_contracts = _read("experience_contracts")
+    skill_current_truth = _read("skill_current_truth")
+    skill_task_router = _read("skill_task_router")
+    skill_release_completion = _read("skill_release_completion")
+    skill_progressive_context = _read("skill_progressive_context")
+    skill_ai_agent = _read("skill_ai_agent")
     registry = _read("registry")
     platform_workflow = _read("platform_workflow")
     contract = json.loads(_read("contract"))
 
     _assert_single_machine_contract()
+    _assert_six_round_routing(agents)
+    _assert_current_round_statuses(takeover)
+    _assert_legacy_coverage_mapping(source_index)
+    _assert_execution_boundaries(agents)
+    _assert_readme_routing_consistent(readme)
 
     assert contract["contract_id"] == EXPECTED_CONTRACT_ID
     assert contract["contract_version"] == EXPECTED_VERSION
@@ -224,11 +444,11 @@ def validate() -> None:
 
     _require(
         source_index,
-        "CURRENT EXECUTION INDEX / FIFTEEN-ROUND CLOSED LOOP",
+        "LUMENIS Source Owner Index",
         "Authority, Only-One and multi-surface decision",
         "Cross-Surface Experience Foundation",
         "Closed-loop internal beta",
-        "Jev",
+        "Product Owner requirement routing check",
         ".opencode/opencode.json",
         "lumenis/system/ai_gateway/",
         "lumenis/system/collector/",
@@ -242,10 +462,6 @@ def validate() -> None:
         "LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
         "LUMENIS_INTERNAL_FULL_UNIVERSE_READY",
         "Cross-round capability gap register",
-        "LUMENIS-Ollama-Autostart",
-        "qwen2.5-coder:7b-agent",
-        "qwen3:1.7b",
-        "bge-m3",
         label="CURRENT source owner index",
     )
 
@@ -290,7 +506,7 @@ def validate() -> None:
     _require(
         real_delivery_overlay,
         "CURRENT SUBORDINATE REAL-DELIVERY OVERLAY / NOT A SECOND PRODUCT OR EXPERIENCE AUTHORITY",
-        "REAL DELIVERY OVERLAY FOR ALL 15 ROUNDS",
+        "REAL USER WORK E2E ACCEPTANCE",
         "REAL DELIVERY CARD",
         "ONLINE DELIVERY / LOCAL-TO-MAIN CLOSURE",
         "THREE-LANGUAGE SURFACE ACCEPTANCE",
@@ -325,14 +541,9 @@ def validate() -> None:
         "CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION",
         "ADOPT / ADAPT / DEFER / REJECT",
         "RESEARCH COMPLETE / NO JUSTIFIED UPGRADE",
-        "FUTURE TASK CARD INPUT / NOT EXECUTABLE BEFORE ROUND 05 ENTRY",
-        "LUMENIS-Ollama-Autostart",
-        "FUTURE TASK CARD INPUT / NOT EXECUTABLE BEFORE ROUND 07 ENTRY",
-        "qwen2.5-coder:7b-agent",
-        "qwen3:1.7b",
-        "bge-m3",
         label="CURRENT real-delivery overlay",
     )
+    # Preserve every historical acceptance section; these are coverage, not dispatch.
     for round_number in range(1, 16):
         marker = f"ROUND {round_number:02d}"
         if marker not in real_delivery_overlay:
@@ -392,7 +603,7 @@ def validate() -> None:
         launch_plan,
         "SUBORDINATE ROUND 15 LAUNCH GATE / NOT THE TASK-SEQUENCE AUTHORITY",
         "D:\\LUMENIS_REBUILD\\序\\序境",
-        "exact 15-round sequence",
+        "six-round dispatch and complete legacy acceptance coverage",
         label="launch convergence plan",
     )
 
@@ -403,6 +614,47 @@ def validate() -> None:
         "direct code target",
         "REWORK",
         label="Experience contract router",
+    )
+
+    _require_collapsed(
+        skill_current_truth,
+        "root `AGENTS.md` first",
+        "only execution router",
+        "C1–C6 local/Codex Cloud assignments",
+        "must not depend on workstation-only instructions or skills",
+        label="repository current-truth skill",
+    )
+    _require_collapsed(
+        skill_task_router,
+        "only repository execution router",
+        "six fixed C1–C6 execution rows",
+        "without workstation-only skills",
+        label="repository task-router skill",
+    )
+    _require_collapsed(
+        skill_release_completion,
+        "C1–C6",
+        "R01–R15",
+        "J1–J8",
+        "only after engineering is fully operable",
+        "does not mark `USER_VERIFIED`, `RELEASED` or `OPERATING`",
+        label="repository release-completion skill",
+    )
+    _require_collapsed(
+        skill_progressive_context,
+        "only execution router",
+        "C1–C6 rows",
+        "Source Owner Index maps",
+        "base-SHA",
+        "W6 patch-return rules",
+        label="repository progressive-context skill",
+    )
+    _require_collapsed(
+        skill_ai_agent,
+        "Do not",
+        "auto-discover, probe, fall back to, or reactivate local-model or Zhipu",
+        "Owned model training and inference belong to C2",
+        label="repository AI/Agent skill",
     )
 
     for required_path in (
@@ -429,16 +681,24 @@ def validate() -> None:
         "00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json",
         "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
         "00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
-        "### Fifteen-round closed-loop red line",
+        "### Six-round execution windows and retained acceptance coverage",
         "### Accepted Batch online-publication gate",
-        "Product Owner's parallelism target is ten",
         "Industry Business",
         "only repository execution router",
-        "not fifteen mutually blocking implementation windows",
-        "ten is also the approved operating ceiling",
-        "parallel war-room rule above",
-        "REAL USER WORK E2E ACCEPTANCE — ROUND 02 through ROUND 15",
-        "Missing E2E evidence forces Sol to return `REWORK` or `BLOCKED`",
+        "**C1 / W1 — Data and Collection**",
+        "**C2 / W2 — Owned AI and Agent**",
+        "**C3 / W3 — CTH and BMP Business Workflows**",
+        "**C4 / W4 — Original Pitch, Video and Podcast**",
+        "**C5 / W5 — Importer, Research and Shared Deliverables**",
+        "**C6 / W6 — Integration, Runtime and Release**",
+        "The separate front-end window F is the seventh execution window",
+        "The root controller M (Sol or Astra",
+        "R01–R15 remain the complete acceptance and technical-dependency coverage",
+        "J1–J8 remain the mapped source of user-job requirements",
+        "Do not add a ten-worker target, hidden helper window, per-leaf stop rule",
+        "#### Codex Cloud window constraints",
+        "REAL USER WORK E2E ACCEPTANCE — C1 through C6 and mapped R checkpoints",
+        "Missing E2E evidence forces REWORK or BLOCKED",
         "REAL USER JOB",
         "USER-VISIBLE RESULT",
         "FAILURE/RECOVERY",
@@ -498,5 +758,6 @@ if __name__ == "__main__":
     print(
         "CODEX TAKEOVER GOVERNANCE OK "
         f"{EXPECTED_CONTRACT_ID} v{EXPECTED_VERSION} {EXPECTED_FINGERPRINT} "
-        "single-machine-contract=PASS workflow-guards=PASS online-progress=PASS"
+        "single-machine-contract=PASS six-round-routing=PASS legacy-coverage=PASS "
+        "cloud-boundaries=PASS workflow-guards=PASS online-progress=PASS"
     )

@@ -4,7 +4,12 @@ import unittest
 
 from scripts.audit_tools.verify_codex_takeover_governance import (
     ONLINE_STATUS_PATH,
+    _assert_current_round_statuses,
+    _assert_execution_boundaries,
+    _assert_legacy_coverage_mapping,
     _assert_online_progress_for_paths,
+    _assert_readme_routing_consistent,
+    _assert_six_round_routing,
     _requires_online_progress,
 )
 
@@ -33,6 +38,120 @@ class OnlineProgressGovernanceTests(unittest.TestCase):
     def test_historical_document_alone_does_not_claim_a_batch(self) -> None:
         self.assertFalse(_requires_online_progress("docs/archive/old-note.md"))
         _assert_online_progress_for_paths({"docs/archive/old-note.md"})
+
+
+class SixRoundGovernanceTests(unittest.TestCase):
+    def _agents_matrix(self) -> str:
+        return "\n".join(
+            (
+                "Root AGENTS.md is the only repository execution router.",
+                "| C1 / W1 | Local Codex | Data and Collection |",
+                "| C2 / W2 | Local Codex | Owned AI and Agent |",
+                "| C3 / W3 | Codex Cloud | CTH and BMP business workflows |",
+                "| C4 / W4 | Local Codex | Original Pitch, Video, Podcast |",
+                "| C5 / W5 | Codex Cloud | Importer, Research, Reporting, Artifact and notifications |",
+                "| C6 / W6 | Local Codex | Integration, Runtime and Release |",
+                "The separate front-end window F joins all six deliveries.",
+                "The root Sol controller M owns review and acceptance.",
+            )
+        )
+
+    def _cloud_and_human_boundaries(self) -> str:
+        return " ".join(
+            (
+                "fixed base SHA",
+                "approved minimal/public sample inputs",
+                "never upload secrets credentials Cookies private sessions complete production database",
+                "must not create a branch open a PR directly push main or deploy",
+                "W6 applies that exact patch",
+                "local runtime/E2E validation",
+                "do not call, auto-discover, probe, fall back to, or reactivate them",
+                "legacy Ollama/local-model-provider, Zhipu or Jev",
+                "interfaces and historical artifacts",
+                "The Product Owner performs the repeated core-job acceptance only after engineering is fully operable",
+                "development window E2E does not mark USER_VERIFIED, RELEASED or OPERATING",
+            )
+        )
+
+    def _coverage_matrix(self) -> str:
+        rows = (
+            "R01 | M W6",
+            "R02 | M W6 all windows",
+            "R03 | C1 C6",
+            "R04 | C1 C2 C5 C6",
+            "R05 | C1 C2 C6",
+            "R06 | C1 F C6",
+            "R07 | C2 C4 C5",
+            "R08 | C6 F",
+            "R09 | C1 C2 C3 C5 C6 F",
+            "R10 | C1 C3",
+            "R11 | C2 C3 C4 C5",
+            "R12 | C1 C2 C3",
+            "R13 | C2 C3 C4 C5",
+            "R14 | C1 C2 C5 C6 F",
+            "R15 | C6 M Product Owner",
+            "J1 | C1 C6",
+            "J2 | C3",
+            "J3 | C3",
+            "J4 | C4",
+            "J5 | C4",
+            "J6 | C4",
+            "J7 | C2",
+            "J8 | C6 F",
+        )
+        return "\n".join(f"| {row} |" for row in rows)
+
+    def test_local_cloud_window_swap_is_blocking(self) -> None:
+        matrix = self._agents_matrix()
+        _assert_six_round_routing(matrix)
+
+        swapped = matrix.replace(
+            "| C3 / W3 | Codex Cloud |", "| C3 / W3 | Local Codex |", 1
+        )
+        with self.assertRaisesRegex(AssertionError, "C3 must use Codex Cloud"):
+            _assert_six_round_routing(swapped)
+
+    def test_current_snapshot_must_report_all_six_rounds(self) -> None:
+        current = self._agents_matrix() + "\nLUMENIS-SOURCE-OWNER-INDEX-CURRENT.md"
+        _assert_current_round_statuses(current)
+
+        without_c4 = "\n".join(line for line in current.splitlines() if "C4 / W4" not in line)
+        with self.assertRaisesRegex(AssertionError, "C4"):
+            _assert_current_round_statuses(without_c4)
+
+    def test_missing_or_remapped_legacy_coverage_is_blocking(self) -> None:
+        matrix = self._coverage_matrix()
+        _assert_legacy_coverage_mapping(matrix)
+
+        without_r15 = "\n".join(line for line in matrix.splitlines() if "R15" not in line)
+        with self.assertRaisesRegex(AssertionError, "R15"):
+            _assert_legacy_coverage_mapping(without_r15)
+
+        remapped_j7 = matrix.replace("| J7 | C2 |", "| J7 | C3 |", 1)
+        with self.assertRaisesRegex(AssertionError, "J7 coverage omits"):
+            _assert_legacy_coverage_mapping(remapped_j7)
+
+    def test_cloud_isolation_retired_providers_and_final_human_gate_are_required(self) -> None:
+        controls = self._cloud_and_human_boundaries()
+        _assert_execution_boundaries(controls)
+
+        with self.assertRaisesRegex(AssertionError, "fixed base SHA"):
+            _assert_execution_boundaries(controls.replace("fixed base SHA ", "", 1))
+        with self.assertRaisesRegex(AssertionError, "repeated core-job acceptance"):
+            _assert_execution_boundaries(
+                controls.replace(
+                    "The Product Owner performs the repeated core-job acceptance only after engineering is fully operable",
+                    "",
+                    1,
+                )
+            )
+        with self.assertRaisesRegex(AssertionError, "obsolete active execution routes"):
+            _assert_execution_boundaries(controls + " Use Ollama first.")
+
+    def test_readme_old_sequential_worker_route_is_blocking(self) -> None:
+        _assert_readme_routing_consistent("See AGENTS.md for execution routing.")
+        with self.assertRaisesRegex(AssertionError, "obsolete execution/provider routes"):
+            _assert_readme_routing_consistent("15 个顺序 Codex 任务")
 
 
 if __name__ == "__main__":

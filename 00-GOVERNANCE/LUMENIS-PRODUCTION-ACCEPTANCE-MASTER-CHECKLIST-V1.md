@@ -27,13 +27,13 @@ RESOLVE origin/main → READ CURRENT SOURCE OWNER INDEX
 
 每一轮结束后复查受影响路径，并将未闭环项保留在 Pending / Blocked / Needs Evidence 中。只有索引 owner 缺失/冲突、跨域 owner 或 DB/API/Auth/Permission/Evidence/Collector 边界改变、引入未分类外部资产、结构校验失败，或产品 Owner 明确要求时，才触发全仓源码重审。
 
-### 三回交付红线
+### 三类验收维度（不是三回执行，映射 C1–C6）
 
 1. **App Experience：** UI、布局、PC/移动语义重组、UX 动效和真实现有绑定；不得从 Apple、ChatGPT、TRAE 参考推导新功能或通用 44 屏模板。
-2. **Backend / Recovery：** 按现有 owner 找回、适配并接通功能；Ollama 归 SYSTEM AI Gateway，媒体平台沿用现有 Cookie/session/browser 链，OpenCode/Codex 只作研发执行工具。
+2. **Backend / Recovery：** 按现有 owner 找回、适配并接通功能；自有 AI 归 SYSTEM AI Gateway；旧本地模型/智谱/OpenCode 模型调用已停止、接口保留；平台沿用获准 Cookie/session/browser 链；Codex/Cloud 仅作研发。
 3. **Closed-loop internal beta：** 用真实授权数据完成 UI Entry → Action → API → Canonical Result → Evidence/Trace → Return/Evaluation → E2E / recovery / release evidence。
 
-LUMENIS 产品账号延后到内测后；内测前和内测阶段不得以产品账号墙阻断现有产品。平台 Cookie/session 与产品账号是两类身份，后端 Permission 和 effect fence 始终保留。
+LUMENIS 产品账号密码重设计延后至产品工程闭环后；内测前和内测阶段不得以产品账号墙阻断现有产品。平台 Cookie/session 与产品账号是两类身份，后端 Permission 和 effect fence 始终保留。
 
 ## 1. 产品结构
 
@@ -122,14 +122,14 @@ Brief → Fact Contract → Research → Scene / Audience
 
 ```text
 Production Truth → Intelligence Router
-├─ Local AI
-├─ Approved Cloud Provider
-└─ Deterministic Rules / No-AI
+├─ Approved owned weights / training / inference
+├─ Retired interfaces (inactive)
+└─ Deterministic functions / explicit failure recovery
 ```
 
-必须验证：Provider Health / Router / Local Runtime / ZERO_CLOUD / cloud-off independence / Structured Output / Hallucination Guard / Fallback / Cost Guard / Resource Guard / Trace。
+必须验证：Owned Runtime / Router / 外部模型 API 关闭后的独立完成 / Structured Output / Grounding / Recovery / Cost Guard / Resource Guard / Trace。不得回退到停用 provider；Codex Cloud 不证明产品推理服务已部署。
 
-AI 不可用时核心生产流程仍必须成立。
+AI 不可用时确定性流程和恢复仍须成立；必需分析的 Job 不能用不可用或摘录过关，C2 必须产出有用的自有推理结果。
 
 ## 8. AI 产品闭环六项
 

@@ -1,6 +1,6 @@
 # LUMENIS Source Owner Index — CURRENT
 
-> Status: **CURRENT EXECUTION INDEX / FIFTEEN-ROUND CLOSED LOOP**
+> Status: **CURRENT EXECUTION INDEX / SIX-ROUND DELIVERY / COMPLETE LEGACY COVERAGE**
 >
 > Updated: 2026-09-23
 > Approved ROUND 01 source-audit baseline: `df15a99de6f5ffc3eb85e2c9924afb59c1c3c781` (provenance only; resolve the live `origin/main` before every change)
@@ -9,9 +9,9 @@ This file is the fixed repository navigation and delivery index for 序境 / LUM
 
 When this index conflicts with current executable source or runtime evidence, current source/runtime wins and this index must be repaired in the same coherent change.
 
-## 1. Locked 15-round delivery sequence
+## 1. Retained fifteen-checkpoint coverage through six rounds
 
-Product work is accepted through exactly 15 ordered round checkpoints. A dependent successor cannot be accepted before its entry dependencies and predecessor exit gate pass. Independently executable implementation batches may overlap only under the root `AGENTS.md` war-room rule after Sol checks actual dependencies, owner/file/test/runtime isolation; parallel implementation never grants early round acceptance. No worker may auto-continue into another batch.
+Current execution follows C1–C6 in AGENTS.md. All fifteen rows retain their requirements and genuine technical dependencies; they are not sequential dispatches. Valid evidence may cover multiple IDs. No mapping turns a missing gate into PASS. M accepts complete outcomes; W6 integrates them.
 
 | Round | Delivery | Scope | Exit gate |
 | --- | --- | --- | --- |
@@ -21,7 +21,7 @@ Product work is accepted through exactly 15 ordered round checkpoints. A depende
 | 4 | **Identity, context, Permission and Evidence** | Actor identity, Subject/BrandFocus, access timing, read/write/approval/effect fences and lineage. | Context cannot grant authorization; decisions/actions trace to Evidence and Return. |
 | 5 | **Runtime, health and recovery** | Startup, supervisor, honest health, queue/worker/DLQ, logging, recovery and operations stores. | Health represents real dependencies; failure/recovery paths are tested. |
 | 6 | **Collector, browser and acquisition** | One collector/browser, scheduler/adapters, Cookie/session/CDP, rate limits, provenance and ingestion. | Authorized source → collection → Evidence closes without duplicate runtime or unsafe browser behavior. |
-| 7 | **AI, Agent and Shared engines** | One AI Gateway, Ollama/providers, approved Jev typed decision candidate, Agent/skills, reporting, evaluation and learning. | Provider state and derivative output are honest; Jev passes its staged contract/evaluation gate before activation; AI never owns truth/effects. |
+| 7 | **AI, Agent and Shared engines** | One AI Gateway, owned weights/training/inference, Agent/skills, reporting, evaluation and learning; retired providers remain inert. | Useful owned inference, tools, recovery and promotion are proven; Jev/retired providers stay inactive; AI never owns truth/effects. |
 | 8 | **Cross-Surface Experience Foundation** | Public Website foundation, Flutter Web Workspace/Desktop/Mobile shells, shared contract/state/accessibility/localization and capability boundary. | Four surfaces have distinct roles over one Product Core; no generic screen template or second truth. |
 | 9 | **Golden Pages and CTH-02** | AI-01, CTH-01/02, BMP-01, SH-01 and SYS-01 with surface matrix and live binding. | Applicable Web/Desktop/Mobile paths complete real tasks with Permission/Evidence and truthful states. |
 | 10 | **CTH monitoring and analysis** | CTH-03..07 source-backed monitoring, events, calendar, sentiment, trend and trace. | Real Subject-scoped monitoring/analysis closes with source lineage. |
@@ -31,9 +31,61 @@ Product work is accepted through exactly 15 ordered round checkpoints. A depende
 | 14 | **Remaining ACC, AI, Shared and SYSTEM Experience** | ACC-01..04, AI-02..05, SH-02..06 and SYS-02..08, respecting pre-beta account timing. | Each applicable surface role is explicit; deferred identity capability is honestly blocked/deferred, not simulated. |
 | 15 | **Closed-loop internal beta and release** | Cross-surface real-data E2E, PC/mobile, security, accessibility, performance, packaging, clean clone, recovery/rollback and release evidence. | Public → Web → real context/workflow/Evidence → Desktop advanced execution if applicable → Web result → Mobile approval/notification if applicable → Report/Evaluation/Learning passes; unresolved items remain explicit. |
 
+### Approved execution coverage map — 2026-10-02
+
+AGENTS.md owns dispatch. C3/W3 and C5/W5 use Codex Cloud; others use local Codex.
+W5/W6 begin immediately within real dependencies. CTH/BMP do not wait for all directories.
+
+| Existing ID | Responsible delivery / support |
+|---|---|
+| R01 | M W6 |
+| R02 | M W6 |
+| R03 | C1 C6 |
+| R04 | C1 C2 C5 C6 |
+| R05 | C1 C2 C6 |
+| R06 | C1 C6 F |
+| R07 | C2 C4 C5 |
+| R08 | C6 F |
+| R09 | C1 C2 C3 C5 C6 F |
+| R10 | C1 C3 |
+| R11 | C2 C3 C4 C5 |
+| R12 | C1 C2 C3 |
+| R13 | C2 C3 C4 C5 |
+| R14 | C1 C2 C5 C6 F |
+| R15 | C6 M Product Owner |
+| J1 | C1 C6 |
+| J2 | C3 C1 C2 C5 |
+| J3 | C3 C1 C2 C5 |
+| J4 | C4 C2 C5 F |
+| J5 | C4 C2 C5 F |
+| J6 | C4 C2 C5 F |
+| J7 | C2 C5 |
+| J8 | C6 F |
+
+The original six urgent exits remain: XHS exact scope/unassigned → C1;
+Core8201/FFmpeg/ffprobe/crash recovery → C6+C4; Source Brief/multimodal in real
+CTH/BMP → C2/C3/C5/C6; useful Outcome/Evaluation → C2/C3/C4; same-SHA Product/App
+hosted → C6; final Product Owner repeated jobs after engineering ready → C6/M/PO.
+Counts do not substitute for useful outcomes.
+
+U01–U25 and original 34-section/44-screen coverage remain:
+U01–U05 Global/identity/markets/native fields/freshness/tenants → C1;
+U06–U12 monitoring/consumer/risk/operations/brand/competitors/creators/campaign → C3;
+U13–U15 original pitches, video and podcast (three separate deliverables) → C4;
+U16–U17 library/import/citation/report/export → C5 with C2 understanding;
+U18–U20 AI, Agent/Skill Store and Evaluation/Learning → C2;
+U21–U25 browser, open entry/effects, surfaces, settings/notifications,
+runtime/security/release → C1/C5/C6 plus F. No capability is removed by remapping.
+
+W6 uniquely writes app.py, lumenis_app_api.py, experience_runtime.py and
+experience_screens.py composition and executes formal DB changes. W2 owns
+ai_task_engine.py and Agent execution. W1 serializes actual Collector writes;
+other windows use explicit disposable DBs. F exclusively changes app/ and
+website/ interface code. These writer assignments do not create new owners.
+
 ## 2. Product preservation contract
 
-These are blocking rules for all 15 rounds:
+These are blocking requirements for C1–C6 and mapped checkpoints:
 
 1. Inspect the current owner, callers, contract, tests and runtime path before changing code. `UNKNOWN` and `BACKEND_GAP` are investigation states, not instructions to create an API.
 2. Preserve existing product position, functions, business rules, data sources, object meanings and workflow outcomes. Work may strengthen or adapt an approved capability; it may not invent, expand or replace product scope.
@@ -51,7 +103,7 @@ These are blocking rules for all 15 rounds:
 14. Route every context/data-related round through `LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md`. The product default is `GLOBAL / ALL`; Subject/BrandFocus selection changes focus only and never grants Permission or controls background execution. Report `Global Commercial Coverage`, `Global Brand Coverage` and `Guangzhou Taikoo Hui Reference Coverage` as three acceptance dimensions of the same internal full-universe edition. They must not create separate products, releases or truth stacks. All three `YES` is required for `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=YES`.
 15. Every related round runs the contract's `RANDOM ENTITY DATA ACCEPTANCE` with rotating stratified non-fixture samples and preserves seed/list/version/request/surface/Evidence/result evidence. A covered/mature blank or fabricated sample forces `REWORK`/`BLOCKED`; an unavailable registry is reported as sample count zero and assigned to its owning round, never postponed silently to ROUND 15.
 16. An accepted Batch is not an online delivery until its reviewed source, Round evidence and CURRENT status are coherently committed, pushed and verified against live `origin/main` in the same delivery cycle under `AGENTS.md` §2. Preserve unaccepted work as `LOCAL_ONLY`; a documentation-only push does not make its source visible to GitHub readers.
-17. Sol targets ten concurrently active, independent Luna Batches only where real host capacity and owner/file/test/runtime isolation permit. Fill safe available slots and disclose actual capacity, active and queued counts; never manufacture work or claim ten active workers when the host allows fewer. Acceptance dependencies remain ordered.
+17. Six fixed windows, four local and Cloud W3/W5, independent frontend F, controller M and integration W6. No ten-worker target. Report actual capacity/activity, preserve pauses and genuine dependencies.
 18. Chinese, English and Korean are product-surface commitments, not merely Public Website copy. Apply the sole Experience Constitution's per-screen three-language and responsive/accessibility gate to every promised operational surface; unverified Korean UI is an explicit gap, never a silently dropped requirement.
 
 ### Product Owner requirement routing check
@@ -76,13 +128,13 @@ mention alone cannot be marked implemented.
 | `GLOBAL / ALL`, focus-only Subject/BrandFocus, internal full-universe data and honest permission-limited commercial views | sole Global Universe Context/Data Maturity contract; Shared DB/Evidence and SYSTEM Permission owners |
 | Global commercial, global brand and Guangzhou Taikoo Hui maturity plus rotating non-reference entity tests | sole Global Universe Context/Data Maturity contract; relevant Round `REAL DELIVERY CARD` |
 | Collector/Browser/authorized sessions, public sources and Hong Kong-only XHS collection | SYSTEM Collector/Browser owners; `AGENTS.md` §§8–10; Real Delivery Overlay ROUND 06 |
-| One AI Gateway, Ollama, Zhipu and typed Jev candidate; no AI Production Truth | Product Architecture AI boundary; SYSTEM AI owner; Round 07 gates |
+| One AI Gateway and owned inference/training | C2, Product Architecture, SYSTEM AI owner and R07 gates; stopped interfaces retained inert |
 | Product Skill Store discovery, trust/license, guarded run, history, update/disable/uninstall | Shared Agent Skills owner; this index §2 item 12; Real Delivery Overlay ROUND 07 and AI-04 |
 | Creation, reporting, evaluation, learning and per-round frontier research/controlled capability upgrades | Product Architecture chain; `AGENTS.md` §§3–4; Real Delivery Overlay research and workflow gates |
 | Real permitted user E2E, operable page, Evidence Trace/Return and honest failure/recovery every related Round | sole Real Delivery Overlay; Experience Constitution; current Round Charter |
 | Data/source legality, secrets, version compatibility, backup/restore/deletion, tenant lifecycle and commercial operations | Real Delivery Overlay §23; `COMMERCIAL_READY=NO` until its six gates pass |
 | Windows/macOS/Linux/Android/iOS, clean clone, cross-surface return, rollback, internal beta and release | this index ROUND 15; Real Delivery Overlay release matrix; platform-specific runtime evidence |
-| Workstation Codex/OpenCode/Zhipu/Ollama routing without exposing credentials or granting product authority | workstation AGENTS defaults; repo `AGENTS.md` security/effects rules; current AI/Agent owners |
+| Codex manual selection retained; stopped model routes inert | Current AGENTS policy supersedes historical workstation routing |
 
 ## 3. Fixed source lookup map
 
@@ -106,10 +158,10 @@ After bootstrap, locate work here. Root-level compatibility callers remain class
 | Shared Evaluation/Learning/Reporting | `lumenis/shared/evaluation/`; `lumenis/shared/learning/`; `lumenis/shared/reporting/` | Current root callers and domain regression tests |
 | Shared skills/agent execution | `lumenis/shared/agents/skills/` | `account/api.py`; `agent_runtime/`; `agent_capability/`; `agent_smart_tool/`; `ai_api.py`; `ai_task_engine.py` |
 | SYSTEM Permission/effects | `lumenis/system/security/` | Active API/action callers; permission, denial, approval and effect-fence tests |
-| SYSTEM AI runtime | `lumenis/system/ai_gateway/` | Generative/local providers plus the approved Jev typed-decision candidate; `local_ai_client.py`; `lumenis/ai_hub/`; `ai_api.py`; `ai_task_engine.py`; `content_generation.py`; `system_features_api.py`; `experience_runtime.py`; AI tests. Jev implementation remains ROUND 07 and may not form a second gateway or truth owner. |
+| SYSTEM AI runtime | lumenis/system/ai_gateway/ | C2 owns inference/training; local_ai_client.py, ai_api.py, ai_task_engine.py, content_generation.py and compatibility callers retained; no retired-provider probes/fallback. |
 | SYSTEM collection | `lumenis/system/collector/` | Platform adapters, guard, runtime, scheduler and collection/Evidence tests |
 | SYSTEM browser/session | `lumenis/system/browser/runtime/` | `xhs_cookie_bridge.py`; `xhs_p0_orchestrator.py`; `xhs_cdp_collector.py`; Cookie/path/HK-policy/lineage tests |
-| Engineering AI | `.opencode/opencode.json` for OpenCode; Codex user/runtime configuration outside product source | Engineering audit/test/automation only; never count it as a LUMENIS user model, API owner or Production Truth |
+| Engineering AI | Codex selected model; historical .opencode/opencode.json | No retired local-model/Zhipu/OpenCode calls; engineering resources never own Product Truth. |
 | Startup/runtime | `scripts/start_production.ps1`; `app.py`; `run_supervised.py`; existing `lumenis/blueprint.py` → `lumenis/version_center/` compatibility startup caller | `/healthz`; required initialization; critical API/App runtime evidence. Version-center background saving must default off; it is not a second mainline acceptance/publishing authority. Manual version actions remain separately authorized. |
 | Operations/deployment | Existing `scripts/`, `deployment/` and environment manifests | Use only the launcher/deployment artifact named by the active acceptance gate; scripts do not become product owners |
 | Tests and release evidence | `tests/`; `app/test/`; `tests/CI_TEST_TIERS.md` | `.github/workflows/`; exact release/production acceptance artifact for the current commit |
@@ -168,8 +220,8 @@ The table below records the earlier audit baseline, not live source status. The 
 | --- | --- | --- |
 | Multi-surface Experience | `app/` contains the only current user-facing implementation. Public Website, Flutter Web Workspace and multi-surface deployment are absent. Five top-level Golden Page slices and nested CTH-02 exist; 44 screen IDs exist, while only six reviewed screen specifications exist. | **PARTIAL / ROUND 08+**. The approved architecture is not implementation evidence; current Flutter/local work is preserved. |
 | Product account | The accepted pre-beta Flutter launch reads Product Core runtime identity without `/v4/auth/login`, `/v4/auth/logout`, or a startup Subject Registry fetch. Loopback-only Core transport bootstrap remains separate; CTH-02 calls the existing account-protected registry only when opened and contains 401/403 locally. Media Cookie/session state remains in SYSTEM. | **TESTED SOURCE / LIVE BACKEND CONTRACT VERIFIED / PACKAGED UI UNVERIFIED** at that source checkpoint. Product account/password design is deferred until 100% product closure and subsequent Product Owner redesign; the observed 401/403 remains a pre-closure access gap. Focused Flutter tests and 75 isolated Python Auth/API regressions passed at that checkpoint; the live repository DB was not opened or altered for testing. |
-| OpenCode | `.opencode/opencode.json` configures a bounded engineering runtime and explicitly restricts secrets/network/task behavior. Flutter and Product Core do not call OpenCode as a user feature. | **ENGINEERING CONFIG PRESENT**. Preserve and use for development/audit where available; do not report it as an implemented product capability. |
-| Ollama and Jev | Local Ollama is represented by the canonical AI Gateway and current compatibility callers; its live state remains probe-dependent. Jev has Product Owner approval only as a future typed decision/evaluation provider and has no current adapter or runtime evidence. | **OLLAMA IMPLEMENTED SOURCE / LIVE UNVERIFIED; JEV ABSENT / ROUND 07**. Neither provider may be called directly from a surface or promoted to `ACTIVE` without its provider-specific gate. |
+| OpenCode | Historical configuration retained | RETIRED / DO NOT CALL OR PROBE. |
+| Ollama and Jev | Interfaces/history retained, C2 follows owned-model milestone | RETIRED / INACTIVE; no calls, probes, auto-discovery, fallback or reactivation. |
 | Media Cookie collection | SYSTEM collector/browser owners, XHS/RedNote bridges, HK-policy checks, Cookie path and lineage tests exist. Secrets are runtime-only and excluded from Git. | **IMPLEMENTED SOURCE / LIVE SESSION UNVERIFIED IN THIS AUDIT**. Preserve existing Cookie flow and verify only through authorized runtime acceptance. |
 | Backend gaps | The registry contains 54 fail-closed binding rows, and current backend capability is distributed across canonical and compatibility callers. Source audit also found duplicate `/api/ai/tasks` declarations, a canonical AI Gateway plus `local_ai_client.py`, and compatibility Skill/Cookie callers that must be reconciled. | **SOURCE CHECK REQUIRED PER ROW**. Preserve unique behavior and converge on existing owners; do not manufacture 54 APIs or a third execution path. |
 | Legacy-looking root callers | Root modules still carry active compatibility/caller behavior. | **CLASSIFIED, NOT DELETION-READY**. Move/delete only after call graph, behavior, data and tests converge on the canonical owner. |
@@ -197,8 +249,8 @@ This table is a scheduling input, not permission to start a later round. Each ow
 
 | Gap / verified lead | Current evidence at 2026-09-22 | Owning round and mandatory future Task Card input | Boundary |
 | --- | --- | --- | --- |
-| Ollama durable startup | Product Owner supplied live evidence that canonical AI Gateway → Ollama `qwen3:1.7b` succeeded and `bge-m3` returned a 1024-dimension embedding. Windows task `LUMENIS-Ollama-Autostart` is disabled and points to missing legacy `D:\audit-four-source\keepalive\start-ollama.ps1`; current Ollama process availability does not prove reboot durability. | **ROUND 05 Runtime / Startup**: inspect current service/process/task ownership; retire the stale path without reviving it; implement one canonical persistent startup only if justified; prove boot, health, failure, recovery, observability and rollback. | Do not create or enable a host scheduled task in ROUND 02. Do not treat a running process as `OPERATING`. |
-| Engineering and canonical Zhipu routes | Product Owner supplied live evidence: OpenCode `zhipu/glm-4.5-air` invocation succeeded; `zhipu/glm-4.7` configuration/skill review completed; canonical AI Gateway → Zhipu `glm-4.5-air` succeeded. | **ROUND 07 AI / Agent / Shared Engines**: revalidate provider identity, secret injection, typed contract, evaluation, failure/fallback, cost/privacy, trace and controlled promotion; record provider/model/scope/exit/adopted for engineering-compute use. | OpenCode/Zhipu is an engineering resource and gateway provider, never Product Owner, Permission/Evidence owner, Production Truth or effect authorizer. No credential may enter source/evidence. |
+| Ollama durable startup | Historical LUMENIS-Ollama-Autostart, qwen3:1.7b, bge-m3, qwen2.5-coder:7b-agent references remain provenance | SUPERSEDED by retirement; C6 proves Core/approved owned-runtime durability | No re-enable or probe. |
+| Engineering and canonical Zhipu routes | Historical successes retained | SUPERSEDED; C2 proves owned-model business outcomes | No calls/probes/fallback or credential publication. |
 | Installed local-model truth drift | `local_ai_client.py` and some governance text still reference unavailable `qwen2.5-coder:7b-agent`, while the verified local routes used `qwen3:1.7b` and `bge-m3`. | **ROUND 07 AI / Agent / Shared Engines**: inventory every model reference and caller; converge actual models through the canonical AI Gateway; preserve honest unavailable/fallback states; update tests and current governance only after live revalidation. | Do not rename a model string mechanically or bypass the gateway in ROUND 02. |
 | Jev and LUMENIS-specific self-developed typed model candidates | Published mainline still has no accepted Jev adapter or real provider result; protected local Jev code remains a candidate. The Product Owner requires a self-developed LUMENIS-specific model candidate before prelaunch review. Keep both for comparison now; Jev is intended to exit after the self-developed path passes its replacement gate. | **ROUND 07 AI / Agent / Shared Engines, then ROUND 15 prelaunch**: use one Gateway and matched authorized tasks to prove each candidate's pinned contract, source lineage, secret/legal/cost/privacy boundary, multilingual and low-confidence behavior, shadow evaluation, human review, trace, observability, rollback and real user-work outcome. The prelaunch comparison must assess accuracy, calibration, latency, failure states and rollback before approving Jev retirement; otherwise record the unmet gate, do not silently remove the provider. | Neither candidate owns Permission, Evidence, Product Truth or effects. Local Codex open-source model configuration is an engineering resource outside the product and never counts as Gateway or product E2E proof. Learn from public principles; training on Jev output requires separate license/data-use approval. |
 | Legacy topic campaign identity path | At `15ece66f`, `topic_campaign.py` fences its former 9222/profile collector, health, recovery, scheduler and backfill entries before collection I/O. Missing or hostile endpoints are blocked; even the explicit HK 9223 route returns `CANONICAL_COLLECTOR_BINDING_REQUIRED` because the old workers still target the Mainland site. App registration still initializes existing storage. This is source and isolated-test evidence, not live HK collection. | **ROUND 06 Collector / Browser**: bind campaign and detail callers to the existing HK/international allowlist and `lumenis/system/collector/` owner; prove manual, automatic and recovery paths with real authorized source/Evidence and hostile 9222/profile tests. | Until the canonical binding passes, collection stays unavailable. Isolated Core acceptance continues to use the no-collect staging gate. Never probe, launch or use the personal Mainland account, port or profile. |

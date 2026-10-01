@@ -1,0 +1,9 @@
+---
+name: lumenis-local-engineering-tools
+description: Use when inspecting the local LUMENIS repository, source ownership, affected tests, tool availability, or runtime health. Select verified engineering tools without waiting for a tool name.
+---
+When connected, use the single lumenis_engineering MCP for repo_truth, source_read, source_owner, route_task, static_check, verification_plan, validation_plan, runtime_health, and configuration inventory. Reuse the existing source helper, never create another production runtime. Codex Cloud does not inherit workstation MCP configuration: if unavailable, use Git CLI, rg, repository owner/contract files and existing verification scripts for equivalent inspection. Do not install another service or upload personal configuration to satisfy a tool preference.
+MCP tools here are bounded inspection/planning tools. Run tests and builds through the native Codex sandbox, not through a new remote arbitrary-execution tool. Tests must report exit status and source version; fixture smoke tests are not product acceptance.
+If the local engineering helper and its .codex/tests directory are present and in scope, its self-test is: python -X utf8 -m unittest discover -s .codex/tests -v. This local helper is not a Cloud task prerequisite; use the task's repository-owned targeted tests.
+Use Context7 and openai_docs for current API documentation. Use dart MCP and Flutter tests for native targets. Use Playwright/Chrome DevTools with isolated profiles for browser flows; never attach the personal work account.
+Native lifecycle hooks require /hooks review of the configured source before execution. Do not bypass trust, approvals, installation checks or sandbox. Explicitly distinguish configured, protocol-verified, function-verified, and product-E2E-verified.

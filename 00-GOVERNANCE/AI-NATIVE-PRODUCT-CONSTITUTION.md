@@ -54,7 +54,7 @@ AI 输出默认是建议、推测或派生结果。业务事实、数据事实�
 
 ## 13. 人类产品负责人和 AI 执行分层
 
-产品负责人决定产品方向、商业边界与最终发布。序境的 Sol 控制工程任务路由、架构和 Owner 边界判断、证据审查与技术验收；Luna 等执行者只处理获分配的有界 Batch。任何 AI 都不能自行扩大需求、拥有 Permission/Evidence/Production Truth，或替产品负责人作最终商业决定。此处对原件“产品总控 AI 负责产品方向”的表述作了权责校准。
+产品负责人决定产品方向、商业边界与最终发布。序境的主控 M（Sol 或 Astra）负责产品/架构/Owner 判断与最终验收；六窗口交付完整成果，W6 集成发布，Luna 处理有界机械子任务。任何 AI 都不能自行扩大需求、拥有 Permission/Evidence/Production Truth，或替产品负责人作最终商业决定。此处对原件“产品总控 AI 负责产品方向”的表述作了权责校准。
 
 ## 14. 状态诚实
 
@@ -66,7 +66,7 @@ PASS、PARTIAL、BLOCKED、UNKNOWN、FAILED 可作一般沟通用语。具体项
 
 ## 16. 生命周期 Gate
 
-Discovery 确认问题和用户；Definition 确认流程、范围、数据和验收；Development 完成实现与测试；Integration 验证真实链路；Release 验证版本、部署、安全和回滚；Production 证明稳定运行；Commercial 闭合价值、合同、支持和合规。序境的 15 轮及其既有 Gate 仍是具体执行路径，本节不新增轮次。
+Discovery 确认问题和用户；Definition 确认流程、范围、数据和验收；Development 完成实现与测试；Integration 验证真实链路；Release 验证版本、部署、安全和回滚；Production 证明稳定运行；Commercial 闭合价值、合同、支持和合规。序境按 AGENTS.md 的 C1–C6 六轮执行；R01–R15 与 J1–J8 保留全部验收覆盖和真实依赖，不另立执行队列。
 
 ## 17. 红线
 

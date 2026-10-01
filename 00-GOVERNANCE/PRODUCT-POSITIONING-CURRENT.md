@@ -8,7 +8,7 @@ The final user-facing product is **one product with four coordinated experience 
 
 - **Public Website** — commercial presentation, capabilities, scenarios, cases, demo, trial application, enterprise contact, help and the login/workspace entry. It never owns Production Truth.
 - **Web Workspace** — the primary browser work surface for Subject / BrandFocus selection, CTH / BMP / AI / Shared / SYSTEM workflows, Evidence Trace, Case / Insight / Decision / Action, report/export, collaboration and approval.
-- **Desktop App** — the Power User client for local Browser / CDP, Cookie / Session, Collector, long-running tasks, local files, Ollama / Local AI, private deployment, Runtime, Recovery and advanced execution.
+- **Desktop App** — the Power User client for local Browser / CDP, Cookie / Session, Collector, long-running tasks, local files, approved owned AI capability, private deployment, Runtime, Recovery and advanced execution.
 - **Mobile Companion** — notification, event and AI-result review, approval, task status, report reading and bounded quick actions.
 
 Web Workspace, Desktop App and Mobile Companion share **ONE Product Core, ONE Canonical API / ViewModel contract, ONE Canonical Data, ONE Evidence, ONE Permission and ONE workflow meaning**. Flutter remains the approved shared application technology for Web Workspace, Desktop App and Mobile Companion; terminal-specific composition and capability boundaries are required instead of identical layouts. Public Website is separately deployable presentation and acquisition surface, not a second product or business-logic owner.

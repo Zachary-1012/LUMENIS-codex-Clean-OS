@@ -1,16 +1,18 @@
 > Status: **CURRENT SUBORDINATE REAL-DELIVERY OVERLAY / NOT A SECOND PRODUCT OR EXPERIENCE AUTHORITY**
 >
-> Authority boundary: this overlay adds delivery evidence and commercial-readiness gates to the fixed 15-round sequence. It does not add a sixteenth round, change dependency order, replace the sole Product Architecture or Experience Constitution, or erase correctly completed source work.
+> Authority boundary: this overlay adds delivery evidence and commercial-readiness gates to C1–C6 and retained fifteen-checkpoint coverage. It does not add another execution schedule, bypass actual dependencies, replace the sole Product Architecture or Experience Constitution, or erase correctly completed source work.
 >
 > Canonical path: `00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`.
 
 序境 / LUMENIS
 15 轮“真实交付约束”强制补充协议
-REAL DELIVERY OVERLAY FOR ALL 15 ROUNDS
+REAL DELIVERY OVERLAY FOR C1–C6 / ALL 15 RETAINED CHECKPOINTS
 
-本协议是当前 15 轮计划的强制叠加约束。
+REAL USER WORK E2E ACCEPTANCE remains mandatory for each complete C-window outcome and every applicable mapped requirement.
 
-它不增加第 16 轮，不改变现有 15 轮依赖顺序，不推翻已经批准的 Product Architecture。
+本协议约束 C1–C6，以下 ROUND 01–15 是保留的完整验收条目，不是十五段串行派工。
+
+分配只见 AGENTS.md，完整映射只见 Source Owner Index；保留真实依赖、全部能力与现有 Product Architecture。
 它的目的只有一个：
 
 禁止把“代码完成、测试通过、页面能打开、API 200、Adapter 注册、模型安装、健康检查正常”
@@ -123,7 +125,7 @@ COMMERCIAL_READY
 四、每轮必须生成 REAL DELIVERY CARD
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-每轮结束时，Sol 必须额外生成：
+每个 C 窗口完整成果由 W6 汇总、M 验收，同一证据复用到 R/J 条目，不逐文件/旧编号另写报告。Product Owner 工程可操作后统一重复操作；开发期间真实 Job/恢复仍必做，不标 USER_VERIFIED。每轮交付：
 
 REAL DELIVERY CARD
 
@@ -442,12 +444,10 @@ empty success
 
 RUNTIME FAILURE MATRIX
 
-FUTURE TASK CARD INPUT / NOT EXECUTABLE BEFORE ROUND 05 ENTRY：
-
-- revalidate the current Ollama process, canonical AI Gateway route and host startup ownership;
-- the disabled `LUMENIS-Ollama-Autostart` task points to missing legacy `D:\audit-four-source\keepalive\start-ollama.ps1` and must not be re-enabled;
-- decide and verify one canonical durable startup path with boot, failure, recovery, observability and rollback evidence;
-- a currently running Ollama process is not persistent-startup or `OPERATING` proof.
+CURRENT C6 RUNTIME INPUT / RETAINED R05 COVERAGE：
+- Prove canonical Core/approved owned-runtime startup, health, interruption,
+  recovery, observability and rollback; a running process is not OPERATING.
+- Historical LUMENIS-Ollama-Autostart is retired; do not enable or probe it.
 
 ROUND 05 EXIT：
 
@@ -577,12 +577,14 @@ Discover
 
 至少一个 Skill 必须真实完成业务任务。
 
-FUTURE TASK CARD INPUT / NOT EXECUTABLE BEFORE ROUND 07 ENTRY：
-
-- revalidate canonical AI Gateway → Zhipu `glm-4.5-air`, AI Gateway → Ollama `qwen3:1.7b`, and `bge-m3` embedding behavior; preserve provider/model/scope/exit/adopted evidence;
-- converge stale `qwen2.5-coder:7b-agent` references in `local_ai_client.py` and current governance to installed, evaluated models through the one canonical gateway;
-- keep Jev `ABSENT` until its typed decision/evaluation adapter, pinned contract/version, secret boundary, legal/cost/privacy, shadow evaluation, low-confidence behavior, trace, observability and rollback pass;
-- OpenCode/Zhipu/Ollama output remains derivative execution evidence, not Permission, Evidence, Canonical Truth, Product Truth or effect authority.
+CURRENT C2 AI INPUT / RETAINED R07 COVERAGE：
+- Retired local-model/Zhipu/OpenCode routes and Jev stay inactive; retain history
+  and interfaces, without call/probe/auto-discovery/fallback/reactivation.
+- Approved owned weights, real training, held-out useful business outputs,
+  multimodal input consumption, tools and resumable tasks are required.
+- Preserve model/data/license/scope/version, feedback/evaluation and controlled
+  promotion/rollback. Engineering answers never own Truth or effects.
+- Reading research, excerpts and unavailable providers cannot close C2.
 
 ROUND 07 EXIT：
 
