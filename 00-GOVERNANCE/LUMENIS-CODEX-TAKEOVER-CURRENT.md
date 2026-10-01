@@ -12,6 +12,51 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — corrected Case milestone hosted PASS; real BMP creative source pack
+
+Latest Product Owner decision: OpenAI commercially permitted open base weights
+with LUMENIS-owned training/deployment is approved. The canonical Gateway candidate
+configuration `config/ai-owned-foundation.json` pins `openai/gpt-oss-20b` revision
+`6cee5e81ee83917806bbde320786a8fb61efebee`, upstream license/policy and eleven
+file SHA256s. Status is APPROVED_FOUNDATION_NOT_TRAINED, not active inference.
+Foundation-direction approval is resolved; actual GPU host/budget and qualified
+training/evaluation remain open. Codex Cloud is a development environment,
+not LUMENIS product hosting or an inference service. No old provider is restored.
+The existing source-backed reporting/learning cases remain unapproved training
+material until the Learning boundary admits exact datasets and review targets.
+The same publication adds an explicit local-only LoRA preparation consumer in
+the existing SYSTEM AI Gateway: pinned snapshot hashes, separate reviewed
+train/held-out inputs, canonical approval rechecks, no Hub uploads or provider
+activation, and no false trained state for zero steps/empty adapters. Its 88
+normal-guard targeted regressions passed using an isolated DB seed; GPU execution,
+qualified datasets and useful owned inference have not run. This is accepted
+preparation source, not ROUND07 or product-AI closure. Existing outputs and
+protected `work/` are preserved. No persistent workstation model route is changed.
+
+Both workflows actually passed at exact source
+`b51a83719b5766fd4588ebf0c94732ed56aaf0c0`:
+[Product36837703716](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/36837703716)
+and [App36837708509](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/36837708509).
+Product executed governance, compilation, isolated DB/media setup, Shared DB
+acceptance and hermetic pytest; App executed analysis/tests. The existing
+informational Asset Impact Scan still could not open its missing script despite
+the summarized success; it is NOT_EXECUTED, not PASS. Tier C remains separate.
+This publication records that exact source result, not hosted proof for a later SHA.
+
+Codex-assisted public research selected three attributed Nike creative sources,
+then the existing Collector acquired them into exact BrandFocus and signed
+Evidence445/446/447. Both acquisition cycles succeeded: three new identities
+initially, zero new identities/Evidence on the second cycle. Real publication
+times and NULL engagement survive; source claims do not establish campaign ROI
+or Chinese running-shoe demand. Existing Source Brief API saved
+`brief-b37e0b3c95994104b0b572eed916d443`; exact reopen/resume matched, GLOBAL
+read was denied403. Reports49→50, artifact evaluations127→130, integrityok/FK0.
+Business analysis was not requested; useful owned inference, business Outcome
+and final human acceptance remain open. The existing research plan retains
+OpenAI/Codex/ChatGPT, Claude, Meta Muse product/secure-VM and its Spark model
+as distinct learning inputs, without activation of another provider or runtime.
+See the existing [ROUND07 proof](evidence/round-07/ROUND-07-OWNED-AI-MATERIALS-2026-10-01.md).
+
 ### 2026-10-01 — hosted Case milestone found and corrected API inventory drift
 
 At source `43c36079ff548c38d75489d01f9e64b32dfa4d3b`, App run

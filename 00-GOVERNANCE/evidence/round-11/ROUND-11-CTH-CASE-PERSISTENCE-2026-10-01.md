@@ -128,3 +128,10 @@ Constitution and diff check passed. Tests and workflow criteria are unchanged.
 The corrected commit requires new same-SHA hosted results; source43c36079
 remains PRODUCT_GATE_FAIL for that specific contract test. Case runtime proof
 above is preserved; this correction adds no user E2E or coverage claim.
+
+Final hosted follow-up: source `b51a83719b5766fd4588ebf0c94732ed56aaf0c0`
+actually passed Product36837703716 and App36837708509. Blocking Product tests
+and App analysis/tests executed. Technical obligation5 PASS at that source;
+Tier C/human/ROUND11 acceptance remains open. The informational Asset Impact
+Scan still failed to open its absent script and must not be called a passed scan.
+This evidence publication does not claim a later documentation SHA was tested.

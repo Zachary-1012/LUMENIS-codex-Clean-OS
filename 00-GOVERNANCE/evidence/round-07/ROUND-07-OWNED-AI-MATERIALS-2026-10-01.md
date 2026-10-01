@@ -5,7 +5,134 @@ Base: `88ed522f00c996982010b9abfc232a17cfefe710`, fetched and verified on
 existing Collector intake. Unknown `work/`, source data, old artifacts and
 user model configuration are protected. No new owner or acceptance round.
 
+## Real BMP creative materials and approved foundation direction
+
+Current Batch base: `b51a83719b5766fd4588ebf0c94732ed56aaf0c0`, fetched and
+live-main verified. Context: `ai_gateway` locator, SYSTEM AI Gateway owner,
+existing Shared Reporting/Learning/Evaluation and SYSTEM Collector; governing
+AGENTS, AI-native constitution, architecture, owner index and real-delivery
+overlay. Protected `work/` is unchanged. Existing research is retained, not
+promoted to runtime truth.
+
+REAL USER JOB: compare Nike creative campaign materials and prepare a source
+brief for later evidence-grounded creative analysis. This task is deliberately
+separate from running-shoe consumer-demand analysis; football materials cannot
+repair a running-demand evidence gap. Developer-assisted discovery is explicit.
+
+REAL INPUT / CONTINUOUS FRONTIER RESEARCH: three Nike-authored public materials
+were inspected on2026-10-01, then acquired by the existing Collector, not pasted
+directly into a parallel store:
+
+| Public source | Publication time supplied by source | Canonical ID / signed Evidence |
+|---|---|---|
+| [Rip the Script release](https://about.nike.com/en/newsroom/releases/nike-debuts-rip-the-script-a-step-inside-the-universe-of-nike-football) | 2026-06-04T09:00:00-07:00 | `public-http:192a3a3344b3c608969438526358cf64` / 445 |
+| [Behind the scenes article](https://about.nike.com/en/magazine/behind-the-scenes-of-nike-football-rip-the-script-brand-film) | 2026-06-04T12:00:00-07:00 | `public-http:07519b5bc57d35e2937790d4d74851dc` / 446 |
+| [Historical Why Do It release](https://about.nike.com/zh-Hans/newsroom/releases/nike-reintroduces-just-do-it-to-todays-generation-with-why-do-it-campaign) | 2025-09-04T07:00:00-07:00 | `public-http:2ee1b97e18a700ad81810641d08503a9` / 447 |
+
+Exact scope: BMP / BrandFocus `BRAND-8b9f5ffaeea603d31bf0d7e8`, productZBMP,
+domainzbmp, SubjectNULL, scopeVERIFIED. All three Canonical rows reference
+writer-authenticated signed Evidence. Two bounded acquisition cycles both
+returned SUCCESS: first imported three identities, second updated the same
+identities with no additional Canonical/Evidence identities. Publication times
+were retained, engagement remains NULL, qualityok. The article was read; the
+film was not viewed, so no frame/shot-analysis claim is made. Brand-authored
+claims are not measured consumer response or campaign ROI. Readable sources do
+not grant weight-training or full-text redistribution rights.
+
+ENTRY / END-TO-END PATH: real Core8201 POST
+`/api/experience/reports/source-brief/generate` with these exact three source IDs,
+BMP FOCUS, followed by GET and same-job resume. USER-VISIBLE RESULT:
+`brief-b37e0b3c95994104b0b572eed916d443`, artifact
+`677b71e3d9d416944a30132a3a75c5b66f58ee4694ed5af64e994e0937663240`.
+GET was identical, resume made no duplicate report/evaluation, GLOBAL read
+returned403. Reports49→50, artifact evaluations127→130; source/Canonical/
+Evidence counts stayed276/276/447 during report creation. Integrityok/FK0.
+Backups preceded both intake and report writes; existing registry, Case,
+relation and historical report fingerprints were preserved. Private local
+proofs stay in TEMP; source articles and production DB are not committed.
+
+ACCEPTANCE ASSERTION: AUTOMATED_REAL_DATA_REPLAY_NOT_HUMAN_ACCEPTANCE.
+Business analysis was `not_requested`, reviewHUMAN_PENDING. Artifact evaluations
+are not observed business Outcome. Useful owned analysis and final PO review
+remain required; this source pack is not the entire BMP Job closure.
+
+Product Owner has now approved OpenAI commercially permitted open base weights
+with LUMENIS-owned tuning/deployment. `FOUNDATION_DIRECTION_PENDING` is closed.
+The pinned text candidate is `openai/gpt-oss-20b` revision
+`6cee5e81ee83917806bbde320786a8fb61efebee`, Apache-2.0 plus its upstream usage
+policy. Standard three weight shards total13,761,316,904 bytes; only one weight
+representation is needed. [Pinned official model card](https://huggingface.co/openai/gpt-oss-20b/blob/6cee5e81ee83917806bbde320786a8fb61efebee/README.md)
+and [official LoRA recipe](https://developers.openai.com/cookbook/articles/gpt-oss/fine-tune-transfomers)
+were checked. Codex CLI's Apache-2.0 source is a tool, not Codex/GPT-6 weights.
+This text model does not supply image understanding. Chinese/domain quality
+must pass held-out real tasks. The current16GB RAM/512MB AMD iGPU workstation
+has no verified training/inference route. H10080GB is the cookbook's example,
+not a proven universal minimum. GPU resource/budget authorization is pending;
+Codex Cloud is development only. No weights/dependencies downloaded, training,
+inference or paid resource activation occurred.
+
+GLOBAL UNIVERSE / DATA MATURITY IMPACT: Global Brand/Commercial coverageNO,
+TaikooPARTIAL. COMMERCIAL OVERLAY IMPACT: RELEASED/OPERATING/COMMERCIAL_READY=NO.
+This Batch implements the local-only LoRA preparation path described below;
+actual approved training/held-out datasets and GPU execution remain open.
+RAW/HUMAN_PENDING/rejected feedback never becomes an approved target
+automatically. OpenAI/Codex/ChatGPT, Claude, Meta Muse agent
+product and Muse Spark remain learning targets. No second runtime/truth owner.
+
+### Owned training preparation — source and bounded regression accepted
+
+`lumenis/system/ai_gateway/owned_training.py` consumes only the canonical pinned
+manifest, explicit local model snapshot and separate JSONL train/held-out inputs.
+Preflight performs no training or output write. Records require explicit source,
+rights, scope and review references plus an approved target; these are local
+attestations, not authenticated Evidence or Permission. Execution additionally
+requires the canonical Learning caller's approval verifier, bound to the exact
+dataset bytes, scopes and foundation revision, and rechecks it before the first
+output write and optimizer execution. The helper supplies no permissive verifier.
+Unknown/unreviewed/rejected inputs and train/held-out overlaps are rejected.
+
+The H100-reference recipe uses optional CUDA/Transformers/PEFT/TRL/datasets,
+offline/local-only safetensors loading, no remote code, Hub publishing or tracking
+uploads, and a new output directory outside protected source/data/model paths.
+It rejects overlength targets rather than truncating them silently. Zero optimizer
+steps or missing/empty adapter files cannot become TRAINED; even a valid trained
+candidate stays NOT_EVALUATED and is never promoted or made an active provider.
+The GPU snapshot must remain immutable in a controlled workspace. Secret-pattern
+screening is supplemental, not proof that arbitrary private text is safe.
+
+Current-snapshot normal-guard regression: 88 tests passed, 0 failures/errors/skips,
+including 16 training cases and 72 adjacent Gateway/provider cases. The explicit
+isolated Shared DB seed was used; the protected product DB was not a test target.
+Mocked execution proves revocation before write, held-out exclusion, and rejection
+of zero-step/missing-adapter false success; it is not actual training or inference.
+The new deterministic test file remains blocking Tier B, not quarantine/Tier C.
+The earlier run without repository conftest is discarded and is not acceptance.
+Current candidate AST/JSON checks, Constitution, takeover governance and diff
+whitespace checks passed. No existing test, tier or blocking gate was weakened.
+
+Sol reviewed the immutable three-file source/config/test patch
+`0f4b260e8a3c43b1f3514ef7bc9a308b819a06fa42f1a0321ebc4f10d24ecdca`
+at base `b51a83719b5766fd4588ebf0c94732ed56aaf0c0`: mergeable inactive
+preparation, partial regression protection, no authorization to activate training
+or inference. Independent delegated review was unavailable; no such review is
+claimed. Actual package versions, GPU execution, canonical approval integration,
+rights-qualified datasets, domain quality and product inference remain required.
+Business analysis/Outcome and final PO acceptance remain open. ROUND 07 is REWORK,
+not PASS; product stage, global coverage and release statuses above are unchanged.
+
 ## Technical obligation 5 — same-SHA hosted PASS
+
+### Latest actual milestone — b51a8371
+
+On2026-10-01 Product36837703716 and App36837708509 both completed SUCCESS at
+`b51a83719b5766fd4588ebf0c94732ed56aaf0c0`. Product blocking governance,
+compile, disposable DB/media preparation, Shared DB tests and hermetic pytest
+executed; App analysis/tests executed. This supersedes the source43c36079
+OpenAPI contract failure, which remains an actual historical failure. Existing
+informational Asset Impact Scan still exits2 for a missing script; summarized
+success does not make that scan PASS. Tier C remains LIVE_NOT_VERIFIED; no
+tests/tiers/workflow standards were relaxed. Documentation publication is not
+a new hosted source test. Technical obligation5 PASS, not product closure.
 
 On 2026-10-01 both completed runs report `conclusion=success` and exact
 `headSha=038fe598459c51040b8a72df02f6c88e75ca8e90`:

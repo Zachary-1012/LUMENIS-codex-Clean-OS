@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "owner": "SYSTEM AI Gateway",
+  "model_id": "openai/gpt-oss-20b",
+  "revision": "6cee5e81ee83917806bbde320786a8fb61efebee",
+  "license": "Apache-2.0",
+  "usage_policy_url": "https://huggingface.co/openai/gpt-oss-20b/blob/6cee5e81ee83917806bbde320786a8fb61efebee/USAGE_POLICY",
+  "capability": "text",
+  "format": "transformers_safetensors",
+  "status": "APPROVED_FOUNDATION_NOT_TRAINED",
+  "accessed_at": "2026-10-01",
+  "source_url": "https://huggingface.co/openai/gpt-oss-20b/tree/6cee5e81ee83917806bbde320786a8fb61efebee",
+  "fine_tune_reference": "https://developers.openai.com/cookbook/articles/gpt-oss/fine-tune-transfomers",
+  "files": {
+    "LICENSE": {
+      "size_bytes": 11357,
+      "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+    },
+    "USAGE_POLICY": {
+      "size_bytes": 200,
+      "sha256": "d6387ef7985019c45db8d9801e6ac5fd9f98f02b9f1c56f8c5af80c3e8f385d0"
+    },
+    "chat_template.jinja": {
+      "size_bytes": 16738,
+      "sha256": "a4c9919cbbd4acdd51ccffe22da049264b1b73e59055fa58811a99efbd7c8146"
+    },
+    "config.json": {
+      "size_bytes": 1806,
+      "sha256": "3a2a26ded679375b7928ddeca59764df7cea83220c1961035f6d6e232659e9ce"
+    },
+    "model-00000-of-00002.safetensors": {
+      "size_bytes": 4792272488,
+      "sha256": "16d0f997dcfc4462089d536bffe51b4bcea2f872f5c430be09ef8ed392312427"
+    },
+    "model-00001-of-00002.safetensors": {
+      "size_bytes": 4798702184,
+      "sha256": "4fbe328ab445455d6f58dc73852b85873bd626986310abd91cd4d2ce3245eaea"
+    },
+    "model-00002-of-00002.safetensors": {
+      "size_bytes": 4170342232,
+      "sha256": "a18106b209e9ab35c3406db4f6f12a927364a058b21e9d1373d682e20674b303"
+    },
+    "model.safetensors.index.json": {
+      "size_bytes": 36355,
+      "sha256": "0e085b977c4c9942f85938828e8c989ed7d5cdabf852e4da6a67c116cd502cd1"
+    },
+    "special_tokens_map.json": {
+      "size_bytes": 98,
+      "sha256": "dd5e191d20c12d2fee1da5bae14ca1db0f5f4215300af691f23cdee97120a293"
+    },
+    "tokenizer.json": {
+      "size_bytes": 27868174,
+      "sha256": "0614fe83cadab421296e664e1f48f4261fa8fef6e03e63bb75c20f38e37d07d3"
+    },
+    "tokenizer_config.json": {
+      "size_bytes": 4200,
+      "sha256": "9279e942392b742d633c7adbb89ebe002c98399db8926a7af5125c726f404070"
+    }
+  }
+}

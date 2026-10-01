@@ -63,7 +63,28 @@ The table records direct manifest entries, not every transitive dependency.
 
 The current `requirements.txt` mentions, but does not require-install: `openai`, `ollama`, `docx2pdf`, `pypdf`, and Windows-specific `win32-setctime`. Presence at runtime must be checked before treating any of them as active dependencies.
 
-## 2A. Existing local multimodal runtime (2026-10-01)
+## 2A. Approved owned-AI foundation and retained model inventory (2026-10-01)
+
+| Component | Exact candidate / presence | Decision and owner | License / notices |
+| --- | --- | --- | --- |
+| [OpenAI gpt-oss-20b](https://huggingface.co/openai/gpt-oss-20b/tree/6cee5e81ee83917806bbde320786a8fb61efebee) | Revision `6cee5e81ee83917806bbde320786a8fb61efebee`; `config/ai-owned-foundation.json` pins eleven package files and SHA256s, including three standard shards totaling13,761,316,904 bytes. No weights downloaded or runtime installed. | PO-approved foundation direction; ADAPT through existing SYSTEM AI Gateway, own LoRA training and deployment; text only, domain quality NOT_VERIFIED. Not an active provider or second model registry. | [Apache-2.0 LICENSE](https://huggingface.co/openai/gpt-oss-20b/blob/6cee5e81ee83917806bbde320786a8fb61efebee/LICENSE) and [USAGE_POLICY](https://huggingface.co/openai/gpt-oss-20b/blob/6cee5e81ee83917806bbde320786a8fb61efebee/USAGE_POLICY) checked2026-10-01; retain upstream license/attribution and applicable notices; label LUMENIS weight modifications. No ownership claim over OpenAI base weights. |
+
+The optional training recipe follows the official
+[OpenAI LoRA cookbook](https://developers.openai.com/cookbook/articles/gpt-oss/fine-tune-transfomers),
+adapted to explicit local snapshots/data, offline loading and disabled Hub and
+telemetry uploads. PyTorch/Transformers/PEFT/TRL/datasets remain optional,
+uninstalled training components; exact target-environment versions and package
+licenses must be reconciled before installation/deployment. The cookbook's
+H10080GB is a reference configuration, not a guaranteed minimum or promised
+LUMENIS performance. Codex CLI licensing covers tool source, not Codex weights.
+
+The observations below are historical inventory, not active routing. Product
+Owner subsequently retired Ollama/LM Studio/llama.cpp/Zhipu inference for product
+and development work. Preserve interfaces and provenance; do not restore these
+models, probes or fallbacks. The newer approved foundation direction is OpenAI
+commercially permitted open weights plus LUMENIS-owned tuning/deployment through
+the existing SYSTEM AI Gateway. No weight download, training or deployment is
+implied by a register entry.
 
 | Component | Observed runtime | Boundary / decision | License and distribution obligations |
 | --- | --- | --- | --- |
