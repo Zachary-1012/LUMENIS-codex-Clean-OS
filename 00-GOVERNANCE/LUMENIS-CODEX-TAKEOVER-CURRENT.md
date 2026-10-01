@@ -12,6 +12,24 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — explicit target/rights review submission
+
+At base69cfe6d8b820dc7efb93d05b415e1bd0ca3fdb94, Shared Learning now
+has the signed review/rights writer consumed by its existing training exporter.
+The submission's actor, exact typed scope, source signatures, prompt, target,
+context, training-purpose rights declaration and stable submission UUID bind a
+distinct MODEL_TRAIN COMMIT/HIGH approval resource. This review approval is not
+the separate dataset/model-hash training-execution approval. Fresh canonical
+scope authorization and exact unrevoked token are checked before commit.
+Rights and target rows write atomically; identical retries are NOOP, changed
+payloads conflict, denial/revocation/write failure rolls back both rows.
+The four affected training suites passed79 tests using isolated signed SQLite
+and the real canonical PermissionGate. No actual human approval, admitted
+business target, production DB write, training or provider activation is claimed.
+See the existing [ROUND07 owned-AI proof](evidence/round-07/ROUND-07-OWNED-AI-MATERIALS-2026-10-01.md).
+Actual useful CTH/BMP inference, execution resume, held-out business review and
+deployment remain open. ROUND07/J7/coverage/release status is unchanged.
+
 ### 2026-10-01 — AgentLoop checkpoint contract bound to durable TaskEngine
 
 At base980aa6c984d960ee2323d660664e4b502b848e3e, AgentLoop now supplies

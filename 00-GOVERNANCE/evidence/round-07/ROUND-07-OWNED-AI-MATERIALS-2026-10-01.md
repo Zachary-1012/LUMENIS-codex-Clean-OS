@@ -1,5 +1,50 @@
 # ROUND 07 / J3 + J7 — owned AI milestone and real task materials
 
+## 2026-10-01 — explicit reviewed-target and rights admission writer
+
+Bounded base69cfe6d8b820dc7efb93d05b415e1bd0ca3fdb94, fetched remote
+and live main verified. Owner: existing Shared Learning, SYSTEM Permission and
+signed Evidence; no alternate store, account system or training approval owner.
+Current locator/owner/Constitution/REAL DELIVERY rules and signed-export contract
+were used. Other active Agent/evaluation files and protected work/ are excluded.
+
+`training_review.py` builds a distinct exact MODEL_TRAIN review resource from
+the real reviewer actor, typed CTH/BMP GLOBAL/FOCUS scope, current signed Source
+hashes, original question, explicitly submitted target/context, training-purpose
+rights declaration and UUID. It rechecks actual actor scope grants and exact
+COMMIT/HIGH approval, including revocation. Review permission cannot authorize
+GPU execution; the training approval still binds model/recipe and dataset hashes.
+This API does not infer correctness or rights from non-empty model/report output.
+
+Two signed derived Evidence rows (rights and target) commit in one existing
+Shared Database transaction. Repeated identical submissions reopen validated
+rows and return NOOP after fresh authorization; payload changes conflict. Denial,
+source tampering, revoked approval, testing bypass and target-write failure never
+commit partial learning rows. The exporter reopens these signed rows into the
+existing Gateway dataset schema, retaining exact business domain and scope.
+
+Root verification:
+`python -m pytest tests/test_owned_training_review.py tests/test_owned_training_cases.py tests/test_owned_training_permission.py tests/test_owned_ai_training.py -q`
+passed79 tests, no failures/errors/skips or thread leaks. Twelve new tests use
+actual isolated signed SQLite and canonical PermissionGate for CTH, BMP Focus,
+wrong actor/scope/resource, revoked/missing approvals, rollback and NOOP. Test
+reviewers and source fixtures are explicitly disposable; no human approval or
+real Source was fabricated in the product database. No product write or model
+call occurred. The writer is IMPLEMENTED/TESTED, not live user acceptance.
+
+REAL DELIVERY CARD / 真实用户工作闭环验收: preparing authorized, reviewed
+training input now has a real writer→signed Evidence→export→Gateway-schema
+source path. Actual qualified business targets, disjoint datasets, training,
+held-out useful CTH/BMP results and production-owned inference remain open.
+RAW/HUMAN_PENDING/rejected feedback is not promoted. Final PO repeat-job review
+remains deferred. CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION: ADAPT
+OSAI learning into these existing owners; preserve the pinned foundation and
+free-T4 recipe. Do not copy independent OSAI stores or activate retired providers.
+GLOBAL UNIVERSE / DATA MATURITY IMPACT: CommercialNO, BrandNO, TaikooPARTIAL.
+COMMERCIAL OVERLAY IMPACT: RELEASED/OPERATING/COMMERCIAL_READY=NO; ROUND07 is
+REWORK and J7 is unaccepted. Same-SHA hosted evidence must be renewed at the
+coherent source milestone; older f3 hosted success is not acceptance here.
+
 Base: `88ed522f00c996982010b9abfc232a17cfefe710`, fetched and verified on
 2026-10-01. Scope: existing SYSTEM AI Gateway, Shared Reporting/Learning,
 existing Collector intake. Unknown `work/`, source data, old artifacts and
