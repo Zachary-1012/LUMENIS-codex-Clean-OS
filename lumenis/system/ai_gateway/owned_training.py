@@ -30,7 +30,7 @@ _RECORD_FIELDS = frozenset({
 _SECRET_KEY = re.compile(r"(?:api[_-]?key|authorization|cookie|session|password|secret|private[_-]?key|access[_-]?token|refresh[_-]?token)", re.I)
 _SECRET_VALUE = re.compile(
     r"(?:sk-(?:proj-)?[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|"
-    r"xox[baprs]-[A-Za-z0-9-]{12,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|\bBearer\s+\S+)", re.I)
+    r"xox[baprs]-[A-Za-z0-9-]{12,}|[-]{5}BEGIN [A-Z ]*PRIVATE KEY[-]{5}|\bBearer\s+\S+)", re.I)
 _UNKNOWN = frozenset({"", "UNKNOWN", "UNVERIFIED", "NOT_AVAILABLE", "NOT_COLLECTED", "N/A", "NA", "NONE", "PENDING", "DENIED", "REJECTED", "REVOKED"})
 _OFFLINE_ENV = {
     "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1", "HF_DATASETS_OFFLINE": "1",

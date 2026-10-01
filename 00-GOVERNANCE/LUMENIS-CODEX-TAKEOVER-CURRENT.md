@@ -12,6 +12,22 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — owned-training hosted scanner regression corrected
+
+At source `5fc46e7ed707c2313f195ec60f7dd0fb2da0be23`, App36844466756
+actually passed analysis/tests; Product36844461610 executed but failed the
+blocking source-secret regression. The detector's own private-key regex literal
+matched the repository scanner; this was a source regression, not quota failure
+or an observed credential leak. The training regex now expresses its identical
+five-hyphen delimiter with a character-class repetition. The repository scanner,
+allowlists, tests, tiers and workflow criteria are unchanged. Five private-key
+header variants remain rejected in input tests, and the complete targeted run
+passed95 tests with normal guards/isolated DB and no thread leak. Constitution,
+governance and source-static gates must pass before publication. The corrected
+source requires its own same-SHA hosted Product/App evidence; it cannot inherit
+the older b51 result. GPU training/useful owned inference and PO review remain open.
+See the existing [ROUND07 proof](evidence/round-07/ROUND-07-OWNED-AI-MATERIALS-2026-10-01.md).
+
 ### 2026-10-01 — corrected Case milestone hosted PASS; real BMP creative source pack
 
 Latest Product Owner decision: OpenAI commercially permitted open base weights

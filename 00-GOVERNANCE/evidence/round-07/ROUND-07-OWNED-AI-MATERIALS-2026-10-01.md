@@ -122,6 +122,24 @@ not PASS; product stage, global coverage and release statuses above are unchange
 
 ## Technical obligation 5 — same-SHA hosted PASS
 
+### Owned-training source milestone and correction — 5fc46e7e
+
+App36844466756 completed SUCCESS with actual analysis/tests at
+`5fc46e7ed707c2313f195ec60f7dd0fb2da0be23`. Product36844461610 executed
+its blocking steps but failed `TestNoSecretLeakage.test_no_real_secrets_in_scratch`:
+the new training detector's literal matched the source scanner's private-key
+header regex. No actual private key was embedded; no scanner/test exclusion is
+added. The delimiter expression is semantically unchanged as a five-character
+hyphen class repetition. Five input regressions prove generic, RSA, EC, OpenSSH
+and encrypted private-key headers still block before output writes.
+
+Normal-guard targeted verification passed95 tests, 0 failures/errors/skips,
+including both unchanged repository secret regressions and all owned-training
+and adjacent provider tests. Isolated seed and no thread leaks. This is an actual
+source fix for the hosted failure, not a quota workaround or a weakened Gate.
+The corrected commit must obtain its own same-SHA hosted result. Earlier b51
+evidence remains valid only for b51; no product or training completion is inferred.
+
 ### Latest actual milestone — b51a8371
 
 On2026-10-01 Product36837703716 and App36837708509 both completed SUCCESS at

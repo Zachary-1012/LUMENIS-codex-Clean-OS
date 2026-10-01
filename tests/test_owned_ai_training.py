@@ -120,6 +120,17 @@ def test_preflight_rejects_secret_values_and_ineligible_raw_feedback(tmp_path, m
         _run(paths)
 
 
+@pytest.mark.parametrize("kind", ["PRIVATE", "RSA PRIVATE", "EC PRIVATE", "OPENSSH PRIVATE", "ENCRYPTED PRIVATE"])
+def test_preflight_rejects_private_key_headers(tmp_path, monkeypatch, kind):
+    paths = _inputs(tmp_path, monkeypatch)
+    record = _record("TRAIN-1", "Question A")
+    record["messages"][0]["content"] = "-" * 5 + "BEGIN " + kind + " KEY" + "-" * 5
+    _write_jsonl(paths[2], [record])
+    with pytest.raises(ValueError, match="Invalid approved dataset record"):
+        _run(paths)
+    assert not paths[-1].exists()
+
+
 @pytest.mark.parametrize("duplicate", ["case_id", "prompt"])
 def test_preflight_rejects_train_heldout_overlap(tmp_path, monkeypatch, duplicate):
     paths = _inputs(tmp_path, monkeypatch)
