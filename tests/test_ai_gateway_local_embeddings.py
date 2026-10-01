@@ -76,9 +76,9 @@ def test_local_embeddings_uses_loopback_api_and_reports_real_metadata(monkeypatc
         'prompt_tokens': 8, 'duration_ns': 900, 'status': 'ok',
     }
     assert [call[0] for call in calls] == ['/api/show', '/api/embed']
-    assert calls[0][3] == {'model': 'bge-m3:latest'}
+    assert calls[0][3] == {'model': 'bge-m3:latest:local'}
     assert calls[1][3] == {
-        'model': 'bge-m3:latest', 'input': ['first item', 'second item'], 'truncate': False,
+        'model': 'bge-m3:latest:local', 'input': ['first item', 'second item'], 'truncate': False,
     }
     assert [call[2] for call in calls] == [60, 60]
     assert not any(key.lower() == 'authorization' for key in calls[1][1].headers)
@@ -94,7 +94,19 @@ def test_local_embeddings_accepts_only_latest_model_alias(monkeypatch):
     assert len(vectors) == 2
     assert meta['requested_model'] == 'bge-m3'
     assert meta['model'] == 'bge-m3:latest'
-    assert calls[1][3]['model'] == 'bge-m3'
+    assert calls[1][3]['model'] == 'bge-m3:local'
+
+
+def test_local_embeddings_normalizes_one_returned_local_selector_and_keeps_raw_model(monkeypatch):
+    monkeypatch.setenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
+    _mock_ollama(monkeypatch, _responses(model='bge-m3:latest:local'))
+
+    vectors, status, meta = core.local_embeddings(['one', 'two'])
+
+    assert vectors is not None
+    assert status == 'ollama'
+    assert meta['requested_model'] == 'bge-m3:latest'
+    assert meta['model'] == 'bge-m3:latest:local'
 
 
 def test_local_embeddings_rejects_unsupported_capability_before_embed(monkeypatch):
@@ -107,6 +119,39 @@ def test_local_embeddings_rejects_unsupported_capability_before_embed(monkeypatc
     assert status == 'ollama_embedding_unsupported'
     assert meta['status'] == status
     assert [call[0] for call in calls] == ['/api/show']
+
+
+@pytest.mark.parametrize(
+    ('field', 'value'),
+    [('remote_model', 'hosted-embedding-model'), ('remote_host', 'https://inference.invalid'), ('remote_model', 0)],
+)
+def test_local_embeddings_refuses_remote_metadata_before_sending_text(monkeypatch, field, value):
+    monkeypatch.setenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
+    calls = _mock_ollama(monkeypatch, {
+        '/api/show': {'capabilities': ['embedding'], field: value},
+    })
+
+    vectors, status, meta = core.local_embeddings(['private source text'])
+
+    assert vectors is None
+    assert status == 'ollama_remote'
+    assert meta['status'] == status
+    assert [call[0] for call in calls] == ['/api/show']
+    assert calls[0][3] == {'model': 'bge-m3:latest:local'}
+
+
+def test_local_embeddings_rejects_remote_metadata_on_response(monkeypatch):
+    monkeypatch.setenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
+    calls = _mock_ollama(monkeypatch, _responses(remote_host='https://inference.invalid'))
+
+    vectors, status, meta = core.local_embeddings(['private source text', 'another'])
+
+    assert vectors is None
+    assert status == 'ollama_remote'
+    assert meta['status'] == status
+    assert meta['model'] == 'bge-m3:latest'
+    assert meta['prompt_tokens'] == 8
+    assert [call[0] for call in calls] == ['/api/show', '/api/embed']
 
 
 def test_local_embeddings_rejects_non_loopback_before_network(monkeypatch):
@@ -171,16 +216,33 @@ def test_local_embeddings_rejects_partial_or_invalid_vectors(monkeypatch, embedd
     assert meta['duration_ns'] == 900
 
 
-def test_local_embeddings_rejects_model_identity_mismatch(monkeypatch):
+@pytest.mark.parametrize('response_model', [
+    'other-model:latest', 'bge-m3:cloud', 'bge-m3:latest-cloud',
+])
+def test_local_embeddings_rejects_model_identity_mismatch(monkeypatch, response_model):
     monkeypatch.setenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
-    responses = _responses(model='other-model:latest')
+    responses = _responses(model=response_model)
     _mock_ollama(monkeypatch, responses)
 
     vectors, status, meta = core.local_embeddings(['one', 'two'])
 
     assert vectors is None
     assert status == 'ollama_model_mismatch'
-    assert meta['model'] == 'other-model:latest'
+    assert meta['model'] == response_model
+
+
+@pytest.mark.parametrize('model', ['bge-m3:cloud', 'bge-m3:latest:cloud:local'])
+def test_local_embeddings_rejects_cloud_or_nested_model_before_network(monkeypatch, model):
+    def forbid_network(*_args, **_kwargs):
+        raise AssertionError('nonlocal model reached transport')
+
+    monkeypatch.setattr(core.urllib.request, 'build_opener', forbid_network)
+
+    vectors, status, meta = core.local_embeddings(['private source text'], model=model)
+
+    assert vectors is None
+    assert status == 'ollama_nonlocal_model'
+    assert meta['status'] == status
 
 
 def test_local_embeddings_keeps_missing_usage_metadata_unknown(monkeypatch):

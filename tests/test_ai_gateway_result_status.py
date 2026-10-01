@@ -1,6 +1,7 @@
 """Mock-only regression for canonical AI Gateway result validation."""
 
 import json
+from urllib.parse import urlsplit
 import pytest
 
 import ai_call_logger as acl
@@ -126,8 +127,14 @@ def test_complete_nonempty_provider_result_remains_success(monkeypatch):
     assert calls == ["https://mock.invalid/v1/chat/completions"]
 
 
-def _local_payload(monkeypatch, payload):
+def _local_payload(monkeypatch, payload, *, show_payload=None, calls=None, base=None, model='qwen3:4b'):
+    transport_calls = calls if calls is not None else []
+
     class Response:
+        def __init__(self, body, url):
+            self.body = json.dumps(body).encode("utf-8")
+            self.url = url
+
         def __enter__(self):
             return self
 
@@ -135,11 +142,23 @@ def _local_payload(monkeypatch, payload):
             return False
 
         def read(self):
-            return json.dumps(payload).encode("utf-8")
+            return self.body
 
-    monkeypatch.setattr(core.urllib.request, "urlopen", lambda *_args, **_kwargs: Response())
+        def geturl(self):
+            return self.url
+
+    class Opener:
+        def open(self, request, timeout):
+            path = urlsplit(request.full_url).path
+            body = json.loads(request.data.decode("utf-8"))
+            transport_calls.append((path, body, timeout))
+            response_body = show_payload if path == "/api/show" else payload
+            return Response(response_body or {}, request.full_url)
+
+    monkeypatch.setattr(core.urllib.request, "build_opener", lambda *_args, **_kwargs: Opener())
+
     return core._call_local_chat(
-        "ollama", "qwen3:4b", "http://127.0.0.1:11434",
+        "ollama", model, base or "http://127.0.0.1:11434",
         "system", "user", 0.0, 16, 3,
     )
 
@@ -160,11 +179,110 @@ def test_ollama_partial_or_thinking_only_response_is_not_success(monkeypatch, pa
 
 
 def test_ollama_complete_final_content_remains_success(monkeypatch):
+    calls = []
     assert _local_payload(monkeypatch, {
         "message": {"content": "local final", "thinking": "hidden"},
         "done": True,
         "done_reason": "stop",
-    }) == ("local final", "ollama")
+    }, calls=calls) == ("local final", "ollama")
+    assert calls == [
+        ("/api/show", {"model": "qwen3:4b:local"}, 3),
+        ("/api/chat", {
+            "model": "qwen3:4b:local",
+            "messages": [
+                {"role": "system", "content": "system"},
+                {"role": "user", "content": "user"},
+            ],
+            "stream": False,
+            "options": {"temperature": 0.0, "num_predict": 16},
+            "think": False,
+        }, 3),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("remote_model", "hosted-model"),
+        ("remote_host", "https://inference.invalid"),
+        ("remote_model", []),
+    ],
+)
+def test_ollama_preflight_remote_or_malformed_metadata_sends_no_user_content(
+    monkeypatch, field, value,
+):
+    calls = []
+
+    with pytest.raises(ValueError, match="remote inference"):
+        _local_payload(
+            monkeypatch,
+            {"message": {"content": "should not be reached"}, "done": True, "done_reason": "stop"},
+            show_payload={field: value}, calls=calls,
+        )
+
+    assert [call[0] for call in calls] == ["/api/show"]
+    assert calls[0][1] == {"model": "qwen3:4b:local"}
+
+
+@pytest.mark.parametrize("field", ["remote_model", "remote_host"])
+def test_ollama_rejects_remote_metadata_on_chat_response(monkeypatch, field):
+    calls = []
+    response = {
+        "message": {"content": "must not be accepted"},
+        "done": True,
+        "done_reason": "stop",
+        field: "hosted-model",
+    }
+
+    with pytest.raises(ValueError, match="remote inference"):
+        _local_payload(monkeypatch, response, show_payload={}, calls=calls)
+
+    assert [call[0] for call in calls] == ["/api/show", "/api/chat"]
+    assert calls[0][1] == {"model": "qwen3:4b:local"}
+
+
+@pytest.mark.parametrize(
+    ("model", "expected"),
+    [
+        ("qwen3:local", "qwen3:local"),
+        ("qwen3:4b:local", "qwen3:4b:local"),
+        ("qwen3: local", "qwen3:local"),
+        ("my-cloud", "my-cloud:local"),
+        ("registry.example:5000/team/model:tag", "registry.example:5000/team/model:tag:local"),
+    ],
+)
+def test_ollama_local_transport_selector_preserves_valid_model_refs(model, expected):
+    assert core._ollama_local_transport_model(model) == expected
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "qwen3:cloud",
+        "qwen3: cloud",
+        "qwen3:4b-cloud",
+        "qwen3:4b:cloud",
+        "qwen3:4b:cloud:local",
+        "qwen3:4b:local:local",
+    ],
+)
+def test_ollama_cloud_or_nested_source_model_is_rejected_before_any_call(monkeypatch, model):
+    calls = []
+
+    with pytest.raises(ValueError):
+        _local_payload(monkeypatch, {}, calls=calls, model=model)
+
+    assert calls == []
+
+
+def test_ollama_rejects_non_loopback_base_before_network(monkeypatch):
+    def forbid_network(*_args, **_kwargs):
+        pytest.fail("non-loopback Ollama endpoint was contacted")
+
+    monkeypatch.setattr(core.urllib.request, "build_opener", forbid_network)
+
+    with pytest.raises(ValueError, match="loopback HTTP"):
+        _local_payload(monkeypatch, {}, base="https://ollama.example/api")
 
 
 def _mock_local_gateway_chat(monkeypatch, result):

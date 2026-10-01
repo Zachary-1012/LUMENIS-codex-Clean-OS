@@ -1,6 +1,8 @@
 import json
 from urllib.parse import urlsplit
 
+import pytest
+
 from lumenis.system.ai_gateway import core
 
 
@@ -82,9 +84,9 @@ def test_local_structured_chat_uses_completion_and_reports_response_usage(monkey
         'status': 'ok',
     }
     assert [urlsplit(call[0].full_url).path for call in calls] == ['/api/show', '/api/chat']
-    assert calls[0][2] == {'model': 'qwen3.5:4b-requested'}
+    assert calls[0][2] == {'model': 'qwen3.5:4b-requested:local'}
     request, timeout, payload = calls[1]
-    assert payload['model'] == 'qwen3.5:4b-requested'
+    assert payload['model'] == 'qwen3.5:4b-requested:local'
     assert payload['format'] == {'type': 'object'}
     assert payload['messages'] == [
         {'role': 'system', 'content': 'system instruction'},
@@ -114,7 +116,7 @@ def test_local_structured_chat_defaults_to_qwen35_and_rejects_missing_completion
     assert meta['model'] is None
     assert meta['status'] == 'ollama_completion_unsupported'
     assert len(calls) == 1
-    assert calls[0][2] == {'model': 'qwen3.5:4b'}
+    assert calls[0][2] == {'model': 'qwen3.5:4b:local'}
 
 
 def test_local_structured_chat_preserves_incomplete_response_metadata(monkeypatch):
@@ -155,6 +157,64 @@ def test_local_structured_chat_rejects_non_loopback_without_transport(monkeypatc
     assert provider == 'ollama_unavailable'
     assert meta['status'] == 'ollama_unavailable'
     assert meta['model'] is None
+
+
+@pytest.mark.parametrize(
+    ('field', 'value'),
+    [('remote_model', 'hosted-model'), ('remote_host', 'https://inference.invalid'), ('remote_host', {})],
+)
+def test_local_structured_chat_refuses_remote_metadata_before_sending_prompt(monkeypatch, field, value):
+    monkeypatch.setenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
+    calls = _mock_ollama(monkeypatch, {
+        '/api/show': {'capabilities': ['completion'], field: value},
+    })
+
+    text, status, meta = core.local_structured_chat(
+        'private system text', 'private user content', response_schema={'type': 'object'},
+    )
+
+    assert text is None
+    assert status == 'ollama_remote'
+    assert meta['status'] == status
+    assert [urlsplit(call[0].full_url).path for call in calls] == ['/api/show']
+    assert calls[0][2] == {'model': 'qwen3.5:4b:local'}
+
+
+def test_local_structured_chat_rejects_remote_metadata_on_response(monkeypatch):
+    monkeypatch.setenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
+    calls = _mock_ollama(monkeypatch, {
+        '/api/show': {'capabilities': ['completion']},
+        '/api/chat': {
+            'remote_host': 'https://inference.invalid', 'model': 'qwen3.5:4b',
+            'done': True, 'done_reason': 'stop',
+            'message': {'role': 'assistant', 'content': 'must not be accepted'},
+        },
+    })
+
+    text, status, meta = core.local_structured_chat(
+        'system', 'user', response_schema={'type': 'object'},
+    )
+
+    assert text is None
+    assert status == 'ollama_remote'
+    assert meta['status'] == status
+    assert [urlsplit(call[0].full_url).path for call in calls] == ['/api/show', '/api/chat']
+
+
+@pytest.mark.parametrize('model', ['qwen3:cloud', 'qwen3:4b:local:local'])
+def test_local_structured_chat_rejects_cloud_or_nested_model_before_network(monkeypatch, model):
+    def forbid_network(*_args, **_kwargs):
+        raise AssertionError('nonlocal model reached transport')
+
+    monkeypatch.setattr(core.urllib.request, 'build_opener', forbid_network)
+
+    text, status, meta = core.local_structured_chat(
+        'system', 'user', response_schema={'type': 'object'}, model=model,
+    )
+
+    assert text is None
+    assert status == 'ollama_nonlocal_model'
+    assert meta['status'] == status
 
 
 def test_report_text_timeout_is_bounded_without_changing_default(monkeypatch):

@@ -81,11 +81,11 @@ def test_local_only_checks_capability_and_sends_image_to_ollama(monkeypatch):
 
     assert result == ('a local result', 'ollama')
     assert [urlsplit(call[0].full_url).path for call in calls] == ['/api/show', '/api/chat']
-    assert calls[0][2] == {'model': 'qwen3.5:4b'}
+    assert calls[0][2] == {'model': 'qwen3.5:4b:local'}
     request, timeout, payload = calls[1]
     handler = core._LocalOnlyRedirectHandler()
     assert handler.redirect_request(request, None, 302, 'Found', {}, 'https://example.invalid/') is None
-    assert payload['model'] == 'qwen3.5:4b'
+    assert payload['model'] == 'qwen3.5:4b:local'
     assert payload['format'] == {'type': 'object'}
     assert payload['options']['num_ctx'] == 8192
     assert payload['messages'] == [
@@ -111,7 +111,7 @@ def test_auto_provider_prefers_local_vision(monkeypatch):
 
     monkeypatch.setattr(core.urllib.request, 'urlopen', forbid_cloud)
     assert core.vision_chat('', 'inspect', 'cGl4ZWw=') == ('a local result', 'ollama')
-    assert calls[-1][2]['model'] == 'qwen3.5:4b'
+    assert calls[-1][2]['model'] == 'qwen3.5:4b:local'
 
 
 def test_ollama_reports_missing_vision_capability_without_chat_or_cloud(monkeypatch):
@@ -143,6 +143,27 @@ def test_local_only_rejects_non_loopback_ollama_url(monkeypatch):
     monkeypatch.setattr(core.urllib.request, 'build_opener', forbid_network)
     monkeypatch.setattr(core.urllib.request, 'urlopen', forbid_network)
     assert core.vision_chat('', 'inspect', 'cGl4ZWw=', local_only=True) == (None, 'ollama_unavailable')
+
+
+def test_local_only_refuses_remote_ollama_before_sending_image(monkeypatch):
+    monkeypatch.setenv('AI_PROVIDER', 'zhipu')
+    monkeypatch.setenv('ALLOW_CLOUD_AI', 'true')
+    monkeypatch.setenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
+    calls = _mock_ollama(monkeypatch, {
+        '/api/show': {'capabilities': ['vision'], 'remote_model': 'hosted-vision-model'},
+    })
+    monkeypatch.setattr(
+        core.urllib.request, 'urlopen',
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError('cloud fallback called')),
+    )
+
+    result = core.vision_chat(
+        'private system text', 'private image prompt', 'private-image-data', local_only=True,
+    )
+
+    assert result == (None, 'ollama_remote')
+    assert [urlsplit(call[0].full_url).path for call in calls] == ['/api/show']
+    assert calls[0][2] == {'model': 'qwen3.5:4b:local'}
 
 
 def test_empty_local_response_is_not_reported_as_success(monkeypatch):

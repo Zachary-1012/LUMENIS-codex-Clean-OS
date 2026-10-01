@@ -278,8 +278,14 @@ def _call_local_chat(provider, model, base, system, user, temperature, max_token
     contract.  Qwen 3 reasoning is disabled for bounded fallback work so a
     small CPU model cannot spend the whole response budget on hidden thinking.
     """
+    if provider == 'ollama':
+        transport_model = _ollama_local_transport_model(model)
+        base = _ollama_validate_loopback_base(base)
+        shown = _ollama_vision_json(base, '/api/show', {'model': transport_model}, timeout)
+        if _ollama_has_remote_metadata(shown):
+            raise ValueError('Ollama remote inference refused')
     payload = {
-        'model': model,
+        'model': transport_model if provider == 'ollama' else model,
         'messages': [
             {'role': 'system', 'content': system},
             {'role': 'user', 'content': user},
@@ -289,14 +295,19 @@ def _call_local_chat(provider, model, base, system, user, temperature, max_token
     }
     if provider == 'ollama':
         payload['think'] = False
-    req = urllib.request.Request(
-        base + '/api/chat',
-        data=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
-        headers={'Content-Type': 'application/json'},
-        method='POST',
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = json.loads(resp.read().decode('utf-8', 'replace'))
+    if provider == 'ollama':
+        data = _ollama_vision_json(base, '/api/chat', payload, timeout)
+        if _ollama_has_remote_metadata(data):
+            raise ValueError('Ollama remote inference refused')
+    else:
+        req = urllib.request.Request(
+            base + '/api/chat',
+            data=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+            headers={'Content-Type': 'application/json'},
+            method='POST',
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode('utf-8', 'replace'))
     if not isinstance(data, dict):
         raise ValueError('local response is invalid')
     message = data.get('message')
@@ -492,7 +503,55 @@ class _LocalOnlyRedirectHandler(urllib.request.HTTPRedirectHandler):
         return None
 
 
+def _ollama_validate_loopback_base(base):
+    if not isinstance(base, str):
+        raise ValueError('Ollama endpoint must be loopback HTTP')
+    base = base.rstrip('/')
+    try:
+        parsed = urlsplit(base)
+        _ = parsed.port
+    except ValueError as exc:
+        raise ValueError('Ollama endpoint must be loopback HTTP') from exc
+    if (parsed.scheme != 'http' or parsed.hostname not in ('127.0.0.1', 'localhost', '::1')
+            or parsed.username or parsed.password or parsed.path not in ('', '/')
+            or parsed.query or parsed.fragment):
+        raise ValueError('Ollama endpoint must be loopback HTTP')
+    return base
+
+
+def _ollama_has_remote_metadata(data):
+    return any(
+        key in data and data[key] is not None and data[key] != ''
+        for key in ('remote_model', 'remote_host')
+    )
+
+
+def _ollama_model_source(model):
+    prefix, separator, suffix = model.rpartition(':')
+    suffix = suffix.strip().lower()
+    if separator and suffix in ('local', 'cloud'):
+        return prefix, suffix
+    if separator and '/' not in suffix and suffix.endswith('-cloud'):
+        return prefix, 'cloud'
+    return model, None
+
+
+def _ollama_local_transport_model(model):
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError('Ollama local model is required')
+    model = model.strip()
+    model_ref, source = _ollama_model_source(model)
+    if source == 'cloud':
+        raise ValueError('Ollama cloud model refused')
+    if source == 'local':
+        if not model_ref or _ollama_model_source(model_ref)[1] is not None:
+            raise ValueError('Ollama nested model source refused')
+        return model_ref + ':local'
+    return model + ':local'
+
+
 def _ollama_vision_json(base, path, payload, timeout):
+    base = _ollama_validate_loopback_base(base)
     req = urllib.request.Request(
         base + path,
         data=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
@@ -531,11 +590,9 @@ def _ollama_local_chat(system, user_text, image_base64, model, temperature, max_
         }
 
     try:
-        base = _env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434').rstrip('/')
-        parsed = urlsplit(base)
-        if (parsed.scheme != 'http' or parsed.hostname not in ('127.0.0.1', 'localhost', '::1')
-                or parsed.username or parsed.password or parsed.path not in ('', '/') or parsed.query or parsed.fragment):
-            return None, 'ollama_unavailable', _meta('ollama_unavailable')
+        base = _ollama_validate_loopback_base(
+            _env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
+        )
         timeout = (max(1, min(120, int(_env('OLLAMA_TIMEOUT_SECONDS', '120'))))
                    if timeout_seconds is None else max(1, min(180, int(timeout_seconds))))
         token_limit = max(1, min(2048, int(max_tokens)))
@@ -543,10 +600,16 @@ def _ollama_local_chat(system, user_text, image_base64, model, temperature, max_
         return None, 'ollama_unavailable', _meta('ollama_unavailable')
     if not requested_model:
         return None, 'ollama_unavailable', _meta('ollama_unavailable')
+    try:
+        transport_model = _ollama_local_transport_model(requested_model)
+    except ValueError:
+        return None, 'ollama_nonlocal_model', _meta('ollama_nonlocal_model')
     _set_call_meta(provider='ollama', model=requested_model)
 
     try:
-        shown = _ollama_vision_json(base, '/api/show', {'model': requested_model}, timeout)
+        shown = _ollama_vision_json(base, '/api/show', {'model': transport_model}, timeout)
+        if _ollama_has_remote_metadata(shown):
+            return None, 'ollama_remote', _meta('ollama_remote')
         capabilities = shown.get('capabilities')
         if not isinstance(capabilities, list) or not any(
                 str(item).lower() == required_capability.lower() for item in capabilities):
@@ -561,7 +624,7 @@ def _ollama_local_chat(system, user_text, image_base64, model, temperature, max_
             user_message['images'] = [image_base64]
         messages.append(user_message)
         payload = {
-            'model': requested_model,
+            'model': transport_model,
             'messages': messages,
             'stream': False,
             'think': False,
@@ -576,6 +639,8 @@ def _ollama_local_chat(system, user_text, image_base64, model, temperature, max_
             completion_tokens = int(data.get('eval_count', 0) or 0)
         except (TypeError, ValueError):
             prompt_tokens = completion_tokens = 0
+        if _ollama_has_remote_metadata(data):
+            return None, 'ollama_remote', _meta('ollama_remote')
         if data.get('done') is not True or str(data.get('done_reason') or '').lower() not in ('', 'stop'):
             return None, 'ollama_incomplete', _meta('ollama_incomplete')
         message = data.get('message')
@@ -630,27 +695,29 @@ def local_embeddings(texts, *, model=None, timeout_seconds=60):
             )):
         return None, 'ollama_invalid_input', _meta('ollama_invalid_input')
     try:
+        transport_model = _ollama_local_transport_model(requested_model)
+    except ValueError:
+        return None, 'ollama_nonlocal_model', _meta('ollama_nonlocal_model')
+    try:
         if isinstance(timeout_seconds, bool):
             raise ValueError('invalid timeout')
         timeout = max(1, min(120, int(timeout_seconds)))
-        base = _env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434').rstrip('/')
-        parsed = urlsplit(base)
-        _ = parsed.port
-        if (parsed.scheme != 'http' or parsed.hostname not in ('127.0.0.1', 'localhost', '::1')
-                or parsed.username or parsed.password or parsed.path not in ('', '/')
-                or parsed.query or parsed.fragment):
-            return None, 'ollama_unavailable', _meta('ollama_unavailable')
+        base = _ollama_validate_loopback_base(
+            _env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
+        )
     except (TypeError, ValueError, OverflowError):
         return None, 'ollama_unavailable', _meta('ollama_unavailable')
 
     try:
-        shown = _ollama_vision_json(base, '/api/show', {'model': requested_model}, timeout)
+        shown = _ollama_vision_json(base, '/api/show', {'model': transport_model}, timeout)
+        if _ollama_has_remote_metadata(shown):
+            return None, 'ollama_remote', _meta('ollama_remote')
         capabilities = shown.get('capabilities')
         if not isinstance(capabilities, list) or not any(
                 isinstance(item, str) and item.lower() == 'embedding' for item in capabilities):
             return None, 'ollama_embedding_unsupported', _meta('ollama_embedding_unsupported')
         data = _ollama_vision_json(base, '/api/embed', {
-            'model': requested_model, 'input': texts, 'truncate': False,
+            'model': transport_model, 'input': texts, 'truncate': False,
         }, timeout)
         raw_response_model = data.get('model')
         actual_model = raw_response_model.strip() if isinstance(raw_response_model, str) else None
@@ -665,11 +732,17 @@ def local_embeddings(texts, *, model=None, timeout_seconds=60):
             raw_duration if isinstance(raw_duration, int) and not isinstance(raw_duration, bool) and raw_duration >= 0
             else None
         )
+        if _ollama_has_remote_metadata(data):
+            return None, 'ollama_remote', _meta('ollama_remote')
         if actual_model is None:
             return None, 'ollama_model_mismatch', _meta('ollama_model_mismatch')
-        expected = requested_model[:-7] if requested_model.endswith(':latest') else requested_model
-        received = actual_model[:-7] if actual_model.endswith(':latest') else actual_model
-        if received != expected:
+        def _model_identity(value):
+            base_model, source = _ollama_model_source(value)
+            if source == 'local':
+                value = base_model
+            return value[:-7] if value.endswith(':latest') else value
+
+        if _model_identity(actual_model) != _model_identity(requested_model):
             return None, 'ollama_model_mismatch', _meta('ollama_model_mismatch')
 
         vectors = data.get('embeddings')
