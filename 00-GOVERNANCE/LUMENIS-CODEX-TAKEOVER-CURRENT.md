@@ -2358,3 +2358,30 @@ Owner. Codex Cloud is only the development environment, not product hosting or
 owned-AI deployment; hosted gate and independent AI remain unaccepted. Next
 Reporting gap is using saved review in a source-grounded revision, not another
 unbounded model/prompt experiment or fabricated business-success score.
+
+### 2026-10-01 — saved feedback reaches a durable revision; content still FAIL
+
+Existing Reporting/TaskEngine now resolve a signed request_changes reference,
+inherit the parent question/actual source IDs/media, recheck exact actor/scope
+and Evidence at execution/write, and preserve a separate immutable revision.
+115 affected tests passed (46.89s); the final bounded review lookup passed 30
+review/revision tests (15.17s), both exit0/no thread leaks.
+
+Actual Nike revision `brief-b8088e39a0744eba96d02dfeb536e375` used Evidence438
+feedback and wrote Evidence439. Task admission0.23s, completion150.51s; completed
+resume, controlled Core restart/reopen and foreign-scope403 verified. Original
+270 Raw/270 Canonical/all44 report rows match backup; one new report, evaluations
+114, integrityok/FK0. The model received the exact feedback but returned an
+identical analysis, retaining both identified defects. Engineering usefulness
+is explicitly FAIL; HUMAN_PENDING and NOT_OBSERVED remain. This verifies the
+revision transport/recovery, not useful revision, frontend or business Outcome.
+The observed no-op now has a bounded rejection guard: new unchanged candidates
+return BUSINESS_BRIEF_REVISION_UNCHANGED/unavailable with signed failure Evidence,
+not another analysis draft. The final analyzer/revision tests passed 38 cases
+(22.87s, exit0); no repeated live inference. Existing failed output is preserved.
+See `evidence/round-07/ROUND-07-REVIEW-REVISION-2026-10-01.md` for evidence/limits.
+
+No further identical model retry is scheduled. Frontend remains paused; final
+user-repeat acceptance belongs to PO. Codex Cloud is development infrastructure
+only; hosted same-SHA and independent product AI remain unaccepted. Existing
+J1-J8/ROUND01-15 objectives remain active, with no new owner or round.

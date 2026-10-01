@@ -25,7 +25,7 @@ def _answer(payload):
             "proposed_actions": [{"action": "Check the proposed content with the team.", "reason": "Only one source is available.",
                                   "check": "Ask for actual customer feedback before promotion.", "source_ids": [source["source_id"]]}],
             "unknowns": ["Sales and customer sentiment are unknown."]}
-    if analysis._VERSION == "report-business-brief/5":
+    if analysis._VERSION in {"report-business-brief/5", "report-business-brief/6"}:
         value["proposed_actions"][0]["pilot"] = {
             "audience": "Propose inviting five consenting participants.",
             "procedure": "Show two draft concepts in alternating order during one interview round.",
@@ -176,8 +176,8 @@ def test_model_schema_diagnostic_is_rejected_not_silently_removed(client, monkey
         assert rejected and "rejected_model_output" in json.loads(rejected[0])
 
 
-@pytest.mark.parametrize("version", ["report-business-brief/1", "report-business-brief/2", "report-business-brief/3", "report-business-brief/4"])
-def test_previous_signed_artifact_remains_reopenable_after_v5_upgrade(client, monkeypatch, version):
+@pytest.mark.parametrize("version", ["report-business-brief/1", "report-business-brief/2", "report-business-brief/3", "report-business-brief/4", "report-business-brief/5"])
+def test_previous_signed_artifact_remains_reopenable_after_upgrade(client, monkeypatch, version):
     api, _, _, _, _ = client
     calls = _mock_model(monkeypatch)
     with monkeypatch.context() as previous:

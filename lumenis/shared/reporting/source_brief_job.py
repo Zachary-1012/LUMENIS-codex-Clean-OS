@@ -174,6 +174,9 @@ def _verify_report(row: dict[str, Any], *, job_id: str, actor_id: str,
         if _multimodal_snapshot(multimodal, job_id=job_id, actor_id=actor_id, scope=scope) != multimodal:
             raise RuntimeError("SOURCE_BRIEF_MEDIA_EVIDENCE_MISMATCH")
     business = snapshot.get("business_analysis")
+    if snapshot.get("revision") is not None:
+        from .operator_review import verify_revision_feedback
+        verify_revision_feedback(snapshot["revision"], actor_id=actor_id, expected_scope=scope)
     if isinstance(business, dict) and business.get("state") == "draft":
         from .business_brief import read_business_brief
         expected = read_business_brief(
@@ -181,6 +184,8 @@ def _verify_report(row: dict[str, Any], *, job_id: str, actor_id: str,
         )
         if expected != business or business.get("question") != snapshot.get("business_question"):
             raise RuntimeError("SOURCE_BRIEF_BUSINESS_EVIDENCE_MISMATCH")
+        if business.get("revision") != snapshot.get("revision"):
+            raise RuntimeError("SOURCE_BRIEF_REVISION_EVIDENCE_MISMATCH")
     return {"row": row, "snapshot": snapshot, "source_brief": brief}
 
 
@@ -271,6 +276,7 @@ def _response(verified: dict[str, Any], evaluations: list[dict[str, Any]]) -> di
         "business_analysis": snapshot.get("business_analysis", {"state": "not_requested"}),
         "business_question": snapshot.get("business_question"),
         "requested_source_ids": snapshot.get("requested_source_ids"),
+        "revision": snapshot.get("revision"),
         "operator_review": read_operator_reviews(verified),
         "evaluation": {"state": "recorded", "records": evaluations,
                        "quality_review": _quality_reviews(verified)},
@@ -289,6 +295,7 @@ def create_source_brief_job(
     retry_of_job_id: str | None = None,
     business_question: str | None = None,
     source_ids: list[str] | None = None,
+    revision_reference: dict | None = None,
     before_persist=None,
 ) -> dict[str, Any]:
     """Create or recover a server-authorized scoped Source Brief report job.
@@ -315,6 +322,27 @@ def create_source_brief_job(
             before_persist()
         evaluations = _record_evaluations(verified)
         return _response(verified, evaluations)
+
+    revision = None
+    if revision_reference is not None:
+        from .operator_review import resolve_report_revision
+        if not isinstance(revision_reference, dict):
+            raise ValueError("REPORT_REVISION_REFERENCE_INVALID")
+        if revision_reference.get("parent_job_id") == job_id:
+            raise ValueError("REPORT_REVISION_SELF_PARENT")
+        inherited = resolve_report_revision(revision_reference, actor_id=actor_id, expected_scope=scope)
+        if (business_question != inherited["business_question"] or source_ids != inherited["source_ids"]
+                or image_source_ref != inherited["image_source_ref"]):
+            raise PermissionError("REPORT_REVISION_INPUT_MISMATCH")
+        revision = inherited["revision_context"]
+
+    def before_evidence():
+        if before_persist is not None:
+            before_persist()
+        if revision is not None:
+            current = resolve_report_revision(revision_reference, actor_id=actor_id, expected_scope=scope)
+            if current["revision_context"] != revision:
+                raise RuntimeError("REPORT_REVISION_PARENT_CHANGED")
 
     brief = build_scoped_source_brief(
         con, product_id=product_id, global_scope=global_scope, entity_label=entity_label,
@@ -365,6 +393,7 @@ def create_source_brief_job(
                 business_analysis = analyze_business_brief(
                     question=business_question, sources=sources, scope=_media_scope(scope),
                     job_id=job_id, actor_ref=actor_id,
+                    revision=revision, before_evidence=before_evidence,
                     sample={"available_brief_count": count, "analyzed_source_count": len(sources),
                             "selection": ("explicit operator-selected verified sources; 1200 characters each"
                                           if source_ids is not None else
@@ -399,6 +428,7 @@ def create_source_brief_job(
         "multimodal": multimodal, "evaluation_ids": evaluation_ids,
         "business_analysis": business_analysis, "business_question": business_question,
         "requested_source_ids": source_ids,
+        "revision": revision,
         "requested_image_source_ref": image_source_ref, "retry_of_job_id": retry_of_job_id,
         "review_status": "HUMAN_PENDING",
     }
@@ -408,8 +438,7 @@ def create_source_brief_job(
         report_id=job_id, report_type=report_type, report_date=report_date,
         total_notes=count, summary=brief["markdown"], source_snapshot=source_snapshot,
     )
-    if before_persist is not None:
-        before_persist()
+    before_evidence()
     report_database.save_daily_report({
         "report_type": report_type, "report_date": report_date,
         "period_start": "", "period_end": "", "total_notes": count,

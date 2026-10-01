@@ -192,3 +192,39 @@ def test_claim_is_single_cas_and_restart_requires_explicit_interruption(engine):
     assert engine.finish_report_task(task_id, result={"artifact_hash": "abc123"}) is True
     assert engine.get_report_task(task_id)["status"] == "succeeded"
     assert engine.finish_report_task(task_id, error="late failure") is False
+
+
+def test_revision_reference_is_optional_and_persists_as_a_stored_reference(engine):
+    legacy = engine.create_report_task(_context())
+    assert "revision" not in legacy["context"]
+    assert engine.get_report_task(legacy["task_id"])["context"] == legacy["context"]
+
+    explicit_none = engine.create_report_task(_context(revision=None))
+    assert explicit_none["context"]["revision"] is None
+    revision = {
+        "parent_job_id": "brief-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "review_id": "b" * 64,
+    }
+    task = engine.create_report_task(_context(revision=revision))
+    assert task["context"]["revision"] == revision
+    assert engine.get_report_task(task["task_id"])["context"]["revision"] == revision
+
+
+@pytest.mark.parametrize("revision", [
+    "not-an-object",
+    {},
+    {"parent_job_id": "brief-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+    {"parent_job_id": "brief-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "review_id": "b" * 64, "extra": True},
+    {"parent_job_id": "not-a-job", "review_id": "b" * 64},
+    {"parent_job_id": "brief-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "review_id": "B" * 64},
+])
+def test_malformed_or_extra_revision_fields_are_rejected(engine, revision):
+    with pytest.raises(ValueError, match="revision reference is invalid"):
+        engine.create_report_task(_context(revision=revision))
+
+
+def test_revision_cannot_point_to_its_own_job(engine):
+    context = _context()
+    context["revision"] = {"parent_job_id": context["job_id"], "review_id": "c" * 64}
+    with pytest.raises(ValueError, match="revision reference is invalid"):
+        engine.create_report_task(context)

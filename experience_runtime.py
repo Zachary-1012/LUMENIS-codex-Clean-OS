@@ -1183,8 +1183,10 @@ def start_source_brief_task():
 
     try:
         body = request.get_json(silent=True)
-        if not isinstance(body, dict) or set(body) - {"limit", "image_source_ref", "business_question", "source_ids"}:
+        if not isinstance(body, dict) or set(body) - {"limit", "image_source_ref", "business_question", "source_ids", "revision"}:
             raise ValueError("SOURCE_BRIEF_INPUT_INVALID")
+        if "revision" in body and set(body) != {"revision"}:
+            raise ValueError("REPORT_REVISION_INHERITS_PARENT_INPUT")
         limit = body.get("limit", 30)
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("SOURCE_BRIEF_LIMIT_INVALID")
@@ -1198,13 +1200,21 @@ def start_source_brief_task():
         actor_ref, audit_ref, scope = _source_brief_context("write")
         authorize = lambda: _report_task_authorize(actor_ref, scope)
         authorize()
+        if "revision" in body:
+            from lumenis.shared.reporting.operator_review import resolve_report_revision
+            from lumenis.shared.reporting.source_brief_job import _scope_material
+            inherited = resolve_report_revision(body["revision"], actor_id=actor_ref,
+                                                 expected_scope=_scope_material(**scope))
+            question, source_ids = inherited["business_question"], inherited["source_ids"]
+            image_ref, limit = inherited["image_source_ref"], len(source_ids)
         if source_ids is not None:
             from lumenis.shared.database import get_repository
             from lumenis.shared.reporting.operational_brief import build_scoped_source_brief
             with get_repository().connection(read_only=True, wal=False) as con:
                 build_scoped_source_brief(con, **scope, source_ids=source_ids, limit=limit)
         task = tasks.create_task(actor_ref=actor_ref, scope=scope, permission_audit_ref=audit_ref,
-                                 limit=limit, image_source_ref=image_ref, business_question=question, source_ids=source_ids)
+                                 limit=limit, image_source_ref=image_ref, business_question=question,
+                                 source_ids=source_ids, revision=body.get("revision"))
         tasks.dispatch(task, authorize=authorize, request_wrapper=copy_current_request_context)
         # The worker may already have finished; 202 is admission, not job success.
         result = tasks.status(tasks.scoped_task(task["task_id"], actor_ref=actor_ref, scope=scope))

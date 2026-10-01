@@ -232,7 +232,7 @@ def write_operator_review(job_id: str, *, actor_id: str, expected_scope: dict[st
         audit_refs = _authorize(authorize, actor_id, expected_scope)
         inputs.update(audit_refs)
         existing_rows = conn.execute(
-            "SELECT * FROM app_evidence_records WHERE feature_id=? AND asset_id=? AND test_name=?",
+            "SELECT * FROM app_evidence_records WHERE feature_id=? AND asset_id=? AND test_name=? LIMIT 2",
             (_FEATURE, job_id, review_id),
         ).fetchall()
         if len(existing_rows) > 1:
@@ -318,3 +318,57 @@ def read_operator_reviews(verified: dict[str, Any]) -> dict[str, Any]:
     return {"state": state,
             "latest": records[0] if records else None, "records": records,
             "truncated": truncated}
+
+
+def resolve_report_revision(reference, *, actor_id, expected_scope):
+    """Resolve a request_changes reference through the original signed owners."""
+    if (not isinstance(reference, dict) or set(reference) != {"parent_job_id", "review_id"}
+            or not isinstance(reference["parent_job_id"], str)
+            or not re.fullmatch(r"brief-[0-9a-f]{32}", reference["parent_job_id"])
+            or not isinstance(reference["review_id"], str)
+            or not re.fullmatch(r"[0-9a-f]{64}", reference["review_id"])):
+        raise ValueError("REPORT_REVISION_REFERENCE_INVALID")
+    parent = _verified_report(reference["parent_job_id"], actor_id, expected_scope)
+    snapshot, row = parent["snapshot"], parent["row"]
+    with get_repository().connection(read_only=True, wal=False) as con:
+        rows = con.execute(
+            "SELECT * FROM app_evidence_records WHERE feature_id=? AND asset_id=? AND test_name=?",
+            (_FEATURE, reference["parent_job_id"], reference["review_id"]),
+        ).fetchall()
+    if len(rows) != 1:
+        raise PermissionError("REPORT_REVISION_REVIEW_UNAVAILABLE")
+    review = _verify_record(dict(rows[0]), job_id=snapshot["job_id"],
+                            artifact_hash=row["artifact_hash"], actor_id=actor_id, scope=expected_scope)
+    if review is None or review["decision"] != "request_changes":
+        raise PermissionError("REPORT_REVISION_REQUEST_CHANGES_REQUIRED")
+    if _evaluation_state(review) != "recorded":
+        raise RuntimeError("REPORT_REVISION_REVIEW_PENDING_RECOVERY")
+    business = snapshot.get("business_analysis") or {}
+    if business.get("state") != "draft":
+        raise ValueError("REPORT_REVISION_BUSINESS_DRAFT_REQUIRED")
+    # _verified_report already verifies this derivative's HMAC/material binding.
+    from .business_brief import _read_row
+    material = json.loads(_read_row(business["evidence_ref"])["inputs_json"])["material"]
+    return {
+        "business_question": material["question"],
+        "source_ids": [source["source_id"] for source in material["sources"]],
+        "image_source_ref": snapshot.get("requested_image_source_ref"),
+        "revision_context": {**reference, "parent_artifact_hash": row["artifact_hash"],
+                             "review_evidence_ref": review["evidence_ref"],
+                             "feedback": review["notes"], "previous_analysis": business["analysis"]},
+    }
+
+
+def verify_revision_feedback(context, *, actor_id, expected_scope):
+    """Reopen the exact signed feedback without recursively traversing old drafts."""
+    from .business_brief import _read_row
+    if not isinstance(context, dict):
+        raise RuntimeError("REPORT_REVISION_CONTEXT_INVALID")
+    record = _read_row(context.get("review_evidence_ref"))
+    review = _verify_record(record, job_id=context.get("parent_job_id"),
+                            artifact_hash=context.get("parent_artifact_hash"),
+                            actor_id=actor_id, scope=expected_scope)
+    if (review is None or review["review_id"] != context.get("review_id")
+            or review["notes"] != context.get("feedback") or review["decision"] != "request_changes"
+            or _evaluation_state(review) != "recorded"):
+        raise RuntimeError("REPORT_REVISION_FEEDBACK_MISMATCH")

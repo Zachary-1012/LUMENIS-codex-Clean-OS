@@ -218,7 +218,7 @@ _REPORT_CONTEXT_KEYS = frozenset({
     "actor_ref", "scope", "job_id", "limit", "image_source_ref",
     "business_question", "permission_audit_ref",
 })
-_REPORT_CONTEXT_OPTIONAL_KEYS = frozenset({"operation_audit_ref", "source_ids"})
+_REPORT_CONTEXT_OPTIONAL_KEYS = frozenset({"operation_audit_ref", "source_ids", "revision"})
 _REPORT_SCOPE_KEYS = frozenset({
     "product_id", "global_scope", "entity_label", "subject_id",
     "brand_focus_id",
@@ -351,6 +351,17 @@ def _validate_managed_report_context(context: Any) -> Dict[str, Any]:
     job_id = context.get("job_id")
     if type(job_id) is not str or re.fullmatch(r"brief-[0-9a-f]{32}", job_id) is None:
         raise ValueError("managed report job_id is invalid")
+
+    revision = context.get("revision")
+    if revision is not None:
+        if type(revision) is not dict or set(revision) != {"parent_job_id", "review_id"}:
+            raise ValueError("managed report revision reference is invalid")
+        parent_job_id, review_id = revision["parent_job_id"], revision["review_id"]
+        if (type(parent_job_id) is not str
+                or re.fullmatch(r"brief-[0-9a-f]{32}", parent_job_id) is None
+                or parent_job_id == job_id or type(review_id) is not str
+                or re.fullmatch(r"[0-9a-f]{64}", review_id) is None):
+            raise ValueError("managed report revision reference is invalid")
 
     limit = context.get("limit")
     if type(limit) is not int or not 1 <= limit <= 100:
