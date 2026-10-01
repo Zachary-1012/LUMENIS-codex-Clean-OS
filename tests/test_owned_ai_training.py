@@ -188,6 +188,17 @@ def test_execute_approval_is_bound_to_exact_dataset_hashes_and_scope(tmp_path, m
     assert request.train_sha256 == hashlib.sha256(paths[2].read_bytes()).hexdigest()
     assert request.heldout_sha256 == hashlib.sha256(paths[3].read_bytes()).hexdigest()
     assert request.scopes == ("GLOBAL / ALL",)
+    assert request.domain_id == "cth"
+    assert not paths[-1].exists()
+
+
+def test_same_global_label_does_not_merge_cth_and_bmp_training_scopes(tmp_path, monkeypatch):
+    paths = _inputs(tmp_path, monkeypatch)
+    heldout = _record("BMP-HELDOUT", "Different brand question")
+    heldout["domain"] = "BMP"
+    _write_jsonl(paths[3], [heldout])
+    with pytest.raises(training.TrainingBlocked, match="MIXED_DOMAIN_TRAINING"):
+        _run(paths, execute=True)
     assert not paths[-1].exists()
 
 

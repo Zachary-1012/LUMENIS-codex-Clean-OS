@@ -56,6 +56,7 @@ class TrainingApprovalRequest:
     scopes: tuple[str, ...]
     recipe: str = H100_RECIPE
     manifest_sha256: str = ""
+    domain_id: str = ""
 
 
 def _local_path(value: str | os.PathLike[str], *, exists: bool = True) -> Path:
@@ -165,6 +166,11 @@ def _validate_record(record: object) -> tuple[dict, str]:
     _text(record["case_id"], "case_id")
     for field in ("scope", "domain", "context", "permission_ref", "rights_ref", "reviewer_approval_ref", "reviewer_approved_target"):
         _text(record[field], field)
+    domain_id = record["domain"].strip().lower()
+    if domain_id == "zbmp":
+        domain_id = "bmp"
+    if domain_id not in {"cth", "bmp"}:
+        raise ValueError("Training records must identify the canonical CTH or BMP domain")
     refs = record["source_evidence_refs"]
     if not isinstance(refs, list) or not refs or any(not isinstance(ref, str) or not ref.strip() or ref.strip().upper() in _UNKNOWN for ref in refs):
         raise ValueError("Source Evidence references must be explicit")
@@ -191,7 +197,7 @@ def _validate_record(record: object) -> tuple[dict, str]:
     if not users or len(assistants) != 1 or messages[-1].get("role") != "assistant" or assistants[0] != record["reviewer_approved_target"].strip():
         raise ValueError("The sole final answer must match its reviewer-approved target")
     prompt = " ".join(unicodedata.normalize("NFKC", " ".join(users)).casefold().split())
-    return {"case_id": record["case_id"], "scope": record["scope"].strip(), "messages": canonical}, prompt
+    return {"case_id": record["case_id"], "scope": record["scope"].strip(), "domain_id": domain_id, "messages": canonical}, prompt
 
 
 def _read_jsonl(path: Path) -> tuple[list[tuple[dict, str]], str]:
@@ -303,6 +309,10 @@ def run_owned_lora_training(
             raise ValueError("Training and held-out inputs overlap by case_id or normalized prompt")
         case_ids.add(record["case_id"])
         prompts.add(prompt)
+    domains = {record["domain_id"] for record, _ in train + heldout}
+    if len(domains) != 1:
+        raise TrainingBlocked("MIXED_DOMAIN_TRAINING_REQUIRES_EXPLICIT_CROSS_DOMAIN_CONTRACT")
+    domain_id = next(iter(domains))
     db_value = os.environ.get("ZBC_DB_PATH", str(REPO_ROOT / "data" / "monitor.db"))
     db_path = Path(db_value) if Path(db_value).is_absolute() else Path.cwd() / db_value
     output = _output_path(output_dir, [model_dir, train_path, heldout_path, manifest_file, REPO_ROOT, db_path])
@@ -316,10 +326,11 @@ def run_owned_lora_training(
         "manifest_sha256": manifest_hash, "train_sha256": train_hash,
         "heldout_sha256": heldout_hash, "train_case_count": len(train),
         "heldout_case_count": len(heldout), "scopes": list(scopes),
+        "domain_id": domain_id,
     }
     if not execute:
         return result
-    request = TrainingApprovalRequest(model_id, revision, train_hash, heldout_hash, scopes, recipe, manifest_hash)
+    request = TrainingApprovalRequest(model_id, revision, train_hash, heldout_hash, scopes, recipe, manifest_hash, domain_id)
     _verify_approval(approval_verifier, request)
     torch, device_name, memory_bytes = _require_cuda(T4_RECIPE) if recipe == T4_RECIPE else _require_cuda()
     with _offline_hf(recipe):

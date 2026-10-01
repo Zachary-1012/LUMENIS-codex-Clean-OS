@@ -12,6 +12,28 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — exact owned-training Permission and business-domain isolation
+
+At base ad4febf0715d1faaff8fef9a185e8403b2fb8b9c, the existing SYSTEM
+Permission owner adds MODEL_TRAIN (COMMIT/HIGH, default deny). Its verifier
+binds the authenticated actor, canonical CTH/BMP domain, registered typed scopes,
+model/revision/recipe and manifest/train/heldout hashes to one exact approval.
+Every invocation rechecks scope grants and revocation/expiry. The Gateway
+retains record domain in its request; identically named GLOBAL / ALL scopes
+cannot combine CTH and BMP. A mixed-domain training file is rejected pending an
+explicit cross-domain contract. Existing permission levels and other gates remain.
+
+Five isolated training/Permission suites passed192 tests. No product database
+write, account redesign, model activation or training was performed by this
+source Batch. Signed reviewed-target/rights admission and qualified dataset
+export remain open; non-empty review notes never constitute a positive target.
+The free-T4 public Nike baseline reached a final-channel answer but stopped
+at180.88 seconds/612 tokens before completion. It remains a failed/incomplete
+candidate, not business acceptance or positive training data. See the existing
+[ROUND07 proof](evidence/round-07/ROUND-07-OWNED-AI-MATERIALS-2026-10-01.md).
+Current source does not inherit preceding f3 same-SHA hosted PASS. Owned
+production inference, useful CTH/BMP jobs and final PO acceptance remain open.
+
 ### 2026-10-01 — zero-spend owned training; OSAI adoption in existing owners
 
 At base f3f716393f1fd30a3b403b4905791d7521e245a0, the original approved

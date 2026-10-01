@@ -259,6 +259,7 @@ class OperationType(str, Enum):
     DB_WRITE = "db_write"                        # 数据库写入
     DATA_DELETE = "data_delete"                  # 数据删除
     AI_CALL = "ai_call"                          # AI 模型调用
+    MODEL_TRAIN = "model_train"                  # 经批准的模型训练
     COLLECTOR_START = "collector_start"          # 采集器启动
     COLLECTOR_STOP = "collector_stop"            # 采集器停止
     DATA_IMPORT = "data_import"                  # 数据导入
@@ -305,6 +306,9 @@ _OPERATION_REGISTRY: Dict[OperationType, OperationSpec] = {
     OperationType.REPORT_REVIEW: OperationSpec(
         PermissionLevel.VERIFY, RiskLevel.MEDIUM,
         "追加指定报告的审核意见，不改原产物/源事实，不发布或执行建议", auto_allow=True),
+    OperationType.MODEL_TRAIN: OperationSpec(
+        PermissionLevel.COMMIT, RiskLevel.HIGH,
+        "绑定精确模型、配方、数据和授权范围的训练（需人工审批）", auto_allow=False),
     OperationType.CTH_CASE_CREATE: OperationSpec(
         PermissionLevel.VERIFY, RiskLevel.MEDIUM,
         "登记有来源的内部CTH工作Case，不修改源事实、不执行Action或外部发布", auto_allow=True),
@@ -983,6 +987,197 @@ def bind_scope_permission_approval(
         scope_audit_id=scope.audit_id,
         verification_state="verified" if verified else "unavailable",
     )
+
+
+_OWNED_TRAINING_SCOPE_DESCRIPTOR_FIELDS = frozenset({
+    "domain_id", "product_id", "global_scope", "subject_id", "brand_focus_id",
+})
+
+
+def _owned_training_payload(
+    request: Any, *, actor_id: int, domain_id: str, context: Mapping[str, Any],
+) -> Dict[str, Any]:
+    """Validate a typed training request and canonical CTH/BMP scope mapping."""
+    from lumenis.system.ai_gateway.owned_training import TrainingApprovalRequest
+
+    if type(request) is not TrainingApprovalRequest:
+        raise ValueError("a canonical TrainingApprovalRequest is required")
+    if type(actor_id) is not int or actor_id <= 0:
+        raise ValueError("a positive authenticated actor id is required")
+    if type(domain_id) is not str or not domain_id or domain_id != domain_id.strip():
+        raise ValueError("a canonical training domain is required")
+    normalized_domain = domain_id.lower()
+    if normalized_domain == "zbmp":
+        normalized_domain = "bmp"
+    domain_config = _RESOURCE_SCOPE_DOMAINS.get(normalized_domain)
+    if domain_config is None:
+        raise ValueError("training domain must be CTH or BMP")
+    if type(request.domain_id) is not str or request.domain_id != normalized_domain:
+        raise ValueError("training request domain must match the authorized domain")
+    product_id = domain_config[0]
+
+    def valid_text(value: Any, *, limit: int = 512) -> bool:
+        return (type(value) is str and bool(value) and value == value.strip()
+                and len(value) <= limit and not any(ord(char) < 32 for char in value))
+
+    if not all(valid_text(value) for value in (
+        request.model_id, request.model_revision, request.recipe,
+    )):
+        raise ValueError("training model, revision, and recipe must be explicit")
+    hashes = (request.manifest_sha256, request.train_sha256, request.heldout_sha256)
+    if any(type(value) is not str or not re.fullmatch(r"[0-9a-f]{64}", value)
+           for value in hashes):
+        raise ValueError("training manifest and dataset hashes must be SHA-256")
+    scopes = request.scopes
+    if (type(scopes) is not tuple or not scopes
+            or any(not valid_text(scope, limit=256) for scope in scopes)
+            or len(set(scopes)) != len(scopes)):
+        raise ValueError("training scopes must be a unique explicit tuple")
+    if type(context) is not dict or set(context) != {"scope_descriptors"}:
+        raise ValueError("canonical scope descriptors are required")
+    descriptors = context.get("scope_descriptors")
+    if type(descriptors) is not dict or set(descriptors) != set(scopes):
+        raise ValueError("every training scope needs exactly one descriptor")
+
+    normalized_descriptors = []
+    for scope in scopes:
+        descriptor = descriptors[scope]
+        if (type(descriptor) is not dict
+                or set(descriptor) != _OWNED_TRAINING_SCOPE_DESCRIPTOR_FIELDS
+                or descriptor.get("domain_id") != normalized_domain
+                or descriptor.get("product_id") != product_id
+                or type(descriptor.get("global_scope")) is not bool):
+            raise ValueError("training scope descriptor is invalid or cross-domain")
+        is_global = descriptor["global_scope"]
+        subject_id = descriptor.get("subject_id")
+        brand_focus_id = descriptor.get("brand_focus_id")
+        if is_global:
+            if scope != "GLOBAL / ALL" or subject_id is not None or brand_focus_id is not None:
+                raise ValueError("global training scope must use the exact global descriptor")
+        elif normalized_domain == "cth":
+            if (not _is_valid_scope_id(subject_id) or brand_focus_id is not None
+                    or scope != subject_id):
+                raise ValueError("CTH training scope must name its exact registered Subject")
+        elif (subject_id is not None or not _is_valid_scope_id(brand_focus_id)
+              or scope != brand_focus_id):
+            raise ValueError("BMP training scope must name its exact registered BrandFocus")
+        normalized_descriptors.append({
+            "scope": scope, "domain_id": normalized_domain, "product_id": product_id,
+            "global_scope": is_global, "subject_id": subject_id,
+            "brand_focus_id": brand_focus_id,
+        })
+    return {
+        "schema_version": 1, "operation": OperationType.MODEL_TRAIN.value,
+        "actor_id": actor_id, "domain_id": normalized_domain,
+        "request_domain_id": request.domain_id,
+        "model_id": request.model_id, "model_revision": request.model_revision,
+        "recipe": request.recipe, "manifest_sha256": request.manifest_sha256,
+        "train_sha256": request.train_sha256,
+        "heldout_sha256": request.heldout_sha256,
+        "scopes": list(scopes), "scope_descriptors": normalized_descriptors,
+    }
+
+
+def owned_training_approval_resource(
+    request: Any, *, actor_id: int, domain_id: str, context: Mapping[str, Any],
+) -> str:
+    """Build the exact opaque Permission resource for one training request.
+
+    ``context`` is ``{"scope_descriptors": {scope: descriptor}}``. Each
+    descriptor has exactly ``domain_id``, ``product_id``, ``global_scope``,
+    ``subject_id`` and ``brand_focus_id``. It identifies resources; it never
+    grants access. GLOBAL / ALL is an exact label, not a permission wildcard.
+    """
+    payload = _owned_training_payload(
+        request, actor_id=actor_id, domain_id=domain_id, context=context,
+    )
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                           ensure_ascii=False).encode("utf-8")
+    return "owned_training:v1:" + hashlib.sha256(canonical).hexdigest()
+
+
+def make_owned_training_approval_verifier(
+    gate: "PermissionGate", *, actor_id: int, domain_id: str,
+    context: Mapping[str, Any],
+) -> Callable[[Any], bool]:
+    """Create a fail-closed verifier that rechecks exact scope and training approval."""
+    if type(gate) is not PermissionGate:
+        raise ValueError("the canonical PermissionGate is required")
+    if type(actor_id) is not int or actor_id <= 0:
+        raise ValueError("a positive authenticated actor id is required")
+    if type(domain_id) is not str or not domain_id or domain_id != domain_id.strip():
+        raise ValueError("a canonical training domain is required")
+    normalized_domain = domain_id.lower()
+    if normalized_domain == "zbmp":
+        normalized_domain = "bmp"
+    domain_config = _RESOURCE_SCOPE_DOMAINS.get(normalized_domain)
+    if domain_config is None:
+        raise ValueError("training domain must be CTH or BMP")
+    # Copy and validate the descriptor map once so caller mutation cannot widen it.
+    if type(context) is not dict or set(context) != {"scope_descriptors"}:
+        raise ValueError("canonical scope descriptors are required")
+    descriptors = context.get("scope_descriptors")
+    if type(descriptors) is not dict:
+        raise ValueError("canonical scope descriptors are required")
+    frozen_context = {"scope_descriptors": {
+        key: dict(value) if type(value) is dict else value
+        for key, value in descriptors.items()
+    }}
+
+    def verify(request: Any) -> bool:
+        try:
+            resource = owned_training_approval_resource(
+                request, actor_id=actor_id, domain_id=normalized_domain,
+                context=frozen_context,
+            )
+            if is_testing_bypass_enabled() or not gate.has_permission(PermissionLevel.COMMIT):
+                return False
+            payload = _owned_training_payload(
+                request, actor_id=actor_id, domain_id=normalized_domain,
+                context=frozen_context,
+            )
+            caller = f"actor:{actor_id}"
+            for descriptor in payload["scope_descriptors"]:
+                scope = check_actor_scope_permission(
+                    {"id": actor_id}, domain_id=normalized_domain, action="write",
+                    module="owned_training", subject_id=descriptor["subject_id"],
+                    brand_focus_id=descriptor["brand_focus_id"],
+                    global_scope=descriptor["global_scope"], gate=gate,
+                )
+                expected_focus = descriptor["subject_id"] if normalized_domain == "cth" else descriptor["brand_focus_id"]
+                expected_resource = f"{normalized_domain}:{'GLOBAL / ALL' if descriptor['global_scope'] else expected_focus}"
+                if not (
+                    type(scope) is ActorScopePermissionResult and scope.allowed is True
+                    and scope.verification_state == "verified" and scope.actor_id == actor_id
+                    and scope.caller == caller and scope.domain_id == normalized_domain
+                    and scope.subject_id == descriptor["subject_id"]
+                    and scope.brand_focus_id == descriptor["brand_focus_id"]
+                    and scope.global_scope is descriptor["global_scope"]
+                    and scope.scope_action == "write"
+                    and scope.operation_type == "resource_scope_write"
+                    and scope.resource == expected_resource and bool(scope.audit_id)
+                    and scope.scope_audit_id == scope.audit_id
+                ):
+                    return False
+            approval = gate.check(
+                OperationType.MODEL_TRAIN, resource=resource, caller=caller,
+                domain_id=normalized_domain, exact_approval_required=True,
+            )
+            token = gate.get_valid_approval_token(
+                OperationType.MODEL_TRAIN.value, resource, exact=True,
+            )
+            return bool(
+                approval.allowed is True and approval.requires_approval is True
+                and approval.operation_type == OperationType.MODEL_TRAIN.value
+                and approval.resource == resource and approval.caller == caller
+                and approval.domain_id == normalized_domain
+                and approval.approval_token and token == approval.approval_token
+            )
+        except Exception:
+            logger.exception("Owned training approval verification failed")
+            return False
+
+    return verify
 
 
 @dataclass(frozen=True)
@@ -2677,6 +2872,8 @@ __all__ = [
     "check_local_workspace_scope_permission",
     "resolve_local_workspace_principal",
     "bind_scope_permission_approval",
+    "owned_training_approval_resource",
+    "make_owned_training_approval_verifier",
     "ContentSourceImport",
     "content_source_import_resource",
     "check_content_source_import_permission",

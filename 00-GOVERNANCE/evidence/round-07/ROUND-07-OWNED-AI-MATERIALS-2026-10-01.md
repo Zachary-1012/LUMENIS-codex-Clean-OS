@@ -713,3 +713,43 @@ Product36849571900/App36849577890 actually passed; newer source must obtain its
 own checks and cannot inherit those results. Product AI closure requires useful
 grounded CTH/BMP results plus evaluation/recovery and the PO's final repeated
 user acceptance, not asset migration or three arithmetic training steps.
+
+## Exact training permission and canonical domain — 2026-10-01
+
+Base HEAD/origin/main ad4febf0715d1faaff8fef9a185e8403b2fb8b9c. Existing
+SYSTEM Permission and AI Gateway owners; no new store, action executor, account
+design or production DB write. MODEL_TRAIN is COMMIT/HIGH, auto_allow=False.
+The exact resource binds actor, domain, model/revision/recipe, all three hashes
+and every canonical scope descriptor. Verifier uses the existing actor-scope
+checker/registry and exact Permission approval, fresh on every call; deny testing
+bypass, wrong operation, other actor/domain, unknown scope, revoked/expired
+approval and revoked scope grant. API imports from the canonical permission
+module, not a second gateway. Dataset requests retain CTH/BMP domain: the same
+GLOBAL / ALL label cannot collapse domain boundaries; mixed-domain datasets
+fail before CUDA or any output creation. Dataset attestation fields alone still
+do not prove signed source/rights/target admission.
+
+Five scoped suites passed192 isolated tests, py_compile/diff-check passed.
+Real permission grants against the product DB, admitted business training and
+production model serving are NOT_VERIFIED. REAL DELIVERY CARD / 真实用户工作闭环验收:
+negative authorization/side-effect fences tested, no useful owned business Job
+or human acceptance claimed. This Batch does not pass ROUND07/J7.
+
+CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION: REUSE the existing
+`operational_brief.py:_analysis_window` Chinese bigram retrieval; do not copy
+OSAI CJK logic already supplied by that caller. DurableExecutionAdapter already
+persists/checks checkpoints through TaskEngine; AgentLoop lacks a persisted
+plan/context-driven resume execution entry. That bounded recovery gap stays
+under the existing Agent Runtime, not a new OSAI queue. Learning report cases
+remain RAW/HUMAN_PENDING/training_eligible=False until qualified target/rights
+review; accepting a report for the next step is not correctness approval.
+
+The free-T4 owned-weight public business baseline used an independently authored
+factual summary of the [Nike official Why Do It release](https://about.nike.com/en/newsroom/releases/nike-why-do-it-campaign),
+publication2025-09-04. Arithmetic adapter was disabled; no external inference
+API or private data used. Actual180.88 seconds/612 tokens reached a final-channel
+answer but timed out unfinished. It also conflated TikTok/China channel naming
+and proposed ungrounded fixed efficacy thresholds. Preserve it as a failed
+candidate, never a positive target. This is a real quality/resource observation,
+not Gateway Job acceptance. Global coverage NO, Taikoo PARTIAL and all release/
+operating/commercial flags remain NO. New source needs its own same-SHA checks.
