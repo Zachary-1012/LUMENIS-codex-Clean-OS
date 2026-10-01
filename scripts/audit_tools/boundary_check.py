@@ -385,13 +385,14 @@ def check_permission_gate(files: List[Path]) -> List[Violation]:
         if any(kw in rel for kw in ["agent", "skill", "lumenis_skill", "skill_registry"]):
             agent_skill_files.append(fpath)
 
-    permission_gate_file = PROJECT_ROOT / "permission_gate.py"
+    permission_owner = "lumenis/system/security/permission.py"
+    permission_gate_file = PROJECT_ROOT / permission_owner
     has_permission_gate = permission_gate_file.exists()
 
     if not has_permission_gate:
         violations.append(Violation(
-            "B6-PERMISSION", "permission_gate.py", 0,
-            "permission_gate.py 不存在",
+            "B6-PERMISSION", permission_owner, 0,
+            "Canonical SYSTEM Permission owner 不存在",
             SEVERITY_HIGH,
             "Agent/Skill 执行应经过 Permission Gate"
         ))

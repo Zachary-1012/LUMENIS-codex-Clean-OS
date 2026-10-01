@@ -45,12 +45,34 @@ def _counter(records: list[dict], field: str) -> dict[str, int]:
     return dict(sorted(Counter(values).items()))
 
 
+def _analysis_window(body: str, question: str | None) -> tuple[str, dict]:
+    """Select a bounded verbatim window, never a generated summary or relevance verdict."""
+    def terms(text):
+        words = set(re.findall(r"[a-z0-9]{3,}", text.casefold()))
+        for run in re.findall(r"[\u3400-\u9fff]+", text):
+            words.update(run[index:index + 2] for index in range(len(run) - 1))
+        return words - {"the", "and", "for", "from", "with", "this", "that", "what", "should"}
+
+    query = terms(question or "")
+    start, overlap = 0, set()
+    # Keep context contiguous: quotes can be checked against the original body.
+    for index in range(0, max(1, len(body) - 1200 + 400), 400):
+        candidate = min(index, max(0, len(body) - 1200))
+        matched = query & terms(body[candidate:candidate + 1200])
+        if len(matched) > len(overlap):
+            start, overlap = candidate, matched
+    text = body[start:start + 1200]
+    return text, {"method": "lexical_window/v1", "start": start, "end": start + len(text),
+                  "matched_query_terms": len(overlap), "semantic_relevance": "NOT_EVALUATED"}
+
+
 def build_scoped_source_brief(
     con: sqlite3.Connection, *, product_id: str, global_scope: bool,
     entity_label: str, subject_id: str | None = None,
     brand_focus_id: str | None = None, limit: int = 30,
     include_analysis_text: bool = False,
     source_ids: list[str] | None = None,
+    analysis_question: str | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic source-only brief; label comes from server registry/context."""
     if type(product_id) is not str or product_id not in {"CTH", "ZBMP"}:
@@ -147,9 +169,11 @@ def build_scoped_source_brief(
         })
         body = row.get("content")
         if include_analysis_text and isinstance(body, str) and body.strip() and len(analysis_sources) < 8:
+            selected_text, selection = _analysis_window(body, analysis_question)
             analysis_sources.append({
                 "source_id": source_id, "evidence_ref": scope_ref,
-                "title": title, "text": body[:1200], "truncated": len(body) > 1200,
+                "title": title, "text": selected_text, "truncated": len(body) > len(selected_text),
+                "text_selection": selection,
                 "body_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
                 "publish_datetime": publish, "captured_at": captured,
                 "source_platform": row.get("source_platform") or "UNKNOWN",

@@ -163,8 +163,10 @@ def test_migrate_only_bootstraps_empty_database_through_canonical_owners(
             } == owner_contract
             assert owner_indexes[table] <= _index_names(conn, table)
 
-    assert version == migrations.CURRENT_VERSION
-    assert numeric_history == list(range(1, migrations.CURRENT_VERSION + 1))
+    expected_version = 18
+    assert migrations.CURRENT_VERSION == expected_version
+    assert version == expected_version
+    assert numeric_history == list(range(1, expected_version + 1))
     assert {"canonical_data", "zbc_evidence", "zbc_canonical_data"} <= tables
     assert "rule_version" in canonical_columns
     assert {"domain_id", "product_id"} <= evidence_canonical_columns
@@ -175,7 +177,7 @@ def test_migrate_only_bootstraps_empty_database_through_canonical_owners(
         "zbc_canonical_data": 0,
     }
 
-    pre_migration_backup = backup_dir / "before_migration_v0_to_v17.db"
+    pre_migration_backup = backup_dir / f"before_migration_v0_to_v{expected_version}.db"
     assert pre_migration_backup.is_file()
     with sqlite3.connect(pre_migration_backup) as conn:
         backup_tables = {
@@ -237,7 +239,7 @@ def test_existing_versioned_data_and_null_semantics_are_preserved(
         None,
         None,
     )
-    assert numeric_history == [9, 10, 11, 12, 13, 14, 15, 16, 17]
+    assert numeric_history == [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
 
 
 def test_failed_migration_step_rolls_back_data_and_version(tmp_path, monkeypatch):

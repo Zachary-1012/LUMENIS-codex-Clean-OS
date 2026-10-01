@@ -7,6 +7,14 @@ import pytest
 from lumenis.system.ai_gateway import core
 
 
+def _enable_mock_provider(monkeypatch, name):
+    from lumenis.system.ai_gateway import providers
+    monkeypatch.setattr(
+        providers, 'RETIRED_PROVIDERS', providers.RETIRED_PROVIDERS - {name},
+    )
+    monkeypatch.setitem(providers.PROVIDER_REGISTRY[name], 'status', providers.ACTIVE)
+
+
 class _Response:
     def __init__(self, body, url):
         self._body = json.dumps(body).encode('utf-8')
@@ -26,6 +34,7 @@ class _Response:
 
 
 def _mock_ollama(monkeypatch, responses):
+    _enable_mock_provider(monkeypatch, 'ollama')
     calls = []
 
     class _Opener:
@@ -100,7 +109,7 @@ def test_local_only_checks_capability_and_sends_image_to_ollama(monkeypatch):
 
 
 def test_auto_provider_prefers_local_vision(monkeypatch):
-    monkeypatch.setenv('AI_PROVIDER', 'auto')
+    monkeypatch.setenv('AI_PROVIDER', 'ollama')
     monkeypatch.setenv('ALLOW_CLOUD_AI', 'true')
     monkeypatch.setenv('OLLAMA_BASE_URL', 'http://localhost:11434')
     monkeypatch.setenv('OLLAMA_VISION_MODEL', 'qwen3.5:4b')
@@ -132,6 +141,7 @@ def test_ollama_reports_missing_vision_capability_without_chat_or_cloud(monkeypa
 
 
 def test_local_only_rejects_non_loopback_ollama_url(monkeypatch):
+    _enable_mock_provider(monkeypatch, 'ollama')
     monkeypatch.setenv('AI_PROVIDER', 'zhipu')
     monkeypatch.setenv('ALLOW_CLOUD_AI', 'true')
     monkeypatch.setenv('OLLAMA_BASE_URL', 'https://ollama.example/v1')
@@ -167,7 +177,7 @@ def test_local_only_refuses_remote_ollama_before_sending_image(monkeypatch):
 
 
 def test_empty_local_response_is_not_reported_as_success(monkeypatch):
-    monkeypatch.setenv('AI_PROVIDER', 'auto')
+    monkeypatch.setenv('AI_PROVIDER', 'ollama')
     monkeypatch.setenv('ALLOW_CLOUD_AI', 'false')
     monkeypatch.setenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
     _mock_ollama(monkeypatch, _vision_responses(content='  '))
@@ -194,6 +204,7 @@ def test_local_only_reports_ollama_exception_without_cloud_fallback(monkeypatch)
 
 
 def test_cloud_disabled_blocks_legacy_zhipu_vision(monkeypatch):
+    _enable_mock_provider(monkeypatch, 'zhipu')
     monkeypatch.setenv('AI_PROVIDER', 'zhipu')
     monkeypatch.setenv('ALLOW_CLOUD_AI', 'false')
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-only-key')
@@ -206,7 +217,8 @@ def test_cloud_disabled_blocks_legacy_zhipu_vision(monkeypatch):
     assert core.vision_chat('', 'inspect', 'cGl4ZWw=') == (None, 'cloud_disabled')
 
 
-def test_explicit_zhipu_vision_uses_legacy_path_only_when_cloud_allowed(monkeypatch):
+def test_mocked_explicit_zhipu_vision_keeps_compatibility_adapter(monkeypatch):
+    _enable_mock_provider(monkeypatch, 'zhipu')
     monkeypatch.setenv('AI_PROVIDER', 'zhipu')
     monkeypatch.setenv('ALLOW_CLOUD_AI', 'true')
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-only-key')
@@ -250,18 +262,19 @@ def test_text_chat_unavailable_auto_or_local_never_enters_cloud_chain(
         lambda *_args, **_kwargs: calls.append('cloud'),
     )
 
-    assert core._chat('system', 'user') == (None, 'rule')
+    assert core._chat('system', 'user') == (None, 'provider_disabled')
     assert calls == []
-    assert core._get_call_meta()['model'] == 'deterministic_rule'
+    assert core._get_call_meta()['provider'] == 'provider_disabled'
 
 
 @pytest.mark.parametrize(
     ('provider', 'cloud_allowed'),
-    [('auto', 'true'), ('zhipu', 'false')],
+    [('zhipu', 'true')],
 )
 def test_text_chat_preserves_explicit_cloud_opt_in_route(
     monkeypatch, provider, cloud_allowed,
 ):
+    _enable_mock_provider(monkeypatch, 'zhipu')
     monkeypatch.setenv('AI_PROVIDER', provider)
     monkeypatch.setenv('ALLOW_CLOUD_AI', cloud_allowed)
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-only-key')
@@ -277,3 +290,20 @@ def test_text_chat_preserves_explicit_cloud_opt_in_route(
     monkeypatch.setattr(core.ai_channel, 'route_with_fallback', route)
     assert core._chat('system', 'user') == ('cloud response', 'zhipu')
     assert routes == [('zhipu',)]
+
+
+@pytest.mark.parametrize(('provider', 'local_only'), [('auto', False), ('zhipu', False), ('ollama', False), ('zhipu', True)])
+def test_retired_vision_routes_return_disabled_without_network(monkeypatch, provider, local_only):
+    monkeypatch.setenv('AI_PROVIDER', provider)
+    monkeypatch.setenv('ALLOW_CLOUD_AI', 'true')
+    monkeypatch.setenv('ZHIPU_API_KEY', 'test-only-placeholder-never-sent')
+
+    def forbid_network(*_args, **_kwargs):
+        raise AssertionError('disabled provider attempted network or inference')
+
+    monkeypatch.setattr(core.urllib.request, 'build_opener', forbid_network)
+    monkeypatch.setattr(core.urllib.request, 'urlopen', forbid_network)
+
+    assert core.vision_chat('', 'inspect', 'cGl4ZWw=', local_only=local_only) == (
+        None, 'provider_disabled',
+    )

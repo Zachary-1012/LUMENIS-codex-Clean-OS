@@ -237,8 +237,13 @@ def analyze_business_brief(*, question, sources, sample, scope, job_id, actor_re
                        "sources": [{"source_id": source["source_id"], "excerpts": _excerpts(source),
                                     "published": source["publish_datetime"],
                                     "platform": source["source_platform"]} for source in sources]}),
-        response_schema=_schema(sources, revision=revision is not None), max_tokens=1200, timeout_seconds=180,
+        response_schema=_schema(sources, revision=revision is not None), max_tokens=1200,
+        timeout_seconds=180,
     )
+    if provider == "provider_disabled":
+        return {**base, "reason": "BUSINESS_BRIEF_PROVIDER_DISABLED"}
+    if provider == "ollama_timeout":
+        return {**base, "reason": "BUSINESS_BRIEF_LOCAL_MODEL_TIMEOUT"}
     if provider != "ollama" or not isinstance(raw, str) or not isinstance(meta.get("model"), str):
         return {**base, "reason": "BUSINESS_BRIEF_LOCAL_MODEL_UNAVAILABLE"}
     try:

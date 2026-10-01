@@ -4,6 +4,15 @@ import sys, os
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
+def _enable_mock_zhipu(monkeypatch):
+    from lumenis.system.ai_gateway import providers
+    monkeypatch.setattr(
+        providers, 'RETIRED_PROVIDERS', providers.RETIRED_PROVIDERS - {'zhipu'},
+    )
+    monkeypatch.setitem(providers.PROVIDER_REGISTRY['zhipu'], 'status', providers.ACTIVE)
+    monkeypatch.setenv('AI_PROVIDER', 'zhipu')
+
 def test_per_call_default_model_is_flag():
     import ai_resource_packs
     import inspect
@@ -25,6 +34,7 @@ def test_per_call_passes_model_to_chat(monkeypatch):
     assert captured['model'] == 'glm-5.3'
 
 def test_intelligence_chat_model_override(monkeypatch):
+    _enable_mock_zhipu(monkeypatch)
     from lumenis.system.ai_gateway import core as intelligence
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-not-real')
     def fake_provider_config():
@@ -53,6 +63,7 @@ def test_intelligence_chat_model_override(monkeypatch):
 
 def test_intelligence_chat_glm53_no_thinking(monkeypatch):
     """GLM-5.3 omits thinking, and reasoning alone is not a final answer."""
+    _enable_mock_zhipu(monkeypatch)
     from lumenis.system.ai_gateway import core as intelligence
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-not-real')
     monkeypatch.setattr(intelligence, '_provider_config',
@@ -74,20 +85,19 @@ def test_intelligence_chat_glm53_no_thinking(monkeypatch):
     monkeypatch.setattr(intelligence, '_detect_local', lambda: None)
     res, prov = intelligence._chat('s', 'u', model='glm-5.3')
     assert sent['has_thinking'] is False, 'glm-5.3 不应传 thinking'
-    assert (res, prov) == (None, 'rule')
+    assert (res, prov) == (None, 'unavailable')
 
 
 # ---------- P0B-2 智谱评审发现修复回归（2026-09-03）----------
-def test_provider_config_glm_alias_no_keyerror(monkeypatch):
-    """AI_PROVIDER=glm 时不得 KeyError（configs 无 'glm' 键，应映射到 zhipu）。智谱评审 P0B-2。"""
+def test_provider_config_glm_alias_is_fail_closed(monkeypatch):
+    """glm is a retired Zhipu alias and stays unavailable without provider probing."""
     from lumenis.system.ai_gateway import core as intelligence
     monkeypatch.setenv('AI_PROVIDER', 'glm')
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-abc')
     intelligence._CACHE['ts'] = 0  # 强制重算
     intelligence._CACHE['provider'] = None
     cfg = intelligence._provider_config()
-    assert cfg is not None
-    assert cfg[0] == 'zhipu', f'glm 别名应解析为 zhipu，实际 {cfg[0]}'
+    assert cfg is None
 
 
 def test_provider_config_glm_without_key_returns_none(monkeypatch):
@@ -102,6 +112,7 @@ def test_provider_config_glm_without_key_returns_none(monkeypatch):
 
 def test_glm53_case_insensitive_no_thinking(monkeypatch):
     """GLM-5.3 returns final content even when it also includes reasoning."""
+    _enable_mock_zhipu(monkeypatch)
     from lumenis.system.ai_gateway import core as intelligence
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-not-real')
     monkeypatch.setattr(intelligence, '_provider_config',
@@ -127,6 +138,7 @@ def test_glm53_case_insensitive_no_thinking(monkeypatch):
 
 def test_glm53_flash_variant_no_thinking(monkeypatch):
     """glm-5.3-flash 变体也应视为始终思考，不传 thinking。"""
+    _enable_mock_zhipu(monkeypatch)
     from lumenis.system.ai_gateway import core as intelligence
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-not-real')
     monkeypatch.setattr(intelligence, '_provider_config',
@@ -148,7 +160,7 @@ def test_glm53_flash_variant_no_thinking(monkeypatch):
     monkeypatch.setattr(intelligence, '_detect_local', lambda: None)
     res, prov = intelligence._chat('s', 'u', model='glm-5.3-flash')
     assert sent['has_thinking'] is False, 'glm-5.3-flash 不应传 thinking'
-    assert (res, prov) == (None, 'rule')
+    assert (res, prov) == (None, 'unavailable')
 
 
 # ---------- Search-STD 增强搜索修复回归（2026-09-03）----------
@@ -164,6 +176,7 @@ def test_search_enhance_default_model_is_web_search_pro(monkeypatch):
 
 def test_search_enhance_parses_tool_calls(monkeypatch):
     """web-search-pro 返回 message.tool_calls[].search_result 时应正确解析为 results（真实联网搜索）。"""
+    _enable_mock_zhipu(monkeypatch)
     from lumenis.system.ai_gateway import core as intelligence
     import sys, types
     monkeypatch.setenv('ZHIPU_API_KEY', 'test-key-abc')

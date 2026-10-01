@@ -6,6 +6,14 @@ import pytest
 from lumenis.system.ai_gateway import core
 
 
+def _enable_mock_provider(monkeypatch, name='ollama'):
+    from lumenis.system.ai_gateway import providers
+    monkeypatch.setattr(
+        providers, 'RETIRED_PROVIDERS', providers.RETIRED_PROVIDERS - {name},
+    )
+    monkeypatch.setitem(providers.PROVIDER_REGISTRY[name], 'status', providers.ACTIVE)
+
+
 class _Response:
     def __init__(self, body, url):
         self._body = json.dumps(body).encode('utf-8')
@@ -25,6 +33,7 @@ class _Response:
 
 
 def _mock_ollama(monkeypatch, responses):
+    _enable_mock_provider(monkeypatch)
     calls = []
 
     class _Opener:
@@ -145,6 +154,7 @@ def test_local_structured_chat_preserves_incomplete_response_metadata(monkeypatc
 
 
 def test_local_structured_chat_rejects_non_loopback_without_transport(monkeypatch):
+    _enable_mock_provider(monkeypatch)
     monkeypatch.setenv('OLLAMA_BASE_URL', 'https://ollama.example/v1')
 
     def forbid_network(*_args, **_kwargs):
@@ -203,6 +213,7 @@ def test_local_structured_chat_rejects_remote_metadata_on_response(monkeypatch):
 
 @pytest.mark.parametrize('model', ['qwen3:cloud', 'qwen3:4b:local:local'])
 def test_local_structured_chat_rejects_cloud_or_nested_model_before_network(monkeypatch, model):
+    _enable_mock_provider(monkeypatch)
     def forbid_network(*_args, **_kwargs):
         raise AssertionError('nonlocal model reached transport')
 
@@ -219,7 +230,90 @@ def test_local_structured_chat_rejects_cloud_or_nested_model_before_network(monk
 
 def test_report_text_timeout_is_bounded_without_changing_default(monkeypatch):
     monkeypatch.setenv('OLLAMA_BASE_URL', 'http://localhost:11434')
+    monkeypatch.setenv('OLLAMA_TIMEOUT_SECONDS', '180')
     calls = _mock_ollama(monkeypatch, {'/api/show': {'capabilities': []}})
+    core.local_structured_chat('', 'request', response_schema={'type': 'object'}, timeout_seconds=300)
     core.local_structured_chat('', 'request', response_schema={'type': 'object'}, timeout_seconds=9999)
     core.local_structured_chat('', 'request', response_schema={'type': 'object'})
-    assert [call[1] for call in calls] == [180, 120]
+    assert [call[1] for call in calls] == [180, 180, 120]
+
+
+def test_local_vision_timeout_ceiling_remains_180_seconds(monkeypatch):
+    monkeypatch.setenv('OLLAMA_BASE_URL', 'http://localhost:11434')
+    calls = _mock_ollama(monkeypatch, {
+        '/api/show': {'capabilities': ['vision']},
+        '/api/chat': {
+            'model': 'qwen3.5:4b', 'done': True, 'done_reason': 'stop',
+            'message': {'role': 'assistant', 'content': 'vision result'},
+        },
+    })
+
+    content, status, _meta = core._ollama_local_chat(
+        '', 'request', 'image-data', 'qwen3.5:4b', 0.2, 50,
+        required_capability='vision', timeout_seconds=300,
+    )
+
+    assert (content, status) == ('vision result', 'ollama')
+    assert [call[1] for call in calls] == [180, 180]
+
+
+@pytest.mark.parametrize(
+    ('failure', 'expected_status'),
+    [
+        (TimeoutError('private prompt'), 'ollama_timeout'),
+        (core.urllib.error.URLError(TimeoutError('private prompt')), 'ollama_timeout'),
+        (core.urllib.error.URLError('private prompt'), 'ollama_error'),
+    ],
+)
+def test_local_structured_chat_classifies_timeouts_without_exposing_error(monkeypatch, failure, expected_status):
+    monkeypatch.setenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
+    calls = _mock_ollama(monkeypatch, {
+        '/api/show': {'capabilities': ['completion']},
+        '/api/chat': failure,
+    })
+
+    text, provider, meta = core.local_structured_chat(
+        'private system prompt', 'private user prompt', response_schema={'type': 'object'},
+        timeout_seconds=300,
+    )
+
+    assert text is None
+    assert provider == expected_status
+    assert meta['status'] == expected_status
+    assert 'private' not in repr(meta)
+    assert [urlsplit(call[0].full_url).path for call in calls] == ['/api/show', '/api/chat']
+
+
+@pytest.mark.parametrize('timeout_seconds', [True, float('nan'), float('inf'), -float('inf'), 10 ** 400])
+def test_local_structured_chat_rejects_non_finite_or_boolean_timeout_without_transport(monkeypatch, timeout_seconds):
+    _enable_mock_provider(monkeypatch)
+    def forbid_network(*_args, **_kwargs):
+        raise AssertionError('invalid timeout reached transport')
+
+    monkeypatch.setattr(core.urllib.request, 'build_opener', forbid_network)
+
+    text, provider, meta = core.local_structured_chat(
+        'system', 'user', response_schema={'type': 'object'}, timeout_seconds=timeout_seconds,
+    )
+
+    assert text is None
+    assert provider == 'ollama_unavailable'
+    assert meta['status'] == 'ollama_unavailable'
+
+
+def test_retired_structured_route_does_not_probe_or_infer(monkeypatch):
+    from lumenis.system.ai_gateway import providers
+
+    monkeypatch.setitem(providers.PROVIDER_REGISTRY['ollama'], 'status', providers.ACTIVE)
+    monkeypatch.setattr(providers, '_probe_endpoint', lambda *_args, **_kwargs: pytest.fail('probe called'))
+    monkeypatch.setattr(core.urllib.request, 'build_opener', lambda *_args, **_kwargs: pytest.fail('inference called'))
+    monkeypatch.setattr(core.urllib.request, 'urlopen', lambda *_args, **_kwargs: pytest.fail('network called'))
+
+    text, status, meta = core.local_structured_chat(
+        'system', 'user', response_schema={'type': 'object'},
+    )
+
+    assert text is None
+    assert status == 'provider_disabled'
+    assert meta['provider'] == 'provider_disabled'
+    assert meta['status'] == 'provider_disabled'

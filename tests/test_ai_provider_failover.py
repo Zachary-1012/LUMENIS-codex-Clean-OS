@@ -19,6 +19,14 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+def _enable_mock_providers(monkeypatch, *names):
+    from lumenis.system.ai_gateway import providers
+    retired = providers.RETIRED_PROVIDERS - set(names)
+    monkeypatch.setattr(providers, 'RETIRED_PROVIDERS', retired)
+    for name in names:
+        monkeypatch.setitem(providers.PROVIDER_REGISTRY[name], 'status', providers.ACTIVE)
+
+
 class TestProviderChain:
     """provider_chain 验证"""
 
@@ -64,9 +72,10 @@ class TestProviderStatus:
         from lumenis.system.ai_gateway import providers as pr
         assert pr.provider_status('qwen') == 'NOT_CONFIGURED'
 
-    def test_zhipu_is_active(self):
+    def test_zhipu_is_disabled(self):
         from lumenis.system.ai_gateway import providers as pr
-        assert pr.provider_status('zhipu') == 'ACTIVE'
+        assert pr.provider_status('zhipu') == 'DISABLED'
+        assert pr.is_provider_available('zhipu') is False
 
     def test_ark_available_for_call(self):
         from lumenis.system.ai_gateway import providers as pr
@@ -226,8 +235,9 @@ class TestGovernanceQuota:
 class TestRouteWithFallback:
     """route_with_fallback 验证"""
 
-    def test_fallback_returns_rule_when_all_fail(self):
+    def test_fallback_returns_rule_when_all_fail(self, monkeypatch):
         from lumenis.system.ai_gateway import channel as ac
+        _enable_mock_providers(monkeypatch, 'zhipu', 'ark', 'ollama')
         def always_fail(prov):
             raise ConnectionError(f"{prov} down")
         result, used = ac.route_with_fallback(
@@ -236,8 +246,9 @@ class TestRouteWithFallback:
         assert used == 'rule'
         assert result is None
 
-    def test_fallback_returns_first_success(self):
+    def test_fallback_returns_first_success(self, monkeypatch):
         from lumenis.system.ai_gateway import channel as ac
+        _enable_mock_providers(monkeypatch, 'zhipu', 'ark', 'ollama')
         call_count = {'n': 0}
         def succeed_on_ark(prov):
             call_count['n'] += 1
@@ -250,6 +261,55 @@ class TestRouteWithFallback:
         assert used == 'ark'
         assert result == 'ark response'
         assert call_count['n'] == 2
+
+    def test_disabled_primary_never_falls_back_to_paid_provider(self):
+        from lumenis.system.ai_gateway import channel as ac
+        calls = []
+        result, used = ac.route_with_fallback(
+            lambda provider: (calls.append(provider) or 'unexpected', provider),
+            providers=['zhipu', 'ark', 'doubao'],
+        )
+        assert (result, used) == (None, 'provider_disabled')
+        assert calls == []
+
+    def test_local_probe_and_status_mutation_cannot_reactivate_retired_routes(self, monkeypatch):
+        from lumenis.system.ai_gateway import providers as pr
+        names = ('zhipu', 'ollama', 'lmstudio', 'llama_cpp')
+        for name in names:
+            monkeypatch.setitem(pr.PROVIDER_REGISTRY[name], 'status', pr.ACTIVE)
+            pr.set_provider_status(name, pr.ACTIVE)
+        monkeypatch.setattr(pr, '_probe_endpoint', lambda *_args, **_kwargs: pytest.fail('probe called'))
+        assert pr.probe_local_providers() == {
+            'ollama': pr.DISABLED, 'lmstudio': pr.DISABLED, 'llama_cpp': pr.DISABLED,
+        }
+        for name in names:
+            assert pr.provider_status(name) == pr.DISABLED
+            assert pr.is_provider_available(name) is False
+            assert pr.provider_info(name)['status'] == pr.DISABLED
+        assert not set(names).intersection(pr.active_providers())
+        assert not set(names[1:]).intersection(pr.available_providers())
+
+    def test_cached_retired_route_and_default_chat_do_not_return_answer(self, monkeypatch):
+        from lumenis.system.ai_gateway import core as gateway, providers as pr
+        monkeypatch.setenv('AI_PROVIDER', 'auto')
+        gateway._CACHE.update(ts=10**12, provider='ollama', model='stale-model', base='http://127.0.0.1:11434')
+        key = gateway._cache_key('system', 'user', 0.1, 800, None)
+        gateway._chat_cache_set(key, 'stale local answer', 'ollama')
+        monkeypatch.setattr(gateway, '_detect_local', lambda: pytest.fail('discovery called'))
+        monkeypatch.setattr(gateway, '_budget_check', lambda *_args, **_kwargs: pytest.fail('budget/cache path reached'))
+        output, provider, meta = gateway.chat('system', 'user', use_cache=True)
+        assert (output, provider) == (None, 'provider_disabled')
+        assert meta['provider'] == 'provider_disabled'
+        assert meta['cache'] is False
+        assert gateway._provider_config() is None
+        assert gateway._CACHE['provider'] is None
+
+    def test_disabled_heartbeat_does_not_call_ping(self):
+        from lumenis.system.ai_gateway import channel as ac
+        calls = []
+        started = ac.start_24h_heartbeat({'zhipu': lambda: calls.append('zhipu'), 'ollama': lambda: calls.append('ollama')})
+        assert started is False
+        assert calls == []
 
     def test_fallback_skips_circuit_open(self):
         from lumenis.system.ai_gateway import channel as ac

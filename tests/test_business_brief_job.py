@@ -40,6 +40,7 @@ def _mock_model(monkeypatch, transform=lambda value: value):
     calls = []
     def model(system, user, **kwargs):
         calls.append(json.loads(user))
+        assert kwargs["timeout_seconds"] == 180
         result = transform(_answer(user))
         if "revision" in json.loads(user):
             result = {"changes": [{"section": "unknowns", "reason": "Address the saved review."}], "analysis": result}
@@ -75,6 +76,37 @@ def test_real_route_derivative_and_reopen_are_scoped_immutable_not_business_succ
     with sqlite3.connect(path) as con:
         con.execute("UPDATE app_evidence_records SET outputs_json='{}' WHERE id=?", (evidence_id,))
     assert api.get(URL + "/jobs/" + job["job_id"], headers=focus).status_code != 200
+
+
+@pytest.mark.parametrize("question,material", [
+    ("Compare cushioning traction weight and durability", "Cushioning traction weight durability measured in this test."),
+    ("比较缓震抓地耐久重量", "缓震、抓地、耐久、重量的实测结果在此。"),
+])
+def test_real_job_selects_task_material_beyond_article_prefix(client, monkeypatch, question, material):
+    api, _, path, entry, _ = client
+    body = "Navigation and unrelated introduction. " * 100 + material + " Method and limits. " * 50
+    with sqlite3.connect(path) as con:
+        con.execute("UPDATE canonical_data SET content=? WHERE source_id='brief-job-source'", (body,))
+    calls = _mock_model(monkeypatch)
+    focus = {**GLOBAL, "X-Lumenis-Context-Mode": "FOCUS", "X-Subject-ID": entry["subject_id"]}
+    response = api.post(URL + "/generate", headers=focus, json={
+        "source_ids": ["brief-job-source"], "business_question": question,
+    })
+    assert response.status_code == 200, response.get_json()
+    job = response.get_json()["result"]
+    source_text = "".join(calls[0]["sources"][0]["excerpts"])
+    assert material in source_text and source_text in body and len(source_text) <= 1200
+    assert job["business_analysis"]["sample"]["has_truncated_bodies"] is True
+    assert api.get(URL + "/jobs/" + job["job_id"], headers=focus).get_json()["result"] == job
+
+
+def test_no_lexical_match_does_not_claim_semantic_relevance():
+    from lumenis.shared.reporting.operational_brief import _analysis_window
+    body = "Original source text. " * 100
+    text, selection = _analysis_window(body, "无关的问题")
+    assert text == body[:1200]
+    assert selection["matched_query_terms"] == 0
+    assert selection["semantic_relevance"] == "NOT_EVALUATED"
 
 
 @pytest.mark.parametrize("missing_body", [False, True])
@@ -126,6 +158,29 @@ def test_model_cannot_invent_quote_or_cite_other_scope(client, monkeypatch, bad)
         assert con.execute("SELECT COUNT(*) FROM app_evidence_records WHERE feature_id='REPORT_BUSINESS_ANALYSIS'").fetchone()[0] == 0
         rejected = con.execute("SELECT result,outputs_json FROM app_evidence_records WHERE feature_id='REPORT_BUSINESS_ANALYSIS_REJECTED'").fetchone()
         assert rejected[0] == 'FAIL' and 'rejected_model_output' in json.loads(rejected[1])
+
+
+@pytest.mark.parametrize("provider,reason", [
+    ("ollama_timeout", "BUSINESS_BRIEF_LOCAL_MODEL_TIMEOUT"),
+    ("provider_disabled", "BUSINESS_BRIEF_PROVIDER_DISABLED"),
+])
+def test_unavailable_provider_is_reopenable_without_fake_analysis_or_retry(client, monkeypatch, provider, reason):
+    api, _, path, _, _ = client
+    calls = []
+    def timeout_model(*args, **kwargs):
+        calls.append(kwargs)
+        return None, provider, {"status": provider}
+    monkeypatch.setattr(analysis.ai_core, "local_structured_chat", timeout_model)
+    response = api.post(URL + "/generate", headers=GLOBAL, json={"business_question": "Which action is supported?"})
+    assert response.status_code == 200
+    job = response.get_json()["result"]
+    assert job["business_analysis"]["state"] == "unavailable"
+    assert job["business_analysis"]["reason"] == reason
+    assert "analysis" not in job["business_analysis"] and len(calls) == 1
+    reopened = api.get(URL + "/jobs/" + job["job_id"], headers=GLOBAL)
+    assert reopened.status_code == 200 and reopened.get_json()["result"] == job
+    with sqlite3.connect(path) as con:
+        assert con.execute("SELECT count(*) FROM app_evidence_records WHERE feature_id='REPORT_BUSINESS_ANALYSIS'").fetchone()[0] == 0
 
 
 def test_empty_body_never_substitutes_title_and_no_model_call(client, monkeypatch):

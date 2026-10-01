@@ -341,6 +341,42 @@ J1–J8 是八个用户交付包，不替代十五轮验收，不限制必要的
 
 当前执行状态：J1 已启动；J2/J3 可用输入核对并行；J4–J8 依实际依赖排队。此行仅记录执行授权，不声称后台任务或任一交付包已通过。
 
+## 2026-10-01 — 序境自有 AI 里程碑与取材修正
+
+本节更新进行中的交付目标，保留前述 J1–J8、十五轮及六项真实验收义务。
+Codex Cloud 是已配置的研发资源，不是序境产品部署。停止产品及研发调用
+本地模型和智谱，只保留接口、既有成果与来源记录，不再延长 CPU 推理重试。
+
+| 既有交付包 | 当前必须推进的结果 |
+|---|---|
+| J1 | 采集暂不完备时由开发者全网检索真实材料，经现有导入、Evidence、Canonical 链补入；明确人工/研发辅助发现，不冒充自动采集覆盖 |
+| J2/J3 | 先按具体 CTH/BMP 任务选材料，区分品牌宣称、独立观察、个体观点、推断和创意；财报/讽刺不能冒充跑鞋消费者需求；资料充分才做对应结论 |
+| J4/J5/J6 | 保留方案、视频、播客的全部已批准目标；采用同一来源与反馈链，恢复各自开发时消费真实案例，不丢专业制作要求 |
+| J7 | 真实任务输入、报告版本、错误原因、修订与评估进入现有 Shared Learning；负样本不转成正向训练目标；候选学习资产、训练执行、留出评估、版本晋升分别留证 |
+| J8 | 自有推理与工具执行在外部模型调用禁用、Codex 不代做任务时仍完成真实业务和恢复；最终由 Product Owner 统一重复操作验收 |
+
+训练/学习材料必须绑定原任务、来源 Evidence、产物版本、反馈和适用范围。
+未知/失败保留原状；外部文章的可读取性不自动等于权重训练或再分发许可。
+以自有报告/反馈与经确认可用的材料建立样本，未经授权的全文不送外部训练服务。
+`分析不可用` 是退出旧推理依赖后的临时诊断，不能作为本里程碑完成状态。
+
+### 明确研究对象及当前采纳（查阅 2026-10-01）
+
+- **OpenAI / Codex / ChatGPT**：[Agent Evals](https://developers.openai.com/api/docs/guides/agent-evals)
+  的任务轨迹与结果评估方法适配现有 Evaluation、Reporting、Agent Runtime；
+  ADAPT 方法，不直接增加外部推理依赖。现有 Codex Cloud 用于同一提交的隔离研发验证。
+- **Claude / Anthropic**：[Context Engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
+  的任务相关上下文选择、按需检索与持久任务笔记，适配现有 Source Brief、Skills、学习记录；
+  ADAPT。先补合适的证据，再优化提示，不把更长上下文当成更强分析。
+- **Meta Muse**：[官方产品说明](https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/)
+  和[安全设计](https://research.meta.ai/blog/security-and-safety-for-ai-agents-our-approach-with-muse)
+  是本次确认的对象：研究长期任务、执行环境、浏览器和独立动作授权边界；
+  ADAPT 到既有 Runtime/Browser/Permission/Effect Fence，部署选择后置，不新增第二运行时。
+
+以上为公开工程/产品方法研究，未复制专有代码、未获取模型内部推理或权重，
+未新增依赖；不声称只读文档便获得对应模型能力。既有研究继续保留，过时运行建议
+由本次明确决策覆盖，不能因此删除历史证据或遗漏产品能力。
+
 ## 11. 提效、版本与停止条件
 
 不再按 commit/文件/测试数量报进度。每批说明：关闭哪个 blocker、状态从哪到哪、commit、真实结果路径、剩余缺口及下一步。只跑变化 owner 的必要回归和 blocking gates；Round/集成候选时才 full gate。不通过反复全仓审计制造工作。

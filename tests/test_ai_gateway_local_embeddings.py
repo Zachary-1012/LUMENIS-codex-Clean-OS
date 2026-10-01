@@ -6,6 +6,14 @@ import pytest
 from lumenis.system.ai_gateway import core
 
 
+def _enable_mock_provider(monkeypatch, name='ollama'):
+    from lumenis.system.ai_gateway import providers
+    monkeypatch.setattr(
+        providers, 'RETIRED_PROVIDERS', providers.RETIRED_PROVIDERS - {name},
+    )
+    monkeypatch.setitem(providers.PROVIDER_REGISTRY[name], 'status', providers.ACTIVE)
+
+
 class _Response:
     def __init__(self, body, url):
         self._body = json.dumps(body).encode('utf-8')
@@ -25,6 +33,7 @@ class _Response:
 
 
 def _mock_ollama(monkeypatch, responses):
+    _enable_mock_provider(monkeypatch)
     calls = []
 
     class _Opener:
@@ -155,6 +164,7 @@ def test_local_embeddings_rejects_remote_metadata_on_response(monkeypatch):
 
 
 def test_local_embeddings_rejects_non_loopback_before_network(monkeypatch):
+    _enable_mock_provider(monkeypatch)
     monkeypatch.setenv('OLLAMA_BASE_URL', 'https://ollama.example/v1')
 
     def forbid_network(*_args, **_kwargs):
@@ -170,6 +180,7 @@ def test_local_embeddings_rejects_non_loopback_before_network(monkeypatch):
 
 @pytest.mark.parametrize('texts', [None, [], [''], ['   '], ['x' * 1601], ('one',), [1], ['x'] * 102])
 def test_local_embeddings_rejects_invalid_text_input_before_network(monkeypatch, texts):
+    _enable_mock_provider(monkeypatch)
     def forbid_network(*_args, **_kwargs):
         raise AssertionError('invalid input reached transport')
 
@@ -183,6 +194,7 @@ def test_local_embeddings_rejects_invalid_text_input_before_network(monkeypatch,
 
 @pytest.mark.parametrize('model', ['', 7])
 def test_local_embeddings_rejects_invalid_model_before_network(monkeypatch, model):
+    _enable_mock_provider(monkeypatch)
     def forbid_network(*_args, **_kwargs):
         raise AssertionError('invalid model reached transport')
 
@@ -233,6 +245,7 @@ def test_local_embeddings_rejects_model_identity_mismatch(monkeypatch, response_
 
 @pytest.mark.parametrize('model', ['bge-m3:cloud', 'bge-m3:latest:cloud:local'])
 def test_local_embeddings_rejects_cloud_or_nested_model_before_network(monkeypatch, model):
+    _enable_mock_provider(monkeypatch)
     def forbid_network(*_args, **_kwargs):
         raise AssertionError('nonlocal model reached transport')
 
@@ -279,3 +292,19 @@ def test_local_embeddings_api_failure_does_not_fall_back_to_cloud(monkeypatch):
     assert status == 'ollama_error'
     assert meta['status'] == status
     assert [call[0] for call in calls] == ['/api/show', '/api/embed']
+
+
+def test_retired_embedding_route_does_not_probe_or_infer(monkeypatch):
+    from lumenis.system.ai_gateway import providers
+
+    monkeypatch.setitem(providers.PROVIDER_REGISTRY['ollama'], 'status', providers.ACTIVE)
+    monkeypatch.setattr(providers, '_probe_endpoint', lambda *_args, **_kwargs: pytest.fail('probe called'))
+    monkeypatch.setattr(core.urllib.request, 'build_opener', lambda *_args, **_kwargs: pytest.fail('inference called'))
+    monkeypatch.setattr(core.urllib.request, 'urlopen', lambda *_args, **_kwargs: pytest.fail('network called'))
+
+    vectors, status, meta = core.local_embeddings(['private source text'])
+
+    assert vectors is None
+    assert status == 'provider_disabled'
+    assert meta['provider'] == 'provider_disabled'
+    assert meta['status'] == 'provider_disabled'

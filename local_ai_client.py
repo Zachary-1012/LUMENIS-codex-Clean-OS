@@ -15,14 +15,15 @@ import sys
 import json
 import requests
 from datetime import datetime
+from lumenis.system.ai_gateway.providers import is_provider_available
 
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # ZBC Phase 7: module status markers
-MODULE_STATUS = 'ACTIVE_FALLBACK'
-AI_ROLE = 'LOCAL_INFERENCE'  # Ollama local client, used by /api/local-ai/* routes; intelligence.py has its own local path
-NOTE = 'Independent LocalAIClient for Ollama; intelligence.py _chat() also supports local models via auto-detection.'
+MODULE_STATUS = 'DISABLED'
+AI_ROLE = 'COMPATIBILITY_ADAPTER'  # Existing /api/local-ai/* interface; runtime provider is retired.
+NOTE = 'Compatibility interface retained; Ollama discovery and inference are disabled.'
 
 
 class LocalAIClient:
@@ -37,6 +38,10 @@ class LocalAIClient:
 
     def check_availability(self):
         """检查本地AI是否可用"""
+        if not is_provider_available('ollama'):
+            self.available = False
+            self.available_models = []
+            return False
         try:
             response = requests.get(f"{self.base_url}/api/tags", timeout=5)
             if response.status_code == 200:
@@ -51,9 +56,13 @@ class LocalAIClient:
 
     def generate(self, prompt, model=None, system_prompt=None, temperature=0.7):
         """生成文本"""
+        if not is_provider_available('ollama'):
+            self.available = False
+            self.available_models = []
+            return {'ok': False, 'status': 'provider_disabled', 'error': 'provider_disabled'}
         if not self.available:
             if not self.check_availability():
-                return {'ok': False, 'error': '本地AI不可用，请确保Ollama已启动'}
+                return {'ok': False, 'status': 'unavailable', 'error': '本地AI不可用，请确保Ollama已启动'}
 
         model = model or self.default_model
         if model not in self.available_models:
@@ -105,9 +114,13 @@ class LocalAIClient:
 
     def chat(self, messages, model=None, temperature=0.7):
         """聊天对话"""
+        if not is_provider_available('ollama'):
+            self.available = False
+            self.available_models = []
+            return {'ok': False, 'status': 'provider_disabled', 'error': 'provider_disabled'}
         if not self.available:
             if not self.check_availability():
-                return {'ok': False, 'error': '本地AI不可用'}
+                return {'ok': False, 'status': 'unavailable', 'error': '本地AI不可用'}
 
         model = model or self.default_model
         if model not in self.available_models and self.available_models:
@@ -232,8 +245,12 @@ class LocalAIClient:
     def get_status(self):
         """获取本地AI状态"""
         self.check_availability()
+        disabled = not is_provider_available('ollama')
+        status = 'available' if self.available else ('provider_disabled' if disabled else 'unavailable')
         return {
             'available': self.available,
+            'status': status,
+            'reason': None if self.available else status,
             'base_url': self.base_url,
             'default_model': self.default_model,
             'available_models': self.available_models,
@@ -265,6 +282,13 @@ class LocalAIClient:
             "degradation_mode": "none",
             "checked_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         }
+
+        if not is_provider_available('ollama'):
+            self.available = False
+            self.available_models = []
+            result['blocked_reason'] = 'provider_disabled'
+            result['degradation_mode'] = 'provider_disabled'
+            return result
 
         last_error = None
         for attempt in range(retries + 1):
@@ -331,7 +355,8 @@ class LocalAIClient:
         health = self.health_check(retries=1)
         if health["runtime_status"] == self.RUNTIME_BLOCKED:
             return {
-                "ok": False, "status": "blocked",
+                "ok": False,
+                "status": "provider_disabled" if health["blocked_reason"] == 'provider_disabled' else "blocked",
                 "error": health["blocked_reason"],
                 "degradation_mode": health["degradation_mode"],
                 "data": None,

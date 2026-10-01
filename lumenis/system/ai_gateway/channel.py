@@ -22,6 +22,9 @@ import urllib.request, urllib.error
 # Runtime Guardian 统一熔断器（收敛重复实现，ZBC-PHASE2-RUNTIME-GUARDIAN）
 from runtime_guardian import CircuitBreaker as _BaseCircuitBreaker
 from runtime_guardian import CircuitState as _RGCircuitState
+from lumenis.system.ai_gateway.providers import (
+    is_provider_available, provider_info, provider_status,
+)
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -242,11 +245,20 @@ def channel_health(provider='', model=''):
         pause_reason = p.get('reason', '')
     except Exception:
         pass
+    provider_disabled = bool(provider and _known_provider_disabled(provider))
     snap.update({
         'provider': provider, 'model': model, 'paused': paused, 'pause_reason': pause_reason,
-        'available': snap['state'] != breaker.OPEN and not paused,
+        'provider_status': provider_status(provider) if provider else '',
+        'available': snap['state'] != breaker.OPEN and not paused and not provider_disabled,
     })
     return snap
+
+
+def _known_provider_disabled(name):
+    """Check registry state without treating channel-only test names as providers."""
+    if provider_info(name) is None:
+        return False
+    return not is_provider_available(name)
 
 
 # ============================================================
@@ -367,7 +379,13 @@ def route_with_fallback(call_fn, providers=None, on_result=None):
     on_result(provider, result, ok) 用于审计/额度记录。
     """
     chain = providers or provider_chain()
+    attempted = False
     for prov in chain:
+        if _known_provider_disabled(prov):
+            if not attempted:
+                return None, 'provider_disabled'
+            continue
+        attempted = True
         pb = get_provider_breaker(prov)
         if not pb.allow():
             continue  # 该 Provider 熔断中，跳过
@@ -404,6 +422,12 @@ def start_24h_heartbeat(ping_funcs, interval_sec=60):
     ping_funcs: dict {provider_name: ping_fn}，每个 Provider 独立探活、独立熔断。
     幂等：已在运行则不重复启动。
     """
+    ping_funcs = {
+        prov: ping_fn for prov, ping_fn in ping_funcs.items()
+        if not _known_provider_disabled(prov)
+    }
+    if not ping_funcs:
+        return False
     interval_sec = max(30, int(interval_sec))
     with _MONITOR_LOCK:
         if _MONITOR['thread'] and _MONITOR['thread'].is_alive():
@@ -415,6 +439,8 @@ def start_24h_heartbeat(ping_funcs, interval_sec=60):
             time.sleep(min(10, interval_sec // 6 + 1))
             while not _MONITOR['stop']:
                 for prov, ping_fn in ping_funcs.items():
+                    if _known_provider_disabled(prov):
+                        continue
                     try:
                         ok = bool(ping_fn())
                         pb = get_provider_breaker(prov)
@@ -578,6 +604,8 @@ def full_fallback_chain():
     24h 保活目标：任何时刻至少有一个通道可用。
     """
     chain = provider_chain()
+    if chain and _known_provider_disabled(chain[0]):
+        return ['rule']
     # 确保豆包兜底在链中（如果未配置则追加）
     if 'doubao' not in chain:
         chain = chain + ['doubao']
@@ -761,10 +789,12 @@ def build_fallback_chain_v1():
     有 API Key 的云端 Provider + 可探测的本地 Provider + 最终 rule。
     返回 provider 名称列表，按层级顺序。
     """
+    if _known_provider_disabled('zhipu'):
+        return ['rule']
     ensure_env_loaded()
     chain = []
     # L1 智谱（必须有 key）
-    if _env("ZHIPU_API_KEY"):
+    if _env("ZHIPU_API_KEY") and not _known_provider_disabled('zhipu'):
         chain.append("zhipu")
     # L2 ARK/豆包（必须有 key）
     if _env("ARK_API_KEY"):
@@ -773,9 +803,11 @@ def build_fallback_chain_v1():
     if _env("DASHSCOPE_API_KEY") or _env("QWEN_API_KEY"):
         chain.append("qwen")
     # L4 Ollama（本地，默认可用）
-    chain.append("ollama")
+    if not _known_provider_disabled('ollama'):
+        chain.append("ollama")
     # L5 LM Studio / llama.cpp（本地，默认可用）
-    chain.append("lmstudio")
+    if not _known_provider_disabled('lmstudio'):
+        chain.append("lmstudio")
     # L6 本地确定性规则（最终兜底，始终在链中）
     chain.append("rule")
     return chain
@@ -797,6 +829,12 @@ def route_with_fallback_v1(call_fn, providers=None, on_result=None,
         # rule 是最终兜底，不走熔断
         if prov == "rule":
             break
+        if _known_provider_disabled(prov):
+            if not last_provider:
+                return None, 'provider_disabled', {
+                    "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0,
+                }, switches
+            continue
         pb = get_provider_breaker(prov)
         if not pb.allow():
             if last_provider:
@@ -851,6 +889,13 @@ def get_provider_status_v1():
         prov = layer["provider"]
         if prov == "rule":
             statuses[prov] = {"status": "DETERMINISTIC_FALLBACK", "layer": layer["layer"], "role": layer["role"]}
+            continue
+        if provider_info(prov) is not None and _known_provider_disabled(prov):
+            statuses[prov] = {
+                "status": provider_status(prov), "layer": layer["layer"],
+                "role": layer["role"], "models": layer["models"],
+                "api_key_configured": False,
+            }
             continue
         # 检查 API key
         key_env = {

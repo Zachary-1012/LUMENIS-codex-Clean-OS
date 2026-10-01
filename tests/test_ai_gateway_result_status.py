@@ -16,10 +16,16 @@ def _mock_only_gateway(monkeypatch):
         "DASHSCOPE_API_KEY",
         "OPENAI_API_KEY",
         "DEEPSEEK_API_KEY",
-        "AI_PROVIDER",
         "OPENAI_PROXY",
     ):
         monkeypatch.delenv(key, raising=False)
+    from lumenis.system.ai_gateway import providers
+    monkeypatch.setattr(
+        providers, "RETIRED_PROVIDERS", providers.RETIRED_PROVIDERS - {"zhipu", "ollama"},
+    )
+    monkeypatch.setitem(providers.PROVIDER_REGISTRY["zhipu"], "status", providers.ACTIVE)
+    monkeypatch.setitem(providers.PROVIDER_REGISTRY["ollama"], "status", providers.ACTIVE)
+    monkeypatch.setenv("AI_PROVIDER", "zhipu")
     monkeypatch.setenv("ZHIPU_API_KEY", "test-only-placeholder-never-sent")
     # These cases validate the mocked cloud transport, which requires explicit opt-in.
     monkeypatch.setenv("ALLOW_CLOUD_AI", "true")
@@ -98,11 +104,11 @@ def _return_payload(monkeypatch, payload):
 def test_unusable_provider_result_is_not_success(monkeypatch, payload):
     result, calls = _return_payload(monkeypatch, payload)
 
-    assert result == (None, "rule")
+    assert result == (None, "unavailable")
     assert calls == ["https://mock.invalid/v1/chat/completions"]
 
 
-def test_transport_error_is_rule_fallback(monkeypatch):
+def test_transport_error_is_unavailable_not_policy_disabled(monkeypatch):
     def fake_transport(*args, **kwargs):
         raise OSError("mock transport error")
 
@@ -110,7 +116,28 @@ def test_transport_error_is_rule_fallback(monkeypatch):
 
     assert core._chat(
         "system", "user", temperature=0.0, max_tokens=16, model="glm-4.5-air"
-    ) == (None, "rule")
+    ) == (None, "unavailable")
+
+
+def test_direct_local_chat_cannot_bypass_retired_provider(monkeypatch):
+    from lumenis.system.ai_gateway import providers
+
+    monkeypatch.setattr(
+        providers, 'RETIRED_PROVIDERS', providers.RETIRED_PROVIDERS | {'ollama'},
+    )
+    calls = []
+    monkeypatch.setattr(
+        core, '_ollama_vision_json',
+        lambda *_args, **_kwargs: calls.append(True),
+    )
+
+    result = core._call_local_chat(
+        'ollama', 'qwen3:4b', 'http://127.0.0.1:11434',
+        'system', 'user', 0.0, 16, 3,
+    )
+
+    assert result == (None, 'provider_disabled')
+    assert calls == []
 
 
 def test_complete_nonempty_provider_result_remains_success(monkeypatch):
@@ -286,6 +313,7 @@ def test_ollama_rejects_non_loopback_base_before_network(monkeypatch):
 
 
 def _mock_local_gateway_chat(monkeypatch, result):
+    monkeypatch.setenv("AI_PROVIDER", "ollama")
     monkeypatch.setattr(
         core,
         "_provider_config",

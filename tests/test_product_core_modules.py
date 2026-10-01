@@ -16,13 +16,15 @@ if str(REPO_ROOT) not in sys.path:
 
 
 class TestProviderRegistry:
-    def test_zhipu_active(self):
-        from lumenis.system.ai_gateway.providers import provider_status, ACTIVE
-        assert provider_status("zhipu") == ACTIVE
+    def test_zhipu_disabled(self):
+        from lumenis.system.ai_gateway.providers import provider_status, DISABLED, is_provider_available
+        assert provider_status("zhipu") == DISABLED
+        assert is_provider_available("zhipu") is False
 
-    def test_ollama_available(self):
-        from lumenis.system.ai_gateway.providers import provider_status, AVAILABLE
-        assert provider_status("ollama") == AVAILABLE
+    def test_ollama_disabled(self):
+        from lumenis.system.ai_gateway.providers import provider_status, DISABLED, is_provider_available
+        assert provider_status("ollama") == DISABLED
+        assert is_provider_available("ollama") is False
 
     def test_ark_active_fallback(self):
         from lumenis.system.ai_gateway.providers import provider_status, ACTIVE_FALLBACK
@@ -43,7 +45,8 @@ class TestProviderRegistry:
     def test_active_providers(self):
         from lumenis.system.ai_gateway.providers import active_providers
         active = active_providers()
-        assert "zhipu" in active
+        assert "zhipu" not in active
+        assert "ollama" not in active
         assert "qwen" not in active
 
     def test_unknown_provider_disabled(self):

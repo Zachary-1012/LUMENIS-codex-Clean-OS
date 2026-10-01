@@ -2,17 +2,18 @@
 """AI OFF Test — 模拟 AI 完全不可用，验证核心链路仍可运行。
 
 真实测试：不 mock，通过环境变量强制 AI 不可用，验证：
-1. intelligence._chat() → (None, 'rule')
+1. intelligence._chat() → (None, 'provider_disabled')
 2. review_note() → 回退规则引擎结果
 3. subject_hit() → 正常工作（不依赖 AI）
 4. 风险规则 → 正常工作（不依赖 AI）
-5. ai_status() → enabled=False, runtime=rule
+5. ai_status() → enabled=False, provider=provider_disabled
 """
 import os
 import sys
 
-ROOT = r"D:\Taikoo-monitor-new"
-sys.path.insert(0, ROOT)
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 
 results = []
 
@@ -22,7 +23,7 @@ def check(name, passed, detail=""):
     print(f"  [{status}] {name}: {detail}")
 
 
-def run_ai_off_tests():
+def _run_ai_off_tests():
     """AI OFF 测试（可被 pytest 收集，也可独立运行）"""
     global results
     results = []
@@ -54,17 +55,17 @@ def run_ai_off_tests():
         status = intelligence.ai_status()
         check("ai_status.enabled=False", status.get("enabled") == False,
               f"enabled={status.get('enabled')}, runtime={status.get('runtime')}")
-        check("ai_status.runtime=rule", status.get("runtime") == "rule",
+        check("ai_status.provider=provider_disabled", status.get("provider") == "provider_disabled",
               f"runtime={status.get('runtime')}")
     except Exception as e:
         check("ai_status()", False, f"exception: {e}")
 
-    # 2. _chat() should return (None, 'rule')
-    print("\n--- 2. _chat() Fallback ---")
+    # 2. Retired Zhipu is explicitly unavailable; business rule continuity is checked below.
+    print("\n--- 2. _chat() Disabled Provider ---")
     try:
         content, provider = intelligence._chat("system", "user", max_tokens=100)
         check("_chat returns None content", content is None, f"content={repr(content)[:80]}")
-        check("_chat provider=rule", provider == "rule", f"provider={provider}")
+        check("_chat provider=provider_disabled", provider == "provider_disabled", f"provider={provider}")
     except Exception as e:
         check("_chat()", False, f"exception: {e}")
 
@@ -100,6 +101,7 @@ def run_ai_off_tests():
         from scripts.ai_gateway import chat
         content, provider, meta = chat("summarizer", "test content", max_tokens=50)
         check("gateway chat returns None on AI off", content is None, f"content={repr(content)[:80]}")
+        check("gateway reports provider_disabled", provider == "provider_disabled", f"provider={provider}")
         check("gateway meta has role", meta.get("role") == "summarizer", f"meta={meta}")
     except Exception as e:
         check("gateway chat()", False, f"exception: {e}")
@@ -108,14 +110,15 @@ def run_ai_off_tests():
     print("\n--- 6. Provider Registry (No AI) ---")
     try:
         from lumenis.system.ai_gateway.providers import (
-            provider_status, is_provider_available, active_providers,
+            provider_status, is_provider_available, active_providers, DISABLED,
         )
-        check("zhipu status=ACTIVE", provider_status("zhipu") == "ACTIVE", "")
+        check("zhipu status=DISABLED", provider_status("zhipu") == DISABLED, "")
+        check("is_provider_available(zhipu)=False", is_provider_available("zhipu") is False, "")
         check("ark status=ACTIVE_FALLBACK", provider_status("ark") == "ACTIVE_FALLBACK", "")
         check("qwen status=NOT_CONFIGURED", provider_status("qwen") == "NOT_CONFIGURED", "")
         check("is_provider_available(qwen)=False", is_provider_available("qwen") == False, "")
         active = active_providers()
-        check("active_providers includes zhipu", "zhipu" in active, f"active={active}")
+        check("active_providers excludes zhipu", "zhipu" not in active, f"active={active}")
     except Exception as e:
         check("provider_registry", False, f"exception: {e}")
 
@@ -132,9 +135,41 @@ def run_ai_off_tests():
     return passed == total
 
 
+_ENV_KEYS = (
+    "AI_PROVIDER", "ALLOW_CLOUD_AI", "ZHIPU_API_KEY", "ARK_API_KEY",
+    "DASHSCOPE_API_KEY", "OPENAI_API_KEY", "DEEPSEEK_API_KEY",
+    "OLLAMA_BASE_URL", "LOCAL_AI_PREFERRED",
+)
+_ENV_MISSING = object()
+
+
+def run_ai_off_tests():
+    """Run with retired routes disabled, then restore process env and cache."""
+    import intelligence
+
+    original_env = {key: os.environ.get(key, _ENV_MISSING) for key in _ENV_KEYS}
+    original_cache = dict(intelligence._CACHE)
+    try:
+        return _run_ai_off_tests()
+    finally:
+        intelligence._CACHE.clear()
+        intelligence._CACHE.update(original_cache)
+        for key, value in original_env.items():
+            if value is _ENV_MISSING:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
 def test_ai_off_core_chain():
     """pytest 入口：AI 关闭后核心链路仍可运行"""
+    import intelligence
+
+    env_before = {key: os.environ.get(key, _ENV_MISSING) for key in _ENV_KEYS}
+    cache_before = dict(intelligence._CACHE)
     assert run_ai_off_tests() is True
+    assert {key: os.environ.get(key, _ENV_MISSING) for key in _ENV_KEYS} == env_before
+    assert intelligence._CACHE == cache_before
 
 
 if __name__ == "__main__":

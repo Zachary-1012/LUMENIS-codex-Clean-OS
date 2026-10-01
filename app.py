@@ -4958,7 +4958,7 @@ def _start_app_automations(args):
         def _ai_channel_ping():
             try:
                 _out, _prov = _intel._chat('你是序境AI通道心跳探活。只回ok。', 'ping', temperature=0.0, max_tokens=10, timeout=30)
-                return _prov != 'rule'
+                return bool(_out) and _prov not in ('rule', 'provider_disabled', 'budget_blocked')
             except Exception:
                 return False
         _aic.start_health_monitor(_ai_channel_ping, interval_sec=int(os.getenv('AI_CHANNEL_HEARTBEAT_SEC', '300') or '300'))

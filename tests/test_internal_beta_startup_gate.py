@@ -181,10 +181,36 @@ def test_bridge_rejects_scheduled_collection_before_identity_checks(monkeypatch)
     ):
         monkeypatch.delenv(name, raising=False)
 
+    # Use the same valid registry shape as the acquisition-plan tests, then
+    # let the bridge build its bounded plan through the canonical resolver.
+    monkeypatch.setattr('subject_registry.list_subjects', lambda: [
+        {
+            'subject_id': 'CTH-NORTH-1',
+            'domain_id': 'CTH',
+            'subject_type': 'company',
+            'name_en': 'North Star Mall',
+            'keywords': ['North Star'],
+            'status': 'configured',
+        },
+        {
+            'subject_id': 'BMP-NORTH-1',
+            'brand_focus_id': 'BRAND-NORTH-1',
+            'domain_id': 'BMP',
+            'subject_type': 'brand',
+            'name_en': 'North Star Brand',
+            'keywords': ['North Brand'],
+            'status': 'configured',
+        },
+    ])
+    plan = app.xhs_cookie_bridge._resolve_acquisition_plan()
+    assert plan.status == 'READY'
+    assert plan.is_runnable is True
+    assert len(plan.queries) <= plan.query_limit
+
     identity_checks = []
     monkeypatch.setattr(
         app.xhs_cookie_bridge, 'collection_policy_gate',
-        lambda **_kwargs: identity_checks.append('policy'),
+        lambda **_kwargs: identity_checks.append('policy') or {'ok': True},
     )
 
     with pytest.raises(RuntimeError, match='Automatic collection is blocked'):

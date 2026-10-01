@@ -4,6 +4,15 @@ import pytest
 from lumenis.system.ai_gateway import channel as ac
 
 
+def _enable_mock_provider(monkeypatch, *names):
+    from lumenis.system.ai_gateway import providers
+    monkeypatch.setattr(
+        providers, 'RETIRED_PROVIDERS', providers.RETIRED_PROVIDERS - set(names),
+    )
+    for name in names:
+        monkeypatch.setitem(providers.PROVIDER_REGISTRY[name], 'status', providers.ACTIVE)
+
+
 class TestProviderBreaker:
     def test_independent_breaker(self):
         """不同 Provider 熔断互不影响。"""
@@ -38,8 +47,9 @@ class TestProviderChain:
 
 
 class TestRouteWithFallback:
-    def test_primary_success(self):
+    def test_primary_success(self, monkeypatch):
         """主通道成功，不调用备用。"""
+        _enable_mock_provider(monkeypatch, 'zhipu', 'ark')
         calls = []
         def fn(prov):
             calls.append(prov)
@@ -51,8 +61,9 @@ class TestRouteWithFallback:
         assert used == "zhipu"
         assert calls == ["zhipu"]
 
-    def test_fallback_to_backup(self):
+    def test_fallback_to_backup(self, monkeypatch):
         """主通道失败，自动切备用。"""
+        _enable_mock_provider(monkeypatch, 'zhipu', 'ark')
         calls = []
         def fn(prov):
             calls.append(prov)
@@ -64,16 +75,18 @@ class TestRouteWithFallback:
         assert used == "ark"
         assert calls == ["zhipu", "ark"]
 
-    def test_all_fail_returns_rule(self):
+    def test_all_fail_returns_rule(self, monkeypatch):
         """全部失败，返回 (None, 'rule')。"""
+        _enable_mock_provider(monkeypatch, 'zhipu', 'ark')
         def fn(prov):
             raise ConnectionError(f"{prov} down")
         result, used = ac.route_with_fallback(fn, providers=["zhipu", "ark"])
         assert result is None
         assert used == "rule"
 
-    def test_breaker_skips_open_provider(self):
+    def test_breaker_skips_open_provider(self, monkeypatch):
         """熔断中的 Provider 被跳过，不浪费调用。"""
+        _enable_mock_provider(monkeypatch, 'zhipu')
         pb = ac.get_provider_breaker("test_open", fail_threshold=1, cooldown_sec=30)
         pb.record_failure("network")  # 触发 OPEN
         calls = []
@@ -85,8 +98,9 @@ class TestRouteWithFallback:
         assert "test_open" not in calls
         assert used == "zhipu"
 
-    def test_auth_error_no_fallback(self):
+    def test_auth_error_no_fallback(self, monkeypatch):
         """鉴权错误（不可重试）不切下一个 Provider。"""
+        _enable_mock_provider(monkeypatch, 'zhipu', 'ark')
         calls = []
         def fn(prov):
             calls.append(prov)

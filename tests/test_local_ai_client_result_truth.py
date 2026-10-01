@@ -14,7 +14,16 @@ class FakeResponse:
         return self.payload
 
 
-def _client():
+def _enable_mock_provider(monkeypatch):
+    from lumenis.system.ai_gateway import providers
+    monkeypatch.setattr(
+        providers, 'RETIRED_PROVIDERS', providers.RETIRED_PROVIDERS - {'ollama'},
+    )
+    monkeypatch.setitem(providers.PROVIDER_REGISTRY['ollama'], 'status', providers.ACTIVE)
+
+
+def _client(monkeypatch):
+    _enable_mock_provider(monkeypatch)
     client = local_module.LocalAIClient()
     client.available = True
     client.available_models = ["qwen3:4b"]
@@ -24,7 +33,7 @@ def _client():
 
 @pytest.mark.parametrize("content", ["", "   ", None, []])
 def test_generate_empty_completion_is_not_success(monkeypatch, content):
-    client = _client()
+    client = _client(monkeypatch)
     monkeypatch.setattr(
         local_module.requests,
         "post",
@@ -48,7 +57,7 @@ def test_generate_empty_completion_is_not_success(monkeypatch, content):
     ],
 )
 def test_chat_empty_or_reasoning_only_completion_is_not_success(monkeypatch, message):
-    client = _client()
+    client = _client(monkeypatch)
     monkeypatch.setattr(
         local_module.requests,
         "post",
@@ -64,7 +73,7 @@ def test_chat_empty_or_reasoning_only_completion_is_not_success(monkeypatch, mes
 
 @pytest.mark.parametrize("method", ["generate", "chat"])
 def test_unfinished_response_is_not_success(monkeypatch, method):
-    client = _client()
+    client = _client(monkeypatch)
     payload = {"done": False, "response": "partial result", "message": {"content": "partial result"}}
     monkeypatch.setattr(local_module.requests, "post", lambda *_args, **_kwargs: FakeResponse(payload))
 
@@ -78,7 +87,7 @@ def test_unfinished_response_is_not_success(monkeypatch, method):
 
 
 def test_generate_preserves_nonempty_completion_and_model(monkeypatch):
-    client = _client()
+    client = _client(monkeypatch)
     captured = {}
 
     def fake_post(_url, json, **_kwargs):
@@ -95,7 +104,7 @@ def test_generate_preserves_nonempty_completion_and_model(monkeypatch):
 
 
 def test_chat_preserves_nonempty_completion_and_model(monkeypatch):
-    client = _client()
+    client = _client(monkeypatch)
     captured = {}
 
     def fake_post(_url, json, **_kwargs):
@@ -113,6 +122,7 @@ def test_chat_preserves_nonempty_completion_and_model(monkeypatch):
 
 @pytest.mark.parametrize("method", ["generate", "chat"])
 def test_unavailable_ollama_stays_unavailable(monkeypatch, method):
+    _enable_mock_provider(monkeypatch)
     client = local_module.LocalAIClient()
     calls = []
 
@@ -128,4 +138,46 @@ def test_unavailable_ollama_stays_unavailable(monkeypatch, method):
         result = client.chat([{"role": "user", "content": "synthetic prompt"}])
 
     assert result["ok"] is False
+    assert result.get('status') == 'unavailable'
     assert calls == []
+
+
+def test_enabled_but_unreachable_status_is_not_provider_disabled(monkeypatch):
+    _enable_mock_provider(monkeypatch)
+    client = local_module.LocalAIClient()
+    monkeypatch.setattr(
+        local_module.requests, 'get',
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            requests.exceptions.ConnectionError('synthetic unavailable')
+        ),
+    )
+
+    status = client.get_status()
+
+    assert status['available'] is False
+    assert status['status'] == 'unavailable'
+    assert status['reason'] == 'unavailable'
+
+
+def test_stale_available_client_cannot_probe_or_generate_when_retired(monkeypatch):
+    client = local_module.LocalAIClient()
+    client.available = True
+    client.available_models = ['stale-model']
+    get_calls = []
+    post_calls = []
+    monkeypatch.setattr(local_module.requests, 'get', lambda *_args, **_kwargs: get_calls.append(True))
+    monkeypatch.setattr(local_module.requests, 'post', lambda *_args, **_kwargs: post_calls.append(True))
+
+    generated = client.generate('synthetic prompt')
+    chatted = client.chat([{'role': 'user', 'content': 'synthetic prompt'}])
+    health = client.health_check(retries=5, retry_interval=0)
+    status = client.get_status()
+
+    assert generated == {'ok': False, 'status': 'provider_disabled', 'error': 'provider_disabled'}
+    assert chatted == {'ok': False, 'status': 'provider_disabled', 'error': 'provider_disabled'}
+    assert health['blocked_reason'] == 'provider_disabled'
+    assert status['status'] == 'provider_disabled'
+    assert client.available is False
+    assert client.available_models == []
+    assert get_calls == []
+    assert post_calls == []

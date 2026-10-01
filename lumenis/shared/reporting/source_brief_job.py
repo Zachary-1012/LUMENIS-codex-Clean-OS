@@ -349,6 +349,7 @@ def create_source_brief_job(
         subject_id=subject_id, brand_focus_id=brand_focus_id, limit=limit,
         include_analysis_text=business_question is not None,
         source_ids=source_ids,
+        analysis_question=business_question,
     )
     if brief.get("scope") != scope:
         raise RuntimeError("SOURCE_BRIEF_CANONICAL_SCOPE_MISMATCH")
@@ -395,9 +396,9 @@ def create_source_brief_job(
                     job_id=job_id, actor_ref=actor_id,
                     revision=revision, before_evidence=before_evidence,
                     sample={"available_brief_count": count, "analyzed_source_count": len(sources),
-                            "selection": ("explicit operator-selected verified sources; 1200 characters each"
+                            "selection": ("explicit operator-selected verified sources; task-term window up to 1200 characters each"
                                           if source_ids is not None else
-                                          "latest verified nonempty bodies; at most 8, 1200 characters each"),
+                                          "latest verified nonempty bodies; at most 8, task-term window up to 1200 characters each"),
                             "omitted_source_count": count - len(sources),
                             "has_truncated_bodies": any(source["truncated"] for source in sources),
                             "coverage": "PARTIAL"},

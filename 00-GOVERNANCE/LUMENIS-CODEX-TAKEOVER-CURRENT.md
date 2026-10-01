@@ -12,6 +12,35 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — owned AI direction, provider retirement and task-relevant materials
+
+The Product Owner stopped local-model and Zhipu use in the product and in this
+development program. Their interfaces and historical artifacts remain; runtime
+discovery, cached availability, fallback and compatibility callers must not
+reactivate them. Persistent Codex model settings and Windows user environment
+are unchanged. Codex Cloud is an isolated development environment, not a deployed
+LUMENIS AI service. OpenAI/Codex/ChatGPT, Claude and Meta Muse remain the named
+research targets; no proprietary model or trained replacement is claimed.
+
+Three relevant Nike running-footwear/campaign sources have entered the existing
+exact BrandFocus Raw/Evidence/Canonical chain. Their actual source brief was saved
+and reopened with Evidence 440/441/442. This repairs task input, not AI usefulness:
+the source brief requested no model analysis, and owned inference remains open.
+Reports, rejected candidates and corrections remain inputs to the existing
+Learning/Evaluation work; storage is not training or proof of a useful model.
+
+The scoped source batch passed 329 tests and the Constitution/takeover/boundary
+gates. Core was reloaded and recovered healthy; its actual AI status is disabled.
+Old report reopen is unchanged and the new disabled-analysis state is explicit.
+Same-SHA GitHub Product/App hosted acceptance remains unverified.
+
+The five technical obligations remain active. Repeated real-user acceptance is
+deferred to the Product Owner's consolidated final product review, without being
+marked PASS or blocking independent technical work. Details, current verification
+and unresolved limits are in
+[the owned-AI batch evidence](evidence/round-07/ROUND-07-OWNED-AI-MATERIALS-2026-10-01.md).
+No J package, Release, Operating or Commercial Ready state is promoted here.
+
 ### 2026-09-30 — bounded BMP-01 BrandFocus read binding and provenance gate correction
 
 The existing Experience runtime now binds BMP-01 FOCUS reads to the exact

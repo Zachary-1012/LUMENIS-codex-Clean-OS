@@ -1,5 +1,7 @@
 import math, threading, time
-from lumenis.system.ai_gateway.providers import is_provider_available, provider_status
+from lumenis.system.ai_gateway.providers import (
+    is_provider_available, is_provider_retired, provider_status,
+)
 
 # V1.0: 线程安全的最后一次 AI 调用元信息（用于 token 记录，不破坏 _chat 2-tuple 接口）
 _last_call_meta_lock = threading.Lock()
@@ -36,12 +38,28 @@ from lumenis.system.ai_gateway import channel as ai_channel  # [StableChannel] �
 # ZBC Phase 7: module status markers
 MODULE_STATUS = 'ACTIVE_PRIMARY'
 AI_ROLE = 'CENTRAL_GATEWAY'  # all AI calls route through _chat/chat; local-first, rule final fallback
-PROVIDER_POLICY = 'ollama local primary when configured; zhipu and other cloud providers explicit-only; rule final fallback'
+PROVIDER_POLICY = 'retired providers fail closed; explicitly selected active providers only'
 
 _CACHE = {'ts': 0, 'provider': None, 'model': None, 'base': None}
 
 def _env(name, default=''):
     return os.getenv(name, default).strip()
+
+
+def _selected_provider_disabled(requested=None):
+    """Auto routing and retired/unavailable selections fail without fallback."""
+    requested = _env('AI_PROVIDER', 'auto').lower() if requested is None else str(requested).lower()
+    if requested == 'auto':
+        return True
+    return is_provider_retired(requested) or provider_status(requested) == 'DISABLED'
+
+
+def _provider_disabled_meta(level='medium', model=None):
+    _set_call_meta(provider='provider_disabled', model=model or '')
+    return {
+        'cache': False, 'level': level, 'model': model, 'provider': 'provider_disabled',
+        'token_usage': 0, 'prompt_tokens': 0, 'completion_tokens': 0, 'call_id': None,
+    }
 
 def _get_json(url, timeout=1.5):
     req=urllib.request.Request(url, headers={'User-Agent':'TaikooMonitor/5.1 local-ai-discovery'})
@@ -55,6 +73,8 @@ def _installed_hints():
     代表服务在线。优先读取本机 ``/api/tags``，让健康页反映真实模型
     运行状态，而不是只显示“已安装”。
     """
+    if all(is_provider_retired(name) for name in ('ollama', 'lmstudio', 'llama_cpp')):
+        return []
     hints=[]
     ollama_base = _env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434').rstrip('/')
     ollama_models = []
@@ -81,6 +101,8 @@ def _installed_hints():
 
 def _detect_local():
     """自动探测本机 AI：Ollama > LM Studio > llama.cpp。"""
+    if all(is_provider_retired(name) for name in ('ollama', 'lmstudio', 'llama_cpp')):
+        return None
     preferred=_env('LOCAL_AI_PREFERRED','').lower()
     checks=[]
     if preferred in ('ollama','lmstudio','llama_cpp'):
@@ -113,10 +135,15 @@ def _detect_local():
 
 def _provider_config():
     now=time.time()
-    if now-_CACHE['ts']<30:
-        detected=(_CACHE['provider'],_CACHE['model'],_CACHE['base']) if _CACHE['provider'] else None
+    requested=_env('AI_PROVIDER','auto').lower()
+    if _selected_provider_disabled(requested):
+        _CACHE.update(ts=now,provider=None,model=None,base=None)
+        return None
+    cached_provider = _CACHE['provider']
+    if (now-_CACHE['ts']<30 and cached_provider
+            and is_provider_available(cached_provider)):
+        detected=(cached_provider,_CACHE['model'],_CACHE['base'])
     else:
-        requested=_env('AI_PROVIDER','auto').lower()
         detected=None
         if requested in ('ollama','lmstudio','llama_cpp'):
             os.environ['LOCAL_AI_PREFERRED']=requested
@@ -160,7 +187,7 @@ def ai_status():
     if d:
         provider,model,base=d
         return {'enabled':True,'provider':provider,'model':model,'base_url':base,'detail':'本机模型自动接入' if provider in ('ollama','lmstudio','llama_cpp') else '云端 Key 已配置','runtime':'local' if provider in ('ollama','lmstudio','llama_cpp') else 'cloud','installed':True,'running':True,'hints':hints}
-    return {'enabled':False,'provider':'local_rule','model':'Taikoo Local Intelligence','base_url':'','detail':'未发现可调用的本地模型，当前使用内置本地智能引擎','runtime':'rule','installed':bool(hints),'running':False,'hints':hints}
+    return {'enabled':False,'provider':'provider_disabled','model':'','base_url':'','detail':'provider_disabled','runtime':'unavailable','installed':bool(hints),'running':False,'hints':hints}
 
 def ai_enabled(): return bool(_provider_config())
 
@@ -229,6 +256,8 @@ def select_model_by_capability(capability='daily'):
         primary = entry['provider']
         entry['primary_available'] = is_provider_available(primary)
         entry['primary_status'] = provider_status(primary)
+        if not entry['primary_available']:
+            entry['fallback_chain'] = []
     except Exception:
         entry['primary_available'] = True
         entry['primary_status'] = 'UNKNOWN'
@@ -278,6 +307,9 @@ def _call_local_chat(provider, model, base, system, user, temperature, max_token
     contract.  Qwen 3 reasoning is disabled for bounded fallback work so a
     small CPU model cannot spend the whole response budget on hidden thinking.
     """
+    if not is_provider_available(provider):
+        _set_call_meta(provider='provider_disabled', model=model)
+        return None, 'provider_disabled'
     if provider == 'ollama':
         transport_model = _ollama_local_transport_model(model)
         base = _ollama_validate_loopback_base(base)
@@ -344,6 +376,10 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
     显式选择本地 Provider 时，本地失败只降级到规则，不偷偷切换云端；
     这样本地优先与“云端仅显式启用”边界在运行时真正一致。
     """
+    requested = _env('AI_PROVIDER', 'auto').lower()
+    if _selected_provider_disabled(requested) or not is_provider_available(requested):
+        _set_call_meta(provider='provider_disabled', model=requested)
+        return None, 'provider_disabled'
     d=_provider_config()
     # CPU Ollama needs a longer, independently bounded window for structured
     # content generation.  Keep the cloud timeout unchanged, and never let a
@@ -374,31 +410,14 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
             _set_call_meta(provider='rule', model='deterministic_rule', prompt_tokens=0, completion_tokens=0, total_tokens=0)
             return None, 'rule'
 
-    requested = _env('AI_PROVIDER', 'auto').lower()
-    cloud_allowed = _env('ALLOW_CLOUD_AI', '').lower() in ('1', 'true', 'yes', 'on', 'y')
-    if requested in ('ollama', 'lmstudio', 'llama_cpp') or (requested == 'auto' and not cloud_allowed):
-        _set_call_meta(provider='rule', model='deterministic_rule', prompt_tokens=0, completion_tokens=0, total_tokens=0)
-        return None, 'rule'
-
     # 云端：多 Provider 故障转移（智谱 L1 → ark L2 → qwen L3 → Ollama L5 → rule L6）
     system_r, user_r = redact_for_cloud(system), redact_for_cloud(user)
     # V1.0: 构建 cloud fallback 链（zhipu L1 → ark L2 → qwen L3）
     # Cloud providers share the redacted request.  Ollama is attempted only
     # after that chain is exhausted and receives the original local prompt.
     # 根据传入 model 前缀判断主 provider：最小输出豆包优先，大算力智谱优先
-    _model_lower = str(model or '').lower()
-    if _model_lower.startswith(('doubao', 'ark-')):
-        _preferred = ('ark', 'zhipu', 'qwen')
-    else:
-        _preferred = ('zhipu', 'ark', 'qwen')
-    chain = []
-    for _p in _preferred:
-        _key_env = {'zhipu': 'ZHIPU_API_KEY', 'ark': 'ARK_API_KEY', 'qwen': 'DASHSCOPE_API_KEY'}.get(_p, '')
-        if _key_env and _env(_key_env):
-            chain.append(_p)
-    if not chain:
-        chain = ['zhipu']  # 至少有 zhipu（无 key 时会在 _call_cloud 中报错并 fallback）
-    primary = chain[0] if chain else 'zhipu'
+    primary = requested
+    chain = [requested]
 
     def _call_cloud(prov):
         """对单个云端 Provider 构造请求并调用（复用 StableChannel 重试+熔断+UTF-8）。
@@ -479,23 +498,8 @@ def _chat(system,user,temperature=0.1,max_tokens=1200,model=None,timeout=None):
     except Exception as exc:
         print('[AI] all providers failed:', exc)
 
-    local = _detect_local()
-    if local and local[0] == 'ollama':
-        provider, local_model, base = local
-        try:
-            try:
-                local_timeout = int(_env('OLLAMA_TIMEOUT_SECONDS', '180'))
-            except (TypeError, ValueError):
-                local_timeout = 180
-            return _call_local_chat(
-                provider, local_model, base, system, user,
-                temperature, max_tokens, local_timeout,
-            )
-        except Exception as exc:
-            print('[AI] Ollama fallback failed, using local rule:', exc)
-
-    _set_call_meta(provider='rule', model='deterministic_rule', prompt_tokens=0, completion_tokens=0, total_tokens=0)
-    return None, 'rule'
+    _set_call_meta(provider='unavailable', model=requested)
+    return None, 'unavailable'
 
 class _LocalOnlyRedirectHandler(urllib.request.HTTPRedirectHandler):
     """Do not let a loopback Ollama endpoint redirect image data elsewhere."""
@@ -580,7 +584,7 @@ def _ollama_local_chat(system, user_text, image_base64, model, temperature, max_
 
     def _meta(status):
         return {
-            'provider': 'ollama',
+            'provider': 'provider_disabled' if status == 'provider_disabled' else 'ollama',
             'model': response_model,
             'requested_model': requested_model or None,
             'prompt_tokens': prompt_tokens,
@@ -589,14 +593,24 @@ def _ollama_local_chat(system, user_text, image_base64, model, temperature, max_
             'status': status,
         }
 
+    if not is_provider_available('ollama'):
+        return None, 'provider_disabled', _meta('provider_disabled')
+
     try:
         base = _ollama_validate_loopback_base(
             _env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
         )
-        timeout = (max(1, min(120, int(_env('OLLAMA_TIMEOUT_SECONDS', '120'))))
-                   if timeout_seconds is None else max(1, min(180, int(timeout_seconds))))
+        if timeout_seconds is None:
+            timeout = max(1, min(120, int(_env('OLLAMA_TIMEOUT_SECONDS', '120'))))
+        else:
+            if isinstance(timeout_seconds, bool):
+                raise ValueError('invalid timeout')
+            explicit_timeout = float(timeout_seconds)
+            if not math.isfinite(explicit_timeout):
+                raise ValueError('invalid timeout')
+            timeout = max(1, min(180, int(explicit_timeout)))
         token_limit = max(1, min(2048, int(max_tokens)))
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return None, 'ollama_unavailable', _meta('ollama_unavailable')
     if not requested_model:
         return None, 'ollama_unavailable', _meta('ollama_unavailable')
@@ -654,6 +668,12 @@ def _ollama_local_chat(system, user_text, image_base64, model, temperature, max_
             total_tokens=prompt_tokens + completion_tokens,
         )
         return content, 'ollama', _meta('ok')
+    except TimeoutError:
+        return None, 'ollama_timeout', _meta('ollama_timeout')
+    except urllib.error.URLError as exc:
+        if isinstance(exc.reason, TimeoutError):
+            return None, 'ollama_timeout', _meta('ollama_timeout')
+        return None, 'ollama_error', _meta('ollama_error')
     except Exception:
         return None, 'ollama_error', _meta('ollama_error')
 
@@ -676,6 +696,12 @@ def local_structured_chat(system, user, *, response_schema, model=None, max_toke
 
 def local_embeddings(texts, *, model=None, timeout_seconds=60):
     """Create embeddings through the canonical loopback Ollama runtime only."""
+    if not is_provider_available('ollama'):
+        return None, 'provider_disabled', {
+            'provider': 'provider_disabled', 'model': None,
+            'requested_model': None, 'prompt_tokens': None,
+            'duration_ns': None, 'status': 'provider_disabled',
+        }
     raw_model = _env('OLLAMA_EMBEDDING_MODEL', 'bge-m3:latest') if model is None else model
     requested_model = raw_model.strip() if isinstance(raw_model, str) else ''
     actual_model = None
@@ -784,13 +810,14 @@ def vision_chat(system, user_text, image_base64, model=None, temperature=0.2, ma
         (content, provider/status) 元组
     """
     requested = _env('AI_PROVIDER', 'auto').lower()
-    cloud_allowed = _env('ALLOW_CLOUD_AI', '').lower() in ('1', 'true', 'yes', 'on', 'y')
-    if local_only or requested in ('auto', 'ollama'):
-        local_result = _ollama_vision_chat(
+    if local_only or requested in ('ollama', 'lmstudio', 'llama_cpp'):
+        return _ollama_vision_chat(
             system, user_text, image_base64, model, temperature, max_tokens, response_schema,
         )
-        if local_result[0] is not None or local_only or requested == 'ollama' or not cloud_allowed:
-            return local_result
+    if requested == 'auto' or not is_provider_available(requested):
+        _set_call_meta(provider='provider_disabled', model=model or requested)
+        return None, 'provider_disabled'
+    cloud_allowed = _env('ALLOW_CLOUD_AI', '').lower() in ('1', 'true', 'yes', 'on', 'y')
     if response_schema is not None:
         return None, 'structured_vision_requires_local'
     if not cloud_allowed:
@@ -1015,6 +1042,12 @@ def search_enhance(query, context='', max_results=5, model=None, level='medium')
     if not query or not query.strip():
         return {'ok': False, 'error': '查询不能为空', 'results': []}
 
+    if not is_provider_available('zhipu'):
+        return {
+            'ok': False, 'error': 'provider_disabled', 'status': 'provider_disabled',
+            'provider': 'provider_disabled', 'results': [],
+        }
+
     # 检查 AI 资源包额度（search-std 100次）
     try:
         import ai_resource_packs
@@ -1224,6 +1257,11 @@ def chat(system, user, level='medium', use_cache=False, temperature=None, max_to
     capability: 任务能力路由（默认 'daily'）。调用 select_model_by_capability 自动选模型，
                 主 provider 不可用时按 fallback_chain 降级。显式 model 参数优先级高于 capability。
     """
+    requested = _env('AI_PROVIDER', 'auto').lower()
+    if (_selected_provider_disabled(requested)
+            or not is_provider_available(requested)):
+        return None, 'provider_disabled', _provider_disabled_meta(level, model or requested)
+
     # 先看真实运行时 Provider。若本地模型已可用，不得把 daily/strong
     # 的云端模型名注入本地 Ollama 请求（例如把 doubao-lite-4k 送给 Ollama）。
     _runtime_local = False
@@ -1254,7 +1292,7 @@ def chat(system, user, level='medium', use_cache=False, temperature=None, max_to
     key = _cache_key(system, user, p['temperature'], p['max_tokens'], p['model']) if use_cache else None
     if use_cache:
         hit = _chat_cache_get(key)
-        if hit:
+        if hit and is_provider_available(hit[1]):
             return hit[0], hit[1], {'cache': True, 'level': level, 'model': p['model'], 'call_id': None}
     # 云端资源包只约束云端调用；本地 Ollama 不应消耗或污染云端配额。
     if not _runtime_local and not _budget_check(pack_id, 1):
@@ -1312,6 +1350,11 @@ def chat_batch(items, level='medium', max_workers=4, use_cache=False, pack_id='g
     """
     if not items:
         return []
+    requested = _env('AI_PROVIDER', 'auto').lower()
+    if _selected_provider_disabled(requested) or not is_provider_available(requested):
+        return [{'index': i, 'ok': False, 'output': None, 'provider': 'provider_disabled',
+                 'error': 'provider_disabled', 'elapsed_ms': 0, 'cache': False}
+                for i in range(len(items))]
     if not _budget_check(pack_id, len(items)):
         return [{'index': i, 'ok': False, 'output': None, 'provider': 'budget_blocked',
                  'error': 'per_call 额度不足', 'elapsed_ms': 0, 'cache': False} for i in range(len(items))]

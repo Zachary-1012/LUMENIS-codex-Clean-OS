@@ -423,6 +423,33 @@ Verify each capability claim against the source, contracts, routes, runtime beha
 
 ## 7. Codex local development tools
 
+### 2026-10-01 Product Owner AI milestone correction
+
+The Product Owner has stopped use of local model providers and Zhipu in both
+LUMENIS and this development program. Keep their interfaces and historical
+artifacts; do not call, auto-discover, probe, fall back to, or reactivate them.
+This explicit instruction supersedes older workstation/local-first routing.
+Do not change the user's persistent Codex model selection or Windows user
+environment to enforce this product policy. Codex Cloud remains a development
+environment, not a deployed LUMENIS AI service.
+
+OpenAI, Codex, ChatGPT, Claude and Meta Muse are the named research targets for
+reasoning, tool operation, product interaction, recovery and evaluation. Learn
+from public documentation and observable behavior; do not claim access to
+proprietary reasoning internals, model weights or a trained replacement merely
+because their documentation was read.
+
+Development may supplement incomplete collection with verified public-web
+materials through the existing Source/Import -> Evidence -> Canonical path.
+Record assisted discovery, exact scope, original URL, actual publication/capture
+times, source claim type and usage rights. Assisted input is not proof of
+autonomous collection. Reports, failures and corrections feed the existing
+Shared Learning/Evaluation owners as traceable candidate cases; only reviewed
+results qualify as positive targets. Preserving samples is not model training.
+Provider-unavailable is an interim diagnostic, never the milestone exit:
+LUMENIS must independently produce useful, grounded results, learn through
+versioned validation and promotion, and pass real task/recovery acceptance.
+
 The following may be used by Codex when installed on the workstation:
 
 ```text
