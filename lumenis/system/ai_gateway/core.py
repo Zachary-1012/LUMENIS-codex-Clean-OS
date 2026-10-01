@@ -1,4 +1,4 @@
-import threading, time
+import math, threading, time
 from lumenis.system.ai_gateway.providers import is_provider_available, provider_status
 
 # V1.0: 线程安全的最后一次 AI 调用元信息（用于 token 记录，不破坏 _chat 2-tuple 接口）
@@ -607,6 +607,92 @@ def local_structured_chat(system, user, *, response_schema, model=None, max_toke
         system, user, None, model or 'qwen3.5:4b', 0, max_tokens, response_schema,
         required_capability='completion', timeout_seconds=timeout_seconds,
     )
+
+
+def local_embeddings(texts, *, model=None, timeout_seconds=60):
+    """Create embeddings through the canonical loopback Ollama runtime only."""
+    raw_model = _env('OLLAMA_EMBEDDING_MODEL', 'bge-m3:latest') if model is None else model
+    requested_model = raw_model.strip() if isinstance(raw_model, str) else ''
+    actual_model = None
+    prompt_tokens = duration_ns = None
+
+    def _meta(status):
+        return {
+            'provider': 'ollama', 'model': actual_model,
+            'requested_model': requested_model or None,
+            'prompt_tokens': prompt_tokens, 'duration_ns': duration_ns, 'status': status,
+        }
+
+    if (not requested_model or not isinstance(texts, list) or not 1 <= len(texts) <= 101
+            or any(
+                not isinstance(text, str) or not text.strip() or not 1 <= len(text) <= 1600
+                for text in texts
+            )):
+        return None, 'ollama_invalid_input', _meta('ollama_invalid_input')
+    try:
+        if isinstance(timeout_seconds, bool):
+            raise ValueError('invalid timeout')
+        timeout = max(1, min(120, int(timeout_seconds)))
+        base = _env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434').rstrip('/')
+        parsed = urlsplit(base)
+        _ = parsed.port
+        if (parsed.scheme != 'http' or parsed.hostname not in ('127.0.0.1', 'localhost', '::1')
+                or parsed.username or parsed.password or parsed.path not in ('', '/')
+                or parsed.query or parsed.fragment):
+            return None, 'ollama_unavailable', _meta('ollama_unavailable')
+    except (TypeError, ValueError, OverflowError):
+        return None, 'ollama_unavailable', _meta('ollama_unavailable')
+
+    try:
+        shown = _ollama_vision_json(base, '/api/show', {'model': requested_model}, timeout)
+        capabilities = shown.get('capabilities')
+        if not isinstance(capabilities, list) or not any(
+                isinstance(item, str) and item.lower() == 'embedding' for item in capabilities):
+            return None, 'ollama_embedding_unsupported', _meta('ollama_embedding_unsupported')
+        data = _ollama_vision_json(base, '/api/embed', {
+            'model': requested_model, 'input': texts, 'truncate': False,
+        }, timeout)
+        raw_response_model = data.get('model')
+        actual_model = raw_response_model.strip() if isinstance(raw_response_model, str) else None
+        actual_model = actual_model or None
+        raw_tokens = data.get('prompt_eval_count')
+        raw_duration = data.get('total_duration')
+        prompt_tokens = (
+            raw_tokens if isinstance(raw_tokens, int) and not isinstance(raw_tokens, bool) and raw_tokens >= 0
+            else None
+        )
+        duration_ns = (
+            raw_duration if isinstance(raw_duration, int) and not isinstance(raw_duration, bool) and raw_duration >= 0
+            else None
+        )
+        if actual_model is None:
+            return None, 'ollama_model_mismatch', _meta('ollama_model_mismatch')
+        expected = requested_model[:-7] if requested_model.endswith(':latest') else requested_model
+        received = actual_model[:-7] if actual_model.endswith(':latest') else actual_model
+        if received != expected:
+            return None, 'ollama_model_mismatch', _meta('ollama_model_mismatch')
+
+        vectors = data.get('embeddings')
+        if not isinstance(vectors, list) or len(vectors) != len(texts):
+            return None, 'ollama_invalid_embeddings', _meta('ollama_invalid_embeddings')
+        dimensions = None
+        for vector in vectors:
+            if (not isinstance(vector, list) or not vector
+                    or (dimensions is not None and len(vector) != dimensions)):
+                return None, 'ollama_invalid_embeddings', _meta('ollama_invalid_embeddings')
+            dimensions = len(vector)
+            if any(not isinstance(value, (int, float)) or isinstance(value, bool)
+                   or (isinstance(value, float) and not math.isfinite(value)) for value in vector):
+                return None, 'ollama_invalid_embeddings', _meta('ollama_invalid_embeddings')
+            try:
+                norm = math.hypot(*vector)
+            except OverflowError:
+                return None, 'ollama_invalid_embeddings', _meta('ollama_invalid_embeddings')
+            if not math.isfinite(norm) or norm <= 0:
+                return None, 'ollama_invalid_embeddings', _meta('ollama_invalid_embeddings')
+        return vectors, 'ollama', _meta('ok')
+    except Exception:
+        return None, 'ollama_error', _meta('ollama_error')
 
 
 def vision_chat(system, user_text, image_base64, model=None, temperature=0.2, max_tokens=2000, level='medium', *, local_only=False, response_schema=None):

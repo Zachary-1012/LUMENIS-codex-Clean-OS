@@ -2263,3 +2263,28 @@ task-relevant source selection and model capability require joint verification.
 DB: 270 Raw/270 Canonical, 35 reports, 79 evaluations, 4 tasks, integrity=ok,
 FK=0. Human acceptance remains pending; frontend stays paused. See
 `evidence/round-07/ROUND-07-BUSINESS-BRIEF-QUALITY-V4-2026-10-01.md`.
+
+### 2026-10-01 — report relevance experiment rejected; stable path restored
+
+The bounded SYSTEM Gateway now has strict local embeddings: loopback-only,
+actual model/shape/finite-norm validation, explicit unavailable states and no
+cloud fallback. The final retained snapshot passed 42 embedding/structured/vision
+tests, compile and Constitution gate, exit 0. Installed BGE-M3/Qwen9B provenance
+was checked; no model download, Codex default or Windows routing change occurred.
+
+Actual Reporting experiments did not justify promotion. Dense-only and task
+reranking still selected weak Nike content; the final full task took 350.89
+seconds and its engineering usefulness review is FAIL. Guangzhou ranking was
+unavailable. Reporting source/tests were restored exactly to accepted `7d8acbf3`,
+and the failed candidate patch is retained as non-executable research evidence.
+Five prior/new artifacts reopened unchanged after the stable runtime restart.
+DB: 270 Raw/270 Canonical, 40 reports, 93 evaluations, 8 report tasks, integrity
+ok, FK 0. Counts are provenance of actual tests/reviews, not product completion.
+
+See `evidence/round-07/ROUND-07-QUESTION-SCOPED-SOURCE-SELECTION-2026-10-01.md`.
+Business usefulness remains REWORK; human repeated acceptance is pending and
+frontend stays paused. Hosted same-SHA acceptance remains unavailable under the
+previously confirmed execution-layer quota block; no rerun was submitted.
+The user's shared cloud link refers to Codex development infrastructure only.
+LUMENIS product hosting, independent inference and developer-PC-offline operation
+are NOT established by that environment. No Round/J/Product completion upgrade.
