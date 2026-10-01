@@ -19,12 +19,12 @@
       }
     }
   },
-  "x-url-map-rule-count": 807,
+  "x-url-map-rule-count": 808,
   "x-static-route-count": 1,
-  "x-route-count": 806,
+  "x-route-count": 807,
   "x-path-count": 767,
-  "x-operation-count": 830,
-  "x-operation-group-count": 816,
+  "x-operation-count": 831,
+  "x-operation-group-count": 817,
   "x-duplicate-operation-group-count": 14,
   "x-duplicate-operation-candidate-count": 28,
   "x-duplicate-operation-candidates": [
@@ -7510,6 +7510,27 @@
       }
     },
     "/api/experience/cth/cases": {
+      "get": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.read_cth_case_list",
+        "x-flask-rule": "/api/experience/cth/cases",
+        "summary": "Find source-verified Cases in the current principal's exact CTH Focus."
+      },
       "post": {
         "tags": [
           "api/experience"

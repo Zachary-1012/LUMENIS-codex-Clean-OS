@@ -12,6 +12,33 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — real CTH Case discovery and reopen
+
+The existing CTH Case owner now exposes `GET /api/experience/cth/cases` for
+the server principal's exact focused commercial Subject. It reuses v19 Cases,
+signed creation/source Evidence and canonical Permission; no migration or new
+store. Cursor pagination reads a single snapshot, validates returned Cases and
+the cursor, and never repairs invalid rows. Other actors/Subjects cannot discover
+a Case; absent/foreign cursors share the same404 response. Global aggregation
+and the CTH-08 Flutter binding remain open, not silently accepted.
+
+Normal guarded targeted suites passed125 tests,0 failures/errors/skips, with
+no background-thread leak; the generated OpenAPI inventory includes the new
+GET operation. Controlled Core reload retained Supervisor19440 and restored
+healthy8201. The actual Taikoo Hui Case listed, reopened identically and repeated
+without writes; another Subject returned an honest empty list, its foreign cursor
+404, GLOBAL403. Seven protected business tables retained exact row fingerprints;
+integrityok/FK0. Analysis remains NOT_REQUESTED and business Outcome NOT_OBSERVED.
+No human E2E, owned inference or ROUND11 acceptance is claimed.
+See the existing [ROUND11 proof](evidence/round-11/ROUND-11-CTH-CASE-PERSISTENCE-2026-10-01.md).
+
+At preceding exact source `08399d0d162d902087e2b68261cf4ceb11616da0`,
+[Product36845838162](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/36845838162)
+and [App36845843673](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/36845843673)
+actually executed their blocking checks and passed. Informational Asset Impact
+Scan is still NOT_EXECUTED because its script is absent. Those results do not
+accept this later Case-list source; resolve its own hosted runs at the milestone.
+
 ### 2026-10-01 — owned-training hosted scanner regression corrected
 
 At source `5fc46e7ed707c2313f195ec60f7dd0fb2da0be23`, App36844466756

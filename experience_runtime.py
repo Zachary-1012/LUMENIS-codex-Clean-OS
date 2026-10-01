@@ -1194,6 +1194,28 @@ def create_cth_work_case():
         return jsonify({"ok": False, "code": "CTH_CASE_UNAVAILABLE"}), 503
 
 
+@experience_bp.route("/api/experience/cth/cases", methods=["GET"])
+def read_cth_case_list():
+    """Find source-verified Cases in the current principal's exact CTH Focus."""
+    from cth_cases import list_cth_cases
+    from lumenis.shared.reporting.source_brief_job import _scope_material
+
+    try:
+        actor_ref, _audit_ref, scope = _source_brief_context("read", module="cases")
+        if set(request.args) - {"limit", "before"} or any(len(request.args.getlist(key)) != 1 for key in request.args):
+            raise ValueError("CTH_CASE_LIST_INPUT_INVALID")
+        raw_limit = request.args.get("limit", "25")
+        if not re.fullmatch(r"[1-9][0-9]{0,2}", raw_limit):
+            raise ValueError("CTH_CASE_LIST_INPUT_INVALID")
+        result = list_cth_cases(actor_ref=actor_ref, expected_scope=_scope_material(**scope),
+                                limit=int(raw_limit), before=request.args.get("before"))
+        return jsonify({"ok": True, "result": result, "publish_status": "not_performed"})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "CTH_CASE_UNAVAILABLE", "publish_status": "not_performed"}), 503
+
+
 @experience_bp.route("/api/experience/cth/cases/<case_id>", methods=["GET"])
 def reopen_cth_work_case(case_id):
     from cth_cases import get_cth_case

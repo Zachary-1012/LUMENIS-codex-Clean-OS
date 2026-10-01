@@ -180,3 +180,33 @@ def get_cth_case(case_id, *, actor_ref, expected_scope):
         if row is None:
             raise LookupError("CTH_CASE_NOT_FOUND")
         return _checked(connection, row, actor_ref=actor_ref, expected_scope=expected_scope)
+
+
+def list_cth_cases(*, actor_ref, expected_scope, limit=25, before=None):
+    """Read one principal's focused Cases, validating each signed source chain."""
+    _scope(expected_scope)
+    if not isinstance(actor_ref, str) or not actor_ref or type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError("CTH_CASE_LIST_INPUT_INVALID")
+    if before is not None and (not isinstance(before, str) or not re.fullmatch(r"CASE-[0-9a-f]{32}", before)):
+        raise ValueError("CTH_CASE_LIST_INPUT_INVALID")
+    with get_repository().connection(read_only=True, wal=False) as connection:
+        # Keep cursor, Case rows and their Evidence in one read snapshot.
+        connection.execute("BEGIN")
+        _subject(connection, expected_scope)
+        params = [actor_ref, expected_scope["subject_id"]]
+        query = f"SELECT * FROM {TABLE} WHERE actor_ref=? AND subject_id=?"
+        if before is not None:
+            cursor = connection.execute(query + " AND case_id=?", (*params, before)).fetchone()
+            if cursor is None:
+                # A missing cursor and another principal/Subject's cursor are indistinguishable.
+                raise LookupError("CTH_CASE_CURSOR_NOT_FOUND")
+            _checked(connection, cursor, actor_ref=actor_ref, expected_scope=expected_scope)
+            query += " AND (created_at,case_id) < (?,?)"
+            params.extend((cursor["created_at"], cursor["case_id"]))
+        rows = connection.execute(
+            query + " ORDER BY created_at DESC,case_id DESC LIMIT ?", (*params, limit + 1),
+        ).fetchall()
+        cases = [_checked(connection, row, actor_ref=actor_ref, expected_scope=expected_scope)
+                 for row in rows[:limit]]
+    return {"version": "cth-case-list:v1", "scope": expected_scope, "cases": cases,
+            "next_cursor": cases[-1]["case_id"] if len(rows) > limit else None}

@@ -135,3 +135,76 @@ and App analysis/tests executed. Technical obligation5 PASS at that source;
 Tier C/human/ROUND11 acceptance remains open. The informational Asset Impact
 Scan still failed to open its absent script and must not be called a passed scan.
 This evidence publication does not claim a later documentation SHA was tested.
+
+## Case discovery / reopen continuation — 2026-10-01
+
+Base `08399d0d162d902087e2b68261cf4ceb11616da0`. Root completed this bounded
+Batch directly after the host rejected a new Luna thread for its session limit.
+No worker was represented as active, no retired model route ran, and no frontend
+layout/design or new owner/round was introduced.
+
+### Task Card / REAL DELIVERY CARD / 真实用户工作闭环验收
+
+- REAL USER JOB: find and reopen a previously registered source-backed commercial
+  investigation without remembering or recreating its Case ID.
+- ENTRY: `GET /api/experience/cth/cases`, same canonical API path as Case creation.
+  Headers select CTH and exact FOCUS Subject; the server resolves the principal.
+  Optional `limit`1–100 (default25) and `before=CASE-<32 hex>` paginate the result.
+  This is a read-page bound, not a Collector quota or a limit on stored Cases.
+- REAL INPUT: the existing Guangzhou Taikoo Hui Case
+  `CASE-c8f477f099e7a0d61880dce7563411cc`, creation Evidence444, original three
+  official source references and immutable Source Brief from the prior Batch.
+- END-TO-END PATH: Permission/current Registry → actor+Subject SQL filter → one
+  read transaction → signed cursor/creation/source checks → real Case list →
+  exact reopen. No business-table writes or invalid-row repair occur.
+- USER-VISIBLE RESULT: API list returns the real Case and original title,
+  question, source references, report hash and CASE timeline; `next_cursor=null`
+  when no further row exists. No Insight, Decision, Action or Outcome is invented.
+- FAILURE/RECOVERY: invalid/duplicate query selectors400; another actor/Subject
+  cannot enumerate the Case; foreign and missing cursor404; GLOBAL403; archived
+  Subject denies access; broken source403 and broken Case/creation trace503;
+  isolated same-time pagination has neither missing nor duplicated IDs. Actual
+  Core reload followed by list → reopen → repeat returned identical data.
+- EVIDENCE:125 guarded tests (119 owner/security/neighbor,6 OpenAPI),0 failures,
+  errors or skips; no thread leak. Constitution, governance and changed-source
+  AST gates passed. Source patch SHA256
+  `9799c7adbb46f462792da5731fc0237ebb579667ad7b286adb8fe7cce6aa2691`.
+  Root reviewed the read-only filter/cursor/signature/error paths; no remaining
+  blocking source defect identified. This was not an independent peer review.
+- ACCEPTANCE ASSERTION: real-data backend discovery/reopen is technically
+  verified. CTH-08 binding, GLOBAL aggregation, owned useful analysis and the
+  rest of Case→Insight→Decision→Action→Outcome remain open. No real human operated
+  this Batch; PO repeated acceptance is still deferred to the final review.
+
+### Runtime / protected data
+
+The validated canonical worker tree8600 was stopped for the source reload;
+Supervisor19440 remained and restarted parent31568/listener34772. Core8201
+reported healthy and databaseok. The existing real Case returned three sources,
+creation Evidence444, analysis NOT_REQUESTED and business Outcome NOT_OBSERVED.
+An active non-reference Subject returned an empty list, not the Taikoo Case;
+using its cursor returned404. Reading past the last Case returned empty/null.
+
+Before reload and after all API reads, exact row fingerprints matched for notes276,
+Canonical276, Evidence447, Registry179, reports50, evaluations130 and Cases1.
+Integrityok/FK0. No migration, reseed, source collection, fabricated evaluation or
+production write occurred. Private DB/proof files are not Git assets.
+
+### CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION
+
+ADAPT: [SQLite row values / scrolling queries](https://www.sqlite.org/rowvalue.html),
+accessed2026-10-01, page revision2025-05-31; existing SQLite3.50.4. Use the existing
+Shared DB snapshot and descending `(created_at,case_id)` cursor comparison instead
+of growing OFFSET. No copied component/license obligation or dependency added.
+Cursor identity is reverified within the principal/Subject filter before use.
+Rollback removes the new read entry without deleting Cases or their Evidence;
+existing create/reopen behavior and signed state remain supported.
+
+### GLOBAL UNIVERSE / DATA MATURITY IMPACT / COMMERCIAL OVERLAY IMPACT
+
+Coverage unchanged: CommercialNO,BrandNO,TaikooPARTIAL,FULL_UNIVERSENO.
+The exact-Focus list is not a Global Case-board proof or new collected coverage.
+Evaluations remain artifact records, not observed commercial Outcomes.
+RELEASED=NO,OPERATING=NO,COMMERCIAL_READY=NO. Same-SHA Product/App proof of source
+08399d0d passed as recorded in CURRENT; this later source must obtain its own
+hosted milestone proof. Tier C and final human review remain separate.

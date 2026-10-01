@@ -194,3 +194,110 @@ def test_revocation_after_admission_before_transaction_write_has_no_effect(case_
     monkeypatch.setattr(repo, "transaction", revoked_transaction)
     assert api.post(URL, headers=focus, json=body).status_code == 403
     assert _counts(db) == (0, 0)
+
+
+def test_case_list_reopens_real_source_bound_cases_without_writes(case_client):
+    api, app, db, focus, body, _ = case_client
+    assert api.get(URL, headers=focus).get_json()["result"]["cases"] == []
+    created = api.post(URL, headers=focus, json=body).get_json()["result"]
+    counts = _counts(db)
+    listed = app.test_client().get(URL, headers=focus)
+    assert listed.status_code == 200, listed.get_json()
+    page = listed.get_json()["result"]
+    assert page == {"version": "cth-case-list:v1", "scope": created["scope"],
+                    "cases": [created], "next_cursor": None}
+    assert api.get(URL + "/" + page["cases"][0]["case_id"], headers=focus).get_json()["result"] == created
+    assert _counts(db) == counts
+
+
+def test_case_list_cursor_pagination_with_tied_times_is_stable(case_client, monkeypatch):
+    import cth_cases
+    from datetime import datetime, timezone
+    class FixedClock:
+        @staticmethod
+        def now(_timezone):
+            return datetime(2026, 10, 1, tzinfo=timezone.utc)
+    monkeypatch.setattr(cth_cases, "datetime", FixedClock)
+    api, _, db, focus, body, _ = case_client
+    ids = [api.post(URL, headers=focus, json={**body, "submission_id": f"page-request-{i:02}"})
+           .get_json()["result"]["case_id"] for i in range(3)]
+    seen = []
+    cursor = None
+    for index in range(3):
+        query = {"limit": 1, **({"before": cursor} if cursor else {})}
+        response = api.get(URL, headers=focus, query_string=query)
+        assert response.status_code == 200, response.get_json()
+        page = response.get_json()["result"]
+        seen.extend(case["case_id"] for case in page["cases"])
+        cursor = page["next_cursor"]
+        assert (cursor is None) == (index == 2)
+    assert seen == sorted(ids, reverse=True)
+    assert api.get(URL, headers=focus, query_string={"before": seen[-1]}).get_json()["result"]["cases"] == []
+    assert _counts(db) == (3, 3)
+
+
+def test_case_list_never_discloses_other_actor_subject_or_global(case_client):
+    import subject_registry
+    from cth_cases import list_cth_cases
+    api, _, db, focus, body, _ = case_client
+    created = api.post(URL, headers=focus, json=body).get_json()["result"]
+    other, _ = subject_registry.add_subject({"domain_id": "CTH", "subject_type": "company",
+                                           "name_en": "Another venue", "name_zh": "另一个商业主体"})
+    assert api.get(URL, headers={**focus, "X-Subject-ID": other["subject_id"]}).get_json()["result"]["cases"] == []
+    global_headers = {"X-Domain-Id": "CTH", "X-Product-Id": "CTH", "X-Lumenis-Context-Mode": "GLOBAL_ALL"}
+    assert api.get(URL, headers=global_headers).status_code == 403
+    assert list_cth_cases(actor_ref="workspace:other", expected_scope=created["scope"])["cases"] == []
+    with pytest.raises(LookupError, match="CTH_CASE_CURSOR_NOT_FOUND"):
+        list_cth_cases(actor_ref="workspace:other", expected_scope=created["scope"], before=created["case_id"])
+    unknown = "CASE-" + "0" * 32
+    for cursor in (created["case_id"], unknown):
+        response = api.get(URL, headers={**focus, "X-Subject-ID": other["subject_id"]}, query_string={"before": cursor})
+        assert response.status_code == 404
+        assert response.get_json()["code"] == "CTH_CASE_CURSOR_NOT_FOUND"
+    assert _counts(db) == (1, 1)
+
+
+@pytest.mark.parametrize("query", ["limit=0", "limit=101", "limit=true", "limit=01", "limit=", "limit=-1",
+                                  "limit=1&limit=2", "before=", "before=bad", "actor_ref=workspace:other"])
+def test_invalid_case_list_query_has_no_effect(case_client, query):
+    api, _, db, focus, body, _ = case_client
+    api.post(URL, headers=focus, json=body)
+    assert api.get(URL + "?" + query, headers=focus).status_code == 400
+    assert _counts(db) == (1, 1)
+
+
+@pytest.mark.parametrize("extra", [{"Origin": "https://foreign.invalid"}, {"X-Actor-ID": "23"},
+                                  {"X-Forwarded-For": "127.0.0.1"}])
+def test_case_list_respects_server_principal_boundary(case_client, extra):
+    api, _, db, focus, body, _ = case_client
+    api.post(URL, headers=focus, json=body)
+    assert api.get(URL, headers={**focus, **extra}).status_code in {401, 403}
+    assert _counts(db) == (1, 1)
+
+
+@pytest.mark.parametrize("target", ["case", "creation", "source"])
+def test_case_list_fails_honestly_on_broken_lineage(case_client, target):
+    api, _, db, focus, body, _ = case_client
+    case = api.post(URL, headers=focus, json=body).get_json()["result"]
+    with sqlite3.connect(db) as con:
+        if target == "case":
+            con.execute(f"UPDATE {TABLE} SET title='Changed title' WHERE case_id=?", (case["case_id"],))
+        else:
+            evidence_id = (case["creation_evidence_ref"].split(":")[1] if target == "creation"
+                           else case["source_refs"][0]["scope_evidence_ref"])
+            con.execute("UPDATE app_evidence_records SET inputs_json='{}' WHERE id=?", (evidence_id,))
+    assert api.get(URL, headers=focus).status_code == (403 if target == "source" else 503)
+    assert api.get(URL, headers=focus, query_string={"before": case["case_id"]}).status_code == (403 if target == "source" else 503)
+    assert _counts(db) == (1, 1)
+
+
+def test_archived_subject_has_no_case_list_access(case_client):
+    from cth_cases import list_cth_cases
+    api, _, db, focus, body, _ = case_client
+    case = api.post(URL, headers=focus, json=body).get_json()["result"]
+    with sqlite3.connect(db) as con:
+        actor_ref = con.execute(f"SELECT actor_ref FROM {TABLE}").fetchone()[0]
+        con.execute("UPDATE lumenis_subject_registry SET status='archived' WHERE subject_id=?", (focus["X-Subject-ID"],))
+    assert api.get(URL, headers=focus).status_code == 404
+    with pytest.raises(PermissionError, match="CTH_CASE_SUBJECT_NOT_ACTIVE"):
+        list_cth_cases(actor_ref=actor_ref, expected_scope=case["scope"])
