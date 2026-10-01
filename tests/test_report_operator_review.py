@@ -130,7 +130,7 @@ def test_revoked_authorization_has_no_write(job_db):
     assert _counts(job_db, result["job_id"]) == (0, 0)
 
 
-@pytest.mark.parametrize("revoke_at,expected_counts", [(2, (0, 0)), (3, (1, 0))])
+@pytest.mark.parametrize("revoke_at,expected_counts", [(2, (0, 0)), (3, (1, 0)), (4, (1, 1))])
 def test_permission_is_rechecked_at_each_persistence_boundary(job_db, revoke_at, expected_counts):
     result = _report(job_db)
     attempts = 0
@@ -145,6 +145,51 @@ def test_permission_is_rechecked_at_each_persistence_boundary(job_db, revoke_at,
     with pytest.raises(PermissionError, match="REVOKED_BEFORE_EFFECT"):
         _write(result, authorize=authorize)
     assert _counts(job_db, result["job_id"]) == expected_counts
+    with sqlite3.connect(job_db) as conn:
+        assert conn.execute("SELECT count(*) FROM app_evidence_records WHERE feature_id='REPORT_LEARNING_CASE'").fetchone()[0] == 0
+
+
+def _learning_count(db_path):
+    with sqlite3.connect(db_path) as conn:
+        return conn.execute("SELECT count(*) FROM app_evidence_records WHERE feature_id='REPORT_LEARNING_CASE'").fetchone()[0]
+
+
+def test_review_case_replays_and_reopens_without_training_promotion(job_db):
+    result = _report(job_db)
+    submission_id = str(uuid.uuid4())
+    first = _write(result, submission_id=submission_id, decision="use_for_next_step")
+    from lumenis.shared.learning.report_cases import record_report_case
+    record_report_case(_verified(result), first)
+    case = first["learning_case"]
+    assert case["state"] == "recorded"
+    assert case["training_eligible"] is False
+    assert case["lifecycle_stage"] == "RAW" and case["review_status"] == "HUMAN_PENDING"
+    assert _write(result, submission_id=submission_id, decision="use_for_next_step")["learning_case"] == case
+    assert _learning_count(job_db) == 1 and _counts(job_db, result["job_id"]) == (1, 1)
+    reopened = reviews.read_operator_reviews(_verified(result))
+    assert reopened["latest"]["learning_case"] == case
+    assert _learning_count(job_db) == 1  # GET/read never performs the missing side-write.
+
+
+@pytest.mark.parametrize("failure", [OSError("isolated case failure"), LookupError("report temporarily unreadable")])
+def test_learning_failure_is_explicit_and_same_review_repairs(job_db, monkeypatch, failure):
+    from lumenis.shared.learning import report_cases
+
+    result = _report(job_db)
+    submission_id = str(uuid.uuid4())
+    original = report_cases.record_report_case
+    monkeypatch.setattr(report_cases, "record_report_case",
+                        lambda *args: (_ for _ in ()).throw(failure))
+    failed = _write(result, submission_id=submission_id)
+    assert failed["learning_case"]["state"] == "pending_recovery"
+    assert _counts(job_db, result["job_id"]) == (1, 1) and _learning_count(job_db) == 0
+    assert reviews.read_operator_reviews(_verified(result))["latest"]["learning_case"]["state"] == "pending_recovery"
+    assert _learning_count(job_db) == 0
+    monkeypatch.setattr(report_cases, "record_report_case", original)
+    repaired = _write(result, submission_id=submission_id)
+    assert repaired["learning_case"]["state"] == "recorded"
+    assert repaired["evidence_ref"] == failed["evidence_ref"]
+    assert _counts(job_db, result["job_id"]) == (1, 1) and _learning_count(job_db) == 1
 
 
 def test_signed_evidence_tampering_is_rejected_on_reopen(job_db):

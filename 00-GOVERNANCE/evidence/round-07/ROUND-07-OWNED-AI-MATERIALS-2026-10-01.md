@@ -338,3 +338,72 @@ Constitution and takeover gates exit 0. The credential-path diagnostic still
 flags two pre-existing Flutter `profile` manifests by pathname. Inspection found
 only Android INTERNET and macOS development entitlements, no credentials; neither
 file is staged here. This diagnostic remains recorded, not relabeled as PASS.
+
+## Scoped report learning material — real review replay, 2026-10-01
+
+Base: local HEAD / origin/main e29a0d7782dd19e171c46da1d8004c36feec6f5c.
+Owner: existing Shared Learning + Reporting, existing signed Evidence store;
+no migration, table, scheduler, inference provider or parallel case database.
+Context routing: `locate_capability_context.py --capability evaluation_learning
+--query correction`, pinned constitution / Product Architecture / Source Owner
+Index / Real Delivery Overlay. The existing J7 research in
+`intelligence_library/01_序境产品研究/FULL-PRODUCT-UPGRADE-CLOSURE-RESEARCH-20260929.md`
+is ADAPT: preserve actual failed candidates and feedback without positive
+promotion. No external SDK or new research-dependent runtime was added.
+
+`report_cases.py` references the verified report, original source Evidence,
+signed operator review, any signed rejected candidate and revision context.
+Signed actor/scope/artifact identities are revalidated on reads and writes.
+Reporting rechecks authorization at the fourth persistence fence. Case failure
+is pending_recovery; same authorized review submission can repair it without
+duplicating the review/Evaluation. Reads never create or repair a case. All cases
+remain RAW / HUMAN_PENDING / training_eligible=false / NOT_OBSERVED /
+REFERENCED_NOT_TRAINED, including use_for_next_step and rejected reports.
+
+VERIFICATION: seven affected Reporting/Learning/Task modules passed 112 tests,
+zero failures/errors/skips, exit0; synthetic disposable v18 seed. Final review
+found a missing LookupError recovery classification after committed review/
+Evaluation. The unchanged side-write contract now returns pending_recovery for
+that failure too; its added retry regression and all changed/neighbor Learning,
+Review and Revision modules passed 33 tests, zero failures/errors/skips, exit0
+in19.442s. No background-thread leak. These are overlapping runs, not145 tests.
+Coverage includes exact foreign actor/scope denial, revoked fourth-write
+authorization, HMAC tampering, rejected-candidate reference binding, identical
+replay, pending/read-only/retry recovery, immutable report/revision contracts.
+Final edited-source compile, Constitution and diff checks passed. Before/after
+test logical DB fingerprints match; test runs did not change the product DB.
+Earlier failures exposed absent Evidence scope columns and PermissionError's
+OSError inheritance; the implementation was corrected to canonical signed scope
+markers and explicit PermissionError propagation, without weakening assertions.
+
+REAL RUNTIME: canonical SQLite backup
+`data/backups/pre-report-learning-cases-20261001.db` (8.82MB), integrity verified.
+Only the verified Core child/parent were stopped; supervisor19440 recovered
+Core27608 at8201 with healthy /healthz. The existing Nike job
+`brief-ca26452b7adb4ffdbc9a8fcd263e81f0` and original signed review438 were read
+and resubmitted with their original request_changes/notes/submission ID through
+the real authorized API. No new feedback, model call or fabricated user was added.
+Exact BrandFocus: `BRAND-8b9f5ffaeea603d31bf0d7e8`.
+
+Result: Evidence443, case
+`4f69d5a83ba013095e87253fc871bbf1c8a8e1b7284828e0a254f7c64271f495`,
+one new derived learning record. Immediate second POST was NOOP; GET reopened
+exactly; GLOBAL_ALL read of the focused job returned403. Original report/review
+row digests, notes/Canonical/reports/Evaluation counts remained unchanged;
+integrityok/FK0. The case has two source refs and retains the historical draft's
+actual state; it does not approve that previously weak analysis or train it.
+
+REAL USER JOB / ENTRY / REAL INPUT: preserve an existing source-grounded report
+and its actual engineering feedback for later controlled learning, via the
+existing report review API. USER-VISIBLE RESULT: explicit recorded learning-case
+reference on the report/review readback. FAILURE/RECOVERY: side-write failure and
+identical authorized retry tested; real repeated submission/reopen verified.
+ACCEPTANCE ASSERTION: AUTOMATED_REAL_DATA_REPLAY_NOT_HUMAN_ACCEPTANCE. The
+Product Owner performs repeated real-user review only at final product closure.
+
+GLOBAL UNIVERSE / DATA MATURITY IMPACT: no new coverage, source or Canonical
+facts. COMMERCIAL OVERLAY IMPACT: RELEASED=NO / OPERATING=NO /
+COMMERCIAL_READY=NO. No Round07/J7 PASS or useful owned-AI claim. Same-SHA hosted
+PASS remains pinned to038fe598; it does not cover this newer implementation.
+Next required increment is useful owned inference and grounded task outcome,
+with these cases available as referenced, unapproved learning material.

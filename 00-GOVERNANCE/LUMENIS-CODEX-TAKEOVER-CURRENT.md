@@ -12,6 +12,35 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — real report feedback reaches scoped Shared Learning material
+
+The existing authorized Reporting review path now records a deterministic,
+signed learning case through Shared Learning and the existing Evidence store.
+It binds the original report, sources, review, actor and exact scope; rejected
+candidates remain references and feedback never becomes a correctness label.
+Cases stay RAW / HUMAN_PENDING / training_eligible=false. No model, schema,
+new store, training, inference or external effect was introduced.
+
+The broader candidate passed 112 affected isolated tests; after extending
+temporarily-unreadable report recovery, all 33 changed/neighbor tests passed,
+zero failures/errors/skips, exit0. Tests left the protected product DB logical
+fingerprint unchanged.
+After a canonical SQLite backup and supervised Core reload (PID27608), replaying
+the existing Nike request_changes review438 created learning Evidence443. Same
+submission replay was NOOP; exact reopen succeeded; GLOBAL context was denied403.
+Original report/review and business-table counts were unchanged; integrity ok,
+FK violations0. GET never repairs a missing case; an authorized identical POST
+can recover its side-write. Permission is rechecked before that persistence.
+
+This is AUTOMATED_REAL_DATA_REPLAY_NOT_HUMAN_ACCEPTANCE, not trained inference,
+a useful new report, observed business Outcome, Round07 or product closure.
+Full proof and owner context are in the existing
+[ROUND07 evidence](evidence/round-07/ROUND-07-OWNED-AI-MATERIALS-2026-10-01.md).
+Hosted acceptance below still belongs only to source038fe598; this newer code
+has local/runtime evidence and must not inherit that hosted SHA result.
+Next blocker remains useful owned text/visual reasoning with task-relevant data
+and its Outcome/Evaluation; the Product Owner's repeated E2E remains deferred.
+
 ### 2026-10-01 — same-source-SHA hosted Product and App gates PASS
 
 Both required workflows actually executed and passed at source commit

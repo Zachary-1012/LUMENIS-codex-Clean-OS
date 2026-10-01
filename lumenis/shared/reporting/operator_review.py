@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import sqlite3
 from typing import Any, Callable
 
 from lumenis.shared.database import get_repository
@@ -197,8 +198,13 @@ def _evaluation_state(review: dict[str, Any]) -> str:
 
 
 def _projection(review: dict[str, Any]) -> dict[str, Any]:
+    from lumenis.shared.learning.report_cases import get_report_case
+
+    learning_case = get_report_case(review)
+    if learning_case.get("state") == "not_recorded":
+        learning_case = {"state": "pending_recovery", "reason": "REPORT_LEARNING_CASE_NOT_RECORDED"}
     return {**{key: value for key, value in review.items() if not key.startswith("_")},
-            "evaluation_state": _evaluation_state(review)}
+            "evaluation_state": _evaluation_state(review), "learning_case": learning_case}
 
 
 def write_operator_review(job_id: str, *, actor_id: str, expected_scope: dict[str, Any],
@@ -275,6 +281,17 @@ def write_operator_review(job_id: str, *, actor_id: str, expected_scope: dict[st
 
     _authorize(authorize, actor_id, expected_scope)
     _record_evaluation(review)
+    # A replay repairs this derivative side-write without duplicating the
+    # signed review. Recheck permission at this independent persistence fence.
+    _authorize(authorize, actor_id, expected_scope)
+    from lumenis.shared.learning.report_cases import record_report_case
+    try:
+        record_report_case(verified, review)
+    except PermissionError:
+        raise
+    except (OSError, sqlite3.Error, ValueError, RuntimeError, LookupError):
+        return {**_projection(review), "learning_case": {
+            "state": "pending_recovery", "reason": "REPORT_LEARNING_CASE_WRITE_UNAVAILABLE"}}
     return _projection(review)
 
 
