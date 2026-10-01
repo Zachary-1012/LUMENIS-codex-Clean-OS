@@ -25,6 +25,12 @@ ordinary main push. Local logs are `lumenis-product-gate-038fe598.log` and
 published evidence. This documentation-only follow-up does not alter the tested
 source or assert its own new SHA was tested by these historical runs.
 
+Final raw-log inspection: `Asset Impact Scan (INFORMATIONAL)` exited 2 because
+`scripts/audit_tools/asset_impact_scan.py` does not exist. GitHub step summary
+reported success through its pre-existing `continue-on-error`; the actual scan
+did not execute. This non-blocking workflow defect remains open. All required
+blocking steps passed; no claim is made that every informational step passed.
+
 Acceptance: technical hosted obligation 5 PASS. Useful owned analysis/outcome,
 human acceptance, Release, Operating and Commercial Ready are not promoted.
 

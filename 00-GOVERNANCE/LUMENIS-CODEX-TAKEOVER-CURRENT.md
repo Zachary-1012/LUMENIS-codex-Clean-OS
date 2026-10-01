@@ -26,6 +26,10 @@ selected hermetic suite. App executed analysis and Flutter tests. No tests or
 gates were removed, quarantined or weakened. Existing Tier C exclusions remain
 LIVE_NOT_VERIFIED, and the advisory boundary scan still reports nine MEDIUM and
 eleven INFO findings. Hosted PASS does not imply Release or business acceptance.
+The existing informational Asset Impact Scan failed with exit 2 because its
+referenced `scripts/audit_tools/asset_impact_scan.py` is absent. Its pre-existing
+`continue-on-error` masked that step outcome in the summary. This remains an open
+non-blocking workflow defect, not a successfully executed scan.
 
 Next active blocker is useful owned text/visual reasoning and its real task
 outcome. Existing report/review/revision evidence is retained; its missing Shared
