@@ -21,18 +21,19 @@ coverage map into these six rounds in the
 They are not three competing execution schedules. Existing owners, capability
 requirements and real technical dependencies remain effective.
 
-**Current authorization is rule convergence and publication only. Product execution
-remains PAUSED; this change does not launch or resume W1–W6/F, collection, training,
-migration or runtime.** A later explicit resume uses the approved six-round route.
+**Product Owner has explicitly resumed product development through W1–W6/F.**
+Codex Cloud configuration is confirmed ready by the Product Owner. M dispatches
+complete outcome cards on a pinned source; actual started/queued/blocked windows
+must be recorded from dispatch results, never inferred from authorization alone.
 
 | Round / window | Placement | Scope | Current acceptance / execution |
 |---|---|---|---|
-| C1 / W1 | LOCAL | Data, Collector, Browser, exact entities/relations, freshness and maintenance | PARTIAL ASSETS / NOT ACCEPTED; PAUSED |
-| C2 / W2 | LOCAL + approved training resources | Owned AI, Agent, Skills, Memory, multimodal, Evaluation/Learning | PARTIAL ASSETS / NOT ACCEPTED; PAUSED |
-| C3 / W3 | CODEX CLOUD | Real CTH/BMP business workflows and outcomes | PARTIAL ASSETS / NOT ACCEPTED; PAUSED |
-| C4 / W4 | LOCAL | Original pitches/general creation, video and podcast | PARTIAL ASSETS / NOT ACCEPTED; PAUSED |
-| C5 / W5 | CODEX CLOUD | Importer, Research, library, Reporting and Artifact services | PARTIAL ASSETS / NOT ACCEPTED; PAUSED |
-| C6 / W6 | LOCAL | Integration, actual DB coordination, runtime, recovery, packaging and release | PARTIAL ASSETS / NOT ACCEPTED; PAUSED |
+| C1 / W1 | LOCAL | Data, Collector, Browser, exact entities/relations, freshness and maintenance | PARTIAL ASSETS / NOT ACCEPTED; AUTHORIZED FOR DISPATCH |
+| C2 / W2 | LOCAL + approved training resources | Owned AI, Agent, Skills, Memory, multimodal, Evaluation/Learning | PARTIAL ASSETS / NOT ACCEPTED; AUTHORIZED FOR DISPATCH |
+| C3 / W3 | CODEX CLOUD | Real CTH/BMP business workflows and outcomes | PARTIAL ASSETS / NOT ACCEPTED; AUTHORIZED FOR DISPATCH |
+| C4 / W4 | LOCAL | Original pitches/general creation, video and podcast | PARTIAL ASSETS / NOT ACCEPTED; AUTHORIZED FOR DISPATCH |
+| C5 / W5 | CODEX CLOUD | Importer, Research, library, Reporting and Artifact services | PARTIAL ASSETS / NOT ACCEPTED; AUTHORIZED FOR DISPATCH |
+| C6 / W6 | LOCAL | Integration, actual DB coordination, runtime, recovery, packaging and release | PARTIAL ASSETS / NOT ACCEPTED; AUTHORIZED FOR DISPATCH |
 
 Frontend F owns `app/` and `website/`, follows the sole Experience Constitution
 and screen-specific `DESIGN_READY`, and joins each round's real workflow. M owns
@@ -45,7 +46,7 @@ global coverage. Recovery is verified within each job, then across the product.
 ### Current decisions, limits and evidence
 
 - User confirms Codex Cloud configuration is complete and participates now.
-  On resume verify correct account, repository, pinned base and dependencies;
+  At dispatch verify correct account, repository, pinned base and dependencies;
   do not repeat configuration or infer a deployed LUMENIS AI service from it.
 - Realtime conversational voice is deferred. Audio-file understanding, video
   audio and podcast production remain in scope. Product account/password
@@ -70,10 +71,13 @@ global coverage. Recovery is verified within each job, then across the product.
   podcast runtime, pitch export → W4; owned inference/tests → W2; supervisor
   lifecycle evidence → W6; Website Brief → F. Reconcile each exact base/diff/test
   result once, then integrate through W6.
-- Native Goal remains paused. The available Goal API cannot rewrite its
-  unfinished objective; its old six-item/J/R scheduling text is superseded by
-  the approved AGENTS execution map. Preserve the complete product objective;
-  do not mark it complete or create a second product Goal to edit its wording.
+- Native Goal is active for the complete approved C1–C6 product outcome and its
+  retained R/J/urgent exits. It remains unfinished until current evidence proves
+  every required exit; a turn ending or window result does not redefine success.
+- Execution efficiency: no repeated full-repository discovery or unrelated test
+  cycles. Capture one failure, research its exact owner and current authoritative
+  solution, repair it, then run affected verification and mandatory blocking gates.
+  Re-run only for new source, a changed hypothesis or an unresolved concrete risk.
 
 `Global Commercial Coverage=NO / NOT YET VERIFIED`; `Global Brand Coverage=NO /
 NOT YET VERIFIED`; `Guangzhou Taikoo Hui Reference Coverage=PARTIAL`;
@@ -86,7 +90,8 @@ The local working tree is not visible to a reader of GitHub. An accepted change
 must publish source, owning evidence and this snapshot in the same delivery cycle.
 This batch's exact scope, checks and limits are in
 [the existing ROUND 02 evidence area](evidence/round-02/ROUND-02-SIX-ROUND-RULE-CONVERGENCE-2026-10-02.md).
-No product round is accepted by this rules-only change.
+The prior rules-only batch accepted no product round. Resumed execution still
+requires real outcomes and current evidence before any C-round acceptance.
 
 Sole design authority: `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md`.
 

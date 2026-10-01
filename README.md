@@ -1,7 +1,7 @@
 # 序境 / LUMENIS
 
 > **Production Core · Production Truth Owner**  
-> 当前阶段 / Current phase: **SIX-ROUND EXECUTION APPROVED / PRODUCT WORK PAUSED**
+> 当前阶段 / Current phase: **SIX-ROUND EXECUTION AUTHORIZED / PRODUCT CLOSURE IN PROGRESS**
 >
 > Canonical repository: Zachary-1012/LUMENIS-codex-Clean-OS (default branch: main).
 
@@ -250,7 +250,7 @@ git ls-remote --heads origin
 
 Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)，随后读取 [`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)。
 
-当前唯一方案为 **C1–C6 六轮 / W1–W6 六固定窗口**：四个本地 Codex，W3（CTH/BMP）与 W5（资料/共享成果）使用 Codex Cloud；前端 F 独立，主控 M（Sol 或 Astra）把关验收，W6 集成发布。原 R01–R15、J1–J8、六项专项验收映射保留，不再分别派工。当前只修正规则，产品窗口暂停，等 Product Owner 指令。分工/云隔离见 [AGENTS.md](AGENTS.md)，完整映射见 [Source Owner Index](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)。旧本地模型/智谱/OpenCode 模型调用停止、接口保留；C2 完成自有权重训练运行。实时对话语音后置，音频理解/播客保留；账号密码重设计在工程闭环后，开放入口仍保留服务端 Permission/effect fence。
+当前唯一方案为 **C1–C6 六轮 / W1–W6 六固定窗口**：四个本地 Codex，W3（CTH/BMP）与 W5（资料/共享成果）使用 Codex Cloud；前端 F 独立，主控 M（Sol 或 Astra）把关验收，W6 集成发布。原 R01–R15、J1–J8、六项专项验收映射保留，不再分别派工。Product Owner 已授权开工；以完整用户成果组织任务，按真实依赖并行推进，遇到缺陷先定向研究再修复和必要验证。分工/云隔离见 [AGENTS.md](AGENTS.md)，完整映射见 [Source Owner Index](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)。旧本地模型/智谱/OpenCode 模型调用停止、接口保留；C2 完成自有权重训练运行。实时对话语音后置，音频理解/播客保留；账号密码重设计在工程闭环后，开放入口仍保留服务端 Permission/effect fence。
 
 默认执行方式：
 

@@ -810,6 +810,17 @@ fast/static
 
 Do not burn quota by running thousands of unrelated tests after every leaf edit.
 
+When a bug or failed user result appears, capture one concrete reproduction and
+identify its owning call path. Before repeated trials, research the exact failure
+against current official documentation and maintained GitHub implementations;
+select the best fit for the existing contract, record the relevant source and
+apply the bounded fix. Do not repeat a scan or test without a changed hypothesis,
+changed source or unresolved acceptance risk. Reuse valid evidence at its pinned
+SHA; run affected regressions and required blocking gates once for the coherent
+outcome Batch. Full-product checks belong at integration/release convergence.
+Research, reproduction and tests each support the repair; none alone closes the
+user job or permits weakening its acceptance standard.
+
 Widen testing when shared primitives, persistence, permission, Evidence, Canonical contracts or runtime infrastructure change.
 
 Never delete, skip or weaken a legitimate test merely to obtain PASS.
