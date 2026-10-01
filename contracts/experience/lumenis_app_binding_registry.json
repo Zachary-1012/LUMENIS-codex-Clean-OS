@@ -35,23 +35,23 @@
   "source_files": [
     {
       "file": "contracts/experience/screen_meta.json",
-      "sha256": "4937aa2281ab280fc69cd1780c656fea0c4ba6c8cb5049cbc550ce357edfff36"
+      "sha256": "fcde926ff2fcb650e8bab4d3c8a8acb1450c939dc60a0f2e137d362a610fb3b3"
     },
     {
       "file": "contracts/experience/viewmodels/VIEWMODEL_REGISTRY.json",
-      "sha256": "d9a93ae99b65229dda55abd8fc0174986a83508c1c7976ee248ccd624ea1bcb1"
+      "sha256": "08596dc4fa1ba6edae3b387bda57331b564557f428738d227a4c3faf69b3ecd5"
     },
     {
       "file": "contracts/experience/unknown-bindings.json",
-      "sha256": "e0be90f3293fa8bb4e13d7aa5e570fdff56ab452d1c86a98739a3701331ddaab"
+      "sha256": "e652c7369656d9b125d379eb639511f67856a14eb6aad80106995d6e294cf9a0"
     },
     {
       "file": "contracts/experience/BINDING_MATRIX.json",
-      "sha256": "0e71c6f7a857bc0ac0e2b9f8b40a43b4fb8c2f9849c10f21ad956a3424b50314"
+      "sha256": "d6a09fafc182ebac0a083fc1d047dfbdb2a9b6ae206a919a4b298e09133a675a"
     },
     {
       "file": "contracts/experience/BACKEND_GAP.json",
-      "sha256": "54ba8339ce4fc56f5c08f754e3149ab0ebcb0ab0ac55e8386a22668bb566b89c"
+      "sha256": "be4f428bd824a095eb5601d960b50ae8ecc8983604d98189f4dce9aed1c35506"
     }
   ],
   "screens": [

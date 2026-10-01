@@ -5,6 +5,32 @@ Base: `88ed522f00c996982010b9abfc232a17cfefe710`, fetched and verified on
 existing Collector intake. Unknown `work/`, source data, old artifacts and
 user model configuration are protected. No new owner or acceptance round.
 
+## Hosted follow-up — exact-byte checkout portability
+
+On 2026-10-01, Product run `36817894227` and App run `36817897722` executed
+real steps on the same `1708b46251030c087518ceeb45a2eeb12e32674d` SHA.
+Both failed the blocking screen blueprint snapshot check before their test
+steps. This is an actual gate failure, not quota exhaustion or a zero-step run.
+
+The five declared snapshot files were byte-identical to their Git objects
+after CRLF-to-LF conversion only. Their declared hashes matched local CRLF
+copies but not Git's LF objects. Scoped `.gitattributes` entries now force LF
+for these five files and the binding registry; the registry hashes match the
+unchanged Git source bytes. No global renormalization, content rewrite, test
+removal, validator relaxation or frontend development occurred.
+
+Verification at the corrected candidate:
+- Four existing blueprint regressions PASS, including content drift and
+  rehashed screen-ID drift rejection; exit 0, no background thread leak.
+- Experience authority, strict anti-template and 44-screen / 54-binding
+  blueprint gates PASS, exit 0.
+- Two disposable index checkouts, `core.autocrlf=true` and `false`, both have
+  LF source bytes and all five exact SHA-256 values match the checked-out
+  registry. The production DB and runtime are untouched by this correction.
+
+The corrected source still requires actual same-SHA Product and App runs.
+No hosted, real-user, product-release or operating acceptance is claimed here.
+
 ## Current objective correction
 
 The Product Owner explicitly stopped local-model and Zhipu use in product and

@@ -12,6 +12,22 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — hosted execution restored; exact snapshot portability repaired
+
+GitHub Product run `36817894227` and App run `36817897722` actually executed
+at `1708b46251030c087518ceeb45a2eeb12e32674d`. Quota exhaustion is no longer
+the current blocker. Both stopped at the same blocking Experience snapshot
+check: five registry digests represented Windows CRLF bytes while Git stored
+LF bytes. The source content was identical after newline normalization.
+
+The five snapshot inputs and registry now have explicit LF checkout attributes;
+the registry records their exact Git bytes. The validator and all gates are
+unchanged. All four blueprint regressions and three Experience gates pass;
+isolated index checkouts with `core.autocrlf=true` and `false` both verify all
+five exact hashes. Same-SHA hosted acceptance is pending the corrected commit's
+actual runs; no Product/App, user E2E or release PASS is inferred from this fix.
+Evidence: [ROUND 07 technical batch](evidence/round-07/ROUND-07-OWNED-AI-MATERIALS-2026-10-01.md).
+
 ### 2026-10-01 — owned AI direction, provider retirement and task-relevant materials
 
 The Product Owner stopped local-model and Zhipu use in the product and in this
