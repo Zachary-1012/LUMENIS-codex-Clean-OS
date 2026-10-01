@@ -19,12 +19,12 @@
       }
     }
   },
-  "x-url-map-rule-count": 805,
+  "x-url-map-rule-count": 807,
   "x-static-route-count": 1,
-  "x-route-count": 804,
-  "x-path-count": 765,
-  "x-operation-count": 828,
-  "x-operation-group-count": 814,
+  "x-route-count": 806,
+  "x-path-count": 767,
+  "x-operation-count": 830,
+  "x-operation-group-count": 816,
   "x-duplicate-operation-group-count": 14,
   "x-duplicate-operation-candidate-count": 28,
   "x-duplicate-operation-candidates": [
@@ -7507,6 +7507,59 @@
         "operationId": "experience_runtime.content_evidence_detail",
         "x-flask-rule": "/api/experience/content/evidence/<evidence_id>",
         "summary": "返回 SH-01 可展示的创作证据字段；输入 Prompt/研究上下文永不下发。"
+      }
+    },
+    "/api/experience/cth/cases": {
+      "post": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.create_cth_work_case",
+        "x-flask-rule": "/api/experience/cth/cases"
+      }
+    },
+    "/api/experience/cth/cases/{case_id}": {
+      "get": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          [
+            {
+              "httpBasic": []
+            }
+          ],
+          [
+            {
+              "v4Auth": []
+            }
+          ]
+        ],
+        "operationId": "experience_runtime.reopen_cth_work_case",
+        "x-flask-rule": "/api/experience/cth/cases/<case_id>"
       }
     },
     "/api/experience/cth/platform-collection": {

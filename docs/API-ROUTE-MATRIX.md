@@ -1,8 +1,8 @@
 # API 路由矩阵（由当前 Flask url_map 自动生成，勿手改）
 
-- Flask url_map rules：**805**（static：**1**；API routes：**804**）
-- 唯一路径：**765**；operation groups：**814**
-- route operation candidates：**828**；重复冲突组：**14**（候选项：**28**）
+- Flask url_map rules：**807**（static：**1**；API routes：**806**）
+- 唯一路径：**767**；operation groups：**816**
+- route operation candidates：**830**；重复冲突组：**14**（候选项：**28**）
 - 认证：public=/healthz；v4Auth=/v4/* 独立 token；其余 httpBasic 或 v4 会话。
 
 | 路径 | 方法 | Endpoint candidate | Flask rule | 认证 | 分组 |
@@ -309,6 +309,8 @@
 | `/api/experience/content-sources` | POST | experience_runtime.import_content_source | `/api/experience/content-sources` | basic/v4 | api/experience |
 | `/api/experience/content-sources/{artifact_id}` | GET | experience_runtime.content_source_detail | `/api/experience/content-sources/<artifact_id>` | basic/v4 | api/experience |
 | `/api/experience/content/evidence/{evidence_id}` | GET | experience_runtime.content_evidence_detail | `/api/experience/content/evidence/<evidence_id>` | basic/v4 | api/experience |
+| `/api/experience/cth/cases` | POST | experience_runtime.create_cth_work_case | `/api/experience/cth/cases` | basic/v4 | api/experience |
+| `/api/experience/cth/cases/{case_id}` | GET | experience_runtime.reopen_cth_work_case | `/api/experience/cth/cases/<case_id>` | basic/v4 | api/experience |
 | `/api/experience/cth/platform-collection` | GET | experience_runtime.cth_platform_collection_surface | `/api/experience/cth/platform-collection` | basic/v4 | api/experience |
 | `/api/experience/cth/platform-collection/search` | POST | experience_runtime.cth_platform_collection_search | `/api/experience/cth/platform-collection/search` | basic/v4 | api/experience |
 | `/api/experience/reports/source-brief/generate` | POST | experience_runtime.generate_source_brief_job | `/api/experience/reports/source-brief/generate` | basic/v4 | api/experience |

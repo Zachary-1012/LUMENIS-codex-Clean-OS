@@ -12,6 +12,21 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — hosted Case milestone found and corrected API inventory drift
+
+At source `43c36079ff548c38d75489d01f9e64b32dfa4d3b`, App run
+[36836323508](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/36836323508)
+actually passed analysis and tests. Product run
+[36836306103](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/36836306103)
+executed its blocking checks and failed `test_generated_spec_files_valid`:
+the generated OpenAPI inventory omitted the two new Case paths. This is an
+actual contract failure, not quota exhaustion. The existing generator now
+synchronizes JSON and route matrix with the current Flask map: two paths added,
+no old path removed or changed. All six OpenAPI regressions and Constitution
+passed; no test, tier or workflow criterion was weakened. Hosted acceptance of
+the corrected commit must be resolved from its own runs, not inherited.
+See the existing [ROUND11 evidence](evidence/round-11/ROUND-11-CTH-CASE-PERSISTENCE-2026-10-01.md).
+
 ### 2026-10-01 — real CTH Case persists with exact sources and restart recovery
 
 The existing CTH application owner now exposes focused Case create/reopen APIs,

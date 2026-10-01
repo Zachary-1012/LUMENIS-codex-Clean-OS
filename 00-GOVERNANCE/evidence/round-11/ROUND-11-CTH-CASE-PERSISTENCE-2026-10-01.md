@@ -114,3 +114,17 @@ Next eligible gaps: CTH-08 real Case read/UI binding, owned useful reasoning and
 the CTH Case→Insight→Decision→Action→Outcome chain. Those are existing ROUND11
 obligations; no new Round/Owner is introduced. Hosted PASS remains limited to
 source038fe598 until another milestone's exact Product/App source is tested.
+
+## Hosted contract correction — 2026-10-01
+
+Source43c36079: App run36836323508 SUCCESS with actual analysis/tests; Product
+run36836306103 executed and failed the blocking generated OpenAPI equality
+test. Its route inventory lacked POST `/api/experience/cth/cases` and GET
+`/api/experience/cth/cases/{case_id}`. The existing `openapi_spec.generate`
+was run against an isolated test application/DB, regenerating only
+`docs/API-OPENAPI-SPEC.json` and `docs/API-ROUTE-MATRIX.md`. Two paths were
+added; no existing path was removed or changed. Six existing OpenAPI tests,
+Constitution and diff check passed. Tests and workflow criteria are unchanged.
+The corrected commit requires new same-SHA hosted results; source43c36079
+remains PRODUCT_GATE_FAIL for that specific contract test. Case runtime proof
+above is preserved; this correction adds no user E2E or coverage claim.
