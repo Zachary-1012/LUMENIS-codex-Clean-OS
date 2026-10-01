@@ -12,6 +12,24 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — AgentLoop checkpoint contract bound to durable TaskEngine
+
+At base980aa6c984d960ee2323d660664e4b502b848e3e, AgentLoop now supplies
+canonical plan/step identities, completed status/result and cumulative elapsed,
+cost, started-step count, replan count and limits to the existing durable owner.
+Persisted task and checkpoint context allow only actor/domain/scope. Raw planner
+output and secret fields are omitted; recognizable credentials in goals/results
+are redacted and affected snapshots are explicitly non-resumable. Numeric
+token-usage metrics remain intact. Original execution/planning inputs stay in RAM.
+The reopened isolated TaskEngine regression passed52 tests; no production DB or
+model call was used. This closes checkpoint serialization, not execution resume.
+The oversized untested resume candidate was archived locally and not merged;
+the next bounded step is fresh-authorized continuation with cumulative budgets
+and uncertain-effect protection. See the existing
+[ROUND07 checkpoint proof](evidence/round-07/ROUND-07-AGENT-CHECKPOINT-PERSISTENCE-2026-10-01.md).
+Actual reviewed business targets, useful owned inference/deployment and final PO
+acceptance remain open; no Round, coverage or release status is promoted.
+
 ### 2026-10-01 — signed Learning export and saved-adapter inference
 
 At base24ad1155cd41354ca4ff55e5c7f9a81b94f66a4e, the existing Shared

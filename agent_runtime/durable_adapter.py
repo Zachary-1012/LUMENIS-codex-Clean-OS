@@ -25,6 +25,7 @@ Durable Execution Adapter — Durable Execution 适配器
 from __future__ import annotations
 
 import json
+import re
 import threading
 import uuid
 from dataclasses import dataclass, field, asdict
@@ -33,6 +34,40 @@ from typing import Any, Callable, Dict, List, Optional
 
 _CHECKPOINT_FORMAT = "lumenis.agent_runtime.checkpoint"
 _CHECKPOINT_VERSION = 1
+_CHECKPOINT_CONTEXT_KEYS = frozenset({"actor_id", "domain_id", "scope"})
+_CREDENTIAL_VALUE = re.compile(
+    r"(?i)\b(?:bearer\s+[\w./~+-]{8,}|(?:sk|pk)-[\w-]{8,}|"
+    r"gh[pousr]_[A-Za-z0-9]{10,}|github_pat_[\w]{10,}|"
+    r"xox[baprs]-[\w-]{10,}|AIza[\w-]{20,}|"
+    r"eyJ[\w-]{8,}\.[\w-]{8,}\.[\w-]{8,})"
+)
+
+
+def _sanitize_checkpoint_value(value: Any, token_usage: bool = False):
+    """Redact recognizable credentials and omit secret fields from checkpoint data."""
+    if isinstance(value, dict):
+        cleaned, sensitive = {}, False
+        for key, item in value.items():
+            normalized = re.sub(r"[^a-z0-9]", "", str(key).lower())
+            metric = token_usage and isinstance(item, (int, float)) and not isinstance(item, bool)
+            if normalized == "rawresponse":
+                continue
+            if any(word in normalized for word in (
+                    "apikey", "secret", "password", "credential", "authorization", "cookie",
+                    "session", "approval", "accesstoken", "refreshtoken")) or (
+                    "token" in normalized and normalized != "tokenusage" and not metric):
+                sensitive = True
+                continue
+            safe_item, item_sensitive = _sanitize_checkpoint_value(item, token_usage or normalized == "tokenusage")
+            sensitive = sensitive or item_sensitive
+            cleaned[key] = safe_item
+        return cleaned, sensitive
+    if isinstance(value, (list, tuple)):
+        items = [_sanitize_checkpoint_value(item, token_usage) for item in value]
+        return [item[0] for item in items], any(item[1] for item in items)
+    if isinstance(value, str) and _CREDENTIAL_VALUE.search(value):
+        return _CREDENTIAL_VALUE.sub("[REDACTED]", value), True
+    return value, False
 
 
 @dataclass
@@ -201,13 +236,18 @@ class DurableExecutionAdapter:
 
         复用 ai_task_engine.create_task()。
         """
+        safe_goal, _ = _sanitize_checkpoint_value(goal)
+        safe_context, _ = _sanitize_checkpoint_value(context or {})
+        safe_context = ({key: value for key, value in safe_context.items()
+                         if key in _CHECKPOINT_CONTEXT_KEYS}
+                        if isinstance(safe_context, dict) else {})
         if self._enabled:
             engine = self._require_task_engine()
             self._require_write_permission("ai_task")
             try:
                 created = engine.create_task(
-                    user_input=goal,
-                    context=context or {},
+                    user_input=safe_goal,
+                    context=safe_context,
                     created_by="agent_runtime",
                 )
                 task_id = created.get("task_id") if isinstance(created, dict) else None
@@ -222,9 +262,9 @@ class DurableExecutionAdapter:
             with self._lock:
                 self._memory_tasks[task_id] = {
                     "task_id": task_id,
-                    "goal": goal,
+                    "goal": safe_goal,
                     "agent_id": agent_id,
-                    "context": context or {},
+                    "context": safe_context,
                     "status": persisted.get("status", "pending"),
                     "created_at": persisted.get("created_at"),
                 }
@@ -234,9 +274,9 @@ class DurableExecutionAdapter:
         with self._lock:
             self._memory_tasks[task_id] = {
                 "task_id": task_id,
-                "goal": goal,
+                "goal": safe_goal,
                 "agent_id": agent_id,
-                "context": context or {},
+                "context": safe_context,
                 "status": "created",
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "source": "memory",
@@ -259,14 +299,37 @@ class DurableExecutionAdapter:
 
         复用 ai_task_engine._db_add_step()。
         """
+        safe_plan, plan_sensitive = _sanitize_checkpoint_value(plan_snapshot or {})
+        context = {key: value for key, value in (context or {}).items()
+                   if key in _CHECKPOINT_CONTEXT_KEYS}
+        safe_context, context_sensitive = _sanitize_checkpoint_value(context)
+        safe_metadata, metadata_sensitive = _sanitize_checkpoint_value(metadata or {})
+        safe_detail, detail_sensitive = _sanitize_checkpoint_value(step_detail or state)
+        if not isinstance(safe_plan, dict):
+            safe_plan = {}
+        if not isinstance(safe_context, dict):
+            safe_context = {}
+        if not isinstance(safe_metadata, dict):
+            safe_metadata = {}
+        steps = safe_plan.get("steps")
+        canonical = bool(safe_plan.get("plan_id")) and isinstance(steps, list)
+        sensitive = plan_sensitive or context_sensitive or metadata_sensitive or detail_sensitive
+        resumable = canonical and not sensitive and safe_metadata.get("resumable") is not False
+        safe_metadata["resumable"] = resumable
+        if not resumable:
+            safe_metadata["non_resumable_reason"] = ("sensitive checkpoint material omitted"
+                                                       if sensitive else "canonical plan snapshot unavailable")
+        else:
+            safe_metadata.pop("non_resumable_reason", None)
+
         cp = Checkpoint(
             agent_id=agent_id,
             task_id=task_id,
             step_index=step_index,
             state=state,
-            plan_snapshot=plan_snapshot or {},
-            context=context or {},
-            metadata=metadata or {},
+            plan_snapshot=safe_plan,
+            context=safe_context,
+            metadata=safe_metadata,
         )
 
         if self._enabled:
@@ -279,7 +342,7 @@ class DurableExecutionAdapter:
                     "format": _CHECKPOINT_FORMAT,
                     "version": _CHECKPOINT_VERSION,
                     "checkpoint": cp.to_dict(),
-                    "step_detail": step_detail or state,
+                    "step_detail": safe_detail,
                     "step_status": step_status,
                 }, ensure_ascii=False, separators=(",", ":"))
                 step_id = engine._db_add_step(
@@ -305,16 +368,25 @@ class DurableExecutionAdapter:
         step_index: int,
         result: Optional[Dict[str, Any]] = None,
         error: Optional[str] = None,
+        plan_snapshot: Optional[Dict[str, Any]] = None,
+        context: Optional[Dict[str, Any]] = None,
+        agent_id: str = "",
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """标记步骤完成/失败。"""
         status = "completed" if error is None else "failed"
+        checkpoint_metadata = dict(metadata or {})
+        checkpoint_metadata.update({"result": result, "error": error})
         self.checkpoint(
             task_id=task_id,
             step_index=step_index,
             state=status,
-            step_detail=json.dumps({"result": result, "error": error}, ensure_ascii=False),
+            plan_snapshot=plan_snapshot,
+            context=context,
+            agent_id=agent_id,
+            step_detail=status,
             step_status=status,
-            metadata={"result": result, "error": error},
+            metadata=checkpoint_metadata,
         )
 
     def save_evidence(

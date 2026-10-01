@@ -145,6 +145,8 @@ class AgentLoop:
         self._cancel_lock = threading.Lock()
         self._start_time: float = 0.0
         self._current_cost: float = 0.0
+        self._steps_started: int = 0
+        self._active_context: Dict[str, Any] = {}
         self._consecutive_failures: int = 0
         self._current_plan: Optional[Plan] = None
 
@@ -175,6 +177,8 @@ class AgentLoop:
         self._cancelled = False
         self._start_time = time.time()
         self._current_cost = 0.0
+        self._steps_started = 0
+        self._active_context = context
         self._consecutive_failures = 0
         self._replanner.reset()
 
@@ -373,6 +377,44 @@ class AgentLoop:
             return "max_cost"
         return "ok"
 
+    def _checkpoint_metadata(
+        self,
+        steps_started: Optional[int] = None,
+        estimated_cost: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Capture cumulative run usage and its limits without resetting budget."""
+        elapsed = max(0.0, time.time() - self._start_time) if self._start_time else 0.0
+        limits = ("max_steps", "max_time_seconds", "max_cost", "max_retries",
+                  "max_replans", "step_timeout_seconds")
+        return {
+            "elapsed_seconds": round(elapsed, 3),
+            "estimated_cost": round(self._current_cost if estimated_cost is None
+                                     else estimated_cost, 6),
+            "steps_started": self._steps_started if steps_started is None else steps_started,
+            "replans": self._replanner.replan_count,
+            "limits": {name: getattr(self.config, name) for name in limits},
+        }
+
+    def _checkpoint_plan_snapshot(
+        self,
+        step_index: Optional[int] = None,
+        status: Optional[str] = None,
+        result: Optional[Dict[str, Any]] = None,
+        error: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Copy the current plan and overlay the just-finished step before run() mutates it."""
+        if self._current_plan is None:
+            return {}
+        snapshot = self._current_plan.to_dict()
+        if step_index is not None and isinstance(snapshot.get("steps"), list):
+            item = next((item for item in snapshot["steps"]
+                         if isinstance(item, dict) and item.get("index") == step_index), None)
+            if item is not None:
+                item.update(status=status or item.get("status"), result=result, error=error)
+                if isinstance(result, dict) and isinstance(result.get("duration_ms"), (int, float)):
+                    item["duration_ms"] = result["duration_ms"]
+        return snapshot
+
     @staticmethod
     def _security_action(step: PlanStep):
         """Derive a deterministic SYSTEM action classification for one Agent step."""
@@ -560,10 +602,14 @@ class AgentLoop:
                 task_id=task_id,
                 step_index=step_index,
                 state="executing",
+                plan_snapshot=self._checkpoint_plan_snapshot(),
+                context=self._active_context,
                 step_detail=step.action,
                 step_status="running",
                 agent_id=self._observation_layer.agent_id,
+                metadata=self._checkpoint_metadata(self._steps_started + 1),
             )
+            self._steps_started += 1
 
             # 执行工具
             result = self._tool_executor(step, context)
@@ -577,13 +623,29 @@ class AgentLoop:
 
             duration_ms = round((time.time() - start) * 1000, 2)
             result["duration_ms"] = duration_ms
+            step_success = bool(result.get("success"))
+            step_error = result.get("error")
+            if not step_success and not step_error:
+                step_error = "step execution failed"
+            next_cost = self._current_cost
+            if step_success:
+                next_cost += result.get("estimated_cost", 0.0)
 
             # 完成 Checkpoint
             self._durable.complete_step(
                 task_id=task_id,
                 step_index=step_index,
                 result=result,
-                error=result.get("error"),
+                error=step_error,
+                plan_snapshot=self._checkpoint_plan_snapshot(
+                    step_index=step_index,
+                    status="completed" if step_success else "failed",
+                    result=result,
+                    error=step_error,
+                ),
+                context=self._active_context,
+                agent_id=self._observation_layer.agent_id,
+                metadata=self._checkpoint_metadata(estimated_cost=next_cost),
             )
 
             return result
@@ -616,6 +678,7 @@ class AgentLoop:
         sm.transition_to(AgentState.REPLANNING, reason=decision.reason,
                          metadata={"replan_count": self._replanner.replan_count + 1})
         new_plan = self._replanner.replan(goal, current_plan, decision, observation, context)
+        self._current_plan = new_plan
         sm.transition_to(AgentState.EXECUTING, reason="replanned, resuming execution")
         return new_plan
 
@@ -689,8 +752,12 @@ class AgentLoop:
                 task_id=result.task_id,
                 step_index=len(steps),
                 state=result.status,
+                plan_snapshot=self._checkpoint_plan_snapshot(),
+                context=self._active_context,
                 step_detail=f"agent {result.status}",
                 step_status=result.status,
+                agent_id=result.agent_id,
+                metadata=self._checkpoint_metadata(),
             )
 
         return result

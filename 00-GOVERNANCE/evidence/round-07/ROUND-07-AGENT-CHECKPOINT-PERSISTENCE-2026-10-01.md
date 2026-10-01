@@ -72,3 +72,50 @@ Real user acceptance remains HUMAN_PENDING for the Product Owner's final review.
 GLOBAL UNIVERSE / DATA MATURITY IMPACT: Commercial Coverage=NO; Brand
 Coverage=NO; Guangzhou reference=PARTIAL; no coverage expansion in this batch.
 COMMERCIAL OVERLAY IMPACT: RELEASED=NO; OPERATING=NO; COMMERCIAL_READY=NO.
+
+## 2026-10-01 — AgentLoop supplies the actual checkpoint contract
+
+Current bounded base:980aa6c984d960ee2323d660664e4b502b848e3e, fetched
+origin/main and live main verified. Existing Agent Runtime / TaskEngine / Shared
+Database / SYSTEM Permission owners remain; no alternate queue or OSAI runtime.
+Context uses the current locator, router, Constitution, owner index and existing
+durable persistence proof. Protected work/ and other workers' learning files are
+excluded from this Batch.
+
+AgentLoop persists the current canonical Plan/PlanStep identifiers, statuses,
+results and numeric token metrics through DurableExecutionAdapter. The completion
+snapshot overlays the actual just-finished step before the normal loop mutates
+it, and records projected cumulative cost without charging it twice. It records
+elapsed execution time, started-step count, replans and limits. Replanning updates
+the current checkpoint plan. Task and checkpoint contexts persist only actor_id,
+domain_id and scope; the original execution context remains in RAM.
+
+Raw planner output and secret fields are omitted. Recognizable credential values
+in persisted task goals, plans, results or step details are redacted; affected
+snapshots are non-resumable. Numeric token_usage is retained. These filters are
+supplemental pattern screening, not proof that arbitrary private text is safe.
+
+Verification command:
+`python -m pytest -q tests/agent_runtime/test_loop_checkpoint_contract.py tests/agent_runtime/test_loop.py tests/agent_runtime/test_durable_adapter.py tests/agent_runtime/test_durable_persistence.py`
+passed52 tests, no failures/errors/skips or background-thread leaks. The three
+new tests reopen actual isolated TaskEngine SQLite storage, check completed
+identity/result/cumulative budget, confirm context filtering and secret omission,
+and prove persisted goal redaction while the execution goal is unchanged. Security
+is stubbed only for this checkpoint-storage test; it proves no production approval.
+No production DB write, provider call or real product-user task was performed.
+
+REAL DELIVERY CARD / 真实用户工作闭环验收: the job remains interrupted analysis
+continuation. This Batch closes IMPLEMENTED→TESTED checkpoint serialization only;
+there is still no execution resume API. The earlier oversized untested candidate
+is preserved in work/osai-resume-candidate-20261001-211338 and is not accepted.
+Next step is canonical fresh authorization, exact actor/domain/scope, cumulative
+budgets and uncertain-effect handling in the existing loop. Real useful owned
+CTH/BMP analysis and final PO repeated-job acceptance remain open.
+
+CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION: ADAPT OSAI's durable-task
+requirement to the existing TaskEngine; REUSE this repository's checkpoint owner,
+not its former independent JSON state store. OSAI live main was rechecked as
+6487532205067d5d3568b75bc7ea5f842dede578. No proprietary weights or trained OSAI
+reasoning are claimed. GLOBAL UNIVERSE / DATA MATURITY IMPACT: CommercialNO,
+BrandNO, TaikooPARTIAL. COMMERCIAL OVERLAY IMPACT: RELEASED/OPERATING/
+COMMERCIAL_READY=NO. ROUND07 remains REWORK until its real user-work gates close.
