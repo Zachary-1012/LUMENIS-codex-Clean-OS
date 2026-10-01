@@ -64,11 +64,11 @@ def _inputs(tmp_path: Path, monkeypatch):
     return model, manifest, train, heldout, tmp_path / "candidate-output"
 
 
-def _run(paths, *, execute=False, approval_verifier=None, manifest=None):
+def _run(paths, *, execute=False, approval_verifier=None, manifest=None, recipe=training.H100_RECIPE):
     model, canonical_manifest, train, heldout, output = paths
     return training.run_owned_lora_training(
         model, train, heldout, output, manifest_path=manifest or canonical_manifest,
-        execute=execute, approval_verifier=approval_verifier,
+        execute=execute, approval_verifier=approval_verifier, recipe=recipe,
     )
 
 
@@ -278,3 +278,137 @@ def test_failed_training_never_claims_trained(tmp_path, monkeypatch, steps, save
     assert "Question B" not in observed["dataset"][0]["text"]
     assert observed["args"].push_to_hub is False
     assert observed["args"].report_to == "none"
+
+
+def _t4_inputs(tmp_path, monkeypatch):
+    paths = _inputs(tmp_path, monkeypatch)
+    model, manifest, *_ = paths
+    # Disposable synthetic snapshot; never a training or hardware acceptance claim.
+    for item in model.iterdir():
+        item.unlink()
+    names = {"chat_template.json", "config.json", "generation_config.json", "model.safetensors.index.json",
+             "special_tokens_map.json", "tokenizer.json", "tokenizer_config.json",
+             *(f"model-{i:05d}-of-00004.safetensors" for i in range(1, 5))}
+    entries = {}
+    for name in names:
+        content = ("disposable-nf4-test:" + name).encode()
+        (model / name).write_bytes(content)
+        entries[name] = {"size_bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()}
+    data = json.loads(manifest.read_text())
+    data["training_variants"] = {training.T4_RECIPE: {
+        "model_id": training.T4_MODEL_ID, "revision": training.T4_MODEL_REVISION,
+        "license": "Apache-2.0", "base_model": training.MODEL_ID,
+        "base_revision_state": "UPSTREAM_UNSPECIFIED", "format": "bitsandbytes_nf4",
+        "source_url": f"https://huggingface.co/{training.T4_MODEL_ID}/tree/{training.T4_MODEL_REVISION}",
+        "files": entries,
+    }}
+    manifest.write_text(json.dumps(data))
+    return paths
+
+
+def test_t4_preflight_keeps_derivative_identity_and_requires_exact_approval(tmp_path, monkeypatch):
+    paths = _t4_inputs(tmp_path, monkeypatch)
+    result = _run(paths, recipe=training.T4_RECIPE)
+    assert result["model_id"] == training.T4_MODEL_ID
+    assert result["model_revision"] == training.T4_MODEL_REVISION
+    assert result["base_revision_state"] == "UPSTREAM_UNSPECIFIED"
+    assert result["execution_state"] == "PREFLIGHT_ONLY"
+    seen = []
+    def deny(request):
+        seen.append(request)
+        return False
+    with pytest.raises(training.TrainingBlocked, match="TRAINING_APPROVAL_REQUIRED"):
+        _run(paths, recipe=training.T4_RECIPE, execute=True, approval_verifier=deny)
+    assert seen[0].recipe == training.T4_RECIPE
+    assert seen[0].model_id == training.T4_MODEL_ID
+    assert seen[0].manifest_sha256 == hashlib.sha256(paths[1].read_bytes()).hexdigest()
+    assert not paths[-1].exists()
+
+
+def test_t4_does_not_accept_raw_mxfp4_or_unpinned_derivative(tmp_path, monkeypatch):
+    paths = _inputs(tmp_path, monkeypatch)
+    with pytest.raises(training.TrainingBlocked, match="T4_DERIVATIVE_MANIFEST_INVALID"):
+        _run(paths, recipe=training.T4_RECIPE)
+    with pytest.raises(training.TrainingBlocked, match="NO_AUTOMATIC_FALLBACK"):
+        _run(paths, recipe="auto")
+    (tmp_path / "variant").mkdir()
+    paths = _t4_inputs(tmp_path / "variant", monkeypatch)
+    data = json.loads(paths[1].read_text())
+    data["training_variants"][training.T4_RECIPE]["revision"] = "main"
+    paths[1].write_text(json.dumps(data))
+    with pytest.raises(training.TrainingBlocked, match="T4_DERIVATIVE_MANIFEST_INVALID"):
+        _run(paths, recipe=training.T4_RECIPE)
+
+
+def test_t4_snapshot_hash_mismatch_remains_blocking(tmp_path, monkeypatch):
+    paths = _t4_inputs(tmp_path, monkeypatch)
+    (paths[0] / "config.json").write_text("tampered")
+    with pytest.raises(training.TrainingBlocked, match="LOCAL_MODEL_FILE_HASH_MISMATCH"):
+        _run(paths, recipe=training.T4_RECIPE)
+
+
+@pytest.mark.parametrize("major,minor,memory,recipe,allowed", [
+    (7, 5, 15637086208, training.T4_RECIPE, True),
+    (7, 5, 8 * 1024**3, training.T4_RECIPE, False),
+    (8, 0, 80 * 1024**3, training.T4_RECIPE, False),
+    (7, 5, 15637086208, training.H100_RECIPE, False),
+])
+def test_recipe_specific_cuda_gate_preserves_h100_boundary(monkeypatch, major, minor, memory, recipe, allowed):
+    device = SimpleNamespace(name="synthetic-cuda", major=major, minor=minor, total_memory=memory)
+    monkeypatch.setitem(sys.modules, "torch", SimpleNamespace(cuda=SimpleNamespace(
+        is_available=lambda: True, device_count=lambda: 1,
+        get_device_properties=lambda _: device, is_bf16_supported=lambda: False)))
+    if allowed:
+        assert training._require_cuda(recipe)[2] == memory
+    else:
+        with pytest.raises(training.TrainingBlocked):
+            training._require_cuda(recipe)
+
+
+def test_t4_precision_and_offline_environment_are_scoped_and_restored(monkeypatch):
+    monkeypatch.setenv("UNSLOTH_FORCE_FLOAT32", "before")
+    monkeypatch.delenv("UNSLOTH_DISABLE_STATISTICS", raising=False)
+    with training._offline_hf(training.T4_RECIPE):
+        assert training.os.environ["UNSLOTH_FORCE_FLOAT32"] == "1"
+        assert training.os.environ["UNSLOTH_DISABLE_STATISTICS"] == "1"
+        assert training.os.environ["HF_HUB_OFFLINE"] == "1"
+    assert training.os.environ["UNSLOTH_FORCE_FLOAT32"] == "before"
+    assert "UNSLOTH_DISABLE_STATISTICS" not in training.os.environ
+
+
+@pytest.mark.parametrize("loss,accepted", [(1.0, True), (float("nan"), False), (float("inf"), False)])
+def test_t4_execution_checks_loss_and_preserves_dataset_and_output_fences(tmp_path, monkeypatch, loss, accepted):
+    from importlib import metadata
+    paths = _t4_inputs(tmp_path, monkeypatch)
+    observed = _mock_training_stack(monkeypatch)
+    monkeypatch.setattr(training, "_require_cuda", lambda recipe: (object(), "synthetic-t4", 15637086208))
+    versions = {"unsloth": "2026.9.12", "unsloth_zoo": "2026.9.8", "transformers": "4.56.2", "trl": "0.22.2",
+                "torch": "2.11.0+cu128", "bitsandbytes": "0.50.2", "tokenizers": "0.22.2", "triton": "3.6.0"}
+    monkeypatch.setattr(metadata, "version", versions.__getitem__)
+    def load(**kwargs):
+        assert kwargs["local_files_only"] is True and kwargs["trust_remote_code"] is False
+        assert kwargs["token"] is False
+        assert training.os.environ["UNSLOTH_FORCE_FLOAT32"] == "1"
+        model = SimpleNamespace(config=SimpleNamespace(_name_or_path=str(paths[0]), quantization_config={"bnb_4bit_quant_type": "nf4"}))
+        tokenizer = sys.modules["transformers"].AutoTokenizer.from_pretrained(str(paths[0]), local_files_only=True, trust_remote_code=False)
+        return model, tokenizer
+    monkeypatch.setitem(sys.modules, "unsloth", SimpleNamespace(FastLanguageModel=SimpleNamespace(
+        from_pretrained=load, get_peft_model=lambda model, **kwargs: model)))
+    trainer_class = sys.modules["trl"].SFTTrainer
+    def train(self):
+        observed["train_calls"] += 1
+        return SimpleNamespace(global_step=1, metrics={"train_loss": loss})
+    monkeypatch.setattr(trainer_class, "train", train)
+    if accepted:
+        result = _run(paths, execute=True, approval_verifier=lambda _: True, recipe=training.T4_RECIPE)
+        assert result["execution_state"] == "TRAINED_NOT_EVALUATED"
+        assert result["candidate_status"] == "NOT_EVALUATED"
+        assert result["training_packages"] == versions
+    else:
+        with pytest.raises(training.TrainingBlocked, match="LOSS_UNAVAILABLE_OR_NONFINITE"):
+            _run(paths, execute=True, approval_verifier=lambda _: True, recipe=training.T4_RECIPE)
+        assert not (paths[-1] / "adapter_model.safetensors").exists()
+    assert observed["args"].bf16 is False and observed["args"].fp16 is False
+    assert observed["args"].max_length == 1024
+    assert observed["args"].per_device_train_batch_size == 1
+    assert "Question B" not in observed["dataset"][0]["text"]

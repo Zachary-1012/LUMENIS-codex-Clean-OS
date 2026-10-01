@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import unicodedata
@@ -15,6 +16,10 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 APPROVED_MANIFEST_PATH = REPO_ROOT / "config" / "ai-owned-foundation.json"
 MODEL_ID = "openai/gpt-oss-20b"
 MODEL_REVISION = "6cee5e81ee83917806bbde320786a8fb61efebee"
+H100_RECIPE = "openai-h100-bf16"
+T4_RECIPE = "unsloth-t4-nf4"
+T4_MODEL_ID = "unsloth/gpt-oss-20b-unsloth-bnb-4bit"
+T4_MODEL_REVISION = "093fba6992ef5a7152481afec0bdfca1ac486998"
 _MIN_CUDA_MEMORY = 75 * 1024**3
 _MODEL_FILES = frozenset({
     "LICENSE", "USAGE_POLICY", "chat_template.jinja", "config.json",
@@ -49,6 +54,8 @@ class TrainingApprovalRequest:
     train_sha256: str
     heldout_sha256: str
     scopes: tuple[str, ...]
+    recipe: str = H100_RECIPE
+    manifest_sha256: str = ""
 
 
 def _local_path(value: str | os.PathLike[str], *, exists: bool = True) -> Path:
@@ -76,7 +83,7 @@ def _overlaps(left: Path, right: Path) -> bool:
     return left == right or left in right.parents or right in left.parents
 
 
-def _manifest(model_dir: Path, manifest_path: str | os.PathLike[str]) -> tuple[str, str]:
+def _manifest(model_dir: Path, manifest_path: str | os.PathLike[str], recipe: str = H100_RECIPE) -> tuple[str, str]:
     supplied = _local_path(manifest_path)
     canonical = APPROVED_MANIFEST_PATH.resolve(strict=True)
     if Path(manifest_path).is_symlink() or supplied != canonical:
@@ -95,8 +102,31 @@ def _manifest(model_dir: Path, manifest_path: str | os.PathLike[str]) -> tuple[s
         not isinstance(data.get("files"), dict) or set(data["files"]) != _MODEL_FILES,
     )):
         raise TrainingBlocked("APPROVED_FOUNDATION_MANIFEST_INVALID")
+    if recipe == T4_RECIPE:
+        variants = data.get("training_variants", {})
+        if not isinstance(variants, dict) or not isinstance(variants.get(T4_RECIPE), dict):
+            raise TrainingBlocked("APPROVED_T4_DERIVATIVE_MANIFEST_INVALID")
+        data = variants[T4_RECIPE]
+        expected_names = {
+            "chat_template.json", "config.json", "generation_config.json",
+            "model.safetensors.index.json", "special_tokens_map.json", "tokenizer.json", "tokenizer_config.json",
+            *(f"model-{i:05d}-of-00004.safetensors" for i in range(1, 5)),
+        }
+        if any((
+            data.get("model_id") != T4_MODEL_ID, data.get("revision") != T4_MODEL_REVISION,
+            data.get("license") != "Apache-2.0", data.get("base_model") != MODEL_ID,
+            data.get("base_revision_state") != "UPSTREAM_UNSPECIFIED",
+            data.get("format") != "bitsandbytes_nf4",
+            data.get("source_url") != f"https://huggingface.co/{T4_MODEL_ID}/tree/{T4_MODEL_REVISION}",
+            not isinstance(data.get("files"), dict) or set(data["files"]) != expected_names,
+        )):
+            raise TrainingBlocked("APPROVED_T4_DERIVATIVE_MANIFEST_INVALID")
+    elif recipe == H100_RECIPE:
+        expected_names = _MODEL_FILES
+    else:
+        raise TrainingBlocked("UNKNOWN_TRAINING_RECIPE_NO_AUTOMATIC_FALLBACK")
     entries = list(model_dir.iterdir())
-    if any(not item.is_file() for item in entries) or {item.name for item in entries} != _MODEL_FILES:
+    if any(not item.is_file() for item in entries) or {item.name for item in entries} != expected_names:
         raise TrainingBlocked("LOCAL_MODEL_SNAPSHOT_FILE_SET_MISMATCH")
     for name, expected in data["files"].items():
         if Path(name).name != name or not isinstance(expected, dict) or set(expected) != {"size_bytes", "sha256"}:
@@ -199,9 +229,12 @@ def _output_path(value: str | os.PathLike[str], protected: list[Path]) -> Path:
 
 
 @contextmanager
-def _offline_hf():
-    previous = {key: os.environ.get(key) for key in _OFFLINE_ENV}
-    os.environ.update(_OFFLINE_ENV)
+def _offline_hf(recipe: str = H100_RECIPE):
+    environment = dict(_OFFLINE_ENV)
+    if recipe == T4_RECIPE:
+        environment.update(UNSLOTH_FORCE_FLOAT32="1", UNSLOTH_DISABLE_STATISTICS="1")
+    previous = {key: os.environ.get(key) for key in environment}
+    os.environ.update(environment)
     try:
         yield
     finally:
@@ -212,7 +245,7 @@ def _offline_hf():
                 os.environ[key] = value
 
 
-def _require_cuda() -> tuple[object, str, int]:
+def _require_cuda(recipe: str = H100_RECIPE) -> tuple[object, str, int]:
     try:
         import torch
     except ImportError as exc:
@@ -220,7 +253,12 @@ def _require_cuda() -> tuple[object, str, int]:
     if not torch.cuda.is_available() or not torch.cuda.device_count():
         raise TrainingBlocked("CUDA_REQUIRED_NO_CPU_FALLBACK")
     device = torch.cuda.get_device_properties(0)
-    if int(device.total_memory) < _MIN_CUDA_MEMORY or not torch.cuda.is_bf16_supported():
+    if recipe == T4_RECIPE:
+        if (device.major, device.minor) != (7, 5) or int(device.total_memory) < 14 * 1024**3:
+            raise TrainingBlocked("T4_NF4_RECIPE_REQUIRES_VERIFIED_SM75_AND_MEMORY")
+    elif recipe != H100_RECIPE:
+        raise TrainingBlocked("UNKNOWN_TRAINING_RECIPE_NO_AUTOMATIC_FALLBACK")
+    elif int(device.total_memory) < _MIN_CUDA_MEMORY or not torch.cuda.is_bf16_supported():
         raise TrainingBlocked("CUDA_MEMORY_OR_BFLOAT16_BELOW_H100_RECIPE_GATE")
     return torch, str(device.name), int(device.total_memory)
 
@@ -241,6 +279,7 @@ def run_owned_lora_training(
     heldout_jsonl_path: str | os.PathLike[str], output_dir: str | os.PathLike[str], *,
     manifest_path: str | os.PathLike[str], execute: bool = False,
     approval_verifier: Callable[[TrainingApprovalRequest], bool] | None = None,
+    recipe: str = H100_RECIPE,
 ) -> dict[str, object]:
     """Validate explicit local inputs; train only after Learning approval and CUDA gates."""
     if type(execute) is not bool:
@@ -254,7 +293,8 @@ def run_owned_lora_training(
         raise TrainingBlocked("LOCAL_DATASET_SYMLINK_NOT_ALLOWED")
     train_path, heldout_path = _local_path(train_jsonl_path), _local_path(heldout_jsonl_path)
     manifest_file = _local_path(manifest_path)
-    manifest_hash, revision = _manifest(model_dir, manifest_file)
+    manifest_hash, revision = _manifest(model_dir, manifest_file, recipe)
+    model_id = T4_MODEL_ID if recipe == T4_RECIPE else MODEL_ID
     train, train_hash = _read_jsonl(train_path)
     heldout, heldout_hash = _read_jsonl(heldout_path)
     case_ids, prompts = set(), set()
@@ -271,46 +311,77 @@ def run_owned_lora_training(
         "status": "VALIDATED_LOCAL_INPUTS_NOT_PRODUCTION_ACCEPTANCE",
         "execution_state": "PREFLIGHT_ONLY", "candidate_status": "NOT_EVALUATED",
         "permission_evidence_state": "LOCAL_ATTESTATIONS_ONLY_NOT_VERIFIED",
-        "model_id": MODEL_ID, "model_revision": revision,
+        "model_id": model_id, "model_revision": revision, "training_recipe": recipe,
+        "base_revision_state": "UPSTREAM_UNSPECIFIED" if recipe == T4_RECIPE else "EXACT_PINNED",
         "manifest_sha256": manifest_hash, "train_sha256": train_hash,
         "heldout_sha256": heldout_hash, "train_case_count": len(train),
         "heldout_case_count": len(heldout), "scopes": list(scopes),
     }
     if not execute:
         return result
-    request = TrainingApprovalRequest(MODEL_ID, revision, train_hash, heldout_hash, scopes)
+    request = TrainingApprovalRequest(model_id, revision, train_hash, heldout_hash, scopes, recipe, manifest_hash)
     _verify_approval(approval_verifier, request)
-    torch, device_name, memory_bytes = _require_cuda()
-    with _offline_hf():
+    torch, device_name, memory_bytes = _require_cuda(T4_RECIPE) if recipe == T4_RECIPE else _require_cuda()
+    with _offline_hf(recipe):
         try:
+            low_memory = recipe == T4_RECIPE
+            if low_memory:
+                from importlib.metadata import version
+                pins = {"unsloth": "2026.9.12", "unsloth_zoo": "2026.9.8", "transformers": "4.56.2", "trl": "0.22.2",
+                        "torch": "2.11.0+cu128", "bitsandbytes": "0.50.2", "tokenizers": "0.22.2", "triton": "3.6.0"}
+                installed = {name: version(name) for name in pins}
+                if installed != pins:
+                    raise TrainingBlocked("T4_TRAINING_STACK_VERSION_MISMATCH")
+                result["training_packages"] = installed
+                from unsloth import FastLanguageModel
+                model, tokenizer = FastLanguageModel.from_pretrained(
+                    model_name=str(model_dir), max_seq_length=1024, dtype=None,
+                    load_in_4bit=True, full_finetuning=False, local_files_only=True,
+                    trust_remote_code=False, token=False,
+                )
+                if Path(str(getattr(model.config, "_name_or_path", ""))).resolve() != model_dir:
+                    raise TrainingBlocked("T4_LOADER_CHANGED_PINNED_MODEL_PATH")
+                quantization = getattr(model.config, "quantization_config", {})
+                if not isinstance(quantization, dict) or quantization.get("bnb_4bit_quant_type") != "nf4":
+                    raise TrainingBlocked("T4_LOADER_QUANTIZATION_MISMATCH")
             from datasets import Dataset
             from peft import LoraConfig, get_peft_model
             from transformers import AutoModelForCausalLM, AutoTokenizer, Mxfp4Config
             from trl import SFTConfig, SFTTrainer
-            tokenizer = AutoTokenizer.from_pretrained(str(model_dir), revision=revision, local_files_only=True, trust_remote_code=False)
+            if not low_memory:
+                tokenizer = AutoTokenizer.from_pretrained(str(model_dir), revision=revision, local_files_only=True, trust_remote_code=False)
+            max_length = 1024 if low_memory else 2048
             rows = []
             for record, _ in train:
                 text = tokenizer.apply_chat_template(record["messages"], tokenize=False)
-                if len(tokenizer(text, add_special_tokens=False, truncation=False)["input_ids"]) > 2048:
+                if len(tokenizer(text, add_special_tokens=False, truncation=False)["input_ids"]) > max_length:
                     raise TrainingBlocked("TRAINING_EXAMPLE_EXCEEDS_MAX_LENGTH")
                 rows.append({"text": text})
             dataset = Dataset.from_list(rows)
-            model = AutoModelForCausalLM.from_pretrained(
-                str(model_dir), revision=revision, local_files_only=True, trust_remote_code=False,
-                attn_implementation="eager", torch_dtype=torch.bfloat16,
-                quantization_config=Mxfp4Config(dequantize=True), use_cache=False, device_map="auto", use_safetensors=True,
-            )
-            config = LoraConfig(
-                r=8, lora_alpha=16, target_modules="all-linear",
-                target_parameters=[f"{layer}.mlp.experts.{projection}" for layer in (7, 15, 23) for projection in ("gate_up_proj", "down_proj")],
-            )
-            model = get_peft_model(model, config)
+            if low_memory:
+                model = FastLanguageModel.get_peft_model(
+                    model, r=8, lora_alpha=16, lora_dropout=0, bias="none",
+                    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+                    use_gradient_checkpointing="unsloth", random_state=3407,
+                )
+            else:
+                model = AutoModelForCausalLM.from_pretrained(
+                    str(model_dir), revision=revision, local_files_only=True, trust_remote_code=False,
+                    attn_implementation="eager", torch_dtype=torch.bfloat16,
+                    quantization_config=Mxfp4Config(dequantize=True), use_cache=False, device_map="auto", use_safetensors=True,
+                )
+                config = LoraConfig(
+                    r=8, lora_alpha=16, target_modules="all-linear",
+                    target_parameters=[f"{layer}.mlp.experts.{projection}" for layer in (7, 15, 23) for projection in ("gate_up_proj", "down_proj")],
+                )
+                model = get_peft_model(model, config)
             args = SFTConfig(
                 learning_rate=2e-4, gradient_checkpointing=True, num_train_epochs=1,
-                logging_steps=1, per_device_train_batch_size=4, gradient_accumulation_steps=4,
-                max_length=2048, warmup_ratio=0.03, lr_scheduler_type="cosine_with_min_lr",
+                logging_steps=1, per_device_train_batch_size=1 if low_memory else 4, gradient_accumulation_steps=4,
+                max_length=max_length, warmup_ratio=0.03, lr_scheduler_type="cosine_with_min_lr",
                 lr_scheduler_kwargs={"min_lr_rate": 0.1}, output_dir=str(output),
-                report_to="none", push_to_hub=False, save_strategy="no", bf16=True,
+                report_to="none", push_to_hub=False, save_strategy="no", bf16=not low_memory,
+                fp16=False, optim="adamw_8bit" if low_memory else "adamw_torch",
             )
             _verify_approval(approval_verifier, request)
             output.mkdir(exist_ok=False)
@@ -322,6 +393,8 @@ def run_owned_lora_training(
                 train_result = trainer.train()
                 if int(getattr(train_result, "global_step", 0)) <= 0:
                     raise TrainingBlocked("TRAINING_COMPLETED_WITHOUT_OPTIMIZER_STEPS")
+                if low_memory and not math.isfinite(float(getattr(train_result, "metrics", {}).get("train_loss", float("nan")))):
+                    raise TrainingBlocked("TRAINING_LOSS_UNAVAILABLE_OR_NONFINITE")
                 trainer.save_model(str(output))
                 tokenizer.save_pretrained(str(output))
                 for artifact in ("adapter_config.json", "adapter_model.safetensors"):

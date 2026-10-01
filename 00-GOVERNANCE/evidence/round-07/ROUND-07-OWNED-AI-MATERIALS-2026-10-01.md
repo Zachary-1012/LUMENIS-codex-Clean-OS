@@ -603,3 +603,113 @@ The separate CTH trace found the first live Case gap: current CTH-08 returns
 notes/events without a persisted canonical Case/lifecycle/actor-to-Subject
 binding. Its fix stays in existing ROUND11 CTH + Shared DB/Evidence/Permission;
 it does not replace pending owned-AI or the PO's deferred real-user acceptance.
+
+## Zero-spend GPU proof and unified OSAI adoption — 2026-10-01
+
+Base: local HEAD/origin/main f3f716393f1fd30a3b403b4905791d7521e245a0.
+Owner: existing SYSTEM AI Gateway `owned_training.py`; dependent Shared
+Learning/Evaluation and existing Agent Runtime. Task Card: make the approved
+open-weight direction technically executable on actually available free
+compute, preserve exact source/approval/split boundaries, and map requested
+OSAI assets without a second runtime or model owner. Unknown `work/` preserved;
+no product DB read/write/migration, Cookie or retired provider call in this Batch.
+
+The original OpenAI snapshot is now actually local at
+`D:\devtools\lumenis-models\openai-gpt-oss-20b\6cee5e81ee83917806bbde320786a8fb61efebee`.
+All eleven files passed full SHA256 through the existing canonical `_manifest`
+consumer; total13,789,255,832 bytes. Canonical manifest hash during this Batch:
+19ee76ca8c37cec0792dfbcfa7faa257a8c38bbd2ad3ee261ecf2fcfaa4b81a5.
+Weights and transfer files remain outside Git; no model/provider activated.
+
+CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION — ADAPT:
+[Colab FAQ](https://research.google.com/colaboratory/faq.html),
+[Unsloth guide](https://unsloth.ai/docs/models/gpt-oss-how-to-run-and-fine-tune),
+[fixed T4 implementation](https://github.com/unslothai/unsloth/blob/6c7f0445ff805e54b02fe4369ed77fef1fefa0ad/tests/kaggle/t4_smoke/run_gptoss_t4.py),
+[fixed notebook](https://github.com/unslothai/notebooks/blob/92e38e86308748d18fc4cd4b104c4c6d3db1d67e/nb/gpt-oss-%2820B%29-Fine-tuning.ipynb),
+and [derivative model card](https://huggingface.co/unsloth/gpt-oss-20b-unsloth-bnb-4bit/blob/093fba6992ef5a7152481afec0bdfca1ac486998/README.md),
+accessed2026-10-01. Raw MXFP4 backward is unsupported on T4/sm75; the
+original H100/BF16 recipe remains intact. T4 uses an explicitly selected pinned
+BNB NF4 derivative and FP32 training. Its exact OpenAI parent revision is not
+declared upstream: UPSTREAM_UNSPECIFIED remains visible, never inferred from
+base_model. Licenses/notices are in the existing third-party register.
+
+REAL INPUT / ENTRY: independent user-approved free Colab notebook
+[LUMENIS-GPT-OSS-Free-GPU-Validation](https://colab.research.google.com/drive/1gtvT4QAI0geLmZ8Gj_ZpNd4a6tuVxjy-),
+not the user's original intro session. Actually allocated one TeslaT4 with
+15,637,086,208 bytes, Torch2.11.0+cu128; no paid resource, Drive mount, private
+repository, business DB, account session or Cookie uploaded. Public pinned
+derivative four shard hashes and tokenizer hash verified before loading.
+
+END-TO-END PATH: download/verify -> load -> four independently authored public
+arithmetic QA -> LoRA rank8 -> three optimizer steps -> non-empty adapter save
+-> PeftConfig local reopen rank8. Actual mean finite loss4.619938214619954,
+step losses4.9395/4.9875/3.9328, peak reserved GPU13,809,745,920 bytes.
+Validation used max_length256, batch1, accumulation1; it does not prove the
+longer1024-token business recipe or domain quality. Adapter config1705 bytes,
+SHA eabd9f09066bd034a5c21af36dfe9d3de60bd034e4e3d6bc65d5e21145728a77;
+adapter weights370,291,488 bytes,
+SHA ffbeacc27fa632fa5274b93c1a8a4680bc3ec4b783cdab7345aa048f7901cabb.
+Cloud ZIP398,167,927 bytes,
+SHA fee6253e2c48c9190c4b4ea229ac8ec6c2ea98863f6858a0ae6d336efb354959.
+Browser download path recovery timed out; workstation ZIP presence is not
+verified. Cloud notebook/technical outputs retained for continuation. An
+evidence-print failure (Torch dtype JSON serialization) and subsequent editor
+append error were corrected in a separate cell; training was not rerun.
+Reopen output confirmed actual config path equals pinned snapshot and NF4.
+
+Canonical implementation: optional explicit `unsloth-t4-nf4` recipe in the same
+manifest/helper, all eleven derivative hashes, exact eight-package pins, sm75
+and memory validation, actual local loader identity/quantization checks,
+bounded precision/batch/length, finite loss and non-empty adapter checks.
+Approval request binds selected model/revision, recipe, manifest, train/heldout
+hashes and scopes. Offline flags are process-local and restored; no automatic
+fallback, external inference, Hub upload, promotion or second registry.
+Original H100 gates and legitimate regression assertions are unchanged.
+Thirty-two targeted isolated regressions passed. They use disposable synthetic
+snapshots/mocked stack for negative safety paths, not real training evidence.
+The real Colab recipe is separate; the canonical approved-record consumer has
+not yet run real business training. Learning approval/rights admission, heldout
+business evaluation and deployed useful inference remain open.
+
+REAL DELIVERY CARD / 真实用户工作闭环验收: technical preparation only. USER-VISIBLE
+RESULT is saved training adapter/config/metrics in the independent notebook;
+FAILURE/RECOVERY includes denied/revoked approval, wrong snapshot/version/hardware,
+non-finite loss, dataset overlap, output fences and local config reopen. Runtime
+restart, full adapter reload/inference and real user CTH/BMP Outcome are not
+accepted by this proof. ACCEPTANCE ASSERTION:
+FREE_GPU_TECHNICAL_BACKWARD_SAVE_VERIFIED_NOT_PRODUCT_AI_CLOSURE.
+
+### OSAI complete capability navigation; implementation remains versioned
+
+Read-only source verified: private
+[Zachary-OS-AI main6487532205067d5d3568b75bc7ea5f842dede578](https://github.com/Zachary-1012/Zachary-OS-AI/tree/6487532205067d5d3568b75bc7ea5f842dede578),
+tree72876a3075c2cf91c99d830add05f93d90c73e9d,1073 entries, not truncated.
+No trained weights/training pipeline found; only a407-byte engineering metrics
+JSONL. GitHub license=null and no root LICENSE/NOTICE: internal PO reuse is
+authorized, but do not claim public OSS redistribution licensing. Existing
+cross-product contract already assigns OSAI Shared Intelligence Assets, not
+LUMENIS Production Truth or production Runtime dependency.
+
+| Asset class | Exact OSAI paths at pinned source | Existing LUMENIS owner / decision |
+| --- | --- | --- |
+| Reasoning/analysis | `app/cognition/builtin_provider.py`, `provider_registry.py`, `tests/test_local_intelligence.py`: deterministic rules/Markdown lexical retrieval, heuristic confidence, external shadow candidates | ADAPT principles to SYSTEM AI Gateway + Shared Evaluation; not trained inference. Preserve retired Zhipu/Ollama/LMStudio/llama.cpp/Ark paths inert, no duplicate provider registry. |
+| Agent/tools | `osai_engine/agent.py`, `llm.py`, `tools.py`; `tests/test_osai_engine.py`, `test_effect_fence_and_checkpoint_hardening.py` | ADAPT existing Shared Agent Skills/Agent Runtime. Do not import direct shell/Git effects or Zhipu generation into a second executor. |
+| Durability/recovery | `app/api/tasks.py`, `osai_engine/checkpoint_resume.py`: task reconciliation, fresh authorization, actor/scope/intent match | ADAPT existing `ai_task_engine.py` / `agent_runtime/durable_adapter.py`; no copied queue/SQLite store. |
+| Retrieval/memory | `app/knowledge/`, `app/knowledge/cjk.py`, `app/memory/`: FTS5/BM25, CJK bigrams, RRF, append-only hash chain | Candidate CJK logic retained; bind only if an existing canonical caller benefits. No separate index/store or retired embedding call just to adopt a library. |
+| Learning/training material | `components/Development-Command-Console/tools/learning_cycle.py`, `learning_promote.py`, `learning-feed/`, `03-RESEARCH/`, `ai-os-research/` | ADAPT Shared Learning/Evaluation to owned-training admission. Source-backed research/shadow/review material is not approved JSONL or positive targets; rights, Evidence, review and split validation required before export. |
+| File/multimodal | `app/knowledge/importer.py`: MD/TXT/OASST1 text import only; no PDF/Office/OCR/image/video implementation found | Bind existing Shared Content & Creation/Multimodal Evaluation owners. OSAI cannot supply a missing vision capability; text GPTOSS is not a vision model. |
+
+This map preserves all six requested asset classes and exact source locations;
+it is navigation/research evidence, not a claim all adapters or business behavior
+are integrated. Next bounded source work: admitted reviewed training-case export
+and useful owned inference; existing recovery/tools are evaluated only at their
+actual task gap, never recopied wholesale. No new Round16, owner, architecture,
+or parallel OSAI product is introduced.
+
+GLOBAL UNIVERSE / DATA MATURITY IMPACT: no new coverage/data facts; Commercial
+and Brand coverage NO, Taikoo reference PARTIAL. COMMERCIAL OVERLAY IMPACT:
+RELEASED/OPERATING/COMMERCIAL_READY=NO; no ROUND07/J7 PASS. Preceding f3 hosted
+Product36849571900/App36849577890 actually passed; newer source must obtain its
+own checks and cannot inherit those results. Product AI closure requires useful
+grounded CTH/BMP results plus evaluation/recovery and the PO's final repeated
+user acceptance, not asset migration or three arithmetic training steps.

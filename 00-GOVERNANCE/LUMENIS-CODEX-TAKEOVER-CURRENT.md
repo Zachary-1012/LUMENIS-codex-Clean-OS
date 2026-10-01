@@ -12,6 +12,44 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — zero-spend owned training; OSAI adoption in existing owners
+
+At base f3f716393f1fd30a3b403b4905791d7521e245a0, the original approved
+OpenAI gpt-oss-20b snapshot was downloaded outside Git and all eleven files
+passed the canonical manifest's full SHA256 checks (13,789,255,832 bytes).
+No retired local/external provider was reactivated. An independent Colab
+notebook actually received a free Tesla T4, loaded a separately pinned Unsloth
+NF4 derivative, completed three optimizer steps on four independently authored
+public arithmetic examples, saved a non-empty LoRA adapter and reopened its
+configuration. Finite mean loss4.619938214619954; peak reserved GPU memory
+13,809,745,920 bytes. This is technical training proof, not CTH/BMP training,
+useful business inference, hosted production deployment or product acceptance.
+
+The existing SYSTEM AI Gateway training helper now accepts an explicit T4
+recipe with its own exact file hashes, hardware/precision/version checks and
+approval binding; original OpenAI/H100 checks remain. No automatic recipe or
+provider fallback, Hub upload, second model registry or Windows setting change.
+The derivative card does not declare its exact OpenAI parent revision:
+UPSTREAM_UNSPECIFIED is retained. Thirty-two isolated targeted regressions
+passed; the canonical helper itself has not yet run a real approved business
+dataset on GPU. Artifact download to the workstation remains unverified.
+
+The requested Zachary-OS-AI integration was inspected at exact main
+6487532205067d5d3568b75bc7ea5f842dede578. It has rule/retrieval, agent,
+recovery and learning assets, not existing trained weights. The six-class
+adoption map is retained in the existing [ROUND07 proof](evidence/round-07/ROUND-07-OWNED-AI-MATERIALS-2026-10-01.md).
+OSAI remains Shared Intelligence Assets; upgrades bind existing Gateway,
+Agent Runtime and Shared Learning/Evaluation/Content owners. Whole-repository
+copying, duplicate queues/stores and retired provider activation are excluded.
+Useful owned CTH/BMP results, qualified training cases and production inference
+still gate AI closure. PO real-user repeated acceptance remains deferred.
+
+The preceding exact f3f716393f1fd30a3b403b4905791d7521e245a0 actually passed
+[Product36849571900](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/36849571900)
+and [App36849577890](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/36849577890).
+Those runs do not accept this newer training source. Global Commercial/Brand
+coverage=NO; Taikoo reference=PARTIAL; RELEASED/OPERATING/COMMERCIAL_READY=NO.
+
 ### 2026-10-01 — real CTH Case discovery and reopen
 
 The existing CTH Case owner now exposes `GET /api/experience/cth/cases` for

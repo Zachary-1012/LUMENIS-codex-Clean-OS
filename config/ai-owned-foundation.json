@@ -56,5 +56,62 @@
       "size_bytes": 4200,
       "sha256": "9279e942392b742d633c7adbb89ebe002c98399db8926a7af5125c726f404070"
     }
+  },
+  "training_variants": {
+    "unsloth-t4-nf4": {
+      "model_id": "unsloth/gpt-oss-20b-unsloth-bnb-4bit",
+      "revision": "093fba6992ef5a7152481afec0bdfca1ac486998",
+      "license": "Apache-2.0",
+      "base_model": "openai/gpt-oss-20b",
+      "base_revision_state": "UPSTREAM_UNSPECIFIED",
+      "format": "bitsandbytes_nf4",
+      "source_url": "https://huggingface.co/unsloth/gpt-oss-20b-unsloth-bnb-4bit/tree/093fba6992ef5a7152481afec0bdfca1ac486998",
+      "files": {
+        "chat_template.json": {
+          "size_bytes": 16721,
+          "sha256": "7bfd294f3e29b53db1e126d5cec050a12dc27adad4445fb5eab540e1cad74ea1"
+        },
+        "config.json": {
+          "size_bytes": 2155,
+          "sha256": "8d2a25b5980bb9135abe915c9e62ed57dd824bec53dfb57b3dbfc4abe5d2d39c"
+        },
+        "generation_config.json": {
+          "size_bytes": 165,
+          "sha256": "199566674b96510c3b9a1141b494223a86a3ff83097e2c2f259c4d94fafc5847"
+        },
+        "model.safetensors.index.json": {
+          "size_bytes": 1187187,
+          "sha256": "e1f5f117b5ca6c1e532d7c04247ae4d1ca481190eec11fb4402fe1305064a7cf"
+        },
+        "special_tokens_map.json": {
+          "size_bytes": 446,
+          "sha256": "c661c7dc897a8d9851446db24876bbc243e6ad2f58542e9147190e6654f92855"
+        },
+        "tokenizer_config.json": {
+          "size_bytes": 22813,
+          "sha256": "1dc1edbfd80613ee13e7882e7bdbd55426d08f88cf38c5de19785219a3ffb076"
+        },
+        "tokenizer.json": {
+          "size_bytes": 27868174,
+          "sha256": "0614fe83cadab421296e664e1f48f4261fa8fef6e03e63bb75c20f38e37d07d3"
+        },
+        "model-00001-of-00004.safetensors": {
+          "size_bytes": 3998751275,
+          "sha256": "f229f4364b1f2cfa7df0ced4d22777145d3d552f95512f98b20493ea094e8b89"
+        },
+        "model-00002-of-00004.safetensors": {
+          "size_bytes": 3996690997,
+          "sha256": "2b75ef14502b54c47cad18bb6c2f96e919991ba994a3331799e38891ac290a30"
+        },
+        "model-00003-of-00004.safetensors": {
+          "size_bytes": 3372033380,
+          "sha256": "76cc7c3bf1cd287a8a7cea77e00eb45ce6d6a0fbc7084d29a347eed0b398af90"
+        },
+        "model-00004-of-00004.safetensors": {
+          "size_bytes": 1158267008,
+          "sha256": "31709e4bd1403df4437091d952e2ec837efbbfc06337b4b2b6c6875491e0e7bc"
+        }
+      }
+    }
   }
 }
