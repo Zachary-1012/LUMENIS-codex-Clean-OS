@@ -12,6 +12,22 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — App hosted PASS; final Product fixture repair
+
+At `dacbd465ad26bd8236b4ab2191d77e496967701e`, App run `36821499154`
+actually passed all required steps. Product run `36821495539` executed its
+hermetic suite and returned five errors in one previously unexecuted candidate
+fixture: it still imported the removed root Permission module. The fixture now
+uses the canonical security owner and the approved loopback workspace read
+configuration, with the real permission gate enabled and all effect assertions
+retained. The candidate and local-workspace Permission regressions pass 32 tests.
+
+Core was reloaded through its existing supervisor and recovered healthy at 8201.
+The next same-SHA Product/App runs must pass before hosted acceptance closes.
+This synthetic integration evidence does not complete useful owned-AI analysis
+or the Product Owner's deferred real-user review. Details remain in the existing
+[ROUND 07 evidence](evidence/round-07/ROUND-07-OWNED-AI-MATERIALS-2026-10-01.md).
+
 ### 2026-10-01 — full hosted test execution and bounded integration repairs
 
 Product run `36818595409` and App run `36818599237` at `56328436` passed the

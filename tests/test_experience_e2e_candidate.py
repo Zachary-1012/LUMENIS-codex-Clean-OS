@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""P0-E2E-03 Critical E2E：以真实候选库 data/monitor.db 的**只读副本**跑完整生产蓝图栈。
+"""P0-E2E-03 integration: use a copy of the explicitly supplied seed DB.
+
+CI supplies a synthetic schema seed; that run is integration evidence, not
+real-data or real-user acceptance. An explicit candidate seed may be used for
+separate runtime verification without changing these assertions.
 
 红线与覆盖：
   * 绝不打开/写入仓库真实库：先复制到 tmp_path，四个隔离环境变量全部指向副本；
@@ -91,7 +95,7 @@ def candidate_client(tmp_path, monkeypatch):
               "ZBC_RUNTIME_GUARDIAN_DB", "ZBC_TOKEN_DB_PATH"):
         monkeypatch.setenv(k, str(copy_db))
     monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
-    import permission_gate
+    from lumenis.system.security import permission as permission_gate
     # The suite's session fixture enables this independent in-memory bypass.
     # Removing the environment variable alone does not restore real authorization.
     monkeypatch.setattr(permission_gate, "_TESTING_BYPASS_ENABLED", False)
@@ -107,6 +111,9 @@ def candidate_client(tmp_path, monkeypatch):
     assert len(builders) == 44
 
     app = Flask(__name__)
+    # Match the approved loopback workspace configuration. Keep the real
+    # permission gate enabled; this flag grants only its bounded read policy.
+    app.config["LUMENIS_OPEN_WORKSPACE"] = True
     experience_runtime.register_experience_runtime(app)
     return app.test_client(), src_before, sidecars_before
 

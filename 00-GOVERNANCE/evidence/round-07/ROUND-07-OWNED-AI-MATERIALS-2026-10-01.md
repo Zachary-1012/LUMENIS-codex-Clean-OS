@@ -5,6 +5,32 @@ Base: `88ed522f00c996982010b9abfc232a17cfefe710`, fetched and verified on
 existing Collector intake. Unknown `work/`, source data, old artifacts and
 user model configuration are protected. No new owner or acceptance round.
 
+## Hosted follow-up — App PASS and final Product fixture at dacbd465
+
+Exact tested source: `dacbd465ad26bd8236b4ab2191d77e496967701e`.
+App run `36821499154` completed successfully, including actual Dart analysis
+and Flutter tests. Product run `36821495539` executed all 374 hermetic test
+files and ended with five errors in `test_experience_e2e_candidate.py` due to
+its obsolete root `permission_gate` import. This is not a quota failure.
+
+The fixture now imports `lumenis.system.security.permission` and uses the
+approved `LUMENIS_OPEN_WORKSPACE` loopback read configuration. Real Permission
+remains enabled: ANALYZE, denied WRITE, permanent-denied PUSH, all 44 screens,
+null-versus-zero and source-immutability assertions remain. A first retry
+identified the missing workspace configuration (four PASS, one FAIL); after
+aligning it, candidate plus local-workspace Permission tests passed 32 tests,
+exit 0, on the edited snapshot. JUnit: `lumenis-candidate-gate-dacbd465.xml`
+in the local temporary directory. The synthetic CI seed proves integration,
+not actual business data or real-user acceptance.
+
+The running app was reloaded by stopping only its verified Core child process;
+the existing supervisor stayed alive and restarted Core PID 34676. The 8201
+health endpoint reported healthy with database OK. No migration, production
+data replacement, browser operation or model activation occurred.
+
+Same-SHA hosted acceptance requires a fresh Product and App run of this fixture
+repair. Owned reasoning/useful outcomes and final human acceptance remain open.
+
 ## Hosted follow-up — full test execution at 56328436
 
 Product `36818595409` and App `36818599237` both executed at
