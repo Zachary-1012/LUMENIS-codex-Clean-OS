@@ -12,6 +12,23 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — exact owned-candidate held-out evaluation
+
+At base fd38f1866d4425986308ba59afd2057073228303, the existing AI Gateway
+now binds held-out requests and final-output review packets to the pinned
+model, recipe, datasets and adapter/config hashes. It rejects untrained or
+changed candidates and split overlap. Harmony completion uses the explicitly
+configured return/fim_suffix token; final-to-analysis channel changes are
+rejected, and only final text plus the raw-output hash enter the packet.
+Citation presence is structural evidence, not factual grounding. Every business
+criterion remains PENDING, every candidate NOT_ACCEPTED/NOT_PROMOTED, and the
+caller-supplied inference runtime is not independently verified by this helper.
+Isolated affected suites and publication gates are recorded in the existing
+[ROUND07 owned-AI proof](evidence/round-07/ROUND-07-OWNED-AI-MATERIALS-2026-10-01.md).
+No model call, production DB write, real business training or promotion occurs
+in this source Batch. Useful CTH/BMP inference, actual execution resume,
+deployment and final user acceptance remain open; release/coverage unchanged.
+
 ### 2026-10-01 — explicit target/rights review submission
 
 At base69cfe6d8b820dc7efb93d05b415e1bd0ca3fdb94, Shared Learning now

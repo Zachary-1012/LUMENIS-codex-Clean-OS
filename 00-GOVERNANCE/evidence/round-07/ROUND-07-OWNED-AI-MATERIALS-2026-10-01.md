@@ -843,6 +843,37 @@ these as rejected candidates, never positive targets. A separately authored
 correction proposal remains REVIEW_CANDIDATE_NOT_ADMITTED/training_eligible=False.
 No original article body, private DB/repository or credentials were uploaded.
 
+## Exact held-out candidate evaluation — 2026-10-01
+
+Base HEAD/origin/main fd38f1866d4425986308ba59afd2057073228303. Existing
+SYSTEM AI Gateway owns `owned_evaluation.py`; no provider, store or promotion
+owner was introduced. It reuses owned-training preflight, dataset validation
+and identity pinning, verifies the trained state and adapter/config hashes,
+then passes only held-out user messages to the caller's inference function.
+Train/held-out separation, exact CTH/BMP scope, source references and artifact
+identity remain in every review packet; changed input/artifacts are rejected.
+
+Harmony final headers and actual configured return/fim_suffix termination are
+required. Plain output requires explicit final-channel-prefill metadata;
+truncation, tool/end tokens and any final-to-analysis channel transition fail.
+Private reasoning is not stored, only final text and a raw-output digest.
+Citation presence does not prove entailment, and seven business criteria remain
+PENDING. Every candidate is NOT_ACCEPTED/NOT_PROMOTED; runtime locality is
+CALLER_SUPPLIED_NOT_INDEPENDENTLY_VERIFIED. Isolated callbacks are test doubles,
+not real inference. The evaluator and three affected training/Permission suites
+passed84 tests in9.37 seconds with no thread leaks. Constitution and the existing
+takeover governance publication gates are required before this Batch is merged.
+
+REAL DELIVERY CARD / 真实用户工作闭环验收: ENTRY is the existing Gateway evaluator;
+REAL INPUT is an isolated pinned candidate and disjoint reviewed test records;
+USER-VISIBLE RESULT is a structured review packet; FAILURE/RECOVERY rejects
+tampering, incomplete generation and channel leakage. ACCEPTANCE ASSERTION is
+TESTED source only, not useful CTH/BMP output or ROUND07/J7 PASS. CONTINUOUS
+FRONTIER RESEARCH / CAPABILITY EVOLUTION: ADAPT the observed GPTOSS Harmony
+termination contract without turning completion into correctness. GLOBAL
+UNIVERSE / DATA MATURITY IMPACT and COMMERCIAL OVERLAY IMPACT stay unchanged:
+Commercial/Brand coverage NO, Taikoo PARTIAL; RELEASED/OPERATING/COMMERCIAL_READY NO.
+
 REAL DELIVERY CARD / 真实用户工作闭环验收: ENTRY is the existing Learning exporter
 and independent notebook; REAL INPUT is isolated signed test Evidence plus
 public arithmetic/brand-authored factual material. USER-VISIBLE RESULT is
