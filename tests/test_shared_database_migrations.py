@@ -163,7 +163,7 @@ def test_migrate_only_bootstraps_empty_database_through_canonical_owners(
             } == owner_contract
             assert owner_indexes[table] <= _index_names(conn, table)
 
-    expected_version = 18
+    expected_version = 19
     assert migrations.CURRENT_VERSION == expected_version
     assert version == expected_version
     assert numeric_history == list(range(1, expected_version + 1))
@@ -239,7 +239,7 @@ def test_existing_versioned_data_and_null_semantics_are_preserved(
         None,
         None,
     )
-    assert numeric_history == [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+    assert numeric_history == [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 
 
 def test_failed_migration_step_rolls_back_data_and_version(tmp_path, monkeypatch):

@@ -196,7 +196,7 @@ def resolve_local_workspace_principal(
     """Resolve the fixed workspace principal from the current server request."""
     if (
         type(module) is not str
-        or module not in {"content", "reports"}
+        or module not in {"content", "reports", "cases"}
         or type(action) is not str
         or action not in _RESOURCE_SCOPE_ACTIONS
     ):
@@ -265,6 +265,7 @@ class OperationType(str, Enum):
     DATA_EXPORT = "data_export"                  # 数据导出
     REPORT_GENERATE = "report_generate"          # 报告生成
     REPORT_REVIEW = "report_review"              # 既有报告的追加审核意见
+    CTH_CASE_CREATE = "cth_case_create"           # 只登记有来源的内部工作 Case
     SKILL_EXECUTE = "skill_execute"              # Skill 执行
     BROWSER_OPERATION = "browser_operation"      # 浏览器操作
     EXTERNAL_NETWORK = "external_network"        # 外部网络请求
@@ -304,6 +305,9 @@ _OPERATION_REGISTRY: Dict[OperationType, OperationSpec] = {
     OperationType.REPORT_REVIEW: OperationSpec(
         PermissionLevel.VERIFY, RiskLevel.MEDIUM,
         "追加指定报告的审核意见，不改原产物/源事实，不发布或执行建议", auto_allow=True),
+    OperationType.CTH_CASE_CREATE: OperationSpec(
+        PermissionLevel.VERIFY, RiskLevel.MEDIUM,
+        "登记有来源的内部CTH工作Case，不修改源事实、不执行Action或外部发布", auto_allow=True),
 
     # ── 中风险 / 写操作类 ──
     OperationType.FILE_WRITE: OperationSpec(
@@ -776,7 +780,8 @@ def check_local_workspace_scope_permission(
 
     valid_request = (
         domain_config is not None
-        and module_value in {"content", "reports"}
+        and module_value in {"content", "reports", "cases"}
+        and (module_value != "cases" or normalized_domain == "cth")
         and action_value in _RESOURCE_SCOPE_ACTIONS
         and type(global_scope) is bool
         and valid_scope_form

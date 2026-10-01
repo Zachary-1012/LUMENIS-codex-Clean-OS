@@ -12,6 +12,35 @@ LIVE / RELEASED / OPERATING claims.
 
 ## 0. Online reader's current-state snapshot
 
+### 2026-10-01 — real CTH Case persists with exact sources and restart recovery
+
+The existing CTH application owner now exposes focused Case create/reopen APIs,
+using Shared Database v19 and the existing signed Evidence store. Case and its
+creation trace commit atomically. Permission is rechecked at the write sink after
+lock acquisition; retries are NOOP, conflicts never overwrite, and archived or
+foreign Subjects cannot access the Case. Product login design remains deferred.
+
+The final source candidate passed150 isolated owner/neighbor tests in48.200s,
+zero failures/errors/skips, exit0; AST, Constitution and database-authority checks
+passed. Existing advisory findings remain9MEDIUM/11INFO, not a clean security claim.
+Clone migration18→19, second NOOP, backup restore and the actual additive migration
+preserved all112 pre-existing non-version tables; integrityok/FK0.
+
+Real Taikoo Hui job `brief-350d84ee6a4b4519ab8815837a49b997` created Case
+`CASE-c8f477f099e7a0d61880dce7563411cc`, signed creation Evidence444, with three
+exact official-source references139/138/121. Reopen/retry succeeded; Luohu and
+GLOBAL read/write were denied403; conflicting intent was rejected400. Source
+Evidence, Canonical, Registry, reports, relations and evaluations stayed unchanged.
+After a second controlled Core restart, workers8600/35596 were healthy under
+Supervisor19440 and the same Case reopened without duplicate records.
+
+This is an automated real-data engineering replay: Case OPEN,
+analysis NOT_REQUESTED, business Outcome NOT_OBSERVED. CTH-08 board binding,
+useful owned reasoning, Insight/Decision/Action/Outcome and final human acceptance
+remain open. ROUND11 is not accepted. Details and the API contract are in
+[ROUND11 Case evidence](evidence/round-11/ROUND-11-CTH-CASE-PERSISTENCE-2026-10-01.md).
+Hosted PASS below remains pinned to038fe598 and does not cover this newer source.
+
 ### 2026-10-01 — exact public directory links restored in real CTH source brief
 
 Reporting now preserves a single literal numeric `page` / `p` query parameter

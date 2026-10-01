@@ -98,7 +98,7 @@ After bootstrap, locate work here. Root-level compatibility callers remain class
 | Flutter operational surfaces | `app/lib/product/`, `app/lib/shell/`, `app/lib/features/` | Flutter Web Workspace, Desktop and Mobile targets; `app/lib/core/`; matching `app/test/`; `app/README.md` |
 | Screen truth binding | `contracts/experience/lumenis_app_binding_registry.json`; `contracts/experience/screens/<SCREEN-ID>/` | `actions/`, `permissions/`, `evidence/`, `states/`, `viewmodels/`; current API owner and tests |
 | Product Core composition/API | `app.py`; `lumenis_app_api.py`; current registered routes | `experience_runtime.py`; `experience_screens.py`; exact route/service/repository tests |
-| CTH/BMP business callers | Current root/domain modules such as `subject_context.py`, `subject_registry.py`, `api_dual_domain.py`, campaign/brand/event/case/risk modules | Trace each caller to its actual data, Permission, Evidence and test owner before moving or renaming it |
+| CTH/BMP business callers | Current root/domain modules such as `subject_context.py`, `subject_registry.py`, `api_dual_domain.py`, `cth_cases.py`, campaign/brand/event/case/risk modules | Trace each caller to its actual data, Permission, Evidence and test owner before moving or renaming it |
 | Shared Evidence | `lumenis/shared/evidence/` | Evidence APIs, migrations, lineage and affected domain tests |
 | Shared Database | `lumenis/shared/database/` | `data/monitor.db` contract, migrations and isolated persistence tests |
 | Schema/migrations | Shared Database migration owner; existing `migrations/`/Alembic paths | Schema callers, rollback/compatibility and isolated migration tests; never mutate the protected runtime DB merely to classify a file |

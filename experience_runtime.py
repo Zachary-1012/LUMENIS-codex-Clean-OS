@@ -983,13 +983,13 @@ def _content_project_error(exc):
     return jsonify({"ok": False, "code": code, "publish_status": "not_performed"}), status
 
 
-def _source_brief_context(action, *, include_actor=False):
+def _source_brief_context(action, *, include_actor=False, module="reports"):
     """Bind reporting to the same server principal, registry and scope as work."""
     from lumenis.shared.database import get_repository
     from subject_registry import TABLE_NAME
 
     actor, scope, decision = _content_project_scope(
-        action, module="reports", include_decision=True,
+        action, module=module, include_decision=True,
     )
     label = "全球商业" if scope["domain_id"] == "cth" else "全球品牌"
     if not scope["global_scope"]:
@@ -1156,6 +1156,59 @@ def submit_source_brief_review(job_id):
         return _source_brief_job_error(exc)
     except Exception:
         return jsonify({"ok": False, "code": "SOURCE_BRIEF_REVIEW_UNAVAILABLE"}), 503
+
+
+@experience_bp.route("/api/experience/cth/cases", methods=["POST"])
+def create_cth_work_case():
+    from cth_cases import create_cth_case
+    from lumenis.shared.reporting.source_brief_job import _scope_material
+    from lumenis.system.security import get_permission_gate, OperationType
+
+    try:
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or set(body) != {
+            "submission_id", "title", "question", "source_job_id", "source_ids",
+        }:
+            raise ValueError("CTH_CASE_INPUT_INVALID")
+        actor_ref, _, scope = _source_brief_context("write", module="cases")
+        expected = _scope_material(**scope)
+
+        def authorize():
+            current_ref, audit_ref, current_scope = _source_brief_context("write", module="cases")
+            if current_ref != actor_ref or current_scope != scope:
+                raise PermissionError("CTH_CASE_CONTEXT_CHANGED")
+            resource = "cth:" + (scope["subject_id"] or "GLOBAL_ALL")
+            allowed = get_permission_gate().check(
+                OperationType.CTH_CASE_CREATE, resource=resource, caller=actor_ref, domain_id="cth",
+            )
+            if (not allowed.allowed or not allowed.audit_id or allowed.resource != resource
+                    or allowed.caller != actor_ref or allowed.domain_id != "cth"):
+                raise PermissionError("CTH_CASE_CREATE_DENIED")
+            return {"permission_audit_ref": audit_ref, "operation_audit_ref": allowed.audit_id}
+
+        result = create_cth_case(actor_ref=actor_ref, expected_scope=expected, authorize=authorize, **body)
+        return jsonify({"ok": True, "result": result, "publish_status": "not_performed"})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "CTH_CASE_UNAVAILABLE"}), 503
+
+
+@experience_bp.route("/api/experience/cth/cases/<case_id>", methods=["GET"])
+def reopen_cth_work_case(case_id):
+    from cth_cases import get_cth_case
+    from lumenis.shared.reporting.source_brief_job import _scope_material
+
+    try:
+        if not re.fullmatch(r"CASE-[0-9a-f]{32}", case_id):
+            raise ValueError("CTH_CASE_ID_INVALID")
+        actor_ref, _, scope = _source_brief_context("read", module="cases")
+        result = get_cth_case(case_id, actor_ref=actor_ref, expected_scope=_scope_material(**scope))
+        return jsonify({"ok": True, "result": result, "publish_status": "not_performed"})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "CTH_CASE_UNAVAILABLE"}), 503
 
 
 def _report_task_authorize(actor_ref, scope):

@@ -1412,6 +1412,8 @@ def _pg_resolve_operation_type(path, method):
     # writes to a platform account and never publishes.
     if p == '/api/experience/cth/platform-collection/search' and method == 'POST':
         return OperationType.COLLECTOR_START
+    if p == '/api/experience/cth/cases' and method == 'POST':
+        return OperationType.CTH_CASE_CREATE
     # 1. 删除类（最高风险）
     if method == 'DELETE' or '/delete' in p or '/revoke' in p:
         return OperationType.DATA_DELETE

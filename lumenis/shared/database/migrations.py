@@ -52,7 +52,7 @@ DB_PATH = main_db_path()
 BACKUP_DIR = os.path.join(os.path.dirname(DB_PATH), 'backups')
 
 # 当前最新版本
-CURRENT_VERSION = 18
+CURRENT_VERSION = 19
 
 # 迁移历史记录
 MIGRATION_HISTORY = {
@@ -74,6 +74,7 @@ MIGRATION_HISTORY = {
     16: "Content Evidence source references, parent cleanup, and query indexes",
     17: "Add nullable full-record integrity metadata to canonical Evidence records",
     18: "Add Evidence-backed exact country relations and source-specific venue tenant assertions",
+    19: "Add canonical CTH Case storage with Subject and Evidence references",
 }
 
 
@@ -730,6 +731,13 @@ def migration_17_to_18(conn: sqlite3.Connection):
     ensure_entity_relation_schema(conn)
 
 
+def migration_18_to_19(conn: sqlite3.Connection):
+    """Add canonical CTH Case storage through the Shared Database owner."""
+    from .cth_cases import ensure_cth_case_schema
+
+    ensure_cth_case_schema(conn)
+
+
 def _ensure_migration_prerequisites(
     conn, current_version: int, target_version: int
 ) -> int:
@@ -869,6 +877,7 @@ MIGRATIONS = {
     15: migration_15_to_16,
     16: migration_16_to_17,
     17: migration_17_to_18,
+    18: migration_18_to_19,
 }
 
 
