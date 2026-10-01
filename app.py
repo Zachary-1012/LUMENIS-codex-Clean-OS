@@ -1421,6 +1421,11 @@ def _pg_resolve_operation_type(path, method):
             return OperationType.COLLECTOR_STOP
         return OperationType.COLLECTOR_START
     # 3. 报告生成
+    if (method == 'POST' and p.startswith('/api/experience/reports/source-brief/jobs/')
+            and p.endswith('/reviews') and len(p.split('/')) == 8):
+        # Append-only, artifact-bound operator disposition; route rechecks exact
+        # scope and this operation. General review/DB writes stay high risk.
+        return OperationType.REPORT_REVIEW
     if method == 'POST' and (
         p == '/api/experience/reports/source-brief/start'
         or (p.startswith('/api/experience/reports/source-brief/tasks/rbrief_') and p.endswith('/resume'))

@@ -259,6 +259,7 @@ def _quality_reviews(verified: dict[str, Any]) -> dict[str, Any]:
 
 
 def _response(verified: dict[str, Any], evaluations: list[dict[str, Any]]) -> dict[str, Any]:
+    from .operator_review import read_operator_reviews
     row, snapshot, brief = verified["row"], verified["snapshot"], verified["source_brief"]
     return {
         "job_id": snapshot["job_id"], "job_state": "completed",
@@ -270,6 +271,7 @@ def _response(verified: dict[str, Any], evaluations: list[dict[str, Any]]) -> di
         "business_analysis": snapshot.get("business_analysis", {"state": "not_requested"}),
         "business_question": snapshot.get("business_question"),
         "requested_source_ids": snapshot.get("requested_source_ids"),
+        "operator_review": read_operator_reviews(verified),
         "evaluation": {"state": "recorded", "records": evaluations,
                        "quality_review": _quality_reviews(verified)},
         "requested_image_source_ref": snapshot.get("requested_image_source_ref"),

@@ -264,6 +264,7 @@ class OperationType(str, Enum):
     DATA_IMPORT = "data_import"                  # 数据导入
     DATA_EXPORT = "data_export"                  # 数据导出
     REPORT_GENERATE = "report_generate"          # 报告生成
+    REPORT_REVIEW = "report_review"              # 既有报告的追加审核意见
     SKILL_EXECUTE = "skill_execute"              # Skill 执行
     BROWSER_OPERATION = "browser_operation"      # 浏览器操作
     EXTERNAL_NETWORK = "external_network"        # 外部网络请求
@@ -300,6 +301,9 @@ _OPERATION_REGISTRY: Dict[OperationType, OperationSpec] = {
     OperationType.REPORT_GENERATE: OperationSpec(
         PermissionLevel.ANALYZE, RiskLevel.LOW,
         "报告生成（只读聚合，不修改源数据）", auto_allow=True),
+    OperationType.REPORT_REVIEW: OperationSpec(
+        PermissionLevel.VERIFY, RiskLevel.MEDIUM,
+        "追加指定报告的审核意见，不改原产物/源事实，不发布或执行建议", auto_allow=True),
 
     # ── 中风险 / 写操作类 ──
     OperationType.FILE_WRITE: OperationSpec(

@@ -1121,6 +1121,43 @@ def reopen_source_brief_job(job_id):
         return jsonify({"ok": False, "code": "SOURCE_BRIEF_JOB_UNAVAILABLE"}), 503
 
 
+@experience_bp.route("/api/experience/reports/source-brief/jobs/<job_id>/reviews", methods=["POST"])
+def submit_source_brief_review(job_id):
+    from lumenis.shared.reporting.operator_review import write_operator_review
+    from lumenis.shared.reporting.source_brief_job import _scope_material
+    from lumenis.system.security import get_permission_gate, OperationType
+
+    try:
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or set(body) != {"submission_id", "decision", "notes"}:
+            raise ValueError("SOURCE_BRIEF_REVIEW_INPUT_INVALID")
+        actor_ref, _, scope = _source_brief_context("write")
+        expected = _scope_material(**scope)
+
+        def authorize():
+            current_ref, audit_ref, current_scope = _source_brief_context("write")
+            if current_ref != actor_ref or current_scope != scope:
+                raise PermissionError("SOURCE_BRIEF_REVIEW_SCOPE_DENIED")
+            domain = expected["domain_id"]
+            resource = domain + ":" + (scope["subject_id"] or scope["brand_focus_id"] or "GLOBAL_ALL")
+            allowed = get_permission_gate().check(
+                OperationType.REPORT_REVIEW, resource=resource, caller=actor_ref, domain_id=domain,
+            )
+            if (not allowed.allowed or not allowed.audit_id or allowed.resource != resource
+                    or allowed.caller != actor_ref or allowed.domain_id != domain):
+                raise PermissionError("SOURCE_BRIEF_REVIEW_DENIED")
+            return {"actor_id": actor_ref, "scope": expected, "permission_audit_ref": audit_ref,
+                    "operation_audit_ref": allowed.audit_id}
+
+        review = write_operator_review(job_id, actor_id=actor_ref, expected_scope=expected,
+                                       authorize=authorize, **body)
+        return jsonify({"ok": True, "review": review, "publish_status": "not_performed"})
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        return _source_brief_job_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "SOURCE_BRIEF_REVIEW_UNAVAILABLE"}), 503
+
+
 def _report_task_authorize(actor_ref, scope):
     """Revalidate the actual request on admission, execution and artifact commit."""
     from lumenis.system.security import get_permission_gate, OperationType

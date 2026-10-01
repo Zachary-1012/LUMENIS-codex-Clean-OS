@@ -2335,3 +2335,26 @@ operator report review write/recovery through Reporting/Evidence/Evaluation;
 generation alone has no user disposition or observed-business-Outcome route.
 Frontend remains paused; no hosted rerun, product hosting or independent
 inference claim. Codex Cloud remains development infrastructure only.
+
+### 2026-10-01 — signed report dispositions, replay and recovery
+
+The existing Reporting owner now accepts append-only, exact-artifact operator
+dispositions through a dedicated REPORT_REVIEW Permission operation. All three
+choices stay derived/RECORDED; they cannot publish, execute a proposal, change
+source truth or assert observed business outcome. Report/task reads expose a
+separate review history; missing Evaluation is pending_recovery with same-input
+retry. General database write approval is unchanged. 104 isolated targeted tests
+passed (28.39s, exit0), plus compile/Constitution/diff checks.
+
+Actual Nike job `brief-ca26452b7adb4ffdbc9a8fcd263e81f0` received engineering
+request_changes (not Product Owner acceptance) as signed Evidence438 and an
+unknown/unscored Evaluation. Duplicate replay, wrong-scope403, conflict400 and
+Core crash/restart readback passed. Raw270/Canonical270/reports44 match backup
+row digests; evaluations110, integrityok/FK0. Full evidence:
+`evidence/round-07/ROUND-07-OPERATOR-REVIEW-2026-10-01.md`.
+This closes a backend review/recovery gap, not Round07/Outcome/UI/user acceptance.
+Frontend remains paused and final repeated user review belongs to the Product
+Owner. Codex Cloud is only the development environment, not product hosting or
+owned-AI deployment; hosted gate and independent AI remain unaccepted. Next
+Reporting gap is using saved review in a source-grounded revision, not another
+unbounded model/prompt experiment or fabricated business-success score.
