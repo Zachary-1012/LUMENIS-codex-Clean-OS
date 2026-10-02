@@ -156,6 +156,66 @@ def test_acceptance_profile_suppresses_all_app_automations(monkeypatch):
 _original_import = builtins.__import__
 
 
+def test_ordinary_startup_does_not_run_retired_inference_heartbeat(monkeypatch):
+    import intelligence
+    from lumenis.system.ai_gateway import channel
+
+    calls = []
+    monkeypatch.setattr(app, 'INTERNAL_BETA_SAFE_STARTUP', False)
+    monkeypatch.setattr(app, 'INTERNAL_BETA_ACCEPTANCE', False)
+    monkeypatch.setattr(app, 'INTERNAL_BETA_WORKSPACE_CONTEXT_ACCEPTANCE', False)
+    monkeypatch.setattr(
+        app.memory_optimizer, 'get_memory_optimizer',
+        lambda: SimpleNamespace(start_monitoring=lambda: None),
+    )
+    monkeypatch.setattr(
+        app.stability_monitor, 'get_stability_monitor',
+        lambda: SimpleNamespace(start_monitoring=lambda: None),
+    )
+    monkeypatch.setattr(
+        intelligence, '_chat',
+        lambda *_args, **_kwargs: calls.append('inference') or ('ok', 'retired'),
+    )
+    # Exercise any registered heartbeat once without starting a background thread
+    # or contacting a provider. A safe metadata-only heartbeat may still register.
+    monkeypatch.setattr(channel, 'start_health_monitor', lambda probe, **_kwargs: probe())
+
+    assert app._start_app_automations(SimpleNamespace(
+        no_scheduler=True, internal_beta_acceptance=False,
+        internal_beta_workspace_context_acceptance=False,
+    )) is True
+    assert calls == []
+
+
+def test_ordinary_startup_cdp_status_uses_approved_collection_account(monkeypatch):
+    import cdp_helper
+    import logging
+
+    ports = []
+    monkeypatch.setattr(app, 'INTERNAL_BETA_SAFE_STARTUP', False)
+    monkeypatch.setattr(app, 'logging', logging, raising=False)
+    monkeypatch.setenv('ZBC_GUARDIAN_ENABLED', '0')
+    monkeypatch.setattr(app.runtime_preflight, 'run_preflight', lambda: {})
+    monkeypatch.setattr(app.runtime_preflight, 'format_summary', lambda _report: '')
+    monkeypatch.setattr(
+        cdp_helper, 'get_cdp_status',
+        lambda port=cdp_helper.DEFAULT_CDP_PORT: ports.append(port) or {'available': False},
+    )
+    monkeypatch.setattr(
+        app.threading, 'Thread',
+        lambda **_kwargs: SimpleNamespace(start=lambda: None),
+    )
+    # The startup helper installs hooks; retain their real prior values on exit.
+    monkeypatch.setattr(app.sys, 'excepthook', app.sys.excepthook)
+    monkeypatch.setattr(app.threading, 'excepthook', app.threading.excepthook)
+
+    assert app._start_optional_runtime_services(False) is True
+    assert ports == [app.xhs_cookie_bridge.cdp_port_for(
+        app.xhs_cookie_bridge.DEFAULT_COLLECTION_ACCOUNT,
+    )]
+    assert 9222 not in ports
+
+
 def test_automatic_collection_startup_is_manual_without_full_opt_in(monkeypatch):
     for name in (
         'REDNOTE_AUTO_RUN', 'REDNOTE_AUTO_SCOPE', 'REDNOTE_AUTO_SOURCE',

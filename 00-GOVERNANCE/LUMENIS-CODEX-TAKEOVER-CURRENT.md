@@ -28,12 +28,12 @@ must be recorded from dispatch results, never inferred from authorization alone.
 
 | Round / window | Placement | Scope | Current acceptance / execution |
 |---|---|---|---|
-| C1 / W1 | LOCAL | Data, Collector, Browser, exact entities/relations, freshness and maintenance | PARTIAL ASSETS / NOT ACCEPTED; AUTHORIZED FOR DISPATCH |
-| C2 / W2 | LOCAL + approved training resources | Owned AI, Agent, Skills, Memory, multimodal, Evaluation/Learning | PARTIAL ASSETS / NOT ACCEPTED; AUTHORIZED FOR DISPATCH |
-| C3 / W3 | CODEX CLOUD | Real CTH/BMP business workflows and outcomes | PARTIAL ASSETS / NOT ACCEPTED; AUTHORIZED FOR DISPATCH |
-| C4 / W4 | LOCAL | Original pitches/general creation, video and podcast | PARTIAL ASSETS / NOT ACCEPTED; AUTHORIZED FOR DISPATCH |
-| C5 / W5 | CODEX CLOUD | Importer, Research, library, Reporting and Artifact services | PARTIAL ASSETS / NOT ACCEPTED; AUTHORIZED FOR DISPATCH |
-| C6 / W6 | LOCAL | Integration, actual DB coordination, runtime, recovery, packaging and release | PARTIAL ASSETS / NOT ACCEPTED; AUTHORIZED FOR DISPATCH |
+| C1 / W1 | LOCAL | Data, Collector, Browser, exact entities/relations, freshness and maintenance | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
+| C2 / W2 | LOCAL + approved training resources | Owned AI, Agent, Skills, Memory, multimodal, Evaluation/Learning | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
+| C3 / W3 | CODEX CLOUD | Real CTH/BMP business workflows and outcomes | ACTIVE on pinned snapshot; PARTIAL ASSETS / NOT ACCEPTED |
+| C4 / W4 | LOCAL | Original pitches/general creation, video and podcast | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
+| C5 / W5 | CODEX CLOUD | Importer, Research, library, Reporting and Artifact services | DISPATCH_BLOCKED / CLOUD_TASK_ROOT_BINDING_MISSING; NOT ACCEPTED |
+| C6 / W6 | LOCAL | Integration, actual DB coordination, runtime, recovery, packaging and release | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
 
 Frontend F owns `app/` and `website/`, follows the sole Experience Constitution
 and screen-specific `DESIGN_READY`, and joins each round's real workflow. M owns
@@ -42,6 +42,30 @@ publishes accepted exact patches; cloud workers do not concurrently push main.
 W5/W6 contribute from the start. Sufficient real materials unblock CTH/BMP work
 without waiting for the whole entity directory; limited job success never proves
 global coverage. Recovery is verified within each job, then across the product.
+
+Execution snapshot 2026-10-02: compact actual thread status confirms W1/W2/W3/W4/F
+in progress; W6 is executing its integration card. M confirmed W5 dispatch is blocked
+because the formal Cloud task entry returned `Unable to determine project root for task`;
+W5 is not counted as started. Other authorized windows continue. F is active; M has approved the bounded
+2026-10-02 Website Brief refinement as DESIGN_READY, not accepted implementation.
+Protected candidates keep the owner assignment below. W6's full working card is
+`work/w6-integration-20261002/TASK-CARD.md`; ongoing bounded runtime evidence stays
+in the existing ROUND 05 supervisor record. The canonical launcher restored Core8201
+on 2026-10-02; a fresh GET /healthz returned healthy/database=ok and the supervisor
+recorded running with child PID 21764, restarts=0. This is the local candidate loaded
+at startup, not proof that later source edits are running or that a business job passed.
+No product outcome, production coverage or release is promoted by this snapshot.
+
+M accepted the bounded C6/W6 lifecycle outcome on 2026-10-02 after reviewing its
+exact four code/test files, stable 39-test regression and actual disposable-Core
+recovery/stop evidence. Its source and the owning
+[Round 05 evidence](evidence/round-05/ROUND-05-J8-SUPERVISOR-LIFECYCLE-2026-10-02.md)
+are one publication unit in the containing commit, subject to required final gates
+and post-push remote verification. Scoped Codex Security review is sealed with no
+confirmed finding; its exact coverage and limitations are in the owning evidence.
+Other local candidates are excluded. This is
+bounded runtime acceptance; full C6, useful business results, owned AI, four-surface
+operation, release and commercial readiness remain unaccepted.
 
 ### Current decisions, limits and evidence
 
@@ -71,9 +95,11 @@ global coverage. Recovery is verified within each job, then across the product.
   podcast runtime, pitch export → W4; owned inference/tests → W2; supervisor
   lifecycle evidence → W6; Website Brief → F. Reconcile each exact base/diff/test
   result once, then integrate through W6.
-- Native Goal is active for the complete approved C1–C6 product outcome and its
-  retained R/J/urgent exits. It remains unfinished until current evidence proves
-  every required exit; a turn ending or window result does not redefine success.
+- Native Goal remains active. Its immutable original J8 text predates the explicit
+  C1–C6 resume; the complete current C6 objective and retained R/J/urgent exits are
+  preserved in W6's Task Card. The superseded restrictions in that old Goal text
+  do not revoke current PO/M authority. It remains unfinished until current evidence
+  proves every required exit; a turn ending or window result does not redefine success.
 - Execution efficiency: no repeated full-repository discovery or unrelated test
   cycles. Capture one failure, research its exact owner and current authoritative
   solution, repair it, then run affected verification and mandatory blocking gates.

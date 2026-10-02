@@ -15,6 +15,7 @@
 监督器自身需以“脱离会话的独立常驻进程”方式启动（pythonw + Start-Process / 计划任务 / 启动项），
 不依赖任何交互式 shell，否则会话结束监督器会被一并回收。
 """
+import errno
 import os
 import subprocess
 import sys
@@ -22,13 +23,13 @@ import time
 import json
 import signal
 import socket
+import threading
 import urllib.request
 from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 LOG_DIR = ROOT / 'logs'
-LOG_DIR.mkdir(exist_ok=True)
 LOG_FILE = LOG_DIR / 'supervisor.log'
 STATE_FILE = ROOT / 'data' / 'supervisor_state.json'
 APP_OUT = LOG_DIR / 'supervised_app.out'
@@ -41,6 +42,8 @@ FAST_CRASH_WINDOW = 60
 FAST_CRASH_LIMIT = 5
 FAST_CRASH_COOLDOWN = 60
 MAX_BACKOFF = 300
+CHILD_SHUTDOWN_TIMEOUT = 10
+LOCK_CONTENTION_ERRNOS = {errno.EACCES, errno.EAGAIN, errno.EDEADLK}
 
 
 def _pid_alive(pid):
@@ -61,6 +64,7 @@ def log(msg):
     line = f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {msg}'
     print(line, flush=True)
     try:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
         with open(LOG_FILE, 'a', encoding='utf-8') as f:
             f.write(line + '\n')
     except Exception:
@@ -73,8 +77,9 @@ def write_state(**kw):
         kw['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         with open(STATE_FILE, 'w', encoding='utf-8') as f:
             json.dump(kw, f, ensure_ascii=False, indent=2)
+        return True
     except Exception:
-        pass
+        return False
 
 
 def http_health(port, timeout=3):
@@ -104,25 +109,126 @@ def port_listening(port):
         s.close()
 
 
-def kill_tree(pid):
-    """Windows 下杀整棵进程树（父+multiprocessing worker），避免残留假活父进程。"""
+def kill_tree(proc, timeout=CHILD_SHUTDOWN_TIMEOUT):
+    """终止由本监督器启动的子进程树，并确认根子进程已退出。"""
+    if proc is None:
+        return True
     try:
-        subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'],
-                       capture_output=True, creationflags=0x08000000)  # CREATE_NO_WINDOW
-        log(f'已杀进程树 PID={pid}')
+        if proc.poll() is not None:
+            proc.wait(timeout=0)
+            return True
+
+        if sys.platform == 'win32':
+            result = subprocess.run(
+                ['taskkill', '/PID', str(proc.pid), '/T', '/F'],
+                capture_output=True, creationflags=0x08000000, timeout=timeout,
+                check=False,
+            )  # CREATE_NO_WINDOW; scope is the child PID owned by this supervisor.
+            if result.returncode != 0:
+                try:
+                    proc.wait(timeout=timeout)
+                except subprocess.TimeoutExpired:
+                    pass
+                log(f'taskkill 未确认进程树退出 PID={proc.pid}, rc={result.returncode}')
+                return False
+        else:
+            # The supervisor itself requires the Windows msvcrt lock. This direct-child
+            # path keeps the helper testable on other platforms without scanning processes.
+            proc.terminate()
+
+        proc.wait(timeout=timeout)
+        if proc.poll() is None:
+            log(f'进程树停止后子进程仍存活 PID={proc.pid}')
+            return False
+        log(f'已确认子进程退出 PID={proc.pid}')
+        return True
+    except subprocess.TimeoutExpired:
+        try:
+            proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            pass
+        log(f'停止进程树超时 PID={proc.pid}')
+        return False
     except Exception as e:
-        log(f'杀进程树失败 PID={pid}: {e}')
+        try:
+            proc.wait(timeout=timeout)
+        except Exception:
+            pass
+        log(f'停止进程树失败 PID={proc.pid}: {e}')
+        return False
 
 
 def spawn(app, host, port):
-    out = open(APP_OUT, 'a', encoding='utf-8')
     creationflags = 0x08000000 if sys.platform == 'win32' else 0
-    proc = subprocess.Popen(
-        [sys.executable, '-u', app, '--host', host, '--port', str(port)],
-        cwd=str(ROOT), stdout=out, stderr=subprocess.STDOUT,
-        creationflags=creationflags,
+    APP_OUT.parent.mkdir(parents=True, exist_ok=True)
+    with open(APP_OUT, 'a', encoding='utf-8') as out:
+        return subprocess.Popen(
+            [sys.executable, '-u', app, '--host', host, '--port', str(port)],
+            cwd=str(ROOT), stdout=out, stderr=subprocess.STDOUT,
+            creationflags=creationflags,
+        )
+
+
+def _is_lock_contention(exc):
+    """Distinguish the expected nonblocking-lock collision from setup failures."""
+    return (
+        exc.errno in LOCK_CONTENTION_ERRNOS
+        or getattr(exc, 'winerror', None) == 33  # ERROR_LOCK_VIOLATION
     )
-    return proc
+
+
+def acquire_instance_lock(lock_path, port):
+    """Return the owned lock handle, or None only for a benign duplicate instance."""
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    import msvcrt  # Windows-only production supervisor lock.
+
+    handle = open(str(lock_path), 'a+', encoding='utf-8')
+    try:
+        # Windows locks only bytes that exist in the file, so reserve one byte first.
+        if handle.seek(0, 2) == 0:
+            handle.write(' ')
+            handle.flush()
+        handle.seek(0)
+        try:
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        except OSError as exc:
+            if _is_lock_contention(exc):
+                handle.close()
+                return None
+            raise
+
+        handle.seek(0)
+        handle.truncate()
+        handle.write(str(os.getpid()))
+        handle.flush()
+        return handle
+    except Exception:
+        try:
+            handle.close()
+        except Exception:
+            pass
+        raise
+
+
+def _release_instance_lock(handle):
+    if handle is None:
+        return True
+    try:
+        handle.close()
+        return True
+    except Exception as exc:
+        log(f'释放单实例锁失败: {exc}')
+        return False
+
+
+def _wait_or_stop(stop_event, is_stopping, timeout):
+    """Wait in bounded Event.wait slices so signal handling never takes a lock."""
+    remaining = max(0.0, float(timeout))
+    while remaining > 0 and not is_stopping():
+        interval = min(remaining, 1.0)
+        stop_event.wait(interval)
+        remaining -= interval
+    return is_stopping()
 
 
 def main():
@@ -133,50 +239,21 @@ def main():
     ap.add_argument('--port', default='8201')
     args = ap.parse_args()
 
-    # ===== 单实例保护：同一目标端口只允许一个监督器（OS 级文件锁，进程退出自动释放，杜绝双 supervisor 竞态）=====
+    # ===== 单实例保护：意外锁错误必须 fail closed；只有已持锁才作为重复实例正常退出 =====
     _lock = ROOT / 'data' / f'supervisor_{args.port}.lock'
-    _lock_handle = None
     try:
-        _lock.parent.mkdir(parents=True, exist_ok=True)
-        import msvcrt  # Windows 专属：进程级排他锁
-        # 打开(不删除)锁文件并加非阻塞排他锁；持锁进程退出后 OS 自动释放锁
-        _lock_handle = open(str(_lock), 'a+', encoding='utf-8')
-        try:
-            # 关键: 文件必须至少 1 字节, 否则 Windows 锁文件尾部之外区域不生效(导致双 supervisor 都能拿到锁)
-            if _lock_handle.seek(0, 2) == 0:
-                _lock_handle.write(' ')
-                _lock_handle.flush()
-            _lock_handle.seek(0)
-            msvcrt.locking(_lock_handle.fileno(), msvcrt.LK_NBLCK, 1)
-            _acquired = True
-        except OSError:
-            _acquired = False
-            try:
-                _lock_handle.close()
-            except Exception:
-                pass
-            _lock_handle = None
-        if _acquired:
-            _lock_handle.seek(0)
-            _lock_handle.truncate()
-            _lock_handle.write(str(os.getpid()))
-            _lock_handle.flush()
-            log(f'Supervisor 单实例锁写入 PID={os.getpid()} (port {args.port})')
-        else:
-            try:
-                _old = _lock.read_text().strip()
-            except Exception:
-                _old = ''
-            log(f'Supervisor 已存在(PID={_old or "?"}，端口 {args.port})，退出避免重复守护')
-            sys.exit(0)
+        _lock_handle = acquire_instance_lock(_lock, args.port)
     except Exception as _e:
-        log(f'单实例保护检查失败(继续启动): {_e}')
-        if _lock_handle is not None:
-            try:
-                _lock_handle.close()
-            except Exception:
-                pass
-            _lock_handle = None
+        log(f'单实例保护检查失败，拒绝启动: {_e}')
+        raise SystemExit(1)
+    if _lock_handle is None:
+        try:
+            _old = _lock.read_text().strip()
+        except Exception:
+            _old = ''
+        log(f'Supervisor 已存在(PID={_old or "?"}，端口 {args.port})，退出避免重复守护')
+        raise SystemExit(0)
+    log(f'Supervisor 单实例锁写入 PID={os.getpid()} (port {args.port})')
 
     # ===== 双重防线: 端口已被健康实例监听则退出（跨权限/跨进程可靠，防 HealthGuard 与手动启动时序错开产生双 supervisor）=====
     try:
@@ -200,105 +277,130 @@ def main():
         if not _can_bind:
             # 端口已被监听 = 已有实例在跑(可能 app 仍在启动中), 一律退出避免双实例; 僵尸场景由 HealthGuard ps1 清理
             log(f'端口 {args.port} 已被占用, 退出避免重复守护(既有实例由 supervisor/HealthGuard 管理)')
-            if _lock_handle is not None:
-                try:
-                    _lock_handle.close()
-                except Exception:
-                    pass
-            sys.exit(0)
+            if not _release_instance_lock(_lock_handle):
+                raise SystemExit(1)
+            raise SystemExit(0)
     except Exception as _e:
         log(f'端口健康检查异常(继续启动): {_e}')
 
+    stop_event = threading.Event()
     stopping = False
 
     def _sig(sig, frame):
+        # Keep signal handling to a plain flag assignment. Event.wait is checked
+        # in bounded slices below, avoiding locks inside the signal handler.
         nonlocal stopping
         stopping = True
-    signal.signal(signal.SIGINT, _sig)
-    if hasattr(signal, 'SIGTERM'):
-        signal.signal(signal.SIGTERM, _sig)
 
-    log(f'Supervisor 启动(常驻+健康探测)，目标: {sys.executable} {args.app} --host {args.host} --port {args.port}')
     crash_times = []
-    proc = spawn(args.app, args.host, args.port)
-    started = time.time()
-    health_fails = 0
-    last_health = 0.0
-    write_state(app=args.app, host=args.host, port=args.port,
-                started_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                restarts=0, status='starting', pid=proc.pid, fast_crashes=0)
-
-    while not stopping:
-        rc = proc.poll()
-
-        # —— 分支1：子进程真的退出了 ——
-        if rc is not None:
-            life = time.time() - started
-            log(f'!! {args.app} 退出，退出码={rc}，存活 {life:.1f}s')
-            now = time.time()
-            crash_times = [t for t in crash_times if now - t < FAST_CRASH_WINDOW]
-            crash_times.append(now)
-            backoff = 0
-            if len(crash_times) >= FAST_CRASH_LIMIT:
-                step = min(FAST_CRASH_COOLDOWN * (2 ** (len(crash_times) - FAST_CRASH_LIMIT)), MAX_BACKOFF)
-                backoff = step
-                log(f'快速崩溃 {len(crash_times)} 次，冷却 {backoff}s 再拉起，避免空转刷进程')
-                write_state(status='backoff', pid=proc.pid, fast_crashes=len(crash_times),
-                            last_exit_code=rc, backoff_seconds=backoff)
-            time.sleep(RESTART_GRACE + backoff)
-            if stopping:
-                break
-            log('拉起 app.py 子进程 ...')
-            proc = spawn(args.app, args.host, args.port)
-            started = time.time()
-            health_fails = 0
-            last_health = 0.0
-            write_state(status='starting', pid=proc.pid, restarts=len(crash_times),
-                        fast_crashes=len(crash_times), last_exit_code=rc)
-            continue
-
-        # —— 分支2：进程在，但端口/健康探测（抓 multiprocessing worker 崩溃的“假活”）——
-        now = time.time()
-        if now - last_health >= HEALTH_INTERVAL:
-            last_health = now
-            # 给新启动留 25s 宽限，避免启动慢被误杀
-            if time.time() - started > 25:
-                if http_health(args.port):
-                    if health_fails:
-                        log(f'健康探测恢复（此前连续失败 {health_fails} 次）')
-                    health_fails = 0
-                    write_state(status='running', pid=proc.pid, restarts=len(crash_times),
-                                fast_crashes=len(crash_times))
-                else:
-                    health_fails += 1
-                    log(f'健康探测失败 {health_fails}/{HEALTH_FAIL_THRESHOLD}（进程 PID={proc.pid} 在，端口不通）')
-                    if health_fails >= HEALTH_FAIL_THRESHOLD:
-                        log(f'!! 判定假活：进程在但服务连续 {health_fails} 次不可达，杀整棵进程树重启')
-                        kill_tree(proc.pid)
-                        time.sleep(2)
-                        try:
-                            proc.wait(timeout=5)
-                        except Exception:
-                            pass
-                        crash_times.append(time.time())
-                        proc = spawn(args.app, args.host, args.port)
-                        started = time.time()
-                        health_fails = 0
-                        last_health = 0.0
-                        write_state(status='restart_after_zombie', pid=proc.pid,
-                                    restarts=len(crash_times), note='worker假活杀树重启')
-        time.sleep(POLL_INTERVAL)
-
-    log('Supervisor 收到停止信号，关闭子进程 ...')
+    proc = None
+    child_started = False
+    cleanup_confirmed = True
+    state_saved = True
+    restart_failure = None
     try:
-        if _lock_handle is not None:
-            try:
-                _lock_handle.close()
-            except Exception:
-                pass
-        log('Supervisor 已释放单实例锁(OS 自动回收文件锁)')
-    except Exception as _e:
-        log(f'释放锁失败: {_e}')
+        signal.signal(signal.SIGINT, _sig)
+        if hasattr(signal, 'SIGTERM'):
+            signal.signal(signal.SIGTERM, _sig)
+
+        log(f'Supervisor 启动(常驻+健康探测)，目标: {sys.executable} {args.app} --host {args.host} --port {args.port}')
+        proc = spawn(args.app, args.host, args.port)
+        child_started = True
+        started = time.time()
+        health_fails = 0
+        last_health = 0.0
+        write_state(app=args.app, host=args.host, port=args.port,
+                    started_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    restarts=0, status='starting', pid=proc.pid, fast_crashes=0)
+
+        while not stopping:
+            rc = proc.poll()
+
+            # —— 分支1：子进程真的退出了 ——
+            if rc is not None:
+                life = time.time() - started
+                log(f'!! {args.app} 退出，退出码={rc}，存活 {life:.1f}s')
+                now = time.time()
+                crash_times = [t for t in crash_times if now - t < FAST_CRASH_WINDOW]
+                crash_times.append(now)
+                backoff = 0
+                if len(crash_times) >= FAST_CRASH_LIMIT:
+                    step = min(FAST_CRASH_COOLDOWN * (2 ** (len(crash_times) - FAST_CRASH_LIMIT)), MAX_BACKOFF)
+                    backoff = step
+                    log(f'快速崩溃 {len(crash_times)} 次，冷却 {backoff}s 再拉起，避免空转刷进程')
+                    write_state(status='backoff', pid=proc.pid, fast_crashes=len(crash_times),
+                                last_exit_code=rc, backoff_seconds=backoff)
+                if _wait_or_stop(stop_event, lambda: stopping, RESTART_GRACE + backoff):
+                    break
+                log('拉起 app.py 子进程 ...')
+                proc = spawn(args.app, args.host, args.port)
+                started = time.time()
+                health_fails = 0
+                last_health = 0.0
+                write_state(status='starting', pid=proc.pid, restarts=len(crash_times),
+                            fast_crashes=len(crash_times), last_exit_code=rc)
+                continue
+
+            # —— 分支2：进程在，但端口/健康探测（抓 multiprocessing worker 崩溃的“假活”）——
+            now = time.time()
+            if now - last_health >= HEALTH_INTERVAL:
+                last_health = now
+                # 给新启动留 25s 宽限，避免启动慢被误杀
+                if time.time() - started > 25:
+                    if http_health(args.port):
+                        if health_fails:
+                            log(f'健康探测恢复（此前连续失败 {health_fails} 次）')
+                        health_fails = 0
+                        write_state(status='running', pid=proc.pid, restarts=len(crash_times),
+                                    fast_crashes=len(crash_times))
+                    else:
+                        health_fails += 1
+                        log(f'健康探测失败 {health_fails}/{HEALTH_FAIL_THRESHOLD}（进程 PID={proc.pid} 在，端口不通）')
+                        if health_fails >= HEALTH_FAIL_THRESHOLD:
+                            log(f'!! 判定假活：进程在但服务连续 {health_fails} 次不可达，杀整棵进程树重启')
+                            if not kill_tree(proc):
+                                restart_failure = 'restart_failed'
+                                write_state(status=restart_failure, pid=proc.pid,
+                                            restarts=len(crash_times), fast_crashes=len(crash_times),
+                                            note='worker假活进程树未能确认退出；未启动替代进程')
+                                break
+                            if _wait_or_stop(stop_event, lambda: stopping, 2):
+                                break
+                            crash_times.append(time.time())
+                            proc = spawn(args.app, args.host, args.port)
+                            started = time.time()
+                            health_fails = 0
+                            last_health = 0.0
+                            write_state(status='restart_after_zombie', pid=proc.pid,
+                                        restarts=len(crash_times), note='worker假活杀树重启')
+            if _wait_or_stop(stop_event, lambda: stopping, POLL_INTERVAL):
+                break
+    finally:
+        log('Supervisor 正在清理其拥有的子进程 ...')
+        cleanup_confirmed = kill_tree(proc) if proc is not None else True
+        if child_started:
+            final_status = restart_failure or ('stopped' if cleanup_confirmed else 'stop_failed')
+            state_saved = write_state(
+                app=args.app, host=args.host, port=args.port, pid=proc.pid,
+                status=final_status,
+                child_cleanup='confirmed' if cleanup_confirmed else 'failed',
+                restarts=len(crash_times), fast_crashes=len(crash_times),
+            )
+            if not state_saved:
+                log(f'无法保存监督器终态 status={final_status}')
+        else:
+            state_saved = True
+
+        if cleanup_confirmed and state_saved:
+            if _release_instance_lock(_lock_handle):
+                log('Supervisor 已释放单实例锁')
+            else:
+                state_saved = False
+        else:
+            log('未释放单实例锁：子进程清理或终态持久化未获确认')
+
+    if not cleanup_confirmed or not state_saved or restart_failure:
+        raise SystemExit(1)
     log('Supervisor 已退出')
 
 

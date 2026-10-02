@@ -4953,20 +4953,9 @@ def _start_app_automations(args):
     except Exception as e:
         print(f'[Stability] 稳定性监控启动失败: {e}')
 
-    # SYSTEM AI Gateway heartbeat; this transport probe does not consume call budget.
-    try:
-        from lumenis.system.ai_gateway import channel as _aic
-        import intelligence as _intel
-        def _ai_channel_ping():
-            try:
-                _out, _prov = _intel._chat('你是序境AI通道心跳探活。只回ok。', 'ping', temperature=0.0, max_tokens=10, timeout=30)
-                return bool(_out) and _prov not in ('rule', 'provider_disabled', 'budget_blocked')
-            except Exception:
-                return False
-        _aic.start_health_monitor(_ai_channel_ping, interval_sec=int(os.getenv('AI_CHANNEL_HEARTBEAT_SEC', '300') or '300'))
-        print('[AIC] 云端 AI 通道 24h 心跳保活已启动')
-    except Exception as _e:
-        print(f'[AIC] 云端 AI 通道心跳保活启动失败: {_e}')
+    # Legacy inference routes are retired. Boot must not generate a request to
+    # probe them; owned-model readiness belongs to the SYSTEM AI Gateway owner.
+    print('[AIC] Startup inference heartbeat disabled; owned inference readiness requires its Gateway evidence')
     return True
 
 
@@ -7181,7 +7170,9 @@ def _start_optional_runtime_services(internal_beta_acceptance):
     # 采集时会按需启动CDP浏览器
     try:
         import cdp_helper
-        cdp_status = cdp_helper.get_cdp_status()
+        cdp_status = cdp_helper.get_cdp_status(
+            port=xhs_cookie_bridge.cdp_port_for(xhs_cookie_bridge.DEFAULT_COLLECTION_ACCOUNT),
+        )
         if cdp_status.get('available'):
             print(f"[CDP] 浏览器已就绪: 端口 {cdp_status.get('port')}")
         else:
