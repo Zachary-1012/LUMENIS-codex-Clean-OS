@@ -124,6 +124,7 @@ void main() {
     expect(find.text('停车专题分析'), findsWidgets);
     expect(find.text('结论'), findsNWidgets(2));
 
+    await tester.ensureVisible(find.text('清除选择'));
     await tester.tap(find.text('清除选择'));
     await tester.pumpAndSettle();
     expect(find.text('报告预览'), findsOneWidget);

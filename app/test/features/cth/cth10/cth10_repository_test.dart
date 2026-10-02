@@ -4,6 +4,86 @@ import 'package:lumenis_app/features/cth/cth10/cth10_repository.dart';
 
 void main() {
   test(
+    'verified report paragraphs and quotations retain their full text',
+    () async {
+      final body = List.filled(40, '运营记录需要连同变化原因与后续安排一起阅读。').join('\n');
+      final quote = List.filled(30, '现场记录中的完整原文，保留限定条件。').join('\n');
+      final repository = CoreCth10Repository(
+        client: _ContractClient(
+          screenResponse: _response(
+            'CTH-10',
+            sections: [
+              {
+                'type': 'reports',
+                'items': [
+                  {
+                    'id': 'REPORT-LONG',
+                    'title': '完整运营记录',
+                    'period': '近7天',
+                    'state': 'confirmed',
+                    'scope': 'GLOBAL / ALL',
+                    'blocks': [
+                      {'id': 'BLOCK-LONG', 'title': '运营记录', 'body': body},
+                    ],
+                    'evidence': [
+                      {..._evidence('EV-LONG'), 'quote': quote},
+                    ],
+                  },
+                ],
+              },
+            ],
+          ),
+        ),
+      );
+
+      final result = await repository.load();
+      expect(result.state, Cth10ContentState.ready);
+      expect(result.reports.single.blocks.single.body, body);
+      expect(result.reports.single.evidence.single.quote, quote);
+    },
+  );
+
+  test(
+    'withheld malformed or sensitive blocks make the report partial',
+    () async {
+      final repository = CoreCth10Repository(
+        client: _ContractClient(
+          screenResponse: _response(
+            'CTH-10',
+            sections: [
+              {
+                'type': 'reports',
+                'items': [
+                  {
+                    'id': 'REPORT-PARTIAL',
+                    'title': '部分运营记录',
+                    'period': '近7天',
+                    'scope': 'GLOBAL / ALL',
+                    'blocks': [
+                      {'id': 'VISIBLE', 'title': '可读部分', 'body': '已核验内容'},
+                      'invalid block',
+                      {
+                        'id': 'WITHHELD',
+                        'title': '内部记录',
+                        'body': 'api_key=private',
+                      },
+                    ],
+                    'evidence': [_evidence('EV-PARTIAL')],
+                  },
+                ],
+              },
+            ],
+          ),
+        ),
+      );
+
+      final result = await repository.load();
+      expect(result.state, Cth10ContentState.partial);
+      expect(result.reports.single.blocks.single.id, 'VISIBLE');
+    },
+  );
+
+  test(
     'current report response is blocked without applied scope binding',
     () async {
       final repository = CoreCth10Repository(

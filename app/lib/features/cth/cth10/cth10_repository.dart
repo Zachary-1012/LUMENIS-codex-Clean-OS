@@ -175,8 +175,10 @@ class CoreCth10Repository implements Cth10Repository {
     final evidence = _decodeEvidence(raw['evidence'], context);
     if (evidence.items.isEmpty) return null;
 
+    final rawBlocks = raw['blocks'];
+    if (rawBlocks is! List) return null;
     final blocks = _maps(
-      raw['blocks'],
+      rawBlocks,
     ).map(_decodeBlock).whereType<Cth10ReportBlock>().toList(growable: false);
     if (blocks.isEmpty) return null;
 
@@ -190,14 +192,14 @@ class CoreCth10Repository implements Cth10Repository {
         blocks: blocks,
         evidence: evidence.items,
       ),
-      dropped: evidence.dropped,
+      dropped: evidence.dropped || blocks.length != rawBlocks.length,
     );
   }
 
   Cth10ReportBlock? _decodeBlock(Map<String, dynamic> raw) {
     final id = _safeText(raw['id']);
     final title = _safeText(raw['title']);
-    final body = _safeText(raw['body']);
+    final body = _safeText(raw['body'], maxLength: null);
     if (id.isEmpty || title.isEmpty || body.isEmpty) return null;
     return Cth10ReportBlock(
       id: id,
@@ -260,7 +262,7 @@ class CoreCth10Repository implements Cth10Repository {
     }
     return Cth10EvidenceReference(
       id: id,
-      quote: _safeText(raw['quote']),
+      quote: _safeText(raw['quote'], maxLength: null),
       capturedAt: _safeText(raw['captured_at']),
       integrityStatus: 'verified',
       integrityVersion: _safeText(integrity?['version']),
@@ -386,10 +388,14 @@ class CoreCth10Repository implements Cth10Repository {
     return value.map((key, value) => MapEntry('$key', value));
   }
 
-  static String _safeText(Object? value) {
+  static String _safeText(Object? value, {int? maxLength = 240}) {
     if (value is! String) return '';
     final text = value.trim();
-    if (text.isEmpty || text.length > 240) return '';
+    // Labels are bounded; report prose and quotations must retain the full
+    // authorized text rather than disappear under a label-length limit.
+    if (text.isEmpty || (maxLength != null && text.length > maxLength)) {
+      return '';
+    }
     if (RegExp(
       r'(api[_ -]?key|token|cookie|password|secret|authorization|/api/|http 4\d\d|permission|lumenis core)',
       caseSensitive: false,

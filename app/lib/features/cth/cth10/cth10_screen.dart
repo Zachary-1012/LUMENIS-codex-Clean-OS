@@ -6,6 +6,8 @@ import '../../../l10n/lumenis_localizations.dart';
 import '../../../core/lumenis_theme.dart';
 import 'cth10_repository.dart';
 import 'cth10_view_model.dart';
+import 'source_brief_copy.dart';
+import 'source_brief_panel.dart';
 
 class Cth10Screen extends StatefulWidget {
   const Cth10Screen({required this.client, this.repository, super.key});
@@ -19,6 +21,7 @@ class Cth10Screen extends StatefulWidget {
 
 class _Cth10ScreenState extends State<Cth10Screen> {
   late Cth10ViewModel _viewModel = _createViewModel()..load();
+  bool _showSourceBrief = false;
 
   Cth10ViewModel _createViewModel() => Cth10ViewModel(
     repository: widget.repository ?? CoreCth10Repository(client: widget.client),
@@ -31,6 +34,7 @@ class _Cth10ScreenState extends State<Cth10Screen> {
         oldWidget.repository != widget.repository) {
       _viewModel.dispose();
       _viewModel = _createViewModel()..load();
+      _showSourceBrief = false;
     }
   }
 
@@ -44,36 +48,60 @@ class _Cth10ScreenState extends State<Cth10Screen> {
   Widget build(BuildContext context) => ColoredBox(
     color: LumenisTheme.of(context).canvas,
     child: SafeArea(
-      child: AnimatedBuilder(
-        animation: _viewModel,
-        builder: (context, _) {
-          final copy = context.lumenisL10n;
-          return switch (_viewModel.phase) {
-            Cth10LoadPhase.loading => _LoadingState(copy: copy),
-            Cth10LoadPhase.blocked => _BlockedState(
-              copy: copy,
-              onRetry: _viewModel.load,
+      child: _showSourceBrief
+          ? SourceBriefPanel(
+              key: ObjectKey(widget.client),
+              client: widget.client,
+              onReturn: () => setState(() => _showSourceBrief = false),
+            )
+          : Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: TextButton.icon(
+                      key: const ValueKey('cth10/source-brief-entry'),
+                      onPressed: () => setState(() => _showSourceBrief = true),
+                      icon: const Icon(Icons.description_outlined, size: 18),
+                      label: Text(SourceBriefCopy.of(context).text('entry')),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: AnimatedBuilder(
+                    animation: _viewModel,
+                    builder: (context, _) {
+                      final copy = context.lumenisL10n;
+                      return switch (_viewModel.phase) {
+                        Cth10LoadPhase.loading => _LoadingState(copy: copy),
+                        Cth10LoadPhase.blocked => _BlockedState(
+                          copy: copy,
+                          onRetry: _viewModel.load,
+                        ),
+                        Cth10LoadPhase.failed => _FailureState(
+                          copy: copy,
+                          kind: _viewModel.failureKind,
+                          onRetry: _viewModel.load,
+                        ),
+                        Cth10LoadPhase.empty ||
+                        Cth10LoadPhase.notCollected ||
+                        Cth10LoadPhase.partial ||
+                        Cth10LoadPhase.ready => _Cth10Workspace(
+                          copy: copy,
+                          phase: _viewModel.phase,
+                          data: _viewModel.data!,
+                          selectedReport: _viewModel.selectedReport,
+                          onSelectReport: _viewModel.selectReport,
+                          onReturn: _viewModel.clearSelection,
+                          onRetry: _viewModel.load,
+                        ),
+                      };
+                    },
+                  ),
+                ),
+              ],
             ),
-            Cth10LoadPhase.failed => _FailureState(
-              copy: copy,
-              kind: _viewModel.failureKind,
-              onRetry: _viewModel.load,
-            ),
-            Cth10LoadPhase.empty ||
-            Cth10LoadPhase.notCollected ||
-            Cth10LoadPhase.partial ||
-            Cth10LoadPhase.ready => _Cth10Workspace(
-              copy: copy,
-              phase: _viewModel.phase,
-              data: _viewModel.data!,
-              selectedReport: _viewModel.selectedReport,
-              onSelectReport: _viewModel.selectReport,
-              onReturn: _viewModel.clearSelection,
-              onRetry: _viewModel.load,
-            ),
-          };
-        },
-      ),
     ),
   );
 }

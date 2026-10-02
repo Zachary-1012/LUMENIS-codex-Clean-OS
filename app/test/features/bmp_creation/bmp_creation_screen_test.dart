@@ -588,10 +588,13 @@ void main() {
     expect(find.text('评估报告'), findsOneWidget);
     expect(find.text('声量'), findsOneWidget);
 
-    await tester.tap(find.text('保存评估报告草稿'));
+    await tester.tap(find.text('准备评估报告请求'));
     await tester.pump();
 
-    expect(find.text('本地评估报告请求草稿已保存；尚未生成或写入任何报告。'), findsOneWidget);
+    expect(
+      find.text('评估报告请求仅在当前页面暂时准备；刷新或离开后会清除，尚未生成或写入任何报告。'),
+      findsOneWidget,
+    );
     expect(find.text('评估报告已生成'), findsNothing);
     expect(find.textContaining('报告已写入'), findsNothing);
     _expectNoDeveloperCopy(tester);

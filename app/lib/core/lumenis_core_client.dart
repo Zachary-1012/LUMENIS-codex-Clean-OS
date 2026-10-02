@@ -370,6 +370,73 @@ class LumenisCoreClient {
   Future<Map<String, dynamic>> screen(String screenId) =>
       _get('/api/experience/screen/${Uri.encodeComponent(screenId)}');
 
+  Future<Map<String, dynamic>> startSourceBriefTask({
+    required String domainId,
+    int limit = 30,
+    String? businessQuestion,
+  }) {
+    final questionPayload = businessQuestion == null
+        ? null
+        : <String, Object?>{'business_question': businessQuestion};
+    return _request(
+      'POST',
+      '/api/experience/reports/source-brief/start',
+      operationContext: _contentContext(domainId),
+      payload: {'limit': limit, ...?questionPayload},
+    );
+  }
+
+  Future<Map<String, dynamic>> sourceBriefTask({
+    required String domainId,
+    required String taskId,
+  }) {
+    _validateSourceBriefTaskId(taskId);
+    return _request(
+      'GET',
+      '/api/experience/reports/source-brief/tasks/${Uri.encodeComponent(taskId)}',
+      operationContext: _contentContext(domainId),
+    );
+  }
+
+  Future<Map<String, dynamic>> resumeSourceBriefTask({
+    required String domainId,
+    required String taskId,
+  }) {
+    _validateSourceBriefTaskId(taskId);
+    return _request(
+      'POST',
+      '/api/experience/reports/source-brief/tasks/${Uri.encodeComponent(taskId)}/resume',
+      operationContext: _contentContext(domainId),
+      payload: const <String, Object?>{},
+    );
+  }
+
+  Future<Map<String, dynamic>> sourceBriefJob({
+    required String domainId,
+    required String jobId,
+  }) {
+    _validateSourceBriefJobId(jobId);
+    return _request(
+      'GET',
+      '/api/experience/reports/source-brief/jobs/${Uri.encodeComponent(jobId)}',
+      operationContext: _contentContext(domainId),
+    );
+  }
+
+  static void _validateSourceBriefTaskId(String value) {
+    if (!RegExp(
+      r'^rbrief_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    ).hasMatch(value)) {
+      throw const FormatException('Invalid source brief task identifier.');
+    }
+  }
+
+  static void _validateSourceBriefJobId(String value) {
+    if (!RegExp(r'^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$').hasMatch(value)) {
+      throw const FormatException('Invalid source brief job identifier.');
+    }
+  }
+
   /// Media actions use canonical focus when selected. GLOBAL_ALL still needs
   /// an explicit invoking domain; it never supplies a subject or focus grant.
   Map<String, String> _contentContext(String domainId) {

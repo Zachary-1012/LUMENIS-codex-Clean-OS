@@ -2416,6 +2416,30 @@
     {
       "binding_id": "BACKEND-GAP-017",
       "screen": "CTH-10",
+      "bounded_source_brief_increment": {
+        "design_state": "DESIGN_READY",
+        "reviewer": "M / Sol / 序境12",
+        "reviewed_at": "2026-10-02",
+        "source_base_sha": "a85c35ee619ae75052f91b3b924e467bd8bc1622",
+        "specification": "contracts/experience/screen-specifications/CTH-10.md#31-m-approved-sourcebrief-increment--2026-10-02",
+        "canonical_owners": ["CTH", "Shared Reporting", "Shared Evidence", "SYSTEM Permission", "SYSTEM Task Runtime"],
+        "api_callables": [
+          "POST /api/experience/reports/source-brief/start",
+          "GET /api/experience/reports/source-brief/tasks/<task_id>",
+          "POST /api/experience/reports/source-brief/tasks/<task_id>/resume",
+          "GET /api/experience/reports/source-brief/jobs/<job_id>"
+        ],
+        "scope": "Core resolves sealed local principal or authenticated actor, exact registered CTH GLOBAL/Subject scope and reports read/write Permission; context headers are selectors only.",
+        "write_effect": "REPORT_GENERATE Permission/effect/audit revalidated on admission, execution and commit; 202 is admission only.",
+        "fields": ["task_id", "job_id", "pending/running/succeeded/failed/interrupted", "artifact_outcome", "report_id", "artifact_hash", "source_count", "source_brief.records[].source_id", "scope_evidence_ref", "evidence_id", "business_analysis.state", "review_status", "operator_review", "evaluation"],
+        "evidence_constraint": "Actual Canonical source identity and exact-scope/hash/Evidence readback; no fixed fixture EV-ID allowlist or canonical_ref-to-source_id inference.",
+        "recovery": "Fresh authorization on resume; saved Job GET on reopen; discard late responses after focus change, Clear, navigation or retry.",
+        "acceptance_targets": ["390px", "1440px", "zh-CN", "en", "ko", "keyboard", "screen reader", "actual runtime/E2E"],
+        "implementation_state": "ACCEPTED_BOUNDED_SOURCE_ONLY / LIVE_VERIFIED",
+        "full_screen_state": "BLOCKED / NOT_ACCEPTED",
+        "live_not_verified": ["genuine interrupted-task resume", "operating-system clipboard transfer"],
+        "remaining_gaps": ["period", "weekly report", "export", "owned business quality", "final real-user repeat acceptance"]
+      },
       "module": "commercial_reporting",
       "title": "报告 / 周报 / 证据",
       "title_key": "screen.CTH-10",

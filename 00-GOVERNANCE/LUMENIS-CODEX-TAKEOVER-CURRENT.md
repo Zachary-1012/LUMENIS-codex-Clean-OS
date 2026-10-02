@@ -91,9 +91,28 @@ matched F's final candidate SHA256
 `a0de16ecc518a24cac810c4dd87f7b8cb53450d45831ee5fdd20b3bb6b760b6f`;
 index/bootstrap matched too. Process-only preview/FFmpeg paths used existing
 runtime seams. This loaded local integration still includes unpublished owner
-candidates; SourceBrief real-operation acceptance is in progress, not established
-by HTTP success or asset hashes. Original build/web and persistent configuration
-were preserved.
+candidates. Original build/web and persistent configuration were preserved.
+
+M subsequently accepted the bounded source-only CTH SourceBrief main flow. Its
+fourteen frozen App source/test files, owning
+[Frontend verification](../app/FRONTEND-VERIFICATION-2026-10-02.md), CTH-10
+specification/ledger acceptance record and this CURRENT are co-published in the
+containing commit. The four existing SourceBrief APIs and their scope/context
+helpers match main; Task/Job modules and `lumenis_app_api.py` match main too.
+Source-only execution does not call the local unaccepted owned-business adapter;
+the Collector/AI/Skill/Memory/business candidates remain excluded.
+
+Actual task `rbrief_ab54bb81-8feb-467c-9c0f-2458821909f1` saved and reopened Job
+`brief-fb2192a3e5784d18a68ed0186b49733b`, artifact SHA256
+`59b5efb3a98623106b35883a533b1b4d9a73576a3f02a79af6df082e438acff6`,
+with 29 Canonical source records. M reviewed the real create/status/Job readback,
+leave/reload/reference reopen, offline recovery, Focus denial/Clear-to-GLOBAL,
+Chinese/English/Korean and 390/1440px operation, with 75 affected tests and the
+unchanged required gate evidence. Evaluation rows 131–133 are material-workflow
+records; analysis was not requested and human review remains pending. Genuine
+interrupted-task resume and operating-system clipboard transfer remain unverified.
+This accepts the source-only main flow, not full CTH-10, useful owned AI, full C3,
+all surfaces, USER_VERIFIED, RELEASED or OPERATING.
 
 ### Current decisions, limits and evidence
 
