@@ -175,8 +175,3 @@ jobs:
         if: ${{ always() }}
         continue-on-error: true
         run: python scripts/audit_tools/boundary_check.py --ci
-
-      - name: Asset Impact Scan (INFORMATIONAL)
-        if: ${{ always() }}
-        continue-on-error: true
-        run: python scripts/audit_tools/asset_impact_scan.py

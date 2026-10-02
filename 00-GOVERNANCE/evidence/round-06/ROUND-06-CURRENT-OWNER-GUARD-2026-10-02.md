@@ -79,3 +79,29 @@ old commit and actual failure receipts remain preserved. The complete newly
 staged publication tree, including all receipts, must pass the mandatory local
 checks and receive both actual hosted workflows at the next exact SHA. This
 correction does not advance runtime, native, product or commercial acceptance.
+# CI informational asset-call retirement — 2026-10-02
+
+M decision: `RETIRE_OBSOLETE_INFORMATIONAL_CALL`. At the fetched/published
+`187fe61fb2907fcdcd69168df9b610eafc32e1cb` baseline, Product run36972256702
+job110728507036 logged exit2 for the absent `scripts/audit_tools/asset_impact_scan.py`.
+Its `continue-on-error` step conclusion was success; that conclusion is not an
+asset-report PASS. Required blocking execution at that SHA remains separately
+verified. The prior failed or advisory outputs are preserved.
+
+Exact historical deletion is `f74cb9784e4158a3641805247a7e1f26c0837266`, last script
+blob `a23761274de785337a2f35e00758c277c943f3c2`, with no rename/replacement and no
+workflow correction at deletion. M's source-only history receipt SHA256 is
+`aed04fb2efdb17275bf11869156fa9577764f01a718521c90e915480452dcc88`.
+The retired implementation used old multi-product/Collector classifications,
+templates/static discovery and a default product DB read. It is not restored.
+`scripts/inventory/asset_scan.py` is not substituted; no stub or new scanner is added.
+
+This change deletes only the four-line informational call, retaining all blocking,
+advisory, test, trigger and permission/data boundaries. Validation is proportional:
+exact YAML job/step comparison, exact obsolete-call reference check, diff-check and
+constitution gate. No full product or hosted matrix is dispatched for this edit.
+The old full-repository graph capability is `RETIRED / NO_EQUIVALENT_GENERATOR`.
+Its useful source/dependency/owner/contract/test impact principles remain in the
+existing locator, Source Owner Index and Batch analysis, without claiming equivalence.
+The source, this owning evidence and CURRENT form one publication unit. This is an
+informational CI cleanup, not full C6, LIVE_VERIFIED, RELEASED or OPERATING acceptance.

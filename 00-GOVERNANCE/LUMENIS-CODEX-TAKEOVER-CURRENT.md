@@ -4,6 +4,19 @@
 > Updated: 2026-10-02 — approved six-round execution convergence.
 > current HEAD = READ WITH git fetch + git rev-parse origin/main
 
+CI information correction (2026-10-02): M approved retirement of the obsolete
+`Asset Impact Scan (INFORMATIONAL)` call only. Its script was deleted by
+`f74cb9784e4158a3641805247a7e1f26c0837266` without a rename or equivalent generator;
+the old workflow call returned exit2 even though `continue-on-error` displayed a
+successful step conclusion. Existing blocking/advisory checks, test selection and
+triggers are unchanged. The old full-repository asset graph is
+`RETIRED / NO_EQUIVALENT_GENERATOR`, never a passed scan. Source/dependency/owner/
+contract/test impact analysis remains with the current capability locator, Source
+Owner Index and each bounded Batch; they are not equivalent graph generators.
+The existing [C6 CI evidence](evidence/round-06/ROUND-06-CURRENT-OWNER-GUARD-2026-10-02.md)
+records this decision and preserves prior failures. No product/runtime/release
+acceptance is promoted by removing the obsolete informational call.
+
 Root `AGENTS.md` remains the **only repository execution router**. This file is
 its current handoff, not a second architecture, execution or design authority.
 [The Product Owner's lightweight AI-native constitution](AI-NATIVE-PRODUCT-CONSTITUTION.md)
