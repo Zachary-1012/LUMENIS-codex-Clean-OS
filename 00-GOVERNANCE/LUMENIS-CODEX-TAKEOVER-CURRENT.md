@@ -197,6 +197,20 @@ state and changes no global coverage.
 
 ### Current decisions, limits and evidence
 
+- Product Owner clarified whole-product closure on 2026-10-02: every confirmed
+  CTH/BMP/Shared/SYSTEM capability and approved surface must pass its actual useful
+  normal path, applicable persistence/reopen/Evidence/Evaluation and recovery.
+  C1–C6 divide this full inventory; representative jobs and honest unavailable
+  responses cannot substitute for a capability's successful result. Only the
+  Product Owner's explicit deferrals remain deferred. Commercial procurement,
+  redistribution agreements and platform partnership negotiation are later work;
+  complete current permitted internal workflows using available authorized sources
+  and suitable owned/licensed materials/components. Actual access, protected-account,
+  source-use and code/model-license boundaries remain enforced; a missing proprietary
+  field/action stays specifically incomplete. The sole
+  [Real Delivery Overlay section 23](LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)
+  contains the exact clarification; the existing Source Owner Index retains the
+  acceptance population. No capability, window or release is accepted by this rule.
 - User confirms Codex Cloud configuration is complete and participates now.
   At dispatch verify correct account, repository, pinned base and dependencies;
   do not repeat configuration or infer a deployed LUMENIS AI service from it.
