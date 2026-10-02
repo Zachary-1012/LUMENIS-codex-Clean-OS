@@ -1,10 +1,12 @@
 """Checkpoint contract tests against an isolated, reopened TaskEngine database."""
 import json
+import os
 from types import SimpleNamespace
 
 import pytest
 
 from agent_runtime.durable_adapter import DurableExecutionAdapter
+from agent_memory.working import WorkingMemory
 from agent_runtime.loop import AgentConfig, AgentLoop
 from agent_runtime.planner import Plan, PlanStep
 from ai_task_engine import TaskEngine
@@ -86,6 +88,40 @@ def test_completed_plan_and_cumulative_budget_survive_engine_reopen(durable, mon
     assert checkpoint["metadata"]["resumable"] is True
 
 
+@pytest.mark.parametrize("memory_first", [True, False])
+def test_working_observation_does_not_replace_resumable_checkpoint(durable, memory_first):
+    engine, gate, adapter = durable
+    task_id = adapter.create_task("resume observed work", context={"domain_id": "cth"})
+    memory = WorkingMemory(db_path=os.environ["ZBC_DB_PATH"], enabled=True)
+    memory.begin_task(task_id, "resume observed work")
+
+    def observe():
+        return memory.add_step("agent_step_0", output_data={"observed": "real persisted output"})
+
+    observation = observe() if memory_first else None
+    checkpoint = adapter.checkpoint(
+        task_id, 0, "executing", plan_snapshot={"plan_id": "retained-plan", "steps": []},
+        context={"domain_id": "cth"}, metadata={"steps_started": 1},
+    )
+    if not memory_first:
+        observation = observe()
+    assert observation["persistence"]["state"] == "PERSISTED"
+
+    reopened = DurableExecutionAdapter(task_engine=TaskEngine(), permission_gate=gate)
+    recovery = reopened.recover(task_id)
+    assert recovery["source"] == "db"
+    assert recovery["checkpoint_count"] == 1
+    assert recovery["last_checkpoint"] == checkpoint.to_dict()
+    assert recovery["last_checkpoint"]["metadata"]["resumable"] is True
+    assert reopened.get_checkpoints(task_id) == [checkpoint]
+    memory_row = next(row for row in engine.get_steps(task_id) if row["step_id"] == observation["step_id"])
+    assert memory_row["phase"] == "working_memory_step_1"
+    detail = json.loads(memory_row["detail"])
+    assert detail["action"] == "agent_step_0"
+    assert detail["output"] == {"observed": "real persisted output"}
+    assert detail["checkpoint_resumable"] is False
+
+
 def test_secret_plan_material_is_omitted_and_checkpoint_marked_non_resumable(
     durable, monkeypatch,
 ):
@@ -136,3 +172,34 @@ def test_credential_in_goal_is_sanitized_only_in_persistence(durable, monkeypatc
     persisted = json.dumps({"task": engine.get_task(result.task_id),
                             "steps": engine.get_steps(result.task_id)}, sort_keys=True)
     assert "abcdefghijklmnopqrstuvwxyz" not in persisted
+
+
+def test_missing_executor_cannot_complete_a_user_job(monkeypatch):
+    plan = Plan(goal="read a real document", steps=[
+        PlanStep(index=0, action="read document", tool="document_reader"),
+    ])
+    loop = AgentLoop(
+        config=AgentConfig(enable_evaluation=False, max_retries=0, max_replans=0),
+        planner=StaticPlanner(plan), durable_adapter=DurableExecutionAdapter(enabled=False),
+    )
+    monkeypatch.setattr(loop, "_check_security", lambda step, ctx: {"allowed": True})
+
+    result = loop.run(plan.goal)
+
+    assert result.status == "failed"
+    assert result.metrics["completed_steps"] == 0
+    assert result.result is None
+    assert "TOOL_EXECUTOR_NOT_BOUND" in result.plan["steps"][0]["error"]
+
+
+def test_completed_result_contains_the_actual_tool_output(durable, monkeypatch):
+    _engine, _gate, adapter = durable
+    plan = Plan(goal="read document", steps=[
+        PlanStep(step_id="step-result", index=0, action="read document", tool="reader"),
+    ])
+
+    result = _run(plan, adapter, monkeypatch, {"actor_id": 1, "domain_id": "cth"})
+
+    assert result.status == "completed"
+    assert result.result["final_step_results"][0]["step_id"] == "step-result"
+    assert result.result["final_step_results"][0]["result"]["output"] == "completed output"

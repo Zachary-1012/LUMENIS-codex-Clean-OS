@@ -42,6 +42,7 @@ import math
 import threading
 import time
 import uuid
+from copy import deepcopy
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
@@ -124,7 +125,7 @@ class AgentLoop:
             evaluator: 轨迹评估器（None 则新建）
             durable_adapter: Durable Execution 适配器（None 则新建）
             tool_executor: 工具执行函数 callback(step: PlanStep, context) -> Dict
-                           None 则使用默认执行器（仅记录，不真实执行）
+                           未绑定则返回真实 unavailable，不执行或模拟成功
             ai_chat_func: AI 调用函数（用于 planner）
             permission_gate: 权限门实例（None 则延迟获取）
         """
@@ -371,15 +372,21 @@ class AgentLoop:
             finished_at=datetime.now(timezone.utc).isoformat(),
         )
         if include_result:
-            result.result = {
-                "completed_steps": sum(step.status == "completed" for step in plan.steps),
-                "total_steps": len(plan.steps),
-                "final_step_results": [
-                    {"index": step.index, "action": step.action, "status": step.status}
-                    for step in plan.steps
-                ],
-            }
+            result.result = self._completed_result(plan)
         return result
+
+    @staticmethod
+    def _completed_result(plan: Plan) -> Dict[str, Any]:
+        """Return executed tool results, including results reopened from a checkpoint."""
+        return {
+            "completed_steps": sum(step.status == "completed" for step in plan.steps),
+            "total_steps": len(plan.steps),
+            "final_step_results": [
+                {"index": step.index, "step_id": step.step_id, "action": step.action,
+                 "tool": step.tool, "status": step.status, "result": step.result}
+                for step in plan.steps
+            ],
+        }
 
     def run(
         self,
@@ -567,21 +574,14 @@ class AgentLoop:
                     else:
                         step_index += 1
 
-            if any(step.status == "failed" for step in plan.steps):
-                sm.fail("required agent steps remain failed", reason="incomplete_plan")
+            if not plan.steps or any(step.status != "completed" for step in plan.steps):
+                sm.fail("required agent steps remain incomplete", reason="incomplete_plan")
                 result.status = "failed"
                 result.error = "Required plan steps did not complete"
             else:
                 sm.complete(reason="all steps executed")
                 result.status = "completed"
-                result.result = {
-                    "completed_steps": sum(1 for s in plan.steps if s.status == "completed"),
-                    "total_steps": len(plan.steps),
-                    "final_step_results": [
-                        {"index": s.index, "action": s.action, "status": s.status}
-                        for s in plan.steps
-                    ],
-                }
+                result.result = self._completed_result(plan)
 
         except StateTransitionError as e:
             sm.fail(str(e), reason="state_machine_error")
@@ -959,10 +959,58 @@ class AgentLoop:
         """执行重规划。"""
         sm.transition_to(AgentState.REPLANNING, reason=decision.reason,
                          metadata={"replan_count": self._replanner.replan_count + 1})
-        new_plan = self._replanner.replan(goal, current_plan, decision, observation, context)
+        # A proposal cannot mutate the accepted plan before its requirements are checked.
+        new_plan = self._replanner.replan(
+            goal, deepcopy(current_plan), decision, observation, context)
+        self._validate_replan(current_plan, new_plan, decision)
         self._current_plan = new_plan
         sm.transition_to(AgentState.EXECUTING, reason="replanned, resuming execution")
         return new_plan
+
+    @staticmethod
+    def _validate_replan(current_plan: Plan, candidate: Plan, decision: ReplanDecision) -> None:
+        """Retain every required outcome and completed result across automatic replans."""
+        if not isinstance(candidate, Plan) or not candidate.steps:
+            raise ValueError("REPLAN_EMPTY_PLAN")
+        if candidate.goal != current_plan.goal:
+            raise ValueError("REPLAN_GOAL_CHANGED")
+        if decision.strategy == "split_step" and any(
+            step.index == decision.original_step_index and step.risk_level in {"high", "critical"}
+            for step in current_plan.steps
+        ):
+            # The generic executor cannot prove that prepare/execute are distinct
+            # safe phases. Repeating a write after an uncertain outcome needs
+            # the owning tool's recovery/idempotency contract.
+            raise ValueError("REPLAN_SIDE_EFFECT_SPLIT_REQUIRES_TOOL_CONTRACT")
+        by_id = {step.step_id: step for step in candidate.steps}
+        if len(by_id) != len(candidate.steps):
+            raise ValueError("REPLAN_DUPLICATE_STEP_ID")
+        risk = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+        original_ids = {step.step_id for step in current_plan.steps}
+        for previous in current_plan.steps:
+            replacement = by_id.get(previous.step_id)
+            if replacement is None:
+                raise ValueError("REPLAN_REQUIRED_STEP_LOST")
+            split_execution = (decision.strategy == "split_step"
+                               and previous.index == decision.original_step_index
+                               and replacement.action == f"[执行] {previous.action}")
+            if (replacement.expected_output != previous.expected_output
+                    or (replacement.action != previous.action and not split_execution)):
+                raise ValueError("REPLAN_REQUIRED_OUTCOME_CHANGED")
+            if (replacement.risk_level not in risk or previous.risk_level not in risk
+                    or risk[replacement.risk_level] < risk[previous.risk_level]):
+                raise ValueError("REPLAN_RISK_DOWNGRADE")
+            if previous.status == "completed":
+                old, new = previous.to_dict(), replacement.to_dict()
+                old.pop("index")
+                new.pop("index")
+                if old != new:
+                    raise ValueError("REPLAN_COMPLETED_STEP_CHANGED")
+            elif replacement.status == "completed":
+                raise ValueError("REPLAN_UNEXECUTED_STEP_COMPLETED")
+        if any(step.status == "completed" and step.step_id not in original_ids
+               for step in candidate.steps):
+            raise ValueError("REPLAN_UNEXECUTED_STEP_COMPLETED")
 
     def _estimate_plan_cost(self, plan: Plan) -> float:
         """估算规划成本（token → 美元）。"""
@@ -1053,14 +1101,10 @@ class AgentLoop:
 
     @staticmethod
     def _default_tool_executor(step: PlanStep, context: Dict[str, Any]) -> Dict[str, Any]:
-        """默认工具执行器（仅记录，不真实执行）。
-
-        生产环境应注入经过 SYSTEM 权限校验的 tool_executor；默认执行器只记录任务，不调用工具。
-        """
+        """Missing execution binding is unavailable, never a completed user job."""
         return {
-            "success": True,
-            "output": f"[default_executor] executed: {step.action}",
+            "success": False,
+            "error": "TOOL_EXECUTOR_NOT_BOUND: no tool was executed",
             "tool": step.tool,
-            "params": step.params,
             "estimated_cost": 0.0,
         }

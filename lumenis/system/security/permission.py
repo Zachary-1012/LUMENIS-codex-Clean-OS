@@ -29,6 +29,7 @@ import re
 import secrets
 import threading
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass, field, asdict, replace
 from datetime import datetime, timedelta
 from enum import Enum
@@ -196,7 +197,7 @@ def resolve_local_workspace_principal(
     """Resolve the fixed workspace principal from the current server request."""
     if (
         type(module) is not str
-        or module not in {"content", "reports", "cases"}
+        or module not in {"content", "reports", "cases", "owned_training", "skills"}
         or type(action) is not str
         or action not in _RESOURCE_SCOPE_ACTIONS
     ):
@@ -208,6 +209,40 @@ def resolve_local_workspace_principal(
 # ═══════════════════════════════════════════════════════════════
 # 1. 枚举定义
 # ═══════════════════════════════════════════════════════════════
+
+
+def owned_training_identity(
+    *, actor_id: Optional[int] = None,
+    principal: Optional[LocalWorkspacePrincipal] = None,
+) -> Dict[str, Any]:
+    """Resolve an authenticated account or the explicitly open local workspace."""
+    if actor_id is not None:
+        if principal is not None:
+            raise ValueError("account and local workspace identities cannot be mixed")
+        if type(actor_id) is not int or actor_id <= 0:
+            raise ValueError("a positive authenticated actor id is required")
+        return {
+            "actor_id": actor_id,
+            "caller": f"actor:{actor_id}",
+            "principal_kind": None,
+            "principal_ref": None,
+            "identity_kind": "account",
+        }
+
+    if principal is None or not _is_server_local_workspace_principal(principal):
+        raise ValueError("a server-issued local workspace principal is required")
+    current = resolve_local_workspace_principal(
+        module="owned_training", action="write",
+    )
+    if current is None:
+        raise ValueError("the local workspace is not currently open")
+    return {
+        "actor_id": None,
+        "caller": "workspace:local",
+        "principal_kind": "local_workspace",
+        "principal_ref": "workspace:local",
+        "identity_kind": "workspace",
+    }
 
 
 class PermissionLevel(str, Enum):
@@ -784,7 +819,7 @@ def check_local_workspace_scope_permission(
 
     valid_request = (
         domain_config is not None
-        and module_value in {"content", "reports", "cases"}
+        and module_value in {"content", "reports", "cases", "owned_training", "skills"}
         and (module_value != "cases" or normalized_domain == "cth")
         and action_value in _RESOURCE_SCOPE_ACTIONS
         and type(global_scope) is bool
@@ -995,15 +1030,17 @@ _OWNED_TRAINING_SCOPE_DESCRIPTOR_FIELDS = frozenset({
 
 
 def _owned_training_payload(
-    request: Any, *, actor_id: int, domain_id: str, context: Mapping[str, Any],
+    request: Any, *, actor_id: Optional[int] = None, domain_id: str,
+    context: Mapping[str, Any],
+    principal: Optional[LocalWorkspacePrincipal] = None,
 ) -> Dict[str, Any]:
     """Validate a typed training request and canonical CTH/BMP scope mapping."""
     from lumenis.system.ai_gateway.owned_training import TrainingApprovalRequest
 
     if type(request) is not TrainingApprovalRequest:
         raise ValueError("a canonical TrainingApprovalRequest is required")
-    if type(actor_id) is not int or actor_id <= 0:
-        raise ValueError("a positive authenticated actor id is required")
+    identity = owned_training_identity(actor_id=actor_id, principal=principal)
+    actor_id = identity["actor_id"]
     if type(domain_id) is not str or not domain_id or domain_id != domain_id.strip():
         raise ValueError("a canonical training domain is required")
     normalized_domain = domain_id.lower()
@@ -1066,7 +1103,7 @@ def _owned_training_payload(
             "global_scope": is_global, "subject_id": subject_id,
             "brand_focus_id": brand_focus_id,
         })
-    return {
+    payload = {
         "schema_version": 1, "operation": OperationType.MODEL_TRAIN.value,
         "actor_id": actor_id, "domain_id": normalized_domain,
         "request_domain_id": request.domain_id,
@@ -1076,10 +1113,16 @@ def _owned_training_payload(
         "heldout_sha256": request.heldout_sha256,
         "scopes": list(scopes), "scope_descriptors": normalized_descriptors,
     }
+    if identity["identity_kind"] == "workspace":
+        payload["principal_kind"] = identity["principal_kind"]
+        payload["principal_ref"] = identity["principal_ref"]
+    return payload
 
 
 def owned_training_approval_resource(
-    request: Any, *, actor_id: int, domain_id: str, context: Mapping[str, Any],
+    request: Any, *, actor_id: Optional[int] = None, domain_id: str,
+    context: Mapping[str, Any],
+    principal: Optional[LocalWorkspacePrincipal] = None,
 ) -> str:
     """Build the exact opaque Permission resource for one training request.
 
@@ -1090,6 +1133,7 @@ def owned_training_approval_resource(
     """
     payload = _owned_training_payload(
         request, actor_id=actor_id, domain_id=domain_id, context=context,
+        principal=principal,
     )
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"),
                            ensure_ascii=False).encode("utf-8")
@@ -1097,14 +1141,16 @@ def owned_training_approval_resource(
 
 
 def make_owned_training_approval_verifier(
-    gate: "PermissionGate", *, actor_id: int, domain_id: str,
-    context: Mapping[str, Any],
+    gate: "PermissionGate", *, actor_id: Optional[int] = None,
+    domain_id: str, context: Mapping[str, Any],
+    principal: Optional[LocalWorkspacePrincipal] = None,
 ) -> Callable[[Any], bool]:
     """Create a fail-closed verifier that rechecks exact scope and training approval."""
     if type(gate) is not PermissionGate:
         raise ValueError("the canonical PermissionGate is required")
-    if type(actor_id) is not int or actor_id <= 0:
-        raise ValueError("a positive authenticated actor id is required")
+    frozen_identity = dict(owned_training_identity(
+        actor_id=actor_id, principal=principal,
+    ))
     if type(domain_id) is not str or not domain_id or domain_id != domain_id.strip():
         raise ValueError("a canonical training domain is required")
     normalized_domain = domain_id.lower()
@@ -1126,30 +1172,50 @@ def make_owned_training_approval_verifier(
 
     def verify(request: Any) -> bool:
         try:
+            identity = owned_training_identity(
+                actor_id=actor_id, principal=principal,
+            )
+            if identity != frozen_identity:
+                return False
             resource = owned_training_approval_resource(
                 request, actor_id=actor_id, domain_id=normalized_domain,
-                context=frozen_context,
+                context=frozen_context, principal=principal,
             )
             if is_testing_bypass_enabled() or not gate.has_permission(PermissionLevel.COMMIT):
                 return False
             payload = _owned_training_payload(
                 request, actor_id=actor_id, domain_id=normalized_domain,
-                context=frozen_context,
+                context=frozen_context, principal=principal,
             )
-            caller = f"actor:{actor_id}"
+            caller = identity["caller"]
             for descriptor in payload["scope_descriptors"]:
-                scope = check_actor_scope_permission(
-                    {"id": actor_id}, domain_id=normalized_domain, action="write",
-                    module="owned_training", subject_id=descriptor["subject_id"],
-                    brand_focus_id=descriptor["brand_focus_id"],
-                    global_scope=descriptor["global_scope"], gate=gate,
+                if identity["identity_kind"] == "workspace":
+                    scope = check_local_workspace_scope_permission(
+                        principal, domain_id=normalized_domain, action="write",
+                        module="owned_training", subject_id=descriptor["subject_id"],
+                        brand_focus_id=descriptor["brand_focus_id"],
+                        global_scope=descriptor["global_scope"], gate=gate,
+                    )
+                else:
+                    scope = check_actor_scope_permission(
+                        {"id": actor_id}, domain_id=normalized_domain, action="write",
+                        module="owned_training", subject_id=descriptor["subject_id"],
+                        brand_focus_id=descriptor["brand_focus_id"],
+                        global_scope=descriptor["global_scope"], gate=gate,
+                    )
+                expected_focus = (
+                    descriptor["subject_id"]
+                    if normalized_domain == "cth"
+                    else descriptor["brand_focus_id"]
                 )
-                expected_focus = descriptor["subject_id"] if normalized_domain == "cth" else descriptor["brand_focus_id"]
                 expected_resource = f"{normalized_domain}:{'GLOBAL / ALL' if descriptor['global_scope'] else expected_focus}"
                 if not (
                     type(scope) is ActorScopePermissionResult and scope.allowed is True
-                    and scope.verification_state == "verified" and scope.actor_id == actor_id
+                    and scope.verification_state == "verified"
+                    and scope.actor_id == identity["actor_id"]
                     and scope.caller == caller and scope.domain_id == normalized_domain
+                    and scope.principal_kind == identity["principal_kind"]
+                    and scope.principal_ref == identity["principal_ref"]
                     and scope.subject_id == descriptor["subject_id"]
                     and scope.brand_focus_id == descriptor["brand_focus_id"]
                     and scope.global_scope is descriptor["global_scope"]
@@ -1179,6 +1245,185 @@ def make_owned_training_approval_verifier(
 
     return verify
 
+
+@dataclass(frozen=True)
+class SkillMetadataPermissionDecision:
+    """Fresh metadata authority; serialized evidence contains no approval token."""
+
+    allowed: bool
+    code: str
+    resource: Optional[str] = None
+    operation_id: Optional[str] = None
+    candidate_sha256: Optional[str] = None
+    actor_id: Optional[int] = None
+    caller: Optional[str] = None
+    principal_kind: Optional[str] = None
+    principal_ref: Optional[str] = None
+    domain_id: Optional[str] = None
+    subject_id: Optional[str] = None
+    brand_focus_id: Optional[str] = None
+    global_scope: bool = False
+    permission_audit_id: Optional[str] = None
+    scope_audit_id: Optional[str] = None
+    approval_token_sha256: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+def _skill_metadata_identity(
+    *, actor_id: Optional[int], principal: Optional[LocalWorkspacePrincipal],
+) -> Dict[str, Any]:
+    if actor_id is not None:
+        if principal is not None or type(actor_id) is not int or actor_id <= 0:
+            raise ValueError("SKILL_METADATA_IDENTITY_INVALID")
+        from flask import has_request_context
+        from lumenis.auth.service import get_current_user
+
+        if not has_request_context():
+            raise ValueError("SKILL_METADATA_AUTHENTICATED_REQUEST_REQUIRED")
+        actor = get_current_user(read_only=True)
+        if type(actor) is not dict or type(actor.get("id")) is not int or actor["id"] != actor_id:
+            raise ValueError("SKILL_METADATA_ACTOR_MISMATCH")
+        return dict(actor_id=actor_id, caller=f"actor:{actor_id}",
+                    principal_kind=None, principal_ref=None)
+    if not _is_server_local_workspace_principal(principal) or \
+            resolve_local_workspace_principal(module="skills", action="write") is None:
+        raise ValueError("SKILL_METADATA_WORKSPACE_UNAVAILABLE")
+    return dict(actor_id=None, caller="workspace:local",
+                principal_kind="local_workspace", principal_ref="workspace:local")
+
+def _skill_metadata_payload(
+    candidate: Any, *, actor_id: Optional[int],
+    principal: Optional[LocalWorkspacePrincipal], domain_id: str,
+    subject_id: Optional[str], brand_focus_id: Optional[str], global_scope: bool,
+) -> Dict[str, Any]:
+    from lumenis.shared.agents.skills.lifecycle import SCHEMA_VERSION, _validate_candidate
+
+    _validate_candidate(candidate)
+    identity = _skill_metadata_identity(actor_id=actor_id, principal=principal)
+    if type(domain_id) is not str or domain_id != domain_id.strip():
+        raise ValueError("SKILL_METADATA_SCOPE_INVALID")
+    domain = domain_id.lower()
+    if domain == "zbmp":
+        domain = "bmp"
+    if domain not in _RESOURCE_SCOPE_DOMAINS or type(global_scope) is not bool:
+        raise ValueError("SKILL_METADATA_SCOPE_INVALID")
+    if global_scope:
+        valid = subject_id is None and brand_focus_id is None
+    elif domain == "cth":
+        valid = _is_valid_scope_id(subject_id) and brand_focus_id is None
+    else:
+        valid = _is_valid_scope_id(brand_focus_id) and subject_id is None
+    if not valid:
+        raise ValueError("SKILL_METADATA_SCOPE_INVALID")
+    return {
+        "schema_version": SCHEMA_VERSION, "skill_id": candidate.skill_id,
+        "action": candidate.action, "operation_id": candidate.operation_id,
+        "before_sha256": candidate.before_sha256, "after_sha256": candidate.after_sha256,
+        "candidate_sha256": candidate.candidate_sha256,
+        "config_sha256": candidate.config_sha256,
+        "restore_evidence_ref": candidate.restore_evidence_ref,
+        "identity": identity,
+        "scope": dict(domain_id=domain, subject_id=subject_id,
+                      brand_focus_id=brand_focus_id, global_scope=global_scope),
+    }
+
+def skill_metadata_approval_resource(
+    candidate: Any, *, actor_id: Optional[int] = None,
+    principal: Optional[LocalWorkspacePrincipal] = None, domain_id: str,
+    subject_id: Optional[str] = None, brand_focus_id: Optional[str] = None,
+    global_scope: bool = False,
+) -> str:
+    """Bind the server-prepared candidate, actual identity and exact scope."""
+    payload = _skill_metadata_payload(
+        candidate, actor_id=actor_id, principal=principal, domain_id=domain_id,
+        subject_id=subject_id, brand_focus_id=brand_focus_id, global_scope=global_scope,
+    )
+    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True,
+                           separators=(",", ":"), allow_nan=False).encode("utf-8")
+    return "skills_registry_change:v1:" + hashlib.sha256(canonical).hexdigest()
+
+def check_skill_metadata_change_permission(
+    candidate: Any, *, gate: "PermissionGate", actor_id: Optional[int] = None,
+    principal: Optional[LocalWorkspacePrincipal] = None, domain_id: str,
+    subject_id: Optional[str] = None, brand_focus_id: Optional[str] = None,
+    global_scope: bool = False,
+) -> SkillMetadataPermissionDecision:
+    """Recheck live role, scope and exact manual approval without cached grants."""
+    fields: Dict[str, Any] = {}
+
+    def denied(code: str) -> SkillMetadataPermissionDecision:
+        if type(gate) is PermissionGate:
+            try:
+                audit_id = gate._write_audit(
+                    operation_type="skill_metadata_permission", resource=fields.get("resource"),
+                    risk_level=RiskLevel.HIGH.value, permission_required=PermissionLevel.COMMIT.value,
+                    caller=fields.get("caller") or "anonymous", result="denied", reason=code,
+                    operation_id=None, approval_token=None,
+                )
+                if type(audit_id) is str and audit_id:
+                    fields["permission_audit_id"] = audit_id
+            except Exception:
+                pass
+        return SkillMetadataPermissionDecision(allowed=False, code=code, **fields)
+
+    try:
+        if type(gate) is not PermissionGate or gate is not get_permission_gate() or not gate.fail_closed:
+            return denied("SKILL_METADATA_CANONICAL_PERMISSION_REQUIRED")
+        payload = _skill_metadata_payload(
+            candidate, actor_id=actor_id, principal=principal, domain_id=domain_id,
+            subject_id=subject_id, brand_focus_id=brand_focus_id, global_scope=global_scope,
+        )
+        identity, scope_args = payload["identity"], payload["scope"]
+        fields.update(identity, **scope_args, operation_id=candidate.operation_id,
+                      candidate_sha256=candidate.candidate_sha256)
+        fields["resource"] = skill_metadata_approval_resource(
+            candidate, actor_id=actor_id, principal=principal, **scope_args,
+        )
+        spec = gate.get_operation_spec(OperationType.CONFIG_MODIFY)
+        if (is_testing_bypass_enabled() or not gate.has_permission(PermissionLevel.COMMIT)
+                or type(spec) is not OperationSpec or spec.permission is not PermissionLevel.COMMIT
+                or spec.risk not in {RiskLevel.HIGH, RiskLevel.CRITICAL} or spec.auto_allow is not False):
+            return denied("SKILL_METADATA_MANUAL_APPROVAL_REQUIRED")
+        if actor_id is not None and _load_actor_scope_role(actor_id) not in {"owner", "admin"}:
+            return denied("SKILL_METADATA_ADMIN_REQUIRED")
+        if actor_id is None:
+            scope = check_local_workspace_scope_permission(
+                principal, module="skills", action="write", gate=gate, **scope_args,
+            )
+        else:
+            scope = check_actor_scope_permission(
+                {"id": actor_id}, module="skills", action="write", gate=gate, **scope_args,
+            )
+        focus = scope_args["subject_id"] or scope_args["brand_focus_id"]
+        scope_resource = f"{scope_args['domain_id']}:{'GLOBAL / ALL' if scope_args['global_scope'] else focus}"
+        if not (type(scope) is ActorScopePermissionResult and scope.allowed is True
+                and scope.verification_state == "verified" and scope.scope_action == "write"
+                and scope.operation_type == "resource_scope_write" and scope.resource == scope_resource
+                and scope.audit_id and scope.scope_audit_id == scope.audit_id
+                and all(getattr(scope, key) == value for key, value in {**identity, **scope_args}.items())):
+            return denied("SKILL_METADATA_SCOPE_DENIED")
+        fields["scope_audit_id"] = scope.scope_audit_id
+        approval = gate.check(
+            OperationType.CONFIG_MODIFY, resource=fields["resource"], caller=identity["caller"],
+            domain_id=scope_args["domain_id"], exact_approval_required=True,
+        )
+        token = gate.get_valid_approval_token(OperationType.CONFIG_MODIFY.value, fields["resource"], exact=True)
+        if not (type(approval) is PermissionResult and approval.allowed is True
+                and approval.requires_approval is True and approval.operation_id is None
+                and approval.idempotent_hit is False and approval.audit_id
+                and approval.operation_type == OperationType.CONFIG_MODIFY.value
+                and approval.resource == fields["resource"] and approval.caller == identity["caller"]
+                and approval.domain_id == scope_args["domain_id"]
+                and approval.risk_level in {RiskLevel.HIGH.value, RiskLevel.CRITICAL.value}
+                and approval.permission_required == PermissionLevel.COMMIT.value
+                and type(token) is str and bool(token) and token == approval.approval_token):
+            return denied("SKILL_METADATA_MANUAL_APPROVAL_REQUIRED")
+        fields.update(permission_audit_id=approval.audit_id,
+                      approval_token_sha256=hashlib.sha256(token.encode("utf-8")).hexdigest())
+        return SkillMetadataPermissionDecision(allowed=True, code="SKILL_METADATA_APPROVED", **fields)
+    except Exception:
+        return denied("SKILL_METADATA_PERMISSION_UNVERIFIED")
 
 @dataclass(frozen=True)
 class ContentSourceImport:
@@ -2385,6 +2630,69 @@ class PermissionGate:
         )
         return token
 
+    @contextmanager
+    def skill_metadata_commit_lease(
+        self, candidate: Any, *, connection: Any, decision: Any,
+        actor_id: Optional[int] = None, principal: Optional[LocalWorkspacePrincipal] = None,
+        domain_id: str, subject_id: Optional[str] = None,
+        brand_focus_id: Optional[str] = None, global_scope: bool = False,
+        timeout_seconds: float = 2.0,
+    ):
+        """Serialize one metadata SQL commit with same-process approval revocation.
+
+        The caller obtains BEGIN IMMEDIATE, completes its fresh Fence check,
+        then holds this lease only for connection.commit(). No Gate.check or
+        other approval-lock-taking method may run inside the lease.
+        """
+        from .effect_fence import EffectFence, SkillMetadataFenceDecision
+
+        if (type(self) is not PermissionGate or self is not get_permission_gate()
+                or not self.fail_closed or is_testing_bypass_enabled()
+                or not EffectFence._skill_metadata_connection_is_canonical(connection)):
+            raise PermissionError("SKILL_METADATA_COMMIT_LEASE_UNAVAILABLE")
+        if type(timeout_seconds) not in {int, float} or not 0 < timeout_seconds <= 2.0:
+            raise ValueError("SKILL_METADATA_COMMIT_LEASE_TIMEOUT_INVALID")
+        payload = _skill_metadata_payload(
+            candidate, actor_id=actor_id, principal=principal, domain_id=domain_id,
+            subject_id=subject_id, brand_focus_id=brand_focus_id, global_scope=global_scope,
+        )
+        resource = skill_metadata_approval_resource(
+            candidate, actor_id=actor_id, principal=principal, **payload["scope"],
+        )
+        expected = {**payload["identity"], **payload["scope"], "resource": resource,
+                    "operation_id": candidate.operation_id, "candidate_sha256": candidate.candidate_sha256}
+        if (type(decision) is not SkillMetadataFenceDecision or decision.allowed is not True
+                or decision.state != "commit_verified" or decision.idempotent_hit is not False
+                or any(getattr(decision, name) != value for name, value in expected.items())
+                or any(not re.fullmatch(r"aud_[0-9a-f]{16}", str(getattr(decision, name)))
+                       for name in ("permission_audit_id", "scope_audit_id", "fence_audit_id"))
+                or not re.fullmatch(r"[0-9a-f]{64}", str(decision.approval_token_sha256))):
+            raise PermissionError("SKILL_METADATA_COMMIT_LEASE_BINDING_INVALID")
+        if not self._approval_lock.acquire(timeout=float(timeout_seconds)):
+            raise PermissionError("SKILL_METADATA_COMMIT_LEASE_TIMEOUT")
+        try:
+            # Recheck transport/session after a possible lock wait. The active
+            # writer transaction prevents concurrent canonical account changes.
+            if _skill_metadata_identity(actor_id=actor_id, principal=principal) != payload["identity"]:
+                raise PermissionError("SKILL_METADATA_COMMIT_LEASE_IDENTITY_CHANGED")
+            spec = self.get_operation_spec(OperationType.CONFIG_MODIFY)
+            if (is_testing_bypass_enabled() or not self.fail_closed or not self.has_permission(PermissionLevel.COMMIT)
+                    or type(spec) is not OperationSpec or spec.permission is not PermissionLevel.COMMIT
+                    or spec.risk not in {RiskLevel.HIGH, RiskLevel.CRITICAL} or spec.auto_allow is not False):
+                raise PermissionError("SKILL_METADATA_COMMIT_LEASE_APPROVAL_REQUIRED")
+            valid = any(
+                approval.operation == OperationType.CONFIG_MODIFY.value and approval.resource == resource
+                and approval.is_valid(OperationType.CONFIG_MODIFY.value, resource)
+                and secrets.compare_digest(hashlib.sha256(token.encode()).hexdigest(), decision.approval_token_sha256)
+                for token, approval in self._approvals.items()
+            )
+            if not valid:
+                raise PermissionError("SKILL_METADATA_COMMIT_LEASE_APPROVAL_REQUIRED")
+            yield
+        finally:
+            self._approval_lock.release()
+
+
     def revoke_approval(self, token: str) -> bool:
         """撤销人工审批令牌。
 
@@ -2868,12 +3176,16 @@ __all__ = [
     "PermissionResult",
     "ActorScopePermissionResult",
     "LocalWorkspacePrincipal",
+    "owned_training_identity",
     "check_actor_scope_permission",
     "check_local_workspace_scope_permission",
     "resolve_local_workspace_principal",
     "bind_scope_permission_approval",
     "owned_training_approval_resource",
     "make_owned_training_approval_verifier",
+    "SkillMetadataPermissionDecision",
+    "skill_metadata_approval_resource",
+    "check_skill_metadata_change_permission",
     "ContentSourceImport",
     "content_source_import_resource",
     "check_content_source_import_permission",

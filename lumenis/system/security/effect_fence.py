@@ -9,6 +9,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import re
+import sqlite3
 import threading
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -46,12 +49,357 @@ class FenceDecision:
         return asdict(self)
 
 
+@dataclass(frozen=True)
+class SkillMetadataFenceDecision:
+    """Immutable, current admission decision for one metadata-only skill change."""
+
+    allowed: bool
+    code: str
+    state: str
+    resource: Optional[str] = None
+    operation_id: Optional[str] = None
+    candidate_sha256: Optional[str] = None
+    actor_id: Optional[int] = None
+    caller: Optional[str] = None
+    principal_kind: Optional[str] = None
+    principal_ref: Optional[str] = None
+    domain_id: Optional[str] = None
+    subject_id: Optional[str] = None
+    brand_focus_id: Optional[str] = None
+    global_scope: bool = False
+    permission_audit_id: Optional[str] = None
+    scope_audit_id: Optional[str] = None
+    fence_audit_id: Optional[str] = None
+    approval_token_sha256: Optional[str] = None
+    idempotent_hit: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+_SKILL_AUDIT_ID = re.compile(r"^aud_[0-9a-f]{16}$")
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_SKILL_HISTORY_INPUTS = frozenset({
+    "schema_version", "skill_id", "action", "operation_id", "before_sha256",
+    "after_sha256", "config_sha256", "restore_evidence_ref", "candidate_sha256",
+    "identity", "scope", "resource", "permission_audit_id", "scope_audit_id",
+    "fence_audit_id", "approval_token_sha256", "commit_verification",
+})
+
+
 class EffectFence:
     """Single owner for side-effect admission and idempotency reservations."""
 
     def __init__(self) -> None:
         self._lock = threading.RLock()
         self._reservations: Dict[str, Dict[str, Any]] = {}
+
+    @staticmethod
+    def _skill_metadata_fence_audit(gate, *, resource, caller, allowed, code) -> Optional[str]:
+        """Record the fence result through the canonical gate without token material."""
+        try:
+            from . import permission
+
+            if type(gate) is not permission.PermissionGate or gate is not permission.get_permission_gate():
+                return None
+            audit_id = gate._write_audit(
+                operation_type="skill_metadata_fence",
+                resource=resource,
+                risk_level=permission.RiskLevel.HIGH.value,
+                permission_required=permission.PermissionLevel.COMMIT.value,
+                caller=caller or "anonymous",
+                result="allowed" if allowed else "denied",
+                reason=code,
+                operation_id=None,
+                approval_token=None,
+            )
+            return audit_id if type(audit_id) is str and _SKILL_AUDIT_ID.fullmatch(audit_id) else None
+        except Exception:
+            return None
+
+    @staticmethod
+    def _skill_metadata_connection_is_canonical(connection) -> bool:
+        """Check only the supplied handle; never open a second database connection."""
+        if type(connection) is not sqlite3.Connection or not connection.in_transaction:
+            return False
+        from lumenis.shared.database import get_repository, main_db_path
+
+        expected = getattr(get_repository(), "db_path", None) or main_db_path()
+        expected = os.path.normcase(os.path.abspath(expected))
+        rows = connection.execute("PRAGMA database_list").fetchall()
+        main_path = next((row[2] for row in rows if row[1] == "main"), None)
+        if type(main_path) is not str or not main_path:
+            return False
+        actual = os.path.normcase(os.path.abspath(main_path))
+        return actual == expected
+
+    @staticmethod
+    def _skill_metadata_candidate(candidate):
+        from lumenis.shared.agents.skills import lifecycle
+
+        lifecycle._validate_candidate(candidate)
+        if candidate.action not in {"update", "uninstall", "restore"}:
+            raise ValueError("SKILL_METADATA_ACTION_INVALID")
+        lifecycle._operation_id(candidate.operation_id)
+        if not all(_SHA256.fullmatch(value or "") for value in (
+            candidate.before_sha256, candidate.after_sha256,
+            candidate.candidate_sha256, candidate.config_sha256,
+        )):
+            raise ValueError("SKILL_METADATA_HASH_INVALID")
+        before = json.loads(candidate._before_json)
+        after = json.loads(candidate._after_json)
+        lifecycle._safe_metadata(before)
+        lifecycle._safe_metadata(after)
+        if before["skill_id"] != candidate.skill_id or after["skill_id"] != candidate.skill_id:
+            raise ValueError("SKILL_METADATA_IDENTITY_CHANGED")
+        if (before["product"], before["domain"]) != (after["product"], after["domain"]):
+            raise ValueError("SKILL_METADATA_OWNER_CHANGED")
+        if (after["status"] != "disabled" or after["permissions_granted_json"] != "[]"
+                or after["trust_level"] != "unverified" or after["health_state"] != "unknown"
+                or after["install_state"] != "not_installed" or after["install_path"] is not None
+                or after["active_version"] is not None or after["previous_version"] != before["version"]
+                or after["lifecycle_state"] != ("uninstalled" if candidate.action == "uninstall" else "validated")
+                or (candidate.action == "uninstall" and after["entrypoint"] is not None)):
+            raise ValueError("SKILL_METADATA_EFFECT_SCOPE_INVALID")
+        if candidate.action == "restore":
+            if not isinstance(candidate.restore_evidence_ref, str) or not candidate.restore_evidence_ref:
+                raise ValueError("SKILL_METADATA_RESTORE_REFERENCE_INVALID")
+        elif candidate.restore_evidence_ref is not None:
+            raise ValueError("SKILL_METADATA_RESTORE_REFERENCE_INVALID")
+        return lifecycle, before, after
+
+    @staticmethod
+    def _skill_metadata_scope_from_decision(decision):
+        return {
+            "domain_id": decision.domain_id,
+            "subject_id": decision.subject_id,
+            "brand_focus_id": decision.brand_focus_id,
+            "global_scope": decision.global_scope,
+        }
+
+    @staticmethod
+    def _skill_metadata_validate_permission_decision(permission, decision, resource, candidate):
+        expected_state = permission.SkillMetadataPermissionDecision
+        if type(decision) is not expected_state or decision.allowed is not True:
+            code = decision.code if type(decision) is expected_state else "SKILL_METADATA_PERMISSION_UNVERIFIED"
+            raise PermissionError(code)
+        if (decision.resource != resource or decision.operation_id != candidate.operation_id
+                or decision.candidate_sha256 != candidate.candidate_sha256
+                or type(decision.permission_audit_id) is not str
+                or not _SKILL_AUDIT_ID.fullmatch(decision.permission_audit_id)
+                or type(decision.scope_audit_id) is not str
+                or not _SKILL_AUDIT_ID.fullmatch(decision.scope_audit_id)
+                or type(decision.approval_token_sha256) is not str
+                or not _SHA256.fullmatch(decision.approval_token_sha256)):
+            raise PermissionError("SKILL_METADATA_PERMISSION_BINDING_INVALID")
+
+    @staticmethod
+    def _skill_metadata_validate_history(connection, replay_evidence_ref, candidate, identity, scope, resource):
+        from lumenis.shared.agents.skills import lifecycle
+
+        if not isinstance(replay_evidence_ref, str):
+            raise ValueError("SKILL_METADATA_REPLAY_REFERENCE_INVALID")
+        row, inputs, outputs = lifecycle._history_row(connection, replay_evidence_ref, candidate.skill_id)
+        if (row.get("subject_scope"), row.get("capture_mode"), row.get("domain_id"),
+                row.get("product_id"), row.get("subject_id"), row.get("brand_focus_id"),
+                row.get("global_scope")) not in {
+                ("SYSTEM", "manual_metadata_admission", None, None, None, None, None),
+                ("SYSTEM", "manual_metadata_admission", None, None, None, None, 0),
+        }:
+            raise ValueError("SKILL_METADATA_REPLAY_OWNER_MISMATCH")
+        if set(inputs) != _SKILL_HISTORY_INPUTS:
+            raise ValueError("SKILL_METADATA_REPLAY_SCHEMA_INVALID")
+        material = lifecycle._candidate_material(candidate)
+        expected_inputs = {key: value for key, value in material.items()
+                           if key not in {"before_metadata", "after_metadata"}}
+        expected_inputs["candidate_sha256"] = candidate.candidate_sha256
+        for key, value in expected_inputs.items():
+            if inputs.get(key) != value:
+                raise ValueError("SKILL_METADATA_REPLAY_CANDIDATE_MISMATCH")
+        if inputs.get("identity") != identity or inputs.get("scope") != scope or inputs.get("resource") != resource:
+            raise ValueError("SKILL_METADATA_REPLAY_CONTEXT_MISMATCH")
+        if set(outputs) != {"before_metadata", "after_metadata", "config_sha256"}:
+            raise ValueError("SKILL_METADATA_REPLAY_OUTPUT_INVALID")
+        if outputs.get("before_metadata") != material["before_metadata"] \
+                or outputs.get("after_metadata") != material["after_metadata"] \
+                or outputs.get("config_sha256") != candidate.config_sha256:
+            raise ValueError("SKILL_METADATA_REPLAY_OUTPUT_MISMATCH")
+
+        audit_fields = ("permission_audit_id", "scope_audit_id", "fence_audit_id")
+        for name in audit_fields:
+            if type(inputs.get(name)) is not str or not _SKILL_AUDIT_ID.fullmatch(inputs[name]):
+                raise ValueError("SKILL_METADATA_REPLAY_AUDIT_INVALID")
+        if type(inputs.get("approval_token_sha256")) is not str or not _SHA256.fullmatch(inputs["approval_token_sha256"]):
+            raise ValueError("SKILL_METADATA_REPLAY_APPROVAL_INVALID")
+        commit = inputs.get("commit_verification")
+        if type(commit) is not dict or set(commit) != {
+                "permission_audit_id", "scope_audit_id", "fence_audit_id", "approval_token_sha256"}:
+            raise ValueError("SKILL_METADATA_REPLAY_COMMIT_INVALID")
+        for name in audit_fields:
+            if type(commit.get(name)) is not str or not _SKILL_AUDIT_ID.fullmatch(commit[name]):
+                raise ValueError("SKILL_METADATA_REPLAY_COMMIT_INVALID")
+        if type(commit.get("approval_token_sha256")) is not str or not _SHA256.fullmatch(commit["approval_token_sha256"]):
+            raise ValueError("SKILL_METADATA_REPLAY_COMMIT_INVALID")
+        return row, outputs
+
+    def check_skill_metadata_change(
+        self, candidate, *, connection, gate, actor_id=None, principal=None, domain_id,
+        subject_id=None, brand_focus_id=None, global_scope=False, phase="before_write",
+        replay_evidence_ref=None,
+    ) -> SkillMetadataFenceDecision:
+        """Authorize one exact metadata-only registry transition on its caller transaction."""
+        fields: Dict[str, Any] = {
+            "state": "denied", "operation_id": getattr(candidate, "operation_id", None),
+            "candidate_sha256": getattr(candidate, "candidate_sha256", None),
+            "actor_id": actor_id, "domain_id": domain_id, "subject_id": subject_id,
+            "brand_focus_id": brand_focus_id,
+            "global_scope": global_scope if type(global_scope) is bool else False,
+            "idempotent_hit": False,
+        }
+        resource = None
+        caller = None
+        permission_result = None
+        code = "SKILL_METADATA_FENCE_UNVERIFIED"
+        allowed = False
+        try:
+            from . import permission
+
+            if phase not in {"before_write", "before_commit", "replay"}:
+                raise ValueError("SKILL_METADATA_FENCE_PHASE_INVALID")
+            lifecycle, before, after = self._skill_metadata_candidate(candidate)
+            if not self._skill_metadata_connection_is_canonical(connection):
+                raise PermissionError("SKILL_METADATA_CANONICAL_TRANSACTION_REQUIRED")
+            fields.update(operation_id=candidate.operation_id, candidate_sha256=candidate.candidate_sha256)
+            if str(before["source_type"] or "builtin").lower() == "builtin":
+                raise PermissionError("BUILTIN_SKILL_METADATA_CHANGE_NOT_SUPPORTED")
+
+            resource = permission.skill_metadata_approval_resource(
+                candidate, actor_id=actor_id, principal=principal, domain_id=domain_id,
+                subject_id=subject_id, brand_focus_id=brand_focus_id, global_scope=global_scope,
+            )
+            if phase == "replay":
+                current = lifecycle._registry_row(connection, candidate.skill_id)
+                if lifecycle._snapshot(current) != after or lifecycle._hash(current["config_json"]) != candidate.config_sha256:
+                    raise PermissionError("SKILL_METADATA_REPLAY_CURRENT_STATE_MISMATCH")
+                # The signed admission binds the original caller/scope, and replay must use that same context.
+                row, outputs = self._skill_metadata_validate_history(
+                    connection, replay_evidence_ref, candidate,
+                    self._identity_payload(actor_id, principal, permission),
+                    self._scope_payload(domain_id, subject_id, brand_focus_id, global_scope, permission),
+                    resource,
+                )
+                identity = self._identity_payload(actor_id, principal, permission)
+                scope = self._scope_payload(domain_id, subject_id, brand_focus_id, global_scope, permission)
+            elif phase == "before_write":
+                current = lifecycle._registry_row(connection, candidate.skill_id)
+                if lifecycle._snapshot(current) != before or lifecycle._hash(current) != candidate.before_sha256 \
+                        or lifecycle._hash(current["config_json"]) != candidate.config_sha256:
+                    raise PermissionError("SKILL_METADATA_REGISTRY_BEFORE_MISMATCH")
+                identity = self._identity_payload(actor_id, principal, permission)
+                scope = self._scope_payload(domain_id, subject_id, brand_focus_id, global_scope, permission)
+            else:
+                current = lifecycle._registry_row(connection, candidate.skill_id)
+                if lifecycle._snapshot(current) != after or lifecycle._hash(lifecycle._snapshot(current)) != candidate.after_sha256 \
+                        or lifecycle._hash(current["config_json"]) != candidate.config_sha256:
+                    raise PermissionError("SKILL_METADATA_REGISTRY_AFTER_MISMATCH")
+                identity = self._identity_payload(actor_id, principal, permission)
+                scope = self._scope_payload(domain_id, subject_id, brand_focus_id, global_scope, permission)
+
+            caller = identity.get("caller")
+            fields.update(identity, **scope)
+            permission_result = permission.check_skill_metadata_change_permission(
+                candidate, gate=gate, actor_id=actor_id, principal=principal,
+                domain_id=domain_id, subject_id=subject_id,
+                brand_focus_id=brand_focus_id, global_scope=global_scope,
+            )
+            self._skill_metadata_validate_permission_decision(permission, permission_result, resource, candidate)
+            identity = {name: getattr(permission_result, name) for name in
+                        ("actor_id", "caller", "principal_kind", "principal_ref")}
+            scope = self._skill_metadata_scope_from_decision(permission_result)
+            if phase == "replay":
+                # Readback only: fresh approval is required, while its token may differ from the signed original.
+                audit = self._skill_metadata_fence_audit(
+                    gate, resource=resource, caller=identity["caller"], allowed=True,
+                    code="SKILL_METADATA_ALREADY_APPLIED",
+                )
+                if not audit:
+                    raise PermissionError("SKILL_METADATA_FENCE_AUDIT_UNAVAILABLE")
+                return SkillMetadataFenceDecision(
+                    allowed=True, code="SKILL_METADATA_ALREADY_APPLIED", state="already_applied",
+                    resource=resource, operation_id=candidate.operation_id,
+                    candidate_sha256=candidate.candidate_sha256, **identity, **scope,
+                    permission_audit_id=permission_result.permission_audit_id,
+                    scope_audit_id=permission_result.scope_audit_id, fence_audit_id=audit,
+                    approval_token_sha256=permission_result.approval_token_sha256,
+                    idempotent_hit=True,
+                )
+
+            current = lifecycle._registry_row(connection, candidate.skill_id)
+            if phase == "before_write":
+                exact = (lifecycle._snapshot(current) == before
+                         and lifecycle._hash(current) == candidate.before_sha256)
+            else:
+                snapshot = lifecycle._snapshot(current)
+                exact = snapshot == after and lifecycle._hash(snapshot) == candidate.after_sha256
+            if not exact or lifecycle._hash(current["config_json"]) != candidate.config_sha256:
+                raise PermissionError(
+                    "SKILL_METADATA_REGISTRY_BEFORE_MISMATCH" if phase == "before_write"
+                    else "SKILL_METADATA_REGISTRY_AFTER_MISMATCH"
+                )
+            state = "admitted" if phase == "before_write" else "commit_verified"
+            success_code = "SKILL_METADATA_ADMITTED" if phase == "before_write" else "SKILL_METADATA_COMMIT_VERIFIED"
+            audit = self._skill_metadata_fence_audit(
+                gate, resource=resource, caller=identity["caller"], allowed=True,
+                code=success_code,
+            )
+            if not audit:
+                raise PermissionError("SKILL_METADATA_FENCE_AUDIT_UNAVAILABLE")
+            return SkillMetadataFenceDecision(
+                allowed=True, code=success_code, state=state,
+                resource=resource, operation_id=candidate.operation_id,
+                candidate_sha256=candidate.candidate_sha256, **identity, **scope,
+                permission_audit_id=permission_result.permission_audit_id,
+                scope_audit_id=permission_result.scope_audit_id, fence_audit_id=audit,
+                approval_token_sha256=permission_result.approval_token_sha256,
+                idempotent_hit=False,
+            )
+        except Exception as exc:
+            code = str(exc) if isinstance(exc, (ValueError, PermissionError, RuntimeError)) else code
+            if type(code) is not str or not code.startswith("SKILL_") and not code.startswith("BUILTIN_"):
+                code = "SKILL_METADATA_FENCE_UNVERIFIED"
+        audit = self._skill_metadata_fence_audit(
+            gate, resource=resource, caller=caller, allowed=allowed, code=code,
+        )
+        fields["fence_audit_id"] = audit
+        if permission_result is not None:
+            for name in ("permission_audit_id", "scope_audit_id", "approval_token_sha256"):
+                fields[name] = getattr(permission_result, name, None)
+            for name in ("actor_id", "caller", "principal_kind", "principal_ref", "domain_id",
+                         "subject_id", "brand_focus_id", "global_scope", "resource", "operation_id",
+                         "candidate_sha256"):
+                value = getattr(permission_result, name, None)
+                if name == "resource":
+                    resource = value
+                fields[name] = value
+        elif resource is not None:
+            fields["resource"] = resource
+        fields["allowed"] = False
+        fields["code"] = code
+        return SkillMetadataFenceDecision(**fields)
+
+    @staticmethod
+    def _identity_payload(actor_id, principal, permission):
+        return permission._skill_metadata_identity(actor_id=actor_id, principal=principal)
+
+    @staticmethod
+    def _scope_payload(domain_id, subject_id, brand_focus_id, global_scope, permission):
+        if type(global_scope) is not bool:
+            raise ValueError("SKILL_METADATA_SCOPE_INVALID")
+        domain = domain_id.lower() if type(domain_id) is str else domain_id
+        if domain == "zbmp":
+            domain = "bmp"
+        return {"domain_id": domain, "subject_id": subject_id,
+                "brand_focus_id": brand_focus_id, "global_scope": global_scope}
 
     @staticmethod
     def _digest(action: AgentAction, target: str, payload: Dict[str, Any]) -> str:
@@ -195,4 +543,4 @@ def get_effect_fence() -> EffectFence:
     return _default_fence
 
 
-__all__ = ["FenceDecision", "EffectFence", "get_effect_fence"]
+__all__ = ["FenceDecision", "SkillMetadataFenceDecision", "EffectFence", "get_effect_fence"]

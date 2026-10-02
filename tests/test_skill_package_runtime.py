@@ -32,6 +32,41 @@ def test_local_skill_manifest_is_previewed_with_deny_by_default(tmp_path):
     assert result["ownership"]["registry"] == "account.models.skills_registry"
 
 
+def test_skill_license_declaration_is_visible_but_never_usage_approval(tmp_path):
+    package = tmp_path / "licensed-skill"
+    package.mkdir()
+    (package / "SKILL.md").write_text(
+        "---\nname: licensed-skill\ndescription: Read an approved document.\n"
+        "license: Apache-2.0\n---\n", encoding="utf-8",
+    )
+    from lumenis.shared.agents.skills.package_runtime import preview_skill_source
+
+    preview = preview_skill_source(str(package))
+
+    assert preview["state"] == "VALIDATED"
+    review = preview["compatibility"]["license_review"]
+    assert review["declaration"] == "Apache-2.0"
+    assert review["state"] == "DECLARED_NOT_VERIFIED"
+    assert review["commercial_use"] == "UNKNOWN"
+    assert review["verified"] is False
+    assert preview["security"]["permissions_granted"] == []
+    assert preview["security"]["execution"].startswith("BLOCKED_")
+
+
+def test_missing_and_malformed_skill_license_do_not_become_commercial_permission():
+    from lumenis.shared.agents.skills.package_runtime import validate_manifest
+    base = {"skill_id": "sample.read", "name": "Sample Read", "version": "1.0.0",
+            "runtime": "builtin"}
+
+    unknown = validate_manifest(base)
+    assert unknown["valid"] is True
+    assert unknown["normalized"]["license_review"]["state"] == "UNKNOWN"
+    assert unknown["normalized"]["license_review"]["commercial_use"] == "UNKNOWN"
+    malformed = validate_manifest({**base, "license": {"commercial_use": True}})
+    assert malformed["valid"] is False
+    assert malformed["normalized"]["license_review"]["verified"] is False
+
+
 def test_github_source_requires_explicit_revision_resolution():
     from lumenis.shared.agents.skills.package_runtime import detect_source, preview_skill_source
 

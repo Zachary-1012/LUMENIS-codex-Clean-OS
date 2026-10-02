@@ -202,9 +202,14 @@ def test_same_global_label_does_not_merge_cth_and_bmp_training_scopes(tmp_path, 
     assert not paths[-1].exists()
 
 
-def _mock_training_stack(monkeypatch, *, steps=1, save_adapter=True):
+def _mock_training_stack(monkeypatch, *, steps=1, save_adapter=True, boundary=None):
     """Observe execution fences without optional packages, a GPU or model calls."""
-    observed = {"train_calls": 0}
+    observed = {"train_calls": 0, "optimizer_steps": 0, "save_calls": 0, "boundaries": []}
+
+    def reach(name):
+        observed["boundaries"].append(name)
+        if boundary is not None:
+            boundary(name)
 
     class Tokenizer:
         def apply_chat_template(self, messages, **kwargs):
@@ -215,6 +220,7 @@ def _mock_training_stack(monkeypatch, *, steps=1, save_adapter=True):
 
         def save_pretrained(self, path):
             (Path(path) / "tokenizer_config.json").write_text("{}")
+            reach("tokenizer_saved")
 
     def load_tokenizer(path, **kwargs):
         assert kwargs["local_files_only"] is True
@@ -232,15 +238,26 @@ def _mock_training_stack(monkeypatch, *, steps=1, save_adapter=True):
         def __init__(self, **kwargs):
             observed["dataset"] = kwargs["train_dataset"]
             observed["args"] = kwargs["args"]
+            self.callbacks = kwargs["callbacks"]
 
         def train(self):
             observed["train_calls"] += 1
+            for index in range(steps):
+                state = SimpleNamespace(global_step=index)
+                for event in ("on_step_begin", "on_substep_end", "on_pre_optimizer_step"):
+                    reach(f"{index}:{event}")
+                    for callback in self.callbacks:
+                        getattr(callback, event)(observed["args"], state, None)
+                observed["optimizer_steps"] += 1
+            reach("training_returned")
             return SimpleNamespace(global_step=steps)
 
         def save_model(self, path):
+            observed["save_calls"] += 1
             if save_adapter:
                 (Path(path) / "adapter_config.json").write_text("{}")
                 (Path(path) / "adapter_model.safetensors").write_bytes(b"synthetic-unit-artifact")
+            reach("adapter_saved")
 
     monkeypatch.setattr(training, "_require_cuda", lambda: (
         SimpleNamespace(bfloat16="synthetic-bfloat16"), "synthetic-test-device", 80 * 1024**3,
@@ -252,6 +269,7 @@ def _mock_training_stack(monkeypatch, *, steps=1, save_adapter=True):
         AutoTokenizer=SimpleNamespace(from_pretrained=load_tokenizer),
         AutoModelForCausalLM=SimpleNamespace(from_pretrained=load_model),
         Mxfp4Config=lambda **kwargs: kwargs,
+        TrainerCallback=object,
     ))
     monkeypatch.setitem(sys.modules, "peft", SimpleNamespace(
         LoraConfig=lambda **kwargs: kwargs, get_peft_model=lambda model, config: model,
@@ -260,6 +278,59 @@ def _mock_training_stack(monkeypatch, *, steps=1, save_adapter=True):
         SFTConfig=lambda **kwargs: SimpleNamespace(**kwargs), SFTTrainer=Trainer,
     ))
     return observed
+
+
+@pytest.mark.parametrize("revoke_at,completed_steps,saved", [
+    ("1:on_step_begin", 1, False),
+    ("0:on_substep_end", 0, False),
+    ("0:on_pre_optimizer_step", 0, False),
+    ("training_returned", 2, False),
+    ("adapter_saved", 2, True),
+    ("tokenizer_saved", 2, True),
+])
+def test_revocation_at_training_or_save_boundary_never_issues_usable_candidate(
+        tmp_path, monkeypatch, revoke_at, completed_steps, saved):
+    """Simulated compute only: drive the real caller's registered callback and save fences."""
+    paths = _inputs(tmp_path, monkeypatch)
+    approved = True
+
+    def boundary(name):
+        nonlocal approved
+        if name == revoke_at:
+            approved = False
+
+    observed = _mock_training_stack(monkeypatch, steps=2, boundary=boundary)
+    with pytest.raises(training.TrainingBlocked, match="TRAINING_APPROVAL_REQUIRED"):
+        _run(paths, execute=True, approval_verifier=lambda request: approved)
+    status = json.loads((paths[-1] / "training_status.json").read_text())
+    assert status["execution_state"] == "TRAINING_APPROVAL_REQUIRED"
+    assert status["candidate_status"] == "NOT_EVALUATED"
+    assert observed["optimizer_steps"] == completed_steps
+    assert observed["save_calls"] == int(saved)
+    # Already-written weights remain diagnostic artifacts; their denied status
+    # prevents the existing evaluation/loader from accepting them as trained.
+    assert (paths[-1] / "adapter_model.safetensors").exists() is saved
+
+
+def test_approval_transport_failure_during_training_is_recorded_without_save(tmp_path, monkeypatch):
+    paths = _inputs(tmp_path, monkeypatch)
+    transport_available = True
+
+    def boundary(name):
+        nonlocal transport_available
+        if name == "0:on_substep_end":
+            transport_available = False
+
+    def verify(request):
+        if not transport_available:
+            raise ConnectionError("isolated approval transport unavailable")
+        return True
+
+    observed = _mock_training_stack(monkeypatch, boundary=boundary)
+    with pytest.raises(training.TrainingBlocked, match="TRAINING_APPROVAL_VERIFIER_FAILED"):
+        _run(paths, execute=True, approval_verifier=verify)
+    assert observed["optimizer_steps"] == observed["save_calls"] == 0
+    assert json.loads((paths[-1] / "training_status.json").read_text())["execution_state"] == "TRAINING_APPROVAL_VERIFIER_FAILED"
 
 
 def test_execution_rechecks_revocation_before_first_write(tmp_path, monkeypatch):

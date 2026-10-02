@@ -357,7 +357,7 @@ def run_owned_lora_training(
                     raise TrainingBlocked("T4_LOADER_QUANTIZATION_MISMATCH")
             from datasets import Dataset
             from peft import LoraConfig, get_peft_model
-            from transformers import AutoModelForCausalLM, AutoTokenizer, Mxfp4Config
+            from transformers import AutoModelForCausalLM, AutoTokenizer, Mxfp4Config, TrainerCallback
             from trl import SFTConfig, SFTTrainer
             if not low_memory:
                 tokenizer = AutoTokenizer.from_pretrained(str(model_dir), revision=revision, local_files_only=True, trust_remote_code=False)
@@ -386,6 +386,20 @@ def run_owned_lora_training(
                     target_parameters=[f"{layer}.mlp.experts.{projection}" for layer in (7, 15, 23) for projection in ("gate_up_proj", "down_proj")],
                 )
                 model = get_peft_model(model, config)
+
+            class ApprovalCallback(TrainerCallback):
+                def on_step_begin(self, args, state, control, **kwargs):
+                    _verify_approval(approval_verifier, request)
+                    return control
+
+                def on_substep_end(self, args, state, control, **kwargs):
+                    _verify_approval(approval_verifier, request)
+                    return control
+
+                def on_pre_optimizer_step(self, args, state, control, **kwargs):
+                    _verify_approval(approval_verifier, request)
+                    return control
+
             args = SFTConfig(
                 learning_rate=2e-4, gradient_checkpointing=True, num_train_epochs=1,
                 logging_steps=1, per_device_train_batch_size=1 if low_memory else 4, gradient_accumulation_steps=4,
@@ -399,19 +413,23 @@ def run_owned_lora_training(
             result.update({"execution_state": "TRAINING_IN_PROGRESS", "cuda_device": device_name, "cuda_memory_bytes": memory_bytes})
             _write_status(output, result)
             try:
-                trainer = SFTTrainer(model=model, args=args, train_dataset=dataset, processing_class=tokenizer)
+                trainer = SFTTrainer(model=model, args=args, train_dataset=dataset, processing_class=tokenizer,
+                                     callbacks=[ApprovalCallback()])
                 _verify_approval(approval_verifier, request)
                 train_result = trainer.train()
                 if int(getattr(train_result, "global_step", 0)) <= 0:
                     raise TrainingBlocked("TRAINING_COMPLETED_WITHOUT_OPTIMIZER_STEPS")
                 if low_memory and not math.isfinite(float(getattr(train_result, "metrics", {}).get("train_loss", float("nan")))):
                     raise TrainingBlocked("TRAINING_LOSS_UNAVAILABLE_OR_NONFINITE")
+                _verify_approval(approval_verifier, request)
                 trainer.save_model(str(output))
+                _verify_approval(approval_verifier, request)
                 tokenizer.save_pretrained(str(output))
                 for artifact in ("adapter_config.json", "adapter_model.safetensors"):
                     path = output / artifact
                     if path.is_symlink() or not path.is_file() or path.stat().st_size <= 0:
                         raise TrainingBlocked("TRAINED_ADAPTER_ARTIFACT_MISSING_OR_EMPTY")
+                _verify_approval(approval_verifier, request)
             except TrainingBlocked as exc:
                 result["execution_state"] = str(exc)
                 _write_status(output, result)

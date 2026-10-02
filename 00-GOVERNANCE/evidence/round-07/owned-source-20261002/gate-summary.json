@@ -1,0 +1,36 @@
+{
+  "base": "187fe61fb2907fcdcd69168df9b610eafc32e1cb",
+  "checks": [
+    {
+      "name": "verify_ai_native_constitution",
+      "exit_code": 0,
+      "output_file": "verify_ai_native_constitution-output.txt",
+      "output_sha256": "e30d82c88700d83e334b9d746d862749bb960251f028c8d76450046dcbfcaeca"
+    },
+    {
+      "name": "verify_codex_takeover_governance",
+      "exit_code": 0,
+      "output_file": "verify_codex_takeover_governance-output.txt",
+      "output_sha256": "b3b3bb0c406adabf6d42e4d4f77059cc70155e01f0bcd5261315342439c8e1ea"
+    },
+    {
+      "name": "verify_lumenis_single_product",
+      "exit_code": 0,
+      "output_file": "verify_lumenis_single_product-output.txt",
+      "output_sha256": "352d35ce1fb2452931d17f4534d1ec367ee2e8b8f1deaa7ba369708293608b1f"
+    },
+    {
+      "name": "verify_database_authority",
+      "exit_code": 0,
+      "output_file": "verify_database_authority-output.txt",
+      "output_sha256": "2fd870f49c45caa9551267ba5aaedac52cfa4fdcaf023acfb49293cc3fe33b6a"
+    },
+    {
+      "name": "git_diff_cached_check",
+      "exit_code": 0,
+      "output_file": "git_diff_cached_check-output.txt",
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "source_and_status_publication_gate": "FINAL_CONTAINING_COMMIT_CHECK_REQUIRED"
+}

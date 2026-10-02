@@ -326,3 +326,164 @@ def test_approval_revoked_during_write_rolls_back_both_rows(review_db, monkeypat
         training_review.submit_training_review(gate=gate, **args)
     assert calls["count"] == 2
     assert _review_count(review_db) == 0
+
+
+def _open_workspace():
+    from flask import Flask
+    app = Flask(__name__)
+    app.config["LUMENIS_OPEN_WORKSPACE"] = True
+    return app
+
+
+def _workspace_args(scope, source_ref):
+    args = _args(scope, source_ref)
+    args.pop("authenticated_actor")
+    args["principal"] = p.resolve_local_workspace_principal(module="owned_training", action="write")
+    assert type(args["principal"]) is p.LocalWorkspacePrincipal
+    return args
+
+
+def _workspace_export(result, args, gate, resource):
+    material = training_review._request_material(**args)
+
+    def authorize():
+        scope_audit, operation_audit = training_review._authorize(gate, material, resource)
+        return {"actor_id": "workspace:local", "scope": args["expected_scope"],
+                "permission_audit_ref": scope_audit, "operation_audit_ref": operation_audit}
+
+    return training_cases.export_reviewed_training_records(
+        [result["review_evidence_ref"]], actor_id="workspace:local", expected_scope=args["expected_scope"],
+        authorize=authorize, principal=args["principal"], gate=gate,
+    )
+
+
+@pytest.mark.parametrize("domain,focus,global_scope", [
+    ("cth", "SUBJ-A", False), ("zbmp", "BRAND-A", False),
+    ("cth", "SUBJ-A", True), ("zbmp", "BRAND-A", True),
+])
+def test_explicit_local_workspace_review_and_read_export_need_no_account_rows(review_db, domain, focus, global_scope):
+    scope = _scope(focus, domain=domain, global_scope=global_scope)
+    with sqlite3.connect(review_db) as connection:
+        connection.execute("DELETE FROM v4_users")
+        source_ref = _source(connection, scope)
+    app = _open_workspace()
+    with app.test_request_context("/", base_url="http://localhost", environ_overrides={"REMOTE_ADDR": "127.0.0.1"}):
+        args = _workspace_args(scope, source_ref)
+        resource = training_review.training_review_approval_resource(**args)
+        gate, _ = _gate(resource)
+        gate.grant_permission(p.PermissionLevel.VERIFY)
+        result = training_review.submit_training_review(gate=gate, **args)
+        records = _workspace_export(result, args, gate, resource)
+        assert records[0]["messages"][-1]["content"] == args["reviewer_approved_target"]
+        assert owned_training._validate_record(records[0])[0]["domain_id"] == ("bmp" if domain == "zbmp" else "cth")
+        noop = training_review.submit_training_review(gate=gate, **args)
+        assert noop["state"] == "already_recorded" and noop["review_evidence_ref"] == result["review_evidence_ref"]
+    with sqlite3.connect(review_db) as connection:
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute("SELECT * FROM app_evidence_records WHERE source='shared_learning'").fetchall()
+        assert len(rows) == 2
+        for row in rows:
+            assert store.verify_evidence_record_integrity(dict(row))
+            inputs = json.loads(row["inputs_json"])
+            assert inputs["actor_id"] == "workspace:local"
+            assert inputs["principal_kind"] == "local_workspace" and inputs["principal_ref"] == "workspace:local"
+        assert connection.execute("SELECT COUNT(*) FROM v4_users").fetchone()[0] == 0
+
+
+def test_workspace_principal_does_not_replace_exact_review_approval_or_mix_with_account(review_db):
+    scope = _scope()
+    with sqlite3.connect(review_db) as connection:
+        source_ref = _source(connection, scope)
+    app = _open_workspace()
+    with app.test_request_context("/", base_url="http://localhost", environ_overrides={"REMOTE_ADDR": "127.0.0.1"}):
+        args = _workspace_args(scope, source_ref)
+        exact = training_review.training_review_approval_resource(**args)
+        actor_args = {key: value for key, value in args.items() if key != "principal"}
+        actor_args["authenticated_actor"] = {"id": 1}
+        actor_resource = training_review.training_review_approval_resource(**actor_args)
+        assert actor_resource != exact
+        wrong_gate, _ = _gate(actor_resource)
+        with pytest.raises(PermissionError, match="EXACT_APPROVAL_REQUIRED"):
+            training_review.submit_training_review(gate=wrong_gate, **args)
+        with pytest.raises(PermissionError, match="IDENTITY_MIXED"):
+            training_review.training_review_approval_resource(**args, authenticated_actor={"id": 1})
+        forged = {**args, "principal": {"principal_ref": "workspace:local", "principal_kind": "local_workspace"}}
+        with pytest.raises(PermissionError, match="SERVER_IDENTITY_REQUIRED"):
+            training_review.training_review_approval_resource(**forged)
+    assert _review_count(review_db) == 0
+
+
+def test_workspace_identity_expires_with_request_and_export_cannot_take_json_or_lambda_true(review_db):
+    scope = _scope()
+    with sqlite3.connect(review_db) as connection:
+        source_ref = _source(connection, scope)
+    app = _open_workspace()
+    with app.test_request_context("/", base_url="http://localhost", environ_overrides={"REMOTE_ADDR": "127.0.0.1"}):
+        args = _workspace_args(scope, source_ref)
+        resource = training_review.training_review_approval_resource(**args)
+        gate, _ = _gate(resource)
+        gate.grant_permission(p.PermissionLevel.VERIFY)
+        result = training_review.submit_training_review(gate=gate, **args)
+        export_args = dict(actor_id="workspace:local", expected_scope=scope, authorize=lambda: True,
+                           principal=args["principal"], gate=gate)
+        with pytest.raises(PermissionError, match="AUTHORIZATION_MISMATCH"):
+            training_cases.export_reviewed_training_records([result["review_evidence_ref"]], **export_args)
+        with pytest.raises(PermissionError, match="SERVER_IDENTITY_REQUIRED"):
+            training_cases.export_reviewed_training_records([result["review_evidence_ref"]],
+                **{**export_args, "principal": {"principal_ref": "workspace:local"}})
+        app.config["LUMENIS_OPEN_WORKSPACE"] = False
+        with pytest.raises(PermissionError, match="SERVER_IDENTITY_REQUIRED"):
+            _workspace_export(result, args, gate, resource)
+    with pytest.raises(PermissionError, match="SERVER_IDENTITY_REQUIRED"):
+        training_review.submit_training_review(gate=gate, **args)
+    assert _review_count(review_db) == 2
+
+
+def test_workspace_closed_during_review_rolls_back_and_can_recover_with_fresh_request(review_db, monkeypatch):
+    scope = _scope()
+    with sqlite3.connect(review_db) as connection:
+        source_ref = _source(connection, scope)
+    app = _open_workspace()
+    original = store.record_evidence
+    closed = {"once": False}
+
+    def close_after_rights(**kwargs):
+        value = original(**kwargs)
+        if kwargs.get("feature_id") == "OWNED_TRAINING_RIGHTS_APPROVAL" and not closed["once"]:
+            app.config["LUMENIS_OPEN_WORKSPACE"] = False
+            closed["once"] = True
+        return value
+
+    with app.test_request_context("/", base_url="http://localhost", environ_overrides={"REMOTE_ADDR": "127.0.0.1"}):
+        args = _workspace_args(scope, source_ref)
+        resource = training_review.training_review_approval_resource(**args)
+        gate, _ = _gate(resource)
+        monkeypatch.setattr(store, "record_evidence", close_after_rights)
+        with pytest.raises(PermissionError, match="SERVER_IDENTITY_REQUIRED"):
+            training_review.submit_training_review(gate=gate, **args)
+        assert _review_count(review_db) == 0
+        app.config["LUMENIS_OPEN_WORKSPACE"] = True
+    with app.test_request_context("/", base_url="http://localhost", environ_overrides={"REMOTE_ADDR": "127.0.0.1"}):
+        result = training_review.submit_training_review(gate=gate, **args)
+        assert result["state"] == "recorded"
+    assert _review_count(review_db) == 2
+
+
+def test_review_approval_does_not_grant_export_and_revocation_remains_live(review_db):
+    scope = _scope()
+    with sqlite3.connect(review_db) as connection:
+        source_ref = _source(connection, scope)
+    app = _open_workspace()
+    with app.test_request_context("/", base_url="http://localhost", environ_overrides={"REMOTE_ADDR": "127.0.0.1"}):
+        args = _workspace_args(scope, source_ref)
+        resource = training_review.training_review_approval_resource(**args)
+        gate, token = _gate(resource)
+        result = training_review.submit_training_review(gate=gate, **args)
+        with pytest.raises(PermissionError, match="EXPORT_READ_DENIED"):
+            _workspace_export(result, args, gate, resource)
+        gate.grant_permission(p.PermissionLevel.VERIFY)
+        assert len(_workspace_export(result, args, gate, resource)) == 1
+        assert gate.revoke_approval(token)
+        with pytest.raises(PermissionError, match="EXACT_APPROVAL_REQUIRED"):
+            _workspace_export(result, args, gate, resource)
+    assert _review_count(review_db) == 2

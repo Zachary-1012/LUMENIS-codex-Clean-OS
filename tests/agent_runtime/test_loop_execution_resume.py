@@ -227,6 +227,8 @@ def test_resume_requires_injected_executor_but_completed_readback_still_works(re
     already_done = loop.resume(completed_task, context=_context())
     assert already_done.status == "already_completed"
     assert already_done.result["completed_steps"] == 2
+    assert already_done.result["final_step_results"][0]["result"]["output"] == "Q4 forecast: $4.2M"
+    assert already_done.result["final_step_results"][1]["result"]["output"] == "final report"
     assert len(TaskEngine().get_steps(completed_task)) == completed_rows
 
 

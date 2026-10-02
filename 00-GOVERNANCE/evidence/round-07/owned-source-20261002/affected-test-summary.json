@@ -1,0 +1,643 @@
+{
+  "schema": "c2-source-prerequisite-affected-tests:v1",
+  "counts": {
+    "tests": 125,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "exit_code": 0,
+  "xml_sha256": "cc76149f2ce26c0a8344da2127f4ae71bdd130cfc3867bf0b54427a6e1a20ee3",
+  "log_sha256": "df1f34fa47072882d1a936e9836ee3cdd625d66b4a0641307e2cd463ff193d5d",
+  "input_manifest": "source-manifest.json",
+  "input_before_after_hashes_identical": true,
+  "no_background_thread_leak": true,
+  "cases": [
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_open_workspace_permission_requires_exact_scope_and_manual_approval",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_workspace_permission_rechecks_open_loopback_transport_and_rejects_claims[headers0-127.0.0.1-False]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_workspace_permission_rechecks_open_loopback_transport_and_rejects_claims[headers1-192.0.2.7-True]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_workspace_permission_rechecks_open_loopback_transport_and_rejects_claims[headers2-127.0.0.1-True]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_workspace_permission_rechecks_open_loopback_transport_and_rejects_claims[headers3-127.0.0.1-True]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_workspace_permission_rechecks_open_loopback_transport_and_rejects_claims[headers4-127.0.0.1-True]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_workspace_permission_rechecks_open_loopback_transport_and_rejects_claims[headers5-127.0.0.1-True]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_workspace_permission_rechecks_open_loopback_transport_and_rejects_claims[headers6-127.0.0.1-True]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_workspace_permission_rechecks_open_loopback_transport_and_rejects_claims[headers7-127.0.0.1-True]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_workspace_permission_rechecks_open_loopback_transport_and_rejects_claims[headers8-127.0.0.1-True]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_workspace_permission_rechecks_open_loopback_transport_and_rejects_claims[headers9-127.0.0.1-True]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_workspace_permission_rechecks_open_loopback_transport_and_rejects_claims[headers10-127.0.0.1-True]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_workspace_permission_rechecks_open_loopback_transport_and_rejects_claims[headers11-127.0.0.1-True]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_forged_mixed_and_absent_workspace_identities_are_denied",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_metadata_requires_a_live_exact_resource_approval[wildcard]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_metadata_requires_a_live_exact_resource_approval[wrong_resource]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_metadata_requires_a_live_exact_resource_approval[revoked]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_metadata_requires_a_live_exact_resource_approval[expired]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_metadata_requires_a_live_exact_resource_approval[missing]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_testing_bypass_never_approves_skill_metadata[global]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_testing_bypass_never_approves_skill_metadata[environment]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_account_identity_comes_from_live_session_and_admin_role",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_account_member_scope_does_not_satisfy_metadata_admin_role",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_injected_gate_and_stale_uuid_cache_cannot_replace_canonical_exact_approval",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_invalid_domain_scope_forms_are_rejected[outside-None-None-True]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_invalid_domain_scope_forms_are_rejected[cth-SUBJ-CLAIM-BRAND-CLAIM-False]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_invalid_domain_scope_forms_are_rejected[cth-None-None-False]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_invalid_domain_scope_forms_are_rejected[bmp-SUBJ-CLAIM-None-False]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_invalid_domain_scope_forms_are_rejected[bmp-None-BRAND-CLAIM-True]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_permission",
+      "name": "test_invalid_domain_scope_forms_are_rejected[cth-None-None-1]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_fence",
+      "name": "test_before_write_and_commit_verify_only_the_exact_disabled_metadata",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_fence",
+      "name": "test_revoked_approval_between_write_and_commit_fails_closed",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_fence",
+      "name": "test_signed_history_replay_is_readback_only_and_allows_a_fresh_exact_approval",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_fence",
+      "name": "test_foreign_connection_stale_registry_and_forged_candidate_are_denied",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_fence",
+      "name": "test_config_and_nonmetadata_full_row_changes_are_denied[config_json-{\"changed\":\"configuration\"}]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_fence",
+      "name": "test_config_and_nonmetadata_full_row_changes_are_denied[last_error-row changed outside the metadata candidate]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_fence",
+      "name": "test_signed_history_replay_rejects_identity_and_scope_collisions",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_fence",
+      "name": "test_signed_history_tampering_blocks_replay",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_fence",
+      "name": "test_generic_effect_fence_production_truth_denial_is_unchanged",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_commit_lease",
+      "name": "test_revoke_before_lease_denies_and_rolls_back_metadata_and_signed_history",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_commit_lease",
+      "name": "test_revoke_waits_for_sqlite_commit_and_stale_receipt_cannot_write_after_return",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_commit_lease",
+      "name": "test_sqlite_commit_exception_releases_lease_and_rolls_back_full_transaction",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_commit_lease",
+      "name": "test_lease_timeout_expired_token_and_changed_receipt_digest_all_rollback",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_commit_lease",
+      "name": "test_read_only_expired_session_lookup_does_not_initialize_or_delete_inside_writer_transaction",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_identity_accepts_only_strict_account_or_sealed_live_workspace",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_legacy_account_approval_resource_bytes_are_unchanged",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_scope_admission_does_not_grant_training",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_approved_exact_workspace_training_path_binds_principal_and_resource",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_identity_and_verifier_reject_closed_remote_and_claimed_transports[closed-headers0-False-127.0.0.1]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_identity_and_verifier_reject_closed_remote_and_claimed_transports[remote-headers1-True-192.0.2.7]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_identity_and_verifier_reject_closed_remote_and_claimed_transports[forwarded-headers2-True-127.0.0.1]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_identity_and_verifier_reject_closed_remote_and_claimed_transports[forwarded-standard-headers3-True-127.0.0.1]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_identity_and_verifier_reject_closed_remote_and_claimed_transports[authorization-headers4-True-127.0.0.1]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_identity_and_verifier_reject_closed_remote_and_claimed_transports[cookie-headers5-True-127.0.0.1]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_identity_and_verifier_reject_closed_remote_and_claimed_transports[x-actor-id-headers6-True-127.0.0.1]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_identity_and_verifier_reject_closed_remote_and_claimed_transports[x-lumenis-actor-id-headers7-True-127.0.0.1]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_identity_and_verifier_reject_closed_remote_and_claimed_transports[x-lumenis-user-id-headers8-True-127.0.0.1]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_identity_and_verifier_reject_closed_remote_and_claimed_transports[x-principal-id-headers9-True-127.0.0.1]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_identity_and_verifier_reject_closed_remote_and_claimed_transports[x-principal-ref-headers10-True-127.0.0.1]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_identity_and_verifier_reject_closed_remote_and_claimed_transports[x-user-id-headers11-True-127.0.0.1]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_approval_rejects_changed_model_input_scope_or_domain[change0]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_approval_rejects_changed_model_input_scope_or_domain[change1]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_approval_rejects_changed_model_input_scope_or_domain[change2]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_approval_rejects_changed_model_input_scope_or_domain[change3]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_verifier_freezes_canonical_scope_context",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_verifier_rechecks_live_approval_and_registered_scope[revoked]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_verifier_rechecks_live_approval_and_registered_scope[expired]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_workspace_verifier_rechecks_live_approval_and_registered_scope[unregistered]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_testing_bypass_never_approves_training_for_either_identity[global-account]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_testing_bypass_never_approves_training_for_either_identity[global-workspace]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_testing_bypass_never_approves_training_for_either_identity[environment-account]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_workspace_permission",
+      "name": "test_testing_bypass_never_approves_training_for_either_identity[environment-workspace]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_explicit_submission_writes_signed_rows_exports_gateway_record_and_noops",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_bmp_brand_focus_scope_round_trips_to_gateway_domain",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_denied_or_revoked_exact_approval_writes_no_learning_evidence[missing]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_denied_or_revoked_exact_approval_writes_no_learning_evidence[wrong_resource]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_denied_or_revoked_exact_approval_writes_no_learning_evidence[revoked]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_exact_operation_approval_cannot_replace_missing_scope_grant",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_actor_and_scope_are_bound_to_the_exact_review_resource",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_source_tampering_and_testing_bypass_are_rejected_without_writes",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_same_submission_id_with_changed_payload_conflicts",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_rights_declaration_must_explicitly_permit_model_training",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_target_write_failure_rolls_back_rights_row",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_approval_revoked_during_write_rolls_back_both_rows",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_explicit_local_workspace_review_and_read_export_need_no_account_rows[cth-SUBJ-A-False]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_explicit_local_workspace_review_and_read_export_need_no_account_rows[zbmp-BRAND-A-False]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_explicit_local_workspace_review_and_read_export_need_no_account_rows[cth-SUBJ-A-True]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_explicit_local_workspace_review_and_read_export_need_no_account_rows[zbmp-BRAND-A-True]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_workspace_principal_does_not_replace_exact_review_approval_or_mix_with_account",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_workspace_identity_expires_with_request_and_export_cannot_take_json_or_lambda_true",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_workspace_closed_during_review_rolls_back_and_can_recover_with_fresh_request",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_owned_training_review",
+      "name": "test_review_approval_does_not_grant_export_and_revocation_remains_live",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_uninstall_preparation_keeps_registry_config_files_and_execution_history",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_update_uses_fresh_manifest_without_enabling_installing_or_granting",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_candidate_cannot_be_submitted_as_json_or_modified_after_review",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_wrong_package_or_embedded_credentials_do_not_reach_candidate_history[changes0-ID_MISMATCH]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_wrong_package_or_embedded_credentials_do_not_reach_candidate_history[changes1-CONTAINS_CREDENTIAL]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_wrong_package_or_embedded_credentials_do_not_reach_candidate_history[changes2-CONTAINS_CREDENTIAL]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_wrong_package_or_embedded_credentials_do_not_reach_candidate_history[changes3-CONTAINS_CREDENTIAL]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_restore_requires_signed_history_and_resets_old_enablement_and_grants",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_existing_builtin_cannot_be_uninstalled_as_a_package",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_signed_but_misbound_history_cannot_authorize_restore[changes0]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_signed_but_misbound_history_cannot_authorize_restore[changes1]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_preparation_does_not_migrate_missing_registry_schema",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_package_start_persists_running_and_finish_preserves_execution_identity",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_cached_runtime_cannot_start_after_metadata_or_configuration_changes[disabled]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_cached_runtime_cannot_start_after_metadata_or_configuration_changes[digest]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_cached_runtime_cannot_start_after_metadata_or_configuration_changes[config]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_package_start_fails_closed_if_execution_tracking_schema_is_missing",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_trace_keeps_valid_long_json_and_excludes_raw_approval_credentials",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_actual_metadata_apply_commits_signed_history_and_preserves_config_files[uninstall]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_actual_metadata_apply_commits_signed_history_and_preserves_config_files[update]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_actual_apply_requires_current_exact_approval_without_registry_or_history_write[missing]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_actual_apply_requires_current_exact_approval_without_registry_or_history_write[revoked]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_actual_apply_requires_current_exact_approval_without_registry_or_history_write[wrong_scope]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_actual_restore_uses_applied_signed_version_and_remains_disabled",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_revoke_after_signed_history_rolls_back_registry_and_evidence",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_revoke_before_commit_lease_rolls_back_both_writes",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_signed_evidence_write_failure_rolls_back_registry",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_caller_rejects_a_typed_fence_result_with_wrong_binding[caller-workspace:other]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_caller_rejects_a_typed_fence_result_with_wrong_binding[domain_id-bmp]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_caller_rejects_a_typed_fence_result_with_wrong_binding[resource-skill_metadata:wrong]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_caller_rejects_a_typed_fence_result_with_wrong_binding[scope_audit_id-]",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_running_package_prevents_metadata_apply_and_keeps_execution_record",
+      "result": "PASS"
+    },
+    {
+      "class": "tests.test_skill_metadata_lifecycle",
+      "name": "test_new_process_recovery_requires_fresh_approval_and_replays_without_duplicate_write",
+      "result": "PASS"
+    }
+  ],
+  "scope": "ISOLATED_SYNTHETIC_PERMISSION_PERSISTENCE_CONTRACTS_NOT_HUMAN_OR_LIVE_TRAINING"
+}

@@ -27,6 +27,7 @@ Replanner — 重规划器（ZBC MISSING 项补齐）
 from __future__ import annotations
 
 import uuid
+from copy import deepcopy
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from enum import Enum
@@ -300,17 +301,11 @@ class Replanner:
         }
 
         for step in current_plan.steps:
-            new_step = PlanStep(
-                index=step.index,
-                action=step.action,
-                tool=fallback_tools.get(step.tool, step.tool),
-                params=dict(step.params),
-                expected_output=step.expected_output,
-                risk_level=step.risk_level,
-            )
-            if step.index == decision.original_step_index:
+            new_step = deepcopy(step)
+            if step.index == decision.original_step_index and step.status != "completed":
+                new_step.tool = fallback_tools.get(step.tool, step.tool)
                 new_step.params["_replan_note"] = f"switched from {step.tool} to {new_step.tool}"
-                new_step.risk_level = "medium"
+                new_step.status, new_step.result, new_step.error = "pending", None, None
             new_plan.steps.append(new_step)
 
         decision.new_steps = [s.to_dict() for s in new_plan.steps]
@@ -332,15 +327,8 @@ class Replanner:
         )
 
         for step in current_plan.steps:
-            new_step = PlanStep(
-                index=step.index,
-                action=step.action,
-                tool=step.tool,
-                params=dict(step.params),
-                expected_output=step.expected_output,
-                risk_level=step.risk_level,
-            )
-            if step.index == decision.original_step_index:
+            new_step = deepcopy(step)
+            if step.index == decision.original_step_index and step.status != "completed":
                 # 保守调整：减少批量、增加超时、降低精度
                 new_step.params["_retry_adjusted"] = True
                 new_step.params["batch_size"] = min(
@@ -348,6 +336,7 @@ class Replanner:
                 )
                 new_step.params["timeout"] = int(new_step.params.get("timeout", 60)) * 2
                 new_step.params["_replan_note"] = "params adjusted after failure"
+                new_step.status, new_step.result, new_step.error = "pending", None, None
             new_plan.steps.append(new_step)
 
         decision.new_steps = [s.to_dict() for s in new_plan.steps]
@@ -369,7 +358,7 @@ class Replanner:
 
         new_index = 0
         for step in current_plan.steps:
-            if step.index == decision.original_step_index:
+            if step.index == decision.original_step_index and step.status != "completed":
                 # 拆为：准备 → 执行 → 验证
                 sub_steps = [
                     PlanStep(
@@ -378,9 +367,10 @@ class Replanner:
                         tool=step.tool,
                         params={"phase": "prepare", **step.params},
                         expected_output=f"准备完成：{step.expected_output}",
-                        risk_level="low",
+                        risk_level=step.risk_level,
                     ),
                     PlanStep(
+                        step_id=step.step_id,
                         index=new_index + 1,
                         action=f"[执行] {step.action}",
                         tool=step.tool,
@@ -400,8 +390,9 @@ class Replanner:
                 new_plan.steps.extend(sub_steps)
                 new_index += 3
             else:
-                step.index = new_index
-                new_plan.steps.append(step)
+                new_step = deepcopy(step)
+                new_step.index = new_index
+                new_plan.steps.append(new_step)
                 new_index += 1
 
         decision.new_steps = [s.to_dict() for s in new_plan.steps]

@@ -535,31 +535,96 @@ def ensure_skill_executions_table():
         finally: conn.close()
     except Exception: pass
 
-def write_trace(ctx, duration_ms=0):
+def _trace_json(value, limit=128 * 1024):
+    from agent_runtime.durable_adapter import _sanitize_checkpoint_value
+    import hashlib
+    safe, _sensitive = _sanitize_checkpoint_value(value)
+    text = json.dumps(safe, ensure_ascii=False, default=str, allow_nan=False)
+    if len(text.encode("utf-8")) <= limit:
+        return text
+    return json.dumps({"representation": "digest_only", "code": "TRACE_PAYLOAD_TOO_LARGE",
+                       "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                       "bytes": len(text.encode("utf-8")), "full_result_in_trace": False})
+
+
+def write_trace(ctx, duration_ms=0, *, connection=None):
     try:
-        ensure_skill_executions_table()
-        from account.models import get_db
-        conn = get_db()
+        if connection is None:
+            ensure_skill_executions_table()
+            from account.models import get_db
+            conn = get_db()
+        else:
+            conn = connection
         try:
-            conn.execute("""INSERT OR REPLACE INTO skill_executions
+            conn.execute("""INSERT INTO skill_executions
                 (execution_id, skill_id, user_id, domain, product, task, action_type,
                  input_json, output_json, status, error, evidence_json, evaluation_json,
                  permission_json, firewall_json, effect_fence_json, duration_ms)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(execution_id) DO UPDATE SET
+                output_json=excluded.output_json,status=excluded.status,error=excluded.error,
+                evidence_json=excluded.evidence_json,evaluation_json=excluded.evaluation_json,
+                permission_json=excluded.permission_json,firewall_json=excluded.firewall_json,
+                effect_fence_json=excluded.effect_fence_json,duration_ms=excluded.duration_ms""", (
                 ctx.execution_id, ctx.skill_id, ctx.user_id, ctx.domain, ctx.product,
                 ctx.task, ctx.action_type.value,
-                json.dumps(ctx.input_payload, ensure_ascii=False, default=str)[:4000],
-                json.dumps(ctx.execute_result, ensure_ascii=False, default=str)[:4000] if ctx.execute_result else None,
+                _trace_json(ctx.input_payload),
+                _trace_json(ctx.execute_result) if ctx.execute_result else None,
                 ctx.status.value, ctx.error,
-                json.dumps(ctx.evidence, ensure_ascii=False, default=str)[:4000] if ctx.evidence else None,
-                json.dumps(ctx.evaluation, ensure_ascii=False, default=str)[:4000] if ctx.evaluation else None,
-                json.dumps(ctx.permission_result, ensure_ascii=False, default=str)[:2000] if ctx.permission_result else None,
-                json.dumps(ctx.firewall_result, ensure_ascii=False, default=str)[:2000] if ctx.firewall_result else None,
-                json.dumps(ctx.effect_fence_result, ensure_ascii=False, default=str)[:2000] if ctx.effect_fence_result else None,
+                _trace_json(ctx.evidence) if ctx.evidence else None,
+                _trace_json(ctx.evaluation) if ctx.evaluation else None,
+                _trace_json(ctx.permission_result) if ctx.permission_result else None,
+                _trace_json(ctx.firewall_result) if ctx.firewall_result else None,
+                _trace_json(ctx.effect_fence_result) if ctx.effect_fence_result else None,
                 duration_ms))
-            conn.commit(); return True
-        finally: conn.close()
+            if connection is None:
+                conn.commit()
+            return True
+        finally:
+            if connection is None:
+                conn.close()
     except Exception: return False
+
+
+def _reserve_package_execution(ctx, skill_info):
+    """Serialize registered package admission with metadata changes; no new schema."""
+    config = skill_info.config if skill_info is not None else None
+    if not isinstance(config, dict) or config.get("source_type") not in {"github", "local", "zip", "skill_md"}:
+        return None
+    from lumenis.shared.database import get_repository
+    fields = ("runtime", "source", "source_type", "entrypoint", "install_path", "active_version", "version",
+              "tools_json", "permissions_granted_json", "install_state", "lifecycle_state", "health_state")
+    try:
+        with get_repository().transaction(timeout=10) as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT * FROM skills_registry WHERE skill_id=?", (ctx.skill_id,)).fetchone()
+            if row is None or not set(fields) <= set(row.keys()):
+                return "SKILL_RUNTIME_METADATA_UNAVAILABLE"
+            if row["status"] != "enabled" or row["install_state"] != "installed" or row["health_state"] != "healthy":
+                return "SKILL_RUNTIME_NOT_READY"
+            from .lifecycle import _hash as registry_hash
+            if not isinstance(config.get("registry_sha256"), str):
+                return "SKILL_RUNTIME_METADATA_SNAPSHOT_REQUIRED"
+            if config["registry_sha256"] != registry_hash(dict(row)):
+                return "SKILL_RUNTIME_METADATA_CHANGED"
+            current_config = json.loads(row["config_json"]) if row["config_json"] else {}
+            if not isinstance(current_config, dict):
+                return "SKILL_RUNTIME_METADATA_INVALID"
+            for name in fields:
+                if row[name] is not None:
+                    current_config[name] = row[name]
+            current_config["registry_sha256"] = registry_hash(dict(row))
+            if current_config != config or row["version"] != skill_info.version:
+                return "SKILL_RUNTIME_METADATA_CHANGED"
+            previous = connection.execute("SELECT 1 FROM skill_executions WHERE execution_id=?", (ctx.execution_id,)).fetchone()
+            if previous is not None:
+                return "SKILL_EXECUTION_ID_COLLISION"
+            ctx.status = ExecutionStatus.RUNNING
+            if not write_trace(ctx, connection=connection):
+                raise RuntimeError("Skill execution reservation could not be persisted")
+        return "reserved"
+    except Exception:
+        return "SKILL_EXECUTION_RESERVATION_UNAVAILABLE"
 
 def query_executions(skill_id=None, limit=50, status=None):
     try:
@@ -706,6 +771,11 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
             except Exception:
                 pass
             return ctx
+    reservation = None if source_import else _reserve_package_execution(ctx, skill_info)
+    if reservation not in (None, "reserved"):
+        ctx.status = ExecutionStatus.REJECTED
+        ctx.error = reservation
+        return ctx
     ctx.status = ExecutionStatus.RUNNING
     ctx.execute_result = execute_skill(ctx, handler=handler, skill_info=skill_info)
     try:
@@ -742,7 +812,10 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
             "validation_status": "failed_no_evidence",
             "reason": "effect completed but required Evidence could not be recorded",
         }
-    write_trace(ctx, int((time.time() - start) * 1000))
+    trace_saved = write_trace(ctx, int((time.time() - start) * 1000))
+    if reservation == "reserved" and not trace_saved:
+        ctx.status = ExecutionStatus.FAILED
+        ctx.error = "SKILL_EXECUTION_TRACE_FINALIZATION_FAILED"
     return ctx
 
 def get_skills_light_status(product=None):

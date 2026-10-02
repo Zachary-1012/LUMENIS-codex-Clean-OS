@@ -369,6 +369,19 @@ def validate_manifest(manifest: Dict[str, Any], *, standard_skill_md: bool = Fal
             warnings.append("entrypoint derived from declared MCP stdio transport")
     if not entrypoint and runtime not in ("builtin", "unknown"):
         warnings.append("entrypoint is not declared; install/invoke remains blocked")
+    license_declaration = manifest.get("license")
+    if license_declaration is not None and (
+        not isinstance(license_declaration, str) or not license_declaration.strip()
+        or len(license_declaration) > 512
+    ):
+        errors.append("license must be a non-empty string of at most 512 characters")
+        license_declaration = None
+    license_review = {
+        "declaration": license_declaration.strip() if license_declaration else None,
+        "state": "DECLARED_NOT_VERIFIED" if license_declaration else "UNKNOWN",
+        "commercial_use": "UNKNOWN", "verified": False,
+        "basis": "manifest declaration only; no license file or usage-rights review",
+    }
     return {
         "valid": not errors,
         "errors": errors,
@@ -387,6 +400,7 @@ def validate_manifest(manifest: Dict[str, Any], *, standard_skill_md: bool = Fal
             "dependencies": _list_value(manifest.get("dependencies", []), limit=64),
             "input_schema": _json_value(manifest.get("input_schema"), {}),
             "output_schema": _json_value(manifest.get("output_schema"), {}),
+            "license_review": license_review,
         },
     }
 
@@ -408,6 +422,10 @@ def preview_skill_source(source: str, *, resolve_remote: bool = False,
             "supported_source_type": detected.source_type in SUPPORTED_SOURCE_TYPES,
             "supported_runtime": False,
             "adapter": detected.protocol or detected.source_type,
+            "license_review": {
+                "declaration": None, "state": "UNKNOWN", "commercial_use": "UNKNOWN",
+                "verified": False, "basis": "source manifest not read",
+            },
         },
         "security": {
             "trust": "UNVERIFIED",
@@ -476,6 +494,7 @@ def preview_skill_source(source: str, *, resolve_remote: bool = False,
         result["validation"] = validation
         normalized = validation.get("normalized") or {}
         result["security"]["permissions_requested"] = normalized.get("permissions_requested", [])
+        result["compatibility"]["license_review"] = normalized["license_review"]
         result["compatibility"]["supported_runtime"] = normalized.get("runtime") in SUPPORTED_RUNTIMES
         result["digest"] = _manifest_digest(manifest)
         if validation["valid"] and result["compatibility"]["supported_runtime"]:
@@ -517,6 +536,7 @@ def preview_skill_source(source: str, *, resolve_remote: bool = False,
                     result["security"]["permissions_requested"] = normalized.get(
                         "permissions_requested", []
                     )
+                    result["compatibility"]["license_review"] = normalized["license_review"]
                     result["compatibility"]["supported_runtime"] = (
                         normalized.get("runtime") in SUPPORTED_RUNTIMES
                     )

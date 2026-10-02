@@ -20,15 +20,23 @@ _TARGET = "OWNED_TRAINING_TARGET_REVIEW"
 _RIGHTS = "OWNED_TRAINING_RIGHTS_APPROVAL"
 
 
-def _request_material(*, authenticated_actor: Mapping[str, Any], expected_scope: dict,
+def _request_material(*, authenticated_actor: Mapping[str, Any] | None = None, expected_scope: dict,
                       source_evidence_refs: list[str], submission_id: str,
                       prompt_messages: list[dict], reviewer_approved_target: str,
-                      context: str, rights_declaration: dict) -> dict:
+                      context: str, rights_declaration: dict,
+                      principal: permission.LocalWorkspacePrincipal | None = None) -> dict:
     from lumenis.system.ai_gateway.owned_training import _validate_record
 
     actor_id = authenticated_actor.get("id") if isinstance(authenticated_actor, Mapping) else None
-    if type(actor_id) is not int or actor_id <= 0:
-        raise PermissionError("OWNED_TRAINING_REVIEW_AUTHENTICATED_ACTOR_REQUIRED")
+    if principal is None:
+        if type(actor_id) is not int or actor_id <= 0:
+            raise PermissionError("OWNED_TRAINING_REVIEW_AUTHENTICATED_ACTOR_REQUIRED")
+    elif authenticated_actor is not None:
+        raise PermissionError("OWNED_TRAINING_REVIEW_IDENTITY_MIXED")
+    try:
+        identity = permission.owned_training_identity(actor_id=actor_id, principal=principal)
+    except ValueError:
+        raise PermissionError("OWNED_TRAINING_REVIEW_SERVER_IDENTITY_REQUIRED") from None
     if (not isinstance(submission_id, str) or not _UUID.fullmatch(submission_id)
             or str(uuid.UUID(submission_id)) != submission_id):
         raise ValueError("OWNED_TRAINING_REVIEW_SUBMISSION_ID_INVALID")
@@ -52,7 +60,8 @@ def _request_material(*, authenticated_actor: Mapping[str, Any], expected_scope:
               "reviewer_approved_target": reviewer_approved_target, "training_eligible": True,
               "messages": [*prompt_messages, {"role": "assistant", "content": reviewer_approved_target, "channel": "final"}]}
     _validate_record(record)
-    return {"actor_id": actor_id, "actor_ref": f"actor:{actor_id}", "scope": scope, "marker": marker,
+    return {"actor_id": identity["actor_id"], "actor_ref": identity["caller"],
+            "identity": identity, "principal": principal, "scope": scope, "marker": marker,
             "source_refs": refs, "submission_id": submission_id,
             "prompt_messages": prompt_messages, "target": reviewer_approved_target,
             "context": context, "rights": rights_declaration}
@@ -83,19 +92,23 @@ def _resource(material: dict, source_hashes: list[dict[str, str]]) -> str:
                "scope": scope, "source_evidence": source_hashes, "prompt_messages": material["prompt_messages"],
                "reviewer_approved_target": material["target"], "context": material["context"],
                "rights_declaration": material["rights"], "submission_id": material["submission_id"]}
+    if material["identity"]["identity_kind"] == "workspace":
+        payload.update(principal_kind=material["identity"]["principal_kind"],
+                       principal_ref=material["identity"]["principal_ref"])
     return _RESOURCE + hashlib.sha256(training_cases._json(payload).encode()).hexdigest()
 
 
-def training_review_approval_resource(*, authenticated_actor: Mapping[str, Any], expected_scope: dict,
+def training_review_approval_resource(*, authenticated_actor: Mapping[str, Any] | None = None, expected_scope: dict,
                                       source_evidence_refs: list[str], submission_id: str,
                                       prompt_messages: list[dict], reviewer_approved_target: str,
-                                      context: str, rights_declaration: dict) -> str:
+                                      context: str, rights_declaration: dict,
+                                      principal: permission.LocalWorkspacePrincipal | None = None) -> str:
     """Build the distinct exact MODEL_TRAIN resource for human review approval."""
     material = _request_material(
         authenticated_actor=authenticated_actor, expected_scope=expected_scope, source_evidence_refs=source_evidence_refs,
         submission_id=submission_id, prompt_messages=prompt_messages,
         reviewer_approved_target=reviewer_approved_target, context=context,
-        rights_declaration=rights_declaration,
+        rights_declaration=rights_declaration, principal=principal,
     )
     with get_repository().connection(read_only=True, wal=False) as connection:
         return _resource(material, _source_hashes(connection, material))
@@ -105,13 +118,21 @@ def _authorize(gate: permission.PermissionGate, material: dict, resource: str) -
     if permission.is_testing_bypass_enabled():
         raise PermissionError("OWNED_TRAINING_REVIEW_TESTING_BYPASS_FORBIDDEN")
     scope, actor_id = material["scope"], material["actor_id"]
+    try:
+        identity = permission.owned_training_identity(actor_id=actor_id, principal=material["principal"])
+    except ValueError:
+        raise PermissionError("OWNED_TRAINING_REVIEW_SERVER_IDENTITY_REQUIRED") from None
+    if identity != material["identity"]:
+        raise PermissionError("OWNED_TRAINING_REVIEW_IDENTITY_CHANGED")
     domain = "bmp" if scope["domain_id"] == "zbmp" else "cth"
-    scoped = permission.check_actor_scope_permission(
-        {"id": actor_id}, domain_id=domain, action="write", module="owned_training",
-        subject_id=scope["subject_id"], brand_focus_id=scope["brand_focus_id"],
-        global_scope=scope["global"], gate=gate,
-    )
-    caller = f"actor:{actor_id}"
+    scope_args = dict(domain_id=domain, action="write", module="owned_training",
+                      subject_id=scope["subject_id"], brand_focus_id=scope["brand_focus_id"],
+                      global_scope=scope["global"], gate=gate)
+    if identity["identity_kind"] == "workspace":
+        scoped = permission.check_local_workspace_scope_permission(material["principal"], **scope_args)
+    else:
+        scoped = permission.check_actor_scope_permission({"id": actor_id}, **scope_args)
+    caller = identity["caller"]
     focus = scope["subject_id"] if domain == "cth" else scope["brand_focus_id"]
     scope_resource = f"{domain}:{'GLOBAL / ALL' if scope['global'] else focus}"
     if type(scoped) is not permission.ActorScopePermissionResult or (
@@ -121,6 +142,8 @@ def _authorize(gate: permission.PermissionGate, material: dict, resource: str) -
     ) != (True, "verified", actor_id, caller, domain, scope["subject_id"],
           scope["brand_focus_id"], scope["global"], "write", "resource_scope_write", scope_resource) \
             or not scoped.audit_id or scoped.scope_audit_id != scoped.audit_id:
+        raise PermissionError("OWNED_TRAINING_REVIEW_SCOPE_DENIED")
+    if (scoped.principal_kind, scoped.principal_ref) != (identity["principal_kind"], identity["principal_ref"]):
         raise PermissionError("OWNED_TRAINING_REVIEW_SCOPE_DENIED")
     approval = gate.check(
         permission.OperationType.MODEL_TRAIN, resource=resource, risk_level=permission.RiskLevel.HIGH,
@@ -164,9 +187,10 @@ def _existing(connection, material: dict, resource: str) -> dict | None:
             "training_executed": False}
 
 
-def submit_training_review(*, gate: permission.PermissionGate, authenticated_actor: Mapping[str, Any], expected_scope: dict,
+def submit_training_review(*, gate: permission.PermissionGate, authenticated_actor: Mapping[str, Any] | None = None, expected_scope: dict,
                            source_evidence_refs: list[str], submission_id: str, prompt_messages: list[dict],
-                           reviewer_approved_target: str, context: str, rights_declaration: dict) -> dict:
+                           reviewer_approved_target: str, context: str, rights_declaration: dict,
+                           principal: permission.LocalWorkspacePrincipal | None = None) -> dict:
     """Persist an explicit review; authenticated_actor must come from the server auth context."""
     if type(gate) is not permission.PermissionGate:
         raise ValueError("the canonical PermissionGate is required")
@@ -174,7 +198,7 @@ def submit_training_review(*, gate: permission.PermissionGate, authenticated_act
         authenticated_actor=authenticated_actor, expected_scope=expected_scope, source_evidence_refs=source_evidence_refs,
         submission_id=submission_id, prompt_messages=prompt_messages,
         reviewer_approved_target=reviewer_approved_target, context=context,
-        rights_declaration=rights_declaration,
+        rights_declaration=rights_declaration, principal=principal,
     )
     with get_repository().connection(read_only=True, wal=False) as connection:
         source_hashes = _source_hashes(connection, material)
@@ -195,6 +219,9 @@ def submit_training_review(*, gate: permission.PermissionGate, authenticated_act
             return existing
         permission_ref, operation_ref = _authorize(gate, material, resource)
         scope, sid = material["scope"], material["submission_id"]
+        identity_fields = {}
+        if material["identity"]["identity_kind"] == "workspace":
+            identity_fields = {name: material["identity"][name] for name in ("principal_kind", "principal_ref")}
         version = _VERSION + ":" + resource.removeprefix(_RESOURCE)
         common = dict(connection=connection, source="shared_learning", project="LUMENIS",
                       product=scope["product_id"], asset_id=sid, test_name=sid, version=version,
@@ -203,7 +230,7 @@ def submit_training_review(*, gate: permission.PermissionGate, authenticated_act
                       brand_focus_id=scope["brand_focus_id"], global_scope=scope["global"])
         rights_id = store.record_evidence(
             **common, feature_id=_RIGHTS,
-            inputs={"actor_id": material["actor_ref"], "scope": scope,
+            inputs={"actor_id": material["actor_ref"], "scope": scope, **identity_fields,
                     "source_evidence_refs": material["source_refs"]},
             outputs=material["rights"],
             notes="Explicit permitted model-training rights declaration; no training effect performed.",
@@ -212,7 +239,7 @@ def submit_training_review(*, gate: permission.PermissionGate, authenticated_act
             raise RuntimeError("OWNED_TRAINING_REVIEW_RIGHTS_WRITE_FAILED")
         review_id = store.record_evidence(
             **common, feature_id=_TARGET,
-            inputs={"actor_id": material["actor_ref"], "scope": scope,
+            inputs={"actor_id": material["actor_ref"], "scope": scope, **identity_fields,
                     "source_evidence_refs": material["source_refs"],
                     "rights_evidence_ref": f"app_evidence_records:{rights_id}",
                     "permission_audit_ref": permission_ref, "operation_audit_ref": operation_ref,

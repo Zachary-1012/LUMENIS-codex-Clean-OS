@@ -51,6 +51,7 @@ class TestWorkingMemory:
         assert wm.get_context()["step_count"] == 2
 
     def test_add_step_persists_to_db(self, temp_db):
+        import json
         import sqlite3
         wm = WorkingMemory(db_path=temp_db, enabled=True)
         wm.begin_task("task_persist", "持久化测试")
@@ -62,7 +63,8 @@ class TestWorkingMemory:
         ).fetchone()
         conn.close()
         assert row is not None
-        assert row["phase"] == "test_action"
+        assert row["phase"] == "working_memory_step_1"
+        assert json.loads(row["detail"])["action"] == "test_action"
 
     def test_recent_steps_limit(self, temp_db):
         wm = WorkingMemory(db_path=temp_db, enabled=True, max_steps=5)
@@ -71,6 +73,81 @@ class TestWorkingMemory:
             wm.add_step(f"step_{i}", persist=False)
         assert len(wm.get_recent_steps()) == 5
         assert wm.get_recent_steps()[0]["action"] == "step_5"
+        assert [step["seq"] for step in wm.get_recent_steps()] == [6, 7, 8, 9, 10]
+        assert wm.get_context()["step_count"] == 10
+        assert wm.get_context()["steps_in_memory"] == 5
+        assert wm.end_task()["step_count"] == 10
+
+    def test_context_cannot_replace_task_binding_or_step_count(self, temp_db):
+        wm = WorkingMemory(db_path=temp_db, enabled=True)
+        wm.begin_task("actual-task", "actual-goal", {"task_id": "other-task", "goal": "other-goal", "step_count": 99})
+        assert wm.get_context()["task_id"] == "actual-task"
+        assert wm.get_context()["goal"] == "actual-goal"
+        assert wm.get_context()["step_count"] == 0
+
+    def test_missing_step_table_reports_unavailable_without_overwriting_business_status(self, temp_db):
+        import sqlite3
+        with sqlite3.connect(temp_db) as connection:
+            connection.execute("DROP TABLE ai_task_step")
+        wm = WorkingMemory(db_path=temp_db, enabled=True)
+        wm.begin_task("task-failure", "Preserve actual business result")
+        result = wm.add_step("actual-tool", output_data={"observed": "source output"})
+        assert result["status"] == "completed"
+        assert result["output"] == {"observed": "source output"}
+        assert result["persistence"]["state"] == "UNAVAILABLE"
+        assert result["persistence"]["code"] == "WORKING_MEMORY_PERSISTENCE_FAILED"
+        assert wm.end_task()["persistence"]["failed_steps"] == 1
+
+    def test_long_step_is_valid_json_reopened_by_a_fresh_connection(self, temp_db):
+        import json
+        import sqlite3
+        wm = WorkingMemory(db_path=temp_db, enabled=True)
+        wm.begin_task("task-long", "Read source content")
+        content = "A long actual source result. " * 240
+        result = wm.add_step("read", output_data={"content": content})
+        assert result["persistence"]["state"] == "PERSISTED"
+        with sqlite3.connect(temp_db) as connection:
+            detail = connection.execute("SELECT detail FROM ai_task_step WHERE step_id=?", (result["step_id"],)).fetchone()[0]
+        payload = json.loads(detail)
+        assert payload["output"]["content"] == content
+        assert payload["seq"] == 1
+        assert payload["checkpoint_resumable"] is False
+
+    def test_credentials_are_excluded_from_context_step_and_persisted_observation(self, temp_db):
+        import json
+        import sqlite3
+        credential = "sk-test-working-memory-secret"
+        wm = WorkingMemory(db_path=temp_db, enabled=True)
+        wm.begin_task("task-safe", "Read source", {"api_key": credential, "source": "public"})
+        result = wm.add_step("read", input_data={"authorization": credential},
+                             output_data={"content": "Bearer private-credential-material", "observed": True})
+        assert result["memory_sanitized"] is True
+        assert "api_key" not in wm.get_context()
+        assert "authorization" not in result["input"]
+        with sqlite3.connect(temp_db) as connection:
+            detail = connection.execute("SELECT detail FROM ai_task_step WHERE step_id=?", (result["step_id"],)).fetchone()[0]
+        assert credential not in detail and "private-credential-material" not in detail
+        assert json.loads(detail)["output"]["observed"] is True
+
+    def test_oversize_step_fails_durability_explicitly_and_does_not_write_truncated_json(self, temp_db):
+        import sqlite3
+        wm = WorkingMemory(db_path=temp_db, enabled=True)
+        wm.begin_task("task-large", "Preserve business output")
+        result = wm.add_step("read", output_data={"content": "x" * (129 * 1024)})
+        assert result["persistence"]["code"] == "WORKING_MEMORY_DETAIL_TOO_LARGE"
+        assert result["status"] == "completed" and len(result["output"]["content"]) == 129 * 1024
+        with sqlite3.connect(temp_db) as connection:
+            assert connection.execute("SELECT COUNT(*) FROM ai_task_step WHERE task_id='task-large'").fetchone()[0] == 0
+
+    def test_returned_step_cannot_mutate_retained_work(self, temp_db):
+        wm = WorkingMemory(db_path=temp_db, enabled=True)
+        wm.begin_task("task-copy", "Retain output")
+        result = wm.add_step("read", output_data={"items": ["observed"]}, persist=False)
+        result["output"]["items"].append("caller mutation")
+        assert wm.get_recent_steps()[0]["output"]["items"] == ["observed"]
+        snapshot = wm.get_recent_steps()
+        snapshot[0]["output"]["items"].clear()
+        assert wm.get_recent_steps()[0]["output"]["items"] == ["observed"]
 
     def test_ttl_expiry(self, temp_db):
         import time
@@ -106,6 +183,30 @@ class TestWorkingMemory:
         assert retrieved is not None
         assert retrieved.value["task_id"] == "task_archive"
         assert retrieved.value["step_count"] == 1
+
+    def test_finished_result_is_redacted_and_cannot_alias_callers_output(self, temp_db):
+        import json
+        wm = WorkingMemory(db_path=temp_db, enabled=True)
+        wm.begin_task("task-finished", "Retain business result")
+        actual_result = {"items": ["actual result"], "approval_token": "private-final-token",
+                         "note": "Bearer private-final-credential"}
+        summary = wm.end_task(actual_result)
+        assert summary["result"]["items"] == ["actual result"]
+        assert summary["memory_sanitized"] is True
+        assert "private-final" not in json.dumps(summary)
+        actual_result["items"].append("later caller mutation")
+        assert summary["result"]["items"] == ["actual result"]
+
+    def test_archived_observation_cannot_mutate_active_working_steps(self, temp_db):
+        from agent_memory.episodic import EpisodicMemory
+        wm = WorkingMemory(db_path=temp_db, enabled=True)
+        em = EpisodicMemory(db_path=temp_db, enabled=True)
+        wm.begin_task("task-archive-copy", "Retain source observation")
+        wm.add_step("read", output_data={"items": ["observed"]}, persist=False)
+        assert wm.archive_to_episodic(em) is not None
+        archived = em.retrieve("case:task-archive-copy")
+        archived.value["steps"][0]["output"]["items"].append("archive consumer mutation")
+        assert wm.get_recent_steps()[0]["output"]["items"] == ["observed"]
 
     def test_stats(self, temp_db):
         wm = WorkingMemory(db_path=temp_db, enabled=True)

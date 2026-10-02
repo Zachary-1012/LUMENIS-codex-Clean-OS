@@ -137,9 +137,10 @@ def logout(token: str):
         conn.close()
 
 
-def get_current_user() -> dict:
+def get_current_user(*, read_only: bool = False) -> dict:
     """从请求中获取当前登录用户"""
-    ensure_initialized()
+    if not read_only:
+        ensure_initialized()
     token = None
     # 从Header获取
     auth_header = request.headers.get("Authorization", "")
@@ -152,7 +153,11 @@ def get_current_user() -> dict:
     if not token:
         return None
 
-    conn = get_db()
+    if read_only:
+        from lumenis.shared.database import get_repository
+        conn = get_repository().connect(read_only=True, wal=False, timeout=0.25, busy_timeout_ms=250)
+    else:
+        conn = get_db()
     try:
         cur = conn.execute("""
             SELECT u.*, s.expires_at FROM v4_sessions s
@@ -164,8 +169,9 @@ def get_current_user() -> dict:
             return None
         # 检查过期
         if row["expires_at"] < time.strftime("%Y-%m-%d %H:%M:%S"):
-            conn.execute("DELETE FROM v4_sessions WHERE token=?", (token,))
-            conn.commit()
+            if not read_only:
+                conn.execute("DELETE FROM v4_sessions WHERE token=?", (token,))
+                conn.commit()
             return None
         return {
             "id": row["id"],

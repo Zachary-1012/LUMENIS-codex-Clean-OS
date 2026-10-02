@@ -315,6 +315,8 @@ def get_skill_info(skill_id: str) -> dict:
         if not row:
             return {}
         info = dict(row)
+        from lumenis.shared.agents.skills.lifecycle import _hash as registry_hash
+        info["registry_sha256"] = registry_hash(info)
         # 解析 config_json
         if info.get("config_json"):
             try:
@@ -397,6 +399,8 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
         return {"success": False, "error": "product scope permission unavailable", "code": "PRODUCT_SCOPE_UNAVAILABLE"}
 
     runtime_config = dict(info.get("config") or {})
+    if "registry_sha256" in info:
+        runtime_config["registry_sha256"] = info["registry_sha256"]
     for key in (
         "runtime", "source", "source_type", "entrypoint", "install_path",
         "active_version", "version", "tools_json", "permissions_granted_json",
@@ -510,3 +514,27 @@ def _categorize_skill(skill: dict) -> str:
     if any(k in sid or k in domain or k in name for k in ("browser", "developer", "开发", "registry", "agent", "boundary")):
         return "开发者工具"
     return "系统"
+
+
+def prepare_skill_metadata_change(skill_id: str, action: str, **kwargs):
+    """Compatibility delegate; a prepared candidate is not an approved change."""
+    from lumenis.shared.agents.skills.lifecycle import prepare_skill_metadata_change as prepare
+    return prepare(skill_id, action, **kwargs)
+
+
+def read_skill_version_history(skill_id: str, *, limit: int = 50) -> list:
+    """Read the existing signed history through the canonical Shared owner."""
+    from lumenis.shared.agents.skills.lifecycle import read_skill_version_history as read_history
+    return read_history(skill_id, limit=limit)
+
+
+def apply_skill_metadata_change(candidate, **kwargs) -> dict:
+    """Delegate actual admission and mutation to the existing Shared owner."""
+    from lumenis.shared.agents.skills.lifecycle import apply_skill_metadata_change as apply_change
+    return apply_change(candidate, **kwargs)
+
+
+def recover_skill_metadata_candidate(skill_id: str, evidence_ref: str):
+    """Recover a signed candidate; this delegate grants no execution permission."""
+    from lumenis.shared.agents.skills.lifecycle import recover_skill_metadata_candidate as recover
+    return recover(skill_id, evidence_ref)

@@ -42,7 +42,7 @@ must be recorded from dispatch results, never inferred from authorization alone.
 | Round / window | Placement | Scope | Current acceptance / execution |
 |---|---|---|---|
 | C1 / W1 | LOCAL | Data, Collector, Browser, exact entities/relations, freshness and maintenance | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
-| C2 / W2 | LOCAL + approved training resources | Owned AI, Agent, Skills, Memory, multimodal, Evaluation/Learning | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
+| C2 / W2 | LOCAL + approved training resources | Owned AI, Agent, Skills, Memory, multimodal, Evaluation/Learning | ACTIVE; BOUNDED SOURCE UNIT ACCEPTED / FULL C2 NOT ACCEPTED |
 | C3 / W3 | CODEX CLOUD | Real CTH/BMP business workflows and outcomes | ACTIVE on pinned snapshot; PARTIAL ASSETS / NOT ACCEPTED |
 | C4 / W4 | LOCAL | Original pitches/general creation, video and podcast | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
 | C5 / W5 | CODEX CLOUD | Importer, Research, library, Reporting and Artifact services | DISPATCH_BLOCKED / CLOUD_TASK_ROOT_BINDING_MISSING; NOT ACCEPTED |
@@ -172,6 +172,28 @@ Round updated in this containing commit. The sole Experience authority check is
 unchanged. Prior failed runs remain failed; the next exact SHA still requires all
 hosted blocking work. No skipped step or local gate is counted as product/release
 acceptance. Full C6 and all ongoing owner capabilities remain open.
+
+M accepted the exact29-path C2 owned-source unit on2026-10-02. The frozen
+W2 e590 source20 and a37 speech source2 are composed with three bounded
+Permission/Fence/Auth prerequisites and four necessary dependency test files.
+Their exact source, [owning Round07 record](evidence/round-07/ROUND-07-C2-OWNED-SOURCE-INTEGRATION-2026-10-02.md),
+eight source/test/gate receipts and this CURRENT form one containing-commit
+publication unit. The accepted Permission projection is
+`4dfa5ffc5d15a0059f0450b332bd88bc7e62941f0a365fc91357ac1b99a7604c`;
+it admits only the currently authorized Skill/workspace-training prerequisite
+interfaces, with exact fresh identity/scope, manual permission, canonical Fence
+and short commit lease. It includes no later phase-reference/grant-issuance/Task
+API increments, Collector/registry admission or unaccepted shared bindings.
+The protected later local candidate remains separate.125 pinned isolated
+affected tests passed with no failures/errors/skips; the current publication
+checks remain mandatory. The source preimages did not change between test
+base187fe61f and publication base373e2ec. Local test evidence is not a new
+same-SHA hosted or live-runtime claim. A new CMU speech input exposed a strict
+interval failure; its follow-on is excluded and its failure is preserved.
+Useful owned training/inference, held-out quality, real Source/Artifact/Task
+integration, multimodal business results, rights, recovery and full C2 remain
+OPEN. This source acceptance promotes no USER_VERIFIED, RELEASED or OPERATING
+state and changes no global coverage.
 
 ### Current decisions, limits and evidence
 
