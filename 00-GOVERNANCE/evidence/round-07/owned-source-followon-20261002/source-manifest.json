@@ -193,21 +193,40 @@
       "d92_preimage_git_blob": "8c223c3128732c2b47b520bcc67d742396a474f5",
       "d92_preimage_sha256": "fc45ee8b1c0328eef7b5420f35198c8cb9496c26a8cd1f004971c9ba7b9e9db6",
       "candidate_postimage_sha256": "bbeb322a3081d730d53d9258f441c42c1cfe4c8feb504d1050edc6d4db0e0ea8",
-      "candidate_postimage_lf_sha256": "5c9ab2221bd96f8ca723a5f9ec17757e78a538e20d89a8f6ecf11a2129c1404c"
+      "candidate_postimage_lf_sha256": "5c9ab2221bd96f8ca723a5f9ec17757e78a538e20d89a8f6ecf11a2129c1404c",
+      "candidate_postimage_raw_hash_scope": "retained_isolated_publication_worktree_bytes",
+      "published_git_commit": "4e674a13433f7fe83c3f708cba6b3b3940eac118",
+      "published_git_blob_sha256": "5c9ab2221bd96f8ca723a5f9ec17757e78a538e20d89a8f6ecf11a2129c1404c"
     },
     {
       "path": "00-GOVERNANCE/evidence/round-07/ROUND-07-C2-OWNED-SOURCE-INTEGRATION-2026-10-02.md",
       "d92_preimage_git_blob": "cae8ab6b1e58427e09be86ed278ee234e6e995fc",
       "d92_preimage_sha256": "162aedcb1b778a87fc65d9ec61a3c23c4e9cb8686e4121221950277a9dd385ab",
-      "candidate_postimage_sha256": "05c435c6e17426e33f5fdf797125abc90880f96fb09d74029f87b76e1f6b3248",
-      "candidate_postimage_lf_sha256": "4e84f300651982b270209205216bc5cd8924e954356e4cc14e9ffda03b4162b7"
+      "candidate_postimage_sha256": "dd44a84663931e2ed861d90c0104309eda82a4bf14d7ecb2060f10d8ccfa092a",
+      "candidate_postimage_lf_sha256": "72c38a1d4d140a4b605b0214f6985f92a8fa065daf03dec5862aa342c48f00d6",
+      "superseded_unreconciled_claim": {
+        "candidate_postimage_sha256": "05c435c6e17426e33f5fdf797125abc90880f96fb09d74029f87b76e1f6b3248",
+        "candidate_postimage_lf_sha256": "4e84f300651982b270209205216bc5cd8924e954356e4cc14e9ffda03b4162b7",
+        "state": "STALE_CLAIM_FAILED_POST_PUBLICATION_READBACK"
+      },
+      "candidate_postimage_raw_hash_scope": "retained_isolated_publication_worktree_bytes",
+      "published_git_commit": "4e674a13433f7fe83c3f708cba6b3b3940eac118",
+      "published_git_blob_sha256": "72c38a1d4d140a4b605b0214f6985f92a8fa065daf03dec5862aa342c48f00d6"
     },
     {
       "path": "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md",
       "d92_preimage_git_blob": "3d82f9e8b5c6b55234ba07ec02e1ee018f4d2685",
       "d92_preimage_sha256": "6b16287b3f5e23679810e770856f7654d247d6e19f31e0f2bb8af70d6f5c384b",
-      "candidate_postimage_sha256": "7c19d21a0b8fcd89f2e9a718f8460c9f49031c105dac8b5617dfcdea17ccb888",
-      "candidate_postimage_lf_sha256": "a4417e407d69a095599ef15279cca232b86265771d087f15e49063f229a9fbcd"
+      "candidate_postimage_sha256": "ecf73726bae073ea92486dc35ddc2a2f77df78912addb2c2583abf6c52c20efd",
+      "candidate_postimage_lf_sha256": "748ec1ca4c90b5cbf45cc791f8bcf29e2a849dd96ed9720a9cf8aef597e523f6",
+      "superseded_unreconciled_claim": {
+        "candidate_postimage_sha256": "7c19d21a0b8fcd89f2e9a718f8460c9f49031c105dac8b5617dfcdea17ccb888",
+        "candidate_postimage_lf_sha256": "a4417e407d69a095599ef15279cca232b86265771d087f15e49063f229a9fbcd",
+        "state": "STALE_CLAIM_FAILED_POST_PUBLICATION_READBACK"
+      },
+      "candidate_postimage_raw_hash_scope": "retained_isolated_publication_worktree_bytes",
+      "published_git_commit": "4e674a13433f7fe83c3f708cba6b3b3940eac118",
+      "published_git_blob_sha256": "748ec1ca4c90b5cbf45cc791f8bcf29e2a849dd96ed9720a9cf8aef597e523f6"
     }
   ],
   "current_178_test_input_dependencies": {
@@ -318,5 +337,6 @@
     "test_log_raw_sha256": "691b67b255d63a8967122f2efb8b70bf4330f73516c3a6a262de0cef017e6534",
     "test_log_hash_scope": "published_git_blob",
     "prior_failure_redacted_worktree_raw_sha256": "dbdcc30f2ac6b3f874982f5b82aadeff1deee7cb23874a7234afa8f27089f528"
-  }
+  },
+  "status_documents_scope": "immutable publication snapshots at each published_git_commit; not later HEAD documentation"
 }

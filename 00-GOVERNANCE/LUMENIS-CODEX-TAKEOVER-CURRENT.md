@@ -205,6 +205,14 @@ This publication unit contains exactly 17 reviewed Formation/Outcome and Speech 
 
 The 178-case run is current-d92 source-projection evidence, not a rerun of the historical Speech suite. The prior 42 Speech cases and offline diagnostics remain candidate-level evidence with unknown rights and unreviewed semantic quality. Rights, Source/Evidence intake, useful owned-AI service/inference, training/held-out quality, Artifact/Task commit/reopen and real user E2E remain OPEN. The J1–J8 and U01–U25 rows are explicit obligations, not passed outcomes. C2_ACCEPTED=NO; USER_VERIFIED=NO; RELEASED=NO; OPERATING=NO.
 
+The bounded source publication is `4e674a13433f7fe83c3f708cba6b3b3940eac118`;
+W6 verified local/fetched/live main equality and all 35 published Git blobs.
+W2's subsequent strict readback found two stale status-document hash claims in
+the manifest, so the initial whole-evidence consistency check failed. The narrow
+manifest correction retains those claims and binds corrected document hashes
+explicitly to the immutable 4e674a13 snapshot. Source and scoped test results
+are unchanged; this correction does not promote runtime or product acceptance.
+
 ### Current decisions, limits and evidence
 
 - Product Owner clarified whole-product closure on 2026-10-02: every confirmed

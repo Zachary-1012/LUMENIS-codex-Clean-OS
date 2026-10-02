@@ -110,3 +110,11 @@ owners, primary duplicates outside the section and conflicting J allocations. Th
 governance change has no runtime or database effects; prior 178/42 evidence is reused.
 CURRENT also records the later Product Owner Cloud pause and the observed stopped
 Core, without narrowing any C-window acceptance requirement.
+
+Post-publication correction: W2's strict readback of 4e674a13 failed on two stale
+`status_documents` hashes for CURRENT and this Round record. All 17 source hashes,
+three tested owner dependencies and the 178-case JUnit still matched. The
+manifest preserves the superseded claims and now labels this document inventory
+as immutable Git snapshots at `4e674a13433f7fe83c3f708cba6b3b3940eac118`, with
+correct published blob hashes. Later prose revisions are not falsely assigned
+those earlier hashes. No unchanged source test was rerun for this metadata fix.
