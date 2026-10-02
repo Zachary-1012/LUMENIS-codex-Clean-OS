@@ -37,7 +37,8 @@ class TestGoalCompletion:
         metrics = TrajectoryMetrics(goal_achieved=True, total_steps=5, completed_steps=5)
         result = evaluator._score_goal_completion(metrics)
         assert result.score == 1.0
-        assert "目标达成" in result.reasoning
+        assert "业务结果须独立核验" in result.reasoning
+        assert result.details["business_outcome_verified"] is False
 
     def test_partial_completion(self):
         evaluator = TrajectoryEvaluator()

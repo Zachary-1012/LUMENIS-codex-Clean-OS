@@ -1,0 +1,131 @@
+{
+  "schema": "w2-formation-178-current-d92-portable-run:v1",
+  "status": "PASS",
+  "base_sha": "d92cbb7dca4a4da3dfda501a5e1c1bac841348c7",
+  "source_overlay_patch_sha256": "5d78f6ee4a352c41fc9320bcc32c9f657ed777e5907c1e42ad59d9615818d780",
+  "source_overlay_paths": 17,
+  "source_overlay_postimage_lf_sha256_match": true,
+  "test_command": "python -m pytest -q --junitxml=<evidence>/formation-178-current-d92.junit.xml -p c2_projection_capture tests/agent_capability/test_router.py tests/agent_runtime/test_evaluation.py tests/agent_runtime/test_formation_dispatch.py tests/agent_runtime/test_formation_semantic_rework.py tests/agent_runtime/test_grounded_outcome.py tests/agent_runtime/test_loop.py tests/agent_runtime/test_loop_checkpoint_contract.py tests/agent_runtime/test_loop_execution_resume.py tests/agent_runtime/test_loop_replan_contract.py tests/agent_runtime/test_planner.py",
+  "test_modules": [
+    {
+      "path": "tests/agent_capability/test_router.py",
+      "sha256": "1679b2fa17215d84e19c4e84819009772ba82664297528e1ebbb8afdf9387ecf",
+      "size_bytes": 11322,
+      "sha256_scope": "original_tested_worktree_raw_bytes",
+      "published_git_blob_sha256": "ea4a32bf844998ab229582d7736b23ed55b0166c927dda59bced5cdb3272172c",
+      "published_git_blob_size": 11059
+    },
+    {
+      "path": "tests/agent_runtime/test_evaluation.py",
+      "sha256": "91bd516f8172b2474ba4d471ca1ae784f8a476bb6d9a85b85118e14792c970ef",
+      "size_bytes": 10537,
+      "sha256_scope": "original_tested_worktree_raw_bytes",
+      "published_git_blob_sha256": "6082225e4252988944d8d37b48b7ab392c2fc40b6dffb9acc5d49199ad758e6b",
+      "published_git_blob_size": 10279
+    },
+    {
+      "path": "tests/agent_runtime/test_formation_dispatch.py",
+      "sha256": "04d8faf289d9d2fe5faa4d71b43632ed2f4009c5d617bc1764a375b28fd5848c",
+      "size_bytes": 10024,
+      "sha256_scope": "original_tested_worktree_raw_bytes",
+      "published_git_blob_sha256": "71ea50ce63ff5b04ab71d099969aa4ead07614eae1629a5d7eaf99077ef937cb",
+      "published_git_blob_size": 9808
+    },
+    {
+      "path": "tests/agent_runtime/test_formation_semantic_rework.py",
+      "sha256": "fa975b1a18691780c00169985da203ce2b7a582eb34d1df58a85bbe13492298a",
+      "size_bytes": 14194,
+      "sha256_scope": "original_tested_worktree_raw_bytes",
+      "published_git_blob_sha256": "6d17ada8423c75eaca17c9f7f5bd72d851eeb7ca247fad8f6dd13ec307fa35cb",
+      "published_git_blob_size": 13927
+    },
+    {
+      "path": "tests/agent_runtime/test_grounded_outcome.py",
+      "sha256": "272bfdf9c10bd3392934453f6350d01969605e977531f059daa419b8ee672a89",
+      "size_bytes": 6345,
+      "sha256_scope": "original_tested_worktree_raw_bytes",
+      "published_git_blob_sha256": "626505ff96c15d41399e0a5e64b57c15494d5eb496bae8ee63d0c492481110da",
+      "published_git_blob_size": 6228
+    },
+    {
+      "path": "tests/agent_runtime/test_loop.py",
+      "sha256": "f4093871535eb2de84109a8cdde40996888a8aa6c81489ff7892dae102aa72a8",
+      "size_bytes": 18436,
+      "sha256_scope": "original_tested_worktree_raw_bytes",
+      "published_git_blob_sha256": "28b6b02b3b822889c5b6ce36b8a3d80a0caee6add1aa61de8c870b5982a51257",
+      "published_git_blob_size": 18045
+    },
+    {
+      "path": "tests/agent_runtime/test_loop_checkpoint_contract.py",
+      "sha256": "a88edadeb795c691dcf2d6e775e7781da5633bdbebb9ff0d15cce0cd2c9e5560",
+      "size_bytes": 9629,
+      "sha256_scope": "original_tested_worktree_raw_bytes",
+      "published_git_blob_sha256": "10c25b39d0853fbb0278a891462062011a15fc26b9c33406cc5f287477201759",
+      "published_git_blob_size": 9423
+    },
+    {
+      "path": "tests/agent_runtime/test_loop_execution_resume.py",
+      "sha256": "ff377484a8c095df3b69b2aa9134e9f8c3e17a36f688a3457b2915a477f23130",
+      "size_bytes": 22028,
+      "sha256_scope": "original_tested_worktree_raw_bytes",
+      "published_git_blob_sha256": "56d4af05b959da983968b8ad316b09f69926444413cd1376c70b1bcc0d1f2a4a",
+      "published_git_blob_size": 21518
+    },
+    {
+      "path": "tests/agent_runtime/test_loop_replan_contract.py",
+      "sha256": "1fcce0b398b95b3a6af97946fafdd131459263cab63b8584699a6105d04e438a",
+      "size_bytes": 8841,
+      "sha256_scope": "original_tested_worktree_raw_bytes",
+      "published_git_blob_sha256": "69c57674fb27a1df80a78bb6d49472fb676875c6c3332147e44d6ba273a9984f",
+      "published_git_blob_size": 8643
+    },
+    {
+      "path": "tests/agent_runtime/test_planner.py",
+      "sha256": "f8d7ad72cc88925b4aa25bf90fe9fbf9f6044d0c079c0027bebe76fab2b2c45b",
+      "size_bytes": 7562,
+      "sha256_scope": "original_tested_worktree_raw_bytes",
+      "published_git_blob_sha256": "1198ce384bfa6fa09dfb562bc44774b4651357ed2d46bc272d8979d9eae3d074",
+      "published_git_blob_size": 7348
+    }
+  ],
+  "result": {
+    "tests": 178,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "exit_code": 0,
+    "elapsed_seconds": 28.318553899996914,
+    "exact_case_id_multiset_matches_retained_junit": true
+  },
+  "runtime": {
+    "python_version": "3.13.15",
+    "python_executable_sha256": "72b29481593c5da37c99248c82777fbfb56217ea7809b771bc760d0a9ecb179b"
+  },
+  "isolation": {
+    "external_seed_sha256_before_after": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "external_seed_size_bytes": 0,
+    "external_seed_unchanged": true,
+    "business_and_evidence_db_paths_confined_to_run_os_temp": true,
+    "effective_test_db_sha256": "130efaf81da046fb1892858b649640ddd3b5d082a0cccd99946f2d113d23fb2b",
+    "network_or_provider_calls": "none; ZBC_TEST_OFFLINE=1"
+  },
+  "source_pins": {
+    "current_d92_owner_dependency_pin_receipt_sha256": "3d3ab60191be3ddbb859c26d82b77869f80b4e763d723c863d875d8640519a17",
+    "owner_git_show_lf_sha256": {
+      "lumenis/auth/service.py": "1a24479882cadd90a33afe1e72973101f94b82851ee1b01eec50d1e2b6bf4002",
+      "lumenis/system/security/effect_fence.py": "4f4d961bf32b4ad48cba19bfaccdbf72e58a0fc7a12b929b5ba187d3cdf019d7",
+      "lumenis/system/security/permission.py": "4dfa5ffc5d15a0059f0450b332bd88bc7e62941f0a365fc91357ac1b99a7604c"
+    }
+  },
+  "junit": {
+    "file": "formation-178-current-d92.junit.xml",
+    "sha256": "00266094afab5809f77d0ce5fe2a5981a9599b907c4eba307a039690c1b78e41",
+    "size_bytes": 25484
+  },
+  "process_receipt_sha256": "ab75212197236af4e1ec4dfed8aca5625d99ad3b32d5a81ef74d543319bcab10",
+  "limitations": [
+    "Run occurred once on an equivalent fresh detached d92 projection with identical 17 source canonical postimages; no suite was rerun during publication packaging.",
+    "This scoped regression does not establish normal Source/Artifact/Task integration, useful owned AI, rights, C2, USER_VERIFIED, RELEASED or OPERATING."
+  ],
+  "published_junit_git_blob_sha256": "00266094afab5809f77d0ce5fe2a5981a9599b907c4eba307a039690c1b78e41"
+}

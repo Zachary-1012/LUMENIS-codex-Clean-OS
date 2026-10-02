@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
-> Updated: 2026-10-02 — approved six-round execution convergence.
+> Updated: 2026-10-03 — accepted C2 source follow-ons; local work continues, Cloud paused.
 > current HEAD = READ WITH git fetch + git rev-parse origin/main
 
 CI information correction (2026-10-02): M approved retirement of the obsolete
@@ -34,18 +34,19 @@ coverage map into these six rounds in the
 They are not three competing execution schedules. Existing owners, capability
 requirements and real technical dependencies remain effective.
 
-**Product Owner has explicitly resumed product development through W1–W6/F.**
-Codex Cloud configuration is confirmed ready by the Product Owner. M dispatches
-complete outcome cards on a pinned source; actual started/queued/blocked windows
-must be recorded from dispatch results, never inferred from authorization alone.
+**Product Owner continues local W1/W2/W4/W6/F work and has paused Cloud W3/W5.**
+The 2026-10-03 pause preserves their full scope and locally received pinned
+candidates. It prohibits Cloud access, dispatch, repair, upload and remote training
+until resumed. Local validation/integration of received material may continue;
+paused dependencies and unavailable interfaces do not become accepted outcomes.
 
 | Round / window | Placement | Scope | Current acceptance / execution |
 |---|---|---|---|
 | C1 / W1 | LOCAL | Data, Collector, Browser, exact entities/relations, freshness and maintenance | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
-| C2 / W2 | LOCAL + approved training resources | Owned AI, Agent, Skills, Memory, multimodal, Evaluation/Learning | ACTIVE; BOUNDED SOURCE UNIT ACCEPTED / FULL C2 NOT ACCEPTED |
-| C3 / W3 | CODEX CLOUD | Real CTH/BMP business workflows and outcomes | ACTIVE on pinned snapshot; PARTIAL ASSETS / NOT ACCEPTED |
+| C2 / W2 | LOCAL + approved training resources | Owned AI, Agent, Skills, Memory, multimodal, Evaluation/Learning | ACTIVE; CURRENT-D92 FOLLOW-ON SOURCE/TESTED (17 PATHS; 178 RELATED CASES PASS) / FULL C2 NOT ACCEPTED |
+| C3 / W3 | CODEX CLOUD | Real CTH/BMP business workflows and outcomes | PAUSED BY PRODUCT OWNER; locally received pinned candidates retained / NOT ACCEPTED |
 | C4 / W4 | LOCAL | Original pitches/general creation, video and podcast | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
-| C5 / W5 | CODEX CLOUD | Importer, Research, library, Reporting and Artifact services | DISPATCH_BLOCKED / CLOUD_TASK_ROOT_BINDING_MISSING; NOT ACCEPTED |
+| C5 / W5 | CODEX CLOUD | Importer, Research, library, Reporting and Artifact services | PAUSED BY PRODUCT OWNER; Source/Artifact normal-chain handoff incomplete / NOT ACCEPTED |
 | C6 / W6 | LOCAL | Integration, actual DB coordination, runtime, recovery, packaging and release | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
 
 Frontend F owns `app/` and `website/`, follows the sole Experience Constitution
@@ -56,17 +57,20 @@ W5/W6 contribute from the start. Sufficient real materials unblock CTH/BMP work
 without waiting for the whole entity directory; limited job success never proves
 global coverage. Recovery is verified within each job, then across the product.
 
-Execution snapshot 2026-10-02: compact actual thread status confirms W1/W2/W3/W4/F
-in progress; W6 is executing its integration card. M confirmed W5 dispatch is blocked
-because the formal Cloud task entry returned `Unable to determine project root for task`;
-W5 is not counted as started. Other authorized windows continue. F is active; M has
+Historical execution snapshot 2026-10-02: W5 initially returned
+`Unable to determine project root for task`, then a later pinned Cloud admission
+was recorded. Neither admission establishes Source/Artifact acceptance. The current
+2026-10-03 Product Owner pause above supersedes these execution states; local
+W1/W2/W4/W6/F continue. F is active; M has
 accepted the bounded 2026-10-02 Website visitor workflow described below.
 Protected candidates keep the owner assignment below. W6's full working card is
 `work/w6-integration-20261002/TASK-CARD.md`; ongoing bounded runtime evidence stays
 in the existing ROUND 05 supervisor record. The canonical launcher restored Core8201
 on 2026-10-02; a fresh GET /healthz returned healthy/database=ok and the supervisor
-recorded running with child PID 21764, restarts=0. This is the local candidate loaded
-at startup, not proof that later source edits are running or that a business job passed.
+recorded running with child PID 21764, restarts=0. That is historical startup
+evidence; W6's 2026-10-03 observation found Core8201 stopped. A new loaded-source
+safe point and actual startup verification are required. This does not prove later
+source edits are running or that a business job passed.
 No product outcome, production coverage or release is promoted by this snapshot.
 
 M accepted the bounded C6/W6 lifecycle outcome on 2026-10-02 after reviewing its
@@ -194,6 +198,12 @@ Useful owned training/inference, held-out quality, real Source/Artifact/Task
 integration, multimodal business results, rights, recovery and full C2 remain
 OPEN. This source acceptance promotes no USER_VERIFIED, RELEASED or OPERATING
 state and changes no global coverage.
+
+#### W2 current-d92 follow-on source status — 2026-10-02
+
+This publication unit contains exactly 17 reviewed Formation/Outcome and Speech paths plus M's approved Source Owner Index §1 job-ID clarification and the strict dual-table governance validator repair. Its owning Round 07 entry records source pins, current 178-case evidence, prior Speech 42-case boundary, 13 governance tests and remaining user-path gates. Acceptance is SOURCE/TESTED for this bounded follow-on only; remote publication requires W6's actual post-push receipt. No unpublished HTTP8 or unrelated protected Root working-copy change is included.
+
+The 178-case run is current-d92 source-projection evidence, not a rerun of the historical Speech suite. The prior 42 Speech cases and offline diagnostics remain candidate-level evidence with unknown rights and unreviewed semantic quality. Rights, Source/Evidence intake, useful owned-AI service/inference, training/held-out quality, Artifact/Task commit/reopen and real user E2E remain OPEN. The J1–J8 and U01–U25 rows are explicit obligations, not passed outcomes. C2_ACCEPTED=NO; USER_VERIFIED=NO; RELEASED=NO; OPERATING=NO.
 
 ### Current decisions, limits and evidence
 

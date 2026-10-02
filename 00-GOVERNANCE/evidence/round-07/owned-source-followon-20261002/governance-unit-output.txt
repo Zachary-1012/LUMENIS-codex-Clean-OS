@@ -1,0 +1,18 @@
+test_historical_document_alone_does_not_claim_a_batch (tests.test_online_progress_governance.OnlineProgressGovernanceTests.test_historical_document_alone_does_not_claim_a_batch) ... ok
+test_product_and_round_changes_require_progress (tests.test_online_progress_governance.OnlineProgressGovernanceTests.test_product_and_round_changes_require_progress) ... ok
+test_same_commit_progress_closes_the_gate (tests.test_online_progress_governance.OnlineProgressGovernanceTests.test_same_commit_progress_closes_the_gate) ... ok
+test_assertion_cannot_drop_an_observed_primary_job_owner (tests.test_online_progress_governance.SixRoundGovernanceTests.test_assertion_cannot_drop_an_observed_primary_job_owner) ... ok
+test_assertion_ids_must_be_complete_unique_and_known (tests.test_online_progress_governance.SixRoundGovernanceTests.test_assertion_ids_must_be_complete_unique_and_known) ... ok
+test_assertion_labels_outcomes_and_owner_cells_are_validated (tests.test_online_progress_governance.SixRoundGovernanceTests.test_assertion_labels_outcomes_and_owner_cells_are_validated) ... ok
+test_both_coverage_ledgers_are_required_and_validated (tests.test_online_progress_governance.SixRoundGovernanceTests.test_both_coverage_ledgers_are_required_and_validated) ... ok
+test_cloud_isolation_retired_providers_and_final_human_gate_are_required (tests.test_online_progress_governance.SixRoundGovernanceTests.test_cloud_isolation_retired_providers_and_final_human_gate_are_required) ... ok
+test_current_snapshot_must_report_all_six_rounds (tests.test_online_progress_governance.SixRoundGovernanceTests.test_current_snapshot_must_report_all_six_rounds) ... ok
+test_local_cloud_window_swap_is_blocking (tests.test_online_progress_governance.SixRoundGovernanceTests.test_local_cloud_window_swap_is_blocking) ... ok
+test_missing_or_remapped_legacy_coverage_is_blocking (tests.test_online_progress_governance.SixRoundGovernanceTests.test_missing_or_remapped_legacy_coverage_is_blocking) ... ok
+test_primary_duplicates_outside_assertion_section_still_fail (tests.test_online_progress_governance.SixRoundGovernanceTests.test_primary_duplicates_outside_assertion_section_still_fail) ... ok
+test_readme_old_sequential_worker_route_is_blocking (tests.test_online_progress_governance.SixRoundGovernanceTests.test_readme_old_sequential_worker_route_is_blocking) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.024s
+
+OK

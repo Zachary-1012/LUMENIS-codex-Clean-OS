@@ -9,7 +9,15 @@ import wave
 
 import pytest
 
-from lumenis.system.ai_gateway import owned_speech as speech
+import importlib.util
+
+# Standalone owner code uses only stdlib before the pinned worker starts.
+# This also allows testing a frozen follow-on outside a full product checkout.
+_source = Path(__file__).resolve().parents[1] / "lumenis/system/ai_gateway/owned_speech.py"
+_spec = importlib.util.spec_from_file_location("owned_speech_under_test", _source)
+speech = importlib.util.module_from_spec(_spec)
+sys.modules[_spec.name] = speech
+_spec.loader.exec_module(speech)
 
 
 def digest(path):
@@ -213,3 +221,50 @@ def test_actual_subprocess_timeout_and_failure_are_not_success():
     with pytest.raises(speech.SpeechBlocked, match="WORKER_FAILED"):
         speech._communicate([sys.executable, "-I", "-c", "raise SystemExit(7)"], b"",
                             cancelled=lambda: False, deadline=time.monotonic() + 5)
+
+
+def test_observed_first_word_can_cross_segment_start_without_timestamp_or_text_edit():
+    raw = raw_transcript()
+    segment = raw["segments"][0]
+    segment.update(start=142.24, end=147.56)
+    segment["words"] = [{"word": " unreviewed", "start": 141.89999999999998,
+                         "end": 142.26, "probability": 0.9177584648132324}]
+    before = copy.deepcopy(raw)
+    result = speech.validate_transcript(raw, duration_seconds=226.925)
+    assert raw == before
+    assert result["review_state"] == "UNREVIEWED"
+    assert result["warnings"] == [{"segment_id": 0, "start": 141.89999999999998,
+                                   "end": 142.26, "reason": "FIRST_WORD_CROSSES_SEGMENT_START_REVIEW_REQUIRED"}]
+
+
+@pytest.mark.parametrize("start,end,probability,reason", [
+    (-1, 0.3, 0.9, "INTERVAL"), (0.4, 0.3, 0.9, "INTERVAL"),
+    (0.0, 2.0, 0.9, "INTERVAL"), (0.0, 0.3, -0.1, "PROBABILITY"),
+    (0.0, 0.3, 1.1, "PROBABILITY"), (False, 0.3, 0.9, "VALUE"),
+    (float("nan"), 0.3, 0.9, "VALUE"), (0.0, float("inf"), 0.9, "VALUE"),
+])
+def test_first_word_exception_does_not_admit_invalid_audio_intervals_or_probabilities(start, end, probability, reason):
+    raw = raw_transcript()
+    raw["segments"][0]["words"][0].update(start=start, end=end, probability=probability)
+    with pytest.raises(speech.SpeechBlocked, match=reason):
+        speech.validate_transcript(raw, duration_seconds=1)
+
+
+def test_crossing_start_requires_first_word_to_reach_the_segment_start():
+    raw = raw_transcript()
+    raw["segments"][0]["start"] = 0.4
+    raw["segments"][0]["words"][0].update(start=0.1, end=0.3)
+    with pytest.raises(speech.SpeechBlocked, match="INTERVAL"):
+        speech.validate_transcript(raw, duration_seconds=1)
+
+
+def test_typed_failure_reason_is_allowlisted_and_raw_stderr_is_never_an_error():
+    stderr = b"private material\n__main__.SpeechBlocked: SPEECH_WORD_INTERVAL_INVALID\n"
+    error = speech._failed_process(["python", "-I", "owner.py", "--worker"], 1, stderr)
+    assert str(error) == "SPEECH_WORD_INTERVAL_INVALID"
+    assert error.diagnostic["exit_code"] == 1
+    assert error.diagnostic["stderr_sha256"] == hashlib.sha256(stderr).hexdigest()
+    assert "private" not in str(error) and "stderr" not in error.diagnostic
+    assert str(speech._failed_process(["worker", "--worker"], 1,
+               b"SpeechBlocked: NOT_APPROVED_REASON\n")) == "SPEECH_OFFLINE_WORKER_FAILED"
+    assert str(speech._failed_process(["ffmpeg"], 1, stderr)) == "SPEECH_OFFLINE_WORKER_FAILED"

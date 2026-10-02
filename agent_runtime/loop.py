@@ -53,6 +53,7 @@ from .planner import Plan, PlanStep, Planner, PlanMode
 from .replanner import Replanner, ReplanDecision
 from lumenis.shared.evaluation.trajectory import TrajectoryEvaluator, TrajectoryMetrics, TrajectoryEvaluation
 from .durable_adapter import DurableExecutionAdapter, _sanitize_checkpoint_value
+from agent_capability.formation import FormationError
 
 
 @dataclass
@@ -115,6 +116,7 @@ class AgentLoop:
         tool_executor: Optional[Callable] = None,
         ai_chat_func: Optional[Callable] = None,
         permission_gate: Optional[Any] = None,
+        tool_binding: Optional[Any] = None,
     ):
         """
         Args:
@@ -145,6 +147,10 @@ class AgentLoop:
             and self._tool_executor is tool_executor
         )
         self._permission_gate = permission_gate
+        # Server-owned resolver/direct binding, not a model-supplied callback.
+        self._tool_binding = tool_binding
+        if tool_binding is not None:
+            self._tool_executor_bound = True
 
         # 运行时状态
         self._cancelled = False
@@ -228,7 +234,7 @@ class AgentLoop:
             )
             if not security.get("allowed"):
                 return self._resume_result(task, plan, "blocked", security.get("reason", "Fresh read permission denied"))
-            return self._resume_result(task, plan, "already_completed", "Task is already completed", include_result=True)
+            return self._read_completed_result(task, plan)
 
         next_index = next((i for i, step in enumerate(plan.steps)
                            if step.status not in {"completed", "skipped"}), len(plan.steps))
@@ -239,7 +245,7 @@ class AgentLoop:
             )
             if not security.get("allowed"):
                 return self._resume_result(task, plan, "blocked", security.get("reason", "Fresh read permission denied"))
-            return self._resume_result(task, plan, "already_completed", "Task is already completed", include_result=True)
+            return self._read_completed_result(task, plan)
         if checkpoint_state == "executing":
             if (checkpoint_index == len(plan.steps)
                     or plan.steps[checkpoint_index].status != "running"):
@@ -258,16 +264,35 @@ class AgentLoop:
             elif plan.steps[checkpoint_index].status != "failed":
                 raise RuntimeError("Failed checkpoint does not match its plan step")
         step = plan.steps[next_index]
+        try:
+            pending_action = self._security_action(step)
+        except FormationError as exc:
+            return self._resume_result(task, plan, "reconciliation_required", str(exc))
         if (step.status in {"running", "failed"}
-                and self._security_action(step).value in {"WRITE", "EXPORT", "COMMIT", "PUSH", "DEPLOY"}):
+                and pending_action.value in {"WRITE", "EXPORT", "COMMIT", "PUSH", "DEPLOY"}):
             return self._resume_result(
                 task, plan, "reconciliation_required",
                 f"Step {step.step_id} may have produced a consequential effect; reconcile it before resuming",
             )
         if not self._tool_executor_bound:
+            if self._tool_binding is not None:
+                self._tool_executor_bound = True
+        if not self._tool_executor_bound:
             return self._resume_result(
                 task, plan, "blocked", "TOOL_EXECUTOR_NOT_BOUND: resume requires an injected tool executor",
             )
+        # Saved pending calls must retain their original trusted formation.
+        # A current registry certificate or approval cannot manufacture it.
+        try:
+            if self._tool_binding is None:
+                raise FormationError("TOOL_FORMATION_NOT_BOUND")
+            for pending in plan.steps[next_index:]:
+                if pending.status not in {"completed", "skipped"}:
+                    if not isinstance(pending.formation, dict):
+                        raise FormationError("TOOL_FORMATION_MISSING")
+                    self._tool_binding.form_step(pending, fresh_context, expected=pending.formation)
+        except FormationError as exc:
+            return self._resume_result(task, plan, "reconciliation_required", str(exc))
 
         current_limits = self._current_budget_limits()
         saved_limits = metrics["limits"]
@@ -298,6 +323,21 @@ class AgentLoop:
         if domain in {"bmp", "zbmp"}:
             return subject is None and isinstance(brand, str) and bool(brand.strip())
         return False
+
+    def _read_completed_result(self, task, plan):
+        # Called only after the existing fresh read authorization. Reopen and
+        # verify through the Artifact/Evidence owner; never repeat the effect.
+        outcome = self._evaluator.verify_outcome(
+            task["task_id"], plan.outcome_contract_sha256,
+            expected_output_receipts=plan.outcome_receipt_bindings,
+            require_bound_receipts=True,
+        )
+        if self._evaluator.has_outcome_contract and outcome["state"] != "VERIFIED":
+            result = self._resume_result(task, plan, "blocked", outcome["reason"])
+        else:
+            result = self._resume_result(task, plan, "already_completed", "Task is already completed", include_result=True)
+        result.evaluation = {"outcome_verification": outcome}
+        return result
 
     @staticmethod
     def _restore_checkpoint_plan(snapshot: Any) -> Plan:
@@ -449,6 +489,19 @@ class AgentLoop:
             self._current_plan = plan
             if not resuming:
                 self._current_cost += self._estimate_plan_cost(plan)
+                plan.outcome_contract_sha256 = self._evaluator.form_outcome_contract(task_id)
+                if self._tool_binding is not None:
+                    for pending in plan.steps:
+                        if pending.status not in {"completed", "skipped"}:
+                            # Planning output can select a candidate but cannot
+                            # mint or carry forward its own authorization.
+                            pending.formation = None
+                            pending.formation = self._tool_binding.form_step(pending, context).binding
+                elif self._tool_executor_bound:
+                    result.status = "blocked"
+                    result.error = "TOOL_FORMATION_NOT_BOUND"
+                    sm.fail(result.error)
+                    return self._finalize(result, sm)
 
             if not plan.steps:
                 sm.fail("planner returned empty plan")
@@ -495,8 +548,15 @@ class AgentLoop:
                 step.status = "running"
 
                 # 3. 安全检查（每步）
-                security = (self._check_security(step, context, fresh_authorization=True)
-                            if resuming else self._check_security(step, context))
+                try:
+                    security, exec_result = self._admit_and_execute_step(
+                        step, context, task_id, step_index, fresh_authorization=resuming)
+                except FormationError as exc:
+                    result.status = "reconciliation_required"
+                    result.error = str(exc)
+                    result.metrics["formation_changed_fields"] = list(exc.changed_fields)
+                    sm.fail(result.error)
+                    return self._finalize(result, sm)
                 if not security["allowed"]:
                     step.status = "failed"
                     step.error = security["reason"]
@@ -530,8 +590,15 @@ class AgentLoop:
                 self._safe_transition(sm, AgentState.EXECUTING,
                                       reason=f"executing step {step_index}",
                                       metadata={"step": step_index})
-                exec_result = self._execute_step(
-                    step, context, task_id, step_index, security=security)
+                if exec_result.get("reconciliation_required"):
+                    result.status = "reconciliation_required"
+                    result.error = exec_result.get("error")
+                    sm.fail(result.error)
+                    return self._finalize(result, sm)
+                if self._is_cancelled() or exec_result.get("cancelled"):
+                    sm.cancel(reason="cancelled before tool dispatch")
+                    result.status = "cancelled"
+                    return self._finalize(result, sm)
 
                 # 5. OBSERVE
                 sm.transition_to(AgentState.OBSERVING, reason=f"step {step_index} done")
@@ -552,6 +619,11 @@ class AgentLoop:
                 else:
                     step.status = "failed"
                     step.error = exec_result.get("error", "unknown error")
+                    if self._security_action(step).value in {"WRITE", "EXPORT", "COMMIT", "PUSH", "DEPLOY"}:
+                        result.status = "reconciliation_required"
+                        result.error = "Consequential tool outcome requires owner reconciliation before retry"
+                        sm.fail(result.error)
+                        return self._finalize(result, sm)
                     self._consecutive_failures += 1
                     if resuming:
                         sm.fail(step.error, reason="resumed_step_failed")
@@ -587,6 +659,12 @@ class AgentLoop:
             sm.fail(str(e), reason="state_machine_error")
             result.status = "failed"
             result.error = f"State machine error: {e}"
+        except FormationError as e:
+            sm.fail(str(e))
+            result.status = "reconciliation_required"
+            result.error = str(e)
+            result.metrics["formation_changed_fields"] = list(e.changed_fields)
+            return self._finalize(result, sm)
         except Exception as e:
             sm.fail(str(e), reason="unexpected_error")
             result.status = "failed"
@@ -676,22 +754,37 @@ class AgentLoop:
         """Derive a deterministic SYSTEM action classification for one Agent step."""
         from lumenis.system.security import AgentAction
 
+        # Effects are distinct canonical obligations, not a numeric privilege
+        # ladder. READ/ANALYZE/SUGGEST labels cannot erase the handler's effect.
+        formed_effect = (step.formation or {}).get("effect")
+        if step.formation is not None and (type(formed_effect) is not str
+                                           or formed_effect not in AgentAction.__members__):
+            raise FormationError("TOOL_FORMATION_EFFECT_INVALID")
         explicit = str((step.params or {}).get("action_type") or "").strip().upper()
         if explicit in AgentAction.__members__:
-            return AgentAction[explicit]
-
-        text = f"{step.tool} {step.action}".lower()
-        if "deploy" in text:
-            return AgentAction.DEPLOY
-        if "push" in text or "publish" in text:
-            return AgentAction.PUSH
-        if "commit" in text:
-            return AgentAction.COMMIT
-        if "export" in text:
-            return AgentAction.EXPORT
-        if str(step.risk_level).lower() in {"high", "critical"}:
-            return AgentAction.WRITE
-        return AgentAction.ANALYZE
+            requested = AgentAction[explicit]
+        else:
+            text = f"{step.tool} {step.action}".lower()
+            if "deploy" in text:
+                requested = AgentAction.DEPLOY
+            elif "push" in text or "publish" in text:
+                requested = AgentAction.PUSH
+            elif "commit" in text:
+                requested = AgentAction.COMMIT
+            elif "export" in text:
+                requested = AgentAction.EXPORT
+            elif formed_effect in AgentAction.__members__:
+                requested = AgentAction[formed_effect]
+            elif str(step.risk_level).lower() in {"high", "critical"}:
+                requested = AgentAction.WRITE
+            else:
+                requested = AgentAction[formed_effect] if formed_effect in {"READ", "ANALYZE"} else AgentAction.ANALYZE
+        if formed_effect in AgentAction.__members__:
+            formed = AgentAction[formed_effect]
+            if requested != formed and requested.value not in {"READ", "ANALYZE", "SUGGEST"}:
+                raise FormationError("TOOL_EFFECT_DECLARATION_CONFLICT")
+            return formed
+        return requested
 
     @staticmethod
     def _security_operation(action):
@@ -868,6 +961,28 @@ class AgentLoop:
                 self._permission_gate = None
         return self._permission_gate
 
+    def _admit_and_execute_step(self, step, context, task_id, step_index, *, fresh_authorization=False):
+        if self._tool_binding is None:
+            if self._tool_executor_bound:
+                raise FormationError("TOOL_FORMATION_NOT_BOUND")
+            security = (self._check_security(step, context, fresh_authorization=True)
+                        if fresh_authorization else self._check_security(step, context))
+            return security, (self._execute_step(step, context, task_id, step_index, security=security)
+                              if security.get("allowed") else None)
+        if not isinstance(step.formation, dict):
+            raise FormationError("TOOL_FORMATION_MISSING")
+        selected = self._tool_binding.form_step(step, context, expected=step.formation)
+        with selected.guard(step, context):
+            security = (self._check_security(step, context, fresh_authorization=True)
+                        if fresh_authorization else self._check_security(step, context))
+            if not security.get("allowed"):
+                return security, None
+            selected.assert_current(step, context)
+            if self._is_cancelled():
+                return security, {"success": False, "cancelled": True}
+            return security, self._execute_step(step, context, task_id, step_index,
+                                                security=security, selected_call=selected)
+
     def _execute_step(
         self,
         step: PlanStep,
@@ -875,6 +990,7 @@ class AgentLoop:
         task_id: str,
         step_index: int,
         security: Optional[Dict[str, Any]] = None,
+        selected_call: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """执行单个步骤。"""
         start = time.time()
@@ -894,7 +1010,10 @@ class AgentLoop:
             self._steps_started += 1
 
             # 执行工具
-            result = self._tool_executor(step, context)
+            result = (selected_call.invoke(step, context) if selected_call is not None
+                      else self._tool_executor(step, context))
+            if not isinstance(result, dict) or type(result.get("success")) is not bool:
+                raise RuntimeError("TOOL_RESULT_CONTRACT_INVALID")
 
             # Close the Effect Fence reservation with the real execution outcome.
             fence_key = (security or {}).get("fence_idempotency_key")
@@ -945,6 +1064,7 @@ class AgentLoop:
                 "success": False,
                 "error": str(e)[:500],
                 "duration_ms": duration_ms,
+                "reconciliation_required": isinstance(e, FormationError),
             }
 
     def _do_replan(
@@ -963,6 +1083,8 @@ class AgentLoop:
         new_plan = self._replanner.replan(
             goal, deepcopy(current_plan), decision, observation, context)
         self._validate_replan(current_plan, new_plan, decision)
+        new_plan.outcome_contract_sha256 = current_plan.outcome_contract_sha256
+        new_plan.outcome_receipt_bindings = deepcopy(current_plan.outcome_receipt_bindings)
         self._current_plan = new_plan
         sm.transition_to(AgentState.EXECUTING, reason="replanned, resuming execution")
         return new_plan
@@ -974,6 +1096,12 @@ class AgentLoop:
             raise ValueError("REPLAN_EMPTY_PLAN")
         if candidate.goal != current_plan.goal:
             raise ValueError("REPLAN_GOAL_CHANGED")
+        if (candidate.outcome_contract_sha256 is not None
+                and candidate.outcome_contract_sha256 != current_plan.outcome_contract_sha256):
+            raise FormationError("REPLAN_OUTCOME_CONTRACT_CHANGED")
+        if (candidate.outcome_receipt_bindings
+                and candidate.outcome_receipt_bindings != current_plan.outcome_receipt_bindings):
+            raise FormationError("REPLAN_OUTCOME_RECEIPT_CHANGED")
         if decision.strategy == "split_step" and any(
             step.index == decision.original_step_index and step.risk_level in {"high", "critical"}
             for step in current_plan.steps
@@ -1008,6 +1136,12 @@ class AgentLoop:
                     raise ValueError("REPLAN_COMPLETED_STEP_CHANGED")
             elif replacement.status == "completed":
                 raise ValueError("REPLAN_UNEXECUTED_STEP_COMPLETED")
+            elif previous.formation is not None and replacement.to_dict() != previous.to_dict():
+                # Changed formed arguments/tool/effect need an explicit owner
+                # decision, not a model-created successor call or fresh budget.
+                if (replacement.tool != previous.tool or replacement.params != previous.params
+                        or replacement.formation != previous.formation):
+                    raise FormationError("REPLAN_FORMED_CALL_CHANGED")
         if any(step.status == "completed" and step.step_id not in original_ids
                for step in candidate.steps):
             raise ValueError("REPLAN_UNEXECUTED_STEP_COMPLETED")
@@ -1035,6 +1169,7 @@ class AgentLoop:
         completed = sum(1 for s in steps if s.get("status") == "completed")
         failed = sum(1 for s in steps if s.get("status") == "failed")
 
+        integrity_failure = result.metrics.get("formation_changed_fields")
         result.metrics = {
             "steps": len(steps),
             "completed_steps": completed,
@@ -1045,12 +1180,14 @@ class AgentLoop:
             "retries": self._consecutive_failures,
             "final_state": sm.state.value,
         }
+        if integrity_failure is not None:
+            result.metrics["formation_changed_fields"] = integrity_failure
         if self._resuming:
             result.metrics["step_timeout_enforcement"] = "not_enforced_by_synchronous_executor"
             result.metrics["effective_budget_limits"] = dict(self._active_limits)
 
         # 轨迹评估
-        if self.config.enable_evaluation:
+        if self.config.enable_evaluation or self._evaluator.has_outcome_contract:
             try:
                 metrics = TrajectoryMetrics(
                     total_steps=len(steps),
@@ -1066,8 +1203,24 @@ class AgentLoop:
                     final_error=result.error,
                 )
                 eval_result = self._evaluator.evaluate(
-                    metrics, agent_id=result.agent_id, task_id=result.task_id)
+                    metrics, agent_id=result.agent_id, task_id=result.task_id,
+                    expected_contract_sha256=(self._current_plan.outcome_contract_sha256
+                                              if self._current_plan else None),
+                    expected_output_receipts=(self._current_plan.outcome_receipt_bindings
+                                              if self._current_plan else None))
                 result.evaluation = eval_result.to_dict()
+                outcome = eval_result.outcome_verification
+                result.metrics["outcome_state"] = outcome.get("state", "NOT_VERIFIED")
+                if (outcome.get("state") == "VERIFIED" and self._current_plan
+                        and result.status == "completed"):
+                    self._current_plan.outcome_receipt_bindings = deepcopy(
+                        outcome.get("committed_output_bindings", {}))
+                    result.plan = self._current_plan.to_dict()
+                if (self._evaluator.has_outcome_contract and result.status == "completed"
+                        and outcome.get("state") != "VERIFIED"):
+                    result.status = "blocked"
+                    result.error = outcome.get("reason", "OUTCOME_NOT_VERIFIED")
+                    result.result = None
 
                 # 保存评估证据
                 self._durable.save_evidence(
@@ -1077,7 +1230,13 @@ class AgentLoop:
                     authenticity_score=eval_result.overall_score,
                 )
             except Exception:
-                pass
+                result.evaluation = {"outcome_verification": {"state": "BLOCKED",
+                    "reason": "OUTCOME_OWNER_UNAVAILABLE", "verified_goal_achieved": False,
+                    "user_verified": False}}
+                if self._evaluator.has_outcome_contract and result.status == "completed":
+                    result.status = "blocked"
+                    result.error = "OUTCOME_OWNER_UNAVAILABLE"
+                    result.result = None
 
         # Durable 完成
         if result.status in ("completed", "failed", "cancelled"):

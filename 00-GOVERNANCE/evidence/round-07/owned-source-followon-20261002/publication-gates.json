@@ -1,0 +1,90 @@
+{
+  "schema": "w2-current-d92-publication-gates:v2",
+  "base": "d92cbb7dca4a4da3dfda501a5e1c1bac841348c7",
+  "checks": [
+    {
+      "name": "verify_ai_native_constitution",
+      "command": [
+        "python",
+        "-X",
+        "utf8",
+        "scripts/audit_tools/verify_ai_native_constitution.py"
+      ],
+      "exit_code": 0,
+      "output_file": "00-GOVERNANCE/evidence/round-07/owned-source-followon-20261002/verify_ai_native_constitution-output.txt",
+      "output_sha256": "ebc22c326a6d37efe2927a0cea24a7380a9c68012a22e70eef99b6641ccf6843",
+      "output_raw_stdout_sha256": "e30d82c88700d83e334b9d746d862749bb960251f028c8d76450046dcbfcaeca",
+      "output_hash_scope": "published_git_blob",
+      "output_published_git_blob_sha256": "ebc22c326a6d37efe2927a0cea24a7380a9c68012a22e70eef99b6641ccf6843"
+    },
+    {
+      "name": "verify_codex_takeover_governance",
+      "command": [
+        "python",
+        "-X",
+        "utf8",
+        "scripts/audit_tools/verify_codex_takeover_governance.py"
+      ],
+      "exit_code": 0,
+      "output_file": "00-GOVERNANCE/evidence/round-07/owned-source-followon-20261002/verify_codex_takeover_governance-output.txt",
+      "output_sha256": "b4904f170256ad01dc954baf015bb879c363d18eef0fe6eb76d019b8bb5017ac",
+      "output_raw_stdout_sha256": "b3b3bb0c406adabf6d42e4d4f77059cc70155e01f0bcd5261315342439c8e1ea",
+      "output_hash_scope": "published_git_blob",
+      "output_published_git_blob_sha256": "b4904f170256ad01dc954baf015bb879c363d18eef0fe6eb76d019b8bb5017ac"
+    },
+    {
+      "name": "verify_lumenis_single_product",
+      "command": [
+        "python",
+        "-X",
+        "utf8",
+        "scripts/audit_tools/verify_lumenis_single_product.py"
+      ],
+      "exit_code": 0,
+      "output_file": "00-GOVERNANCE/evidence/round-07/owned-source-followon-20261002/verify_lumenis_single_product-output.txt",
+      "output_sha256": "ee4d7803f7aa65d547f0aaaf0139bc5e7ca3c3f9bde05ba792216e3fb325d15e",
+      "output_raw_stdout_sha256": "352d35ce1fb2452931d17f4534d1ec367ee2e8b8f1deaa7ba369708293608b1f",
+      "output_hash_scope": "published_git_blob",
+      "output_published_git_blob_sha256": "ee4d7803f7aa65d547f0aaaf0139bc5e7ca3c3f9bde05ba792216e3fb325d15e"
+    },
+    {
+      "name": "verify_database_authority",
+      "command": [
+        "python",
+        "-X",
+        "utf8",
+        "scripts/audit_tools/verify_database_authority.py"
+      ],
+      "exit_code": 0,
+      "output_file": "00-GOVERNANCE/evidence/round-07/owned-source-followon-20261002/verify_database_authority-output.txt",
+      "output_sha256": "00c7bc87d3dc549e878f4116917ea9344427dd1dcf20fab60cd020a991594137",
+      "output_raw_stdout_sha256": "b4fd652a0fb6094b77d306a3ae36993890b76e2154a94dd31bbfd0ff3f3acaac",
+      "output_hash_scope": "published_git_blob",
+      "output_published_git_blob_sha256": "00c7bc87d3dc549e878f4116917ea9344427dd1dcf20fab60cd020a991594137"
+    }
+  ],
+  "prior_failed_gate_preserved": "verify_codex_takeover_governance-before-repair.txt",
+  "governance_tests": {
+    "files": [
+      {
+        "path": "scripts/audit_tools/verify_codex_takeover_governance.py",
+        "preimage_lf_sha256": "75e39e34f3d8ecfffb7297be13f7cbd488eedd36648b98cbc50843e65bbdae6d",
+        "postimage_lf_sha256": "fefc87ab91f36328d9d6d47750d95bd1289ce0738119ad89060f2940ee9ee61b"
+      },
+      {
+        "path": "tests/test_online_progress_governance.py",
+        "preimage_lf_sha256": "9fecc0518ea7f8a4eebb2f21990ea145581396260bc715f5e31bd755eb8f9d9d",
+        "postimage_lf_sha256": "e01681b1d05ca9855bea0110935f26a08e665fff3289a456d5385f12fd9c233d"
+      }
+    ],
+    "test_count": 13,
+    "test_exit_code": 0,
+    "test_log": "governance-unit-output.txt",
+    "test_log_sha256": "f148dabbecd58f46e479b3b129aa776b1607799557168d06d113f55801d6d89d",
+    "prior_failure_original_sha256": "99a144361db6ea9cefdaf835ff0cbd58962f96ff1ae59bd5a5e9dbe4a3e80996",
+    "prior_failure_published_sha256": "a8f22a611342b1a973380beafdbadc64f5713b13e237e7c5a5f909ee5d4d7548",
+    "test_log_raw_sha256": "691b67b255d63a8967122f2efb8b70bf4330f73516c3a6a262de0cef017e6534",
+    "test_log_hash_scope": "published_git_blob",
+    "prior_failure_redacted_worktree_raw_sha256": "dbdcc30f2ac6b3f874982f5b82aadeff1deee7cb23874a7234afa8f27089f528"
+  }
+}

@@ -152,6 +152,10 @@ class TestCapabilityRouter:
             tool_id="handler_test", name="测试", description="test",
             params=[ToolParam("query", "string", True)],
             handler=mock_handler,
+            origin="unit-test-owner", resource_uri="tool://unit/handler",
+            identity_provider=lambda: {"configuration": {"fixture": True}, "environment": {},
+                                       "origin_scope_id": "unit-caller-7", "implementation_revision": "unit-v1",
+                                       "available": True},
         )
         router.register_tool(tool)
         actor = ToolActorContext(7, "user", "CTH", "cth", "cth_analyst")
@@ -209,6 +213,10 @@ class TestCapabilityRouter:
         router.register_tool(ToolDefinition(
             tool_id="scoped_tool", name="scoped", description="test",
             params=[], handler=lambda **kwargs: {"ok": True},
+            origin="unit-test-owner", resource_uri="tool://unit/scoped",
+            identity_provider=lambda: {"configuration": {"fixture": True}, "environment": {},
+                                       "origin_scope_id": "unit-caller-9", "implementation_revision": "unit-v1",
+                                       "available": True},
         ))
         actor = ToolActorContext(9, "user", "BMP", "zbmp", "zbmp_analyst")
         result = router.execute_tool(

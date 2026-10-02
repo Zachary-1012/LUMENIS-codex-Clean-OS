@@ -77,6 +77,74 @@ U18–U20 AI, Agent/Skill Store and Evaluation/Learning → C2;
 U21–U25 browser, open entry/effects, surfaces, settings/notifications,
 runtime/security/release → C1/C5/C6 plus F. No capability is removed by remapping.
 
+### Current J/U job assertions — M clarification, 2026-10-02
+
+This table completes the previously grouped J/U mapping in this same Source Owner
+Index. These are current explicit labels/assertions, not purported recovered
+historical individual titles. The original R rows, J/C allocations, U groups,
+six urgent exits, 34-section/44-screen obligations and approved detailed contracts
+remain cumulative. A grouped function appearing in more than one row is not
+deleted or duplicated into another owner; the same valid evidence may cover it.
+This clarification adds no feature, window, runtime or acceptance authority.
+
+Each row needs an actual normal task: permitted real input -> correct scope and
+Evidence -> useful user-visible result -> applicable persistence/version/reopen/
+revision/export -> honest failure and bounded recovery -> return. Apply only the
+operations promised by that capability; a read-only fact lookup need not invent
+an external action. Record exact source/runtime/model/build versions and limits.
+Tests, a denial, an empty/unavailable response, a mock, a file, or a model answer
+alone cannot complete a promised normal capability. An unavailable dependency
+blocks that path without erasing the row or stopping unrelated work.
+
+#### J1-J8 complete user-work packages
+
+| ID | Current explicit user job | Retained deliveries | Required outcome |
+|---|---|---|---|
+| J1 | Establish, select and continuously maintain the real data universe | C1 C6 | Real Add Subject/BrandFocus, country/market and venue/tenant identities, approved platform-native acquisition and time series, signed Source/Evidence/Canonical, GLOBAL/Focus/Clear, due-only refresh, idempotence and actual scheduled recovery; representative samples do not imply coverage. |
+| J2 | Complete a commercial Subject operating decision | C3 C1 C2 C5 | Exact venue/tenant and time scope; monitoring/events, consumer/market/risk analysis, Case -> supported insight -> internal decision -> authorized action where promised -> actual outcome/evaluation and saved result; useful owned analysis, recovery and return. |
+| J3 | Complete a BrandFocus market/content/campaign decision | C3 C1 C2 C5 | Brand/market/competitor/creator/propagation inputs with comparable metrics, grounded analysis, editable Brief and content/campaign lifecycle through creation owners, actual result/evaluation, saved/reopened output and recovery. |
+| J4 | Produce and revise an original professional pitch | C4 C2 C5 F | Real Brief and materials -> original reasoned concept/strategy -> editable customer-ready proposal -> review/revision/export/reopen and evaluation; manual and owned-AI paths both work where approved. |
+| J5 | Produce and revise an editable video | C4 C2 C5 F | Real permitted media -> editable Timeline -> preview/edit/render -> verified playable result and editable project -> review/revision/export/reopen/cancel/recovery; retain approved audio, subtitle, transition and quality requirements. |
+| J6 | Produce and revise a usable podcast | C4 C2 C5 F | Research/script/interview-or-story intent -> actual audio and complete editable episode -> edit/mix/transcript/chapter/derivative work -> review/export/reopen/evaluation, with script changes distinguished from actual recorded/generated sound. |
+| J7 | Turn real materials and goals into reusable knowledge and useful owned-AI work | C2 C5 | Supported file/media intake and precise citations -> actual understanding/research/analysis -> saved searchable versioned result; actual owned Gateway/Agent/Skills/Memory work and Outcome -> Evaluation -> reviewed Learning -> held-out promotion/rollback. Public discovery and saved examples alone are not training. |
+| J8 | Continue and recover the work across approved surfaces and release it | C6 F | Website/Web/Desktop/Mobile roles operate over one Core and saved context/task/result, with required packaging/security/accessibility/performance, same-SHA hosted Product/App, restart/rollback and engineering-ready bundle. PO repeats only when engineering ready; RELEASED and OPERATING need their own evidence. |
+
+#### U01-U25 retained capability assertions
+
+| ID | Current explicit capability | Existing responsible delivery / support | Required normal result and distinguishing constraint |
+|---|---|---|---|
+| U01 | GLOBAL universe, country categories and continuous entity addition | C1 / C6 F | Versioned approved China/global inclusion rules, retained country candidates/categories and Add Subject/BrandFocus operate; honest coverage/freshness states; no fabricated completed inventory or sample-to-universe promotion. |
+| U02 | Exact entity identity, aliases and venue/tenant relations | C1 / C3 | Stable deduplicated Brand/Subject/store identities, exact venue membership and typed Evidence-backed time relations; in-venue monitoring cannot silently expand to every store of the brand. |
+| U03 | Headquarters/origin/jurisdiction/operating/marketing/location context | C1 / C3 F | Distinct relation meanings with evidence, dates and review state support market selection; multiple markets preserved without conflating headquarters, legal company, venue or campaign. |
+| U04 | Approved platform acquisition and native observations | C1 / C6 | Single-platform requests and approved public/official/session paths ingest real content, authors, times, native metrics/comments/media and provenance into existing truth; unsupported fields remain unavailable, never invented; preserve future official API integration. |
+| U05 | Historical metrics, freshness and incremental maintenance | C1 / C6 | Append actual observations, retain publication/capture/event/derived-time distinctions, refresh only due sources, deduplicate unchanged work and recover failures with lineage; product AUTO remains opt-in except explicitly approved baseline maintenance. |
+| U06 | Commercial monitoring, events and calendar | C3 / C1 C5 F | Subject-scoped real monitoring results and source-backed event/calendar work can be inspected and continued; planned versus happened remains distinct. |
+| U07 | Consumer, media/social and sentiment/trend intelligence | C3 / C1 C2 C5 | Task-relevant, place/time/platform-matched evidence produces supported interpretations and stated sampling limits; observed posts do not fabricate population satisfaction or causal demand. |
+| U08 | CTH/BMP risk detection and response | C3 / C1 C2 C5 | Traceable risk evidence, context and prioritization enter the existing response/case workflow; uncertainty, false positives, decisions and actual effects stay distinguishable. |
+| U09 | Commercial operations, cases, decisions and outcomes | C3 / C2 C5 | Existing Case/Insight/Decision/Action/Outcome/Evaluation objects complete real operating work, retain human/model/source separation, persistence and recovery; a proposal is not an executed action. |
+| U10 | Brand portfolio, market and competitor intelligence | C3 / C1 C2 C5 | Exact BrandFocus/market comparison and benchmark use compatible unit/currency/period/denominator, disclose gaps and produce useful decisions; unrelated financial/navigation material cannot pass marketing research. |
+| U11 | Creator, channel and propagation intelligence | C3 / C1 C2 C5 | Actual creator/content/channel/native observations and their time relations support decisions; likes, reach, sales attribution and causal lift remain separate claims. |
+| U12 | Brand content/campaign lifecycle and evaluation | C3 / C2 C4 C5 F | Editable Brief/content/campaign review, authorized action, observed result and evaluation persist and reopen; actual external publishing needs its existing approval/integration, and an internal stage label is not a campaign result. |
+| U13 | Original pitch creation | C4 / C2 C5 F | J4's separate professional proposal result passes factual support, originality, editable delivery, actual revision/recovery and usefulness checks. |
+| U14 | Video creation | C4 / C2 C5 F | J5's separate editable project and rendered result pass approved feature coverage, visual quality, audio synchronization, captions, revision/cancel/recovery; a demo clip cannot substitute for the complete promised normal workflow. |
+| U15 | Podcast creation | C4 / C2 C5 F | J6's separate playable episode and complete project preserve script/audio identities, segments, chapters, transcripts/corrections, loudness and editing/recovery; text correction alone does not synthesize speech. |
+| U16 | Material import, library, search and precise citation | C5 / C2 C1 | Approved files/web/audio/video enter existing Source/Evidence with source purpose, pages/paragraphs/frames/timecodes and scope; material is locatable, understandable, searchable and reopenable without a second truth store. |
+| U17 | Research, reports, versioned Artifact and export | C5 / C2 C3 C4 | Actual useful result saves, revises, reopens and exports through current owners; retain per-source permissions, citations, parent/digest, revocation and recovery. Owned/permitted material has a normal path; unknown use rights do not become licensed. |
+| U18 | LUMENIS-owned model, inference and multimodal understanding | C2 / C3 C4 C5 C6 | Approved open foundation weights, real admitted training, durable reload and canonical service independently produce useful grounded text/file/media outcomes; held-out semantic quality and runtime performance are measured. Codex Cloud development and offline loader registration are not deployed inference. |
+| U19 | Agent, Skills lifecycle, tool discovery and Memory | C2 / C6 | Real goal/tool work runs through the existing chain with origin/version-bound capability formation, progressive retrieval, context/memory/checkpoint continuity, interruption/resume/cancel and uncertain-effect reconciliation; discovery/skills gain no independent authority. |
+| U20 | Evaluation, feedback and controlled learning | C2 / C3 C4 C5 | Actual outcomes, corrections and negatives produce derivative versioned learning assets, shadow/held-out comparison, approved promotion and rollback; preserve source truth and distinguish effect fidelity from simulated/user/environment shortcuts. |
+| U21 | Product browser and acquisition continuity | C1 / C6 F | Approved product browser/profile context supports real permitted navigation/acquisition and source return with honest login/challenge/offline/recovery states; protect the workstation Mainland personal account and preserve official interfaces. |
+| U22 | Open product entry, scope, Permission and effect control | C6 / C1 C2 C5 F | Existing product work remains accessible without a new account/password wall; server actor/scope/effects remain enforced. Focus/Clear preserves stored task scopes and original-source rights; final PO account redesign remains explicitly deferred. |
+| U23 | Four-surface Experience and work continuity | C6 F / all owning deliveries | Approved Website/Web/Desktop/Mobile roles execute their actual tasks with task-specific layouts, Chinese/English/Korean localization, accessibility, saved context/result continuity and recovery; approved mobile role is not a duplicate desktop. |
+| U24 | Settings, shared preferences and notifications | C5 C6 F / relevant source owners | Real preferences/settings persist and affect their intended behavior, status/notifications open the correct scoped task/result, and denial/offline/retry remain accurate without a second settings or event truth. |
+| U25 | Runtime, security, packaging, release and operation | C6 / all owning deliveries M PO | Core8201, FFmpeg/ffprobe, supervisor/owned-child cleanup, queue/restart/recovery, protected DB/backup/rollback, required builds and same-SHA real Gate pass; separate engineering, PO repeat, RELEASED, scheduled OPERATING and future commercial/market evidence. |
+
+The U assertions are a minimum traceability layer for the original groups, not a
+replacement for their deeper source/Screen/Experience/business contracts. Attach
+additional retained sub-capabilities to these same rows without silently narrowing
+them. Maintain every unresolved detailed obligation in its current delivery card.
+Approval of this mapping does not mark any capability TESTED, VERIFIED or accepted.
+
 W6 uniquely writes app.py, lumenis_app_api.py, experience_runtime.py and
 experience_screens.py composition and executes formal DB changes. W2 owns
 ai_task_engine.py and Agent execution. W1 serializes actual Collector writes;

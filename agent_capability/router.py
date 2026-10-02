@@ -23,13 +23,28 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
 import uuid
-from dataclasses import dataclass, field, asdict
+from copy import deepcopy
+from dataclasses import dataclass, field, asdict, fields
+from functools import wraps
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from .formation import (FormationError, FormedCall, canonical_bytes, digest,
+                        implementation_identity, runtime_identity, request_identity,
+                        context_identity)
+
 logger = logging.getLogger(__name__)
+
+
+def _serialized_dispatch(method):
+    @wraps(method)
+    def dispatch(self, *args, **kwargs):
+        with self._dispatch_lock:
+            return method(self, *args, **kwargs)
+    return dispatch
 
 
 class ToolRiskLevel(str, Enum):
@@ -73,13 +88,23 @@ class ToolDefinition:
     api_route: str = ""                      # 对应的 HTTP 路由
     enabled: bool = True
     version: str = "1.0.0"
+    # Trusted owner metadata, never populated from a model's tool arguments.
+    origin: str = ""
+    resource_uri: str = ""
+    identity_provider: Optional[Callable] = None
+    dependency_paths: Tuple[str, ...] = ()
+    resource_manifest: List[Dict[str, Any]] = field(default_factory=list)
+    resource_reader: Optional[Callable] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        d = asdict(self)
+        d = {f.name: deepcopy(getattr(self, f.name)) for f in fields(self)
+             if f.name not in {"handler", "identity_provider", "resource_reader", "dependency_paths"}}
         d["permission_level"] = self.permission_level.value
         d["risk_level"] = self.risk_level.value
         d["params"] = [asdict(p) for p in self.params]
         d.pop("handler", None)
+        for key in ("identity_provider", "resource_reader", "dependency_paths"):
+            d.pop(key, None)
         return d
 
     def validate_params(self, params: Dict[str, Any]) -> Tuple[bool, str]:
@@ -106,6 +131,8 @@ class ToolExecutionResult:
     evidence: Optional[Dict[str, Any]] = None
     duration_ms: int = 0
     execution_id: str = field(default_factory=lambda: uuid.uuid4().hex[:16])
+    formation: Optional[Dict[str, Any]] = None
+    reconciliation_required: bool = False
 
 
 @dataclass(frozen=True)
@@ -359,6 +386,7 @@ class CapabilityRouter:
         self.db_path = db_path
         self.enabled = enabled
         self._tools: Dict[str, ToolDefinition] = {}
+        self._dispatch_lock = threading.RLock()
         self.skill_memory = skill_memory
         # No production call site currently supplies trusted actor binding.
         # Keep execution disabled by default until an authenticated server
@@ -372,19 +400,120 @@ class CapabilityRouter:
     def _register_core_tools(self) -> None:
         """注册首批核心 Tool。"""
         for tool in CORE_TOOLS:
-            self._tools[tool.tool_id] = tool
+            self._tools[tool.tool_id] = deepcopy(tool)
 
     def register_tool(self, tool: ToolDefinition) -> bool:
         """注册一个新 Tool。"""
         if not self.enabled:
             return False
-        if tool.tool_id in self._tools:
-            logger.warning("Tool %s already registered, overwriting", tool.tool_id)
-        self._tools[tool.tool_id] = tool
-        return True
+        with self._dispatch_lock:
+            old = self._tools.get(tool.tool_id)
+            if old and (old.origin, old.resource_uri) != (tool.origin, tool.resource_uri):
+                return False  # An ID cannot shadow another origin/URI.
+            self._tools[tool.tool_id] = tool
+            return True
 
     def unregister_tool(self, tool_id: str) -> bool:
-        return self._tools.pop(tool_id, None) is not None
+        with self._dispatch_lock:
+            return self._tools.pop(tool_id, None) is not None
+
+    @staticmethod
+    def _resource_identity(tool):
+        rows = tool.resource_manifest
+        if not isinstance(rows, list):
+            raise FormationError("TOOL_CONTENT_MANIFEST_INVALID")
+        uris = set()
+        for row in rows:
+            if (not isinstance(row, dict) or set(row) != {"uri", "sha256", "size"}
+                    or not isinstance(row["uri"], str) or not row["uri"]
+                    or row["uri"] in uris or type(row["size"]) is not int or row["size"] < 0
+                    or not isinstance(row["sha256"], str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", row["sha256"])):
+                raise FormationError("TOOL_CONTENT_MANIFEST_INVALID")
+            uris.add(row["uri"])
+        return sorted(deepcopy(rows), key=lambda row: row["uri"])
+
+    def form_step(self, step, context, *, expected=None):
+        """Resolve once; hold that implementation through Loop admission/call."""
+        with self._dispatch_lock:
+            tool = self._tools.get(step.tool)
+            if not self.enabled or not tool or not tool.enabled:
+                raise FormationError("TOOL_RUNTIME_UNAVAILABLE")
+            if not tool.origin or not tool.resource_uri or not callable(tool.handler):
+                raise FormationError("TOOL_IMPLEMENTATION_NOT_BOUND")
+            valid, reason = tool.validate_params(step.params)
+            if not valid:
+                raise FormationError("TOOL_FORMATION_PARAMETERS_INVALID")
+            handler = tool.handler
+            provider = tool.identity_provider
+
+            def identity():
+                if (self._tools.get(step.tool) is not tool or tool.handler is not handler
+                        or not self.enabled or not tool.enabled):
+                    raise FormationError("TOOL_IMPLEMENTATION_CHANGED")
+                if tool.identity_provider is not provider:
+                    raise FormationError("TOOL_RUNTIME_IDENTITY_CHANGED")
+                resources = self._resource_identity(tool)
+                content_digest = digest(resources)
+                # The existing registry/package owner supplies this current
+                # content-admission state. It is not a local permission grant.
+                if resources:
+                    state = tool.identity_provider() if callable(tool.identity_provider) else None
+                    if not isinstance(state, dict) or state.get("content_manifest_digest") != content_digest:
+                        raise FormationError("TOOL_CONTENT_REAPPROVAL_REQUIRED")
+                effect = {ToolPermissionLevel.READ: "READ", ToolPermissionLevel.ANALYZE: "ANALYZE",
+                          ToolPermissionLevel.WRITE: "WRITE", ToolPermissionLevel.ADMIN: "WRITE"}[tool.permission_level]
+                return {"schema": "lumenis-formed-call:v1", "origin": tool.origin,
+                        "resource_uri": tool.resource_uri, "effect": effect,
+                        "descriptor_sha256": digest(tool.to_dict()),
+                        "implementation_sha256": implementation_identity(handler, tool.dependency_paths),
+                        "runtime_sha256": runtime_identity(tool.identity_provider),
+                        "content_sha256": content_digest, "request_sha256": request_identity(step),
+                        "context_sha256": context_identity(context)}
+
+            def invoke(captured_step, _context):
+                data = handler(**captured_step.params)
+                # A real handler error remains an error, including uncertain
+                # effects; dictionary truthiness is not completion evidence.
+                if isinstance(data, dict) and "success" in data:
+                    return data
+                return {"success": True, "result": data, "source": "tool_handler"}
+
+            return FormedCall(step=step, context=context, identity=identity, invoke=invoke,
+                              lock=self._dispatch_lock, expected=expected)
+
+    def read_supporting_resource(self, step, context, binding, uri, *, actor_context=None):
+        """Lazy integrity-checked bytes; reading a nested skill never activates it."""
+        selected = self.form_step(step, context, expected=binding)
+        with selected.guard(step, context):
+            tool = self._tools[step.tool]
+            row = next((r for r in self._resource_identity(tool) if r["uri"] == uri), None)
+            reader = tool.resource_reader
+            if not row or not callable(reader):
+                raise FormationError("TOOL_CONTENT_UNAVAILABLE")
+            if (not isinstance(actor_context, ToolActorContext) or not actor_context.valid()
+                    or self._actor_authorizer is None
+                    or self._actor_authorizer(actor_context, tool) is not True):
+                raise FormationError("TOOL_CONTENT_ACTOR_NOT_AUTHORIZED")
+            from lumenis.shared.agents.skills.execution import (
+                SkillExecutionContext, ActionType, check_permission, action_firewall, effect_fence)
+            read_context = SkillExecutionContext(
+                skill_id=tool.tool_id, user_id=actor_context.user_id,
+                permission_role=actor_context.permission_role, domain=actor_context.domain_id,
+                product=actor_context.product_id, task="read supporting skill resource",
+                input_payload={"resource_uri": uri}, action_type=ActionType.READ)
+            for check in (lambda ctx: check_permission(ctx, user_role=actor_context.user_role),
+                          action_firewall, effect_fence):
+                if check(read_context).get("allowed") is not True:
+                    raise FormationError("TOOL_CONTENT_PERMISSION_DENIED")
+            selected.assert_current(step, context)
+            data = reader(uri)
+            selected.assert_current(step, context)
+            import hashlib
+            if (not isinstance(data, bytes) or len(data) != row["size"]
+                    or hashlib.sha256(data).hexdigest() != row["sha256"]):
+                raise FormationError("TOOL_CONTENT_INTEGRITY_FAILED")
+            return data
 
     def list_tools(self, category: Optional[str] = None,
                    risk_level: Optional[ToolRiskLevel] = None) -> List[ToolDefinition]:
@@ -483,11 +612,13 @@ class CapabilityRouter:
 
     # ── Tool 执行（复用 skill_execution_chain） ──────────────────
 
+    @_serialized_dispatch
     def execute_tool(self, tool_id: str, params: Dict[str, Any],
                      user_role: Optional[str] = None,
                      agent_id: str = "agent_runtime",
                      task_id: Optional[str] = None,
-                     actor_context: Optional[ToolActorContext] = None) -> ToolExecutionResult:
+                     actor_context: Optional[ToolActorContext] = None,
+                     formation: Optional[Dict[str, Any]] = None) -> ToolExecutionResult:
         """执行 Tool，经过完整安全链路。
 
         链路：参数校验 → permission_gate → action_firewall → effect_fence → 执行 → evidence
@@ -521,6 +652,19 @@ class CapabilityRouter:
         if self._actor_authorizer is None:
             result.error = "trusted actor authorization validator not configured"
             return result
+        from agent_runtime.planner import PlanStep
+        call_step = PlanStep(step_id=f"{task_id or 'direct'}:{tool_id}", tool=tool_id,
+                             action="execute registered tool", params=deepcopy(params))
+        call_context = {"actor_id": actor_context.user_id, "domain_id": actor_context.domain_id,
+                        "role": actor_context.user_role, "product": actor_context.product_id,
+                        "permission_role": actor_context.permission_role}
+        try:
+            selected = self.form_step(call_step, call_context, expected=formation)
+            result.formation = selected.binding
+        except FormationError as exc:
+            result.error = str(exc)
+            result.reconciliation_required = True
+            return result
         try:
             authorized = self._actor_authorizer(actor_context, tool)
         except Exception as exc:
@@ -531,6 +675,9 @@ class CapabilityRouter:
             result.error = "actor is not authorized for this product tool"
             return result
         user_role = actor_context.user_role
+        # Admission receives exactly the captured arguments, rather than a
+        # mutable caller dictionary that can diverge from the eventual handler.
+        params = deepcopy(call_step.params)
 
         # 2. 构建执行上下文（复用 canonical Shared Skills execution owner）
         try:
@@ -544,7 +691,7 @@ class CapabilityRouter:
             result.duration_ms = int((time.time() - start) * 1000)
             return result
 
-        action_type = ActionType.WRITE if tool.permission_level == ToolPermissionLevel.WRITE else (
+        action_type = ActionType.WRITE if tool.permission_level in {ToolPermissionLevel.WRITE, ToolPermissionLevel.ADMIN} else (
             ActionType.ANALYZE if tool.permission_level == ToolPermissionLevel.ANALYZE
             else ActionType.READ
         )
@@ -601,17 +748,23 @@ class CapabilityRouter:
 
         # 6. 执行
         try:
-            if tool.handler:
-                exec_result = {"success": True, "result": tool.handler(**params),
-                               "source": "tool_handler"}
-            else:
-                # 无 handler 时，通过 skill_execution_chain 执行（会走 OSAI adapter 或 builtin）
-                exec_result = execute_skill(ctx, handler=None)
+            # The selected handler and immutable arguments survive every
+            # admission check. Do not re-resolve an ID after Permission.
+            if digest(ctx.input_payload) != digest(call_step.params):
+                raise FormationError("TOOL_ADMISSION_INPUT_CHANGED")
+            if (ctx.user_id, ctx.domain, ctx.product, ctx.permission_role, ctx.action_type) != (
+                    actor_context.user_id, actor_context.domain_id, actor_context.product_id,
+                    actor_context.permission_role, action_type):
+                raise FormationError("TOOL_ADMISSION_CONTEXT_CHANGED")
+            exec_result = selected.invoke(call_step, call_context)
             ctx.execute_result = exec_result
-            result.success = exec_result.get("success", False)
+            result.success = exec_result.get("success") is True
             result.data = exec_result.get("result") if result.success else None
             if not result.success:
                 result.error = exec_result.get("error", "execution failed")
+        except FormationError as e:
+            result.error = str(e)
+            result.reconciliation_required = True
         except Exception as e:
             result.error = f"execution error: {e}"
 

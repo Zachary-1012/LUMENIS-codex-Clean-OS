@@ -24,10 +24,29 @@ LUMENIS Shared Evaluation — Agent Trajectory Evaluation
 from __future__ import annotations
 
 import json
+import re
 import uuid
+from copy import deepcopy
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
+from agent_capability.formation import digest
+
+
+@dataclass(frozen=True)
+class OutcomeAssertion:
+    """Requirement supplied by the existing authenticated task/artifact owner.
+
+    Expected values are task intent, never observations. Known artifacts keep
+    their expected digest. A newly generated artifact instead freezes an exact
+    canonical-committed-artifact:v1 requirement in expected_value. Only the
+    committed Task/Artifact owner may subsequently bind its unknown bytes.
+    """
+    assertion_id: str
+    kind: str  # evidence / artifact / effect / environment / user_constraint
+    reference: str
+    expected_sha256: Optional[str] = None
+    expected_value: Any = None
 
 
 @dataclass
@@ -88,6 +107,8 @@ class TrajectoryEvaluation:
     grade: str = "F"                # S/A/B/C/D/F
     metrics: Dict[str, Any] = field(default_factory=dict)
     recommendations: List[str] = field(default_factory=list)
+    score_scope: str = "OPERATIONAL_TRAJECTORY_ONLY"
+    outcome_verification: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
@@ -121,19 +142,207 @@ class TrajectoryEvaluator:
         (0.0, "F"),
     ]
 
-    def __init__(self, persist_func: Optional[Callable] = None):
+    def __init__(self, persist_func: Optional[Callable] = None,
+                 outcome_contract_func: Optional[Callable] = None,
+                 outcome_resolver: Optional[Callable] = None,
+                 committed_artifact_resolver: Optional[Callable] = None):
         """
         Args:
             persist_func: 评估结果持久化回调 callback(evaluation) -> None
                           可传入 ai_task_engine._db_add_evidence 的包装
         """
         self._persist_func = persist_func
+        self._outcome_contract_func = outcome_contract_func
+        self._outcome_resolver = outcome_resolver
+        # Server-injected canonical read path, never model/tool output or a
+        # caller-supplied receipt. It adds no store, writer or approval owner.
+        self._committed_artifact_resolver = committed_artifact_resolver
+
+    @property
+    def has_outcome_contract(self):
+        return (self._outcome_contract_func is not None or self._outcome_resolver is not None
+                or self._committed_artifact_resolver is not None)
+
+    @staticmethod
+    def _generated_spec(row):
+        if row.kind != "artifact" or row.expected_sha256 is not None:
+            return None
+        spec = row.expected_value
+        fields = {"schema", "domain_id", "scope", "output_type", "parent_version_id", "requirements"}
+        if (type(spec) is not dict or set(spec) != fields
+                or spec["schema"] != "canonical-committed-artifact:v1"
+                or any(type(spec[key]) is not str or not spec[key].strip()
+                       for key in ("domain_id", "output_type"))
+                or type(spec["scope"]) is not dict or not spec["scope"]
+                or type(spec["requirements"]) is not dict or not spec["requirements"]
+                or (spec["parent_version_id"] is not None and
+                    (type(spec["parent_version_id"]) is not str or not spec["parent_version_id"].strip()))):
+            raise ValueError("OUTCOME_GENERATED_REQUIREMENT_INVALID")
+        # Validate canonical JSON shape without converting missing/bool to zero.
+        digest(spec)
+        return spec
+
+    def _outcome_contract(self, task_id):
+        if not callable(self._outcome_contract_func) or not callable(self._outcome_resolver):
+            raise ValueError("OUTCOME_OWNER_NOT_BOUND")
+        assertions = self._outcome_contract_func(task_id)
+        allowed = {"evidence", "artifact", "effect", "environment", "user_constraint"}
+        if (not isinstance(assertions, (list, tuple)) or not assertions
+                or any(not isinstance(row, OutcomeAssertion) or not row.assertion_id
+                       or row.kind not in allowed or not row.reference for row in assertions)
+                or len({r.assertion_id for r in assertions}) != len(assertions)
+                or not any(r.kind in {"evidence", "artifact"} for r in assertions)):
+            raise ValueError("OUTCOME_CONTRACT_INVALID")
+        for row in assertions:
+            if row.kind == "artifact" and row.expected_sha256 is None:
+                self._generated_spec(row)
+                continue
+            if row.kind in {"evidence", "artifact"} and (
+                    not isinstance(row.expected_sha256, str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", row.expected_sha256)):
+                raise ValueError("OUTCOME_EXPECTED_IDENTITY_MISSING")
+        return tuple(deepcopy(assertions))
+
+    def form_outcome_contract(self, task_id):
+        if not self.has_outcome_contract:
+            return None
+        return digest([asdict(r) for r in self._outcome_contract(task_id)])
+
+    def _committed_output(self, row, task_id, identity, expected_bindings, require_bound):
+        spec = self._generated_spec(row)
+        if not callable(self._committed_artifact_resolver):
+            raise ValueError("OUTCOME_COMMITTED_OWNER_NOT_BOUND")
+
+        def read_receipt():
+            receipt = self._committed_artifact_resolver(row, task_id, identity)
+            if type(receipt) is not dict or receipt.get("state") != "COMMITTED":
+                raise ValueError("OUTCOME_COMMIT_UNAVAILABLE")
+            exact = {"schema": "canonical-committed-output-receipt:v1", "task_id": task_id,
+                     "assertion_id": row.assertion_id, "contract_sha256": identity,
+                     "domain_id": spec["domain_id"], "scope": spec["scope"],
+                     "output_type": spec["output_type"], "parent_version_id": spec["parent_version_id"]}
+            if any(key not in receipt or not canonical_equal(receipt[key], value)
+                   for key, value in exact.items()):
+                raise ValueError("OUTCOME_COMMIT_LINEAGE_MISMATCH")
+            if (any(type(receipt.get(key)) is not str or not receipt[key].strip()
+                    for key in ("artifact_ref", "version_id"))
+                    or receipt["version_id"] == spec["parent_version_id"]
+                    or not isinstance(receipt.get("sha256"), str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"])
+                    or type(receipt.get("byte_length")) is not int or receipt["byte_length"] <= 0):
+                raise ValueError("OUTCOME_COMMIT_IDENTITY_INVALID")
+            constraints = receipt.get("constraint_observations")
+            if (type(constraints) is not dict or any(key not in constraints
+                    or not canonical_equal(constraints[key], value)
+                    for key, value in spec["requirements"].items())):
+                raise ValueError("OUTCOME_COMMIT_CONSTRAINT_MISMATCH")
+            # Exclude volatile access metadata; retain all immutable lineage,
+            # constraints, identity and bytes for subsequent completed readback.
+            retained = {**exact, **{key: receipt[key] for key in
+                        ("artifact_ref", "version_id", "sha256", "byte_length", "constraint_observations")}}
+            return deepcopy(retained)
+
+        receipt = read_receipt()
+        binding = {"receipt_sha256": digest(receipt), "artifact_ref": receipt["artifact_ref"],
+                   "version_id": receipt["version_id"], "sha256": receipt["sha256"]}
+        previous = (expected_bindings or {}).get(row.assertion_id)
+        if require_bound and previous is None:
+            raise ValueError("OUTCOME_COMMIT_BINDING_MISSING")
+        if previous is not None and not canonical_equal(previous, binding):
+            raise ValueError("OUTCOME_COMMIT_BINDING_CHANGED")
+        # The canonical owner reopens these actual committed bytes/version. A
+        # receipt alone, tool result or content hash alone cannot pass this read.
+        actual = self._outcome_resolver(row, task_id, committed_receipt=deepcopy(receipt))
+        if type(actual) is not dict or actual.get("state") != "AVAILABLE":
+            raise ValueError("OUTCOME_UNAVAILABLE")
+        expected_read = {"reference": row.reference, "kind": "artifact", "sha256": receipt["sha256"],
+                         "artifact_ref": receipt["artifact_ref"], "version_id": receipt["version_id"],
+                         "task_id": task_id, "domain_id": spec["domain_id"], "scope": spec["scope"],
+                         "parent_version_id": spec["parent_version_id"], "byte_length": receipt["byte_length"]}
+        if any(key not in actual or not canonical_equal(actual[key], value)
+               for key, value in expected_read.items()):
+            raise ValueError("OUTCOME_COMMITTED_READBACK_MISMATCH")
+        if not canonical_equal(read_receipt(), receipt):
+            raise ValueError("OUTCOME_COMMIT_CHANGED_DURING_READ")
+        return binding
+
+    def verify_outcome(self, task_id, expected_contract_sha256=None, *,
+                       expected_output_receipts=None, require_bound_receipts=False):
+        result = {"state": "NOT_VERIFIED", "verified_goal_achieved": False,
+                  "user_verified": False, "checks": [], "reason": "OUTCOME_OWNER_NOT_BOUND",
+                  "committed_output_bindings": {}}
+        if not self.has_outcome_contract:
+            return result
+        try:
+            if expected_output_receipts is not None and type(expected_output_receipts) is not dict:
+                raise ValueError("OUTCOME_COMMIT_BINDING_INVALID")
+            expected_output_receipts = deepcopy(expected_output_receipts)
+            assertions = self._outcome_contract(task_id)
+            identity = digest([asdict(r) for r in assertions])
+            if expected_contract_sha256 is None:
+                raise ValueError("OUTCOME_CONTRACT_MISSING")
+            if identity != expected_contract_sha256:
+                raise ValueError("OUTCOME_CONTRACT_CHANGED")
+            for row in assertions:
+                check = {"assertion_id": row.assertion_id, "kind": row.kind,
+                         "reference": row.reference, "state": "NOT_VERIFIED"}
+                try:
+                    if row.kind == "artifact" and row.expected_sha256 is None:
+                        binding = self._committed_output(row, task_id, identity,
+                                                         expected_output_receipts, require_bound_receipts)
+                        result["committed_output_bindings"][row.assertion_id] = binding
+                        check.update(state="VERIFIED", reason="CANONICAL_COMMIT_AND_REOPEN_MATCHED")
+                        result["checks"].append(check)
+                        continue
+                    actual = self._outcome_resolver(row, task_id)
+                    if not isinstance(actual, dict) or actual.get("state") != "AVAILABLE":
+                        check["reason"] = "OUTCOME_UNAVAILABLE"
+                    elif actual.get("reference") != row.reference or actual.get("kind") != row.kind:
+                        check.update(state="FAILED", reason="OUTCOME_IDENTITY_MISMATCH")
+                    elif row.kind in {"evidence", "artifact"} and actual.get("sha256") != row.expected_sha256:
+                        check.update(state="FAILED", reason="OUTCOME_DIGEST_MISMATCH")
+                    elif row.kind not in {"evidence", "artifact"} and (
+                            "value" not in actual or canonical_equal(actual["value"], row.expected_value) is not True):
+                        check.update(state="FAILED", reason="OUTCOME_EXPECTATION_MISMATCH")
+                    else:
+                        check.update(state="VERIFIED", reason="CANONICAL_OBSERVATION_MATCHED")
+                except Exception as exc:
+                    safe = str(exc)
+                    known = {"OUTCOME_COMMITTED_OWNER_NOT_BOUND", "OUTCOME_COMMIT_UNAVAILABLE", "OUTCOME_UNAVAILABLE"}
+                    failures = {"OUTCOME_COMMIT_LINEAGE_MISMATCH", "OUTCOME_COMMIT_IDENTITY_INVALID",
+                                "OUTCOME_COMMIT_CONSTRAINT_MISMATCH", "OUTCOME_COMMIT_BINDING_MISSING",
+                                "OUTCOME_COMMIT_BINDING_CHANGED", "OUTCOME_COMMITTED_READBACK_MISMATCH",
+                                "OUTCOME_COMMIT_CHANGED_DURING_READ"}
+                    check["reason"] = safe if safe in known | failures else "OUTCOME_OWNER_UNAVAILABLE"
+                    if safe in failures:
+                        check["state"] = "FAILED"
+                result["checks"].append(check)
+            # Detect a requirement/configuration change during owner reads.
+            if self.form_outcome_contract(task_id) != identity:
+                raise ValueError("OUTCOME_CONTRACT_CHANGED")
+            states = {check["state"] for check in result["checks"]}
+            result["state"] = "FAILED" if "FAILED" in states else (
+                "VERIFIED" if states == {"VERIFIED"} else "NOT_VERIFIED")
+            result["verified_goal_achieved"] = result["state"] == "VERIFIED"
+            if result["state"] != "VERIFIED":
+                result["committed_output_bindings"] = {}
+            result["reason"] = "CANONICAL_OUTCOME_CHECKS"  # no user material or owner errors
+        except Exception as exc:
+            safe = str(exc)
+            result.update(state="BLOCKED", reason=safe if safe in {
+                "OUTCOME_OWNER_NOT_BOUND", "OUTCOME_CONTRACT_INVALID", "OUTCOME_EXPECTED_IDENTITY_MISSING",
+                "OUTCOME_CONTRACT_MISSING", "OUTCOME_CONTRACT_CHANGED",
+                "OUTCOME_GENERATED_REQUIREMENT_INVALID", "OUTCOME_COMMIT_BINDING_INVALID"} else "OUTCOME_OWNER_UNAVAILABLE")
+            result["committed_output_bindings"] = {}
+        return result
 
     def evaluate(
         self,
         metrics: TrajectoryMetrics,
         agent_id: str = "",
         task_id: str = "",
+        expected_contract_sha256: Optional[str] = None,
+        expected_output_receipts: Optional[Dict[str, Any]] = None,
     ) -> TrajectoryEvaluation:
         """执行轨迹评估。
 
@@ -150,6 +359,8 @@ class TrajectoryEvaluator:
             task_id=task_id,
             metrics=asdict(metrics),
         )
+        result.outcome_verification = self.verify_outcome(
+            task_id, expected_contract_sha256, expected_output_receipts=expected_output_receipts)
 
         # 1. 目标达成度
         result.goal_completion = self._score_goal_completion(metrics)
@@ -191,7 +402,7 @@ class TrajectoryEvaluator:
         """目标达成度评分。"""
         if metrics.goal_achieved:
             score = 1.0
-            reasoning = "目标达成"
+            reasoning = "执行器报告步骤完成；业务结果须独立核验"
         elif metrics.completed_steps > 0 and metrics.total_steps > 0:
             completion_ratio = metrics.completed_steps / metrics.total_steps
             score = min(completion_ratio * 0.8, 0.8)  # 未完全达成最高0.8
@@ -215,6 +426,8 @@ class TrajectoryEvaluator:
                 "completed_steps": metrics.completed_steps,
                 "total_steps": metrics.total_steps,
                 "failed_steps": metrics.failed_steps,
+                "claim_source": "EXECUTION_METRICS",
+                "business_outcome_verified": False,
             },
             reasoning=reasoning,
         )
@@ -376,3 +589,9 @@ class TrajectoryEvaluator:
                 eval2.safety_compliance.score - eval1.safety_compliance.score, 4),
             "better": eval2.agent_id if eval2.overall_score > eval1.overall_score else eval1.agent_id,
         }
+
+
+def canonical_equal(actual, expected):
+    # Strict JSON comparison distinguishes false/zero, missing/zero and values
+    # from their string representations; no missing-to-zero transformations.
+    return digest(actual) == digest(expected)

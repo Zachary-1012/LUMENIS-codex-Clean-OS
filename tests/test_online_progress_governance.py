@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
 from scripts.audit_tools.verify_codex_takeover_governance import (
     ONLINE_STATUS_PATH,
+    JOB_ASSERTIONS_HEADING,
     _assert_current_round_statuses,
     _assert_execution_boundaries,
     _assert_legacy_coverage_mapping,
@@ -152,6 +154,65 @@ class SixRoundGovernanceTests(unittest.TestCase):
         _assert_readme_routing_consistent("See AGENTS.md for execution routing.")
         with self.assertRaisesRegex(AssertionError, "obsolete execution/provider routes"):
             _assert_readme_routing_consistent("15 个顺序 Codex 任务")
+
+    def _assertion_section(self) -> str:
+        path = Path(__file__).resolve().parents[1] / "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md"
+        source = path.read_text(encoding="utf-8")
+        return JOB_ASSERTIONS_HEADING + source.split(JOB_ASSERTIONS_HEADING, 1)[1].split("\n## ", 1)[0]
+
+    def _two_ledgers(self, section: str | None = None) -> str:
+        return self._coverage_matrix() + "\n" + (self._assertion_section() if section is None else section)
+
+    def test_both_coverage_ledgers_are_required_and_validated(self) -> None:
+        _assert_legacy_coverage_mapping(self._two_ledgers(), require_assertions=True)
+        with self.assertRaisesRegex(AssertionError, "exactly one"):
+            _assert_legacy_coverage_mapping(self._coverage_matrix(), require_assertions=True)
+        with self.assertRaisesRegex(AssertionError, "Missing current"):
+            _assert_legacy_coverage_mapping(self._two_ledgers(JOB_ASSERTIONS_HEADING))
+
+    def test_primary_duplicates_outside_assertion_section_still_fail(self) -> None:
+        for heading in ("# Other", "## Other", "### Other"):
+            with self.subTest(heading=heading), self.assertRaisesRegex(AssertionError, "duplicates coverage mapping J1"):
+                _assert_legacy_coverage_mapping(self._two_ledgers() + f"\n{heading}\n| J1 | C1 C6 |")
+
+    def test_assertion_ids_must_be_complete_unique_and_known(self) -> None:
+        section = self._assertion_section()
+        row = next(line for line in section.splitlines() if line.startswith("| U15 |"))
+        mutations = {
+            "missing": section.replace(row, ""),
+            "duplicate_u": section + "\n" + row,
+            "duplicate_j": section + "\n" + next(line for line in section.splitlines() if line.startswith("| J1 |")),
+            "extra_u": section + "\n" + row.replace("U15", "U26"),
+            "extra_r": section + "\n" + row.replace("U15", "R03"),
+            "duplicate_heading": section + "\n" + JOB_ASSERTIONS_HEADING,
+        }
+        for mutation, changed in mutations.items():
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                _assert_legacy_coverage_mapping(self._two_ledgers(changed), require_assertions=True)
+
+    def test_assertion_labels_outcomes_and_owner_cells_are_validated(self) -> None:
+        section = self._assertion_section()
+        row = next(line for line in section.splitlines() if line.startswith("| U15 |"))
+        cells = [cell.strip() for cell in row.strip("|").split("|")]
+        for column in (1, 3):
+            for placeholder in ("", "UNKNOWN", "NA", "PENDING"):
+                changed = cells.copy()
+                changed[column] = placeholder
+                bad_row = "| " + " | ".join(changed) + " |"
+                with self.subTest(column=column, placeholder=placeholder), self.assertRaisesRegex(AssertionError, "placeholder"):
+                    _assert_legacy_coverage_mapping(self._two_ledgers(section.replace(row, bad_row)))
+        for owner in ("C3 / C2 C5 F", "C4 / C2 C5 F C7", "C4 / C2 C5 F W7", ""):
+            changed = cells.copy()
+            changed[2] = owner
+            with self.subTest(owner=owner), self.assertRaisesRegex(AssertionError, "owners"):
+                _assert_legacy_coverage_mapping(self._two_ledgers(section.replace(row, "| " + " | ".join(changed) + " |")))
+        with self.assertRaisesRegex(AssertionError, "four fields"):
+            _assert_legacy_coverage_mapping(self._two_ledgers(section.replace(row, "| U15 | Podcast | C4 C2 C5 F |")))
+
+    def test_assertion_cannot_drop_an_observed_primary_job_owner(self) -> None:
+        changed = self._two_ledgers().replace("| J1 | C1 C6 |", "| J1 | C1 C2 C6 |", 1)
+        with self.assertRaisesRegex(AssertionError, "J1 omits owners.*C2"):
+            _assert_legacy_coverage_mapping(changed, require_assertions=True)
 
 
 if __name__ == "__main__":

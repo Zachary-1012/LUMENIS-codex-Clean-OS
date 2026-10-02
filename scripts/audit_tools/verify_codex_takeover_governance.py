@@ -55,6 +55,25 @@ JOB_COVERAGE = {
     "J8": {"C6", "F"},
 }
 
+JOB_ASSERTIONS_HEADING = "### Current J/U job assertions — M clarification, 2026-10-02"
+JOB_ASSERTION_COVERAGE = {
+    identifier: set(owners.split())
+    for identifier, owners in {
+        "J1": "C1 C6", "J2": "C3 C1 C2 C5", "J3": "C3 C1 C2 C5",
+        "J4": "C4 C2 C5 F", "J5": "C4 C2 C5 F", "J6": "C4 C2 C5 F",
+        "J7": "C2 C5", "J8": "C6 F",
+        "U01": "C1 C6 F", "U02": "C1 C3", "U03": "C1 C3 F",
+        "U04": "C1 C6", "U05": "C1 C6", "U06": "C3 C1 C5 F",
+        "U07": "C3 C1 C2 C5", "U08": "C3 C1 C2 C5", "U09": "C3 C2 C5",
+        "U10": "C3 C1 C2 C5", "U11": "C3 C1 C2 C5", "U12": "C3 C2 C4 C5 F",
+        "U13": "C4 C2 C5 F", "U14": "C4 C2 C5 F", "U15": "C4 C2 C5 F",
+        "U16": "C5 C2 C1", "U17": "C5 C2 C3 C4", "U18": "C2 C3 C4 C5 C6",
+        "U19": "C2 C6", "U20": "C2 C3 C4 C5", "U21": "C1 C6 F",
+        "U22": "C6 C1 C2 C5 F", "U23": "C6 F", "U24": "C5 C6 F",
+        "U25": "C6 M PO",
+    }.items()
+}
+
 
 def _requires_online_progress(path: str) -> bool:
     if path == "AGENTS.md" or path.startswith(
@@ -234,9 +253,61 @@ def _mapping_tokens(text: str) -> set[str]:
     return tokens
 
 
-def _assert_legacy_coverage_mapping(source_index: str) -> None:
+def _split_job_assertions(source_index: str, *, required: bool) -> tuple[str, str | None]:
+    lines = source_index.splitlines()
+    starts = [i for i, line in enumerate(lines) if line.strip() == JOB_ASSERTIONS_HEADING]
+    if not starts and not required:
+        return source_index, None
+    if len(starts) != 1:
+        raise AssertionError("Source Owner Index requires exactly one current J/U assertion section")
+    start = starts[0]
+    end = next(
+        (i for i in range(start + 1, len(lines)) if re.match(r"^#{1,3}\s", lines[i])),
+        len(lines),
+    )
+    return "\n".join(lines[:start] + lines[end:]), "\n".join(lines[start + 1:end])
+
+
+def _assert_job_assertions(section: str, primary_mapping: dict[str, set[str]]) -> None:
+    observed: set[str] = set()
+    for line in section.splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        identifier = cells[0].strip("`* ")
+        if identifier == "ID" or all(re.fullmatch(r":?-+:?", cell) for cell in cells):
+            continue
+        if identifier not in JOB_ASSERTION_COVERAGE:
+            raise AssertionError(f"Unexpected current job assertion ID {identifier!r}")
+        if identifier in observed:
+            raise AssertionError(f"Duplicate current job assertion {identifier}")
+        observed.add(identifier)
+        if len(cells) != 4:
+            raise AssertionError(f"Current job assertion {identifier} requires four fields")
+        for field in (cells[1], cells[3]):
+            if field.strip("`* ").upper() in {"", "UNKNOWN", "NA", "N/A", "PENDING", "TBD", "-"}:
+                raise AssertionError(f"Current job assertion {identifier} has an empty/placeholder label or outcome")
+        owners = _mapping_tokens(cells[2])
+        if re.search(r"\bPO\b", cells[2]):
+            owners.add("PO")
+        invalid = set(re.findall(r"\b[CW]\d+\b", cells[2])) - {
+            f"{prefix}{number}" for prefix in ("C", "W") for number in range(1, 7)
+        }
+        if invalid:
+            raise AssertionError(f"Current job assertion {identifier} has invalid owners {sorted(invalid)}")
+        required_owners = JOB_ASSERTION_COVERAGE[identifier] | primary_mapping.get(identifier, set())
+        missing = required_owners - owners
+        if missing:
+            raise AssertionError(f"Current job assertion {identifier} omits owners {sorted(missing)}")
+    missing = set(JOB_ASSERTION_COVERAGE) - observed
+    if missing:
+        raise AssertionError(f"Missing current job assertions: {sorted(missing)}")
+
+
+def _assert_legacy_coverage_mapping(source_index: str, *, require_assertions: bool = False) -> None:
+    legacy, assertions = _split_job_assertions(source_index, required=require_assertions)
     observed: dict[str, set[str]] = {}
-    for line in source_index.splitlines():
+    for line in legacy.splitlines():
         if not line.lstrip().startswith("|"):
             continue
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
@@ -265,6 +336,8 @@ def _assert_legacy_coverage_mapping(source_index: str) -> None:
             raise AssertionError(
                 f"Source Owner Index {identifier} coverage omits {missing_tokens}"
             )
+    if assertions is not None:
+        _assert_job_assertions(assertions, observed)
 
 
 def _assert_execution_boundaries(agents: str) -> None:
@@ -355,7 +428,7 @@ def validate() -> None:
     _assert_single_machine_contract()
     _assert_six_round_routing(agents)
     _assert_current_round_statuses(takeover)
-    _assert_legacy_coverage_mapping(source_index)
+    _assert_legacy_coverage_mapping(source_index, require_assertions=True)
     _assert_execution_boundaries(agents)
     _assert_readme_routing_consistent(readme)
 

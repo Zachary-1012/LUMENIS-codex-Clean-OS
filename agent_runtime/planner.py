@@ -61,6 +61,8 @@ class PlanStep:
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
     duration_ms: float = 0.0
+    # Set by the trusted runtime after planning; never accepted from model JSON.
+    formation: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -79,6 +81,9 @@ class Plan:
     raw_response: str = ""
     is_fallback: bool = False           # 是否为降级规划
     fallback_reason: str = ""
+    outcome_contract_sha256: Optional[str] = None
+    # Populated only from independently read canonical committed output receipts.
+    outcome_receipt_bindings: Dict[str, Dict[str, Any]] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)

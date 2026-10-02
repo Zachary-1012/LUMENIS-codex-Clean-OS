@@ -51,6 +51,12 @@ _WHISPER_FILES = {
 class SpeechBlocked(RuntimeError):
     """A named input, asset, runtime or decoder contract is unavailable/invalid."""
 
+    def __init__(self, reason, *, diagnostic=None):
+        super().__init__(reason)
+        # Safe metadata only. Raw stderr, paths and transcript material never
+        # become an API error or a persisted diagnostic on this adapter's own.
+        self.diagnostic = diagnostic or {}
+
 
 class SpeechCancelled(SpeechBlocked):
     """No transcript was committed; retry requires a fresh authorized invocation."""
@@ -129,6 +135,35 @@ def _wav_bytes(path: Path, expected_sha256: str) -> tuple[bytes, float]:
     return data, duration
 
 
+_WORKER_REASON_CODES = frozenset({
+    "SPEECH_ASSET_HASH_MISMATCH", "SPEECH_ASSET_MISSING", "SPEECH_CPU_ONLY_REQUIRED",
+    "SPEECH_PINNED_CPU_RUNTIME_REQUIRED", "SPEECH_RUNTIME_MANIFEST_INVALID",
+    "SPEECH_RUNTIME_PATH_INVALID", "SPEECH_RUNTIME_VERSION_MISMATCH",
+    "SPEECH_WORKER_AUDIO_INVALID", "SPEECH_WORKER_AUDIO_NONFINITE",
+    "SPEECH_WORKER_CONTRACT_INVALID", "SPEECH_WORKER_EXTERNAL_ACCESS_FORBIDDEN",
+    "SPEECH_DECODER_OUTPUT_NOT_SERIALIZABLE", "SPEECH_DECODER_METRIC_INVALID",
+    "SPEECH_TRANSCRIPT_SHAPE_INVALID", "SPEECH_TRANSCRIPT_INVALID",
+    "SPEECH_SEGMENT_INVALID", "SPEECH_SEGMENT_INTERVAL_INVALID", "SPEECH_TEXT_SEGMENT_MISMATCH",
+    "SPEECH_WORD_INVALID", "SPEECH_WORD_TIMESTAMPS_REQUIRED", "SPEECH_WORD_VALUE_INVALID",
+    "SPEECH_WORD_INTERVAL_INVALID", "SPEECH_WORD_PROBABILITY_INVALID",
+})
+
+
+def _failed_process(command, returncode, stderr):
+    reason = "SPEECH_OFFLINE_WORKER_FAILED"
+    is_worker = command[-1:] == ["--worker"]
+    if is_worker:
+        # Only an exact final typed exception and closed allowlist can select
+        # the public failure reason. Unrecognized third-party errors stay opaque.
+        match = re.search(rb"(?:^|\n)(?:[A-Za-z_][A-Za-z_0-9]*\.)*SpeechBlocked: ([A-Z_]+)\s*$", stderr[-8192:])
+        if match and match.group(1).decode("ascii") in _WORKER_REASON_CODES:
+            reason = match.group(1).decode("ascii")
+    return SpeechBlocked(reason, diagnostic={
+        "phase": "whisper_worker" if is_worker else "normalization_or_subprocess",
+        "exit_code": returncode, "stderr_sha256": hashlib.sha256(stderr).hexdigest(),
+        "stderr_bytes": len(stderr), "raw_stderr_exposed": False})
+
+
 def _communicate(command, payload: bytes, *, cancelled, deadline: float) -> bytes:
     if cancelled():
         raise SpeechCancelled("SPEECH_CANCELLED_NO_RESULT")
@@ -143,9 +178,9 @@ def _communicate(command, payload: bytes, *, cancelled, deadline: float) -> byte
             if time.monotonic() >= deadline:
                 raise SpeechBlocked("SPEECH_COMPUTATION_TIMEOUT")
             try:
-                stdout, _stderr = process.communicate(input=pending, timeout=0.2)
+                stdout, stderr = process.communicate(input=pending, timeout=0.2)
                 if process.returncode != 0:
-                    raise SpeechBlocked("SPEECH_OFFLINE_WORKER_FAILED")
+                    raise _failed_process(command, process.returncode, stderr or b"")
                 return stdout
             except subprocess.TimeoutExpired:
                 pending = None
@@ -181,13 +216,26 @@ def validate_transcript(raw: dict, *, duration_seconds: float) -> dict:
         words = segment.get("words")
         if not isinstance(words, list):
             raise SpeechBlocked("SPEECH_WORD_TIMESTAMPS_REQUIRED")
-        word_end = start
-        for word in words:
+        word_end = None
+        for word_index, word in enumerate(words):
             if not isinstance(word, dict) or not isinstance(word.get("word"), str):
                 raise SpeechBlocked("SPEECH_WORD_INVALID")
             begin, finish, probability = (word.get(key) for key in ("start", "end", "probability"))
-            if not all(_finite_number(value) for value in (begin, finish, probability)) or not word_end <= begin <= finish <= end + 0.05 or not 0 <= probability <= 1:
-                raise SpeechBlocked("SPEECH_WORD_INTERVAL_OR_PROBABILITY_INVALID")
+            if not all(_finite_number(value) for value in (begin, finish, probability)):
+                raise SpeechBlocked("SPEECH_WORD_VALUE_INVALID")
+            if (not 0 <= begin <= finish <= min(end + 0.05, duration_seconds + 0.05)
+                    or (word_end is not None and begin < word_end)
+                    or (word_index == 0 and begin < start and finish < start)):
+                raise SpeechBlocked("SPEECH_WORD_INTERVAL_INVALID")
+            if not 0 <= probability <= 1:
+                raise SpeechBlocked("SPEECH_WORD_PROBABILITY_INVALID")
+            if word_index == 0 and begin < start:
+                # Pinned Whisper timing.py's segment-preference branch can
+                # retain segment.start while min(end-median, segment.start)
+                # places the first word across it. Preserve both estimates;
+                # never clamp timestamps or widen a numerical tolerance.
+                warnings.append({"segment_id": index, "start": begin, "end": finish,
+                                 "reason": "FIRST_WORD_CROSSES_SEGMENT_START_REVIEW_REQUIRED"})
             word_end = finish
             if probability < 0.8:
                 warnings.append({"segment_id": index, "start": begin, "end": finish,
@@ -251,9 +299,16 @@ def transcribe_audio(audio_path: str, *, expected_audio_sha256: str, runtime: Sp
             "weight_path": str(paths["weight"]), "duration_seconds": duration}
     module_path = Path(__file__).resolve()
     module_sha = _digest(module_path)
-    response = _communicate([str(paths["python"]), "-I", str(module_path), "--worker"],
-                            json.dumps(spec, allow_nan=False).encode() + b"\n" + normalized,
-                            cancelled=cancelled, deadline=deadline)
+    try:
+        response = _communicate([str(paths["python"]), "-I", str(module_path), "--worker"],
+                                json.dumps(spec, allow_nan=False).encode() + b"\n" + normalized,
+                                cancelled=cancelled, deadline=deadline)
+    except SpeechBlocked as exc:
+        exc.diagnostic.update(audio_sha256=expected_audio_sha256, adapter_sha256=module_sha,
+                              runtime_manifest_sha256=runtime.manifest_sha256,
+                              python_sha256=runtime.python_sha256, weight_sha256=WEIGHT_SHA256,
+                              ffmpeg_sha256=runtime.ffmpeg_sha256)
+        raise
     if cancelled():
         raise SpeechCancelled("SPEECH_CANCELLED_NO_RESULT")
     # Revalidate named assets and source before handing bytes back to their owner.

@@ -4,6 +4,8 @@ from copy import deepcopy
 import pytest
 
 from agent_runtime.durable_adapter import DurableExecutionAdapter
+from tests.agent_runtime.formation_support import unit_identity
+from agent_capability.formation import BoundToolExecutor, FormationError
 from agent_runtime.loop import AgentConfig, AgentLoop
 from agent_runtime.planner import Plan, PlanStep
 from agent_runtime.replanner import ReplanDecision, Replanner
@@ -26,19 +28,33 @@ def _plan():
     ])
 
 
-def _loop(plan, executor, monkeypatch, replanner=None):
+def _loop(plan, executor, monkeypatch, replanner=None, report_effect="WRITE"):
+    # These are explicit server-side UNIT tool declarations. The simulated
+    # report writer must not be mislabeled ANALYZE, or rely on numeric ranking.
+    bindings = {name: BoundToolExecutor(executor, origin="lumenis-unit-tests",
+                    resource_uri=f"tool://unit-replan/{name}", identity_provider=unit_identity,
+                    action_type=effect)
+                for name, effect in {"reader": "READ", "reporter": report_effect}.items()}
+
+    class FixtureBindings:
+        def form_step(self, step, context, *, expected=None):
+            selected = bindings.get(step.tool)
+            if selected is None:
+                raise FormationError("TOOL_IMPLEMENTATION_NOT_BOUND")
+            return selected.form_step(step, context, expected=expected)
+
     loop = AgentLoop(
         config=AgentConfig(max_steps=10, max_retries=1, max_replans=1,
                            enable_evaluation=False),
         planner=StaticPlanner(plan), replanner=replanner,
-        durable_adapter=DurableExecutionAdapter(enabled=False), tool_executor=executor,
+        durable_adapter=DurableExecutionAdapter(enabled=False), tool_binding=FixtureBindings(),
     )
     # These are loop contract tests; no production permission or effect is bypassed.
     monkeypatch.setattr(loop, "_check_security", lambda step, context: {"allowed": True})
     return loop
 
 
-def test_parameter_repair_retains_completed_output_and_does_not_repeat_reader(monkeypatch):
+def test_parameter_repair_cannot_retry_uncertain_write_and_retains_completed_source(monkeypatch):
     plan = _plan()
     calls = []
 
@@ -50,10 +66,12 @@ def test_parameter_repair_retains_completed_output_and_does_not_repeat_reader(mo
 
     result = _loop(plan, execute, monkeypatch).run(plan.goal)
 
-    assert result.status == "completed"
-    assert calls == ["reader", "reporter", "reporter"]
+    assert result.status == "reconciliation_required"
+    assert "Consequential tool outcome" in result.error, (result.error, result.metrics)
+    assert calls == ["reader", "reporter"]
     assert [step["step_id"] for step in result.plan["steps"]] == ["read-source", "write-report"]
-    assert result.result["final_step_results"][0]["result"]["output"] == "actual source material"
+    assert result.result is None
+    assert result.plan["steps"][0]["result"]["output"] == "actual source material"
 
 
 class ReplacingReplanner(Replanner):
@@ -88,12 +106,19 @@ def test_replan_cannot_erase_or_claim_a_required_outcome(monkeypatch, mutation, 
 
     result = _loop(plan, execute, monkeypatch, ReplacingReplanner(mutation)).run(plan.goal)
 
-    assert result.status == "failed"
-    assert error in result.error
+    assert result.status == "reconciliation_required"
+    assert "Consequential tool outcome" in result.error, (result.error, result.metrics)
     assert result.result is None
     assert len(result.plan["steps"]) == 2
     assert result.plan["steps"][0]["result"]["output"] == "actual source material"
     assert result.plan["steps"][1]["status"] == "failed"
+    # Preserve every original negative replan assertion. The safer Loop now
+    # stops the uncertain write before requesting any automatic successor.
+    candidate = deepcopy(plan)
+    mutation(candidate)
+    with pytest.raises(ValueError, match=error):
+        AgentLoop._validate_replan(plan, candidate, ReplanDecision(
+            strategy="adjust_params", reason="fixture candidate", original_step_index=1))
 
 
 def test_skipped_required_step_is_not_a_completed_job(monkeypatch):
@@ -140,14 +165,16 @@ def test_split_recovery_preserves_original_job_and_completed_source(monkeypatch)
             return {"success": False, "error": "timeout"}
         return {"success": True, "output": "actual " + step.expected_output}
 
-    result = _loop(plan, execute, monkeypatch).run(plan.goal)
+    result = _loop(plan, execute, monkeypatch, report_effect="ANALYZE").run(plan.goal)
 
-    assert result.status == "completed"
+    assert result.status == "reconciliation_required", result.error
+    assert result.error == "REPLAN_FORMED_CALL_CHANGED"
     assert result.plan["goal"] == plan.goal
-    assert calls == ["reader", "reporter", "reporter", "reporter", "verification"]
+    assert calls == ["reader", "reporter"]
     original = next(step for step in result.plan["steps"] if step["step_id"] == "write-report")
     assert original["expected_output"] == "report" and original["risk_level"] == "low"
-    assert result.result["final_step_results"][0]["result"]["output"] == "actual source material"
+    assert result.result is None
+    assert result.plan["steps"][0]["result"]["output"] == "actual source material"
 
 
 def test_split_cannot_repeat_a_write_as_prepare_and_execute(monkeypatch):
@@ -162,7 +189,10 @@ def test_split_cannot_repeat_a_write_as_prepare_and_execute(monkeypatch):
 
     result = _loop(plan, execute, monkeypatch).run(plan.goal)
 
-    assert result.status == "failed"
-    assert "REPLAN_SIDE_EFFECT_SPLIT_REQUIRES_TOOL_CONTRACT" in result.error
+    assert result.status == "reconciliation_required"
+    assert "Consequential tool outcome" in result.error
     assert calls == ["reader", "reporter"]
     assert result.plan["steps"][1]["risk_level"] == "high"
+    with pytest.raises(ValueError, match="REPLAN_SIDE_EFFECT_SPLIT_REQUIRES_TOOL_CONTRACT"):
+        AgentLoop._validate_replan(plan, deepcopy(plan), ReplanDecision(
+            strategy="split_step", reason="fixture candidate", original_step_index=1))

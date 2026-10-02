@@ -7,6 +7,7 @@ import pytest
 
 from agent_runtime.durable_adapter import DurableExecutionAdapter
 from agent_memory.working import WorkingMemory
+from tests.agent_runtime.formation_support import trusted_test_executor
 from agent_runtime.loop import AgentConfig, AgentLoop
 from agent_runtime.planner import Plan, PlanStep
 from ai_task_engine import TaskEngine
@@ -39,9 +40,9 @@ def _run(plan, adapter, monkeypatch, context):
                            enable_evaluation=False),
         planner=StaticPlanner(plan),
         durable_adapter=adapter,
-        tool_executor=lambda step, ctx: {
+        tool_binding=trusted_test_executor(lambda step, ctx: {
             "success": True, "output": "completed output", "estimated_cost": 0.125,
-        },
+        }),
     )
     # This batch verifies checkpoint persistence, not the production permission chain.
     monkeypatch.setattr(loop, "_check_security", lambda step, ctx: {"allowed": True})

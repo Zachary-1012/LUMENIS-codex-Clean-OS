@@ -84,3 +84,29 @@ unchanged tests are reused at their exact pins, not rerun for a docs-only base
 change. Same-SHA hosted execution and actual runtime mounting remain pending.
 M accepts source integration only. No useful trained/inference business result,
 whole C2 outcome, speech correctness, human rights or release is accepted.
+
+
+## Current-d92 follow-on source and scoped regression — 2026-10-02
+
+This isolated publication candidate starts from detached `d92cbb7dca4a4da3dfda501a5e1c1bac841348c7` and applies the exact 17-path Formation/Outcome and Speech follow-on (`15 + 2`) patch, SHA-256 `5d78f6ee4a352c41fc9320bcc32c9f657ed777e5907c1e42ad59d9615818d780`. The M source-review records are the accepted Formation review (SHA-256 `69ce0e6ded3186ce00353019f144a936583a1bd9a3bd1a7aa5919ca3d13b8cfe`) and Speech follow-on review (SHA-256 `76a7b7f69a4167668825192c79e0993d6eb4e48f0cdd0adad4a4e5d0022e6a19`), pinned in `owned-source-followon-20261002/source-manifest.json`. Their reviewed patches are the exact candidates applied here; no fuzzy or three-way application was used.
+
+The same detached base receives M's approved job-ID clarification patch (`work/m-controller-20261002/job-id-acceptance-amendment.patch`, SHA-256 `17025d350c89152ed949c3090b0fefa70e85c030e797194ac6e5343ea923e168`) in Source Owner Index §1 only. It identifies the current J1–J8 and U01–U25 assertions (33 retained obligation IDs); a mapping row is not evidence that its normal user outcome passed. The amendment does not absorb concurrent Root-only working-copy differences elsewhere in the index.
+
+The preceding current-d92 source projection carried all 17 postimages and ran 178 affected Formation/Outcome/loop/Evaluation cases. JUnit contains 178 tests, zero failures/errors/skips, exit 0, and the case-ID multiset matches the retained 178 JUnit. Those 178 cases do not exercise Speech's separate 42-case suite. This publication candidate reuses the run only after its 17 canonical postimage hashes and current d92 dependency pins match. Its compact receipt and copied JUnit are in `owned-source-followon-20261002/`; the OS-temp database/evidence copy was isolated and the empty external seed remained unchanged. No current Speech 42-case rerun is claimed.
+
+Speech's separate prior candidate unit result remains 42 tests, exit 0, zero failures/errors/skips, bound to JUnit SHA-256 `7c70ac0637b990ef7ff73603b4732906b3e97269c37423ea8c3ba4c8af918e12` and its 25-package runtime manifest SHA-256 `945e49877123e38655dc4599fb835aab3557a86f9d1001e758440cafe8bb9827`. That is prior candidate-only evidence; only 11 of those 25 versions match the current repository environment, and no Speech test or audio recognition was rerun for this candidate. A separate actual CMU blind recovery used a 226.925-second input and recorded 256.718 seconds elapsed, 57 segments and 47 review warnings. The recovery had two changed synthesis variables, so it provides no single-variable quality ranking; proper names remain unknown/unreviewed, rights unknown, human listening not accepted, and no formal Source import or positive training target was approved. The actual computation-cancelled test is separately recorded in the earlier cancellation receipt (35.125705 seconds, no transcript result); it is not conflated with the CMU recovery.
+
+Rights, canonical Source/Evidence intake, useful owned-AI service/inference, real training and held-out quality, shared Artifact/Task commit and reopen, and the complete normal user E2E all remain OPEN. This is a source-and-scoped-test candidate only: C2, USER_VERIFIED, RELEASED and OPERATING remain NO. Unpublished HTTP8 and other protected Root source are excluded. The 33 J/U rows state current obligations only; they do not pass them.
+
+The first takeover governance check failed because its legacy parser counted the
+new J assertion rows as duplicate allocation rows. The original failure is retained
+in `owned-source-followon-20261002/verify_codex_takeover_governance-before-repair.txt`.
+The bounded validator repair separates only the named assertion section, preserves
+every original R/J allocation check, requires all 33 assertions exactly once, checks
+their four fields and owner coverage, and prevents a J assertion from dropping an
+owner observed in its primary allocation. Thirteen governance tests passed, including
+missing/duplicate/extra IDs, empty or placeholder content, malformed rows, invalid
+owners, primary duplicates outside the section and conflicting J allocations. The
+governance change has no runtime or database effects; prior 178/42 evidence is reused.
+CURRENT also records the later Product Owner Cloud pause and the observed stopped
+Core, without narrowing any C-window acceptance requirement.

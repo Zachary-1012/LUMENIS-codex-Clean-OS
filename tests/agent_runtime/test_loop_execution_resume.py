@@ -8,6 +8,7 @@ from agent_runtime.durable_adapter import DurableExecutionAdapter
 from agent_runtime.loop import AgentConfig, AgentLoop
 from agent_runtime.planner import Plan, PlanStep
 from ai_task_engine import TaskEngine
+from tests.agent_runtime.formation_support import trusted_test_executor
 
 
 class PersistencePermission:
@@ -127,7 +128,12 @@ def _plan(*, interrupted=None, second_action="read report"):
 
 def _persist_checkpoint(env, plan, *, state="completed", index=0, steps_started=1,
                         elapsed=0.25, cost=0.12515, replans=0, resumable=True,
-                        limits=None):
+                        limits=None, form_pending=True):
+    if form_pending:
+        owner = _resume_executor([])
+        for pending in plan.steps:
+            if pending.status not in {"completed", "skipped"}:
+                pending.formation = owner.form_step(pending, _context()).binding
     binding = {key: value for key, value in _context().items()
                if key in {"actor_id", "domain_id", "scope"}}
     task_id = env["adapter"].create_task(plan.goal, "agent-resume-test", binding)
@@ -146,6 +152,13 @@ def _persist_checkpoint(env, plan, *, state="completed", index=0, steps_started=
     return task_id
 
 
+def _resume_executor(tool_calls):
+    return trusted_test_executor(lambda step, _context: (
+        tool_calls.append(step.step_id) or {
+            "success": True, "output": "fresh result", "estimated_cost": 0.2,
+        }))
+
+
 def _loop(env, *, tool_calls, config=None):
     return AgentLoop(
         config=config or AgentConfig(max_steps=4, max_time_seconds=30, max_cost=1.0,
@@ -153,11 +166,7 @@ def _loop(env, *, tool_calls, config=None):
         planner=NoPlanner(),
         durable_adapter=DurableExecutionAdapter(
             task_engine=TaskEngine(), permission_gate=PersistencePermission()),
-        tool_executor=lambda step, _context: (
-            tool_calls.append(step.step_id) or {
-                "success": True, "output": "fresh result", "estimated_cost": 0.2,
-            }
-        ),
+        tool_binding=_resume_executor(tool_calls),
         permission_gate=env["gate"],
     )
 
@@ -202,6 +211,18 @@ def test_resume_after_engine_reopen_continues_same_task_and_skips_completed_plan
     assert result.duration_ms >= 250
     with sqlite3.connect(resume_env["path"]) as conn:
         assert conn.execute("SELECT COUNT(*) FROM ai_task").fetchone()[0] == 1
+
+
+def test_legacy_pending_checkpoint_cannot_be_filled_from_new_executor(resume_env):
+    _grant(resume_env["path"])
+    task_id = _persist_checkpoint(resume_env, _plan(), form_pending=False)
+    calls = []
+    result = _loop(resume_env, tool_calls=calls).resume(task_id, context=_context())
+    assert result.status == "reconciliation_required"
+    assert result.error == "TOOL_FORMATION_MISSING"
+    assert calls == []
+    recovered = resume_env["adapter"].recover(task_id)
+    assert recovered["last_checkpoint"]["metadata"]["steps_started"] == 1
 
 
 def test_resume_requires_injected_executor_but_completed_readback_still_works(resume_env):

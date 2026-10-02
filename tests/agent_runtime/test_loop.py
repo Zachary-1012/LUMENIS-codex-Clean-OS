@@ -12,6 +12,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+from tests.agent_runtime.formation_support import trusted_test_executor
 from agent_runtime.loop import AgentLoop, AgentConfig, AgentResult
 from agent_runtime.state_machine import AgentState
 from agent_runtime.planner import Plan, PlanStep, Planner, PlanMode
@@ -74,7 +75,7 @@ class TestFullLoopSuccess:
         loop = AgentLoop(
             config=config,
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=_mock_tool_executor_success,
+            tool_binding=trusted_test_executor(_mock_tool_executor_success),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("生成今日舆情日报", context={"date": "today"})
@@ -94,7 +95,7 @@ class TestFullLoopSuccess:
         """Loop 应生成 task_id。"""
         loop = AgentLoop(
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=_mock_tool_executor_success,
+            tool_binding=trusted_test_executor(_mock_tool_executor_success),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
@@ -105,7 +106,7 @@ class TestFullLoopSuccess:
         """状态转换应被记录。"""
         loop = AgentLoop(
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=_mock_tool_executor_success,
+            tool_binding=trusted_test_executor(_mock_tool_executor_success),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
@@ -118,7 +119,7 @@ class TestFullLoopSuccess:
         """规划结果应包含在 result 中。"""
         loop = AgentLoop(
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=_mock_tool_executor_success,
+            tool_binding=trusted_test_executor(_mock_tool_executor_success),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
@@ -138,7 +139,7 @@ class TestBudgetControl:
         loop = AgentLoop(
             config=config,
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=_mock_tool_executor_success,
+            tool_binding=trusted_test_executor(_mock_tool_executor_success),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
@@ -153,7 +154,7 @@ class TestBudgetControl:
         loop = AgentLoop(
             config=config,
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=_mock_tool_executor_slow,
+            tool_binding=trusted_test_executor(_mock_tool_executor_slow),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
@@ -167,7 +168,7 @@ class TestBudgetControl:
         loop = AgentLoop(
             config=config,
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=_mock_tool_executor_success,
+            tool_binding=trusted_test_executor(_mock_tool_executor_success),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
@@ -179,12 +180,13 @@ class TestBudgetControl:
         loop = AgentLoop(
             config=config,
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=_mock_tool_executor_step1_fails,
+            tool_binding=trusted_test_executor(_mock_tool_executor_step1_fails),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
         # 步骤1失败 → 重规划 → 新计划步骤1仍失败 → 最终失败或完成（跳过）
-        assert result.status in ("failed", "completed", "max_steps")
+        assert result.status == "reconciliation_required", result.error
+        assert result.error in {"TOOL_FORMATION_MISSING", "TOOL_FORMATION_CHANGED", "REPLAN_FORMED_CALL_CHANGED"}
         assert result.metrics["replans"] >= 0
 
 
@@ -199,7 +201,7 @@ class TestCancellation:
         loop = AgentLoop(
             config=config,
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=_mock_tool_executor_slow,
+            tool_binding=trusted_test_executor(_mock_tool_executor_slow),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
 
@@ -220,7 +222,7 @@ class TestCancellation:
         """两次 run 之间取消标志应重置。"""
         loop = AgentLoop(
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=_mock_tool_executor_success,
+            tool_binding=trusted_test_executor(_mock_tool_executor_success),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         loop.cancel()  # 先取消
@@ -239,7 +241,7 @@ class TestReplanningIntegration:
         loop = AgentLoop(
             config=config,
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=_mock_tool_executor_step1_fails,
+            tool_binding=trusted_test_executor(_mock_tool_executor_step1_fails),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
@@ -281,7 +283,7 @@ class TestDurableAdapterIntegration:
         """Durable 禁用时仍能正常运行。"""
         loop = AgentLoop(
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=_mock_tool_executor_success,
+            tool_binding=trusted_test_executor(_mock_tool_executor_success),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
@@ -292,7 +294,7 @@ class TestDurableAdapterIntegration:
         adapter = DurableExecutionAdapter(enabled=False)
         loop = AgentLoop(
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=_mock_tool_executor_success,
+            tool_binding=trusted_test_executor(_mock_tool_executor_success),
             durable_adapter=adapter,
         )
         result = loop.run("test")
@@ -311,7 +313,7 @@ class TestEvaluationIntegration:
         loop = AgentLoop(
             config=config,
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=_mock_tool_executor_success,
+            tool_binding=trusted_test_executor(_mock_tool_executor_success),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
@@ -323,7 +325,7 @@ class TestEvaluationIntegration:
         loop = AgentLoop(
             config=config,
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=_mock_tool_executor_success,
+            tool_binding=trusted_test_executor(_mock_tool_executor_success),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
@@ -345,7 +347,7 @@ class TestEdgeCases:
 
         loop = AgentLoop(
             planner=Planner(ai_chat_func=empty_plan_chat),
-            tool_executor=_mock_tool_executor_success,
+            tool_binding=trusted_test_executor(_mock_tool_executor_success),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
@@ -361,7 +363,7 @@ class TestEdgeCases:
 
         loop = AgentLoop(
             planner=Planner(ai_chat_func=raising_chat),
-            tool_executor=_mock_tool_executor_success,
+            tool_binding=trusted_test_executor(_mock_tool_executor_success),
             durable_adapter=DurableExecutionAdapter(enabled=False),
         )
         result = loop.run("test")
@@ -376,11 +378,14 @@ class TestEdgeCases:
 
         loop = AgentLoop(
             planner=Planner(ai_chat_func=_mock_ai_chat),
-            tool_executor=raising_tool,
+            tool_binding=trusted_test_executor(raising_tool),
             durable_adapter=DurableExecutionAdapter(enabled=False),
             config=AgentConfig(max_retries=0, max_replans=0),
         )
         result = loop.run("test")
         # 工具异常被捕获，步骤标记失败
-        assert result.status in ("failed", "completed")
+        assert result.status == "failed"
+        assert result.error == "Required plan steps did not complete"
+        assert result.metrics["failed_steps"] == 3
+        assert result.metrics["completed_steps"] == 0
         assert result.error is None or "exception" not in (result.error or "").lower()
