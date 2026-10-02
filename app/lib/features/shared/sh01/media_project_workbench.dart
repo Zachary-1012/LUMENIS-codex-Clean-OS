@@ -1,7 +1,10 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
@@ -11,6 +14,7 @@ import 'media_preview.dart';
 import 'media_project_controller.dart';
 import 'media_project_files.dart';
 import 'media_project_snapshot.dart';
+import 'saved_media_projects_controller.dart';
 
 String _copy(BuildContext context, String key) =>
     context.lumenisL10n.text('sh01.media.$key');
@@ -61,6 +65,8 @@ class MediaProjectWorkbench extends StatefulWidget {
 
 class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   late MediaProjectController _controller;
+  late SavedMediaProjectsController _savedProjects;
+  String? _savedListContextKey;
   bool _controllerInitialized = false;
   bool _ownsController = false;
   bool _scopeAvailable = false;
@@ -68,6 +74,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   final _previewKey = GlobalKey();
   final _timelineScroll = ScrollController();
   final _sheetUpdates = _SheetUpdateSignal();
+  final _savedReference = TextEditingController();
   final _versions = <MediaProjectVersion>[];
   ContentProjectFile? _preview;
   String? _previewArtifact;
@@ -122,14 +129,24 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   @override
   void didUpdateWidget(covariant MediaProjectWorkbench oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final savedContextChanged =
+        _controllerInitialized && _savedListContextKey != _savedContextKey;
+    if (savedContextChanged) _savedListContextKey = _savedContextKey;
     if (oldWidget.contextAvailable && !widget.contextAvailable) {
-      if (_controllerInitialized) _controller.quarantineDraftSources();
+      if (_controllerInitialized) {
+        _controller.quarantineDraftSources();
+      }
       _leaveGuard?.refresh();
     } else if (oldWidget.contextAvailable != widget.contextAvailable) {
       _leaveGuard?.refresh();
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _sheetUpdates.refresh();
+      if (!mounted) return;
+      if (_controllerInitialized &&
+          (!widget.contextAvailable || savedContextChanged)) {
+        _savedProjects.invalidate();
+      }
+      _sheetUpdates.refresh();
     });
   }
 
@@ -147,11 +164,21 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     }
     _controllerInitialized = true;
     _controller.addListener(_changed);
+    _savedListContextKey = _savedContextKey;
+    _savedProjects = SavedMediaProjectsController(
+      loadPage: (cursor) =>
+          widget.client.listContentProjects(domainId: domain, cursor: cursor),
+      contextKey: () => _savedContextKey,
+    );
   }
+
+  String get _savedContextKey =>
+      '${widget.contextAvailable}:${_controller.domain}:${jsonEncode(widget.client.currentContextEnvelope)}';
 
   void _chooseInvokingDomain(String domain) {
     if (_controllerInitialized) {
       _controller.removeListener(_changed);
+      _savedProjects.dispose();
       if (_ownsController) _controller.dispose();
     }
     _attachController(domain);
@@ -180,9 +207,11 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     _leaveGuard?.unregister(this);
     if (_controllerInitialized) {
       _controller.removeListener(_changed);
+      _savedProjects.dispose();
       if (_ownsController) _controller.dispose();
     }
     _timelineScroll.dispose();
+    _savedReference.dispose();
     _sheetUpdates.dispose();
     super.dispose();
   }
@@ -261,6 +290,193 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   Future<void> _leaveEditor() async {
     if (await _requestLeave() && mounted) widget.onBack();
   }
+
+  Future<void> _reopen(String artifactId) async {
+    if (_isBusy || !_canUseCurrentContext) return;
+    if (!await _requestLeave() || !mounted || !_canUseCurrentContext) return;
+    setState(() => _notice = null);
+    await _controller.reopen(artifactId, discardExisting: true);
+    if (!mounted) return;
+    if (_controller.failureCode == null &&
+        _controller.version?.artifactId == artifactId) {
+      _inspectorDrafts.clear();
+      _savedReference.text = artifactId;
+      _leaveGuard?.refresh();
+    }
+    _sheetUpdates.refresh();
+    setState(() {});
+  }
+
+  Future<void> _openSavedWork() async {
+    if (_isBusy || !_canUseCurrentContext) return;
+    var invalid = false;
+    unawaited(_savedProjects.refresh());
+    final reference = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AnimatedBuilder(
+        animation: _savedProjects,
+        builder: (_, _) => StatefulBuilder(
+          builder: (context, updateDialog) {
+            void submit() {
+              final value = _savedReference.text.trim();
+              if (!RegExp(r'^ART-[A-Za-z0-9_-]{1,70}$').hasMatch(value)) {
+                updateDialog(() => invalid = true);
+                return;
+              }
+              Navigator.of(dialogContext).pop(value);
+            }
+
+            return AlertDialog(
+              scrollable: true,
+              title: Text(_copy(context, 'open_saved')),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _savedProjectList(dialogContext),
+                    const Divider(height: 32),
+                    TextField(
+                      key: const Key('media-saved-reference'),
+                      controller: _savedReference,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      textInputAction: TextInputAction.go,
+                      decoration: InputDecoration(
+                        labelText: _copy(context, 'saved_reference'),
+                        helperText: _copy(context, 'saved_reference_hint'),
+                        helperMaxLines: 4,
+                        errorText: invalid
+                            ? _copy(context, 'saved_reference_invalid')
+                            : null,
+                        errorMaxLines: 3,
+                      ),
+                      onSubmitted: (_) => submit(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text(_copy(context, 'cancel')),
+                ),
+                FilledButton(
+                  key: const Key('media-confirm-open-saved'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                  ),
+                  onPressed: submit,
+                  child: Text(_copy(context, 'reopen')),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+    if (reference != null && mounted) await _reopen(reference);
+  }
+
+  Widget _savedProjectList(BuildContext dialogContext) {
+    if (!_canUseCurrentContext) return Text(_copy(context, 'context'));
+    final library = _savedProjects;
+    final error = library.errorCode;
+    final denied =
+        error != null &&
+        (error.contains('DENIED') ||
+            error.contains('AUTH') ||
+            error.contains('CONTEXT'));
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (library.busy) ...[
+          const LinearProgressIndicator(),
+          const SizedBox(height: 8),
+          Text(_copy(context, 'saved_loading')),
+        ],
+        if (error != null)
+          Semantics(
+            liveRegion: true,
+            child: Text(_copy(context, denied ? 'denied' : 'saved_failed')),
+          ),
+        if (library.loaded && library.status == SavedMediaProjectsStatus.empty)
+          Text(_copy(context, 'saved_empty')),
+        if (library.status == SavedMediaProjectsStatus.scanIncomplete ||
+            library.status == SavedMediaProjectsStatus.integrityIncomplete)
+          Text(_copy(context, 'saved_partial')),
+        for (final project in library.projects)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: OutlinedButton(
+              key: Key('media-saved-project-${project.artifactId}'),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(project.artifactId),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _copy(
+                        context,
+                        project.outputKind == 'video'
+                            ? 'saved_video'
+                            : 'saved_audio',
+                      ),
+                    ),
+                    Text(project.artifactId),
+                    Text(project.createdAt),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 12,
+          children: [
+            TextButton.icon(
+              key: const Key('media-saved-refresh'),
+              style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+              onPressed: library.busy ? null : library.refresh,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(_copy(context, 'saved_refresh')),
+            ),
+            if (library.nextCursor != null)
+              TextButton(
+                key: const Key('media-saved-more'),
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                onPressed: library.busy ? null : library.loadMore,
+                child: Text(_copy(context, 'saved_more')),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _copyReference(String reference) async {
+    try {
+      await Clipboard.setData(ClipboardData(text: reference));
+      if (!mounted || !_canUseCurrentContext) return;
+      setState(() => _notice = 'copied_reference');
+    } catch (_) {
+      if (mounted) setState(() => _notice = 'failure');
+    }
+    if (mounted) _sheetUpdates.refresh();
+  }
+
+  Widget _openSavedButton(String key) => OutlinedButton.icon(
+    key: Key(key),
+    style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+    onPressed: _isBusy || !_canUseCurrentContext ? null : _openSavedWork,
+    icon: const Icon(Icons.folder_open_outlined),
+    label: Text(_copy(context, 'open_saved')),
+  );
 
   Future<void> _recoverDraftSources() async {
     if (!_controllerInitialized || !widget.contextAvailable || _isBusy) return;
@@ -499,10 +715,16 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     }
   }
 
-  Future<void> _retrieve({required bool download}) async {
+  Future<void> _retrieve({
+    required bool download,
+    BuildContext? actionsSheetContext,
+  }) async {
     final version = _controller.version;
     if (version == null || _retrieving || !_canUseCurrentContext) return;
     final scope = _controller.repository.contextKey;
+    if (!download && actionsSheetContext != null) {
+      Navigator.of(actionsSheetContext).pop();
+    }
     setState(() {
       _retrieving = true;
       _notice = null;
@@ -532,6 +754,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
           _preview = file;
           _previewArtifact = version.artifactId;
         });
+        _revealPreview(scope, version.artifactId);
       }
     } catch (_) {
       if (mounted) setState(() => _notice = 'failure');
@@ -542,6 +765,30 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
         _sheetUpdates.refresh();
       }
     }
+  }
+
+  void _revealPreview(String scope, String artifactId) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final previewContext = _previewKey.currentContext;
+      if (!mounted ||
+          previewContext == null ||
+          !_canUseCurrentContext ||
+          _controller.repository.contextKey != scope ||
+          _controller.version?.artifactId != artifactId ||
+          _previewArtifact != artifactId) {
+        return;
+      }
+      unawaited(
+        Scrollable.ensureVisible(
+          previewContext,
+          alignment: 0.08,
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 240),
+          curve: Curves.easeInOutCubic,
+        ),
+      );
+    });
   }
 
   String? get _failure {
@@ -721,6 +968,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                             _hasUnsavedChanges ? 'draft' : 'saved',
                           ),
                         ),
+                      _openSavedButton('media-open-saved'),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -731,9 +979,14 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                     Text(
                       _copy(
                         context,
-                        _controller.operation == MediaProjectOperation.exporting
-                            ? 'exporting'
-                            : 'importing',
+                        _retrieving
+                            ? 'saved_loading'
+                            : switch (_controller.operation) {
+                                MediaProjectOperation.exporting => 'exporting',
+                                MediaProjectOperation.reopening =>
+                                  'saved_loading',
+                                _ => 'importing',
+                              },
                       ),
                     ),
                   ],
@@ -787,7 +1040,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                           ),
                           onPressed: () => _openLayerSheet(
                             title: _copy(context, 'sources'),
-                            content: (_) => _sources(
+                            content: (_, _) => _sources(
                               _canUseCurrentContext
                                   ? _controller.timeline
                                   : null,
@@ -807,7 +1060,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                           ),
                           onPressed: () => _openLayerSheet(
                             title: _copy(context, 'properties'),
-                            content: (_) {
+                            content: (_, _) {
                               final latest = _canUseCurrentContext
                                   ? _controller.timeline
                                   : null;
@@ -841,7 +1094,11 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
 
   Future<void> _openLayerSheet({
     required String title,
-    required Widget Function(StateSetter setSheetState) content,
+    required Widget Function(
+      StateSetter setSheetState,
+      BuildContext sheetContext,
+    )
+    content,
   }) => _showLayerSheet(title: title, content: content);
 
   MediaProjectClip? _selectedClip(MediaProjectSnapshot? timeline) => timeline
@@ -865,9 +1122,10 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
 
   Future<void> _openActionsSheet() => _showLayerSheet(
     title: _copy(context, 'actions'),
-    content: (setSheetState) => _actions(
+    content: (setSheetState, sheetContext) => _actions(
       _canUseCurrentContext ? _controller.timeline : null,
       setSheetState: setSheetState,
+      actionsSheetContext: sheetContext,
     ),
   );
 
@@ -884,7 +1142,11 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
 
   Future<void> _showLayerSheet({
     required String title,
-    required Widget Function(StateSetter setSheetState) content,
+    required Widget Function(
+      StateSetter setSheetState,
+      BuildContext sheetContext,
+    )
+    content,
   }) => showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -937,7 +1199,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                             bottom:
                                 MediaQuery.viewInsetsOf(context).bottom + 24,
                           ),
-                          child: content(setSheetState),
+                          child: content(setSheetState, sheetContext),
                         ),
                       ),
                     ],
@@ -954,12 +1216,18 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   Widget _actions(
     MediaProjectSnapshot? timeline, {
     StateSetter? setSheetState,
+    BuildContext? actionsSheetContext,
   }) {
     final palette = LumenisTheme.of(context);
     final working = _isBusy;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: _openSavedButton('media-actions-open-saved'),
+        ),
+        const SizedBox(height: 16),
         Text(
           _copy(context, 'rights'),
           style: TextStyle(color: palette.caution),
@@ -1017,6 +1285,25 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
+          if (_controller.version case final version?) ...[
+            Text(_copy(context, 'saved_reference')),
+            SelectableText(
+              version.artifactId,
+              key: const Key('media-output-reference'),
+            ),
+            const SizedBox(height: 8),
+            Text(_copy(context, 'saved_reference_keep')),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                onPressed: () => _copyReference(version.artifactId),
+                icon: const Icon(Icons.copy_outlined),
+                label: Text(_copy(context, 'copy_reference')),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           Wrap(
             spacing: 12,
             runSpacing: 12,
@@ -1029,22 +1316,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                     ),
                     onPressed: working || !_canUseCurrentContext
                         ? null
-                        : () async {
-                            if (await _requestLeave() &&
-                                mounted &&
-                                _canUseCurrentContext) {
-                              await _controller.reopen(
-                                version.artifactId,
-                                discardExisting: true,
-                              );
-                              if (_controller.failureCode == null &&
-                                  _controller.version?.artifactId ==
-                                      version.artifactId) {
-                                _inspectorDrafts.clear();
-                                _leaveGuard?.refresh();
-                              }
-                            }
-                          },
+                        : () => _reopen(version.artifactId),
                     child: Text(
                       '${_copy(context, 'reopen')} · v${version.timelineVersion} · ${_seconds(version.durationSec)} s',
                     ),
@@ -1064,7 +1336,12 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                 ),
                 onPressed: _retrieving
                     ? null
-                    : () => _retrieve(download: false),
+                    : () => _retrieve(
+                        download: false,
+                        actionsSheetContext: setSheetState == null
+                            ? null
+                            : actionsSheetContext,
+                      ),
                 child: Text(_copy(context, 'preview')),
               ),
               OutlinedButton(
@@ -1079,7 +1356,10 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
               ),
             ],
           ),
-          if (_retrieving) const LinearProgressIndicator(),
+          if (_retrieving) ...[
+            const LinearProgressIndicator(),
+            if (setSheetState != null) Text(_copy(context, 'saved_loading')),
+          ],
         ],
       ],
     );

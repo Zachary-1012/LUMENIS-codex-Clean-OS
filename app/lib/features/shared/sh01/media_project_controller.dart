@@ -503,7 +503,9 @@ final class MediaProjectController extends ChangeNotifier {
     }
     final context = _contextKey;
     try {
+      if (!_acceptContext(context)) return;
       final response = await repository.reopen(domain, artifactId);
+      if (!_acceptContext(context)) return;
       final bundle = response['project'];
       if (response['ok'] != true || bundle is! Map) {
         throw const FormatException('Project was not returned.');
@@ -513,31 +515,33 @@ final class MediaProjectController extends ChangeNotifier {
         bundle['project'],
         bundle['render'],
       );
-      if (!_acceptContext(context)) return;
-      _version = version;
-      _timeline = null;
-      _paths = const [];
-      _sourceRefs = null;
-      _suspendedSourceRefs = null;
-      _sourcesNeedRevalidation = false;
-      _selectedClipId = null;
-      _draftContext = context;
-      _completionUnknown = false;
+      MediaProjectSnapshot? timeline;
       if (version.sourceRefs.isNotEmpty) {
         final assets = await repository.inspectReferences(
           domain,
           version.sourceRefs,
         );
-        final timeline = MediaProjectSnapshot.fromJson(
+        if (!_acceptContext(context)) return;
+        timeline = MediaProjectSnapshot.fromJson(
           version.timelineJson,
           inspectedAssets: assets,
         );
-        if (!_acceptContext(context)) return;
-        _timeline = timeline;
-        _sourceRefs = version.sourceRefs;
       }
+
+      // Keep the current in-memory draft intact until the candidate version
+      // and every required source reference have passed validation.
+      if (!_acceptContext(context)) return;
+      _version = version;
+      _timeline = timeline;
+      _paths = const [];
+      _sourceRefs = version.sourceRefs.isEmpty ? null : version.sourceRefs;
+      _suspendedSourceRefs = null;
+      _sourcesNeedRevalidation = false;
+      _selectedClipId = null;
+      _draftContext = context;
+      _completionUnknown = false;
     } catch (error) {
-      _capture(error);
+      if (_acceptContext(context)) _capture(error);
     } finally {
       _end();
     }

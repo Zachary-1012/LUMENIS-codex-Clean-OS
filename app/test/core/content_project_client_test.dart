@@ -71,6 +71,48 @@ void main() {
   tearDown(() => server.close(force: true));
 
   test(
+    'saved project listing retains exact focus and opaque page cursor',
+    () async {
+      final cursor = 'a' * 43;
+      await client.listContentProjects(
+        domainId: 'BMP',
+        cursor: cursor,
+        limit: 7,
+      );
+      expect(calls.single['path'], '/api/experience/content-projects');
+      expect(calls.single['query'], {'limit': '7', 'cursor': cursor});
+      expect(calls.single['method'], 'GET');
+      expect(calls.single['domain'], 'BMP');
+      expect(calls.single['subject'], 'brand-one');
+      expect(calls.single['mode'], 'FOCUS');
+      expect(calls.single['action'], isNull);
+      expect(calls.single['body'], isNull);
+      expect(calls.single['approval'], isNull);
+    },
+  );
+
+  test(
+    'invalid paging and incompatible scope make no listing request',
+    () async {
+      for (final limit in [0, 21]) {
+        expect(
+          () => client.listContentProjects(domainId: 'BMP', limit: limit),
+          throwsArgumentError,
+        );
+      }
+      expect(
+        () => client.listContentProjects(domainId: 'BMP', cursor: '../unknown'),
+        throwsFormatException,
+      );
+      expect(
+        () => client.listContentProjects(domainId: 'CTH'),
+        throwsA(isA<LumenisCoreException>()),
+      );
+      expect(calls, isEmpty);
+    },
+  );
+
+  test(
     'source import sends exact bytes with a write action and scoped filename',
     () async {
       final bytes = Uint8List.fromList([0, 255, 128, 10]);

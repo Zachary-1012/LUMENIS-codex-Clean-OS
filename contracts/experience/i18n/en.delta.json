@@ -763,6 +763,21 @@
   "sh01.media.no_changes": "Make an edit before saving a new version. Your current work is kept.",
   "sh01.media.recover_sources": "Read media again",
   "sh01.media.voiceover": "Voiceover",
-  "sh01.media.web_import": "Web file import is not connected yet. Use the local workbench."
+  "sh01.media.web_import": "Web file import is not connected yet. Use the local workbench.",
+  "sh01.media.open_saved": "Open saved work",
+  "sh01.media.saved_reference": "Work reference",
+  "sh01.media.saved_reference_hint": "Enter the work reference retained after export.",
+  "sh01.media.saved_reference_invalid": "Enter a valid work reference.",
+  "sh01.media.saved_reference_keep": "Keep this reference to reopen and continue editing later.",
+  "sh01.media.copy_reference": "Copy work reference",
+  "sh01.media.copied_reference": "Work reference copied",
+  "sh01.media.saved_empty": "No saved work in the current scope.",
+  "sh01.media.saved_loading": "Loading saved work…",
+  "sh01.media.saved_partial": "Only verified work is shown. Continue searching or reload.",
+  "sh01.media.saved_failed": "Saved work could not be loaded. Try again.",
+  "sh01.media.saved_refresh": "Reload",
+  "sh01.media.saved_more": "Find more",
+  "sh01.media.saved_video": "Video",
+  "sh01.media.saved_audio": "Audio"
  }
 }

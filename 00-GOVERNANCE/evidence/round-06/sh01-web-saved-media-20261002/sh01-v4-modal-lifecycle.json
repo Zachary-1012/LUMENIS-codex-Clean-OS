@@ -1,0 +1,25 @@
+{
+  "playing": {
+    "paused": false,
+    "src": "blob:http://127.0.0.1:8201/56a9f6db-1a88-4e9a-af58-6efb9a7e1e1b",
+    "time": 0.016999
+  },
+  "covered": {
+    "label": "预览成片",
+    "paused": true,
+    "pointerEvents": "none",
+    "src": "blob:http://127.0.0.1:8201/56a9f6db-1a88-4e9a-af58-6efb9a7e1e1b",
+    "time": 0.207195,
+    "visibility": "hidden"
+  },
+  "returned": {
+    "error": null,
+    "label": "预览成片",
+    "paused": true,
+    "pointerEvents": "auto",
+    "src": "blob:http://127.0.0.1:8201/56a9f6db-1a88-4e9a-af58-6efb9a7e1e1b",
+    "time": 0.207195,
+    "visibility": "visible"
+  },
+  "observedAt": "2026-10-02T04:25:00.056Z"
+}

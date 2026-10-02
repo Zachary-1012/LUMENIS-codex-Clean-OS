@@ -1,0 +1,17 @@
+[
+  {
+    "path": "app/build/media-reopen-preview-v4/main.dart.js",
+    "sha256": "59e209e917eaa7276029787b7ddc51c502ef57a67a602d9025701f01bb47febd",
+    "bytes": 4765553
+  },
+  {
+    "path": "app/build/media-reopen-preview-v4/index.html",
+    "sha256": "ac799a466221d798eb7a148ed5fd90bbad483030d4be4d04bfd9c61435300f05",
+    "bytes": 762
+  },
+  {
+    "path": "app/build/media-reopen-preview-v4/flutter_bootstrap.js",
+    "sha256": "d3440a413c9f414e5b4d7d8b5964714407838efcffa706111fc4e760ae2e9a21",
+    "bytes": 13193
+  }
+]

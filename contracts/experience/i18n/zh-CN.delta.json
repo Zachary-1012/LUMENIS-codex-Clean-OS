@@ -763,6 +763,21 @@
   "sh01.media.no_changes": "先修改内容，再保存新版本。当前作品已保留。",
   "sh01.media.recover_sources": "重新读取素材",
   "sh01.media.voiceover": "旁白",
-  "sh01.media.web_import": "网页文件导入尚未接通，请使用本机工作台。"
+  "sh01.media.web_import": "网页文件导入尚未接通，请使用本机工作台。",
+  "sh01.media.open_saved": "打开已保存的作品",
+  "sh01.media.saved_reference": "作品编号",
+  "sh01.media.saved_reference_hint": "输入导出时保留的作品编号。",
+  "sh01.media.saved_reference_invalid": "请填写有效的作品编号。",
+  "sh01.media.saved_reference_keep": "保留此编号，离开后可继续打开编辑。",
+  "sh01.media.copy_reference": "复制作品编号",
+  "sh01.media.copied_reference": "已复制作品编号",
+  "sh01.media.saved_empty": "当前范围还没有已保存的作品。",
+  "sh01.media.saved_loading": "正在读取已保存的作品…",
+  "sh01.media.saved_partial": "仅显示已核验的部分作品，可以继续查找或重新读取。",
+  "sh01.media.saved_failed": "作品列表暂时无法读取，请重试。",
+  "sh01.media.saved_refresh": "重新读取",
+  "sh01.media.saved_more": "继续查找",
+  "sh01.media.saved_video": "视频作品",
+  "sh01.media.saved_audio": "音频作品"
  }
 }

@@ -9,6 +9,7 @@ import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/features/shared/sh01/media_project_controller.dart';
 import 'package:lumenis_app/features/shared/sh01/media_project_files.dart';
+import 'package:lumenis_app/features/shared/sh01/media_preview.dart';
 import 'package:lumenis_app/features/shared/sh01/media_project_workbench.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import 'package:lumenis_app/navigation/lumenis_leave_guard.dart';
@@ -27,6 +28,8 @@ class _Client extends LumenisCoreClient {
   Duration confirmationLifetime = const Duration(minutes: 5);
   Completer<void>? pendingImport;
   Completer<void>? pendingRetrieval;
+  String? retrievalFailureCode;
+  int retrievalCalls = 0;
   String? confirmationFilename;
   int? confirmationSizeBytes;
   Completer<void>? pendingExport;
@@ -34,6 +37,11 @@ class _Client extends LumenisCoreClient {
   final importedBytes = <List<int>>[];
   Map<String, dynamic>? contextEnvelope;
   List<String>? exportedRefs;
+  Map<String, dynamic>? savedExport;
+  String? reopenedReference;
+  String? reopenFailure;
+  int reopenCalls = 0;
+  String? listingFailure;
   final asset = <String, Object?>{
     'asset_id': 'MEDIA-aaaaaaaaaaaaaaaa',
     'filename': 'interview.mp4',
@@ -55,7 +63,16 @@ class _Client extends LumenisCoreClient {
     required String artifactId,
     required bool package,
   }) async {
+    retrievalCalls++;
     await pendingRetrieval?.future;
+    final failureCode = retrievalFailureCode;
+    if (failureCode != null) {
+      throw LumenisCoreException(
+        'private retrieval diagnostic',
+        statusCode: 503,
+        errorCode: failureCode,
+      );
+    }
     return ContentProjectFile(
       bytes: Uint8List.fromList([1, 2]),
       filename: 'project.mp4',
@@ -152,7 +169,7 @@ class _Client extends LumenisCoreClient {
       );
     }
     if (successfulExport) {
-      return {
+      final response = <String, dynamic>{
         'ok': true,
         'publish_status': 'not_performed',
         'evidence_recorded': true,
@@ -175,6 +192,8 @@ class _Client extends LumenisCoreClient {
           },
         },
       };
+      savedExport = response;
+      return response;
     }
     throw const LumenisCoreException(
       'private decoder detail',
@@ -182,9 +201,65 @@ class _Client extends LumenisCoreClient {
       errorCode: 'CONTENT_RENDER_FAILED',
     );
   }
+
+  @override
+  Future<Map<String, dynamic>> listContentProjects({
+    required String domainId,
+    int limit = 20,
+    String? cursor,
+  }) async {
+    if (listingFailure != null) {
+      throw LumenisCoreException(
+        'private diagnostic',
+        errorCode: listingFailure,
+      );
+    }
+    return {
+      'ok': true,
+      'publish_status': 'not_performed',
+      'status': savedExport == null ? 'empty' : 'ok',
+      'projects': [
+        if (savedExport != null)
+          {
+            'artifact_id': 'ART-version',
+            'output_kind': 'video',
+            'created_at': '2026-10-02 09:00:00',
+            'updated_at': '2026-10-02 09:00:00',
+            'status': 'staged',
+          },
+      ],
+      'next_cursor': null,
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> reopenContentProject({
+    required String domainId,
+    required String artifactId,
+  }) async {
+    reopenCalls++;
+    reopenedReference = artifactId;
+    if (reopenFailure != null) {
+      throw LumenisCoreException(
+        'private diagnostic',
+        statusCode: 403,
+        errorCode: reopenFailure,
+      );
+    }
+    final result = savedExport!['result'] as Map;
+    return {
+      'ok': true,
+      'project': {'project': result['project'], 'render': result['render']},
+    };
+  }
 }
 
 class _Files extends MediaProjectFiles {
+  int saves = 0;
+
+  @override
+  bool get canSave => true;
+
   @override
   Future<List<XFile>> choose() async => [
     XFile.fromData(
@@ -193,6 +268,12 @@ class _Files extends MediaProjectFiles {
       name: 'interview.mp4',
     ),
   ];
+
+  @override
+  Future<bool> save(ContentProjectFile content) async {
+    saves++;
+    return true;
+  }
 }
 
 Widget _app(
@@ -205,6 +286,7 @@ Widget _app(
   bool contextAvailable = true,
   LumenisLeaveGuard? guard,
   VoidCallback? onBack,
+  MediaProjectFiles? files,
 }) => MaterialApp(
   theme: LumenisTheme.dark,
   locale: locale,
@@ -228,7 +310,7 @@ Widget _app(
           invokingDomain: invokingDomain,
           contextAvailable: contextAvailable,
           onBack: onBack,
-          files: _Files(),
+          files: files ?? _Files(),
         )
       : LumenisLeaveScope(
           guard: guard,
@@ -238,7 +320,7 @@ Widget _app(
             invokingDomain: invokingDomain,
             contextAvailable: contextAvailable,
             onBack: onBack,
-            files: _Files(),
+            files: files ?? _Files(),
           ),
         ),
 );
@@ -287,6 +369,228 @@ void main() {
     );
   });
   tearDown(() => controller.dispose());
+
+  testWidgets(
+    'open saved-work dialog clears a completed list on available scope change',
+    (tester) async {
+      await _prepareEditableProject(client, controller);
+      client.successfulExport = true;
+      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      client.contextEnvelope = {
+        'context': {
+          'mode': 'FOCUS',
+          'domain_id': 'BMP',
+          'subject_id': 'brand-one',
+        },
+      };
+      final fresh = MediaProjectController(
+        repository: CoreMediaProjectRepository(client),
+        domain: 'BMP',
+      );
+      addTearDown(fresh.dispose);
+      await tester.pumpWidget(_app(client, fresh));
+      await tester.tap(find.byKey(const Key('media-open-saved')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('media-saved-project-ART-version')),
+        findsOneWidget,
+      );
+      client.contextEnvelope = {
+        'context': {
+          'mode': 'FOCUS',
+          'domain_id': 'BMP',
+          'subject_id': 'brand-two',
+        },
+      };
+      await tester.pumpWidget(_app(client, fresh));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('media-saved-project-ART-version')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('media-saved-refresh')), findsOneWidget);
+      expect(client.reopenCalls, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'open saved-work dialog hides rows when the shell quarantines scope',
+    (tester) async {
+      await _prepareEditableProject(client, controller);
+      client.successfulExport = true;
+      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await tester.pumpWidget(_app(client, controller));
+      await tester.tap(find.byKey(const Key('media-open-saved')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('media-saved-project-ART-version')),
+        findsOneWidget,
+      );
+      await tester.pumpWidget(
+        _app(client, controller, contextAvailable: false),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('media-saved-project-ART-version')),
+        findsNothing,
+      );
+      expect(controller.version, isNull);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'real listing contract opens a saved project without typing its ID',
+    (tester) async {
+      await _prepareEditableProject(client, controller);
+      client.successfulExport = true;
+      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      final fresh = MediaProjectController(
+        repository: CoreMediaProjectRepository(client),
+        domain: 'BMP',
+      );
+      addTearDown(fresh.dispose);
+      await tester.pumpWidget(_app(client, fresh));
+      await tester.tap(find.byKey(const Key('media-open-saved')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('media-saved-project-ART-version')),
+      );
+      await tester.pumpAndSettle();
+      expect(client.reopenedReference, 'ART-version');
+      expect(fresh.timeline!.tracks.single.clips.single.sourceOut, 8);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('listing failure is distinct from empty and can retry in place', (
+    tester,
+  ) async {
+    client.listingFailure = 'CONTENT_PROJECT_LIST_UNAVAILABLE';
+    await tester.pumpWidget(_app(client, controller));
+    await tester.tap(find.byKey(const Key('media-open-saved')));
+    await tester.pumpAndSettle();
+    expect(find.text('作品列表暂时无法读取，请重试。'), findsOneWidget);
+    expect(find.text('当前范围还没有已保存的作品。'), findsNothing);
+    client.listingFailure = null;
+    await tester.tap(find.byKey(const Key('media-saved-refresh')));
+    await tester.pumpAndSettle();
+    expect(find.text('当前范围还没有已保存的作品。'), findsOneWidget);
+    expect(find.text('作品列表暂时无法读取，请重试。'), findsNothing);
+    expect(find.byKey(const Key('media-saved-reference')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'saved reference reopens into a fresh editor without page history',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 1100));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _prepareEditableProject(client, controller);
+      client.successfulExport = true;
+      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      final fresh = MediaProjectController(
+        repository: CoreMediaProjectRepository(client),
+        domain: 'BMP',
+      );
+      addTearDown(fresh.dispose);
+      await tester.pumpWidget(_app(client, fresh));
+      expect(find.byKey(const Key('media-reopen-ART-version')), findsNothing);
+      await tester.tap(find.byKey(const Key('media-open-saved')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('media-saved-reference')),
+        '  ART-version  ',
+      );
+      await tester.tap(find.byKey(const Key('media-confirm-open-saved')));
+      await tester.pumpAndSettle();
+      expect(client.reopenedReference, 'ART-version');
+      expect(fresh.version?.artifactId, 'ART-version');
+      expect(fresh.timeline!.tracks.single.clips.single.sourceOut, 8);
+      expect(fresh.hasUnsavedChanges, isFalse);
+      expect(find.byKey(const Key('media-output-reference')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('invalid reference stays editable and performs no request', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app(client, controller));
+    await tester.tap(find.byKey(const Key('media-open-saved')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('media-saved-reference')),
+      'ART-../private',
+    );
+    await tester.tap(find.byKey(const Key('media-confirm-open-saved')));
+    await tester.pumpAndSettle();
+    expect(find.text('请填写有效的作品编号。'), findsOneWidget);
+    expect(client.reopenCalls, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'failed reference leaves inspector text and edited timeline intact',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 1100));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _prepareEditableProject(client, controller);
+      final original = controller.timeline;
+      client.reopenFailure = 'CONTENT_PROJECT_CONTEXT_MISMATCH';
+      await tester.pumpWidget(_app(client, controller));
+      await tester.pumpAndSettle();
+      final endField = find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.labelText == '素材终点（秒）',
+      );
+      await tester.enterText(endField, '6.5');
+      await tester.tap(find.byKey(const Key('media-open-saved')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('media-saved-reference')),
+        'ART-unavailable',
+      );
+      await tester.tap(find.byKey(const Key('media-confirm-open-saved')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('放弃修改'));
+      await tester.pumpAndSettle();
+      expect(controller.timeline, same(original));
+      expect(controller.hasUnsavedChanges, isTrue);
+      expect(tester.widget<TextField>(endField).controller!.text, '6.5');
+      expect(controller.version, isNull);
+      expect(client.reopenCalls, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'reference dialog is usable at 320 pixels and 200 percent in all locales',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 720));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      for (final locale in LumenisLocalizations.supportedLocales) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpWidget(
+          _app(client, controller, locale: locale, scale: 2),
+        );
+        await tester.ensureVisible(find.byKey(const Key('media-open-saved')));
+        await tester.tap(find.byKey(const Key('media-open-saved')));
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const Key('media-saved-reference')),
+          'ART',
+        );
+        final button = find.byKey(const Key('media-confirm-open-saved'));
+        await tester.ensureVisible(button);
+        expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+        expect(client.reopenCalls, 0);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
 
   testWidgets('GLOBAL_ALL asks for an explicit business purpose', (
     tester,
@@ -1070,6 +1374,8 @@ void main() {
     await tester.tap(find.byKey(const Key('media-version-preview')));
     await tester.pump();
     expect(guard.needsProtection, isTrue);
+    expect(find.text('正在读取已保存的作品…'), findsOneWidget);
+    expect(find.text('正在导入所选文件…'), findsNothing);
     expect(
       tester
           .widget<IconButton>(
@@ -1088,6 +1394,141 @@ void main() {
     expect(backCalls, 0);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('desktop preview retrieval scrolls the loaded player into view', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 720));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _prepareEditableProject(client, controller);
+    client.successfulExport = true;
+    await tester.pumpWidget(_app(client, controller));
+    await tester.pumpAndSettle();
+    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await tester.pumpAndSettle();
+
+    final action = find.byKey(const Key('media-version-preview'));
+    final viewportHeight = tester.getSize(find.byType(Scaffold)).height;
+    final scrollable = tester.state<ScrollableState>(
+      find.byType(Scrollable).first,
+    );
+    scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+    await tester.pumpAndSettle();
+    final actionRect = tester.getRect(action);
+    expect(actionRect.top, greaterThanOrEqualTo(0));
+    expect(actionRect.bottom, lessThanOrEqualTo(viewportHeight));
+    final placeholderRect = tester.getRect(find.text('导出后可预览真实成片。'));
+    expect(
+      placeholderRect.top < 0 || placeholderRect.bottom > viewportHeight,
+      isTrue,
+    );
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+
+    final player = find.byType(MediaPreview);
+    expect(player, findsOneWidget);
+    final rect = tester.getRect(player);
+    expect(rect.top, greaterThanOrEqualTo(0));
+    expect(rect.bottom, lessThanOrEqualTo(viewportHeight));
+    expect(controller.version?.artifactId, 'ART-version');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mobile preview closes actions and reveals the loaded player', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _prepareEditableProject(client, controller);
+    client.successfulExport = true;
+    await tester.pumpWidget(_app(client, controller));
+    await tester.pumpAndSettle();
+    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('media-open-actions')));
+    await tester.tap(find.byKey(const Key('media-open-actions')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('media-close-layer')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('media-version-preview')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('media-close-layer')), findsNothing);
+    expect(client.retrievalCalls, 1);
+
+    await tester.pumpAndSettle();
+    final player = find.byType(MediaPreview);
+    expect(player, findsOneWidget);
+    final rect = tester.getRect(player);
+    expect(rect.top, greaterThanOrEqualTo(0));
+    expect(
+      rect.bottom,
+      lessThanOrEqualTo(
+        tester.view.physicalSize.height / tester.view.devicePixelRatio,
+      ),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mobile download keeps actions open with saved-work progress', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _prepareEditableProject(client, controller);
+    client.successfulExport = true;
+    final files = _Files();
+    await tester.pumpWidget(_app(client, controller, files: files));
+    await tester.pumpAndSettle();
+    await controller.export(outputKind: 'video', demoAcknowledged: true);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('media-open-actions')));
+    await tester.tap(find.byKey(const Key('media-open-actions')));
+    await tester.pumpAndSettle();
+    client.pendingRetrieval = Completer<void>();
+    await tester.tap(find.byKey(const Key('media-version-download')));
+    await tester.pump();
+    expect(find.byKey(const Key('media-close-layer')), findsOneWidget);
+    expect(find.text('正在读取已保存的作品…'), findsNWidgets(2));
+    expect(find.text('正在导入所选文件…'), findsNothing);
+
+    client.pendingRetrieval!.complete();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('media-close-layer')), findsOneWidget);
+    expect(files.saves, 1);
+    expect(controller.version?.artifactId, 'ART-version');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'failed mobile preview keeps the saved result and shows failure',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _prepareEditableProject(client, controller);
+      client.successfulExport = true;
+      await tester.pumpWidget(_app(client, controller));
+      await tester.pumpAndSettle();
+      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('media-open-actions')));
+      await tester.tap(find.byKey(const Key('media-open-actions')));
+      await tester.pumpAndSettle();
+      client.retrievalFailureCode = 'CONTENT_PROJECT_READ_UNAVAILABLE';
+      await tester.tap(find.byKey(const Key('media-version-preview')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('media-close-layer')), findsNothing);
+      expect(find.text('操作未完成，草稿和已导出版本仍保留。'), findsOneWidget);
+      expect(find.byType(MediaPreview), findsNothing);
+      expect(controller.version?.artifactId, 'ART-version');
+      expect(client.retrievalCalls, 1);
+      expect(find.text('文件已保存到所选位置。'), findsNothing);
+      expect(find.text('已交给浏览器下载，请检查下载记录。'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('no-change and stale-parent rejects use safe editor copy', (
     tester,

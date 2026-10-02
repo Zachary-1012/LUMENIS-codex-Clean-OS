@@ -114,6 +114,28 @@ interrupted-task resume and operating-system clipboard transfer remain unverifie
 This accepts the source-only main flow, not full CTH-10, useful owned AI, full C3,
 all surfaces, USER_VERIFIED, RELEASED or OPERATING.
 
+M accepted the bounded SH-01 Web saved-media continuation on 2026-10-02.
+Its exact fifteen App/source/locale/specification paths, owning
+[Round 06 evidence](evidence/round-06/ROUND-06-SH01-WEB-SAVED-MEDIA-2026-10-02.md),
+[App verification](../app/SH01-MEDIA-VERIFICATION-2026-10-02.md) and this CURRENT
+form one source/evidence publication unit in the containing commit. W6 matched
+ten source/test files, sixteen evidence files and three build assets to the
+M-accepted packet; six relevant existing Core API bodies match the base main.
+Actual 20-second parent and 19-second revision remained reopenable, exact BMP
+denial and CTH return were observed, and Chrome physically saved the 44,511-byte
+revision package. The final actual v4 player updated Chinese/Korean/English
+labels on the same source and paused/hidden modal return without autoplay.
+Reuse the pinned v3 affected tests, final 38 v4 checks, analysis/build and
+applicable blocking checks; no new import/export was performed for final review.
+
+This accepts one Web engineering job. IAB physical save, installed native
+surfaces, commercial source rights, full SH-01/C4 outcomes, Product Owner repeat
+operation and release remain unaccepted. The actual local Core still includes
+unaccepted owner candidates; this commit does not assert a complete same-SHA
+runtime or include the unaccepted renderer transitions. GLOBAL coverage is
+unchanged; USER_VERIFIED, RELEASED, OPERATING and COMMERCIAL_READY remain NO.
+Exact commit/remote verification is W6's remaining publication step.
+
 ### Current decisions, limits and evidence
 
 - User confirms Codex Cloud configuration is complete and participates now.

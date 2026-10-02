@@ -517,6 +517,30 @@ class LumenisCoreClient {
     );
   }
 
+  Future<Map<String, dynamic>> listContentProjects({
+    required String domainId,
+    int limit = 20,
+    String? cursor,
+  }) {
+    if (limit < 1 || limit > 20) {
+      throw ArgumentError.value(limit, 'limit');
+    }
+    if (cursor != null && !RegExp(r'^[A-Za-z0-9_-]{40,48}$').hasMatch(cursor)) {
+      throw const FormatException('Invalid saved-project cursor.');
+    }
+    final query = Uri(
+      queryParameters: {
+        'limit': '$limit',
+        'cursor': ?cursor,
+      },
+    ).query;
+    return _request(
+      'GET',
+      '/api/experience/content-projects?$query',
+      operationContext: _contentContext(domainId),
+    );
+  }
+
   Future<Map<String, dynamic>> reopenContentProject({
     required String domainId,
     required String artifactId,

@@ -35,6 +35,9 @@ final class _Repository implements MediaProjectRepository {
   };
   int calls = 0;
   int referenceInspections = 0;
+  Object? referenceFailure;
+  Completer<void>? pendingReferenceInspection;
+  Completer<void>? referenceInspectionStarted;
   List<MediaProjectAsset>? inspectedAssets;
   Completer<void>? pendingInspection;
 
@@ -104,8 +107,12 @@ final class _Repository implements MediaProjectRepository {
   Future<List<MediaProjectAsset>> inspectReferences(
     String domain,
     List<String> refs,
-  ) {
+  ) async {
     referenceInspections++;
+    final started = referenceInspectionStarted;
+    if (started != null && !started.isCompleted) started.complete();
+    await pendingReferenceInspection?.future;
+    if (referenceFailure != null) throw referenceFailure!;
     return inspect(domain, refs);
   }
 
@@ -274,6 +281,104 @@ void main() {
     expect(controller.hasUnsavedChanges, isFalse);
     expect(controller.timeline!.tracks.single.clips.single.sourceOut, 4);
   });
+
+  test(
+    'failed reference inspection preserves the current unsaved draft',
+    () async {
+      await controller.importFile('interview.mp4', Uint8List.fromList([1, 2]));
+      controller.edit(
+        (s) =>
+            s.addClip(repository.asset.assetId, trackId: 'video', sourceOut: 4),
+      );
+      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      final previousVersion = controller.version!;
+      final clipId = controller.timeline!.tracks.single.clips.single.clipId;
+      controller.edit((s) => s.trimClip(clipId, sourceIn: 1, sourceOut: 4));
+      final previousDraft = controller.timeline!;
+      controller.selectClip(clipId);
+
+      repository.referenceFailure = const LumenisCoreException(
+        'source unavailable',
+        statusCode: 503,
+        errorCode: 'CONTENT_SOURCE_UNAVAILABLE',
+      );
+      await controller.reopen('ART-1', discardExisting: true);
+
+      expect(controller.timeline, same(previousDraft));
+      expect(controller.timeline!.canUndo, isTrue);
+      expect(controller.version, same(previousVersion));
+      expect(controller.sourceRefs, ['ART-source']);
+      expect(controller.selectedClipId, clipId);
+      expect(controller.hasUnsavedChanges, isTrue);
+      expect(controller.failureCode, 'CONTENT_SOURCE_UNAVAILABLE');
+      expect(controller.busy, isFalse);
+    },
+  );
+
+  test(
+    'successful reopen replaces the old draft after reference inspection',
+    () async {
+      await controller.importFile('interview.mp4', Uint8List.fromList([1, 2]));
+      controller.edit(
+        (s) =>
+            s.addClip(repository.asset.assetId, trackId: 'video', sourceOut: 4),
+      );
+      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      final previousVersion = controller.version!;
+      final clipId = controller.timeline!.tracks.single.clips.single.clipId;
+      controller.edit((s) => s.trimClip(clipId, sourceIn: 1, sourceOut: 4));
+      final previousDraft = controller.timeline!;
+
+      await controller.reopen('ART-1', discardExisting: true);
+
+      expect(controller.timeline, isNot(same(previousDraft)));
+      expect(controller.timeline!.tracks.single.clips.single.sourceIn, 0);
+      expect(controller.version, isNot(same(previousVersion)));
+      expect(controller.version!.artifactId, 'ART-1');
+      expect(controller.sourceRefs, ['ART-source']);
+      expect(controller.needsOriginalFiles, isFalse);
+      expect(controller.hasUnsavedChanges, isFalse);
+      expect(repository.referenceInspections, 1);
+    },
+  );
+
+  test(
+    'scope change during reopen quarantines and preserves the old draft',
+    () async {
+      await controller.importFile('interview.mp4', Uint8List.fromList([1, 2]));
+      controller.edit(
+        (s) =>
+            s.addClip(repository.asset.assetId, trackId: 'video', sourceOut: 4),
+      );
+      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      final previousVersion = controller.version!;
+      final clipId = controller.timeline!.tracks.single.clips.single.clipId;
+      controller.edit((s) => s.trimClip(clipId, sourceIn: 1, sourceOut: 4));
+      final previousDraft = controller.timeline!;
+      repository.pendingReferenceInspection = Completer<void>();
+      repository.referenceInspectionStarted = Completer<void>();
+
+      final reopening = controller.reopen('ART-1', discardExisting: true);
+      await repository.referenceInspectionStarted!.future;
+      repository.contextKey = 'BMP:brand-two';
+      repository.pendingReferenceInspection!.complete();
+      await reopening;
+
+      expect(controller.failureCode, 'CONTENT_CONTEXT_CHANGED');
+      expect(controller.contextMatches, isFalse);
+      expect(controller.timeline, isNull);
+      expect(controller.version, isNull);
+      expect(controller.sourceRefs, isEmpty);
+      expect(controller.hasUnsavedChanges, isTrue);
+
+      repository.contextKey = 'BMP:GLOBAL';
+      await controller.recoverDraftSources();
+      expect(controller.timeline, same(previousDraft));
+      expect(controller.timeline!.canUndo, isTrue);
+      expect(controller.version, same(previousVersion));
+      expect(controller.sourceRefs, ['ART-source']);
+    },
+  );
 
   test('unsaved work is not replaced without explicit discard', () async {
     await create();
