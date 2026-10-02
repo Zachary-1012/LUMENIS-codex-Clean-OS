@@ -150,6 +150,16 @@ was exempted or weakened. The old-SHA App Gate completed, but Product Gate faile
 The repair's exact newly published SHA still requires both hosted workflows and
 actual execution of every blocking step. No product or release state is promoted.
 
+The guard repair was published and remotely verified at
+`52d9a6792cde4da833d278a0ffa286fe7c6e5766`. Its actual Only-One and Shared
+Database checks passed; both hosted workflows then rejected W6's new stdout
+receipt filename as a competing-authority-like document. The receipt is now
+byte-preserved under `exclusive-check-output.txt`, with its manifest and owning
+Round updated in this containing commit. The sole Experience authority check is
+unchanged. Prior failed runs remain failed; the next exact SHA still requires all
+hosted blocking work. No skipped step or local gate is counted as product/release
+acceptance. Full C6 and all ongoing owner capabilities remain open.
+
 ### Current decisions, limits and evidence
 
 - User confirms Codex Cloud configuration is complete and participates now.

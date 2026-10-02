@@ -31,7 +31,7 @@
       "raw_bytes": 302
     },
     {
-      "path": "00-GOVERNANCE/evidence/round-06/current-owner-guard-20261002/experience-authority.txt",
+      "path": "00-GOVERNANCE/evidence/round-06/current-owner-guard-20261002/exclusive-check-output.txt",
       "raw_sha256": "c055943c5f4b535db2cf5475ba85206dbd07109e686fd1e23144f57a507a938d",
       "raw_bytes": 226
     },
@@ -63,5 +63,17 @@
   ],
   "production_runtime_db_or_provider_touched": false,
   "same_sha_hosted_checks": "PENDING_AFTER_PUBLICATION",
-  "git_blob_semantics": "Git normalizes CRLF to LF according to repository attributes; raw SHA256 records preserve the copied receipt bytes."
+  "git_blob_semantics": "Git normalizes CRLF to LF according to repository attributes; raw SHA256 records preserve the copied receipt bytes.",
+  "receipt_path_correction": {
+    "base_main": "52d9a6792cde4da833d278a0ffa286fe7c6e5766",
+    "previous_path": "00-GOVERNANCE/evidence/round-06/current-owner-guard-20261002/experience-authority.txt",
+    "current_path": "00-GOVERNANCE/evidence/round-06/current-owner-guard-20261002/exclusive-check-output.txt",
+    "receipt_raw_sha256_unchanged": "c055943c5f4b535db2cf5475ba85206dbd07109e686fd1e23144f57a507a938d",
+    "cause": "A gate stdout receipt filename matched the existing competing-authority document-name policy.",
+    "guard_source_or_policy_changed": false,
+    "old_sha_product_run": 36971216086,
+    "old_sha_app_run": 36971219491,
+    "old_sha_both_workflows": "FAILED_AT_EXPERIENCE_AUTHORITY; downstream blocking work skipped",
+    "new_sha_same_sha_hosted_gates": "PENDING_AFTER_COPUBLICATION"
+  }
 }

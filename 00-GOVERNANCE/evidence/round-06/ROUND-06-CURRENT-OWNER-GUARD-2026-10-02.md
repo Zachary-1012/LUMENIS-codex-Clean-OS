@@ -62,3 +62,20 @@ ACCEPTANCE ASSERTION: coherent source/evidence/CURRENT publication and fresh rem
 verification, followed by actual same-SHA execution of every hosted blocking step.
 Full useful owned AI, four-surface operation, USER_VERIFIED, RELEASED, OPERATING and
 COMMERCIAL_READY remain unaccepted. Unrelated local owner candidates are excluded.
+
+## Published-receipt filename correction
+
+At `52d9a6792cde4da833d278a0ffa286fe7c6e5766`, the Only-One and Shared Database
+checks actually passed. Product run 36971216086 and App run 36971219491 then
+failed the sole Experience authority check: the newly added gate-stdout filename
+`experience-authority.txt` matched its existing competing-document-name policy.
+Downstream blocking work was skipped; neither workflow is accepted as green.
+
+W6 corrected its receipt filename to `exclusive-check-output.txt`. The record's
+raw SHA256 is still `c055943c5f4b535db2cf5475ba85206dbd07109e686fd1e23144f57a507a938d`;
+the entire previous published Git blob is retained byte for byte. The authority
+validator, blacklist and canonical Experience authority remain unchanged. The
+old commit and actual failure receipts remain preserved. The complete newly
+staged publication tree, including all receipts, must pass the mandatory local
+checks and receive both actual hosted workflows at the next exact SHA. This
+correction does not advance runtime, native, product or commercial acceptance.
