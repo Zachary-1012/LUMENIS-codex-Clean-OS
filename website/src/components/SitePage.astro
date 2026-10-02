@@ -68,6 +68,10 @@ const accessItems = [
     statusId: c.access.workspaceStateId,
   },
 ];
+const workflows = [
+  { id: "commerce", scenario: c.scenarios.commerce },
+  { id: "brand", scenario: c.scenarios.brand },
+];
 ---
 
 <!doctype html>
@@ -136,14 +140,23 @@ const accessItems = [
             <h1 id="hero-title">{c.hero.title}</h1>
             <p class="hero__description">{c.hero.description}</p>
             <div class="hero__actions">
-              <a class="action-link action-link--primary" data-magnetic href="#demo">
-                {c.hero.primary}<span class="action-link__icon" aria-hidden="true"></span>
-              </a>
-              <a class="action-link action-link--secondary" data-magnetic href="#structure">
+              {publicDestinations.workspace ? (
+                <a class="action-link action-link--primary" data-magnetic href={publicDestinations.workspace} aria-describedby="hero-workspace-status">
+                  {c.hero.primary}<span class="action-link__icon" aria-hidden="true"></span>
+                </a>
+              ) : (
+                <span class="action-link action-link--disabled" aria-disabled="true" aria-describedby="hero-workspace-status">
+                  {c.hero.primaryUnavailable}<span class="action-link__icon action-link__icon--unavailable" aria-hidden="true"></span>
+                </span>
+              )}
+              <a class="action-link action-link--secondary" data-magnetic href="#scenarios">
                 {c.hero.secondary}<span class="action-link__icon action-link__icon--down" aria-hidden="true"></span>
               </a>
             </div>
-            <p class="hero__note"><span aria-hidden="true"></span>{c.hero.note}</p>
+            <p class="hero__note" id="hero-workspace-status">
+              <span aria-hidden="true"></span>
+              {publicDestinations.workspace ? c.hero.workspaceConfiguredNote : c.hero.workspaceUnavailableNote}
+            </p>
           </div>
 
           <figure class="hero-field" data-optical-field aria-labelledby="hero-visual-caption">
@@ -232,26 +245,108 @@ const accessItems = [
             <h2 id="scenarios-title">{c.scenarios.title}</h2>
             <p>{c.scenarios.intro}</p>
           </div>
-          <div class="scenario-list">
-            {[c.scenarios.commerce, c.scenarios.brand].map((scenario, index) => (
-              <article
-                class:list={["scenario", { "scenario--brand": index === 1 }]}
-                id={index === 0 ? "scenario-commerce" : "scenario-brand"}
-                aria-labelledby={index === 0 ? "scenario-commerce-title" : "scenario-brand-title"}
-              >
-                <span class="scenario__index" aria-hidden="true">0{index + 1}</span>
-                <div class="scenario__story">
-                  <h3 id={index === 0 ? "scenario-commerce-title" : "scenario-brand-title"}>{scenario.title}</h3>
-                  <p class="scenario__question">{scenario.question}</p>
-                  <p>{scenario.description}</p>
-                </div>
-                <ol class="scenario__path">
-                  {scenario.path.map((step, stepIndex) => (
-                    <li><span aria-hidden="true">0{stepIndex + 1}</span>{step}</li>
-                  ))}
-                </ol>
-              </article>
-            ))}
+          <div
+            class="workflow-explorer"
+            data-workflow-root
+            data-workflow-position-pattern={c.workflow.positionPattern}
+            data-workflow-question-changed={c.workflow.questionChangedAnnouncement}
+            data-workflow-restored={c.workflow.restoredAnnouncement}
+            data-workflow-stage-prefix={c.workflow.stageAnnouncementPrefix}
+          >
+            <div
+              class="workflow-question-list"
+              data-workflow-question-controls
+              role="group"
+              aria-label={c.workflow.questionGroupLabel}
+              hidden
+            >
+              {workflows.map((workflow, workflowIndex) => (
+                <button
+                  class="workflow-question"
+                  id={`scenario-select-${workflow.id}`}
+                  type="button"
+                  data-workflow-question={workflow.id}
+                >
+                  <span class="workflow-question__index" aria-hidden="true">0{workflowIndex + 1}</span>
+                  <span class="workflow-question__copy">
+                    <strong>{workflow.scenario.title}</strong>
+                    <span>{workflow.scenario.question}</span>
+                  </span>
+                  <span class="workflow-question__state">{c.workflow.selectedLabel}</span>
+                </button>
+              ))}
+            </div>
+
+            <div class="workflow-panels">
+              {workflows.map((workflow, workflowIndex) => (
+                <article
+                  class="workflow-panel"
+                  id={`scenario-${workflow.id}`}
+                  data-workflow-panel={workflow.id}
+                  aria-labelledby={`scenario-${workflow.id}-title`}
+                >
+                  <header class="workflow-panel__header">
+                    <span class="workflow-panel__index" aria-hidden="true">0{workflowIndex + 1}</span>
+                    <div class="workflow-panel__heading">
+                      <h3 id={`scenario-${workflow.id}-title`}>{workflow.scenario.title}</h3>
+                      <p class="workflow-panel__question">{workflow.scenario.question}</p>
+                    </div>
+                    <span class="workflow-preview-label">{c.workflow.previewLabel}</span>
+                  </header>
+                  <p class="workflow-panel__description">{workflow.scenario.description}</p>
+
+                  <div
+                    class="workflow-stage-list"
+                    data-workflow-stage-controls
+                    role="tablist"
+                    aria-label={c.workflow.stageGroupLabel}
+                    hidden
+                  >
+                    {workflow.scenario.stages.map((stage, stageIndex) => (
+                      <button
+                        class="workflow-stage-tab"
+                        id={`scenario-tab-${workflow.id}-${stage.id}`}
+                        type="button"
+                        data-workflow-stage-tab={stage.id}
+                      >
+                        <span>{stage.label}</span>
+                        <span class="workflow-stage-tab__state">{c.workflow.selectedLabel}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div class="workflow-stage-panels">
+                    {workflow.scenario.stages.map((stage, stageIndex) => (
+                      <section
+                        class="workflow-stage"
+                        id={`scenario-${workflow.id}-${stage.id}`}
+                        data-workflow-stage={stage.id}
+                      >
+                        <p class="workflow-stage__ordinal">0{stageIndex + 1} / {stage.label}</p>
+                        <h4>{stage.title}</h4>
+                        <p class="workflow-stage__copy">{stage.body}</p>
+                        <details class="workflow-confirmation">
+                          <summary>{c.workflow.confirmationSummary}</summary>
+                          <p>{stage.confirmation}</p>
+                        </details>
+                      </section>
+                    ))}
+                  </div>
+
+                  <div class="workflow-traversal" data-workflow-traversal hidden>
+                    <button class="workflow-traversal__button" type="button" data-workflow-previous disabled>
+                      {c.workflow.previousAction}
+                    </button>
+                    <p class="workflow-position" data-workflow-position aria-live="polite" aria-atomic="true"></p>
+                    <button class="workflow-traversal__button" type="button" data-workflow-next>
+                      {c.workflow.nextAction}
+                    </button>
+                  </div>
+                  <a class="workflow-return" href="#scenarios" data-workflow-return hidden>{c.workflow.returnAction}</a>
+                </article>
+              ))}
+            </div>
+            <p class="visually-hidden" data-workflow-status aria-live="polite" aria-atomic="true"></p>
           </div>
         </div>
       </section>

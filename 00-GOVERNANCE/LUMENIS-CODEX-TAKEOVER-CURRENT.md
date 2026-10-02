@@ -46,8 +46,8 @@ global coverage. Recovery is verified within each job, then across the product.
 Execution snapshot 2026-10-02: compact actual thread status confirms W1/W2/W3/W4/F
 in progress; W6 is executing its integration card. M confirmed W5 dispatch is blocked
 because the formal Cloud task entry returned `Unable to determine project root for task`;
-W5 is not counted as started. Other authorized windows continue. F is active; M has approved the bounded
-2026-10-02 Website Brief refinement as DESIGN_READY, not accepted implementation.
+W5 is not counted as started. Other authorized windows continue. F is active; M has
+accepted the bounded 2026-10-02 Website visitor workflow described below.
 Protected candidates keep the owner assignment below. W6's full working card is
 `work/w6-integration-20261002/TASK-CARD.md`; ongoing bounded runtime evidence stays
 in the existing ROUND 05 supervisor record. The canonical launcher restored Core8201
@@ -66,6 +66,34 @@ confirmed finding; its exact coverage and limitations are in the owning evidence
 Other local candidates are excluded. This is
 bounded runtime acceptance; full C6, useful business results, owned AI, four-surface
 operation, release and commercial readiness remain unaccepted.
+
+The lifecycle source/evidence/CURRENT publication was verified at
+`4a3187763e6d47cdf7ee6961b7c558776d4f506d`: local HEAD, origin/main and live
+refs/heads/main matched after push/fetch; local main and live remote main were the
+only branches. This is a pinned publication receipt, not the next task's HEAD.
+
+M accepted the Website's explanatory visitor job: choose the commerce or brand
+question, inspect three distinct material/judgment/deliverable stages, return or
+change question, and navigate the existing source relationship with honest entry
+availability. The exact six Website files and their owning
+[Development Brief](../website/DEVELOPMENT-BRIEF.md) are co-published here. F's final
+12 tests/build, actual browser keyboard/back-forward/Chinese-English-Korean,
+eight widths, no-JavaScript/reduced-motion and 44px controls evidence was reviewed
+by M. W6 verified the five frozen source/test hashes, inspected the local DOM/hash
+selection and HTTPS destination boundary, and reused the unchanged Constitution
+and three Experience gate evidence. No public hosting or real destination was
+configured by this batch; public release and operating App work remain unaccepted.
+
+At 09:23 on 2026-10-02 W6 performed one authorized canonical Core refresh after
+W1/F/Permission imports were stable. Fresh health was healthy/database=ok;
+supervisor child41048, restarts0. Actual same-origin `/workspace/main.dart.js`
+matched F's final candidate SHA256
+`a0de16ecc518a24cac810c4dd87f7b8cb53450d45831ee5fdd20b3bb6b760b6f`;
+index/bootstrap matched too. Process-only preview/FFmpeg paths used existing
+runtime seams. This loaded local integration still includes unpublished owner
+candidates; SourceBrief real-operation acceptance is in progress, not established
+by HTTP success or asset hashes. Original build/web and persistent configuration
+were preserved.
 
 ### Current decisions, limits and evidence
 

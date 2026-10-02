@@ -76,6 +76,101 @@ test("hero and workflow explainer use localized business language", async () => 
   }
 });
 
+test("business questions keep a complete no-JavaScript, three-stage preview", async () => {
+  const localizedStages = {
+    "index.html": [
+      "先汇集可核对的材料",
+      "区分已证实与待确认事项",
+      "把选择整理成团队计划",
+      "汇集可追溯的市场材料",
+      "比较受众、内容与合作选择",
+      "整理一份带依据的 Brief",
+    ],
+    "en/index.html": [
+      "Gather material that can be checked",
+      "Separate verified resources from open questions",
+      "Set out a plan the team can review",
+      "Gather traceable market material",
+      "Compare audience, content, and partner choices",
+      "Prepare a brief with its support attached",
+    ],
+    "ko/index.html": [
+      "확인 가능한 자료를 모읍니다",
+      "확인된 자원과 미확인 사항을 나눕니다",
+      "팀이 검토할 계획을 정리합니다",
+      "출처를 추적할 수 있는 시장 자료를 모읍니다",
+      "대상, 콘텐츠와 협업 방향을 비교합니다",
+      "근거와 함께 브리프를 준비합니다",
+    ],
+  };
+  const workflowLabels = {
+    "index.html": "工作路径示意",
+    "en/index.html": "Workflow path preview",
+    "ko/index.html": "업무 경로 미리보기",
+  };
+
+  for (const [path, headings] of Object.entries(localizedStages)) {
+    const html = await page(path);
+    const stages = [...html.matchAll(/<section class="workflow-stage"([^>]*)>([\s\S]*?)<\/section>/g)];
+
+    assert.equal((html.match(/data-workflow-question="(?:commerce|brand)"/g) ?? []).length, 2, path);
+    assert.equal(stages.length, 6, `${path} lists all three stages for both questions`);
+    assert.match(html, /class="workflow-question-list"[^>]*hidden/);
+    assert.match(html, /class="workflow-stage-list"[^>]*hidden/);
+    assert.match(html, /class="workflow-traversal"[^>]*hidden/);
+    assert.doesNotMatch(stages.map(([, attributes]) => attributes).join(" "), /\shidden(?:\s|>)/);
+    const labels = [...html.matchAll(/<span class="workflow-preview-label">([^<]+)<\/span>/g)].map(([, label]) => label);
+    assert.deepEqual(labels, [workflowLabels[path], workflowLabels[path]], `${path} labels both paths as previews`);
+
+    for (const heading of headings) {
+      assert.ok(html.includes(heading), `${path} includes “${heading}”`);
+    }
+  }
+});
+
+test("hero workspace entry is configured or honestly unavailable", async () => {
+  const workspace = process.env.LUMENIS_PUBLIC_WORKSPACE_URL;
+
+  for (const path of pages) {
+    const html = await page(path);
+    const heroActions = html.match(/<div class="hero__actions">([\s\S]*?)<\/div>/)?.[1];
+    assert.ok(heroActions, `${path} renders hero actions`);
+    assert.match(heroActions, /href="#scenarios"/);
+
+    if (workspace) {
+      const expectedHref = new URL(workspace).href.replaceAll("&", "&amp;");
+      assert.ok(heroActions.includes(`href="${expectedHref}"`), `${path} uses the configured workspace destination`);
+      assert.doesNotMatch(heroActions, /action-link--disabled/);
+    } else {
+      assert.match(heroActions, /action-link--disabled[^>]*aria-disabled="true"/);
+      assert.doesNotMatch(heroActions, /href="(?:https?:|\/\/|\/)/);
+    }
+  }
+});
+
+test("public copy avoids retired local-AI claims and states capability availability", async () => {
+  const localizedCapabilityStatus = {
+    "index.html": {
+      retiredAiClaim: /设备本地\s*AI|本地\s*AI|本地模型|在线模型可用/,
+      availability: "各表面可提供的能力取决于运行环境与部署配置。",
+    },
+    "en/index.html": {
+      retiredAiClaim: /device-local\s*AI|local\s*AI|local model|live model availability/i,
+      availability: "Available capabilities vary by surface, runtime, and deployment.",
+    },
+    "ko/index.html": {
+      retiredAiClaim: /기기 내\s*AI|로컬\s*AI|기기 내 모델|실시간 모델 제공/,
+      availability: "각 표면에서 제공하는 기능은 실행 환경과 배포 설정에 따라 다릅니다.",
+    },
+  };
+
+  for (const [path, expected] of Object.entries(localizedCapabilityStatus)) {
+    const html = await page(path);
+    assert.doesNotMatch(html, expected.retiredAiClaim, `${path} avoids the retired local-AI claim`);
+    assert.ok(html.includes(expected.availability), `${path} states that capability availability depends on its environment`);
+  }
+});
+
 test("preview output is closed to search indexing until an origin is configured", async () => {
   const html = await page("index.html");
   const robots = await readFile(new URL("robots.txt", root), "utf8");
@@ -148,6 +243,10 @@ test("spatial browsing remains opt-in, localized, and motion-aware", async () =>
   assert.match(motion, /pointer: fine/);
   assert.match(motion, /data-chain-view-option/);
   assert.match(motion, /ArrowRight/);
+  assert.match(motion, /ArrowDown/);
+  assert.match(motion, /popstate/);
+  assert.match(motion, /hashchange/);
+  assert.match(motion, /data-workflow-root/);
   assert.match(styles, /data-chain-view="orbit"/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });
@@ -161,7 +260,8 @@ test("the public page does not expose secrets or internal operation identifiers"
 
 test("access actions never imply a configured destination", async () => {
   const html = await page("index.html");
-  const disabledActions = (html.match(/action-link--disabled/g) ?? []).length;
+  const accessList = html.match(/<ul class="access-list">([\s\S]*?)<\/ul>/)?.[1] ?? "";
+  const disabledActions = (accessList.match(/action-link--disabled/g) ?? []).length;
   const destinationVariables = [
     "LUMENIS_PUBLIC_TRIAL_URL",
     "LUMENIS_PUBLIC_CONTACT_URL",
