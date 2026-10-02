@@ -156,7 +156,7 @@ same-origin browser operation, and accepted this bounded flow: GLOBAL CTH source
 brief creation, real task completion, 29 Canonical source records with the returned
 Evidence references, saved Job/hash readback, leave/reload/reference reopen,
 offline result hiding/reconnect, foreign Focus denial and Clear back to GLOBAL.
-The owning evidence is `app/FRONTEND-VERIFICATION-2026-10-02.md`.
+The owning evidence is `00-GOVERNANCE/evidence/round-06/APP-WORKFLOW-VERIFICATION-2026-10-02.md`.
 
 The actual task is `rbrief_ab54bb81-8feb-467c-9c0f-2458821909f1`, Job/Report
 `brief-fb2192a3e5784d18a68ed0186b49733b`, artifact SHA256

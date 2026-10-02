@@ -1,0 +1,2 @@
+LUMENIS Only-One/multi-surface architecture guard: FAIL
+- architecture marker missing: lumenis/system/ai_gateway/ remains the sole SYSTEM owner

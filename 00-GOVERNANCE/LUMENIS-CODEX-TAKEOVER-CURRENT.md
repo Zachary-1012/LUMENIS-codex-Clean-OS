@@ -95,7 +95,7 @@ candidates. Original build/web and persistent configuration were preserved.
 
 M subsequently accepted the bounded source-only CTH SourceBrief main flow. Its
 fourteen frozen App source/test files, owning
-[Frontend verification](../app/FRONTEND-VERIFICATION-2026-10-02.md), CTH-10
+[App workflow verification](evidence/round-06/APP-WORKFLOW-VERIFICATION-2026-10-02.md), CTH-10
 specification/ledger acceptance record and this CURRENT are co-published in the
 containing commit. The four existing SourceBrief APIs and their scope/context
 helpers match main; Task/Job modules and `lumenis_app_api.py` match main too.
@@ -134,7 +134,21 @@ operation and release remain unaccepted. The actual local Core still includes
 unaccepted owner candidates; this commit does not assert a complete same-SHA
 runtime or include the unaccepted renderer transitions. GLOBAL coverage is
 unchanged; USER_VERIFIED, RELEASED, OPERATING and COMMERCIAL_READY remain NO.
-Exact commit/remote verification is W6's remaining publication step.
+The bounded SH-01 publication was verified at
+`7aa3b6935f43bb4aad45e2d8a714f44655a1cde4`: HEAD, origin/main and live main
+matched, and all thirty accepted published paths matched their staged Git blobs.
+This is a pinned publication receipt, not the next task's HEAD.
+
+M authorized the bounded current-owner product guard repair after the actual
+Product Gate at that SHA failed on the stale Jev assertion and the evidence
+filename. The validator now checks current sole-Gateway/owned-weight/retired-route
+policy; the unchanged evidence record moved into Round 06, with its two references
+updated. The source, [owning Round evidence](evidence/round-06/ROUND-06-CURRENT-OWNER-GUARD-2026-10-02.md)
+and this CURRENT are one publication unit in the containing commit. Five isolated
+checks passed and all three controlled policy violations were rejected; no guard
+was exempted or weakened. The old-SHA App Gate completed, but Product Gate failed.
+The repair's exact newly published SHA still requires both hosted workflows and
+actual execution of every blocking step. No product or release state is promoted.
 
 ### Current decisions, limits and evidence
 
