@@ -274,6 +274,8 @@ def _is_managed_report_task_id(task_id: Any) -> bool:
 
 
 def _guard_generic_task_access(task_id: Any) -> None:
+    if type(task_id) is str and task_id.startswith("task-pitch-"):
+        raise PermissionError("internal pitch tasks require their managed owner methods")
     if _is_managed_report_task_id(task_id):
         raise PermissionError(
             "managed report tasks are accessible only through report-task methods"
@@ -1121,6 +1123,8 @@ class TaskEngine:
         Returns:
             任务摘要 dict
         """
+        if created_by == "shared_internal_pitch":
+            raise PermissionError("internal pitch tasks require their managed owner methods")
         if (created_by == _TRAINING_RECEIPT_TASK_CREATOR
                 or (type(context) is dict
                     and context.get("managed_owner") == _TRAINING_RECEIPT_OWNER)):
@@ -1148,6 +1152,157 @@ class TaskEngine:
             "created_at": now,
             "user_input": user_input,
         }
+
+    def create_pitch_task(self, context: Dict[str, Any], *, before_commit=None) -> Dict[str, Any]:
+        """Persist internal-making intent in the existing task table, not a grant."""
+        from lumenis.shared.reporting.saved_work import _digest, _json
+        if (type(context) is not dict or set(context) != {"schema", "owner_context", "request_id", "input_hash", "input"}
+                or context["schema"] != "lumenis.internal-pitch-task/v1"
+                or type(context["owner_context"]) is not dict
+                or type(context["request_id"]) is not str
+                or re.fullmatch(r"[A-Za-z0-9_-]{8,128}", context["request_id"]) is None
+                or type(context["input"]) is not dict or context["input_hash"] != _digest(context["input"])):
+            raise ValueError("INTERNAL_PITCH_TASK_INPUT_INVALID")
+        frozen = _json(context).decode()
+        task_id = "task-pitch-" + _digest({"context": context["owner_context"], "request_id": context["request_id"]})[:24]
+        now = self._now()
+        with get_repository().connection() as con:
+            con.execute("BEGIN IMMEDIATE")
+            con.execute("""INSERT OR IGNORE INTO ai_task
+                (task_id,user_input,intent,parameters_json,context_json,status,risk_level,created_at,updated_at,created_by)
+                VALUES (?,?,'create_internal_pitch','{}',?,'pending','L0',?,?,'shared_internal_pitch')""",
+                (task_id, context["input"].get("title", "Internal draft"), frozen, now, now))
+            current = self.get_pitch_task(task_id, owner_context=context["owner_context"], connection=con)
+            if current["context_json"] != frozen:
+                raise ValueError("INTERNAL_PITCH_REQUEST_REUSE_CONFLICT")
+            if before_commit is not None:
+                before_commit()
+            con.commit()
+        return current
+
+    def get_pitch_task(self, task_id: str, *, owner_context: Dict[str, Any], connection=None) -> Dict[str, Any]:
+        """Read exact owner/context; the caller still performs fresh Permission."""
+        if type(task_id) is not str or re.fullmatch(r"task-pitch-[0-9a-f]{24}", task_id) is None:
+            raise ValueError("INTERNAL_PITCH_TASK_ID_INVALID")
+        if connection is None:
+            with get_repository().connection(read_only=True, wal=False) as con:
+                return self.get_pitch_task(task_id, owner_context=owner_context, connection=con)
+        row = connection.execute("SELECT * FROM ai_task WHERE task_id=? AND created_by='shared_internal_pitch'", (task_id,)).fetchone()
+        if row is None:
+            raise LookupError("INTERNAL_PITCH_TASK_NOT_FOUND")
+        value = dict(row)
+        value["context"] = _strict_json_loads(value["context_json"], field_name="pitch context")
+        context = value["context"]
+        from lumenis.shared.reporting.saved_work import _digest, _json
+        if (type(context) is not dict or set(context) != {"schema", "owner_context", "request_id", "input_hash", "input"}
+                or context.get("schema") != "lumenis.internal-pitch-task/v1"
+                or context.get("owner_context") != owner_context):
+            raise PermissionError("INTERNAL_PITCH_TASK_SCOPE_DENIED")
+        if (context["input_hash"] != _digest(context["input"])
+                or "task-pitch-" + _digest({"context": owner_context, "request_id": context["request_id"]})[:24] != task_id
+                or _json(context).decode() != value["context_json"]
+                or value["intent"] != "create_internal_pitch"
+                or value["status"] not in {"pending", "running", "cancel_requested", "cancelled", "failed", "interrupted", "succeeded"}):
+            raise ValueError("INTERNAL_PITCH_TASK_INTEGRITY_INVALID")
+        value["parameters"] = _strict_json_loads(value["parameters_json"], field_name="pitch worker")
+        value["result"] = _strict_json_loads(value["result_json"], field_name="pitch result") if value["result_json"] else None
+        return value
+
+    def claim_pitch_task(self, task_id: str, *, owner_context: Dict[str, Any], before_commit=None) -> Dict[str, Any]:
+        import psutil
+        worker = {"pid": os.getpid(), "started_at": psutil.Process().create_time(), "nonce": uuid.uuid4().hex}
+        parameters = _serialize_strict_json(worker, field_name="pitch worker")
+        with get_repository().connection() as con:
+            con.execute("BEGIN IMMEDIATE")
+            current = self.get_pitch_task(task_id, owner_context=owner_context, connection=con)
+            if current["status"] not in {"pending", "failed", "interrupted"}:
+                raise ValueError("INTERNAL_PITCH_TASK_NOT_RUNNABLE")
+            con.execute("""UPDATE ai_task SET status='running',parameters_json=?,started_at=?,
+                finished_at=NULL,result_json=NULL,error=NULL,updated_at=? WHERE task_id=?""",
+                (parameters, self._now(), self._now(), task_id))
+            result = self.get_pitch_task(task_id, owner_context=owner_context, connection=con)
+            if before_commit is not None:
+                before_commit()
+            con.commit()
+        return result
+
+    def require_pitch_worker(self, task_id: str, *, owner_context: Dict[str, Any], worker: Dict[str, Any], connection=None) -> None:
+        import psutil
+        current = self.get_pitch_task(task_id, owner_context=owner_context, connection=connection)
+        if current["status"] in {"cancel_requested", "cancelled"}:
+            raise ValueError("INTERNAL_PITCH_CANCELLED")
+        if (current["status"] != "running" or current["parameters"] != worker
+                or worker.get("pid") != os.getpid() or worker.get("started_at") != psutil.Process().create_time()):
+            raise ValueError("INTERNAL_PITCH_WORKER_CONFLICT")
+
+    def cancel_pitch_task(self, task_id: str, *, owner_context: Dict[str, Any], before_commit=None) -> Dict[str, Any]:
+        """Request cancellation; a committed result is always retained."""
+        with get_repository().connection() as con:
+            con.execute("BEGIN IMMEDIATE")
+            task = self.get_pitch_task(task_id, owner_context=owner_context, connection=con)
+            state = task["status"]
+            if state in {"pending", "failed", "interrupted"}:
+                con.execute("UPDATE ai_task SET status='cancelled',finished_at=?,updated_at=? WHERE task_id=?", (self._now(), self._now(), task_id))
+            elif state == "running":
+                con.execute("UPDATE ai_task SET status='cancel_requested',updated_at=? WHERE task_id=?", (self._now(), task_id))
+            if before_commit is not None:
+                before_commit()
+            con.commit()
+        return self.get_pitch_task(task_id, owner_context=owner_context)
+
+    def reconcile_pitch_worker(self, task_id: str, *, owner_context: Dict[str, Any], before_commit=None) -> Dict[str, Any]:
+        """Recover only after the exact recorded OS worker is proven gone."""
+        import psutil
+        with get_repository().connection() as con:
+            con.execute("BEGIN IMMEDIATE")
+            task = self.get_pitch_task(task_id, owner_context=owner_context, connection=con)
+            if task["status"] in {"running", "cancel_requested"}:
+                worker = task["parameters"]
+                if (set(worker) != {"pid", "started_at", "nonce"} or type(worker["pid"]) is not int
+                        or worker["pid"] <= 0 or type(worker["started_at"]) not in {int, float}):
+                    raise RuntimeError("INTERNAL_PITCH_WORKER_UNVERIFIED")
+                try:
+                    process = psutil.Process(worker["pid"])
+                    if process.is_running() and process.create_time() == worker["started_at"]:
+                        raise RuntimeError("INTERNAL_PITCH_WORKER_STILL_ACTIVE")
+                except psutil.NoSuchProcess:
+                    pass
+                state = "cancelled" if task["status"] == "cancel_requested" else "interrupted"
+                con.execute("UPDATE ai_task SET status=?,updated_at=? WHERE task_id=? AND parameters_json=?",
+                            (state, self._now(), task_id, task["parameters_json"]))
+            if before_commit is not None:
+                before_commit()
+            con.commit()
+        return self.get_pitch_task(task_id, owner_context=owner_context)
+
+    def commit_pitch_task(self, task_id: str, *, owner_context: Dict[str, Any], worker: Dict[str, Any], connection, artifact: Dict[str, Any], document: Dict[str, Any]) -> None:
+        """Commit making result on the Artifact owner's same transaction."""
+        if not isinstance(connection, sqlite3.Connection) or not connection.in_transaction:
+            raise ValueError("INTERNAL_PITCH_COMMIT_TRANSACTION_REQUIRED")
+        self.require_pitch_worker(task_id, owner_context=owner_context, worker=worker, connection=connection)
+        row = connection.execute("SELECT sha256,size_bytes,source_execution_id FROM lumenis_shared_artifacts WHERE artifact_id=?", (artifact["artifact_id"],)).fetchone()
+        if (row is None or tuple(row) != (artifact["sha256"], artifact["size_bytes"], document["work_id"])
+                or document["context"] != owner_context or document["task_id"] != task_id):
+            raise ValueError("INTERNAL_PITCH_COMMIT_BINDING_INVALID")
+        result = {"artifact_id": artifact["artifact_id"], "sha256": artifact["sha256"], "size_bytes": artifact["size_bytes"],
+                  "work_id": document["work_id"], "version": document["version"],
+                  "parent_artifact_id": document["parent_artifact_id"], "parent_sha256": document["parent_sha256"],
+                  "action_kind": "INTERNAL_TEXT_REVISION" if document["version"] > 1 else "INTERNAL_TEXT_CREATION",
+                  "execution_state": "ARTIFACT_COMMITTED", "business_outcome": "NOT_OBSERVED", "external_effect": "NOT_PERFORMED"}
+        connection.execute("UPDATE ai_task SET status='succeeded',result_json=?,finished_at=?,updated_at=? WHERE task_id=?",
+                           (_serialize_strict_json(result, field_name="pitch result"), self._now(), self._now(), task_id))
+
+    def fail_pitch_task(self, task_id: str, *, owner_context: Dict[str, Any], worker: Dict[str, Any], error: str) -> None:
+        if type(error) is not str or re.fullmatch(r"[A-Z_0-9]{1,100}", error) is None:
+            raise ValueError("INTERNAL_PITCH_ERROR_INVALID")
+        with get_repository().connection() as con:
+            con.execute("BEGIN IMMEDIATE")
+            task = self.get_pitch_task(task_id, owner_context=owner_context, connection=con)
+            if task["status"] in {"running", "cancel_requested"} and task["parameters"] == worker:
+                state = "cancelled" if task["status"] == "cancel_requested" else "failed"
+                con.execute("UPDATE ai_task SET status=?,error=?,finished_at=?,updated_at=? WHERE task_id=?",
+                            (state, error, self._now(), self._now(), task_id))
+            con.commit()
 
     def create_report_task(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Persist one server-authorized Source Brief task in the existing table.

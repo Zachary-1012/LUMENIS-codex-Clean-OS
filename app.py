@@ -1336,6 +1336,12 @@ def auth_config_api():
 
 @app.before_request
 def _basic_auth():
+    # A server-opened local workspace uses the existing sealed principal and
+    # exact current Registry scope. The route still rechecks scope and effects.
+    if request.path.startswith('/api/experience/creation/internal-pitches'):
+        from lumenis_app_api import _internal_pitch_local_access_allowed
+        if _internal_pitch_local_access_allowed():
+            return None
     # /v4 升级模块使用独立 token/密钥认证（自带登录页），不走现网 HTTP Basic；其余路由维持 Basic 兜底不变
     # /api/auth/config 放行：前端 Auth 动态注入端点（P0-B），返回凭证供前端读取
     # P0-R6: CTH 免密浏览态只读 GET 放行（CTH 页面依赖的旧版只读 API，仅 GET，不含 ZBMP 专属接口）
@@ -1392,6 +1398,11 @@ def _pg_resolve_operation_type(path, method):
     """根据请求路径+方法映射 PermissionGate OperationType。
     覆盖采集/报告/导入导出/配置/事件/规则等所有写操作类别。"""
     p = path.lower()
+    if (method == 'POST' and (p == '/api/experience/creation/internal-pitches'
+            or re.fullmatch(r'/api/experience/creation/internal-pitches/task-pitch-[0-9a-f]{24}/(?:run|cancel)', p))):
+        # Internal Word/stored-work operation only; the owner checks exact
+        # input, principal, scope and DATA_EXPORT again before every commit.
+        return OperationType.DATA_EXPORT
     if method == 'POST' and p == '/api/experience/owned-training/review-resources':
         return OperationType.OWNED_TRAINING_REVIEW_PREVIEW
     # Shared Content & Creation 在 experience_runtime 内部执行动作白名单：

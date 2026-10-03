@@ -112,15 +112,17 @@ def test_json_shaped_identity_cannot_be_used_as_a_workspace_principal(app):
         (True, {"X-Lumenis-User-ID": "23"}, "127.0.0.1"),
     ],
 )
+@pytest.mark.parametrize("module", ["content", "collector"])
 def test_resolver_rejects_closed_remote_forwarded_and_identity_claims(
-    app, config, headers, remote_addr,
+    app, config, headers, remote_addr, module,
 ):
     app.config["LUMENIS_OPEN_WORKSPACE"] = config
     with _request(app, headers=headers, remote_addr=remote_addr):
-        assert p.resolve_local_workspace_principal() is None
+        assert p.resolve_local_workspace_principal(module=module) is None
 
 
-def test_scope_check_revalidates_open_workspace_and_transport(app):
+@pytest.mark.parametrize("module", ["content", "collector"])
+def test_scope_check_revalidates_open_workspace_and_transport(app, module):
     principal = _principal(app)
     gate = p.PermissionGate()
     app.config["LUMENIS_OPEN_WORKSPACE"] = False
@@ -129,7 +131,7 @@ def test_scope_check_revalidates_open_workspace_and_transport(app):
             principal,
             domain_id="cth",
             action="read",
-            module="content",
+            module=module,
             global_scope=True,
             gate=gate,
         )
@@ -142,7 +144,7 @@ def test_scope_check_revalidates_open_workspace_and_transport(app):
             principal,
             domain_id="cth",
             action="read",
-            module="content",
+            module=module,
             global_scope=True,
             gate=gate,
         )
@@ -242,3 +244,26 @@ def test_reports_reuses_scoped_workspace_without_granting_effects(app, action):
     assert result.audit_id and result.actor_id is None
     app.config["LUMENIS_OPEN_WORKSPACE"] = False
     assert not _scope(app, principal, module="reports", global_scope=True).allowed
+
+
+def test_collector_scope_requires_registry_and_does_not_approve_import(app, monkeypatch):
+    with _request(app):
+        principal = p.resolve_local_workspace_principal(module="collector", action="write")
+    assert type(principal) is p.LocalWorkspacePrincipal
+    monkeypatch.setattr(
+        p, "_registered_resource_scope_exists",
+        lambda domain, *, subject_id, brand_focus_id: (
+            domain == "cth" and subject_id == "subject-123" and brand_focus_id is None
+        ),
+    )
+    gate = p.PermissionGate()
+    admitted = _scope(
+        app, principal, gate=gate, module="collector", action="write", subject_id="subject-123",
+    )
+    assert admitted.allowed and admitted.audit_id
+    missing = _scope(app, principal, module="collector", action="write", subject_id="subject-missing")
+    assert not missing.allowed and missing.code == "scope_not_registered"
+    effect = gate.check(p.OperationType.DATA_IMPORT, resource=admitted.resource, caller=admitted.caller)
+    assert not effect.allowed
+    app.config["LUMENIS_OPEN_WORKSPACE"] = False
+    assert not _scope(app, principal, module="collector", action="write", subject_id="subject-123").allowed

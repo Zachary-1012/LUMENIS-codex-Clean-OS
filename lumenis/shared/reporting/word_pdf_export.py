@@ -21,6 +21,60 @@ class ReportExporter:
         self.output_dir = output_dir
         os.makedirs(output_dir, exist_ok=True)
 
+    @staticmethod
+    def export_saved_document(document: dict, *, sources: list, format: str) -> bytes:
+        """Export the complete saved snapshot in memory, including source lineage.
+
+        Uses the existing Reporting exporter dependencies. A missing converter
+        raises an error; a requested PDF never returns a Word file. No output
+        directory or database is created by this method.
+        """
+        import io
+        import json
+        snapshot = json.dumps(document, ensure_ascii=False, sort_keys=True, indent=2)
+        sections = [document["title"], document["markdown"],
+                    "Sources / original scope / rights", json.dumps(sources, ensure_ascii=False, indent=2),
+                    "Complete saved snapshot", snapshot]
+        output = io.BytesIO()
+        if format == "docx":
+            from docx import Document
+            doc = Document()
+            for section in sections:
+                for line in section.splitlines():
+                    doc.add_paragraph(line)
+            doc.save(output)
+        elif format == "pdf":
+            from html import escape
+            from reportlab.lib.pagesizes import A4
+            from reportlab.lib.styles import ParagraphStyle
+            from reportlab.pdfbase import pdfmetrics
+            from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+            pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
+            style = ParagraphStyle("SavedWork", fontName="STSong-Light", fontSize=9,
+                                   leading=13, wordWrap="CJK")
+            story = []
+            for section in sections:
+                for line in section.splitlines():
+                    story.append(Paragraph(escape(line) or "&#160;", style))
+                story.append(Spacer(1, 12))
+            SimpleDocTemplate(output, pagesize=A4).build(story)
+        elif format == "xlsx":
+            from openpyxl import Workbook
+            book = Workbook()
+            sheet = book.active
+            sheet.title = "Saved snapshot"
+            for label, section in zip(("Title", "Report", "Lineage", "Sources", "Snapshot", "JSON"), sections):
+                # Excel cells truncate at 32767 characters. Preserve every
+                # character in ordered chunks, and force text to avoid formulas.
+                for index, start in enumerate(range(0, len(section), 30000), 1):
+                    sheet.append([label, index, section[start:start + 30000]])
+                    sheet.cell(sheet.max_row, 3).data_type = "s"
+            book.save(output)
+        else:
+            raise ValueError("unsupported saved document export format")
+        return output.getvalue()
+
     def export_word(self, report: dict, filename: str = None) -> str:
         """导出为Word文档"""
         try:

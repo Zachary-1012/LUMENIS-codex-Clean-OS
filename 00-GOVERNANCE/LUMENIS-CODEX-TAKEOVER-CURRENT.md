@@ -345,6 +345,28 @@ held-out promotion/rollback and useful user outcomes. This changes no provider
 code or runtime and grants no training/source use. The broader 6d722c60 rule
 revision and its actual consumer acknowledgements remain separately retained.
 
+### Internal creation and Saved Work source integration — 2026-10-03
+
+M accepted the exact frozen internal-creation source and isolated integration.
+The containing commit publishes the existing W5 Importer/Saved Work dependencies,
+required Word and Registry-permission owner slices, managed TaskEngine and normal
+internal-pitch API composition. The app.py publication applies only the two W6
+guard insertions to published source; unrelated protected composition is excluded.
+Explicit GLOBAL and exact Focus use fresh server principal/scope/effect checks.
+Task success and real Artifact registration commit atomically; versions/parents,
+lost acknowledgement, cancellation and proven-gone worker recovery are retained.
+
+The original 129-pass/two-optional-skip union is reused at its exact pins; 25 new
+published-composition checks pass with no skip. Four actual owner/governance gates
+and exact diff checks pass. Four actual W4 cases/eight DOCX results and independent
+W4/M readbacks remain isolated evidence. Initial producer source hashes and the
+second process's original responses were not captured; later readbacks cannot
+reconstruct them. Full C3/C4/C5/C6, actual owned AI, source-use admission, normal
+formal-DB/Core/UI operation, video/podcast and manuscript-only general pitch
+remain OPEN. Nonempty unbound ShotPlan references are rejected; empty references
+remain pending. The new source is not proof the running Core loaded it.
+See [source integration evidence](evidence/round-07/INTERNAL-CREATION-SOURCE-2026-10-03.md).
+
 ## 2. Minimal current-context route
 
 Read `AGENTS.md` first, then its mandatory bootstrap and exact capability locator

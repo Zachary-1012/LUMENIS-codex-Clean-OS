@@ -21,6 +21,183 @@ lumenis_bp = Blueprint("lumenis", __name__, url_prefix="/lumenis")
 domain_api_bp = Blueprint("domain_api", __name__)
 
 
+def _internal_pitch_body():
+    """Bounded JSON only; client identity and server file paths are forbidden."""
+    import math
+    if not request.is_json or (request.content_length or 0) > 1024 * 1024:
+        raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
+    raw = request.get_data(cache=True)
+    if len(raw) > 1024 * 1024:
+        raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
+
+    def pairs(values):
+        result = {}
+        for key, value in values:
+            if key in result:
+                raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
+            result[key] = value
+        return result
+
+    def floating(value):
+        result = float(value)
+        if not math.isfinite(result):
+            raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
+        return result
+
+    try:
+        data = json.loads(raw, object_pairs_hook=pairs, parse_float=floating,
+                          parse_constant=lambda _: (_ for _ in ()).throw(ValueError("INTERNAL_PITCH_REQUEST_INVALID")))
+    except (ValueError, UnicodeError) as exc:
+        raise ValueError("INTERNAL_PITCH_REQUEST_INVALID") from exc
+    if not isinstance(data, dict):
+        raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
+    return data
+
+
+def _internal_pitch_scope(data=None):
+    if data is not None:
+        scope = data.get("scope")
+    else:
+        if set(request.args) != {"domain_id", "subject_id", "brand_focus_id", "global_scope"} or any(
+                len(request.args.getlist(key)) != 1 for key in request.args):
+            raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
+        if request.args["global_scope"] not in {"true", "false"}:
+            raise ValueError("INTERNAL_PITCH_EXACT_SCOPE_REQUIRED")
+        scope = {"domain_id": request.args["domain_id"], "subject_id": request.args["subject_id"] or None,
+                 "brand_focus_id": request.args["brand_focus_id"] or None,
+                 "global_scope": request.args["global_scope"] == "true"}
+    if (not isinstance(scope, dict) or set(scope) != {"domain_id", "subject_id", "brand_focus_id", "global_scope"}
+            or type(scope["global_scope"]) is not bool):
+        raise ValueError("INTERNAL_PITCH_EXACT_SCOPE_REQUIRED")
+    return scope
+
+
+def _internal_pitch_actor(action):
+    from lumenis.auth.service import get_current_user
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    actor = resolve_local_workspace_principal(module="reports", action=action)
+    if actor is None:
+        actor = get_current_user()
+    if actor is None:
+        raise PermissionError("AUTH_REQUIRED")
+    return actor
+
+
+def _internal_pitch_local_access_allowed():
+    """The explicitly open workspace still checks exact live Registry scope."""
+    import re
+    from lumenis.shared.reporting.saved_work import authorize
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    prefix = "/api/experience/creation/internal-pitches"
+    path = request.path
+    expected = {"domain_api.api_internal_pitch_prepare", "domain_api.api_internal_pitch_read",
+                "domain_api.api_internal_pitch_action", "domain_api.api_internal_pitch_export"}
+    if request.endpoint not in expected:
+        return False
+    if not ((path == prefix and request.method == "POST") or
+            (re.fullmatch(re.escape(prefix) + r"/task-pitch-[0-9a-f]{24}(?:/(?:run|cancel|export))?", path)
+             and request.method in {"GET", "POST"})):
+        return False
+    action = "read" if request.method == "GET" else "write"
+    actor = resolve_local_workspace_principal(module="reports", action=action)
+    if actor is None:
+        return False
+    try:
+        data = _internal_pitch_body() if request.method == "POST" else None
+        authorize(actor, _internal_pitch_scope(data), action=action)
+        return True
+    except (ValueError, PermissionError):
+        return False
+
+
+def _internal_pitch_response(call):
+    from flask import current_app
+    try:
+        result = call()
+        if not isinstance(result, dict):
+            return result
+        response = jsonify({"ok": True, "contract": "lumenis.internal-pitch.v1", "result": result})
+        response.headers["Cache-Control"] = "no-store"
+        return response, 202 if result["state"] == "pending" else 200
+    except (ValueError, PermissionError, LookupError, RuntimeError) as exc:
+        import re
+        code = str(exc)
+        if re.fullmatch(r"[A-Z_0-9]{1,100}", code) is None:
+            current_app.logger.exception("internal pitch owner failed")
+            code = "INTERNAL_PITCH_OWNER_FAILED"
+        if code == "AUTH_REQUIRED":
+            status = 401
+        elif isinstance(exc, PermissionError) or "PERMISSION" in code or "DENIED" in code:
+            status = 403
+        elif isinstance(exc, LookupError):
+            status = 404
+        elif any(term in code for term in ("CONFLICT", "CANCELLED", "NOT_RUNNABLE", "STILL_ACTIVE")):
+            status = 409
+        elif isinstance(exc, RuntimeError) or any(term in code for term in ("INTEGRITY", "MISSING", "OWNER_FAILED")):
+            status = 503
+        else:
+            status = 400
+        response = jsonify({"ok": False, "code": code})
+        response.headers["Cache-Control"] = "no-store"
+        return response, status
+    except Exception:
+        current_app.logger.exception("internal pitch owner unavailable")
+        return jsonify({"ok": False, "code": "INTERNAL_PITCH_OWNER_UNAVAILABLE"}), 503
+
+
+@domain_api_bp.post("/api/experience/creation/internal-pitches")
+def api_internal_pitch_prepare():
+    def execute():
+        from lumenis.shared.content_creation.internal_pitch import prepare_internal_pitch
+        data = _internal_pitch_body()
+        allowed = {"scope", "manuscript", "shot_plan", "request_id", "citations", "work_id",
+                   "previous_artifact_id", "expected_draft_digest"}
+        if not {"scope", "manuscript", "shot_plan", "request_id"}.issubset(data) or set(data) - allowed:
+            raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
+        scope = _internal_pitch_scope(data)
+        return prepare_internal_pitch(actor=_internal_pitch_actor("write"), scope=scope,
+                                      **{key: value for key, value in data.items() if key != "scope"})
+    return _internal_pitch_response(execute)
+
+
+@domain_api_bp.get("/api/experience/creation/internal-pitches/<task_id>")
+def api_internal_pitch_read(task_id):
+    def execute():
+        from lumenis.shared.content_creation.internal_pitch import read_internal_pitch
+        return read_internal_pitch(task_id, actor=_internal_pitch_actor("read"), scope=_internal_pitch_scope())
+    return _internal_pitch_response(execute)
+
+
+@domain_api_bp.post("/api/experience/creation/internal-pitches/<task_id>/<action>")
+def api_internal_pitch_action(task_id, action):
+    def execute():
+        from lumenis.shared.content_creation.internal_pitch import run_internal_pitch, cancel_internal_pitch
+        if action not in {"run", "cancel"}:
+            raise LookupError("INTERNAL_PITCH_ACTION_NOT_FOUND")
+        data = _internal_pitch_body()
+        if set(data) != {"scope"}:
+            raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
+        return {"run": run_internal_pitch, "cancel": cancel_internal_pitch}[action](
+            task_id, actor=_internal_pitch_actor("write"), scope=_internal_pitch_scope(data))
+    return _internal_pitch_response(execute)
+
+
+@domain_api_bp.get("/api/experience/creation/internal-pitches/<task_id>/export")
+def api_internal_pitch_export(task_id):
+    def execute():
+        import io
+        from flask import send_file
+        from lumenis.shared.content_creation.internal_pitch import download_internal_pitch
+        result = download_internal_pitch(task_id, actor=_internal_pitch_actor("read"), scope=_internal_pitch_scope())
+        response = send_file(io.BytesIO(result["content"]), mimetype=result["media_type"],
+                             as_attachment=True, download_name=result["filename"], max_age=0)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Artifact-ID"] = result["action_receipt"]["output"]["artifact_id"]
+        response.headers["X-Artifact-SHA256"] = result["sha256"]
+        return response
+    return _internal_pitch_response(execute)
+
+
 def _context_error(code, message, status):
     return jsonify({"ok": False, "code": code, "error": message}), status
 

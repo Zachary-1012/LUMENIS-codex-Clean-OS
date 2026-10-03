@@ -180,6 +180,62 @@ def test_bmp_grant_uses_brand_focus_id_not_subject_id(isolated_scope_database):
     assert cth_using_brand_focus.allowed is False
 
 
+@pytest.mark.parametrize("status,allowed", [
+    ("configured", True), ("active", True), ("inactive", False),
+    ("disabled", False), ("deleted", False), ("archived", False),
+    ("UNKNOWN", False),
+])
+@pytest.mark.parametrize("domain_id,subject_id,brand_focus_id", [
+    ("cth", "SUBJ-CTH-A", None), ("bmp", None, "BRAND-BMP-A"),
+])
+def test_registry_status_controls_selected_scope_even_for_admin(
+    isolated_scope_database, status, allowed, domain_id, subject_id, brand_focus_id,
+):
+    with sqlite3.connect(isolated_scope_database) as con:
+        con.execute(
+            "UPDATE lumenis_subject_registry SET status=? WHERE subject_id=?",
+            (status, subject_id or "SUBJ-BMP-A"),
+        )
+    result = _check({"id": 2}, domain_id=domain_id,
+                    subject_id=subject_id, brand_focus_id=brand_focus_id)
+    assert result.allowed is allowed
+    assert result.verification_state == "verified"
+
+
+def test_revoking_registered_scope_is_checked_again_for_same_gate(isolated_scope_database):
+    from lumenis.system.security import PermissionGate
+
+    gate = PermissionGate()
+    assert _check({"id": 2}, gate=gate).allowed
+    with sqlite3.connect(isolated_scope_database) as con:
+        con.execute("UPDATE lumenis_subject_registry SET status='disabled' WHERE subject_id='SUBJ-CTH-A'")
+    result = _check({"id": 2}, gate=gate)
+    assert result.allowed is False
+    assert result.verification_state == "verified"
+
+
+def test_local_workspace_rechecks_registry_revocation(isolated_scope_database):
+    from flask import Flask
+    from lumenis.system.security import permission as p
+
+    app = Flask(__name__)
+    app.config["LUMENIS_OPEN_WORKSPACE"] = True
+    gate = p.PermissionGate()
+    with app.test_request_context("/", headers={"Host": "localhost"},
+                                  environ_overrides={"REMOTE_ADDR": "127.0.0.1"}):
+        principal = p.resolve_local_workspace_principal(module="reports", action="read")
+        assert type(principal) is p.LocalWorkspacePrincipal
+        args = dict(domain_id="cth", action="read", module="reports",
+                    subject_id="SUBJ-CTH-A", gate=gate)
+        assert p.check_local_workspace_scope_permission(principal, **args).allowed
+        with sqlite3.connect(isolated_scope_database) as con:
+            con.execute("UPDATE lumenis_subject_registry SET status='inactive' WHERE subject_id='SUBJ-CTH-A'")
+        result = p.check_local_workspace_scope_permission(principal, **args)
+        assert result.allowed is False
+        assert result.code == "scope_not_registered"
+        assert result.verification_state == "verified"
+
+
 def test_global_access_requires_global_grant_or_database_owner_role(isolated_scope_database):
     _grant(
         isolated_scope_database, 1, "CTH", "evidence", "read",

@@ -197,7 +197,7 @@ def resolve_local_workspace_principal(
     """Resolve the fixed workspace principal from the current server request."""
     if (
         type(module) is not str
-        or module not in {"content", "reports", "cases", "owned_training", "skills"}
+        or module not in {"content", "reports", "cases", "collector", "owned_training", "skills"}
         or type(action) is not str
         or action not in _RESOURCE_SCOPE_ACTIONS
     ):
@@ -562,7 +562,9 @@ def _registered_resource_scope_exists(
         ]
     if len(matches) > 1:
         raise RuntimeError("canonical resource scope is not unique")
-    return len(matches) == 1
+    # Registry listings retain some inactive rows for diagnosis. Existence
+    # alone cannot authorize their use, including use by an owner/admin.
+    return len(matches) == 1 and matches[0].get("status") in {"configured", "active"}
 
 
 def _load_actor_scope_role(actor_id: int) -> Optional[str]:
@@ -786,7 +788,7 @@ def check_local_workspace_scope_permission(
     global_scope: bool = False,
     gate: Optional["PermissionGate"] = None,
 ) -> ActorScopePermissionResult:
-    """Admit one local workspace principal to an exact Content/Reporting scope.
+    """Admit one local workspace principal to an exact registered module scope.
 
     This is scope admission, not approval or an Effect Fence capability. The
     workspace transport boundary is revalidated for every call.
@@ -823,7 +825,7 @@ def check_local_workspace_scope_permission(
 
     valid_request = (
         domain_config is not None
-        and module_value in {"content", "reports", "cases", "owned_training", "skills"}
+        and module_value in {"content", "reports", "cases", "collector", "owned_training", "skills"}
         and (module_value != "cases" or normalized_domain == "cth")
         and action_value in _RESOURCE_SCOPE_ACTIONS
         and type(global_scope) is bool

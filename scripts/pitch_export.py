@@ -11,6 +11,7 @@ import json
 import os
 import sys
 import tempfile
+import uuid
 
 try:
     from docx import Document
@@ -22,8 +23,8 @@ except Exception:
 
 from scripts.pitch_parser import analyze_pitch
 
-_ACCENT = RGBColor(0x2F, 0x3B, 0x66)
-_SUB = RGBColor(0x6B, 0x72, 0x80)
+_ACCENT = RGBColor(0x2F, 0x3B, 0x66) if _HAS_DOCX else None
+_SUB = RGBColor(0x6B, 0x72, 0x80) if _HAS_DOCX else None
 
 
 def _h(doc, text, size=14, color=_ACCENT, space=6):
@@ -59,10 +60,97 @@ def _kv_table(doc, rows):
         cells[1].text = str(v) if v not in (None, "") else "—"
 
 
-def export_pitch_docx(analysis, out_path=None):
-    """把 analyze_pitch 返回结果导出为可交付 Word 文档。返回输出路径。"""
+def _save_new_document(doc, out_path, check_continue):
+    """Stage and validate locally; publish a new file without replacing a revision."""
+    from lumenis.shared.reporting.artifact import assert_artifact_or_raise
+
+    destination = os.path.abspath(os.fspath(out_path)) if out_path else os.path.join(
+        tempfile.gettempdir(), "pitch_%s.docx" % uuid.uuid4().hex)
+    if not destination.lower().endswith(".docx"):
+        raise ValueError("输出必须为 .docx 文件")
+    if os.path.lexists(destination):
+        raise FileExistsError("输出已存在，请为修订选择新文件")
+    if check_continue:
+        check_continue()
+    fd, staged = tempfile.mkstemp(prefix=".pitch-stage-", suffix=".docx",
+                                  dir=os.path.dirname(destination))
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            doc.save(stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        # The shared verifier proves bytes/hash only; reopen also verifies OOXML.
+        assert_artifact_or_raise(staged)
+        Document(staged)
+        if check_continue:
+            check_continue()
+        os.link(staged, destination)
+        return destination
+    finally:
+        os.unlink(staged)
+
+
+def _manuscript_document(manuscript):
+    """Export supplied final prose. This function neither generates nor approves it."""
+    if not isinstance(manuscript, dict):
+        raise ValueError("成稿必须包含标题、说明和正文段落")
+    title, summary = manuscript.get("title"), manuscript.get("summary")
+    sections = manuscript.get("sections")
+    if (not isinstance(title, str) or not title.strip()
+            or not isinstance(summary, str) or not summary.strip()
+            or not isinstance(sections, list) or not sections):
+        raise ValueError("成稿标题、说明和正文不能为空")
+    for section in sections:
+        if (not isinstance(section, dict)
+                or not isinstance(section.get("heading"), str)
+                or not section["heading"].strip()
+                or not isinstance(section.get("body"), str)
+                or not section["body"].strip()):
+            raise ValueError("每节成稿必须有标题和实际正文")
+    authorship = manuscript.get("authorship", "assisted")
+    labels = {
+        "zh": {"assisted": "开发辅助原创草案 未获客户批准",
+               "user_supplied": "用户提供的成稿 审阅及使用授权待确认"},
+        "en": {"assisted": "Original draft prepared with development assistance. Client approval pending.",
+               "user_supplied": "Supplied manuscript. Review and usage approval pending."},
+        "ko": {"assisted": "개발 지원으로 작성한 독창적 초안 고객 승인 대기",
+               "user_supplied": "제공된 원고 검토 및 사용 승인 대기"},
+    }
+    language = manuscript.get("language", "zh")
+    if language not in labels:
+        raise ValueError("成稿语言必须为 zh、en 或 ko")
+    if authorship not in labels[language]:
+        raise ValueError("成稿来源必须为 assisted 或 user_supplied")
+    doc = Document()
+    for name in ("Title", "Heading 1", "Normal"):
+        doc.styles[name].font.color.rgb = RGBColor(0, 0, 0)
+    doc.styles["Normal"].font.size = Pt(11)
+    doc.add_paragraph(title, style="Title")
+    doc.add_paragraph(summary)
+    doc.add_paragraph(labels[language][authorship])
+    for section in sections:
+        doc.add_heading(section["heading"], level=1)
+        # Preserve blank paragraphs, line breaks and all authored words.
+        for paragraph in section["body"].split("\n\n"):
+            doc.add_paragraph(paragraph)
+    doc.core_properties.title = title
+    doc.core_properties.language = language
+    doc.core_properties.comments = "authorship=%s; approval=not_verified" % authorship
+    return doc
+
+
+def export_pitch_docx(analysis, out_path=None, *, manuscript=None, check_continue=None):
+    """导出需求分析或实际提供的成稿；新版本须新路径，不覆盖旧件。"""
     if not _HAS_DOCX:
         raise RuntimeError("python-docx 不可用，无法导出 Word")
+    if not isinstance(analysis, dict):
+        raise ValueError("需求分析必须为对象")
+    if check_continue:
+        check_continue()
+    if manuscript is None:
+        manuscript = analysis.get("manuscript")
+    if manuscript is not None:
+        return _save_new_document(_manuscript_document(manuscript), out_path, check_continue)
     ex = (analysis.get("extracted") or {})
     doc = Document()
     # 封面标题
@@ -70,6 +158,7 @@ def export_pitch_docx(analysis, out_path=None):
     r = t.add_run("%s · %s 方案拆解" % (ex.get("brand") or "品牌", ex.get("category") or "品类"))
     r.font.size = Pt(20)
     r.font.color.rgb = _ACCENT
+    _p(doc, "本材料为需求分析和创意候选，不是完整提案成稿。历史对标尚未经本次核验。")
     _p(doc, "调性 %s ｜ 圈层 %s ｜ 预算 %s ｜ 来源：Zachary Creative 方案拆解引擎"
        % (ex.get("tonality") or "—", ex.get("circle") or "—",
           ("%s%s" % (ex.get("budget", {}).get("value", ""), ex.get("budget", {}).get("unit", ""))) if ex.get("budget") else "—"),
@@ -118,11 +207,7 @@ def export_pitch_docx(analysis, out_path=None):
             else:
                 _p(doc, "• %s" % item, size=10)
 
-    if not out_path:
-        fd, out_path = tempfile.mkstemp(suffix=".docx", prefix="pitch_")
-        os.close(fd)
-    doc.save(out_path)
-    return out_path
+    return _save_new_document(doc, out_path, check_continue)
 
 
 def main():
