@@ -49,9 +49,9 @@ class SixRoundGovernanceTests(unittest.TestCase):
                 "Root AGENTS.md is the only repository execution router.",
                 "| C1 / W1 | Local Codex | Data and Collection |",
                 "| C2 / W2 | Local Codex | Owned AI and Agent |",
-                "| C3 / W3 | Codex Cloud | CTH and BMP business workflows |",
+                "| C3 / W3 | Local Codex | CTH and BMP business workflows |",
                 "| C4 / W4 | Local Codex | Original Pitch, Video, Podcast |",
-                "| C5 / W5 | Codex Cloud | Importer, Research, Reporting, Artifact and notifications |",
+                "| C5 / W5 | Local Codex | Importer, Research, Reporting, Artifact and notifications |",
                 "| C6 / W6 | Local Codex | Integration, Runtime and Release |",
                 "The separate front-end window F joins all six deliveries.",
                 "The root Sol controller M owns review and acceptance.",
@@ -103,14 +103,14 @@ class SixRoundGovernanceTests(unittest.TestCase):
         )
         return "\n".join(f"| {row} |" for row in rows)
 
-    def test_local_cloud_window_swap_is_blocking(self) -> None:
+    def test_unapproved_cloud_reactivation_is_blocking(self) -> None:
         matrix = self._agents_matrix()
         _assert_six_round_routing(matrix)
 
         swapped = matrix.replace(
-            "| C3 / W3 | Codex Cloud |", "| C3 / W3 | Local Codex |", 1
+            "| C3 / W3 | Local Codex |", "| C3 / W3 | Codex Cloud |", 1
         )
-        with self.assertRaisesRegex(AssertionError, "C3 must use Codex Cloud"):
+        with self.assertRaisesRegex(AssertionError, "C3 must use Local Codex"):
             _assert_six_round_routing(swapped)
 
     def test_current_snapshot_must_report_all_six_rounds(self) -> None:

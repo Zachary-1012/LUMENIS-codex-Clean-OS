@@ -1,6 +1,6 @@
 # 序境 / LUMENIS
 
-> **Production Core · Production Truth Owner**  
+> **Production Core · Production Truth Owner**
 > 当前阶段 / Current phase: **SIX-ROUND EXECUTION AUTHORIZED / PRODUCT CLOSURE IN PROGRESS**
 >
 > Canonical repository: Zachary-1012/LUMENIS-codex-Clean-OS (default branch: main).
@@ -254,7 +254,7 @@ git ls-remote --heads origin
 
 Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)，随后读取 [`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)。
 
-当前唯一方案为 **C1–C6 六轮 / W1–W6 六固定窗口**：四个本地 Codex，W3（CTH/BMP）与 W5（资料/共享成果）使用 Codex Cloud；前端 F 独立，主控 M（Sol 或 Astra）把关验收，W6 集成发布。原 R01–R15、J1–J8、六项专项验收映射保留，不再分别派工。Product Owner 已授权开工；以完整用户成果组织任务，按真实依赖并行推进，遇到缺陷先定向研究再修复和必要验证。分工/云隔离见 [AGENTS.md](AGENTS.md)，完整映射见 [Source Owner Index](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)。旧本地模型/智谱/OpenCode 模型调用停止、接口保留；C2 完成自有权重训练运行。实时对话语音后置，音频理解/播客保留；账号密码重设计在工程闭环后，开放入口仍保留服务端 Permission/effect fence。
+当前唯一方案保留 **C1–C6 六个完整交付职责**：C3（CTH/BMP）与 C5（资料/共享成果）已由同一个本地「序境｜C3+C5 与未完成研究资料接续」窗口承接，并保留未完成研究；原云端 W3/W5 仅保留交接。C1、C2、C4、C6 继续本地执行，前端 F 独立，主控 M（Sol 或 Astra）把关验收，W6 集成发布。原 R01–R15、J1–J8、六项专项验收映射保留，不再分别派工。当前产品执行已暂停待审核；恢复后以完整用户成果组织任务，按真实依赖并行推进，遇到缺陷先定向研究再修复和必要验证。分工/云隔离见 [AGENTS.md](AGENTS.md)，完整映射见 [Source Owner Index](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)。旧本地模型/智谱/OpenCode 模型调用停止、接口保留；C2 完成自有权重训练运行。实时对话语音后置，音频理解/播客保留；账号密码重设计在工程闭环后，开放入口仍保留服务端 Permission/effect fence。
 
 默认执行方式：
 
@@ -385,3 +385,9 @@ Tests/staging 必须显式使用 isolated/disposable DB；任何 persistence 变
 - [`scripts/audit_tools/verify_lumenis_single_product.py`](scripts/audit_tools/verify_lumenis_single_product.py)
 
 历史 handoff / audit / archive 只在迁移、回溯、审计需要时读取，不作为正常开发必读材料。
+
+## 当前审核状态（2026-10-03）
+
+产品窗口 C1–C6 与独立前端 F 已按用户要求暂停，等待产品负责人审核；当前仅 M 统一规则、全仓能力审计与六轮闭环报告/官网调整提案。规则发布和通知不自动恢复开发。详见 CURRENT 与本次六轮闭环审计报告。
+
+本轮审核材料：[六轮闭环执行报告](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md) · [全仓能力覆盖](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/CAPABILITY-COVERAGE.md) · [官网调整提案](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/WEBSITE-ADAPTATION.md)。这些是待审核材料，不代表产品闭环或恢复执行。

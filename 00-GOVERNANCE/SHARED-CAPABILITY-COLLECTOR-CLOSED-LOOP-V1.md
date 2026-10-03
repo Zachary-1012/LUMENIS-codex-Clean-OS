@@ -112,6 +112,72 @@ Two task types share one Runtime:
 
 Tracking horizons may include T0 / T+1h / T+24h / T+3d / T+7d / T+30d, but future windows must remain scheduled or pending until real time has elapsed.
 
+### 3.1 Current prelaunch collection and query contract — 2026-10-03
+
+The Product Owner requires collection and new brand/commercial-entity admission
+to continue alongside the other product work. Current main social-platform work
+covers XHS/RedNote, Douyin, WeChat, Instagram, X and Facebook. Retain other planned
+platform capability obligations; these six are not a reason to delete them.
+Use genuine native publication time from 2026-01-01 through each actual capture.
+Keep unknown publication time separately for review; capture time is never a
+replacement publication date, and future observations cannot be invented.
+
+The Global contract remains the single owner of country categories and the
+China-first quality adjustment: finish existing country candidates and continue
+excellent, regional, specialist and niche entities operating in China with global
+references. Do not resurrect the superseded equal-country50+50 expansion quota.
+Registry counts and four representative jobs are not full collection coverage.
+
+Use the existing SYSTEM acquisition_plan owner. Current name/alias enumeration
+alone does not implement the complete business query. Bind each derived query
+to an actual entity ID/aliases, selected country/market/city or venue boundary,
+business purpose, chosen topic/event dimensions and known account/URL provenance.
+Keep canonical identity/scope separate from the search string; do not turn an
+arbitrary string or name hit into permission or verified entity binding.
+
+Purpose-specific paths include identity/official-account discovery, current
+market/news/product/collaboration/campaign activity, consumer experience/service
+feedback, creator/content/propagation work, and venue tenant/category/events.
+Select relevant dimensions from the task instead of multiplying every alias by
+every topic. Known authorized accounts and content URLs can enter Tracking;
+unresolved identity stays Discovery/UNASSIGNED until real evidence binds it.
+Guangzhou venue monitoring covers its actual in-venue tenants/activities; other
+locations or a tenant brand's global campaign do not automatically belong there.
+Company, brand, store and commercial venue identities/relations stay distinct.
+
+Retain the original available body/media representation, platform/native ID,
+author/account, source URL, publication/capture/observation time and precision,
+native interaction metrics/units, topic/tag/mention/location/language and useful
+public comment/reply/creator metadata where genuinely available. Preserve
+platform-specific fields and honest NULL/UNKNOWN/UNAVAILABLE. Source-derived
+sentiment/risk/relevance/event interpretation stays distinguishable from raw
+facts and carries its method/version and evidence.
+
+Admission checks exact entity/market and task relevance, locatable source content,
+source identity and time quality. Navigation, login/challenge pages, fetch errors
+and unrelated same-name entities are not a successful body. Classify advertising
+and finance by business purpose: an advertising case may be useful, but unrelated
+financial/navigation material cannot stand in for a creative brief. Preserve
+original/republished lineage, use stable platform/native identity, append genuine
+metric changes and retain content revisions; do not erase low-quality raw input
+or turn duplicates into additional coverage. Sampled posts do not establish
+representative consumer demand or causal business effects.
+
+The removed aggregate Collector quota is not reintroduced as a32/64-query world
+limit. A bounded per-batch limit may protect runtime/account health, but remaining
+queries/entities require an explicit continuation through the existing task,
+checkpoint and scheduler. Truncation is not completion. Keep bounded retries,
+polite pacing and recovery. No second Collector, query store or scheduler.
+
+MANUAL remains the default. Only explicitly approved public prelaunch-baseline
+sources or user-opted-in scopes may enter AUTO; login does not grant source use.
+Use current Source/session/Permission/caller bindings and the Source→Evidence→
+Canonical chain. The protected personal Mainland XHS identity and legacy9222
+recovery route remain forbidden. One unavailable identity/source blocks that
+path only; other approved collection and entity admission continue. Technical
+access, use rights and commercial-readiness states remain separately honest.
+
+
 ## 4. Canonical Content Intelligence
 
 Cross-platform analysis requires one canonical content entity rather than raw platform schemas.

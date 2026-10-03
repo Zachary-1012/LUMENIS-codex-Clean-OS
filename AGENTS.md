@@ -1,6 +1,6 @@
 # AGENTS.md — 序境 / LUMENIS Production Execution Router
 
-> Purpose: model-neutral routing, evidence, safety and completion rules for coding agents.  
+> Purpose: model-neutral routing, evidence, safety and completion rules for coding agents.
 > This file is not a second README, architecture book, handoff log, or proof of runtime state.
 
 This root file is the **only repository execution router**. Product Architecture,
@@ -231,9 +231,45 @@ thread, account, fixed source base and manually selected model/effort.
 
 Collector/Scheduler product operation must not depend on a Codex task, CUA session, work-directory harness or daily developer trigger. The Global contract defines this proof. Current Source-derived discovery/creation and budget requirements belong to the existing Experience, Global and Real Delivery contracts and mapped J/U rows; no second recommendation, budget, learning or collection authority is authorized.
 
+### Current Product Owner audit pause — 2026-10-03
+
+The Product Owner paused other product tasks and authorized M to unify rules,
+audit the full repository/capabilities, and submit one six-delivery closure report
+plus the official-website adaptation proposal for review. C1-C6 and F remain
+`PAUSED_PENDING_PRODUCT_OWNER_REVIEW`; M's governance/audit work is active.
+M may publish this exact governance/audit-only reconciliation after verifying
+protected work and the empty index handed off by W6. This does not transfer
+W6's normal product integration ownership or resume product code, collection,
+GPU rental/training, tests, deployments or runtime restarts. Read-only runtime
+and DB inspection and the directly affected governance gates are authorized.
+The single paid GPU was released; new costs need an actual approved execution
+plan and applicable cost authority. Rule notifications must explicitly preserve
+this pause. Only a later Product Owner instruction resumes product work.
+
+### Direct execution and continuous collection
+
+Choose the shortest evidence-supported feasible implementation in the existing
+owner and execute it through the complete real user outcome. Do not manufacture
+unrelated alternatives, speculative candidates, repeated scans, new research
+loops or repeated tests without a changed hypothesis/source or a real remaining
+acceptance risk. Reuse valid pinned evidence. Run only directly affected
+verification and legitimate blocking gates; the Product Owner's ban concerns
+irrelevant/redundant work, not falsifying results or disabling necessary checks.
+An isolated integration copy protecting a dirty tree is not a competing product.
+Reject an incorrect approach without deleting protected data or unknown work.
+
+When product execution is authorized, unaffected C1-C6 and frontend work continues in parallel. C1 collection and
+new brand/commercial-entity admission continue through approved sources and
+existing owners; GPU, a different window or completion of the global inventory
+does not pause those paths. A blocked identity/source stops only its own path.
+Use the current Collector query contract and retain source/identity/Evidence
+and MANUAL/AUTO boundaries. Publish a changed canonical rule/status before its
+dependent integration, then notify each affected window with the exact published
+revision and receive a readback. A message or candidate count is not delivery.
+
 ### Six-round execution windows and retained acceptance coverage
 
-Current delivery uses six fixed execution windows. The C1–C6 labels organize six
+Current delivery retains six complete C1–C6 responsibilities across five local delivery executors. C3 and C5 share the Product Owner-selected local continuation window. The C1–C6 labels organize six
 complete user-outcome deliveries; they do not impose a mechanical serial schedule.
 Work may proceed in parallel only when actual entry dependencies, canonical
 owners, files, tests, migrations and runtime resources permit it. A later C
@@ -243,21 +279,20 @@ acceptance gate pass.
 | Delivery / window | Execution environment | Responsibility |
 | --- | --- | --- |
 | **C1 / W1 — Data and Collection** | Local Codex | Existing registry and source owners; 14-country categories and approved candidates; platform-native fields and honest unavailable states; Subject/venue/tenant relationships; approved collection and browser sessions; Source → Evidence → Canonical; refresh, review and recovery. Registration never proves collection coverage. |
-| **C2 / W2 — Owned AI and Agent** | Local Codex using approved open base weights and approved free training resources | The single AI Gateway and existing Agent, Skills, Memory, context, Evaluation and Learning owners; LUMENIS-owned model training and inference; grounded CTH/BMP/creation results; multimodal file understanding; version, held-out evaluation, feedback, controlled promotion and rollback. |
-| **C3 / W3 — CTH and BMP Business Workflows** | Codex Cloud | Existing CTH and BMP services, metrics and task workflows; monitoring, market/competitor/creator/consumer work, operations, cases, campaigns, decisions, outcomes and evaluation inputs; call existing Shared and SYSTEM owners. |
+| **C2 / W2 — Owned AI and Agent** | Local Codex using approved open base weights and approved training resources (available/free first; paid resources require the actual approved cost boundary) | The single AI Gateway and existing Agent, Skills, Memory, context, Evaluation and Learning owners; LUMENIS-owned model training and inference; grounded CTH/BMP/creation results; multimodal file understanding; version, held-out evaluation, feedback, controlled promotion and rollback. |
+| **C3 / W3 — CTH and BMP Business Workflows** | Local Codex — combined C3+C5 continuation | Existing CTH and BMP services, metrics and task workflows; monitoring, market/competitor/creator/consumer work, operations, cases, campaigns, decisions, outcomes and evaluation inputs; call existing Shared and SYSTEM owners. |
 | **C4 / W4 — Original Pitch, Video and Podcast** | Local Codex | Separate customer-ready pitch, editable video and usable podcast results; existing Shared Timeline/Artifact and media owners; editing, review, export, reopen, cancellation and recovery. Each of the three deliverables has its own acceptance. |
-| **C5 / W5 — Importer, Research and Shared Deliverables** | Codex Cloud | Existing Importer/Research, citations, Reporting/Artifact, notifications and shared-preference owners; real material → locatable Evidence/citation → saved/versioned result → search, reopen, revise, export and return. No second database, Evidence store or model service. |
+| **C5 / W5 — Importer, Research and Shared Deliverables** | Local Codex — combined C3+C5 continuation | Existing Importer/Research, citations, Reporting/Artifact, notifications and shared-preference owners; real material → locatable Evidence/citation → saved/versioned result → search, reopen, revise, export and return. No second database, Evidence store or model service. |
 | **C6 / W6 — Integration, Runtime and Release** | Local Codex | Accepted shared API composition and bindings, canonical database-change coordination, Core/runtime/FFmpeg/supervisor, mainline integration, four-surface operation, packaging, CI, recovery/rollback and final evidence bundle. C6 integrates owned capabilities; it does not replace them. |
 
-The separate front-end window F is the seventh execution window, not a seventh
-delivery round. It owns existing Flutter and Website interface work,
+The separate front-end window F remains independent across all six deliveries; it is not an additional delivery round. It owns existing Flutter and Website interface work,
 screen-specific DESIGN_READY implementation, real interface binding, responsive
 composition, Chinese/English/Korean localization and accessibility through all
 six deliveries. Backend windows provide field and behavior contracts; F owns
 screen layout and user interaction.
 
 The root controller M (Sol or Astra, using the active model and effort
-authorized for the task) is the eighth review and acceptance role. M freezes
+authorized for the task) retains the independent review and acceptance role. M freezes
 scope, resolves Product Architecture/owner/interface conflicts, reviews
 DESIGN_READY, and accepts or returns complete window outcomes. Product Owner
 human decisions remain separate from M.
@@ -286,9 +321,30 @@ and is consolidated at the next meaningful integration point.
 
 W6 applies that exact patch in isolation and performs local runtime/E2E validation before M final acceptance and main publication.
 
+#### Current C3/C5 local continuation and historical Cloud handoff
+
+The Product Owner moved all C3 and C5 work to local thread
+`01a10117-03c7-7503-8a9b-670e80a474a7` on 2026-10-03. Its title is
+`序境｜C3+C5 与未完成研究资料接续`. It retains the unfinished research remit
+and both complete delivery scopes, all R/J/U requirements and existing owners.
+It does not wait for all research or GPU work before continuing independent
+business and Shared implementation. C2/W2 remains the sole GPU training operator;
+the local C3+C5/research executor must not take over GPU or billing operations.
+W6 coordinates exact shared-file reservations, formal DB writes and main publication.
+
+Former Cloud W3 `01a0fbd3-b280-779c-8431-207a71739022` and Cloud W5
+`01a0f9df-91e3-70b4-b9e7-db3e49e4701b` stop new development, research,
+tests, collection and source synchronization. Preserve fixed d92 candidates,
+logs and unresolved material states; use their complete handoffs and retrieve
+only genuinely missing bytes. Do not delete/recreate environments, rerun valid
+evidence, recollect the original material pack or reactivate old rev4.
+
 #### Codex Cloud window constraints
 
-W3 and W5 use Codex Cloud only as an isolated development environment. Product
+The following safeguards apply to historical handoff or a future explicitly
+authorized Cloud task. They do not resume current C3/C5 Cloud execution.
+
+When explicitly authorized in the future, Cloud workers use Codex Cloud only as an isolated development environment. Product
 Owner confirmation that Cloud is configured does not prove LUMENIS deployment,
 runtime, model inference or product acceptance. Each Cloud task uses the
 Product Owner-authorized account 2804907467@qq.com and repository Zachary-1012/LUMENIS-codex-Clean-OS, an explicit fixed base SHA,
@@ -523,7 +579,7 @@ provider paths. Keep compatibility interfaces and historical artifacts, but
 do not call, auto-discover, probe, fall back to, or reactivate them. This
 supersedes older local-first, Ollama, Zhipu and Jev activation guidance. It does
 not retire approved C2/W2 work to build and validate a LUMENIS-owned model using
-commercially permitted open base weights and approved free training resources
+commercially permitted open base weights and approved training resources (available/free first; paid resources require the actual approved cost boundary)
 behind the existing SYSTEM AI Gateway. Do not change the user's persistent
 Codex model selection or Windows user environment to enforce this policy.
 Codex Cloud remains a development environment, not a deployed LUMENIS model or

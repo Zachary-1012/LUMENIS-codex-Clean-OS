@@ -1,0 +1,200 @@
+{
+  "observed_utc": "2026-10-03T10:42:49.096615+00:00",
+  "schema_version": 19,
+  "registry": [
+    {
+      "domain_id": "BMP",
+      "subject_type": "brand",
+      "status": "configured",
+      "n": 117
+    },
+    {
+      "domain_id": "CTH",
+      "subject_type": "company",
+      "status": "configured",
+      "n": 62
+    }
+  ],
+  "canonical_platforms": [
+    {
+      "source_platform": "douyin",
+      "n": 13
+    },
+    {
+      "source_platform": "public_http",
+      "n": 225
+    },
+    {
+      "source_platform": "web_atom",
+      "n": 30
+    },
+    {
+      "source_platform": "x",
+      "n": 6
+    },
+    {
+      "source_platform": "xhs",
+      "n": 3
+    }
+  ],
+  "canonical_scope": [
+    {
+      "scope_status": "UNASSIGNED",
+      "n": 4
+    },
+    {
+      "scope_status": "VERIFIED",
+      "n": 273
+    }
+  ],
+  "canonical_quality": [
+    {
+      "quality_status": "complete",
+      "n": 3
+    },
+    {
+      "quality_status": "missing",
+      "n": 211
+    },
+    {
+      "quality_status": "ok",
+      "n": 63
+    }
+  ],
+  "raw_quality": [
+    {
+      "data_quality_status": "complete",
+      "n": 3
+    },
+    {
+      "data_quality_status": "missing",
+      "n": 211
+    },
+    {
+      "data_quality_status": "ok",
+      "n": 63
+    }
+  ],
+  "publication": [
+    {
+      "state": "PRESENT_NOT_SEMANTICALLY_REVERIFIED",
+      "n": 66
+    },
+    {
+      "state": "UNKNOWN",
+      "n": 211
+    }
+  ],
+  "relations": [
+    {
+      "relation_type": "HQ",
+      "review_status": "UNREVIEWED",
+      "n": 2
+    },
+    {
+      "relation_type": "MARKET_ACTIVITY",
+      "review_status": "UNREVIEWED",
+      "n": 17
+    },
+    {
+      "relation_type": "OPERATES_IN",
+      "review_status": "UNREVIEWED",
+      "n": 3
+    },
+    {
+      "relation_type": "TENANT_OF",
+      "review_status": "UNREVIEWED",
+      "n": 214
+    },
+    {
+      "relation_type": "VENUE_LOCATION",
+      "review_status": "UNREVIEWED",
+      "n": 57
+    }
+  ],
+  "artifacts": [
+    {
+      "kind": "content_project",
+      "status": "staged",
+      "approval_status": "pending",
+      "n": 9
+    },
+    {
+      "kind": "content_source",
+      "status": "staged",
+      "approval_status": "pending",
+      "n": 6
+    }
+  ],
+  "task_states": [
+    {
+      "status": "succeeded",
+      "n": 15
+    }
+  ],
+  "evaluation": [
+    {
+      "dimension": "report",
+      "status": "fail",
+      "n": 10
+    },
+    {
+      "dimension": "report",
+      "status": "pass",
+      "n": 80
+    },
+    {
+      "dimension": "report",
+      "status": "unknown",
+      "n": 43
+    }
+  ],
+  "web_runs": [
+    {
+      "adapter": "douyin",
+      "state": "NO_RECORDED_ERROR",
+      "n": 6
+    },
+    {
+      "adapter": "douyin",
+      "state": "RECORDED_ERROR",
+      "n": 1
+    },
+    {
+      "adapter": "multi-source",
+      "state": "NO_RECORDED_ERROR",
+      "n": 1
+    },
+    {
+      "adapter": "public_http",
+      "state": "NO_RECORDED_ERROR",
+      "n": 485
+    },
+    {
+      "adapter": "public_http",
+      "state": "RECORDED_ERROR",
+      "n": 2
+    },
+    {
+      "adapter": "web_atom",
+      "state": "NO_RECORDED_ERROR",
+      "n": 3
+    },
+    {
+      "adapter": "x",
+      "state": "NO_RECORDED_ERROR",
+      "n": 2
+    }
+  ],
+  "cryptographic_lineage": "NOT_REVERIFIED_BY_THIS_READONLY_AGGREGATION",
+  "scope_reference_validation": {
+    "observed_utc": "2026-10-03T10:52:47.903137+00:00",
+    "source_contract": "secondary_collection._persist_prelaunch_scope passes integer evidence_id; operational_brief compares str(proof.id) with stored reference",
+    "verified_rows": 273,
+    "numeric_reference_rows": 273,
+    "distinct_evidence_refs": 234,
+    "missing_evidence_rows": 0,
+    "correction": "Discarded prefixed-reference join: this collector contract stores numeric ids, not app_evidence_records:<id>. No orphan finding from the invalid query.",
+    "cryptographic_verification": "NOT_RUN"
+  }
+}

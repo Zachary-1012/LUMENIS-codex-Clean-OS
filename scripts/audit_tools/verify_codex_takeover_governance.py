@@ -17,10 +17,10 @@ ONLINE_STATUS_PATH = "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md"
 SIX_ROUND_ASSIGNMENTS = {
     "C1": ("Local Codex", ("data", "collection")),
     "C2": ("Local Codex", ("owned ai", "agent")),
-    "C3": ("Codex Cloud", ("cth", "bmp", "business")),
+    "C3": ("Local Codex", ("cth", "bmp", "business")),
     "C4": ("Local Codex", ("original pitch", "video", "podcast")),
     "C5": (
-        "Codex Cloud",
+        "Local Codex",
         ("importer", "research", "reporting", "artifact", "notification"),
     ),
     "C6": ("Local Codex", ("integration", "runtime", "release")),
@@ -764,7 +764,9 @@ def validate() -> None:
         "**C4 / W4 — Original Pitch, Video and Podcast**",
         "**C5 / W5 — Importer, Research and Shared Deliverables**",
         "**C6 / W6 — Integration, Runtime and Release**",
-        "The separate front-end window F is the seventh execution window",
+        "The separate front-end window F remains independent across all six deliveries",
+        "01a10117-03c7-7503-8a9b-670e80a474a7",
+        "Current C3/C5 local continuation and historical Cloud handoff",
         "The root controller M (Sol or Astra",
         "R01–R15 remain the complete acceptance and technical-dependency coverage",
         "J1–J8 remain the mapped source of user-job requirements",

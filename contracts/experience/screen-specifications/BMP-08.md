@@ -90,3 +90,53 @@ persistence, actual AI/rights binding and live user acceptance remain open.
 - Presentation decision: `DESIGN_READY` after root reviewed the task-specific composition against current source and the guarded browser page on 2026-09-24. This covers the material/section rail, segmented script work area, rights/properties inspector, distinct audio region, and single-active-work-area mobile composition.
 - Business decision remains `IMPLEMENTED / BLOCKED_FOR_PODCAST_SCOPE`. The review does not establish that blocked source, script, rights, or audio data was read, and it is not a business PASS. The podcast owner must preserve source references in a verified brand read before real-user E2E acceptance.
 - When real audio is absent, the audio region stays explicitly empty; no waveform, recording, generation, or playable result is inferred from the presentation review.
+
+## 9. Manual audio editing through the Shared owner — DESIGN_READY 2026-10-03
+
+From the existing Audio area, an explicit Edit audio action opens the existing
+Shared media workbench in audio mode. A new manual project uses actual local
+voice/music/effect files admitted by the current source confirmation and
+Permission owner. The legacy podcast material reader remains under its v2
+scope/lineage gate: its labels and audioAvailable flag are never source refs.
+An unavailable legacy catalog does not itself prohibit a separately authorized
+new manual project. Current server context and source-use checks still govern
+that action; default GLOBAL_ALL does not require artificial BrandFocus selection.
+
+Reuse Snapshot, Timeline, Controller, Artifact and the existing audio export
+callable. Show real sources and clip ranges, an actual saved audio player and
+voice/music/effects tracks. Support existing trim/split/placement/gain/fades,
+fixed-duration source replacement, Delete and Undo. Hide video-ratio, video
+track and caption-overlay controls in audio mode without deleting stored data.
+Do not fabricate waveforms, meters, beat grids, live draft sound, transcription
+or synthesis. Source stream choices must describe the actual inspected asset.
+
+Keep output_kind consistent across save, export, retrieval and reopen. A video
+project is never silently converted to audio or stripped of its tracks/overlays;
+offer the appropriate existing editor or an honest unsupported result. A failed
+new export preserves the previous authorized playable sound and current edit.
+
+Returning restores the studio's Script/Audio selection, segment, notes and known
+position. Retain pending edits through the existing leave guard and pause hidden
+playback through the existing lifecycle owner. Do not create a second player or
+discard live state on cosmetic tab changes. Narrow/200% text keeps one active
+work area with reversible source/properties/result layers, keyboard access and
+Chinese/English/Korean copy.
+
+Continuing known research or a project requires the real inherited Task/Brief,
+selected material/Evidence, constraints and upstream versions. Ask only for
+missing production inputs. A new manually imported project does not substitute
+for that cross-capability requirement or remove the older source binding gap.
+
+Required actual outcome: admitted files -> stream/range/mix editing -> actual
+WAV export and listening -> saved version -> reopen -> meaningful revision and
+re-export -> return to the same studio. Verify revoked source/scope, invalid
+media, stale revision, retrieval/render failure, cancellation and retained prior
+output. Web and Windows audio playback require their own real evidence; other
+native platforms remain explicitly unavailable until verified. Builds and local
+request drafts cannot establish podcast completion. Owned audio understanding
+and synthesis retain their separate C2/C4 acceptance.
+
+F owns the existing BMP-08/workbench/player interface and affected tests; W4
+owns media processing, W5 source/Evidence/Artifact lineage and W6 shared binding,
+runtime and publication. This decision adds no backend, endpoint, store or model.
+The older podcast read remains blocked wherever its real scope/lineage is absent.

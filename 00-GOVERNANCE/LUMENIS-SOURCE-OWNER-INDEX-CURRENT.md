@@ -2,7 +2,7 @@
 
 > Status: **CURRENT EXECUTION INDEX / SIX-ROUND DELIVERY / COMPLETE LEGACY COVERAGE**
 >
-> Updated: 2026-09-23
+> Updated: 2026-10-03; earlier baseline tables remain dated provenance
 > Approved ROUND 01 source-audit baseline: `df15a99de6f5ffc3eb85e2c9924afb59c1c3c781` (provenance only; resolve the live `origin/main` before every change)
 
 This file is the fixed repository navigation and delivery index for 序境 / LUMENIS. It classifies current source by owner and tells Codex where to look after the one-time source audit. It is not a second product architecture, Experience authority, progress ledger, or proof that a runtime capability works.
@@ -33,7 +33,7 @@ Current execution follows C1–C6 in AGENTS.md. All fifteen rows retain their re
 
 ### Approved execution coverage map — 2026-10-02
 
-AGENTS.md owns dispatch. C3/W3 and C5/W5 use Codex Cloud; others use local Codex.
+AGENTS.md owns dispatch. All active deliveries use local Codex; C3/W3 and C5/W5 share local continuation thread `01a10117-03c7-7503-8a9b-670e80a474a7`, retaining both full scopes and unfinished research. Former Cloud instances are preserved for handoff only.
 W5/W6 begin immediately within real dependencies. CTH/BMP do not wait for all directories.
 
 | Existing ID | Responsible delivery / support |
@@ -171,7 +171,7 @@ These are blocking requirements for C1–C6 and mapped checkpoints:
 14. Route every context/data-related round through `LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md`. The product default is `GLOBAL / ALL`; Subject/BrandFocus selection changes focus only and never grants Permission or controls background execution. Report `Global Commercial Coverage`, `Global Brand Coverage` and `Guangzhou Taikoo Hui Reference Coverage` as three acceptance dimensions of the same internal full-universe edition. They must not create separate products, releases or truth stacks. All three `YES` is required for `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=YES`.
 15. Every related round runs the contract's `RANDOM ENTITY DATA ACCEPTANCE` with rotating stratified non-fixture samples and preserves seed/list/version/request/surface/Evidence/result evidence. A covered/mature blank or fabricated sample forces `REWORK`/`BLOCKED`; an unavailable registry is reported as sample count zero and assigned to its owning round, never postponed silently to ROUND 15.
 16. An accepted Batch is not an online delivery until its reviewed source, Round evidence and CURRENT status are coherently committed, pushed and verified against live `origin/main` in the same delivery cycle under `AGENTS.md` §2. Preserve unaccepted work as `LOCAL_ONLY`; a documentation-only push does not make its source visible to GitHub readers.
-17. Six fixed windows, four local and Cloud W3/W5, independent frontend F, controller M and integration W6. No ten-worker target. Report actual capacity/activity, preserve pauses and genuine dependencies.
+17. Six complete C1-C6 delivery responsibilities use five local delivery executors because C3/C5 share the approved continuation window. Independent frontend F, controller M and integration W6 retain their roles. C2 alone executes GPU training; historical Cloud W3/W5 are handoff-only. No ten-worker target. Report actual capacity/activity, preserve explicit pauses and genuine dependencies.
 18. Chinese, English and Korean are product-surface commitments, not merely Public Website copy. Apply the sole Experience Constitution's per-screen three-language and responsive/accessibility gate to every promised operational surface; unverified Korean UI is an explicit gap, never a silently dropped requirement.
 
 ### Product Owner requirement routing check
@@ -281,7 +281,7 @@ A repository-wide re-audit is allowed only when one of these triggers occurs:
 
 Routine commits, runner/DNS failures, stale historical documents and a single `UNKNOWN` binding are not full-audit triggers.
 
-## 5. Source-audit disposition at the baseline
+## 5. Historical source-audit disposition (not current capability status)
 
 The table below records the earlier audit baseline, not live source status. The current Public Website foundation is committed under `website/`; the Flutter Web Workspace build and host have local evidence but protected CTH/BMP browser access remains blocked. Use the current owner matrix above and dated Round 08 evidence for present status, without treating either source presence as release acceptance.
 
@@ -350,3 +350,7 @@ The latest product evaluation is accepted as a sharper **user-work acceptance te
 - **BMP, ROUND 12–13 and ROUND 15:** a brand lead must use real, comparable consumer/market/competitor/creator evidence to make a bounded choice and carry its rationale into a Brief, approval, result and feedback. Popularity alone is not creator or channel fit.
 - **Shared and surfaces, ROUND 08–15:** preserve scope and source IDs as a user moves among research, plan, draft, report and review. Public Website copy may describe the intended role and task but must not present fictional examples, one local source report or an unconfigured entry as delivered customer outcomes.
 - **Already covered / defer:** the existing CTH, BMP, Shared and SYSTEM owners, GLOBAL / ALL focus, Evidence/Permission chain and 15 checkpoints remain. Additional industry presets, a composite success score and replacement of POS/member/finance/property systems stay `OPTIONAL / NOT NOW` until a real job and owner contract justify them.
+
+## 9. Current full-repository audit coverage — 2026-10-03
+
+The Product Owner requested a complete capability audit while product windows are paused. The [current dated audit](evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md) covers all tracked roots, current source/caller slices, formal DB/runtime snapshots, 54 binding rows, R01-R15/J1-J8/U01-U25 and the original six urgent exits. The 44-screen capability obligations remain; page counts do not impose a generic layout. Historical tables above are preserved as provenance and cannot overrule current source or this dated audit. No product capability is accepted merely by inclusion in the inventory.

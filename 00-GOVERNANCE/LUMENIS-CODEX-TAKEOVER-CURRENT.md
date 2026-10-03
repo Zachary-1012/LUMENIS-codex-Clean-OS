@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
-> Updated: 2026-10-03 — accepted C2 source and bounded C3 workflow source; Cloud W3/W5 resumed on fixed bases.
+> Updated: 2026-10-03 — PRODUCT EXECUTION PAUSED_PENDING_PRODUCT_OWNER_REVIEW; M unifies rules and performs the full capability audit. C3+C5 placement is local; historical Cloud W3/W5 are handoff-only.
 > current HEAD = READ WITH git fetch + git rev-parse origin/main
 
 CI information correction (2026-10-02): M approved retirement of the obsolete
@@ -25,8 +25,7 @@ acceptance nor product closure.
 
 ## 1. Online reader's current-state snapshot
 
-The Product Owner approved **C1–C6 / W1–W6: four LOCAL windows and two CODEX CLOUD
-windows**, plus independent frontend F and controller M. The canonical allocation,
+The Product Owner retains **C1–C6 complete delivery responsibilities**, now using five local delivery executors: C3+C5 share `01a10117-03c7-7503-8a9b-670e80a474a7` (`序境｜C3+C5 与未完成研究资料接续`). Independent frontend F and controller M remain. The canonical allocation,
 cloud restrictions, shared-file writers and reporting protocol are in
 [AGENTS.md](../AGENTS.md). Existing R01–R15 acceptance coverage and J1–J8 capability
 coverage map into these six rounds in the
@@ -34,22 +33,23 @@ coverage map into these six rounds in the
 They are not three competing execution schedules. Existing owners, capability
 requirements and real technical dependencies remain effective.
 
-**Product Owner continues W1/W2/W3/W4/W5/W6/F work; the temporary Cloud pause was explicitly revoked.**
-W3 and W5 remain on their fixed d92 source snapshots after actual same-instance
-shell/root admission (revision45 and revision38 respectively). Account restoration
-and development admission do not prove deployment, model inference or product
-acceptance. Old rev4 is untouched. W6 reconciles exact candidates against current
-main at an explicit safe point; no background source replacement or Cloud push.
-Remote owned training remains separately constrained by actual compute admission.
+**Current Product Owner instruction: all product windows are PAUSED_PENDING_PRODUCT_OWNER_REVIEW. M alone completes rule unification, full capability audit and the six-delivery closure report/website proposal.**
+C3/C5 execution placement has moved locally; old Cloud windows do not perform new work.
+The original d92 snapshots and delivered candidate/source/evidence packages remain
+preserved. Reuse actual local deliveries; retrieve only missing Cloud bytes.
+Do not restart source work, old rev4 or the original missing material collection.
+C2/W2 remains responsible for actual paid single-GPU training. Source preparation,
+model execution, semantic quality and product acceptance remain distinct.
+W6 retains formal DB/shared composition and exact main publication.
 
 | Round / window | Placement | Scope | Current acceptance / execution |
 |---|---|---|---|
-| C1 / W1 | LOCAL | Data, Collector, Browser, exact entities/relations, freshness and maintenance | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
-| C2 / W2 | LOCAL + approved training resources | Owned AI, Agent, Skills, Memory, multimodal, Evaluation/Learning | ACTIVE; ACCEPTED HTTP/CALLBACK SOURCE (343 DISTINCT CASES ACROSS RETAINED SPLIT RUNS); PRODUCTION OWNED SERVICE NOT_BOUND / FULL C2 NOT ACCEPTED |
-| C3 / W3 | CODEX CLOUD | Real CTH/BMP business workflows and outcomes | ACTIVE ON FIXED D92; BOUNDED FOUR-LAYER WORKFLOW/CASE SOURCE AND FINAL READ REPAIR ACCEPTED; ACTUAL AI/ACTION/UI OPEN / FULL C3 NOT ACCEPTED |
-| C4 / W4 | LOCAL | Original pitches/general creation, video and podcast | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
-| C5 / W5 | CODEX CLOUD | Importer, Research, library, Reporting and Artifact services | ACTIVE ON FIXED D92; Source/Artifact normal-chain handoff incomplete / NOT ACCEPTED |
-| C6 / W6 | LOCAL | Integration, actual DB coordination, runtime, recovery, packaging and release | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
+| C1 / W1 | LOCAL | Data, Collector, Browser, exact entities/relations, freshness and maintenance | PAUSED_PENDING_PRODUCT_OWNER_REVIEW; PARTIAL ASSETS / NOT ACCEPTED |
+| C2 / W2 | LOCAL + approved training resources | Owned AI, Agent, Skills, Memory, multimodal, Evaluation/Learning | PAUSED_PENDING_PRODUCT_OWNER_REVIEW; ACCEPTED HTTP/CALLBACK SOURCE (343 DISTINCT CASES ACROSS RETAINED SPLIT RUNS); PRODUCTION OWNED SERVICE NOT_BOUND / FULL C2 NOT ACCEPTED |
+| C3 / W3 | LOCAL C3+C5 CONTINUATION | Real CTH/BMP business workflows and outcomes | PAUSED_PENDING_PRODUCT_OWNER_REVIEW; CLOUD HANDOFF ONLY; BOUNDED FOUR-LAYER WORKFLOW/CASE SOURCE AND FINAL READ REPAIR ACCEPTED; ACTUAL AI/ACTION/UI OPEN / FULL C3 NOT ACCEPTED |
+| C4 / W4 | LOCAL | Original pitches/general creation, video and podcast | PAUSED_PENDING_PRODUCT_OWNER_REVIEW; PARTIAL ASSETS / NOT ACCEPTED |
+| C5 / W5 | LOCAL C3+C5 CONTINUATION | Importer, Research, library, Reporting and Artifact services | PAUSED_PENDING_PRODUCT_OWNER_REVIEW; CLOUD HANDOFF ONLY; Source/Artifact normal-chain handoff incomplete / NOT ACCEPTED |
+| C6 / W6 | LOCAL | Integration, actual DB coordination, runtime, recovery, packaging and release | PAUSED_PENDING_PRODUCT_OWNER_REVIEW; PARTIAL ASSETS / NOT ACCEPTED |
 
 Frontend F owns `app/` and `website/`, follows the sole Experience Constitution
 and screen-specific `DESIGN_READY`, and joins each round's real workflow. M owns
@@ -63,7 +63,7 @@ Historical execution snapshot 2026-10-02: W5 initially returned
 `Unable to determine project root for task`, then a later pinned Cloud admission
 was recorded. Neither admission establishes Source/Artifact acceptance. The current
 2026-10-03 temporary pause was subsequently revoked after account restoration;
-the current fixed-instance admission above supersedes it. F is active; M has
+the later local C3/C5 transfer above supersedes that Cloud execution placement. F is now paused under the latest Product Owner instruction; M previously
 accepted the bounded 2026-10-02 Website visitor workflow described below.
 Protected candidates keep the owner assignment below. W6's full working card is
 `work/w6-integration-20261002/TASK-CARD.md`; ongoing bounded runtime evidence stays
@@ -234,7 +234,7 @@ are unchanged; this correction does not promote runtime or product acceptance.
   [Real Delivery Overlay section 23](LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)
   contains the exact clarification; the existing Source Owner Index retains the
   acceptance population. No capability, window or release is accepted by this rule.
-- User confirms Codex Cloud configuration is complete and participates now.
+- Historical Cloud configuration was confirmed; current C3/C5 execution has since moved to the approved local continuation window.
   At dispatch verify correct account, repository, pinned base and dependencies;
   do not repeat configuration or infer a deployed LUMENIS AI service from it.
 - Realtime conversational voice is deferred. Audio-file understanding, video
@@ -296,7 +296,7 @@ and [exact source evidence](evidence/round-07/owned-training-phase-callback-2026
 Metadata permission, signatures and historical readback do not establish physical
 training, a bound owned AI business service, useful results or C2/C6 acceptance.
 Actual runtime, same-source hosted checks and publication readback remain separate.
-Cloud W3/W5 are resumed on fixed development snapshots; actual remote training
+Historical Cloud W3/W5 snapshots are retained for handoff; actual remote training
 and normal owned inference remain separate unavailable dependencies.
 
 M accepted the bounded C3 workflow source composed by W6 at exact09b3 integration
@@ -320,7 +320,7 @@ The containing commit synchronizes the sole AGENTS execution router and its exis
 
 This is rule/design publication, not product implementation acceptance. The current internal-creation and retained public-Raw source candidates are separately reviewed and not promoted by this publication. Actual useful owned inference, complete business/media/UI jobs, Source admission, unattended scheduled operation and full C acceptance remain OPEN. The Product Owner performs repeated core jobs after engineering is ready.
 
-Cloud W3/W5 retain their fixed source snapshots. W6/M deliver the newly published canonical rule revision at a safe checkpoint with exact SHA/bytes/read acknowledgement; delivery does not synchronize source or revive old rev4. A historical receipt of a Cloud pause is not current execution status. Latest user priority is canonical rule synchronization before dependent integration; unaffected authorized work continues.
+Cloud W3/W5 retain their fixed source snapshots. W6/M deliver the newly published canonical rule revision at a safe checkpoint with exact SHA/bytes/read acknowledgement; delivery does not synchronize source or revive old rev4. Current Cloud C3/C5 status is handoff-only under the later Product Owner transfer; prior resume receipts are historical. Latest user priority is canonical rule synchronization before dependent integration; unaffected authorized work continues.
 
 The same publication includes M-reviewed AI-01/ACC-03 same-scope navigation
 draft/selection retention and the SH-01 Discover specification. Closing/refresh
@@ -447,3 +447,48 @@ preserved byte-for-byte in Git at the pinned pre-change source:
 Its historical next-step commands are provenance, not current dispatch rules.
 No implementation, candidate, research asset or acceptance requirement is deleted
 by replacing the chronological handoff with this snapshot.
+
+### Current full-product dispatch reconciliation — 2026-10-03
+
+All C1-C6, R01-R15, J1-J8 and special acceptance obligations remain. C3/C5 share
+the local continuation window; frontend F remains independent. Current rule
+changes must be published and read back before dependent integration, not left
+only in chat. Select one viable existing-owner path and deliver the user result;
+no unrelated candidate/research/test loop. Necessary affected verification and
+blocking gates remain. Collection and new brand/commercial-entity admission
+continue in parallel under the current Collector and Global contracts.
+
+Observed runtime progress on 2026-10-03: canonical Core review/export routes were
+reloaded and the original12 approved fictional cases were actually reviewed and
+exported as8 train/4 heldout through existing owners. This is not GPU training,
+owned inference quality or product closure. Paid GPU status and actual steps
+must be read from W2's current runtime/billing evidence, never inferred here.
+The Source Owner Index continues to retain every C/R/J/U acceptance requirement.
+
+## Product Owner full-product audit review — 2026-10-03
+
+The latest user pause supersedes every earlier ACTIVE/resume receipt in this file.
+C1-C6/F remain PAUSED_PENDING_PRODUCT_OWNER_REVIEW. M's governance/audit-only
+publication is authorized; normal W6 product integration ownership is preserved.
+Read the [six-delivery closure report](evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md),
+[complete capability coverage](evidence/round-15/full-product-audit-20261003/CAPABILITY-COVERAGE.md)
+and [official-website adaptation proposal](evidence/round-15/full-product-audit-20261003/WEBSITE-ADAPTATION.md).
+These are audit/review evidence, not another execution authority or acceptance.
+
+Observed at the audit: 277 Canonical rows, 179 configured entities, 4 UNASSIGNED,
+293 relations UNREVIEWED, 211 unknown publication dates, 484 Evidence records and
+133 report evaluation records. Numeric collector scope references resolve to
+existing Evidence rows; cryptographic lineage was not reverified by aggregation.
+Core health is healthy/database ok, not a source-version or business-work proof.
+The original12 approved fictional samples were actually reviewed/exported into
+8 training and 4 held-out inputs. The paid RTX5090 instance is RELEASED and billing
+STOPPED: displayed51 minutes, 2.54 compute credits consumed, optimizer_steps=0,
+model load incomplete, no trained checkpoint/adapter/inference. Do not restart
+training, rent resources or resume product development from this publication.
+
+The source baseline was a6844a98032ed1ffa0be8f99c40f7b99ba14d453. The containing
+commit publishes exact rules and audit evidence only; protected product dirty
+files and frozen candidates are not included. Existing historical test receipts
+are reused at their own source state. Actual scoped governance gate outcomes are
+in [audit-rule-gates.json](evidence/round-15/full-product-audit-20261003/audit-rule-gates.json).
+Full C1-C6, USER_VERIFIED, RELEASED, OPERATING and Market Proof remain OPEN.

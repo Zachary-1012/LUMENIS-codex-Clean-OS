@@ -141,3 +141,26 @@ Five constitution/governance/Experience checks and staged diff check apply.
 Actual argv/exits are in [clip-replacement-gates.json]
 (global-discover-rules-20261003/clip-replacement-gates.json). Unchanged product
 tests are reused. Protected dirty sources and formal DB remain untouched.
+
+## Current local C3/C5 and direct delivery reconciliation
+
+The Product Owner moved complete C3/C5 execution and retained research to local
+thread01a10117-03c7-7503-8a9b-670e80a474a7; prior Cloud windows retain handoff
+only. Six C delivery responsibilities and all R/J/U obligations remain. The
+governance validator now rejects unapproved Cloud reactivation under this rule,
+instead of rejecting the user-approved local route. Security/Evidence/real-user
+and source-publication gates remain blocking.
+
+The same batch reconciles AGENTS, Source Owner Index, CURRENT and README, adds
+the approved offline audio acceptance to the existing Overlay, and approves the
+concrete BMP-08 manual-audio design entry. The existing Collector contract now
+records the2026 publication window, task-specific compound-query gap, continued
+entity admission and per-batch versus aggregate limit semantics. These are
+governance/design changes, not proof of implemented query expansion, audio
+understanding, completed collections, GPU training or full product acceptance.
+
+M review inputs: work/m-controller-20261002/report-1440-review-20261003,
+audio-understanding-supplement-20261003, bmp08-audio-binding-20261003 and the
+current C1 owner decision. W6 records the exact scoped governance/Experience
+verification and publication readback for this chosen batch; unchanged product
+test suites and historic valid evidence are not rerun to pad progress.
