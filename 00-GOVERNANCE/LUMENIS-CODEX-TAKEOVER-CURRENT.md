@@ -381,6 +381,18 @@ The source-only internal creation publication at
 See the [owning Round 08 record](evidence/round-08/GLOBAL-DISCOVER-RULES-2026-10-03.md)
 for exact rule paths, input pins and blocking verification. W3 source stays KEEP_D92.
 
+The containing rule commit publishes M's approved three research-to-production
+continuity constraints in the existing Real Delivery Overlay. Existing task/Brief,
+constraints, selected materials, Evidence/locators, rationale, scope and upstream
+versions must carry into pitch/video/podcast without re-entering unchanged inputs.
+Fresh server permission/source-use checks remain automatic; changed inputs or use
+require only the applicable missing information, conflict or approval. Historical
+parents and outputs remain immutable. Actual integrated revision/reopen/export and
+interruption recovery are required; navigation or file existence cannot pass.
+No source/runtime, training/source grant or full C acceptance is established by
+this rule publication. The exact five-path native coordination/storyboard rule
+publication at 5fe253af remains separately retained.
+
 ## 2. Minimal current-context route
 
 Read `AGENTS.md` first, then its mandatory bootstrap and exact capability locator

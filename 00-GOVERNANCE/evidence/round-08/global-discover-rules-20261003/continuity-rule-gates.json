@@ -1,0 +1,48 @@
+{
+  "schema": "w6.research-creation-continuity-rule/v1",
+  "base": "5fe253af8a4a63dc112d6a9dcca495295c17178c",
+  "M_exact_patch_sha256": "180831898173d920832490f9ed4deac31b7b82b714174a2c89c57d7a8f15a94f",
+  "M_approved": true,
+  "paths": {
+    "00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md": {
+      "preimage_raw_sha256": "21f0a51d3bbb8157370a3d532b61b8a2f2118ba369b66ed68a0ce2e94e443c06",
+      "published_sha256": "6f5db2c5c486867911fccc15389e11a0a45b568f3f9d91d66c4d29d936690478",
+      "bytes": 35596
+    },
+    "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md": {
+      "preimage_raw_sha256": "bcad6c0d5c4823c7171930e4cf719d2cbf7a3c5e87c9ad97508934a6653065c4",
+      "published_sha256": "69ef25a67ed6cea2fbc8f90078440280819d62e5beb4c51d373ae298ebc998d9",
+      "bytes": 31434
+    },
+    "00-GOVERNANCE/evidence/round-08/GLOBAL-DISCOVER-RULES-2026-10-03.md": {
+      "preimage_raw_sha256": "198067e2d133afac09591086c0bb408fd7776f3b12ebc98ff929ecc680f8ff3f",
+      "published_sha256": "0027fef8b7be9c0b3abd236e09ac1dc1ccd7e8dfeafb8a6173252d767ff908c2",
+      "bytes": 6212
+    }
+  },
+  "gates": {
+    "verify_ai_native_constitution": {
+      "argv": [
+        "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
+        "scripts/audit_tools/verify_ai_native_constitution.py"
+      ],
+      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-continuity-rule-5fe-0j7_e37x",
+      "exit_code": 0,
+      "log_sha256": "e30d82c88700d83e334b9d746d862749bb960251f028c8d76450046dcbfcaeca",
+      "log_text": "AI-NATIVE CONSTITUTION GATE: PASS\r\n - 18 lightweight principles present\r\n - AGENTS/README bootstrap routes through the constitution\r\n - non-bypass status and dirty-worktree protections present\r\n - missing!=0 and CI anti-bypass regression anchors present\r\n - Product Gate executes this validator as BLOCKING\r\n"
+    },
+    "verify_codex_takeover_governance": {
+      "argv": [
+        "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
+        "scripts/audit_tools/verify_codex_takeover_governance.py"
+      ],
+      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-continuity-rule-5fe-0j7_e37x",
+      "exit_code": 0,
+      "log_sha256": "b3b3bb0c406adabf6d42e4d4f77059cc70155e01f0bcd5261315342439c8e1ea",
+      "log_text": "CODEX TAKEOVER GOVERNANCE OK lumenis-ggi-cross-product v1.1.0 68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f single-machine-contract=PASS six-round-routing=PASS legacy-coverage=PASS cloud-boundaries=PASS workflow-guards=PASS online-progress=PASS\r\n"
+    }
+  },
+  "product_tests_rerun": false,
+  "provider_source_runtime_changed": false,
+  "full_C_accepted": false
+}

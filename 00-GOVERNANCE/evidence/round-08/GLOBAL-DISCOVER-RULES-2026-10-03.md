@@ -71,3 +71,26 @@ against the isolated exact candidate. Their argv, exits, source pins and
 limitations are in [communication-storyboard-gates.json](global-discover-rules-20261003/communication-storyboard-gates.json).
 Historical source tests are not rerun. Protected source candidates, formal DB,
 runtime, source use, owned AI and full C acceptance are unchanged.
+
+## Research-to-production continuity
+
+M approved the exact 3,777-byte Real Delivery Overlay delta
+SHA256 180831898173d920832490f9ed4deac31b7b82b714174a2c89c57d7a8f15a94f
+at base 5fe253af. Its three constraints preserve task/Brief, applicable constraints,
+selected sources/locators, rationale, original scope and exact parent versions
+through research, decisions and pitch/video/podcast. Unchanged known input is
+not re-entered or manually verified again; fresh server authorization continues.
+Actual inherited arguments/refs, explicit upstream-change adoption, immutable
+prior output, save/reopen/export, interruption recovery and denied-source/context
+cases remain mandatory. The existing Overlay is the sole acceptance owner.
+No new AGENTS copy or Context owner is introduced.
+
+The containing commit co-publishes this exact Overlay delta, CURRENT and this
+owning record. Constitution/governance command exits and exact postimage pins
+are retained in [continuity-rule-gates.json](global-discover-rules-20261003/continuity-rule-gates.json).
+This is rule publication only. Current internal_pitch still rejects nonempty
+Brief/Evidence bindings; unpublished v2 existence does not close that gap. The
+normal training review/export handlers are local tested source, with actual Core
+reload AccessDenied and the unchanged live handler probe returning HTTP404.
+No formal target review, source admission, owned AI, or complete C result is
+claimed. Protected source candidates remain separate.
