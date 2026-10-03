@@ -336,6 +336,15 @@ GPL FFmpeg toolchain and signature adapter accurately: packaging clearance is
 NOT_VERIFIED, and cryptography's local declaration was NOT_PUBLISHED in the
 reviewed base. No requirements, App/source or binary installation is included.
 
+The containing rule-correction commit removes the Source Owner Index's
+obsolete Jev comparison/retirement prerequisite and local-provider convergence
+instructions. Those references are historical and inert. C2/W2 directly closes
+approved owned foundation-weight training/inference through the sole Gateway,
+retaining quality, calibration, latency, multilingual/low-confidence, recovery,
+held-out promotion/rollback and useful user outcomes. This changes no provider
+code or runtime and grants no training/source use. The broader 6d722c60 rule
+revision and its actual consumer acknowledgements remain separately retained.
+
 ## 2. Minimal current-context route
 
 Read `AGENTS.md` first, then its mandatory bootstrap and exact capability locator

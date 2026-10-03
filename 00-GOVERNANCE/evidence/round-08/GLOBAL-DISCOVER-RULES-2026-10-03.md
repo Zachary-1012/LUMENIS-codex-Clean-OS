@@ -36,3 +36,13 @@ are included. Other protected code and F implementation candidates are excluded
 and preserved. FFmpeg/crypto registration retains packaging NOT_VERIFIED and
 base declaration NOT_PUBLISHED. Source/DB/model/runtime/browser/external effects are not changed by
 this publication. No historical 129/74/W3 statistics tests are rerun.
+
+## Retired-provider disposition correction
+
+M accepted the exact four legacy-disposition corrections in the Source Owner
+Index. Jev and legacy local/Zhipu routes stay inert; comparison or reactivation
+is no prerequisite for C2/W2 owned training/inference. Original quality, time,
+failure, calibration and rollback gates remain. Provider source/runtime, source
+admission, model training and complete C acceptance are unchanged. The actual
+constitution/governance command/exit and byte pins are retained in
+[retired-rule-gates.json](global-discover-rules-20261003/retired-rule-gates.json).
