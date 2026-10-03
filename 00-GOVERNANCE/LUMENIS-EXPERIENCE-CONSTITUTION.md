@@ -1,6 +1,6 @@
 # LUMENIS Experience Constitution — CURRENT
 
-> Status: **CANONICAL / SOLE EXPERIENCE DESIGN AUTHORITY**  
+> Status: **CANONICAL / SOLE EXPERIENCE DESIGN AUTHORITY**
 > Internal version: **3.2**
 > Effective: 2026-09-21
 > Stable path: `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md`
@@ -40,7 +40,11 @@ Feature contracts may define **objects, fields, states, permissions, workflows a
 
 Historical browser presentation material was removed from `main`. Its templates/static implementations remain forbidden. The approved Public Website and Flutter Web Workspace are new surfaces under this same Constitution; retained contracts under `contracts/experience/` do not grant a second Experience design authority.
 
-Historical design material is recoverable from Git history. It does not belong in the current main tree.
+Historical design material is recoverable from Git history and user attachment
+inventories. User-supplied references and requirements must be studied and mapped;
+do not revive superseded design authorities or retired renderers. Keep bulky
+reference media outside the source tree, with exact provenance and coverage
+receipts in the existing research/evidence paths.
 
 ## 1. Authority order
 
@@ -153,6 +157,63 @@ emoji. Verify representative sequences, exact text return and package-size impac
 do not claim universal Unicode or native-device coverage from Web evidence.
 
 ## 6. Color, light and material
+
+### Product Owner correction — four-surface creative Experience, 2026-10-03
+
+This later direction supersedes assistant-authored storyboard-only, reduced-
+interaction and limited-reference interpretations. Public Website, Web Workspace,
+Desktop App and Mobile Companion all require upgraded creative UI/UX and AIGC
+visual/interaction quality. Recompose for device and actual task; do not exclude
+a surface as merely a wrapper or use mobile limitations to erase a requirement.
+Preserve approved product/runtime roles and real capability handoff where needed.
+
+The user's girl-with-hand-painted-portrait reference establishes a flat 2D,
+human-drawn watercolor/colored-pencil/print-like visual feel: expressive loose
+lines, overlapping pigment and hatch marks, visible paper, irregular edges and
+warm/cool hand-colored accents. Apply that direction to original frontend AIGC
+visuals, meaningful UI illustrations, creative-work presentation and appropriate
+interactive states across all four surfaces. It is not confined to storyboards.
+The reference person's identity is not a fixed character: requested characters
+follow the user's description/script. Avoid plastic 3D render, glossy AI sculpture
+and generic gradient/card SaaS appearance. Keep factual text, controls and semantic
+states readable and distinguishable inside this expressive direction.
+
+Rich color is explicitly permitted. Use deliberate palette hierarchy, meaningful
+contrast, controlled saturation/area and consistent semantic roles; do not impose
+an arbitrary monochrome, low-color or one-accent rule. Avoid indiscriminate color
+and competing focal points. Watercolor pigment layering can be expressive while
+information and accessible controls remain clear. Evaluate the actual composition
+instead of equating creative richness with visual noise.
+
+Interaction richness is required where it improves the work: direct manipulation,
+selection/comparison, spatial or layered exploration, preview, transformation,
+editing, source Trace and exact Return. Do not equate clarity, restraint or
+accessibility with removing controls, motion, AIGC or creative interaction. Provide
+keyboard/touch equivalents, interruptible transitions and user/system reduced-
+motion support without deleting the underlying capability or making all default
+experiences static. Different tasks need different compositions.
+
+The scroll requirement is no unnecessary up/down scrolling, not removal of
+content or interaction. Fit primary work and essential controls to the viewport;
+use task-appropriate panes, zoom, timeline/canvas, reversible layers and explicit
+navigation. Long documents, data or accessibility enlargement may need scrolling;
+justify the region, preserve position/context and retain all information. Avoid
+unnecessary nested scroll and elongated template pages; never clip content merely
+to make a screenshot fit.
+
+All supplied historical videos remain in scope for frame-by-frame study. Record
+actual file/hash, frame count/PTS, visual transition, interaction trigger, state,
+task intent, four-surface adaptation and exact implementation/acceptance location.
+Exact duplicate frames may share one visual read only with an exhaustive frame
+mapping; sparse thumbnails, decoded frames or a few highlights are not full visual
+analysis. Missing files/remote material remain explicit unresolved items. The
+historical12 editing exercises are a separate corpus, not the entire reference
+library the user estimates at100-200 videos.
+The five earlier videos supplied to the independent frontend window are explicitly
+included, together with all earlier Codex reference videos stored locally. Locate
+those originals proactively; do not ask the user to resend already available files
+or substitute the newest clip for the historical set.
+
 
 ### Product Owner direction — 2026-09-24 frontend reconstruction
 
@@ -523,8 +584,11 @@ Creative-industry research, accessed 2026-09-28, principle-only:
   maintained upstream: reuse existing route, dialog, focus and paint primitives.
   No new runtime dependency, copied asset, external effect or account is needed.
 
-AIGC remains a method for making original frontend materials; it does not create
-a new user-facing generation feature. The generated optical sculpture explored
+The Product Owner's 2026-10-03 correction supersedes the former materials-only
+restriction: AIGC includes original frontend visual materials AND the requested
+user-facing generation/creative interaction through existing AI and creation
+owners. Map each actual user action and output to its current owner, Permission,
+source/material version and honest runtime state; this adds no second AI owner. The generated optical sculpture explored
 on this date is `DESIGN_EXPLORATION / DEFER`, excluded from the production asset
 bundle pending a restrained, task-specific review. Depth/motion must clarify a
 real layer or selection, be interruptible, and become immediate in reduced motion.
@@ -664,7 +728,12 @@ For non-trivial work, the plan names active workflow, truth sources, semantic pr
 
 ## 27. Repository exclusivity
 
-The current main tree must not contain historical UI/UX/visual design authorities, design research packs, Apple/UI reference packs, old visual baselines, old design-system documents, old frontend design handoffs or old page-design specifications.
+The current main tree must not restore superseded UI/UX/visual authorities,
+retired templates or competing design systems. This is not a ban on studying
+user-supplied videos/images, historical requests or research. Preserve their
+exact references and adoption/coverage records; promote applicable requirements
+through this Constitution and current detailed specifications. Bulky original
+media remains in its protected material location rather than the Git source tree.
 
 Those remain recoverable from Git history.
 
@@ -810,7 +879,11 @@ Motion may clarify causality, selection, progress, successful persistence, block
 
 External creative work, including Korean product-app craft and `motion-web`, may inform general principles such as task clarity, progressive disclosure, crisp response, restrained transitions, accessibility and measurable interaction quality. Product semantics, information architecture, composition and visual identity remain LUMENIS-owned and are derived from real domain objects and workflows.
 
-The approved principle mapping is narrow: Apple informs restraint, content priority, one clear primary action and an uncluttered search entry when an existing workflow is search-led; ChatGPT informs a single intent entry and progressive disclosure of existing complexity; TRAE informs visible **task → execution → result** feedback for existing workflows. These references do not authorize new Chat, Work, Project, recent-content, search, task-platform or account capabilities, and they do not replace any current business function or backend owner.
+The named examples below are non-exhaustive. The user's historical and current
+video/image requirements take priority over an assistant's narrow reference list;
+extract and adapt their actual visual and interaction mechanisms, record the
+frames studied and restate the chosen design here or in a governed specification.
+The earlier examples are: Apple informs restraint, content priority, one clear primary action and an uncluttered search entry when an existing workflow is search-led; ChatGPT informs a single intent entry and progressive disclosure of existing complexity; TRAE informs visible **task → execution → result** feedback for existing workflows. These references do not authorize new Chat, Work, Project, recent-content, search, task-platform or account capabilities, and they do not replace any current business function or backend owner.
 
 For Korean product-app craft, study public product-engineering documentation such as the [Toss Design System component guide](https://developers-apps-in-toss.toss.im/landing-page/landing-page-en/design/components) for consistency, clear component guidance and task-focused implementation. Its UI Kit terms restrict use of Toss materials to the Apps in Toss service, so LUMENIS does not adopt the UI Kit, components, assets or visual patterns. Extract only general, non-visual principles, then test those against LUMENIS workflows.
 

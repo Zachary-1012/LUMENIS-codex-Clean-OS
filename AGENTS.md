@@ -11,6 +11,14 @@ execution instructions.
 
 ## 1. Authority
 
+Current explicit Product Owner requirements define the required outcome and
+scope. Source/runtime truth describes what exists and what is proven; missing
+implementation cannot cancel an unmet user requirement. Preserve unretracted
+requirements from M, C1-C6, F and the user's research/material submissions with
+their provenance and current owner. A later explicit user correction supersedes
+an assistant-authored narrowing, old summary or old reference restriction.
+Do not turn an incomplete history retrieval into a complete coverage claim.
+
 When evidence conflicts:
 
 ```text
@@ -245,6 +253,39 @@ and DB inspection and the directly affected governance gates are authorized.
 The single paid GPU was released; new costs need an actual approved execution
 plan and applicable cost authority. Rule notifications must explicitly preserve
 this pause. Only a later Product Owner instruction resumes product work.
+
+### Product Owner correction: optimal method, full capability — 2026-10-03
+
+The latest seven corrections are active M work: resolve the deprecated Guardian
+setting, recover all window requirements/research/media, inspect supplied videos
+frame by frame, study official websites article by article including support,
+guides and release logs, correct the four-surface UI/UX/AIGC rules and synchronize
+the exact rules online/offline. Other product windows retain their pause until
+the requested review/resume decision; this is not a return to the rejected scope.
+
+For a capability or bug, research relevant current GitHub implementations and
+frontier/real-product cases before selecting its method. Compare task fitness,
+accuracy, full capability, recovery, licensing, maintainability and actual cost/
+latency; choose the strongest feasible fit, not the easiest implementation or a
+smaller product. Reuse pinned valid research where applicable instead of creating
+a new research loop. Then implement the selected path directly and verify the
+actual outcome with affected checks. Required accuracy/recovery/security gates
+remain; irrelevant tests, repeated unchanged trials, speculative parallel
+candidates and repeated reports are prohibited.
+
+M owns a discovered defect through resolution within the authorized scope:
+diagnose/research, coordinate the existing writer, fix, verify the effect and
+report the result. Do not bounce it back to the reporter or require another user
+reminder. A real permission/environment blocker is recorded once with the next
+executable step. Protect existing source/data and active shared writers.
+
+Keep one current input/version manifest per outcome and pointers to archived
+evidence. Classify superseded candidates without deleting unique valid work;
+do not load every old candidate/report into each context. Research materials
+must map both to product-capability improvements and, where separately approved,
+training/learning use. Capturing, reading, adopting, implementing and accepting
+are distinct states. No summary, selected sample, navigation map or reference
+count completes the full requested corpus.
 
 ### Direct execution and continuous collection
 
@@ -529,7 +570,16 @@ All UI/UX/visual/presentation decisions remain subordinate to the sole authority
 
 `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md`
 
-Historical UI/UX documents, screenshots, copied Apple/GPT reference packs and old design systems are forbidden development inputs. The only permitted external-reference input is the bounded abstract principle mapping recorded in the current Experience Constitution; it cannot add features, copy layouts or become a second design authority.
+User-supplied historical videos, images, UI/UX requirements and research must be
+recovered and studied with source/coverage records. They are reference evidence,
+not a competing design authority, and their age is not grounds for discarding
+them. Restore unique user requirements into the current Experience Constitution
+and detailed specifications before implementation. Retired templates/static
+renderers remain retired; reference study does not grant third-party code/asset
+rights. The Product Owner's 2026-10-03 correction requires four-surface creative
+UI/UX/AIGC, the supplied hand-drawn watercolor visual direction, useful rich
+interaction and no unnecessary vertical scrolling. It is not storyboard-only
+or a mandate to reduce interactions.
 
 The approved audit PDF, its 44 sketches and any later AI/Figma/wireframe output are
 `DESIGN_EXPLORATION` unless the applicable `<SCREEN-ID>.md` has been reviewed and

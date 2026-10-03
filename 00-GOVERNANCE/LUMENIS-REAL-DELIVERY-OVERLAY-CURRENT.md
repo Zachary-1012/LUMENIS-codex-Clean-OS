@@ -1135,3 +1135,27 @@ Product Owner clarification (2026-10-02): 本轮工程/产品闭环必须完成�
 Collector、Browser、AI、Content、Agent、Reporting、Evaluation、Learning 与 CTH/BMP workflow 依据真实 Evidence 持续演进。候选改进必须映射回 canonical owner、对象、Permission、Evidence、workflow 和 LUMENIS Experience，并经过版本化资产、测试、真实运行/E2E、效果评估、可观测性、回滚与 Sol 验收后才可晋级。注册、import、模型输出、论文结论或外部项目活跃度都不能直接成为产品能力。
 
 若本轮研究后没有适用升级，仍必须记录 `RESEARCH COMPLETE / NO JUSTIFIED UPGRADE` 和拒绝/延后证据；不得省略研究门。外部账号、许可证或商业授权不清仅阻止对应采用，不得拖延无冲突研发。
+
+## Product Owner full-scope correction — 2026-10-03
+
+Acceptance remains full C1-C6/R01-R15/J1-J8/U01-U25 plus every unretracted user
+requirement supplied to M, the six delivery roles and F. Optimal execution is the
+best accurate, effective, feasible method for those fixed outcomes, selected from
+current GitHub/official/frontier and real-product evidence before implementation;
+it is not the easiest smaller capability. Reuse valid evidence, avoid unrelated
+tests/candidates and retain meaningful failure/recovery verification.
+
+Four-surface creative UI/UX/AIGC, rich useful interaction, no unnecessary vertical
+scrolling and the user's watercolor/hand-drawn reference are acceptance dimensions
+under the sole Experience Constitution. Every supplied reference video requires
+frame-level coverage and adoption decisions;12 production exercises do not replace
+the larger historical reference corpus. Research must improve applicable product
+capabilities as well as approved model learning. A source file inventory, fetched
+webpage, storyboard, test or example cannot prove those requirements completed.
+
+The official-website research requirement is article-by-article, including support,
+instructions, documentation and release logs, all discovered historical/language
+variants and accessible relevant login pages. Maintain an explicit URL universe,
+actual retrieval/read coverage and adaptation decisions. Authentication, robots,
+access denial and missing pages remain real gaps, not permission to bypass or
+silently sample. Index/navigation/category review alone is incomplete.

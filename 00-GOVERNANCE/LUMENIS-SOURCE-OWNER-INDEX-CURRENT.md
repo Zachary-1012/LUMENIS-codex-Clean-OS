@@ -354,3 +354,21 @@ The latest product evaluation is accepted as a sharper **user-work acceptance te
 ## 9. Current full-repository audit coverage — 2026-10-03
 
 The Product Owner requested a complete capability audit while product windows are paused. The [current dated audit](evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md) covers all tracked roots, current source/caller slices, formal DB/runtime snapshots, 54 binding rows, R01-R15/J1-J8/U01-U25 and the original six urgent exits. The 44-screen capability obligations remain; page counts do not impose a generic layout. Historical tables above are preserved as provenance and cannot overrule current source or this dated audit. No product capability is accepted merely by inclusion in the inventory.
+
+## 10. User requirement and research recovery — 2026-10-03 correction
+
+The earlier audit inventories source and contracts, not the complete historical
+user requirement corpus. Do not claim all M/C1-C6/F requirements are captured
+until their actual user messages and material manifests have been reconciled.
+Keep every unretracted requirement with source thread/date/attachment, C/R/J/U
+owner, four-surface applicability, adoption, implementation and acceptance state.
+100-200 user-estimated reference videos cannot be reduced to12 editing exercises.
+The exact accessible inventory is measured, with missing/duplicate references
+recorded rather than invented or silently excluded.
+
+Research enters both product-capability improvement and separately authorized
+AI training/learning. Books, courses, papers, open-source work, user videos/images
+and official product/support/release material remain traceable to actual changes.
+M corrects narrowed rules and carries detected bugs through the existing owner
+to a verified repair; an audit finding alone is not resolution. This does not
+resume paused product windows or authorize paid resources.

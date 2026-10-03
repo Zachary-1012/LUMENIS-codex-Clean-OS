@@ -492,3 +492,27 @@ files and frozen candidates are not included. Existing historical test receipts
 are reused at their own source state. Actual scoped governance gate outcomes are
 in [audit-rule-gates.json](evidence/round-15/full-product-audit-20261003/audit-rule-gates.json).
 Full C1-C6, USER_VERIFIED, RELEASED, OPERATING and Market Proof remain OPEN.
+
+## Latest Product Owner seven-part correction — 2026-10-03
+
+The Product Owner rejected incomplete history/website coverage and the narrowed
+frontend interpretation in the preceding audit. Current state is
+REQUIREMENTS_RECONCILIATION_IN_PROGRESS, not full requirement recovery complete.
+M is executing the specifically requested configuration verification, all-window
+requirement/material recovery, frame-by-frame reference study, article-by-article
+official product/support/docs/release research, four-surface UI/UX/AIGC/watercolor
+rule corrections and online/offline synchronization. Existing product windows
+remain paused pending the review/resume instruction; no paid GPU is reactivated.
+
+The current Codex config/profile files contain no removed thread_context key,
+and a fresh load by the actual desktop Codex binary returned exit0 without that
+deprecation warning. This is observed configuration verification, not a claim
+that M removed a key which was already absent; model defaults are unchanged.
+
+User requirements define the required future outcome; current source describes
+actual implementation and cannot be used to erase missing capability. Research
+improves the product as well as separately approved training. The corrected
+Experience Constitution covers the supplied flat hand-drawn watercolor direction,
+rich interaction and no unnecessary vertical scrolling across all four surfaces.
+Earlier storyboard-only/materials-only and navigation-only conclusions are
+superseded. The existing R/J/U and full capability obligations remain cumulative.

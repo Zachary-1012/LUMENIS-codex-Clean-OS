@@ -391,3 +391,11 @@ Tests/staging 必须显式使用 isolated/disposable DB；任何 persistence 变
 产品窗口 C1–C6 与独立前端 F 已按用户要求暂停，等待产品负责人审核；当前仅 M 统一规则、全仓能力审计与六轮闭环报告/官网调整提案。规则发布和通知不自动恢复开发。详见 CURRENT 与本次六轮闭环审计报告。
 
 本轮审核材料：[六轮闭环执行报告](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md) · [全仓能力覆盖](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/CAPABILITY-COVERAGE.md) · [官网调整提案](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/WEBSITE-ADAPTATION.md)。这些是待审核材料，不代表产品闭环或恢复执行。
+
+### 用户七项修正：需求与研究恢复中（2026-10-03）
+
+上一轮源文件盘点不等于所有窗口历史需求已收齐，官网栏目对照不等于逐篇研究。
+当前M正在恢复全部需求/参考视频/研究材料，逐帧与逐篇研究并修正规则。四端
+UI/UX/AIGC均升级，女孩手绘水彩风格进入前端，保留丰富有用交互，非必要不
+纵向滚动。最优解指实现方法的准确、有效、快速，不能缩能力换方便。具体要求
+归AGENTS、Experience和Owner Index；其他产品窗口仍暂停，GPU不重租。

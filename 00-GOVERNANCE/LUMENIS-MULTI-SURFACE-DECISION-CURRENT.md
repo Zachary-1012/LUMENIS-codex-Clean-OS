@@ -46,6 +46,17 @@ The surfaces may recompose navigation, density and interaction for their devices
 | Desktop App | Power User Client | Full workspace plus local Browser/CDP, Cookie/session, Collector, long-running tasks, local files, approved owned AI capability, enterprise LAN/private deployment, recovery and advanced execution | Desktop-only capability remains behind SYSTEM Permission/effect fences and explicit capability state; it does not create separate business truth |
 | Mobile Companion | Timely review and light action | Notifications, events, AI results, approvals, task state, report reading and bounded quick actions | Not the primary dense-analysis or local-execution environment; unavailable capability is shown honestly and may hand off to an authorized Web/Desktop task |
 
+### Four-surface upgrade requirement — 2026-10-03
+
+All four surfaces receive the user's creative UI/UX/AIGC, historical-reference,
+hand-drawn watercolor and interaction upgrades under the Experience Constitution.
+The roles above constrain actual execution and data ownership, not design ambition
+or which surface receives improvements. Device-appropriate composition preserves
+the user's capabilities and continuity; it does not justify a generic thin shell,
+reduced interaction or ignoring Website/Mobile. Record each requirement's concrete
+entry, behavior, state and verification on every applicable surface, including a
+real handoff where the runtime capability is device-specific.
+
 ## 3. Approved technical route
 
 The approved route is hybrid and keeps one Product Core:
