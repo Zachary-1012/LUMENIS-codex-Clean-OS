@@ -516,3 +516,10 @@ Experience Constitution covers the supplied flat hand-drawn watercolor direction
 rich interaction and no unnecessary vertical scrolling across all four surfaces.
 Earlier storyboard-only/materials-only and navigation-only conclusions are
 superseded. The existing R/J/U and full capability obligations remain cumulative.
+
+Exact historical-user readback correction: F's line13050 explicitly distinguishes
+frontend AIGC/3D presentation from a request to add an AIGC-production feature.
+The current four-surface watercolor/visual/interaction direction is retained;
+existing content-generation business capabilities are evaluated separately under
+their own approved scope. The overly broad user-facing-generation interpretation
+in the immediately preceding Experience wording is corrected, not made a new task.

@@ -584,11 +584,15 @@ Creative-industry research, accessed 2026-09-28, principle-only:
   maintained upstream: reuse existing route, dialog, focus and paint primitives.
   No new runtime dependency, copied asset, external effect or account is needed.
 
-The Product Owner's 2026-10-03 correction supersedes the former materials-only
-restriction: AIGC includes original frontend visual materials AND the requested
-user-facing generation/creative interaction through existing AI and creation
-owners. Map each actual user action and output to its current owner, Permission,
-source/material version and honest runtime state; this adds no second AI owner. The generated optical sculpture explored
+The original F user message at session 01a0cf2d-6ece-7c90-8877-b58fc80a4480,
+line13050, distinguishes AIGC/3D frontend presentation from a request to add an
+AIGC-production feature. The current four-surface direction requires original
+generated visuals, creative composition and rich interactive/motion presentation;
+it is not limited to a static illustration. Do not infer a new generation module
+from this frontend requirement. Separately approved AI/content-creation business
+capabilities retain their own full owners and acceptance. Preserve existing
+Permission, material/version and real-state bindings; no second AI owner is added.
+The generated optical sculpture explored
 on this date is `DESIGN_EXPLORATION / DEFER`, excluded from the production asset
 bundle pending a restrained, task-specific review. Depth/motion must clarify a
 real layer or selection, be interruptible, and become immediate in reduced motion.
