@@ -1,0 +1,79 @@
+{
+  "schema": "w6.fixed-duration-clip-rule-publication/v1",
+  "base": "37b11e80ec11464314b954976c1d7cfd94972dce",
+  "M_decision": "DESIGN_READY_ONLY",
+  "M_patch_sha256": "bef285b5765ff88e70b27954ab834470a916432eb27fe772e916f0f71907f0ce",
+  "paths": {
+    "contracts/experience/screen-specifications/SH-01.md": {
+      "preimage_raw_sha256": "be8e1871b9a5cb3c8f3f0f2b62444283973d769fd8b21fb505129ea08dcd2bc0",
+      "postimage_sha256": "d61c8bd63c86f19745fb40b2c3b7cd0e7cd41f66400ae9407d05eb1206e0877c",
+      "bytes": 47459
+    },
+    "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md": {
+      "preimage_raw_sha256": "405836d35a716291df585612463d758789dd73b2fb2b10ac521e3a29e52111a4",
+      "postimage_sha256": "fa0a8f57fd8b9102fc7fd932f11397b226e2a51a3ed531d432a31a91e671aa3e",
+      "bytes": 32787
+    },
+    "00-GOVERNANCE/evidence/round-08/GLOBAL-DISCOVER-RULES-2026-10-03.md": {
+      "preimage_raw_sha256": "ee9388f584610668f526e10add0ec9f4a1f28a722f12cbd4ad06e5625e574223",
+      "postimage_sha256": "c00d7444b397c745850c4fa482458be8a78dbd96d42a4473d62a90038f92e15d",
+      "bytes": 9051
+    }
+  },
+  "gates": {
+    "verify_ai_native_constitution": {
+      "argv": [
+        "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
+        "scripts/audit_tools/verify_ai_native_constitution.py"
+      ],
+      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-clip-rule-37b-0_r6d1ts",
+      "exit_code": 0,
+      "log_sha256": "e30d82c88700d83e334b9d746d862749bb960251f028c8d76450046dcbfcaeca",
+      "log_text": "AI-NATIVE CONSTITUTION GATE: PASS\r\n - 18 lightweight principles present\r\n - AGENTS/README bootstrap routes through the constitution\r\n - non-bypass status and dirty-worktree protections present\r\n - missing!=0 and CI anti-bypass regression anchors present\r\n - Product Gate executes this validator as BLOCKING\r\n"
+    },
+    "verify_codex_takeover_governance": {
+      "argv": [
+        "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
+        "scripts/audit_tools/verify_codex_takeover_governance.py"
+      ],
+      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-clip-rule-37b-0_r6d1ts",
+      "exit_code": 0,
+      "log_sha256": "b3b3bb0c406adabf6d42e4d4f77059cc70155e01f0bcd5261315342439c8e1ea",
+      "log_text": "CODEX TAKEOVER GOVERNANCE OK lumenis-ggi-cross-product v1.1.0 68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f single-machine-contract=PASS six-round-routing=PASS legacy-coverage=PASS cloud-boundaries=PASS workflow-guards=PASS online-progress=PASS\r\n"
+    },
+    "verify_experience_authority_exclusive": {
+      "argv": [
+        "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
+        "scripts/audit_tools/verify_experience_authority_exclusive.py"
+      ],
+      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-clip-rule-37b-0_r6d1ts",
+      "exit_code": 0,
+      "log_sha256": "522a9aae1293051a9a67a822b09ef9c4de1cfafaff671dc6cf7545265b08de78",
+      "log_text": "LUMENIS Experience authority exclusivity: PASS\r\nsole_authority=00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md\r\napproved_experience_surfaces=public-website,web-workspace,desktop-app,mobile-companion\r\nlegacy_design_authorities=0\r\n"
+    },
+    "verify_experience_anti_template": {
+      "argv": [
+        "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
+        "scripts/audit_tools/verify_experience_anti_template.py",
+        "--strict"
+      ],
+      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-clip-rule-37b-0_r6d1ts",
+      "exit_code": 0,
+      "log_sha256": "dbfa407a8e69a76815e7266800f78c05d5b7c5a946db38156664a7e428845d17",
+      "log_text": "{\r\n  \"ok\": true,\r\n  \"mode\": \"strict\",\r\n  \"canonical_experience\": \"public-website + app/web-desktop-mobile\",\r\n  \"experience_authority\": \"00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md\",\r\n  \"dart_file_count\": 207,\r\n  \"legacy_web_authority\": false\r\n}\r\n"
+    },
+    "verify_experience_screen_blueprints": {
+      "argv": [
+        "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
+        "scripts/audit_tools/verify_experience_screen_blueprints.py"
+      ],
+      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-clip-rule-37b-0_r6d1ts",
+      "exit_code": 0,
+      "log_sha256": "36d92c2f6575d2fb0f0f91ddfb81a68a61977ad724b4510dbcffbdeb4661a07c",
+      "log_text": "Experience blueprint/source contract: PASS screens=44 bindings=54 sha256=verified ids=verified\r\n"
+    }
+  },
+  "product_tests_rerun": false,
+  "source_runtime_DB_changed": false,
+  "product_accepted": false
+}

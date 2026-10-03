@@ -404,6 +404,15 @@ required through existing owners. Neither a catalog opening an empty workbench
 nor internal_pitch rejecting Brief/Evidence bindings closes that requirement.
 Actual source/API/runtime continuity remains OPEN.
 
+The containing rule unit publishes M's DESIGN_READY-only SH-01 section 10.13
+for replacing one selected clip while preserving its exact timeline duration.
+The source rule preimage is main37b11e80ec11464314b954976c1d7cfd94972dce;
+the exact M-approved patch and postimage are recorded in round-08 evidence.
+Existing media Source/Artifact/Permission owners, source bounds, audio and
+caption relationships, editing history and return/reopen remain required.
+Replacement implementation, source-use authorization, actual output export
+and recovery are OPEN. This rule does not accept a product capability.
+
 ## 2. Minimal current-context route
 
 Read `AGENTS.md` first, then its mandatory bootstrap and exact capability locator

@@ -119,3 +119,25 @@ against the isolated exact addendum; actual argv/exits are in
 [sh01-continuity-gates.json](global-discover-rules-20261003/sh01-continuity-gates.json).
 Protected source and formal DB are unchanged, including the normal training
 review/export local candidate and its actual Core AccessDenied/HTTP404 blocker.
+
+## Fixed-duration clip replacement design
+
+M reviewed F's existing SH-01 clip replacement design as DESIGN_READY_ONLY.
+This publication applies only the exact section 10.13 delta, synchronizes
+CURRENT and this owning round record, and preserves all previous sections.
+Patch SHA256 bef285b5765ff88e70b27954ab834470a916432eb27fe772e916f0f71907f0ce;
+SH-01 preimage be8e1871b9a5cb3c8f3f0f2b62444283973d769fd8b21fb505129ea08dcd2bc0;
+postimage d61c8bd63c86f19745fb40b2c3b7cd0e7cd41f66400ae9407d05eb1206e0877c.
+
+The exact design governs one selected clip's source replacement. Source
+bounds, timeline duration, affected audio/captions and edit/recovery
+behavior remain subject to canonical owners and actual acceptance. The
+research-to-creation continuity rules remain in force. Existing user inputs
+and source permissions cannot be replaced by a file URL or client assertion.
+Implementation, real replacement/export/reopen and product acceptance are
+OPEN; no Source, model, DB, runtime or user-result claim is made here.
+
+Five constitution/governance/Experience checks and staged diff check apply.
+Actual argv/exits are in [clip-replacement-gates.json]
+(global-discover-rules-20261003/clip-replacement-gates.json). Unchanged product
+tests are reused. Protected dirty sources and formal DB remain untouched.
