@@ -353,7 +353,7 @@ The latest product evaluation is accepted as a sharper **user-work acceptance te
 
 ## 9. Current full-repository audit coverage — 2026-10-03
 
-The Product Owner requested a complete capability audit while product windows are paused. The [current dated audit](evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md) covers all tracked roots, current source/caller slices, formal DB/runtime snapshots, 54 binding rows, R01-R15/J1-J8/U01-U25 and the original six urgent exits. The 44-screen capability obligations remain; page counts do not impose a generic layout. Historical tables above are preserved as provenance and cannot overrule current source or this dated audit. No product capability is accepted merely by inclusion in the inventory.
+The Product Owner requested this capability audit during the earlier product pause; C1-C6 are now explicitly resumed and F remains paused under AGENTS. The [current dated audit](evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md) covers all tracked roots, current source/caller slices, formal DB/runtime snapshots, 54 binding rows, R01-R15/J1-J8/U01-U25 and the original six urgent exits. The 44-screen capability obligations remain; page counts do not impose a generic layout. Historical tables above are preserved as provenance and cannot overrule current source or this dated audit. No product capability is accepted merely by inclusion in the inventory.
 
 ## 10. User requirement and research recovery — 2026-10-03 correction
 
@@ -370,8 +370,9 @@ Research enters both product-capability improvement and separately authorized
 AI training/learning. Books, courses, papers, open-source work, user videos/images
 and official product/support/release material remain traceable to actual changes.
 M corrects narrowed rules and carries detected bugs through the existing owner
-to a verified repair; an audit finding alone is not resolution. This does not
-resume paused product windows or authorize paid resources.
+to a verified repair; an audit finding alone is not resolution. Execution state
+and current paid-resource authorization come only from the latest user instruction
+recorded in AGENTS: C1-C6 resumed, F paused, C2 original single-GPU renewal approved.
 
 ## 11. Active material accountability and missing-entry requirements
 

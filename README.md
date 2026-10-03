@@ -254,7 +254,7 @@ git ls-remote --heads origin
 
 Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)，随后读取 [`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)。
 
-当前唯一方案保留 **C1–C6 六个完整交付职责**：C3（CTH/BMP）与 C5（资料/共享成果）已由同一个本地「序境｜C3+C5 与未完成研究资料接续」窗口承接，并保留未完成研究；原云端 W3/W5 仅保留交接。C1、C2、C4、C6 继续本地执行，前端 F 独立，主控 M（Sol 或 Astra）把关验收，W6 集成发布。原 R01–R15、J1–J8、六项专项验收映射保留，不再分别派工。当前产品执行已暂停待审核；恢复后以完整用户成果组织任务，按真实依赖并行推进，遇到缺陷先定向研究再修复和必要验证。分工/云隔离见 [AGENTS.md](AGENTS.md)，完整映射见 [Source Owner Index](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)。旧本地模型/智谱/OpenCode 模型调用停止、接口保留；C2 完成自有权重训练运行。实时对话语音后置，音频理解/播客保留；账号密码重设计在工程闭环后，开放入口仍保留服务端 Permission/effect fence。
+当前唯一方案保留 **C1–C6 六个完整交付职责**：C3（CTH/BMP）与 C5（资料/共享成果）已由同一个本地「序境｜C3+C5 与未完成研究资料接续」窗口承接，并保留未完成研究；原云端 W3/W5 仅保留交接。C1、C2、C4、C6 继续本地执行，前端 F 独立，主控 M（Sol 或 Astra）把关验收，W6 集成发布。原 R01–R15、J1–J8、六项专项验收映射保留，不再分别派工。当前C1–C6已按最新明确指令恢复，前端F仍暂停；以完整用户成果组织任务，按真实依赖并行推进，遇到缺陷先定向研究再修复和必要验证。分工/云隔离见 [AGENTS.md](AGENTS.md)，完整映射见 [Source Owner Index](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)。旧本地模型/智谱/OpenCode 模型调用停止、接口保留；C2 完成自有权重训练运行。实时对话语音后置，音频理解/播客保留；账号密码重设计在工程闭环后，开放入口仍保留服务端 Permission/effect fence。
 
 默认执行方式：
 
@@ -388,17 +388,17 @@ Tests/staging 必须显式使用 isolated/disposable DB；任何 persistence 变
 
 ## 当前审核状态（2026-10-03）
 
-产品窗口 C1–C6 与独立前端 F 已按用户要求暂停，等待产品负责人审核；当前仅 M 统一规则、全仓能力审计与六轮闭环报告/官网调整提案。规则发布和通知不自动恢复开发。详见 CURRENT 与本次六轮闭环审计报告。
+最新明确授权：C1–C6目标已原地更新并恢复执行，C3+C5仍由既有本地窗口承接；独立前端F继续暂停。M已发布规则、完整成果验收与材料责任，资料研究由各Owner接续，不再把中央全量审计设为执行前置。恢复依据是用户明确指令，规则发布本身不代表能力验收。
 
-本轮审核材料：[六轮闭环执行报告](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md) · [全仓能力覆盖](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/CAPABILITY-COVERAGE.md) · [官网调整提案](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/WEBSITE-ADAPTATION.md)。这些是待审核材料，不代表产品闭环或恢复执行。
+本轮审核材料：[六轮闭环执行报告](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md) · [全仓能力覆盖](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/CAPABILITY-COVERAGE.md) · [官网调整提案](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/WEBSITE-ADAPTATION.md)。这些是审计和执行输入，不代表产品闭环；最新执行状态见上方及CURRENT。
 
 ### 用户七项修正：需求与研究恢复中（2026-10-03）
 
 上一轮源文件盘点不等于所有窗口历史需求已收齐，官网栏目对照不等于逐篇研究。
-当前M正在恢复全部需求/参考视频/研究材料，逐帧与逐篇研究并修正规则。四端
+全部需求/参考视频/研究材料由材料责任窗口接续逐帧、逐篇研究，M维护唯一规则。四端
 UI/UX/AIGC均升级，女孩手绘水彩风格进入前端，保留丰富有用交互，非必要不
 纵向滚动。最优解指实现方法的准确、有效、快速，不能缩能力换方便。具体要求
-归AGENTS、Experience和Owner Index；其他产品窗口仍暂停，GPU不重租。
+归AGENTS、Experience和Owner Index；C1–C6恢复，F暂停。C2获准按原单卡方案自行续租并训练。
 
 ### 当前收口与材料责任（2026-10-03）
 
@@ -406,4 +406,6 @@ M收规则和完整成果验收；视频由F/C4接续，全部资料由对应窗
 [资料责任表及逐条清单](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-CONTRACT.md)。
 视频与播客都必须具备可实际滑动的时间轴；开发者模式按用户最新要求后置，保留来源/责任、不作为本次阻断项。
 AI训练列P0，先补实际本地依赖再启动获准算力；不等待全量研究。按用户要求规则
-同步后非前端窗口切GPT-6.1 Sol/max，前端保留手选；全产品开发暂停/审核仍区分。
+同步后C1/C2/C3+C5/C4/C6用GPT-6.1 Sol/max；M按最新指令用Sol/ultra；F保留手选且暂停。
+C2须先完成训练前准备，于2026-10-03中国时间24:00前自行续租原RTX5090单卡按时资源并开始真实训练；准备失败先修复，失败阻断须保存并停止空转计费。
+原生Goal通过官方协议原地更新并读回，预算及已用计数未重置；[目标与恢复回执](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/EXECUTION-RESUME-20261003.md)。

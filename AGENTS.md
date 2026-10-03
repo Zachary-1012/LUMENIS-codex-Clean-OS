@@ -239,20 +239,20 @@ thread, account, fixed source base and manually selected model/effort.
 
 Collector/Scheduler product operation must not depend on a Codex task, CUA session, work-directory harness or daily developer trigger. The Global contract defines this proof. Current Source-derived discovery/creation and budget requirements belong to the existing Experience, Global and Real Delivery contracts and mapped J/U rows; no second recommendation, budget, learning or collection authority is authorized.
 
-### Current Product Owner audit pause — 2026-10-03
+### Current Product Owner execution authorization — 2026-10-03 late update
 
-The Product Owner paused other product tasks and authorized M to unify rules,
-audit the full repository/capabilities, and submit one six-delivery closure report
-plus the official-website adaptation proposal for review. C1-C6 and F remain
-`PAUSED_PENDING_PRODUCT_OWNER_REVIEW`; M's governance/audit work is active.
-M may publish this exact governance/audit-only reconciliation after verifying
-protected work and the empty index handed off by W6. This does not transfer
-W6's normal product integration ownership or resume product code, collection,
-GPU rental/training, tests, deployments or runtime restarts. Read-only runtime
-and DB inspection and the directly affected governance gates are authorized.
-The single paid GPU was released; new costs need an actual approved execution
-plan and applicable cost authority. Rule notifications must explicitly preserve
-this pause. Only a later Product Owner instruction resumes product work.
+The Product Owner explicitly resumed C1-C6 after native Goal updates; F remains
+paused under the immediately following instruction. C3 and C5 retain their single
+existing local continuation window. M publishes the exact rule/status handoff,
+then W6 resumes its sole product integration and main-publication responsibility.
+Protected dirty work and every R/J/U acceptance requirement remain intact.
+C2 is authorized to renew the previously approved single Matpool RTX5090 hourly
+resource and start actual GPU training before 2026-10-03 24:00 Asia/Shanghai.
+Complete executable training prerequisites before rental, verify the current
+quote, preserve checkpoint/output and stop billing if an unresolved failure
+prevents progress. This does not authorize extra GPUs or an expanded paid tier.
+Other independent collection/entity growth and complete outcome work proceed;
+F's pause blocks its own work only. Developer mode remains deferred.
 
 ### Product Owner correction: optimal method, full capability — 2026-10-03
 
@@ -260,8 +260,8 @@ The latest seven corrections are active M work: resolve the deprecated Guardian
 setting, recover all window requirements/research/media, inspect supplied videos
 frame by frame, study official websites article by article including support,
 guides and release logs, correct the four-surface UI/UX/AIGC rules and synchronize
-the exact rules online/offline. Other product windows retain their pause until
-the requested review/resume decision; this is not a return to the rejected scope.
+the exact rules online/offline. The later explicit C1-C6 resume above now governs;
+F remains paused. Material coverage and capability requirements are not reduced.
 
 For a capability or bug, research relevant current GitHub implementations and
 frontier/real-product cases before selecting its method. Compare task fitness,
@@ -1114,13 +1114,13 @@ AI training is the first ready execution priority: close the actual local
 material/signing/runner/checkpoint prerequisites before paid GPU time starts,
 then execute the approved model path directly. Do not await all corpus research,
 reselect unchanged hardware/model or substitute a CPU demo for real training.
-Paid-resource reactivation still requires the existing actual cost approval;
-the released instance is not a running lease. Other independent capabilities
+The latest explicit C2 single-card renewal authorization above supplies the
+current cost authority; the previously released instance is not a running lease. Other independent capabilities
 and collection/entity growth proceed when their execution is authorized.
 
-After rule synchronization, configure current non-frontend LUMENIS windows as
-GPT-6.1 Sol / max per the user's latest request; F retains its current manual
-selection. M is included. Preserve global defaults and report actual control
+After rule synchronization, configure C1/C2/C3+C5/C4/C6 as GPT-6.1 Sol / max.
+The latest M-specific instruction is GPT-6.1 Sol / ultra; F retains its current
+manual selection and remains paused. Preserve global defaults and report actual control
 results; no silent fallback or unverifiable claim that a model executed.
 Research/bug repair uses current relevant GitHub and frontier evidence to choose
 the best complete method, then one coherent outcome implementation and directly

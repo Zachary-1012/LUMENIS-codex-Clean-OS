@@ -33,7 +33,7 @@ coverage map into these six rounds in the
 They are not three competing execution schedules. Existing owners, capability
 requirements and real technical dependencies remain effective.
 
-**Current Product Owner instruction: all product windows are PAUSED_PENDING_PRODUCT_OWNER_REVIEW. M alone completes rule unification, full capability audit and the six-delivery closure report/website proposal.**
+**Current Product Owner instruction: C1-C6 resume after native Goal updates; F remains paused. M closes rule/acceptance synchronization, Owners continue their complete outcomes. C2 is authorized to renew the original single GPU and start training before 2026-10-03 24:00 Asia/Shanghai after preparation.**
 C3/C5 execution placement has moved locally; old Cloud windows do not perform new work.
 The original d92 snapshots and delivered candidate/source/evidence packages remain
 preserved. Reuse actual local deliveries; retrieve only missing Cloud bytes.
@@ -44,12 +44,12 @@ W6 retains formal DB/shared composition and exact main publication.
 
 | Round / window | Placement | Scope | Current acceptance / execution |
 |---|---|---|---|
-| C1 / W1 | LOCAL | Data, Collector, Browser, exact entities/relations, freshness and maintenance | PAUSED_PENDING_PRODUCT_OWNER_REVIEW; PARTIAL ASSETS / NOT ACCEPTED |
-| C2 / W2 | LOCAL + approved training resources | Owned AI, Agent, Skills, Memory, multimodal, Evaluation/Learning | PAUSED_PENDING_PRODUCT_OWNER_REVIEW; ACCEPTED HTTP/CALLBACK SOURCE (343 DISTINCT CASES ACROSS RETAINED SPLIT RUNS); PRODUCTION OWNED SERVICE NOT_BOUND / FULL C2 NOT ACCEPTED |
-| C3 / W3 | LOCAL C3+C5 CONTINUATION | Real CTH/BMP business workflows and outcomes | PAUSED_PENDING_PRODUCT_OWNER_REVIEW; CLOUD HANDOFF ONLY; BOUNDED FOUR-LAYER WORKFLOW/CASE SOURCE AND FINAL READ REPAIR ACCEPTED; ACTUAL AI/ACTION/UI OPEN / FULL C3 NOT ACCEPTED |
-| C4 / W4 | LOCAL | Original pitches/general creation, video and podcast | PAUSED_PENDING_PRODUCT_OWNER_REVIEW; PARTIAL ASSETS / NOT ACCEPTED |
-| C5 / W5 | LOCAL C3+C5 CONTINUATION | Importer, Research, library, Reporting and Artifact services | PAUSED_PENDING_PRODUCT_OWNER_REVIEW; CLOUD HANDOFF ONLY; Source/Artifact normal-chain handoff incomplete / NOT ACCEPTED |
-| C6 / W6 | LOCAL | Integration, actual DB coordination, runtime, recovery, packaging and release | PAUSED_PENDING_PRODUCT_OWNER_REVIEW; PARTIAL ASSETS / NOT ACCEPTED |
+| C1 / W1 | LOCAL | Data, Collector, Browser, exact entities/relations, freshness and maintenance | ACTIVE_BY_PRODUCT_OWNER; PARTIAL ASSETS / NOT ACCEPTED |
+| C2 / W2 | LOCAL + approved training resources | Owned AI, Agent, Skills, Memory, multimodal, Evaluation/Learning | ACTIVE_BY_PRODUCT_OWNER; ACCEPTED HTTP/CALLBACK SOURCE (343 DISTINCT CASES ACROSS RETAINED SPLIT RUNS); PRODUCTION OWNED SERVICE NOT_BOUND / FULL C2 NOT ACCEPTED |
+| C3 / W3 | LOCAL C3+C5 CONTINUATION | Real CTH/BMP business workflows and outcomes | ACTIVE_BY_PRODUCT_OWNER; CLOUD HANDOFF ONLY; BOUNDED FOUR-LAYER WORKFLOW/CASE SOURCE AND FINAL READ REPAIR ACCEPTED; ACTUAL AI/ACTION/UI OPEN / FULL C3 NOT ACCEPTED |
+| C4 / W4 | LOCAL | Original pitches/general creation, video and podcast | ACTIVE_BY_PRODUCT_OWNER; PARTIAL ASSETS / NOT ACCEPTED |
+| C5 / W5 | LOCAL C3+C5 CONTINUATION | Importer, Research, library, Reporting and Artifact services | ACTIVE_BY_PRODUCT_OWNER; CLOUD HANDOFF ONLY; Source/Artifact normal-chain handoff incomplete / NOT ACCEPTED |
+| C6 / W6 | LOCAL | Integration, actual DB coordination, runtime, recovery, packaging and release | ACTIVE_BY_PRODUCT_OWNER; PARTIAL ASSETS / NOT ACCEPTED |
 
 Frontend F owns `app/` and `website/`, follows the sole Experience Constitution
 and screen-specific `DESIGN_READY`, and joins each round's real workflow. M owns
@@ -467,9 +467,9 @@ The Source Owner Index continues to retain every C/R/J/U acceptance requirement.
 
 ## Product Owner full-product audit review — 2026-10-03
 
-The latest user pause supersedes every earlier ACTIVE/resume receipt in this file.
-C1-C6/F remain PAUSED_PENDING_PRODUCT_OWNER_REVIEW. M's governance/audit-only
-publication is authorized; normal W6 product integration ownership is preserved.
+Historical audit-pause snapshot: the user initially paused C1-C6/F for this audit.
+That pause is now superseded for C1-C6 by the explicit late-day resume; F remains
+paused. M publishes this exact governance handoff, then W6 retains normal product integration.
 Read the [six-delivery closure report](evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md),
 [complete capability coverage](evidence/round-15/full-product-audit-20261003/CAPABILITY-COVERAGE.md)
 and [official-website adaptation proposal](evidence/round-15/full-product-audit-20261003/WEBSITE-ADAPTATION.md).
@@ -498,11 +498,10 @@ Full C1-C6, USER_VERIFIED, RELEASED, OPERATING and Market Proof remain OPEN.
 The Product Owner rejected incomplete history/website coverage and the narrowed
 frontend interpretation in the preceding audit. Current state is
 REQUIREMENTS_RECONCILIATION_IN_PROGRESS, not full requirement recovery complete.
-M is executing the specifically requested configuration verification, all-window
-requirement/material recovery, frame-by-frame reference study, article-by-article
-official product/support/docs/release research, four-surface UI/UX/AIGC/watercolor
-rule corrections and online/offline synchronization. Existing product windows
-remain paused pending the review/resume instruction; no paid GPU is reactivated.
+M completed the configuration/rule/ownership handoff; assigned outcome Owners
+continue requirement/material recovery, frame-by-frame and article-by-article
+research, and four-surface UI/UX/AIGC/watercolor adaptation. The latest explicit
+resume applies to C1-C6 and approved C2 single-GPU renewal; F remains paused.
 
 The current Codex config/profile files contain no removed thread_context key,
 and a fresh load by the actual desktop Codex binary returned exit0 without that
@@ -548,7 +547,13 @@ DEFERRED_BY_USER and does not block the present closeout.
 AI training is the first execution priority once its actual local dependencies
 and resource approval are ready; do not wait for all research or restart hardware
 selection. No GPU was rented/restarted by this rule batch. After publication,
-current non-F windows are to be configured gpt-6.1-sol/max by the native control,
-with F's manual model retained; control results and ACKs are recorded separately.
-Newly delegated reference audit is authorized; this handoff does not silently
-resume all paused product development or accept any C outcome.
+C1/C2/C3+C5/C4/C6 use gpt-6.1-sol/max; M uses the later requested Sol/ultra,
+with F's manual model retained. The subsequent explicit resume authorizes C1-C6
+execution and C2 single-card renewal; F is paused. Native objective/status
+readback and unchanged budget/usage accounting are recorded in the current
+execution-resume evidence. No C outcome is thereby accepted.
+
+
+## Current native Goal update and explicit execution resume
+
+See [execution resume receipt](evidence/round-15/full-product-audit-20261003/EXECUTION-RESUME-20261003.md) and its seven native Goal readbacks. C1-C6 resumed; F paused. C2 preparation and original single-GPU renewal/training are explicitly authorized for tonight before 24:00 Asia/Shanghai. Training has not been proven by these control actions. C1 native dispatch recovered after original-thread archive/unarchive/reopen; C1 then sent its own original-thread ACK back to M, proving both directions. The stale pause-message race was reconciled by setting and reading back the same Goal active. M closes this exact rule publication before W6 resumes sole product publication.
