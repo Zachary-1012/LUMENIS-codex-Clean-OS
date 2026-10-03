@@ -362,7 +362,9 @@ user requirement corpus. Do not claim all M/C1-C6/F requirements are captured
 until their actual user messages and material manifests have been reconciled.
 Keep every unretracted requirement with source thread/date/attachment, C/R/J/U
 owner, four-surface applicability, adoption, implementation and acceptance state.
-100-200 user-estimated reference videos cannot be reduced to12 editing exercises.
+Historical100-200 reference and12 editing-exercise corpora remain distinct archives.
+The latest explicit F scope is two new plus earlier five videos, existing analysis
+and OpenAI/current product material; further exhaustive old-video study is superseded.
 The exact accessible inventory is measured, with missing/duplicate references
 recorded rather than invented or silently excluded.
 
@@ -399,3 +401,38 @@ not shrink outcomes. C2 remains single RTX5090; the interim 4090 alternative is
 superseded. F remains paused; M handles actual decisions/acceptance and otherwise
 stands by. Native objectives and their preserved states are in the current
 complete-outcome execution receipt, without replacing this owner index.
+
+
+## Current combination acceptance — 2026-10-04
+
+These are cumulative result assertions mapped into current owners/C/R/J/U, not
+new rounds, stores or a separate queue. Input current-status claims in the user's
+table are hypotheses to check, not a live completion declaration.
+
+| Combination | Existing owner / complete C responsibility | Required actual result |
+| --- | --- | --- |
+| Collection + entity + Evidence + transaction | SYSTEM Collector/Browser/Scheduler, subject_registry.py, Shared Database/Evidence; C1+C5+C6 | Purpose/topic-semantic query yields exact scoped Jan2026→current Source/Evidence/Canonical and a useful answer; relevance, formal intake, transaction, refresh and independent continuous recovery work. |
+| Task + Word + SavedWork | existing Shared Content/Artifact/Task composition, internal_pitch.py, current Core binding; C4+C3+C5+C6 | Actual task/DOCX/saved version connects; repeat is idempotent, cancellation cannot commit, revision keeps parent, independent reopen/recovery preserves bytes and source versions. |
+| Research inputs + multiple creation formats | existing Importer/Research/SourceBrief/domain workflow + Shared Content/Artifact; C3+C5+C4+C2+C6 | One real Brief/evidence/context enters useful text/video/podcast alternatives; changed constraints continue without repeated input, false AI/source use or lost versions. |
+| Training + permission + remote process + Artifact | SYSTEM AI Gateway/owned training, existing Permission/effects/runtime and Artifact; C2+C6 | Actual remote load/step/loss, physical checkpoint bytes, reload, cancellation/disconnect recovery, independent held-out and normal owned inference; controlled promotion/rollback. |
+| Edit + replace + render + save | Shared Timeline/content_creation/rendering + podcast + Artifact; C4+C6; F after resume | Local edits/replacements do not corrupt the full work; render/save remain consistent and final editable projects reopen with versions and meaningful recovery. |
+| Source correction + judgment + result versions | Shared Evidence/Trace/Research/Artifact/SavedWork/Evaluation, domain consumers; C1+C3+C5+C4+C6 | Locate every linked affected conclusion/artifact, explicitly adopt correction, revise affected parts, preserve unaffected content and old results/reasons/rollback; no rewritten Evidence. |
+
+| Current priority | Existing complete owner package | Actual acceptance |
+| --- | --- | --- |
+| Remote training normal chain | C2+C6 | GPU load, optimizer step/loss, checkpoint bytes, reload, cancellation and disconnect results. |
+| Training/business recipe consistency | C2+C3+C5+C6 | Same accepted model/recipe/token budget in actual normal Gateway business task; candidate/main/runtime/evaluation do not silently mix. |
+| Research→creation source transfer | C3+C5+C4+C6 | Same real nonempty Brief/source refs inherit, change constraints, save/reopen/export through current use permissions; an internal no-source craft is not AI research completion. |
+| Purpose query→actual collection | C1+C5+C6 | Six major-platform actual task queries, precise scope/relevance, formal Evidence/Canonical, refresh and recovery. |
+| Same-version integration/reproduction | C6+related owners | Main, overlay, build, loaded process/model/recipe, DB and actual task outputs/evidence align; reproduced environment and recovery. |
+| Real operation after frontend resume | F+C4+C6 | Actual four-surface AI submit, horizontal timelines, source/editing/result/save/reopen only after user explicitly resumes F. |
+
+Full source/API callable bindings are resolved within these existing owner roots
+and current contracts; a row above is not proof that a missing binding exists.
+C1 also owns source-backed presentation text/image examples for F, not a new
+layout/renderer. The complete brand/commercial material→budget/resources→editable
+outcome→affected-only revised version→old work/reason/rollback path is accepted
+through Real Delivery, including semantic and same-budget peer comparisons.
+
+
+User-reviewed100-term foundation input: C1 owns topic/query/entity binding; C5 existing Source/Importer contracts and C6 formal storage/deployment coordinate. Global§10 retains immutable originals, additive effective versions, all original evidence/null/time fields and runtime admission;100 terms across4 named subjects is not100 subjects, a verified hotlist or global/platform coverage. Existing permission and model-training use remain distinct.

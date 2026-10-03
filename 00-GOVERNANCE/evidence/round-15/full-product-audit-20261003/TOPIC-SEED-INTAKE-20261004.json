@@ -1,0 +1,442 @@
+{
+  "intake_date": "2026-10-04",
+  "timezone": "Asia/Shanghai",
+  "purpose": "Read-only intake of three user-supplied topic vocabulary seed formats; not a collection, registry import, coverage result, or runtime acceptance.",
+  "source_files": [
+    {
+      "filename": "1-xujing_topic_seed_100_4confirmed_20261004.xlsx",
+      "source_path": "C:\\Users\\28049\\.codex\\codex-remote-attachments\\01a0cd84-7685-7a73-97d9-83a14a546e71\\03D691F8-AC79-47AF-89A1-53C0E49E3DBE\\1-xujing_topic_seed_100_4confirmed_20261004.xlsx",
+      "bytes": 46358,
+      "sha256": "8e45d88ae3f13174ca5a16f8d07f73eab55af897330e744a05b29af245c9af52"
+    },
+    {
+      "filename": "2-xujing_topic_seed_100_4confirmed_20261004.csv",
+      "source_path": "C:\\Users\\28049\\.codex\\codex-remote-attachments\\01a0cd84-7685-7a73-97d9-83a14a546e71\\03D691F8-AC79-47AF-89A1-53C0E49E3DBE\\2-xujing_topic_seed_100_4confirmed_20261004.csv",
+      "bytes": 45691,
+      "sha256": "bde59e722eea3381e412ebc4d56c6547dbbf5ea4dc582dad7caf782e1f7b3c3a"
+    },
+    {
+      "filename": "3-xujing_topic_seed_100_4confirmed_20261004.json",
+      "source_path": "C:\\Users\\28049\\.codex\\codex-remote-attachments\\01a0cd84-7685-7a73-97d9-83a14a546e71\\03D691F8-AC79-47AF-89A1-53C0E49E3DBE\\3-xujing_topic_seed_100_4confirmed_20261004.json",
+      "bytes": 126455,
+      "sha256": "cfe3b6cb424ee0efe3d917479ba95db66f4ca9b8df32fa891fcf16fd6c576028"
+    }
+  ],
+  "parsed_structure": {
+    "xlsx": {
+      "sheets": [
+        "使用说明",
+        "词库100",
+        "来源索引",
+        "范围与规则"
+      ],
+      "topic_sheet": "词库100",
+      "topic_header_row": 5,
+      "topic_columns": [
+        "编号",
+        "主体",
+        "标准词",
+        "原文词条",
+        "词条类型",
+        "证据所在平台",
+        "证据等级",
+        "发表／编辑时间原文",
+        "来源采集时间",
+        "热点状态",
+        "来源编号",
+        "原始链接",
+        "与主体的关系",
+        "使用备注",
+        "项目证据相对路径",
+        "本轮复核日",
+        "话题热度值",
+        "平台热榜名次"
+      ],
+      "topic_records": 100,
+      "source_index_data_rows": 41,
+      "scope_rules_sheet": "范围与规则",
+      "instruction_sheet": "使用说明",
+      "formula_cells_by_sheet": {
+        "使用说明": 14,
+        "词库100": 0,
+        "来源索引": 0,
+        "范围与规则": 0
+      }
+    },
+    "csv": {
+      "encoding": "utf-8-sig",
+      "header": [
+        "id",
+        "entity",
+        "entity_type",
+        "topic",
+        "observed_literal",
+        "term_type",
+        "association",
+        "platform",
+        "source_id",
+        "source_url",
+        "source_title",
+        "publication_time_literal",
+        "source_capture_time",
+        "review_date",
+        "evidence_level",
+        "heat_status",
+        "heat_value",
+        "trend_rank",
+        "recommended_use",
+        "notes",
+        "local_evidence_file"
+      ],
+      "records": 100
+    },
+    "json": {
+      "root_keys": [
+        "metadata",
+        "topics",
+        "sources"
+      ],
+      "metadata_fields": [
+        "dataset_name",
+        "version",
+        "status",
+        "review_date",
+        "timezone",
+        "requested_entity_count",
+        "confirmed_entity_count",
+        "missing_entity_count",
+        "topic_count",
+        "source_count",
+        "scope_evidence_file",
+        "confirmed_entities",
+        "entity_counts",
+        "platform_counts",
+        "evidence_counts",
+        "term_type_counts",
+        "hot_topics_verified",
+        "scope_note",
+        "coverage_note",
+        "evidence_note",
+        "time_note",
+        "import_safety",
+        "null_policy",
+        "exclusions"
+      ],
+      "topic_fields": [
+        "id",
+        "entity",
+        "entity_type",
+        "topic",
+        "observed_literal",
+        "term_type",
+        "association",
+        "platform",
+        "source_id",
+        "source_url",
+        "source_title",
+        "publication_time_literal",
+        "source_capture_time",
+        "review_date",
+        "evidence_level",
+        "heat_status",
+        "heat_value",
+        "trend_rank",
+        "recommended_use",
+        "notes",
+        "local_evidence_file"
+      ],
+      "topic_records": 100,
+      "source_fields": [
+        "source_id",
+        "platform",
+        "source_title",
+        "source_url",
+        "publication_time_literal",
+        "evidence_level",
+        "source_capture_time",
+        "local_evidence_file",
+        "source_notes"
+      ],
+      "source_records": 41
+    }
+  },
+  "state_counts": {
+    "dataset_status": "PARTIAL_ENTITY_COVERAGE_NOT_VERIFIED_HOTLIST",
+    "requested_entities": 6,
+    "confirmed_entity_count": 4,
+    "missing_entity_count": 2,
+    "confirmed_entities_exact": [
+      "广州太古汇",
+      "深圳万象城（罗湖）",
+      "Nike",
+      "Le Labo"
+    ],
+    "unconfirmed_entities": "Two planned test entities remain unnamed and are excluded; do not infer names.",
+    "topic_records": 100,
+    "topics_by_entity": {
+      "广州太古汇": 25,
+      "深圳万象城（罗湖）": 25,
+      "Nike": 25,
+      "Le Labo": 25
+    },
+    "platforms": {
+      "抖音": 59,
+      "小红书": 18,
+      "微信公众号": 4,
+      "Facebook": 2,
+      "X": 2,
+      "Instagram": 15
+    },
+    "platform_count": 6,
+    "term_types": {
+      "原生话题标签": 76,
+      "正文主题词": 21,
+      "公众号引用的话题标签": 2,
+      "标题主题词": 1
+    },
+    "evidence_levels": {
+      "项目原生响应快照": 59,
+      "项目采集快照／身份标记已核验": 12,
+      "本轮网页提取正文": 15,
+      "本轮搜索索引摘要": 3,
+      "本轮搜索索引标题／摘要": 11
+    },
+    "heat_status": {
+      "UNKNOWN": 100
+    },
+    "heat_values_non_null": 0,
+    "trend_ranks_non_null": 0,
+    "source_records": 41,
+    "topic_records_with_source_id_resolved": 100
+  },
+  "duplicate_and_ambiguity_checks": {
+    "duplicate_entity_standard_term_pairs": [],
+    "duplicate_pair_count": 0,
+    "standard_terms_repeated_across_rows_or_entities": [],
+    "standard_term_duplicate_count": 0,
+    "identity_scope_notes": [
+      "Confirmed identity set is exactly Guangzhou Taikoo Hui, Shenzhen MixC (Luohu), Nike, and Le Labo.",
+      "The Shenzhen entity is explicitly disambiguated from Shenzhen Bay MixC and Shenzhen MixC World.",
+      "Common/generic terms and cross-brand co-occurrence are not entity-exclusive; association and entity must travel together.",
+      "A row’s platform is the platform of its cited observation, not evidence that the term exists on every platform.",
+      "Entity confirmation does not independently confirm each term as an identity fact, current trend, or business claim."
+    ]
+  },
+  "format_equivalence": {
+    "row_id_order_equal": true,
+    "json_csv_shared_record_fields_match": true,
+    "json_csv_serialization_differences": {
+      "heat_value_and_trend_rank": {
+        "json": "null",
+        "csv": "empty string",
+        "count_each": 100
+      },
+      "json_adds_metadata_and_separate_sources_array": true
+    },
+    "xlsx_topic_rows_match_shared_fields": true,
+    "xlsx_field_mapping": {
+      "主体": "entity",
+      "标准词": "topic",
+      "原文词条": "observed_literal",
+      "词条类型": "term_type",
+      "证据所在平台": "platform",
+      "证据等级": "evidence_level",
+      "热点状态": "heat_status",
+      "来源编号": "source_id",
+      "原始链接": "source_url",
+      "与主体的关系": "association",
+      "使用备注": "notes",
+      "项目证据相对路径": "local_evidence_file",
+      "本轮复核日": "review_date",
+      "话题热度值": "heat_value",
+      "平台热榜名次": "trend_rank"
+    },
+    "xlsx_additional_context": [
+      "source_title and local_evidence_file are supplied on 来源索引 and join by source_id.",
+      "XLSX has 18 columns on the topic sheet; JSON/CSV have 21 topic fields. entity_type, source_title, recommended_use, and evidence-file ref come from JSON/CSV or source-index context."
+    ],
+    "timestamp_handling": {
+      "publication": {
+        "numeric_excel_vs_csv_utc_within_0.01s": 59,
+        "literal_exact": 41
+      },
+      "source_capture": {
+        "numeric_excel_vs_csv_utc_within_0.01s": 77,
+        "literal_exact": 23
+      },
+      "note": "XLSX numeric date cells omit timezone metadata; numeric cells match CSV ISO instants after normalizing to UTC within 0.01 seconds. Non-ISO/raw date strings match literally. Do not infer a publication date from capture time."
+    },
+    "xlsx_summary_formulas": "Workbook instructions include formulas; topic table rows contain source values, and the intake recomputed row counts from rows rather than relying on cached formula values."
+  },
+  "provenance_and_time": {
+    "review_date": "2026-10-04",
+    "timezone": "Asia/Shanghai",
+    "source_capture_note": "原始采集主要为2026-10-03；本轮复核为2026-10-04。缺少年份、仅相对日期或编辑日期的值按原文保留，不倒推发表日。历史内容不当作当前热点。",
+    "evidence_note": "保留原词、来源地址与证据等级。71条来自项目既有采集快照，15条来自本轮网页正文，14条仅有搜索索引标题/摘要；未获得平台趋势榜单或统一热度统计。",
+    "scope_evidence_file_declared_only": "D:/LUMENIS_REBUILD/序/序境/work/c1-w1-20261002/CURRENT-BUSINESS-QUERY-CONSUMPTION.json",
+    "scope_evidence_file_read_or_verified": false,
+    "local_evidence_files_read_or_verified": false,
+    "observed_source_classes": {
+      "项目原生响应快照": 59,
+      "项目采集快照／身份标记已核验": 12,
+      "本轮网页提取正文": 15,
+      "本轮搜索索引摘要": 3,
+      "本轮搜索索引标题／摘要": 11
+    }
+  },
+  "four_confirmed_entity_topic_examples_exact": [
+    {
+      "id": "T001",
+      "entity": "广州太古汇",
+      "entity_type": "商业主体",
+      "topic": "广州太古汇",
+      "observed_literal": "#广州太古汇",
+      "term_type": "原生话题标签",
+      "association": "主体相关",
+      "platform": "抖音",
+      "source_id": "S36",
+      "source_url": "https://www.douyin.com/video/7666084555984245082",
+      "source_title": "定位摘要：香水实验室／广州太古汇／广州探店",
+      "publication_time_literal": "2026-07-24T13:23:22+00:00",
+      "source_capture_time": "2026-10-03T16:21:47.910703+00:00",
+      "review_date": "2026-10-04",
+      "evidence_level": "项目原生响应快照",
+      "heat_status": "UNKNOWN",
+      "heat_value": null,
+      "trend_rank": null,
+      "recommended_use": "候选检索词；非热榜标签",
+      "notes": "",
+      "local_evidence_file": "work/c1-w1-20261002/douyin-business-public-read-20261004/query01-7666084555984245082.json"
+    },
+    {
+      "id": "T026",
+      "entity": "深圳万象城（罗湖）",
+      "entity_type": "商业主体",
+      "topic": "深圳万象城",
+      "observed_literal": "#深圳万象城",
+      "term_type": "原生话题标签",
+      "association": "主体相关",
+      "platform": "小红书",
+      "source_id": "S07",
+      "source_url": "https://www.rednote.com/discovery/item/69a7bc76000000002203aa75",
+      "source_title": "深圳人自己的六本木",
+      "publication_time_literal": "03-04",
+      "source_capture_time": "2026-10-03T15:04:43.633181+08:00",
+      "review_date": "2026-10-04",
+      "evidence_level": "项目采集快照／身份标记已核验",
+      "heat_status": "UNKNOWN",
+      "heat_value": null,
+      "trend_rank": null,
+      "recommended_use": "候选检索词；非热榜标签",
+      "notes": "仅关联罗湖；不得迁移到深圳湾万象城或深圳万象天地。",
+      "local_evidence_file": "work/c1-w1-20261002/hk-xhs-live-attempt-011-normalized-redacted.json"
+    },
+    {
+      "id": "T051",
+      "entity": "Nike",
+      "entity_type": "品牌",
+      "topic": "Nike",
+      "observed_literal": "#Nike",
+      "term_type": "原生话题标签",
+      "association": "品牌／足球活动",
+      "platform": "抖音",
+      "source_id": "S13",
+      "source_url": "https://www.douyin.com/video/7647522209375816970",
+      "source_title": "让剧本都作废",
+      "publication_time_literal": "2026-06-04T16:00:00+00:00",
+      "source_capture_time": "2026-10-03T16:24:46.254651+00:00",
+      "review_date": "2026-10-04",
+      "evidence_level": "项目原生响应快照",
+      "heat_status": "UNKNOWN",
+      "heat_value": null,
+      "trend_rank": null,
+      "recommended_use": "候选检索词；非热榜标签",
+      "notes": "",
+      "local_evidence_file": "work/c1-w1-20261002/douyin-business-public-read-20261004/query03-7647522209375816970.json"
+    },
+    {
+      "id": "T076",
+      "entity": "Le Labo",
+      "entity_type": "品牌",
+      "topic": "LeLabo",
+      "observed_literal": "#LeLabo",
+      "term_type": "原生话题标签",
+      "association": "品牌／城市限定活动",
+      "platform": "Instagram",
+      "source_id": "S24",
+      "source_url": "https://www.instagram.com/reel/DbSfN9gj2-V/",
+      "source_title": "LE LABO：City Exclusives／SHIU 25",
+      "publication_time_literal": "6w；搜索提取另示 August 18, 2026",
+      "source_capture_time": "2026-10-04",
+      "review_date": "2026-10-04",
+      "evidence_level": "本轮网页提取正文",
+      "heat_status": "UNKNOWN",
+      "heat_value": null,
+      "trend_rank": null,
+      "recommended_use": "候选检索词；非热榜标签",
+      "notes": "",
+      "local_evidence_file": ""
+    }
+  ],
+  "c1_w6_json_row_contract": {
+    "primary_source": "3-xujing_topic_seed_100_4confirmed_20261004.json",
+    "records_path": "topics[]",
+    "source_context_path": "sources[] joined by topics[].source_id",
+    "recommended_row_fields": [
+      "id",
+      "entity",
+      "entity_type",
+      "topic",
+      "observed_literal",
+      "term_type",
+      "association",
+      "platform",
+      "source_id",
+      "source_url",
+      "source_title",
+      "publication_time_literal",
+      "source_capture_time",
+      "review_date",
+      "evidence_level",
+      "heat_status",
+      "heat_value",
+      "trend_rank",
+      "recommended_use",
+      "notes",
+      "local_evidence_file"
+    ],
+    "preserve_original_fields": [
+      "id",
+      "entity",
+      "topic",
+      "observed_literal",
+      "term_type",
+      "association",
+      "platform",
+      "source_id",
+      "source_url",
+      "source_title",
+      "publication_time_literal",
+      "source_capture_time",
+      "review_date",
+      "evidence_level",
+      "notes",
+      "local_evidence_file"
+    ],
+    "do_not_promote_from_seed": [
+      "UNKNOWN heat status",
+      "null heat/rank",
+      "entity confirmation into term/trend verification",
+      "local path strings into verified Evidence"
+    ],
+    "owner_route": "Use existing SYSTEM Collector, canonical registry, Source/Evidence and current C1/W6 owners; do not add a topic DB or parallel registry."
+  },
+  "required_treatment": {
+    "seed_vs_source_confirmed": "Treat each row as a user-supplied seed observation with a cited source pointer/evidence level. Promote to a source-confirmed canonical topic only after the existing Source/Evidence path resolves the source, identity/scope, permitted access, source-time semantics and exact observed term.",
+    "versioning": "Retain immutable original wording and source payload/provenance. Add versioned normalized/current-active views and status changes; never delete or overwrite the original term.",
+    "identity": "Verify exact canonical Subject/BrandFocus or brand identity through existing owners; do not resolve the two unnamed entities by guess. Keep generic/cross-entity terms scoped by entity and relation.",
+    "hotness": "All 100 heat statuses are UNKNOWN; zero verified hot topics. Never translate UNKNOWN/null into zero, HOT, TRENDING or current popularity.",
+    "learning": "Seed intake alone is not approval or admission to MODEL_TRAIN; only reviewed source-grounded outcomes through existing evaluation/learning owners can qualify.",
+    "operation": "No collection, DB/registry mutation, source re-fetch, browser action, notification, or runtime/test acceptance occurred."
+  }
+}

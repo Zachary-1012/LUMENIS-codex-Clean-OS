@@ -243,3 +243,94 @@ Unavailable later-round functionality must be recorded as `NOT IN ROUND / NOT YE
 | [OpenStreetMap Foundation Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/) | Live policy page accessed 2026-09-26; no fixed version is published and the policy may change without notice. | ODbL imposes attribution/share-alike obligations on adapted databases; the public service has a maximum of one request/second, requires an identifying User-Agent/Referer and attribution, discourages periodic/bulk use, and forbids systematic POI/list extraction. Commercial users must account for policy changes and service withdrawal. | `DEFER` as a global baseline source. It is not a complete venue inventory. Any bounded geocoding use must pass a deliberate commercial/license review and route through the existing acquisition owner with caching, rate limits and attribution. |
 
 Research adds no dependency or new owner. Source/service status, terms, and version pins must be rechecked when a source is actually selected; no source availability or baseline coverage is claimed by this table.
+
+
+## 10. Task-semantic vocabulary and continuous acquisition
+
+Six primary platforms are Instagram, Facebook, WeChat Official Accounts,
+RedNote/XHS, Douyin and X. C1 begins/resumes actual eligible acquisition routes
+for all six; names/registrations/imports are not proof of platform collection.
+Keep other existing platforms. Every platform has its own native fields, access
+state, permitted identity, exact entity/domain/market/purpose and Evidence path.
+Missing access/binding blocks that portion honestly while available platforms
+continue, without substituting a differently scoped account or fake zero.
+
+Through existing SYSTEM Collector/registry/Source/Evidence/Canonical owners,
+maintain versioned topic terms per platform and canonical brand/commercial
+entity. Record observed tag/phrase, source URL/ID/Evidence, original language,
+aliases, actual city/store/venue, source/observation times, applicable scope,
+ad/organic and official/consumer distinctions, permitted use and review state.
+One spelling never resolves same-named venues or cross-city stores by itself.
+No second topic database, scheduler, registry or collector is authorized.
+
+Compile purpose queries from the actual user task, accepted source vocabulary,
+canonical aliases, topic dimensions, language, time and scope constraints, with
+explainable inclusion/exclusion and disambiguation. A composed query is derived
+task text, not an observed platform hashtag/hotspot/ranking. Do not invent terms
+as platform facts or guess an entity, popularity, advertisement status or date.
+Relevance and exact-scope checks must reach real capture/intake and the consumer
+job, not stop at a query-plan candidate. Unknown/conflicting bindings stay honest
+while the owner resolves them; useful authorized results remain the real exit.
+
+The user explicitly opts this internal approved program into continuous operation
+from publication/event date2026-01-01 inclusive, onward without a fixed end.
+Retain source timezone/date precision and normalize by the current time owner;
+capture/import/refresh time cannot replace source publication/event time.
+Unknown publication/timezone and unsupported history windows remain explicit
+coverage gaps, never in-window proof, all-zero buckets or silent omissions.
+Keep preexisting older evidence intact; it is not counted as this backfill.
+
+Persistent product Scheduler/Collector own backfill cursors, per-platform window/
+progress, incremental watermark, last attempt/success, next due cycle, bounded
+Retry-After/backoff, idempotence and restart/overdue recovery. Rotate the six
+platforms if needed. Training, development, rule publication or another task
+must not cancel their resident acquisition schedule or make collection depend
+on Codex/CUA. Source challenge/outage/revocation safely isolates only the
+affected path; continue eligible others, retain pending gaps and resume it after
+actual recovery. Never defeat access controls to satisfy 'continuous'.
+
+Existing MANUAL future-user defaults remain; this is explicit AUTO consent for
+the named internal program and current approved exact identities/scopes, not an
+unbounded consent for all accounts. Protect the personal Mainland XHS profile;
+resolve other platform sessions through registered secret-safe owners. Prefer
+official permitted APIs/refresh/session continuity and researched legitimate
+recovery to repeated human troubleshooting. Historical R-0003/R-0004 and their
+MediaCrawler/xiaohongshu-mcp/Spider_XHS references are research inputs only;
+recheck versions/licenses/current rules and do not activate legacy accounts,
+rotating identities, CAPTCHA bypass or presumed immunity to platform bans.
+After a user reports verification complete, the session owner reads back actual
+authorized state and resumes only the pending scoped work.
+
+Acceptance requires real Jan2026→current historical-window receipts/gaps,
+topic/task→query→Capture→Evidence→Canonical→useful normal business result,
+repeated due cycles while another job runs, one-platform failure isolation and
+restart recovery. Mocks, replay clocks, a name search, raw posts, imported rows
+or a live schedule registration alone cannot prove these. C1 retains continual
+China/global brand/commercial-entity additions and relation review alongside
+real task validation, without waiting for complete global directory coverage.
+
+
+### User-reviewed foundation vocabulary seed
+
+Use the user-reviewed xujing_topic_seed_100_4confirmed_20261004 XLSX/CSV/JSON as
+versioned foundational test entity/topic inputs through existing Source/registry/
+Evidence/Canonical ingestion, then real runtime queries. JSON has100 topic
+records and41 source records; four named entities have25 terms each. Its own
+metadata remains4/6 entities confirmed,2 unnamed and100 heat UNKNOWN, with no
+verified hotlist. User review approves this input, not fabricated platform
+hotness, rankings, complete six-platform coverage or automatic MODEL_TRAIN use.
+Preserve term IDs, entity/type, topic/observed_literal/term_type/association,
+platform, source IDs/URLs/titles, publication literal/capture/review times,
+evidence level, heat/null/rank, recommended use, notes and evidence locators.
+
+Original files and original terms are immutable and never deleted. Add versioned
+terms and associations based on actual time, commercial entity, brand, activity
+and event changes, with reason/provenance/effective interval/parent version;
+retain old terms for search/history/rollback. Active query views select applicable
+versions and mark retired/expired/conflicting terms without destroying them.
+C1/W6 store/resolve/import this reviewed source through current owners and ensure
+packaged deployment/runtime uses its admitted version rather than a developer's
+attachment path or a fixture. Preserve current exact identity/source-use checks,
+normal explicit authorization and honest unknowns without asking for another
+manual review of the same100 terms. This seed does not limit ongoing entity/
+source/topic growth or replace whole-universe data coverage.

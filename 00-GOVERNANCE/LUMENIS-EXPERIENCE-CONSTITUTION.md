@@ -193,26 +193,27 @@ keyboard/touch equivalents, interruptible transitions and user/system reduced-
 motion support without deleting the underlying capability or making all default
 experiences static. Different tasks need different compositions.
 
-The scroll requirement is no unnecessary up/down scrolling, not removal of
-content or interaction. Fit primary work and essential controls to the viewport;
+For Web Workspace, Desktop App and Mobile Companion, the scroll requirement
+is no unnecessary page-level up/down scrolling. The Public Website is exempt
+from this operational-layout restriction. Fit primary work and essential controls to the viewport;
 use task-appropriate panes, zoom, timeline/canvas, reversible layers and explicit
 navigation. Long documents, data or accessibility enlargement may need scrolling;
 justify the region, preserve position/context and retain all information. Avoid
 unnecessary nested scroll and elongated template pages; never clip content merely
 to make a screenshot fit.
 
-All supplied historical videos remain in scope for frame-by-frame study. Record
-actual file/hash, frame count/PTS, visual transition, interaction trigger, state,
-task intent, four-surface adaptation and exact implementation/acceptance location.
-Exact duplicate frames may share one visual read only with an exhaustive frame
-mapping; sparse thumbnails, decoded frames or a few highlights are not full visual
-analysis. Missing files/remote material remain explicit unresolved items. The
-historical12 editing exercises are a separate corpus, not the entire reference
-library the user estimates at100-200 videos.
-The five earlier videos supplied to the independent frontend window are explicitly
-included, together with all earlier Codex reference videos stored locally. Locate
-those originals proactively; do not ask the user to resend already available files
-or substitute the newest clip for the historical set.
+The latest explicit F instruction limits current frontend study to the two new
+recordings, the earlier five supplied to F, existing analysis, OpenAI official
+material and current product rules/requirements/architecture. Further exhaustive
+analysis of other historical videos is no longer a frontend prerequisite. Retain
+their originals and valid analysis as archives; the historical12 editing exercises
+remain a distinct C4 corpus, not the seven frontend references. F and cooperating
+owners do not analyze the paused frontend recordings until explicit resume.
+After resume, record actual file/hash, frame count/PTS, visual transition, trigger,
+state, task intent, four-surface adaptation and implementation/acceptance mapping.
+Exact duplicate frames may share a read with a complete frame map; sparse
+thumbnails or decoding alone never prove a full visual study. Reuse already valid
+frame analysis without inventing coverage or repeating it.
 
 
 ### Product Owner direction — 2026-09-24 frontend reconstruction
@@ -1098,3 +1099,51 @@ These requirements apply to the appropriate operational surfaces with deliberate
 desktop/touch recomposition. Website explains actual available abilities; it
 does not pretend to execute the local developer tools. Implementation and actual
 pan/seek/reopen evidence remain separate from this rule publication.
+
+
+## 38. Current frontend reference scope and scrolling
+
+The actual F user turns are retained in USER-ADDITIONS-20261004.md; their latest
+instruction supersedes prior exhaustive historical-video execution obligations.
+F remains paused including code, research, tests and new tasks. The two new
+recordings d16fc1c8ad774b0e950e3e7a4e444fe3.mp4 and
+7ac450632cf2611ee2ff3a6b29a41669.mp4 plus the earlier five, valid existing
+analysis, OpenAI official pages and current product rules are the current study
+inputs after explicit resume. Preserve all old originals/analysis, not another
+historical-video reading gate. No current rule update itself analyzes frames.
+
+Linear icons and original colored icons coexist. Colored icons carry the user's
+supplied hand-painted flat-2D material/color feel (image848dd8334ba062ff70657c7e0acc7c86
+and the existing watercolor direction). Choose their roles by the actual task,
+with readable labels, semantic colors and accessible contrast; do not reduce all
+icons to monochrome or indiscriminately color every control. Characters follow
+the user's script/description. Rich but controlled color remains permitted.
+
+After resume, adapt the recorded launch/re-entry and Manus work/operation ideas
+through this sole Constitution for Public Website, Web Workspace, Desktop and
+Mobile. Study visual AND functional presentation, composition, UI/UX/AIGC and
+task-specific useful interaction. Define UI/AIGC balance by screen/task/purpose,
+not a generic percentage or replacement of factual controls. The Website has
+text, interaction and original creative operation videos showing actual intended
+workflows with accurate build/capability status. Recording references are
+principles, not authority to copy proprietary assets or claim an unimplemented
+operation is live. A front-end showcase does not prove a real business result.
+
+Operational surfaces except Public Website do not require unnecessary page-level
+vertical scrolling. Keep primary work/actions usable in the viewport through
+task-specific panes, reversible disclosures/navigation and editing canvases;
+necessary long-document/table/detail/accessibility regions may scroll without
+clipping, losing context or flattening all screens into the same template.
+Website may scroll according to its content. Actual video AND podcast timelines
+retain required horizontal pan/seek, ruler/track synchronization and accessible
+device controls. Public Website, Web Workspace, Desktop and Mobile keep their
+approved roles and full capabilities rather than becoming scaled copies.
+
+C1 supplies source-backed text/image presentation examples in the approved
+LUMENIS style: retained platform-native fields, exact entity/city/venue/time,
+Evidence/citations, question relevance, readable result, uncertainty and versions.
+Genuine source images use their permitted rights; rendered/style illustrations
+are explicitly labeled references, never substituted for source photographs.
+Examples must not recreate RedNote/Douyin/X/etc. feeds. They stay evidence/design
+exploration until F resumes and a screen-specific DESIGN_READY owner accepts
+the real composition; C1 does not become a second frontend/design authority.

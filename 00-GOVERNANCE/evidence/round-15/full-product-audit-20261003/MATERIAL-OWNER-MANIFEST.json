@@ -1,12 +1,12 @@
 {
   "state": "ASSIGNED_NOT_READ_OR_IMPLEMENTED_BY_THIS_MANIFEST",
-  "scope": "185 direct references at recovered-input snapshot, plus complete corpus responsibilities in MATERIAL-OWNER-CONTRACT; not the full universe count",
+  "scope": "191 direct references: initial185 plus3 new frontend inputs and3 seed representations; not full universe or read completion",
   "source_sha256": "23380ad9008228df72f5890e98f9e72eb7aff25928c9c0a478cd2c264382f2b0",
   "owner_counts": {
     "C3+C5": 32,
-    "F": 80,
+    "F": 83,
     "C2": 2,
-    "C1": 1,
+    "C1": 4,
     "C4": 70
   },
   "materials": [
@@ -3371,6 +3371,148 @@
       "local_exists_at_snapshot": null,
       "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
       "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-dde572026d5034df7e3b",
+      "display_name": "d16fc1c8ad774b0e950e3e7a4e444fe3.mp4",
+      "kind": "local_file",
+      "corpus": "latest_frontend_reference",
+      "original_locator": "D:/微信数据/微信下载/xwechat_files/wxid_tkz9s7tlr1kn22_0eec/msg/video/2026-10/d16fc1c8ad774b0e950e3e7a4e444fe3.mp4",
+      "source_input_ids": [
+        "F-native-turn:01a102b8-7fd4-79b2-8873-57bc3278f3c0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Future four-surface reference adaptation only after explicit frontend resume; raw instruction retained",
+      "status": "PAUSED_PENDING_USER_RESUME",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_ANALYZED_BY_THIS_RULE_UPDATE",
+      "training_use": "NOT_AUTOMATICALLY_ADMITTED"
+    },
+    {
+      "material_id": "MAT-66701f109b71867d23df",
+      "display_name": "7ac450632cf2611ee2ff3a6b29a41669.mp4",
+      "kind": "local_file",
+      "corpus": "latest_frontend_reference",
+      "original_locator": "D:/微信数据/微信下载/xwechat_files/wxid_tkz9s7tlr1kn22_0eec/msg/video/2026-10/7ac450632cf2611ee2ff3a6b29a41669.mp4",
+      "source_input_ids": [
+        "F-native-turn:01a102b8-7fd4-79b2-8873-57bc3278f3c0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Future four-surface reference adaptation only after explicit frontend resume; raw instruction retained",
+      "status": "PAUSED_PENDING_USER_RESUME",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_ANALYZED_BY_THIS_RULE_UPDATE",
+      "training_use": "NOT_AUTOMATICALLY_ADMITTED"
+    },
+    {
+      "material_id": "MAT-42c01bcf8fcf3b0e5a30",
+      "display_name": "848dd8334ba062ff70657c7e0acc7c86.jpg",
+      "kind": "local_file",
+      "corpus": "latest_frontend_reference",
+      "original_locator": "D:/微信数据/微信下载/xwechat_files/wxid_tkz9s7tlr1kn22_0eec/temp/RWTemp/2026-10/9e20f478899dc29eb19741386f9343c8/848dd8334ba062ff70657c7e0acc7c86.jpg",
+      "source_input_ids": [
+        "F-native-turn:01a102b8-7fd4-79b2-8873-57bc3278f3c0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Future four-surface reference adaptation only after explicit frontend resume; raw instruction retained",
+      "status": "PAUSED_PENDING_USER_RESUME",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_ANALYZED_BY_THIS_RULE_UPDATE",
+      "training_use": "NOT_AUTOMATICALLY_ADMITTED"
+    },
+    {
+      "material_id": "MAT-7ca7671d4d4567a5477b",
+      "display_name": "1-xujing_topic_seed_100_4confirmed_20261004.xlsx",
+      "kind": "local_file",
+      "corpus": "user_reviewed_topic_seed",
+      "original_locator": "C:\\Users\\28049\\.codex\\codex-remote-attachments\\01a0cd84-7685-7a73-97d9-83a14a546e71\\03D691F8-AC79-47AF-89A1-53C0E49E3DBE\\1-xujing_topic_seed_100_4confirmed_20261004.xlsx",
+      "source_input_ids": [
+        "M-user-topic-seed-20261004"
+      ],
+      "primary_owner": "C1",
+      "thread_id": "01a0f86f-6435-78d0-8e48-522e2ca09ca2",
+      "supporting_owners": [
+        "C3+C5",
+        "C6"
+      ],
+      "owner_obligation": "User-reviewed foundation topic inputs through current Source/registry/Evidence/Canonical; additive versions, no term deletion",
+      "status": "USER_REVIEWED_PENDING_PRODUCT_INTAKE",
+      "local_exists_at_snapshot": true,
+      "sha256": "8e45d88ae3f13174ca5a16f8d07f73eab55af897330e744a05b29af245c9af52",
+      "size_bytes": 46358,
+      "body_read_status": "FILE_PINS_AND_JSON_CSV_SCHEMA_INSPECTED_NO_REPEAT_MANUAL_REVIEW",
+      "training_use": "NOT_AUTOMATICALLY_ADMITTED"
+    },
+    {
+      "material_id": "MAT-970391a59674603dac89",
+      "display_name": "2-xujing_topic_seed_100_4confirmed_20261004.csv",
+      "kind": "local_file",
+      "corpus": "user_reviewed_topic_seed",
+      "original_locator": "C:\\Users\\28049\\.codex\\codex-remote-attachments\\01a0cd84-7685-7a73-97d9-83a14a546e71\\03D691F8-AC79-47AF-89A1-53C0E49E3DBE\\2-xujing_topic_seed_100_4confirmed_20261004.csv",
+      "source_input_ids": [
+        "M-user-topic-seed-20261004"
+      ],
+      "primary_owner": "C1",
+      "thread_id": "01a0f86f-6435-78d0-8e48-522e2ca09ca2",
+      "supporting_owners": [
+        "C3+C5",
+        "C6"
+      ],
+      "owner_obligation": "User-reviewed foundation topic inputs through current Source/registry/Evidence/Canonical; additive versions, no term deletion",
+      "status": "USER_REVIEWED_PENDING_PRODUCT_INTAKE",
+      "local_exists_at_snapshot": true,
+      "sha256": "bde59e722eea3381e412ebc4d56c6547dbbf5ea4dc582dad7caf782e1f7b3c3a",
+      "size_bytes": 45691,
+      "body_read_status": "FILE_PINS_AND_JSON_CSV_SCHEMA_INSPECTED_NO_REPEAT_MANUAL_REVIEW",
+      "training_use": "NOT_AUTOMATICALLY_ADMITTED"
+    },
+    {
+      "material_id": "MAT-2fcdae3d81f462c0f26a",
+      "display_name": "3-xujing_topic_seed_100_4confirmed_20261004.json",
+      "kind": "local_file",
+      "corpus": "user_reviewed_topic_seed",
+      "original_locator": "C:\\Users\\28049\\.codex\\codex-remote-attachments\\01a0cd84-7685-7a73-97d9-83a14a546e71\\03D691F8-AC79-47AF-89A1-53C0E49E3DBE\\3-xujing_topic_seed_100_4confirmed_20261004.json",
+      "source_input_ids": [
+        "M-user-topic-seed-20261004"
+      ],
+      "primary_owner": "C1",
+      "thread_id": "01a0f86f-6435-78d0-8e48-522e2ca09ca2",
+      "supporting_owners": [
+        "C3+C5",
+        "C6"
+      ],
+      "owner_obligation": "User-reviewed foundation topic inputs through current Source/registry/Evidence/Canonical; additive versions, no term deletion",
+      "status": "USER_REVIEWED_PENDING_PRODUCT_INTAKE",
+      "local_exists_at_snapshot": true,
+      "sha256": "cfe3b6cb424ee0efe3d917479ba95db66f4ca9b8df32fa891fcf16fd6c576028",
+      "size_bytes": 126455,
+      "body_read_status": "FILE_PINS_AND_JSON_CSV_SCHEMA_INSPECTED_NO_REPEAT_MANUAL_REVIEW",
+      "training_use": "NOT_AUTOMATICALLY_ADMITTED"
     }
-  ]
+  ],
+  "frontend_reference_video_scope": {
+    "status": "PAUSED_PENDING_USER_RESUME",
+    "new_videos": [
+      "D:/微信数据/微信下载/xwechat_files/wxid_tkz9s7tlr1kn22_0eec/msg/video/2026-10/d16fc1c8ad774b0e950e3e7a4e444fe3.mp4",
+      "D:/微信数据/微信下载/xwechat_files/wxid_tkz9s7tlr1kn22_0eec/msg/video/2026-10/7ac450632cf2611ee2ff3a6b29a41669.mp4"
+    ],
+    "earlier_five": [
+      "28346dd9b6cbda22c59a9f13c6757b1b.mp4",
+      "28d5aca3aaba2851b9a0f24f5c49f039.mp4",
+      "a700b33f084a1601c9c98e5d5dc52264.mp4",
+      "2601473a2d645d6250caede43c3486a6.mp4",
+      "cb55b77feb25668ebdaea62e177adf1b.mp4"
+    ],
+    "reuse_existing_analysis": true,
+    "further_exhaustive_other_historical_video_study": "SUPERSEDED_BY_LATEST_USER",
+    "old_originals_and_analysis_retained": true,
+    "source_thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+    "source_turn_id": "01a102b8-7fd4-79b2-8873-57bc3278f3c0"
+  }
 }

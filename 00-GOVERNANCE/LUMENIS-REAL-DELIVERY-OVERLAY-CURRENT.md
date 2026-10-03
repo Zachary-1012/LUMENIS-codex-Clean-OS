@@ -1209,3 +1209,58 @@ unchanged handoff checks or progress-only reports into that path. Existing
 owners coordinate dependencies directly; preserved valid evidence and required
 affected recovery/security/E2E gates still apply. F remains paused. C2's current
 resource is the single approved RTX5090; the RTX4090 alternative is superseded.
+
+
+## Normal success and change continuity — 2026-10-04
+
+Actual permitted material enters an actual user task and produces a useful,
+editable result that can save, revise, independently reopen and recover. The
+executing main/overlay/build/process/DB/model/recipe/token-budget/input/Evidence/
+Artifact versions must agree. A locally accepted candidate, old evaluation path
+or document/test/HTTP/manifest cannot substitute for that executing version.
+Keep Source truth, analysis, human decision and production effect distinct.
+
+Require the six combination results in the Source Owner Index: purpose-bound
+collection answers a business question; Task/DOCX/SavedWork retry/cancel/parent
+versions work; research Brief/source/context survive creation formats and
+constraint edits; remote training/physical Artifact repeat/recover/evaluate/
+promote/rollback; localized editing preserves the whole work; source corrections
+locate and revise all related conclusions and works without overwriting origins.
+
+An allowed nonempty brief_ref/evidence_refs must travel through the normal
+source-use contract into useful analysis/creation. If it still produces
+INTERNAL_PITCH_SOURCE_BINDING_REQUIRED, this is an unfinished binding, not
+acceptance of 'research→AI pitch'. owned_model_execution=NOT_RUN cannot establish
+owned analysis. Internal Word/DOCX/SavedWork composition can prove its own
+bounded behavior but not that missing normal research/owned-AI path. On F resume,
+required real submission must be operable; an onPressed:null editor/entry is
+not a completed action. F's pause never becomes UI verification.
+
+Domestic semantic quality must distinguish same-named commercial entities,
+cross-city shops, current versus historical claims, brand self-description versus
+consumer feedback, and advertisements versus organic discussion. Evaluation
+checks those distinctions in the final task result, not merely Chinese labels.
+Compare with peers/manual workflows on the same materials, task and budget:
+record correctness, editability, human remedial effort, elapsed time and cost;
+no claim of outperforming Meltwater/Brand24/YouScan follows from architecture.
+
+The complete reusable business path is one brand/commercial job → the same
+time/scope-bearing materials → budget/resource-constrained alternatives →
+editable text/video/podcast outcomes → source/budget change → locate the affected
+claims/sections/scenes/audio/budget decisions → explicitly adopt the new version
+and revise affected parts → preserve old work, reasons and a usable rollback.
+The existing Evidence/Trace/Artifact/SavedWork/Task/Evaluation owners maintain
+these dependencies and version lineage; no second impact-truth store is created.
+Corrections are appended/linked rather than rewriting source Evidence. Changed
+constraints retain the user goal/context and unaffected valid portions; external
+effects still need fresh permission/fences and do not silently replay on reopen.
+
+Prioritize actual remote training/step/loss/checkpoint bytes/load/cancel/connection
+loss; consistent training and Gateway recipes/budgets; true research→creation
+source transfer; semantic queries in actual capture/refresh/recovery; same-version
+integration/environment reproduction; and four-surface operation after F resume.
+Each existing owner continuously closes its whole outcome, not safety refusal
+only or repeated per-function reports. F remains paused; reference videos are
+not analyzed before explicit resume. Original six-window/R/J/U/special exits,
+global data construction, real outcome/Evaluation and final human repeat gate
+remain, with no shrinking of useful normal-path standards.

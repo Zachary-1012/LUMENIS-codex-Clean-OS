@@ -10,7 +10,7 @@
 | C2 | 自有基础权重、训练/推理/Agent/Skills/Memory/多模态/识听、模型与推理教材、OSA及OpenAI/Codex/ChatGPT/Claude/Meta学习对象 | 优先闭合实际训练→checkpoint→reload→heldout→Gateway正常业务结果；研究既改产品能力也支持独立获批的学习/训练 |
 | C3+C5 本地接续 | 两个完整领域职责；所有未归类文件的接收与用途核实；能力/补充需求、行业广告/传播/课程/案例/法律、CTH/BMP材料、Import/Research/引用/报告/Artifact；官方站点逐篇资料的研究统筹 | 全文/逐篇取证及source/范围/权利；业务方案和可继续的产物；将技术/UI需求交相应Owner并拿ACK，交接前仍由本窗负责，不得停在归档 |
 | C4 | 全部剪辑、播客、视听方法/教程/书籍、广告/电影/纪录片等制作参考；V2方法库；历史12条重剪工作另册保留 | 逐视频/逐帧与声音、叙事/镜头/节奏/编辑机制分析，适配现有Timeline/制作Owner；原创方案/视频/播客分别完整结果；与F共验可滑动时间轴 |
-| F 独立前端 | 全部历史UI/UX/AIGC参考视频/图片/网站，含此前五个Desktop附件、旧微信五片、五个XHS链接和新录屏；女孩水彩/颜色/壁纸/动效/动线；官网全部支持/说明/日志等页面的前端适配 | 全量参考的实际覆盖→四端具体设计/操作→实现→真实界面验收；接续已读帧，不重做有效部分；可滑动时间轴归F界面；开发者模式由用户后置，保留F/C6归属 |
+| F 独立前端（暂停） | 最新2个录屏+此前5个视频+已有分析+OpenAI官网及现规则/需求/架构；最新彩色手绘图片、线性和彩色icon、启动页、Manus及官网操作创意视频；全部四端UI/UX/功能布局/AIGC比例 | 明确恢复后按现范围真实逐帧并适配四端；旧历史原件/有效分析保留，不再继续穷尽其他历史视频；当前代码/研究/测试/视频分析均暂停；C1文图示例供未来参考，设计仍归F/Experience；开发者模式后置 |
 | C6 | 运行/安全/DB/协议/打包/依赖、平台工具配置/开发者能力记录（本轮后置）、跨端浏览器、恢复、CI及共享集成资料 | 现有Owner的真实合同/实现/安全与恢复，developer mode记录与后续恢复归属（本轮不实施、不阻断），接受后唯一main集成/发布；不建第二系统 |
 | M | 跨Owner分歧、产品/架构/设计、完整性和结果验收 | 原始需求不被摘要删除；修正不当方法，跟踪bug到修复；按完整成果验收，不逐函数/逐文件叫停，也不亲自反复取代窗口研究 |
 
@@ -23,7 +23,7 @@
 ## 已备好的具体入口
 
 - 全历史恢复：work/m-controller-20261003/requirements-recovery/。HUMAN-AND-REFERENCED-INPUTS、INPUT-OCCURRENCES保留每个线程/时间上下文；相同“继续/暂停”不能跨线程混为一条。ALL-MATERIAL-REFERENCES是原路径索引；ADDITIONAL-SOURCES补旧来源。工具注入/Goal/助手转发不是新的用户功能授权。
-- 视频：work/m-controller-20261003/VIDEO-OWNER-HANDOFF.md。新录屏及历史前三条已完成逐帧；#260147停在前128唯一帧（6.35s），#cb55未读。484张连续图页和完整映射可复用。旧2秒采样COMPLETE不等于逐帧完成。旧微信/其他历史集合另行查找，不能以这六个文件冒充全部参考。
+- 视频：work/m-controller-20261003/VIDEO-OWNER-HANDOFF.md。新录屏及历史前三条已完成逐帧；#260147停在前128唯一帧（6.35s），#cb55未读。484张连续图页和完整映射可复用。旧2秒采样COMPLETE不等于逐帧完成。旧微信/其他历史集合的原件/已完成分析保留；最新F仅要求两新片+此前五片及已有分析，不再扩大其他历史视频逐帧研究。
 - Word原件：work/m-controller-20261003/user-document-reading/。能力.docx 34节和补充需求.docx已全文读；旧运行/模型/数字不可照搬，业务能力不能丢。
 - 官网：work/m-controller-20261003/official-site-full-coverage/。URL-INVENTORY共4797条发现记录；正文/占位/403/未穷尽状态分别保留。723篇主审阅正文加18篇短正文待核，M只完成Browser/Settings两篇文本阅读，绝不是逐篇研究全部完成。C3+C5研究统筹，F负责全部前端适配，C2/C6消费各自技术部分。取回、阅读、采用和实现分别记状态。
 - 既有研究库：intelligence_library/09_Research-Hub/2026-10-02-industry-foundation、expansion-2026-10-03、2026-10-03-communication-foundation、2026-10-03-inference-engineering；intelligence_library/01_序境产品研究/和07_Data-Evidence-Evaluation/；work/w4-creation-20261002/dot-av-methods-v2-adaptation-20261003/、audio-understanding-supplement-20261003/及work/frontend-2026-10-03/textbook-research/。按主题Owner接续，不重新收集已有原文，也不能称全书/所有课程已读。
@@ -37,3 +37,24 @@
 每窗只需一次确认本包主责、原件入口、完整范围及当前状态。普通进度在本窗口记录/W6合并，M只收完整成果、必要决策或紧急风险；不逐材料、逐函数发消息打断。转交只有接收Owner ACK后生效，主责仍需确认原件与缺口未丢。新增任何材料不得以未整理为由无主。
 
 2026-10-04最新纠正：全部窗口的执行单位是完整用户成果，不能把资料/代码按最小函数切片反复交接、核对、报告。保留当前原件/pins后直接持续研究和实现；真实Owner依赖由责任窗口与W6协同闭合，必要来源/权利/安全/恢复验收保留。C2固定5090，4090临时选项已撤销。F继续暂停所有代码、研究和测试，其完整资料责任保留到未来明确恢复；此方法更新不恢复前端。
+
+
+## 2026-10-04 updates
+
+当前输入原文、F原生turn/附件定位和逐条覆盖见 USER-ADDITIONS-20261004.md
+及 REQUIREMENT-COVERAGE-20261004.md。原185直接材料记录保留，本轮新三条F
+附件追加，不删除旧来源或有效分析。Manifest的当前frontend_reference_video_scope
+仅变更F未来研究义务，不删除归档，也不缩减其他窗口的课程/书籍/产品能力。
+
+F继续暂停，当前七片的进一步研究/逐帧分析待用户明确恢复。C1在既有采集/Source/
+Artifact责任内另交真实结果的文案和许可图像示例，标Source/范围/时间/版本、引用/
+用途、示例与实际UI区别，符合Experience风格供以后F消费。C3+C5接真实研究到
+多格式创作和来源更正/预算变更的可继续任务；C4制作/Word/编辑/重开、C2/C6真实
+训练/Gateway/版本一致和数据持续运行按当前完整组合验收，非空Brief/Evidence不能
+停在source-binding-required拒绝。C1/C6定向研究平台验证现有R-0003/R-0004等输入，
+核当前来源/许可/合法会话/API/恢复，不照搬旧账号或速率策略。六大平台词条/语义
+计划/Jan2026起回溯与持续轮换有实收资料/任务入口和Owner，研究同时提升产品能力，
+不是只做模型训练。最大完整成果执行保持，不逐条发重复确认或重审原件。
+
+
+新增三格式用户已核对词条基础输入归C1，C3+C5协作Source/Importer，C6正式入库/版本与部署；100词条不是100主体，热度UNKNOWN及原证据时间层级保留。原词不删，后续按time/entity/brand/activity/event增补版本。Metadata/schema/hash只读收据见TOPIC-SEED-INTAKE-20261004.json。后续运行保存/打包不依赖开发者附件目录；与MODEL_TRAIN和真实平台覆盖证明分开。

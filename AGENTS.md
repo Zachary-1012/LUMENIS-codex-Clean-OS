@@ -1132,7 +1132,7 @@ A launch shell, route, contract, generated Web target or provider registration d
 The Product Owner directed M to stop an unending central audit, finish the unique
 rules and complete-outcome acceptance contract, publish them online/offline and
 ensure every supplied document/video/research item has an accountable owner.
-F owns the full historical UI/UX/AIGC video/reference audit; C4 owns editing,
+F owns the latest user-scoped UI/UX/AIGC reference work, currently paused; C4 owns editing,
 podcast and audiovisual-method material, using already reviewed frame coverage.
 C1/C2/C3+C5/C6 own their named research/capability materials. The dated
 `00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-CONTRACT.md`
@@ -1159,3 +1159,76 @@ alternatives without losing unique valid work, and do not pile up unrelated
 candidates/tests/reports. M ensures a found bug reaches repair, not another
 round of user reporting. Current material ownership and acceptance remain
 binding through every handoff, model change and compaction.
+
+
+### Latest collection and result continuity — 2026-10-04
+
+Keep maximum complete-outcome execution. The Product Owner's current frontend
+instruction remains PAUSED: no F code, research, tests or video/frame analysis
+until explicit resume. The latest F reference scope is two new recordings plus
+the earlier five, existing analysis, OpenAI official material and current product
+rules/requirements/architecture. This explicitly supersedes exhaustive further
+historical-video study for F; retain old originals/analysis as archives. Experience
+§38 governs linear and colored hand-drawn icons, recorded launch principles,
+Manus-inspired task/operation presentation and Website operation videos, all four
+surfaces and task-justified UI/AIGC balance. All operational surfaces except the
+Public Website avoid unnecessary page-level up/down scrolling; preserve necessary
+long-content/accessibility scrolling and actual content/interaction completeness.
+
+C1 starts/continues the six primary platforms: Instagram, Facebook, WeChat
+Official Accounts, RedNote/XHS, Douyin and X. Existing other platforms remain.
+Use current platform aliases/registry/adapters and approved exact identities and
+scopes. Create provenance-bearing platform/brand/commercial-entity topic terms,
+then compile task-semantic purpose queries from actual terms, canonical aliases,
+city/store/time/language and user intent; never invent a platform tag, hotspot,
+identity or popularity claim. The existing Collector/registry/Source owners own
+this vocabulary and query plan, not another store or Collector. Global §10 is
+the detailed temporal/continuous-acquisition contract.
+
+The user explicitly authorized this internal scoped program to backfill from
+2026-01-01 by actual publication/event time and continue incremental collection
+while other work, training or rule publication occurs. Platforms may rotate;
+one platform's challenge/outage pauses only its affected authorized path. Existing
+SYSTEM Collector/Scheduler code, persistent cursor/backoff/checkpoint/overdue
+recovery and real scheduled operation must supply continuity without Codex/CUA
+or manual developer triggers. This is an explicit opt-in for this program,
+not a change of future-user MANUAL defaults or permission to use the protected
+Mainland personal XHS profile. Source-time unknowns remain unknown; capture time
+cannot establish historical coverage.
+
+C1/C6 research and repair platform-verification friction using existing material,
+current official interfaces and maintained permitted implementations. Do not
+make repeated Product Owner troubleshooting the normal path. Historical R-0003/
+R-0004 research includes MediaCrawler/xiaohongshu-mcp/Spider_XHS comparisons;
+recheck source/license/version and current boundaries, not old frequency/account
+claims. Reuse permitted sessions, official refresh, pacing/Retry-After, bounded
+backoff and recovery; never bypass CAPTCHA/access checks or fabricate completion.
+An unavoidable human identity step stays explicit while other platforms proceed.
+The supplied Douyin completion reply requires current session-owner readback.
+
+C1 also delivers real collected-result text/image examples for later F work,
+with source, scope, time, rights and versions in the existing Artifact/evidence
+path and the sole Experience style. These are presentation references, not a
+second UI authority, a copied social-platform interface or implemented screens.
+
+Self-owned Product/AI/Gateway/Collector and unique governance remain the current
+owners. Historical third-party integrations and GPU training are separate proof
+paths; neither replaces the product or establishes independent operation. Real
+permitted materials must enter real useful tasks and save/revise/reopen/recover
+with matching runtime/source/model/recipe/token-budget/Evidence/Artifact versions.
+Real Delivery's normal-success/change contract retains all six combinations and
+priorities, exact semantic disambiguation, budget/resource constraints and
+affected-only revisions with explicit new-version adoption, old work/reasons
+and rollback. Missing allowed nonempty Brief/Evidence binding or a NOT_RUN model
+is an unfinished normal path; refusal-only behavior is never its acceptance.
+
+
+### User-reviewed foundation vocabulary seed
+
+C1/C5/C6 admit the user-reviewed100-topic/41-source XLSX/CSV/JSON foundation
+through current Source/registry/Evidence/Canonical and actual packaged runtime.
+Global§10 owns its exact schema,4 named entity/2 unnamed/UNKNOWN-hotness states,
+immutable original terms, additive time/entity/brand/activity/event versions,
+active-query selection, history and rollback. User confirmation is already given;
+no repeated human review and no inference of verified hotlist/platform coverage.
+Do not auto-admit the seed to MODEL_TRAIN or depend on developer attachment paths.

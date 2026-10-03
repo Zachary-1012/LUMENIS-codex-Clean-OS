@@ -572,3 +572,38 @@ C2 uses RTX5090 only; the intervening conditional RTX4090 option is explicitly
 revoked. Weight integrity and actual remote trainer/checkpoint binding are one
 complete execution Batch with W6. The latest C2 report had zero optimizer steps;
 no real training completion/start is inferred from this rule publication.
+
+
+## Latest user collection and normal-result requirements — 2026-10-04
+
+AGENTS/Global §10/Experience §38/Real Delivery/Owner Index/README and material
+accountability now carry every current user addition; raw M/F instructions and
+the requirement-level ledger are retained in this round evidence. The latest
+F scope is two new recordings + earlier five + valid analysis/OpenAI/current
+product material, superseding further exhaustive historical-video work. F stays
+paused including research/tests; no video frames were analyzed by this rule batch.
+Linear+colored hand-drawn icons, recorded launch/Manus operation/Website videos,
+four-surface functional UI/UX/AIGC balance and Website-exempt operational no-
+unnecessary-vertical-scroll direction remain future actual design/operation work.
+
+Six primary platforms are Instagram/Facebook/WeChat Official Accounts/RedNote/
+Douyin/X. Current scoped approved internal continuous acquisition is explicitly
+authorized from publication/event2026-01-01 onward, task-semantic sourced topic
+terms, rotating platforms without other tasks stopping the product Scheduler,
+real refresh/recovery and C1 text/image examples. Actual running/history coverage
+is not established by this document. Platform-verification repair is researched
+through existing owners and permitted APIs/sessions; unavoidable identity checks
+remain honest and cannot be bypassed. Personal Mainland XHS protection remains.
+
+All six combinations/priorities, useful normal results from permitted nonempty
+Brief/Evidence, actual owned model use, same model/recipe/token/version identity,
+domestic semantic distinctions and same-input/task/budget peer comparisons are
+preserved. Real source/budget change must locate affected conclusions/artifacts,
+explicitly adopt/revise only affected content, keep old work/reasons and rollback.
+No raw rows, pipeline safety refusals, NOT_RUN outputs or frontend placeholders
+are promoted to acceptance. Current self-owned product and historical integrations/
+GPU training retain separate proof. Maximum complete outcome execution, fixed
+RTX5090, W6 sole product integration and M event-driven standby are unchanged.
+
+
+基础测试主体词条库：用户已核对三格式 xujing_topic_seed_100_4confirmed_20261004，实际100词条/41来源，广州太古汇、深圳万象城（罗湖）、Nike、Le Labo各25词条；输入仍自述4/6主体确认、2未指定和100热度UNKNOWN，不冒充已验证热榜/全平台覆盖。C1/W6按现Source/registry/Evidence/Canonical入库与打包进入实际运行；词条随时间、商业体、品牌、活动、事件增补版本，原词条/原文件不删除，保留理由/有效区间/来源/旧版本与回滚。用户核对不重新要求人工重复确认。
