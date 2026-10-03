@@ -246,6 +246,10 @@ git ls-remote --heads origin
 
 ---
 
+### 当前规则同步 / 2026-10-03
+
+当前统一口径：完整成果 Batch、默认 GLOBAL 工作入口、序境风格的采集结果与 SH-01 Discover、由产品 Collector/Scheduler 自运行采集、可扩展案例创意与真实预算/资源约束。唯一执行路由仍为 AGENTS.md；详细体验、数据及验收分别归现有 Experience Constitution、Global contract 和 Real Delivery Overlay。规则/设计发布不代表这些产品能力已经完成；实际状态和发布证据见 CURRENT。旧暂停记录、研究包与工作回执不能成为第二套执行规则。
+
 ## 8. Codex / Coding Agent 执行标准
 
 Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)，随后读取 [`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)。

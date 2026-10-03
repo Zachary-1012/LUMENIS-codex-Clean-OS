@@ -36,6 +36,16 @@ The prelaunch Global baseline still requires real, traceable CTH and BMP data be
 
 Clearing focus returns to `GLOBAL / ALL`. Every result, Evidence reference, AI task, content/report artifact and consequential action must carry its actual scope. A client-supplied header, route parameter, selected card or local UI state never grants access.
 
+### GLOBAL work and product-owned acquisition — 2026-10-03
+
+No Subject/BrandFocus selection is required merely to enter work or submit a valid GLOBAL/ALL task. Resolve the actual actor and explicit global scope on the server, retain fresh permissions and each original source's exact entity/domain/market/purpose binding. Focus is an optional narrowing; Clear returns the active view to GLOBAL without rewriting saved task, result, Evidence or Artifact scopes. An unbound callable or source grant remains that specific gap, not a reason to invent a subject/login wall.
+
+SYSTEM Collector/Browser code owns search input, navigation, permitted scrolling, parsing and capture; SYSTEM Scheduler owns due-only maintenance, bounded retry and restart recovery. Development harness execution is CODE_EXECUTED_BY_DEVELOPER_TRIGGER, not unattended product operation. Assisted web discovery/import remains labelled assisted and cannot pass autonomous platform collection.
+
+For approved prelaunch public-baseline AUTO, prove an actual future due cycle with Codex/CUA/manual developer triggers absent: append/change/no-change semantics, Source/Evidence/Canonical lineage, last attempt/success/freshness, partial failure and recovery remain correct. Clock simulation/immediate replay proves technical behavior only; real elapsed scheduled operation is separate. Final-user AUTO remains explicit opt-in; MANUAL remains default. Login expiry requests a real human login through the existing session owner; it never accesses the protected Mainland personal account.
+
+Discovery uses authorized real observations: distinguish comparable measured trends, corpus-observed hotspots, an actual official platform rank and owned-AI suggestions. Preserve platform-specific fields, publication/capture/event/window/derivation times, sampling and coverage. Absent fields or unmeasured time buckets are unknown/unavailable, not zero or an invented trend. Related-work selection is not permission to reuse, export, publish or train.
+
 ## 2. Existing owners and compatibility boundary
 
 | Concern | Sole current owner | Contract boundary |

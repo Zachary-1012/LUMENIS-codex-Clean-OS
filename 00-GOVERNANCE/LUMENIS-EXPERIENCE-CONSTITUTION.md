@@ -298,14 +298,14 @@ SYSTEM may be dense and technical. It exposes machine relationships rather than 
 
 ## 9. Account, authentication and global context
 
-The LUMENIS product account is a post-internal-beta capability. During the current three deliveries, the App opens without a global product-account wall; a protected operation may still show a local, truthful Permission boundary enforced by Product Core. Media-platform Cookie/session/browser authorization is a separate SYSTEM connector state and must not become a LUMENIS login flow.
+The LUMENIS product account is a post-internal-beta capability. During the current C1–C6 delivery, the App opens without a global product-account wall; a protected operation may still show a local, truthful Permission boundary enforced by Product Core. Media-platform Cookie/session/browser authorization is a separate SYSTEM connector state and must not become a LUMENIS login flow.
 
 When post-beta authentication/access surfaces are implemented, they are calm, direct and explicit about identity, permission, blocked state and recovery. They are not marketing landing pages.
 
 Global Subject Context:
 
 ```text
-Selected Subject → Domain Lens → Scope / Permission
+GLOBAL_ALL → optional Subject / BrandFocus → Domain Lens → Scope / Permission
 → Function / Metric → ViewModel → Experience / Report / Export
 ```
 
@@ -559,6 +559,53 @@ business and recovery state, typography, local draft and reversible focused
 editor. This is a bounded simplification of the existing owner. It authorizes no
 new page, effect, data meaning, brand asset or overall frontend acceptance.
 
+### Task Home, collected-source presentation and Discover — 2026-10-03
+
+Default entry is useful work in GLOBAL/ALL, with optional exact Subject/BrandFocus. The Home reuses the existing AI-01 editor/draft/ViewModel and real navigation. Do not substitute a marketing hero, introductory SaaS cards, entry-status CTA or subject-selection prerequisite. Missing actual behavior stays explicitly unavailable at its control.
+
+All collected platform lists, details, media, source results and recommendations use LUMENIS information hierarchy, interaction and visual language. Retain native facts, original logos/attribution, source URL, locators, times and metrics; source-platform visual chrome, copied XHS/Douyin feed/layout, endless swipe or forced autoplay are not the product interface. Avoid replacing them with one generic repeated card template. Detail/media reading is reversible and preserves task/context/scroll continuity and honest states.
+
+The existing SH-01 research/creation workspace includes a bounded Discover view: task-relevant trends, observed hotspots and similar works, with explicit scope/platform/time filters, relevance explanation, source/citation and missing/partial states. A single-platform collection request remains available. The owned Gateway may analyze authorized product materials and suggest alternatives, reasons and original creative directions; static entry cards, source excerpts or Codex answers cannot pretend to be this analysis. Selected references enter existing Brief/creation owners with actual use authorization.
+
+AI-01, ACC-03 and SH-01 specifications carry the detailed bounded design. A design-approved requirement or this rule is not implemented/live accepted. F keeps each screen's task-specific composition, responsive behavior, localization and accessibility; W6 binds the same real Core contracts across approved surfaces. No new screen ID, model owner, database, recommendation authority or design system is created.
+
+### Functional glyphs and surface assets — 2026-10-03
+
+M reviewed the complete original functional atlas at 16/18/20/24 logical-pixel
+sizes and its exact semantic aliases. The bounded glyph language is
+`DESIGN_READY`: a 24-unit grid, optically corrected open geometry, restrained
+rounded strokes and familiar navigation/editing/transport meanings. Play,
+pause and simple selection marks may use deliberate solid geometry. The
+existing App visual/Theme owner supplies one implementation; no independent
+icon system or design authority is introduced.
+
+Use 14–16 logical pixels for inline metadata, 18 for editing toolbars, 20 for
+navigation and 24 for deliberate transport emphasis. Glyph size is separate
+from the accessible interaction area, ordinarily 44–48 pixels or greater.
+Preserve IconTheme color/opacity/size, semantic labels and exclusions,
+Directionality where applicable, focus, disabled/selected behavior and native
+control semantics. A custom painter does not establish accessibility by itself.
+Aliases may share a glyph only when they share meaning; newly encountered
+symbols require explicit coverage rather than a silent generic substitution.
+Actual state remains legible in text and must not be conveyed by a glyph alone.
+
+The approved static point/open nested-contour product mark remains the common
+identity for App, Website, favicon and native/package assets. Website header
+and footer keep the unboxed mark and existing product text. Small favicon and
+package variants may place the same optically corrected silhouette on an opaque
+warm-neutral field, respecting the platform mask and safe zone. Preserve real
+source brand logos/avatars and their provenance. Package variants must not
+change signing identifiers or imply a business, connection or readiness state.
+
+F produces the complete isolated glyph/asset candidate and exact format,
+dimension, alpha and before/after hash inventory. W6 integrates frozen App
+inputs, launch/package assets and existing entry defaults. Functional atlas
+approval does not accept generated package artwork, a mounted interface or an
+installed executable. Review representative real light/dark/wallpaper contexts,
+large text and three locales; verify actual Website/Web/Desktop behavior and
+each promised native/package surface separately. Missing device or installed
+launcher evidence stays `LIVE_NOT_VERIFIED`.
+
 ## 24. Anti-template hard failures
 
 Unless a current product requirement proves a narrow exception, fail review when:
@@ -793,8 +840,8 @@ The 44 screen IDs and 54 binding records (`BACKEND-GAP-001..054`) define the sco
 | Capability family | Product owner and scope | Required product outcome | Truth boundary |
 | --- | --- | --- | --- |
 | Runtime and work context | SYSTEM runtime/permission; future product account after engineering closure and Product Owner redesign | Open the pre-beta product without an account wall, restore safe local work context, and expose a truthful local restriction only where a protected operation requires it | UI context is not proof of authorization; every protected server operation still enforces Permission/effect boundaries; media platform Cookie/session state is separate |
-| Commercial operations and subject intelligence | CTH | Start from a Subject; read its commercial signals, event stream, cases, risk, decisions, actions, schedules and reports; trace each decision to source and follow-up outcome | Subject ownership, CTH metrics and confirmed outcomes remain CTH-owned |
-| Brand and market intelligence | BMP | Start from Brand/Market focus; connect category movement, competitors, audience, creators, content, channels, campaigns, brand risk and evaluation | Brand focus and BMP metrics remain BMP-owned; competitor and creator data are relationships, not interchangeable subjects |
+| Commercial operations and subject intelligence | CTH | Start in authorized GLOBAL_ALL commercial intelligence, optionally narrow to a Subject; read commercial signals, event stream, cases, risk, decisions, actions, schedules and reports; resolve the exact target when an operation needs it and trace each decision to source and follow-up outcome | Subject ownership, CTH metrics and confirmed outcomes remain CTH-owned |
+| Brand and market intelligence | BMP | Start in authorized GLOBAL_ALL brand/market intelligence, optionally narrow to BrandFocus/Market; connect category movement, competitors, audience, creators, content, channels, campaigns, brand risk and evaluation | Brand focus and BMP metrics remain BMP-owned; competitor and creator data are relationships, not interchangeable subjects |
 | Analytics and decision support | Shared analytical capability with CTH/BMP-owned metric definitions | Cohort, compare, segment, trend, attribute, detect anomaly, explain change and export an auditable view | Shared computation keeps source domain, definition/version, scope, window, freshness, confidence and lineage; it cannot relabel a metric or combine incompatible scopes silently |
 | Business operations | CTH for commercial cases/actions; BMP for brand campaigns/marketing workflows | Convert a signal into an owned decision, accountable task, due date, status, approval and measurable follow-up | Each action is written by its source-domain owner; Shared provides orchestration/trace, not a replacement workflow truth |
 | Brand marketing and growth | BMP | Plan positioning, audience, campaign, creator/channel mix, content variants, launch calendar, budget/goal and evaluation | Proposed, approved, scheduled, published and measured are separate states; no simulated metric is presented as actual reach or ROI |
@@ -831,7 +878,7 @@ Prioritize work by real user task and authorized role, not by the size of a scre
 
 | Role / context | Top task | End-to-end scenario to prove |
 | --- | --- | --- |
-| Commercial operator (CTH) | Detect a subject-level change and close the response loop | Select authorized Subject → inspect current and historical signals → open source evidence → create/assign a case or decision → confirm authorized result → revisit measured outcome → Return to the same Subject context |
+| Commercial operator (CTH) | Detect a subject-level change and close the response loop | Enter authorized GLOBAL_ALL → optionally focus an authorized Subject → inspect current and historical signals → open source evidence → resolve the exact target for a case or decision → confirm authorized result → revisit measured outcome → Return to the retained context |
 | Brand / growth operator (BMP) | Move from market signal to measured campaign | Select Brand/Market focus → compare category/competitor/creator signals → inspect source and freshness → plan creative/channel/campaign → obtain required approval → record delivery result → evaluate against a defined baseline → Return to the campaign |
 | Analyst (CTH or BMP) | Explain a KPI change without mixing scopes | Select product-owned metric → inspect definition/window/denominator → segment or compare compatible cohorts → distinguish actual, estimated and unavailable data → export with lineage → reopen the same view |
 | Media / content operator | Adapt an approved asset to an authorized platform | Open asset from owning campaign/Subject → review rights and provenance → create channel variant → preview and approve → submit through the platform adapter → inspect real adapter status/error → trace back to campaign and evidence |
@@ -852,7 +899,7 @@ The supplied [`motion-web` repository](https://github.com/Zachary-1012/motion-we
 
 ### Implementation sequence and release gates
 
-1. **Freeze product semantics:** validate CTH Subject-first, BMP Brand/Market-first, Shared lineage and SYSTEM infrastructure boundaries against the current owner map. Reject a screen proposal that merges or changes these starts.
+1. **Freeze product semantics:** validate CTH Subject-first, BMP Brand/Market-first, Shared lineage and SYSTEM infrastructure boundaries against the current owner map. These are domain ownership semantics, not mandatory selected-Focus entry gates. Reject merging domain meanings or making Subject/Brand selection a prerequisite for a GLOBAL-capable task.
 2. **Resolve all 54 bindings:** one registry row per `BACKEND-GAP-001..054`; inspect code and live contracts, assign the canonical owner, record exact callable/route and typed fields, actor/scope, permission operation, evidence fields, side effects, truth status and test. Unknown remains blocked with an explicit next action.
 3. **Implement foundations:** typed API clients, session and context boundaries, deep links, cancellation/retry, offline/error handling, accessibility, event logging without sensitive content, state restoration and explicit surface capability state. Establish browser/desktop keyboard and mobile touch baselines before screens.
 4. **Deliver workflow slices:** for each capability, finish read → explain → decide → authorize → act → observe → Trace/Return before moving on. Prioritize AI-01, CTH-01, BMP-01, SH-01 and SYS-01 as distinct Golden Pages, then migrate by shared interaction/workflow family while preserving parity.
@@ -896,10 +943,10 @@ The design review records pass/fail per screen in `contracts/experience/screen-s
 | Screen | Purpose-built information composition and visual language | Primary interaction and result | PC → mobile recomposition |
 | --- | --- | --- | --- |
 | ACC-01 Authentication entry | Quiet, focused identity surface with one clear account form, provider choices only when actually supported, and a compact trust/status rail; no analytics shell. Auth behavior stays `UNKNOWN` until bound. | Enter credentials or select a supported sign-in method; show validation, pending, rejected and recovered states distinctly. | Centered form with help/status pane → single-column form with touch-safe fields and explicit return. |
-| ACC-02 Subject and lens selection | Two-stage chooser: authorized Subject list first, then CTH or BMP lens; subject identity and lens are visually separate so selecting a view cannot imply changing ownership. | Search/select an authorized Subject, then confirm an available lens; server response controls the destination. | Searchable split list/detail → searchable full-screen list then focused subject confirmation. |
-| ACC-03 Workspace launch | A spatial launch map of recent work, CTH/BMP entry points and the central AI task entry; runtime health is a small truthful indicator, not another dashboard. | Resume a restorable work context or start a named product task. | Persistent domain rail plus recent-work canvas → compact destinations and one prominent resume/start action. |
+| ACC-02 Subject and lens selection | Optional context chooser from GLOBAL_ALL: choose an authorized Subject/BrandFocus and appropriate CTH or BMP lens; identity and lens remain separate and cannot imply changing ownership. | Search/select an authorized focus or remain GLOBAL_ALL, then confirm an available lens; server response controls the destination. | Searchable split list/detail → searchable full-screen list then focused subject confirmation. |
+| ACC-03 Workspace task home | Existing AI-01 task editor as the primary entry under GLOBAL_ALL or current exact Focus; compact recent work and destinations are secondary, with truthful unobtrusive runtime availability. | State a task or reopen saved work; retain the draft and selection during same-scope shell navigation. | Persistent domain rail plus task editor and compact recent-work access → task-first compact composition on small surfaces. |
 | ACC-04 Access recovery and guard | A boundary/recovery screen explains which step is blocked, what scope is missing and how to recover; no fictional credentials, roles or access grant. | Retry, switch to authorized account/context, or request access through a real flow once verified. | Diagnostic steps beside the attempted destination → sequential recovery cards with clear back path. |
-| CTH-01 Commercial operations overview | Subject-anchored operating desk: metric spine, chronological signal ribbon, event/evidence focus and a decision/action queue. Avoid BMP's brand network composition. | Scrub a change on the timeline, inspect its source, open/create a case or decision and trace the follow-up. | Parallel metrics + timeline + action queue → one active signal with swipeable evidence and a contextual action sheet. |
+| CTH-01 Commercial operations overview | Scope-aware commercial operating desk: GLOBAL signals or optional Subject metrics, chronological signal ribbon, event/evidence focus and a decision/action queue. Avoid BMP's brand network composition. | Scrub a change on the timeline, inspect its source, open/create a case or decision and trace the follow-up. | Parallel metrics + timeline + action queue → one active signal with swipeable evidence and a contextual action sheet. |
 | CTH-02 Subject / business-unit profile | Ownership map showing Subject → business unit → brand/format relationships, with source/owner labels and a separate context selector. | Expand a relationship and inspect its provenance; switch the selected Subject only through the authorized context control. | Hierarchical tree and relationship table → compact breadcrumb hierarchy with focused relationship cards. |
 | CTH-03 Real-time monitoring | Live pulse strip with freshness clock, confirmed-vs-live distinction, source lanes and collector health band; the update rhythm is the main visual. | Pause/resume viewing, pin an event, open source evidence; health actions remain permission-gated. | Multi-source live board with filters → prioritized single stream and persistent freshness/connection badge. |
 | CTH-04 Event relationships | Causal event constellation paired with a time axis; nodes encode event/case links and evidence anchors, not generic cards. | Select a node to reveal linked evidence, navigate to its case, then Trace/Return to the same graph position. | Interactive graph + synchronized timeline → vertical event path with evidence nodes and saved zoom/focus. |
@@ -920,7 +967,7 @@ The design review records pass/fail per screen in `contracts/experience/screen-s
 | BMP-09 Brand evaluation | Brand scorecard shows dimension, period-over-period movement, confidence and evidence coverage; narrative conclusions sit below the measured values. | Select a brand/period, inspect a dimension's definition and evidence, then compare only aligned baselines. | Score matrix with dimension trend small multiples → prioritized dimension list and one selected evidence-backed trend. |
 | BMP-10 Brand risk and events | Brand incident field groups by severity, spread and recency; active event timeline leads into response ownership and evidence. | Triage an incident, assign a response, record approval/effect and revisit verified impact. | Incident map plus response timeline → urgent queue with a focused incident detail and action ladder. |
 | BMP-11 Benchmark and competitor analysis | Normalized comparison workbench with metric definitions, side-by-side brand/competitor columns and an evidence strip; incomparable values are visibly withheld. | Select comparison set and time window, inspect normalization, identify a supported gap and export a traceable finding. | Multi-column benchmark grid and small multiples → swipeable comparison cards with sticky metric definitions. |
-| AI-01 AI intent entry | Intent composer beside a preview of which product context and evidence will be used; suggested tasks are grounded in available capabilities. | State a task, confirm authorized context, inspect evidence/capability plan and start only when an executable route exists. | Composer and evidence preview in parallel → single prompt field with context chip and expandable plan preview. |
+| AI-01 AI intent entry | Intent composer beside a preview of which product context and evidence will be used; suggested tasks are grounded in available capabilities. | State a task in GLOBAL_ALL or optional exact Focus, inspect authorized evidence/capability plan and start only when an executable route exists. | Composer and evidence preview in parallel → single prompt field with context chip and expandable plan preview. |
 | AI-02 Capability task workbench | Task represented as cancellable stages with input/output artifacts between stages; stage transitions reveal evidence and permission requirements. | Start, pause/cancel, retry a safe stage or review a gated action before it runs. | Stage graph with artifact inspector → vertical progress path with persistent cancel and expandable evidence. |
 | AI-03 Evidence-anchored analysis thread | Conversation claims are grouped by conclusion; each claim has inline evidence anchors, uncertainty labels and a provenance rail. | Open a cited source at the relevant passage, challenge/refine a claim or create an owned follow-up task. | Thread plus source inspector → claim cards with inline citations and full-screen source return. |
 | AI-04 Agent and skill catalog | Capability matrix shows owner, supported task, required permissions, health and last verified call; code presence is not shown as availability. | Filter by task, inspect input/output and permission contract, then run a safe verified capability. | Matrix/catalog with capability detail panel → searchable capability list and detail sheet. |
@@ -933,7 +980,7 @@ The design review records pass/fail per screen in `contracts/experience/screen-s
 | SYS-06 Internal browser | Controlled evidence-capture workspace splits source page, capture metadata and audit actions; unmistakably separate from personal browsing. | Navigate only within allowed capture rules, pin a snapshot as Evidence and inspect the audit result. | Browser viewport plus evidence inspector → source capture full screen with a compact metadata/trace panel. |
 | SYS-07 Evaluation and acceptance | Six-gate acceptance sequence shows owner, required evidence, result and unresolved blockers; PARTIAL/UNKNOWN remain visibly incomplete. | Open a gate's artifact, rerun a permitted check and inspect exact failing criterion. | Gate matrix with evidence detail → sequential gate cards with current blocker and artifact links. |
 | SYS-08 Observability and logs | Trace waterfall links requests, runtime spans and structured errors; frontend prototype events are in a separate lane. | Filter by trace/time/component, inspect correlated logs and return to the originating runtime or task. | Waterfall and query facets with detail pane → trace summary followed by scrollable spans and errors. |
-| SH-01 Content creation studio | Source-to-artifact canvas: brief and evidence rail, editable creation canvas, version/outcome lane; different from campaign planning and podcast editing. | Create a draft from a real brief, cite evidence, review revisions and hand off for human approval. | Three-zone canvas (sources/work/artifact) → focused editor with source drawer and version/action sheet. |
+| SH-01 Content creation studio | Discover and source-to-artifact workspace: readable trends/hotspots/related works, brief and evidence rail, editable creation canvas and version/outcome lane; distinct from SH-02 library, BMP-03 interpretation, campaign planning and podcast editing. | Inspect actual works and explained relevance, carry selected locatable references into an editable real brief, review versioned revisions and hand off for human approval. | Three-zone canvas (sources/work/artifact) → focused editor with source drawer and version/action sheet. |
 | SH-02 Evidence library | Search-first evidence atlas organized by source, time, domain and lineage; original snapshot and extracted citation remain adjacent. | Search/filter, compare source with extracted item, inspect freshness and open its owning CTH/BMP origin. | Dense result list with provenance inspector → searchable evidence cards with full-screen source trace. |
 | SH-03 Canonical data and metrics browser | Schema/metric explorer places definition, owner, lineage and sample records in distinct panes; derived values are marked as derived. | Inspect a field or metric and traverse lineage; this is read-only exploration, not business fact editing. | Navigable schema tree plus query/result panes → table/metric list with definition and lineage drilldown. |
 | SH-04 Report export center | Output queue distinguishes configuration, generated preview, completed artifact and failed export; format-specific preview appears beside provenance. | Choose PDF/Excel/PPT only when supported, set scope, inspect preview, export and retrieve audited artifact. | Export configuration and artifact preview split → guided export steps and a final downloadable artifact view. |

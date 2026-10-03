@@ -164,6 +164,31 @@ These names are architectural candidates only. Their inclusion here does **not**
 | Langfuse OSS | AI trace/evaluation/prompt observation | AI observability only; never Evidence/Metric/Permission/Business Truth owner |
 | Temporal | Durable long-running workflow/recovery | Adopt only if current scheduler/runtime/recovery is proven insufficient; use a workflow adapter |
 
+### Existing local FFmpeg/ffprobe media toolchain — verified 2026-10-02
+
+The existing external-process media adapter uses FFmpeg and ffprobe
+`9.0.2-essentials_build-www.gyan.dev`. Both binaries were inspected locally with
+`-version`; `ffmpeg -L` reports GPLv3 or later, and configure includes
+`--enable-gpl --enable-version3`. This exact build is GPL, not the project's
+default LGPL configuration. Primary references (accessed 2026-10-02):
+[FFmpeg licensing](https://ffmpeg.org/legal.html) and
+[Gyan release-build provenance](https://www.gyan.dev/ffmpeg/builds/), which identifies
+release9.0.2 and upstream commit946fcce07b. The extracted package includes LICENSE.
+
+Binary SHA256: ffmpeg
+`3256173f3f8bffd7df12227c68adf68025edb1832273a9530688a7bb1ed8edec`;
+ffprobe `f0d36ecbbdd3bcfac3efa078c96c7271c2e68b3810595552ac3b7f17e9a65c52`.
+Classification: existing OPTIONAL ADAPTER / local runtime tool, not committed or
+distributed here. Boundary: Shared Artifact/video/podcast subprocess adapters;
+existing LUMENIS_FFMPEG_PATH and LUMENIS_FFPROBE_PATH deployment settings. No new
+runtime, store, platform library or bundled binary is introduced. Replacement can
+use a separately verified compatible executable behind the same adapter.
+
+Before distributing this exact build, reconcile its corresponding source/build
+configuration, retained license/notices and compiled-library obligations against
+the actual package. Distribution/commercial packaging clearance is NOT VERIFIED;
+local execution/version checks do not establish that release gate.
+
 ## 8. Required pre-release reconciliation
 
 Before a production release:
@@ -207,3 +232,36 @@ notice SHA256 `6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2`
 Sampled composite-glyph rendering and exact local-file return are recorded in
 `evidence/round-08/ROUND-08-WEB-EMOJI-FALLBACK-2026-09-28.md`.
 This is not a claim of complete Unicode coverage or native-device acceptance.
+
+### 2026-10-02 bounded training phase signature adapter
+
+ADAPT `cryptography` 50.0.2 behind the existing SYSTEM Security owner for
+Ed25519 derivative phase receipts. The concrete gap is asymmetric verification
+in an approved interactive training notebook without exporting the local
+Evidence HMAC key or creating another Permission authority. This adapter does
+not grant MODEL_TRAIN permission, host a service, or perform model inference.
+
+Official tagged metadata/license inspected 2026-10-02:
+https://raw.githubusercontent.com/pyca/cryptography/50.0.2/pyproject.toml and
+https://raw.githubusercontent.com/pyca/cryptography/50.0.2/LICENSE . License:
+Apache-2.0 OR BSD-3-Clause; retain the upstream license/copyright notices and
+the license material of the statically linked wheel components. Current
+PyPI metadata identifies maintained stable 50.0.2 and CPython-compatible
+Windows AMD64 wheels. Source API reference:
+https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/ .
+
+Class: OPTIONAL SECURITY ADAPTER / LOCAL_MANIFEST_CANDIDATE. Declaration
+in the reviewed base ce5b5a632922b4efd3a96942e1d4084c2cb72044 is
+NOT_PUBLISHED; the protected local requirements candidate is separate from
+this rule/registration publication.
+The local Python 3.13 environment installed cryptography 50.0.2, cffi 2.1.1
+and pycparser 3.0 from binary wheels. Installed metadata independently read
+2026-10-02 declares `cffi` 2.1.1 as MIT-0 and `pycparser` 3.0 as BSD-3-Clause;
+do not substitute older releases' license declarations. Their bundled license material must
+remain with any redistributed dependency; packaging/other-target runtime
+acceptance is not established by this local installation. Only ephemeral
+test signing was verified; no production signing key was provisioned by the
+dependency installation. Private key configuration stays inside existing
+SYSTEM Security secret management; only public verification keys may leave
+the workstation. Replacement remains possible behind the same versioned
+receipt contract and requires equivalent signature/expiry/binding tests.

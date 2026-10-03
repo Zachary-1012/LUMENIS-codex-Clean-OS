@@ -314,6 +314,28 @@ executed Action, observed Outcome, Evaluation and UI/return/recovery remain open
 Source quotation and operator drafts do not establish executed business effects.
 Full C3 and C6, USER_VERIFIED, RELEASED and OPERATING remain unaccepted.
 
+### Current rule reconciliation — 2026-10-03
+
+The containing commit synchronizes the sole AGENTS execution router and its existing Experience/Global/Real Delivery/Source Owner contracts: complete-result Batch efficiency and autonomous correction within approved scope; GLOBAL task entry and practical Home; LUMENIS presentation of collected sources and SH-01 Discover; product-code/Scheduler acquisition independent of Codex; extensible research/case creation with actual budget/resource constraints. R01–R15/J1–J8/U01–U25 and C1–C6/F/M remain intact. There is no second router or parallel collection/recommendation/budget authority.
+
+This is rule/design publication, not product implementation acceptance. The current internal-creation and retained public-Raw source candidates are separately reviewed and not promoted by this publication. Actual useful owned inference, complete business/media/UI jobs, Source admission, unattended scheduled operation and full C acceptance remain OPEN. The Product Owner performs repeated core jobs after engineering is ready.
+
+Cloud W3/W5 retain their fixed source snapshots. W6/M deliver the newly published canonical rule revision at a safe checkpoint with exact SHA/bytes/read acknowledgement; delivery does not synchronize source or revive old rev4. A historical receipt of a Cloud pause is not current execution status. Latest user priority is canonical rule synchronization before dependent integration; unaffected authorized work continues.
+
+The same publication includes M-reviewed AI-01/ACC-03 same-scope navigation
+draft/selection retention and the SH-01 Discover specification. Closing/refresh
+is not durable save; confirmed scope/client changes isolate drafts. Detailed
+Git-byte input/output pins and publication gates are in the
+[rule/design evidence](evidence/round-08/GLOBAL-DISCOVER-RULES-2026-10-03.md).
+
+Previously local M-approved glyph language, memory compatibility-owner rows,
+BMP-03 signal reading/return and BMP-08 Script/Audio design refinements are
+published in the same canonical unit. Whole-screen binding/implementation stays
+blocked where recorded. The third-party register records the existing local
+GPL FFmpeg toolchain and signature adapter accurately: packaging clearance is
+NOT_VERIFIED, and cryptography's local declaration was NOT_PUBLISHED in the
+reviewed base. No requirements, App/source or binary installation is included.
+
 ## 2. Minimal current-context route
 
 Read `AGENTS.md` first, then its mandatory bootstrap and exact capability locator

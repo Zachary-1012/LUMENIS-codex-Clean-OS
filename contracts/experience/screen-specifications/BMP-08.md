@@ -49,6 +49,19 @@ approval_reference: ROUND-13-BMP-CREATION-UI
 - Only a verified, authorized response may produce real counts or a true empty/not-collected state. The screen keeps local script/render request drafts and their local-only explanation; those controls do not read blocked material or claim generation.
 - The primary question remains “can this spoken version be reviewed and released with its source and rights intact?”
 
+### 2026-10-03 approved Script/Audio refinement
+
+M reviewed the existing episode composition and approved task-appropriate Script
+and Audio views within the current material/section and properties/rights areas.
+Keep the selected segment and known time when switching views. Distinguish the
+script version, corrected transcript, spoken-audio revision and actual rendered
+output; text changes do not imply changed sound. Show actual audio only when its
+canonical result exists. Narrow/large-text layouts keep one active work area and
+reversible layers with visible focus, touch targets and honest recovery states.
+This is a bounded DESIGN_READY presentation clarification, without a new episode
+store, persisted preference or audio engine. Implementation, complete podcast
+persistence, actual AI/rights binding and live user acceptance remain open.
+
 ## 5. Actions, authorization and effects
 
 - `podcast:draft` saves a local request draft; it does not create a script or call an executor.

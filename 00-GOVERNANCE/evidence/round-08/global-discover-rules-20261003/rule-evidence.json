@@ -1,0 +1,404 @@
+{
+  "schema": "lumenis.canonical-rule-design-publication/v2",
+  "base": "ce5b5a632922b4efd3a96942e1d4084c2cb72044",
+  "accepted_M_inputs": {
+    "work/m-controller-20261002/rule-sync-priority-20261003/MANIFEST.json": {
+      "bytes": 2412,
+      "sha256": "c336478f9d1add0f7692d18a70a8e92027ee0c9eff2d355d61efefe6860cb819",
+      "lf_bytes": 2356,
+      "lf_sha256": "001c33b0e2b59772f5838587af440655a36424d812a1323b28fdf7c2a4bc08af"
+    },
+    "work/m-controller-20261002/rule-sync-priority-20261003/canonical-rule-sync.patch": {
+      "bytes": 24497,
+      "sha256": "8372cd3ff73be51f1895bd5d2d249a97fa99f5d8e75f2931675a11824fe13f80",
+      "lf_bytes": 24497,
+      "lf_sha256": "8372cd3ff73be51f1895bd5d2d249a97fa99f5d8e75f2931675a11824fe13f80"
+    },
+    "work/m-controller-20261002/global-discovery-home-spec-review-20261003.md": {
+      "bytes": 4814,
+      "sha256": "ba817a19558b0ce6ebe5755c609082c24fd4f4c51306af7e4c6aaec85b8204c2",
+      "lf_bytes": 4814,
+      "lf_sha256": "ba817a19558b0ce6ebe5755c609082c24fd4f4c51306af7e4c6aaec85b8204c2"
+    }
+  },
+  "exact_rule_and_spec_paths": {
+    "AGENTS.md": {
+      "base": {
+        "bytes": 47776,
+        "sha256": "6bdc67235874353abe1c9d2144d1dce7be0b8727b7819fe7426bda4acf3622cf",
+        "lf_bytes": 47776,
+        "lf_sha256": "6bdc67235874353abe1c9d2144d1dce7be0b8727b7819fe7426bda4acf3622cf"
+      },
+      "M_postimage": "c8a54537f63e736981a858b4018a37b88f1cc3853130fdb70a9cf73c1379a4e5",
+      "root_before": {
+        "bytes": 47776,
+        "sha256": "6bdc67235874353abe1c9d2144d1dce7be0b8727b7819fe7426bda4acf3622cf",
+        "lf_bytes": 47776,
+        "lf_sha256": "6bdc67235874353abe1c9d2144d1dce7be0b8727b7819fe7426bda4acf3622cf"
+      },
+      "published": {
+        "bytes": 50174,
+        "sha256": "c8a54537f63e736981a858b4018a37b88f1cc3853130fdb70a9cf73c1379a4e5",
+        "lf_bytes": 50174,
+        "lf_sha256": "c8a54537f63e736981a858b4018a37b88f1cc3853130fdb70a9cf73c1379a4e5"
+      },
+      "root_after": {
+        "bytes": 50174,
+        "sha256": "c8a54537f63e736981a858b4018a37b88f1cc3853130fdb70a9cf73c1379a4e5",
+        "lf_bytes": 50174,
+        "lf_sha256": "c8a54537f63e736981a858b4018a37b88f1cc3853130fdb70a9cf73c1379a4e5"
+      },
+      "protected_fragments": []
+    },
+    "00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md": {
+      "base": {
+        "bytes": 30941,
+        "sha256": "587feff0e2408d863534290191f46d59f578eea73e53a349754a8585e61ea0c1",
+        "lf_bytes": 30941,
+        "lf_sha256": "587feff0e2408d863534290191f46d59f578eea73e53a349754a8585e61ea0c1"
+      },
+      "M_postimage": "aeab13b55d86879310cab76a9f234c19060753b1dc83deb4b705da9f046bd158",
+      "root_before": {
+        "bytes": 30941,
+        "sha256": "587feff0e2408d863534290191f46d59f578eea73e53a349754a8585e61ea0c1",
+        "lf_bytes": 30941,
+        "lf_sha256": "587feff0e2408d863534290191f46d59f578eea73e53a349754a8585e61ea0c1"
+      },
+      "published": {
+        "bytes": 32946,
+        "sha256": "aeab13b55d86879310cab76a9f234c19060753b1dc83deb4b705da9f046bd158",
+        "lf_bytes": 32946,
+        "lf_sha256": "aeab13b55d86879310cab76a9f234c19060753b1dc83deb4b705da9f046bd158"
+      },
+      "root_after": {
+        "bytes": 32946,
+        "sha256": "aeab13b55d86879310cab76a9f234c19060753b1dc83deb4b705da9f046bd158",
+        "lf_bytes": 32946,
+        "lf_sha256": "aeab13b55d86879310cab76a9f234c19060753b1dc83deb4b705da9f046bd158"
+      },
+      "protected_fragments": []
+    },
+    "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md": {
+      "base": {
+        "bytes": 81741,
+        "sha256": "44731845848c8f1547368189cdc4729e8410df448054c16be0c5000f0c50a999",
+        "lf_bytes": 81741,
+        "lf_sha256": "44731845848c8f1547368189cdc4729e8410df448054c16be0c5000f0c50a999"
+      },
+      "M_postimage": "ed59279ea78e1be5aefaaf7ed5c710ade1028672850d69ffedee01c862a2ac00",
+      "root_before": {
+        "bytes": 84114,
+        "sha256": "32d713c4c7f2f0e186250de0292695780c9e919f7d21bfbe070778546179f25f",
+        "lf_bytes": 84114,
+        "lf_sha256": "32d713c4c7f2f0e186250de0292695780c9e919f7d21bfbe070778546179f25f"
+      },
+      "published": {
+        "bytes": 86822,
+        "sha256": "fde33e769c55fdb626bfd5c6bc7953678518ee0efb6ff8631a64f0b667893043",
+        "lf_bytes": 86822,
+        "lf_sha256": "fde33e769c55fdb626bfd5c6bc7953678518ee0efb6ff8631a64f0b667893043"
+      },
+      "root_after": {
+        "bytes": 86822,
+        "sha256": "fde33e769c55fdb626bfd5c6bc7953678518ee0efb6ff8631a64f0b667893043",
+        "lf_bytes": 86822,
+        "lf_sha256": "fde33e769c55fdb626bfd5c6bc7953678518ee0efb6ff8631a64f0b667893043"
+      },
+      "protected_fragments": [
+        {
+          "kind": "insert",
+          "original_fragment": {
+            "bytes": 2373,
+            "sha256": "ae8d5aafd66ef3025bb45599705392bf892e161ea1410817800c7c1a08aba0b5",
+            "lf_bytes": 2373,
+            "lf_sha256": "ae8d5aafd66ef3025bb45599705392bf892e161ea1410817800c7c1a08aba0b5"
+          }
+        }
+      ],
+      "previous_protected_fragments_now_M_accepted_rule_design": true
+    },
+    "00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md": {
+      "base": {
+        "bytes": 31028,
+        "sha256": "150f5446800ee387f7722dba673f8ead6a9d463ddacfbe5a5699dd3457460dbb",
+        "lf_bytes": 31028,
+        "lf_sha256": "150f5446800ee387f7722dba673f8ead6a9d463ddacfbe5a5699dd3457460dbb"
+      },
+      "M_postimage": "21f0a51d3bbb8157370a3d532b61b8a2f2118ba369b66ed68a0ce2e94e443c06",
+      "root_before": {
+        "bytes": 31028,
+        "sha256": "150f5446800ee387f7722dba673f8ead6a9d463ddacfbe5a5699dd3457460dbb",
+        "lf_bytes": 31028,
+        "lf_sha256": "150f5446800ee387f7722dba673f8ead6a9d463ddacfbe5a5699dd3457460dbb"
+      },
+      "published": {
+        "bytes": 33797,
+        "sha256": "21f0a51d3bbb8157370a3d532b61b8a2f2118ba369b66ed68a0ce2e94e443c06",
+        "lf_bytes": 33797,
+        "lf_sha256": "21f0a51d3bbb8157370a3d532b61b8a2f2118ba369b66ed68a0ce2e94e443c06"
+      },
+      "root_after": {
+        "bytes": 33797,
+        "sha256": "21f0a51d3bbb8157370a3d532b61b8a2f2118ba369b66ed68a0ce2e94e443c06",
+        "lf_bytes": 33797,
+        "lf_sha256": "21f0a51d3bbb8157370a3d532b61b8a2f2118ba369b66ed68a0ce2e94e443c06"
+      },
+      "protected_fragments": []
+    },
+    "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md": {
+      "base": {
+        "bytes": 55561,
+        "sha256": "5c9ab2221bd96f8ca723a5f9ec17757e78a538e20d89a8f6ecf11a2129c1404c",
+        "lf_bytes": 55561,
+        "lf_sha256": "5c9ab2221bd96f8ca723a5f9ec17757e78a538e20d89a8f6ecf11a2129c1404c"
+      },
+      "M_postimage": "315c1e3c434967921dfacbb8189c325b9f3e7e983d47291a84aae1996143e996",
+      "root_before": {
+        "bytes": 56200,
+        "sha256": "46f647a07293c2733c7288e9d69c6ad2d440f02caacb9615dc96357880183a2f",
+        "lf_bytes": 55849,
+        "lf_sha256": "ff2b6ca9e67cefecd0719e35106a8edc930e80bda86ba88500ec3072b911b420"
+      },
+      "published": {
+        "bytes": 56937,
+        "sha256": "b6c1619ac2336ededb28c9a46441a333a9fcfff816686a782036b8011182ad96",
+        "lf_bytes": 56937,
+        "lf_sha256": "b6c1619ac2336ededb28c9a46441a333a9fcfff816686a782036b8011182ad96"
+      },
+      "root_after": {
+        "bytes": 57289,
+        "sha256": "b174c5ea9b46f0d34ff5d63bfdc6ce0fa933fb80ac6348fac170d61ad9142f4f",
+        "lf_bytes": 56937,
+        "lf_sha256": "b6c1619ac2336ededb28c9a46441a333a9fcfff816686a782036b8011182ad96"
+      },
+      "protected_fragments": [
+        {
+          "kind": "replace",
+          "original_fragment": {
+            "bytes": 649,
+            "sha256": "760bed8c7e7a09f45634a9502937f2996d28cb8e48385c6c10a9a438b95c6b94",
+            "lf_bytes": 649,
+            "lf_sha256": "760bed8c7e7a09f45634a9502937f2996d28cb8e48385c6c10a9a438b95c6b94"
+          }
+        }
+      ],
+      "previous_protected_fragments_now_M_accepted_rule_design": true
+    },
+    "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md": {
+      "base": {
+        "bytes": 25027,
+        "sha256": "3bde4ee80f30e156b60ba824e4f14c714dbe605319ed20ec3e42e1e7b7e5dec6",
+        "lf_bytes": 25027,
+        "lf_sha256": "3bde4ee80f30e156b60ba824e4f14c714dbe605319ed20ec3e42e1e7b7e5dec6"
+      },
+      "M_postimage": "e591979575f35e738d5f6677bb99322e722618f1c6d199653bec433abd8ed125",
+      "root_before": {
+        "bytes": 25027,
+        "sha256": "3bde4ee80f30e156b60ba824e4f14c714dbe605319ed20ec3e42e1e7b7e5dec6",
+        "lf_bytes": 25027,
+        "lf_sha256": "3bde4ee80f30e156b60ba824e4f14c714dbe605319ed20ec3e42e1e7b7e5dec6"
+      },
+      "published": {
+        "bytes": 27439,
+        "sha256": "611f429d702f09627cb8e35a1e2a7ec63213e1670cbc8151385b122ae0bdd1c6",
+        "lf_bytes": 27439,
+        "lf_sha256": "611f429d702f09627cb8e35a1e2a7ec63213e1670cbc8151385b122ae0bdd1c6"
+      },
+      "root_after": {
+        "bytes": 27439,
+        "sha256": "611f429d702f09627cb8e35a1e2a7ec63213e1670cbc8151385b122ae0bdd1c6",
+        "lf_bytes": 27439,
+        "lf_sha256": "611f429d702f09627cb8e35a1e2a7ec63213e1670cbc8151385b122ae0bdd1c6"
+      },
+      "protected_fragments": []
+    },
+    "README.md": {
+      "base": {
+        "bytes": 19390,
+        "sha256": "2ff5dbbe19d67e999c5686315662482dac705e82b789dc08aaa79b6577d19873",
+        "lf_bytes": 19390,
+        "lf_sha256": "2ff5dbbe19d67e999c5686315662482dac705e82b789dc08aaa79b6577d19873"
+      },
+      "M_postimage": "d65b53a329fe7268aaae3eb921b09ccc730513c85142cfd24d82c4776c0f9d7a",
+      "root_before": {
+        "bytes": 19390,
+        "sha256": "2ff5dbbe19d67e999c5686315662482dac705e82b789dc08aaa79b6577d19873",
+        "lf_bytes": 19390,
+        "lf_sha256": "2ff5dbbe19d67e999c5686315662482dac705e82b789dc08aaa79b6577d19873"
+      },
+      "published": {
+        "bytes": 19981,
+        "sha256": "d65b53a329fe7268aaae3eb921b09ccc730513c85142cfd24d82c4776c0f9d7a",
+        "lf_bytes": 19981,
+        "lf_sha256": "d65b53a329fe7268aaae3eb921b09ccc730513c85142cfd24d82c4776c0f9d7a"
+      },
+      "root_after": {
+        "bytes": 19981,
+        "sha256": "d65b53a329fe7268aaae3eb921b09ccc730513c85142cfd24d82c4776c0f9d7a",
+        "lf_bytes": 19981,
+        "lf_sha256": "d65b53a329fe7268aaae3eb921b09ccc730513c85142cfd24d82c4776c0f9d7a"
+      },
+      "protected_fragments": []
+    },
+    "contracts/experience/screen-specifications/AI-01.md": {
+      "root_before": {
+        "bytes": 36423,
+        "sha256": "1a4e58eee7f24d52ba9f29d5539080abf08137170e7979da74b270e6c029f1df",
+        "lf_bytes": 36128,
+        "lf_sha256": "97a176c7946fcaa206105d988a0458f8b05cb118a3703d1dc7fa79b9de08ed5d"
+      },
+      "root_after": {
+        "bytes": 36423,
+        "sha256": "1a4e58eee7f24d52ba9f29d5539080abf08137170e7979da74b270e6c029f1df",
+        "lf_bytes": 36128,
+        "lf_sha256": "97a176c7946fcaa206105d988a0458f8b05cb118a3703d1dc7fa79b9de08ed5d"
+      },
+      "published": {
+        "bytes": 36128,
+        "sha256": "97a176c7946fcaa206105d988a0458f8b05cb118a3703d1dc7fa79b9de08ed5d",
+        "lf_bytes": 36128,
+        "lf_sha256": "97a176c7946fcaa206105d988a0458f8b05cb118a3703d1dc7fa79b9de08ed5d"
+      },
+      "M_accepted_spec": true
+    },
+    "contracts/experience/screen-specifications/ACC-03.md": {
+      "root_before": {
+        "bytes": 10068,
+        "sha256": "9af64c8da6ab3208716a83be96608d214618fd6fdd917ea2a508207099a40226",
+        "lf_bytes": 9921,
+        "lf_sha256": "262600b9c3d3db3b3bf63b985968b1511c1940bb04c1792af8c62174d72c0175"
+      },
+      "root_after": {
+        "bytes": 10068,
+        "sha256": "9af64c8da6ab3208716a83be96608d214618fd6fdd917ea2a508207099a40226",
+        "lf_bytes": 9921,
+        "lf_sha256": "262600b9c3d3db3b3bf63b985968b1511c1940bb04c1792af8c62174d72c0175"
+      },
+      "published": {
+        "bytes": 9921,
+        "sha256": "262600b9c3d3db3b3bf63b985968b1511c1940bb04c1792af8c62174d72c0175",
+        "lf_bytes": 9921,
+        "lf_sha256": "262600b9c3d3db3b3bf63b985968b1511c1940bb04c1792af8c62174d72c0175"
+      },
+      "M_accepted_spec": true
+    },
+    "contracts/experience/screen-specifications/SH-01.md": {
+      "root_before": {
+        "bytes": 39650,
+        "sha256": "2892935af6778e3897a68a54a723961d4a88af9581a5f2753802f056f982a5dc",
+        "lf_bytes": 39245,
+        "lf_sha256": "9fbdf0ff23cd1e6beb32c4ffd28902fa3dfeb40b63048a8d29642d2c1a48c003"
+      },
+      "root_after": {
+        "bytes": 39650,
+        "sha256": "2892935af6778e3897a68a54a723961d4a88af9581a5f2753802f056f982a5dc",
+        "lf_bytes": 39245,
+        "lf_sha256": "9fbdf0ff23cd1e6beb32c4ffd28902fa3dfeb40b63048a8d29642d2c1a48c003"
+      },
+      "published": {
+        "bytes": 39245,
+        "sha256": "9fbdf0ff23cd1e6beb32c4ffd28902fa3dfeb40b63048a8d29642d2c1a48c003",
+        "lf_bytes": 39245,
+        "lf_sha256": "9fbdf0ff23cd1e6beb32c4ffd28902fa3dfeb40b63048a8d29642d2c1a48c003"
+      },
+      "M_accepted_spec": true
+    },
+    "00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md": {
+      "root_before": {
+        "bytes": 24278,
+        "sha256": "9fa360ce59acab33ba1bc53fbf51e507369a2f5f68229b269dff691a4b6a7b84",
+        "lf_bytes": 24143,
+        "lf_sha256": "f337a7df55cdcb508cca25dc3afdb60f5783d6be6013564e3dd7253eca32674e"
+      },
+      "root_after": {
+        "bytes": 24589,
+        "sha256": "af32f54f68ad623ae8db3168863a5ca1d8a87310e8fd0dbffb316a78ebee4b69",
+        "lf_bytes": 24322,
+        "lf_sha256": "c8ede001dfb29f20b39fa1eefb6d39bd954bbbac0115337710a6f34a2d340f36"
+      },
+      "published": {
+        "bytes": 24322,
+        "sha256": "c8ede001dfb29f20b39fa1eefb6d39bd954bbbac0115337710a6f34a2d340f36",
+        "lf_bytes": 24322,
+        "lf_sha256": "c8ede001dfb29f20b39fa1eefb6d39bd954bbbac0115337710a6f34a2d340f36"
+      },
+      "M_accepted_rule_design": true
+    },
+    "contracts/experience/screen-specifications/BMP-03.md": {
+      "root_before": {
+        "bytes": 17111,
+        "sha256": "3f078c64ee12a10eeb4791234e2ba9bea4e2c28947e66e9359de21a66140b2e4",
+        "lf_bytes": 17111,
+        "lf_sha256": "3f078c64ee12a10eeb4791234e2ba9bea4e2c28947e66e9359de21a66140b2e4"
+      },
+      "root_after": {
+        "bytes": 17111,
+        "sha256": "3f078c64ee12a10eeb4791234e2ba9bea4e2c28947e66e9359de21a66140b2e4",
+        "lf_bytes": 17111,
+        "lf_sha256": "3f078c64ee12a10eeb4791234e2ba9bea4e2c28947e66e9359de21a66140b2e4"
+      },
+      "published": {
+        "bytes": 17111,
+        "sha256": "3f078c64ee12a10eeb4791234e2ba9bea4e2c28947e66e9359de21a66140b2e4",
+        "lf_bytes": 17111,
+        "lf_sha256": "3f078c64ee12a10eeb4791234e2ba9bea4e2c28947e66e9359de21a66140b2e4"
+      },
+      "M_accepted_rule_design": true
+    },
+    "contracts/experience/screen-specifications/BMP-08.md": {
+      "root_before": {
+        "bytes": 7324,
+        "sha256": "49d18507cb113eae762dde58a3f91f6baee969dd74a12c81d7dc88e7ca567dbf",
+        "lf_bytes": 7232,
+        "lf_sha256": "936a4926b2d6460b64b6df8e01a2b5b0e6c0aa3425719f6a4b135382f10b371f"
+      },
+      "root_after": {
+        "bytes": 7324,
+        "sha256": "49d18507cb113eae762dde58a3f91f6baee969dd74a12c81d7dc88e7ca567dbf",
+        "lf_bytes": 7232,
+        "lf_sha256": "936a4926b2d6460b64b6df8e01a2b5b0e6c0aa3425719f6a4b135382f10b371f"
+      },
+      "published": {
+        "bytes": 7232,
+        "sha256": "936a4926b2d6460b64b6df8e01a2b5b0e6c0aa3425719f6a4b135382f10b371f",
+        "lf_bytes": 7232,
+        "lf_sha256": "936a4926b2d6460b64b6df8e01a2b5b0e6c0aa3425719f6a4b135382f10b371f"
+      },
+      "M_accepted_rule_design": true
+    }
+  },
+  "additional_corrections": {
+    "experience": [
+      "During the current three deliveries,",
+      "Selected Subject → Domain Lens → Scope / Permission",
+      "Start from a Subject; read its commercial signals, event stream, cases, risk, decisions, actions, schedules and reports; trace each decision to source and follow-up outcome",
+      "Start from Brand/Market focus; connect category movement, competitors, audience, creators, content, channels, campaigns, brand risk and evaluation",
+      "Select authorized Subject → inspect current and historical signals → open source evidence → create/assign a case or decision → confirm authorized result → revisit measured outcome → Return to the same Subject context",
+      "Reject a screen proposal that merges or changes these starts.",
+      "Two-stage chooser: authorized Subject list first, then CTH or BMP lens; subject identity and lens are visually separate so selecting a view cannot imply changing ownership.",
+      "Search/select an authorized Subject, then confirm an available lens; server response controls the destination.",
+      "Subject-anchored operating desk: metric spine, chronological signal ribbon, event/evidence focus and a decision/action queue.",
+      "State a task, confirm authorized context, inspect evidence/capability plan and start only when an executable route exists.",
+      "Source-to-artifact canvas: brief and evidence rail, editable creation canvas, version/outcome lane; different from campaign planning and podcast editing.",
+      "Create a draft from a real brief, cite evidence, review revisions and hand off for human approval."
+    ],
+    "owner": "Existing Metric/domain/API compatibility mapping; legacy callable still requires repair"
+  },
+  "scope": "Rule/design only",
+  "source_admission": null,
+  "actual_owned_inference": "NOT_BOUND",
+  "unattended_collection": "LIVE_NOT_VERIFIED",
+  "full_C_acceptance": false,
+  "USER_VERIFIED": false,
+  "RELEASED": false,
+  "OPERATING": false,
+  "M_accepted_local_rule_design_included": [
+    "glyph language",
+    "memory canonical/compatibility owner clarification",
+    "BMP-03",
+    "BMP-08",
+    "FFmpeg/crypto factual register with base declaration correction"
+  ],
+  "implementation_candidates_preserved_excluded": true,
+  "final_M_approved_ACC03_blueprint": "| ACC-03 Workspace task home | Existing AI-01 task editor as the primary entry under GLOBAL_ALL or current exact Focus; compact recent work and destinations are secondary, with truthful unobtrusive runtime availability. | State a task or reopen saved work; retain the draft and selection during same-scope shell navigation. | Persistent domain rail plus task editor and compact recent-work access → task-first compact composition on small surfaces. |"
+}

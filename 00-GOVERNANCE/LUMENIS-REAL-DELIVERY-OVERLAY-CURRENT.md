@@ -95,6 +95,20 @@ DEFERRED
 这些最多只能证明 IMPLEMENTED / TESTED 的一部分。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### Current cross-capability result constraints — 2026-10-03
+
+These are acceptance inputs to existing C/R/J/U cards, not another round or queue. Real delivery retains every existing source/permission/result/recovery gate.
+
+- Product-owned collection: distinguish product UI/API/Scheduler execution from assisted discovery and developer harnesses. Continuous operation needs an actual unattended scheduled cycle and truthful failure/recovery evidence, not a successful manual trigger.
+- Source-to-creation discovery: real collected results can enter SH-01 Discover and existing CTH/BMP/creation work; evidence-backed trend/hotspot/related-work interpretation and useful owned recommendations must reach a saved/reopened/revised result. Lack of analysis does not erase readable sources, and a model answer alone does not pass.
+- Creative research is extensible: combine cases/methods with current user Brief, new data, brand/venue context and resources. Preserve sources, versions, premises, counterexamples and outcome limits. Do not lock work to twelve mechanisms or merely swap brand names. A permitted adaptation/reuse is distinct from copying a protected work or admitting training data.
+- For work involving cost/resource choices, the existing Brief/plan/domain owners retain budget/range, currency, tax basis, market/time, hard cap versus target, contingency and available resources. Unknown is not zero. Quote, estimate, confirmed commitment and actual expenditure remain distinct, with quantities/unit prices, source/date and uncertainty. Do not fabricate current prices or ROI.
+- Budget/resources must change the creative and execution plan: production scope, scenes/duration, crew/location/equipment, sound/postproduction/rights, channel/media allocation, schedule and deliverables as applicable. Explain feasible alternatives and trade-offs; preserve non-negotiable safety/rights/quality constraints. Budget changes revise dependent work and saved versions, not only the total. Planning does not authorize payment, purchase or publishing.
+- Verify one real Brief under two different budget/resource situations, actual meaningful plan differences and cap consistency; revise, save, reopen and export with stable figures/versions. Unknown prices, infeasible budget and excess have honest states. Actual outcomes/evaluation remain distinct from estimated performance. Pure browsing does not require an artificial budget form.
+
+The existing responsible windows are C2 owned understanding/reasoning, C3 domain decisions/campaigns, C4 original pitch/video/podcast, C5 source/research/versioned Artifact, C1 source facts, F operation/layout and C6 binding/publication. No second budget store, inference service, Evidence owner or permission plane is introduced.
+
+
 三、统一完成语义
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

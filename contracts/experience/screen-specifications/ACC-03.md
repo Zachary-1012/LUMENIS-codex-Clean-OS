@@ -1,130 +1,159 @@
-# ACC-03 — Workspace launch map
+# ACC-03 — Product home
 
 ```yaml
 screen_id: ACC-03
 status: DESIGN_READY
-revision: 3
-owner_domain: SYSTEM shell / CTH / BMP / Shared AI entry map
-binding_ids:
-  - CODEX-ACC03-RUNTIME
-  - CODEX-ACC03-CONTEXT
+revision: 6
+owner_domain: SYSTEM / Shared Capability presentation
+binding_ids: []
 product_owner_approval: APPROVED
 design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
 design_decision: DESIGN_READY
-artifact_disposition: REVIEWED_BOUNDED_LAUNCH_NAVIGATION
-reviewer: Sol root integration review
-reviewed_at: 2026-09-28
-approval_reference: ROUND-14A bounded implementation Task Card
+artifact_disposition: NON_AUTHORITATIVE_EXPLORATION_ONLY
+reviewer: M, after explicit Product Owner correction
+reviewed_at: 2026-10-03
+approval_reference: Current F/M thread decision for task-first Home, GLOBAL_ALL default and reuse of the AI-01 editor
 ```
 
-## 0. User task and ownership
+## 1. User task and product invariant
 
-- User job: see the three approved workspace destinations, confirm the current view lens and choose an entry supplied by the host shell.
-- CTH remains Subject-first, BMP remains Brand/Market-first and Shared AI remains derivative. ACC-03 owns spatial entry only; it owns no business data or duplicate navigation truth.
-- The composition is a launch map with a current-view rail and startup checks, not a dashboard of invented health metrics.
+Open the product and begin real work: write or open a task draft, continue an
+actually visited page, or open an existing business/creation workflow. This is
+an operating product entry, not a marketing landing page or a system checklist.
 
-### Host navigation refinement — 2026-09-28
+No selection means GLOBAL_ALL. Subject/BrandFocus selection only narrows the
+view. There is no account, login, password or mandatory focus design here.
+Canonical server Permission and Effect Fence still protect actual reads and
+effects. A single-target consequential action may request its real target at
+that action; it cannot gate the whole product or global research/creation.
 
-Sol review: `DESIGN_READY` for the existing Shell's bounded presentation under
-Constitution §23. Desktop/compact navigation becomes an explicit reversible layer
-above the mounted task. Browsing a domain in that layer changes only its preview;
-choosing a route leaf invokes the existing host callback. Close/Escape preserve
-the current route, draft, selection and scroll. All workflow destinations,
-including ACC and the unavailable SYS-06 boundary, remain reachable. Mobile keeps
-its focused-page navigation and tools. The unboxed, restrained in-product mark
-uses the same Theme owner and does not signal runtime or data state. Verify
-keyboard/touch, 200% text and reduced motion; preserve current Context/Permission
-semantics. This host refinement does not pass ACC-03's business E2E or all surfaces.
+This revision supersedes the rejected large slogan, introduction columns,
+destination descriptions and View entry details sheet. They are removed from
+the current design rather than retained as alternative layouts.
 
-## 1. Routes and fields
+## 2. Owner, route, entry and return
 
-- `GET /api/experience/runtime/identity` → runtime entry state.
-- `GET /api/settings/context` → current server-returned view label/mode.
-- Launch destinations are static approved host entry descriptors (`CTH`, `BMP`, `AI`) until the shell supplies verified routes. A card tap calls `onOpen`; it does not claim navigation without a callback.
-- Safe fields: `runtime_guardian.overall`, context mode and safe display name. Raw route, path, provider, token, error and implementation values are excluded.
-- `identity.ok` alone does not prove a connected runtime. Missing guardian evidence remains `UNKNOWN`; a context payload is connected only when its `lumenis.context.v1` envelope is valid and marked selection-only. An invalid envelope is `UNAVAILABLE`, never connected.
+- Default / and /workspace resolve to /workspace/ACC-03 through the existing
+  route owner. Exact CTH, BMP, Shared and other deep links keep their meaning.
+- ACC-03 owns composition/navigation only. It embeds the existing AI-01 editor
+  using the shared Core client; AI-01 owns draft/file/analysis behavior.
+- CTH remains commercial Subject-first and BMP brand/market-first in their
+  business domains. That does not force a focus at the product entry.
+- Shell owns navigation, current scope, leave decisions and remembered route.
+  W6 owns server redirect and the four desktop entry targets.
+- Home never implies Commerce is selected. Return to Home does not clear a
+  valid focus, start collection, submit a task or write business data.
 
-## 2. States and recovery
+## 3. Source and binding table
 
-| State | Meaning | Action |
+| Field/action | Existing owner/binding | Truth rule |
 | --- | --- | --- |
-| Loading | runtime/context reads pending | Wait |
-| Connected | runtime guardian or valid selection-only context explicitly confirms availability | Open only host-supplied destination |
-| Degraded / unavailable | actual response reports it | Show per-check status; retry via host |
-| Unknown | the guardian or context evidence is missing | Keep the unknown state visible; do not infer readiness |
-| 401 / 403 | access is not confirmed | Return or go to ACC-02/ACC-04 through the host; no bypass |
-| Missing callback | destination descriptor exists but host route is absent | Keep entry visibly unavailable |
+| Task editor | Ai01Screen(client, embedded: true), Ai01ViewModel and Ai01DraftActions; Shell supplies the existing editor controller | One session draft shared by Home and AI-01 in the same scope; no separate Home AI service/store |
+| Analysis availability | Existing AI-01 service/submit contract | Present actual unavailable/failure reason; missing focus is not a reason |
+| Four destinations | Existing shell onOpen routes | CTH-01, BMP-01, SH-02 and SH-01; navigation only |
+| Continue last page | Actual Shell in-memory/restorable valid prior route | No invented job, artifact, timestamp or claim of project recovery; clear on confirmed context/client change |
+| Theme/wallpaper/locale | Existing shared owners | Preserve contrast, zh-CN/en/ko, text scaling and reduced motion |
+| GLOBAL_ALL/FOCUS | Existing Core context and request headers | Default global; selected focus only narrows; no synthetic grant |
 
-## 3. Desktop/mobile and accessibility
+No recent projects, counts, feed, artwork or success state is fabricated to fill
+space. Real collected records will use their existing reviewed ViewModels.
+The historical ACC03 repository/model remains separately testable; its optional
+entry-state fetch is not a prerequisite for the editor or host navigation.
 
-- Desktop: launch map occupies the primary region; startup checks stay in a narrow secondary region.
-- Mobile: destinations stack as a map-like sequence with current view above; each tile has a distinct domain label and 44px+ target.
-- Keyboard order follows current view → CTH → BMP → AI → checks. Screen readers receive destination names and state text, not color-only dots.
-- Reduced motion collapses directly to the selected host result.
+## 4. Desktop composition
 
-## 4. Localization integration key list
+Use the existing wallpaper-aware Shell with its restrained brand and controls.
+The content area has one reading/editing width around 820 logical pixels. A
+small functional New task heading is optional at about 18–20 px. The reusable
+task field and its real local file actions form the main content. No large
+hero, slogan, repeated product name, introduction text or status-inspection CTA.
 
-Existing shared key: `screen.ACC-03`.
+Four compact destinations use a small original glyph and a concise label, with
+shared edges and visible focus/pressed state. They are navigation controls,
+not four descriptive cards. Show the actual last-opened page only when present.
+No permanent right-hand business inspector or duplicate AI panel.
 
-Feature keys: `acc03.commerce`, `acc03.brandMarket`, `acc03.aiTasks`, `acc03.currentView`, `acc03.startupChecks`, `acc03.openDestination`, `acc03.hostRouteUnavailable` for `zh-CN`, `en`, and `ko`. The bounded code uses a local fallback map pending canonical l10n integration.
+## 5. Web and mobile composition
 
-## 5. Executable acceptance
+The same owner contracts apply in Web Workspace, Desktop and Mobile Companion.
+On phone, prioritize the editor and wrap the compact destination controls while
+preserving >=48 px targets. Avoid decorative vertical space and nested scroll.
+The embedded AI-01 body takes natural height; Home supplies a single bounded
+page scroll when keyboard, low height or 200% text makes it necessary.
 
-| ID | Acceptance | Current evidence |
+The Public Website is a separate approved surface and does not become an editor.
+Native mobile file saving remains limited by the actual existing file owner;
+offer real Open/Copy behavior instead of a fake Save success.
+
+## 6. State, failure and recovery
+
+| State | Behavior | Recovery |
 | --- | --- | --- |
-| ACC03-MAP-01 | Build distinct CTH/BMP/AI destination descriptors from safe state | `acc03_feature_test.dart` |
-| ACC03-SAFE-01 | Suppress hostile context labels and keep missing/invalid health evidence out of the connected state | `acc03_feature_test.dart` |
-| ACC03-REAL-01 | Open a real destination, complete its return path and retain the selected view | Not run; requires host shell runtime E2E |
+| No focus | GLOBAL_ALL; editor and existing navigation remain available | Optional exact focus through existing Shell only |
+| AI screen read pending/error | Preserve local draft and file controls; actual AI status beside it | Explicit safe retry; clear stale remote data |
+| Analysis not integrated | State analysis service is not yet connected | Existing AI/Core owners connect real submit/result path; do not suggest choosing a Subject |
+| Actual permission refusal | Keep distinct from offline/no data/missing adapter | Respect server decision; no new account wall |
+| No last page | Omit the row | Never display a fake empty recent-work card |
+| Invalid remembered route | Suppress it | Existing route/return owner |
+| Missing host callback | Affected navigation unavailable | No fake navigation success |
 
-## 6. REAL USER WORK E2E / global impact
+File chooser cancel, invalid input, concurrent edits, save failure and expanded
+editor return preserve the existing AI-01 safeguards. No automatic persistence
+or inference is added. Navigation to a business page and back, or between Home
+and AI-01, preserves task text and selection within the same window and scope.
+A confirmed scope/client change starts a separate draft; a temporary scope-read
+failure does not erase it. Closing/refreshing still requires saving or copying.
+Use a compact actual scope label with optional-focus help on demand, while the
+real unavailable-action reason remains findable. Local drafting is not a saved
+business result. M accepted this recovery correction on 2026-10-03; runtime
+verification remains separate.
 
-- `REAL USER JOB`: operator starts from the launch map, opens a real CTH/BMP/AI workflow and returns with the current view preserved.
-- `REAL INPUT`: live runtime identity, live context, actual host route.
-- `END-TO-END PATH`: shell → ACC-03 → host destination → target screen → return.
-- `USER-VISIBLE RESULT`: actual target opens or an honest route-unavailable state appears.
-- `FAILURE/RECOVERY`: no success claim without callback; 401/403/offline remain distinct.
-- `EVIDENCE`: route/return trace, current view, permission result and downstream screen.
-- `ACCEPTANCE ASSERTION`: `BLOCKED_PENDING_LIVE_RUNTIME_E2E`.
-- `RANDOM ENTITY DATA ACCEPTANCE`: sample count 0; this map does not fabricate entity data.
-- `GLOBAL UNIVERSE / DATA MATURITY IMPACT`: routing preserves the selected global/focus context but does not measure coverage.
-- `COMMERCIAL OVERLAY IMPACT`: `COMMERCIAL_READY=NO` pending target-surface route/return proof.
+## 7. Accessibility, localization and motion
 
-## 7. Continuous frontier research / review decision
+Chinese, English and Korean labels share the same functional meaning. Use body
+text around 14–16 px, 16 px editable text and 16–20 px glyphs within accessible
+targets. Support keyboard traversal/Enter/Space, labelled icon actions, visible
+focus, error announcement and explicit close/back/focus return in reused dialogs.
+200% text may create scrolling but must not clip controls. Existing white,
+black, solid and wallpaper modes retain their own contrast behavior; test the
+two user-supplied vivid wallpapers. No new shader, copied asset or motion owner.
 
-- `RESEARCH COMPLETE / NO JUSTIFIED UPGRADE` on 2026-09-22. Existing shell callbacks, LayoutBuilder and shared route owners satisfy the bounded gap; adding a router or route registry here would duplicate truth.
-- Decision: `ADAPT` host navigation and current context owners. On 2026-09-26,
-  root reviewed the existing launch composition as `DESIGN_READY` for bounded
-  route binding: commerce -> CTH-01, brand -> BMP-01, AI -> AI-01, all through
-  the shell's existing `onNavigate` and canonical URL routing. Current view is
-  retained; route changes grant no access and do not execute AI or collection.
-  Existing shell account navigation returns to ACC-01 and its Continue opens
-  this map again. Browser history and direct links use the existing router.
-  Missing standalone callbacks stay unavailable. Runtime route/return and
-  native/mobile acceptance are separately recorded, not implied by this review.
+## 8. Acceptance
 
-### Runtime-discovered dependency isolation
+| ID | Required result |
+| --- | --- |
+| ACC03-ENTRY-01 | Default route opens neutral Home; explicit deep links remain exact |
+| ACC03-GLOBAL-01 | No Subject/BrandFocus keeps GLOBAL_ALL, local editor and navigation available; no subject-selection lock |
+| ACC03-TASK-01 | Home uses the real AI-01 draft/file owner; editable text, expansion/return and actual failure recovery work |
+| ACC03-DRAFT-01 | Home -> business page -> Home and Home -> AI-01 retain text/selection in the same window/scope; confirmed scope/client change isolates the new draft; no claim of refresh/close persistence |
+| ACC03-NAV-01 | All four destinations call their exact host route without business writes |
+| ACC03-RETURN-01 | Valid last page returns correctly; invalid/absent and changed context/client do not fabricate history |
+| ACC03-UX-01 | No rejected slogan, introduction cards or entry-status sheet; functional hierarchy at desktop/phone |
+| ACC03-A11Y-01 | zh/en/ko, 390x844, 360x560, large desktop, 200% text and reduced motion preserve usable controls |
+| ACC03-LIVE-01 | Exact W6-mounted Web/Windows bundle: Home -> task/file or real business page -> Return; four launch entries verified separately |
 
-Live browser inspection found that a denied optional Context GET prevented the
-whole launch map from opening even when runtime identity was confirmed. Align
-with the existing LaunchSurface boundary: identity failure still blocks entry;
-Context 401/403 is shown as Access restricted, other Context failures as
-Unavailable. The map still opens only existing host routes and every downstream
-request remains server-authorized. No selected Subject, global confirmation or
-permission grant is manufactured from an unavailable Context response.
+Keep existing safe-model/repository tests for malformed identity/context and
+unknown health semantics; they are not Home layout requirements. Run affected
+Flutter tests and the three Experience gates plus constitution gate at the
+final source. Static/widget/build evidence does not prove real user completion.
 
-### 2026-09-27 — Review of unavailable destination and task return
+## 9. Real delivery and limits
 
-Sol approves this bounded correction under the existing `DESIGN_READY` host
-navigation/recovery contract: SYS-06 has no operable viewport on any target yet,
-so its entry must say browsing is unavailable, rather than direct users to a
-desktop build that has the same route boundary. Entry from a current task pushes
-the existing boundary route without disposing the task; Return pops that route.
-A direct link with no prior task returns to the existing workspace root. Unknown
-addresses retain the separate route-unavailable message. At narrow height and
-200% text the explanation and Return must remain scrollable and reachable.
+REAL USER JOB: start work from one product entry. ENTRY: actual launcher or
+workspace root. REAL INPUT: a user task text or available business record, not a
+fixture. END-TO-END PATH: Home -> existing owner operation -> real result/return.
+USER-VISIBLE RESULT: usable draft/file or actual target screen. FAILURE/RECOVERY:
+preserved text and honest independent service/read states. EVIDENCE: pinned source,
+tests and operated runtime. ACCEPTANCE ASSERTION: LIVE_NOT_VERIFIED until that
+exact artifact is mounted and used. COMMERCIAL OVERLAY IMPACT: no release claim.
+GLOBAL UNIVERSE / DATA MATURITY IMPACT: routing measures no market coverage;
+Global Commercial, Global Brand and Guangzhou reference coverage stay separate.
 
-This review changes only the host route boundary, copy and Return behavior. It
-does not promote SYS-06's `DESIGN_EXPLORATION`, start a browser, treat Basic
-transport credentials as a product Actor, or grant access. Its acceptance is
-an actual local draft → unavailable entry → Return → exact draft preservation
-flow plus direct-link recovery; full browser and native-device E2E remain open.
+## 10. Research and review
+
+ADAPT the supplied task-entry recording's editing priority, controlled density
+and reversible layers under the sole Experience Constitution. Its frame evidence
+is work/frontend-2026-10-03/ai-entry-video-frames.json; the review does not cover
+every historical video. Original vectors are existing shared primitives.
+No new third-party dependency or second design system. M accepted the Product
+Owner's task-first correction; exact candidate/live acceptance remains separate.

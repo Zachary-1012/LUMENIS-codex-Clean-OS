@@ -206,6 +206,18 @@ Before changing one capability, run `python scripts/audit_tools/locate_capabilit
 
 The fixed source classification and resume path is `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. Use its owner row for normal work. A full-repository re-audit is permitted only for the structural triggers listed there; a local gap, stale historical note or runner failure is not a trigger.
 
+### Current closure scope and publication priority — 2026-10-03
+
+Keep the approved C1–C6/W1–W6 plus F/M allocation and all mapped R/J/U requirements. Improve an existing capability or correct a conflicting old rule within that authorized scope; do not wait for the Product Owner to rediscover the same gap. Changes to scope, protected identity, source rights, paid resources or consequential effects still require their existing authority.
+
+When current rules conflict, M resolves their canonical owner and W6 prioritizes exact rule/status publication before dependent integration. AGENTS.md is the sole execution router; Experience, Global context and Real Delivery remain the existing named domain contracts. Work receipts, research, task cards and cached skills cannot become competing rules. Preserve protected work, publish the exact accepted canonical changes, then verify local HEAD, origin/main, live main and actual online file bytes.
+
+Organize related source/interface/recovery fixes into one useful outcome Batch. Reuse valid pinned evidence; run affected regression and legitimate blocking gates for the changed state. Do not repeat a scan/test without a changed hypothesis, source or remaining acceptance risk, or request M review per function. W6 hands actual typed contracts and admitted refs to their consumers rather than holding all work for an unrelated global inventory. Report ordinary progress once at a meaningful integration point; M receives complete outcomes, necessary decisions and urgent data/security risks.
+
+Cloud source stays on its approved fixed base. At an explicit safe checkpoint, W6/M deliver the newly published canonical rules with their publication SHA and actual byte/hash receipt, and workers acknowledge the active rule revision. Reading newer canonical rules must not hot-replace protected source, restart work, change account/model or imply source synchronization. A rule or message merely queued is not delivery acknowledgement.
+
+Collector/Scheduler product operation must not depend on a Codex task, CUA session, work-directory harness or daily developer trigger. The Global contract defines this proof. Current Source-derived discovery/creation and budget requirements belong to the existing Experience, Global and Real Delivery contracts and mapped J/U rows; no second recommendation, budget, learning or collection authority is authorized.
+
 ### Six-round execution windows and retained acceptance coverage
 
 Current delivery uses six fixed execution windows. The C1–C6 labels organize six

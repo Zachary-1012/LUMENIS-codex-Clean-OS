@@ -3,13 +3,16 @@
 ```yaml
 screen_id: BMP-03
 status: BLOCKED
-revision: 1
+revision: 2
 owner_domain: BMP
 binding_ids:
   - BACKEND-GAP-020
 product_owner_approval: OVERALL_EXPERIENCE_CONSTITUTION_30_36_ONLY
 design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
 design_decision: DESIGN_EXPLORATION
+presentation_design_decision: DESIGN_READY_BOUNDED_SIGNAL_BRIEF_RETURN
+presentation_reviewer: M / Codex GPT-6 Astra
+presentation_reviewed_at: 2026-10-03
 artifact_disposition: BOUNDED_IMPLEMENTATION_WITH_SCOPE_GUARD
 reviewer: Codex bounded ROUND-12 Luna batch
 reviewed_at: 2026-09-22
@@ -23,6 +26,7 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 - Exploration references: current Experience Constitution blueprint only; historical dashboards and screenshots are rejected as implementation inputs.
 - Anti-template decision: the page is a momentum/confidence radar paired with a ranked signal feed and source brief, not a generic KPI wall.
 - Sol design decision: `DESIGN_EXPLORATION`; full acceptance is blocked because the current builder is global/unscoped.
+- M's 2026-10-03 presentation review approves the bounded reading and return behavior in §5B over already authorized typed fields. This leaves the whole-screen design/binding/acceptance state above unchanged. Review provenance is `work/m-controller-20261002/content-reading-m-decision-20261003.md`; the scope of approval is recorded here so implementation does not depend on a working artifact as a second authority.
 
 ## 1. User problem and product invariant
 
@@ -76,9 +80,19 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 - Web shares the same screen response, parser and ViewModel. URL restoration of a selected signal is host-owned and not added here.
 - No browser-only effect, export or report action is exposed.
 
+### 5B. Approved bounded signal reading and return
+
+- **Task hierarchy:** scan an already authorized signal's title, kind and source; select it; read the supplied source brief; return to the same filtered signal set and selected item. The first view stays concise while the selected reading area gives supplied material enough space.
+- **Desktop:** retain the signal field/list relationship and a stable adjacent brief. Keep the current selection visually and semantically identifiable. Long brief text scrolls inside its reading area where the available height allows; it must not push the selected signal and return action far down the whole page.
+- **Compact/mobile:** show the signal feed first; explicit selection enters one focused brief with an always-reachable return action. Return restores the kind filter, invoking row, browse position and keyboard focus. With large text or a short window, allow local scrolling without clipping controls or trapping focus.
+- **Material semantics:** `Bmp03Signal.summary` is optional returned material. Do not label it as AI-generated, a full original article or an independently verified conclusion when method/full-body metadata is absent. Show the existing source, capture time and time window only under their actual meanings. No derived topic clustering, new source request or media preview is authorized here.
+- **Metric integrity:** confidence and momentum remain distinct supplied measures. Missing or malformed momentum must not fall back to confidence, zero or an invented chart coordinate. Current `Bmp03Signal.fromJson` contains a confidence fallback for missing momentum; this is a known source gap, not accepted behavior. Reconcile unknown presentation with the existing contract before accepting this screen; keep authorized text material readable where its contract permits it.
+- **Lifecycle:** filter/selection/return are local presentation actions. A new scope, denied read or changed source snapshot must not replay a previously selected signal under a different scope. No new persistence, stable ID, reader route, external source-open action or effect is introduced.
+- **Brand and usability:** preserve a restrained content-first composition. Use movement only to explain entry/return; honor reduced motion. Explicit selection, status, source labels, reachable back and focus recovery carry the Nielsen requirements in this slice.
+
 ## 6. Purpose-built mobile composition
 
-- Recompose to a ranked signal feed first, with momentum/confidence labels in each row and a source-reader drill-in below the selected row.
+- Recompose to a ranked signal feed first, with supplied momentum/confidence labels in each row and the focused source-brief drill-in defined in §5B.
 - Keep BrandFocus and time window visible. Back returns from the source brief to the feed; it never changes context.
 - Use 48 px touch targets, announce filter changes, and preserve no stale signal after an interrupted read.
 
@@ -117,6 +131,14 @@ Real API/Permission/Evidence and runtime/E2E acceptance remain blocked because t
 - **Decision:** `BLOCKED` for full acceptance; `DESIGN_EXPLORATION` bounded slice only.
 - **Open owners:** BMP must provide Focus-scoped signal fields and definitions; SYSTEM must return actor/read binding; Shared Evidence must validate signal traces; Sol must review the screen composition before DESIGN_READY.
 - **Required before acceptance:** live BrandFocus run, source-reader trace resolution, responsive/a11y runtime checks and random entity data acceptance.
+
+### Bounded presentation acceptance added 2026-10-03
+
+- Select a real authorized signal after filtering and scrolling. Read its supplied brief, then return with filter, selection, position and focus intact. Cover pointer, keyboard and mobile controls; do not require a gesture as the only return path.
+- Cover a supplied summary, an absent summary and conflicting/missing metric fields. Assert no invented summary, generation method, score or source-open action; confidence must never become missing momentum.
+- Check short and long briefs, narrow/short windows, 200% text and all three locales. Keep content, source and return controls reachable with local scrolling.
+- Change scope and simulate a denied/failed read through the existing contracts. Old unauthorized content must not remain visible; recovery must not falsely imply a source was opened or a new result saved.
+- These are pending acceptance requirements. The 2026-10-03 approval is source/spec review only; no real API, UI, business E2E or full-screen acceptance is claimed. The currently frozen editor v4 inputs remain unchanged until their safe validation boundary.
 
 ## 11. Real delivery and data-maturity overlay
 

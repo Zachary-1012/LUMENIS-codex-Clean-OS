@@ -1,0 +1,185 @@
+{
+  "schema": "w6.rule-publication-gates/v1",
+  "base": "ce5b5a632922b4efd3a96942e1d4084c2cb72044",
+  "source_tree": "5d9d3f099e121c1a32b230dfb0c0299572e5343a",
+  "checks": {
+    "verify_ai_native_constitution": {
+      "argv": [
+        "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
+        "scripts/audit_tools/verify_ai_native_constitution.py"
+      ],
+      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "pid": 21804,
+      "start_utc": "2026-10-03T05:15:16.143720+00:00",
+      "end_utc": "2026-10-03T05:15:16.533248+00:00",
+      "exit_code": 0,
+      "log_bytes": 308,
+      "log_sha256": "e30d82c88700d83e334b9d746d862749bb960251f028c8d76450046dcbfcaeca",
+      "candidate_index_tree": "5d9d3f099e121c1a32b230dfb0c0299572e5343a",
+      "native_subprocess_exit_observed": true
+    },
+    "verify_codex_takeover_governance": {
+      "argv": [
+        "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
+        "scripts/audit_tools/verify_codex_takeover_governance.py"
+      ],
+      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "pid": 29260,
+      "start_utc": "2026-10-03T05:15:16.144345+00:00",
+      "end_utc": "2026-10-03T05:15:17.065576+00:00",
+      "exit_code": 0,
+      "log_bytes": 265,
+      "log_sha256": "b3b3bb0c406adabf6d42e4d4f77059cc70155e01f0bcd5261315342439c8e1ea",
+      "candidate_index_tree": "5d9d3f099e121c1a32b230dfb0c0299572e5343a",
+      "native_subprocess_exit_observed": true
+    },
+    "verify_database_authority": {
+      "argv": [
+        "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
+        "scripts/audit_tools/verify_database_authority.py"
+      ],
+      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "pid": 9620,
+      "start_utc": "2026-10-03T05:15:16.145020+00:00",
+      "end_utc": "2026-10-03T05:15:30.209468+00:00",
+      "exit_code": 0,
+      "log_bytes": 534,
+      "log_sha256": "b5e2aba6a6d3c6ffe8ca60677808e083f5be2324c50ff1334ee167e7b4ad6857",
+      "candidate_index_tree": "5d9d3f099e121c1a32b230dfb0c0299572e5343a",
+      "native_subprocess_exit_observed": true
+    },
+    "verify_lumenis_single_product": {
+      "argv": [
+        "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
+        "scripts/audit_tools/verify_lumenis_single_product.py"
+      ],
+      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "pid": 33372,
+      "start_utc": "2026-10-03T05:15:16.145883+00:00",
+      "end_utc": "2026-10-03T05:15:22.620741+00:00",
+      "exit_code": 0,
+      "log_bytes": 307,
+      "log_sha256": "352d35ce1fb2452931d17f4534d1ec367ee2e8b8f1deaa7ba369708293608b1f",
+      "candidate_index_tree": "5d9d3f099e121c1a32b230dfb0c0299572e5343a",
+      "native_subprocess_exit_observed": true
+    },
+    "verify_experience_authority_exclusive": {
+      "argv": [
+        "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
+        "scripts/audit_tools/verify_experience_authority_exclusive.py"
+      ],
+      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "pid": 21252,
+      "start_utc": "2026-10-03T05:15:16.146425+00:00",
+      "end_utc": "2026-10-03T05:15:16.734155+00:00",
+      "exit_code": 0,
+      "log_bytes": 230,
+      "log_sha256": "522a9aae1293051a9a67a822b09ef9c4de1cfafaff671dc6cf7545265b08de78",
+      "candidate_index_tree": "5d9d3f099e121c1a32b230dfb0c0299572e5343a",
+      "native_subprocess_exit_observed": true
+    },
+    "verify_experience_anti_template": {
+      "argv": [
+        "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
+        "scripts/audit_tools/verify_experience_anti_template.py",
+        "--strict"
+      ],
+      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "pid": 13996,
+      "start_utc": "2026-10-03T05:15:16.147195+00:00",
+      "end_utc": "2026-10-03T05:15:17.166464+00:00",
+      "exit_code": 0,
+      "log_bytes": 251,
+      "log_sha256": "dbfa407a8e69a76815e7266800f78c05d5b7c5a946db38156664a7e428845d17",
+      "candidate_index_tree": "5d9d3f099e121c1a32b230dfb0c0299572e5343a",
+      "native_subprocess_exit_observed": true
+    },
+    "verify_experience_screen_blueprints": {
+      "argv": [
+        "D:\\LUMENIS_REBUILD\\\u5e8f\\\u5e8f\u5883\\.venv\\Scripts\\python.exe",
+        "scripts/audit_tools/verify_experience_screen_blueprints.py"
+      ],
+      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "pid": 59296,
+      "start_utc": "2026-10-03T05:15:16.147990+00:00",
+      "end_utc": "2026-10-03T05:15:16.675845+00:00",
+      "exit_code": 0,
+      "log_bytes": 96,
+      "log_sha256": "36d92c2f6575d2fb0f0f91ddfb81a68a61977ad724b4510dbcffbdeb4661a07c",
+      "candidate_index_tree": "5d9d3f099e121c1a32b230dfb0c0299572e5343a",
+      "native_subprocess_exit_observed": true
+    },
+    "staged_diff_check": {
+      "argv": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "cwd": "C:\\Users\\28049\\AppData\\Local\\Temp\\lumenis-rule-sync-v2-ce5-lze_6365",
+      "pid": 62844,
+      "start_utc": "2026-10-03T05:15:16.148601+00:00",
+      "end_utc": "2026-10-03T05:15:16.307298+00:00",
+      "exit_code": 0,
+      "log_bytes": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "candidate_index_tree": "5d9d3f099e121c1a32b230dfb0c0299572e5343a",
+      "native_subprocess_exit_observed": true
+    }
+  },
+  "all_exit0": true,
+  "product_tests_rerun": false,
+  "root_index_modified": false,
+  "logs": {
+    "verify_ai_native_constitution": {
+      "encoding": "base64",
+      "bytes": 308,
+      "sha256": "e30d82c88700d83e334b9d746d862749bb960251f028c8d76450046dcbfcaeca",
+      "base64": "QUktTkFUSVZFIENPTlNUSVRVVElPTiBHQVRFOiBQQVNTDQogLSAxOCBsaWdodHdlaWdodCBwcmluY2lwbGVzIHByZXNlbnQNCiAtIEFHRU5UUy9SRUFETUUgYm9vdHN0cmFwIHJvdXRlcyB0aHJvdWdoIHRoZSBjb25zdGl0dXRpb24NCiAtIG5vbi1ieXBhc3Mgc3RhdHVzIGFuZCBkaXJ0eS13b3JrdHJlZSBwcm90ZWN0aW9ucyBwcmVzZW50DQogLSBtaXNzaW5nIT0wIGFuZCBDSSBhbnRpLWJ5cGFzcyByZWdyZXNzaW9uIGFuY2hvcnMgcHJlc2VudA0KIC0gUHJvZHVjdCBHYXRlIGV4ZWN1dGVzIHRoaXMgdmFsaWRhdG9yIGFzIEJMT0NLSU5HDQo="
+    },
+    "verify_codex_takeover_governance": {
+      "encoding": "base64",
+      "bytes": 265,
+      "sha256": "b3b3bb0c406adabf6d42e4d4f77059cc70155e01f0bcd5261315342439c8e1ea",
+      "base64": "Q09ERVggVEFLRU9WRVIgR09WRVJOQU5DRSBPSyBsdW1lbmlzLWdnaS1jcm9zcy1wcm9kdWN0IHYxLjEuMCA2OGNhYTM3YzNmNGE4ZDUwZjBjMGI3N2JlZmFjMGU4YWUwYzk1NGI2M2IxYTc1ODNhOGY4MjJhMjhlYWE2OTBmIHNpbmdsZS1tYWNoaW5lLWNvbnRyYWN0PVBBU1Mgc2l4LXJvdW5kLXJvdXRpbmc9UEFTUyBsZWdhY3ktY292ZXJhZ2U9UEFTUyBjbG91ZC1ib3VuZGFyaWVzPVBBU1Mgd29ya2Zsb3ctZ3VhcmRzPVBBU1Mgb25saW5lLXByb2dyZXNzPVBBU1MNCg=="
+    },
+    "verify_database_authority": {
+      "encoding": "base64",
+      "bytes": 534,
+      "sha256": "b5e2aba6a6d3c6ffe8ca60677808e083f5be2324c50ff1334ee167e7b4ad6857",
+      "base64": "UHJvZHVjdGlvbiBQeXRob24gbW9kdWxlcyBBU1QtYXVkaXRlZDogNTg2DQpEaXJlY3QgU1FMaXRlIG93bmVyczogbHVtZW5pcy9zaGFyZWQvZGF0YWJhc2UvY29ubmVjdGlvbi5weSwgbHVtZW5pcy9zaGFyZWQvZGF0YWJhc2UvbWlncmF0aW9ucy5weQ0KRXhjbHVkZWQgcm9vdHM6IC5naXQsIC5weXRlc3RfY2FjaGUsIC52ZW52LCAwMC1HT1ZFUk5BTkNFLCAwMi1BUkNISVRFQ1RVUkUsIDk5LUFSQ0hJVkUsIENIQU5HRUxPRywgT1NBSea1i+ivleivgeaNriwgYXBwLCBhdWRpdCwgYnVpbGQsIGRvY3MsIGludGVsbGlnZW5jZV9saWJyYXJ5LCBsb2dzLCBub2RlX21vZHVsZXMsIG91dHB1dCwgcmVzZWFyY2gsIHNjcmlwdHMsIHRlc3RzLCB0bXAsIHZlbmRvciwgdmVudg0KUm9vdCB0ZXN0XyoucHkgYW5kIHJvb3QgdW5kZXJzY29yZSBzY3JhdGNoIGZpbGVzOiBleHBsaWNpdGx5IGV4Y2x1ZGVkDQpQQVNTOiBTaGFyZWQgRGF0YWJhc2UgZGlyZWN0LWNvbm5lY3Rpb24gYW5kIHBhdGgtb3ZlcnJpZGUgYXV0aG9yaXR5IGlzIGV4Y2x1c2l2ZQ0K"
+    },
+    "verify_lumenis_single_product": {
+      "encoding": "base64",
+      "bytes": 307,
+      "sha256": "352d35ce1fb2452931d17f4534d1ec367ee2e8b8f1deaa7ba369708293608b1f",
+      "base64": "TFVNRU5JUyBPbmx5LU9uZS9tdWx0aS1zdXJmYWNlIGFyY2hpdGVjdHVyZSBndWFyZDogUEFTUw0KcHJvZHVjdF9hcmNoaXRlY3R1cmU9MDAtR09WRVJOQU5DRS9MVU1FTklTLVBST0RVQ1QtQVJDSElURUNUVVJFLUNVUlJFTlQubWQNCmV4cGVyaWVuY2VfYXV0aG9yaXR5PTAwLUdPVkVSTkFOQ0UvTFVNRU5JUy1FWFBFUklFTkNFLUNPTlNUSVRVVElPTi5tZA0Kc3VyZmFjZV9kZWNpc2lvbj0wMC1HT1ZFUk5BTkNFL0xVTUVOSVMtTVVMVEktU1VSRkFDRS1ERUNJU0lPTi1DVVJSRU5ULm1kDQpsZWdhY3lfdWlfcmVmZXJlbmNlX3BhdGhzPTANCg=="
+    },
+    "verify_experience_authority_exclusive": {
+      "encoding": "base64",
+      "bytes": 230,
+      "sha256": "522a9aae1293051a9a67a822b09ef9c4de1cfafaff671dc6cf7545265b08de78",
+      "base64": "TFVNRU5JUyBFeHBlcmllbmNlIGF1dGhvcml0eSBleGNsdXNpdml0eTogUEFTUw0Kc29sZV9hdXRob3JpdHk9MDAtR09WRVJOQU5DRS9MVU1FTklTLUVYUEVSSUVOQ0UtQ09OU1RJVFVUSU9OLm1kDQphcHByb3ZlZF9leHBlcmllbmNlX3N1cmZhY2VzPXB1YmxpYy13ZWJzaXRlLHdlYi13b3Jrc3BhY2UsZGVza3RvcC1hcHAsbW9iaWxlLWNvbXBhbmlvbg0KbGVnYWN5X2Rlc2lnbl9hdXRob3JpdGllcz0wDQo="
+    },
+    "verify_experience_anti_template": {
+      "encoding": "base64",
+      "bytes": 251,
+      "sha256": "dbfa407a8e69a76815e7266800f78c05d5b7c5a946db38156664a7e428845d17",
+      "base64": "ew0KICAib2siOiB0cnVlLA0KICAibW9kZSI6ICJzdHJpY3QiLA0KICAiY2Fub25pY2FsX2V4cGVyaWVuY2UiOiAicHVibGljLXdlYnNpdGUgKyBhcHAvd2ViLWRlc2t0b3AtbW9iaWxlIiwNCiAgImV4cGVyaWVuY2VfYXV0aG9yaXR5IjogIjAwLUdPVkVSTkFOQ0UvTFVNRU5JUy1FWFBFUklFTkNFLUNPTlNUSVRVVElPTi5tZCIsDQogICJkYXJ0X2ZpbGVfY291bnQiOiAyMDcsDQogICJsZWdhY3lfd2ViX2F1dGhvcml0eSI6IGZhbHNlDQp9DQo="
+    },
+    "verify_experience_screen_blueprints": {
+      "encoding": "base64",
+      "bytes": 96,
+      "sha256": "36d92c2f6575d2fb0f0f91ddfb81a68a61977ad724b4510dbcffbdeb4661a07c",
+      "base64": "RXhwZXJpZW5jZSBibHVlcHJpbnQvc291cmNlIGNvbnRyYWN0OiBQQVNTIHNjcmVlbnM9NDQgYmluZGluZ3M9NTQgc2hhMjU2PXZlcmlmaWVkIGlkcz12ZXJpZmllZA0K"
+    },
+    "staged_diff_check": {
+      "encoding": "base64",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "base64": ""
+    }
+  },
+  "evidence_addition_after_gates": "Only this immutable actual gate receipt; no source/rule/spec changes",
+  "first_archived_and_patch_CRLF_precheck_failures_preserved_locally": true
+}
