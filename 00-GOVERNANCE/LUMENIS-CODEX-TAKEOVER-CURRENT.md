@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
-> Updated: 2026-10-03 — accepted C2 source follow-ons; local work continues, Cloud paused.
+> Updated: 2026-10-03 — accepted C2 source and bounded C3 workflow source; Cloud W3/W5 resumed on fixed bases.
 > current HEAD = READ WITH git fetch + git rev-parse origin/main
 
 CI information correction (2026-10-02): M approved retirement of the obsolete
@@ -34,19 +34,21 @@ coverage map into these six rounds in the
 They are not three competing execution schedules. Existing owners, capability
 requirements and real technical dependencies remain effective.
 
-**Product Owner continues local W1/W2/W4/W6/F work and has paused Cloud W3/W5.**
-The 2026-10-03 pause preserves their full scope and locally received pinned
-candidates. It prohibits Cloud access, dispatch, repair, upload and remote training
-until resumed. Local validation/integration of received material may continue;
-paused dependencies and unavailable interfaces do not become accepted outcomes.
+**Product Owner continues W1/W2/W3/W4/W5/W6/F work; the temporary Cloud pause was explicitly revoked.**
+W3 and W5 remain on their fixed d92 source snapshots after actual same-instance
+shell/root admission (revision45 and revision38 respectively). Account restoration
+and development admission do not prove deployment, model inference or product
+acceptance. Old rev4 is untouched. W6 reconciles exact candidates against current
+main at an explicit safe point; no background source replacement or Cloud push.
+Remote owned training remains separately constrained by actual compute admission.
 
 | Round / window | Placement | Scope | Current acceptance / execution |
 |---|---|---|---|
 | C1 / W1 | LOCAL | Data, Collector, Browser, exact entities/relations, freshness and maintenance | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
-| C2 / W2 | LOCAL + approved training resources | Owned AI, Agent, Skills, Memory, multimodal, Evaluation/Learning | ACTIVE; CURRENT-D92 FOLLOW-ON SOURCE/TESTED (17 PATHS; 178 RELATED CASES PASS) / FULL C2 NOT ACCEPTED |
-| C3 / W3 | CODEX CLOUD | Real CTH/BMP business workflows and outcomes | PAUSED BY PRODUCT OWNER; locally received pinned candidates retained / NOT ACCEPTED |
+| C2 / W2 | LOCAL + approved training resources | Owned AI, Agent, Skills, Memory, multimodal, Evaluation/Learning | ACTIVE; ACCEPTED HTTP/CALLBACK SOURCE (343 DISTINCT CASES ACROSS RETAINED SPLIT RUNS); PRODUCTION OWNED SERVICE NOT_BOUND / FULL C2 NOT ACCEPTED |
+| C3 / W3 | CODEX CLOUD | Real CTH/BMP business workflows and outcomes | ACTIVE ON FIXED D92; BOUNDED FOUR-LAYER WORKFLOW/CASE SOURCE AND FINAL READ REPAIR ACCEPTED; ACTUAL AI/ACTION/UI OPEN / FULL C3 NOT ACCEPTED |
 | C4 / W4 | LOCAL | Original pitches/general creation, video and podcast | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
-| C5 / W5 | CODEX CLOUD | Importer, Research, library, Reporting and Artifact services | PAUSED BY PRODUCT OWNER; Source/Artifact normal-chain handoff incomplete / NOT ACCEPTED |
+| C5 / W5 | CODEX CLOUD | Importer, Research, library, Reporting and Artifact services | ACTIVE ON FIXED D92; Source/Artifact normal-chain handoff incomplete / NOT ACCEPTED |
 | C6 / W6 | LOCAL | Integration, actual DB coordination, runtime, recovery, packaging and release | ACTIVE; PARTIAL ASSETS / NOT ACCEPTED |
 
 Frontend F owns `app/` and `website/`, follows the sole Experience Constitution
@@ -60,17 +62,20 @@ global coverage. Recovery is verified within each job, then across the product.
 Historical execution snapshot 2026-10-02: W5 initially returned
 `Unable to determine project root for task`, then a later pinned Cloud admission
 was recorded. Neither admission establishes Source/Artifact acceptance. The current
-2026-10-03 Product Owner pause above supersedes these execution states; local
-W1/W2/W4/W6/F continue. F is active; M has
+2026-10-03 temporary pause was subsequently revoked after account restoration;
+the current fixed-instance admission above supersedes it. F is active; M has
 accepted the bounded 2026-10-02 Website visitor workflow described below.
 Protected candidates keep the owner assignment below. W6's full working card is
 `work/w6-integration-20261002/TASK-CARD.md`; ongoing bounded runtime evidence stays
 in the existing ROUND 05 supervisor record. The canonical launcher restored Core8201
 on 2026-10-02; a fresh GET /healthz returned healthy/database=ok and the supervisor
 recorded running with child PID 21764, restarts=0. That is historical startup
-evidence; W6's 2026-10-03 observation found Core8201 stopped. A new loaded-source
-safe point and actual startup verification are required. This does not prove later
-source edits are running or that a business job passed.
+evidence. A later 2026-10-03 read found Core8201 responding healthy/database=ok,
+and the exact frozen F v4 Web bundle was mounted with HTTP-byte readback while
+Core/HK processes stayed unchanged. Core's loaded Python source remains
+NOT_VERIFIED, and the observed business page reports Subject information
+unavailable. Neither source publication nor bundle mounting proves a normal
+business job or four-surface acceptance.
 No product outcome, production coverage or release is promoted by this snapshot.
 
 M accepted the bounded C6/W6 lifecycle outcome on 2026-10-02 after reviewing its
@@ -291,7 +296,23 @@ and [exact source evidence](evidence/round-07/owned-training-phase-callback-2026
 Metadata permission, signatures and historical readback do not establish physical
 training, a bound owned AI business service, useful results or C2/C6 acceptance.
 Actual runtime, same-source hosted checks and publication readback remain separate.
-Cloud W3/W5 and remote training remain paused while local integration continues.
+Cloud W3/W5 are resumed on fixed development snapshots; actual remote training
+and normal owned inference remain separate unavailable dependencies.
+
+M accepted the bounded C3 workflow source composed by W6 at exact09b3 integration
+base: the four existing layers, their Case dependency, and the named final-read
+repair. The containing source unit includes `api_dual_domain.py`, `cth_cases.py`
+and their two direct test files, plus this CURRENT status and owning
+[C3 source evidence](evidence/round-11/C3-W3-WORKFLOW-SOURCE-2026-10-03.md).
+Eight affected cases and the required isolated gates pass; prior valid layer
+evidence is retained without rerunning old106/8/7 or the independent statistics.
+The repair uses the existing same-actor/exact-scope authorization after rendering
+and accurately reports UNAVAILABLE/OWNED_RUNTIME_NOT_BOUND. No new route,
+production DB change, permission owner or effect executor is introduced.
+Real caller/loading verification, useful owned AI, saved Artifact/version/receipt,
+executed Action, observed Outcome, Evaluation and UI/return/recovery remain open.
+Source quotation and operator drafts do not establish executed business effects.
+Full C3 and C6, USER_VERIFIED, RELEASED and OPERATING remain unaccepted.
 
 ## 2. Minimal current-context route
 

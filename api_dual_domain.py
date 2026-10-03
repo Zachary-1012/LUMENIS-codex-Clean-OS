@@ -55,6 +55,576 @@ from subject_context import (
 from domain_adapter import get_adapter, CTH_ONLY_FIELDS, ZBMP_ONLY_FIELDS
 from lumenis.shared.database import get_repository
 
+
+def authorize_business_work_request(operation, *, actor_ref, scope):
+    """Fresh server receipt for W6 composition; never accept receipt JSON."""
+    from experience_runtime import _source_brief_context
+    from lumenis.shared.reporting.source_brief_job import _scope_material
+    from lumenis.system.security import get_permission_gate, OperationType
+    if operation not in {"read", "prepare", "choose", "cancel", "interrupt", "resume", "outcome", "evaluate"}:
+        raise PermissionError("BUSINESS_WORK_OPERATION_DENIED")
+    action = "read" if operation == "read" else "write"
+    current_ref, scope_audit, material = _source_brief_context(action)
+    current_scope = _scope_material(**material)
+    if current_ref != actor_ref or current_scope != scope or current_scope["global"] is not False:
+        raise PermissionError("BUSINESS_WORK_CONTEXT_CHANGED")
+    audit = scope_audit
+    if operation != "read":
+        resource = scope["domain_id"] + ":" + (scope["subject_id"] or scope["brand_focus_id"])
+        allowed = get_permission_gate().check(
+            OperationType.REPORT_REVIEW, resource=resource, caller=actor_ref, domain_id=scope["domain_id"],
+        )
+        if (not allowed.allowed or not allowed.audit_id or allowed.resource != resource
+                or allowed.caller != actor_ref or allowed.domain_id != scope["domain_id"]):
+            raise PermissionError("BUSINESS_WORK_INTERNAL_RECORD_DENIED")
+        audit = allowed.audit_id
+    return {"actor_id": current_ref, "scope": current_scope, "operation": operation,
+            "permission_audit_ref": scope_audit, "operation_audit_ref": audit}
+
+
+def authorize_business_related_read(principal, *, actor_ref, original_scope, operation):
+    """Server-only read adapter; an unsealed JSON principal is never accepted."""
+    from lumenis.system.security.permission import check_local_workspace_scope_permission
+    if operation != "read" or getattr(principal, "principal_ref", None) != actor_ref:
+        raise PermissionError("BUSINESS_LENS_READ_ONLY_PRINCIPAL_REQUIRED")
+    result = check_local_workspace_scope_permission(
+        principal, domain_id=original_scope.get("domain_id"), module="reports", action="read",
+        subject_id=original_scope.get("subject_id"), brand_focus_id=original_scope.get("brand_focus_id"),
+        global_scope=original_scope.get("global"))
+    if not result.allowed or not result.audit_id:
+        raise PermissionError("BUSINESS_LENS_ORIGINAL_SCOPE_READ_DENIED")
+    return {"actor_id": actor_ref, "scope": original_scope, "operation": "read",
+            "permission_audit_ref": result.audit_id, "operation_audit_ref": result.audit_id}
+
+
+class BusinessDecisionWorkflow:
+    """CTH/BMP operator decisions over existing Shared report artifacts.
+
+    This is domain work, not an AI, database, Artifact or Permission owner.
+    The composing API must supply a fresh server authorization closure for
+    every operation. Options are attributed operator proposals, never inferred
+    consumer facts. Nothing here collects, executes a campaign or invokes AI.
+    Signed transitions live in the existing Evidence store without a migration.
+    """
+
+    VERSION = "cth-bmp-decision/1"
+    FEATURE = "CTH_BMP_DECISION_WORK"
+    KINDS = {"venue_operations", "consumer_risk", "brand_market", "creator_campaign"}
+
+    @staticmethod
+    def _json(value):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True,
+                          separators=(",", ":"), allow_nan=False)
+
+    @staticmethod
+    def _text(value, maximum=1500):
+        if (not isinstance(value, str) or not value.strip() or value != value.strip()
+                or len(value) > maximum or any(ord(c) < 32 and c not in "\n\t" for c in value)):
+            raise ValueError("BUSINESS_WORK_TEXT_INVALID")
+        return value
+
+    def _authorize(self, authorize, actor_ref, scope, operation):
+        if not callable(authorize):
+            raise PermissionError("BUSINESS_WORK_AUTHORIZATION_REQUIRED")
+        receipt = authorize(operation)
+        if (not isinstance(receipt, dict) or receipt.get("actor_id") != actor_ref
+                or receipt.get("scope") != scope or receipt.get("operation") != operation):
+            raise PermissionError("BUSINESS_WORK_AUTHORIZATION_MISMATCH")
+        try:
+            return {key: self._text(receipt.get(key), 256)
+                    for key in ("permission_audit_ref", "operation_audit_ref")}
+        except ValueError as exc:
+            raise PermissionError("BUSINESS_WORK_AUDIT_REQUIRED") from exc
+
+    def _report(self, connection, job_id, actor_ref, scope):
+        from lumenis.shared.reporting.source_brief_job import _verify_report
+        row = connection.execute(
+            "SELECT * FROM daily_reports WHERE report_id=? ORDER BY id DESC LIMIT 1", (job_id,),
+        ).fetchone()
+        if row is None:
+            raise LookupError("BUSINESS_WORK_SOURCE_REPORT_NOT_FOUND")
+        verified = _verify_report(dict(row), job_id=job_id, actor_id=actor_ref, expected_scope=scope)
+        import canonical_data
+        for source in verified["source_brief"]["records"]:
+            record = self._canonical_source(connection, source["source_id"], scope)
+            if str(record["scope_evidence_ref"]) != str(source["scope_evidence_ref"]):
+                raise PermissionError("BUSINESS_WORK_SOURCE_LINEAGE_CHANGED")
+            canonical_data._validate_canonical_scope(connection, canonical_data.CanonicalRecord(
+                source_id=source["source_id"], product_id=scope["product_id"], domain_id=scope["domain_id"],
+                subject_id=scope.get("subject_id"), brand_focus_id=scope.get("brand_focus_id"),
+                scope_status="VERIFIED", scope_evidence_ref=str(source["scope_evidence_ref"])))
+        return verified
+
+    @staticmethod
+    def _canonical_source(connection, source_id, scope):
+        rows = connection.execute(
+            "SELECT * FROM canonical_data WHERE source_id=? AND product_id=? AND domain_id=? "
+            "AND COALESCE(subject_id,'')=? AND COALESCE(brand_focus_id,'')=? AND scope_status='VERIFIED'",
+            (source_id, scope["product_id"], scope["domain_id"], scope.get("subject_id") or "", scope.get("brand_focus_id") or ""),
+        ).fetchall()
+        if len(rows) != 1:
+            raise PermissionError("BUSINESS_WORK_SOURCE_SCOPE_INVALID")
+        return dict(rows[0])
+
+    def _bound_report(self, connection, history, actor_ref, scope):
+        report = self._report(connection, history[0]["inputs"]["payload"]["source_job_id"], actor_ref, scope)
+        if report["row"]["artifact_hash"] != history[0]["outputs"]["source_report_hash"]:
+            raise RuntimeError("BUSINESS_WORK_SOURCE_REPORT_CHANGED")
+        case_id = history[0]["inputs"]["payload"].get("case_id")
+        if case_id:
+            case = self._case(connection, case_id, actor_ref, scope)
+            if (case["source_job_id"] != report["snapshot"]["job_id"]
+                    or case["creation_evidence_ref"] != history[0]["outputs"].get("case_evidence_ref")):
+                raise RuntimeError("BUSINESS_WORK_CASE_BINDING_CHANGED")
+        return report
+
+    @staticmethod
+    def _case(connection, case_id, actor_ref, scope):
+        from cth_cases import _checked
+        from lumenis.shared.database.cth_cases import TABLE
+        row = connection.execute(f"SELECT * FROM {TABLE} WHERE case_id=?", (case_id,)).fetchone()
+        if row is None:
+            raise LookupError("CTH_CASE_NOT_FOUND")
+        return _checked(connection, row, actor_ref=actor_ref, expected_scope=scope)
+
+    def _history(self, connection, work_id, actor_ref, scope):
+        import re
+        from lumenis.shared.evidence import store
+        from lumenis.shared.reporting.operator_review import _expected_scope_marker
+        if not isinstance(work_id, str) or not re.fullmatch(r"work-[0-9a-f]{64}", work_id):
+            raise ValueError("BUSINESS_WORK_ID_INVALID")
+        rows = connection.execute(
+            "SELECT * FROM app_evidence_records WHERE feature_id=? AND asset_id=? ORDER BY id",
+            (self.FEATURE, work_id),
+        ).fetchall()
+        history, previous = [], None
+        for raw in rows:
+            row = dict(raw)
+            if not store.verify_evidence_record_integrity(row):
+                raise RuntimeError("BUSINESS_WORK_SIGNATURE_INVALID")
+            inputs, outputs = json.loads(row["inputs_json"]), json.loads(row["outputs_json"])
+            if inputs.get("actor_ref") != actor_ref or inputs.get("scope") != scope:
+                raise PermissionError("BUSINESS_WORK_CONTEXT_MISMATCH")
+            if (row["version"] != self.VERSION or row["source"] != "cth_bmp_business"
+                    or row["product_id"] != scope["product_id"] or row["domain_id"] != scope["domain_id"]
+                    or row["status"] != "derived" or row["result"] != "RECORDED"
+                    or inputs.get("_lumenis_scope") != _expected_scope_marker(scope)
+                    or inputs.get("parent_ref") != previous or inputs.get("work_id") != work_id
+                    or inputs.get("submission_id") != row["test_name"]
+                    or outputs.get("action_state") != "NOT_EXECUTED"):
+                raise RuntimeError("BUSINESS_WORK_BINDING_INVALID")
+            evidence_ref = f"app_evidence_records:{row['id']}"
+            history.append({"inputs": inputs, "outputs": outputs, "evidence_ref": evidence_ref})
+            previous = evidence_ref
+        return history
+
+    def _options(self, options, source_ids):
+        if not isinstance(options, list) or not 2 <= len(options) <= 4:
+            raise ValueError("BUSINESS_WORK_COMPARABLE_OPTIONS_REQUIRED")
+        result = []
+        for option in options:
+            if not isinstance(option, dict) or set(option) != {"option_id", "proposal", "rationale", "source_ids", "assumptions", "unknowns", "check"}:
+                raise ValueError("BUSINESS_WORK_OPTION_INVALID")
+            for key in ("option_id", "proposal", "rationale", "check"):
+                self._text(option[key], 80 if key == "option_id" else 1500)
+            refs = option["source_ids"]
+            if (not isinstance(refs, list) or not refs or any(type(s) is not str for s in refs)
+                    or len(refs) != len(set(refs)) or not set(refs) <= source_ids):
+                raise PermissionError("BUSINESS_WORK_OPTION_SOURCE_INVALID")
+            for key in ("assumptions", "unknowns"):
+                if not isinstance(option[key], list) or not 1 <= len(option[key]) <= 8:
+                    raise ValueError("BUSINESS_WORK_LIMITS_REQUIRED")
+                for text in option[key]:
+                    self._text(text)
+            result.append({**option, "claim_type": "OPERATOR_PROPOSAL", "causation": "NOT_ESTABLISHED"})
+        if len({item["option_id"] for item in result}) != len(result):
+            raise ValueError("BUSINESS_WORK_OPTION_ID_DUPLICATE")
+        return result
+
+    def _append(self, *, actor_ref, scope, work_id, submission_id, operation,
+                payload, authorize, expected_revision=None):
+        import re
+        from lumenis.shared.evidence import store
+        if not isinstance(submission_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{8,80}", submission_id):
+            raise ValueError("BUSINESS_WORK_SUBMISSION_INVALID")
+        self._authorize(authorize, actor_ref, scope, operation)
+        with get_repository().transaction(timeout=10) as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            history = self._history(connection, work_id, actor_ref, scope)
+            # Replay is checked before optimistic revision: lost responses must
+            # recover the same event, while conflicting intent cannot overwrite it.
+            existing = [event for event in history if event["inputs"]["submission_id"] == submission_id]
+            if existing:
+                if len(existing) != 1 or existing[0]["inputs"]["operation"] != operation or existing[0]["inputs"]["payload"] != payload:
+                    raise ValueError("BUSINESS_WORK_SUBMISSION_CONFLICT")
+            else:
+                revision = history[-1]["evidence_ref"] if history else None
+                if revision != expected_revision:
+                    raise RuntimeError("BUSINESS_WORK_REVISION_CONFLICT")
+                outputs = self._transition(connection, history, operation, payload, actor_ref, scope)
+                audits = self._authorize(authorize, actor_ref, scope, operation)
+                inputs = {"work_id": work_id, "actor_ref": actor_ref, "scope": scope,
+                          "submission_id": submission_id, "operation": operation,
+                          "payload": payload, "parent_ref": revision, **audits}
+                ref = store.record_evidence(
+                    connection=connection, source="cth_bmp_business", project="LUMENIS",
+                    product=scope["product_id"], domain_id=scope["domain_id"],
+                    subject_id=scope.get("subject_id"), brand_focus_id=scope.get("brand_focus_id"),
+                    global_scope=False, feature_id=self.FEATURE, asset_id=work_id,
+                    test_name=submission_id, version=self.VERSION, status="derived", result="RECORDED",
+                    inputs=inputs, outputs=outputs,
+                )
+                if type(ref) is not int or ref < 1:
+                    raise RuntimeError("BUSINESS_WORK_EVIDENCE_WRITE_FAILED")
+                history = self._history(connection, work_id, actor_ref, scope)
+            # Every replay validates its original report and still-visible source chain.
+            self._bound_report(connection, history, actor_ref, scope)
+        if history[-1]["outputs"]["state"] == "OUTCOME_RECORDED":
+            # Evaluation is a recoverable derivative side-write. Replay retains
+            # the signed outcome and repairs its exact deterministic evaluation.
+            from lumenis.shared.evaluation.recorder import record_evaluation
+            import hashlib
+            self._authorize(authorize, actor_ref, scope, "evaluate")
+            record_evaluation(
+                dimension="report", metric_name="business_decision_usefulness",
+                metric_value=None, pass_threshold=1.0, warn_threshold=0.8,
+                source="cth_bmp_business", evidence_ref=history[-1]["evidence_ref"],
+                evaluation_id=hashlib.sha256((work_id + history[-1]["evidence_ref"]).encode()).hexdigest(),
+                metadata={"work_id": work_id, "actor_ref": actor_ref, "scope": scope,
+                          "outcome_state": "SOURCE_REPORTED", "causation": "NOT_ESTABLISHED",
+                          "action_state": "NOT_EXECUTED"},
+            )
+        return self.reopen(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize)
+
+    def _transition(self, connection, history, operation, payload, actor_ref, scope):
+        if operation == "prepare":
+            if history:
+                raise RuntimeError("BUSINESS_WORK_ALREADY_EXISTS")
+            if scope.get("global") is not False or scope.get("product_id") not in {"CTH", "ZBMP"}:
+                raise PermissionError("BUSINESS_WORK_EXACT_FOCUS_REQUIRED")
+            report = self._report(connection, payload["source_job_id"], actor_ref, scope)
+            sources = report["source_brief"]["records"]
+            if not sources:
+                raise ValueError("BUSINESS_WORK_SOURCE_MATERIAL_REQUIRED")
+            kind = payload["kind"]
+            allowed = {"venue_operations", "consumer_risk"} if scope["product_id"] == "CTH" else {"brand_market", "creator_campaign"}
+            if kind not in allowed:
+                raise ValueError("BUSINESS_WORK_DOMAIN_JOB_MISMATCH")
+            self._text(payload["question"])
+            case = None
+            if payload.get("case_id"):
+                if scope["product_id"] != "CTH":
+                    raise PermissionError("BUSINESS_WORK_CASE_DOMAIN_MISMATCH")
+                case = self._case(connection, payload["case_id"], actor_ref, scope)
+                if case["source_job_id"] != payload["source_job_id"] or case["question"] != payload["question"]:
+                    raise PermissionError("BUSINESS_WORK_CASE_INPUT_MISMATCH")
+            selected = {s["source_id"] for s in (case["source_refs"] if case else sources)}
+            options = self._options(payload["options"], selected)
+            return {"state": "PREPARED", "options": options, "decision": None,
+                    "source_report_hash": report["row"]["artifact_hash"],
+                    "case_id": payload.get("case_id"),
+                    "case_evidence_ref": case["creation_evidence_ref"] if case else None,
+                    "resume_count": 0, "outcome_state": "NOT_OBSERVED", "business_outcome": "NOT_OBSERVED",
+                    "action_state": "NOT_EXECUTED"}
+        if not history:
+            raise LookupError("BUSINESS_WORK_NOT_FOUND")
+        original = history[0]["inputs"]["payload"]
+        self._bound_report(connection, history, actor_ref, scope)
+        prior = history[-1]["outputs"]
+        state = prior["state"]
+        if state in {"CANCELLED", "OUTCOME_RECORDED"}:
+            raise RuntimeError("BUSINESS_WORK_TERMINAL")
+        result = dict(prior)
+        if operation == "choose":
+            if state != "PREPARED" or payload["option_id"] not in {o["option_id"] for o in prior["options"]}:
+                raise ValueError("BUSINESS_WORK_DECISION_INVALID")
+            self._text(payload["reason"])
+            self._text(payload["owner"])
+            self._text(payload["review_at"], 80)
+            from datetime import datetime
+            when = datetime.fromisoformat(payload["review_at"].replace("Z", "+00:00"))
+            if when.tzinfo is None:
+                raise ValueError("BUSINESS_WORK_REVIEW_TIMEZONE_REQUIRED")
+            result.update(state="DECIDED", decision={**payload, "approval": "INTERNAL_SELECTION_ONLY"})
+        elif operation in {"cancel", "interrupt"}:
+            self._text(payload["reason"])
+            if operation == "interrupt" and state == "INTERRUPTED":
+                raise RuntimeError("BUSINESS_WORK_ALREADY_INTERRUPTED")
+            result.update(state="CANCELLED" if operation == "cancel" else "INTERRUPTED",
+                          previous_state=state, reason=payload["reason"])
+        elif operation == "resume":
+            if state != "INTERRUPTED" or prior["resume_count"] >= 2:
+                raise RuntimeError("BUSINESS_WORK_RESUME_LIMIT_OR_STATE")
+            result.update(state=prior["previous_state"], resume_count=prior["resume_count"] + 1)
+        elif operation == "outcome":
+            if state != "DECIDED":
+                raise RuntimeError("BUSINESS_WORK_DECISION_REQUIRED")
+            outcome_report = self._report(connection, payload["source_job_id"], actor_ref, scope)
+            source_ids = {s["source_id"] for s in outcome_report["source_brief"]["records"]}
+            if payload["source_id"] not in source_ids:
+                raise PermissionError("BUSINESS_WORK_OUTCOME_SOURCE_INVALID")
+            quote = self._text(payload["quote"], 1200)
+            body = self._canonical_source(connection, payload["source_id"], scope)["content"] or ""
+            if quote not in body:
+                raise ValueError("BUSINESS_WORK_OUTCOME_QUOTE_NOT_IN_SOURCE")
+            import hashlib
+            self._text(payload["limits"])
+            result.update(state="OUTCOME_RECORDED", outcome_state="SOURCE_REPORTED",
+                          outcome={**payload, "report_hash": outcome_report["row"]["artifact_hash"],
+                                   "body_sha256": hashlib.sha256(body.encode()).hexdigest(),
+                                   "claim_type": "SOURCE_CLAIM", "causation": "NOT_ESTABLISHED"})
+        else:
+            raise ValueError("BUSINESS_WORK_OPERATION_INVALID")
+        return result
+
+    def prepare(self, *, actor_ref, scope, submission_id, source_job_id, kind, question, options, authorize):
+        import hashlib
+        self._text(actor_ref, 256)
+        work_id = "work-" + hashlib.sha256(self._json([actor_ref, scope, submission_id]).encode()).hexdigest()
+        return self._append(actor_ref=actor_ref, scope=scope, work_id=work_id,
+                            submission_id=submission_id, operation="prepare", authorize=authorize,
+                            payload={"source_job_id": source_job_id, "kind": kind, "question": question, "options": options})
+
+    def prepare_from_case(self, case_id, *, actor_ref, scope, submission_id, kind, options, authorize):
+        """Continue the existing signed CTH Case without replacing its owner."""
+        import hashlib
+        self._authorize(authorize, actor_ref, scope, "read")
+        with get_repository().connection(read_only=True, wal=False) as connection:
+            case = self._case(connection, case_id, actor_ref, scope)
+        work_id = "work-" + hashlib.sha256(self._json([actor_ref, scope, submission_id]).encode()).hexdigest()
+        return self._append(actor_ref=actor_ref, scope=scope, work_id=work_id,
+                            submission_id=submission_id, operation="prepare", authorize=authorize,
+                            payload={"source_job_id": case["source_job_id"], "kind": kind,
+                                     "question": case["question"], "options": options, "case_id": case_id})
+
+    def advance(self, work_id, *, actor_ref, scope, submission_id, operation, payload, expected_revision, authorize):
+        fields = {"choose": {"option_id", "reason", "owner", "review_at"},
+                  "cancel": {"reason"}, "interrupt": {"reason"}, "resume": set(),
+                  "outcome": {"source_job_id", "source_id", "quote", "limits"}}
+        if operation not in fields or not isinstance(payload, dict) or set(payload) != fields[operation]:
+            raise ValueError("BUSINESS_WORK_OPERATION_PAYLOAD_INVALID")
+        return self._append(work_id=work_id, actor_ref=actor_ref, scope=scope,
+                            submission_id=submission_id, operation=operation, payload=payload,
+                            expected_revision=expected_revision, authorize=authorize)
+
+    def _material_review(self, connection, report, scope, kind):
+        """Task-specific gaps from signed provenance, never inferred source roles.
+
+        A source's declared role is a capture annotation, not a truth/rights
+        verdict. Even complete role coverage requires material review; one
+        official identity page cannot establish consumer demand or ROI.
+        """
+        requirements = {
+            "venue_operations": [("VENUE_OPERATOR_DISCLOSURE", "核对主体级品牌/业态、经营口径与统计窗口"),
+                                 ("CONSUMER_FEEDBACK", "核对获准消费者样本、体验主题与偏差")],
+            "consumer_risk": [("CONSUMER_FEEDBACK", "核对反馈原文、时间与样本偏差"),
+                              ("VENUE_OPERATOR_DISCLOSURE", "向运营披露核验风险范围与处置事实")],
+            "brand_market": [("OFFICIAL_BRAND_SELF_DESCRIPTION", "核对品牌身份与自述范围"),
+                             ("MARKET_DISCLOSURE", "补充同口径市场/竞品材料与比较期")],
+            "creator_campaign": [("OFFICIAL_BRAND_SELF_DESCRIPTION", "核对品牌任务与表达边界"),
+                                 ("CREATOR_CONTENT", "核对获准创作者内容与传播语境"),
+                                 ("CONSUMER_FEEDBACK", "核对受众样本与真实反馈")],
+        }[kind]
+        sources = []
+        for source in report["source_brief"]["records"]:
+            record = self._canonical_source(connection, source["source_id"], scope)
+            ref = str(source["scope_evidence_ref"])
+            # Canonical scope validation already verified this signed record.
+            evidence_id = ref.split(":")[-1]
+            evidence = connection.execute(
+                "SELECT inputs_json FROM app_evidence_records WHERE id=?", (evidence_id,),
+            ).fetchone()
+            annotations = json.loads(evidence["inputs_json"]) if evidence else {}
+            role = annotations.get("source_role")
+            allowed_roles = {"OFFICIAL_BRAND_SELF_DESCRIPTION", "VENUE_OPERATOR_DISCLOSURE",
+                             "CONSUMER_FEEDBACK", "MARKET_DISCLOSURE", "CREATOR_CONTENT"}
+            role = role if isinstance(role, str) and role in allowed_roles else "UNKNOWN"
+            fields = {key: record.get("engagement_" + key) if type(record.get("engagement_" + key)) is int and record["engagement_" + key] >= 0 else None
+                      for key in ("likes", "comments", "collects", "shares")}
+            # Use the sole metric owner only when every component was measured.
+            from canonical_metrics import engagement_of
+            complete = all(value is not None for value in fields.values())
+            sources.append({"source_id": source["source_id"], "scope_evidence_ref": ref,
+                            "url": record.get("url"), "declared_role": role,
+                            "role_status": "CAPTURE_ANNOTATION_ONLY",
+                            "captured_at": record.get("captured_at"),
+                            "published_at": record.get("publish_datetime") or None,
+                            "commercial_reuse": annotations.get("commercial_reuse", "UNKNOWN"),
+                            "engagement": {"components": fields,
+                                           "value": engagement_of(fields) if complete else None,
+                                           "state": "COMPLETE_INPUT" if complete else "MISSING_INPUT",
+                                           "interpretation": "SOURCE_INTERACTIONS_ONLY_NOT_DEMAND_OR_ROI"}})
+        roles = {item["declared_role"] for item in sources}
+        checks = [{"required_role": role, "check": check,
+                   "state": "REVIEW_REQUIRED" if role in roles else "MISSING_MATERIAL",
+                   "source_ids": [s["source_id"] for s in sources if s["declared_role"] == role]}
+                  for role, check in requirements]
+        return {"state": "INSUFFICIENT_MATERIAL" if any(c["state"] == "MISSING_MATERIAL" for c in checks)
+                else "MATERIAL_REVIEW_REQUIRED", "checks": checks, "sources": sources,
+                "consumer_conclusion": "NOT_ESTABLISHED", "causation": "NOT_ESTABLISHED",
+                "commercial_readiness": "NOT_VERIFIED", "collection_triggered": False}
+
+    def reopen(self, work_id, *, actor_ref, scope, authorize):
+        self._authorize(authorize, actor_ref, scope, "read")
+        with get_repository().connection(read_only=True, wal=False) as connection:
+            connection.execute("BEGIN")
+            history = self._history(connection, work_id, actor_ref, scope)
+            if not history:
+                raise LookupError("BUSINESS_WORK_NOT_FOUND")
+            original = history[0]["inputs"]["payload"]
+            report = self._bound_report(connection, history, actor_ref, scope)
+            current = history[-1]
+            material_review = self._material_review(connection, report, scope, original["kind"])
+            if current["outputs"].get("outcome"):
+                import hashlib
+                outcome = current["outputs"]["outcome"]
+                outcome_report = self._report(connection, outcome["source_job_id"], actor_ref, scope)
+                body = self._canonical_source(connection, outcome["source_id"], scope)["content"] or ""
+                if (outcome_report["row"]["artifact_hash"] != outcome["report_hash"]
+                        or hashlib.sha256(body.encode()).hexdigest() != outcome["body_sha256"]
+                        or outcome["quote"] not in body):
+                    raise RuntimeError("BUSINESS_WORK_OUTCOME_SOURCE_CHANGED")
+        evaluation = {"state": "NOT_EVALUATED", "business_usefulness": "UNKNOWN"}
+        if current["outputs"]["state"] == "OUTCOME_RECORDED":
+            import hashlib
+            from lumenis.shared.evaluation.recorder import get_evaluation_record
+            evaluation_id = hashlib.sha256((work_id + current["evidence_ref"]).encode()).hexdigest()
+            record = get_evaluation_record(evaluation_id)
+            if record is None:
+                evaluation["state"] = "PENDING_RECOVERY"
+            else:
+                metadata = json.loads(record["metadata"])
+                if (record["evidence_ref"] != current["evidence_ref"] or record["status"] != "unknown"
+                        or record["metric_value"] is not None or metadata.get("work_id") != work_id
+                        or metadata.get("actor_ref") != actor_ref or metadata.get("scope") != scope):
+                    raise RuntimeError("BUSINESS_WORK_EVALUATION_BINDING_INVALID")
+                evaluation.update(state="RECORDED", evaluation_id=evaluation_id)
+        result = {"version": self.VERSION, "work_id": work_id, "scope": scope,
+                "revision": current["evidence_ref"], **current["outputs"],
+                "question": original["question"], "kind": original["kind"],
+                "source_report": {"job_id": original["source_job_id"], "artifact_hash": report["row"]["artifact_hash"]},
+                "source_brief": report["source_brief"], "multimodal": report["snapshot"]["multimodal"],
+                "material_review": material_review,
+                "owned_analysis": {"state": "UNAVAILABLE", "reason": "OWNED_RUNTIME_NOT_BOUND"},
+                "timeline": [{"operation": e["inputs"]["operation"], "evidence_ref": e["evidence_ref"]} for e in history],
+                "return_context": {"product_id": scope["product_id"], "global": True,
+                                   "subject_id": None, "brand_focus_id": None},
+                "evaluation": evaluation}
+        result["usable_result"] = self.render_result(result)
+        self._authorize(authorize, actor_ref, scope, "read")
+        return result
+
+    def focus_lens(self, work_id, *, actor_ref, scope, authorize, related_reports, authorize_related):
+        """Read separately authorized reports without rebinding their Evidence.
+
+        W6 supplies fresh server read receipts for each ORIGINAL scope. A
+        requested contextual citation is not an accepted entity relationship.
+        Shared report exact-scope contracts and stores remain unchanged.
+        """
+        focus = self.reopen(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize)
+        if not isinstance(related_reports, list) or len(related_reports) > 4:
+            raise ValueError("BUSINESS_LENS_CONTEXT_LIMIT")
+        if related_reports and not callable(authorize_related):
+            raise PermissionError("BUSINESS_LENS_CONTEXT_AUTHORIZATION_REQUIRED")
+        contexts, seen = [], {focus["source_report"]["job_id"]}
+        with get_repository().connection(read_only=True, wal=False) as connection:
+            connection.execute("BEGIN")
+            for descriptor in related_reports:
+                if not isinstance(descriptor, dict) or set(descriptor) != {"job_id", "original_scope", "purpose"}:
+                    raise ValueError("BUSINESS_LENS_CONTEXT_DESCRIPTOR_INVALID")
+                original = descriptor["original_scope"]
+                if not isinstance(original, dict) or original.get("product_id") != scope["product_id"]:
+                    raise PermissionError("BUSINESS_LENS_DOMAIN_MISMATCH")
+                if original.get("global") is True:
+                    raise RuntimeError("BUSINESS_LENS_GLOBAL_REPORT_SOURCE_SCOPE_OWNER_REQUIRED")
+                job_id = self._text(descriptor["job_id"], 256)
+                purpose = self._text(descriptor["purpose"])
+                if job_id in seen:
+                    raise ValueError("BUSINESS_LENS_DUPLICATE_REPORT")
+                seen.add(job_id)
+                receipt = lambda operation: authorize_related(original, operation)
+                self._authorize(receipt, actor_ref, original, "read")
+                report = self._report(connection, job_id, actor_ref, original)
+                contexts.append({"job_id": job_id, "artifact_hash": report["row"]["artifact_hash"],
+                                 "original_scope": original, "task_focus_scope": scope, "purpose": purpose,
+                                 "relationship_state": "OPERATOR_CONTEXT_REQUEST_NOT_VERIFIED_RELATION",
+                                 "source_brief": report["source_brief"],
+                                 "multimodal": report["snapshot"]["multimodal"],
+                                 "interpretation": "BACKGROUND_ONLY_NOT_FOCUS_FACT_OR_CAUSATION"})
+                # Revocation during the read must prevent returning material.
+                self._authorize(receipt, actor_ref, original, "read")
+        # A later related read may revoke an earlier scope. Recheck every
+        # original scope at the response boundary before returning any material.
+        for context in contexts:
+            original = context["original_scope"]
+            receipt = lambda operation, original=original: authorize_related(original, operation)
+            self._authorize(receipt, actor_ref, original, "read")
+        self._authorize(authorize, actor_ref, scope, "read")
+        return {"state": "SCOPED_REFERENCES_PREPARED", "task_focus_scope": scope,
+                "focus_work": focus, "related_context": contexts,
+                "analysis": {"state": "UNAVAILABLE", "reason": "W2_OWNED_GATEWAY_NOT_BOUND"},
+                "grounded_analysis_input": {"question": focus["question"], "task_focus_scope": scope,
+                    "focus_report": focus["source_report"],
+                    "related_reports": [{k: c[k] for k in ("job_id", "artifact_hash", "original_scope", "purpose")}
+                                        for c in contexts],
+                    "full_source_read": "REQUIRES_ORIGINAL_SCOPE_SOURCE_PERMISSION_AND_CANONICAL_OWNER",
+                    "cross_scope_metric_comparability": "NOT_ESTABLISHED"},
+                "truth_rewritten": False, "collection_triggered": False,
+                "return_context": focus["return_context"]}
+
+    @staticmethod
+    def render_result(work):
+        """Business-owned decision content; Shared still owns save/export assets."""
+        import hashlib
+        from lumenis.shared.reporting.operational_brief import _markdown_text, _source_url
+        text = _markdown_text
+        lines = ["# " + text(work["scope"]["entity_label"]) + " · 工作决策记录", "",
+                 text(work["question"]), "", "## 可比较的人工提案（不是已核实事实）", ""]
+        lines += ["## 本任务材料与缺口", "", text(work["material_review"]["state"])]
+        for check in work["material_review"]["checks"]:
+            lines += [text(check["check"]) + "：" + text(check["state"])]
+        lines += ["材料角色仅为捕获时标注，仍须核对原文、范围、时效与权利；官网自述不代表消费者意见。", ""]
+        lines += ["## 可复查来源", ""]
+        for source in work["material_review"]["sources"]:
+            source_url, url_state = _source_url(source.get("url"))
+            lines += ["来源：" + text(source["source_id"]),
+                      "出处：" + text(source_url or ("已隐去（地址含未经批准的参数或凭据）" if url_state == "WITHHELD" else "未知")),
+                      "捕获时间：" + text(source.get("captured_at") or "未知"),
+                      "发布时间：" + text(source.get("published_at") or "未知（不能以捕获时间替代）"),
+                      "材料角色标注：" + text(source["declared_role"]) + "（仍需原文核验）",
+                      "商业使用许可：" + text(source.get("commercial_reuse") or "UNKNOWN"),
+                      "范围证据：" + text(source["scope_evidence_ref"])]
+            metric = source["engagement"]
+            lines += ["来源互动字段合计：" + (str(metric["value"]) if metric["value"] is not None else "未知（字段未齐）"),
+                      "此数值仅来自来源互动字段，不代表客流、需求、销量或投放回报。", ""]
+        for option in work["options"]:
+            lines += ["### " + text(option["option_id"]) + " · " + text(option["proposal"]),
+                      text(option["rationale"]), "来源：" + text(", ".join(option["source_ids"])),
+                      "假设：" + text("；".join(option["assumptions"])),
+                      "未知：" + text("；".join(option["unknowns"])), "验证与停止条件：" + text(option["check"]), ""]
+        decision = work["decision"]
+        lines += ["## 决策与后续工作", ""]
+        if decision:
+            lines += ["选择：" + text(decision["option_id"]), "理由：" + text(decision["reason"]),
+                      "责任人：" + text(decision["owner"]), "复查时间：" + text(decision["review_at"])]
+        else:
+            lines += ["尚未选择方案。"]
+        lines += ["行动尚未执行；此记录不授予联系、发布、投放、资金或采集权限。", "",
+                  "## 来源报告与结果", "", "来源报告：" + text(work["source_report"]["job_id"])]
+        if work.get("outcome"):
+            outcome = work["outcome"]
+            lines += ["来源原文：" + text(outcome["quote"]), "限制：" + text(outcome["limits"]),
+                      "这是来源报告的说法，不证明本方案的效果或因果关系。"]
+        else:
+            lines += ["尚无结果证据。客流、销售、消费者意见与活动效果不得由来源存在性推断。"]
+        lines += ["", "## 证据与复查", ""]
+        lines += [text(e["evidence_ref"]) for e in work["timeline"]]
+        lines += ["", "业务有用性尚未验证；保存与导出由既有共享成果服务处理。"]
+        markdown = "\n".join(lines) + "\n"
+        return {"state": "OPERATOR_WORKING_RECORD", "markdown": markdown,
+                "content_sha256": hashlib.sha256(markdown.encode()).hexdigest(),
+                "artifact_state": "W5_EXPORT_BINDING_REQUIRED", "review_status": "HUMAN_PENDING"}
+
 # ---------------------------------------------------------------------------
 # 数据库连接：统一通过 Shared Database repository
 # ---------------------------------------------------------------------------

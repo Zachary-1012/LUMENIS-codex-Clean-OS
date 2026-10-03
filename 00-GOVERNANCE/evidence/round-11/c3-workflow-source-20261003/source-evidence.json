@@ -1,0 +1,133 @@
+{
+  "schema": "c3-bounded-workflow-source-evidence:v1",
+  "integration_base": "09b3bbb461e6f338251a4b1b3c6a45e4a2664fdb",
+  "fixed_cloud_base": "d92cbb7dca4a4da3dfda501a5e1c1bac841348c7",
+  "source_paths": [
+    {
+      "path": "api_dual_domain.py",
+      "bytes": 74201,
+      "sha256": "97ddddcd86032907bf2ceb34a7294440de61dbc4340c23aa434731a8e40dc12f"
+    },
+    {
+      "path": "cth_cases.py",
+      "bytes": 13039,
+      "sha256": "d19651824377ce4e56a646a61b8f37043a1a304a30fd7c911d1622048d39c000"
+    },
+    {
+      "path": "tests/test_cth_case_routes.py",
+      "bytes": 18101,
+      "sha256": "2375dc81e5ebe353f98556a5cddc9271d8effd31ac117dd0cc29d4aebd226b5c"
+    },
+    {
+      "path": "tests/test_business_decision_workflow.py",
+      "bytes": 33362,
+      "sha256": "57b4c95572ea6bf95f685d94b62158b25f97426b2b5785b306d64dcf100c955d"
+    }
+  ],
+  "published_callable_dependencies": {
+    "experience_runtime.py:_source_brief_context": {
+      "published_file_sha256": "7f9aac14512f30bb19a41e506d57af7c96a81b921c94d8c8513929c48723c7db",
+      "signature": "action, *, include_actor=False, module='reports'",
+      "root_and_published_callable_AST_equal": true,
+      "documented_published_caller_compatibility": null
+    },
+    "lumenis/system/security/permission.py:check_local_workspace_scope_permission": {
+      "published_file_sha256": "eb9167b2f564138018593a8bc8cce984f0f496db2a960d42009a18ad9b91a1f0",
+      "signature": "principal: Any, *, domain_id: str, action: str, module: str, subject_id: Optional[str]=None, brand_focus_id: Optional[str]=None, global_scope: bool=False, gate: Optional['PermissionGate']=None",
+      "root_and_published_callable_AST_equal": false,
+      "documented_published_caller_compatibility": "Only protected collector module allowlist addition and docstring differ. This published workflow calls exact module='reports', already allowed on main; no collector or other unpublished Permission behavior is a dependency. Protected Permission/test paths excluded."
+    },
+    "lumenis/shared/reporting/source_brief_job.py:_scope_material": {
+      "published_file_sha256": "917698b5ea55555a2f79c36fb9df34fd80245f2870ade38008ed247c82fe916b",
+      "signature": "*, product_id: str, global_scope: bool, entity_label: str, subject_id: str | None, brand_focus_id: str | None",
+      "root_and_published_callable_AST_equal": true,
+      "documented_published_caller_compatibility": null
+    },
+    "lumenis/shared/reporting/source_brief_job.py:_verify_report": {
+      "published_file_sha256": "917698b5ea55555a2f79c36fb9df34fd80245f2870ade38008ed247c82fe916b",
+      "signature": "row: dict[str, Any], *, job_id: str, actor_id: str, expected_scope: dict[str, Any] | None=None",
+      "root_and_published_callable_AST_equal": true,
+      "documented_published_caller_compatibility": null
+    },
+    "lumenis/shared/reporting/operator_review.py:_expected_scope_marker": {
+      "published_file_sha256": "2031c5adb93fec7226149efe338665211d165503615d01117d4c5b3fc1ac4448",
+      "signature": "scope: dict[str, Any]",
+      "root_and_published_callable_AST_equal": true,
+      "documented_published_caller_compatibility": null
+    }
+  },
+  "tests": {
+    "counts": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "unique_case_ids": [
+      "test_prepare_choose_outcome_reopen_and_unknown_evaluation[CTH]",
+      "test_prepare_choose_outcome_reopen_and_unknown_evaluation[ZBMP]",
+      "test_reopen_rechecks_read_after_render_revocation[CTH]",
+      "test_reopen_rechecks_read_after_render_revocation[ZBMP]",
+      "test_reopen_rejects_changed_final_read_authorization[CTH-actor]",
+      "test_reopen_rejects_changed_final_read_authorization[CTH-scope]",
+      "test_reopen_rejects_changed_final_read_authorization[ZBMP-actor]",
+      "test_reopen_rejects_changed_final_read_authorization[ZBMP-scope]"
+    ],
+    "synthetic_not_product_acceptance": true,
+    "original_junit_sha256": "a985d386e1bd270ec69f91e16a5c974533e4c059f2f5036ce06132db1d679087",
+    "original_junit_retained_locally": true
+  },
+  "logs": {
+    "affected-reopen": {
+      "encoding": "base64",
+      "bytes": 387,
+      "sha256": "066328a3e0fd54a7ca134b4e047e8f8ee711449b5b1e11cda22954f0bce3f6aa",
+      "exit_code": 0,
+      "original_log_bytes_unchanged": true,
+      "base64": "Li4uLi4uLi4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIFsxMDAlXQ0KPT09PSBUSFJFQUQgTEVBSyBSRVBPUlQgKGJhY2tncm91bmQgZGFlbW9uIHRocmVhZHMgbGVmdCBhbGl2ZSBhZnRlciB0ZXN0KSA9PT09DQpOTyBiYWNrZ3JvdW5kLXRocmVhZCBsZWFrIGRldGVjdGVkLg0KPT09PSBFTkQgVEhSRUFEIExFQUsgUkVQT1JUID09PT0NCg0KPT09PSBUSFJFQUQgTEVBSyBSRVBPUlQgKGJhY2tncm91bmQgZGFlbW9uIHRocmVhZHMgbGVmdCBhbGl2ZSBhZnRlciB0ZXN0KSA9PT09DQpOTyBiYWNrZ3JvdW5kLXRocmVhZCBsZWFrIGRldGVjdGVkLg0KPT09PSBFTkQgVEhSRUFEIExFQUsgUkVQT1JUID09PT0NCg0K"
+    },
+    "verify_ai_native_constitution": {
+      "encoding": "base64",
+      "bytes": 308,
+      "sha256": "e30d82c88700d83e334b9d746d862749bb960251f028c8d76450046dcbfcaeca",
+      "exit_code": 0,
+      "original_log_bytes_unchanged": true,
+      "base64": "QUktTkFUSVZFIENPTlNUSVRVVElPTiBHQVRFOiBQQVNTDQogLSAxOCBsaWdodHdlaWdodCBwcmluY2lwbGVzIHByZXNlbnQNCiAtIEFHRU5UUy9SRUFETUUgYm9vdHN0cmFwIHJvdXRlcyB0aHJvdWdoIHRoZSBjb25zdGl0dXRpb24NCiAtIG5vbi1ieXBhc3Mgc3RhdHVzIGFuZCBkaXJ0eS13b3JrdHJlZSBwcm90ZWN0aW9ucyBwcmVzZW50DQogLSBtaXNzaW5nIT0wIGFuZCBDSSBhbnRpLWJ5cGFzcyByZWdyZXNzaW9uIGFuY2hvcnMgcHJlc2VudA0KIC0gUHJvZHVjdCBHYXRlIGV4ZWN1dGVzIHRoaXMgdmFsaWRhdG9yIGFzIEJMT0NLSU5HDQo="
+    },
+    "verify_codex_takeover_governance": {
+      "encoding": "base64",
+      "bytes": 265,
+      "sha256": "b3b3bb0c406adabf6d42e4d4f77059cc70155e01f0bcd5261315342439c8e1ea",
+      "exit_code": 0,
+      "original_log_bytes_unchanged": true,
+      "base64": "Q09ERVggVEFLRU9WRVIgR09WRVJOQU5DRSBPSyBsdW1lbmlzLWdnaS1jcm9zcy1wcm9kdWN0IHYxLjEuMCA2OGNhYTM3YzNmNGE4ZDUwZjBjMGI3N2JlZmFjMGU4YWUwYzk1NGI2M2IxYTc1ODNhOGY4MjJhMjhlYWE2OTBmIHNpbmdsZS1tYWNoaW5lLWNvbnRyYWN0PVBBU1Mgc2l4LXJvdW5kLXJvdXRpbmc9UEFTUyBsZWdhY3ktY292ZXJhZ2U9UEFTUyBjbG91ZC1ib3VuZGFyaWVzPVBBU1Mgd29ya2Zsb3ctZ3VhcmRzPVBBU1Mgb25saW5lLXByb2dyZXNzPVBBU1MNCg=="
+    },
+    "verify_lumenis_single_product": {
+      "encoding": "base64",
+      "bytes": 307,
+      "sha256": "352d35ce1fb2452931d17f4534d1ec367ee2e8b8f1deaa7ba369708293608b1f",
+      "exit_code": 0,
+      "original_log_bytes_unchanged": true,
+      "base64": "TFVNRU5JUyBPbmx5LU9uZS9tdWx0aS1zdXJmYWNlIGFyY2hpdGVjdHVyZSBndWFyZDogUEFTUw0KcHJvZHVjdF9hcmNoaXRlY3R1cmU9MDAtR09WRVJOQU5DRS9MVU1FTklTLVBST0RVQ1QtQVJDSElURUNUVVJFLUNVUlJFTlQubWQNCmV4cGVyaWVuY2VfYXV0aG9yaXR5PTAwLUdPVkVSTkFOQ0UvTFVNRU5JUy1FWFBFUklFTkNFLUNPTlNUSVRVVElPTi5tZA0Kc3VyZmFjZV9kZWNpc2lvbj0wMC1HT1ZFUk5BTkNFL0xVTUVOSVMtTVVMVEktU1VSRkFDRS1ERUNJU0lPTi1DVVJSRU5ULm1kDQpsZWdhY3lfdWlfcmVmZXJlbmNlX3BhdGhzPTANCg=="
+    },
+    "verify_database_authority": {
+      "encoding": "base64",
+      "bytes": 534,
+      "sha256": "b5e2aba6a6d3c6ffe8ca60677808e083f5be2324c50ff1334ee167e7b4ad6857",
+      "exit_code": 0,
+      "original_log_bytes_unchanged": true,
+      "base64": "UHJvZHVjdGlvbiBQeXRob24gbW9kdWxlcyBBU1QtYXVkaXRlZDogNTg2DQpEaXJlY3QgU1FMaXRlIG93bmVyczogbHVtZW5pcy9zaGFyZWQvZGF0YWJhc2UvY29ubmVjdGlvbi5weSwgbHVtZW5pcy9zaGFyZWQvZGF0YWJhc2UvbWlncmF0aW9ucy5weQ0KRXhjbHVkZWQgcm9vdHM6IC5naXQsIC5weXRlc3RfY2FjaGUsIC52ZW52LCAwMC1HT1ZFUk5BTkNFLCAwMi1BUkNISVRFQ1RVUkUsIDk5LUFSQ0hJVkUsIENIQU5HRUxPRywgT1NBSea1i+ivleivgeaNriwgYXBwLCBhdWRpdCwgYnVpbGQsIGRvY3MsIGludGVsbGlnZW5jZV9saWJyYXJ5LCBsb2dzLCBub2RlX21vZHVsZXMsIG91dHB1dCwgcmVzZWFyY2gsIHNjcmlwdHMsIHRlc3RzLCB0bXAsIHZlbmRvciwgdmVudg0KUm9vdCB0ZXN0XyoucHkgYW5kIHJvb3QgdW5kZXJzY29yZSBzY3JhdGNoIGZpbGVzOiBleHBsaWNpdGx5IGV4Y2x1ZGVkDQpQQVNTOiBTaGFyZWQgRGF0YWJhc2UgZGlyZWN0LWNvbm5lY3Rpb24gYW5kIHBhdGgtb3ZlcnJpZGUgYXV0aG9yaXR5IGlzIGV4Y2x1c2l2ZQ0K"
+    }
+  },
+  "review_receipt_sha256": "39905c65b7d5907250ebe05b70da4d65db68fecf8dbd7f32aeda6bd0bef2e586",
+  "root_integration_receipt_sha256": "9463a59fe482a1e38182acf488aa8fb42591e614013ee3c72a208b7464a42e25",
+  "closure_sha256": "42f66c43e28b4425a5050f327fa205455caca1ef0d7e908e103a2747ddf39fa5",
+  "unrelated_statistics_excluded": true,
+  "old_106_8_7_not_repeated": true,
+  "full_C3_accepted": false,
+  "runtime_source_loaded": "NOT_VERIFIED",
+  "owned_analysis": "NOT_BOUND",
+  "actual_action": "NOT_BOUND",
+  "business_outcome": "NOT_OBSERVED",
+  "source_acceptance": "M_SOURCE_ACCEPTED"
+}

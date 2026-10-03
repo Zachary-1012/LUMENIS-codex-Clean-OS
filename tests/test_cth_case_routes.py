@@ -112,6 +112,49 @@ def test_case_tampering_is_not_displayed_as_a_verified_case(case_client, field, 
     assert _counts(db) == (1, 1)
 
 
+@pytest.mark.parametrize("column,value", [("summary", "replaced source brief"),
+                                          ("artifact_hash", "f" * 64)])
+def test_case_reopen_reverifies_original_source_report(case_client, column, value):
+    api, _, db, focus, body, _ = case_client
+    case = api.post(URL, headers=focus, json=body).get_json()["result"]
+    with sqlite3.connect(db) as con:
+        con.execute(f"UPDATE daily_reports SET {column}=? WHERE report_id=?", (value, body["source_job_id"]))
+    response = api.get(URL + "/" + case["case_id"], headers=focus)
+    assert response.status_code == 503
+    assert response.get_json()["code"] in {"SOURCE_BRIEF_ARTIFACT_HASH_MISMATCH", "CTH_CASE_SOURCE_JOB_CHANGED"}
+    assert _counts(db) == (1, 1)
+
+
+def test_case_reopen_fails_honestly_when_source_report_disappears(case_client):
+    api, _, db, focus, body, _ = case_client
+    case = api.post(URL, headers=focus, json=body).get_json()["result"]
+    with sqlite3.connect(db) as con:
+        con.execute("DELETE FROM daily_reports WHERE report_id=?", (body["source_job_id"],))
+    response = api.get(URL + "/" + case["case_id"], headers=focus)
+    assert response.status_code == 503
+    assert response.get_json()["code"] == "CTH_CASE_SOURCE_JOB_INVALID"
+    assert _counts(db) == (1, 1)
+
+
+def test_case_reopen_requires_selected_refs_to_match_source_report(case_client, monkeypatch):
+    import cth_cases
+
+    api, _, db, focus, body, _ = case_client
+    case = api.post(URL, headers=focus, json=body).get_json()["result"]
+    verify_report = cth_cases._verify_report
+
+    def mismatched_source_ref(*args, **kwargs):
+        verified = verify_report(*args, **kwargs)
+        verified["source_brief"]["records"][0]["scope_evidence_ref"] = "replaced-source-evidence"
+        return verified
+
+    monkeypatch.setattr(cth_cases, "_verify_report", mismatched_source_ref)
+    response = api.get(URL + "/" + case["case_id"], headers=focus)
+    assert response.status_code == 503
+    assert response.get_json()["code"] == "CTH_CASE_SOURCE_BINDING_INVALID"
+    assert _counts(db) == (1, 1)
+
+
 def test_failed_case_insert_rolls_back_signed_evidence_and_retry_recovers(case_client):
     api, _, db, focus, body, _ = case_client
     with sqlite3.connect(db) as con:

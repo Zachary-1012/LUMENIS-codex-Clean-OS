@@ -93,6 +93,28 @@ def _checked(connection, row, *, actor_ref, expected_scope):
             or json.loads(signed["outputs_json"]) != {"state": "OPEN", "analysis_state": "NOT_REQUESTED", "business_outcome": "NOT_OBSERVED"}):
         raise RuntimeError("CTH_CASE_BINDING_INVALID")
     _sources(connection, inputs["source_refs"], scope)
+    source_job_id = inputs.get("source_job_id")
+    if not isinstance(source_job_id, str) or not source_job_id:
+        raise RuntimeError("CTH_CASE_SOURCE_JOB_INVALID")
+    report = connection.execute(
+        "SELECT * FROM daily_reports WHERE report_id=? ORDER BY id DESC LIMIT 1", (source_job_id,),
+    ).fetchone()
+    if report is None:
+        raise RuntimeError("CTH_CASE_SOURCE_JOB_INVALID")
+    report = dict(report)
+    verified = _verify_report(
+        report, job_id=source_job_id, actor_id=actor_ref, expected_scope=scope,
+    )
+    if report.get("artifact_hash") != inputs.get("source_report_hash"):
+        raise RuntimeError("CTH_CASE_SOURCE_JOB_CHANGED")
+    available = {record["source_id"]: record for record in verified["source_brief"]["records"]}
+    refs = inputs.get("source_refs")
+    if any(
+        ref["source_id"] not in available
+        or available[ref["source_id"]]["scope_evidence_ref"] != ref["scope_evidence_ref"]
+        for ref in refs
+    ):
+        raise RuntimeError("CTH_CASE_SOURCE_BINDING_INVALID")
     return {
         "case_id": row["case_id"], "title": row["title"], "question": row["question"],
         "state": "OPEN", "scope": scope, "created_at": row["created_at"],
