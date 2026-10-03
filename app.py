@@ -1,4 +1,4 @@
-﻿"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
+"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
 import os, sys, json, threading, time, shutil, sqlite3, secrets, argparse, concurrent.futures, subprocess, csv, io, re, tempfile
 from pathlib import Path
 
@@ -1392,6 +1392,8 @@ def _pg_resolve_operation_type(path, method):
     """根据请求路径+方法映射 PermissionGate OperationType。
     覆盖采集/报告/导入导出/配置/事件/规则等所有写操作类别。"""
     p = path.lower()
+    if method == 'POST' and p == '/api/experience/owned-training/review-resources':
+        return OperationType.OWNED_TRAINING_REVIEW_PREVIEW
     # Shared Content & Creation 在 experience_runtime 内部执行动作白名单：
     # READ/ANALYZE/SUGGEST 是低风险 AI_CALL；未被共享面放行的写入/发布动作
     # 继续落入默认高风险门，避免把安全共享请求误判为 db_write。
@@ -1490,13 +1492,26 @@ def _permission_gate_write_check():
         pass
     if request.method not in _PG_WRITE_METHODS:
         return None
+    training_phase_rules = {
+        'experience_runtime.prepare_owned_training_phase_task': '/api/experience/owned-training/phase-tasks',
+        'experience_runtime.prepare_owned_training_phase_challenge': '/api/experience/owned-training/phase-tasks/<task_id>/challenges',
+        'experience_runtime.issue_owned_training_phase_decision': '/api/experience/owned-training/phase-tasks/<task_id>/challenge-decisions',
+        'experience_runtime.interrupt_owned_training_phase_task': '/api/experience/owned-training/phase-tasks/<task_id>/interrupt',
+        'experience_runtime.resume_owned_training_phase_task': '/api/experience/owned-training/phase-tasks/<task_id>/resume',
+    }
+    if (request.method == 'POST' and request.endpoint in training_phase_rules and request.url_rule is not None
+            and training_phase_rules.get(request.endpoint) == request.url_rule.rule):
+        # These exact registered handlers enforce the sealed task's own identity,
+        # scope, live grant and commit lease; a path-level grant cannot bind them.
+        return None
     if (request.method == 'POST' and (
             (request.path == '/api/experience/content-sources'
              and request.endpoint == 'experience_runtime.import_content_source')
             or (request.path == '/api/experience/content-projects/export'
                 and request.endpoint == 'experience_runtime.export_content_project')
             or (request.path.startswith('/api/experience/content-source-confirmations/')
-                and request.endpoint == 'experience_runtime.confirm_content_source_import_request'))):
+                and request.endpoint == 'experience_runtime.confirm_content_source_import_request')
+            )):
         # The registered handlers bind actual bytes and exact scope to the
         # canonical Permission confirmation. A path-level grant cannot do so.
         return None

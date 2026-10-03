@@ -8,6 +8,7 @@ owners 提供。本模块只负责把这些事实以受约束的 API contract �
 from __future__ import annotations
 
 import datetime as _dt
+from contextlib import contextmanager
 import hashlib
 import tempfile
 from urllib.parse import urlsplit
@@ -888,7 +889,7 @@ def cth_platform_collection_search():
         return jsonify({"ok": False, "status": "error", "error_type": type(exc).__name__}), 503
 
 
-def _content_project_scope(action: str, *, module="content", include_decision=False):
+def _content_project_scope(action: str, *, module="content", include_decision=False, read_only_auth=False):
     """Resolve selectors through the canonical registry, then ask Permission."""
     from lumenis.auth.service import get_current_user
     from lumenis.system.security.permission import (
@@ -900,7 +901,9 @@ def _content_project_scope(action: str, *, module="content", include_decision=Fa
 
     try:
         local_principal = resolve_local_workspace_principal(module=module, action=action)
-        actor = local_principal if local_principal is not None else get_current_user()
+        actor = local_principal if local_principal is not None else (
+            get_current_user(read_only=True) if read_only_auth else get_current_user()
+        )
     except Exception as exc:
         raise LocalArtifactError("AUTH_UNAVAILABLE") from exc
     if local_principal is None and (
@@ -963,6 +966,497 @@ def _content_project_scope(action: str, *, module="content", include_decision=Fa
     return (actor, scope, decision) if include_decision else (actor, scope)
 
 
+@experience_bp.route("/api/experience/owned-training/review-resources", methods=["POST"])
+def prepare_owned_training_review_resource():
+    """Prepare a review fingerprint from a real request; never submit a review."""
+    from lumenis.shared.database import get_repository
+    from lumenis.shared.learning import training_cases, training_review
+    from lumenis.shared.reporting.source_brief_job import _scope_material
+    from lumenis.system.security import permission
+
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("OWNED_TRAINING_PREVIEW_INPUT_INVALID")
+            result[key] = value
+        return result
+
+    try:
+        raw = request.stream.read(65537)
+        if len(raw) > 65536 or not request.is_json:
+            raise ValueError("OWNED_TRAINING_PREVIEW_INPUT_INVALID")
+        body = json.loads(raw, object_pairs_hook=unique_object)
+        if type(body) is not dict or set(body) != {
+            "submission_id", "source_evidence_refs", "prompt_messages", "proposed_target",
+            "context", "proposed_rights_declaration",
+        }:
+            raise ValueError("OWNED_TRAINING_PREVIEW_INPUT_INVALID")
+        actor, selected, scoped = _content_project_scope(
+            "write", module="owned_training", include_decision=True, read_only_auth=True,
+        )
+        scope = _scope_material(
+            product_id="CTH" if selected["domain_id"] == "cth" else "ZBMP",
+            subject_id=selected["subject_id"], brand_focus_id=selected["brand_focus_id"],
+            global_scope=selected["global_scope"], entity_label="GLOBAL / ALL" if selected["global_scope"] else (
+                selected["subject_id"] or selected["brand_focus_id"]
+            ),
+        )
+        gate = permission.get_permission_gate()
+        decision = gate.check(
+            permission.OperationType.OWNED_TRAINING_REVIEW_PREVIEW,
+            resource=request.path, caller=scoped.caller, domain_id=scoped.domain_id,
+        )
+        if not decision.allowed or not decision.audit_id:
+            raise PermissionError("OWNED_TRAINING_PREVIEW_DENIED")
+        identity_args = {"principal": actor} if type(actor) is permission.LocalWorkspacePrincipal else {
+            "authenticated_actor": actor,
+        }
+        args = dict(
+            **identity_args, expected_scope=scope,
+            source_evidence_refs=body["source_evidence_refs"], submission_id=body["submission_id"],
+            prompt_messages=body["prompt_messages"], reviewer_approved_target=body["proposed_target"],
+            context=body["context"], rights_declaration=body["proposed_rights_declaration"],
+        )
+        resource = training_review.training_review_approval_resource(**args)
+        # Read the same signed rows again so the response cannot certify an
+        # input whose immutable source changed between fingerprint and output.
+        material = training_review._request_material(**args)
+        with get_repository().connection(read_only=True, wal=False) as connection:
+            source_hashes = training_review._source_hashes(connection, material)
+        if resource != training_review._resource(material, source_hashes):
+            raise PermissionError("OWNED_TRAINING_PREVIEW_SOURCE_CHANGED")
+        return jsonify({
+            "ok": True, "state": "REVIEW_RESOURCE_PREPARED", "resource": resource,
+            "submission_id": body["submission_id"], "input_sha256": hashlib.sha256(
+                training_cases._json(body).encode("utf-8")
+            ).hexdigest(), "source_evidence": source_hashes,
+            "scope_permission_audit_id": scoped.audit_id, "preview_permission_audit_id": decision.audit_id,
+            "human_rights_decision": "PENDING", "human_target_decision": "PENDING",
+            "approval_issued": False, "training_eligible": False, "training_started": False,
+        })
+    except Exception as exc:
+        return _content_project_error(exc)
+
+
+def _owned_training_phase_material(body):
+    """Bind the private phase owner to fresh server identity and exact training inputs."""
+    from lumenis.system.ai_gateway.owned_training import TrainingApprovalRequest
+    from lumenis.system.security import permission as p
+
+    data = body.get("training_request")
+    fields = {"model_id", "model_revision", "train_sha256", "heldout_sha256", "scopes",
+              "recipe", "manifest_sha256", "domain_id"}
+    if type(data) is not dict or set(data) != fields or type(data.get("scopes")) is not list:
+        raise ValueError("OWNED_TRAINING_PHASE_INPUT_INVALID")
+    typed = TrainingApprovalRequest(**{**data, "scopes": tuple(data["scopes"])})
+    actor, selected, scoped = _content_project_scope(
+        "write", module="owned_training", include_decision=True, read_only_auth=True,
+    )
+    domain = "cth" if selected["domain_id"] == "cth" else "bmp"
+    context = {"scope_descriptors": body.get("scope_descriptors")}
+    identity_args = ({"principal": actor} if type(actor) is p.LocalWorkspacePrincipal
+                     else {"actor_id": actor["id"]})
+    identity = p.owned_training_identity(**identity_args)
+    fingerprints = p.owned_training_phase_fingerprints(
+        typed, domain_id=domain, context=context, **identity_args,
+    )
+    binding = {
+        "resource": p.owned_training_approval_resource(
+            typed, domain_id=domain, context=context, **identity_args,
+        ),
+        "identity": {name: identity[name] for name in
+                     ("actor_id", "caller", "principal_kind", "principal_ref")},
+        "scope_descriptors": context["scope_descriptors"],
+    }
+    gate = p.get_permission_gate()
+    if type(gate) is not p.PermissionGate or not gate.fail_closed or p.is_testing_bypass_enabled():
+        raise PermissionError("OWNED_TRAINING_PHASE_PERMISSION_UNAVAILABLE")
+    verifier = p.make_owned_training_approval_verifier(
+        gate, domain_id=domain, context=context, **identity_args,
+    )
+
+    def fresh_approval():
+        if identity.get("actor_id") is not None:
+            from lumenis.auth.service import get_current_user
+            current = get_current_user(read_only=True)
+            if type(current) is not dict or current.get("id") != identity["actor_id"]:
+                raise PermissionError("OWNED_TRAINING_PHASE_IDENTITY_CHANGED")
+        if not verifier(typed):
+            raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REQUIRED")
+        approval = gate.check(
+            p.OperationType.MODEL_TRAIN, resource=binding["resource"], caller=identity["caller"],
+            domain_id=domain, exact_approval_required=True,
+        )
+        if not approval.allowed or not approval.requires_approval or not approval.approval_token:
+            raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REQUIRED")
+        return approval
+
+    return typed, context, identity_args, domain, binding, fingerprints, gate, fresh_approval
+
+
+def _owned_training_phase_body(*, challenge=False, phase=False):
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("OWNED_TRAINING_PHASE_INPUT_INVALID")
+            result[key] = value
+        return result
+
+    def no_constant(_):
+        raise ValueError("OWNED_TRAINING_PHASE_INPUT_INVALID")
+
+    raw = request.stream.read(65537)
+    if len(raw) > 65536 or not request.is_json:
+        raise ValueError("OWNED_TRAINING_PHASE_INPUT_INVALID")
+    body = json.loads(raw, object_pairs_hook=unique_object, parse_constant=no_constant)
+    fields = ({"training_request", "scope_descriptors"}
+              | ({"challenge"} if challenge else set())
+              | ({"phase"} if phase else set()))
+    if type(body) is not dict or set(body) != fields:
+        raise ValueError("OWNED_TRAINING_PHASE_INPUT_INVALID")
+    return body
+
+
+def _owned_training_phase_reference(typed, context, args, domain, gate, fresh):
+    approval = fresh()
+    reference = gate.owned_training_approval_reference(
+        training_request=typed, context=context, domain_id=domain, approval=approval, **args,
+    )
+    return approval, reference
+
+
+@contextmanager
+def _owned_training_phase_transaction():
+    """Bound the entire staged transaction to the existing Task metadata owner."""
+    import sqlite3
+    from lumenis.shared.database import get_repository
+
+    with get_repository().connection(timeout=30) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        capture = {"denied": False, "allow_commit": False}
+        writes = {sqlite3.SQLITE_INSERT, sqlite3.SQLITE_UPDATE, sqlite3.SQLITE_DELETE}
+        task_savepoints = {
+            "sealed_training_phase_prepare", "sealed_training_phase_consume",
+            "sealed_training_phase_interrupt",
+        }
+        schema_effects = {getattr(sqlite3, name) for name in (
+            "SQLITE_ATTACH", "SQLITE_DETACH", "SQLITE_ALTER_TABLE", "SQLITE_REINDEX",
+            "SQLITE_ANALYZE", "SQLITE_CREATE_INDEX", "SQLITE_CREATE_TABLE",
+            "SQLITE_CREATE_TEMP_INDEX", "SQLITE_CREATE_TEMP_TABLE", "SQLITE_CREATE_TEMP_TRIGGER",
+            "SQLITE_CREATE_TEMP_VIEW", "SQLITE_CREATE_TRIGGER", "SQLITE_CREATE_VIEW",
+            "SQLITE_DROP_INDEX", "SQLITE_DROP_TABLE", "SQLITE_DROP_TEMP_INDEX",
+            "SQLITE_DROP_TEMP_TABLE", "SQLITE_DROP_TEMP_TRIGGER", "SQLITE_DROP_TEMP_VIEW",
+            "SQLITE_DROP_TRIGGER", "SQLITE_DROP_VIEW", "SQLITE_CREATE_VTABLE", "SQLITE_DROP_VTABLE",
+        )}
+
+        def authorize(action, first, second, database, _trigger):
+            denied = (
+                (action in writes and (database != "main" or first not in {"ai_task", "ai_task_step"}))
+                or action in schema_effects
+                or (action == sqlite3.SQLITE_TRANSACTION and first == "COMMIT" and not capture["allow_commit"])
+                or (action == sqlite3.SQLITE_SAVEPOINT and (
+                    first not in {"BEGIN", "ROLLBACK", "RELEASE"} or second not in task_savepoints
+                ))
+                or (action == sqlite3.SQLITE_PRAGMA and second is not None
+                    and first.lower() not in {"table_info", "table_xinfo", "index_info", "index_list", "foreign_key_list"})
+                or (action == sqlite3.SQLITE_FUNCTION and str(second).lower() == "load_extension")
+            )
+            if denied:
+                capture["denied"] = True
+                return sqlite3.SQLITE_DENY
+            return sqlite3.SQLITE_OK
+
+        def commit_metadata():
+            if capture["denied"]:
+                raise PermissionError("OWNED_TRAINING_PHASE_TRANSACTION_EFFECT_DENIED")
+            capture["allow_commit"] = True
+            try:
+                conn.commit()
+            finally:
+                capture["allow_commit"] = False
+
+        conn.set_authorizer(authorize)
+        try:
+            yield conn, commit_metadata
+            if capture["denied"]:
+                raise PermissionError("OWNED_TRAINING_PHASE_TRANSACTION_EFFECT_DENIED")
+        except Exception:
+            conn.rollback()
+            if capture["denied"]:
+                raise PermissionError("OWNED_TRAINING_PHASE_TRANSACTION_EFFECT_DENIED") from None
+            raise
+        finally:
+            conn.set_authorizer(None)
+
+
+def _commit_owned_training_phase(conn, typed, context, args, domain, gate, fresh, reference,
+                                 *, task_id, mutation, state, commit):
+    from lumenis.system.security.effect_fence import (
+        EffectFence, TrainingPhaseMetadataFenceDecision, get_effect_fence,
+    )
+
+    approval, current = _owned_training_phase_reference(typed, context, args, domain, gate, fresh)
+    if current != reference:
+        raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REPLACED")
+    fence = get_effect_fence()
+    if type(fence) is not EffectFence:
+        raise PermissionError("OWNED_TRAINING_PHASE_FENCE_UNAVAILABLE")
+    decision = fence.authorize_training_phase_metadata(
+        connection=conn, task_id=task_id, mutation=mutation, training_request=typed,
+        context=context, domain_id=domain, gate=gate, approval=approval,
+        approval_reference=reference, expected_state=state,
+        capture_mode="owned_training_task_metadata", **args,
+    )
+    if (type(decision) is not TrainingPhaseMetadataFenceDecision or decision.allowed is not True
+            or decision.effect_mode != "owned_training_task_metadata"
+            or decision.model_execution_allowed is not False or decision.task_id != task_id
+            or decision.mutation != mutation or decision.resource != reference["resource"]
+            or decision.approval_token_sha256 != reference["approval_token_sha256"]
+            or not decision.state_sha256 or not decision.permission_audit_id or not decision.fence_audit_id):
+        raise PermissionError(getattr(decision, "code", "OWNED_TRAINING_PHASE_FENCE_UNAVAILABLE"))
+    with gate.owned_training_phase_commit_lease(
+        training_request=typed, context=context, domain_id=domain, approval=approval,
+        connection=conn, expected_approval_reference=reference, **args,
+    ):
+        commit()
+
+
+def _owned_training_historical_receipt_response(record, *, state="HISTORICAL_PHASE_RECEIPT"):
+    # Historical bytes are recoverable evidence, never renewed phase authority.
+    return {"ok": True, "state": state, "receipt": record["receipt"],
+            "challenge": record["challenge"], "task": record["state"],
+            "pinned_public_key": record["pinned_public_key"], "historical": True,
+            "authorization_usable": False, "model_execution_claimed": False}
+
+
+@experience_bp.route("/api/experience/owned-training/phase-tasks", methods=["POST"])
+def prepare_owned_training_phase_task():
+    """Prepare a durable phase task only under an existing exact MODEL_TRAIN approval."""
+    from ai_task_engine import get_task_engine
+    from lumenis.shared.database import get_repository
+    from lumenis.system.security import training_receipts as receipts
+
+    try:
+        body = _owned_training_phase_body()
+        typed, context, args, domain, binding, fingerprints, gate, fresh = _owned_training_phase_material(body)
+        fresh()
+        public_key = receipts.get_training_receipt_public_key()
+        engine = get_task_engine()
+        with _owned_training_phase_transaction() as (conn, commit):
+            try:
+                _, reference = _owned_training_phase_reference(typed, context, args, domain, gate, fresh)
+                state = engine.create_training_receipt_task(
+                    binding=binding, fingerprints=fingerprints, connection=conn,
+                    approval_reference=reference, pinned_public_key=public_key,
+                )
+                if state.get("admission_version") != 2:
+                    raise PermissionError("OWNED_TRAINING_PHASE_SEALED_ADMISSION_REQUIRED")
+                _commit_owned_training_phase(conn, typed, context, args, domain, gate, fresh, reference,
+                                             task_id=state["task_id"], mutation="create", state=state, commit=commit)
+            except Exception:
+                conn.rollback()
+                raise
+        public_state = {key: value for key, value in state.items() if key != "task_id"}
+        return jsonify({"ok": True, "state": "PHASE_TASK_PREPARED", "task_id": state["task_id"],
+                        "public_challenge_context": public_state, "pinned_public_key": public_key,
+                        "training_started": False, "approval_issued": False})
+    except Exception as exc:
+        return _owned_training_phase_error(exc)
+
+
+@experience_bp.route(
+    "/api/experience/owned-training/phase-tasks/<task_id>/challenges", methods=["POST"],
+)
+def prepare_owned_training_phase_challenge(task_id):
+    """Persist the one legal server-authored challenge; perform no model work."""
+    from ai_task_engine import get_task_engine
+    from lumenis.shared.database import get_repository
+    from lumenis.system.security import training_receipts as receipts
+
+    try:
+        body = _owned_training_phase_body(phase=True)
+        typed, context, args, domain, binding, _, gate, fresh = _owned_training_phase_material(body)
+        fresh()
+        public_key = receipts.get_training_receipt_public_key()
+        engine = get_task_engine()
+        with _owned_training_phase_transaction() as (conn, commit):
+            try:
+                _, reference = _owned_training_phase_reference(typed, context, args, domain, gate, fresh)
+                engine.require_training_receipt_admission(task_id, binding, reference, public_key, conn)
+                challenge = engine.prepare_training_phase_challenge(
+                    task_id, binding, reference, public_key, body["phase"], conn,
+                )
+                state = engine.get_training_receipt_task(task_id, expected_binding=binding, connection=conn)
+                _commit_owned_training_phase(conn, typed, context, args, domain, gate, fresh, reference,
+                                             task_id=task_id, mutation="challenge", state=state, commit=commit)
+            except Exception:
+                conn.rollback()
+                raise
+        return jsonify({"ok": True, "state": "PHASE_CHALLENGE_PREPARED", "challenge": challenge,
+                        "pinned_public_key": public_key, "model_execution_claimed": False})
+    except Exception as exc:
+        return _owned_training_phase_error(exc)
+
+
+@experience_bp.route(
+    "/api/experience/owned-training/phase-tasks/<task_id>/challenge-decisions", methods=["POST"],
+)
+def issue_owned_training_phase_decision(task_id):
+    """Sign and durably consume one current challenge; never execute a model here."""
+    from ai_task_engine import get_task_engine
+    from lumenis.shared.database import get_repository
+    from lumenis.system.security import training_receipts as receipts
+
+    try:
+        body = _owned_training_phase_body(challenge=True)
+        typed, context, args, domain, binding, fingerprints, gate, fresh = _owned_training_phase_material(body)
+        supplied = body["challenge"]
+        challenge = receipts.validate_training_phase_challenge(
+            supplied, now=supplied.get("issued_at") if type(supplied) is dict else None,
+        )
+        if any(challenge[name] != value for name, value in fingerprints.items()):
+            raise PermissionError("OWNED_TRAINING_PHASE_BINDING_MISMATCH")
+        fresh()
+        public_key = receipts.get_training_receipt_public_key()
+        engine = get_task_engine()
+        with _owned_training_phase_transaction() as (conn, commit):
+            try:
+                _, reference = _owned_training_phase_reference(typed, context, args, domain, gate, fresh)
+                engine.require_training_receipt_admission(task_id, binding, reference, public_key, conn)
+                prior = engine.get_training_phase_receipt(task_id, binding, reference, challenge["nonce"], conn)
+                if prior is not None:
+                    if prior["challenge"] != challenge:
+                        raise PermissionError("OWNED_TRAINING_PHASE_BINDING_MISMATCH")
+                    _, current = _owned_training_phase_reference(typed, context, args, domain, gate, fresh)
+                    if current != reference:
+                        raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REPLACED")
+                    conn.rollback()
+                    return jsonify(_owned_training_historical_receipt_response(prior, state="PHASE_RECEIPT_ALREADY_COMMITTED"))
+                challenge = engine.require_pending_training_phase_challenge(
+                    task_id, binding, reference, public_key, challenge, conn,
+                )
+                signed = receipts.sign_training_phase_decision(challenge, "allow")
+                receipts.verify_training_phase_decision(
+                    signed, expected_challenge=challenge, pinned_public_key=public_key,
+                )
+                encoded = json.dumps(signed, ensure_ascii=False, sort_keys=True,
+                                     separators=(",", ":"), allow_nan=False).encode("utf-8")
+                state = engine.consume_training_phase_challenge(
+                    task_id, expected_binding=binding, challenge=challenge,
+                    receipt_sha256=hashlib.sha256(encoded).hexdigest(), decision="allow", connection=conn,
+                    receipt=signed, expected_approval_reference=reference,
+                )
+                _commit_owned_training_phase(conn, typed, context, args, domain, gate, fresh, reference,
+                                             task_id=task_id, mutation="receipt", state=state, commit=commit)
+            except Exception:
+                conn.rollback()
+                raise
+        return jsonify({"ok": True, "state": "PHASE_RECEIPT_COMMITTED", "receipt": signed,
+                        "next_sequence": state["next_sequence"], "model_execution_claimed": False})
+    except Exception as exc:
+        return _owned_training_phase_error(exc)
+
+
+@experience_bp.route(
+    "/api/experience/owned-training/phase-tasks/<task_id>/receipts/<nonce>", methods=["GET"],
+)
+def read_owned_training_phase_receipt(task_id, nonce):
+    """Read exact historical bytes under the still-live same grant and scope."""
+    from ai_task_engine import get_task_engine
+    from lumenis.auth.service import get_current_user
+    from lumenis.shared.database import get_repository
+    from lumenis.system.security import permission as p
+
+    try:
+        actor = get_current_user(read_only=True)
+        if type(actor) is dict and type(actor.get("id")) is int and actor["id"] > 0:
+            args = {"actor_id": actor["id"]}
+        else:
+            principal = p.resolve_local_workspace_principal(module="owned_training", action="write")
+            if principal is None:
+                raise PermissionError("OWNED_TRAINING_PHASE_AUTH_REQUIRED")
+            args = {"principal": principal}
+        identity = p.owned_training_identity(**args)
+        expected = {name: identity[name] for name in ("actor_id", "caller", "principal_kind", "principal_ref")}
+        gate = p.get_permission_gate()
+        if type(gate) is not p.PermissionGate or not gate.fail_closed or p.is_testing_bypass_enabled():
+            raise PermissionError("OWNED_TRAINING_PHASE_PERMISSION_UNAVAILABLE")
+        engine = get_task_engine()
+        with get_repository().connection(timeout=30) as conn:
+            conn.execute("BEGIN")
+            try:
+                material = engine.get_training_receipt_history_material(task_id, expected_identity=expected, connection=conn)
+                reference = gate.owned_training_history_approval_reference(material["binding"], **args)
+                if reference != material["approval_reference"]:
+                    raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REPLACED")
+                record = engine.get_training_phase_receipt(task_id, material["binding"], reference, nonce, conn)
+                if gate.owned_training_history_approval_reference(material["binding"], **args) != reference:
+                    raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REPLACED")
+            finally:
+                conn.rollback()
+        if record is None:
+            return jsonify({"ok": True, "state": "PHASE_RECEIPT_NOT_COMMITTED", "receipt": None,
+                            "historical": True, "authorization_usable": False, "model_execution_claimed": False}), 202
+        return jsonify(_owned_training_historical_receipt_response(record))
+    except Exception as exc:
+        return _owned_training_phase_error(exc)
+
+
+def _change_owned_training_phase_task_state(task_id, *, resume):
+    from ai_task_engine import get_task_engine
+    from lumenis.shared.database import get_repository
+    from lumenis.system.security import training_receipts as receipts
+
+    body = _owned_training_phase_body()
+    typed, context, args, domain, binding, _, gate, fresh = _owned_training_phase_material(body)
+    fresh()
+    public_key = receipts.get_training_receipt_public_key()
+    engine = get_task_engine()
+    with _owned_training_phase_transaction() as (conn, commit):
+        try:
+            _, reference = _owned_training_phase_reference(typed, context, args, domain, gate, fresh)
+            engine.require_training_receipt_admission(task_id, binding, reference, public_key, conn)
+            change = engine.resume_training_receipt_task if resume else engine.interrupt_training_receipt_task
+            state = change(task_id, expected_binding=binding, connection=conn)
+            _commit_owned_training_phase(conn, typed, context, args, domain, gate, fresh, reference,
+                                         task_id=task_id, mutation="resume" if resume else "interrupt", state=state, commit=commit)
+        except Exception:
+            conn.rollback()
+            raise
+    return jsonify({"ok": True, "state": "PHASE_TASK_RESUMED" if resume else "PHASE_TASK_INTERRUPTED",
+                    "task": state, "model_execution_claimed": False, "trainer_process_stopped": False})
+
+
+@experience_bp.route("/api/experience/owned-training/phase-tasks/<task_id>/interrupt", methods=["POST"])
+def interrupt_owned_training_phase_task(task_id):
+    try:
+        return _change_owned_training_phase_task_state(task_id, resume=False)
+    except Exception as exc:
+        return _owned_training_phase_error(exc)
+
+
+@experience_bp.route("/api/experience/owned-training/phase-tasks/<task_id>/resume", methods=["POST"])
+def resume_owned_training_phase_task(task_id):
+    try:
+        return _change_owned_training_phase_task_state(task_id, resume=True)
+    except Exception as exc:
+        return _owned_training_phase_error(exc)
+
+
+def _owned_training_phase_error(exc):
+    import sqlite3
+    from lumenis.system.security.training_receipts import TrainingReceiptConfigurationError
+
+    if isinstance(exc, TrainingReceiptConfigurationError):
+        return jsonify({"ok": False, "code": "OWNED_TRAINING_PHASE_SIGNING_UNAVAILABLE"}), 503
+    code = _content_project_error_code(exc)
+    status = (403 if isinstance(exc, PermissionError) else
+              409 if isinstance(exc, (KeyError, RuntimeError, sqlite3.IntegrityError)) else 400)
+    return jsonify({"ok": False, "code": code, "training_started": False}), status
+
+
 def _content_project_error_code(exc):
     code = str(exc)
     # Only known code-shaped errors are safe to serialize; never return filesystem paths.
@@ -979,6 +1473,7 @@ def _content_project_error(exc):
         "CONTENT_SOURCE_CONTEXT_MISMATCH", "CONTENT_SOURCE_SCOPE_DENIED",
         "CONTENT_SOURCE_ORIGIN_DENIED",
         "CONTENT_SOURCE_APPROVAL_REQUIRED", "CONTENT_EXPORT_PERMISSION_DENIED",
+        "OWNED_TRAINING_PREVIEW_DENIED",
     } else 400
     return jsonify({"ok": False, "code": code, "publish_status": "not_performed"}), status
 

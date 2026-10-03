@@ -118,3 +118,31 @@ manifest preserves the superseded claims and now labels this document inventory
 as immutable Git snapshots at `4e674a13433f7fe83c3f708cba6b3b3940eac118`, with
 correct published blob hashes. Later prose revisions are not falsely assigned
 those earlier hashes. No unchanged source test was rerun for this metadata fix.
+
+
+## Training phase metadata and callback composition — 2026-10-03
+
+The containing source candidate adds sealed Task phase metadata, exact current
+Permission references/short commit leases, an Effect Fence metadata decision,
+strict signed phase receipts and the existing trainer's nine callbacks. Historical
+readback never renews authority, and resumed advanced runs cannot restart from
+the initial phase. Default transport remains unbound. Scope is the exact18 source
+and test paths in [the source evidence](owned-training-phase-callback-20261003/source-evidence.json).
+The candidate is based on c433a5579abccd17aeee618926daf529cdce3c8f and projects
+M's accepted HTTP V3b/four-path callback without protected Pitch/Collector edits.
+
+The new composition ran343 checks:331 passed and12 encountered one fixture setup
+error because a historical test hardcoded this developer's temporary seed path.
+The original failing log/JUnit remain alongside the repair. Only that fixture was
+made portable: it still requires an explicit empty seed in the resolved temporary
+root, rejects the formal DB path, initializes a disposable DB and preserves every
+history/authorization/no-write assertion. Its12 checks then passed, with unchanged
+product source. The331 unaffected cases are reused; this is343 distinct cases with
+current passing evidence, not a claim of one green343-case run. No test was skipped,
+quarantined or weakened to promote a product failure.
+
+These are isolated owner/HTTP metadata contracts with ephemeral test keys and
+approvals. No actual training grant, physical checkpoint recovery, trained weights,
+useful owned inference, real business result or complete C2/C6 outcome is accepted.
+Local service/business composition continues; Cloud W3/W5 and remote training stay
+paused. Exact publication and actual loaded-source/runtime receipts remain separate.

@@ -281,6 +281,18 @@ requires real outcomes and current evidence before any C-round acceptance.
 
 Sole design authority: `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md`.
 
+The containing bounded C2/C6 source candidate now composes the accepted sealed
+training phase metadata and nine callback implementation at exact c433 base,
+excluding protected Pitch/Collector deltas. Its18 source/test paths have343
+distinct passing cases across the initial331-pass/12-fixture-error run and the
+12-case portable-fixture repair; original failures are retained. See the owning
+[Round07 record](evidence/round-07/ROUND-07-C2-OWNED-SOURCE-INTEGRATION-2026-10-02.md)
+and [exact source evidence](evidence/round-07/owned-training-phase-callback-20261003/source-evidence.json).
+Metadata permission, signatures and historical readback do not establish physical
+training, a bound owned AI business service, useful results or C2/C6 acceptance.
+Actual runtime, same-source hosted checks and publication readback remain separate.
+Cloud W3/W5 and remote training remain paused while local integration continues.
+
 ## 2. Minimal current-context route
 
 Read `AGENTS.md` first, then its mandatory bootstrap and exact capability locator

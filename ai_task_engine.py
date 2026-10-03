@@ -36,10 +36,12 @@ import os
 import hashlib
 import math
 import re
+import secrets
 import sqlite3
 import threading
 import time
 import uuid
+from contextlib import nullcontext
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from enum import Enum
@@ -212,6 +214,48 @@ _MANAGED_REPORT_TASK_CREATOR = "shared.reporting.source_brief"
 _MANAGED_REPORT_TASK_ID_RE = re.compile(
     r"^rbrief_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 )
+_TRAINING_RECEIPT_TASK_PREFIX = "trainrelay_"
+_TRAINING_RECEIPT_TASK_CREATOR = "owned_training_phase_receipts:v1"
+_TRAINING_RECEIPT_TASK_ID_RE = re.compile(
+    r"^trainrelay_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+)
+_TRAINING_RECEIPT_OWNER = "owned_training_phase_receipts:v1"
+_TRAINING_RECEIPT_USER_INPUT = "Owned training phase receipt state"
+_TRAINING_RECEIPT_FINGERPRINT_FIELDS = (
+    "request_sha256", "model_identity_sha256", "manifest_sha256", "train_sha256",
+    "heldout_sha256", "recipe_sha256", "scope_sha256",
+)
+_TRAINING_RECEIPT_CONTEXT_FIELDS = frozenset({
+    "managed_owner", "binding", "fingerprints", "run_digest", "task_digest",
+    "next_sequence", "last_receipt_sha256",
+})
+_TRAINING_RECEIPT_V2_CONTEXT_FIELDS = _TRAINING_RECEIPT_CONTEXT_FIELDS | {"admission"}
+_TRAINING_ADMISSION_FIELDS = frozenset({
+    "schema_version", "approval_reference", "public_key_pin", "last_phase",
+    "pending_step_id", "terminal",
+})
+_TRAINING_APPROVAL_REFERENCE_FIELDS = frozenset({
+    "schema_version", "operation", "resource", "approval_token_sha256",
+    "issuance_audit_id", "granted_by", "granted_at", "expires_at",
+})
+_TRAINING_PHASES = frozenset({
+    "initial", "before_output_dir", "before_train", "step_begin", "substep_end",
+    "pre_optimizer_step", "before_adapter_save", "before_tokenizer_save",
+    "after_saved_artifact_check",
+})
+_TRAINING_PHASE_TRANSITIONS = {
+    None: frozenset({"initial"}),
+    "initial": frozenset({"before_output_dir"}),
+    "before_output_dir": frozenset({"before_train"}),
+    "before_train": frozenset({"step_begin"}),
+    "step_begin": frozenset({"substep_end", "pre_optimizer_step"}),
+    "substep_end": frozenset({"substep_end", "pre_optimizer_step"}),
+    "pre_optimizer_step": frozenset({"step_begin", "before_adapter_save"}),
+    "before_adapter_save": frozenset({"before_tokenizer_save"}),
+    "before_tokenizer_save": frozenset({"after_saved_artifact_check"}),
+    "after_saved_artifact_check": frozenset(),
+}
+_TRAINING_TERMINAL_PHASE = "after_saved_artifact_check"
 _REPORT_AUDIT_REF_RE = re.compile(r"^aud_[0-9a-f]{16}$")
 _REPORT_IMAGE_REF_RE = re.compile(r"^ART-[0-9a-f]{16}$")
 _REPORT_CONTEXT_KEYS = frozenset({
@@ -234,6 +278,28 @@ def _guard_generic_task_access(task_id: Any) -> None:
         raise PermissionError(
             "managed report tasks are accessible only through report-task methods"
         )
+    if _is_training_receipt_task_id(task_id):
+        raise PermissionError(
+            "training receipt tasks are accessible only through training-receipt methods"
+        )
+
+
+def _is_training_receipt_task_id(task_id: Any) -> bool:
+    return type(task_id) is str and task_id.startswith(_TRAINING_RECEIPT_TASK_PREFIX)
+
+
+def _require_training_receipt_task_id(task_id: Any) -> str:
+    if not _is_training_receipt_task_id(task_id):
+        raise PermissionError("task is not a managed training receipt task")
+    if _TRAINING_RECEIPT_TASK_ID_RE.fullmatch(task_id) is None:
+        raise ValueError("managed training receipt task id is malformed")
+    try:
+        parsed = uuid.UUID(task_id.removeprefix(_TRAINING_RECEIPT_TASK_PREFIX))
+    except (AttributeError, TypeError, ValueError):
+        raise ValueError("managed training receipt task id is malformed") from None
+    if parsed.version != 4 or str(parsed) != task_id.removeprefix(_TRAINING_RECEIPT_TASK_PREFIX):
+        raise ValueError("managed training receipt task id is not a canonical UUID4")
+    return task_id
 
 
 def _require_managed_report_task_id(task_id: Any) -> str:
@@ -278,6 +344,279 @@ def _serialize_strict_json(value: Any, *, field_name: str) -> str:
         raise ValueError(f"{field_name} is not valid JSON data") from exc
     _strict_json_loads(encoded, field_name=field_name)
     return encoded
+
+
+def _validate_training_receipt_fingerprints(value: Any) -> Dict[str, str]:
+    if type(value) is not dict or set(value) != set(_TRAINING_RECEIPT_FINGERPRINT_FIELDS):
+        raise ValueError("training receipt fingerprints have missing or unsupported fields")
+    result = {}
+    for name in _TRAINING_RECEIPT_FINGERPRINT_FIELDS:
+        digest = value.get(name)
+        if type(digest) is not str or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+            raise ValueError(f"training receipt {name} must be a lowercase SHA-256 digest")
+        result[name] = digest
+    return result
+
+
+def _validate_training_receipt_binding(value: Any) -> Dict[str, Any]:
+    if type(value) is not dict or set(value) != {"resource", "identity", "scope_descriptors"}:
+        raise ValueError("training receipt binding has missing or unsupported fields")
+    resource = value.get("resource")
+    if type(resource) is not str or re.fullmatch(r"owned_training:v1:[0-9a-f]{64}", resource) is None:
+        raise ValueError("training receipt resource is invalid")
+
+    identity = value.get("identity")
+    identity_keys = {"actor_id", "caller", "principal_kind", "principal_ref"}
+    if type(identity) is not dict or set(identity) != identity_keys:
+        raise ValueError("training receipt identity has missing or unsupported fields")
+    actor_id = identity.get("actor_id")
+    caller = identity.get("caller")
+    principal_kind = identity.get("principal_kind")
+    principal_ref = identity.get("principal_ref")
+    if actor_id is not None:
+        if (type(actor_id) is not int or actor_id <= 0
+                or caller != f"actor:{actor_id}"
+                or principal_kind is not None or principal_ref is not None):
+            raise ValueError("training receipt account identity is incoherent")
+    elif not (
+        caller == "workspace:local"
+        and principal_kind == "local_workspace"
+        and principal_ref == "workspace:local"
+    ):
+        raise ValueError("training receipt workspace identity is incoherent")
+    normalized_identity = {
+        "actor_id": actor_id, "caller": caller,
+        "principal_kind": principal_kind, "principal_ref": principal_ref,
+    }
+
+    descriptors = value.get("scope_descriptors")
+    if type(descriptors) is not dict or not descriptors:
+        raise ValueError("training receipt scope descriptors must be a non-empty object")
+    normalized_descriptors = {}
+    descriptor_keys = {"domain_id", "product_id", "global_scope", "subject_id", "brand_focus_id"}
+    for scope, descriptor in descriptors.items():
+        if (type(scope) is not str or not scope or scope != scope.strip()
+                or len(scope) > 256 or any(ord(char) < 32 for char in scope)
+                or type(descriptor) is not dict or set(descriptor) != descriptor_keys):
+            raise ValueError("training receipt scope descriptor is invalid")
+        domain_id = descriptor.get("domain_id")
+        product_id = descriptor.get("product_id")
+        global_scope = descriptor.get("global_scope")
+        subject_id = descriptor.get("subject_id")
+        brand_focus_id = descriptor.get("brand_focus_id")
+        if (type(global_scope) is not bool
+                or domain_id not in {"cth", "bmp"}
+                or product_id != ("CTH" if domain_id == "cth" else "ZBMP")):
+            raise ValueError("training receipt scope descriptor domain is invalid")
+        if global_scope:
+            valid_scope = scope == "GLOBAL / ALL" and subject_id is None and brand_focus_id is None
+        elif domain_id == "cth":
+            valid_scope = (
+                type(subject_id) is str and bool(subject_id) and subject_id == subject_id.strip()
+                and len(subject_id) <= 256 and not any(ord(char) < 32 for char in subject_id)
+                and scope == subject_id and brand_focus_id is None
+            )
+        else:
+            valid_scope = (
+                type(brand_focus_id) is str and bool(brand_focus_id)
+                and brand_focus_id == brand_focus_id.strip() and len(brand_focus_id) <= 256
+                and not any(ord(char) < 32 for char in brand_focus_id)
+                and scope == brand_focus_id and subject_id is None
+            )
+        if not valid_scope:
+            raise ValueError("training receipt scope descriptor does not match its scope")
+        normalized_descriptors[scope] = {
+            "domain_id": domain_id, "product_id": product_id,
+            "global_scope": global_scope, "subject_id": subject_id,
+            "brand_focus_id": brand_focus_id,
+        }
+    return {
+        "resource": resource, "identity": normalized_identity,
+        "scope_descriptors": normalized_descriptors,
+    }
+
+
+def _validate_training_approval_reference(value: Any) -> Dict[str, Any]:
+    if type(value) is not dict or set(value) != _TRAINING_APPROVAL_REFERENCE_FIELDS:
+        raise ValueError("training approval reference has missing or unsupported fields")
+    if type(value.get("schema_version")) is not int or value["schema_version"] != 1:
+        raise ValueError("training approval reference schema is invalid")
+    if value.get("operation") != "model_train":
+        raise ValueError("training approval reference operation is invalid")
+    resource = value.get("resource")
+    if type(resource) is not str or re.fullmatch(r"owned_training:v1:[0-9a-f]{64}", resource) is None:
+        raise ValueError("training approval reference resource is invalid")
+    token_digest = value.get("approval_token_sha256")
+    if type(token_digest) is not str or re.fullmatch(r"[0-9a-f]{64}", token_digest) is None:
+        raise ValueError("training approval reference token digest is invalid")
+    if type(value.get("issuance_audit_id")) is not str or _REPORT_AUDIT_REF_RE.fullmatch(value["issuance_audit_id"]) is None:
+        raise ValueError("training approval reference issuance audit is invalid")
+    granted_by = value.get("granted_by")
+    if (type(granted_by) is not str or not granted_by.strip()
+            or len(granted_by) > 256 or any(ord(character) < 32 for character in granted_by)):
+        raise ValueError("training approval reference grant owner is invalid")
+
+    parsed_times = []
+    for field_name in ("granted_at", "expires_at"):
+        raw = value.get(field_name)
+        if type(raw) is not str or len(raw) > 64:
+            raise ValueError("training approval reference time is invalid")
+        try:
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            raise ValueError("training approval reference time is invalid") from None
+        if parsed.timestamp() <= 0:
+            raise ValueError("training approval reference timestamp must be positive")
+        parsed_times.append(parsed.timestamp())
+    if parsed_times[1] <= parsed_times[0]:
+        raise ValueError("training approval reference expiry must follow issuance")
+    return {name: value[name] for name in (
+        "schema_version", "operation", "resource", "approval_token_sha256",
+        "issuance_audit_id", "granted_by", "granted_at", "expires_at",
+    )}
+
+
+def _validate_training_public_key_pin(value: Any) -> Dict[str, Any]:
+    from lumenis.system.security.training_receipts import _validate_pinned_public_key
+
+    if type(value) is not dict:
+        raise ValueError("training receipt public key pin is invalid")
+    key_id, _public_key = _validate_pinned_public_key(value)
+    if key_id != value.get("key_id"):
+        raise ValueError("training receipt public key pin is invalid")
+    return {
+        "schema_version": value["schema_version"],
+        "key_id": value["key_id"],
+        "algorithm": value["algorithm"],
+        "public_key": value["public_key"],
+    }
+
+
+def _validate_training_admission(value: Any) -> Dict[str, Any]:
+    if type(value) is not dict or set(value) != _TRAINING_ADMISSION_FIELDS:
+        raise ValueError("sealed training admission has missing or unsupported fields")
+    if type(value.get("schema_version")) is not int or value["schema_version"] != 2:
+        raise ValueError("sealed training admission schema is invalid")
+    approval_reference = _validate_training_approval_reference(value.get("approval_reference"))
+    public_key_pin = _validate_training_public_key_pin(value.get("public_key_pin"))
+    last_phase = value.get("last_phase")
+    if last_phase is not None and (type(last_phase) is not str or last_phase not in _TRAINING_PHASES):
+        raise ValueError("sealed training admission phase is invalid")
+    pending_step_id = value.get("pending_step_id")
+    if pending_step_id is not None and (
+        type(pending_step_id) is not str
+        or re.fullmatch(r"trainphase_[0-9a-f]{64}", pending_step_id) is None
+    ):
+        raise ValueError("sealed training admission pending step is invalid")
+    terminal = value.get("terminal")
+    if type(terminal) is not bool:
+        raise ValueError("sealed training admission terminal flag is invalid")
+    if terminal != (last_phase == _TRAINING_TERMINAL_PHASE) or (terminal and pending_step_id is not None):
+        raise ValueError("sealed training admission terminal state is incoherent")
+    return {
+        "schema_version": 2,
+        "approval_reference": approval_reference,
+        "public_key_pin": public_key_pin,
+        "last_phase": last_phase,
+        "pending_step_id": pending_step_id,
+        "terminal": terminal,
+    }
+
+
+def _training_phase_now(now: Optional[int]) -> int:
+    if now is None:
+        return int(time.time())
+    if type(now) is not int or now <= 0:
+        raise ValueError("training phase clock must be a positive integer")
+    return now
+
+
+def _training_approval_expiry_seconds(reference: Dict[str, Any]) -> int:
+    parsed = datetime.fromisoformat(reference["expires_at"].replace("Z", "+00:00"))
+    return int(parsed.timestamp())
+
+
+def _training_phase_step_id(task_id: str, nonce: str) -> str:
+    return "trainphase_" + hashlib.sha256((task_id + nonce).encode("utf-8")).hexdigest()
+
+
+def _training_phase_transition_allowed(last_phase: Optional[str], phase: str) -> bool:
+    return phase in _TRAINING_PHASE_TRANSITIONS.get(last_phase, frozenset())
+
+
+def _training_challenge_matches_context(challenge: Dict[str, Any], context: Dict[str, Any]) -> bool:
+    expected = {
+        "run_digest": context["run_digest"],
+        "task_digest": context["task_digest"],
+        **context["fingerprints"],
+        "sequence": context["next_sequence"],
+    }
+    return all(challenge.get(name) == value for name, value in expected.items())
+
+
+def _training_receipt_task_digest(task_id: str) -> str:
+    return hashlib.sha256(task_id.encode("utf-8")).hexdigest()
+
+
+def _training_receipt_public_state(task_id: str, context: Dict[str, Any], status: str) -> Dict[str, Any]:
+    public = {
+        "task_id": task_id,
+        "run_digest": context["run_digest"],
+        "task_digest": context["task_digest"],
+        "next_sequence": context["next_sequence"],
+        "fingerprints": dict(context["fingerprints"]),
+        "status": status,
+    }
+    admission = context.get("admission")
+    if admission is not None:
+        public.update({
+            "admission_version": 2,
+            "pinned_public_key": dict(admission["public_key_pin"]),
+            "last_phase": admission["last_phase"],
+            "terminal": admission["terminal"],
+        })
+    return public
+
+
+def _validate_training_receipt_context(
+    raw: Any, *, task_id: str, expected_binding: Dict[str, Any],
+) -> Dict[str, Any]:
+    context = _strict_json_loads(raw, field_name="training receipt task context")
+    if (type(context) is not dict
+            or (set(context) != _TRAINING_RECEIPT_CONTEXT_FIELDS
+                and set(context) != _TRAINING_RECEIPT_V2_CONTEXT_FIELDS)):
+        raise ValueError("training receipt task context has missing or unsupported fields")
+    if context.get("managed_owner") != _TRAINING_RECEIPT_OWNER:
+        raise PermissionError("task is not owned by the training receipt state owner")
+    binding = _validate_training_receipt_binding(context.get("binding"))
+    if binding != expected_binding:
+        raise PermissionError("training receipt task binding does not match the expected binding")
+    fingerprints = _validate_training_receipt_fingerprints(context.get("fingerprints"))
+    if (type(context.get("task_digest")) is not str
+            or context["task_digest"] != _training_receipt_task_digest(task_id)):
+        raise ValueError("training receipt task digest does not match its task ID")
+    if type(context.get("run_digest")) is not str or re.fullmatch(r"[0-9a-f]{64}", context["run_digest"]) is None:
+        raise ValueError("training receipt run digest is invalid")
+    sequence = context.get("next_sequence")
+    if type(sequence) is not int or not 1 <= sequence <= 1_000_000_000:
+        raise ValueError("training receipt next sequence is invalid")
+    last_receipt = context.get("last_receipt_sha256")
+    if last_receipt is not None and (
+        type(last_receipt) is not str or re.fullmatch(r"[0-9a-f]{64}", last_receipt) is None
+    ):
+        raise ValueError("training receipt last receipt hash is invalid")
+    normalized = {
+        "managed_owner": _TRAINING_RECEIPT_OWNER,
+        "binding": binding,
+        "fingerprints": fingerprints,
+        "run_digest": context["run_digest"],
+        "task_digest": context["task_digest"],
+        "next_sequence": sequence,
+        "last_receipt_sha256": last_receipt,
+    }
+    if "admission" in context:
+        normalized["admission"] = _validate_training_admission(context["admission"])
+    return normalized
 
 
 def _valid_report_text(value: Any, max_length: int) -> bool:
@@ -782,6 +1121,12 @@ class TaskEngine:
         Returns:
             任务摘要 dict
         """
+        if (created_by == _TRAINING_RECEIPT_TASK_CREATOR
+                or (type(context) is dict
+                    and context.get("managed_owner") == _TRAINING_RECEIPT_OWNER)):
+            raise PermissionError(
+                "training receipt tasks are created only through training-receipt methods"
+            )
         task_id = self._gen_id("task")
         now = self._now()
         ctx = context or {}
@@ -981,6 +1326,875 @@ class TaskEngine:
                 ),
             )
         return cursor.rowcount == 1
+
+    @staticmethod
+    def _training_receipt_row_state(row: Any, expected_binding: Dict[str, Any]):
+        if row is None:
+            raise KeyError("Managed training receipt task not found")
+        task = dict(row)
+        task_id = _require_training_receipt_task_id(task.get("task_id"))
+        if (task.get("created_by") != _TRAINING_RECEIPT_TASK_CREATOR
+                or task.get("user_input") != _TRAINING_RECEIPT_USER_INPUT):
+            raise PermissionError("task is not owned by the training receipt state owner")
+        context = _validate_training_receipt_context(
+            task.get("context_json"), task_id=task_id, expected_binding=expected_binding,
+        )
+        status = task.get("status")
+        admission = context.get("admission")
+        if status not in {"ready", "running", "unknown", "failed", "completed"}:
+            raise ValueError("training receipt task status is invalid")
+        if (admission is None and status == "completed") or (
+            admission is not None and (status == "completed") != admission["terminal"]
+        ):
+            raise ValueError("training receipt task status does not match its admission state")
+        return task, context
+
+    @staticmethod
+    def _require_training_receipt_connection(connection: Any) -> None:
+        if type(connection) is not sqlite3.Connection or not connection.in_transaction:
+            raise RuntimeError("training phase consumption requires an active SQLite transaction")
+        rows = connection.execute("PRAGMA database_list").fetchall()
+        main_path = next((row[2] for row in rows if row[1] == "main"), None)
+        if not isinstance(main_path, str) or not main_path:
+            raise RuntimeError("training phase connection is not a file-backed canonical database")
+        expected_path = os.path.abspath(main_db_path())
+        if os.path.normcase(os.path.realpath(main_path)) != os.path.normcase(os.path.realpath(expected_path)):
+            raise RuntimeError("training phase connection is not the canonical TaskEngine database")
+
+    def create_training_receipt_task(
+        self, *, binding: Dict[str, Any], fingerprints: Dict[str, str],
+        connection: Optional[sqlite3.Connection] = None,
+        approval_reference: Optional[Dict[str, Any]] = None,
+        pinned_public_key: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Persist private phase-receipt state in the existing TaskEngine table.
+
+        The caller supplies server-derived Permission identity and scope
+        material. This method stores no approval token and does not authorize
+        or claim that training has started or succeeded.
+        """
+        normalized_binding = _validate_training_receipt_binding(binding)
+        normalized_fingerprints = _validate_training_receipt_fingerprints(fingerprints)
+        sealed = approval_reference is not None or pinned_public_key is not None
+        if (approval_reference is None) != (pinned_public_key is None):
+            raise ValueError("sealed training admission requires both approval reference and public key pin")
+        normalized_reference = (
+            _validate_training_approval_reference(approval_reference) if sealed else None
+        )
+        normalized_key = _validate_training_public_key_pin(pinned_public_key) if sealed else None
+        if sealed and connection is None:
+            raise RuntimeError("sealed training task creation requires the caller transaction")
+        if connection is not None:
+            self._require_training_receipt_connection(connection)
+        task_id = f"{_TRAINING_RECEIPT_TASK_PREFIX}{uuid.uuid4()}"
+        _require_training_receipt_task_id(task_id)
+        context = {
+            "managed_owner": _TRAINING_RECEIPT_OWNER,
+            "binding": normalized_binding,
+            "fingerprints": normalized_fingerprints,
+            "run_digest": hashlib.sha256(uuid.uuid4().bytes).hexdigest(),
+            "task_digest": _training_receipt_task_digest(task_id),
+            "next_sequence": 1,
+            "last_receipt_sha256": None,
+        }
+        if sealed:
+            context["admission"] = {
+                "schema_version": 2,
+                "approval_reference": normalized_reference,
+                "public_key_pin": normalized_key,
+                "last_phase": None,
+                "pending_step_id": None,
+                "terminal": False,
+            }
+        now = self._now()
+        context_manager = (get_repository().transaction(timeout=30)
+                           if connection is None else nullcontext(connection))
+        with context_manager as conn:
+            if sealed:
+                rows = conn.execute(
+                    "SELECT * FROM ai_task WHERE created_by=? ORDER BY task_id",
+                    (_TRAINING_RECEIPT_TASK_CREATOR,),
+                ).fetchall()
+                matches = []
+                for candidate_row in rows:
+                    candidate = dict(candidate_row)
+                    raw_context = _strict_json_loads(
+                        candidate.get("context_json"), field_name="training receipt task context",
+                    )
+                    if type(raw_context) is not dict or raw_context.get("managed_owner") != _TRAINING_RECEIPT_OWNER:
+                        raise ValueError("managed training task context is invalid")
+                    candidate_binding = _validate_training_receipt_binding(raw_context.get("binding"))
+                    candidate_task, candidate_context = self._training_receipt_row_state(
+                        candidate_row, candidate_binding,
+                    )
+                    existing_admission = candidate_context.get("admission")
+                    if (existing_admission is not None
+                            and existing_admission["approval_reference"]["approval_token_sha256"]
+                            == normalized_reference["approval_token_sha256"]):
+                        matches.append((candidate_task, candidate_context))
+                if len(matches) > 1:
+                    raise RuntimeError("one training approval grant matches multiple managed tasks")
+                if matches:
+                    existing_task, existing_context = matches[0]
+                    existing_admission = existing_context["admission"]
+                    if (
+                        existing_context["binding"] != normalized_binding
+                        or existing_context["fingerprints"] != normalized_fingerprints
+                        or existing_admission["approval_reference"] != normalized_reference
+                        or existing_admission["public_key_pin"] != normalized_key
+                    ):
+                        raise PermissionError("training approval grant is already bound to different task material")
+                    return _training_receipt_public_state(
+                        existing_task["task_id"], existing_context, existing_task["status"],
+                    )
+            conn.execute(
+                """INSERT INTO ai_task
+                   (task_id, user_input, context_json, status, risk_level,
+                    created_at, updated_at, created_by)
+                   VALUES (?, ?, ?, 'ready', 'L0', ?, ?, ?)""",
+                (
+                    task_id, _TRAINING_RECEIPT_USER_INPUT,
+                    _serialize_strict_json(context, field_name="training receipt context"),
+                    now, now, _TRAINING_RECEIPT_TASK_CREATOR,
+                ),
+            )
+        return _training_receipt_public_state(task_id, context, "ready")
+
+    def get_training_receipt_task(
+        self, task_id: str, *, expected_binding: Dict[str, Any],
+        connection: Optional[sqlite3.Connection] = None,
+    ) -> Dict[str, Any]:
+        """Read one managed phase task without exposing its private binding."""
+        task_id = _require_training_receipt_task_id(task_id)
+        binding = _validate_training_receipt_binding(expected_binding)
+        if connection is not None:
+            self._require_training_receipt_connection(connection)
+        context_manager = (get_repository().connection(timeout=30)
+                           if connection is None else nullcontext(connection))
+        with context_manager as conn:
+            row = conn.execute(
+                "SELECT * FROM ai_task WHERE task_id=? AND created_by=?",
+                (task_id, _TRAINING_RECEIPT_TASK_CREATOR),
+            ).fetchone()
+        task, context = self._training_receipt_row_state(row, binding)
+        return _training_receipt_public_state(task_id, context, task["status"])
+
+    @staticmethod
+    def _require_training_receipt_v2_task(
+        row: Any, *, task_id: str, expected_binding: Dict[str, Any],
+        expected_approval_reference: Dict[str, Any],
+        expected_public_key: Optional[Dict[str, Any]] = None,
+    ):
+        task, context = TaskEngine._training_receipt_row_state(row, expected_binding)
+        admission = context.get("admission")
+        if admission is None:
+            raise PermissionError("training receipt task does not have sealed v2 admission")
+        normalized_reference = _validate_training_approval_reference(expected_approval_reference)
+        if admission["approval_reference"] != normalized_reference:
+            raise PermissionError("training receipt approval reference does not match the sealed task")
+        if expected_public_key is not None:
+            normalized_key = _validate_training_public_key_pin(expected_public_key)
+            if admission["public_key_pin"] != normalized_key:
+                raise PermissionError("training receipt public key pin does not match the sealed task")
+        return task, context, admission
+
+    def require_training_receipt_admission(
+        self, task_id: str, expected_binding: Dict[str, Any],
+        expected_approval_reference: Dict[str, Any],
+        expected_public_key: Optional[Dict[str, Any]] = None,
+        connection: Optional[sqlite3.Connection] = None,
+    ) -> Dict[str, Any]:
+        """Read sealed v2 state only after the caller supplies its current exact grant reference."""
+        task_id = _require_training_receipt_task_id(task_id)
+        binding = _validate_training_receipt_binding(expected_binding)
+        if connection is None:
+            raise RuntimeError("sealed training admission requires the caller transaction")
+        self._require_training_receipt_connection(connection)
+        row = connection.execute(
+            "SELECT * FROM ai_task WHERE task_id=? AND created_by=?",
+            (task_id, _TRAINING_RECEIPT_TASK_CREATOR),
+        ).fetchone()
+        task, context, _admission = self._require_training_receipt_v2_task(
+            row, task_id=task_id, expected_binding=binding,
+            expected_approval_reference=expected_approval_reference,
+            expected_public_key=expected_public_key,
+        )
+        return _training_receipt_public_state(task_id, context, task["status"])
+
+    def get_training_receipt_history_material(
+        self, task_id: str, *, expected_identity: Dict[str, Any],
+        connection: sqlite3.Connection,
+    ) -> Dict[str, Any]:
+        """Return validated private material for an already sealed task owner.
+
+        This is a read-only server composition helper. It neither authenticates
+        the caller nor restores Permission authority from the persisted grant.
+        """
+        from copy import deepcopy
+
+        task_id = _require_training_receipt_task_id(task_id)
+        self._require_training_receipt_connection(connection)
+        row = connection.execute(
+            "SELECT * FROM ai_task WHERE task_id=? AND created_by=?",
+            (task_id, _TRAINING_RECEIPT_TASK_CREATOR),
+        ).fetchone()
+        if row is None:
+            raise KeyError("Managed training receipt task not found")
+        task_row = dict(row)
+        if (task_row.get("created_by") != _TRAINING_RECEIPT_TASK_CREATOR
+                or task_row.get("user_input") != _TRAINING_RECEIPT_USER_INPUT):
+            raise PermissionError("task is not owned by the training receipt state owner")
+
+        stored_raw = _strict_json_loads(
+            task_row.get("context_json"), field_name="training receipt task context",
+        )
+        if (type(stored_raw) is not dict
+                or set(stored_raw) != _TRAINING_RECEIPT_V2_CONTEXT_FIELDS
+                or stored_raw.get("managed_owner") != _TRAINING_RECEIPT_OWNER):
+            raise ValueError("training history requires a sealed v2 task context")
+        stored_binding = _validate_training_receipt_binding(stored_raw.get("binding"))
+        binding = _validate_training_receipt_binding({
+            "resource": stored_binding["resource"],
+            "identity": expected_identity,
+            "scope_descriptors": stored_binding["scope_descriptors"],
+        })
+        if binding["identity"] != stored_binding["identity"]:
+            raise PermissionError("training receipt task identity does not match the expected identity")
+
+        raw_admission = stored_raw.get("admission")
+        if type(raw_admission) is not dict:
+            raise ValueError("training history requires sealed v2 admission")
+        reference = _validate_training_approval_reference(raw_admission.get("approval_reference"))
+        task, context, admission = self._require_training_receipt_v2_task(
+            task_row, task_id=task_id, expected_binding=binding,
+            expected_approval_reference=reference,
+        )
+        approval_reference = _validate_training_approval_reference(
+            admission["approval_reference"],
+        )
+        pinned_public_key = _validate_training_public_key_pin(admission["public_key_pin"])
+        return {
+            "binding": deepcopy(context["binding"]),
+            "fingerprints": deepcopy(context["fingerprints"]),
+            "approval_reference": deepcopy(approval_reference),
+            "pinned_public_key": deepcopy(pinned_public_key),
+        }
+
+    def prepare_training_phase_challenge(
+        self, task_id: str, expected_binding: Dict[str, Any],
+        expected_approval_reference: Dict[str, Any],
+        pinned_public_key: Dict[str, Any], phase: str,
+        connection: sqlite3.Connection, now: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Persist or read the one server-generated live challenge for the next phase."""
+        task_id = _require_training_receipt_task_id(task_id)
+        binding = _validate_training_receipt_binding(expected_binding)
+        reference = _validate_training_approval_reference(expected_approval_reference)
+        key_pin = _validate_training_public_key_pin(pinned_public_key)
+        self._require_training_receipt_connection(connection)
+        from lumenis.system.security.training_receipts import validate_training_phase_challenge
+
+        current_time = _training_phase_now(now)
+        if type(phase) is not str or phase not in _TRAINING_PHASES:
+            raise ValueError("training phase is not registered")
+        if _training_approval_expiry_seconds(reference) <= current_time:
+            raise PermissionError("training approval reference has expired")
+        row = connection.execute(
+            "SELECT * FROM ai_task WHERE task_id=? AND created_by=?",
+            (task_id, _TRAINING_RECEIPT_TASK_CREATOR),
+        ).fetchone()
+        task, context, admission = self._require_training_receipt_v2_task(
+            row, task_id=task_id, expected_binding=binding,
+            expected_approval_reference=reference, expected_public_key=key_pin,
+        )
+        if task["status"] not in {"ready", "running"} or admission["terminal"]:
+            raise PermissionError("training phase task is not available for challenge preparation")
+        if context["next_sequence"] >= 1_000_000_000:
+            raise RuntimeError("training phase sequence space is exhausted; a new task is required")
+        if not _training_phase_transition_allowed(admission["last_phase"], phase):
+            raise PermissionError("training phase transition is not allowed")
+
+        expired_pending = None
+        if admission["pending_step_id"] is not None:
+            pending_row = connection.execute(
+                "SELECT * FROM ai_task_step WHERE step_id=? AND task_id=?",
+                (admission["pending_step_id"], task_id),
+            ).fetchone()
+            if pending_row is None or pending_row["status"] != "pending":
+                raise ValueError("training admission pending step is missing or inconsistent")
+            pending_detail = _strict_json_loads(
+                pending_row["detail"], field_name="training phase pending step detail",
+            )
+            if type(pending_detail) is not dict or set(pending_detail) != {"challenge"}:
+                raise ValueError("training phase pending step detail is invalid")
+            stored_challenge = pending_detail["challenge"]
+            if type(stored_challenge) is not dict:
+                raise ValueError("training phase pending challenge is invalid")
+            try:
+                historical_pending = validate_training_phase_challenge(
+                    stored_challenge, now=stored_challenge.get("issued_at"),
+                )
+            except (TypeError, ValueError):
+                raise ValueError("training phase pending challenge is invalid") from None
+            if (not _training_challenge_matches_context(historical_pending, context)
+                    or historical_pending["phase"] != pending_row["phase"]
+                    or historical_pending["phase"] != phase
+                    or _training_phase_step_id(task_id, historical_pending["nonce"])
+                    != admission["pending_step_id"]):
+                raise ValueError("training phase pending challenge does not match current task state")
+            if historical_pending["expires_at"] > current_time:
+                try:
+                    return validate_training_phase_challenge(stored_challenge, now=current_time)
+                except (TypeError, ValueError):
+                    raise ValueError("training phase pending challenge is invalid") from None
+            expired_pending = (pending_row, pending_detail)
+
+        expires_at = min(
+            current_time + 60,
+            _training_approval_expiry_seconds(reference),
+        )
+        if expires_at <= current_time:
+            raise PermissionError("training approval reference has expired")
+        challenge = {
+            "schema_version": 1,
+            "run_digest": context["run_digest"],
+            "task_digest": context["task_digest"],
+            **context["fingerprints"],
+            "nonce": secrets.token_hex(32),
+            "phase": phase,
+            "sequence": context["next_sequence"],
+            "issued_at": current_time,
+            "expires_at": expires_at,
+        }
+        challenge = validate_training_phase_challenge(challenge, now=current_time)
+        step_id = _training_phase_step_id(task_id, challenge["nonce"])
+        step_detail = _serialize_strict_json(
+            {"challenge": challenge}, field_name="training phase pending step detail",
+        )
+        next_context = dict(context)
+        next_admission = dict(admission)
+        next_admission["pending_step_id"] = step_id
+        next_context["admission"] = next_admission
+        serialized_context = _serialize_strict_json(
+            next_context, field_name="training receipt context",
+        )
+        savepoint = "sealed_training_phase_prepare"
+        connection.execute(f"SAVEPOINT {savepoint}")
+        try:
+            if expired_pending is not None:
+                old_row, old_detail = expired_pending
+                expired_cursor = connection.execute(
+                    """UPDATE ai_task_step SET status='expired', finished_at=?
+                       WHERE step_id=? AND task_id=? AND status='pending' AND detail=?""",
+                    (self._now(), old_row["step_id"], task_id,
+                     _serialize_strict_json(old_detail, field_name="training phase pending step detail")),
+                )
+                if expired_cursor.rowcount != 1:
+                    raise RuntimeError("training phase pending step changed during expiry")
+            connection.execute(
+                """INSERT INTO ai_task_step
+                   (step_id, task_id, phase, status, detail, started_at,
+                    finished_at, duration_ms, error)
+                   VALUES (?, ?, ?, 'pending', ?, ?, NULL, NULL, NULL)""",
+                (step_id, task_id, phase, step_detail, self._now()),
+            )
+            updated = connection.execute(
+                """UPDATE ai_task SET context_json=?, updated_at=?
+                   WHERE task_id=? AND created_by=? AND status=? AND context_json=?""",
+                (serialized_context, self._now(), task_id, _TRAINING_RECEIPT_TASK_CREATOR,
+                 task["status"], task["context_json"]),
+            )
+            if updated.rowcount != 1:
+                raise RuntimeError("training receipt task changed during challenge preparation")
+            connection.execute(f"RELEASE SAVEPOINT {savepoint}")
+        except Exception:
+            connection.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+            connection.execute(f"RELEASE SAVEPOINT {savepoint}")
+            raise
+        return dict(challenge)
+
+    def require_pending_training_phase_challenge(
+        self, task_id: str, expected_binding: Dict[str, Any],
+        expected_approval_reference: Dict[str, Any],
+        pinned_public_key: Dict[str, Any], challenge: Dict[str, Any],
+        connection: sqlite3.Connection, now: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Require byte-for-byte equality with the live server-persisted challenge."""
+        task_id = _require_training_receipt_task_id(task_id)
+        binding = _validate_training_receipt_binding(expected_binding)
+        reference = _validate_training_approval_reference(expected_approval_reference)
+        key_pin = _validate_training_public_key_pin(pinned_public_key)
+        self._require_training_receipt_connection(connection)
+        from lumenis.system.security.training_receipts import validate_training_phase_challenge
+
+        current_time = _training_phase_now(now)
+        row = connection.execute(
+            "SELECT * FROM ai_task WHERE task_id=? AND created_by=?",
+            (task_id, _TRAINING_RECEIPT_TASK_CREATOR),
+        ).fetchone()
+        task, context, admission = self._require_training_receipt_v2_task(
+            row, task_id=task_id, expected_binding=binding,
+            expected_approval_reference=reference, expected_public_key=key_pin,
+        )
+        if task["status"] not in {"ready", "running"} or admission["terminal"]:
+            raise PermissionError("training phase task is not available for a pending challenge")
+        if admission["pending_step_id"] is None:
+            raise PermissionError("training phase task has no pending server challenge")
+        validated = validate_training_phase_challenge(challenge, now=current_time)
+        if (not _training_challenge_matches_context(validated, context)
+                or not _training_phase_transition_allowed(admission["last_phase"], validated["phase"])
+                or _training_phase_step_id(task_id, validated["nonce"]) != admission["pending_step_id"]):
+            raise PermissionError("training phase challenge does not match the current pending task")
+        step = connection.execute(
+            "SELECT * FROM ai_task_step WHERE step_id=? AND task_id=?",
+            (admission["pending_step_id"], task_id),
+        ).fetchone()
+        if step is None or step["status"] != "pending" or step["phase"] != validated["phase"]:
+            raise PermissionError("training phase challenge is not pending")
+        detail = _strict_json_loads(step["detail"], field_name="training phase pending step detail")
+        if type(detail) is not dict or set(detail) != {"challenge"} or detail["challenge"] != validated:
+            raise PermissionError("training phase challenge differs from the server-persisted challenge")
+        return validated
+
+    def consume_training_phase_challenge(
+        self, task_id: str, *, expected_binding: Dict[str, Any], challenge: Dict[str, Any],
+        receipt_sha256: str, decision: str, connection: sqlite3.Connection,
+        receipt: Optional[Dict[str, Any]] = None,
+        expected_approval_reference: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Consume one legacy nonce or one sealed, fully signed v2 phase receipt."""
+        task_id = _require_training_receipt_task_id(task_id)
+        binding = _validate_training_receipt_binding(expected_binding)
+        if type(receipt_sha256) is not str or re.fullmatch(r"[0-9a-f]{64}", receipt_sha256) is None:
+            raise ValueError("training phase receipt hash must be a lowercase SHA-256 digest")
+        if type(decision) is not str or decision not in {"allow", "deny"}:
+            raise ValueError("training phase decision must be allow or deny")
+        self._require_training_receipt_connection(connection)
+
+        from lumenis.system.security.training_receipts import (
+            _canonical_json_bytes,
+            validate_training_phase_challenge,
+            verify_training_phase_decision,
+        )
+
+        row = connection.execute(
+            "SELECT * FROM ai_task WHERE task_id=? AND created_by=?",
+            (task_id, _TRAINING_RECEIPT_TASK_CREATOR),
+        ).fetchone()
+        task, context = self._training_receipt_row_state(row, binding)
+        admission = context.get("admission")
+        if admission is not None:
+            try:
+                historical_now = challenge.get("issued_at") if type(challenge) is dict else None
+                validated = validate_training_phase_challenge(challenge, now=historical_now)
+            except (TypeError, ValueError):
+                raise ValueError("sealed training phase challenge is invalid") from None
+            if receipt is None or expected_approval_reference is None:
+                raise PermissionError("sealed training receipt and current approval reference are required")
+            reference = _validate_training_approval_reference(expected_approval_reference)
+            if reference != admission["approval_reference"]:
+                raise PermissionError("training receipt approval reference does not match the sealed task")
+            if decision != "allow":
+                raise PermissionError("sealed training phase receipts must verify an allow decision")
+            try:
+                canonical_receipt = _canonical_json_bytes(receipt)
+            except (TypeError, ValueError):
+                raise ValueError("training phase signed receipt is not canonical JSON") from None
+            actual_receipt_sha256 = hashlib.sha256(canonical_receipt).hexdigest()
+            if actual_receipt_sha256 != receipt_sha256:
+                raise ValueError("training phase receipt hash does not match the complete signed receipt")
+
+            step_id = _training_phase_step_id(task_id, validated["nonce"])
+            existing_step = connection.execute(
+                "SELECT * FROM ai_task_step WHERE step_id=? AND task_id=?",
+                (step_id, task_id),
+            ).fetchone()
+            if existing_step is not None and existing_step["status"] == "allow":
+                stored_detail = _strict_json_loads(
+                    existing_step["detail"], field_name="training phase receipt step detail",
+                )
+                if type(stored_detail) is not dict or set(stored_detail) != {
+                    "challenge", "receipt_sha256", "decision", "receipt",
+                }:
+                    raise ValueError("stored sealed training receipt detail is invalid")
+                stored_challenge = stored_detail["challenge"]
+                stored_receipt = stored_detail["receipt"]
+                if (stored_detail["decision"] != "allow"
+                        or stored_detail["receipt_sha256"] != receipt_sha256
+                        or stored_receipt != receipt
+                        or stored_challenge != validated
+                        or existing_step["phase"] != validated["phase"]
+                        or hashlib.sha256(_canonical_json_bytes(stored_receipt)).hexdigest()
+                        != stored_detail["receipt_sha256"]):
+                    raise PermissionError("training phase nonce was already consumed with different receipt bytes")
+                issued_at = stored_receipt.get("issued_at") if type(stored_receipt) is dict else None
+                try:
+                    historical_challenge = validate_training_phase_challenge(
+                        stored_challenge, now=stored_challenge.get("issued_at"),
+                    )
+                    verify_training_phase_decision(
+                        stored_receipt,
+                        expected_challenge=historical_challenge,
+                        pinned_public_key=admission["public_key_pin"],
+                        now=issued_at,
+                    )
+                except (TypeError, ValueError):
+                    raise ValueError("stored sealed training phase receipt failed historical verification") from None
+                if (historical_challenge["task_digest"] != context["task_digest"]
+                        or any(historical_challenge.get(name) != value
+                               for name, value in context["fingerprints"].items())):
+                    raise ValueError("stored sealed training receipt no longer matches task material")
+                return _training_receipt_public_state(task_id, context, task["status"])
+
+            if task["status"] not in {"ready", "running"}:
+                raise PermissionError("training phase task is not available for challenge consumption")
+            current_time = int(time.time())
+            pending_challenge = self.require_pending_training_phase_challenge(
+                task_id, binding, reference, admission["public_key_pin"], validated,
+                connection, now=current_time,
+            )
+            verify_training_phase_decision(
+                receipt,
+                expected_challenge=pending_challenge,
+                pinned_public_key=admission["public_key_pin"],
+                now=current_time,
+            )
+            next_context = dict(context)
+            next_context["next_sequence"] += 1
+            next_context["last_receipt_sha256"] = receipt_sha256
+            next_admission = dict(admission)
+            next_admission["last_phase"] = pending_challenge["phase"]
+            next_admission["pending_step_id"] = None
+            next_admission["terminal"] = pending_challenge["phase"] == _TRAINING_TERMINAL_PHASE
+            next_context["admission"] = next_admission
+            serialized_context = _serialize_strict_json(
+                next_context, field_name="training receipt context",
+            )
+            detail = _serialize_strict_json(
+                {
+                    "challenge": pending_challenge,
+                    "receipt_sha256": receipt_sha256,
+                    "decision": "allow",
+                    "receipt": receipt,
+                },
+                field_name="training phase receipt step detail",
+            )
+            next_status = "completed" if next_admission["terminal"] else "running"
+            now_text = self._now()
+            savepoint = "sealed_training_phase_consume"
+            connection.execute(f"SAVEPOINT {savepoint}")
+            try:
+                updated_step = connection.execute(
+                    """UPDATE ai_task_step SET status='allow', detail=?, finished_at=?, duration_ms=0
+                       WHERE step_id=? AND task_id=? AND status='pending' AND phase=?""",
+                    (detail, now_text, step_id, task_id, pending_challenge["phase"]),
+                )
+                if updated_step.rowcount != 1:
+                    raise RuntimeError("training phase pending receipt changed during consumption")
+                updated_task = connection.execute(
+                    """UPDATE ai_task SET context_json=?, status=?, updated_at=?,
+                           finished_at=CASE WHEN ?='completed' THEN ? ELSE NULL END
+                       WHERE task_id=? AND created_by=? AND status=? AND context_json=?""",
+                    (serialized_context, next_status, now_text, next_status, now_text,
+                     task_id, _TRAINING_RECEIPT_TASK_CREATOR, task["status"], task["context_json"]),
+                )
+                if updated_task.rowcount != 1:
+                    raise RuntimeError("training phase task changed during receipt consumption")
+                connection.execute(f"RELEASE SAVEPOINT {savepoint}")
+            except Exception:
+                connection.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+                connection.execute(f"RELEASE SAVEPOINT {savepoint}")
+                raise
+            return _training_receipt_public_state(task_id, next_context, next_status)
+
+        if receipt is not None or expected_approval_reference is not None:
+            raise ValueError("legacy training receipt tasks cannot be promoted to sealed admission")
+        validated = validate_training_phase_challenge(challenge)
+        if task["status"] not in {"ready", "running"}:
+            raise PermissionError("training phase task is not available for challenge consumption")
+        expected_challenge_fields = {
+            "run_digest": context["run_digest"],
+            "task_digest": context["task_digest"],
+            **context["fingerprints"],
+            "sequence": context["next_sequence"],
+        }
+        if any(validated.get(name) != value for name, value in expected_challenge_fields.items()):
+            raise PermissionError("training phase challenge does not match the current task state")
+        # The persisted next_sequence must remain within the same bound that
+        # the SYSTEM Security challenge validator accepts on every later read.
+        if context["next_sequence"] >= 1_000_000_000:
+            raise RuntimeError("training phase sequence space is exhausted; a new task is required")
+
+        now = self._now()
+        step_id = "trainphase_" + hashlib.sha256(
+            (task_id + validated["nonce"]).encode("utf-8")
+        ).hexdigest()
+        detail = _serialize_strict_json(
+            {
+                "challenge": validated,
+                "receipt_sha256": receipt_sha256,
+                "decision": decision,
+            },
+            field_name="training phase receipt step detail",
+        )
+        next_context = dict(context)
+        next_context["next_sequence"] += 1
+        next_context["last_receipt_sha256"] = receipt_sha256
+        serialized_context = _serialize_strict_json(
+            next_context, field_name="training receipt context",
+        )
+        next_status = "running" if decision == "allow" else "failed"
+        savepoint = "training_phase_receipt_consume"
+        connection.execute(f"SAVEPOINT {savepoint}")
+        try:
+            connection.execute(
+                """INSERT INTO ai_task_step
+                   (step_id, task_id, phase, status, detail, started_at,
+                    finished_at, duration_ms, error)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL)""",
+                (step_id, task_id, validated["phase"], decision, detail, now, now),
+            )
+            cursor = connection.execute(
+                """UPDATE ai_task SET context_json=?, status=?, updated_at=?,
+                       finished_at=CASE WHEN ?='failed' THEN ? ELSE NULL END
+                   WHERE task_id=? AND created_by=? AND status=? AND context_json=?""",
+                (
+                    serialized_context, next_status, now, next_status, now,
+                    task_id, _TRAINING_RECEIPT_TASK_CREATOR, task["status"],
+                    task["context_json"],
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError("training phase task changed during nonce consumption")
+            connection.execute(f"RELEASE SAVEPOINT {savepoint}")
+        except Exception:
+            connection.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+            connection.execute(f"RELEASE SAVEPOINT {savepoint}")
+            raise
+        return _training_receipt_public_state(task_id, next_context, next_status)
+
+    def get_training_phase_receipt(
+        self, task_id: str, expected_binding: Dict[str, Any],
+        expected_approval_reference: Dict[str, Any], nonce: str,
+        connection: sqlite3.Connection,
+    ) -> Optional[Dict[str, Any]]:
+        """Read back one committed signed receipt without renewing its authority."""
+        task_id = _require_training_receipt_task_id(task_id)
+        binding = _validate_training_receipt_binding(expected_binding)
+        reference = _validate_training_approval_reference(expected_approval_reference)
+        if type(nonce) is not str or re.fullmatch(r"[0-9a-f]{64}", nonce) is None:
+            raise ValueError("training phase receipt nonce is invalid")
+        self._require_training_receipt_connection(connection)
+        from lumenis.system.security.training_receipts import (
+            _canonical_json_bytes,
+            validate_training_phase_challenge,
+            verify_training_phase_decision,
+        )
+
+        row = connection.execute(
+            "SELECT * FROM ai_task WHERE task_id=? AND created_by=?",
+            (task_id, _TRAINING_RECEIPT_TASK_CREATOR),
+        ).fetchone()
+        task, context, admission = self._require_training_receipt_v2_task(
+            row, task_id=task_id, expected_binding=binding,
+            expected_approval_reference=reference,
+        )
+        step_id = _training_phase_step_id(task_id, nonce)
+        step = connection.execute(
+            "SELECT * FROM ai_task_step WHERE step_id=? AND task_id=?",
+            (step_id, task_id),
+        ).fetchone()
+        if step is None:
+            raise KeyError("Training phase nonce was not found")
+        detail = _strict_json_loads(step["detail"], field_name="training phase receipt step detail")
+        if step["status"] == "pending":
+            if type(detail) is not dict or set(detail) != {"challenge"}:
+                raise ValueError("pending training phase detail is invalid")
+            challenge_value = detail["challenge"]
+            try:
+                issued_at = challenge_value.get("issued_at") if type(challenge_value) is dict else None
+                historical_challenge = validate_training_phase_challenge(
+                    challenge_value, now=issued_at,
+                )
+            except (TypeError, ValueError):
+                raise ValueError("pending training phase challenge is invalid") from None
+            if (admission["pending_step_id"] != step_id
+                    or _training_phase_step_id(task_id, historical_challenge["nonce"]) != step_id
+                    or historical_challenge["task_digest"] != context["task_digest"]
+                    or any(historical_challenge.get(name) != value
+                           for name, value in context["fingerprints"].items())
+                    or historical_challenge["phase"] != step["phase"]):
+                raise ValueError("pending training phase challenge does not match task state")
+            return None
+        if step["status"] != "allow" or type(detail) is not dict or set(detail) != {
+            "challenge", "receipt_sha256", "decision", "receipt",
+        }:
+            raise PermissionError("training phase nonce has no committed signed allow receipt")
+        challenge_value = detail["challenge"]
+        receipt = detail["receipt"]
+        issued_at = receipt.get("issued_at") if type(receipt) is dict else None
+        try:
+            challenge_issued_at = challenge_value.get("issued_at") if type(challenge_value) is dict else None
+            challenge_copy = validate_training_phase_challenge(
+                challenge_value, now=challenge_issued_at,
+            )
+            if detail["decision"] != "allow":
+                raise ValueError("stored decision is not allow")
+            receipt_digest = hashlib.sha256(_canonical_json_bytes(receipt)).hexdigest()
+            if (type(detail["receipt_sha256"]) is not str
+                    or re.fullmatch(r"[0-9a-f]{64}", detail["receipt_sha256"]) is None
+                    or receipt_digest != detail["receipt_sha256"]
+                    or step["phase"] != challenge_copy["phase"]
+                    or challenge_copy["task_digest"] != context["task_digest"]
+                    or any(challenge_copy.get(name) != value
+                           for name, value in context["fingerprints"].items())):
+                raise ValueError("stored signed receipt material does not match")
+            verify_training_phase_decision(
+                receipt,
+                expected_challenge=challenge_copy,
+                pinned_public_key=admission["public_key_pin"],
+                now=issued_at,
+            )
+        except (TypeError, ValueError):
+            raise ValueError("stored training phase receipt failed historical verification") from None
+        return {
+            "receipt": dict(receipt),
+            "challenge": dict(challenge_copy),
+            "state": _training_receipt_public_state(task_id, context, task["status"]),
+            "pinned_public_key": dict(admission["public_key_pin"]),
+        }
+
+    def interrupt_training_receipt_task(
+        self, task_id: str, *, expected_binding: Dict[str, Any],
+        connection: Optional[sqlite3.Connection] = None,
+    ) -> Dict[str, Any]:
+        """Mark an active managed phase task unknown for explicit recovery."""
+        task_id = _require_training_receipt_task_id(task_id)
+        binding = _validate_training_receipt_binding(expected_binding)
+        if connection is not None:
+            self._require_training_receipt_connection(connection)
+        now = self._now()
+        context_manager = (get_repository().transaction(timeout=30)
+                           if connection is None else nullcontext(connection))
+        with context_manager as conn:
+            row = conn.execute(
+                "SELECT * FROM ai_task WHERE task_id=? AND created_by=?",
+                (task_id, _TRAINING_RECEIPT_TASK_CREATOR),
+            ).fetchone()
+            task, context = self._training_receipt_row_state(row, binding)
+            if task["status"] not in {"ready", "running"}:
+                raise PermissionError("only an active training receipt task can be interrupted")
+            admission = context.get("admission")
+            if admission is not None:
+                next_context = dict(context)
+                next_admission = dict(admission)
+                pending_step_id = admission["pending_step_id"]
+                pending_step = None
+                if pending_step_id is not None:
+                    pending_step = conn.execute(
+                        "SELECT * FROM ai_task_step WHERE step_id=? AND task_id=?",
+                        (pending_step_id, task_id),
+                    ).fetchone()
+                    if pending_step is None or pending_step["status"] != "pending":
+                        raise ValueError("training admission pending step is missing or inconsistent")
+                    pending_detail = _strict_json_loads(
+                        pending_step["detail"], field_name="training phase pending step detail",
+                    )
+                    if type(pending_detail) is not dict or set(pending_detail) != {"challenge"}:
+                        raise ValueError("training phase pending step detail is invalid")
+                    challenge_value = pending_detail["challenge"]
+                    try:
+                        from lumenis.system.security.training_receipts import validate_training_phase_challenge
+
+                        historical_challenge = validate_training_phase_challenge(
+                            challenge_value,
+                            now=challenge_value.get("issued_at") if type(challenge_value) is dict else None,
+                        )
+                    except (TypeError, ValueError):
+                        raise ValueError("training phase pending challenge is invalid") from None
+                    if (not _training_challenge_matches_context(historical_challenge, context)
+                            or historical_challenge["phase"] != pending_step["phase"]
+                            or _training_phase_step_id(task_id, historical_challenge["nonce"])
+                            != pending_step_id):
+                        raise ValueError("training phase pending challenge does not match task state")
+                next_admission["pending_step_id"] = None
+                next_context["admission"] = next_admission
+                serialized_context = _serialize_strict_json(
+                    next_context, field_name="training receipt context",
+                )
+                savepoint = "sealed_training_phase_interrupt"
+                conn.execute(f"SAVEPOINT {savepoint}")
+                try:
+                    if pending_step is not None:
+                        interrupted_step = conn.execute(
+                            """UPDATE ai_task_step SET status='interrupted', finished_at=?
+                               WHERE step_id=? AND task_id=? AND status='pending'""",
+                            (now, pending_step_id, task_id),
+                        )
+                        if interrupted_step.rowcount != 1:
+                            raise RuntimeError("training phase pending step changed during interruption")
+                    cursor = conn.execute(
+                        """UPDATE ai_task SET context_json=?, status='unknown', updated_at=?
+                           WHERE task_id=? AND created_by=? AND status=? AND context_json=?""",
+                        (serialized_context, now, task_id, _TRAINING_RECEIPT_TASK_CREATOR,
+                         task["status"], task["context_json"]),
+                    )
+                    if cursor.rowcount != 1:
+                        raise RuntimeError("training receipt task changed during interruption")
+                    conn.execute(f"RELEASE SAVEPOINT {savepoint}")
+                except Exception:
+                    conn.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+                    conn.execute(f"RELEASE SAVEPOINT {savepoint}")
+                    raise
+                return _training_receipt_public_state(task_id, next_context, "unknown")
+            cursor = conn.execute(
+                """UPDATE ai_task SET status='unknown', updated_at=?
+                   WHERE task_id=? AND created_by=? AND status=? AND context_json=?""",
+                (now, task_id, _TRAINING_RECEIPT_TASK_CREATOR,
+                 task["status"], task["context_json"]),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError("training receipt task changed during interruption")
+        return _training_receipt_public_state(task_id, context, "unknown")
+
+    def resume_training_receipt_task(
+        self, task_id: str, *, expected_binding: Dict[str, Any],
+        connection: Optional[sqlite3.Connection] = None,
+    ) -> Dict[str, Any]:
+        """Start a new challenge epoch only after explicit interruption recovery."""
+        task_id = _require_training_receipt_task_id(task_id)
+        binding = _validate_training_receipt_binding(expected_binding)
+        if connection is not None:
+            self._require_training_receipt_connection(connection)
+        now = self._now()
+        context_manager = (get_repository().transaction(timeout=30)
+                           if connection is None else nullcontext(connection))
+        with context_manager as conn:
+            row = conn.execute(
+                "SELECT * FROM ai_task WHERE task_id=? AND created_by=?",
+                (task_id, _TRAINING_RECEIPT_TASK_CREATOR),
+            ).fetchone()
+            task, context = self._training_receipt_row_state(row, binding)
+            if task["status"] != "unknown":
+                raise PermissionError("only an unknown training receipt task can be resumed")
+            admission = context.get("admission")
+            if admission is not None and admission["pending_step_id"] is not None:
+                raise ValueError("unknown sealed training task still has a pending challenge")
+            next_context = dict(context)
+            next_context["run_digest"] = hashlib.sha256(uuid.uuid4().bytes).hexdigest()
+            serialized_context = _serialize_strict_json(
+                next_context, field_name="training receipt context",
+            )
+            cursor = conn.execute(
+                """UPDATE ai_task SET context_json=?, status='ready', error=NULL,
+                       finished_at=NULL, updated_at=?
+                   WHERE task_id=? AND created_by=? AND status='unknown' AND context_json=?""",
+                (serialized_context, now, task_id, _TRAINING_RECEIPT_TASK_CREATOR,
+                 task["context_json"]),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError("training receipt task changed during recovery")
+        return _training_receipt_public_state(task_id, next_context, "ready")
 
     # ──────────────────────────────────────────────────────────
     # 2. 解析任务（Parser → Intent）
@@ -1887,8 +3101,14 @@ class TaskEngine:
         limit: int = 50,
         offset: int = 0,
     ) -> List[Dict[str, Any]]:
-        query = "SELECT * FROM ai_task WHERE substr(task_id, 1, 7) <> ?"
-        params: List[Any] = [_MANAGED_REPORT_TASK_PREFIX]
+        query = (
+            "SELECT * FROM ai_task WHERE substr(task_id, 1, 7) <> ? "
+            "AND substr(task_id, 1, ?) <> ?"
+        )
+        params: List[Any] = [
+            _MANAGED_REPORT_TASK_PREFIX, len(_TRAINING_RECEIPT_TASK_PREFIX),
+            _TRAINING_RECEIPT_TASK_PREFIX,
+        ]
         if status:
             query += " AND status=?"
             params.append(status)
@@ -1927,16 +3147,20 @@ class TaskEngine:
                 rows = conn.execute(
                     """SELECT * FROM ai_task_trace
                        WHERE task_id=? AND substr(task_id, 1, 7) <> ?
+                         AND substr(task_id, 1, ?) <> ?
                        ORDER BY started_at""",
-                    (task_id, _MANAGED_REPORT_TASK_PREFIX),
+                    (task_id, _MANAGED_REPORT_TASK_PREFIX,
+                     len(_TRAINING_RECEIPT_TASK_PREFIX), _TRAINING_RECEIPT_TASK_PREFIX),
                 ).fetchall()
         else:
             with get_db() as conn:
                 rows = conn.execute(
                     """SELECT * FROM ai_task_trace
                        WHERE substr(task_id, 1, 7) <> ?
+                         AND substr(task_id, 1, ?) <> ?
                        ORDER BY started_at DESC LIMIT ?""",
-                    (_MANAGED_REPORT_TASK_PREFIX, limit),
+                    (_MANAGED_REPORT_TASK_PREFIX, len(_TRAINING_RECEIPT_TASK_PREFIX),
+                     _TRAINING_RECEIPT_TASK_PREFIX, limit),
                 ).fetchall()
         return [dict(r) for r in rows]
 

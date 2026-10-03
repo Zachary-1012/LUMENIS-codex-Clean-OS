@@ -206,10 +206,6 @@ def resolve_local_workspace_principal(
         return None
     return LocalWorkspacePrincipal(_issuer=_LOCAL_WORKSPACE_PRINCIPAL_SEAL)
 
-# ═══════════════════════════════════════════════════════════════
-# 1. 枚举定义
-# ═══════════════════════════════════════════════════════════════
-
 
 def owned_training_identity(
     *, actor_id: Optional[int] = None,
@@ -243,6 +239,10 @@ def owned_training_identity(
         "principal_ref": "workspace:local",
         "identity_kind": "workspace",
     }
+
+# ═══════════════════════════════════════════════════════════════
+# 1. 枚举定义
+# ═══════════════════════════════════════════════════════════════
 
 
 class PermissionLevel(str, Enum):
@@ -295,6 +295,7 @@ class OperationType(str, Enum):
     DATA_DELETE = "data_delete"                  # 数据删除
     AI_CALL = "ai_call"                          # AI 模型调用
     MODEL_TRAIN = "model_train"                  # 经批准的模型训练
+    OWNED_TRAINING_REVIEW_PREVIEW = "owned_training_review_preview"
     COLLECTOR_START = "collector_start"          # 采集器启动
     COLLECTOR_STOP = "collector_stop"            # 采集器停止
     DATA_IMPORT = "data_import"                  # 数据导入
@@ -344,6 +345,9 @@ _OPERATION_REGISTRY: Dict[OperationType, OperationSpec] = {
     OperationType.MODEL_TRAIN: OperationSpec(
         PermissionLevel.COMMIT, RiskLevel.HIGH,
         "绑定精确模型、配方、数据和授权范围的训练（需人工审批）", auto_allow=False),
+    OperationType.OWNED_TRAINING_REVIEW_PREVIEW: OperationSpec(
+        PermissionLevel.PLAN, RiskLevel.LOW,
+        "只读准备精确训练材料审核资源；不授予权利、目标或训练批准", auto_allow=True),
     OperationType.CTH_CASE_CREATE: OperationSpec(
         PermissionLevel.VERIFY, RiskLevel.MEDIUM,
         "登记有来源的内部CTH工作Case，不修改源事实、不执行Action或外部发布", auto_allow=True),
@@ -1140,6 +1144,53 @@ def owned_training_approval_resource(
     return "owned_training:v1:" + hashlib.sha256(canonical).hexdigest()
 
 
+def owned_training_phase_fingerprints(
+    request: Any, *, actor_id: Optional[int] = None, domain_id: str,
+    context: Mapping[str, Any],
+    principal: Optional[LocalWorkspacePrincipal] = None,
+) -> Dict[str, str]:
+    """Bind public phase challenges to the validated private training request.
+
+    All hashes use UTF-8, sorted JSON keys, compact separators and no NaN.
+    Identity and approval tokens are deliberately excluded from public hashes;
+    the TaskEngine binding retains the exact private Permission resource.
+    A recipe identifies the fixed Gateway recipe, not a claim of source quality.
+    """
+    payload = _owned_training_payload(
+        request, actor_id=actor_id, domain_id=domain_id, context=context,
+        principal=principal,
+    )
+
+    def digest(value: Any) -> str:
+        encoded = json.dumps(value, ensure_ascii=False, sort_keys=True,
+                             separators=(",", ":"), allow_nan=False).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    scope = {
+        "schema_version": 1, "domain_id": payload["domain_id"],
+        "scopes": payload["scopes"], "scope_descriptors": payload["scope_descriptors"],
+    }
+    model = {
+        "schema_version": 1, "model_id": payload["model_id"],
+        "model_revision": payload["model_revision"],
+    }
+    recipe = {"schema_version": 1, "recipe": payload["recipe"]}
+    public_request = {
+        "schema_version": 1, "operation": OperationType.MODEL_TRAIN.value,
+        "domain_id": payload["domain_id"], "model_id": payload["model_id"],
+        "model_revision": payload["model_revision"], "recipe": payload["recipe"],
+        "manifest_sha256": payload["manifest_sha256"],
+        "train_sha256": payload["train_sha256"], "heldout_sha256": payload["heldout_sha256"],
+        "scopes": payload["scopes"], "scope_descriptors": payload["scope_descriptors"],
+    }
+    return {
+        "request_sha256": digest(public_request), "model_identity_sha256": digest(model),
+        "manifest_sha256": payload["manifest_sha256"],
+        "train_sha256": payload["train_sha256"], "heldout_sha256": payload["heldout_sha256"],
+        "recipe_sha256": digest(recipe), "scope_sha256": digest(scope),
+    }
+
+
 def make_owned_training_approval_verifier(
     gate: "PermissionGate", *, actor_id: Optional[int] = None,
     domain_id: str, context: Mapping[str, Any],
@@ -1270,6 +1321,7 @@ class SkillMetadataPermissionDecision:
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
+
 def _skill_metadata_identity(
     *, actor_id: Optional[int], principal: Optional[LocalWorkspacePrincipal],
 ) -> Dict[str, Any]:
@@ -1291,6 +1343,7 @@ def _skill_metadata_identity(
         raise ValueError("SKILL_METADATA_WORKSPACE_UNAVAILABLE")
     return dict(actor_id=None, caller="workspace:local",
                 principal_kind="local_workspace", principal_ref="workspace:local")
+
 
 def _skill_metadata_payload(
     candidate: Any, *, actor_id: Optional[int],
@@ -1328,6 +1381,7 @@ def _skill_metadata_payload(
                       brand_focus_id=brand_focus_id, global_scope=global_scope),
     }
 
+
 def skill_metadata_approval_resource(
     candidate: Any, *, actor_id: Optional[int] = None,
     principal: Optional[LocalWorkspacePrincipal] = None, domain_id: str,
@@ -1342,6 +1396,7 @@ def skill_metadata_approval_resource(
     canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True,
                            separators=(",", ":"), allow_nan=False).encode("utf-8")
     return "skills_registry_change:v1:" + hashlib.sha256(canonical).hexdigest()
+
 
 def check_skill_metadata_change_permission(
     candidate: Any, *, gate: "PermissionGate", actor_id: Optional[int] = None,
@@ -1424,6 +1479,7 @@ def check_skill_metadata_change_permission(
         return SkillMetadataPermissionDecision(allowed=True, code="SKILL_METADATA_APPROVED", **fields)
     except Exception:
         return denied("SKILL_METADATA_PERMISSION_UNVERIFIED")
+
 
 @dataclass(frozen=True)
 class ContentSourceImport:
@@ -2063,6 +2119,7 @@ class ApprovalToken:
     expires_at: datetime
     granted_by: str = "human"
     revoked: bool = False
+    issuance_audit_id: Optional[str] = None
 
     def is_valid(self, operation: str, resource: Optional[str] = None) -> bool:
         """检查令牌是否对指定操作/资源有效。"""
@@ -2621,13 +2678,15 @@ class PermissionGate:
         logger.info(f"[PermissionGate] 人工审批已授予: operation={operation}, "
                      f"resource={resource}, duration={duration_minutes}min, "
                      f"token={token[:8]}...")
-        self._write_audit(
+        issuance_audit_id = self._write_audit(
             operation_type=operation, resource=resource,
             risk_level=RiskLevel.HIGH.value, permission_required="human_approval",
             caller=granted_by, result="approval_granted",
             reason=f"人工审批授予: {operation} (有效期 {duration_minutes} 分钟)",
             operation_id=None, approval_token=token,
         )
+        with self._approval_lock:
+            approval.issuance_audit_id = issuance_audit_id
         return token
 
     @contextmanager
@@ -2692,6 +2751,224 @@ class PermissionGate:
         finally:
             self._approval_lock.release()
 
+    def owned_training_approval_reference(
+        self, *, training_request: Any, actor_id: Optional[int] = None,
+        principal: Optional[LocalWorkspacePrincipal] = None, domain_id: str,
+        context: Mapping[str, Any], approval: PermissionResult,
+    ) -> Dict[str, Any]:
+        """Identify one live exact grant without exporting its private token.
+
+        A check audit is distinct from the original human grant's issuance
+        audit. Durable task state records this reference for one execution;
+        it cannot restore an expired, revoked or lost in-memory grant.
+        """
+        if (type(self) is not PermissionGate or self is not get_permission_gate()
+                or not self.fail_closed or is_testing_bypass_enabled()
+                or not self.has_permission(PermissionLevel.COMMIT)):
+            raise PermissionError("OWNED_TRAINING_PHASE_PERMISSION_UNAVAILABLE")
+        payload = _owned_training_payload(
+            training_request, actor_id=actor_id, principal=principal,
+            domain_id=domain_id, context=context,
+        )
+        identity = owned_training_identity(actor_id=actor_id, principal=principal)
+        resource = owned_training_approval_resource(
+            training_request, actor_id=actor_id, principal=principal,
+            domain_id=domain_id, context=context,
+        )
+        if (type(approval) is not PermissionResult or approval.allowed is not True
+                or approval.requires_approval is not True
+                or approval.operation_type != OperationType.MODEL_TRAIN.value
+                or approval.resource != resource or approval.caller != identity["caller"]
+                or approval.domain_id != payload["domain_id"]
+                or type(approval.audit_id) is not str
+                or re.fullmatch(r"aud_[0-9a-f]{16}", approval.audit_id) is None
+                or type(approval.approval_token) is not str or not approval.approval_token):
+            raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REQUIRED")
+        spec = self.get_operation_spec(OperationType.MODEL_TRAIN)
+        if (type(spec) is not OperationSpec or spec.permission is not PermissionLevel.COMMIT
+                or spec.risk not in {RiskLevel.HIGH, RiskLevel.CRITICAL} or spec.auto_allow is not False):
+            raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REQUIRED")
+        with self._approval_lock:
+            return self._owned_training_approval_reference_locked(
+                approval=approval, resource=resource,
+            )
+
+    def owned_training_history_approval_reference(
+        self, binding: Mapping[str, Any], *, actor_id: Optional[int] = None,
+        principal: Optional[LocalWorkspacePrincipal] = None,
+    ) -> Dict[str, Any]:
+        """Recheck a sealed task's exact live grant for read-only history.
+
+        The Task owner supplies its validated private binding after the server
+        identity check. This cannot issue a grant, admit a phase or restore a
+        lost grant from its persisted digest. No private reference is public API.
+        """
+        from ai_task_engine import _validate_training_receipt_binding
+
+        if (type(self) is not PermissionGate or self is not get_permission_gate()
+                or not self.fail_closed or is_testing_bypass_enabled()
+                or not self.has_permission(PermissionLevel.COMMIT)):
+            raise PermissionError("OWNED_TRAINING_PHASE_PERMISSION_UNAVAILABLE")
+        value = _validate_training_receipt_binding(binding)
+        identity = owned_training_identity(actor_id=actor_id, principal=principal)
+        names = ("actor_id", "caller", "principal_kind", "principal_ref")
+        if value["identity"] != {name: identity[name] for name in names}:
+            raise PermissionError("OWNED_TRAINING_PHASE_IDENTITY_CHANGED")
+        if actor_id is not None:
+            from flask import has_request_context
+            from lumenis.auth.service import get_current_user
+
+            if not has_request_context():
+                raise PermissionError("OWNED_TRAINING_PHASE_AUTH_REQUIRED")
+            current = get_current_user(read_only=True)
+            if type(current) is not dict or type(current.get("id")) is not int or current["id"] != actor_id:
+                raise PermissionError("OWNED_TRAINING_PHASE_IDENTITY_CHANGED")
+        domains = {d["domain_id"] for d in value["scope_descriptors"].values()}
+        if len(domains) != 1:
+            raise PermissionError("OWNED_TRAINING_PHASE_BINDING_MISMATCH")
+        domain = next(iter(domains))
+        for descriptor in value["scope_descriptors"].values():
+            scope_args = {"domain_id": domain, "action": "write", "module": "owned_training",
+                          "subject_id": descriptor["subject_id"], "brand_focus_id": descriptor["brand_focus_id"],
+                          "global_scope": descriptor["global_scope"], "gate": self}
+            scoped = (check_local_workspace_scope_permission(principal, **scope_args)
+                      if identity["identity_kind"] == "workspace"
+                      else check_actor_scope_permission({"id": actor_id}, **scope_args))
+            expected_focus = descriptor["subject_id"] if domain == "cth" else descriptor["brand_focus_id"]
+            expected_resource = f"{domain}:{'GLOBAL / ALL' if descriptor['global_scope'] else expected_focus}"
+            if (type(scoped) is not ActorScopePermissionResult or scoped.allowed is not True
+                    or scoped.verification_state != "verified"
+                    or scoped.actor_id != identity["actor_id"] or scoped.caller != identity["caller"]
+                    or scoped.principal_kind != identity["principal_kind"] or scoped.principal_ref != identity["principal_ref"]
+                    or scoped.domain_id != domain or scoped.subject_id != descriptor["subject_id"]
+                    or scoped.brand_focus_id != descriptor["brand_focus_id"]
+                    or scoped.global_scope is not descriptor["global_scope"] or scoped.resource != expected_resource
+                    or type(scoped.audit_id) is not str or re.fullmatch(r"aud_[0-9a-f]{16}", scoped.audit_id) is None):
+                raise PermissionError("OWNED_TRAINING_PHASE_SCOPE_DENIED")
+        spec = self.get_operation_spec(OperationType.MODEL_TRAIN)
+        if (type(spec) is not OperationSpec or spec.permission is not PermissionLevel.COMMIT
+                or spec.risk not in {RiskLevel.HIGH, RiskLevel.CRITICAL} or spec.auto_allow is not False):
+            raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REQUIRED")
+        approval = self.check(OperationType.MODEL_TRAIN, resource=value["resource"],
+                              caller=identity["caller"], domain_id=domain, exact_approval_required=True)
+        if (type(approval) is not PermissionResult or approval.allowed is not True
+                or approval.requires_approval is not True or approval.resource != value["resource"]
+                or approval.operation_type != OperationType.MODEL_TRAIN.value
+                or approval.caller != identity["caller"] or approval.domain_id != domain
+                or not approval.approval_token or type(approval.audit_id) is not str
+                or re.fullmatch(r"aud_[0-9a-f]{16}", approval.audit_id) is None):
+            raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REQUIRED")
+        with self._approval_lock:
+            return self._owned_training_approval_reference_locked(approval=approval, resource=value["resource"])
+
+    def _owned_training_approval_reference_locked(
+        self, *, approval: PermissionResult, resource: str,
+    ) -> Dict[str, Any]:
+        """Read a validated live grant while the caller holds the approval lock.
+
+        Both public entry points validate identity, policy and exact resource
+        before calling this helper. It must not acquire the non-reentrant lock
+        again while the phase commit lease serializes revocation.
+        """
+        grant = self._approvals.get(approval.approval_token)
+        if (type(grant) is not ApprovalToken
+                or grant.operation != OperationType.MODEL_TRAIN.value
+                or grant.resource != resource
+                or type(grant.token) is not str
+                or not secrets.compare_digest(grant.token, approval.approval_token)
+                or not grant.is_valid(OperationType.MODEL_TRAIN.value, resource)
+                or type(grant.issuance_audit_id) is not str
+                or re.fullmatch(r"aud_[0-9a-f]{16}", grant.issuance_audit_id) is None
+                or type(grant.granted_by) is not str or not grant.granted_by.strip()):
+            raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REFERENCE_UNAVAILABLE")
+        return {
+            "schema_version": 1,
+            "operation": grant.operation,
+            "resource": grant.resource,
+            "approval_token_sha256": hashlib.sha256(grant.token.encode("utf-8")).hexdigest(),
+            "issuance_audit_id": grant.issuance_audit_id,
+            "granted_by": grant.granted_by,
+            "granted_at": grant.granted_at.isoformat(),
+            "expires_at": grant.expires_at.isoformat(),
+        }
+
+    @contextmanager
+    def owned_training_phase_commit_lease(
+        self, *, training_request: Any, actor_id: Optional[int] = None,
+        principal: Optional[LocalWorkspacePrincipal] = None, domain_id: str,
+        context: Mapping[str, Any], approval: PermissionResult, connection: Any,
+        timeout_seconds: float = 1.0,
+        expected_approval_reference: Optional[Mapping[str, Any]] = None,
+    ):
+        """Commit one phase task/receipt while serializing exact approval revocation.
+
+        The caller holds a canonical BEGIN IMMEDIATE transaction and has just
+        rechecked every scope and MODEL_TRAIN approval. Hold this lease only for
+        connection.commit(), never for signing, Gate.check or model execution.
+        """
+        from ai_task_engine import TaskEngine
+
+        TaskEngine._require_training_receipt_connection(connection)
+        if (type(self) is not PermissionGate or self is not get_permission_gate()
+                or not self.fail_closed or is_testing_bypass_enabled()):
+            raise PermissionError("OWNED_TRAINING_PHASE_PERMISSION_UNAVAILABLE")
+        if type(timeout_seconds) not in {int, float} or not 0 < timeout_seconds <= 2:
+            raise ValueError("OWNED_TRAINING_PHASE_LEASE_TIMEOUT_INVALID")
+        payload = _owned_training_payload(
+            training_request, actor_id=actor_id, principal=principal,
+            domain_id=domain_id, context=context,
+        )
+        identity = owned_training_identity(actor_id=actor_id, principal=principal)
+        resource = owned_training_approval_resource(
+            training_request, actor_id=actor_id, principal=principal,
+            domain_id=domain_id, context=context,
+        )
+        if (type(approval) is not PermissionResult or approval.allowed is not True
+                or approval.requires_approval is not True
+                or approval.operation_type != OperationType.MODEL_TRAIN.value
+                or approval.resource != resource or approval.caller != identity["caller"]
+                or approval.domain_id != payload["domain_id"]
+                or not approval.audit_id or not approval.approval_token):
+            raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REQUIRED")
+        token_hash = hashlib.sha256(approval.approval_token.encode("utf-8")).hexdigest()
+        if not self._approval_lock.acquire(timeout=float(timeout_seconds)):
+            raise PermissionError("OWNED_TRAINING_PHASE_LEASE_TIMEOUT")
+        try:
+            current = owned_training_identity(actor_id=actor_id, principal=principal)
+            if current != identity:
+                raise PermissionError("OWNED_TRAINING_PHASE_IDENTITY_CHANGED")
+            if actor_id is not None:
+                from flask import has_request_context
+                from lumenis.auth.service import get_current_user
+
+                if not has_request_context():
+                    raise PermissionError("OWNED_TRAINING_PHASE_AUTH_REQUIRED")
+                actor = get_current_user(read_only=True)
+                if type(actor) is not dict or type(actor.get("id")) is not int or actor["id"] != actor_id:
+                    raise PermissionError("OWNED_TRAINING_PHASE_IDENTITY_CHANGED")
+            spec = self.get_operation_spec(OperationType.MODEL_TRAIN)
+            if (not self.fail_closed or is_testing_bypass_enabled()
+                    or not self.has_permission(PermissionLevel.COMMIT)
+                    or type(spec) is not OperationSpec or spec.permission is not PermissionLevel.COMMIT
+                    or spec.risk not in {RiskLevel.HIGH, RiskLevel.CRITICAL} or spec.auto_allow is not False):
+                raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REQUIRED")
+            valid = any(
+                item.operation == OperationType.MODEL_TRAIN.value and item.resource == resource
+                and item.is_valid(OperationType.MODEL_TRAIN.value, resource)
+                and secrets.compare_digest(hashlib.sha256(token.encode("utf-8")).hexdigest(), token_hash)
+                for token, item in self._approvals.items()
+            )
+            if not valid:
+                raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REQUIRED")
+            if expected_approval_reference is not None:
+                current_reference = self._owned_training_approval_reference_locked(
+                    approval=approval, resource=resource,
+                )
+                if current_reference != expected_approval_reference:
+                    raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REPLACED")
+            yield
+        finally:
+            self._approval_lock.release()
 
     def revoke_approval(self, token: str) -> bool:
         """撤销人工审批令牌。
@@ -3182,6 +3459,7 @@ __all__ = [
     "resolve_local_workspace_principal",
     "bind_scope_permission_approval",
     "owned_training_approval_resource",
+    "owned_training_phase_fingerprints",
     "make_owned_training_approval_verifier",
     "SkillMetadataPermissionDecision",
     "skill_metadata_approval_resource",

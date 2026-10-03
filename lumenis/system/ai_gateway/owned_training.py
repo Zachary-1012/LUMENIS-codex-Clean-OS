@@ -280,12 +280,26 @@ def _verify_approval(verifier: Callable[[TrainingApprovalRequest], bool] | None,
         raise TrainingBlocked("TRAINING_APPROVAL_REQUIRED")
 
 
+def _verify_training_boundary(verifier, phase_client, request, phase) -> None:
+    from .owned_training_phases import TrainingPhaseClient
+
+    _verify_approval(verifier, request)
+    if type(phase_client) is not TrainingPhaseClient:
+        raise TrainingBlocked("TRAINING_PHASE_TRANSPORT_NOT_BOUND")
+    phase_client.authorize(request, phase)
+    # Metadata receipt is no model permit. Retain a live original MODEL_TRAIN
+    # check after transport/signature verification, immediately before action.
+    _verify_approval(verifier, request)
+    phase_client.require_current_receipt()
+
+
 def run_owned_lora_training(
     model_snapshot_dir: str | os.PathLike[str], train_jsonl_path: str | os.PathLike[str],
     heldout_jsonl_path: str | os.PathLike[str], output_dir: str | os.PathLike[str], *,
     manifest_path: str | os.PathLike[str], execute: bool = False,
     approval_verifier: Callable[[TrainingApprovalRequest], bool] | None = None,
     recipe: str = H100_RECIPE,
+    phase_client=None,
 ) -> dict[str, object]:
     """Validate explicit local inputs; train only after Learning approval and CUDA gates."""
     if type(execute) is not bool:
@@ -331,7 +345,7 @@ def run_owned_lora_training(
     if not execute:
         return result
     request = TrainingApprovalRequest(model_id, revision, train_hash, heldout_hash, scopes, recipe, manifest_hash, domain_id)
-    _verify_approval(approval_verifier, request)
+    _verify_training_boundary(approval_verifier, phase_client, request, "initial")
     torch, device_name, memory_bytes = _require_cuda(T4_RECIPE) if recipe == T4_RECIPE else _require_cuda()
     with _offline_hf(recipe):
         try:
@@ -389,15 +403,15 @@ def run_owned_lora_training(
 
             class ApprovalCallback(TrainerCallback):
                 def on_step_begin(self, args, state, control, **kwargs):
-                    _verify_approval(approval_verifier, request)
+                    _verify_training_boundary(approval_verifier, phase_client, request, "step_begin")
                     return control
 
                 def on_substep_end(self, args, state, control, **kwargs):
-                    _verify_approval(approval_verifier, request)
+                    _verify_training_boundary(approval_verifier, phase_client, request, "substep_end")
                     return control
 
                 def on_pre_optimizer_step(self, args, state, control, **kwargs):
-                    _verify_approval(approval_verifier, request)
+                    _verify_training_boundary(approval_verifier, phase_client, request, "pre_optimizer_step")
                     return control
 
             args = SFTConfig(
@@ -408,28 +422,28 @@ def run_owned_lora_training(
                 report_to="none", push_to_hub=False, save_strategy="no", bf16=not low_memory,
                 fp16=False, optim="adamw_8bit" if low_memory else "adamw_torch",
             )
-            _verify_approval(approval_verifier, request)
+            _verify_training_boundary(approval_verifier, phase_client, request, "before_output_dir")
             output.mkdir(exist_ok=False)
             result.update({"execution_state": "TRAINING_IN_PROGRESS", "cuda_device": device_name, "cuda_memory_bytes": memory_bytes})
             _write_status(output, result)
             try:
                 trainer = SFTTrainer(model=model, args=args, train_dataset=dataset, processing_class=tokenizer,
                                      callbacks=[ApprovalCallback()])
-                _verify_approval(approval_verifier, request)
+                _verify_training_boundary(approval_verifier, phase_client, request, "before_train")
                 train_result = trainer.train()
                 if int(getattr(train_result, "global_step", 0)) <= 0:
                     raise TrainingBlocked("TRAINING_COMPLETED_WITHOUT_OPTIMIZER_STEPS")
                 if low_memory and not math.isfinite(float(getattr(train_result, "metrics", {}).get("train_loss", float("nan")))):
                     raise TrainingBlocked("TRAINING_LOSS_UNAVAILABLE_OR_NONFINITE")
-                _verify_approval(approval_verifier, request)
+                _verify_training_boundary(approval_verifier, phase_client, request, "before_adapter_save")
                 trainer.save_model(str(output))
-                _verify_approval(approval_verifier, request)
+                _verify_training_boundary(approval_verifier, phase_client, request, "before_tokenizer_save")
                 tokenizer.save_pretrained(str(output))
                 for artifact in ("adapter_config.json", "adapter_model.safetensors"):
                     path = output / artifact
                     if path.is_symlink() or not path.is_file() or path.stat().st_size <= 0:
                         raise TrainingBlocked("TRAINED_ADAPTER_ARTIFACT_MISSING_OR_EMPTY")
-                _verify_approval(approval_verifier, request)
+                _verify_training_boundary(approval_verifier, phase_client, request, "after_saved_artifact_check")
             except TrainingBlocked as exc:
                 result["execution_state"] = str(exc)
                 _write_status(output, result)

@@ -1,0 +1,207 @@
+........................................................................ [ 20%]
+........................................................................ [ 41%]
+........................................................................ [ 62%]
+........EEEEEEEEEEEE.................................................... [ 83%]
+.......................................................                  [100%]
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+==== THREAD LEAK REPORT (background daemon threads left alive after test) ====
+NO background-thread leak detected.
+==== END THREAD LEAK REPORT ====
+
+=================================== ERRORS ====================================
+_ ERROR at setup of test_returns_exact_private_material_as_deep_copies_without_writes[account] _
+
+tmp_path = WindowsPath('C:/Users/28049/AppData/Local/Temp/pytest-of-张志宏/pytest-2100/test_returns_exact_private_mat0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FC2081BAF0>
+request = <SubRequest 'canonical_task_db' for <Function test_returns_exact_private_material_as_deep_copies_without_writes[account]>>
+
+    @pytest.fixture
+    def canonical_task_db(tmp_path, monkeypatch, request):
+        seed = Path(os.environ["LUMENIS_TEST_SEED_DB"]).resolve()
+>       assert seed == _SEED.resolve()
+E       AssertionError: assert WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-training-http-callback-c433-eratzynq/explicit-empty-test-seed.db') == WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db')
+E        +  where WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db') = resolve()
+E        +    where resolve = WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db').resolve
+
+tests\test_training_phase_history_material.py:32: AssertionError
+_ ERROR at setup of test_returns_exact_private_material_as_deep_copies_without_writes[workspace] _
+
+tmp_path = WindowsPath('C:/Users/28049/AppData/Local/Temp/pytest-of-张志宏/pytest-2100/test_returns_exact_private_mat1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FC20818600>
+request = <SubRequest 'canonical_task_db' for <Function test_returns_exact_private_material_as_deep_copies_without_writes[workspace]>>
+
+    @pytest.fixture
+    def canonical_task_db(tmp_path, monkeypatch, request):
+        seed = Path(os.environ["LUMENIS_TEST_SEED_DB"]).resolve()
+>       assert seed == _SEED.resolve()
+E       AssertionError: assert WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-training-http-callback-c433-eratzynq/explicit-empty-test-seed.db') == WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db')
+E        +  where WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db') = resolve()
+E        +    where resolve = WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db').resolve
+
+tests\test_training_phase_history_material.py:32: AssertionError
+_ ERROR at setup of test_rejects_wrong_or_malformed_identity_without_changes[identity0-PermissionError] _
+
+tmp_path = WindowsPath('C:/Users/28049/AppData/Local/Temp/pytest-of-张志宏/pytest-2100/test_rejects_wrong_or_malforme0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FC206C8D00>
+request = <SubRequest 'canonical_task_db' for <Function test_rejects_wrong_or_malformed_identity_without_changes[identity0-PermissionError]>>
+
+    @pytest.fixture
+    def canonical_task_db(tmp_path, monkeypatch, request):
+        seed = Path(os.environ["LUMENIS_TEST_SEED_DB"]).resolve()
+>       assert seed == _SEED.resolve()
+E       AssertionError: assert WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-training-http-callback-c433-eratzynq/explicit-empty-test-seed.db') == WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db')
+E        +  where WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db') = resolve()
+E        +    where resolve = WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db').resolve
+
+tests\test_training_phase_history_material.py:32: AssertionError
+_ ERROR at setup of test_rejects_wrong_or_malformed_identity_without_changes[identity1-ValueError] _
+
+tmp_path = WindowsPath('C:/Users/28049/AppData/Local/Temp/pytest-of-张志宏/pytest-2100/test_rejects_wrong_or_malforme1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FC206CB3F0>
+request = <SubRequest 'canonical_task_db' for <Function test_rejects_wrong_or_malformed_identity_without_changes[identity1-ValueError]>>
+
+    @pytest.fixture
+    def canonical_task_db(tmp_path, monkeypatch, request):
+        seed = Path(os.environ["LUMENIS_TEST_SEED_DB"]).resolve()
+>       assert seed == _SEED.resolve()
+E       AssertionError: assert WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-training-http-callback-c433-eratzynq/explicit-empty-test-seed.db') == WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db')
+E        +  where WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db') = resolve()
+E        +    where resolve = WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db').resolve
+
+tests\test_training_phase_history_material.py:32: AssertionError
+_ ERROR at setup of test_rejects_wrong_or_malformed_identity_without_changes[identity2-ValueError] _
+
+tmp_path = WindowsPath('C:/Users/28049/AppData/Local/Temp/pytest-of-张志宏/pytest-2100/test_rejects_wrong_or_malforme2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FC206C8B40>
+request = <SubRequest 'canonical_task_db' for <Function test_rejects_wrong_or_malformed_identity_without_changes[identity2-ValueError]>>
+
+    @pytest.fixture
+    def canonical_task_db(tmp_path, monkeypatch, request):
+        seed = Path(os.environ["LUMENIS_TEST_SEED_DB"]).resolve()
+>       assert seed == _SEED.resolve()
+E       AssertionError: assert WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-training-http-callback-c433-eratzynq/explicit-empty-test-seed.db') == WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db')
+E        +  where WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db') = resolve()
+E        +    where resolve = WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db').resolve
+
+tests\test_training_phase_history_material.py:32: AssertionError
+_ ERROR at setup of test_rejects_malformed_legacy_schema_and_wrong_owner_rows_without_changes[malformed_json-ValueError] _
+
+tmp_path = WindowsPath('C:/Users/28049/AppData/Local/Temp/pytest-of-张志宏/pytest-2100/test_rejects_malformed_legacy_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FC206C8A60>
+request = <SubRequest 'canonical_task_db' for <Function test_rejects_malformed_legacy_schema_and_wrong_owner_rows_without_changes[malformed_json-ValueError]>>
+
+    @pytest.fixture
+    def canonical_task_db(tmp_path, monkeypatch, request):
+        seed = Path(os.environ["LUMENIS_TEST_SEED_DB"]).resolve()
+>       assert seed == _SEED.resolve()
+E       AssertionError: assert WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-training-http-callback-c433-eratzynq/explicit-empty-test-seed.db') == WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db')
+E        +  where WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db') = resolve()
+E        +    where resolve = WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db').resolve
+
+tests\test_training_phase_history_material.py:32: AssertionError
+_ ERROR at setup of test_rejects_malformed_legacy_schema_and_wrong_owner_rows_without_changes[legacy_v1-ValueError] _
+
+tmp_path = WindowsPath('C:/Users/28049/AppData/Local/Temp/pytest-of-张志宏/pytest-2100/test_rejects_malformed_legacy_1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FC206C9320>
+request = <SubRequest 'canonical_task_db' for <Function test_rejects_malformed_legacy_schema_and_wrong_owner_rows_without_changes[legacy_v1-ValueError]>>
+
+    @pytest.fixture
+    def canonical_task_db(tmp_path, monkeypatch, request):
+        seed = Path(os.environ["LUMENIS_TEST_SEED_DB"]).resolve()
+>       assert seed == _SEED.resolve()
+E       AssertionError: assert WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-training-http-callback-c433-eratzynq/explicit-empty-test-seed.db') == WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db')
+E        +  where WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db') = resolve()
+E        +    where resolve = WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db').resolve
+
+tests\test_training_phase_history_material.py:32: AssertionError
+_ ERROR at setup of test_rejects_malformed_legacy_schema_and_wrong_owner_rows_without_changes[wrong_schema-ValueError] _
+
+tmp_path = WindowsPath('C:/Users/28049/AppData/Local/Temp/pytest-of-张志宏/pytest-2100/test_rejects_malformed_legacy_2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FC206C8EC0>
+request = <SubRequest 'canonical_task_db' for <Function test_rejects_malformed_legacy_schema_and_wrong_owner_rows_without_changes[wrong_schema-ValueError]>>
+
+    @pytest.fixture
+    def canonical_task_db(tmp_path, monkeypatch, request):
+        seed = Path(os.environ["LUMENIS_TEST_SEED_DB"]).resolve()
+>       assert seed == _SEED.resolve()
+E       AssertionError: assert WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-training-http-callback-c433-eratzynq/explicit-empty-test-seed.db') == WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db')
+E        +  where WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db') = resolve()
+E        +    where resolve = WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db').resolve
+
+tests\test_training_phase_history_material.py:32: AssertionError
+_ ERROR at setup of test_rejects_malformed_legacy_schema_and_wrong_owner_rows_without_changes[wrong_owner-KeyError] _
+
+tmp_path = WindowsPath('C:/Users/28049/AppData/Local/Temp/pytest-of-张志宏/pytest-2100/test_rejects_malformed_legacy_3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FC206C9240>
+request = <SubRequest 'canonical_task_db' for <Function test_rejects_malformed_legacy_schema_and_wrong_owner_rows_without_changes[wrong_owner-KeyError]>>
+
+    @pytest.fixture
+    def canonical_task_db(tmp_path, monkeypatch, request):
+        seed = Path(os.environ["LUMENIS_TEST_SEED_DB"]).resolve()
+>       assert seed == _SEED.resolve()
+E       AssertionError: assert WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-training-http-callback-c433-eratzynq/explicit-empty-test-seed.db') == WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db')
+E        +  where WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db') = resolve()
+E        +    where resolve = WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db').resolve
+
+tests\test_training_phase_history_material.py:32: AssertionError
+_ ERROR at setup of test_rejects_malformed_or_missing_task_ids_without_changes[trainrelay_not-a-uuid-ValueError] _
+
+tmp_path = WindowsPath('C:/Users/28049/AppData/Local/Temp/pytest-of-张志宏/pytest-2100/test_rejects_malformed_or_miss0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FC206CA5F0>
+request = <SubRequest 'canonical_task_db' for <Function test_rejects_malformed_or_missing_task_ids_without_changes[trainrelay_not-a-uuid-ValueError]>>
+
+    @pytest.fixture
+    def canonical_task_db(tmp_path, monkeypatch, request):
+        seed = Path(os.environ["LUMENIS_TEST_SEED_DB"]).resolve()
+>       assert seed == _SEED.resolve()
+E       AssertionError: assert WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-training-http-callback-c433-eratzynq/explicit-empty-test-seed.db') == WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db')
+E        +  where WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db') = resolve()
+E        +    where resolve = WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db').resolve
+
+tests\test_training_phase_history_material.py:32: AssertionError
+_ ERROR at setup of test_rejects_malformed_or_missing_task_ids_without_changes[trainrelay_00000000-0000-4000-8000-000000000001-KeyError] _
+
+tmp_path = WindowsPath('C:/Users/28049/AppData/Local/Temp/pytest-of-张志宏/pytest-2100/test_rejects_malformed_or_miss1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FC1EE61DA0>
+request = <SubRequest 'canonical_task_db' for <Function test_rejects_malformed_or_missing_task_ids_without_changes[trainrelay_00000000-0000-4000-8000-000000000001-KeyError]>>
+
+    @pytest.fixture
+    def canonical_task_db(tmp_path, monkeypatch, request):
+        seed = Path(os.environ["LUMENIS_TEST_SEED_DB"]).resolve()
+>       assert seed == _SEED.resolve()
+E       AssertionError: assert WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-training-http-callback-c433-eratzynq/explicit-empty-test-seed.db') == WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db')
+E        +  where WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db') = resolve()
+E        +    where resolve = WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db').resolve
+
+tests\test_training_phase_history_material.py:32: AssertionError
+_ ERROR at setup of test_requires_active_transaction_on_canonical_connection __
+
+tmp_path = WindowsPath('C:/Users/28049/AppData/Local/Temp/pytest-of-张志宏/pytest-2100/test_requires_active_transacti0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FC206C96A0>
+request = <SubRequest 'canonical_task_db' for <Function test_requires_active_transaction_on_canonical_connection>>
+
+    @pytest.fixture
+    def canonical_task_db(tmp_path, monkeypatch, request):
+        seed = Path(os.environ["LUMENIS_TEST_SEED_DB"]).resolve()
+>       assert seed == _SEED.resolve()
+E       AssertionError: assert WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-training-http-callback-c433-eratzynq/explicit-empty-test-seed.db') == WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db')
+E        +  where WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db') = resolve()
+E        +    where resolve = WindowsPath('C:/Users/28049/AppData/Local/Temp/lumenis-j8-validation-d1ffc4d9c7814924a2dc192d59c300d0/empty-seed.db').resolve
+
+tests\test_training_phase_history_material.py:32: AssertionError
+=========================== short test summary info ===========================
+ERROR tests/test_training_phase_history_material.py::test_returns_exact_private_material_as_deep_copies_without_writes[account]
+ERROR tests/test_training_phase_history_material.py::test_returns_exact_private_material_as_deep_copies_without_writes[workspace]
+ERROR tests/test_training_phase_history_material.py::test_rejects_wrong_or_malformed_identity_without_changes[identity0-PermissionError]
+ERROR tests/test_training_phase_history_material.py::test_rejects_wrong_or_malformed_identity_without_changes[identity1-ValueError]
+ERROR tests/test_training_phase_history_material.py::test_rejects_wrong_or_malformed_identity_without_changes[identity2-ValueError]
+ERROR tests/test_training_phase_history_material.py::test_rejects_malformed_legacy_schema_and_wrong_owner_rows_without_changes[malformed_json-ValueError]
+ERROR tests/test_training_phase_history_material.py::test_rejects_malformed_legacy_schema_and_wrong_owner_rows_without_changes[legacy_v1-ValueError]
+ERROR tests/test_training_phase_history_material.py::test_rejects_malformed_legacy_schema_and_wrong_owner_rows_without_changes[wrong_schema-ValueError]
+ERROR tests/test_training_phase_history_material.py::test_rejects_malformed_legacy_schema_and_wrong_owner_rows_without_changes[wrong_owner-KeyError]
+ERROR tests/test_training_phase_history_material.py::test_rejects_malformed_or_missing_task_ids_without_changes[trainrelay_not-a-uuid-ValueError]
+ERROR tests/test_training_phase_history_material.py::test_rejects_malformed_or_missing_task_ids_without_changes[trainrelay_00000000-0000-4000-8000-000000000001-KeyError]
+ERROR tests/test_training_phase_history_material.py::test_requires_active_transaction_on_canonical_connection

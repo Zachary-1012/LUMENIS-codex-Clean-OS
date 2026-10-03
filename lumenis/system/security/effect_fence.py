@@ -77,6 +77,23 @@ class SkillMetadataFenceDecision:
         return asdict(self)
 
 
+@dataclass(frozen=True)
+class TrainingPhaseMetadataFenceDecision:
+    """Admission of one durable task-state change, never model execution."""
+
+    allowed: bool
+    code: str
+    task_id: str
+    mutation: str
+    resource: Optional[str] = None
+    state_sha256: Optional[str] = None
+    approval_token_sha256: Optional[str] = None
+    permission_audit_id: Optional[str] = None
+    fence_audit_id: Optional[str] = None
+    effect_mode: str = "owned_training_task_metadata"
+    model_execution_allowed: bool = False
+
+
 _SKILL_AUDIT_ID = re.compile(r"^aud_[0-9a-f]{16}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _SKILL_HISTORY_INPUTS = frozenset({
@@ -419,6 +436,101 @@ class EffectFence:
         ).strip().lower()
         return bool(payload.get("staging") is True or mode in {"staging", "preview", "dry_run", "dry-run"})
 
+    def authorize_training_phase_metadata(
+        self, *, connection, task_id, mutation, training_request, context,
+        domain_id, gate, approval, approval_reference, expected_state,
+        actor_id=None, principal=None, capture_mode,
+    ) -> TrainingPhaseMetadataFenceDecision:
+        """Verify the staged sealed Task row on its canonical transaction.
+
+        The exact existing MODEL_TRAIN grant admits only this metadata change.
+        This seam cannot authorize a trainer, weights, data changes or any
+        external effect. Generic Production Truth denial remains independent.
+        """
+        fields = dict(task_id=task_id, mutation=mutation)
+        try:
+            from ai_task_engine import TaskEngine, get_task_engine
+            from . import permission
+
+            if (type(self) is not EffectFence or self is not get_effect_fence()
+                    or capture_mode != "owned_training_task_metadata"
+                    or mutation not in {"create", "challenge", "receipt", "interrupt", "resume"}
+                    or type(gate) is not permission.PermissionGate
+                    or gate is not permission.get_permission_gate()
+                    or not gate.fail_closed or permission.is_testing_bypass_enabled()):
+                raise PermissionError("OWNED_TRAINING_PHASE_FENCE_UNAVAILABLE")
+            TaskEngine._require_training_receipt_connection(connection)
+            engine = get_task_engine()
+            if type(engine) is not TaskEngine:
+                raise PermissionError("OWNED_TRAINING_PHASE_TASK_OWNER_UNAVAILABLE")
+            args = {"actor_id": actor_id, "principal": principal}
+            identity = permission.owned_training_identity(**args)
+            resource = permission.owned_training_approval_resource(
+                training_request, context=context, domain_id=domain_id, **args,
+            )
+            fields["resource"] = resource
+            verifier = permission.make_owned_training_approval_verifier(
+                gate, context=context, domain_id=domain_id, **args,
+            )
+            if not verifier(training_request):
+                raise PermissionError("OWNED_TRAINING_PHASE_FENCE_APPROVAL_REQUIRED")
+            reference = gate.owned_training_approval_reference(
+                training_request=training_request, context=context, domain_id=domain_id,
+                approval=approval, **args,
+            )
+            if reference != approval_reference:
+                raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REPLACED")
+            binding = {"resource": resource, "scope_descriptors": context["scope_descriptors"],
+                       "identity": {name: identity[name] for name in
+                                    ("actor_id", "caller", "principal_kind", "principal_ref")}}
+            material = engine.get_training_receipt_history_material(
+                task_id, expected_identity=binding["identity"], connection=connection,
+            )
+            if (material["binding"] != binding or material["approval_reference"] != reference
+                    or material["fingerprints"] != permission.owned_training_phase_fingerprints(
+                        training_request, context=context, domain_id=domain_id, **args)):
+                raise PermissionError("OWNED_TRAINING_PHASE_FENCE_BINDING_MISMATCH")
+            state = engine.require_training_receipt_admission(
+                task_id, binding, reference, material["pinned_public_key"], connection,
+            )
+            if type(expected_state) is not dict or state != expected_state:
+                raise PermissionError("OWNED_TRAINING_PHASE_FENCE_STATE_CHANGED")
+            if mutation == "interrupt" and state["status"] != "unknown":
+                raise PermissionError("OWNED_TRAINING_PHASE_FENCE_STATE_CHANGED")
+            if mutation == "resume" and state["status"] != "ready":
+                raise PermissionError("OWNED_TRAINING_PHASE_FENCE_STATE_CHANGED")
+            row = connection.execute(
+                "SELECT context_json FROM ai_task WHERE task_id=?", (task_id,),
+            ).fetchone()
+            if row is None or type(row[0]) is not str:
+                raise PermissionError("OWNED_TRAINING_PHASE_FENCE_STATE_UNAVAILABLE")
+            state_sha256 = hashlib.sha256(json.dumps(
+                {"state": state, "context_json": row[0]}, ensure_ascii=False,
+                sort_keys=True, separators=(",", ":"), allow_nan=False,
+            ).encode("utf-8")).hexdigest()
+            audit = gate._write_audit(
+                operation_type="owned_training_phase_metadata_fence", resource=resource,
+                risk_level=permission.RiskLevel.HIGH.value,
+                permission_required=permission.PermissionLevel.COMMIT.value,
+                caller=identity["caller"], result="allowed",
+                reason="OWNED_TRAINING_PHASE_METADATA_ADMITTED_NOT_COMMITTED",
+                operation_id=None, approval_token=None,
+            )
+            if type(audit) is not str or not _SKILL_AUDIT_ID.fullmatch(audit):
+                raise PermissionError("OWNED_TRAINING_PHASE_FENCE_AUDIT_UNAVAILABLE")
+            return TrainingPhaseMetadataFenceDecision(
+                allowed=True, code="OWNED_TRAINING_PHASE_METADATA_ADMITTED_NOT_COMMITTED",
+                **fields, state_sha256=state_sha256,
+                approval_token_sha256=reference["approval_token_sha256"],
+                permission_audit_id=approval.audit_id, fence_audit_id=audit,
+            )
+        except Exception as exc:
+            code = str(exc)
+            if (type(code) is not str or not code.startswith("OWNED_TRAINING_")
+                    or len(code) > 100 or re.fullmatch(r"[A-Z_0-9]+", code) is None):
+                code = "OWNED_TRAINING_PHASE_FENCE_UNVERIFIED"
+            return TrainingPhaseMetadataFenceDecision(allowed=False, code=code, **fields)
+
     def check(
         self,
         *,
@@ -543,4 +655,5 @@ def get_effect_fence() -> EffectFence:
     return _default_fence
 
 
-__all__ = ["FenceDecision", "SkillMetadataFenceDecision", "EffectFence", "get_effect_fence"]
+__all__ = ["FenceDecision", "SkillMetadataFenceDecision", "TrainingPhaseMetadataFenceDecision",
+           "EffectFence", "get_effect_fence"]

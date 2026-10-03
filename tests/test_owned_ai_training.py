@@ -11,6 +11,12 @@ import pytest
 from lumenis.system.ai_gateway import owned_training as training
 
 
+@pytest.fixture(autouse=True)
+def _phase_fixture_monkeypatch(monkeypatch):
+    from tests.test_owned_training_callback_v3 import _unit_signer
+    _unit_signer(monkeypatch)
+
+
 def _record(case_id: str, prompt: str) -> dict:
     answer = f"Reviewed answer for {case_id}."
     return {
@@ -66,9 +72,19 @@ def _inputs(tmp_path: Path, monkeypatch):
 
 def _run(paths, *, execute=False, approval_verifier=None, manifest=None, recipe=training.H100_RECIPE):
     model, canonical_manifest, train, heldout, output = paths
+    phase_client = None
+    if execute and callable(approval_verifier):
+        from tests.test_owned_training_callback_v3 import _unit_phase_client
+        preflight = training.run_owned_lora_training(
+            model, train, heldout, output, manifest_path=manifest or canonical_manifest, recipe=recipe)
+        request = training.TrainingApprovalRequest(
+            preflight["model_id"], preflight["model_revision"], preflight["train_sha256"],
+            preflight["heldout_sha256"], tuple(preflight["scopes"]), preflight["training_recipe"],
+            preflight["manifest_sha256"], preflight["domain_id"])
+        phase_client, _ = _unit_phase_client(request)
     return training.run_owned_lora_training(
         model, train, heldout, output, manifest_path=manifest or canonical_manifest,
-        execute=execute, approval_verifier=approval_verifier, recipe=recipe,
+        execute=execute, approval_verifier=approval_verifier, recipe=recipe, phase_client=phase_client,
     )
 
 
@@ -477,9 +493,10 @@ def test_t4_execution_checks_loss_and_preserves_dataset_and_output_fences(tmp_pa
     monkeypatch.setitem(sys.modules, "unsloth", SimpleNamespace(FastLanguageModel=SimpleNamespace(
         from_pretrained=load, get_peft_model=lambda model, **kwargs: model)))
     trainer_class = sys.modules["trl"].SFTTrainer
+    original_train = trainer_class.train
     def train(self):
-        observed["train_calls"] += 1
-        return SimpleNamespace(global_step=1, metrics={"train_loss": loss})
+        result = original_train(self)
+        return SimpleNamespace(global_step=result.global_step, metrics={"train_loss": loss})
     monkeypatch.setattr(trainer_class, "train", train)
     if accepted:
         result = _run(paths, execute=True, approval_verifier=lambda _: True, recipe=training.T4_RECIPE)
