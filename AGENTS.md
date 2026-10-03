@@ -208,6 +208,36 @@ Persistent Execution
 Explicit Completion Criteria
 ```
 
+### Complete outcome execution — latest Product Owner instruction, 2026-10-04
+
+All outcome windows use the user's **最大完整成果执行** mode. Continue the
+entire assigned user result through research, implementation, real execution,
+saved/retrievable outputs, applicable recovery and evaluation, then complete
+acceptance. A bounded Task Card limits owners, files, authority and effects;
+it does not mean a minimum function, tiny slice or an easier substitute outcome.
+Minimal context loading limits redundant reading, never delivery scope.
+
+Do not stop per function/file, repeatedly hand off unchanged pins, generate
+progress-only reports, re-audit stable source or wait for M's per-step approval.
+Resolve ordinary dependencies directly between their existing Owners and W6.
+Read current valid context once and continue; recheck when relevant source,
+authorization, inputs or an actual acceptance risk changes. Reuse valid evidence;
+required security/recovery/affected gates remain mandatory. M receives complete
+results, a necessary decision or urgent risk. W6 remains the sole integrator.
+
+C2 stays on the approved single RTX5090 route. The temporary RTX4090 alternative
+is superseded by the user's explicit instruction to disregard it. Complete
+weight integrity, authenticated remote managed-worker/physical-checkpoint
+binding and real GPU optimization as one continuous outcome Batch. The missed
+2026-10-03 24:00 start deadline remains an unmet historical requirement, not a
+new deadline or evidence of training. Training must proceed to actual step/loss,
+checkpoint retrieval/reload, independent held-out and owned business results.
+
+F remains explicitly paused: no frontend implementation, reference research or
+tests are resumed. Its complete-outcome wording is for a future explicit resume.
+M's standby policy remains effective when no actual review/decision/repair work
+is available; do not repeatedly poll or scan to keep a turn active.
+
 Do not begin every task with a full-repository rediscovery. Load only the owners, callers, contracts, tests and runtime paths required by the active gate.
 
 Before changing one capability, run `python scripts/audit_tools/locate_capability_context.py --capability <existing-family> --query <specific-task-term>` (or `--path <source-path> --query <specific-task-term>` when ownership is unambiguous). Read its pinned current rules, then inspect the matching source, tests, related documents and historical research for that exact slice. The locator is a navigation aid: it does not promote research, an old plan or a missing candidate to Production Truth. If the path has no unique owner, resolve the row in the Source Owner Index before editing; record a missing historical input explicitly instead of silently narrowing the capability. Do not run a full-repository audit merely to locate one capability.

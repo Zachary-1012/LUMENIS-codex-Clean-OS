@@ -1201,3 +1201,11 @@ ready; research, technical proof, USER_VERIFIED, RELEASED and OPERATING are sepa
 M checks completeness once per full outcome, owns necessary cross-owner repairs,
 and receives complete results/necessary decisions/urgent risks rather than every
 function or ordinary research progress message.
+
+The Product Owner's 2026-10-04 complete-execution correction requires each
+window to continue its whole accepted delivery contract through actual results,
+not serial minimum function slices. Do not insert per-function M approvals,
+unchanged handoff checks or progress-only reports into that path. Existing
+owners coordinate dependencies directly; preserved valid evidence and required
+affected recovery/security/E2E gates still apply. F remains paused. C2's current
+resource is the single approved RTX5090; the RTX4090 alternative is superseded.

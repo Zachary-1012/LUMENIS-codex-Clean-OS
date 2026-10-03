@@ -391,3 +391,11 @@ C6/F and U22/U24/U25; source settings_module.py still registers its flag and rou
 through app.py. The Product Owner now marks developer mode DEFERRED_BY_USER; preserve its
 requirement and source but do not implement or make it a current closure blocker.
 Actual AI training is P0 ready execution under C2/C6, retaining all other C scope.
+
+2026-10-04 execution correction: every current C window keeps its full result
+scope and continuously closes it under AGENTS, rather than stopping at a minimum
+function/file slice or repeating unchanged handoff checks. Owner boundaries do
+not shrink outcomes. C2 remains single RTX5090; the interim 4090 alternative is
+superseded. F remains paused; M handles actual decisions/acceptance and otherwise
+stands by. Native objectives and their preserved states are in the current
+complete-outcome execution receipt, without replacing this owner index.

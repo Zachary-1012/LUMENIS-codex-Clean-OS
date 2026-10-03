@@ -556,4 +556,19 @@ execution-resume evidence. No C outcome is thereby accepted.
 
 ## Current native Goal update and explicit execution resume
 
-See [execution resume receipt](evidence/round-15/full-product-audit-20261003/EXECUTION-RESUME-20261003.md) and its seven native Goal readbacks. C1-C6 resumed; F paused. C2 preparation and original single-GPU renewal/training are explicitly authorized for tonight before 24:00 Asia/Shanghai. Training has not been proven by these control actions. C1 native dispatch recovered after original-thread archive/unarchive/reopen; C1 then sent its own original-thread ACK back to M, proving both directions. The stale pause-message race was reconciled by setting and reading back the same Goal active. M closes this exact rule publication before W6 resumes sole product publication.
+See [execution resume receipt](evidence/round-15/full-product-audit-20261003/EXECUTION-RESUME-20261003.md) and its seven native Goal readbacks. C1-C6 resumed; F paused. The 2026-10-03 24:00 GPU start deadline was missed; C2 continues under the existing single RTX5090 authorization. Training has not been proven by these control actions. C1 native dispatch recovered after original-thread archive/unarchive/reopen; C1 then sent its own original-thread ACK back to M, proving both directions. The stale pause-message race was reconciled by setting and reading back the same Goal active. M closes this exact rule publication before W6 resumes sole product publication.
+
+## Current complete outcome execution — 2026-10-04
+
+The Product Owner rejected minimum execution slices and repeated handoffs,
+checks and reports. All current native Goal objectives have been updated in
+place to continuous full-outcome execution; original budgets, usage and statuses
+are retained. C1/C2/C3+C5/C4/C6 active, F paused, M standby/paused until actual
+review/decision/repair work. This changes execution method, not R/J/U scope,
+Permission, Evidence, recovery or acceptance standards. See AGENTS execution
+mode and [current readback](evidence/round-15/full-product-audit-20261003/COMPLETE-OUTCOME-EXECUTION-20261004.md).
+
+C2 uses RTX5090 only; the intervening conditional RTX4090 option is explicitly
+revoked. Weight integrity and actual remote trainer/checkpoint binding are one
+complete execution Batch with W6. The latest C2 report had zero optimizer steps;
+no real training completion/start is inferred from this rule publication.
