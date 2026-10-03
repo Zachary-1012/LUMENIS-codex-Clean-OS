@@ -393,6 +393,17 @@ No source/runtime, training/source grant or full C acceptance is established by
 this rule publication. The exact five-path native coordination/storyboard rule
 publication at 5fe253af remains separately retained.
 
+The containing SH-01 rule addendum completes the two existing-owner continuity
+clarifications. Parent de437c28584a76ce6038b18c7456771e97746b65 already publishes
+the exact three Real Delivery Overlay constraints. This addendum applies M's
+exact SH-01 section 11.3 delta, whose unchanged 5fe preimage still matches main,
+and synchronizes CURRENT/evidence. Both canonical postimages are verified
+at the resulting main. Visible inherited research inputs, exact upstream
+versions, changes, explicit adoption and return to the original research are
+required through existing owners. Neither a catalog opening an empty workbench
+nor internal_pitch rejecting Brief/Evidence bindings closes that requirement.
+Actual source/API/runtime continuity remains OPEN.
+
 ## 2. Minimal current-context route
 
 Read `AGENTS.md` first, then its mandatory bootstrap and exact capability locator

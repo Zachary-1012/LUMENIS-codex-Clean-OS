@@ -94,3 +94,28 @@ normal training review/export handlers are local tested source, with actual Core
 reload AccessDenied and the unchanged live handler probe returning HTTP404.
 No formal target review, source admission, owned AI, or complete C result is
 claimed. Protected source candidates remain separate.
+
+## SH-01 continuity addendum and combined canonical state
+
+M's final screen delta arrived while the first Overlay publisher completed its
+accepted unit de437c28584a76ce6038b18c7456771e97746b65. Published history is
+retained; this addendum completes the same two-document requirement in the
+resulting canonical tree. Only existing SH-01 section 11.3 changes, with its
+unchanged 5fe preimage. Patch SHA256:
+1279c7d152a928e445399b7b924e868f652390f4bf425121876f02d093c5bb6c.
+SH-01 postimage SHA256 be8e1871b9a5cb3c8f3f0f2b62444283973d769fd8b21fb505129ea08dcd2bc0;
+Overlay remains 6f5db2c5c486867911fccc15389e11a0a45b568f3f9d91d66c4d29d936690478.
+Both actual online byte pins are checked at the resulting main.
+
+Inherited task/Brief, constraints, selected Evidence/file/locators, rationale
+and exact upstream versions must be visible and editable without repeated
+unchanged entry. Material changes use explicit adoption/new version and return
+to the original research. Existing source-use, current permission and each
+production format's actual acceptance stay distinct. Source/runtime binding is
+OPEN; catalog navigation and v2 file existence do not pass.
+
+Five constitution/governance/Experience checks plus diff check are required
+against the isolated exact addendum; actual argv/exits are in
+[sh01-continuity-gates.json](global-discover-rules-20261003/sh01-continuity-gates.json).
+Protected source and formal DB are unchanged, including the normal training
+review/export local candidate and its actual Core AccessDenied/HTTP404 blocker.
