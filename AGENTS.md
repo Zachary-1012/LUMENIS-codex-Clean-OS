@@ -216,6 +216,19 @@ Organize related source/interface/recovery fixes into one useful outcome Batch. 
 
 Cloud source stays on its approved fixed base. At an explicit safe checkpoint, W6/M deliver the newly published canonical rules with their publication SHA and actual byte/hash receipt, and workers acknowledge the active rule revision. Reading newer canonical rules must not hot-replace protected source, restart work, change account/model or imply source synchronization. A rule or message merely queued is not delivery acknowledgement.
 
+Routine six-window coordination uses the existing native thread mechanism:
+steer the actual active turn, or start an idle turn when the native service
+supports it. Do not silently substitute a queue for delivery. A returned thread
+ID is a dispatch observation, not the recipient's readback acknowledgement.
+When a Cloud window cannot initiate the reverse native connection, M/W6 read or
+wait for that original Cloud thread's complete report and acknowledge the exact
+received bytes and unresolved dependencies there. Do not make Product Owner
+manual relaying, a second daemon or a parallel queue a workflow dependency.
+Record both directions separately: observed local-to-Cloud steering does not
+prove Cloud-to-local connectivity has been restored. Preserve the existing
+thread, account, fixed source base and manually selected model/effort.
+
+
 Collector/Scheduler product operation must not depend on a Codex task, CUA session, work-directory harness or daily developer trigger. The Global contract defines this proof. Current Source-derived discovery/creation and budget requirements belong to the existing Experience, Global and Real Delivery contracts and mapped J/U rows; no second recommendation, budget, learning or collection authority is authorized.
 
 ### Six-round execution windows and retained acceptance coverage

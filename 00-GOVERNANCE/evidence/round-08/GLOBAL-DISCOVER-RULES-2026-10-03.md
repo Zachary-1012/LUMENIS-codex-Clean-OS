@@ -46,3 +46,28 @@ failure, calibration and rollback gates remain. Provider source/runtime, source
 admission, model training and complete C acceptance are unchanged. The actual
 constitution/governance command/exit and byte pins are retained in
 [retired-rule-gates.json](global-discover-rules-20261003/retired-rule-gates.json).
+
+## Native coordination, storyboard and manual captions
+
+M accepted this exact rule/specification direction at main 22abbf9a. The
+containing commit changes only AGENTS.md coordination, SH-01 sections 10.11 and
+10.12, CURRENT, this record and its gate receipt. W4's nineteen package members
+were read back by size/hash, including the actual human style confirmation and
+the 4,015,592-byte calibration image. Package manifest SHA256:
+`740e331dc43b7a9774b85f634a32cfd0bd407e8e901e4f9f1fc534c121ebdfe4`.
+No reference or calibration image is committed. The native routing observations
+and manual caption review remain work evidence, not a second authority.
+
+Observed local active-turn steering is separate from unsupported Cloud reverse
+initiation. M/W6 read the original complete Cloud reports and acknowledge actual
+receipt; no human relay, new daemon or parallel queue is a prerequisite.
+Storyboards belong to Shared video/SH-01, and pure audio/manuscript tasks retain
+their own deliverables. Only actual style calibration is confirmed. Manual
+caption editing is bounded DESIGN_READY, with accepted renderer limits still
+requiring exact binding and real export/reopen evidence.
+
+The five required constitution/governance/Experience gates and diff check run
+against the isolated exact candidate. Their argv, exits, source pins and
+limitations are in [communication-storyboard-gates.json](global-discover-rules-20261003/communication-storyboard-gates.json).
+Historical source tests are not rerun. Protected source candidates, formal DB,
+runtime, source use, owned AI and full C acceptance are unchanged.

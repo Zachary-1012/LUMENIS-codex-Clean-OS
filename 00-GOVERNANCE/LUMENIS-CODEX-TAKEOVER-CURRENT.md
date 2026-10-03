@@ -367,6 +367,20 @@ remain OPEN. Nonempty unbound ShotPlan references are rejected; empty references
 remain pending. The new source is not proof the running Core loaded it.
 See [source integration evidence](evidence/round-07/INTERNAL-CREATION-SOURCE-2026-10-03.md).
 
+The containing rule/specification commit publishes M's approved native
+six-window coordination rule and the bounded SH-01 storyboard and manual
+caption/text decisions in their existing canonical owners. W6 verified the
+actual W4 integration package and human style confirmation; work images are
+not published. Cloud reverse connectivity remains unproven, so M/W6 consume
+the original complete reports and issue exact readback acknowledgements.
+SH-01 manual caption interaction is DESIGN_READY; storyboard image/runtime
+bindings remain NOT_BOUND. No source/runtime, formal intake, source-use grant,
+owned inference or complete C outcome is established by this rule revision.
+The source-only internal creation publication at
+`22abbf9acea0c00bf0af446aa4b31670d32b640c` remains a distinct accepted unit.
+See the [owning Round 08 record](evidence/round-08/GLOBAL-DISCOVER-RULES-2026-10-03.md)
+for exact rule paths, input pins and blocking verification. W3 source stays KEEP_D92.
+
 ## 2. Minimal current-context route
 
 Read `AGENTS.md` first, then its mandatory bootstrap and exact capability locator
