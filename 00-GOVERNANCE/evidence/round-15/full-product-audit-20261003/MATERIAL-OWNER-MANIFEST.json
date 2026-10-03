@@ -1,0 +1,3376 @@
+{
+  "state": "ASSIGNED_NOT_READ_OR_IMPLEMENTED_BY_THIS_MANIFEST",
+  "scope": "185 direct references at recovered-input snapshot, plus complete corpus responsibilities in MATERIAL-OWNER-CONTRACT; not the full universe count",
+  "source_sha256": "23380ad9008228df72f5890e98f9e72eb7aff25928c9c0a478cd2c264382f2b0",
+  "owner_counts": {
+    "C3+C5": 32,
+    "F": 80,
+    "C2": 2,
+    "C1": 1,
+    "C4": 70
+  },
+  "materials": [
+    {
+      "material_id": "MAT-4930358b61a208672570",
+      "display_name": "已粘贴的文本.txt",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-4ee9c0716271abed"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-aede7f76f3f74200b811",
+      "display_name": "codex-clipboard-4843c79a-4ba1-4f0b-bbcf-a9833589d3eb.png",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-3b48af1b76d058ee"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-dae8a87d79470879817e",
+      "display_name": "developers.openai.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-19e3826d2c42c7bc",
+        "INPUT-7fb51eb3658f8e78"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-c272fa6faf4691de0d32",
+      "display_name": "learn.chatgpt.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-19e3826d2c42c7bc",
+        "INPUT-7fb51eb3658f8e78"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-49e8d0577a5e1f9d20fd",
+      "display_name": "developers.openai.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-19e3826d2c42c7bc",
+        "INPUT-7fb51eb3658f8e78"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-48e40655dc1112eb2fa3",
+      "display_name": "learn.chatgpt.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-19e3826d2c42c7bc",
+        "INPUT-7fb51eb3658f8e78"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-803acf44becc0ece0309",
+      "display_name": "learn.chatgpt.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-19e3826d2c42c7bc",
+        "INPUT-7fb51eb3658f8e78"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-bcdc9e36ce977a30506c",
+      "display_name": "codex-clipboard-be01e326-ae42-4b6c-ba8e-784c35b8205f.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-9f47fccfbb2aabb6"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-4ef0ac9079c11fd0a584",
+      "display_name": "codex-clipboard-e60ab31a-e7da-46b9-b132-d176b30a6574.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-9f47fccfbb2aabb6"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-b2a103ea17b072613ed8",
+      "display_name": "chatgpt.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-c6fa62b8506cb813"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-6908722518dcaf3c69b3",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-4d01e041ba99f3c2"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-611e914f84240d561b36",
+      "display_name": "research.google.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-6d5d5377245a1c04"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-7f355a35ccb1c73e01a5",
+      "display_name": "codex-clipboard-0249c0f9-b2de-4b90-92fd-328bd78bed5a.png",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b794217772130cb5"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-6642468820bda55c1e7e",
+      "display_name": "colab.research.google.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b794217772130cb5"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-0ddcb00f94ecb9b0878d",
+      "display_name": "github.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-0ddcb00f94ecb9b0"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-c925bf9f9d9b6b749704",
+      "display_name": "colab.research.google.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-5d82b7edc914454d",
+        "INPUT-ea08d1001e8b0c71"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-385a45571dc0e0b9de01",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-9ad9f42fc95b34d8"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-7dc8a40479f000840acb",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-597cf45812f1c498"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-f58cafc2eaf87429f898",
+      "display_name": "1-LUMENIS_1645_for_Codex.txt",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-4afc2664605c33bf"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-0b298e1eadc440cef6d8",
+      "display_name": "www.kaggle.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-f64112dfe4ff8104"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-195f5a5ce90ef3acb580",
+      "display_name": "github.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-4262d0bedb3cf85a"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-fce143e34a6b9e29e00b",
+      "display_name": "LUMENIS_AI_capability_audit_20261003.txt",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-42fa58736a561806"
+      ],
+      "primary_owner": "C2",
+      "thread_id": "01a0f9c7-90ef-7b33-a3d7-9a0936c8d9c7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-ddc04a6413a661b4e73b",
+      "display_name": "codex-clipboard-a23b4d18-a37f-4be3-9aa9-7a078f649dcc.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-2cef2020468cd986"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-7a7e457d26b9e0e0f1ef",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-79caacdc1123ec25"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-4496174e13b24257ffcc",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-bbda1e5a35aeb93a"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-58077a8f47c36daeb46b",
+      "display_name": "2-照片-2.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-bbda1e5a35aeb93a"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-9099e42f67bafd846d06",
+      "display_name": "3-照片-3.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-bbda1e5a35aeb93a"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-be03a3c5875d3350fa92",
+      "display_name": "1-LUMENIS_20261003_1440_Report_for_Codex.txt",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-df1a8fac7c3c8560"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-265eaba773a248f1e7f0",
+      "display_name": "1-声音识听_中英韩与音乐情绪_Codex接入增补.md",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a1392bc9c19fbdff"
+      ],
+      "primary_owner": "C2",
+      "thread_id": "01a0f9c7-90ef-7b33-a3d7-9a0936c8d9c7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-1920ca4b3a892736925d",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-fbfea6a9c0ef2bd4"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-02838ae7dbd9813fb04b",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-c8ea68860fd0ef9f"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-e1948614159a6d13fd93",
+      "display_name": "codex-clipboard-533e3144-8e10-48d8-9808-24c51074ced0.png",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-824a6a0304a98732"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-e04256a687f066baf184",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-f6ec1e0f4e22bcb8"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-49d040980136f01b4f74",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-5af4375cdc3c5abd"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-ee1a6badfeedaa4d3870",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-216936eec62ac4c0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-ce668c24b3193b41b8ee",
+      "display_name": "20261003-1238-22.9468452.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-90a68f15b1bb64d9"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-0592974d1ee08d831e5c",
+      "display_name": "NEW-WINDOW-HANDOFF-2026-09-23.md",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-cc71132223ae41ea"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-c64387ba621c368c774c",
+      "display_name": "127.0.0.1:64252",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-185c55b46d4a6450",
+        "INPUT-e63ab7f5eca720b8"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-4eb559b057ff77a2e6a3",
+      "display_name": "codex-clipboard-28504089-65c0-4dc0-964d-b37e724e0b0e.png",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-7b0877f4b8b75bf2"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-8df0f5e2bec226c2ae55",
+      "display_name": "1-AI_Native_Product_Development_Constitution_Light_v1.0.md",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-d2543eda0b7980d4"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-d9ab37705ebac0472343",
+      "display_name": "2-AI_Native_Product_Development_Constitution_Light_v1.0.docx",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-d2543eda0b7980d4"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-6ca660566fd1192a462a",
+      "display_name": "127.0.0.1:53764",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-6bc82661b1ad26c2",
+        "INPUT-d00b75b315831591",
+        "INPUT-f0187fc52866dbbc"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-2cabf33d4ccf2c23f825",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-aca0655e7028ba49"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-4e506e478af9b372a182",
+      "display_name": "xhslink.cn",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-aca0655e7028ba49"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-9467408fdf07d584fc5b",
+      "display_name": "已粘贴的文本.txt",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-39b6cf2d31515d8d"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-a1c519a3173cc7fdcb3a",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-449e0c2f79a48c7c"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-62d1efda2178da4ca067",
+      "display_name": "pan.baidu.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-518b7b18a8b21933"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-08edcb66ff7342f67cca",
+      "display_name": "已粘贴的文本.txt",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-96abcf38d2e98a4c"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-fe73368d6d8476adc821",
+      "display_name": "codex-clipboard-3b1cf16c-a29e-4088-bd2d-3361bdc642ab.png",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-29d6577ff0bbd0a3"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-49e7add2e7066c962444",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b1e2b6aa6d375675"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-07bca125ffe0b8577ac7",
+      "display_name": "20260927-0305-06.2747994.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-f24d57d154f74e09"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-35a819477aed1fea4e19",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-d914ad05d04ad32f"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-396118ed2ec7120bf49b",
+      "display_name": "2-照片-2.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-d914ad05d04ad32f"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-c20fcdba36a88bf7f518",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a9cdaf7316eb60ee"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-098cc354da0387a421e4",
+      "display_name": "2-照片-2.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a9cdaf7316eb60ee"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-f866a850c240067a1ae4",
+      "display_name": "3-照片-3.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a9cdaf7316eb60ee"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-42698d56397ba0b720b5",
+      "display_name": "已粘贴的文本.txt",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-44d5ada122b1547b"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-43c5f8862919fa084917",
+      "display_name": "127.0.0.1:53764",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-3ca5797d35d5ec4a",
+        "INPUT-44d5ada122b1547b",
+        "INPUT-741cf3e95e268c39",
+        "INPUT-7f917d89783b6592"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-2ef3de046762974cb15e",
+      "display_name": "codex-clipboard-19e0d802-2314-48fb-8ca9-03e40567ba2b.png",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-ccbbbb3a19ad46fa"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-c3e02152487700c7eec0",
+      "display_name": "能力.docx",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-52c93633879f1b49",
+        "INPUT-dbc52cdaf02996dd"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-146e6c3eded2871d46de",
+      "display_name": "已粘贴的文本.txt",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-faa2863d76f224c7"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-18b583af52a5688b6e0e",
+      "display_name": "补充需求.docx",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-643e0cf9dee62f3b"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-64b0ce1d3e0a4c841dc0",
+      "display_name": "104101b8322c3blr87k06jpmq2gjp800000000072sgo2m.zip",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-5fad45da6d28b5b3"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-e673ca712815a2d7bd22",
+      "display_name": "chatgpt.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-1734d4e7a6286bec"
+      ],
+      "primary_owner": "C3+C5",
+      "thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-17292913ca8f39c6ed0e",
+      "display_name": "LUMENIS_采集开源组件对比与商用接入评估_20260929.docx",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-0ad020ea754562e8"
+      ],
+      "primary_owner": "C1",
+      "thread_id": "01a0f86f-6435-78d0-8e48-522e2ca09ca2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-6dc2ce330467fde1947a",
+      "display_name": "09cfeb50338b6e6576b85d3f6b84628a.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-9342eba4a4484ba3"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-8e5df635065c014c3df5",
+      "display_name": "codex-clipboard-c160c2e3-fcff-4c31-a109-455a2ce87131.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-9342eba4a4484ba3"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-900742d3489374af160a",
+      "display_name": "codex-clipboard-975d9889-121c-4ad3-a8e5-3593be7f071a.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-9342eba4a4484ba3"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-613c91dc60430377a9de",
+      "display_name": "codex-clipboard-baa694d6-9b2d-437f-827f-88e1d18a84ce.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-9342eba4a4484ba3"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-f32e9edc4b9b6f96b11e",
+      "display_name": "codex-clipboard-90770872-cf5c-40d5-be79-68ad923e5e7d.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-9342eba4a4484ba3"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-68505196d281a67e6cac",
+      "display_name": "ff13000d9780cd5e4afca00af6556905.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-7640cb66fa44a8c2"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-edaaa917632603429752",
+      "display_name": "63ec6626fb6aca589c2071ef8d0caf06.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-7640cb66fa44a8c2"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-8e44a82d65346a298682",
+      "display_name": "codex-clipboard-52287941-f787-4c4c-8ae8-8b444fafe1ed.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-7640cb66fa44a8c2"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-dac7b7545d487f560a99",
+      "display_name": "codex-clipboard-e60ecbeb-5191-45e8-afa4-72b04ac71c35.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-7640cb66fa44a8c2"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-6933a22d583f97afcdb4",
+      "display_name": "codex-clipboard-884c1c4b-eeb1-4c0a-83e9-6731ccf7746e.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-7640cb66fa44a8c2"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-3ab8c5bab20b996a1902",
+      "display_name": "codex-clipboard-48e3c867-f7f7-433f-b1a1-c4deed4b47fe.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-7640cb66fa44a8c2"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-fe2e44e81c93759dced8",
+      "display_name": "codex-clipboard-cc56d188-82cd-4085-ae25-3bf0a3fa2f13.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-7640cb66fa44a8c2"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-d46fd484da694a40a01c",
+      "display_name": "codex-clipboard-a184aa9e-5696-4353-a794-69c0595cd392.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-7640cb66fa44a8c2"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-238e54a5bb84c5ad0a8f",
+      "display_name": "xhslink.cn",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-047e8d1f270704e6"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-77fe21027a520bf32326",
+      "display_name": "xhslink.cn",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-047e8d1f270704e6"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-c88013e1dd3b9ddc52b1",
+      "display_name": "xhslink.cn",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-047e8d1f270704e6"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-880c22374fb40cf248bf",
+      "display_name": "xhslink.cn",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-047e8d1f270704e6"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-49c96c2ece90b38897cf",
+      "display_name": "xhslink.cn",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-047e8d1f270704e6"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-b8882fef7abe2c6a1e18",
+      "display_name": "f17b987d8584bb13b649187a9f5652f3.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-28b77784c77bf801"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-0518a628a8cde3bb652c",
+      "display_name": "3e1067660c7223875e207df7661645e5.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-28b77784c77bf801"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-93f5e03f5ea196cd2339",
+      "display_name": "20260924-0428-28.8331232.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-d00b75b315831591"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-fdad02c42ef6be8ee350",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-9c537ab9f767f096"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-580f442657b77e403256",
+      "display_name": "2-照片-2.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-9c537ab9f767f096"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-5445773926b5a3cff227",
+      "display_name": "e2a26878d16692c631136aeaef302e97.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-27af2f76d9e48df1"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-0b11533c4dec77d44a54",
+      "display_name": "codex-clipboard-d06308c6-b9a4-43a3-a259-cfec3ab61d7b.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-e1cc15dd10600ff9"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-d5c9193ab4e9c78ee49c",
+      "display_name": "127.0.0.1:54566",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-bc4a1f370b82b71a"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-d7d4bac6d33fa0eb57e9",
+      "display_name": "127.0.0.1:8201",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-3e6537676ac141fc",
+        "INPUT-5121cbdecb70c1bd"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-66d0ef32dcf3c69bcc47",
+      "display_name": "2601473a2d645d6250caede43c3486a6.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-0fd58b641065c97d",
+        "INPUT-75654cd9aa7afb62",
+        "INPUT-c15189e1a6dfcc79",
+        "INPUT-ebe306ff834cb4c4"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-59ad741d79aab5695fe3",
+      "display_name": "cb55b77feb25668ebdaea62e177adf1b.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-0fd58b641065c97d",
+        "INPUT-75654cd9aa7afb62",
+        "INPUT-c15189e1a6dfcc79",
+        "INPUT-ebe306ff834cb4c4"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-e30f90a704972da60d02",
+      "display_name": "28346dd9b6cbda22c59a9f13c6757b1b.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-0fd58b641065c97d",
+        "INPUT-75654cd9aa7afb62",
+        "INPUT-c15189e1a6dfcc79",
+        "INPUT-ebe306ff834cb4c4"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-374ea563cb678ed43957",
+      "display_name": "28d5aca3aaba2851b9a0f24f5c49f039.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-0fd58b641065c97d",
+        "INPUT-75654cd9aa7afb62",
+        "INPUT-c15189e1a6dfcc79",
+        "INPUT-ebe306ff834cb4c4"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-f32b2f2c28f51b8f66f7",
+      "display_name": "a700b33f084a1601c9c98e5d5dc52264.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-0fd58b641065c97d",
+        "INPUT-75654cd9aa7afb62",
+        "INPUT-c15189e1a6dfcc79",
+        "INPUT-ebe306ff834cb4c4"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-09396f19ba8306006761",
+      "display_name": "codex-clipboard-034090fb-a960-498d-8b7a-7e77acfba9f7.png",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-73b165d60b270bb0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-2861f96f617d9bb7d560",
+      "display_name": "codex-clipboard-f483b3cb-d734-417e-9b63-624eb9cae258.png",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-73b165d60b270bb0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-4ddd85529a18ff803a1b",
+      "display_name": "codex-clipboard-69c7a0b3-d91e-49bd-9b4a-82ab36824159.png",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-73b165d60b270bb0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-73efa451c9a321ab2b28",
+      "display_name": "codex-clipboard-4596fd97-40f4-458f-b6c9-d32ea50f90cc.png",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-73b165d60b270bb0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-57bb6503b2487f141d93",
+      "display_name": "codex-clipboard-8758b649-e774-44bf-9c30-fa30fc9a59d3.png",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-73b165d60b270bb0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-7a6584a0c5f39edd6352",
+      "display_name": "codex-clipboard-c2e88fdb-c74e-454e-b78a-66780aea4235.png",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-73b165d60b270bb0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-e33c98240babef9054d1",
+      "display_name": "www.xiaohongshu.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-73b165d60b270bb0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-63650499b226e1be5507",
+      "display_name": "www.xiaohongshu.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-73b165d60b270bb0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-9abd7a008a8414f36bb7",
+      "display_name": "www.xiaohongshu.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-73b165d60b270bb0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-31054d9199213e0a7fef",
+      "display_name": "www.xiaohongshu.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-73b165d60b270bb0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-40d085555f07f2d380bc",
+      "display_name": "www.xiaohongshu.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-73b165d60b270bb0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-5b96f0df424a37ddca94",
+      "display_name": "www.xiaohongshu.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-73b165d60b270bb0"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-10b29f5e360b8c01bc63",
+      "display_name": "codex-clipboard-0e836c17-4f55-474d-9f26-37a003adcb23.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-cda8f5818509acc5"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-25145c368d661a159421",
+      "display_name": "xhslink.cn",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-cda8f5818509acc5"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-03144d7f87a70e0ccc18",
+      "display_name": "codex-clipboard-2be437e4-e81b-43dc-a668-ac646591ab9b.png",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-009516a653c4fa55"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-2ec202fa02d6affb5811",
+      "display_name": "20261003-0145-11.4767587.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-f51631736e5691fc"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-04e54d1ecf07b4b29705",
+      "display_name": "127.0.0.1:8201",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-4beb05b416a0e5d5",
+        "INPUT-75654cd9aa7afb62"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-1c82c266148c9b76a820",
+      "display_name": "1-照片-1.jpg",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-e0891cec3de5575f"
+      ],
+      "primary_owner": "F",
+      "thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-d3ee5adb7ef278931e08",
+      "display_name": "BUSINESS-DRAFTS.md",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-1430339c511aac8a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-4434fcee9c5c7c9872b8",
+      "display_name": "GTA-25-WINNERS.pdf",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-723118f649dfebdfdbc7",
+      "display_name": "prodigious.fr",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-33605901c0a4fb613883",
+      "display_name": "vimeo.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-47f5eb600c418ce4ff31",
+      "display_name": "factory.uk.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-78a3f5b969400eec8107",
+      "display_name": "vimeo.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-a27de37f9d1c8e5c5e48",
+      "display_name": "revolver.ws",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-d96279d6b55bb8bfd7b8",
+      "display_name": "vimeo.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-12970acd810ead01063d",
+      "display_name": "featured.avsquad.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-35fe1d4e16a823b25f37",
+      "display_name": "thesilkfactory.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-7942070993289b6bca63",
+      "display_name": "distrib.pyramidefilms.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-442efddee0537ca232cb",
+      "display_name": "metrofilms.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-273a579f5c07875a01b9",
+      "display_name": "www.condor-films.fr",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-2fac1b4ba5551e9b2cf0",
+      "display_name": "www.netflix.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-5ab0164cd48a944f1f90",
+      "display_name": "wellgousa.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-582c687a4e8be7ffe724",
+      "display_name": "www.netflix.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-d908c16d73ddd6043196",
+      "display_name": "france.publicisgroupe.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-4f5c68677cf6fa812909",
+      "display_name": "bienvivreledigital.orange.fr",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-bd224ac6ba5621ea2027",
+      "display_name": "lions.prowly.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-04b76b2e07494fa1100a",
+      "display_name": "www.canneslions.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-d0ced2a8d45f823aecb3",
+      "display_name": "www.geretyawards.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-e942e2a2be69f23bd6a0",
+      "display_name": "revolver.ws",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-ee3348fa5d5ec1df296a",
+      "display_name": "www.canneslions.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-05032ee8846e5fc209fe",
+      "display_name": "www.channel4.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-ebd7abf0e9de007fb8be",
+      "display_name": "factory.uk.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-0ca01b68c1464ac3b0cc",
+      "display_name": "www.canneslions.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-c0ae113caad23077923e",
+      "display_name": "www.thecalmzone.net",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-c4d8a382852d37d6dfce",
+      "display_name": "www.oneclub.org",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-14f95da9526900413b7c",
+      "display_name": "stream.sydneyoperahouse.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-8a7e3fba7db1688fc617",
+      "display_name": "clios.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-acda8e355273a514593e",
+      "display_name": "featured.avsquad.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-2ef9f258a8d7518d65b8",
+      "display_name": "player.vimeo.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-423874926ae97280bde7",
+      "display_name": "clios.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-55e0935c806704ea8cf7",
+      "display_name": "goldentrailer.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-2e1b99b06d2f0fba285b",
+      "display_name": "player.vimeo.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-878d1c971303becf57e0",
+      "display_name": "vimeo.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-0d8a81194e59a2e91a40",
+      "display_name": "www.festival-cannes.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-fe4c996bbd12841f8061",
+      "display_name": "offscreencentral.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-5d5f064e9a6ac180b200",
+      "display_name": "www.hammertonail.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-bf574c1ff110f1d20ca8",
+      "display_name": "www.festival-cannes.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-e878556ed67e5c2d2029",
+      "display_name": "www.asoundeffect.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-e92c4a7c7194c9b04bf0",
+      "display_name": "www.festival-cannes.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-20c724402282045bbfb7",
+      "display_name": "a-rabbitsfoot.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-25c63425b9befb9bb6cc",
+      "display_name": "www.bilibili.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-b0dfba64e1a67a6dd287",
+      "display_name": "www.adobe.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-66d403833c9322e1a8c9",
+      "display_name": "www.adobe.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-48e9cb4c820a6613d8a4",
+      "display_name": "www.adobe.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a66387554a06dc7a"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-d5d3c1de3cb601c2aaac",
+      "display_name": "source`; all 12 match the manifest. The originals are `v0200f840000bf64e8l8n75spf1ktahg.MP4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a58a1e1892e6f8c9"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-76597e7cf298be9e24b8",
+      "display_name": "mist-next-step-demo-v2.mp4",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-a58a1e1892e6f8c9"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-605be0e860210acbebe1",
+      "display_name": "www.nist.gov",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-804e7e98718936d7"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-3abbb75464e3073847d9",
+      "display_name": "api.dart.dev",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-7d7b11384df8ad28"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-61ce3781b5b9d523867a",
+      "display_name": "pub.dev",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-7d7b11384df8ad28"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-22154168f0c84a8b52e1",
+      "display_name": "codex-clipboard-9f8f90b0-1616-40b1-a698-73010d69a80f.png",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-cc7317a73056b0d1"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-2d25d287d25613683226",
+      "display_name": "www.rednote.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-60e5925af5376060",
+        "INPUT-c2b4d4e7b19e2286",
+        "INPUT-cc7317a73056b0d1"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-8dd71ea57997b01136dc",
+      "display_name": "ENGINE.md",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-cffa0123d92a346c27d7",
+      "display_name": "LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": true,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-02af6466ca2d0662da6f",
+      "display_name": "README.md",
+      "kind": "local_file",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": false,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-7045bc2ab78a11966871",
+      "display_name": "github.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-c88202302a4a73675123",
+      "display_name": "github.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-ab7ab67946638c948650",
+      "display_name": "github.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-a8d66dece6865cd1a07e",
+      "display_name": "github.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-8940f535c364b9998353",
+      "display_name": "github.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-13441365718711d6c180",
+      "display_name": "github.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-f813f828f89a50ee4eb9",
+      "display_name": "github.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-2db5f9f53b75cff86e8a",
+      "display_name": "github.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-c10d8f74eadd9334181e",
+      "display_name": "github.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-97b6285387d7e0bb38ea",
+      "display_name": "github.com",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-30f78a76e54562461eb4",
+      "display_name": "docs.pytorch.org",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-66f62e51b7d0ec4353b5",
+      "display_name": "docs.pytorch.org",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    },
+    {
+      "material_id": "MAT-6daf0b824aa43b515f10",
+      "display_name": "docs.pytorch.org",
+      "kind": "url",
+      "corpus": "user_reference",
+      "original_locator": "work/m-controller-20261003/requirements-recovery/ALL-MATERIAL-REFERENCES.jsonl",
+      "source_input_ids": [
+        "INPUT-b39ae77d24a8aab5"
+      ],
+      "primary_owner": "C4",
+      "thread_id": "01a0f870-7e23-7513-9234-0af1183faea2",
+      "supporting_owners": [],
+      "owner_obligation": "Own intake, resolve original intent, read/research applicable content, implement through canonical capability owner, prove outcome; transfer only after receiving-owner ACK.",
+      "status": "ASSIGNED_INCOMPLETE",
+      "local_exists_at_snapshot": null,
+      "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
+      "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL"
+    }
+  ]
+}

@@ -372,3 +372,21 @@ and official product/support/release material remain traceable to actual changes
 M corrects narrowed rules and carries detected bugs through the existing owner
 to a verified repair; an audit finding alone is not resolution. This does not
 resume paused product windows or authorize paid resources.
+
+## 11. Active material accountability and missing-entry requirements
+
+The Product Owner moved ongoing video/material audit work to its existing outcome
+windows. Use [Material Owner Contract](evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-CONTRACT.md)
+and [per-reference manifest](evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-MANIFEST.json)
+as evidence and lookup, not another authority. F/C4 own their complete reference
+corpora; C3+C5 owns cross-material intake/transfer until a receiving Owner ACKs;
+C1/C2/C6 own their respective data/AI/runtime inputs. Every recovered and newly
+discovered item gets a primary Owner; unread/missing remains an obligation.
+M finishes rule/completeness acceptance, not another central full-corpus audit.
+
+Retained video/podcast timeline horizontal interaction maps to C4/F/C6 and J5/J6,
+U14/U15/U23. Developer mode maps to existing SYSTEM settings/security/runtime,
+C6/F and U22/U24/U25; source settings_module.py still registers its flag and routes
+through app.py. The Product Owner now marks developer mode DEFERRED_BY_USER; preserve its
+requirement and source but do not implement or make it a current closure blocker.
+Actual AI training is P0 ready execution under C2/C6, retaining all other C scope.

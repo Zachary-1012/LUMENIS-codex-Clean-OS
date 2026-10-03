@@ -1072,3 +1072,29 @@ The design review records pass/fail per screen in `contracts/experience/screen-s
 4. Keep the design blueprint, binding registry and implementation state separate: the blueprint says how a verified task should work; the binding registry says where truth and authorization come from; tests/runtime evidence say whether implementation works.
 5. Complete visual regression only after live binding and action behavior pass. Review each applicable screen in Web Workspace, Desktop, tablet and Mobile Companion contexts with realistic long text, missing data and permission denial; review Public Website pages against their separate commercial-entry contract.
 6. Treat audit/taskbook sketches, screenshots, prototypes and Figma output as references with status `DESIGN_EXPLORATION`. If code follows one of those artifacts without a current `DESIGN_READY` specification, or reproduces its repeated frame as a generic template, the Sol acceptance decision is `REWORK`.
+
+## 37. Scrollable editing timelines and deferred developer-mode record
+
+The Product Owner explicitly requires a usable horizontally scrollable timeline
+in BOTH video editing and podcast/audio editing. It is a necessary editing
+interaction, consistent with no unnecessary page-level vertical scrolling.
+Reuse the one Timeline/Artifact owner; do not create a separate audio timeline
+truth. Mouse/trackpad, visible draggable horizontal scrollbar, touch/pen and
+keyboard must have real reachable pan/seek paths as appropriate to the device.
+Synchronize time ruler, clip/segment positions, overlays and all tracks; preserve
+zoom anchor, selected clip, playhead and return context. Distinguish scrolling
+the viewport, seeking playback, moving a clip and resizing the track region.
+Long projects can reach both ends without clipping; dense tracks may scroll
+vertically within their own necessary region. Panning alone never changes
+project duration, clip positions, audio mix, source refs or saved versions.
+
+Developer mode remains a retained historical SYSTEM capability. The Product
+Owner explicitly deferred it after raising the missing entry: DEFERRED_BY_USER,
+not a current implementation task or closure blocker. C6 retains the backend/
+security record and F the eventual UI ownership; do not enable legacy execution
+or erase its history. Resume it only under a later authorized priority change.
+
+These requirements apply to the appropriate operational surfaces with deliberate
+desktop/touch recomposition. Website explains actual available abilities; it
+does not pretend to execute the local developer tools. Implementation and actual
+pan/seek/reopen evidence remain separate from this rule publication.

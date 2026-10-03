@@ -1159,3 +1159,45 @@ variants and accessible relevant login pages. Maintain an explicit URL universe,
 actual retrieval/read coverage and adaptation decisions. Authentication, robots,
 access denial and missing pages remain real gaps, not permission to bypass or
 silently sample. Index/navigation/category review alone is incomplete.
+
+## Execution completeness and retained-material acceptance — 2026-10-03 closeout
+
+For every unretracted user requirement and supplied material, retain its original
+source, main/supporting Owner, interpretation and later corrections, C/R/J/U and
+surface mapping, research/adoption state, implementation path/version, actual
+normal outcome, failure/recovery and remaining blocker. Assignment or storage
+does not mean read, frame-reviewed, implemented or accepted. No silent omission,
+summary-based scope cut, arbitrary sample cap or unacknowledged transfer is valid.
+Material corpus completeness is checked against the recovered source inventory,
+including missing and second-level references, not only today's direct URLs.
+
+Accept a complete C outcome only when the promised normal job works with real
+permitted inputs, task/material/scope/budget/versions continue across research,
+decision and production, the actual effect/result is evidenced, saved artifacts
+can be located/revised/exported/reopened where promised, and meaningful interruption,
+revocation/denial/cancellation/restart paths pass. Every promised interface/device
+is included. Honest UNAVAILABLE remains an unfinished capability, not a substitute
+for the normal path. Required shared contracts and existing gates stay blocking;
+reuse valid same-content evidence and do not rerun unrelated tests just to count.
+
+Video AND podcast acceptance includes actual horizontal timeline interaction,
+pan/seek separation, ruler/track synchronization and unchanged project truth under
+view-only panning. Developer mode is DEFERRED_BY_USER and is not a gate for this closeout; retain
+its source/Owner and revisit only when later authorized. Its deferral does not
+defer timeline interaction, research ownership or the other agreed capabilities.
+
+AI training acceptance requires the approved actual model/data/resource route,
+optimizer steps/loss, durable checkpoint, reload/resume and independent held-out
+results before Gateway/business quality and controlled promotion. Cached weights,
+CPU simulations, tests, recipe/manifest presence and rented GPU time are not
+training. Ready local prerequisites precede billing; record first-step evidence,
+actual cost and failure stop/recovery. Whole corpus review is not a prerequisite
+for the already approved training-pipeline inputs or unrelated business work.
+
+At convergence verify the exact integrated source/runtime/model/build/DB identity,
+required same-SHA hosted gates, four-surface continuity and recovery/rollback.
+Product Owner repeat operation remains the final human gate after engineering is
+ready; research, technical proof, USER_VERIFIED, RELEASED and OPERATING are separate.
+M checks completeness once per full outcome, owns necessary cross-owner repairs,
+and receives complete results/necessary decisions/urgent risks rather than every
+function or ordinary research progress message.

@@ -140,3 +140,7 @@ F owns the existing BMP-08/workbench/player interface and affected tests; W4
 owns media processing, W5 source/Evidence/Artifact lineage and W6 shared binding,
 runtime and publication. This decision adds no backend, endpoint, store or model.
 The older podcast read remains blocked wherever its real scope/lineage is absent.
+
+## Audio timeline panning completeness — 2026-10-03
+
+Podcast/audio editing must satisfy Experience §37 through the existing shared Timeline owner. Horizontal panning, actual audio seek/playhead, segment selection, zoom anchor and long-episode endpoints must work without forcing page-level vertical travel or corrupting segment/source positions. Reopen/Return retains the appropriate viewing context. F owns the viewport, C4 owns actual audio behavior, C6 integration; an existing video scrollbar cannot alone accept podcast behavior.

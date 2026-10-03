@@ -1096,3 +1096,36 @@ Large code volume, many files, long tests or context size are not themselves blo
 The approved experience surfaces are Public Website, Web Workspace, Desktop App and Mobile Companion. Do not freeze their implementation status in this router: inspect the current `origin/main`, protected local `app/` and `website/` work, active routes, builds and real runtime evidence separately. Local-only source must not be reported as absent, while a page file or build must not be reported as an accepted product surface. Binding contracts live under `contracts/experience/`; `experience_runtime.py` provides the API/ViewModel boundary and `lumenis_app_api.py` provides JSON APIs.
 
 A launch shell, route, contract, generated Web target or provider registration does not establish an end-to-end product workflow. Operational surfaces must bind real Product Core/API, Canonical Data, Evidence, Permission and Evaluation behavior before they can be described as complete.
+
+### Latest closeout routing — research belongs to outcome owners
+
+The Product Owner directed M to stop an unending central audit, finish the unique
+rules and complete-outcome acceptance contract, publish them online/offline and
+ensure every supplied document/video/research item has an accountable owner.
+F owns the full historical UI/UX/AIGC video/reference audit; C4 owns editing,
+podcast and audiovisual-method material, using already reviewed frame coverage.
+C1/C2/C3+C5/C6 own their named research/capability materials. The dated
+`00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-CONTRACT.md`
+and its manifest are traceability/handoff evidence under the existing Source
+Owner Index, not a new execution queue or product authority. No item is dropped
+because it is unclassified, old, missing, shared or outside a short summary.
+
+AI training is the first ready execution priority: close the actual local
+material/signing/runner/checkpoint prerequisites before paid GPU time starts,
+then execute the approved model path directly. Do not await all corpus research,
+reselect unchanged hardware/model or substitute a CPU demo for real training.
+Paid-resource reactivation still requires the existing actual cost approval;
+the released instance is not a running lease. Other independent capabilities
+and collection/entity growth proceed when their execution is authorized.
+
+After rule synchronization, configure current non-frontend LUMENIS windows as
+GPT-6.1 Sol / max per the user's latest request; F retains its current manual
+selection. M is included. Preserve global defaults and report actual control
+results; no silent fallback or unverifiable claim that a model executed.
+Research/bug repair uses current relevant GitHub and frontier evidence to choose
+the best complete method, then one coherent outcome implementation and directly
+affected verification. Keep one current outcome manifest, archive superseded
+alternatives without losing unique valid work, and do not pile up unrelated
+candidates/tests/reports. M ensures a found bug reaches repair, not another
+round of user reporting. Current material ownership and acceptance remain
+binding through every handoff, model change and compaction.

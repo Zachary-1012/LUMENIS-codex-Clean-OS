@@ -399,3 +399,11 @@ Tests/staging 必须显式使用 isolated/disposable DB；任何 persistence 变
 UI/UX/AIGC均升级，女孩手绘水彩风格进入前端，保留丰富有用交互，非必要不
 纵向滚动。最优解指实现方法的准确、有效、快速，不能缩能力换方便。具体要求
 归AGENTS、Experience和Owner Index；其他产品窗口仍暂停，GPU不重租。
+
+### 当前收口与材料责任（2026-10-03）
+
+M收规则和完整成果验收；视频由F/C4接续，全部资料由对应窗口负责，未读/缺件不删。
+[资料责任表及逐条清单](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-CONTRACT.md)。
+视频与播客都必须具备可实际滑动的时间轴；开发者模式按用户最新要求后置，保留来源/责任、不作为本次阻断项。
+AI训练列P0，先补实际本地依赖再启动获准算力；不等待全量研究。按用户要求规则
+同步后非前端窗口切GPT-6.1 Sol/max，前端保留手选；全产品开发暂停/审核仍区分。

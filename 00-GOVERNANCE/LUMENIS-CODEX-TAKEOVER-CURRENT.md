@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
-> Updated: 2026-10-03 — PRODUCT EXECUTION PAUSED_PENDING_PRODUCT_OWNER_REVIEW; M unifies rules and performs the full capability audit. C3+C5 placement is local; historical Cloud W3/W5 are handoff-only.
+> Updated: 2026-10-03 — M closes unique execution/completeness rules; reference audits move to accountable windows. AI training is P0; timeline panning is required; developer mode is deferred by the user. Global product pause/review is not silently revoked.
 > current HEAD = READ WITH git fetch + git rev-parse origin/main
 
 CI information correction (2026-10-02): M approved retirement of the obsolete
@@ -523,3 +523,32 @@ The current four-surface watercolor/visual/interaction direction is retained;
 existing content-generation business capabilities are evaluated separately under
 their own approved scope. The overly broad user-facing-generation interpretation
 in the immediately preceding Experience wording is corrected, not made a new task.
+
+## Latest user closeout and owner handoff — 2026-10-03
+
+The Product Owner directed M to stop an unending central audit and finish rule/
+acceptance synchronization. Video reference study is delegated to F and C4 with
+actual frame coverage; documents/research have primary Owners in the
+[Material Owner Contract](evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-CONTRACT.md).
+The per-reference manifest assigns the185 recovered direct references; full
+corpora and second-level/missing items remain required, not declared complete.
+The [video handoff](evidence/round-15/full-product-audit-20261003/VIDEO-OWNER-HANDOFF.md)
+preserves exact completed/partial/unread boundaries. No repeated audit/test is
+needed solely because another window takes responsibility.
+
+Source inspection: local SH-01 already has _timelineScroll, horizontal Scrollbar
+and SingleChildScrollView; this does not prove the user's running build can pan.
+F/C4 must close real video AND podcast interaction, following Experience §37.
+Developer mode was not deleted wholesale: settings_module.py retains its flag,
+execute/log endpoints and app.py registers the blueprint. The inspected Flutter
+settings path is appearance-focused without an explicit developer entry; C6/F
+retain the developer-mode source and responsibility, but its implementation is now
+DEFERRED_BY_USER and does not block the present closeout.
+
+AI training is the first execution priority once its actual local dependencies
+and resource approval are ready; do not wait for all research or restart hardware
+selection. No GPU was rented/restarted by this rule batch. After publication,
+current non-F windows are to be configured gpt-6.1-sol/max by the native control,
+with F's manual model retained; control results and ACKs are recorded separately.
+Newly delegated reference audit is authorized; this handoff does not silently
+resume all paused product development or accept any C outcome.
