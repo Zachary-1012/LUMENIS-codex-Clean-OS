@@ -181,11 +181,10 @@ def test_health_check_no_cookie_no_proxy(monkeypatch):
     # Point cookie path to a non-existent file
     monkeypatch.setattr(InstagramAdapter, "COOKIE_PATH", Path("/nonexistent/fake_ig_cookie.json"))
     hc = adapter.health_check()
-    assert hc.status == CollectionStatus.COLLECT_ERROR
-    assert "cookie" in hc.message.lower() or "Cookie" in hc.message
-    assert "代理" in hc.message or "proxy" in hc.message.lower()
-    assert hc.metadata["cookie_exists"] is False
-    assert hc.metadata["proxy_configured"] is False
+    assert hc.status == CollectionStatus.NOT_CONFIGURED
+    assert hc.metadata["worker_binding_registered"] is False
+    assert hc.metadata["login_and_collection_verified"] is False
+    assert hc.metadata["legacy_cookie_checked"] is False
 
 
 def test_health_check_ready(monkeypatch, tmp_path):
@@ -197,10 +196,10 @@ def test_health_check_ready(monkeypatch, tmp_path):
     adapter = InstagramAdapter(engine=MagicMock())
     monkeypatch.setattr(InstagramAdapter, "COOKIE_PATH", fake_cookie)
     hc = adapter.health_check()
-    assert hc.status == CollectionStatus.SUCCESS
-    assert "ready" in hc.message.lower()
-    assert hc.metadata["cookie_exists"] is True
-    assert hc.metadata["proxy_configured"] is True
+    # A local file/proxy cannot make a worker, consent or platform session ready.
+    assert hc.status == CollectionStatus.NOT_CONFIGURED
+    assert hc.metadata["worker_binding_registered"] is False
+    assert hc.metadata["login_and_collection_verified"] is False
 
 
 def test_health_check_cookie_missing_only(monkeypatch):
@@ -209,10 +208,16 @@ def test_health_check_cookie_missing_only(monkeypatch):
     adapter = InstagramAdapter(engine=MagicMock())
     monkeypatch.setattr(InstagramAdapter, "COOKIE_PATH", Path("/nonexistent/fake.json"))
     hc = adapter.health_check()
-    # proxy configured but cookie missing -> SESSION_EXPIRED
-    assert hc.status == CollectionStatus.SESSION_EXPIRED
-    assert hc.metadata["cookie_exists"] is False
-    assert hc.metadata["proxy_configured"] is True
+    assert hc.status == CollectionStatus.NOT_CONFIGURED
+    assert hc.metadata["worker_binding_registered"] is False
+
+
+def test_public_post_health_requires_real_document_read_without_worker():
+    adapter = InstagramAdapter(engine=MagicMock())
+    health = adapter.health_check(url="https://www.instagram.com/p/ABC123/")
+    assert health.status == CollectionStatus.NEED_VERIFY
+    assert health.metadata["provider"] == "public_native_post_document"
+    assert health.metadata["requires_auth"] is False
 
 
 # ---------------------------------------------------------------------------

@@ -182,7 +182,9 @@ def test_detail_keeps_verified_native_metrics_and_missing_values():
     assert native["share"] is None
     canonical = to_canonical_record(native, "bilibili")
     assert canonical["content_id"] == "BV1xx"
-    assert canonical["author_id"] == 456
+    # Raw Bilibili `mid` remains its native integer. Canonical author identity
+    # is exact text, matching opaque IDs on the other supported platforms.
+    assert canonical["author_id"] == "456"
     assert canonical["like_count"] == 11
     assert canonical["comment_count"] == 2
     assert canonical["collect_count"] == 5

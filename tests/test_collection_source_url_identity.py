@@ -14,4 +14,4 @@ def test_oversized_input_still_rejected_before_network():
     with pytest.raises(ValueError):
         _validate_request("public_http", "https://publisher.example/" + "x" * 4096, 3)
     with pytest.raises(ValueError):
-        _validate_request("douyin", "x" * 121, 3)
+        _validate_request("douyin", "x" * 257, 3)

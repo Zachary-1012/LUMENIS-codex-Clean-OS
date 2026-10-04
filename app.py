@@ -2020,6 +2020,7 @@ def persist_rednote_data(data, subject_hit_fn=None, *, acquisition_query=None):
                 'captured_at': n.get('captured_at') or datetime.now().isoformat(),
                 'detail_fetched_at': n.get('detail_fetched_at') or datetime.now().isoformat(),
                 'comments_collected': n.get('comment_count'),
+                '_lumenis_metric_observation_complete': n.get('detail_fetched') is True,
             }
             db.insert_note(note_data)
             persisted += 1

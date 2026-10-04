@@ -130,6 +130,18 @@ def insert_note(note_data, *, connection=None):
             'source_keyword': note_data.get('source_keyword','') or '',
             'matched_keywords': note_data.get('matched_keywords','') or '',
         }
+        # Some collection paths distinguish an incomplete detail read from an
+        # explicit source observation of an unknown metric. The former may keep
+        # an older measured value; the latter intentionally clears it. The
+        # marker remains caller metadata and is never persisted as a note field.
+        metric_observation_complete = note_data.get(
+            '_lumenis_metric_observation_complete',
+        ) is not False
+
+        def _should_write_metric(name):
+            return name in note_data and (
+                metric_observation_complete or vals[name] is not None
+            )
         # 数据质量软门（写入门接线，enrich 标记不丢弃=数据零丢失）：
         # 调用方未显式传 data_quality_status 时，自动用 DataQualityGate(note 契约) 校验并标记。
         # INSERT/UPDATE 分支已消费 note_data 的这两个字段，此处统一填充，零侵入各采集入口。
@@ -196,8 +208,10 @@ def insert_note(note_data, *, connection=None):
                 vals['source_platform'], vals['title'], vals['content'], vals['content'], vals['url'], vals['url'], vals['cover'], vals['cover'],
                 vals['author_id'], vals['author_id'], vals['author_nickname'], vals['author_nickname'],
                 vals['author_avatar'], vals['author_avatar'],
-                'likes' in note_data, vals['likes'], 'comments' in note_data, vals['comments'],
-                'collects' in note_data, vals['collects'], 'shares' in note_data, vals['shares'],
+                _should_write_metric('likes'), vals['likes'],
+                _should_write_metric('comments'), vals['comments'],
+                _should_write_metric('collects'), vals['collects'],
+                _should_write_metric('shares'), vals['shares'],
                 vals['note_type'], vals['xsec_token'], vals['xsec_token'], vals['publish_date'], vals['publish_date'], vals['is_taikoo_verified'], vals['verify_reason'], vals['verify_reason'],
                 pub_dt, pub_dt,
                 coll_at, coll_at,
