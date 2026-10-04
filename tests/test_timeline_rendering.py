@@ -3,6 +3,7 @@ import array
 from dataclasses import replace
 import json
 from pathlib import Path
+import struct
 import subprocess
 import sys
 
@@ -390,6 +391,33 @@ def test_cancellation_reaps_process_and_allows_a_fresh_attempt(tmp_path, monkeyp
     assert rendering._run([sys.executable, "-c", "pass"], cwd=tmp_path) == ""
 
 
+@pytest.mark.parametrize("phase", ["before", "during", "after"])
+@pytest.mark.parametrize("error_kind", ["permission", "os", "subprocess"])
+def test_callback_error_identity_survives_process_boundary(tmp_path, monkeypatch, phase, error_kind):
+    error = {"permission": PermissionError("access revoked"), "os": OSError("callback failure"),
+             "subprocess": subprocess.TimeoutExpired("callback", 1)}[error_kind]
+    processes = []
+    original_popen = subprocess.Popen
+    def launch(*args, **kwargs):
+        process = original_popen(*args, **kwargs)
+        processes.append(process)
+        return process
+    monkeypatch.setattr(rendering.subprocess, "Popen", launch)
+    checks = 0
+    def check_continue():
+        nonlocal checks
+        checks += 1
+        if checks == (1 if phase == "before" else 3):
+            raise error
+    script = "import time; time.sleep(5)" if phase == "during" else "pass"
+    with pytest.raises(type(error)) as caught:
+        rendering._run([sys.executable, "-c", script], cwd=tmp_path, check_continue=check_continue)
+    assert caught.value is error
+    assert len(processes) == (0 if phase == "before" else 1)
+    assert all(process.poll() is not None for process in processes)
+    assert rendering._run([sys.executable, "-c", "pass"], cwd=tmp_path) == ""
+
+
 def test_cancelled_render_cleans_new_work_and_preserves_previous(media, render_calls, tmp_path):
     previous = tmp_path / "previous.mp4"
     previous.write_bytes(b"previous verified output")
@@ -518,3 +546,224 @@ def test_actual_single_clip_render_retains_delayed_audio(timestamped_audio_sourc
         samples.byteswap()
     assert max(abs(value) for value in samples[:2400]) < 100
     assert max(abs(value) for value in samples[7000:14000]) > 1000
+
+
+def _font_with_cmap(subtable, *, collection=False):
+    """Minimal synthetic font directory, not a distributable typeface."""
+    prefix = struct.pack(">4sIII", b"ttcf", 0x10000, 1, 16) if collection else b""
+    cmap = struct.pack(">HHHHI", 0, 1, 3, 10 if subtable[:2] == b"\x00\x0c" else 1, 12) + subtable
+    header = struct.pack(">IHHHH", 0x10000, 1, 0, 0, 0)
+    directory = struct.pack(">4sIII", b"cmap", 0, len(prefix) + 28, len(cmap))
+    return prefix + header + directory + cmap
+
+
+@pytest.mark.parametrize("collection", [False, True])
+@pytest.mark.parametrize("indirect", [False, True])
+def test_caption_font_cmap4_respects_delta_range_and_missing_glyph(tmp_path, monkeypatch, collection, indirect):
+    # Two segments: A..B and the required sentinel. In the indirect branch B is missing.
+    subtable = struct.pack(">7H", 4, 36 if indirect else 32, 0, 4, 4, 1, 0)
+    subtable += struct.pack(">2HH2H2h2H", 66, 65535, 0, 65, 65535,
+                            1 if indirect else -64, 1, 4 if indirect else 0, 0)
+    if indirect:
+        subtable += struct.pack(">2H", 5, 0)
+    font = tmp_path / "synthetic.ttf"
+    font.write_bytes(_font_with_cmap(subtable, collection=collection))
+    monkeypatch.setattr(rendering, "CAPTION_FONT", font)
+    rendering._verify_caption_glyphs("A\n")
+    if indirect:
+        with pytest.raises(VideoEditingError, match="OVERLAY_GLYPH_UNAVAILABLE"):
+            rendering._verify_caption_glyphs("B")
+    else:
+        rendering._verify_caption_glyphs("AB")
+    with pytest.raises(VideoEditingError, match="OVERLAY_GLYPH_UNAVAILABLE"):
+        rendering._verify_caption_glyphs("C")
+
+
+def test_caption_font_cmap12_and_malformed_directory_fail_closed(tmp_path, monkeypatch):
+    subtable = struct.pack(">HHIII", 12, 0, 40, 0, 2)
+    subtable += struct.pack(">6I", 65, 65, 0, 0x1F600, 0x1F600, 7)
+    font = tmp_path / "synthetic.ttc"
+    font.write_bytes(_font_with_cmap(subtable, collection=True))
+    monkeypatch.setattr(rendering, "CAPTION_FONT", font)
+    rendering._verify_caption_glyphs("\U0001f600")
+    with pytest.raises(VideoEditingError, match="OVERLAY_GLYPH_UNAVAILABLE"):
+        rendering._verify_caption_glyphs("A")
+    for broken in (b"", b"ttcf", font.read_bytes()[:-2]):
+        font.write_bytes(broken)
+        with pytest.raises(VideoEditingError, match="CAPTION_FONT_UNAVAILABLE"):
+            rendering._verify_caption_glyphs("A")
+
+
+@pytest.fixture
+def installed_caption_runtime(timestamped_audio_source):
+    if sys.platform != "win32" or not rendering.CAPTION_FONT.is_file():
+        pytest.skip("caption profile requires its installed Windows font")
+    return timestamped_audio_source
+
+
+def _audio_packets(ffprobe, path):
+    result = subprocess.run(
+        [ffprobe, "-v", "error", "-protocol_whitelist", "file", "-format_whitelist", "mov",
+         "-select_streams", "a:0", "-show_packets", "-show_data_hash", "sha256",
+         "-show_entries", "packet=pts,dts,duration,size,data_hash", "-of", "json", str(path)],
+        capture_output=True, check=True, timeout=15, shell=False,
+    )
+    return json.loads(result.stdout)["packets"]
+
+
+def test_actual_caption_filter_is_literal_and_frame_bounded(installed_caption_runtime, tmp_path, monkeypatch):
+    ffmpeg, source = installed_caption_runtime
+    monkeypatch.setenv("LUMENIS_LOCAL_ASSET_DIR", str(source.parent))
+    asset = video_editing.fingerprint_local_media(str(source))
+    literal = "中文 English\n%{pts}:;[]'\\\nmovie=http://invalid.test/"
+    timeline = Timeline.from_assets((asset,), "16:9").add_caption(.201, .799, literal)
+    filters = rendering._overlay_filters(timeline, duration=1, width=320, height=180,
+                                         ffmpeg=ffmpeg, work=tmp_path)
+    assert (tmp_path / "caption-000.txt").read_text(encoding="utf-8") == literal
+    command = [ffmpeg, "-v", "error", "-nostdin", "-filter_threads", "1", "-f", "lavfi",
+               "-i", "color=c=black:s=320x180:r=30:d=1"]
+    output = ["-pix_fmt", "gray", "-f", "rawvideo", "pipe:1"]
+    baseline = subprocess.run(command + output, cwd=tmp_path, capture_output=True, check=True, timeout=15).stdout
+    captioned = subprocess.run(command + ["-vf", ",".join(filters)] + output,
+                               cwd=tmp_path, capture_output=True, check=True, timeout=15).stdout
+    frame_size = 320 * 180
+    assert len(baseline) == len(captioned) == frame_size * 30
+    for frame in range(30):
+        selection = slice(frame * frame_size, (frame + 1) * frame_size)
+        assert (baseline[selection] != captioned[selection]) is (7 <= frame < 24)
+
+
+def test_actual_caption_export_reopen_keeps_audio_and_duration(installed_caption_runtime, tmp_path, monkeypatch):
+    ffmpeg, source = installed_caption_runtime
+    monkeypatch.setenv("LUMENIS_LOCAL_ASSET_DIR", str(source.parent))
+    asset = video_editing.fingerprint_local_media(str(source))
+    timeline = Timeline.from_assets((asset,), "16:9")
+    timeline = timeline.add_clip(asset.asset_id, source_out=.5, audio_stream_index=1)
+    timeline = timeline.add_clip(asset.asset_id, source_in=.5, source_out=1, audio_stream_index=1)
+    baseline = tmp_path / "baseline.mp4"
+    before = rendering.render_timeline(timeline, baseline)
+    timeline = timeline.add_caption(.2, .8, "中文 English").add_text_overlay(.2, .8, "%{pts}:;[]'\\")
+    reopened = Timeline.from_dict(json.loads(json.dumps(timeline.to_dict())), assets=(asset,))
+    assert reopened.to_dict() == timeline.to_dict()
+    captioned = tmp_path / "captioned.mp4"
+    after = rendering.render_timeline(reopened, captioned)
+    assert before["measurement"] == after["measurement"]
+    assert after["measurement"]["video_frames"] == 30
+    assert after["audio_processing"]["true_peak_verified"] is True
+    assert after["rights_state"] == "unknown" and after["publish_status"] == "not_performed"
+    packets = _audio_packets(video_editing._ffprobe_path(), baseline)
+    assert packets and packets == _audio_packets(video_editing._ffprobe_path(), captioned)
+    assert not list(tmp_path.glob("timeline-render-*"))
+    muted = Timeline.from_assets((asset,), "16:9").add_clip(asset.asset_id, source_out=.5, audio_role="muted")
+    result = rendering.render_timeline(muted.add_caption(0, .5, "静音"), tmp_path / "muted.mp4")
+    assert result["measurement"]["audio_streams"] == 0
+    assert result["measurement"]["video_frames"] == 15
+
+
+@pytest.mark.parametrize("text", ["한글 테스트", "\U0001f600"])
+def test_installed_font_missing_glyph_never_publishes_output(installed_caption_runtime, tmp_path, monkeypatch, text):
+    _, source = installed_caption_runtime
+    monkeypatch.setenv("LUMENIS_LOCAL_ASSET_DIR", str(source.parent))
+    asset = video_editing.fingerprint_local_media(str(source))
+    timeline = Timeline.from_assets((asset,)).add_clip(asset.asset_id, source_out=1, audio_stream_index=0)
+    output = tmp_path / "unsupported.mp4"
+    with pytest.raises(VideoEditingError, match="OVERLAY_GLYPH_UNAVAILABLE"):
+        rendering.render_timeline(timeline.add_caption(0, 1, text), output)
+    assert not output.exists() and not list(tmp_path.glob("timeline-render-*"))
+
+
+def test_dissolve_uses_centred_handles_and_preserves_cuts_caption_and_audio(media, render_calls, caption_font, tmp_path):
+    timeline = Timeline.from_assets((media,), "16:9")
+    for _ in range(3):
+        timeline = timeline.add_clip(media.asset_id, source_in=2, source_out=4, audio_stream_index=0)
+    first, second, third = timeline.tracks[0].clips
+    timeline = timeline.add_transition(first.clip_id, second.clip_id, duration_sec=.31, reason="visual continuity")
+    timeline = timeline.add_transition(second.clip_id, third.clip_id, transition_type="cut", duration_sec=0, reason="")
+    result = rendering.render_timeline(timeline.add_caption(2, 3, "Same timing"), tmp_path / "dissolve.mp4")
+    video = [command for command, _ in render_calls if "-frames:v" in command and command[-1].endswith(".mp4")]
+    assert [command[command.index("-frames:v") + 1] for command in video] == ["65", "64", "60"]
+    assert [command[command.index("-ss") + 1] for command in video] == ["2.000000", "1.866667", "2.000000"]
+    graph = next(graph for _, graph in render_calls if "xfade=" in graph)
+    assert "xfade=transition=fade:duration=0.300000:offset=1.866667" in graph
+    assert "concat=n=2:v=1:a=0,settb=1/30" in graph and "trim=end_frame=180" in graph
+    assert "gte(n,60)*lt(n,90)" in graph
+    audio_graph = next(graph for _, graph in render_calls if "atrim=" in graph)
+    assert audio_graph.count("atrim=start=2.000000:end=4.000000") == 3
+    assert "acrossfade" not in audio_graph
+    applied = result["transition_processing"]["applied"]
+    assert len(applied) == 1 and applied[0]["start_frame"] == 56 and applied[0]["end_frame"] == 65
+    assert applied[0]["requested_duration_sec"] == .31 and applied[0]["duration_frames"] == 9
+    assert result["transition_processing"]["visual_only"] is True
+
+
+@pytest.mark.parametrize("failure,error", [
+    ("handles", "TRANSITION_MEDIA_HANDLES_UNAVAILABLE"),
+    ("subframe", "TRANSITION_SHORTER_THAN_OUTPUT_FRAME"),
+    ("duplicate", "TRANSITION_BOUNDARY_CONFLICT"),
+    ("reverse", "TRANSITION_REQUIRES_ADJACENT_VIDEO_CLIPS"),
+    ("unknown", "TRANSITION_RENDER_NOT_SUPPORTED"),
+])
+def test_transition_preflight_failure_starts_no_encoder_and_preserves_old_output(media, render_calls, tmp_path, failure, error):
+    timeline = Timeline.from_assets((media,)).add_clip(media.asset_id, source_in=2, source_out=4, audio_role="muted")
+    timeline = timeline.add_clip(media.asset_id, source_in=0 if failure == "handles" else 5, source_out=2 if failure == "handles" else 7, audio_role="muted")
+    first, second = timeline.tracks[0].clips
+    timeline = timeline.add_transition(first.clip_id, second.clip_id,
+        transition_type="wipe" if failure == "unknown" else "dissolve",
+        duration_sec=.01 if failure == "subframe" else .3, reason="reviewed edit")
+    if failure == "duplicate":
+        timeline = timeline.add_transition(first.clip_id, second.clip_id, transition_type="cut", duration_sec=0, reason="")
+    elif failure == "reverse":
+        transition = timeline.transitions[0]
+        timeline = replace(timeline, transitions=(replace(transition, from_clip=second.clip_id, to_clip=first.clip_id),))
+    previous = tmp_path / "previous.mp4"
+    previous.write_bytes(b"previous output")
+    with pytest.raises(VideoEditingError, match=error):
+        rendering.render_timeline(timeline, tmp_path / "new.mp4")
+    assert not render_calls and not (tmp_path / "new.mp4").exists()
+    assert previous.read_bytes() == b"previous output" and not list(tmp_path.glob("timeline-render-*"))
+
+
+@pytest.mark.parametrize("boundaries", [(0,), (1,), (0, 1)])
+def test_real_dissolve_blends_frames_without_shortening_mixed_cut_sequence(tmp_path, monkeypatch, boundaries):
+    from shared_artifacts import _ffmpeg_path
+    ffmpeg = _ffmpeg_path()
+    probe = video_editing._ffprobe_path()
+    if not ffmpeg or not probe:
+        pytest.skip("transition frame contract requires FFmpeg and FFprobe")
+    monkeypatch.setenv("LUMENIS_LOCAL_ASSET_DIR", str(tmp_path))
+    assets = []
+    for color in ("red", "blue", "green"):
+        source = tmp_path / (color + ".mp4")
+        subprocess.run([ffmpeg, "-v", "error", "-nostdin", "-n", "-f", "lavfi", "-i",
+                        f"color=c={color}:s=32x32:r=30:d=3", "-c:v", "libx264", "-threads:v", "1",
+                        "-pix_fmt", "yuv420p", str(source)], capture_output=True, check=True, timeout=15)
+        assets.append(video_editing.fingerprint_local_media(str(source)))
+    timeline = Timeline.from_assets(assets, "16:9")
+    for asset in assets:
+        timeline = timeline.add_clip(asset.asset_id, source_in=1, source_out=2, audio_role="muted")
+    clips = timeline.tracks[0].clips
+    for index in boundaries:
+        timeline = timeline.add_transition(clips[index].clip_id, clips[index + 1].clip_id,
+                                           duration_sec=.4, reason="synthetic frame contract")
+    output = tmp_path / "blend.mp4"
+    result = rendering.render_timeline(timeline, output)
+    assert result["measurement"]["video_frames"] == 90
+    assert result["measurement"]["audio_streams"] == 0
+    frames = subprocess.run([ffmpeg, "-v", "error", "-nostdin", "-i", str(output), "-vf",
+                            "select='eq(n,10)+eq(n,30)+eq(n,50)+eq(n,60)+eq(n,70)',crop=16:16:(iw-16)/2:(ih-16)/2,scale=1:1", "-fps_mode", "vfr",
+                            "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"], capture_output=True, check=True, timeout=15).stdout
+    assert len(frames) == 15
+    red, first_cut, blue, second_cut, green = [tuple(frames[index:index + 3]) for index in range(0, 15, 3)]
+    assert red[0] > 200 and red[2] < 20 and blue[2] > 200 and blue[0] < 20
+    if 0 in boundaries:
+        assert 70 < first_cut[0] < 180 and 70 < first_cut[2] < 180 and first_cut[1] < 20
+    else:
+        assert first_cut[2] > 200 and first_cut[0] < 20
+    if 1 in boundaries:
+        assert 30 < second_cut[1] < 90 and 70 < second_cut[2] < 180 and second_cut[0] < 20
+    else:
+        assert second_cut[1] > 90 and second_cut[0] < 20 and second_cut[2] < 20
+    assert green[1] > 90 and green[0] < 20 and green[2] < 20
+    reopened = Timeline.from_dict(timeline.to_dict(), assets=[video_editing.fingerprint_local_media(asset.path) for asset in assets])
+    assert reopened.transitions == timeline.transitions
+    assert not list(tmp_path.glob("timeline-render-*"))

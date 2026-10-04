@@ -45,9 +45,19 @@ def _run(command: list[str], *, cwd: Path, timeout: float = 60,
          check_continue: Callable[[], None] | None = None) -> str:
     if os.name == "nt" and len(subprocess.list2cmdline(command)) > 30000:
         raise VideoEditingError("RENDER_COMMAND_TOO_LARGE")
-    try:
+    callback_error: BaseException | None = None
+
+    def check_status() -> None:
+        nonlocal callback_error
         if check_continue:
-            check_continue()
+            try:
+                check_continue()
+            except BaseException as exc:
+                callback_error = exc
+                raise
+
+    try:
+        check_status()
         deadline = time.monotonic() + timeout
         with subprocess.Popen(
             command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -55,8 +65,7 @@ def _run(command: list[str], *, cwd: Path, timeout: float = 60,
         ) as process:
             try:
                 while True:
-                    if check_continue:
-                        check_continue()
+                    check_status()
                     remaining = deadline - time.monotonic()
                     if remaining <= 0:
                         raise subprocess.TimeoutExpired(command, timeout)
@@ -65,14 +74,17 @@ def _run(command: list[str], *, cwd: Path, timeout: float = 60,
                         break
                     except subprocess.TimeoutExpired:
                         continue
-                if check_continue:
-                    check_continue()
+                check_status()
             except BaseException:
                 # Reap the encoder before its private working directory is removed.
                 process.kill()
                 process.communicate()
                 raise
     except (OSError, subprocess.SubprocessError) as exc:
+        # Permission/cancellation callbacks are not encoder failures, even when
+        # their exception happens to inherit from a process/OS error class.
+        if exc is callback_error:
+            raise
         raise VideoEditingError("MEDIA_RENDER_PROCESS_FAILED") from exc
     if process.returncode != 0:
         # Decoder messages can contain private source paths. Keep them out of API errors.
@@ -87,6 +99,55 @@ def _number(value: float) -> str:
 def _frame_at(seconds: float) -> int:
     # Round shared boundaries once so adjacent clips cannot accumulate drift.
     return int(math.floor(round(seconds * FRAME_RATE, 6) + 0.5))
+
+
+def _video_transition_plan(timeline: Timeline, clips: list[TimelineClip]) -> dict[int, dict[str, Any]]:
+    """Resolve centred dissolves using real handles, without rippling other edits."""
+    assets = {asset.asset_id: asset for asset in timeline.assets}
+    boundaries = {(left.clip_id, right.clip_id): index
+                  for index, (left, right) in enumerate(zip(clips, clips[1:]), 1)}
+    seen: set[int] = set()
+    plan: dict[int, dict[str, Any]] = {}
+    for transition in timeline.transitions:
+        if transition.transition_type not in {"cut", "dissolve"}:
+            raise VideoEditingError("TRANSITION_RENDER_NOT_SUPPORTED")
+        index = boundaries.get((transition.from_clip, transition.to_clip))
+        if index is None:
+            raise VideoEditingError("TRANSITION_REQUIRES_ADJACENT_VIDEO_CLIPS")
+        if index in seen:
+            raise VideoEditingError("TRANSITION_BOUNDARY_CONFLICT")
+        seen.add(index)
+        if transition.transition_type == "cut":
+            continue
+        if transition.duration_sec < 1 / FRAME_RATE:
+            raise VideoEditingError("TRANSITION_SHORTER_THAN_OUTPUT_FRAME")
+        frames = _frame_at(transition.duration_sec)
+        before, after = frames // 2, frames - frames // 2
+        left, right = clips[index - 1], clips[index]
+        cut_frame = _frame_at(right.timeline_start)
+        start, end = cut_frame - before, cut_frame + after
+        if (start < _frame_at(left.timeline_start)
+                or end > _frame_at(right.timeline_start + right.duration_sec)):
+            raise VideoEditingError("TRANSITION_WINDOW_EXCEEDS_CLIP")
+        left_frames = cut_frame - _frame_at(left.timeline_start)
+        outgoing_end = left.source_in + (left_frames + after) / FRAME_RATE
+        if (outgoing_end > assets[left.media_asset_id].duration_sec
+                or right.source_in < before / FRAME_RATE):
+            raise VideoEditingError("TRANSITION_MEDIA_HANDLES_UNAVAILABLE")
+        plan[index] = {
+            "from_clip": left.clip_id, "to_clip": right.clip_id, "type": "dissolve",
+            "requested_duration_sec": transition.duration_sec, "duration_frames": frames,
+            "before_cut_frames": before, "after_cut_frames": after,
+            "start_frame": start, "end_frame": end,
+            "outgoing_extra_source_range": [left.source_in + left_frames / FRAME_RATE, outgoing_end],
+            "incoming_extra_source_range": [right.source_in - before / FRAME_RATE, right.source_in],
+        }
+    previous_end = -1
+    for item in sorted(plan.values(), key=lambda item: item["start_frame"]):
+        if item["start_frame"] < previous_end:
+            raise VideoEditingError("TRANSITION_WINDOWS_OVERLAP")
+        previous_end = item["end_frame"]
+    return plan
 
 
 def _verify_caption_glyphs(text: str) -> None:
@@ -479,9 +540,6 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
         raise VideoEditingError("FORMAT_RATIO_NOT_SUPPORTED")
     if timeline.overlays and output_kind != "video":
         raise VideoEditingError("OVERLAYS_REQUIRE_VIDEO_OUTPUT")
-    if any(transition.transition_type != "cut" for transition in timeline.transitions):
-        raise VideoEditingError("TRANSITION_RENDER_NOT_SUPPORTED")
-
     clips = [clip for track in timeline.tracks for clip in track.clips]
     if not clips or len(clips) > MAX_RENDER_CLIPS:
         raise VideoEditingError("RENDER_REQUIRES_ONE_TO_128_CLIPS")
@@ -521,6 +579,8 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
         if not math.isfinite(duration) or duration <= 0 or duration > MAX_EDIT_TIME_SEC:
             raise VideoEditingError("TIMELINE_DURATION_OUT_OF_RANGE")
 
+    transitions = _video_transition_plan(timeline, list(video_tracks[0].clips) if video_tracks else [])
+
     audio_clips = [clip for track in timeline.tracks for clip in track.clips
                    if clip.audio_role != "muted"
                    and next(asset for asset in timeline.assets if asset.asset_id == clip.media_asset_id).audio_stream_count]
@@ -548,9 +608,12 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
                 frame_count = _frame_at(clip.timeline_start + clip.duration_sec) - _frame_at(clip.timeline_start)
                 if frame_count < 1:
                     raise VideoEditingError("VIDEO_CLIP_SHORTER_THAN_OUTPUT_FRAME")
+                before = transitions.get(index, {}).get("before_cut_frames", 0)
+                after = transitions.get(index + 1, {}).get("after_cut_frames", 0)
+                frame_count += before + after
                 segment = work / f"clip-{index:03d}.mp4"
                 _run([ffmpeg, "-v", "error", "-nostdin", "-n", "-filter_threads", "1",
-                      "-filter_complex_threads", "1", "-threads", "1", "-ss", _number(clip.source_in),
+                      "-filter_complex_threads", "1", "-threads", "1", "-ss", _number(clip.source_in - before / FRAME_RATE),
                       "-protocol_whitelist", "file", "-format_whitelist", MEDIA_INPUT_DEMUXERS,
                       "-i", asset_paths[clip.media_asset_id], "-frames:v", str(frame_count), "-map", "0:v:0",
                       "-an", "-vf", f"setpts=PTS-STARTPTS,scale={width}:{height}:force_original_aspect_ratio=decrease,"
@@ -566,10 +629,24 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
             if audio is not None:
                 command += ["-protocol_whitelist", "file", "-format_whitelist", MEDIA_INPUT_DEMUXERS,
                             "-i", str(audio)]
-            graph = [f"[{index}:v:0]setpts=PTS-STARTPTS[v{index}]" for index in range(len(segments))]
-            graph.append("".join(f"[v{index}]" for index in range(len(segments))) +
-                         f"concat=n={len(segments)}:v=1:a=0" +
-                         ("," + ",".join(overlays) if overlays else "") + "[outv]")
+            if transitions:
+                graph = [f"[{index}:v:0]settb=1/{FRAME_RATE},setpts=PTS-STARTPTS[v{index}]"
+                         for index in range(len(segments))]
+                current = "v0"
+                for index in range(1, len(segments)):
+                    item = transitions.get(index)
+                    merge = (f"xfade=transition=fade:duration={_number(item['duration_frames'] / FRAME_RATE)}:"
+                             f"offset={_number(item['start_frame'] / FRAME_RATE)}" if item else
+                             f"concat=n=2:v=1:a=0,settb=1/{FRAME_RATE},setpts=PTS-STARTPTS")
+                    graph.append(f"[{current}][v{index}]{merge}[merged{index}]")
+                    current = f"merged{index}"
+                graph.append(f"[{current}]trim=end_frame={_frame_at(duration)},setpts=PTS-STARTPTS" +
+                             ("," + ",".join(overlays) if overlays else "") + "[outv]")
+            else:
+                graph = [f"[{index}:v:0]setpts=PTS-STARTPTS[v{index}]" for index in range(len(segments))]
+                graph.append("".join(f"[v{index}]" for index in range(len(segments))) +
+                             f"concat=n={len(segments)}:v=1:a=0" +
+                             ("," + ",".join(overlays) if overlays else "") + "[outv]")
             command += ["-filter_complex", ";".join(graph), "-map", "[outv]"]
             if audio is not None:
                 command += ["-map", f"{len(segments)}:a:0", "-c:a", "aac", "-b:a", "192k",
@@ -619,6 +696,8 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
             "measurement": measured, "renderer": "lumenis-timeline-4",
             "overlay_processing": {"count": len(timeline.overlays),
                                    "profile": "literal-cjk-windows-v1" if timeline.overlays else None},
+            "transition_processing": {"profile": "centred-handles-30fps-v1" if transitions else None,
+                                      "visual_only": True, "applied": list(transitions.values())},
             "audio_processing": {"pre_encode_sample_peak_limit_dbfs": -1 if has_audio else None,
                                  "limiter_latency_compensated": has_audio,
                                  "ducked_music_clips": len(ducked_clips),
