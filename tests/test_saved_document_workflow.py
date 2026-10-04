@@ -163,6 +163,62 @@ def test_podcast_draft_saves_before_render_and_retains_complete_payload(workspac
         _save(workspace, kind="podcast_episode", payload={}, contract=contract)
 
 
+def test_validated_podcast_plan_saves_reopens_and_revises(workspace):
+    from dataclasses import replace
+    from podcast.intelligence.episode_runtime import PodcastPlan, PodcastSegment
+
+    _, _, source = _source(workspace, filename="podcast-plan-source.txt")
+    citation = workspace["documents"].locate_quote(
+        source["evidence_id"], actor=workspace["actor"], scope=workspace["scope"], start=0, end=20,
+    )["citation"]
+    first_plan = PodcastPlan(
+        title="Source-backed episode",
+        description="A reviewed original episode plan.",
+        language="en",
+        segments=(PodcastSegment(
+            segment_id="segment-1", media_asset_id="MEDIA-source", source_in=0, source_out=4,
+            original_text="Original source wording", corrected_text="Reviewed episode wording",
+            speaker="Host", chapter_title="Opening", evidence_refs=(f"evidence:{source['evidence_id']}",),
+        ),),
+    )
+    contract = {"id": "lumenis.podcast-plan", "version": "1", "required_payload_paths": ["podcast_plan"]}
+    first = _save(
+        workspace, kind="podcast_episode", markdown=first_plan.script_text(),
+        payload={"podcast_plan": first_plan.to_dict()}, citations=[citation], contract=contract,
+        request_id="podcast-plan-0001",
+    )
+    assert first["document"]["payload"]["podcast_plan"] == first_plan.to_dict()
+    assert first["receipt"]["constraint_observations"]["media_lineage"] == "W4_W6_NOT_VERIFIED"
+    assert workspace["work"].reopen_work(
+        first["artifact"]["artifact_id"], actor=workspace["actor"], scope=workspace["scope"],
+    )["document"]["payload"]["podcast_plan"] == first_plan.to_dict()
+
+    revised_plan = replace(first_plan, revision=2, segments=(replace(
+        first_plan.segments[0], corrected_text="Reviewed revision wording",
+    ),))
+    second = _save(
+        workspace, kind="podcast_episode", markdown=revised_plan.script_text(),
+        payload={"podcast_plan": revised_plan.to_dict()}, citations=[citation], contract=contract,
+        request_id="podcast-plan-0002", work_id=first["document"]["work_id"],
+        previous_artifact_id=first["artifact"]["artifact_id"],
+        expected_draft_digest=first["document"]["draft_digest"],
+    )
+    assert second["document"]["version"] == 2
+    assert workspace["work"].reopen_work(
+        first["artifact"]["artifact_id"], actor=workspace["actor"], scope=workspace["scope"],
+    )["document"]["payload"]["podcast_plan"] == first_plan.to_dict()
+
+    invalid = {"podcast_plan": first_plan.to_dict()}
+    invalid["podcast_plan"]["segments"][0]["source_out"] = 0
+    before = workspace["repo"].query_one("SELECT COUNT(*) FROM lumenis_shared_artifacts")[0]
+    with pytest.raises(ValueError, match="WORK_PODCAST_PLAN_INVALID"):
+        _save(
+            workspace, kind="podcast_episode", markdown="Invalid plan", payload=invalid,
+            citations=[citation], contract=contract, request_id="podcast-plan-invalid",
+        )
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM lumenis_shared_artifacts")[0] == before
+
+
 def test_corruption_and_ungrounded_citations_never_reopen_success(workspace):
     _, _, source = _source(workspace)
     with pytest.raises(ValueError, match="WORK_CITATION_UNGROUNDED"):

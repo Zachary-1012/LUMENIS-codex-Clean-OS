@@ -425,8 +425,10 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
     """Save or revise an exact document; optional payload retains the W4 snapshot.
 
     PodcastPlan/script/original transcript/corrections/chapters/source refs/version/
-    Timeline belong to W4 and pass through unchanged as JSON. This service does
-    not validate editorial quality, render media, approve or publish anything.
+    Timeline belong to W4. A supplied ``podcast_plan`` is parsed through the
+    existing podcast runtime before storage; legacy episode payloads remain
+    readable. This service does not validate editorial quality, render media,
+    approve or publish anything.
     """
     if (not isinstance(title, str) or not title.strip() or len(title) > 300
             or not isinstance(markdown, str) or not markdown.strip() or not isinstance(kind, str) or kind not in _KINDS
@@ -463,6 +465,13 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
     contract = json.loads(_json(_validate_contract(contract, payload)))
     if kind == "podcast_episode" and not contract["required_payload_paths"]:
         raise SavedWorkError("WORK_EPISODE_CONTRACT_REQUIRED")
+    if kind == "podcast_episode" and "podcast_plan" in payload:
+        try:
+            from podcast.intelligence.episode_runtime import PodcastPlan
+
+            PodcastPlan.from_dict(payload["podcast_plan"])
+        except (TypeError, ValueError) as exc:
+            raise SavedWorkError("WORK_PODCAST_PLAN_INVALID") from exc
     args = dict(title=title, markdown=markdown, kind=kind, payload=payload, citations=citations,
                 request_id=request_id, work_id=work_id, previous_artifact_id=previous_artifact_id,
                 expected_draft_digest=expected_draft_digest, contract=contract,
