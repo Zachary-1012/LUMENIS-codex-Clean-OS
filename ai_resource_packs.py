@@ -22,7 +22,7 @@ from datetime import datetime, date
 from typing import Dict, List, Optional, Any
 
 # ZBC Phase 7: module status markers
-MODULE_STATUS = 'RETIRED_COMPATIBILITY'
+MODULE_STATUS = 'DISABLED'
 AI_ROLE = 'HISTORICAL_BUDGET_RECORD'  # retained usage history, never a product inference authority
 RETIRED_EXECUTION_PROVIDER = 'zhipu'
 

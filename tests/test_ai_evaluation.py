@@ -623,7 +623,7 @@ class TestModuleStatusMarkers:
                 'ACTIVE', 'ACTIVE_PRIMARY', 'ACTIVE_FALLBACK',
                 'LEGACY', 'LEGACY_PARTIAL', 'RULES_ENGINE_PRIMARY',
             )
-            if mod_name == 'local_ai_client':
+            if mod_name in {'local_ai_client', 'ai_resource_packs'}:
                 assert mod.MODULE_STATUS == 'DISABLED'
             else:
                 assert mod.MODULE_STATUS in allowed_statuses, (

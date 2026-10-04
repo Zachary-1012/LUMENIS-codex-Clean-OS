@@ -9822,7 +9822,7 @@
         ],
         "operationId": "system_features.local_ai_analyze",
         "x-flask-rule": "/api/local-ai/analyze",
-        "summary": "本地AI分析"
+        "summary": "Retained endpoint: local model analysis is permanently unavailable."
       }
     },
     "/api/local-ai/chat": {
@@ -9841,7 +9841,7 @@
         ],
         "operationId": "system_features.local_ai_chat",
         "x-flask-rule": "/api/local-ai/chat",
-        "summary": "本地AI聊天"
+        "summary": "Retained endpoint: local model chat is permanently unavailable."
       }
     },
     "/api/local-ai/status": {
@@ -9860,7 +9860,7 @@
         ],
         "operationId": "system_features.local_ai_status",
         "x-flask-rule": "/api/local-ai/status",
-        "summary": "获取本地AI状态"
+        "summary": "Retained endpoint: local model discovery is permanently unavailable."
       }
     },
     "/api/local-import": {
