@@ -14,15 +14,14 @@ from .registry import register_adapter
 
 
 def _entry_time(entry: Any) -> str:
-    for key in ("published_parsed", "updated_parsed"):
-        value = entry.get(key)
-        if value:
-            try:
-                from datetime import timezone
-                return format_datetime(datetime(*value[:6], tzinfo=timezone.utc))
-            except (TypeError, ValueError):
-                pass
-    return str(entry.get("published") or entry.get("updated") or "")[:80]
+    value = entry.get("published_parsed")
+    if value:
+        try:
+            from datetime import timezone
+            return format_datetime(datetime(*value[:6], tzinfo=timezone.utc))
+        except (TypeError, ValueError):
+            pass
+    return str(entry.get("published") or "")[:80]
 
 
 def _is_blocked_youtube_feed(url: str) -> bool:
@@ -96,6 +95,10 @@ class AtomAdapter(BasePlatformAdapter):
                 if not content and entry.get("content"):
                     content = str(entry.content[0].get("value") or "")
                 raw: dict[str, Any] = {"feed_url": response.url, "entry_id": identity}
+                if entry.get("published"):
+                    raw["source_published_at"] = str(entry.get("published"))
+                if entry.get("updated"):
+                    raw["source_updated_at"] = str(entry.get("updated"))
                 if video_id and channel_id:
                     statistics = entry.get("media_statistics") or {}
                     views = str(statistics.get("views") or "").strip()
@@ -116,7 +119,7 @@ class AtomAdapter(BasePlatformAdapter):
                     "platform_content_id": f"atom:{item_id}",
                     "title": str(entry.get("title") or ""),
                     "content": content,
-                    "author_id": channel_id or str((entry.get("author_detail") or {}).get("name") or entry.get("author") or "") or None,
+                    "author_id": channel_id or None,
                     "author_nickname": str(entry.get("author") or "") or None,
                     "publish_datetime": _entry_time(entry),
                     "url": link,

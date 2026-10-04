@@ -21,7 +21,12 @@ def list_adapters() -> list[str]:
 
 def get_adapter(platform: str, **kwargs):
     key = platform.strip().lower()
+    if key == "xiaohongshu":
+        key = "xhs"  # Canonical content spelling, same protected primary adapter.
     adapter_cls = _ADAPTERS.get(key)
+    if adapter_cls is None and key == "wechat":
+        from . import wechat  # Register the existing public-article adapter.
+        adapter_cls = _ADAPTERS.get(key)
     if adapter_cls is None:
         raise KeyError(
             f"No adapter registered for {platform!r}. "

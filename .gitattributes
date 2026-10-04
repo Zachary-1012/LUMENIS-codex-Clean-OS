@@ -12,3 +12,7 @@ contracts/experience/unknown-bindings.json text eol=lf
 contracts/experience/BINDING_MATRIX.json text eol=lf
 contracts/experience/BACKEND_GAP.json text eol=lf
 contracts/experience/lumenis_app_binding_registry.json text eol=lf
+
+# Reviewed source inputs retain their exact original-byte hashes on every OS.
+config/collection-topic-seed-20261004.json -text
+tests/fixtures/collector/native_public_captures_20261004.json -text whitespace=cr-at-eol

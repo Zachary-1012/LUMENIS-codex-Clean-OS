@@ -21,6 +21,8 @@ from urllib.parse import parse_qsl, urlsplit
 
 
 MAX_DUE_ATTEMPTS_PER_TICK = 8
+PURPOSE_POLICY = "purpose-query-read-only-exact-import-v1"
+PURPOSE_PLATFORMS = frozenset({"xhs", "douyin", "x", "instagram", "facebook", "wechat"})
 
 
 @dataclass(frozen=True)
@@ -45,6 +47,8 @@ class PublicBaselinePlan:
     plan_version: str = "1"
     policy_id: str = "public-read-only-exact-import-v1"
     _signed_config_digest: str = field(default="", repr=False, compare=False)
+    purpose_query: Optional[dict] = None
+    internal_auto_opt_in: bool = False
 
     def __post_init__(self) -> None:
         for name in ("source_key", "source_version", "exact_scope", "scope_version",
@@ -62,11 +66,25 @@ class PublicBaselinePlan:
             raise ValueError("cadence_seconds must be between one minute and 31 days")
         if self.end_user_auto:
             raise ValueError("prelaunch baseline must not enable end-user AUTO")
-        if self.policy_id != "public-read-only-exact-import-v1":
-            raise ValueError("unsupported public baseline permission policy")
-        if self.platform not in {"public_http", "web_atom"}:
-            raise ValueError("prelaunch baseline supports only public HTTP and Atom")
-        if self.source_url:
+        if self.policy_id not in {"public-read-only-exact-import-v1", PURPOSE_POLICY}:
+            raise ValueError("unsupported baseline permission policy")
+        purpose = self.policy_id == PURPOSE_POLICY
+        if purpose:
+            if self.platform not in PURPOSE_PLATFORMS or self.internal_auto_opt_in is not True:
+                raise ValueError("purpose baseline requires an explicitly approved internal platform")
+            if not isinstance(self.purpose_query, dict):
+                raise ValueError("a full source-derived purpose query is required")
+            query = _purpose_query(self.purpose_query)
+            context = query.business_context or {}
+            if (query.keyword != self.source_url or not 1 <= len(query.keyword) <= 256
+                    or context.get("platform") not in {self.platform, "xiaohongshu" if self.platform == "xhs" else self.platform}
+                    or context.get("publication_since") != "2026-01-01"
+                    or query.subject_id != self.subject_id or query.brand_focus_id != self.brand_focus_id
+                    or ("cth" if query.domain_id == "CTH" else "bmp") != self.domain_id):
+                raise ValueError("purpose query must bind exact plan identity, scope and requested period")
+        elif self.platform not in {"public_http", "web_atom"} or self.purpose_query is not None or self.internal_auto_opt_in:
+            raise ValueError("public policy does not grant purpose-query AUTO")
+        if self.source_url and not purpose:
             parts = urlsplit(self.source_url)
             if (len(self.source_url) > 2048 or any(ch.isspace() for ch in self.source_url)
                     or parts.scheme != "https" or not parts.hostname or parts.username
@@ -111,7 +129,33 @@ class PublicBaselinePlan:
             "plan_version": self.plan_version,
             "policy_id": self.policy_id,
         }
+        if self.policy_id == PURPOSE_POLICY:
+            payload.update(purpose_query=self.purpose_query, internal_auto_opt_in=self.internal_auto_opt_in)
         return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def _purpose_query(value):
+    from ...acquisition_plan import AcquisitionQuery
+    names = ("keyword", "domain_id", "product_id", "registry_id", "subject_id",
+             "brand_focus_id", "priority", "reason_code", "alias_kind",
+             "context_mode", "business_context")
+    if not isinstance(value, dict):
+        raise ValueError("purpose query must be an object")
+    return AcquisitionQuery(**{name: value[name] for name in names if name in value})
+
+
+def round_robin_due(evaluated, limit=MAX_DUE_ATTEMPTS_PER_TICK):
+    """Use durable oldest-due ordering while rotating platforms within a tick."""
+    from collections import deque
+    groups = {}
+    for row in sorted(evaluated, key=lambda r: (r[0], r[1], r[2])):
+        groups.setdefault(row[3].platform, deque()).append(row)
+    selected = []
+    while any(groups.values()) and len(selected) < limit:
+        for rows in groups.values():
+            if rows and len(selected) < limit:
+                selected.append(rows.popleft())
+    return selected
 
 
 @dataclass(frozen=True)
@@ -269,11 +313,12 @@ class PrelaunchMaintenanceAuthorization:
 
     def matches(self, plan: PublicBaselinePlan, *, source_url: str,
                 platform: str, scope: dict) -> bool:
+        from ..platform_naming import normalize_platform
         return (
             self.signature_verified is True
             and self.plan_id == plan.plan_id
             and self.source_url == source_url == plan.source_url
-            and self.platform == platform == plan.platform
+            and normalize_platform(self.platform) == normalize_platform(platform) == normalize_platform(plan.platform)
             and self.domain_id == scope.get("domain_id") == plan.domain_id
             and self.subject_id == scope.get("subject_id") == plan.subject_id
             and self.brand_focus_id == scope.get("brand_focus_id") == plan.brand_focus_id
@@ -285,16 +330,17 @@ class PrelaunchMaintenanceAuthorization:
         )
 
     def matches_request(self, *, source_url: str, platform: str, scope: dict) -> bool:
+        from ..platform_naming import normalize_platform
         return (
             self.signature_verified is True
             and bool(re.fullmatch(r"[0-9a-f]{64}", self.plan_id))
             and self.source_url == source_url
-            and self.platform == platform
+            and normalize_platform(self.platform) == normalize_platform(platform)
             and self.domain_id == scope.get("domain_id")
             and self.subject_id == scope.get("subject_id")
             and self.brand_focus_id == scope.get("brand_focus_id")
             and bool(self.source_version and self.scope_version and self.authorization_ref)
-            and self.policy_id == "public-read-only-exact-import-v1"
+            and self.policy_id in {"public-read-only-exact-import-v1", PURPOSE_POLICY}
             and 60 <= self.cadence_seconds <= 31 * 24 * 60 * 60
         )
 
@@ -326,8 +372,10 @@ def load_prelaunch_baseline_config(path: Optional[str] = None, *,
         return {"status": "DISABLED", "plans": []}
     if config.get("end_user_auto") is not False:
         raise BaselineConfigError("END_USER_AUTO_MUST_REMAIN_OFF")
-    if config.get("policy_id") != "public-read-only-exact-import-v1":
+    if config.get("policy_id") not in {"public-read-only-exact-import-v1", PURPOSE_POLICY}:
         raise BaselineConfigError("POLICY_UNSUPPORTED")
+    if config.get("policy_id") == PURPOSE_POLICY and config.get("internal_auto_opt_in") is not True:
+        raise BaselineConfigError("INTERNAL_AUTO_OPT_IN_REQUIRED")
     sources = config.get("sources")
     if not isinstance(sources, list) or not sources:
         raise BaselineConfigError("SOURCE_SET_INVALID")
@@ -374,6 +422,8 @@ def load_prelaunch_baseline_config(path: Optional[str] = None, *,
                 plan_version=source_plan_version,
                 policy_id=config["policy_id"],
                 _signed_config_digest=digest,
+                purpose_query=source.get("purpose_query"),
+                internal_auto_opt_in=config.get("internal_auto_opt_in", False),
             )
         except (KeyError, TypeError, ValueError):
             raise BaselineConfigError("SOURCE_ENTRY_INVALID") from None
@@ -422,9 +472,13 @@ def run_due_prelaunch_baseline(*, now: Optional[datetime] = None,
     now = now or datetime.now().astimezone()
     evaluated = []
     not_due = []
+    purpose_platform_backoff = {}
     for order, plan in enumerate(loaded["plans"]):
         history = store.public_baseline_history(plan)
         decision = evaluate_baseline_due(plan, history, now=now)
+        if plan.policy_id == PURPOSE_POLICY and decision.reason == "RETRY_BACKOFF":
+            purpose_platform_backoff[plan.platform] = max(
+                purpose_platform_backoff.get(plan.platform, now), decision.due_at or now)
         expired_claim = (history.attempt_in_progress and history.last_attempt_at is not None
                          and now >= history.last_attempt_at + timedelta(hours=1))
         # The atomic claim owner expires abandoned workers and records backoff.
@@ -436,10 +490,17 @@ def run_due_prelaunch_baseline(*, now: Optional[datetime] = None,
     # Bound actual source attempts per scheduler tick, while allowing the signed
     # baseline to cover the full approved inventory. Oldest due sources go first.
     evaluated.sort(key=lambda row: (row[0], row[1], row[2]))
-    selected = evaluated[:MAX_DUE_ATTEMPTS_PER_TICK]
+    selected = round_robin_due(evaluated)
     selected_ids = {row[1] for row in selected}
     results = []
-    for decision_at, plan_id, order, plan, decision in evaluated:
+    blocked_platforms = set(purpose_platform_backoff)
+    selected_order = {row[1]: i for i, row in enumerate(selected)}
+    for decision_at, plan_id, order, plan, decision in sorted(
+            evaluated, key=lambda row: selected_order.get(row[1], len(selected))):
+        if plan.policy_id == PURPOSE_POLICY and plan.platform in blocked_platforms:
+            results.append({"plan_id": plan.plan_id, "attempt_id": None,
+                            "status": "PLATFORM_BACKOFF", "platform": plan.platform})
+            continue
         if plan_id not in selected_ids:
             results.append({"decision": decision, "attempt_id": None,
                             "status": "BATCH_DEFERRED"})
@@ -449,10 +510,14 @@ def run_due_prelaunch_baseline(*, now: Optional[datetime] = None,
         auth = maintenance_authorization(plan)
         def execute(plan=plan, scope=scope, auth=auth):
             def collect_once():
+                options = {}
+                if plan.policy_id == PURPOSE_POLICY:
+                    options["business_query"] = _purpose_query(plan.purpose_query)
                 return collect(
                     plan.platform, plan.source_url, max_results=plan.max_results,
                     operator="prelaunch_maintenance", scope=scope,
                     prelaunch_local_import=True, prelaunch_authorization=auth,
+                    **options,
                 )
 
             result = collect_once()
@@ -481,6 +546,10 @@ def run_due_prelaunch_baseline(*, now: Optional[datetime] = None,
                 result = item.get("result")
                 success, status = _verified_source_refresh(result)
                 item["status"] = "SUCCESS" if success else status
+            if (plan.policy_id == PURPOSE_POLICY and item.get("status") in {
+                    "NEED_VERIFY", "BLOCKED", "RISK_WARNING", "SESSION_EXPIRED",
+                    "AUTH_REQUIRED", "NOT_CONFIGURED", "COOLING_DOWN", "RATE_LIMITED"}):
+                blocked_platforms.add(plan.platform)
             results.append(item)
         except Exception as exc:
             results.append({"plan_id": plan.plan_id, "status": "FAILED",
@@ -490,7 +559,7 @@ def run_due_prelaunch_baseline(*, now: Optional[datetime] = None,
                    for plan, decision in not_due)
     statuses = [str(item.get("status") or "FAILED") for item in results]
     deferred_statuses = {"NOT_DUE", "ATTEMPT_IN_PROGRESS", "RETRY_BACKOFF",
-                         "BATCH_DEFERRED", "FIRST_RUN", "DISABLED"}
+                         "BATCH_DEFERRED", "PLATFORM_BACKOFF", "FIRST_RUN", "DISABLED"}
     deferred = sum(status in deferred_statuses for status in statuses)
     failed = sum(status != "SUCCESS" and status not in deferred_statuses
                  for status in statuses)
@@ -506,3 +575,54 @@ def run_due_prelaunch_baseline(*, now: Optional[datetime] = None,
                             "deferred_source_count": len(evaluated) - len(selected),
                         }},
             "runs": results}
+
+
+
+def purpose_baseline_config(query_pages, *, source_version, scope_version,
+                            authorization_ref, cadence_seconds=3600, plan_version="1"):
+    """Serialize all compiled purpose pages for owner signing, without granting AUTO."""
+    import dataclasses
+    from ..platform_naming import normalize_platform
+    if not isinstance(query_pages, (list, tuple)) or not query_pages:
+        raise ValueError("nonempty compiled pages are required")
+    source_entries = []
+    seen = set()
+    for page in query_pages:
+        if not isinstance(page, dict) or page.get("status") != "READY":
+            raise ValueError("only actual READY planner pages may be serialized")
+        for value in page.get("queries", []):
+            query = _purpose_query(value)
+            platform = normalize_platform(query.business_context.get("platform"))
+            if platform == "xiaohongshu":
+                platform = "xhs"
+            if platform not in PURPOSE_PLATFORMS:
+                raise ValueError("unsupported purpose baseline platform")
+            identity = hashlib.sha256(json.dumps(query.to_dict(), sort_keys=True,
+                ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+            if identity in seen:
+                continue
+            seen.add(identity)
+            domain = "cth" if query.domain_id == "CTH" else "bmp"
+            scope = {"domain_id":domain,"subject_id":query.subject_id,"brand_focus_id":query.brand_focus_id}
+            plan = PublicBaselinePlan(
+                source_key=platform+":"+identity, source_version=source_version,
+                exact_scope=json.dumps(scope,sort_keys=True,separators=(",",":")),
+                scope_version=scope_version,cadence_seconds=cadence_seconds,
+                authorization_ref=authorization_ref,platform=platform,source_url=query.keyword,
+                domain_id=domain,subject_id=query.subject_id,brand_focus_id=query.brand_focus_id,
+                plan_version=plan_version,policy_id=PURPOSE_POLICY,
+                purpose_query=query.to_dict(),internal_auto_opt_in=True)
+            source_entries.append({
+                name:getattr(plan,name) for name in (
+                    "source_key","source_version","scope_version","cadence_seconds",
+                    "authorization_ref","platform","source_url","domain_id",
+                    "subject_id","brand_focus_id","max_results","plan_version","purpose_query")
+            })
+    if not source_entries:
+        raise ValueError("no purpose queries survived serialization")
+    # The existing Permission owner reviews the exact actor/scope/use and signs
+    # the final enabled config. This serialized candidate cannot execute itself.
+    return {"schema_version":1,"enabled":False,"end_user_auto":False,
+            "internal_auto_opt_in":True,"policy_id":PURPOSE_POLICY,
+            "plan_version":plan_version,"sources":source_entries,
+            "hmac":None,"admission_state":"OWNER_SCOPE_AND_SIGNATURE_PENDING"}

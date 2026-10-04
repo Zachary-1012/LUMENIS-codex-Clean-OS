@@ -354,6 +354,25 @@ sources/times and controlled updates; do not delete or invent heat values.
 
 ### Retained TopicCampaign safety parameters
 
+The approved original 100-term/41-source seed is packaged unchanged at
+`config/collection-topic-seed-20261004.json` (SHA256
+`cfe3b6cb424ee0efe3d917479ba95db66f4ca9b8df32fa891fcf16fd6c576028`).
+`acquisition_plan.load_approved_topic_seed` reads that product file, not a
+developer attachment or work directory. Seed-bearing business requests must
+match its topic ID, source ID/URL, original literal, term, platform and registered
+entity. The explicit user task selects purpose and facets; packaging grants no
+trend status, entity promotion, source-use permission or model training.
+Retain this original when adding subsequent source-backed topic versions.
+
+The existing platform-collection search API accepts task-selected
+`business_requests`, bounded `max_queries` and a checked plan continuation.
+It resolves the actual actor/scope; a client cannot upload a completed-checkpoint
+claim to skip collection. Scheduled internal purpose requests use the existing
+signed baseline loader, fresh Permission check of the whole query and request
+bound, then the same Collector transaction. This is not a parallel scheduler or
+an automatic grant to future-user AUTO. Live platform/session/continuity evidence
+remains required separately from source integration.
+
 The 2026-09-03 TopicCampaign exception remains source-specific history and
 configuration: hours [9, 11, 13, 15, 17, 19], staggered execution, maximum eight
 runs including manual on its own counter. Retiring TWIN_EXECUTION_GATE does not

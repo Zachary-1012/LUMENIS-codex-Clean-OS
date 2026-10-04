@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import os
 import re
+import json
+import hashlib
+from datetime import datetime, timezone
+from urllib.parse import urlsplit
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -9,6 +13,79 @@ from lumenis.adapters.base import optional_int
 
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
 from .registry import register_adapter
+from .public_source import fetch_public_url, public_source_provenance
+
+
+def parse_public_instagram_document(response, shortcode):
+    """Inspect only the matching public post, keeping media/caption times distinct."""
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(response.content, 'html.parser')
+    matches = []
+    def visit(value, locator):
+        if isinstance(value, dict):
+            if value.get('code') == shortcode and value.get('pk') and isinstance(value.get('if_not_gated_logged_out'), dict):
+                matches.append((locator, value))
+            for key, child in value.items():
+                visit(child, locator + '/' + str(key))
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, locator + '/' + str(index))
+    for index, script in enumerate(soup.find_all('script')):
+        try:
+            visit(json.loads(script.get_text()), f'script[{index}]')
+        except (ValueError, TypeError):
+            continue
+    if len(matches) != 1:
+        return None
+    locator, media = matches[0]
+    public = media['if_not_gated_logged_out']
+    if str(public.get('pk')) != str(media['pk']) or public.get('code') != shortcode:
+        return None
+    caption = public.get('caption') or {}
+    text = caption.get('text')
+    if not isinstance(text, str) or not text.strip():
+        return None
+    user = public.get('user') or {}
+    published = None
+    taken_at = public.get('taken_at')
+    if isinstance(taken_at, (int, float)) and not isinstance(taken_at, bool):
+        try:
+            published = datetime.fromtimestamp(taken_at, timezone.utc).isoformat()
+        except (ValueError, OverflowError, OSError):
+            pass
+    def metric(key):
+        value = public.get(key)
+        return value if type(value) is int and value >= 0 else None
+    comments = []
+    for edge in (media.get('comments_connection') or {}).get('edges') or []:
+        node = edge.get('node') or {}
+        # Copy the public comment fields, never the surrounding viewer or tracking context.
+        comment = {key: node[key] for key in ('pk', 'id', 'text', 'created_at', 'like_count') if key in node}
+        comment_user = node.get('user')
+        if isinstance(comment_user, dict):
+            comment['user'] = {key: comment_user[key] for key in
+                               ('pk', 'id', 'username', 'full_name', 'is_verified', 'profile_pic_url')
+                               if key in comment_user}
+        comments.append(comment)
+    public_user = {key: user[key] for key in ('pk', 'username', 'full_name', 'is_verified') if key in user}
+    raw = {'media_id': str(media['pk']), 'shortcode': shortcode, 'taken_at': taken_at,
+           'caption': text, 'caption_created_at': caption.get('created_at'),
+           'caption_is_edited': public.get('caption_is_edited'), 'author_id': str(user.get('pk')) if user.get('pk') else None,
+           'author': public_user, 'like_count': metric('like_count'), 'comment_count': metric('comment_count'),
+           'share_count': None, 'play_count': None, 'location': public.get('location'),
+           'media_type': public.get('media_type'), 'display_uri': public.get('display_uri'),
+           'video_versions': [{key: value[key] for key in ('type', 'url', 'width', 'height') if key in value}
+                              for value in public.get('video_versions') or []],
+           'public_comments': comments, 'comment_page_info': (media.get('comments_connection') or {}).get('page_info'),
+           'native_document_sha256': hashlib.sha256(response.content).hexdigest(),
+           'native_post_locator': locator, 'native_caption_locator': locator + '/if_not_gated_logged_out/caption/text',
+           'native_time_locator': locator + '/if_not_gated_logged_out/taken_at',
+           'native_hashtags': re.findall(r'#([^\s#]+)', text)}
+    return {'platform': 'instagram', 'platform_content_id': str(media['pk']), 'url': response.url,
+            'content': text, 'title': None, 'publish_datetime': published,
+            'author_id': raw['author_id'], 'author_nickname': user.get('username'),
+            'likes': raw['like_count'], 'comments': raw['comment_count'], 'collects': None,
+            'shares': None, 'views': None, 'raw': raw}
 
 
 class InstagramAdapter(BasePlatformAdapter):
@@ -31,10 +108,11 @@ class InstagramAdapter(BasePlatformAdapter):
     COOKIE_PATH = Path(__file__).resolve().parents[1] / "data" / "cookies" / "instagram.json"
     _DEFAULT_COOKIE_PATH = COOKIE_PATH
 
-    def __init__(self, *, engine: Any = None, **kwargs: Any) -> None:
+    def __init__(self, *, engine: Any = None, public_fetcher: Any = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._engine = engine
         self._engine_loaded = engine is not None
+        self._public_fetcher = public_fetcher or fetch_public_url
 
     # ------------------------------------------------------------------
     # Engine lazy-load
@@ -55,6 +133,8 @@ class InstagramAdapter(BasePlatformAdapter):
         if success:
             return CollectionStatus.SUCCESS if notes else CollectionStatus.NO_NEW_DATA
         err = (error or "").lower()
+        if "instagram_worker_not_registered" in err:
+            return CollectionStatus.NOT_CONFIGURED
         if "登录态失效" in error or "session" in err and "expire" in err:
             return CollectionStatus.SESSION_EXPIRED
         if any(k in error for k in ("验证", "captcha", "人机")) or "captcha" in err:
@@ -79,6 +159,8 @@ class InstagramAdapter(BasePlatformAdapter):
     # Public API
     # ------------------------------------------------------------------
     def search(self, keyword: str, **kwargs: Any) -> CollectionResult:
+        if str(keyword).startswith('https://'):
+            return self._public_detail(keyword)
         try:
             engine = self._get_engine()
             result = engine.search(keyword, max_results=kwargs.get("max_results", 20))
@@ -103,7 +185,28 @@ class InstagramAdapter(BasePlatformAdapter):
                 message=str(exc),
             )
 
+    def _public_detail(self, url):
+        parts = urlsplit(url)
+        match = re.search(r'/(?:p|reel|tv)/([A-Za-z0-9_-]+)(?:/|$)', parts.path)
+        if (parts.scheme != 'https' or parts.hostname not in {'instagram.com', 'www.instagram.com'}
+                or parts.username or parts.password or not match):
+            raise ValueError('exact public Instagram post URL required')
+        try:
+            response = self._public_fetcher(url)
+            if urlsplit(response.url).hostname not in {'instagram.com', 'www.instagram.com'}:
+                return CollectionResult(CollectionStatus.BLOCKED, self.platform, metadata={'original_body_available': False})
+            item = parse_public_instagram_document(response, match.group(1))
+            return CollectionResult(CollectionStatus.SUCCESS if item else CollectionStatus.PROVIDER_UNAVAILABLE,
+                self.platform, items=[item] if item else [], raw_count=1 if item else 0,
+                metadata={**public_source_provenance(response, url), 'provider': 'public_native_post_document',
+                          'original_body_available': item is not None, 'requires_auth': False})
+        except Exception as exc:
+            return CollectionResult(CollectionStatus.PROVIDER_UNAVAILABLE, self.platform,
+                                    metadata={'error_type': type(exc).__name__, 'original_body_available': False})
+
     def detail(self, content_id: str, **kwargs: Any) -> CollectionResult:
+        if str(content_id).startswith('https://'):
+            return self._public_detail(content_id)
         try:
             engine = self._get_engine()
             media_type = kwargs.get("media_type", "post")
@@ -190,46 +293,21 @@ class InstagramAdapter(BasePlatformAdapter):
             )
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
-        """Local-only health check: cookie file existence + proxy env vars.
+        """Report public-read or registered-worker readiness without reading credentials.
 
-        Does NOT start a browser or access the network.
+        Cookie/proxy file presence cannot prove a registered permitted worker,
+        authentication, acquisition access or readiness. No browser is touched.
         """
-        cookie_path = self.COOKIE_PATH
-        if cookie_path == self._DEFAULT_COOKIE_PATH:
-            try:
-                from lumenis.adapters.cookie_vault import _resolve_path
-                cookie_path = _resolve_path("instagram") or cookie_path
-            except Exception:
-                pass
-        cookie_exists = cookie_path.is_file() and cookie_path.stat().st_size > 0
-        proxy_configured = bool(self._proxy_configured())
-
-        metadata = {
-            "cookie_exists": cookie_exists,
-            "proxy_configured": proxy_configured,
-            "cookie_path": str(cookie_path),
-        }
-
-        if cookie_exists and proxy_configured:
-            return CollectionResult(
-                status=CollectionStatus.SUCCESS,
-                platform=self.platform,
-                message="Instagram adapter ready (cookie + proxy configured)",
-                metadata=metadata,
-            )
-
-        problems = []
-        if not cookie_exists:
-            problems.append("Instagram cookie file not found")
-        if not proxy_configured:
-            problems.append("Instagram requires proxy (GOOGLE_PROXY/OPENAI_PROXY not set)")
-
-        status = CollectionStatus.SESSION_EXPIRED if not cookie_exists and proxy_configured else CollectionStatus.COLLECT_ERROR
+        if str(kwargs.get('url') or '').startswith('https://'):
+            return CollectionResult(CollectionStatus.NEED_VERIFY, self.platform,
+                metadata={'provider': 'public_native_post_document', 'requires_auth': False,
+                          'healthcheck_scope': 'public_document_requires_actual_read'})
         return CollectionResult(
-            status=status,
+            status=CollectionStatus.NOT_CONFIGURED,
             platform=self.platform,
-            message="; ".join(problems),
-            metadata=metadata,
+            message="INSTAGRAM_WORKER_NOT_REGISTERED: Instagram采集入口尚未就绪",
+            metadata={"availability": "UNAVAILABLE", "worker_binding_registered": False,
+                      "login_and_collection_verified": False, "legacy_cookie_checked": False},
         )
 
     # ------------------------------------------------------------------

@@ -19,6 +19,13 @@ def scope_db(tmp_path, monkeypatch):
     monkeypatch.setattr(database, 'DB_PATH', str(path))
     monkeypatch.setenv('LUMENIS_EVIDENCE_HMAC_KEY_RING', json.dumps({'test': 'isolated-scope-test'}))
     monkeypatch.setenv('LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID', 'test')
+    from lumenis.shared.database import migrations
+    from lumenis.shared.evidence import store as evidence_store
+    monkeypatch.setattr(migrations, 'DB_PATH', str(path))
+    monkeypatch.setattr(migrations, 'BACKUP_DIR', str(tmp_path / 'backups'))
+    database.init_db()
+    assert migrations.migrate(target_version=19)
+    evidence_store.init_evidence_store(str(path))
     entity, _ = subject_registry.add_subject({
         'domain_id': 'CTH', 'subject_type': 'company', 'name_zh': '广州太古汇',
         'name_en': 'Guangzhou Taikoo Hui',

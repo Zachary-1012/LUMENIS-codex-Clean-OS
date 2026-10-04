@@ -14,7 +14,9 @@
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
@@ -48,6 +50,7 @@ PLATFORM_ALIASES: Dict[str, str] = {
     "instagram": "instagram", "ins": "instagram", "ig": "instagram",
     # Facebook
     "facebook": "facebook", "fb": "facebook",
+    "wechat": "wechat", "weixin": "wechat", "微信公众号": "wechat", "sogou_wechat": "wechat",
     # X / Twitter
     "x": "x", "twitter": "x", "tweet": "x",
     # 视频号（微信视频号，无公开API，部分字段unavailable）
@@ -72,6 +75,7 @@ PLATFORM_DISPLAY_NAME: Dict[str, str] = {
     "public_http": "Public HTTP", "web_atom": "Web Atom", "sitemap": "Sitemap",
     "bilibili": "B站", "zhihu": "知乎", "tieba": "贴吧",
     "instagram": "Instagram", "facebook": "Facebook", "x": "X",
+    "wechat": "微信公众号",
     "channels": "视频号", "youtube": "YouTube", "tiktok": "TikTok",
     "reddit": "Reddit", "linkedin": "LinkedIn", "github": "GitHub",
 }
@@ -155,16 +159,16 @@ PLATFORM_NATIVE_FIELDS: Dict[str, PlatformFieldSpec] = {
         share_field="share_count", url_template="",
         notes="公共 Atom 订阅；条目 identity/link 是来源主键，互动指标不可用"),
     "sitemap": PlatformFieldSpec(
-        content_id="content_id", author_id="author_id", published_at="lastmod",
+        content_id="content_id", author_id="author_id", published_at="published_at",
         like_field="like_count", comment_field="comment_count", collect_field=None,
         share_field="share_count", url_template="",
-        notes="公共 Sitemap URL discovery；不把 Sitemap 当作内容事实存储"),
+        notes="公共 Sitemap URL discovery；lastmod 仅表示页面最后修改，不作为发布时间"),
     "weibo": PlatformFieldSpec(
-        content_id="mid", author_id="idstr", id_is_bigint=True,
+        content_id="mid", author_id="user_id", id_is_bigint=True,
         published_at="created_at", like_field="attitudes_count", comment_field="comments_count",
         collect_field=None, share_field="reposts_count",
         url_template="https://m.weibo.cn/detail/{content_id}",
-        notes="mid/id/idstr 并存，idstr 为字符串保精度；转发=reposts_count"),
+        notes="mid/idstr 为微博内容 ID；作者 ID 使用 user_id；转发=reposts_count"),
     "bilibili": PlatformFieldSpec(
         content_id="bvid", author_id="mid",
         published_at="pubdate", like_field="like", comment_field="reply",
@@ -200,6 +204,12 @@ PLATFORM_NATIVE_FIELDS: Dict[str, PlatformFieldSpec] = {
         collect_field=None, share_field="share_count",
         url_template="https://tieba.baidu.com/p/{content_id}"),
     # ---- V1.0 新增6平台 ----
+    "wechat": PlatformFieldSpec(
+        content_id="article_id", author_id="author_id", id_is_bigint=False,
+        published_at="published_at", like_field="like_num", comment_field="comment_count",
+        collect_field=None, share_field="share_count", type_field="content_type",
+        url_template=None, notes="公众号原文；索引时间不充当发表时间，缺失指标保持NULL。",
+    ),
     "channels": PlatformFieldSpec(
         content_id="object_id", author_id="author_id",
         published_at="create_time", like_field="like_count", comment_field="comment_count",
@@ -276,6 +286,75 @@ CANONICAL_FROM_NATIVE: Dict[str, Dict[str, str]] = {
 }
 
 
+def _exact_nonempty_text(value: Any) -> Optional[str]:
+    """Return source text unchanged when it contains a non-whitespace value."""
+    if isinstance(value, str) and value.strip():
+        return value
+    return None
+
+
+def _normalize_author_identity(value: Any) -> Optional[str]:
+    """Keep author IDs as exact text without coercing lossy or ambiguous types.
+
+    Platform author identities may be opaque handles/tokens, so their text is
+    never passed through content-ID normalization. Python integers are exact
+    and can be represented as decimal text; booleans, floats and containers do
+    not establish a trustworthy identity.
+    """
+    text = _exact_nonempty_text(value)
+    if text is not None:
+        return text
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int):
+        return str(value)
+    return None
+
+
+def _normalize_bilibili_publication(value: Any) -> Optional[str]:
+    """Normalize Bilibili's Unix-second publication value to UTC ISO text."""
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        timestamp = value
+    elif isinstance(value, str):
+        source_text = value.strip()
+        if not source_text:
+            return None
+        if re.fullmatch(r"[+-]?\d+", source_text):
+            try:
+                timestamp = int(source_text)
+            except ValueError:
+                return None
+        else:
+            try:
+                published = datetime.fromisoformat(source_text.replace("Z", "+00:00"))
+            except ValueError:
+                return None
+            if published.tzinfo is None:
+                return None
+            try:
+                published = published.astimezone(timezone.utc)
+            except (OverflowError, ValueError):
+                return None
+            timespec = "microseconds" if published.microsecond else "seconds"
+            return published.isoformat(timespec=timespec)
+    else:
+        # Bilibili's API supplies integer seconds. Floats and other types may
+        # already have lost source precision, so they do not become timestamps.
+        return None
+
+    # The source adapter treats zero as its missing timestamp sentinel.
+    if timestamp == 0:
+        return None
+    try:
+        published = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+    except (OverflowError, OSError, ValueError):
+        return None
+    timespec = "microseconds" if published.microsecond else "seconds"
+    return published.isoformat(timespec=timespec)
+
+
 def to_canonical_record(raw_record: Dict[str, Any], platform: Optional[str] = None) -> Dict[str, Any]:
     """把一条平台原生 raw 记录映射为 canonical 记录（不修改入参，不臆造缺失值）。
 
@@ -292,9 +371,14 @@ def to_canonical_record(raw_record: Dict[str, Any], platform: Optional[str] = No
         for canon_key, native_key in mapping.items():
             if native_key in raw_record:
                 out[canon_key] = raw_record[native_key]
+        out["author_id"] = _normalize_author_identity(out["author_id"])
         for passthrough in ("url", "title", "captured_at"):
             if passthrough in raw_record:
                 out[passthrough] = raw_record[passthrough]
+        if plat == "instagram" and out["content_id"] in (None, ""):
+            out["content_id"] = _exact_nonempty_text(raw_record.get("shortcode"))
+        if plat == "bilibili":
+            out["published_at"] = _normalize_bilibili_publication(out["published_at"])
     return out
 
 
@@ -358,20 +442,24 @@ def normalize_content_id(platform: Optional[str], raw_id: Any) -> Optional[str]:
     - 小红书 note_id、B站 bvid 等本身为字符串的平台，去空白后原样返回；
     - 空值返回 None（显式缺失）。
     """
-    if raw_id is None:
+    if raw_id is None or isinstance(raw_id, bool):
         return None
     spec = get_platform_fields(platform)
+    if spec and spec.id_is_bigint:
+        if isinstance(raw_id, float):
+            return None
+        if isinstance(raw_id, int):
+            return str(raw_id)
+        if not isinstance(raw_id, str):
+            return None
+        s = raw_id.strip()
+        if not s or re.fullmatch(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)[eE][+-]?\d+", s):
+            return None
+        return s
     # 统一转字符串去空白；bigint 平台额外确保不经过 float
     s = str(raw_id).strip()
     if not s:
         return None
-    if spec and spec.id_is_bigint:
-        # 防御：如果传入的是科学计数法字符串（如 7.34e18），尝试还原；无法还原则保留原串
-        if "e" in s.lower() and "." in s:
-            try:
-                s = str(int(float(s)))
-            except (ValueError, OverflowError):
-                pass
     return s
 
 
@@ -478,6 +566,13 @@ PLATFORM_FIELD_MAPPING: Dict[str, Dict[str, str]] = {
         "like_count": "like", "comment_count": "reply",
         "share_count": "share", "collect_count": "favorite",
         "view_count": "view",
+    },
+    "weibo": {
+        "platform_content_id": "mid", "author_id": "user_id",
+        "author_name": "screen_name", "title": "text", "content": "text",
+        "published_at": "created_at", "url": "url",
+        "like_count": "attitudes_count", "comment_count": "comments_count",
+        "share_count": "reposts_count",
     },
     "channels": {
         "platform_content_id": "object_id",
@@ -599,6 +694,29 @@ def map_raw_to_normalized(raw_record: Dict[str, Any], platform: Optional[str] = 
         for norm_key, raw_key in mapping.items():
             if raw_key in raw_record:
                 normalized[norm_key] = raw_record[raw_key]
+    elif plat and plat in CANONICAL_FROM_NATIVE:
+        canonical = to_canonical_record(raw_record, plat)
+        for normalized_key, canonical_key in (
+            ("platform_content_id", "content_id"),
+            ("author_id", "author_id"),
+            ("content_type", "content_type"),
+            ("published_at", "published_at"),
+            ("like_count", "like_count"),
+            ("comment_count", "comment_count"),
+            ("collect_count", "collect_count"),
+            ("share_count", "share_count"),
+        ):
+            normalized[normalized_key] = canonical[canonical_key]
+        for field_name in ("title", "url"):
+            normalized[field_name] = canonical[field_name]
+        if "content" in raw_record:
+            normalized["content"] = raw_record["content"]
+        if "captured_at" in raw_record:
+            normalized["collected_at"] = canonical["captured_at"]
+    if plat:
+        normalized["author_id"] = _normalize_author_identity(normalized["author_id"])
+        if plat == "instagram" and normalized["platform_content_id"] in (None, ""):
+            normalized["platform_content_id"] = _exact_nonempty_text(raw_record.get("shortcode"))
     return normalized
 
 

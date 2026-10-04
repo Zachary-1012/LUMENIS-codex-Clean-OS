@@ -324,6 +324,8 @@ def _ensure_cdp_online(timeout=30, cdp_url=None):
 def _norm_cdp_note(rec):
     """把 rednote_collector.cjs 的详情记录映射为 collector/insert_note 标准字段。"""
     pub = rec.get('detail_publish_time') or rec.get('publish_time') or rec.get('publish_datetime') or ''
+    if 'time_source_observations' in rec and rec.get('publication_time_source') not in {'detail', 'card'}:
+        pub = ''
     m = re.match(r'(\d{4}-\d{2}-\d{2})', str(pub))
     publish_date = m.group(1) if m else ''
     _title = rec.get('detail_title') or rec.get('title') or ''
@@ -336,8 +338,15 @@ def _norm_cdp_note(rec):
                 _title = _line[:40]
                 break
     def _int(v):
-        try: return int(v or 0)
-        except Exception: return 0
+        if v is None or isinstance(v, bool):
+            return None
+        if isinstance(v, int):
+            return v if v >= 0 else None
+        if isinstance(v, float):
+            return int(v) if v >= 0 and v.is_integer() else None
+        if isinstance(v, str) and v.strip().isascii() and v.strip().isdigit():
+            return int(v.strip())
+        return None
     return {
         'note_id': rec.get('note_id', ''),
         'title': _title,
@@ -351,38 +360,97 @@ def _norm_cdp_note(rec):
         'collects': _int(rec.get('collects')),
         'shares': _int(rec.get('shares')),
         'publish_date': publish_date,
+        'publish_time': pub,
+        'detail_publish_time': pub,
+        'time_raw': rec.get('time_raw', ''),
+        'time_source_observations': rec.get('time_source_observations', []),
+        'publication_time_source': rec.get('publication_time_source', 'legacy_not_classified'),
         # 双时间铁律：publish_date 来自平台发布时间；captured_at 是本机采集时刻，来源不同。
         # 显式落采集时刻，不依赖下游 insert_note 的隐式兜底（智谱采集链审查 P0-C 加固）。
-        'captured_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'captured_at': rec.get('collected_at') or rec.get('captured_at') or datetime.now().astimezone().isoformat(),
         'xsec_token': rec.get('xsec_token', ''),
         'source_channel': 'cdp_edge_9223',
         'quality_status': rec.get('quality_status', ''),
         'subject_hit_cdp': rec.get('subject_hit'),
         'comment_list': rec.get('comment_list', []),
+        'comment_count': rec.get('comment_count'),
+        'is_video': rec.get('is_video'),
+        'image_count': rec.get('image_count'),
+        'image_list': rec.get('image_list', []),
+        'video_list': rec.get('video_list', []),
+        'tag_list': rec.get('tag_list', []),
+        'author_url': rec.get('author_url', ''),
+        'detail_fetched': rec.get('detail_fetched'),
+        'native_metrics_raw': rec.get('native_metrics_raw', {}),
+        'source_note_ids': rec.get('source_note_ids'),
+        'source_page_url': rec.get('source_page_url'),
+        'detail_identity_verified': rec.get('detail_identity_verified'),
+        'unassigned_detail_observation': rec.get('unassigned_detail_observation'),
+        'collector_version': rec.get('collector_version', ''),
     }
 
 
-def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=None, region=None, account=None):
+def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=None, region=None, account=None, resume_path=None, time_budget=None):
     """Use the configured server browser worker with the existing XHS collector."""
+    import math
+    if time_budget is not None:
+        if isinstance(time_budget, bool):
+            return {'keyword': keyword, 'notes': [], 'total': 0, 'error': 'INVALID_TIME_BUDGET', 'channel': 'cdp'}
+        try:
+            time_budget = float(time_budget)
+        except (ValueError, TypeError, OverflowError):
+            return {'keyword': keyword, 'notes': [], 'total': 0, 'error': 'INVALID_TIME_BUDGET', 'channel': 'cdp'}
+        if not math.isfinite(time_budget) or time_budget <= 0:
+            return {'keyword': keyword, 'notes': [], 'total': 0, 'error': 'INVALID_TIME_BUDGET', 'channel': 'cdp'}
     _cdp, endpoint_error = _resolve_server_cdp_url(
         cdp_url, account=account, region=region or 'intl')
     if endpoint_error:
         return {'keyword': keyword, 'total': 0, 'notes': [], 'error': endpoint_error, 'channel': 'cdp'}
     env = _collection_env(account=account, region=region or 'intl', cdp_url=_cdp)
+    from uuid import uuid4
+    run_id = uuid4().hex
     py = sys.executable or 'python'
     cmd = [py, CDP_SCRIPT, '--keyword', keyword, '--output', output_path,
-           '--max-scroll', str(max_scroll), '--max-details', str(max_details), '--cdp-url', _cdp]
-    p = subprocess.run(cmd, cwd=SCRIPT_DIR, capture_output=True, text=True, encoding='utf-8', timeout=300, env=env)
-    out = p.stdout or ''
-    marker = '---RESULT_JSON---'
-    raw = out.split(marker, 1)[1].strip() if marker in out else (out[out.find('{'):] if out.find('{') >= 0 else '')
-    if not raw:
-        return {'keyword': keyword, 'total': 0, 'notes': [],
-                'error': ((p.stderr or out) or f'CDP exit {p.returncode}')[-800:], 'channel': 'cdp'}
+           '--max-scroll', str(max_scroll), '--max-details', str(max_details), '--cdp-url', _cdp,
+           '--run-id', run_id]
+    if time_budget is not None:
+        cmd.extend(['--time-budget', str(time_budget)])
+    if resume_path:
+        cmd.extend(['--resume-from', str(resume_path)])
     try:
-        data = json.loads(raw)
-    except Exception as e:
-        return {'keyword': keyword, 'total': 0, 'notes': [], 'error': f'CDP结果解析失败: {e}', 'channel': 'cdp'}
+        p = subprocess.run(cmd, cwd=SCRIPT_DIR, capture_output=True, text=True, encoding='utf-8', timeout=None if time_budget is None else time_budget + 60, env=env)
+    except subprocess.TimeoutExpired:
+        # Recover only this invocation's atomic checkpoint, never an older file.
+        try:
+            with open(output_path, encoding='utf-8') as source:
+                data = json.load(source)
+            checkpoint = data.get('checkpoint') or {}
+            if (checkpoint.get('run_id') != run_id or data.get('keyword') != keyword
+                    or checkpoint.get('source_host') != 'www.rednote.com'
+                    or not isinstance(data.get('notes'), list)
+                    or not all(isinstance(note, dict) for note in data['notes'])
+                    or not isinstance(data.get('summary'), dict)):
+                raise ValueError('checkpoint belongs to another acquisition')
+        except (OSError, ValueError, TypeError, AttributeError):
+            return {'keyword': keyword, 'total': 0, 'notes': [], 'ok': False,
+                    'error': 'CDP_TIMEOUT_NO_CHECKPOINT', 'channel': 'cdp',
+                    'summary': {'timed_out': True, 'checkpoint_recovered': False}}
+        data['ok'] = False
+        data['partial'] = True
+        data.setdefault('summary', {}).update({'timed_out': True, 'checkpoint_recovered': True})
+        data['error'] = data.get('error') or 'CDP_TIMEOUT_PARTIAL'
+    else:
+        out = p.stdout or ''
+        marker = '---RESULT_JSON---'
+        raw = out.split(marker, 1)[1].strip() if marker in out else (out[out.find('{'):] if out.find('{') >= 0 else '')
+        if not raw:
+            return {'keyword': keyword, 'total': 0, 'notes': [], 'ok': False,
+                    'error': ((p.stderr or out) or f'CDP exit {p.returncode}')[-800:], 'channel': 'cdp'}
+        try:
+            data = json.loads(raw)
+        except Exception as e:
+            return {'keyword': keyword, 'total': 0, 'notes': [], 'ok': False,
+                    'error': f'CDP结果解析失败: {e}', 'channel': 'cdp'}
     summ = data.get('summary', {}) or {}
     notes = [_norm_cdp_note(r) for r in data.get('notes', []) if r.get('note_id')]
     if summ.get('ip_blocked'):
@@ -391,12 +459,16 @@ def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=No
         err = 'SESSION_EXPIRED'
     elif summ.get('verification_required'):
         err = 'NEED_VERIFY'
+    elif data.get('error'):
+        err = data['error']
     elif not notes and not data.get('ok'):
         err = 'CDP_EMPTY_OR_LOAD_FAILED'
     else:
         err = ''
     return {'keyword': keyword, 'total': len(notes), 'notes': notes, 'error': err,
-            'channel': 'cdp', 'summary': summ, 'ok': bool(data.get('ok'))}
+            'channel': 'cdp', 'summary': summ, 'ok': bool(data.get('ok')),
+            'partial': bool(data.get('partial')), 'checkpoint': data.get('checkpoint', {}),
+            'search_diagnostics': data.get('search_diagnostics', {})}
 
 
 def _search_standalone(keyword, max_scroll, output_path, account=None, region='intl', cdp_url=None):
@@ -444,7 +516,7 @@ def _is_noise_keyword(k):
 
 
 def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
-                        region=None, cdp_port=None, kos_only=False, account=None):
+                        region=None, cdp_port=None, kos_only=False, account=None, resume_path=None, time_budget=None):
     """多通道搜索 RedNote：仅走香港/国际账号与 9223 入口。
     返回 dict: {keyword,total,notes,error,channel,region}。风控态显式返回，不当作普通0条。
     region: 当前生产值为 'intl'；'cn' 明确返回策略阻断，不触发任何下游进程。
@@ -505,7 +577,8 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
         return {'keyword': keyword, 'total': 0, 'notes': [], 'error': 'COLLECTOR_ENDPOINT_UNAVAILABLE',
                 'channel': 'worker', 'region': region}
     result = _search_via_cdp(keyword, max_scroll, output_path, max_details=max_details,
-                             cdp_url=cdp_url, region=region, account=selected_account)
+                             cdp_url=cdp_url, region=region, account=selected_account,
+                             resume_path=resume_path, time_budget=time_budget)
     result['region'] = region
     result['channel'] = 'authorized_browser_worker'
     return result
@@ -527,7 +600,9 @@ def _collect_one_keyword(guard, kw, kw_scroll, kw_details, account=None):
 
 
 def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_id=None,
-                kind="public_opinion", auto_trigger=False, account=None):
+                kind="public_opinion", auto_trigger=False, account=None, *,
+                business_requests=None, continuation=None, max_queries=32,
+                max_details=0):
     """
     批量采集所有关键词
     返回去重后的笔记列表
@@ -563,7 +638,8 @@ def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_
 
     # Resolve the canonical acquisition plan before touching Guard/browser/network.
     from lumenis.system.collector.acquisition_plan import build_acquisition_plan
-    query_plan = build_acquisition_plan(keywords)
+    query_plan = build_acquisition_plan(keywords, business_requests=business_requests,
+                                       continuation=continuation, max_queries=max_queries)
     if not query_plan.is_runnable:
         return [], [{
             'keyword': '',
@@ -580,7 +656,11 @@ def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_
         if not k or _is_noise_keyword(k) or k.lower() in seen_kw:
             continue
         seen_kw.add(k.lower()); clean_kw.append(k)
-    keywords = clean_kw[:12]
+    keywords = clean_kw
+    if any(query.business_context and query.business_context.get('platform') not in
+           {'xhs', 'xiaohongshu', 'rednote', '小红书'} for query in query_plan.queries):
+        return [], [{'keyword': '', 'count': 0, 'error': 'USE_PLATFORM_COLLECTION_ENTRY',
+                     'query_plan': query_plan.to_dict()}]
 
     all_notes = {}
     collection_results = []
@@ -589,8 +669,8 @@ def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_
     for idx, kw in enumerate(keywords):
         # 首个显式词与主体监测词为核心，深采；其余为扩展反馈词，浅采（提速、降负载、降风控）
         is_core = (idx == 0) or (kw in core_set)
-        kw_details = 10 if is_core else 3
-        kw_scroll = max_scroll if is_core else min(max_scroll, 2)
+        kw_details = max_details
+        kw_scroll = max_scroll
         print(f"[Collector] 搜索: {kw} ({'核心' if is_core else '扩展'}浅采)" if not is_core else f"[Collector] 搜索: {kw}")
         guard = _get_xhs_guard()
         # Runtime Guardian: 逐关键词心跳
@@ -632,7 +712,11 @@ def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_
         if _feed_risk_engine(_get_xhs_risk_engine(), error=error, guard_state=getattr(gr, 'state', ''),
                              count=count, kw=kw, is_core=is_core, results=collection_results):
             break
-        collection_results.append({'keyword': kw, 'count': count, 'error': error, 'tier': 'core' if is_core else 'expand'})
+        matching_queries = [query.to_dict() for query in query_plan.queries if query.keyword == kw]
+        collection_results.append({'keyword': kw, 'count': count, 'error': error,
+                                   'tier': 'core' if is_core else 'expand',
+                                   'planned_queries': matching_queries,
+                                   'scope_role': 'QUERY_INTENT_NOT_VERIFIED_SOURCE_BINDING'})
         print(f"[Collector]   -> {count} 条 {'(错误: '+error+')' if error else ''}")
 
         # P1-A 动态调度间隔（生产接线）：关键词间按 RiskEngine 六态动态降频/恢复。
@@ -679,6 +763,14 @@ def collect_all(keywords=None, max_scroll=4, guardian=None, worker_id=None, run_
                 pass
 
     notes_list = list(all_notes.values())
+    if collection_results:
+        attempted = {item.get('keyword') for item in collection_results}
+        pending = [query.to_dict() for query in query_plan.queries if query.keyword not in attempted]
+        collection_results[-1]['query_plan'] = query_plan.to_dict()
+        collection_results[-1]['pending_queries'] = pending
+        collection_results[-1]['next_cursor'] = query_plan.next_cursor
+        collection_results[-1]['continuation_required'] = bool(pending or query_plan.next_cursor)
+        collection_results[-1]['coverage_complete'] = False
     print(f"[Collector] 去重后共 {len(notes_list)} 条笔记")
     return notes_list, collection_results
 

@@ -1,4 +1,4 @@
-"""Scoped prelaunch import integration against the disposable v18 database."""
+"""Scoped prelaunch import integration against an explicitly disposable database."""
 from __future__ import annotations
 
 import json
@@ -38,6 +38,10 @@ def test_public_prelaunch_import_binds_exact_scope_and_repeats_idempotently(
     monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
     monkeypatch.setattr(permission_module, "_TESTING_BYPASS_ENABLED", False)
     monkeypatch.setattr(database, "DB_PATH", str(db_path))
+    from lumenis.shared.database.migrations import migrate
+    assert migrate(target_version=19)
+    from lumenis.shared.evidence.store import init_evidence_store
+    init_evidence_store(str(db_path))
     with sqlite3.connect(db_path) as conn:
         evidence_columns = {row[1] for row in conn.execute("PRAGMA table_info(app_evidence_records)")}
         note_columns = {row[1] for row in conn.execute("PRAGMA table_info(notes)")}

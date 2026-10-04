@@ -513,31 +513,208 @@ def human_consume_detail(page, profile, depth):
 
 
 def parse_count(s):
-    if s is None:
-        return 0
+    if s is None or isinstance(s, bool):
+        return None
     s = str(s).strip().lower().replace(',', '').replace(' ', '')
     if not s:
-        return 0
-    m = re.search(r'(-?\d+(?:\.\d+)?)\s*(万|w|千|k|亿|m|b)?', s)
+        return None
+    m = re.fullmatch(r'(\d+(?:\.\d+)?)\s*(万|w|千|k|亿|m|b)?', s)
     if not m:
-        return 0
-    num = float(m.group(1))
+        return None
+    from decimal import Decimal
+    num = Decimal(m.group(1))
     unit = m.group(2) or ''
-    mul = {'万': 1e4, 'w': 1e4, '千': 1e3, 'k': 1e3, '亿': 1e8, 'm': 1e6, 'b': 1e9}.get(unit, 1)
-    return int(num * mul)
+    mul = {'万': 10000, 'w': 10000, '千': 1000, 'k': 1000, '亿': 100000000,
+           'm': 1000000, 'b': 1000000000}.get(unit, 1)
+    count = num * mul
+    return int(count) if count == count.to_integral_value() else None
+
+
+def _detail_metrics(detail, card):
+    """Only labeled note metrics may fill note counts; comment likes cannot."""
+    engage = detail.get('engage') or {}
+    likes = parse_count(engage.get('like_raw'))
+    if likes is None:
+        likes = parse_count(card.get('likes_raw'))
+    return {'likes': likes, 'collects': parse_count(engage.get('collect_raw')),
+            'comments': parse_count(engage.get('comment_raw')),
+            'shares': parse_count(engage.get('share_raw'))}
+
+
+def _require_detail_observation(detail):
+    if detail.get('detail_present') is not True:
+        raise RuntimeError('DETAIL_CONTENT_UNAVAILABLE')
+
+
+class RawCheckpointError(RuntimeError):
+    pass
+
+
+def _identity_fingerprint():
+    import hashlib
+    expected = os.environ.get('XHS_EXPECTED_COLLECTION_USER_ID', '').strip()
+    return hashlib.sha256(expected.encode('utf-8')).hexdigest() if expected else ''
+
+
+def _load_resume_checkpoint(path, keyword):
+    if not path:
+        return None
+    with open(path, encoding='utf-8') as source:
+        previous = json.load(source)
+    if not isinstance(previous, dict):
+        raise RuntimeError('RESUME_INPUT_MISMATCH')
+    checkpoint = previous.get('checkpoint') or {}
+    if (previous.get('keyword') != keyword or checkpoint.get('source_host') != COLLECTION_HOST
+            or not _identity_fingerprint()
+            or checkpoint.get('verified_identity_fingerprint') != _identity_fingerprint()
+            or previous.get('identity_verified') is not True):
+        raise RuntimeError('RESUME_INPUT_MISMATCH')
+    return previous
+
+
+def _completed_detail_ids(previous):
+    if previous is None:
+        return set()
+    completed = {note['note_id'] for note in previous.get('notes', [])
+                 if isinstance(note, dict) and note.get('detail_fetched') is True
+                 and isinstance(note.get('note_id'), str) and note['note_id']}
+    completed.update(value for value in previous.get('summary', {}).get('resumed_note_ids', [])
+                     if isinstance(value, str) and value)
+    return completed
+
+
+def _resume_note_ids(path, keyword):
+    return _completed_detail_ids(_load_resume_checkpoint(path, keyword))
+
+
+def _validate_native_card(card):
+    from urllib.parse import urlsplit
+    if not isinstance(card, dict) or not re.fullmatch(r'[0-9a-fA-F]{24}', str(card.get('note_id') or '')):
+        raise RuntimeError('NATIVE_PENDING_SOURCE_INVALID')
+    try:
+        url = urlsplit(str(card.get('url') or ''))
+        match = re.fullmatch(r'/(?:explore|search_result|discovery/item)/([0-9a-fA-F]{24})/?', url.path)
+        valid = (url.scheme == 'https' and url.hostname == COLLECTION_HOST
+                 and url.port in (None, 443) and not url.username and not url.password
+                 and match and match.group(1).lower() == card['note_id'].lower())
+    except ValueError:
+        valid = False
+    if not valid:
+        raise RuntimeError('NATIVE_PENDING_SOURCE_INVALID')
+    return card
+
+
+def _resume_pending_cards(previous, completed):
+    if previous is None:
+        return []
+    pending = {}
+    for card in previous.get('discovered_cards', []) + previous.get('notes', []):
+        if isinstance(card, dict) and card.get('note_id') not in completed:
+            _validate_native_card(card)
+            pending.setdefault(card['note_id'], dict(card))
+    recorded = (previous.get('summary') or {}).get('pending_note_ids', [])
+    if any(note_id not in pending and note_id not in completed for note_id in recorded):
+        raise RuntimeError('RESUME_PENDING_SOURCE_MISSING')
+    return list(pending.values())
+
+
+def _merge_native_cards(resume_cards, current_cards):
+    merged = {}
+    for card in (resume_cards or []) + current_cards:
+        _validate_native_card(card)
+        merged.setdefault(card['note_id'], dict(card))
+    return list(merged.values())
+
+
+def _require_detail_identity(detail, expected_note_id):
+    from urllib.parse import urlsplit
+    try:
+        url = urlsplit(str(detail.get('source_page_url') or ''))
+        valid = (url.scheme == 'https' and url.hostname == COLLECTION_HOST
+                 and url.port in (None, 443) and not url.username and not url.password)
+    except ValueError:
+        valid = False
+    if not valid:
+        raise RuntimeError('DETAIL_SOURCE_UNVERIFIED')
+    observed = detail.get('source_note_ids')
+    if not isinstance(observed, list) or not observed:
+        raise RuntimeError('DETAIL_IDENTITY_UNVERIFIED')
+    if any(not isinstance(value, str) or value.lower() != expected_note_id.lower() for value in observed):
+        raise RuntimeError('DETAIL_IDENTITY_MISMATCH')
+
+
+def _update_detail_progress(result):
+    completed = {note.get('note_id') for note in result['notes'] if note.get('detail_fetched') is True}
+    completed.update(result['summary'].get('resumed_note_ids', []))
+    pending = [card['note_id'] for card in result.get('discovered_cards', [])
+               if card.get('note_id') and card['note_id'] not in completed]
+    result['summary'].update({'pending_note_ids': list(dict.fromkeys(pending)),
+                              'pagination_exhausted': False})
+
+
+def _write_checkpoint(output, result, run_id, *, complete=False):
+    """Atomically replace the existing Raw artifact after each observation."""
+    if not output:
+        return
+    import tempfile
+    folder = os.path.dirname(os.path.abspath(output))
+    os.makedirs(folder, exist_ok=True)
+    snapshot = dict(result)
+    snapshot['partial'] = not complete
+    snapshot['checkpoint'] = {'run_id': run_id, 'source_host': COLLECTION_HOST,
+                              'complete': complete,
+                              'verified_identity_fingerprint': _identity_fingerprint() if result.get('identity_verified') else '',
+                              'written_at': datetime.now().astimezone().isoformat()}
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=folder,
+                                         prefix='.xhs-raw-', suffix='.tmp', delete=False) as target:
+            temporary = target.name
+            json.dump(snapshot, target, ensure_ascii=False, indent=2)
+            target.flush()
+            os.fsync(target.fileno())
+        os.replace(temporary, output)
+    except OSError as exc:
+        raise RawCheckpointError('RAW_CHECKPOINT_WRITE_FAILED') from exc
+    finally:
+        if temporary and os.path.exists(temporary):
+            os.unlink(temporary)
+    return snapshot['checkpoint']
+
+
+def _budget_reached(result, deadline):
+    if deadline is None or time.monotonic() < deadline:
+        return False
+    result['ok'] = False
+    result['partial'] = True
+    result['error'] = result.get('error') or 'CDP_TIME_BUDGET_PARTIAL'
+    result['summary']['time_budget_reached'] = True
+    return True
 
 
 def normalize_publish_time(raw):
     """小红书发布时间：明确日期优先；相对时间换算；拿不到返回空字符串，绝不臆造。"""
     if not raw:
         return ''
-    raw = raw.strip().replace('编辑于', '').strip()
+    raw = str(raw).strip()
+    if '编辑于' in raw:
+        return ''  # An edit time does not establish publication.
+    stamp = re.search(r'20\d{2}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?', raw)
+    if stamp:
+        try:
+            datetime.fromisoformat(stamp.group(0))
+            return stamp.group(0)
+        except ValueError:
+            return ''
     m = re.search(r'(20\d{2})[-./](\d{1,2})[-./](\d{1,2})', raw)
     if m:
-        return f'{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}'
+        try:
+            return datetime(*(int(m.group(i)) for i in (1, 2, 3))).strftime('%Y-%m-%d')
+        except ValueError:
+            return ''
     m = re.search(r'(\d{1,2})[-./](\d{1,2})', raw)
     if m:
-        return f'{datetime.now().year}-{int(m.group(1)):02d}-{int(m.group(2)):02d}'
+        return ''  # The publication year was not observed.
     now = datetime.now()
     if '今天' in raw:
         return now.strftime('%Y-%m-%d')
@@ -552,6 +729,24 @@ def normalize_publish_time(raw):
     return ''
 
 
+def _source_publication_time(detail, card):
+    """A visible edit/unclassified date is not independent publication evidence."""
+    observations = []
+    for origin, source in (('detail', detail), ('card', card)):
+        raw = source.get('time_raw') or ''
+        kind = source.get('time_kind') or 'unclassified'
+        if re.search(r'编辑|更新|edited|updated', str(raw), re.I):
+            kind = 'edit'
+        locator = source.get('time_locator')
+        observations.append({'origin': origin, 'raw': raw, 'kind': kind, 'locator': locator})
+    for observation in observations:
+        if observation['kind'] == 'publication' and observation['locator']:
+            value = normalize_publish_time(observation['raw'])
+            if value:
+                return value, observations, observation['origin']
+    return '', observations, 'unknown'
+
+
 _LIST_JS = r"""
 () => {
   const out = [];
@@ -562,12 +757,22 @@ _LIST_JS = r"""
     const tkm = href.match(/xsec_token=([^&]+)/);
     const q = s => { const e = item.querySelector(s); return e ? (e.innerText||'').trim() : ''; };
     const img = item.querySelector('a.cover img');
+    let observedTime = {time_raw:'', time_kind:'unknown', time_locator:null};
+    for (const selector of ['[itemprop="datePublished"]','.publish-time','a.author .time','.time']) {
+      const e = item.querySelector(selector);
+      const raw = e ? (e.getAttribute('content') || e.getAttribute('datetime') || e.innerText || '').trim() : '';
+      if (!raw) continue;
+      observedTime = {time_raw:raw,
+        time_kind:/编辑|更新|edited|updated/i.test(raw)?'edit':(['[itemprop="datePublished"]','.publish-time'].includes(selector)?'publication':'unclassified'),
+        time_locator:{container_selector:'section.note-item',note_id:idm?idm[1]:'',selector}};
+      break;
+    }
     out.push({
       note_id: idm ? idm[1] : '',
       xsec_token: tkm ? decodeURIComponent(tkm[1]) : '',
       title: q('a.title span') || q('.title'),
       author: q('a.author .name') || q('.author .name'),
-      time_raw: q('a.author .time') || q('.time'),
+      ...observedTime,
       likes_raw: q('span.like-wrapper .count') || q('.count'),
       cover: img ? img.getAttribute('src') : '',
       url: href && href.startsWith('http') ? href : new URL(href.startsWith('/') ? href : '/' + href, window.location.origin).href
@@ -581,7 +786,10 @@ _DETAIL_JS = r"""
 () => {
   const q = sels => { for (const s of sels) { const e = document.querySelector(s); if (e && (e.innerText||'').trim()) return (e.innerText||'').trim(); } return ''; };
   const counts = Array.from(document.querySelectorAll('.count')).map(c => (c.innerText||'').trim()).filter(Boolean);
-  const wc = sels => { for (const s of sels) { const e=document.querySelector(s); const v=e?(e.innerText||'').trim():''; if(v) return v; } return ''; };
+  const wc = sels => { for (const s of sels) { for (const e of document.querySelectorAll(s)) {
+    if (e.closest('section.note-item,.comment-item,.parent-comment,.comments-container,.comment-container')) continue;
+    const v=(e.innerText||'').trim(); if(v) return v;
+  }} return ''; };
   // 语义化互动计数（只读取数字，绝不点击）：赞/藏/评/分享，缺省为空串由后端兜底
   const engage = {
     like_raw: wc(['.like-wrapper .count','.engage-bar .like .count','[class*="like-wrapper"] .count','[class*="like"] .count']),
@@ -596,14 +804,53 @@ _DETAIL_JS = r"""
              time: t?(t.innerText||'').trim():'', likes_raw: l?(l.innerText||'').trim():'' };
   });
   const hasVideo = !!document.querySelector('video,.video-container,[class*="video-player"]');
-  const slideImgs = document.querySelectorAll('.swiper-slide img, .note-slider-img, .media-container img').length;
+  const images = Array.from(document.querySelectorAll('.swiper-slide img, .note-slider-img, .media-container img'));
+  const imageList = Array.from(new Set(images.map(e => e.currentSrc || e.getAttribute('src') || '').filter(Boolean)));
+  const videoList = Array.from(document.querySelectorAll('video')).map(v => ({
+    url: v.currentSrc || v.getAttribute('src') || '', poster: v.getAttribute('poster') || '',
+    sources: Array.from(v.querySelectorAll('source')).map(s => s.getAttribute('src') || '').filter(Boolean)
+  }));
+  const authorLink = document.querySelector('.author-container a[href*="/user/profile/"],.author a[href*="/user/profile/"]');
+  const authorUrl = authorLink ? authorLink.href : '';
+  const authorMatch = authorUrl.match(/\/user\/profile\/([0-9a-fA-F]{24})(?:[/?#]|$)/);
+  const tags = Array.from(new Set(Array.from(document.querySelectorAll('#detail-desc a.tag,.note-content a.tag,a[href*="/search_result?keyword=%23"]')).map(e => (e.innerText||'').trim()).filter(Boolean)));
+  let observedTime = {time_raw:'', time_kind:'unknown', time_locator:null};
+  for (const selector of ['[itemprop="datePublished"]','.publish-time','.author-container .time','.date','.time']) {
+    for (const e of document.querySelectorAll(selector)) {
+      if(e.closest('section.note-item,.comment-item,.parent-comment,.comments-container,.comment-container')) continue;
+      const raw = (e.getAttribute('content') || e.getAttribute('datetime') || e.innerText || '').trim();
+      if (!raw) continue;
+      observedTime = {time_raw:raw,
+        time_kind:/编辑|更新|edited|updated/i.test(raw)?'edit':(['[itemprop="datePublished"]','.publish-time'].includes(selector)?'publication':'unclassified'),
+        time_locator:{page_url:window.location.origin+window.location.pathname,selector}};
+      break;
+    }
+    if(observedTime.time_raw) break;
+  }
+  const nativeNoteId = value => {
+    try {
+      const u = new URL(value, window.location.origin);
+      const m = u.pathname.match(/^\/(?:discovery\/item|explore|search_result)\/([0-9a-fA-F]{24})\/?$/);
+      return u.protocol === 'https:' && u.hostname === 'www.rednote.com' && m ? m[1].toLowerCase() : '';
+    } catch (_) { return ''; }
+  };
+  const canonical = document.querySelector('link[rel="canonical"]');
+  const sourceNoteIds = Array.from(new Set([
+    nativeNoteId(window.location.href),
+    canonical ? nativeNoteId(canonical.getAttribute('href') || '') : '',
+    ...Array.from(document.querySelectorAll('.note-detail[data-note-id],#noteContainer[data-note-id]')).map(e => e.getAttribute('data-note-id') || '')
+  ].filter(x => /^[0-9a-fA-F]{24}$/.test(x)).map(x => x.toLowerCase())));
   return {
+    source_note_ids: sourceNoteIds,
+    source_page_url: window.location.origin + window.location.pathname,
+    detail_present: !!document.querySelector('#detail-title,#detail-desc,.note-content .desc,.note-detail'),
     title: q(['#detail-title','.note-content .title','h1']),
     desc: q(['#detail-desc','.note-content .desc','.note-text','.desc']),
     author: q(['.author-container .name','.author .name','.username']),
-    time_raw: q(['.author-container .time','.publish-time','.date','.time']),
+    ...observedTime,
     all_counts: counts, engage: engage, comment_list: comments, comment_count: comments.length,
-    is_video: hasVideo, image_count: slideImgs
+    is_video: hasVideo, image_count: images.length, image_list: imageList, video_list: videoList,
+    author_url: authorUrl, author_id: authorMatch ? authorMatch[1] : '', tag_list: tags
   };
 }
 """
@@ -680,13 +927,130 @@ def robust_goto(page, url, commit_to=30000, dom_to=45000):
 # ============================================================
 # 真人采集主流程（默认）
 # ============================================================
-def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
+
+_SEARCH_STATE_JS = r"""(keyword) => {
+  const body = document.body ? (document.body.innerText || '') : '';
+  const query = new URL(location.href).searchParams.get('keyword');
+  const input = document.querySelector('#search-input,.search-input input,input[type=search]');
+  const selectors = ['section.note-item','a.cover','.feeds-container'];
+  const counts = Object.fromEntries(selectors.map(s => [s,document.querySelectorAll(s).length]));
+  const links = Array.from(document.querySelectorAll('section.note-item a')).map(a => a.getAttribute('href') || '');
+  const noteLinkCount = links.filter(x => /(?:search_result|explore)\/([^/?]+)/.test(x)).length;
+  const bodyLines = body.split(/\r?\n/).map(x => x.trim());
+  return {
+    host_matches: location.hostname === 'www.rednote.com' && location.protocol === 'https:',
+    route_is_search: location.pathname.startsWith('/search_result'),
+    query_matches: query === keyword || (!!input && input.value === keyword && query === encodeURIComponent(keyword)),
+    query_encoding: query === keyword ? 'literal' : (!!input && input.value === keyword && query === encodeURIComponent(keyword) ? 'percent_encoded_once' : 'unverified'),
+    input_matches: !!input && input.value === keyword,
+    document_ready_state: document.readyState,
+    selector_counts: counts,
+    note_link_count: noteLinkCount,
+    body_character_count: body.length,
+    native_empty_indicators: counts['section.note-item'] === 0 && noteLinkCount === 0
+      ? ['暂无搜索结果','没有找到相关内容','无搜索结果','No results found'].filter(x => bodyLines.includes(x)) : [],
+    loading_element_count: document.querySelectorAll('[aria-busy=true],.loading,.load-more').length
+  };
+}"""
+
+
+def _snapshot_search_state(page, keyword, result, phase, progress=None, *, error_type=None):
+    """Capture bounded DOM facts only; never URL queries, HTML, cookies or headers."""
+    observation = {'phase': phase, 'observed_at': datetime.now().astimezone().isoformat()}
+    try:
+        raw = page.evaluate(_SEARCH_STATE_JS, keyword)
+        if not isinstance(raw, dict):
+            raise TypeError('SEARCH_STATE_INVALID')
+        for key in ('host_matches', 'route_is_search', 'query_matches', 'input_matches'):
+            observation[key] = raw.get(key) is True
+        encoding = raw.get('query_encoding')
+        observation['query_encoding'] = encoding if encoding in {'literal', 'percent_encoded_once'} else 'unverified'
+        state = raw.get('document_ready_state')
+        observation['document_ready_state'] = state if state in {'loading','interactive','complete'} else 'unknown'
+        counts = raw.get('selector_counts') or {}
+        observation['selector_counts'] = {}
+        for selector in ('section.note-item','a.cover','.feeds-container'):
+            count = counts.get(selector)
+            observation['selector_counts'][selector] = count if type(count) is int and count >= 0 else None
+        for key in ('note_link_count', 'body_character_count', 'loading_element_count'):
+            count = raw.get(key)
+            observation[key] = count if type(count) is int and count >= 0 else None
+        indicators = raw.get('native_empty_indicators') or []
+        observation['native_empty_indicators'] = [value for value in indicators if value in {
+            '暂无搜索结果','没有找到相关内容','无搜索结果','No results found'}]
+    except Exception as exc:
+        observation['diagnostic_error_type'] = type(exc).__name__
+    if error_type:
+        observation['wait_error_type'] = error_type
+    diagnostics = result.setdefault('search_diagnostics', {'version': 'xhs-search-state-v1', 'observations': []})
+    diagnostics['observations'].append(observation)
+    diagnostics['observations'] = diagnostics['observations'][-12:]
+    if progress:
+        progress(result)
+    return observation
+
+
+def _search_failure_code(observation):
+    """An empty observation is an acquisition state, never a business metric zero."""
+    if observation.get('diagnostic_error_type'):
+        return 'SEARCH_STATE_UNAVAILABLE'
+    if observation.get('host_matches') is not True:
+        return 'SOURCE_HOST_MISMATCH'
+    if not observation.get('route_is_search') or not observation.get('query_matches'):
+        return 'SEARCH_TRANSITION_UNVERIFIED'
+    if (observation.get('native_empty_indicators')
+            and observation.get('selector_counts', {}).get('section.note-item') == 0
+            and observation.get('note_link_count') == 0):
+        return 'SOURCE_NO_RESULTS'
+    if (observation.get('body_character_count') or 0) < 20:
+        return 'LOAD_FAILED'
+    if (observation.get('selector_counts', {}).get('section.note-item') or 0) > 0 and observation.get('note_link_count') == 0:
+        return 'LIST_PARSE_UNAVAILABLE'
+    if (observation.get('loading_element_count') or 0) > 0:
+        return 'SEARCH_LOADING_TIMEOUT'
+    return 'EMPTY_LIST_UNCLASSIFIED'
+
+
+def _await_search_ready(page, keyword, result, progress=None, deadline=None):
+    """Wait for this exact query and a visible native card, within one time budget."""
+    from urllib.parse import parse_qs, quote
+    started = time.monotonic()
+    end = min(started + 18, deadline) if deadline is not None else started + 18
+    observation = _snapshot_search_state(page, keyword, result, 'search_submitted', progress)
+    if observation.get('host_matches') is not True:
+        result['error'] = _search_failure_code(observation)
+        return False
+    def matches(url):
+        parsed = urlsplit(str(url))
+        return (parsed.scheme == 'https' and parsed.hostname == COLLECTION_HOST
+                and parsed.path.startswith('/search_result')
+                and parse_qs(parsed.query).get('keyword') in ([keyword], [quote(keyword, safe="~()*!.'")]))
+    try:
+        if _budget_reached(result, deadline):
+            return False
+        page.wait_for_url(matches, wait_until='domcontentloaded', timeout=max(1, int((end-time.monotonic())*1000)))
+        page.locator('section.note-item').first.wait_for(state='visible', timeout=max(1, int((end-time.monotonic())*1000)))
+    except Exception as exc:
+        observation = _snapshot_search_state(page, keyword, result, 'search_wait_failed', progress, error_type=type(exc).__name__)
+        if _risk_check(page, result):
+            return False
+        result['error'] = _search_failure_code(observation)
+        return False
+    observation = _snapshot_search_state(page, keyword, result, 'search_ready', progress)
+    if not (observation.get('host_matches') and observation.get('route_is_search') and observation.get('query_matches')):
+        result['error'] = _search_failure_code(observation)
+        return False
+    return True
+
+def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progress=None, deadline=None, resume_ids=None, resume_cards=None):
     _assert_collection_host()
     from playwright.sync_api import sync_playwright
     result = {'ok': False, 'keyword': keyword, 'mode': 'human', 'notes': [], 'summary': {}, 'human_trace': []}
+    result['summary']['resumed_note_ids'] = sorted(resume_ids or ())
     trace = result['human_trace']
     with sync_playwright() as p:
         browser, ctx = _connect_verified_collection_context(p, cdp_url)
+        result['identity_verified'] = True
         page = ctx.new_page()
         try:
             from urllib.parse import quote
@@ -695,6 +1059,7 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
             landing = f'{COLLECTION_ORIGIN}/explore'
             log('真人模式：打开探索页')
             robust_goto(page, landing)
+            _snapshot_search_state(page, keyword, result, 'landing', progress)
             human_sleep(2.4, 3.8)
             if _risk_check(page, result):
                 return result
@@ -705,61 +1070,68 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                 # 兜底：键盘输入失败时退回 URL 直达（仍继续真人浏览，不中断采集）
                 log(f'键盘输入失败，回退URL直达: {e}')
                 robust_goto(page, f'{COLLECTION_ORIGIN}/search_result/?keyword={quote(keyword)}&source=web_explore_feed&type=51')
-            try:
-                page.wait_for_selector('section.note-item', timeout=18000)
-            except Exception:
-                text = page.evaluate("() => document.body ? document.body.innerText : ''") or ''
-                if len(text.replace('\n', '').replace(' ', '')) < 20 or page.url.startswith('about:blank'):
-                    result['error'] = 'LOAD_FAILED'
-                    result['summary'] = {'load_failed': True, 'url': page.url[:80]}
-                    return result
+            if not _await_search_ready(page, keyword, result, progress, deadline):
+                return result
             human_sleep(1.2, 2.2)
 
-            # 2) 真人变速滚动浏览信息流（触发懒加载），鼠标伴随漂移
+            # Browse only the confirmed exact-query list.
             for i in range(int(max_scroll)):
+                if _budget_reached(result, deadline):
+                    return result
                 scroll_human(page, total_px=random.randint(700, 1100), rounds=random.randint(2, 4))
                 gauss_sleep(1.4, 0.5, 0.8)
                 if _risk_check(page, result):
                     return result
             human_sleep(0.8, 1.6)
 
+            observation = _snapshot_search_state(page, keyword, result, 'before_list_parse', progress)
+            if not (observation.get('host_matches') and observation.get('route_is_search') and observation.get('query_matches')):
+                result['error'] = _search_failure_code(observation)
+                return result
             cards = page.evaluate(_LIST_JS)
             log(f'信息流发现 {len(cards)} 张卡片')
             result['summary']['discovered'] = len(cards)
+            cards = _merge_native_cards(resume_cards, cards) if resume_cards else cards
+            result['discovered_cards'] = cards
+            if progress:
+                _update_detail_progress(result)
+                progress(result)
             if not cards:
                 if _risk_check(page, result):
                     return result
-                result['error'] = 'EMPTY_LIST'
+                result['error'] = _search_failure_code(_snapshot_search_state(page, keyword, result, 'empty_list', progress))
                 return result
 
-            actual = min(int(max_details), len(cards))
+            pending_cards = [card for card in cards if card['note_id'] not in (resume_ids or ())]
+            actual = len(pending_cards) if int(max_details) == 0 else min(int(max_details), len(pending_cards))
             ok_detail = 0
-            seen_ids = set()
+            seen_ids = set(resume_ids or ())
             for i in range(actual):
+                if _budget_reached(result, deadline):
+                    return result
                 # 每 4 篇长休息一次（真人刷累了停顿）
                 if i > 0 and i % 4 == 0:
                     long_break = random.uniform(15, 32)
                     log(f'模拟真人长休息 {long_break:.0f}s')
                     time.sleep(long_break)
 
-                # 返回列表后 DOM 可能重建，每次重新取卡片并挑下一张未采的
-                fresh = page.evaluate(_LIST_JS)
-                if fresh:
-                    cards = fresh
-                target = None
-                for c in cards:
-                    if c['note_id'] not in seen_ids:
-                        target = c
-                        break
-                if target is None:
-                    break
+                # Keep the pending identity queue stable across live-list refreshes.
+                observation = _snapshot_search_state(page, keyword, result, 'before_detail_select', progress)
+                if not (observation.get('host_matches') and observation.get('route_is_search') and observation.get('query_matches')):
+                    if _risk_check(page, result):
+                        return result
+                    result['error'] = _search_failure_code(observation)
+                    return result
+                target = pending_cards[i]
+                fresh = page.evaluate(_LIST_JS) or []
+                matching = next((card for card in fresh if card.get('note_id') == target['note_id']), None)
+                if matching is not None:
+                    target = _validate_native_card(matching)
                 seen_ids.add(target['note_id'])
                 opened_by_click = False
                 try:
                     # 3) 贝塞尔鼠标移动 + 真实点击笔记封面打开详情（绝不点互动按钮）
                     card_loc = page.locator(f'section.note-item:has(a[href*="{target["note_id"]}"])').first
-                    if card_loc.count() == 0:
-                        card_loc = page.locator('section.note-item').nth(min(i, max(len(cards)-1, 0)))
                     # 优先真人坐标点击封面（最像真人，且不受 actionability 误判影响）
                     try:
                         if human_click_note_coords(page, target['note_id']):
@@ -794,13 +1166,11 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                     comment_seen = consume['comments_seen']
 
                     d = page.evaluate(_DETAIL_JS)
-                    nums = [int(x) for x in d.get('all_counts', []) if re.fullmatch(r'\d+', str(x))]
-                    eng = d.get('engage') or {}
-                    likes = parse_count(eng.get('like_raw')) or (nums[-3] if len(nums) >= 3 else (nums[-1] if nums else parse_count(target.get('likes_raw'))))
-                    collects = parse_count(eng.get('collect_raw')) or (nums[-2] if len(nums) >= 2 else 0)
-                    comments = parse_count(eng.get('comment_raw')) or (nums[-1] if nums else 0)
-                    shares = parse_count(eng.get('share_raw'))
-                    pub = normalize_publish_time(d.get('time_raw')) or normalize_publish_time(target.get('time_raw'))
+                    _require_detail_observation(d)
+                    _require_detail_identity(d, target['note_id'])
+                    metrics = _detail_metrics(d, target)
+                    likes, collects, comments, shares = (metrics[k] for k in ('likes', 'collects', 'comments', 'shares'))
+                    pub, time_observations, publication_source = _source_publication_time(d, target)
                     rec = {
                         'note_id': target['note_id'], 'xsec_token': target.get('xsec_token', ''),
                         'title': d.get('title') or target.get('title', ''),
@@ -809,22 +1179,34 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                         'author': d.get('author') or target.get('author', ''),
                         'detail_author': d.get('author') or target.get('author', ''),
                         'detail_publish_time': pub, 'publish_time': pub,
+                        'time_raw': d.get('time_raw') or target.get('time_raw', ''),
+                        'time_source_observations': time_observations,
+                        'publication_time_source': publication_source,
+                        'native_metrics_raw': {'engage': d.get('engage') or {}, 'card_likes_raw': target.get('likes_raw')},
+                        'author_id': d.get('author_id', ''), 'author_url': d.get('author_url', ''),
+                        'image_list': d.get('image_list', []), 'video_list': d.get('video_list', []),
+                        'tag_list': d.get('tag_list', []),
                         'likes': likes, 'collects': collects, 'comments': comments, 'shares': shares,
                         'comment_list': d.get('comment_list', []), 'comment_count': d.get('comment_count', comment_seen),
                         'is_video': bool(d.get('is_video') or is_video),
-                        'image_count': d.get('image_count', img_swiped + 1),
+                        'image_count': d.get('image_count'),
                         'cover': target.get('cover', ''), 'url': page.url if opened_by_click else target['url'],
                         'human_view': {'opened_by': 'click' if opened_by_click else 'goto',
                                        'profile': profile, 'depth': depth,
                                        'dwell_sec': consume['dwell_sec'],
                                        'video_watched': is_video, 'images_swiped': img_swiped,
                                        'comments_seen': comment_seen},
-                        'detail_fetched': True, 'collected_at': datetime.now().isoformat(),
-                        'collector_version': 'xhs-cdp-py-human-2.1',
+                        'detail_fetched': True, 'collected_at': datetime.now().astimezone().isoformat(),
+                        'source_note_ids': d.get('source_note_ids'), 'source_page_url': d.get('source_page_url'),
+                        'detail_identity_verified': True,
+                        'collector_version': 'xhs-cdp-py-human-2.3',
                     }
                     rec['subject_hit'] = _compute_subject_hit(rec.get('title'), rec.get('desc'))
                     result['notes'].append(rec)
                     ok_detail += 1
+                    if progress:
+                        _update_detail_progress(result)
+                        progress(result)
                     log(f'真人阅评 {i+1}/{actual} [{profile}/{consume["dwell_sec"]}s]: {rec["title"][:20]} 视频={rec["is_video"]} 翻图={img_swiped} 评{comment_seen} 赞{likes} 藏{collects} 享{shares} {pub}')
 
                     # 5) 真人“返回”信息流（优先返回键/关闭弹层，不触发互动）
@@ -850,11 +1232,21 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                     except Exception:
                         pass
                 except Exception as e:
+                    if isinstance(e, RawCheckpointError):
+                        raise
                     log(f'详情失败 {i+1}: {e}')
                     result['notes'].append({**target, 'detail_fetched': False, 'error': str(e)[:160],
                                             'desc': '', 'likes': parse_count(target.get('likes_raw')),
-                                            'collects': 0, 'comments': 0,
-                                            'detail_publish_time': normalize_publish_time(target.get('time_raw'))})
+                                            'collects': None, 'comments': None, 'shares': None,
+                                            'time_raw': target.get('time_raw', ''),
+                                            'collected_at': datetime.now().astimezone().isoformat(),
+                                            'detail_publish_time': '',
+                                            'time_source_observations': _source_publication_time({}, target)[1],
+                                            'publication_time_source': 'unknown',
+                                            'unassigned_detail_observation': d if 'd' in locals() and str(e) in {'DETAIL_IDENTITY_UNVERIFIED', 'DETAIL_IDENTITY_MISMATCH', 'DETAIL_SOURCE_UNVERIFIED'} else None})
+                    if progress:
+                        _update_detail_progress(result)
+                        progress(result)
                     # 异常后尝试回到结果流，避免卡在详情页
                     try:
                         page.goto(f'{COLLECTION_ORIGIN}/search_result/?keyword={quote(keyword)}&source=web_explore_feed&type=51',
@@ -864,7 +1256,10 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                         pass
             result['summary'].update({'detail_success': ok_detail, 'detail_total': actual,
                                       'human': True, 'interactions_made': 0})
-            result['ok'] = len(result['notes']) > 0
+            _update_detail_progress(result)
+            result['partial'] = bool(result['summary']['pending_note_ids'])
+            result['summary']['batch_limited'] = len(pending_cards) > actual
+            result['ok'] = ok_detail > 0
             if not result['ok']:
                 result['error'] = result.get('error') or 'NO_DETAIL'
             return result
@@ -873,24 +1268,29 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                 page.close()
             except Exception:
                 pass
+            if progress:
+                progress(result)
             # CDP 模式绝不 browser.close()，保留持久 Edge 登录态
 
 
 # ============================================================
 # 旧直连流程（--human=0 回退用，保留稳定基线）
 # ============================================================
-def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
+def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progress=None, deadline=None, resume_ids=None, resume_cards=None):
     _assert_collection_host()
     from playwright.sync_api import sync_playwright
     result = {'ok': False, 'keyword': keyword, 'mode': 'direct', 'notes': [], 'summary': {}}
+    result['summary']['resumed_note_ids'] = sorted(resume_ids or ())
     with sync_playwright() as p:
         browser, ctx = _connect_verified_collection_context(p, cdp_url)
+        result['identity_verified'] = True
         page = ctx.new_page()
         try:
             from urllib.parse import quote
             url = f'{COLLECTION_ORIGIN}/search_result/?keyword={quote(keyword)}&source=web_explore_feed&type=51'
             log(f'导航搜索: {keyword}')
             page.goto(url, wait_until='commit', timeout=30000)
+            _snapshot_search_state(page, keyword, result, 'landing', progress)
             human_sleep(3.0, 4.5)
 
             text = page.evaluate("() => document.body ? document.body.innerText : ''") or ''
@@ -908,23 +1308,27 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                 result['error'] = 'NEED_VERIFY'
                 return result
 
-            try:
-                page.wait_for_selector('section.note-item', timeout=18000)
-            except Exception:
-                body_len = len(text.replace('\n', '').replace(' ', ''))
-                if body_len < 20 or page.url.startswith('about:blank'):
-                    result['error'] = 'LOAD_FAILED'
-                    result['summary'] = {'load_failed': True, 'url': page.url[:80]}
-                    return result
-
+            if not _await_search_ready(page, keyword, result, progress, deadline):
+                return result
             for i in range(int(max_scroll)):
+                if _budget_reached(result, deadline):
+                    return result
                 page.mouse.wheel(0, random.randint(500, 950))
                 human_sleep(1.4, 2.6)
             human_sleep(0.8, 1.4)
 
+            observation = _snapshot_search_state(page, keyword, result, 'before_list_parse', progress)
+            if not (observation.get('host_matches') and observation.get('route_is_search') and observation.get('query_matches')):
+                result['error'] = _search_failure_code(observation)
+                return result
             cards = page.evaluate(_LIST_JS)
             log(f'列表发现 {len(cards)} 张卡片')
             result['summary']['discovered'] = len(cards)
+            cards = _merge_native_cards(resume_cards, cards) if resume_cards else cards
+            result['discovered_cards'] = cards
+            if progress:
+                _update_detail_progress(result)
+                progress(result)
             if not cards:
                 t2 = page.evaluate("() => document.body ? document.body.innerText : ''") or ''
                 kind, hit = classify_page(t2)
@@ -935,12 +1339,15 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                     result['summary'] = {'ip_blocked': True, 'matched': hit}; result['error'] = 'IP_RISK_OR_300012'; return result
                 if kind == 'verify':
                     result['summary'] = {'verification_required': True, 'matched': hit}; result['error'] = 'NEED_VERIFY'; return result
-                result['error'] = 'EMPTY_LIST'
+                result['error'] = _search_failure_code(_snapshot_search_state(page, keyword, result, 'empty_list', progress))
                 return result
 
-            actual = min(int(max_details), len(cards))
+            cards = [card for card in cards if card['note_id'] not in (resume_ids or ())]
+            actual = len(cards) if int(max_details) == 0 else min(int(max_details), len(cards))
             ok_detail = 0
             for i in range(actual):
+                if _budget_reached(result, deadline):
+                    return result
                 c = cards[i]
                 try:
                     page.goto(c['url'], wait_until='domcontentloaded', timeout=30000)
@@ -949,12 +1356,14 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                     except Exception:
                         pass
                     human_sleep(2.2, 3.4)
+                    if _risk_check(page, result):
+                        return result
                     d = page.evaluate(_DETAIL_JS)
-                    nums = [int(x) for x in d.get('all_counts', []) if re.fullmatch(r'\d+', str(x))]
-                    likes = nums[-3] if len(nums) >= 3 else (nums[-1] if nums else parse_count(c.get('likes_raw')))
-                    collects = nums[-2] if len(nums) >= 2 else 0
-                    comments = nums[-1] if len(nums) >= 1 else 0
-                    pub = normalize_publish_time(d.get('time_raw')) or normalize_publish_time(c.get('time_raw'))
+                    _require_detail_observation(d)
+                    _require_detail_identity(d, c['note_id'])
+                    metrics = _detail_metrics(d, c)
+                    likes, collects, comments, shares = (metrics[k] for k in ('likes', 'collects', 'comments', 'shares'))
+                    pub, time_observations, publication_source = _source_publication_time(d, c)
                     rec = {
                         'note_id': c['note_id'], 'xsec_token': c.get('xsec_token', ''),
                         'title': d.get('title') or c.get('title', ''),
@@ -963,23 +1372,50 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                         'author': d.get('author') or c.get('author', ''),
                         'detail_author': d.get('author') or c.get('author', ''),
                         'detail_publish_time': pub, 'publish_time': pub,
-                        'likes': likes, 'collects': collects, 'comments': comments,
+                        'time_raw': d.get('time_raw') or c.get('time_raw', ''),
+                        'time_source_observations': time_observations,
+                        'publication_time_source': publication_source,
+                        'native_metrics_raw': {'engage': d.get('engage') or {}, 'card_likes_raw': c.get('likes_raw')},
+                        'author_id': d.get('author_id', ''), 'author_url': d.get('author_url', ''),
+                        'image_list': d.get('image_list', []), 'video_list': d.get('video_list', []),
+                        'tag_list': d.get('tag_list', []), 'is_video': d.get('is_video'),
+                        'image_count': d.get('image_count'),
+                        'likes': likes, 'collects': collects, 'comments': comments, 'shares': shares,
                         'comment_list': d.get('comment_list', []), 'comment_count': d.get('comment_count', 0),
                         'cover': c.get('cover', ''), 'url': c['url'],
-                        'detail_fetched': True, 'collected_at': datetime.now().isoformat(),
-                        'collector_version': 'xhs-cdp-py-1.0',
+                        'detail_fetched': True, 'collected_at': datetime.now().astimezone().isoformat(),
+                        'source_note_ids': d.get('source_note_ids'), 'source_page_url': d.get('source_page_url'),
+                        'detail_identity_verified': True,
+                        'collector_version': 'xhs-cdp-py-direct-1.2',
                     }
                     rec['subject_hit'] = _compute_subject_hit(rec.get('title'), rec.get('desc'))
                     result['notes'].append(rec); ok_detail += 1
+                    if progress:
+                        _update_detail_progress(result)
+                        progress(result)
                     log(f'详情 {i+1}/{actual}: {rec["title"][:24]} 赞{likes} 藏{collects} 评{comments} {pub}')
                     human_sleep(1.0, 2.0)
                 except Exception as e:
+                    if isinstance(e, RawCheckpointError):
+                        raise
                     log(f'详情失败 {i+1}: {e}')
                     result['notes'].append({**c, 'detail_fetched': False, 'error': str(e)[:160],
                                             'desc': '', 'likes': parse_count(c.get('likes_raw')),
-                                            'collects': 0, 'comments': 0, 'detail_publish_time': normalize_publish_time(c.get('time_raw'))})
+                                            'collects': None, 'comments': None, 'shares': None,
+                                            'time_raw': c.get('time_raw', ''),
+                                            'collected_at': datetime.now().astimezone().isoformat(),
+                                            'detail_publish_time': '',
+                                            'time_source_observations': _source_publication_time({}, c)[1],
+                                            'publication_time_source': 'unknown',
+                                            'unassigned_detail_observation': d if 'd' in locals() and str(e) in {'DETAIL_IDENTITY_UNVERIFIED', 'DETAIL_IDENTITY_MISMATCH', 'DETAIL_SOURCE_UNVERIFIED'} else None})
+                    if progress:
+                        _update_detail_progress(result)
+                        progress(result)
             result['summary'].update({'detail_success': ok_detail, 'detail_total': actual})
-            result['ok'] = len(result['notes']) > 0
+            _update_detail_progress(result)
+            result['partial'] = bool(result['summary']['pending_note_ids'])
+            result['summary']['batch_limited'] = len(cards) > actual
+            result['ok'] = ok_detail > 0
             if not result['ok']:
                 result['error'] = result.get('error') or 'NO_DETAIL'
             return result
@@ -988,16 +1424,18 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL):
                 page.close()
             except Exception:
                 pass
+            if progress:
+                progress(result)
 
 
-def collect(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, human=1):
+def collect(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, human=1, progress=None, deadline=None, resume_ids=None, resume_cards=None):
     """统一入口：human=1 真人浏览链路（默认），human=0 旧直连。"""
     if not cdp_url:
         return {'ok': False, 'keyword': keyword, 'notes': [], 'summary': {},
                 'error': 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'}
     if int(human) == 0:
-        return collect_direct(keyword, max_scroll, max_details, cdp_url)
-    return collect_human(keyword, max_scroll, max_details, cdp_url)
+        return collect_direct(keyword, max_scroll, max_details, cdp_url, progress, deadline, resume_ids, resume_cards)
+    return collect_human(keyword, max_scroll, max_details, cdp_url, progress, deadline, resume_ids, resume_cards)
 
 
 def main():
@@ -1008,21 +1446,46 @@ def main():
     ap.add_argument('--max-details', type=int, default=10)
     ap.add_argument('--cdp-url', default=CDP_URL)
     ap.add_argument('--human', type=int, default=1, help='1=真人浏览链路(默认) 0=旧直连')
+    ap.add_argument('--run-id', default='')
+    ap.add_argument('--time-budget', type=float, default=None, help='Optional positive total seconds; omitted means unlimited')
+    ap.add_argument('--resume-from', default='')
     args = ap.parse_args()
+    import math
+    if args.time_budget is not None and (not math.isfinite(args.time_budget) or args.time_budget <= 0):
+        ap.error('--time-budget must be a finite positive number; omit it for unlimited')
+    if args.resume_from and args.output and os.path.normcase(os.path.abspath(args.resume_from)) == os.path.normcase(os.path.abspath(args.output)):
+        ap.error('--resume-from and --output must name distinct Raw artifacts')
     t0 = time.time()
+    if not args.run_id:
+        from uuid import uuid4
+        args.run_id = uuid4().hex
+    deadline = None if args.time_budget is None else time.monotonic() + args.time_budget
+    progress = lambda value: _write_checkpoint(args.output, value, args.run_id)
+    initial = {'ok': False, 'keyword': args.keyword, 'notes': [], 'summary': {'phase': 'starting'},
+               'search_diagnostics': {'version': 'xhs-search-state-v1', 'observations': []}}
+    progress(initial)
     try:
-        res = collect(args.keyword, args.max_scroll, args.max_details, args.cdp_url, args.human)
+        previous = _load_resume_checkpoint(args.resume_from, args.keyword)
+        resume_ids = _completed_detail_ids(previous)
+        resume_options = {'resume_cards': _resume_pending_cards(previous, resume_ids)} if previous is not None else {}
+        res = collect(args.keyword, args.max_scroll, args.max_details, args.cdp_url, args.human, progress, deadline, resume_ids, **resume_options)
     except Exception as e:
-        res = {'ok': False, 'keyword': args.keyword, 'notes': [], 'error': f'CDP_EXCEPTION: {e}', 'summary': {}}
+        res = initial
+        if args.output:
+            try:
+                with open(args.output, encoding='utf-8') as source:
+                    saved = json.load(source)
+                if (saved.get('checkpoint', {}).get('run_id') == args.run_id
+                        and saved.get('keyword') == args.keyword):
+                    res = saved
+            except (OSError, ValueError, TypeError, AttributeError):
+                pass
+        code = str(e) if re.fullmatch(r'[A-Z][A-Z0-9_]{0,100}', str(e)) else type(e).__name__
+        res.update({'ok': False, 'partial': True, 'error': f'CDP_EXCEPTION: {code}'})
     res['elapsed'] = round(time.time() - t0, 1)
+    res['partial'] = bool(res.get('error') or res.get('partial'))
     if args.output:
-        try:
-            import os
-            os.makedirs(os.path.dirname(args.output) or '.', exist_ok=True)
-            with open(args.output, 'w', encoding='utf-8') as f:
-                json.dump(res, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            log(f'写输出失败: {e}')
+        res['checkpoint'] = _write_checkpoint(args.output, res, args.run_id, complete=not res['partial'])
     print('\n---RESULT_JSON---')
     print(json.dumps(res, ensure_ascii=False))
     sys.exit(0 if res.get('ok') else 1)

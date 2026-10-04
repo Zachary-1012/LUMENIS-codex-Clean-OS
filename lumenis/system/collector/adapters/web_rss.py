@@ -70,7 +70,7 @@ class WebRSSAdapter(BasePlatformAdapter):
                 "platform_content_id": f"google-news:{item_id}",
                 "title": source_item.get("title") or "",
                 "content": "",
-                "author_id": source_name or None,
+                "author_id": None,
                 "author_nickname": source_name,
                 "publish_datetime": source_item.get("published_at") or "",
                 "url": url,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import time
 
@@ -49,6 +50,10 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
     from lumenis.system.security import permission as permission_module
 
     db_path = tmp_path / "atom.sqlite3"
+    seed_path = os.environ["LUMENIS_TEST_SEED_DB"]
+    with sqlite3.connect(f"file:{seed_path}?mode=ro", uri=True) as source_db:
+        with sqlite3.connect(db_path) as target_db:
+            source_db.backup(target_db)
     monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
     monkeypatch.setenv(
         "LUMENIS_EVIDENCE_HMAC_KEY_RING",
@@ -58,8 +63,20 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
     monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
     monkeypatch.setattr(permission_module, "_TESTING_BYPASS_ENABLED", False)
     monkeypatch.setattr(database, "DB_PATH", str(db_path))
+    from lumenis.shared.database import migrations
+    from lumenis.shared.evidence import store as evidence_store
+    monkeypatch.setattr(migrations, "DB_PATH", str(db_path))
+    monkeypatch.setattr(migrations, "BACKUP_DIR", str(tmp_path / "backups"))
     database.init_db()
-    assert migrate() is True
+    # The versioned DB migration and Evidence's additive material schema are
+    # separate existing owners. A fresh runtime must initialize both.
+    assert migrations.migrate(target_version=19) is True
+    evidence_store.init_evidence_store(str(db_path))
+    with sqlite3.connect(db_path) as conn:
+        evidence_columns = {column[1] for column in conn.execute(
+            "PRAGMA table_info(app_evidence_records)"
+        )}
+        assert {"domain_id", "product_id", "integrity_digest"} <= evidence_columns
 
     brand, _ = subject_registry.add_subject({
         "domain_id": "BMP", "subject_type": "brand", "name_en": "Fixture Brand",
@@ -157,7 +174,7 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
     assert note[1:6] == ("web_atom", "ZBMP", "zbmp", brand["brand_focus_id"], "VERIFIED")
     assert canonical[:6] == (note[0], "web_atom", "ZBMP", "zbmp", brand["brand_focus_id"], "VERIFIED")
     assert canonical[6] == str(first_evidence_id)
-    assert canonical[7] in (None, "")
+    assert canonical[7] == str(first_evidence_id)
     assert first_evidence_id == int(canonical[6])
     assert first_title == "Observed public item"
     assert first_published_at in (None, "")
@@ -227,14 +244,15 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
         ).fetchone()
         changed_canonical = conn.execute(
             "SELECT title, publish_datetime, captured_at, scope_evidence_ref, "
-            "sentiment, risk_level FROM canonical_data WHERE source_id=?", (note[0],),
+            "sentiment, risk_level, evidence_ref FROM canonical_data WHERE source_id=?", (note[0],),
         ).fetchone()
     assert changed_source[0] == changed_canonical[0] == "Changed public item"
     assert changed_source[1] in (None, "")
     assert changed_canonical[1] in (None, "")
     assert changed_source[2] and changed_canonical[2]
     assert changed_source[3] == changed_canonical[3] == str(first_evidence_id)
-    assert changed_canonical[4:] == ("negative", "high")
+    assert changed_canonical[4:6] == ("negative", "high")
+    assert changed_canonical[6] == str(observation_evidence_id)
 
     unchanged = collect(1250, title="Changed public item")
     assert unchanged["ok"] is True, unchanged
@@ -314,8 +332,22 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
             "SELECT COUNT(*) FROM metric_snapshots WHERE entity_type='platform_content' "
             "AND entity_key=?", (f"web_atom:{note[0]}",),
         ).fetchone()[0]
+        unknown_metric_rows = conn.execute(
+            "SELECT raw_json FROM metric_snapshots WHERE entity_type='platform_content' "
+            "AND entity_key=? ORDER BY id", (f"web_atom:{note[0]}",),
+        ).fetchall()
     assert current_view_count is None
-    assert metric_count == 2
+    assert metric_count == 3
+    assert [json.loads(row[0])["view_count"] for row in unknown_metric_rows] == [1234, 1250, None]
+    # A measured count becoming unknown is a new observation; it must not be
+    # discarded or converted to zero by the append-only MetricSnapshot owner.
+    with sqlite3.connect(db_path) as conn:
+        last_metric = json.loads(conn.execute(
+            "SELECT raw_json FROM metric_snapshots WHERE entity_type='platform_content' "
+            "AND entity_key=? ORDER BY id DESC LIMIT 1", (f"web_atom:{note[0]}",),
+        ).fetchone()[0])
+    assert last_metric["view_count"] is None
+    assert last_metric["source_id"] == note[0] and last_metric["evidence_id"]
     assert fetches == [source_url] * 6
 
     for blocked_url in (
@@ -347,7 +379,9 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
         "web_atom", "https://www.youtube.com/feeds/videos.xml?channel_id=blocked",
         max_results=1,
     )
-    assert blocked_attempt["status"] == "BLOCKED"
+    # The live Collector identity fence runs before source-policy evaluation;
+    # the adapter-level check above independently asserts the BLOCKED result.
+    assert blocked_attempt["status"] == "AUTH_REQUIRED"
     with sqlite3.connect(db_path) as conn:
         after_blocked_attempt = (
             conn.execute("SELECT COUNT(*) FROM app_evidence_records").fetchone()[0],

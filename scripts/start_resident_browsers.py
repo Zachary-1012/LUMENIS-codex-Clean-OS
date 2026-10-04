@@ -3,10 +3,10 @@
 Zachary OS AI · Z-Brand-Core 驻场浏览器（Resident Browser）统一启动器
 ================================================================================
 按采集 Contract（xhs_cookie_bridge 单一事实源）幂等拉起香港/国际采集与通用浏览
-两个物理隔离的 Edge CDP 驻场实例，人工在各自窗口登录一次后 profile 长期复用：
+香港采集与产品内置浏览器分别使用独立 profile：
 
   XHS_RETINAUT    端口 9223  profile edge-cdp-retinaut    rednote.com      继承系统/海外代理
-  GENERAL_BROWSE  端口 9224  profile edge-cdp-general     bing.com         直连(平台内置通用浏览)
+  GENERAL_BROWSE  端口 9224  系统默认 Chromium 内核，无头运行，使用 browser_surface 的独立 profile
 
 生产采集链只通过 CDP 附着到 9223 香港/国际身份，采集结束不关闭驻场窗口。
 9222 内地 profile 保留为诊断/历史凭证隔离资产，但不属于生产驻场计划、不自动启动。
@@ -78,16 +78,6 @@ import cdp_helper
 RESIDENT_PLAN = [
     (bridge.XHS_RETINAUT_NAME, False),
 ]
-
-# 通用浏览实例（平台内置浏览器，与采集物理隔离，独立 cookie jar）
-GENERAL_BROWSER = {
-    "account": "GENERAL_BROWSE",
-    "port": 9224,
-    "profile": os.path.join(_ROOT, "edge-cdp-general"),
-    "home": "https://www.bing.com",
-    "direct": True,
-}
-
 
 def douyin_worker_spec(private_data_dir=None):
     """Return the fixed isolated read-only Douyin worker plan without starting it."""
@@ -190,26 +180,26 @@ def launch_one(account, direct, status_only=False):
 
 
 def launch_general(status_only=False):
-    """通用浏览实例（9224）：独立 profile、直连、与采集物理隔离。幂等复用。"""
-    g = GENERAL_BROWSER
-    row = {"account": g["account"], "port": g["port"], "profile": g["profile"],
-           "home": g["home"], "online": port_online(g["port"]),
-           "direct": g["direct"], "action": "", "pages": []}
-    if row["online"]:
-        row["action"] = "already_online"
-        row["pages"] = list_page_hosts(g["port"])
-        return row
+    """Reuse the product browser owner for startup and verified status."""
+    import browser_surface
+
+    browser = cdp_helper.system_default_cdp_browser()
+    row = {"account": "GENERAL_BROWSE", "port": browser_surface.GENERAL_CDP_PORT,
+           "profile": browser_surface._general_profile_dir(browser)
+           if browser in {"chrome", "edge"} else None,
+           "home": browser_surface.GENERAL_HOME_URL, "browser": browser,
+           "online": False, "direct": False, "action": "", "pages": []}
     if status_only:
-        row["action"] = "offline"
+        row["online"] = browser_surface.general_browser_online()
+        row["action"] = "already_online" if row["online"] else "offline_or_unverified"
+        if row["online"]:
+            row["pages"] = list_page_hosts(row["port"])
         return row
-    os.makedirs(g["profile"], exist_ok=True)
-    res = cdp_helper.start_cdp_browser(
-        port=g["port"], profile_dir=g["profile"],
-        launch_url=g["home"], direct_connection=g["direct"], browser="edge",
-    )
-    row["online"] = port_online(g["port"])
-    row["action"] = "started" if res.get("success") else f"failed: {res.get('message')}"
-    row["pages"] = list_page_hosts(g["port"])
+    res = browser_surface.ensure_general_browser()
+    row["online"] = res.get("ok") is True and res.get("online") is True
+    row["action"] = res.get("action") if row["online"] else f"failed: {res.get('code') or res.get('error') or 'BROWSER_UNAVAILABLE'}"
+    if row["online"]:
+        row["pages"] = list_page_hosts(row["port"])
     return row
 
 

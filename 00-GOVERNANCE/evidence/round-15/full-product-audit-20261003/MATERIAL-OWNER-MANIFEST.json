@@ -6881,7 +6881,18 @@
       "next_action": "Resolve original if missing; consume existing research into the named source owner, then prove a real result with source/version/recovery. No automatic training admission.",
       "integration_state": "NOT_INFERRED_FROM_MATERIAL_ASSIGNMENT",
       "locator_recovery_state": "EXPLICIT_ORIGINAL_LOCATOR",
-      "locator_is_not_body_reading_or_capability_acceptance": true
+      "locator_is_not_body_reading_or_capability_acceptance": true,
+      "product_adoption": {
+        "state": "PACKAGED_INPUT_AND_QUERY_REFERENCE_BINDING_IMPLEMENTED_LIVE_COLLECTION_OPEN",
+        "packaged_original": "config/collection-topic-seed-20261004.json",
+        "sha256": "cfe3b6cb424ee0efe3d917479ba95db66f4ca9b8df32fa891fcf16fd6c576028",
+        "source_owner": "lumenis/system/collector/acquisition_plan.py",
+        "callers": [
+          "experience_runtime.cth_platform_collection_search",
+          "lumenis.system.collector.adapters.scheduling.prelaunch_baseline"
+        ],
+        "normalization": "Original 100 terms and 41 sources unchanged; no implicit hotlist, entity promotion or MODEL_TRAIN grant"
+      }
     },
     {
       "material_id": "MAT-970391a59674603dac89",
@@ -6922,7 +6933,18 @@
       "next_action": "Resolve original if missing; consume existing research into the named source owner, then prove a real result with source/version/recovery. No automatic training admission.",
       "integration_state": "NOT_INFERRED_FROM_MATERIAL_ASSIGNMENT",
       "locator_recovery_state": "EXPLICIT_ORIGINAL_LOCATOR",
-      "locator_is_not_body_reading_or_capability_acceptance": true
+      "locator_is_not_body_reading_or_capability_acceptance": true,
+      "product_adoption": {
+        "state": "PACKAGED_INPUT_AND_QUERY_REFERENCE_BINDING_IMPLEMENTED_LIVE_COLLECTION_OPEN",
+        "packaged_original": "config/collection-topic-seed-20261004.json",
+        "sha256": "cfe3b6cb424ee0efe3d917479ba95db66f4ca9b8df32fa891fcf16fd6c576028",
+        "source_owner": "lumenis/system/collector/acquisition_plan.py",
+        "callers": [
+          "experience_runtime.cth_platform_collection_search",
+          "lumenis.system.collector.adapters.scheduling.prelaunch_baseline"
+        ],
+        "normalization": "Original 100 terms and 41 sources unchanged; no implicit hotlist, entity promotion or MODEL_TRAIN grant"
+      }
     },
     {
       "material_id": "MAT-2fcdae3d81f462c0f26a",
@@ -6963,7 +6985,18 @@
       "next_action": "Resolve original if missing; consume existing research into the named source owner, then prove a real result with source/version/recovery. No automatic training admission.",
       "integration_state": "NOT_INFERRED_FROM_MATERIAL_ASSIGNMENT",
       "locator_recovery_state": "EXPLICIT_ORIGINAL_LOCATOR",
-      "locator_is_not_body_reading_or_capability_acceptance": true
+      "locator_is_not_body_reading_or_capability_acceptance": true,
+      "product_adoption": {
+        "state": "PACKAGED_INPUT_AND_QUERY_REFERENCE_BINDING_IMPLEMENTED_LIVE_COLLECTION_OPEN",
+        "packaged_original": "config/collection-topic-seed-20261004.json",
+        "sha256": "cfe3b6cb424ee0efe3d917479ba95db66f4ca9b8df32fa891fcf16fd6c576028",
+        "source_owner": "lumenis/system/collector/acquisition_plan.py",
+        "callers": [
+          "experience_runtime.cth_platform_collection_search",
+          "lumenis.system.collector.adapters.scheduling.prelaunch_baseline"
+        ],
+        "normalization": "Original 100 terms and 41 sources unchanged; no implicit hotlist, entity promotion or MODEL_TRAIN grant"
+      }
     }
   ],
   "frontend_reference_video_scope": {

@@ -4,7 +4,7 @@ import json
 import os
 import re
 from datetime import datetime
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from subject_rules import SUBJECT_FIELDS, subject_hit, subject_sql_and_values
 
 import time
@@ -84,13 +84,29 @@ def note_to_dict(row):
     return d
 
 
-def insert_note(note_data):
-    """插入/更新笔记；返回 (row_id, inserted_bool)。"""
+def insert_note(note_data, *, connection=None):
+    """Upsert a note; omitted metrics retain history, explicit null is current unknown."""
     nid = str(note_data.get('note_id') or '').strip()
     if not nid:
         raise ValueError('note_id 不能为空')
-    with get_db() as conn:
+    db_context = get_db() if connection is None else nullcontext(connection)
+    with db_context as conn:
+        # Take SQLite's write reservation before reading the unique source key.
+        # A caller-supplied active transaction keeps its existing ownership and
+        # lock mode; SQLite will reject an unsafe stale-snapshot upgrade.
+        if not conn.in_transaction:
+            conn.execute('BEGIN IMMEDIATE')
         existing = conn.execute('SELECT * FROM notes WHERE note_id=?', (nid,)).fetchone()
+        source_platform = note_data.get('source_platform', 'xhs') or 'xhs'
+        if existing:
+            from lumenis.system.collector.adapters.platform_naming import normalize_platform
+
+            old_platform = normalize_platform(existing['source_platform'])
+            new_platform = normalize_platform(source_platform)
+            if old_platform is None or new_platform is None or old_platform != new_platform:
+                raise ValueError('SOURCE_ID_PLATFORM_CONFLICT')
+            # Keep the original source spelling as historical identity data.
+            source_platform = existing['source_platform']
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         def _nullable_metric(name):
             value = note_data.get(name)
@@ -99,7 +115,7 @@ def insert_note(note_data):
             return int(value)
 
         vals = {
-            'title': note_data.get('title','') or '', 'source_platform': note_data.get('source_platform','xhs') or 'xhs', 'content': note_data.get('content','') or '',
+            'title': note_data.get('title','') or '', 'source_platform': source_platform, 'content': note_data.get('content','') or '',
             'url': note_data.get('url','') or '', 'cover': note_data.get('cover','') or '',
             'author_id': note_data.get('author_id','') or '', 'author_nickname': note_data.get('author_nickname','') or '',
             'author_avatar': note_data.get('author_avatar','') or '',
@@ -158,8 +174,10 @@ def insert_note(note_data):
                 author_id=CASE WHEN ?<>'' THEN ? ELSE author_id END,
                 author_nickname=CASE WHEN ?<>'' THEN ? ELSE author_nickname END,
                 author_avatar=CASE WHEN ?<>'' THEN ? ELSE author_avatar END,
-                likes=COALESCE(?,likes), comments=COALESCE(?,comments),
-                collects=COALESCE(?,collects), shares=COALESCE(?,shares), note_type=?,
+                likes=CASE WHEN ? THEN ? ELSE likes END,
+                comments=CASE WHEN ? THEN ? ELSE comments END,
+                collects=CASE WHEN ? THEN ? ELSE collects END,
+                shares=CASE WHEN ? THEN ? ELSE shares END, note_type=?,
                 xsec_token=CASE WHEN ?<>'' THEN ? ELSE xsec_token END,
                 publish_date=CASE WHEN ?<>'' THEN ? ELSE publish_date END,
                 is_taikoo_verified=CASE WHEN ?=1 THEN 1 ELSE is_taikoo_verified END,
@@ -177,7 +195,9 @@ def insert_note(note_data):
                 WHERE note_id=?""", (
                 vals['source_platform'], vals['title'], vals['content'], vals['content'], vals['url'], vals['url'], vals['cover'], vals['cover'],
                 vals['author_id'], vals['author_id'], vals['author_nickname'], vals['author_nickname'],
-                vals['author_avatar'], vals['author_avatar'], vals['likes'], vals['comments'], vals['collects'], vals['shares'],
+                vals['author_avatar'], vals['author_avatar'],
+                'likes' in note_data, vals['likes'], 'comments' in note_data, vals['comments'],
+                'collects' in note_data, vals['collects'], 'shares' in note_data, vals['shares'],
                 vals['note_type'], vals['xsec_token'], vals['xsec_token'], vals['publish_date'], vals['publish_date'], vals['is_taikoo_verified'], vals['verify_reason'], vals['verify_reason'],
                 pub_dt, pub_dt,
                 coll_at, coll_at,

@@ -34,6 +34,13 @@ def test_douyin_manual_import_requires_exact_approval_and_binds_native_evidence(
     monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
     monkeypatch.setattr(permission_module, "_TESTING_BYPASS_ENABLED", False)
     monkeypatch.setattr(database, "DB_PATH", str(db_path))
+    from lumenis.shared.database import migrations
+    from lumenis.shared.evidence import store as evidence_store
+    monkeypatch.setattr(migrations, "DB_PATH", str(db_path))
+    monkeypatch.setattr(migrations, "BACKUP_DIR", str(tmp_path / "backups"))
+    database.init_db()
+    assert migrations.migrate(target_version=19)
+    evidence_store.init_evidence_store(str(db_path))
     with sqlite3.connect(db_path) as conn:
         baseline_evidence = conn.execute("SELECT COUNT(*) FROM app_evidence_records").fetchone()[0]
         baseline_douyin_evidence = conn.execute(

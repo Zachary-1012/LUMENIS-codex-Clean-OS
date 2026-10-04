@@ -33,6 +33,18 @@ def test_x_manual_import_requires_exact_approval_and_keeps_tweet_identity(
     monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
     monkeypatch.setattr(permission_module, "_TESTING_BYPASS_ENABLED", False)
     monkeypatch.setattr(database, "DB_PATH", str(db_path))
+    from lumenis.shared.database import migrations
+    from lumenis.shared.evidence import store as evidence_store
+    monkeypatch.setattr(migrations, "DB_PATH", str(db_path))
+    monkeypatch.setattr(migrations, "BACKUP_DIR", str(tmp_path / "backups"))
+    database.init_db()
+    assert migrations.migrate(target_version=19) is True
+    evidence_store.init_evidence_store(str(db_path))
+    with sqlite3.connect(db_path) as conn:
+        evidence_columns = {column[1] for column in conn.execute(
+            "PRAGMA table_info(app_evidence_records)"
+        )}
+        assert {"domain_id", "product_id", "integrity_digest"} <= evidence_columns
 
     entity, _ = subject_registry.add_subject({
         "domain_id": domain, "subject_type": "brand" if domain == "BMP" else "company",
@@ -94,7 +106,7 @@ def test_x_manual_import_requires_exact_approval_and_keeps_tweet_identity(
     # X is not exposed through the ordinary or maintenance route, and a denied
     # exact manual request cannot reach the adapter.
     ordinary = surface.collect_search("x", keyword, max_results=2)
-    assert ordinary["status"] == "SCOPE_UNAUTHORIZED"
+    assert ordinary["status"] == "AUTH_REQUIRED"
     denied = surface.collect_search(
         "x", keyword, max_results=2, scope=scope, actor=None,
         operator="human", prelaunch_local_import=True,

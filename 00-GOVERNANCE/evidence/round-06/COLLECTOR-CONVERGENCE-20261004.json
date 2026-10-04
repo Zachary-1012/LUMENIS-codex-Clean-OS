@@ -1,0 +1,319 @@
+{
+  "at": "2026-10-04T22:43:59.309707+08:00",
+  "base": "bb95d832b760d76d9ec59aeff53aa717ffb56097",
+  "staged_tree": "375d550606d76a1990926b1db317b6a35662c5c1",
+  "results": [
+    {
+      "check": "seed_checkout",
+      "exit": 0,
+      "summary": ".........                                                                [100%]\n==== THREAD LEAK REPORT (background daemon threads left alive after test) ====\nNO background-thread leak detected.\n==== END THREAD LEAK REPORT ====\n\n==== THREAD LEAK REPORT (background daemon threads left alive after test) ====\nNO background-thread leak detected.\n==== END THREAD LEAK REPORT ====\n\n"
+    },
+    {
+      "check": "verify_ai_native_constitution.py",
+      "exit": 0,
+      "summary": "AI-NATIVE CONSTITUTION GATE: PASS\n - 18 lightweight principles present\n - AGENTS/README bootstrap routes through the constitution\n - non-bypass status and dirty-worktree protections present\n - missing!=0 and CI anti-bypass regression anchors present\n - Product Gate executes this validator as BLOCKING\n"
+    },
+    {
+      "check": "verify_codex_takeover_governance.py",
+      "exit": 0,
+      "summary": "CODEX TAKEOVER GOVERNANCE OK lumenis-ggi-cross-product v1.1.0 68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f single-machine-contract=PASS six-round-routing=PASS legacy-coverage=PASS cloud-boundaries=PASS workflow-guards=PASS online-progress=PASS\n"
+    },
+    {
+      "check": "verify_lumenis_single_product.py",
+      "exit": 0,
+      "summary": "LUMENIS Only-One/multi-surface architecture guard: PASS\nproduct_architecture=00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md\nexperience_authority=00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md\nsurface_decision=00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md\nlegacy_ui_reference_paths=0\n"
+    },
+    {
+      "check": "verify_database_authority.py",
+      "exit": 0,
+      "summary": "Production Python modules AST-audited: 594\nDirect SQLite owners: lumenis/shared/database/connection.py, lumenis/shared/database/migrations.py\nExcluded roots: .git, .pytest_cache, .venv, 00-GOVERNANCE, 02-ARCHITECTURE, 99-ARCHIVE, CHANGELOG, OSAI测试证据, app, audit, build, docs, intelligence_library, logs, node_modules, output, research, scripts, tests, tmp, vendor, venv, work\nRoot test_*.py and root underscore scratch files: explicitly excluded\nPASS: Shared Database direct-connection and path-override authority is exclusive\n"
+    },
+    {
+      "check": "verify_experience_authority_exclusive.py",
+      "exit": 0,
+      "summary": "LUMENIS Experience authority exclusivity: PASS\nsole_authority=00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md\napproved_experience_surfaces=public-website,web-workspace,desktop-app,mobile-companion\nlegacy_design_authorities=0\n"
+    },
+    {
+      "check": "verify_experience_anti_template.py",
+      "exit": 0,
+      "summary": "{\n  \"ok\": true,\n  \"mode\": \"strict\",\n  \"canonical_experience\": \"public-website + app/web-desktop-mobile\",\n  \"experience_authority\": \"00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md\",\n  \"dart_file_count\": 207,\n  \"legacy_web_authority\": false\n}\n"
+    },
+    {
+      "check": "verify_experience_screen_blueprints.py",
+      "exit": 0,
+      "summary": "Experience blueprint/source contract: PASS screens=44 bindings=54 sha256=verified ids=verified\n"
+    }
+  ],
+  "original_staged_cases": 390,
+  "original_staged_failures": 1,
+  "recheck_scope": "Exact-byte checkout correction only; source unchanged from the 390-case run",
+  "input_hashes": {
+    "config/collection-topic-seed-20261004.json": "cfe3b6cb424ee0efe3d917479ba95db66f4ca9b8df32fa891fcf16fd6c576028",
+    "tests/fixtures/collector/native_public_captures_20261004.json": "09ca00b375db2367e359c62844b811f5fdfe0abb67f2faba1a8bab61f82d5c85"
+  },
+  "verification_semantics": "389/390 passed on first exact staged run; original-byte checkout repaired; all nine affected seed/native-input checks passed on recheck. No source behavior changed after that run.",
+  "latest_case_count": 376,
+  "latest_nonpasses": [],
+  "node_checks": {
+    "passed": 13,
+    "failed": 0,
+    "files": [
+      "tests/test_rednote_metric_truth.cjs",
+      "tests/test_rednote_publication_truth.cjs",
+      "tests/test_rednote_comment_truth.cjs"
+    ]
+  },
+  "source_states": {
+    "implementation": "INTEGRATED_MAIN_PATH_PENDING_COMMIT",
+    "production_db_migration": "NOT_RUN",
+    "live_six_platform_acceptance": "OPEN",
+    "gpu_model_calls": "NOT_RUN",
+    "other_windows_resumed": false
+  },
+  "staged_paths": [
+    {
+      "path": ".gitattributes",
+      "sha256": "a44bc39b7b4525feff643b305be9909cd57ef135ea260ade39a6858422f95ac4"
+    },
+    {
+      "path": "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+      "sha256": "3718e40203254335cbe3d6c04558f563f16ed0f2bb3ca37a652fdb79d7018b31"
+    },
+    {
+      "path": "00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
+      "sha256": "49b521457adba7cfe8cfaf860bb3b51437de104990bb5f2e4c69264bb350a624"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-06/COLLECTOR-CONVERGENCE-20261004.md",
+      "sha256": "40936e68cd05d34882fd7a6fac097995e1052d2969f84ab47d4a2045376d21c5"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-MANIFEST.json",
+      "sha256": "a8bd209ca5baf24d76484dc8ce92c02a819f085aefef52631c04cb628270b85c"
+    },
+    {
+      "path": "collector.py",
+      "sha256": "17b04f3cb9b6c7c5cb65f1c6734488345322cfcf09211bdf1c9f9ae068b14fb4"
+    },
+    {
+      "path": "config/collection-topic-seed-20261004.json",
+      "sha256": "cfe3b6cb424ee0efe3d917479ba95db66f4ca9b8df32fa891fcf16fd6c576028"
+    },
+    {
+      "path": "database.py",
+      "sha256": "ef0529eccc2aa690e61b53a8d942590287d741b9dae7d2c2dcbc67e1722d0c23"
+    },
+    {
+      "path": "experience_runtime.py",
+      "sha256": "e95a0a85cc20d1d5efd6250327f364cbb36859df65f27bc0dccf48886fd8a948"
+    },
+    {
+      "path": "lumenis/shared/database/platform_content.py",
+      "sha256": "ea6f8e8665374ebe6b629bf3a29ba45f1c788193818ad1b62b95e249c68f101d"
+    },
+    {
+      "path": "lumenis/system/collector/acquisition_plan.py",
+      "sha256": "21323787edab9707fe0d1392a8300fdaedd46d9455756e138f2525d7159422df"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/config.py",
+      "sha256": "141a9df97b43029b9d9925682aabfcc7b9dfbab29e87b4a37613d172a37f946b"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/instagram.py",
+      "sha256": "99f17d777ab2779c59e52681d8c5b359b04689cdbfb2e6697056fb7d16092360"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/multi_platform_import.py",
+      "sha256": "b231c27b38cc2d34ec9e91da6ea8a8a51c8b52e403dd5263cd6091478d2d7405"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/platform_naming.py",
+      "sha256": "5bca0f05db29cd7df1b39de49dacd760dcf2e9259da234b2eb51cd1b6ae97c4b"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/registry.py",
+      "sha256": "903b00e0ee455fa465eedfa2e78e0b241ab2f8ed5a2001a3dbe57cf33ac10f4c"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/scheduling/prelaunch_baseline.py",
+      "sha256": "8a54c3fb90992be82e42e151abdd52fa6af7876eb5cfd46973fd265bd782cd5c"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/secondary_collection.py",
+      "sha256": "89098ec656d397d5a699aaf3ebd5d12581418c664e157144cbbfa4b0ec9f9e0d"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/web_atom.py",
+      "sha256": "4c94e3a886d1488dffca99a01ce58e645963776c2a3852cafb2535f5d2245fa5"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/web_rss.py",
+      "sha256": "ba1306fd8ce603b8662596098f252cdc004b1517c299cc8aea7c3c84207000fd"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/wechat.py",
+      "sha256": "cff82a517c2d580d23b680b4c67be692a53215b6434ac036cf0c397d46f04633"
+    },
+    {
+      "path": "lumenis/system/collector/runtime/xhs/parser.py",
+      "sha256": "ff6ebd7e4026950717046fa7616c6f9695b77c29f51789039da08dcff4affb31"
+    },
+    {
+      "path": "lumenis/system/security/permission.py",
+      "sha256": "9b189afa54f0d5d852d7724b0f31b454b4f00b96d6c04d6f17d40f01047a57ea"
+    },
+    {
+      "path": "rednote_collector.cjs",
+      "sha256": "05d9429687eb1cc5a67c55de2a07e91a553fca4ee415a53b3c9c163499242bf3"
+    },
+    {
+      "path": "scripts/start_resident_browsers.py",
+      "sha256": "fca127f50e4ae1ccf97f0464151639aded945b8d26d15cc2451ce5d0c6476699"
+    },
+    {
+      "path": "tests/fixtures/collector/native_public_captures_20261004.json",
+      "sha256": "09ca00b375db2367e359c62844b811f5fdfe0abb67f2faba1a8bab61f82d5c85"
+    },
+    {
+      "path": "tests/test_bilibili_import_persistence.py",
+      "sha256": "3cb034cd67c6f027e776e9f466d3eb484019857ea5eaf07e4f51be406e526601"
+    },
+    {
+      "path": "tests/test_business_acquisition_contract.py",
+      "sha256": "c0b690f6022ba609e7002a43221a1c8eb8bbb17bf4e65f6e6364c61cca650577"
+    },
+    {
+      "path": "tests/test_business_collection_runtime.py",
+      "sha256": "c9c5a6953489e6988075550b04a13d498cb1da72aa0ae01b87012cd87ee0344e"
+    },
+    {
+      "path": "tests/test_collector_purpose_continuation.py",
+      "sha256": "09e138e1242e7a3f96e6457018dd1536a49b12cd5c861174e0763e6d7b485179"
+    },
+    {
+      "path": "tests/test_collector_transaction_truth.py",
+      "sha256": "5aaeff8a87b40b48ebf0acef7ed471f98f0574d96e6863a34f27c9e25c9a0e25"
+    },
+    {
+      "path": "tests/test_current_note_metric_fields.py",
+      "sha256": "a271b190011315529af3710bbe8c6e29405ee449ac304545d23a29609efa73a1"
+    },
+    {
+      "path": "tests/test_current_observation_metric_semantics.py",
+      "sha256": "1701fa45d5d8980c2d44f0ae0154309bb0c874da8cb54e68405f3c7624558c16"
+    },
+    {
+      "path": "tests/test_current_platform_metric_history.py",
+      "sha256": "c72696f9b0af78f787895d8aebc5877d4fb489169aee529754b7933026336768"
+    },
+    {
+      "path": "tests/test_database_insert_note_transaction.py",
+      "sha256": "61c11c845ab01b56369fab45a9d62b4b71434a63531decc661a2adaa0e84327a"
+    },
+    {
+      "path": "tests/test_frozen_native_capture_intake.py",
+      "sha256": "24523ca87700cabace40734e715332be0e50b8e07cffda513ac8670b462d20bf"
+    },
+    {
+      "path": "tests/test_general_browser_startup_owner.py",
+      "sha256": "7236a12c3cf43bf5316a8b86e9f246a837b7f982a161acbe2785ca33a8c7bf8b"
+    },
+    {
+      "path": "tests/test_global_observation_reconciliation.py",
+      "sha256": "0416dd66d2b1703387ef6a846f46afb165fed2e4f421da9f66cb4e7c5fa95096"
+    },
+    {
+      "path": "tests/test_instagram_public_document.py",
+      "sha256": "bcfc2b6789902d417fb51b737b2ca8c8f016e3a4623056dccb571cd2f91b9024"
+    },
+    {
+      "path": "tests/test_manual_collection_permission.py",
+      "sha256": "febb3f8295123bf1f7351b5db7bcfd394bcfc122a9ae102de169038b767a53f6"
+    },
+    {
+      "path": "tests/test_multi_platform_native_payload.py",
+      "sha256": "ea378e09ffb560ec02a7a61b9ceabf1276f450c15b1e5f242d1c5d18926d2744"
+    },
+    {
+      "path": "tests/test_native_bridge_priority.py",
+      "sha256": "ea4c4d8352667787b255a909778bdc6210814aa7fbebc48d5ecca8520c5dbfcf"
+    },
+    {
+      "path": "tests/test_native_publication_types.py",
+      "sha256": "c7c1358c5ee20157dfb6f6048aadd9ae0e0a62391ccf79a6a451ca264ca5c83e"
+    },
+    {
+      "path": "tests/test_observed_topic_catalog.py",
+      "sha256": "9ba47c4cb3c92dfa68eda11f51e45fb242be3b45c8590b14d80c594cd119f7b1"
+    },
+    {
+      "path": "tests/test_platform_naming.py",
+      "sha256": "6b97764c659149aae00e7606bbc0ef261dada845382c20038fd8173698aab724"
+    },
+    {
+      "path": "tests/test_prelaunch_douyin_manual_import.py",
+      "sha256": "7cc72c5413be8554dd695f04739c37de2b44b81ddb8c6cba376102163f950709"
+    },
+    {
+      "path": "tests/test_prelaunch_exact_scope_import.py",
+      "sha256": "f37091a0f48a3d79b8b755de2b1a5fe0d4f88dbaf06db7609764131bf8b9926c"
+    },
+    {
+      "path": "tests/test_prelaunch_local_atom_import.py",
+      "sha256": "6752bdb8d932df0032bbfb7f93a0b9585b7abb4d1c3b7b4ccdb9da01bb7c025a"
+    },
+    {
+      "path": "tests/test_prelaunch_x_manual_import.py",
+      "sha256": "15416704645b069ff7efaea750931f95db98dbb6e32eff372046e749e52f2a3e"
+    },
+    {
+      "path": "tests/test_public_source_adapters.py",
+      "sha256": "01dbd749bacee50104d5a835df01881244fd52d45c7f7f3703d89d58d3fbd4f7"
+    },
+    {
+      "path": "tests/test_purpose_collector_integration.py",
+      "sha256": "ace4584f35020bd54b630ff0b31fb661479a533e673d01a2f9129d12d7633e51"
+    },
+    {
+      "path": "tests/test_purpose_schedule_continuity.py",
+      "sha256": "8a49de7b7510de01f0cdfa10a94adbefa37f03681e6502efcfa78a735636f0e1"
+    },
+    {
+      "path": "tests/test_rednote_metric_truth.cjs",
+      "sha256": "9d074cea099d7d07643a870c679f4e69da7d61a54306d9228bdb3a8accb069a6"
+    },
+    {
+      "path": "tests/test_rednote_publication_truth.cjs",
+      "sha256": "79eb73a17a638080a7fa0e10cfb78ddca48ca51b224b9634a581ba1e731ef272"
+    },
+    {
+      "path": "tests/test_secondary_collection_surface.py",
+      "sha256": "a9490abb22c7b62548bcd901686303cd3066acbe7361c2b03cbcb60d8dedc30a"
+    },
+    {
+      "path": "tests/test_social_observation_transaction.py",
+      "sha256": "a7d2a6fa56f68c0816e6889da9a4927ff5ffbb0d941674b11d2a90336b5d898e"
+    },
+    {
+      "path": "tests/test_unassigned_platform_observations.py",
+      "sha256": "0717ec016a4d64d3c43ab3ca7011b84c0158b28e7f7a899a1417302dc1968723"
+    },
+    {
+      "path": "tests/test_wechat_public_sources.py",
+      "sha256": "62717e0bd3756e24c04316738b928ce89049c25338a999ba5743227f601204b0"
+    },
+    {
+      "path": "tests/test_xhs_exact_scope_binding.py",
+      "sha256": "c35dcfe5f2c6a6aaee175eeba1f6916c86d281a9aed58a38f04b786cbfba136d"
+    },
+    {
+      "path": "tests/test_xhs_parser_source_times.py",
+      "sha256": "b0b2544298e9f7c9dbf3ae2a741d37565dfacdbe2cf795caf1debdd62ab873ad"
+    },
+    {
+      "path": "xhs_cdp_collector.py",
+      "sha256": "3555116b1b5bc65189b7322be5c42e7f65a13ed6923d008560e53694d60e30b2"
+    }
+  ]
+}

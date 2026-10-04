@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import sys
+from copy import deepcopy
 
 import pytest
 
@@ -16,6 +17,31 @@ if ROOT not in sys.path:
 
 from lumenis.system.collector.adapters.base import CollectionResult, CollectionStatus
 from lumenis.system.collector.adapters import secondary_collection as surface
+
+
+class _ServerActorStub:
+    actor_id = "test-server-actor"
+    principal_kind = "server"
+
+
+@pytest.fixture
+def approved_global_request():
+    return {
+        "actor": _ServerActorStub(),
+        "scope": {
+            "domain_id": "cth", "global_scope": True,
+            "subject_id": None, "brand_focus_id": None,
+        },
+    }
+
+
+def _stub_approved_global_guard(monkeypatch, request):
+    def allow(actor, scope, platform, keyword, max_results):
+        assert actor is request["actor"]
+        assert scope == request["scope"]
+        return dict(request["scope"]), None
+
+    monkeypatch.setattr(surface, "_manual_collection_guard", allow)
 
 
 def test_surface_has_exact_launch_allowlist(monkeypatch):
@@ -32,7 +58,8 @@ def test_surface_has_exact_launch_allowlist(monkeypatch):
     assert result["domain"] == "CTH"
     assert [item["platform"] for item in result["platforms"]] == [
         "bilibili", "weibo", "douyin", "x", "kuaishou", "web_rss",
-        "public_http", "web_atom", "sitemap", "zhihu", "instagram"
+        "public_http", "web_atom", "sitemap", "zhihu", "instagram",
+        "wechat", "facebook", "xiaohongshu"
     ]
     assert result["manual_only"] is True
     assert result["read_only"] is True
@@ -221,7 +248,7 @@ def test_collect_search_rejects_non_human_operator():
         surface.collect_search("douyin", "广州太古汇", operator="agent")
 
 
-def test_collect_search_follows_read_only_import_and_evidence_chain(monkeypatch):
+def test_collect_search_follows_read_only_import_and_evidence_chain(monkeypatch, approved_global_request):
     class FakeAdapter:
         def health_check(self):
             return CollectionResult(
@@ -253,23 +280,35 @@ def test_collect_search_follows_read_only_import_and_evidence_chain(monkeypatch)
     monkeypatch.setattr(surface, "get_adapter", lambda platform: FakeAdapter())
     monkeypatch.setattr(surface, "_daily_action_count", lambda platform, at: 0)
     monkeypatch.setattr(surface, "_write_run_log", lambda *args, **kwargs: None)
-    monkeypatch.setattr(surface, "_write_evidence", lambda *args, **kwargs: 1)
-    monkeypatch.setattr(surface, "_mark_subject_and_sync", lambda *args, **kwargs: {
-        "subject_matches": 1, "canonical_synced": 1, "subjects": [],
-    })
+    monkeypatch.setattr(surface, "_write_prelaunch_evidence", lambda *args, **kwargs: 1)
+    monkeypatch.setattr(surface, "_sync_unassigned_collection", lambda note_ids, scope, evidence_id, **kwargs: len(note_ids))
+    monkeypatch.setattr(surface, "_prelaunch_scope_conflict", lambda records, scope, **kwargs: False)
+    from lumenis.shared.database import platform_content
+    monkeypatch.setattr(platform_content, "platform_records_changed", lambda *args, **kwargs: True)
+    def write_native(records, **kwargs):
+        assert kwargs["connection"].in_transaction
+        assert kwargs["scope"]["global_scope"] is True
+        return len(records)
+    monkeypatch.setattr(platform_content, "persist_unassigned_platform_records", write_native)
+    _stub_approved_global_guard(monkeypatch, approved_global_request)
     monkeypatch.setattr(
         "lumenis.system.collector.adapters.multi_platform_import.import_multi_platform_records",
-        lambda records: {"imported": 1, "updated": 0, "failed": 0,
+        lambda records, **kwargs: {"imported": 1, "updated": 0, "failed": 0,
                          "details": [{"status": "imported", "note_id": "777"}]},
     )
 
-    result = surface.collect_search("douyin", "广州太古汇", max_results=1, operator="human")
+    result = surface.collect_search(
+        "douyin", "广州太古汇", max_results=1, operator="human",
+        actor=approved_global_request["actor"], scope=approved_global_request["scope"],
+    )
 
     assert result["ok"] is True
     assert result["read_only"] is True
     assert result["external_write"] is False
     assert result["publish_authority"] == "human_manual_only"
     assert result["imported"] == 1
+    assert result["canonical_synced"] == 1
+    assert result["native_fields_synced"] == 1 and result["refresh_verified"] is True
     assert result["evidence_recorded"] is True
     assert result["provenance"]["source"] == "platform:douyin"
     assert result["provenance"]["provider"] == "platform_adapter"
@@ -296,12 +335,203 @@ def test_native_web_rss_record_maps_existing_canonical_fields():
     )
 
     assert record["content_id"] == "google-news:abc123"
-    assert record["source_id"] == "媒体来源"
+    assert record.get("source_id") is None
+    assert record["source_name"] == "媒体来源"
     assert record["published_at"] == "2026-09-15 10:00:00"
-    assert record["like_count"] is None
+    assert record.get("like_count") is None
+    from lumenis.system.collector.adapters.platform_naming import to_canonical_record
+    assert to_canonical_record(record, "web_rss")["author_id"] is None
 
 
-def test_provider_exception_isolated_and_recorded(monkeypatch):
+def test_native_bilibili_search_record_bridges_source_publication_and_favorites():
+    from lumenis.system.collector.adapters.platform_naming import to_canonical_record
+
+    item = {
+        "platform_content_id": "BV1Q541167Qg",
+        "title": "Bilibili search result",
+        "content": "Source description",
+        "author_id": "",
+        "author_nickname": "Uploader",
+        "publish_datetime": "2026-09-18T04:00:00+00:00",
+        "url": "https://www.bilibili.com/video/BV1Q541167Qg",
+        "likes": None,
+        "comments": None,
+        "collects": 123,
+        "shares": None,
+        "raw": {
+            "engine": "bilibili_search_api",
+            "bvid": "BV1Q541167Qg",
+            "pubdate_ts": 1789704000,
+            "video_review": 17,
+        },
+    }
+    original = deepcopy(item)
+
+    record = surface._native_record(
+        item, "bilibili", "广州太古汇", "2026-09-18T04:01:00+00:00",
+    )
+    canonical = to_canonical_record(record, "bilibili")
+
+    assert record["bvid"] == "BV1Q541167Qg"
+    assert record["pubdate"] == "2026-09-18T04:00:00+00:00"
+    assert record["pubdate_ts"] == 1789704000
+    assert record["favorite"] == 123
+    assert record.get("reply") is None
+    assert canonical["published_at"] == "2026-09-18T04:00:00+00:00"
+    assert canonical["collect_count"] == 123
+    assert canonical["comment_count"] is None
+    assert record["captured_at"] == "2026-09-18T04:01:00+00:00"
+    assert item == original
+
+
+def test_native_bilibili_detail_keeps_existing_native_values_and_fills_gaps():
+    from lumenis.system.collector.adapters.platform_naming import to_canonical_record
+
+    item = {
+        "platform_content_id": "BV1detail",
+        "author_id": "87654321",
+        "publish_datetime": "2026-09-18T04:00:00+00:00",
+        "likes": 41,
+        "comments": 12,
+        "collects": 23,
+        "shares": 7,
+        "raw": {
+            "bvid": "BV1detail",
+            "mid": "87654321",
+            "pubdate": 1789704000,
+            "pubdate_ts": 1789704000,
+            "like": 41,
+            "reply": 12,
+            "favorite": 23,
+            "share": 7,
+        },
+    }
+    original = deepcopy(item)
+
+    record = surface._native_record(item, "bilibili", "query", "capture")
+    canonical = to_canonical_record(record, "bilibili")
+
+    assert record["bvid"] == "BV1detail"
+    assert record["mid"] == "87654321"
+    assert record["pubdate"] == 1789704000
+    assert record["pubdate_ts"] == 1789704000
+    assert (record["like"], record["reply"], record["favorite"], record["share"]) == (41, 12, 23, 7)
+    assert (canonical["like_count"], canonical["comment_count"], canonical["collect_count"], canonical["share_count"]) == (41, 12, 23, 7)
+    assert item == original
+
+
+def test_native_bilibili_missing_source_values_stay_null_without_capture_fallback():
+    from lumenis.system.collector.adapters.platform_naming import to_canonical_record
+
+    item = {
+        "platform_content_id": "BV1unknown",
+        "publish_datetime": "",
+        "likes": None,
+        "comments": None,
+        "collects": None,
+        "shares": None,
+        "raw": {"bvid": "BV1unknown", "video_review": 99},
+    }
+
+    record = surface._native_record(item, "bilibili", "query", "2026-09-18T04:01:00+00:00")
+    canonical = to_canonical_record(record, "bilibili")
+
+    assert record["bvid"] == "BV1unknown"
+    assert record.get("pubdate") is None
+    assert record.get("reply") is None
+    assert record.get("favorite") is None
+    assert record["captured_at"] == "2026-09-18T04:01:00+00:00"
+    assert canonical["published_at"] is None
+    assert canonical["like_count"] is None
+    assert canonical["comment_count"] is None
+    assert canonical["collect_count"] is None
+    assert canonical["share_count"] is None
+
+
+def test_native_bilibili_source_identity_and_zero_metrics_win_over_projection():
+    from lumenis.system.collector.adapters.platform_naming import to_canonical_record
+
+    item = {
+        "platform_content_id": "BVprojected",
+        "author_id": "87654321",
+        "likes": 41,
+        "comments": 12,
+        "collects": 23,
+        "shares": 7,
+        "raw": {"bvid": "BVnative", "like": 0, "favorite": 0},
+    }
+
+    record = surface._native_record(item, "bilibili", "query", "capture")
+    canonical = to_canonical_record(record, "bilibili")
+
+    assert canonical["content_id"] == "BVnative"
+    assert (record["like"], record["favorite"]) == (0, 0)
+    assert (record["mid"], record["reply"], record["share"]) == ("87654321", 12, 7)
+
+
+def test_native_weibo_post_identity_author_and_zero_metrics_are_distinct():
+    from lumenis.system.collector.adapters.platform_naming import to_canonical_record
+
+    item = {
+        "platform_content_id": "projection-post-id",
+        "author_id": "projection-author-id",
+        "author_nickname": "Projected author",
+        "publish_datetime": "projection-publication",
+        "likes": 99,
+        "comments": 98,
+        "shares": 97,
+        "raw": {
+            "engine": "weibo_mobile_search_api",
+            "mid": "5071234567890123456",
+            "idstr": "5071234567890123456",
+            "user_id": "2468013579",
+            "created_at": "native-publication",
+            "attitudes_count": 0,
+            "comments_count": 14,
+            "reposts_count": 6,
+        },
+    }
+    original = deepcopy(item)
+
+    record = surface._native_record(item, "weibo", "query", "capture-time")
+    canonical = to_canonical_record(record, "weibo")
+
+    assert record["mid"] == "5071234567890123456"
+    assert record["idstr"] == "5071234567890123456"
+    assert record["user_id"] == "2468013579"
+    assert canonical["content_id"] == "5071234567890123456"
+    assert canonical["author_id"] == "2468013579"
+    assert canonical["published_at"] == "native-publication"
+    assert (canonical["like_count"], canonical["comment_count"], canonical["share_count"]) == (0, 14, 6)
+    assert record["captured_at"] == "capture-time"
+    assert item == original
+
+
+def test_native_weibo_post_id_does_not_fill_unknown_author():
+    from lumenis.system.collector.adapters.platform_naming import to_canonical_record
+
+    item = {
+        "platform_content_id": "5071234567890123456",
+        "author_id": "",
+        "raw": {
+            "engine": "weibo_mobile_search_api",
+            "mid": "5071234567890123456",
+            "idstr": "5071234567890123456",
+        },
+    }
+    original = deepcopy(item)
+
+    record = surface._native_record(item, "weibo", "query", "capture-time")
+    canonical = to_canonical_record(record, "weibo")
+
+    assert record["mid"] == "5071234567890123456"
+    assert record["idstr"] == "5071234567890123456"
+    assert record.get("user_id") is None
+    assert canonical["author_id"] is None
+    assert item == original
+
+
+def test_provider_exception_isolated_and_recorded(monkeypatch, approved_global_request):
     class BrokenAdapter:
         def health_check(self):
             return CollectionResult(status=CollectionStatus.SUCCESS, platform="bilibili")
@@ -314,12 +544,16 @@ def test_provider_exception_isolated_and_recorded(monkeypatch):
     monkeypatch.setattr(surface, "get_adapter", lambda platform: BrokenAdapter())
     monkeypatch.setattr(surface, "_daily_action_count", lambda platform, at: 0)
     monkeypatch.setattr(surface, "_write_run_log", lambda *args, **kwargs: run_log.update(kwargs))
+    _stub_approved_global_guard(monkeypatch, approved_global_request)
     monkeypatch.setattr(
-        surface, "_write_evidence",
+        surface, "_write_prelaunch_evidence",
         lambda platform, keyword, result, **kwargs: evidence.update(result) or 7,
     )
 
-    result = surface.collect_search("bilibili", "广州太古汇", max_results=1, operator="human")
+    result = surface.collect_search(
+        "bilibili", "广州太古汇", max_results=1, operator="human",
+        actor=approved_global_request["actor"], scope=approved_global_request["scope"],
+    )
 
     assert result["ok"] is False
     assert result["status"] == "PROVIDER_UNAVAILABLE"
@@ -329,21 +563,24 @@ def test_provider_exception_isolated_and_recorded(monkeypatch):
     assert evidence["provenance"]["source"] == "platform:bilibili"
 
 
-def test_evidence_failure_marker_is_not_reported_as_persisted(monkeypatch):
+def test_evidence_failure_marker_is_not_reported_as_persisted(monkeypatch, approved_global_request):
     from lumenis.shared.evidence import store as evidence_store
 
     monkeypatch.setattr(surface, "_ensure_evidence_schema", lambda: None)
-    monkeypatch.setattr(evidence_store, "record_collection_evidence", lambda **kwargs: -1)
+    monkeypatch.setattr(evidence_store, "record_evidence", lambda **kwargs: -1)
 
-    assert surface._write_evidence(
+    assert surface._write_prelaunch_evidence(
         "bilibili",
         "广州太古汇",
         {"status": "SUCCESS", "provenance": {"provider": "fixture"}},
         started="2026-09-15 10:00:00",
+        scope=approved_global_request["scope"],
+        source_ids=[],
+        manual=True,
     ) is None
 
 
-def test_collection_fails_closed_when_evidence_is_not_persisted(monkeypatch):
+def test_collection_fails_closed_when_evidence_is_not_persisted(monkeypatch, approved_global_request):
     class FakeAdapter:
         def health_check(self):
             return CollectionResult(status=CollectionStatus.SUCCESS, platform="kuaishou")
@@ -358,11 +595,15 @@ def test_collection_fails_closed_when_evidence_is_not_persisted(monkeypatch):
     run_log = {}
     monkeypatch.setattr(surface, "get_adapter", lambda platform: FakeAdapter())
     monkeypatch.setattr(surface, "_daily_action_count", lambda platform, at: 0)
-    monkeypatch.setattr(surface, "_write_evidence", lambda *args, **kwargs: None)
+    _stub_approved_global_guard(monkeypatch, approved_global_request)
+    monkeypatch.setattr(surface, "_write_prelaunch_evidence", lambda *args, **kwargs: None)
     monkeypatch.setattr(surface, "_write_run_log", lambda *args, **kwargs: run_log.update(kwargs))
     monkeypatch.setitem(surface._last_action, "kuaishou", 0.0)
 
-    result = surface.collect_search("kuaishou", "广州太古汇", max_results=1, operator="human")
+    result = surface.collect_search(
+        "kuaishou", "广州太古汇", max_results=1, operator="human",
+        actor=approved_global_request["actor"], scope=approved_global_request["scope"],
+    )
 
     assert result["ok"] is False
     assert result["status"] == "EVIDENCE_WRITE_FAILED"

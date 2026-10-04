@@ -14,7 +14,7 @@ The local working tree is not visible to a reader of GitHub. Distinguish current
 
 | Round / window | Placement | Scope | Current evidence and remaining work |
 |---|---|---|---|
-| C1 / W1 | Local Codex | Data and collection | Existing Collector/Browser/Source/Evidence owners; remaining local adapters/query/metric changes and six-platform formal intake require convergence; no coverage PASS. |
+| C1 / W1 | Local Codex | Data and collection | Purpose-query API and signed Scheduler share Collector/Permission/five-table transaction; original 100-term input is packaged and checked. Native fields, unknown metrics and GLOBAL refresh fixes have passing isolated receipts; actual six-platform continuous operation/coverage remains OPEN. |
 | C2 / W2 | Local Codex | Owned AI and Agent | Single Gateway; approved open weights and free-resource preparation retained. Production owned inference, semantic quality, training/reload/promotion are not established by configuration or this delivery. |
 | C3 / W3 | Local Codex C3+C5 continuation | CTH/BMP business | source-bound/v3 producer, HTTP and business consumer integration is published with v1/v2 retained; normal task quality, actual outcomes and real-user repeat remain open. |
 | C4 / W4 | Local Codex | Original pitch, video, podcast | Source-bound Word engineering chain and centred-dissolve renderer are integrated; 87 renderer/audio plus 55 Artifact checks passed. Real customer media/playback/audition/multisurface completion remains separate. |
@@ -27,7 +27,7 @@ F retains four-surface behavior and design responsibilities through existing Flu
 
 1. Follow the approved blueprint in the existing Product Architecture and the source paths in `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. No new candidate implementation directories or duplicate task matrices.
 2. At base `be347f03`, the direct repair retained 551 passing isolated checks, two explicit optional skips and a clean-source 87-case source-bound chain; actual Core monitor evidence records TCP listener8201 with health/database OK. These are dated scoped evidence in `evidence/round-15/DIRECT-REPAIR-20261004.md`.
-3. Hosted Product Gate on that base failed because five local fixture updates were omitted from publication: business inference mocks still patched the retired provider seam, one extracted resolver lacked re, and one registry fixture combined unrelated invalid fields. The corrections were published in `2377db6d`, with 89 checks and seven gates passing on an isolated staged-source snapshot; all 37 changed remote paths matched. Same-SHA App Gate passed; Product Gate result must be read from run37208061028 rather than inferred.
+3. Hosted Product Gate on that base failed because five paired fixture updates were omitted from publication. They were corrected in `2377db6d`; its Product/App gates passed. Media integration `bb95d832` also passed Product run37208571760 and App run37208576562. These exact historical runs do not predeclare the next commit green.
 4. Keep other local media, native-player, platform adapters and source-metric work protected until its unique changes and real outcome are integrated. Do not bulk-stage, reset or delete it.
 5. Material locators and adoption belong to the existing material manifest plus named capability owners. Missing originals, unread material and independent training rights stay explicit. Research summaries are not product completion.
 6. Dependencies such as model availability block only their actual consumer. Continue independent source admission, deterministic credibility checks, editing and recovery. Do not revive stopped providers to disguise an unavailable owned model.
@@ -42,5 +42,6 @@ F retains four-surface behavior and design responsibilities through existing Flu
 - `scripts/audit_tools/verify_codex_takeover_governance.py`: blocking consistency and co-publication checks.
 - `evidence/round-15/APPROVED-CONVERGENCE-20261004.md`: current approved removals, references and source convergence evidence.
 - `evidence/round-14/MEDIA-RENDER-CONVERGENCE-20261004.md`: retained media renderer integrated into the existing Artifact export caller; engineering results and live limits.
+- `evidence/round-06/COLLECTOR-CONVERGENCE-20261004.md`: current purpose, signed scheduler, source transaction and packaged-input integration evidence.
 
 Previous CURRENT snapshots and source/runtime histories remain at [fixed base](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/be347f03eb9f2bc470a39644df281be3a3d704c9/00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md). They are provenance, not current pause/resume/paid-resource instructions. Historical acceptance artifacts are retained, not deleted or relabeled as current success.

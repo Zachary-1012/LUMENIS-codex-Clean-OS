@@ -33,36 +33,98 @@ function parseArgs() {
   return result;
 }
 
-function parseCount(str) {
-  if (!str) return 0;
-  str = String(str).trim();
-  if (str.includes('万')) return Math.round(parseFloat(str) * 10000);
-  const n = parseInt(str.replace(/[^0-9]/g, ''));
-  return isNaN(n) ? 0 : n;
+function parseCount(value) {
+  if (value == null) return null;
+  if (typeof value === 'number') {
+    return Number.isSafeInteger(value) && value >= 0 ? value : null;
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+  if (raw.includes(',') && !/^\d{1,3}(?:,\d{3})+(?:\.\d+)?\s*万?\+?$/.test(raw)) {
+    return null;
+  }
+
+  const normalized = raw.replace(/,/g, '');
+  const match = normalized.match(/^(\d+(?:\.\d+)?)\s*(万)?\+?$/);
+  if (!match) return null;
+
+  const amount = Number(match[1]);
+  const count = match[2] ? Math.round(amount * 10000) : amount;
+  return Number.isSafeInteger(count) && count >= 0 ? count : null;
+}
+
+function parseExplicitDisplayDate(raw) {
+  if (typeof raw !== 'string') return '';
+  const match = raw.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return '';
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (year < 1 || month < 1 || month > 12 || day < 1 || day > daysInMonth[month - 1]) return '';
+
+  return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
+function isYearlessDisplayDate(raw) {
+  const match = raw.match(/^(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const month = Number(match[1]);
+  const day = Number(match[2]);
+  const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth[month - 1];
 }
 
 function normalizePublishTime(raw) {
-  if (!raw) return '';
-  raw = raw.trim();
-  // "2025-09-27" → 保持
-  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.match(/^\d{4}-\d{2}-\d{2}/)[0];
-  // "08-01" → 补当前年
-  if (/^\d{2}-\d{2}/.test(raw)) {
-    const year = new Date().getFullYear();
-    return year + '-' + raw.match(/^\d{2}-\d{2}/)[0];
+  if (typeof raw !== 'string') return '';
+  const display = raw.trim();
+  if (!display || /编辑/.test(display)) return '';
+  return parseExplicitDisplayDate(display);
+}
+
+function sourceTimeFields(raw) {
+  const sourceDisplayTime = typeof raw === 'string' ? raw : raw == null ? '' : String(raw);
+  const display = sourceDisplayTime.trim();
+  let sourcePublishedAt = '';
+  let sourceUpdatedAt = '';
+  let sourceTimeKind = 'UNKNOWN';
+
+  const editMatch = display.match(/^编辑(?:于)?\s*(.*)$/);
+  if (editMatch) {
+    sourceUpdatedAt = parseExplicitDisplayDate(editMatch[1]);
+    sourceTimeKind = 'UPDATE_DISPLAY';
+  } else {
+    sourcePublishedAt = parseExplicitDisplayDate(display);
+    if (sourcePublishedAt) {
+      sourceTimeKind = 'ABSOLUTE_DATE';
+    } else if (isYearlessDisplayDate(display)) {
+      sourceTimeKind = 'YEAR_UNKNOWN';
+    } else if (/(?:\d+\s*(?:秒|分钟|小时|天|周|个月|年)前|刚刚|今天|昨天|前天)/.test(display)) {
+      sourceTimeKind = 'RELATIVE_DISPLAY';
+    }
   }
-  // "3天前" / "2天前" → 计算日期
-  const daysMatch = raw.match(/(\d+)天前/);
-  if (daysMatch) {
-    const d = new Date();
-    d.setDate(d.getDate() - parseInt(daysMatch[1]));
-    return d.toISOString().slice(0, 10);
-  }
-  // "今天" / "刚刚"
-  if (raw.includes('今天') || raw.includes('刚刚')) {
-    return new Date().toISOString().slice(0, 10);
-  }
-  return raw;
+
+  return {
+    source_display_time: sourceDisplayTime,
+    source_published_at: sourcePublishedAt,
+    source_updated_at: sourceUpdatedAt,
+    source_time_kind: sourceTimeKind,
+    source_publication_precision: sourcePublishedAt ? 'DATE' : 'UNKNOWN'
+  };
+}
+
+function normalizeSearchNote(note) {
+  return {
+    ...note,
+    ...sourceTimeFields(note.publish_time_raw),
+    publish_time: normalizePublishTime(note.publish_time_raw),
+    likes: parseCount(note.likes_raw),
+    collects: null,
+    shares: null
+  };
 }
 
 // ========== 主采集逻辑 ==========
@@ -70,15 +132,25 @@ function normalizePublishTime(raw) {
 function detailCommentFields(detailFetched, detail) {
   // The broad `.count` selector has no semantic label and can include comment likes.
   // Keep the post-wide comments metric unknown until a dedicated source is available.
-  const knownCount = value => Number.isInteger(value) && value >= 0 ? value : null;
+  const knownCount = value => Number.isSafeInteger(value) && value >= 0 ? value : null;
   const observedCommentCount = detailFetched === true
     ? knownCount(detail && detail.comment_count)
+    : null;
+  const loadedCommentCount = detailFetched === true
+    ? knownCount(detail && detail.loaded_comment_count)
     : null;
   return {
     comments: null,
     comment_count: observedCommentCount,
-    comments_collected: observedCommentCount
+    comments_collected: loadedCommentCount ?? observedCommentCount
   };
+}
+
+function detailEngagementFields(searchLikes) {
+  // The detail page currently exposes only unscoped `.count` nodes. Preserve a
+  // measured search like count (including zero) and leave detail collections unknown.
+  const knownCount = value => Number.isSafeInteger(value) && value >= 0 ? value : null;
+  return { likes: knownCount(searchLikes), collects: null };
 }
 
 async function collect(options) {
@@ -176,7 +248,7 @@ async function collect(options) {
       const author = authorEl ? (authorEl.innerText || '').trim() : '';
       const timeEl = item.querySelector('a.author .time') || item.querySelector('.time');
       const time = timeEl ? (timeEl.innerText || '').trim() : '';
-      const likeEl = item.querySelector('span.like-wrapper .count') || item.querySelector('.count');
+      const likeEl = item.querySelector('span.like-wrapper .count');
       const likes = likeEl ? (likeEl.innerText || '').trim() : '';
       const coverImg = item.querySelector('a.cover img');
       const cover = coverImg ? coverImg.getAttribute('src') : '';
@@ -198,11 +270,7 @@ async function collect(options) {
   }, collectionOrigin);
 
   // 在 Node.js 端做标准化
-  const notes = rawNotes.map(n => ({
-    ...n,
-    publish_time: normalizePublishTime(n.publish_time_raw),
-    likes: parseCount(n.likes_raw)
-  }));
+  const notes = rawNotes.map(normalizeSearchNote);
 
   console.log(`[rednote] 发现 ${notes.length} 条笔记`);
   notes.slice(0, 5).forEach((n, i) => {
@@ -238,17 +306,13 @@ async function collect(options) {
         const timeEl = document.querySelector('.author-container .time, .publish-time, .date, .time');
         result.publish_time_raw = timeEl ? (timeEl.innerText || '').trim() : '';
 
-        // 所有 count 值（用于提取赞/藏/评）
-        const allCounts = document.querySelectorAll('.count');
-        result.all_counts = Array.from(allCounts).map(c => (c.innerText || '').trim()).filter(t => t);
-
         // 评论列表
         const commentItems = document.querySelectorAll('.comment-item');
         result.comment_list = Array.from(commentItems).map(c => {
           const userEl = c.querySelector('.name, .author a');
           const contentEl = c.querySelector('.content, .comment-content, .right > div:nth-child(2)');
           const timeEl = c.querySelector('.time, .date');
-          const likeEl = c.querySelector('.like .count, .count');
+          const likeEl = c.querySelector('.like .count');
           return {
             user: userEl ? (userEl.innerText || '').trim() : '',
             content: contentEl ? (contentEl.innerText || '').trim() : '',
@@ -256,7 +320,7 @@ async function collect(options) {
             likes_raw: likeEl ? (likeEl.innerText || '').trim() : ''
           };
         });
-        result.comment_count = commentItems.length;
+        result.loaded_comment_count = commentItems.length;
 
         return result;
       });
@@ -273,10 +337,7 @@ async function collect(options) {
         c.raw_data = { ...c };
       });
 
-      // 从 all_counts 最后三个值提取 赞/藏/评
-      const counts = detail.all_counts.filter(c => /^\d+$/.test(c)).map(Number);
-      const likes = counts.length >= 3 ? counts[counts.length - 3] : (counts[counts.length - 1] || note.likes);
-      const collects = counts.length >= 2 ? counts[counts.length - 2] : 0;
+      const { likes, collects } = detailEngagementFields(note.likes);
       const commentFields = detailCommentFields(true, detail);
 
       // 数据质量评分
@@ -285,10 +346,19 @@ async function collect(options) {
       if (detail.desc && detail.desc.length > 20) qualityScore += 25;
       if (detail.author) qualityScore += 10;
       if (detail.publish_time_raw) qualityScore += 15;
-      if (likes > 0) qualityScore += 10;
-      if (detail.comment_count > 0) qualityScore += 15;
-      if (collects > 0) qualityScore += 10;
+      if (likes !== null && likes > 0) qualityScore += 10;
+      if (detail.loaded_comment_count > 0) qualityScore += 15;
+      if (collects !== null && collects > 0) qualityScore += 10;
       const qualityStatus = qualityScore >= 80 ? 'complete' : (qualityScore >= 50 ? 'partial' : 'poor');
+
+      const detailSourceTime = sourceTimeFields(detail.publish_time_raw);
+      const detailSourceFields = {
+        detail_source_display_time: detailSourceTime.source_display_time,
+        detail_source_published_at: detailSourceTime.source_published_at,
+        detail_source_updated_at: detailSourceTime.source_updated_at,
+        detail_source_time_kind: detailSourceTime.source_time_kind,
+        detail_source_publication_precision: detailSourceTime.source_publication_precision
+      };
 
       // 主体过滤
       const fullText = (detail.title + ' ' + detail.desc + ' ' + note.title + ' ' + note.author).toLowerCase();
@@ -300,6 +370,7 @@ async function collect(options) {
         desc: detail.desc,
         detail_author: detail.author,
         detail_publish_time_raw: detail.publish_time_raw,
+        ...detailSourceFields,
         detail_publish_time: normalizePublishTime(detail.publish_time_raw),
         likes,
         collects,
@@ -314,7 +385,7 @@ async function collect(options) {
         // === 兼容旧格式字段（供 persist_live 使用）===
         data_quality: { status: qualityStatus, score: qualityScore },
         comments_data: detail.comment_list,
-        comments_collected: detail.comment_count,
+        comments_collected: detail.loaded_comment_count,
         fetched_at: new Date().toISOString(),
         detail_status: 'success',
         publish_datetime: normalizePublishTime(detail.publish_time_raw) || note.publish_time,
@@ -328,7 +399,7 @@ async function collect(options) {
 
       console.log(`  正文: ${(detail.desc || '').slice(0, 50)}...`);
       console.log(`  互动: 赞=${likes} 藏=${collects} 评=${commentFields.comments}`);
-      console.log(`  评论数: ${detail.comment_count}`);
+      console.log(`  帖子评论总数: ${commentFields.comment_count} | 已采集评论: ${detail.loaded_comment_count}`);
       console.log(`  质量: ${qualityStatus} (${qualityScore}分) | 主体命中: ${subjectHit}`);
 
     } catch (e) {
@@ -410,4 +481,7 @@ if (require.main === module) {
   });
 }
 
-module.exports = { collect, parseCount, normalizePublishTime, detailCommentFields };
+module.exports = {
+  collect, parseCount, normalizePublishTime, detailCommentFields,
+  detailEngagementFields, normalizeSearchNote, sourceTimeFields
+};

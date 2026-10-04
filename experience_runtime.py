@@ -853,7 +853,8 @@ def cth_platform_collection_search():
     no external write or publish path.
     """
     body = request.get_json(silent=True)
-    allowed_fields = {"operator", "confirm_read_only", "platform", "keyword", "max_results"}
+    allowed_fields = {"operator", "confirm_read_only", "platform", "keyword", "max_results",
+                      "business_requests", "max_queries", "continuation"}
     if not isinstance(body, dict) or set(body) - allowed_fields:
         return jsonify({"ok": False, "status": "invalid_request", "code": "INVALID_COLLECTION_REQUEST",
                         "read_only": True, "external_write": False}), 400
@@ -884,8 +885,22 @@ def cth_platform_collection_search():
             actor, scope = _content_project_scope("write", module="collector")
         except LocalArtifactError as exc:
             return _content_project_error(exc)
-        result = collect_search(platform, keyword, max_results=max_results, operator=operator,
-                                actor=actor, scope=scope)
+        if "business_requests" in body:
+            from lumenis.system.collector.adapters.secondary_collection import collect_business_queries
+            if "platform" in body or "keyword" in body:
+                raise ValueError("Choose one explicit source query or a task-selected business batch")
+            max_queries = body.get("max_queries", 32)
+            if type(max_queries) is not int or not 1 <= max_queries <= 64:
+                raise ValueError("max_queries must be an integer from 1 to 64")
+            domain = "bmp" if scope["domain_id"] in {"bmp", "zbmp"} else "cth"
+            result = collect_business_queries(body["business_requests"], actor=actor,
+                scopes={domain: scope}, operator=operator, max_results=max_results,
+                max_queries=max_queries, continuation=body.get("continuation"))
+        else:
+            if set(body) & {"max_queries", "continuation"}:
+                raise ValueError("Business continuation fields require business_requests")
+            result = collect_search(platform, keyword, max_results=max_results, operator=operator,
+                                    actor=actor, scope=scope)
         state = result.get("status")
         http_status = (401 if state == "AUTH_REQUIRED" else
                        403 if state in {"SCOPE_UNAUTHORIZED", "APPROVAL_REQUIRED"} else

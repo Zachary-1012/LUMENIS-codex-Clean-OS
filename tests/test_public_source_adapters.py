@@ -1,11 +1,38 @@
 from __future__ import annotations
 
+import pytest
+
 from lumenis.system.collector.adapters.base import CollectionStatus
 from lumenis.system.collector.adapters.public_http import PublicHttpAdapter
 from lumenis.system.collector.adapters.public_source import PublicResponse, PublicSourceError, validate_public_url
 from lumenis.system.collector.adapters.sitemap import SitemapAdapter
 from lumenis.system.collector.adapters.web_atom import AtomAdapter
 from lumenis.system.collector.adapters.web_rss import WebRSSAdapter
+
+
+class _ServerActorStub:
+    actor_id = "test-server-actor"
+    principal_kind = "server"
+
+
+@pytest.fixture
+def approved_global_request():
+    return {
+        "actor": _ServerActorStub(),
+        "scope": {
+            "domain_id": "cth", "global_scope": True,
+            "subject_id": None, "brand_focus_id": None,
+        },
+    }
+
+
+def _stub_approved_global_guard(monkeypatch, surface, request):
+    def allow(actor, scope, platform, keyword, max_results):
+        assert actor is request["actor"]
+        assert scope == request["scope"]
+        return dict(request["scope"]), None
+
+    monkeypatch.setattr(surface, "_manual_collection_guard", allow)
 
 
 def _response(body: str, content_type: str) -> PublicResponse:
@@ -43,6 +70,7 @@ def test_atom_normalizes_entry_identity_and_timestamp():
         <id>tag:public.example,2026:item-1</id>
         <title>Atom entry</title>
         <link href="https://public.example.test/item-1" />
+        <published>2026-09-17T04:00:00Z</published>
         <updated>2026-09-18T04:00:00Z</updated>
         <summary>Atom summary</summary>
         <author><name>Publisher</name></author>
@@ -56,8 +84,78 @@ def test_atom_normalizes_entry_identity_and_timestamp():
     assert result.items[0]["platform_content_id"].startswith("atom:")
     assert result.items[0]["title"] == "Atom entry"
     assert result.items[0]["author_nickname"] == "Publisher"
-    assert result.items[0]["publish_datetime"]
+    assert result.items[0]["publish_datetime"] == "Thu, 17 Sep 2026 04:00:00 +0000"
+    assert result.items[0]["raw"]["source_published_at"] == "2026-09-17T04:00:00Z"
+    assert result.items[0]["raw"]["source_updated_at"] == "2026-09-18T04:00:00Z"
     assert result.metadata["provider"] == "feedparser_atom"
+
+
+def test_atom_updated_only_entry_keeps_publication_unknown():
+    atom = """<?xml version="1.0" encoding="utf-8"?>
+    <feed xmlns="http://www.w3.org/2005/Atom">
+      <title>Example feed</title>
+      <entry>
+        <id>tag:public.example,2026:updated-only</id>
+        <title>Updated only</title>
+        <updated>2026-09-18T04:00:00Z</updated>
+      </entry>
+    </feed>"""
+    adapter = AtomAdapter(fetcher=lambda _: _response(atom, "application/atom+xml"))
+
+    result = adapter.search("https://public.example.test/feed.atom")
+
+    assert result.status is CollectionStatus.SUCCESS
+    assert result.items[0]["publish_datetime"] == ""
+    assert result.items[0]["raw"]["source_updated_at"] == "2026-09-18T04:00:00Z"
+    assert "source_published_at" not in result.items[0]["raw"]
+
+
+def test_atom_entry_without_timestamps_keeps_publication_unknown():
+    atom = """<?xml version="1.0" encoding="utf-8"?>
+    <feed xmlns="http://www.w3.org/2005/Atom">
+      <title>Example feed</title>
+      <entry>
+        <id>tag:public.example,2026:no-time</id>
+        <title>No timestamp</title>
+      </entry>
+    </feed>"""
+    adapter = AtomAdapter(fetcher=lambda _: _response(atom, "application/atom+xml"))
+
+    result = adapter.search("https://public.example.test/feed.atom")
+
+    assert result.status is CollectionStatus.SUCCESS
+    assert result.items[0]["publish_datetime"] == ""
+    assert "source_published_at" not in result.items[0]["raw"]
+    assert "source_updated_at" not in result.items[0]["raw"]
+
+
+def test_atom_source_update_survives_native_bridge_without_replacing_publication():
+    from lumenis.system.collector.adapters.platform_naming import to_canonical_record
+    from lumenis.system.collector.adapters.secondary_collection import _native_record
+
+    atom = """<?xml version="1.0" encoding="utf-8"?>
+    <feed xmlns="http://www.w3.org/2005/Atom">
+      <title>Example feed</title>
+      <entry>
+        <id>tag:public.example,2026:bridge</id>
+        <title>Published and later updated</title>
+        <link href="https://public.example.test/bridge" />
+        <published>2026-09-17T04:00:00Z</published>
+        <updated>2026-09-18T04:00:00Z</updated>
+      </entry>
+    </feed>"""
+    adapter = AtomAdapter(fetcher=lambda _: _response(atom, "application/atom+xml"))
+
+    result = adapter.search("https://public.example.test/feed.atom")
+    item = result.items[0]
+    record = _native_record(item, "web_atom", "fixture", "2026-09-19T00:00:00+00:00")
+    canonical = to_canonical_record(record, "web_atom")
+
+    assert record["published_at"] == "Thu, 17 Sep 2026 04:00:00 +0000"
+    assert record["source_published_at"] == "2026-09-17T04:00:00Z"
+    assert record["source_updated_at"] == "2026-09-18T04:00:00Z"
+    assert record["captured_at"] == "2026-09-19T00:00:00+00:00"
+    assert canonical["published_at"] == "Thu, 17 Sep 2026 04:00:00 +0000"
 
 
 def test_web_rss_normalizes_existing_public_reader_and_provenance(monkeypatch):
@@ -122,7 +220,7 @@ def test_public_url_rejects_local_network_targets():
         raise AssertionError("loopback source must be rejected")
 
 
-def test_public_source_runs_through_existing_evidence_boundary(monkeypatch):
+def test_public_source_runs_through_existing_evidence_boundary(monkeypatch, approved_global_request):
     import database as db
     import lumenis.system.collector.adapters.secondary_collection as surface
 
@@ -135,7 +233,8 @@ def test_public_source_runs_through_existing_evidence_boundary(monkeypatch):
     captured = {}
     persisted = []
 
-    def insert_note(payload):
+    def insert_note(payload, *, connection=None):
+        assert connection is not None and connection.in_transaction
         persisted.append(payload)
         return 11, True
 
@@ -143,13 +242,26 @@ def test_public_source_runs_through_existing_evidence_boundary(monkeypatch):
     monkeypatch.setattr(surface, "_daily_action_count", lambda platform, at: 0)
     monkeypatch.setitem(surface._last_action, "public_http", 0.0)
     monkeypatch.setattr(surface, "_write_run_log", lambda *args, **kwargs: None)
-    monkeypatch.setattr(surface, "_write_evidence", lambda platform, keyword, result, **kwargs: captured.update(result) or 11)
+    _stub_approved_global_guard(monkeypatch, surface, approved_global_request)
+    monkeypatch.setattr(
+        surface, "_write_prelaunch_evidence",
+        lambda platform, keyword, result, **kwargs: captured.update(result) or 11,
+    )
+    monkeypatch.setattr(surface, "_prelaunch_scope_conflict", lambda records, scope, **kwargs: False)
+    monkeypatch.setattr(surface, "_sync_unassigned_collection", lambda note_ids, scope, evidence_id, **kwargs: len(note_ids))
+    from lumenis.shared.database import platform_content
+    monkeypatch.setattr(platform_content, "platform_records_changed", lambda *args, **kwargs: True)
+    def write_native(records, **kwargs):
+        assert kwargs["connection"].in_transaction
+        assert kwargs["scope"]["global_scope"] is True
+        return len(records)
+    monkeypatch.setattr(platform_content, "persist_unassigned_platform_records", write_native)
     monkeypatch.setattr(db, "insert_note", insert_note)
-    monkeypatch.setattr(surface, "_mark_subject_and_sync", lambda *args, **kwargs: {
-        "subject_matches": 0, "canonical_synced": 1, "subjects": [],
-    })
 
-    result = surface.collect_search("public_http", "https://public.example.test/article", max_results=1, operator="human")
+    result = surface.collect_search(
+        "public_http", "https://public.example.test/article", max_results=1, operator="human",
+        actor=approved_global_request["actor"], scope=approved_global_request["scope"],
+    )
 
     assert result["ok"] is True
     assert result["imported"] == 1
@@ -159,13 +271,14 @@ def test_public_source_runs_through_existing_evidence_boundary(monkeypatch):
     assert persisted[0]["publish_datetime"] == "2026-09-27T10:00:00+00:00"
     assert result["evidence_recorded"] is True
     assert result["canonical_synced"] == 1
+    assert result["native_fields_synced"] == 1 and result["refresh_verified"] is True
     assert result["provenance"]["provider"] == "public_http"
     assert result["provenance"]["source"].startswith("https://")
     assert result["external_write"] is False
     assert captured["provenance"]["provider"] == "public_http"
 
 
-def test_sitemap_rejects_non_sitemap_xml_before_canonical_import(monkeypatch):
+def test_sitemap_rejects_non_sitemap_xml_before_canonical_import(monkeypatch, approved_global_request):
     import lumenis.system.collector.adapters.multi_platform_import as importer
     import lumenis.system.collector.adapters.secondary_collection as surface
 
@@ -181,12 +294,16 @@ def test_sitemap_rejects_non_sitemap_xml_before_canonical_import(monkeypatch):
     monkeypatch.setattr(surface, "_daily_action_count", lambda platform, at: 0)
     monkeypatch.setitem(surface._last_action, "sitemap", 0.0)
     monkeypatch.setattr(surface, "_write_run_log", lambda *args, **kwargs: None)
-    monkeypatch.setattr(surface, "_write_evidence", lambda *args, **kwargs: captured.update(args[2]) or 11)
-    monkeypatch.setattr(surface, "_mark_subject_and_sync", fail_if_called)
+    _stub_approved_global_guard(monkeypatch, surface, approved_global_request)
+    monkeypatch.setattr(
+        surface, "_write_prelaunch_evidence",
+        lambda platform, keyword, result, **kwargs: captured.update(result) or 11,
+    )
     monkeypatch.setattr(importer, "import_multi_platform_records", fail_if_called)
 
     result = surface.collect_search(
         "sitemap", "https://public.example.test/sitemap.xml", max_results=1, operator="human",
+        actor=approved_global_request["actor"], scope=approved_global_request["scope"],
     )
 
     assert result["ok"] is False
@@ -216,7 +333,7 @@ def test_sitemap_index_root_remains_supported():
     assert result.metadata["entry_kind"] == "sitemapindex"
 
 
-def test_atom_entry_without_stable_identity_fails_before_canonical_import(monkeypatch):
+def test_atom_entry_without_stable_identity_fails_before_canonical_import(monkeypatch, approved_global_request):
     import lumenis.system.collector.adapters.multi_platform_import as importer
     import lumenis.system.collector.adapters.secondary_collection as surface
 
@@ -245,16 +362,17 @@ def test_atom_entry_without_stable_identity_fails_before_canonical_import(monkey
     })
     monkeypatch.setattr(surface, "_daily_action_count", lambda _platform, _at: 0)
     monkeypatch.setattr(surface, "_write_run_log", lambda *args, **kwargs: None)
+    _stub_approved_global_guard(monkeypatch, surface, approved_global_request)
     monkeypatch.setattr(
-        surface, "_write_evidence",
+        surface, "_write_prelaunch_evidence",
         lambda _platform, _keyword, result, **_kwargs: evidence.update(result) or 11,
     )
-    monkeypatch.setattr(surface, "_mark_subject_and_sync", fail_if_called)
     monkeypatch.setattr(importer, "import_multi_platform_records", fail_if_called)
     monkeypatch.setitem(surface._last_action, "web_atom", 0.0)
 
     result = surface.collect_search(
         "web_atom", "https://public.example.test/feed.atom", max_results=1, operator="human",
+        actor=approved_global_request["actor"], scope=approved_global_request["scope"],
     )
 
     assert result["ok"] is False
@@ -266,7 +384,7 @@ def test_atom_entry_without_stable_identity_fails_before_canonical_import(monkey
     assert evidence["provenance"]["source"] == response.url
 
 
-def test_web_rss_missing_item_url_fails_before_canonical_import(monkeypatch):
+def test_web_rss_missing_item_url_fails_before_canonical_import(monkeypatch, approved_global_request):
     import web_discovery
     import lumenis.system.collector.adapters.multi_platform_import as importer
     import lumenis.system.collector.adapters.secondary_collection as surface
@@ -298,15 +416,18 @@ def test_web_rss_missing_item_url_fails_before_canonical_import(monkeypatch):
     })
     monkeypatch.setattr(surface, "_daily_action_count", lambda _platform, _at: 0)
     monkeypatch.setattr(surface, "_write_run_log", lambda *args, **kwargs: None)
+    _stub_approved_global_guard(monkeypatch, surface, approved_global_request)
     monkeypatch.setattr(
-        surface, "_write_evidence",
+        surface, "_write_prelaunch_evidence",
         lambda _platform, _keyword, result, **_kwargs: evidence.update(result) or 11,
     )
-    monkeypatch.setattr(surface, "_mark_subject_and_sync", fail_if_called)
     monkeypatch.setattr(importer, "import_multi_platform_records", fail_if_called)
     monkeypatch.setitem(surface._last_action, "web_rss", 0.0)
 
-    result = surface.collect_search("web_rss", "lumenis", max_results=1, operator="human")
+    result = surface.collect_search(
+        "web_rss", "lumenis", max_results=1, operator="human",
+        actor=approved_global_request["actor"], scope=approved_global_request["scope"],
+    )
 
     assert result["ok"] is False
     assert result["status"] == "PROVIDER_UNAVAILABLE"

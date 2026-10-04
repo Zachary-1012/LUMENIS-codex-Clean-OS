@@ -1,27 +1,18 @@
 # -*- coding: utf-8 -*-
-"""CTH secondary platform collection surface.
+"""SYSTEM-owned collection shared by exact CTH/BMP and unassigned GLOBAL work.
 
-This is the canonical runtime entry for manual, read-only platform collection.
-XHS keeps its existing primary collector; this surface reuses the registered
-adapters for Bilibili, Weibo, Douyin, Kuaishou and Web RSS, alongside the
-already-integrated Zhihu and Instagram adapters.
-
-The product boundary is deliberately narrow:
-
-* CTH owns the collection action and the resulting Evidence/Canonical records.
-* BMP may consume the resulting read-only market-intelligence view; it does not
-  get a second collector or a second copy of the truth.
-* Every action is human-triggered and read-only on the external platform.
-* Raw platform records never leave the server response and credentials are never
-  returned.  The existing ``notes`` and ``canonical_data`` tables remain the
-  persistence boundary.
-* Publishing is not a collection capability.  The product never publishes.
-
-The scheduler flag remains disabled on purpose.  This surface enables a
-controlled, explicit search collection action without silently turning on
-background traffic for accounts that still need operating review.
+Manual calls require the current actor/scope and exact DATA_IMPORT approval.
+Internal scheduled calls require an enabled, signed, freshly checked plan; they
+do not enable future-user AUTO or grant platform credentials. XHS delegates to
+the existing protected HK/international worker. Platform access stays read-only.
+Source, Evidence, Canonical, native fields and metric history use the existing
+transaction owner. No publishing or parallel data store is introduced.
 """
 from __future__ import annotations
+
+from contextlib import nullcontext
+from dataclasses import dataclass
+import ipaddress
 
 import threading
 import time
@@ -33,7 +24,7 @@ import re
 import unicodedata
 from datetime import datetime, timedelta
 from typing import Any, Dict, Iterable, List, Mapping
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from .base import CollectionResult, CollectionStatus
 from .config import PLATFORM_CAPABILITIES
@@ -42,7 +33,7 @@ from .safe_collection import CollectionHygienePolicy, RateGovernor
 
 
 SECONDARY_COLLECTION_PLATFORMS = (
-    "bilibili", "weibo", "douyin", "x", "kuaishou", "web_rss", "public_http", "web_atom", "sitemap", "zhihu", "instagram",
+    "bilibili", "weibo", "douyin", "x", "kuaishou", "web_rss", "public_http", "web_atom", "sitemap", "zhihu", "instagram", "wechat", "facebook", "xiaohongshu",
 )
 PLATFORM_NAMES = {
     "bilibili": "B站",
@@ -56,6 +47,9 @@ PLATFORM_NAMES = {
     "sitemap": "Sitemap",
     "zhihu": "知乎",
     "instagram": "Instagram",
+    "wechat": "微信公众号",
+    "facebook": "Facebook",
+    "xiaohongshu": "小红书",
 }
 MAX_RESULTS = 20
 MIN_INTERVAL_SECONDS = 3.0
@@ -371,7 +365,7 @@ def get_collection_surface() -> Dict[str, Any]:
         "platforms": platforms,
         "paused_platforms": ["xiaohongshu_cn"],
         "out_of_scope_platforms": [
-            "tieba", "facebook", "x", "youtube",
+            "tieba", "facebook", "youtube",
             "tiktok", "reddit", "linkedin", "github", "channels",
         ],
         "manual_only": True,
@@ -390,7 +384,7 @@ def _validate_request(platform: str, keyword: str, max_results: int) -> tuple[st
     query = str(keyword or "").strip()
     # Public adapters receive a source URL, not a social search keyword. Keep
     # that URL intact so path/query identity, authorization and provenance agree.
-    max_length = 4096 if canonical in {"public_http", "web_rss", "web_atom", "sitemap"} else 120
+    max_length = 4096 if canonical in {"public_http", "web_rss", "web_atom", "sitemap"} else 256
     if not query or len(query) > max_length:
         raise ValueError(f"keyword/source URL 必须为 1-{max_length} 个字符")
     try:
@@ -419,23 +413,53 @@ def _native_record(item: Dict[str, Any], platform: str, keyword: str, captured_a
     """
     raw = item.get("raw") if isinstance(item.get("raw"), dict) else {}
     record: Dict[str, Any] = dict(raw)
-    content_id = str(item.get("platform_content_id") or "").strip()
+    record["source_raw"] = dict(raw)
+    from .platform_naming import get_platform_fields, normalize_content_id
+    spec = get_platform_fields(platform)
+    native_id = raw.get(spec.content_id) if spec else None
+    if native_id is None or native_id == "":
+        native_id = item.get("platform_content_id")
+    content_id = normalize_content_id(platform, native_id)
     publish_date = item.get("publish_datetime") or ""
     record.update({
         "platform": platform,
         "source_platform": platform,
+        "content_id": content_id,
         "title": item.get("title") or "",
         "content": item.get("content") or "",
         "url": item.get("url") or "",
-        "author_id": item.get("author_id") or "",
+        "author_id": raw.get("author_id") if raw.get("author_id") not in (None, "") else item.get("author_id") or "",
         "author_nickname": item.get("author_nickname") or "",
         "captured_at": captured_at,
+        "publish_datetime": publish_date,
         "source_keyword": keyword,
         "matched_keywords": keyword,
     })
-    if platform == "douyin":
-        record.update({"content_id": content_id, "aweme_id": content_id,
-                       "desc": item.get("content") or item.get("title") or ""})
+    def fill_native(field, value):
+        if record.get(field) in (None, "") and value is not None and value != "":
+            record[field] = value
+    if platform == "bilibili":
+        source_bvid = raw.get("bvid") or content_id
+        if source_bvid is not None and str(source_bvid).strip():
+            record["bvid"] = str(source_bvid).strip()
+
+        source_publication = publish_date or raw.get("pubdate_ts")
+        if record.get("pubdate") in (None, "") and source_publication not in (None, ""):
+            record["pubdate"] = source_publication
+
+        for native_field, item_field in (
+            ("mid", "author_id"),
+            ("like", "likes"),
+            ("reply", "comments"),
+            ("favorite", "collects"),
+            ("share", "shares"),
+        ):
+            value = item.get(item_field)
+            if value is not None and value != "" and record.get(native_field) in (None, ""):
+                record[native_field] = value
+    elif platform == "douyin":
+        fill_native("aweme_id", content_id)
+        fill_native("desc", item.get("content") or item.get("title"))
         author_name = item.get("author_nickname")
         if (isinstance(author_name, str) and author_name.strip()
                 and author_name.strip() != "抖音用户" and not record.get("nickname")):
@@ -447,50 +471,57 @@ def _native_record(item: Dict[str, Any], platform: str, keyword: str, captured_a
                                          ("collect_count", "collects"),
                                          ("share_count", "shares")):
             value = item.get(item_field)
-            if value is not None:
-                record[native_field] = value
+            fill_native(native_field, value)
     elif platform == "weibo":
-        record.update({"mid": content_id, "idstr": content_id, "created_at": publish_date})
-        record.update({"attitudes_count": item.get("likes"), "comments_count": item.get("comments"),
-                       "reposts_count": item.get("shares")})
+        # Top-level idstr identifies the post. Author identity comes from
+        # user.id in the adapter, never from the post's id/idstr.
+        for native_field, value in (
+            ("mid", content_id), ("user_id", item.get("author_id")),
+            ("screen_name", item.get("author_nickname")),
+            ("created_at", publish_date), ("attitudes_count", item.get("likes")),
+            ("comments_count", item.get("comments")), ("reposts_count", item.get("shares")),
+        ):
+            if value is not None and value != "" and record.get(native_field) in (None, ""):
+                record[native_field] = value
     elif platform == "x":
-        record.update({"content_id": content_id, "tweet_id": content_id, "created_at": publish_date})
+        fill_native("tweet_id", content_id)
+        fill_native("created_at", publish_date)
+        fill_native("screen_name", raw.get("handle"))
         for native_field, item_field in (("favorite_count", "likes"),
                                          ("reply_count", "comments"),
                                          ("retweet_count", "shares")):
             value = item.get(item_field)
-            if value is not None:
-                record[native_field] = value
+            fill_native(native_field, value)
     elif platform == "zhihu":
-        record.update({"answer_id": content_id, "url_token": item.get("author_id") or "", "created_time": publish_date})
-        record.update({"voteup_count": item.get("likes"), "comment_count": item.get("comments"),
-                       "share_count": item.get("shares")})
+        if raw.get("object_type") == "answer":
+            fill_native("answer_id", content_id)
+        fill_native("created_time", publish_date)
+        for native_field, item_field in (("voteup_count", "likes"),
+                                         ("comment_count", "comments"),
+                                         ("share_count", "shares")):
+            fill_native(native_field, item.get(item_field))
     elif platform == "instagram":
-        record.update({"media_id": content_id, "username": item.get("author_id") or "", "taken_at": publish_date})
-        record.update({"like_count": item.get("likes"), "comment_count": item.get("comments"),
-                       "share_count": item.get("shares")})
+        if raw.get("shortcode") and not raw.get("media_id"):
+            record["source_id_kind"] = "shortcode"
+        fill_native("taken_at", publish_date)
+        for native_field, item_field in (("like_count", "likes"),
+                                         ("comment_count", "comments"),
+                                         ("share_count", "shares")):
+            fill_native(native_field, item.get(item_field))
     elif platform == "public_http":
-        record.update({"content_id": content_id, "published_at": publish_date})
+        fill_native("published_at", publish_date)
     elif platform == "web_rss":
-        record.update({
-            "content_id": content_id,
-            "source_id": item.get("author_id") or raw.get("source_name") or "",
-            "source_name": item.get("author_nickname") or raw.get("source_name") or "",
-            "published_at": publish_date,
-            "like_count": item.get("likes"),
-            "comment_count": item.get("comments"),
-            "collect_count": item.get("collects"),
-            "share_count": item.get("shares"),
-        })
+        fill_native("source_name", item.get("author_nickname"))
+        fill_native("published_at", publish_date)
+        for native_field, item_field in (("like_count", "likes"),
+                                         ("comment_count", "comments"),
+                                         ("collect_count", "collects"),
+                                         ("share_count", "shares")):
+            fill_native(native_field, item.get(item_field))
     elif platform == "web_atom":
-        record.update({
-            "content_id": content_id,
-            "author_id": item.get("author_id") or "",
-            "author_name": item.get("author_nickname") or "",
-            "published_at": publish_date,
-            "view_count": raw.get("view_count"),
-            "content_type": "video" if raw.get("video_id") else "article",
-        })
+        fill_native("author_name", item.get("author_nickname"))
+        fill_native("published_at", publish_date)
+        record["content_type"] = "video" if raw.get("video_id") else "article"
     return record
 
 
@@ -645,7 +676,8 @@ def _prelaunch_public_import_resource(
 
 
 def _authorize_prelaunch_public(scope: Mapping[str, Any], source: str, platform: str,
-                               *, maintenance_authorization=None) -> bool:
+                               *, maintenance_authorization=None, raw_capture=None,
+                               business_query=None, max_results=None) -> bool:
     try:
         from lumenis.system.security import OperationType, get_permission_gate, is_testing_bypass_enabled
         if is_testing_bypass_enabled():
@@ -653,14 +685,26 @@ def _authorize_prelaunch_public(scope: Mapping[str, Any], source: str, platform:
         if maintenance_authorization is not None:
             return get_permission_gate().check_prelaunch_maintenance(
                 maintenance_authorization, source_url=source, platform=platform,
-                scope=dict(scope),
+                scope=dict(scope), business_query=business_query, max_results=max_results,
             ).allowed is True
-        resource = _prelaunch_public_import_resource(scope, source, platform=platform)
-        return get_permission_gate().check(
+        if raw_capture is not None:
+            if platform != "public_http" or raw_capture.source_url != source:
+                return False
+            resource = approved_public_raw_resource(scope, raw_capture)
+        else:
+            resource = _prelaunch_public_import_resource(scope, source, platform=platform)
+        allowed = get_permission_gate().check(
             OperationType.DATA_IMPORT, resource,
             caller=f"local_prelaunch_operator:{getpass.getuser()}",
             domain_id=scope["domain_id"], exact_approval_required=True,
         ).allowed is True
+        if allowed and raw_capture is not None:
+            from lumenis.system.security.permission import _registered_resource_scope_exists
+            return _registered_resource_scope_exists(
+                scope["domain_id"],
+                subject_id=scope.get("subject_id"), brand_focus_id=scope.get("brand_focus_id"),
+            )
+        return allowed
     except Exception:
         return False
 
@@ -718,19 +762,20 @@ def _authorize_prelaunch_douyin_manual(
     )
 
 
-def _validate_prelaunch_registry(scope: Mapping[str, Any]) -> None:
+def _validate_prelaunch_registry(scope: Mapping[str, Any], *, connection=None) -> None:
     from lumenis.shared.database import get_repository
     from lumenis.shared.database.scope import resolve_scope
-    conn = get_repository().connect(timeout=10)
+    conn = connection if connection is not None else get_repository().connect(timeout=10)
     try:
         resolve_scope(conn, product_id="CTH" if scope["domain_id"] == "cth" else "ZBMP",
                       subject_id=scope.get("subject_id"), brand_focus_id=scope.get("brand_focus_id"),
                       requested_status="UNVERIFIED")
     finally:
-        conn.close()
+        if connection is None:
+            conn.close()
 
 
-def _prelaunch_entity_mentions(records: List[Dict[str, Any]], scope: Mapping[str, Any]) -> List[dict]:
+def _prelaunch_entity_mentions(records: List[Dict[str, Any]], scope: Mapping[str, Any], *, connection=None) -> List[dict]:
     """Check source text, never the query, before a social result gets exact scope.
 
     A unique registered-name mention is bounded association evidence, not a
@@ -745,7 +790,7 @@ def _prelaunch_entity_mentions(records: List[Dict[str, Any]], scope: Mapping[str
 
     expected = scope.get("subject_id") or scope.get("brand_focus_id")
     domain = "CTH" if scope["domain_id"] == "cth" else "BMP"
-    with get_repository().transaction() as conn:
+    with (get_repository().transaction() if connection is None else nullcontext(connection)) as conn:
         rows = conn.execute(
             "SELECT subject_id, brand_focus_id, name_zh, name_en "
             "FROM lumenis_subject_registry WHERE domain_id=? "
@@ -784,13 +829,13 @@ def _prelaunch_entity_mentions(records: List[Dict[str, Any]], scope: Mapping[str
     return decisions
 
 
-def _existing_prelaunch_evidence(note_ids: List[str], scope: Mapping[str, Any]) -> int | None:
+def _existing_prelaunch_evidence(note_ids: List[str], scope: Mapping[str, Any], *, connection=None) -> int | None:
     if not note_ids:
         return None
     import database as db
     domain = "cth" if scope["domain_id"] == "cth" else "zbmp"
     key = scope.get("subject_id") or scope.get("brand_focus_id")
-    with db.get_db() as conn:
+    with (db.get_db() if connection is None else nullcontext(connection)) as conn:
         rows = [conn.execute(
             "SELECT domain_id, subject_id, brand_focus_id, scope_status, scope_evidence_ref "
             "FROM notes WHERE note_id=?", (note_id,)
@@ -804,7 +849,7 @@ def _existing_prelaunch_evidence(note_ids: List[str], scope: Mapping[str, Any]) 
     return refs.pop() if len(refs) == 1 else None
 
 
-def _prelaunch_scope_conflict(records: List[Dict[str, Any]], scope: Mapping[str, Any]) -> bool:
+def _prelaunch_scope_conflict(records: List[Dict[str, Any]], scope: Mapping[str, Any], *, connection=None) -> bool:
     """Reject known cross-scope raw identities before the existing importer writes."""
     ids = [record.get("content_id") for record in records]
     if any(not isinstance(note_id, str) or not note_id for note_id in ids):
@@ -812,57 +857,180 @@ def _prelaunch_scope_conflict(records: List[Dict[str, Any]], scope: Mapping[str,
     if len(set(ids)) != len(ids):
         return True
     import database as db
+    from .platform_naming import normalize_platform
+    expected_platform = normalize_platform(records[0].get("platform") or records[0].get("source_platform"))
+    if expected_platform is None or any(
+        normalize_platform(record.get("platform") or record.get("source_platform")) != expected_platform
+        for record in records
+    ):
+        return True
     expected_domain = "zbmp" if scope["domain_id"] == "bmp" else "cth"
+    expected_product = "ZBMP" if scope["domain_id"] == "bmp" else "CTH"
     expected_subject = scope.get("subject_id")
     expected_brand = scope.get("brand_focus_id")
-    with db.get_db() as conn:
-        rows = conn.execute(
-            "SELECT domain_id, subject_id, brand_focus_id FROM notes WHERE note_id IN ("
-            + ",".join("?" for _ in ids) + ")", ids,
-        ).fetchall() if ids else []
+    rows = []
+    with (db.get_db() if connection is None else nullcontext(connection)) as conn:
+        identities = {}
+        for table, id_column in (("notes", "note_id"), ("canonical_data", "source_id")):
+            found = conn.execute(
+                "SELECT " + id_column + ",domain_id,subject_id,brand_focus_id,"
+                "source_platform,scope_status,scope_evidence_ref,product_id FROM " + table
+                + " WHERE " + id_column + " IN (" + ",".join("?" for _ in ids) + ")", ids,
+            ).fetchall() if ids else []
+            rows.extend(row[1:] for row in found)
+            for row in found:
+                identities.setdefault(row[0], []).append(tuple(row[1:]))
+        # A verified source must agree in both owners. Partial promotion or a
+        # mismatched proof requires recovery before refreshing that identity.
+        for prior in identities.values():
+            if any(str(row[4] or "").upper() == "VERIFIED" for row in prior):
+                proofs = {(row[0], row[1] or None, row[2] or None,
+                           normalize_platform(row[3]), row[4], str(row[5] or ""), row[6]) for row in prior}
+                if len(prior) != 2 or len(proofs) != 1:
+                    return True
     return any(
         (row[0] not in (None, "", expected_domain))
+        or (row[6] not in (None, "", expected_product))
         or (row[1] not in (None, "", expected_subject))
         or (row[2] not in (None, "", expected_brand))
+        or normalize_platform(row[3]) != expected_platform
+        or (scope.get("global_scope") is True and str(row[4] or "").upper() == "VERIFIED")
+        or (str(row[4] or "").upper() == "VERIFIED" and not row[5])
         for row in rows
     )
 
 
 def _write_prelaunch_evidence(platform: str, keyword: str, result: Dict[str, Any], *,
                               started: str, scope: Mapping[str, Any], source_ids: List[str],
-                              review_candidates: List[Dict[str, Any]] | None = None) -> int | None:
+                              review_candidates: List[Dict[str, Any]] | None = None,
+                              manual: bool = False,
+                              observations: List[Dict[str, Any]] | None = None,
+                              connection=None) -> int | None:
     try:
-        _ensure_evidence_schema()
+        if connection is None:
+            _ensure_evidence_schema()
         from lumenis.shared.evidence.store import record_evidence
         bmp = scope["domain_id"] == "bmp"
+        inputs = {"platform": platform, "source_url": _credential_free_observations(keyword),
+                  "source_ids": source_ids, "keywords": [_credential_free_observations(keyword)],
+                  "unassigned_review_candidates": _credential_free_observations(review_candidates or [])}
+        if observations:
+            from lumenis.shared.database.platform_content import _stable_observation
+            inputs["source_observations"] = [{
+                "source_id": record.get("content_id"),
+                "platform": platform,
+                "source_url": _credential_free_observations(record.get("url")),
+                "observation_sha256": hashlib.sha256(json.dumps(
+                    _stable_observation(_credential_free_observations(record)),
+                    ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+                    allow_nan=False,
+                ).encode("utf-8")).hexdigest(),
+            } for record in observations]
+        prefix = "SYSTEM" if manual else "PRELAUNCH"
         evidence_id = record_evidence(
             source="collector", project="LUMENIS", product="ZBMP" if bmp else "CTH",
-            feature_id=f"PRELAUNCH_{platform.upper()}_COLLECT", level="L8",
-            test_name=f"prelaunch_collection_{platform}",
+            feature_id=f"{prefix}_{platform.upper()}_COLLECT", level="L8",
+            version=("approved-public-raw-source-v1" if
+                     (result.get("provenance") or {}).get("provider") == "approved_original_public_raw" else ""),
+            test_name=f"{prefix.lower()}_collection_{platform}",
             result="PASS" if result.get("ok") else "FAIL", started_at=started,
-            inputs={"platform": platform, "source_url": keyword,
-                    "source_ids": source_ids, "keywords": [keyword],
-                    "unassigned_review_candidates": review_candidates or []},
+            inputs=inputs,
             outputs={"notes_collected": result.get("raw_count", 0),
                      "notes_inserted": result.get("imported", 0),
                      "notes_updated": result.get("updated", 0),
                      "entity_mentions": result.get("entity_mentions")},
-            actual=result.get("status", "COLLECT_ERROR"), account=f"PRELAUNCH_{platform.upper()}",
+            actual=result.get("status", "COLLECT_ERROR"), account=f"{prefix}_{platform.upper()}",
             provider=(result.get("provenance") or {}).get("provider", "platform_adapter"),
             collection_metadata=result.get("provenance"),
             domain_id="zbmp" if bmp else "cth", subject_id=scope.get("subject_id"),
             brand_focus_id=scope.get("brand_focus_id"),
+            global_scope=scope.get("global_scope", False),
+            connection=connection,
         )
         return evidence_id if type(evidence_id) is int and evidence_id > 0 else None
     except Exception:
+        if connection is not None:
+            raise
         return None
 
 
-def _persist_prelaunch_scope(note_ids: List[str], scope: Mapping[str, Any], evidence_id: int) -> int:
+def _credential_free_observations(value):
+    """Retain native source fields without copying transport credentials.
+
+    Public author IDs and Zhihu url_token are source fields, so a broad
+    substring match on auth/token would corrupt the observation.
+    """
+    if isinstance(value, dict):
+        return {
+            key: _credential_free_observations(item)
+            for key, item in value.items()
+            if not (
+                str(key).lower() in {
+                    "cookie", "cookies", "authorization", "password", "passwd",
+                    "secret", "api_key", "apikey", "session", "session_id",
+                    "headers", "request_headers", "xsec_token",
+                }
+                or (str(key).lower().endswith("_token") and str(key).lower() != "url_token")
+            )
+        }
+    if isinstance(value, list):
+        return [_credential_free_observations(item) for item in value]
+    if isinstance(value, str) and value.lower().startswith(("http://", "https://")):
+        parts = urlsplit(value)
+        secret_names = {"key", "api_key", "apikey", "access_key", "appkey",
+                        "token", "auth", "authorization", "cookie", "session",
+                        "session_id", "password", "signature", "sign", "sig"}
+        query = [(key, item) for key, item in parse_qsl(parts.query, keep_blank_values=True)
+                 if key.lower() not in secret_names and not key.lower().endswith("_token")]
+        # Source identity can keep its public query fields; credentials embedded
+        # in URL user-info, query or fragments must not enter signed Evidence.
+        netloc = parts.netloc.rsplit("@", 1)[-1]
+        return urlunsplit((parts.scheme, netloc, parts.path, urlencode(query), ""))
+    return value
+
+
+def _sync_unassigned_collection(note_ids, scope, evidence_id, *, connection=None,
+                               new_note_ids=(), source_unchanged=False):
+    """Keep GLOBAL observations unassigned through the existing Canonical writer."""
+    import database as db
+    product = "ZBMP" if scope["domain_id"] == "bmp" else "CTH"
+    domain = "zbmp" if scope["domain_id"] == "bmp" else "cth"
+    new_ids = set(new_note_ids)
+    if not new_ids.issubset(note_ids):
+        raise ValueError("new source identities must belong to this transaction")
+    with (db.get_db() if connection is None else nullcontext(connection)) as conn:
+        conn.execute("SAVEPOINT manual_global_collection")
+        try:
+            for note_id in note_ids:
+                row = conn.execute("SELECT * FROM notes WHERE note_id=?", (note_id,)).fetchone()
+                if row is None:
+                    raise ValueError("Raw source is missing")
+                note = dict(row)
+                if (note.get("subject_id") or note.get("brand_focus_id")
+                        or str(note.get("scope_status") or "").upper() == "VERIFIED"
+                        or (note.get("domain_id") not in (None, "", domain) and note_id not in new_ids)):
+                    raise ValueError("GLOBAL cannot rewrite an assigned source")
+                conn.execute(
+                    "UPDATE notes SET product_id=?,domain_id=?,scope_status='UNASSIGNED' WHERE note_id=?",
+                    (product, domain, note_id),
+                )
+            _sync_prelaunch_canonical_source_fields(
+                note_ids, scope, evidence_id=evidence_id,
+                source_unchanged=source_unchanged, connection=conn,
+            )
+            conn.execute("RELEASE SAVEPOINT manual_global_collection")
+        except Exception:
+            conn.execute("ROLLBACK TO SAVEPOINT manual_global_collection")
+            conn.execute("RELEASE SAVEPOINT manual_global_collection")
+            raise
+    return len(note_ids)
+
+
+def _persist_prelaunch_scope(note_ids: List[str], scope: Mapping[str, Any], evidence_id: int, *, connection=None) -> int:
     import database as db
     from lumenis.adapters.persist import persist_existing_note_scope
     bmp = scope["domain_id"] == "bmp"
-    with db.get_db() as conn:
+    with (db.get_db() if connection is None else nullcontext(connection)) as conn:
         return persist_existing_note_scope(
             conn, note_ids, product_id="ZBMP" if bmp else "CTH",
             domain_id="zbmp" if bmp else "cth", subject_id=scope.get("subject_id"),
@@ -870,7 +1038,49 @@ def _persist_prelaunch_scope(note_ids: List[str], scope: Mapping[str, Any], evid
         )
 
 
-def bind_collected_social_scope(note_ids, *, scope, platform, keyword, provider):
+def prepare_xhs_observations(notes, *, keyword, captured_at=None):
+    """Project the current RedNote capture fields without querying a profile."""
+    if not isinstance(notes, (list, tuple)) or not notes or len(notes) > 100:
+        raise ValueError("a bounded captured RedNote batch is required")
+    captured = captured_at or _now()
+    records = []
+    for note in notes:
+        if not isinstance(note, dict):
+            raise ValueError("a captured RedNote note must be a mapping")
+        raw = _credential_free_observations(note)
+        record = dict(raw)
+        record["source_raw"] = raw
+        def known(*keys):
+            for key in keys:
+                if key in raw and raw[key] is not None and raw[key] != "":
+                    return raw[key]
+            return None
+        publication = known("time", "source_published_at", "detail_source_published_at",
+                            "pub_time", "publish_datetime")
+        record.update({
+            "platform": "xiaohongshu", "source_platform": "xiaohongshu",
+            "content_id": raw.get("note_id"), "note_id": raw.get("note_id"),
+            "title": raw.get("title") or "", "content": raw.get("content") or raw.get("desc") or "",
+            "desc": raw.get("desc") or raw.get("content") or "",
+            "url": known("url", "note_url") or "",
+            "user_id": known("user_id", "author_id"),
+            "nickname": known("nickname", "author_nickname"),
+            "time": publication,
+            "liked_count": known("liked_count", "likes"),
+            # The JS capture contract separates its dedicated post total from
+            # comment_count/comments_collected, which count loaded DOM rows.
+            "comment_count": known("total_comment_count", "comments"),
+            "collected_count": known("collected_count", "collects"),
+            "share_count": known("share_count", "shares"),
+            "captured_at": captured, "source_keyword": keyword,
+            "matched_keywords": keyword,
+        })
+        records.append(record)
+    return records
+
+
+def bind_collected_social_scope(note_ids, *, scope, platform, keyword, provider,
+                                observations=None, connection=None):
     """Bind stored observations after the caller's collection permission gate.
 
     The requested query is context, never identity evidence. Reuse the signed
@@ -879,31 +1089,50 @@ def bind_collected_social_scope(note_ids, *, scope, platform, keyword, provider)
     """
     import database as db
 
+    if connection is None:
+        _ensure_evidence_schema()
+        try:
+            with db.get_db() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                return bind_collected_social_scope(
+                    note_ids, scope=scope, platform=platform, keyword=keyword,
+                    provider=provider, observations=observations, connection=conn,
+                )
+        except _CollectionWriteRejected as rejected:
+            return rejected.result
+    if not connection.in_transaction:
+        raise ValueError("the caller must own an active collection transaction")
     exact = _prelaunch_scope(scope)
-    _validate_prelaunch_registry(exact)
+    _validate_prelaunch_registry(exact, connection=connection)
     ids = list(dict.fromkeys(str(value) for value in note_ids if value))
     if platform not in {"xhs", "douyin", "x"} or not ids or len(ids) > 100:
         raise ValueError("a bounded social observation batch is required")
-    with db.get_db() as conn:
+    with nullcontext(connection) as conn:
         records = []
         for source_id in ids:
             row = conn.execute(
                 "SELECT note_id content_id,title,content,source_platform "
                 "FROM notes WHERE note_id=?", (source_id,),
             ).fetchone()
-            if row is None or row["source_platform"] != platform:
+            from .platform_naming import normalize_platform
+            if row is None or normalize_platform(row["source_platform"]) != normalize_platform(platform):
                 raise ValueError("stored observation/platform mismatch")
             records.append(dict(row))
-    if _prelaunch_scope_conflict(records, exact):
+    if observations is not None:
+        return _bind_collected_social_observations(
+            records, observations, scope=exact, platform=platform, keyword=keyword,
+            provider=provider, connection=connection,
+        )
+    if _prelaunch_scope_conflict(records, exact, connection=connection):
         return {"ok": False, "status": "SCOPE_CONFLICT", "verified": 0}
-    mentions = _prelaunch_entity_mentions(records, exact)
+    mentions = _prelaunch_entity_mentions(records, exact, connection=connection)
     accepted = [item["source_id"] for item in mentions
                 if item["status"] == "EXACT_NAME_MENTION"]
     review = [item for item in mentions if item["status"] != "EXACT_NAME_MENTION"]
-    evidence_id = _existing_prelaunch_evidence(accepted, exact) if accepted else None
+    evidence_id = _existing_prelaunch_evidence(accepted, exact, connection=connection) if accepted else None
     if not accepted:
         from lumenis.shared.evidence.store import classify_evidence_integrity
-        with db.get_db() as conn:
+        with nullcontext(connection) as conn:
             prior_reviews = conn.execute(
                 "SELECT * FROM app_evidence_records WHERE feature_id=? ORDER BY id DESC LIMIT 30",
                 (f'PRELAUNCH_{platform.upper()}_COLLECT',),
@@ -920,7 +1149,7 @@ def bind_collected_social_scope(note_ids, *, scope, platform, keyword, provider)
                 evidence_id = prior_row['id']
                 break
     if evidence_id is not None:
-        with db.get_db() as conn:
+        with nullcontext(connection) as conn:
             row = conn.execute("SELECT outputs_json FROM app_evidence_records WHERE id=?",
                                (evidence_id,)).fetchone()
         prior = json.loads(row[0] or '{}').get('entity_mentions') or []
@@ -937,26 +1166,111 @@ def bind_collected_social_scope(note_ids, *, scope, platform, keyword, provider)
                             "tenant_location_asserted": False}},
             started=datetime.now().isoformat(), scope=exact, source_ids=accepted,
             review_candidates=review,
+            connection=connection,
         )
     if evidence_id is None:
-        return {"ok": False, "status": "SCOPE_EVIDENCE_UNAVAILABLE", "verified": 0}
+        raise _CollectionWriteRejected({"ok": False, "status": "SCOPE_EVIDENCE_UNAVAILABLE", "verified": 0})
     if accepted:
-        _persist_prelaunch_scope(accepted, exact, evidence_id)
+        _persist_prelaunch_scope(accepted, exact, evidence_id, connection=connection)
     return {"ok": True, "status": "PARTIAL" if review else "VERIFIED",
             "verified": len(accepted), "unassigned": len(review),
             "evidence_ref": evidence_id, "review_candidates": review,
             "tenant_location_asserted": False}
 
 
+def _bind_collected_social_observations(stored, observations, *, scope, platform,
+                                         keyword, provider, connection):
+    """Keep original scope proof and current source observations distinct."""
+    from .platform_naming import normalize_platform, to_canonical_record
+    from .multi_platform_import import _to_note_payload
+    from lumenis.shared.database.platform_content import (
+        platform_records_changed, persist_verified_platform_records,
+    )
+
+    canonical_platform = normalize_platform(platform)
+    if not isinstance(observations, (list, tuple)) or len(observations) != len(stored):
+        raise ValueError("one captured observation is required per stored source")
+    records = []
+    for note, observed in zip(stored, observations):
+        if not isinstance(observed, dict):
+            raise ValueError("a native source observation must be a mapping")
+        record = _credential_free_observations(observed)
+        canonical = to_canonical_record(record, platform=canonical_platform)
+        payload = _to_note_payload(canonical, record)
+        if (payload.get("note_id") != note["content_id"]
+                or payload.get("title", "") != (note["title"] or "")
+                or payload.get("content", "") != (note["content"] or "")):
+            raise ValueError("captured observation does not match the stored source")
+        record.update(platform=canonical_platform, source_platform=canonical_platform,
+                      content_id=note["content_id"], title=payload.get("title") or "",
+                      content=payload.get("content") or "")
+        records.append(record)
+    if _prelaunch_scope_conflict(records, scope, connection=connection):
+        raise _CollectionWriteRejected({"ok": False, "status": "SCOPE_CONFLICT", "verified": 0})
+    mentions = _prelaunch_entity_mentions(records, scope, connection=connection)
+    accepted = [record for record, mention in zip(records, mentions)
+                if mention["status"] == "EXACT_NAME_MENTION"]
+    review = [record for record, mention in zip(records, mentions)
+              if mention["status"] != "EXACT_NAME_MENTION"]
+    accepted_ids = [record["content_id"] for record in accepted]
+    if review:
+        for record in review:
+            row = connection.execute("SELECT scope_status FROM notes WHERE note_id=?",
+                                     (record["content_id"],)).fetchone()
+            if str(row[0] or "").upper() == "VERIFIED":
+                raise _CollectionWriteRejected({"ok": False, "status": "SOURCE_SCOPE_REVIEW_REQUIRED", "verified": 0})
+    changed = bool(accepted) and platform_records_changed(
+        accepted, platform=canonical_platform, connection=connection,
+    )
+    evidence_id = (_existing_prelaunch_observation_evidence(
+        accepted_ids, canonical_platform, connection=connection,
+    ) if accepted and not changed and not review else None)
+    if evidence_id is None:
+        try:
+            evidence_id = _write_prelaunch_evidence(
+                platform, keyword, {"ok": bool(accepted), "status": "SOURCE_SCOPE_REVIEW",
+                    "raw_count": len(records), "entity_mentions": mentions,
+                    "provenance": {"provider": provider, "scope_basis": "source_name_mention",
+                                   "tenant_location_asserted": False}},
+                started=_now(), scope=scope, source_ids=accepted_ids,
+                review_candidates=review, observations=records, connection=connection,
+            )
+        except Exception as exc:
+            raise _CollectionWriteRejected({"ok": False, "status": "EVIDENCE_WRITE_FAILED", "verified": 0}) from exc
+    if evidence_id is None:
+        raise _CollectionWriteRejected({"ok": False, "status": "SCOPE_EVIDENCE_UNAVAILABLE", "verified": 0})
+    if accepted:
+        pending = _prelaunch_scope_note_ids_needing_verification(
+            accepted_ids, scope, connection=connection,
+        )
+        if pending:
+            _persist_prelaunch_scope(pending, scope, evidence_id, connection=connection)
+        _sync_prelaunch_canonical_source_fields(
+            accepted_ids, scope, evidence_id=evidence_id,
+            source_unchanged=not changed, connection=connection,
+        )
+        persist_verified_platform_records(
+            accepted, platform=canonical_platform, note_ids=accepted_ids,
+            evidence_id=evidence_id, scope=scope, connection=connection,
+            require_observation_proof=True,
+        )
+    return {"ok": True, "status": "PARTIAL" if review else "VERIFIED",
+            "verified": len(accepted), "unassigned": len(review),
+            "evidence_ref": evidence_id, "observation_changed": changed,
+            "native_fields_synced": len(accepted), "review_candidates": review,
+            "tenant_location_asserted": False}
+
+
 def _prelaunch_scope_note_ids_needing_verification(
     note_ids: List[str], scope: Mapping[str, Any],
+    *, connection=None,
 ) -> List[str]:
     """Return only rows that still need their first exact-scope Evidence link."""
     import database as db
 
     product = "ZBMP" if scope["domain_id"] == "bmp" else "CTH"
     domain = "zbmp" if scope["domain_id"] == "bmp" else "cth"
-    with db.get_db() as conn:
+    with (db.get_db() if connection is None else nullcontext(connection)) as conn:
         pending = []
         for note_id in note_ids:
             note = conn.execute(
@@ -981,22 +1295,30 @@ def _prelaunch_scope_note_ids_needing_verification(
 
 
 def _sync_prelaunch_canonical_source_fields(
-    note_ids: List[str], scope: Mapping[str, Any],
+    note_ids: List[str], scope: Mapping[str, Any], *, evidence_id: int,
+    source_unchanged: bool = False, connection=None,
 ) -> int:
     """Refresh source fields through the existing Canonical Data owner."""
+    if isinstance(evidence_id, bool) or not isinstance(evidence_id, int) or evidence_id <= 0:
+        raise ValueError("current observation Evidence reference must be a positive record ID")
+    from dataclasses import fields
+
     import database as db
     from canonical_data import (
-        ensure_canonical_table, get_connection, note_to_canonical, persist_canonical,
+        CanonicalRecord, ensure_canonical_table, get_connection, note_to_canonical,
+        persist_canonical,
     )
     from lumenis.shared.database import main_db_path
 
     product = "ZBMP" if scope["domain_id"] == "bmp" else "CTH"
     expected = (
         product, "zbmp" if product == "ZBMP" else "cth",
-        scope.get("subject_id"), scope.get("brand_focus_id"), "VERIFIED",
+        scope.get("subject_id"), scope.get("brand_focus_id"),
+        "UNASSIGNED" if scope.get("global_scope") is True else "VERIFIED",
     )
     notes = []
-    with db.get_db() as conn:
+    existing_canonical = {}
+    with (db.get_db() if connection is None else nullcontext(connection)) as conn:
         for note_id in note_ids:
             cursor = conn.execute("SELECT * FROM notes WHERE note_id=?", (note_id,))
             row = cursor.fetchone()
@@ -1008,24 +1330,62 @@ def _sync_prelaunch_canonical_source_fields(
                 note.get("subject_id") or None, note.get("brand_focus_id") or None,
                 note.get("scope_status"),
             )
-            if actual != expected or not note.get("scope_evidence_ref"):
+            if actual != expected or (expected[-1] == "VERIFIED" and not note.get("scope_evidence_ref")):
                 raise ValueError(f"imported note has no matching signed scope: {note_id}")
             notes.append(note)
+            if source_unchanged:
+                canonical_cursor = conn.execute(
+                    "SELECT * FROM canonical_data WHERE source_id=? AND product_id=? LIMIT 1",
+                    (note_id, product),
+                )
+                canonical_row = canonical_cursor.fetchone()
+                if canonical_row is not None:
+                    canonical_values = dict(zip(
+                        (column[0] for column in canonical_cursor.description), canonical_row,
+                    ))
+                    existing_canonical[note_id] = CanonicalRecord(**{
+                        field.name: canonical_values[field.name]
+                        for field in fields(CanonicalRecord)
+                        if field.name in canonical_values
+                    })
 
-    db_path = main_db_path()
-    ensure_canonical_table(db_path)
-    conn = get_connection(db_path)
-    try:
+    if connection is not None:
         for note in notes:
-            persist_canonical(conn, note_to_canonical(note, product_id=product))
-        conn.commit()
-    finally:
-        conn.close()
+            canonical = note_to_canonical(note, product_id=product)
+            if source_unchanged and note["note_id"] in existing_canonical:
+                current_metrics = canonical
+                canonical = existing_canonical[note["note_id"]]
+                canonical.engagement_likes = current_metrics.engagement_likes
+                canonical.engagement_comments = current_metrics.engagement_comments
+                canonical.engagement_collects = current_metrics.engagement_collects
+                canonical.engagement_shares = current_metrics.engagement_shares
+            canonical.evidence_ref = str(evidence_id)
+            persist_canonical(connection, canonical)
+    else:
+        db_path = main_db_path()
+        ensure_canonical_table(db_path)
+        conn = get_connection(db_path)
+        try:
+            for note in notes:
+                canonical = note_to_canonical(note, product_id=product)
+                if source_unchanged and note["note_id"] in existing_canonical:
+                    current_metrics = canonical
+                    canonical = existing_canonical[note["note_id"]]
+                    canonical.engagement_likes = current_metrics.engagement_likes
+                    canonical.engagement_comments = current_metrics.engagement_comments
+                    canonical.engagement_collects = current_metrics.engagement_collects
+                    canonical.engagement_shares = current_metrics.engagement_shares
+                canonical.evidence_ref = str(evidence_id)
+                persist_canonical(conn, canonical)
+            conn.commit()
+        finally:
+            conn.close()
     return len(notes)
 
 
 def _existing_prelaunch_observation_evidence(
     note_ids: List[str], platform: str,
+    *, connection=None,
 ) -> int | None:
     """Reuse the latest matching observation Evidence on an unchanged public page."""
     if not note_ids:
@@ -1033,7 +1393,7 @@ def _existing_prelaunch_observation_evidence(
     from lumenis.shared.database import get_repository
 
     evidence_ids = set()
-    with get_repository().transaction() as conn:
+    with (get_repository().transaction() if connection is None else nullcontext(connection)) as conn:
         for note_id in note_ids:
             row = conn.execute(
                 "SELECT raw_data FROM platform_contents "
@@ -1050,7 +1410,25 @@ def _existing_prelaunch_observation_evidence(
             if type(evidence_id) is not int or evidence_id <= 0:
                 return None
             evidence_ids.add(evidence_id)
-    return next(iter(evidence_ids)) if len(evidence_ids) == 1 else None
+        if len(evidence_ids) != 1:
+            return None
+        evidence_id = next(iter(evidence_ids))
+        cursor = conn.execute("SELECT * FROM app_evidence_records WHERE id=?", (evidence_id,))
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        from lumenis.shared.evidence.store import classify_evidence_integrity
+        evidence = dict(zip((column[0] for column in cursor.description), row))
+        try:
+            inputs = json.loads(evidence.get("inputs_json") or "{}")
+        except (TypeError, ValueError):
+            return None
+        if (not classify_evidence_integrity(evidence).get("verified")
+                or str(evidence.get("result") or "").upper() != "PASS"
+                or str(evidence.get("status") or "").lower() != "verified"
+                or set(inputs.get("source_ids") or ()) != set(note_ids)):
+            return None
+        return evidence_id
 
 
 def _write_evidence(platform: str, keyword: str, result: Dict[str, Any], *, started: str) -> int | None:
@@ -1086,11 +1464,97 @@ def _write_evidence(platform: str, keyword: str, result: Dict[str, Any], *, star
         return None
 
 
+def _manual_collection_approval_resource(scope, platform, keyword, max_results, receipt):
+    """Bind approval to the server identity and the exact bounded source request."""
+    binding = {
+        "module": "collector", "action": "write", "platform": platform,
+        "keyword": keyword, "max_results": max_results,
+        "domain_id": scope["domain_id"], "global_scope": scope["global_scope"],
+        "subject_id": scope["subject_id"], "brand_focus_id": scope["brand_focus_id"],
+        "actor_id": receipt.actor_id, "principal_kind": receipt.principal_kind,
+        "principal_ref": receipt.principal_ref,
+    }
+    encoded = json.dumps(binding, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return "collector-source-import:v1:" + hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _manual_collection_guard(actor, scope, platform, keyword, max_results):
+    """Check live Collector admission and separate import approval; never grant it."""
+    from lumenis.system.security import (
+        LocalWorkspacePrincipal, OperationType, check_actor_scope_permission,
+        check_local_workspace_scope_permission, get_permission_gate,
+        is_testing_bypass_enabled,
+    )
+
+    def denied(status, **extra):
+        return None, {
+            "ok": False, "status": status, "platform": platform, "keyword": keyword,
+            "read_only": True, "external_write": False, **extra,
+        }
+
+    if actor is None:
+        return denied("AUTH_REQUIRED")
+    if not isinstance(scope, Mapping) or type(scope.get("global_scope")) is not bool:
+        return denied("SCOPE_UNAUTHORIZED")
+    domain = scope.get("domain_id")
+    if not isinstance(domain, str):
+        return denied("SCOPE_UNAUTHORIZED")
+    domain = domain.strip().lower()
+    if domain == "zbmp":
+        domain = "bmp"
+    if domain not in {"cth", "bmp"}:
+        return denied("SCOPE_UNAUTHORIZED")
+    exact = {
+        "domain_id": domain, "global_scope": scope["global_scope"],
+        "subject_id": scope.get("subject_id"), "brand_focus_id": scope.get("brand_focus_id"),
+    }
+    try:
+        if is_testing_bypass_enabled():
+            return denied("PERMISSION_UNAVAILABLE")
+        gate = get_permission_gate()
+        check = (check_local_workspace_scope_permission
+                 if type(actor) is LocalWorkspacePrincipal else check_actor_scope_permission)
+        receipt = check(actor, module="collector", action="write", gate=gate, **exact)
+        if receipt.verification_state != "verified":
+            return denied("PERMISSION_UNAVAILABLE")
+        if receipt.allowed is not True:
+            return denied("SCOPE_UNAUTHORIZED")
+        resource = _manual_collection_approval_resource(
+            exact, platform, keyword, max_results, receipt,
+        )
+        approval = gate.check(
+            OperationType.DATA_IMPORT, resource,
+            caller=(f"account:{receipt.actor_id}" if receipt.actor_id is not None
+                    else receipt.principal_ref),
+            domain_id="zbmp" if domain == "bmp" else "cth",
+            exact_approval_required=True,
+        )
+        if approval.allowed is not True:
+            return denied(
+                "APPROVAL_REQUIRED" if approval.requires_approval else "SCOPE_UNAUTHORIZED",
+                approval_resource=resource,
+            )
+        return exact, None
+    except Exception:
+        return denied("PERMISSION_UNAVAILABLE")
+
+
+class _CollectionWriteRejected(Exception):
+    """Abort the scoped transaction without publishing partial write success."""
+
+    def __init__(self, result):
+        self.result = result
+        super().__init__(str(result.get("status") or "COLLECTION_WRITE_FAILED"))
+
+
 def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULTS,
                    operator: str = "human", scope: Mapping[str, Any] | None = None,
-                   actor: Mapping[str, Any] | None = None,
+                   actor: Any = None,
                    prelaunch_local_import: bool = False,
-                   prelaunch_authorization: Any = None) -> Dict[str, Any]:
+                   prelaunch_authorization: Any = None,
+                   raw_capture: PublicRawCapture | None = None,
+                   business_query: Any = None,
+                   native_capture: NativePublicCapture | None = None) -> Dict[str, Any]:
     """Run one explicit, read-only platform search and persist its evidence."""
     operator = str(operator or "").strip().lower()
     maintenance_operator = operator == "prelaunch_maintenance"
@@ -1099,21 +1563,66 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
     if maintenance_operator and not prelaunch_local_import:
         return {"ok": False, "status": "SCOPE_UNAUTHORIZED", "platform": platform,
                 "keyword": keyword, "read_only": True, "external_write": False}
+    if platform == "xhs":
+        platform = "xiaohongshu"
     platform, keyword, max_results = _validate_request(platform, keyword, max_results)
-    if platform == "x" and not prelaunch_local_import:
-        return {"ok": False, "status": "SCOPE_UNAUTHORIZED", "platform": platform,
-                "keyword": keyword, "read_only": True, "external_write": False}
+    permission_keyword = keyword
+    if native_capture is not None:
+        try:
+            if raw_capture is not None or prelaunch_local_import or operator not in {"human", "human_ui"}:
+                raise ValueError("frozen native import requires the real manual caller")
+            native_value = _native_capture_record(native_capture)
+            if native_capture.platform != platform or native_value["source_url"] != keyword:
+                raise ValueError("native capture platform/source mismatch")
+            permission_keyword = native_capture_permission_keyword(native_capture)
+        except NativeCaptureError as exc:
+            return {"ok":False,"status":exc.code,"platform":platform,
+                    "network_attempted":False,"persistence_attempted":False}
+        except (TypeError, ValueError, AttributeError):
+            return {"ok":False,"status":"INVALID_NATIVE_CAPTURE","platform":platform,
+                    "network_attempted":False,"persistence_attempted":False}
+    if business_query is not None:
+        from ..acquisition_plan import AcquisitionQuery
+        from .platform_naming import normalize_platform
+        if (type(business_query) is not AcquisitionQuery
+                or not business_query.business_context
+                or business_query.keyword != keyword
+                or normalize_platform(business_query.business_context.get('platform')) != platform):
+            raise ValueError('business query must match the exact planned platform and keyword')
+    if raw_capture is not None:
+        try:
+            if (not prelaunch_local_import or operator != "human" or actor is not None
+                    or platform != "public_http" or raw_capture.source_url != keyword):
+                raise ValueError("explicit approved public Raw intake required")
+            _public_raw_material(raw_capture)
+        except (AttributeError, TypeError, ValueError):
+            return {"ok": False, "status": "INVALID_ORIGINAL_CAPTURE", "platform": platform,
+                    "keyword": keyword, "read_only": True, "external_write": False}
+    manual_scope = None
+    if not prelaunch_local_import:
+        manual_scope, denial = _manual_collection_guard(
+            actor, scope, platform, permission_keyword, max_results,
+        )
+        if denial is not None:
+            return denial
     if _blocked_youtube_atom_feed(platform, keyword):
         return {
             "ok": False, "status": "BLOCKED", "platform": platform,
             "keyword": keyword, "read_only": True, "external_write": False,
             "error_type": "SOURCE_POLICY",
         }
-    prelaunch_scope = None
+    prelaunch_scope = (
+        manual_scope if manual_scope and not manual_scope["global_scope"] else None
+    )
     if prelaunch_local_import:
+        from .scheduling.prelaunch_baseline import PURPOSE_POLICY
+        purpose_maintenance = (maintenance_operator and
+                               getattr(prelaunch_authorization, "policy_id", None) == PURPOSE_POLICY)
+        permitted_platforms = ({"xiaohongshu", "douyin", "x", "instagram", "facebook", "wechat"}
+                               if purpose_maintenance else {"public_http", "web_atom"}
+                               if maintenance_operator else {"public_http", "web_atom", "douyin", "x"})
         if (actor is not None
-                or platform not in {"public_http", "web_atom", "douyin", "x"}
-                or (maintenance_operator and platform not in {"public_http", "web_atom"})
+                or platform not in permitted_platforms
                 or (operator != "human" and not maintenance_operator)):
             return {"ok": False, "status": "SCOPE_UNAUTHORIZED", "platform": platform,
                     "keyword": keyword, "read_only": True, "external_write": False}
@@ -1129,13 +1638,14 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 authorized = _authorize_prelaunch_public(
                     prelaunch_scope, keyword, platform,
                     maintenance_authorization=prelaunch_authorization,
+                    business_query=business_query, max_results=max_results,
                 )
             elif platform in {"douyin", "x"}:
                 authorized = _authorize_prelaunch_manual(
                     prelaunch_scope, keyword, platform=platform,
                 )
             else:
-                authorized = _authorize_prelaunch_public(prelaunch_scope, keyword, platform)
+                authorized = _authorize_prelaunch_public(prelaunch_scope, keyword, platform, raw_capture=raw_capture)
             if not authorized:
                 raise PermissionError("exact import approval unavailable")
             _validate_prelaunch_registry(prelaunch_scope)
@@ -1202,10 +1712,11 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 }
             _last_action[platform] = time.monotonic()
 
-        health = (
+        health = ({"status": "LOCAL_CAPTURE_INPUT", "can_attempt": True,
+                   "healthcheck_scope": "local_original_capture_only"} if raw_capture is not None or native_capture is not None else (
             _adapter_health(platform, url=keyword)
-            if platform in {"public_http", "web_atom"} else _adapter_health(platform)
-        )
+            if platform in {"public_http", "web_atom", "instagram", "wechat"} else _adapter_health(platform)
+        ))
 
 
         health_status = health.get("status", "UNAVAILABLE")
@@ -1221,7 +1732,13 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 "external_write": False, "publish_authority": "human_manual_only",
                 "duration_ms": int((time.monotonic() - started_monotonic) * 1000),
             }
-            evidence_id = _write_evidence(platform, keyword, result, started=started_at)
+            if manual_scope is not None:
+                evidence_id = _write_prelaunch_evidence(
+                    platform, keyword, result, started=started_at,
+                    scope=manual_scope, source_ids=[], manual=True,
+                )
+            else:
+                evidence_id = _write_evidence(platform, keyword, result, started=started_at)
             result["evidence_recorded"] = evidence_id is not None
             if evidence_id is None:
                 result.update({
@@ -1234,12 +1751,17 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                            fetched=0, accepted=0, rejected=0, error=result["error"])
             return result
 
-        adapter = _get_runtime_adapter(platform)
         try:
-            collection = adapter.search(keyword, max_results=max_results)
+            collection = (_native_capture_collection(native_capture) if native_capture is not None else
+                          _public_raw_collection(raw_capture) if raw_capture is not None
+                          else _get_runtime_adapter(platform).search(keyword, max_results=max_results))
             if not isinstance(collection, CollectionResult):
                 raise TypeError("adapter returned a non-CollectionResult value")
         except Exception as exc:
+            if raw_capture is not None:
+                return {"ok": False, "status": "INVALID_ORIGINAL_CAPTURE", "platform": platform,
+                        "keyword": keyword, "error_type": type(exc).__name__,
+                        "read_only": True, "external_write": False}
             collection = CollectionResult(
                 status=CollectionStatus.PROVIDER_UNAVAILABLE,
                 platform=platform,
@@ -1248,46 +1770,44 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             )
         status = _canonical_status(collection)
         items = [item for item in (collection.items or []) if isinstance(item, dict)]
-        captured_at = _now()
+        captured_at = (native_value["capture_observation_native"] if native_capture is not None else
+                       raw_capture.captured_at if raw_capture is not None else _now())
         records = [_native_record(item, platform, keyword, captured_at) for item in items]
+        business_reviews = []
+        business_observed_at = None
+        if business_query is not None:
+            from datetime import timezone
+            business_observed_at = (raw_capture.captured_at if raw_capture is not None
+                                    else datetime.now(timezone.utc).isoformat())
+            business_reviews = _business_source_reviews(records, business_query, business_observed_at)
+        if manual_scope is not None:
+            _, denial = _manual_collection_guard(actor, manual_scope, platform, permission_keyword, max_results)
+            if denial is not None:
+                return denial
         source_item_count = len(items)
         entity_mentions = []
         review_pending = []
         review_candidates = []
-        if platform in {"douyin", "x"} and prelaunch_scope is not None and collection.ok and records:
+        if business_reviews:
+            accepted_indices = [index for index, review in enumerate(business_reviews)
+                                if review['status'] == 'CANDIDATE_TASK_RELEVANT']
+            review_candidates = [record for index, record in enumerate(records) if index not in accepted_indices]
+            review_pending = [review for review in business_reviews if review['status'] != 'CANDIDATE_TASK_RELEVANT']
+            records = [records[index] for index in accepted_indices]
+            items = [items[index] for index in accepted_indices]
+        if (prelaunch_scope is not None and collection.ok and records
+                and (manual_scope is not None or business_query is not None or platform in {"douyin", "x"})):
             entity_mentions = _prelaunch_entity_mentions(records, prelaunch_scope)
-            review_pending = [item for item in entity_mentions if item["status"] != "EXACT_NAME_MENTION"]
+            review_pending += [item for item in entity_mentions if item["status"] != "EXACT_NAME_MENTION"]
             accepted_indices = [i for i, item in enumerate(entity_mentions) if item["status"] == "EXACT_NAME_MENTION"]
-            review_candidates = [record for i, record in enumerate(records) if i not in accepted_indices]
+            review_candidates += [record for i, record in enumerate(records) if i not in accepted_indices]
             records = [records[i] for i in accepted_indices]
             items = [items[i] for i in accepted_indices]
-            if not records:
-                result = {
-                    "ok": False, "status": "SCOPE_REVIEW_REQUIRED",
-                    "error_type": "SOURCE_ENTITY_IDENTITY_UNCONFIRMED",
-                    "platform": platform, "keyword": keyword,
-                    "raw_count": source_item_count, "returned_count": source_item_count,
-                    "imported": 0, "updated": 0, "canonical_synced": 0,
-                    "read_only": True, "external_write": False,
-                    "entity_mentions": entity_mentions,
-                    "review_pending_count": len(review_pending),
-                    "error": _status_message("SCOPE_REVIEW_REQUIRED"),
-                }
-                evidence_id = _write_prelaunch_evidence(
-                    platform, keyword, result, started=started_at,
-                    scope=prelaunch_scope, source_ids=[], review_candidates=review_candidates,
-                )
-                result["evidence_recorded"] = evidence_id is not None
-                if evidence_id is None:
-                    result["status"] = "EVIDENCE_WRITE_FAILED"
-                _write_run_log(platform, keyword, started=started_at, finished=_now(),
-                               fetched=source_item_count, accepted=0, rejected=source_item_count,
-                               error=result["status"])
-                return result
         if (maintenance_operator and prelaunch_scope is not None
                 and not _authorize_prelaunch_public(
                     prelaunch_scope, keyword, platform,
                     maintenance_authorization=prelaunch_authorization,
+                    business_query=business_query, max_results=max_results,
                 )):
             return {
                 "ok": False, "status": "SCOPE_UNAUTHORIZED",
@@ -1295,7 +1815,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 "read_only": True, "external_write": False,
                 "publish_authority": "human_manual_only",
             }
-        if (platform in {"douyin", "x"} and prelaunch_scope is not None
+        if (prelaunch_local_import and platform in {"douyin", "x"} and prelaunch_scope is not None
                 and not maintenance_operator
                 and not _authorize_prelaunch_manual(
                     prelaunch_scope, keyword, platform=platform,
@@ -1306,178 +1826,726 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 "read_only": True, "external_write": False,
                 "publish_authority": "human_manual_only",
             }
-        prelaunch_observation_changed = False
-        if prelaunch_scope is not None and platform in {"web_atom", "public_http", "douyin", "x"} and records:
-            from lumenis.shared.database.platform_content import platform_records_changed
-
-            prelaunch_observation_changed = platform_records_changed(records, platform=platform)
-        prelaunch_scope_conflict = bool(
-            prelaunch_scope is not None and items
-            and _prelaunch_scope_conflict(records, prelaunch_scope)
-        )
         metadata = collection.metadata if isinstance(collection.metadata, dict) else {}
         provenance = {
             "provider": str(metadata.get("provider") or metadata.get("engine") or "platform_adapter")[:100],
             "source": str(metadata.get("source") or f"platform:{platform}")[:180],
             "collected_at": str(metadata.get("collected_at") or captured_at)[:40],
         }
+        if native_capture is not None:
+            provenance["native_capture_sha256"] = native_capture.sha256
+            provenance["source_version"] = native_capture.sha256
+            provenance["intake_mode"] = "FROZEN_NATIVE_ORIGINAL_NO_NETWORK"
+            provenance["source_lineage"] = native_value["source_lineage"]
+            provenance["rights"] = native_value.get("rights")
+            provenance["native_publication_state"] = native_value.get("publication_since_2026")
         if metadata.get("error_type"):
             provenance["error_type"] = str(metadata["error_type"])[:80]
+        if business_query is not None:
+            provenance['planned_business_query'] = business_query.to_dict()
+            provenance['business_source_reviews'] = business_reviews
+            provenance['actual_response_observation_utc'] = business_observed_at
+            provenance['query_scope_role'] = 'PLANNED_TARGET_NOT_SOURCE_ENTITY_BINDING'
         if maintenance_operator:
             provenance["maintenance_plan_id"] = prelaunch_authorization.plan_id
             provenance["authorization_ref"] = prelaunch_authorization.authorization_ref
             provenance["source_version"] = prelaunch_authorization.source_version
             provenance["scope_version"] = prelaunch_authorization.scope_version
 
-        import_result: Dict[str, Any] = {"imported": 0, "updated": 0, "failed": 0, "details": []}
-        subject = {"subject_matches": 0, "canonical_synced": 0, "subjects": []}
-        note_ids: List[str] = []
-        if items and collection.ok and not prelaunch_scope_conflict:
-            from .multi_platform_import import import_multi_platform_records
+        import database as db
+        try:
+            # Reserve the writer before checking either source owner. Every
+            # scoped write below uses this connection and commits only after
+            # the final permission check, including Evidence and native fields.
+            with db.get_db() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                if raw_capture is not None and not _authorize_prelaunch_public(
+                    prelaunch_scope, keyword, platform, raw_capture=raw_capture,
+                ):
+                    raise _CollectionWriteRejected({"ok": False, "status": "SCOPE_UNAUTHORIZED",
+                        "platform": platform, "keyword": keyword,
+                        "read_only": True, "external_write": False})
+                if raw_capture is not None:
+                    _validate_prelaunch_registry(prelaunch_scope, connection=conn)
+                prelaunch_observation_changed = False
+                if (prelaunch_scope is not None or manual_scope is not None) and records:
+                    from lumenis.shared.database.platform_content import platform_records_changed
 
-            import_result = import_multi_platform_records(records)
-            note_ids = [
-                str(detail.get("note_id"))
-                for detail in import_result.get("details", [])
-                if detail.get("note_id") and detail.get("status") in {"imported", "updated"}
-            ]
-            if prelaunch_scope is None:
-                subject = _mark_subject_and_sync(note_ids, keyword)
-
-        prelaunch_import_incomplete = (
-            prelaunch_scope is not None and bool(items)
-            and (len(note_ids) != len(records) or len(set(note_ids)) != len(note_ids))
-        )
-        canonical_failed = (prelaunch_scope is None and bool(note_ids)
-                           and int(subject.get("canonical_synced", 0) or 0) != len(note_ids))
-        final_status = ("SCOPE_CONFLICT" if prelaunch_scope_conflict else
-                        "CANONICAL_SYNC_FAILED" if canonical_failed else status)
-        if (not prelaunch_scope_conflict and not canonical_failed and collection.ok
-                and (import_result.get("failed") or prelaunch_import_incomplete)):
-            final_status = "IMPORT_FAILED"
-        finished = _now()
-        error = "" if final_status in {"SUCCESS", "NO_NEW_DATA"} else f"{final_status}: {_status_message(final_status)}"
-        result = {
-            "ok": bool(collection.ok and not prelaunch_scope_conflict and not import_result.get("failed")
-                       and not prelaunch_import_incomplete and not canonical_failed),
-            "status": final_status,
-            "platform": platform,
-            "keyword": keyword,
-            "raw_count": int(collection.raw_count or len(items) or 0),
-            "returned_count": source_item_count,
-            "imported": int(import_result.get("imported", 0) or 0),
-            "updated": int(import_result.get("updated", 0) or 0),
-            "failed": int(import_result.get("failed", 0) or 0),
-            "subject_matches": int(subject.get("subject_matches", 0) or 0),
-            "canonical_synced": int(subject.get("canonical_synced", 0) or 0),
-            "health_status": health_status,
-            "error": error,
-            "error_type": "" if final_status in {"SUCCESS", "NO_NEW_DATA"} else final_status,
-            "duration_ms": int((time.monotonic() - started_monotonic) * 1000),
-            "read_only": True,
-            "external_write": False,
-            "publish_authority": "human_manual_only",
-            "product_owner": (
-                "BMP" if prelaunch_scope and prelaunch_scope.get("domain_id") == "bmp"
-                else "CTH"
-            ),
-            "consumer_views": ["CTH", "BMP"],
-            "provenance": provenance,
-            "entity_mentions": entity_mentions,
-            "review_pending_count": len(review_pending),
-        }
-        if prelaunch_scope is not None and platform in {"public_http", "web_atom", "douyin", "x"}:
-            result["refresh_verified"] = False
-        if prelaunch_scope is not None:
-            if prelaunch_observation_changed or review_candidates:
-                evidence_id = None
-            elif platform in {"public_http", "web_atom", "douyin", "x"}:
-                evidence_id = _existing_prelaunch_observation_evidence(note_ids, platform)
-            else:
-                evidence_id = _existing_prelaunch_evidence(note_ids, prelaunch_scope)
-            if evidence_id is None:
-                evidence_id = _write_prelaunch_evidence(
-                    platform, keyword, result, started=started_at,
-                    scope=prelaunch_scope, source_ids=note_ids,
-                    review_candidates=review_candidates,
+                    prelaunch_observation_changed = platform_records_changed(records, platform=platform, connection=conn)
+                prelaunch_scope_conflict = bool(
+                    (prelaunch_scope is not None or manual_scope is not None) and items
+                    and _prelaunch_scope_conflict(records, prelaunch_scope or manual_scope, connection=conn)
                 )
-        else:
-            evidence_id = _write_evidence(platform, keyword, result, started=started_at)
-        result["evidence_recorded"] = isinstance(evidence_id, int) and evidence_id > 0
-        if not isinstance(evidence_id, int) or evidence_id <= 0:
-            result.update({
-                "ok": False,
-                "status": "EVIDENCE_WRITE_FAILED",
-                "error_type": "EVIDENCE_WRITE_FAILED",
-                "error": f"EVIDENCE_WRITE_FAILED: {_status_message('EVIDENCE_WRITE_FAILED')}",
-            })
-        elif prelaunch_scope is not None and note_ids and result["ok"]:
-            try:
-                pending_scope_ids = _prelaunch_scope_note_ids_needing_verification(
-                    note_ids, prelaunch_scope,
-                )
-                if pending_scope_ids:
-                    _persist_prelaunch_scope(pending_scope_ids, prelaunch_scope, evidence_id)
-                canonical_synced = len(pending_scope_ids)
-                if prelaunch_observation_changed:
-                    canonical_synced = _sync_prelaunch_canonical_source_fields(
-                        note_ids, prelaunch_scope,
-                    )
-                elif not prelaunch_observation_changed:
-                    canonical_synced = len(note_ids)
-                result["canonical_synced"] = canonical_synced
-                result["scope_status"] = "VERIFIED"
-                if platform in {"web_atom", "public_http", "douyin", "x"}:
-                    from lumenis.shared.database.platform_content import persist_verified_platform_records
+                import_result: Dict[str, Any] = {"imported": 0, "updated": 0, "failed": 0, "details": []}
+                subject = {"subject_matches": 0, "canonical_synced": 0, "subjects": []}
+                note_ids: List[str] = []
+                if items and collection.ok and not prelaunch_scope_conflict:
+                    from .multi_platform_import import import_multi_platform_records
 
-                    result["native_fields_synced"] = persist_verified_platform_records(
-                        records, platform=platform, note_ids=note_ids,
-                        evidence_id=evidence_id, scope=prelaunch_scope,
-                    )
-                if platform in {"public_http", "web_atom", "douyin", "x"}:
-                    refresh_verified = (
-                        bool(records)
-                        and len(note_ids) == len(records)
-                        and canonical_synced == len(records)
-                        and result.get("native_fields_synced") == len(records)
-                        and result.get("evidence_recorded") is True
-                    )
-                    result["refresh_verified"] = refresh_verified
-                    if not refresh_verified:
-                        result.update({
-                            "ok": False,
-                            "status": "CANONICAL_SYNC_FAILED",
-                            "error_type": "CANONICAL_SYNC_FAILED",
-                            "error": _status_message("CANONICAL_SYNC_FAILED"),
-                        })
-            except Exception:
-                result.update({"ok": False, "status": "CANONICAL_SYNC_FAILED",
-                               "error_type": "CANONICAL_SYNC_FAILED",
-                               "error": _status_message("CANONICAL_SYNC_FAILED")})
-        # The signed success above covers only admitted source_ids. Keep the
-        # overall request partial when other returned items still need review.
-        if review_pending and result["ok"]:
-            result.update({
-                "ok": False, "status": "PARTIAL_SCOPE_REVIEW_REQUIRED",
-                "error_type": "SOURCE_ENTITY_IDENTITY_UNCONFIRMED",
-                "error": _status_message("PARTIAL_SCOPE_REVIEW_REQUIRED"),
-                "scope_status": "PARTIAL", "refresh_verified": False,
-            })
+                    import_result = import_multi_platform_records(records, connection=conn)
+                    note_ids = [
+                        str(detail.get("note_id"))
+                        for detail in import_result.get("details", [])
+                        if detail.get("note_id") and detail.get("status") in {"imported", "updated"}
+                    ]
+
+                prelaunch_import_incomplete = (
+                    (prelaunch_scope is not None or manual_scope is not None) and bool(items)
+                    and (len(note_ids) != len(records) or len(set(note_ids)) != len(note_ids))
+                )
+                canonical_failed = False
+                final_status = ("SCOPE_CONFLICT" if prelaunch_scope_conflict else
+                                "CANONICAL_SYNC_FAILED" if canonical_failed else status)
+                if review_pending and not records:
+                    final_status = "SCOPE_REVIEW_REQUIRED"
+                if (not prelaunch_scope_conflict and not canonical_failed and collection.ok
+                        and (import_result.get("failed") or prelaunch_import_incomplete)):
+                    final_status = "IMPORT_FAILED"
+                finished = _now()
+                error = "" if final_status in {"SUCCESS", "NO_NEW_DATA"} else f"{final_status}: {_status_message(final_status)}"
+                result = {
+                    "ok": bool(collection.ok and not prelaunch_scope_conflict and not import_result.get("failed")
+                               and not prelaunch_import_incomplete and not canonical_failed),
+                    "status": final_status,
+                    "platform": platform,
+                    "keyword": keyword,
+                    "raw_count": int(collection.raw_count or len(items) or 0),
+                    "returned_count": source_item_count,
+                    "imported": int(import_result.get("imported", 0) or 0),
+                    "updated": int(import_result.get("updated", 0) or 0),
+                    "failed": int(import_result.get("failed", 0) or 0),
+                    "subject_matches": int(subject.get("subject_matches", 0) or 0),
+                    "canonical_synced": int(subject.get("canonical_synced", 0) or 0),
+                    "health_status": health_status,
+                    "error": error,
+                    "error_type": "" if final_status in {"SUCCESS", "NO_NEW_DATA"} else final_status,
+                    "duration_ms": int((time.monotonic() - started_monotonic) * 1000),
+                    "read_only": True,
+                    "external_write": False,
+                    "publish_authority": "human_manual_only",
+                    "product_owner": (
+                        "BMP" if (prelaunch_scope or manual_scope or {}).get("domain_id") == "bmp"
+                        else "CTH"
+                    ),
+                    "consumer_views": ["CTH", "BMP"],
+                    "provenance": provenance,
+                    "entity_mentions": entity_mentions,
+                    "review_pending_count": len(review_pending),
+                }
+                if final_status == "SCOPE_REVIEW_REQUIRED":
+                    result["ok"] = False
+                    result["error_type"] = "SOURCE_ENTITY_IDENTITY_UNCONFIRMED"
+                if prelaunch_scope is not None or manual_scope is not None:
+                    result["refresh_verified"] = False
+                try:
+                    if prelaunch_scope is not None:
+                        if prelaunch_observation_changed or review_candidates:
+                            evidence_id = None
+                        else:
+                            evidence_id = _existing_prelaunch_observation_evidence(note_ids, platform, connection=conn)
+                        if evidence_id is None:
+                            evidence_id = _write_prelaunch_evidence(
+                                platform, keyword, result, started=started_at,
+                                scope=prelaunch_scope, source_ids=note_ids,
+                                review_candidates=review_candidates,
+                                manual=manual_scope is not None, observations=records + review_candidates, connection=conn,
+                            )
+                    elif manual_scope is not None:
+                        evidence_id = (None if prelaunch_observation_changed else
+                            _existing_prelaunch_observation_evidence(note_ids, platform, connection=conn))
+                        if evidence_id is None:
+                            evidence_id = _write_prelaunch_evidence(
+                                platform, keyword, result, started=started_at, scope=manual_scope,
+                                source_ids=note_ids, manual=True, observations=records + review_candidates, connection=conn,
+                            )
+                    else:
+                        evidence_id = _write_evidence(platform, keyword, result, started=started_at)
+                except Exception as exc:
+                    raise _CollectionWriteRejected({
+                        **result, "ok": False, "status": "EVIDENCE_WRITE_FAILED",
+                        "error_type": "EVIDENCE_WRITE_FAILED",
+                        "error": _status_message("EVIDENCE_WRITE_FAILED"),
+                    }) from exc
+                result["evidence_recorded"] = isinstance(evidence_id, int) and evidence_id > 0
+                if result["evidence_recorded"]:
+                    result["evidence_ref"] = str(evidence_id)
+                if not isinstance(evidence_id, int) or evidence_id <= 0:
+                    result.update({
+                        "ok": False,
+                        "status": "EVIDENCE_WRITE_FAILED",
+                        "error_type": "EVIDENCE_WRITE_FAILED",
+                        "error": f"EVIDENCE_WRITE_FAILED: {_status_message('EVIDENCE_WRITE_FAILED')}",
+                    })
+                elif prelaunch_scope is not None and note_ids and result["ok"]:
+                    try:
+                        pending_scope_ids = _prelaunch_scope_note_ids_needing_verification(
+                            note_ids, prelaunch_scope, connection=conn,
+                        )
+                        if pending_scope_ids:
+                            _persist_prelaunch_scope(pending_scope_ids, prelaunch_scope, evidence_id, connection=conn)
+                        canonical_synced = _sync_prelaunch_canonical_source_fields(
+                            note_ids, prelaunch_scope, evidence_id=evidence_id,
+                            source_unchanged=not prelaunch_observation_changed,
+                            connection=conn,
+                        )
+                        result["canonical_synced"] = canonical_synced
+                        result["scope_status"] = "VERIFIED"
+                        if prelaunch_scope is not None:
+                            from lumenis.shared.database.platform_content import persist_verified_platform_records
+
+                            result["native_fields_synced"] = persist_verified_platform_records(
+                                records, platform=platform, note_ids=note_ids,
+                                evidence_id=evidence_id, scope=prelaunch_scope, connection=conn,
+                                require_observation_proof=True,
+                            )
+                        if prelaunch_scope is not None:
+                            refresh_verified = (
+                                bool(records)
+                                and len(note_ids) == len(records)
+                                and canonical_synced == len(records)
+                                and result.get("native_fields_synced") == len(records)
+                                and result.get("evidence_recorded") is True
+                            )
+                            result["refresh_verified"] = refresh_verified
+                            if not refresh_verified:
+                                result.update({
+                                    "ok": False,
+                                    "status": "CANONICAL_SYNC_FAILED",
+                                    "error_type": "CANONICAL_SYNC_FAILED",
+                                    "error": _status_message("CANONICAL_SYNC_FAILED"),
+                                })
+                    except Exception:
+                        result.update({"ok": False, "status": "CANONICAL_SYNC_FAILED",
+                                       "error_type": "CANONICAL_SYNC_FAILED",
+                                       "error": _status_message("CANONICAL_SYNC_FAILED")})
+                elif manual_scope is not None and note_ids and result["ok"]:
+                    try:
+                        result["canonical_synced"] = _sync_unassigned_collection(
+                            note_ids, manual_scope, evidence_id, connection=conn,
+                            new_note_ids=[detail["note_id"] for detail in import_result["details"]
+                                          if detail.get("status") == "imported"],
+                            source_unchanged=not prelaunch_observation_changed,
+                        )
+                        from lumenis.shared.database.platform_content import persist_unassigned_platform_records
+                        result["native_fields_synced"] = persist_unassigned_platform_records(
+                            records, platform=platform, note_ids=note_ids,
+                            evidence_id=evidence_id, scope=manual_scope, connection=conn,
+                        )
+                        result["scope_status"] = "UNASSIGNED"
+                        result["refresh_verified"] = (
+                            len(records) == len(note_ids)
+                            and result["canonical_synced"] == len(records)
+                            and result["native_fields_synced"] == len(records)
+                        )
+                    except Exception:
+                        result.update({"ok": False, "status": "CANONICAL_SYNC_FAILED",
+                                       "error_type": "CANONICAL_SYNC_FAILED",
+                                       "error": _status_message("CANONICAL_SYNC_FAILED")})
+                if not result["evidence_recorded"] or (collection.ok and records and not result["ok"]):
+                    raise _CollectionWriteRejected(result)
+                if raw_capture is not None and result["ok"]:
+                    canonical_rows = conn.execute(
+                        "SELECT canonical_id,source_id,version,product_id,domain_id,subject_id,brand_focus_id,"
+                        "scope_status,scope_evidence_ref,publish_datetime,captured_at FROM canonical_data "
+                        "WHERE source_type='note' AND source_table='notes' AND source_id=?",
+                        (note_ids[0],),
+                    ).fetchall()
+                    evidence = conn.execute("SELECT * FROM app_evidence_records WHERE id=?", (evidence_id,)).fetchone()
+                    from lumenis.shared.evidence.store import classify_evidence_integrity
+                    integrity = classify_evidence_integrity(dict(evidence)) if evidence else {}
+                    if len(canonical_rows) != 1 or not integrity.get("verified"):
+                        raise _CollectionWriteRejected({**result, "ok": False, "status": "EVIDENCE_WRITE_FAILED"})
+                    try:
+                        admission_id = _record_public_raw_admission(
+                            conn, raw_capture, prelaunch_scope, note_ids, evidence_id, started=started_at,
+                        )
+                    except Exception as exc:
+                        raise _CollectionWriteRejected({**result, "ok": False,
+                            "status": "EVIDENCE_WRITE_FAILED", "error_type": "EVIDENCE_WRITE_FAILED"}) from exc
+                    admission = conn.execute("SELECT * FROM app_evidence_records WHERE id=?", (admission_id,)).fetchone()
+                    if not admission or not classify_evidence_integrity(dict(admission)).get("verified"):
+                        raise _CollectionWriteRejected({**result, "ok": False, "status": "EVIDENCE_WRITE_FAILED"})
+                    result["approved_raw_refs"] = {
+                        "source_id": note_ids[0], "source_table": "notes",
+                        "canonical": dict(canonical_rows[0]),
+                        "evidence_ref": f"app_evidence_records:{evidence_id}",
+                        "evidence_version": evidence["version"],
+                        "signature_verified": True,
+                        "admission_evidence_ref": f"app_evidence_records:{admission_id}",
+                        "admission_evidence_version": admission["version"],
+                        "admission_signature_verified": True,
+                        "original_capture": _public_raw_material(raw_capture),
+                        "approval_resource": approved_public_raw_resource(prelaunch_scope, raw_capture),
+                        "domain_adapter": {"prelaunch": prelaunch_scope["domain_id"],
+                                           "consumer": "cth" if prelaunch_scope["domain_id"] == "cth" else "zbmp"},
+                    }
+                if native_capture is not None and note_ids and result.get("ok"):
+                    rows = conn.execute("SELECT canonical_id,source_id,version,product_id,domain_id,subject_id,brand_focus_id,scope_status,scope_evidence_ref,publish_datetime,captured_at FROM canonical_data WHERE source_table='notes' AND source_id=?", (note_ids[0],)).fetchall()
+                    evidence = conn.execute("SELECT * FROM app_evidence_records WHERE id=?", (evidence_id,)).fetchone()
+                    from lumenis.shared.evidence.store import classify_evidence_integrity
+                    if len(rows) != 1 or not evidence or not classify_evidence_integrity(dict(evidence)).get("verified"):
+                        raise _CollectionWriteRejected({**result,"ok":False,"status":"EVIDENCE_WRITE_FAILED"})
+                    result["native_original_refs"] = {"source_id":note_ids[0],"canonical":dict(rows[0]),
+                        "evidence_ref":"app_evidence_records:"+str(evidence_id),"evidence_version":evidence["version"],
+                        "observation_sha256":native_capture.sha256,"original_capture_time":captured_at,
+                        "body_sha256":native_value["body_sha256"],"source_lineage":native_value["source_lineage"],
+                        "approval_resource_keyword":permission_keyword,"signature_verified":True,
+                        "per_use_admission":{"DATA_IMPORT":"CURRENT_CALLER_APPROVED","READ_ANALYZE_SAVE_EXPORT":"CHECK_EACH_CURRENT_USE","MODEL_TRAIN":"NOT_GRANTED"}}
+                if manual_scope is not None:
+                    _, denial = _manual_collection_guard(actor, manual_scope, platform, permission_keyword, max_results)
+                    if denial is not None:
+                        raise _CollectionWriteRejected(denial)
+                elif prelaunch_scope is not None:
+                    authorized = (_authorize_prelaunch_public(
+                        prelaunch_scope, keyword, platform,
+                        maintenance_authorization=prelaunch_authorization,
+                        raw_capture=raw_capture,
+                        business_query=business_query, max_results=max_results,
+                    ) if maintenance_operator or platform in {"public_http", "web_atom"} else _authorize_prelaunch_manual(
+                        prelaunch_scope, keyword, platform=platform,
+                    ))
+                    if not authorized:
+                        raise _CollectionWriteRejected({"ok": False, "status": "SCOPE_UNAUTHORIZED",
+                            "platform": platform, "keyword": keyword,
+                            "read_only": True, "external_write": False})
+                # The signed success above covers only admitted source_ids. Keep the
+                # overall request partial when other returned items still need review.
+                if review_pending and result["ok"]:
+                    result.update({
+                        "ok": False, "status": "PARTIAL_SCOPE_REVIEW_REQUIRED",
+                        "error_type": "SOURCE_ENTITY_IDENTITY_UNCONFIRMED",
+                        "error": _status_message("PARTIAL_SCOPE_REVIEW_REQUIRED"),
+                        "scope_status": "PARTIAL", "refresh_verified": False,
+                    })
+        except _CollectionWriteRejected as rejected:
+            result = dict(rejected.result)
+            result.update(imported=0, updated=0, canonical_synced=0,
+                          native_fields_synced=0, evidence_recorded=False, refresh_verified=False)
+            result.pop("evidence_ref", None)
+            result.pop("approved_raw_refs", None)
+            result.pop("scope_status", None)
+            if result.get("status") not in {"AUTH_REQUIRED", "APPROVAL_REQUIRED",
+                    "SCOPE_UNAUTHORIZED", "PERMISSION_UNAVAILABLE"}:
+                try:
+                    _write_run_log(platform, keyword, started=started_at, finished=_now(),
+                        fetched=source_item_count, accepted=0, rejected=source_item_count,
+                        error=result.get("error") or str(result.get("status")))
+                    result["run_log_recorded"] = True
+                except Exception:
+                    result["run_log_recorded"] = False
+            return result
+        except Exception:
+            return {"ok": False, "status": "COLLECTION_WRITE_FAILED",
+                    "error_type": "COLLECTION_WRITE_FAILED", "platform": platform,
+                    "keyword": keyword, "imported": 0, "updated": 0,
+                    "canonical_synced": 0, "native_fields_synced": 0,
+                    "evidence_recorded": False, "refresh_verified": False,
+                    "read_only": True, "external_write": False}
         accepted_count = int(result.get("canonical_synced", 0) or 0)
-        _write_run_log(
-            platform, keyword, started=started_at, finished=finished,
-            fetched=int(collection.raw_count or len(items) or 0),
-            accepted=accepted_count,
-            rejected=max(0, source_item_count - accepted_count),
-            error=result["error"],
-        )
+        try:
+            _write_run_log(
+                platform, keyword, started=started_at, finished=finished,
+                fetched=int(collection.raw_count or len(items) or 0),
+                accepted=accepted_count,
+                rejected=max(0, source_item_count - accepted_count),
+                error=result["error"],
+            )
+            result["run_log_recorded"] = True
+        except Exception:
+            result["run_log_recorded"] = False
         return result
     finally:
         lock.release()
 
 
+def _business_source_reviews(records, query, observed_at):
+    """Review live native time and task scope without altering source observations."""
+    from datetime import timezone
+    from ..acquisition_plan import assess_query_relevance
+    from .platform_naming import get_platform_fields
+    spec = get_platform_fields(query.business_context['platform'])
+    reviewed = []
+    for record in records:
+        native = record.get(spec.published_at) if spec else None
+        if native in (None, ''):
+            native = record.get('publish_datetime')
+        if isinstance(native, (int, float)) and not isinstance(native, bool):
+            try:
+                native = datetime.fromtimestamp(native, timezone.utc).isoformat()
+            except (ValueError, OverflowError, OSError):
+                native = None
+        observation = {'native_id': record.get('content_id'), 'source_url': record.get('url'),
+                       'title': record.get('title'), 'content': record.get('content'),
+                       'published_at': native, 'capture_observation_utc': observed_at}
+        reviewed.append({**assess_query_relevance(observation, query),
+                         'platform_content_id': record.get('content_id'),
+                         'source_url': record.get('url'), 'native_publication_literal': native})
+    return reviewed
+
+
+def collect_business_queries(business_requests, *, actor=None, scopes=None,
+                             operator='human', continuation=None, checkpoint=None,
+                             max_queries=32, max_results=MAX_RESULTS,
+                             prelaunch_authorization=None):
+    """Execute a task-selected batch through the existing guarded collection entry.
+
+    Existing task owners persist the returned checkpoint. Source scopes come
+    from the authenticated caller, never from a name in the plan. One platform's
+    failure defers its remaining queries and permits the other platforms to run.
+    Native pagination and formal admission remain separately explicit.
+    """
+    from collections import deque
+    from ..acquisition_plan import build_acquisition_plan, AcquisitionPlanError
+    from .platform_naming import normalize_platform
+
+    if operator not in {'human', 'human_ui', 'prelaunch_maintenance'}:
+        raise PermissionError('normal collector caller or signed schedule owner required')
+    if operator in {'human', 'human_ui'} and actor is None:
+        return {'ok': False, 'status': 'AUTH_REQUIRED', 'runs': [], 'network_attempted': False}
+    plan = build_acquisition_plan(business_requests=business_requests,
+                                  continuation=continuation, max_queries=max_queries)
+    if not plan.is_runnable:
+        return {'ok': False, 'status': 'ACQUISITION_PLAN_BLOCKED', 'query_plan': plan.to_dict(), 'runs': []}
+    if checkpoint is not None and (not isinstance(checkpoint, Mapping)
+            or checkpoint.get('input_fingerprint') != plan.input_fingerprint
+            or not isinstance(checkpoint.get('completed_query_keys'), list)
+            or any(not isinstance(key, str) or not re.fullmatch(r'[0-9a-f]{64}', key)
+                   for key in checkpoint['completed_query_keys'])):
+        raise AcquisitionPlanError('checkpoint does not match this task-selected query plan')
+    completed = set((checkpoint or {}).get('completed_query_keys', []))
+    groups = {}
+    keys = {}
+    for query in plan.queries:
+        key = hashlib.sha256(json.dumps(query.to_dict(), sort_keys=True, ensure_ascii=False,
+                                        separators=(',', ':')).encode('utf-8')).hexdigest()
+        keys[key] = query
+        platform = normalize_platform(query.business_context['platform'])
+        groups.setdefault(platform, deque()).append((key, query))
+    blocked = {}
+    runs = []
+    deferred = []
+    while any(groups.values()):
+        for platform, queries in groups.items():
+            if not queries:
+                continue
+            key, query = queries.popleft()
+            if key in completed:
+                continue
+            if platform in blocked:
+                deferred.append({'query_key': key, 'query': query.to_dict(), 'reason': blocked[platform]})
+                continue
+            domain = 'cth' if query.domain_id == 'CTH' else 'bmp'
+            scope = (scopes or {}).get(domain)
+            if platform not in SECONDARY_COLLECTION_PLATFORMS:
+                result = {'ok': False, 'status': 'NOT_SUPPORTED', 'platform': platform,
+                          'network_attempted': False, 'error_type': 'EXISTING_PLATFORM_ROUTE_REQUIRED'}
+            elif not isinstance(scope, Mapping):
+                result = {'ok': False, 'status': 'SCOPE_UNAUTHORIZED', 'platform': platform,
+                          'network_attempted': False}
+            elif not scope.get('global_scope') and (
+                    scope.get('subject_id') != query.subject_id or
+                    scope.get('brand_focus_id') != query.brand_focus_id):
+                result = {'ok': False, 'status': 'SCOPE_UNAUTHORIZED', 'platform': platform,
+                          'network_attempted': False, 'error_type': 'QUERY_CALLER_SCOPE_MISMATCH'}
+            else:
+                try:
+                    result = collect_search(platform, query.keyword, max_results=max_results,
+                        actor=actor, operator=operator, scope=scope, business_query=query,
+                        prelaunch_local_import=operator == 'prelaunch_maintenance',
+                        prelaunch_authorization=prelaunch_authorization)
+                except (ValueError, PermissionError) as exc:
+                    result = {'ok': False, 'status': 'COLLECTION_REQUEST_REJECTED',
+                              'platform': platform, 'error_type': type(exc).__name__}
+            runs.append({'query_key': key, 'planned_query': query.to_dict(), 'result': result})
+            if result.get('ok') is True and result.get('status') in {'SUCCESS', 'NO_NEW_DATA'}:
+                completed.add(key)
+            else:
+                blocked[platform] = result.get('status') or 'UNAVAILABLE'
+                deferred.append({'query_key': key, 'query': query.to_dict(), 'reason': blocked[platform]})
+    return {'ok': not deferred, 'status': 'PARTIAL' if deferred else 'BATCH_COMPLETED',
+            'query_plan': plan.to_dict(), 'runs': runs, 'deferred_queries': deferred,
+            'checkpoint': {'input_fingerprint': plan.input_fingerprint,
+                           'completed_query_keys': sorted(completed)},
+            'next_cursor': plan.next_cursor, 'continuation_required': bool(deferred or plan.next_cursor),
+            'coverage_complete': False, 'source_scopes_promoted_from_plan': False,
+            'product_schedule_operation_proven': False}
+
+
 __all__ = [
     "SECONDARY_COLLECTION_PLATFORMS",
     "collect_search",
+    "collect_business_queries",
+    "NativePublicCapture",
+    "native_capture_permission_keyword",
     "get_collection_surface",
 ]
+
+
+@dataclass(frozen=True)
+class PublicRawCapture:
+    """Immutable observed bytes and native metadata; this object grants nothing."""
+    content: bytes
+    sha256: str
+    source_url: str
+    final_url: str
+    content_type: str
+    captured_at: str
+    published_at: str | None
+    rights_json: str
+    native_scope_json: str
+    purpose: str = "INTERNAL_SOURCE_REVIEW_AND_ORIGINAL_BUSINESS_BRIEF"
+    claim_type: str = "BRAND_AUTHORED_SOURCE_CLAIM"
+
+def _public_raw_collection(capture: PublicRawCapture) -> CollectionResult:
+    """Normal local Source intake of observed bytes; no fetcher substitution."""
+    from .public_source import PublicResponse
+    from .public_http import PublicHttpAdapter
+    material = _public_raw_material(capture)
+    if capture.content_type == "text/html":
+        item = PublicHttpAdapter._item(PublicResponse(
+            url=capture.final_url, content=capture.content,
+            content_type=capture.content_type, status_code=0,
+        ))
+        if (item["publish_datetime"] or None) != capture.published_at:
+            raise ValueError("publication does not match declared original HTML")
+    else:
+        if capture.published_at is not None:
+            raise ValueError("plain directory text has no independent publication signal")
+        body = capture.content.decode("utf-8").strip()
+        item = {"platform_content_id": "public-http:" + hashlib.sha256(capture.final_url.encode()).hexdigest()[:32],
+                "title": body.splitlines()[0] if body else "", "content": body,
+                "url": capture.final_url, "publish_datetime": "", "author_id": None,
+                "author_nickname": None, "likes": None, "comments": None, "collects": None,
+                "shares": None, "raw": {"body_source": "captured_utf8_text",
+                    "publication_date_source": "unknown", "publication_date_state": "unknown",
+                    "full_body_text": body, "full_body_sha256": hashlib.sha256(body.encode()).hexdigest()}}
+    if not item.get("content", "").strip():
+        raise ValueError("original Raw contains no source body")
+    item["captured_at"] = capture.captured_at
+    # Capture time belongs to the signed admission observation, not the stable
+    # source identity. The original time remains in the record's captured_at.
+    stable_material = {key: value for key, value in material.items() if key != "captured_at"}
+    item["raw"].update({"approved_original_capture": stable_material,
+                         "original_raw_utf8": capture.content.decode("utf-8")})
+    return CollectionResult(status=CollectionStatus.SUCCESS, platform="public_http",
+                            items=[PublicHttpAdapter().normalize_item(item)],
+                            raw_count=1, new_count=1,
+                            metadata={"provider": "approved_original_public_raw", "source": capture.source_url,
+                                      "collected_at": capture.captured_at,
+                                      "healthcheck_scope": "local_original_capture_only"})
+
+def _public_raw_material(capture: PublicRawCapture) -> dict:
+    if (type(capture) is not PublicRawCapture or type(capture.content) is not bytes
+            or not 0 < len(capture.content) <= 2 * 1024 * 1024
+            or hashlib.sha256(capture.content).hexdigest() != capture.sha256):
+        raise ValueError("original Raw bytes/hash required")
+    for url in (capture.source_url, capture.final_url):
+        parts = urlsplit(url)
+        host = (parts.hostname or "").lower()
+        if (parts.scheme != "https" or not host or parts.username or parts.password
+                or parts.fragment or host == "localhost" or host.endswith((".localhost", ".local"))):
+            raise ValueError("public HTTPS capture URL required")
+        try:
+            address = ipaddress.ip_address(host)
+        except ValueError:
+            address = None
+        if address is not None and not address.is_global:
+            raise ValueError("private source URL forbidden")
+        if _credential_free_observations(url) != url:
+            raise ValueError("capture URL contains credential material")
+    if capture.content_type not in {"text/html", "text/plain"}:
+        raise ValueError("unsupported original Raw representation")
+    if not isinstance(capture.captured_at, str) or not any(mark in capture.captured_at for mark in ("T", " ")):
+        raise ValueError("actual native capture timestamp required")
+    datetime.fromisoformat(capture.captured_at.replace("Z", "+00:00"))
+    if capture.published_at is not None:
+        datetime.fromisoformat(capture.published_at.replace("Z", "+00:00"))
+    rights = json.loads(capture.rights_json)
+    native_scope = json.loads(capture.native_scope_json)
+    if not isinstance(rights, dict) or not isinstance(native_scope, dict):
+        raise ValueError("original rights and native scope required")
+    if (_credential_free_observations(rights) != rights
+            or _credential_free_observations(native_scope) != native_scope):
+        raise ValueError("private capture metadata forbidden")
+    if capture.purpose != "INTERNAL_SOURCE_REVIEW_AND_ORIGINAL_BUSINESS_BRIEF":
+        raise ValueError("this intake does not grant publication or model training")
+    if capture.claim_type not in {"BRAND_AUTHORED_SOURCE_CLAIM", "OFFICIAL_SINGLE_STORE_DIRECTORY"}:
+        raise ValueError("explicit supported source claim required")
+    capture.content.decode("utf-8", errors="strict")
+    return {"version": "approved-public-raw-v1", "raw_sha256": capture.sha256,
+            "raw_bytes": len(capture.content), "source_url": capture.source_url,
+            "final_url": capture.final_url, "content_type": capture.content_type,
+            "captured_at": capture.captured_at, "published_at": capture.published_at,
+            "rights": rights, "native_scope": native_scope, "purpose": capture.purpose,
+            "claim_type": capture.claim_type}
+
+def _record_public_raw_admission(connection, capture: PublicRawCapture, scope: Mapping[str, Any],
+                                 source_ids: List[str], source_evidence_id: int, *, started: str) -> int:
+    """Sign the exact capture through the existing Evidence owner and transaction."""
+    from lumenis.shared.evidence.store import classify_evidence_integrity, record_evidence
+    resource = approved_public_raw_resource(scope, capture)
+    inputs = {"original_capture": _public_raw_material(capture), "approval_resource": resource,
+              "source_ids": source_ids, "source_evidence_ref": f"app_evidence_records:{source_evidence_id}"}
+    rows = connection.execute(
+        "SELECT * FROM app_evidence_records WHERE feature_id=? AND asset_id=?",
+        ("SYSTEM_APPROVED_PUBLIC_RAW_ADMISSION", resource),
+    ).fetchall()
+    if rows:
+        if len(rows) != 1:
+            raise ValueError("ambiguous original capture admission")
+        prior = dict(rows[0])
+        prior_inputs = json.loads(prior["inputs_json"])
+        if (any(prior_inputs.get(key) != value for key, value in inputs.items())
+                or not classify_evidence_integrity(prior).get("verified")):
+            raise ValueError("original capture admission cannot be verified")
+        return prior["id"]
+    bmp = scope["domain_id"] == "bmp"
+    evidence_id = record_evidence(
+        source="collector", project="LUMENIS", product="ZBMP" if bmp else "CTH",
+        feature_id="SYSTEM_APPROVED_PUBLIC_RAW_ADMISSION", asset_id=resource,
+        version="approved-public-raw-v1", level="L8", capture_mode="manual",
+        captured_at=capture.captured_at, started_at=started,
+        inputs=inputs, outputs={"source_ids": source_ids}, result="PASS",
+        test_name="approved_original_public_raw_admission", actual="ADMITTED_ORIGINAL_CAPTURE",
+        provider="approved_original_public_raw", domain_id="zbmp" if bmp else "cth",
+        subject_id=scope.get("subject_id"), brand_focus_id=scope.get("brand_focus_id"),
+        global_scope=False, connection=connection,
+    )
+    if type(evidence_id) is not int or evidence_id <= 0:
+        raise ValueError("signed original capture admission unavailable")
+    return evidence_id
+
+def approved_public_raw_resource(scope: Mapping[str, Any], capture: PublicRawCapture) -> str:
+    """Exact approval binds original Raw identity, times, use and selected focus."""
+    exact = _prelaunch_scope(scope)
+    material = {"capture": _public_raw_material(capture), "scope": exact}
+    digest = hashlib.sha256(json.dumps(material, ensure_ascii=False, sort_keys=True,
+                                       separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+    return f"prelaunch-public_http:{exact['domain_id']}:{exact['subject_id'] or exact['brand_focus_id']}:{digest}"
+
+
+class NativeCaptureError(ValueError):
+    def __init__(self, code):
+        self.code = code
+        super().__init__(code)
+
+
+@dataclass(frozen=True)
+class NativePublicCapture:
+    """Frozen public post observation; the DTO grants no scope or permitted use."""
+    platform: str
+    content: bytes
+    sha256: str
+
+def _native_capture_record(capture):
+    if type(capture) is not NativePublicCapture or capture.platform not in {
+            "xiaohongshu", "douyin", "x", "instagram", "facebook", "wechat"}:
+        raise ValueError("explicit supported native observation required")
+    if type(capture.content) is not bytes or not 1 <= len(capture.content) <= 2 * 1024 * 1024:
+        raise ValueError("bounded native observation bytes required")
+    if hashlib.sha256(capture.content).hexdigest() != capture.sha256:
+        raise ValueError("native observation bytes changed")
+    value = json.loads(capture.content)
+    if (not isinstance(value, dict) or value.get("platform") != capture.platform
+            or not isinstance(value.get("native_id"), str)
+            or value.get("stable_source_key") != capture.platform + ":" + value["native_id"]
+            or not isinstance(value.get("body"), str) or not value["body"].strip()
+            or hashlib.sha256(value["body"].encode("utf-8")).hexdigest() != value.get("body_sha256")
+            or not isinstance(value.get("source_lineage"), list) or not value["source_lineage"]
+            or not isinstance(value.get("native_record"), dict)):
+        raise ValueError("native post identity/body/lineage required")
+    if value.get("body_state") in {"OG_PREVIEW_ONLY_NOT_NATIVE_FULL_POST", "NATIVE_BODY_UNAVAILABLE"}:
+        raise NativeCaptureError("NATIVE_BODY_UNAVAILABLE")
+    for parent in value["source_lineage"]:
+        if (not isinstance(parent, dict) or not re.fullmatch(r"[0-9a-f]{64}", str(parent.get("sha256") or ""))
+                or not isinstance(parent.get("locator"), str) or not parent["locator"]):
+            raise ValueError("source byte hash and original locator required")
+    stamp = value.get("capture_observation_native")
+    if not isinstance(stamp, str) or not stamp:
+        raise NativeCaptureError("SOURCE_CAPTURE_TIME_UNAVAILABLE")
+    # Preserve naive literals rather than silently assigning their timezone.
+    datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+    parts = urlsplit(value.get("source_url") or "")
+    allowed = {
+        "xiaohongshu": {"www.rednote.com", "rednote.com"},
+        "douyin": {"www.douyin.com", "douyin.com"},
+        "x": {"x.com", "www.x.com", "twitter.com", "www.twitter.com"},
+        "instagram": {"www.instagram.com", "instagram.com"},
+        "facebook": {"www.facebook.com", "facebook.com"},
+        "wechat": {"mp.weixin.qq.com"},
+    }
+    if parts.scheme != "https" or parts.hostname not in allowed[capture.platform] or parts.username or parts.password:
+        raise ValueError("approved public platform source URL required")
+    from .platform_naming import get_platform_fields
+    spec = get_platform_fields(capture.platform)
+    native_id = value["native_record"].get(spec.content_id) if spec else None
+    if native_id is not None and str(native_id) != value["native_id"]:
+        raise ValueError("post identity differs from original native record")
+    return value
+
+def native_capture_permission_keyword(capture):
+    """Existing manual DATA_IMPORT approval includes the complete observed bytes."""
+    _native_capture_record(capture)
+    return "native-original:" + capture.platform + ":" + capture.sha256
+
+def _native_capture_collection(capture):
+    value = _native_capture_record(capture)
+    native = value["native_record"]
+    platform = capture.platform
+    raw = dict(native)
+    publication = value.get("publication") or {}
+    metrics = {}
+    author_id = None
+    author_name = None
+    if platform == "douyin":
+        observed = (value.get("additional") or {}).get("metric_observations") or []
+        matched = [m for m in observed if m.get("captured_at") == value["capture_observation_native"]]
+        stats = matched[-1]["native"] if matched else native.get("statistics") or {}
+        raw.update({key: stats.get(key) for key in ("digg_count","comment_count","collect_count","share_count","play_count")})
+        metrics = {"likes":raw.get("digg_count"),"comments":raw.get("comment_count"),
+                   "collects":raw.get("collect_count"),"shares":raw.get("share_count"),"views":raw.get("play_count")}
+        author = native.get("author") or {}
+        author_id, author_name = author.get("sec_uid") or author.get("uid"), author.get("nickname")
+    elif platform == "x":
+        observed = native.get("metrics_observed") or {}
+        for key in ("favorite_count","reply_count","retweet_count","bookmark_count","view_count"):
+            raw[key] = (observed.get(key) or {}).get("value")
+        metrics = {"likes":raw.get("favorite_count"),"comments":raw.get("reply_count"),
+                   "shares":raw.get("retweet_count"),"collects":None,"views":raw.get("view_count")}
+        author_id = native.get("author_numeric_id")
+        author_name = native.get("screen_name")
+        raw["repost_native_metric_name"] = "retweet_count"
+        raw["bookmark_native_metric_name"] = "bookmark_count"
+    elif platform == "instagram":
+        metrics = {"likes":native.get("like_count"),"comments":native.get("comment_count"),
+                   "collects":None,"shares":native.get("share_count"),"views":native.get("play_count")}
+        author_id = native.get("author_id")
+        author_name = (native.get("author") or {}).get("username")
+    elif platform == "xiaohongshu":
+        raw.update(note_id=value["native_id"], user_id=native.get("author_id"),
+                   liked_count=native.get("likes"), comment_count=native.get("comments"),
+                   collected_count=native.get("collects"), share_count=native.get("shares"))
+        metrics = {"likes":native.get("likes"),"comments":native.get("comments"),
+                   "collects":native.get("collects"),"shares":native.get("shares"),"views":None}
+        author_id, author_name = native.get("author_id"), native.get("author_nickname")
+    else:
+        metrics = {"likes":None,"comments":None,"collects":None,"shares":None,"views":None}
+        author_id, author_name = native.get("author_id"), native.get("account_display")
+    for metric in metrics.values():
+        if metric is not None and (type(metric) is not int or metric < 0):
+            raise ValueError("native metrics must be exact nonnegative integers or NULL")
+    raw["_native_original"] = {
+        "source_sha256": capture.sha256, "body_sha256":value["body_sha256"],
+        "source_lineage": value["source_lineage"], "original_capture_time":value["capture_observation_native"],
+        "body_state":value["body_state"], "publication_since_2026":value.get("publication_since_2026"),
+        "claim_type":value.get("claim_type"),"rights":value.get("rights"),
+    }
+    item = {"platform_content_id":value["native_id"],"url":value["source_url"],
+            "title":native.get("title"),"content":value["body"],
+            "publish_datetime":publication.get("published_at_utc"),
+            "author_id":author_id,"author_nickname":author_name,"raw":raw,**metrics}
+    return CollectionResult(CollectionStatus.SUCCESS, platform, items=[item], raw_count=1,
+        metadata={"provider":"frozen_public_native_observation","source_version":capture.sha256,
+                  "source":"platform:"+platform,"collected_at":value["capture_observation_native"],
+                  "original_body_available":True,"native_capture_sha256":capture.sha256,
+                  "source_native_time_unknown":publication.get("published_at_utc") is None})

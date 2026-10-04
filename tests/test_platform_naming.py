@@ -2,6 +2,7 @@
 """平台命名与字段规范单元测试（2026-09 全网研究后建立）。"""
 import os
 import sys
+from copy import deepcopy
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -20,6 +21,8 @@ from lumenis.system.collector.adapters.platform_naming import (
     normalize_content_id,
     build_content_url,
     get_platform_aliases,
+    PLATFORM_FIELD_MAPPING,
+    map_raw_to_normalized,
 )
 
 
@@ -105,6 +108,63 @@ def test_bilibili_uses_bvid():
     assert spec.content_id == "bvid"
     assert spec.like_field == "like"
     assert spec.collect_field == "favorite"
+
+
+def test_bilibili_unix_publication_is_normalized_to_utc_iso_without_mutation():
+    raw = {
+        "bvid": "BV1timestamp",
+        "pubdate": 1789704000,
+        "pubdate_ts": 1789704000,
+        "captured_at": "2026-10-02T00:00:00+00:00",
+    }
+    original = deepcopy(raw)
+
+    canonical = to_canonical_record(raw, "bilibili")
+
+    assert canonical["published_at"] == "2026-09-18T04:00:00+00:00"
+    assert canonical["captured_at"] == raw["captured_at"]
+    assert canonical["raw"] is raw
+    assert raw == original
+
+
+def test_bilibili_iso_publication_is_kept_in_utc():
+    raw = {"bvid": "BV1isoTime", "pubdate": "2026-09-18T12:00:00+08:00"}
+
+    canonical = to_canonical_record(raw, "bilibili")
+
+    assert canonical["published_at"] == "2026-09-18T04:00:00+00:00"
+
+
+def test_bilibili_invalid_publication_stays_unknown_without_capture_fallback():
+    expected = "2026-09-18T04:00:00+00:00"
+    assert to_canonical_record(
+        {"bvid": "BV1numericText", "pubdate": "1789704000"}, "bilibili",
+    )["published_at"] == expected
+
+    invalid_values = (
+        True,
+        False,
+        0,
+        1789704000.5,
+        "not-a-timestamp",
+        "2026-09-18T04:00:00",
+        253402300800,
+        "0001-01-01T00:00:00+23:59",
+    )
+    for value in invalid_values:
+        raw = {
+            "bvid": "BV1invalidTimestamp",
+            "pubdate": value,
+            "pubdate_ts": value,
+            "captured_at": "2026-10-02T00:00:00+00:00",
+        }
+        assert to_canonical_record(raw, "bilibili")["published_at"] is None
+
+    without_publication = {
+        "bvid": "BV1missingTimestamp",
+        "captured_at": "2026-10-02T00:00:00+00:00",
+    }
+    assert to_canonical_record(without_publication, "bilibili")["published_at"] is None
 
 
 def test_safe_content_id_stringifies():
@@ -197,10 +257,146 @@ def test_shard_c_get_platform_fields_weibo():
     spec = get_platform_fields("weibo")
     assert spec is not None
     assert spec.content_id == "mid"
-    assert spec.author_id == "idstr"
+    assert spec.author_id == "user_id"
     assert spec.id_is_bigint is True
     assert spec.published_at == "created_at"
     assert spec.share_field == "reposts_count"
+
+
+def test_weibo_mapping_uses_post_and_author_ids_separately():
+    post_id = 5012345678901234567
+    raw = {
+        "mid": post_id,
+        "idstr": "post-idstr-5012345678901234567",
+        "user_id": "author-42",
+        "screen_name": "Example author",
+        "created_at": "2026-10-02T10:00:00+08:00",
+        "text": "Weibo post text",
+        "attitudes_count": 12,
+        "comments_count": 3,
+        "reposts_count": 4,
+    }
+
+    canonical = to_canonical_record(raw, "weibo")
+    normalized = map_raw_to_normalized(raw, "weibo")
+
+    assert canonical["content_id"] == post_id
+    assert normalize_content_id("weibo", canonical["content_id"]) == str(post_id)
+    assert canonical["author_id"] == "author-42"
+    assert canonical["author_id"] != raw["idstr"]
+    assert normalized["platform_content_id"] == post_id
+    assert normalized["author_id"] == "author-42"
+    assert normalized["author_name"] == "Example author"
+    assert normalized["published_at"] == raw["created_at"]
+    assert normalized["content"] == raw["text"]
+    assert (normalized["like_count"], normalized["comment_count"], normalized["share_count"]) == (12, 3, 4)
+    assert normalized["collect_count"] is None
+    assert "collect_count" not in PLATFORM_FIELD_MAPPING["weibo"]
+
+
+def test_weibo_missing_user_id_does_not_promote_post_idstr_to_author():
+    raw = {"mid": "5012345678901234567", "idstr": "post-idstr-only"}
+
+    canonical = to_canonical_record(raw, "weibo")
+    normalized = map_raw_to_normalized(raw, "weibo")
+
+    assert canonical["content_id"] == raw["mid"]
+    assert canonical["author_id"] is None
+    assert normalized["author_id"] is None
+
+
+def test_native_platform_without_full_mapping_uses_known_core_fields():
+    raw = {
+        "content_id": "rss-item-1",
+        "source_id": "publisher-1",
+        "published_at": "2026-10-01T08:00:00Z",
+        "like_count": 0,
+        "comment_count": None,
+        "share_count": 5,
+        "type": "article",
+        "title": "Public item",
+        "content": "Public content",
+        "url": "https://public.example.test/item-1",
+        "captured_at": "2026-10-02T08:00:00Z",
+        "tags": ["unmapped extension"],
+    }
+    original = deepcopy(raw)
+
+    normalized = map_raw_to_normalized(raw, "web_rss")
+
+    assert normalized["platform"] == "web_rss"
+    assert normalized["platform_content_id"] == "rss-item-1"
+    assert normalized["author_id"] == "publisher-1"
+    assert normalized["content_type"] == "article"
+    assert normalized["published_at"] == "2026-10-01T08:00:00Z"
+    assert normalized["like_count"] == 0
+    assert normalized["comment_count"] is None
+    assert normalized["share_count"] == 5
+    assert normalized["collect_count"] is None
+    assert normalized["title"] == "Public item"
+    assert normalized["content"] == "Public content"
+    assert normalized["url"] == "https://public.example.test/item-1"
+    assert normalized["collected_at"] == "2026-10-02T08:00:00Z"
+    assert normalized["hashtag_list"] is None
+    assert normalized["raw_data"] is raw
+    assert raw == original
+
+
+def test_sitemap_lastmod_stays_raw_and_does_not_become_publication():
+    spec = get_platform_fields("sitemap")
+    raw = {
+        "platform": "sitemap",
+        "content_id": "page-1",
+        "url": "https://public.example.test/page-1",
+        "lastmod": "2026-10-01T08:00:00Z",
+        "captured_at": "2026-10-02T08:00:00Z",
+    }
+
+    normalized = map_raw_to_normalized(raw, "sitemap")
+
+    assert spec is not None
+    assert spec.published_at == "published_at"
+    assert normalized["published_at"] is None
+    assert normalized["collected_at"] == raw["captured_at"]
+    assert normalized["raw_data"] is raw
+    assert normalized["raw_data"]["lastmod"] == "2026-10-01T08:00:00Z"
+
+
+def test_weibo_bigint_ids_reject_float_boolean_and_scientific_strings():
+    exact_int = 5012345678901234567
+    exact_string = "5012345678901234567"
+
+    assert normalize_content_id("weibo", exact_int) == exact_string
+    assert normalize_content_id("weibo", exact_string) == exact_string
+    assert normalize_content_id("weibo", 5.012345678901234e18) is None
+    assert normalize_content_id("weibo", "5.012345678901234e+18") is None
+    assert normalize_content_id("weibo", "5.012345678901234E18") is None
+    assert normalize_content_id("weibo", True) is None
+
+
+def test_unknown_platform_does_not_map_known_looking_fields():
+    raw = {
+        "platform": "unlisted_platform",
+        "content_id": "source-id",
+        "author_id": "source-author",
+        "published_at": "2026-10-01T08:00:00Z",
+        "like_count": 9,
+        "title": "Unmapped title",
+        "content": "Unmapped content",
+        "url": "https://public.example.test/unmapped",
+    }
+
+    normalized = map_raw_to_normalized(raw)
+
+    assert normalized["platform"] is None
+    assert normalized["platform_content_id"] is None
+    assert normalized["author_id"] is None
+    assert normalized["published_at"] is None
+    assert normalized["like_count"] is None
+    assert normalized["title"] is None
+    assert normalized["content"] is None
+    assert normalized["url"] is None
+    assert normalized["raw_data"] is raw
 
 
 def test_shard_c_get_platform_fields_unknown_returns_none():

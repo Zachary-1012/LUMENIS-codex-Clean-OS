@@ -2480,7 +2480,8 @@ class PermissionGate:
     # ──────────────────────────────────────────────────────────
 
     def check_prelaunch_maintenance(self, authorization, *, source_url: str,
-                                   platform: str, scope: Dict[str, Any]) -> PermissionResult:
+                                   platform: str, scope: Dict[str, Any],
+                                   business_query=None, max_results=None) -> PermissionResult:
         """Evaluate a revocable signed service grant for one public source.
 
         The durable plan records the owner's explicit prelaunch authorization.
@@ -2496,11 +2497,11 @@ class PermissionGate:
                 _prelaunch_public_import_resource,
             )
             from lumenis.system.collector.adapters.scheduling.prelaunch_baseline import (
-                PrelaunchMaintenanceAuthorization, load_prelaunch_baseline_config,
+                PURPOSE_POLICY, PrelaunchMaintenanceAuthorization,
+                load_prelaunch_baseline_config, _purpose_query,
             )
             if _TESTING_BYPASS_ENABLED or os.environ.get("PERMISSION_GATE_TESTING") == "1":
                 raise ValueError("testing bypass cannot authorize maintenance")
-            resource = _prelaunch_public_import_resource(scope, source_url, platform=platform)
             if isinstance(authorization, PrelaunchMaintenanceAuthorization):
                 loaded = load_prelaunch_baseline_config(
                     os.environ.get("LUMENIS_PRELAUNCH_BASELINE_CONFIG") or None,
@@ -2508,6 +2509,21 @@ class PermissionGate:
                 for plan in loaded.get("plans", []):
                     if authorization.matches(plan, source_url=source_url,
                                              platform=platform, scope=scope):
+                        if max_results is not None and (
+                                type(max_results) is not int or not 1 <= max_results <= plan.max_results):
+                            break
+                        if plan.policy_id == PURPOSE_POLICY:
+                            from lumenis.system.collector.acquisition_plan import AcquisitionQuery
+                            if (type(business_query) is not AcquisitionQuery
+                                    or max_results is None
+                                    or json.dumps(business_query.to_dict(), sort_keys=True) !=
+                                    json.dumps(_purpose_query(plan.purpose_query).to_dict(), sort_keys=True)):
+                                break
+                            resource = "prelaunch-purpose:" + plan.plan_id
+                        else:
+                            if business_query is not None:
+                                break
+                            resource = _prelaunch_public_import_resource(scope, source_url, platform=platform)
                         allowed = True
                         reason = "SIGNED_PRELAUNCH_SERVICE_GRANT"
                         break

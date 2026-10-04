@@ -1,0 +1,1098 @@
+{
+  "schema": "c1-source-derived-per-post-owner-input:v2",
+  "prepared_at_utc": "2026-10-04T06:43:48.268489+00:00",
+  "rejected_parent": {
+    "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\current-purpose-collection-outcome\\C1-PER-POST-EVIDENCE-CHAIN-INPUT.v1.json",
+    "bytes": 30475,
+    "sha256": "d3a0841f7fe4e9e6395b71d38a922b83e30825cf096e35972a5e9e320a5088e6"
+  },
+  "rejection_reasons": [
+    "invented_Instagram_capture_time",
+    "truncated_HK_body_and_missing_author_id",
+    "X_repost_bookmark_semantics_collapsed",
+    "legacy_EvidenceChain_not_current_signed_intake_route"
+  ],
+  "records": [
+    {
+      "platform": "xiaohongshu",
+      "native_id": "69a7bc76000000002203aa75",
+      "stable_source_key": "xiaohongshu:69a7bc76000000002203aa75",
+      "source_url": "https://www.rednote.com/discovery/item/69a7bc76000000002203aa75?xsec_source=pc_search&source=unknown",
+      "body": "陪羅湖人長大的深萬\n\t\n#记录我的城市 #深圳\n#citywalk #周末去哪儿\n#城市地标 #深圳万象城\n#罗湖 #深圳拍照\n#徕卡咖啡 #深圳citywalk",
+      "body_sha256": "374fd870ae094172e88b545ea07761b202bd1bcac9fd3b34108768d49a0baed4",
+      "body_state": "FROZEN_DETAIL_IDENTITY_VERIFIED_CURRENT_DIRECT_LINK_UNAVAILABLE",
+      "capture_observation_native": "2026-10-03T15:04:43.633181+08:00",
+      "publication": {
+        "native_literal": [
+          {
+            "origin": "detail",
+            "raw": "03-04",
+            "kind": "unclassified",
+            "locator": {
+              "page_url": "https://www.rednote.com/discovery/item/69a7bc76000000002203aa75",
+              "selector": ".date"
+            }
+          },
+          {
+            "origin": "card",
+            "raw": "03-04",
+            "kind": "unclassified",
+            "locator": {
+              "container_selector": "section.note-item",
+              "note_id": "69a7bc76000000002203aa75",
+              "selector": "a.author .time"
+            }
+          }
+        ],
+        "published_at_utc": null,
+        "year": null
+      },
+      "native_record": {
+        "note_id": "69a7bc76000000002203aa75",
+        "title": "深圳人自己的六本木",
+        "content": "陪羅湖人長大的深萬\n\t\n#记录我的城市 #深圳\n#citywalk #周末去哪儿\n#城市地标 #深圳万象城\n#罗湖 #深圳拍照\n#徕卡咖啡 #深圳citywalk",
+        "url": "https://www.rednote.com/discovery/item/69a7bc76000000002203aa75?xsec_source=pc_search&source=unknown",
+        "author_id": "59412fe982ec39155a11c3db",
+        "author_nickname": "次所武次子",
+        "likes": 599,
+        "comments": 39,
+        "collects": 119,
+        "shares": null,
+        "native_metrics_raw": {
+          "engage": {
+            "like_raw": "599",
+            "collect_raw": "119",
+            "comment_raw": "39",
+            "share_raw": ""
+          },
+          "card_likes_raw": "599"
+        },
+        "tag_list": [
+          "#记录我的城市",
+          "#深圳",
+          "#citywalk",
+          "#周末去哪儿",
+          "#城市地标",
+          "#深圳万象城",
+          "#罗湖",
+          "#深圳拍照",
+          "#徕卡咖啡",
+          "#深圳citywalk"
+        ],
+        "image_list": [
+          "https://sns-web-i10.rednotecdn.com/202610031504/7f474df6cc48c1f69e55fb0048745a73/notes_uhdr/1040g3qg31t9fvopdl66g49k5p0nujgur88vqa1g!nd_dft_wlteh_webp_3",
+          "https://sns-web-i10.rednotecdn.com/202610031504/4c40f4629cd646b70421ad0fbcb72ca5/notes_uhdr/1040g3qg31t9fvopdl60049k5p0nujgurgg2pb3o!nd_dft_wlteh_webp_3",
+          "https://sns-web-i10.rednotecdn.com/202610031504/d502bb622c7ff4e113c3acfde0e2835a/notes_uhdr/1040g3qg31t9fvopdl60g49k5p0nujgurrhb3dlo!nd_dft_wlteh_webp_3",
+          "https://sns-web-i10.rednotecdn.com/202610031504/cdd54ce668f598d857c6fdada0f65f26/notes_uhdr/1040g3qg31t9fvopdl61049k5p0nujguroi74s0g!nd_dft_wlteh_webp_3",
+          "https://sns-web-i10.rednotecdn.com/202610031504/8a9177ebaf1238c1ca9a0171fe9ac151/notes_uhdr/1040g3qg31t9fvopdl62g49k5p0nujguruf9qo1g!nd_dft_wlteh_webp_3",
+          "https://sns-web-i10.rednotecdn.com/202610031504/81782df31dccb49bf30a97e63b0dd63d/notes_uhdr/1040g3qg31t9fvopdl61g49k5p0nujgurfll90ao!nd_dft_wlteh_webp_3",
+          "https://sns-web-i10.rednotecdn.com/202610031504/b8684fc1345db86ca9db88282a9310bc/notes_uhdr/1040g3qg31t9fvopdl62049k5p0nujgur7fhbe7g!nd_dft_wlteh_webp_3",
+          "https://sns-web-i10.rednotecdn.com/202610031504/e5d83f8f8a6c56b1eb030eabadacedb6/notes_uhdr/1040g3qg31t9fvopdl63g49k5p0nujgur3rtqpr0!nd_dft_wlteh_webp_3",
+          "https://sns-web-i10.rednotecdn.com/202610031504/1305e3b8e8531eb54d484186a9c8c57a/notes_uhdr/1040g3qg31t9fvopdl65g49k5p0nujgur01tqgag!nd_dft_wlteh_webp_3",
+          "https://sns-web-i10.rednotecdn.com/202610031504/d098411b0dd9e19b931a07d88c9ea51a/notes_uhdr/1040g3qg31t9fvopdl63049k5p0nujgur8tqqvt0!nd_dft_wlteh_webp_3",
+          "https://sns-web-i10.rednotecdn.com/202610031504/01171b2fac8d858fb8c6c5ebba437a69/notes_uhdr/1040g3qg31t9fvopdl65049k5p0nujgurg8j9vko!nd_dft_wlteh_webp_3",
+          "https://sns-web-i10.rednotecdn.com/202610031504/49733c891d6cc8278fea67df169043a7/notes_uhdr/1040g3qg31t9fvopdl64g49k5p0nujgurn1ho3m0!nd_dft_wlteh_webp_3",
+          "https://sns-web-i10.rednotecdn.com/202610031504/1b4ebc0a8005757f92716827167feef6/notes_uhdr/1040g3qg31t9fvopdl64049k5p0nujgurdtr9sug!nd_dft_wlteh_webp_3",
+          "https://sns-web-i10.rednotecdn.com/202610031504/14d32c83d74e9eb87fcdc02e1567db10/notes_uhdr/1040g3qg31t9fvopdl66049k5p0nujgur4bpqv6g!nd_dft_wlteh_webp_3"
+        ],
+        "video_list": [],
+        "image_count": 32,
+        "comment_list": [
+          {
+            "user": "馥芮白去冰",
+            "content": "显得我像个黑粉",
+            "time": "03-04",
+            "likes_raw": "4"
+          },
+          {
+            "user": "馥芮白去冰",
+            "content": "显得我像个黑粉",
+            "time": "03-04",
+            "likes_raw": "4"
+          },
+          {
+            "user": "次所武次子",
+            "content": "hhhhh",
+            "time": "03-04",
+            "likes_raw": "1"
+          },
+          {
+            "user": "木子",
+            "content": "请问前海？谢谢",
+            "time": "03-04",
+            "likes_raw": "赞"
+          },
+          {
+            "user": "木子",
+            "content": "请问前海？谢谢",
+            "time": "03-04",
+            "likes_raw": "赞"
+          },
+          {
+            "user": "次所武次子",
+            "content": "罗湖哦",
+            "time": "03-06",
+            "likes_raw": "1"
+          },
+          {
+            "user": "gaga1st",
+            "content": "但是呢六本木没有痰液",
+            "time": "03-12",
+            "likes_raw": "14"
+          },
+          {
+            "user": "gaga1st",
+            "content": "但是呢六本木没有痰液",
+            "time": "03-12",
+            "likes_raw": "14"
+          },
+          {
+            "user": "次所武次子",
+            "content": "这个无解",
+            "time": "03-12",
+            "likes_raw": "1"
+          },
+          {
+            "user": "minminn",
+            "content": "拍得好好看 请问是用什么设备呢",
+            "time": "03-08",
+            "likes_raw": "赞"
+          },
+          {
+            "user": "minminn",
+            "content": "拍得好好看 请问是用什么设备呢",
+            "time": "03-08",
+            "likes_raw": "赞"
+          },
+          {
+            "user": "次所武次子",
+            "content": "🍎13p哦",
+            "time": "03-08",
+            "likes_raw": "赞"
+          },
+          {
+            "user": "zlq",
+            "content": "",
+            "time": "03-21",
+            "likes_raw": "1"
+          },
+          {
+            "user": "zlq",
+            "content": "",
+            "time": "03-21",
+            "likes_raw": "1"
+          },
+          {
+            "user": "次所武次子",
+            "content": "美的超標！",
+            "time": "03-21",
+            "likes_raw": "赞"
+          },
+          {
+            "user": "ks",
+            "content": "拿",
+            "time": "03-04",
+            "likes_raw": "1"
+          },
+          {
+            "user": "ks",
+            "content": "拿",
+            "time": "03-04",
+            "likes_raw": "1"
+          },
+          {
+            "user": "松莓瓷",
+            "content": "图六是在深圳？？我感觉好好看 像在日本",
+            "time": "03-05",
+            "likes_raw": "赞"
+          },
+          {
+            "user": "松莓瓷",
+            "content": "图六是在深圳？？我感觉好好看 像在日本",
+            "time": "03-05",
+            "likes_raw": "赞"
+          },
+          {
+            "user": "次所武次子",
+            "content": "是呀在深圳hhh",
+            "time": "03-06",
+            "likes_raw": "赞"
+          },
+          {
+            "user": "GivenchyDior",
+            "content": "拍的真好",
+            "time": "03-05",
+            "likes_raw": "2"
+          },
+          {
+            "user": "GivenchyDior",
+            "content": "拍的真好",
+            "time": "03-05",
+            "likes_raw": "2"
+          },
+          {
+            "user": "次所武次子",
+            "content": "",
+            "time": "03-06",
+            "likes_raw": "赞"
+          },
+          {
+            "user": "路过的太阳",
+            "content": "老了还是法拉利",
+            "time": "03-04",
+            "likes_raw": "15"
+          },
+          {
+            "user": "路过的太阳",
+            "content": "老了还是法拉利",
+            "time": "03-04",
+            "likes_raw": "15"
+          },
+          {
+            "user": "次所武次子",
+            "content": "依旧好逛",
+            "time": "03-05",
+            "likes_raw": "赞"
+          },
+          {
+            "user": "💮",
+            "content": "六本木是什么东西",
+            "time": "03-31",
+            "likes_raw": "赞"
+          },
+          {
+            "user": "💮",
+            "content": "六本木是什么东西",
+            "time": "03-31",
+            "likes_raw": "赞"
+          }
+        ],
+        "time_source_observations": [
+          {
+            "origin": "detail",
+            "raw": "03-04",
+            "kind": "unclassified",
+            "locator": {
+              "page_url": "https://www.rednote.com/discovery/item/69a7bc76000000002203aa75",
+              "selector": ".date"
+            }
+          },
+          {
+            "origin": "card",
+            "raw": "03-04",
+            "kind": "unclassified",
+            "locator": {
+              "container_selector": "section.note-item",
+              "note_id": "69a7bc76000000002203aa75",
+              "selector": "a.author .time"
+            }
+          }
+        ],
+        "captured_at": "2026-10-03T15:04:43.633181+08:00",
+        "detail_identity_verified": true,
+        "collector_version": "xhs-cdp-py-human-2.3"
+      },
+      "source_lineage": [
+        {
+          "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\hk-xhs-live-attempt-011-normalized-redacted.json",
+          "bytes": 252644,
+          "sha256": "e4f3507090c12107e576f4135816541263ba7f36dec518ed04fb5b5520388041",
+          "locator": "/3"
+        }
+      ],
+      "claim_type": "SELF_SELECTED_PUBLIC_CONSUMER_CITYWALK_POST_NOT_OPERATOR_DIRECTORY",
+      "publication_since_2026": "UNKNOWN_YEAR_REVIEW_ONLY",
+      "source_scope": "UNASSIGNED",
+      "requested_scope_is_native_scope": false,
+      "requested_owner_scope_mode": "GLOBAL_OBSERVATION_REQUIRES_CURRENT_CALLER_AUTHORIZATION",
+      "formal_source_evidence_canonical_use_signature_refs": null,
+      "rights": {
+        "internal_public_review": "PO_APPROVED",
+        "MODEL_TRAIN": "NOT_GRANTED",
+        "READ_ANALYZE_SAVE_EXPORT": "CHECK_EACH_CURRENT_OWNER_USE"
+      },
+      "additional": {
+        "image_count_literal": 32,
+        "bound_image_ref_count": 14,
+        "typed_luohu_LV_TENANT_OF": null,
+        "must_not_borrow_guangzhou_LV_assertions": true
+      }
+    },
+    {
+      "platform": "douyin",
+      "native_id": "7676442440286424366",
+      "stable_source_key": "douyin:7676442440286424366",
+      "source_url": "https://www.douyin.com/video/7676442440286424366",
+      "body": "观夏闻献背后，中国还藏着一批宝藏调香师 #yili #冯天乐 #中国调香师 #中国香氛 #小众品牌",
+      "body_sha256": "6d33a9e0f11e7d528746f4e072653aba85a1fff76f745782eb46d7b52357d199",
+      "body_state": "NATIVE_CAPTION_AND_ACTUAL_DETAIL_OBSERVED",
+      "capture_observation_native": "2026-10-03T21:45:51.179812+00:00",
+      "publication": {
+        "create_time": 1787319000,
+        "published_at_utc": "2026-08-21T13:30:00+00:00",
+        "page_literal": "2026-08-21 21:30",
+        "page_literal_offset": null
+      },
+      "native_record": {
+        "aweme_id": "7676442440286424366",
+        "desc": "观夏闻献背后，中国还藏着一批宝藏调香师 #yili #冯天乐 #中国调香师 #中国香氛 #小众品牌",
+        "create_time": 1787319000,
+        "statistics": {
+          "aweme_id": "7676442440286424366",
+          "comment_count": 6,
+          "digg_count": 96,
+          "download_count": 0,
+          "play_count": 0,
+          "share_count": 22,
+          "forward_count": 0,
+          "lose_count": 0,
+          "lose_comment_count": 0,
+          "whatsapp_share_count": 0,
+          "digest": "",
+          "exposure_count": 0,
+          "live_watch_count": 0,
+          "collect_count": 44,
+          "recommend_count": 2
+        },
+        "author": {
+          "uid": "3993864026991084",
+          "sec_uid": "MS4wLjABAAAAxk7HMKAgbhwmt_Zzw2nFWcW62dcG4oUc6dpk_w8LQPb1tV_qceZQbTRxYM_IVXn-",
+          "nickname": "木有话聊"
+        },
+        "aweme_type": 0,
+        "text_extra": [
+          {
+            "start": 20,
+            "end": 25,
+            "type": 1,
+            "hashtag_name": "yili",
+            "hashtag_id": "1651440102446094",
+            "is_commerce": false,
+            "caption_start": 0,
+            "caption_end": 5
+          },
+          {
+            "start": 26,
+            "end": 30,
+            "type": 1,
+            "hashtag_name": "冯天乐",
+            "hashtag_id": "1784585331142723",
+            "is_commerce": false,
+            "caption_start": 6,
+            "caption_end": 10
+          },
+          {
+            "start": 31,
+            "end": 37,
+            "type": 1,
+            "hashtag_name": "中国调香师",
+            "hashtag_id": "7554746769851025448",
+            "is_commerce": false,
+            "caption_start": 11,
+            "caption_end": 17
+          },
+          {
+            "start": 38,
+            "end": 43,
+            "type": 1,
+            "hashtag_name": "中国香氛",
+            "hashtag_id": "1655132139894796",
+            "is_commerce": false,
+            "caption_start": 18,
+            "caption_end": 23
+          },
+          {
+            "start": 44,
+            "end": 49,
+            "type": 1,
+            "hashtag_name": "小众品牌",
+            "hashtag_id": "1614655949731854",
+            "is_commerce": false,
+            "caption_start": 24,
+            "caption_end": 29
+          }
+        ],
+        "video_duration_native_ms": 527813,
+        "video_cover": {
+          "uri": "image-cut-tos-priv/4035a70583649976931f6217a0cb0801",
+          "url_list": [
+            "https://p3-pc-sign.douyinpic.com/image-cut-tos-priv/4035a70583649976931f6217a0cb0801~tplv-dy-resize-origshort-autoq-75:330.jpeg?biz_tag=pcweb_cover&card_type=153&column_n=0&from=327834062&l=2026100400202452D0AB8606E8307DC8BF&lk3s=138a59ce&s=PackSourceEnum_SEARCH&sc=cover&se=false&x-expires=2106403200&x-signature=XM6WxrNZlspJT0ZMBuOSZAWhv2c%3D"
+          ],
+          "width": 720,
+          "height": 720
+        },
+        "captured_at": "2026-10-03T16:20:09.025313+00:00"
+      },
+      "source_lineage": [
+        {
+          "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\douyin-business-public-read-20261004\\query00-7676442440286424366.json",
+          "bytes": 106283,
+          "sha256": "377acd8178798c9a29810bd0754118481370838946404d0824ce108c5b62b0cd",
+          "locator": "/native_public_aweme"
+        },
+        {
+          "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\douyin-actual-detail-content-review-20261004\\receipt.json",
+          "bytes": 19228,
+          "sha256": "3478c32ffba2247e4f3ce865153b95de60f1cdbcd439c223f4035045b13be571",
+          "locator": "/actual_page/body_visible"
+        }
+      ],
+      "claim_type": "AUTHOR_OPINION_NOT_INDEPENDENT_BRAND_FACT",
+      "publication_since_2026": "ELIGIBLE_NATIVE_2026_PUBLICATION",
+      "source_scope": "UNASSIGNED",
+      "requested_scope_is_native_scope": false,
+      "requested_owner_scope_mode": "GLOBAL_OBSERVATION_REQUIRES_CURRENT_CALLER_AUTHORIZATION",
+      "formal_source_evidence_canonical_use_signature_refs": null,
+      "rights": {
+        "internal_public_review": "PO_APPROVED",
+        "MODEL_TRAIN": "NOT_GRANTED",
+        "READ_ANALYZE_SAVE_EXPORT": "CHECK_EACH_CURRENT_OWNER_USE"
+      },
+      "additional": {
+        "metric_observations": [
+          {
+            "source": {
+              "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\douyin-business-public-read-20261004\\query00-7676442440286424366.json",
+              "bytes": 106283,
+              "sha256": "377acd8178798c9a29810bd0754118481370838946404d0824ce108c5b62b0cd",
+              "locator": "/native_public_aweme/statistics"
+            },
+            "captured_at": "2026-10-03T16:20:09.025313+00:00",
+            "native": {
+              "aweme_id": "7676442440286424366",
+              "comment_count": 6,
+              "digg_count": 96,
+              "download_count": 0,
+              "play_count": 0,
+              "share_count": 22,
+              "forward_count": 0,
+              "lose_count": 0,
+              "lose_comment_count": 0,
+              "whatsapp_share_count": 0,
+              "digest": "",
+              "exposure_count": 0,
+              "live_watch_count": 0,
+              "collect_count": 44,
+              "recommend_count": 2
+            }
+          },
+          {
+            "source": {
+              "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\douyin-actual-detail-content-review-20261004\\receipt.json",
+              "bytes": 19228,
+              "sha256": "3478c32ffba2247e4f3ce865153b95de60f1cdbcd439c223f4035045b13be571",
+              "locator": "/actual_page/body_visible:after_exact_desc/4_lines"
+            },
+            "captured_at": "2026-10-03T21:45:51.179812+00:00",
+            "native": {
+              "digg_count": 97,
+              "comment_count": 6,
+              "collect_count": 44,
+              "share_count": 22
+            },
+            "play_count": null
+          }
+        ],
+        "platform_AI_chapters_are_derivative": true,
+        "full_video_watched": false
+      }
+    },
+    {
+      "platform": "instagram",
+      "native_id": "3950357121996910485",
+      "stable_source_key": "instagram:3950357121996910485",
+      "source_url": "https://www.instagram.com/reel/DbSfN9gj2-V/",
+      "body": "Le Labo City Exclusives only leave their hometowns once a year to reach new noses. This year, we welcome a new scent for Beijing — SHIU 25. Available worldwide in discovery sizes starting August 1. Full-size bottles available September 1-30.\nWatch the full film on YouTube — link in bio.\n#CityExclusiveEvent #WearTheCityFeelsLikeHome #LeLabo",
+      "body_sha256": "933891d984f38e06f8186d6db8633159c99250606af699743106577b1e06c8ed",
+      "body_state": "MATCHED_PUBLIC_NATIVE_POST_DOCUMENT",
+      "capture_observation_native": "2026-10-03T19:26:01.058401+00:00",
+      "publication": {
+        "taken_at": 1785146450,
+        "caption_created_at": 1785146453,
+        "published_at_utc": "2026-07-27T10:00:50+00:00"
+      },
+      "native_record": {
+        "media_id": "3950357121996910485",
+        "shortcode": "DbSfN9gj2-V",
+        "taken_at": 1785146450,
+        "caption": "Le Labo City Exclusives only leave their hometowns once a year to reach new noses. This year, we welcome a new scent for Beijing — SHIU 25. Available worldwide in discovery sizes starting August 1. Full-size bottles available September 1-30.\nWatch the full film on YouTube — link in bio.\n#CityExclusiveEvent #WearTheCityFeelsLikeHome #LeLabo",
+        "caption_created_at": 1785146453,
+        "caption_is_edited": false,
+        "author_id": "384675077",
+        "author": {
+          "pk": "384675077",
+          "username": "lelabofragrances",
+          "full_name": "LE LABO Fragrances",
+          "is_verified": true
+        },
+        "like_count": 3853,
+        "comment_count": 50,
+        "share_count": null,
+        "play_count": null,
+        "location": null,
+        "media_type": 2,
+        "display_uri": "https://scontent-lax3-1.cdninstagram.com/v/t51.82787-15/757455107_18619627045035078_3507887337463430399_n.jpg?stp=dst-jpg_e35_s640x640_tt6&_nc_cat=102&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiQ0xJUFMuYmVzdF9pbWFnZV91cmxnZW4uQzMifQ%3D%3D&_nc_ohc=pBUDEny0FVMQ7kNvwGYHrYo&_nc_oc=Adrb3MonlImGN4JC4cgJudwuF0NNhR2534A0-Ksw03GoCDf6XpkEJiLI998TeUURIrg&_nc_zt=23&_nc_ht=scontent-lax3-1.cdninstagram.com&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&oh=00_AQOpPLKKwo8Fza7jyk59_y0R2lZsBP9s9VBUnGj1yXR-dA&oe=6AC7388E",
+        "video_versions": [
+          {
+            "type": 101,
+            "url": "https://scontent-lax3-2.cdninstagram.com/o1/v/t2/f2/m86/AQP27hUWJX_8hHk-59wQ5LULF_LkBv-uHwOlvJdclB2LS1ZxzjErrMLb_ZkLYFqdhslgwIizs5deuSwtjT6IJLC4eWeIam8A-6wxzk0.mp4?_nc_cat=107&_nc_sid=5e9851&_nc_ht=scontent-lax3-2.cdninstagram.com&_nc_ohc=0g_W9DYPJHgQ7kNvwFeZlG2&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5JTlNUQUdSQU0uQ0xJUFMuQzMuNzIwLmRhc2hfYmFzZWxpbmVfMV92MSIsInhwdl9hc3NldF9pZCI6MTg2MTk2MDc4MTIwMzUwNzgsImFzc2V0X2FnZV9kYXlzIjo2OCwidmlfdXNlY2FzZV9pZCI6MTAwOTksImR1cmF0aW9uX3MiOjI4LCJ1cmxnZW5fc291cmNlIjoid3d3In0%3D&ccb=17-1&vs=febf75b3b01bf551&_nc_vs=HBksFQIYUmlnX3hwdl9yZWVsc19wZXJtYW5lbnRfc3JfcHJvZC84NjQ1NDUyNEQ2RjUyMEVEN0YzNDExRDY1QjFGNzFBRl92aWRlb19kYXNoaW5pdC5tcDQVAALIARIAFQIYUWlnX3hwdl9wbGFjZW1lbnRfcGVybWFuZW50X3YyLzI1NDdCREIxRDIxNDY1RTIxRjk3QjdBMjNERUNERTlCX2F1ZGlvX2Rhc2hpbml0Lm1wNBUCAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACaMyPLX6JuTQhUCKAJDMywXQDzx64UeuFIYEmRhc2hfYmFzZWxpbmVfMV92MREAdf4HZeadAQA&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&_nc_zt=28&oh=00_AQPOTFK1R8nKSO1Bvsjd3jZ1zvsWwd5Xo-KJO0vf8D582A&oe=6AC34224"
+          },
+          {
+            "type": 102,
+            "url": "https://scontent-lax3-2.cdninstagram.com/o1/v/t2/f2/m86/AQP27hUWJX_8hHk-59wQ5LULF_LkBv-uHwOlvJdclB2LS1ZxzjErrMLb_ZkLYFqdhslgwIizs5deuSwtjT6IJLC4eWeIam8A-6wxzk0.mp4?_nc_cat=107&_nc_sid=5e9851&_nc_ht=scontent-lax3-2.cdninstagram.com&_nc_ohc=0g_W9DYPJHgQ7kNvwFeZlG2&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5JTlNUQUdSQU0uQ0xJUFMuQzMuNzIwLmRhc2hfYmFzZWxpbmVfMV92MSIsInhwdl9hc3NldF9pZCI6MTg2MTk2MDc4MTIwMzUwNzgsImFzc2V0X2FnZV9kYXlzIjo2OCwidmlfdXNlY2FzZV9pZCI6MTAwOTksImR1cmF0aW9uX3MiOjI4LCJ1cmxnZW5fc291cmNlIjoid3d3In0%3D&ccb=17-1&vs=febf75b3b01bf551&_nc_vs=HBksFQIYUmlnX3hwdl9yZWVsc19wZXJtYW5lbnRfc3JfcHJvZC84NjQ1NDUyNEQ2RjUyMEVEN0YzNDExRDY1QjFGNzFBRl92aWRlb19kYXNoaW5pdC5tcDQVAALIARIAFQIYUWlnX3hwdl9wbGFjZW1lbnRfcGVybWFuZW50X3YyLzI1NDdCREIxRDIxNDY1RTIxRjk3QjdBMjNERUNERTlCX2F1ZGlvX2Rhc2hpbml0Lm1wNBUCAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACaMyPLX6JuTQhUCKAJDMywXQDzx64UeuFIYEmRhc2hfYmFzZWxpbmVfMV92MREAdf4HZeadAQA&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&_nc_zt=28&oh=00_AQPOTFK1R8nKSO1Bvsjd3jZ1zvsWwd5Xo-KJO0vf8D582A&oe=6AC34224"
+          },
+          {
+            "type": 103,
+            "url": "https://scontent-lax3-2.cdninstagram.com/o1/v/t2/f2/m86/AQP27hUWJX_8hHk-59wQ5LULF_LkBv-uHwOlvJdclB2LS1ZxzjErrMLb_ZkLYFqdhslgwIizs5deuSwtjT6IJLC4eWeIam8A-6wxzk0.mp4?_nc_cat=107&_nc_sid=5e9851&_nc_ht=scontent-lax3-2.cdninstagram.com&_nc_ohc=0g_W9DYPJHgQ7kNvwFeZlG2&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5JTlNUQUdSQU0uQ0xJUFMuQzMuNzIwLmRhc2hfYmFzZWxpbmVfMV92MSIsInhwdl9hc3NldF9pZCI6MTg2MTk2MDc4MTIwMzUwNzgsImFzc2V0X2FnZV9kYXlzIjo2OCwidmlfdXNlY2FzZV9pZCI6MTAwOTksImR1cmF0aW9uX3MiOjI4LCJ1cmxnZW5fc291cmNlIjoid3d3In0%3D&ccb=17-1&vs=febf75b3b01bf551&_nc_vs=HBksFQIYUmlnX3hwdl9yZWVsc19wZXJtYW5lbnRfc3JfcHJvZC84NjQ1NDUyNEQ2RjUyMEVEN0YzNDExRDY1QjFGNzFBRl92aWRlb19kYXNoaW5pdC5tcDQVAALIARIAFQIYUWlnX3hwdl9wbGFjZW1lbnRfcGVybWFuZW50X3YyLzI1NDdCREIxRDIxNDY1RTIxRjk3QjdBMjNERUNERTlCX2F1ZGlvX2Rhc2hpbml0Lm1wNBUCAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACaMyPLX6JuTQhUCKAJDMywXQDzx64UeuFIYEmRhc2hfYmFzZWxpbmVfMV92MREAdf4HZeadAQA&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&_nc_zt=28&oh=00_AQPOTFK1R8nKSO1Bvsjd3jZ1zvsWwd5Xo-KJO0vf8D582A&oe=6AC34224"
+          }
+        ],
+        "public_comments": [
+          {
+            "pk": "17987217333064339",
+            "id": "17987217333064339",
+            "text": "When will the new diffuser be released, or at least a tease or the images",
+            "created_at": 1789519439,
+            "user": {
+              "profile_pic_url": "https://scontent-lax3-2.cdninstagram.com/v/t51.2885-19/465744321_1274237570291048_8208745938683042993_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=103&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=msXOc-C98TUQ7kNvwHSRFC8&_nc_oc=AdpHAtypledmP18Yqgp57CLTHHpX5v8orfWT6AsRBydoTr2HIOgJ23hLKyMDvUYCCMQ&_nc_zt=24&_nc_ht=scontent-lax3-2.cdninstagram.com&_nc_ss=7b60f&oh=00_AQOjtVOCtuUmaKBiCdAb5NbqtDL_6DCvRsbrZ2FrDyrI9w&oe=6AC71ED2",
+              "username": "godlovesjhg",
+              "id": "1433462137",
+              "is_unpublished": false,
+              "pk": "1433462137",
+              "is_verified": false
+            }
+          },
+          {
+            "pk": "18022346372699584",
+            "id": "18022346372699584",
+            "text": "Noir is my favorite ❤️",
+            "created_at": 1787708864,
+            "user": {
+              "profile_pic_url": "https://scontent-lax3-2.cdninstagram.com/v/t51.2885-19/358008403_277814844828782_6474983418217427929_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=107&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=YAAQz61tp0MQ7kNvwHQdP9e&_nc_oc=AdoajIKuAFUx3OsvFsnBs-6lPAs63efUQrUtRwhpPI9QZAQYs-VNd9deXlk5KqVPV5A&_nc_zt=24&_nc_ht=scontent-lax3-2.cdninstagram.com&_nc_ss=7b60f&oh=00_AQPnFahlvqc2Tcet1Jr6Ffn2LTsBmzh6KRsB70YeP_J7Mg&oe=6AC73E99",
+              "username": "dmorell48",
+              "id": "3191904434",
+              "is_unpublished": false,
+              "pk": "3191904434",
+              "is_verified": false
+            }
+          },
+          {
+            "pk": "18092270429156732",
+            "id": "18092270429156732",
+            "text": "How we have I never heard of this brand before 😍😍",
+            "created_at": 1787584209,
+            "user": {
+              "profile_pic_url": "https://scontent-lax3-1.cdninstagram.com/v/t51.82787-19/809107144_18625725664035045_1650517800027630022_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=109&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy44MjIuQzMifQ%3D%3D&_nc_ohc=_5dnim3gdLIQ7kNvwGvFGgK&_nc_oc=AdoGqnXsECyidfwAskK0CMi3Pr4RkM4FLyyOddTkB3KhJglFRu23-O9DtFojLLgTZRs&_nc_zt=24&_nc_ht=scontent-lax3-1.cdninstagram.com&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&oh=00_AQOmgE3nouM3wJtgohtYvMqeKRZCf3XxHb6Us-eweGXm4g&oe=6AC71BBF",
+              "username": "hercountryliving",
+              "id": "1502051044",
+              "is_unpublished": false,
+              "pk": "1502051044",
+              "is_verified": true
+            }
+          },
+          {
+            "pk": "18223500826333583",
+            "id": "18223500826333583",
+            "text": "私は Another13 がタイプ💜‪ みんな好きな香りがそれぞれあるのが面白い",
+            "created_at": 1787228669,
+            "user": {
+              "profile_pic_url": "https://scontent-lax3-2.cdninstagram.com/v/t51.82787-19/762542906_18465971347117419_558837529135145832_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=103&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=umhYGcgnNf4Q7kNvwEGz7xz&_nc_oc=AdrIYvIEVCA48lOae9wcF8eUnW49SHoS39515fa9f5rprt-io1hcOs3hGZ2GX4qWMBc&_nc_zt=24&_nc_ht=scontent-lax3-2.cdninstagram.com&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&oh=00_AQMbKwOk-eb5TrQqEgg7vg0UtJoJXq104ap7XoddPuHkRg&oe=6AC74370",
+              "username": "mai.sodachi",
+              "id": "3409749418",
+              "is_unpublished": false,
+              "pk": "3409749418",
+              "is_verified": false
+            }
+          },
+          {
+            "pk": "18127428679665345",
+            "id": "18127428679665345",
+            "text": "🔥🔥🔥",
+            "created_at": 1786580811,
+            "user": {
+              "profile_pic_url": "https://scontent-lax3-2.cdninstagram.com/v/t51.82787-19/688615340_17892338013464567_2568517978787606943_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=107&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=9G_md98GdcAQ7kNvwFW6Ddk&_nc_oc=AdrX6mMD8mLo5dS6_DO7AG3SFebyvx4RznVQN0OSzRbnQEYIGvv9tqg6egYhL_isRuM&_nc_zt=24&_nc_ht=scontent-lax3-2.cdninstagram.com&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&oh=00_AQMibKlaA3fjW4MxVWypt6vuZpJ3JF3LTYjagMy5vMdYoA&oe=6AC729F5",
+              "username": "balenzanoantonio4",
+              "id": "73983136566",
+              "is_unpublished": false,
+              "pk": "73983136566",
+              "is_verified": false
+            }
+          },
+          {
+            "pk": "18400371685093795",
+            "id": "18400371685093795",
+            "text": "So excited to purchase gaiac 10❤️",
+            "created_at": 1786575208,
+            "user": {
+              "profile_pic_url": "https://scontent-lax3-2.cdninstagram.com/v/t51.82787-19/803067910_18623475649053433_7322505731070347180_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=107&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=o38cVtlEScMQ7kNvwH0zwvl&_nc_oc=AdrODe7r2EclLxsMLAvK2EiL636OBLoHl2GW9Ci_pz09oDa0FVpLFTl9VIFy_HC1p_c&_nc_zt=24&_nc_ht=scontent-lax3-2.cdninstagram.com&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&oh=00_AQMasBOha_sC2Ph7wVgdG-2PKim2NhKxdBH7vcZmEKr9WA&oe=6AC734F5",
+              "username": "pedrolomtz",
+              "id": "223285432",
+              "is_unpublished": false,
+              "pk": "223285432",
+              "is_verified": false
+            }
+          },
+          {
+            "pk": "17964707037177189",
+            "id": "17964707037177189",
+            "text": "This is the only brand in my list to collab.",
+            "created_at": 1786239553,
+            "user": {
+              "profile_pic_url": "https://scontent-lax3-1.cdninstagram.com/v/t51.82787-19/773867141_18584487646067224_8742340892083711717_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=110&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy44MTAuQzMifQ%3D%3D&_nc_ohc=HlVomBx5mMEQ7kNvwFLTdyp&_nc_oc=AdpQpdrN6U1jQAX_CQvtA30YCugeTLc09wRRd54QWYnSpzIka6XJIIndFlM8yg074xY&_nc_zt=24&_nc_ht=scontent-lax3-1.cdninstagram.com&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&oh=00_AQPQOlQFThkLuzRIhpztd2enA5QjNE191ezhuNHE66kT2w&oe=6AC72B8B",
+              "username": "juliojanpierre",
+              "id": "1976763223",
+              "is_unpublished": false,
+              "pk": "1976763223",
+              "is_verified": true
+            }
+          },
+          {
+            "pk": "17870019177581796",
+            "id": "17870019177581796",
+            "text": "🙌🙌",
+            "created_at": 1786137609,
+            "user": {
+              "profile_pic_url": "https://scontent-lax3-2.cdninstagram.com/v/t51.89012-19/573323465_1219825463302212_7278921664109726296_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=1&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy5DMyJ9&_nc_ohc=KsOoGv21mmoQ7kNvwHcjIMO&_nc_oc=Adq0qh-MfdiVv_N4medjXwc5NniiOy4v0sdsJwTBz7C677rE3zfpn0NfeJKu4gGBY28&_nc_zt=24&_nc_ht=scontent-lax3-2.cdninstagram.com&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&oh=00_AQNVX-YA9d9sVuFqN1L7L2ZgN-lWtslGgb_NZihze_VYrA&oe=6AC72422",
+              "username": "deer.4149677",
+              "id": "37994340237",
+              "is_unpublished": false,
+              "pk": "37994340237",
+              "is_verified": false
+            }
+          },
+          {
+            "pk": "17981049840062049",
+            "id": "17981049840062049",
+            "text": "Gaiac and Shui for me! 🔥",
+            "created_at": 1785838741,
+            "user": {
+              "profile_pic_url": "https://scontent-lax3-1.cdninstagram.com/v/t51.82787-19/671211012_18582791503018126_4215473864777983194_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=109&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy45NjAuQzMifQ%3D%3D&_nc_ohc=pe_Xg4TZ0mUQ7kNvwGVr_au&_nc_oc=Adqmie6t00IgaSXJmElKWqiL6O7MZQY3u-TPVCYXI2OEu3hmhJMYUrMf7aPmgDtYW-Q&_nc_zt=24&_nc_ht=scontent-lax3-1.cdninstagram.com&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&oh=00_AQMnEnSrO634Sei1BY3jpSAPhZaO-WEmkyDUU_kGTXPsnA&oe=6AC731F7",
+              "username": "shamille21",
+              "id": "22802125",
+              "is_unpublished": false,
+              "pk": "22802125",
+              "is_verified": false
+            }
+          },
+          {
+            "pk": "18057840095608322",
+            "id": "18057840095608322",
+            "text": "❤️❤️❤️❤️❤️❤️🔥",
+            "created_at": 1785735129,
+            "user": {
+              "profile_pic_url": "https://scontent-lax7-1.cdninstagram.com/v/t51.82787-19/773218304_18607495267056945_4677909758569047638_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=101&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=Q24ILDUdaEAQ7kNvwFRmFeW&_nc_oc=Adpvyne5Wa5_6GbkmphK7doJUDpMZsiME_Bp7i7aBDsQjt82nli3LgSnq1IbkjJ2Zfo&_nc_zt=24&_nc_ht=scontent-lax7-1.cdninstagram.com&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&oh=00_AQM7FTfXbqBrmObGML7124yqu66bndp2yZb2UQc4UAMzVQ&oe=6AC740F9",
+              "username": "bettrossi",
+              "id": "20536944",
+              "is_unpublished": false,
+              "pk": "20536944",
+              "is_verified": true
+            }
+          },
+          {
+            "pk": "18118533814905854",
+            "id": "18118533814905854",
+            "text": "Will there ever be a Detroit scent?",
+            "created_at": 1785729605,
+            "user": {
+              "profile_pic_url": "https://scontent-lax3-1.cdninstagram.com/v/t51.82787-19/760756919_17959531080179990_8236470885744232048_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=104&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=m3-wCT4xsFAQ7kNvwHVLTsL&_nc_oc=AdoQksNc5-7zqT_uTPofhU-Sh1nEQDDXZ4ku8Y2S-q57adE-gzo8xAN9ydq8_Y1XLK4&_nc_zt=24&_nc_ht=scontent-lax3-1.cdninstagram.com&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&oh=00_AQNgkci8_nQK75w0-i6a5dtoyNPZyozI7pQgH68h7wneNQ&oe=6AC73474",
+              "username": "unklekarl1976",
+              "id": "65317939989",
+              "is_unpublished": false,
+              "pk": "65317939989",
+              "is_verified": false
+            }
+          },
+          {
+            "pk": "18120428882500130",
+            "id": "18120428882500130",
+            "text": "Cant wait🔥",
+            "created_at": 1785455201,
+            "user": {
+              "profile_pic_url": "https://scontent-lax3-1.cdninstagram.com/v/t51.82787-19/821685596_18118580123516588_1666180495269919674_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=108&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy44NTQuQzMifQ%3D%3D&_nc_ohc=YEDXp_FAo2wQ7kNvwEtDVMu&_nc_oc=AdqemOVtdnpX_pBAi6fvgjqaEiHXrOCHJQ2EBW_vjylHXXDnbYcqzcaAKK9q8f9s3xs&_nc_zt=24&_nc_ht=scontent-lax3-1.cdninstagram.com&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&oh=00_AQMMtphacMYhZWECMBYkPaLDy6jW5kYw9IpYYnf9Wzu47w&oe=6AC73925",
+              "username": "cha.marisya",
+              "id": "45397700587",
+              "is_unpublished": false,
+              "pk": "45397700587",
+              "is_verified": false
+            }
+          },
+          {
+            "pk": "18375572377236179",
+            "id": "18375572377236179",
+            "text": "❤️🔥",
+            "created_at": 1785441896,
+            "user": {
+              "profile_pic_url": "https://scontent-lax3-2.cdninstagram.com/v/t51.89012-19/573323465_1219825463302212_7278921664109726296_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=1&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy5DMyJ9&_nc_ohc=KsOoGv21mmoQ7kNvwHcjIMO&_nc_oc=Adq0qh-MfdiVv_N4medjXwc5NniiOy4v0sdsJwTBz7C677rE3zfpn0NfeJKu4gGBY28&_nc_zt=24&_nc_ht=scontent-lax3-2.cdninstagram.com&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&oh=00_AQNVX-YA9d9sVuFqN1L7L2ZgN-lWtslGgb_NZihze_VYrA&oe=6AC72422",
+              "username": "geck_o255884",
+              "id": "44093915461",
+              "is_unpublished": false,
+              "pk": "44093915461",
+              "is_verified": false
+            }
+          },
+          {
+            "pk": "18070247930456923",
+            "id": "18070247930456923",
+            "text": "Exageradamente caros ya . Los amo pero se sale de mi presupuesto.",
+            "created_at": 1785420001,
+            "user": {
+              "profile_pic_url": "https://scontent-lax3-1.cdninstagram.com/v/t51.82787-19/612516934_18374851837083592_3000500929053897363_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=110&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=GtVhTDtIu9sQ7kNvwHnVJRT&_nc_oc=Adou5ZsHqHlZYHDxiQSTkhUSf8FXPoQm3DSqllTtmGoAXDDKRI3k6VeRMFjMP6V0dts&_nc_zt=24&_nc_ht=scontent-lax3-1.cdninstagram.com&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&oh=00_AQP3CF5gXzLTnntk9xUqIQEtdBEPg2qmYqbd5fIWf_DErw&oe=6AC7259D",
+              "username": "masa.madre",
+              "id": "2517971591",
+              "is_unpublished": false,
+              "pk": "2517971591",
+              "is_verified": false
+            }
+          },
+          {
+            "pk": "18044815550610078",
+            "id": "18044815550610078",
+            "text": "will there be a city exclusive for new orleans anytime soon?",
+            "created_at": 1785367338,
+            "user": {
+              "profile_pic_url": "https://scontent-lax3-2.cdninstagram.com/v/t51.82787-19/619991145_18101618929842434_3316362533607494577_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=111&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy44NDUuQzMifQ%3D%3D&_nc_ohc=fcfOtcrFAxoQ7kNvwFqarWg&_nc_oc=AdoLh3G4x6mvebJ_FCwL6sg9HWjyRBomeNy0l4clZiWkkD2IjmhHhLlT-p6vnsXBInU&_nc_zt=24&_nc_ht=scontent-lax3-2.cdninstagram.com&_nc_gid=7zyXaAJsNM9ubt1r4My6mA&_nc_ss=7b60f&oh=00_AQPiizGQv1AyWL3b674mgF39s6ZBI_Ar3IEh9tNMSjcwiw&oe=6AC736B8",
+              "username": "crawfish.princess",
+              "id": "25392914433",
+              "is_unpublished": false,
+              "pk": "25392914433",
+              "is_verified": false
+            }
+          }
+        ],
+        "comment_page_info": {
+          "end_cursor": "{\"is_server_cursor_inverse\":true,\"server_cursor\":\"AQHTpEvIjn9U-UDMui4Amro18Rpk54bu4vVu0qIgUBpcW69CbkSgdzHGF7nBaPs-ajbfvUJV1RirLyaD7q6N0jP-nQ\"}",
+          "has_next_page": true
+        },
+        "native_document_sha256": "d3ff8f4a17ccd4350123fdfefc644133a2217bc036074b5105fe7162c20b599f",
+        "native_post_locator": "script[54]/require/0/3/0/__bbox/require/5/3/1/__bbox/result/data/xig_polaris_media",
+        "native_caption_locator": "script[54]/require/0/3/0/__bbox/require/5/3/1/__bbox/result/data/xig_polaris_media/if_not_gated_logged_out/caption/text",
+        "native_time_locator": "script[54]/require/0/3/0/__bbox/require/5/3/1/__bbox/result/data/xig_polaris_media/if_not_gated_logged_out/taken_at",
+        "native_hashtags": [
+          "CityExclusiveEvent",
+          "WearTheCityFeelsLikeHome",
+          "LeLabo"
+        ]
+      },
+      "source_lineage": [
+        {
+          "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\current-purpose-collection-outcome\\CURRENT-INSTAGRAM-NATIVE-OBSERVATION.json",
+          "bytes": 22097,
+          "sha256": "c8c67a6dc5321151489b8e8dd0358756e733bd2c1e740c2b6a18018c66c54993",
+          "locator": "/item/raw"
+        },
+        {
+          "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\missing-priority-public-source-read-20261004\\S24.html",
+          "bytes": 949484,
+          "sha256": "d3ff8f4a17ccd4350123fdfefc644133a2217bc036074b5105fe7162c20b599f",
+          "locator": "script[54]/require/0/3/0/__bbox/require/5/3/1/__bbox/result/data/xig_polaris_media"
+        }
+      ],
+      "claim_type": "ISSUER_WORLDWIDE_OFFER_ANNOUNCEMENT_NOT_EXECUTION_STOCK_OR_CHINA_DEMAND",
+      "publication_since_2026": "ELIGIBLE_NATIVE_2026_PUBLICATION",
+      "source_scope": "UNASSIGNED",
+      "requested_scope_is_native_scope": false,
+      "requested_owner_scope_mode": "GLOBAL_OBSERVATION_REQUIRES_CURRENT_CALLER_AUTHORIZATION",
+      "formal_source_evidence_canonical_use_signature_refs": null,
+      "rights": {
+        "internal_public_review": "PO_APPROVED",
+        "MODEL_TRAIN": "NOT_GRANTED",
+        "READ_ANALYZE_SAVE_EXPORT": "CHECK_EACH_CURRENT_OWNER_USE"
+      },
+      "additional": {
+        "full_reel_watched": false,
+        "old_undated_mechanism_year": null
+      }
+    },
+    {
+      "platform": "x",
+      "native_id": "2087408869421289835",
+      "stable_source_key": "x:2087408869421289835",
+      "source_url": "https://x.com/65kicks/status/2087408869421289835",
+      "body": "新入荷 #スニーカー\n\n新品 箱なし 29cm\n\nNIKE AIR FORCE 1 HIGH RETRO QS\n\n\"NAI-KE\"\n\n上質なレザーと抜群のクッショニングで快適な履き心地を実現\n\n中国語でナイキを意味する「耐克 」の文字がかかと部分に刺繍されたリミテッドモデル\n\n#kicksclan\n#nike\n#ナイキ \n#埼玉\n#戸田市\n#戸田公園",
+      "body_sha256": "1671f1155b6f3e1069fc0cd1332bd2cdf0edfdfdc7ed68c822aea486f8aa222d",
+      "body_state": "ACTUAL_ORIGINAL_JAPANESE_DETAIL",
+      "capture_observation_native": "2026-10-03T23:40:13.162738+00:00",
+      "publication": {
+        "created_at": {
+          "datetime": "2026-08-12T05:20:31.000Z",
+          "literal": "1:20 PM · Aug 12, 2026"
+        },
+        "published_at_utc": "2026-08-12T05:20:31.000Z"
+      },
+      "native_record": {
+        "tweet_id": "2087408869421289835",
+        "screen_name": "65kicks",
+        "author_numeric_id": null,
+        "created_at": "2026-08-12T05:20:31.000Z",
+        "text": "新入荷 #スニーカー\n\n新品 箱なし 29cm\n\nNIKE AIR FORCE 1 HIGH RETRO QS\n\n\"NAI-KE\"\n\n上質なレザーと抜群のクッショニングで快適な履き心地を実現\n\n中国語でナイキを意味する「耐克 」の文字がかかと部分に刺繍されたリミテッドモデル\n\n#kicksclan\n#nike\n#ナイキ \n#埼玉\n#戸田市\n#戸田公園",
+        "lang": "ja",
+        "metrics_observed": {
+          "view_count": {
+            "value": 947,
+            "label": "947\n Views",
+            "source": {
+              "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\x-single-post-original-review-20261004\\receipt.json",
+              "bytes": 8759,
+              "sha256": "35bafa8fd0969c32d2a5d70c9beac2917a8ca33948d7c67f2d03ab23b2a128a8",
+              "locator": "/target_post/counters/0/literal"
+            }
+          },
+          "reply_count": {
+            "value": 0,
+            "label": "0 Replies. Reply",
+            "source": {
+              "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\x-single-post-original-review-20261004\\receipt.json",
+              "bytes": 8759,
+              "sha256": "35bafa8fd0969c32d2a5d70c9beac2917a8ca33948d7c67f2d03ab23b2a128a8",
+              "locator": "/target_post/counters/1/aria"
+            }
+          },
+          "retweet_count": {
+            "value": 1,
+            "label": "1 repost. Repost",
+            "source": {
+              "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\x-single-post-original-review-20261004\\receipt.json",
+              "bytes": 8759,
+              "sha256": "35bafa8fd0969c32d2a5d70c9beac2917a8ca33948d7c67f2d03ab23b2a128a8",
+              "locator": "/target_post/counters/2/aria"
+            }
+          },
+          "favorite_count": {
+            "value": 4,
+            "label": "4 Likes. Like",
+            "source": {
+              "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\x-single-post-original-review-20261004\\receipt.json",
+              "bytes": 8759,
+              "sha256": "35bafa8fd0969c32d2a5d70c9beac2917a8ca33948d7c67f2d03ab23b2a128a8",
+              "locator": "/target_post/counters/3/aria"
+            }
+          },
+          "bookmark_count": {
+            "value": 0,
+            "label": "0 Bookmarks. Bookmark",
+            "source": {
+              "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\x-single-post-original-review-20261004\\receipt.json",
+              "bytes": 8759,
+              "sha256": "35bafa8fd0969c32d2a5d70c9beac2917a8ca33948d7c67f2d03ab23b2a128a8",
+              "locator": "/target_post/counters/4/aria"
+            }
+          }
+        },
+        "media": [
+          {
+            "src": "blob:https://x.com/31683dee-867b-4109-82ba-7b5839852c61",
+            "poster": "https://pbs.twimg.com/amplify_video_thumb/2087408850576314368/img/iJWnsarnHE6rJiNL.jpg",
+            "duration": 4.999999,
+            "paused": true
+          },
+          {
+            "src": "blob:https://x.com/151b2139-e390-4b21-b7ce-5d732587b4ff",
+            "poster": "https://pbs.twimg.com/amplify_video_thumb/2087408850597273600/img/NSRq9V1tr0iqTAiL.jpg",
+            "duration": 4.999999,
+            "paused": true
+          },
+          {
+            "src": "blob:https://x.com/ec6dcc75-1a99-405f-8ce0-0934510e02e7",
+            "poster": "https://pbs.twimg.com/amplify_video_thumb/2087408850618155008/img/0J_40nfbHLsiVaxs.jpg",
+            "duration": 4.999999,
+            "paused": true
+          }
+        ],
+        "images": [
+          {
+            "src": "https://pbs.twimg.com/profile_images/2075062175140663296/6hNW15jq_bigger.jpg",
+            "alt": "",
+            "width": 73,
+            "height": 73
+          },
+          {
+            "src": "https://abs.twimg.com/emoji/v2/svg/1f195.svg",
+            "alt": "🆕",
+            "width": 150,
+            "height": 150
+          },
+          {
+            "src": "https://abs.twimg.com/emoji/v2/svg/203c.svg",
+            "alt": "‼️",
+            "width": 150,
+            "height": 150
+          },
+          {
+            "src": "https://abs.twimg.com/emoji/v2/svg/1f1e8-1f1f3.svg",
+            "alt": "🇨🇳",
+            "width": 150,
+            "height": 150
+          },
+          {
+            "src": "https://abs.twimg.com/emoji/v2/svg/1f1e8-1f1f3.svg",
+            "alt": "🇨🇳",
+            "width": 150,
+            "height": 150
+          },
+          {
+            "src": "https://pbs.twimg.com/amplify_video_thumb/2087408850576314368/img/iJWnsarnHE6rJiNL.jpg",
+            "alt": "",
+            "width": 675,
+            "height": 1200
+          },
+          {
+            "src": "https://pbs.twimg.com/amplify_video_thumb/2087408850597273600/img/NSRq9V1tr0iqTAiL.jpg",
+            "alt": "",
+            "width": 675,
+            "height": 1200
+          },
+          {
+            "src": "https://pbs.twimg.com/amplify_video_thumb/2087408850618155008/img/0J_40nfbHLsiVaxs.jpg",
+            "alt": "",
+            "width": 675,
+            "height": 1200
+          }
+        ],
+        "platform_translation_preserved_in_parent": true,
+        "captured_at": "2026-10-03T23:40:13.162738+00:00"
+      },
+      "source_lineage": [
+        {
+          "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\x-single-post-original-review-20261004\\receipt.json",
+          "bytes": 8759,
+          "sha256": "35bafa8fd0969c32d2a5d70c9beac2917a8ca33948d7c67f2d03ab23b2a128a8",
+          "locator": "/target_post"
+        }
+      ],
+      "claim_type": "OVERSEAS_RETAILER_PRODUCT_PROMOTION_NOT_CHINA_DEMAND",
+      "publication_since_2026": "ELIGIBLE_NATIVE_2026_PUBLICATION",
+      "source_scope": "UNASSIGNED",
+      "requested_scope_is_native_scope": false,
+      "requested_owner_scope_mode": "GLOBAL_OBSERVATION_REQUIRES_CURRENT_CALLER_AUTHORIZATION",
+      "formal_source_evidence_canonical_use_signature_refs": null,
+      "rights": {
+        "internal_public_review": "PO_APPROVED",
+        "MODEL_TRAIN": "NOT_GRANTED",
+        "READ_ANALYZE_SAVE_EXPORT": "CHECK_EACH_CURRENT_OWNER_USE"
+      },
+      "additional": {
+        "repost_is_generic_share": false,
+        "bookmark_is_generic_collect": false,
+        "full_clips_watched": false
+      }
+    },
+    {
+      "platform": "wechat",
+      "native_id": "ClOUA5AHJqmAFYSUONk8Ww",
+      "stable_source_key": "wechat:ClOUA5AHJqmAFYSUONk8Ww",
+      "source_url": "https://mp.weixin.qq.com/s/ClOUA5AHJqmAFYSUONk8Ww",
+      "body": "\n国\n\n庆\n\n黄\n\n金\n\n周\n\n红动罗湖 Fun飞山海\n\nGO\n\nHappy\n\nHoliday\n\n说走就走\n\n爆改假期！快乐起飞！\n\nHey\n\n还记得之前发布的\n\n水灵灵宝藏路线吗？\n\n这个国庆假期\n\n蔡屋围又有新鲜局啦！\n\n爱集章的宝宝速来！\n\n蔡屋围限定章上线！\n\n还有限量文创以及联名商家优惠\n\n免费领！\n\n▽▽▽\n\n即日起\n\n蔡屋围商圈虚拟园区党委\n\n在深圳万象城\n\n京基100大厦KK MALL\n\n地王大厦、深圳书城罗湖城\n\n4个经典建筑地标开设\n\n以“城市记忆计划”为主题的\n\n“城市记忆展”\n\n重温深圳燃情岁月\n\n大家可以前往指定商家打卡盖章\n\n领取蔡屋围限量文创以及联名商家优惠\n\n快约上伙伴们一起来吧~\n\n活动打卡时间：\n\n9月30日至10月7日\n\n活动观展点位：\n\n1.深圳万象城记忆展（深圳万象城三期北区五楼扶梯口）\n\n2.深圳书城记忆展（深圳书城罗湖城一楼）\n\n3.京基100大厦记忆展（京基100大厦KK MALL一楼lululemon旁）\n\n4.地王大厦记忆展（地王大厦LG层中庭）\n\n活动打卡玩法：\n\n本次集章共分为4栋经典建筑，在每栋建筑的“城市记忆展”处领取打卡地图后，前往指定商家完成打卡任务盖章后就可以领取文创和商家礼品啦。（集齐四个点位可以兑换整套文创哦）\n\n接下来\n\n我们一起穿越时空\n\n感受深圳经典建筑背后的\n\n人文与故事\n\n01.\n\n京基100大厦KK MALL\n\n“城市之巅，记忆之光”\n\n京基100大厦建成于2011年，建成时是深圳第一高楼、中国内地第三高楼、世界第八高楼，地上100层、地下4层，因此得名“京基100”。\n\n京基100大厦1至4层是综合性消费商场KK mall，集购物、娱乐、餐饮于一体，是现代都市生活的缩影。此次京基“城市记忆展”以“城市之巅，记忆之光”为主题，讲述了京基100从规划建设到建成封顶背后的故事，让人感受深圳改革开放的波澜壮阔。\n\n地址：深圳市罗湖区深南东路5016号\n\n打卡方式：\n\n在京基100大厦KK MALL一楼设置的“城市记忆展”前拍照留念、领取打卡指南，关注KK MALL官方小红书账号并在置顶的“城市记忆计划”笔记内点赞、晒图、评论即视为打卡成功，然后可到指定商家盖章领取蔡屋围商圈京基100限定冰箱贴一枚。\n\n盖章地址：\n\n（1）歌志轩·名古屋拌面（KK MAL三楼324a号铺）\n\n（2）珮姐重庆火锅 (京基100大厦裙楼一楼132b号、02层01-207a号商铺）\n\n（3）BreadTalk面包新语·烘焙蛋糕（KK MALL一楼133b室）\n\n（4）野萃山·潮汕厚果汁 (京基100大厦裙楼一楼L140室）\n\n温馨提示：\n\n以上4个商家任选其一即可盖章领取礼品；如果某个商家礼品已经领完，可以去其他商家试试哦~\n\n02.\n\n地王大厦\n\n见证城市变迁\n\n1999年9月开业的地王大厦，主楼共69层，是当时亚洲第一高楼。本次地王大厦“城市记忆展”用多幅历史照片展现了地王大厦的建设过程，许多蔡屋围的老照片更是第一次公开展出。快来一起感受TA的“前世今生”。\n\n地址：深圳市罗湖区深南东路5002号（大剧院地铁站D口旁）\n\n打卡方式：\n\n观展并关注“地王深港之窗”公众号或“美丽田园”企业微信，发送1张以上活动相关照片到公众号或企业微信，即可盖章领取蔡屋围商圈地王大厦限定冰箱贴。\n\n盖章地址：（二选一即可）\n\n（1）地王大厦G层深港之窗前台旁（9:00—13:00）\n\n（2）地王星荟购物中心2楼美丽田园（10:00—22:00）\n\n温馨提示：\n\n前往以上2个商家领取限定冰箱贴的同时，可根据商家指引额外获取专属优惠券1份。冰箱贴和礼品每日数量有限，先到先得。\n\n03.\n\n深圳书城罗湖城\n\n深圳第一家书城\n\n深圳书城罗湖城建于1996年，仿若喧嚣都市里的一片净土，陪伴了一代又一代人，成为了深圳人心中不可替代的文化记忆。第一次在省会城市以外举办全国书市、第一次免收出版社摊位费……让我们从深圳书城罗湖城的一张张老照片中，感受让深圳文化自信倍增的“第一次”！\n\n地址：深圳市罗湖区深南东路5033号金山大厦1层\n\n打卡方式：\n\n关注“深圳书城罗湖城”公众号，并将关注截图发至后台，即可前往服务台盖章领取蔡屋围商圈书城限定冰箱贴。\n\n盖章地址：\n\n金山大厦深圳书城罗湖城一楼服务台\n\n温馨提示：\n\n可根据商家指引，额外获取神秘礼品一份。冰箱贴和礼品每日数量有限，先到先得。\n\n04.\n\n深圳万象城\n\n20周年的变与不变\n\n深圳万象城于2004年12月正式开业，率先开启了国内高端商业的购物中心时代。此次深圳万象城“城市记忆展”以编年史方式，带你了解二十年来的大事记。\n\n地址：深圳市罗湖区书城路1号万象城三期（大剧院地铁站F口步行130米）\n\n打卡方式：\n\n关注“深圳万象城”小红书，发布小红书笔记带1张以上活动相关照片，并添加话题#蔡屋围城市记忆计划、#深圳万象城、#深圳万象城20周年，即可到巴奴毛肚火锅盖章领取蔡屋围商圈深圳万象城限定冰箱贴。\n\n盖章地址：\n\n巴奴毛肚火锅（深圳万象城三期北区五楼）\n\n出发！\n\n走遍这四大地标\n\n集齐冰箱贴碎片\n\n拼出属于你的蔡屋围商圈记忆拼图吧！\n\n让我们在探索中感受深圳的魅力\n\n在记忆中重温城市的温情\n\n✨✨✨\n\n---\n\n信息来源：桂园街道\n\n统筹整合：罗湖发布\n\n如需转载，请注明以上内容\n",
+      "body_sha256": "9e3295f7ee0556bc401564ed8acc64a4babee0040aecca1894a52396a16a019e",
+      "body_state": "ASSISTED_PUBLIC_ORIGINAL_TEXT_NATIVE_HTML_CHALLENGE",
+      "capture_observation_native": null,
+      "publication": {
+        "published_at_utc": null,
+        "event_window_literal": "9月30日至10月7日",
+        "event_year": null
+      },
+      "native_record": {
+        "article_id": "ClOUA5AHJqmAFYSUONk8Ww",
+        "author_id": null,
+        "account_display": "罗湖发布",
+        "published_at": null,
+        "read_count": null,
+        "like_count": null,
+        "comment_count": null,
+        "share_count": null,
+        "original_text_sha256": "b879faabc924bcf810fec1f4715f4e27c750a33a144f495ec958a9f4ba830328",
+        "media_refs": null
+      },
+      "source_lineage": [
+        {
+          "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\current-purpose-collection-outcome\\CURRENT-WECHAT-PUBLIC-TEXT-OBSERVATION.json",
+          "bytes": 7533,
+          "sha256": "012937d9d6067bb4c54dbe4cef145a205fdcbb4a83980885679eac1410575d0e",
+          "locator": "/actual_tool_result/content/0/text"
+        }
+      ],
+      "claim_type": "PUBLIC_AUTHORITY_ACTIVITY_GUIDE_NOT_PROOF_OF_CURRENT_2026_EXECUTION",
+      "publication_since_2026": "UNKNOWN_YEAR_REVIEW_ONLY",
+      "source_scope": "UNASSIGNED",
+      "requested_scope_is_native_scope": false,
+      "requested_owner_scope_mode": "GLOBAL_OBSERVATION_REQUIRES_CURRENT_CALLER_AUTHORIZATION",
+      "formal_source_evidence_canonical_use_signature_refs": null,
+      "rights": {
+        "internal_public_review": "PO_APPROVED",
+        "MODEL_TRAIN": "NOT_GRANTED",
+        "READ_ANALYZE_SAVE_EXPORT": "CHECK_EACH_CURRENT_OWNER_USE"
+      },
+      "additional": {
+        "derived_body_span": {
+          "start": 119,
+          "end": 2339
+        },
+        "capture_timestamp_unrecorded_no_mtime_imputation": true,
+        "native_HTML_accepted": false,
+        "images_unavailable": true
+      }
+    },
+    {
+      "platform": "facebook",
+      "native_id": "1222657469228960",
+      "stable_source_key": "facebook:1222657469228960",
+      "source_url": "https://www.facebook.com/nike/posts/give-them-bold-style-and-all-day-comfort-with-the-air-max-plus/1222657469228960/",
+      "body": "Give them bold style and all-day comfort with the Air Max Plus.",
+      "body_sha256": "b64399f259860d79884b9df6e0f38318b6b7fdf769e11405a9d7190ac576f096",
+      "body_state": "OG_PREVIEW_ONLY_NOT_NATIVE_FULL_POST",
+      "capture_observation_native": "2026-10-03T19:25:58.783327+00:00",
+      "publication": {
+        "native_seed_literal": "February 21（年份未返回）",
+        "published_at_utc": null,
+        "year": null
+      },
+      "native_record": {
+        "post_id": "1222657469228960",
+        "user_id": null,
+        "og_title": "Nike",
+        "og_description": "Give them bold style and all-day comfort with the Air Max Plus.",
+        "created_time": null,
+        "reactions": null,
+        "comments": null,
+        "shares": null
+      },
+      "source_lineage": [
+        {
+          "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\missing-priority-public-source-read-20261004\\S18.html",
+          "bytes": 779134,
+          "sha256": "00a55a8f7ff7041d07f1109095df16a0e102a6031c5597df2aee7fd045e4d774",
+          "locator": "meta[property=\"og:description\"]"
+        },
+        {
+          "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\c1-w1-20261002\\missing-priority-public-source-read-20261004\\receipt.json",
+          "bytes": 7163,
+          "sha256": "fb3869eb26af341ddc8bcc08a20e01602cb69fa556a3de97eb9297c7fd2c9aca",
+          "locator": "/sources:input_source_id=S18/capture_observation_utc"
+        }
+      ],
+      "claim_type": "ISSUER_META_PREVIEW_NOT_BODY",
+      "publication_since_2026": "UNAVAILABLE_BODY_NOT_ADMISSIBLE_AS_COMPLETE_POST",
+      "source_scope": "UNASSIGNED",
+      "requested_scope_is_native_scope": false,
+      "requested_owner_scope_mode": "GLOBAL_OBSERVATION_REQUIRES_CURRENT_CALLER_AUTHORIZATION",
+      "formal_source_evidence_canonical_use_signature_refs": null,
+      "rights": {
+        "internal_public_review": "PO_APPROVED",
+        "MODEL_TRAIN": "NOT_GRANTED",
+        "READ_ANALYZE_SAVE_EXPORT": "CHECK_EACH_CURRENT_OWNER_USE"
+      },
+      "additional": {
+        "formal_full_post_admission_allowed": false
+      }
+    }
+  ],
+  "formal_refs": null,
+  "database_opened_or_written": false,
+  "consumer": "W6 existing signed collect_search/Importer/source_observation owner with actual caller, scope and each use",
+  "acceptance": {
+    "verified_parent_hashes": true,
+    "source_bound_values": true,
+    "eligible_native_2026_posts": 3,
+    "unknown_year_review_posts": 2,
+    "unavailable_full_post": 1,
+    "full_C1_goal_complete": false
+  }
+}

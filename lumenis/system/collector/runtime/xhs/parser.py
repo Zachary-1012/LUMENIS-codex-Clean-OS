@@ -11,6 +11,29 @@ from typing import List, Optional, Dict, Any
 from .models import XHSNote, XHSComment
 
 
+def _optional_interaction_count(value: Any) -> Optional[int]:
+    """Keep absent, invalid, and negative interaction counts unknown."""
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if value >= 0 else None
+    if isinstance(value, float):
+        return int(value) if value >= 0 and value.is_integer() else None
+    if isinstance(value, str):
+        display = value.strip()
+        if display.isascii() and display.isdigit():
+            return int(display)
+    return None
+
+
+def _first_known_interaction_count(*values: Any) -> Optional[int]:
+    for value in values:
+        count = _optional_interaction_count(value)
+        if count is not None:
+            return count
+    return None
+
+
 class XHSParser:
     """小红书响应解析器"""
 
@@ -53,15 +76,16 @@ class XHSParser:
                 cover = note_data['cover'].get('url_default', '') or note_data['cover'].get('url', '')
 
             user = note_data.get('user', {}) or {}
-            author_id = user.get('user_id', '') or user.get('nickname', '')
-            author_nickname = user.get('nickname', '') or user.get('user_id', '')
-            author_avatar = user.get('avatar', '') or ''
+            author_id = user.get('user_id', '') or ''
+            author_nickname = user.get('nickname', '') or ''
 
             interact_info = note_data.get('interact_info', {}) or {}
-            likes = int(interact_info.get('liked_count', 0) or interact_info.get('like_count', 0) or 0)
-            comments = int(interact_info.get('comment_count', 0) or 0)
-            collects = int(interact_info.get('collected_count', 0) or 0)
-            shares = int(interact_info.get('share_count', 0) or 0)
+            likes = _first_known_interaction_count(
+                interact_info.get('liked_count'), interact_info.get('like_count')
+            )
+            comments = _optional_interaction_count(interact_info.get('comment_count'))
+            collects = _optional_interaction_count(interact_info.get('collected_count'))
+            shares = _optional_interaction_count(interact_info.get('share_count'))
 
             note_type = note_data.get('type', 'normal') or 'normal'
             xsec_token = note_data.get('xsec_token', '') or item.get('xsec_token', '')
@@ -69,7 +93,9 @@ class XHSParser:
             if xsec_token:
                 url += f'?xsec_token={xsec_token}'
 
-            time_info = note_data.get('time', '') or note_data.get('last_update_time', '')
+            # `time` is the source creation/publication time. `last_update_time`
+            # remains in raw_data as provenance but must not become publication.
+            time_info = note_data.get('time', '')
             publish_date = XHSParser._format_time(time_info)
 
             tag_list = []
@@ -79,15 +105,21 @@ class XHSParser:
                 elif isinstance(tag, str):
                     tag_list.append(tag)
 
+            image_list = [
+                img.get('url_default', '') or img.get('url', '')
+                for img in images if isinstance(img, dict)
+            ]
+            image_list = [image_url for image_url in image_list if image_url]
+            if not image_list and cover:
+                image_list = [cover]
+
             return XHSNote(
                 note_id=note_id,
                 title=title,
                 content=desc,
                 url=url,
-                cover=cover,
                 author_id=author_id,
                 author_nickname=author_nickname,
-                author_avatar=author_avatar,
                 likes=likes,
                 comments=comments,
                 collects=collects,
@@ -95,7 +127,7 @@ class XHSParser:
                 note_type=note_type,
                 xsec_token=xsec_token,
                 publish_date=publish_date,
-                image_list=[img.get('url_default', '') for img in images if isinstance(img, dict)],
+                image_list=image_list,
                 tag_list=tag_list,
                 raw_data=item,
             )
@@ -164,23 +196,27 @@ class XHSParser:
     @staticmethod
     def _format_time(time_str: str) -> str:
         """格式化时间字符串为 YYYY-MM-DD"""
-        if not time_str:
+        if not time_str or isinstance(time_str, bool):
             return ''
         # 时间戳（毫秒）
         if str(time_str).isdigit() and len(str(time_str)) >= 10:
             try:
-                from datetime import datetime
+                from datetime import datetime, timezone
                 ts = int(time_str)
                 if ts > 1e12:
                     ts = ts // 1000
-                return datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+                return datetime.fromtimestamp(ts, timezone.utc).strftime('%Y-%m-%d')
             except Exception:
                 pass
         # 字符串日期
-        match = re.search(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})', str(time_str))
+        match = re.fullmatch(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})', str(time_str).strip())
         if match:
-            return f'{match.group(1)}-{int(match.group(2)):02d}-{int(match.group(3)):02d}'
-        return str(time_str)[:10]
+            from datetime import date
+            try:
+                return date(*(int(value) for value in match.groups())).isoformat()
+            except ValueError:
+                return ''
+        return ''
 
     @staticmethod
     def parse_html_search(page_html: str) -> List[XHSNote]:

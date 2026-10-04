@@ -139,6 +139,13 @@ PLATFORM_CAPABILITIES = {
         "proxy_pool": True,
         "enable_gate": "proxy_plus_cookie_configured",
     },
+    "wechat": {
+        "name": "微信公众号", "enabled": False, "manual_collection_enabled": True,
+        "collection_mode": "human_triggered_read_only", "product_owner": "SYSTEM",
+        "priority": "primary", "search": True, "detail": True,
+        "comments": False, "creator": False, "session_cache": False,
+        "proxy_pool": False, "enable_gate": "public_original_article_and_actual_permission",
+    },
     "facebook": {
         "name": "Facebook",
         "enabled": False,

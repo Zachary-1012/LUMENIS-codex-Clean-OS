@@ -9,7 +9,11 @@ remain owned by the existing runtime callers.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+import hashlib
+import json
+from pathlib import Path
+from urllib.parse import urlsplit, parse_qs
 import re
 from typing import Any, Callable, Iterable, Mapping, Optional, Sequence
 
@@ -27,6 +31,37 @@ MAX_QUERY_LIMIT = 64
 _VALID_DOMAINS = {"CTH", "BMP"}
 _WHITESPACE = re.compile(r"\s+")
 _CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]")
+APPROVED_TOPIC_SEED_SHA256 = "cfe3b6cb424ee0efe3d917479ba95db66f4ca9b8df32fa891fcf16fd6c576028"
+
+
+def load_approved_topic_seed() -> dict[str, Any]:
+    """Load the unchanged reviewed seed from the product package, not work/.
+
+    This is an input version, not entity admission, trend truth or training
+    permission. New observed terms use the existing source/topic owners; keep
+    this approved original when publishing a subsequent seed version.
+    """
+    path = Path(__file__).resolve().parents[3] / "config/collection-topic-seed-20261004.json"
+    raw = path.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != APPROVED_TOPIC_SEED_SHA256:
+        raise AcquisitionPlanError("approved topic seed bytes changed")
+    return json.loads(raw)
+
+
+def _verify_seed_reference(reference, entry, platforms, seed):
+    if not isinstance(reference, Mapping) or reference.get("input_sha256") != APPROVED_TOPIC_SEED_SHA256:
+        raise AcquisitionPlanError("unknown topic seed version")
+    topic = next((row for row in seed["topics"] if row["id"] == reference.get("topic_id")), None)
+    if topic is None or entry is None:
+        raise AcquisitionPlanError("topic seed needs an existing term and registered entity")
+    from .adapters.platform_naming import normalize_platform
+    aliases = {_normalised_key(alias) for alias, _ in entry["aliases"]}
+    if (_normalised_key(topic["entity"]) not in aliases
+            or normalize_platform(topic["platform"]) not in {normalize_platform(p) for p in platforms}
+            or any(reference.get(key) != topic[field] for key, field in (
+                ("source_id", "source_id"), ("source_url", "source_url"),
+                ("term_preserved", "topic"), ("literal", "observed_literal")))):
+        raise AcquisitionPlanError("topic seed reference does not match its original source/entity")
 
 
 class AcquisitionPlanError(ValueError):
@@ -51,6 +86,7 @@ class AcquisitionQuery:
     reason_code: str
     alias_kind: str
     context_mode: str = GLOBAL_ALL
+    business_context: Mapping[str, Any] | None = None
 
     @property
     def scope_key(self) -> str:
@@ -65,7 +101,7 @@ class AcquisitionQuery:
             "domain_id": domain_id,
             "subject_id": self.subject_id,
             "brand_focus_id": self.brand_focus_id,
-            "global_scope": False,
+            "global_scope": not bool(self.subject_id or self.brand_focus_id),
         }
 
     @property
@@ -93,6 +129,8 @@ class AcquisitionQuery:
             "reason_code": self.reason_code,
             "alias_kind": self.alias_kind,
             "provenance": self.provenance,
+            "business_context": dict(self.business_context or {}),
+            "scope_role": "PLANNED_TARGET_NOT_VERIFIED_SOURCE_BINDING",
         }
 
 
@@ -113,6 +151,9 @@ class AcquisitionPlan:
     source_policy: dict[str, Any] | None = None
     rate_policy: dict[str, Any] | None = None
     focus_scope: dict[str, Any] | None = None
+    total_queries: int = 0
+    next_cursor: dict[str, Any] | None = None
+    input_fingerprint: str = ""
 
     @property
     def keywords(self) -> tuple[str, ...]:
@@ -137,6 +178,10 @@ class AcquisitionPlan:
             "missing_domains": list(self.missing_domains),
             "truncated": self.truncated,
             "query_limit": self.query_limit,
+            "total_queries": self.total_queries,
+            "next_cursor": dict(self.next_cursor) if self.next_cursor else None,
+            "input_fingerprint": self.input_fingerprint,
+            "continuation_required": self.next_cursor is not None,
             "reason_code": self.reason_code,
             "reason": self.reason,
             "source_policy": dict(self.source_policy or {}),
@@ -311,6 +356,8 @@ def build_acquisition_plan(
     max_queries: int = DEFAULT_QUERY_LIMIT,
     registry_loader: Optional[Callable[[], Sequence[Mapping[str, Any]]]] = None,
     policy: Any = None,
+    business_requests: Optional[Sequence[Mapping[str, Any]]] = None,
+    continuation: Optional[Mapping[str, Any]] = None,
 ) -> AcquisitionPlan:
     """Build a bounded query plan from registered Subjects and BrandFocus rows.
 
@@ -355,6 +402,10 @@ def build_acquisition_plan(
             reason="CTH scope cannot carry brand_focus_id",
         )
     source_policy, rate_policy = _safe_policy_metadata(policy)
+    if business_requests is not None:
+        source_policy = {"source": "SYSTEM_COLLECTOR_QUERY_CONTRACT", "rule_version": "lumenis.business-query.v1",
+                         "mode": "MANUAL", "identity_or_source_use_granted": False}
+        rate_policy = {"source": "existing_platform_owner", "status": "EXECUTION_OWNER_REQUIRED"}
     if source_policy.get("status") == "UNAVAILABLE":
         return _blocked_plan(
             context_mode=mode,
@@ -435,7 +486,11 @@ def build_acquisition_plan(
         })
         registry_counts[domain] += 1
 
-    if not entries:
+    unassigned_discovery_only = bool(business_requests) and all(
+        isinstance(r, Mapping) and r.get("unregistered_discovery") is True and not r.get("scope_key")
+        for r in business_requests
+    )
+    if not entries and not unassigned_discovery_only:
         reason_code = "REGISTRY_EMPTY" if not rows else "REGISTRY_NOT_QUERYABLE"
         reason = (
             "no active registered Subject or BrandFocus has a query alias"
@@ -564,14 +619,32 @@ def build_acquisition_plan(
             context_mode=mode,
         ))
 
+    if business_requests is not None:
+        queries = _purpose_queries(entries, business_requests, mode, focus_key)
+
     queries.sort(key=lambda item: (
         item.priority,
         item.domain_id,
         item.scope_key,
         _normalised_key(item.keyword),
     ))
-    truncated = len(queries) > query_limit
-    queries = queries[:query_limit]
+    total_queries = len(queries)
+    fingerprint = hashlib.sha256(json.dumps(
+        [q.to_dict() for q in queries], ensure_ascii=False, sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")).hexdigest()
+    offset = 0
+    if continuation is not None:
+        if (not isinstance(continuation, Mapping)
+                or continuation.get("input_fingerprint") != fingerprint
+                or type(continuation.get("offset")) is not int
+                or not 0 <= continuation["offset"] <= total_queries):
+            raise AcquisitionPlanError("continuation does not match current query inputs")
+        offset = continuation["offset"]
+    end = min(offset + query_limit, total_queries)
+    truncated = end < total_queries
+    next_cursor = {"offset": end, "input_fingerprint": fingerprint} if truncated else None
+    queries = queries[offset:end]
     missing_domains = tuple(domain for domain in ("CTH", "BMP") if not registry_counts[domain])
     status = STAGED if missing_domains or invalid_count else READY
     reason_code = "REGISTRY_PARTIAL" if status == STAGED else ""
@@ -595,7 +668,277 @@ def build_acquisition_plan(
         source_policy=source_policy,
         rate_policy=rate_policy,
         focus_scope=focus_scope,
+        total_queries=total_queries,
+        next_cursor=next_cursor,
+        input_fingerprint=fingerprint,
     )
+
+
+
+_BUSINESS_DIMENSIONS = frozenset({
+    "identity_discovery", "market_activity", "consumer_experience",
+    "creator_content", "venue_operations",
+})
+_PRIMARY_PLATFORMS = frozenset({"xhs", "douyin", "wechat", "instagram", "x", "facebook"})
+BUSINESS_RULE_VERSION = "lumenis.business-query.v1"
+
+
+def _public_query_target(value: Any) -> str:
+    value = _normalise_text(value, field="source_url", max_length=2048)
+    parsed = urlsplit(value)
+    host = (parsed.hostname or "").lower().rstrip(".")
+    if (parsed.scheme != "https" or not host or parsed.username or parsed.password
+            or host in {"localhost", "127.0.0.1", "::1"} or host.endswith(".local")
+            or set(parse_qs(parsed.query)) & {"access_token", "token", "api_key", "password"}):
+        raise AcquisitionPlanError("tracking requires a public HTTPS source URL without credentials")
+    return value
+
+
+def _purpose_queries(entries, requests, mode, focus_key):
+    """Compile selected task facets; never infer purpose or multiply all catalog topics."""
+    if not isinstance(requests, (list, tuple)) or not requests:
+        raise AcquisitionPlanError("business_requests must explicitly select task purposes and facets")
+    seed = (load_approved_topic_seed() if any(
+        isinstance(request, Mapping) and request.get("user_seed_topic_ref") is not None
+        for request in requests) else None)
+    result, seen = [], set()
+    for request in requests:
+        if not isinstance(request, Mapping):
+            raise AcquisitionPlanError("each business request must be a mapping")
+        domain = _normalise_domain(request.get("domain_id"))
+        key = str(request.get("scope_key") or "").strip()
+        entry = next((e for e in entries if e["domain_id"] == domain
+            and key in {e["registry_id"], e["subject_id"], e["brand_focus_id"]}), None)
+        discovery = request.get("unregistered_discovery") is True
+        if entry is None and not (discovery and not key):
+            raise AcquisitionPlanError("business target is not registered; unknown discovery must keep ID null")
+        purpose = _normalise_text(request.get("purpose"), field="purpose", max_length=256)
+        dimension = request.get("dimension")
+        if not purpose or dimension not in _BUSINESS_DIMENSIONS:
+            raise AcquisitionPlanError("explicit business purpose and approved dimension required")
+        if dimension == "venue_operations" and domain != "CTH":
+            raise AcquisitionPlanError("venue_operations requires a CTH venue target")
+        platforms = _as_terms(request.get("platforms"), field="platforms")
+        from .adapters.platform_naming import PLATFORM_ALIASES
+        approved_names = set(PLATFORM_ALIASES) | {"wechat", "sogou_wechat"}
+        if not platforms or any(p not in approved_names for p in platforms):
+            raise AcquisitionPlanError("select existing named platforms explicitly")
+        if request.get("user_seed_topic_ref") is not None:
+            _verify_seed_reference(request["user_seed_topic_ref"], entry, platforms, seed)
+        aliases = _as_terms(request.get("aliases"), field="aliases")
+        registered_aliases = [a for a, _ in entry["aliases"]] if entry else []
+        if entry:
+            aliases = aliases or registered_aliases[:1]
+            if any(_normalised_key(a) not in {_normalised_key(x) for x in registered_aliases} for a in aliases):
+                raise AcquisitionPlanError("business alias is not supplied by the registry")
+        elif aliases:
+            raise AcquisitionPlanError("new entity discovery cannot invent an admitted entity alias")
+        geography = _as_terms(request.get("geography_terms"), field="geography_terms")
+        venue = _as_terms(request.get("venue_boundary_terms"), field="venue_boundary_terms")
+        topics = _as_terms(request.get("topic_terms"), field="topic_terms")
+        exclude = _as_terms(request.get("exclude_terms"), field="exclude_terms")
+        since = request.get("publication_since", "2026-01-01")
+        if since != "2026-01-01":
+            raise AcquisitionPlanError("current task publication starts2026-01-01; preserve historical sources separately")
+        until = request.get("publication_until")
+        if until is not None:
+            from datetime import datetime
+            try:
+                cutoff = datetime.fromisoformat(str(until).replace("Z", "+00:00"))
+                if cutoff.tzinfo is None:
+                    raise ValueError("offset required")
+            except ValueError as exc:
+                raise AcquisitionPlanError("publication_until must be an observed offset-aware cutoff") from exc
+        tracking = request.get("tracking_sources") or []
+        if not isinstance(tracking, (list, tuple)):
+            raise AcquisitionPlanError("tracking_sources must be a list")
+        if not tracking and not topics:
+            raise AcquisitionPlanError("select relevant topic terms; name-only is an identity seed, not a business plan")
+        seeds = []
+        for alias in aliases or [""]:
+            for topic in topics:
+                parts = [alias] + [v for v in geography + venue if v not in alias] + [topic]
+                keyword = _normalise_text(" ".join(p for p in parts if p), field="business_query", max_length=256)
+                seeds.append((keyword, "DISCOVERY", None))
+        for source in tracking:
+            if (not isinstance(source, Mapping) or not source.get("evidence_ref")
+                    or source.get("scope_key") != key or entry is None):
+                raise AcquisitionPlanError("tracking source needs matching entity and locatable identity evidence")
+            seeds.append((_public_query_target(source.get("url")), "TRACKING", str(source["evidence_ref"])))
+        for platform in platforms:
+            for keyword, kind, source_ref in seeds:
+                unique = (platform, domain, key, purpose, dimension, keyword.casefold())
+                if unique in seen:
+                    continue
+                seen.add(unique)
+                context = {
+                    "rule_version": BUSINESS_RULE_VERSION, "platform": platform, "purpose": purpose,
+                    "dimension": dimension, "task_type": kind, "entity_aliases": tuple(aliases), "geography_terms": tuple(geography),
+                    "venue_boundary_terms": tuple(venue), "topic_terms": tuple(topics),
+                    "exclude_terms": tuple(exclude), "source_identity_evidence_ref": source_ref,
+                    "publication_since": since, "publication_until": until,
+                    "time_role": "NATIVE_PUBLICATION_NOT_CAPTURE", "mode": "MANUAL",
+                    "native_scope_bound": False, "source_use_grant": None,
+                    "market_typed_ref": request.get("market_typed_ref"),
+                    "unregistered_discovery": discovery and entry is None,
+                    "user_seed_topic_ref": request.get("user_seed_topic_ref"),
+                    "task_semantic_expansion": request.get("task_semantic_expansion"),
+                }
+                result.append(AcquisitionQuery(
+                    keyword=keyword, domain_id=domain, product_id="CTH" if domain=="CTH" else "ZBMP",
+                    registry_id=entry["registry_id"] if entry else "",
+                    subject_id=entry["subject_id"] if entry else None,
+                    brand_focus_id=entry["brand_focus_id"] if entry else None,
+                    priority=0 if entry and focus_key in {entry["subject_id"],entry["brand_focus_id"]} else 10,
+                    reason_code="business_purpose" if entry else "unregistered_discovery",
+                    alias_kind="task_selected_registered_alias" if entry else "UNASSIGNED",
+                    context_mode=mode, business_context=context,
+                ))
+    return result
+
+
+def assess_query_relevance(record: Mapping[str, Any], query: AcquisitionQuery) -> dict[str, Any]:
+    """A source-linked lexical review aid, never admission/signature or consumer demand."""
+    context = dict(query.business_context or {})
+    text = " ".join(str(record.get(k) or "") for k in ("title", "body", "content", "native_topics")).casefold()
+    reasons = []
+    if any(str(t).casefold() in text for t in context.get("exclude_terms", ())):
+        return {"status": "EXCLUDED_TASK_BOUNDARY", "derivative": True, "admitted": False}
+    if not record.get("native_id") or not record.get("source_url") or not text.strip():
+        reasons.append("SOURCE_ID_OR_LOCATABLE_BODY_MISSING")
+    if not record.get("published_at"):
+        reasons.append("NATIVE_PUBLICATION_UNKNOWN")
+    aliases = context.get("entity_aliases", ())
+    if aliases and not any(str(a).casefold() in text for a in aliases):
+        reasons.append("ENTITY_ALIAS_NOT_OBSERVED")
+    from datetime import datetime, timezone
+    stamp = record.get("published_at")
+    if stamp:
+        try:
+            published = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+            if published.tzinfo is None:
+                raise ValueError("native offset unavailable")
+            start = datetime.fromisoformat(context.get("publication_since", "2026-01-01") + "T00:00:00+08:00")
+            end = record.get("capture_observation_utc") or context.get("publication_until")
+            if published < start:
+                return {"status": "OUTSIDE_REQUESTED_PUBLICATION_PERIOD", "derivative": True, "admitted": False}
+            if end is None:
+                reasons.append("ACTUAL_CAPTURE_CUTOFF_MISSING")
+            if end is not None:
+                observed = datetime.fromisoformat(str(end).replace("Z", "+00:00"))
+                if observed.tzinfo is None:
+                    raise ValueError("observation offset unavailable")
+                if published > observed:
+                    reasons.append("PUBLICATION_AFTER_ACTUAL_OBSERVATION")
+        except (ValueError, TypeError):
+            reasons.append("NATIVE_PUBLICATION_PRECISION_OR_OFFSET_UNVERIFIED")
+    terms = context.get("topic_terms", ())
+    if terms and not any(all(part.casefold() in text for part in str(term).split()) for term in terms):
+        reasons.append("TASK_TOPIC_NOT_OBSERVED")
+    boundaries = context.get("geography_terms", ()) + context.get("venue_boundary_terms", ())
+    if boundaries and not all(str(t).casefold() in text for t in boundaries):
+        reasons.append("REQUEST_BOUNDARY_NOT_OBSERVED")
+    # The lexical result does not bind the entity; existing Evidence/Permission
+    # owners still verify exact entity/market, source identity, time and use.
+    return {"status": "REVIEW_REQUIRED" if reasons else "CANDIDATE_TASK_RELEVANT",
+            "reasons": reasons, "derivative": True, "method": BUSINESS_RULE_VERSION,
+            "admitted": False, "entity_scope_verified": False, "source_use_grant": None}
+
+def build_observed_topic_catalog(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
+    """Retain native topic provenance as a discovery asset, without admitting it.
+
+    The caller supplies locators from inspected native fields. A count is the
+    number of distinct content IDs in this input sample, never platform heat or
+    representative demand. Unknown time, source and topic quality stay reviewable.
+    This pure function owns neither a store nor collection effects.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    start = datetime(2026, 1, 1, tzinfo=timezone(timedelta(hours=8)))
+    entries: dict[tuple[str, str], dict[str, Any]] = {}
+    review = []
+    input_count = 0
+    for observation in observations:
+        input_count += 1
+        platform = str(observation.get("platform") or "").strip()
+        native_id = str(observation.get("platform_content_id") or "").strip()
+        raw_ref = observation.get("native_raw_ref") or {}
+        reason = None
+        try:
+            source_url = _public_query_target(observation.get("source_url"))
+            published = datetime.fromisoformat(str(observation.get("native_publication") or "").replace("Z", "+00:00"))
+            captured = datetime.fromisoformat(str(observation.get("capture_observation_utc") or "").replace("Z", "+00:00"))
+            if published.tzinfo is None or captured.tzinfo is None:
+                reason = "NATIVE_TIME_OFFSET_UNKNOWN"
+            elif published < start:
+                reason = "OUTSIDE_REQUESTED_PUBLICATION_PERIOD"
+            elif published > captured:
+                reason = "PUBLICATION_AFTER_ACTUAL_OBSERVATION"
+            if (not platform or not native_id or not isinstance(raw_ref, Mapping)
+                    or not re.fullmatch(r"[0-9a-f]{64}", str(raw_ref.get("sha256") or ""))
+                    or not raw_ref.get("path")):
+                reason = "NATIVE_SOURCE_REFERENCE_MISSING"
+        except (ValueError, TypeError):
+            reason = "NATIVE_TIME_OR_PUBLIC_SOURCE_UNVERIFIED"
+        if reason:
+            review.append({"platform": platform, "platform_content_id": native_id,
+                           "native_raw_ref": dict(raw_ref) if isinstance(raw_ref, Mapping) else None,
+                           "reason": reason})
+            continue
+        topics = observation.get("native_topics") or []
+        if not isinstance(topics, (list, tuple)):
+            raise AcquisitionPlanError("native_topics must contain inspected native fields")
+        for topic in topics:
+            if not isinstance(topic, Mapping):
+                raise AcquisitionPlanError("native topic text needs its original field locator")
+            literal = topic.get("text")
+            locator = str(topic.get("native_locator") or "")
+            if (not isinstance(literal, str) or not literal.strip()
+                    or _CONTROL_CHARS.search(literal) or len(literal) > 256
+                    or not locator.startswith("/") or locator == "/"):
+                review.append({"platform": platform, "platform_content_id": native_id,
+                               "native_raw_ref": dict(raw_ref), "reason": "NATIVE_TOPIC_LOCATOR_OR_TEXT_INVALID"})
+                continue
+            term = literal.strip().removeprefix("#")
+            if not term.strip():
+                review.append({"platform": platform, "platform_content_id": native_id,
+                               "native_raw_ref": dict(raw_ref), "reason": "NATIVE_TOPIC_EMPTY"})
+                continue
+            key = (platform, term.casefold())
+            node = entries.setdefault(key, {
+                "platform": platform, "term": term, "original_spellings": [],
+                "native_topic_ids": [], "observations": [],
+                "distinct_content_keys": [], "planned_tasks": [],
+                "canonical_entity_refs": None, "source_use_ref": None,
+                "admitted": False, "scope_status": "UNASSIGNED",
+            })
+            if literal not in node["original_spellings"]:
+                node["original_spellings"].append(literal)
+            topic_id = topic.get("native_topic_id")
+            if topic_id not in (None, "") and str(topic_id) not in node["native_topic_ids"]:
+                node["native_topic_ids"].append(str(topic_id))
+            native_key = platform + ":" + native_id
+            if native_key not in node["distinct_content_keys"]:
+                node["distinct_content_keys"].append(native_key)
+            source = {"platform_content_id": native_id, "source_url": source_url,
+                      "native_publication": observation["native_publication"],
+                      "capture_observation_utc": observation["capture_observation_utc"],
+                      "native_raw_ref": dict(raw_ref), "native_locator": locator,
+                      "original_topic_text": literal, "rights": observation.get("rights"),
+                      "source_evidence_canonical_use_refs": observation.get("formal_refs")}
+            if source not in node["observations"]:
+                node["observations"].append(source)
+            task = observation.get("planned_task")
+            if task and task not in node["planned_tasks"]:
+                node["planned_tasks"].append(task)
+    nodes = list(entries.values())
+    for node in nodes:
+        node["sample_distinct_content_count"] = len(node["distinct_content_keys"])
+    return {"version": "lumenis.observed-topic-catalog.v1", "input_observation_count": input_count,
+            "publication_since": "2026-01-01", "time_role": "NATIVE_PUBLICATION_NOT_CAPTURE",
+            "terms": nodes, "review": review, "platform_heat": None,
+            "representative_demand": None, "automatic_adoption": False,
+            "purpose": "SOURCE_LINKED_DISCOVERY_AND_TASK_QUERY_REVIEW", "admitted": False}
 
 
 def resolve_query_plan(*args: Any, **kwargs: Any) -> AcquisitionPlan:
