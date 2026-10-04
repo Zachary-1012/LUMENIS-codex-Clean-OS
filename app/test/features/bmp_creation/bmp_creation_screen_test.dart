@@ -553,10 +553,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('音频舞台'), findsOneWidget);
       expect(find.text('逐字稿与分段'), findsOneWidget);
       expect(find.text('版权与版本'), findsOneWidget);
       expect(find.textContaining('春季录音'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const ValueKey('podcast-audio-view')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('音频舞台'), findsOneWidget);
 
       await tester.tap(find.text('保存渲染请求草稿'));
       await tester.pump();
