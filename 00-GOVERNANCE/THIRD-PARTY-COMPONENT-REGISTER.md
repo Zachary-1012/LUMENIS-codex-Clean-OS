@@ -250,10 +250,14 @@ PyPI metadata identifies maintained stable 50.0.2 and CPython-compatible
 Windows AMD64 wheels. Source API reference:
 https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/ .
 
-Class: OPTIONAL SECURITY ADAPTER / LOCAL_MANIFEST_CANDIDATE. Declaration
-in the reviewed base ce5b5a632922b4efd3a96942e1d4084c2cb72044 is
-NOT_PUBLISHED; the protected local requirements candidate is separate from
-this rule/registration publication.
+Class: SYSTEM SECURITY ADAPTER / REQUIRED SIGNATURE-TEST DEPENDENCY.
+Historical base ce5b5a632922b4efd3a96942e1d4084c2cb72044 registered the adapter
+while its manifest stayed local. On 2026-10-04 the exact pinned dependency is
+included with W6's hosted-CI repair: published Ed25519 modules already require
+it, and the clean runner otherwise fails during test collection. This changes
+installation reproducibility, not Permission, key configuration or training
+admission. Upstream tagged metadata/license rechecked on 2026-10-04 supports
+Python >=3.9 including the hosted Python3.11 environment.
 The local Python 3.13 environment installed cryptography 50.0.2, cffi 2.1.1
 and pycparser 3.0 from binary wheels. Installed metadata independently read
 2026-10-02 declares `cffi` 2.1.1 as MIT-0 and `pycparser` 3.0 as BSD-3-Clause;

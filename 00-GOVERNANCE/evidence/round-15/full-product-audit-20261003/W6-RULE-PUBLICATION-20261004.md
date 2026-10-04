@@ -62,3 +62,26 @@ Independent pre-push review added root vendor/ to the contract/import exclusions
 The 17 boundary/governance tests and the two affected governance/Only-One gates
 passed again on the updated exact snapshot. Other unchanged gate evidence is
 reused; the machine receipt pins final source bytes and both verification runs.
+
+
+## Hosted follow-up and latest rule correction
+
+App Gate run37184812654 succeeded at fd365f7c. Product Gate run37184809683
+failed test collection for missing cryptography; all preceding governance and
+DB gates passed. Publish the existing approved cryptography50.0.2 pin and two
+fixture repairs (missing re namespace; isolated zero-byte history seed).
+The five affected test files pass 175/175 with all assertions retained. Original
+failure and recovery XML/logs remain in the existing W6 publication work folder.
+[Upstream version metadata](https://raw.githubusercontent.com/pyca/cryptography/50.0.2/pyproject.toml),
+[Python exec globals](https://docs.python.org/3.11/library/functions.html#exec) and
+[pytest tmp_path](https://docs.pytest.org/en/stable/how-to/tmp_path.html) informed
+this existing-owner repair. New hosted runs at the corrected SHA are required;
+a local 175-test pass does not establish full hosted success.
+
+The explicit human model selection keeps C windows on Sol6.1/max and M/F on
+Astra/ultra; repeated older model tables do not override that selection. Ordinary owner failures are
+resolved by that owner, with escalation only for real permission/cost gaps or
+unresolved owner/product decisions. C2 alone holds the now approved/recharged
+RMB10 incremental / RMB23.17 cumulative single5090 stage and its 95/180-minute
+stop limits. These current requirements live in AGENTS; no new capability,
+GPU action or production source/data write is performed by this publication.

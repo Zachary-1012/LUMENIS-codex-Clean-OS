@@ -262,5 +262,43 @@
       "output_sha256": "352d35ce1fb2452931d17f4534d1ec367ee2e8b8f1deaa7ba369708293608b1f",
       "output": "LUMENIS Only-One/multi-surface architecture guard: PASS\nproduct_architecture=00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md\nexperience_authority=00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md\nsurface_decision=00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md\nlegacy_ui_reference_paths=0\n"
     }
-  ]
+  ],
+  "hosted_followup": {
+    "failed_run": 37184809683,
+    "app_successful_run": 37184812654,
+    "affected_tests": 175,
+    "failure_log_sha256": "7ba52a77af3395096f5db99441917d1397fcf6bd51b9464d4737a56e4f13e93d",
+    "recovery_xml_sha256": "ab551014d258184b4e1fc08464ea7a70210e85eb8a8303fc53b0cbdc6c0c9a59",
+    "unchanged_guards": "No test assertion, blocking rule or tier weakened",
+    "followup_files": [
+      {
+        "path": "requirements.txt",
+        "sha256": "4dc2aead92efee4cf1c1e875316f5def6dd744d648ab555adc460683ac361eec"
+      },
+      {
+        "path": "tests/test_owned_training_phase_http_v2.py",
+        "sha256": "5aa44dba9973b1a6ca5236208cc946537b59cfb1804a3c27152374ef2cf30840"
+      },
+      {
+        "path": "tests/test_training_phase_history_material.py",
+        "sha256": "dd0ae33b441112e58b970c3458b0db225c070ac10fc9a05c6ea42cfa9af767b2"
+      },
+      {
+        "path": "AGENTS.md",
+        "sha256": "1784ccaa4782b959c353d0f5f326468a7c398d8c99c865f05d3ee7856dd95735"
+      },
+      {
+        "path": "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+        "sha256": "156cc390f1a11bab7a9afb220e51b301def1f1da6ed1924a71ea74f2fd0006d7"
+      },
+      {
+        "path": "00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md",
+        "sha256": "b8a171bb3767ae13169b14197e002e5ec473f9f16b8ec7bc53dd3fbf3b94c9e9"
+      },
+      {
+        "path": "00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/W6-RULE-PUBLICATION-20261004.md",
+        "sha256": "8337195c1a084bd00d0f94964722a99c8463f669fcd14d0f8a539c5485920f87"
+      }
+    ]
+  }
 }

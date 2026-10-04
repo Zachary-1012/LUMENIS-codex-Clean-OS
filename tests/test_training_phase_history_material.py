@@ -25,14 +25,15 @@ _USER_INPUT = "Owned training phase receipt state"
 
 @pytest.fixture
 def canonical_task_db(tmp_path, monkeypatch, request):
-    seed = Path(os.environ["LUMENIS_TEST_SEED_DB"]).resolve()
+    # This history contract needs a new empty Task store, independently of the
+    # schema-populated seed used by the rest of the clean-checkout suite.
+    seed = (tmp_path / "empty-history-seed.sqlite3").resolve()
+    seed.touch(exist_ok=False)
     assert seed.is_relative_to(Path(tempfile.gettempdir()).resolve())
     assert seed != (Path(__file__).resolve().parents[1] / "data/monitor.db").resolve()
     assert seed.is_file() and seed.stat().st_size == 0
     db_path = (tmp_path / "training-history-canonical.sqlite3").resolve()
-    # The approved seed is intentionally 0B; initialize a new disposable DB.
-    with sqlite3.connect(db_path):
-        pass
+    db_path.write_bytes(seed.read_bytes())
     monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
     monkeypatch.setenv("ZBC_EVIDENCE_DB_PATH", str(db_path))
     init_task_engine_db()

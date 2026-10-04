@@ -66,3 +66,4 @@ markitdown[pptx]==0.1.8  # 可选本地 PPTX/HTML 文档转换；仅经 importer
 alembic>=1.19.1
 
 feedparser>=6.0.11  # RSS / Atom public-feed adapter
+cryptography==50.0.2  # SYSTEM Security Ed25519 training phase receipts; private keys remain local

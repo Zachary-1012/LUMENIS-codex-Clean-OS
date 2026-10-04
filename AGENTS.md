@@ -26,7 +26,11 @@ R01-R15/J1-J8/U and special exits within the existing product scope.
    tests, repeated audits or per-function handoffs. Necessary affected safety,
    recovery and acceptance checks remain required. On a new failure, identify
    the concrete source/caller and consult current official/GitHub and relevant
-   web evidence before further trials; repair and continue independent work.
+   web evidence before further trials. Each owner resolves its ordinary failures
+   through repair and meaningful validation; do not hand them to M, wait for
+   per-function decisions or substitute exchanged reports for actual outcomes.
+   Escalate once only for a real permission/cost gap or an owner/product decision
+   that cannot be resolved within the existing authority. Continue independent work.
 3. Before editing, each window reads its actual assigned materials and source
    owner/callers/contracts, records the complete result and the receiving owner
    in its existing Task Card, and uses that card continuously. A coverage table
@@ -42,6 +46,11 @@ R01-R15/J1-J8/U and special exits within the existing product scope.
    after this report. Do not rent, recharge or increase the cap autonomously.
    New-instance SSH/CUDA/load cannot be claimed before allocation: label these
    paid-stage checks separately and stop/release promptly on an unresolved fault.
+   The latest approved and recharged C2 stage has a new cap of RMB10, cumulative
+   cap RMB23.17, one RTX5090 at no more than RMB2.99/hour. C2 alone repairs the
+   connection, rents, trains and stops billing: release by 95 minutes if no real
+   optimizer step/loss is observed, and stop billing by 180 minutes. M does not
+   rent on C2's behalf. This authority does not admit source use or model quality.
 6. M and F retain GPT-6 Astra/ultra; C1/C2/C3+C5/C4/C6 use GPT-6.1 Sol/max.
    1.5x is off; ordinary speed is requested. Settings/readback and executed
    backend identity are distinct. Do not change global defaults or silently

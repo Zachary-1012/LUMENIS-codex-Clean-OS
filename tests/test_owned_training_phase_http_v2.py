@@ -8,6 +8,7 @@ import hashlib
 import json
 import multiprocessing
 import os
+import re
 from pathlib import Path
 import shutil
 import sqlite3
@@ -90,7 +91,7 @@ def _actual_app_guards(app, gate):
     functions = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names]
     assert {node.name for node in functions} == names
     namespace = {
-        "request": request, "jsonify": jsonify,
+        "request": request, "jsonify": jsonify, "re": re,
         "OperationType": p.OperationType,
         "_PG_WRITE_METHODS": {"POST", "PUT", "DELETE", "PATCH"},
         "_PG_BYPASS_PATHS": frozenset(), "_pg": gate,

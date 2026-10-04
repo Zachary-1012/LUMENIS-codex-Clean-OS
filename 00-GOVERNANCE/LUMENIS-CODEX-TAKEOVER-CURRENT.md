@@ -656,3 +656,20 @@ retain their own pins and unresolved same-version runtime/acceptance work.
 Core configuration HTTP 200 proves local binding only. C1 formal admission,
 actual owned training/inference and four-surface user outcomes are not accepted
 by this rule publication. No GPU or production DB action is included.
+
+
+## Hosted verification recovery — 2026-10-04
+
+At fd365f7c, App Gate run37184812654 succeeded. Product Gate run37184809683
+passed governance, compile and Shared DB acceptance, then failed collection of
+five existing signature test modules because the registered cryptography50.0.2
+manifest entry was still local. The failure remains retained. W6 publishes that
+exact pin and repairs two test-environment contracts exposed by isolated replay:
+provide the production resolver's re global to its compiled test namespace, and
+create the history test's required empty seed under its own tmp_path instead of
+requiring the suite-wide schema seed to be empty. All 175 affected tests pass;
+no assertion, test tier or blocking gate is removed or softened. Full hosted
+pytest remains pending until a successful run at the corrected publication SHA.
+Current model allocation remains C1-C6 GPT-6.1 Sol/max and M/F Astra/ultra;
+the explicitly corrected selection takes precedence over a repeated older model table. C2's new budget/recharge authority and stop limits
+are defined in AGENTS; no GPU is rented by this dependency/rule repair.
