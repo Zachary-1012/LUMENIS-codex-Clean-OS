@@ -645,6 +645,9 @@ private backup/config and actual command receipts stay in M's local work folder.
 This batch reconciles active pause/model/GPU rules and consolidates the frontend
 mapping in Experience section 38. It repairs only audit inventory traversal,
 with in-scope failures and real duplicate/runtime-owner violations still blocking.
+Independent review also confirmed that top-level vendored Python and contract
+copies belong to the existing third-party boundary; the final traversal repair
+prunes that root while preserving nested production-owner directories.
 See [exact batch evidence](evidence/round-15/full-product-audit-20261003/W6-RULE-PUBLICATION-20261004.md)
 for scope, tests, source pins, research, prior failures and publication readback.
 Its commit carries this CURRENT update and the exact accepted rules/validators.

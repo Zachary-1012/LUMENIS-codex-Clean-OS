@@ -391,7 +391,7 @@ def _assert_readme_routing_consistent(readme: str) -> None:
 def _assert_single_machine_contract() -> None:
     canonical = PATHS["contract"].resolve()
     copies = []
-    excluded_roots = {".git", ".venv", "venv", "node_modules", ".pytest_cache", "work"}
+    excluded_roots = {".git", ".venv", "venv", "vendor", "node_modules", ".pytest_cache", "work"}
     for directory, dirs, files in os.walk(ROOT, onerror=_scan_error):
         current = Path(directory)
         dirs[:] = [name for name in dirs if name != "__pycache__"

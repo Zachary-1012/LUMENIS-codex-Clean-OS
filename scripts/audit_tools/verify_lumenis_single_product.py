@@ -152,7 +152,7 @@ def tracked() -> list[str]:
 def production_python_files(root: Path) -> list[Path]:
     """Preserve the import audit scope without entering local work or env trees."""
     ignored_dirs = {".git", "__pycache__", "node_modules", "tests", "test", "docs"}
-    local_roots = {"work", ".venv", "venv"}
+    local_roots = {"work", ".venv", "venv", "vendor"}
     result = []
     for directory, dirs, files in os.walk(root, onerror=_scan_error):
         current = Path(directory)

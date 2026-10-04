@@ -57,3 +57,8 @@ Remote delivery requires HEAD, fetched origin/main, live main and every publishe
 Git file byte to match; the post-push native receipt is retained in the existing
 W6 publication work directory. Rule publication is distinct from live product,
 USER_VERIFIED, RELEASED, OPERATING and COMMERCIAL_READY acceptance.
+
+Independent pre-push review added root vendor/ to the contract/import exclusions.
+The 17 boundary/governance tests and the two affected governance/Only-One gates
+passed again on the updated exact snapshot. Other unchanged gate evidence is
+reused; the machine receipt pins final source bytes and both verification runs.

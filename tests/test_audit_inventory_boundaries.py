@@ -23,13 +23,13 @@ class AuditInventoryTests(unittest.TestCase):
 
     def test_local_trees_are_pruned_before_they_are_opened(self):
         included = self.write("lumenis/new_runtime.py", "import sqlite3\nsqlite3.connect('x')")
-        for name in ("work", ".venv", "venv"):
+        for name in ("work", ".venv", "venv", "vendor"):
             self.write(f"{name}/candidate/runtime.py", "not valid Python")
         real_scandir = database.os.scandir
 
         def scoped_scandir(path):
             relative = Path(path).relative_to(self.root)
-            if relative.parts and relative.parts[0] in {"work", ".venv", "venv"}:
+            if relative.parts and relative.parts[0] in {"work", ".venv", "venv", "vendor"}:
                 self.fail("excluded local tree was traversed")
             return real_scandir(path)
 
