@@ -15,7 +15,7 @@ The local working tree is not visible to a reader of GitHub. Distinguish current
 | Round / window | Placement | Scope | Current evidence and remaining work |
 |---|---|---|---|
 | C1 / W1 | Local Codex | Data and collection | Purpose-query API and signed Scheduler share Collector/Permission/five-table transaction; original 100-term input is packaged and checked. Native fields, unknown metrics and GLOBAL refresh fixes have passing isolated receipts; actual six-platform continuous operation/coverage remains OPEN. |
-| C2 / W2 | Local Codex | Owned AI and Agent | Single Gateway; approved open weights and free-resource preparation retained. The checked-in foundation manifest now binds exact 4090/5090 recipe and checkpoint-policy parsing, but production owned inference, semantic quality, training/reload/promotion are not established by configuration or this delivery. |
+| C2 / W2 | Local Codex | Owned AI and Agent | Single Gateway; approved open weights and free-resource preparation retained. Legacy local/Zhipu compatibility paths are explicitly disabled before discovery, quota mutation or dispatch; the checked-in foundation manifest binds exact 4090/5090 recipe and checkpoint-policy parsing. Production owned inference, semantic quality, training/reload/promotion are not established by either repair. |
 | C3 / W3 | Local Codex C3+C5 continuation | CTH/BMP business | source-bound/v3 producer, HTTP and business consumer integration is published with v1/v2 retained; normal task quality, actual outcomes and real-user repeat remain open. |
 | C4 / W4 | Local Codex | Original pitch, video, podcast | Source-bound Word chain, centred-dissolve renderer and shared Flutter media workbench are integrated. Native-player source inclusion repair `a95daf23` has 700 local App checks plus exact-SHA App/Product CI passing; real customer media/playback/audition/multisurface acceptance remains separate. |
 | C5 / W5 | Local Codex C3+C5 continuation | Importer, Research, Reporting, Artifact, notifications | Source continuity/revision/rollback code is published; research use must change real product capabilities. Restored locators do not prove body reading or live admission. |
@@ -32,6 +32,7 @@ F retains four-surface behavior and design responsibilities through existing Flu
 5. Material locators and adoption belong to the existing material manifest plus named capability owners. Missing originals, unread material and independent training rights stay explicit. Research summaries are not product completion.
 6. Dependencies such as model availability block only their actual consumer. Continue independent source admission, deterministic credibility checks, editing and recovery. Do not revive stopped providers to disguise an unavailable owned model.
 7. The static owned-foundation policy binding is recorded in `evidence/round-07/OWNED-FOUNDATION-POLICY-BINDING-20261005.md`. It does not authorize a GPU, paid compute, endpoint use, model download, training, inference or promotion; the next C2 gate is the documented real preflight and execution chain.
+8. Retired provider compatibility is recorded in `evidence/round-07/RETIRED-PROVIDER-COMPATIBILITY-20261005.md`. Historical endpoints and quota observations remain readable but cannot start local/Zhipu discovery, inference, fallback or usage accounting.
 
 ## 3. Authority and retained evidence
 

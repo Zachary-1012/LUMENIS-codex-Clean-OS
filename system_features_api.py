@@ -13,7 +13,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 导入模块
 from security_scanner import security_scanner
-from local_ai_client import local_ai
 from collector_auto_start import collector_starter
 
 system_features_bp = Blueprint('system_features', __name__)
@@ -162,51 +161,31 @@ def evaluation_golden_cases():
 # 本地AI API
 # ============================================
 
+def _retired_local_ai_response():
+    """Keep historical URLs while preventing provider discovery or inference."""
+    return jsonify({
+        'ok': False,
+        'status': 'provider_disabled',
+        'reason': 'RETIRED_LOCAL_AI_COMPATIBILITY_ONLY',
+        'compatibility_adapter': True,
+    }), 503
+
 @system_features_bp.route('/api/local-ai/status')
 def local_ai_status():
-    """获取本地AI状态"""
-    try:
-        result = local_ai.get_status()
-        return jsonify({'ok': True, **result})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    """Retained endpoint: local model discovery is permanently unavailable."""
+    return _retired_local_ai_response()
 
 
 @system_features_bp.route('/api/local-ai/analyze', methods=['POST'])
 def local_ai_analyze():
-    """本地AI分析"""
-    try:
-        data = request.get_json(silent=True) or {}
-        text = data.get('text', '')
-        analysis_type = data.get('type', 'sentiment')
-
-        if not text:
-            return jsonify({'ok': False, 'error': 'text不能为空'}), 400
-
-        if analysis_type == 'sentiment':
-            result = local_ai.analyze_sentiment(text)
-        elif analysis_type == 'event':
-            result = local_ai.analyze_event(text)
-        elif analysis_type == 'risk':
-            result = local_ai.analyze_risk(text)
-        else:
-            result = local_ai.generate(f"请分析以下内容：{text}")
-
-        return jsonify({'ok': True, **result})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    """Retained endpoint: local model analysis is permanently unavailable."""
+    return _retired_local_ai_response()
 
 
 @system_features_bp.route('/api/local-ai/chat', methods=['POST'])
 def local_ai_chat():
-    """本地AI聊天"""
-    try:
-        data = request.get_json(silent=True) or {}
-        messages = data.get('messages', [])
-        result = local_ai.chat(messages)
-        return jsonify({'ok': True, **result})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    """Retained endpoint: local model chat is permanently unavailable."""
+    return _retired_local_ai_response()
 
 
 # ============================================

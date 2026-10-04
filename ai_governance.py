@@ -265,11 +265,11 @@ class AIUsageTracker:
             from lumenis.system.ai_gateway.providers import active_providers
             active = active_providers()
         except Exception:
-            active = ["zhipu"]
+            active = []
         return {
             "ok": True,
             "active_providers": active,
-            "primary_provider": active[0] if active else "zhipu",
+            "primary_provider": active[0] if active else "provider_disabled",
             "desensitization": "enabled",
             "quota": quota,
             "total_usage": self.stats["total"],

@@ -13,14 +13,16 @@ def _enable_mock_zhipu(monkeypatch):
     monkeypatch.setitem(providers.PROVIDER_REGISTRY['zhipu'], 'status', providers.ACTIVE)
     monkeypatch.setenv('AI_PROVIDER', 'zhipu')
 
-def test_per_call_default_model_is_flag():
+def test_per_call_default_model_is_flag(monkeypatch):
     import ai_resource_packs
+    _enable_mock_zhipu(monkeypatch)
     import inspect
     sig = inspect.signature(ai_resource_packs.execute_per_call_request)
     assert sig.parameters['model'].default == 'glm-5.3', '默认模型应为智谱最强可用 glm-5.3'
 
 def test_per_call_passes_model_to_chat(monkeypatch):
     import ai_resource_packs
+    _enable_mock_zhipu(monkeypatch)
     captured = {}
     def fake_chat(system, user, temperature, max_tokens, model):
         captured['model'] = model

@@ -1,8 +1,10 @@
 {
   "provider": "zhipu",
+  "snapshot_status": "HISTORICAL_RETIRED_PROVIDER_SNAPSHOT",
+  "current_product_execution": "DISABLED_BY_PROVIDER_POLICY",
   "snapshot_at": "2026-09-03T02:34:00",
   "source": "智谱开放平台资源包列表（用户同步截图）",
-  "note": "仅记录余额/模型/生效信息，不含任何密钥。智谱为 ZBC 唯一外接 AI provider。",
+  "note": "仅记录2026-09-03历史余额/模型观察，不含任何密钥。该历史提供方已退出产品执行，不能作为当前推理、训练或回退路由。",
   "flagship_model": "glm-4.7",
   "flagship_tokens": 5000000,
   "resources": [

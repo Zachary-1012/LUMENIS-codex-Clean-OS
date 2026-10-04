@@ -314,7 +314,6 @@ import subject_registry
 from lumenis.shared.reporting import export_api
 import security_scanner
 import runtime_preflight  # ZBIP Runtime Integrity Preflight（统一启动闸门；默认只记录不阻断，ZBC_PREFLIGHT_ENFORCE=1 时 P0 阻断）
-import local_ai_client
 import pr_case_integration
 import system_features_api
 import auth_recovery_api  # V3.0 P0: Auth Recovery Center

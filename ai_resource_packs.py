@@ -22,8 +22,26 @@ from datetime import datetime, date
 from typing import Dict, List, Optional, Any
 
 # ZBC Phase 7: module status markers
-MODULE_STATUS = 'ACTIVE'
-AI_ROLE = 'BUDGET_AND_QUOTA'  # resource pack quota management, not business judgment
+MODULE_STATUS = 'RETIRED_COMPATIBILITY'
+AI_ROLE = 'HISTORICAL_BUDGET_RECORD'  # retained usage history, never a product inference authority
+RETIRED_EXECUTION_PROVIDER = 'zhipu'
+
+
+def _retired_execution_result() -> Dict:
+    """Block historical quota routes before quota mutation or Gateway dispatch."""
+    return {
+        'ok': False,
+        'status': 'provider_disabled',
+        'provider': RETIRED_EXECUTION_PROVIDER,
+        'reason': 'RETIRED_PROVIDER_COMPATIBILITY_ONLY',
+        'resource_consumed': False,
+    }
+
+
+def _execution_provider_is_retired() -> bool:
+    from lumenis.system.ai_gateway.providers import is_provider_retired
+
+    return is_provider_retired(RETIRED_EXECUTION_PROVIDER)
 
 # ============ 资源包配置 ============
 RESOURCE_PACKS = {
@@ -195,6 +213,8 @@ def pause_connection(reason: str = "用户手动暂停"):
 
 def resume_connection():
     """恢复 AI 连接。"""
+    if _execution_provider_is_retired():
+        return {**_retired_execution_result(), 'paused': True}
     global _paused, _pause_reason
     with _lock:
         _paused = False
@@ -217,6 +237,9 @@ def execute_per_call_request(user_request: str, model: str = "glm-5.3") -> Dict:
     用户输入需求，系统调度执行（消耗1次按次计费额度）。
     默认走智谱当前最强可用模型 glm-5.3（最大算力优先；豆包仅编排不承担推理）。
     """
+    if _execution_provider_is_retired():
+        return _retired_execution_result()
+
     # 检查按次计费额度
     quota = check_quota("per_call", 1)
     if not quota["allowed"]:
@@ -260,6 +283,11 @@ def get_all_packs_status() -> Dict:
     result = {
         "paused": _paused,
         "pause_reason": _pause_reason,
+        "execution": {
+            "provider": RETIRED_EXECUTION_PROVIDER,
+            "status": "provider_disabled" if _execution_provider_is_retired() else "compatibility_test_only",
+            "resource_consumed": False,
+        },
         "packs": {},
         "summary": {
             "total_packs": len(RESOURCE_PACKS),

@@ -1,13 +1,8 @@
-"""
-本地AI对接模块 v1.0
-功能：
-1. 对接本地Ollama AI
-2. 支持多种本地模型（qwen2/llama3/mistral等）
-3. 舆情分析（情绪/事件/风险）
-4. 智能摘要生成
-5. 公关话术推荐
-6. 案例对标分析
-7. 自动检测本地AI可用性
+"""Retired local-AI compatibility interface.
+
+The original Ollama client surface remains importable for historical callers.
+The production provider registry keeps it disabled, so normal product calls
+return an honest unavailable state before any discovery or inference request.
 """
 
 import os
@@ -244,9 +239,19 @@ class LocalAIClient:
 
     def get_status(self):
         """获取本地AI状态"""
+        if not is_provider_available('ollama'):
+            self.available = False
+            self.available_models = []
+            return {
+                'available': False,
+                'status': 'provider_disabled',
+                'reason': 'RETIRED_LOCAL_AI_COMPATIBILITY_ONLY',
+                'available_models': [],
+                'compatibility_adapter': True,
+                'checked_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            }
         self.check_availability()
-        disabled = not is_provider_available('ollama')
-        status = 'available' if self.available else ('provider_disabled' if disabled else 'unavailable')
+        status = 'available' if self.available else 'unavailable'
         return {
             'available': self.available,
             'status': status,
@@ -372,4 +377,4 @@ class LocalAIClient:
 # 全局实例
 local_ai = LocalAIClient()
 
-print("[LocalAI] 本地AI对接模块已加载", flush=True)
+print("[LocalAI] retired compatibility adapter retained; discovery and inference are disabled", flush=True)
