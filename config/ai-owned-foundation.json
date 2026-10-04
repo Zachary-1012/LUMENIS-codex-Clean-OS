@@ -113,5 +113,160 @@
         }
       }
     }
+  },
+  "training_recipes": {
+    "unsloth-rtx4090-nf4": {
+      "foundation_variant": "unsloth-t4-nf4",
+      "gpu_names": [
+        "NVIDIA GeForce RTX 4090"
+      ],
+      "compute_capability": [
+        8,
+        9
+      ],
+      "minimum_vram_bytes": 23622320128,
+      "visible_device_count": 1,
+      "compute_dtype": "bfloat16",
+      "max_sequence_length": 4096,
+      "gradient_accumulation_steps": 1,
+      "quantization": "bitsandbytes_nf4",
+      "status": "APPROVED_COMPATIBILITY_NOT_LIVE_VERIFIED"
+    },
+    "unsloth-rtx5090-nf4": {
+      "foundation_variant": "unsloth-t4-nf4",
+      "gpu_names": [
+        "NVIDIA GeForce RTX 5090"
+      ],
+      "compute_capability": [
+        12,
+        0
+      ],
+      "minimum_vram_bytes": 32212254720,
+      "visible_device_count": 1,
+      "compute_dtype": "bfloat16",
+      "cuda_runtime": "12.8",
+      "required_cuda_arch": "sm_120",
+      "max_sequence_length": 16384,
+      "gradient_accumulation_steps": 1,
+      "quantization": "bitsandbytes_nf4",
+      "status": "APPROVED_COMPATIBILITY_NOT_LIVE_VERIFIED"
+    }
+  },
+  "checkpoint_recovery_policies": {
+    "schema_version": 1,
+    "policies": {
+      "0ee6ae2fdcec5f9c2a01cfbaf08e4216226cadd9c1b35a93a22430a8a558950d": {
+        "automatic_rotation": false,
+        "base_recipe": "unsloth-rtx5090-nf4",
+        "checkpoint_interval_steps": 2,
+        "data_order_sha256": "405e3034c4f78523567074cdebb2f3dcff535f0191880cfe7ca1e0b706e36bf0",
+        "framework_lock_sha256": "220e8e688ce0fb05779c5f7f640476bf928c11e185e00c0552cb3cf8b3a6ea21",
+        "max_replay_optimizer_steps": 0,
+        "numerical_tolerance": {
+          "atol": 0,
+          "rtol": 0
+        },
+        "required_roles": {
+          "adapter_or_model": [
+            "adapter_model.safetensors"
+          ],
+          "callback_state": [
+            "lumenis_callback_state.json"
+          ],
+          "data_position": [
+            "lumenis_data_position.json"
+          ],
+          "model_config": [
+            "adapter_config.json"
+          ],
+          "optimizer": [
+            "optimizer.pt"
+          ],
+          "rng_cpu": [
+            "rng_state.pth"
+          ],
+          "rng_cuda": [
+            "lumenis_cuda_rng.safetensors"
+          ],
+          "scheduler": [
+            "scheduler.pt"
+          ],
+          "tokenizer": [
+            "tokenizer.json",
+            "tokenizer_config.json"
+          ],
+          "trainer_state": [
+            "trainer_state.json"
+          ]
+        },
+        "restore_callback_state": true,
+        "restore_dataset_position": true,
+        "retain_committed": true,
+        "rng_devices": [
+          "cpu",
+          "cuda:0"
+        ],
+        "save_only_at_completed_optimizer_step": true,
+        "save_only_model": false,
+        "schema_version": 1,
+        "trainer_config_sha256": "d2813c71708387947dc04b054afcdfdbc731bcc5d9fd44bf21d1c1bbf60c1f3c"
+      },
+      "79d164b92600173f7fef57f85fe5ef44802942ba68176f66010045ef09117fdc": {
+        "automatic_rotation": false,
+        "base_recipe": "unsloth-rtx5090-nf4",
+        "checkpoint_interval_steps": 2,
+        "data_order_sha256": "92fcd0f91bc90869979fd758c180811bf8fe0b3894487cd61c23d3034acb88a9",
+        "framework_lock_sha256": "220e8e688ce0fb05779c5f7f640476bf928c11e185e00c0552cb3cf8b3a6ea21",
+        "max_replay_optimizer_steps": 0,
+        "numerical_tolerance": {
+          "atol": 0,
+          "rtol": 0
+        },
+        "required_roles": {
+          "adapter_or_model": [
+            "adapter_model.safetensors"
+          ],
+          "callback_state": [
+            "lumenis_callback_state.json"
+          ],
+          "data_position": [
+            "lumenis_data_position.json"
+          ],
+          "model_config": [
+            "adapter_config.json"
+          ],
+          "optimizer": [
+            "optimizer.pt"
+          ],
+          "rng_cpu": [
+            "rng_state.pth"
+          ],
+          "rng_cuda": [
+            "lumenis_cuda_rng.safetensors"
+          ],
+          "scheduler": [
+            "scheduler.pt"
+          ],
+          "tokenizer": [
+            "tokenizer.json",
+            "tokenizer_config.json"
+          ],
+          "trainer_state": [
+            "trainer_state.json"
+          ]
+        },
+        "restore_callback_state": true,
+        "restore_dataset_position": true,
+        "retain_committed": true,
+        "rng_devices": [
+          "cpu",
+          "cuda:0"
+        ],
+        "save_only_at_completed_optimizer_step": true,
+        "save_only_model": false,
+        "schema_version": 1,
+        "trainer_config_sha256": "d2813c71708387947dc04b054afcdfdbc731bcc5d9fd44bf21d1c1bbf60c1f3c"
+      }
+    }
   }
 }
