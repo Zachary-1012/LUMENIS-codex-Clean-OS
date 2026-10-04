@@ -82,6 +82,14 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   bool _choosing = false;
   bool _retrieving = false;
   bool _demo = false;
+  bool _sourcesVisible = true;
+  bool _propertiesVisible = true;
+  double _timelineFraction = .38;
+  double _timelineZoom = 1;
+  double? _timelinePlayheadSec;
+  Duration? _previewSeekPosition;
+  int _previewSeekRequest = 0;
+  bool _layerOpen = false;
   final _inspectorDrafts = <String, _ClipInspectorDraft>{};
   LumenisLeaveGuard? _leaveGuard;
 
@@ -218,6 +226,14 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
 
   bool get _isBusy =>
       _choosing || _retrieving || _controllerInitialized && _controller.busy;
+
+  String get _operationCopyKey => _retrieving
+      ? 'saved_loading'
+      : switch (_controller.operation) {
+          MediaProjectOperation.exporting => 'exporting',
+          MediaProjectOperation.reopening => 'saved_loading',
+          _ => 'importing',
+        };
 
   bool get _hasUnappliedInspectorDrafts {
     if (_inspectorDrafts.isEmpty) return false;
@@ -673,16 +689,27 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     );
   }
 
-  void _edit(MediaProjectSnapshot Function(MediaProjectSnapshot) operation) {
-    if (!_canUseCurrentContext) return;
+  bool _edit(MediaProjectSnapshot Function(MediaProjectSnapshot) operation) {
+    if (!_canUseCurrentContext) return false;
     try {
       _controller.edit(operation);
+      final remainingClips =
+          _controller.timeline?.tracks
+              .expand((track) => track.clips)
+              .map((clip) => clip.clipId)
+              .toSet() ??
+          <String>{};
+      _inspectorDrafts.removeWhere((id, _) => !remainingClips.contains(id));
       setState(() => _notice = null);
+      _leaveGuard?.refresh();
+      _sheetUpdates.refresh();
+      return true;
     } on FormatException {
       setState(() => _notice = 'invalid');
     } on StateError {
       setState(() => _notice = 'invalid');
     }
+    return false;
   }
 
   Future<void> _add(MediaProjectAsset asset) async {
@@ -898,198 +925,444 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     }
     final palette = LumenisTheme.of(context);
     final timeline = _canUseCurrentContext ? _controller.timeline : null;
-    final selected = _selectedClip(timeline);
-    final working = _isBusy;
-    final notice = _failure ?? _notice;
     return Material(
       color: palette.canvas,
       child: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final wide =
-                constraints.maxWidth >= 1180 &&
-                MediaQuery.textScalerOf(context).scale(14) <= 22;
-            final sources = _sources(timeline);
-            final center = Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _pane(
-                  context,
-                  'preview',
-                  SizedBox(
-                    key: _previewKey,
-                    height: wide ? 300 : 230,
-                    child: !_canUseCurrentContext || _preview == null
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Text(_copy(context, 'preview_empty')),
+            final textSize = MediaQuery.textScalerOf(context).scale(14);
+            final wide = constraints.maxWidth >= 1180 && textSize <= 22;
+            final compact = constraints.maxWidth < 700 || textSize > 22;
+            final height = constraints.hasBoundedHeight
+                ? constraints.maxHeight
+                : MediaQuery.sizeOf(context).height;
+            return SizedBox(
+              height: height,
+              child: Padding(
+                padding: EdgeInsets.all(compact ? 8 : 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: height * .36),
+                      child: SingleChildScrollView(
+                        child: _editorHeader(
+                          timeline,
+                          wide: wide,
+                          compact: compact,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Expanded(
+                      key: const ValueKey('media-editing-stage'),
+                      child: LayoutBuilder(
+                        builder: (context, area) {
+                          final minimumHeight = textSize > 22 ? 560.0 : 460.0;
+                          final editingHeight = math.max(
+                            minimumHeight,
+                            area.maxHeight,
+                          );
+                          final timelineHeight =
+                              (editingHeight * _timelineFraction).clamp(
+                                180.0,
+                                editingHeight - 260.0,
+                              );
+                          return SingleChildScrollView(
+                            key: const Key('media-editing-region-scroll'),
+                            physics: area.maxHeight >= editingHeight
+                                ? const NeverScrollableScrollPhysics()
+                                : null,
+                            child: SizedBox(
+                              height: editingHeight,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        if (wide && _sourcesVisible) ...[
+                                          SizedBox(
+                                            width: 232,
+                                            child: SingleChildScrollView(
+                                              key: const Key(
+                                                'media-source-rail',
+                                              ),
+                                              child: _sources(timeline),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 1),
+                                        ],
+                                        Expanded(
+                                          key: const ValueKey(
+                                            'media-preview-stage',
+                                          ),
+                                          child: _previewArea(),
+                                        ),
+                                        if (wide && _propertiesVisible) ...[
+                                          const SizedBox(width: 1),
+                                          SizedBox(
+                                            width: 280,
+                                            child: SingleChildScrollView(
+                                              key: const Key(
+                                                'media-property-rail',
+                                              ),
+                                              child: _inspector(
+                                                timeline,
+                                                _selectedClip(timeline),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    key: const Key('media-timeline-region'),
+                                    height: timelineHeight,
+                                    child: _timeline(timeline),
+                                  ),
+                                ],
+                              ),
                             ),
-                          )
-                        : MediaPreview(file: _preview!),
-                  ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                _timeline(timeline),
-              ],
-            );
-            final inspector = _inspector(timeline, selected);
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 12,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      IconButton(
-                        tooltip: _copy(context, 'back'),
-                        onPressed: working ? null : _leaveEditor,
-                        icon: const Icon(Icons.arrow_back_rounded),
-                      ),
-                      Text(
-                        _copy(context, 'title'),
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      if (timeline == null && _controller.version == null)
-                        Text(
-                          context.lumenisL10n.text(
-                            _controller.domain == 'CTH'
-                                ? 'navgroup.cth'
-                                : 'navgroup.bmp',
-                          ),
-                        ),
-                      if (timeline != null)
-                        Text(
-                          _copy(
-                            context,
-                            _hasUnsavedChanges ? 'draft' : 'saved',
-                          ),
-                        ),
-                      _openSavedButton('media-open-saved'),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(_copy(context, 'subtitle')),
-                  if (working) ...[
-                    const SizedBox(height: 12),
-                    const LinearProgressIndicator(),
-                    Text(
-                      _copy(
-                        context,
-                        _retrieving
-                            ? 'saved_loading'
-                            : switch (_controller.operation) {
-                                MediaProjectOperation.exporting => 'exporting',
-                                MediaProjectOperation.reopening =>
-                                  'saved_loading',
-                                _ => 'importing',
-                              },
-                      ),
-                    ),
-                  ],
-                  if (notice != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Semantics(
-                        liveRegion: true,
-                        child: Text(_copy(context, notice)),
-                      ),
-                    ),
-                  if (!_canUseCurrentContext) Text(_copy(context, 'context')),
-                  if (widget.contextAvailable &&
-                      _controllerInitialized &&
-                      _controller.sourcesNeedRevalidation)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: OutlinedButton.icon(
-                        key: const Key('media-recover-draft-sources'),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(48, 48),
-                        ),
-                        onPressed: _isBusy ? null : _recoverDraftSources,
-                        icon: const Icon(Icons.refresh_rounded),
-                        label: Text(_copy(context, 'recover_sources')),
-                      ),
-                    ),
-                  const SizedBox(height: 20),
-                  if (wide)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(width: 240, child: sources),
-                        const SizedBox(width: 16),
-                        Expanded(child: center),
-                        const SizedBox(width: 16),
-                        SizedBox(width: 270, child: inspector),
-                      ],
-                    )
-                  else ...[
-                    center,
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        OutlinedButton.icon(
-                          key: const Key('media-open-sources'),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(48, 48),
-                          ),
-                          onPressed: () => _openLayerSheet(
-                            title: _copy(context, 'sources'),
-                            content: (_, _) => _sources(
-                              _canUseCurrentContext
-                                  ? _controller.timeline
-                                  : null,
-                              onChoose: () {
-                                Navigator.of(context).pop();
-                                _choose();
-                              },
-                            ),
-                          ),
-                          icon: const Icon(Icons.video_library_outlined),
-                          label: Text(_copy(context, 'sources')),
-                        ),
-                        OutlinedButton.icon(
-                          key: const Key('media-open-properties'),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(48, 48),
-                          ),
-                          onPressed: () => _openLayerSheet(
-                            title: _copy(context, 'properties'),
-                            content: (_, _) {
-                              final latest = _canUseCurrentContext
-                                  ? _controller.timeline
-                                  : null;
-                              return _inspector(latest, _selectedClip(latest));
-                            },
-                          ),
-                          icon: const Icon(Icons.tune_rounded),
-                          label: Text(_copy(context, 'properties')),
-                        ),
-                        OutlinedButton.icon(
-                          key: const Key('media-open-actions'),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(48, 48),
-                          ),
-                          onPressed: _openActionsSheet,
-                          icon: const Icon(Icons.more_horiz_rounded),
-                          label: Text(_copy(context, 'actions')),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (wide) ...[const SizedBox(height: 20), _actions(timeline)],
-                ],
               ),
             );
           },
         ),
       ),
     );
+  }
+
+  Widget _editorHeader(
+    MediaProjectSnapshot? timeline, {
+    required bool wide,
+    required bool compact,
+  }) {
+    final notice = _failure ?? _notice;
+    final version = _controller.version;
+    final status = timeline == null && version == null
+        ? context.lumenisL10n.text(
+            _controller.domain == 'CTH' ? 'navgroup.cth' : 'navgroup.bmp',
+          )
+        : _copy(context, _hasUnsavedChanges ? 'draft' : 'saved');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              key: const Key('media-editor-back'),
+              tooltip: _copy(context, 'back'),
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              onPressed: _isBusy ? null : _leaveEditor,
+              icon: const Icon(Icons.arrow_back_rounded),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _copy(context, 'title'),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  Text(status, style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            ),
+            if (wide) _editorTools(timeline, wide: wide),
+            const SizedBox(width: 8),
+            if (compact)
+              IconButton(
+                key: const Key('media-open-saved'),
+                tooltip: _copy(context, 'open_saved'),
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                onPressed: _isBusy || !_canUseCurrentContext
+                    ? null
+                    : _openSavedWork,
+                icon: const Icon(Icons.folder_open_outlined),
+              )
+            else
+              _openSavedButton('media-open-saved'),
+            const SizedBox(width: 8),
+            if (compact)
+              IconButton.filled(
+                key: const Key('media-open-actions'),
+                tooltip: _copy(context, 'versions_export'),
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                onPressed: _openActionsSheet,
+                icon: const Icon(Icons.ios_share_rounded),
+              )
+            else
+              FilledButton.icon(
+                key: const Key('media-open-actions'),
+                style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+                onPressed: _openActionsSheet,
+                icon: const Icon(Icons.ios_share_rounded),
+                label: Text(_copy(context, 'versions_export')),
+              ),
+          ],
+        ),
+        if (!wide) _editorTools(timeline, wide: wide),
+        if (_isBusy && !_layerOpen) ...[
+          const LinearProgressIndicator(),
+          Semantics(
+            liveRegion: true,
+            child: Text(_copy(context, _operationCopyKey)),
+          ),
+        ],
+        if (notice != null && !_layerOpen)
+          Semantics(liveRegion: true, child: Text(_copy(context, notice))),
+        if (!_canUseCurrentContext) Text(_copy(context, 'context')),
+        if (widget.contextAvailable && _controller.sourcesNeedRevalidation)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              key: const Key('media-recover-draft-sources'),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+              onPressed: _isBusy ? null : _recoverDraftSources,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(_copy(context, 'recover_sources')),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _editorTools(MediaProjectSnapshot? timeline, {required bool wide}) =>
+      Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        children: [
+          _areaButton(
+            key: 'media-open-sources',
+            title: 'sources',
+            icon: Icons.video_library_outlined,
+            selected: wide && _sourcesVisible,
+            onPressed: () {
+              if (wide) {
+                setState(() => _sourcesVisible = !_sourcesVisible);
+              } else {
+                _openLayerSheet(
+                  title: _copy(context, 'sources'),
+                  content: (_, sheetContext) => _sources(
+                    _canUseCurrentContext ? _controller.timeline : null,
+                    onChoose: () {
+                      Navigator.of(sheetContext).pop();
+                      _choose();
+                    },
+                  ),
+                );
+              }
+            },
+          ),
+          _areaButton(
+            key: 'media-open-properties',
+            title: 'properties',
+            icon: Icons.tune_rounded,
+            selected: wide && _propertiesVisible,
+            onPressed: () {
+              if (wide) {
+                setState(() => _propertiesVisible = !_propertiesVisible);
+              } else {
+                _openLayerSheet(
+                  title: _copy(context, 'properties'),
+                  content: (_, _) {
+                    final latest = _canUseCurrentContext
+                        ? _controller.timeline
+                        : null;
+                    return _inspector(latest, _selectedClip(latest));
+                  },
+                );
+              }
+            },
+          ),
+          IconButton(
+            key: const Key('media-toolbar-undo'),
+            tooltip: _copy(context, 'undo'),
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            onPressed: timeline?.canUndo == true && !_isBusy
+                ? () => _edit((s) => s.undo())
+                : null,
+            icon: const Icon(Icons.undo_rounded),
+          ),
+        ],
+      );
+
+  Widget _areaButton({
+    required String key,
+    required String title,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onPressed,
+  }) => Semantics(
+    selected: selected,
+    child: OutlinedButton.icon(
+      key: Key(key),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(48, 48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        backgroundColor: selected
+            ? LumenisTheme.of(context).surfaceRaised
+            : null,
+      ),
+      onPressed: onPressed,
+      icon: Icon(icon),
+      label: Text(_copy(context, title)),
+    ),
+  );
+
+  Widget _previewArea() {
+    final version = _controller.version;
+    final available = _canUseCurrentContext && _preview != null;
+    final canPreview = _canUseCurrentContext && version != null;
+    final theme = Theme.of(context);
+    final mediaTheme = theme.copyWith(
+      brightness: Brightness.dark,
+      colorScheme: theme.colorScheme.copyWith(
+        brightness: Brightness.dark,
+        surface: const Color(0xff181a1d),
+        onSurface: Colors.white,
+        onSurfaceVariant: Colors.white70,
+        primary: Colors.white,
+      ),
+      textTheme: theme.textTheme.apply(
+        bodyColor: Colors.white,
+        displayColor: Colors.white,
+      ),
+      iconTheme: const IconThemeData(color: Colors.white),
+    );
+    return Container(
+      key: _previewKey,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: LumenisTheme.of(context).surface,
+        border: Border.all(color: LumenisTheme.of(context).line),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '${_copy(context, 'rendered_preview')}'
+            '${canPreview ? ' · v${version.timelineVersion} · ${_seconds(version.durationSec)} s' : ''}',
+            style: theme.textTheme.labelLarge,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (available && _hasUnsavedChanges)
+            Flexible(
+              child: SingleChildScrollView(
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    _copy(context, 'previous_render'),
+                    key: const Key('media-previous-render'),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
+          Expanded(
+            flex: 4,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: ColoredBox(
+                key: const Key('media-preview-matte'),
+                color: const Color(0xff181a1d),
+                child: Theme(
+                  data: mediaTheme,
+                  child: DefaultTextStyle.merge(
+                    style: const TextStyle(color: Colors.white),
+                    child: available
+                        ? MediaPreview(
+                            file: _preview!,
+                            seekPosition: _previewSeekPosition,
+                            seekRequest: _previewSeekRequest,
+                            onPositionChanged: _onPreviewPosition,
+                          )
+                        : Center(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.all(16),
+                              child: canPreview
+                                  ? OutlinedButton.icon(
+                                      key: const Key('media-load-preview'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        side: const BorderSide(
+                                          color: Colors.white54,
+                                        ),
+                                        minimumSize: const Size(48, 48),
+                                      ),
+                                      onPressed: _isBusy
+                                          ? null
+                                          : () => _retrieve(download: false),
+                                      icon: const Icon(
+                                        Icons.play_circle_outline_rounded,
+                                      ),
+                                      label: Text(_copy(context, 'preview')),
+                                    )
+                                  : Text(_copy(context, 'preview_empty')),
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _onPreviewPosition(Duration position) {
+    final timeline = _canUseCurrentContext ? _controller.timeline : null;
+    if (!mounted ||
+        timeline == null ||
+        timeline.durationSec <= 0 ||
+        !_previewMatchesDraft) {
+      return;
+    }
+    final seconds = (position.inMicroseconds / Duration.microsecondsPerSecond)
+        .clamp(0.0, timeline.durationSec);
+    if (_timelinePlayheadSec != null &&
+        (_timelinePlayheadSec! - seconds).abs() < .03) {
+      return;
+    }
+    setState(() => _timelinePlayheadSec = seconds);
+  }
+
+  void _seekFromTimeline(double seconds) {
+    final timeline = _canUseCurrentContext ? _controller.timeline : null;
+    if (timeline == null || timeline.durationSec <= 0) return;
+    final clamped = seconds.clamp(0.0, timeline.durationSec);
+    setState(() {
+      _timelinePlayheadSec = clamped;
+      if (_previewMatchesDraft) {
+        _previewSeekPosition = Duration(
+          microseconds: (clamped * Duration.microsecondsPerSecond).round(),
+        );
+        _previewSeekRequest++;
+      }
+    });
+  }
+
+  bool get _previewMatchesDraft =>
+      _preview != null &&
+      !_controller.hasUnsavedChanges &&
+      _previewArtifact == _controller.version?.artifactId;
+
+  void _seekBy(double delta) {
+    _seekFromTimeline((_timelinePlayheadSec ?? 0) + delta);
   }
 
   Future<void> _openLayerSheet({
@@ -1121,7 +1394,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       );
 
   Future<void> _openActionsSheet() => _showLayerSheet(
-    title: _copy(context, 'actions'),
+    title: _copy(context, 'versions_export'),
     content: (setSheetState, sheetContext) => _actions(
       _canUseCurrentContext ? _controller.timeline : null,
       setSheetState: setSheetState,
@@ -1147,71 +1420,100 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       BuildContext sheetContext,
     )
     content,
-  }) => showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    sheetAnimationStyle: MediaQuery.disableAnimationsOf(context)
-        ? AnimationStyle.noAnimation
-        : null,
-    builder: (sheetContext) => AnimatedBuilder(
-      animation: _sheetUpdates,
-      builder: (context, _) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: FractionallySizedBox(
-          heightFactor: .9,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 760),
-              child: StatefulBuilder(
-                builder: (context, setSheetState) => Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                  child: Column(
-                    children: [
-                      Row(
+  }) async {
+    setState(() => _layerOpen = true);
+    try {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        sheetAnimationStyle: MediaQuery.disableAnimationsOf(context)
+            ? AnimationStyle.noAnimation
+            : null,
+        builder: (sheetContext) => AnimatedBuilder(
+          animation: _sheetUpdates,
+          builder: (context, _) => Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: FractionallySizedBox(
+              heightFactor: .9,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 760),
+                  child: StatefulBuilder(
+                    builder: (context, setSheetState) => Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                      child: Column(
                         children: [
-                          Expanded(
-                            child: Semantics(
-                              header: true,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Semantics(
+                                  header: true,
+                                  child: Text(
+                                    title,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleLarge,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                key: const Key('media-close-layer'),
+                                tooltip: _copy(context, 'close'),
+                                style: IconButton.styleFrom(
+                                  minimumSize: const Size(48, 48),
+                                ),
+                                onPressed: () =>
+                                    Navigator.of(sheetContext).pop(),
+                                icon: const Icon(Icons.close_rounded),
+                              ),
+                            ],
+                          ),
+                          if (_isBusy) ...[
+                            const LinearProgressIndicator(),
+                            Semantics(
+                              liveRegion: true,
                               child: Text(
-                                title,
-                                style: Theme.of(context).textTheme.titleLarge,
+                                _copy(context, _operationCopyKey),
+                                key: const Key('media-layer-progress'),
                               ),
                             ),
-                          ),
-                          IconButton(
-                            key: const Key('media-close-layer'),
-                            tooltip: _copy(context, 'close'),
-                            style: IconButton.styleFrom(
-                              minimumSize: const Size(48, 48),
+                          ],
+                          if ((_failure ?? _notice) case final notice?)
+                            Semantics(
+                              liveRegion: true,
+                              child: Text(
+                                _copy(context, notice),
+                                key: const Key('media-layer-notice'),
+                              ),
                             ),
-                            onPressed: () => Navigator.of(sheetContext).pop(),
-                            icon: const Icon(Icons.close_rounded),
+                          const Divider(),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              padding: EdgeInsets.only(
+                                bottom:
+                                    MediaQuery.viewInsetsOf(context).bottom +
+                                    24,
+                              ),
+                              child: content(setSheetState, sheetContext),
+                            ),
                           ),
                         ],
                       ),
-                      const Divider(),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.only(
-                            bottom:
-                                MediaQuery.viewInsetsOf(context).bottom + 24,
-                          ),
-                          child: content(setSheetState, sheetContext),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
         ),
-      ),
-    ),
-  );
+      );
+    } finally {
+      if (mounted) setState(() => _layerOpen = false);
+    }
+  }
 
   Widget _actions(
     MediaProjectSnapshot? timeline, {
@@ -1223,11 +1525,6 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: _openSavedButton('media-actions-open-saved'),
-        ),
-        const SizedBox(height: 16),
         Text(
           _copy(context, 'rights'),
           style: TextStyle(color: palette.caution),
@@ -1356,182 +1653,515 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
               ),
             ],
           ),
-          if (_retrieving) ...[
-            const LinearProgressIndicator(),
-            if (setSheetState != null) Text(_copy(context, 'saved_loading')),
-          ],
         ],
       ],
     );
   }
 
-  Widget _sources(MediaProjectSnapshot? timeline, {VoidCallback? onChoose}) =>
-      _pane(
-        context,
-        'sources',
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            OutlinedButton.icon(
-              key: const Key('media-import'),
-              onPressed:
-                  _controller.busy ||
-                      _choosing ||
-                      !_canUseCurrentContext ||
-                      _controller.needsOriginalFiles
-                  ? null
-                  : (onChoose ?? _choose),
-              icon: const Icon(Icons.add),
-              label: Text(_copy(context, 'choose')),
-            ),
-            if (timeline == null)
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Text(_copy(context, 'empty')),
-              ),
-            for (final asset in timeline?.assets ?? <MediaProjectAsset>[])
-              Padding(
-                padding: const EdgeInsets.only(top: 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      asset.filename,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text('${_seconds(asset.durationSec)} s'),
-                    TextButton.icon(
-                      onPressed: () => _add(asset),
-                      icon: Icon(
-                        asset.hasVideo
-                            ? Icons.video_collection_outlined
-                            : Icons.audio_file_outlined,
-                      ),
-                      label: Text(_copy(context, 'add')),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      );
-
-  Widget _timeline(MediaProjectSnapshot? timeline) => _pane(
+  Widget _sources(
+    MediaProjectSnapshot? timeline, {
+    VoidCallback? onChoose,
+  }) => _pane(
     context,
-    'timeline',
-    LayoutBuilder(
-      builder: (context, constraints) {
-        if (timeline == null || timeline.durationSec <= 0) {
-          return Padding(
-            padding: const EdgeInsets.all(20),
+    'sources',
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        OutlinedButton.icon(
+          key: const Key('media-import'),
+          onPressed:
+              _controller.busy ||
+                  _choosing ||
+                  !_canUseCurrentContext ||
+                  _controller.needsOriginalFiles
+              ? null
+              : (onChoose ?? _choose),
+          icon: const Icon(Icons.add),
+          label: Text(_copy(context, 'choose')),
+        ),
+        if (timeline == null)
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
             child: Text(_copy(context, 'empty')),
-          );
-        }
-        final width = math.max(
-          constraints.maxWidth,
-          math.min(20000.0, math.max(800.0, timeline.durationSec * 36)),
-        );
-        final scale = width / timeline.durationSec;
-        return Scrollbar(
-          controller: _timelineScroll,
-          thumbVisibility: true,
-          child: SingleChildScrollView(
-            key: const Key('media-timeline-scroll'),
-            controller: _timelineScroll,
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: width + 16,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    height: 28,
-                    child: Stack(
-                      children: [
-                        for (var tick = 0; tick < 8; tick++)
-                          Positioned(
-                            left: tick * width / 8,
+          ),
+        for (final asset in timeline?.assets ?? <MediaProjectAsset>[])
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: LumenisTheme.of(context).line),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  asset.hasVideo
+                      ? Icons.movie_outlined
+                      : Icons.audio_file_outlined,
+                  size: 20,
+                  color: LumenisTheme.of(context).muted,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        asset.filename,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      Text(
+                        '${_seconds(asset.durationSec)} s',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  constraints: const BoxConstraints(
+                    minWidth: 48,
+                    minHeight: 48,
+                  ),
+                  tooltip: '${_copy(context, 'add')} · ${asset.filename}',
+                  onPressed: _isBusy ? null : () => _add(asset),
+                  icon: const Icon(Icons.add_rounded),
+                ),
+              ],
+            ),
+          ),
+      ],
+    ),
+  );
+
+  Widget _timeline(MediaProjectSnapshot? timeline) {
+    final palette = LumenisTheme.of(context);
+    final textSize = MediaQuery.textScalerOf(context).scale(14);
+    final rowHeight = math.max(72.0, textSize * 3 + 20);
+    final rulerHeight = math.max(28.0, textSize + 10);
+    final tracks = timeline?.tracks ?? <MediaProjectTrack>[];
+    final overlays = timeline?.overlays ?? <MediaProjectOverlay>[];
+    return Material(
+      color: palette.surface,
+      shape: Border(top: BorderSide(color: palette.line)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: 48,
+            child: Row(
+              children: [
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '${_copy(context, 'timeline')}'
+                    '${timeline == null ? '' : ' · ${_seconds(timeline.durationSec)} s'}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+                IconButton(
+                  key: const Key('media-timeline-smaller'),
+                  tooltip: _copy(context, 'preview_size'),
+                  onPressed: _timelineFraction <= .28
+                      ? null
+                      : () => setState(() {
+                          _timelineFraction = (_timelineFraction - .1).clamp(
+                            .28,
+                            .58,
+                          );
+                        }),
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                ),
+                IconButton(
+                  key: const Key('media-timeline-larger'),
+                  tooltip: _copy(context, 'timeline_size'),
+                  onPressed: _timelineFraction >= .58
+                      ? null
+                      : () => setState(() {
+                          _timelineFraction = (_timelineFraction + .1).clamp(
+                            .28,
+                            .58,
+                          );
+                        }),
+                  icon: const Icon(Icons.keyboard_arrow_up_rounded),
+                ),
+                if (timeline != null &&
+                    tracks.any((track) => track.clips.isNotEmpty))
+                  PopupMenuButton<String>(
+                    key: const Key('media-clip-list'),
+                    tooltip: _copy(context, 'select'),
+                    icon: const Icon(Icons.view_list_outlined),
+                    onSelected: _controller.selectClip,
+                    itemBuilder: (_) => [
+                      for (final track in tracks)
+                        for (final clip in track.clips)
+                          PopupMenuItem(
+                            value: clip.clipId,
                             child: Text(
-                              '${_seconds(timeline.durationSec * tick / 8)} s',
-                              style: Theme.of(context).textTheme.labelSmall,
+                              '${timeline.assets.firstWhere((a) => a.assetId == clip.mediaAssetId).filename} · ${_seconds(clip.timelineStart)} s',
                             ),
                           ),
-                      ],
-                    ),
+                    ],
                   ),
-                  for (final track in timeline.tracks) ...[
-                    Text(_copy(context, track.kind)),
-                    SizedBox(
-                      height: 68,
-                      child: Stack(
-                        children: [
-                          for (final clip in track.clips)
-                            Positioned(
-                              left: clip.timelineStart * scale,
-                              width: math.max(48, clip.durationSec * scale - 3),
-                              top: 4,
-                              child: Semantics(
-                                selected:
-                                    clip.clipId == _controller.selectedClipId,
-                                child: OutlinedButton(
-                                  style: OutlinedButton.styleFrom(
-                                    backgroundColor:
-                                        clip.clipId ==
-                                            _controller.selectedClipId
-                                        ? LumenisTheme.of(context).surfaceRaised
-                                        : null,
-                                    minimumSize: const Size(48, 48),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
+                PopupMenuButton<double>(
+                  key: const Key('media-timeline-zoom'),
+                  tooltip: _copy(context, 'timeline_zoom'),
+                  onSelected: (value) => setState(() => _timelineZoom = value),
+                  initialValue: _timelineZoom,
+                  icon: const Icon(Icons.zoom_in_rounded),
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 0,
+                      child: Text(_copy(context, 'timeline_fit')),
+                    ),
+                    for (final zoom in [1.0, 2.0, 4.0, 8.0])
+                      PopupMenuItem(
+                        value: zoom,
+                        child: Text('${(zoom * 100).round()}%'),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: palette.line),
+          Expanded(
+            child: timeline == null || timeline.durationSec <= 0
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(_copy(context, 'empty')),
+                    ),
+                  )
+                : SingleChildScrollView(
+                    key: const Key('media-track-scroll'),
+                    child: LayoutBuilder(
+                      builder: (context, area) {
+                        final labelWidth = area.maxWidth < 500 ? 76.0 : 128.0;
+                        final viewport = math.max(
+                          1.0,
+                          area.maxWidth - labelWidth,
+                        );
+                        final baseWidth = math.max(
+                          800.0,
+                          math.min(20000.0, timeline.durationSec * 36),
+                        );
+                        final width = _timelineZoom == 0
+                            ? viewport
+                            : math.max(viewport, baseWidth * _timelineZoom);
+                        final scale = width / timeline.durationSec;
+                        // Use readable time steps while keeping clip geometry exact.
+                        final minimumStep = 110 * (textSize / 14) / scale;
+                        final magnitude = math
+                            .pow(
+                              10,
+                              (math.log(minimumStep) / math.ln10).floor(),
+                            )
+                            .toDouble();
+                        final interval = [1, 2, 5, 10]
+                            .map((step) => step * magnitude)
+                            .firstWhere((step) => step >= minimumStep);
+                        final divisions = (timeline.durationSec / interval)
+                            .ceil();
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              key: const Key('media-track-labels'),
+                              width: labelWidth,
+                              child: Column(
+                                children: [
+                                  SizedBox(height: rulerHeight),
+                                  for (final track in tracks)
+                                    Container(
+                                      height: rowHeight,
+                                      alignment: Alignment.centerLeft,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: palette.surfaceRaised,
+                                        border: Border(
+                                          top: BorderSide(color: palette.line),
+                                          right: BorderSide(
+                                            color: palette.line,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        _copy(context, track.kind),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.labelMedium,
+                                      ),
                                     ),
-                                  ),
-                                  onPressed: () =>
-                                      _controller.selectClip(clip.clipId),
-                                  child: Text(
-                                    '${timeline.assets.firstWhere((a) => a.assetId == clip.mediaAssetId).filename}\n${_seconds(clip.sourceIn)}–${_seconds(clip.sourceOut)} s',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: Scrollbar(
+                                controller: _timelineScroll,
+                                thumbVisibility: true,
+                                child: SingleChildScrollView(
+                                  key: const Key('media-timeline-scroll'),
+                                  controller: _timelineScroll,
+                                  scrollDirection: Axis.horizontal,
+                                  child: SizedBox(
+                                    width: width,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        Builder(
+                                          builder: (context) {
+                                            final playhead =
+                                                (_timelinePlayheadSec ?? 0.0)
+                                                    .clamp(
+                                                      0.0,
+                                                      timeline.durationSec,
+                                                    );
+                                            final earlier = (playhead - 1)
+                                                .clamp(
+                                                  0.0,
+                                                  timeline.durationSec,
+                                                );
+                                            final later = (playhead + 1).clamp(
+                                              0.0,
+                                              timeline.durationSec,
+                                            );
+                                            return SizedBox(
+                                              height: rulerHeight,
+                                              child: Semantics(
+                                                label: _copy(
+                                                  context,
+                                                  'player.seek',
+                                                ),
+                                                value: _seconds(playhead),
+                                                increasedValue: _seconds(later),
+                                                decreasedValue: _seconds(
+                                                  earlier,
+                                                ),
+                                                onIncrease: () => _seekBy(1),
+                                                onDecrease: () => _seekBy(-1),
+                                                child: GestureDetector(
+                                                  key: const Key(
+                                                    'media-timeline-ruler',
+                                                  ),
+                                                  behavior:
+                                                      HitTestBehavior.opaque,
+                                                  onTapDown: (details) =>
+                                                      _seekFromTimeline(
+                                                        (details
+                                                                    .localPosition
+                                                                    .dx -
+                                                                4) /
+                                                            scale,
+                                                      ),
+                                                  child: Stack(
+                                                    children: [
+                                                      for (
+                                                        var tick = 0;
+                                                        tick < divisions;
+                                                        tick++
+                                                      )
+                                                        Positioned(
+                                                          left:
+                                                              tick *
+                                                                  interval *
+                                                                  scale +
+                                                              4,
+                                                          top: 4,
+                                                          child: Text(
+                                                            '${_seconds(tick * interval)} s',
+                                                            style: Theme.of(context)
+                                                                .textTheme
+                                                                .labelSmall
+                                                                ?.copyWith(
+                                                                  fontFeatures:
+                                                                      const [
+                                                                        FontFeature.tabularFigures(),
+                                                                      ],
+                                                                ),
+                                                          ),
+                                                        ),
+                                                      if (_timelinePlayheadSec !=
+                                                          null)
+                                                        Positioned(
+                                                          left:
+                                                              _timelinePlayheadSec! *
+                                                              scale,
+                                                          top: 0,
+                                                          bottom: 0,
+                                                          child: Container(
+                                                            width: 2,
+                                                            color:
+                                                                palette.accent,
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                        for (final track in tracks)
+                                          Container(
+                                            height: rowHeight,
+                                            decoration: BoxDecoration(
+                                              color: palette.canvas,
+                                              border: Border(
+                                                top: BorderSide(
+                                                  color: palette.line,
+                                                ),
+                                              ),
+                                            ),
+                                            child: Stack(
+                                              children: [
+                                                for (
+                                                  var tick = 0;
+                                                  tick < divisions;
+                                                  tick++
+                                                )
+                                                  Positioned(
+                                                    left:
+                                                        tick * interval * scale,
+                                                    top: 0,
+                                                    bottom: 0,
+                                                    child: Container(
+                                                      width: 1,
+                                                      color: palette.line,
+                                                    ),
+                                                  ),
+                                                if (_timelinePlayheadSec !=
+                                                    null)
+                                                  Positioned(
+                                                    left:
+                                                        _timelinePlayheadSec! *
+                                                        scale,
+                                                    top: 0,
+                                                    bottom: 0,
+                                                    child: Container(
+                                                      width: 2,
+                                                      color: palette.accent,
+                                                    ),
+                                                  ),
+                                                for (final clip in track.clips)
+                                                  Positioned(
+                                                    left:
+                                                        clip.timelineStart *
+                                                        scale,
+                                                    width:
+                                                        clip.durationSec *
+                                                        scale,
+                                                    top: 6,
+                                                    bottom: 6,
+                                                    child: _timelineClip(
+                                                      timeline,
+                                                      clip,
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        for (final overlay in overlays)
+                                          Padding(
+                                            padding: const EdgeInsets.all(8),
+                                            child: Text(
+                                              '${_seconds(overlay.startSec)}–${_seconds(overlay.endSec)} s · ${overlay.text}',
+                                            ),
+                                          ),
+                                        const SizedBox(height: 12),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                        ],
-                      ),
+                          ],
+                        );
+                      },
                     ),
-                  ],
-                  for (final overlay in timeline.overlays)
-                    Text(
-                      '${_seconds(overlay.startSec)}–${_seconds(overlay.endSec)} s · ${overlay.text}',
-                    ),
-                  const SizedBox(height: 12),
-                ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _timelineClip(MediaProjectSnapshot timeline, MediaProjectClip clip) {
+    final palette = LumenisTheme.of(context);
+    final selected = clip.clipId == _controller.selectedClipId;
+    final asset = timeline.assets.firstWhere(
+      (a) => a.assetId == clip.mediaAssetId,
+    );
+    final label =
+        '${asset.filename}\n${_seconds(clip.sourceIn)}–${_seconds(clip.sourceOut)} s';
+    return Padding(
+      padding: const EdgeInsets.only(right: 2),
+      child: Semantics(
+        selected: selected,
+        child: Tooltip(
+          message: label,
+          child: OutlinedButton(
+            key: ValueKey('media-clip-${clip.clipId}'),
+            style: OutlinedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(3),
               ),
+              backgroundColor: selected
+                  ? palette.surfaceRaised
+                  : palette.surface,
+              foregroundColor: palette.foreground,
+              side: BorderSide(
+                color: selected ? palette.foreground : palette.line,
+                width: selected ? 2 : 1,
+              ),
+              minimumSize: const Size(0, 48),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              alignment: Alignment.centerLeft,
+            ),
+            onPressed: () => _controller.selectClip(clip.clipId),
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium,
             ),
           ),
-        );
-      },
-    ),
-  );
+        ),
+      ),
+    );
+  }
 }
 
-Widget _pane(BuildContext context, String title, Widget child) => Container(
-  padding: const EdgeInsets.all(16),
-  decoration: BoxDecoration(
-    color: LumenisTheme.of(context).surface,
-    border: Border.all(color: LumenisTheme.of(context).line),
-    borderRadius: BorderRadius.circular(12),
+Widget _pane(BuildContext context, String title, Widget child) => Material(
+  color: LumenisTheme.of(context).surface,
+  shape: RoundedRectangleBorder(
+    side: BorderSide(color: LumenisTheme.of(context).line),
+    borderRadius: BorderRadius.circular(4),
   ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Text(
-        _copy(context, title),
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
-      const SizedBox(height: 12),
-      child,
-    ],
+  clipBehavior: Clip.antiAlias,
+  child: Padding(
+    padding: const EdgeInsets.all(12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          _copy(context, title),
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
+        const SizedBox(height: 12),
+        child,
+      ],
+    ),
   ),
 );
 
@@ -1681,7 +2311,7 @@ class _ClipInspector extends StatefulWidget {
   });
   final MediaProjectSnapshot? timeline;
   final MediaProjectClip? clip;
-  final void Function(MediaProjectSnapshot Function(MediaProjectSnapshot))
+  final bool Function(MediaProjectSnapshot Function(MediaProjectSnapshot))
   onEdit;
   final _ClipInspectorDraft? draft;
   final void Function(String clipId, _ClipInspectorDraft? draft) onDraftChanged;
@@ -1690,6 +2320,7 @@ class _ClipInspector extends StatefulWidget {
 }
 
 class _ClipInspectorState extends State<_ClipInspector> {
+  bool _invalid = false;
   final _fields = {
     for (final name in [
       'source_in',
@@ -1712,7 +2343,10 @@ class _ClipInspectorState extends State<_ClipInspector> {
   @override
   void didUpdateWidget(covariant _ClipInspector oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.clip, widget.clip)) _sync();
+    if (!identical(oldWidget.clip, widget.clip)) {
+      _invalid = false;
+      _sync();
+    }
   }
 
   void _sync() {
@@ -1766,6 +2400,21 @@ class _ClipInspectorState extends State<_ClipInspector> {
   double _value(String name) =>
       double.tryParse(_fields[name]!.text) ?? double.nan;
 
+  bool get _hasClipFieldChanges {
+    final clip = widget.clip;
+    if (clip == null) return false;
+    final expected = {
+      'source_in': clip.sourceIn,
+      'source_out': clip.sourceOut,
+      'position': clip.timelineStart,
+      'gain': clip.audioMix.volume,
+      'fade_in': clip.audioMix.fadeInSec,
+      'fade_out': clip.audioMix.fadeOutSec,
+    };
+    return expected.entries.any((entry) => _value(entry.key) != entry.value) ||
+        _stream != (clip.audioRole == 'muted' ? -1 : clip.audioStreamIndex);
+  }
+
   @override
   Widget build(BuildContext context) {
     final clip = widget.clip;
@@ -1781,50 +2430,69 @@ class _ClipInspectorState extends State<_ClipInspector> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(asset.filename, maxLines: 3, overflow: TextOverflow.ellipsis),
-        for (final name in [
-          'source_in',
-          'source_out',
-          if (!video) 'position',
-          'gain',
-          'fade_in',
-          'fade_out',
-        ])
+        for (final name in ['source_in', 'source_out', if (!video) 'position'])
           _numberField(
             context,
             name,
             _fields[name]!,
             onChanged: (_) => _saveDraft(),
           ),
-        if (asset.audioStreamCount > 0)
-          DropdownButtonFormField<int>(
-            key: ValueKey(
-              '${clip.clipId}-${clip.audioRole}-${clip.audioStreamIndex}',
-            ),
-            initialValue: _stream,
-            decoration: InputDecoration(labelText: _copy(context, 'stream')),
-            items: [
-              if (video)
-                DropdownMenuItem(
-                  value: -1,
-                  child: Text(_copy(context, 'muted')),
-                ),
-              ...List.generate(
-                asset.audioStreamCount,
-                (i) => DropdownMenuItem(
-                  value: i,
-                  child: Text('${_copy(context, 'stream')} ${i + 1}'),
-                ),
+        ExpansionTile(
+          key: const Key('media-sound-settings'),
+          maintainState: true,
+          tilePadding: EdgeInsets.zero,
+          title: Text(_copy(context, 'sound_settings')),
+          children: [
+            for (final name in ['gain', 'fade_in', 'fade_out'])
+              _numberField(
+                context,
+                name,
+                _fields[name]!,
+                onChanged: (_) => _saveDraft(),
               ),
-            ],
-            onChanged: (value) {
-              setState(() => _stream = value);
-              _saveDraft();
-            },
+            if (asset.audioStreamCount > 0)
+              DropdownButtonFormField<int>(
+                key: ValueKey(
+                  '${clip.clipId}-${clip.audioRole}-${clip.audioStreamIndex}',
+                ),
+                initialValue: _stream,
+                decoration: InputDecoration(
+                  labelText: _copy(context, 'stream'),
+                ),
+                items: [
+                  if (video)
+                    DropdownMenuItem(
+                      value: -1,
+                      child: Text(_copy(context, 'muted')),
+                    ),
+                  ...List.generate(
+                    asset.audioStreamCount,
+                    (i) => DropdownMenuItem(
+                      value: i,
+                      child: Text('${_copy(context, 'stream')} ${i + 1}'),
+                    ),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() => _stream = value);
+                  _saveDraft();
+                },
+              ),
+          ],
+        ),
+        if (_invalid)
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              _copy(context, 'invalid'),
+              key: const Key('media-inspector-invalid'),
+            ),
           ),
         const SizedBox(height: 12),
         FilledButton(
+          style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
           onPressed: () {
-            widget.onEdit(
+            final applied = widget.onEdit(
               (s) => s.adjustClip(
                 clip.clipId,
                 sourceIn: _value('source_in'),
@@ -1842,57 +2510,81 @@ class _ClipInspectorState extends State<_ClipInspector> {
                 audioStreamIndex: _stream == -1 ? null : _stream,
               ),
             );
-            widget.onDraftChanged(clip.clipId, null);
+            setState(() => _invalid = !applied);
+            if (applied) widget.onDraftChanged(clip.clipId, null);
           },
           child: Text(_copy(context, 'apply')),
         ),
-        _numberField(
-          context,
-          'split_position',
-          _fields['split_position']!,
-          onChanged: (_) => _saveDraft(),
-        ),
-        OutlinedButton(
-          onPressed: () => widget.onEdit(
-            (s) => s.splitClip(clip.clipId, atSec: _value('split_position')),
-          ),
-          child: Text(_copy(context, 'split')),
-        ),
-        if (video)
-          Wrap(
-            spacing: 8,
-            children: [
-              TextButton(
-                onPressed: index == 0
-                    ? null
-                    : () => widget.onEdit(
-                        (s) => s.reorderVideoClip(
-                          clip.clipId,
-                          newIndex: index - 1,
-                        ),
-                      ),
-                child: Text(_copy(context, 'earlier')),
+        ExpansionTile(
+          key: const Key('media-clip-operations'),
+          maintainState: true,
+          tilePadding: EdgeInsets.zero,
+          title: Text(_copy(context, 'clip_operations')),
+          children: [
+            _numberField(
+              context,
+              'split_position',
+              _fields['split_position']!,
+              onChanged: (_) => _saveDraft(),
+            ),
+            if (_hasClipFieldChanges)
+              Text(
+                _copy(context, 'apply_before_split'),
+                key: const Key('media-apply-before-split'),
               ),
-              TextButton(
-                onPressed: index == track.clips.length - 1
-                    ? null
-                    : () => widget.onEdit(
-                        (s) => s.reorderVideoClip(
+            OutlinedButton(
+              key: const Key('media-split-clip'),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+              onPressed: _hasClipFieldChanges
+                  ? null
+                  : () {
+                      final applied = widget.onEdit(
+                        (s) => s.splitClip(
                           clip.clipId,
-                          newIndex: index + 1,
+                          atSec: _value('split_position'),
                         ),
-                      ),
-                child: Text(_copy(context, 'later')),
+                      );
+                      if (!applied) setState(() => _invalid = true);
+                    },
+              child: Text(_copy(context, 'split')),
+            ),
+            if (video)
+              Wrap(
+                spacing: 8,
+                children: [
+                  TextButton(
+                    onPressed: index == 0
+                        ? null
+                        : () => widget.onEdit(
+                            (s) => s.reorderVideoClip(
+                              clip.clipId,
+                              newIndex: index - 1,
+                            ),
+                          ),
+                    child: Text(_copy(context, 'earlier')),
+                  ),
+                  TextButton(
+                    onPressed: index == track.clips.length - 1
+                        ? null
+                        : () => widget.onEdit(
+                            (s) => s.reorderVideoClip(
+                              clip.clipId,
+                              newIndex: index + 1,
+                            ),
+                          ),
+                    child: Text(_copy(context, 'later')),
+                  ),
+                ],
               ),
-            ],
-          ),
-        TextButton(
-          onPressed: () => widget.onEdit(
-            (s) => video
-                ? s.deleteVideoClip(clip.clipId)
-                : s.deleteAudioClip(clip.clipId),
-          ),
-          child: Text(_copy(context, 'delete')),
+            TextButton(
+              onPressed: () => widget.onEdit(
+                (s) => video
+                    ? s.deleteVideoClip(clip.clipId)
+                    : s.deleteAudioClip(clip.clipId),
+              ),
+              child: Text(_copy(context, 'delete')),
+            ),
+          ],
         ),
       ],
     );

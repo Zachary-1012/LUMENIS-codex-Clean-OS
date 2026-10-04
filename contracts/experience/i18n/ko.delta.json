@@ -778,6 +778,27 @@
   "sh01.media.saved_refresh": "다시 불러오기",
   "sh01.media.saved_more": "계속 찾기",
   "sh01.media.saved_video": "동영상",
-  "sh01.media.saved_audio": "오디오"
+  "sh01.media.saved_audio": "오디오",
+  "sh01.media.player.loading": "재생 준비 중…",
+  "sh01.media.player.play": "재생",
+  "sh01.media.player.pause": "일시 정지",
+  "sh01.media.player.replay": "다시 재생",
+  "sh01.media.player.mute": "음소거",
+  "sh01.media.player.unmute": "음소거 해제",
+  "sh01.media.player.seek": "재생 위치",
+  "sh01.media.player.failure": "이 버전을 재생할 수 없습니다. 다시 시도하거나 다운로드하여 확인하세요.",
+  "sh01.media.player.retry": "재생 다시 시도",
+  "sh01.media.player.releasing": "이전 재생을 종료하는 중…",
+  "sh01.media.player.cleanup_failure": "임시 재생 파일을 삭제하지 못했습니다. 재생을 종료한 후 다시 시도하세요.",
+  "sh01.media.rendered_preview": "내보낸 영상",
+  "sh01.media.previous_render": "이전에 내보낸 영상입니다. 초안 변경 사항을 보려면 새 버전을 내보내세요.",
+  "sh01.media.versions_export": "버전 및 내보내기",
+  "sh01.media.sound_settings": "사운드",
+  "sh01.media.clip_operations": "클립 작업",
+  "sh01.media.apply_before_split": "현재 변경 사항을 적용한 후 클립을 분할하세요.",
+  "sh01.media.timeline_zoom": "타임라인 확대/축소",
+  "sh01.media.timeline_fit": "시퀀스에 맞추기",
+  "sh01.media.timeline_size": "타임라인 영역 크기",
+  "sh01.media.preview_size": "미리보기 영역 크기"
  }
 }

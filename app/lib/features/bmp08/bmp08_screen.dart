@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
+import '../../navigation/lumenis_leave_guard.dart';
 import 'bmp08_repository.dart';
 import 'bmp08_snapshot.dart';
 import 'bmp08_view_model.dart';
@@ -82,11 +83,78 @@ class _PodcastStudio extends StatefulWidget {
 
 enum _MobileStudioTask { script, materials, audio, properties }
 
+enum _DesktopStudioTask { script, audio }
+
 class _PodcastStudioState extends State<_PodcastStudio> {
   int _selectedSection = 0;
+  int _refreshGeneration = 0;
   int _selectedMaterial = 0;
   _MobileStudioTask _mobileTask = _MobileStudioTask.script;
+  _DesktopStudioTask _desktopTask = _DesktopStudioTask.script;
   final Map<int, String> _localDrafts = <int, String>{};
+  LumenisLeaveGuard? _leaveGuard;
+
+  bool get _hasLocalDraft =>
+      _localDrafts.values.any((value) => value.isNotEmpty);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final guard = LumenisLeaveScope.maybeOf(context);
+    if (identical(guard, _leaveGuard)) return;
+    _leaveGuard?.unregister(this);
+    _leaveGuard = guard;
+    guard?.register(
+      this,
+      needsProtection: () => _hasLocalDraft,
+      requestLeave: () => _confirmDiscard(leaving: true),
+    );
+  }
+
+  @override
+  void dispose() {
+    _leaveGuard?.unregister(this);
+    super.dispose();
+  }
+
+  Future<bool> _confirmDiscard({bool leaving = false}) async {
+    if (_hasLocalDraft) {
+      final copy = _Bmp08Copy.of(context);
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(leaving ? copy.leaveDraftTitle : copy.discardDraftTitle),
+          content: Text(copy.discardDraftDetail),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(context.lumenisL10n.text('common.cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(
+                leaving ? copy.leaveDraftConfirm : copy.discardDraftConfirm,
+              ),
+            ),
+          ],
+        ),
+      );
+      return mounted && confirmed == true;
+    }
+    return true;
+  }
+
+  Future<void> _refresh() async {
+    if (!await _confirmDiscard() || !mounted) return;
+    setState(() {
+      _localDrafts.clear();
+      _selectedSection = 0;
+      _selectedMaterial = 0;
+      _refreshGeneration++;
+    });
+    _leaveGuard?.refresh();
+    widget.onRefresh();
+  }
 
   Bmp08Snapshot _safeSnapshot(Bmp08Snapshot source) {
     if (source.scopeApproved) return source;
@@ -114,84 +182,106 @@ class _PodcastStudioState extends State<_PodcastStudio> {
     final snapshot = _safeSnapshot(widget.snapshot);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 980;
-        final padding = constraints.maxWidth >= 800 ? 32.0 : 18.0;
+        final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final wide = constraints.maxWidth >= 1100 && textScale < 1.5;
         final selectedSection = snapshot.outline.isEmpty
             ? null
             : _selectedSection.clamp(0, snapshot.outline.length - 1).toInt();
         final selectedMaterial = snapshot.materials.isEmpty
             ? null
             : _selectedMaterial.clamp(0, snapshot.materials.length - 1).toInt();
-        return Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1340),
-            child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(padding, 20, padding, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _Header(copy: copy, onRefresh: widget.onRefresh),
-                  const SizedBox(height: 14),
-                  _StudioContext(snapshot: snapshot, copy: copy),
-                  if (!snapshot.scopeApproved) ...[
-                    const SizedBox(height: 12),
-                    _Gate(copy: copy),
-                  ],
-                  const SizedBox(height: 14),
-                  _ActionRail(
-                    copy: copy,
-                    state: widget.actionState,
-                    actionId: widget.actionId,
-                    onAction: widget.onAction,
-                  ),
-                  const SizedBox(height: 14),
-                  if (wide) ...[
-                    _DesktopStudio(
-                      snapshot: snapshot,
-                      copy: copy,
-                      selectedSection: selectedSection,
-                      selectedMaterial: selectedMaterial,
-                      localDraft: selectedSection == null
-                          ? ''
-                          : _localDrafts[selectedSection] ?? '',
-                      onSectionSelected: (index) =>
-                          setState(() => _selectedSection = index),
-                      onMaterialSelected: (index) =>
-                          setState(() => _selectedMaterial = index),
-                      onDraftChanged: (value) {
-                        if (selectedSection != null) {
-                          setState(() => _localDrafts[selectedSection] = value);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    _AudioStage(snapshot: snapshot, copy: copy),
-                  ] else
-                    _MobileStudio(
-                      snapshot: snapshot,
-                      copy: copy,
-                      task: _mobileTask,
-                      selectedSection: selectedSection,
-                      selectedMaterial: selectedMaterial,
-                      localDraft: selectedSection == null
-                          ? ''
-                          : _localDrafts[selectedSection] ?? '',
-                      onTaskChanged: (task) =>
-                          setState(() => _mobileTask = task),
-                      onSectionSelected: (index) =>
-                          setState(() => _selectedSection = index),
-                      onMaterialSelected: (index) =>
-                          setState(() => _selectedMaterial = index),
-                      onDraftChanged: (value) {
-                        if (selectedSection != null) {
-                          setState(() => _localDrafts[selectedSection] = value);
-                        }
-                      },
-                    ),
-                ],
-              ),
+        final localDraft = selectedSection == null
+            ? ''
+            : _localDrafts[selectedSection] ?? '';
+        void selectSection(int index) =>
+            setState(() => _selectedSection = index);
+        void selectMaterial(int index) =>
+            setState(() => _selectedMaterial = index);
+        void editDraft(String value) {
+          if (selectedSection != null) {
+            setState(() => _localDrafts[selectedSection] = value);
+            _leaveGuard?.refresh();
+          }
+        }
+
+        final workspace = KeyedSubtree(
+          key: ValueKey(_refreshGeneration),
+          child: wide
+              ? _DesktopStudio(
+                  snapshot: snapshot,
+                  copy: copy,
+                  task: _desktopTask,
+                  onTaskChanged: (task) => setState(() => _desktopTask = task),
+                  selectedSection: selectedSection,
+                  selectedMaterial: selectedMaterial,
+                  localDraft: localDraft,
+                  onSectionSelected: selectSection,
+                  onMaterialSelected: selectMaterial,
+                  onDraftChanged: editDraft,
+                )
+              : _MobileStudio(
+                  snapshot: snapshot,
+                  copy: copy,
+                  task: _mobileTask,
+                  selectedSection: selectedSection,
+                  selectedMaterial: selectedMaterial,
+                  localDraft: localDraft,
+                  onTaskChanged: (task) => setState(() => _mobileTask = task),
+                  onSectionSelected: selectSection,
+                  onMaterialSelected: selectMaterial,
+                  onDraftChanged: editDraft,
+                ),
+        );
+        final header = <Widget>[
+          _Header(copy: copy, onRefresh: _refresh),
+          _StudioContext(snapshot: snapshot, copy: copy),
+          if (!snapshot.scopeApproved) ...[
+            const SizedBox(height: 8),
+            _Gate(copy: copy),
+          ],
+          const SizedBox(height: 8),
+        ];
+        final actions = _ActionRail(
+          copy: copy,
+          state: widget.actionState,
+          actionId: widget.actionId,
+          onAction: widget.onAction,
+        );
+        // Enlarged text and short windows use natural header/action heights.
+        // The active editor still has its own bounded, scrollable work region.
+        if (textScale >= 1.5 ||
+            !constraints.hasBoundedHeight ||
+            constraints.maxHeight < (snapshot.scopeApproved ? 600 : 710)) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ...header,
+                SizedBox(height: 440 * textScale, child: workspace),
+                const SizedBox(height: 8),
+                actions,
+              ],
             ),
+          );
+        }
+        return Padding(
+          padding: EdgeInsets.all(wide ? 12 : 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ...header,
+              Expanded(child: workspace),
+              const SizedBox(height: 8),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: 125 * textScale),
+                child: SingleChildScrollView(
+                  key: const ValueKey('podcast-actions-scroll'),
+                  primary: false,
+                  child: actions,
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -210,25 +300,18 @@ class _Header extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Tooltip(
+            message: copy.subtitle,
+            child: Text(
               context.lumenisL10n.text('screen.BMP-08'),
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: LumenisTheme.of(context).foreground,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              copy.subtitle,
-              style: TextStyle(
-                color: LumenisTheme.of(context).muted,
-                height: 1.5,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
       IconButton(
@@ -244,6 +327,8 @@ class _DesktopStudio extends StatelessWidget {
   const _DesktopStudio({
     required this.snapshot,
     required this.copy,
+    required this.task,
+    required this.onTaskChanged,
     required this.selectedSection,
     required this.selectedMaterial,
     required this.localDraft,
@@ -254,6 +339,8 @@ class _DesktopStudio extends StatelessWidget {
 
   final Bmp08Snapshot snapshot;
   final _Bmp08Copy copy;
+  final _DesktopStudioTask task;
+  final ValueChanged<_DesktopStudioTask> onTaskChanged;
   final int? selectedSection;
   final int? selectedMaterial;
   final String localDraft;
@@ -262,42 +349,111 @@ class _DesktopStudio extends StatelessWidget {
   final ValueChanged<String> onDraftChanged;
 
   @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      SizedBox(
-        width: 188,
-        child: _MaterialsSectionsRail(
-          snapshot: snapshot,
-          copy: copy,
-          selectedSection: selectedSection,
-          selectedMaterial: selectedMaterial,
-          onSectionSelected: onSectionSelected,
-          onMaterialSelected: onMaterialSelected,
-        ),
+      Row(
+        children: [
+          for (final option in _DesktopStudioTask.values)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                key: ValueKey('podcast-${option.name}-view'),
+                selected: task == option,
+                label: Text(
+                  copy.mobilePane(
+                    option == _DesktopStudioTask.script
+                        ? _MobileStudioTask.script
+                        : _MobileStudioTask.audio,
+                  ),
+                ),
+                onSelected: (_) => onTaskChanged(option),
+              ),
+            ),
+          if (selectedSection != null)
+            Expanded(
+              child: Text(
+                '${snapshot.outline[selectedSection!].timecode}  '
+                '${snapshot.outline[selectedSection!].title}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+        ],
       ),
-      const SizedBox(width: 12),
+      const SizedBox(height: 8),
       Expanded(
-        child: _ScriptPanel(
-          snapshot: snapshot,
-          copy: copy,
-          selectedSection: selectedSection,
-          localDraft: localDraft,
-          onSectionSelected: onSectionSelected,
-          onDraftChanged: onDraftChanged,
-        ),
-      ),
-      const SizedBox(width: 12),
-      SizedBox(
-        width: 248,
-        child: _PropertiesPanel(
-          snapshot: snapshot,
-          copy: copy,
-          selectedSection: selectedSection,
-          selectedMaterial: selectedMaterial,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: 230,
+              child: _StudioScrollPane(
+                paneKey: 'podcast-materials-pane',
+                child: _MaterialsSectionsRail(
+                  snapshot: snapshot,
+                  copy: copy,
+                  selectedSection: selectedSection,
+                  selectedMaterial: selectedMaterial,
+                  onSectionSelected: onSectionSelected,
+                  onMaterialSelected: onMaterialSelected,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _StudioScrollPane(
+                paneKey: 'podcast-active-pane',
+                child: task == _DesktopStudioTask.script
+                    ? _ScriptPanel(
+                        snapshot: snapshot,
+                        copy: copy,
+                        selectedSection: selectedSection,
+                        localDraft: localDraft,
+                        onSectionSelected: onSectionSelected,
+                        onDraftChanged: onDraftChanged,
+                        selectedOnly: true,
+                      )
+                    : _AudioStage(snapshot: snapshot, copy: copy),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 248,
+              child: _StudioScrollPane(
+                paneKey: 'podcast-properties-pane',
+                child: _PropertiesPanel(
+                  snapshot: snapshot,
+                  copy: copy,
+                  selectedSection: selectedSection,
+                  selectedMaterial: selectedMaterial,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     ],
+  );
+}
+
+class _StudioScrollPane extends StatelessWidget {
+  const _StudioScrollPane({
+    required this.paneKey,
+    required this.child,
+    super.key,
+  });
+  final String paneKey;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ClipRect(
+    child: SingleChildScrollView(
+      key: PageStorageKey(paneKey),
+      primary: false,
+      child: child,
+    ),
   );
 }
 
@@ -363,34 +519,61 @@ class _MobileStudio extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: [
-            for (final option in _MobileStudioTask.values)
-              ChoiceChip(
-                label: Text(copy.mobilePane(option)),
-                selected: task == option,
-                onSelected: (_) => onTaskChanged(option),
-                visualDensity: VisualDensity.compact,
-                side: BorderSide(
-                  color: task == option
-                      ? LumenisTheme.of(context).bmp.withValues(alpha: 0.25)
-                      : LumenisTheme.of(context).line,
+        if (MediaQuery.textScalerOf(context).scale(14) > 21)
+          DropdownButton<_MobileStudioTask>(
+            key: const ValueKey('podcast-work-area-selector'),
+            value: task,
+            isExpanded: true,
+            itemHeight: null,
+            items: [
+              for (final option in _MobileStudioTask.values)
+                DropdownMenuItem(
+                  value: option,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(copy.mobilePane(option)),
+                  ),
                 ),
-                selectedColor: LumenisTheme.of(
-                  context,
-                ).bmp.withValues(alpha: 0.09),
-                backgroundColor: LumenisTheme.of(context).surface,
-              ),
-          ],
-        ),
+            ],
+            onChanged: (value) {
+              if (value != null) onTaskChanged(value);
+            },
+          )
+        else
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final option in _MobileStudioTask.values)
+                ChoiceChip(
+                  label: Text(copy.mobilePane(option)),
+                  selected: task == option,
+                  onSelected: (_) => onTaskChanged(option),
+                  visualDensity: VisualDensity.compact,
+                  side: BorderSide(
+                    color: task == option
+                        ? LumenisTheme.of(context).bmp.withValues(alpha: 0.25)
+                        : LumenisTheme.of(context).line,
+                  ),
+                  backgroundColor: LumenisTheme.of(context).surface,
+                ),
+            ],
+          ),
         const SizedBox(height: 10),
-        AnimatedSwitcher(
-          duration: MediaQuery.maybeOf(context)?.disableAnimations == true
-              ? Duration.zero
-              : const Duration(milliseconds: 160),
-          child: KeyedSubtree(key: ValueKey(task), child: pane),
+        Expanded(
+          child: AnimatedSwitcher(
+            duration: _bmp08Motion(context),
+            layoutBuilder: (current, previous) => Stack(
+              alignment: Alignment.topCenter,
+              fit: StackFit.expand,
+              children: [...previous, ?current],
+            ),
+            child: _StudioScrollPane(
+              key: ValueKey(task),
+              paneKey: 'podcast-mobile-${task.name}',
+              child: pane,
+            ),
+          ),
         ),
       ],
     );
@@ -499,6 +682,7 @@ class _MaterialsSectionsRail extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
                 child: AnimatedContainer(
                   duration: _bmp08Motion(context),
+                  constraints: const BoxConstraints(minHeight: 48),
                   margin: const EdgeInsets.only(bottom: 4),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -525,7 +709,7 @@ class _MaterialsSectionsRail extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: LumenisTheme.of(context).foreground,
-                            fontSize: 11,
+                            fontSize: 12,
                           ),
                         ),
                       ),
@@ -665,6 +849,7 @@ class _Bmp08SectionRow extends StatelessWidget {
         child: AnimatedContainer(
           duration: _bmp08Motion(context),
           curve: Curves.easeOut,
+          constraints: const BoxConstraints(minHeight: 48),
           padding: EdgeInsets.symmetric(
             horizontal: compact ? 7 : 10,
             vertical: compact ? 8 : 10,
@@ -679,14 +864,14 @@ class _Bmp08SectionRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                width: compact ? 30 : 42,
+                width: 50,
                 child: Text(
                   section.timecode,
                   style: TextStyle(
                     color: selected
                         ? LumenisTheme.of(context).bmp
                         : LumenisTheme.of(context).quiet,
-                    fontSize: compact ? 10 : 11,
+                    fontSize: 12,
                   ),
                 ),
               ),
@@ -701,7 +886,7 @@ class _Bmp08SectionRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: LumenisTheme.of(context).foreground,
-                        fontSize: compact ? 11 : 13,
+                        fontSize: 13,
                         fontWeight: selected
                             ? FontWeight.w600
                             : FontWeight.w400,
@@ -715,7 +900,7 @@ class _Bmp08SectionRow extends StatelessWidget {
                             : copy.sourcePending,
                         style: TextStyle(
                           color: LumenisTheme.of(context).muted,
-                          fontSize: 11,
+                          fontSize: 12,
                         ),
                       ),
                     ],
@@ -744,7 +929,7 @@ class _StudioPanel extends StatelessWidget {
     decoration: BoxDecoration(
       color: LumenisTheme.of(context).surface,
       border: Border.all(color: LumenisTheme.of(context).line),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(4),
     ),
     child: Padding(padding: padding, child: child),
   );
@@ -770,11 +955,19 @@ class _PanelHeading extends StatelessWidget {
           ),
         ),
       ),
-      if (detail != null)
-        Text(
-          detail!,
-          style: TextStyle(color: LumenisTheme.of(context).quiet, fontSize: 10),
+      if (detail != null) ...[
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            detail!,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              color: LumenisTheme.of(context).quiet,
+              fontSize: 12,
+            ),
+          ),
         ),
+      ],
     ],
   );
 }
@@ -801,7 +994,7 @@ class _StatusLabel extends StatelessWidget {
           color: emphasized
               ? LumenisTheme.of(context).bmp
               : LumenisTheme.of(context).quiet,
-          fontSize: 10,
+          fontSize: 12,
         ),
       ),
     ),
@@ -826,7 +1019,7 @@ class _PropertyLine extends StatelessWidget {
             label,
             style: TextStyle(
               color: LumenisTheme.of(context).quiet,
-              fontSize: 11,
+              fontSize: 12,
             ),
           ),
         ),
@@ -836,7 +1029,7 @@ class _PropertyLine extends StatelessWidget {
             value,
             style: TextStyle(
               color: LumenisTheme.of(context).foreground,
-              fontSize: 11,
+              fontSize: 12,
               height: 1.35,
             ),
           ),
@@ -859,7 +1052,7 @@ class _EmptyLine extends StatelessWidget {
       text,
       style: TextStyle(
         color: LumenisTheme.of(context).quiet,
-        fontSize: 11,
+        fontSize: 12,
         height: 1.45,
       ),
     ),
@@ -901,12 +1094,12 @@ class _AudioStage extends StatelessWidget {
                   ? copy.audioPreviewUnavailable
                   : copy.audioPendingDetail,
               child: Container(
-                height: 82,
+                constraints: const BoxConstraints(minHeight: 110),
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: LumenisTheme.of(context).canvas,
                   border: Border.all(color: LumenisTheme.of(context).line),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: Center(
                   child: Padding(
@@ -929,7 +1122,7 @@ class _AudioStage extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: LumenisTheme.of(context).muted,
-                            fontSize: 11,
+                            fontSize: 12,
                             height: 1.35,
                           ),
                         ),
@@ -1009,7 +1202,7 @@ class _Flag extends StatelessWidget {
           color: ready
               ? LumenisTheme.of(context).positive
               : LumenisTheme.of(context).muted,
-          fontSize: 11,
+          fontSize: 12,
         ),
       ),
     ),
@@ -1024,12 +1217,14 @@ class _ScriptPanel extends StatelessWidget {
     required this.localDraft,
     required this.onSectionSelected,
     required this.onDraftChanged,
+    this.selectedOnly = false,
   });
 
   final Bmp08Snapshot snapshot;
   final _Bmp08Copy copy;
   final int? selectedSection;
   final String localDraft;
+  final bool selectedOnly;
   final ValueChanged<int> onSectionSelected;
   final ValueChanged<String> onDraftChanged;
 
@@ -1037,7 +1232,7 @@ class _ScriptPanel extends StatelessWidget {
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
       color: LumenisTheme.of(context).surface,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(4),
       border: Border.all(color: LumenisTheme.of(context).line),
     ),
     child: Padding(
@@ -1056,6 +1251,13 @@ class _ScriptPanel extends StatelessWidget {
             _EmptyLine(text: copy.noOutline, roomy: true)
           else if (!snapshot.scopeApproved)
             _EmptyLine(text: copy.scriptPreviewHint, roomy: true)
+          else if (selectedOnly && selectedSection != null)
+            _Bmp08SectionRow(
+              section: snapshot.outline[selectedSection!],
+              copy: copy,
+              selected: true,
+              onTap: () {},
+            )
           else
             for (var index = 0; index < snapshot.outline.length; index++)
               _Bmp08SectionRow(
@@ -1081,7 +1283,7 @@ class _ScriptPanel extends StatelessWidget {
               copy.localDraftHint,
               style: TextStyle(
                 color: LumenisTheme.of(context).quiet,
-                fontSize: 11,
+                fontSize: 12,
                 height: 1.4,
               ),
             ),
@@ -1096,7 +1298,7 @@ class _ScriptPanel extends StatelessWidget {
                 hintText: copy.localDraftPlaceholder,
                 contentPadding: const EdgeInsets.all(12),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(4),
                   borderSide: BorderSide(color: LumenisTheme.of(context).line),
                 ),
               ),
@@ -1149,7 +1351,7 @@ class _Gate extends StatelessWidget {
                 copy.withheldDetails,
                 style: TextStyle(
                   color: LumenisTheme.of(context).muted,
-                  fontSize: 11,
+                  fontSize: 12,
                   height: 1.4,
                 ),
               ),
@@ -1264,7 +1466,7 @@ class _ActionRail extends StatelessWidget {
         const SizedBox(height: 5),
         Text(
           copy.actionLocalOnly,
-          style: TextStyle(color: LumenisTheme.of(context).quiet, fontSize: 10),
+          style: TextStyle(color: LumenisTheme.of(context).quiet, fontSize: 12),
         ),
         if (actionId == 'BMP-08.render') ...[
           const SizedBox(height: 9),
@@ -1349,6 +1551,11 @@ class _Bmp08Copy {
     );
   }
 
+  String get discardDraftTitle => _get('discardDraftTitle');
+  String get discardDraftDetail => _get('discardDraftDetail');
+  String get discardDraftConfirm => _get('discardDraftConfirm');
+  String get leaveDraftTitle => _get('leaveDraftTitle');
+  String get leaveDraftConfirm => _get('leaveDraftConfirm');
   String get subtitle => _get('subtitle');
   String get refresh => _get('refresh');
   String get focus => _get('focus');
@@ -1420,6 +1627,11 @@ class _Bmp08Copy {
 
   static const _values = <String, Map<String, String>>{
     'zh-CN': {
+      'discardDraftTitle': '放弃本次文字修订并刷新？',
+      'discardDraftDetail': '文字修订只保留在当前制作台，尚未保存为脚本版本。取消可继续编辑。',
+      'discardDraftConfirm': '放弃修订并刷新',
+      'leaveDraftTitle': '放弃本次文字修订并离开？',
+      'leaveDraftConfirm': '放弃修订并离开',
       'subtitle': '让脚本、音频、逐字稿、来源与版权在同一个制作台对齐。',
       'refresh': '刷新播客工作台',
       'focus': '当前品牌',
@@ -1484,6 +1696,12 @@ class _Bmp08Copy {
       'kind.TRANSCRIPT': '逐字稿',
     },
     'en': {
+      'discardDraftTitle': 'Discard text revisions and refresh?',
+      'discardDraftDetail':
+          'These text revisions are only held in this workspace and have not been saved as a script version. Cancel to continue editing.',
+      'discardDraftConfirm': 'Discard and refresh',
+      'leaveDraftTitle': 'Discard text revisions and leave?',
+      'leaveDraftConfirm': 'Discard and leave',
       'subtitle':
           'Align script, audio, transcript, sources and rights in one production desk.',
       'refresh': 'Refresh podcast studio',
@@ -1561,6 +1779,12 @@ class _Bmp08Copy {
       'kind.TRANSCRIPT': 'Transcript',
     },
     'ko': {
+      'discardDraftTitle': '텍스트 수정을 버리고 새로고침할까요?',
+      'discardDraftDetail':
+          '수정한 텍스트는 현재 작업 공간에만 있으며 대본 버전으로 저장되지 않았습니다. 취소하면 계속 편집할 수 있습니다.',
+      'discardDraftConfirm': '수정 삭제 후 새로고침',
+      'leaveDraftTitle': '텍스트 수정을 버리고 나갈까요?',
+      'leaveDraftConfirm': '수정 삭제 후 나가기',
       'subtitle': '스크립트, 오디오, 대본, 출처와 권리를 하나의 제작 데스크에서 맞춥니다.',
       'refresh': '팟캐스트 스튜디오 새로고침',
       'focus': '현재 브랜드',

@@ -778,6 +778,27 @@
   "sh01.media.saved_refresh": "重新读取",
   "sh01.media.saved_more": "继续查找",
   "sh01.media.saved_video": "视频作品",
-  "sh01.media.saved_audio": "音频作品"
+  "sh01.media.saved_audio": "音频作品",
+  "sh01.media.player.loading": "正在准备播放…",
+  "sh01.media.player.play": "播放",
+  "sh01.media.player.pause": "暂停",
+  "sh01.media.player.replay": "重新播放",
+  "sh01.media.player.mute": "静音",
+  "sh01.media.player.unmute": "取消静音",
+  "sh01.media.player.seek": "播放进度",
+  "sh01.media.player.failure": "暂时无法播放这个版本。你可以重试，或下载后查看。",
+  "sh01.media.player.retry": "重试播放",
+  "sh01.media.player.releasing": "正在关闭上一次播放…",
+  "sh01.media.player.cleanup_failure": "上一次播放的临时文件尚未清理。关闭播放后可再次重试。",
+  "sh01.media.rendered_preview": "已导出成片",
+  "sh01.media.previous_render": "正在预览上次成片。草稿修改需导出新版本后才能呈现。",
+  "sh01.media.versions_export": "版本与导出",
+  "sh01.media.sound_settings": "声音",
+  "sh01.media.clip_operations": "片段操作",
+  "sh01.media.apply_before_split": "请先应用当前调整，再拆分片段。",
+  "sh01.media.timeline_zoom": "时间线缩放",
+  "sh01.media.timeline_fit": "适合整段",
+  "sh01.media.timeline_size": "时间线区域大小",
+  "sh01.media.preview_size": "预览区域大小"
  }
 }

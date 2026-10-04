@@ -778,6 +778,27 @@
   "sh01.media.saved_refresh": "Reload",
   "sh01.media.saved_more": "Find more",
   "sh01.media.saved_video": "Video",
-  "sh01.media.saved_audio": "Audio"
+  "sh01.media.saved_audio": "Audio",
+  "sh01.media.player.loading": "Preparing playback…",
+  "sh01.media.player.play": "Play",
+  "sh01.media.player.pause": "Pause",
+  "sh01.media.player.replay": "Replay",
+  "sh01.media.player.mute": "Mute",
+  "sh01.media.player.unmute": "Unmute",
+  "sh01.media.player.seek": "Playback position",
+  "sh01.media.player.failure": "This version could not be played. Retry, or download it to view.",
+  "sh01.media.player.retry": "Retry playback",
+  "sh01.media.player.releasing": "Closing the previous playback…",
+  "sh01.media.player.cleanup_failure": "Temporary playback files could not be removed. Close playback and try again.",
+  "sh01.media.rendered_preview": "Exported video",
+  "sh01.media.previous_render": "This is the previous export. Export a new version to see draft changes.",
+  "sh01.media.versions_export": "Versions & export",
+  "sh01.media.sound_settings": "Sound",
+  "sh01.media.clip_operations": "Clip operations",
+  "sh01.media.apply_before_split": "Apply the current changes before splitting this clip.",
+  "sh01.media.timeline_zoom": "Timeline zoom",
+  "sh01.media.timeline_fit": "Fit sequence",
+  "sh01.media.timeline_size": "Timeline area size",
+  "sh01.media.preview_size": "Preview area size"
  }
 }

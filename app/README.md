@@ -74,6 +74,18 @@ A source file under `app/web/` does not prove that the current build contains it
 Same-origin routing, TLS, access control and complete user journeys still need
 deployment-specific acceptance.
 
+### Shared media workbench
+
+The SH-01 workbench retrieves a saved content-project result through the existing
+Core/Artifact/Permission path. It never sends a platform source URL, Cookie or
+Core credential to a player. Windows uses `video_player` plus the bounded
+`video_player_win` adapter for authorized local MP4/WAV lease files. Web uses a
+browser media element for the same returned bytes. A codec or player error stays
+an explicit playback failure; the app does not download codecs or claim the
+source was played. A changed draft retains the earlier export as a distinct
+version and cannot control its media playhead. Full source-to-media user E2E,
+listening review and target-platform support remain acceptance work.
+
 ### Windows builds from the canonical Unicode checkout
 
 The local MSVC/Flutter toolchain can misinterpret the Unicode checkout path.

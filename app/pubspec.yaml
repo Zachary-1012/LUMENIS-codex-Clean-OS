@@ -22,6 +22,8 @@ dependencies:
   shared_preferences: ^2.5.3
   flutter_acrylic: ^1.1.4
   macos_window_utils: ^1.9.1
+  video_player: 2.14.0
+  video_player_win: 3.3.0
 
 dev_dependencies:
   flutter_test:

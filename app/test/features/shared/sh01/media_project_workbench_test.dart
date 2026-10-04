@@ -1,9 +1,11 @@
-import 'dart:typed_data';
 import 'dart:async';
+import 'dart:ui' show Tristate;
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
@@ -358,6 +360,38 @@ Future<void> _prepareEditableProject(
   controller.selectClip(controller.timeline!.tracks.single.clips.single.clipId);
 }
 
+Future<void> _openActionsForTarget(WidgetTester tester, Finder target) async {
+  if (target.evaluate().isNotEmpty) return;
+  final opener = find.byKey(const Key('media-open-actions'));
+  expect(opener, findsOneWidget);
+  await tester.ensureVisible(opener);
+  await tester.tap(opener);
+  await tester.pumpAndSettle();
+  expect(target, findsOneWidget);
+}
+
+Future<void> _openPropertiesForField(WidgetTester tester, Finder field) async {
+  if (field.evaluate().isNotEmpty) return;
+  final opener = find.byKey(const Key('media-open-properties'));
+  expect(opener, findsOneWidget);
+  await tester.ensureVisible(opener);
+  await tester.tap(opener);
+  await tester.pumpAndSettle();
+  expect(field, findsOneWidget);
+}
+
+Future<void> _expandClipOperationsForTarget(
+  WidgetTester tester,
+  Finder target,
+) async {
+  if (target.evaluate().isNotEmpty) return;
+  final group = find.byKey(const Key('media-clip-operations'));
+  await tester.ensureVisible(group);
+  await tester.tap(group);
+  await tester.pumpAndSettle();
+  expect(target, findsOneWidget);
+}
+
 void main() {
   late _Client client;
   late MediaProjectController controller;
@@ -509,6 +543,10 @@ void main() {
       expect(fresh.version?.artifactId, 'ART-version');
       expect(fresh.timeline!.tracks.single.clips.single.sourceOut, 8);
       expect(fresh.hasUnsavedChanges, isFalse);
+      await _openActionsForTarget(
+        tester,
+        find.byKey(const Key('media-output-reference')),
+      );
       expect(find.byKey(const Key('media-output-reference')), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
@@ -868,7 +906,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(client.imports, 1);
       expect(controller.timeline!.tracks.single.clips, isEmpty);
-      await tester.tap(find.text('添加片段'));
+      await tester.tap(find.byTooltip('添加片段 · interview.mp4'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, '添加片段'));
       await tester.pumpAndSettle();
@@ -881,19 +919,24 @@ void main() {
       await tester.tap(find.text('应用调整'));
       await tester.pumpAndSettle();
       expect(controller.timeline!.tracks.single.clips.single.sourceOut, 8);
-      await tester.ensureVisible(find.text('撤销'));
-      await tester.tap(find.text('撤销'));
+      final toolbarUndo = find.byKey(const Key('media-toolbar-undo'));
+      await tester.ensureVisible(toolbarUndo);
+      expect(tester.widget<IconButton>(toolbarUndo).tooltip, '撤销');
+      await tester.tap(toolbarUndo);
       await tester.pumpAndSettle();
       expect(controller.timeline!.tracks.single.clips.single.sourceOut, 20);
-      await tester.ensureVisible(find.byKey(const Key('media-export')));
-      await tester.tap(find.byKey(const Key('media-export')));
+      final exportButton = find.byKey(const Key('media-export'));
+      await _openActionsForTarget(tester, exportButton);
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
       await tester.pumpAndSettle();
       expect(client.exports, 0);
       await tester.ensureVisible(find.byType(CheckboxListTile));
       await tester.tap(find.byType(CheckboxListTile));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('media-export')));
-      await tester.tap(find.byKey(const Key('media-export')));
+      await _openActionsForTarget(tester, exportButton);
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
       await tester.pumpAndSettle();
       expect(client.exports, 1);
       expect(client.exportedRefs, ['ART-source']);
@@ -984,7 +1027,7 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('media-open-sources')));
     await tester.tap(find.byKey(const Key('media-open-sources')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('添加片段'));
+    await tester.tap(find.byTooltip('添加片段 · interview.mp4'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, '添加片段'));
     await tester.pumpAndSettle();
@@ -994,9 +1037,7 @@ void main() {
     await tester.tap(find.byKey(const Key('media-close-layer')));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.byKey(const Key('media-open-actions')));
-    await tester.tap(find.byKey(const Key('media-open-actions')));
-    await tester.pumpAndSettle();
+    await _openActionsForTarget(tester, find.byKey(const Key('media-export')));
     await tester.tap(find.byType(CheckboxListTile));
     await tester.pumpAndSettle();
     client.pendingExport = Completer<void>();
@@ -1044,9 +1085,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(_app(client, controller));
-    await tester.ensureVisible(find.byKey(const Key('media-open-actions')));
-    await tester.tap(find.byKey(const Key('media-open-actions')));
-    await tester.pumpAndSettle();
+    await _openActionsForTarget(tester, find.byKey(const Key('media-export')));
     await tester.tap(find.byType(CheckboxListTile));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('media-export')));
@@ -1121,6 +1160,99 @@ void main() {
   });
 
   testWidgets(
+    'unapplied clip range blocks split and keeps the entered fields',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await controller.importFile('interview.mp4', Uint8List.fromList([1]));
+      controller.edit(
+        (snapshot) => snapshot.addClip(
+          snapshot.assets.single.assetId,
+          trackId: 'video',
+          sourceOut: 8,
+        ),
+      );
+      controller.selectClip(
+        controller.timeline!.tracks.single.clips.single.clipId,
+      );
+      await tester.pumpWidget(_app(client, controller));
+      await tester.pumpAndSettle();
+
+      final endField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.labelText == '素材终点（秒）',
+      );
+      await _openPropertiesForField(tester, endField);
+      await tester.enterText(endField, '6.5');
+      await tester.pump();
+
+      final splitButton = find.byKey(const Key('media-split-clip'));
+      await _expandClipOperationsForTarget(tester, splitButton);
+      final splitPosition = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.labelText == '分割位置（素材秒）',
+      );
+      await tester.enterText(splitPosition, '4.5');
+      await tester.pump();
+
+      expect(tester.widget<OutlinedButton>(splitButton).onPressed, isNull);
+      expect(find.byKey(const Key('media-apply-before-split')), findsOneWidget);
+      expect(tester.widget<TextField>(endField).controller!.text, '6.5');
+      expect(tester.widget<TextField>(splitPosition).controller!.text, '4.5');
+      expect(controller.timeline!.tracks.single.clips, hasLength(1));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'split-position-only edit exports cleanly and does not leave a stale guard',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await controller.importFile('interview.mp4', Uint8List.fromList([1]));
+      controller.edit(
+        (snapshot) => snapshot.addClip(
+          snapshot.assets.single.assetId,
+          trackId: 'video',
+          sourceOut: 8,
+        ),
+      );
+      controller.selectClip(
+        controller.timeline!.tracks.single.clips.single.clipId,
+      );
+      client.successfulExport = true;
+      final guard = LumenisLeaveGuard();
+      await tester.pumpWidget(_app(client, controller, guard: guard));
+      await tester.pumpAndSettle();
+
+      final splitButton = find.byKey(const Key('media-split-clip'));
+      await _expandClipOperationsForTarget(tester, splitButton);
+      final splitPosition = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.labelText == '分割位置（素材秒）',
+      );
+      await tester.enterText(splitPosition, '5.5');
+      await tester.pump();
+      expect(tester.widget<OutlinedButton>(splitButton).onPressed, isNotNull);
+
+      await tester.tap(splitButton);
+      await tester.pumpAndSettle();
+      expect(controller.timeline!.tracks.single.clips, hasLength(2));
+      expect(controller.hasUnsavedChanges, isTrue);
+      expect(guard.needsProtection, isTrue);
+
+      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await tester.pumpAndSettle();
+      expect(controller.version?.artifactId, 'ART-version');
+      expect(client.exports, 1);
+      expect(controller.hasUnsavedChanges, isFalse);
+      expect(guard.needsProtection, isFalse);
+      expect(await guard.requestLeave(), isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'editor Back shares the leave decision and keeps unapplied inspector text on cancel',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(1440, 1100));
@@ -1186,6 +1318,7 @@ void main() {
     await tester.enterText(endField, '6.5');
     await tester.pump();
     final reopen = find.byKey(const Key('media-reopen-ART-version'));
+    await _openActionsForTarget(tester, reopen);
     await tester.ensureVisible(reopen);
     await tester.tap(reopen);
     await tester.pumpAndSettle();
@@ -1229,6 +1362,10 @@ void main() {
       expect(client.inspectCalls, 0);
       expect(find.byKey(const Key('media-reopen-ART-version')), findsNothing);
       expect(find.byKey(const Key('media-timeline-scroll')), findsNothing);
+      await _openActionsForTarget(
+        tester,
+        find.byKey(const Key('media-export')),
+      );
       expect(
         tester
             .widget<FilledButton>(find.byKey(const Key('media-export')))
@@ -1245,6 +1382,8 @@ void main() {
       expect(await leave, isFalse);
       expect(guard.needsProtection, isTrue);
 
+      await tester.tap(find.byKey(const Key('media-close-layer')));
+      await tester.pumpAndSettle();
       await tester.pumpWidget(_app(client, controller, guard: guard));
       await tester.pumpAndSettle();
       expect(controller.contextMatches, isFalse);
@@ -1353,6 +1492,44 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('export progress stays in the active layer and follows return', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _prepareEditableProject(client, controller);
+    client.successfulExport = true;
+    await tester.pumpWidget(_app(client, controller));
+    await tester.pumpAndSettle();
+    final exportButton = find.byKey(const Key('media-export'));
+    await _openActionsForTarget(tester, exportButton);
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pump();
+    client.pendingExport = Completer<void>();
+    await tester.ensureVisible(exportButton);
+    await tester.tap(exportButton);
+    await tester.pump();
+    expect(controller.busy, isTrue);
+    expect(
+      find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.text('正在导出，草稿仍保留…'),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('media-close-layer')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.text('正在导出，草稿仍保留…'), findsOneWidget);
+    client.pendingExport!.complete();
+    await tester.pumpAndSettle();
+    expect(controller.busy, isFalse);
+    expect(controller.version?.artifactId, 'ART-version');
+    expect(find.text('正在导出，草稿仍保留…'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('pending version retrieval blocks leaving without onBack', (
     tester,
   ) async {
@@ -1370,9 +1547,13 @@ void main() {
     await tester.pumpAndSettle();
 
     client.pendingRetrieval = Completer<void>();
-    await tester.ensureVisible(find.byKey(const Key('media-version-preview')));
-    await tester.tap(find.byKey(const Key('media-version-preview')));
+    final previewAction = find.byKey(const Key('media-version-preview'));
+    await _openActionsForTarget(tester, previewAction);
+    await tester.ensureVisible(previewAction);
+    await tester.tap(previewAction);
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('media-close-layer')), findsNothing);
     expect(guard.needsProtection, isTrue);
     expect(find.text('正在读取已保存的作品…'), findsOneWidget);
     expect(find.text('正在导入所选文件…'), findsNothing);
@@ -1395,42 +1576,284 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('desktop preview retrieval scrolls the loaded player into view', (
+  testWidgets(
+    'desktop keeps the loaded preview and timeline in short and tall viewports',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 720));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _prepareEditableProject(client, controller);
+      client.successfulExport = true;
+      await tester.pumpWidget(_app(client, controller));
+      await tester.pumpAndSettle();
+      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await tester.pumpAndSettle();
+
+      final action = find.byKey(const Key('media-version-preview'));
+      await _openActionsForTarget(tester, action);
+      await tester.ensureVisible(action);
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+
+      final preview = find.byType(MediaPreview);
+      final matte = find.byKey(const Key('media-preview-matte'));
+      final timeline = find.byKey(const Key('media-timeline-region'));
+      expect(preview, findsOneWidget);
+      expect(controller.version?.artifactId, 'ART-version');
+      expect(client.retrievalCalls, 1);
+
+      for (final size in const [Size(1440, 720), Size(1440, 1080)]) {
+        await tester.binding.setSurfaceSize(size);
+        await tester.pumpAndSettle();
+        final viewport = tester.getRect(find.byType(Scaffold));
+        final previewRect = tester.getRect(matte);
+        final timelineRect = tester.getRect(timeline);
+        expect(previewRect.width, greaterThan(0));
+        expect(previewRect.height, greaterThan(0));
+        expect(previewRect.top, greaterThanOrEqualTo(viewport.top));
+        expect(previewRect.bottom, lessThanOrEqualTo(viewport.bottom));
+        expect(timelineRect.height, greaterThan(0));
+        expect(timelineRect.top, greaterThanOrEqualTo(viewport.top));
+        expect(timelineRect.bottom, lessThanOrEqualTo(viewport.bottom));
+        expect(timelineRect.top, greaterThan(previewRect.top));
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
+  testWidgets(
+    'full-width timeline scales clips together and keeps labels and edit intent stable',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _prepareEditableProject(client, controller);
+      controller.edit(
+        (s) => s.addClip(
+          s.assets.single.assetId,
+          trackId: 'video',
+          sourceIn: 8,
+          sourceOut: 12,
+        ),
+      );
+      await tester.pumpWidget(_app(client, controller));
+      await tester.pumpAndSettle();
+      final clips = controller.timeline!.tracks.single.clips;
+      final first = find.byKey(ValueKey('media-clip-${clips[0].clipId}'));
+      final second = find.byKey(ValueKey('media-clip-${clips[1].clipId}'));
+      final timeline = find.byKey(const Key('media-timeline-region'));
+      final labels = find.byKey(const Key('media-track-labels'));
+      final sourceRail = find.byKey(const Key('media-source-rail'));
+      final propertyRail = find.byKey(const Key('media-property-rail'));
+      final region = tester.getRect(timeline);
+      expect(region.left, lessThanOrEqualTo(tester.getRect(sourceRail).left));
+      expect(
+        region.right,
+        greaterThanOrEqualTo(tester.getRect(propertyRail).right),
+      );
+      expect(
+        region.top,
+        greaterThanOrEqualTo(tester.getRect(sourceRail).bottom),
+      );
+      final originalWidth = tester.getSize(first).width + 2;
+      expect(
+        originalWidth / (tester.getSize(second).width + 2),
+        closeTo(2, .01),
+      );
+      final originalSelection = controller.selectedClipId;
+      final initialHeight = region.height;
+      await tester.tap(find.byKey(const Key('media-timeline-larger')));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(timeline).height, greaterThan(initialHeight));
+      expect(controller.selectedClipId, originalSelection);
+      await tester.tap(find.byKey(const Key('media-timeline-zoom')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('400%'));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(first).width + 2, greaterThan(originalWidth));
+      final labelOrigin = tester.getTopLeft(labels);
+      await tester.drag(
+        find.byKey(const Key('media-timeline-scroll')),
+        const Offset(-350, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(labels), labelOrigin);
+      expect(controller.selectedClipId, originalSelection);
+      expect(controller.timeline!.tracks.single.clips[0].sourceOut, 8);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'wide rail toggles preserve the loaded preview and unapplied inspector text',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _prepareEditableProject(client, controller);
+      client.successfulExport = true;
+      await tester.pumpWidget(_app(client, controller));
+      await tester.pumpAndSettle();
+      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await tester.pumpAndSettle();
+
+      final previewAction = find.byKey(const Key('media-version-preview'));
+      await _openActionsForTarget(tester, previewAction);
+      await tester.tap(previewAction);
+      await tester.pumpAndSettle();
+      final preview = find.byType(MediaPreview);
+      final previewElement = tester.element(preview);
+      expect(preview, findsOneWidget);
+
+      final endField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.labelText == '素材终点（秒）',
+      );
+      await _openPropertiesForField(tester, endField);
+      await tester.ensureVisible(endField);
+      await tester.enterText(endField, '6.25');
+      await tester.pump();
+      expect(tester.widget<TextField>(endField).controller!.text, '6.25');
+      expect(controller.timeline!.tracks.single.clips.single.sourceOut, 8);
+
+      final sources = find.byKey(const Key('media-open-sources'));
+      await tester.ensureVisible(sources);
+      await tester.tap(sources);
+      await tester.pumpAndSettle();
+      expect(tester.element(preview), same(previewElement));
+      expect(tester.widget<TextField>(endField).controller!.text, '6.25');
+      await tester.tap(sources);
+      await tester.pumpAndSettle();
+      expect(tester.element(preview), same(previewElement));
+
+      final properties = find.byKey(const Key('media-open-properties'));
+      await tester.ensureVisible(properties);
+      await tester.tap(properties);
+      await tester.pumpAndSettle();
+      expect(endField, findsNothing);
+      expect(tester.element(preview), same(previewElement));
+      await tester.tap(properties);
+      await tester.pumpAndSettle();
+      expect(endField, findsOneWidget);
+      expect(tester.widget<TextField>(endField).controller!.text, '6.25');
+      expect(tester.element(preview), same(previewElement));
+      expect(controller.timeline!.tracks.single.clips.single.sourceOut, 8);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'editing after preview labels the prior render and keeps its bytes unchanged',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _prepareEditableProject(client, controller);
+      client.successfulExport = true;
+      await tester.pumpWidget(_app(client, controller));
+      await tester.pumpAndSettle();
+      await controller.export(outputKind: 'video', demoAcknowledged: true);
+      await tester.pumpAndSettle();
+
+      final previewAction = find.byKey(const Key('media-version-preview'));
+      await _openActionsForTarget(tester, previewAction);
+      await tester.tap(previewAction);
+      await tester.pumpAndSettle();
+      final preview = find.byType(MediaPreview);
+      expect(preview, findsOneWidget);
+      final loadedFile = tester.widget<MediaPreview>(preview).file;
+      final originalBytes = List<int>.unmodifiable(loadedFile.bytes);
+
+      final endField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.labelText == '素材终点（秒）',
+      );
+      await _openPropertiesForField(tester, endField);
+      await tester.ensureVisible(endField);
+      await tester.enterText(endField, '6.5');
+      await tester.ensureVisible(find.text('应用调整'));
+      await tester.tap(find.text('应用调整'));
+      await tester.pumpAndSettle();
+
+      expect(controller.hasUnsavedChanges, isTrue);
+      expect(controller.timeline!.tracks.single.clips.single.sourceOut, 6.5);
+      final previousRender = find.byKey(const Key('media-previous-render'));
+      expect(previousRender, findsOneWidget);
+      expect(tester.widget<Text>(previousRender).data, isNotEmpty);
+      expect(tester.widget<MediaPreview>(preview).file, same(loadedFile));
+      expect(
+        tester.widget<MediaPreview>(preview).file.bytes,
+        orderedEquals(originalBytes),
+      );
+      expect(client.retrievalCalls, 1);
+      final priorSeek = tester.widget<MediaPreview>(preview).seekRequest;
+      final ruler = find.byKey(const Key('media-timeline-ruler'));
+      await tester.ensureVisible(ruler);
+      final cursorSemantics = find
+          .ancestor(of: ruler, matching: find.byType(Semantics))
+          .first;
+      final cursorBefore = tester
+          .widget<Semantics>(cursorSemantics)
+          .properties
+          .value;
+      tester
+          .widget<MediaPreview>(preview)
+          .onPositionChanged
+          ?.call(const Duration(seconds: 2));
+      await tester.pump();
+      expect(
+        tester.widget<Semantics>(cursorSemantics).properties.value,
+        cursorBefore,
+      );
+      await tester.tap(ruler);
+      await tester.pump();
+      expect(
+        tester.widget<MediaPreview>(preview).seekRequest,
+        priorSeek,
+        reason:
+            'The changed draft must not seek a different saved media version',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('saved result previews directly and recovers without re-export', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(1440, 720));
+    await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await _prepareEditableProject(client, controller);
     client.successfulExport = true;
     await tester.pumpWidget(_app(client, controller));
     await tester.pumpAndSettle();
+    expect(find.text('导出后可预览真实成片。'), findsOneWidget);
+    expect(find.byKey(const Key('media-load-preview')), findsNothing);
+
     await controller.export(outputKind: 'video', demoAcknowledged: true);
     await tester.pumpAndSettle();
+    final load = find.byKey(const Key('media-load-preview'));
+    expect(load, findsOneWidget);
+    expect(find.text('导出后可预览真实成片。'), findsNothing);
+    expect(find.textContaining('已导出成片 · v'), findsOneWidget);
+    expect(tester.getSize(load).shortestSide, greaterThanOrEqualTo(48));
 
-    final action = find.byKey(const Key('media-version-preview'));
-    final viewportHeight = tester.getSize(find.byType(Scaffold)).height;
-    final scrollable = tester.state<ScrollableState>(
-      find.byType(Scrollable).first,
-    );
-    scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+    client.retrievalFailureCode = 'CONTENT_PROJECT_READ_UNAVAILABLE';
+    await tester.tap(load);
     await tester.pumpAndSettle();
-    final actionRect = tester.getRect(action);
-    expect(actionRect.top, greaterThanOrEqualTo(0));
-    expect(actionRect.bottom, lessThanOrEqualTo(viewportHeight));
-    final placeholderRect = tester.getRect(find.text('导出后可预览真实成片。'));
-    expect(
-      placeholderRect.top < 0 || placeholderRect.bottom > viewportHeight,
-      isTrue,
-    );
-    await tester.tap(action);
-    await tester.pumpAndSettle();
-
-    final player = find.byType(MediaPreview);
-    expect(player, findsOneWidget);
-    final rect = tester.getRect(player);
-    expect(rect.top, greaterThanOrEqualTo(0));
-    expect(rect.bottom, lessThanOrEqualTo(viewportHeight));
+    expect(find.byType(MediaPreview), findsNothing);
     expect(controller.version?.artifactId, 'ART-version');
+    expect(find.text('操作未完成，草稿和已导出版本仍保留。'), findsOneWidget);
+    expect(load, findsOneWidget);
+
+    client.retrievalFailureCode = null;
+    client.pendingRetrieval = Completer<void>();
+    await tester.tap(load);
+    await tester.pump();
+    expect(tester.widget<OutlinedButton>(load).onPressed, isNull);
+    expect(find.text('正在读取已保存的作品…'), findsOneWidget);
+    client.pendingRetrieval!.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(MediaPreview), findsOneWidget);
+    expect(load, findsNothing);
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(client.retrievalCalls, 2);
+    expect(client.exports, 1);
     expect(tester.takeException(), isNull);
   });
 
@@ -1489,7 +1912,7 @@ void main() {
     await tester.tap(find.byKey(const Key('media-version-download')));
     await tester.pump();
     expect(find.byKey(const Key('media-close-layer')), findsOneWidget);
-    expect(find.text('正在读取已保存的作品…'), findsNWidgets(2));
+    expect(find.text('正在读取已保存的作品…'), findsOneWidget);
     expect(find.text('正在导入所选文件…'), findsNothing);
 
     client.pendingRetrieval!.complete();
@@ -1575,39 +1998,70 @@ void main() {
     testWidgets('mobile 200 percent text remains operable in $locale', (
       tester,
     ) async {
-      await tester.binding.setSurfaceSize(const Size(320, 720));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(
-        _app(client, controller, locale: locale, scale: 2),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('media-import')), findsNothing);
-      await tester.ensureVisible(find.byKey(const Key('media-open-sources')));
-      await tester.tap(find.byKey(const Key('media-open-sources')));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('media-import')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('media-close-layer')));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(
-        find.byKey(const Key('media-open-properties')),
-      );
-      await tester.tap(find.byKey(const Key('media-open-properties')));
-      await tester.pumpAndSettle();
-      expect(
-        tester.getSize(find.byKey(const Key('media-close-layer'))).shortestSide,
-        greaterThanOrEqualTo(48),
-      );
-      await tester.tap(find.byKey(const Key('media-close-layer')));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('media-open-actions')));
-      await tester.tap(find.byKey(const Key('media-open-actions')));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('media-export')));
-      expect(
-        tester.getSize(find.byKey(const Key('media-export'))).height,
-        greaterThanOrEqualTo(48),
-      );
-      expect(tester.takeException(), isNull);
+      final semantics = tester.ensureSemantics();
+      try {
+        await tester.binding.setSurfaceSize(const Size(320, 720));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          _app(client, controller, locale: locale, scale: 2),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('media-import')), findsNothing);
+        final sources = find.byKey(const Key('media-open-sources'));
+        final properties = find.byKey(const Key('media-open-properties'));
+        final actions = find.byKey(const Key('media-open-actions'));
+        for (final control in [sources, properties, actions]) {
+          final node = tester.getSemantics(control);
+          expect(node.flagsCollection.isButton, isTrue);
+          expect(
+            node.getSemanticsData().hasAction(SemanticsAction.tap),
+            isTrue,
+          );
+        }
+
+        await tester.ensureVisible(sources);
+        var sourcesFocused = false;
+        for (var attempt = 0; attempt < 64 && !sourcesFocused; attempt++) {
+          sourcesFocused =
+              tester.getSemantics(sources).flagsCollection.isFocused ==
+              Tristate.isTrue;
+          if (!sourcesFocused) {
+            await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+            await tester.pump();
+          }
+        }
+        expect(sourcesFocused, isTrue);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('media-import')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.tap(find.byKey(const Key('media-close-layer')));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(properties);
+        await tester.tap(properties);
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .getSize(find.byKey(const Key('media-close-layer')))
+              .shortestSide,
+          greaterThanOrEqualTo(48),
+        );
+        await tester.tap(find.byKey(const Key('media-close-layer')));
+        await tester.pumpAndSettle();
+        await _openActionsForTarget(
+          tester,
+          find.byKey(const Key('media-export')),
+        );
+        await tester.ensureVisible(find.byKey(const Key('media-export')));
+        expect(
+          tester.getSize(find.byKey(const Key('media-export'))).shortestSide,
+          greaterThanOrEqualTo(48),
+        );
+        expect(tester.takeException(), isNull);
+      } finally {
+        semantics.dispose();
+      }
     });
   }
 }

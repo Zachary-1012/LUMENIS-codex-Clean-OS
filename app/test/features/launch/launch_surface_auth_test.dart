@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -11,6 +12,118 @@ import 'package:lumenis_app/features/launch/launch_surface.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 
 void main() {
+  testWidgets('loading state has the launch Material text and color baseline', (
+    tester,
+  ) async {
+    final identity = Completer<Map<String, dynamic>>();
+    final client = _PendingIdentityClient(identity.future);
+    await tester.binding.setSurfaceSize(const Size(360, 520));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_app(client, withScaffold: false));
+    await tester.pump();
+
+    final title = find.text('序境');
+    expect(title, findsOneWidget);
+    expect(find.text('正在连接工作区…'), findsOneWidget);
+    final detailStyle = tester
+        .widget<RichText>(
+          find.descendant(
+            of: find.text('正在连接工作区…'),
+            matching: find.byType(RichText),
+          ),
+        )
+        .text
+        .style!;
+    expect(
+      detailStyle.fontSize,
+      LumenisTheme.dark.textTheme.bodyMedium!.fontSize,
+    );
+    expect(detailStyle.decoration ?? TextDecoration.none, TextDecoration.none);
+    final material = tester.widget<Material>(
+      find.ancestor(of: title, matching: find.byType(Material)).first,
+    );
+    expect(
+      material.color,
+      LumenisTheme.dark.extension<LumenisPalette>()!.canvas,
+    );
+    expect(
+      tester.widget<Text>(title).style?.color,
+      LumenisTheme.dark.extension<LumenisPalette>()!.foreground,
+    );
+    expect(
+      tester.widget<Text>(find.text('正在连接工作区…')).style?.color,
+      LumenisTheme.dark.extension<LumenisPalette>()!.muted,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('unavailable state scrolls at large text and retry recovers', (
+    tester,
+  ) async {
+    final client = _RetryingIdentityClient();
+    await tester.binding.setSurfaceSize(const Size(320, 200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _app(client, withScaffold: false, textScaler: const TextScaler.linear(2)),
+    );
+    await tester.pumpAndSettle();
+
+    final title = find.text('工作区暂未连接');
+    expect(title, findsOneWidget);
+    expect(find.text('暂时无法读取工作区，请检查连接后重试。'), findsOneWidget);
+    final detailStyle = tester
+        .widget<RichText>(
+          find.descendant(
+            of: find.text('暂时无法读取工作区，请检查连接后重试。'),
+            matching: find.byType(RichText),
+          ),
+        )
+        .text
+        .style!;
+    expect(
+      detailStyle.fontSize,
+      LumenisTheme.dark.textTheme.bodyMedium!.fontSize,
+    );
+    expect(detailStyle.decoration ?? TextDecoration.none, TextDecoration.none);
+    expect(find.byType(SingleChildScrollView), findsOneWidget);
+    expect(
+      tester.widget<Text>(title).style?.color,
+      LumenisTheme.dark.extension<LumenisPalette>()!.foreground,
+    );
+    expect(
+      tester.widget<Text>(find.text('暂时无法读取工作区，请检查连接后重试。')).style?.color,
+      LumenisTheme.dark.extension<LumenisPalette>()!.muted,
+    );
+    expect(
+      find.ancestor(of: title, matching: find.byType(Material)),
+      findsOneWidget,
+    );
+    final scrollable = find.descendant(
+      of: find.byType(SingleChildScrollView),
+      matching: find.byType(Scrollable),
+    );
+    expect(
+      tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
+      greaterThan(0),
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.binding.setSurfaceSize(const Size(1024, 768));
+    await tester.pumpAndSettle();
+    final retry = find.text('重新连接');
+    await tester.ensureVisible(retry);
+    await tester.tap(retry);
+    await tester.pumpAndSettle();
+
+    expect(client.identityCalls, 2);
+    expect(find.text('工作区暂未连接'), findsNothing);
+    expect(find.byType(Cth01Screen), findsOneWidget);
+    expect(find.text('登录序境'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('opens the existing workspace without a product account', (
     tester,
   ) async {
@@ -179,9 +292,19 @@ class _RealHttpOverrides extends HttpOverrides {
   }
 }
 
-Widget _app(LumenisCoreClient client) => MaterialApp(
+Widget _app(
+  LumenisCoreClient client, {
+  bool withScaffold = true,
+  TextScaler? textScaler,
+}) => MaterialApp(
   locale: const Locale('zh', 'CN'),
   theme: LumenisTheme.dark,
+  builder: textScaler == null
+      ? null
+      : (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+          child: child!,
+        ),
   supportedLocales: LumenisLocalizations.supportedLocales,
   localizationsDelegates: const [
     LumenisLocalizations.delegate,
@@ -189,7 +312,9 @@ Widget _app(LumenisCoreClient client) => MaterialApp(
     GlobalWidgetsLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
   ],
-  home: Scaffold(body: LaunchSurface(client: client)),
+  home: withScaffold
+      ? Scaffold(body: LaunchSurface(client: client))
+      : LaunchSurface(client: client),
 );
 
 Future<void> _pumpNetwork(WidgetTester tester) async {
@@ -232,6 +357,50 @@ class _DeniedDirectoryClient extends LumenisCoreClient {
       statusCode: HttpStatus.unauthorized,
     );
   }
+}
+
+class _PendingIdentityClient extends LumenisCoreClient {
+  _PendingIdentityClient(this.identity);
+
+  final Future<Map<String, dynamic>> identity;
+
+  @override
+  Future<Map<String, dynamic>> runtimeIdentity() => identity;
+}
+
+class _RetryingIdentityClient extends LumenisCoreClient {
+  int identityCalls = 0;
+
+  @override
+  Future<Map<String, dynamic>> runtimeIdentity() async {
+    identityCalls += 1;
+    if (identityCalls == 1) {
+      throw const LumenisCoreException('Core is temporarily unavailable.');
+    }
+    return _identity;
+  }
+
+  @override
+  Future<Map<String, dynamic>> settingsContext() async => const {
+    'ok': true,
+    'contract': 'lumenis.context.v1',
+    'context': {
+      'mode': 'GLOBAL_ALL',
+      'mode_label_key': 'context.mode.global_all',
+      'domain_id': null,
+      'product_id': null,
+      'subject_id': null,
+      'display_name': null,
+      'display_state': 'not_applicable',
+    },
+    'authorized_domains': [
+      {'id': 'CTH', 'name': 'Business', 'product': 'CTH'},
+    ],
+    'selection_only': true,
+  };
+
+  @override
+  Future<Map<String, dynamic>> screen(String screenId) async => _cthScreen;
 }
 
 class _TestCoreServer {

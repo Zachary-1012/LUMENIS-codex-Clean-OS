@@ -4,8 +4,17 @@ import '../../../core/lumenis_core_client.dart';
 import '../../../l10n/lumenis_localizations.dart';
 
 class MediaPreview extends StatelessWidget {
-  const MediaPreview({required this.file, super.key});
+  const MediaPreview({
+    required this.file,
+    this.onPositionChanged,
+    this.seekPosition,
+    this.seekRequest,
+    super.key,
+  });
   final ContentProjectFile file;
+  final ValueChanged<Duration>? onPositionChanged;
+  final Duration? seekPosition;
+  final int? seekRequest;
 
   @override
   Widget build(BuildContext context) => Padding(

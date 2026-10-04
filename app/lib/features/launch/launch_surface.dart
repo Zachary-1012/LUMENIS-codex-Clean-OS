@@ -96,7 +96,7 @@ class _LaunchSurfaceState extends State<LaunchSurface> {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
+    return Material(
       color: LumenisTheme.of(context).canvas,
       child: SafeArea(
         child: FutureBuilder<_LaunchState>(
@@ -163,7 +163,7 @@ class _Failure extends StatelessWidget {
   Widget build(BuildContext context) {
     final copy = context.lumenisL10n;
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(28),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 680),
@@ -210,7 +210,7 @@ class _Status extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,

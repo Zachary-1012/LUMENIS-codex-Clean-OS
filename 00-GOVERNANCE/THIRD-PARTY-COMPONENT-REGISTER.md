@@ -138,6 +138,8 @@ released package version.
 | [shared_preferences](https://github.com/flutter/packages/tree/main/packages/shared_preferences/shared_preferences) | 2.5.5 | PRODUCTION | Device-local SYS-05 appearance and wallpaper preference persistence | `Sys05AppearanceController` via `SharedPreferencesAsync`; no server or business-data ownership | BSD-3-Clause (installed package `LICENSE`) | Yes |
 | [flutter_acrylic](https://github.com/alexmercerind/flutter_acrylic) | 1.1.4 | PRODUCTION | Windows acrylic host-window material adapter | `lumenis_window_material_io.dart`; Windows native appearance only | MIT (installed package `LICENSE`) | Yes |
 | [macos_window_utils](https://github.com/Adrian-Samoticha/macos_window_utils.dart) | 1.9.1 | PRODUCTION | macOS window material and brightness adapter | `lumenis_window_material_io.dart`; macOS native appearance only | MIT (installed package `LICENSE`) | Yes |
+| [video_player](https://github.com/flutter/packages/tree/main/packages/video_player/video_player) | 2.14.0 | PRODUCTION | Authorized saved MP4/WAV preview on the shared media workbench | `NativeMediaPlayer` adapter; receives a private lease path or authorized Web bytes only, never a source URL, Cookie or Product Core credential | BSD-3-Clause (installed package `LICENSE`; Flutter Authors) | Yes, bounded adapter |
+| [video_player_win](https://github.com/jakky1/video_player_win) | 3.3.0 | PRODUCTION / Windows adapter | Native Windows Media Foundation MP4/WAV preview, seeking, volume and resource release | `WindowsMediaPlayer`; Windows-only implementation behind the same `NativeMediaPlayer` boundary | BSD-3-Clause (installed package `LICENSE`; upstream `jakky1`) | Yes, bounded adapter |
 
 For these four rows, exact versions are from `app/pubspec.lock`; repository
 URLs and licenses were checked against each installed package's `pubspec.yaml`
@@ -145,6 +147,24 @@ and `LICENSE` under the local Pub cache. The Flutter Authors packages use the
 three-clause BSD license text; `flutter_acrylic` and `macos_window_utils`
 include MIT license text. This records local package evidence only and does not
 replace shipped-artifact notice reconciliation at release.
+
+### 2026-10-05 media preview dependency decision
+
+`video_player` 2.14.0 and `video_player_win` 3.3.0 were added because the
+existing SH-01 workbench had a saved Artifact retrieval path but no Windows
+native player for returned MP4/WAV bytes. The installed lockfile, package
+metadata and BSD-3-Clause license files were inspected. `video_player_win`
+uses Windows Media Foundation; its upstream documentation records that codec
+availability depends on installed Windows codecs. LUMENIS reports an honest
+playback failure and never downloads or installs codecs. It does not use the
+package's experimental HTTP-header path or pass remote source URLs.
+
+Web uses the browser media element over the same authorized bytes. The MDN
+`loadedmetadata` contract applies a queued timeline seek only after duration
+metadata exists. Package integration and fixture playback checks do not establish
+a released media feature, a customer listening review, or support for all native
+platforms. Release packaging must retain BSD notices and reconcile the actual
+dependency graph shipped on each target.
 
 ## 6. Built-in / platform dependencies
 
