@@ -107,16 +107,14 @@ def _all_manifest_records():
 
 
 def _list_production_python_files():
-    py_files = []
-    for root, dirs, files in os.walk(REPO_ROOT):
-        rel = os.path.relpath(root, REPO_ROOT)
-        parts = rel.split(os.sep) if rel != "." else []
-        if any(part in EXCLUDE_DIRS for part in parts):
-            continue
-        for filename in files:
-            if filename.endswith(".py"):
-                py_files.append(os.path.join(root, filename))
-    return py_files
+    """Use the same live-source boundary as the Shared Database authority gate.
+
+    Root candidate/dependency trees are not production callers; a nested
+    lumenis/**/work directory remains in scope. No failing test is removed.
+    """
+    from pathlib import Path
+    from scripts.audit_tools.verify_database_authority import production_python_files
+    return [str(path) for path in production_python_files(Path(REPO_ROOT))]
 
 
 def _git_history_provenance_status():
@@ -277,20 +275,14 @@ class TestCurrentProvenanceEvidence:
     def test_no_media_crawler_noncommercial_source_marker(self):
         """Reject the known non-commercial source marker in production Python files."""
         violations = []
-        for root, dirs, files in os.walk(REPO_ROOT):
-            rel = os.path.relpath(root, REPO_ROOT)
-            parts = rel.split(os.sep) if rel != "." else []
-            if any(part in EXCLUDE_DIRS for part in parts):
+        for file_path in _list_production_python_files():
+            if "license_audit" in os.path.basename(file_path):
                 continue
-            for filename in files:
-                if not filename.endswith(".py") or "license_audit" in filename:
-                    continue
-                file_path = os.path.join(root, filename)
-                try:
-                    if "NON-COMMERCIAL LEARNING LICENSE" in _read_utf8(file_path):
-                        violations.append(os.path.relpath(file_path, REPO_ROOT))
-                except (OSError, UnicodeError):
-                    continue
+            try:
+                if "NON-COMMERCIAL LEARNING LICENSE" in _read_utf8(file_path):
+                    violations.append(os.path.relpath(file_path, REPO_ROOT))
+            except (OSError, UnicodeError):
+                continue
         assert not violations, f"生产 Python 代码包含已知非商业源码标记: {violations}"
 
 

@@ -53,6 +53,7 @@ def test_build_spec_covers_every_nonstatic_rule():
     note = spec["paths"]["/api/note/{note_id}"]
     assert set(note) == {"get", "delete"}
     assert note["get"]["operationId"] == "note_detail"
+    assert note["get"]["security"] == [{"httpBasic": []}, {"v4Auth": []}]
     assert note["get"]["parameters"][0]["name"] == "note_id"
     # /v4 仅 v4Auth；/healthz 无 security
     assert spec["paths"]["/v4/console/{sub}"]["get"]["security"] == [{"v4Auth": []}]

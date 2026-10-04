@@ -1505,6 +1505,384 @@ class TaskEngine:
         return task, context
 
     @staticmethod
+    def _training_checkpoint_material(value):
+        """Strict bounded derivative metadata; never deserialize authority."""
+        raw = _serialize_strict_json(value, field_name="training checkpoint state")
+        if len(raw.encode("utf-8")) > 1024 * 1024:
+            raise ValueError("CHECKPOINT_REQUEST_INVALID")
+        return _strict_json_loads(raw, field_name="training checkpoint state"), raw
+
+    def _training_checkpoint_task(self, task_id, *, expected_binding,
+                                  expected_approval_reference, pinned_public_key, connection):
+        self._require_training_receipt_connection(connection)
+        task_id = _require_training_receipt_task_id(task_id)
+        row = connection.execute("SELECT * FROM ai_task WHERE task_id=? AND created_by=?",
+                                 (task_id, _TRAINING_RECEIPT_TASK_CREATOR)).fetchone()
+        return self._require_training_receipt_v2_task(row, task_id=task_id,
+            expected_binding=expected_binding, expected_approval_reference=expected_approval_reference,
+            expected_public_key=pinned_public_key)
+
+    def training_execution_read(self, task_id, *, expected_binding,
+                                expected_approval_reference, pinned_public_key, connection):
+        """Read the versioned execution subrecord under the original sealed Task."""
+        _, context, _ = self._training_checkpoint_task(task_id, expected_binding=expected_binding,
+            expected_approval_reference=expected_approval_reference,
+            pinned_public_key=pinned_public_key, connection=connection)
+        step_id = "trainexec_" + context["task_digest"]
+        row = connection.execute("SELECT * FROM ai_task_step WHERE task_id=? AND step_id=?",
+                                 (task_id, step_id)).fetchone()
+        if row is None:
+            return None
+        detail = _strict_json_loads(row["detail"], field_name="training execution subrecord")
+        fields = {"schema_version", "owner", "task_digest", "fingerprints", "policy_sha256",
+                  "byte_limit", "attempt_id", "worker_epoch", "run_digest", "worker_binding",
+                  "next_sequence", "last_phase", "pending_challenge", "handoff", "state"}
+        if (type(detail) is not dict or set(detail) != fields or detail["schema_version"] != 3
+                or type(detail["schema_version"]) is not int
+                or detail["owner"] != "owned_training_execution:v1"
+                or detail["task_digest"] != context["task_digest"]
+                or detail["fingerprints"] != context["fingerprints"]
+                or row["phase"] != "owned_training_execution"
+                or row["status"] != detail["state"]):
+            raise ValueError("CHECKPOINT_SCOPE_MISMATCH")
+        self._training_checkpoint_material(detail)
+        from lumenis.system.security import training_receipts as receipts
+        for field in ("task_digest", "policy_sha256", "run_digest"):
+            receipts._checkpoint_hash(detail[field])
+        receipts._checkpoint_uuid(detail["attempt_id"])
+        for field in ("worker_epoch", "next_sequence"):
+            receipts._checkpoint_integer(detail[field], 1)
+        if (type(detail["byte_limit"]) is not int or not 1 <= detail["byte_limit"] <= 1024**4
+                or type(detail["worker_binding"]) is not dict
+                or set(detail["worker_binding"]) != {"pid", "created_at", "lock_sha256"}
+                or type(detail["worker_binding"]["pid"]) is not int or detail["worker_binding"]["pid"] <= 0
+                or type(detail["worker_binding"]["created_at"]) not in {int, float}
+                or not math.isfinite(detail["worker_binding"]["created_at"])
+                or detail["worker_binding"]["created_at"] <= 0
+                or type(detail["state"]) is not str
+                or detail["state"] not in {"RUNNABLE", "LOAD_ADMITTED", "LOADED", "COMPLETED", "FAILED", "INTERRUPTED"}
+                or (detail["last_phase"] is not None and detail["last_phase"] not in _TRAINING_PHASES)):
+            raise ValueError("CHECKPOINT_REQUEST_INVALID")
+        receipts._checkpoint_hash(detail["worker_binding"]["lock_sha256"])
+        return detail
+
+    def _training_execution_write(self, task_id, *, previous, current, connection):
+        """CAS on the existing step table; caller owns commit/Permission lease."""
+        self._require_training_receipt_connection(connection)
+        _, raw = self._training_checkpoint_material(current)
+        step_id = "trainexec_" + current["task_digest"]
+        if previous is None:
+            connection.execute("""INSERT INTO ai_task_step
+                (step_id,task_id,phase,status,detail,started_at) VALUES (?,?,?,?,?,?)""",
+                (step_id, task_id, "owned_training_execution", current["state"], raw, self._now()))
+        else:
+            _, before = self._training_checkpoint_material(previous)
+            cursor = connection.execute("""UPDATE ai_task_step SET detail=?,status=?
+                WHERE step_id=? AND task_id=? AND detail=?""", (raw, current["state"], step_id, task_id, before))
+            if cursor.rowcount != 1:
+                raise RuntimeError("CHECKPOINT_OPERATION_CONFLICT")
+
+    def training_execution_initialize(self, task_id, *, worker_binding, policy_sha256, byte_limit,
+                                      expected_binding, expected_approval_reference,
+                                      pinned_public_key, connection):
+        import copy
+        worker, _ = self._training_checkpoint_material(worker_binding)
+        if (type(worker) is not dict or set(worker) != {"pid", "created_at", "lock_sha256"}
+                or type(worker["pid"]) is not int or worker["pid"] <= 0
+                or type(worker["created_at"]) not in {int, float}
+                or not math.isfinite(worker["created_at"]) or worker["created_at"] <= 0
+                or type(worker["lock_sha256"]) is not str or re.fullmatch(r"[0-9a-f]{64}", worker["lock_sha256"]) is None
+                or type(policy_sha256) is not str or re.fullmatch(r"[0-9a-f]{64}", policy_sha256) is None
+                or type(byte_limit) is not int or not 1 <= byte_limit <= 1024**4):
+            raise ValueError("CHECKPOINT_REQUEST_INVALID")
+        task, context, _ = self._training_checkpoint_task(task_id, expected_binding=expected_binding,
+            expected_approval_reference=expected_approval_reference, pinned_public_key=pinned_public_key,
+            connection=connection)
+        args = dict(expected_binding=expected_binding, expected_approval_reference=expected_approval_reference,
+                    pinned_public_key=pinned_public_key, connection=connection)
+        prior = self.training_execution_read(task_id, **args)
+        if prior is not None:
+            if (prior["worker_binding"] != worker or prior["policy_sha256"] != policy_sha256
+                    or prior["byte_limit"] != byte_limit):
+                raise PermissionError("CHECKPOINT_WORKER_FENCE_LOST")
+            return copy.deepcopy(prior)
+        if task["status"] not in {"ready", "running"} or context["admission"]["terminal"]:
+            raise PermissionError("CHECKPOINT_RUN_MISMATCH")
+        value = {"schema_version": 3, "owner": "owned_training_execution:v1",
+            "task_digest": context["task_digest"], "fingerprints": context["fingerprints"],
+            "policy_sha256": policy_sha256, "byte_limit": byte_limit, "attempt_id": str(uuid.uuid4()),
+            "worker_epoch": 1, "run_digest": context["run_digest"], "worker_binding": worker,
+            "next_sequence": context["next_sequence"], "last_phase": context["admission"]["last_phase"],
+            "pending_challenge": None, "handoff": None, "state": "RUNNABLE"}
+        self._training_execution_write(task_id, previous=None, current=value, connection=connection)
+        return copy.deepcopy(value)
+
+    def training_operation_read(self, task_id, *, operation_id, **args):
+        import copy
+        from lumenis.system.security.training_receipts import _checkpoint_uuid
+        _checkpoint_uuid(operation_id)
+        execution = self.training_execution_read(task_id, **args)
+        if execution is None:
+            raise PermissionError("CHECKPOINT_CONTRACT_NOT_BOUND")
+        step_id = "trainop_" + hashlib.sha256((task_id + operation_id).encode()).hexdigest()
+        row = args["connection"].execute("SELECT * FROM ai_task_step WHERE task_id=? AND step_id=?",
+                                       (task_id, step_id)).fetchone()
+        if row is None:
+            return None
+        detail = _strict_json_loads(row["detail"], field_name="training checkpoint operation")
+        fields = {"schema_version", "operation_id", "kind", "input", "input_sha256", "state", "result"}
+        if (type(detail) is not dict or set(detail) != fields
+                or type(detail["schema_version"]) is not int or detail["schema_version"] != 1
+                or detail["operation_id"] != operation_id or detail["kind"] not in {"save", "load"}
+                or row["status"] != detail["state"] or row["phase"] != "training_" + detail["kind"]):
+            raise ValueError("CHECKPOINT_OPERATION_CONFLICT")
+        _, encoded = self._training_checkpoint_material(detail["input"])
+        if hashlib.sha256(encoded.encode()).hexdigest() != detail["input_sha256"]:
+            raise ValueError("CHECKPOINT_HASH_MISMATCH")
+        self._training_checkpoint_material(detail)
+        return copy.deepcopy(detail)
+
+    def training_operation_prepare(self, task_id, *, operation_id, kind, normalized_input, result, **args):
+        if type(kind) is not str or kind not in {"save", "load"}:
+            raise ValueError("CHECKPOINT_REQUEST_INVALID")
+        prior = self.training_operation_read(task_id, operation_id=operation_id, **args)
+        value, raw = self._training_checkpoint_material(normalized_input)
+        input_hash = hashlib.sha256(raw.encode()).hexdigest()
+        if prior is not None:
+            if prior["kind"] != kind or prior["input_sha256"] != input_hash or prior["input"] != value:
+                raise PermissionError("CHECKPOINT_OPERATION_CONFLICT")
+            return prior
+        detail = {"schema_version": 1, "operation_id": operation_id, "kind": kind, "input": value,
+            "input_sha256": input_hash, "state": "RESERVED" if kind == "save" else "LOAD_ADMITTED",
+            "result": result}
+        _, encoded = self._training_checkpoint_material(detail)
+        step_id = "trainop_" + hashlib.sha256((task_id + operation_id).encode()).hexdigest()
+        args["connection"].execute("""INSERT INTO ai_task_step
+            (step_id,task_id,phase,status,detail,started_at) VALUES (?,?,?,?,?,?)""",
+            (step_id, task_id, "training_" + kind, detail["state"], encoded, self._now()))
+        return self.training_operation_read(task_id, operation_id=operation_id, **args)
+
+    def training_checkpoint_latest_receipt(self, task_id, **args):
+        import copy
+        from lumenis.system.security import training_receipts as receipts
+        self.training_execution_read(task_id, **args)
+        rows = args["connection"].execute("""SELECT detail FROM ai_task_step
+            WHERE task_id=? AND phase='training_save' AND status='COMMITTED'""", (task_id,)).fetchall()
+        if len(rows) > 4096:
+            raise ValueError("CHECKPOINT_REQUEST_INVALID")
+        records = []
+        for row in rows:
+            operation = _strict_json_loads(row["detail"], field_name="committed training checkpoint")
+            record = operation["result"]
+            receipts.verify_training_checkpoint_receipt(record["receipt"],
+                expected_payload={k: v for k, v in record.items() if k != "receipt"}, pinned_public_key=args["pinned_public_key"])
+            if record["task_digest"] != _training_receipt_task_digest(task_id):
+                raise ValueError("CHECKPOINT_SCOPE_MISMATCH")
+            records.append(record)
+        records.sort(key=lambda value: value["artifact_version"])
+        parent, refs = None, set()
+        for version, record in enumerate(records, 1):
+            if (record["artifact_version"] != version or record["parent_ref"] != parent
+                    or record["artifact_ref"] in refs):
+                raise ValueError("CHECKPOINT_OPERATION_CONFLICT")
+            refs.add(record["artifact_ref"])
+            parent = record["artifact_ref"]
+        return copy.deepcopy(records[-1]) if records else None
+
+    def training_checkpoint_receipt_for_artifact(self, task_id, *, artifact_ref, **args):
+        import copy
+        from lumenis.system.security import training_receipts as receipts
+        receipts._checkpoint_ref(artifact_ref)
+        self.training_checkpoint_latest_receipt(task_id, **args)
+        rows = args["connection"].execute("""SELECT detail FROM ai_task_step
+            WHERE task_id=? AND phase='training_save' AND status='COMMITTED'""", (task_id,)).fetchall()
+        matches = []
+        for row in rows:
+            operation = _strict_json_loads(row["detail"], field_name="committed training checkpoint")
+            if operation["result"]["artifact_ref"] == artifact_ref:
+                matches.append(operation["result"])
+        if len(matches) > 1:
+            raise ValueError("CHECKPOINT_OPERATION_CONFLICT")
+        return copy.deepcopy(matches[0]) if matches else None
+
+    def training_operation_transition(self, task_id, *, operation_id, before_state, state, result, **args):
+        record = self.training_operation_read(task_id, operation_id=operation_id, **args)
+        if record is None or record["state"] != before_state:
+            raise PermissionError("CHECKPOINT_OPERATION_CONFLICT")
+        transitions = {"RESERVED": {"WRITING", "FAILED", "INTERRUPTED"},
+            "WRITING": {"COMMITTED", "FAILED", "INTERRUPTED"},
+            "LOAD_ADMITTED": {"LOAD_ADMITTED", "LOADING", "FAILED", "INTERRUPTED"},
+            "LOADING": {"LOADED", "FAILED", "INTERRUPTED"}, "LOADED": {"RUNNABLE", "FAILED"}}
+        if type(state) is not str or state not in transitions.get(before_state, set()):
+            raise PermissionError("CHECKPOINT_OPERATION_CONFLICT")
+        _, previous = self._training_checkpoint_material(record)
+        current = {**record, "state": state, "result": result}
+        _, encoded = self._training_checkpoint_material(current)
+        step_id = "trainop_" + hashlib.sha256((task_id + operation_id).encode()).hexdigest()
+        cursor = args["connection"].execute("""UPDATE ai_task_step SET status=?,detail=?,finished_at=?
+            WHERE step_id=? AND task_id=? AND detail=?""", (state, encoded,
+            self._now() if state in {"COMMITTED", "RUNNABLE", "FAILED", "INTERRUPTED"} else None,
+            step_id, task_id, previous))
+        if cursor.rowcount != 1:
+            raise RuntimeError("CHECKPOINT_OPERATION_CONFLICT")
+        return current
+
+    def training_require_current_checkpoint_admission(self, task_id, *, admission, operation,
+                                                      expected_fingerprints, worker_binding, **args):
+        """Verify current persisted start bytes; Permission/runtime remain callers."""
+        from lumenis.system.security import training_receipts as receipts
+        if type(admission) is not receipts.VerifiedTrainingCheckpointAdmission or operation not in {"save", "load"}:
+            raise PermissionError("CHECKPOINT_REQUEST_INVALID")
+        execution = self.training_execution_read(task_id, **args)
+        envelope = admission.envelope
+        payload = envelope["payload"]
+        record = self.training_operation_read(task_id, operation_id=payload["operation_id"], **args)
+        if (execution is None or record is None or record["kind"] != operation
+                or record["state"] != ("RESERVED" if operation == "save" else "LOAD_ADMITTED")
+                or type(record["result"]) is not dict or record["result"].get("admission") != envelope
+                or execution["worker_binding"] != worker_binding
+                or execution["fingerprints"] != expected_fingerprints
+                or payload["fingerprints"] != expected_fingerprints
+                or payload["task_digest"] != execution["task_digest"]
+                or payload["run_digest"] != execution["run_digest"]
+                or payload["attempt_id"] != execution["attempt_id"]
+                or payload["worker_epoch"] != execution["worker_epoch"]
+                or payload["policy_sha256"] != execution["policy_sha256"]
+                or payload["operation"] != operation):
+            raise PermissionError("CHECKPOINT_WORKER_FENCE_LOST")
+        receipts.verify_training_checkpoint_admission(envelope, expected_payload=record["result"]["admission"]["payload"],
+            pinned_public_key=args["pinned_public_key"])
+        return record
+
+    def training_execution_register_resume(self, task_id, *, previous_worker_binding,
+                                          worker_binding, worker_stop_receipt_ref, **args):
+        import copy
+        value = self.training_execution_read(task_id, **args)
+        if (value is None or value["worker_binding"] != previous_worker_binding
+                or value["pending_challenge"] is not None
+                or type(worker_stop_receipt_ref) is not str or not worker_stop_receipt_ref
+                or worker_binding == previous_worker_binding):
+            raise PermissionError("CHECKPOINT_WORKER_STOP_NOT_CONFIRMED")
+        # Runtime has already stopped/reaped the exact old process tree while
+        # retaining its OS lock; this method stores no caller Boolean claim.
+        worker, _ = self._training_checkpoint_material(worker_binding)
+        if (type(worker) is not dict or set(worker) != {"pid", "created_at", "lock_sha256"}
+                or type(worker["pid"]) is not int or worker["pid"] <= 0
+                or type(worker["created_at"]) not in {int, float} or not math.isfinite(worker["created_at"])
+                or worker["created_at"] <= 0 or type(worker["lock_sha256"]) is not str
+                or re.fullmatch(r"[0-9a-f]{64}", worker["lock_sha256"]) is None):
+            raise ValueError("CHECKPOINT_REQUEST_INVALID")
+        _, original, _ = self._training_checkpoint_task(task_id,
+            expected_binding=args["expected_binding"], expected_approval_reference=args["expected_approval_reference"],
+            pinned_public_key=args["pinned_public_key"], connection=args["connection"])
+        current = {**value, "worker_binding": worker, "worker_epoch": value["worker_epoch"] + 1,
+            "attempt_id": str(uuid.uuid4()), "run_digest": hashlib.sha256(uuid.uuid4().bytes).hexdigest(),
+            "next_sequence": max(value["next_sequence"], original["next_sequence"]),
+            "last_phase": None, "pending_challenge": None, "handoff": None, "state": "LOAD_ADMITTED"}
+        self._training_execution_write(task_id, previous=value, current=current, connection=args["connection"])
+        return copy.deepcopy(current)
+
+    def training_execution_commit_loaded(self, task_id, *, phase_handoff, **args):
+        from lumenis.system.security import training_receipts as receipts
+        value = self.training_execution_read(task_id, **args)
+        payload = phase_handoff.get("payload") if type(phase_handoff) is dict else None
+        if value is None or value["state"] != "LOAD_ADMITTED" or type(payload) is not dict:
+            raise PermissionError("CHECKPOINT_LOAD_FAILED")
+        receipts.verify_training_recovery_handoff(phase_handoff, expected_payload=payload,
+                                                  pinned_public_key=args["pinned_public_key"])
+        expected = {"task_id": task_id, "task_digest": value["task_digest"], "run_digest": value["run_digest"],
+            "attempt_id": value["attempt_id"], "worker_epoch": value["worker_epoch"],
+            "fingerprints": value["fingerprints"], "next_sequence": value["next_sequence"],
+            "worker_binding_sha256": hashlib.sha256(receipts._canonical_json_bytes(value["worker_binding"])).hexdigest()}
+        if any(type(payload.get(k)) is not type(v) or payload[k] != v for k, v in expected.items()):
+            raise PermissionError("CHECKPOINT_SCOPE_MISMATCH")
+        record = self.training_operation_read(task_id, operation_id=payload["load_operation_id"], **args)
+        if record is None or record["state"] != "LOADED" or record["result"].get("phase_handoff") != phase_handoff:
+            raise PermissionError("CHECKPOINT_NOT_COMMITTED")
+        current = {**value, "state": "LOADED", "handoff": phase_handoff}
+        self._training_execution_write(task_id, previous=value, current=current, connection=args["connection"])
+        return current
+
+    def training_prepare_recovery_phase_challenge(self, task_id, *, phase, **args):
+        from lumenis.system.security import training_receipts as receipts
+        current_time = int(time.time())
+        value = self.training_execution_read(task_id, **args)
+        if value is None or value["state"] not in {"LOADED", "RUNNABLE"}:
+            raise PermissionError("CHECKPOINT_NOT_COMMITTED")
+        previous = dict(value)
+        if value["pending_challenge"] is not None:
+            # Lost response is reconciled explicitly; never renew a physical
+            # resumed phase by silently reissuing its start.
+            raise PermissionError("CHECKPOINT_COMMIT_UNKNOWN")
+        if value["last_phase"] is None:
+            if phase != "before_train" or value["handoff"] is None:
+                raise PermissionError("CHECKPOINT_REQUEST_INVALID")
+            receipts.verify_training_recovery_handoff(value["handoff"],
+                expected_payload=value["handoff"]["payload"], pinned_public_key=args["pinned_public_key"])
+            value = {**value, "handoff": None}
+        elif not _training_phase_transition_allowed(value["last_phase"], phase):
+            raise PermissionError("CHECKPOINT_RUN_MISMATCH")
+        challenge = receipts.validate_training_phase_challenge({"schema_version": 1,
+            "task_digest": value["task_digest"], "run_digest": value["run_digest"],
+            **value["fingerprints"], "nonce": hashlib.sha256(uuid.uuid4().bytes).hexdigest(),
+            "phase": phase, "sequence": value["next_sequence"], "issued_at": current_time,
+            "expires_at": min(current_time + 60, _training_approval_expiry_seconds(args["expected_approval_reference"]))})
+        value = {**value, "pending_challenge": challenge}
+        self._training_execution_write(task_id, previous=previous, current=value, connection=args["connection"])
+        return challenge
+
+    def training_commit_recovery_phase_receipt(self, task_id, *, challenge, receipt, **args):
+        from lumenis.system.security import training_receipts as receipts
+        value = self.training_execution_read(task_id, **args)
+        if value is None or value["pending_challenge"] != challenge:
+            raise PermissionError("CHECKPOINT_OPERATION_CONFLICT")
+        receipts.verify_training_phase_decision(receipt, expected_challenge=challenge,
+                                                pinned_public_key=args["pinned_public_key"])
+        for name, expected in {**value["fingerprints"], "run_digest": value["run_digest"],
+                               "task_digest": value["task_digest"], "sequence": value["next_sequence"]}.items():
+            if type(challenge.get(name)) is not type(expected) or challenge[name] != expected:
+                raise PermissionError("CHECKPOINT_SCOPE_MISMATCH")
+        _, detail = self._training_checkpoint_material({"challenge": challenge, "receipt": receipt})
+        args["connection"].execute("""INSERT INTO ai_task_step
+            (step_id,task_id,phase,status,detail,started_at,finished_at) VALUES (?,?,?,?,?,?,?)""",
+            (_training_phase_step_id(task_id, challenge["nonce"]), task_id, challenge["phase"], "allow",
+             detail, self._now(), self._now()))
+        state = "COMPLETED" if challenge["phase"] == _TRAINING_TERMINAL_PHASE else "RUNNABLE"
+        current = {**value, "next_sequence": value["next_sequence"] + 1, "last_phase": challenge["phase"],
+                   "pending_challenge": None, "state": state}
+        self._training_execution_write(task_id, previous=value, current=current, connection=args["connection"])
+        return current
+
+    def training_recovery_phase_history(self, task_id, *, nonce, **args):
+        """Read signed derivative history for this loaded attempt, never a permit."""
+        import copy
+        from lumenis.system.security import training_receipts as receipts
+        if type(nonce) is not str or re.fullmatch(r"[0-9a-f]{64}", nonce) is None:
+            raise ValueError("CHECKPOINT_REQUEST_INVALID")
+        execution = self.training_execution_read(task_id, **args)
+        if execution is None:
+            raise PermissionError("CHECKPOINT_NOT_COMMITTED")
+        row = args["connection"].execute(
+            "SELECT * FROM ai_task_step WHERE task_id=? AND step_id=?",
+            (task_id, _training_phase_step_id(task_id, nonce))).fetchone()
+        if row is None:
+            return None
+        detail = _strict_json_loads(row["detail"], field_name="recovery phase history")
+        if type(detail) is not dict or set(detail) != {"challenge", "receipt"}:
+            raise ValueError("CHECKPOINT_SCOPE_MISMATCH")
+        challenge = receipts.validate_training_phase_challenge(
+            detail["challenge"], now=detail["challenge"]["issued_at"])
+        expected = {"task_digest": execution["task_digest"], "run_digest": execution["run_digest"],
+                    **execution["fingerprints"], "nonce": nonce}
+        if (any(type(challenge.get(k)) is not type(v) or challenge[k] != v for k, v in expected.items())
+                or row["phase"] != challenge["phase"] or row["status"] != "allow"
+                or challenge["sequence"] >= execution["next_sequence"]):
+            raise ValueError("CHECKPOINT_SCOPE_MISMATCH")
+        receipts.verify_training_phase_decision(detail["receipt"], expected_challenge=challenge,
+            pinned_public_key=args["pinned_public_key"], now=detail["receipt"]["issued_at"])
+        return copy.deepcopy(detail)
+
+    @staticmethod
     def _require_training_receipt_connection(connection: Any) -> None:
         if type(connection) is not sqlite3.Connection or not connection.in_transaction:
             raise RuntimeError("training phase consumption requires an active SQLite transaction")

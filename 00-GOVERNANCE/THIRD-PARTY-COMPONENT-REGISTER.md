@@ -43,6 +43,7 @@ The table records direct manifest entries, not every transitive dependency.
 | python-docx | PRODUCTION | DOCX generation | Report/export adapter | VERIFY_BEFORE_RELEASE | Yes |
 | reportlab | PRODUCTION | PDF/report generation | Report/export adapter | VERIFY_BEFORE_RELEASE | Yes |
 | playwright | PRODUCTION | Browser automation | Browser/Collector adapter boundary | VERIFY_BEFORE_RELEASE | Yes, high-cost |
+| cryptography | PRODUCTION SECURITY ADAPTER | Ed25519 training-phase verification; pinned in requirements.txt | Existing SYSTEM Security; evidence and packaging details in the bounded training signature adapter section below | VERIFY_BEFORE_RELEASE | Yes |
 | psutil | PRODUCTION | Process/system monitoring | Runtime observability/process boundary | VERIFY_BEFORE_RELEASE | Yes |
 | requests | PRODUCTION | HTTP client | Network adapter | VERIFY_BEFORE_RELEASE | Yes |
 | httpx | PRODUCTION | HTTP client | Network adapter | VERIFY_BEFORE_RELEASE | Yes |
@@ -109,6 +110,7 @@ the developer computer is powered off.
 | Component | Class | Purpose in repository | Integration / replacement boundary | License status | Replaceable |
 | --- | --- | --- | --- | --- | --- |
 | pytest | TEST ONLY | Automated test collection/execution and CI blocking regression gate | Test runner boundary; production runtime must not depend on it | VERIFY_BEFORE_RELEASE | Yes |
+| pdfplumber | TEST ONLY | Pinned 0.11.10; independent extraction of exported PDF text | PDF verification only; no production import; upstream MIT, transitive notices still require reconciliation (https://github.com/jsvine/pdfplumber) | VERIFY_BEFORE_RELEASE | Yes |
 
 ## 4. Node direct dependencies observed in root `package.json`
 

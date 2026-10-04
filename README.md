@@ -17,7 +17,13 @@ Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)。
 
 ## Current execution instruction — closure red lines 2026-10-04
 
-All C1-C6/F/M are resumed under the latest six closure red lines in AGENTS.md. M/F use Astra/ultra, other execution windows Sol6.1/max; ordinary speed. GPU preparation is nonbilling until the Product Owner receives the concrete readiness/budget report and approves payment. This replaces the M/F-only pause and old autonomous rental permission. All scope, material duties, existing owners and acceptance requirements are retained.
+Current task 2026-10-04 21:00 Asia/Shanghai: M alone finishes the existing
+direct-repair errors and synchronizes reviewed source/rules with GitHub. Other
+windows are inactive and must not be messaged or resumed by this task. Existing
+product scope and unresolved requirements remain; this is not full product
+acceptance. Existing/free compute is the first choice. The former fixed paid
+RTX5090 route and rental deadline are historical and no longer current routing.
+No paid GPU, recharge or training is started by this repair task.
 
 
 At the start of every engineering task, resolve the current remote `main` HEAD. A README SHA, dated audit, handoff, or commit message is never a substitute for the current source tree.
@@ -437,3 +443,6 @@ Real Delivery；原文及每一条映射见[增补原文](00-GOVERNANCE/evidence
 基础测试主体词条库：用户已核对三格式 xujing_topic_seed_100_4confirmed_20261004，实际100词条/41来源，广州太古汇、深圳万象城（罗湖）、Nike、Le Labo各25词条；输入仍自述4/6主体确认、2未指定和100热度UNKNOWN，不冒充已验证热榜/全平台覆盖。C1/W6按现Source/registry/Evidence/Canonical入库与打包进入实际运行；词条随时间、商业体、品牌、活动、事件增补版本，原词条/原文件不删除，保留理由/有效区间/来源/旧版本与回滚。用户核对不重新要求人工重复确认。
 
 本地开发工具配置（2026-10-04）：官方Product Design已安装启用并保存当前产品/设计上下文；GSAP3.15.0独立开发工具链已实际调用，当前未写入官网/App生产依赖。只用于符合许可的Website/界面动效，不作为Flutter或视频/播客时间轴/可视化动画生成器。插件默认原型/模板流程服从现AGENTS/Experience/Screen owner；前端已恢复，配置按现有Owner合同供真实界面工作使用。已修复AE Method市场乱码路径、隔离退役Ollama配置、禁用同名全局旧上下文Skill入口，保留所有原活跃插件、手选、安全/Hook/MCP/项目配置。新启动的发现/功能证据与运行中窗口/产品E2E分别记录；不重启正在开发的窗口。
+
+
+本轮直接修复入口：20:45审计的剩余错误由M接续；source-bound/v3已经进入本地生产路径，验证不代表Owned AI或真实用户验收。现有/免费GPU优先。本轮结果与未完成项见 `00-GOVERNANCE/evidence/round-15/DIRECT-REPAIR-20261004.md`；未提交的其他Owner候选保留，不冒称已发布。

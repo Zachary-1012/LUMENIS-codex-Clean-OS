@@ -1,5 +1,6 @@
 """Real isolated report route, canonical data, principal and recovery chain."""
 import ast
+import re
 import sqlite3
 from pathlib import Path
 
@@ -43,7 +44,7 @@ def client(job_db, monkeypatch):
              node.name in {"_pg_resolve_operation_type", "_permission_gate_write_check"}]
     for node in nodes:
         node.decorator_list = []
-    namespace = dict(request=request, jsonify=jsonify, OperationType=p.OperationType,
+    namespace = dict(request=request, jsonify=jsonify, re=re, OperationType=p.OperationType,
                      _PG_WRITE_METHODS={"POST", "PUT", "PATCH", "DELETE"},
                      _PG_BYPASS_PATHS=set(), _pg=gate)
     exec(compile(ast.Module(body=nodes, type_ignores=[]), "app.py", "exec"), namespace)

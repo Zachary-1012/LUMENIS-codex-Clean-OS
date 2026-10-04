@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 import re
 import threading
 from dataclasses import asdict
@@ -19,6 +20,74 @@ from lumenis.system.security import training_receipts
 
 class TrainingPhaseBlocked(TrainingBlocked):
     """A phase cannot safely continue under the current bound metadata state."""
+
+
+class TrainingPublicContext:
+    """Public request hashes, with no actor, session, approval or authority.
+
+    A supervised worker can check its request without manufacturing a local
+    principal. Every execution check still goes to the authenticated owner.
+    """
+
+    def __init__(self, request, context, fingerprints):
+        def text(value, limit=512):
+            return (type(value) is str and value and value == value.strip()
+                    and len(value) <= limit and not any(ord(c) < 32 for c in value))
+
+        if (type(request) is not TrainingApprovalRequest or request.domain_id not in {"cth", "bmp"}
+                or not all(text(v) for v in (request.model_id, request.model_revision, request.recipe))
+                or any(type(v) is not str or re.fullmatch(r"[0-9a-f]{64}", v) is None
+                       for v in (request.manifest_sha256, request.train_sha256, request.heldout_sha256))
+                or type(request.scopes) is not tuple or not request.scopes
+                or any(not text(v, 256) for v in request.scopes)
+                or len(set(request.scopes)) != len(request.scopes)
+                or type(context) is not dict or set(context) != {"scope_descriptors"}
+                or type(context["scope_descriptors"]) is not dict
+                or set(context["scope_descriptors"]) != set(request.scopes)):
+            raise TrainingPhaseBlocked("TRAINING_PHASE_REQUEST_CHANGED")
+        descriptors = []
+        for scope in request.scopes:
+            value = context["scope_descriptors"][scope]
+            if (type(value) is not dict
+                    or set(value) != {"domain_id", "product_id", "global_scope", "subject_id", "brand_focus_id"}
+                    or value["domain_id"] != request.domain_id
+                    or value["product_id"] != {"cth": "CTH", "bmp": "ZBMP"}[request.domain_id]
+                    or type(value["global_scope"]) is not bool):
+                raise TrainingPhaseBlocked("CHECKPOINT_SCOPE_MISMATCH")
+            if value["global_scope"]:
+                valid = scope == "GLOBAL / ALL" and value["subject_id"] is None and value["brand_focus_id"] is None
+            elif request.domain_id == "cth":
+                valid = text(value["subject_id"], 256) and scope == value["subject_id"] and value["brand_focus_id"] is None
+            else:
+                valid = text(value["brand_focus_id"], 256) and scope == value["brand_focus_id"] and value["subject_id"] is None
+            if not valid:
+                raise TrainingPhaseBlocked("CHECKPOINT_SCOPE_MISMATCH")
+            descriptors.append({"scope": scope, **value})
+        def digest(value):
+            return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True,
+                separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+        public_request = {"schema_version": 1, "operation": "model_train", "domain_id": request.domain_id,
+            "model_id": request.model_id, "model_revision": request.model_revision, "recipe": request.recipe,
+            "manifest_sha256": request.manifest_sha256, "train_sha256": request.train_sha256,
+            "heldout_sha256": request.heldout_sha256, "scopes": list(request.scopes), "scope_descriptors": descriptors}
+        expected = {"request_sha256": digest(public_request),
+            "model_identity_sha256": digest({"schema_version": 1, "model_id": request.model_id, "model_revision": request.model_revision}),
+            "manifest_sha256": request.manifest_sha256, "train_sha256": request.train_sha256,
+            "heldout_sha256": request.heldout_sha256, "recipe_sha256": digest({"schema_version": 1, "recipe": request.recipe}),
+            "scope_sha256": digest({"schema_version": 1, "domain_id": request.domain_id,
+                "scopes": list(request.scopes), "scope_descriptors": descriptors})}
+        if type(fingerprints) is not dict or fingerprints != expected:
+            raise TrainingPhaseBlocked("TRAINING_PHASE_REQUEST_CHANGED")
+        self._request = request
+        self._context = copy.deepcopy(context)
+        self._fingerprints = expected
+
+    def fingerprints_for(self, request, context):
+        if type(request) is not TrainingApprovalRequest or request != self._request or context != self._context:
+            raise TrainingPhaseBlocked("TRAINING_PHASE_REQUEST_CHANGED")
+        # Recompute on read; mutating a public value never changes its binding.
+        checked = TrainingPublicContext(request, context, self._fingerprints)
+        return dict(checked._fingerprints)
 
 
 class TrainingPhaseClient:
@@ -34,13 +103,17 @@ class TrainingPhaseClient:
 
     def __init__(self, request: TrainingApprovalRequest, context: dict, *,
                  pinned_public_key: dict, transport: Callable | None = None,
-                 actor_id: int | None = None, principal=None):
+                 actor_id: int | None = None, principal=None, public_context=None):
         from lumenis.system.security.permission import owned_training_phase_fingerprints
 
-        self._fingerprints = owned_training_phase_fingerprints(
-            request, context=context, domain_id=request.domain_id,
-            actor_id=actor_id, principal=principal,
-        )
+        if public_context is None:
+            self._fingerprints = owned_training_phase_fingerprints(
+                request, context=context, domain_id=request.domain_id,
+                actor_id=actor_id, principal=principal)
+        elif type(public_context) is TrainingPublicContext and actor_id is None and principal is None:
+            self._fingerprints = public_context.fingerprints_for(request, context)
+        else:
+            raise TrainingPhaseBlocked("TRAINING_PHASE_REQUEST_CHANGED")
         training_receipts._validate_pinned_public_key(pinned_public_key)
         self._pin = copy.deepcopy(pinned_public_key)
         self._request = request
@@ -60,6 +133,76 @@ class TrainingPhaseClient:
         self._cancelled = threading.Event()
         self._last_challenge = None
         self._last_receipt = None
+        self._recovery_handoff = None
+
+    @classmethod
+    def from_prepared_task(cls, request, context, *, prepared_task, pinned_public_key,
+                           transport, actor_id=None, principal=None, public_context=None):
+        """Reuse the exact owner-prepared Task; signed fresh phases still gate work."""
+        if cls is not TrainingPhaseClient:
+            raise TrainingPhaseBlocked("TRAINING_PHASE_TASK_BINDING_INVALID")
+        client = cls(request, context, pinned_public_key=pinned_public_key, transport=transport,
+            actor_id=actor_id, principal=principal, public_context=public_context)
+        client._accept_prepared_task(copy.deepcopy(prepared_task))
+        return client
+
+    @classmethod
+    def from_recovery_handoff(cls, request: TrainingApprovalRequest, context: dict, *,
+                              handoff, pinned_public_key: dict, transport: Callable,
+                              actor_id: int | None = None, principal=None, public_context=None):
+        """Bind an explicitly loaded attempt without replaying the old run.
+
+        The checkpoint owner supplies the signed one-use handoff. Its current
+        Task, worker and Permission state is checked again by the phase owner
+        before admitting the first resumed before_train action.
+        """
+        if cls is not TrainingPhaseClient:
+            raise TrainingPhaseBlocked("CHECKPOINT_REQUEST_INVALID")
+        verified_type = getattr(training_receipts, "VerifiedTrainingRecoveryHandoff", None)
+        if verified_type is None:
+            raise TrainingPhaseBlocked("CHECKPOINT_CONTRACT_NOT_BOUND")
+        if type(handoff) is not verified_type or not callable(transport):
+            raise TrainingPhaseBlocked("CHECKPOINT_REQUEST_INVALID")
+        client = cls(request, context, pinned_public_key=pinned_public_key,
+                     transport=transport, actor_id=actor_id, principal=principal, public_context=public_context)
+        envelope = copy.deepcopy(handoff.envelope)
+        payload = envelope.get("payload") if type(envelope) is dict else None
+        if type(payload) is not dict or payload.get("fingerprints") != client._fingerprints:
+            raise TrainingPhaseBlocked("CHECKPOINT_SCOPE_MISMATCH")
+        task_id = payload.get("task_id")
+        if (type(task_id) is not str
+                or re.fullmatch(r"trainrelay_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}", task_id) is None
+                or payload.get("task_digest") != hashlib.sha256(task_id.encode("utf-8")).hexdigest()
+                or type(payload.get("next_sequence")) is not int or payload["next_sequence"] < 1
+                or type(payload.get("run_digest")) is not str
+                or re.fullmatch(r"[0-9a-f]{64}", payload["run_digest"]) is None
+                or type(payload.get("schema_version")) is not int or payload["schema_version"] != 1
+                or type(payload.get("admission_version")) is not int or payload["admission_version"] != 3
+                or payload.get("next_phase") != "before_train"):
+            raise TrainingPhaseBlocked("CHECKPOINT_REQUEST_INVALID")
+        client._recovery_handoff = envelope
+        client._require_recovery_handoff()
+        client._task_id = task_id
+        client._task_digest = payload["task_digest"]
+        client._run_digest = payload["run_digest"]
+        client._sequence = payload["next_sequence"]
+        return client
+
+    def _require_recovery_handoff(self) -> None:
+        verifier = getattr(training_receipts, "verify_training_recovery_handoff", None)
+        verified_type = getattr(training_receipts, "VerifiedTrainingRecoveryHandoff", None)
+        if not callable(verifier) or verified_type is None:
+            raise TrainingPhaseBlocked("CHECKPOINT_CONTRACT_NOT_BOUND")
+        try:
+            verified = verifier(
+                copy.deepcopy(self._recovery_handoff),
+                expected_payload=copy.deepcopy(self._recovery_handoff["payload"]),
+                pinned_public_key=self._pin,
+            )
+        except training_receipts.TrainingReceiptError:
+            raise TrainingPhaseBlocked("CHECKPOINT_REQUEST_INVALID") from None
+        if type(verified) is not verified_type:
+            raise TrainingPhaseBlocked("CHECKPOINT_REQUEST_INVALID")
 
     def cancel(self) -> None:
         """Request cooperative stop at the next caller boundary; no process claim."""
@@ -77,7 +220,11 @@ class TrainingPhaseClient:
         return copy.deepcopy(reply)
 
     def _prepare(self) -> None:
-        reply = self._call("POST", body=self._body)
+        self._accept_prepared_task(self._call("POST", body=self._body))
+
+    def _accept_prepared_task(self, reply):
+        if type(reply) is not dict or reply.get("ok") is not True:
+            raise TrainingPhaseBlocked("TRAINING_PHASE_TASK_BINDING_INVALID")
         state = reply.get("public_challenge_context")
         task_id = reply.get("task_id")
         if (reply.get("state") != "PHASE_TASK_PREPARED"
@@ -119,6 +266,13 @@ class TrainingPhaseClient:
                 raise TrainingPhaseBlocked("TRAINING_PHASE_REQUEST_CHANGED")
             if self._uncertain:
                 raise TrainingPhaseBlocked("TRAINING_PHYSICAL_RECOVERY_REQUIRED")
+            if self._recovery_handoff is not None:
+                if phase != "before_train":
+                    raise TrainingPhaseBlocked("CHECKPOINT_REQUEST_INVALID")
+                self._require_recovery_handoff()
+                # Preparing the first resumed challenge consumes the one-use
+                # owner handoff. A lost response cannot safely be retried here.
+                self._uncertain = True
             if self._task_id is None:
                 if phase != "initial":
                     raise TrainingPhaseBlocked("TRAINING_PHASE_INITIAL_REQUIRED")
@@ -162,6 +316,7 @@ class TrainingPhaseClient:
             self._last_receipt = decision["receipt"]
             self._sequence = decision["next_sequence"]
             self._uncertain = False
+            self._recovery_handoff = None
 
     def require_current_receipt(self) -> None:
         """Recheck expiry/cancellation after the separate live model permit check."""

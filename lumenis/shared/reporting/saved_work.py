@@ -51,7 +51,7 @@ def _digest(value: Any) -> str:
     return hashlib.sha256(_json(value)).hexdigest()
 
 
-def authorize(actor: Any, scope: Mapping[str, Any], *, action: str) -> dict:
+def authorize(actor: Any, scope: Mapping[str, Any], *, action: str, connection=None) -> dict:
     """Revalidate the existing server-issued principal and exact report scope."""
     keys = {"domain_id", "subject_id", "brand_focus_id", "global_scope"}
     if not isinstance(scope, Mapping) or set(scope) != keys:
@@ -63,7 +63,8 @@ def authorize(actor: Any, scope: Mapping[str, Any], *, action: str) -> dict:
     checker = (permission.check_local_workspace_scope_permission
                if type(actor) is permission.LocalWorkspacePrincipal
                else permission.check_actor_scope_permission)
-    decision = checker(actor, module="reports", action=action, **normalized)
+    connection_options = {} if connection is None else {"connection": connection}
+    decision = checker(actor, module="reports", action=action, **normalized, **connection_options)
     if decision.allowed is not True or decision.verification_state != "verified":
         raise SavedWorkError("WORK_PERMISSION_DENIED")
     identity = ({"principal_kind": actor.principal_kind, "principal_ref": actor.principal_ref}
@@ -72,8 +73,9 @@ def authorize(actor: Any, scope: Mapping[str, Any], *, action: str) -> dict:
     return {**normalized, **identity}
 
 
-def _check_effect(actor: Any, scope: Mapping, operation: Any, resource: str) -> dict:
-    context = authorize(actor, scope, action="write" if operation != permission.OperationType.DATA_EXPORT else "read")
+def _check_effect(actor: Any, scope: Mapping, operation: Any, resource: str, *, connection=None) -> dict:
+    context = authorize(actor, scope, action="write" if operation != permission.OperationType.DATA_EXPORT else "read",
+                        connection=connection)
     if permission.is_testing_bypass_enabled():
         raise SavedWorkError("WORK_PERMISSION_UNVERIFIED")
     caller = context.get("principal_ref") or f"actor:{context['actor_id']}"
@@ -248,7 +250,7 @@ def _verified_evidence(con, evidence_id: int, context: dict, actor: Any = None,
     # GLOBAL never authorizes a focused source. Resolve its own scope afresh
     # through the canonical Permission owner for every use/read/export.
     if actor is not None:
-        if authorize(actor, source_scope, action="read") != source_context:
+        if authorize(actor, source_scope, action="read", connection=con) != source_context:
             raise SavedWorkError("WORK_EVIDENCE_CONTEXT_MISMATCH")
     elif source_context != context:
         raise SavedWorkError("WORK_SOURCE_AUTHORIZATION_REQUIRED")
@@ -536,8 +538,9 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
             _validate_citations(con, checked_citations, context, actor)
             if before_commit is not None:
                 before_commit(con, record, document)
-            _check_effect(actor, scope, permission.OperationType.DATA_EXPORT, resource)
-            authorize(actor, scope, action="write")
+            _check_effect(actor, scope, permission.OperationType.DATA_EXPORT, resource, connection=con)
+            authorize(actor, scope, action="write", connection=con)
+            _validate_citations(con, checked_citations, context, actor)
             con.commit()
             committed = True
             # A receipt is issued only after an independent connection has
@@ -554,14 +557,20 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
                     attached_path.unlink(missing_ok=True)
 
 
-def read_committed_work(artifact_id: str, *, actor: Any, scope: Mapping) -> dict:
+def read_committed_work(artifact_id: str, *, actor: Any, scope: Mapping, connection=None) -> dict:
     """Canonical server reader; never accepts a tool/model receipt as evidence."""
-    context = authorize(actor, scope, action="read")
-    with get_repository().connection(read_only=True, wal=False) as con:
+    from contextlib import nullcontext
+    if connection is not None:
+        permission._require_canonical_scope_connection(connection)
+    context = authorize(actor, scope, action="read", connection=connection)
+    committed_refs = []
+    reader = get_repository().connection(read_only=True, wal=False) if connection is None else nullcontext(connection)
+    with reader as con:
         result = _read(con, artifact_id, context, actor)
         child = result
         for _ in range(1000):
             doc = child["document"]
+            committed_refs.append(child["artifact"])
             parent = doc.get("parent_artifact_id")
             if doc["version"] == 1:
                 if parent is not None or doc.get("parent_sha256") is not None:
@@ -598,9 +607,20 @@ def read_committed_work(artifact_id: str, *, actor: Any, scope: Mapping) -> dict
                             "captured_at": provenance["provenance"]["captured_at"],
                             "purposes": purposes,
                             **source_boundaries(provenance["provenance"])})
-    authorize(actor, scope, action="read")
+    if connection is not None:
+        # Scope/rights checks use the caller's transaction. This separate view
+        # proves only that immutable upstream rows were committed beforehand;
+        # it can never authorize an otherwise denied or newly staged source.
+        with get_repository().connection(read_only=True, wal=False) as committed:
+            for artifact in committed_refs:
+                row = committed.execute(f"SELECT sha256,size_bytes,source_execution_id,kind FROM {_TABLE} WHERE artifact_id=?",
+                                        (artifact["artifact_id"],)).fetchone()
+                if (row is None or row[0] != artifact["sha256"] or row[1] != artifact["size_bytes"]
+                        or row[2] != artifact["source_execution_id"] or row[3] != _KIND):
+                    raise SavedWorkError("WORK_NOT_COMMITTED")
+    authorize(actor, scope, action="read", connection=connection)
     for source in sources:
-        authorize(actor, source["scope"], action="read")
+        authorize(actor, source["scope"], action="read", connection=connection)
     doc, record = result["document"], result["artifact"]
     receipt = {"schema": "lumenis.committed-saved-work/v1", "task_id": doc.get("task_id"),
                "assertion_id": doc.get("assertion_id"), "contract": doc["contract"],
@@ -620,29 +640,161 @@ def read_committed_work(artifact_id: str, *, actor: Any, scope: Mapping) -> dict
                "commit_state": "registry_committed_artifact_staged"}
     raw = result.pop("_content_bytes")
     # The final response boundary retains the exact target actor/scope.
-    authorize(actor, scope, action="read")
-    with get_repository().connection(read_only=True, wal=False) as con:
+    authorize(actor, scope, action="read", connection=connection)
+    reader = get_repository().connection(read_only=True, wal=False) if connection is None else nullcontext(connection)
+    with reader as con:
         _validate_citations(con, result["document"]["citations"], context, actor)
-    authorize(actor, scope, action="read")
+    authorize(actor, scope, action="read", connection=connection)
     return {**result, "content": raw, "receipt": receipt}
 
 
-def reopen_work(artifact_id: str, *, actor: Any, scope: Mapping) -> dict:
-    result = read_committed_work(artifact_id, actor=actor, scope=scope)
+def reopen_work(artifact_id: str, *, actor: Any, scope: Mapping, connection=None) -> dict:
+    options = {} if connection is None else {"connection": connection}
+    result = read_committed_work(artifact_id, actor=actor, scope=scope, **options)
     result.pop("content")
     return result
 
 
+def _revision_target(document: dict, pointer: str):
+    if (not isinstance(pointer, str) or len(pointer) > 1000 or not pointer.startswith("/")
+            or re.search(r"~(?![01])", pointer)):
+        raise SavedWorkError("WORK_EDIT_POINTER_INVALID")
+    tokens = tuple(token.replace("~1", "/").replace("~0", "~") for token in pointer[1:].split("/"))
+    if tokens not in {("title",), ("markdown",)} and not (len(tokens) > 1 and tokens[0] == "payload"):
+        raise SavedWorkError("WORK_EDIT_FIELD_FORBIDDEN")
+    if tokens[:2] == ("payload", "revision_note"):
+        raise SavedWorkError("WORK_EDIT_FIELD_FORBIDDEN")
+    current = document
+    for token in tokens[:-1]:
+        if isinstance(current, dict) and token in current:
+            current = current[token]
+        elif isinstance(current, list) and re.fullmatch(r"0|[1-9][0-9]*", token) and int(token) < len(current):
+            current = current[int(token)]
+        else:
+            raise SavedWorkError("WORK_EDIT_TARGET_NOT_FOUND")
+    key = tokens[-1]
+    if isinstance(current, list):
+        if not re.fullmatch(r"0|[1-9][0-9]*", key) or int(key) >= len(current):
+            raise SavedWorkError("WORK_EDIT_TARGET_NOT_FOUND")
+        key = int(key)
+    elif not isinstance(current, dict) or key not in current:
+        raise SavedWorkError("WORK_EDIT_TARGET_NOT_FOUND")
+    if isinstance(current[key], (dict, list)):
+        raise SavedWorkError("WORK_EDIT_CONTAINER_REPLACEMENT_FORBIDDEN")
+    return tokens, current, key
+
+
+def _apply_work_edits(document: dict, edits: list) -> list:
+    if not isinstance(edits, list) or not 1 <= len(edits) <= 100:
+        raise SavedWorkError("WORK_EDITS_REQUIRED")
+    grouped = {}
+    for edit in edits:
+        if not isinstance(edit, dict):
+            raise SavedWorkError("WORK_EDIT_INVALID")
+        fields = set(edit)
+        if fields not in ({"pointer", "expected", "value"}, {"pointer", "start", "end", "expected", "replacement"}):
+            raise SavedWorkError("WORK_EDIT_INVALID")
+        tokens, target, key = _revision_target(document, edit["pointer"])
+        value = target[key]
+        if fields == {"pointer", "expected", "value"}:
+            if tokens in grouped or isinstance(edit["value"], (dict, list)):
+                raise SavedWorkError("WORK_EDIT_OVERLAP_OR_CONTAINER")
+            if _json(value) != _json(edit["expected"]):
+                raise SavedWorkError("WORK_EDIT_VALUE_CHANGED")
+        else:
+            if (not isinstance(value, str) or type(edit["start"]) is not int or type(edit["end"]) is not int
+                    or not 0 <= edit["start"] <= edit["end"] <= len(value)
+                    or not isinstance(edit["expected"], str) or not isinstance(edit["replacement"], str)):
+                raise SavedWorkError("WORK_EDIT_RANGE_INVALID")
+            if value[edit["start"]:edit["end"]] != edit["expected"]:
+                raise SavedWorkError("WORK_EDIT_VALUE_CHANGED")
+            if tokens in grouped and any("start" not in other for other in grouped[tokens]):
+                raise SavedWorkError("WORK_EDIT_OVERLAP_OR_CONTAINER")
+        grouped.setdefault(tokens, []).append(edit)
+    for tokens, changes in grouped.items():
+        _, target, key = _revision_target(document, changes[0]["pointer"])
+        if "value" in changes[0]:
+            target[key] = changes[0]["value"]
+            continue
+        ordered = sorted(changes, key=lambda item: (item["start"], item["end"]))
+        for previous, current in zip(ordered, ordered[1:]):
+            if previous["end"] > current["start"] or previous["start"] == current["start"]:
+                raise SavedWorkError("WORK_EDIT_RANGES_OVERLAP")
+        text = target[key]
+        for edit in reversed(ordered):
+            text = text[:edit["start"]] + edit["replacement"] + text[edit["end"]:]
+        target[key] = text
+    return edits
+
+
+def revise_work(artifact_id: str, *, actor: Any, scope: Mapping, request_id: str,
+                expected_sha256: str, reason: str, edits: list, citations: list | None = None,
+                source_adoptions: list | None = None) -> dict:
+    """Apply explicit local user edits to a current generic research/report owner.
+
+    Creation and Task-owned contracts retain their dedicated revision service.
+    Offsets are Unicode code points in the selected immutable parent string.
+    """
+    if (not isinstance(expected_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_sha256)
+            or not isinstance(reason, str) or not reason.strip() or len(reason) > 4000):
+        raise SavedWorkError("WORK_REVISION_INPUT_INVALID")
+    item = read_committed_work(artifact_id, actor=actor, scope=scope)
+    if item["artifact"]["sha256"] != expected_sha256:
+        raise SavedWorkError("WORK_REVISION_SOURCE_CHANGED")
+    document = json.loads(_json(item["document"]))
+    if (document["kind"] not in {"research", "report"} or document.get("task_id") is not None
+            or document.get("assertion_id") is not None
+            or document["contract"] != {"id": "lumenis.saved-work", "version": "1", "required_payload_paths": []}):
+        raise SavedWorkError("WORK_REVISION_OWNER_REQUIRED")
+    edits = json.loads(_json(edits))
+    chosen_citations = document["citations"] if citations is None else json.loads(_json(citations))
+    adoptions = json.loads(_json([] if source_adoptions is None else source_adoptions))
+    if not isinstance(chosen_citations, list) or not isinstance(adoptions, list) or len(adoptions) > 100:
+        raise SavedWorkError("WORK_SOURCE_ADOPTION_INVALID")
+    old_ids = {citation["evidence_id"] for citation in document["citations"]}
+    if any(not isinstance(citation, dict) or type(citation.get("evidence_id")) is not int
+           or citation["evidence_id"] <= 0 for citation in chosen_citations):
+        raise SavedWorkError("WORK_CITATIONS_INVALID")
+    new_ids = {citation["evidence_id"] for citation in chosen_citations}
+    for adoption in adoptions:
+        if (not isinstance(adoption, dict) or set(adoption) != {"from_evidence_id", "to_evidence_id"}
+                or any(adoption[key] is not None and (type(adoption[key]) is not int or adoption[key] <= 0) for key in adoption)
+                or adoption["from_evidence_id"] is not None and adoption["from_evidence_id"] not in old_ids
+                or adoption["to_evidence_id"] is not None and adoption["to_evidence_id"] not in new_ids
+                or adoption["from_evidence_id"] == adoption["to_evidence_id"]):
+            raise SavedWorkError("WORK_SOURCE_ADOPTION_INVALID")
+    if ((new_ids - old_ids) - {adoption["to_evidence_id"] for adoption in adoptions}
+            or (old_ids - new_ids) - {adoption["from_evidence_id"] for adoption in adoptions}):
+        raise SavedWorkError("WORK_SOURCE_ADOPTION_REQUIRED")
+    applied = _apply_work_edits(document, edits)
+    document["payload"]["revision_note"] = {
+        "schema": "lumenis.user-work-local-revision/v1", "reason": reason,
+        "parent": {"artifact_id": artifact_id, "sha256": expected_sha256, "version": item["document"]["version"]},
+        "edits": applied, "source_adoptions": adoptions, "offset_unit": "unicode_codepoint",
+        "source_relation": "explicit user selection; not an independent correction of source Evidence"}
+    _safe_payload(document["payload"])
+    return save_work(title=document["title"], markdown=document["markdown"], kind=document["kind"],
+                     payload=document["payload"], citations=chosen_citations, request_id=request_id,
+                     actor=actor, scope=scope, work_id=document["work_id"], previous_artifact_id=artifact_id,
+                     expected_draft_digest=item["document"]["draft_digest"], contract=document["contract"])
+
+
 def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
-                cursor: str | None = None, kind: str | None = None) -> dict:
+                cursor: str | None = None, kind: str | None = None,
+                evidence_id: int | None = None) -> dict:
     """Bounded, newest-first search; return a continuation even across hidden rows."""
     context = authorize(actor, scope, action="read")
     if not isinstance(query, str) or len(query) > 200 or type(limit) is not int or not 1 <= limit <= 100:
         raise SavedWorkError("WORK_SEARCH_INVALID")
     if kind is not None and (not isinstance(kind, str) or kind not in _KINDS):
         raise SavedWorkError("WORK_SEARCH_INVALID")
+    if evidence_id is not None and (type(evidence_id) is not int or evidence_id <= 0):
+        raise SavedWorkError("WORK_SEARCH_INVALID")
     import shared_artifacts
-    identity = _digest({"owner": "saved_work", "context": context, "query": query, "kind": kind})
+    selectors = {"owner": "saved_work", "context": context, "query": query, "kind": kind}
+    if evidence_id is not None:
+        selectors["evidence_id"] = evidence_id
+    identity = _digest(selectors)
     try:
         boundary_value = shared_artifacts._content_project_list_boundary(cursor, identity)
     except shared_artifacts.LocalArtifactError as exc:
@@ -672,11 +824,23 @@ def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
                 continue
             doc = item["document"]
             item.pop("_content_bytes")
+            if evidence_id is not None:
+                matches = [citation for citation in doc["citations"] if citation["evidence_id"] == evidence_id]
+                if not matches:
+                    continue
+                # These are source-character uses in immutable work versions.
+                # Storage cannot infer an uncited claim or a scene/audio link.
+                item["source_matches"] = {"evidence_id": evidence_id, "citations": matches,
+                    "impact": "source-cited-work-version", "uncited_dependencies": "NOT_VERIFIED"}
             if (kind is None or doc["kind"] == kind) and query.casefold() in (doc["title"] + "\n" + doc["markdown"]).casefold():
                 results.append(item)
             if len(results) == limit:
                 break
     authorize(actor, scope, action="read")
+    with get_repository().connection(read_only=True, wal=False) as con:
+        for item in results:
+            _validate_citations(con, item["document"]["citations"], context, actor)
+        authorize(actor, scope, action="read", connection=con)
     has_more = len(rows) > consumed
     return {"items": results, "unverified_candidates": unavailable_count, "has_more": has_more,
             "next_cursor": shared_artifacts._content_project_list_cursor(identity, last_scanned)

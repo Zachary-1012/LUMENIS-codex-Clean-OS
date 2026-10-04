@@ -11,9 +11,13 @@ VALID_PRODUCTS = ("ZBMP", "CTH", "SYSTEM")
 VALID_ACTIONS = ("read", "write")
 
 
-def get_member_authorizations(user_id: int) -> list:
+def get_member_authorizations(user_id: int, *, connection=None) -> list:
     """获取成员的双域授权矩阵"""
-    conn = get_db()
+    if connection is None:
+        conn = get_db()
+    else:
+        from lumenis.system.security.permission import _require_canonical_scope_connection
+        conn = _require_canonical_scope_connection(connection)
     try:
         cur = conn.execute("""
             SELECT id, user_id, product_id, module, action, data_scope, time_range,
@@ -22,7 +26,8 @@ def get_member_authorizations(user_id: int) -> list:
         """, (user_id,))
         return [dict(r) for r in cur.fetchall()]
     finally:
-        conn.close()
+        if connection is None:
+            conn.close()
 
 
 def set_member_authorizations(user_id: int, authorizations: list, granted_by: int = None) -> dict:
@@ -75,7 +80,7 @@ def set_member_authorizations(user_id: int, authorizations: list, granted_by: in
 
 
 def check_dual_domain_permission(user_id: int, product_id: str, module: str = "*",
-                                 action: str = "read") -> bool:
+                                 action: str = "read", *, connection=None) -> bool:
     """
     双域权限校验。
     owner/admin 拥有全部权限；member(user) 按授权矩阵校验。
@@ -83,7 +88,11 @@ def check_dual_domain_permission(user_id: int, product_id: str, module: str = "*
     """
     product_id = (product_id or "").upper()
     action = (action or "read").lower()
-    conn = get_db()
+    if connection is None:
+        conn = get_db()
+    else:
+        from lumenis.system.security.permission import _require_canonical_scope_connection
+        conn = _require_canonical_scope_connection(connection)
     try:
         cur = conn.execute("SELECT role FROM v4_users WHERE id=? AND status='active'", (user_id,))
         user = cur.fetchone()
@@ -102,7 +111,8 @@ def check_dual_domain_permission(user_id: int, product_id: str, module: str = "*
         )
         return cur.fetchone() is not None
     finally:
-        conn.close()
+        if connection is None:
+            conn.close()
 
 
 def get_authorization_matrix_summary() -> dict:

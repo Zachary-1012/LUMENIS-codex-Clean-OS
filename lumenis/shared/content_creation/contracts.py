@@ -237,3 +237,77 @@ __all__ = [
     "VisualMotifPattern",
     "WhiteDescriptionPattern",
 ]
+
+def resolve_creation_upstream(reference, *, actor, scope, connection=None):
+    """Resolve an immutable upstream through its canonical authorized reader.
+
+    Caller references select bytes/versions; they never supply trusted body,
+    receipts, source rights or a cross-work production revision parent.
+    """
+    import copy
+    import re
+    from lumenis.shared.reporting import saved_work
+
+    if not isinstance(reference, dict) or reference.get("kind") not in {"saved_work", "source_brief_job"}:
+        raise ContentContractError("CREATION_UPSTREAM_REFERENCE_INVALID")
+    options = {"connection": connection} if connection is not None else {}
+    context = saved_work.authorize(actor, scope, action="read", **options)
+    if reference["kind"] == "saved_work":
+        if (set(reference) != {"kind", "artifact_id", "expected_sha256", "expected_version"}
+                or not isinstance(reference["artifact_id"], str)
+                or not isinstance(reference["expected_sha256"], str)
+                or re.fullmatch(r"[0-9a-f]{64}", reference["expected_sha256"]) is None
+                or type(reference["expected_version"]) is not int or reference["expected_version"] < 1):
+            raise ContentContractError("CREATION_UPSTREAM_REFERENCE_INVALID")
+        result = saved_work.read_committed_work(reference["artifact_id"], actor=actor, scope=scope, **options)
+        document, artifact = result["document"], result["artifact"]
+        if (artifact["sha256"] != reference["expected_sha256"]
+                or document["version"] != reference["expected_version"]):
+            raise ContentContractError("CREATION_UPSTREAM_VERSION_CHANGED")
+        snapshot = {
+            "schema": "lumenis.creation-upstream/v1", "kind": "saved_work",
+            "reference": copy.deepcopy(reference),
+            "identity": {"artifact_id": artifact["artifact_id"], "sha256": artifact["sha256"],
+                         "size_bytes": artifact["size_bytes"], "work_id": document["work_id"],
+                         "version": document["version"], "draft_digest": document["draft_digest"],
+                         "task_id": document.get("task_id"), "assertion_id": document.get("assertion_id")},
+            "document": {key: copy.deepcopy(document[key]) for key in
+                         ("schema", "kind", "title", "markdown", "payload", "contract", "citations")},
+            "source_records": copy.deepcopy(result["receipt"]["sources"]),
+            "return_ref": copy.deepcopy(result["return_ref"]),
+            "scope": {key: context[key] for key in ("domain_id", "subject_id", "brand_focus_id", "global_scope")},
+            "source_role": "committed_material_and_citations_not_new_capture_or_creation_grant",
+        }
+    else:
+        if (set(reference) != {"kind", "job_id", "expected_artifact_hash"}
+                or not isinstance(reference["job_id"], str)
+                or not isinstance(reference["expected_artifact_hash"], str)
+                or re.fullmatch(r"[0-9a-f]{64}", reference["expected_artifact_hash"]) is None):
+            raise ContentContractError("CREATION_UPSTREAM_REFERENCE_INVALID")
+        from lumenis.shared.reporting.source_brief_job import get_source_brief_job, _media_scope
+        actor_ref = context.get("principal_ref") or f"actor:{context['actor_id']}"
+        result = get_source_brief_job(reference["job_id"], actor_id=actor_ref, actor=actor, **options)
+        original_scope = _media_scope(result["source_brief"]["scope"])
+        target_scope = {key: context[key] for key in ("domain_id", "subject_id", "brand_focus_id", "global_scope")}
+        if (original_scope["domain_id"] != target_scope["domain_id"]
+                or (not target_scope["global_scope"] and original_scope != target_scope)):
+            raise ContentContractError("CREATION_UPSTREAM_SCOPE_MISMATCH")
+        if result["artifact_outcome"]["artifact_hash"] != reference["expected_artifact_hash"]:
+            raise ContentContractError("CREATION_UPSTREAM_VERSION_CHANGED")
+        snapshot = {
+            "schema": "lumenis.creation-upstream/v1", "kind": "source_brief_job",
+            "reference": copy.deepcopy(reference),
+            "identity": {"job_id": result["job_id"], "report_id": result["artifact_outcome"]["report_id"],
+                         "artifact_hash": result["artifact_outcome"]["artifact_hash"],
+                         "revision": copy.deepcopy(result.get("revision"))},
+            "document": {key: copy.deepcopy(result[key]) for key in
+                         ("business_question", "requested_source_ids", "source_brief")},
+            "source_records": copy.deepcopy(result["source_brief"]["records"]),
+            "return_ref": {"job_id": result["job_id"], "scope": copy.deepcopy(result["source_brief"]["scope"])},
+            "scope": target_scope,
+            "source_role": "source_scope_proof_report_not_shared_artifact_or_new_observation",
+        }
+    saved_work._safe_payload(snapshot)
+    if saved_work.authorize(actor, scope, action="read", **options) != context:
+        raise ContentContractError("CREATION_UPSTREAM_SCOPE_MISMATCH")
+    return snapshot

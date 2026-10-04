@@ -375,3 +375,218 @@ with app.test_request_context('/', headers={'Host':'localhost'}, environ_overrid
     restored = run(workspace, task)
     assert restored["state"] == "succeeded" and restored["action_receipt"]["version"] == 1
     assert count(workspace) == 2
+
+
+# New shape regressions are technical fixture evidence, never business acceptance.
+def manuscript_arguments(ws, request="manuscript-request-0001"):
+    args = arguments(ws, request)
+    args.pop("shot_plan")
+    materials = []
+    for key, role, text in (("brief", "brief", "The complete fixture brief.\n"),
+                            ("form", "application_form", "The separate complete fixture form.\n")):
+        materials.append({"material_id": key, "role": role, "filename": key + ".docx",
+            "size_bytes": 100, "sha256": "0" * 64, "text": text,
+            "text_sha256": hashlib.sha256(text.encode()).hexdigest(),
+            "source_url": "https://example.com/" + key + ".docx", "published_at": None,
+            "captured_at": "2026-10-03T00:00:00Z", "source_ref": None,
+            "evidence_ref": None, "source_use_ref": None})
+    args.update(profile=pitch.MANUSCRIPT_PROFILE,
+        input_manifest={"schema": pitch.INPUT_MANIFEST_SCHEMA, "state": "NOT_INGESTED", "materials": materials})
+    return args
+
+
+def test_manuscript_only_real_word_version_revision_full_manifest_and_reopen(workspace):
+    ws = workspace
+    args = manuscript_arguments(ws)
+    first = run(ws, pitch.prepare_internal_pitch(**args))
+    doc = first["work"]["document"]
+    assert doc["contract"] == pitch.MANUSCRIPT_CONTRACT
+    assert "shot_plan" not in doc["payload"] and "shot_timing" not in doc["payload"]["truth_state"]
+    assert doc["payload"]["input_manifest"] == args["input_manifest"]
+    assert doc["payload"]["truth_state"]["source_admission"] == "PENDING"
+    assert doc["payload"]["truth_state"]["input_materials"] == "OPERATOR_DECLARED_NOT_INGESTED"
+    assert doc["payload"]["truth_state"]["owned_model_execution"] == "NOT_RUN"
+    second_args = manuscript_arguments(ws, "manuscript-revision-0002")
+    second_args["manuscript"]["sections"][0]["body"] = "A revised original question."
+    second_args.update(work_id=doc["work_id"], previous_artifact_id=first["action_receipt"]["artifact_id"],
+                       expected_draft_digest=doc["draft_digest"])
+    second = run(ws, pitch.prepare_internal_pitch(**second_args))
+    assert second["action_receipt"]["version"] == 2
+    assert second["action_receipt"]["parent_sha256"] == first["action_receipt"]["sha256"]
+    assert second["work"]["document"]["payload"]["input_manifest"] == args["input_manifest"]
+    output = pitch.download_internal_pitch(second["task_id"], actor=ws["actor"], scope=ws["scope"])
+    assert "A revised original question." in [p.text for p in Document(io.BytesIO(output["content"])).paragraphs]
+    assert hashlib.sha256(output["content"]).hexdigest() == second["action_receipt"]["output"]["sha256"]
+    assert pitch.read_internal_pitch(first["task_id"], actor=ws["actor"], scope=ws["scope"])["work"]["document"] == doc
+    assert count(ws) == 4
+
+
+def test_exact_v1_task_created_with_old_owner_remains_byte_identical_under_new_owner(workspace, monkeypatch):
+    import base64
+    import types
+    import zlib
+    # Immutable pre-upgrade owner is a test-only compatibility golden, not a
+    # runtime owner. Inline compressed bytes keep the test independent of W4
+    # work paths, Git history depth and external source downloads.
+    legacy = zlib.decompress(base64.b64decode("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"))
+    assert hashlib.sha256(legacy).hexdigest() == "34eaf1dd0d6f99b394e6e39670383d9e1bb416c3694ecc47b599c17bf62cf9f8"
+    old = types.ModuleType("w4_exact_legacy_pitch")
+    exec(compile(legacy, "<immutable-v1-compatibility-golden>", "exec"), old.__dict__)
+    monkeypatch.setattr(old, "get_repository", lambda: workspace["repo"])
+    args = arguments(workspace)
+    pending = old.prepare_internal_pitch(**args)
+    first = old.run_internal_pitch(pending["task_id"], actor=workspace["actor"], scope=workspace["scope"])
+    row_before = dict(workspace["repo"].query_one("SELECT * FROM ai_task WHERE task_id=?", (pending["task_id"],)))
+    read = pitch.read_internal_pitch(pending["task_id"], actor=workspace["actor"], scope=workspace["scope"])
+    replay = pitch.run_internal_pitch(pending["task_id"], actor=workspace["actor"], scope=workspace["scope"])
+    assert read == first == replay
+    assert pitch.prepare_internal_pitch(**args) == first
+    row_after = dict(workspace["repo"].query_one("SELECT * FROM ai_task WHERE task_id=?", (pending["task_id"],)))
+    assert row_after == row_before
+    assert read["work"]["document"]["contract"] == pitch.CONTRACT
+    assert "input_manifest" not in read["work"]["document"]["payload"]
+    assert count(workspace) == 2
+    old.engine.cache_clear()
+
+
+@pytest.mark.parametrize("change", ["missing", "empty", "hash", "duplicate", "bound", "state", "time", "url", "private", "role", "size", "extra"])
+def test_manuscript_manifest_rejects_incomplete_forged_or_bound_claims_before_task(workspace, change):
+    args = manuscript_arguments(workspace)
+    manifest = args["input_manifest"]
+    material = manifest["materials"][0]
+    expected = "INTERNAL_PITCH_INPUT_MANIFEST_INVALID"
+    if change == "missing":
+        args["input_manifest"] = None
+    elif change == "empty":
+        manifest["materials"] = []
+    elif change == "hash":
+        material["text"] += "undeclared modification"
+    elif change == "duplicate":
+        manifest["materials"][1]["material_id"] = material["material_id"]
+    elif change == "bound":
+        material["source_ref"] = "DOC-invented"
+        expected = "INTERNAL_PITCH_SOURCE_BINDING_REQUIRED"
+    elif change == "state":
+        manifest["state"] = "VERIFIED"
+    elif change == "time":
+        material["captured_at"] = "2026-10-03"
+    elif change == "url":
+        material["source_url"] = "https://user:private@example.com/source"
+    elif change == "private":
+        material["local_path"] = "D:/private.docx"
+        expected = "WORK_PRIVATE_FIELD_FORBIDDEN"
+    elif change == "role":
+        material["role"] = []
+    elif change == "size":
+        material["size_bytes"] = True
+    elif change == "extra":
+        manifest["licensed"] = True
+    with pytest.raises(ValueError, match=expected):
+        pitch.prepare_internal_pitch(**args)
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM ai_task")[0] == 0
+    assert count(workspace) == 0
+
+
+def test_manuscript_profile_never_coerces_empty_shots_or_unknown_profile(workspace):
+    for profile, shot in ((pitch.MANUSCRIPT_PROFILE, {"shots": []}), ("unknown/v2", None)):
+        args = manuscript_arguments(workspace)
+        args.update(profile=profile, shot_plan=shot)
+        with pytest.raises(ValueError, match="INTERNAL_PITCH_PROFILE_INVALID"):
+            pitch.prepare_internal_pitch(**args)
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM ai_task")[0] == 0
+
+
+def test_manuscript_pending_cancel_and_committed_cancel_keep_history(workspace):
+    args = manuscript_arguments(workspace)
+    task = pitch.prepare_internal_pitch(**args)
+    cancelled = pitch.cancel_internal_pitch(task["task_id"], actor=workspace["actor"], scope=workspace["scope"])
+    assert cancelled["state"] == "cancelled" and cancelled["action_receipt"] is None
+    with pytest.raises(ValueError, match="INTERNAL_PITCH_TASK_NOT_RUNNABLE"):
+        run(workspace, task)
+    made = run(workspace, pitch.prepare_internal_pitch(**manuscript_arguments(workspace, "manuscript-after-cancel-0002")))
+    after = pitch.cancel_internal_pitch(made["task_id"], actor=workspace["actor"], scope=workspace["scope"])
+    assert after["action_receipt"] == made["action_receipt"] and after["cancellation"] == "ALREADY_COMMITTED"
+    assert count(workspace) == 2
+
+
+def test_manuscript_cannot_rewrite_legacy_contract_or_stale_parent(workspace):
+    old = run(workspace, prepare(workspace))
+    doc = old["work"]["document"]
+    args = manuscript_arguments(workspace)
+    args.update(work_id=doc["work_id"], previous_artifact_id=old["action_receipt"]["artifact_id"], expected_draft_digest=doc["draft_digest"])
+    with pytest.raises(ValueError, match="WORK_CONTRACT_CHANGE_FORBIDDEN"):
+        run(workspace, pitch.prepare_internal_pitch(**args))
+    assert pitch.read_internal_pitch(old["task_id"], actor=workspace["actor"], scope=workspace["scope"])["work"]["document"] == doc
+    assert count(workspace) == 2
+
+
+def test_manuscript_changed_material_under_same_request_is_conflict(workspace):
+    args = manuscript_arguments(workspace)
+    pitch.prepare_internal_pitch(**args)
+    args["input_manifest"]["materials"][0]["text"] += "\nNew operator input."
+    args["input_manifest"]["materials"][0]["text_sha256"] = hashlib.sha256(args["input_manifest"]["materials"][0]["text"].encode()).hexdigest()
+    with pytest.raises(ValueError, match="INTERNAL_PITCH_REQUEST_REUSE_CONFLICT"):
+        pitch.prepare_internal_pitch(**args)
+    assert count(workspace) == 0
+
+
+# Bounded M review regressions; technical inputs are not source-use admission.
+@pytest.mark.parametrize("display_name", ["客户原创提案.docx", "브랜드 제안서.DOCX", "Client Brief résumé.docx"])
+def test_input_compatibility_unicode_upload_retains_actual_file_and_declarations(workspace, display_name):
+    args = manuscript_arguments(workspace, "unicode-input-0001")
+    path = workspace["root"] / display_name
+    document = Document()
+    document.add_paragraph("A complete local technical brief.")
+    document.save(path)
+    raw = path.read_bytes()
+    material = args["input_manifest"]["materials"][0]
+    text = "\n".join(paragraph.text for paragraph in Document(io.BytesIO(raw)).paragraphs)
+    material.update(filename=display_name, size_bytes=len(raw), sha256=hashlib.sha256(raw).hexdigest(),
+                    text=text, text_sha256=hashlib.sha256(text.encode()).hexdigest(), source_url=None,
+                    source_origin={"kind": "approved-file", "ref": "TEST-UPLOAD-DECLARATION-0001"})
+    expected = copy.deepcopy(args["input_manifest"])
+    first = run(workspace, pitch.prepare_internal_pitch(**args))
+    stored = first["work"]["document"]["payload"]
+    assert stored["input_manifest"] == expected
+    assert stored["truth_state"]["input_materials"] == "OPERATOR_DECLARED_NOT_INGESTED"
+    assert stored["truth_state"]["source_admission"] == "PENDING"
+    assert stored["input_manifest"]["materials"][0]["source_ref"] is None
+    assert path.name == display_name and path.read_bytes() == raw
+    read = pitch.read_internal_pitch(first["task_id"], actor=workspace["actor"], scope=workspace["scope"])
+    assert read["work"]["document"]["payload"]["input_manifest"] == expected
+
+
+@pytest.mark.parametrize("name", ["../提案.docx", "..\\제안.docx", "C:提案.docx", "提案/稿.docx",
+    "提案\x00.docx", "提案\n.docx", "提案\u202e.docx", "", " .docx", ".docx",
+    "CON.docx", "LPT1.docx", "brief .docx", "brief.docx ", "brief.txt"])
+def test_input_compatibility_unsafe_basename_is_rejected(workspace, name):
+    args = manuscript_arguments(workspace)
+    args["input_manifest"]["materials"][0]["filename"] = name
+    with pytest.raises(ValueError, match="INTERNAL_PITCH_INPUT_MANIFEST_INVALID"):
+        pitch.prepare_internal_pitch(**args)
+    assert count(workspace) == 0
+
+
+@pytest.mark.parametrize("origin", [None, {"kind": "approved-file", "ref": ""},
+    {"kind": "upload", "ref": "TEST-UPLOAD-0001"}, {"kind": "approved-file", "ref": "../private"},
+    {"kind": "approved-file", "ref": "TEST-UPLOAD-0001", "approved": True}])
+def test_input_compatibility_null_url_needs_existing_origin_shape(workspace, origin):
+    args = manuscript_arguments(workspace)
+    material = args["input_manifest"]["materials"][0]
+    material["source_url"] = None
+    if origin is not None:
+        material["source_origin"] = origin
+    with pytest.raises(ValueError, match="INTERNAL_PITCH_INPUT_MANIFEST_INVALID"):
+        pitch.prepare_internal_pitch(**args)
+    assert count(workspace) == 0
+
+
+def test_input_compatibility_public_manifest_unchanged_and_origin_not_mixed(workspace):
+    args = manuscript_arguments(workspace)
+    expected = copy.deepcopy(args["input_manifest"])
+    prepared = pitch.prepare_internal_pitch(**args)
+    assert prepared["task_id"] and args["input_manifest"] == expected
+    invalid = manuscript_arguments(workspace, "mixed-input-0002")
+    invalid["input_manifest"]["materials"][0]["source_origin"] = {"kind": "approved-file", "ref": "TEST-UPLOAD-0001"}
+    with pytest.raises(ValueError, match="INTERNAL_PITCH_INPUT_MANIFEST_INVALID"):
+        pitch.prepare_internal_pitch(**invalid)

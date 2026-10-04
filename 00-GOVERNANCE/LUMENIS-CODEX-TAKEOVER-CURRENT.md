@@ -6,7 +6,13 @@
 
 ## Current execution instruction — closure red lines 2026-10-04
 
-All C1-C6/F/M are resumed under the latest six closure red lines in AGENTS.md. M/F use Astra/ultra, other execution windows Sol6.1/max; ordinary speed. GPU preparation is nonbilling until the Product Owner receives the concrete readiness/budget report and approves payment. This replaces the M/F-only pause and old autonomous rental permission. All scope, material duties, existing owners and acceptance requirements are retained.
+Current task 2026-10-04 21:00 Asia/Shanghai: M alone finishes the existing
+direct-repair errors and synchronizes reviewed source/rules with GitHub. Other
+windows are inactive and must not be messaged or resumed by this task. Existing
+product scope and unresolved requirements remain; this is not full product
+acceptance. Existing/free compute is the first choice. The former fixed paid
+RTX5090 route and rental deadline are historical and no longer current routing.
+No paid GPU, recharge or training is started by this repair task.
 
 
 
@@ -574,7 +580,7 @@ review/decision/repair work under the current explicit user instruction. This ch
 Permission, Evidence, recovery or acceptance standards. See AGENTS execution
 mode and [current readback](evidence/round-15/full-product-audit-20261003/COMPLETE-OUTCOME-EXECUTION-20261004.md).
 
-C2 uses RTX5090 only; the intervening conditional RTX4090 option is explicitly
+The old RTX5090-only choice is historical; existing/free compute is now preferred; the intervening conditional RTX4090 option is explicitly
 revoked. Weight integrity and actual remote trainer/checkpoint binding are one
 complete execution Batch with W6. The latest C2 report had zero optimizer steps;
 no real training completion/start is inferred from this rule publication.
@@ -673,3 +679,6 @@ pytest remains pending until a successful run at the corrected publication SHA.
 Current model allocation remains C1-C6 GPT-6.1 Sol/max and M/F Astra/ultra;
 the explicitly corrected selection takes precedence over a repeated older model table. C2's new budget/recharge authority and stop limits
 are defined in AGENTS; no GPU is rented by this dependency/rule repair.
+
+
+本轮直接修复入口：20:45审计的剩余错误由M接续；source-bound/v3已经进入本地生产路径，验证不代表Owned AI或真实用户验收。现有/免费GPU优先。本轮结果与未完成项见 `00-GOVERNANCE/evidence/round-15/DIRECT-REPAIR-20261004.md`；未提交的其他Owner候选保留，不冒称已发布。

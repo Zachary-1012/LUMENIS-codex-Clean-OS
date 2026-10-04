@@ -191,8 +191,10 @@ class TestAIEvaluation:
     def test_evaluate_empty_db(self, test_db):
         result = aev.evaluate_ai_quality()
         assert result['total_calls'] == 0
-        assert result['ai_accuracy'] == 0.0
-        assert result['fallback_rate'] == 0.0
+        assert result['ai_accuracy'] is None
+        assert result['rule_agreement_rate'] is None
+        assert result['state'] == 'NO_SAMPLES'
+        assert result['fallback_rate'] is None
 
     def test_evaluate_ai_accuracy(self, test_db):
         # 3 条可对比记录：2 条 AI 与规则一致，1 条不一致
@@ -349,7 +351,8 @@ class TestAIEvaluation:
         report = aev.generate_evaluation_report()
         assert 'AI 质量评估报告' in report
         assert '总调用次数' in report
-        assert 'AI 准确率' in report
+        assert 'AI与规则一致率（非独立正确率）: 100.0%' in report
+        assert 'AI 准确率:' not in report
 
 
 # ============================================================
@@ -398,9 +401,10 @@ class TestAINotReplacingRules:
         mock_intel.chat.assert_not_called()  # AI 未被调用
 
     def test_verify_ai_not_replacing_rules_empty(self, test_db):
-        """空库时验证器应返回 passed（无违规数据）。"""
+        """无样本不能当作安全验证通过。"""
         result = aev.verify_ai_not_replacing_rules()
-        assert result['passed'] is True
+        assert result['passed'] is False
+        assert result['state'] == 'UNKNOWN'
 
     def test_verify_ai_not_replacing_rules_with_data(self, test_db):
         """规则优先的数据应通过验证。"""
@@ -643,3 +647,42 @@ class TestModuleStatusMarkers:
 
         assert callable(learning.get_learning_status)
         assert callable(learning.record_operation)
+
+
+def test_evaluation_query_failure_is_unknown_not_zero_or_pass(test_db, monkeypatch):
+    def fail():
+        raise RuntimeError('isolated query failure')
+    monkeypatch.setattr(aev, '_conn', fail)
+    result = aev.evaluate_ai_quality()
+    assert result['state'] == 'UNAVAILABLE' and result['total_calls'] is None
+    assert result['ai_accuracy'] is None
+    verification = aev.verify_ai_not_replacing_rules()
+    assert verification['state'] == 'UNKNOWN' and verification['passed'] is False
+
+
+def test_actual_subject_replacement_is_detected_with_sqlite_rows(test_db):
+    _seed_calls(test_db, [{'provider': 'owned', 'success': True,
+                          'prompt_version': 'subject-filter-v1', 'rule_result': 'deny',
+                          'output': 'allow', 'final_result': 'allow'}])
+    result = aev.verify_ai_not_replacing_rules()
+    check = next(x for x in result['checks'] if x['name'] == 'subject_filter_not_ai_replaced')
+    assert check['value'] == 1 and check['passed'] is False
+    assert result['state'] == 'FAIL'
+
+
+def test_missing_metric_samples_do_not_become_measured_zero(test_db):
+    _seed_calls(test_db, [{'provider': 'owned', 'success': True,
+                          'output': 'text', 'confidence': None,
+                          'latency_ms': None, 'token_usage': None}])
+    result = aev.evaluate_ai_quality()
+    assert result['ai_accuracy'] is None and result['ai_replacement_rate'] is None
+    assert all(v is None for v in result['confidence_distribution'].values())
+    assert result['latency']['avg_ms'] is None and result['token_cost']['total_tokens'] is None
+    assert result['sample_counts']['rule_comparisons'] == 0
+
+
+def test_empty_evaluation_report_discloses_unknown_and_no_accuracy_claim(test_db):
+    report = aev.generate_evaluation_report()
+    assert '未知／未测量' in report and 'UNKNOWN' in report
+    assert '非独立正确率' in report
+    assert 'AI 准确率:' not in report

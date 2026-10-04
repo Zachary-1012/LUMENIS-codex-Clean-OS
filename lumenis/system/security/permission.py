@@ -528,11 +528,43 @@ def _scope_grant_matches(
     return global_grant is True or requested_id in scoped_ids
 
 
+def _require_canonical_scope_connection(connection):
+    """Validate a borrowed real SQLite connection against the Shared repository.
+
+    This does not open, commit, close or upgrade a database connection. Client
+    dictionaries, alternate files, attached stores and altered row readers are
+    never accepted as canonical account/registry authority.
+    """
+    import sqlite3
+    from pathlib import Path
+    from lumenis.shared.database import DatabaseRepository, get_repository, main_db_path
+
+    if (type(connection) is not sqlite3.Connection
+            or connection.row_factory is not sqlite3.Row
+            or connection.text_factory is not str):
+        raise ValueError("RESOURCE_SCOPE_CONNECTION_INVALID")
+    repository = get_repository()
+    if type(repository) is not DatabaseRepository:
+        raise ValueError("RESOURCE_SCOPE_CONNECTION_INVALID")
+    try:
+        expected = Path(repository.db_path or main_db_path()).resolve(strict=True)
+        databases = connection.execute("PRAGMA database_list").fetchall()
+        if (len(databases) != 1 or databases[0][1] != "main" or not databases[0][2]
+                or Path(databases[0][2]).resolve(strict=True) != expected
+                or not os.path.samefile(databases[0][2], expected)
+                or connection.execute("PRAGMA read_uncommitted").fetchone()[0] != 0):
+            raise ValueError("RESOURCE_SCOPE_CONNECTION_INVALID")
+    except (OSError, sqlite3.Error) as exc:
+        raise ValueError("RESOURCE_SCOPE_CONNECTION_INVALID") from exc
+    return connection
+
+
 def _registered_resource_scope_exists(
     domain_id: str,
     *,
     subject_id: Optional[str],
     brand_focus_id: Optional[str],
+    connection=None,
 ) -> bool:
     """Require an active canonical registry row for every selected focus."""
     from subject_registry import list_subjects
@@ -540,7 +572,8 @@ def _registered_resource_scope_exists(
     _product_id, _scope_key, registry_domain, subject_type = (
         _RESOURCE_SCOPE_DOMAINS[domain_id]
     )
-    rows = list_subjects(registry_domain)
+    rows = (list_subjects(registry_domain) if connection is None else
+            list_subjects(registry_domain, connection=_require_canonical_scope_connection(connection)))
     if not isinstance(rows, list):
         raise RuntimeError("canonical subject registry response is invalid")
 
@@ -567,11 +600,11 @@ def _registered_resource_scope_exists(
     return len(matches) == 1 and matches[0].get("status") in {"configured", "active"}
 
 
-def _load_actor_scope_role(actor_id: int) -> Optional[str]:
+def _load_actor_scope_role(actor_id: int, *, connection=None) -> Optional[str]:
     """Resolve the active role from the account owner, never from request data."""
     from account.models import get_db
 
-    conn = get_db()
+    conn = get_db() if connection is None else _require_canonical_scope_connection(connection)
     try:
         row = conn.execute(
             "SELECT role FROM v4_users WHERE id = ? AND status = 'active'",
@@ -579,27 +612,31 @@ def _load_actor_scope_role(actor_id: int) -> Optional[str]:
         ).fetchone()
         return str(row["role"]).strip().lower() if row else None
     finally:
-        conn.close()
+        if connection is None:
+            conn.close()
 
 
-def _load_actor_scope_grants(actor_id: int) -> List[Dict[str, Any]]:
+def _load_actor_scope_grants(actor_id: int, *, connection=None) -> List[Dict[str, Any]]:
     """Read existing account grants; their data_scope is evaluated here."""
     from account.authorization import get_member_authorizations
 
-    grants = get_member_authorizations(actor_id)
+    grants = (get_member_authorizations(actor_id) if connection is None else
+              get_member_authorizations(actor_id, connection=_require_canonical_scope_connection(connection)))
     if not isinstance(grants, list):
         raise RuntimeError("account authorization response is invalid")
     return grants
 
 
 def _actor_has_scope_action(
-    actor_id: int, product_id: str, module: str, action: str
+    actor_id: int, product_id: str, module: str, action: str, *, connection=None
 ) -> bool:
     """Retain the account owner's active-user and product/module/action gate."""
     from account.authorization import check_dual_domain_permission
 
+    connection_options = {} if connection is None else {
+        "connection": _require_canonical_scope_connection(connection)}
     return bool(check_dual_domain_permission(
-        actor_id, product_id, module=module, action=action
+        actor_id, product_id, module=module, action=action, **connection_options
     ))
 
 
@@ -613,6 +650,7 @@ def check_actor_scope_permission(
     brand_focus_id: Optional[str] = None,
     global_scope: bool = False,
     gate: Optional["PermissionGate"] = None,
+    connection=None,
 ) -> ActorScopePermissionResult:
     """Check one authenticated actor against one exact CTH Subject or BMP focus.
 
@@ -672,18 +710,20 @@ def check_actor_scope_permission(
     if valid_request:
         product_id = domain_config[0]
         try:
+            connection_options = {} if connection is None else {
+                "connection": _require_canonical_scope_connection(connection)}
             if not _actor_has_scope_action(
-                actor_id, product_id, module_value, action_value
+                actor_id, product_id, module_value, action_value, **connection_options
             ):
                 reason = "actor lacks active product, module, or action permission"
             else:
-                role = _load_actor_scope_role(actor_id)
+                role = _load_actor_scope_role(actor_id, **connection_options)
                 if role is None:
                     raise RuntimeError("active actor role unavailable")
                 if not global_scope and not _registered_resource_scope_exists(
                     normalized_domain,
                     subject_id=scope_subject_id,
-                    brand_focus_id=scope_brand_focus_id,
+                    brand_focus_id=scope_brand_focus_id, **connection_options,
                 ):
                     reason = "requested resource is not a registered active scope"
                 elif role in {"owner", "admin"}:
@@ -692,7 +732,7 @@ def check_actor_scope_permission(
                     allowed = True
                     reason = "active account role has account-wide authority"
                 else:
-                    grants = _load_actor_scope_grants(actor_id)
+                    grants = _load_actor_scope_grants(actor_id, **connection_options)
                     for grant in grants:
                         if not isinstance(grant, Mapping):
                             continue
@@ -787,6 +827,7 @@ def check_local_workspace_scope_permission(
     brand_focus_id: Optional[str] = None,
     global_scope: bool = False,
     gate: Optional["PermissionGate"] = None,
+    connection=None,
 ) -> ActorScopePermissionResult:
     """Admit one local workspace principal to an exact registered module scope.
 
@@ -847,15 +888,17 @@ def check_local_workspace_scope_permission(
     elif not valid_request:
         reason = "requested Content scope is invalid"
         code = "invalid_scope"
-    elif global_scope:
-        allowed = True
-        reason = "local workspace may access the explicit canonical global scope"
     else:
         try:
-            if _registered_resource_scope_exists(
+            connection_options = {} if connection is None else {
+                "connection": _require_canonical_scope_connection(connection)}
+            if global_scope:
+                allowed = True
+                reason = "local workspace may access the explicit canonical global scope"
+            elif _registered_resource_scope_exists(
                 normalized_domain,
                 subject_id=scope_subject_id,
-                brand_focus_id=scope_brand_focus_id,
+                brand_focus_id=scope_brand_focus_id, **connection_options,
             ):
                 allowed = True
                 reason = "local workspace may access the registered exact scope"
@@ -2971,6 +3014,59 @@ class PermissionGate:
             yield
         finally:
             self._approval_lock.release()
+
+    def require_current_training_checkpoint_admission(
+        self, admission, *, operation, training_request, context, domain_id,
+        engine, task_id, worker, connection, approval, approval_reference,
+        pinned_public_key, actor_id=None, principal=None,
+    ):
+        """Check the exact live start admission on its canonical transaction.
+
+        The bound client must CAS to WRITING/LOADING, pass the checkpoint
+        metadata Fence and commit under owned_training_phase_commit_lease
+        before physical IO. This returned current operation is no reusable
+        permission token. v1.3 renewal and start serialize on that transaction.
+        """
+        from ai_task_engine import TaskEngine, get_task_engine
+        from lumenis.system.ai_gateway.owned_training_runtime import TrainingProcessFence
+        from .training_receipts import VerifiedTrainingCheckpointAdmission
+
+        if (type(self) is not PermissionGate or self is not get_permission_gate()
+                or not self.fail_closed or is_testing_bypass_enabled()
+                or type(engine) is not TaskEngine or engine is not get_task_engine()
+                or type(worker) is not TrainingProcessFence
+                or type(admission) is not VerifiedTrainingCheckpointAdmission
+                or operation not in {"save", "load"}):
+            raise PermissionError("CHECKPOINT_PERMISSION_REQUIRED")
+        TaskEngine._require_training_receipt_connection(connection)
+        identity_args = {"actor_id": actor_id, "principal": principal}
+        identity = owned_training_identity(**identity_args)
+        resource = owned_training_approval_resource(
+            training_request, domain_id=domain_id, context=context, **identity_args)
+        binding = {"resource": resource, "scope_descriptors": context["scope_descriptors"],
+                   "identity": {name: identity[name] for name in
+                       ("actor_id", "caller", "principal_kind", "principal_ref")}}
+        fingerprints = owned_training_phase_fingerprints(
+            training_request, domain_id=domain_id, context=context, **identity_args)
+        worker_binding = worker.worker_binding
+        worker.require_live(worker_binding)
+        verifier = make_owned_training_approval_verifier(
+            self, domain_id=domain_id, context=context, **identity_args)
+        if not verifier(training_request):
+            raise PermissionError("CHECKPOINT_PERMISSION_REQUIRED")
+        reference = self.owned_training_approval_reference(
+            training_request=training_request, context=context, domain_id=domain_id,
+            approval=approval, **identity_args)
+        if reference != approval_reference:
+            raise PermissionError("CHECKPOINT_PERMISSION_REQUIRED")
+        current = engine.training_require_current_checkpoint_admission(
+            task_id, admission=admission, operation=operation,
+            expected_fingerprints=fingerprints, worker_binding=worker_binding,
+            expected_binding=binding, expected_approval_reference=reference,
+            pinned_public_key=pinned_public_key, connection=connection)
+        worker.require_live(worker_binding)
+        return current
+
 
     def revoke_approval(self, token: str) -> bool:
         """撤销人工审批令牌。

@@ -76,6 +76,7 @@ def test_registered_brand_focus_is_resolved_before_reading(inspection_client, mo
     entry = {
         "subject_id": "SUBJ-BRAND", "brand_focus_id": "BRAND-X",
         "subject_type": "brand", "domain_id": "BMP",
+        "status": "active",
     }
     monkeypatch.setattr(subject_registry, "get_subject_by_id", lambda *_: entry)
     monkeypatch.setattr(subject_registry, "list_subjects", lambda *_: [entry])

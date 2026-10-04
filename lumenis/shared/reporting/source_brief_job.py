@@ -102,14 +102,19 @@ def _multimodal_snapshot(result, *, job_id, actor_id, scope):
     }
 
 
-def _read_report(job_id: str) -> dict[str, Any] | None:
-    conn = get_repository().connect(timeout=10, read_only=True, wal=False)
+def _read_report(job_id: str, *, connection=None) -> dict[str, Any] | None:
+    if connection is None:
+        conn = get_repository().connect(timeout=10, read_only=True, wal=False)
+    else:
+        from lumenis.system.security.permission import _require_canonical_scope_connection
+        conn = _require_canonical_scope_connection(connection)
     try:
         row = conn.execute(
             "SELECT * FROM daily_reports WHERE report_id=? ORDER BY id DESC LIMIT 1", (job_id,)
         ).fetchone()
     finally:
-        conn.close()
+        if connection is None:
+            conn.close()
     return dict(row) if row else None
 
 
@@ -462,20 +467,58 @@ def create_source_brief_job(
 
 
 def get_source_brief_job(job_id: str, *, actor_id: str,
-                         expected_scope: dict[str, Any] | None = None) -> dict[str, Any]:
+                         expected_scope: dict[str, Any] | None = None,
+                         actor=None, connection=None) -> dict[str, Any]:
     """Reopen a persisted job for the same actor and, when supplied, exact scope."""
     if not isinstance(actor_id, str) or not _ACTOR_ID.fullmatch(actor_id):
         raise ValueError("SOURCE_BRIEF_ACTOR_REQUIRED")
     if not isinstance(job_id, str) or not _JOB_ID.fullmatch(job_id):
         raise ValueError("SOURCE_BRIEF_SERVER_JOB_ID_INVALID")
-    row = _read_report(job_id)
+    if connection is not None and actor is None:
+        raise PermissionError("SOURCE_BRIEF_SERVER_ACTOR_REQUIRED")
+    options = {} if connection is None else {"connection": connection}
+    row = _read_report(job_id, **options)
     if not row:
         raise LookupError("SOURCE_BRIEF_JOB_NOT_FOUND")
     verified = _verify_report(row, job_id=job_id, actor_id=actor_id, expected_scope=expected_scope)
+    if connection is not None:
+        committed = _read_report(job_id)
+        if committed is None or any(committed.get(key) != row.get(key) for key in (
+            "report_id", "artifact_hash", "source_snapshot", "summary", "total_notes", "generator_version"
+        )):
+            raise RuntimeError("SOURCE_BRIEF_NOT_COMMITTED")
+    if actor is not None:
+        from contextlib import nullcontext
+        from lumenis.shared.reporting.saved_work import authorize
+        import canonical_data
+        scope = verified["snapshot"]["scope"]
+        target = _media_scope(scope)
+        identity = authorize(actor, target, action="read", **options)
+        current_ref = identity.get("principal_ref") or f"actor:{identity.get('actor_id')}"
+        if current_ref != actor_id:
+            raise PermissionError("SOURCE_BRIEF_ACTOR_MISMATCH")
+        reader = get_repository().connection(read_only=True, wal=False) if connection is None else nullcontext(connection)
+        with reader as con:
+            for source in verified["source_brief"]["records"]:
+                selected = con.execute("SELECT product_id,domain_id,subject_id,brand_focus_id,scope_status,scope_evidence_ref FROM canonical_data WHERE source_id=? AND product_id=?",
+                                       (source["source_id"], scope["product_id"])).fetchall()
+                if len(selected) != 1:
+                    raise RuntimeError("SOURCE_BRIEF_CURRENT_SOURCE_INVALID")
+                item = selected[0]
+                original = {"domain_id": item[1], "subject_id": item[2] or None,
+                            "brand_focus_id": item[3] or None, "global_scope": not bool(item[2] or item[3])}
+                if str(item[5]) != str(source["scope_evidence_ref"]):
+                    raise RuntimeError("SOURCE_BRIEF_CURRENT_SOURCE_CHANGED")
+                authorize(actor, original, action="read", connection=con)
+                canonical_data._validate_canonical_scope(con, canonical_data.CanonicalRecord(
+                    source_id=source["source_id"], product_id=item[0], domain_id=item[1], subject_id=item[2],
+                    brand_focus_id=item[3], scope_status=item[4], scope_evidence_ref=str(item[5])))
     evaluation_ids = verified["snapshot"].get("evaluation_ids")
     evaluations = [get_evaluation_record(evaluation_ids[name]) for name in _evaluation_ids(job_id)]
     present = [record for record in evaluations if record]
     state = "recorded" if len(present) == len(evaluations) else "pending_recovery"
     result = _response(verified, present)
     result["evaluation"]["state"] = state
+    if actor is not None:
+        authorize(actor, target, action="read", **options)
     return result

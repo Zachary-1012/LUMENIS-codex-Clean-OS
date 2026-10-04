@@ -7,7 +7,7 @@ lumenis.shared.evaluation.ai — LUMENIS Shared Evaluation AI 质量评估
 形成「AI 输出 → 规则对比 → 人工修正 → 规则沉淀」的闭环。
 
 追踪指标：
-- AI 准确率（ai_accuracy）：AI 结果与规则结果一致的比例
+- 规则一致率（rule_agreement_rate；ai_accuracy为兼容别名）：不是独立正确率
 - AI 替代率（ai_replacement_rate）：最终结果采用 AI 而非规则的比例
 - 人工修正率（human_correction_rate）：被人工修正的调用比例
 - 置信度分布（confidence_distribution）：低/中/高置信度占比
@@ -123,155 +123,101 @@ def _results_match(rule: str, ai: str) -> bool:
 # ============================================================
 # 3) 核心评估函数：evaluate_ai_quality
 # ============================================================
-def evaluate_ai_quality(
-    since: str = '',
-    provider: str = '',
-    limit: int = 5000,
-) -> Dict[str, Any]:
-    """
-    评估 AI 质量，返回完整指标字典。
+def evaluate_ai_quality(since: str = '', provider: str = '', limit: int = 5000) -> Dict[str, Any]:
+    """Read measured quality signals; absent denominators remain unknown.
 
-    Args:
-        since: 起始时间（ISO 格式），空则全量
-        provider: 限定 provider，空则全部
-        limit: 最多分析的记录数
-
-    Returns:
-        {
-            'total_calls', 'success_count', 'failure_count',
-            'ai_accuracy', 'ai_replacement_rate', 'human_correction_rate',
-            'confidence_distribution': {'low': %, 'medium': %, 'high': %},
-            'provider_failure_rate': {provider: rate},
-            'fallback_rate',
-            'latency': {'avg_ms', 'p50_ms', 'p95_ms', 'max_ms'},
-            'token_cost': {'total_tokens', 'avg_tokens'},
-            'period': {'since', 'until', 'sampled'}
-        }
+    ``ai_accuracy`` is a compatibility alias of rule_agreement_rate, NOT an
+    independent accuracy benchmark. Contract v2 makes that meaning explicit.
     """
+    import math
+    if type(limit) is not int or not 1 <= limit <= 50000:
+        raise ValueError('AI_EVALUATION_LIMIT_INVALID')
+    def rounded_ratio(numerator, denominator):
+        return round(numerator / denominator, 4) if denominator else None
+    def numbers(rows, key, maximum=None):
+        result = []
+        for row in rows:
+            raw = row.get(key)
+            if raw is None or isinstance(raw, bool):
+                continue
+            try:
+                value = float(raw)
+            except (ValueError, TypeError, OverflowError):
+                continue
+            if math.isfinite(value) and value >= 0 and (maximum is None or value <= maximum):
+                result.append(value)
+        return result
+    empty = {
+        'metric_contract': 'lumenis.ai-quality/v2', 'state': 'NO_SAMPLES',
+        'total_calls': 0, 'success_count': 0, 'failure_count': 0,
+        'rule_agreement_rate': None, 'ai_accuracy': None,
+        'ai_accuracy_semantics': 'COMPATIBILITY_ALIAS_RULE_AGREEMENT_NOT_GROUND_TRUTH',
+        'independent_accuracy': None, 'independent_accuracy_state': 'NOT_MEASURED',
+        'ai_replacement_rate': None, 'human_correction_rate': None,
+        'confidence_distribution': {'low': None, 'medium': None, 'high': None},
+        'provider_failure_rate': {}, 'fallback_rate': None,
+        'latency': {'avg_ms': None, 'p50_ms': None, 'p95_ms': None, 'max_ms': None},
+        'token_cost': {'total_tokens': None, 'avg_tokens': None},
+        'sample_counts': {'rule_comparisons': 0, 'final_comparisons': 0,
+                          'confidence': 0, 'latency': 0, 'token_usage': 0},
+        'period': {'since': since, 'until': '', 'sampled': 0},
+    }
     try:
         conn = _conn()
         try:
-            sql = "SELECT * FROM ai_call_logs WHERE 1=1"
-            params: List[Any] = []
+            sql = 'SELECT * FROM ai_call_logs WHERE 1=1'; params = []
             if since:
-                sql += " AND created_at >= ?"
-                params.append(since)
+                sql += ' AND created_at >= ?'; params.append(since)
             if provider:
-                sql += " AND provider = ?"
-                params.append(provider)
-            sql += " ORDER BY id DESC LIMIT ?"
-            params.append(limit)
-            rows = [dict(r) for r in conn.execute(sql, params).fetchall()]
+                sql += ' AND provider = ?'; params.append(provider)
+            sql += ' ORDER BY id DESC LIMIT ?'; params.append(limit)
+            rows = [dict(row) for row in conn.execute(sql, params).fetchall()]
         finally:
             conn.close()
-    except Exception as e:
-        print(f'[AIEvaluation] evaluate query failed: {e}')
-        return {'error': str(e), 'total_calls': 0}
-
+    except Exception as exc:
+        return {**empty, 'state': 'UNAVAILABLE', 'error': type(exc).__name__,
+                'reason': 'AI_EVALUATION_QUERY_FAILED', 'total_calls': None,
+                'success_count': None, 'failure_count': None,
+                'period': {'since': since, 'until': '', 'sampled': None}}
     if not rows:
-        return {
-            'total_calls': 0, 'success_count': 0, 'failure_count': 0,
-            'ai_accuracy': 0.0, 'ai_replacement_rate': 0.0,
-            'human_correction_rate': 0.0,
-            'confidence_distribution': {'low': 0.0, 'medium': 0.0, 'high': 0.0},
-            'provider_failure_rate': {},
-            'fallback_rate': 0.0,
-            'latency': {'avg_ms': 0, 'p50_ms': 0, 'p95_ms': 0, 'max_ms': 0},
-            'token_cost': {'total_tokens': 0, 'avg_tokens': 0},
-            'period': {'since': since, 'until': '', 'sampled': 0},
-        }
-
-    total = len(rows)
-    success_rows = [r for r in rows if r.get('success') == 1]
-    failure_rows = [r for r in rows if r.get('success') == 0]
-
-    # --- AI 准确率：有 rule_result 和 output 的记录中，两者一致的比例 ---
-    comparable = [r for r in success_rows if r.get('rule_result') and r.get('output')]
-    matches = sum(1 for r in comparable if _results_match(r['rule_result'], r['output']))
-    ai_accuracy = matches / len(comparable) if comparable else 0.0
-
-    # --- AI 替代率：在有 final_result 和 output 的记录中，final_result 采用了 AI 结果
-    #     且 AI 结果与规则结果不同（或无规则结果）的比例。AI 与规则一致时不算"替代"。 ---
-    with_final = [r for r in success_rows if r.get('final_result') and r.get('output')]
-    replaced = 0
-    for r in with_final:
-        if not _results_match(r['final_result'], r['output']):
-            continue  # final 没采用 AI，不算替代
-        if r.get('rule_result') and _results_match(r['rule_result'], r['output']):
-            continue  # AI 与规则一致，不算替代
-        replaced += 1
-    ai_replacement_rate = replaced / len(with_final) if with_final else 0.0
-
-    # --- 人工修正率 ---
-    corrected = sum(1 for r in rows if r.get('human_correction'))
-    human_correction_rate = corrected / total if total else 0.0
-
-    # --- 置信度分布 ---
-    conf_values = [float(r.get('confidence', 0) or 0) for r in success_rows]
-    if conf_values:
-        low = sum(1 for c in conf_values if c < 0.4) / len(conf_values)
-        medium = sum(1 for c in conf_values if 0.4 <= c < 0.7) / len(conf_values)
-        high = sum(1 for c in conf_values if c >= 0.7) / len(conf_values)
-    else:
-        low = medium = high = 0.0
-
-    # --- Provider 失败率 ---
-    provider_stats: Dict[str, Dict[str, int]] = {}
-    for r in rows:
-        p = r.get('provider', 'unknown') or 'unknown'
-        if p not in provider_stats:
-            provider_stats[p] = {'total': 0, 'failures': 0}
-        provider_stats[p]['total'] += 1
-        if r.get('success') == 0:
-            provider_stats[p]['failures'] += 1
-    provider_failure_rate = {
-        p: (s['failures'] / s['total'] if s['total'] else 0.0)
-        for p, s in provider_stats.items()
-    }
-
-    # --- 回退率：provider 为 rule/local_rule 的比例（AI 不可用时回退） ---
-    fallback_count = sum(1 for r in rows
-                         if (r.get('provider') or '').lower() in ('rule', 'local_rule'))
-    fallback_rate = fallback_count / total if total else 0.0
-
-    # --- 延迟统计 ---
-    latencies = sorted([int(r.get('latency_ms', 0) or 0) for r in success_rows])
-    if latencies:
-        avg_lat = sum(latencies) // len(latencies)
-        p50 = latencies[len(latencies) // 2]
-        p95 = latencies[int(len(latencies) * 0.95)] if len(latencies) > 1 else latencies[0]
-        max_lat = latencies[-1]
-    else:
-        avg_lat = p50 = p95 = max_lat = 0
-
-    # --- Token 成本 ---
-    tokens = [int(r.get('token_usage', 0) or 0) for r in success_rows]
-    total_tokens = sum(tokens)
-    avg_tokens = total_tokens // len(tokens) if tokens else 0
-
+        return empty
+    success = [row for row in rows if row.get('success') == 1]
+    failure = [row for row in rows if row.get('success') == 0]
+    comparable = [row for row in success if row.get('rule_result') and row.get('output')]
+    agreement = rounded_ratio(sum(_results_match(row['rule_result'], row['output']) for row in comparable), len(comparable))
+    final = [row for row in success if row.get('final_result') and row.get('output')]
+    replaced = sum(_results_match(row['final_result'], row['output']) and
+                   not (row.get('rule_result') and _results_match(row['rule_result'], row['output'])) for row in final)
+    confidences = numbers(success, 'confidence', 1)
+    latencies = sorted(numbers(success, 'latency_ms'))
+    tokens = numbers(success, 'token_usage')
+    providers = {}
+    for row in rows:
+        name = row.get('provider') or 'unknown'
+        record = providers.setdefault(name, {'total': 0, 'failures': 0})
+        record['total'] += 1; record['failures'] += row.get('success') == 0
     return {
-        'total_calls': total,
-        'success_count': len(success_rows),
-        'failure_count': len(failure_rows),
-        'ai_accuracy': round(ai_accuracy, 4),
-        'ai_replacement_rate': round(ai_replacement_rate, 4),
-        'human_correction_rate': round(human_correction_rate, 4),
+        **empty, 'state': 'OBSERVED', 'total_calls': len(rows),
+        'success_count': len(success), 'failure_count': len(failure),
+        'rule_agreement_rate': agreement, 'ai_accuracy': agreement,
+        'ai_replacement_rate': rounded_ratio(replaced, len(final)),
+        'human_correction_rate': rounded_ratio(sum(bool(row.get('human_correction')) for row in rows), len(rows)),
         'confidence_distribution': {
-            'low': round(low, 4),
-            'medium': round(medium, 4),
-            'high': round(high, 4),
+            'low': rounded_ratio(sum(v < 0.4 for v in confidences), len(confidences)),
+            'medium': rounded_ratio(sum(0.4 <= v < 0.7 for v in confidences), len(confidences)),
+            'high': rounded_ratio(sum(v >= 0.7 for v in confidences), len(confidences)),
         },
-        'provider_failure_rate': {p: round(r, 4) for p, r in provider_failure_rate.items()},
-        'fallback_rate': round(fallback_rate, 4),
-        'latency': {
-            'avg_ms': avg_lat, 'p50_ms': p50, 'p95_ms': p95, 'max_ms': max_lat,
-        },
-        'token_cost': {'total_tokens': total_tokens, 'avg_tokens': avg_tokens},
-        'period': {
-            'since': since,
-            'until': rows[0].get('created_at', ''),
-            'sampled': total,
-        },
+        'provider_failure_rate': {name: rounded_ratio(v['failures'], v['total']) for name, v in providers.items()},
+        'fallback_rate': rounded_ratio(sum((row.get('provider') or '').lower() in ('rule', 'local_rule') for row in rows), len(rows)),
+        'latency': {'avg_ms': int(sum(latencies) / len(latencies)) if latencies else None,
+                    'p50_ms': latencies[len(latencies) // 2] if latencies else None,
+                    'p95_ms': latencies[min(int(len(latencies) * 0.95), len(latencies) - 1)] if latencies else None,
+                    'max_ms': latencies[-1] if latencies else None},
+        'token_cost': {'total_tokens': int(sum(tokens)) if tokens else None,
+                       'avg_tokens': int(sum(tokens) / len(tokens)) if tokens else None},
+        'sample_counts': {'rule_comparisons': len(comparable), 'final_comparisons': len(final),
+                          'confidence': len(confidences), 'latency': len(latencies), 'token_usage': len(tokens)},
+        'period': {'since': since, 'until': rows[0].get('created_at', ''), 'sampled': len(rows)},
     }
 
 
@@ -400,110 +346,53 @@ def evaluate_provider_health(since: str = '') -> Dict[str, Any]:
 # 6) AI 不替代核心规则的验证器
 # ============================================================
 def verify_ai_not_replacing_rules() -> Dict[str, Any]:
-    """
-    验证 AI 没有替代核心确定性规则。
-
-    检查项：
-    1. ai_replacement_rate 应较低（AI 不应高频替代规则）
-    2. 所有有 rule_result 的记录，final_result 应优先等于 rule_result
-    3. 主体过滤相关调用（prompt_version 含 subject）的 AI 替代率应为 0
-
-    Returns:
-        {'passed': bool, 'checks': [...], 'violations': [...]}
-    """
+    """Require observations for PASS; failed queries never certify safety."""
     quality = evaluate_ai_quality()
-    checks = []
-    violations = []
-
-    # 检查 1：AI 替代率不应超过 50%（AI 是辅助，不是主判断）
-    replacement_rate = quality.get('ai_replacement_rate', 0.0)
-    check1_pass = replacement_rate <= 0.5
-    checks.append({
-        'name': 'ai_replacement_rate_below_50pct',
-        'value': replacement_rate,
-        'threshold': 0.5,
-        'passed': check1_pass,
-    })
-    if not check1_pass:
-        violations.append(f'AI 替代率 {replacement_rate:.1%} 超过 50% 阈值，AI 可能过度替代规则')
-
-    # 检查 2：有 rule_result 的记录中，final_result 应优先等于 rule_result
+    checks = []; violations = []
+    def add(name, value, threshold, passed, count, violation):
+        state = 'UNKNOWN' if passed is None else 'PASS' if passed else 'FAIL'
+        checks.append({'name': name, 'value': value, 'threshold': threshold,
+                       'passed': passed, 'state': state, 'sample_count': count})
+        if passed is False:
+            violations.append(violation)
+    replacement = quality.get('ai_replacement_rate')
+    add('ai_replacement_rate_below_50pct', replacement, 0.5,
+        replacement <= 0.5 if replacement is not None else None,
+        quality.get('sample_counts', {}).get('final_comparisons', 0),
+        'AI 替代率超过 50% 阈值，需核查规则边界')
     try:
         conn = _conn()
         try:
-            rows = conn.execute(
+            rows = [dict(row) for row in conn.execute(
                 "SELECT rule_result, final_result, output FROM ai_call_logs "
                 "WHERE rule_result != '' AND rule_result IS NOT NULL "
-                "AND final_result != '' AND final_result IS NOT NULL"
-            ).fetchall()
-            rule_priority_count = sum(
-                1 for r in rows if _results_match(r['rule_result'], r['final_result'])
-            )
-            total_comparable = len(rows)
-            rule_priority_rate = (
-                rule_priority_count / total_comparable if total_comparable else 1.0
-            )
-        finally:
-            conn.close()
-    except Exception:
-        rule_priority_rate = 1.0
-        total_comparable = 0
-
-    check2_pass = rule_priority_rate >= 0.5
-    checks.append({
-        'name': 'rule_result_priority',
-        'value': round(rule_priority_rate, 4),
-        'threshold': 0.5,
-        'comparable_records': total_comparable,
-        'passed': check2_pass,
-    })
-    if not check2_pass:
-        violations.append(
-            f'规则结果优先率 {rule_priority_rate:.1%} 低于 50%，final_result 可能未优先采用规则结果'
-        )
-
-    # 检查 3：主体过滤不应被 AI 替代（通过 prompt_version 标记）
-    try:
-        conn = _conn()
-        try:
-            subject_rows = conn.execute(
+                "AND final_result != '' AND final_result IS NOT NULL").fetchall()]
+            subjects = [dict(row) for row in conn.execute(
                 "SELECT final_result, output, rule_result FROM ai_call_logs "
-                "WHERE prompt_version LIKE '%subject%'"
-            ).fetchall()
-            subject_ai_replaced = sum(
-                1 for r in subject_rows
-                if r.get('output') and _results_match(r['final_result'], r['output'])
-                and not _results_match(r['rule_result'], r['output'])
-            )
-            subject_total = len(subject_rows)
+                "WHERE prompt_version LIKE '%subject%'").fetchall()]
         finally:
             conn.close()
+        rate = sum(_results_match(row['rule_result'], row['final_result']) for row in rows) / len(rows) if rows else None
+        add('rule_result_priority', round(rate, 4) if rate is not None else None, 0.5,
+            rate >= 0.5 if rate is not None else None, len(rows), '规则结果优先率低于 50%')
+        checks[-1]['comparable_records'] = len(rows)
+        comparable_subjects = [row for row in subjects if row.get('output') and row.get('final_result') and row.get('rule_result')]
+        replaced = sum(_results_match(row['final_result'], row['output']) and
+                       not _results_match(row['rule_result'], row['output']) for row in comparable_subjects)
+        add('subject_filter_not_ai_replaced', replaced if comparable_subjects else None, 0,
+            replaced == 0 if comparable_subjects else None, len(comparable_subjects),
+            f'主体过滤被 AI 替代 {replaced} 次')
+        checks[-1]['total_subject_calls'] = len(subjects)
     except Exception:
-        subject_ai_replaced = 0
-        subject_total = 0
-
-    check3_pass = subject_ai_replaced == 0
-    checks.append({
-        'name': 'subject_filter_not_ai_replaced',
-        'value': subject_ai_replaced,
-        'threshold': 0,
-        'total_subject_calls': subject_total,
-        'passed': check3_pass,
-    })
-    if not check3_pass:
-        violations.append(
-            f'主体过滤被 AI 替代 {subject_ai_replaced} 次，违反「主体过滤是第一道关」红线'
-        )
-
-    return {
-        'passed': all(c['passed'] for c in checks),
-        'checks': checks,
-        'violations': violations,
-        'summary': (
-            'AI 未替代核心规则' if all(c['passed'] for c in checks)
-            else '检测到 AI 可能替代核心规则，需人工审查'
-        ),
-    }
+        add('rule_result_priority', None, 0.5, None, 0, '')
+        checks[-1]['comparable_records'] = 0
+        add('subject_filter_not_ai_replaced', None, 0, None, 0, '')
+        checks[-1]['total_subject_calls'] = None
+    state = 'FAIL' if violations else 'UNKNOWN' if any(c['state'] == 'UNKNOWN' for c in checks) else 'PASS'
+    return {'passed': state == 'PASS', 'state': state, 'checks': checks, 'violations': violations,
+            'summary': {'PASS': '已观测样本中未发现 AI 替代核心规则',
+                        'FAIL': '检测到 AI 可能替代核心规则，需人工审查',
+                        'UNKNOWN': '缺少可比较样本或查询失败，尚不能验证规则边界'}[state]}
 
 
 # ============================================================
@@ -514,6 +403,9 @@ def generate_evaluation_report(since: str = '') -> str:
     quality = evaluate_ai_quality(since=since)
     provider_health = evaluate_provider_health(since=since)
     rule_verify = verify_ai_not_replacing_rules()
+
+    def pct(value):
+        return '未知／未测量' if value is None else f'{value:.1%}'
 
     lines = [
         '=' * 60,
@@ -526,17 +418,17 @@ def generate_evaluation_report(since: str = '') -> str:
         f'  总调用次数: {quality.get("total_calls", 0)}',
         f'  成功: {quality.get("success_count", 0)}',
         f'  失败: {quality.get("failure_count", 0)}',
-        f'  回退率: {quality.get("fallback_rate", 0):.1%}',
+        f'  回退率: {pct(quality.get("fallback_rate"))}',
         '',
         '【质量指标】',
-        f'  AI 准确率: {quality.get("ai_accuracy", 0):.1%}',
-        f'  AI 替代率: {quality.get("ai_replacement_rate", 0):.1%}',
-        f'  人工修正率: {quality.get("human_correction_rate", 0):.1%}',
+        f'  AI与规则一致率（非独立正确率）: {pct(quality.get("rule_agreement_rate"))}',
+        f'  AI 替代率: {pct(quality.get("ai_replacement_rate"))}',
+        f'  人工修正率: {pct(quality.get("human_correction_rate"))}',
         '',
         '【置信度分布】',
-        f'  低 (<0.4): {quality.get("confidence_distribution", {}).get("low", 0):.1%}',
-        f'  中 (0.4-0.7): {quality.get("confidence_distribution", {}).get("medium", 0):.1%}',
-        f'  高 (>=0.7): {quality.get("confidence_distribution", {}).get("high", 0):.1%}',
+        f'  低 (<0.4): {pct(quality.get("confidence_distribution", {}).get("low"))}',
+        f'  中 (0.4-0.7): {pct(quality.get("confidence_distribution", {}).get("medium"))}',
+        f'  高 (>=0.7): {pct(quality.get("confidence_distribution", {}).get("high"))}',
         '',
         '【延迟】',
         f'  平均: {quality.get("latency", {}).get("avg_ms", 0)}ms',
@@ -557,7 +449,7 @@ def generate_evaluation_report(since: str = '') -> str:
     lines.extend([
         '',
         '【AI 不替代规则验证】',
-        f'  结果: {"PASS" if rule_verify["passed"] else "FAIL"}',
+        f'  结果: {rule_verify["state"]}',
         f'  摘要: {rule_verify["summary"]}',
     ])
     for v in rule_verify.get('violations', []):
@@ -573,10 +465,14 @@ def quick_summary() -> Dict[str, Any]:
     q = evaluate_ai_quality(limit=1000)
     return {
         'total_calls': q.get('total_calls', 0),
-        'ai_accuracy': q.get('ai_accuracy', 0.0),
-        'ai_replacement_rate': q.get('ai_replacement_rate', 0.0),
-        'human_correction_rate': q.get('human_correction_rate', 0.0),
-        'fallback_rate': q.get('fallback_rate', 0.0),
+        'metric_contract': q.get('metric_contract'), 'state': q.get('state'),
+        'rule_agreement_rate': q.get('rule_agreement_rate'),
+        'ai_accuracy': q.get('ai_accuracy'),
+        'ai_accuracy_semantics': q.get('ai_accuracy_semantics'),
+        'independent_accuracy': q.get('independent_accuracy'),
+        'ai_replacement_rate': q.get('ai_replacement_rate'),
+        'human_correction_rate': q.get('human_correction_rate'),
+        'fallback_rate': q.get('fallback_rate'),
         'provider_health': evaluate_provider_health(),
         'rule_verification': verify_ai_not_replacing_rules(),
     }

@@ -52,7 +52,7 @@ def owned_inference_status(candidate=None):
         "model_id": candidate._preflight["model_id"],
         "model_revision": candidate._preflight["model_revision"],
         "training_recipe": candidate._preflight["training_recipe"],
-        "max_sequence_length": _MAX_SEQUENCE_LENGTH,
+        "max_sequence_length": candidate._max_sequence_length,
     }
 
 
@@ -70,8 +70,10 @@ def load_owned_inference(
     manifest_path, expected_adapter_sha256: str, expected_adapter_config_sha256: str,
     recipe: str = owned_training.T4_RECIPE,
 ):
-    """Explicitly load only the approved T4/NF4 candidate; H100 is unsupported."""
-    if recipe != owned_training.T4_RECIPE:
+    """Load an explicitly selected approved NF4 candidate; H100 is unsupported."""
+    checkpoint_recipe = (type(recipe) is str and any(
+        recipe.startswith(base + "+checkpoint-v1:") for base in owned_training.NF4_RECIPES))
+    if recipe not in owned_training.NF4_RECIPES and not checkpoint_recipe:
         raise OwnedInferenceBlocked("UNSUPPORTED_INFERENCE_RECIPE")
     if any(not isinstance(value, str) or not _DIGEST.fullmatch(value)
            for value in (expected_adapter_sha256, expected_adapter_config_sha256)):
@@ -97,6 +99,7 @@ def load_owned_inference(
         model_dir, train_path, heldout_path, unused, manifest_path=manifest,
         execute=False, recipe=recipe,
     )
+    base_recipe = preflight["base_training_recipe"]
     status_bytes = status_path.read_bytes()
     try:
         status = json.loads(status_bytes.decode("utf-8"))
@@ -133,13 +136,14 @@ def load_owned_inference(
         raise OwnedInferenceBlocked("T4_INFERENCE_STACK_VERSION_MISMATCH")
 
     try:
-        with owned_training._offline_hf(recipe):
+        with owned_training._offline_hf(base_recipe):
             from unsloth import FastLanguageModel
             from peft import PeftModel
             import torch
-            owned_training._require_cuda(recipe)
+            owned_training._require_cuda(base_recipe)
             model, tokenizer = FastLanguageModel.from_pretrained(
-                model_name=str(model_dir), max_seq_length=_MAX_SEQUENCE_LENGTH, dtype=None,
+                model_name=str(model_dir), max_seq_length=owned_training.recipe_sequence_length(base_recipe),
+                dtype=torch.bfloat16 if base_recipe in owned_training.NATIVE_BF16_NF4_RECIPES else None,
                 load_in_4bit=True, full_finetuning=False, local_files_only=True,
                 trust_remote_code=False, token=False,
             )
@@ -176,6 +180,8 @@ class _OfflineCandidate:
         self._model, self._tokenizer, self._torch = model, tokenizer, torch
         self._status_path, self._adapter_path, self._config_path = status_path, adapter_path, config_path
         self._preflight, self.candidate_identity_sha256 = preflight, candidate_sha
+        self._base_recipe = preflight.get("base_training_recipe", preflight["training_recipe"])
+        self._max_sequence_length = owned_training.recipe_sequence_length(self._base_recipe)
         self._status_sha, self._adapter_sha, self._config_sha = status_sha, adapter_sha, config_sha
         self._eos_ids = {}
         for token in _TERMINATORS:
@@ -200,7 +206,7 @@ class _OfflineCandidate:
         if any((
             request.candidate_identity_sha256 != self.candidate_identity_sha256,
             request.model_id != expected["model_id"], request.model_revision != expected["model_revision"],
-            request.training_recipe != owned_training.T4_RECIPE,
+            request.training_recipe != expected["training_recipe"],
             request.manifest_sha256 != expected["manifest_sha256"],
             request.train_sha256 != expected["train_sha256"],
             request.heldout_sha256 != expected["heldout_sha256"],
@@ -221,11 +227,11 @@ class _OfflineCandidate:
             f"<|start|>user<|message|>{message}<|end|>" for message in request.user_messages
         ) + "<|start|>assistant<|channel|>final<|message|>"
         try:
-            with owned_training._offline_hf(owned_training.T4_RECIPE), self._torch.inference_mode():
+            with owned_training._offline_hf(self._base_recipe), self._torch.inference_mode():
                 encoded = self._tokenizer(prompt, return_tensors="pt", add_special_tokens=False)
                 input_ids = encoded["input_ids"]
                 input_length = int(input_ids.shape[1])
-                if input_length + request.max_new_tokens > _MAX_SEQUENCE_LENGTH:
+                if input_length + request.max_new_tokens > self._max_sequence_length:
                     raise OwnedInferenceBlocked("T4_CONTEXT_BUDGET_EXCEEDED")
                 device = getattr(self._model, "device", None)
                 if device is not None:

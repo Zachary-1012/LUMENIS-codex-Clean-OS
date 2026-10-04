@@ -531,6 +531,97 @@ class EffectFence:
                 code = "OWNED_TRAINING_PHASE_FENCE_UNVERIFIED"
             return TrainingPhaseMetadataFenceDecision(allowed=False, code=code, **fields)
 
+    def authorize_training_checkpoint_metadata(
+        self, *, connection, task_id, mutation, training_request, context,
+        domain_id, gate, approval, approval_reference, expected_state,
+        actor_id=None, principal=None, capture_mode="owned_training_checkpoint_metadata",
+    ) -> TrainingPhaseMetadataFenceDecision:
+        """Admit the exact staged v3 Task/Artifact change, never GPU execution.
+
+        expected_state is {execution: current v3 execution, operation: current
+        save/load operation or None during execution initialization}. It is
+        re-read through the existing sealed Task owner on this transaction.
+        No existing v2 mutation is widened to admit physical checkpoint work.
+        """
+        fields = dict(task_id=task_id, mutation=mutation)
+        try:
+            from ai_task_engine import TaskEngine, get_task_engine
+            from . import permission
+            if (type(self) is not EffectFence or self is not get_effect_fence()
+                    or capture_mode != "owned_training_checkpoint_metadata"
+                    or mutation not in {"reserve", "start", "commit", "load", "renew", "recovery-phase"}
+                    or type(gate) is not permission.PermissionGate or gate is not permission.get_permission_gate()
+                    or not gate.fail_closed or permission.is_testing_bypass_enabled()
+                    or type(expected_state) is not dict or set(expected_state) != {"execution", "operation"}):
+                raise PermissionError("OWNED_TRAINING_CHECKPOINT_FENCE_UNAVAILABLE")
+            TaskEngine._require_training_receipt_connection(connection)
+            engine = get_task_engine()
+            if type(engine) is not TaskEngine:
+                raise PermissionError("OWNED_TRAINING_CHECKPOINT_TASK_OWNER_UNAVAILABLE")
+            args = {"actor_id": actor_id, "principal": principal}
+            identity = permission.owned_training_identity(**args)
+            resource = permission.owned_training_approval_resource(
+                training_request, context=context, domain_id=domain_id, **args)
+            fields["resource"] = resource
+            if not permission.make_owned_training_approval_verifier(
+                    gate, context=context, domain_id=domain_id, **args)(training_request):
+                raise PermissionError("OWNED_TRAINING_CHECKPOINT_FENCE_APPROVAL_REQUIRED")
+            reference = gate.owned_training_approval_reference(
+                training_request=training_request, context=context, domain_id=domain_id,
+                approval=approval, **args)
+            if reference != approval_reference:
+                raise PermissionError("OWNED_TRAINING_CHECKPOINT_APPROVAL_REPLACED")
+            binding = {"resource": resource, "scope_descriptors": context["scope_descriptors"],
+                "identity": {name: identity[name] for name in
+                    ("actor_id", "caller", "principal_kind", "principal_ref")}}
+            material = engine.get_training_receipt_history_material(
+                task_id, expected_identity=binding["identity"], connection=connection)
+            fingerprints = permission.owned_training_phase_fingerprints(
+                training_request, context=context, domain_id=domain_id, **args)
+            if (material["binding"] != binding or material["approval_reference"] != reference
+                    or material["fingerprints"] != fingerprints):
+                raise PermissionError("OWNED_TRAINING_CHECKPOINT_FENCE_BINDING_MISMATCH")
+            owner_args = dict(expected_binding=binding, expected_approval_reference=reference,
+                pinned_public_key=material["pinned_public_key"], connection=connection)
+            execution = engine.training_execution_read(task_id, **owner_args)
+            if execution is None or execution != expected_state["execution"]:
+                raise PermissionError("OWNED_TRAINING_CHECKPOINT_FENCE_STATE_CHANGED")
+            operation = expected_state["operation"]
+            if operation is None:
+                if mutation != "reserve":
+                    raise PermissionError("OWNED_TRAINING_CHECKPOINT_FENCE_STATE_CHANGED")
+            else:
+                if type(operation) is not dict or type(operation.get("operation_id")) is not str:
+                    raise PermissionError("OWNED_TRAINING_CHECKPOINT_FENCE_STATE_CHANGED")
+                current = engine.training_operation_read(task_id, operation_id=operation["operation_id"], **owner_args)
+                allowed = {"reserve": {"RESERVED", "LOAD_ADMITTED"}, "start": {"WRITING", "LOADING"},
+                    "commit": {"COMMITTED"}, "load": {"LOADED", "RUNNABLE"},
+                    "renew": {"LOAD_ADMITTED"}, "recovery-phase": {"LOADED", "RUNNABLE"}}
+                if current != operation or current["state"] not in allowed[mutation]:
+                    raise PermissionError("OWNED_TRAINING_CHECKPOINT_FENCE_STATE_CHANGED")
+            state_sha256 = hashlib.sha256(json.dumps(
+                expected_state, ensure_ascii=False, sort_keys=True,
+                separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+            audit = gate._write_audit(
+                operation_type="owned_training_checkpoint_metadata_fence", resource=resource,
+                risk_level=permission.RiskLevel.HIGH.value, permission_required=permission.PermissionLevel.COMMIT.value,
+                caller=identity["caller"], result="allowed", reason="OWNED_TRAINING_CHECKPOINT_METADATA_ADMITTED_NOT_COMMITTED",
+                operation_id=None if operation is None else operation["operation_id"], approval_token=None)
+            if type(audit) is not str or not _SKILL_AUDIT_ID.fullmatch(audit):
+                raise PermissionError("OWNED_TRAINING_CHECKPOINT_FENCE_AUDIT_UNAVAILABLE")
+            return TrainingPhaseMetadataFenceDecision(
+                allowed=True, code="OWNED_TRAINING_CHECKPOINT_METADATA_ADMITTED_NOT_COMMITTED",
+                **fields, state_sha256=state_sha256, approval_token_sha256=reference["approval_token_sha256"],
+                permission_audit_id=approval.audit_id, fence_audit_id=audit,
+                effect_mode="owned_training_checkpoint_metadata")
+        except Exception as exc:
+            code = str(exc)
+            if (type(code) is not str or not code.startswith("OWNED_TRAINING_")
+                    or len(code) > 100 or re.fullmatch(r"[A-Z_0-9]+", code) is None):
+                code = "OWNED_TRAINING_CHECKPOINT_FENCE_UNVERIFIED"
+            return TrainingPhaseMetadataFenceDecision(allowed=False, code=code, **fields,
+                effect_mode="owned_training_checkpoint_metadata")
+
     def check(
         self,
         *,

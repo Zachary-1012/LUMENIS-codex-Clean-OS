@@ -1523,7 +1523,7 @@ def get_artifact(artifact_id: str) -> Optional[Dict[str, Any]]:
     if not row:
         return None
     item = dict(row)
-    if item.get("kind") in {"content_source", "content_project"}:
+    if item.get("kind") in {"content_source", "content_project", "training_checkpoint"}:
         # Scoped media must use the actor-authorized source/project readers.
         return None
     item["approval_required"] = bool(item.get("approval_required"))
@@ -1561,6 +1561,332 @@ def artifact_file_path(artifact_id: str) -> Optional[Path]:
     ):
         raise LocalArtifactError("ARTIFACT_INTEGRITY_FAILED")
     return candidate
+
+
+def _checkpoint_json(value):
+    try:
+        raw = json.dumps(value, ensure_ascii=False, sort_keys=True,
+                         separators=(",", ":"), allow_nan=False).encode("utf-8")
+    except (TypeError, ValueError, UnicodeError) as exc:
+        raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID") from exc
+    if len(raw) > 1024 * 1024:
+        raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    return raw
+
+
+def _checkpoint_regular(path, *, directory=False):
+    import stat
+    try:
+        info = path.lstat()
+    except OSError as exc:
+        raise LocalArtifactError("CHECKPOINT_STORAGE_UNAVAILABLE") from exc
+    if (stat.S_ISLNK(info.st_mode) or getattr(info, "st_file_attributes", 0) & 0x400
+            or not (stat.S_ISDIR(info.st_mode) if directory else stat.S_ISREG(info.st_mode))
+            or (not directory and info.st_nlink != 1)):
+        raise LocalArtifactError("CHECKPOINT_STORAGE_SUBSTITUTED")
+    return info
+
+
+def _checkpoint_relative(value):
+    from pathlib import PurePosixPath
+    if (type(value) is not str or not value or len(value) > 512
+            or "\\" in value or ":" in value or "\0" in value):
+        raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    path = PurePosixPath(value)
+    if path.is_absolute() or str(path) != value or any(x in {".", ".."} for x in path.parts):
+        raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    # Prevent Windows alternate names and reserved-device aliasing on every host.
+    for part in path.parts:
+        if (part.endswith((".", " ")) or any(ord(c) < 32 for c in part)
+                or part.split(".")[0].upper() in {"CON", "PRN", "AUX", "NUL",
+                    *[f"COM{i}" for i in range(1, 10)], *[f"LPT{i}" for i in range(1, 10)]}):
+            raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    return path
+
+
+def _checkpoint_files(root, files, max_bytes, *, allow_manifest=False):
+    if (type(max_bytes) is not int or max_bytes <= 0 or type(files) is not list
+            or not 0 < len(files) <= 4096):
+        raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    declared, total = {}, 0
+    for item in files:
+        if type(item) is not dict or set(item) != {"path", "role", "size_bytes", "sha256"}:
+            raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+        rel = _checkpoint_relative(item["path"])
+        if (str(rel) == "checkpoint.manifest.json" or str(rel).casefold() in declared
+                or type(item["size_bytes"]) is not int or item["size_bytes"] < 0
+                or item["role"] not in {"adapter_or_model", "model_config", "tokenizer", "optimizer",
+                    "scheduler", "rng_cpu", "rng_cuda", "trainer_state", "data_position", "scaler",
+                    "callback_state", "auxiliary"}
+                or type(item["sha256"]) is not str or re.fullmatch(r"[0-9a-f]{64}", item["sha256"]) is None):
+            raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+        declared[str(rel).casefold()] = item
+        total += item["size_bytes"]
+    if total > max_bytes or [x["path"] for x in files] != sorted(x["path"] for x in files):
+        raise LocalArtifactError("CHECKPOINT_STORAGE_LIMIT_EXCEEDED")
+    actual = []
+    _checkpoint_regular(root, directory=True)
+    for parent in root.parents:
+        _checkpoint_regular(parent, directory=True)
+    for current, dirs, names in os.walk(root, followlinks=False):
+        for name in dirs:
+            _checkpoint_regular(Path(current) / name, directory=True)
+        for name in names:
+            path = Path(current) / name
+            _checkpoint_regular(path)
+            rel = path.relative_to(root).as_posix()
+            if rel != "checkpoint.manifest.json" or not allow_manifest:
+                actual.append(rel)
+    if sorted(actual) != [x["path"] for x in files]:
+        raise LocalArtifactError("CHECKPOINT_INVENTORY_MISMATCH")
+    for item in files:
+        path = root / item["path"]
+        before = _checkpoint_regular(path)
+        actual_hash = _hash_file(path)
+        after = _checkpoint_regular(path)
+        if (actual_hash != item["sha256"] or before.st_size != item["size_bytes"]
+                or (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) !=
+                   (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)):
+            raise LocalArtifactError("CHECKPOINT_INTEGRITY_FAILED")
+    return total
+
+
+def _checkpoint_authorize(authorize):
+    if not callable(authorize):
+        raise PermissionError("CHECKPOINT_PERMISSION_REQUIRED")
+    # This private storage adapter is invoked only by the bound Task/Permission
+    # composition. None is a successful fresh check; booleans are not grants.
+    if authorize() is not None:
+        raise PermissionError("CHECKPOINT_PERMISSION_REQUIRED")
+
+
+def _checkpoint_install(source, target):
+    """Flush actual bytes, then install a new immutable name without replacement."""
+    if target.exists():
+        raise LocalArtifactError("CHECKPOINT_OPERATION_CONFLICT")
+    if os.name == "nt":
+        import ctypes
+        move = ctypes.WinDLL("kernel32", use_last_error=True).MoveFileExW
+        move.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32]
+        move.restype = ctypes.c_int
+        # MOVEFILE_WRITE_THROUGH, with no REPLACE_EXISTING or cross-volume copy.
+        if not move(str(source), str(target), 0x8):
+            raise LocalArtifactError("CHECKPOINT_DURABILITY_UNAVAILABLE")
+    else:
+        for directory in sorted([source, *[p for p in source.rglob("*") if p.is_dir()]],
+                                key=lambda p: len(p.parts), reverse=True):
+            fd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+        os.rename(source, target)
+        for directory in {target.parent, source.parent}:
+            fd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+
+
+def stage_training_checkpoint_artifact(*, source_root, inventory, binding, max_bytes,
+                                      authorize, artifact_ref=None):
+    """Install closed/excluded worker bytes; no DB write or recovery grant.
+
+    The bound training process owner must retain effective writer exclusion
+    across this call. Fresh authorizer validates that exact Task/worker/recipe.
+    ``source_root`` is an owner-created directory below the canonical Artifact
+    root. Artifact IDs and an unacknowledged stage are retained by the same Task
+    operation; filesystem existence alone never creates a committed checkpoint.
+    """
+    _checkpoint_authorize(authorize)
+    root = artifact_root()
+    root.mkdir(parents=True, exist_ok=True)
+    source_root = Path(source_root)
+    if not source_root.is_absolute() or source_root == root:
+        raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    try:
+        source_root.relative_to(root)
+    except ValueError as exc:
+        raise LocalArtifactError("CHECKPOINT_STORAGE_OUTSIDE_OWNER_ROOT") from exc
+    inventory = json.loads(_checkpoint_json(inventory))
+    binding = json.loads(_checkpoint_json(binding))
+    if (type(inventory) is not dict or type(inventory.get("schema_version")) is not int
+            or inventory.get("schema_version") != 1
+            or set(inventory) != {"schema_version", "operation_id", "completed_step", "checkpoint_relative_path",
+                "policy_sha256", "fingerprints", "framework_versions", "trainer_config_sha256",
+                "data_order_sha256", "data_position", "files"}
+            or type(binding) is not dict or set(binding) != {
+                "task_id", "domain_id", "task_digest", "operation_id", "attempt_id", "worker_epoch",
+                "actor_identity", "scope_descriptors", "artifact_version", "parent_ref"}
+            or binding["domain_id"] not in {"cth", "bmp"}
+            or type(binding["artifact_version"]) is not int or binding["artifact_version"] < 1):
+        raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    if (inventory["operation_id"] != binding["operation_id"]
+            or type(inventory["completed_step"]) is not int or inventory["completed_step"] < 0
+            or type(binding["worker_epoch"]) is not int or binding["worker_epoch"] < 1
+            or type(binding["task_id"]) is not str or not binding["task_id"]
+            or type(binding["actor_identity"]) is not dict
+            or set(binding["actor_identity"]) != {"actor_id", "caller", "principal_kind", "principal_ref"}
+            or type(binding["scope_descriptors"]) is not dict or not binding["scope_descriptors"]
+            or (binding["parent_ref"] is not None and
+                (type(binding["parent_ref"]) is not str or _CONTENT_SOURCE_ARTIFACT_ID.fullmatch(binding["parent_ref"]) is None))):
+        raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    for value in (binding["operation_id"], binding["attempt_id"]):
+        if type(value) is not str or str(uuid.UUID(value)) != value or uuid.UUID(value).version != 4:
+            raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    for value in (binding["task_digest"], inventory["policy_sha256"],
+                  inventory["trainer_config_sha256"], inventory["data_order_sha256"]):
+        if type(value) is not str or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+            raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    _checkpoint_relative(inventory["checkpoint_relative_path"])
+    artifact_ref = artifact_ref or _new_artifact_id()
+    if type(artifact_ref) is not str or _CONTENT_SOURCE_ARTIFACT_ID.fullmatch(artifact_ref) is None:
+        raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    total = _checkpoint_files(source_root, inventory.get("files"), max_bytes)
+    manifest = _checkpoint_json({"schema": "lumenis.training-checkpoint-artifact/v1",
+        "artifact_ref": artifact_ref, "inventory": inventory, "binding": binding,
+        "max_bytes": max_bytes})
+    relative = f"training_checkpoints/{artifact_ref}/checkpoint.manifest.json"
+    destination = root / "training_checkpoints" / artifact_ref
+    destination.parent.mkdir(exist_ok=True)
+    if destination.exists():
+        if (destination / "checkpoint.manifest.json").read_bytes() != manifest:
+            raise LocalArtifactError("CHECKPOINT_OPERATION_CONFLICT")
+        _checkpoint_files(destination, inventory["files"], max_bytes, allow_manifest=True)
+    else:
+        stage = Path(tempfile.mkdtemp(prefix=".checkpoint-stage-", dir=root))
+        # Failed stages are diagnostic orphans. They are never registered or
+        # recursively removed by a generic cleanup/recovery path.
+        for item in inventory["files"]:
+            target = stage / item["path"]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with (source_root / item["path"]).open("rb") as src, target.open("xb") as dst:
+                shutil.copyfileobj(src, dst, length=1024 * 1024)
+                dst.flush()
+                os.fsync(dst.fileno())
+        _checkpoint_files(stage, inventory["files"], max_bytes)
+        with (stage / "checkpoint.manifest.json").open("xb") as dst:
+            dst.write(manifest)
+            dst.flush()
+            os.fsync(dst.fileno())
+        _checkpoint_authorize(authorize)
+        _checkpoint_install(stage, destination)
+    _checkpoint_authorize(authorize)
+    return {"artifact_ref": artifact_ref, "sha256": hashlib.sha256(manifest).hexdigest(),
+        "size_bytes": len(manifest) + total, "relative_path": relative,
+        "storage_identity": "artifact:" + artifact_ref, "binding": binding}
+
+
+def _checkpoint_reopen_record(staged):
+    if type(staged) is not dict or set(staged) != {
+            "artifact_ref", "sha256", "size_bytes", "relative_path", "storage_identity", "binding"}:
+        raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    ref = staged["artifact_ref"]
+    if type(ref) is not str or _CONTENT_SOURCE_ARTIFACT_ID.fullmatch(ref) is None:
+        raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    expected_path = f"training_checkpoints/{ref}/checkpoint.manifest.json"
+    if staged["relative_path"] != expected_path or staged["storage_identity"] != "artifact:" + ref:
+        raise LocalArtifactError("CHECKPOINT_STORAGE_SUBSTITUTED")
+    path = artifact_root() / expected_path
+    for parent in path.parents:
+        _checkpoint_regular(parent, directory=True)
+    _checkpoint_regular(path)
+    if path.stat().st_size > 1024 * 1024:
+        raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    raw = path.read_bytes()
+    try:
+        manifest = json.loads(raw)
+    except (UnicodeError, ValueError) as exc:
+        raise LocalArtifactError("CHECKPOINT_INTEGRITY_FAILED") from exc
+    if (_checkpoint_json(manifest) != raw or type(manifest) is not dict or set(manifest) != {
+            "schema", "artifact_ref", "inventory", "binding", "max_bytes"}
+            or manifest["schema"] != "lumenis.training-checkpoint-artifact/v1"
+            or manifest["artifact_ref"] != ref or manifest["binding"] != staged["binding"]
+            or hashlib.sha256(raw).hexdigest() != staged["sha256"]):
+        raise LocalArtifactError("CHECKPOINT_INTEGRITY_FAILED")
+    total = _checkpoint_files(path.parent, manifest["inventory"]["files"], manifest["max_bytes"], allow_manifest=True)
+    if len(raw) + total != staged["size_bytes"]:
+        raise LocalArtifactError("CHECKPOINT_INTEGRITY_FAILED")
+    return manifest, path.parent
+
+
+def register_training_checkpoint_artifact(*, connection, staged, authorize):
+    """Register with the caller's Task transaction; never open/commit/create DB."""
+    from ai_task_engine import TaskEngine
+    TaskEngine._require_training_receipt_connection(connection)
+    _checkpoint_authorize(authorize)
+    _checkpoint_reopen_record(staged)
+    binding = staged["binding"]
+    if binding["parent_ref"] is not None:
+        parent = connection.execute(f"SELECT * FROM {_ARTIFACT_TABLE} WHERE artifact_id=?",
+                                    (binding["parent_ref"],)).fetchone()
+        if (not parent or parent["kind"] != "training_checkpoint" or parent["status"] != "committed"
+                or parent["source_execution_id"] != binding["task_id"]):
+            raise LocalArtifactError("CHECKPOINT_PARENT_MISMATCH")
+        parent_raw = read_training_checkpoint_artifact(connection=connection,
+            artifact_ref=binding["parent_ref"], expected_sha256=parent["sha256"], authorize=authorize)
+        parent_binding = parent_raw["manifest"]["binding"]
+        if (parent_binding["artifact_version"] + 1 != binding["artifact_version"]
+                or any(parent_binding[k] != binding[k] for k in
+                       ("actor_identity", "scope_descriptors", "domain_id", "task_digest"))):
+            raise LocalArtifactError("CHECKPOINT_PARENT_MISMATCH")
+    elif binding["artifact_version"] != 1:
+        raise LocalArtifactError("CHECKPOINT_PARENT_MISMATCH")
+    record = {"artifact_id": staged["artifact_ref"], "kind": "training_checkpoint",
+        "product_id": "CTH" if binding["domain_id"] == "cth" else "ZBMP",
+        "domain_id": "cth" if binding["domain_id"] == "cth" else "zbmp",
+        "source_execution_id": binding["task_id"], "evidence_id": None, "note_id": None,
+        "filename": "checkpoint.manifest.json", "media_type": "application/vnd.lumenis.training-checkpoint+json",
+        "relative_path": staged["relative_path"], "size_bytes": staged["size_bytes"],
+        "sha256": staged["sha256"], "status": "committed", "approval_required": True,
+        "approval_status": "approved"}
+    existing = connection.execute(f"SELECT * FROM {_ARTIFACT_TABLE} WHERE artifact_id=?",
+                                  (staged["artifact_ref"],)).fetchone()
+    if existing:
+        if any(dict(existing)[k] != v for k, v in record.items()):
+            raise LocalArtifactError("CHECKPOINT_OPERATION_CONFLICT")
+        _checkpoint_authorize(authorize)
+        return {**dict(existing), "artifact_ref": staged["artifact_ref"], "storage_identity": staged["storage_identity"]}
+    now = datetime.utcnow().isoformat(timespec="microseconds") + "Z"
+    record.update(created_at=now, updated_at=now)
+    keys = list(record)
+    connection.execute(f"INSERT INTO {_ARTIFACT_TABLE} ({','.join(keys)}) VALUES ({','.join('?' for _ in keys)})",
+                       tuple(record[k] for k in keys))
+    _checkpoint_authorize(authorize)
+    return {**record, "artifact_ref": staged["artifact_ref"], "storage_identity": staged["storage_identity"]}
+
+
+def read_training_checkpoint_artifact(*, connection, artifact_ref, expected_sha256, authorize):
+    """Verify a registered immutable checkpoint; returned Path stays private."""
+    _checkpoint_authorize(authorize)
+    if type(connection) is not sqlite3.Connection:
+        raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    dbs = connection.execute("PRAGMA database_list").fetchall()
+    selected = next((r[2] for r in dbs if r[1] == "main"), None)
+    if not selected or Path(selected).resolve() != Path(main_db_path()).resolve():
+        raise LocalArtifactError("CHECKPOINT_STORAGE_OUTSIDE_OWNER_ROOT")
+    row = connection.execute(f"SELECT * FROM {_ARTIFACT_TABLE} WHERE artifact_id=?", (artifact_ref,)).fetchone()
+    if not row or row["kind"] != "training_checkpoint" or row["status"] != "committed":
+        raise LocalArtifactError("CHECKPOINT_NOT_COMMITTED")
+    item = dict(row)
+    if item["sha256"] != expected_sha256:
+        raise LocalArtifactError("CHECKPOINT_INTEGRITY_FAILED")
+    path = artifact_root() / f"training_checkpoints/{artifact_ref}/checkpoint.manifest.json"
+    for parent in path.parents:
+        _checkpoint_regular(parent, directory=True)
+    _checkpoint_regular(path)
+    if path.stat().st_size > 1024 * 1024:
+        raise LocalArtifactError("CHECKPOINT_REQUEST_INVALID")
+    manifest = json.loads(path.read_bytes())
+    staged = {"artifact_ref": artifact_ref, "sha256": expected_sha256,
+        "size_bytes": item["size_bytes"], "relative_path": item["relative_path"],
+        "storage_identity": "artifact:" + artifact_ref, "binding": manifest["binding"]}
+    verified, load_root = _checkpoint_reopen_record(staged)
+    _checkpoint_authorize(authorize)
+    return {"record": item, "manifest": verified, "load_root": load_root,
+            "artifact_ref": artifact_ref, "sha256": expected_sha256,
+            "storage_identity": staged["storage_identity"]}
 
 
 __all__ = [

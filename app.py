@@ -1047,67 +1047,183 @@ def creative_social_ops():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+def _creative_pitch_request(*, export=False):
+    """Read bounded task input; client fields cannot select authority or paths."""
+    import json
+    import re
+    from werkzeug.exceptions import BadRequest, RequestEntityTooLarge
+
+    allowed = {'text', 'brand', 'hotspot', 'n'} | ({'manuscript'} if export else set())
+
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError('重复的输入字段')
+            result[key] = value
+        return result
+
+    def invalid_constant(value):
+        raise ValueError('输入不能包含非有限数值')
+
+    def json_object(raw):
+        return json.loads(raw, object_pairs_hook=unique_object, parse_constant=invalid_constant)
+
+    upload = None
+    if request.is_json:
+        raw = request.stream.read(1024 * 1024 + 1)
+        if len(raw) > 1024 * 1024:
+            raise ValueError('输入超过大小限制')
+        data = json_object(raw.decode('utf-8'))
+    elif request.mimetype == 'multipart/form-data':
+        if request.content_length is not None and request.content_length > 17 * 1024 * 1024:
+            raise ValueError('上传超过大小限制')
+        try:
+            form, files = request.form, request.files
+            if (set(files) - {'file'} or len(files.getlist('file')) > 1
+                    or any(len(form.getlist(key)) != 1 for key in form)):
+                raise ValueError('重复或未知的上传字段')
+            data = form.to_dict()
+            upload = files.get('file')
+        except (BadRequest, RequestEntityTooLarge) as exc:
+            raise ValueError('无法读取上传输入') from exc
+        if 'n' in data:
+            if not re.fullmatch(r'[0-9]{1,6}', data['n']):
+                raise ValueError('n 必须为正整数')
+            data['n'] = int(data['n'])
+        if 'manuscript' in data:
+            data['manuscript'] = json_object(data['manuscript'])
+    else:
+        raise ValueError('需要 JSON 或 multipart 输入')
+    if not isinstance(data, dict) or set(data) - allowed:
+        raise ValueError('未知的输入字段')
+    for key, limit in (('text', 200000), ('brand', 1000), ('hotspot', 1000)):
+        value = data.get(key, '')
+        if not isinstance(value, str) or len(value) > limit:
+            raise ValueError('%s 必须为大小受限的文本' % key)
+    n = data.get('n', 3)
+    if isinstance(n, bool) or not isinstance(n, int) or n < 1:
+        raise ValueError('n 必须为正整数')
+    # Retain the existing maximum of five candidates.
+    data['n'] = min(n, 5)
+    if 'manuscript' in data:
+        manuscript = data['manuscript']
+        if (not isinstance(manuscript, dict)
+                or set(manuscript) - {'title', 'summary', 'sections', 'language', 'authorship'}):
+            raise ValueError('成稿必须包含有效的正文对象')
+        if (any(not isinstance(manuscript.get(key), str) or not manuscript[key].strip()
+                for key in ('title', 'summary'))
+                or not isinstance(manuscript.get('sections'), list) or not manuscript['sections']):
+            raise ValueError('成稿标题、说明和正文不能为空')
+        for section in manuscript['sections']:
+            if (not isinstance(section, dict) or set(section) != {'heading', 'body'}
+                    or any(not isinstance(section[key], str) or not section[key].strip()
+                           for key in ('heading', 'body'))):
+                raise ValueError('每节成稿需要标题和正文')
+        if (type(manuscript.get('language', 'zh')) is not str
+                or manuscript.get('language', 'zh') not in {'zh', 'en', 'ko'}
+                or type(manuscript.get('authorship', 'assisted')) is not str
+                or manuscript.get('authorship', 'assisted') not in {'assisted', 'user_supplied'}):
+            raise ValueError('成稿语言或来源无效')
+    return data, upload
+
+
+def _creative_pitch_analysis(data, upload):
+    from pathlib import Path
+    import tempfile
+    from scripts.pitch_parser import analyze_pitch, analyze_pitch_file
+
+    brand, hotspot, n = data.get('brand', ''), data.get('hotspot', ''), data['n']
+    if upload is not None and upload.filename:
+        filename = upload.filename.replace('\\', '/').rsplit('/', 1)[-1]
+        if len(filename) > 255 or any(ord(char) < 32 for char in filename):
+            raise ValueError('文件名无效')
+        suffix = Path(filename).suffix.lower()
+        if suffix not in {'.txt', '.md', '.json', '.csv', '.pptx', '.docx'}:
+            raise ValueError('不支持的输入文件格式')
+        content = upload.stream.read(16 * 1024 * 1024 + 1)
+        if not content or len(content) > 16 * 1024 * 1024:
+            raise ValueError('文件为空或超过大小限制')
+        with tempfile.TemporaryDirectory(prefix='lumenis-pitch-input-') as directory:
+            source = Path(directory) / ('source' + suffix)
+            source.write_bytes(content)
+            result = analyze_pitch_file(str(source), brand, n, hotspot)
+        # Input provenance retains the original basename and byte hash, never a
+        # deleted server path. This is input provenance, not signed Evidence.
+        result['source_file'] = filename
+        result['input_provenance']['filename'] = filename
+        return result
+    text = data.get('text', '')
+    if not text.strip():
+        raise ValueError('需要 text 或上传文件')
+    return analyze_pitch(text, brand, n, hotspot)
+
+
+def _creative_pitch_check_export():
+    """Recheck the existing export permission without an operation-cache key."""
+    from lumenis.system.security import get_permission_gate, is_testing_bypass_enabled, OperationType
+
+    if (_pg is None or _pg is not get_permission_gate()
+            or not _pg.fail_closed or is_testing_bypass_enabled()):
+        raise RuntimeError('PITCH_PERMISSION_UNAVAILABLE')
+    result = _pg.check(operation_type=OperationType.DATA_EXPORT,
+                       resource=request.path,
+                       caller='http:{}:{}'.format(request.method, request.path))
+    if not result.allowed:
+        raise PermissionError('PITCH_EXPORT_DENIED')
+
+
 @app.route('/api/creative/pitch-analyze', methods=['POST'])
 def creative_pitch_analyze():
-    """方案需求拆解：接受 text 或上传文件(multipart file) → 要素提取+对标拆解+创意+方案脉络。"""
+    """方案需求拆解：接受文本或现有支持格式的文件。"""
     try:
-        from scripts.pitch_parser import analyze_pitch, analyze_pitch_file
-        try:
-            data = request.get_json(silent=True) or {}
-        except Exception:
-            data = {}
-        text = data.get('text', '')
-        brand_hint = data.get('brand', '')
-        hotspot = data.get('hotspot', '')
-        n = min(int(data.get('n', 3)), 5)
-        file = request.files.get('file') if hasattr(request, 'files') else None
-        if file and file.filename:
-            import os, tempfile
-            tmp = os.path.join(tempfile.gettempdir(), 'pitch_%s' % file.filename)
-            file.save(tmp)
-            result = analyze_pitch_file(tmp, brand_hint, n, hotspot)
-            os.remove(tmp)
-        elif text.strip():
-            result = analyze_pitch(text, brand_hint, n, hotspot)
-        else:
-            return jsonify({'ok': False, 'error': '需要 text 或上传文件'}), 400
-        return jsonify({'ok': True, 'data': result})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        data, upload = _creative_pitch_request()
+        return jsonify({'ok': True, 'data': _creative_pitch_analysis(data, upload)})
+    except (ValueError, UnicodeError):
+        return jsonify({'ok': False, 'code': 'INVALID_PITCH_INPUT', 'error': '请检查需求文本和上传文件'}), 400
+    except Exception:
+        return jsonify({'ok': False, 'code': 'PITCH_ANALYSIS_FAILED', 'error': '需求分析失败'}), 500
 
 
 @app.route('/api/creative/pitch-export', methods=['POST'])
 def creative_pitch_export():
-    """方案拆解结果导出 Word：接收 text/文件（同 pitch-analyze），返回 .docx 下载。
-    用于把方案需求拆解成可交付的 Word 提案材料。个人业务资料仅本地导出，不上传。"""
+    """导出需求分析或实际提供的成稿；成稿审阅和使用授权仍待确认。"""
     try:
-        from scripts.pitch_parser import analyze_pitch, analyze_pitch_file
+        import io
+        import tempfile
+        from pathlib import Path
+        from werkzeug.utils import secure_filename
         from scripts.pitch_export import export_pitch_docx
-        try:
-            data = request.get_json(silent=True) or {}
-        except Exception:
-            data = {}
-        text = data.get('text', '')
-        brand_hint = data.get('brand', '')
-        hotspot = data.get('hotspot', '')
-        n = min(int(data.get('n', 3)), 5)
-        file = request.files.get('file') if hasattr(request, 'files') else None
-        if file and file.filename:
-            import os, tempfile
-            tmp = os.path.join(tempfile.gettempdir(), 'pitch_%s' % file.filename)
-            file.save(tmp)
-            result = analyze_pitch_file(tmp, brand_hint, n, hotspot)
-            os.remove(tmp)
-        elif text.strip():
-            result = analyze_pitch(text, brand_hint, n, hotspot)
-        else:
-            return jsonify({'ok': False, 'error': '需要 text 或上传文件'}), 400
-        out_path = export_pitch_docx(result)
-        from flask import send_file
-        return send_file(out_path, as_attachment=True,
-                         download_name='%s_方案拆解.docx' % (result.get('extracted', {}).get('brand') or 'pitch'))
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        data, upload = _creative_pitch_request(export=True)
+        _creative_pitch_check_export()
+        result = _creative_pitch_analysis(data, upload)
+        # Request-owned paths are unique and cleaned on success, denial and
+        # failure. A memory-backed response needs no deferred disk cleanup.
+        with tempfile.TemporaryDirectory(prefix='lumenis-pitch-export-') as directory:
+            destination = Path(directory) / 'proposal.docx'
+            out_path = export_pitch_docx(result, str(destination),
+                                        manuscript=data.get('manuscript'),
+                                        check_continue=_creative_pitch_check_export)
+            if Path(out_path).resolve() != destination.resolve():
+                raise RuntimeError('PITCH_OUTPUT_PATH_INVALID')
+            payload = destination.read_bytes()
+            _creative_pitch_check_export()
+        brand = secure_filename(result.get('extracted', {}).get('brand') or 'pitch')[:80] or 'pitch'
+        suffix = '提案成稿' if 'manuscript' in data else '方案拆解'
+        response = send_file(io.BytesIO(payload), as_attachment=True,
+                             download_name='%s_%s.docx' % (brand, suffix))
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+    except PermissionError:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'code': 'PITCH_EXPORT_DENIED', 'error': '当前不能导出'}), 403
+    except (ValueError, UnicodeError):
+        return jsonify({'ok': False, 'code': 'INVALID_PITCH_INPUT', 'error': '请检查需求和成稿内容'}), 400
+    except RuntimeError as exc:
+        if str(exc) == 'PITCH_PERMISSION_UNAVAILABLE':
+            return jsonify({'ok': False, 'status': 'BLOCKED', 'code': 'PITCH_PERMISSION_UNAVAILABLE', 'error': '导出权限暂不可用'}), 503
+        return jsonify({'ok': False, 'code': 'PITCH_EXPORT_FAILED', 'error': '导出失败'}), 500
+    except Exception:
+        return jsonify({'ok': False, 'code': 'PITCH_EXPORT_FAILED', 'error': '导出失败'}), 500
 
 @app.route('/api/event-graph/import', methods=['POST'])
 def event_graph_import_existing():
@@ -1338,6 +1454,14 @@ def auth_config_api():
 def _basic_auth():
     # A server-opened local workspace uses the existing sealed principal and
     # exact current Registry scope. The route still rechecks scope and effects.
+    if request.path.startswith(('/api/experience/materials/documents', '/api/experience/saved-work')):
+        from experience_runtime import _shared_work_local_access_allowed
+        if _shared_work_local_access_allowed():
+            return None
+    if request.path.startswith('/api/experience/business-works'):
+        from lumenis_app_api import _business_work_local_access_allowed
+        if _business_work_local_access_allowed():
+            return None
     if request.path.startswith('/api/experience/creation/internal-pitches'):
         from lumenis_app_api import _internal_pitch_local_access_allowed
         if _internal_pitch_local_access_allowed():
@@ -1427,6 +1551,18 @@ def _pg_resolve_operation_type(path, method):
         return OperationType.COLLECTOR_START
     if p == '/api/experience/cth/cases' and method == 'POST':
         return OperationType.CTH_CASE_CREATE
+    if method == 'POST' and p == '/api/experience/materials/documents':
+        return OperationType.DATA_IMPORT
+    if method == 'POST' and p in {'/api/experience/saved-work', '/api/experience/saved-work/preferences'}:
+        return OperationType.DATA_EXPORT
+    if method == 'POST' and re.fullmatch(r'/api/experience/saved-work/art-[0-9a-f]{16}/revise', p):
+        return OperationType.DATA_EXPORT
+    if method == 'POST' and re.fullmatch(
+        r'/api/experience/business-works(?:/work-[0-9a-f]{64}/(?:choose|cancel|interrupt|resume|action|outcome|outcome_unknown))?', p,
+    ):
+        # Domain records only; the service separately binds current actor,
+        # exact scope, report revision and any actual creation-owner receipt.
+        return OperationType.REPORT_REVIEW
     # 1. 删除类（最高风险）
     if method == 'DELETE' or '/delete' in p or '/revoke' in p:
         return OperationType.DATA_DELETE
@@ -1505,6 +1641,8 @@ def _permission_gate_write_check():
         return None
     training_phase_rules = {
         'experience_runtime.prepare_owned_training_phase_task': '/api/experience/owned-training/phase-tasks',
+        'experience_runtime.execute_owned_training_phase_task': '/api/experience/owned-training/phase-tasks/<task_id>/execute',
+        'experience_runtime.read_owned_training_execution_configuration': '/api/experience/owned-training/execution-configuration',
         'experience_runtime.prepare_owned_training_phase_challenge': '/api/experience/owned-training/phase-tasks/<task_id>/challenges',
         'experience_runtime.issue_owned_training_phase_decision': '/api/experience/owned-training/phase-tasks/<task_id>/challenge-decisions',
         'experience_runtime.interrupt_owned_training_phase_task': '/api/experience/owned-training/phase-tasks/<task_id>/interrupt',
@@ -1514,6 +1652,17 @@ def _permission_gate_write_check():
             and training_phase_rules.get(request.endpoint) == request.url_rule.rule):
         # These exact registered handlers enforce the sealed task's own identity,
         # scope, live grant and commit lease; a path-level grant cannot bind them.
+        return None
+    training_review_rules = {
+        'experience_runtime.confirm_owned_training_execution_approval': '/api/experience/owned-training/execution-approvals',
+        'experience_runtime.submit_owned_training_review': '/api/experience/owned-training/review-submissions',
+        'experience_runtime.export_owned_training_reviews': '/api/experience/owned-training/review-exports',
+    }
+    if (request.method == 'POST' and request.endpoint in training_review_rules
+            and request.url_rule is not None
+            and training_review_rules[request.endpoint] == request.url_rule.rule == request.path):
+        # These two resolved owners enforce current server identity/scope and
+        # exact manual review or DATA_EXPORT. A path grant cannot bind inputs.
         return None
     if (request.method == 'POST' and (
             (request.path == '/api/experience/content-sources'
@@ -4974,7 +5123,8 @@ def _start_app_automations(args):
 
     # 启动进程级稳定性监控（watchdog+heartbeat，仅记录不强制退出）
     try:
-        stab_mon = stability_monitor.get_stability_monitor()
+        stab_mon = stability_monitor.get_stability_monitor(
+            service_port=getattr(globals().get("args"), "port", APP_PORT))
         stab_mon.start_monitoring()
     except Exception as e:
         print(f'[Stability] 稳定性监控启动失败: {e}')

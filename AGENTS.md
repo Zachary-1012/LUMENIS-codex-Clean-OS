@@ -13,10 +13,13 @@ execution instructions.
 
 ## Current execution instruction — closure red lines 2026-10-04
 
-All existing C1-C6 responsibilities, the local C3+C5 continuation, F and M are
-explicitly resumed by the Product Owner. This replaces the previous M/F-only
-pause; dated pause receipts remain historical evidence. C1-C6/F retain all
-R01-R15/J1-J8/U and special exits within the existing product scope.
+Current task 2026-10-04 21:00 Asia/Shanghai: M alone finishes the existing
+direct-repair errors and synchronizes reviewed source/rules with GitHub. Other
+windows are inactive and must not be messaged or resumed by this task. Existing
+product scope and unresolved requirements remain; this is not full product
+acceptance. Existing/free compute is the first choice. The former fixed paid
+RTX5090 route and rental deadline are historical and no longer current routing.
+No paid GPU, recharge or training is started by this repair task.
 
 1. Every action serves the existing product closure. Deliver real permitted
    input -> useful result -> save/revise/reopen/recover -> Evaluation with
@@ -40,24 +43,18 @@ R01-R15/J1-J8/U and special exits within the existing product scope.
    speculative features. C3+C5 research serves capability improvement, data
    credibility and separately approved training/evaluation; product improvement
    does not wait for GPU. Keep unread/missing material and original rights honest.
-5. C2 accelerates the approved single RTX5090 path by completing all nonbilling
-   preparation, then reports the concrete remaining stages, budget and stop
-   conditions to M/Product Owner. Recharge is performed by the Product Owner
-   after this report. Do not rent, recharge or increase the cap autonomously.
-   New-instance SSH/CUDA/load cannot be claimed before allocation: label these
-   paid-stage checks separately and stop/release promptly on an unresolved fault.
-   The latest approved and recharged C2 stage has a new cap of RMB10, cumulative
-   cap RMB23.17, one RTX5090 at no more than RMB2.99/hour. C2 alone repairs the
-   connection, rents, trains and stops billing: release by 95 minutes if no real
-   optimizer step/loss is observed, and stop billing by 180 minutes. M does not
-   rent on C2's behalf. This authority does not admit source use or model quality.
+5. Existing/free GPU resources are preferred. Verify actual availability,
+   capacity and license before selecting a recipe; a free development environment
+   is not production model hosting. No paid resource starts without current
+   explicit cost authorization. The historical 5090 budget is not a standing
+   instruction to rent. This M-only repair performs no model/GPU execution.
 6. M and F retain GPT-6 Astra/ultra; C1/C2/C3+C5/C4/C6 use GPT-6.1 Sol/max.
    1.5x is off; ordinary speed is requested. Settings/readback and executed
    backend identity are distinct. Do not change global defaults or silently
    lower the selected model. M handles complete results, necessary decisions
    and urgent risks; when no actionable work remains, M pauses its own Goal.
 
-W6 is the sole product integrator and main publisher. Its next delivery includes
+W6 normally owns product integration and main publication. For this explicitly authorized M-only repair, M publishes only the reviewed repair scope; W6 is not resumed. Its next delivery includes
 the exact canonical rule changes, current state and required gates, then a safe
 main push and remote file-byte verification. M prepares these rules and reviews
 the result; W6 being previously paused is no longer a publication dependency.
@@ -280,12 +277,7 @@ authorization, inputs or an actual acceptance risk changes. Reuse valid evidence
 required security/recovery/affected gates remain mandatory. M receives complete
 results, a necessary decision or urgent risk. W6 remains the sole integrator.
 
-C2 stays on the approved single RTX5090 route. The temporary RTX4090 alternative
-is superseded by the user's explicit instruction to disregard it. Complete
-weight integrity, authenticated remote managed-worker/physical-checkpoint
-binding and real GPU optimization as one continuous outcome Batch. The missed
-2026-10-03 24:00 start deadline remains an unmet historical requirement, not a
-new deadline or evidence of training. Training must proceed to actual step/loss,
+Existing/free compute takes priority; the historical paid route is retained only as evidence. Training must proceed to actual step/loss,
 checkpoint retrieval/reload, independent held-out and owned business results.
 
 F is active under the Product Owner's explicit 2026-10-04 resume: frontend implementation, scoped reference research and tests proceed through the complete F outcome. Its work remains governed by the sole Experience Constitution and current owner contracts.

@@ -235,9 +235,18 @@ def _row_to_dict(row) -> Dict[str, Any]:
     return data
 
 
-def list_subjects(domain_id: Optional[str] = None) -> List[Dict[str, Any]]:
+def _registry_read_connection(connection=None):
+    """Borrow canonical scope reads without closing the caller's transaction."""
+    if connection is None:
+        return _db_ready()
+    from contextlib import nullcontext
+    from lumenis.system.security.permission import _require_canonical_scope_connection
+    return nullcontext(_require_canonical_scope_connection(connection))
+
+
+def list_subjects(domain_id: Optional[str] = None, *, connection=None) -> List[Dict[str, Any]]:
     normalized = normalize_domain(domain_id) if domain_id else None
-    with _db_ready() as conn:
+    with _registry_read_connection(connection) as conn:
         _require_registry_schema(conn)
         if normalized:
             rows = conn.execute(
@@ -278,6 +287,13 @@ def add_subject(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
         raise SubjectValidationError("请求体必须是 JSON 对象")
     domain_id = normalize_domain(payload.get("domain_id"))
     subject_type = normalize_subject_type(payload.get("subject_type"))
+    if (domain_id == "CTH" and subject_type != "company") or (
+        domain_id == "BMP" and subject_type != "brand"
+    ):
+        raise SubjectValidationError(
+            "domain_id 与 subject_type 不匹配：CTH 仅支持 company（商业主体），"
+            "BMP 仅支持 brand（品牌主体）"
+        )
     name_en = _text(payload.get("name_en"), field="name_en")
     name_zh = _text(payload.get("name_zh"), field="name_zh")
     if not name_en or not name_zh:

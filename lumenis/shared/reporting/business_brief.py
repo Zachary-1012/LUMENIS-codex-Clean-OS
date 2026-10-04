@@ -7,9 +7,20 @@ import re
 
 from lumenis.shared.database import get_repository
 from lumenis.shared.evidence import store as evidence_store
-from lumenis.system.ai_gateway import core as ai_core
+from lumenis.system.ai_gateway import owned_inference
 from .media_brief import _read_row, _scope
 from .operational_brief import _markdown_text
+
+# Historical tests import ``ai_core`` only to assert that the retired local
+# provider is never called. Keep that compatibility seam inert; all normal
+# analysis uses the owned Gateway status path below.
+class _RetiredProviderCompatibility:
+    @staticmethod
+    def local_structured_chat(*_args, **_kwargs):
+        raise RuntimeError("RETIRED_PROVIDER_UNAVAILABLE")
+
+
+ai_core = _RetiredProviderCompatibility()
 
 _FEATURE = "REPORT_BUSINESS_ANALYSIS"
 _VERSION = "report-business-brief/7"
@@ -201,6 +212,29 @@ def read_business_brief(evidence_ref, *, job_id, actor_ref, scope):
             "outcome_state": "NOT_OBSERVED", "action_state": "NOT_EXECUTED"}
 
 
+def _request_business_inference(system, user, **kwargs):
+    """Read the canonical Gateway's status; no business service is bound yet.
+
+    Offline evaluation candidates are not services. A future structured binding
+    must supply the Gateway's actual authorization/version/trace contract before
+    this adapter may generate or sign new owned-provider drafts.
+    """
+    try:
+        status = owned_inference.owned_inference_status()
+        if not isinstance(status, dict):
+            raise ValueError("OWNED_STATUS_INVALID")
+    except Exception:
+        status = {"reason": "OWNED_STATUS_UNAVAILABLE"}
+    reason = ("OWNED_STATUS_UNAVAILABLE" if status.get("reason") == "OWNED_STATUS_UNAVAILABLE"
+              else "OWNED_RUNTIME_NOT_BOUND" if status.get("service_binding") == "NOT_BOUND"
+              else "OWNED_STRUCTURED_SERVICE_NOT_BOUND")
+    return None, "owned", {
+        "state": "UNAVAILABLE", "reason": reason, "available": False,
+        "service_binding": "NOT_BOUND", "generation_probe_performed": False,
+        "fallback_allowed": False,
+    }
+
+
 def analyze_business_brief(*, question, sources, sample, scope, job_id, actor_ref,
                            revision=None, before_evidence=None):
     normalized = _scope(scope)
@@ -231,7 +265,7 @@ def analyze_business_brief(*, question, sources, sample, scope, job_id, actor_re
                    "资料不足时明确未知并提出可执行的补证或探索方案，不能虚构基线、效果、共识或已经完成的工作。"
                    "先在 changes 中简明列出为落实反馈必须修改的部分及原因，再在 analysis 中完成修改后的全文。"
                    "changes 不是自我打分；每个列出的部分必须在新稿中实际变化，不能只声明已修改却照抄。")
-    raw, provider, meta = ai_core.local_structured_chat(
+    raw, provider, meta = _request_business_inference(
         system, _json({"domain": normalized["domain_id"], "question": question,
                        **({"revision": revision} if revision is not None else {}),
                        "sources": [{"source_id": source["source_id"], "excerpts": _excerpts(source),
@@ -240,6 +274,9 @@ def analyze_business_brief(*, question, sources, sample, scope, job_id, actor_re
         response_schema=_schema(sources, revision=revision is not None), max_tokens=1200,
         timeout_seconds=180,
     )
+    if provider == "owned":
+        return {**base, "reason": "BUSINESS_BRIEF_" + meta["reason"],
+                "provider": "owned", "provider_status": meta}
     if provider == "provider_disabled":
         return {**base, "reason": "BUSINESS_BRIEF_PROVIDER_DISABLED"}
     if provider == "ollama_timeout":

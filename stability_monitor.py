@@ -48,7 +48,8 @@ logger = logging.getLogger(__name__)
 class StabilityMonitor:
     """进程级稳定性监控器"""
     
-    def __init__(self, log_dir='data/stability'):
+    def __init__(self, log_dir='data/stability', *, service_port=None):
+        self.configure_service_port(service_port)
         self.base_dir = Path(__file__).resolve().parent
         self.log_dir = self.base_dir / log_dir
         self.log_dir.mkdir(parents=True, exist_ok=True)
@@ -198,17 +199,8 @@ class StabilityMonitor:
         except Exception as e:
             self.module_status['threads']['status'] = 'error'
         
-        # Flask检测（通过端口）
-        try:
-            import socket
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(2)
-            result = sock.connect_ex(('127.0.0.1', 8200))
-            sock.close()
-            self.module_status['flask']['status'] = 'ok' if result == 0 else 'error'
-            self.module_status['flask']['last_check'] = now
-        except Exception:
-            self.module_status['flask']['status'] = 'unknown'
+        # Listener availability is not a business-task acceptance result.
+        self._check_http_listener(now)
 
         # 调度器检测：存在存活的 scheduler 线程即视为运行
         try:
@@ -236,6 +228,29 @@ class StabilityMonitor:
         except Exception:
             self.module_status['crawler']['status'] = 'unknown'
     
+    def configure_service_port(self, port=None):
+        """Bind the monitor to the actual launcher-selected Core port."""
+        if port is None:
+            port = os.environ.get('TAIKOO_PORT', '8200')
+        if isinstance(port, str) and port.isascii() and port.isdecimal():
+            port = int(port)
+        if type(port) is not int or not 1 <= port <= 65535:
+            raise ValueError('STABILITY_SERVICE_PORT_INVALID')
+        self.service_port = port
+
+    def _check_http_listener(self, now=None):
+        import socket
+        observed = self.module_status['flask']
+        observed.update(last_check=time.time() if now is None else now,
+                        port=self.service_port, observation_kind='TCP_LISTENER_ONLY')
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.settimeout(2)
+                result = sock.connect_ex(('127.0.0.1', self.service_port))
+            observed['status'] = 'ok' if result == 0 else 'error'
+        except OSError:
+            observed['status'] = 'unknown'
+
     def _write_heartbeat(self):
         """写心跳日志"""
         try:
@@ -429,11 +444,13 @@ class StabilityMonitor:
 # 全局单例
 _stability_monitor = None
 
-def get_stability_monitor():
+def get_stability_monitor(*, service_port=None):
     """获取全局稳定性监控器单例"""
     global _stability_monitor
     if _stability_monitor is None:
-        _stability_monitor = StabilityMonitor()
+        _stability_monitor = StabilityMonitor(service_port=service_port)
+    elif service_port is not None:
+        _stability_monitor.configure_service_port(service_port)
     return _stability_monitor
 
 

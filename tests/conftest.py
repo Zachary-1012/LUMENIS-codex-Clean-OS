@@ -39,6 +39,13 @@ def _dotenv_path(name: str, dotenv_path: str) -> str:
     return ""
 
 
+for _media_tool_path in ("LUMENIS_FFMPEG_PATH", "LUMENIS_FFPROBE_PATH"):
+    if not os.environ.get(_media_tool_path):
+        _configured_tool = _dotenv_path(_media_tool_path, os.path.join(_REPO_ROOT, ".env"))
+        if _configured_tool and os.path.isfile(_configured_tool):
+            os.environ[_media_tool_path] = _configured_tool
+
+
 def _existing_seed(*candidates: str) -> str:
     """Choose the first existing read-only seed, preserving CI fallback behavior."""
     for _candidate in candidates:

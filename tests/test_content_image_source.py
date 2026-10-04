@@ -1,6 +1,7 @@
 """An image import/reopen keeps actual dimensions and no fabricated duration."""
 import hashlib
 import json
+import re
 import struct
 import zlib
 
@@ -70,7 +71,7 @@ def test_report_job_analyzes_imported_image_reopens_signed_result_and_never_repl
     tree = ast.parse(Path('app.py').read_text(encoding='utf-8-sig'))
     resolver = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
                     and node.name == '_pg_resolve_operation_type')
-    namespace = {'OperationType': p.OperationType}
+    namespace = {'OperationType': p.OperationType, 're': re}
     exec(compile(ast.Module(body=[resolver], type_ignores=[]), 'app.py', 'exec'), namespace)
     monkeypatch.setitem(app.before_request_funcs[None][0].__globals__, '_pg_resolve_operation_type',
                         namespace['_pg_resolve_operation_type'])
@@ -91,8 +92,10 @@ def test_report_job_analyzes_imported_image_reopens_signed_result_and_never_repl
     imported = api.post(url, headers=HEADERS, data=payload, content_type='application/octet-stream')
     ref = imported.get_json()['result']['artifact']['artifact_id']
     monkeypatch.setattr(core, 'vision_chat', lambda *args, **kwargs: (None, 'ollama_error'))
-    failed = api.post('/api/experience/reports/source-brief/generate', headers=HEADERS,
-                      json={'image_source_ref': ref}).get_json()['result']
+    failed_response = api.post('/api/experience/reports/source-brief/generate', headers=HEADERS,
+                               json={'image_source_ref': ref})
+    assert failed_response.status_code == 200, failed_response.get_json()
+    failed = failed_response.get_json()['result']
     assert failed['multimodal']['state'] == 'unavailable'
     assert failed['multimodal']['real_input_bound'] is False
     assert failed['requested_image_source_ref'] == ref

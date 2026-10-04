@@ -852,7 +852,11 @@ def cth_platform_collection_search():
     AI task execution.  It can import Evidence/Canonical records, but it has
     no external write or publish path.
     """
-    body = request.get_json(silent=True) or {}
+    body = request.get_json(silent=True)
+    allowed_fields = {"operator", "confirm_read_only", "platform", "keyword", "max_results"}
+    if not isinstance(body, dict) or set(body) - allowed_fields:
+        return jsonify({"ok": False, "status": "invalid_request", "code": "INVALID_COLLECTION_REQUEST",
+                        "read_only": True, "external_write": False}), 400
     operator = str(body.get("operator") or "").strip().lower()
     if operator not in {"human", "human_ui"}:
         return jsonify({
@@ -874,9 +878,19 @@ def cth_platform_collection_search():
     keyword = body.get("keyword")
     max_results = body.get("max_results", 20)
     try:
+        from shared_artifacts import LocalArtifactError
         from lumenis.system.collector.adapters.secondary_collection import collect_search
-        result = collect_search(platform, keyword, max_results=max_results, operator=operator)
-        http_status = 409 if result.get("status") in {"BUSY", "RATE_LIMITED"} else 200
+        try:
+            actor, scope = _content_project_scope("write", module="collector")
+        except LocalArtifactError as exc:
+            return _content_project_error(exc)
+        result = collect_search(platform, keyword, max_results=max_results, operator=operator,
+                                actor=actor, scope=scope)
+        state = result.get("status")
+        http_status = (401 if state == "AUTH_REQUIRED" else
+                       403 if state in {"SCOPE_UNAUTHORIZED", "APPROVAL_REQUIRED"} else
+                       503 if state == "PERMISSION_UNAVAILABLE" else
+                       409 if state in {"BUSY", "RATE_LIMITED"} else 200)
         return jsonify(result), http_status
     except PermissionError as exc:
         return jsonify({"ok": False, "status": "denied", "code": "HUMAN_OPERATOR_REQUIRED",
@@ -1039,6 +1053,131 @@ def prepare_owned_training_review_resource():
         return _content_project_error(exc)
 
 
+def _owned_training_review_api_body(required):
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("OWNED_TRAINING_REVIEW_INPUT_INVALID")
+            result[key] = value
+        return result
+    raw = request.stream.read(65537)
+    if len(raw) > 65536 or not request.is_json:
+        raise ValueError("OWNED_TRAINING_REVIEW_INPUT_INVALID")
+    body = json.loads(raw, object_pairs_hook=unique)
+    if type(body) is not dict or set(body) != required:
+        raise ValueError("OWNED_TRAINING_REVIEW_INPUT_INVALID")
+    return body
+
+
+def _owned_training_review_api_scope(action):
+    from lumenis.shared.reporting.source_brief_job import _scope_material
+    from lumenis.system.security import permission as p
+    actor, selected, decision = _content_project_scope(
+        action, module="owned_training", include_decision=True, read_only_auth=True,
+    )
+    scope = _scope_material(
+        product_id="CTH" if selected["domain_id"] == "cth" else "ZBMP",
+        subject_id=selected["subject_id"], brand_focus_id=selected["brand_focus_id"],
+        global_scope=selected["global_scope"],
+        entity_label="GLOBAL / ALL" if selected["global_scope"] else (
+            selected["subject_id"] or selected["brand_focus_id"]),
+    )
+    identity_args = {"principal": actor} if type(actor) is p.LocalWorkspacePrincipal else {"actor_id": actor["id"]}
+    return actor, scope, decision, p.owned_training_identity(**identity_args)
+
+
+@experience_bp.route("/api/experience/owned-training/review-submissions", methods=["POST"])
+def submit_owned_training_review():
+    """Apply an explicit human target/rights decision through canonical owners."""
+    from lumenis.shared.learning import training_review
+    from lumenis.system.security import permission as p
+    token = None
+    gate = p.get_permission_gate()
+    try:
+        body = _owned_training_review_api_body({"material", "confirmed_resource", "confirm"})
+        material = body["material"]
+        if (body["confirm"] is not True or type(material) is not dict or set(material) != {
+            "submission_id", "source_evidence_refs", "prompt_messages", "proposed_target",
+            "context", "proposed_rights_declaration",
+        }):
+            raise PermissionError("OWNED_TRAINING_REVIEW_EXPLICIT_CONFIRMATION_REQUIRED")
+        actor, scope, scoped, identity = _owned_training_review_api_scope("write")
+        if (type(gate) is not p.PermissionGate or p.is_testing_bypass_enabled()
+                or not gate.has_permission(p.PermissionLevel.HUMAN_APPROVAL)
+                or not gate.has_permission(p.PermissionLevel.COMMIT)):
+            raise PermissionError("OWNED_TRAINING_REVIEW_MANUAL_AUTHORITY_REQUIRED")
+        args = dict(
+            **({"principal": actor} if type(actor) is p.LocalWorkspacePrincipal else {"authenticated_actor": actor}),
+            expected_scope=scope, source_evidence_refs=material["source_evidence_refs"],
+            submission_id=material["submission_id"], prompt_messages=material["prompt_messages"],
+            reviewer_approved_target=material["proposed_target"], context=material["context"],
+            rights_declaration=material["proposed_rights_declaration"],
+        )
+        resource = training_review.training_review_approval_resource(**args)
+        if type(body["confirmed_resource"]) is not str or body["confirmed_resource"] != resource:
+            raise PermissionError("OWNED_TRAINING_REVIEW_CONFIRMED_RESOURCE_CHANGED")
+        _, current_scope, _, current_identity = _owned_training_review_api_scope("write")
+        if (current_scope, current_identity) != (scope, identity):
+            raise PermissionError("OWNED_TRAINING_REVIEW_IDENTITY_CHANGED")
+        # This grants only the exact reviewed target/rights resource. It cannot
+        # authorize a model/recipe/dataset execution resource or a phase task.
+        token = gate.grant_approval(p.OperationType.MODEL_TRAIN.value, resource=resource,
+                                   duration_minutes=5, granted_by=identity["caller"])
+        result = training_review.submit_training_review(gate=gate, **args)
+        _, current_scope, _, current_identity = _owned_training_review_api_scope("write")
+        if (current_scope, current_identity) != (scope, identity):
+            raise PermissionError("OWNED_TRAINING_REVIEW_IDENTITY_CHANGED")
+        return jsonify({"ok": True, **result, "confirmed_resource": resource,
+                        "scope_permission_audit_id": scoped.audit_id,
+                        "training_started": False, "execution_approval_issued": False})
+    except Exception as exc:
+        return _source_brief_job_error(exc)
+    finally:
+        if token is not None:
+            gate.revoke_approval(token)
+
+
+@experience_bp.route("/api/experience/owned-training/review-exports", methods=["POST"])
+def export_owned_training_reviews():
+    """Export current signed review records; never train or accept client records."""
+    from lumenis.shared.learning import training_cases
+    from lumenis.system.security import permission as p
+    try:
+        body = _owned_training_review_api_body({"review_evidence_refs"})
+        actor, scope, _, identity = _owned_training_review_api_scope("read")
+        gate = p.get_permission_gate()
+        if type(gate) is not p.PermissionGate or p.is_testing_bypass_enabled():
+            raise PermissionError("OWNED_TRAINING_EXPORT_CANONICAL_PERMISSION_REQUIRED")
+        resource = "owned_training_case_export:v1:" + hashlib.sha256(training_cases._json({
+            "identity": identity, "scope": scope, "review_evidence_refs": body["review_evidence_refs"],
+        }).encode()).hexdigest()
+        def authorize():
+            _, current_scope, scoped, current_identity = _owned_training_review_api_scope("read")
+            if (current_scope, current_identity) != (scope, identity):
+                raise PermissionError("OWNED_TRAINING_EXPORT_IDENTITY_MISMATCH")
+            domain = "bmp" if scope["domain_id"] == "zbmp" else "cth"
+            decision = gate.check(p.OperationType.DATA_EXPORT, resource=resource,
+                                  caller=identity["caller"], domain_id=domain,
+                                  risk_level=p.RiskLevel.MEDIUM)
+            if (not decision.allowed or not decision.audit_id
+                    or decision.permission_required != p.PermissionLevel.VERIFY):
+                raise PermissionError("OWNED_TRAINING_EXPORT_READ_DENIED")
+            return {"actor_id": identity["caller"], "scope": scope,
+                    "permission_audit_ref": scoped.audit_id, "operation_audit_ref": decision.audit_id}
+        records = training_cases.export_reviewed_training_records(
+            body["review_evidence_refs"], actor_id=identity["caller"], expected_scope=scope,
+            authorize=authorize, principal=actor if type(actor) is p.LocalWorkspacePrincipal else None,
+            gate=gate,
+        )
+        authorize()
+        return jsonify({"ok": True, "state": "TRAINING_RECORDS_EXPORTED", "records": records,
+                        "scope": scope, "actor_ref": identity["caller"], "resource": resource,
+                        "training_started": False, "execution_approval_issued": False})
+    except Exception as exc:
+        return _source_brief_job_error(exc)
+
+
 def _owned_training_phase_material(body):
     """Bind the private phase owner to fresh server identity and exact training inputs."""
     from lumenis.system.ai_gateway.owned_training import TrainingApprovalRequest
@@ -1093,6 +1232,63 @@ def _owned_training_phase_material(body):
         return approval
 
     return typed, context, identity_args, domain, binding, fingerprints, gate, fresh_approval
+
+
+@experience_bp.route("/api/experience/owned-training/execution-approvals", methods=["POST"])
+def confirm_owned_training_execution_approval():
+    """Confirm one explicit training resource through the real Permission owner.
+
+    A preview creates no grant. A confirmed request carries the operator's
+    training intent; it neither starts a trainer nor replaces source admission.
+    Approval tokens and signing material remain in the Core.
+    """
+    from lumenis.system.security import permission as p
+    token = None
+    try:
+        body = _owned_training_review_api_body({
+            "training_request", "scope_descriptors", "confirmed_resource", "confirm",
+        })
+        if type(body["confirm"]) is not bool:
+            raise ValueError("OWNED_TRAINING_EXECUTION_CONFIRMATION_INVALID")
+        typed, context, args, domain, binding, fingerprints, gate, fresh = _owned_training_phase_material(body)
+        if (not gate.has_permission(p.PermissionLevel.HUMAN_APPROVAL)
+                or not gate.has_permission(p.PermissionLevel.COMMIT)):
+            raise PermissionError("OWNED_TRAINING_EXECUTION_MANUAL_AUTHORITY_REQUIRED")
+        if body["confirm"] is False:
+            if body["confirmed_resource"] is not None:
+                raise ValueError("OWNED_TRAINING_EXECUTION_PREVIEW_INVALID")
+            return jsonify({"ok": True, "state": "EXECUTION_RESOURCE_PREPARED",
+                            "resource": binding["resource"], "fingerprints": fingerprints,
+                            "identity": binding["identity"], "scope_descriptors": context["scope_descriptors"],
+                            "approval_issued": False, "training_started": False})
+        if (type(body["confirmed_resource"]) is not str
+                or body["confirmed_resource"] != binding["resource"]):
+            raise PermissionError("OWNED_TRAINING_EXECUTION_RESOURCE_CHANGED")
+        _, _, _, current_domain, current_binding, current_fingerprints, current_gate, _ = _owned_training_phase_material(body)
+        if (current_binding != binding or current_fingerprints != fingerprints
+                or current_domain != domain or current_gate is not gate):
+            raise PermissionError("OWNED_TRAINING_EXECUTION_IDENTITY_CHANGED")
+        token = gate.grant_approval(p.OperationType.MODEL_TRAIN.value, resource=binding["resource"],
+                                   duration_minutes=15, granted_by=binding["identity"]["caller"])
+        approval = fresh()
+        reference = gate.owned_training_approval_reference(
+            training_request=typed, context=context, domain_id=domain, approval=approval, **args,
+        )
+        _, _, _, final_domain, final_binding, final_fingerprints, final_gate, _ = _owned_training_phase_material(body)
+        if (final_binding != binding or final_fingerprints != fingerprints
+                or final_domain != domain or final_gate is not gate):
+            raise PermissionError("OWNED_TRAINING_EXECUTION_IDENTITY_CHANGED")
+        return jsonify({"ok": True, "state": "EXACT_EXECUTION_INTENT_GRANTED",
+                        "resource": binding["resource"], "fingerprints": fingerprints,
+                        "identity": binding["identity"], "approval_reference": reference,
+                        "permission_audit_id": approval.audit_id, "duration_minutes": 15,
+                        "approval_issued": True, "training_started": False})
+    except Exception as exc:
+        if token is not None:
+            gate.revoke_approval(token)
+        if str(exc) == "AUTH_REQUIRED":
+            return jsonify({"ok": False, "code": "AUTH_REQUIRED", "training_started": False}), 401
+        return _owned_training_phase_error(exc)
 
 
 def _owned_training_phase_body(*, challenge=False, phase=False):
@@ -1266,6 +1462,268 @@ def prepare_owned_training_phase_task():
         return _owned_training_phase_error(exc)
 
 
+_OWNED_TRAINING_PARENT_LOCK = threading.RLock()
+# Retained OS handles only. Canonical Task, checkpoint and result state stays
+# with TaskEngine/Shared Artifact; this map never grants authority.
+_OWNED_TRAINING_PARENT_FENCES = {}
+
+
+def _owned_training_parent_profile(body, domain):
+    from pathlib import Path
+    from lumenis.system.ai_gateway.owned_training import TrainingBlocked
+    from lumenis.system.ai_gateway.owned_training_runtime import training_worker_source_pins
+
+    root = Path(__file__).resolve().parent
+    path = Path(os.environ.get("LUMENIS_TRAINING_PARENT_SPEC_PATH",
+                               str(root / "config/ai-owned-training-runtime.json")))
+    if not path.is_absolute() or not path.is_file() or path.is_symlink():
+        raise TrainingBlocked("TRAINING_PARENT_SPEC_NOT_CONFIGURED")
+    document = json.loads(path.read_bytes())
+    profiles = document.get("profiles")
+    if type(profiles) is not list:
+        raise TrainingBlocked("TRAINING_PARENT_SPEC_INVALID")
+    matches = [profile for profile in profiles if type(profile) is dict
+               and profile.get("domain_id") == domain and profile.get("request_body") == body]
+    if (len(matches) != 1 or document.get("worker_source_pins") != training_worker_source_pins(root)):
+        raise TrainingBlocked("TRAINING_PARENT_INPUT_VERSION_CHANGED")
+    profile = matches[0]
+    if (Path(profile["controller_source_root"]) != root
+            or profile["local_invocation"]["manifest_path"] != str(root / "config/ai-owned-foundation.json")
+            or profile["local_invocation"].get("resume_request") is not None
+            or profile["local_invocation"].get("stop_after_checkpoint_step") != 2):
+        raise TrainingBlocked("TRAINING_PARENT_SPEC_INVALID")
+    return root, document, profile
+
+
+def _owned_training_parent_endpoint(pins, configuration_reference=None):
+    from pathlib import Path
+    from lumenis.system.ai_gateway.owned_training import TrainingBlocked
+    from lumenis.system.ai_gateway.owned_training_ssh import SSHTrainingEndpoint
+
+    # Safe startup intentionally does not import arbitrary .env fields. This
+    # SYSTEM private configuration has an explicit local application default.
+    local_root = os.environ.get("LOCALAPPDATA")
+    if not local_root and os.name == "nt":
+        import ctypes
+        folder = ctypes.create_unicode_buffer(32768)
+        if ctypes.windll.shell32.SHGetFolderPathW(None, 0x001C, None, 0, folder) != 0:
+            raise TrainingBlocked("TRAINING_SSH_ENDPOINT_NOT_CONFIGURED")
+        local_root = folder.value
+    default = (str(Path(local_root) / "LUMENIS/runtime/owned-training-ssh-endpoint.json")
+               if local_root else None)
+    configured = configuration_reference or os.environ.get("LUMENIS_TRAINING_SSH_ENDPOINT_PATH") or default
+    if not configured:
+        raise TrainingBlocked("TRAINING_SSH_ENDPOINT_NOT_CONFIGURED")
+    path = Path(configured)
+    if not path.is_absolute() or not path.is_file() or path.is_symlink():
+        raise TrainingBlocked("TRAINING_SSH_ENDPOINT_NOT_CONFIGURED")
+    value = json.loads(path.read_bytes())
+    fields = {"ssh_executable", "host", "port", "user", "identity_file", "known_hosts",
+              "remote_python", "source_root", "source_pins"}
+    if type(value) is not dict or set(value) != fields or value["source_pins"] != pins:
+        raise TrainingBlocked("TRAINING_SSH_ENDPOINT_INVALID")
+    # Private identity and known-host files remain in the real Core process.
+    for name in ("ssh_executable", "identity_file", "known_hosts"):
+        value[name] = Path(value[name])
+    return SSHTrainingEndpoint(**value)
+
+
+@experience_bp.route("/api/experience/owned-training/execution-configuration", methods=["POST"])
+def read_owned_training_execution_configuration():
+    """Observe this serving process's effective binding without disclosing it."""
+    try:
+        body = _owned_training_phase_body()
+        _, _, _, domain, _, _, _, fresh = _owned_training_phase_material(body)
+        fresh()
+        _, specification, _ = _owned_training_parent_profile(body, domain)
+        _owned_training_parent_endpoint(specification["worker_source_pins"],
+            specification.get("private_endpoint_configuration_reference"))
+        fresh()
+        return jsonify({"ok": True, "state": "PARENT_CONFIGURATION_BOUND", "serving_pid": os.getpid(),
+                        "configuration_revision": "owned-parent-private-config-3",
+                        "endpoint_present": True, "exact_source_pins": True,
+                        "training_started": False})
+    except Exception as exc:
+        response, status = _owned_training_phase_error(exc)
+        value = response.get_json()
+        from pathlib import Path
+        selected_spec = Path(os.environ.get("LUMENIS_TRAINING_PARENT_SPEC_PATH",
+            str(Path(__file__).resolve().parent / "config/ai-owned-training-runtime.json")))
+        observed_spec = json.loads(selected_spec.read_bytes()) if selected_spec.is_file() else {}
+        profile_reference = observed_spec.get("private_endpoint_configuration_reference")
+        environment_reference = os.environ.get("LUMENIS_TRAINING_SSH_ENDPOINT_PATH")
+        selected_reference = profile_reference or environment_reference
+        selected_path = Path(selected_reference) if selected_reference else None
+        def _private_file_probe(candidate):
+            import hashlib
+            result = {"reference_present": bool(candidate), "reference_is_absolute": False,
+                      "reference_is_file": False, "reference_is_symlink": False,
+                      "reference_sha256": hashlib.sha256(str(candidate or "").encode()).hexdigest()}
+            if not candidate:
+                return result
+            probe = Path(candidate)
+            result["reference_is_absolute"] = probe.is_absolute()
+            try:
+                result["reference_is_symlink"] = probe.is_symlink()
+                result["reference_is_file"] = probe.is_file()
+                result["reference_stat_mode"] = probe.stat().st_mode
+                result["reference_bytes_sha256"] = hashlib.sha256(probe.read_bytes()).hexdigest()
+            except Exception as probe_error:
+                result.update(reference_error_class=type(probe_error).__name__,
+                              reference_error_errno=getattr(probe_error, "errno", None),
+                              reference_error_winerror=getattr(probe_error, "winerror", None))
+            return result
+        root_path = Path(__file__).resolve().parent
+        expected_root = Path(r"D:\LUMENIS_REBUILD\序\序境")
+        value.update(serving_pid=os.getpid(), configuration_revision="owned-parent-private-config-4",
+                     environment_reference_present=bool(os.environ.get("LUMENIS_TRAINING_SSH_ENDPOINT_PATH")),
+                     native_appdata_environment_present=bool(os.environ.get("LOCALAPPDATA")),
+                     running_source_root_sha256=__import__("hashlib").sha256(str(root_path).encode()).hexdigest(),
+                     running_source_root_matches_expected=root_path == expected_root,
+                     selected_spec_bytes_sha256=__import__("hashlib").sha256(selected_spec.read_bytes()).hexdigest() if selected_spec.is_file() else None,
+                     selected_spec_is_canonical=selected_spec == root_path / "config/ai-owned-training-runtime.json",
+                     selected_profile_reference_present=bool(profile_reference),
+                     selected_endpoint_is_absolute=selected_path.is_absolute() if selected_path else False,
+                     selected_endpoint_is_file=selected_path.is_file() if selected_path else False,
+                     selected_endpoint_is_symlink=selected_path.is_symlink() if selected_path else False,
+                     selected_endpoint_probe=_private_file_probe(selected_reference))
+        return jsonify(value), status
+
+
+def _owned_training_parent_checkpoint(client):
+    from lumenis.shared.database import get_repository
+
+    client._fresh()
+    with get_repository().connection(timeout=30) as connection:
+        connection.execute("BEGIN")
+        try:
+            checkpoint = client._engine.training_checkpoint_latest_receipt(
+                client.task_id, **client._args(connection))
+            client._fresh()
+            return checkpoint
+        finally:
+            connection.rollback()
+
+
+@experience_bp.route("/api/experience/owned-training/phase-tasks/<task_id>/execute", methods=["POST"])
+def execute_owned_training_phase_task(task_id):
+    """Run the existing owned trainer, committed checkpoint and physical reload.
+
+    The initiating real HTTP context owns the private parent for the complete
+    call. No synthetic CLI principal, Core listener, queue or signer is created.
+    A lost response leaves the canonical checkpoint receipt available.
+    """
+    import copy
+    import uuid
+    from pathlib import Path, PurePosixPath
+    import requests
+    import shared_artifacts
+    from ai_task_engine import get_task_engine
+    from lumenis.shared.database import get_repository
+    from lumenis.system.security import training_receipts
+    from lumenis.system.ai_gateway.owned_training import TrainingBlocked
+    from lumenis.system.ai_gateway.owned_training_runtime import (
+        OwnedTrainingCheckpointClient, OwnedTrainingPhaseHTTPTransport, TrainingProcessFence,
+    )
+    from lumenis.system.ai_gateway.owned_training_ssh import AuthenticatedSSHTrainingTransport
+
+    worker = None
+    session = None
+    registered = False
+    try:
+        body = _owned_training_phase_body()
+        typed, context, args, domain, binding, _, gate, fresh = _owned_training_phase_material(body)
+        _, reference = _owned_training_phase_reference(typed, context, args, domain, gate, fresh)
+        pin = training_receipts.get_training_receipt_public_key()
+        engine = get_task_engine()
+        with get_repository().connection(timeout=30) as connection:
+            connection.execute("BEGIN")
+            try:
+                engine.require_training_receipt_admission(task_id, binding, reference, pin, connection)
+                fresh()
+            finally:
+                connection.rollback()
+        root, specification, profile = _owned_training_parent_profile(body, domain)
+        endpoint = _owned_training_parent_endpoint(specification["worker_source_pins"],
+            specification.get("private_endpoint_configuration_reference"))
+        if not re.fullmatch(r"trainrelay_[0-9a-f-]{36}", task_id):
+            raise TrainingBlocked("CHECKPOINT_REQUEST_INVALID")
+        with _OWNED_TRAINING_PARENT_LOCK:
+            if task_id in _OWNED_TRAINING_PARENT_FENCES:
+                raise TrainingBlocked("CHECKPOINT_OPERATION_CONFLICT")
+            _OWNED_TRAINING_PARENT_FENCES[task_id] = {"binding": binding, "worker": None}
+            registered = True
+        fresh()
+        staging = shared_artifacts.artifact_root() / "training-checkpoints" / task_id
+        staging.mkdir(mode=0o700, parents=True, exist_ok=True)
+        worker = TrainingProcessFence(staging / "worker.lock")
+        with _OWNED_TRAINING_PARENT_LOCK:
+            _OWNED_TRAINING_PARENT_FENCES[task_id]["worker"] = worker
+        transport = AuthenticatedSSHTrainingTransport(endpoint)
+        start = {"python_executable": Path(profile["controller_python"]), "cwd": root,
+                 "log_path": staging / "worker.stderr", "source_pins": specification["worker_source_pins"],
+                 "remote_transport": transport}
+        worker.start_managed_training(**start)
+        client = OwnedTrainingCheckpointClient(typed, context, task_id=task_id, worker=worker,
+            manifest_path=profile["local_invocation"]["manifest_path"], staging_root=staging,
+            max_bytes=profile["max_checkpoint_bytes"],
+            remote_storage_root=PurePosixPath(profile["intended_remote_storage_root"]), **args)
+        client.initialize()
+        session = requests.Session()
+        session.trust_env = False
+        session.verify = True
+        for name in ("Authorization", "Cookie", "Origin", "Referer", "Sec-Fetch-Site",
+                     "X-Domain-Id", "X-Product-Id", "X-Subject-ID", "X-Brand-Focus-ID",
+                     "X-Lumenis-Context-Mode", "X-Lumenis-Action"):
+            if name in request.headers:
+                session.headers[name] = request.headers[name]
+        phase_transport = OwnedTrainingPhaseHTTPTransport("http://127.0.0.1:8201",
+            session=session, pinned_public_key=pin)
+        invocation = copy.deepcopy(profile["local_invocation"])
+        call = {"client": client, "phase_transport": phase_transport,
+                "timeout_seconds": profile["timeout_seconds"],
+                "remote_input_paths": profile["intended_remote_input_paths"]}
+        first_result = worker.invoke_owned_training(invocation=invocation, **call)
+        checkpoint = _owned_training_parent_checkpoint(client)
+        if checkpoint is None or checkpoint["completed_step"] != 2:
+            raise TrainingBlocked("CHECKPOINT_NOT_COMMITTED")
+        fresh()
+        worker.start_managed_training(replace=True, **start)
+        # These references originate from the actual committed owner receipt;
+        # no path or dictionary supplied by the caller proves checkpoint bytes.
+        invocation["resume_request"] = {
+            "operation_id": str(uuid.uuid4()), "checkpoint_ref": checkpoint["artifact_ref"],
+            "expected_checkpoint_sha256": checkpoint["artifact_sha256"], "replay_through_step": 2,
+        }
+        invocation["stop_after_checkpoint_step"] = None
+        resumed_result = worker.invoke_owned_training(invocation=invocation, **call)
+        parent_ref = checkpoint["artifact_ref"]
+        checkpoint = _owned_training_parent_checkpoint(client)
+        if (checkpoint is None or checkpoint["completed_step"] <= 2
+                or checkpoint["artifact_ref"] == parent_ref or checkpoint["parent_ref"] != parent_ref):
+            raise TrainingBlocked("CHECKPOINT_TRAINING_CONTINUATION_NOT_OBSERVED")
+        fresh()
+        return jsonify({"ok": True, "state": "OWNED_TRAINING_CALL_RETURNED", "task_id": task_id,
+                        "first_result": first_result, "resumed_result": resumed_result,
+                        "checkpoint": checkpoint, "runtime_promotion": "NOT_PERFORMED"})
+    except Exception as exc:
+        return _owned_training_phase_error(exc)
+    finally:
+        # Stop/reap is owned by the fence and is required even after revocation.
+        # A failed stop must remain an actual error, never a successful return.
+        stopped = worker is None
+        try:
+            if worker is not None:
+                worker.close()
+                stopped = True
+        finally:
+            if session is not None:
+                session.close()
+            if registered and stopped:
+                with _OWNED_TRAINING_PARENT_LOCK:
+                    _OWNED_TRAINING_PARENT_FENCES.pop(task_id, None)
+
+
 @experience_bp.route(
     "/api/experience/owned-training/phase-tasks/<task_id>/challenges", methods=["POST"],
 )
@@ -1412,6 +1870,16 @@ def _change_owned_training_phase_task_state(task_id, *, resume):
     body = _owned_training_phase_body()
     typed, context, args, domain, binding, _, gate, fresh = _owned_training_phase_material(body)
     fresh()
+    stopped = None
+    if not resume:
+        with _OWNED_TRAINING_PARENT_LOCK:
+            retained = _OWNED_TRAINING_PARENT_FENCES.get(task_id)
+            if retained is not None and retained["binding"] != binding:
+                raise PermissionError("OWNED_TRAINING_PHASE_IDENTITY_CHANGED")
+            worker = None if retained is None else retained["worker"]
+        if worker is not None:
+            stopped = worker.stop_and_reap()
+            fresh()
     public_key = receipts.get_training_receipt_public_key()
     engine = get_task_engine()
     with _owned_training_phase_transaction() as (conn, commit):
@@ -1426,7 +1894,9 @@ def _change_owned_training_phase_task_state(task_id, *, resume):
             conn.rollback()
             raise
     return jsonify({"ok": True, "state": "PHASE_TASK_RESUMED" if resume else "PHASE_TASK_INTERRUPTED",
-                    "task": state, "model_execution_claimed": False, "trainer_process_stopped": False})
+                    "task": state, "model_execution_claimed": False,
+                    "trainer_process_stopped": stopped is not None,
+                    "trainer_stop_receipt": stopped})
 
 
 @experience_bp.route("/api/experience/owned-training/phase-tasks/<task_id>/interrupt", methods=["POST"])
@@ -1520,6 +1990,292 @@ def _source_brief_job_error(exc):
     else:
         return _content_project_error(exc)
     return jsonify({"ok": False, "code": code, "publish_status": "not_performed"}), status
+
+
+
+
+def _shared_work_actor_scope(action):
+    from lumenis.shared.reporting.saved_work import authorize
+    actor_ref, _audit, material, actor = _source_brief_context(action, include_actor=True)
+    scope = {"domain_id": "cth" if material["product_id"] == "CTH" else "zbmp",
+             "subject_id": material["subject_id"], "brand_focus_id": material["brand_focus_id"],
+             "global_scope": material["global_scope"]}
+    authorize(actor, scope, action=action)
+    return actor, scope
+
+
+def _shared_work_response(call):
+    from flask import current_app
+    try:
+        result = call()
+        if not isinstance(result, dict):
+            return result
+        response = jsonify({"ok": True, "result": result, "publish_status": "not_performed"})
+        response.headers["Cache-Control"] = "no-store"
+        return response
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        import re
+        code = str(exc)
+        if re.fullmatch(r"[A-Z_0-9]{1,100}", code) is None:
+            code = "SHARED_WORK_UNAVAILABLE"
+        if code == "AUTH_REQUIRED":
+            status = 401
+        elif isinstance(exc, PermissionError) or any(term in code for term in ("PERMISSION", "RIGHTS", "NOT_AUTHORIZED", "SCOPE_DENIED")):
+            status = 403
+        elif isinstance(exc, LookupError) or code in {"WORK_NOT_FOUND", "WORK_EVIDENCE_MISSING"}:
+            status = 404
+        elif isinstance(exc, RuntimeError) or "UNAVAILABLE" in code:
+            status = 503
+        elif any(term in code for term in ("CONFLICT", "CHANGED", "INTEGRITY_FAILED")):
+            status = 409
+        else:
+            status = 400
+        response = jsonify({"ok": False, "code": code, "publish_status": "not_performed"})
+        response.headers["Cache-Control"] = "no-store"
+        return response, status
+    except Exception as exc:
+        current_app.logger.warning("shared work owner unavailable: %s", type(exc).__name__)
+        return jsonify({"ok": False, "code": "SHARED_WORK_UNAVAILABLE"}), 503
+
+
+def _shared_work_local_access_allowed():
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    endpoints = {"experience_runtime.import_shared_document": "POST",
+                 "experience_runtime.read_shared_document": "GET",
+                 "experience_runtime.download_shared_document": "GET",
+                 "experience_runtime.quote_shared_document": "GET",
+                 "experience_runtime.save_shared_work": "POST",
+                 "experience_runtime.search_shared_work": "GET",
+                 "experience_runtime.read_shared_work": "GET",
+                 "experience_runtime.export_shared_work": "GET",
+                 "experience_runtime.read_reporting_preferences": "GET",
+                 "experience_runtime.save_reporting_preferences": "POST",
+                 "experience_runtime.read_reporting_notifications": "GET",
+                 "experience_runtime.revise_shared_work": "POST"}
+    if endpoints.get(request.endpoint) != request.method:
+        return False
+    action = "read" if request.method == "GET" or request.endpoint == "experience_runtime.quote_shared_document" else "write"
+    if resolve_local_workspace_principal(module="reports", action=action) is None:
+        return False
+    try:
+        _shared_work_actor_scope(action)
+        return True
+    except (ValueError, LookupError, PermissionError, RuntimeError):
+        return False
+
+
+@experience_bp.post("/api/experience/materials/documents")
+def import_shared_document():
+    def execute():
+        import hashlib
+        import json
+        import tempfile
+        import unicodedata
+        from pathlib import Path
+        from lumenis.importer.documents import import_document
+        from lumenis.shared.reporting.saved_work import _json, _safe_payload
+        actor, scope = _shared_work_actor_scope("write")
+        if (set(request.files) != {"file"} or len(request.files.getlist("file")) != 1
+                or set(request.form) != {"provenance"} or len(request.form.getlist("provenance")) != 1
+                or (request.content_length or 0) > 8 * 1024 * 1024 + 65536):
+            raise ValueError("DOCUMENT_UPLOAD_INVALID")
+        file = request.files["file"]
+        name = file.filename
+        if (not isinstance(name, str) or not 1 <= len(name) <= 185 or name != name.strip()
+                or any(char in '<>:"/\\|?*' or unicodedata.category(char).startswith("C") for char in name)
+                or name.endswith((".", " ")) or Path(name).stem.split(".", 1)[0].upper() in
+                {"CON", "PRN", "AUX", "NUL", *{f"COM{i}" for i in range(1, 10)}, *{f"LPT{i}" for i in range(1, 10)}}):
+            raise ValueError("DOCUMENT_UPLOAD_NAME_INVALID")
+        raw = file.stream.read(8 * 1024 * 1024 + 1)
+        if not 0 < len(raw) <= 8 * 1024 * 1024:
+            raise ValueError("DOCUMENT_SIZE_INVALID")
+        if len(request.form["provenance"].encode()) > 65536:
+            raise ValueError("DOCUMENT_PROVENANCE_REQUIRED")
+        def pairs(items):
+            result = {}
+            for key, value in items:
+                if key in result:
+                    raise ValueError("DOCUMENT_PROVENANCE_REQUIRED")
+                result[key] = value
+            return result
+        try:
+            provenance = json.loads(request.form["provenance"], object_pairs_hook=pairs,
+                parse_constant=lambda value: (_ for _ in ()).throw(ValueError("DOCUMENT_PROVENANCE_REQUIRED")))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("DOCUMENT_PROVENANCE_REQUIRED") from exc
+        if not isinstance(provenance, dict) or "source_origin" in provenance:
+            raise ValueError("DOCUMENT_PROVENANCE_REQUIRED")
+        _safe_payload(json.loads(_json(provenance)))
+        if provenance.get("source_url") is None:
+            provenance["source_origin"] = {"kind": "approved-file", "ref": "file-upload-" + hashlib.sha256(raw).hexdigest()}
+        with tempfile.TemporaryDirectory(prefix="lumenis-document-upload-") as temporary:
+            path = Path(temporary) / name
+            path.write_bytes(raw)
+            return import_document(str(path), actor=actor, scope=scope, provenance=provenance)
+    return _shared_work_response(execute)
+
+
+@experience_bp.get("/api/experience/materials/documents/<int:evidence_id>")
+def read_shared_document(evidence_id):
+    def execute():
+        from lumenis.importer.documents import reopen_imported_source
+        if request.args:
+            raise ValueError("DOCUMENT_REQUEST_INVALID")
+        actor, scope = _shared_work_actor_scope("read")
+        result = reopen_imported_source(evidence_id, actor=actor, scope=scope)
+        return {**{key: value for key, value in result.items() if key != "content"},
+                "source_file_url": f"/api/experience/materials/documents/{evidence_id}/file"}
+    return _shared_work_response(execute)
+
+
+@experience_bp.get("/api/experience/materials/documents/<int:evidence_id>/file")
+def download_shared_document(evidence_id):
+    def execute():
+        import io
+        from flask import send_file
+        from lumenis.importer.documents import reopen_imported_source
+        if request.args:
+            raise ValueError("DOCUMENT_REQUEST_INVALID")
+        actor, scope = _shared_work_actor_scope("read")
+        result = reopen_imported_source(evidence_id, actor=actor, scope=scope)
+        response = send_file(io.BytesIO(result["content"]), as_attachment=True,
+                             download_name=result["filename"], max_age=0)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Source-Artifact-ID"] = result["artifact_ref"]
+        response.headers["X-Content-SHA256"] = result["sha256"]
+        return response
+    return _shared_work_response(execute)
+
+
+@experience_bp.get("/api/experience/materials/documents/<int:evidence_id>/quote")
+def quote_shared_document(evidence_id):
+    def execute():
+        from lumenis.importer.documents import locate_quote
+        if set(request.args) != {"start", "end"} or any(len(request.args.getlist(k)) != 1 for k in request.args):
+            raise ValueError("DOCUMENT_QUOTE_INVALID")
+        if any(not request.args[k].isascii() or not request.args[k].isdecimal() for k in request.args):
+            raise ValueError("DOCUMENT_QUOTE_RANGE_INVALID")
+        body = {key: int(request.args[key]) for key in ("start", "end")}
+        actor, scope = _shared_work_actor_scope("read")
+        return locate_quote(evidence_id, actor=actor, scope=scope, **body)
+    return _shared_work_response(execute)
+
+
+@experience_bp.post("/api/experience/saved-work")
+def save_shared_work():
+    def execute():
+        from lumenis.shared.reporting.saved_work import save_work
+        from lumenis_app_api import _internal_pitch_body
+        body = _internal_pitch_body()
+        required = {"title", "markdown", "kind", "payload", "citations", "request_id"}
+        allowed = required | {"work_id", "previous_artifact_id", "expected_draft_digest"}
+        if not required.issubset(body) or set(body) - allowed:
+            raise ValueError("WORK_REQUEST_INVALID")
+        actor, scope = _shared_work_actor_scope("write")
+        return save_work(actor=actor, scope=scope, **body)
+    return _shared_work_response(execute)
+
+
+@experience_bp.post("/api/experience/saved-work/<artifact_id>/revise")
+def revise_shared_work(artifact_id):
+    def execute():
+        from lumenis.shared.reporting.saved_work import revise_work
+        from lumenis_app_api import _internal_pitch_body
+        body = _internal_pitch_body()
+        required = {"request_id", "expected_sha256", "reason", "edits"}
+        if not required.issubset(body) or set(body) - required - {"citations", "source_adoptions"}:
+            raise ValueError("WORK_REVISION_REQUEST_INVALID")
+        actor, scope = _shared_work_actor_scope("write")
+        return revise_work(artifact_id, actor=actor, scope=scope, **body)
+    return _shared_work_response(execute)
+
+
+@experience_bp.get("/api/experience/saved-work")
+def search_shared_work():
+    def execute():
+        from lumenis.shared.reporting.saved_work import search_work
+        if set(request.args) - {"query", "limit", "cursor", "kind", "evidence_id"} or any(len(request.args.getlist(k)) != 1 for k in request.args):
+            raise ValueError("WORK_SEARCH_INVALID")
+        limit = request.args.get("limit", "30")
+        if not limit.isascii() or not limit.isdecimal():
+            raise ValueError("WORK_SEARCH_INVALID")
+        evidence_id = request.args.get("evidence_id")
+        if evidence_id is not None and (not evidence_id.isascii() or not evidence_id.isdecimal()):
+            raise ValueError("WORK_SEARCH_INVALID")
+        actor, scope = _shared_work_actor_scope("read")
+        return search_work(actor=actor, scope=scope, query=request.args.get("query", ""), limit=int(limit),
+                           cursor=request.args.get("cursor"), kind=request.args.get("kind"),
+                           evidence_id=int(evidence_id) if evidence_id is not None else None)
+    return _shared_work_response(execute)
+
+
+@experience_bp.get("/api/experience/saved-work/<artifact_id>")
+def read_shared_work(artifact_id):
+    def execute():
+        from lumenis.shared.reporting.saved_work import reopen_work
+        if request.args:
+            raise ValueError("WORK_REQUEST_INVALID")
+        actor, scope = _shared_work_actor_scope("read")
+        return reopen_work(artifact_id, actor=actor, scope=scope)
+    return _shared_work_response(execute)
+
+
+@experience_bp.get("/api/experience/saved-work/<artifact_id>/export")
+def export_shared_work(artifact_id):
+    def execute():
+        import io
+        from flask import send_file
+        from lumenis.shared.reporting.saved_work import export_work
+        if set(request.args) != {"format"} or len(request.args.getlist("format")) != 1:
+            raise ValueError("WORK_EXPORT_FORMAT_INVALID")
+        actor, scope = _shared_work_actor_scope("read")
+        result = export_work(artifact_id, actor=actor, scope=scope, format=request.args["format"])
+        response = send_file(io.BytesIO(result["content"]), mimetype=result["media_type"],
+                             download_name=result["filename"], as_attachment=True, max_age=0)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Source-Artifact-ID"] = artifact_id
+        response.headers["X-Content-SHA256"] = result["sha256"]
+        return response
+    return _shared_work_response(execute)
+
+
+@experience_bp.get("/api/experience/saved-work/preferences")
+def read_reporting_preferences():
+    def execute():
+        from lumenis.shared.reporting.delivery_preferences import read_preferences
+        if request.args:
+            raise ValueError("DELIVERY_PREFERENCES_REQUEST_INVALID")
+        actor, scope = _shared_work_actor_scope("read")
+        return read_preferences(actor=actor, scope=scope)
+    return _shared_work_response(execute)
+
+
+@experience_bp.post("/api/experience/saved-work/preferences")
+def save_reporting_preferences():
+    def execute():
+        from lumenis.shared.reporting.delivery_preferences import save_preferences
+        from lumenis_app_api import _internal_pitch_body
+        body = _internal_pitch_body()
+        required = {"preferences", "request_id"}
+        if not required.issubset(body) or set(body) - required - {"previous_artifact_id", "expected_draft_digest"}:
+            raise ValueError("DELIVERY_PREFERENCES_REQUEST_INVALID")
+        actor, scope = _shared_work_actor_scope("write")
+        return save_preferences(actor=actor, scope=scope, **body)
+    return _shared_work_response(execute)
+
+
+@experience_bp.get("/api/experience/saved-work/notifications")
+def read_reporting_notifications():
+    def execute():
+        from lumenis.shared.reporting.delivery_preferences import notification_feed
+        if set(request.args) - {"limit", "cursor"} or any(len(request.args.getlist(k)) != 1 for k in request.args):
+            raise ValueError("DELIVERY_NOTIFICATIONS_REQUEST_INVALID")
+        limit = request.args.get("limit", "30")
+        if not limit.isascii() or not limit.isdecimal():
+            raise ValueError("DELIVERY_NOTIFICATIONS_REQUEST_INVALID")
+        actor, scope = _shared_work_actor_scope("read")
+        return notification_feed(actor=actor, scope=scope, limit=int(limit), cursor=request.args.get("cursor"))
+    return _shared_work_response(execute)
 
 
 def _source_brief_material_ids(body, *, question, limit):

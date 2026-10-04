@@ -61,7 +61,7 @@ def authorize_business_work_request(operation, *, actor_ref, scope):
     from experience_runtime import _source_brief_context
     from lumenis.shared.reporting.source_brief_job import _scope_material
     from lumenis.system.security import get_permission_gate, OperationType
-    if operation not in {"read", "prepare", "choose", "cancel", "interrupt", "resume", "outcome", "evaluate"}:
+    if operation not in {"read", "prepare", "choose", "cancel", "interrupt", "resume", "action", "outcome", "outcome_unknown", "evaluate"}:
         raise PermissionError("BUSINESS_WORK_OPERATION_DENIED")
     action = "read" if operation == "read" else "write"
     current_ref, scope_audit, material = _source_brief_context(action)
@@ -103,13 +103,173 @@ class BusinessDecisionWorkflow:
     This is domain work, not an AI, database, Artifact or Permission owner.
     The composing API must supply a fresh server authorization closure for
     every operation. Options are attributed operator proposals, never inferred
-    consumer facts. Nothing here collects, executes a campaign or invokes AI.
+    consumer facts. An injected server owner reader can reconcile internal
+    creation already performed; this service never executes a task or campaign.
     Signed transitions live in the existing Evidence store without a migration.
     """
 
     VERSION = "cth-bmp-decision/1"
+    ACTION_VERSION = "cth-bmp-decision/2"
     FEATURE = "CTH_BMP_DECISION_WORK"
     KINDS = {"venue_operations", "consumer_risk", "brand_market", "creator_campaign"}
+
+    def __init__(self, *, internal_action_reader=None, action_actor=None):
+        # W6 binds the observed read_internal_pitch(task_id, *, actor, scope)
+        # callable and server principal. Never load owner candidates implicitly
+        # or take a reader/principal/receipt from an HTTP/model payload.
+        self._internal_action_reader = internal_action_reader
+        self._action_actor = action_actor
+
+    @staticmethod
+    def _action_scope(scope):
+        return {"domain_id": scope["domain_id"], "subject_id": scope.get("subject_id"),
+                "brand_focus_id": scope.get("brand_focus_id"), "global_scope": scope["global"]}
+
+    def _read_action(self, task_id, actor_ref, scope, authorize):
+        """Consume the frozen Shared reader, not a caller-supplied receipt."""
+        self._text(task_id, 256)
+        if not callable(self._internal_action_reader) or self._action_actor is None:
+            raise RuntimeError("BUSINESS_WORK_ACTION_OWNER_NOT_BOUND")
+        self._authorize(authorize, actor_ref, scope, "read")
+        owner_scope = self._action_scope(scope)
+        observed = self._internal_action_reader(task_id, actor=self._action_actor, scope=owner_scope)
+        self._authorize(authorize, actor_ref, scope, "read")
+        if (not isinstance(observed, dict) or observed.get("task_id") != task_id
+                or observed.get("scope") != owner_scope
+                or observed["scope"].get("global_scope") is not owner_scope["global_scope"]):
+            raise PermissionError("BUSINESS_WORK_ACTION_CONTEXT_MISMATCH")
+        if observed.get("state") != "succeeded" or observed.get("error") is not None:
+            raise RuntimeError("BUSINESS_WORK_ACTION_NOT_COMMITTED")
+        receipt, work = observed.get("action_receipt"), observed.get("work")
+        if not isinstance(receipt, dict) or not isinstance(work, dict):
+            raise RuntimeError("BUSINESS_WORK_ACTION_RECEIPT_INVALID")
+        committed, doc, artifact = work.get("receipt"), work.get("document"), work.get("artifact")
+        if not all(isinstance(item, dict) for item in (committed, doc, artifact)):
+            raise RuntimeError("BUSINESS_WORK_ACTION_RECEIPT_INVALID")
+        context = doc.get("context", {})
+        actor_matches = isinstance(context, dict) and context.get("principal_ref") == actor_ref
+        if isinstance(self._action_actor, dict) and type(self._action_actor.get("id")) is int:
+            actor_matches = (isinstance(context, dict)
+                             and context.get("actor_id") == self._action_actor["id"]
+                             and actor_ref == f"actor:{self._action_actor['id']}"
+                             and "principal_ref" not in context)
+        if (not actor_matches
+                or any(context.get(k) != v for k, v in owner_scope.items())
+                or receipt.get("scope") != owner_scope or committed.get("scope") != owner_scope
+                or context.get("global_scope") is not owner_scope["global_scope"]
+                or receipt["scope"].get("global_scope") is not owner_scope["global_scope"]
+                or committed["scope"].get("global_scope") is not owner_scope["global_scope"]):
+            raise PermissionError("BUSINESS_WORK_ACTION_CONTEXT_MISMATCH")
+        # W4's exact historical ShotPlan contract and explicit manuscript-only
+        # contract. Shared verifies the sealed task input, committed bytes and
+        # unchanged work contract; never infer a profile from missing content.
+        contract = committed.get("contract")
+        supported_contracts = (
+            {"id": "lumenis.internal-pitch", "version": "1",
+             "required_payload_paths": ["manuscript", "shot_plan", "truth_state"]},
+            {"id": "lumenis.internal-pitch", "version": "2",
+             "required_payload_paths": ["manuscript", "input_manifest", "truth_state"]},
+            {"id": "lumenis.internal-pitch", "version": "3",
+             "required_payload_paths": ["manuscript", "upstream_binding", "truth_state"]},
+        )
+        if (receipt.get("owner") != "Shared ContentCreation/TaskEngine/SavedWork"
+                or receipt.get("action_kind") != ("INTERNAL_TEXT_CREATION" if receipt.get("version") == 1 else "INTERNAL_TEXT_REVISION")
+                or receipt.get("execution_state") != "ARTIFACT_COMMITTED"
+                or receipt.get("business_outcome") != "NOT_OBSERVED"
+                or receipt.get("external_effect") != "NOT_PERFORMED"
+                or receipt.get("task_id") != task_id or doc.get("task_id") != task_id
+                or committed.get("task_id") != task_id
+                or committed.get("schema") != "lumenis.committed-saved-work/v1"
+                or contract not in supported_contracts or doc.get("contract") != contract):
+            raise RuntimeError("BUSINESS_WORK_ACTION_RECEIPT_INVALID")
+        checks = committed.get("constraint_observations", {})
+        if (not isinstance(checks, dict) or checks.get("committed_bytes_match") is not True
+                or checks.get("parent_chain_verified") is not True):
+            raise RuntimeError("BUSINESS_WORK_ACTION_RECEIPT_INVALID")
+        for key in ("work_id", "version"):
+            if receipt.get(key) != committed.get(key) or receipt.get(key) != doc.get(key):
+                raise RuntimeError("BUSINESS_WORK_ACTION_RECEIPT_INVALID")
+        if type(committed.get("version")) is not int or type(doc.get("version")) is not int:
+            raise RuntimeError("BUSINESS_WORK_ACTION_RECEIPT_INVALID")
+        for action_key, committed_key in (("artifact_id", "ref"), ("sha256", "sha256"), ("size_bytes", "size_bytes")):
+            if (receipt.get(action_key) != committed.get(committed_key)
+                    or receipt.get(action_key) != artifact.get(action_key)):
+                raise RuntimeError("BUSINESS_WORK_ACTION_RECEIPT_INVALID")
+        parent = committed.get("parent")
+        if not isinstance(parent, dict) or parent != {"ref": receipt.get("parent_artifact_id"), "sha256": receipt.get("parent_sha256")}:
+            raise RuntimeError("BUSINESS_WORK_ACTION_RECEIPT_INVALID")
+        if any(doc.get(k) != receipt.get(k) for k in ("parent_artifact_id", "parent_sha256")):
+            raise RuntimeError("BUSINESS_WORK_ACTION_RECEIPT_INVALID")
+        import re
+        if (type(receipt.get("version")) is not int or receipt["version"] < 1
+                or type(receipt.get("size_bytes")) is not int or receipt["size_bytes"] < 1
+                or not isinstance(receipt.get("sha256"), str) or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"])):
+            raise RuntimeError("BUSINESS_WORK_ACTION_RECEIPT_INVALID")
+        for key in ("artifact_id", "work_id"):
+            self._text(receipt.get(key), 256)
+        if receipt["version"] == 1:
+            if parent != {"ref": None, "sha256": None}:
+                raise RuntimeError("BUSINESS_WORK_ACTION_PARENT_INVALID")
+        elif (not isinstance(parent["ref"], str) or not parent["ref"]
+              or not isinstance(parent["sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", parent["sha256"])):
+            raise RuntimeError("BUSINESS_WORK_ACTION_PARENT_INVALID")
+        output = receipt.get("output")
+        if (not isinstance(output, dict) or doc.get("attachments") != [output]
+                or type(output.get("size_bytes")) is not int or output["size_bytes"] < 1
+                or not isinstance(output.get("sha256"), str) or not re.fullmatch(r"[0-9a-f]{64}", output["sha256"])):
+            raise RuntimeError("BUSINESS_WORK_ACTION_OUTPUT_INVALID")
+        for key in ("artifact_id", "name", "media_type"):
+            self._text(output.get(key), 256)
+        # Store only immutable lineage, not owner content, grants or source
+        # statements. Shared remains the authority for bytes and source uses.
+        return json.loads(self._json(receipt))
+
+    def _verify_actions(self, history, actor_ref, scope, authorize):
+        actions = [e["outputs"]["action"] for e in history if e["inputs"]["operation"] == "action"]
+        if not actions:
+            return {"state": "NOT_REQUESTED"}
+        if not callable(self._internal_action_reader) or self._action_actor is None:
+            return {"state": "UNAVAILABLE", "reason": "ACTION_OWNER_NOT_BOUND"}
+        for action in actions:
+            if self._read_action(action["receipt"]["task_id"], actor_ref, scope, authorize) != action["receipt"]:
+                raise RuntimeError("BUSINESS_WORK_ACTION_RECEIPT_CHANGED")
+        return {"state": "FRESH_OWNER_VERIFIED", "count": len(actions)}
+
+    def _resources(self, value):
+        """Preserve operator constraints; estimates are neither quotes nor spend."""
+        from decimal import Decimal, InvalidOperation
+        from datetime import datetime
+        import re
+        keys = {"budget_amount", "estimated_cost_amount", "currency", "as_of", "limits"}
+        if not isinstance(value, dict) or set(value) != keys:
+            raise ValueError("BUSINESS_WORK_RESOURCE_CONSTRAINTS_INVALID")
+        for key in ("budget_amount", "estimated_cost_amount"):
+            amount = value[key]
+            if amount is not None:
+                try:
+                    if not isinstance(amount, str) or len(amount) > 40 or not re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", amount):
+                        raise ValueError("BUSINESS_WORK_RESOURCE_AMOUNT_INVALID")
+                    if not Decimal(amount).is_finite() or Decimal(amount) < 0:
+                        raise ValueError("BUSINESS_WORK_RESOURCE_AMOUNT_INVALID")
+                except InvalidOperation as exc:
+                    raise ValueError("BUSINESS_WORK_RESOURCE_AMOUNT_INVALID") from exc
+        currency, as_of = value["currency"], value["as_of"]
+        if currency is not None and (not isinstance(currency, str) or not re.fullmatch(r"[A-Z]{3}", currency)):
+            raise ValueError("BUSINESS_WORK_RESOURCE_CURRENCY_INVALID")
+        if as_of is not None:
+            self._text(as_of, 80)
+            if datetime.fromisoformat(as_of.replace("Z", "+00:00")).tzinfo is None:
+                raise ValueError("BUSINESS_WORK_RESOURCE_TIMEZONE_REQUIRED")
+        if any(value[k] is not None for k in ("budget_amount", "estimated_cost_amount")) and (currency is None or as_of is None):
+            raise ValueError("BUSINESS_WORK_RESOURCE_BASIS_REQUIRED")
+        if not isinstance(value["limits"], list) or not 1 <= len(value["limits"]) <= 8:
+            raise ValueError("BUSINESS_WORK_RESOURCE_LIMITS_REQUIRED")
+        for limit in value["limits"]:
+            self._text(limit)
+        known = value["budget_amount"] is not None and value["estimated_cost_amount"] is not None
+        return {**value, "claim_type": "OPERATOR_CONSTRAINT_AND_ESTIMATE", "actual_spend": None,
+                "budget_fit": ("OVER_BUDGET" if Decimal(value["estimated_cost_amount"]) > Decimal(value["budget_amount"])
+                               else "WITHIN_OPERATOR_ESTIMATE") if known else "UNKNOWN"}
 
     @staticmethod
     def _json(value):
@@ -205,14 +365,32 @@ class BusinessDecisionWorkflow:
             inputs, outputs = json.loads(row["inputs_json"]), json.loads(row["outputs_json"])
             if inputs.get("actor_ref") != actor_ref or inputs.get("scope") != scope:
                 raise PermissionError("BUSINESS_WORK_CONTEXT_MISMATCH")
-            if (row["version"] != self.VERSION or row["source"] != "cth_bmp_business"
+            if (row["version"] not in {self.VERSION, self.ACTION_VERSION} or row["source"] != "cth_bmp_business"
                     or row["product_id"] != scope["product_id"] or row["domain_id"] != scope["domain_id"]
                     or row["status"] != "derived" or row["result"] != "RECORDED"
                     or inputs.get("_lumenis_scope") != _expected_scope_marker(scope)
                     or inputs.get("parent_ref") != previous or inputs.get("work_id") != work_id
-                    or inputs.get("submission_id") != row["test_name"]
-                    or outputs.get("action_state") != "NOT_EXECUTED"):
+                    or inputs.get("submission_id") != row["test_name"]):
                 raise RuntimeError("BUSINESS_WORK_BINDING_INVALID")
+            if row["version"] == self.VERSION:
+                if outputs.get("action_state") != "NOT_EXECUTED" or outputs.get("action") is not None:
+                    raise RuntimeError("BUSINESS_WORK_BINDING_INVALID")
+            else:
+                action = outputs.get("action")
+                if outputs.get("action_state") != ("EXECUTED" if action else "NOT_EXECUTED"):
+                    raise RuntimeError("BUSINESS_WORK_BINDING_INVALID")
+                if action:
+                    if (not isinstance(action, dict) or not isinstance(action.get("receipt"), dict)
+                            or action.get("option_id") != outputs.get("decision", {}).get("option_id")
+                            or action.get("association") != "OPERATOR_LINK_TO_SELECTED_OPTION"):
+                        raise RuntimeError("BUSINESS_WORK_BINDING_INVALID")
+                    if inputs.get("operation") == "action":
+                        payload = inputs["payload"]
+                        if (payload.get("task_id") != action["receipt"].get("task_id")
+                                or payload.get("option_id") != action["option_id"]):
+                            raise RuntimeError("BUSINESS_WORK_BINDING_INVALID")
+                    elif not history or action != history[-1]["outputs"].get("action"):
+                        raise RuntimeError("BUSINESS_WORK_BINDING_INVALID")
             evidence_ref = f"app_evidence_records:{row['id']}"
             history.append({"inputs": inputs, "outputs": outputs, "evidence_ref": evidence_ref})
             previous = evidence_ref
@@ -261,7 +439,7 @@ class BusinessDecisionWorkflow:
                 revision = history[-1]["evidence_ref"] if history else None
                 if revision != expected_revision:
                     raise RuntimeError("BUSINESS_WORK_REVISION_CONFLICT")
-                outputs = self._transition(connection, history, operation, payload, actor_ref, scope)
+                outputs = self._transition(connection, history, operation, payload, actor_ref, scope, authorize)
                 audits = self._authorize(authorize, actor_ref, scope, operation)
                 inputs = {"work_id": work_id, "actor_ref": actor_ref, "scope": scope,
                           "submission_id": submission_id, "operation": operation,
@@ -271,7 +449,9 @@ class BusinessDecisionWorkflow:
                     product=scope["product_id"], domain_id=scope["domain_id"],
                     subject_id=scope.get("subject_id"), brand_focus_id=scope.get("brand_focus_id"),
                     global_scope=False, feature_id=self.FEATURE, asset_id=work_id,
-                    test_name=submission_id, version=self.VERSION, status="derived", result="RECORDED",
+                    test_name=submission_id,
+                    version=self.ACTION_VERSION if (outputs.get("action") or "resource_constraints" in (outputs.get("decision") or {})) else self.VERSION,
+                    status="derived", result="RECORDED",
                     inputs=inputs, outputs=outputs,
                 )
                 if type(ref) is not int or ref < 1:
@@ -279,6 +459,11 @@ class BusinessDecisionWorkflow:
                 history = self._history(connection, work_id, actor_ref, scope)
             # Every replay validates its original report and still-visible source chain.
             self._bound_report(connection, history, actor_ref, scope)
+            action_read = self._verify_actions(history, actor_ref, scope, authorize)
+            if any(e["inputs"]["operation"] == "action" for e in history):
+                if action_read["state"] != "FRESH_OWNER_VERIFIED":
+                    raise RuntimeError("BUSINESS_WORK_ACTION_OWNER_NOT_BOUND")
+                self._authorize(authorize, actor_ref, scope, operation)
         if history[-1]["outputs"]["state"] == "OUTCOME_RECORDED":
             # Evaluation is a recoverable derivative side-write. Replay retains
             # the signed outcome and repairs its exact deterministic evaluation.
@@ -290,13 +475,24 @@ class BusinessDecisionWorkflow:
                 metric_value=None, pass_threshold=1.0, warn_threshold=0.8,
                 source="cth_bmp_business", evidence_ref=history[-1]["evidence_ref"],
                 evaluation_id=hashlib.sha256((work_id + history[-1]["evidence_ref"]).encode()).hexdigest(),
-                metadata={"work_id": work_id, "actor_ref": actor_ref, "scope": scope,
-                          "outcome_state": "SOURCE_REPORTED", "causation": "NOT_ESTABLISHED",
-                          "action_state": "NOT_EXECUTED"},
+                metadata=self._evaluation_metadata(work_id, history[-1], actor_ref, scope),
             )
         return self.reopen(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize)
 
-    def _transition(self, connection, history, operation, payload, actor_ref, scope):
+    @staticmethod
+    def _evaluation_metadata(work_id, event, actor_ref, scope):
+        outputs = event["outputs"]
+        metadata = {"work_id": work_id, "actor_ref": actor_ref, "scope": scope,
+                    "outcome_state": outputs["outcome_state"], "causation": "NOT_ESTABLISHED",
+                    "action_state": outputs["action_state"]}
+        if outputs.get("action"):
+            metadata["action"] = outputs["action"]
+            metadata["business_outcome"] = outputs["business_outcome"]
+        if "resource_constraints" in (outputs.get("decision") or {}):
+            metadata["resource_constraints"] = outputs["decision"]["resource_constraints"]
+        return metadata
+
+    def _transition(self, connection, history, operation, payload, actor_ref, scope, authorize):
         if operation == "prepare":
             if history:
                 raise RuntimeError("BUSINESS_WORK_ALREADY_EXISTS")
@@ -332,11 +528,11 @@ class BusinessDecisionWorkflow:
         self._bound_report(connection, history, actor_ref, scope)
         prior = history[-1]["outputs"]
         state = prior["state"]
-        if state in {"CANCELLED", "OUTCOME_RECORDED"}:
+        if state == "CANCELLED" or (state == "OUTCOME_RECORDED" and operation != "action"):
             raise RuntimeError("BUSINESS_WORK_TERMINAL")
         result = dict(prior)
         if operation == "choose":
-            if state != "PREPARED" or payload["option_id"] not in {o["option_id"] for o in prior["options"]}:
+            if state not in {"PREPARED", "DECIDED"} or payload["option_id"] not in {o["option_id"] for o in prior["options"]}:
                 raise ValueError("BUSINESS_WORK_DECISION_INVALID")
             self._text(payload["reason"])
             self._text(payload["owner"])
@@ -346,6 +542,8 @@ class BusinessDecisionWorkflow:
             if when.tzinfo is None:
                 raise ValueError("BUSINESS_WORK_REVIEW_TIMEZONE_REQUIRED")
             result.update(state="DECIDED", decision={**payload, "approval": "INTERNAL_SELECTION_ONLY"})
+            if "resource_constraints" in payload:
+                result["decision"]["resource_constraints"] = self._resources(payload["resource_constraints"])
         elif operation in {"cancel", "interrupt"}:
             self._text(payload["reason"])
             if operation == "interrupt" and state == "INTERRUPTED":
@@ -356,8 +554,32 @@ class BusinessDecisionWorkflow:
             if state != "INTERRUPTED" or prior["resume_count"] >= 2:
                 raise RuntimeError("BUSINESS_WORK_RESUME_LIMIT_OR_STATE")
             result.update(state=prior["previous_state"], resume_count=prior["resume_count"] + 1)
+        elif operation == "action":
+            if state not in {"DECIDED", "ACTION_RECORDED", "OUTCOME_RECORDED"} or payload["option_id"] != prior["decision"]["option_id"]:
+                raise RuntimeError("BUSINESS_WORK_ACTION_SELECTED_OPTION_REQUIRED")
+            receipt = self._read_action(payload["task_id"], actor_ref, scope, authorize)
+            if prior.get("action"):
+                parent = prior["action"]["receipt"]
+                if (receipt["work_id"] != parent["work_id"] or receipt["version"] != parent["version"] + 1
+                        or receipt["parent_artifact_id"] != parent["artifact_id"]
+                        or receipt["parent_sha256"] != parent["sha256"]):
+                    raise RuntimeError("BUSINESS_WORK_ACTION_REVISION_INVALID")
+            result.update(state="ACTION_RECORDED", action_state="EXECUTED",
+                          action={"option_id": payload["option_id"], "association": "OPERATOR_LINK_TO_SELECTED_OPTION",
+                                  "receipt": receipt}, business_outcome="NOT_OBSERVED",
+                          outcome_state="SOURCE_REPORTED" if result.get("outcome") else "NOT_OBSERVED")
+            # A new committed revision starts a new effects review. Previous
+            # evaluations/UNKNOWN limitations remain in immutable history.
+            result.pop("outcome_unknown", None)
+        elif operation == "outcome_unknown":
+            if state != "ACTION_RECORDED":
+                raise RuntimeError("BUSINESS_WORK_ACTION_REQUIRED")
+            self._text(payload["limits"])
+            result.update(state="OUTCOME_RECORDED", outcome_state="UNKNOWN", business_outcome="UNKNOWN",
+                          outcome_unknown={"limits": payload["limits"], "claim_type": "OPERATOR_REVIEW",
+                                           "causation": "NOT_ESTABLISHED"})
         elif operation == "outcome":
-            if state != "DECIDED":
+            if state not in {"DECIDED", "ACTION_RECORDED"}:
                 raise RuntimeError("BUSINESS_WORK_DECISION_REQUIRED")
             outcome_report = self._report(connection, payload["source_job_id"], actor_ref, scope)
             source_ids = {s["source_id"] for s in outcome_report["source_brief"]["records"]}
@@ -400,8 +622,11 @@ class BusinessDecisionWorkflow:
     def advance(self, work_id, *, actor_ref, scope, submission_id, operation, payload, expected_revision, authorize):
         fields = {"choose": {"option_id", "reason", "owner", "review_at"},
                   "cancel": {"reason"}, "interrupt": {"reason"}, "resume": set(),
+                  "action": {"option_id", "task_id"}, "outcome_unknown": {"limits"},
                   "outcome": {"source_job_id", "source_id", "quote", "limits"}}
-        if operation not in fields or not isinstance(payload, dict) or set(payload) != fields[operation]:
+        if (operation not in fields or not isinstance(payload, dict)
+                or set(payload) not in (fields[operation], fields[operation] | {"resource_constraints"})
+                or ("resource_constraints" in payload and operation != "choose")):
             raise ValueError("BUSINESS_WORK_OPERATION_PAYLOAD_INVALID")
         return self._append(work_id=work_id, actor_ref=actor_ref, scope=scope,
                             submission_id=submission_id, operation=operation, payload=payload,
@@ -484,6 +709,7 @@ class BusinessDecisionWorkflow:
                         or hashlib.sha256(body.encode()).hexdigest() != outcome["body_sha256"]
                         or outcome["quote"] not in body):
                     raise RuntimeError("BUSINESS_WORK_OUTCOME_SOURCE_CHANGED")
+        action_read = self._verify_actions(history, actor_ref, scope, authorize)
         evaluation = {"state": "NOT_EVALUATED", "business_usefulness": "UNKNOWN"}
         if current["outputs"]["state"] == "OUTCOME_RECORDED":
             import hashlib
@@ -498,9 +724,15 @@ class BusinessDecisionWorkflow:
                         or record["metric_value"] is not None or metadata.get("work_id") != work_id
                         or metadata.get("actor_ref") != actor_ref or metadata.get("scope") != scope):
                     raise RuntimeError("BUSINESS_WORK_EVALUATION_BINDING_INVALID")
+                if metadata != self._evaluation_metadata(work_id, current, actor_ref, scope):
+                    raise RuntimeError("BUSINESS_WORK_EVALUATION_BINDING_INVALID")
                 evaluation.update(state="RECORDED", evaluation_id=evaluation_id)
-        result = {"version": self.VERSION, "work_id": work_id, "scope": scope,
-                "revision": current["evidence_ref"], **current["outputs"],
+        result = {"version": self.ACTION_VERSION if (current["outputs"].get("action") or
+                                                     "resource_constraints" in (current["outputs"].get("decision") or {})) else self.VERSION,
+                "work_id": work_id, "scope": scope,
+                "revision": current["evidence_ref"], **current["outputs"], "action_read": action_read,
+                "action_service": {"state": "BOUND_READER"} if callable(self._internal_action_reader) and self._action_actor is not None
+                                  else {"state": "UNAVAILABLE", "reason": "ACTION_OWNER_NOT_BOUND"},
                 "question": original["question"], "kind": original["kind"],
                 "source_report": {"job_id": original["source_job_id"], "artifact_hash": report["row"]["artifact_hash"]},
                 "source_brief": report["source_brief"], "multimodal": report["snapshot"]["multimodal"],
@@ -511,6 +743,10 @@ class BusinessDecisionWorkflow:
                                    "subject_id": None, "brand_focus_id": None},
                 "evaluation": evaluation}
         result["usable_result"] = self.render_result(result)
+        # Shared read/use permissions may change during rendering independently
+        # of this domain's report permission. Reconcile all linked versions again.
+        if action_read["state"] == "FRESH_OWNER_VERIFIED":
+            self._verify_actions(history, actor_ref, scope, authorize)
         self._authorize(authorize, actor_ref, scope, "read")
         return result
 
@@ -607,15 +843,37 @@ class BusinessDecisionWorkflow:
         if decision:
             lines += ["选择：" + text(decision["option_id"]), "理由：" + text(decision["reason"]),
                       "责任人：" + text(decision["owner"]), "复查时间：" + text(decision["review_at"])]
+            resources = decision.get("resource_constraints")
+            if resources:
+                lines += ["预算上限（人工输入）：" + text(resources["budget_amount"] if resources["budget_amount"] is not None else "未知"),
+                          "方案成本估计（人工输入）：" + text(resources["estimated_cost_amount"] if resources["estimated_cost_amount"] is not None else "未知"),
+                          "币种：" + text(resources["currency"] or "未知"), "估计时点：" + text(resources["as_of"] or "未知"),
+                          "预算适配：" + text(resources["budget_fit"]), "资源与停止约束：" + text("；".join(resources["limits"])),
+                          "估计不代表已取得报价、已承诺采购或实际支出；超预算方案需调整。"]
         else:
             lines += ["尚未选择方案。"]
-        lines += ["行动尚未执行；此记录不授予联系、发布、投放、资金或采集权限。", "",
+        action = work.get("action")
+        if action:
+            receipt = action["receipt"]
+            fresh = work.get("action_read", {}).get("state") == "FRESH_OWNER_VERIFIED"
+            lines += ["已记录内部文字制作（" + ("本次已向成果 owner 复查" if fresh else "本次 owner 读取未绑定，历史回执尚未重新核验") + "）。",
+                      "人工关联方案：" + text(action["option_id"]), "制作 Task：" + text(receipt["task_id"]),
+                      "成果：" + text(receipt["artifact_id"]) + " · 版本 " + str(receipt["version"]),
+                      "父成果：" + text(receipt["parent_artifact_id"] or "首版，无父成果"),
+                      "内容 hash：" + text(receipt["sha256"]), "Word hash：" + text(receipt["output"]["sha256"]),
+                      "内部制作完成不代表活动已执行、内容已获商业许可或消费者效果已验证。"]
+        else:
+            lines += ["尚未记录已执行行动。"]
+        lines += ["此记录不授予联系、发布、投放、资金或采集权限。", "",
                   "## 来源报告与结果", "", "来源报告：" + text(work["source_report"]["job_id"])]
         if work.get("outcome"):
             outcome = work["outcome"]
             lines += ["来源原文：" + text(outcome["quote"]), "限制：" + text(outcome["limits"]),
                       "这是来源报告的说法，不证明本方案的效果或因果关系。"]
-        else:
+        if work.get("outcome_unknown"):
+            lines += ["业务效果：UNKNOWN。", "复查限制：" + text(work["outcome_unknown"]["limits"]),
+                      "未观察效果不撤销已经完成的内部制作事实。"]
+        elif not work.get("outcome"):
             lines += ["尚无结果证据。客流、销售、消费者意见与活动效果不得由来源存在性推断。"]
         lines += ["", "## 证据与复查", ""]
         lines += [text(e["evidence_ref"]) for e in work["timeline"]]

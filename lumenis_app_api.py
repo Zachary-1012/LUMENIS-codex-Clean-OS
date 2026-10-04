@@ -151,8 +151,11 @@ def api_internal_pitch_prepare():
         from lumenis.shared.content_creation.internal_pitch import prepare_internal_pitch
         data = _internal_pitch_body()
         allowed = {"scope", "manuscript", "shot_plan", "request_id", "citations", "work_id",
-                   "previous_artifact_id", "expected_draft_digest"}
-        if not {"scope", "manuscript", "shot_plan", "request_id"}.issubset(data) or set(data) - allowed:
+                   "previous_artifact_id", "expected_draft_digest", "profile", "input_manifest", "upstream_ref"}
+        required = {"scope", "manuscript", "request_id"}
+        if "profile" not in data:
+            required.add("shot_plan")
+        if not required.issubset(data) or set(data) - allowed:
             raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
         scope = _internal_pitch_scope(data)
         return prepare_internal_pitch(actor=_internal_pitch_actor("write"), scope=scope,
@@ -196,6 +199,118 @@ def api_internal_pitch_export(task_id):
         response.headers["X-Artifact-SHA256"] = result["sha256"]
         return response
     return _internal_pitch_response(execute)
+
+
+def _business_work_body():
+    try:
+        return _internal_pitch_body()
+    except ValueError as exc:
+        raise ValueError("BUSINESS_WORK_REQUEST_INVALID") from exc
+
+
+def _business_work_binding(operation):
+    """Compose existing domain and creation readers with the current server actor."""
+    from api_dual_domain import BusinessDecisionWorkflow, authorize_business_work_request
+    from experience_runtime import _source_brief_context
+    from lumenis.shared.content_creation.internal_pitch import read_internal_pitch
+    from lumenis.shared.reporting.source_brief_job import _scope_material
+
+    actor_ref, _audit, material, actor = _source_brief_context(
+        "read" if operation == "read" else "write", include_actor=True,
+    )
+    scope = _scope_material(**material)
+    if scope["global"]:
+        raise PermissionError("BUSINESS_WORK_FOCUS_REQUIRED")
+    service = BusinessDecisionWorkflow(internal_action_reader=read_internal_pitch, action_actor=actor)
+    authorize = lambda selected: authorize_business_work_request(
+        selected, actor_ref=actor_ref, scope=scope,
+    )
+    return service, actor_ref, scope, authorize
+
+
+def _business_work_local_access_allowed():
+    """Open entry uses the same sealed loopback principal and exact live scope."""
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    expected = {
+        "domain_api.api_business_work_prepare": "POST",
+        "domain_api.api_business_work_read": "GET",
+        "domain_api.api_business_work_advance": "POST",
+    }
+    if expected.get(request.endpoint) != request.method:
+        return False
+    action = "read" if request.method == "GET" else "write"
+    if resolve_local_workspace_principal(module="reports", action=action) is None:
+        return False
+    try:
+        _business_work_binding("read" if action == "read" else "prepare")
+        return True
+    except (ValueError, LookupError, PermissionError, RuntimeError):
+        return False
+
+
+def _business_work_response(call):
+    from flask import current_app
+    try:
+        result = call()
+        response = jsonify({"ok": True, "result": result, "publish_status": "not_performed"})
+        response.headers["Cache-Control"] = "no-store"
+        return response
+    except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
+        import re
+        code = str(exc)
+        if re.fullmatch(r"[A-Z_0-9]{1,100}", code) is None:
+            code = "BUSINESS_WORK_UNAVAILABLE"
+        status = 401 if code == "AUTH_REQUIRED" else 403 if (
+            isinstance(exc, PermissionError) or code == "CONTENT_SCOPE_DENIED"
+        ) else (
+            404 if isinstance(exc, LookupError) else 503 if isinstance(exc, RuntimeError) else 400
+        )
+        response = jsonify({"ok": False, "code": code, "publish_status": "not_performed"})
+        response.headers["Cache-Control"] = "no-store"
+        return response, status
+    except Exception:
+        current_app.logger.exception("business work owner unavailable")
+        return jsonify({"ok": False, "code": "BUSINESS_WORK_UNAVAILABLE"}), 503
+
+
+@domain_api_bp.post("/api/experience/business-works")
+def api_business_work_prepare():
+    def execute():
+        data = _business_work_body()
+        common = {"submission_id", "kind", "options"}
+        source_fields = common | {"source_job_id", "question"}
+        case_fields = common | {"case_id"}
+        if set(data) not in (source_fields, case_fields):
+            raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
+        service, actor_ref, scope, authorize = _business_work_binding("prepare")
+        if "case_id" in data:
+            return service.prepare_from_case(actor_ref=actor_ref, scope=scope, authorize=authorize, **data)
+        return service.prepare(actor_ref=actor_ref, scope=scope, authorize=authorize, **data)
+    return _business_work_response(execute)
+
+
+@domain_api_bp.get("/api/experience/business-works/<work_id>")
+def api_business_work_read(work_id):
+    def execute():
+        if request.args:
+            raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
+        service, actor_ref, scope, authorize = _business_work_binding("read")
+        return service.reopen(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize)
+    return _business_work_response(execute)
+
+
+@domain_api_bp.post("/api/experience/business-works/<work_id>/<operation>")
+def api_business_work_advance(work_id, operation):
+    def execute():
+        if operation not in {"choose", "cancel", "interrupt", "resume", "action", "outcome", "outcome_unknown"}:
+            raise LookupError("BUSINESS_WORK_OPERATION_NOT_FOUND")
+        data = _business_work_body()
+        if set(data) != {"submission_id", "payload", "expected_revision"}:
+            raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
+        service, actor_ref, scope, authorize = _business_work_binding(operation)
+        return service.advance(work_id, actor_ref=actor_ref, scope=scope, operation=operation,
+                               authorize=authorize, **data)
+    return _business_work_response(execute)
 
 
 def _context_error(code, message, status):

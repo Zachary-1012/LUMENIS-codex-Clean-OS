@@ -25,6 +25,47 @@ from lumenis.system.security.permission import OperationType
 from .parser import parse_file
 
 
+def _capture_observation(provenance: Mapping) -> dict | None:
+    observation = provenance.get("capture_observation")
+    if "capture_observation" not in provenance:
+        return None
+    required = {"literal", "precision", "utc_offset", "timezone", "absolute_utc", "invocation_bounds"}
+    if (not isinstance(observation, dict) or set(observation) != required
+            or observation["literal"] != provenance.get("captured_at")
+            or observation["utc_offset"] is not None or observation["absolute_utc"] is not None
+            or observation["timezone"] != "UNKNOWN"
+            or not isinstance(observation["literal"], str)
+            or not isinstance(observation["precision"], str)):
+        raise SavedWorkError("DOCUMENT_CAPTURE_OBSERVATION_INVALID")
+    patterns = {"minute": r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}",
+                "second": r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}",
+                "subsecond": r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}\.\d{1,6}"}
+    pattern = patterns.get(observation["precision"])
+    if pattern is None or re.fullmatch(pattern, observation["literal"]) is None:
+        raise SavedWorkError("DOCUMENT_CAPTURE_OBSERVATION_INVALID")
+    try:
+        timestamp = datetime.fromisoformat(observation["literal"])
+    except ValueError as exc:
+        raise SavedWorkError("DOCUMENT_CAPTURE_OBSERVATION_INVALID") from exc
+    if timestamp.tzinfo is not None:
+        raise SavedWorkError("DOCUMENT_CAPTURE_OBSERVATION_INVALID")
+    bounds = observation["invocation_bounds"]
+    if bounds is not None:
+        if (not isinstance(bounds, dict) or set(bounds) != {"started_at", "finished_at", "meaning"}
+                or bounds["meaning"] != "original-invocation-bounds-not-exact-capture"
+                or any(not isinstance(bounds[k], str) or len(bounds[k]) > 64 for k in ("started_at", "finished_at"))):
+            raise SavedWorkError("DOCUMENT_CAPTURE_OBSERVATION_INVALID")
+        try:
+            start, end = (datetime.fromisoformat(bounds[k].replace("Z", "+00:00"))
+                          for k in ("started_at", "finished_at"))
+        except ValueError as exc:
+            raise SavedWorkError("DOCUMENT_CAPTURE_OBSERVATION_INVALID") from exc
+        if (start.utcoffset() is None or end.utcoffset() is None
+                or start.utcoffset().total_seconds() != 0 or end.utcoffset().total_seconds() != 0 or start > end):
+            raise SavedWorkError("DOCUMENT_CAPTURE_OBSERVATION_INVALID")
+    return json.loads(_json(observation))
+
+
 def source_boundaries(provenance: Mapping) -> dict:
     """Describe source declarations, never factual or Learning admission.
 
@@ -45,17 +86,20 @@ def source_boundaries(provenance: Mapping) -> dict:
             or "research_id" in declared and (not isinstance(declared["research_id"], str)
                 or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", declared["research_id"]))):
         raise SavedWorkError("DOCUMENT_CONTENT_ORIGIN_INVALID")
+    observation = _capture_observation(provenance)
     return {"content_origin": dict(declared), "claim_type": declared["claim_type"],
             "fact_verification": "NOT_VERIFIED", "learning_admission": "NOT_ADMITTED",
             "training_eligible": False, "held_out": False,
             "rights_statement": provenance.get("rights_statement"),
-            "research_transport": provenance.get("research_transport")}
+            "research_transport": provenance.get("research_transport"),
+            **({"capture_observation": observation, "capture_absolute_time_status": "UNKNOWN"}
+               if observation is not None else {})}
 
 
 def _prepare(file_path: str, *, actor: Any, scope: Mapping, provenance: Mapping) -> dict:
     context = authorize(actor, scope, action="write")
     required = {"source_url", "published_at", "captured_at", "rights", "title"}
-    if not isinstance(provenance, Mapping) or not required.issubset(provenance) or set(provenance) - required - {"intended_use", "capture", "source_origin", "content_origin", "rights_statement", "research_transport"}:
+    if not isinstance(provenance, Mapping) or not required.issubset(provenance) or set(provenance) - required - {"intended_use", "capture", "source_origin", "content_origin", "rights_statement", "research_transport", "capture_observation"}:
         raise SavedWorkError("DOCUMENT_PROVENANCE_REQUIRED")
     # Seal nested declarations as well as bytes: decoder duration must not let
     # a caller replace approved rights/origin/capture metadata after admission.
@@ -120,7 +164,7 @@ def _prepare(file_path: str, *, actor: Any, scope: Mapping, provenance: Mapping)
             timestamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError as exc:
             raise SavedWorkError("DOCUMENT_TIME_INVALID") from exc
-        if timestamp.tzinfo is None:
+        if timestamp.tzinfo is None and not (key == "captured_at" and "capture_observation" in provenance):
             raise SavedWorkError("DOCUMENT_TIME_OFFSET_REQUIRED")
     # Bound the service input separately from the legacy 500MB parser envelope.
     path = Path(file_path)
@@ -136,7 +180,7 @@ def _prepare(file_path: str, *, actor: Any, scope: Mapping, provenance: Mapping)
                   "source_fingerprint": hashlib.sha256(raw).hexdigest(),
                   "source_name": path.name, "extension": path.suffix.lower(),
                   "size_bytes": len(raw), "provenance": dict(provenance),
-                  "importer_contract": "document-import/1"}
+                  "importer_contract": "document-import/2" if "capture_observation" in provenance else "document-import/1"}
     return {"context": context, "descriptor": descriptor,
             "resource": "document-import:v1:" + _digest(descriptor),
             "source_bytes": raw, "extension": path.suffix.lower()}
@@ -189,7 +233,7 @@ def import_document(file_path: str, *, actor: Any, scope: Mapping,
                 "autonomous_collection": False}
     with get_repository().transaction() as con:
         con.execute("BEGIN IMMEDIATE")
-        _check_effect(actor, scope, OperationType.DATA_IMPORT, prepared["resource"])
+        _check_effect(actor, scope, OperationType.DATA_IMPORT, prepared["resource"], connection=con)
         cur = con.execute("SELECT * FROM app_evidence_records WHERE feature_id='DOCUMENT_IMPORT' AND asset_id=?",
                           (source_id,))
         row = cur.fetchone()
@@ -199,6 +243,7 @@ def import_document(file_path: str, *, actor: Any, scope: Mapping,
             if evidence["raw_content"] != parsed.text or evidence["provenance"].get("source_fingerprint") != parsed.metadata["source_fingerprint"]:
                 raise SavedWorkError("DOCUMENT_REPLAY_CONFLICT")
             _source_bytes(con, evidence)
+            _check_effect(actor, scope, OperationType.DATA_IMPORT, prepared["resource"], connection=con)
             return _result(con, source_id, evidence_id, parsed, scope, product, replayed=True)
         with staging_write(prepared["resource"]):
             return _write_document(con, prepared, context, provenance, product, metadata, scope, actor)
@@ -214,7 +259,7 @@ def _write_document(con, prepared, context, provenance, product, metadata, scope
         metadata = {**metadata, "source_artifact_ref": record["artifact_id"]}
         evidence_id = evidence_store.record_evidence(
             source="document_import", product=product, feature_id="DOCUMENT_IMPORT",
-            asset_id=source_id, version="document-import/1", env="staging",
+            asset_id=source_id, version=prepared["descriptor"]["importer_contract"], env="staging",
             capture_mode="file_import", captured_at=provenance["captured_at"],
             inputs={"source_ids": [source_id], "import_resource": prepared["resource"]},
             outputs={"parsed_text_sha256": parsed.metadata["parsed_text_sha256"]},
@@ -241,7 +286,7 @@ def _write_document(con, prepared, context, provenance, product, metadata, scope
                     (str(evidence_id), record["artifact_id"]))
         evidence = _verified_evidence(con, evidence_id, context)
         _source_bytes(con, evidence)
-        _check_effect(actor, scope, OperationType.DATA_IMPORT, prepared["resource"])
+        _check_effect(actor, scope, OperationType.DATA_IMPORT, prepared["resource"], connection=con)
         result = _result(con, source_id, evidence_id, parsed, scope, product, replayed=False)
         con.commit()
         committed = True

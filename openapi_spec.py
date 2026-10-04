@@ -85,7 +85,7 @@ def build_spec(app: Any, title: str = "LUMENIS API", version: str = "1.0.0") -> 
         }
         sec = auth_for(path)
         if sec:
-            op["security"] = [sec] if len(sec) == 1 else [[{k: []}] for k in sec]
+            op["security"] = [{scheme: scopes} for scheme, scopes in sec.items()]
 
         if len(candidates) == 1:
             candidate = candidates[0]

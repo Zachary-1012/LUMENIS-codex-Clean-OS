@@ -17,6 +17,9 @@ import re
 import json
 import sys
 import datetime
+import csv
+import hashlib
+import io
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.idea_generator import generate_ideas, CIRCLE_SYMBOLS
@@ -141,11 +144,62 @@ def detect_goals(text):
 
 
 def detect_budget(text):
-    m = re.findall(r"(预算[^\d]{0,4}|投入[^\d]{0,4})?\s*(\d+(?:\.\d+)?)\s*(万|亿|w|k|百万)?", text)
-    for prefix, num, unit in m:
-        if num:
-            return {"value": float(num), "unit": unit or "万"}
-    return None
+    """Return only an explicitly labelled, unambiguous monetary budget.
+
+    A number is not a budget unless a budget label and a monetary unit or
+    currency are both present. Keep the original scale/currency in ``unit``;
+    this parser deliberately performs no currency or magnitude conversion.
+    """
+    label_re = re.compile(r"预算|投入|(?<!\w)budget(?!\w)", re.IGNORECASE)
+    currency = r"(?:人民币|US\$|USD|RMB|CNY|EUR|GBP|JPY|[¥￥$£€])"
+    number = r"\d+(?:,\d{3})*(?:\.\d+)?"
+    scale = r"(?:百万元|百万|亿元|万元|亿|万|元|[wk])"
+    amount_re = re.compile(
+        rf"^(?:(?:\s|[:：=,，|\"'“”‘’]|大约|预计|约|为|是|of|is|about))*"
+        rf"(?P<prefix>{currency})?\s*(?P<number>{number})\s*"
+        rf"(?P<scale>{scale})?\s*(?P<suffix>{currency})?",
+        re.IGNORECASE,
+    )
+    # A post-number currency can stand in for a scale, but a unitless number
+    # followed by ordinary prose is never accepted.
+    range_re = re.compile(
+        rf"^\s*(?:[-–—~～至到/]|和|或|及|、|与|以及)\s*(?:{currency}\s*)?{number}\s*(?:{scale}|{currency})?",
+        re.IGNORECASE,
+    )
+    ambiguous_suffix_re = re.compile(r"^(?:余|左右|上下|以上|以下|不等|起|多)")
+
+    found = []
+    for label in label_re.finditer(text):
+        # Keep extraction local to the label: do not borrow a unit or amount
+        # from a later clause or another field.
+        lines = text[label.end():label.end() + 40].splitlines()
+        tail = lines[0] if lines else ""
+        amount = amount_re.match(tail)
+        if not amount:
+            return None
+        raw_number = amount.group("number").replace(",", "")
+        unit = amount.group("scale") or ""
+        prefix_currency = amount.group("prefix") or ""
+        suffix_currency = amount.group("suffix") or ""
+        if prefix_currency and suffix_currency and prefix_currency.upper() != suffix_currency.upper():
+            return None
+        currency_token = prefix_currency or suffix_currency
+        if not unit and not currency_token:
+            return None
+        # Currency remains attached to the returned unit so GBP, USD, etc.
+        # cannot silently become CNY.
+        if currency_token:
+            unit = currency_token + unit
+        after = tail[amount.end():]
+        following = after.lstrip()
+        if (range_re.match(after) or ambiguous_suffix_re.match(after)
+                or re.match(r"^[A-Za-z_\u4e00-\u9fff%％]", following)):
+            return None
+        found.append({"value": float(raw_number), "unit": unit})
+
+    if not found or any(candidate != found[0] for candidate in found[1:]):
+        return None
+    return found[0]
 
 
 def detect_brand(text, hint=""):
@@ -214,13 +268,13 @@ def analyze_pitch(text, brand_hint="", n_ideas=3, hotspot=""):
     }
 
 
-def _extract_docx_text(path):
+def _extract_docx_text(content):
     """docx → 段落文本（含表格）。"""
     try:
         from docx import Document
     except Exception:
         return ""
-    d = Document(path)
+    d = Document(io.BytesIO(content))
     parts = [p.text for p in d.paragraphs if p.text.strip()]
     for t in d.tables:
         for row in t.rows:
@@ -230,13 +284,13 @@ def _extract_docx_text(path):
     return "\n".join(parts)
 
 
-def _extract_pptx_text(path):
+def _extract_pptx_text(content):
     """pptx → 每页标题/文本（含表格），按页分隔。"""
     try:
         from pptx import Presentation
     except Exception:
         return ""
-    prs = Presentation(path)
+    prs = Presentation(io.BytesIO(content))
     parts = []
     for i, slide in enumerate(prs.slides, 1):
         lines = []
@@ -259,25 +313,45 @@ def _extract_pptx_text(path):
 def analyze_pitch_file(path, brand_hint="", n_ideas=3, hotspot=""):
     """从文件导入方案需求：支持 txt/md/json/csv/pptx/docx。"""
     ext = os.path.splitext(path)[1].lower()
+    supported = {".txt", ".md", ".json", ".csv", ".pptx", ".docx"}
+    if ext not in supported:
+        raise ValueError("不支持的文件格式: %s" % (ext or "<无扩展名>"))
+    with open(path, "rb") as source:
+        content = source.read()
+    if not content:
+        raise ValueError("输入文件为空")
+
     if ext == ".json":
-        data = json.load(open(path, encoding="utf-8"))
+        data = json.loads(content.decode("utf-8-sig"))
         text = json.dumps(data, ensure_ascii=False)
     elif ext == ".csv":
-        import csv
         rows = []
-        with open(path, encoding="utf-8-sig", newline="") as f:
-            for r in csv.reader(f):
-                rows.append(" ".join(c for c in r if c))
+        decoded = content.decode("utf-8-sig")
+        for row in csv.reader(io.StringIO(decoded, newline="")):
+            rows.append(" ".join(cell for cell in row if cell))
         text = "\n".join(rows)
     elif ext in (".pptx", ".docx"):
         fn = _extract_pptx_text if ext == ".pptx" else _extract_docx_text
-        text = fn(path)
-        if not text.strip():
-            raise ValueError("无法从 %s 抽取文本（可能为空或受保护）" % ext)
-    else:  # txt / md / 其他文本
-        text = open(path, encoding="utf-8", errors="ignore").read()
+        try:
+            text = fn(content)
+        except Exception as exc:
+            raise ValueError("无法解析 %s 文件" % ext) from exc
+    else:  # txt / md
+        text = content.decode("utf-8-sig")
+        if "\x00" in text:
+            raise ValueError("文本文件包含二进制内容")
+    if not text.strip():
+        raise ValueError("无法从 %s 抽取文本（文件为空或无可读文本）" % ext)
     r = analyze_pitch(text, brand_hint, n_ideas, hotspot)
     r["source_file"] = path
+    r["input_provenance"] = {
+        "kind": "file_import_input",
+        "filename": os.path.basename(path),
+        "format": ext.lstrip("."),
+        "source_bytes_sha256": hashlib.sha256(content).hexdigest(),
+        "extracted_text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        "extracted_text": text,
+    }
     return r
 
 

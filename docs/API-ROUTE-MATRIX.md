@@ -1,8 +1,8 @@
 # API 路由矩阵（由当前 Flask url_map 自动生成，勿手改）
 
-- Flask url_map rules：**808**（static：**1**；API routes：**807**）
-- 唯一路径：**767**；operation groups：**817**
-- route operation candidates：**831**；重复冲突组：**14**（候选项：**28**）
+- Flask url_map rules：**839**（static：**1**；API routes：**838**）
+- 唯一路径：**796**；operation groups：**848**
+- route operation candidates：**862**；重复冲突组：**14**（候选项：**28**）
 - 认证：public=/healthz；v4Auth=/v4/* 独立 token；其余 httpBasic 或 v4 会话。
 
 | 路径 | 方法 | Endpoint candidate | Flask rule | 认证 | 分组 |
@@ -300,6 +300,9 @@
 | `/api/experience/ai/publish-requests/{task_id}` | GET | experience_runtime.publish_approval_request_detail | `/api/experience/ai/publish-requests/<task_id>` | basic/v4 | api/experience |
 | `/api/experience/artifacts/{artifact_id}` | GET | experience_runtime.shared_artifact_detail | `/api/experience/artifacts/<artifact_id>` | basic/v4 | api/experience |
 | `/api/experience/artifacts/{artifact_id}/file` | GET | experience_runtime.shared_artifact_file | `/api/experience/artifacts/<artifact_id>/file` | basic/v4 | api/experience |
+| `/api/experience/business-works` | POST | domain_api.api_business_work_prepare | `/api/experience/business-works` | basic/v4 | api/experience |
+| `/api/experience/business-works/{work_id}` | GET | domain_api.api_business_work_read | `/api/experience/business-works/<work_id>` | basic/v4 | api/experience |
+| `/api/experience/business-works/{work_id}/{operation}` | POST | domain_api.api_business_work_advance | `/api/experience/business-works/<work_id>/<operation>` | basic/v4 | api/experience |
 | `/api/experience/content-projects` | GET | experience_runtime.content_project_list | `/api/experience/content-projects` | basic/v4 | api/experience |
 | `/api/experience/content-projects/export` | POST | experience_runtime.export_content_project | `/api/experience/content-projects/export` | basic/v4 | api/experience |
 | `/api/experience/content-projects/{artifact_id}` | GET | experience_runtime.content_project_detail | `/api/experience/content-projects/<artifact_id>` | basic/v4 | api/experience |
@@ -309,11 +312,31 @@
 | `/api/experience/content-sources` | POST | experience_runtime.import_content_source | `/api/experience/content-sources` | basic/v4 | api/experience |
 | `/api/experience/content-sources/{artifact_id}` | GET | experience_runtime.content_source_detail | `/api/experience/content-sources/<artifact_id>` | basic/v4 | api/experience |
 | `/api/experience/content/evidence/{evidence_id}` | GET | experience_runtime.content_evidence_detail | `/api/experience/content/evidence/<evidence_id>` | basic/v4 | api/experience |
+| `/api/experience/creation/internal-pitches` | POST | domain_api.api_internal_pitch_prepare | `/api/experience/creation/internal-pitches` | basic/v4 | api/experience |
+| `/api/experience/creation/internal-pitches/{task_id}` | GET | domain_api.api_internal_pitch_read | `/api/experience/creation/internal-pitches/<task_id>` | basic/v4 | api/experience |
+| `/api/experience/creation/internal-pitches/{task_id}/export` | GET | domain_api.api_internal_pitch_export | `/api/experience/creation/internal-pitches/<task_id>/export` | basic/v4 | api/experience |
+| `/api/experience/creation/internal-pitches/{task_id}/{action}` | POST | domain_api.api_internal_pitch_action | `/api/experience/creation/internal-pitches/<task_id>/<action>` | basic/v4 | api/experience |
 | `/api/experience/cth/cases` | GET | experience_runtime.read_cth_case_list | `/api/experience/cth/cases` | basic/v4 | api/experience |
 | `/api/experience/cth/cases` | POST | experience_runtime.create_cth_work_case | `/api/experience/cth/cases` | basic/v4 | api/experience |
 | `/api/experience/cth/cases/{case_id}` | GET | experience_runtime.reopen_cth_work_case | `/api/experience/cth/cases/<case_id>` | basic/v4 | api/experience |
 | `/api/experience/cth/platform-collection` | GET | experience_runtime.cth_platform_collection_surface | `/api/experience/cth/platform-collection` | basic/v4 | api/experience |
 | `/api/experience/cth/platform-collection/search` | POST | experience_runtime.cth_platform_collection_search | `/api/experience/cth/platform-collection/search` | basic/v4 | api/experience |
+| `/api/experience/materials/documents` | POST | experience_runtime.import_shared_document | `/api/experience/materials/documents` | basic/v4 | api/experience |
+| `/api/experience/materials/documents/{evidence_id}` | GET | experience_runtime.read_shared_document | `/api/experience/materials/documents/<int:evidence_id>` | basic/v4 | api/experience |
+| `/api/experience/materials/documents/{evidence_id}/file` | GET | experience_runtime.download_shared_document | `/api/experience/materials/documents/<int:evidence_id>/file` | basic/v4 | api/experience |
+| `/api/experience/materials/documents/{evidence_id}/quote` | GET | experience_runtime.quote_shared_document | `/api/experience/materials/documents/<int:evidence_id>/quote` | basic/v4 | api/experience |
+| `/api/experience/owned-training/execution-approvals` | POST | experience_runtime.confirm_owned_training_execution_approval | `/api/experience/owned-training/execution-approvals` | basic/v4 | api/experience |
+| `/api/experience/owned-training/execution-configuration` | POST | experience_runtime.read_owned_training_execution_configuration | `/api/experience/owned-training/execution-configuration` | basic/v4 | api/experience |
+| `/api/experience/owned-training/phase-tasks` | POST | experience_runtime.prepare_owned_training_phase_task | `/api/experience/owned-training/phase-tasks` | basic/v4 | api/experience |
+| `/api/experience/owned-training/phase-tasks/{task_id}/challenge-decisions` | POST | experience_runtime.issue_owned_training_phase_decision | `/api/experience/owned-training/phase-tasks/<task_id>/challenge-decisions` | basic/v4 | api/experience |
+| `/api/experience/owned-training/phase-tasks/{task_id}/challenges` | POST | experience_runtime.prepare_owned_training_phase_challenge | `/api/experience/owned-training/phase-tasks/<task_id>/challenges` | basic/v4 | api/experience |
+| `/api/experience/owned-training/phase-tasks/{task_id}/execute` | POST | experience_runtime.execute_owned_training_phase_task | `/api/experience/owned-training/phase-tasks/<task_id>/execute` | basic/v4 | api/experience |
+| `/api/experience/owned-training/phase-tasks/{task_id}/interrupt` | POST | experience_runtime.interrupt_owned_training_phase_task | `/api/experience/owned-training/phase-tasks/<task_id>/interrupt` | basic/v4 | api/experience |
+| `/api/experience/owned-training/phase-tasks/{task_id}/receipts/{nonce}` | GET | experience_runtime.read_owned_training_phase_receipt | `/api/experience/owned-training/phase-tasks/<task_id>/receipts/<nonce>` | basic/v4 | api/experience |
+| `/api/experience/owned-training/phase-tasks/{task_id}/resume` | POST | experience_runtime.resume_owned_training_phase_task | `/api/experience/owned-training/phase-tasks/<task_id>/resume` | basic/v4 | api/experience |
+| `/api/experience/owned-training/review-exports` | POST | experience_runtime.export_owned_training_reviews | `/api/experience/owned-training/review-exports` | basic/v4 | api/experience |
+| `/api/experience/owned-training/review-resources` | POST | experience_runtime.prepare_owned_training_review_resource | `/api/experience/owned-training/review-resources` | basic/v4 | api/experience |
+| `/api/experience/owned-training/review-submissions` | POST | experience_runtime.submit_owned_training_review | `/api/experience/owned-training/review-submissions` | basic/v4 | api/experience |
 | `/api/experience/reports/source-brief/generate` | POST | experience_runtime.generate_source_brief_job | `/api/experience/reports/source-brief/generate` | basic/v4 | api/experience |
 | `/api/experience/reports/source-brief/jobs/{job_id}` | GET | experience_runtime.reopen_source_brief_job | `/api/experience/reports/source-brief/jobs/<job_id>` | basic/v4 | api/experience |
 | `/api/experience/reports/source-brief/jobs/{job_id}/reviews` | POST | experience_runtime.submit_source_brief_review | `/api/experience/reports/source-brief/jobs/<job_id>/reviews` | basic/v4 | api/experience |
@@ -321,6 +344,14 @@
 | `/api/experience/reports/source-brief/tasks/{task_id}` | GET | experience_runtime.source_brief_task_status | `/api/experience/reports/source-brief/tasks/<task_id>` | basic/v4 | api/experience |
 | `/api/experience/reports/source-brief/tasks/{task_id}/resume` | POST | experience_runtime.resume_source_brief_task | `/api/experience/reports/source-brief/tasks/<task_id>/resume` | basic/v4 | api/experience |
 | `/api/experience/runtime/identity` | GET | experience_runtime.runtime_identity | `/api/experience/runtime/identity` | basic/v4 | api/experience |
+| `/api/experience/saved-work` | GET | experience_runtime.search_shared_work | `/api/experience/saved-work` | basic/v4 | api/experience |
+| `/api/experience/saved-work` | POST | experience_runtime.save_shared_work | `/api/experience/saved-work` | basic/v4 | api/experience |
+| `/api/experience/saved-work/notifications` | GET | experience_runtime.read_reporting_notifications | `/api/experience/saved-work/notifications` | basic/v4 | api/experience |
+| `/api/experience/saved-work/preferences` | GET | experience_runtime.read_reporting_preferences | `/api/experience/saved-work/preferences` | basic/v4 | api/experience |
+| `/api/experience/saved-work/preferences` | POST | experience_runtime.save_reporting_preferences | `/api/experience/saved-work/preferences` | basic/v4 | api/experience |
+| `/api/experience/saved-work/{artifact_id}` | GET | experience_runtime.read_shared_work | `/api/experience/saved-work/<artifact_id>` | basic/v4 | api/experience |
+| `/api/experience/saved-work/{artifact_id}/export` | GET | experience_runtime.export_shared_work | `/api/experience/saved-work/<artifact_id>/export` | basic/v4 | api/experience |
+| `/api/experience/saved-work/{artifact_id}/revise` | POST | experience_runtime.revise_shared_work | `/api/experience/saved-work/<artifact_id>/revise` | basic/v4 | api/experience |
 | `/api/experience/screen/{screen_id}` | GET | experience_runtime.screen_viewmodel | `/api/experience/screen/<screen_id>` | basic/v4 | api/experience |
 | `/api/experience/shared-skills` | GET | experience_runtime.shared_skills_catalog | `/api/experience/shared-skills` | basic/v4 | api/experience |
 | `/api/experience/shared-skills/shared.content_project/inspect` | POST | experience_runtime.inspect_content_project_media | `/api/experience/shared-skills/shared.content_project/inspect` | basic/v4 | api/experience |
