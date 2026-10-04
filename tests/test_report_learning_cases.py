@@ -42,7 +42,7 @@ def test_missing_case_read_does_not_repair_or_duplicate_the_review(job_db):
 def test_rejected_inference_is_referenced_without_copying_source_or_training(job_db, monkeypatch):
     from lumenis.shared.reporting import business_brief
 
-    monkeypatch.setattr(business_brief.ai_core, "local_structured_chat",
+    monkeypatch.setattr(business_brief, "_request_business_inference",
                         lambda *args, **kwargs: ('{"invalid":true}', "ollama", {"model": "isolated-mock"}))
     with sqlite3.connect(job_db) as con:
         con.row_factory = sqlite3.Row

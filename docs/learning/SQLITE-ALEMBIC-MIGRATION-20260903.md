@@ -11,7 +11,7 @@
 ### 1.1 对既有 SQLite 库引入版本化迁移的正确路径
 - **zero-state / stamp-only baseline**：空迁移仅打版本戳，不重建表。
 - `--autogenerate` 只适用于有 SQLAlchemy model 层的项目；本项目纯 sqlite3 + 裸 SQL，无 model 层，autogenerate 不可用。
-- 存量库 = 先 `alembic stamp head` 标记当前状态，之后**所有新 schema 变更**走迁移文件。
+- 存量库 = 先 `alembic stamp head` 标记当前状态，该历史方法仅说明当时的stamp操作；当前schema变更由 `lumenis/shared/database/migrations.py` 的唯一Owner和现有兼容合同决定，不授权执行历史迁移命令。
 
 ### 1.2 关键坑：`target_metadata.reflect()` 破坏 stamp 写入
 - 实测：无 model 层项目若用 `target_metadata.reflect(bind=connection)`，`alembic stamp head` 打印成功但 `alembic_version` 表为空。

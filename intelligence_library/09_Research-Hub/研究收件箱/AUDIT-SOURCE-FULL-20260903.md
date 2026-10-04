@@ -45,7 +45,7 @@
   - 主舆情：`auto_collect_hours=[8,10,12,14,16,18,20,22,23]` 仅作历史参考，实际由 **ShadowPlanner 门控**（`ZBC_SCHED_GATE_MODE=enforce`，GAP-05 用户签字 2026-09-02）动态决策 → **合规**。
   - 专题：`topic_campaign.py` **独立 daemon 线程** `CAMPAIGN_COLLECT_HOURS=[9,11,13,15,17,19]`（6 点/天），独立配额每日上限 8 次（含手动），不受 ShadowPlanner 门控 → **超红线（6-8 次/天 > 2 次/天）**。
 - 依据：topic_campaign.py L4-6/81-82/644/764；app.py L4492/4506/4539-4549。
-- **处置：已获本人显式授权例外（2026-09-03）** → 专题采集维持 6 点/天 [9,11,13,15,17,19] 独立配额（每日上限 8 次含手动）。授权已固化到 ZBC `00-GOVERNANCE/TWIN_EXECUTION_GATE.md`（Authorized exception 条款）+ `topic_campaign.py` 顶部注释，**GAP 闭合**。未来变更需重新授权。
+- **处置：已获本人显式授权例外（2026-09-03）** → 专题采集维持 6 点/天 [9,11,13,15,17,19] 独立配额（每日上限 8 次含手动）。授权已固化到 ZBC [历史版本 TWIN_EXECUTION_GATE.md](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/be347f03eb9f2bc470a39644df281be3a3d704c9/00-GOVERNANCE/TWIN_EXECUTION_GATE.md)（Authorized exception 条款）+ `topic_campaign.py` 顶部注释，**GAP 闭合**。未来变更需重新授权。
 
 ## 五、其他待确认（非阻塞）
 

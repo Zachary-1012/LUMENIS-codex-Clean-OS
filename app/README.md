@@ -1,8 +1,12 @@
 # LUMENIS App
 
-This is the repository's **single canonical Flutter app target** and the only intended user-facing app implementation for 序境 / LUMENIS. The five Golden Pages have source-backed Flutter slices. CTH-02 is reachable as a nested, read-only CTH registry workflow; the full 44-screen product is not yet accepted or released.
+This is the repository's **single canonical Flutter app target** for Web Workspace,
+Desktop and Mobile. Public Website is separately implemented under `website/`.
+The approved Product Architecture defines the complete outcome scope; historical
+Golden Pages and route counts are compatibility/evidence, not a product limit.
+Current implementation and acceptance state is read from CURRENT and exact source.
 
-## Current implementation status
+## Retained implementation observations — not current acceptance
 
 - **Approved pre-beta boundary:** the LUMENIS product account is deferred until after internal beta and does not block App entry. Core's existing transport authentication remains separate from a product account. Media-platform Cookie/session/browser authorization is separate and remains in the existing SYSTEM collector path.
 - The launch surface reads the existing `GET /api/auth/config` transport configuration, then Product Core runtime identity. It does not call `/v4/auth/login` or load the account-scoped CTH Subject Registry at startup. The five Golden Pages call their existing `GET /api/experience/screen/<screen_id>` owner contracts. A returned Subject or a bound ViewModel does not establish actor-to-Subject authorization by itself.
@@ -84,7 +88,11 @@ Build outputs remain under the canonical checkout's `app/build/` directory.
 
 Follow `../00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md` §§30–36 for app architecture, the current task-specific screen contracts, CTH/BMP/Shared/SYSTEM ownership, desktop/mobile composition, accessibility, motion and originality boundaries, ordered implementation and acceptance. That Constitution is the sole UI/UX and interaction authority. Do not create another visual design specification or copy historical web UI.
 
-The repository-wide execution order and fixed lookup map are `../00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`: the current fifteen ordered acceptance checkpoints. Independent frontend and backend implementation may overlap under the active Task Cards; an implementation batch does not close an unmet acceptance dependency. Apple, ChatGPT and TRAE contribute only the approved Experience principles in the Constitution; they do not add features or replace current functions.
+The repository execution router is `../AGENTS.md`; the fixed lookup map is
+`../00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. C1-C6 retain all R01-R15
+acceptance dependencies and J/U outcomes. They do not impose fifteen serial
+development stages. Current user reference directions and Experience govern
+design; examples cannot remove capabilities or authorize copying a vendor UI.
 
 The historical 44 route IDs preserve compatibility; they are neither a page quota nor a layout template. Compose the experience around the user job and current owner contracts. The product owner accepted this architecture and Experience Constitution §§30–36 on 2026-09-20; App implementation is now proceeding through reviewed screen specifications and source-backed vertical slices. That approval does not make a route, contract row or fixture proof of a working feature, and it does not permit generic screen templates.
 
@@ -95,7 +103,10 @@ Bind each screen/action to its current source owner, API/ViewModel, Permission, 
 - **Shared Capability:** supports CTH and BMP while preserving its source domain and object context.
 - **SYSTEM:** permission-gated product infrastructure, not a third business domain.
 
-Implement and accept the five Golden Pages, then migrate remaining screens by workflow family as required by §§25, 34 and 36. Each screen receives its own information hierarchy and interaction path. Do not remove an existing capability until its behavior is preserved and accepted in its canonical owner.
+Complete the user workflow and real bindings assigned by the current owner,
+preserving all mapped capabilities. Each screen has its own hierarchy and
+interaction path. A historical five-page milestone is not a new prerequisite.
+Do not remove a capability before its behavior is preserved in its current owner.
 
 ## Flutter implementation architecture and delivery standard
 
@@ -117,7 +128,9 @@ This section governs the App code structure and engineering sequence. The Experi
 5. **Acceptance before expansion:** verify source/auth behavior (allowed, denied, missing, stale and error), ViewModel/repository behavior, PC and mobile layouts at representative window widths, keyboard/mouse/touch input, focus/contrast/reduced motion, Evidence traceability, and regression of the preserved capability. Review the actual running app before marking the screen accepted.
 6. **Release gate:** only supported platforms with a real build and runtime acceptance may be listed as supported. Keep failed, skipped and unrun checks distinct in the release evidence.
 
-This is an implementation and acceptance path, not a completed-product claim. Preserve the fifteen ordered acceptance gates while independent frontend and backend batches proceed in parallel. Current task-specific specifications and the Product Owner's latest reference directions control presentation; historical screen counts do not constrain reconstruction.
+This is an implementation and acceptance path, not a completed-product claim.
+Preserve all fifteen mapped acceptance requirements; execution and pause state
+come only from AGENTS. Historical screen counts do not constrain reconstruction.
 
 ## Workspace asset updates
 

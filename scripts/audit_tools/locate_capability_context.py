@@ -54,8 +54,14 @@ FAMILIES = {
     "collector": {
         "concern": "SYSTEM collection",
         "terms": ("collector", "collection", "acquisition", "采集", "来源"),
-        "roots": ("lumenis/system/collector", "experience_runtime.py"),
+        "roots": ("lumenis/system/collector",),
         "rules": ("00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md",),
+    },
+    "product_api": {
+        "concern": "Product Core composition/API",
+        "terms": ("api", "contract", "binding", "scope", "接口", "绑定"),
+        "roots": ("app.py", "lumenis_app_api.py", "experience_runtime.py", "experience_screens.py"),
+        "rules": ("00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md",),
     },
     "browser": {
         "concern": "SYSTEM browser/session",
@@ -77,8 +83,8 @@ FAMILIES = {
     },
     "agents_skills": {
         "concern": "Shared skills/agent execution",
-        "terms": ("agent", "skill", "智能体", "技能"),
-        "roots": ("lumenis/shared/agents/skills", "agent_runtime", "agent_capability"),
+        "terms": ("agent", "skill", "memory", "智能体", "技能", "记忆"),
+        "roots": ("lumenis/shared/agents/skills", "agent_runtime", "agent_capability", "agent_memory/working.py"),
         "rules": (),
     },
     "content_creation": {
@@ -95,8 +101,8 @@ FAMILIES = {
     },
     "evaluation_learning": {
         "concern": "Shared Evaluation/Learning/Reporting",
-        "terms": ("evaluation", "learning", "反馈", "评估", "学习"),
-        "roots": ("lumenis/shared/evaluation", "lumenis/shared/learning"),
+        "terms": ("evaluation", "learning", "memory", "反馈", "评估", "学习", "记忆"),
+        "roots": ("lumenis/shared/evaluation", "lumenis/shared/learning", "agent_memory/base.py"),
         "rules": (),
     },
     "cth_job": {

@@ -350,3 +350,16 @@ data; the latter needs the actual platform-native field/source/window. They are
 not interchangeable, and unknown remains unknown. Greater data volume alone
 does not prove representative global demand. Retain original terms/versions,
 sources/times and controlled updates; do not delete or invent heat values.
+
+
+### Retained TopicCampaign safety parameters
+
+The 2026-09-03 TopicCampaign exception remains source-specific history and
+configuration: hours [9, 11, 13, 15, 17, 19], staggered execution, maximum eight
+runs including manual on its own counter. Retiring TWIN_EXECUTION_GATE does not
+change those code values or authorize unrestricted collection. These values do
+not impose a universal twice-daily limit on the current continuous multi-platform
+program. Current schedules require source identity, approved policy, bounded
+retry/cooldown, observable outcomes and recovery through the existing Scheduler.
+No new module starts collection implicitly; actual risk/authorization failures
+stop only the affected path and preserve evidence for recovery.

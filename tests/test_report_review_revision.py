@@ -39,7 +39,7 @@ def test_revision_uses_saved_feedback_and_preserves_original_through_reopen_resu
         answer["unknowns"] = ["Baseline is unknown; gather initial observations before comparing change."]
         return json.dumps({"changes": [{"section": "unknowns", "reason": "Make the absent baseline explicit."}],
                            "analysis": answer}), "ollama", {"model": "test-local"}
-    monkeypatch.setattr(analysis.ai_core, "local_structured_chat", revised_model)
+    monkeypatch.setattr(analysis, "_request_business_inference", revised_model)
     reference = {"parent_job_id": parent["job_id"], "review_id": review["review_id"]}
     response = api.post(URL + "/start", headers=headers, json={"revision": reference})
     assert response.status_code == 202, response.get_json()
@@ -116,7 +116,7 @@ def test_revision_cannot_claim_an_edit_it_did_not_make(client, monkeypatch, bad)
         else:
             changes[0]["reason"] = " "
         return json.dumps({"analysis": answer, "changes": changes}), "ollama", {"model": "test-local"}
-    monkeypatch.setattr(analysis.ai_core, "local_structured_chat", model)
+    monkeypatch.setattr(analysis, "_request_business_inference", model)
     response = api.post(URL + "/start", headers=headers, json={"revision": {
         "parent_job_id": parent["job_id"], "review_id": review["review_id"]}})
     task = _poll(api, response.get_json()["task"]["task_id"], headers)
@@ -159,7 +159,7 @@ def test_revision_rechecks_permission_before_derivative_evidence(client, monkeyp
         answer["unknowns"] = ["Baseline is not measured."]
         return json.dumps({"analysis": answer, "changes": [
             {"section": "unknowns", "reason": "Clarify absent baseline."}]}), "ollama", {"model": "test-local"}
-    monkeypatch.setattr(analysis.ai_core, "local_structured_chat", revoke_during_model)
+    monkeypatch.setattr(analysis, "_request_business_inference", revoke_during_model)
     response = api.post(URL + "/start", headers=headers, json={
         "revision": {"parent_job_id": parent["job_id"], "review_id": review["review_id"]}})
     assert response.status_code == 202, response.get_json()

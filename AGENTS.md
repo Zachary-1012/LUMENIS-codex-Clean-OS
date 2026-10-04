@@ -13,13 +13,14 @@ execution instructions.
 
 ## Current execution instruction — closure red lines 2026-10-04
 
-Current task 2026-10-04 21:00 Asia/Shanghai: M alone finishes the existing
-direct-repair errors and synchronizes reviewed source/rules with GitHub. Other
-windows are inactive and must not be messaged or resumed by this task. Existing
-product scope and unresolved requirements remain; this is not full product
-acceptance. Existing/free compute is the first choice. The former fixed paid
-RTX5090 route and rental deadline are historical and no longer current routing.
-No paid GPU, recharge or training is started by this repair task.
+Current task: execute the Product Owner-approved 2026-10-04 blueprint and
+49-item audit dispositions. M is the only active executor in this task; do not
+message or resume other windows. C1-C6/F remain responsibility labels and their
+full R/J/U requirements remain assigned, not separate active work queues.
+The sole approved product blueprint is
+`00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`.
+Existing/free compute is preferred; this convergence does not authorize paid GPU,
+new rental, recharge or retired model providers.
 
 1. Every action serves the existing product closure. Deliver real permitted
    input -> useful result -> save/revise/reopen/recover -> Evaluation with
@@ -58,8 +59,10 @@ W6 normally owns product integration and main publication. For this explicitly a
 the exact canonical rule changes, current state and required gates, then a safe
 main push and remote file-byte verification. M prepares these rules and reviews
 the result; W6 being previously paused is no longer a publication dependency.
-Do not bulk-stage the dirty tree. All nondependent collection, source admission,
-research-to-creation, media and F work proceeds alongside training preparation.
+Do not bulk-stage the dirty tree. M may continue independent authorized source
+admission, research-to-creation and media integration in this task. This does not
+resume C1-C6/F or authorize model/GPU execution; their retained work is input to
+the single main implementation.
 
 
 
@@ -280,7 +283,7 @@ results, a necessary decision or urgent risk. W6 remains the sole integrator.
 Existing/free compute takes priority; the historical paid route is retained only as evidence. Training must proceed to actual step/loss,
 checkpoint retrieval/reload, independent held-out and owned business results.
 
-F is active under the Product Owner's explicit 2026-10-04 resume: frontend implementation, scoped reference research and tests proceed through the complete F outcome. Its work remains governed by the sole Experience Constitution and current owner contracts.
+F retains the complete frontend outcome; execution activation is controlled only by the current instruction at the top. Its work remains governed by the sole Experience Constitution and current owner contracts.
 M's standby policy remains effective when no actual review/decision/repair work
 is available; do not repeatedly poll or scan to keep a turn active.
 
@@ -290,51 +293,16 @@ Before changing one capability, run `python scripts/audit_tools/locate_capabilit
 
 The fixed source classification and resume path is `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. Use its owner row for normal work. A full-repository re-audit is permitted only for the structural triggers listed there; a local gap, stale historical note or runner failure is not a trigger.
 
-### Current closure scope and publication priority — 2026-10-03
-
-Keep the approved C1–C6/W1–W6 plus F/M allocation and all mapped R/J/U requirements. Improve an existing capability or correct a conflicting old rule within that authorized scope; do not wait for the Product Owner to rediscover the same gap. Changes to scope, protected identity, source rights, paid resources or consequential effects still require their existing authority.
-
-When current rules conflict, M resolves their canonical owner and W6 prioritizes exact rule/status publication before dependent integration. AGENTS.md is the sole execution router; Experience, Global context and Real Delivery remain the existing named domain contracts. Work receipts, research, task cards and cached skills cannot become competing rules. Preserve protected work, publish the exact accepted canonical changes, then verify local HEAD, origin/main, live main and actual online file bytes.
-
-Organize related source/interface/recovery fixes into one useful outcome Batch. Reuse valid pinned evidence; run affected regression and legitimate blocking gates for the changed state. Do not repeat a scan/test without a changed hypothesis, source or remaining acceptance risk, or request M review per function. W6 hands actual typed contracts and admitted refs to their consumers rather than holding all work for an unrelated global inventory. Report ordinary progress once at a meaningful integration point; M receives complete outcomes, necessary decisions and urgent data/security risks.
-
-Cloud source stays on its approved fixed base. At an explicit safe checkpoint, W6/M deliver the newly published canonical rules with their publication SHA and actual byte/hash receipt, and workers acknowledge the active rule revision. Reading newer canonical rules must not hot-replace protected source, restart work, change account/model or imply source synchronization. A rule or message merely queued is not delivery acknowledgement.
-
-Routine six-window coordination uses the existing native thread mechanism:
-steer the actual active turn, or start an idle turn when the native service
-supports it. Do not silently substitute a queue for delivery. A returned thread
-ID is a dispatch observation, not the recipient's readback acknowledgement.
-When a Cloud window cannot initiate the reverse native connection, M/W6 read or
-wait for that original Cloud thread's complete report and acknowledge the exact
-received bytes and unresolved dependencies there. Do not make Product Owner
-manual relaying, a second daemon or a parallel queue a workflow dependency.
-Record both directions separately: observed local-to-Cloud steering does not
-prove Cloud-to-local connectivity has been restored. Preserve the existing
-thread, account, fixed source base and manually selected model/effort.
-
-
-Collector/Scheduler product operation must not depend on a Codex task, CUA session, work-directory harness or daily developer trigger. The Global contract defines this proof. Current Source-derived discovery/creation and budget requirements belong to the existing Experience, Global and Real Delivery contracts and mapped J/U rows; no second recommendation, budget, learning or collection authority is authorized.
-
-### Current Product Owner execution authorization — 2026-10-04
-
-The Product Owner explicitly resumed C1-C6 and F after the native Goal updates on 2026-10-04. C3 and C5 retain their single
-existing local continuation window. M accepts the exact rule/status handoff;
-W6 holds sole product integration and main-publication responsibility.
-Protected dirty work and every R/J/U acceptance requirement remain intact.
-Historical deadline 2026-10-03 24:00 Asia/Shanghai was missed. Current C2 rental requires the readiness/budget report and the Product Owner payment decision under the six red lines.
-Complete executable training prerequisites before rental, verify the current
-quote, preserve checkpoint/output and stop billing if an unresolved failure
-prevents progress. This does not authorize extra GPUs or an expanded paid tier.
-Other independent collection/entity growth and complete outcome work proceed;
-F remains within its own owner scope and is active. Developer mode remains deferred.
-
 ### Product Owner correction: optimal method, full capability — 2026-10-03
 
-The latest seven corrections are active M work: resolve the deprecated Guardian
-setting, recover all window requirements/research/media, inspect supplied videos
+The retained seven corrections cover the deprecated Guardian setting,
+window requirements/research/media, supplied-video inspection
 frame by frame, study official websites article by article including support,
 guides and release logs, correct the four-surface UI/UX/AIGC rules and synchronize
-the exact rules online/offline. The later explicit C1-C6-and-F resume above now governs. Material coverage and capability requirements are not reduced.
+and exact online/offline rules. Current scope and execution come only from the
+M-only instruction at the top and the approved blueprint. Reuse completed repair
+evidence; a historical correction does not restart an already resolved task.
+Material coverage and capability requirements are not reduced.
 
 For a capability or bug, research relevant current GitHub implementations and
 frontier/real-product cases before selecting its method. Compare task fitness,
@@ -997,7 +965,10 @@ python scripts/audit_tools/verify_experience_anti_template.py --strict
 python scripts/audit_tools/verify_experience_screen_blueprints.py
 ```
 
-Do not reintroduce deleted historical design/handoff/reference material into the current main tree.
+Do not reinstate retired design/handoff documents as execution authorities.
+Preserve original user references and valid research as provenance-bearing
+materials under their existing owner; use their accepted adaptations through the
+current Experience and product contracts.
 
 ## 14. Testing policy
 
@@ -1170,41 +1141,10 @@ The approved experience surfaces are Public Website, Web Workspace, Desktop App 
 
 A launch shell, route, contract, generated Web target or provider registration does not establish an end-to-end product workflow. Operational surfaces must bind real Product Core/API, Canonical Data, Evidence, Permission and Evaluation behavior before they can be described as complete.
 
-### Latest closeout routing — research belongs to outcome owners
-
-The Product Owner directed M to stop an unending central audit, finish the unique
-rules and complete-outcome acceptance contract, publish them online/offline and
-ensure every supplied document/video/research item has an accountable owner.
-F owns the latest user-scoped UI/UX/AIGC reference work and is active; C4 owns editing,
-podcast and audiovisual-method material, using already reviewed frame coverage.
-C1/C2/C3+C5/C6 own their named research/capability materials. The dated
-`00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-CONTRACT.md`
-and its manifest are traceability/handoff evidence under the existing Source
-Owner Index, not a new execution queue or product authority. No item is dropped
-because it is unclassified, old, missing, shared or outside a short summary.
-
-AI training is the first ready execution priority: close the actual local
-material/signing/runner/checkpoint prerequisites before paid GPU time starts,
-then execute the approved model path directly. Do not await all corpus research,
-reselect unchanged hardware/model or substitute a CPU demo for real training.
-The current six-red-line instruction supplies the cost boundary: report nonbilling readiness and budget, then wait for Product Owner recharge/approval; the previously released instance is not a running lease. Other independent capabilities and collection/entity growth continue within their resumed existing owners.
-
-The model allocation and ordinary-speed request are defined once in the
-current six closure red lines above. Preserve global defaults and report actual control
-results; no silent fallback or unverifiable claim that a model executed.
-Research/bug repair uses current relevant GitHub and frontier evidence to choose
-the best complete method, then one coherent outcome implementation and directly
-affected verification. Keep one current outcome manifest, archive superseded
-alternatives without losing unique valid work, and do not pile up unrelated
-candidates/tests/reports. M ensures a found bug reaches repair, not another
-round of user reporting. Current material ownership and acceptance remain
-binding through every handoff, model change and compaction.
-
-
 ### Latest collection and result continuity — 2026-10-04
 
-Keep maximum complete-outcome execution. F is resumed for its complete
-frontend outcome. Experience section 38 owns the current reference scope and
+Keep maximum complete-outcome execution within the current authorized task.
+Experience section 38 owns the frontend reference scope and
 its evidence limits, including the later Website-only 319b input. Retain two new recordings plus
 the earlier five, existing analysis, OpenAI official material and current product
 rules/requirements/architecture. This explicitly supersedes exhaustive further
@@ -1215,7 +1155,7 @@ surfaces and task-justified UI/AIGC balance. All operational surfaces except the
 Public Website avoid unnecessary page-level up/down scrolling; preserve necessary
 long-content/accessibility scrolling and actual content/interaction completeness.
 
-C1 starts/continues the six primary platforms: Instagram, Facebook, WeChat
+C1's retained collection responsibility covers six primary platforms: Instagram, Facebook, WeChat
 Official Accounts, RedNote/XHS, Douyin and X. Existing other platforms remain.
 Use current platform aliases/registry/adapters and approved exact identities and
 scopes. Create provenance-bearing platform/brand/commercial-entity topic terms,
@@ -1287,7 +1227,8 @@ the current LUMENIS Experience and screen owner, existing Astro/Flutter stack,
 user style/Brief/references and the current explicit execution state. It may not create a second design
 authority, replace the product with a generic starter, clone vendor assets or
 force another three-direction/prototype round for an approved actual design.
-F code, scoped reference-video research, testing and design execution are active under the current F owner contract.
+F retains code, scoped reference-video research, testing and design obligations;
+only the current AGENTS execution instruction may resume that window.
 
 GSAP3.15.0 is configured in the separate workstation development toolchain for
 permitted Website/interface motion. It is not a Flutter/media Timeline owner,
@@ -1321,3 +1262,18 @@ owner remains in scope. Traversal failures in an included path are blocking.
 Publishable snapshots and staged paths must exclude local work artifacts and
 private runtime material; run the unchanged substantive gates on the exact
 main baseline plus the accepted source/rule changes in isolation.
+
+
+### One implementation and approved material adoption
+
+Keep one current implementation per capability on main and one existing complete
+Task Card per outcome. Do not create parallel long-lived source candidates or
+repeated research matrices. Exact, temporary verification environments are not
+development owners and never enter the execution navigation. Preserve original
+research/media, model versions, Artifact history, backups and failed evidence.
+Before retiring a duplicate, compare its unique changes, retain any valid
+behavior and record immutable provenance. The approved 49-item disposition
+record is under evidence/round-15; it records actions, not a new authority.
+Research is adopted through an existing capability's real inputs, processing,
+quality/credibility requirements and user outcome. Reading or training alone
+does not replace product integration; unread/missing assets remain explicit.

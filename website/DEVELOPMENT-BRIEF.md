@@ -1,6 +1,22 @@
 # Public Website development brief
 
-Status: implementation foundation for ROUND08, scoped to `website/**`.
+Status: retained Website implementation and research evidence. Current execution
+comes only from `../AGENTS.md`, the approved Product Architecture and Experience
+Constitution. Historical bases, file reservations and design approvals below
+apply only to their dated changes; they do not resume F or freeze the Website.
+
+## Current product requirement
+
+Use Cue as the Website visual/rhythm reference and the 319b video only for this
+surface. Keep original 2D hand-painted/watercolor/print identity, useful creative
+interaction, Chinese/English/Korean access, controlled operation video and real
+configured workspace/help/contact entries. Label fictional demos; never present
+them as actual customer or owned-AI results. Do not use an invented AIGC quota.
+Website may scroll. Operational surfaces adapt suitable principles to their own
+tasks. Preserve pause/skip, reduced-motion, keyboard, failure and return paths.
+The earlier foundation text below cannot prohibit these approved additions.
+
+## Historical foundation and verification
 
 ## Product and surface assumptions
 

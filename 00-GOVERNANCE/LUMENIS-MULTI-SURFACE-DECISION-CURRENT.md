@@ -145,10 +145,10 @@ Historical approval-time baseline (not a live status table):
 
 Approval is not implementation evidence. Since this baseline, `website/` has a committed trilingual foundation; Flutter Web Workspace source, build and same-origin host have local verification, but protected CTH/BMP browser access and commercial entry are not accepted. Jev source remains local-only pending its provider gate. None may be reported as released or operating from this table.
 
-## 7. Fifteen-round placement and gates
+## 7. Historical placement; current coverage is in the Source Owner Index
 
 - ROUND 02: record this decision; reconcile sole authorities, naming, validators and compatibility classification. No Web/Jev implementation.
-- ROUND 07: implement and evaluate Jev, if its Task Card confirms owner/contract/legal/security prerequisites, inside the one AI Gateway.
+- Historical ROUND 07 planned Jev research; that implementation instruction is superseded. Jev remains inactive under current AGENTS policy.
 - ROUND 08: build the Cross-Surface Experience Foundation: Public Website foundation, Flutter Web Workspace shell, Desktop shell, Mobile Companion shell, shared state/accessibility/localization and capability boundary.
 - ROUND 09–14: every workflow specification records a surface matrix: Web primary/available, Desktop enhanced/exclusive, Mobile view/notify/approve/light action, Public Website explanation/demo only.
 - ROUND 15: prove Public Website → trial/login entry → Web Workspace → real context/workflow/Evidence → Desktop advanced execution when applicable → Web result → Mobile notification/approval when applicable → Report/Evaluation/Learning.

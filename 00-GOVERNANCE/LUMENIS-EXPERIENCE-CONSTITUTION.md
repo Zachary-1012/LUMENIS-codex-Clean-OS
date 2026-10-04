@@ -208,7 +208,8 @@ material and current product rules/requirements/architecture. Further exhaustive
 analysis of other historical videos is no longer a frontend prerequisite. Retain
 their originals and valid analysis as archives; the historical12 editing exercises
 remain a distinct C4 corpus, not the seven frontend references. F and cooperating
-owners now work under the explicit resume. The later Website-only 319b input
+owners retain their responsibilities; execution/pause state comes only from
+AGENTS.md. The later Website-only 319b input
 is covered by section 38. Record actual file/hash, frame count/PTS, visual transition, trigger,
 state, task intent, four-surface adaptation and implementation/acceptance mapping.
 Exact duplicate frames may share a read with a complete frame map; sparse

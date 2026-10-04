@@ -45,7 +45,7 @@ def _mock_model(monkeypatch, transform=lambda value: value):
         if "revision" in json.loads(user):
             result = {"changes": [{"section": "unknowns", "reason": "Address the saved review."}], "analysis": result}
         return json.dumps(result), "ollama", {"model": "test-local"}
-    monkeypatch.setattr(analysis.ai_core, "local_structured_chat", model)
+    monkeypatch.setattr(analysis, "_request_business_inference", model)
     return calls
 
 
@@ -170,7 +170,7 @@ def test_unavailable_provider_is_reopenable_without_fake_analysis_or_retry(clien
     def timeout_model(*args, **kwargs):
         calls.append(kwargs)
         return None, provider, {"status": provider}
-    monkeypatch.setattr(analysis.ai_core, "local_structured_chat", timeout_model)
+    monkeypatch.setattr(analysis, "_request_business_inference", timeout_model)
     response = api.post(URL + "/generate", headers=GLOBAL, json={"business_question": "Which action is supported?"})
     assert response.status_code == 200
     job = response.get_json()["result"]
@@ -197,7 +197,7 @@ def test_model_error_preserves_source_report_and_does_not_claim_analysis(client,
     api, _, path, _, _ = client
     def failed(*args, **kwargs):
         raise TimeoutError("model unavailable")
-    monkeypatch.setattr(analysis.ai_core, "local_structured_chat", failed)
+    monkeypatch.setattr(analysis, "_request_business_inference", failed)
     job = api.post(URL + "/generate", headers=GLOBAL, json={"business_question": "What should the team do?"}).get_json()["result"]
     assert job["business_analysis"]["state"] == "error"
     assert api.get(URL + "/jobs/" + job["job_id"], headers=GLOBAL).get_json()["result"] == job

@@ -59,7 +59,42 @@ def test_subject_registry_requires_bilingual_names(tmp_path, monkeypatch):
     from subject_registry import SubjectValidationError, add_subject
 
     with pytest.raises(SubjectValidationError, match="name_en 与 name_zh"):
-        add_subject({"domain_id": "CTH", "subject_type": "brand", "name_en": "Only English"})
+        add_subject({"domain_id": "CTH", "subject_type": "company", "name_en": "Only English"})
+
+
+@pytest.mark.parametrize(
+    ("domain_id", "subject_type"),
+    [
+        ("CTH", "brand"),
+        ("CTH", "品牌主体"),
+        ("BMP", "company"),
+        ("ZBMP", "商业主体"),
+    ],
+)
+def test_subject_registry_rejects_cross_domain_subject_types_before_database_open(
+    tmp_path, monkeypatch, domain_id, subject_type
+):
+    import subject_registry
+
+    db_path = tmp_path / "cross-pair-must-not-open.sqlite3"
+    monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
+
+    def unexpected_database_open():
+        raise AssertionError("invalid domain/type pair reached database open")
+
+    monkeypatch.setattr(subject_registry, "_db_ready", unexpected_database_open)
+    with pytest.raises(
+        subject_registry.SubjectValidationError,
+        match="domain_id 与 subject_type",
+    ):
+        subject_registry.add_subject({
+            "domain_id": domain_id,
+            "subject_type": subject_type,
+            "name_en": "Invalid Cross Pair",
+            "name_zh": "错误领域类型组合",
+        })
+
+    assert not db_path.exists()
 
 
 @pytest.fixture

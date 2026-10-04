@@ -1274,3 +1274,14 @@ recovery in this Overlay's acceptance card. Distinguish frame extraction from
 actual reading; F's corrected 319b evidence leaves unread intervals open until
 its new receipt. Existing test/build/mount reports retain their exact versions
 and cannot prove the newer four-surface implementation or user acceptance.
+
+
+### Retained release and recovery obligations
+
+The retired RELEASE_AND_AUTORUN_GATE adds no execution authority. Its still-valid
+obligations remain here: trusted configuration, deployment routing and target
+runtime health, explicit collection enablement, last-success evidence, bounded
+recovery/cooldown, permission before external effects, and a stoppable release
+with rollback that preserves Evidence. A green repository gate is necessary
+but not proof of target-runtime operation. No historical fixed schedule or
+external document grants collection or deployment permission.

@@ -1,10 +1,13 @@
 # 序境 / LUMENIS — Canonical Registry
 
-> Status: Active · Production Truth Owner
+> Status: Current naming and compatibility reference; subordinate to Product Architecture.
 
 ## Purpose
 
-This registry is the single structural reference for mapping production assets without changing runtime behavior.
+This registry preserves formal names and compatibility identifiers. AGENTS.md is
+the sole execution router; Product Architecture owns the blueprint; Source Owner
+Index owns source lookup. This document neither owns Production Truth nor defines
+an additional execution schedule.
 
 ## Product identity
 
@@ -125,7 +128,12 @@ CTH and BMP may share infrastructure and contracts, but their domain semantics r
 
 ## Runtime rules
 
-Collection is policy-controlled. Automatic collection has two daily windows (00:00 and 12:00) and may be enabled/disabled; the entry remains hidden from ordinary navigation. Other collection is manual and capped at 30 minutes per run. Authorized accounts and official APIs may enter through an explicit adapter/policy boundary.
+Collection is controlled by the current Global data contract and the existing
+SYSTEM Collector/Scheduler. Use task-semantic terms, exact entity/time scope,
+platform rotation, bounded pacing and durable refresh. The historical twice-daily
+schedule is not a current product-wide limit. Existing per-job safety controls
+remain in their owner; this naming register grants no automatic collection or
+platform authorization.
 
 Every collection task must pass Preflight → Policy → Identity → Session → Risk → Validate → Normalize → Filter → Evidence.
 
@@ -135,13 +143,16 @@ No account rotation, cookie rotation, IP rotation, frequency escalation, or othe
 
 ## UI rules
 
-Navigation follows the hierarchy above. No module may invent an independent navigation tree, token system, icon registry, or interaction grammar.
-
-Design baseline: restrained density, small line icons, information-first layout, drill-down from visualization to data/evidence, no oversized logo/icon/typography, and CJK/English layouts that preserve hierarchy.
+The sole Experience Constitution owns four-surface composition, navigation,
+hand-painted identity, functional glyphs, motion, language and accessibility.
+The naming hierarchy above is not a fixed layout or a competing design system.
 
 ## Data contract
 
-`Source → Collection → Raw → Normalize → Analyze → Evidence → Insight → Report`
+`Source → Evidence → Canonical Data/Content → Research/Analysis → Insight → Report`
+
+Preserve the original material and source identity before derived analysis.
+Capture/normalization steps remain within the existing Collector/Importer owners.
 
 Any displayed metric must have a traceable data origin. Any consequential AI result must retain sufficient model/prompt/input/output/confidence/final-result/human-correction metadata according to sensitivity policy.
 

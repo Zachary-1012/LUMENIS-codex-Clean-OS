@@ -2,6 +2,7 @@
 import ast
 import hashlib
 import json
+import re
 from pathlib import Path
 import sqlite3
 import uuid
@@ -130,7 +131,7 @@ def test_canonical_preview_denial_is_enforced(route):
 def test_app_write_router_maps_only_exact_preparation_path():
     module = ast.parse(Path("app.py").read_text(encoding="utf-8-sig"))
     function = next(node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == "_pg_resolve_operation_type")
-    namespace = {"OperationType": p.OperationType}
+    namespace = {"OperationType": p.OperationType, "re": re}
     exec(compile(ast.Module(body=[function], type_ignores=[]), "app.py", "exec"), namespace)
     resolve = namespace["_pg_resolve_operation_type"]
     assert resolve(URL, "POST") is p.OperationType.OWNED_TRAINING_REVIEW_PREVIEW

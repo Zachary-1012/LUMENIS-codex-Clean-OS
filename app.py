@@ -548,7 +548,7 @@ try:
 except Exception as _lm_e:
     print(f"[lumenis] App API register failed: {_lm_e}")
 
-# 序境 Experience ViewModel/API：App-only transport；不再托管浏览器原型。
+# 序境共享 Experience ViewModel/API：服务 Flutter Web/Desktop/Mobile，不恢复旧浏览器原型。
 try:
     from experience_runtime import register_experience_runtime
     register_experience_runtime(app)

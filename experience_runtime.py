@@ -1,4 +1,4 @@
-"""序境 / LUMENIS — App-only Experience ViewModel/API runtime.
+"""序境 / LUMENIS — shared Flutter Experience ViewModel/API runtime.
 
 本模块是 Flutter App 使用的 JSON transport 与只读 ViewModel 聚合层。
 它不托管 Jinja、static、浏览器原型或第二套网页 Experience；所有真实数据、

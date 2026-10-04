@@ -2,7 +2,10 @@
 
 > 关联任务：T-P1-3 Alembic 可回滚 DB 迁移（BACKLOG 落地）
 > 关联文件：`alembic.ini`、`alembic/env.py`、`alembic/versions/`、`tests/test_alembic_migration.py`
-> 状态：代码/测试闭环已验证 ✅｜生产接入流程（本文档）已补齐 ✅
+> 状态：历史 Alembic 研究和验证记录；不是当前生产执行指令。
+> 当前迁移入口由 `lumenis/shared/database/migrations.py` 及 Source Owner Index
+> 确定。以下安装版本、表数、通过记录和 stamp/downgrade 命令仅对应原实验；
+> 不代表当前生产库状态，也不授权直接运行。复用前核当前迁移链、备份与回滚。
 
 ---
 
