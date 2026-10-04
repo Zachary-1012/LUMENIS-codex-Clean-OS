@@ -91,6 +91,68 @@ def test_material_citation_version_search_reopen_and_actual_export(route_workspa
     assert exported.headers["X-Source-Artifact-ID"] == ref and len(exported.data) > 50
 
 
+def test_podcast_plan_contract_reaches_normal_saved_work_route(route_workspace):
+    from dataclasses import replace
+    from podcast.intelligence.episode_runtime import PodcastPlan, PodcastSegment
+
+    ws = route_workspace
+    material, _ = approved_upload(ws, filename="podcast-contract-source.txt")
+    quote = ws["api"].get(
+        MATERIALS + "/" + str(material["evidence_id"]) + "/quote",
+        headers=GLOBAL,
+        query_string={"start": 0, "end": len("Owned material 中文.")},
+    )
+    assert quote.status_code == 200, quote.get_json()
+    citation = quote.get_json()["result"]["citation"]
+    first_plan = PodcastPlan(
+        title="Route-backed episode",
+        description="A source-bound editable episode plan.",
+        language="en",
+        segments=(PodcastSegment(
+            segment_id="route-segment", media_asset_id="MEDIA-route", source_in=0, source_out=3,
+            original_text="Owned material 中文.", corrected_text="Reviewed route narration",
+            speaker="Host", chapter_title="Opening", evidence_refs=(f"evidence:{material['evidence_id']}",),
+        ),),
+    )
+    contract = {"id": "lumenis.podcast-plan", "version": "1", "required_payload_paths": ["podcast_plan"]}
+    body = {
+        "title": first_plan.title,
+        "markdown": first_plan.script_text(),
+        "kind": "podcast_episode",
+        "payload": {"podcast_plan": first_plan.to_dict()},
+        "citations": [citation],
+        "request_id": "route-podcast-plan-001",
+        "contract": contract,
+    }
+    first = ws["api"].post(WORKS, headers=GLOBAL, json=body)
+    assert first.status_code == 200, first.get_json()
+    first = first.get_json()["result"]
+    assert first["document"]["payload"]["podcast_plan"] == first_plan.to_dict()
+
+    second_plan = replace(first_plan, revision=2, segments=(replace(
+        first_plan.segments[0], corrected_text="Reviewed route revision",
+    ),))
+    second = ws["api"].post(
+        WORKS,
+        headers=GLOBAL,
+        json={
+            **body,
+            "markdown": second_plan.script_text(),
+            "payload": {"podcast_plan": second_plan.to_dict()},
+            "request_id": "route-podcast-plan-002",
+            "work_id": first["document"]["work_id"],
+            "previous_artifact_id": first["artifact"]["artifact_id"],
+            "expected_draft_digest": first["document"]["draft_digest"],
+        },
+    )
+    assert second.status_code == 200, second.get_json()
+    second = second.get_json()["result"]
+    assert second["document"]["version"] == 2
+    original = ws["api"].get(WORKS + "/" + first["artifact"]["artifact_id"], headers=GLOBAL)
+    assert original.status_code == 200
+    assert original.get_json()["result"]["document"]["payload"]["podcast_plan"] == first_plan.to_dict()
+
+
 def test_unapproved_upload_and_client_identity_do_not_commit(route_workspace):
     ws = route_workspace
     before = ws["repo"].query_one("SELECT COUNT(*) FROM lumenis_shared_artifacts")[0]

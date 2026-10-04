@@ -2183,7 +2183,7 @@ def save_shared_work():
         from lumenis_app_api import _internal_pitch_body
         body = _internal_pitch_body()
         required = {"title", "markdown", "kind", "payload", "citations", "request_id"}
-        allowed = required | {"work_id", "previous_artifact_id", "expected_draft_digest"}
+        allowed = required | {"work_id", "previous_artifact_id", "expected_draft_digest", "contract"}
         if not required.issubset(body) or set(body) - allowed:
             raise ValueError("WORK_REQUEST_INVALID")
         actor, scope = _shared_work_actor_scope("write")
