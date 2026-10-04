@@ -1207,7 +1207,7 @@ window to continue its whole accepted delivery contract through actual results,
 not serial minimum function slices. Do not insert per-function M approvals,
 unchanged handoff checks or progress-only reports into that path. Existing
 owners coordinate dependencies directly; preserved valid evidence and required
-affected recovery/security/E2E gates still apply. F remains paused. C2's current
+affected recovery/security/E2E gates still apply. F is active under the 2026-10-04 Product Owner resume. C2's current
 resource is the single approved RTX5090; the RTX4090 alternative is superseded.
 
 
@@ -1260,7 +1260,17 @@ loss; consistent training and Gateway recipes/budgets; true research→creation
 source transfer; semantic queries in actual capture/refresh/recovery; same-version
 integration/environment reproduction; and four-surface operation after F resume.
 Each existing owner continuously closes its whole outcome, not safety refusal
-only or repeated per-function reports. F remains paused; reference videos are
-not analyzed before explicit resume. Original six-window/R/J/U/special exits,
+only or repeated per-function reports. F is active after the Product Owner's 2026-10-04 resume; its scoped reference inputs may now be analyzed under the Experience Constitution. Original six-window/R/J/U/special exits,
 global data construction, real outcome/Evaluation and final human repeat gate
 remain, with no shrinking of useful normal-path standards.
+
+
+### Frontend result acceptance under the resumed allocation
+
+Consume the single consolidated mapping in Experience section 38 through F1–F5
+and the existing owners. Each promised surface must prove the real task, input,
+per-purpose authorization, source/version, editable saved result, return and
+recovery in this Overlay's acceptance card. Distinguish frame extraction from
+actual reading; F's corrected 319b evidence leaves unread intervals open until
+its new receipt. Existing test/build/mount reports retain their exact versions
+and cannot prove the newer four-surface implementation or user acceptance.

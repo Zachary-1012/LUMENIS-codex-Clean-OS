@@ -192,17 +192,11 @@ def test_production_modules_do_not_bypass_database_repository():
         "lumenis/shared/database/connection.py",
         "lumenis/shared/database/migrations.py",
     }
-    excluded_roots = {
-        "tests", "scripts", "audit", "docs", "99-ARCHIVE",
-        "OSAI测试证据", "intelligence_library", "build", "vendor",
-        ".venv", "venv",
-    }
+    from scripts.audit_tools.verify_database_authority import production_python_files
     violations = []
-    for path in REPO.rglob("*.py"):
+    for path in production_python_files(REPO):
         rel = path.relative_to(REPO).as_posix()
         if rel in allowed:
-            continue
-        if rel.split("/", 1)[0] in excluded_roots:
             continue
         source = path.read_text(encoding="utf-8", errors="ignore")
         if "sqlite3.connect(" in source:

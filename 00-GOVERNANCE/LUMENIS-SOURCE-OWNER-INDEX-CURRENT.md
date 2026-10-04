@@ -353,7 +353,7 @@ The latest product evaluation is accepted as a sharper **user-work acceptance te
 
 ## 9. Current full-repository audit coverage — 2026-10-03
 
-The Product Owner requested this capability audit during the earlier product pause; C1-C6 are now explicitly resumed and F remains paused under AGENTS. The [current dated audit](evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md) covers all tracked roots, current source/caller slices, formal DB/runtime snapshots, 54 binding rows, R01-R15/J1-J8/U01-U25 and the original six urgent exits. The 44-screen capability obligations remain; page counts do not impose a generic layout. Historical tables above are preserved as provenance and cannot overrule current source or this dated audit. No product capability is accepted merely by inclusion in the inventory.
+The Product Owner requested this capability audit during the earlier product pause; C1-C6/F/M are resumed under the latest six closure red lines in AGENTS. The [current dated audit](evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md) covers all tracked roots, current source/caller slices, formal DB/runtime snapshots, 54 binding rows, R01-R15/J1-J8/U01-U25 and the original six urgent exits. The 44-screen capability obligations remain; page counts do not impose a generic layout. Historical tables above are preserved as provenance and cannot overrule current source or this dated audit. No product capability is accepted merely by inclusion in the inventory.
 
 ## 10. User requirement and research recovery — 2026-10-03 correction
 
@@ -374,7 +374,7 @@ and official product/support/release material remain traceable to actual changes
 M corrects narrowed rules and carries detected bugs through the existing owner
 to a verified repair; an audit finding alone is not resolution. Execution state
 and current paid-resource authorization come only from the latest user instruction
-recorded in AGENTS: C1-C6 resumed, F paused, C2 original single-GPU renewal approved.
+recorded in AGENTS: all existing windows resumed; C2 reports nonbilling readiness and budget before Product Owner recharge.
 
 ## 11. Active material accountability and missing-entry requirements
 
@@ -398,7 +398,7 @@ Actual AI training is P0 ready execution under C2/C6, retaining all other C scop
 scope and continuously closes it under AGENTS, rather than stopping at a minimum
 function/file slice or repeating unchanged handoff checks. Owner boundaries do
 not shrink outcomes. C2 remains single RTX5090; the interim 4090 alternative is
-superseded. F remains paused; M handles actual decisions/acceptance and otherwise
+superseded. F and C1-C6 are active; M handles actual decisions/acceptance and otherwise
 stands by. Native objectives and their preserved states are in the current
 complete-outcome execution receipt, without replacing this owner index.
 
@@ -415,7 +415,7 @@ table are hypotheses to check, not a live completion declaration.
 | Task + Word + SavedWork | existing Shared Content/Artifact/Task composition, internal_pitch.py, current Core binding; C4+C3+C5+C6 | Actual task/DOCX/saved version connects; repeat is idempotent, cancellation cannot commit, revision keeps parent, independent reopen/recovery preserves bytes and source versions. |
 | Research inputs + multiple creation formats | existing Importer/Research/SourceBrief/domain workflow + Shared Content/Artifact; C3+C5+C4+C2+C6 | One real Brief/evidence/context enters useful text/video/podcast alternatives; changed constraints continue without repeated input, false AI/source use or lost versions. |
 | Training + permission + remote process + Artifact | SYSTEM AI Gateway/owned training, existing Permission/effects/runtime and Artifact; C2+C6 | Actual remote load/step/loss, physical checkpoint bytes, reload, cancellation/disconnect recovery, independent held-out and normal owned inference; controlled promotion/rollback. |
-| Edit + replace + render + save | Shared Timeline/content_creation/rendering + podcast + Artifact; C4+C6; F after resume | Local edits/replacements do not corrupt the full work; render/save remain consistent and final editable projects reopen with versions and meaningful recovery. |
+| Edit + replace + render + save | Shared Timeline/content_creation/rendering + podcast + Artifact; C4+C6; F active | Local edits/replacements do not corrupt the full work; render/save remain consistent and final editable projects reopen with versions and meaningful recovery. |
 | Source correction + judgment + result versions | Shared Evidence/Trace/Research/Artifact/SavedWork/Evaluation, domain consumers; C1+C3+C5+C4+C6 | Locate every linked affected conclusion/artifact, explicitly adopt correction, revise affected parts, preserve unaffected content and old results/reasons/rollback; no rewritten Evidence. |
 
 | Current priority | Existing complete owner package | Actual acceptance |
@@ -425,7 +425,7 @@ table are hypotheses to check, not a live completion declaration.
 | Research→creation source transfer | C3+C5+C4+C6 | Same real nonempty Brief/source refs inherit, change constraints, save/reopen/export through current use permissions; an internal no-source craft is not AI research completion. |
 | Purpose query→actual collection | C1+C5+C6 | Six major-platform actual task queries, precise scope/relevance, formal Evidence/Canonical, refresh and recovery. |
 | Same-version integration/reproduction | C6+related owners | Main, overlay, build, loaded process/model/recipe, DB and actual task outputs/evidence align; reproduced environment and recovery. |
-| Real operation after frontend resume | F+C4+C6 | Actual four-surface AI submit, horizontal timelines, source/editing/result/save/reopen only after user explicitly resumes F. |
+| Real operation with frontend active | F+C4+C6 | Actual four-surface AI submit, horizontal timelines, source/editing/result/save/reopen under the explicit 2026-10-04 resume and current Experience contract. |
 
 Full source/API callable bindings are resolved within these existing owner roots
 and current contracts; a row above is not proof that a missing binding exists.
@@ -436,3 +436,18 @@ through Real Delivery, including semantic and same-budget peer comparisons.
 
 
 User-reviewed100-term foundation input: C1 owns topic/query/entity binding; C5 existing Source/Importer contracts and C6 formal storage/deployment coordinate. Global§10 retains immutable originals, additive effective versions, all original evidence/null/time fields and runtime admission;100 terms across4 named subjects is not100 subjects, a verified hotlist or global/platform coverage. Existing permission and model-training use remain distinct.
+
+
+## Complete outcome routing after the six closure red lines
+
+Existing source-owner rows above remain the precise path/contract authority. These complete outcomes retain all prior mapped requirements. Research must change a named existing capability, its quality/credibility criteria or its demonstrated outcome; a matrix alone is insufficient.
+
+| Window | Direct outcome and current dependency |
+| --- | --- |
+| M | 完成唯一规则线上线下同步、十四类资料到已有能力与验收的准确适配、六窗口职责把关和必要堵点裁决。审核完整成果、材料不丢及全部R/J/U覆盖；由W6发布确切规则/源/状态并核远端。无可行动事项按用户要求暂停主控，不空转或重复状态报告。 |
+| C1 | 完成SYSTEM Collector/Browser/registry及Source→Evidence→Canonical真实链：六平台逐帖正文/派生摘要、作者/时间、原生指标、图像视频线索及缺件；每平台至少一版纯字符示例供F，不复刻平台UI。将现单帖manifest的null refs/UNASSIGNED经真实actor/scope/use/签名/同事务准入，不虚构身份、清零或卡片冒充正文。新增品牌商业主体/既有14国家分类/场内品牌关系与复核并行；动态词条与目的查询绑定常驻产品Scheduler，轮换/幂等/增量/断点/重启自主运行，不依赖Codex/CUA每日驱动。C2不得阻塞独立数据准入。 |
+| C2 | 完成自有AI/Agent/Skills/Memory/多模态/文件分析/Evaluation/Learning及OSAI已有适配。优先消除非计费训练准备缺口并交具体可充值方案；复用11权重校验、批准12样本8训练4独立评价、Core配置200回执但核当前版本及完整剩余阶段，不将配置200称训练ready。固定5090，优化模型传输和恢复，不再换卡或重复收集。获准租用后首个实际optimizer step/loss、checkpoint物理取回/重载/恢复、heldout与真实CTH/BMP/创作owned inference及晋升回滚。未运行诚实保留，管线12样本不是质量合格。 |
+| C3+C5 | 本地同时闭合完整CTH/BMP与Importer/Research/Reporting/Artifact/引用/通知/偏好；广州太古汇、深圳罗湖万象城及Nike/LeLabo代表性任务，监测消费者/竞品/运营/创作者/活动/决策Action→Outcome→Evaluation，真实结果不能虚构因果/销售/客流。接现Source/use/actor/scope/Artifact与C2 typed owned service；沿已有revision v1→v2→丢ACK重开→引用/导出→rollback v3完成正式Core链及跨成果影响定位。十四类资料继续原始阅读与产品吸收：传播/新闻/网络、广告法、SNU、Baseten、补充文档/采集OSS/AI产品/多模态视听/官方站点支持说明日志；分别给C1/C2/C4/C6/F可执行现入口、质量条件与验收，不能停于矩阵或等待GPU/全目录。所有未读、缺件与权利边界保留。 |
+| C4 | 三项独立完整结果：客户可用原创提案、可编辑新视频、可用播客。真Brief/源引用继承→计划/制作→编辑/替换/实际渲染或混音→保存/导出可编辑工程→fresh重开/撤销/取消/恢复→Evaluation。现有Timeline/Artifact/media owner；同字节视频复用不冒充新画面render，播客须实际试听/语义/音量/中英韩与音乐情绪质量证据。与F接视频及播客横向滚动/seek/playhead/zoom，与W6接正式Source/Task/Permission/Artifact；保留12重剪练习、V2课程/历史材料及缺页未听事实。 |
+| C6 | 优先收敛canonical规则/状态并安全提交push、回读远端；审查exact staged paths，不bulk-stage未知dirty，不声称本地候选已在GitHub。接现已合17path C3/C5、C1来源准入、C4媒体Artifact和F四端API，与C2闭合Core实际endpoint/远端进程与checkpoint取回。复用345受影响用例及其精确pins，变更才补必要验证；治理门因work重复machine-contract/遍历中断要查根因按既有扫描边界修复，不吞错/降级gate。Core8201/FFmpeg/FFprobe/supervisor、DB安全与事务、版本加载、同SHA hosted gates/打包/独立运行/恢复回滚全部保留。独立准入和规则发布不等待GPU。 |
+| F | 独立完整四表面Public Website/Web Workspace/Desktop/Mobile创意UI/UX/AIGC及真实API绑定。消费最新前端报告§13与§12及现Experience：Cue作为官网主视觉/节奏参考，其他三端按现Experience适配优化且不直接缩放；彩色手绘对象identity原则适用于四端；319b仅官网，d16fc创意叙事与7ac450进入授权状态机不可混；五既有视频及既有分析、OpenAI中文官方全导航支持说明日志、Manus2.0辅助保留。线性glyph/原创彩绘对象icon/来源icon三层，2D水彩版画纸感、丰富不滥用色彩、人物按Brief。官网文字/交互/可控真实演示，其他端非必要不纵滚；AI artifact-first、GLOBAL/ALL、不新增账号墙。既有F1-F5完整计划及44屏/R/J/U保留：入口/重进、视觉primitives、AI01/阅读、SH01视频与播客、官网操作叙事；共享playhead/轨道seek实测、Windows WAV和其他原生播放器缺口、源/权限/Artifact/返回/恢复四端验收，不把49 tests或挂载HTTP等同live。材料研究直接用于这些已授权能力，不增产品。 |

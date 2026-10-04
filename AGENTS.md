@@ -11,6 +11,52 @@ execution instructions.
 
 ## 1. Authority
 
+## Current execution instruction — closure red lines 2026-10-04
+
+All existing C1-C6 responsibilities, the local C3+C5 continuation, F and M are
+explicitly resumed by the Product Owner. This replaces the previous M/F-only
+pause; dated pause receipts remain historical evidence. C1-C6/F retain all
+R01-R15/J1-J8/U and special exits within the existing product scope.
+
+1. Every action serves the existing product closure. Deliver real permitted
+   input -> useful result -> save/revise/reopen/recover -> Evaluation with
+   consistent Source/Evidence, model/recipe, runtime and Artifact versions.
+2. Execute complete outcomes with the strongest feasible existing-owner method.
+   Reuse valid pinned evidence. Do not produce meaningless candidates, unchanged
+   tests, repeated audits or per-function handoffs. Necessary affected safety,
+   recovery and acceptance checks remain required. On a new failure, identify
+   the concrete source/caller and consult current official/GitHub and relevant
+   web evidence before further trials; repair and continue independent work.
+3. Before editing, each window reads its actual assigned materials and source
+   owner/callers/contracts, records the complete result and the receiving owner
+   in its existing Task Card, and uses that card continuously. A coverage table
+   or unreviewed summary does not satisfy the material review. No repeated ACK
+   or new report is required when the existing card already contains this.
+4. Close the agreed capabilities without adding products, owners, frameworks or
+   speculative features. C3+C5 research serves capability improvement, data
+   credibility and separately approved training/evaluation; product improvement
+   does not wait for GPU. Keep unread/missing material and original rights honest.
+5. C2 accelerates the approved single RTX5090 path by completing all nonbilling
+   preparation, then reports the concrete remaining stages, budget and stop
+   conditions to M/Product Owner. Recharge is performed by the Product Owner
+   after this report. Do not rent, recharge or increase the cap autonomously.
+   New-instance SSH/CUDA/load cannot be claimed before allocation: label these
+   paid-stage checks separately and stop/release promptly on an unresolved fault.
+6. M and F retain GPT-6 Astra/ultra; C1/C2/C3+C5/C4/C6 use GPT-6.1 Sol/max.
+   1.5x is off; ordinary speed is requested. Settings/readback and executed
+   backend identity are distinct. Do not change global defaults or silently
+   lower the selected model. M handles complete results, necessary decisions
+   and urgent risks; when no actionable work remains, M pauses its own Goal.
+
+W6 is the sole product integrator and main publisher. Its next delivery includes
+the exact canonical rule changes, current state and required gates, then a safe
+main push and remote file-byte verification. M prepares these rules and reviews
+the result; W6 being previously paused is no longer a publication dependency.
+Do not bulk-stage the dirty tree. All nondependent collection, source admission,
+research-to-creation, media and F work proceeds alongside training preparation.
+
+
+
 Current explicit Product Owner requirements define the required outcome and
 scope. Source/runtime truth describes what exists and what is proven; missing
 implementation cannot cancel an unmet user requirement. Preserve unretracted
@@ -233,8 +279,7 @@ binding and real GPU optimization as one continuous outcome Batch. The missed
 new deadline or evidence of training. Training must proceed to actual step/loss,
 checkpoint retrieval/reload, independent held-out and owned business results.
 
-F remains explicitly paused: no frontend implementation, reference research or
-tests are resumed. Its complete-outcome wording is for a future explicit resume.
+F is active under the Product Owner's explicit 2026-10-04 resume: frontend implementation, scoped reference research and tests proceed through the complete F outcome. Its work remains governed by the sole Experience Constitution and current owner contracts.
 M's standby policy remains effective when no actual review/decision/repair work
 is available; do not repeatedly poll or scan to keep a turn active.
 
@@ -269,20 +314,18 @@ thread, account, fixed source base and manually selected model/effort.
 
 Collector/Scheduler product operation must not depend on a Codex task, CUA session, work-directory harness or daily developer trigger. The Global contract defines this proof. Current Source-derived discovery/creation and budget requirements belong to the existing Experience, Global and Real Delivery contracts and mapped J/U rows; no second recommendation, budget, learning or collection authority is authorized.
 
-### Current Product Owner execution authorization — 2026-10-03 late update
+### Current Product Owner execution authorization — 2026-10-04
 
-The Product Owner explicitly resumed C1-C6 after native Goal updates; F remains
-paused under the immediately following instruction. C3 and C5 retain their single
-existing local continuation window. M publishes the exact rule/status handoff,
-then W6 resumes its sole product integration and main-publication responsibility.
+The Product Owner explicitly resumed C1-C6 and F after the native Goal updates on 2026-10-04. C3 and C5 retain their single
+existing local continuation window. M accepts the exact rule/status handoff;
+W6 holds sole product integration and main-publication responsibility.
 Protected dirty work and every R/J/U acceptance requirement remain intact.
-C2 is authorized to renew the previously approved single Matpool RTX5090 hourly
-resource and start actual GPU training before 2026-10-03 24:00 Asia/Shanghai.
+Historical deadline 2026-10-03 24:00 Asia/Shanghai was missed. Current C2 rental requires the readiness/budget report and the Product Owner payment decision under the six red lines.
 Complete executable training prerequisites before rental, verify the current
 quote, preserve checkpoint/output and stop billing if an unresolved failure
 prevents progress. This does not authorize extra GPUs or an expanded paid tier.
 Other independent collection/entity growth and complete outcome work proceed;
-F's pause blocks its own work only. Developer mode remains deferred.
+F remains within its own owner scope and is active. Developer mode remains deferred.
 
 ### Product Owner correction: optimal method, full capability — 2026-10-03
 
@@ -290,8 +333,7 @@ The latest seven corrections are active M work: resolve the deprecated Guardian
 setting, recover all window requirements/research/media, inspect supplied videos
 frame by frame, study official websites article by article including support,
 guides and release logs, correct the four-surface UI/UX/AIGC rules and synchronize
-the exact rules online/offline. The later explicit C1-C6 resume above now governs;
-F remains paused. Material coverage and capability requirements are not reduced.
+the exact rules online/offline. The later explicit C1-C6-and-F resume above now governs. Material coverage and capability requirements are not reduced.
 
 For a capability or bug, research relevant current GitHub implementations and
 frontier/real-product cases before selecting its method. Compare task fitness,
@@ -1132,7 +1174,7 @@ A launch shell, route, contract, generated Web target or provider registration d
 The Product Owner directed M to stop an unending central audit, finish the unique
 rules and complete-outcome acceptance contract, publish them online/offline and
 ensure every supplied document/video/research item has an accountable owner.
-F owns the latest user-scoped UI/UX/AIGC reference work, currently paused; C4 owns editing,
+F owns the latest user-scoped UI/UX/AIGC reference work and is active; C4 owns editing,
 podcast and audiovisual-method material, using already reviewed frame coverage.
 C1/C2/C3+C5/C6 own their named research/capability materials. The dated
 `00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-CONTRACT.md`
@@ -1144,13 +1186,10 @@ AI training is the first ready execution priority: close the actual local
 material/signing/runner/checkpoint prerequisites before paid GPU time starts,
 then execute the approved model path directly. Do not await all corpus research,
 reselect unchanged hardware/model or substitute a CPU demo for real training.
-The latest explicit C2 single-card renewal authorization above supplies the
-current cost authority; the previously released instance is not a running lease. Other independent capabilities
-and collection/entity growth proceed when their execution is authorized.
+The current six-red-line instruction supplies the cost boundary: report nonbilling readiness and budget, then wait for Product Owner recharge/approval; the previously released instance is not a running lease. Other independent capabilities and collection/entity growth continue within their resumed existing owners.
 
-After rule synchronization, configure C1/C2/C3+C5/C4/C6 as GPT-6.1 Sol / max.
-The latest M-specific instruction is GPT-6.1 Sol / ultra; F retains its current
-manual selection and remains paused. Preserve global defaults and report actual control
+The model allocation and ordinary-speed request are defined once in the
+current six closure red lines above. Preserve global defaults and report actual control
 results; no silent fallback or unverifiable claim that a model executed.
 Research/bug repair uses current relevant GitHub and frontier evidence to choose
 the best complete method, then one coherent outcome implementation and directly
@@ -1163,9 +1202,9 @@ binding through every handoff, model change and compaction.
 
 ### Latest collection and result continuity — 2026-10-04
 
-Keep maximum complete-outcome execution. The Product Owner's current frontend
-instruction remains PAUSED: no F code, research, tests or video/frame analysis
-until explicit resume. The latest F reference scope is two new recordings plus
+Keep maximum complete-outcome execution. F is resumed for its complete
+frontend outcome. Experience section 38 owns the current reference scope and
+its evidence limits, including the later Website-only 319b input. Retain two new recordings plus
 the earlier five, existing analysis, OpenAI official material and current product
 rules/requirements/architecture. This explicitly supersedes exhaustive further
 historical-video study for F; retain old originals/analysis as archives. Experience
@@ -1232,3 +1271,52 @@ immutable original terms, additive time/entity/brand/activity/event versions,
 active-query selection, history and rollback. User confirmation is already given;
 no repeated human review and no inference of verified hotlist/platform coverage.
 Do not auto-admit the seed to MODEL_TRAIN or depend on developer attachment paths.
+
+### Local development configuration — 2026-10-04
+
+The earlier configuration-only batch did not itself resume F or alter product code,
+active Collector/Core/GPU processes, user accounts, manually selected models or
+other projects. Existing canonical rules always override plugin defaults.
+Use verified current tools, remove only evidenced obsolete/conflicting active
+entries with private backups, and avoid repeat research/installation/restarts.
+Installed, discovered, function-called and product-bound states remain distinct.
+
+Product Design is a proprietary development aid. Its saved context points to
+the current LUMENIS Experience and screen owner, existing Astro/Flutter stack,
+user style/Brief/references and the current explicit execution state. It may not create a second design
+authority, replace the product with a generic starter, clone vendor assets or
+force another three-direction/prototype round for an approved actual design.
+F code, scoped reference-video research, testing and design execution are active under the current F owner contract.
+
+GSAP3.15.0 is configured in the separate workstation development toolchain for
+permitted Website/interface motion. It is not a Flutter/media Timeline owner,
+render engine or no-code animation builder; its standard license restricts
+competing visual animation builders. Product manifests/source remain unchanged
+until the existing frontend owner chooses and validates that binding.
+
+Standalone skill discovery uses the repository canonical progressive-context;
+the conflicting same-name global copy is disabled, retained for recovery.
+The retired Ollama standalone config is privately quarantined, not reactivated.
+CLI main-controller work retains lcodex's explicit model/effort guard; no default
+or per-conversation manual selection is changed for this configuration batch.
+
+### Current frontend implementation routing
+
+Experience Constitution section 38 owns the consolidated Cue/four-surface
+reference mapping and F1-F5 outcome boundaries. F implements its existing screen
+owners; C4 owns media, C3/C5 supplies task/material contracts, C2 supplies actual
+AI state, and W6 integrates API/runtime/Artifact and publishes accepted changes.
+The local research report is supporting evidence, never an execution authority.
+Extracted frames, visually read frames and unresolved intervals remain distinct.
+
+### Audit traversal boundary
+
+The top-level `work/` directory holds protected local candidates, private runtime
+configuration and receipts. It is outside the canonical production-source and
+live machine-contract inventories, as are the auditors' existing cache/vendor
+and environment exclusions. Prune excluded directories before descent; do not
+delete evidence to pass a gate. A directory named `work` inside a production
+owner remains in scope. Traversal failures in an included path are blocking.
+Publishable snapshots and staged paths must exclude local work artifacts and
+private runtime material; run the unchanged substantive gates on the exact
+main baseline plus the accepted source/rule changes in isolation.

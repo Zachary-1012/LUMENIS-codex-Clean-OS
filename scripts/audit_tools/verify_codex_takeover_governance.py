@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -389,17 +390,26 @@ def _assert_readme_routing_consistent(readme: str) -> None:
 
 def _assert_single_machine_contract() -> None:
     canonical = PATHS["contract"].resolve()
-    copies = sorted(
-        path.resolve()
-        for path in ROOT.rglob(CONTRACT_BASENAME)
-        if path.resolve() != canonical
-    )
+    copies = []
+    excluded_roots = {".git", ".venv", "venv", "node_modules", ".pytest_cache", "work"}
+    for directory, dirs, files in os.walk(ROOT, onerror=_scan_error):
+        current = Path(directory)
+        dirs[:] = [name for name in dirs if name != "__pycache__"
+                   and not (current == ROOT and name in excluded_roots)]
+        if CONTRACT_BASENAME in files:
+            path = current / CONTRACT_BASENAME
+            if path != PATHS["contract"]:
+                copies.append(path)
     if copies:
-        relative = [str(path.relative_to(ROOT.resolve())) for path in copies]
+        relative = [str(path.relative_to(ROOT)) for path in sorted(copies)]
         raise AssertionError(
             "duplicate live machine contract copies are forbidden; "
             f"canonical={canonical.relative_to(ROOT.resolve())}; duplicates={relative}"
         )
+
+
+def _scan_error(error: OSError) -> None:
+    raise error
 
 
 def validate() -> None:

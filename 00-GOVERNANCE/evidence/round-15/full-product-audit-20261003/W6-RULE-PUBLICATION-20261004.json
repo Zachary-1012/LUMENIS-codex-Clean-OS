@@ -1,0 +1,223 @@
+{
+  "schema": "w6.rules-and-audit-traversal/v1",
+  "date": "2026-10-04",
+  "base": "6ff8a6fc9573b2242c039aa9796f2e55a01fa8ed",
+  "scope": "canonical execution rules and audit traversal only",
+  "acceptance": "M accepted governance semantics contingent on blocking gates; product outcomes remain NOT_ACCEPTED",
+  "source_files": [
+    {
+      "path": "AGENTS.md",
+      "git_lf_bytes": 73559,
+      "git_lf_sha256": "14c8ab4cdb880488eab6dd884746bc9829fc264750910e4f0356bfc0db4c47ce",
+      "root_raw_bytes": 73559,
+      "root_raw_sha256": "14c8ab4cdb880488eab6dd884746bc9829fc264750910e4f0356bfc0db4c47ce"
+    },
+    {
+      "path": "README.md",
+      "git_lf_bytes": 27351,
+      "git_lf_sha256": "16f1277f0063644b8f7c50b9bf3c85b22f6827a9fd81f2bfd870ee2a5a789f3e",
+      "root_raw_bytes": 27351,
+      "root_raw_sha256": "16f1277f0063644b8f7c50b9bf3c85b22f6827a9fd81f2bfd870ee2a5a789f3e"
+    },
+    {
+      "path": "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+      "git_lf_bytes": 48283,
+      "git_lf_sha256": "2fe2ee465360dbe076e9ff8810e498957b0a790cbe6659fe301d6995fd891961",
+      "root_raw_bytes": 48283,
+      "root_raw_sha256": "2fe2ee465360dbe076e9ff8810e498957b0a790cbe6659fe301d6995fd891961"
+    },
+    {
+      "path": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+      "git_lf_bytes": 100419,
+      "git_lf_sha256": "e238dae0afe4848163582880d5311a51be826ac5288b839808575ab972472804",
+      "root_raw_bytes": 100419,
+      "root_raw_sha256": "e238dae0afe4848163582880d5311a51be826ac5288b839808575ab972472804"
+    },
+    {
+      "path": "00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
+      "git_lf_bytes": 47709,
+      "git_lf_sha256": "2dee3158be0b1ab846dc5a6cb0dcd93b123cef8a4935e5dbf39c52f78d7c504b",
+      "root_raw_bytes": 47709,
+      "root_raw_sha256": "2dee3158be0b1ab846dc5a6cb0dcd93b123cef8a4935e5dbf39c52f78d7c504b"
+    },
+    {
+      "path": "00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
+      "git_lf_bytes": 40002,
+      "git_lf_sha256": "fe6b4bb6f1da0d8ae1ba143d7f5ce1bacb6ea22cb03b97195ab03ed6889cb964",
+      "root_raw_bytes": 40002,
+      "root_raw_sha256": "fe6b4bb6f1da0d8ae1ba143d7f5ce1bacb6ea22cb03b97195ab03ed6889cb964"
+    },
+    {
+      "path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+      "git_lf_bytes": 71125,
+      "git_lf_sha256": "939dcf08671f3e13504e5ac0bc707590acaa4f00997690799f232735fa942e1c",
+      "root_raw_bytes": 71125,
+      "root_raw_sha256": "939dcf08671f3e13504e5ac0bc707590acaa4f00997690799f232735fa942e1c"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-CONTRACT.md",
+      "git_lf_bytes": 10040,
+      "git_lf_sha256": "a2b5518f8df9d15e6c8adc62e8e173bd5cb2306c6a49bca65a37c31ba315930e",
+      "root_raw_bytes": 10040,
+      "root_raw_sha256": "a2b5518f8df9d15e6c8adc62e8e173bd5cb2306c6a49bca65a37c31ba315930e"
+    },
+    {
+      "path": "scripts/audit_tools/verify_codex_takeover_governance.py",
+      "git_lf_bytes": 33753,
+      "git_lf_sha256": "95476ca7c8a8ba505ba26f0666f8b7ddab9416763759ba2deca0cee18fcb7548",
+      "root_raw_bytes": 33753,
+      "root_raw_sha256": "95476ca7c8a8ba505ba26f0666f8b7ddab9416763759ba2deca0cee18fcb7548"
+    },
+    {
+      "path": "scripts/audit_tools/verify_database_authority.py",
+      "git_lf_bytes": 13279,
+      "git_lf_sha256": "c7756fb980f60d1ed86ee866125f8355f481419c12948136eebb73b75df89056",
+      "root_raw_bytes": 13279,
+      "root_raw_sha256": "c7756fb980f60d1ed86ee866125f8355f481419c12948136eebb73b75df89056"
+    },
+    {
+      "path": "scripts/audit_tools/verify_lumenis_single_product.py",
+      "git_lf_bytes": 19443,
+      "git_lf_sha256": "91e1c79e4446f62802eb20010405f7fcefd90b8d66d087e2769cf583bb75d820",
+      "root_raw_bytes": 19856,
+      "root_raw_sha256": "3d109abacdc79b593ac2f7d33f91bf121350cf24a25dded1215b3653f202bc1d"
+    },
+    {
+      "path": "tests/test_audit_inventory_boundaries.py",
+      "git_lf_bytes": 4143,
+      "git_lf_sha256": "b9cff68c295ce497abfd1307f0e668aed8f9d444f9f4865c9d871b149051511d",
+      "root_raw_bytes": 4143,
+      "root_raw_sha256": "b9cff68c295ce497abfd1307f0e668aed8f9d444f9f4865c9d871b149051511d"
+    },
+    {
+      "path": "tests/test_shared_database_owner.py",
+      "git_lf_bytes": 8717,
+      "git_lf_sha256": "68ce0894265231e0b2a74858f5dcc4e7a34553f6a930bed9d8600f3e15225d7b",
+      "root_raw_bytes": 8938,
+      "root_raw_sha256": "5fac5570f14a39a20da5614c8e7f2d9b050628b9a79f9e328513066b80dddcfd"
+    }
+  ],
+  "checks": [
+    {
+      "name": "verify_ai_native_constitution",
+      "argv": [
+        "python",
+        "scripts/audit_tools/verify_ai_native_constitution.py"
+      ],
+      "exit": 0,
+      "seconds": 0.53,
+      "output_sha256": "e30d82c88700d83e334b9d746d862749bb960251f028c8d76450046dcbfcaeca",
+      "output": "AI-NATIVE CONSTITUTION GATE: PASS\n - 18 lightweight principles present\n - AGENTS/README bootstrap routes through the constitution\n - non-bypass status and dirty-worktree protections present\n - missing!=0 and CI anti-bypass regression anchors present\n - Product Gate executes this validator as BLOCKING\n"
+    },
+    {
+      "name": "verify_codex_takeover_governance",
+      "argv": [
+        "python",
+        "scripts/audit_tools/verify_codex_takeover_governance.py"
+      ],
+      "exit": 0,
+      "seconds": 1.21,
+      "output_sha256": "b3b3bb0c406adabf6d42e4d4f77059cc70155e01f0bcd5261315342439c8e1ea",
+      "output": "CODEX TAKEOVER GOVERNANCE OK lumenis-ggi-cross-product v1.1.0 68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f single-machine-contract=PASS six-round-routing=PASS legacy-coverage=PASS cloud-boundaries=PASS workflow-guards=PASS online-progress=PASS\n"
+    },
+    {
+      "name": "verify_database_authority",
+      "argv": [
+        "python",
+        "scripts/audit_tools/verify_database_authority.py"
+      ],
+      "exit": 0,
+      "seconds": 32.71,
+      "output_sha256": "86383bb1fdcaf646f6ca9c51c9cb2290ab7aef9a7660151750ef91d4063a3bb0",
+      "output": "Production Python modules AST-audited: 590\nDirect SQLite owners: lumenis/shared/database/connection.py, lumenis/shared/database/migrations.py\nExcluded roots: .git, .pytest_cache, .venv, 00-GOVERNANCE, 02-ARCHITECTURE, 99-ARCHIVE, CHANGELOG, OSAI测试证据, app, audit, build, docs, intelligence_library, logs, node_modules, output, research, scripts, tests, tmp, vendor, venv, work\nRoot test_*.py and root underscore scratch files: explicitly excluded\nPASS: Shared Database direct-connection and path-override authority is exclusive\n"
+    },
+    {
+      "name": "verify_lumenis_single_product",
+      "argv": [
+        "python",
+        "scripts/audit_tools/verify_lumenis_single_product.py"
+      ],
+      "exit": 0,
+      "seconds": 32.72,
+      "output_sha256": "352d35ce1fb2452931d17f4534d1ec367ee2e8b8f1deaa7ba369708293608b1f",
+      "output": "LUMENIS Only-One/multi-surface architecture guard: PASS\nproduct_architecture=00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md\nexperience_authority=00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md\nsurface_decision=00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md\nlegacy_ui_reference_paths=0\n"
+    },
+    {
+      "name": "verify_experience_authority_exclusive",
+      "argv": [
+        "python",
+        "scripts/audit_tools/verify_experience_authority_exclusive.py"
+      ],
+      "exit": 0,
+      "seconds": 0.55,
+      "output_sha256": "522a9aae1293051a9a67a822b09ef9c4de1cfafaff671dc6cf7545265b08de78",
+      "output": "LUMENIS Experience authority exclusivity: PASS\nsole_authority=00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md\napproved_experience_surfaces=public-website,web-workspace,desktop-app,mobile-companion\nlegacy_design_authorities=0\n"
+    },
+    {
+      "name": "verify_experience_anti_template",
+      "argv": [
+        "python",
+        "scripts/audit_tools/verify_experience_anti_template.py",
+        "--strict"
+      ],
+      "exit": 0,
+      "seconds": 6.84,
+      "output_sha256": "dbfa407a8e69a76815e7266800f78c05d5b7c5a946db38156664a7e428845d17",
+      "output": "{\n  \"ok\": true,\n  \"mode\": \"strict\",\n  \"canonical_experience\": \"public-website + app/web-desktop-mobile\",\n  \"experience_authority\": \"00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md\",\n  \"dart_file_count\": 207,\n  \"legacy_web_authority\": false\n}\n"
+    },
+    {
+      "name": "verify_experience_screen_blueprints",
+      "argv": [
+        "python",
+        "scripts/audit_tools/verify_experience_screen_blueprints.py"
+      ],
+      "exit": 0,
+      "seconds": 1.77,
+      "output_sha256": "36d92c2f6575d2fb0f0f91ddfb81a68a61977ad724b4510dbcffbdeb4661a07c",
+      "output": "Experience blueprint/source contract: PASS screens=44 bindings=54 sha256=verified ids=verified\n"
+    },
+    {
+      "name": "audit-unit",
+      "argv": [
+        "python",
+        "-m",
+        "unittest",
+        "tests.test_audit_inventory_boundaries",
+        "tests.test_online_progress_governance",
+        "-q"
+      ],
+      "exit": 0,
+      "seconds": 1.48,
+      "output_sha256": "0934497d39281ea54f99e1e567ad0a5d9bb2835c16d4285606bdcedea99c22a0",
+      "output": "----------------------------------------------------------------------\nRan 17 tests in 0.207s\n\nOK\n"
+    },
+    {
+      "name": "database-owner-regression",
+      "argv": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_shared_database_owner.py",
+        "--junitxml=D:\\LUMENIS_REBUILD\\序\\序境\\work\\w6-integration-20261002\\rule-publication-20261004\\database-owner-regression.xml"
+      ],
+      "exit": 0,
+      "seconds": 45.17,
+      "output_sha256": "ef2cfce77ac2b8471aec4fca87b5968f39a1e13e2e85fd8b553e2ea479219f98",
+      "output": "................                                                         [100%]\n==== THREAD LEAK REPORT (background daemon threads left alive after test) ====\nNO background-thread leak detected.\n==== END THREAD LEAK REPORT ====\n\n==== THREAD LEAK REPORT (background daemon threads left alive after test) ====\nNO background-thread leak detected.\n==== END THREAD LEAK REPORT ====\n\n"
+    }
+  ],
+  "protected_product_candidates_included": false,
+  "production_database_or_gpu_action": false,
+  "historical_product_test_receipts": "345 tests remain at their own prior pins; not rerun or reclassified here",
+  "remote_verification": "After push: fetch, compare HEAD/origin/main/live main and every published file byte; retain native receipt in work/w6-integration-20261002/rule-publication-20261004/PUBLICATION.json",
+  "research": {
+    "decision": "ADAPT existing Python os.walk top-down pruning with onerror raising; no new dependency",
+    "version": "existing Python 3.13-compatible standard library",
+    "references": [
+      "https://docs.python.org/3.13/library/os.html#os.walk",
+      "https://github.com/python/cpython/blob/3.13/Lib/os.py"
+    ],
+    "license": "Python/CPython PSF standard library; no vendored code"
+  }
+}

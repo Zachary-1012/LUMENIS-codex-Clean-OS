@@ -208,8 +208,8 @@ material and current product rules/requirements/architecture. Further exhaustive
 analysis of other historical videos is no longer a frontend prerequisite. Retain
 their originals and valid analysis as archives; the historical12 editing exercises
 remain a distinct C4 corpus, not the seven frontend references. F and cooperating
-owners do not analyze the paused frontend recordings until explicit resume.
-After resume, record actual file/hash, frame count/PTS, visual transition, trigger,
+owners now work under the explicit resume. The later Website-only 319b input
+is covered by section 38. Record actual file/hash, frame count/PTS, visual transition, trigger,
 state, task intent, four-surface adaptation and implementation/acceptance mapping.
 Exact duplicate frames may share a read with a complete frame map; sparse
 thumbnails or decoding alone never prove a full visual study. Reuse already valid
@@ -1105,7 +1105,7 @@ pan/seek/reopen evidence remain separate from this rule publication.
 
 The actual F user turns are retained in USER-ADDITIONS-20261004.md; their latest
 instruction supersedes prior exhaustive historical-video execution obligations.
-F remains paused including code, research, tests and new tasks. The two new
+F is active under the Product Owner's 2026-10-04 resume, including code, scoped research, tests and new tasks. The two new
 recordings d16fc1c8ad774b0e950e3e7a4e444fe3.mp4 and
 7ac450632cf2611ee2ff3a6b29a41669.mp4 plus the earlier five, valid existing
 analysis, OpenAI official pages and current product rules are the current study
@@ -1145,5 +1145,58 @@ Evidence/citations, question relevance, readable result, uncertainty and version
 Genuine source images use their permitted rights; rendered/style illustrations
 are explicitly labeled references, never substituted for source photographs.
 Examples must not recreate RedNote/Douyin/X/etc. feeds. They stay evidence/design
-exploration until F resumes and a screen-specific DESIGN_READY owner accepts
+exploration until the current F screen-specific DESIGN_READY owner accepts
 the real composition; C1 does not become a second frontend/design authority.
+
+
+### Consolidated four-surface reference mapping — 2026-10-04
+
+Cue Website is the main visual, page-rhythm and interaction-presentation reference
+for Public Website only. Web Workspace, Desktop and Mobile retain the established
+product rules, task-specific composition, creative workbench and AI/Evidence/
+Permission/Recovery contracts, adapting suitable Cue principles without scaling
+the Website. Original hand-painted Agent/object identity icons remain applicable
+across all four surfaces. This scope follows the human messages
+`01a1057b-200e-7a01-b256-cf1faabb2c9b` and
+`01a10576-48c2-7e53-abe6-e445d94f2b68`, reconciled by M on 2026-10-04.
+The 319b creative video applies
+only to Public Website. d16fc is Cue Website operation narrative; 7ac450 is the
+startup/authorization/onboarding state machine. Retain the earlier five videos,
+existing analysis, Manus 2.0 and OpenAI official materials as supporting inputs.
+
+The local report `work/frontend-2026-10-03/FRONTEND-REFERENCE-EXECUTABLE-20261004.md`
+sections 12/13 supplies evidence, not design authority. Its earlier 34,245-byte
+snapshot SHA256 `6b662e3798cec98a372bb36a8b9f9614c3adb10bbeaa6b5dbce4382c4cf6ca32`
+and W6 review are superseded evidence. F corrected the 319b claim: the old report
+had read only sheets 1 and 11–30; 4,484 extracted frames / 150 sheets do not
+establish full visual or semantic reading. The old 7ac event time ranges also
+require correction. Record
+extracted, actually read and unresolved intervals separately; require a new
+source-pinned reading receipt before claiming complete analysis. Independent
+implementation with sufficient current design evidence continues.
+
+Preserve functional line glyphs, original colored hand-painted Agent/object
+identity icons and third-party source icons as three distinct layers. Colored
+identity objects are programmatic task/content identities, never invented truth
+states or global decoration. The old fixed AIGC percentage quota was added by
+the assistant without a human or measurement basis and is withdrawn. Determine
+visual/proposal emphasis from the actual task and its approved screen contract.
+Keep watercolor/print/paper texture and Brief-driven character choices within
+the existing Experience owner. Manus/OpenAI informs architecture principles,
+without adding another runtime, provider, editor, account wall or design system.
+
+F retains the full F1–F5 outcomes: entry/startup (ACC-03/Launch/AI-01), accessible
+visual primitives, AI-01 and content reading, SH-01 video plus Shared audio,
+and Public Website operation narrative. C4 owns media behavior; C3/C5 supplies
+task/material contracts; C2 supplies actual AI state; W6 binds API/runtime/
+Artifact and publishes accepted results. GLOBAL/ALL, artifact-first AI,
+same-source use permissions, reversible drawers/Trace/Return, horizontal media
+timelines, locale/accessibility and failure/recovery remain required.
+
+Website requires text, controlled interaction and honestly labeled operation
+video/demo with pause/skip/reduced-motion/failure fallback and an actual entry.
+Operational surfaces retain task-specific panes and necessary long-content
+scrolling without unnecessary full-page scroll. Classify reference conclusions
+as OBSERVED / INFERRED / ADAPTED / DEFERRED / UNAVAILABLE. Record implementation,
+tests, live operation and acceptance independently; a research report, demo,
+frame extraction, gate or build cannot establish Product Truth.

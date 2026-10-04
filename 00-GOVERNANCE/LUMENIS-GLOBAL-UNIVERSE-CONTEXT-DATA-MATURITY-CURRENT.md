@@ -334,3 +334,19 @@ attachment path or a fixture. Preserve current exact identity/source-use checks,
 normal explicit authorization and honest unknowns without asking for another
 manual review of the same100 terms. This seed does not limit ongoing entity/
 source/topic growth or replace whole-universe data coverage.
+
+### Topic growth and two heat meanings — latest C1 human correction, 2026-10-04
+
+The Product Owner explicitly prioritizes sourced topic growth over current heat/
+rank positions. Expand existing terms plus new time/entity/brand/activity/event
+terms across additional brands, commercial entities and platforms; the four
+seed subjects and six primary platforms are baselines, not permanent limits.
+Use C1's newly sourced terms through this same versioned owner chain. Hotlist
+verification is not a prerequisite for vocabulary growth or actual collection.
+
+Keep LUMENIS corpus-derived heat separate from platform-provided heat/rank.
+The former needs a declared corpus/window/scope/sample/metric/version and actual
+data; the latter needs the actual platform-native field/source/window. They are
+not interchangeable, and unknown remains unknown. Greater data volume alone
+does not prove representative global demand. Retain original terms/versions,
+sources/times and controlled updates; do not delete or invent heat values.

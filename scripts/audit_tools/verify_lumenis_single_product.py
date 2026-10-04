@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import os
 import subprocess
 import sys
 import re
@@ -146,6 +147,24 @@ def tracked() -> list[str]:
         encoding="utf-8",
     )
     return [line.strip().replace("\\", "/") for line in out.splitlines() if line.strip()]
+
+
+def production_python_files(root: Path) -> list[Path]:
+    """Preserve the import audit scope without entering local work or env trees."""
+    ignored_dirs = {".git", "__pycache__", "node_modules", "tests", "test", "docs"}
+    local_roots = {"work", ".venv", "venv"}
+    result = []
+    for directory, dirs, files in os.walk(root, onerror=_scan_error):
+        current = Path(directory)
+        dirs[:] = [name for name in dirs if name.lower() not in ignored_dirs
+                   and not (current == root and name in local_roots)]
+        result.extend(current / name for name in files if name.endswith(".py")
+                      and not name.lower().startswith(("test_", "audit_")))
+    return sorted(result)
+
+
+def _scan_error(error: OSError) -> None:
+    raise error
 
 def main() -> int:
     errors: list[str] = []
@@ -367,14 +386,8 @@ def main() -> int:
     # identifiers that merely share a retired module prefix. Stable API facades
     # such as browser_runtime_api and collector_guard_integration stay valid.
     retired_imports = []
-    ignored_dirs = {".git", "__pycache__", "node_modules", "tests", "test", "docs"}
-    for source_path in ROOT.rglob("*.py"):
+    for source_path in production_python_files(ROOT):
         relative = source_path.relative_to(ROOT)
-        parts = tuple(part.lower() for part in relative.parts)
-        if any(part in ignored_dirs for part in parts[:-1]):
-            continue
-        if relative.name.lower().startswith(("test_", "audit_")):
-            continue
         try:
             tree = ast.parse(source_path.read_text(encoding="utf-8-sig"), filename=str(relative))
         except (OSError, UnicodeError, SyntaxError) as exc:

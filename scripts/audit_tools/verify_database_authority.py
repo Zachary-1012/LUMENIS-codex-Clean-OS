@@ -8,6 +8,7 @@ verified by their own test/tooling boundaries instead.
 from __future__ import annotations
 
 import ast
+import os
 import re
 import sys
 from dataclasses import dataclass
@@ -52,6 +53,7 @@ EXCLUDED_ROOTS = {
     "tmp",
     "vendor",
     "venv",
+    "work",
 }
 
 # Despite its legacy name, this environment variable selects a JSON learning
@@ -81,21 +83,23 @@ def _read_tree(path: Path) -> ast.AST:
 def production_python_files(root: Path = ROOT) -> list[Path]:
     """Return Python files that can participate in the production runtime."""
     result: list[Path] = []
-    for path in root.rglob("*.py"):
-        rel = path.relative_to(root)
-        if not rel.parts or rel.parts[0] in EXCLUDED_ROOTS:
-            continue
-        if "__pycache__" in rel.parts:
-            continue
-        # Root test_*.py files are legacy test entrypoints, not runtime modules.
-        if len(rel.parts) == 1 and path.name.startswith("test_"):
-            continue
-        # Repository convention reserves root underscore-prefixed Python files
-        # for scratch/import tooling; they are not importable runtime owners.
-        if len(rel.parts) == 1 and path.name.startswith("_"):
-            continue
-        result.append(path)
+    for directory, dirs, files in os.walk(root, onerror=_scan_error):
+        current = Path(directory)
+        # Prune before descent; nested owner/work is still production source.
+        dirs[:] = [name for name in dirs if name != "__pycache__"
+                   and not (current == root and name in EXCLUDED_ROOTS)]
+        for name in files:
+            if not name.endswith(".py"):
+                continue
+            # Existing root test/scratch entrypoints are not runtime owners.
+            if current == root and name.startswith(("test_", "_")):
+                continue
+            result.append(current / name)
     return sorted(result)
+
+
+def _scan_error(error: OSError) -> None:
+    raise error
 
 
 def _root_name(node: ast.AST) -> str | None:

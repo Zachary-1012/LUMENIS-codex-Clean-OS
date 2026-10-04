@@ -15,7 +15,10 @@
 
 Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)。
 
-## 0. Current source and acceptance
+## Current execution instruction — closure red lines 2026-10-04
+
+All C1-C6/F/M are resumed under the latest six closure red lines in AGENTS.md. M/F use Astra/ultra, other execution windows Sol6.1/max; ordinary speed. GPU preparation is nonbilling until the Product Owner receives the concrete readiness/budget report and approves payment. This replaces the M/F-only pause and old autonomous rental permission. All scope, material duties, existing owners and acceptance requirements are retained.
+
 
 At the start of every engineering task, resolve the current remote `main` HEAD. A README SHA, dated audit, handoff, or commit message is never a substitute for the current source tree.
 
@@ -254,7 +257,7 @@ git ls-remote --heads origin
 
 Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)，随后读取 [`00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)。
 
-当前唯一方案保留 **C1–C6 六个完整交付职责**：C3（CTH/BMP）与 C5（资料/共享成果）已由同一个本地「序境｜C3+C5 与未完成研究资料接续」窗口承接，并保留未完成研究；原云端 W3/W5 仅保留交接。C1、C2、C4、C6 继续本地执行，前端 F 独立，主控 M（Sol 或 Astra）把关验收，W6 集成发布。原 R01–R15、J1–J8、六项专项验收映射保留，不再分别派工。当前C1–C6已按最新明确指令恢复，前端F仍暂停；以完整用户成果组织任务，按真实依赖并行推进，遇到缺陷先定向研究再修复和必要验证。分工/云隔离见 [AGENTS.md](AGENTS.md)，完整映射见 [Source Owner Index](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)。旧本地模型/智谱/OpenCode 模型调用停止、接口保留；C2 完成自有权重训练运行。实时对话语音后置，音频理解/播客保留；账号密码重设计在工程闭环后，开放入口仍保留服务端 Permission/effect fence。
+当前唯一方案保留 **C1–C6 六个完整交付职责**：C3（CTH/BMP）与 C5（资料/共享成果）已由同一个本地「序境｜C3+C5 与未完成研究资料接续」窗口承接，并保留未完成研究；原云端 W3/W5 仅保留交接。C1、C2、C4、C6恢复完整成果执行，前端 F 独立，主控 M（Sol 或 Astra）把关验收，W6 集成发布。原 R01–R15、J1–J8、六项专项验收映射保留，不再分别派工。当前M、F与C1–C6按最新六条红线恢复完整成果执行，全部有效候选和资料保留；以完整用户成果组织任务，按真实依赖并行推进，遇到缺陷先定向研究再修复和必要验证。分工/云隔离见 [AGENTS.md](AGENTS.md)，完整映射见 [Source Owner Index](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)。旧本地模型/智谱/OpenCode 模型调用停止、接口保留；C2 完成自有权重训练运行。实时对话语音后置，音频理解/播客保留；账号密码重设计在工程闭环后，开放入口仍保留服务端 Permission/effect fence。
 
 默认执行方式：
 
@@ -386,9 +389,9 @@ Tests/staging 必须显式使用 isolated/disposable DB；任何 persistence 变
 
 历史 handoff / audit / archive 只在迁移、回溯、审计需要时读取，不作为正常开发必读材料。
 
-## 当前审核状态（2026-10-03）
+## 当前审核状态（2026-10-04）
 
-最新明确授权：C1–C6目标已原地更新并恢复执行，C3+C5仍由既有本地窗口承接；独立前端F继续暂停。M已发布规则、完整成果验收与材料责任，资料研究由各Owner接续，不再把中央全量审计设为执行前置。恢复依据是用户明确指令，规则发布本身不代表能力验收。
+最新明确授权：M/F及C1–C6按AGENTS六条红线恢复，完整目标和资料保留。M接受规则语义，W6负责规则、完整成果验收与材料责任的精确发布，资料研究由各Owner接续，不再把中央全量审计设为执行前置。恢复依据是用户明确指令，规则发布本身不代表能力验收。
 
 本轮审核材料：[六轮闭环执行报告](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md) · [全仓能力覆盖](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/CAPABILITY-COVERAGE.md) · [官网调整提案](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/WEBSITE-ADAPTATION.md)。这些是审计和执行输入，不代表产品闭环；最新执行状态见上方及CURRENT。
 
@@ -398,19 +401,18 @@ Tests/staging 必须显式使用 isolated/disposable DB；任何 persistence 变
 全部需求/参考视频/研究材料由材料责任窗口接续逐帧、逐篇研究，M维护唯一规则。四端
 UI/UX/AIGC均升级，女孩手绘水彩风格进入前端，保留丰富有用交互，非必要不
 纵向滚动。最优解指实现方法的准确、有效、快速，不能缩能力换方便。具体要求
-归AGENTS、Experience和Owner Index；C1–C6恢复，F暂停。C2获准按原单卡方案自行续租并训练。
+归AGENTS、Experience和Owner Index；C1–C6与F均已恢复。C2先报不计费准备和预算，用户确认充值后才能进入获批单卡训练。
 
 ### 当前收口与材料责任（2026-10-03）
 
 M收规则和完整成果验收；视频由F/C4接续，全部资料由对应窗口负责，未读/缺件不删。
 [资料责任表及逐条清单](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-CONTRACT.md)。
 视频与播客都必须具备可实际滑动的时间轴；开发者模式按用户最新要求后置，保留来源/责任、不作为本次阻断项。
-AI训练列P0，先补实际本地依赖再启动获准算力；不等待全量研究。按用户要求规则
-同步后C1/C2/C3+C5/C4/C6用GPT-6.1 Sol/max；M按最新指令用Sol/ultra；F保留手选且暂停。
-C2固定原RTX5090单卡按时方案，直接闭合权重/远端执行绑定并开始真实训练；原2026-10-03 24:00截止未达成，继续处理而不改写为完成。4090备选已撤销；失败阻断须保存并停止空转计费。
+AI训练列P0，先完成不计费准备、具体成本/硬上限/止损报告；用户确认充值后才进入获批单RTX5090租用阶段。新实例SSH/CUDA/load属于租后检查，不提前声称通过。独立采集、研究适配与业务接线继续。
+模型分工与普通速度要求以AGENTS六条红线为准；全部现有窗口已恢复。原2026-10-03 24:00截止未达、0 step、实例已释放是保留的失败事实，4090备选已撤销。
 原生Goal通过官方协议原地更新并读回，预算及已用计数未重置；[目标与恢复回执](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/EXECUTION-RESUME-20261003.md)。
 
-最新执行口径（2026-10-04）：各窗口采用**最大完整成果执行**，同一用户成果连续完成研究、实现、真实运行、保存/取回、恢复、评价与完整验收；禁止最小执行切片、逐函数交接/核对/报告及无变化的重复审计/测试。Owner/文件/授权边界仍明确，必要真实验证保留。普通依赖由责任窗口和W6直接解决，M只处理完整成果/必要裁决/风险，空闲待命。前端F仍暂停，代码、研究和测试均不恢复。[执行目标回执](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/COMPLETE-OUTCOME-EXECUTION-20261004.md)。
+最新执行口径（2026-10-04）：各窗口采用**最大完整成果执行**，同一用户成果连续完成研究、实现、真实运行、保存/取回、恢复、评价与完整验收；禁止最小执行切片、逐函数交接/核对/报告及无变化的重复审计/测试。Owner/文件/授权边界仍明确，必要真实验证保留。普通依赖由责任窗口和W6直接解决，M只处理完整成果/必要裁决/风险，空闲待命。前端F继续按完整成果执行；C1–C6同步恢复，保留有效候选和资料并收敛成果。[执行目标回执](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/COMPLETE-OUTCOME-EXECUTION-20261004.md)。
 
 
 ### 最新采集、连续成果与前端需求（2026-10-04）
@@ -422,16 +424,16 @@ RedNote、抖音、X，开始/继续实际采集；既有其他平台保留。C1
 平台，单平台故障隔离。平台验证由现Collector/session Owners研究官方接口、合法会话/
 恢复以减少重复人工，不能绕挑战或假报通过；受保护CN个人账号保持禁止访问。
 
-C1还提供有Source/时间/scope/权利/版本的真实采集文字/图像呈现示例，供未来F参考。
+C1还提供有Source/时间/scope/权利/版本的真实采集文字/图像呈现示例，由F按现有设计合同消费。
 真实材料→真实有用任务→保存/修订/重开/恢复必须闭合；同运行/模型/配方/token预算/
 Evidence版本。来源或预算变动应定位受影响部分、明确采用新版、局部修订，保留旧成果/
 理由/回滚；六种能力组合和六项优先出口见Real Delivery及Owner Index。
 
-F持续暂停代码/研究/测试，视频等明确恢复再分析。最新研究范围是两新录屏+此前五片+
-已有分析+OpenAI官网/现规则，旧视频归档而不再继续穷尽分析；线性及彩色手绘icon、
-参考启动页、Manus功能/UI/UX/AIGC及官网真实操作创意视频覆盖四端。除官网外，非必要
+F已恢复完整前端工作；当前研究映射统一见Experience §38。Cue是官网主视觉/节奏参考，其他三端按现Experience适配优化，319b创意视频仅用于Public Website；d16官网叙事与7ac启动/授权流程分别适配。两新录屏、此前五片、既有分析、OpenAI和Manus资料保留。提取帧数不能证明全部视觉阅读，未读区间继续由F闭合。除官网外，非必要
 不做页面上下滚动；必要长内容/无障碍不能裁掉。详细规则仅归AGENTS/Experience/Global/
 Real Delivery；原文及每一条映射见[增补原文](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/USER-ADDITIONS-20261004.md)和[逐条覆盖](00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/REQUIREMENT-COVERAGE-20261004.md)。本次规则发布不证明采集/训练/创作或界面已完成。
 
 
 基础测试主体词条库：用户已核对三格式 xujing_topic_seed_100_4confirmed_20261004，实际100词条/41来源，广州太古汇、深圳万象城（罗湖）、Nike、Le Labo各25词条；输入仍自述4/6主体确认、2未指定和100热度UNKNOWN，不冒充已验证热榜/全平台覆盖。C1/W6按现Source/registry/Evidence/Canonical入库与打包进入实际运行；词条随时间、商业体、品牌、活动、事件增补版本，原词条/原文件不删除，保留理由/有效区间/来源/旧版本与回滚。用户核对不重新要求人工重复确认。
+
+本地开发工具配置（2026-10-04）：官方Product Design已安装启用并保存当前产品/设计上下文；GSAP3.15.0独立开发工具链已实际调用，当前未写入官网/App生产依赖。只用于符合许可的Website/界面动效，不作为Flutter或视频/播客时间轴/可视化动画生成器。插件默认原型/模板流程服从现AGENTS/Experience/Screen owner；前端已恢复，配置按现有Owner合同供真实界面工作使用。已修复AE Method市场乱码路径、隔离退役Ollama配置、禁用同名全局旧上下文Skill入口，保留所有原活跃插件、手选、安全/Hook/MCP/项目配置。新启动的发现/功能证据与运行中窗口/产品E2E分别记录；不重启正在开发的窗口。

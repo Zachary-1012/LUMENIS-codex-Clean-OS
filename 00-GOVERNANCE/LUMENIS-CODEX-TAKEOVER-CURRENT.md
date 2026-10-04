@@ -1,8 +1,14 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
-> Updated: 2026-10-03 — M closes unique execution/completeness rules; reference audits move to accountable windows. AI training is P0; timeline panning is required; developer mode is deferred by the user. Global product pause/review is not silently revoked.
+> Updated: 2026-10-04 — M closes unique execution/completeness rules; reference audits move to accountable windows. AI training is P0; timeline panning is required; developer mode is deferred by the user. Latest 2026-10-04 instruction resumes C1-C6/F/M under the six closure red lines; prior pauses are historical.
 > current HEAD = READ WITH git fetch + git rev-parse origin/main
+
+## Current execution instruction — closure red lines 2026-10-04
+
+All C1-C6/F/M are resumed under the latest six closure red lines in AGENTS.md. M/F use Astra/ultra, other execution windows Sol6.1/max; ordinary speed. GPU preparation is nonbilling until the Product Owner receives the concrete readiness/budget report and approves payment. This replaces the M/F-only pause and old autonomous rental permission. All scope, material duties, existing owners and acceptance requirements are retained.
+
+
 
 CI information correction (2026-10-02): M approved retirement of the obsolete
 `Asset Impact Scan (INFORMATIONAL)` call only. Its script was deleted by
@@ -33,7 +39,7 @@ coverage map into these six rounds in the
 They are not three competing execution schedules. Existing owners, capability
 requirements and real technical dependencies remain effective.
 
-**Current Product Owner instruction: C1-C6 resume after native Goal updates; F remains paused. M closes rule/acceptance synchronization, Owners continue their complete outcomes. C2 is authorized to renew the original single GPU and start training before 2026-10-03 24:00 Asia/Shanghai after preparation.**
+**Current Product Owner instruction: C1-C6/F/M are resumed under AGENTS six closure red lines. W6 publishes the M-accepted rules; every owner continues its full outcome. C2 reports nonbilling readiness and the concrete budget before Product Owner recharge approval; autonomous rental is not authorized.**
 C3/C5 execution placement has moved locally; old Cloud windows do not perform new work.
 The original d92 snapshots and delivered candidate/source/evidence packages remain
 preserved. Reuse actual local deliveries; retrieve only missing Cloud bytes.
@@ -63,7 +69,7 @@ Historical execution snapshot 2026-10-02: W5 initially returned
 `Unable to determine project root for task`, then a later pinned Cloud admission
 was recorded. Neither admission establishes Source/Artifact acceptance. The current
 2026-10-03 temporary pause was subsequently revoked after account restoration;
-the later local C3/C5 transfer above supersedes that Cloud execution placement. F is now paused under the latest Product Owner instruction; M previously
+the later local C3/C5 transfer above supersedes that Cloud execution placement. F was paused in the historical snapshot; that state is superseded by the 2026-10-04 resume; M previously
 accepted the bounded 2026-10-02 Website visitor workflow described below.
 Protected candidates keep the owner assignment below. W6's full working card is
 `work/w6-integration-20261002/TASK-CARD.md`; ongoing bounded runtime evidence stays
@@ -468,8 +474,8 @@ The Source Owner Index continues to retain every C/R/J/U acceptance requirement.
 ## Product Owner full-product audit review — 2026-10-03
 
 Historical audit-pause snapshot: the user initially paused C1-C6/F for this audit.
-That pause is now superseded for C1-C6 by the explicit late-day resume; F remains
-paused. M publishes this exact governance handoff, then W6 retains normal product integration.
+That pause was superseded by the explicit 2026-10-04 resume for C1-C6 and F.
+M accepts governance semantics; W6 retains sole main publication and integration.
 Read the [six-delivery closure report](evidence/round-15/full-product-audit-20261003/SIX-ROUND-CLOSURE-REPORT.md),
 [complete capability coverage](evidence/round-15/full-product-audit-20261003/CAPABILITY-COVERAGE.md)
 and [official-website adaptation proposal](evidence/round-15/full-product-audit-20261003/WEBSITE-ADAPTATION.md).
@@ -501,7 +507,7 @@ REQUIREMENTS_RECONCILIATION_IN_PROGRESS, not full requirement recovery complete.
 M completed the configuration/rule/ownership handoff; assigned outcome Owners
 continue requirement/material recovery, frame-by-frame and article-by-article
 research, and four-surface UI/UX/AIGC/watercolor adaptation. The latest explicit
-resume applies to C1-C6 and approved C2 single-GPU renewal; F remains paused.
+resume applies to C1-C6, F and the approved C2 single-GPU preparation; F is active.
 
 The current Codex config/profile files contain no removed thread_context key,
 and a fresh load by the actual desktop Codex binary returned exit0 without that
@@ -547,24 +553,24 @@ DEFERRED_BY_USER and does not block the present closeout.
 AI training is the first execution priority once its actual local dependencies
 and resource approval are ready; do not wait for all research or restart hardware
 selection. No GPU was rented/restarted by this rule batch. After publication,
-C1/C2/C3+C5/C4/C6 use gpt-6.1-sol/max; M uses the later requested Sol/ultra,
-with F's manual model retained. The subsequent explicit resume authorizes C1-C6
-execution and C2 single-card renewal; F is paused. Native objective/status
+the current model allocation follows AGENTS: M/F Astra/ultra, other execution
+windows GPT-6.1 Sol/max, ordinary speed requested. All are resumed. C2
+single-card rental requires the Product Owner payment decision after readiness. Native objective/status
 readback and unchanged budget/usage accounting are recorded in the current
 execution-resume evidence. No C outcome is thereby accepted.
 
 
 ## Current native Goal update and explicit execution resume
 
-See [execution resume receipt](evidence/round-15/full-product-audit-20261003/EXECUTION-RESUME-20261003.md) and its seven native Goal readbacks. C1-C6 resumed; F paused. The 2026-10-03 24:00 GPU start deadline was missed; C2 continues under the existing single RTX5090 authorization. Training has not been proven by these control actions. C1 native dispatch recovered after original-thread archive/unarchive/reopen; C1 then sent its own original-thread ACK back to M, proving both directions. The stale pause-message race was reconciled by setting and reading back the same Goal active. M closes this exact rule publication before W6 resumes sole product publication.
+The [2026-10-03 execution resume receipt](evidence/round-15/full-product-audit-20261003/EXECUTION-RESUME-20261003.md) and its seven readbacks are historical. The later 2026-10-04 instruction resumes all C1-C6/F/M. C1 native dispatch and original-thread ACK established its recovery; C6 no longer holds temporary C1 custody. The old GPU deadline was missed, with zero steps and released compute; new rental requires the current readiness/budget/payment gate. W6 is the sole main publisher. None of these control actions proves training or a complete product outcome.
 
 ## Current complete outcome execution — 2026-10-04
 
 The Product Owner rejected minimum execution slices and repeated handoffs,
 checks and reports. All current native Goal objectives have been updated in
 place to continuous full-outcome execution; original budgets, usage and statuses
-are retained. C1/C2/C3+C5/C4/C6 active, F paused, M standby/paused until actual
-review/decision/repair work. This changes execution method, not R/J/U scope,
+are retained. C1/C2/C3+C5/C4/C6 and F are active; M handles actual
+review/decision/repair work under the current explicit user instruction. This changes execution method, not R/J/U scope,
 Permission, Evidence, recovery or acceptance standards. See AGENTS execution
 mode and [current readback](evidence/round-15/full-product-audit-20261003/COMPLETE-OUTCOME-EXECUTION-20261004.md).
 
@@ -580,8 +586,9 @@ AGENTS/Global §10/Experience §38/Real Delivery/Owner Index/README and material
 accountability now carry every current user addition; raw M/F instructions and
 the requirement-level ledger are retained in this round evidence. The latest
 F scope is two new recordings + earlier five + valid analysis/OpenAI/current
-product material, superseding further exhaustive historical-video work. F stays
-paused including research/tests; no video frames were analyzed by this rule batch.
+product material, superseding further exhaustive historical-video work; the
+later 319b input is Website-only. F is active. This rule batch does not analyze
+video frames or prove F has visually read every extracted frame.
 Linear+colored hand-drawn icons, recorded launch/Manus operation/Website videos,
 four-surface functional UI/UX/AIGC balance and Website-exempt operational no-
 unnecessary-vertical-scroll direction remain future actual design/operation work.
@@ -607,3 +614,42 @@ RTX5090, W6 sole product integration and M event-driven standby are unchanged.
 
 
 基础测试主体词条库：用户已核对三格式 xujing_topic_seed_100_4confirmed_20261004，实际100词条/41来源，广州太古汇、深圳万象城（罗湖）、Nike、Le Labo各25词条；输入仍自述4/6主体确认、2未指定和100热度UNKNOWN，不冒充已验证热榜/全平台覆盖。C1/W6按现Source/registry/Evidence/Canonical入库与打包进入实际运行；词条随时间、商业体、品牌、活动、事件增补版本，原词条/原文件不删除，保留理由/有效区间/来源/旧版本与回滚。用户核对不重新要求人工重复确认。
+
+## Developer configuration evidence — 2026-10-04
+
+Historical configuration-only batch, before the explicit F resume: local
+AE Method marketplace's corrupt path blocked plugin listing; its real existing
+manifest path was corrected and normal CLI listing works. Retired standalone
+Ollama config was privately backed up/quarantined; same-name global context Skill
+disabled while repo canonical skill remains enabled. Original16 plugin entries,
+models/efforts/projects/security/MCP/hooks are unchanged; Product Design was added.
+
+Official Product Design0.1.52/commit5fd93af4 was installed and enabled, its actual
+user-context preflight/init/save/readback ran with existing rules/references and
+the then-current F pause. Local GSAP3.15.0 pinned package ran a real paused tween at50%/100% and
+cleaned it up. New-process skills discovery sees the new developer motion skill,
+old global context skill disabled and repo skill enabled. No inference/API-cost
+probe, frontend code, prototype, reference-video study, product dependency change
+or active process restart occurred. Live existing windows have not been hot-
+reloaded; developer availability is not a product-E2E/release statement.
+
+Source/licensing: official openai/plugins Product Design is proprietary tooling,
+not product-owned code; GSAP's standard No Charge terms restrict competing visual
+animation builders. Scope is permitted Website/interface developer motion, not
+media Timeline truth, a Flutter migration or animation-builder feature. Exact
+private backup/config and actual command receipts stay in M's local work folder.
+
+
+## W6 rule and audit-boundary delivery — 2026-10-04
+
+This batch reconciles active pause/model/GPU rules and consolidates the frontend
+mapping in Experience section 38. It repairs only audit inventory traversal,
+with in-scope failures and real duplicate/runtime-owner violations still blocking.
+See [exact batch evidence](evidence/round-15/full-product-audit-20261003/W6-RULE-PUBLICATION-20261004.md)
+for scope, tests, source pins, research, prior failures and publication readback.
+Its commit carries this CURRENT update and the exact accepted rules/validators.
+The separate dirty product candidates, 17-path integration and 345-test receipts
+retain their own pins and unresolved same-version runtime/acceptance work.
+Core configuration HTTP 200 proves local binding only. C1 formal admission,
+actual owned training/inference and four-surface user outcomes are not accepted
+by this rule publication. No GPU or production DB action is included.
