@@ -2,7 +2,7 @@
   "schema_version": 1,
   "recorded_at": "2026-10-05",
   "purpose": "Single lookup boundary for protected local-only candidates and artifacts; not a second source, product, Evidence or execution authority.",
-  "main_commit_at_recording": "fec4ceb7cdb67a2dc0b6fe4ffe2c6ad27600bff1",
+  "main_commit_at_recording": "d87b4ab790c992ef2dfb08e5d4cac6e050b489da",
   "rules": {
     "active_source_of_truth": "origin/main plus current runtime/DB/Permission/Evidence truth",
     "automatic_admission": false,
@@ -16,12 +16,11 @@
     "admission_path": "existing Owner source/caller/contract review -> isolated application when needed -> affected verification -> coherent main commit -> remote readback"
   },
   "snapshot": {
-    "untracked_path_count": 43387,
-    "work_archive_path_count": 43380,
-    "work_archive_direct_child_count": 22,
+    "untracked_path_count": 43383,
+    "work_archive_path_count": 43381,
+    "work_archive_direct_child_count": 23,
     "candidate_counts": {
       "c1_evidence_candidate": 1,
-      "c3c5_evidence_candidate": 5,
       "private_training_runtime_config": 1,
       "unmerged_test_candidates": 0
     },
@@ -104,6 +103,29 @@
       "sha256": "fcd43cf1cc395c34f2e2296eef74ed6505911de247ad2db0a13aa05c235c5a35",
       "status": "ADMITTED_TO_MAIN_WITH_ISOLATED_TEST",
       "reason": "Fifteen current process ownership/lock recovery cases pass using isolated temporary child processes; no GPU or model training ran."
+    },
+    {
+      "id": "C3C5-SOURCE-EVIDENCE-RECEIPTS",
+      "path": "00-GOVERNANCE/evidence/round-11/c3-workflow-source-20261003/",
+      "manifest_path": "00-GOVERNANCE/evidence/round-11/c3-workflow-source-20261003/source-evidence.json",
+      "manifest_sha256": "e475048b06de0e2b50e24c486d22d9af8d0747c520123ac0236e78ce09d3b270",
+      "status": "ADMITTED_TO_MAIN_AS_ENGINEERING_PROVENANCE",
+      "receipt_sha256": {
+        "affected-reopen.txt": "066328a3e0fd54a7ca134b4e047e8f8ee711449b5b1e11cda22954f0bce3f6aa",
+        "verify_ai_native_constitution.txt": "e30d82c88700d83e334b9d746d862749bb960251f028c8d76450046dcbfcaeca",
+        "verify_codex_takeover_governance.txt": "b3b3bb0c406adabf6d42e4d4f77059cc70155e01f0bcd5261315342439c8e1ea",
+        "verify_database_authority.txt": "b5e2aba6a6d3c6ffe8ca60677808e083f5be2324c50ff1334ee167e7b4ad6857",
+        "verify_lumenis_single_product.txt": "352d35ce1fb2452931d17f4534d1ec367ee2e8b8f1deaa7ba369708293608b1f"
+      },
+      "reason": "Each plain-text file is byte-identical to its SHA-bound base64 receipt inside the already-tracked source-evidence.json. Outputs are fixed-source engineering receipts, not C3 user acceptance. Ignored .log twins remain locally preserved because deletion was blocked by the safety layer; they are exact duplicates, not alternate source evidence."
+    }
+  ],
+  "deferred_inputs": [
+    {
+      "path": "work/frontend-review-package-2026-10-05/LUMENIS-FRONTEND-PRELAUNCH-REVIEW-DRAFT.md",
+      "owner": "F / Product Owner's separate frontend work",
+      "state": "PRESERVED_UNREAD_BY_M",
+      "next_action": "F handles the input in its separate frontend scope; M does not inspect or modify its contents."
     }
   ],
   "categories": [
@@ -121,14 +143,6 @@
       "state": "LOCAL_EVIDENCE_NOT_FORMAL_SOURCE_EVIDENCE",
       "owner": "C1 / SYSTEM Collector, Source, Evidence and Canonical owners",
       "main_admission": "requires real source/scope/rights/actor transaction evidence; this file alone cannot admit collection results"
-    },
-    {
-      "id": "C3C5-LOCAL-RECEIPTS",
-      "path": "00-GOVERNANCE/evidence/round-11/c3-workflow-source-20261003/",
-      "file_count": 5,
-      "state": "LOCAL_VERIFICATION_RECEIPTS",
-      "owner": "C3+C5 business/import/reporting owners",
-      "main_admission": "retain as provenance; do not publish a receipt as C3/C5 user acceptance or re-run without a changed source/contract"
     },
     {
       "id": "PRIVATE-OWNED-TRAINING-RUNTIME",

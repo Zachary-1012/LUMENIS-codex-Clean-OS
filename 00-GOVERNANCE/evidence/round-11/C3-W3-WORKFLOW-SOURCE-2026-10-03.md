@@ -46,6 +46,17 @@ repeated. The initial Windows autocrlf representation error and wrong gate-name
 tooling error are retained locally; their actual causes were corrected without
 weakening any legitimate test/gate. Logs and counts remain independently readable.
 
+Plain-text copies of the fixed-base gate receipts are linked for direct review:
+[affected reopen](c3-workflow-source-20261003/affected-reopen.txt),
+[AI-native constitution](c3-workflow-source-20261003/verify_ai_native_constitution.txt),
+[takeover governance](c3-workflow-source-20261003/verify_codex_takeover_governance.txt),
+[database authority](c3-workflow-source-20261003/verify_database_authority.txt),
+and [single-product guard](c3-workflow-source-20261003/verify_lumenis_single_product.txt).
+Each is byte-identical to its SHA-bound original output embedded in
+`source-evidence.json`; these are engineering receipts, not full C3 acceptance.
+The identical ignored `.log` copies remain local because the safety layer
+rejected their deletion; they are not a second evidence source.
+
 W6 review receipt39905c65b7d5907250ebe05b70da4d65db68fecf8dbd7f32aeda6bd0bef2e586;
 local root integration9463a59fe482a1e38182acf488aa8fb42591e614013ee3c72a208b7464a42e25.
 The integration preserved all93 preexisting protected file hashes and an empty
