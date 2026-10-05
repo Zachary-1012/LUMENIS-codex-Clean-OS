@@ -40,6 +40,7 @@ F retains four-surface behavior and design responsibilities through existing Flu
 13. The canonical OpenAPI generator now creates its route map in an isolated disposable database environment before importing Flask. This prevents route-document generation from initializing the protected repository DB; it is an engineering isolation repair, not a product/runtime acceptance claim. Exact source `0ef959a4` passed Product Gate `37286766323`. See `evidence/round-15/OPENAPI-ISOLATED-GENERATOR-20261005.md`.
 14. Follow-up `fb894def` makes that isolation regression valid in both workstation checkouts with a protected DB and clean GitHub checkouts where the ignored DB is absent. It changes no product route, runtime or data state; the generator still uses only a disposable schema.
 15. The tracked environment template and the old provider-failover policy no longer advertise retired local/external routes as active. Compatibility key names remain only to preserve configuration shape; current product inference remains the owned Gateway route with an honest unavailable state until real binding evidence. Exact source `373d846a` passed Product Gate `37289571504`. See `evidence/round-07/RETIRED-PROVIDER-CONFIG-TEMPLATE-20261005.md`.
+16. The protected local-only candidate/archive boundary is now indexed once in `evidence/round-15/CURRENT-PROTECTED-LOCAL-BOUNDARIES-20261005.json`. It preserves the archive, private training runtime, local receipts and unmerged tests without treating any as active main source or creating a second candidate queue.
 
 ## 3. Authority and retained evidence
 
@@ -56,6 +57,7 @@ F retains four-surface behavior and design responsibilities through existing Flu
 - `evidence/round-07/OWNED-TRAINING-REMOTE-PREFLIGHT-20261005.md`: current no-GPU remote source-pin preflight binding and the remaining real training gates.
 - `evidence/round-07/RETIRED-PROVIDER-CONFIG-TEMPLATE-20261005.md`: retired-provider template/policy alignment without provider activation.
 - `evidence/round-15/OPENAPI-ISOLATED-GENERATOR-20261005.md`: isolated route-contract generation and protected DB boundary verification.
+- `evidence/round-15/CURRENT-PROTECTED-LOCAL-BOUNDARIES-20261005.json`: current protected local-only candidate/archive owner and admission boundary.
 - `evidence/round-06/COLLECTOR-CONVERGENCE-20261004.md`: current purpose, signed scheduler, source transaction and packaged-input integration evidence.
 - `evidence/round-06/C1-RUNTIME-ACTIVATION-20261005.md`: current narrow HK resident/scheduler runtime readback and explicit six-platform/result limits.
 

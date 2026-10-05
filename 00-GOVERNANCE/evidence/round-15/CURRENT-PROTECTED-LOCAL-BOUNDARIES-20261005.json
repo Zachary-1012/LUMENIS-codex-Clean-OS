@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-05",
+  "purpose": "Single lookup boundary for protected local-only candidates and artifacts; not a second source, product, Evidence or execution authority.",
+  "main_commit_at_recording": "1ab4d1a80f0d54b6cae27ce27fb4f88bf6d9f129",
+  "rules": {
+    "active_source_of_truth": "origin/main plus current runtime/DB/Permission/Evidence truth",
+    "automatic_admission": false,
+    "forbidden_operations": [
+      "git reset or clean",
+      "bulk stage",
+      "delete or move protected files",
+      "treat local artifact as accepted product source",
+      "execute private training configuration without current Product Owner cost authorization"
+    ],
+    "admission_path": "existing Owner source/caller/contract review -> isolated application when needed -> affected verification -> coherent main commit -> remote readback"
+  },
+  "snapshot": {
+    "untracked_path_count": 43398,
+    "work_archive_path_count": 43380,
+    "work_archive_direct_child_count": 22,
+    "candidate_counts": {
+      "c1_evidence_candidate": 1,
+      "c3c5_evidence_candidate": 5,
+      "private_training_runtime_config": 1,
+      "app_fixture_candidate": 1,
+      "unmerged_test_candidates": 10
+    },
+    "scope_note": "Counts exclude this index itself and are Git untracked-path counts only. The work archive was not recursively re-read or reclassified in this record."
+  },
+  "categories": [
+    {
+      "id": "LOCAL-WORK-ARCHIVE",
+      "path": "work/",
+      "state": "PROTECTED_ARCHIVE_AND_CANDIDATE_INPUT",
+      "owner": "the existing canonical owner named by each contained source/artifact path",
+      "main_admission": "never by directory; only a unique current-source delta with exact owner, base, contract and verification"
+    },
+    {
+      "id": "C1-EVIDENCE-CANDIDATE",
+      "path": "00-GOVERNANCE/evidence/round-06/C1-W1-DATA-COLLECTION-2026-10-02.md",
+      "sha256": "329cf8d3023d7e23655fe250dd96ac63caab4c6c16e999414a550dd562a91e82",
+      "state": "LOCAL_EVIDENCE_NOT_FORMAL_SOURCE_EVIDENCE",
+      "owner": "C1 / SYSTEM Collector, Source, Evidence and Canonical owners",
+      "main_admission": "requires real source/scope/rights/actor transaction evidence; this file alone cannot admit collection results"
+    },
+    {
+      "id": "C3C5-LOCAL-RECEIPTS",
+      "path": "00-GOVERNANCE/evidence/round-11/c3-workflow-source-20261003/",
+      "file_count": 5,
+      "state": "LOCAL_VERIFICATION_RECEIPTS",
+      "owner": "C3+C5 business/import/reporting owners",
+      "main_admission": "retain as provenance; do not publish a receipt as C3/C5 user acceptance or re-run without a changed source/contract"
+    },
+    {
+      "id": "PRIVATE-OWNED-TRAINING-RUNTIME",
+      "path": "config/ai-owned-training-runtime.json",
+      "sha256": "02425b04db037d591d9967b85adb7ce5be3625bee052b5b8d479af0b2050fae4",
+      "state": "PRIVATE_RUNTIME_CONFIGURATION_NOT_COMMITTABLE",
+      "owner": "C2 / SYSTEM AI Gateway",
+      "main_admission": "never commit private endpoint/identity material; validate only through the published exact-approval preflight and actual authorized runtime"
+    },
+    {
+      "id": "APP-NATIVE-MEDIA-FIXTURE",
+      "path": "app/test/fixtures/native_media_lease_child.dart",
+      "sha256": "274f9d5dfcd710d92a89a38ac0103f57c8c488fcae1d217e3e54c72faac24ded",
+      "state": "UNMERGED_TEST_FIXTURE_CANDIDATE",
+      "owner": "C4 / Shared Artifact and Flutter media owners",
+      "main_admission": "only if an active tracked media test names it and source behavior requires it"
+    },
+    {
+      "id": "UNMERGED-TEST-CANDIDATES",
+      "paths": [
+        "tests/test_business_brief_owned_boundary.py",
+        "tests/test_collection_scope_routes.py",
+        "tests/test_owned_blackwell_recipe.py",
+        "tests/test_owned_training_checkpoint_recovery.py",
+        "tests/test_owned_training_execution_approval_routes.py",
+        "tests/test_owned_training_parent_routes.py",
+        "tests/test_owned_training_review_submission_routes.py",
+        "tests/test_owned_training_runtime_recovery.py",
+        "tests/test_pitch_caller_routes.py",
+        "tests/test_pitch_export.py"
+      ],
+      "state": "UNMERGED_TEST_CANDIDATES",
+      "owner": "C2, C3+C5 and C4 according to each named current source contract",
+      "main_admission": "compare each candidate against current main once; retain only unique coverage for already accepted source behavior and do not use a test as implementation proof"
+    }
+  ]
+}
