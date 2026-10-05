@@ -19,12 +19,12 @@
       }
     }
   },
-  "x-url-map-rule-count": 839,
+  "x-url-map-rule-count": 840,
   "x-static-route-count": 1,
-  "x-route-count": 838,
-  "x-path-count": 796,
-  "x-operation-count": 862,
-  "x-operation-group-count": 848,
+  "x-route-count": 839,
+  "x-path-count": 797,
+  "x-operation-count": 863,
+  "x-operation-group-count": 849,
   "x-duplicate-operation-group-count": 14,
   "x-duplicate-operation-candidate-count": 28,
   "x-duplicate-operation-candidates": [
@@ -6739,6 +6739,25 @@
         "operationId": "experience_runtime.read_owned_training_execution_configuration",
         "x-flask-rule": "/api/experience/owned-training/execution-configuration",
         "summary": "Observe this serving process's effective binding without disclosing it."
+      }
+    },
+    "/api/experience/owned-training/execution-preflight": {
+      "post": {
+        "tags": [
+          "api/experience"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "httpBasic": []
+          },
+          {
+            "v4Auth": []
+          }
+        ],
+        "operationId": "experience_runtime.preflight_owned_training_execution",
+        "x-flask-rule": "/api/experience/owned-training/execution-preflight",
+        "summary": "Verify the exact remote source binding without launching training or a model."
       }
     },
     "/api/experience/owned-training/phase-tasks": {

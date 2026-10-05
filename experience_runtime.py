@@ -1605,6 +1605,42 @@ def read_owned_training_execution_configuration():
         return jsonify(value), status
 
 
+@experience_bp.route("/api/experience/owned-training/execution-preflight", methods=["POST"])
+def preflight_owned_training_execution():
+    """Verify the exact remote source binding without launching training or a model."""
+    try:
+        from lumenis.system.ai_gateway.owned_training_ssh import AuthenticatedSSHTrainingTransport
+
+        body = _owned_training_phase_body()
+        _, _, _, domain, _, _, _, fresh = _owned_training_phase_material(body)
+        fresh()
+        _, specification, _ = _owned_training_parent_profile(body, domain)
+        endpoint = _owned_training_parent_endpoint(
+            specification["worker_source_pins"],
+            specification.get("private_endpoint_configuration_reference"),
+        )
+        observation = AuthenticatedSSHTrainingTransport(endpoint).preflight_source()
+        if observation != {
+            "state": "REMOTE_TRAINING_PREFLIGHT_SOURCE_PINS_VERIFIED",
+            "source_pins_verified": True,
+        }:
+            raise RuntimeError("REMOTE_TRAINING_PREFLIGHT_INVALID")
+        fresh()
+        return jsonify({
+            "ok": True,
+            "state": "REMOTE_TRAINING_PREFLIGHT_BOUND",
+            "configuration_revision": "owned-parent-remote-preflight-1",
+            "endpoint_present": True,
+            "exact_source_pins": True,
+            "remote_source_pins_verified": True,
+            "training_started": False,
+            "model_loaded": False,
+            "optimizer_steps": 0,
+        })
+    except Exception as exc:
+        return _owned_training_phase_error(exc)
+
+
 def _owned_training_parent_checkpoint(client):
     from lumenis.shared.database import get_repository
 

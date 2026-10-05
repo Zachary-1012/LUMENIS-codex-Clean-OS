@@ -1,8 +1,8 @@
 # API 路由矩阵（由当前 Flask url_map 自动生成，勿手改）
 
-- Flask url_map rules：**839**（static：**1**；API routes：**838**）
-- 唯一路径：**796**；operation groups：**848**
-- route operation candidates：**862**；重复冲突组：**14**（候选项：**28**）
+- Flask url_map rules：**840**（static：**1**；API routes：**839**）
+- 唯一路径：**797**；operation groups：**849**
+- route operation candidates：**863**；重复冲突组：**14**（候选项：**28**）
 - 认证：public=/healthz；v4Auth=/v4/* 独立 token；其余 httpBasic 或 v4 会话。
 
 | 路径 | 方法 | Endpoint candidate | Flask rule | 认证 | 分组 |
@@ -327,6 +327,7 @@
 | `/api/experience/materials/documents/{evidence_id}/quote` | GET | experience_runtime.quote_shared_document | `/api/experience/materials/documents/<int:evidence_id>/quote` | basic/v4 | api/experience |
 | `/api/experience/owned-training/execution-approvals` | POST | experience_runtime.confirm_owned_training_execution_approval | `/api/experience/owned-training/execution-approvals` | basic/v4 | api/experience |
 | `/api/experience/owned-training/execution-configuration` | POST | experience_runtime.read_owned_training_execution_configuration | `/api/experience/owned-training/execution-configuration` | basic/v4 | api/experience |
+| `/api/experience/owned-training/execution-preflight` | POST | experience_runtime.preflight_owned_training_execution | `/api/experience/owned-training/execution-preflight` | basic/v4 | api/experience |
 | `/api/experience/owned-training/phase-tasks` | POST | experience_runtime.prepare_owned_training_phase_task | `/api/experience/owned-training/phase-tasks` | basic/v4 | api/experience |
 | `/api/experience/owned-training/phase-tasks/{task_id}/challenge-decisions` | POST | experience_runtime.issue_owned_training_phase_decision | `/api/experience/owned-training/phase-tasks/<task_id>/challenge-decisions` | basic/v4 | api/experience |
 | `/api/experience/owned-training/phase-tasks/{task_id}/challenges` | POST | experience_runtime.prepare_owned_training_phase_challenge | `/api/experience/owned-training/phase-tasks/<task_id>/challenges` | basic/v4 | api/experience |

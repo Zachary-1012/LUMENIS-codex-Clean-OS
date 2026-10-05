@@ -82,6 +82,22 @@ class SSHTrainingEndpoint:
                 '-o', 'ServerAliveCountMax=2', self.user + '@' + self.host, command]
 
 
+_PREFLIGHT = r'''
+import hashlib,json,stat,sys
+from pathlib import Path
+b=json.loads(sys.stdin.buffer.readline())
+root=Path(b['source_root']); assert root.is_absolute() and root.is_dir() and not root.is_symlink()
+pins={}
+for name,wanted in b['source_pins'].items():
+ p=root/name; current=root
+ for part in Path(name).parts:
+  current=current/part; assert not current.is_symlink()
+ s=p.lstat(); assert stat.S_ISREG(s.st_mode) and s.st_nlink==1
+ actual=hashlib.sha256(p.read_bytes()).hexdigest(); assert actual==wanted; pins[name]=actual
+print(json.dumps({'state':'REMOTE_TRAINING_PREFLIGHT_OK','source_pins':pins},separators=(',',':')),flush=True)
+'''
+
+
 # Independent OS observation over the authenticated connection. A worker's
 # hello dictionary is compared with this observation; it is not an authority.
 _INSPECT = r'''
@@ -280,6 +296,28 @@ class AuthenticatedSSHTrainingTransport:
             return json.loads(result.stdout)
         except (ValueError, UnicodeError) as exc:
             raise RemoteTrainingError('REMOTE_OBSERVATION_INVALID') from exc
+
+    def preflight_source(self):
+        """Verify the remote pinned source before any worker/model/GPU action."""
+        result = self._query(
+            _PREFLIGHT,
+            {
+                'source_root': self.endpoint.source_root,
+                'source_pins': self.endpoint.source_pins,
+            },
+            timeout=20,
+        )
+        if (
+            type(result) is not dict
+            or set(result) != {'state', 'source_pins'}
+            or result.get('state') != 'REMOTE_TRAINING_PREFLIGHT_OK'
+            or result.get('source_pins') != self.endpoint.source_pins
+        ):
+            raise RemoteTrainingError('REMOTE_TRAINING_PREFLIGHT_INVALID')
+        return {
+            'state': 'REMOTE_TRAINING_PREFLIGHT_SOURCE_PINS_VERIFIED',
+            'source_pins_verified': True,
+        }
 
     def start_stdio(self):
         if self._channel is not None:

@@ -1642,6 +1642,7 @@ def _permission_gate_write_check():
         'experience_runtime.prepare_owned_training_phase_task': '/api/experience/owned-training/phase-tasks',
         'experience_runtime.execute_owned_training_phase_task': '/api/experience/owned-training/phase-tasks/<task_id>/execute',
         'experience_runtime.read_owned_training_execution_configuration': '/api/experience/owned-training/execution-configuration',
+        'experience_runtime.preflight_owned_training_execution': '/api/experience/owned-training/execution-preflight',
         'experience_runtime.prepare_owned_training_phase_challenge': '/api/experience/owned-training/phase-tasks/<task_id>/challenges',
         'experience_runtime.issue_owned_training_phase_decision': '/api/experience/owned-training/phase-tasks/<task_id>/challenge-decisions',
         'experience_runtime.interrupt_owned_training_phase_task': '/api/experience/owned-training/phase-tasks/<task_id>/interrupt',
