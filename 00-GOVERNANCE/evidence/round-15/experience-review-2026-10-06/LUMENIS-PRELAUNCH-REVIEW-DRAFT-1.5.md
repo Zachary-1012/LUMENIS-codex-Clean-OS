@@ -976,7 +976,7 @@ AUTO全局产品自有公开基线依当前批准Global合同单独标识；普�
 
 ## 6. 44 个既有 Screen ID 的能力覆盖映射（不是固定页数）
 
-**现状共通说明：**当前 App 有 44 个 screen source files 和 44 个路由/屏幕 ID。这里把 44 个历史 Screen ID 当作已批准能力范围的覆盖索引，用来证明没有漏掉一类用户工作；不是承诺产品必须有 44 个固定页面。某项流程适合在 drawer、modal、split view、播放器层或返回态呈现时就留在现有 Screen 下；不能为了凑页数复制画面，也不能借“非固定页面数”删掉真实任务。下面的设计是目标态而非视觉套版。对所有行，“源码入口存在”不代表功能绑定、权限、Evidence、保存/恢复、离线状态、E2E 已验证。准确完成状态要在未来逐屏读当前 Core/ViewModel 并依 Real Delivery Card 操作验证。页面形状和移动重排的逐屏文字草图见[44项能力覆盖文字视觉草图](../../../../work/frontend-review-package-2026-10-05/LUMENIS-44-SCREEN-TEXT-WIREFRAMES.md)，按ID对应本表。
+**现状共通说明：**当前 App 有 44 个 screen source files 和 44 个路由/屏幕 ID。这里把 44 个历史 Screen ID 当作已批准能力范围的覆盖索引，用来证明没有漏掉一类用户工作；不是承诺产品必须有 44 个固定页面。某项流程适合在 drawer、modal、split view、播放器层或返回态呈现时就留在现有 Screen 下；不能为了凑页数复制画面，也不能借“非固定页面数”删掉真实任务。下面的设计是目标态而非视觉套版。对所有行，“源码入口存在”不代表功能绑定、权限、Evidence、保存/恢复、离线状态、E2E 已验证。准确完成状态要在未来逐屏读当前 Core/ViewModel 并依 Real Delivery Card 操作验证。页面形状和移动重排的逐屏文字草图见[44项能力覆盖文字视觉草图](LUMENIS-44-SCREEN-TEXT-WIREFRAMES-1.5.md)，按ID对应本表。
 
 ### 6.1 ACC — 进入、上下文与恢复（4 屏）
 
