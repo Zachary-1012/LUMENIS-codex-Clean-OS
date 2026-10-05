@@ -97,9 +97,7 @@ class TestEnvVarActivation:
     def test_env_var_changes_subject_hit(self, monkeypatch):
         """环境变量切换后，默认 subject_hit 使用新品牌口径。"""
         monkeypatch.setenv("ZBC_ACTIVE_BRAND", "hainan_cdf")
-        # 海南中免内容在激活后应命中
         assert sr.subject_hit(title="海南中免CDF攻略") is True
-        # 广州太古汇内容在海南口径下不命中
         assert sr.subject_hit(title="广州太古汇探店") is False
 
     def test_invalid_env_brand_falls_back_to_guangzhou(self, monkeypatch):
@@ -107,6 +105,72 @@ class TestEnvVarActivation:
         monkeypatch.setenv("ZBC_ACTIVE_BRAND", "nonexistent_brand")
         cfg = sr.get_brand_config()
         assert cfg.get("display_name") == "广州太古汇"
+
+
+def test_kos_collection_uses_canonical_scoped_secondary_writer(monkeypatch):
+    from flask import Flask
+    import experience_runtime
+    import kos_routes
+    import subject_registry
+    import xhs_cookie_bridge
+    from lumenis.system.collector.adapters import secondary_collection
+
+    actor = {"id": 17}
+    scope = {
+        "domain_id": "zbmp", "subject_id": None,
+        "brand_focus_id": "BRAND-1", "global_scope": False,
+    }
+    entry = {
+        "subject_id": "SUBJECT-1", "brand_focus_id": "BRAND-1", "domain_id": "BMP",
+        "subject_type": "brand", "name_zh": "海南中免", "name_en": "Hainan CDF",
+        "keywords": ["海南中免", "CDF", "三亚免税"],
+    }
+    calls = []
+    monkeypatch.setattr(experience_runtime, "_content_project_scope", lambda *_a, **_k: (actor, scope))
+    monkeypatch.setattr(subject_registry, "list_subjects", lambda _domain: [entry])
+    monkeypatch.setattr(xhs_cookie_bridge, "is_user_paused", lambda: None)
+    monkeypatch.setattr(
+        secondary_collection, "collect_search",
+        lambda platform, keyword, **kwargs: calls.append((platform, keyword, kwargs)) or {
+            "ok": True, "status": "SUCCESS", "imported": 1, "updated": 0,
+            "details": [{"content": "source body must stay behind the Evidence API"}],
+        },
+    )
+    monkeypatch.setattr(kos_routes, "_engine", lambda: type(
+        "FakeKOS", (), {"brand_collection_stats": lambda _self, _brand: {"records": 1}}
+    )())
+
+    app = Flask("kos-secondary-collection")
+    app.register_blueprint(kos_routes.kos_bp)
+    response = app.test_client().post("/api/kos/collect", json={
+        "brand": "hainan_cdf", "operator": "human", "confirm_read_only": True,
+        "max_results": 2,
+    })
+
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["ok"] is True
+    assert body["brand_focus_id"] == "BRAND-1"
+    assert body["accepted_total"] == len(calls)
+    assert all("details" not in result for result in body["results"])
+    assert calls
+    assert all(platform == "xiaohongshu" for platform, _keyword, _kwargs in calls)
+    assert all(kwargs["actor"] is actor and kwargs["scope"] is scope for _, _, kwargs in calls)
+    assert {keyword for _, keyword, _ in calls} == {"海南中免", "Hainan CDF", "CDF", "三亚免税"}
+
+
+def test_kos_collection_requires_read_only_confirmation_before_collection(monkeypatch):
+    from flask import Flask
+    import kos_routes
+
+    app = Flask("kos-confirmation-required")
+    app.register_blueprint(kos_routes.kos_bp)
+    response = app.test_client().post("/api/kos/collect", json={
+        "brand": "hainan_cdf", "operator": "human",
+    })
+
+    assert response.status_code == 400
+    assert response.get_json()["code"] == "READ_ONLY_CONFIRMATION_REQUIRED"
 
 
 class TestSubjectHitNote:

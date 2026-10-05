@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
-"""LUMENIS Shared Evidence / Canonical Data 数据链核心模块
+"""LUMENIS Shared Evidence and lifecycle support.
 
-统一数据生命周期：
-  External Source → Evidence → Canonical Data → Event → Case → Finding
-  → Insight → Decision → Action → Outcome → Evaluation → Feedback → Learning Asset
+`canonical_data.py` is the authoritative business Canonical Data writer. The
+historical `zbc_canonical_data` table is retained for old EvidenceChain
+analysis/correction history only; it is a derived overlay, not a second
+Production Truth. New product collection can use `capture_evidence_for_canonical`
+to add immutable Evidence and lifecycle links to an existing canonical record
+without creating another canonical row.
 
 核心原则（不可违反）：
   1. 原始证据(Evidence)不可被分析结果覆盖 —— Evidence 表 raw_content/content_hash/source
@@ -16,8 +19,9 @@
   5. 完整 provenance —— 每条 Evidence 携带 hash/timestamp/source/subject_scope/
      collection_metadata/provider/authenticity_score。
 
-本模块使用受治理的 Evidence/Canonical lifecycle 表（历史物理表名保持 zbc_evidence / zbc_canonical_data / zbc_lifecycle_tracking），
-不修改、不覆盖现有 canonical_data、app_evidence_records、notes 等生产表。
+本模块使用历史物理表名保持兼容的 zbc_evidence / zbc_canonical_data /
+zbc_lifecycle_tracking。`zbc_canonical_data` 只承载既有派生分析/修订历史；
+当前业务 Canonical Data 由共享数据库中的 `canonical_data` 负责。
 新字段一律可空，向后兼容。
 """
 from __future__ import annotations
@@ -63,9 +67,8 @@ LIFECYCLE_STAGES: Dict[str, Dict[str, Any]] = {
     "CANONICAL_DATA": {
         "order": 2,
         "input": "Evidence 记录",
-        "output": "CanonicalData 记录（规范化+主体过滤+质量门+情感/风险）",
-        "transform": "内容规范化；subject_hit 判定；sentiment/risk_level 计算；"
-                     "engagement_metrics 聚合；rule_version 标记；AI 分析与人工修正分离存储",
+        "output": "历史 zbc_canonical_data 派生分析覆盖（不是业务 Canonical Truth）",
+        "transform": "兼容历史的内容归一化/修订生命周期；业务 Canonical Data 由 canonical_data.py 负责",
         "immutable": False,
     },
     "EVENT": {
@@ -198,7 +201,11 @@ class Evidence:
 
 @dataclass
 class CanonicalData:
-    """规范数据 —— 从 Evidence 转换而来，AI 输出与人工修正分离。
+    """Legacy Evidence-derived analysis overlay in zbc_canonical_data.
+
+    It is not the authoritative business Canonical Data record. Keep the old
+    table and manual correction history readable; new product ingestion links
+    Evidence/lifecycle to the existing ``canonical_data.py`` record instead.
 
     核心约束：
       - ai_analysis 存储 AI 原始输出，永不被人工修正覆盖
@@ -211,8 +218,8 @@ class CanonicalData:
     normalized_content: str
     subject_hit: bool = False
     subject_keywords: List[str] = field(default_factory=list)
-    sentiment: str = "neutral"     # positive / neutral / negative / unknown
-    risk_level: str = "low"        # low / medium / high / critical
+    sentiment: str = "unknown"     # positive / neutral / negative / unknown
+    risk_level: str = "unknown"    # unknown / low / medium / high / critical
     engagement_metrics: Dict[str, Any] = field(default_factory=dict)
     rule_version: str = RULE_VERSION
     ai_analysis: Dict[str, Any] = field(default_factory=dict)       # AI 原始输出（独立）
@@ -315,8 +322,8 @@ CREATE TABLE IF NOT EXISTS zbc_canonical_data (
     normalized_content TEXT NOT NULL DEFAULT '',
     subject_hit        INTEGER NOT NULL DEFAULT 0,
     subject_keywords   TEXT NOT NULL DEFAULT '[]',
-    sentiment          TEXT NOT NULL DEFAULT 'neutral',
-    risk_level         TEXT NOT NULL DEFAULT 'low',
+    sentiment          TEXT NOT NULL DEFAULT 'unknown',
+    risk_level         TEXT NOT NULL DEFAULT 'unknown',
     engagement_metrics TEXT NOT NULL DEFAULT '{}',
     rule_version       TEXT NOT NULL DEFAULT 'evidence-chain-v1.0.0',
     ai_analysis        TEXT NOT NULL DEFAULT '{}',
@@ -649,15 +656,16 @@ class EvidenceStore:
 
 
 # ============================================================
-# CanonicalData Store —— AI 与人工分离，rule_version 追踪
+# Legacy Evidence Analysis Overlay Store —— retained for historical corrections
 # ============================================================
 class CanonicalDataStore:
-    """规范数据存储。
+    """Historical zbc analysis-overlay storage; not the business Canonical owner.
 
     核心约束：
       - ai_analysis 与 human_correction 为独立 JSON 字段，互不覆盖
       - rule_version 标记创建时规则版本，历史数据不被新规则静默改写
       - evidence_id FK 关联不可变原始证据
+      - business Canonical Truth belongs to canonical_data.py
     """
 
     def __init__(self, db_path: Optional[str] = None):
@@ -671,8 +679,8 @@ class CanonicalDataStore:
         normalized_content: str,
         subject_hit: bool = False,
         subject_keywords: Optional[List[str]] = None,
-        sentiment: str = "neutral",
-        risk_level: str = "low",
+        sentiment: str = "unknown",
+        risk_level: str = "unknown",
         engagement_metrics: Optional[Dict[str, Any]] = None,
         ai_analysis: Optional[Dict[str, Any]] = None,
         human_correction: Optional[Dict[str, Any]] = None,
@@ -974,8 +982,10 @@ class LifecycleTracker:
 class EvidenceChain:
     """证据链统一门面。
 
-    封装 EvidenceStore + CanonicalDataStore + LifecycleTracker，
-    提供端到端的证据→规范数据→生命周期追踪能力。
+    `capture_and_canonicalize` is a retained legacy analysis-overlay path.
+    Current product flows use `canonical_data.py` for business Canonical Data
+    and this owner only for immutable source Evidence plus lineage when linking
+    to a canonical record that already exists.
     """
 
     def __init__(self, db_path: Optional[str] = None):
@@ -995,8 +1005,8 @@ class EvidenceChain:
         normalized_content: str = "",
         subject_hit: bool = False,
         subject_keywords: Optional[List[str]] = None,
-        sentiment: str = "neutral",
-        risk_level: str = "low",
+        sentiment: str = "unknown",
+        risk_level: str = "unknown",
         engagement_metrics: Optional[Dict[str, Any]] = None,
         ai_analysis: Optional[Dict[str, Any]] = None,
         publish_datetime: Optional[str] = None,
@@ -1014,7 +1024,11 @@ class EvidenceChain:
         rule_id: str = "",
         ai_call_id: str = "",
     ) -> Dict[str, Any]:
-        """端到端：采集证据 → hash 去重 → 创建规范数据 → 记录生命周期。
+        """Legacy compatibility: capture Evidence and a derived analysis overlay.
+
+        `canonical_data.py` remains the authoritative business Canonical Data
+        owner. Product ingestion should create its canonical record there and
+        use `capture_evidence_for_canonical` to attach Evidence/lifecycle only.
 
         Returns:
             {
@@ -1098,13 +1112,102 @@ class EvidenceChain:
             "source_id": source_id,
         }
 
+    def capture_evidence_for_canonical(
+        self,
+        *,
+        canonical_id: str = "",
+        source_type: str,
+        source_url: str,
+        raw_content: str,
+        source_id: str = "",
+        captured_at: Optional[str] = None,
+        publish_datetime: Optional[str] = None,
+        subject_scope: str = "CTH",
+        task_id: str = "",
+        trace_id: str = "",
+        collection_metadata: Optional[Dict[str, Any]] = None,
+        provider: str = "unknown",
+        dedupe_by_source: bool = True,
+        domain_id: str = "",
+        product_id: str = "",
+        rule_version: str = RULE_VERSION,
+    ) -> Dict[str, Any]:
+        """Record Evidence and link it to an existing authoritative canonical row.
+
+        This method does not create or update `zbc_canonical_data` and never
+        writes the business record. A blank canonical_id retains Evidence and
+        its EVIDENCE-stage receipt without inventing a Canonical relationship.
+        """
+        if not isinstance(canonical_id, str):
+            raise TypeError("canonical_id must be a string")
+        evidence, is_new = self.evidence_store.add_evidence(
+            source_type=source_type,
+            source_url=source_url,
+            raw_content=raw_content,
+            source_id=source_id,
+            captured_at=captured_at or "",
+            publish_datetime=publish_datetime,
+            subject_scope=subject_scope,
+            task_id=task_id,
+            trace_id=trace_id,
+            collection_metadata=collection_metadata,
+            provider=provider,
+            dedupe_by_source=dedupe_by_source,
+            domain_id=domain_id,
+            product_id=product_id,
+        )
+        tracking_ids = [self.lifecycle.record_stage(
+            evidence_id=evidence.evidence_id,
+            stage="EVIDENCE",
+            input_ref=source_url,
+            output_ref=evidence.evidence_id,
+            transform_rule="SHA256 hash + immutable source provenance capture",
+            rule_version=rule_version,
+            operator=provider,
+            task_id=task_id,
+            trace_id=trace_id,
+            metadata={
+                "is_new": is_new,
+                "content_hash": evidence.content_hash,
+                "source_id": source_id,
+                "canonical_owner": "canonical_data.py",
+            },
+        )]
+        if canonical_id.strip():
+            tracking_ids.append(self.lifecycle.record_stage(
+                evidence_id=evidence.evidence_id,
+                canonical_id=canonical_id,
+                stage="CANONICAL_DATA",
+                input_ref=evidence.evidence_id,
+                output_ref=canonical_id,
+                transform_rule="link Evidence to the existing canonical_data.py business row",
+                rule_version=rule_version,
+                operator="system",
+                task_id=task_id,
+                trace_id=trace_id,
+                metadata={
+                    "canonical_owner": "canonical_data.py",
+                    "canonical_role": "AUTHORITATIVE_BUSINESS_RECORD",
+                },
+            ))
+        return {
+            "evidence": evidence,
+            "is_new_evidence": is_new,
+            "canonical_id": canonical_id,
+            "tracking_ids": tracking_ids,
+            "source_id": source_id,
+        }
+
     def trace_lineage(self, evidence_id: str) -> Dict[str, Any]:
         return self.lifecycle.trace_data_lineage(evidence_id)
 
     def get_stats(self) -> Dict[str, Any]:
+        overlay_count = self.canonical_store.count()
         return {
             "evidence_count": self.evidence_store.count(),
-            "canonical_count": self.canonical_store.count(),
+            "derived_overlay_count": overlay_count,
+            "canonical_count": overlay_count,
+            "canonical_count_semantics": "LEGACY_ZBC_ANALYSIS_OVERLAY_NOT_PRODUCTION_CANONICAL_TRUTH",
             "rule_version": RULE_VERSION,
             "lifecycle_stages": len(LIFECYCLE_STAGES),
         }
@@ -1134,11 +1237,12 @@ def capture_note_lineage(
     domain_id: str = "cth",
     product_id: str = "CTH",
 ) -> Dict[str, Any]:
-    """以现有 Evidence 与 Canonical 契约记录已入库笔记的可失败旁路。
+    """Record a stored note in the sole business Canonical owner and Evidence lineage.
 
-    主业务 ``notes`` 写入由调用方先完成；本函数独立记录不可变来源证据、
-    zbc canonical/lifecycle 和 ``canonical_data``。两侧分别容错，不能让
-    任一旁路故障回滚主业务事实。来源范围去重保留不同笔记的 source/provider。
+    The caller has already written ``notes``. `canonical_data.py` creates the
+    one business canonical row; EvidenceChain adds immutable source Evidence
+    and a lifecycle reference to that exact row. The legacy zbc canonical
+    analysis overlay is not written by this ingestion path.
     """
     note = dict(note_data or {})
     source_id = str(note.get("note_id") or note.get("source_id") or "").strip()
@@ -1157,15 +1261,6 @@ def capture_note_lineage(
     source_url = str(note.get("url") or "")
     source_platform = str(note.get("source_platform") or "xhs")
     source_keyword = str(note.get("source_keyword") or note.get("keyword") or "")
-    matched = note.get("matched_keywords") or []
-    if isinstance(matched, str):
-        matched = [item.strip() for item in matched.replace("，", ",").replace("、", ",").split(",") if item.strip()]
-    elif not isinstance(matched, (list, tuple, set)):
-        matched = []
-    subject_keywords = [str(item).strip() for item in matched if str(item).strip()]
-    if source_keyword and source_keyword not in subject_keywords:
-        subject_keywords.append(source_keyword)
-
     collection_metadata = build_provenance_metadata(
         source_type="xhs_note",
         source_url=source_url,
@@ -1189,39 +1284,6 @@ def capture_note_lineage(
     }
 
     try:
-        chain_result = _note_lineage_chain(path).capture_and_canonicalize(
-            source_type="xhs_note",
-            source_url=source_url,
-            raw_content=raw_content,
-            source_id=source_id,
-            captured_at=captured_at,
-            normalized_content=raw_content[:500],
-            subject_hit=bool(note.get("is_taikoo_verified")),
-            subject_keywords=subject_keywords,
-            sentiment=str(note.get("sentiment") or "neutral"),
-            risk_level=str(note.get("risk_level") or "low"),
-            engagement_metrics={
-                "likes": note.get("likes"),
-                "comments": note.get("comments"),
-                "collects": note.get("collects"),
-                "shares": note.get("shares"),
-            },
-            publish_datetime=note.get("publish_datetime") or note.get("publish_date") or None,
-            subject_scope=subject_scope,
-            task_id=str(note.get("task_id") or ""),
-            trace_id=str(note.get("trace_id") or ""),
-            collection_metadata=collection_metadata,
-            provider=provider,
-            dedupe_by_source=True,
-            domain_id=domain_id,
-            product_id=product_id,
-        )
-        result["evidence_id"] = chain_result["evidence"].evidence_id
-        result["chain_canonical_id"] = chain_result["canonical"].canonical_id
-    except Exception as exc:
-        result["errors"].append({"stage": "evidence_chain", "error_type": type(exc).__name__})
-
-    try:
         _canonical_data = _note_canonical_data_module(path)
         record = _canonical_data.note_to_canonical(note, product_id=product_id)
         conn = _canonical_data.get_connection(path)
@@ -1234,7 +1296,31 @@ def capture_note_lineage(
     except Exception as exc:
         result["errors"].append({"stage": "canonical_data", "error_type": type(exc).__name__})
 
-    result["ok"] = bool(result["evidence_id"] and result["chain_canonical_id"] and result["canonical_id"] and not result["errors"])
+    try:
+        chain_result = _note_lineage_chain(path).capture_evidence_for_canonical(
+            canonical_id=result["canonical_id"],
+            source_type="xhs_note",
+            source_url=source_url,
+            raw_content=raw_content,
+            source_id=source_id,
+            captured_at=captured_at,
+            publish_datetime=note.get("publish_datetime") or note.get("publish_date") or None,
+            subject_scope=subject_scope,
+            task_id=str(note.get("task_id") or ""),
+            trace_id=str(note.get("trace_id") or ""),
+            collection_metadata=collection_metadata,
+            provider=provider,
+            dedupe_by_source=True,
+            domain_id=domain_id,
+            product_id=product_id,
+        )
+        result["evidence_id"] = chain_result["evidence"].evidence_id
+        # Compatibility alias only; the ID points to canonical_data.py.
+        result["chain_canonical_id"] = result["canonical_id"]
+    except Exception as exc:
+        result["errors"].append({"stage": "evidence_lineage", "error_type": type(exc).__name__})
+
+    result["ok"] = bool(result["evidence_id"] and result["canonical_id"] and not result["errors"])
     return result
 
 

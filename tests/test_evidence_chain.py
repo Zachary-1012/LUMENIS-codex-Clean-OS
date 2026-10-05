@@ -586,6 +586,84 @@ class TestProvenance:
 # 8. 端到端 capture_and_canonicalize
 # ============================================================
 class TestEndToEnd:
+    def test_evidence_chain_links_to_business_canonical_without_second_canonical_row(self, tmp_db):
+        """Business canonical_data remains unique; EvidenceChain records only lineage."""
+        import canonical_data
+
+        canonical_data.ensure_canonical_table(tmp_db)
+        record = canonical_data.CanonicalRecord(
+            canonical_id="can_business_note_1", product_id="CTH", domain_id="cth",
+            source_id="note-1", source_type="note", source_table="notes",
+            title="Observed source", content="Source body", sentiment="unknown",
+            risk_level="unknown", sentiment_score=None, risk_score=None,
+        )
+        conn = canonical_data.get_connection(tmp_db)
+        try:
+            canonical_data.persist_canonical(conn, record)
+            conn.commit()
+        finally:
+            conn.close()
+
+        result = EvidenceChain(tmp_db).capture_evidence_for_canonical(
+            canonical_id=record.canonical_id,
+            source_type="xhs_note",
+            source_url="https://public.example.test/note-1",
+            raw_content="Observed source body",
+            source_id="note-1",
+            subject_scope="BMP:BRAND-1",
+            provider="test-collector",
+            domain_id="zbmp",
+            product_id="BMP",
+        )
+
+        assert result["canonical_id"] == record.canonical_id
+        assert result["evidence"].source_id == "note-1"
+        conn = canonical_data.get_connection(tmp_db)
+        try:
+            assert conn.execute("SELECT COUNT(*) FROM canonical_data").fetchone()[0] == 1
+            assert conn.execute("SELECT COUNT(*) FROM zbc_canonical_data").fetchone()[0] == 0
+            linked = conn.execute(
+                "SELECT COUNT(*) FROM zbc_lifecycle_tracking "
+                "WHERE canonical_id=? AND stage='CANONICAL_DATA'",
+                (record.canonical_id,),
+            ).fetchone()[0]
+            assert linked == 1
+        finally:
+            conn.close()
+
+    def test_capture_note_lineage_uses_one_business_canonical_owner(self, tmp_db):
+        """The XHS lineage helper links Evidence to canonical_data without a zbc duplicate."""
+        import canonical_data
+
+        result = evidence_chain.capture_note_lineage(
+            {
+                "note_id": "lineage-note-1",
+                "url": "https://public.example.test/lineage-note-1",
+                "title": "Observed title", "content": "Observed body",
+                "captured_at": "2026-10-06T04:00:00+08:00",
+                "publish_datetime": "2026-10-05T11:00:00+08:00",
+                "source_platform": "xhs", "source_keyword": "registered term",
+                "sentiment": "unknown", "risk_level": "unknown",
+            },
+            db_path=tmp_db, provider="test-collector", subject_scope="BMP:BRAND-1",
+            domain_id="zbmp", product_id="BMP",
+        )
+
+        assert result["ok"] is True
+        assert result["canonical_id"]
+        assert result["chain_canonical_id"] == result["canonical_id"]
+        conn = canonical_data.get_connection(tmp_db)
+        try:
+            assert conn.execute("SELECT COUNT(*) FROM canonical_data").fetchone()[0] == 1
+            assert conn.execute("SELECT COUNT(*) FROM zbc_canonical_data").fetchone()[0] == 0
+            assert conn.execute(
+                "SELECT COUNT(*) FROM zbc_lifecycle_tracking "
+                "WHERE evidence_id=? AND canonical_id=? AND stage='CANONICAL_DATA'",
+                (result["evidence_id"], result["canonical_id"]),
+            ).fetchone()[0] == 1
+        finally:
+            conn.close()
+
     def test_capture_and_canonicalize_full_flow(self, chain):
         """端到端：采集→规范化→生命周期追踪。"""
         result = chain.capture_and_canonicalize(

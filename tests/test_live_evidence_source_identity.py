@@ -31,8 +31,9 @@ def test_live_persist_binds_source_scoped_evidence_dedupe(monkeypatch):
         def __init__(self, db_path):
             captured["db_path"] = db_path
 
-        def capture_and_canonicalize(self, **kwargs):
+        def capture_evidence_for_canonical(self, **kwargs):
             captured["evidence_call"] = kwargs
+            return {"evidence": types.SimpleNamespace(evidence_id="evidence-1")}
 
     class NoopConnection:
         def commit(self):
@@ -50,7 +51,10 @@ def test_live_persist_binds_source_scoped_evidence_dedupe(monkeypatch):
     monkeypatch.setattr(database, "save_collector_quality", lambda *_args: None)
     monkeypatch.setattr(database, "upsert_note_comments", lambda *_args: None)
     monkeypatch.setattr(canonical_data, "ensure_canonical_table", lambda _path: None)
-    monkeypatch.setattr(canonical_data, "note_to_canonical", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(
+        canonical_data, "note_to_canonical",
+        lambda *_args, **_kwargs: types.SimpleNamespace(canonical_id="canonical-1"),
+    )
     monkeypatch.setattr(canonical_data, "get_connection", lambda _path: NoopConnection())
     monkeypatch.setattr(canonical_data, "persist_canonical", lambda *_args: "inserted")
 
@@ -66,6 +70,9 @@ def test_live_persist_binds_source_scoped_evidence_dedupe(monkeypatch):
 
     assert result["ok"] is True
     assert result["persisted"] == 1
+    assert result["canonical_synced"] == 1
+    assert result["evidence_recorded"] == 1
+    assert captured["evidence_call"]["canonical_id"] == "canonical-1"
     assert captured["evidence_call"]["source_id"] == "source-a"
     assert captured["evidence_call"]["source_url"] == note["url"]
     assert captured["evidence_call"]["dedupe_by_source"] is True

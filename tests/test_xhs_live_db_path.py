@@ -1,8 +1,8 @@
-"""Mock-only regression for XHS live side-write database path switching.
+"""Mock-only regression for XHS canonical-owner and DB-path binding.
 
-The test executes only ``_bypass_evidence_canonical_live``. Evidence and
-canonical persistence are fakes, so no browser, account profile, Cookie, or
-SQLite database is opened.
+The test executes only ``_bypass_evidence_canonical_live``. Canonical and
+Evidence/lifecycle persistence are fakes, so no browser, account profile,
+Cookie, or SQLite database is opened.
 """
 import ast
 import builtins
@@ -37,14 +37,15 @@ def test_bypass_uses_current_shared_database_path_for_both_side_writes(
     stale_database = SimpleNamespace(DB_PATH=owner.main_db_path())
     monkeypatch.setenv("ZBC_DB_PATH", str(call_time_path))
 
-    observed = {"evidence": [], "ensure": [], "connection": [], "persist": []}
+    observed = {"evidence_paths": [], "evidence_calls": [], "ensure": [], "connection": [], "persist": []}
 
     class FakeEvidenceChain:
         def __init__(self, db_path):
-            observed["evidence"].append(os.path.abspath(db_path))
+            observed["evidence_paths"].append(os.path.abspath(db_path))
 
-        def capture_and_canonicalize(self, **_kwargs):
-            return {"ok": True}
+        def capture_evidence_for_canonical(self, **kwargs):
+            observed["evidence_calls"].append(kwargs)
+            return {"evidence": SimpleNamespace(evidence_id="evidence-1")}
 
     class FakeConnection:
         def commit(self):
@@ -67,7 +68,7 @@ def test_bypass_uses_current_shared_database_path_for_both_side_writes(
     shared_database_module = SimpleNamespace(main_db_path=owner.main_db_path)
     canonical_module = SimpleNamespace(
         ensure_canonical_table=ensure_canonical_table,
-        note_to_canonical=lambda _note, **_kwargs: object(),
+        note_to_canonical=lambda _note, **_kwargs: SimpleNamespace(canonical_id="canonical-1"),
         get_connection=get_connection,
         persist_canonical=persist_canonical,
     )
@@ -99,7 +100,9 @@ def test_bypass_uses_current_shared_database_path_for_both_side_writes(
     expected_path = os.path.abspath(str(call_time_path))
     stale_path = os.path.abspath(str(import_time_path))
     assert stale_database.DB_PATH == stale_path
-    assert observed["evidence"] == [expected_path]
+    assert observed["evidence_paths"] == [expected_path]
+    assert observed["evidence_calls"][0]["canonical_id"] == "canonical-1"
+    assert observed["evidence_calls"][0]["source_id"] == "synthetic-note-1"
     assert observed["ensure"] == [expected_path]
     assert observed["connection"] == [expected_path]
     assert observed["persist"] == [True]

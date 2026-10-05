@@ -21,7 +21,8 @@ from canonical_data import (
     ensure_canonical_table, ensure_schema_version_table, register_schema_version,
     get_schema_versions, self_check, count_canonical, get_canonical_by_id,
     list_canonical, CANONICAL_TABLE, SCHEMA_VERSION, SENTIMENT_POSITIVE,
-    RISK_HIGH, SOURCE_TYPE_NOTE, SOURCE_TYPE_WEB_MENTION, PRODUCT_CTH,
+    SENTIMENT_UNKNOWN, RISK_HIGH, RISK_UNKNOWN, SOURCE_TYPE_NOTE,
+    SOURCE_TYPE_WEB_MENTION, PRODUCT_CTH,
 )
 
 
@@ -78,8 +79,10 @@ class TestCanonicalRecord:
         rec = CanonicalRecord()
         assert rec.canonical_id.startswith("can_")
         assert rec.product_id == PRODUCT_CTH
-        assert rec.sentiment == "neutral"
-        assert rec.risk_level == "low"
+        assert rec.sentiment == SENTIMENT_UNKNOWN
+        assert rec.sentiment_score is None
+        assert rec.risk_level == RISK_UNKNOWN
+        assert rec.risk_score is None
         assert rec.publish_datetime == ""
         assert rec.captured_at == ""
 
@@ -121,6 +124,14 @@ class TestCanonicalRecord:
 
 class TestNoteToCanonical:
     """notes 表 → CanonicalRecord 转化测试。"""
+
+    def test_missing_sentiment_and_risk_remain_unknown_not_neutral_or_zero(self):
+        rec = note_to_canonical({"note_id": "unknown-analysis"})
+
+        assert rec.sentiment == SENTIMENT_UNKNOWN
+        assert rec.sentiment_score is None
+        assert rec.risk_level == RISK_UNKNOWN
+        assert rec.risk_score is None
 
     def test_basic_conversion(self):
         note = {

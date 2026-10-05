@@ -2071,60 +2071,144 @@ def api_kos_profile():
 
 @kos_bp.route("/collect", methods=["POST"])
 def api_kos_collect():
-    """品牌采集：统一暂停门 + 品牌主体过滤 + CDP 复用（链路复用 live_engine，不重写采集逻辑）。
-
-    遵循统一采集规则：is_user_paused() 暂停门（与主链同一规则）；主体过滤用 subject_hit_for_brand
-    （品牌词/排除词，不修改全局激活品牌口径）；CDP 复用常驻浏览器（不 new browser）。
-    数据隔离：笔记落库 source_keyword=品牌采集词（方案 A），KOS 聚合按品牌实时计算，不污染广州。
-    """
+    """Compatibility entry into the canonical scoped secondary-collection flow."""
     try:
-        from subject_rules import collect_keywords_for, subject_hit_for_brand
-        from xhs_cookie_bridge import is_user_paused, cdp_url_for, XHS_RETINAUT_NAME
-        body = request.get_json(silent=True) or {}
-        brand = (body.get("brand") or request.args.get("brand") or "").strip()
-        if not brand:
-            return jsonify({"ok": False, "error": "brand required"}), 400
-        kws = collect_keywords_for(brand)
-        if not kws:
-            return jsonify({"ok": False, "error": f"no collect keywords for brand: {brand}"}), 400
-        # 统一暂停门（与主链同一规则；测试模式豁免）
+        body = request.get_json(silent=True)
+        allowed = {"brand", "operator", "confirm_read_only", "max_results"}
+        if not isinstance(body, dict) or set(body) - allowed:
+            return jsonify({"ok": False, "status": "invalid_request",
+                            "code": "INVALID_COLLECTION_REQUEST",
+                            "read_only": True, "external_write": False}), 400
+        operator = str(body.get("operator") or "").strip().lower()
+        if operator not in {"human", "human_ui"}:
+            return jsonify({"ok": False, "status": "denied", "code": "HUMAN_OPERATOR_REQUIRED",
+                            "read_only": True, "external_write": False}), 403
+        if body.get("confirm_read_only") is not True:
+            return jsonify({"ok": False, "status": "input_required",
+                            "code": "READ_ONLY_CONFIRMATION_REQUIRED"}), 400
+        brand_key = body.get("brand")
+        if not isinstance(brand_key, str) or not brand_key.strip():
+            return jsonify({"ok": False, "status": "input_required", "code": "BRAND_REQUIRED"}), 400
+        brand_key = brand_key.strip()
+        raw_limit = body.get("max_results", 20)
+        if type(raw_limit) is not int or not 1 <= raw_limit <= 20:
+            return jsonify({"ok": False, "status": "invalid_request", "code": "MAX_RESULTS_OUT_OF_RANGE"}), 400
+
+        from subject_rules import BRAND_PROFILES
+        profile = BRAND_PROFILES.get(brand_key)
+        if not isinstance(profile, dict):
+            return jsonify({"ok": False, "status": "invalid_request", "code": "BRAND_PROFILE_UNKNOWN"}), 400
+
+        from experience_runtime import _content_project_scope, _content_project_error
+        from shared_artifacts import LocalArtifactError
+        try:
+            actor, scope = _content_project_scope("write", module="collector")
+        except LocalArtifactError as exc:
+            return _content_project_error(exc)
+        if (scope.get("domain_id") not in {"bmp", "zbmp"}
+                or not isinstance(scope.get("brand_focus_id"), str)
+                or not scope["brand_focus_id"] or scope.get("global_scope") is True):
+            return jsonify({"ok": False, "status": "denied", "code": "EXACT_BRAND_FOCUS_REQUIRED",
+                            "read_only": True, "external_write": False}), 403
+
+        from subject_registry import list_subjects
+        entries = [entry for entry in list_subjects("BMP")
+                   if entry.get("brand_focus_id") == scope["brand_focus_id"]]
+        if len(entries) != 1:
+            return jsonify({"ok": False, "status": "blocked", "code": "BRAND_FOCUS_NOT_UNIQUELY_REGISTERED",
+                            "read_only": True, "external_write": False}), 503
+        entry = entries[0]
+        registered_terms = entry.get("keywords")
+        if not isinstance(registered_terms, list):
+            return jsonify({"ok": False, "status": "blocked", "code": "BRAND_TOPIC_TERMS_UNAVAILABLE",
+                            "read_only": True, "external_write": False}), 503
+        registered_names = {
+            str(value).strip().casefold()
+            for value in (entry.get("name_zh"), entry.get("name_en"), *registered_terms,
+                          entry.get("subject_id"), entry.get("brand_focus_id"))
+            if isinstance(value, str) and value.strip()
+        }
+        profile_names = {
+            part.strip().casefold()
+            for part in str(profile.get("display_name") or "").split("/")
+            if part.strip()
+        }
+        if not profile_names.intersection(registered_names):
+            return jsonify({"ok": False, "status": "denied", "code": "BRAND_PROFILE_SCOPE_MISMATCH",
+                            "read_only": True, "external_write": False}), 403
+
+        terms = []
+        seen_terms = set()
+        for value in (entry.get("name_zh"), entry.get("name_en"), *registered_terms):
+            if isinstance(value, str) and value.strip() and value.strip().casefold() not in seen_terms:
+                term = value.strip()
+                seen_terms.add(term.casefold())
+                terms.append(term)
+        if not terms:
+            return jsonify({"ok": False, "status": "blocked", "code": "BRAND_TOPIC_TERMS_UNAVAILABLE",
+                            "read_only": True, "external_write": False}), 503
+
+        from xhs_cookie_bridge import is_user_paused
         paused = is_user_paused()
         if paused and not os.environ.get("ZBC_TEST_MODE"):
             return jsonify({"ok": False, "status": "USER_PAUSED",
-                            "reason": paused.get("reason", "采集已暂停"), "brand": brand}), 200
-        cdp_url = (body.get("cdp_url") or "").strip() or cdp_url_for(XHS_RETINAUT_NAME)  # KOS 统一香港账号采集（用户指令，可 body 覆盖）
-        comments = bool(body.get("comments", True))
-        from lumenis.system.collector.runtime.xhs.live_engine import run_live, persist_live
+                            "reason": paused.get("reason", "采集已暂停"),
+                            "brand_focus_id": scope["brand_focus_id"]}), 409
 
-        def brand_hit(text):
+        from lumenis.system.collector.adapters.secondary_collection import collect_search
+        results = []
+        stop_statuses = {
+            "RISK_WARNING", "NEED_VERIFY", "SESSION_EXPIRED", "BLOCKED",
+            "PROVIDER_UNAVAILABLE", "NOT_CONFIGURED", "RATE_LIMITED", "COOLING_DOWN",
+            "SCOPE_UNAUTHORIZED", "APPROVAL_REQUIRED", "PERMISSION_UNAVAILABLE",
+        }
+        result_fields = {
+            "ok", "status", "platform", "raw_count", "returned_count", "imported", "updated",
+            "failed", "subject_matches", "canonical_synced", "native_fields_synced",
+            "evidence_recorded", "evidence_ref", "scope_status", "refresh_verified",
+            "error_type", "read_only", "external_write", "publish_authority",
+        }
+        for keyword in terms:
             try:
-                return subject_hit_for_brand(title=str(text or ""), brand_key=brand)
-            except Exception:
-                return False
+                result = collect_search(
+                    "xiaohongshu", keyword, max_results=raw_limit,
+                    operator=operator, actor=actor, scope=scope,
+                )
+            except Exception as exc:
+                result = {"ok": False, "status": "ERROR", "error_type": type(exc).__name__}
+            results.append({"keyword": keyword, **{
+                field: result[field] for field in result_fields if field in result
+            }})
+            if str(result.get("status") or "").upper() in stop_statuses:
+                break
 
-        max_scroll = int(body.get("max_scroll", 5) or 5)
-        max_details = int(body.get("max_details", 20) or 20)
-        max_comment_pages = int(body.get("max_comment_pages", 5) or 5)
-        results, accepted_total = [], 0
-        for kw in kws:
-            data = run_live(kw, max_scroll=max_scroll, max_details=max_details,
-                            max_comment_pages=max_comment_pages, comments=comments, cdp_url=cdp_url)
-            # Preserve the selected BMP brand as the Evidence/Canonical scope;
-            # the predicate stays brand-specific and never switches CTH's default.
-            raw_notes = data.get("notes", []) if isinstance(data, dict) else []
-            for note in raw_notes:
-                if isinstance(note, dict):
-                    note.setdefault("source_keyword", kw)
-            stats = persist_live(data, brand_hit, subject_scope=brand,
-                                 domain_id="bmp", product_id="BMP")
-            accepted_total += int(stats.get("persisted", 0))
-            results.append({"keyword": kw, "stats": stats,
-                            "verification_required": data.get("verification_required", False)})
-        ke = _engine()
-        return jsonify({"ok": True, "brand": brand, "accepted_total": accepted_total,
-                        "collection": ke.brand_collection_stats(brand), "results": results}), 200
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+        accepted_total = sum(
+            int(result.get("imported", 0) or 0) + int(result.get("updated", 0) or 0)
+            for result in results if result.get("ok") is True
+        )
+        all_terms_completed = len(results) == len(terms)
+        all_succeeded = all(result.get("ok") is True for result in results) and all_terms_completed
+        any_succeeded = any(result.get("ok") is True for result in results)
+        status = "SUCCESS" if all_succeeded else "PARTIAL" if any_succeeded else (
+            str(results[-1].get("status") or "ERROR").upper() if results else "ERROR"
+        )
+        try:
+            collection_stats = _engine().brand_collection_stats(brand_key)
+            collection_stats_status = "AVAILABLE"
+        except Exception:
+            collection_stats = None
+            collection_stats_status = "UNAVAILABLE"
+        return jsonify({
+            "ok": all_succeeded, "status": status,
+            "brand": entry.get("name_zh"), "brand_focus_id": scope["brand_focus_id"],
+            "accepted_total": accepted_total, "collection": collection_stats,
+            "collection_stats_status": collection_stats_status,
+            "query_count": len(results), "query_total": len(terms), "results": results,
+        }), 200 if all_succeeded or any_succeeded else 503
+    except Exception as exc:
+        return jsonify({"ok": False, "status": "unavailable",
+                        "code": "KOS_COLLECTION_UNAVAILABLE",
+                        "error_type": type(exc).__name__}), 503
 
 
 @kos_bp.route("/brand", methods=["GET"])

@@ -91,55 +91,65 @@ def run_live(keyword: str, *, max_scroll=5, max_details=20, max_comment_pages=5,
 
 def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2', *,
                                     subject_scope='CTH', domain_id='cth', product_id='CTH'):
-    """P0-3/P0-4: Evidence Chain + Canonical Data 旁路写入（side-write）。
+    """Write the sole business canonical row, then attach Evidence lineage.
 
-    硬红线：所有写入必须 try/except 吞掉并 log warning，绝不影响 notes 主入库。
+    The legacy ``zbc_canonical_data`` overlay is intentionally not written here.
+    Source ``notes`` is already stored by the caller; canonical_data.py remains
+    the one business Canonical writer and EvidenceChain records only provenance
+    plus a lifecycle link to that row.
     """
+    from lumenis.shared.database import main_db_path
+    db_path = main_db_path()
+    source_id = str(note_data.get('note_id') or '')
+    raw_content = (str(note_data.get('title', '')) + ' ' + str(note_data.get('content', ''))).strip()
+    result = {
+        'ok': False, 'source_id': source_id, 'canonical_id': '',
+        'canonical_action': '', 'evidence_id': '', 'errors': [],
+    }
+    try:
+        import canonical_data as _cd
+        _cd.ensure_canonical_table(db_path)
+        record = _cd.note_to_canonical(note_data, product_id=product_id)
+        _con = _cd.get_connection(db_path)
+        try:
+            result['canonical_action'] = _cd.persist_canonical(_con, record)
+            _con.commit()
+        finally:
+            _con.close()
+        result['canonical_id'] = record.canonical_id
+    except Exception as exc:
+        result['errors'].append({'stage': 'canonical_data', 'error_type': type(exc).__name__})
+
     try:
         from lumenis.shared.evidence import EvidenceChain
-        from lumenis.shared.database import main_db_path
-        db_path = main_db_path()
-        _raw = (str(note_data.get('title','')) + ' ' + str(note_data.get('content',''))).strip()
-        _chain = EvidenceChain(db_path)
-        _chain.capture_and_canonicalize(
+
+        evidence_result = EvidenceChain(db_path).capture_evidence_for_canonical(
+            canonical_id=result['canonical_id'],
             source_type='xhs_note',
-            source_url=str(note_data.get('url','')),
-            raw_content=_raw,
-            source_id=str(note_data.get('note_id','')),
-            normalized_content=_raw[:500],
-            subject_hit=True,
-            subject_keywords=['taikoo_hui'],
-            sentiment='neutral',
-            risk_level='low',
-            engagement_metrics={
-                'likes': note_data.get('likes',0),
-                'comments': note_data.get('comments',0),
-                'collects': note_data.get('collects',0),
-                'shares': note_data.get('shares',0),
-            },
+            source_url=str(note_data.get('url', '')),
+            raw_content=raw_content,
+            source_id=source_id,
+            captured_at=str(note_data.get('captured_at') or note_data.get('fetched_at') or ''),
             publish_datetime=note_data.get('publish_datetime') or note_data.get('publish_date') or None,
             subject_scope=subject_scope,
+            task_id=str(note_data.get('task_id') or ''),
+            trace_id=str(note_data.get('trace_id') or ''),
+            collection_metadata={
+                'source_platform': str(note_data.get('source_platform') or 'xhs'),
+                'collector_version': str(note_data.get('collector_version') or 'xhs-live-v2'),
+                'source_keyword': str(note_data.get('source_keyword') or ''),
+            },
             provider=provider,
             dedupe_by_source=True,
             domain_id=domain_id,
             product_id=product_id,
         )
-    except Exception as _e:
-        print(f"[bypass][shared_evidence][live] side-write skipped (non-fatal): {_e}")
-    try:
-        import canonical_data as _cd
-        from lumenis.shared.database import main_db_path
-        db_path = main_db_path()
-        _cd.ensure_canonical_table(db_path)
-        _rec = _cd.note_to_canonical(note_data, product_id=product_id)
-        _con = _cd.get_connection(db_path)
-        try:
-            _cd.persist_canonical(_con, _rec)
-            _con.commit()
-        finally:
-            _con.close()
-    except Exception as _e:
-        print(f"[bypass][canonical_data][live] side-write skipped (non-fatal): {_e}")
+        result['evidence_id'] = evidence_result['evidence'].evidence_id
+    except Exception as exc:
+        result['errors'].append({'stage': 'evidence_lineage', 'error_type': type(exc).__name__})
+
+    result['ok'] = bool(result['canonical_id'] and result['evidence_id'] and not result['errors'])
+    return result
 
 
 def persist_live(data: dict, subject_hit: Callable[[str], bool], *,
@@ -157,20 +167,30 @@ def persist_live(data: dict, subject_hit: Callable[[str], bool], *,
     notes = deduplicate([normalize_note(n) for n in raw])
     # 红线：这里唯一调用现有 subject_hit；不在采集器内重写主体口径。
     accepted = filter_subject(notes, subject_hit)
-    stats = {'fetched': len(notes), 'accepted': len(accepted), 'rejected_subject': len(notes)-len(accepted), 'persisted': 0, 'comments': 0}
+    stats = {
+        'fetched': len(notes), 'accepted': len(accepted),
+        'rejected_subject': len(notes) - len(accepted), 'persisted': 0, 'comments': 0,
+        'canonical_synced': 0, 'evidence_recorded': 0, 'lineage_failures': 0,
+    }
     for n in accepted:
         q = n.get('data_quality') or {}
         n['data_quality_status'] = q.get('status','unknown')
-        n['data_quality_score'] = q.get('score',0)
+        n['data_quality_score'] = q.get('score')
         n['collector_version'] = 'xhs-live-v2'
         n['captured_at'] = n.get('fetched_at') or datetime.now().isoformat()
         n['comments_collected'] = n.get('comments_collected')
+        if not isinstance(n.get('sentiment'), str) or not n['sentiment'].strip():
+            n['sentiment'] = 'unknown'
+        if not isinstance(n.get('risk_level'), str) or not n['risk_level'].strip():
+            n['risk_level'] = 'unknown'
         database.insert_note(n)
-        # P0-3/P0-4: Evidence Chain + Canonical Data 旁路写入（side-write，失败不影响主入库）
-        _bypass_evidence_canonical_live(
+        lineage = _bypass_evidence_canonical_live(
             n, provider='xhs-live-v2', subject_scope=subject_scope,
             domain_id=domain_id, product_id=product_id,
         )
+        stats['canonical_synced'] += int(bool(lineage.get('canonical_id')))
+        stats['evidence_recorded'] += int(bool(lineage.get('evidence_id')))
+        stats['lineage_failures'] += int(not lineage.get('ok'))
         database.save_collector_quality(n.get('note_id'), {
             **q, 'detail_status': n.get('detail_status',''),
             'comments_collected': n.get('comments_collected',0), 'collector_version':'xhs-live-v2'
@@ -178,4 +198,14 @@ def persist_live(data: dict, subject_hit: Callable[[str], bool], *,
         database.upsert_note_comments(n.get('note_id'), n.get('comments_data') or [])
         stats['persisted'] += 1
         stats['comments'] += len(n.get('comments_data') or [])
-    return {'ok': True, 'status': 'success', **stats}
+    lineage_complete = (
+        stats['canonical_synced'] == stats['persisted']
+        and stats['evidence_recorded'] == stats['persisted']
+        and stats['lineage_failures'] == 0
+    )
+    return {
+        'ok': lineage_complete,
+        'status': ('success' if lineage_complete and stats['persisted'] else
+                   'no_new_data' if lineage_complete else 'partial_lineage_failure'),
+        **stats,
+    }

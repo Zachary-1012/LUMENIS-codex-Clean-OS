@@ -50,6 +50,7 @@ SENTIMENT_NEGATIVE = "negative"
 SENTIMENT_UNKNOWN = "unknown"
 
 RISK_LOW = "low"
+RISK_UNKNOWN = "unknown"
 RISK_MEDIUM = "medium"
 RISK_HIGH = "high"
 RISK_CRITICAL = "critical"
@@ -280,16 +281,16 @@ class CanonicalRecord:
     captured_at: str = ""  # 系统采集时间（本服务写入）
 
     # --- 情感与风险 ---
-    sentiment: str = SENTIMENT_NEUTRAL
-    sentiment_score: float = 0.0
-    risk_level: str = RISK_LOW
-    risk_score: int = 0
+    sentiment: str = SENTIMENT_UNKNOWN
+    sentiment_score: Optional[float] = None
+    risk_level: str = RISK_UNKNOWN
+    risk_score: Optional[int] = None
 
     # --- 质量与置信 ---
     quality_status: str = "unknown"
-    quality_score: float = 0.0
-    confidence: float = 0.0
-    relevance_status: str = "relevant"
+    quality_score: Optional[float] = None
+    confidence: Optional[float] = None
+    relevance_status: str = "unknown"
     verification_status: str = "review"
     localization_score: Optional[float] = None  # IC-039: 跨文化本地化评分 0-1，None=未评估
 
@@ -391,16 +392,16 @@ CREATE TABLE IF NOT EXISTS {CANONICAL_TABLE} (
     captured_at       TEXT DEFAULT '',
 
     -- 情感与风险
-    sentiment         TEXT DEFAULT 'neutral',
-    sentiment_score   REAL DEFAULT 0.0,
-    risk_level        TEXT DEFAULT 'low',
-    risk_score        INTEGER DEFAULT 0,
+    sentiment         TEXT DEFAULT 'unknown',
+    sentiment_score   REAL,
+    risk_level        TEXT DEFAULT 'unknown',
+    risk_score        INTEGER,
 
     -- 质量与置信
     quality_status    TEXT DEFAULT 'unknown',
-    quality_score     REAL DEFAULT 0.0,
-    confidence        REAL DEFAULT 0.0,
-    relevance_status  TEXT DEFAULT 'relevant',
+    quality_score     REAL,
+    confidence        REAL,
+    relevance_status  TEXT DEFAULT 'unknown',
     verification_status TEXT DEFAULT 'review',
     localization_score REAL,  -- IC-039: 跨文化本地化评分 0-1，NULL=未评估
 
@@ -873,14 +874,14 @@ def note_to_canonical(note_row: Dict[str, Any], product_id: str = PRODUCT_CTH) -
         author_name=_safe_str(note_row.get("author_nickname")),
         publish_datetime=publish_dt,
         captured_at=captured,
-        sentiment=_safe_str(note_row.get("sentiment") or SENTIMENT_NEUTRAL),
-        sentiment_score=_safe_float(note_row.get("sentiment_score")),
-        risk_level=_safe_str(note_row.get("risk_level") or RISK_LOW),
-        risk_score=_safe_int(note_row.get("risk_score")),
+        sentiment=_safe_str(note_row.get("sentiment") or SENTIMENT_UNKNOWN),
+        sentiment_score=_safe_float_or_none(note_row.get("sentiment_score")),
+        risk_level=_safe_str(note_row.get("risk_level") or RISK_UNKNOWN),
+        risk_score=_safe_int_or_none(note_row.get("risk_score")),
         quality_status=_safe_str(note_row.get("data_quality_status") or "unknown"),
-        quality_score=_safe_float(note_row.get("data_quality_score") or note_row.get("content_quality_score")),
-        confidence=_safe_float(note_row.get("verification_confidence")),
-        relevance_status=_safe_str(note_row.get("relevance_status") or "relevant"),
+        quality_score=_safe_float_or_none(note_row.get("data_quality_score") or note_row.get("content_quality_score")),
+        confidence=_safe_float_or_none(note_row.get("verification_confidence")),
+        relevance_status=_safe_str(note_row.get("relevance_status") or "unknown"),
         verification_status=_safe_str(note_row.get("verification_status") or "review"),
         subject_type=_safe_str(note_row.get("subject_type")),
         content_type=_safe_str(note_row.get("content_type")),
@@ -931,13 +932,13 @@ def web_mention_to_canonical(web_row: Dict[str, Any], product_id: str = PRODUCT_
         author_name="",
         publish_datetime=publish_dt,
         captured_at=captured,
-        sentiment=SENTIMENT_NEUTRAL,  # web_mentions 暂无情感字段，默认 neutral
-        sentiment_score=0.0,
-        risk_level=RISK_LOW,
-        risk_score=0,
+        sentiment=SENTIMENT_UNKNOWN,
+        sentiment_score=None,
+        risk_level=RISK_UNKNOWN,
+        risk_score=None,
         quality_status="unknown",
-        quality_score=0.0,
-        confidence=0.0,
+        quality_score=None,
+        confidence=None,
         relevance_status=_safe_str(web_row.get("relevance") or "pending"),
         verification_status=_safe_str(web_row.get("verification") or "review"),
         subject_type="media",  # 网页提及默认媒体类
@@ -1009,13 +1010,13 @@ def collected_note_to_canonical(collected: Any, source_platform: str = "",
         author_name=author,
         publish_datetime=publish_dt,
         captured_at=_now_str(),  # 采集时刻由本服务写入
-        sentiment=SENTIMENT_NEUTRAL,
-        sentiment_score=0.0,
-        risk_level=RISK_LOW,
-        risk_score=0,
+        sentiment=_safe_str(getattr(collected, "sentiment", "") or SENTIMENT_UNKNOWN),
+        sentiment_score=_safe_float_or_none(getattr(collected, "sentiment_score", None)),
+        risk_level=_safe_str(getattr(collected, "risk_level", "") or RISK_UNKNOWN),
+        risk_score=_safe_int_or_none(getattr(collected, "risk_score", None)),
         quality_status="unknown",
-        quality_score=0.0,
-        confidence=0.0,
+        quality_score=_safe_float_or_none(getattr(collected, "quality_score", None)),
+        confidence=_safe_float_or_none(getattr(collected, "confidence", None)),
         relevance_status="unverified",
         verification_status="pending",
         subject_type="normal_user",
