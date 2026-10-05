@@ -1,16 +1,16 @@
 > Status: **CURRENT SUBORDINATE REAL-DELIVERY OVERLAY / NOT A SECOND PRODUCT OR EXPERIENCE AUTHORITY**
 >
-> Authority boundary: this overlay adds delivery evidence and commercial-readiness gates to C1–C6 and retained fifteen-checkpoint coverage. It does not add another execution schedule, bypass actual dependencies, replace the sole Product Architecture or Experience Constitution, or erase correctly completed source work.
+> Authority boundary: this overlay adds delivery evidence and commercial-readiness gates to the six C1–C6 outcomes and retained R01–R15 acceptance coverage. The historical numbered coverage groups below preserve acceptance provenance, not an execution schedule. This overlay does not create another queue, bypass dependencies, replace Product Architecture/Experience, or erase completed source work.
 >
 > Canonical path: `00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`.
 
 序境 / LUMENIS
-15 轮“真实交付约束”强制补充协议
-REAL DELIVERY OVERLAY FOR C1–C6 / ALL 15 RETAINED CHECKPOINTS
+真实交付约束与验收覆盖补充协议
+REAL DELIVERY OVERLAY FOR C1–C6 / R01–R15 ACCEPTANCE COVERAGE
 
 REAL USER WORK E2E ACCEPTANCE remains mandatory for each complete C-window outcome and every applicable mapped requirement.
 
-本协议约束 C1–C6，以下 ROUND 01–15 是保留的完整验收条目，不是十五段串行派工。
+本协议约束 C1–C6。旧编号01–15的验收/依赖覆盖材料由六个C成果承接；它不是新的窗口、派工队列或十五段串行执行计划。
 
 分配只见 AGENTS.md，完整映射只见 Source Owner Index；保留真实依赖、全部能力与现有 Product Architecture。
 它的目的只有一个：
@@ -19,7 +19,7 @@ REAL USER WORK E2E ACCEPTANCE remains mandatory for each complete C-window outco
 误判为“产品已经能交付给真实用户”。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-一、全 15 轮统一最高验收原则
+一、C1–C6统一真实交付验收原则
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 任何一轮的 PASS，必须同时回答下面 8 个问题：
@@ -144,19 +144,19 @@ COMMERCIAL_READY
 任何阶段都不得升级状态词。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-四、每轮必须生成 REAL DELIVERY CARD
+四、每个C窗口都必须生成 REAL DELIVERY CARD
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-每个 C 窗口完整成果由 W6 汇总、M 验收，同一证据复用到 R/J 条目，不逐文件/旧编号另写报告。Product Owner 工程可操作后统一重复操作；开发期间真实 Job/恢复仍必做，不标 USER_VERIFIED。每轮交付：
+每个 C 窗口完整成果由 W6 汇总、M 验收，同一证据复用到 R/J 条目，不逐文件/旧编号另写报告。Product Owner 工程可操作后统一重复操作；开发期间真实 Job/恢复仍必做，不标 USER_VERIFIED。每个C成果交付：
 
 REAL DELIVERY CARD
 
-ROUND：
+C WINDOW / DELIVERY：
 CURRENT SHA：
 
 ONLINE DELIVERY / LOCAL-TO-MAIN CLOSURE：
 - accepted Batch source paths and exact local commit/remote `origin/main` SHA
-- owning Round evidence and CURRENT status published with the accepted source
+- owning C-delivery evidence and CURRENT status published with the accepted source
 - fresh live remote main SHA and online file verification after push
 - staged/unstaged/untracked protected work still `LOCAL_ONLY`, with owner and next gate
 - CI job step count and result; a zero-step billing failure is not test evidence
@@ -240,11 +240,11 @@ IMPLEMENTED / TESTED / LIVE_VERIFIED / USER_VERIFIED / OPERATING
 NEXT GAP：
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-五、ROUND 01 — Current Truth
-真实交付约束
+五、历史覆盖组 01 — Current Truth
+作为现行C成果的真实性验收，不单独派工
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-ROUND 01 不只是“扫描仓库”。
+这一历史覆盖不只是“扫描仓库”；其源代码、运行和结果辨别标准适用于每个C成果。
 
 必须最终回答：
 
@@ -275,7 +275,7 @@ EXTERNAL DEPENDENCY
 
 禁止仅根据文件存在判定能力。
 
-ROUND 01 EXIT：
+HISTORICAL COVERAGE 01 ACCEPTANCE：
 
 必须能明确列出：
 
@@ -287,7 +287,7 @@ E. Missing
 F. External blocked
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-六、ROUND 02 — Authority / Only-One / Compatibility
+六、历史覆盖组 02 — Authority / Only-One / Compatibility
 真实交付约束
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -313,12 +313,12 @@ OWNER → CALLER → USER CAPABILITY MATRIX
 如果一个旧 caller 仍有唯一业务行为：
 不得删除。
 
-ROUND 02 EXIT：
+HISTORICAL COVERAGE 02 ACCEPTANCE：
 
 不存在 UNKNOWN OWNER 的核心商业能力。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-七、ROUND 03 — Database / Canonical Truth
+七、历史覆盖组 03 — Database / Canonical Truth
 真实交付约束
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -365,12 +365,12 @@ RAW SOURCE
 - timestamps
 - rollback
 
-ROUND 03 EXIT：
+HISTORICAL COVERAGE 03 ACCEPTANCE：
 
 数据库不只是“干净”，而是能够承载真实业务事实。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-八、ROUND 04 — Identity / Context / Permission / Evidence
+八、历史覆盖组 04 — Identity / Context / Permission / Evidence
 真实交付约束
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -421,12 +421,12 @@ Actor
 - Evidence lookup
 - action denial
 
-ROUND 04 EXIT：
+HISTORICAL COVERAGE 04 ACCEPTANCE：
 
 不能跨客户、跨 Subject、跨 BrandFocus 泄露。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-九、ROUND 05 — Runtime / Health / Recovery
+九、历史覆盖组 05 — Runtime / Health / Recovery
 真实交付约束
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -471,12 +471,12 @@ CURRENT C6 RUNTIME INPUT / RETAINED R05 COVERAGE：
   recovery, observability and rollback; a running process is not OPERATING.
 - Historical LUMENIS-Ollama-Autostart is retired; do not enable or probe it.
 
-ROUND 05 EXIT：
+HISTORICAL COVERAGE 05 ACCEPTANCE：
 
 至少一个完整失败恢复流程真实跑通。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-十、ROUND 06 — Collector / Browser / Acquisition
+十、历史覆盖组 06 — Collector / Browser / Acquisition
 真实交付约束
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -546,12 +546,12 @@ Cookie exists = valid
 Health OK = collection works
 one success = operating
 
-ROUND 06 EXIT：
+HISTORICAL COVERAGE 06 ACCEPTANCE：
 
 必须明确知道“哪些平台现在真的能给客户数据”。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-十一、ROUND 07 — AI / Agent / Skill Store / Shared Engines
+十一、历史覆盖组 07 — AI / Agent / Skill Store / Shared Engines
 真实交付约束
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -608,12 +608,12 @@ CURRENT C2 AI INPUT / RETAINED R07 COVERAGE：
   promotion/rollback. Engineering answers never own Truth or effects.
 - Reading research, excerpts and unavailable providers cannot close C2.
 
-ROUND 07 EXIT：
+HISTORICAL COVERAGE 07 ACCEPTANCE：
 
 AI / Agent 是业务增强，不是 Demo Chat。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-十二、ROUND 08 — Cross-Surface Experience Foundation
+十二、历史覆盖组 08 — Cross-Surface Experience Foundation
 真实交付约束
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -656,12 +656,12 @@ File System
 
 SURFACE CAPABILITY MATRIX
 
-ROUND 08 EXIT：
+HISTORICAL COVERAGE 08 ACCEPTANCE：
 
 同一业务事实跨 Surface 一致，但交互不复制。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-十三、ROUND 09 — Golden Pages
+十三、历史覆盖组 09 — Golden Pages
 真实交付约束
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -699,12 +699,12 @@ Flutter test pass
 → 执行一个操作
 → Return
 
-ROUND 09 EXIT：
+HISTORICAL COVERAGE 09 ACCEPTANCE：
 
 Golden Pages 真正“可工作”。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-十四、ROUND 10 — CTH Monitoring / Analysis
+十四、历史覆盖组 10 — CTH Monitoring / Analysis
 真实交付约束
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -744,12 +744,12 @@ Source
 → Evidence
 → Trend / Monitoring UI
 
-ROUND 10 EXIT：
+HISTORICAL COVERAGE 10 ACCEPTANCE：
 
 用户看到的是“现在真实发生的事情”。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-十五、ROUND 11 — CTH Case / Risk / Decision / Report
+十五、历史覆盖组 11 — CTH Case / Risk / Decision / Report
 真实交付约束
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -781,12 +781,12 @@ Event
 如果外部 Action 不能真实执行：
 必须明确显示 approval / pending / blocked。
 
-ROUND 11 EXIT：
+HISTORICAL COVERAGE 11 ACCEPTANCE：
 
 至少一个 CTH business loop 真实闭合。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-十六、ROUND 12 — BMP Market / Creator
+十六、历史覆盖组 12 — BMP Market / Creator
 真实交付约束
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -818,12 +818,12 @@ Time Window
 Metric Definition
 Evidence
 
-ROUND 12 EXIT：
+HISTORICAL COVERAGE 12 ACCEPTANCE：
 
 用户可以真正理解某品牌当前市场位置。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-十七、ROUND 13 — BMP Content / Campaign / Podcast / Evaluation
+十七、历史覆盖组 13 — BMP Content / Campaign / Podcast / Evaluation
 真实交付约束
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -859,12 +859,12 @@ rights
 
 Evaluation 必须基于实际结果，不是 AI 主观评分。
 
-ROUND 13 EXIT：
+HISTORICAL COVERAGE 13 ACCEPTANCE：
 
 至少一个真实内容/活动闭环有 Actual Result。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-十八、ROUND 14 — Remaining ACC / AI / Shared / SYSTEM
+十八、历史覆盖组 14 — Remaining ACC / AI / Shared / SYSTEM
 真实交付约束
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -907,16 +907,18 @@ IMPLEMENTED
 BLOCKED
 DEFERRED
 
-ROUND 14 EXIT：
+HISTORICAL COVERAGE 14 ACCEPTANCE：
 
 不存在“看起来能用但其实不能用”的 Screen。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-十九、ROUND 15 — Internal Beta / Release / Operating
-真实交付约束
+十九、历史覆盖组 15 — 完整产品闭环、发布与运行验收
+并入C1–C6及最终产品决策，不单独派工
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-ROUND 15 是最终“真假分界线”。
+HISTORICAL COVERAGE 15 ACCEPTANCE：
+
+这些要求构成完整产品结果的最终“真假分界线”，不是另一个执行窗口或等待所有其他工作的独立轮次。
 
 必须邀请真实用户或非开发参与者。
 
@@ -1000,7 +1002,7 @@ pre-populated fake success
 
 最后不得只写：
 
-ROUND 15 PASS
+未附具适用状态和证据的“产品已闭环”结论
 
 必须输出：
 
@@ -1060,7 +1062,7 @@ state
 
 否则不得称为 Production Truth。
 
-本节的真实数据链必须同时服从 `LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md`。每个相关 Round 持续建设并分别报告 `GLOBAL CTH maturity impact`、`GLOBAL BMP maturity impact` 与 `Guangzhou Taikoo Hui reference-loop impact`；ROUND 15 只在当前 SHA 复验，不接收前序轮次积压实现。
+本节真实数据链服从 `LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md`。每个相关C成果分别报告 `GLOBAL CTH maturity impact`、`GLOBAL BMP maturity impact` 与 `Guangzhou Taikoo Hui reference-loop impact`；完整产品发布验收只按当前SHA复核，不把未接受的历史实现堆到最终门槛。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 二十二、最终商业交付标准
@@ -1082,11 +1084,12 @@ DEFERRED
 
 每个数据源、平台、AI Provider、Skill、Screen、Workflow 都必须有真实状态。
 
-继续执行当前 15 轮，不新增第 16 轮。
-
-从当前正在执行的 Round 开始立即应用本协议。
-已完成的前序 Round，在后续 M acceptance 时补做 REAL DELIVERY CARD；
-无需推倒重做已经通过的正确源码工作。
+R01–R15 remain the complete acceptance/dependency coverage mapped into six
+C1–C6 outcomes; they are not 15 separately activated dispatch rounds. Current
+window activation and pause state come only from the top of `AGENTS.md`. Apply
+the `REAL DELIVERY CARD` when an owner is formally activated; do not infer work
+from a numbered R checkpoint or a historical charter. Preserve valid completed
+source and re-use same-content evidence without treating it as user acceptance.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 二十三、全局商业交付补充红线
@@ -1096,7 +1099,7 @@ Whole-product completion condition: 以唯一 Source Owner Index 和 Real Delive
 
 Product Owner clarification (2026-10-02): 本轮工程/产品闭环必须完成冻结范围内真实、可用、可重复的功能与用户结果；商业授权采购、商业再分发许可和平台合作谈判后置，不得仅因这些商务事项未完成，把整项能力降为 helper、演示、禁用控件或 unavailable 并称为闭环。沿现有 owner 使用当前可用且允许的来源、自有/许可合适的素材和组件，完成真实输入→有用产物→保存/重开→Evidence→Evaluation→恢复。具体访问授权、账号边界、源用途与第三方代码/模型许可继续按实际条件执行；若某个承诺的专有字段/动作确实依赖未获授权，仅将该明确能力记录为未完成，不得伪造或用另一来源冒充。商业合作缺口单列 COMMERCIAL_READY，真实工程缺口仍须修复并如实保留。保留官方接口，未来授权后通过实际联调、范围/质量/限额及恢复验证再升级，不能预设授权自动保证能力完整。
 
-以下六项作为全 15 轮横向约束，不新增 Round。它们不耽误与其无冲突的当前产品开发；每轮在相关 canonical owner 范围内逐步建设、记录差距和证据。外部账号、商业授权、合规确认或上线前运营准备尚未完成时，必须记录为 `COMMERCIAL READINESS GAP / BLOCKED FOR COMMERCIAL_READY`，不得误写成当前工程能力失败。最终在 ROUND 15 正式上线前由 Product Owner 审核。
+以下六项是C1–C6共用的横向约束，不新增执行轮次或任务队列。它们不耽误与其无冲突的产品能力交付；每个C成果在相关canonical owner范围内建设并记录差距与证据。外部账号、商业授权、合规确认或上线前运营准备尚未完成时，必须记录为 `COMMERCIAL READINESS GAP / BLOCKED FOR COMMERCIAL_READY`，不得误写成当前工程能力失败。完整产品发布决策由Product Owner依据全部适用C成果、R验收与真实用户任务统一审核。
 
 1. DATA GOVERNANCE / COMPLIANCE
 
@@ -1128,9 +1131,9 @@ Product Owner clarification (2026-10-02): 本轮工程/产品闭环必须完成�
 二十四、持续前沿研究与能力演进门
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-每个活动 Owner Task Card 与 M Acceptance 必须包含 `CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION`。研究是本 Overlay 下的交付证据，不是第二产品、架构、设计或研究权威。每轮必须先记录当前业务/工程/页面差距，再核验与本轮直接相关的当前官方资料、行业案例、论文/标准、高质量 GitHub 项目及适用产品交互；保存 URL、访问日期、版本/commit、许可证、维护状态、商业可用性和安全边界，并作出 `ADOPT / ADAPT / DEFER / REJECT` 决策。
+每个活动 Owner Task Card 与 M Acceptance 必须包含 `CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION`。研究是本 Overlay 下的交付证据，不是第二产品、架构、设计或研究权威。每个C成果必须先记录当前业务/工程/页面差距，再核验与本轮直接相关的当前官方资料、行业案例、论文/标准、高质量 GitHub 项目及适用产品交互；保存 URL、访问日期、版本/commit、许可证、维护状态、商业可用性和安全边界，并作出 `ADOPT / ADAPT / DEFER / REJECT` 决策。
 
-涉及页面的 Round 必须主动研究当前前沿、原创、非模板化体验，且不得把 Toss Shopping、KakaoTalk Channel、Toss Design System、`motion-web` 或任何后续样本当作白名单或范围上限。外部输入只能提炼原则；禁止复制布局、视觉身份、代码、资产、参数、交互序列或受限衍生工作流。禁止 AdminLTE/Tabler 式通用后台、通用 Dashboard、Bento、Card Grid 批量套屏。只有长期 canonical 原则才可更新唯一 `LUMENIS-EXPERIENCE-CONSTITUTION.md`；研究记录、截图、Figma、模型输出和 GitHub star 都不是设计权威或 Production Truth。
+涉及页面的C成果必须主动研究当前前沿、原创、非模板化体验，且不得把 Toss Shopping、KakaoTalk Channel、Toss Design System、`motion-web` 或任何后续样本当作白名单或范围上限。外部输入只能提炼原则；禁止复制布局、视觉身份、代码、资产、参数、交互序列或受限衍生工作流。禁止 AdminLTE/Tabler 式通用后台、通用 Dashboard、Bento、Card Grid 批量套屏。只有长期 canonical 原则才可更新唯一 `LUMENIS-EXPERIENCE-CONSTITUTION.md`；研究记录、截图、Figma、模型输出和 GitHub star 都不是设计权威或 Production Truth。
 
 Collector、Browser、AI、Content、Agent、Reporting、Evaluation、Learning 与 CTH/BMP workflow 依据真实 Evidence 持续演进。候选改进必须映射回 canonical owner、对象、Permission、Evidence、workflow 和 LUMENIS Experience，并经过版本化资产、测试、真实运行/E2E、效果评估、可观测性、回滚与 M 验收后才可晋级。注册、import、模型输出、论文结论或外部项目活跃度都不能直接成为产品能力。
 
@@ -1235,9 +1238,10 @@ source-use contract into useful analysis/creation. If it still produces
 INTERNAL_PITCH_SOURCE_BINDING_REQUIRED, this is an unfinished binding, not
 acceptance of 'research→AI pitch'. owned_model_execution=NOT_RUN cannot establish
 owned analysis. Internal Word/DOCX/SavedWork composition can prove its own
-bounded behavior but not that missing normal research/owned-AI path. On F resume,
-required real submission must be operable; an onPressed:null editor/entry is
-not a completed action. F's pause never becomes UI verification.
+bounded behavior but not that missing normal research/owned-AI path. For an
+F-owned screen, the required real submission must be operable; an onPressed:null
+editor/entry is not a completed action. M does not inspect or verify F's
+independent implementation in this preparation.
 
 Domestic semantic quality must distinguish same-named commercial entities,
 cross-city shops, current versus historical claims, brand self-description versus
@@ -1261,14 +1265,20 @@ effects still need fresh permission/fences and do not silently replay on reopen.
 Prioritize actual remote training/step/loss/checkpoint bytes/load/cancel/connection
 loss; consistent training and Gateway recipes/budgets; true research→creation
 source transfer; semantic queries in actual capture/refresh/recovery; same-version
-integration/environment reproduction; and four-surface operation after F resume.
-Each existing owner continuously closes its whole outcome, not safety refusal
-only or repeated per-function reports. F is active after the Product Owner's 2026-10-04 resume; its scoped reference inputs may now be analyzed under the Experience Constitution. Original six-window/R/J/U/special exits,
-global data construction, real outcome/Evaluation and final human repeat gate
-remain, with no shrinking of useful normal-path standards.
+integration/environment reproduction; and four-surface operation when F's
+separately authorized deliverable is reviewed. These are retained product gates,
+not current task activation commands.
+These are complete outcome obligations, not activation commands. Current window
+activation comes only from the top of AGENTS.md. In the current M-only preparation
+C1–C6 remain paused; F is separately authorized by the Product Owner and M does
+not inspect or manage F's independent work. When an owner is later activated, it
+continues the whole outcome rather than safety refusal or per-function reports.
+Original six-window/R/J/U/special exits, global data construction, real
+outcome/Evaluation and final human repeat gate remain without shrinking useful
+normal-path standards.
 
 
-### Frontend result acceptance under the resumed allocation
+### Frontend result acceptance under F's independent authorization
 
 Consume the single consolidated mapping in Experience section 38 through F1–F5
 and the existing owners. Each promised surface must prove the real task, input,

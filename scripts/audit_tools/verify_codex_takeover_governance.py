@@ -630,9 +630,10 @@ def validate() -> None:
         "RESEARCH COMPLETE / NO JUSTIFIED UPGRADE",
         label="CURRENT real-delivery overlay",
     )
-    # Preserve every historical acceptance section; these are coverage, not dispatch.
-    for round_number in range(1, 16):
-        marker = f"ROUND {round_number:02d}"
+    # Preserve all 15 historical coverage groups without routing them as
+    # current execution rounds. C1-C6 are the only current delivery units.
+    for group_number in range(1, 16):
+        marker = f"HISTORICAL COVERAGE {group_number:02d} ACCEPTANCE"
         if marker not in real_delivery_overlay:
             raise AssertionError(f"CURRENT real-delivery overlay missing {marker}")
 
@@ -782,7 +783,7 @@ def validate() -> None:
         "**C6 / W6 — Integration, Runtime and Release**",
         "The separate front-end window F remains independent across all six deliveries",
         "01a10117-03c7-7503-8a9b-670e80a474a7",
-        "Current C3/C5 local continuation and historical Cloud handoff",
+        "C3/C5 retained continuation ownership and historical Cloud handoff",
         "The root controller M retains the independent review and acceptance role",
         "uses the Product Owner's current manual selection without overriding it",
         "R01–R15 remain the complete acceptance and technical-dependency coverage",

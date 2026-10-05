@@ -1,6 +1,8 @@
 # ROUND-03-B001A — Repository script rollback, one bounded Luna Batch
 
-Status: SOL-ACCEPTED FOR THIS BATCH ONLY. Luna implemented and verified the bounded patch at base `519ea7f`; Sol independently reviewed it and committed/pushed `e2084dd9` to `origin/main`. This Task Card is under `LUMENIS-ROUND-03-CHARTER-CURRENT.md`; it does not accept the original B001 dirty candidate or authorize another round.
+> **Historical completed Batch record:** The R03 B001A result and Sol/Luna roles below describe the dated accepted Batch only; they do not assign current models, activate ROUND 03, or authorize a new code/DB task. Current activation is controlled by the top of `AGENTS.md`.
+
+Status: SOL-ACCEPTED FOR THIS BATCH ONLY. Luna implemented and verified the bounded patch at base `519ea7f`; Sol independently reviewed it and committed/pushed `e2084dd9` to `origin/main`. This record does not accept the original B001 dirty candidate or authorize another round.
 
 | Field | Contract |
 | --- | --- |

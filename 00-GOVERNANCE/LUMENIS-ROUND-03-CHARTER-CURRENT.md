@@ -1,6 +1,8 @@
 # ROUND 03 Charter — Database Repository and Canonical Truth
 
-Status: ACTIVE / REWORK / NOT ACCEPTED. Sol controls only ROUND 03. This Charter is an execution record under the root `AGENTS.md`, current Product Architecture, Source Owner Index, Real Delivery Overlay, and Global Universe contract. It does not authorize ROUND 04. The current scoped results are recorded in [ROUND-03-2026-09-23-PROVISIONAL.md](evidence/round-03/ROUND-03-2026-09-23-PROVISIONAL.md).
+> **Historical execution snapshot:** At its last Round 03 update this charter recorded `ACTIVE / REWORK / NOT ACCEPTED` and a Sol-owned R03 gate. It is retained as dated acceptance/dependency evidence, not current activation or model routing. Current activation and pause state come only from the top of `AGENTS.md`; this M-only preparation does not resume Round 03 or authorize database/runtime work.
+
+This Charter remains subordinate to the root `AGENTS.md`, current Product Architecture, Source Owner Index, Real Delivery Overlay, and Global Universe contract. The scoped results recorded in [ROUND-03-2026-09-23-PROVISIONAL.md](evidence/round-03/ROUND-03-2026-09-23-PROVISIONAL.md) are historical evidence, not present execution truth.
 
 ## Entry and coverage
 

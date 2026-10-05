@@ -13,13 +13,15 @@ execution instructions.
 
 ## Current execution instruction — closure red lines 2026-10-04
 
-Current task: execute the Product Owner-approved 2026-10-04 blueprint and
-49-item audit dispositions D01-D49; these disposition IDs are distinct from
-acceptance requirements R01-R15. M is the only executor of this convergence;
-C1-C6 remain paused responsibility labels and their full R/J/U requirements
-remain assigned. F is separately active under the Product Owner's direct
-instruction and outside M's scope; M does not inspect, manage, or message F.
-The sole approved product blueprint is
+Current task: complete M's updated pre-start rules/material/Owner/dependency/
+acceptance consolidation against the Product Owner-approved 2026-10-04 product
+blueprint and D01-D49 disposition record. The D01-D49 audit-disposition IDs
+are distinct from acceptance requirements R01-R15 and are not ordinal-mapped.
+M is the only executor of this preparation; no product implementation or
+runtime work is authorized. C1-C6 remain paused responsibility labels with
+their full R/J/U obligations assigned. F is separately active under the
+Product Owner's direct instruction and outside M's scope; M does not inspect,
+manage, or message F. The sole approved product blueprint is
 `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`.
 Existing/free compute is preferred; this convergence does not authorize paid GPU,
 new rental, recharge or retired model providers.
@@ -37,6 +39,13 @@ new rental, recharge or retired model providers.
    per-function decisions or substitute exchanged reports for actual outcomes.
    Escalate once only for a real permission/cost gap or an owner/product decision
    that cannot be resolved within the existing authority. Continue independent work.
+   `main` is the sole current implementation. Do not create parallel candidate
+   source trees or leave multiple competing versions active. A temporary
+   isolated copy is allowed only to protect pre-existing dirty source during an
+   exact, authorized integration check; it is a validation workspace, not a
+   second implementation or a new product candidate. Preserve older research,
+   originals and failure evidence as history until their exact disposition is
+   verified.
 3. Before editing, each window reads its actual assigned materials and source
    owner/callers/contracts, records the complete result and the receiving owner
    in its existing Task Card, and uses that card continuously. A coverage table
@@ -50,7 +59,7 @@ new rental, recharge or retired model providers.
    capacity and license before selecting a recipe; a free development environment
    is not production model hosting. No paid resource starts without current
    explicit cost authorization. The historical 5090 budget is not a standing
-   instruction to rent. This M-only repair performs no model/GPU execution.
+   instruction to rent. This M-only preparation performs no model/GPU execution.
 6. Preserve the Product Owner's current manually selected account, model,
    reasoning effort and speed/service tier for each active window. This router
    assigns no model or speed by window and supersedes historical Sol/Luna/Astra
@@ -61,14 +70,15 @@ new rental, recharge or retired model providers.
    results, necessary decisions and urgent risks; when no actionable work remains,
    M pauses its own Goal.
 
-W6 normally owns product integration and main publication. For this explicitly authorized M-only repair, M publishes only the reviewed repair scope; W6 is not resumed. Its next delivery includes
-the exact canonical rule changes, current state and required gates, then a safe
-main push and remote file-byte verification. M prepares these rules and reviews
-the result; W6 being previously paused is no longer a publication dependency.
-Do not bulk-stage the dirty tree. M may continue independent authorized source
-admission, research-to-creation and media integration in this task. This does not
-resume C1-C6/F or authorize model/GPU execution; their retained work is input to
-the single main implementation.
+W6 normally owns product integration and main publication. For this explicitly
+authorized M-only preparation, M may publish only the reviewed governance,
+CURRENT, material-map and task-routing changes; W6 is not resumed. M verifies the
+exact published files and remote main. Do not bulk-stage the dirty tree.
+This task does not authorize production-source changes, database/migration or
+runtime operations, collection, model/GPU activity, deployment, or product E2E.
+Record those as exact later owner tasks with inputs, source/callers, dependencies,
+deliverables, recovery and acceptance. C1-C6 stay paused; F remains separately
+active under the Product Owner's instruction and outside M's scope.
 
 
 
@@ -409,15 +419,17 @@ and is consolidated at the next meaningful integration point.
 
 W6 applies that exact patch in isolation and performs local runtime/E2E validation before M final acceptance and main publication.
 
-#### Current C3/C5 local continuation and historical Cloud handoff
+#### C3/C5 retained continuation ownership and historical Cloud handoff
 
-The Product Owner moved all C3 and C5 work to local thread
+The Product Owner moved C3 and C5 responsibility to local thread
 `01a10117-03c7-7503-8a9b-670e80a474a7` on 2026-10-03. Its title is
 `序境｜C3+C5 与未完成研究资料接续`. It retains the unfinished research remit
-and both complete delivery scopes, all R/J/U requirements and existing owners.
-It does not wait for all research or GPU work before continuing independent
-business and Shared implementation. C2/W2 remains the sole GPU training operator;
-the local C3+C5/research executor must not take over GPU or billing operations.
+and both complete delivery scopes, all R/J/U requirements and existing owners;
+this historical handoff does not activate that thread. When the owner is later
+formally activated, it must not wait for unrelated research or GPU work before
+continuing independent business and Shared outcomes. C2/W2 remains the sole GPU
+training operator under separate current authorization; this M-only preparation
+does not perform GPU or billing operations.
 W6 coordinates exact shared-file reservations, formal DB writes and main publication.
 
 Former Cloud W3 `01a0fbd3-b280-779c-8431-207a71739022` and Cloud W5

@@ -96,7 +96,7 @@ FAMILIES = {
     "reporting": {
         "concern": "Shared Evaluation/Learning/Reporting",
         "terms": ("report", "export", "报告", "导出"),
-        "roots": ("lumenis/shared/reporting", "reporting"),
+        "roots": ("lumenis/shared/reporting",),
         "rules": (),
     },
     "evaluation_learning": {

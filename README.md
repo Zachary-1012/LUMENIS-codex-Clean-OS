@@ -37,13 +37,13 @@ Set-Location D:\LUMENIS_REBUILD\序\序境
 powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
 ```
 
-Core健康：`http://127.0.0.1:8201/healthz`。Flutter Web入口由同一Core的 `/workspace` host提供，需实际构建及配置；Desktop/Mobile复用Flutter代码；`website/`仅承载官网。参见 [App说明](app/README.md)与[官网说明](website/DEVELOPMENT-BRIEF.md)。旧App-only注释仅指不恢复旧浏览器原型，不能取消四入口。
+Core健康：`http://127.0.0.1:8201/healthz`。Flutter Web入口由同一Core的 `/workspace` host提供，需实际构建及配置；Desktop/Mobile复用Flutter代码；`website/`仅承载官网。参见 [App说明](app/README.md)与[官网说明](website/DEVELOPMENT-BRIEF.md)。四个入口各有职责，共用同一Product Core。
 
 当前产品入口保持开放，不新增账号/升级墙；服务端Permission、Action Firewall、Effect Fence和平台会话边界始终有效。保护本机个人CN小红书身份，开发采集只用已批准HK/国际身份。
 
 ## 当前执行约束
 
-本轮由M独自执行已批准收敛，不启动或联系其他窗口。现有/免费GPU优先，不因此启动训练、付费GPU或外部模型。全部旧需求和材料保留，研究必须落实到已有产品能力；没有审核依据不得称吸收完成。
+本轮M只完成开工前规则、材料、Owner、依赖和验收收敛，不实施产品源码或运行操作。C1–C6保持暂停；F按产品负责人单独授权独立工作，M不读取、管理或联系F。现有/免费GPU优先不构成本轮训练或付费授权；全部需求和材料保留，研究必须映射到既有产品能力，未读/未采用不得称吸收完成。
 
 每项能力只保留一个当前主实现、已有完整任务卡和一个当前成果入口，不新增并行候选源码目录。按真实依赖连续完成，不做无变化的重复审计、测试或逐函数交接。必要验证保留。主线发布与CURRENT/证据在同一交付完成，读取remote核对；其他dirty工作保护到单独验证后。
 

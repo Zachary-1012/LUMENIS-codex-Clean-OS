@@ -1,6 +1,8 @@
 # ROUND 03 first bounded Task Card — canonical database path and migration integration
 
-This is a dispatch card, **not** a claim that ROUND 03 has started or passed. The new ROUND 03 Sol task must first resolve fresh remote/local truth, inspect protected changes and issue its Charter. The 2026-09-21 database audit is historical evidence, not a substitute for current source.
+> **Historical task-card snapshot:** This former ROUND 03 dispatch card is preserved for provenance and dependency evidence; it is not a current task or authorization. Current activation, account/model selection and allowed actions come only from the top of `AGENTS.md`. This M-only preparation does not start the database task, read/write the protected DB, resume C1–C6, or replace F's independent work.
+
+The 2026-09-21 database audit is historical evidence, not a substitute for current source.
 
 | Field | Contract |
 | --- | --- |

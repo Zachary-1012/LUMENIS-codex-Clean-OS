@@ -1,6 +1,8 @@
 # ROUND-03-B001C — Consistent backup and honest migration refusal
 
-Status: SOL-ACCEPTED FOR THIS BATCH ONLY. Luna produced and clean-replayed a bounded patch at base `f66a5ed8`; after one Sol-requested rework, Sol independently replayed and tested the exact staged blobs, then committed/pushed them as `98729908`. B001 and ROUND 03 remain unaccepted.
+> **Historical completed Batch record:** The R03 B001C result and Sol/Luna roles below describe the dated accepted Batch only; they do not assign current models, activate ROUND 03, or authorize a new code/DB task. Current activation is controlled by the top of `AGENTS.md`.
+
+Status in the recorded Batch: SOL-ACCEPTED FOR THIS BATCH ONLY. Luna produced and clean-replayed a bounded patch at base `f66a5ed8`; after one Sol-requested rework, Sol independently replayed and tested the exact staged blobs, then committed/pushed them as `98729908`. B001 and ROUND 03 were not thereby accepted.
 
 | Field | Boundary |
 | --- | --- |

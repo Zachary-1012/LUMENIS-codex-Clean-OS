@@ -1,6 +1,8 @@
 # ROUND-03-B001B — Protected candidate dependency map
 
-Status: NEXT READ-ONLY TASK CARD. Sol owns the classification and any later integration decision. This card does not authorize ROUND 04 or a code edit.
+> **Historical read-only task-card snapshot:** This former B001B proposal is retained as dependency evidence only. It is not the current task queue or authorization; current activation and Product Owner model/account/resource choices come only from `AGENTS.md`. This M-only preparation does not start its analysis or a code edit.
+
+Status at the recorded snapshot: NEXT READ-ONLY TASK CARD. The current Owner Index and AGENTS control any future authorization.
 
 | Field | Boundary |
 | --- | --- |

@@ -13,7 +13,9 @@
       "treat local artifact as accepted product source",
       "execute private training configuration without current Product Owner cost authorization"
     ],
-    "admission_path": "existing Owner source/caller/contract review -> isolated application when needed -> affected verification -> coherent main commit -> remote readback"
+    "admission_path": "existing Owner source/caller/contract review -> isolated application when needed -> affected verification -> coherent main commit -> remote readback",
+    "current_implementation_policy": "main is the only current implementation. Do not create parallel product/source candidates. Use an isolated copy only when needed to protect existing dirty work for an exact authorized check; keep historical work protected until each item has an exact verified disposition.",
+    "existing_archive_disposition": "work/ remains a protected unclassified historical root. Its directory/path count is not proof of unique work, integration, archive completion, or permission to delete/move. Continue only by exact item, owner, hash/source lineage and verified disposition; do not bulk-clean."
   },
   "snapshot": {
     "untracked_path_count": 43383,
@@ -132,18 +134,19 @@
     {
       "id": "LOCAL-WORK-ARCHIVE",
       "path": "work/",
-      "classification": "KEEP_PROTECTED_ARCHIVE",
-      "state": "HISTORICAL_AND_RESEARCH_INPUTS_NOT_ACTIVE_IMPLEMENTATION_QUEUE",
+      "classification": "PROTECTED_UNCLASSIFIED_WORK_ROOT",
+      "state": "DIRECTORY_LEVEL_BOUNDARY_ONLY_ITEM_DISPOSITIONS_OPEN",
       "owner": "the existing canonical owner named by each contained source/artifact path; frontend inputs remain F-owned",
-      "content_review": "NOT_RECURSIVELY_READ_OR_RECLASSIFIED_IN_THIS_UPDATE",
+      "content_review": "DIRECTORY_NAMES_AND_SELECTED_EXACT_PATHS_ONLY; NOT_RECURSIVELY_READ_OR_CLASSIFIED",
       "main_admission": "never by directory; only a unique current-source delta with exact owner, base, contract and verification"
     },
     {
       "id": "C1-EVIDENCE-CANDIDATE",
       "path": "00-GOVERNANCE/evidence/round-06/C1-W1-DATA-COLLECTION-2026-10-02.md",
       "sha256": "329cf8d3023d7e23655fe250dd96ac63caab4c6c16e999414a550dd562a91e82",
-      "state": "LOCAL_EVIDENCE_NOT_FORMAL_SOURCE_EVIDENCE",
+      "state": "LOCAL_RESEARCH_RECEIPT_READ_FOR_PREPARATION_NOT_FORMAL_SOURCE_EVIDENCE",
       "owner": "C1 / SYSTEM Collector, Source, Evidence and Canonical owners",
+      "content_review": "M read this 2026-10-02 C1 evidence note on 2026-10-05 for preparation mapping only. Its capture/research claims remain local-only; its 541 candidate rows are pending identity/rights/admission and are not formal Source/Evidence/Canonical or platform coverage.",
       "main_admission": "requires real source/scope/rights/actor transaction evidence; this file alone cannot admit collection results"
     },
     {

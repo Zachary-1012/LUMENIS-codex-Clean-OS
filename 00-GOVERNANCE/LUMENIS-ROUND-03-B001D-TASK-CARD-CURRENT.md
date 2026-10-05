@@ -1,6 +1,8 @@
 # ROUND-03-B001D — v14–v17 owner and contract reconciliation
 
-Status: NEXT READ-ONLY TASK CARD. This is ROUND 03 dependency work under the current Charter. It does not authorize ROUND 04, migration, or promotion of the protected dirty candidate.
+> **Historical read-only task-card snapshot:** This former B001D proposal is retained as dependency evidence only. It is not the current task queue or authorization; current activation, database safety and Product Owner model/account/resource choices come only from `AGENTS.md`. This M-only preparation does not start migration or candidate promotion.
+
+Status at the recorded snapshot: NEXT READ-ONLY TASK CARD. This was R03 dependency work; it did not authorize the then-next round, migration or promotion of protected work.
 
 | Field | Boundary |
 | --- | --- |

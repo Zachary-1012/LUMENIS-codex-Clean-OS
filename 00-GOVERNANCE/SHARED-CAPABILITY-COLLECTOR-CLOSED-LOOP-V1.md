@@ -163,11 +163,37 @@ metric changes and retain content revisions; do not erase low-quality raw input
 or turn duplicates into additional coverage. Sampled posts do not establish
 representative consumer demand or causal business effects.
 
+Platform readiness is not one boolean. Preserve separate facts for declared
+capability, configuration, exact session/permission verification, worker
+reachability, last real run, current run and formal Source/Evidence/Canonical
+admission. A readable cookie file or configured proxy cannot produce `ACTIVE`,
+`VERIFIED` or product-facing `READY`; a check timestamp must describe an actual
+check, and cached verification must be judged against its freshness contract.
+Do not enable a platform flag to conceal a missing authorization or callable
+method. Resolve aliases through the existing canonical platform-naming owner,
+while retaining historical source-platform values and their read compatibility.
+
 The removed aggregate Collector quota is not reintroduced as a32/64-query world
 limit. A bounded per-batch limit may protect runtime/account health, but remaining
 queries/entities require an explicit continuation through the existing task,
-checkpoint and scheduler. Truncation is not completion. Keep bounded retries,
-polite pacing and recovery. No second Collector, query store or scheduler.
+checkpoint and scheduler. The business-plan checkpoint (`input_fingerprint` plus
+completed query keys) is query-level continuation; it is not a platform-native
+page cursor. Carry the existing checkpoint through the authorized API/task resume
+path and separately persist each platform's native pagination cursor when its
+adapter exposes one. A task that only calls search does not satisfy a promised
+detail, comment/reply, creator/author-post or media continuation. Preserve partial
+results, distinguish query-plan continuation from native pagination, and resume
+without repeating accepted effects or losing failed pages. Truncation is not
+completion. Keep bounded retries, polite pacing and recovery. No second Collector,
+query store or scheduler.
+
+The canonical CTH collection API and any retained V4 compatibility entry are
+callers of this one Collector/Task/Permission/Source/Evidence/Canonical owner,
+not separate acquisition systems. Preserve legacy task identifiers, polling,
+risk handling and platform-specific behavior until each unique behavior has an
+equivalent path through the canonical contract and its acceptance evidence;
+then retire only the duplicated route. Never keep two independent status or
+write authorities to avoid migrating a caller.
 
 MANUAL remains the default. Only explicitly approved public prelaunch-baseline
 sources or user-opted-in scopes may enter AUTO; login does not grant source use.
