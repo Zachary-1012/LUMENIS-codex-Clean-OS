@@ -38,6 +38,7 @@ F retains four-surface behavior and design responsibilities through existing Flu
 11. The bounded SYS-06 source specification now uses the canonical `DESIGN_READY` decision token required by the Experience gate. This records reviewed implementation scope only; its `IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED` status and all runtime/user acceptance limits remain unchanged.
 12. C2 now exposes the existing-owner `execution-preflight` route. It requires the current exact MODEL_TRAIN approval, performs only an authenticated remote source-pin check, and reports no training/model/GPU progress. Exact source `f3877f80` passed App Gate `37283524406` and Product Gate `37283529275`. Its local evidence and the remaining live/billing gates are recorded in `evidence/round-07/OWNED-TRAINING-REMOTE-PREFLIGHT-20261005.md`.
 13. The canonical OpenAPI generator now creates its route map in an isolated disposable database environment before importing Flask. This prevents route-document generation from initializing the protected repository DB; it is an engineering isolation repair, not a product/runtime acceptance claim. See `evidence/round-15/OPENAPI-ISOLATED-GENERATOR-20261005.md`.
+14. Follow-up `fb894def` makes that isolation regression valid in both workstation checkouts with a protected DB and clean GitHub checkouts where the ignored DB is absent. It changes no product route, runtime or data state; the generator still uses only a disposable schema.
 
 ## 3. Authority and retained evidence
 
