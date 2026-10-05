@@ -156,6 +156,46 @@ C1–C6 是六个完整用户成果责任，不等于六个零碎函数批次；
 | `lumenis/system/collector/data/schedule_state.json` | 2026-10-06 00:08 +08看到的tracked dirty；不在本批暂存/提交 | **证据不足/疑似运行状态数据**；内容未读。 | 只确认该路径从初查后变dirty；不能推断写入者或语义。 | 保持原样和unstaged；由真实运行/Collector Owner单独核来源与状态，不重置或覆盖。 |
 | `config/ai-owned-training-runtime.json`、`work/`、`00-GOVERNANCE/evidence/round-06/C1-W1-DATA-COLLECTION-2026-10-02.md` | 本地untracked，不推送 | **私有/未分类历史与材料**。 | 保护边界JSON标明私有配置不提交；C1记录为local receipt；43,381条work path未逐项分类。 | 不stage/不删除/不迁移；由确切Owner逐个处置。不称为唯一工作已经整理完毕。 |
 
+### 6.1 `work/`候选命名根路径盘点（路径元数据，不是内容验收）
+
+2026-10-06 00:32 +08扫描了非F、非敏感子树中的最外层“candidate”命名目录，共31项。表内“直接文件/代码”只计该目录本层，不包括子目录；Validation Source、依赖和产物内容没有因此被读取或认定为产品源码。所有项当前均为 `LOCAL_ONLY / PATH_ONLY / CONTENT_AND_UNIQUENESS_OPEN`；属于哪个Owner依据归档根路径推定，不能据此自动移交、清理或合入。唯一活动实现仍是main；这张表仅帮助后续逐项认领既有资产，不是第二任务队列。
+
+| 现有Owner线索 | 本地 work 路径 | 本层文件 / 源码类文件 | 分类与接续 |
+|---|---|---:|---|
+| C1 | `work/c1-w1-20261002/six-platform-safe-routing-candidate-20261003` | 4 / 0 | 路径像采集研究/材料包；需C1核原件、来源/许可与main替代关系。 |
+| C3+C5 | `work/c3-c5-local-continuation-20261003/candidate` | 234 / 192 | 源码快照标签；内容/版本尚未与main逐项比对。 |
+| C3+C5 | `work/c3-c5-local-continuation-20261003/candidate-v2` | 234 / 192 | 同一C3+C5线的第二个快照标签；不得仅据版本号删除。 |
+| C3+C5 | `work/c3-c5-local-continuation-20261003/candidate-v3` | 234 / 192 | 同一C3+C5线的第三个快照标签；需比较唯一改动/来源输入/回执。 |
+| C3+C5 / C6 | `work/c3-c5-local-continuation-20261003/integration-validation/candidate` | 1 / 1 | 集成验证材料；验收输出不等产品实现。 |
+| C3+C5 / C6 | `work/c3-c5-local-continuation-20261003/integration-validation/candidate-owned-output-bytes` | 0 / 0 | 字节输出子包标签；内容位于子目录，未读。 |
+| C3+C5 / C6 | `work/c3-c5-local-continuation-20261003/received-transaction/candidate` | 1 / 1 | transaction/receipt相关快照；需确认主线引用。 |
+| M / C3+C5 | `work/m-controller-20261002/w5-final-source-boundary-reception-20261003/inputs/candidate-owned-output-bytes` | 0 / 0 | W5接收包的输出字节目录；不是M新建的业务Owner。 |
+| C2 | `work/osai-resume-candidate-20261001-211338` | 4 / 2 | OSAI/恢复材料名；仅路径标签，不证明当前模型/训练。 |
+| C3 | `work/w3-business-continuation-20261002/action-outcome-candidate-20261003` | 41 / 0 | Action/Outcome业务产物候选名；需读其现有回执/owner映射后归类。 |
+| C4 | `work/w4-creation-20261002/brief-ingestion-complete-candidate-03` | 3 / 0 | Brief导入/创作材料标签；需核文件类型与版本。 |
+| C4 | `work/w4-creation-20261002/candidate-01` | 2 / 0 | 内容未知；保留。 |
+| C4 | `work/w4-creation-20261002/candidate-02` | 1 / 1 | 内容未知；保留。 |
+| C4 | `work/w4-creation-20261002/candidate-03` | 2 / 1 | 内容未知；保留。 |
+| C4 | `work/w4-creation-20261002/candidate-04` | 1 / 1 | 内容未知；保留。 |
+| C4 | `work/w4-creation-20261002/caption-owner-candidate-v1` | 1 / 0 | 版本化字幕/编辑证据标签；嵌套验证源码未读。 |
+| C4 | `work/w4-creation-20261002/caption-owner-candidate-v2` | 1 / 0 | 版本化字幕/编辑证据标签；嵌套验证源码未读。 |
+| C4 | `work/w4-creation-20261002/caption-owner-candidate-v3` | 7 / 2 | 版本化字幕任务，存在嵌套源快照；尚未唯一性核对。 |
+| C4 | `work/w4-creation-20261002/caption-owner-candidate-v4` | 7 / 2 | 版本化字幕任务，存在嵌套源快照；尚未唯一性核对。 |
+| C4 | `work/w4-creation-20261002/caption-owner-candidate-v5` | 11 / 2 | 版本化字幕任务，存在嵌套源快照；尚未唯一性核对。 |
+| C4 | `work/w4-creation-20261002/manuscript-only-candidate-v1` | 11 / 0 | 文稿来源版本标签；嵌套内容/权利状态未核。 |
+| C4 | `work/w4-creation-20261002/manuscript-only-candidate-v2` | 7 / 0 | 文稿来源版本标签；嵌套内容/权利状态未核。 |
+| C4 | `work/w4-creation-20261002/manuscript-only-candidate-v3` | 12 / 0 | 文稿来源版本标签；嵌套内容/权利状态未核。 |
+| C4 | `work/w4-creation-20261002/original-general-pitch-intake-v1/inputs/brief-ingestion-complete-candidate-03` | 2 / 0 | 提案输入候选标签；需确认与现行Source/Brief contract关系。 |
+| C4 | `work/w4-creation-20261002/original-general-pitch-intake-v1/inputs/pitch-source-quality-v4/layout-candidate-v1` | 2 / 1 | 提案版式/来源质量标签；不等最终Screen或产物接受。 |
+| C4 | `work/w4-creation-20261002/original-preparation/audio-candidate03-verification-v1` | 1 / 0 | 音频验证材料标签；音频/权利未复核。 |
+| C4 | `work/w4-creation-20261002/original-preparation/audio-candidate03-verification-v2` | 2 / 0 | 第二版音频验证材料标签；不得与v1按名字推定优劣。 |
+| C4 | `work/w4-creation-20261002/pitch-category-candidate-01` | 9 / 3 | 提案类别候选名；代码/策略语义未读。 |
+| C4 | `work/w4-creation-20261002/pitch-input-truth-candidate-02` | 4 / 1 | 提案输入真值候选名；需校验Evidence/Source lineage。 |
+| C4 | `work/w4-creation-20261002/pitch-source-quality-v4/layout-candidate-v1` | 6 / 1 | 提案版式/质量候选名；需与上方相似路径分别核hash，不能按名称合并。 |
+| C4 | `work/w4-creation-20261002/podcast-plan-candidate-02` | 12 / 0 | 播客计划候选名；计划不等真实节目/Timeline/Artifact验收。 |
+
+此盘点不包含被过滤的F或敏感子树，不展开任何子目录文件正文；相同路径名、文件数或源码后缀都不是重复证明。下一步需沿各Owner的精确receipt/manifest和当前main逐项判断 `KEEP / MERGE / RESTORE / MIGRATE / DELETE / RESEARCH`。当前没有任何一项因本元数据扫描被删除、搬移或宣称完成。
+
 ## 7. 开工准备与产品状态清单
 
 | 检查项 | 状态 | 证据/备注 |
