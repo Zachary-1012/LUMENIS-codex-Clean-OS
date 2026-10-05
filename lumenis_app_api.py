@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
-"""LUMENIS App API Blueprint — JSON contracts only.
+"""Product Core API blueprints for the current application.
 
-本模块只负责渲染前端 Foundation 页面 + Skill Hub API，不包含任何业务逻辑、
-数据采集、主体判断或数据库写操作。与 ZBC 生产核心解耦：在 app.py 中用一行注册即可：
-
-    from lumenis_app_api import lumenis_bp
-    app.register_blueprint(lumenis_bp)
-
-不注册也不影响现有系统；模板与静态资源独立于旧前端。
-平台中立：无硬编码个人路径。
+``lumenis_bp`` retains the ``/lumenis``-prefixed foundation and Skill Hub
+routes. ``domain_api_bp`` defines the root-level product ``/api`` routes,
+including current CTH/BMP and Shared workflow bindings. ``app.py`` registers
+both blueprints; omitting them removes current product routes. Each route
+composes its existing domain, Shared and SYSTEM owners rather than creating a
+second owner in this module.
 """
 import json
 import time as _time
