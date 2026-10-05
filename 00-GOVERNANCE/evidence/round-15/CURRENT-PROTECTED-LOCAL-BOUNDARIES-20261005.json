@@ -2,7 +2,7 @@
   "schema_version": 1,
   "recorded_at": "2026-10-05",
   "purpose": "Single lookup boundary for protected local-only candidates and artifacts; not a second source, product, Evidence or execution authority.",
-  "main_commit_at_recording": "e66d3c0184e375d6130176082db36e633002acf1",
+  "main_commit_at_recording": "fec4ceb7cdb67a2dc0b6fe4ffe2c6ad27600bff1",
   "rules": {
     "active_source_of_truth": "origin/main plus current runtime/DB/Permission/Evidence truth",
     "automatic_admission": false,
@@ -16,14 +16,14 @@
     "admission_path": "existing Owner source/caller/contract review -> isolated application when needed -> affected verification -> coherent main commit -> remote readback"
   },
   "snapshot": {
-    "untracked_path_count": 43395,
+    "untracked_path_count": 43387,
     "work_archive_path_count": 43380,
     "work_archive_direct_child_count": 22,
     "candidate_counts": {
       "c1_evidence_candidate": 1,
       "c3c5_evidence_candidate": 5,
       "private_training_runtime_config": 1,
-      "unmerged_test_candidates": 8
+      "unmerged_test_candidates": 0
     },
     "scope_note": "Counts exclude this index itself and are Git untracked-path counts only. The work archive was not recursively re-read or reclassified in this record."
   },
@@ -48,6 +48,62 @@
       "sha256": "a63b78242a0e838b8778925953763f20db5acd70146a34f63f7052459db1729a",
       "status": "ADMITTED_TO_MAIN_WITH_ISOLATED_TEST",
       "reason": "The existing app.py pitch analysis/export routes remain registered. Thirty-four targeted cases pass with an isolated empty test seed after the AST harness supplied app.py's existing global re module. These guard input validation, permission, upload cleanup and export behavior; they do not replace the canonical source-bound SavedWork path."
+    },
+    {
+      "id": "BUSINESS-BRIEF-OWNED-BOUNDARY-TESTS",
+      "path": "tests/test_business_brief_owned_boundary.py",
+      "sha256": "9b654a1ac42a1c9b2edea84bf29d93b9326fdcf2c8ad09bfe632fcbf48a20be9",
+      "status": "ADMITTED_TO_MAIN_WITH_ISOLATED_TEST",
+      "reason": "Two current Gateway/BusinessBrief owner-boundary cases pass with an isolated empty test seed; no owned inference was run."
+    },
+    {
+      "id": "COLLECTION-SCOPE-ROUTE-TESTS",
+      "path": "tests/test_collection_scope_routes.py",
+      "sha256": "dda6b68f01199c7aae227ea24d9cfec4c17719f801642d6a1c5ddf50634f112b",
+      "status": "ADMITTED_TO_MAIN_WITH_ISOLATED_TEST",
+      "reason": "Four current Collector/Permission route-boundary cases pass with an isolated empty test seed; no collection session or worker was started."
+    },
+    {
+      "id": "BLACKWELL-RECIPE-TESTS",
+      "path": "tests/test_owned_blackwell_recipe.py",
+      "sha256": "945b2595e6af3f7283fae40e177300ce134f2a02876427b1e7ea36f332b92c7e",
+      "status": "ADMITTED_TO_MAIN_WITH_ISOLATED_TEST",
+      "reason": "Five current recipe/policy tests pass with simulated hardware facts; no GPU, model or training worker was started."
+    },
+    {
+      "id": "OWNED-CHECKPOINT-RECOVERY-TESTS",
+      "path": "tests/test_owned_training_checkpoint_recovery.py",
+      "sha256": "c893d9f09f0421a093d2e31cf1bb51a6273f82e2703e5d2db985914263bb59c5",
+      "status": "ADMITTED_TO_MAIN_WITH_ISOLATED_TEST",
+      "reason": "Current checkpoint-policy and recovery boundary tests pass using temporary files and isolated seed; no physical checkpoint, GPU or owned inference is claimed."
+    },
+    {
+      "id": "OWNED-EXECUTION-APPROVAL-TESTS",
+      "path": "tests/test_owned_training_execution_approval_routes.py",
+      "sha256": "181302528df6d74bb070f67653cf9d3b20aae7767293b71791e8adc15d72347f",
+      "status": "ADMITTED_TO_MAIN_WITH_ISOLATED_TEST",
+      "reason": "Four current exact-grant/approval route tests pass; this validates authorization boundaries only, not training execution."
+    },
+    {
+      "id": "OWNED-TRAINING-PARENT-ROUTE-TESTS",
+      "path": "tests/test_owned_training_parent_routes.py",
+      "sha256": "0dab4df710c9079b0de96df269dbddb23fde299e7d6bf24921fafdb329397bdc",
+      "status": "ADMITTED_TO_MAIN_WITH_ISOLATED_TEST",
+      "reason": "Four current parent/preflight source-pin boundary tests pass with private configuration mocked; no SSH worker or endpoint was contacted."
+    },
+    {
+      "id": "OWNED-TRAINING-REVIEW-TESTS",
+      "path": "tests/test_owned_training_review_submission_routes.py",
+      "sha256": "d20d6f96b4236e01b6b7243209a42e9a7980b8befacb1912498c1feab8e3a61d",
+      "status": "ADMITTED_TO_MAIN_WITH_ISOLATED_TEST",
+      "reason": "Five current review-submission/Evidence route cases pass on the isolated seed; no model result or promotion is implied."
+    },
+    {
+      "id": "OWNED-TRAINING-RUNTIME-RECOVERY-TESTS",
+      "path": "tests/test_owned_training_runtime_recovery.py",
+      "sha256": "fcd43cf1cc395c34f2e2296eef74ed6505911de247ad2db0a13aa05c235c5a35",
+      "status": "ADMITTED_TO_MAIN_WITH_ISOLATED_TEST",
+      "reason": "Fifteen current process ownership/lock recovery cases pass using isolated temporary child processes; no GPU or model training ran."
     }
   ],
   "categories": [
@@ -81,22 +137,6 @@
       "state": "PRIVATE_RUNTIME_CONFIGURATION_NOT_COMMITTABLE",
       "owner": "C2 / SYSTEM AI Gateway",
       "main_admission": "never commit private endpoint/identity material; validate only through the published exact-approval preflight and actual authorized runtime"
-    },
-    {
-      "id": "UNMERGED-TEST-CANDIDATES",
-      "paths": [
-        "tests/test_business_brief_owned_boundary.py",
-        "tests/test_collection_scope_routes.py",
-        "tests/test_owned_blackwell_recipe.py",
-        "tests/test_owned_training_checkpoint_recovery.py",
-        "tests/test_owned_training_execution_approval_routes.py",
-        "tests/test_owned_training_parent_routes.py",
-        "tests/test_owned_training_review_submission_routes.py",
-        "tests/test_owned_training_runtime_recovery.py"
-      ],
-      "state": "UNMERGED_TEST_CANDIDATES",
-      "owner": "C2, C3+C5 and C4 according to each named current source contract",
-      "main_admission": "compare each candidate against current main once; retain only unique coverage for already accepted source behavior and do not use a test as implementation proof"
     }
   ]
 }
