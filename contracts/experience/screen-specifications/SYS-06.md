@@ -9,7 +9,7 @@ binding_ids:
   - BACKEND-GAP-041
 product_owner_approval: DIRECT_IMPLEMENTATION_SCOPE_2026-10-05
 design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
-design_decision: IMPLEMENTED_BOUND_SLICE / ACCEPTANCE_OPEN
+design_decision: DESIGN_READY
 reviewer: M bounded implementation review
 reviewed_at: 2026-10-05
 approval_reference: Product Owner direct internal-browser repair approval
