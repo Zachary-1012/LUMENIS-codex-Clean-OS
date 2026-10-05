@@ -42,3 +42,13 @@ collection, browser action, GPU action or remote request was performed.
 
 This is an engineering-documentation isolation repair. It does not establish
 live API behavior, a product release, runtime health or user acceptance.
+
+## Published-source verification
+
+GitHub `main` commit `0ef959a413e7a70ce1a4457bcb472e598da2a16d` contains the
+generator, clean-checkout test correction and CURRENT status record.
+
+[Product Gate 37286766323](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/37286766323)
+completed successfully, including the clean-checkout hermetic pytest suite,
+Python compilation, isolated database acceptance and governance gates. This
+proves the source/tooling batch, not a running production API or user outcome.
