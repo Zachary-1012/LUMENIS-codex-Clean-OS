@@ -432,7 +432,7 @@ def migration_7_to_8(conn: sqlite3.Connection):
         ('comments_fetched_at', 'TIMESTAMP'),
         ('comments_collected', 'INTEGER DEFAULT 0'),
         ('data_quality_status', "TEXT DEFAULT 'unknown'"),
-        ('data_quality_score', 'REAL DEFAULT 0'),
+        ('data_quality_score', 'REAL'),
         ('collector_version', 'TEXT'),
     ]
     

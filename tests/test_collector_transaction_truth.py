@@ -883,3 +883,49 @@ def test_collect_now_uses_shared_database_and_fails_closed_without_quota_state(m
 
     assert module.collect_now("registered term") is False
     assert "已阻止请求" in capsys.readouterr().out
+
+
+def test_note_ingestion_keeps_missing_analysis_unknown_and_preserves_existing_result(collector_case):
+    case = collector_case
+    import database as db
+
+    def read_analysis(note_id):
+        connection = _connect(case["db_path"])
+        try:
+            row = connection.execute(
+                "SELECT sentiment,sentiment_score,risk_level,risk_score,data_quality_score "
+                "FROM notes WHERE note_id=?",
+                (note_id,),
+            ).fetchone()
+            return tuple(row)
+        finally:
+            connection.close()
+
+    note = {
+        "note_id": "unclassified-xhs-note", "source_platform": "xhs",
+        "title": "广州太古汇 observed source", "content": "Raw source body",
+        "url": "https://public.example.test/unclassified-xhs-note",
+        "data_quality_status": "unknown", "data_quality_score": None,
+        "is_taikoo_verified": 1,
+    }
+
+    db.insert_note(note)
+    with db.get_db() as connection:
+        connection.execute("UPDATE notes SET topics=? WHERE note_id=?",
+                           (json.dumps(["registered topic"], ensure_ascii=False), note["note_id"]))
+    assert read_analysis(note["note_id"]) == ("unknown", None, "unknown", None, None)
+    stats = db.get_stats()
+    assert stats["unknown_sentiment"] == 1 and stats["unknown_risk"] == 1
+    topic = next(item for item in db.get_hot_topics() if item["topic"] == "registered topic")
+    assert topic["sentiment"] == "unknown"
+    assert topic["unknown"] == 1 and topic["neutral"] == 0
+
+    assert db.update_note_analysis(note["note_id"], {"status": "UNAVAILABLE"}) is False
+    assert db.update_note_analysis(note["note_id"], {
+        "status": "COMPLETED", "sentiment": "positive", "sentiment_score": 0.8,
+        "risk_level": "low", "risk_score": 2, "summary": "Reviewed analysis",
+        "topics": ["retail"], "ai_provider": "owned",
+    }) is True
+    db.insert_note({**note, "title": "Source refreshed"})
+
+    assert read_analysis(note["note_id"]) == ("positive", 0.8, "low", 2, None)

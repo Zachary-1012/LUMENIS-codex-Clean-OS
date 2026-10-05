@@ -3,6 +3,7 @@ import sqlite3
 import json
 import os
 import re
+import math
 from datetime import datetime
 from contextlib import contextmanager, nullcontext
 from subject_rules import SUBJECT_FIELDS, subject_hit, subject_sql_and_values
@@ -11,6 +12,37 @@ import time
 import logging
 
 logger = logging.getLogger(__name__)
+
+_NOTE_SENTIMENTS = frozenset({"positive", "neutral", "negative", "unknown"})
+_NOTE_RISK_LEVELS = frozenset({"low", "medium", "high", "critical", "unknown"})
+
+
+def _analysis_label(note_data, field, allowed):
+    value = note_data.get(field)
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return "unknown"
+    if not isinstance(value, str):
+        raise ValueError(f"{field} must be a string status")
+    normalized = value.strip().lower()
+    if normalized not in allowed:
+        raise ValueError(f"{field} status is unsupported")
+    return normalized
+
+
+def _nullable_analysis_score(value, *, integer=False):
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    if isinstance(value, bool):
+        raise ValueError("analysis scores cannot be booleans")
+    try:
+        if integer:
+            return int(float(value))
+        parsed = float(value)
+    except (TypeError, ValueError, OverflowError):
+        raise ValueError("analysis score is invalid") from None
+    if not math.isfinite(parsed):
+        raise ValueError("analysis score is invalid")
+    return parsed
 
 # 数据库锁超时重试配置
 _DB_MAX_RETRIES = 3
@@ -142,6 +174,44 @@ def insert_note(note_data, *, connection=None):
             return name in note_data and (
                 metric_observation_complete or vals[name] is not None
             )
+
+        def _write_analysis_values(*, new_record):
+            updates = {}
+            if new_record or "sentiment" in note_data:
+                sentiment = _analysis_label(note_data, "sentiment", _NOTE_SENTIMENTS)
+                updates["sentiment"] = sentiment
+                updates["sentiment_score"] = (
+                    _nullable_analysis_score(note_data.get("sentiment_score"))
+                    if sentiment != "unknown" else None
+                )
+            elif "sentiment_score" in note_data:
+                current_sentiment = str(existing["sentiment"] or "unknown").strip().lower()
+                updates["sentiment_score"] = (
+                    _nullable_analysis_score(note_data.get("sentiment_score"))
+                    if current_sentiment in {"positive", "neutral", "negative"} else None
+                )
+
+            if new_record or "risk_level" in note_data:
+                risk_level = _analysis_label(note_data, "risk_level", _NOTE_RISK_LEVELS)
+                updates["risk_level"] = risk_level
+                updates["risk_score"] = (
+                    _nullable_analysis_score(note_data.get("risk_score"), integer=True)
+                    if risk_level != "unknown" else None
+                )
+            elif "risk_score" in note_data:
+                current_risk = str(existing["risk_level"] or "unknown").strip().lower()
+                updates["risk_score"] = (
+                    _nullable_analysis_score(note_data.get("risk_score"), integer=True)
+                    if current_risk in {"low", "medium", "high", "critical"} else None
+                )
+
+            if updates:
+                assignments = ", ".join(f"{field}=?" for field in updates)
+                conn.execute(
+                    f"UPDATE notes SET {assignments} WHERE note_id=?",
+                    (*updates.values(), nid),
+                )
+
         # 数据质量软门（写入门接线，enrich 标记不丢弃=数据零丢失）：
         # 调用方未显式传 data_quality_status 时，自动用 DataQualityGate(note 契约) 校验并标记。
         # INSERT/UPDATE 分支已消费 note_data 的这两个字段，此处统一填充，零侵入各采集入口。
@@ -201,7 +271,7 @@ def insert_note(note_data, *, connection=None):
                 comments_fetched_at=CASE WHEN ?<>'' THEN ? ELSE comments_fetched_at END,
                 comments_collected=CASE WHEN ? >= 0 THEN ? ELSE comments_collected END,
                 data_quality_status=CASE WHEN ?<>'' THEN ? ELSE data_quality_status END,
-                data_quality_score=CASE WHEN ? > 0 THEN ? ELSE data_quality_score END,
+                data_quality_score=CASE WHEN ? THEN ? ELSE data_quality_score END,
                 collector_version=CASE WHEN ?<>'' THEN ? ELSE collector_version END,
                 status='active', last_seen_at=?
                 WHERE note_id=?""", (
@@ -220,7 +290,7 @@ def insert_note(note_data, *, connection=None):
                 note_data.get('comments_fetched_at','') or '', note_data.get('comments_fetched_at','') or '',
                 vals['comments_collected'], vals['comments_collected'],
                 note_data.get('data_quality_status','') or '', note_data.get('data_quality_status','') or '',
-                float(note_data.get('data_quality_score',0) or 0), float(note_data.get('data_quality_score',0) or 0),
+                'data_quality_score' in note_data, _nullable_analysis_score(note_data.get('data_quality_score')),
                 note_data.get('collector_version','') or '', note_data.get('collector_version','') or '', now, nid))
             conn.execute("UPDATE notes SET body=CASE WHEN ?<>'' THEN ? ELSE body END, source_keyword=CASE WHEN ?<>'' THEN ? ELSE source_keyword END, matched_keywords=CASE WHEN ?<>'' THEN ? ELSE matched_keywords END WHERE note_id=?", (vals['body'], vals['body'], vals['source_keyword'], vals['source_keyword'], vals['matched_keywords'], vals['matched_keywords'], nid))
             if _stype:
@@ -236,6 +306,7 @@ def insert_note(note_data, *, connection=None):
                     source='live', collector_version=note_data.get('collector_version', '') or '')
             except Exception:
                 pass
+            _write_analysis_values(new_record=False)
             return existing['id'], False
         cur = conn.execute("""INSERT INTO notes
             (note_id,source_platform,title,content,url,cover,author_id,author_nickname,author_avatar,likes,comments,collects,shares,
@@ -246,8 +317,9 @@ def insert_note(note_data, *, connection=None):
             vals['author_avatar'], vals['likes'], vals['comments'], vals['collects'], vals['shares'], vals['note_type'],
             vals['xsec_token'], vals['publish_date'], pub_dt, coll_at or now, coll_at or now,
             note_data.get('detail_fetched_at','') or '', note_data.get('comments_fetched_at','') or '', vals['comments_collected'],
-            note_data.get('data_quality_status','unknown') or 'unknown', float(note_data.get('data_quality_score',0) or 0),
+            note_data.get('data_quality_status','unknown') or 'unknown', _nullable_analysis_score(note_data.get('data_quality_score')),
             note_data.get('collector_version','') or '', now, 1 if vals['author_nickname']=='广州太古汇' else 0, vals['is_taikoo_verified'], vals['verify_reason']))
+        _write_analysis_values(new_record=True)
         conn.execute('UPDATE notes SET body=?, source_keyword=?, matched_keywords=? WHERE note_id=?', (vals['body'], vals['source_keyword'], vals['matched_keywords'], nid))
         if _stype:
             conn.execute("UPDATE notes SET subject_type=CASE WHEN ?<>'' THEN ? ELSE subject_type END, "
@@ -351,14 +423,34 @@ def mark_disappeared_notes(seen_note_ids=None):
 
 
 def update_note_analysis(note_id, analysis):
+    if not isinstance(analysis, dict):
+        raise ValueError("analysis must be a result object")
+    if str(analysis.get("status") or "").upper() in {
+        "UNAVAILABLE", "NOT_RUN", "BLOCKED", "ERROR", "FAILED",
+    }:
+        return False
+    if not any(field in analysis for field in ("sentiment", "risk_level", "summary", "topics")):
+        return False
+    sentiment = _analysis_label(analysis, "sentiment", _NOTE_SENTIMENTS)
+    risk_level = _analysis_label(analysis, "risk_level", _NOTE_RISK_LEVELS)
+    sentiment_score = (
+        _nullable_analysis_score(analysis.get("sentiment_score"))
+        if sentiment != "unknown" else None
+    )
+    risk_score = (
+        _nullable_analysis_score(analysis.get("risk_score"), integer=True)
+        if risk_level != "unknown" else None
+    )
+    provider = str(analysis.get("ai_provider") or analysis.get("provider") or "unknown")
     with get_db() as conn:
-        conn.execute("""UPDATE notes SET sentiment=?, sentiment_score=?, risk_level=?, risk_score=?,
+        cursor = conn.execute("""UPDATE notes SET sentiment=?, sentiment_score=?, risk_level=?, risk_score=?,
             summary=?, topics=?, ai_provider=?, ai_analyzed_at=?, category=?, is_official=?
             WHERE note_id=?""", (
-            analysis.get('sentiment','neutral'), analysis.get('sentiment_score',0), analysis.get('risk_level','low'),
-            analysis.get('risk_score',0), analysis.get('summary',''), json.dumps(analysis.get('topics',[]),ensure_ascii=False),
-            analysis.get('ai_provider','rule'), datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            sentiment, sentiment_score, risk_level, risk_score,
+            analysis.get('summary',''), json.dumps(analysis.get('topics',[]),ensure_ascii=False),
+            provider, datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             analysis.get('category','other'), int(analysis.get('is_official',0) or 0), note_id))
+        return cursor.rowcount == 1
 
 
 def _subject_clause(alias=''):
@@ -416,14 +508,22 @@ def get_stats():
         pos=q(f"SELECT COUNT(*) c FROM notes WHERE {base} AND sentiment='positive'")
         neu=q(f"SELECT COUNT(*) c FROM notes WHERE {base} AND sentiment='neutral'")
         neg=q(f"SELECT COUNT(*) c FROM notes WHERE {base} AND sentiment='negative'")
+        unknown_sentiment=q(f"SELECT COUNT(*) c FROM notes WHERE {base} AND COALESCE(sentiment,'unknown') NOT IN ('positive','neutral','negative')")
         high=q(f"SELECT COUNT(*) c FROM notes WHERE {base} AND risk_level='high'")
+        critical=q(f"SELECT COUNT(*) c FROM notes WHERE {base} AND risk_level='critical'")
         med=q(f"SELECT COUNT(*) c FROM notes WHERE {base} AND risk_level='medium'")
         low=q(f"SELECT COUNT(*) c FROM notes WHERE {base} AND risk_level='low'")
+        unknown_risk=q(f"SELECT COUNT(*) c FROM notes WHERE {base} AND COALESCE(risk_level,'unknown') NOT IN ('low','medium','high','critical')")
         total_likes=conn.execute(f'SELECT COALESCE(SUM(likes),0) s FROM notes WHERE {base}',tuple(subject_params)).fetchone()['s']
         total_comments=conn.execute(f'SELECT COALESCE(SUM(comments),0) s FROM notes WHERE {base}',tuple(subject_params)).fetchone()['s']
         total_eng=conn.execute(f'SELECT COALESCE(SUM(likes+comments+collects+shares),0) s FROM notes WHERE {base}',tuple(subject_params)).fetchone()['s']
         official=q(f'SELECT COUNT(*) c FROM notes WHERE {base} AND is_official=1')
-        return {'total':total,'positive':pos,'neutral':neu,'negative':neg,'high_risk':high,'medium_risk':med,'low_risk':low,'total_likes':total_likes,'total_comments':total_comments,'total_engagements':total_eng,'official_count':official,'verified_count':total}
+        return {'total':total,'positive':pos,'neutral':neu,'negative':neg,
+                'unknown_sentiment':unknown_sentiment,'critical_risk':critical,
+                'high_risk':high,'medium_risk':med,
+                'low_risk':low,'unknown_risk':unknown_risk,
+                'total_likes':total_likes,'total_comments':total_comments,
+                'total_engagements':total_eng,'official_count':official,'verified_count':total}
 
 def get_hot_topics(limit=12):
     """返回首页热门话题；严格继承广州太古汇主体口径。"""
@@ -434,20 +534,20 @@ def get_hot_topics(limit=12):
         try: vals=json.loads(r['topics'] or '[]')
         except Exception: vals=[x.strip() for x in str(r['topics'] or '').split(',') if x.strip()]
         if not isinstance(vals,list): vals=[]
-        sentiment=r['sentiment'] or 'neutral'
+        sentiment = str(r['sentiment'] or 'unknown').strip().lower()
         for t in vals:
             t=str(t).strip()
             if not t: continue
-            b=buckets.setdefault(t, {'topic':t,'count':0,'positive':0,'neutral':0,'negative':0})
+            b=buckets.setdefault(t, {'topic':t,'count':0,'positive':0,'neutral':0,'negative':0,'unknown':0})
             b['count']+=1
-            b[sentiment if sentiment in ('positive','neutral','negative') else 'neutral']+=1
+            b[sentiment if sentiment in ('positive','neutral','negative') else 'unknown']+=1
     items=[]
     for b in buckets.values():
         counts={'positive':b['positive'],'neutral':b['neutral'],'negative':b['negative']}
-        dominant=max(counts,key=counts.get)
+        dominant=max(counts,key=counts.get) if sum(counts.values()) else 'unknown'
         # 以“热度 + 正负方向”决定轻微排序，不把负面绝对置顶。
         b['sentiment']=dominant
-        b['sentiment_count']=counts[dominant]
+        b['sentiment_count']=counts[dominant] if dominant != 'unknown' else b['unknown']
         items.append(b)
     return sorted(items,key=lambda x:(x['count'],x['sentiment_count']),reverse=True)[:max(1,int(limit))]
 
