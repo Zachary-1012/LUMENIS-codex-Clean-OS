@@ -77,6 +77,8 @@ F retains four-surface behavior and design responsibilities through existing Flu
 
 43. At 2026-10-06 06:17 +08, `scripts/collect_now.py`'s quota-store fail-closed path was verified with a mocked Shared Database connection whose `collection_counters` table is absent; the command returned unavailable before importing/calling the live collector. Its regression test also makes any raw `sqlite3.connect` call fail. The script remains a legacy `persist_live` caller pending transaction/scope integration as recorded in item 39. No production DB or platform session was opened.
 
+44. At 2026-10-06 06:35 +08, the earlier PDF failure was traced to running tests with system `C:\Python314`, which lacks ReportLab; the repository `.venv` already contains ReportLab 5.0.1 and pdfplumber 0.11.10, matching `requirements.txt`/`requirements-dev.txt`. `tests/test_saved_document_workflow.py` passes under the repository venv. The configured FFmpeg/ffprobe paths in `.env` point to existing files, and the audio/timeline render test batch also passes under the venv with the isolated seed. No package install or `.env` change was needed; no real runtime/media/production DB was touched.
+
 ## 3. Authority and retained evidence
 
 - `00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`: real job, useful outcome, recovery and final states.
