@@ -1113,12 +1113,48 @@ analysis, OpenAI official pages and current product rules are the current study
 inputs after explicit resume. Preserve all old originals/analysis, not another
 historical-video reading gate. No current rule update itself analyzes frames.
 
-Linear icons and original colored icons coexist. Colored icons carry the user's
-supplied hand-painted flat-2D material/color feel (image848dd8334ba062ff70657c7e0acc7c86
-and the existing watercolor direction). Choose their roles by the actual task,
-with readable labels, semantic colors and accessible contrast; do not reduce all
-icons to monochrome or indiscriminately color every control. Characters follow
-the user's script/description. Rich but controlled color remains permitted.
+### Five architecture role identities — current visual map (2026-10-06)
+
+The product's recurring colored hand-drawn architecture identities are fixed to
+five roles. This map defines illustration identity only. It does not add product
+domains, Agents, services, model providers, user-selectable roles or
+authentication/Permission roles.
+
+| Architecture identity (zh-CN / en / ko-KR) | Existing screen families | When the identity may appear |
+|---|---|---|
+| **CTH 商业运营 / CTH · Commerce operations / CTH · 상업 운영** | CTH-01–10 | In a real commercial-operations task or when clarifying a CTH business object; never as a substitute for a mall, tenant brand or platform identity. |
+| **BMP 品牌市场 / BMP · Brand and market / BMP · 브랜드 및 시장** | BMP-01–11 | In a real brand, market, creator, content or campaign task; identity and meaning come from the actual brand/Brief. |
+| **Shared Capability 共享能力 / Shared · Shared capability / Shared · 공유 기능** | SH-01–06 and cross-domain result handoffs | When making the existing source-to-result shared workflow legible; it never stands in for a Source or Evidence fact. |
+| **System 系统 / System · System / System · 시스템** | SYS-01–08 | Only when explaining a real service state, security/runtime condition or recovery path; it is not the default user-navigation persona. |
+| **序境自研AI / LUMENIS-owned AI / LUMENIS 자체 AI** | AI-01–05 | Only for a real AI task, source explanation, result or unavailable state, through the existing single AI Gateway; suggestions remain inspectable, editable and rejectable. |
+
+Agent is an execution/coordination pattern inside the existing Agent Runtime,
+not a sixth role identity. The owned-AI identity adds no Gateway, model service,
+autonomous permission or product domain. Users do not choose these identities
+for login, account, access or action authority.
+
+All five share the original flat-2D watercolor, colored-pencil and print-grain
+visual language, with distinct task-relevant silhouettes and controlled accent
+colors. Functional controls continue to use clear linear glyphs. The five role
+identities, third-party source marks and functional glyphs remain separate
+layers. Color, pose or illustration must never imply connection, success,
+failure, permission, popularity, confidence or factual truth. Source/market/work
+objects may use task-specific illustrations, but do not create extra recurring
+role personalities. Characters in AIGC follow the user's script/description.
+
+The previous generic Agent/object-family role description in the historical
+`work/frontend-2026-10-03/LUMENIS-ICON-REVISION.md` no longer defines the number
+or allocation of current role identities; retain that file as historical icon
+research, not as a competing authority. During a later, explicitly authorized
+F implementation, map existing Website, Web Workspace, Desktop and Mobile role
+artwork/icon versions to these five identities, retain source/version/hash and
+mark unmapped material as historical or pending replacement. This rule update
+does not create or replace art assets, accept a screen, or resume F.
+
+Linear icons and original colored icons coexist. Choose whether to show one of
+the five architecture identities by the real task, with readable labels and
+accessible contrast; do not reduce the product to monochrome or indiscriminately
+color every control. Rich but controlled color remains permitted.
 
 After resume, adapt the recorded launch/re-entry and Manus work/operation ideas
 through this sole Constitution for Public Website, Web Workspace, Desktop and
@@ -1156,8 +1192,8 @@ Cue Website is the main visual, page-rhythm and interaction-presentation referen
 for Public Website only. Web Workspace, Desktop and Mobile retain the established
 product rules, task-specific composition, creative workbench and AI/Evidence/
 Permission/Recovery contracts, adapting suitable Cue principles without scaling
-the Website. Original hand-painted Agent/object identity icons remain applicable
-across all four surfaces. This scope follows the human messages
+the Website. The same five architecture identities above map across all four
+surfaces; Agent does not add another identity. This scope follows the human messages
 `01a1057b-200e-7a01-b256-cf1faabb2c9b` and
 `01a10576-48c2-7e53-abe6-e445d94f2b68`, reconciled by M on 2026-10-04.
 The 319b creative video applies
@@ -1176,10 +1212,11 @@ extracted, actually read and unresolved intervals separately; require a new
 source-pinned reading receipt before claiming complete analysis. Independent
 implementation with sufficient current design evidence continues.
 
-Preserve functional line glyphs, original colored hand-painted Agent/object
-identity icons and third-party source icons as three distinct layers. Colored
-identity objects are programmatic task/content identities, never invented truth
-states or global decoration. The old fixed AIGC percentage quota was added by
+Preserve functional line glyphs, the five colored hand-painted architecture
+role identities above and third-party source icons as three distinct layers.
+Content/object illustrations remain local to real task and content identity;
+they do not create another recurring persona or signal truth/state/authority.
+The old fixed AIGC percentage quota was added by
 the assistant without a human or measurement basis and is withdrawn. Determine
 visual/proposal emphasis from the actual task and its approved screen contract.
 Keep watercolor/print/paper texture and Brief-driven character choices within
