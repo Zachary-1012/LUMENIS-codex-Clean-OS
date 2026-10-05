@@ -37,6 +37,7 @@ F retains four-surface behavior and design responsibilities through existing Flu
 10. The SYS-06 controlled-reader repair replaces the old permanent unavailable route with the existing SYSTEM Browser API and a local-workspace principal that does not reuse Core Basic credentials. Its exact source scope, local verification and retained live limits are recorded in `evidence/round-14/SYS-06-CONTROLLED-READER-20261005.md`. Exact source `154219a3` passed App Gate `37279577199` and Product Gate `37279581122`; that proves the published source gates, not live Browser runtime, acquisition or user acceptance.
 11. The bounded SYS-06 source specification now uses the canonical `DESIGN_READY` decision token required by the Experience gate. This records reviewed implementation scope only; its `IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED` status and all runtime/user acceptance limits remain unchanged.
 12. C2 now exposes the existing-owner `execution-preflight` route. It requires the current exact MODEL_TRAIN approval, performs only an authenticated remote source-pin check, and reports no training/model/GPU progress. Exact source `f3877f80` passed App Gate `37283524406` and Product Gate `37283529275`. Its local evidence and the remaining live/billing gates are recorded in `evidence/round-07/OWNED-TRAINING-REMOTE-PREFLIGHT-20261005.md`.
+13. The canonical OpenAPI generator now creates its route map in an isolated disposable database environment before importing Flask. This prevents route-document generation from initializing the protected repository DB; it is an engineering isolation repair, not a product/runtime acceptance claim. See `evidence/round-15/OPENAPI-ISOLATED-GENERATOR-20261005.md`.
 
 ## 3. Authority and retained evidence
 
@@ -51,6 +52,7 @@ F retains four-surface behavior and design responsibilities through existing Flu
 - `evidence/round-14/MEDIA-WORKBENCH-FOUR-SURFACE-20261005.md`: current Flutter player/timeline/reopen integration, Windows build evidence and Web test-server limitation.
 - `evidence/round-14/SYS-06-CONTROLLED-READER-20261005.md`: current internal-reader source/API binding, local verification and retained runtime/user acceptance limits.
 - `evidence/round-07/OWNED-TRAINING-REMOTE-PREFLIGHT-20261005.md`: current no-GPU remote source-pin preflight binding and the remaining real training gates.
+- `evidence/round-15/OPENAPI-ISOLATED-GENERATOR-20261005.md`: isolated route-contract generation and protected DB boundary verification.
 - `evidence/round-06/COLLECTOR-CONVERGENCE-20261004.md`: current purpose, signed scheduler, source transaction and packaged-input integration evidence.
 
 Previous CURRENT snapshots and source/runtime histories remain at [fixed base](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/be347f03eb9f2bc470a39644df281be3a3d704c9/00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md). They are provenance, not current pause/resume/paid-resource instructions. Historical acceptance artifacts are retained, not deleted or relabeled as current success.

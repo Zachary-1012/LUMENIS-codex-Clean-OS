@@ -10,8 +10,16 @@
 """
 from __future__ import annotations
 
+import argparse
+import contextlib
+import io
 import json
+import os
 import re
+import shutil
+import sys
+import tempfile
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 _PARAM_RE = re.compile(r"<(?:[a-zA-Z]+:)?([^>]+)>")
@@ -166,3 +174,102 @@ def generate(app: Any, json_path: str, matrix_path: Optional[str] = None,
         with open(matrix_path, "w", encoding="utf-8", newline="") as f:
             f.write(build_matrix_md(spec))
     return spec
+
+
+def generate_current_app_contract(
+    json_path: str,
+    matrix_path: Optional[str] = None,
+) -> dict:
+    """Generate the current Flask contract without opening the repository DB.
+
+    The route map is independent of business data.  Importing ``app`` with its
+    ordinary workstation environment can nevertheless initialize the default
+    SQLite path, so this helper creates a process-local disposable data root
+    before importing the application.  It is deliberately rejected after an
+    app import: callers must use the CLI in a fresh process rather than reuse a
+    potentially production-bound module state.
+    """
+    if "app" in sys.modules:
+        raise RuntimeError("generate_current_app_contract requires a fresh Python process")
+    root = Path(__file__).resolve().parent
+    sandbox = Path(tempfile.mkdtemp(prefix="lumenis-openapi-contract-"))
+    data_root = sandbox / "data"
+    data_root.mkdir(parents=True, exist_ok=False)
+    environment = {
+        "ZBC_DB_PATH": str(data_root / "openapi-contract.db"),
+        "ZBC_EVIDENCE_DB_PATH": str(data_root / "openapi-contract.db"),
+        "ZBC_DATA_DIR": str(data_root),
+        "ZBC_GUARDIAN_ENABLED": "0",
+        "LOG_DIR": str(data_root / "logs"),
+        "PYTHONDONTWRITEBYTECODE": "1",
+    }
+    previous = {name: os.environ.get(name) for name in environment}
+    previous_argv = list(sys.argv)
+    added_path = False
+    try:
+        os.environ.update(environment)
+        sys.argv = [
+            str(Path(__file__).resolve()),
+            "--internal-beta-acceptance",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8761",
+        ]
+        if str(root) not in sys.path:
+            sys.path.insert(0, str(root))
+            added_path = True
+        # Prepare only the disposable schema before Flask modules inspect
+        # optional statistics tables.  Import/runtime failures still propagate;
+        # output suppression merely keeps this document generator machine-safe.
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            from lumenis.shared.database.migrations import migrate
+
+            if migrate() is not True:
+                raise RuntimeError("isolated OpenAPI schema preparation failed")
+            import app as current_app
+
+        return generate(current_app.app, json_path, matrix_path)
+    finally:
+        sys.argv = previous_argv
+        if added_path:
+            sys.path.remove(str(root))
+        for name, value in previous.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+        shutil.rmtree(sandbox, ignore_errors=True)
+
+
+def _main() -> int:
+    root = Path(__file__).resolve().parent
+    parser = argparse.ArgumentParser(
+        description="Generate LUMENIS OpenAPI documents in an isolated app environment.",
+    )
+    parser.add_argument(
+        "--json-path",
+        default=str(root / "docs" / "API-OPENAPI-SPEC.json"),
+    )
+    parser.add_argument(
+        "--matrix-path",
+        default=str(root / "docs" / "API-ROUTE-MATRIX.md"),
+    )
+    args = parser.parse_args()
+    spec = generate_current_app_contract(args.json_path, args.matrix_path)
+    print(
+        json.dumps(
+            {
+                "json_path": str(Path(args.json_path).resolve()),
+                "matrix_path": str(Path(args.matrix_path).resolve()),
+                "route_count": spec["x-route-count"],
+                "operation_count": spec["x-operation-count"],
+            },
+            ensure_ascii=True,
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_main())

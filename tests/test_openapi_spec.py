@@ -3,6 +3,9 @@
 import os
 import sys
 import json
+import hashlib
+from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -151,3 +154,43 @@ def test_generated_spec_files_valid(app):
     assert "API 路由矩阵" in md and "/healthz" in md
     matrix_path = os.path.join(root, "docs", "API-ROUTE-MATRIX.md")
     assert open(matrix_path, encoding="utf-8").read() == md
+
+
+def test_generator_cli_uses_an_isolated_database_environment(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    protected = root / "data" / "monitor.db"
+    before_bytes = protected.read_bytes()
+    before_sidecars = {
+        suffix: (protected.with_name(protected.name + suffix)).read_bytes()
+        for suffix in ("-wal", "-shm")
+        if protected.with_name(protected.name + suffix).exists()
+    }
+    json_path = tmp_path / "openapi.json"
+    matrix_path = tmp_path / "matrix.md"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(root / "openapi_spec.py"),
+            "--json-path",
+            str(json_path),
+            "--matrix-path",
+            str(matrix_path),
+        ],
+        cwd=root,
+        env={**os.environ, "PYTHONUTF8": "1"},
+        capture_output=True,
+        timeout=60,
+        check=False,
+    )
+
+    assert result.returncode == 0, (result.stderr or b"").decode("utf-8", errors="replace")
+    assert json.loads(json_path.read_text(encoding="utf-8"))["paths"]
+    assert "API 路由矩阵" in matrix_path.read_text(encoding="utf-8")
+    assert hashlib.sha256(protected.read_bytes()).digest() == hashlib.sha256(before_bytes).digest()
+    after_sidecars = {
+        suffix: (protected.with_name(protected.name + suffix)).read_bytes()
+        for suffix in ("-wal", "-shm")
+        if protected.with_name(protected.name + suffix).exists()
+    }
+    assert after_sidecars == before_sidecars
