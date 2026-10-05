@@ -73,6 +73,10 @@ F retains four-surface behavior and design responsibilities through existing Flu
 
 41. At 2026-10-06 06:09 +08, the final C1 review tightened the KOS compatibility response to return status/receipt fields only, not raw collected-body details. The KOS route test, EvidenceChain lineage test, XHS DB-path/source-identity tests, Canonical conversion tests and existing secondary-collection/scope tests pass on the disposable seed. `canonical_data.py` and its new-schema DDL now default absent sentiment/risk/relevance to UNKNOWN and absent scores to NULL; this source change does not rewrite existing production rows or alter the protected DB schema. Legacy CLI callers and real user/runtime collection acceptance remain OPEN. This source batch is still local pending publication.
 
+42. At 2026-10-06 06:15 +08, `scripts/collect_now.py` no longer opens the repository-relative `data/monitor.db` directly for its manual-count gate. It queries the counter through `database.get_db()` (the Shared Database path owner) and blocks if the policy table/state cannot be read; source compilation passes and the file contains no `sqlite3.connect` or literal `monitor.db` path. The script still calls the legacy `live_engine.persist_live` compatibility writer, so its actor/scope transaction convergence remains the existing CLI gap in item 39. No collection or database request was executed.
+
+43. At 2026-10-06 06:17 +08, `scripts/collect_now.py`'s quota-store fail-closed path was verified with a mocked Shared Database connection whose `collection_counters` table is absent; the command returned unavailable before importing/calling the live collector. Its regression test also makes any raw `sqlite3.connect` call fail. The script remains a legacy `persist_live` caller pending transaction/scope integration as recorded in item 39. No production DB or platform session was opened.
+
 ## 3. Authority and retained evidence
 
 - `00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`: real job, useful outcome, recovery and final states.

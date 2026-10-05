@@ -22,16 +22,23 @@ def collect_now(keyword='广州太古汇', max_scroll=5, max_details=20):
     print("=" * 60)
     print()
 
-    # 检查采集次数
+    # Read collection limits through the Shared Database owner. If policy state
+    # cannot be read, fail closed instead of bypassing the manual quota.
     try:
-        import sqlite3
-        db_path = os.path.join(PROJECT_ROOT, 'data', 'monitor.db')
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        import database as db
 
         today = datetime.now().strftime('%Y-%m-%d')
-        cursor.execute("SELECT daily_count, manual_count, auto_count FROM collection_counters WHERE date = ?", (today,))
-        row = cursor.fetchone()
+        with db.get_db() as conn:
+            table = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='collection_counters'"
+            ).fetchone()
+            if not table:
+                print("❌ 采集限额状态不可用，已阻止请求")
+                return False
+            row = conn.execute(
+                "SELECT daily_count, manual_count, auto_count FROM collection_counters WHERE date = ?",
+                (today,),
+            ).fetchone()
 
         if row:
             daily_count, manual_count, auto_count = row
@@ -39,14 +46,12 @@ def collect_now(keyword='广州太古汇', max_scroll=5, max_details=20):
 
             if manual_count >= 3:
                 print("⚠️ 今日手动采集次数已用完（3次），请等待明天或使用自动采集")
-                conn.close()
                 return False
         else:
             print("今日首次采集")
-
-        conn.close()
     except Exception as e:
-        print(f"⚠️ 检查采集次数失败: {e}")
+        print(f"❌ 采集限额状态不可用，已阻止请求: {type(e).__name__}")
+        return False
 
     print()
     print("开始采集...")

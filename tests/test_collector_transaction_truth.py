@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import sqlite3
+import sys
 import time
 from pathlib import Path
+from types import ModuleType, SimpleNamespace
 
 import pytest
 from flask import Flask
@@ -847,3 +850,36 @@ def test_noncritical_run_log_failure_preserves_committed_source_result(collector
     assert result["ok"] is True and result["status"] == "SUCCESS"
     assert result["refresh_verified"] is True and result["run_log_recorded"] is False
     assert all(count == 1 for count in _pipeline_counts(case["db_path"]).values())
+
+
+def test_collect_now_uses_shared_database_and_fails_closed_without_quota_state(monkeypatch, capsys):
+    source = Path(__file__).resolve().parents[1] / "scripts" / "collect_now.py"
+    spec = importlib.util.spec_from_file_location("isolated_collect_now", source)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    class Connection:
+        def execute(self, sql, *_args):
+            assert "sqlite_master" in sql
+            return SimpleNamespace(fetchone=lambda: None)
+
+    class DatabaseModule(ModuleType):
+        @staticmethod
+        def get_db():
+            class Context:
+                def __enter__(self):
+                    return Connection()
+
+                def __exit__(self, *_args):
+                    return False
+            return Context()
+
+    monkeypatch.setitem(sys.modules, "database", DatabaseModule("database"))
+    monkeypatch.setattr(
+        sqlite3, "connect",
+        lambda *_args, **_kwargs: pytest.fail("collect_now must not open a raw SQLite connection"),
+    )
+
+    assert module.collect_now("registered term") is False
+    assert "已阻止请求" in capsys.readouterr().out
