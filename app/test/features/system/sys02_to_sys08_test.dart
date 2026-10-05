@@ -21,7 +21,6 @@ import 'package:lumenis_app/features/system/sys05/sys05_appearance_editor.dart';
 import 'package:lumenis_app/features/system/sys05/sys05_screen.dart';
 import 'package:lumenis_app/features/system/sys05/sys05_snapshot.dart';
 import 'package:lumenis_app/features/system/sys05/sys05_view_model.dart';
-import 'package:lumenis_app/features/system/sys06/sys06_repository.dart';
 import 'package:lumenis_app/features/system/sys06/sys06_snapshot.dart';
 import 'package:lumenis_app/features/system/sys07/sys07_repository.dart';
 import 'package:lumenis_app/features/system/sys07/sys07_screen.dart';
@@ -717,34 +716,6 @@ Sys05Snapshot _sys05Snapshot() => Sys05Snapshot.fromResponse(
       },
     ],
     truth: {'data_source': 'localStorage', 'backend_required': false},
-  ),
-);
-
-Sys06Snapshot _sys06Snapshot() => Sys06Snapshot.fromResponse(
-  _envelope(
-    'SYS-06',
-    sections: [
-      {
-        'type': 'kpis',
-        'items': [
-          {'id': 'sys06.instances', 'value': 1, 'state': 'ready'},
-          {'id': 'sys06.online', 'value': 0, 'state': 'ready'},
-          {'id': 'sys06.capabilities', 'value': 2, 'state': 'ready'},
-        ],
-      },
-      {
-        'type': 'table',
-        'rows': [
-          {
-            'account': 'private-profile',
-            'port': 9222,
-            'profile': 'C:\\private',
-            'session': 'secret-session',
-            'state': 'offline',
-          },
-        ],
-      },
-    ],
   ),
 );
 

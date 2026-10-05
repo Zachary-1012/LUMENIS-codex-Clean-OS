@@ -97,25 +97,24 @@ abstract interface class Sys06BrowserRepository {
 }
 
 class CoreSys06BrowserRepository implements Sys06BrowserRepository {
-  CoreSys06BrowserRepository({required LumenisCoreClient client})
-    : _client = client;
+  CoreSys06BrowserRepository({required this.client});
 
-  final LumenisCoreClient _client;
+  final LumenisCoreClient client;
 
   @override
   Future<Sys06BrowserSession> open() async =>
-      Sys06BrowserSession.fromResponse(await _client.openBrowserSession());
+      Sys06BrowserSession.fromResponse(await client.openBrowserSession());
 
   @override
   Future<Sys06BrowserSession> readSession(String sessionId) async =>
-      Sys06BrowserSession.fromResponse(await _client.browserSession(sessionId));
+      Sys06BrowserSession.fromResponse(await client.browserSession(sessionId));
 
   @override
   Future<Sys06BrowserSession> navigate({
     required String sessionId,
     required String url,
   }) async {
-    final response = await _client.navigateBrowserSession(
+    final response = await client.navigateBrowserSession(
       sessionId: sessionId,
       url: url,
     );
@@ -125,18 +124,18 @@ class CoreSys06BrowserRepository implements Sys06BrowserRepository {
 
   @override
   Future<Sys06BrowserSession> reload(String sessionId) async {
-    final response = await _client.reloadBrowserSession(sessionId);
+    final response = await client.reloadBrowserSession(sessionId);
     _requireActionSuccess(response, action: 'reload');
     return readSession(sessionId);
   }
 
   @override
   Future<Sys06BrowserFrame> readFrame(String sessionId) async =>
-      Sys06BrowserFrame(frame: await _client.browserFrame(sessionId));
+      Sys06BrowserFrame(frame: await client.browserFrame(sessionId));
 
   @override
   Future<void> stop(String sessionId) async {
-    final response = await _client.stopBrowserSession(sessionId);
+    final response = await client.stopBrowserSession(sessionId);
     if (response['ok'] != true || response['closed'] != true) {
       throw const LumenisCoreException(
         'The controlled browser session was not closed.',
