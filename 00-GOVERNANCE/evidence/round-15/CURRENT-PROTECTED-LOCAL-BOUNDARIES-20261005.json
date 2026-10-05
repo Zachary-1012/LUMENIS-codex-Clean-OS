@@ -2,7 +2,7 @@
   "schema_version": 1,
   "recorded_at": "2026-10-05",
   "purpose": "Single lookup boundary for protected local-only candidates and artifacts; not a second source, product, Evidence or execution authority.",
-  "main_commit_at_recording": "dca16c30464757ef943b6e560904913851619cca",
+  "main_commit_at_recording": "c5c3b51b9c785d30de6d7efa8f5f4488264606da",
   "rules": {
     "active_source_of_truth": "origin/main plus current runtime/DB/Permission/Evidence truth",
     "automatic_admission": false,
@@ -16,14 +16,14 @@
     "admission_path": "existing Owner source/caller/contract review -> isolated application when needed -> affected verification -> coherent main commit -> remote readback"
   },
   "snapshot": {
-    "untracked_path_count": 43397,
+    "untracked_path_count": 43396,
     "work_archive_path_count": 43380,
     "work_archive_direct_child_count": 22,
     "candidate_counts": {
       "c1_evidence_candidate": 1,
       "c3c5_evidence_candidate": 5,
       "private_training_runtime_config": 1,
-      "unmerged_test_candidates": 10
+      "unmerged_test_candidates": 9
     },
     "scope_note": "Counts exclude this index itself and are Git untracked-path counts only. The work archive was not recursively re-read or reclassified in this record."
   },
@@ -34,6 +34,13 @@
       "sha256": "274f9d5dfcd710d92a89a38ac0103f57c8c488fcae1d217e3e54c72faac24ded",
       "status": "ADMITTED_TO_MAIN_WITH_ACTIVE_TEST",
       "reason": "The tracked Windows lease-recovery test resolves and launches this isolated helper; the targeted test passed. See evidence/round-14/MEDIA-WINDOWS-LEASE-RECOVERY-20261005.md."
+    },
+    {
+      "id": "PITCH-EXPORT-TESTS",
+      "path": "tests/test_pitch_export.py",
+      "sha256": "4dbf17604d92cd08e4903e2831de48811b84bc503b7d25e6a131dba5a2d066b2",
+      "status": "ADMITTED_TO_MAIN_WITH_ISOLATED_TEST",
+      "reason": "The current internal pitch and app callers use scripts/pitch_export.py. Twelve targeted cases pass with an isolated empty test seed; the candidate adds direct exporter coverage for concurrent destination creation and no-replace publication, absent from the tracked route suite."
     }
   ],
   "categories": [
@@ -79,8 +86,7 @@
         "tests/test_owned_training_parent_routes.py",
         "tests/test_owned_training_review_submission_routes.py",
         "tests/test_owned_training_runtime_recovery.py",
-        "tests/test_pitch_caller_routes.py",
-        "tests/test_pitch_export.py"
+        "tests/test_pitch_caller_routes.py"
       ],
       "state": "UNMERGED_TEST_CANDIDATES",
       "owner": "C2, C3+C5 and C4 according to each named current source contract",
