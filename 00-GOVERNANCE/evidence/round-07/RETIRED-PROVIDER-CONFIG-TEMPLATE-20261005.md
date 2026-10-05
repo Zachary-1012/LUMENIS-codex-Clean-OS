@@ -17,3 +17,8 @@ Gateway authority.
 No product provider code, credential, quota, local model server, external API,
 model execution or user data changed. `tests/test_ai_off_shardB.py` asserts the
 template cannot restore the retired routes.
+
+GitHub `main` commit `373d846a0afb55f76e26753d6f5a953994a1f074` passed
+[Product Gate 37289571504](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/37289571504),
+including the clean-checkout hermetic pytest suite and configuration test. This
+confirms the source/template rule; it does not make an owned model available.
