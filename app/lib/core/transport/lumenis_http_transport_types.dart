@@ -71,15 +71,32 @@ class LumenisTransportResponse {
 }
 
 class LumenisBinaryTransportResponse {
-  const LumenisBinaryTransportResponse({
+  LumenisBinaryTransportResponse({
     required this.statusCode,
     required this.bytes,
     required this.contentType,
-  });
+    Map<String, String> headers = const {},
+  }) : headers = Map.unmodifiable({
+         for (final entry in headers.entries)
+           if (_allowedHeaders.contains(entry.key.toLowerCase()))
+             entry.key.toLowerCase(): entry.value,
+       });
+
+  static const _allowedHeaders = {
+    'content-type',
+    'cache-control',
+    'x-lumenis-frame-id',
+    'x-lumenis-target-id',
+    'x-lumenis-page-revision',
+    'x-lumenis-captured-at',
+    'x-lumenis-frame-width',
+    'x-lumenis-frame-height',
+  };
 
   final int statusCode;
   final Uint8List bytes;
   final String? contentType;
+  final Map<String, String> headers;
 }
 
 class LumenisTransportException implements Exception {

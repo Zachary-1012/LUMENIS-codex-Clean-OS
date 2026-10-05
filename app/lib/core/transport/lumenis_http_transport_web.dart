@@ -94,7 +94,9 @@ Future<LumenisBinaryTransportResponse> _sendBinaryRequest(
   await for (final chunk in incoming.stream) {
     byteCount += chunk.length;
     if (byteCount > maxBytes) {
-      throw const LumenisTransportException('Binary response exceeds maxBytes.');
+      throw const LumenisTransportException(
+        'Binary response exceeds maxBytes.',
+      );
     }
     builder.add(chunk);
   }
@@ -103,5 +105,6 @@ Future<LumenisBinaryTransportResponse> _sendBinaryRequest(
     statusCode: incoming.statusCode,
     bytes: builder.takeBytes(),
     contentType: incoming.headers['content-type'],
+    headers: incoming.headers,
   );
 }

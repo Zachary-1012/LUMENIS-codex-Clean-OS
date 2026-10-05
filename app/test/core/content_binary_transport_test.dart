@@ -61,6 +61,7 @@ void main() {
       expect(result.statusCode, HttpStatus.ok);
       expect(result.bytes, [0, 255, 195, 40]);
       expect(result.contentType, startsWith('audio/mpeg'));
+      expect(result.headers['content-type'], startsWith('audio/mpeg'));
       expect(await received.future, {
         'method': 'GET',
         'accept': 'audio/mpeg',

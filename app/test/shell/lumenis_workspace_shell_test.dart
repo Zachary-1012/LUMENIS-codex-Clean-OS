@@ -15,7 +15,7 @@ import 'package:lumenis_app/navigation/lumenis_workspace_routes.dart';
 import 'package:lumenis_app/shell/lumenis_workspace_shell.dart';
 
 void main() {
-  test('all non-desktop Screen IDs have one unique concrete screen widget', () {
+  test('all canonical Screen IDs have one unique concrete screen widget', () {
     final client = _ShellClient();
     final widgets = {
       for (final screenId in LumenisWorkspaceRoutes.workspaceScreenIds)
@@ -25,17 +25,17 @@ void main() {
         ),
     };
 
-    expect(widgets, hasLength(43));
+    expect(widgets, hasLength(44));
     expect(
       widgets.values.map((widget) => widget.runtimeType).toSet(),
-      hasLength(43),
+      hasLength(44),
     );
     for (final widget in widgets.values) {
       expect((widget as dynamic).client, same(client));
     }
     expect(
-      () => buildLumenisWorkspaceScreen(screenId: 'SYS-06', client: client),
-      throwsArgumentError,
+      buildLumenisWorkspaceScreen(screenId: 'SYS-06', client: client),
+      isNotNull,
     );
   });
 
@@ -362,14 +362,17 @@ void main() {
     expect(selected, ['AI-04']);
     expect(find.byType(Ai04Screen), findsOneWidget);
 
-      await tester.tap(find.byKey(const ValueKey('workspace-phone-tools')));
-      await tester.pumpAndSettle();
-      expect(find.text('服务已连接'), findsOneWidget);
-      expect(find.byKey(const ValueKey('workspace-account-navigation')), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('workspace-sheet-close')));
-      await tester.pumpAndSettle();
-      expect(selected, ['AI-04']);
-      expect(tester.takeException(), isNull);
+    await tester.tap(find.byKey(const ValueKey('workspace-phone-tools')));
+    await tester.pumpAndSettle();
+    expect(find.text('服务已连接'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('workspace-account-navigation')),
+      findsNothing,
+    );
+    await tester.tap(find.byKey(const ValueKey('workspace-sheet-close')));
+    await tester.pumpAndSettle();
+    expect(selected, ['AI-04']);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(

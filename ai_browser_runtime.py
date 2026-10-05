@@ -1188,6 +1188,7 @@ class AIBrowserRuntime:
         user_data_dir: Optional[str] = None,
         owner_actor_id: Optional[int] = None,
         owner_account_session_id: Optional[int] = None,
+        owner_principal_ref: Optional[str] = None,
         idle_timeout: int = DEFAULT_SESSION_IDLE_TIMEOUT,
         max_lifetime: int = DEFAULT_SESSION_MAX_LIFETIME,
     ):
@@ -1197,6 +1198,13 @@ class AIBrowserRuntime:
         self.user_data_dir = user_data_dir
         self.owner_actor_id = owner_actor_id
         self.owner_account_session_id = owner_account_session_id
+        if owner_principal_ref is not None and owner_principal_ref != "workspace:local":
+            raise ValueError("AI Browser principal must be the server-issued local workspace")
+        if owner_principal_ref is not None and (
+            owner_actor_id is not None or owner_account_session_id is not None
+        ):
+            raise ValueError("AI Browser account and workspace owners cannot be mixed")
+        self.owner_principal_ref = owner_principal_ref
         self.idle_timeout = idle_timeout
         self.max_lifetime = max_lifetime
 
@@ -2072,20 +2080,25 @@ class BrowserSessionManager:
         user_data_dir: Optional[str] = None,
         owner_actor_id: Optional[int] = None,
         owner_account_session_id: Optional[int] = None,
+        owner_principal_ref: Optional[str] = None,
         idle_timeout: int = DEFAULT_SESSION_IDLE_TIMEOUT,
         max_lifetime: int = DEFAULT_SESSION_MAX_LIFETIME,
     ) -> AIBrowserRuntime:
         """Create only a session on the verified isolated product browser."""
         if cdp_port != 9224 or headless is not True or user_data_dir not in (None, ""):
             raise ValueError("AI Browser session must use the isolated LUMENIS browser")
+        owner_key = self._owner_key(
+            owner_actor_id=owner_actor_id,
+            owner_account_session_id=owner_account_session_id,
+            owner_principal_ref=owner_principal_ref,
+        )
         with self._lock:
-            if type(owner_actor_id) is int and type(owner_account_session_id) is int:
+            if owner_key is not None:
                 for existing in self._sessions.values():
-                    if (existing.owner_actor_id is not None and
+                    if (self._session_owner_key(existing) is not None and
                             existing.status not in {SessionStatus.CLOSED, SessionStatus.ERROR} and
                             existing.is_alive()):
-                        if (existing.owner_actor_id == owner_actor_id and
-                                existing.owner_account_session_id == owner_account_session_id):
+                        if self._session_owner_key(existing) == owner_key:
                             return existing
                         raise BrowserCapacityError("AI Browser is busy with another product login")
             session = AIBrowserRuntime(
@@ -2094,6 +2107,7 @@ class BrowserSessionManager:
                 user_data_dir=user_data_dir,
                 owner_actor_id=owner_actor_id,
                 owner_account_session_id=owner_account_session_id,
+                owner_principal_ref=owner_principal_ref,
                 idle_timeout=idle_timeout,
                 max_lifetime=max_lifetime,
             )
@@ -2138,10 +2152,53 @@ class BrowserSessionManager:
 
     def list_sessions_for_actor(self, actor_id: int, account_session_id: int) -> List[Dict[str, Any]]:
         """Expose only sessions created by this authenticated product login."""
+        return self.list_sessions_for_owner(
+            owner_actor_id=actor_id,
+            owner_account_session_id=account_session_id,
+        )
+
+    @staticmethod
+    def _owner_key(
+        *,
+        owner_actor_id: Optional[int] = None,
+        owner_account_session_id: Optional[int] = None,
+        owner_principal_ref: Optional[str] = None,
+    ) -> Optional[tuple[str, object, object]]:
+        if type(owner_actor_id) is int and type(owner_account_session_id) is int:
+            return ("account", owner_actor_id, owner_account_session_id)
+        if owner_principal_ref == "workspace:local":
+            return ("workspace", owner_principal_ref, "")
+        return None
+
+    @classmethod
+    def _session_owner_key(cls, session: AIBrowserRuntime) -> Optional[tuple[str, object, object]]:
+        return cls._owner_key(
+            owner_actor_id=session.owner_actor_id,
+            owner_account_session_id=session.owner_account_session_id,
+            owner_principal_ref=session.owner_principal_ref,
+        )
+
+    def list_sessions_for_owner(
+        self,
+        *,
+        owner_actor_id: Optional[int] = None,
+        owner_account_session_id: Optional[int] = None,
+        owner_principal_ref: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Expose only sessions belonging to one authenticated or local owner."""
+        owner_key = self._owner_key(
+            owner_actor_id=owner_actor_id,
+            owner_account_session_id=owner_account_session_id,
+            owner_principal_ref=owner_principal_ref,
+        )
+        if owner_key is None:
+            return []
         with self._lock:
-            sessions = [s for s in self._sessions.values()
-                        if s.owner_actor_id == actor_id
-                        and s.owner_account_session_id == account_session_id]
+            sessions = [
+                session
+                for session in self._sessions.values()
+                if self._session_owner_key(session) == owner_key
+            ]
         return [s.get_status() for s in sessions if s.is_alive()]
 
     def cleanup_idle_sessions(self) -> int:

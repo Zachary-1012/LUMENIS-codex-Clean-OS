@@ -197,7 +197,7 @@ def resolve_local_workspace_principal(
     """Resolve the fixed workspace principal from the current server request."""
     if (
         type(module) is not str
-        or module not in {"content", "reports", "cases", "collector", "owned_training", "skills"}
+        or module not in {"content", "reports", "cases", "collector", "owned_training", "skills", "browser"}
         or type(action) is not str
         or action not in _RESOURCE_SCOPE_ACTIONS
     ):

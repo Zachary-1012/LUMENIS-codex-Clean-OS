@@ -19,6 +19,13 @@ GoRouter createLumenisRouter({
     restorationScopeId: 'lumenis-router',
     onEnter: (context, current, next, router) async {
       if (current.uri == next.uri) return const Allow();
+      // SYS-06 is pushed above the current workspace task.  The underlying
+      // page remains mounted, so opening a read-only controlled preview cannot
+      // discard a draft and must not be treated as a destructive leave.
+      final sys06Path = LumenisWorkspaceRoutes.pathForScreen('SYS-06');
+      if (next.uri.path == sys06Path) {
+        return const Allow();
+      }
       return await leaveGuard.requestLeave()
           ? const Allow()
           : const Block.stop();
@@ -43,9 +50,6 @@ GoRouter createLumenisRouter({
         path: '/workspace/:screenId',
         builder: (context, state) {
           final screenId = state.pathParameters['screenId'] ?? '';
-          if (LumenisWorkspaceRoutes.unavailableScreenIds.contains(screenId)) {
-            return const LumenisRouteBoundary.browserUnavailable();
-          }
           if (LumenisWorkspaceRoutes.supportsWorkspaceScreen(screenId)) {
             return _workspace(
               context,
@@ -76,14 +80,14 @@ Widget _workspace(
     initialScreenId: screenId,
     onScreenSelected: (nextScreenId) {
       final path = LumenisWorkspaceRoutes.pathForScreen(nextScreenId);
+      if (LumenisWorkspaceRoutes.focusedReturnScreenIds.contains(
+        nextScreenId,
+      )) {
+        context.push(path);
+        return;
+      }
       if (GoRouterState.of(context).uri.path != path) {
-        if (LumenisWorkspaceRoutes.unavailableScreenIds.contains(
-          nextScreenId,
-        )) {
-          context.push(path);
-        } else {
-          context.go(path);
-        }
+        context.go(path);
       }
     },
     onLocaleChanged: onLocaleChanged,
@@ -95,11 +99,6 @@ class LumenisRouteBoundary extends StatelessWidget {
     : _titleKey = 'workspace.route.unavailable.title',
       _detailKey = 'workspace.route.unavailable.detail',
       _icon = Icons.route_outlined;
-
-  const LumenisRouteBoundary.browserUnavailable({super.key})
-    : _titleKey = 'workspace.capability.browser_unavailable.title',
-      _detailKey = 'workspace.capability.browser_unavailable.detail',
-      _icon = Icons.info_outline_rounded;
 
   final String _titleKey;
   final String _detailKey;

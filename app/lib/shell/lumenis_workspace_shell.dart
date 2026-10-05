@@ -46,6 +46,7 @@ import '../features/system/sys02/sys02_screen.dart';
 import '../features/system/sys03/sys03_screen.dart';
 import '../features/system/sys04/sys04_screen.dart';
 import '../features/system/sys05/sys05_screen.dart';
+import '../features/system/sys06/sys06_screen.dart';
 import '../features/system/sys07/sys07_screen.dart';
 import '../features/system/sys08/sys08_screen.dart';
 import '../l10n/lumenis_localizations.dart';
@@ -125,6 +126,7 @@ Widget buildLumenisWorkspaceScreen({
     'SYS-03' => Sys03Screen(client: client),
     'SYS-04' => Sys04Screen(client: client),
     'SYS-05' => Sys05Screen(client: client),
+    'SYS-06' => Sys06Screen(client: client),
     'SYS-07' => Sys07Screen(client: client),
     'SYS-08' => Sys08Screen(client: client),
     _ => throw StateError('Unmapped workspace Screen ID: $screenId'),
@@ -313,6 +315,13 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     bool notifyRoute = true,
   }) async {
     if (!LumenisWorkspaceRoutes.supportsScreen(screenId)) {
+      return;
+    }
+    if (LumenisWorkspaceRoutes.focusedReturnScreenIds.contains(screenId)) {
+      // A controlled reader is a push-only focus layer.  Its origin remains
+      // mounted beneath it, so draft protection stays with that origin and no
+      // local screen replacement or destructive leave may occur here.
+      if (notifyRoute) widget.onScreenSelected?.call(screenId);
       return;
     }
     if (LumenisWorkspaceRoutes.unavailableScreenIds.contains(screenId)) {

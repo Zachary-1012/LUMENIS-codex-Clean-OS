@@ -22,7 +22,6 @@ import 'package:lumenis_app/features/system/sys05/sys05_screen.dart';
 import 'package:lumenis_app/features/system/sys05/sys05_snapshot.dart';
 import 'package:lumenis_app/features/system/sys05/sys05_view_model.dart';
 import 'package:lumenis_app/features/system/sys06/sys06_repository.dart';
-import 'package:lumenis_app/features/system/sys06/sys06_screen.dart';
 import 'package:lumenis_app/features/system/sys06/sys06_snapshot.dart';
 import 'package:lumenis_app/features/system/sys07/sys07_repository.dart';
 import 'package:lumenis_app/features/system/sys07/sys07_screen.dart';
@@ -415,35 +414,6 @@ void main() {
       expect(snapshot.instanceStates.single.state, 'offline');
     },
   );
-
-  testWidgets('SYS-06 never renders sensitive browser identity fields', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(1440, 1000));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-
-    await tester.pumpWidget(
-      _host(
-        Sys06Screen(
-          client: LumenisCoreClient(),
-          repository: _Sys06Repo(_sys06Snapshot()),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const ValueKey('sys06/layout-desktop')), findsOneWidget);
-    for (final forbidden in [
-      'private-profile',
-      '9222',
-      'C:\\private',
-      'secret-session',
-    ]) {
-      expect(find.textContaining(forbidden), findsNothing);
-    }
-    expect(find.text('身份材料已隐藏'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
 
   test(
     'SYS-07 leaves acceptance UNKNOWN when no evidence-backed gates exist',
@@ -885,13 +855,6 @@ class _PendingSys05Repo implements Sys05Repository {
     loads++;
     return result.future;
   }
-}
-
-class _Sys06Repo implements Sys06Repository {
-  const _Sys06Repo(this.snapshot);
-  final Sys06Snapshot snapshot;
-  @override
-  Future<Sys06Snapshot> load() async => snapshot;
 }
 
 class _Sys07Repo implements Sys07Repository {

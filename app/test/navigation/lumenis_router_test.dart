@@ -37,12 +37,9 @@ void main() {
   test('legacy canonical IDs retain unique reachable workspace paths', () {
     expect(LumenisWorkspaceRoutes.screenIds, _canonicalScreenIds);
     expect(LumenisWorkspaceRoutes.screenIds, hasLength(44));
-    expect(LumenisWorkspaceRoutes.workspaceScreenIds, hasLength(43));
-    expect(LumenisWorkspaceRoutes.unavailableScreenIds, {'SYS-06'});
-    expect(
-      LumenisWorkspaceRoutes.workspaceScreenIds,
-      isNot(contains('SYS-06')),
-    );
+    expect(LumenisWorkspaceRoutes.workspaceScreenIds, hasLength(44));
+    expect(LumenisWorkspaceRoutes.unavailableScreenIds, isEmpty);
+    expect(LumenisWorkspaceRoutes.workspaceScreenIds, contains('SYS-06'));
     expect(
       LumenisWorkspaceRoutes.screenIdsByGroup.map(
         (group, screenIds) => MapEntry(group, screenIds.length),
@@ -272,7 +269,7 @@ void main() {
   }
 
   testWidgets(
-    'SYS-06 shows the truthful unavailable boundary on phone and PC',
+    'SYS-06 opens the controlled reader on phone and PC without a browser side effect',
     (tester) async {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       for (final size in const [Size(390, 844), Size(1440, 960)]) {
@@ -286,9 +283,9 @@ void main() {
         await tester.pumpWidget(_app(router));
         await tester.pumpAndSettle();
 
-        expect(find.text('内置浏览暂不可用'), findsOneWidget);
-        expect(find.text('当前工作区尚未接通浏览页面。你可以返回继续原来的工作。'), findsOneWidget);
-        expect(find.byType(Sys06Screen), findsNothing);
+        expect(find.byType(Sys06Screen), findsOneWidget);
+        expect(find.text('内置来源阅读器'), findsOneWidget);
+        expect(find.byKey(const ValueKey('sys06-open')), findsOneWidget);
         expect(tester.takeException(), isNull);
 
         await tester.pumpWidget(const SizedBox.shrink());
@@ -318,35 +315,27 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('a direct SYS-06 link returns to the workspace root', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    final client = _RouterClient();
-    final router = createLumenisRouter(
-      client: client,
-      onLocaleChanged: (_) {},
-      initialLocation: LumenisWorkspaceRoutes.pathForScreen('SYS-06'),
-    );
-    addTearDown(router.dispose);
+  testWidgets(
+    'a direct SYS-06 link does not start a controlled browser session',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final client = _RouterClient();
+      final router = createLumenisRouter(
+        client: client,
+        onLocaleChanged: (_) {},
+        initialLocation: LumenisWorkspaceRoutes.pathForScreen('SYS-06'),
+      );
+      addTearDown(router.dispose);
 
-    await tester.pumpWidget(_app(router));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(_app(router));
+      await tester.pumpAndSettle();
 
-    expect(find.text('内置浏览暂不可用'), findsOneWidget);
-    expect(find.byType(Sys06Screen), findsNothing);
-    expect(client.runtimeIdentityCalls, 0);
-
-    await tester.tap(find.widgetWithText(OutlinedButton, '返回工作区'));
-    await tester.pumpAndSettle();
-
-    expect(
-      router.routerDelegate.currentConfiguration.uri.path,
-      LumenisWorkspaceRoutes.root,
-    );
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.byType(Sys06Screen), findsOneWidget);
+      expect(find.byKey(const ValueKey('sys06-open')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('SYS-05 un-applied local editor input survives SYS-06 return', (
     tester,
@@ -390,16 +379,9 @@ void main() {
     await tester.tap(sys06Navigation);
     await tester.pumpAndSettle();
 
-    expect(
-      GoRouterState.of(
-        tester.element(find.byType(LumenisRouteBoundary)),
-      ).uri.path,
-      LumenisWorkspaceRoutes.pathForScreen('SYS-06'),
-    );
-    expect(find.text('内置浏览暂不可用'), findsOneWidget);
-    expect(find.byType(Sys06Screen), findsNothing);
+    expect(find.byType(Sys06Screen), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(OutlinedButton, '返回工作区'));
+    router.pop();
     await tester.pumpAndSettle();
 
     expect(
@@ -424,35 +406,31 @@ void main() {
     appearance.dispose();
   });
 
-  testWidgets('browser boundary scrolls to Return at 320px and 200% text', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(320, 420);
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final router = createLumenisRouter(
-      client: _RouterClient(),
-      onLocaleChanged: (_) {},
-      initialLocation: LumenisWorkspaceRoutes.pathForScreen('SYS-06'),
-    );
-    addTearDown(router.dispose);
+  testWidgets(
+    'SYS-06 keeps its controlled-reader entry usable at 320px and 200% text',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(320, 420);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final router = createLumenisRouter(
+        client: _RouterClient(),
+        onLocaleChanged: (_) {},
+        initialLocation: LumenisWorkspaceRoutes.pathForScreen('SYS-06'),
+      );
+      addTearDown(router.dispose);
 
-    await tester.pumpWidget(_app(router, textScaler: TextScaler.linear(2)));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(_app(router, textScaler: TextScaler.linear(2)));
+      await tester.pumpAndSettle();
 
-    final returnButton = find.widgetWithText(OutlinedButton, '返回工作区');
-    expect(
-      find.byKey(const ValueKey('workspace-route-boundary-scroll')),
-      findsOneWidget,
-    );
-    expect(tester.getRect(returnButton).bottom, greaterThan(420));
-    await tester.ensureVisible(returnButton);
-    await tester.pumpAndSettle();
-
-    expect(tester.getRect(returnButton).bottom, lessThanOrEqualTo(420));
-    expect(tester.takeException(), isNull);
-  });
+      final entry = find.byKey(const ValueKey('sys06-open'));
+      expect(find.byType(SingleChildScrollView), findsWidgets);
+      await tester.ensureVisible(entry);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(entry).bottom, lessThanOrEqualTo(420));
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 const _canonicalScreenIds = <String>{

@@ -99,14 +99,22 @@ Future<LumenisBinaryTransportResponse> _sendBinaryRequest(
   await for (final chunk in incoming) {
     byteCount += chunk.length;
     if (byteCount > maxBytes) {
-      throw const LumenisTransportException('Binary response exceeds maxBytes.');
+      throw const LumenisTransportException(
+        'Binary response exceeds maxBytes.',
+      );
     }
     builder.add(chunk);
   }
+
+  final headers = <String, String>{};
+  incoming.headers.forEach((name, values) {
+    headers[name] = values.join(', ');
+  });
 
   return LumenisBinaryTransportResponse(
     statusCode: incoming.statusCode,
     bytes: builder.takeBytes(),
     contentType: incoming.headers.value(HttpHeaders.contentTypeHeader),
+    headers: headers,
   );
 }

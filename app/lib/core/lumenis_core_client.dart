@@ -107,6 +107,26 @@ class ContentProjectFile {
   final String mediaType;
 }
 
+class LumenisBrowserFrame {
+  const LumenisBrowserFrame({
+    required this.bytes,
+    required this.frameId,
+    required this.targetId,
+    required this.pageRevision,
+    required this.capturedAt,
+    required this.width,
+    required this.height,
+  });
+
+  final Uint8List bytes;
+  final String frameId;
+  final String targetId;
+  final int pageRevision;
+  final DateTime capturedAt;
+  final int width;
+  final int height;
+}
+
 class LumenisCoreClient {
   LumenisCoreClient({String? baseUrl})
     : baseUrl =
@@ -529,10 +549,7 @@ class LumenisCoreClient {
       throw const FormatException('Invalid saved-project cursor.');
     }
     final query = Uri(
-      queryParameters: {
-        'limit': '$limit',
-        'cursor': ?cursor,
-      },
+      queryParameters: {'limit': '$limit', 'cursor': ?cursor},
     ).query;
     return _request(
       'GET',
@@ -685,6 +702,205 @@ class LumenisCoreClient {
     }
   }
 
+  /// Browser sessions use the server-issued open-workspace principal.
+  ///
+  /// This deliberately omits the development Basic credential and all business
+  /// context headers.  The Browser API accepts it only on the explicitly open,
+  /// loopback workspace transport and refuses forged identity headers, cookies
+  /// and remote origins.  A client credential must never become a substitute
+  /// for a Browser actor/session boundary.
+  Future<Map<String, dynamic>> openBrowserSession() {
+    _requireLocalBrowserEndpoint();
+    return _request(
+      'POST',
+      '/api/browser/sessions',
+      payload: const <String, Object?>{},
+      useCoreAuthorization: false,
+      withContext: false,
+    );
+  }
+
+  Future<Map<String, dynamic>> browserSession(String sessionId) {
+    _validateBrowserSessionId(sessionId);
+    _requireLocalBrowserEndpoint();
+    return _request(
+      'GET',
+      '/api/browser/sessions/${Uri.encodeComponent(sessionId)}',
+      useCoreAuthorization: false,
+      withContext: false,
+    );
+  }
+
+  Future<Map<String, dynamic>> navigateBrowserSession({
+    required String sessionId,
+    required String url,
+  }) {
+    _validateBrowserSessionId(sessionId);
+    _validateBrowserUrl(url);
+    _requireLocalBrowserEndpoint();
+    return _request(
+      'POST',
+      '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/navigate',
+      payload: <String, Object?>{'url': url},
+      useCoreAuthorization: false,
+      withContext: false,
+      connectionTimeout: const Duration(seconds: 20),
+    );
+  }
+
+  Future<Map<String, dynamic>> reloadBrowserSession(String sessionId) {
+    _validateBrowserSessionId(sessionId);
+    _requireLocalBrowserEndpoint();
+    return _request(
+      'POST',
+      '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/action',
+      payload: const <String, Object?>{'action': 'reload'},
+      useCoreAuthorization: false,
+      withContext: false,
+      connectionTimeout: const Duration(seconds: 20),
+    );
+  }
+
+  Future<Map<String, dynamic>> stopBrowserSession(String sessionId) {
+    _validateBrowserSessionId(sessionId);
+    _requireLocalBrowserEndpoint();
+    return _request(
+      'POST',
+      '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/stop',
+      payload: const <String, Object?>{},
+      useCoreAuthorization: false,
+      withContext: false,
+    );
+  }
+
+  Future<LumenisBrowserFrame> browserFrame(String sessionId) async {
+    _validateBrowserSessionId(sessionId);
+    _requireLocalBrowserEndpoint();
+    final uri = _uri(
+      '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/frame',
+    );
+    try {
+      final response = await sendLumenisBinaryRequest(
+        LumenisTransportRequest(
+          method: 'GET',
+          uri: uri,
+          headers: <String, String>{'Accept': 'image/png, application/json'},
+          connectionTimeout: const Duration(seconds: 20),
+          followRedirects: false,
+        ),
+        maxBytes: 16 * 1024 * 1024,
+      );
+      if (response.statusCode != 200) {
+        throw _browserFrameFailure(response);
+      }
+      final contentType = response.contentType
+          ?.split(';')
+          .first
+          .trim()
+          .toLowerCase();
+      if (contentType != 'image/png' ||
+          response.bytes.length < 24 ||
+          response.bytes[0] != 0x89 ||
+          response.bytes[1] != 0x50 ||
+          response.bytes[2] != 0x4e ||
+          response.bytes[3] != 0x47) {
+        throw const FormatException('Browser frame is not a PNG image.');
+      }
+      final frameId = response.headers['x-lumenis-frame-id'];
+      final targetId = response.headers['x-lumenis-target-id'];
+      final revision = int.tryParse(
+        response.headers['x-lumenis-page-revision'] ?? '',
+      );
+      final capturedAt = DateTime.tryParse(
+        response.headers['x-lumenis-captured-at'] ?? '',
+      );
+      final width = int.tryParse(
+        response.headers['x-lumenis-frame-width'] ?? '',
+      );
+      final height = int.tryParse(
+        response.headers['x-lumenis-frame-height'] ?? '',
+      );
+      if (!_isOpaqueBrowserId(frameId) ||
+          !_isOpaqueBrowserId(targetId) ||
+          revision == null ||
+          revision < 0 ||
+          capturedAt == null ||
+          width == null ||
+          height == null ||
+          width < 1 ||
+          height < 1 ||
+          width > 16384 ||
+          height > 16384) {
+        throw const FormatException('Browser frame metadata is invalid.');
+      }
+      return LumenisBrowserFrame(
+        bytes: response.bytes,
+        frameId: frameId!,
+        targetId: targetId!,
+        pageRevision: revision,
+        capturedAt: capturedAt.toUtc(),
+        width: width,
+        height: height,
+      );
+    } on LumenisTransportException {
+      throw const LumenisCoreException(
+        'Browser frame retrieval is unavailable.',
+        errorCode: 'BROWSER_FRAME_UNAVAILABLE',
+      );
+    }
+  }
+
+  static bool _isOpaqueBrowserId(String? value) =>
+      value != null && RegExp(r'^[A-Za-z0-9_-]{1,180}$').hasMatch(value);
+
+  void _requireLocalBrowserEndpoint() {
+    if (!_isLoopback(_uri('/api/browser/sessions'))) {
+      throw const LumenisCoreException(
+        'Controlled browser access is available only through local LUMENIS Core.',
+        errorCode: 'BROWSER_LOCAL_CORE_REQUIRED',
+      );
+    }
+  }
+
+  static void _validateBrowserSessionId(String value) {
+    if (!RegExp(r'^bs_[a-f0-9]{12}$').hasMatch(value)) {
+      throw const FormatException('Invalid browser session identifier.');
+    }
+  }
+
+  static void _validateBrowserUrl(String value) {
+    final uri = Uri.tryParse(value.trim());
+    if (uri == null ||
+        uri.host.isEmpty ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        value.length > 4096 ||
+        RegExp(r'[\x00-\x1f]').hasMatch(value)) {
+      throw const FormatException('Invalid browser address.');
+    }
+  }
+
+  static LumenisCoreException _browserFrameFailure(
+    LumenisBinaryTransportResponse response,
+  ) {
+    String? code;
+    try {
+      final body = jsonDecode(utf8.decode(response.bytes));
+      if (body is Map && body['error_code'] is String) {
+        final candidate = body['error_code'] as String;
+        if (RegExp(r'^[A-Z][A-Z_0-9]{0,99}$').hasMatch(candidate)) {
+          code = candidate;
+        }
+      }
+    } on FormatException {
+      // A malformed error body never becomes a successful browser frame.
+    }
+    return LumenisCoreException(
+      'Browser frame was not returned.',
+      statusCode: response.statusCode,
+      errorCode: code,
+    );
+  }
+
   Future<Map<String, dynamic>> _get(
     String path, {
     bool useCoreAuthorization = true,
@@ -760,8 +976,11 @@ class LumenisCoreClient {
           if (errorBody is Map && errorBody['message_key'] is String) {
             messageKey = errorBody['message_key'] as String;
           }
-          if (errorBody is Map && errorBody['code'] is String) {
-            final code = errorBody['code'] as String;
+          if (errorBody is Map &&
+              (errorBody['code'] is String ||
+                  errorBody['error_code'] is String)) {
+            final code =
+                (errorBody['code'] ?? errorBody['error_code']) as String;
             if (RegExp(r'^[A-Z][A-Z_0-9]{0,99}$').hasMatch(code)) {
               errorCode = code;
             }

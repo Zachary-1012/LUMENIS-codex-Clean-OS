@@ -98,7 +98,16 @@ abstract final class LumenisWorkspaceRoutes {
     screenIdsByGroup.values.expand((screenIds) => screenIds),
   );
 
-  static const unavailableScreenIds = <String>{'SYS-06'};
+  /// Every canonical screen currently has a workspace implementation.  A
+  /// particular capability can still return a truthful unavailable state at
+  /// runtime, but navigation must not replace a real product surface with a
+  /// permanent route boundary.
+  static const unavailableScreenIds = <String>{};
+
+  /// A controlled reader is opened above the originating task so browser Back
+  /// can return to its exact task context.  This is a navigation behavior, not
+  /// an availability boundary.
+  static const focusedReturnScreenIds = <String>{'SYS-06'};
 
   static final Set<String> workspaceScreenIds = Set.unmodifiable(
     screenIds.difference(unavailableScreenIds),

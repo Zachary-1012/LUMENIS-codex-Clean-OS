@@ -168,6 +168,19 @@ def _authorized_client(monkeypatch, manager=None):
     return app.test_client(), actor
 
 
+def _local_workspace_client(monkeypatch, manager=None):
+    from flask import Flask
+    import account.service
+
+    if manager is not None:
+        monkeypatch.setattr(runtime, "get_session_manager", lambda: manager)
+    app = Flask(__name__)
+    app.config["LUMENIS_OPEN_WORKSPACE"] = True
+    ai_browser_api.register_ai_browser_api(app)
+    monkeypatch.setattr(account.service, "get_current_user", lambda: None)
+    return app.test_client()
+
+
 def test_api_rejects_caller_selected_browser_before_creating_session(monkeypatch):
     client, _actor = _authorized_client(monkeypatch)
     for body in ({"cdp_port": 9222}, {"user_data_dir": r"C:\Users\personal"},
@@ -208,6 +221,25 @@ def test_api_session_is_visible_only_to_creating_login(monkeypatch, isolated_run
     assert client.post(f"/api/browser/sessions/{session_id}/stop").status_code == 404
 
     actor["session_id"] = 501
+    assert client.post(f"/api/browser/sessions/{session_id}/stop").get_json()["closed"] is True
+
+
+def test_api_open_workspace_session_is_server_bound_and_rejects_forged_identity(monkeypatch, isolated_runtime):
+    client = _local_workspace_client(monkeypatch, isolated_runtime)
+    created = client.post("/api/browser/sessions", json={"auto_start": False})
+    assert created.status_code == 200
+    session_id = created.get_json()["session_id"]
+    session = isolated_runtime.get_session(session_id)
+    assert session is not None
+    assert session.owner_actor_id is None
+    assert session.owner_account_session_id is None
+    assert session.owner_principal_ref == "workspace:local"
+    assert client.get("/api/browser/sessions").get_json()["count"] == 1
+    forged = client.get(
+        f"/api/browser/sessions/{session_id}",
+        headers={"X-Actor-Id": "101"},
+    )
+    assert forged.status_code == 401
     assert client.post(f"/api/browser/sessions/{session_id}/stop").get_json()["closed"] is True
 
 

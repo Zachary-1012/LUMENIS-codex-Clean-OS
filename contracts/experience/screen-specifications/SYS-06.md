@@ -2,17 +2,17 @@
 
 ```yaml
 screen_id: SYS-06
-status: DESIGN_EXPLORATION
-revision: 2
+status: IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED
+revision: 3
 owner_domain: SYSTEM Browser / CDP
 binding_ids:
   - BACKEND-GAP-041
-product_owner_approval: PENDING
+product_owner_approval: DIRECT_IMPLEMENTATION_SCOPE_2026-10-05
 design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
-design_decision: DESIGN_EXPLORATION
-reviewer: Sol review required
-reviewed_at: UNKNOWN
-approval_reference: UNKNOWN
+design_decision: IMPLEMENTED_BOUND_SLICE / ACCEPTANCE_OPEN
+reviewer: M bounded implementation review
+reviewed_at: 2026-10-05
+approval_reference: Product Owner direct internal-browser repair approval
 ```
 
 ## 0. Authority basis and artifact disposition
@@ -21,7 +21,71 @@ approval_reference: UNKNOWN
 - Product contract: SYSTEM browser capability supports controlled acquisition; it is not a user personal browser and does not authorize collection effects.
 - References: `KEEP_AS_EXPLORATION`; no external browser UI is copied.
 - Anti-template check: capability boundary + safe instance state composition, not a browser tab clone or generic dashboard.
-- Sol design decision: `DESIGN_EXPLORATION`.
+- Current source decision: the bounded reader below is implemented; runtime,
+  accessibility and real-user acceptance remain open.
+
+## 0.1 Current source binding — 2026-10-05
+
+This section is the direct execution contract for current SYS-06 source. It
+supersedes the capacity-only behavior in the revision-2 sections below wherever
+they conflict; those sections remain historical provenance and explain why the
+reader has its present boundaries.
+
+- **Entry and return.** `SYS-06` is a real Web Workspace/Desktop/Mobile route,
+  not an unavailable-route boundary. It opens as a focused return layer above
+  the originating workspace task, so Browser Back returns to the preserved task
+  and its local draft. Direct links still show a normal workspace shell.
+- **Existing owner only.** `Sys06Screen` uses the existing SYSTEM Browser API:
+  `POST /api/browser/sessions`, `GET session`, `GET frame`, `POST navigate`,
+  `POST reload action`, and `POST stop`. It does not add a Browser owner,
+  WebView, client browser runtime, profile, extension, or parallel Evidence
+  store.
+- **Actor boundary.** The product client deliberately sends neither Core Basic
+  credentials nor business context headers to these routes. The server can issue
+  only its fixed `workspace:local` principal on an explicitly open loopback
+  workspace with no Authorization, Cookie or forged identity headers. Account
+  sessions retain their existing Browser ownership path.
+- **Readable result.** A user explicitly opens the controlled reader, enters a
+  credential-free `http` or `https` public address, then sees only the current
+  server-filtered title/address and a short-lived authorised PNG page preview.
+  After navigation, the input is replaced with the server-filtered address.
+- **Preview boundary.** The preview is labelled read-only. Local pan/zoom is
+  allowed; it cannot click, type into, or scroll the remote page. The UI accepts
+  a frame only when both opaque target identity and page revision match the
+  current server session. It clears stale, denied, expired and failed frames.
+- **No sensitive projection.** No account, Cookie, session ID, profile, port,
+  WebSocket endpoint, filesystem path or raw query/fragment is rendered.
+  Capacity collision names no other user and never steals or closes another
+  session.
+- **State truth.** A pending frame, empty frame, denied scope, occupied
+  capacity, invalid address, unavailable runtime and an explicitly ended session
+  are separate visible states. The screen never opens an external browser or
+  turns a failed frame into source/Evidence/collection success.
+
+### Current source evidence
+
+- Browser API owner/session isolation and forged-identity rejection:
+  `tests/test_ai_browser_default_engine.py` and `tests/test_browser_e2e.py`.
+- Flutter normal path, stale-frame discard, invalid-address failure and explicit
+  session stop: `app/test/features/system/sys06_reader_test.dart`.
+- Deep link, focused-return draft preservation and 320px/200% text route path:
+  `app/test/navigation/lumenis_router_test.dart`.
+- Shell canonical-screen mapping and four-surface composition regression:
+  `app/test/shell/lumenis_workspace_shell_test.dart`.
+
+### Remaining acceptance
+
+This source binding is not a live browser, acquisition, Evidence, collection,
+semantic accessibility, native-device or Product Owner user-job acceptance.
+`SYS06-ENTRY-02`, `SYS06-SCOPE-02`, `SYS06-FRAME-02`, `SYS06-ACTION-02`,
+`SYS06-RETURN-02`, `SYS06-A11Y-02` and `SYS06-TRUTH-02` remain open until the
+actual permitted runtime can supply their required evidence.
+
+## Historical capacity-only specification — revision 2 provenance
+
+The following sections preserve the former safe capability-panel design and its
+research basis. They are not a second current execution contract. Current source
+behavior is defined by §0.1 and the exact source/API contracts it names.
 
 ## 1. User problem and product invariant
 

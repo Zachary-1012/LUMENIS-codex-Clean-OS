@@ -40,19 +40,27 @@ def register_ai_browser_api(app):
 
     @bp.before_request
     def _require_browser_actor():
-        """Bind every AI Browser request to an active account and SYSTEM grant."""
+        """Bind every Browser request to an account or open local workspace."""
         try:
             from account.service import get_current_user
             from account.authorization import check_dual_domain_permission
+            from lumenis.system.security.permission import resolve_local_workspace_principal
 
             actor = get_current_user()
-            if not actor or type(actor.get("id")) is not int or type(actor.get("session_id")) is not int:
-                return jsonify({"ok": False, "error_code": "BROWSER_ACTOR_REQUIRED"}), 401
             action = "read" if request.method == "GET" else "write"
-            if not check_dual_domain_permission(actor["id"], "SYSTEM", module="browser", action=action):
-                return jsonify({"ok": False, "error_code": "BROWSER_PERMISSION_DENIED"}), 403
-            g.browser_actor_id = actor["id"]
-            g.browser_account_session_id = actor["session_id"]
+            if type(actor) is dict and type(actor.get("id")) is int and type(actor.get("session_id")) is int:
+                if not check_dual_domain_permission(actor["id"], "SYSTEM", module="browser", action=action):
+                    return jsonify({"ok": False, "error_code": "BROWSER_PERMISSION_DENIED"}), 403
+                g.browser_actor_id = actor["id"]
+                g.browser_account_session_id = actor["session_id"]
+                g.browser_principal_ref = None
+                return None
+            principal = resolve_local_workspace_principal(module="browser", action=action)
+            if principal is None:
+                return jsonify({"ok": False, "error_code": "BROWSER_ACTOR_REQUIRED"}), 401
+            g.browser_actor_id = None
+            g.browser_account_session_id = None
+            g.browser_principal_ref = principal.principal_ref
         except Exception:
             logger.exception("AI Browser actor authorization unavailable")
             return jsonify({"ok": False, "error_code": "BROWSER_PERMISSION_UNAVAILABLE"}), 503
@@ -88,7 +96,8 @@ def register_ai_browser_api(app):
                 "error_code": "SESSION_NOT_FOUND",
             }), 404)
         if (session.owner_actor_id != g.browser_actor_id or
-                session.owner_account_session_id != g.browser_account_session_id):
+                session.owner_account_session_id != g.browser_account_session_id or
+                session.owner_principal_ref != g.browser_principal_ref):
             return None, (jsonify({"ok": False, "error_code": "SESSION_NOT_FOUND"}), 404)
         return session, None
 
@@ -160,6 +169,7 @@ def register_ai_browser_api(app):
                     user_data_dir=None,
                     owner_actor_id=g.browser_actor_id,
                     owner_account_session_id=g.browser_account_session_id,
+                    owner_principal_ref=g.browser_principal_ref,
                     idle_timeout=int(data.get("idle_timeout", 600)),
                     max_lifetime=int(data.get("max_lifetime", 3600)),
                 )
@@ -208,8 +218,11 @@ def register_ai_browser_api(app):
         """列出所有活跃 Session。"""
         try:
             mgr = get_session_manager()
-            sessions = mgr.list_sessions_for_actor(
-                g.browser_actor_id, g.browser_account_session_id)
+            sessions = mgr.list_sessions_for_owner(
+                owner_actor_id=g.browser_actor_id,
+                owner_account_session_id=g.browser_account_session_id,
+                owner_principal_ref=g.browser_principal_ref,
+            )
             return jsonify({
                 "ok": True,
                 "count": len(sessions),

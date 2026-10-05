@@ -116,6 +116,52 @@ void main() {
   });
 
   test(
+    'controlled browser transport omits bootstrap credentials and context headers',
+    () async {
+      final server = await _CoreStub.start();
+      addTearDown(server.close);
+      final client = LumenisCoreClient(baseUrl: server.baseUrl);
+
+      final session = await client.openBrowserSession();
+      final frame = await client.browserFrame('bs_0123456789ab');
+
+      expect(session['session_id'], 'bs_0123456789ab');
+      expect(frame.targetId, 'target_approved');
+      expect(frame.pageRevision, 1);
+      expect(server.requests.map((request) => request.path), [
+        '/api/browser/sessions',
+        '/api/browser/sessions/bs_0123456789ab/frame',
+      ]);
+      for (final request in server.requests) {
+        expect(request.authorization, isNull);
+        expect(request.contextMode, isNull);
+        expect(request.domainId, isNull);
+        expect(request.subjectId, isNull);
+      }
+    },
+  );
+
+  test(
+    'controlled browser refuses a non-loopback Core before issuing a request',
+    () async {
+      final client = LumenisCoreClient(
+        baseUrl: 'https://core.example.invalid:8201',
+      );
+
+      expect(
+        () => client.openBrowserSession(),
+        throwsA(
+          isA<LumenisCoreException>().having(
+            (error) => error.errorCode,
+            'errorCode',
+            'BROWSER_LOCAL_CORE_REQUIRED',
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
     'CTH registry denial stays local and preserves the HTTP status',
     () async {
       final server = await _CoreStub.start(
@@ -228,6 +274,79 @@ const _password = 'secret';
 final _authorization =
     'Basic ${base64Encode(utf8.encode('$_username:$_password'))}';
 
+const _browserPng = <int>[
+  137,
+  80,
+  78,
+  71,
+  13,
+  10,
+  26,
+  10,
+  0,
+  0,
+  0,
+  13,
+  73,
+  72,
+  68,
+  82,
+  0,
+  0,
+  0,
+  1,
+  0,
+  0,
+  0,
+  1,
+  8,
+  6,
+  0,
+  0,
+  0,
+  31,
+  21,
+  196,
+  137,
+  0,
+  0,
+  0,
+  13,
+  73,
+  68,
+  65,
+  84,
+  8,
+  215,
+  99,
+  248,
+  207,
+  192,
+  240,
+  31,
+  0,
+  5,
+  0,
+  1,
+  255,
+  137,
+  153,
+  61,
+  29,
+  0,
+  0,
+  0,
+  0,
+  73,
+  69,
+  78,
+  68,
+  174,
+  66,
+  96,
+  130,
+];
+
 Map<String, dynamic> _contextEnvelope(
   String mode, {
   String? domainId,
@@ -339,6 +458,35 @@ class _CoreStub {
         authorized ? HttpStatus.ok : HttpStatus.unauthorized,
         const {'ok': true},
       );
+      return;
+    }
+    if (path == '/api/browser/sessions' && request.method == 'POST') {
+      await _reply(request, HttpStatus.ok, const {
+        'ok': true,
+        'session_id': 'bs_0123456789ab',
+        'status': 'running',
+        'engine_label': 'Controlled Browser',
+        'target_id': 'target_approved',
+        'page_revision': 1,
+        'current_title': 'Example',
+        'current_url': 'https://example.com',
+        'allowed_actions': ['navigate', 'reload', 'frame'],
+      });
+      return;
+    }
+    if (path == '/api/browser/sessions/bs_0123456789ab/frame' &&
+        request.method == 'GET') {
+      request.response
+        ..statusCode = HttpStatus.ok
+        ..headers.contentType = ContentType('image', 'png')
+        ..headers.set('X-LUMENIS-Frame-Id', 'frame_approved')
+        ..headers.set('X-LUMENIS-Target-Id', 'target_approved')
+        ..headers.set('X-LUMENIS-Page-Revision', '1')
+        ..headers.set('X-LUMENIS-Captured-At', '2026-10-05T10:00:00Z')
+        ..headers.set('X-LUMENIS-Frame-Width', '1')
+        ..headers.set('X-LUMENIS-Frame-Height', '1')
+        ..add(_browserPng);
+      await request.response.close();
       return;
     }
     if (path == '/api/settings/subjects?domain_id=CTH') {
