@@ -1,11 +1,6 @@
-"""
-AI分析器
-对导入的文本进行：实体识别、情感分析、自动打标签、关联话题/事件
-对接现有 ark_llm.py
-"""
+"""Source-grounded document analysis through the single SYSTEM AI Gateway."""
 import re
-import json
-from typing import List, Dict
+from typing import List, Dict, Optional
 from .parser import ParseResult, split_into_chunks
 
 
@@ -17,19 +12,26 @@ class AnalyzedNote:
         self.author: str = "外部导入"
         self.publish_date: str = ""
         self.source_platform: str = "import"
-        self.sentiment: str = "neutral"  # positive/negative/neutral
-        self.sentiment_score: float = 0.0
+        self.sentiment: str = "unknown"
+        self.sentiment_score: Optional[float] = None
+        self.risk_level: str = "unknown"
+        self.risk_score: Optional[int] = None
         self.topics: List[str] = []
         self.category: str = ""
         self.keywords: List[str] = []
         self.summary: str = ""
+        self.ai_provider: str = "unknown"
+        self.analysis_status: str = "UNAVAILABLE"
+        self.analysis_code: str = "OWNED_RUNTIME_NOT_BOUND"
+        self.keyword_method: str = ""
         self.raw_chunk: str = ""
 
 
 def analyze_text(text: str, context_keywords: List[str] = None) -> List[AnalyzedNote]:
     """
     分析文本，返回结构化笔记列表
-    优先用AI分析，回退到规则分析
+    Text parsing continues without a model; absent owned inference remains
+    explicitly unavailable and never becomes fabricated sentiment or summary.
     """
     chunks = split_into_chunks(text, max_chunk_size=800)
     results = []
@@ -46,49 +48,62 @@ def _analyze_chunk(chunk: str, context_keywords: List[str] = None) -> AnalyzedNo
     note.raw_chunk = chunk
     note.content = chunk[:500] if len(chunk) > 500 else chunk
 
-    # 尝试用AI分析
-    try:
-        ai_result = _ai_analyze(chunk, context_keywords)
-        if ai_result:
-            note.title = ai_result.get("title", _extract_title(chunk))
-            note.sentiment = ai_result.get("sentiment", "neutral")
-            note.sentiment_score = ai_result.get("sentiment_score", 0.0)
-            note.topics = ai_result.get("topics", [])
-            note.category = ai_result.get("category", "")
-            note.keywords = ai_result.get("keywords", [])
-            note.summary = ai_result.get("summary", chunk[:100])
-            return note
-    except Exception:
-        pass
+    result = _ai_analyze(chunk, context_keywords)
+    analysis = result.get("analysis") if result.get("status") == "COMPLETED" else None
+    if isinstance(analysis, dict):
+        note.title = str(analysis.get("title") or _extract_title(chunk))
+        note.sentiment = str(analysis.get("sentiment") or "unknown")
+        note.sentiment_score = analysis.get("sentiment_score")
+        note.risk_level = str(analysis.get("risk_level") or "unknown")
+        note.risk_score = analysis.get("risk_score")
+        note.topics = analysis.get("topics") if isinstance(analysis.get("topics"), list) else []
+        note.category = str(analysis.get("category") or "")
+        note.keywords = analysis.get("keywords") if isinstance(analysis.get("keywords"), list) else []
+        note.summary = str(analysis.get("summary") or "")
+        note.ai_provider = "owned"
+        note.analysis_status = "COMPLETED"
+        note.analysis_code = ""
+        note.keyword_method = "owned_model"
+        return note
 
-    # 规则分析回退
     note.title = _extract_title(chunk)
-    note.sentiment = _rule_sentiment(chunk)
+    note.sentiment = "unknown"
+    note.sentiment_score = None
+    note.risk_level = "unknown"
+    note.risk_score = None
+    note.summary = ""
     note.keywords = _extract_keywords(chunk, context_keywords)
-    note.summary = chunk[:100]
+    note.keyword_method = "deterministic_source_terms"
+    note.ai_provider = "unknown"
+    note.analysis_status = str(result.get("status") or "UNAVAILABLE")
+    note.analysis_code = str(result.get("code") or "OWNED_ANALYSIS_NOT_COMPLETED")
     return note
 
 
 def _ai_analyze(text: str, context_keywords: List[str] = None) -> dict:
-    """调用AI分析（对接现有ark_llm.py）"""
+    """Call the owned Gateway only; return explicit non-completion otherwise."""
     try:
-        import sys, os
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-        from ark_llm import analyze_sentiment, extract_keywords
+        from lumenis.system.ai_gateway.core import run_owned_analysis
 
-        sentiment_result = analyze_sentiment(text)
-        keywords_result = extract_keywords(text)
+        prompt = text
+        if context_keywords:
+            prompt = "Registered task terms: " + ", ".join(
+                str(value) for value in context_keywords if isinstance(value, str) and value.strip()
+            ) + "\n\nSource text:\n" + text
+        result = run_owned_analysis(text=prompt, analysis_type="summary")
+    except Exception as exc:
+        return {"status": "ERROR", "code": type(exc).__name__, "analysis": None}
 
+    if (not isinstance(result, dict) or result.get("ok") is not True
+            or result.get("status") != "COMPLETED"
+            or not isinstance(result.get("analysis"), dict)):
         return {
-            "title": _extract_title(text),
-            "sentiment": sentiment_result.get("sentiment", "neutral"),
-            "sentiment_score": sentiment_result.get("score", 0.0),
-            "keywords": keywords_result.get("keywords", []),
-            "topics": context_keywords or [],
-            "summary": text[:100],
+            "status": str(result.get("status") or "ERROR") if isinstance(result, dict) else "ERROR",
+            "code": str(result.get("code") or "OWNED_ANALYSIS_NOT_COMPLETED")
+            if isinstance(result, dict) else "OWNED_GATEWAY_INVALID_RESPONSE",
+            "analysis": None,
         }
-    except Exception:
-        return None
+    return {"status": "COMPLETED", "code": "", "analysis": result["analysis"]}
 
 
 def _extract_title(text: str) -> str:
@@ -102,19 +117,6 @@ def _extract_title(text: str) -> str:
     # 否则取最长的句子前30字
     longest = max(lines, key=len)
     return longest[:30] + ("..." if len(longest) > 30 else "")
-
-
-def _rule_sentiment(text: str) -> str:
-    """规则情感分析"""
-    positive_words = ["好", "赞", "喜欢", "满意", "优秀", "推荐", "不错", "方便", "舒适", "热闹"]
-    negative_words = ["差", "烂", "失望", "糟糕", "投诉", "问题", "故障", "拥挤", "贵", "难吃"]
-    pos_count = sum(text.count(w) for w in positive_words)
-    neg_count = sum(text.count(w) for w in negative_words)
-    if pos_count > neg_count:
-        return "positive"
-    elif neg_count > pos_count:
-        return "negative"
-    return "neutral"
 
 
 def _extract_keywords(text: str, context_keywords: List[str] = None) -> List[str]:
@@ -200,10 +202,20 @@ def analyze_table_rows(parsed, context_keywords=None) -> List[AnalyzedNote]:
         note.author = cell("author") or "外部导入"
         note.publish_date = cell("date")
         note.source_platform = "import"
-        note.sentiment = _rule_sentiment(text)
+        # Table parsing is source extraction only. Do not turn keyword counts
+        # into sentiment or relabel a source excerpt as an AI summary.
+        note.sentiment = "unknown"
+        note.sentiment_score = None
+        note.risk_level = "unknown"
+        note.risk_score = None
         note.keywords = _extract_keywords(text, context_keywords)
         note.topics = [k for k in (context_keywords or []) if k and k in text]
-        note.summary = (content or title)[:100]
+        note.summary = ""
+        note.ai_provider = "unknown"
+        note.analysis_status = "NOT_RUN"
+        note.analysis_code = "STRUCTURED_ROW_ANALYSIS_NOT_RUN"
+        note.keyword_method = "deterministic_source_terms"
+        note.raw_chunk = text
         notes.append(note)
     return notes
 

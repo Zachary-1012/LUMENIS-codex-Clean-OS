@@ -2,7 +2,7 @@
 
 > Status: **CURRENT EXECUTION INDEX / SIX-ROUND DELIVERY / COMPLETE LEGACY COVERAGE**
 >
-> Updated: 2026-10-05; earlier baseline tables remain dated provenance
+> Updated: 2026-10-06; earlier baseline tables remain dated provenance
 > Approved ROUND 01 source-audit baseline: `df15a99de6f5ffc3eb85e2c9924afb59c1c3c781` (provenance only; resolve the live `origin/main` before every change)
 
 This file is the fixed repository navigation and delivery index for 序境 / LUMENIS. It classifies current source by owner and tells Codex where to look after the one-time source audit. It is not a second product architecture, Experience authority, progress ledger, or proof that a runtime capability works.
@@ -33,7 +33,7 @@ Activation follows the current instruction at the top of AGENTS.md. C1–C6 are 
 
 ### Historical responsibility coverage map — 2026-10-02
 
-The rows below preserve the approved role mapping as of 2026-10-02; they are not current activation instructions. AGENTS.md owns activation and environment choice. The C3/C5 shared continuation relationship and former Cloud handoff are provenance and dependency facts, not permission to resume or message those windows. During the current M-only preparation C1–C6 remain paused; F's separate task is outside M's scope. No owner waits for unrelated material directories after its own task is authorized.
+The rows below preserve the approved role mapping as of 2026-10-02; they are not current activation instructions. AGENTS.md owns activation and environment choice. The C3/C5 shared continuation relationship and former Cloud handoff are provenance and dependency facts, not permission to resume or message those windows. Under the current M-only repair instruction, no C1–C6 or F window is active; M does not resume or message them. No owner waits for unrelated material directories after its task is authorized.
 
 | Existing ID | Responsible delivery / support |
 |---|---|
@@ -226,7 +226,7 @@ After bootstrap, locate work here. Root-level compatibility callers remain class
 | Shared Evaluation/Learning/Reporting | `lumenis/shared/evaluation/`; `lumenis/shared/learning/`; `lumenis/shared/reporting/` | Current root callers and domain regression tests; `agent_memory/base.py` remains a compatibility interface used by `lumenis/shared/learning/memory.py`; Shared Learning retains memory capability authority and Shared Database retains persistence authority |
 | Shared skills/agent execution | `lumenis/shared/agents/skills/` | `account/api.py`; `agent_runtime/`; `agent_capability/`; `agent_smart_tool/`; `ai_api.py`; `ai_task_engine.py`; `agent_memory/working.py` remains a compatibility working-memory execution caller |
 | SYSTEM Permission/effects | `lumenis/system/security/` | Active API/action callers; permission, denial, approval and effect-fence tests |
-| SYSTEM AI runtime | lumenis/system/ai_gateway/ | C2 owns inference/training; local_ai_client.py, ai_api.py, ai_task_engine.py, content_generation.py and compatibility callers retained; no retired-provider probes/fallback. The existing owned-training path now has an exact-approval remote source-pin preflight that starts no worker/model/GPU; all actual training, checkpoint, inference and promotion gates remain separate. |
+| SYSTEM AI runtime | lumenis/system/ai_gateway/ | C2 owns inference/training; `local_ai_client.py`, `ai_api.py`, `ai_task_engine.py`, `content_generation.py`, and the C5 `lumenis/importer/analyzer.py` compatibility caller use/retain the single Gateway boundary; no retired-provider probes/fallback. The v4 importer exposes unavailable analysis and table-only `NOT_RUN` without fabricated labels. `lumenis/importer/service.py` still writes directly to shared `notes` without Source/Evidence/Canonical binding; this is an open C5 integration gap, not a second owner. The existing owned-training path has an exact-approval remote source-pin preflight that starts no worker/model/GPU; actual training, checkpoint, inference and promotion gates remain separate. |
 | SYSTEM collection | `lumenis/system/collector/` and `lumenis/system/browser/runtime/` | Canonical adapters/guard/runtime/Scheduler/Evidence tests. Compatibility call paths that require consolidation are `app.py` → `lumenis/blueprint.py` `/v4/adapters/collect` → `lumenis/adapters/collector_service.py` / `persist.py`, and `/api/experience/cth/platform-collection/search` → `secondary_collection.py`. They are callers, not separate owners; preserve unique task/polling/risk/platform behavior while converging on one collector/task/status/write contract. |
 | SYSTEM browser/session | `lumenis/system/browser/runtime/` | `xhs_cookie_bridge.py`; `xhs_p0_orchestrator.py`; `xhs_cdp_collector.py`; Cookie/path/HK-policy/lineage tests |
 | Engineering AI | Codex selected model; historical .opencode/opencode.json | No retired local-model/Zhipu/OpenCode calls; engineering resources never own Product Truth. |
@@ -370,14 +370,14 @@ recorded rather than invented or silently excluded.
 Research enters both product-capability improvement and separately authorized
 AI training/learning. Books, courses, papers, open-source work, user videos/images
 and official product/support/release material remain traceable to actual changes.
-M corrects narrowed rules and records the exact owner task for bugs; an audit
-finding alone is not resolution. During the current preparation, M changes only
-governance/material maps/task routing and performs no product-source, DB,
-runtime, collection, model, GPU, deployment or product-E2E work. Execution state,
-account/model selection and any later resource authorization come only from the
-current AGENTS instruction. C1-C6 remain paused responsibilities; F is separately
-active under the Product Owner's direct instruction and outside M's scope.
-Existing/free compute is preferred; no historical budget authorizes payment.
+M corrects narrowed rules and owns each authorized source repair through scoped
+verification and publication; an audit finding alone is not resolution. The
+current AGENTS instruction authorizes M-only product-source repairs, not
+production DB/migrations, runtime, collection, model/GPU, deployment or product
+E2E. Execution state, account/model selection and resource authorization come
+only from current AGENTS and direct Product Owner instructions. C1-C6 and F remain
+assigned responsibilities but no other window is active in this task. Existing/
+free compute is preferred; no historical budget authorizes payment.
 
 ## 11. Active material accountability and missing-entry requirements
 
@@ -450,12 +450,11 @@ User-reviewed100-term foundation input: C1 owns topic/query/entity binding; C5 e
 
 The cards below specify full user outcomes, not active work queues. Current
 activation, pause state, model/account selection and allowed effects come only
-from the top of `AGENTS.md`. In this M-only preparation C1–C6 remain paused;
-their cards are being made directly executable for later authorization. F is
-separately active under the Product Owner's instruction; M does not read, manage,
-modify or contact F. Do not create parallel task-card files: each row links its
-existing source routes in §3 to J/U/R coverage, the existing material manifest,
-and the Real Delivery Card/acceptance fields in the Overlay.
+from the top of `AGENTS.md`. The current task authorizes M-only source repair;
+C1–C6 and F remain assigned responsibilities but no other window is active or
+contacted. Do not create parallel task-card files: each row links its existing
+source routes in §3 to J/U/R coverage, the existing material manifest, and the
+Real Delivery Card/acceptance fields in the Overlay.
 
 ### Research inputs consumed by the existing owners
 
@@ -463,9 +462,9 @@ The retained RC identifiers below locate the existing research corpus, not new
 work queues or completed adoption. Original locators, actual read intervals and
 rights remain in MATERIAL-OWNER-MANIFEST and each source receipt. The precise
 product path below is the implementation destination; summaries alone cannot
-close it. Current activation comes only from AGENTS.md. M executes this
-preparation; C1–C6 rows are future outcome cards while those windows remain
-paused, and F remains independently Product Owner-authorized outside M's scope.
+close it. Current activation comes only from AGENTS.md. M executes the current
+authorized repair; C1–C6 rows retain their complete outcome responsibilities,
+and F remains the separate Experience owner without active work in this task.
 
 For direct materials, the manifest's `primary_owner` is the reading and
 capability-adoption owner; `source_owner_paths` is the existing product route,
@@ -492,21 +491,21 @@ remain outside M's read/management scope.
 | RC-13 brand/commercial/topic seeds | `subject_registry.py`, `lumenis/system/collector/acquisition_plan.py`, existing Scheduler and Global contract | Versioned additive terms from evidence and task semantics; six-platform Jan2026 onward rotation, fresh observations and continuity. Four seeded subjects/100 terms are not global coverage or platform hotlists. |
 | RC-14 governance/outcome research | AGENTS, this index, existing Real Delivery and Evaluation | Use the one current implementation and pinned receipts; actual effect and environment/user fidelity separately. Do not create a research registry, permission system or alternate acceptance authority. |
 
-Existing source-owner rows above remain the precise path/contract authority. These complete outcomes retain all prior mapped requirements. Research must change a named existing capability, its quality/credibility criteria or its demonstrated outcome; a matrix alone is insufficient. The ownership map is preparation for later authorized outcomes; it is not current C-window activation.
+Existing source-owner rows above remain the precise path/contract authority. These complete outcomes retain all prior mapped requirements. Research must change a named existing capability, its quality/credibility criteria or its demonstrated outcome; a matrix alone is insufficient. The ownership map preserves complete responsibilities; it does not independently activate C windows.
 
 The shared `REAL DELIVERY CARD` fields remain in the Overlay; the card rows
 below bind complete outcomes to exact existing source families and J/U/R
-acceptance. They are not active queues during the present M-only preparation.
+acceptance. They are not active queues during the present M-only repair task.
 
 | Window | User input and canonical source routes | Dependencies, deliverable, recovery and acceptance |
 | --- | --- | --- |
-| M | Current preparation only: update existing authorities, the 191-row material snapshot boundary, D01–D49 audit dispositions (keeping their original audit labels separate from product R01–R15 acceptance), exact future owner cards and local/online facts. Source: AGENTS/CURRENT/Architecture/Owner Index/Overlay/Global contract/Material Manifest. | Deliver published prep maps and exact future responsibilities; preserve unread, private and F-owned items. No production source, DB, migration, runtime, collection, model/GPU, deployment or product E2E. Acceptance: bidirectional requirement→task→source/owner→deliverable/evidence path is unambiguous; no statement implies product closure. |
+| M | Current task: repair the confirmed product-source defects within existing owners, verify affected contracts once, update CURRENT/owner evidence and publish the reviewed repair to `main`. Source: exact source/callers/contracts/tests in the current active task; bootstrap and current owner routing in AGENTS. | Preserve dirty/untracked work and exact existing interfaces. No production DB/migration, runtime/restart, live collection, model/GPU, deployment or unsupported product-E2E claim. Acceptance: concrete defect corrected, affected tests/gates pass, current status agrees with source, and local/GitHub main bytes match. Full product closure remains the overall objective and is not inferred from a repair batch. |
 | C1 | Inputs: the four C1 manifest rows (one collection-OSS comparison and three user-reviewed XLSX/CSV/JSON seed representations), additive Subject/BrandFocus/aliases, six-platform authorized sources and task semantics. Source: `subject_registry.py`, `lumenis/system/collector/`, `lumenis/system/browser/runtime/`, `lumenis/shared/evidence/`, `lumenis/shared/database/`, `lumenis/system/collector/acquisition_plan.py` and Scheduler. | Deliver actual authorized 2026-01-01 publication/event-time backfill and ongoing rotation for Instagram, Facebook, WeChat Official Accounts, RedNote/XHS, Douyin and X; ingest body/author/native time/metrics/comments/permitted media to Source/Evidence/Canonical and answer a CTH/BMP task. Provide sourced text/image examples for F without copying platform UI. Preserve exact scope/use/identity, personal Mainland XHS exclusion, cursor/idempotency, UNKNOWN, challenge/outage and restart recovery. Acceptance J1/U01–U05/R03–R06; no seed-as-coverage claim. Before actual collection, close the source-audited Facebook result-contract failure, honest status/readiness and alias/manual-capability mismatch, and durable task continuation/native pagination through these same owners; do not blanket-enable platforms or call a file-level cookie check a live session. |
-| C2 | Inputs: the two C2 manifest materials (`LUMENIS_AI_capability_audit_20261003.txt` and `声音识听_中英韩与音乐情绪_Codex接入增补.md`), approved open foundation/recipe, the existing MODEL_TRAIN grant and only the already approved 8 training + 4 independent evaluation samples. Source: `lumenis/system/ai_gateway/owned_training*.py`, checkpoint/runtime/SSH owners, `owned_inference.py`, `owned_evaluation.py`, existing Agent/Skills/Memory/Learning; research routes RC-01/07/09. | Validate the existing exact grant against the same input/resource; do not repeat approval for unchanged scope. Existing/free compute first; no SKU or payment in this preparation. Deliver actual load/optimizer step/loss, checkpoint bytes, reload/resume, held-out semantics, normal Gateway business inference, cancellation/disconnect recovery and controlled promotion/rollback. Acceptance J7/U18–U20/R07 on real CTH/BMP/creation work; samples/preflight are not quality evidence. |
+| C2 | Inputs: the two C2 manifest materials (`LUMENIS_AI_capability_audit_20261003.txt` and `声音识听_中英韩与音乐情绪_Codex接入增补.md`), approved open foundation/recipe, the existing MODEL_TRAIN grant and only the already approved 8 training + 4 independent evaluation samples. Source: `lumenis/system/ai_gateway/owned_training*.py`, checkpoint/runtime/SSH owners, `owned_inference.py`, `owned_evaluation.py`, existing Agent/Skills/Memory/Learning; research routes RC-01/07/09. | No model/GPU action is part of the current M-only repair. When C2 is activated by current AGENTS, validate the existing exact grant against the same input/resource; do not repeat approval for unchanged scope. Existing/free compute first; no historical payment instruction authorizes a rental. Deliver actual load/optimizer step/loss, checkpoint bytes, reload/resume, held-out semantics, normal Gateway business inference, cancellation/disconnect recovery and controlled promotion/rollback. Acceptance J7/U18–U20/R07 on real CTH/BMP/creation work; samples/preflight are not quality evidence. |
 | C3+C5 | Inputs: 32 direct C3+C5 manifest rows plus second-level references assigned through the existing material route; real Subject/BrandFocus Briefs, permitted source refs and versioned constraints. Source: `lumenis/importer/documents.py`, `lumenis/shared/reporting/source_brief_job.py`, `saved_work.py`, `artifact.py`, CTH/BMP owners and `api_dual_domain.py`. | Dependencies: C1 formal source/actor/scope; C2 only when owned analysis is bound; C6 shared Core/API/DB. Deliver useful research/decision, recommendations and editable text/video/podcast Briefs with Action→Outcome→Evaluation where promised; save/revise/reopen/export/rollback and source/constraint impact. Read assigned materials through RC01–RC14, mapping original/read interval/rights to named behavior and quality checks. The 191-row manifest is not the full corpus; official-site 4,797 URL inventory and dated 723+18 unread-body entries remain article-by-article obligations. Acceptance J2/J3/J7 and applicable U/R gates; unresolved outcome/rights/unread states stay explicit. |
 | C4 | Inputs: 70 direct C4 manifest materials, real Brief/inherited Evidence, permitted media and actual resource constraints; keep 12 editing exercises separate. Source: `lumenis/shared/content_creation/`, Timeline/Artifact/render owners and `podcast/`; research routes RC-08/09. | Deliver separate editable pitch, genuinely rendered/editable video and playable/listenable podcast. Read assigned V2/audio/media methods with exact visual/audio read intervals and rights. Verify timeline pan vs seek, ruler/track/playhead, edit/replace/render, save/export/reopen/cancel/recovery, human review and unaffected-part integrity. Dependencies: C3/C5 source inheritance and C6 runtime/FFmpeg/player; F interface work remains F-owned. Acceptance J4–J6/U13–U15, separate normal results for all three. |
 | C6 | Inputs: exact accepted C-owner deltas, source/runtime/DB/API/build/Artifact identity and existing test/runtime receipts. Source: `app.py`, `lumenis_app_api.py`, `experience_runtime.py`, `collector_status_api.py`, `lumenis/blueprint.py`, `lumenis/adapters/collector_service.py`, Shared Database/Evidence, FFmpeg/supervisor and deployment/release owners in §3. | Dependencies: real owner contracts and exact path reservations; preserve dirty/untracked work. Deliver one same-SHA integrated runtime/package with actual API/surface operation, failure/cancel/restart/rollback recovery, required gates and final evidence. For collection, converge existing canonical and V4 callers on one Collector/Task/status/write contract while preserving unique legacy behavior; bind task checkpoints through HTTP and distinguish task query checkpoints from platform-native page cursors. F-reported API-to-Flutter projection/POST issues remain F-owned and were not inspected by M. Developer mode remains user-deferred and recorded, not a blocker. Acceptance J8/U21–U25 and mapped R gates; code/build/health alone cannot prove operation or release. |
-| F | Independent direct Product Owner task; detailed front-end source/input remains F-owned. Sole contract: Experience Constitution §38 and screen-specific DESIGN_READY contracts. M does not inspect or manage F's private work. | F's full four-surface output and its own acceptance remain separately owned. This row preserves the interface and requirement boundary; it is not an M assignment or an ACK on F's behalf. |
+| F | Independent four-surface Experience responsibility; detailed front-end source/input remains F-owned. Sole contract: Experience Constitution §38 and screen-specific DESIGN_READY contracts. F is inactive under the current M-only instruction; M does not inspect or manage F's private work. | F's full four-surface output and its own acceptance remain separately owned. This row preserves the interface and requirement boundary; it is not an M assignment or an ACK on F's behalf. |
 
 ### C1/C6 collector source audit — verified repair target, not a new owner
 

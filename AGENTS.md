@@ -428,7 +428,7 @@ and both complete delivery scopes, all R/J/U requirements and existing owners;
 this historical handoff does not activate that thread. When the owner is later
 formally activated, it must not wait for unrelated research or GPU work before
 continuing independent business and Shared outcomes. C2/W2 remains the sole GPU
-training operator under separate current authorization; this M-only preparation
+training operator under separate current authorization; this M-only source-repair
 does not perform GPU or billing operations.
 W6 coordinates exact shared-file reservations, formal DB writes and main publication.
 
