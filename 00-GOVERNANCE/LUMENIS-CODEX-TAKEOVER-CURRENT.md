@@ -39,6 +39,7 @@ F retains four-surface behavior and design responsibilities through existing Flu
 12. C2 now exposes the existing-owner `execution-preflight` route. It requires the current exact MODEL_TRAIN approval, performs only an authenticated remote source-pin check, and reports no training/model/GPU progress. Exact source `f3877f80` passed App Gate `37283524406` and Product Gate `37283529275`. Its local evidence and the remaining live/billing gates are recorded in `evidence/round-07/OWNED-TRAINING-REMOTE-PREFLIGHT-20261005.md`.
 13. The canonical OpenAPI generator now creates its route map in an isolated disposable database environment before importing Flask. This prevents route-document generation from initializing the protected repository DB; it is an engineering isolation repair, not a product/runtime acceptance claim. Exact source `0ef959a4` passed Product Gate `37286766323`. See `evidence/round-15/OPENAPI-ISOLATED-GENERATOR-20261005.md`.
 14. Follow-up `fb894def` makes that isolation regression valid in both workstation checkouts with a protected DB and clean GitHub checkouts where the ignored DB is absent. It changes no product route, runtime or data state; the generator still uses only a disposable schema.
+15. The tracked environment template and the old provider-failover policy no longer advertise retired local/external routes as active. Compatibility key names remain only to preserve configuration shape; current product inference remains the owned Gateway route with an honest unavailable state until real binding evidence. See `evidence/round-07/RETIRED-PROVIDER-CONFIG-TEMPLATE-20261005.md`.
 
 ## 3. Authority and retained evidence
 
@@ -53,6 +54,7 @@ F retains four-surface behavior and design responsibilities through existing Flu
 - `evidence/round-14/MEDIA-WORKBENCH-FOUR-SURFACE-20261005.md`: current Flutter player/timeline/reopen integration, Windows build evidence and Web test-server limitation.
 - `evidence/round-14/SYS-06-CONTROLLED-READER-20261005.md`: current internal-reader source/API binding, local verification and retained runtime/user acceptance limits.
 - `evidence/round-07/OWNED-TRAINING-REMOTE-PREFLIGHT-20261005.md`: current no-GPU remote source-pin preflight binding and the remaining real training gates.
+- `evidence/round-07/RETIRED-PROVIDER-CONFIG-TEMPLATE-20261005.md`: retired-provider template/policy alignment without provider activation.
 - `evidence/round-15/OPENAPI-ISOLATED-GENERATOR-20261005.md`: isolated route-contract generation and protected DB boundary verification.
 - `evidence/round-06/COLLECTOR-CONVERGENCE-20261004.md`: current purpose, signed scheduler, source transaction and packaged-input integration evidence.
 

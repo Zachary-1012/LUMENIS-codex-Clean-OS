@@ -172,6 +172,28 @@ def test_ai_off_core_chain():
     assert intelligence._CACHE == cache_before
 
 
+def test_env_template_keeps_retired_product_provider_routes_disabled():
+    template = open(os.path.join(ROOT, '.env.example'), encoding='utf-8-sig').read()
+    assert 'ALLOW_CLOUD_AI=false' in template
+    assert 'LOCAL_AI_PREFERRED=false' in template
+    for key in (
+        'OLLAMA_BASE_URL',
+        'LMSTUDIO_BASE_URL',
+        'LLAMA_CPP_BASE_URL',
+        'ZHIPU_MODEL',
+        'ZHIPU_STRONG_MODEL',
+        'ZHIPU_BASE_URL',
+        'ARK_MODEL',
+        'ARK_BASE_URL',
+        'DASHSCOPE_BASE_URL',
+    ):
+        assert f'{key}=\n' in template
+    assert 'SUPERSEDED / HISTORICAL ONLY' in open(
+        os.path.join(ROOT, '00-GOVERNANCE', 'AI_PROVIDER_FAILOVER_POLICY_V1.0.md'),
+        encoding='utf-8-sig',
+    ).read()
+
+
 if __name__ == "__main__":
     ok = run_ai_off_tests()
     sys.exit(0 if ok else 1)

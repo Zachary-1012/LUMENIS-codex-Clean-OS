@@ -1,11 +1,19 @@
-# AI Provider 额度切换规则 V1.0
+# AI Provider 额度切换规则 V1.0 — 历史证据
 
 > **版本**: V1.0
 > **定版日期**: 2026-09-07
-> **状态**: ACTIVE
-> **适用范围**: Z-Brand Core / CorTech-TaikooHui 全部 AI 调用链路
+> **状态**: SUPERSEDED / HISTORICAL ONLY
+> **原适用范围**: Z-Brand Core / CorTech-TaikooHui 旧 AI 调用链路
 > **关联 Commit**: `20da4c5` (lumenis-dual-domain-v3)
 > **关联文件**: `ai_channel.py`, `intelligence.py`, `provider_registry.py`, `ai_call_logger.py`, `ai_governance.py`, `ai_resource_packs.py`
+
+> **Current rule:** this document cannot enable or select a provider. The sole
+> current execution rule is `AGENTS.md` plus the SYSTEM AI Gateway owner:
+> Ollama, LM Studio, llama.cpp, Zhipu, Ark and other external-provider paths
+> remain compatibility/history only and may not be called, probed, discovered,
+> selected or used as fallback. Product AI proceeds only through the approved
+> LUMENIS-owned foundation-weight route, which returns explicit unavailable
+> states until its training/inference gates have real evidence.
 
 ---
 
