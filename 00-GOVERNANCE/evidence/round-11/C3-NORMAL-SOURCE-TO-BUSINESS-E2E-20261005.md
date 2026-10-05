@@ -2,7 +2,7 @@
 
 > Status: **LIVE_VERIFIED for the bounded internal Core/API path; not USER_VERIFIED, RELEASED, OPERATING, or commercial acceptance.**
 >
-> Recorded on 2026-10-05, after exact source `1ab4d1a80f0d54b6cae27ce27fb4f88bf6d9f129` was present in the running checkout; current main at write time is `c57efa29f8d28fb98664fbfeee618b4f6c531a2f`. The intervening commit only changed governance documentation.
+> Operation-time checkout was `c57efa29f8d28fb98664fbfeee618b4f6c531a2f`. The Core process started at 2026-10-05 17:14 +08:00; the API/domain source files used by this path were last changed together at `be347f03eb9f2bc470a39644df281be3a3d704c9` (2026-10-04 21:15 +08:00). Runtime did not expose a loaded Git SHA. Later commits `1ab4d1a8` and `c57efa29` only changed documentation.
 
 ## Scope and real input
 
@@ -40,6 +40,7 @@ Focused Source Brief
 | Saved result | Committed receipt `ART-5f83533e37194b6b`, version `1`, SHA-256 `7aad329d310388ac8e8cdd538b624d5665231a0f4e697306928166f9fdb59160`, 39,927 bytes. |
 | User-visible export | Attachment `ART-c5683ff5c1c74db5`, DOCX, SHA-256 `36ecea297d181c420127adf8c94f1d1ff6694807f97ca5d86a1b390b9cb8d3af`, 37,525 bytes. Fresh export returned the same media type, byte count and response hash. |
 | Business decision | Work `work-c70fb7378072364b43fa00f7448bf9f705531831f6be8ae39b777a4dda8eb028` was prepared from the exact Source Brief, selected an internal-review proposal, and linked only the committed task above. |
+| Operator input boundary | The local workspace principal submitted the review selection. `owner=LUMENIS local workspace operator` and the future `review_at` were engineering exercise inputs, not a Product Owner assignment, user decision, or real calendar commitment. This operation is **not USER_VERIFIED**. |
 | Action boundary | `action_state=EXECUTED` means the existing committed internal document was freshly re-read and associated with the selected internal review. It does **not** mean a campaign, purchase, publication, platform operation or other external effect occurred. |
 | Outcome and evaluation | `state=OUTCOME_RECORDED`; `business_outcome=UNKNOWN`; `outcome_state=UNKNOWN`; evaluation `business_decision_usefulness=UNKNOWN`; current revision `app_evidence_records:494`. |
 | AI honesty | `owned_analysis=UNAVAILABLE / OWNED_RUNTIME_NOT_BOUND`. No model output was used to claim that the operator decision or business result was completed. |
@@ -58,7 +59,9 @@ internal document creation.
 It does **not** prove a Flutter/Desktop/Mobile user operation, a customer
 acceptance test, source withdrawal/revision handling, a measured external
 outcome, owned-model usefulness, full six-platform collection coverage, or
-release/operating/commercial readiness. Those remain separate acceptance gates.
+release/operating/commercial readiness. The operator fields above must not be
+shown as an actual Product Owner assignment or schedule. Those remain separate
+acceptance gates.
 
 ## Next owned work
 
