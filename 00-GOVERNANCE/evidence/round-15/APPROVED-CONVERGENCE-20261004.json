@@ -542,7 +542,65 @@
       "replacement": "当前main对应17文件；be347f03提交",
       "current_exists": true,
       "current_sha256": "6f9d43d97866cbbec88a9d8d5946fe189fe05a8fe4361159eded13a0628a26a9",
-      "prior_audit_disposition_id": "R44"
+      "prior_audit_disposition_id": "R44",
+      "current_recheck": {
+        "checked_at": "2026-10-06T00:32:00+08:00",
+        "checked_main": "c7765b87fee1d524f17ddc1661976f0ea83fd799",
+        "receipt_path": "work/w6-integration-20261002/coherent-owner-integration-20261004/APPLIED.json",
+        "receipt_sha256": "6f9d43d97866cbbec88a9d8d5946fe189fe05a8fe4361159eded13a0628a26a9",
+        "receipt_scope": "All 17 recorded after-image SHA256 values were compared with byte content read from the current main Git tree.",
+        "exact_current_after_hash_matches": 6,
+        "current_after_hash_differences": 11,
+        "matching_paths": [
+          "tests/test_business_decision_workflow.py",
+          "tests/test_internal_pitch_workflow.py",
+          "tests/test_source_brief_job_routes.py",
+          "subject_registry.py",
+          "lumenis/shared/reporting/source_brief_job.py",
+          "tests/test_upstream_transaction_readers.py"
+        ],
+        "differing_paths": [
+          "api_dual_domain.py",
+          "lumenis/shared/content_creation/internal_pitch.py",
+          "lumenis_app_api.py",
+          "requirements-dev.txt",
+          "lumenis/system/security/permission.py",
+          "account/authorization.py",
+          "lumenis/shared/reporting/saved_work.py",
+          "experience_runtime.py",
+          "app.py",
+          "tests/test_business_work_owner_routes.py",
+          "tests/test_shared_work_owner_routes.py"
+        ],
+        "result": "Historical postimage byte identity is not current for 11 paths. This does not prove behavior is missing; later source changes require semantic owner review before any duplicate/archive deletion.",
+        "runtime_db_or_product_action": "NOT_RUN",
+        "retained_merge_input_reconstruction": {
+          "checked_at": "2026-10-06T00:32:00+08:00",
+          "method": "git merge-file -p ours base owner; compare reconstructed SHA256 with the receipt after SHA256; stdout only, no file created.",
+          "reconstructed_after_hashes": 11,
+          "not_reconstructed_from_retained_triplets": 6,
+          "not_reconstructed_paths": [
+            "requirements-dev.txt",
+            "lumenis/system/security/permission.py",
+            "account/authorization.py",
+            "lumenis/shared/reporting/saved_work.py",
+            "experience_runtime.py",
+            "app.py"
+          ],
+          "interpretation": "Input triplets are not enough to reproduce six historical after byte strings with the current recorded merge invocation. This is a preservation/review gap, not proof of lost or missing feature."
+        },
+        "current_source_feature_trace": {
+          "checked_at": "2026-10-06T00:47:00+08:00",
+          "main_sha": "c7765b87fee1d524f17ddc1661976f0ea83fd799",
+          "observed_paths": {
+            "api_dual_domain.py": "Internal pitch contract versions 1, 2, and 3 are registered.",
+            "lumenis/shared/content_creation/internal_pitch.py": "source-bound/v3 profile, upstream ref resolver, revalidation before commit/reopen are present.",
+            "lumenis_app_api.py": "Internal pitch request allows upstream_ref.",
+            "tests/test_business_work_owner_routes.py": "source-bound/v3 route case is present."
+          },
+          "interpretation": "Source-level presence only. No product tests or real business job were run; C3/C5 acceptance remains open."
+        }
+      }
     },
     {
       "id": "D45",
@@ -554,7 +612,23 @@
       "replacement": "当前main对应Importer/SavedWork相关源码测试",
       "current_exists": true,
       "current_sha256": "21bdb8bfa9b72cda82e2f678ec9b6b296e99180b85bd2a73c93b670544f5918d",
-      "prior_audit_disposition_id": "R45"
+      "prior_audit_disposition_id": "R45",
+      "current_recheck": {
+        "checked_at": "2026-10-06T00:32:00+08:00",
+        "checked_main": "c7765b87fee1d524f17ddc1661976f0ea83fd799",
+        "receipt_path": "work/w6-integration-20261002/coherent-owner-integration-20261004/missing-layer-integration/APPLIED.json",
+        "receipt_sha256": "21bdb8bfa9b72cda82e2f678ec9b6b296e99180b85bd2a73c93b670544f5918d",
+        "receipt_scope": "All 3 recorded after-image SHA256 values were compared with byte content read from the current main Git tree.",
+        "exact_current_after_hash_matches": 3,
+        "current_after_hash_differences": 0,
+        "matching_paths": [
+          "lumenis/importer/documents.py",
+          "tests/test_shared_work_source_continuity.py",
+          "tests/test_saved_work_local_revision.py"
+        ],
+        "result": "These 3 file contents match current main exactly. The APPLIED receipt itself remains historical provenance; this does not prove runtime, DB or full C3/C5 acceptance.",
+        "runtime_db_or_product_action": "NOT_RUN"
+      }
     },
     {
       "id": "D46",

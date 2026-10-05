@@ -60,8 +60,8 @@
 | D41 | R41 | `output/final-audit-2026-09-21/LUMENIS_PRODUCT_ARCHITECTURE_FUNCTION_SOURCE_AUDIT_2026-09-21.md` | 历史需保留 | 继续保留有效合同/历史证据；不作为第二执行权威。 |
 | D42 | R42 | `00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-MANIFEST.json` | 证据不足 | 191项精确原件locator已恢复，空locator为0；缺件/未读/权限仍逐条保留，未宣称资料全部采用。 |
 | D43 | R43 | `work/research-continuation-20261003/FULL-COVERAGE-OWNER-INTERFACE-ACCEPTANCE-MATRIX-20261004.json` | 已并入唯一索引；本地证据保留 | 14个RC类别与当前Owner Index RC-01–RC-14对应；唯一新增的RC-09采样率/声道/time_base/start_pts/分段映射已并入RC-09。矩阵仍是本地证据，不是第二队列；正文未读、来源权利和实际采纳仍按各行状态保持OPEN。 |
-| D44 | R44 | `work/w6-integration-20261002/coherent-owner-integration-20261004/APPLIED.json` | 已替代但仍引用 | 17路径已发布；可核历史源码副本退出活动目录，APPLIED原回执未改写；不重放旧postimage。 |
-| D45 | R45 | `work/w6-integration-20261002/coherent-owner-integration-20261004/missing-layer-integration/APPLIED.json` | 已替代但仍引用 | 3路径已发布；同样按哈希归档，未宣称运行任务已验收。 |
+| D44 | R44 | `work/w6-integration-20261002/coherent-owner-integration-20261004/APPLIED.json` | 已替代但仍引用；当前后像核对未闭 | 2026-10-06 对 c7765b87 main 按回执的17个 after SHA256复核，6个当前字节匹配、11个不匹配；保留的base/ours/owner三方输入可按git merge-file重构11个after hash，另6个无法由这组输入重构。当前main可定位source-bound/v3调用合同，但这些源码迹象不是完整C3/C5用户验收。差异不证明功能丢失或候选有效；语义与未重构资产继续OPEN。原APPLIED及merge证据保留，不重放postimage、不删除副本。 |
+| D45 | R45 | `work/w6-integration-20261002/coherent-owner-integration-20261004/missing-layer-integration/APPLIED.json` | 已替代但仍引用；当前字节匹配 | 2026-10-06 对 c7765b87 main 按回执的3个 after SHA256复核，3/3当前文件内容完全匹配。保留APPLIED作为历史来源证明；这不证明Runtime/DB/用户任务验收。 |
 | D46 | R46 | `work/frontend-2026-10-03/FRONTEND-REFERENCE-EXECUTABLE-20261004.md` | 证据不足 | 前端报告保留为证据；确认的范围已归Experience；尚未完成逐帧/试听的部分继续OPEN。 |
 | D47 | R47 | `config/ai-owned-training-runtime.json` | 证据不足 | 私有训练配置原样保留不提交；不改变运行绑定，不启动GPU。 |
 | D48 | R48 | `undefinedvalidate_research.py` | 证据不足 | 与原包验证器不完全同字节，有独有内容；从根目录迁出到可回读归档，未丢弃。 |

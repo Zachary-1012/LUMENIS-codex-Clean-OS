@@ -114,7 +114,7 @@ C1–C6 是六个完整用户成果责任，不等于六个零碎函数批次；
 | 固定RTX5090/4090旧方案 | **历史需保留，不再活动。** | `AGENTS.md`、Takeover CURRENT、Material Owner Contract以现有/免费资源优先，旧租赁和GPU预算仅历史证据；不删除step=0与付费损耗记录，不把模型硬件选择写入当前路由。 |
 | reporting locator的不存在根目录 | **已替代并修正本地导航实现。** | `scripts/audit_tools/locate_capability_context.py`移除不存在的裸 `reporting/` 根，保留 `lumenis/shared/reporting/`。Cited check at earlier pin reported `missing_owner_roots=[] / ROUTED_NOT_VERIFIED`;不代表报告行为已验收。 |
 | Guardian `thread_context`废弃键 | **配置范围已核对为不存在；无需再写设置。** | 已检查目标用户/项目 `config.toml` 中没有该键或 `[features.guardianv2]`；本轮未改全局或项目配置。现有CURRENT有核验说明；不再把它作为等待用户操作的bug。 |
-| 本地重复实现候选与 43,381 条 work 路径 | **尚未完成逐项去重/处置；全部受保护。** | `CURRENT-PROTECTED-LOCAL-BOUNDARIES-20261005.json`说明这只是 `work/` 路径快照，未逐条内容核实。新规则为main唯一实现、禁止新建并行候选；不能把未经核对的工作目录整体删除或写成“已整理”。本报告不把独有源码、来源原件、模型、Artifact、DB备份或失败记录当候选废物。 |
+| 本地重复实现候选与 `work/` 归档 | **尚未完成逐项去重/处置；全部受保护。** | 原记录的43,381是Git untracked路径计数，不是文件内容或唯一实现数。2026-10-06 00:32的路径名元数据扫描（排除F与敏感路径，不读内容）找到31个外层候选/候选产物标签目录；W2/W4/C3+C5中含大量validation-source、依赖、生成产物，不能把路径/源码扩展名数当独立实现。D44回执17个after hash中6/17匹配当前c776 main、11/17不匹配；保留的base/ours/owner triplets 可重构11个after hash，另6个无法由这组输入重构。D45回执3/3匹配。当前main在[`internal_pitch.py`](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/c7765b87fee1d524f17ddc1661976f0ea83fd799/lumenis/shared/content_creation/internal_pitch.py#L29-L33)、[`lumenis_app_api.py`](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/c7765b87fee1d524f17ddc1661976f0ea83fd799/lumenis_app_api.py#L147-L153)、[`api_dual_domain.py`](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/c7765b87fee1d524f17ddc1661976f0ea83fd799/api_dual_domain.py#L168-L174)和对应route test能定位source-bound/v3；这是源码存在证明，不是正常业务E2E。11个字节差异尚未语义判定，不能推断功能丢失或某副本可删。 | 后续由现有C3/C5/C6 Owner逐条比较那些历史输入与当前主线，只在证明完全重复且已有等价主线替代时才处理单项归档；保留全部receipt和不同postimage。不读F、不清理、不移动/删除。 |
 
 ## 5. 规则、资料、代码与验收的唯一去向
 
@@ -147,9 +147,9 @@ C1–C6 是六个完整用户成果责任，不等于六个零碎函数批次；
 | `00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md:1-160, 242-930, 997-1100` | 相对52cd本地更新旧标题/格式 | **已替代为六C执行口径，验收内容保留**。 | 移除“Round 01–15”作为派工含义；旧内容改历史覆盖组；`C WINDOW / DELIVERY`、当前R/J/U保持。 | 整份内容不删除；用R01–R15作为验收要求，不作为额外轮次。 |
 | `scripts/audit_tools/verify_codex_takeover_governance.py:633-637, 786` | 相对52cd本地更新门禁 | **已替代的调度校验引用**。 | 门禁由要求旧`ROUND 01–15`字面标记，改为逐项要求 `HISTORICAL COVERAGE 01–15 ACCEPTANCE`；六个C成果和各项验收均保留。治理门禁现通过。 | 保留更精确的新标记，不把旧轮次名补回Overlay。 |
 | `00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md:115-190` | 本轮本地新增明确语义条件 | **仍有效/Collector专业合同**：状态真实性、alias、query checkpoint和native pagination、旧入口兼容。 | 与Owner Index §11同向：一个Collector/Task/Permission/Source/Evidence/Canonical写入Owner。 | 保留为能力合同；真正源码修复由C1/C6后续执行。 |
-| `00-GOVERNANCE/evidence/round-15/APPROVED-CONVERGENCE-20261004.json:1-645` | 本轮本地更正字段语义 | **历史处置记录、非路由**：49行D01–D49、原审计标签新命名。 | 验证49个D唯一、49个旧审计标签唯一；`legacy_id`键数=0；D43的当前 recheck保持。 | 保留原发现/证据；禁止把旧审计R标签解释为产品R验收。 |
-| `00-GOVERNANCE/evidence/round-15/APPROVED-CONVERGENCE-20261004.md:1-79` | 本轮本地更正表头和介绍 | **历史证据/逐条处置表**。 | 49行齐全；旧审计ID列名明确“非验收项”；固定历史提交链接留存。 | 保留，不把它升级成第二套规则。 |
-| `00-GOVERNANCE/evidence/round-15/CURRENT-PROTECTED-LOCAL-BOUNDARIES-20261005.json:1-161` | 本轮本地新增唯一实现/归档处置原则 | **保护记录、非候选准入表**。 | `work/`路径43,381/23个直接子目录仍标未逐条检查；私有配置不纳入提交。 | 保留受保护状态；未经逐项hash、owner和替代证明不得删除或移动。 |
+| `00-GOVERNANCE/evidence/round-15/APPROVED-CONVERGENCE-20261004.json:1-719` | 本轮本地更正字段语义并加入2026-10-06 D44/D45重核 | **历史处置记录、非路由**：49行D01–D49，旧审计标签另名。 | 49个D ID/旧审计标签均唯一、无`legacy_id`；D43/D44/D45都有 current recheck；差异未冒充语义结论。 | 保留原发现及回执；差异交C3/C5/C6现Owner核语义后再决定单项归档；R验收编号不与旧标签关联。 |
+| `00-GOVERNANCE/evidence/round-15/APPROVED-CONVERGENCE-20261004.md:1-79` | 本轮本地更正表头和介绍，补D44/D45当前差异状态 | **历史证据/逐条处置表**。 | 49行齐全；原审计ID明确“非验收项”；固定历史提交链接留存。 | 保留，不把它升级成第二套规则。 |
+| `00-GOVERNANCE/evidence/round-15/CURRENT-PROTECTED-LOCAL-BOUNDARIES-20261005.json:1-161` | 此次未改；历史快照 | **保护记录、非候选准入表**。 | 记录`work/` Git untracked 计数为43,381及23个直接子目录；未逐项内容检查。本次path-only复核另见D44/D45 current_recheck及本报告。 | 保留快照原貌；不得将其历史观察时间冒充本次盘点。 |
 | `00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-CONTRACT.md:1-77` | 相对52cd本地改当前暂停/资料责任口径 | **仍有效/材料分工合同，不激活窗口**。 | 191直接引用快照及URL/未读数明确非完整全集；F稿件M不读。 | 保留；Owner后续逐篇/逐项落实且给出采用/实现结果。 |
 | `00-GOVERNANCE/LUMENIS-ROUND-03-CHARTER-CURRENT.md`; `00-GOVERNANCE/LUMENIS-ROUND-03-FIRST-TASK-CARD-CURRENT.md`; `00-GOVERNANCE/LUMENIS-ROUND-03-B001A-TASK-CARD-CURRENT.md`; `00-GOVERNANCE/LUMENIS-ROUND-03-B001B-TASK-CARD-CURRENT.md`; `00-GOVERNANCE/LUMENIS-ROUND-03-B001C-TASK-CARD-CURRENT.md`; `00-GOVERNANCE/LUMENIS-ROUND-03-B001D-TASK-CARD-CURRENT.md` | 六个本地文件增加历史/当前状态提示 | **历史验收/约束证据，不是当前任务**。 | 共同Banner指向最新AGENTS；原保护DB、测试和source证据仍保留。 | 不删历史内容；不让旧task card重新激活。 |
 | `scripts/audit_tools/locate_capability_context.py:96` | 相对52cd本地改owner root | **仍有效/导航工具**：仅移除不存在的裸`reporting/`，保留共享canonical根。 | `--capability reporting --query citation`的既有定向回执为 `missing_owner_roots=[] / ROUTED_NOT_VERIFIED`。 | 保留；导航成功不是报告能力验收。 |
@@ -169,7 +169,7 @@ C1–C6 是六个完整用户成果责任，不等于六个零碎函数批次；
 | CTH03 / Flutter交互 | **M未核Flutter源码** | F独立；仅核对服务端projection字段，UI/POST断言仍来自用户报告，未签收。 |
 | 数据库所述历史行差异/当前runtime/scheduled采集 | **NOT LIVE-VERIFIED** | 本轮没打开数据库、没发平台请求、没探Runtime；用户旧报告不提升为当前事实。 |
 | 研究材料全文阅读/产品采用 | **尚未全部完成；责任保留** | 191 direct refs不是全集；未读与未获授权内容留给对应Owner，不强行称已吸收。 |
-| `work/`唯一化与旧候选逐项清理 | **未完成，受保护** | 43,381条路径、23个直接子目录仅有目录级边界。现行规则禁止再造候选；历史资产仍需逐项识别，不能整树删除。 |
+| `work/`唯一化与旧候选逐项清理 | **未完成，受保护** | D44回执17个after hash有6匹配/11不匹配，D45为3/3匹配；metadata-only扫描找到31个外层候选标签目录（含验证快照/产物，不等于独立实现）。43,381是Git untracked计数；完整内容/权利/唯一性仍未逐项核实。现行规则禁止再造候选；历史资产仍须按Owner和精确内容区分，不能整树删除。 |
 | 全产品实现、Owned推理、四端E2E、发布和用户接受 | **未完成/本轮未执行** | 本报告只是产品蓝图与执行准备，不代表任一实现态升级。 |
 
 ## 8. 产品 Owner 审核点与后续边界
