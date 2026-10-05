@@ -165,9 +165,9 @@ These are blocking requirements for C1–C6 and mapped checkpoints:
 8. Each of the 44 screen blueprints keeps its own task, information hierarchy, composition and interaction path. PC and mobile share business truth but use purpose-built semantic recomposition; neither is a scaled copy of the other.
 9. A local problem may change only its bounded owner/callers. It may not trigger a global auth, database, naming, architecture or design-system rewrite. Remove a path only after its unique behavior is preserved and accepted in the current owner.
 10. Every change proves the requested improvement and preservation of affected behavior with proportional tests and, for user-visible workflows, real runtime/E2E evidence. A build, fixture, HTTP 200, screenshot or document alone is insufficient.
-11. The approved ROUND 01 PDF/report/register are evidence and coverage indexes only. Their sketches remain `DESIGN_EXPLORATION`; implementation requires a current Sol-reviewed `DESIGN_READY` screen specification. Direct PDF/sketch implementation is `REWORK`.
+11. The approved ROUND 01 PDF/report/register are evidence and coverage indexes only. Their sketches remain `DESIGN_EXPLORATION`; implementation requires a current M-reviewed `DESIGN_READY` screen specification using the Product Owner's current manually selected model. Direct PDF/sketch implementation is `REWORK`.
 12. Product Skill Store is a named P0 capability under Shared Agent Skills and AI-04. Preserve discovery, trust/license, input/output, Permission, enablement, verified run, history, update, disable and uninstall semantics; do not reduce it to the historical `FUNCTION_MAP`.
-13. ROUND 02–15 cannot close on source, tests or governance evidence alone. Route every Round Charter, Luna Task Card and Sol decision through `LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`, including its real-user E2E, per-round `REAL DELIVERY CARD` and Section 23 `COMMERCIAL OVERLAY IMPACT`; a commercial gap sets `COMMERCIAL_READY=NO` without falsely failing unrelated engineering work.
+13. ROUND 02–15 cannot close on source, tests or governance evidence alone. Route each active Owner Task Card and M decision through `LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`, including its real-user E2E, `REAL DELIVERY CARD` and Section 23 `COMMERCIAL OVERLAY IMPACT`; a commercial gap sets `COMMERCIAL_READY=NO` without falsely failing unrelated engineering work.
 14. Route every context/data-related round through `LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md`. The product default is `GLOBAL / ALL`; Subject/BrandFocus selection changes focus only and never grants Permission or controls background execution. Report `Global Commercial Coverage`, `Global Brand Coverage` and `Guangzhou Taikoo Hui Reference Coverage` as three acceptance dimensions of the same internal full-universe edition. They must not create separate products, releases or truth stacks. All three `YES` is required for `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=YES`.
 15. Every related round runs the contract's `RANDOM ENTITY DATA ACCEPTANCE` with rotating stratified non-fixture samples and preserves seed/list/version/request/surface/Evidence/result evidence. A covered/mature blank or fabricated sample forces `REWORK`/`BLOCKED`; an unavailable registry is reported as sample count zero and assigned to its owning round, never postponed silently to ROUND 15.
 16. An accepted Batch is not an online delivery until its reviewed source, Round evidence and CURRENT status are coherently committed, pushed and verified against live `origin/main` in the same delivery cycle under `AGENTS.md` §2. Preserve unaccepted work as `LOCAL_ONLY`; a documentation-only push does not make its source visible to GitHub readers.
@@ -187,7 +187,7 @@ mention alone cannot be marked implemented.
 | --- | --- |
 | One product, CTH/BMP/Shared/SYSTEM jobs, preserved legacy capability and no duplicate truths | Product Architecture and Product Positioning; `AGENTS.md` §§4–6; exact caller row below |
 | Current remote/local truth, protected work, PDF page/task coverage and exactly 15 Round checkpoints | `AGENTS.md` §§1–3; this index §1; approved ROUND 01 coverage evidence |
-| Safe parallel Sol/Luna roles, one Batch per Luna, continuous REWORK and actual host capacity | `AGENTS.md` §3; current Round Charter and Task Card |
+| Current manual account/model/effort/speed selection, controller M, no automatic window/model dispatch | `AGENTS.md` current execution instruction; active Task Card and Product Owner's current selection |
 | Accepted source + tests/E2E + Round evidence + CURRENT online status + verified push | `AGENTS.md` §2 online-publication gate; current Round evidence and CURRENT takeover |
 | Business end-state, industry logic, real job and deliverable outcome before adding a feature | Product Positioning; `AGENTS.md` §3 business-work selection; Real Delivery Overlay |
 | Public Website versus Web Workspace, Desktop advanced capabilities and Mobile Companion | approved Multi-Surface Decision; Product Architecture; Experience Constitution |
@@ -297,15 +297,15 @@ The table below records the earlier audit baseline, not live source status. The 
 
 This disposition freezes where work starts; it does not freeze code. Each delivered slice updates its own specification, evidence and affected index row so future work resumes from the fixed path rather than rediscovering the repository.
 
-## 6. ROUND 02 Root Caller convergence decision
+## 6. Historical ROUND 02 Root Caller convergence snapshot
 
 `LUMENIS-ROOT-PYTHON-CALLER-INVENTORY-ROUND-02.md` is the accepted LUNA-004 evidence inventory for baseline `c3036aa714ff3236e1267d33cbfb9d2aa33ed000`. SOL-005 independently verified its 191/191 tracked-root coverage, unique rows, path existence, status/disposition enums, current SHA and blocking validators. The inventory remains evidence; this index owns the decision below.
 
-| Decision queue | Count | SOL decision | Exit before move/removal |
+| Historical ROUND 02 disposition | Count | Recorded decision | Historical exit condition |
 | --- | ---: | --- | --- |
 | KEEP | 131 | Keep the current executable owner/caller. A later owner-specific round may adapt it, but location or legacy spelling is not a removal reason. | Current contract/tests preserved; owner change requires explicit task and affected regression. |
 | ABSORB WITH PARITY GATE | 37 | Send to its named canonical owner in the scheduled DB, Permission/Evidence, Runtime, Collector/Browser or AI/Agent round. `ABSORB-CANDIDATE` is not deletion approval. | Direct and dynamic callers, API/CLI/data behavior, Permission, Evidence, migration/rollback and tests are proven on the canonical path. |
-| PROVENANCE / LAST REVIEW | 20 | Retain until dynamic import, CLI, workflow, manual-operation and reproducibility dependencies are checked. | No unique behavior or operational dependency remains; Sol issues a separate retire decision. |
+| PROVENANCE / LAST REVIEW | 20 | Retain until dynamic import, CLI, workflow, manual-operation and reproducibility dependencies are checked. | Historical retirement required a separate decision; current disposition follows AGENTS.md and the exact active owner, not this dated queue. |
 | OWNER UNKNOWN / BLOCKED | 3 | `evaluate_system_timing.py`, `review_workflow.py` and `topic_monitor_policy.py` stay in place. They are excluded from migration/removal until an owner and runtime scope are proved. | Owner, callers, contract, data/Permission/Evidence effects and tests are explicit. |
 
 `domain_adapter.py` remains KEEP as the only proved current implementation, although its higher-level owner family still needs domain review. No root Python file is approved for retirement or deletion in ROUND 02. Destructive cleanup remains closed until the sole behavior has migrated and passed its owner-specific gate.
@@ -398,8 +398,10 @@ resource authorization and execution state require current proof under AGENTS.
 2026-10-04 execution correction: every current C window keeps its full result
 scope and continuously closes it under AGENTS, rather than stopping at a minimum
 function/file slice or repeating unchanged handoff checks. Owner boundaries do
-not shrink outcomes. C2 prioritizes existing/free compute; the interim 4090 alternative is
-superseded. The named responsibilities remain; M handles actual decisions/acceptance and otherwise
+not shrink outcomes. C2 prioritizes existing/free compute; no GPU SKU is
+preselected by this index. Paid compute requires current explicit cost
+authorization; historic 4090/5090 proposals are evidence only. The named
+responsibilities remain; M handles actual decisions/acceptance and otherwise
 stands by when no actionable work remains. Historical goal receipts preserve
 prior states; current execution comes only from AGENTS, not a resumed old goal.
 

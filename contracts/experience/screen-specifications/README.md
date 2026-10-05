@@ -4,7 +4,7 @@ This folder holds the reviewed implementation specification for each canonical A
 
 ## Rules
 
-- Create one `<SCREEN-ID>.md` from [`SCREEN_SPEC_TEMPLATE.md`](SCREEN_SPEC_TEMPLATE.md) for each screen before implementing that screen. A file existing is not enough: Sol must record `DESIGN_READY` before implementation begins.
+- Create one `<SCREEN-ID>.md` from [`SCREEN_SPEC_TEMPLATE.md`](SCREEN_SPEC_TEMPLATE.md) for each screen before implementing that screen. A file existing is not enough: M must review and record `DESIGN_READY` using the current user-selected model; no historical model assignment overrides that selection.
 - Use `contracts/experience/lumenis_app_binding_registry.json` as the binding inventory. Update it only from current source/runtime evidence; never treat historical `BOUND`, task assignee or ViewModel labels as proof.
 - Keep CTH Subject-first, BMP Brand/Market-first, Shared lineage and SYSTEM infrastructure boundaries intact.
 - Do not copy screen layouts into a shared renderer. Shared tokens and semantic interaction primitives may be referenced, while each specification must define its own information hierarchy, composition and task choreography.

@@ -14,9 +14,11 @@ execution instructions.
 ## Current execution instruction — closure red lines 2026-10-04
 
 Current task: execute the Product Owner-approved 2026-10-04 blueprint and
-49-item audit dispositions. M is the only active executor in this task; do not
-message or resume other windows. C1-C6/F remain responsibility labels and their
-full R/J/U requirements remain assigned, not separate active work queues.
+49-item audit dispositions D01-D49; these disposition IDs are distinct from
+acceptance requirements R01-R15. M is the only executor of this convergence;
+C1-C6 remain paused responsibility labels and their full R/J/U requirements
+remain assigned. F is separately active under the Product Owner's direct
+instruction and outside M's scope; M does not inspect, manage, or message F.
 The sole approved product blueprint is
 `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`.
 Existing/free compute is preferred; this convergence does not authorize paid GPU,
@@ -49,11 +51,15 @@ new rental, recharge or retired model providers.
    is not production model hosting. No paid resource starts without current
    explicit cost authorization. The historical 5090 budget is not a standing
    instruction to rent. This M-only repair performs no model/GPU execution.
-6. M and F retain GPT-6 Astra/ultra; C1/C2/C3+C5/C4/C6 use GPT-6.1 Sol/max.
-   1.5x is off; ordinary speed is requested. Settings/readback and executed
-   backend identity are distinct. Do not change global defaults or silently
-   lower the selected model. M handles complete results, necessary decisions
-   and urgent risks; when no actionable work remains, M pauses its own Goal.
+6. Preserve the Product Owner's current manually selected account, model,
+   reasoning effort and speed/service tier for each active window. This router
+   assigns no model or speed by window and supersedes historical Sol/Luna/Astra
+   allocation text as a setting source. Do not change current or persistent
+   defaults, add CLI/profile overrides, or auto-switch models. Distinguish the
+   visible selection from the executed backend; if either cannot be read back,
+   mark it `SETTINGS_UNVERIFIED` and do not infer a substitute. M handles complete
+   results, necessary decisions and urgent risks; when no actionable work remains,
+   M pauses its own Goal.
 
 W6 normally owns product integration and main publication. For this explicitly authorized M-only repair, M publishes only the reviewed repair scope; W6 is not resumed. Its next delivery includes
 the exact canonical rule changes, current state and required gates, then a safe
@@ -102,7 +108,7 @@ Current source / runtime / DB / API / Permission / Evidence truth
 → sole Experience Constitution for user-visible work
 → Source Owner Index and approved Multi-Surface Decision
 → current detailed Screen Specification for the active screen
-→ bounded Sol Task Card
+→ existing complete Owner Task Card
 → taskbook/report/PDF/sketch as non-authoritative evidence only
 ```
 
@@ -220,8 +226,8 @@ Do not claim local-only work exists on GitHub. If local valid work is ahead, pre
 
 ### Accepted Batch online-publication gate
 
-For every Sol-accepted implementation Batch, close local work and online truth in
-the same delivery cycle. Sol must inspect the exact staged files and diff,
+For every M-accepted implementation Batch, close local work and online truth in
+the same delivery cycle. M must inspect the exact staged files and diff,
 record the Batch's tests, runtime/E2E evidence and unresolved limits, update the
 owning Round evidence **and** this repository's CURRENT online status, then make
 a coherent mainline commit and push it. Before calling the Batch delivered or
@@ -373,8 +379,8 @@ composition, Chinese/English/Korean localization and accessibility through all
 six deliveries. Backend windows provide field and behavior contracts; F owns
 screen layout and user interaction.
 
-The root controller M (Sol or Astra, using the active model and effort
-authorized for the task) retains the independent review and acceptance role. M freezes
+The root controller M retains the independent review and acceptance role and
+uses the Product Owner's current manual selection without overriding it. M freezes
 scope, resolves Product Architecture/owner/interface conflicts, reviews
 DESIGN_READY, and accepts or returns complete window outcomes. Product Owner
 human decisions remain separate from M.
@@ -492,7 +498,7 @@ Production Truth. Improvements are versioned and pass applicable real E2E,
 page/effect evaluation, regression, observability and rollback. If no upgrade
 is justified, record RESEARCH COMPLETE / NO JUSTIFIED UPGRADE with evidence.
 
-When a round involves a page, deliver and run the actual operable page on every target surface promised by that round under the sole Experience Constitution and a Sol-approved `DESIGN_READY` specification. Commercial-readiness gaps are recorded as `COMMERCIAL READINESS GAP / BLOCKED FOR COMMERCIAL_READY`; they set `COMMERCIAL_READY=NO` but do not stop unrelated in-scope engineering work.
+When a round involves a page, deliver and run the actual operable page on every target surface promised by that round under the sole Experience Constitution and an M-reviewed `DESIGN_READY` specification. Commercial-readiness gaps are recorded as `COMMERCIAL READINESS GAP / BLOCKED FOR COMMERCIAL_READY`; they set `COMMERCIAL_READY=NO` but do not stop unrelated in-scope engineering work.
 
 The Product Owner accepted the ROUND 01 source audit, missing-capability
 register and multi-surface direction on 2026-09-21 as planning evidence. The
@@ -628,7 +634,7 @@ promoted to `DESIGN_READY` under the Experience Constitution. They may illustrat
 questions and surface deltas, but they may not be copied directly into code, used to
 authorize a shared renderer, or treated as acceptance evidence. If an implementation
 copies a PDF/sketch or generic repeated frame without the current screen-specific gate,
-Sol returns `REWORK`.
+M returns `REWORK`.
 
 ## 5. No duplicate truth
 
@@ -954,7 +960,8 @@ Screen design states are distinct from implementation states:
 DESIGN_EXPLORATION → DESIGN_READY → IMPLEMENTED → ACCEPTED
 ```
 
-Only a Sol-reviewed detailed screen specification may establish `DESIGN_READY`.
+Only a detailed screen specification reviewed by M under the Product Owner's
+current manually selected model may establish `DESIGN_READY`.
 PDFs, screenshots, prototypes, Figma frames and fixtures cannot self-promote.
 
 Before claiming Experience work complete, run all three blocking checks:
@@ -1239,8 +1246,12 @@ until the existing frontend owner chooses and validates that binding.
 Standalone skill discovery uses the repository canonical progressive-context;
 the conflicting same-name global copy is disabled, retained for recovery.
 The retired Ollama standalone config is privately quarantined, not reactivated.
-CLI main-controller work retains lcodex's explicit model/effort guard; no default
-or per-conversation manual selection is changed for this configuration batch.
+CLI main-controller work must preserve the active manually selected account,
+model, reasoning effort and service tier. Use a launcher only if its effective
+arguments preserve that selection; do not apply a historical lcodex model/effort
+pin. Do not edit global defaults or user configuration to align them with this
+router. If the effective selection cannot be read back, report
+`SETTINGS_UNVERIFIED`.
 
 ### Current frontend implementation routing
 

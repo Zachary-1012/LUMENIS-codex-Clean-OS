@@ -133,7 +133,7 @@ Vendor references used for this decision: [System One / Jev launch](https://type
 
 Historical approval-time baseline (not a live status table):
 
-| Item | Current status |
+| Item | Approval-time observation |
 | --- | --- |
 | Product Core/API ownership | `IMPLEMENTED` in current Python/Flask owners; completeness varies by workflow |
 | Flutter Desktop/Mobile source | `PARTIAL` |
@@ -143,7 +143,7 @@ Historical approval-time baseline (not a live status table):
 | Jev adapter/provider configuration | `ABSENT` |
 | Jev runtime/evaluation evidence | `LIVE_UNVERIFIED` |
 
-Approval is not implementation evidence. Since this baseline, `website/` has a committed trilingual foundation; Flutter Web Workspace source, build and same-origin host have local verification, but protected CTH/BMP browser access and commercial entry are not accepted. Jev source remains local-only pending its provider gate. None may be reported as released or operating from this table.
+Approval is not implementation evidence. Current source contains the trilingual Astro Website, Flutter Web target and same-origin `/workspace` host; this establishes source and route presence only. Protected CTH/BMP browser access, deployed commercial entry, and complete four-surface real-user operation remain unaccepted. Jev was retired by the Product Owner; its former provider gate is not pending product work, and no Jev activation is authorized. None of these source records establishes RELEASED or OPERATING.
 
 ## 7. Historical placement; current coverage is in the Source Owner Index
 

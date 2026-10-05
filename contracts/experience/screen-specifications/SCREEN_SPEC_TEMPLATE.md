@@ -21,7 +21,7 @@ approval_reference: UNKNOWN
 - Audit PDF/taskbook/sketch/screenshot/Figma references (non-authoritative):
 - For each reference: `KEEP_AS_EXPLORATION` / `REJECT` / `RESTATED_IN_THIS_SPEC`:
 - Anti-template check: explain why this is not a generic dashboard/card grid/shared renderer:
-- Sol design decision: `DESIGN_EXPLORATION` / `DESIGN_READY` / `BLOCKED`:
+- M review decision under the current manually selected model: `DESIGN_EXPLORATION` / `DESIGN_READY` / `BLOCKED`:
 
 ## 1. User problem and product invariant
 

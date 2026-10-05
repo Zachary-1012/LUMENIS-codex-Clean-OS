@@ -132,8 +132,10 @@
     {
       "id": "LOCAL-WORK-ARCHIVE",
       "path": "work/",
-      "state": "PROTECTED_ARCHIVE_AND_CANDIDATE_INPUT",
-      "owner": "the existing canonical owner named by each contained source/artifact path",
+      "classification": "KEEP_PROTECTED_ARCHIVE",
+      "state": "HISTORICAL_AND_RESEARCH_INPUTS_NOT_ACTIVE_IMPLEMENTATION_QUEUE",
+      "owner": "the existing canonical owner named by each contained source/artifact path; frontend inputs remain F-owned",
+      "content_review": "NOT_RECURSIVELY_READ_OR_RECLASSIFIED_IN_THIS_UPDATE",
       "main_admission": "never by directory; only a unique current-source delta with exact owner, base, contract and verification"
     },
     {

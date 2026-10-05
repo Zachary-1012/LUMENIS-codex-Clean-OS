@@ -223,8 +223,12 @@ def _assert_six_round_routing(agents: str) -> None:
     )
     if not frontend_route:
         raise AssertionError("AGENTS.md must route front-end window F through all six deliveries")
-    if not re.search(r"root (?:sol )?controller m", lowered) or "review" not in lowered or "acceptance" not in lowered:
-        raise AssertionError("AGENTS.md must identify root M as Sol/Astra's review and acceptance role")
+    if not re.search(r"root controller m", lowered) or "review" not in lowered or "acceptance" not in lowered:
+        raise AssertionError("AGENTS.md must identify M as the review and acceptance owner")
+    if "assigns no model or speed by window" not in lowered or "current manually selected account, model" not in lowered:
+        raise AssertionError("AGENTS.md must preserve the Product Owner's current manual model and speed selections")
+    if "d01-d49" not in lowered or "distinct from acceptance requirements r01-r15" not in lowered:
+        raise AssertionError("AGENTS.md must distinguish D01-D49 dispositions from R01-R15 acceptance requirements")
     if "only repository execution router" not in lowered:
         raise AssertionError("AGENTS.md must remain the only repository execution router")
 
@@ -506,7 +510,7 @@ def validate() -> None:
         "DESIGN_EXPLORATION",
         "DESIGN_READY",
         "copied directly into production UI",
-        "Sol acceptance decision is `REWORK`",
+        "M returns `REWORK`",
         "three user-visible language versions",
         label="CURRENT Experience Constitution",
     )
@@ -632,6 +636,8 @@ def validate() -> None:
         if marker not in real_delivery_overlay:
             raise AssertionError(f"CURRENT real-delivery overlay missing {marker}")
 
+    # "Sol final" below is a preservation marker for the dated, closed R02
+    # acceptance record. It must not route the current model or controller.
     _require(
         round02_charter,
         "PASS / CLOSED FOR ROUND 02 SCOPE",
@@ -777,7 +783,8 @@ def validate() -> None:
         "The separate front-end window F remains independent across all six deliveries",
         "01a10117-03c7-7503-8a9b-670e80a474a7",
         "Current C3/C5 local continuation and historical Cloud handoff",
-        "The root controller M (Sol or Astra",
+        "The root controller M retains the independent review and acceptance role",
+        "uses the Product Owner's current manual selection without overriding it",
         "R01–R15 remain the complete acceptance and technical-dependency coverage",
         "J1–J8 remain the mapped source of user-job requirements",
         "Do not add a ten-worker target, hidden helper window, per-leaf stop rule",
@@ -807,7 +814,7 @@ def validate() -> None:
         "fixtures, mocks, hard-coded examples",
         "DESIGN_EXPLORATION",
         "DESIGN_READY",
-        "Sol returns `REWORK`",
+        "M returns `REWORK`",
         "git rev-parse origin/main",
         "v1.1.0",
         EXPECTED_FINGERPRINT,
