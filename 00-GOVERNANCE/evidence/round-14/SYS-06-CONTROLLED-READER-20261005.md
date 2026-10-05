@@ -93,7 +93,13 @@ repository gates. They do not promote the limits below to runtime or user proof.
 
 ## Limits retained
 
-- No browser/CDP runtime was started for this batch.
+- Source implementation and local widget/API checks originally did not start a
+  browser/CDP runtime. A later post-publication local runtime readback started
+  the canonical 8201 supervisor, observed healthy Core/database status plus the
+  permitted 9223 HK collector and 9224 isolated general browser, then created
+  and explicitly stopped one blank local-workspace Browser session. It performed
+  no external navigation, page capture, collection, Evidence write or personal
+  account access.
 - No social source, personal Mainland XHS account, Cookie, credential, page
   content, collection, Evidence admission or external effect was used.
 - Page content remains a visual snapshot and is not a semantic accessible source
