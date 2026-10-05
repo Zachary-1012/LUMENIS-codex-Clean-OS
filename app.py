@@ -2380,48 +2380,6 @@ def api_intelligence_refresh():
     return jsonify({'ok':True,'task_id':task_id})
 
 
-# ========== Round 8 连接点c: AI Tasks + Browser Sessions 路由 ==========
-@app.route('/api/ai/tasks', methods=['GET', 'POST'])
-def api_ai_tasks():
-    """AI 任务管理：GET 列出任务，POST 创建任务。
-    走 Contract/Artifact 边界，任务状态可追溯。
-    """
-    try:
-        if request.method == 'GET':
-            status_filter = request.args.get('status', '')
-            limit = min(int(request.args.get('limit', 50)), 200)
-            try:
-                from lumenis.shared.agents.skills.execution import query_executions
-                tasks = query_executions(limit=limit, status=status_filter or None)
-                return jsonify({'ok': True, 'tasks': tasks, 'count': len(tasks)})
-            except Exception as e:
-                return jsonify({'ok': True, 'tasks': [], 'count': 0, 'note': f'query failed: {e}'})
-        else:  # POST
-            data = request.get_json(silent=True) or {}
-            task_desc = data.get('task', '')
-            skill_id = data.get('skill_id', '')
-            if not task_desc and not skill_id:
-                return jsonify({'ok': False, 'error': 'task or skill_id required'}), 400
-            try:
-                from lumenis.shared.agents.skills.execution import run_execution_chain, ActionType
-                action_type = ActionType(data.get('action_type', 'ANALYZE'))
-                ctx = run_execution_chain(
-                    skill_id=skill_id or 'zbc.generic_analysis',
-                    task=task_desc,
-                    input_payload=data.get('input', {}),
-                    action_type=action_type,
-                    user_id=data.get('user_id'),
-                    product=data.get('product', 'SYSTEM'),
-                    domain=data.get('domain', 'global'),
-                )
-                return jsonify({'ok': True, 'execution_id': ctx.execution_id, 'status': ctx.status.value,
-                                'evidence_recorded': getattr(ctx, 'evidence_record', {}).get('ok', False)})
-            except Exception as e:
-                return jsonify({'ok': False, 'error': str(e)}), 500
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
-
 @app.route('/api/browser/sessions')
 def api_browser_sessions():
     """浏览器会话列表：列出当前 CDP 连接的 tab/会话状态。

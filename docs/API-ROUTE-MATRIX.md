@@ -1,8 +1,8 @@
 # API 路由矩阵（由当前 Flask url_map 自动生成，勿手改）
 
-- Flask url_map rules：**840**（static：**1**；API routes：**839**）
+- Flask url_map rules：**838**（static：**1**；API routes：**837**）
 - 唯一路径：**797**；operation groups：**849**
-- route operation candidates：**863**；重复冲突组：**14**（候选项：**28**）
+- route operation candidates：**861**；重复冲突组：**12**（候选项：**24**）
 - 认证：public=/healthz；v4Auth=/v4/* 独立 token；其余 httpBasic 或 v4 会话。
 
 | 路径 | 方法 | Endpoint candidate | Flask rule | 认证 | 分组 |
@@ -48,10 +48,8 @@
 | `/api/ai/status` | GET | ai_api.api_ai_status | `/api/ai/status` | basic/v4 | api/ai |
 | `/api/ai/task-engine/dlq` | GET | ai_api.api_ai_task_engine_dlq | `/api/ai/task-engine/dlq` | basic/v4 | api/ai |
 | `/api/ai/task-engine/health` | GET | ai_api.api_ai_task_engine_health | `/api/ai/task-engine/health` | basic/v4 | api/ai |
-| `/api/ai/tasks` | GET | ai_api.api_ai_tasks_list | `/api/ai/tasks` | basic/v4 | api/ai |
-| `/api/ai/tasks` | GET | api_ai_tasks | `/api/ai/tasks` | basic/v4 | api/ai |
-| `/api/ai/tasks` | POST | ai_api.api_ai_tasks_create | `/api/ai/tasks` | basic/v4 | api/ai |
-| `/api/ai/tasks` | POST | api_ai_tasks | `/api/ai/tasks` | basic/v4 | api/ai |
+| `/api/ai/tasks` | GET | ai_api.api_ai_tasks | `/api/ai/tasks` | basic/v4 | api/ai |
+| `/api/ai/tasks` | POST | ai_api.api_ai_tasks | `/api/ai/tasks` | basic/v4 | api/ai |
 | `/api/ai/tasks/{task_id}` | GET | ai_api.api_ai_tasks_get | `/api/ai/tasks/<task_id>` | basic/v4 | api/ai |
 | `/api/ai/tasks/{task_id}/approve` | POST | ai_api.api_ai_tasks_approve | `/api/ai/tasks/<task_id>/approve` | basic/v4 | api/ai |
 | `/api/ai/tasks/{task_id}/cancel` | POST | ai_api.api_ai_tasks_cancel | `/api/ai/tasks/<task_id>/cancel` | basic/v4 | api/ai |

@@ -19,43 +19,15 @@
       }
     }
   },
-  "x-url-map-rule-count": 840,
+  "x-url-map-rule-count": 838,
   "x-static-route-count": 1,
-  "x-route-count": 839,
+  "x-route-count": 837,
   "x-path-count": 797,
-  "x-operation-count": 863,
+  "x-operation-count": 861,
   "x-operation-group-count": 849,
-  "x-duplicate-operation-group-count": 14,
-  "x-duplicate-operation-candidate-count": 28,
+  "x-duplicate-operation-group-count": 12,
+  "x-duplicate-operation-candidate-count": 24,
   "x-duplicate-operation-candidates": [
-    {
-      "path": "/api/ai/tasks",
-      "method": "GET",
-      "candidates": [
-        {
-          "endpoint": "ai_api.api_ai_tasks_list",
-          "rule": "/api/ai/tasks"
-        },
-        {
-          "endpoint": "api_ai_tasks",
-          "rule": "/api/ai/tasks"
-        }
-      ]
-    },
-    {
-      "path": "/api/ai/tasks",
-      "method": "POST",
-      "candidates": [
-        {
-          "endpoint": "ai_api.api_ai_tasks_create",
-          "rule": "/api/ai/tasks"
-        },
-        {
-          "endpoint": "api_ai_tasks",
-          "rule": "/api/ai/tasks"
-        }
-      ]
-    },
     {
       "path": "/api/browser/sessions",
       "method": "GET",
@@ -795,7 +767,7 @@
         ],
         "operationId": "ai_api.api_ai_analyze_v580",
         "x-flask-rule": "/api/ai/analyze",
-        "summary": "AI分析舆情"
+        "summary": "Analyze supplied source text through the owned SYSTEM AI Gateway only."
       }
     },
     "/api/ai/analyze-v570": {
@@ -1055,16 +1027,9 @@
             "v4Auth": []
           }
         ],
-        "x-route-candidates": [
-          {
-            "endpoint": "ai_api.api_ai_tasks_list",
-            "rule": "/api/ai/tasks"
-          },
-          {
-            "endpoint": "api_ai_tasks",
-            "rule": "/api/ai/tasks"
-          }
-        ]
+        "operationId": "ai_api.api_ai_tasks",
+        "x-flask-rule": "/api/ai/tasks",
+        "summary": "Single compatibility entry for TaskEngine and Skill Execution tasks."
       },
       "post": {
         "tags": [
@@ -1079,16 +1044,9 @@
             "v4Auth": []
           }
         ],
-        "x-route-candidates": [
-          {
-            "endpoint": "ai_api.api_ai_tasks_create",
-            "rule": "/api/ai/tasks"
-          },
-          {
-            "endpoint": "api_ai_tasks",
-            "rule": "/api/ai/tasks"
-          }
-        ]
+        "operationId": "ai_api.api_ai_tasks",
+        "x-flask-rule": "/api/ai/tasks",
+        "summary": "Single compatibility entry for TaskEngine and Skill Execution tasks."
       }
     },
     "/api/ai/tasks/{task_id}": {

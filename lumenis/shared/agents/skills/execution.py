@@ -626,7 +626,7 @@ def _reserve_package_execution(ctx, skill_info):
     except Exception:
         return "SKILL_EXECUTION_RESERVATION_UNAVAILABLE"
 
-def query_executions(skill_id=None, limit=50, status=None):
+def query_executions(skill_id=None, limit=50, status=None, offset=0, *, strict=False):
     try:
         from account.models import get_db
         conn = get_db()
@@ -635,10 +635,13 @@ def query_executions(skill_id=None, limit=50, status=None):
             if skill_id: conds.append("skill_id=?"); params.append(skill_id)
             if status: conds.append("status=?"); params.append(status)
             if conds: sql += " WHERE " + " AND ".join(conds)
-            sql += " ORDER BY created_at DESC LIMIT ?"; params.append(limit)
+            sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?"; params.extend([limit, offset])
             return [dict(r) for r in conn.execute(sql, params).fetchall()]
         finally: conn.close()
-    except Exception: return []
+    except Exception:
+        if strict:
+            raise
+        return []
 
 def transition_state(current, target):
     allowed = _VALID_TRANSITIONS.get(current, set())

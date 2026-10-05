@@ -387,25 +387,65 @@ def api_ai_channel_health():
 
 @bp.route('/api/ai/analyze', methods=['POST'])
 def api_ai_analyze_v580():
-    """AI分析舆情"""
-    data = request.get_json(silent=True) or {}
+    """Analyze supplied source text through the owned SYSTEM AI Gateway only."""
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({
+            'ok': False, 'status': 'INVALID_INPUT', 'code': 'JSON_OBJECT_REQUIRED',
+            'provider': 'owned', 'analysis': None,
+        }), 400
+
     note_id = data.get('note_id')
-    provider = data.get('provider', 'local')
-    analysis_type = data.get('type', 'summary')  # summary/sentiment/risk/event
-    
-    # 这里可以集成实际的AI调用逻辑
-    # 暂时返回模拟数据
+    if note_id is not None and not isinstance(note_id, (str, int)):
+        return jsonify({
+            'ok': False, 'status': 'INVALID_INPUT', 'code': 'NOTE_ID_INVALID',
+            'provider': 'owned', 'note_id': None, 'analysis': None,
+        }), 400
+
+    analysis_type = data.get('type', 'summary')
+    if not isinstance(analysis_type, str) or analysis_type not in {'summary', 'sentiment', 'risk', 'event'}:
+        return jsonify({
+            'ok': False, 'status': 'INVALID_INPUT', 'code': 'ANALYSIS_TYPE_UNSUPPORTED',
+            'provider': 'owned', 'note_id': note_id, 'analysis': None,
+        }), 400
+
+    text = data.get('text')
+    if text is None:
+        text = data.get('content', data.get('source_text'))
+    if not isinstance(text, str) or not text.strip():
+        return jsonify({
+            'ok': False, 'status': 'INVALID_INPUT', 'code': 'ANALYSIS_TEXT_REQUIRED',
+            'provider': 'owned', 'note_id': note_id, 'analysis': None,
+        }), 400
+    if len(text) > 12000:
+        return jsonify({
+            'ok': False, 'status': 'INVALID_INPUT', 'code': 'ANALYSIS_TEXT_TOO_LARGE',
+            'provider': 'owned', 'note_id': note_id, 'analysis': None,
+        }), 413
+
+    result = intelligence.run_owned_analysis(
+        text=text.strip(), analysis_type=analysis_type, note_id=note_id,
+    )
+    if not isinstance(result, dict):
+        return jsonify({
+            'ok': False, 'status': 'ERROR', 'code': 'OWNED_GATEWAY_INVALID_RESPONSE',
+            'provider': 'owned', 'note_id': note_id, 'analysis': None,
+        }), 502
+
+    if (result.get('ok') is True and result.get('status') == 'COMPLETED'
+            and isinstance(result.get('analysis'), dict) and result['analysis']):
+        return jsonify({
+            'ok': True, 'status': 'COMPLETED', 'provider': 'owned',
+            'note_id': note_id, 'analysis': result['analysis'],
+        })
+
+    status = result.get('status') or 'ERROR'
+    http_status = 503 if status == 'UNAVAILABLE' else 502
     return jsonify({
-        'ok': True,
-        'provider': provider,
-        'note_id': note_id,
-        'analysis': {
-            'summary': '这是AI分析的摘要内容',
-            'sentiment': 'neutral',
-            'risk_level': 'low',
-            'event_type': 'general'
-        }
-    })
+        'ok': False, 'status': status,
+        'code': result.get('code') or 'OWNED_ANALYSIS_NOT_COMPLETED',
+        'provider': 'owned', 'note_id': note_id, 'analysis': None,
+    }), http_status
 
 
 @bp.route('/api/ai-learning/optimization/<operation_type>')
@@ -443,23 +483,72 @@ def _scoped_report_task_boundary():
         return jsonify({'ok': False, 'code': 'REPORT_TASK_SCOPED_ROUTE_REQUIRED'}), 403
 
 
-@bp.route('/api/ai/tasks', methods=['POST'])
-def api_ai_tasks_create():
+@bp.route('/api/ai/tasks', methods=['GET', 'POST'])
+def api_ai_tasks():
+    """Single compatibility entry for TaskEngine and Skill Execution tasks."""
+    if request.method == 'GET':
+        return api_ai_tasks_list()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'ok': False, 'code': 'JSON_OBJECT_REQUIRED'}), 400
+    if 'task' in data or 'skill_id' in data:
+        return api_ai_skill_execution_create(data)
+    return api_ai_tasks_create(data)
+
+
+def api_ai_tasks_create(data=None):
     """创建 AI Task。
     Body: {"input": "用户自然语言", "context": {...}, "created_by": "user"}
     """
     try:
-        data = request.get_json(force=True, silent=True) or {}
+        if data is None:
+            data = request.get_json(silent=True) or {}
         user_input = data.get('input', '')
         context = data.get('context', {})
         created_by = data.get('created_by', 'system')
-        if not user_input or not user_input.strip():
+        if not isinstance(user_input, str) or not user_input.strip():
             return jsonify({'ok': False, 'error': 'input is required'}), 400
         engine = _get_engine()
         task = engine.create_task(user_input, context=context, created_by=created_by)
         return jsonify({'ok': True, 'task': task})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+def api_ai_skill_execution_create(data):
+    """Preserve the existing Skill Execution contract on the shared endpoint."""
+    task_desc = data.get('task', '')
+    skill_id = data.get('skill_id', '')
+    if not isinstance(task_desc, str) or not isinstance(skill_id, str):
+        return jsonify({'ok': False, 'code': 'SKILL_TASK_INPUT_INVALID'}), 400
+    if not task_desc.strip() and not skill_id.strip():
+        return jsonify({'ok': False, 'error': 'task or skill_id required'}), 400
+    try:
+        from lumenis.shared.agents.skills.execution import run_execution_chain, ActionType
+        try:
+            action_type = ActionType(data.get('action_type', 'ANALYZE'))
+        except (TypeError, ValueError):
+            return jsonify({'ok': False, 'code': 'ACTION_TYPE_INVALID'}), 400
+        ctx = run_execution_chain(
+            skill_id=skill_id or 'zbc.generic_analysis',
+            task=task_desc,
+            input_payload=data.get('input', {}),
+            action_type=action_type,
+            user_id=data.get('user_id'),
+            product=data.get('product', 'SYSTEM'),
+            domain=data.get('domain', 'global'),
+        )
+        evidence_record = getattr(ctx, 'evidence_record', None)
+        return jsonify({
+            'ok': True,
+            'execution_id': ctx.execution_id,
+            'status': getattr(ctx.status, 'value', str(ctx.status)),
+            'evidence_recorded': bool(
+                isinstance(evidence_record, dict) and evidence_record.get('ok')
+            ),
+        })
+    except Exception:
+        return jsonify({'ok': False, 'code': 'SKILL_EXECUTION_FAILED'}), 500
 
 
 @bp.route('/api/ai/tasks/<task_id>', methods=['GET'])
@@ -538,18 +627,44 @@ def api_ai_tasks_cancel(task_id):
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
-@bp.route('/api/ai/tasks', methods=['GET'])
 def api_ai_tasks_list():
-    """列出任务（支持 ?status=&limit=&offset=）。"""
+    """List TaskEngine and Skill Execution records in one compatibility view."""
     try:
-        status = request.args.get('status')
-        limit = int(request.args.get('limit', 50))
-        offset = int(request.args.get('offset', 0))
+        limit = max(1, min(200, int(request.args.get('limit', 50))))
+        offset = max(0, min(100000, int(request.args.get('offset', 0))))
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'code': 'AI_TASK_PAGINATION_INVALID'}), 400
+    try:
+        status = request.args.get('status') or None
         engine = _get_engine()
-        tasks = engine.list_tasks(status=status, limit=limit, offset=offset)
-        return jsonify({'ok': True, 'tasks': tasks, 'count': len(tasks)})
+        window = offset + limit
+        engine_tasks = engine.list_tasks(status=status, limit=window, offset=0)
+        from lumenis.shared.agents.skills.execution import query_executions
+        executions = query_executions(
+            status=status, limit=window, offset=0, strict=True,
+        )
+        combined = [
+            {**dict(task), 'task_kind': 'TASK_ENGINE'} for task in engine_tasks
+        ] + [
+            {**dict(execution), 'task_kind': 'SKILL_EXECUTION'}
+            for execution in executions
+        ]
+        combined.sort(
+            key=lambda item: str(
+                item.get('created_at') or item.get('timestamp') or item.get('started_at') or ''
+            ),
+            reverse=True,
+        )
+        page = combined[offset:offset + limit]
+        task_engine_page = [item for item in page if item['task_kind'] == 'TASK_ENGINE']
+        execution_page = [item for item in page if item['task_kind'] == 'SKILL_EXECUTION']
+        return jsonify({
+            'ok': True, 'tasks': page, 'count': len(page),
+            'task_engine_tasks': task_engine_page,
+            'skill_executions': execution_page,
+        })
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return jsonify({'ok': False, 'code': 'AI_TASK_LIST_UNAVAILABLE'}), 503
 
 
 @bp.route('/api/ai/skills', methods=['GET'])

@@ -3,7 +3,6 @@
 import os
 import sys
 import json
-import hashlib
 from pathlib import Path
 import subprocess
 
@@ -159,15 +158,38 @@ def test_generated_spec_files_valid(app):
 def test_generator_cli_uses_an_isolated_database_environment(tmp_path):
     root = Path(__file__).resolve().parents[1]
     protected = root / "data" / "monitor.db"
-    protected_exists = protected.is_file()
-    before_bytes = protected.read_bytes() if protected_exists else None
-    before_sidecars = {
-        suffix: (protected.with_name(protected.name + suffix)).read_bytes()
-        for suffix in ("-wal", "-shm")
-        if protected.with_name(protected.name + suffix).exists()
-    }
     json_path = tmp_path / "openapi.json"
     matrix_path = tmp_path / "matrix.md"
+    access_marker = tmp_path / "protected-db-access.txt"
+    sitecustomize = tmp_path / "sitecustomize.py"
+    sitecustomize.write_text(
+        "\n".join([
+            "import os",
+            "import sqlite3",
+            "import urllib.parse",
+            "protected = os.path.normcase(os.path.abspath(os.environ['LUMENIS_TEST_PROTECTED_DB']))",
+            "marker = os.environ['LUMENIS_TEST_PROTECTED_DB_MARKER']",
+            "real_connect = sqlite3.connect",
+            "def normalize(database):",
+            "    value = os.fspath(database)",
+            "    if value.startswith('file:'):",
+            "        value = urllib.parse.unquote(value[5:].split('?', 1)[0])",
+            "        if value.startswith('/') and len(value) > 2 and value[2] == ':':",
+            "            value = value[1:]",
+            "    return os.path.normcase(os.path.abspath(value))",
+            "def guarded_connect(database, *args, **kwargs):",
+            "    if normalize(database) == protected:",
+            "        with open(marker, 'w', encoding='utf-8') as stream:",
+            "            stream.write('protected database connection attempted')",
+            "        raise RuntimeError('protected repository database connection is forbidden')",
+            "    return real_connect(database, *args, **kwargs)",
+            "sqlite3.connect = guarded_connect",
+            "sqlite3.dbapi2.connect = guarded_connect",
+            "",
+        ]),
+        encoding="utf-8",
+    )
+    child_pythonpath = os.pathsep.join(filter(None, [str(tmp_path), os.environ.get("PYTHONPATH", "")]))
 
     result = subprocess.run(
         [
@@ -179,22 +201,19 @@ def test_generator_cli_uses_an_isolated_database_environment(tmp_path):
             str(matrix_path),
         ],
         cwd=root,
-        env={**os.environ, "PYTHONUTF8": "1"},
+        env={
+            **os.environ,
+            "PYTHONUTF8": "1",
+            "PYTHONPATH": child_pythonpath,
+            "LUMENIS_TEST_PROTECTED_DB": str(protected),
+            "LUMENIS_TEST_PROTECTED_DB_MARKER": str(access_marker),
+        },
         capture_output=True,
         timeout=60,
         check=False,
     )
 
     assert result.returncode == 0, (result.stderr or b"").decode("utf-8", errors="replace")
+    assert not access_marker.exists(), "OpenAPI generator tried to connect to the protected database"
     assert json.loads(json_path.read_text(encoding="utf-8"))["paths"]
     assert "API 路由矩阵" in matrix_path.read_text(encoding="utf-8")
-    if protected_exists:
-        assert hashlib.sha256(protected.read_bytes()).digest() == hashlib.sha256(before_bytes).digest()
-    else:
-        assert not protected.exists()
-    after_sidecars = {
-        suffix: (protected.with_name(protected.name + suffix)).read_bytes()
-        for suffix in ("-wal", "-shm")
-        if protected.with_name(protected.name + suffix).exists()
-    }
-    assert after_sidecars == before_sidecars

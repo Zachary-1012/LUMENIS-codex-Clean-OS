@@ -61,6 +61,45 @@ def _provider_disabled_meta(level='medium', model=None):
         'token_usage': 0, 'prompt_tokens': 0, 'completion_tokens': 0, 'call_id': None,
     }
 
+
+def owned_inference_status():
+    """Return owned-runtime state without discovering or loading providers."""
+    from . import owned_inference
+
+    return owned_inference.owned_inference_status()
+
+
+def run_owned_analysis(*, text, analysis_type, note_id=None):
+    """Route analysis through the owned-runtime boundary without provider fallback.
+
+    The current offline candidate loader is evaluation-only. Until a promoted
+    runtime is explicitly service-bound, this method must return unavailable
+    instead of treating an evaluation candidate or another provider as product
+    inference.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return {
+            "ok": False, "status": "INVALID_INPUT", "code": "ANALYSIS_TEXT_REQUIRED",
+            "provider": "owned", "note_id": note_id, "analysis": None,
+        }
+
+    runtime = owned_inference_status()
+    if runtime.get("available") is not True or runtime.get("service_binding") != "BOUND":
+        return {
+            "ok": False, "status": "UNAVAILABLE",
+            "code": runtime.get("reason") or "OWNED_RUNTIME_NOT_BOUND",
+            "provider": "owned", "note_id": note_id, "analysis": None,
+            "runtime": runtime,
+        }
+
+    # No promoted service invocation contract is currently bound to the Gateway.
+    # Keep this explicit even if a candidate-status implementation changes.
+    return {
+        "ok": False, "status": "UNAVAILABLE", "code": "OWNED_SERVICE_EXECUTOR_NOT_BOUND",
+        "provider": "owned", "note_id": note_id, "analysis": None,
+        "runtime": runtime,
+    }
+
 def _get_json(url, timeout=1.5):
     req=urllib.request.Request(url, headers={'User-Agent':'TaikooMonitor/5.1 local-ai-discovery'})
     with urllib.request.urlopen(req, timeout=timeout) as r:

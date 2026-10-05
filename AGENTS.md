@@ -11,17 +11,16 @@ execution instructions.
 
 ## 1. Authority
 
-## Current execution instruction — closure red lines 2026-10-04
+## Current execution instruction — M-only product repairs 2026-10-06
 
-Current task: complete M's updated pre-start rules/material/Owner/dependency/
-acceptance consolidation against the Product Owner-approved 2026-10-04 product
-blueprint and D01-D49 disposition record. The D01-D49 audit-disposition IDs
-are distinct from acceptance requirements R01-R15 and are not ordinal-mapped.
-M is the only executor of this preparation; no product implementation or
-runtime work is authorized. C1-C6 remain paused responsibility labels with
-their full R/J/U obligations assigned. F is separately active under the
-Product Owner's direct instruction and outside M's scope; M does not inspect,
-manage, or message F. The sole approved product blueprint is
+Current task: the Product Owner explicitly directed M to execute the confirmed
+source repairs in the current repair objective and continue toward full product
+closure. This supersedes the prior preparation-only instruction. M is the only
+active executor; do not message, resume, or start other windows, including F.
+The C1-C6 map, all R01-R15/J1-J8/U requirements and existing owner contracts
+remain the complete scope, not parallel active work queues. D01-D49 audit
+disposition IDs are distinct from acceptance requirements R01-R15 and are not
+ordinal-mapped. The sole approved product blueprint is
 `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`.
 Existing/free compute is preferred; this convergence does not authorize paid GPU,
 new rental, recharge or retired model providers.
@@ -37,8 +36,9 @@ new rental, recharge or retired model providers.
    web evidence before further trials. Each owner resolves its ordinary failures
    through repair and meaningful validation; do not hand them to M, wait for
    per-function decisions or substitute exchanged reports for actual outcomes.
-   Escalate once only for a real permission/cost gap or an owner/product decision
-   that cannot be resolved within the existing authority. Continue independent work.
+   Escalate only for a real permission/cost gap or an owner/product decision
+   that cannot be resolved within existing authority. M resolves ordinary
+   failures in this active task; no other window starts.
    `main` is the sole current implementation. Do not create parallel candidate
    source trees or leave multiple competing versions active. A temporary
    isolated copy is allowed only to protect pre-existing dirty source during an
@@ -46,11 +46,11 @@ new rental, recharge or retired model providers.
    second implementation or a new product candidate. Preserve older research,
    originals and failure evidence as history until their exact disposition is
    verified.
-3. Before editing, each window reads its actual assigned materials and source
-   owner/callers/contracts, records the complete result and the receiving owner
-   in its existing Task Card, and uses that card continuously. A coverage table
-   or unreviewed summary does not satisfy the material review. No repeated ACK
-   or new report is required when the existing card already contains this.
+3. Before editing each capability, M reads its actual assigned materials and
+   source owner/callers/contracts, records the complete result in the existing
+   task/evidence record, and uses it continuously. A coverage table or
+   unreviewed summary does not satisfy material review. Do not generate
+   progress-only reports or repeated ACKs.
 4. Close the agreed capabilities without adding products, owners, frameworks or
    speculative features. C3+C5 research serves capability improvement, data
    credibility and separately approved training/evaluation; product improvement
@@ -59,7 +59,8 @@ new rental, recharge or retired model providers.
    capacity and license before selecting a recipe; a free development environment
    is not production model hosting. No paid resource starts without current
    explicit cost authorization. The historical 5090 budget is not a standing
-   instruction to rent. This M-only preparation performs no model/GPU execution.
+   instruction to rent. This task performs no model/GPU execution without a
+   separate current authorization.
 6. Preserve the Product Owner's current manually selected account, model,
    reasoning effort and speed/service tier for each active window. This router
    assigns no model or speed by window and supersedes historical Sol/Luna/Astra
@@ -70,15 +71,14 @@ new rental, recharge or retired model providers.
    results, necessary decisions and urgent risks; when no actionable work remains,
    M pauses its own Goal.
 
-W6 normally owns product integration and main publication. For this explicitly
-authorized M-only preparation, M may publish only the reviewed governance,
-CURRENT, material-map and task-routing changes; W6 is not resumed. M verifies the
-exact published files and remote main. Do not bulk-stage the dirty tree.
-This task does not authorize production-source changes, database/migration or
-runtime operations, collection, model/GPU activity, deployment, or product E2E.
-Record those as exact later owner tasks with inputs, source/callers, dependencies,
-deliverables, recovery and acceptance. C1-C6 stay paused; F remains separately
-active under the Product Owner's instruction and outside M's scope.
+W6 remains the normal integration owner but is not resumed for this task. Under
+the Product Owner's direct instruction, M alone may repair confirmed product
+sources, update necessary governing/current records, run affected acceptance
+gates, commit to `main`, and verify the same online content. Do not bulk-stage
+the dirty tree. This instruction does not authorize production-database writes,
+deployment/restart, live collection, model/GPU execution, paid resources or
+external business effects. Keep those separate unless the Product Owner gives
+their exact required authorization. F and the other windows remain unopened.
 
 
 
