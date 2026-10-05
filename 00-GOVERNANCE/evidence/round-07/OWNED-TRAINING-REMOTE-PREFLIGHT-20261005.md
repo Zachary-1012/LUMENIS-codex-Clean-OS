@@ -62,6 +62,22 @@ and the DB was not checkpointed, copied, deleted or repaired. The later isolated
 test run passed with no background thread leak. Full clean-checkout execution
 remains required after publication.
 
+## Published-source verification
+
+GitHub `main` commit `f3877f80b793e08807f3652b6c8cf550768fc2dc` contains this
+source/API/documentation batch.
+
+- [App Gate 37283524406](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/37283524406)
+  passed the Experience gates, complete Flutter analysis and canonical Flutter
+  test suite.
+- [Product Gate 37283529275](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/37283529275)
+  passed the governance/contract/Experience gates, clean-checkout Python
+  compilation, isolated database acceptance and hermetic pytest suite.
+
+These gate results prove the published source contracts. They do not establish
+a reachable remote host, an allocated GPU, model files, model loading, training,
+checkpoint bytes, inference quality or user acceptance.
+
 ## Current limits
 
 - The current private runtime profile remains local and untracked by design.
