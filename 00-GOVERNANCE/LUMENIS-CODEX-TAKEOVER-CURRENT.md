@@ -42,6 +42,7 @@ F retains four-surface behavior and design responsibilities through existing Flu
 15. The tracked environment template and the old provider-failover policy no longer advertise retired local/external routes as active. Compatibility key names remain only to preserve configuration shape; current product inference remains the owned Gateway route with an honest unavailable state until real binding evidence. Exact source `373d846a` passed Product Gate `37289571504`. See `evidence/round-07/RETIRED-PROVIDER-CONFIG-TEMPLATE-20261005.md`.
 16. The protected local-only candidate/archive boundary is now indexed once in `evidence/round-15/CURRENT-PROTECTED-LOCAL-BOUNDARIES-20261005.json`. It preserves the archive, private training runtime, local receipts and unmerged tests without treating any as active main source or creating a second candidate queue.
 17. Current Core/API has one real focused CTH normal-success chain from a 29-record Source Brief whose collection/coverage/freshness remain `UNKNOWN`, through a source-bound/v3 Word/SavedWork result to a persisted internal business review. Its `EXECUTED` action state records the already committed internal document against the selected review option; no external effect occurred. Outcome and business usefulness remain `UNKNOWN`, owned analysis remains `UNAVAILABLE`, and fresh reopen/export succeeded. The exact receipts and limits are in `evidence/round-11/C3-NORMAL-SOURCE-TO-BUSINESS-E2E-20261005.md`.
+18. The P0 execution-entry wording is reconciled in the sole Product Architecture: current four-surface roles, source-bound/v3 with v1/v2 compatibility, canonical business DB and narrow SYSTEM operational-store exception, preserved historical evidence, and the single locator/owner route are explicit. The owner index's prior “Website/Web absent” finding is now labeled as a frozen audit baseline, not current state. Historical acceptance material remains intact.
 
 ## 3. Authority and retained evidence
 
@@ -60,6 +61,7 @@ F retains four-surface behavior and design responsibilities through existing Flu
 - `evidence/round-15/OPENAPI-ISOLATED-GENERATOR-20261005.md`: isolated route-contract generation and protected DB boundary verification.
 - `evidence/round-15/CURRENT-PROTECTED-LOCAL-BOUNDARIES-20261005.json`: current protected local-only candidate/archive owner and admission boundary.
 - `evidence/round-11/C3-NORMAL-SOURCE-TO-BUSINESS-E2E-20261005.md`: current real Core/API source-to-creation-to-business-review path, opaque receipts and open limits.
+- `LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`: the sole product blueprint and current execution-entry ruling; `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md` distinguishes frozen audit baselines from current surface state.
 - `evidence/round-06/COLLECTOR-CONVERGENCE-20261004.md`: current purpose, signed scheduler, source transaction and packaged-input integration evidence.
 - `evidence/round-06/C1-RUNTIME-ACTIVATION-20261005.md`: current narrow HK resident/scheduler runtime readback and explicit six-platform/result limits.
 
