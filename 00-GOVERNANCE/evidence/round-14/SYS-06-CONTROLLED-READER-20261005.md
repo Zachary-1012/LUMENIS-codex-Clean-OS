@@ -75,6 +75,22 @@ The browser-client test verifies that session/frame calls did not bootstrap
 reader tests cover normal frame display, URL refusal, stale-frame discard,
 explicit stop, deep route entry, focus return and narrow/large-text layout.
 
+## Published-source verification
+
+GitHub `main` commit `154219a3df3a69af00097dbdbd135a165a9c9b77` is the remote
+source containing this repair and its gate-alignment follow-up.
+
+- [App Gate 37279577199](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/37279577199)
+  completed successfully. It passed the Experience gates, full Flutter analysis
+  and the canonical Flutter test suite.
+- [Product Gate 37279581122](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/37279581122)
+  completed successfully. It passed governance, contract, Experience,
+  clean-checkout Python compilation, isolated database acceptance and the
+  hermetic pytest suite.
+
+Those online checks prove the exact published source can pass its required
+repository gates. They do not promote the limits below to runtime or user proof.
+
 ## Limits retained
 
 - No browser/CDP runtime was started for this batch.
