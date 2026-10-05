@@ -28,7 +28,10 @@ not define product behavior or a second API authority.
 
 `tests/test_openapi_spec.py` now launches the CLI into temporary output files,
 checks that both artifacts are generated, and confirms the protected
-`data/monitor.db` plus its sidecar state are byte-for-byte unchanged.
+`data/monitor.db` plus its sidecar state are byte-for-byte unchanged when it
+exists. In a clean GitHub checkout where that ignored workstation database is
+absent, the same test confirms the generator leaves it absent and uses only its
+own disposable schema.
 
 The isolated OpenAPI suite passed seven cases locally with no background-thread
 leak. A direct CLI generation into temporary output paths reported 839 API

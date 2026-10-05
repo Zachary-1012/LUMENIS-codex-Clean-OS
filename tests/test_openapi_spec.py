@@ -159,7 +159,8 @@ def test_generated_spec_files_valid(app):
 def test_generator_cli_uses_an_isolated_database_environment(tmp_path):
     root = Path(__file__).resolve().parents[1]
     protected = root / "data" / "monitor.db"
-    before_bytes = protected.read_bytes()
+    protected_exists = protected.is_file()
+    before_bytes = protected.read_bytes() if protected_exists else None
     before_sidecars = {
         suffix: (protected.with_name(protected.name + suffix)).read_bytes()
         for suffix in ("-wal", "-shm")
@@ -187,7 +188,10 @@ def test_generator_cli_uses_an_isolated_database_environment(tmp_path):
     assert result.returncode == 0, (result.stderr or b"").decode("utf-8", errors="replace")
     assert json.loads(json_path.read_text(encoding="utf-8"))["paths"]
     assert "API 路由矩阵" in matrix_path.read_text(encoding="utf-8")
-    assert hashlib.sha256(protected.read_bytes()).digest() == hashlib.sha256(before_bytes).digest()
+    if protected_exists:
+        assert hashlib.sha256(protected.read_bytes()).digest() == hashlib.sha256(before_bytes).digest()
+    else:
+        assert not protected.exists()
     after_sidecars = {
         suffix: (protected.with_name(protected.name + suffix)).read_bytes()
         for suffix in ("-wal", "-shm")
