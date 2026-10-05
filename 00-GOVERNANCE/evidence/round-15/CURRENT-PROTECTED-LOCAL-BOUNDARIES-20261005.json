@@ -2,7 +2,7 @@
   "schema_version": 1,
   "recorded_at": "2026-10-05",
   "purpose": "Single lookup boundary for protected local-only candidates and artifacts; not a second source, product, Evidence or execution authority.",
-  "main_commit_at_recording": "1ab4d1a80f0d54b6cae27ce27fb4f88bf6d9f129",
+  "main_commit_at_recording": "dca16c30464757ef943b6e560904913851619cca",
   "rules": {
     "active_source_of_truth": "origin/main plus current runtime/DB/Permission/Evidence truth",
     "automatic_admission": false,
@@ -16,18 +16,26 @@
     "admission_path": "existing Owner source/caller/contract review -> isolated application when needed -> affected verification -> coherent main commit -> remote readback"
   },
   "snapshot": {
-    "untracked_path_count": 43398,
+    "untracked_path_count": 43397,
     "work_archive_path_count": 43380,
     "work_archive_direct_child_count": 22,
     "candidate_counts": {
       "c1_evidence_candidate": 1,
       "c3c5_evidence_candidate": 5,
       "private_training_runtime_config": 1,
-      "app_fixture_candidate": 1,
       "unmerged_test_candidates": 10
     },
     "scope_note": "Counts exclude this index itself and are Git untracked-path counts only. The work archive was not recursively re-read or reclassified in this record."
   },
+  "admissions": [
+    {
+      "id": "APP-NATIVE-MEDIA-FIXTURE",
+      "path": "app/test/fixtures/native_media_lease_child.dart",
+      "sha256": "274f9d5dfcd710d92a89a38ac0103f57c8c488fcae1d217e3e54c72faac24ded",
+      "status": "ADMITTED_TO_MAIN_WITH_ACTIVE_TEST",
+      "reason": "The tracked Windows lease-recovery test resolves and launches this isolated helper; the targeted test passed. See evidence/round-14/MEDIA-WINDOWS-LEASE-RECOVERY-20261005.md."
+    }
+  ],
   "categories": [
     {
       "id": "LOCAL-WORK-ARCHIVE",
@@ -59,14 +67,6 @@
       "state": "PRIVATE_RUNTIME_CONFIGURATION_NOT_COMMITTABLE",
       "owner": "C2 / SYSTEM AI Gateway",
       "main_admission": "never commit private endpoint/identity material; validate only through the published exact-approval preflight and actual authorized runtime"
-    },
-    {
-      "id": "APP-NATIVE-MEDIA-FIXTURE",
-      "path": "app/test/fixtures/native_media_lease_child.dart",
-      "sha256": "274f9d5dfcd710d92a89a38ac0103f57c8c488fcae1d217e3e54c72faac24ded",
-      "state": "UNMERGED_TEST_FIXTURE_CANDIDATE",
-      "owner": "C4 / Shared Artifact and Flutter media owners",
-      "main_admission": "only if an active tracked media test names it and source behavior requires it"
     },
     {
       "id": "UNMERGED-TEST-CANDIDATES",
