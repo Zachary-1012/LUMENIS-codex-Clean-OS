@@ -25,8 +25,16 @@ def get_planner() -> PlatformSchedulePlanner:
                 root = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
                 from db_paths import main_db_path
                 store = ScheduleDecisionStore(main_db_path())
+                legacy_state = _os.path.join(root, "data", "schedule_state.json")
+                repo_root = _os.path.dirname(_os.path.dirname(_os.path.dirname(root)))
+                state_dir = _os.path.join(repo_root, "data", "runtime", "collector")
+                _os.makedirs(state_dir, exist_ok=True)
+                state_file = _os.path.join(state_dir, "schedule_state.json")
+                if not _os.path.exists(state_file) and _os.path.isfile(legacy_state):
+                    import shutil as _shutil
+                    _shutil.copyfile(legacy_state, state_file)
                 _PLANNER = PlatformSchedulePlanner(
-                    state_file=_os.path.join(root, "data", "schedule_state.json"), store=store)
+                    state_file=state_file, store=store)
     return _PLANNER
 
 

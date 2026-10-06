@@ -71,6 +71,7 @@ def test_markitdown_missing_dependency_is_honest(tmp_path, monkeypatch):
 
 
 def test_upload_preview_binds_file_hash_actor_scope_and_capture_time(tmp_path, monkeypatch):
+    from lumenis.importer.analyzer import extract_source_rows, source_rows_fingerprint
     import lumenis.importer.service as service
     from lumenis.importer.parser import ParseResult
 
@@ -86,6 +87,8 @@ def test_upload_preview_binds_file_hash_actor_scope_and_capture_time(tmp_path, m
     monkeypatch.setattr(service, "log_audit", lambda *_args, **_kwargs: None)
     parsed = ParseResult()
     parsed.metadata["format"] = "txt"
+    parsed.metadata["source_fingerprint"] = hashlib.sha256(b"source text").hexdigest()
+    parsed.metadata["parsed_text_sha256"] = hashlib.sha256(b"source text").hexdigest()
     parsed.text = "source text"
     monkeypatch.setattr(service, "parse_file", lambda _path: parsed)
     note = service.AnalyzedNote()
@@ -108,6 +111,10 @@ def test_upload_preview_binds_file_hash_actor_scope_and_capture_time(tmp_path, m
     assert manifest["scope"]["subject_id"] == "subject-1"
     assert manifest["source_sha256"] == hashlib.sha256(b"source text").hexdigest()
     assert manifest["preview_note_count"] == 1
+    assert body["preview_selection_available"] is True
+    assert manifest["preview_selection_fingerprint"] == source_rows_fingerprint(
+        parsed, extract_source_rows(parsed), count=1,
+    )
     assert manifest["uploaded_at"].endswith("Z")
 
 
@@ -242,8 +249,8 @@ def test_import_confirmation_uses_shared_document_owner_and_replays_receipt(tmp_
     actor = object()
     calls = []
 
-    def import_document(file_path, *, actor, scope, provenance):
-        calls.append((file_path, actor, scope, provenance))
+    def import_document(file_path, *, actor, scope, provenance, **selection):
+        calls.append((file_path, actor, scope, provenance, selection))
         return {
             "source_id": "DOC-123", "evidence_id": 42, "canonical_id": "CAN-123",
             "source_artifact_ref": "ART-123", "scope": scope, "replayed": False,
@@ -266,6 +273,7 @@ def test_import_confirmation_uses_shared_document_owner_and_replays_receipt(tmp_
     assert calls[0][1] is actor
     assert calls[0][2] == scope
     assert calls[0][3]["captured_at"] == "2026-10-06T10:00:00Z"
+    assert calls[0][4]["selected_row_indices"] is None
     assert calls[0][3]["source_origin"] == {
         "kind": "approved-file", "ref": "file-upload-" + hashlib.sha256(source_bytes).hexdigest(),
     }
@@ -278,34 +286,77 @@ def test_import_confirmation_uses_shared_document_owner_and_replays_receipt(tmp_
     assert not source_path.exists()
 
 
-def test_import_confirmation_rejects_partial_note_selection(tmp_path, monkeypatch):
+def test_import_confirmation_binds_partial_selection_to_preview_and_replays_same_rows(tmp_path, monkeypatch):
+    from lumenis.importer.analyzer import extract_source_rows, source_rows_fingerprint
+    from lumenis.importer.parser import parse_file
     import lumenis.importer.service as service
+    import lumenis.importer.documents as documents
 
     task_id = uuid.uuid4().hex
     task_dir = tmp_path / task_id
     task_dir.mkdir()
-    source_path = task_dir / "brief.txt"
-    source_bytes = b"Source text"
+    source_path = task_dir / "brief.csv"
+    source_bytes = "title,content\nFirst,one\nSecond,two\nThird,three\n".encode("utf-8")
     source_path.write_bytes(source_bytes)
+    parsed = parse_file(str(source_path))
+    preview_rows = extract_source_rows(parsed)
+    preview_fingerprint = source_rows_fingerprint(parsed, preview_rows, count=2)
     scope = {
         "domain_id": "cth", "subject_id": "subject-1",
         "brand_focus_id": None, "global_scope": False,
     }
     service._write_manifest(service._manifest_path(task_dir), {
         "schema": "import-preview/v1", "task_id": task_id, "state": "PREVIEWED",
-        "actor_ref": "actor:17", "scope": scope, "original_filename": "brief.txt",
+        "actor_ref": "actor:17", "scope": scope, "original_filename": "brief.csv",
         "source_sha256": hashlib.sha256(source_bytes).hexdigest(),
         "source_size_bytes": len(source_bytes), "uploaded_at": "2026-10-06T10:00:00Z",
-        "preview_note_count": 2, "total_note_count": 2,
+        "preview_note_count": 2, "total_note_count": 3,
         "preview_analysis": {"analysis_status": "NOT_RUN"},
+        "preview_selection_fingerprint": preview_fingerprint,
     })
     monkeypatch.setattr(service, "UPLOAD_DIR", str(tmp_path))
+    actor = object()
+    calls = []
 
-    with pytest.raises(ValueError, match="PARTIAL_NOTE_SELECTION_UNSUPPORTED_FOR_SOURCE_IMPORT"):
-        service._confirm_source_document({
-            "task_id": task_id, "confirm_whole_source": True, "note_indices": [0],
-            "provenance": {
-                "rights": "owner-approved",
-                "content_origin": {"kind": "self-authored", "claim_type": "author_statement"},
-            },
-        }, actor_ref="actor:17", scope=scope, actor=object())
+    def import_document(file_path, *, actor, scope, provenance, **selection):
+        calls.append((file_path, actor, scope, provenance, selection))
+        return {
+            "source_id": "DOC-123", "evidence_id": 42, "canonical_id": "CAN-123",
+            "source_artifact_ref": "ART-123", "scope": scope, "replayed": False,
+            "selected_row_indices": [1], "canonical_rows_inserted": 1,
+            "canonical_row_records": [{"canonical_id": "CAN-DOCROW-1", "row_index": 1}],
+        }
+
+    monkeypatch.setattr(documents, "import_document", import_document)
+    body = {
+        "task_id": task_id, "confirm_whole_source": True, "note_indices": [1],
+        "target_table": "notes",
+        "provenance": {
+            "rights": "owner-approved",
+            "content_origin": {"kind": "self-authored", "claim_type": "author_statement"},
+        },
+    }
+    first = service._confirm_source_document(body, actor_ref="actor:17", scope=scope, actor=actor)
+    second = service._confirm_source_document(body, actor_ref="actor:17", scope=scope, actor=actor)
+
+    assert len(calls) == 1
+    assert calls[0][1] is actor and calls[0][2] == scope
+    assert calls[0][4]["selected_row_indices"] == [1]
+    assert calls[0][4]["preview_row_count"] == 2
+    assert calls[0][4]["expected_preview_rows_sha256"] == preview_fingerprint
+    assert first.get("selected_preview_indices") == [1], (
+        f"selected indices were {first.get('selected_preview_indices')!r}"
+    )
+    assert first["preview_selection_applied"] is True
+    assert first["selected_preview_indices"] == [1]
+    assert first["canonical_rows_inserted"] == 1
+    assert first["note_rows_inserted"] == 0
+    assert second["document"]["replayed"] is True
+    assert second["canonical_rows_inserted"] == 0
+    assert not source_path.exists()
+
+    changed_selection = {**body, "note_indices": [0]}
+    with pytest.raises(ValueError, match="IMPORT_REPLAY_CONFLICT"):
+        service._confirm_source_document(
+            changed_selection, actor_ref="actor:17", scope=scope, actor=actor,
+        )

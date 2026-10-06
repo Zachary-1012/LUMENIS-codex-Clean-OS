@@ -13,7 +13,9 @@ from flask import Blueprint, request, jsonify
 from ..auth import require_auth, get_current_user, log_audit
 from ..config import IMPORTER_CONFIG
 from .parser import parse_file
-from .analyzer import analyze_text, analyze_parsed, AnalyzedNote
+from .analyzer import (
+    analyze_text, analyze_parsed, extract_source_rows, source_rows_fingerprint, AnalyzedNote,
+)
 
 importer_bp = Blueprint("v4_importer", __name__, url_prefix="/importer")  # 相对前缀，由父蓝图 /v4 拼成 /v4/importer
 
@@ -108,15 +110,21 @@ def _provenance_digest(value: dict) -> str:
 
 
 def _source_import_receipt(manifest: dict, receipt: dict, *, replayed: bool) -> dict:
+    selected_indices = receipt.get("selected_row_indices") or []
+    canonical_rows = receipt.get("canonical_row_records") or []
+    source_replayed = bool(receipt.get("source_replayed", replayed))
     return {
         "success": True, "status": "SOURCE_IMPORTED",
-        "inserted": 0 if replayed else 1,
+        "inserted": 0 if replayed or source_replayed else 1,
         "inserted_kind": "source_document", "note_rows_inserted": 0,
+        "canonical_rows_inserted": 0 if replayed else int(receipt.get("canonical_rows_inserted") or 0),
+        "selected_preview_indices": list(selected_indices),
+        "preview_selection_applied": bool(selected_indices),
+        "canonical_rows": list(canonical_rows),
         "total": manifest["total_note_count"],
         "preview_count": manifest["preview_note_count"],
         "analysis_status": manifest["preview_analysis"]["analysis_status"],
         "source_content_scope": "WHOLE_DOCUMENT",
-        "preview_selection_applied": False,
         "document": {**receipt, "replayed": replayed},
     }
 
@@ -142,18 +150,36 @@ def _confirm_source_document(data: dict, *, actor_ref: str, scope: dict, actor) 
     if target_table != "notes":
         raise ValueError("IMPORT_TARGET_UNSUPPORTED")
     indices = data.get("note_indices")
+    selected_row_indices = None
+    preview_selection_fingerprint = None
     if indices is not None:
         if (not isinstance(indices, list)
                 or any(type(index) is not int or index < 0 for index in indices)
                 or len(set(indices)) != len(indices)):
             raise ValueError("IMPORT_PREVIEW_SELECTION_INVALID")
-        if indices != list(range(manifest["preview_note_count"])):
-            raise ValueError("PARTIAL_NOTE_SELECTION_UNSUPPORTED_FOR_SOURCE_IMPORT")
+        preview_count = manifest.get("preview_note_count")
+        if type(preview_count) is not int or any(index >= preview_count for index in indices):
+            raise ValueError("IMPORT_PREVIEW_SELECTION_INVALID")
+        if not indices:
+            raise ValueError("IMPORT_PREVIEW_SELECTION_EMPTY")
+        if sorted(indices) != list(range(preview_count)):
+            selected_row_indices = sorted(indices)
+            preview_selection_fingerprint = manifest.get("preview_selection_fingerprint")
+            if (not isinstance(preview_selection_fingerprint, str)
+                    or re.fullmatch(r"[0-9a-f]{64}", preview_selection_fingerprint) is None):
+                raise ValueError("IMPORT_PREVIEW_SELECTION_BINDING_UNAVAILABLE")
 
     provenance = _normalized_import_provenance(data.get("provenance"), manifest)
     provenance_sha256 = _provenance_digest(provenance)
+    selection_sha256 = _provenance_digest({
+        "selected_row_indices": selected_row_indices,
+        "preview_selection_fingerprint": preview_selection_fingerprint,
+    })
     if manifest.get("state") == "IMPORTED":
-        if manifest.get("provenance_sha256") != provenance_sha256:
+        prior_selection = manifest.get("selection_sha256")
+        if (manifest.get("provenance_sha256") != provenance_sha256
+                or prior_selection is not None and prior_selection != selection_sha256
+                or prior_selection is None and selected_row_indices is not None):
             raise ValueError("IMPORT_REPLAY_CONFLICT")
         receipt = manifest.get("receipt")
         if not isinstance(receipt, dict):
@@ -172,15 +198,23 @@ def _confirm_source_document(data: dict, *, actor_ref: str, scope: dict, actor) 
 
     from lumenis.importer.documents import import_document
 
-    imported = import_document(str(source_path), actor=actor, scope=scope, provenance=provenance)
+    imported = import_document(
+        str(source_path), actor=actor, scope=scope, provenance=provenance,
+        selected_row_indices=selected_row_indices,
+        preview_row_count=manifest["preview_note_count"] if selected_row_indices is not None else None,
+        expected_preview_rows_sha256=preview_selection_fingerprint,
+    )
     if (not isinstance(imported, dict)
             or not all(imported.get(key) for key in ("source_id", "evidence_id", "canonical_id"))):
         raise RuntimeError("DOCUMENT_IMPORT_RECEIPT_INVALID")
     receipt = {key: imported[key] for key in (
         "source_id", "evidence_id", "canonical_id", "source_artifact_ref", "scope", "replayed",
+        "source_replayed",
+        "selected_row_indices", "canonical_rows_inserted", "canonical_row_records",
     ) if key in imported}
     manifest.update({
-        "state": "IMPORTED", "provenance_sha256": provenance_sha256, "receipt": receipt,
+        "state": "IMPORTED", "provenance_sha256": provenance_sha256,
+        "selection_sha256": selection_sha256, "receipt": receipt,
     })
     _write_manifest(manifest_path, manifest)
     source_path.unlink(missing_ok=True)
@@ -231,6 +265,18 @@ def upload_file():
 
         # 限制预览数量
         preview_notes = notes[:IMPORTER_CONFIG["preview_limit"]]
+        preview_selection_fingerprint = None
+        preview_selection_error = None
+        try:
+            source_rows = extract_source_rows(parsed)
+            if len(source_rows) != len(notes):
+                preview_selection_error = "IMPORT_PREVIEW_SELECTION_BINDING_UNAVAILABLE"
+            else:
+                preview_selection_fingerprint = source_rows_fingerprint(
+                    parsed, source_rows, count=len(preview_notes),
+                )
+        except (TypeError, ValueError, AttributeError):
+            preview_selection_error = "IMPORT_PREVIEW_SELECTION_BINDING_UNAVAILABLE"
         uploaded_at = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
         preview_analysis = _analysis_summary_payload(notes)
         manifest = {
@@ -240,6 +286,8 @@ def upload_file():
             "uploaded_at": uploaded_at, "preview_note_count": len(preview_notes),
             "total_note_count": len(notes),
             "preview_analysis": preview_analysis,
+            "preview_selection_fingerprint": preview_selection_fingerprint,
+            "preview_selection_error": preview_selection_error,
         }
         _write_manifest(_manifest_path(task_dir), manifest)
 
@@ -253,6 +301,8 @@ def upload_file():
             "source_sha256": manifest["source_sha256"],
             "filename": original_filename,
             "format": parsed.metadata.get("format", ""),
+            "preview_selection_available": preview_selection_fingerprint is not None,
+            "preview_selection_error": preview_selection_error,
             "total_notes": len(notes),
             "preview_count": len(preview_notes),
             "notes": [_note_to_dict(n) for n in preview_notes],
@@ -272,7 +322,8 @@ def upload_file():
 def confirm_import():
     """
     Confirm a whole uploaded document through the canonical Source/Evidence/Canonical owner.
-    Legacy note-row selection is accepted only when it covers the entire preview.
+    Selected preview rows are projected to Canonical children under the source
+    document's existing Evidence and exact scope; they are never written to notes.
     """
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
@@ -287,7 +338,7 @@ def confirm_import():
         code = str(exc)
         if code in {
             "IMPORT_REPLAY_CONFLICT", "IMPORT_PREVIEW_SOURCE_CHANGED",
-            "PARTIAL_NOTE_SELECTION_UNSUPPORTED_FOR_SOURCE_IMPORT",
+            "DOCUMENT_PREVIEW_SELECTION_CHANGED",
         }:
             return jsonify({"success": False, "status": "CONFLICT", "code": code,
                             "publish_status": "not_performed"}), 409

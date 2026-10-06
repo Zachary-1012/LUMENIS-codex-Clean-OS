@@ -74,7 +74,7 @@ class StabilityMonitor:
             'crawler': {'status': 'unknown', 'last_check': 0, 'errors': 0, 'tasks_run': 0},
             'playwright': {'status': 'unknown', 'last_check': 0, 'browsers_open': 0, 'pages_open': 0, 'errors': 0},
             'database': {'status': 'unknown', 'last_check': 0, 'connections': 0, 'errors': 0, 'locks': 0},
-            'memory': {'status': 'unknown', 'last_check': 0, 'current_mb': 0, 'peak_mb': 0},
+            'memory': {'status': 'unknown', 'last_check': 0, 'current_mb': 0, 'peak_mb': 0, 'errors': 0},
             'threads': {'status': 'unknown', 'active_count': 0, 'daemon_count': 0},
             'child_processes': {'status': 'unknown', 'count': 0, 'chromium_count': 0}
         }

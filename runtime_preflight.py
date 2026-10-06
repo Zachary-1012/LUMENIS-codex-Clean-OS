@@ -332,6 +332,12 @@ def format_summary(r):
 
 
 if __name__ == "__main__":
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            if _stream is not None and hasattr(_stream, "reconfigure"):
+                _stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
     _enf = "--enforce" in sys.argv or str(os.environ.get("ZBC_PREFLIGHT_ENFORCE", "")).lower() in ("1", "true", "yes")
     rep = run_preflight(enforce=_enf)
     print(format_summary(rep))

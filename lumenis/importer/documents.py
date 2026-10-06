@@ -212,8 +212,36 @@ def document_import_resource(file_path: str, *, actor: Any, scope: Mapping,
     return _prepare(file_path, actor=actor, scope=scope, provenance=provenance)["resource"]
 
 
+def _selected_source_rows(parsed, *, selected_row_indices, preview_row_count,
+                          expected_preview_rows_sha256):
+    if selected_row_indices is None:
+        if preview_row_count is not None or expected_preview_rows_sha256 is not None:
+            raise SavedWorkError("DOCUMENT_PREVIEW_SELECTION_INVALID")
+        return [], []
+    if (not isinstance(selected_row_indices, list) or not selected_row_indices
+            or any(type(index) is not int or index < 0 for index in selected_row_indices)
+            or len(set(selected_row_indices)) != len(selected_row_indices)
+            or type(preview_row_count) is not int or preview_row_count <= 0
+            or not isinstance(expected_preview_rows_sha256, str)
+            or re.fullmatch(r"[0-9a-f]{64}", expected_preview_rows_sha256) is None):
+        raise SavedWorkError("DOCUMENT_PREVIEW_SELECTION_INVALID")
+    indices = sorted(selected_row_indices)
+    if any(index >= preview_row_count for index in indices):
+        raise SavedWorkError("DOCUMENT_PREVIEW_SELECTION_INVALID")
+    from .analyzer import extract_source_rows, source_rows_fingerprint
+    rows = extract_source_rows(parsed)
+    if len(rows) < preview_row_count:
+        raise SavedWorkError("DOCUMENT_PREVIEW_SELECTION_CHANGED")
+    actual_fingerprint = source_rows_fingerprint(parsed, rows, count=preview_row_count)
+    if actual_fingerprint != expected_preview_rows_sha256:
+        raise SavedWorkError("DOCUMENT_PREVIEW_SELECTION_CHANGED")
+    return indices, [(index, rows[index]) for index in indices]
+
+
 def import_document(file_path: str, *, actor: Any, scope: Mapping,
-                    provenance: Mapping) -> dict:
+                    provenance: Mapping, selected_row_indices=None,
+                    preview_row_count=None,
+                    expected_preview_rows_sha256: str | None = None) -> dict:
     """Atomically retain parsed source, signed provenance and canonical content.
 
     A retry uses exactly the same provenance including capture time. A modified
@@ -225,6 +253,11 @@ def import_document(file_path: str, *, actor: Any, scope: Mapping,
     context = _check_effect(actor, scope, OperationType.DATA_IMPORT, prepared["resource"])
     prepared = _parse_approved(prepared)
     parsed, source_id = prepared["parsed"], prepared["source_id"]
+    selected_indices, selected_rows = _selected_source_rows(
+        parsed, selected_row_indices=selected_row_indices,
+        preview_row_count=preview_row_count,
+        expected_preview_rows_sha256=expected_preview_rows_sha256,
+    )
     product = "CTH" if context["domain_id"] == "cth" else "ZBMP"
     owner = {k: v for k, v in context.items() if k in {"actor_id", "principal_kind", "principal_ref"}}
     metadata = {**prepared["material"], "owner": owner, "parser": parsed.metadata,
@@ -244,12 +277,28 @@ def import_document(file_path: str, *, actor: Any, scope: Mapping,
                 raise SavedWorkError("DOCUMENT_REPLAY_CONFLICT")
             _source_bytes(con, evidence)
             _check_effect(actor, scope, OperationType.DATA_IMPORT, prepared["resource"], connection=con)
-            return _result(con, source_id, evidence_id, parsed, scope, product, replayed=True)
+            row_records, rows_inserted = _persist_selected_rows(
+                con, source_id=source_id, evidence_id=evidence_id, parsed=parsed,
+                selected_rows=selected_rows, context=context, product=product,
+                metadata=metadata, provenance=provenance,
+            )
+            return _result(
+                con, source_id, evidence_id, parsed, scope, product,
+                replayed=rows_inserted == 0, source_replayed=True,
+                selected_indices=selected_indices,
+                row_records=row_records, rows_inserted=rows_inserted,
+                preview_rows_sha256=expected_preview_rows_sha256,
+            )
         with staging_write(prepared["resource"]):
-            return _write_document(con, prepared, context, provenance, product, metadata, scope, actor)
+            return _write_document(
+                con, prepared, context, provenance, product, metadata, scope, actor,
+                selected_indices=selected_indices, selected_rows=selected_rows,
+                preview_rows_sha256=expected_preview_rows_sha256,
+            )
 
 
-def _write_document(con, prepared, context, provenance, product, metadata, scope, actor):
+def _write_document(con, prepared, context, provenance, product, metadata, scope, actor,
+                    *, selected_indices, selected_rows, preview_rows_sha256):
     parsed, source_id = prepared["parsed"], prepared["source_id"]
     record, path = _stage_bytes(con, raw=prepared["source_bytes"], context=context,
                                kind="imported_document_source", source_execution_id=source_id,
@@ -282,18 +331,105 @@ def _write_document(con, prepared, context, provenance, product, metadata, scope
             content_hash=hashlib.sha256(parsed.text.encode()).hexdigest(),
         )
         canonical_data.persist_canonical(con, canonical_record)
+        row_records, rows_inserted = _persist_selected_rows(
+            con, source_id=source_id, evidence_id=evidence_id, parsed=parsed,
+            selected_rows=selected_rows, context=context, product=product,
+            metadata=metadata, provenance=provenance,
+        )
         con.execute("UPDATE lumenis_shared_artifacts SET evidence_id=? WHERE artifact_id=?",
                     (str(evidence_id), record["artifact_id"]))
         evidence = _verified_evidence(con, evidence_id, context)
         _source_bytes(con, evidence)
         _check_effect(actor, scope, OperationType.DATA_IMPORT, prepared["resource"], connection=con)
-        result = _result(con, source_id, evidence_id, parsed, scope, product, replayed=False)
+        result = _result(
+            con, source_id, evidence_id, parsed, scope, product, replayed=False,
+            selected_indices=selected_indices, row_records=row_records,
+            rows_inserted=rows_inserted,
+            preview_rows_sha256=preview_rows_sha256,
+        )
         con.commit()
         committed = True
         return result
     finally:
         if not committed:
             path.unlink(missing_ok=True)
+
+
+def _persist_selected_rows(con, *, source_id, evidence_id, parsed, selected_rows,
+                           context, product, metadata, provenance):
+    records = []
+    inserted_count = 0
+    source_platform = ("public_document"
+                       if metadata["content_origin"]["kind"] == "publisher-material"
+                       else "approved_research_document")
+    for row_index, note in selected_rows:
+        locator = json.loads(_json(note.source_locator))
+        row_payload = str(note.raw_chunk or note.content or "")
+        row_sha256 = str(note.source_row_sha256 or "")
+        if not row_sha256 or not re.fullmatch(r"[0-9a-f]{64}", row_sha256):
+            raise SavedWorkError("DOCUMENT_ROW_PROJECTION_INVALID")
+        identity = json.dumps(locator, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        canonical_id = "CAN-DOCROW-" + hashlib.sha256(
+            f"{source_id}\n{identity}".encode("utf-8")
+        ).hexdigest()[:32]
+        row_provenance = {
+            "schema": "document-row-projection/v1",
+            "document_source_id": source_id,
+            "evidence_id": int(evidence_id),
+            "source_fingerprint": parsed.metadata["source_fingerprint"],
+            "parsed_text_sha256": parsed.metadata["parsed_text_sha256"],
+            "source_locator": locator,
+            "source_row_sha256": row_sha256,
+            "source_row_payload": row_payload,
+            "claim_type": metadata["claim_type"],
+            "rights": provenance["rights"],
+            "intended_use": provenance.get("intended_use", "research_reference"),
+            "fact_verification": "NOT_VERIFIED",
+            "learning_admission": "NOT_ADMITTED",
+            "training_eligible": False,
+            "analysis_status": "NOT_RUN",
+            "analysis_code": "SOURCE_ROW_PROJECTION_NOT_ANALYZED",
+        }
+        record = canonical_data.CanonicalRecord(
+            canonical_id=canonical_id,
+            product_id=product, domain_id=context["domain_id"],
+            subject_id=context["subject_id"] or "",
+            brand_focus_id=context["brand_focus_id"] or "",
+            scope_status="UNASSIGNED" if context["global_scope"] else "VERIFIED",
+            scope_evidence_ref=str(evidence_id), source_id=source_id,
+            external_id=f"{source_id}:row:{canonical_id}",
+            provenance=json.dumps(row_provenance, ensure_ascii=False, sort_keys=True),
+            source_type="document_row", source_table="app_evidence_records",
+            source_platform=source_platform,
+            title=str(note.title or ""), content=str(note.content or note.raw_chunk or ""),
+            author_name=str(note.author or ""), url=provenance["source_url"] or "",
+            publish_datetime=str(note.publish_date or provenance["published_at"] or ""),
+            captured_at=provenance["captured_at"],
+            sentiment="unknown", sentiment_score=None,
+            risk_level="unknown", risk_score=None,
+            quality_status="unknown", relevance_status="unknown",
+            verification_status="review", ai_provider="unknown", ai_model="", ai_analysis="",
+            raw_ref=json.dumps({
+                "table": "app_evidence_records", "evidence_id": int(evidence_id),
+                "source_id": source_id, "source_locator": locator,
+                "source_row_sha256": row_sha256,
+            }, ensure_ascii=False, sort_keys=True),
+        )
+        existing = con.execute(
+            "SELECT source_id, source_type, scope_evidence_ref FROM canonical_data WHERE canonical_id=?",
+            (canonical_id,),
+        ).fetchone()
+        if existing is not None and (
+                existing[0] != source_id or existing[1] != "document_row"
+                or str(existing[2] or "") != str(evidence_id)):
+            raise SavedWorkError("DOCUMENT_ROW_CANONICAL_CONFLICT")
+        status = canonical_data.persist_canonical(con, record)
+        inserted_count += int(status == "inserted")
+        records.append({
+            "canonical_id": canonical_id, "row_index": row_index,
+            "source_locator": locator, "source_row_sha256": row_sha256,
+        })
+    return records, inserted_count
 
 
 def _source_bytes(con, evidence):
@@ -333,7 +469,10 @@ def reopen_imported_source(evidence_id: int, *, actor: Any, scope: Mapping) -> d
             "source_origin":evidence["provenance"]["provenance"].get("source_origin"),
             "scope":{k: original[k] for k in ("domain_id", "subject_id", "brand_focus_id", "global_scope")}}
 
-def _result(con, source_id, evidence_id, parsed, scope, product, *, replayed):
+def _result(con, source_id, evidence_id, parsed, scope, product, *, replayed,
+            source_replayed=False,
+            selected_indices=None, row_records=None, rows_inserted=0,
+            preview_rows_sha256=None):
     row = con.execute("SELECT canonical_id FROM canonical_data WHERE source_id=? AND product_id=?",
                       (source_id, product)).fetchone()
     if row is None:
@@ -342,9 +481,14 @@ def _result(con, source_id, evidence_id, parsed, scope, product, *, replayed):
     signed = json.loads(stored[0])
     return {"source_id": source_id, "evidence_id": evidence_id, "canonical_id": row[0],
             "source_artifact_ref":signed["source_artifact_ref"],
-            "scope": dict(scope), "replayed": replayed, "metadata": dict(signed["parser"]),
+            "scope": dict(scope), "replayed": replayed,
+            "source_replayed": source_replayed, "metadata": dict(signed["parser"]),
             "locators": list(signed["locators"]), "scope_status": "UNASSIGNED" if scope["global_scope"] else "VERIFIED",
             "global_projection": "NOT_VERIFIED" if scope["global_scope"] else "NOT_APPLICABLE",
+            "selected_row_indices": list(selected_indices or []),
+            "canonical_rows_inserted": int(rows_inserted),
+            "canonical_row_records": list(row_records or []),
+            "preview_rows_sha256": preview_rows_sha256,
             "source_boundaries": source_boundaries(signed["provenance"])}
 
 

@@ -96,6 +96,100 @@ def test_import_cite_save_reopen_revise_export_and_retry(workspace):
     assert exported["return_ref"]["scope"] == workspace["scope"]
 
 
+def test_selected_preview_rows_project_to_canonical_children_under_source_evidence(workspace):
+    from lumenis.importer.analyzer import extract_source_rows, source_rows_fingerprint
+    from lumenis.importer.parser import parse_file
+
+    path = workspace["root"] / "selected-rows.csv"
+    source_bytes = (
+        "标题,正文,作者,发布日期,门店\n"
+        "未选行,第一行内容,作者甲,2026-01-01,广州\n"
+        "选中行,第二行内容,作者乙,2026-01-02,深圳\n"
+        "未选行二,第三行内容,作者丙,2026-01-03,上海\n"
+    ).encode("utf-8")
+    path.write_bytes(source_bytes)
+    provenance = {
+        "source_url": "https://www.swireproperties.com/research/source.csv",
+        "published_at": None, "captured_at": "2026-10-02T01:00:00Z",
+        "rights": "public-reference-only", "title": "Selected row source",
+    }
+    args = {"actor": workspace["actor"], "scope": workspace["scope"],
+            "provenance": provenance}
+    resource = workspace["documents"].document_import_resource(str(path), **args)
+    workspace["gate"].grant_approval(
+        permission.OperationType.DATA_IMPORT.value, resource=resource,
+        granted_by="isolated-test",
+    )
+    parsed = parse_file(str(path))
+    source_rows = extract_source_rows(parsed)
+    expected_fingerprint = source_rows_fingerprint(parsed, source_rows, count=3)
+
+    with pytest.raises(ValueError, match="DOCUMENT_PREVIEW_SELECTION_CHANGED"):
+        workspace["documents"].import_document(
+            str(path), **args, selected_row_indices=[1], preview_row_count=3,
+            expected_preview_rows_sha256="0" * 64,
+        )
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM app_evidence_records")[0] == 0
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM canonical_data")[0] == 0
+
+    imported = workspace["documents"].import_document(
+        str(path), **args, selected_row_indices=[1], preview_row_count=3,
+        expected_preview_rows_sha256=expected_fingerprint,
+    )
+    assert imported["replayed"] is False
+    assert imported["selected_row_indices"] == [1]
+    assert imported["canonical_rows_inserted"] == 1
+    assert len(imported["canonical_row_records"]) == 1
+    selected = imported["canonical_row_records"][0]
+    assert selected["row_index"] == 1
+    assert selected["source_locator"] == {
+        "unit": "parsed_table_row", "table_index": 0, "row_index": 2,
+    }
+
+    child = workspace["repo"].query_one(
+        "SELECT * FROM canonical_data WHERE canonical_id=?", (selected["canonical_id"],),
+    )
+    assert child["source_type"] == "document_row"
+    assert child["source_id"] == imported["source_id"]
+    assert child["scope_evidence_ref"] == str(imported["evidence_id"])
+    assert child["title"] == "选中行"
+    assert child["content"] == "第二行内容"
+    assert child["author_name"] == "作者乙"
+    assert child["publish_datetime"] == "2026-01-02"
+    assert child["sentiment"] == "unknown" and child["risk_level"] == "unknown"
+    assert child["ai_provider"] == "unknown" and child["ai_analysis"] == ""
+    row_provenance = json.loads(child["provenance"])
+    assert row_provenance["analysis_status"] == "NOT_RUN"
+    assert row_provenance["source_row_sha256"] == selected["source_row_sha256"]
+    raw_ref = json.loads(child["raw_ref"])
+    assert raw_ref["evidence_id"] == imported["evidence_id"]
+    assert raw_ref["source_locator"] == selected["source_locator"]
+
+    reopened = workspace["documents"].reopen_imported_source(
+        imported["evidence_id"], actor=workspace["actor"], scope=workspace["scope"],
+    )
+    assert reopened["content"] == source_bytes
+
+    replayed = workspace["documents"].import_document(
+        str(path), **args, selected_row_indices=[1], preview_row_count=3,
+        expected_preview_rows_sha256=expected_fingerprint,
+    )
+    assert replayed["replayed"] is True
+    assert replayed["canonical_rows_inserted"] == 0
+    assert replayed["canonical_row_records"] == imported["canonical_row_records"]
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM canonical_data")[0] == 2
+
+    another_selection = workspace["documents"].import_document(
+        str(path), **args, selected_row_indices=[0], preview_row_count=3,
+        expected_preview_rows_sha256=expected_fingerprint,
+    )
+    assert another_selection["source_replayed"] is True
+    assert another_selection["replayed"] is False
+    assert another_selection["canonical_rows_inserted"] == 1
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM app_evidence_records")[0] == 1
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM canonical_data")[0] == 3
+
+
 def test_unapproved_or_revoked_import_has_no_source_side_write(workspace):
     path, args, result = _source(workspace)
     path.write_text("Changed document", encoding="utf-8")

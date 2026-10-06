@@ -3,6 +3,19 @@ import os, sys, json, threading, time, shutil, sqlite3, secrets, argparse, concu
 from pathlib import Path
 
 
+def _force_utf8_stdio():
+    """Keep startup/preflight/migration diagnostics writable on legacy Windows code pages."""
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            if _stream is not None and hasattr(_stream, 'reconfigure'):
+                _stream.reconfigure(encoding='utf-8', errors='replace')
+        except Exception:
+            pass
+
+
+_force_utf8_stdio()
+
+
 def _is_internal_beta_loopback(host):
     return str(host or '').strip().lower() == '127.0.0.1'
 
@@ -241,6 +254,9 @@ try:
     os.makedirs(_LOG_DIR, exist_ok=True)
     _fault_fh = open(os.path.join(_LOG_DIR, 'faulthandler.log'), 'a', encoding='utf-8')
     _faulthandler.enable(file=_fault_fh, all_threads=True)
+    # Bounded periodic all-thread dump: when the supervisor later kills a
+    # "false alive" Core, the traceback file shows what the threads were doing.
+    _faulthandler.dump_traceback_later(120, repeat=True, file=_fault_fh)
 except Exception as _fault_e:
     print('[FaultHandler] enable failed:', _fault_e)
 
@@ -254,6 +270,31 @@ def _thread_excepthook(args):
     except Exception:
         pass
 threading.excepthook = _thread_excepthook
+
+# Stall watchdog: the supervisor probes /healthz every 10s. If no HTTP request
+# completes for 90s, dump the current thread stacks once per minute. This
+# captures I/O/DB/child-process blocks that do not trip faulthandler's crash path.
+_HANG_WATCHDOG = {'last_request_ok': time.time(), 'last_dump': 0.0}
+
+
+def _hang_watchdog_loop():
+    while True:
+        time.sleep(15)
+        try:
+            silence = time.time() - _HANG_WATCHDOG['last_request_ok']
+            if silence > 90 and time.time() - _HANG_WATCHDOG['last_dump'] > 60:
+                _HANG_WATCHDOG['last_dump'] = time.time()
+                if '_fault_fh' in globals() and not _fault_fh.closed:
+                    _fault_fh.write(
+                        f"\n[HangWatchdog] no completed HTTP request for {silence:.0f}s "
+                        f"at {time.strftime('%Y-%m-%dT%H:%M:%S')}\n")
+                    _fault_fh.flush()
+                    _faulthandler.dump_traceback(file=_fault_fh)
+        except Exception:
+            pass
+
+
+threading.Thread(target=_hang_watchdog_loop, daemon=True, name='hang_watchdog').start()
 
 from datetime import datetime, timedelta
 # 统一 Node 解析（PATH 优先，项目内置 nodejs/ 兜底），避免常驻进程 PATH 缺 node 抛 WinError 2
@@ -349,6 +390,12 @@ import brand_logo_manager
 import trend_api
 
 app=Flask(__name__)
+
+
+@app.after_request
+def _hang_watchdog_heartbeat(response):
+    _HANG_WATCHDOG['last_request_ok'] = time.time()
+    return response
 app.config['LUMENIS_OPEN_WORKSPACE'] = os.environ.get('LUMENIS_OPEN_WORKSPACE') == '1'
 
 

@@ -1,4 +1,6 @@
 """Source-grounded document analysis through the single SYSTEM AI Gateway."""
+import hashlib
+import json
 import re
 from typing import List, Dict, Optional
 from .parser import ParseResult, split_into_chunks
@@ -25,6 +27,8 @@ class AnalyzedNote:
         self.analysis_code: str = "OWNED_RUNTIME_NOT_BOUND"
         self.keyword_method: str = ""
         self.raw_chunk: str = ""
+        self.source_locator: Optional[Dict] = None
+        self.source_row_sha256: Optional[str] = None
 
 
 def analyze_text(text: str, context_keywords: List[str] = None) -> List[AnalyzedNote]:
@@ -228,3 +232,113 @@ def analyze_parsed(parsed, context_keywords=None) -> List[AnalyzedNote]:
         if rows:
             return rows
     return analyze_text(parsed.text, context_keywords)
+
+
+def extract_source_rows(parsed) -> List[AnalyzedNote]:
+    """Create deterministic source excerpts for canonical row projection.
+
+    This path performs no AI analysis. Sentiment/risk/summary remain
+    UNKNOWN/NOT_RUN; user-visible AI analysis is a separate owned-Gateway job.
+    """
+    fmt = parsed.metadata.get("format", "")
+    if fmt in ("excel", "csv") and parsed.tables:
+        rows = analyze_table_rows(parsed, context_keywords=[])
+        if rows:
+            table = parsed.tables[0]
+            has_header = bool(table and _looks_like_header(table[0]))
+            headers = ([None if value is None else str(value) for value in table[0]]
+                       if has_header else None)
+            table_rows = table[1:] if has_header else table
+            row_indices = []
+            columns = _map_columns([str(value) for value in table[0]]) if table else {}
+            for original_index, row in enumerate(table_rows, start=1 if has_header else 0):
+                if not any(str(value).strip() for value in row):
+                    continue
+
+                def cell(key):
+                    column = columns.get(key)
+                    return (str(row[column]).strip()
+                            if column is not None and column < len(row) and row[column] is not None
+                            else "")
+
+                if not cell("title") and not cell("content"):
+                    continue
+                row_indices.append((original_index, row))
+            if len(row_indices) != len(rows):
+                raise ValueError("DOCUMENT_ROW_PROJECTION_COUNT_MISMATCH")
+            for note, (original_index, row) in zip(rows, row_indices):
+                source_row = json.dumps(
+                    {"headers": headers,
+                     "values": [None if value is None else str(value) for value in row]},
+                    ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+                )
+                note.raw_chunk = source_row
+                note.source_locator = {
+                    "unit": "parsed_table_row", "table_index": 0,
+                    "row_index": original_index,
+                }
+                note.source_row_sha256 = hashlib.sha256(source_row.encode("utf-8")).hexdigest()
+            return rows
+    result: List[AnalyzedNote] = []
+    source_text = str(parsed.text or "")
+    search_from = 0
+    for chunk in split_into_chunks(source_text, max_chunk_size=800):
+        if not chunk.strip():
+            continue
+        start = source_text.find(chunk, search_from)
+        if start < 0:
+            raise ValueError("DOCUMENT_ROW_PROJECTION_LOCATOR_UNAVAILABLE")
+        end = start + len(chunk)
+        note = AnalyzedNote()
+        note.title = _extract_title(chunk)
+        note.content = chunk[:500]
+        note.raw_chunk = chunk
+        note.source_locator = {"unit": "parsed_text_range", "start": start, "end": end}
+        note.source_row_sha256 = hashlib.sha256(chunk.encode("utf-8")).hexdigest()
+        note.sentiment = "unknown"
+        note.sentiment_score = None
+        note.risk_level = "unknown"
+        note.risk_score = None
+        note.summary = ""
+        note.topics = []
+        note.keywords = []
+        note.ai_provider = "unknown"
+        note.analysis_status = "NOT_RUN"
+        note.analysis_code = "SOURCE_ROW_PROJECTION_NOT_ANALYZED"
+        note.keyword_method = "source_excerpt"
+        result.append(note)
+        search_from = end
+    return result
+
+
+def source_rows_fingerprint(parsed, rows: List[AnalyzedNote], *, count: int) -> str:
+    """Bind preview row order and locators to the exact parsed source snapshot."""
+    if type(count) is not int or count < 0 or count > len(rows):
+        raise ValueError("DOCUMENT_PREVIEW_ROW_COUNT_INVALID")
+    selected = rows[:count]
+    if any(not row.source_locator or not row.source_row_sha256 for row in selected):
+        raise ValueError("DOCUMENT_PREVIEW_ROW_LOCATOR_UNAVAILABLE")
+    metadata = parsed.metadata if isinstance(parsed.metadata, dict) else {}
+    source_sha256 = metadata.get("source_fingerprint")
+    parsed_text_sha256 = metadata.get("parsed_text_sha256")
+    if (not isinstance(source_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", source_sha256)
+            or not isinstance(parsed_text_sha256, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", parsed_text_sha256)):
+        raise ValueError("DOCUMENT_PREVIEW_SOURCE_FINGERPRINT_REQUIRED")
+    payload = {
+        "schema": "document-preview-rows/v1",
+        "source_sha256": source_sha256,
+        "parsed_text_sha256": parsed_text_sha256,
+        "format": str(metadata.get("format") or ""),
+        "parser": str(metadata.get("parser") or ""),
+        "parser_version": str(metadata.get("parser_version") or ""),
+        "preview_count": count,
+        "rows": [
+            {"index": index, "title": row.title, "content": row.content,
+             "locator": row.source_locator, "source_row_sha256": row.source_row_sha256}
+            for index, row in enumerate(selected)
+        ],
+    }
+    return hashlib.sha256(json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+    ).encode("utf-8")).hexdigest()

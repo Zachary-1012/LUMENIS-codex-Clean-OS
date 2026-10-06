@@ -19,6 +19,19 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
+
+def _force_utf8_stdio():
+    """Supervisor diagnostics must survive legacy Windows console/pipe code pages."""
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            if _stream is not None and hasattr(_stream, 'reconfigure'):
+                _stream.reconfigure(encoding='utf-8', errors='replace')
+        except Exception:
+            pass
+
+
+_force_utf8_stdio()
+
 ROOT = Path(__file__).resolve().parent
 LOG_DIR = ROOT / 'logs'
 LOG_FILE = LOG_DIR / 'supervisor.log'
@@ -152,11 +165,12 @@ def kill_tree(proc, timeout=CHILD_SHUTDOWN_TIMEOUT):
 def spawn(app, host, port):
     creationflags = 0x08000000 if sys.platform == 'win32' else 0
     APP_OUT.parent.mkdir(parents=True, exist_ok=True)
+    env = {**os.environ, 'PYTHONUTF8': '1', 'PYTHONIOENCODING': 'utf-8'}
     with open(APP_OUT, 'a', encoding='utf-8') as out:
         return subprocess.Popen(
-            [sys.executable, '-u', app, '--host', host, '--port', str(port)],
+            [sys.executable, '-X', 'utf8', '-u', app, '--host', host, '--port', str(port)],
             cwd=str(ROOT), stdout=out, stderr=subprocess.STDOUT,
-            creationflags=creationflags,
+            creationflags=creationflags, env=env,
         )
 
 
