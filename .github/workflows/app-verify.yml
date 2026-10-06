@@ -96,7 +96,11 @@ jobs:
           assert actual['frameworkVersion'] == expected['flutter_version'], (actual, expected)
           assert actual['frameworkRevision'] == expected['flutter_revision'], (actual, expected)
           assert actual['dartSdkVersion'] == expected['dart_version'], (actual, expected)
-          assert actual['channel'] == expected['channel'], (actual, expected)
+          # The gate installs the exact tag/revision, so a detached checkout can
+          # report "[user-branch]" instead of "stable". Exact version, revision
+          # and Dart identity remain the stronger pin; accept only that alias.
+          actual_channel = str(actual.get('channel', ''))
+          assert actual_channel in {str(expected['channel']), '[user-branch]'}, (actual, expected)
           PY
 
       - name: Resolve app dependencies (EXECUTION-LAYER)
