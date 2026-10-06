@@ -24,7 +24,7 @@ The Product Owner approved the fresh historical-package audit against synchroniz
 - C6 binds the shared API/runtime/system-browser handoff, same-SHA integration, recovery and release gates.
 - F implements task-specific LUMENIS presentation and `Trace → Open Original → Return` on the approved operational surfaces without copying platform UI.
 
-`contracts/experience/source-target-contract-v1.json` is an approved target contract, not implementation proof. Historical package data remains `Production admission = 0`. Current Product/App/Critical E2E, six-platform live collection, Owned AI service binding and user verification remain open. Existing C1/C2/C5 dirty and `work/` stay protected and are not part of this governance/specification Batch.
+`contracts/experience/source-target-contract-v1.json` is an approved target contract, not implementation proof. The Experience binding snapshot is generated from accepted source-contract commit `3ebe60f99d0f928bbcc92aaea7ce99225535d65e`; the registry publication commit changes no product source, runtime or acceptance state. Historical package data remains `Production admission = 0`. Current Product/App/Critical E2E, six-platform live collection, Owned AI service binding and user verification remain open. Existing C1/C2/C5 dirty and `work/` stay protected and are not part of this governance/specification Batch.
 
 | Round / window | Placement | Scope | Current evidence and remaining work |
 |---|---|---|---|
