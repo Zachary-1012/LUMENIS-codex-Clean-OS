@@ -2838,12 +2838,33 @@ def api_function_map():
 
 @app.route('/api/translate',methods=['POST'])
 def api_translate():
-    data=request.get_json(silent=True) or {}; text=str(data.get('text','')); target=str(data.get('target','en')).lower()
-    if target not in ('zh','en','ko'): return jsonify({'ok':False,'error':'target 仅支持 zh/en/ko'}),400
-    if not text: return jsonify({'ok':False,'error':'text不能为空'}),400
-    if target=='zh': return jsonify({'ok':True,'target':'zh','text':text})
-    if not intelligence.ai_enabled(): return jsonify({'ok':False,'error':'未配置AI provider/API Key'}),503
-    return jsonify({'ok':True,'target':target,'text':intelligence.translate_text(text,target)})
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'JSON_OBJECT_REQUIRED'}), 400
+    text = data.get('text')
+    target = data.get('target', 'en')
+    if not isinstance(text, str) or not text.strip():
+        return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'TEXT_REQUIRED'}), 400
+    if not isinstance(target, str) or target.lower() not in ('zh', 'en', 'ko'):
+        return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'TRANSLATION_TARGET_UNSUPPORTED'}), 400
+    target = target.lower()
+    if target == 'zh':
+        return jsonify({'ok': True, 'status': 'COMPLETED', 'provider': 'none',
+                        'target': target, 'text': text})
+    translated = intelligence.translate_text(text, target)
+    if not isinstance(translated, str) or not translated.strip():
+        try:
+            runtime = intelligence.owned_inference_status()
+        except Exception:
+            runtime = {}
+        code = runtime.get('reason') if isinstance(runtime, dict) else None
+        return jsonify({
+            'ok': False, 'status': 'UNAVAILABLE',
+            'code': code or 'OWNED_RUNTIME_NOT_BOUND', 'provider': 'owned',
+            'target': target, 'text': None,
+        }), 503
+    return jsonify({'ok': True, 'status': 'COMPLETED', 'provider': 'owned',
+                    'target': target, 'text': translated})
 
 @app.route('/api/notes/historical')
 def api_notes_historical_v2():

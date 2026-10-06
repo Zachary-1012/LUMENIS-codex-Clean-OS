@@ -192,6 +192,48 @@ def test_ai_provider_status_exposes_only_owned_gateway_without_local_discovery(a
     assert providers["owned"]["service_binding"] == "NOT_BOUND"
 
 
+def test_translate_helper_uses_owned_gateway_without_source_text_fallback(monkeypatch):
+    seen = {}
+
+    def unavailable(**kwargs):
+        seen.update(kwargs)
+        return {
+            "ok": False, "status": "UNAVAILABLE", "code": "OWNED_RUNTIME_NOT_BOUND",
+            "provider": "owned", "analysis": None,
+        }
+
+    monkeypatch.setattr(ai_api.intelligence, "run_owned_analysis", unavailable)
+    monkeypatch.setattr(
+        ai_api.intelligence, "chat",
+        lambda *_a, **_k: pytest.fail("translation used a legacy provider route"),
+    )
+
+    assert ai_api.intelligence.translate_text("source text", "en") == ""
+    assert seen["analysis_type"] == "translation"
+
+
+def test_translate_endpoint_returns_unavailable_instead_of_source_as_translation(app, auth_headers, monkeypatch):
+    import app as app_module
+
+    monkeypatch.setattr(app_module.intelligence, "translate_text", lambda *_args: "")
+    monkeypatch.setattr(
+        app_module.intelligence, "owned_inference_status",
+        lambda: {"available": False, "service_binding": "NOT_BOUND",
+                 "state": "UNAVAILABLE", "reason": "OWNED_RUNTIME_NOT_BOUND"},
+    )
+
+    response = app.test_client().post(
+        "/api/translate", json={"text": "source text", "target": "en"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 503
+    assert response.get_json() == {
+        "ok": False, "status": "UNAVAILABLE", "code": "OWNED_RUNTIME_NOT_BOUND",
+        "provider": "owned", "target": "en", "text": None,
+    }
+
+
 def test_ai_analyze_rejects_unknown_analysis_type(ai_client, monkeypatch):
     monkeypatch.setattr(
         ai_api.intelligence,

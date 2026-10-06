@@ -140,6 +140,36 @@ def test_direct_local_chat_cannot_bypass_retired_provider(monkeypatch):
     assert calls == []
 
 
+def test_legacy_analysis_helpers_use_owned_gateway_and_never_fabricate_fallbacks(monkeypatch):
+    calls = []
+
+    def unavailable(*, text, analysis_type, note_id=None):
+        calls.append((analysis_type, text, note_id))
+        return {
+            'ok': False, 'status': 'UNAVAILABLE', 'code': 'OWNED_RUNTIME_NOT_BOUND',
+            'provider': 'owned', 'analysis': None,
+        }
+
+    monkeypatch.setattr(core, 'run_owned_analysis', unavailable)
+    monkeypatch.setattr(
+        core, 'chat', lambda *_args, **_kwargs: pytest.fail('legacy provider chat called'),
+    )
+
+    connection = core.test_connection('source')
+    sentiment = core.analyze_sentiment('source')
+    summary = core.generate_summary('source')
+    keywords = core.extract_keywords('source')
+
+    assert connection['ok'] is False and connection['reply'] is None
+    assert sentiment['ok'] is False and sentiment['sentiment'] is None
+    assert sentiment['label'] is None and sentiment['summary'] is None
+    assert summary == ''
+    assert keywords == []
+    assert [item[0] for item in calls] == [
+        'connection_test', 'sentiment', 'summary', 'keywords',
+    ]
+
+
 def test_complete_nonempty_provider_result_remains_success(monkeypatch):
     result, calls = _return_payload(
         monkeypatch,

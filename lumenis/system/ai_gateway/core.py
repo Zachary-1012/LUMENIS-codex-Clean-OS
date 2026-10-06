@@ -898,21 +898,71 @@ def summarize_event(event,notes):
     _sci=_scf(notes); _rci=_rcf(notes); neg=_sci['negative']; high=_rci['high']  # Canonical; high不含critical
     return {'title':event.get('title','事件')[:24],'summary':f'相关提及{len(notes)}条，负面{neg}条，高风险{high}条；目前仅能确认存在相关讨论，事实仍需核验。','fact_status':'unconfirmed','impact':'negative' if neg else 'neutral','risk_reason':'存在负面讨论' if neg else '暂未发现明显风险','recommended_action':'核查原始来源并持续观察传播变化。','provider':'rule'}
 
+def _owned_analysis_text(result):
+    analysis = result.get('analysis') if isinstance(result, dict) else None
+    if isinstance(analysis, str) and analysis.strip():
+        return analysis.strip()
+    if isinstance(analysis, dict):
+        for key in ('reply', 'summary', 'text', 'content', 'translation'):
+            value = analysis.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    return None
+
+
+def _owned_analysis_complete(result):
+    return (
+        isinstance(result, dict) and result.get('ok') is True
+        and result.get('status') == 'COMPLETED' and result.get('provider') == 'owned'
+        and _owned_analysis_text(result) is not None
+    )
+
+
 def test_connection(text):
-    status=ai_status()
-    if not status.get('enabled'):
-        return {'enabled':False,'provider':'local_rule','model':status.get('model'),'message':'当前没有可调用的本地模型，系统仍可使用本地规则引擎。','reply':'本地规则引擎已就绪。'}
-    raw,provider,_=chat('你是广州太古汇舆情监测系统的本地AI测试助手。只回答一句简短中文。', text, level='low', use_cache=True, temperature=0.0, max_tokens=120, pack_id='glm_4_5_air')
-    if raw:
-        return {'enabled':True,'provider':provider,'model':status.get('model'),'message':'AI接口连接正常。','reply':raw.strip()}
-    return {'enabled':False,'provider':status.get('provider'),'model':status.get('model'),'message':'发现本地AI但调用失败，系统已自动回退本地规则。','reply':'本地规则引擎已接管。'}
+    result = run_owned_analysis(text=text, analysis_type='connection_test')
+    if _owned_analysis_complete(result):
+        return {
+            'ok': True, 'enabled': True, 'status': 'COMPLETED',
+            'provider': 'owned', 'message': 'Owned Gateway analysis completed.',
+            'reply': _owned_analysis_text(result),
+        }
+    result = result if isinstance(result, dict) else {}
+    _set_call_meta(provider='owned_unavailable', model='')
+    return {
+        'ok': False, 'enabled': False,
+        'status': result.get('status') if result.get('status') != 'COMPLETED' else 'ERROR',
+        'code': result.get('code') or 'OWNED_RUNTIME_NOT_BOUND',
+        'provider': 'owned', 'message': 'Owned Gateway is unavailable.', 'reply': None,
+    }
 
 def translate_text(text,target='en'):
-    if not text:return ''
-    if target=='zh':return text
-    labels={'en':'English','ko':'Korean'}
-    raw,_,_=chat(f'Translate the following Chinese public-opinion text into {labels.get(target,target)}. Preserve Guangzhou Taikoo Hui and brand names. Return translation only.',text[:3000],level='medium',use_cache=True,temperature=0,max_tokens=700,pack_id='glm_4_5_air')
-    return (raw or '').strip() or text
+    if not isinstance(text, str) or not text.strip():
+        return ''
+    target = target.lower().strip() if isinstance(target, str) else ''
+    if target == 'zh':
+        return text
+    labels = {'en': 'English', 'ko': 'Korean'}
+    if target not in labels:
+        return ''
+    prompt = (
+        f'Translate the supplied text into {labels[target]}. Preserve personal, '
+        'brand, venue and product names. Return only the translated text.\n\n'
+        + text[:3000]
+    )
+    result = run_owned_analysis(text=prompt, analysis_type='translation')
+    if not (isinstance(result, dict) and result.get('ok') is True
+            and result.get('status') == 'COMPLETED' and result.get('provider') == 'owned'):
+        _set_call_meta(provider='owned_unavailable', model='')
+        return ''
+    analysis = result.get('analysis')
+    if isinstance(analysis, str) and analysis.strip():
+        return analysis.strip()
+    if isinstance(analysis, dict):
+        translated = analysis.get('translation') or analysis.get('text')
+        if isinstance(translated, str) and translated.strip():
+            return translated.strip()
+    _set_call_meta(provider='owned_result_invalid', model='')
+    return ''
 
 
 # ============================================================
@@ -922,53 +972,82 @@ def translate_text(text,target='en'):
 # ============================================================
 
 def analyze_sentiment(text, max_len=2000):
-    """情感/摘要/关键词一站式分析（智谱驱动）。返回 {sentiment:-1/0/1, label, summary, keywords, provider}。"""
-    if not text or not text.strip():
-        return {'sentiment': 0, 'label': 'neutral', 'summary': '', 'keywords': [], 'provider': 'rule'}
-    system = ('你是专业舆情分析助手，只输出严格JSON，不要其他文字。字段：'
-              'sentiment(-1负面,0中性,1正面),label(positive/neutral/negative),'
-              f'summary(不超过{max_len}字的简要总结),keywords(关键词数组最多10个)。')
-    raw, provider, _ = chat(system, str(text)[:6000], level='medium', use_cache=True, temperature=0.1, max_tokens=800, pack_id='glm_4_5_air')
-    data = _json_from_text(raw) or {}
+    """Return owned sentiment output or explicit unavailable fields; never infer neutral."""
     try:
-        s = int(data.get('sentiment', 0))
-    except Exception:
-        s = 0
-    label = data.get('label') or ({1: 'positive', -1: 'negative'}.get(s, 'neutral'))
+        max_len = max(1, min(2000, int(max_len)))
+    except (TypeError, ValueError, OverflowError):
+        max_len = 2000
+    if not isinstance(text, str) or not text.strip():
+        return {'ok': False, 'status': 'INVALID_INPUT', 'code': 'ANALYSIS_TEXT_REQUIRED',
+                'sentiment': None, 'label': None, 'summary': None, 'keywords': None, 'provider': 'owned'}
+    result = run_owned_analysis(text=text[:6000], analysis_type='sentiment')
+    analysis = result.get('analysis') if isinstance(result, dict) else None
+    valid = (
+        _owned_analysis_complete(result) and isinstance(analysis, dict)
+        and type(analysis.get('sentiment')) is int and analysis.get('sentiment') in (-1, 0, 1)
+        and analysis.get('label') in {'positive', 'neutral', 'negative'}
+        and isinstance(analysis.get('summary'), str)
+        and isinstance(analysis.get('keywords'), list)
+        and all(isinstance(item, str) for item in analysis['keywords'])
+    )
+    if not valid:
+        result = result if isinstance(result, dict) else {}
+        _set_call_meta(provider='owned_unavailable', model='')
+        return {
+            'ok': False,
+            'status': result.get('status') if result.get('status') != 'COMPLETED' else 'ERROR',
+            'code': result.get('code') or 'OWNED_SENTIMENT_RESULT_INVALID',
+            'sentiment': None, 'label': None, 'summary': None, 'keywords': None,
+            'provider': 'owned',
+        }
+    _set_call_meta(provider='owned', model=result.get('model'))
     return {
-        'sentiment': s,
-        'label': label,
-        'summary': str(data.get('summary', ''))[:max_len],
-        'keywords': data.get('keywords', []) if isinstance(data.get('keywords', []), list) else [],
-        'provider': provider,
+        'ok': True, 'status': 'COMPLETED', 'sentiment': analysis['sentiment'],
+        'label': analysis['label'], 'summary': analysis['summary'][:max_len],
+        'keywords': analysis['keywords'], 'provider': 'owned',
     }
 
 
 def generate_summary(text, max_length=200):
-    """文本摘要（智谱驱动）。返回摘要字符串；失败回退前 max_length 字。"""
-    if not text or not text.strip():
+    """Return an owned summary or an empty compatibility value on failure."""
+    try:
+        max_length = max(1, min(2000, int(max_length)))
+    except (TypeError, ValueError, OverflowError):
+        max_length = 200
+    if not isinstance(text, str) or not text.strip():
         return ''
-    system = f'你是专业文本摘要助手，生成简洁准确的中文摘要，不超过{max_length}字。只输出摘要内容。'
-    raw, provider, _ = chat(system, str(text)[:6000], level='medium', use_cache=False, temperature=0.3, max_tokens=max_length + 100, pack_id='glm_4_5_air')
-    out = (raw or '').strip()
+    result = run_owned_analysis(
+        text=f'Create a faithful summary with at most {max_length} characters.\n\n{text[:6000]}',
+        analysis_type='summary',
+    )
+    out = _owned_analysis_text(result) if _owned_analysis_complete(result) else None
     if not out:
-        return str(text)[:max_length] + ('...' if len(str(text)) > max_length else '')
-    if len(out) > max_length:
-        out = out[:max_length]
-    return out
+        _set_call_meta(provider='owned_unavailable', model='')
+        return ''
+    _set_call_meta(provider='owned', model=result.get('model'))
+    return out[:max_length]
 
 
 def extract_keywords(text, num_keywords=10):
-    """关键词提取（智谱驱动）。返回关键词列表；失败回退空列表。"""
-    if not text or not text.strip():
+    """Return owned keywords or an empty compatibility value on failure."""
+    try:
+        num_keywords = max(1, min(30, int(num_keywords)))
+    except (TypeError, ValueError, OverflowError):
+        num_keywords = 10
+    if not isinstance(text, str) or not text.strip():
         return []
-    system = f'你是关键词提取助手，提取{num_keywords}个最重要的关键词。只输出严格JSON：{{"keywords":[...]}}。'
-    raw, provider, _ = chat(system, str(text)[:6000], level='medium', use_cache=True, temperature=0.2, max_tokens=400, pack_id='glm_4_5_air')
-    data = _json_from_text(raw) or {}
-    kws = data.get('keywords', [])
-    if isinstance(kws, list):
-        return [str(k)[:30] for k in kws[:num_keywords]]
-    return []
+    result = run_owned_analysis(
+        text=f'Extract up to {num_keywords} source-grounded keywords.\n\n{text[:6000]}',
+        analysis_type='keywords',
+    )
+    analysis = result.get('analysis') if isinstance(result, dict) else None
+    keywords = analysis.get('keywords') if isinstance(analysis, dict) else None
+    if (not _owned_analysis_complete(result) or not isinstance(keywords, list)
+            or any(not isinstance(item, str) or not item.strip() for item in keywords)):
+        _set_call_meta(provider='owned_unavailable', model='')
+        return []
+    _set_call_meta(provider='owned', model=result.get('model'))
+    return [item[:30] for item in keywords[:num_keywords]]
 
 
 def search_enhance(query, context='', max_results=5, model=None, level='medium'):
