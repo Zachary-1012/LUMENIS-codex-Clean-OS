@@ -3,7 +3,7 @@
 ```yaml
 screen_id: SYS-06
 status: IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED
-revision: 3
+revision: 4
 owner_domain: SYSTEM Browser / CDP
 binding_ids:
   - BACKEND-GAP-041
@@ -80,6 +80,25 @@ semantic accessibility, native-device or Product Owner user-job acceptance.
 `SYS06-ENTRY-02`, `SYS06-SCOPE-02`, `SYS06-FRAME-02`, `SYS06-ACTION-02`,
 `SYS06-RETURN-02`, `SYS06-A11Y-02` and `SYS06-TRUTH-02` remain open until the
 actual permitted runtime can supply their required evidence.
+
+## 0.2 Approved platform-recovery role — 2026-10-07
+
+SYS-06 is the controlled browser capability used by the shared platform-recovery flow when a platform requires an interactive login or human verification step that cannot be completed by a QR-only surface. It does not become a platform-account manager and does not own `PlatformSession`.
+
+```text
+LumenisPlatformRecoverySheet
+→ PlatformSession says LOGIN_FORM_REQUIRED or VERIFY
+→ invoke permitted SYS-06 controlled browser capability
+→ user completes the legitimate platform step
+→ return browser result/state to SYSTEM session owner
+→ PlatformSession rechecks real auth/verification/risk health
+→ RecoverySheet resumes the exact pending Collector task only after healthy readback
+→ Return to the originating CTH/BMP/Shared/SYSTEM context
+```
+
+QR-capable recovery remains in the shared RecoverySheet and need not open SYS-06. BLOCKED/IP-risk/cooldown states do not open a browser merely to simulate progress. SYS-06 never exposes Cookie/token/profile/CDP details, never performs social writes, and never converts “browser opened” or “login form completed” into “session healthy” without the PlatformSession owner readback.
+
+When multiple platforms require attention, SYS-06 serves only the one active recovery item selected by the single RecoverySheet queue; platform-specific browser windows or stacked modal recovery surfaces are forbidden.
 
 ## Historical capacity-only specification — revision 2 provenance
 
@@ -299,6 +318,9 @@ transport access or a locally generated Actor; show unavailable and keep Return.
 | SYS06-RETURN-02 | Open source from a real task, open/close details, return, and retain exact draft/context/selection; distinguish local Return from remote history | Web/desktop/phone E2E required separately |
 | SYS06-A11Y-02 | Keyboard/touch can enter, read status, close layers and return at 320 px/200% text and in landscape; no focus hidden by fixed chrome | Widget + keyboard + assistive-technology runtime required |
 | SYS06-TRUTH-02 | Preview is announced as a snapshot; screenshot-only content is not reported as fully accessible or Canonical Evidence | Accessibility review; semantic reading alternative remains a gap |
+| SYS06-RECOVERY-03 | RecoverySheet invokes SYS-06 only for the current LOGIN_FORM/VERIFY item; QR and BLOCKED/COOLDOWN do not open a browser | Future widget + Browser/PlatformSession integration test |
+| SYS06-RECOVERY-04 | Completing browser interaction does not mark the connector healthy; PlatformSession health readback must pass before the exact pending task resumes | Future backend/runtime E2E |
+| SYS06-MULTI-03 | Multiple affected platforms share one RecoverySheet queue and SYS-06 serves one active recovery item without stacked browser/modal sessions | Future multi-platform recovery E2E |
 
 Real user-work card: **ENTRY** originating task → **REAL INPUT** an allowed public
 source URL → **PATH** permission → navigation → current authorized read → details →

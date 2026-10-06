@@ -427,7 +427,11 @@ BLOCKED / IP_RISK / COOLDOWN
 → do not show a QR as if login could solve it
 ```
 
+When more than one platform needs attention, use one recovery sheet with a queue/list of affected platform sources and one active recovery task at a time. Do not stack platform-specific modal sheets or alerts. The sheet names the suspended source/task, keeps the origin visible enough to preserve context, and provides an obvious dismiss/defer path when the underlying task can safely continue with other sources.
+
 The recovery sheet uses LUMENIS visual language while preserving the platform's actual QR/login content inside the controlled boundary. It never displays or logs Cookie values, tokens, profile paths, CDP endpoints or internal session identifiers. A button press, QR scan or login-form completion is not success by itself: the server-owned PlatformSession must re-read the real platform/runtime health before marking the connector recovered and resuming the exact pending task/checkpoint.
+
+Modal accessibility follows the W3C APG dialog pattern and platform conventions: focus moves inside the sheet when it opens, Tab/Shift+Tab remain within the active sheet where applicable, Escape/system-dismiss closes only when cancellation is safe, and closing returns focus to the invoking control or the next logical workflow target. Asynchronous states such as waiting for QR scan, scanned, verifying, recovered or cooldown are announced as status updates without stealing keyboard/screen-reader focus. Reference standards: W3C APG Dialog (Modal), WCAG 2.1 Status Messages, and Apple HIG Modality.
 
 Recovery returns to the originating CTH/BMP/Shared/SYSTEM task with scope, selection and work state preserved. Platform recovery must not create a second product account, silently expand source rights, start unrelated collection or perform social writes.
 
@@ -882,7 +886,7 @@ Responsive acceptance uses the widths in §20 and verifies a semantic recomposit
 
 | Form factor | Composition contract |
 | --- | --- |
-| Public Website | SEO-readable product narrative, capability proof, truthful demo/case material, trial/contact/help and a clear login/workspace entry. It cannot resemble or execute the operational workspace. |
+| Public Website | SEO-readable product narrative, capability proof, truthful demo/case material, trial/contact/help and a clear workspace entry. The current pre-closure surface exposes no product-login entry or account wall. It cannot resemble or execute the operational workspace. |
 | Web Workspace | Browser-first primary operating surface with URL/deep-link semantics, keyboard/pointer access and responsive evidence/workflow composition. Desktop-only capability exposes a truthful handoff/state, never simulated success. |
 | Wide desktop (≥1280 logical px) | Persistent product/domain navigation, a compact active-context bar, workflow-specific work surface, and an optional Evidence/inspector region. The inspector may resize but cannot obscure the primary task. |
 | Compact desktop/tablet (768–1279 px) | Collapsible navigation rail, one primary work surface, and Evidence/inspector as a reversible panel. Keep keyboard navigation and selected context visible. |

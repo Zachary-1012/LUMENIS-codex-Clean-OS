@@ -1,10 +1,11 @@
 # LUMENIS 44 个既有屏幕：逐屏文字视觉草图
 
-与同目录《LUMENIS 前端最终目标与执行蓝图》1.5 逐项对应。本文件覆盖 44 个既有 Screen ID，作为完整业务能力的审查索引，不承诺最终产品固定恰好 44 个页面；适用时用当前页内抽屉、模态、播放器层、时间线状态表达，不复制造页。本文只用字符/区域说明目标形状、字段优先级、主次动作和关键状态；不是正式视觉稿，也不要求当前就编码。
+当前内部修订：1.6（沿用原 1.5 文件路径，避免制造第二份草图权威）。
+与同目录《LUMENIS 前端最终目标与执行蓝图》1.6 逐项对应。本文件覆盖 44 个既有 Screen ID，作为完整业务能力的审查索引，不承诺最终产品固定恰好 44 个页面；适用时用当前页内抽屉、模态、播放器层、时间线状态表达，不复制造页。本文只用字符/区域说明目标形状、字段优先级、主次动作和关键状态；不是正式视觉稿，也不表示当前已经编码。
 
 ## 当前状态读法
 
-- 当前核对基线为 `main = origin/main = refs/heads/main = 0c9394ef442cc9ec40e65204c72afa8ad3557959`。`c7765b87`、`1b238c2f`和`0c9394ef`为治理/归档审阅提交，未修改前端Screen/API媒体/采集源码；当前静态源码快照有44个App Screen源文件；44份Screen-specific规范与ID对应。
+- 1.6 审阅输入基线为 `bbe3310f095b788448a480c4615481bc5da029f8`；Universal Platform Acquisition 规则来源提交为 `3be8298a3ae853b98fde90b2fda943a5c9462a58`。该 SHA 仅冻结本轮审阅输入；实现/验收必须 fresh resolve 当前 main/runtime。原 1.5 的 `0c9394ef` 源码观察保留为 dated provenance；当前目标以 2026-10-07 权威规则与更新后的 Screen Spec 为准。`c7765b87`、`1b238c2f`和`0c9394ef`为治理/归档审阅提交，未修改前端Screen/API媒体/采集源码；当前静态源码快照有44个App Screen源文件；44份Screen-specific规范与ID对应。
 - Binding registry 生成源早于该 HEAD，历史状态为 Acceptance Pending；本任务没有运行产品、读取生产 DB、重跑绑定或任何产品 E2E。
 - 下方 `Screen Spec.status` 是屏幕规范/设计评审状态（例如 `DESIGN_READY` 或 `BLOCKED`），不是产品实现、服务可用或运行验收状态。每行同时保留源码/验收缺口与直接链接。
 - R01–R15/J1–J8/U01–U25 到本产品屏幕/流程的审阅导航见同目录主方案 §6.7；这些代码不是新的页面标签，也不会自动标为通过。
@@ -13,7 +14,21 @@
 - 以下每屏的字段都是语义槽位；若当前 owner 不返回或语义未知，显示缺失状态，不自行发明值。
 - 逐Screen的zh-CN/en/ko-KR目标标题、主要动作及核心状态词映射见主方案 §3.4；本文件中的 `GLOBAL/ALL`、Owner、Evidence、Viewer 等是审核/字段 shorthand，不是要求直接显示为技术大字。
 
-## 五位架构视觉角色索引（主方案 1.5 / §3.3）
+## 2026-10-07 跨屏终态收敛
+
+以下是 1.6 必须贯穿相关屏幕/抽屉/Sheet 的共性结果，不新增 Screen ID，也不把内部技术名直接显示给普通用户：
+
+- `PlatformManifest` 只负责内部平台真相；SYS-02把它投射成“该来源能提供什么 / 当前配置与验证到哪一步 / 哪些字段不可用”，而不是显示Manifest、Adapter类名或硬编码平台清单。
+- `PlatformSession` 是平台连接状态唯一投影；用户看到 READY / 需要登录 / 需要验证 / 冷却 / Worker不可达 / 未配置 / 未知，不看到Cookie/CDP/profile路径。
+- `LumenisPlatformRecoverySheet` 是唯一平台恢复层；QR、受控登录、VERIFY、BLOCKED/COOLDOWN四态分开。多个平台同时异常时在一个Sheet里排队，一次处理一个，不叠多层modal。
+- RecoverySheet打开时焦点进入Sheet，关闭后返回触发控件或下一合理工作位置；扫码/验证等异步状态可被辅助技术播报但不抢焦点。
+- `SourceTarget / Open Original / Return` 是所有重要Source-backed事实的统一来源动作：同一row lineage→查看来源→Open Original→诚实handoff状态→返回原route/Focus/filter/selection/scroll；普通打开原帖不启动采集或Evidence捕获。
+- query continuation、平台native cursor和durable task receipt在视觉上分开；用户看到“从原任务继续、已完成来源不重复、终态重开返回原结果”，不看到attempt/lease/completion token。
+- 平台扩展按原生内容类型与平台特有字段重组Reader；六个平台是当前验收基线，不是最终视觉平台上限。
+- SYS-07终态按同一发布证据链显示 source/config → Product Gate → App Gate → Critical E2E → package/build（适用）→ loaded runtime → rollback/recovery → Product Owner repeat → RELEASED → OPERATING；不同SHA证据不合并冒绿。
+- AI-05只显示产品AI服务诊断，不显示或选择Codex研发模型/provider。
+
+## 五位架构视觉角色索引（主方案 1.6 / §3.3）
 
 | 角色身份 | 对应既有能力屏幕 | 产品内显示边界 |
 |---|---|---|
@@ -73,17 +88,17 @@ App 页面按已有 screen repository/Client 读取；本任务不运行其中�
 | AI-02 | SYSTEM Agent Runtime / Task Queue / Artifact | stage状态、step inputs/outputs、cancel/resume | screen source存在；真实runtime执行/恢复未验 | owner_domain=Shared Capability / AI Agent Groups; status=BLOCKED; no BACKEND-GAP ID in frontmatter; [AI-02.md](../../../../contracts/experience/screen-specifications/AI-02.md) |
 | AI-03 | AI Result + Shared Citation/Evidence | claim、citation anchor、版本、uncertainty | screen source存在；结果对每条source的真实绑定未验 | owner_domain=Shared Capability / Evidence-linked AI analysis; status=BLOCKED; no BACKEND-GAP ID in frontmatter; [AI-03.md](../../../../contracts/experience/screen-specifications/AI-03.md) |
 | AI-04 | SYSTEM Skill Registry / License / Permission | 已验证skill、license/trust、inputs/outputs/run history | screen source存在；Store lifecycle需逐条落实在现有owner | owner_domain=Shared Capability / Agent Skills registry; status=BLOCKED; no BACKEND-GAP ID in frontmatter; [AI-04.md](../../../../contracts/experience/screen-specifications/AI-04.md) |
-| AI-05 | SYSTEM AI Gateway / Provider Observation | 实际provider状态/策略/fallback/last check | screen source存在；current code已明示diagnostic fallback，不是独立能力 | owner_domain=SYSTEM AI Gateway / runtime diagnostics; status=BLOCKED; no BACKEND-GAP ID in frontmatter; [AI-05.md](../../../../contracts/experience/screen-specifications/AI-05.md) |
+| AI-05 | SYSTEM AI Gateway / runtime diagnostics | 产品级Available/Not ready/Unavailable/Unknown、最后检查与安全调用观测；不显示/选择raw provider/model | 当前可有明确diagnostic fallback；诊断不等于独立AI能力，Codex研发模型选择不进入产品UI | owner_domain=SYSTEM AI Gateway / runtime diagnostics; status=BLOCKED; current spec禁止provider marketplace/model selection; [AI-05.md](../../../../contracts/experience/screen-specifications/AI-05.md) |
 | SYS-01 | SYSTEM Runtime / Observability | 组件health/dependency/trace/recovery | screen source存在；当前运行 health未执行检查 | owner_domain=SYSTEM / RuntimeGuardian; status=APPROVED; BACKEND-GAP-036; [SYS-01.md](../../../../contracts/experience/screen-specifications/SYS-01.md) |
-| SYS-02 | SYSTEM Collector / Scheduler / Session | 完整目标：计划/Schedule配置、单次/批次Task、逐平台状态、查询续页与native media cursor分别记录、取消/暂停/恢复回执 | 当前Screen Spec是只读状态面，目标写动作/分页/取消仍待C1/C6 Owner冻结；当前可见状态不冒绿灯、不把旧ACTIVE当新运行 | owner_domain=SYSTEM Collector; status=DESIGN_EXPLORATION; BACKEND-GAP-037; [SYS-02.md](../../../../contracts/experience/screen-specifications/SYS-02.md) |
+| SYS-02 | SYSTEM Collector / Scheduler / PlatformSession | 终态：PlatformManifest能力投影、PlatformSession、计划/Task、query continuation/native cursor/durable receipt、pause/cancel/resume/recovery | revision 2已承接最终目标；当前实现仍read-only，Manifest/Session/receipt与真实动作需C1/C6绑定；配置/注册不能冒充READY | owner_domain=SYSTEM Collector; status=DESIGN_EXPLORATION; revision=2; BACKEND-GAP-037; [SYS-02.md](../../../../contracts/experience/screen-specifications/SYS-02.md) |
 | SYS-03 | SYSTEM Database / Integrity / Evidence Lineage | schema, version, readonly health, canonical integrity | screen source存在；本轮不读/改生产DB | owner_domain=SYSTEM / Canonical Data; status=DESIGN_EXPLORATION; BACKEND-GAP-038; [SYS-03.md](../../../../contracts/experience/screen-specifications/SYS-03.md) |
 | SYS-04 | SYSTEM Permission / Audit / Effect Fence | actor/scope/action/approval/effect result | screen source存在；不能将屏幕中的UI grant当服务权限 | owner_domain=SYSTEM Permission; status=DESIGN_EXPLORATION; BACKEND-GAP-039; [SYS-04.md](../../../../contracts/experience/screen-specifications/SYS-04.md) |
 | SYS-05 | SYSTEM Settings / Local Preferences | wallpaper/theme/contrast/motion/locale on current device | screen source存在；wallpaper's cross-surface adaptive result未跑实机 | owner_domain=SYSTEM Settings; status=DESIGN_READY; BACKEND-GAP-040 (read-only SYS-05 screen snapshot); [SYS-05.md](../../../../contracts/experience/screen-specifications/SYS-05.md) |
-| SYS-06 | SYSTEM Controlled Browser / Authorization / Evidence | 当前任务授权内的 browser capability 与来源/证据 lineage | `IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED / BACKEND-GAP-041`；浏览器容量/状态不等于实际浏览、采集许可或Evidence | owner_domain=SYSTEM Browser / CDP; status=IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED; BACKEND-GAP-041; [SYS-06.md](../../../../contracts/experience/screen-specifications/SYS-06.md) |
-| SYS-07 | SYSTEM Evaluation / Release Evidence | gate owner/assertion/current result/evidence | screen source存在；本轮未跑门禁 | owner_domain=SYSTEM Security / AI Gateway; status=DESIGN_EXPLORATION; BACKEND-GAP-042; [SYS-07.md](../../../../contracts/experience/screen-specifications/SYS-07.md) |
+| SYS-06 | SYSTEM Controlled Browser / Authorization / Recovery support | 当前任务受控Browser；RecoverySheet当前项需要LOGIN_FORM/VERIFY时提供网页交互，再交回PlatformSession健康复核 | revision 4明确Browser不是Session owner/平台账号中心；QR与BLOCKED/COOLDOWN不强制开Browser；live/native recovery E2E未验 | owner_domain=SYSTEM Browser / CDP; status=IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED; revision=4; BACKEND-GAP-041; [SYS-06.md](../../../../contracts/experience/screen-specifications/SYS-06.md) |
+| SYS-07 | SYSTEM Evaluation / Release Evidence | 终态same-release证据链：source/config→Product Gate→App Gate→Critical E2E→package/runtime→rollback→PO repeat→RELEASED→OPERATING | revision 2已批准终态；当前builder仍只有有限checks/skill light，完整C6/M release evidence未绑定 | owner_domain=SYSTEM Security / AI Gateway; status=DESIGN_EXPLORATION; revision=2; BACKEND-GAP-042; [SYS-07.md](../../../../contracts/experience/screen-specifications/SYS-07.md) |
 | SYS-08 | SYSTEM Observability / Logs | trace id/span/error/time context, sanitized fields | screen source存在；实机关联回路待验 | owner_domain=SYSTEM Observability; status=DESIGN_EXPLORATION; BACKEND-GAP-043; [SYS-08.md](../../../../contracts/experience/screen-specifications/SYS-08.md) |
 | SH-01 | Shared Timeline/Media/Artifact | licensed source files, project, timeline, render/export/reopen | screen/media source存在；本轮未完成真实project E2E | owner_domain=Shared Capability; status=IMPLEMENTED_CATALOG_ONLY_EVIDENCE_SCOPE_BLOCKED; BACKEND-GAP-044, BACKEND-GAP-045, BACKEND-GAP-046, BACKEND-GAP-047, BACKEND-GAP-048, BACKEND-GAP-049; [SH-01.md](../../../../contracts/experience/screen-specifications/SH-01.md) |
-| SH-02 | Shared Source/Evidence / Rights | originals, snapshots, captured/published times, citation link；按平台原生结构显示单帖 | `IMPLEMENTED_SCOPE_GUARDED_BACKEND_SCOPE_UNVERIFIED`；六个字符草图未正式登记Source/Evidence，媒体/全文和商业权利依 owner 返回 | owner_domain=Shared Capability; status=IMPLEMENTED_SCOPE_GUARDED_BACKEND_SCOPE_UNVERIFIED; no BACKEND-GAP ID in frontmatter; [SH-02.md](../../../../contracts/experience/screen-specifications/SH-02.md) |
+| SH-02 | Shared Source/Evidence / Rights / SourceTarget | originals/snapshots/time/citation/native Reader；同一row已验证时终态支持Trace→Open Original→Return | revision 3已承接SourceTarget终态；当前scope/Evidence envelope、typed target/launcher/Return仍未绑定，六样本仅作内部结构参考 | owner_domain=Shared Capability; status=IMPLEMENTED_SCOPE_GUARDED_BACKEND_SCOPE_UNVERIFIED; revision=3; [SH-02.md](../../../../contracts/experience/screen-specifications/SH-02.md) |
 | SH-03 | Shared Canonical Data / Metric | field/schema owner/lineage/derived status | screen source存在；当前 binding/production schema未核实 | owner_domain=Shared Capability; status=IMPLEMENTED_SCOPE_GUARDED_BACKEND_SCOPE_UNVERIFIED; no BACKEND-GAP ID in frontmatter; [SH-03.md](../../../../contracts/experience/screen-specifications/SH-03.md) |
 | SH-04 | Shared Artifact/Reporting/Export | output version/type/source links/export status | screen source存在；每种文件实际重开未验证 | owner_domain=Shared Capability; status=IMPLEMENTED_SCOPE_GUARDED_EFFECT_UNVERIFIED; no BACKEND-GAP ID in frontmatter; [SH-04.md](../../../../contracts/experience/screen-specifications/SH-04.md) |
 | SH-05 | Shared Learning/Evaluation/Promotion | reviewed assets, evaluation, proposed versions, approval/rollback | screen source存在；自动Promotion不允许，流程未E2E | owner_domain=Shared Capability; status=IMPLEMENTED_SCOPE_GUARDED_PROMOTION_READ_ONLY; no BACKEND-GAP ID in frontmatter; [SH-05.md](../../../../contracts/experience/screen-specifications/SH-05.md) |
@@ -201,7 +216,7 @@ review_status：未审/已接受/冲突/拒绝（仅Owner返回）
 │ 同一请求ID      │ 实际图/视频/长文         │ 平台ID≠显示名         │
 │ fetched/accepted│ 原文/派生译文分开        │ 发布时间/采集时间      │
 │ 重复/部分/失败  │ 评论/互动按平台分页       │ Evidence/版本/关系     │
-│ 具体恢复原因    │ [打开来源/可用媒体]     │ [回列表] [回任务]      │
+│ 具体恢复原因    │ [Trace] [Open Original] │ [回列表] [回任务]      │
 └───────────────┴────────────────────────┴──────────────────────┘
 
 手机： [已存记录] / [新建采集] → 一条任务条件与真状态 → 逐篇Reader
@@ -209,6 +224,8 @@ review_status：未审/已接受/冲突/拒绝（仅Owner返回）
 ~~~
 
 现有接口事实：CTH-03 GET最多返回100条且会报告 `partial`；现有人工只读 search POST 当前仅支持一个`platform+keyword`或`business_requests`批次；`continuation`只续查询计划，不是post/comment/media native cursor；App当前只有Screen GET。UI目标显示完整两种模式和计划/原生分页能力，当前模式没有实现的字段列为owner contract gap，不能发往旧Route。筛选主键必须为稳定 `platform_id`，显示名不可作身份键；不移除已有Evidence projection校验。固定“广州太古汇”查询预填须清空。未返回的全文/媒体/评论/原生互动标“未取得/未绑定”，不可借别帖补齐。
+
+终态来源动作使用 `lumenis.source-target/v1`：Trace先显示同一row的Source/Evidence/时间/locator，再按 `READY / URL_MISSING / INVALID_URL / DENIED / UNSUPPORTED / SOURCE_WITHDRAWN / STALE / UNKNOWN` 决定是否提供 Open Original。打开后只把公开HTTPS交给系统浏览器，`HANDOFF_ACCEPTED`不等于页面加载成功；Return恢复原Scope、平台lane、筛选、选中项和滚动位置。六个平台是当前基线；新增平台沿相同稳定ID、SourceTarget和原生内容类型规则进入，不复制一个新CTH页面。
 
 ### CTH-04 事件关系
 
@@ -443,15 +460,15 @@ Phone: 当前Task适用能力→来源/版本/输入输出→调用状态→返�
 
 **目标生命周期**：发现→查看来源/信任/许可/版本/用途→在目标Task中批准使用→运行/失败/取消→保存真实结果/版本→比较更新差异→采用新版本或保留旧版→停用/卸载及恢复。**当前ScreenSpec是READ_ONLY目录**，Install/Enable/Update/Disable/Uninstall按钮尚未绑定，本方案不把它画成当前可操作；闭环终态必须由既有Skill Registry/Runtime owner补充对应操作/在途状态，不能另建Marketplace/Runtime。运行中的skill若版本将变，仅按owner返回的run-id/版本和安全退出状态处理；旧Artifact/Trace不随卸载删除。无license/owner/permission的条目显示不可运行和原因。
 
-### AI-05 AI Gateway/Provider
+### AI-05 AI Gateway 诊断
 
 ~~~text
-PC: Task入口 → Gateway → 实际provider/已退役状态/失败路径
-    右侧显示当前检查时间/用户可执行的诊断
-Phone: Provider列表→选择详情→看错误、恢复或返回任务
+PC: 当前任务 → AI服务状态 → 最近检查/调用观测 → 错误或恢复说明
+    [刷新诊断] [继续手动流程] [返回任务]
+Phone: 服务状态→检查时间/错误原因→重试或返回原任务
 ~~~
 
-状态不给星星评分或无来源的tokens指标；fallback显示实际路线。用户手动选模不被UI重写。
+AI-05只做产品级诊断，不是provider marketplace或模型选择器。产品UI不显示原始provider/model名称，也不展示Codex研发窗口的Astra/Sol/Luna等工程配置；服务状态只用可核验的Available / Not ready / Unavailable / Unknown及真实时间/延迟单位。fallback只能明确标为diagnostic fallback，不能把降级/未绑定状态包装成AI能力成功。
 
 ## SYSTEM
 
@@ -468,13 +485,21 @@ Phone: 依赖状态列表→错误详情→返回当前任务
 
 ~~~text
 PC: 采集计划 | 执行记录 | 来源能力
+    来源能力：平台/来源 · 能提供的正文/详情/评论/媒体/跟踪 · 当前可用程度
+    PlatformSession：可用 / 需登录 / 需验证 / 冷却 / Worker不可达 / 未配置 / 未知
     计划编辑：目标/平台/授权Scope/用途/时间/频率/深度/停止条件
-    执行列表：Task ID / 按平台结果 / 原生续接位置 / 失败原因
-    操作：人工运行 / 开启已授权计划 / 暂停后续计划 / 取消待执行项
-Phone: 计划卡或单次Task → 平台分行进展 → partial/回执/恢复说明
+    执行列表：Task / 按平台进展 / query续接 / native cursor / 恢复原因
+    操作：人工运行 / 开启已授权计划 / 暂停后续计划 / 取消待执行项 / 恢复来源
+Phone: 单个计划或Task → 来源lane → 能力/Session/进展 → 回执/恢复
 ~~~
 
-这是SYS-02最终操作工作面的目标，不是当前ScreenSpec现有可用控件。当前Spec只有只读状态，计划提交/启动/暂停/取消/任务续接若无owner callable与Permission都不得出现在可操作实现；但终态UI必须为C1/C6已有Collector/Scheduler合同保留此路径，不能因为today read-only而删除。能力状态分别呈现`已配置`、`会话已验证`、`执行器可达`、`上次实际尝试/成功`、`当前运行`、`Evidence/Canonical正式接收`；旧缓存/文件ACTIVE/配置存在都不得亮成“已连接”。人工搜索、自动计划、批次续接、媒体/评论native cursor各自标记，不用同一个业务checkpoint冒充四种完成度。服务端拒绝、限速、挑战、部分收录、cancel等待回执或结果未知保留task/scope/已接内容，安全返回来源工作。具体现状和字段Owner见主方案§5.1/§5.2.2。
+SYS-02是一个Collector的产品投影，不是平台后台或第二平台注册表。内部PlatformManifest决定canonical platform ID、alias、字段、能力、provider和runtime registration；UI只显示“这个来源现在能提供什么、验证到哪一步、还缺什么”，不显示Manifest/Adapter类名。
+
+能力状态必须分开：declared / implemented / registered / configured / session-verified / live-verified不能压成一个绿灯。PlatformSession只通过统一Owner返回 READY / AUTH_REQUIRED / VERIFY / BLOCKED_COOLDOWN / WORKER_UNAVAILABLE / NOT_CONFIGURED / UNKNOWN。Cookie文件、CDP在线或profile存在都不能直接显示“已连接”。
+
+任务状态显示 planned / queued / running / partial / waiting-recovery / completed / failed / cancelled；query continuation、平台native cursor和durable receipt分别表示不同连续性。终态receipt重开不得画成新run；用户看到“已完成来源不会重复执行 / 从原任务继续 / 返回原结果”，内部attempt/lease/completion token不显示。
+
+这是SYS-02最终操作工作面的目标，不是当前ScreenSpec现有可用控件。当前实现仍可保持只读直到real callable/Permission/receipt接通；但终态的manual run、已授权AUTO plan、pause/cancel/resume、RecoverySheet入口不因today read-only而从蓝图删除。一个平台被阻断时只隔离该lane，其他可用来源继续。
 
 ### SYS-03 Data/DB Truth
 
@@ -508,20 +533,41 @@ Phone: 主题/图片缩略图→裁切&对比预览→[本机应用]
 
 ~~~text
 PC: [当前任务/允许域/可用浏览器状态] | 实际viewport（若绑定）|来源状态
-    未授权→显示范围与正常授权入口→用户完成登录/授权→返回来源任务
+    普通来源阅读→受控浏览，不等于采集/登录
+    RecoverySheet请求LOGIN_FORM/VERIFY→进入受控平台页面→完成合法人工步骤→返回RecoverySheet
 Phone: 当前工作→授权边界→受控来源（若可用）→状态/返回任务
 ~~~
 
-SYS-06展示的是浏览器能力与当前任务授权范围，不是Collector连接灯。只有被现有Browser/Permission owner绑定的真实viewport/action才能提供操作；没有时如实显示不可用并返回来源任务。会话失效/挑战/撤权说明影响与已有Evidence保留状态；重新授权后是否续接由原任务owner决定。challenge由人工解决，不绕过。敏感Cookie/password不显示/复制；开发边界内不碰个人Mainland XHS身份。
+SYS-06展示的是浏览器能力与当前任务授权范围，不是Collector连接灯，也不是平台账号管理中心。LumenisPlatformRecoverySheet负责恢复编排；只有当前恢复项需要网页交互时才调用SYS-06。QR可直接在Sheet显示；BLOCKED/IP风险/COOLDOWN不为了“有动作”而打开浏览器。
+
+用户完成登录表单或验证后，SYS-06只把控制权/安全状态交回SYSTEM Session owner；必须由PlatformSession重新检查真实auth/verify/risk/worker健康，健康后RecoverySheet才能恢复原Collector task。多个平台异常时SYS-06只服务Sheet当前选中的一个恢复项，不叠平台窗口。敏感Cookie/token/password/profile/CDP/session ID不显示/复制；开发边界内不碰个人Mainland XHS身份。
 
 ### SYS-07 Release/Evaluation
 
 ~~~text
-PC: 当前产品能力/Owner → Acceptance criteria → source/test/live/user evidence
-Phone: 单个验收项→所需证据→当前未通过项/返回owner
+PC: 当前候选SHA
+    source/config/DB/Experience
+        ↓
+    Product Gate
+        ↓
+    App Gate
+        ↓
+    Critical E2E
+        ↓
+    package/build（适用Surface）
+        ↓
+    loaded runtime identity / rollback
+        ↓
+    Product Owner重复核心任务
+        ↓
+    RELEASED
+        ↓ real elapsed operation evidence
+    OPERATING
+
+Phone: 单个验收阶段→SHA/时间/证据→FAIL / NOT_RUN / UNKNOWN原因→返回owner
 ~~~
 
-状态区分 source-present、tests、runtime/E2E、user-verified、released、operating；不以全部绿点或报告代替。
+每一阶段都独立显示 PASS / FAIL / NOT_RUN / UNKNOWN / STALE 和证据SHA；不同SHA的Product/App/E2E不能拼成一条假绿线。source-present、build成功、HTTP 200、报告或某个本地Gate都不能单独变成RELEASED。官网/Web/桌面/移动各自只显示实际承诺的package/runtime状态；未发布安装包就明确未发布。
 
 ### SYS-08 Logs/Traces
 
@@ -691,7 +737,23 @@ Facebook · 完整帖子目标形态
 | X | 原文与每个可用视频片段/时码对应，翻译分开且标来源 | poster-only时逐片段标未播放，不拼画面补内容 |
 | Facebook | 完整帖子正文/媒体/发布时间/评论按真实响应布局 | meta预览仅作为预览状态，完整文本和媒体缺失字段逐项显示 |
 
-其它已批准Source按现有 `content_type` 复用对应长文、图集、视频、音频、讨论串或listing reader；未识别类型保留来源记录与明确“暂不可读”状态，不丢掉或伪造一个平台。
+六个平台只是当前验收基线，不是Reader视觉上限。其它已批准Source按原生内容类型与平台特有字段组合Reader，而不是“新增一个平台就复制一页”：
+
+```text
+Gallery / Image Post
+Short Video
+Long Video
+Long Article
+Short Text Post
+Thread / Discussion
+Audio
+Listing / Page
+Unknown / Unsupported
+```
+
+平台自己的author/native ID/topic/location/metric/reply等字段作为typed extension进入对应Reader；未识别类型保留来源记录与明确“暂不可读”状态，不丢掉或伪造一个平台。
+
+每个正式Evidence item的来源动作统一为：`Trace → SourceTarget availability → Open Original → handoff state → Return`。如果 `URL_MISSING / INVALID_URL / DENIED / UNSUPPORTED / SOURCE_WITHDRAWN / STALE / UNKNOWN`，Reader只显示真实原因；不放裸URL按钮。`HANDOFF_ACCEPTED`不等于来源页已成功加载。Return恢复SH-02原Space/List模式、query/filter、选中item、scroll/camera和键盘焦点。
 
 该参考集的 `source_scope=UNASSIGNED`、正式 Source/Evidence/Canonical refs 为空，commercial=`UNKNOWN`、`TRAIN=NOT_GRANTED`、design_state=`DESIGN_EXPLORATION`、frontend_implemented=`false`。只采用内部阅读层级，不复制正文、账号或媒体到产品/官网，不作训练输入。
 

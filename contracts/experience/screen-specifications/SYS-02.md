@@ -3,16 +3,16 @@
 ```yaml
 screen_id: SYS-02
 status: DESIGN_EXPLORATION
-revision: 1
+revision: 2
 owner_domain: SYSTEM Collector
 binding_ids:
   - BACKEND-GAP-037
-product_owner_approval: PENDING
+product_owner_approval: APPROVED_FINAL_TARGET_2026-10-07
 design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
 design_decision: DESIGN_EXPLORATION
-reviewer: Sol review required
-reviewed_at: UNKNOWN
-approval_reference: UNKNOWN
+reviewer: M target-convergence review
+reviewed_at: 2026-10-07
+approval_reference: Product Owner-approved Universal Platform Acquisition / PlatformManifest / PlatformSession convergence; current implementation remains read-only until bindings pass
 ```
 
 ## 0. Authority basis and artifact disposition
@@ -21,14 +21,43 @@ approval_reference: UNKNOWN
 - Product contract: `SYSTEM Collector → Source/Evidence → Canonical Data`; this screen reports operational collection state only.
 - External sketches, screenshots and taskbooks: `KEEP_AS_EXPLORATION`; none authorize layout or capability.
 - Anti-template check: the primary composition is a platform-lane inspection with an ingestion-boundary explanation, not a generic KPI dashboard.
-- Sol design decision: `DESIGN_EXPLORATION`; the implementation is a bounded candidate until reviewed.
+- Sol design decision: `DESIGN_EXPLORATION`; the current implementation is a bounded read-only candidate. Product Owner approval below defines the final target, not implementation proof.
+
+## 0.1 Approved final-target extension — 2026-10-07
+
+SYS-02 is the operational projection of the one SYSTEM Collector. It must not become a platform-admin dashboard or a second collector. The final target consumes the shared `PlatformManifest`, `PlatformSession` and durable Collector task/result owners instead of maintaining local platform lists or session truth.
+
+The user-visible final target distinguishes:
+
+```text
+Platform capability
+→ declared / implemented / registered / configured / session-verified / live-verified
+
+PlatformSession
+→ READY
+→ AUTH_REQUIRED
+→ VERIFY
+→ BLOCKED / COOLDOWN
+→ WORKER_UNAVAILABLE
+→ NOT_CONFIGURED
+→ UNKNOWN
+
+Collector task
+→ planned / queued / running / partial / waiting-recovery / completed / failed / cancelled
+→ query continuation is separate from platform-native content/comment/media cursors
+→ terminal replay never appears as a new run
+```
+
+Desktop/Web may show plan, execution and platform lanes in parallel. Mobile shows one task or platform lane at a time with the same semantics. User-facing rows describe what data can actually be obtained, what remains unavailable and what recovery is required; Cookie files, CDP ports, profile paths, lease IDs and completion tokens never render.
+
+Final actions may include explicit manual run, an already-authorized schedule, pause/cancel/resume and recovery entry only when the existing Collector/Scheduler/Permission owners supply a real callable and receipt. One affected platform must not block other eligible platform lanes. `LumenisPlatformRecoverySheet` is the shared recovery surface; SYS-02 links into it rather than creating platform-specific login dialogs.
 
 ## 1. User problem and product invariant
 
 - Authorized context: SYSTEM operator permitted to read the current screen envelope.
 - Real task: determine which collection lanes are verified, partial, missing or blocked, and whether a record may cross into Evidence/Canonical Data.
 - Completion signal: the returned platform states and counts are visible with their source state; missing values stay unavailable.
-- Out of scope: cookie/session inspection, collection control, retry/stop/compensation actions, and business truth.
+- Current read-only slice out of scope: cookie/session inspection, collection control, retry/stop/compensation actions, and business truth. The approved final target in §0.1 may expose only those controls whose existing owners later provide real callables, Permission and durable receipts.
 
 ## 2. Route, entry, exit and return
 
@@ -95,6 +124,10 @@ No pagination, write action, idempotency key, Evidence emission or cancellation 
 | SYS02-RESP-01 | Desktop, tablet and phone use distinct lane composition | Flutter widget tests |
 | SYS02-RECOVERY-01 | 401/403/offline/malformed response show safe bounded states | ViewModel/widget tests; live HTTP still pending |
 | SYS02-REAL-USER-01 | Operator opens SYS-02, reads one real returned lane, and can distinguish not-collected from zero | Requires authenticated runtime E2E at current commit |
+| SYS02-MANIFEST-02 | A clean runtime projects the same canonical platform identity/capability truth as PlatformManifest without import-order registration tricks or a second UI list | Future manifest/registry contract + clean-runtime test |
+| SYS02-SESSION-02 | READY/AUTH_REQUIRED/VERIFY/BLOCKED_COOLDOWN/WORKER_UNAVAILABLE/NOT_CONFIGURED/UNKNOWN are visually distinct and recovery opens the one shared RecoverySheet | Future PlatformSession API + widget + runtime E2E |
+| SYS02-TASK-02 | Query continuation, native cursor and durable receipt are distinct; terminal replay returns prior result or explicit terminal state and never appears as a new run | Future task/receipt contract + concurrency/replay test |
+| SYS02-ISOLATE-02 | One blocked/recovering platform lane does not block eligible platform lanes and retained partial results stay visible | Future multi-platform runtime E2E |
 
 ## 10. Cross-cutting gates and review
 

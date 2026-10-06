@@ -3,16 +3,16 @@
 ```yaml
 screen_id: SYS-07
 status: DESIGN_EXPLORATION
-revision: 1
+revision: 2
 owner_domain: SYSTEM Security / AI Gateway
 binding_ids:
   - BACKEND-GAP-042
-product_owner_approval: PENDING
+product_owner_approval: APPROVED_FINAL_RELEASE_TARGET_2026-10-07
 design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
 design_decision: DESIGN_EXPLORATION
-reviewer: Sol review required
-reviewed_at: UNKNOWN
-approval_reference: UNKNOWN
+reviewer: M target-convergence review
+reviewed_at: 2026-10-07
+approval_reference: Product Owner-approved final product closure requires same-SHA Product/App/Critical E2E, packaging/runtime/user-repeat/release evidence; current builder remains incomplete
 ```
 
 ## 0. Authority basis and artifact disposition
@@ -21,7 +21,32 @@ approval_reference: UNKNOWN
 - Product contract: real result → Evidence → evaluation; PARTIAL/UNKNOWN cannot become PASS.
 - References: `KEEP_AS_EXPLORATION`; fixture gates are not production evidence.
 - Anti-template check: evidence posture, gates and returned checks form a review sequence, not a scorecard dashboard.
-- Sol design decision: `DESIGN_EXPLORATION`.
+- Sol design decision: `DESIGN_EXPLORATION`; the current builder remains a bounded read-only slice.
+
+## 0.1 Approved final release-evidence target — 2026-10-07
+
+SYS-07's final product role is to make release truth legible. It consumes existing C6/M release evidence and does not itself run acceptance actions or change release state.
+
+Final evidence order:
+
+```text
+candidate source SHA
+→ source/config/DB/Experience checks
+→ Product Gate
+→ App Gate
+→ Critical E2E
+→ package/build artifact where promised
+→ loaded runtime identity matches the accepted release composition
+→ rollback/recovery evidence
+→ Product Owner repeats the core job
+→ RELEASED
+→ real elapsed operating evidence
+→ OPERATING
+```
+
+Each stage reports PASS / FAIL / NOT_RUN / UNKNOWN / STALE with exact evidence, time and SHA when available. An earlier green stage never hides a later missing stage. Evidence from different SHAs stays visibly separate until the accepted release composition proves them compatible. Source presence, a build, or an HTTP response alone is not release.
+
+Public Website, Web Workspace, Desktop and Mobile keep distinct release roles. Only actually published/supported packages are shown as downloadable; unavailable packages remain explicitly unavailable.
 
 ## 1. User problem and product invariant
 
@@ -90,6 +115,10 @@ approval_reference: UNKNOWN
 | SYS07-NO-PASS-01 | OWASP/skill registration does not become production acceptance | Snapshot/widget/source tests |
 | SYS07-EVIDENCE-01 | A gate is not complete without explicit evidence and ready/pass result | Future contract test; current screen fails closed |
 | SYS07-REAL-USER-01 | Operator reviews a real check and sees exactly why production acceptance remains incomplete | Authenticated runtime E2E plus evaluation Evidence required |
+| SYS07-SHA-02 | Product/App/Critical/runtime/package evidence carries its actual SHA/version; different SHAs remain visibly separate until an accepted release composition proves compatibility | Future release-evidence contract + widget test |
+| SYS07-LADDER-02 | PASS/FAIL/NOT_RUN/UNKNOWN/STALE are shown for every promised release stage; an earlier PASS never hides a missing later stage | Future widget/contract test |
+| SYS07-RELEASE-02 | RELEASED requires the accepted release composition plus applicable package/runtime/rollback and Product Owner repeat evidence; OPERATING requires later real operating evidence | Future same-release E2E + Product Owner acceptance |
+| SYS07-SURFACE-02 | Public Website/Web/Desktop/Mobile show only their actually promised package/runtime state; an unavailable installer is not fabricated or borrowed from another surface | Future cross-surface release E2E |
 
 ## 10. Cross-cutting gates and review
 

@@ -1,15 +1,24 @@
 # LUMENIS 前端最终目标与执行蓝图
-## 全产品操作方案与文字视觉草图 · Product Owner 审核稿 1.5
+## 全产品操作方案与文字视觉草图 · Product Owner 审核稿 1.6
 
-日期：2026-10-06  
-当前代码快照：main、origin/main 与 live refs/heads/main 均为 0c9394ef442cc9ec40e65204c72afa8ad3557959  
-审核状态：DESIGN_EXPLORATION / 等待 Product Owner 审核  
-本轮范围：研究综合、全产品目标态、操作流程、页面规格、五位架构角色视觉体系、文字视觉草图、当前状态与缺口映射  
-本轮没有做：修改产品代码、正式视觉制作、产品构建/测试、启动/重启产品、部署、提交或推送。只编辑本审核包中的方案和文字草图；工作区其他未提交治理文件与候选资料保持原样。
+初版日期：2026-10-06
+当前收敛日期：2026-10-07
+1.6 审阅输入基线：本轮最终交叉核对前，main、origin/main 与 live refs/heads/main 均为 `bbe3310f095b788448a480c4615481bc5da029f8`；Universal Platform Acquisition 规则来源提交为 `3be8298a3ae853b98fde90b2fda943a5c9462a58`。该 SHA 是审阅输入，不是永久 current 指针；实现/验收必须 fresh resolve 当前 main。
+审核状态：FINAL_TARGET_CONVERGENCE_APPROVED / 仍不等于实现或用户验收
+本文件沿用原 1.5 路径以避免制造第二份前端蓝图；内部修订号 1.6 取代其中与当前权威冲突的 1.5 目标描述。
+本轮范围：研究综合、全产品最终目标态、操作流程、页面规格、五位架构角色视觉体系、文字视觉草图、当前状态与缺口映射，以及 2026-10-06—10-07 新批准的 SourceTarget、Universal Platform Acquisition、PlatformSession/Recovery、durable task 和 same-release evidence 规则。
+本轮没有做：修改产品代码、正式视觉制作、产品构建/运行验收或部署。产品实现状态与最终目标继续分开记录。
 
 > 这份蓝图画的是：当前批准的序境完整产品范围全部实现并形成真实工作闭环之后，用户能够看见并使用的目标体验。它不是当前产品已全部完成的声明，也不是最终视觉定稿。
 >
 > 本文同时标出已有源码、候选/局部实现、尚缺接入、未验证和明确后置。没有数据、后端或接口的目标功能仍保留在蓝图中，但标成未完成或未知；不会用样例数值、动画或 AI 文案伪造已完成。
+
+### 文档读法：最终目标与当前实现永远分开
+
+- **FINAL PRODUCT TARGET**：描述完整产品闭环后用户应该看见和完成什么。除非 Product Owner 改变产品方向，它不因今天某个 API/模型/平台暂未接通而缩水。
+- **CURRENT IMPLEMENTATION DELTA**：描述当前 main 已实现、部分实现、Blocked/Unverified 的真实状态。它可以随开发更新，但不得反向删除已经批准的终态。
+- 原 1.5 中以 `0c9394ef` 为基线的源码/运行观察仍是 dated provenance；若与当前 main、Current Screen Spec 或本 1.6 收敛段冲突，以当前权威和 fresh evidence 为准。
+- 文字视觉草图只定义用户可见结构、状态、动作与 Return；PlatformManifest、attempt token、lease、Cookie、CDP 等内部实现词不得直接变成普通用户界面。
 
 ---
 
@@ -30,9 +39,11 @@
 - 默认主页承接“当前确实存在的任务、待用户确认结果、影响工作的已验证变化”；没有真实任务或待确认事项时不渲染虚构数字或占位任务。广州太古汇只有在用户当前确实选中了该 Subject 时才出现，不作默认主体。
 - **当前产品入口裁决来自Product Owner在本会话的直接指令：**整体账号/登录/通用权限配置UI等全产品闭环后再重新规划；闭环前不显示登录页、注册表单、账号菜单、角色选择或未来占位，网站CTA和四端启动直接进入开放产品。它不取消业务Owner当前必需的服务端Permission，也不取消在原任务中对某个外部写入/采集/发布动作的明确Scope/审批/效果回执。
 
-### 当前证据速览
+### 1.5 dated evidence snapshot + 1.6 current contract delta
 
-| 项目 | 本轮只读核对 | 结论 |
+下表主要保留 2026-10-06 / `0c9394ef` 前后的只读源码观察作为 provenance；其中写“当前”的句子不得脱离日期继续当实时事实。1.6 目标与本轮合同差分以文件顶部 `bbe3310f` 审阅输入、Current Screen Spec 与本稿后续 `1.6 current overrides` 为准；任何实现/验收状态仍须 fresh resolve main/runtime。
+
+| 项目 | 1.5 dated observation | 结论 / 1.6读法 |
 |---|---|---|
 | 44 个 App 屏幕 | `app/lib/features` 下有 44 个屏幕源码；44 份 `contracts/experience/screen-specifications/<ID>.md` 全部存在 | 页面入口存在不等于业务闭环；每份 screen spec 的状态、owner、binding gap、目标交互和验收边界见伴随草图的44行映射；`spec.status` 不是实现完成 |
 | 默认入口 | 当前 root 与 Shell 初始屏幕指向 CTH-01 | 与目标主页 ACC-03/AI-01 冲突，待用户审核后由既有 owner 适配 |
@@ -40,9 +51,9 @@
 | 账号门槛 | 当前 LaunchSurface 对 401/403 运行时身份读取失败仍允许显示 Shell，交由具体页面报告真实状态 | 这是开放产品入口的客户端路径证据；不代表各业务服务都可用 |
 | AI-05 | 当前 Repository 在 AI-05 未独立绑定时读取 AI-01 诊断，并明确标成 fallback | 源码存在诊断；不代表 AI-05 有独立可执行 Provider/Gateway |
 | Website | Astro 页面、样式、i18n、测试源文件存在 | 不代表含真实操作视频、当前在线、支持全部产品流程或已通过发布验收 |
-| 屏幕绑定登记 | lumenis_app_binding_registry.json 标为 SOURCE_MAPPED_ACCEPTANCE_PENDING，但 generated_from_head 是旧提交 76fbe1af… | 本登记表早于当前 `0c9394ef`；它不是本轮逐屏当前绑定结论。44 个规范各自的 contract status 与缺口见伴随草图文件 |
+| 屏幕绑定登记 | 1.5 时 `lumenis_app_binding_registry.json` 标为 SOURCE_MAPPED_ACCEPTANCE_PENDING，generated_from_head 早于当时main | 这是 dated snapshot；当前逐屏目标以 current Screen Spec + Experience contract 为准，不能继续用旧 generated_from_head 推断实现状态 |
 | 产品蓝图基线 | 52cd770 更新 Product Architecture 与 takeover 文档，将已有 SH-01 Discover 纳入 J3/J7 闭环 | Discover 是既有 SH-01 子视图，无新增 Screen ID/Owner；其数据 callable 尚未冻结，仍属设计探索/待绑定 |
-| 当前治理主线 | `c7765b87`、`1b238c2f`、`0c9394ef`连续更新治理/归档处置；均未改前端Screen/API、媒体运行或采集调用源码 | 本轮按审计增补主/草图，只校准目标与字段依赖；UI/Collector源码仍固定在上述提交间未变化的`52cd770`文件字节，不代表任何当前API缺口已修复 |
+| 1.5治理主线 | `c7765b87`、`1b238c2f`、`0c9394ef`连续更新治理/归档处置；当时未改前端Screen/API、媒体运行或采集调用源码 | 仅用于解释1.5观察来源；自那以后CTH-03 SourceTarget、Collector治理、配置/Gate及多个合同已变化，1.6不得复用此行判断fresh main |
 | 采集到单帖呈现的接线 | 2026-10-05 对当前 CTH-03、Collector API、SYS-02/SYS-06、SH-02、BMP-03 源码及现有六平台单帖草图做只读核对 | 已有人工只读采集 POST；CTH-03 前端当前只读 GET，未调用该 POST；列表丢失部分已返回字段，平台通道身份未按稳定 ID 保留；此项为源码事实，不是运行采集证明 |
 | 本轮运行/验收 | 本轮未启动产品、未运行构建/测试/浏览器 E2E | 所有真实用户闭环与发布状态均需按当前 owner 和验收证据继续 |
 
@@ -265,7 +276,7 @@ Evaluation / 经审核的 Learning Asset
 
 这五位共享同一原创造型语法，但轮廓、姿态和一处主要材料线索可辨；不是五套互不相关的画风。Agent是执行协作方式，不另设第六位；AI角色代表序境自研AI能力的用户侧可见身份，不另建AI Gateway、模型服务或自治权限。各类来源/市场对象/作品可有手绘身份图标或插画，但不新增角色人格。既有功能控件继续用清晰线性glyph；五位彩色身份图只在对应架构语境、适当的说明/入口/空状态或获准的官网演示中使用，不铺满工具栏、列表或每张卡，也不代表状态、权限或数据事实。
 
-**版本升级规则：**本稿1.5取代1.4中未分架构的泛化“角色/对象家族”描述。旧版`LUMENIS-ICON-REVISION.md`保留为历史研究，不再作为五位角色数量/分配的当前依据；唯一正式规则由总控写回Experience Constitution。现有官网、Web、Desktop、Mobile中的角色草案和已登记角色资产，在后续获准设计/实现时全部按这五位重新归类与升级；不匹配者标为旧版/待替换，保留原始文件、来源和版本记录，不覆盖历史或谎称已完成图稿替换。当前升级的是方案规则，尚未生成/替换实际产品图标和角色美术。
+**版本升级规则：**本稿1.6保留1.5已经取代1.4的“五位架构角色”裁决，并继续吸收2026-10-07批准的跨屏闭环；1.5以前未分架构的泛化“角色/对象家族”描述继续只作历史。旧版`LUMENIS-ICON-REVISION.md`保留为历史研究，不再作为五位角色数量/分配的当前依据；唯一正式规则由总控写回Experience Constitution。现有官网、Web、Desktop、Mobile中的角色草案和已登记角色资产，在后续获准设计/实现时全部按这五位重新归类与升级；不匹配者标为旧版/待替换，保留原始文件、来源和版本记录，不覆盖历史或谎称已完成图稿替换。当前升级的是方案规则，尚未生成/替换实际产品图标和角色美术。
 - 任务状态点可以参考 Cue/OpenAI Dot 的“轻、小、略有材质、正在运动时能被察觉”的质感，但形状、节奏与色谱均需序境原创。规则：静止=可用（小实点）、执行中=短行/缓慢聚拢、待人确认=开放圆点+停顿、部分可用=半闭合轮廓、阻断/失败=断开的轮廓并配原因文字。全部状态都须显示文本标签或可访问名称；不能只靠点的颜色或动画表达。
 - 官网演示中可展示标记/对象从线性识别→彩色手绘 identity→回到真实证据/成果的变化。App工作页只在对象变更、待确认等有意义时有一次短动作；不把角色放在每个工具按钮或每一条数据前。
 
@@ -749,26 +760,66 @@ SYS-05 外观入口 → 选白/黑/纯色/壁纸/模糊选项
 
 移动端读取无障碍字号/浅深模式时覆盖默认预览；Web 不假装能读到 OS 桌面底图。外观偏好和用户壁纸文件按当前设备的外观/文件 owner 本地使用；不擅自跨设备同步原图或产生新云存储。用户可在另一个设备重新选择相同预设或自己的文件。上传图像失败、取消和撤销不改变当前偏好。
 
-#### 流程 I：平台首次授权、会话复用与失效恢复
+#### 流程 I：平台接入、会话复用、恢复与继续任务
 
 ~~~text
 用户先选择“查看已存记录”或“新建来源任务”
  → 已存记录：按 stable platform_id / 发布时间 / 采集时间过滤，不发采集请求
- → 新任务：选择一个平台+关键词，或批量business_requests；不把来源URL暗传到keyword
+ → 新任务：选择真实已登记平台/来源与任务目的；六平台只是当前验收基线，新增平台沿同一PlatformManifest/Adapter合同接入
  → MANUAL为普通用户默认；最终用户AUTO计划需单独设置/确认；Owner批准的产品自有公开基线AUTO另行标识
- → 显示任务Scope/允许来源/目的/时间语义/内容深度/触发频率/到期/停止方式（只显示由现有Owner提供的可选字段）
- → 通过既有平台授权Owner完成正常平台登录/许可（非序境账号；不显示/导出Cookie或口令）
- → 人工确认只读 → 已有CTH人工搜索或现有Task/Scheduler owner → Source/Evidence/Canonical
- → 按平台分别显示待执行/执行/已接收/拒绝/重复/部分/未取得/失败及真实回执
- → 在途取消与未来计划暂停分开；只有持久Task/native cursor真实存在时才显示续接/恢复
- → 重启/撤权/挑战：停止受影响请求、保留部分材料与精确进度，授权恢复后由原Task幂等续接
+ → 显示任务Scope/允许来源/目的/时间语义/内容深度/触发频率/到期/停止方式（只显示现有Owner真实提供的字段）
+ → PlatformSession返回真实状态
+    ├ READY → 正常执行
+    ├ AUTH_REQUIRED → LumenisPlatformRecoverySheet
+    ├ LOGIN_FORM_REQUIRED → RecoverySheet调用受控SYS-06
+    ├ VERIFY / CAPTCHA → 明确人工验证，不伪装成普通登录
+    ├ BLOCKED / COOLDOWN → 停止该来源请求，其他来源继续
+    ├ WORKER_UNAVAILABLE / NOT_CONFIGURED / UNKNOWN → 明确原因
+ → 用户完成合法平台步骤后，服务端重新读取真实Session/Worker/Risk健康
+ → 只有健康回读通过才恢复原Collector Task
+ → Collector沿同一Task/attempt/receipt继续，已完成来源不重复执行
+ → Source/Evidence/Canonical接收真实结果
+ → 按平台显示待执行/运行/已接收/重复/部分/等待恢复/失败/完成与真实回执
 ~~~
 
-屏幕对应 CTH-03（具体单次业务检索）、SYS-02（当前状态及目标计划管理）、SYS-06（获准浏览器/会话）、以及SH-02/CTH/BMP来源消费者。这里的登录/授权仅指第三方来源采集会话，不是序境产品账号或登录墙。现有POST的`continuation`不是平台帖子/评论/作者的native cursor，普通request的time window/content depth也不可直接发到旧Route；缺少续页/排程字段时在目标图保留正常用户流程并标“既有Owner合约待补”，不假装已经传参/排程。暂停未来任务、取消当前在途任务、撤权和不可逆/结果未知的请求分别显示；出错时先查询原任务回执，绝不自动复制提交。
+屏幕对应 CTH-03（具体来源任务）、SYS-02（平台能力/Session/计划/执行/receipt）、SYS-06（需要受控网页交互时的Browser capability）、SH-02/CTH/BMP来源消费者，以及跨这些工作面的统一 `LumenisPlatformRecoverySheet`。这里的登录/授权只指第三方平台连接器，不是序境产品账号或登录墙。
 
-需要时按现有Owner显示外部平台、授权身份/范围/到期/撤销方式；敏感凭据只留在现有secret/session owner。普通用户MANUAL默认；AUTO必须逐平台/Scope/用途确认频率、时间、深度和停止入口；序境自有预发布公开基线AUTO按已批准Global合同单独标识，不与最终用户AUTO混在一起。会话失效时不能静默切换账户；未知挑战不绕过。当前开发/测试仅允许批准的香港/国际XHS身份，不触碰个人Mainland XHS账号/Cookie。Focus选择或清除都不会自动开始采集。
+##### 统一恢复Sheet：一个恢复层，不叠平台弹窗
 
-会话撤销后停止后续请求并停止创建新的计划任务；在途任务由 Collector/Scheduler 现有 owner 返回是否可安全暂停或取消。若已有部分结果，记录准确的 PARTIAL 与 cursor/checkpoint，允许在用户重新授权后由原任务续接，不创建重复的 Source/Evidence，也不把半次运行显示为成功。调度重启要复用的是同一用户明示授权下的会话与采集进度，不复用他人/开发者身份。
+~~~text
+当前任务被局部暂停
+┌ 序境 · 恢复数据源 ───────────────────────────┐
+│ 3 个来源需要处理                             │
+│ ● 小红书      需要扫码                       │
+│ ○ 抖音        需要重新登录                   │
+│ ○ Instagram  需要安全验证                   │
+├──────────────────────────────────────────────┤
+│ 当前：小红书                                 │
+│ [真实平台二维码 / 受控登录区域 / 验证说明]   │
+│ 状态：等待扫码 → 已扫描 → 正在验证 → 已恢复  │
+│ [稍后处理] [取消本来源]                      │
+└──────────────────────────────────────────────┘
+完成一个 → health readback → 恢复该来源Task → 自动切到下一项
+~~~
+
+同时出现多个平台问题时只使用一个 RecoverySheet 和一个当前恢复项；不叠多层 modal/alert。Sheet 标明被暂停的是哪个来源/任务，允许在安全时“稍后处理”，其它可用来源继续。打开时焦点进入Sheet；键盘焦点保持在活动Sheet内；可安全取消时 Escape/系统返回关闭；关闭后焦点回触发控件或下一合理任务位置。扫码等待、已扫描、验证中、恢复完成、冷却等异步状态通过辅助技术播报，但不抢走用户当前焦点。
+
+QR、登录表单、VERIFY 和 BLOCKED/COOLDOWN 是四种不同视觉状态：
+
+~~~text
+QR              → 平台二维码 + 等待状态
+LOGIN FORM      → SYS-06受控网页区域 + 返回
+VERIFY          → “需要完成平台安全验证” + 实际验证入口
+BLOCKED/COOLDOWN→ 说明系统已停止该来源请求 + 下次检查/继续其它来源
+~~~
+
+前端永远不显示 Cookie、Token、CDP、profile路径、lease/attempt/completion token；这些只属于SYSTEM实现。用户只看见“数据源能否继续、缺什么、当前任务怎样恢复”。
+
+`continuation`、native cursor 和 durable task receipt 三者必须在目标体验中分开：query continuation只表示业务查询计划继续位置；帖子/评论/媒体分页使用平台native cursor；durable receipt代表原任务的服务端连续性。终态receipt重开只能返回原结果或明确拒绝，不得在UI上伪装成“又启动一次”。
+
+需要时按现有Owner显示外部平台、授权身份/范围/到期/撤销方式；敏感凭据只留在现有secret/session owner。普通用户MANUAL默认；AUTO必须逐平台/Scope/用途确认频率、时间、深度和停止入口。当前开发/测试只允许批准的香港/国际XHS身份；个人Mainland XHS账号/Cookie继续禁止触碰。Focus选择或清除都不会自动开始采集。
+
+会话撤销后停止后续请求并停止创建新的计划任务。若已有部分结果，记录准确PARTIAL及真实continuation/native cursor/receipt状态；重新授权后由原任务续接，不创建重复 Source/Evidence，也不把半次运行显示为成功。
 
 #### 流程 J：Skill Store 能力发现到停用
 
@@ -831,7 +882,7 @@ CTH-02主体目录 / BMP-02品牌组合里的“新增” → 不放进ACC-02焦
 | 视频工作台 | 官网只演示已真实可用的操作；不向访问者展示私有生产数据 | 完整项目/素材箱/Viewer/Inspector/多层Timeline/ShotPlan与逐镜确认/字幕与音轨/修订/导出/重开；实现缺口单独列账，不缩减终态 | 完整素材库、桌面精准键鼠、多轨/B-roll、画面/音频检查器、时间线横移缩放、实际渲染与工程恢复 | 预览/逐帧/时码、逐镜审阅、来源/字幕和允许的轻量修订/返回；密集Timeline由Web/Desktop完成，不画成缩小控制台 |
 | Podcast Studio | 展示真实文件音频/脚本/编辑/试听闭环，实录按当前运行状态说明 | 文件音频/脚本/时码/真实波形、多轨/Mixer/Effects/Automation/分段修订/导出/重开；缺Owner/Renderer字段时作为当前差距，不从目标删除 | 专业Podcast主工作台：章节/Script/音轨同步、声道/音量/声像/自动化/降噪等已批准操作、监听、混音版本/工程恢复 | 播放/试听、章节/脚本校对、逐段审阅与可恢复的轻量文字修订；完整混音工程接续Web/Desktop |
 | 实时/麦克风录制 | 不在站点宣传为已支持 | 当前明确后置，不显示当前可用麦克风入口 | 同左；后置恢复时单独检查设备权限与录音路径 | 同左；不能从参考音频软件推断现有麦克风能力 |
-| AI/Agent工作 | 只展示当前真有的AI操作，写明版本/状态 | AI-01起任务；AI-02阶段/结果；AI-03证据；AI-04 Skill；AI-05 route状态 | 同一能力 + 文件任务/编辑器协助；不改变用户手选模型与已批准路由 | 查看运行进度/结果、通知、人工选择或授权；不把手机聊天当作另一个Agent后台 |
+| AI/Agent工作 | 只展示当前真有的AI操作，写明版本/状态 | AI-01起任务；AI-02阶段/结果；AI-03证据；AI-04 Skill；AI-05服务诊断 | 同一能力 + 文件任务/编辑器协助；产品不暴露或选择Codex研发模型/provider，AI-05只显示可核验服务状态 | 查看运行进度/结果、通知、人工选择或授权；不把手机聊天当作另一个Agent后台 |
 | Report/Artifact/Evaluation | 提供真实示例/帮助/下载入口 | Artifact类型阅读、审阅、历史、导出、评价反馈 | 多文档/媒体对比、文件版本/恢复 | 查看、批注、下载/确认等服务真的支持的动作 |
 | 设置/壁纸/恢复 | 产品说明链接 | Web本机偏好/任务返回 | Desktop设备本机偏好/本地媒体恢复 | 手机本地偏好/通知/易读性；壁纸原图不跨端同步 |
 | SYSTEM浏览器/权限/Runtime | 解释使用边界；不展示真实私有运行状态 | Controlled Browser、权限提示、工具/采集状态与恢复可见 | 大屏日志、会话选择/媒体文件/状态恢复入口 | 轻量Runtime状态、授权状态/待审批提醒/安全回退 |
@@ -866,9 +917,9 @@ CTH-02主体目录 / BMP-02品牌组合里的“新增” → 不放进ACC-02焦
 
 本节把已有六平台单帖字符草图接回 CTH / SYSTEM / Shared / BMP 既有页面。它是 CTH-03、SYS-02、SYS-06、SH-02、BMP-03 的同一来源工作链，不新增平台中心、采集后台、Screen ID、Evidence 库或采集器。目标画面表达的是完整能力实现后的体验；源码栏只说当前静态事实。
 
-### 5.1 当前main 0c9394ef与采集/UI源码基线（间隔提交未改这些代码路径；只读）
+### 5.1 1.5 dated source baseline + 1.6 current contract delta
 
-采集/UI源码行仍与固定`52cd770cde458f73f99e4073014c90a9d850c3f4`一致：之后`c7765b87`、`1b238c2f`、`0c9394ef`三个提交只改治理/Owner/归档审阅证据，未改`experience_runtime.py`、`experience_screens.py`、CTH-03 Flutter Repository、Collector adapter或Screen Specs。下表专项发现沿用2026-10-05 22:37—22:52与M于2026-10-05 23:36记录的固定源码SHA；本审核稿本轮没有运行这些能力。
+下表保留 1.5 在 `52cd770c`—`0c9394ef` 期间的源码观察作为 dated provenance，用于解释为什么终态视觉需要这些状态；它不再等于当前 main。1.6 审阅输入基线是 `bbe3310f095b788448a480c4615481bc5da029f8`；`3be8298a` 是 Universal Platform Acquisition 规则来源提交。实现/验收不使用这里的 SHA 代替 fresh main。自 1.5 冻结后，CTH-03 SourceTarget 合同、Collector治理、配置/Gate和若干兼容测试已经变化；当前实现结论必须读取 fresh main / current Screen Spec / runtime，而不能继续引用下表中的“当前”字样作为实时事实。
 
 | 现有位置 | 当前源合同 / 调用事实 | 尚未成立的产品事实 |
 |---|---|---|
@@ -883,6 +934,15 @@ CTH-02主体目录 / BMP-02品牌组合里的“新增” → 不放进ACC-02焦
 | 查询默认值 | 当前共享平台 helper 把 `default_keyword` 设为“广州太古汇”。 | 与 GLOBAL/ALL 产品默认不相容。未来 UI 清空固定关键词，不自动选该商场或其品牌；用户可在任务里显式输入关键词，Focus 仍为可选筛选。 |
 | SYS-02 / SYS-06 | 终态SYS-02是Collector计划/任务/平台lane与恢复工作面；SYS-06是在授权Scope下访问受控来源/Browser的独立工作面。Browser会话、平台能力、Task状态和正式Evidence是不同事实。 | 当前SYS-02 ScreenSpec只读且计划/动作API未冻结；终态计划控制依原Collector/Scheduler Task+Permission；SYS-06显示内容不自动成为Collector source或许可。撤权/失效/挑战按原Owner恢复且影响面有限，不接触个人Mainland XHS身份。 |
 | SH-02 / BMP-03 | SH-02 是既有 Source/Evidence 阅读/检索面；BMP-03 解释 Brand/Market 信号。两者消费既有来源，不另建 Collector。 | 单帖不是趋势/总体；只有已有 metric、时间窗、去重和覆盖分母支持时才形成汇总。引用一个市场线索不等于获得消费者总体需求或 BrandFocus 归属。 |
+
+**1.6 current overrides（supersede上表中过时的“当前”描述）：**
+
+- Facebook `CollectionResult.platform` 合同缺失已在后续 main 修复；不要继续把该旧缺陷当当前阻塞。
+- 平台状态已收敛到“配置≠验证≠READY”的更诚实口径，但统一 `PlatformManifest` / `PlatformSession` 仍是批准目标，不能把分散列表继续当最终真相。
+- 业务query checkpoint 已能沿当前接口传递；durable server receipt、attempt fencing和platform-native pagination仍是独立未闭合能力。终态视觉按三者分开设计，不恢复旧的“一种checkpoint代表全部进度”。
+- `canonical_data` 是唯一当前业务Canonical；旧 `zbc_canonical_data` 不再作为采集双写成功条件。
+- CTH-03 已批准 `lumenis.source-target/v1` / Open Original / Return 目标，当前Flutter typed target / launcher / Return仍未绑定；SH-02等来源消费者共用同一SourceTarget语义。
+- Universal Platform Acquisition 已批准：六平台只作为当前验收基线，新增平台必须走同一Manifest/Session/Recovery/Source/Evidence/Canonical链，不增加第二平台中心或第二采集器。
 
 CTH-03 当前真实记录 UI 应先完整呈现其已有且受验证的标题、平台 ID/三语名、发布时间、采集时间、来源链接、质量/完整性、scope 和 Evidence 状态。若正文、图像、视频、评论、章节/字幕或平台原生互动不在所选 owner 返回中，显示对应“未取得 / 未验证 / 不适用 / 部分”及可采取动作；不得以 AI 摘要冒充原文、用封面冒充视频已观看或借别帖补图。
 
@@ -935,17 +995,18 @@ SYS-02 / 来源任务 · 目标排程和结果状态
 ├───────────────────────────────────────────────────────┤
 │ 平台A · 本批完成/部分/需人工/限速/未开始              │
 │ 平台B · …                                             │
-│ 查询续页 cursor     | 原帖详情/评论分页 cursor        │
-│ 两种进度分开，不能互相替代；失败平台隔离              │
-│ [暂停未来计划] [取消待执行] [检查在途状态] [恢复]       │
+│ query continuation | 原帖详情/评论/media native cursor│
+│ durable task receipt：原任务/终态回执/精确恢复          │
+│ 三种连续性分开；失败平台隔离；终态重开不生成新run      │
+│ [暂停未来计划] [取消待执行] [检查在途状态] [恢复来源]   │
 └───────────────────────────────────────────────────────┘
 ```
 
-前端将任务区分为：①只读打开已存结果；②一次人工 query；③`business_requests`批次；④明确配置计划/AUTO；⑤帖子/评论/媒体等平台原生分页。现有route的`continuation`只有查询计划语义，不是单帖native cursor；批次/搜索不能代表完整评论、回复、creator或media分页。计划/批次来自真实task id和已有cursor时才画真实排队、暂停、取消、失败/部分接受、可恢复状态；未知接口字段保留在本稿目标合同清单并由原SYS Collector/Scheduler及C1/C6 owner补充，不作为当前请求体字段或新Owner。
+前端将任务区分为：①只读打开已存结果；②一次人工 query；③`business_requests`批次；④明确配置计划/AUTO；⑤帖子/评论/媒体等平台原生分页；⑥服务端 durable task/result receipt。`continuation`只表示查询计划继续位置，native cursor表示平台原生分页，receipt表示原任务身份/终态/恢复语义；三者不得互相冒充。终态receipt再次打开只返回原结果或明确terminal状态，绝不在视觉上变成“又启动一次”。计划/批次来自真实task id和已有cursor/receipt时才画真实排队、暂停、取消、失败/部分接受、可恢复状态；未知接口字段保留在本稿目标合同清单并由原SYS Collector/Scheduler及C1/C6 owner补充，不作为当前请求体字段或新Owner。
 
 AUTO全局产品自有公开基线依当前批准Global合同单独标识；普通用户新建任务默认MANUAL，AUTO前显示平台、Focus/全部范围、purpose、内容深度、频率/到期、通知、停用/撤权方式与将要影响的数据。未明确授权不开始排程，选Focus或打开页面不自动采集。待取消与在途取消分别显示，撤权后停新的请求，已发生/未知的外部执行按同一task id查询回执，不自动二次提交。重新授权只由原task/scheduler owner安全续接；native cursor缺失时说明不能无损续接，保留已收部分及未完成范围，不冒称成功。
 
-### 5.3 六个平台的单帖差异（适配既有字符草图，不复制帖子内容）
+### 5.3 六平台验收基线与可扩展原生Reader（不复制平台Feed/Chrome）
 
 | 平台 / 原生内容形态 | 完整正常结果的Reader | 部分/授权/来源不可用时的保留表现 | 当前参考资料的真实边界 |
 |---|---|---|---|
@@ -965,9 +1026,9 @@ AUTO全局产品自有公开基线依当前批准Global合同单独标识；普�
 | Screen / owner | 承接动作 | 不承担的动作 / 状态 |
 |---|---|---|
 | CTH-03 | 用户任务里的显式人工只读检索、来源流、Scope/平台过滤、单帖入口及返回业务链 | 不把打开页面当采集；不把100条上限当全量；不将平台状态当 Evidence；未绑定正文/媒体时不伪造详情 |
-| SYS-02 | 目标态显示真实计划编辑/审核、手动run、批次lane、pause/cancel/resume与recovery（后四项须由原Owner返回真实Task/cursor/effect） | 当前ScreenSpec/实现是read-only；配置、session验证、worker可达、last run、live run和正式入库分开。实施期缺callback时当前build可标unavailable，但终态动作不从方案删除、不展示假进度 |
-| SYS-06 | 在授权范围内查看受控浏览器和来源/页面状态；会话失效、挑战、撤权按已有 Permission/Session owner 处理 | 浏览器在线不等于来源已许可、已采集或已进入 Evidence；隐藏敏感会话/Cookie；不触碰个人 Mainland XHS 账号 |
-| SH-02 | 查看已登记 Source/Evidence、原件/文本可用性、引用定位、版本/来源时间；按内容类型打开现有 reader | 不补造缺失原文，不另建 Evidence；权限/媒体不可读时显示独立错误并返回来源 |
+| SYS-02 | 目标态显示PlatformManifest投影、PlatformSession、真实计划/手动run、逐来源lane、durable task receipt、query continuation与native cursor，并在真实callable存在时提供pause/cancel/resume/recovery | 当前实现仍可read-only；declared/registered/configured/session-verified/live-verified分开，终态动作不因当前未绑定而从蓝图删除；一个来源失败不阻断其它可用lane |
+| SYS-06 | 在授权范围内查看受控来源；当RecoverySheet的当前恢复项需要LOGIN_FORM/VERIFY时提供受控Browser交互并返回Session owner | Browser打开/表单完成不等于Session恢复；必须PlatformSession健康回读后才续原Task；QR与BLOCKED/COOLDOWN不强行进入Browser；隐藏Cookie/token/profile/CDP且不触碰个人Mainland XHS账号 |
+| SH-02 | 查看已登记Source/Evidence、原件/文本可用性、引用定位、版本/来源时间；按原生内容类型进入Reader；同一row可用时走SourceTarget→Open Original→Return | 不补造缺失原文、不另建Evidence、不暴露裸URL；Open Original不启动采集/登录/Evidence写入，Return恢复原筛选/选中/位置 |
 | BMP-03 | 从已有来源做品牌/市场研究，以样本/范围/期间/指标定义解释主题，逐条回 CTH/SH-02 Source | 不发起另一个采集器；单帖不能代表市场或消费者总体；没有可比时间序列不称趋势 |
 
 完成态的用户闭环为：明确任务与 GLOBAL/可选 Focus → 输入来源条件 → 服务端照常校验 Permission → 确认只读并由 CTH Collector 执行 → 真实 Source/Evidence/Canonical 回执 → 打开原帖 → 加入有范围的 BMP/CTH/Research/Brief → 保存、重开、修改与回溯同一 Source。授权失效、限速/挑战、部分接受、拒绝归属、媒体缺失和撤权分别显示原因/已保留内容/可恢复动作；绝不重复外部效果或把“下载到文件”当成正式入库。
@@ -1026,19 +1087,19 @@ AUTO全局产品自有公开基线依当前批准Global合同单独标识；普�
 | AI-02 | 审查真实任务分步执行、取消/重试和 Artifact | 阶段层与输入/结果文件横向关联，执行/等待/失败各自标注 | 每步打开产物/来源，取消或安全重试，审批节点需要用户操作 | 源码存在；不能仅凭阶段动画声称任务成功 |
 | AI-03 | 逐条核对分析结论、来源与不确定性 | 结论流由引用脚注连到来源，未核实项保持独立标志 | 点引用原文、请求修订、加入已有 Case/报告 | 源码存在；模型内容不替代 Production Truth |
 | AI-04 | 在当前任务中查找真正已验证/许可的Skills并理解用途 | source/owner/version/license/trust/input/output/risk/permission/evaluation一屏详情与update diff | 仅在目标生命周期动作已由Owner绑定时启用/运行/更新；否则只读显示现状/缺口；结果回原Task | 当前 ScreenSpec是BLOCKED read-only catalog；完整Enable/Update/Disable/Uninstall是C2 existing Skills owner依赖，不另造marketplace/runtime；见§7.14 |
-| AI-05 | 查看目前 AI route/Provider的运行和策略 | Gateway 路径/状态/退路/最后检查；错误不藏进聊天 | 查看诊断/实际Provider/失败原因并返回 AI 任务 | 源码存在；当前未绑定时显示 AI-01 diagnostic fallback，不能宣传独立 Provider |
+| AI-05 | 查看当前AI服务是否可用、为什么不可用、是否能重试或继续手动流程 | Available/Not ready/Unavailable/Unknown、最近检查与安全调用观测；错误不藏进聊天 | 查看诊断→重试或返回AI任务；不提供provider/model选择 | 源码存在；当前未绑定时显示AI-01 diagnostic fallback；raw provider/model名称不进入产品UI |
 
 ### 6.5 SYSTEM（8 屏）
 
 | 屏幕 | 完整任务与字段/内容 | 页面形状/优先级 | 操作与转移 | 当前状态/缺口 |
 |---|---|---|---|---|
 | SYS-01 | 查应用、API、数据库、依赖和适配器实时状态 | 有向拓扑+更新时间+当前失败层；不是业务 KPI | 点依赖看 trace/错误→授权恢复→原任务返回 | 源码存在；具体现场健康需运行 |
-| SYS-02 | 终态：查看现有计划/新增获准计划/真实Task结果及可恢复位置 | Plans与Runs两个工作区：Scope/模式/时间/来源深度；逐平台lane；run状态/下一次due/last success独立 | 目标控件含manual start/用户opt-in plan/pause future/cancel pending/恢复同Task；运行回执定位Source/Evidence | 当前ScreenSpec只读；计划/动作/游标尚未绑定。实施版如实标差距，完整终态目标保留 |
+| SYS-02 | 终态：查看来源能力、PlatformSession、现有计划/新增获准计划、真实Task结果及精确可恢复位置 | Plans / Runs / Sources三块互相联动：Scope/模式/时间/来源深度；逐平台lane；declared→live-verified能力层级；query/native/receipt进度分开 | manual start / 用户opt-in plan / pause future / cancel pending / RecoverySheet / resume same Task；运行回执定位Source/Evidence | revision 2已承接最终目标；当前实现仍是read-only，Manifest/Session/receipt/动作绑定与runtime E2E待C1/C6完成 |
 | SYS-03 | 看 Schema、数据库健康、证据/Canonical链 | DB层级与字段 lineage/Integrity error列关系 | 检查错误、导出审计/按owner恢复，不直接改业务 truth | 源码存在；本轮不读生产 DB |
 | SYS-04 | 当前不提供产品角色/账户/通用权限配置页；仅呈现已有动作本身的审批/回执 | 不绘制全局角色矩阵；审批细节留在发起动作的业务页面，系统审计仅保留当前真实只读回执 | 用户在业务页确认具体动作；服务端Permission决定允许/拒绝，SYS-04界面不能授予权限 | 通用账号/权限UI按用户指令待整体产品闭环后再决定；Effect Fence继续有效 |
 | SYS-05 | 外观、壁纸、主题、对比、字体与动效偏好 | 即时预览；壁纸控制在当前工作旁的抽屉/面板，内容按设备重排 | 预览→仅在当前设备应用/取消→回原任务；无服务端/跨设备壁纸同步 | Screen spec `DESIGN_READY`；两张用户照片已捆绑。局部 Web 选择/重载/移除及纯黑/字号检查有 PASS；两张原图全端/极端裁切验收和原生材质实绘仍未完成 |
-| SYS-06 | 在当前任务的已授权边界中访问获准来源/受控网页 | 来源/会话范围与真实浏览器状态并置；身份敏感信息隐藏 | 正常授权/打开已批准来源→真实快照或错误→回触发任务 | `IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED / BACKEND-GAP-041`；浏览器 online 不等于采集许可或 Evidence；不使用受保护个人 XHS 会话 |
-| SYS-07 | 看能力发布/验收证据与未完成阻断项 | 可展开 Gate/owner/证据的检查路线，不以绿灯卡片表达全部 | 看精确依据/在 owner 允许时执行验收→回能力 | 源码存在；在开发工具与用户产品内容之间明确 boundary |
+| SYS-06 | 在当前任务的已授权边界中访问受控网页；当RecoverySheet当前项需要LOGIN_FORM/VERIFY时提供Browser交互 | 来源/允许域/浏览器状态/当前恢复项并置；Cookie/token/profile/CDP等敏感信息永不显示 | 普通受控阅读→Return；RecoverySheet→受控登录/验证→交回PlatformSession健康复核→恢复原Task | revision 4明确它不是Session owner/平台账号中心；`IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED / BACKEND-GAP-041`，浏览器online/表单完成都不等于Session或Evidence成功 |
+| SYS-07 | 看同一候选发布链的source/config、Product Gate、App Gate、Critical E2E、package/runtime、rollback、PO repeat、RELEASED/OPERATING证据 | 以SHA绑定的纵向证据链为主，不用一组绿灯卡片；不同SHA证据并排标明不合并 | 打开精确证据/回对应Owner；本屏不自己执行Gate或宣告release | revision 2已批准最终release-evidence目标；当前builder仍只返回有限checks/skill light，完整C6/M release contract和real-user E2E待绑定 |
 | SYS-08 | 查任务 trace、请求、失败日志及影响 | 真实 Trace waterfall 与 Error Inspector；有频率筛选 | 由任务跳 Trace，返回同一 task/result | 源码存在；事件关联需同一 trace id |
 
 ### 6.6 Shared（6 屏）
@@ -1046,7 +1107,7 @@ AUTO全局产品自有公开基线依当前批准Global合同单独标识；普�
 | 屏幕 | 完整任务与字段/内容 | 页面形状/优先级 | 操作与转移 | 当前状态/缺口 |
 |---|---|---|---|---|
 | SH-01 | 当前安全能力目录；完整目标为Discover、Source→Brief→Artifact、可规划叙事的ShotPlan/逐镜审阅与专业视频编辑 | 同屏在Discover/当前创建活动间切换；视频活动包含媒体Source、ShotPlan(适用时)、完整Viewer/Inspector/Timeline、字幕与音轨、版本/导出/重开 | 选择真实来源→选片段/剧本段→按需做线稿/彩稿并逐镜确认→进入Timeline→导出/试听/重开/恢复 | `IMPLEMENTED_CATALOG_ONLY_EVIDENCE_SCOPE_BLOCKED`；Discover callable/Evidencescope、storyboard draw/confirm bindings及完整Timeline媒体E2E各自未验；不将未绑定能力删出终态 |
-| SH-02 | 搜索并阅读已有 Source/Evidence 的单帖/单篇及 lineage | 平台原生 Reader；原文、译文、媒体、评论、指标版本和来源链各自分层，仅按实际返回开放 | 搜→打开同一 Source→按权利/权限带入 Research→回 CTH/BMP 上游 | `IMPLEMENTED_SCOPE_GUARDED_BACKEND_SCOPE_UNVERIFIED`；六样本仅作内部布局参考、未正式登记；媒体/全文/商业权利逐项未知时不补造 |
+| SH-02 | 搜索并阅读已有Source/Evidence及lineage；对same-row已验证来源提供SourceTarget→Open Original→Return | 平台/内容类型原生Reader；原文、译文、媒体、评论、指标版本、SourceTarget状态和来源链各自分层，仅按实际返回开放 | 搜→Reader/Trace→Open Original（可用时）→Return恢复Space/List/query/filter/item/focus→按权利/权限带入Research或回CTH/BMP | revision 3已批准SourceTarget终态；当前scope/Evidence envelope、typed target/launcher/Return仍未绑定；六样本仅作内部布局参考、未正式登记 |
 | SH-03 | 检查 Canonical字段/Metric定义和取值来源 | Schema tree → field/metric inspector → records table | 追到 Source/Event/Evidence/Calculation→原始任务返回 | 源码存在；不开放直接编辑 Canonical truth |
 | SH-04 | 管理真实报告、视频/音频和Artifact输出版本 | 文件类型/来源/版本列表+对应真实预览 | 预览/比较/下载/重开/导出新的版本 | 源码存在；每种格式对应的真实服务待验证 |
 | SH-05 | 复核Outcome/Evaluation与版本化Learning候选 | Parent/Scope/Evidence/评价口径/样本/反例及candidate差异；promotion与rollback史分别呈现 | 逐项查看来源→请求现有审批/测试→仅回Owner真实promotion/rollback状态 | 当前面板read-only且全局Envelope未绑定；不自动Promotion/重写Evidence；详见§7.14 |
@@ -1462,6 +1523,20 @@ Web section：一次真实工作怎样走完
 
 按钮只在现有人工只读 API、真实 Scope 与 Permission 通过时可执行；结果状态逐项对应实际返回。平台筛选用稳定 ID，翻译/缩写只做标签，不作为查询键。当前代码存在的固定广州太古汇关键词在目标态移除；保持 GLOBAL/ALL 可用。点击单篇后不得丢失输入、筛选、结果位置；媒体未完整读取时明确标未看完/未取得，不做循环自动播放。
 
+**SourceTarget / Open Original 正式终态：**来源列表、Reader、Event、Case、Risk、Report、Artifact引用等只要显示了重要 Source-backed 事实，都复用同一来源动作语法，而不是各屏自造裸 URL：
+
+~~~text
+Trace / 查看来源
+→ Source/Evidence detail
+→ Open Original（仅当same-row SourceTarget可用）
+→ OS / system browser handoff
+→ HANDOFF_ACCEPTED只表示系统接收了打开请求
+→ 返回序境
+→ 恢复route / GLOBAL或FOCUS / Subject或BrandFocus / filters / selection / scroll
+~~~
+
+可见状态至少区分 `READY / URL_MISSING / INVALID_URL / DENIED / UNSUPPORTED / SOURCE_WITHDRAWN / STALE / UNKNOWN` 与 `LAUNCH_REJECTED / LAUNCH_FAILED / HANDOFF_ACCEPTED / RETURNED`。普通 Open Original 不读Cookie、不静默登录、不启动采集、不创建Evidence、不改Canonical、不执行外部写入；需要受控网页交互/采集时进入独立SYS-06/Collector路径。当前 CTH-03 已有正式 SourceTarget 合同目标，SH-02/SYS-06 等消费面按各自 Screen Spec 接同一合同。
+
 ### 7.11 原创提案与预算资源编辑器（BMP-06/07 + Shared Artifact）
 
 这是BMP/Shared现有创作工作面的独立可审核区域，不由SH-01一句话、Campaign状态表或视频/播客页面代替；不新增Proposal产品、第二预算库或付款功能。目标是让同一Brief下的资源变化真正改变方案，而不是只改一个总数。
@@ -1722,10 +1797,29 @@ SH-06：通知 | 任务 | 警示 分lane；每行展示来源、范围、时间�
 
 ### 发布证据
 
+最终发布证据按同一 release composition 展示，不把不同时间/不同 SHA 的绿项拼成“全绿”：
+
+```text
+candidate source SHA
+→ source/config/DB/Experience checks
+→ Product Gate
+→ App Gate
+→ Critical E2E
+→ package/build artifact（该Surface有承诺时）
+→ loaded runtime identity / version readback
+→ rollback/recovery proof
+→ Product Owner重复核心工作
+→ USER_VERIFIED / RELEASED
+→ real elapsed operating evidence
+→ OPERATING
+```
+
+- 每一步显示 `PASS / FAIL / NOT_RUN / UNKNOWN / STALE`、证据时间与SHA；早一步PASS不能遮住后一步未运行。
 - 当前 HEAD 下所有变更后运行规定的 current-snapshot static checks，后续修改都要重测相应内容。
 - 按 affected source 做必要测试；按用户承诺端运行真实 E2E；触发安全/数据/权限门禁。
-- 所有上线文件、规则与状态对应到同一版本并经 GitHub main verification；不把本审核文档或截图当部署证据。
-- Product Owner 最终完成重复核心工作的端到端审查后再标 USER_VERIFIED / RELEASED / OPERATING。
+- 所有上线文件、规则与状态对应到同一接受版本并经 GitHub main verification；不把本审核文档、截图、source存在、build成功或HTTP 200当部署/Release证据。
+- Public Website、Web Workspace、Desktop、Mobile按各自真实承诺核对；未发布安装包就显示未发布，不能用另一个Surface的build代替。
+- Product Owner 最终完成重复核心工作的端到端审查后再标 USER_VERIFIED / RELEASED；OPERATING还需要真实运行周期证据。
 
 **本轮未执行以上产品测试或运行验收。**它们作为目标完整性条件保留，不声称通过。
 
@@ -1774,8 +1868,13 @@ SH-06：通知 | 任务 | 警示 分lane；每行展示来源、范围、时间�
 9. CTH-03 的采集 POST 接口存在，但 App 未调用；screen GET 的平台 lane 缺 row projection、Flutter 又据此筛选；Dart模型没有独立 `platform_id`，当前以 `platform/channel` 字符串筛选，通道展示值与原始内容key可能不一致；这是实际接线/字段缺口，不是“平台 API 不存在”。
 10. CTH-03 当前把“广州太古汇”设为默认查询关键词，与用户要求的 GLOBAL/ALL 默认不一致；必须清空预填值，不能把选择该主体变成进入或使用产品的门槛。
 11. CTH-03 GET 读取上限为100且可标 `partial`；当前字段不能显示完整帖子内容/媒体/评论/平台指标；六平台结构稿的 source scope/formal refs/商业权利状态仍不足以构成生产证据或官网展示素材。
-12. 当前 Collector 还有本地 Adapter 返回字段缺陷、可能把文件 `ACTIVE`/配置检测映成“已连接/READY”、平台 alias/manual 标记不一致、平台原生分页续接不完整及两个调用入口未统一等源码问题；详见开工前审阅证据。它们是 C1/C6 当前修复义务，UI不得伪装成功或自造续接字段；审阅报告并未修复/运行验收这些问题。
-13. 本轮没有直接修改产品代码、资源、运行或测试；只读核对并更新此审核稿/草图，当前产品缺口仍需在未来得到明确执行授权后处理。
+12. Collector当前核心缺口已从旧Adapter小修收敛为五个P0与三个共性底座：XHS HK/International recovery fence、Task attempt fencing、durable terminal receipt、兼容采集统一进Source/Evidence/Canonical、sole Canonical gate，以及PlatformManifest / PlatformSession / LumenisPlatformRecoverySheet。已修掉的历史Facebook result-contract/旧双写测试不得重新当当前问题。
+13. SYS-02 revision 2已经承接最终Manifest/Session/task连续性目标，但当前实现仍是read-only；PlatformManifest、PlatformSession、durable receipt及真实计划/暂停/取消/恢复callable仍需C1/C6代码和runtime E2E。
+14. SYS-06 revision 4已经明确受控Browser只服务RecoverySheet需要的LOGIN_FORM/VERIFY或普通受控阅读；QR、BLOCKED/COOLDOWN与Session健康真相不归Browser UI。当前live/native recovery E2E仍未验收。
+15. SH-02 revision 3已承接SourceTarget/Open Original/Return最终目标；当前scope/Evidence envelope、typed SourceTarget、platform launcher与Return绑定未完成，不能把裸URL当替代。
+16. SYS-07 revision 2已承接same-release证据链；当前builder仍只有有限security/skill checks，Product/App/Critical E2E/package/runtime/rollback/PO repeat的真实聚合合同未绑定。
+17. AI-05正式Screen Spec禁止provider marketplace/model selection和raw provider/model名称；旧草图里“用户手动选模”属于Codex研发配置，1.6已移除，不得进入序境产品UI。
+18. 本轮1.6只收敛权威文字合同、Screen Spec和文字视觉目标，不修改产品代码、资源、运行或部署；上述实现缺口仍由F/C1/C6及对应Owner按现行规则完成。
 
 ### 最终审核范围
 
@@ -1787,11 +1886,11 @@ SH-06：通知 | 任务 | 警示 分lane；每行展示来源、范围、时间�
 - 所有参考资料按“观察→适配→能力→交互→验证”的链条说明；
 - 当前源码、历史候选、未知状态、后置边界、缺失验证分别标明。
 
-本稿是完整目标态的审核提案，不是产品当前实现情况的包装，也不是最终设计定稿。它保留了当前已能看到的源码入口，同时没有把任何未核验的真实用户工作闭环写成完成。
+本稿 1.6 已经 Product Owner 批准为当前产品闭环的完整文字目标态与视觉审查基线；它仍不是产品代码实现、正式美术稿或用户验收完成证明。后续实现不得因为当前接口缺失而缩减目标，也不得因为本稿存在就把未核验工作写成完成。
 
-### 本次前端交付审计处置索引（F-01—F-12）
+### 前端目标收敛处置索引（F-01—F-18）
 
-以下索引对应 `Frontend_Delivery_Audit.md` 的12项发现，是本稿 1.5 对前版1.4的文档修订位置；“已补入方案”只表示目标态文字与草图已补，不代表源码实现、Owner接线、运行/E2E或Product Owner签收完成。
+F-01—F-12对应 `Frontend_Delivery_Audit.md` 的原12项发现；F-13—F-18记录 2026-10-06—10-07 权威规则继续演进后，本稿 1.6 对 SourceTarget、Universal Platform Acquisition、Recovery、release evidence 与 AI-05 边界的二次收敛。“已补入方案”只表示当前目标文字/草图/Screen Spec已同步，不代表产品代码、运行/E2E或用户验收完成。
 
 | 审计项 | 文档处置 | 主稿位置 | 配套文字草图 |
 |---|---|---|---|
@@ -1807,6 +1906,12 @@ SH-06：通知 | 任务 | 警示 分lane；每行展示来源、范围、时间�
 | F-10 | 明确四个产品Surface与桌面快捷方式不同，并补OS、尺寸、键盘/返回/触控/媒体边界 | §4.1流程A、§4.3 | ACC入口与逐屏任务重组 |
 | F-11 | 将字段/权限/导入/采集错误、A11y语义、焦点返回、200%文字、缺词回退、图标层级及五位架构角色纳入三语目标 | §3.3–§3.6、§7.10 | 逐屏标题/动作映射与操作状态 |
 | F-12 | 将25项既有U能力逐项连到关键控件、用户可见结果、异常/恢复与原Owner，不把Screen ID或状态当作验收通过 | §6.7、§12 | 全44屏Owner/合同表与逐屏草图 |
+| F-13 | 把六平台采集扩展为Universal Platform Acquisition终态：PlatformManifest能力投影、PlatformSession真状态、来源失败隔离，不新增平台后台 | §4.1流程I、§5.4、§6.5 | SYS-02、CTH-03、SH-02 |
+| F-14 | 补唯一LumenisPlatformRecoverySheet：QR/Login Form/VERIFY/BLOCKED四态、多平台单Sheet队列、health readback、焦点/读屏/Return | §4.1流程I、§6.5、§10恢复验收 | SYS-02、SYS-06及跨屏Sheet |
+| F-15 | 把query continuation、native cursor、durable receipt/terminal replay分成三种用户连续性，禁止终态重开伪装新run | §5.2.1、§5.4 | SYS-02任务/恢复状态 |
+| F-16 | 将SourceTarget正式合同扩到CTH-03、SH-02及所有重要Source-backed事实：Trace→Open Original→诚实handoff→Return | §5.4、§7.10 | CTH-03、SH-02、相关Evidence drawer |
+| F-17 | 补same-release发布证据链：Product/App/Critical E2E/package/runtime/rollback/PO repeat/RELEASED/OPERATING，证据按SHA分开 | §6.5、§10发布证据 | SYS-07 |
+| F-18 | 清除研发配置泄漏：AI-05只做产品AI服务诊断，不暴露/选择Codex的Astra/Sol/Luna或raw provider/model | §4.2、§6.4 | AI-05 |
 
 审计中的通用权限UI边界按本会话Product Owner直接指令处理：整体账号/登录/通用角色配置留待完整产品闭环后重新规划；本稿继续保留原业务动作内的服务端Permission、明确批准/拒绝、来源授权、Effect回执与审计，不恢复登录墙。审计未复演全部视频帧；本稿只沿用已有的指定视频覆盖记录/观察和对应采用点，不声称本轮重新逐帧观看。
 
