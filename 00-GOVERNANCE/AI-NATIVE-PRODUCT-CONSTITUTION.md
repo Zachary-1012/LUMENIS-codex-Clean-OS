@@ -54,7 +54,7 @@ AI 输出默认是建议、推测或派生结果。业务事实、数据事实�
 
 ## 13. 人类产品负责人和 AI 执行分层
 
-产品负责人决定产品方向、商业边界与最终发布。序境的主控 M（Sol 或 Astra）负责产品/架构/Owner 判断与最终验收；六窗口交付完整成果，W6 集成发布，Luna 处理有界机械子任务。任何 AI 都不能自行扩大需求、拥有 Permission/Evidence/Production Truth，或替产品负责人作最终商业决定。此处对原件“产品总控 AI 负责产品方向”的表述作了权责校准。
+产品负责人决定产品方向、商业边界与最终发布。序境的主控 M 负责产品/架构/Owner 判断与最终验收；F 与 C1–C6 按既有 Owner 交付完整成果，W6 集成发布。M、F、C1–C6 均严格保留 Product Owner 在各自当前 Codex/Codex CLI 窗口手动选择的账号、模型、推理强度与速度/服务档位；本宪法不按窗口分配 Sol/Luna/Astra/Terra 等模型，也不允许仓库配置、CLI、Hook、Subagent 或 fallback 自动替换。任何 AI 都不能自行扩大需求、拥有 Permission/Evidence/Production Truth，或替产品负责人作最终商业决定。此处对原件“产品总控 AI 负责产品方向”的表述作了权责校准。
 
 ## 14. 状态诚实
 

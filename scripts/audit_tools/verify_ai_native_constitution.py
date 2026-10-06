@@ -95,8 +95,20 @@ for token in (
     "LIVE_NOT_VERIFIED",
     "HUMAN_DECISION_REQUIRED",
     "python scripts/audit_tools/verify_ai_native_constitution.py",
+    "当前 Codex/Codex CLI 窗口手动选择",
+    "本宪法不按窗口分配 Sol/Luna/Astra/Terra",
 ):
     require(constitution, token, "constitution execution status")
+
+for forbidden_allocation in (
+    "M（Sol 或 Astra）",
+    "Luna 处理有界机械子任务",
+):
+    if forbidden_allocation in constitution:
+        errors.append(
+            "constitution: fixed historical Codex model allocation is forbidden: "
+            + forbidden_allocation
+        )
 
 require(
     takeover,
