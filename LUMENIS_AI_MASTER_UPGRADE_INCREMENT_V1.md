@@ -1,3 +1,6 @@
+> **HISTORICAL / REQUIREMENT-MAPPING AI UPGRADE RECORD — NOT CURRENT AI ARCHITECTURE OR EXECUTION AUTHORITY.**
+> Current execution starts at root `AGENTS.md`; current product AI ownership is C2 through the sole `lumenis/system/ai_gateway/` route under the current Product Architecture and Source Owner Index. The requirements below remain retained input where still unretracted, but historical provider/router plans, status labels and “not authorized” wording do not pause, replace or narrow current C2/F/C1-C6 execution.
+
 # LUMENIS AI 总体升级增量落地对照 V1
 
 来源：用户提供的《序境 LUMENIS AI 总体升级指令》
