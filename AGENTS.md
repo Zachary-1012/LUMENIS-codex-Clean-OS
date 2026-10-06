@@ -11,19 +11,22 @@ execution instructions.
 
 ## 1. Authority
 
-## Current execution instruction — controlled execution stage 2026-10-06
+## Current execution instruction ? M + F + C1-C6 execution restored 2026-10-06
 
-Current task: the Product Owner explicitly authorized the controlled execution
-stage and directed work to continue toward full product closure. This supersedes
-the prior preparation-only instruction. M remains the controller/integrator and
-the only authority-bearing active executor. A bounded OpenCode worker may be
-invoked by M or the current Codex session as a local engineering subprocess for
-low-risk, explicitly scoped tasks; it is not another C1-C6 window, product owner,
-source owner, acceptance authority or parallel architecture. Do not message,
-resume or start F or another window merely because execution is active.
+Current task: at 2026-10-06 15:40 +08 the Product Owner explicitly restored the
+approved execution topology: **M is the root controller/integrator, F is the
+front-end/Experience executor, and C1-C6 are six active delivery windows**.
+This supersedes the temporary M-only/controlled-worker wording. Each window
+executes its existing owned outcome and may proceed in parallel when its real
+dependencies permit; no window may invent a second owner, architecture, data
+store, model service or acceptance standard. M does not duplicate window work:
+it freezes current truth, resolves cross-window conflicts, reviews/accepts or
+returns outcomes, and controls integration/publication with W6. OpenCode is
+shelved and is not a current execution path or fallback.
 
 The C1-C6 map, all R01-R15/J1-J8/U requirements and existing owner contracts
-remain the complete scope, not parallel active work queues. Before starting any
+remain the complete scope and are now active delivery windows, not competing
+architectures or permission to bypass entry dependencies. Before starting any
 capability, resolve fresh origin/main, the protected dirty tree, its actual owner
 and callers, runtime/DB/Permission/Evidence truth and required external
 preconditions. If there is no current actionable gap, or a required session,
@@ -47,8 +50,9 @@ GPU, new rental, recharge or retired model providers.
    through repair and meaningful validation; do not hand them to M, wait for
    per-function decisions or substitute exchanged reports for actual outcomes.
    Escalate only for a real permission/cost gap or an owner/product decision
-   that cannot be resolved within existing authority. M resolves ordinary
-   failures in this active task; no other window starts.
+   that cannot be resolved within existing authority. Each active window resolves ordinary
+   failures inside its existing owner; M resolves cross-window conflicts, integration
+   and acceptance rather than becoming a substitute implementation window.
    `main` is the sole current implementation. Do not create parallel candidate
    source trees or leave multiple competing versions active. A temporary
    isolated copy is allowed only to protect pre-existing dirty source during an
@@ -65,48 +69,38 @@ GPU, new rental, recharge or retired model providers.
    speculative features. C3+C5 research serves capability improvement, data
    credibility and separately approved training/evaluation; product improvement
    does not wait for GPU. Keep unread/missing material and original rights honest.
-5. Existing/free GPU resources are preferred. The Product Owner has authorized
-   the C2 free-GPU path and the use of a zero-cost development worker, but actual
-   execution still requires the current owner contract, exact model/recipe/data
-   hashes, required MODEL_TRAIN Permission, real zero-cost GPU capacity and the
-   existing checkpoint/evaluation boundaries. A free development environment is
-   not production model hosting. No paid resource starts without current explicit
-   cost authorization; the historical 5090 budget is not a standing instruction
-   to rent. C1 read-only collection likewise starts only through the existing
+5. Existing/free GPU resources are preferred. C2/W2 is active and may execute
+   the already-approved zero-cost training path only after its exact
+   model/recipe/data hashes, MODEL_TRAIN Permission, worker/source pins and real
+   zero-cost GPU capacity are verified. A free development environment is not
+   production model hosting. No paid GPU, rental, recharge or paid model
+   fallback starts without a new explicit cost authorization. C1/W1 is likewise
+   active: live read-only collection runs only through the existing
    Scope/Permission/session/rate-limit contracts on platforms that are actually
-   ready; authorization is not permission to fabricate ACTIVE status or bypass a
-   blocked platform.
+   ready; a blocked identity/source blocks only that path and must never be
+   rewritten as ACTIVE.
 6. Preserve the Product Owner's current manually selected account, model,
-   reasoning effort and speed/service tier for Codex/Codex CLI; that current
-   manual Codex selection is the sole Codex model authority. This router assigns no
-   model or speed by window for Codex/Codex CLI. Do not pin, downgrade,
-   upgrade or substitute the Codex controller model from repository config,
-   subagents, hooks or historical Sol/Luna/Astra text. The bounded OpenCode basic
-   worker is a separate development-runtime exception: it may automatically use
-   the strongest currently verified zero-cost model from an approved free
-   allowlist, with no paid fallback or silent provider switch. The current
-   approved free worker model is opencode/mimo-v2.6-flash-free; changing that
-   allowlist requires fresh capability/availability verification, not a product
-   architecture change. The worker model has no authority over Product
-   Architecture, Owner, Permission, Production Truth, Promotion or release.
-   If the executed backend or required worker state cannot be verified, stop and
-   mark it SETTINGS_UNVERIFIED / blocked rather than infer a substitute. M
-   handles complete results, necessary decisions and urgent risks; when no
-   actionable work remains, M pauses its own Goal.
+   reasoning effort and speed/service tier for every Codex/Codex CLI window.
+   That manual selection is the sole Codex model authority. This router assigns no model or speed by window
+   across M/F/C1-C6 and does not pin, downgrade, upgrade or
+   substitute models through repository config, subagents, hooks or historical
+   Sol/Luna/Astra text. If the executed backend/effort cannot be verified, mark
+   it SETTINGS_UNVERIFIED rather than infer a substitute. OpenCode is currently
+   shelved; do not invoke it, route tasks to it, or treat its configured free
+   model as a fallback unless the Product Owner explicitly resumes that path.
 
-W6 remains the normal integration owner but is not resumed as a parallel window.
-Under the Product Owner's direct instruction, M alone may integrate confirmed
-product repairs, update necessary governing/current records, run affected
-acceptance gates, commit to main, and verify the same online content. A bounded
-OpenCode worker may execute delegated low-risk preparation/inspection work in an
-isolated workspace, but it never commits or pushes main, rewrites governance,
-changes owners, performs Production DB writes, approves Promotion or declares
-acceptance. Do not bulk-stage the dirty tree. C1 live read-only collection and
-C2 free-GPU work may proceed only when their existing capability-specific
-Permission/session/resource preconditions are actually satisfied; missing
-preconditions remain blockers. Deployment, paid resources and external business
-effects still require their exact existing authorization boundaries. F and the
-other windows remain unopened unless explicitly resumed.
+M is the root controller and final engineering acceptance/integration authority.
+F is active for the approved four-surface Experience/frontend implementation.
+C1-C6 are active as six separate delivery windows under the map below. W6 owns
+accepted shared composition and mainline integration paths; M reviews and
+controls acceptance/publication, while each C-window remains responsible for
+its own source, tests, runtime evidence and complete user outcome. Protect all
+pre-existing dirty work, do not bulk-stage, and do not let parallel windows
+write the same owner/path without an explicit M/W6 dependency handoff. Paid
+resources, destructive Production DB operations, deployment/release and
+external business effects still require their exact existing authorization
+boundaries.
+
 
 Current explicit Product Owner requirements define the required outcome and
 scope. Source/runtime truth describes what exists and what is proven; missing
@@ -342,7 +336,7 @@ window requirements/research/media, supplied-video inspection
 frame by frame, study official websites article by article including support,
 guides and release logs, correct the four-surface UI/UX/AIGC rules and synchronize
 and exact online/offline rules. Current scope and execution come only from the
-M-only instruction at the top and the approved blueprint. Reuse completed repair
+current M/F/C1-C6 instruction at the top and the approved blueprint. Reuse completed repair
 evidence; a historical correction does not restart an already resolved task.
 Material coverage and capability requirements are not reduced.
 
@@ -356,8 +350,9 @@ actual outcome with affected checks. Required accuracy/recovery/security gates
 remain; irrelevant tests, repeated unchanged trials, speculative parallel
 candidates and repeated reports are prohibited.
 
-M owns a discovered defect through resolution within the authorized scope:
-diagnose/research, coordinate the existing writer, fix, verify the effect and
+Each active delivery window owns defects inside its assigned owner through resolution:
+diagnose/research, fix, verify the effect and report the complete outcome. M owns
+cross-window conflicts, integration and acceptance rather than absorbing routine window work.
 report the result. Do not bounce it back to the reporter or require another user
 reminder. A real permission/environment blocker is recorded once with the next
 executable step. Protect existing source/data and active shared writers.
@@ -393,7 +388,7 @@ revision and receive a readback. A message or candidate count is not delivery.
 
 ### Six-round execution windows and retained acceptance coverage
 
-Current delivery retains six complete C1–C6 responsibilities across five local delivery executors. C3 and C5 share the Product Owner-selected local continuation window. The C1–C6 labels organize six
+Current delivery runs six complete C1-C6 responsibilities across six local execution windows. The C1-C6 labels organize six
 complete user-outcome deliveries; they do not impose a mechanical serial schedule.
 Work may proceed in parallel only when actual entry dependencies, canonical
 owners, files, tests, migrations and runtime resources permit it. A later C
@@ -404,9 +399,9 @@ acceptance gate pass.
 | --- | --- | --- |
 | **C1 / W1 — Data and Collection** | Local Codex | Existing registry and source owners; 14-country categories and approved candidates; platform-native fields and honest unavailable states; Subject/venue/tenant relationships; approved collection and browser sessions; Source → Evidence → Canonical; refresh, review and recovery. Registration never proves collection coverage. |
 | **C2 / W2 — Owned AI and Agent** | Local Codex using approved open base weights and approved training resources (available/free first; paid resources require the actual approved cost boundary) | The single AI Gateway and existing Agent, Skills, Memory, context, Evaluation and Learning owners; LUMENIS-owned model training and inference; grounded CTH/BMP/creation results; multimodal file understanding; version, held-out evaluation, feedback, controlled promotion and rollback. |
-| **C3 / W3 — CTH and BMP Business Workflows** | Local Codex — combined C3+C5 continuation | Existing CTH and BMP services, metrics and task workflows; monitoring, market/competitor/creator/consumer work, operations, cases, campaigns, decisions, outcomes and evaluation inputs; call existing Shared and SYSTEM owners. |
+| **C3 / W3 — CTH and BMP Business Workflows** | Local Codex — W3 | Existing CTH and BMP services, metrics and task workflows; monitoring, market/competitor/creator/consumer work, operations, cases, campaigns, decisions, outcomes and evaluation inputs; call existing Shared and SYSTEM owners. |
 | **C4 / W4 — Original Pitch, Video and Podcast** | Local Codex | Separate customer-ready pitch, editable video and usable podcast results; existing Shared Timeline/Artifact and media owners; editing, review, export, reopen, cancellation and recovery. Each of the three deliverables has its own acceptance. |
-| **C5 / W5 — Importer, Research and Shared Deliverables** | Local Codex — combined C3+C5 continuation | Existing Importer/Research, citations, Reporting/Artifact, notifications and shared-preference owners; real material → locatable Evidence/citation → saved/versioned result → search, reopen, revise, export and return. No second database, Evidence store or model service. |
+| **C5 / W5 — Importer, Research and Shared Deliverables** | Local Codex — W5 | Existing Importer/Research, citations, Reporting/Artifact, notifications and shared-preference owners; real material → locatable Evidence/citation → saved/versioned result → search, reopen, revise, export and return. No second database, Evidence store or model service. |
 | **C6 / W6 — Integration, Runtime and Release** | Local Codex | Accepted shared API composition and bindings, canonical database-change coordination, Core/runtime/FFmpeg/supervisor, mainline integration, four-surface operation, packaging, CI, recovery/rollback and final evidence bundle. C6 integrates owned capabilities; it does not replace them. |
 
 The separate front-end window F remains independent across all six deliveries; it is not an additional delivery round. It owns existing Flutter and Website interface work,
@@ -447,15 +442,18 @@ W6 applies that exact patch in isolation and performs local runtime/E2E validati
 
 #### C3/C5 retained continuation ownership and historical Cloud handoff
 
+> Historical provenance only: current W3 and W5 are separate active local windows; this heading is retained for compatibility and does not reactivate the combined thread.
+
 The Product Owner moved C3 and C5 responsibility to local thread
 `01a10117-03c7-7503-8a9b-670e80a474a7` on 2026-10-03. Its title is
 `序境｜C3+C5 与未完成研究资料接续`. It retains the unfinished research remit
 and both complete delivery scopes, all R/J/U requirements and existing owners;
-this historical handoff does not activate that thread. When the owner is later
-formally activated, it must not wait for unrelated research or GPU work before
-continuing independent business and Shared outcomes. C2/W2 remains the sole GPU
-training operator under separate current authorization; this M-only source-repair
-does not perform GPU or billing operations.
+this historical combined handoff does not override the current topology. W3 and W5 are now
+separate active local windows; the combined thread is provenance only and must not become
+a second execution queue.
+C2/W2 remains the sole owned-AI training window and may execute only the verified
+zero-cost path under its current Permission/recipe/checkpoint/evaluation contracts.
+Paid GPU or billing operations still require a new explicit cost authorization.
 W6 coordinates exact shared-file reservations, formal DB writes and main publication.
 
 Former Cloud W3 `01a0fbd3-b280-779c-8431-207a71739022` and Cloud W5
@@ -548,7 +546,7 @@ applicable mapped R gates.
 
 
 
-Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE remain Experience-principle references only. OpenCode/Codex are engineering runtimes. Legacy Ollama/local-model-provider, Zhipu and Jev routes are retired: retain compatibility interfaces and historical artifacts, but do not call, auto-discover, probe, fall back to or reactivate them. C2/W2 owns the approved LUMENIS-specific model route using commercially permitted open base weights and approved training resources behind the one SYSTEM AI Gateway; training, inference, held-out quality, failure/recovery and user outcomes require evidence. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. Product account and password redesign is deferred until the current engineering/product closure is complete; before then, do not block product access behind a new account wall, and keep server Permission and effect fences enforced.
+Preserve product position, functions, rules, data sources and workflow meanings. Apple, ChatGPT and TRAE remain Experience-principle references only. Codex/Codex CLI are the current engineering runtimes; OpenCode is shelved and not part of the current execution route. Legacy Ollama/local-model-provider, Zhipu and Jev routes are retired: retain compatibility interfaces and historical artifacts, but do not call, auto-discover, probe, fall back to or reactivate them. C2/W2 owns the approved LUMENIS-specific model route using commercially permitted open base weights and approved training resources behind the one SYSTEM AI Gateway; training, inference, held-out quality, failure/recovery and user outcomes require evidence. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. Product account and password redesign is deferred until the current engineering/product closure is complete; before then, do not block product access behind a new account wall, and keep server Permission and effect fences enforced.
 
 Business work is selected in this order: Product Positioning → Industry Business
 Logic → Real User Jobs → Deliverable Outcomes → Experience → Data/Runtime
@@ -719,10 +717,9 @@ behind the existing SYSTEM AI Gateway. Do not change the user's persistent
 Codex model selection or Windows user environment to enforce this policy.
 Codex Cloud remains a development environment, not a deployed LUMENIS model or
 AI service.
-OpenCode may be used only as a bounded local engineering worker under
-this router. Its approved free-worker model is not the LUMENIS-owned
-product AI, does not enter SYSTEM AI Gateway as a provider, and must not
-become an implicit runtime fallback.
+OpenCode is currently shelved. Its installed/configured state is not an active
+engineering route, product AI provider or fallback. Do not invoke or resume it
+unless the Product Owner gives a new explicit instruction.
 
 Development may supplement incomplete collection with verified public-web
 materials through the existing Source/Import -> Evidence -> Canonical path.
@@ -741,7 +738,6 @@ The following may be used by Codex when installed on the workstation:
 Git CLI
 Playwright MCP
 Filesystem MCP
-OpenCode CLI/server through the bounded LUMENIS basic-worker boundary
 ripgrep / rg
 fd
 jq
@@ -755,9 +751,7 @@ Rules:
 - Filesystem MCP must be scoped to the active repository/workspace, not entire disks unless explicitly required;
 - Playwright MCP may validate UI/E2E/runtime, but it does not replace the repository's own Playwright/browser runtime contracts;
 - CLI inspection must be read-only against protected production data unless the active task explicitly requires and safely authorizes a write.
-- OpenCode worker tasks start with an explicit capability and file/context boundary, normally in an isolated temporary workspace; do not give the free worker an open-ended whole-repository rediscovery task;
-- the OpenCode worker may prepare Collector/C2 checks and run approved bounded validation, but live collection, GPU execution or any write/effect still passes the existing owner/Permission/session/resource boundary;
-- no OpenCode worker may commit/push main, alter Product Architecture/Owner/Permission, approve model Promotion, enable paid fallback or declare Product/User acceptance.
+- OpenCode is shelved for the current execution stage; Codex windows must not delegate to it or treat it as an automatic fallback.
 
 ## 8. Zero-auth acquisition capability program
 
