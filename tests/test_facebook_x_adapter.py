@@ -209,3 +209,72 @@ def test_main_x_adapter_health_check_uses_vault_metadata(monkeypatch):
     assert missing.status == CollectionStatus.NOT_CONFIGURED
     assert missing.platform == "x"
     assert "metadata missing" in missing.message
+
+
+def test_main_facebook_adapter_constructs_search_and_detail_results():
+    from types import SimpleNamespace
+    from lumenis.system.collector.adapters.facebook import FacebookAdapter, CollectionStatus
+
+    note = SimpleNamespace(
+        raw_data={"post_id": "fb-post-123"}, title="Post", content="Body",
+        author_id="page-1", author="Brand", publish_date="2026-10-05T10:00:00Z",
+        url="https://www.facebook.com/page/posts/fb-post-123", likes=None,
+        comments=None, collects=None, shares=None,
+    )
+
+    class Backend:
+        def search(self, keyword, *, max_results):
+            assert keyword == "brand update" and max_results == 12
+            return SimpleNamespace(success=True, notes=[note], raw_count=1, error="")
+
+        def detail(self, content_id):
+            assert content_id == "fb-post-123"
+            return SimpleNamespace(success=True, notes=[note], raw_count=1, error="")
+
+        def comments(self, content_id, *, max_comments):
+            return SimpleNamespace(success=True, notes=[], raw_count=0, error="")
+
+        def creator(self, creator_id):
+            return SimpleNamespace(success=True, notes=[], raw_count=0, error="")
+
+    adapter = FacebookAdapter(backend=Backend())
+    search = adapter.search("brand update", max_results=12)
+    detail = adapter.detail("fb-post-123")
+    comments = adapter.comments("fb-post-123")
+    creator = adapter.creator("page-1")
+
+    assert search.platform == detail.platform == comments.platform == creator.platform == "facebook"
+    assert search.status == detail.status == CollectionStatus.SUCCESS
+    assert search.items[0]["platform_content_id"] == "fb-post-123"
+    assert search.items[0]["likes"] is None
+
+
+def test_main_facebook_adapter_errors_keep_platform_and_health_unverified(monkeypatch):
+    from lumenis.system.collector.adapters.facebook import FacebookAdapter, CollectionStatus
+
+    class BrokenBackend:
+        def search(self, *_args, **_kwargs):
+            raise RuntimeError("collector unavailable")
+
+    adapter = FacebookAdapter(backend=BrokenBackend())
+    failed = adapter.search("brand")
+    assert failed.platform == "facebook"
+    assert failed.status == CollectionStatus.COLLECT_ERROR
+
+    monkeypatch.setattr(
+        "lumenis.adapters.cookie_vault.check_cookie_status",
+        lambda platform: {"platform": platform, "has_auth_cookie": True,
+                          "cookie_file": "private-cookie-path"},
+    )
+    health = adapter.health_check()
+    assert health.platform == "facebook"
+    assert health.status == CollectionStatus.NEED_VERIFY
+    assert "private-cookie-path" not in health.message
+
+    monkeypatch.setattr(
+        "lumenis.adapters.cookie_vault.check_cookie_status",
+        lambda platform: {"platform": platform, "has_auth_cookie": False},
+    )
+    missing = adapter.health_check()
+    assert missing.platform == "facebook"
+    assert missing.status == CollectionStatus.NOT_CONFIGURED

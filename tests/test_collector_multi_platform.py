@@ -3,7 +3,7 @@
 多平台采集连通验证测试
 ======================
 测试范围：
-  1. cookie_vault 统一加载（8平台 cookie 文件存在且可解析）
+  1. cookie_vault 静态配置检查；凭证读取仅限未受保护的平台身份
   2. 适配器注册（所有平台适配器可注册）
   3. collector_status API 路由注册与响应结构
   4. 数据精准门禁（publish_date 与 collected_at 分离、缺失不臆造）
@@ -34,6 +34,7 @@ PLATFORMS_UNDER_TEST = [
     "xiaohongshu", "weibo", "bilibili", "zhihu",
     "douyin", "x", "instagram", "jiguang",
 ]
+COOKIE_READ_PLATFORMS = [p for p in PLATFORMS_UNDER_TEST if p != "xiaohongshu"]
 
 
 class TestCookieVault:
@@ -52,14 +53,14 @@ class TestCookieVault:
             assert len(PLATFORM_AUTH_COOKIES[p]) > 0, f"{p} 认证 cookie 名为空"
 
     def test_load_cookies_returns_list_for_all_platforms(self):
-        """所有平台 load_cookies 返回 list（不抛异常）"""
-        for p in PLATFORMS_UNDER_TEST:
+        """可检查平台的 load_cookies 返回 list（不访问受保护的 XHS 身份）。"""
+        for p in COOKIE_READ_PLATFORMS:
             cookies = load_cookies(p)
             assert isinstance(cookies, list), f"{p} load_cookies 返回非 list"
 
     def test_cookie_status_is_explicit(self):
         """凭证不进仓库；存在时验证认证结构，不存在时必须显式报告。"""
-        for p in PLATFORMS_UNDER_TEST:
+        for p in COOKIE_READ_PLATFORMS:
             status = check_cookie_status(p)
             assert status["platform"] == p
             assert status["cookie_count"] >= 0
@@ -68,7 +69,7 @@ class TestCookieVault:
                 assert status["has_auth_cookie"], f"{p} 缺少关键认证 cookie"
 
     def test_to_cookie_string_matches_loaded_state(self):
-        for p in PLATFORMS_UNDER_TEST:
+        for p in COOKIE_READ_PLATFORMS:
             s = to_cookie_string(p)
             assert isinstance(s, str), f"{p} to_cookie_string 返回非 str"
             if load_cookies(p):
@@ -77,14 +78,14 @@ class TestCookieVault:
                 assert s == ""
 
     def test_to_requests_cookies_returns_safe_dict(self):
-        for p in PLATFORMS_UNDER_TEST:
+        for p in COOKIE_READ_PLATFORMS:
             c = to_requests_cookies(p)
             assert isinstance(c, dict), f"{p} to_requests_cookies 返回非 dict"
             assert all(isinstance(k, str) and isinstance(v, str) for k, v in c.items())
 
     def test_no_cookie_value_in_status_output(self):
         """check_cookie_status 不返回 cookie value（安全）"""
-        for p in PLATFORMS_UNDER_TEST:
+        for p in COOKIE_READ_PLATFORMS:
             status = check_cookie_status(p)
             for key in status:
                 val = status[key]
@@ -145,6 +146,18 @@ class TestAdapterRegistry:
 class TestCollectorStatusAPI:
     """collector_status API 结构验证"""
 
+    @pytest.fixture(autouse=True)
+    def isolate_status_inputs(self, tmp_path, monkeypatch):
+        """Never read platform credentials or write the workstation cache in tests."""
+        import collector_status_api as status_api
+
+        monkeypatch.setattr(status_api, "_STATUS_CACHE", tmp_path / "collector_status_cache.json")
+        monkeypatch.setattr(status_api, "_load_cache", lambda: {})
+        monkeypatch.setattr(
+            status_api, "check_cookie_status",
+            lambda platform: {"platform": platform, "status": "MISSING", "has_auth_cookie": False},
+        )
+
     def test_get_all_status_returns_dict(self):
         """get_all_status 返回 dict"""
         from collector_status_api import get_all_status
@@ -186,18 +199,52 @@ class TestCollectorStatusAPI:
         assert summary["expired"] == sum(1 for p in platforms if p["cookie_status"] == "EXPIRED")
 
     def test_update_platform_status_persists(self):
-        """update_platform_status 写入缓存并可读取"""
-        from collector_status_api import update_platform_status, get_all_status
+        """update_platform_status 写入隔离的临时缓存文件"""
+        import collector_status_api as status_api
+        update_platform_status = status_api.update_platform_status
         update_platform_status("test_platform", "VERIFIED", 5, "test error", 200)
-        result = get_all_status()
-        # test_platform 不在 PLATFORMS 列表中，不会出现在结果里
-        # 但缓存文件应已更新
-        cache_path = Path(__file__).resolve().parents[1] / "data" / "collector_status_cache.json"
+        # test_platform 不在 PLATFORMS 列表中，但独立缓存记录仍应可核对。
+        cache_path = status_api._STATUS_CACHE
         assert cache_path.exists()
         cache = json.loads(cache_path.read_text(encoding="utf-8"))
         assert "test_platform" in cache
         assert cache["test_platform"]["cookie_status"] == "VERIFIED"
         assert cache["test_platform"]["records_parsed"] == 5
+
+    def test_status_does_not_read_xhs_and_never_promotes_metadata_or_stale_cache(self, monkeypatch):
+        import collector_status_api as status_api
+
+        checked = []
+        monkeypatch.setattr(status_api, "_load_cache", lambda: {
+            "xiaohongshu": {"cookie_status": "ACTIVE", "last_check": "2026-10-05T10:00:00+08:00",
+                            "records_parsed": 9},
+            "facebook": {"cookie_status": "ACTIVE", "last_check": "2026-10-05T10:00:00+08:00",
+                         "records_parsed": 4},
+        })
+
+        def fake_cookie_status(platform):
+            checked.append(platform)
+            return {"platform": platform, "status": "ACTIVE", "has_auth_cookie": True}
+
+        monkeypatch.setattr(status_api, "check_cookie_status", fake_cookie_status)
+        result = status_api.get_all_status()
+        rows = {item["platform"]: item for item in result["platforms"]}
+        xhs = rows["xiaohongshu"]
+        facebook = rows["facebook"]
+        weibo = rows["weibo"]
+
+        assert "xiaohongshu" not in checked
+        assert xhs["cookie_status"] == "UNKNOWN"
+        assert xhs["last_check"] is None and xhs["records_parsed"] is None
+        assert xhs["status_source"] == "IDENTITY_SCOPE_UNBOUND"
+        assert facebook["cookie_status"] == "UNKNOWN"
+        assert facebook["last_verified_status"] == "ACTIVE"
+        assert facebook["last_check"] == "2026-10-05T10:00:00+08:00"
+        assert facebook["freshness"] == "UNKNOWN"
+        assert weibo["cookie_status"] == "NEED_VERIFY"
+        assert weibo["last_check"] is None and weibo["records_parsed"] is None
+        assert result["summary"]["active"] == 0
+        assert result["summary"]["last_verified"]["active"] == 1
 
 
 # ============================================================

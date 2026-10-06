@@ -75,13 +75,14 @@ class FacebookAdapter(BasePlatformAdapter):
             items = self._v4_notes_to_items(result.notes)
             return CollectionResult(
                 status=status,
+                platform=self.platform,
                 items=items,
                 raw_count=result.raw_count,
                 message=result.error or "",
             )
         except Exception as exc:
             logger.exception("Facebook 主链路采集失败")
-            return CollectionResult(status=CollectionStatus.COLLECT_ERROR, message=str(exc))
+            return CollectionResult(status=CollectionStatus.COLLECT_ERROR, platform=self.platform, message=str(exc))
 
     def detail(self, content_id: str, **kwargs: Any) -> CollectionResult:
         return self._delegate_v4("detail", content_id)
@@ -98,25 +99,34 @@ class FacebookAdapter(BasePlatformAdapter):
             result = getattr(backend, method)(*args, **kwargs)
             status = self._v4_status_to_main(result.success, result.notes, result.error)
             items = self._v4_notes_to_items(result.notes)
-            return CollectionResult(status=status, items=items, raw_count=result.raw_count, message=result.error or "")
+            return CollectionResult(status=status, platform=self.platform, items=items,
+                                    raw_count=result.raw_count, message=result.error or "")
         except Exception as exc:
-            return CollectionResult(status=CollectionStatus.COLLECT_ERROR, message=str(exc))
+            return CollectionResult(status=CollectionStatus.COLLECT_ERROR, platform=self.platform, message=str(exc))
 
     def health_check(self) -> CollectionResult:
-        """纯本地检查：cookie 文件 + 代理环境变量。"""
-        import os
-        from pathlib import Path
-        cookie_path = Path(__file__).parent.parent / "data" / "cookies" / "facebook.json"
-        has_cookie = cookie_path.exists()
-        has_proxy = bool(os.environ.get("OPENAI_PROXY") or os.environ.get("GOOGLE_PROXY") or os.environ.get("HTTPS_PROXY"))
-        if has_cookie and has_proxy:
-            return CollectionResult(status=CollectionStatus.SUCCESS, message="Facebook adapter ready (cookie + proxy configured)")
-        missing = []
-        if not has_cookie:
-            missing.append("cookie")
-        if not has_proxy:
-            missing.append("proxy")
-        return CollectionResult(status=CollectionStatus.COLLECT_ERROR, message=f"Facebook missing: {', '.join(missing)}")
+        """Inspect non-secret auth metadata without claiming a live session."""
+        from lumenis.adapters.cookie_vault import check_cookie_status
+
+        try:
+            status = check_cookie_status(self.platform)
+        except Exception as exc:
+            return CollectionResult(
+                status=CollectionStatus.COLLECT_ERROR,
+                platform=self.platform,
+                message=f"Facebook auth metadata unavailable: {type(exc).__name__}",
+            )
+        if status.get("has_auth_cookie") is True:
+            return CollectionResult(
+                status=CollectionStatus.NEED_VERIFY,
+                platform=self.platform,
+                message="Facebook auth-cookie metadata present; session and collection access need verification",
+            )
+        return CollectionResult(
+            status=CollectionStatus.NOT_CONFIGURED,
+            platform=self.platform,
+            message="Facebook auth-cookie metadata missing",
+        )
 
 
 register_adapter("facebook", FacebookAdapter)

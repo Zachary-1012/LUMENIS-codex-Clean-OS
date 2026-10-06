@@ -2,27 +2,23 @@
 """
 采集器状态 API（Collector Status API）
 ======================================
-GET /api/collector/status → 返回各平台真实连通状态。
+GET /api/collector/status → 返回最近验证记录与当前认证元数据的分层状态。
 
 状态定义（真实，禁止伪造）：
-  - ACTIVE   : cookie 有效且最近一次搜索/解析成功
-  - VERIFIED : 同 ACTIVE，用于明确"真连通验证通过"
-  - PARTIAL  : cookie 有效但部分功能受限（如风控/搜索空/详情失败）
-  - EXPIRED  : cookie 过期/登录态失效
-  - INVALID  : cookie 文件存在但无关键认证 cookie
-  - MISSING  : cookie 文件不存在
-  - BLOCKED  : 平台反爬/网络不通/外部限制导致无法连通
+  - ACTIVE / VERIFIED / PARTIAL / EXPIRED / BLOCKED : 仅作带时间戳的上次验证结果
+  - NEED_VERIFY : 认证 Cookie 元数据存在，但没有连通验证
+  - INVALID / MISSING : 当前 Cookie 元数据检查结果
+  - UNKNOWN : 身份范围或验证时效未绑定；不能声称当前连通
 
 返回字段：platform / cookie_status / last_check / records_parsed / error / http_status
 """
 import json
-import time
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from flask import Blueprint, jsonify
 
-from lumenis.adapters.cookie_vault import check_cookie_status, load_cookies
+from lumenis.adapters.cookie_vault import check_cookie_status
 
 logger = logging.getLogger(__name__)
 
@@ -100,30 +96,95 @@ def update_platform_status(platform: str, status: str, records_parsed: int = 0,
 
 
 def get_all_status() -> dict:
-    """获取所有平台状态（合并 cookie 文件级状态 + 最近一次验证缓存）。
+    """Return current metadata separately from cached historical verification.
 
-    优先级：验证缓存（真连通结果） > cookie 文件级状态（ACTIVE/MISSING/NO_AUTH）。
+    A file-level auth Cookie is not a connectivity check. Cached observations
+    retain their original timestamp/status, but remain UNKNOWN as a current
+    state until an explicit freshness contract exists. The generic status
+    route never reads the protected XHS profile or trusts an unscoped cache row.
     """
     cache = _load_cache()
     results = []
     for p in PLATFORMS:
-        if p in cache:
-            # 有真实验证缓存，直接使用
-            results.append(cache[p])
-        else:
-            # 无验证缓存，返回 cookie 文件级状态（未做真连通验证）
-            cs = check_cookie_status(p)
-            file_status = cs["status"]  # ACTIVE / MISSING / NO_AUTH
+        if p == "xiaohongshu":
+            # No identity/scope binding exists in this generic legacy cache.
+            # Never inspect or expose the Product Owner's local XHS identity.
             results.append({
                 "platform": p,
                 "display": PLATFORM_DISPLAY.get(p, p),
-                "cookie_status": file_status if file_status != "NO_AUTH" else "INVALID",
-                "last_check": _now_iso(),
-                "records_parsed": 0,
-                "error": "未执行真连通验证" if file_status == "ACTIVE" else
-                         ("cookie 文件不存在" if file_status == "MISSING" else "无关键认证 cookie"),
+                "cookie_status": "UNKNOWN",
+                "last_verified_status": None,
+                "last_check": None,
+                "records_parsed": None,
+                "error": "approved identity scope is not verified by this status source",
                 "http_status": None,
+                "status_source": "IDENTITY_SCOPE_UNBOUND",
+                "freshness": "NOT_CHECKED",
             })
+            continue
+
+        cached = cache.get(p)
+        if isinstance(cached, dict):
+            verified_status = cached.get("cookie_status")
+            last_check = cached.get("last_check")
+            if verified_status in {"ACTIVE", "VERIFIED", "PARTIAL", "EXPIRED", "INVALID", "MISSING", "BLOCKED"} \
+                    and isinstance(last_check, str) and last_check.strip():
+                results.append({
+                    "platform": p,
+                    "display": PLATFORM_DISPLAY.get(p, p),
+                    "cookie_status": "UNKNOWN",
+                    "last_verified_status": verified_status,
+                    "last_check": last_check,
+                    "records_parsed": cached.get("records_parsed"),
+                    "error": "stored verification retained; current freshness is not established",
+                    "http_status": cached.get("http_status"),
+                    "status_source": "VERIFICATION_CACHE",
+                    "freshness": "UNKNOWN",
+                })
+                continue
+
+        # A generic cache entry is not trusted without a known verification
+        # state and timestamp. Read only non-XHS Cookie metadata below.
+        try:
+            metadata = check_cookie_status(p)
+        except Exception as exc:
+            file_status = "UNKNOWN"
+            error = f"auth metadata unavailable: {type(exc).__name__}"
+        else:
+            file_status = metadata.get("status")
+            if file_status == "ACTIVE":
+                file_status = "NEED_VERIFY"
+                error = "auth-cookie metadata present; connectivity was not checked"
+            elif file_status == "NO_AUTH":
+                file_status = "INVALID"
+                error = "no recognized auth cookie metadata"
+            elif file_status == "MISSING":
+                error = "cookie metadata missing"
+            else:
+                file_status = "UNKNOWN"
+                error = "cookie metadata state is unknown"
+        results.append({
+            "platform": p,
+            "display": PLATFORM_DISPLAY.get(p, p),
+            "cookie_status": file_status,
+            "last_verified_status": None,
+            "last_check": None,
+            "records_parsed": None,
+            "error": error,
+            "http_status": None,
+            "status_source": "AUTH_METADATA",
+            "freshness": "NOT_CHECKED",
+        })
+
+    last_verified = [r.get("last_verified_status") for r in results]
+    last_verified_summary = {
+        "active": sum(1 for s in last_verified if s in ("ACTIVE", "VERIFIED")),
+        "partial": sum(1 for s in last_verified if s == "PARTIAL"),
+        "expired": sum(1 for s in last_verified if s == "EXPIRED"),
+        "invalid": sum(1 for s in last_verified if s == "INVALID"),
+        "missing": sum(1 for s in last_verified if s == "MISSING"),
+        "blocked": sum(1 for s in last_verified if s == "BLOCKED"),
+    }
     return {
         "timestamp": _now_iso(),
         "total_platforms": len(PLATFORMS),
@@ -135,6 +196,9 @@ def get_all_status() -> dict:
             "invalid": sum(1 for r in results if r["cookie_status"] == "INVALID"),
             "missing": sum(1 for r in results if r["cookie_status"] == "MISSING"),
             "blocked": sum(1 for r in results if r["cookie_status"] == "BLOCKED"),
+            "need_verify": sum(1 for r in results if r["cookie_status"] == "NEED_VERIFY"),
+            "unknown": sum(1 for r in results if r["cookie_status"] == "UNKNOWN"),
+            "last_verified": last_verified_summary,
         },
     }
 
