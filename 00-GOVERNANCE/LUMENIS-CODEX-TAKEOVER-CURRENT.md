@@ -114,6 +114,8 @@ F retains four-surface behavior and design responsibilities through existing Flu
 
 63. At 2026-10-06 13:52 +08, after publishing the legacy-identity repair, the canonical production launcher restarted the 8201 Core on the published source. Three consecutive live samples returned HTTP 200 from healthz with service=lumenis-core and database=ok; api/status reported system=?? / LUMENIS; api/runtime/identity and api/settings/context both reported GLOBAL_ALL with domain_id/subject_id/brand_focus_id null, and Runtime Guardian remained healthy. The status payload still reports Guangzhou Taikoo Hui as the last historical collection keyword; that is preserved observed business data, not a product/default-context identity.
 
+64. At 2026-10-06 15:22 +08, Product Owner authorized controlled execution rather than preparation-only work. AGENTS.md and README now require fresh current-state admission before each task, keep M/Codex as the controller, permit only the bounded OpenCode basic worker for low-risk delegated work, preserve manual Codex model selection, and allow the approved zero-cost MiMo worker with no paid fallback. C1 read-only collection and C2 free-GPU work may proceed only when their existing Scope/Permission/session/resource contracts are actually satisfied; missing prerequisites remain blockers and do not authorize bypass, fake ACTIVE, Promotion, deployment or Production DB mutation. This governance change alone is not product acceptance.
+
 ## 3. Authority and retained evidence
 
 - `00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`: real job, useful outcome, recovery and final states.
