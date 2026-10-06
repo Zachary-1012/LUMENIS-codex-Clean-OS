@@ -8,12 +8,55 @@ import re
 import subprocess
 import sys
 import time
+import tomllib
 from pathlib import Path
 
 STATE_ROOT = Path.home() / ".codex" / "lumenis-engineering-state"
 CODE = {".py", ".dart", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".rs"}
 TEXT = CODE | {".md", ".toml", ".json", ".yaml", ".yml", ".rules", ".txt", ".ps1", ".cmd"}
 SHELL = {"Bash", "exec_command", "command_execution", "shell_command"}
+ROLE_DEFAULTS = {
+    "M": ("gpt-6-astra", "ultra"),
+    "F": ("gpt-6-astra", "ultra"),
+    "C1": ("gpt-6.1-sol", "ultra"),
+    "C2": ("gpt-6.1-sol", "ultra"),
+    "C3": ("gpt-6.1-sol", "ultra"),
+    "C4": ("gpt-6.1-sol", "ultra"),
+    "C5": ("gpt-6.1-sol", "ultra"),
+    "C6": ("gpt-6.1-sol", "ultra"),
+}
+TASK_AGENT_DEFAULT = ("gpt-6-luna", "max")
+
+
+def model_policy_context(event: dict) -> str:
+    current = str(event.get("model") or "SETTINGS_UNVERIFIED")
+    return (
+        f"Current event model={current}. LUMENIS engineering defaults when not superseded: "
+        "M/controller=GPT-6 Astra ultra; F/frontend=GPT-6 Astra ultra; "
+        "C1-C6=GPT-6.1 Sol ultra; task subagents=GPT-6 Luna max. "
+        "The Product Owner's manual model/reasoning/speed/service-tier selection in any "
+        "current window has highest priority and overrides the role default immediately; "
+        "an explicit subagent spawn selection overrides the task-agent default. "
+        "Hooks never mutate model, reasoning effort or service tier. "
+        "M executes assigned or unresolved approved work while it exists; when none remains, "
+        "M stops and waits instead of inventing background work."
+    )
+
+
+def project_primary_model_override_reason(root: Path) -> str | None:
+    cfg = root / ".codex" / "config.toml"
+    if not cfg.is_file():
+        return None
+    data = tomllib.loads(cfg.read_text("utf-8-sig"))
+    for key in ("model", "model_reasoning_effort", "plan_mode_reasoning_effort", "service_tier", "model_provider"):
+        if key in data:
+            return (
+                f"Shared project config sets top-level {key}={data[key]!r}; "
+                "this would silently override a current primary window. Keep role defaults in "
+                "model-routing.toml and use the native agents default only for task subagents."
+            )
+    return None
+
 PATTERNS = [
     (r"\bgit(?:\.exe)?\s+(?:-C\s+(?:\"[^\"]+\"|[^\s]+)\s+)?push\b[^\r\n]*(?:--force(?:-with-lease)?|\s-f(?:\s|$))", "Force-push is forbidden for LUMENIS."),
     (r"\bgit(?:\.exe)?\s+(?:-C\s+(?:\"[^\"]+\"|[^\s]+)\s+)?reset\b[^\r\n]*--hard\b", "Hard reset may destroy protected local work."),
@@ -48,7 +91,7 @@ def eligible(relative: str) -> bool:
             and not any(word in path.name.lower() for word in ("cookie", "credential", "secret")))
 
 def snapshot(root: Path) -> dict:
-    raw = git(root, "status", "--porcelain=v1", "-z", "-uall")
+    raw = git(root, "status", "--porcelain=v1", "-z", "--untracked-files=normal")
     records, files, i = raw.split("\0"), {}, 0
     while i < len(records):
         entry = records[i]; i += 1
@@ -138,7 +181,7 @@ def state_file(event: dict, root: Path) -> Path:
 
 @contextlib.contextmanager
 def locked(path: Path):
-    lock = path.with_suffix(".lock"); deadline = time.monotonic() + 1.0
+    lock = path.with_suffix(".lock"); deadline = time.monotonic() + 5.0
     while True:
         try:
             fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
@@ -162,13 +205,22 @@ def handle(event: dict, root: Path, state: dict) -> dict:
     if name == "PreToolUse":
         reason = policy_reason(event)
         return {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": reason}} if reason else {}
+    if name in {"SessionStart", "UserPromptSubmit"}:
+        reason = project_primary_model_override_reason(root)
+        if reason:
+            return {"continue": False, "stopReason": reason,
+                    "systemMessage": "LUMENIS manual-selection guard blocked this turn: " + reason}
     if name == "SubagentStart":
-        return context(name, "Use the current local AGENTS.md concurrency and owner contract, not a historical round/window limit. Own ordinary bugs/blockers inside the assigned Owner end-to-end: reproduce once, research current official docs plus maintained upstream GitHub/high-quality current implementations when needed, choose the strongest feasible complete solution, implement, verify recovery and continue toward the full outcome. Escalate only genuine product/permission/paid-resource/security/external blockers. Return scoped diff, exit statuses and runtime evidence; never overlap unknown work.")
+        return context(name, model_policy_context(event) + " Use the current local AGENTS.md concurrency and owner contract, not a historical round/window limit. Own ordinary bugs/blockers inside the assigned Owner end-to-end: reproduce once, research current official docs plus maintained upstream GitHub/high-quality current implementations when needed, choose the strongest feasible complete solution, implement, verify recovery and continue toward the full outcome. Escalate only genuine product/permission/paid-resource/security/external blockers. Return scoped diff, exit statuses and runtime evidence; never overlap unknown work.")
     if name in {"PreCompact", "PostCompact", "SubagentStop"}:
         state["last_event"] = name; return {}
     if name == "UserPromptSubmit":
         state["routes"] = route_prompt(str(event.get("prompt", "")))
-        return context(name, "\n".join(state["routes"])) if state["routes"] else {}
+        routed = "\n".join(state["routes"])
+        message = model_policy_context(event)
+        if routed:
+            message += "\n" + routed
+        return context(name, message)
     if name == "SessionStart":
         if "baseline" not in state or event.get("source") == "clear":
             state["baseline"] = snapshot(root); state["receipts"] = []; state["mutation_observed"] = False
@@ -181,7 +233,7 @@ def handle(event: dict, root: Path, state: dict) -> dict:
                 " CURRENT has local uncommitted modifications. Treat only the published HEAD copy as GitHub-main truth; "
                 "the local delta is LOCAL_CANDIDATE_ONLY until its owning source/tests/evidence are validated and published. "
             )
-        return context(name, f"Local HEAD={state['baseline']['head']}; cached origin/main={origin} (not a fresh network read). Before editing, git fetch origin and reconcile protected local work.{current_note}State is preserved across compact/resume. Root AGENTS.md and current source owners control execution. " + "\n".join(state.get("routes", [])))
+        return context(name, model_policy_context(event) + " " + f"Local HEAD={state['baseline']['head']}; cached origin/main={origin} (not a fresh network read). Before editing, git fetch origin and reconcile protected local work.{current_note}State is preserved across compact/resume. Root AGENTS.md and current source owners control execution. " + "\n".join(state.get("routes", [])))
     if name == "PostToolUse":
         now = snapshot(root)
         state.setdefault("baseline", now)

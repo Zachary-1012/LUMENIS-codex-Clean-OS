@@ -24,12 +24,16 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-start "Taikoo Monitor v5.6.3" cmd /c "call .venv\Scripts\activate.bat ^&^& python app.py --host 127.0.0.1 --port 8200"
-timeout /t 3 /nobreak >nul
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%CD%\scripts\start_production.ps1"
+if errorlevel 1 (
+  echo [ERROR] Canonical LUMENIS 8201 runtime failed to start.
+  pause
+  exit /b 1
+)
 echo.
-echo ===== Cloudflare Quick Tunnel =====
-echo Copy the https://*.trycloudflare.com address shown below to your phone.
+echo ===== LUMENIS Cloudflare Quick Tunnel =====
+echo Copy the https://*.trycloudflare.com address shown below to your authorized device.
 echo Keep this window open while using remote access.
 echo.
-cloudflared tunnel --url http://127.0.0.1:8200
+cloudflared tunnel --url http://127.0.0.1:8201
 pause

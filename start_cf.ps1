@@ -11,5 +11,5 @@ Set-Location $dst
 Remove-Item "cf_stable.log" -ErrorAction SilentlyContinue
 
 # 启动cloudflared，输出重定向到文件
-& $cloudflared tunnel --url http://localhost:8200 --protocol http2 *> "cf_stable.log"
+& $cloudflared tunnel --url http://localhost:8201 --protocol http2 *> "cf_stable.log"
 

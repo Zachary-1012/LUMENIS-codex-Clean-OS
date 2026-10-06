@@ -227,11 +227,18 @@ def _assert_six_round_routing(agents: str) -> None:
     if not re.search(r"root controller m", lowered) or "review" not in lowered or "acceptance" not in lowered:
         raise AssertionError("AGENTS.md must identify M as the review and acceptance owner")
     if (
-        "assigns no model or speed by window" not in lowered
-        or "selection visible in that window is the sole codex model authority" not in lowered
-        or "repository code must not assign a subagent model" not in lowered
+        "m/controller = `gpt-6-astra`" not in lowered
+        or "f/frontend = `gpt-6-astra`" not in lowered
+        or "c1-c6 = `gpt-6.1-sol`" not in lowered
+        or "spawned task agents default to `gpt-6-luna` + `max`" not in lowered
+        or "made manually by the product owner" not in lowered
+        or "hooks must never mutate model/effort/service tier" not in lowered
+        or "m stops and waits" not in lowered
     ):
-        raise AssertionError("AGENTS.md must preserve the Product Owner's exact current-window model/effort/speed selection without repository or subagent overrides")
+        raise AssertionError(
+            "AGENTS.md must preserve the approved role defaults, manual override precedence, "
+            "Hook non-authority and M idle-wait policy"
+        )
     if "d01-d49" not in lowered or "distinct from acceptance requirements r01-r15" not in lowered:
         raise AssertionError("AGENTS.md must distinguish D01-D49 dispositions from R01-R15 acceptance requirements")
     if "only repository execution router" not in lowered:
@@ -400,11 +407,14 @@ def _assert_readme_routing_consistent(readme: str) -> None:
     _require_collapsed(
         readme,
         "README **不固化 current HEAD",
-        "NO_LUMENIS_AUTHORED_MODEL_OVERRIDE",
-        "native Codex UI/session persistence of the Product Owner's own selection is allowed",
-        "窗口改选后立即以新选择为权威",
+        "M/F=`GPT-6 Astra / ultra`",
+        "C1–C6=`GPT-6.1 Sol / ultra`",
+        "任务 Subagent=`GPT-6 Luna / max`",
+        "手动模型、推理强度、速度/服务档位选择始终即时覆盖角色默认",
+        "Hook 不拥有模型选择权",
+        "无任务时停止待命",
         "窗口通过准入后持续完成完整结果直到验收或真实阻塞",
-        label="README dynamic/manual-selection routing",
+        label="README dynamic/model-routing consistency",
     )
 
 
@@ -530,7 +540,7 @@ def _assert_legacy_root_docs_classified() -> None:
 
 
 def _assert_repository_model_neutrality() -> None:
-    """Repository engineering config must never choose the Product Owner's Codex model."""
+    """Validate approved role defaults while preserving manual-window precedence."""
     cfg = ROOT / ".codex" / "config.toml"
     if cfg.is_file():
         text = cfg.read_text("utf-8-sig")
@@ -540,23 +550,59 @@ def _assert_repository_model_neutrality() -> None:
             "model_reasoning_effort", "plan_mode_reasoning_effort",
             "model_reasoning_summary", "model_verbosity", "model_context_window",
             "model_auto_compact_token_limit", "model_catalog_json",
-            "default_subagent_model", "default_subagent_reasoning_effort",
         )
         for key in forbidden_keys:
             if re.search(rf"(?m)^\s*{re.escape(key)}\s*=", text):
                 raise AssertionError(
-                    f"repository Codex config must not set {key}; use the current window selection"
+                    f"repository Codex config must not set top-level {key}; manual window selection wins"
                 )
         agents_cfg = data.get("agents", {})
-        for key in ("default_subagent_model", "default_subagent_reasoning_effort"):
-            if key in agents_cfg:
+        expected_agents = {
+            "default_subagent_model": "gpt-6-luna",
+            "default_subagent_reasoning_effort": "max",
+        }
+        for key, expected in expected_agents.items():
+            if agents_cfg.get(key) != expected:
                 raise AssertionError(
-                    f"repository Codex agents config must not set {key}; subagents inherit the current window selection"
+                    f"repository Codex agents config must set {key}={expected!r}; "
+                    f"got {agents_cfg.get(key)!r}"
                 )
-        if "Inherit the current Codex window's manual selection exactly" not in text:
+        if "any Product Owner manual window selection wins" not in text:
             raise AssertionError(
-                "repository Codex config must explicitly preserve current window selection"
+                "repository Codex config must explicitly preserve manual-window precedence"
             )
+
+        routing_path = ROOT / ".codex" / "model-routing.toml"
+        if not routing_path.is_file():
+            raise AssertionError("missing .codex/model-routing.toml role-default contract")
+        routing = tomllib.loads(routing_path.read_text("utf-8-sig"))
+        if routing.get("manual_window_selection_wins") is not True:
+            raise AssertionError("model routing must preserve manual window selection as highest priority")
+        if routing.get("hooks_may_change_model") is not False:
+            raise AssertionError("model routing must forbid Hooks from changing model/effort")
+        expected_roles = {
+            "M": ("gpt-6-astra", "ultra"),
+            "F": ("gpt-6-astra", "ultra"),
+            "C1": ("gpt-6.1-sol", "ultra"),
+            "C2": ("gpt-6.1-sol", "ultra"),
+            "C3": ("gpt-6.1-sol", "ultra"),
+            "C4": ("gpt-6.1-sol", "ultra"),
+            "C5": ("gpt-6.1-sol", "ultra"),
+            "C6": ("gpt-6.1-sol", "ultra"),
+        }
+        roles = routing.get("roles", {})
+        for role, (model, effort) in expected_roles.items():
+            actual = roles.get(role, {})
+            if actual.get("model") != model or actual.get("reasoning_effort") != effort:
+                raise AssertionError(
+                    f"model routing mismatch for {role}: expected {model}/{effort}, got "
+                    f"{actual.get('model')}/{actual.get('reasoning_effort')}"
+                )
+        task_agents = routing.get("subagents", {})
+        if task_agents.get("model") != "gpt-6-luna" or task_agents.get("reasoning_effort") != "max":
+            raise AssertionError("task subagents must default to gpt-6-luna/max")
+        if task_agents.get("explicit_spawn_overrides_default") is not True:
+            raise AssertionError("explicit subagent spawn selection must override the project default")
         if data.get("web_search") != "live":
             raise AssertionError("repository Codex config must keep live web search for current blocker research")
         features = data.get("features", {})
@@ -586,6 +632,7 @@ def _assert_repository_model_neutrality() -> None:
 
         required_project_codex = (
             ".codex/config.toml",
+            ".codex/model-routing.toml",
             ".codex/README.md",
             ".codex/engineering.py",
             ".codex/mcp/server.mjs",
@@ -1079,7 +1126,9 @@ def validate() -> None:
         "01a10117-03c7-7503-8a9b-670e80a474a7",
         "C3/C5 retained continuation ownership and historical Cloud handoff",
         "The root controller M retains the independent review and acceptance role",
-        "uses the Product Owner's current manual selection without overriding it",
+        "LUMENIS role default is GPT-6 Astra ultra",
+        "manual window",
+        "M stops and waits when no assigned or unresolved",
         "R01–R15 remain the complete acceptance and technical-dependency coverage",
         "J1–J8 remain the mapped source of user-job requirements",
         "Do not add a ten-worker target, hidden helper window, per-leaf stop rule",

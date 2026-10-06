@@ -158,9 +158,9 @@ Current frontend evidence, including typography, local appearance, Web and
 Windows builds and remaining platform/business gates, is in
 [`ROUND-08-REFERENCE-ADAPTATION-2026-09-24.md`](../00-GOVERNANCE/evidence/round-08/ROUND-08-REFERENCE-ADAPTATION-2026-09-24.md).
 
-## Historical development checks — 2026-09-20
+## Current toolchain authority and historical development checks
 
-- Toolchain: Flutter 3.47.5, Dart 3.13.4, Android API 36 / Build Tools 36, JDK 21.
+- Toolchain machine authority: `app/toolchain.json` pins Flutter 3.47.5 (`6a19cca56475dbfba1478ee68d7bd0c2ef891da1`) and Dart 3.13.4; App Gate reads and verifies this same file. Android API 36 / Build Tools 36 and JDK 21 remain platform prerequisites.
 - `flutter analyze`: passed with no issues.
 - `flutter test --no-pub`: 75 tests passed, including 1440 px / 390 px Shell and screen-layout coverage.
 - `py -3.13 -m pytest tests/test_experience_runtime.py tests/test_subject_registry.py tests/test_shared_database_migrations.py`: 48 passed; no background-thread leaks. The cookie-route test isolates the unrelated app-startup migration from its file/identity assertions.

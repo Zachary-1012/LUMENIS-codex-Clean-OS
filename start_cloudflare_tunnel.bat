@@ -15,7 +15,7 @@ echo.
 echo 使用HTTP2协议，4条高可用连接，稳定运行
 echo.
 
-"%~dp0tools\cloudflared.exe" tunnel --url http://127.0.0.1:8200 --protocol http2 --ha-connections 4 --no-autoupdate
+"%~dp0tools\cloudflared.exe" tunnel --url http://127.0.0.1:8201 --protocol http2 --ha-connections 4 --no-autoupdate
 
 pause
 

@@ -2,7 +2,8 @@
 project_doc_max_bytes = 131072
 # LUMENIS / 序境 — repository-local Codex execution layer.
 # This file configures engineering behavior only. It is not Product Truth.
-# Do not set model/effort defaults here. Inherit the current Codex window's manual selection exactly.
+# Primary-window model choice follows AGENTS/model-routing; any Product Owner manual window selection wins.
+# Only the approved task-subagent fallback is encoded natively here.
 sandbox_mode = "danger-full-access"
 approval_policy = "never"
 web_search = "live"
@@ -13,6 +14,10 @@ multi_agent = true
 shell_snapshot = true
 goals = true
 skill_search = true
+
+[agents]
+default_subagent_model = "gpt-6-luna"
+default_subagent_reasoning_effort = "max"
 
 [mcp_servers.openaiDeveloperDocs]
 url = "https://developers.openai.com/mcp"

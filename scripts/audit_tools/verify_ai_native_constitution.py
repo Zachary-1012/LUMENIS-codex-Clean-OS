@@ -95,8 +95,13 @@ for token in (
     "LIVE_NOT_VERIFIED",
     "HUMAN_DECISION_REQUIRED",
     "python scripts/audit_tools/verify_ai_native_constitution.py",
-    "当前 Codex/Codex CLI 窗口手动选择",
-    "本宪法不按窗口分配 Sol/Luna/Astra/Terra",
+    "M=`GPT-6 Astra / ultra`",
+    "F=`GPT-6 Astra / ultra`",
+    "C1–C6=`GPT-6.1 Sol / ultra`",
+    "任务型 Subagent=`GPT-6 Luna / max`",
+    "手动账号、模型、推理强度与速度/服务档位选择具有最高优先级",
+    "Hook 不拥有模型选择权",
+    "无任务时停止并待命",
 ):
     require(constitution, token, "constitution execution status")
 

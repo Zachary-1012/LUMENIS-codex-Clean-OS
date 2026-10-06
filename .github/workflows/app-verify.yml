@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - "app/**"
+      - ".env.example"
+      - "app.py"
+      - "config.py"
       - "contracts/experience/**"
       - "AGENTS.md"
       - "README.md"
@@ -13,6 +16,7 @@ on:
       - "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
       - "00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md"
       - "scripts/audit_tools/verify_ai_native_constitution.py"
+      - "scripts/audit_tools/verify_current_configuration.py"
       - "scripts/audit_tools/verify_experience_*.py"
       - ".github/workflows/app-verify.yml"
   workflow_dispatch:
@@ -32,6 +36,9 @@ jobs:
       - name: Validate AI-native product constitution execution chain (BLOCKING)
         run: python3 scripts/audit_tools/verify_ai_native_constitution.py
 
+      - name: Validate current configuration and Flutter toolchain (BLOCKING)
+        run: python3 scripts/audit_tools/verify_current_configuration.py
+
       - name: Validate multi-surface Experience authority (BLOCKING)
         shell: bash
         run: |
@@ -39,13 +46,15 @@ jobs:
           python3 scripts/audit_tools/verify_experience_anti_template.py --strict
           python3 scripts/audit_tools/verify_experience_screen_blueprints.py
 
-      - name: Install Flutter 3.47.2 stable (EXECUTION-LAYER)
+      - name: Install pinned Flutter stable (EXECUTION-LAYER)
         shell: bash
         run: |
+          flutter_version="$(python3 -c "import json; print(json.load(open('app/toolchain.json', encoding='utf-8'))['flutter_version'])")"
+          test -n "$flutter_version"
           rm -rf "$RUNNER_TEMP/flutter"
           ok=0
           for attempt in 1 2 3; do
-            if git clone --depth 1 --branch 3.47.2 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"; then
+            if git clone --depth 1 --branch "$flutter_version" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"; then
               ok=1
               break
             fi
@@ -60,8 +69,17 @@ jobs:
         shell: bash
         run: |
           flutter config --no-analytics
-          flutter --version
+          flutter --version --machine > "$RUNNER_TEMP/flutter-version.json"
           dart --version
+          python3 - <<'PY'
+          import json, os
+          expected = json.load(open('app/toolchain.json', encoding='utf-8'))
+          actual = json.load(open(os.path.join(os.environ['RUNNER_TEMP'], 'flutter-version.json'), encoding='utf-8'))
+          assert actual['frameworkVersion'] == expected['flutter_version'], (actual, expected)
+          assert actual['frameworkRevision'] == expected['flutter_revision'], (actual, expected)
+          assert actual['dartSdkVersion'] == expected['dart_version'], (actual, expected)
+          assert actual['channel'] == expected['channel'], (actual, expected)
+          PY
 
       - name: Resolve app dependencies (EXECUTION-LAYER)
         working-directory: app
@@ -69,7 +87,7 @@ jobs:
         run: |
           ok=0
           for attempt in 1 2 3; do
-            if flutter pub get; then
+            if flutter pub get --enforce-lockfile; then
               ok=1
               break
             fi

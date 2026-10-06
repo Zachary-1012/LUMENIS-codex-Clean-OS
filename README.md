@@ -107,7 +107,7 @@ Product Owner 已恢复批准的完整执行拓扑：
 
 ### 当前执行器
 
-- **Codex / Codex CLI**：当前研发执行器。每个窗口严格使用 Product Owner 当下在该窗口手动选择的模型、推理强度和服务档位；LUMENIS 不在仓库、Hook、CLI/Profile/环境变量或 Subagent 中人为指定、切换或降级工程模型。Codex 原生 UI/会话若自行持久化 Product Owner 刚刚做出的选择，属于 Codex 默认行为，可以保留；窗口改选后立即以新选择为权威。Machine invariant: `NO_LUMENIS_AUTHORED_MODEL_OVERRIDE`; native Codex UI/session persistence of the Product Owner's own selection is allowed.
+- **Codex / Codex CLI**：当前研发执行器。序境研发角色默认值为 M/F=`GPT-6 Astra / ultra`、C1–C6=`GPT-6.1 Sol / ultra`、任务 Subagent=`GPT-6 Luna / max`；机器合同见 `.codex/model-routing.toml`，Subagent 默认同时写入 Codex 原生 `[agents]` 配置。Product Owner 在任一当前窗口的手动模型、推理强度、速度/服务档位选择始终即时覆盖角色默认；显式 spawn 选择覆盖 Subagent 默认；Hook 不拥有模型选择权。M 有已分配或未闭合工作时执行，无任务时停止待命。
 - **OpenCode**：**当前搁置，不属于本轮执行路径，也不是 Codex 额度不足时的自动 fallback。** 已有安装/配置不等于获准执行；除非 Product Owner 以后明确恢复，否则任何窗口都不要把任务派给 OpenCode。
 - TRAE、Apple、ChatGPT 等只在各自既有规则内作为 Experience/研究参考，不拥有序境产品架构或执行权。
 
@@ -165,9 +165,9 @@ work/ staging/ output/ tmp/  工作区/候选/输出；不能因文件存在就�
 ## 开发环境、配置与秘密
 
 - Python 依赖以 `requirements.txt` / `requirements-dev.txt` 和当前 `.venv` 实际状态为准；不要为了“统一环境”擅自重建环境或升级全部依赖。
-- Flutter 依赖以 `app/pubspec.yaml` / `app/pubspec.lock` 为准；各平台实际构建能力仍需对应平台验证。
+- Flutter SDK 版本以 `app/toolchain.json` 为唯一机器锁定，依赖以 `app/pubspec.yaml` / `app/pubspec.lock` 为准；本机与 App Gate 必须核对同一 SDK 版本/Revision/Dart，各平台实际构建能力仍需对应平台验证。
 - Node/Browser脚本依赖以 `package.json` / `package-lock.json` 为准。
-- `.env`、Cookie、API Key、平台 Session、生产 DB、用户文件和本机私有路径属于本地/受保护配置，**不得提交、打印到日志、写进README或Evidence正文**。
+- `.env`、Cookie、API Key、平台 Session、生产 DB、用户文件和本机私有路径属于本地/受保护配置，**不得提交、打印到日志、写进README或Evidence正文**。`.env.example` 只用于说明变量形状，运行时代码与测试不得把它加载为真实环境。
 - 新依赖、模型、字体、二进制工具或外部服务加入产品前，必须同时更新 Owner、第三方登记、License/Notice、运行/恢复和Release影响。
 - 当前 OpenCode 已搁置；其本机安装状态不构成序境产品依赖或运行时 Provider。
 
@@ -180,6 +180,7 @@ work/ staging/ output/ tmp/  工作区/候选/输出；不能因文件存在就�
 ```powershell
 .\.venv\Scripts\python.exe scripts\audit_tools\verify_ai_native_constitution.py
 .\.venv\Scripts\python.exe scripts\audit_tools\verify_codex_takeover_governance.py
+.\.venv\Scripts\python.exe scripts\audit_tools\verify_current_configuration.py
 .\.venv\Scripts\python.exe scripts\audit_tools\verify_lumenis_single_product.py
 ```
 

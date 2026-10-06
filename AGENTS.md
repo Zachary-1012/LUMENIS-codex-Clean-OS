@@ -87,18 +87,20 @@ GPU, new rental, recharge or retired model providers.
    Scope/Permission/session/rate-limit contracts on platforms that are actually
    ready; a blocked identity/source blocks only that path and must never be
    rewritten as ACTIVE.
-6. Preserve exactly the Product Owner's current manual selection in each Codex /
-   Codex CLI window: account, model, reasoning effort and speed/service tier. The
-   selection visible in that window is the sole Codex model authority; when the
-   Product Owner changes it in the window, the new selection supersedes immediately
-   without any repository/config edit. This router assigns no model or speed by
-   window across M/F/C1-C6 and does not pin, downgrade, upgrade or substitute models
-   through repository config, CLI/profile/env arguments, subagents, hooks or
-   historical Sol/Luna/Astra text. Repository code must not assign a subagent model;
-   native Codex inheritance from the current window remains unmodified. Native Codex UI/session state may persist the Product Owner's own last selection; that is allowed native behavior, not a LUMENIS-authored default. If the executed backend/effort cannot be verified, mark
-   it SETTINGS_UNVERIFIED rather than infer a substitute. OpenCode is currently
-   shelved; do not invoke it, route tasks to it, or treat its configured free
-   model as a fallback unless the Product Owner explicitly resumes that path.
+6. Use the Product Owner-approved LUMENIS engineering role defaults only when the
+   current window has no newer manual selection: M/controller = `gpt-6-astra` +
+   `ultra`; F/frontend = `gpt-6-astra` + `ultra`; C1-C6 = `gpt-6.1-sol` +
+   `ultra`. Spawned task agents default to `gpt-6-luna` + `max` through
+   Codex's native `[agents]` defaults. A model/reasoning/speed/service-tier choice
+   made manually by the Product Owner in any current Codex/Codex CLI window always
+   wins immediately; an explicit spawn model/effort likewise overrides the task-agent
+   default. Hooks must never mutate model/effort/service tier. Profiles are launch
+   helpers only and may not override a later manual selection. M executes assigned or
+   unresolved controller/integration/review/acceptance work while such work exists;
+   when no assigned or unresolved approved work remains, M stops and waits rather than
+   inventing background research or self-starting new product work. If the executed
+   backend/effort cannot be verified, mark it SETTINGS_UNVERIFIED. OpenCode remains
+   shelved and is never a fallback unless the Product Owner explicitly resumes it.
 
 M is the root controller and final engineering acceptance/integration authority.
 F is active for the approved four-surface Experience/frontend implementation.
@@ -450,11 +452,12 @@ composition, Chinese/English/Korean localization and accessibility through all
 six deliveries. Backend windows provide field and behavior contracts; F owns
 screen layout and user interaction.
 
-The root controller M retains the independent review and acceptance role and
-uses the Product Owner's current manual selection without overriding it. M freezes
-scope, resolves Product Architecture/owner/interface conflicts, reviews
-DESIGN_READY, and accepts or returns complete window outcomes. Product Owner
-human decisions remain separate from M.
+The root controller M retains the independent review and acceptance role. Its
+LUMENIS role default is GPT-6 Astra ultra; a newer Product Owner manual window
+selection overrides that default immediately. M freezes scope, resolves Product
+Architecture/owner/interface conflicts, reviews DESIGN_READY, and accepts or
+returns complete window outcomes. M stops and waits when no assigned or unresolved
+approved work remains. Product Owner human decisions remain separate from M.
 
 W6 is the sole writer for accepted shared composition and mainline integration
 paths, including app.py, lumenis_app_api.py, experience_runtime.py and

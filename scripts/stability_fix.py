@@ -106,7 +106,7 @@ if exist debug_error.log del /Q debug_error.log
 
 echo [3/3] 启动系统（稳定模式，禁用所有后台线程）...
 echo.
-echo 系统将在 http://127.0.0.1:8200 启动
+echo 系统将在 http://127.0.0.1:8201 启动
 echo 按 Ctrl+C 停止系统
 echo.
 
@@ -156,7 +156,7 @@ def check_system_health():
     """检查系统健康状态"""
     try:
         import urllib.request
-        response = urllib.request.urlopen('http://127.0.0.1:8200/api/dashboard/all', timeout=10)
+        response = urllib.request.urlopen('http://127.0.0.1:8201/api/dashboard/all', timeout=10)
         return response.status == 200
     except Exception:
         return False

@@ -19,7 +19,7 @@ while ($true) {
     $proc = Get-Process -Name cloudflared -ErrorAction SilentlyContinue
     if (-not $proc) {
         Write-Log "⚠ cloudflared未运行，正在启动..."
-        Start-Process -FilePath $cloudflaredPath -ArgumentList "tunnel","--url","http://127.0.0.1:8200","--protocol","http2","--ha-connections","4","--no-autoupdate" -WindowStyle Hidden
+        Start-Process -FilePath $cloudflaredPath -ArgumentList "tunnel","--url","http://127.0.0.1:8201","--protocol","http2","--ha-connections","4","--no-autoupdate" -WindowStyle Hidden
         Start-Sleep -Seconds 10
         $newProc = Get-Process -Name cloudflared -ErrorAction SilentlyContinue
         if ($newProc) {

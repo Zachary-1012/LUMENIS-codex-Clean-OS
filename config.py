@@ -29,11 +29,9 @@ _config_loaded = False
 
 
 def load_env():
-    """加载.env文件"""
+    """Load only the protected local .env. The example file is documentation."""
     if os.path.exists(ENV_FILE):
         load_dotenv(ENV_FILE, override=True)
-    elif os.path.exists(ENV_EXAMPLE_FILE):
-        load_dotenv(ENV_EXAMPLE_FILE, override=True)
 
 
 def load_system_config() -> Dict[str, Any]:
@@ -72,10 +70,10 @@ class Config:
     # 内置默认值（Track1 补齐：关键配置项在 .env 缺失时不返回 None）
     _DEFAULTS = {
         'APP_HOST': '0.0.0.0',
-        'APP_PORT': 8200,
+        'APP_PORT': 8201,
         'APP_DEBUG': False,
         'DATABASE_PATH': 'data/monitor.db',
-        'AI_PROVIDER': 'auto',
+        'AI_PROVIDER': 'owned',
         'AI_TIMEOUT_SECONDS': 90,
         'AI_LOCAL_ENABLED': False,
         'LOG_LEVEL': 'INFO',
@@ -86,13 +84,13 @@ class Config:
         'AUTO_INTERVAL_MINUTES': 90,
         'DAILY_REPORT_HOUR': 9,
         'TAIKOO_HOST': '0.0.0.0',
-        'TAIKOO_PORT': 8200,
-        'TAIKOO_AUTH_USER': 'admin',
+        'TAIKOO_PORT': 8201,
+        'TAIKOO_AUTH_USER': '',
         'COMPANY_DOMAIN_ENABLED': False,
         'NOTIFICATION_DEDUP_TTL': 300,
         'NOTIFICATION_MAX_RETRIES': 3,
         'ZBC_SCHED_GATE_MODE': 'shadow',
-        'ALLOW_CLOUD_AI': True,
+        'ALLOW_CLOUD_AI': False,
         'LOCAL_AI_PREFERRED': False,
     }
 
@@ -269,9 +267,11 @@ class Config:
             # 全网话题采集
             'WEB_ADAPTERS', 'WEB_BASE_QUERY', 'WEB_RSS_URLS', 'WEB_QUERIES',
             'TAIKOO_WEB_DISCOVERY', 'TAIKOO_WEB_DISCOVERY_TIMEOUT',
-            # 小红书配置
+            # 平台只读 Runtime / 浏览器配置
             'XHS_CDP_URL', 'XHS_COOKIE_FILE', 'XHS_COOKIE', 'XHS_PROFILE_DIR',
             'XHS_CN_CDP_URL', 'XHS_HK_CDP_URL',
+            'DOUYIN_CDP_URL', 'DOUYIN_LOCAL_WORKER_ENABLED', 'DOUYIN_LOCAL_WORKER_ACCOUNT',
+            'X_READONLY_CDP_URL', 'X_READONLY_LOCAL_WORKER_ENABLED', 'X_READONLY_LOCAL_WORKER_ACCOUNT',
             # 凭证 / Cookie
             'ZBC_WEIBO_COOKIE_JSON', 'ZBC_BILI_COOKIE_JSON',
             'ZBC_API_KEY', 'V4_ACCESS_KEY',
@@ -298,6 +298,11 @@ class Config:
             'ZBC_BACKUP_DIR', 'ZBC_EXPORT_DIR', 'ZBC_TEMP_DIR',
             'ZBC_AI_RUNTIME_DIR', 'ZBC_COLLECTOR_DIR', 'ZBC_LOG_DIR',
             'ZBC_CONFIG_DIR',
+            # 本机媒体 / Evidence / C2 私有执行引用
+            'LUMENIS_FFMPEG_PATH', 'LUMENIS_FFPROBE_PATH',
+            'LUMENIS_EVIDENCE_HMAC_KEY_RING', 'LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID',
+            'LUMENIS_TRAINING_RECEIPT_KEY_RING', 'LUMENIS_TRAINING_RECEIPT_ACTIVE_KEY_ID',
+            'LUMENIS_TRAINING_SSH_ENDPOINT_PATH', 'LUMENIS_PUBLIC_SOURCE_DOH_FALLBACK',
             # 日志 / Cloudflare
             'LOG_LEVEL', 'LOG_DIR',
             'CLOUDFLARED_PATH', 'CLOUDFLARE_TUNNEL_URL',
@@ -324,20 +329,25 @@ class Config:
                 result['missing'].append(key)
                 result['valid'] = False
         
-        # 检查认证配置
-        if self.get('TAIKOO_AUTH_USER') is None:
-            result['warnings'].append('TAIKOO_AUTH_USER 未设置，将使用默认认证')
-        if self.get('TAIKOO_AUTH_PASSWORD') is None:
-            result['warnings'].append('TAIKOO_AUTH_PASSWORD 未设置，将使用默认认证')
-        
-        # 检查AI配置
-        if self.get('AI_API_KEY') is None and self.get('AI_LOCAL_ENABLED') is not True:
-            result['warnings'].append('AI_API_KEY 未设置且本地AI未启用，AI分析功能可能不可用')
-        
-        # 检查邮件配置
-        email_keys = ['EMAIL_SMTP_HOST', 'EMAIL_SMTP_USER', 'EMAIL_SMTP_PASSWORD']
-        if any(self.get(k) is None for k in email_keys):
-            result['warnings'].append('邮件配置不完整，日报推送功能可能不可用')
+        # Compatibility Basic auth is optional while product-account redesign is deferred.
+        basic_user = str(self.get('TAIKOO_AUTH_USER') or '').strip()
+        basic_password = str(self.get('TAIKOO_AUTH_PASSWORD') or '')
+        if bool(basic_user) != bool(basic_password):
+            result['valid'] = False
+            result['missing'].append('TAIKOO_AUTH_USER/TAIKOO_AUTH_PASSWORD pair')
+        result['details']['compatibility_basic_auth_configured'] = bool(basic_user and basic_password)
+
+        # Product inference has one owned Gateway. Retired provider selectors are invalid current configuration.
+        provider = str(self.get('AI_PROVIDER') or '').strip().lower()
+        if provider not in ('', 'owned'):
+            result['valid'] = False
+            result['warnings'].append('AI_PROVIDER must be blank/owned; retired provider routing is disabled')
+        if self.get('ALLOW_CLOUD_AI') is True:
+            result['valid'] = False
+            result['warnings'].append('ALLOW_CLOUD_AI must remain false for the current owned-runtime contract')
+        result['details']['product_ai_provider'] = 'owned'
+        result['details']['external_ai_fallback_allowed'] = False
+        result['details']['email_required_by_current_product'] = False
         
         result['details']['total_keys'] = len(self.get_known_keys())
         result['details']['configured_keys'] = sum(
@@ -384,7 +394,7 @@ if __name__ == '__main__':
     # 显示基本配置
     print(f"\n🏠 服务器配置:")
     print(f"  HOST: {config.get('APP_HOST', '0.0.0.0')}")
-    print(f"  PORT: {config.get('APP_PORT', 8200)}")
+    print(f"  PORT: {config.get('APP_PORT', 8201)}")
     
     print(f"\n💾 数据库配置:")
     print(f"  PATH: {config.get('DATABASE_PATH', 'data/monitor.db')}")

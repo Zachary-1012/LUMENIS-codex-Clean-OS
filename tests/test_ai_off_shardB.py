@@ -175,7 +175,7 @@ def test_ai_off_core_chain():
 def test_env_template_keeps_retired_product_provider_routes_disabled():
     template = open(os.path.join(ROOT, '.env.example'), encoding='utf-8-sig').read()
     assert 'ALLOW_CLOUD_AI=false' in template
-    assert 'LOCAL_AI_PREFERRED=false' in template
+    assert '\nLOCAL_AI_PREFERRED=' not in '\n' + template
     for key in (
         'OLLAMA_BASE_URL',
         'LMSTUDIO_BASE_URL',

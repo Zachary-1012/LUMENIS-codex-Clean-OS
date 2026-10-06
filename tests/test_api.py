@@ -91,10 +91,15 @@ class TestAIAPI:
 class TestSystemAPI:
     """系统API测试"""
 
-    def test_system_health(self, client, auth_headers):
-        """测试系统健康检查API"""
+    def test_system_health(self, client, auth_headers, monkeypatch):
+        """测试系统健康检查API及默认禁用的历史发现配置。"""
+        monkeypatch.delenv('TAIKOO_WEB_DISCOVERY', raising=False)
         response = client.get('/api/system/health', headers=auth_headers)
         assert response.status_code == 200
+        data = response.get_json()
+        assert data['health']['web_discovery_enabled'] is False
+        assert data['health']['ai']['provider'] == 'owned'
+        assert data['health']['ai']['fallback_allowed'] is False
 
     def test_system_status(self, client, auth_headers):
         """测试系统状态API"""
@@ -102,6 +107,12 @@ class TestSystemAPI:
         assert response.status_code == 200
         data = response.get_json()
         assert data['ok'] is True
+        assert data['collector'] == 'SYSTEM Collector / source-specific adapters'
+        assert data['data_source'] == 'Source → Evidence → Canonical'
+        assert data['ai_provider'] == 'owned'
+        assert data['ai_fallback_allowed'] is False
+        assert data['last_collection_semantics'] == 'historical_observation_not_current_readiness'
+        assert data['web_discovery_enabled'] is False
 
 class TestAuthAPI:
     """认证API测试"""

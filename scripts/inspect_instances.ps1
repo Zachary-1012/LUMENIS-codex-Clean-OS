@@ -1,6 +1,6 @@
-# Z-Brand Core instance read-only inspector (never kills; reports port ownership and duplicate instances)
+# LUMENIS instance read-only inspector (never kills; reports canonical and legacy port ownership)
 # Usage: powershell -File scripts/inspect_instances.ps1
-# 8200=production, 8201=test. LISTEN=holds the port, DUPLICATE=extra stacked instance.
+# 8201=canonical Product Core. Any 8200 listener is legacy/unexpected and must never be treated as the production keeper.
 $ErrorActionPreference = 'SilentlyContinue'
 
 function Get-ListenPid([int]$Port) {
@@ -18,7 +18,13 @@ foreach ($port in 8200, 8201) {
     $procs = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
         Where-Object { $_.CommandLine -match 'app\.py' -and $_.CommandLine -match "$port" }
     foreach ($p in $procs) {
-        $role = if ($p.ProcessId -eq $listen) { 'LISTEN(KEEP)' } else { 'DUPLICATE' }
+        $role = if ($p.ProcessId -eq $listen -and $port -eq 8201) {
+            'CANONICAL_LISTEN(KEEP)'
+        } elseif ($p.ProcessId -eq $listen -and $port -eq 8200) {
+            'LEGACY_LISTEN(REVIEW)'
+        } else {
+            'DUPLICATE'
+        }
         $mb = [math]::Round($p.WorkingSetSize / 1MB)
         Write-Output ("  PID={0} PPID={1} {2} mem={3}MB start={4}" -f $p.ProcessId, $p.ParentProcessId, $role, $mb, $p.CreationDate)
     }

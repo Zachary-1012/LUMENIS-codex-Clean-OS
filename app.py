@@ -69,9 +69,9 @@ def _validate_internal_beta_workspace_context_arguments(argv, environ=None):
         raise ValueError('--port must be an integer from 1024 through 65535')
     protected_ports = set(_INTERNAL_BETA_RESERVED_PORTS)
     try:
-        configured_production_port = int(env.get('TAIKOO_PORT', '8200'))
+        configured_production_port = int(env.get('TAIKOO_PORT', '8201'))
     except (TypeError, ValueError):
-        configured_production_port = 8200
+        configured_production_port = 8201
     protected_ports.add(configured_production_port)
     if port in protected_ports:
         raise ValueError(f'--port {port} is reserved for production or resident services')
@@ -1355,7 +1355,7 @@ APP_VERSION='5.9.9'
 PRODUCT_NAME='\u5e8f\u5883 / LUMENIS'
 CORE_SERVICE_NAME='lumenis-core'
 APP_HOST=os.getenv('TAIKOO_HOST','0.0.0.0')
-APP_PORT=int(os.getenv('TAIKOO_PORT','8200'))
+APP_PORT=int(os.getenv('TAIKOO_PORT','8201'))
 AUTH_USER=os.getenv('TAIKOO_AUTH_USER','')
 AUTH_PASSWORD=os.getenv('TAIKOO_AUTH_PASSWORD','')
 
@@ -1834,7 +1834,7 @@ def _run_collect_task(task_id,keywords,max_scroll,query_plan=None):
         with _task_lock: collect_tasks[task_id].update(status='web-discovery',message='正在检索公开网页舆情并提取事件关键词…',progress=5)
         # 全网发现是辅助能力，不能阻塞小红书主采集链。
         web_result={'fetched':0,'keywords':[],'error':'disabled_or_timeout'}
-        if os.getenv('TAIKOO_WEB_DISCOVERY','1').lower() not in ('0','false','no','off'):
+        if os.getenv('TAIKOO_WEB_DISCOVERY','0').lower() not in ('0','false','no','off'):
             _ex=concurrent.futures.ThreadPoolExecutor(max_workers=1)
             _future=_ex.submit(reprocess.discover_web,limit=80,translate=False)
             try:
@@ -2815,12 +2815,19 @@ def api_negative_review_stats():
 def api_settings_get():
     """系统设置（前端兼容）"""
     try:
+        from lumenis.system.ai_gateway.core import owned_inference_status
+        owned = owned_inference_status()
         config = {
             'version': APP_VERSION,
-            'auto_collect': True,
-            'collector_type': 'Playwright/XHS search + rednote CDP',
+            'auto_collect': os.getenv('REDNOTE_AUTO_RUN', 'false').lower() in ('1','true','yes','on'),
+            'collector_type': 'SYSTEM Collector / source-specific adapters',
+            'collector_scope': 'current Subject/BrandFocus + Permission',
             'auth_enabled': bool(AUTH_USER and AUTH_PASSWORD),
-            'ai_enabled': ARK_LLM_AVAILABLE,
+            'product_account_redesign_deferred': True,
+            'ai_enabled': owned.get('available') is True and owned.get('service_binding') == 'BOUND',
+            'ai_provider': 'owned',
+            'ai_service_binding': owned.get('service_binding'),
+            'ai_fallback_allowed': False,
         }
         return jsonify({'ok': True, 'settings': config})
     except Exception as e:
@@ -3153,7 +3160,7 @@ def api_notes_library_v571():
 def remote_access():
     """本地固定入口：自动跳转到当前Cloudflare隧道公网URL
     用于解决trycloudflare临时域名每次重启变化的问题。
-    用户访问 http://127.0.0.1:8200/remote 即可自动跳转到最新的公网地址。
+    用户访问当前 Product Core 的 /remote 可跳转到最新的公网地址。
     """
     import os
     url_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tunnel_url.txt')
@@ -3169,7 +3176,7 @@ def remote_access():
     return jsonify({
         'ok': False,
         'message': '公网隧道未启动，请先运行 tunnel_guardian.py 启动隧道',
-        'local_url': 'http://127.0.0.1:8200',
+        'local_url': f'http://127.0.0.1:{APP_PORT}',
         'tunnel_url_file': url_file,
     }), 503
 
@@ -3251,8 +3258,9 @@ def api_system_health():
         result.update({'database':'ok','verified_notes':int(stats.get('verified_count',0) or 0),'latest_data':latest})
     except Exception as e:
         result.update({'database':'error','database_error':str(e)})
-    result['ai']=intelligence.ai_status()
-    result['web_discovery_enabled']=os.getenv('TAIKOO_WEB_DISCOVERY','1').lower() not in ('0','false','no','off')
+    from lumenis.system.ai_gateway.core import owned_inference_status
+    result['ai'] = owned_inference_status()
+    result['web_discovery_enabled']=os.getenv('TAIKOO_WEB_DISCOVERY','0').lower() not in ('0','false','no','off')
     return jsonify({'ok':result.get('database')=='ok','health':result})
 
 # ===== ZBC Lifecycle Contract V1.0: Runtime Worker API =====
@@ -3615,7 +3623,28 @@ def api_status():
     stats=db.get_stats()
     with db.get_db() as conn:
         clause,sp=_subject_sql_and_values(); unanalyzed=conn.execute(f"SELECT COUNT(*) c FROM notes WHERE (ai_analyzed_at='' OR ai_analyzed_at IS NULL) AND is_taikoo_verified=1 AND {clause}",tuple(sp)).fetchone()['c']; last=conn.execute('SELECT * FROM collection_logs ORDER BY id DESC LIMIT 1').fetchone()
-    return jsonify({'ok':True,'system':PRODUCT_NAME,'version':APP_VERSION,'collector':'Playwright/XHS search + rednote CDP','analyzer':'AI provider + auditable rule fallback','qian_gua_integration':False,'data_source':'公开网页发现 → 关键词反馈 → 小红书/rednote浏览器采集','total_notes':stats['total'],'verified_notes':stats['verified_count'],'unanalyzed':unanalyzed,'last_collection':dict(last) if last else None,'server_time':datetime.now().strftime('%Y-%m-%d %H:%M:%S'),'ai_enabled':intelligence.ai_enabled(),'ai_detail':intelligence.ai_status().get('detail'),'ai_provider':intelligence.ai_status().get('provider'),'ai_model':intelligence.ai_status().get('model'),'web_sources':['Google News RSS','GDELT','custom RSS'],'rednote_cdp_enabled':bool(os.getenv('XHS_CDP_URL','')),'company_domain':os.getenv('TAIKOO_COMPANY_DOMAIN',''),'auto_interval_minutes':int(os.getenv('AUTO_INTERVAL_MINUTES','90'))})
+    from lumenis.system.ai_gateway.core import owned_inference_status
+    owned = owned_inference_status()
+    configured_web_sources = [item.strip() for item in os.getenv('WEB_ADAPTERS', '').split(',') if item.strip()]
+    return jsonify({
+        'ok': True, 'system': PRODUCT_NAME, 'version': APP_VERSION,
+        'collector': 'SYSTEM Collector / source-specific adapters',
+        'collector_mode': 'permission-scoped read/intake; no implicit publishing',
+        'analyzer': 'deterministic rules plus owned AI Gateway when service-bound',
+        'qian_gua_integration': False, 'data_source': 'Source → Evidence → Canonical',
+        'total_notes': stats['total'], 'verified_notes': stats['verified_count'],
+        'unanalyzed': unanalyzed, 'last_collection': dict(last) if last else None,
+        'last_collection_semantics': 'historical_observation_not_current_readiness',
+        'server_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'ai_enabled': owned.get('available') is True and owned.get('service_binding') == 'BOUND',
+        'ai_detail': owned.get('reason'), 'ai_provider': 'owned',
+        'ai_model': owned.get('model_id'), 'ai_service_binding': owned.get('service_binding'),
+        'ai_fallback_allowed': False, 'web_sources': configured_web_sources,
+        'web_discovery_enabled': os.getenv('TAIKOO_WEB_DISCOVERY', '0').lower() not in ('0','false','no','off'),
+        'rednote_cdp_enabled': bool(os.getenv('XHS_CDP_URL','')),
+        'company_domain': os.getenv('TAIKOO_COMPANY_DOMAIN',''),
+        'auto_interval_minutes': int(os.getenv('AUTO_INTERVAL_MINUTES','90')),
+    })
 
 # ===== v5.4 rednote CDP 采集 API =====
 @app.route('/api/rednote/collect', methods=['POST'])
@@ -4070,18 +4099,25 @@ def api_engineering_metrics():
 # ===== v5.6.4 报告导出 API（支持Word/Excel/CSV + 精确时间维度） =====
 @app.route('/api/system/config')
 def api_system_config():
+    from lumenis.system.ai_gateway.core import owned_inference_status
+    owned = owned_inference_status()
+    monitor_keywords = getattr(collector, 'MONITOR_KEYWORDS', None)
     return jsonify({
         'ok': True,
         'version': APP_VERSION,
-        'company_domain': os.getenv('TAIKOO_COMPANY_DOMAIN', ''),
-        'company_name': os.getenv('TAIKOO_COMPANY_NAME', '广州太古汇'),
-        'rednote_cdp_url': os.getenv('XHS_CDP_URL', ''),
+        'company_domain': os.getenv('TAIKOO_COMPANY_DOMAIN', '') or None,
+        'company_name': os.getenv('TAIKOO_COMPANY_NAME', '') or None,
+        'default_context': 'GLOBAL_ALL',
+        'default_subject': None,
+        'rednote_cdp_configured': bool(os.getenv('XHS_CDP_URL', '')),
         'auto_interval_minutes': int(os.getenv('AUTO_INTERVAL_MINUTES', '90')),
         'daily_report_push_hour': int(os.getenv('DAILY_REPORT_HOUR', '9')),
-        'ai_enabled': intelligence.ai_enabled(),
-        'ai_provider': intelligence.ai_status().get('provider'),
-        'web_discovery_enabled': os.getenv('TAIKOO_WEB_DISCOVERY','1').lower() not in ('0','false','no','off'),
-        'monitor_keywords': collector.MONITOR_KEYWORDS if hasattr(collector, 'MONITOR_KEYWORDS') else ['广州太古汇'],
+        'ai_enabled': owned.get('available') is True and owned.get('service_binding') == 'BOUND',
+        'ai_provider': 'owned',
+        'ai_service_binding': owned.get('service_binding'),
+        'ai_fallback_allowed': False,
+        'web_discovery_enabled': os.getenv('TAIKOO_WEB_DISCOVERY','0').lower() not in ('0','false','no','off'),
+        'monitor_keywords': list(monitor_keywords) if isinstance(monitor_keywords, (list, tuple)) else [],
     })
 
 @app.route('/api/system/config', methods=['POST'])
@@ -5366,22 +5402,27 @@ def api_dashboard_all():
         except Exception as e:
             result['hot_topics'] = []
         
-        # 7. AI状态
+        # 7. AI状态：只读唯一 owned Gateway，不探测或回退旧 Provider。
         try:
-            result['ai_status'] = intelligence.ai_status()
+            from lumenis.system.ai_gateway.core import owned_inference_status
+            result['ai_status'] = owned_inference_status()
         except Exception as e:
-            result['ai_status'] = {'enabled': False, 'error': str(e)}
+            result['ai_status'] = {'provider': 'owned', 'available': False,
+                                   'service_binding': 'NOT_BOUND', 'fallback_allowed': False,
+                                   'state': 'UNAVAILABLE', 'reason': type(e).__name__}
         
         # 8. 系统状态
         try:
             result['system_status'] = {
                 'version': APP_VERSION,
-                'collector': 'Playwright/XHS search + rednote CDP',
-                'auto_collect': True,
-                'auth_enabled': _auth_enabled()
+                'collector': 'SYSTEM Collector / source-specific adapters',
+                'auto_collect': os.getenv('REDNOTE_AUTO_RUN', 'false').lower() in ('1','true','yes','on'),
+                'auth_enabled': _auth_enabled(),
+                'default_context': 'GLOBAL_ALL',
+                'default_subject': None,
             }
         except Exception as e:
-            result['system_status'] = {'error': str(e)}
+            result['system_status'] = {'error': type(e).__name__}
 
         # 9. v5.9.0 合并字段：供前端统一轮询，避免多个独立30s请求
         try:

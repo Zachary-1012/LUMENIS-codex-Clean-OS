@@ -1,10 +1,10 @@
 """
 设置模块完善 v1.0
 
-[DEPRECATED - 2026-09-06 ZBC Phase 1]
-本模块与 config.py 在配置加载逻辑上存在功能重叠。
-演进方向：未来应将 load_config()/save_config() 重构为调用 config.get_config()。
-当前标记 DEPRECATE 但不删除。
+[CURRENT COMPATIBILITY API / NOT RUNTIME CONFIGURATION AUTHORITY]
+本模块仍由 app.py 注册以兼容现有设置接口，但运行时真相归当前 SYSTEM Owner：
+Product Core、SYSTEM Collector、Owned AI Gateway、Permission 与受保护本机配置。
+本模块只保存非运行时偏好；读取时必须重新投影当前 runtime-owned 字段。
 
 功能：
 1. 系统配置管理（采集/分析/报告/推送/AI/安全）
@@ -44,7 +44,7 @@ def load_config():
     """加载系统配置"""
     default_config = {
         'collection': {
-            'auto_collect': True,
+            'auto_collect': os.getenv('REDNOTE_AUTO_RUN', 'false').lower() in ('1', 'true', 'yes', 'on'),
             'auto_hours': [8, 10, 12, 14, 16, 18, 20, 22, 23],
             'manual_daily_limit': 3,
             'request_delay': 2,
@@ -52,7 +52,7 @@ def load_config():
             'max_scroll': 6
         },
         'analysis': {
-            'ai_enabled': True,
+            'ai_enabled': False,
             'sentiment_enabled': True,
             'event_classification': True,
             'brand_recognition': True,
@@ -74,15 +74,15 @@ def load_config():
             'high_risk_immediate': True
         },
         'ai': {
-            'provider': 'local',
-            'local_enabled': True,
-            'doubao_api_key': '',
-            'gpt_api_key': '',
-            'trae_api_key': '',
-            'model': 'qwen2:7b'
+            'provider': 'owned',
+            'local_enabled': False,
+            'model': None,
+            'service_binding': 'NOT_BOUND',
+            'fallback_allowed': False,
+            'status': 'UNAVAILABLE'
         },
         'security': {
-            'http_auth': True,
+            'http_auth': bool(os.getenv('TAIKOO_AUTH_USER', '').strip() and os.getenv('TAIKOO_AUTH_PASSWORD', '')),
             'auto_backup': True,
             'backup_interval_hours': 24,
             'file_integrity_check': True,
@@ -91,7 +91,7 @@ def load_config():
         'domain': {
             'company_domain': '',
             'cloudflare_tunnel': '',
-            'local_url': 'http://127.0.0.1:8200',
+            'local_url': 'http://127.0.0.1:8201',
             'lan_url': ''
         }
     }
@@ -108,6 +108,42 @@ def load_config():
                     default_config[key] = value
     except Exception as e:
         print(f"[Settings] 加载配置失败: {e}", flush=True)
+
+    # Compatibility file values never own current runtime truth. Project AI,
+    # canonical Core port, Basic-auth presence and automatic collection state
+    # are projected from their current owners every time this legacy API reads.
+    try:
+        from lumenis.system.ai_gateway.core import owned_inference_status
+        owned = owned_inference_status()
+    except Exception as exc:
+        owned = {
+            'available': False,
+            'service_binding': 'NOT_BOUND',
+            'state': 'UNAVAILABLE',
+            'reason': type(exc).__name__,
+            'model_id': None,
+        }
+    ai_available = (
+        owned.get('available') is True and owned.get('service_binding') == 'BOUND'
+    )
+    default_config['collection']['auto_collect'] = (
+        os.getenv('REDNOTE_AUTO_RUN', 'false').lower() in ('1', 'true', 'yes', 'on')
+    )
+    default_config['analysis']['ai_enabled'] = ai_available
+    default_config['ai'] = {
+        'provider': 'owned',
+        'local_enabled': False,
+        'model': owned.get('model_id'),
+        'service_binding': owned.get('service_binding') or 'NOT_BOUND',
+        'fallback_allowed': False,
+        'status': owned.get('state') or ('AVAILABLE' if ai_available else 'UNAVAILABLE'),
+        'reason': owned.get('reason'),
+    }
+    default_config['security']['http_auth'] = bool(
+        os.getenv('TAIKOO_AUTH_USER', '').strip()
+        and os.getenv('TAIKOO_AUTH_PASSWORD', '')
+    )
+    default_config['domain']['local_url'] = 'http://127.0.0.1:8201'
 
     return default_config
 
@@ -133,11 +169,6 @@ def get_config():
     """获取系统配置"""
     try:
         config = load_config()
-        # 隐藏敏感信息
-        if 'ai' in config:
-            for key in ['doubao_api_key', 'gpt_api_key', 'trae_api_key']:
-                if config['ai'].get(key):
-                    config['ai'][key] = '***' + config['ai'][key][-4:] if len(config['ai'][key]) > 4 else '***'
         return jsonify({'ok': True, 'config': config})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -148,23 +179,42 @@ def update_config():
     """更新系统配置"""
     try:
         data = request.get_json(silent=True) or {}
+        if not isinstance(data, dict):
+            return jsonify({'ok': False, 'error': '配置必须是对象'}), 400
         config = load_config()
+        ignored = []
 
-        # 合并配置
-        for key, value in data.items():
+        # This legacy settings file may persist user preferences only. Runtime
+        # owners keep AI routing, collection activation, Basic auth and Core URL.
+        incoming = dict(data)
+        if 'ai' in incoming:
+            ignored.append('ai')
+            incoming.pop('ai', None)
+        if isinstance(incoming.get('collection'), dict) and 'auto_collect' in incoming['collection']:
+            incoming['collection'] = dict(incoming['collection'])
+            incoming['collection'].pop('auto_collect', None)
+            ignored.append('collection.auto_collect')
+        if isinstance(incoming.get('security'), dict) and 'http_auth' in incoming['security']:
+            incoming['security'] = dict(incoming['security'])
+            incoming['security'].pop('http_auth', None)
+            ignored.append('security.http_auth')
+        if isinstance(incoming.get('domain'), dict) and 'local_url' in incoming['domain']:
+            incoming['domain'] = dict(incoming['domain'])
+            incoming['domain'].pop('local_url', None)
+            ignored.append('domain.local_url')
+
+        for key, value in incoming.items():
             if key in config and isinstance(value, dict) and isinstance(config[key], dict):
                 config[key].update(value)
             else:
                 config[key] = value
 
-        # 处理API Key（如果是***开头则不更新）
-        if 'ai' in data:
-            for key in ['doubao_api_key', 'gpt_api_key', 'trae_api_key']:
-                if key in data['ai'] and data['ai'][key] and not data['ai'][key].startswith('***'):
-                    config['ai'][key] = data['ai'][key]
-
         if save_config(config):
-            return jsonify({'ok': True, 'message': '配置已保存'})
+            return jsonify({
+                'ok': True,
+                'message': '配置已保存',
+                'ignored_runtime_owned_fields': ignored,
+            })
         else:
             return jsonify({'ok': False, 'error': '保存失败'}), 500
     except Exception as e:
