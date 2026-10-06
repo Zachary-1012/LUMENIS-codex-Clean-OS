@@ -19,7 +19,7 @@ def _offline_provider_configuration(monkeypatch):
     monkeypatch.setattr(
         ai_gateway,
         "ai_status",
-        lambda: {"enabled": True, "provider": "ollama", "model": "qwen3:4b"},
+        lambda: pytest.fail("TaskEngine must not inspect retired provider status"),
     )
     for key in (
         "ZHIPU_API_KEY",
@@ -36,14 +36,18 @@ def _engine():
     return object.__new__(TaskEngine)
 
 
-def test_bridge_uses_canonical_chat_and_preserves_provider(monkeypatch):
+def test_bridge_uses_owned_gateway_and_preserves_task_context(monkeypatch):
     calls = []
 
-    def fake_chat(system, user, **kwargs):
-        calls.append((system, user, kwargs))
-        return "Model answer", "ollama", {"model": "qwen3:4b"}
+    def fake_owned_analysis(**kwargs):
+        calls.append(kwargs)
+        return {
+            "ok": True, "status": "COMPLETED", "provider": "owned",
+            "analysis": "Model answer", "model": "owned-test",
+        }
 
-    monkeypatch.setattr(ai_gateway, "chat", fake_chat)
+    monkeypatch.setattr(ai_gateway, "run_owned_analysis", fake_owned_analysis)
+    monkeypatch.setattr(ai_gateway, "chat", lambda *_a, **_k: pytest.fail("legacy chat called"))
 
     result = TaskEngine._call_ai_with_fallback(
         _engine(), "analyze", "question", {"items": 2}
@@ -51,65 +55,64 @@ def test_bridge_uses_canonical_chat_and_preserves_provider(monkeypatch):
 
     assert result == {
         "status": "completed",
-        "provider": "ollama",
+        "provider": "owned",
         "response": "Model answer",
-        "model": "qwen3:4b",
+        "model": "owned-test",
     }
-    system, user, kwargs = calls[0]
-    assert "analyze" in user and "question" in user and '"items": 2' in user
-    assert "LUMENIS task assistant" in system
-    assert kwargs == {
-        "level": "medium",
-        "use_cache": False,
-        "track": True,
-        "capability": "daily",
-    }
+    assert calls[0]["analysis_type"] == "task_engine_analyze"
+    assert "analyze" in calls[0]["text"] and "question" in calls[0]["text"]
+    assert '"items": 2' in calls[0]["text"]
 
 
-def test_explicit_cloud_selection_remains_owned_by_gateway(monkeypatch):
+def test_explicit_retired_provider_selection_never_reaches_legacy_chat(monkeypatch):
     monkeypatch.setenv("AI_PROVIDER", "zhipu")
     calls = []
 
-    def fake_chat(*_args, **_kwargs):
-        calls.append(True)
-        return "Model answer", "zhipu", {"model": "glm-test"}
+    def fake_owned_analysis(**kwargs):
+        calls.append(kwargs)
+        return {
+            "ok": False, "status": "UNAVAILABLE", "code": "OWNED_RUNTIME_NOT_BOUND",
+            "provider": "owned", "analysis": None,
+        }
 
-    monkeypatch.setattr(ai_gateway, "chat", fake_chat)
+    monkeypatch.setattr(ai_gateway, "run_owned_analysis", fake_owned_analysis)
+    monkeypatch.setattr(ai_gateway, "chat", lambda *_a, **_k: pytest.fail("retired chat called"))
 
     result = TaskEngine._call_ai_with_fallback(_engine(), "analyze", "input", {})
 
-    assert calls == [True]
-    assert result["status"] == "completed"
-    assert result["provider"] == "zhipu"
+    assert calls and calls[0]["analysis_type"] == "task_engine_analyze"
+    assert result["status"] == "unavailable"
+    assert result["provider"] == "owned"
 
 
 @pytest.mark.parametrize(
-    ("response", "provider", "metadata", "expected_status"),
+    ("gateway_result", "expected_status", "expected_error"),
     [
-        (None, "rule", {"model": "deterministic_rule"}, "rule"),
-        (None, "budget_blocked", {}, "budget_blocked"),
-        ("   ", "ollama", {"model": "qwen3:4b"}, "empty"),
-        (None, "ollama", {"model": "qwen3:4b"}, "empty"),
-        (None, "error", {}, "error"),
+        ({"ok": False, "status": "UNAVAILABLE", "code": "OWNED_RUNTIME_NOT_BOUND", "provider": "owned"}, "unavailable", "OWNED_RUNTIME_NOT_BOUND"),
+        ({"ok": False, "status": "BUDGET_BLOCKED", "code": "AI_BUDGET_BLOCKED", "provider": "owned"}, "budget_blocked", "AI_BUDGET_BLOCKED"),
+        ({"ok": True, "status": "COMPLETED", "provider": "owned", "analysis": "   "}, "error", "OWNED_ANALYSIS_NOT_COMPLETED"),
+        ({"ok": False, "status": "ERROR", "code": "OWNED_EXECUTION_FAILED", "provider": "owned"}, "error", "OWNED_EXECUTION_FAILED"),
     ],
 )
 def test_gateway_noncompletion_states_are_not_model_success(
-    monkeypatch, response, provider, metadata, expected_status
+    monkeypatch, gateway_result, expected_status, expected_error
 ):
-    monkeypatch.setattr(ai_gateway, "chat", lambda *_args, **_kwargs: (response, provider, metadata))
+    monkeypatch.setattr(ai_gateway, "run_owned_analysis", lambda **_kwargs: gateway_result)
+    monkeypatch.setattr(ai_gateway, "chat", lambda *_a, **_k: pytest.fail("legacy chat called"))
 
     result = TaskEngine._call_ai_with_fallback(_engine(), "analyze", "input", {})
 
     assert result["status"] == expected_status
-    assert result["provider"] == provider
+    assert result["provider"] == "owned"
     assert result["response"] is None
+    assert result["error"] == expected_error
 
 
 def test_gateway_exception_is_safe_error_state(monkeypatch):
     def fail(*_args, **_kwargs):
         raise RuntimeError("secret=must-not-be-recorded")
 
-    monkeypatch.setattr(ai_gateway, "chat", fail)
+    monkeypatch.setattr(ai_gateway, "run_owned_analysis", fail)
 
     result = TaskEngine._call_ai_with_fallback(_engine(), "analyze", "input", {})
 
@@ -119,32 +122,38 @@ def test_gateway_exception_is_safe_error_state(monkeypatch):
     assert "must-not-be-recorded" not in repr(result)
 
 
-@pytest.mark.parametrize("requested_provider", ["auto", "ollama"])
-def test_disabled_auto_or_unavailable_local_route_skips_chat(monkeypatch, requested_provider):
+@pytest.mark.parametrize("requested_provider", ["auto", "ollama", "zhipu"])
+def test_provider_selection_does_not_change_owned_taskengine_route(monkeypatch, requested_provider):
     monkeypatch.setenv("AI_PROVIDER", requested_provider)
     monkeypatch.setenv("ZHIPU_API_KEY", "placeholder-test-key-never-used")
-    monkeypatch.setattr(ai_gateway, "ai_status", lambda: {"enabled": False})
     monkeypatch.setattr(
         ai_gateway,
         "chat",
-        lambda *_args, **_kwargs: pytest.fail("disabled local route reached Gateway chat"),
+        lambda *_args, **_kwargs: pytest.fail("legacy provider route reached from TaskEngine"),
     )
+    monkeypatch.setattr(ai_gateway, "run_owned_analysis", lambda **_kwargs: {
+        "ok": False, "status": "UNAVAILABLE", "code": "OWNED_RUNTIME_NOT_BOUND",
+        "provider": "owned", "analysis": None,
+    })
 
     result = TaskEngine._call_ai_with_fallback(_engine(), "analyze", "input", {})
 
-    assert result["status"] == "rule"
-    assert result["provider"] == "rule"
+    assert result["status"] == "unavailable"
+    assert result["provider"] == "owned"
     assert result["response"] is None
 
 
 def test_gateway_timeout_is_reported(monkeypatch):
     release_call = threading.Event()
 
-    def slow_chat(*_args, **_kwargs):
+    def slow_owned_analysis(**_kwargs):
         release_call.wait(timeout=1)
-        return "late answer", "ollama", {"model": "qwen3:4b"}
+        return {
+            "ok": True, "status": "COMPLETED", "provider": "owned",
+            "analysis": "late answer", "model": "owned-test",
+        }
 
-    monkeypatch.setattr(ai_gateway, "chat", slow_chat)
+    monkeypatch.setattr(ai_gateway, "run_owned_analysis", slow_owned_analysis)
     monkeypatch.setattr(task_engine_module, "_AI_CALL_TIMEOUT_SECONDS", 0.01)
 
     result = TaskEngine._call_ai_with_fallback(_engine(), "analyze", "input", {})
@@ -158,8 +167,8 @@ def test_gateway_timeout_is_reported(monkeypatch):
 @pytest.mark.parametrize(
     ("status", "provider", "error"),
     [
-        ("rule", "rule", None),
-        ("empty", "ollama", None),
+        ("unavailable", "owned", "OWNED_RUNTIME_NOT_BOUND"),
+        ("error", "owned", "OWNED_ANALYSIS_RESULT_INVALID"),
         ("error", "unknown", "RuntimeError"),
         ("timeout", "unknown", "Gateway timeout"),
     ],
@@ -185,6 +194,51 @@ def test_noncompletion_state_reaches_task_without_fake_ai_response(status, provi
         assert assist["ai_error"] == error
 
 
+@pytest.mark.parametrize(
+    ("agent_id", "result_data", "expected_code"),
+    [
+        ("assistant_agent", {
+            "ai_response": None, "ai_status": "unavailable", "provider": "owned",
+            "ai_error": "OWNED_RUNTIME_NOT_BOUND",
+        }, "OWNED_RUNTIME_NOT_BOUND"),
+        ("analysis_agent", {
+            "ai_analysis": None, "ai_analysis_status": "unavailable",
+            "analysis_provider": "owned", "ai_analysis_error": "OWNED_RUNTIME_NOT_BOUND",
+        }, "OWNED_RUNTIME_NOT_BOUND"),
+    ],
+)
+def test_ai_dependent_task_is_not_marked_succeeded_without_owned_result(
+    monkeypatch, agent_id, result_data, expected_code,
+):
+    monkeypatch.setattr(task_engine_module, "_guard_generic_task_access", lambda *_args: None)
+    engine = _engine()
+    task = {
+        "task_id": "task-1", "agent_id": agent_id, "intent": "analyze",
+        "user_input": "question", "skill_id": None,
+    }
+    state = {"status": "ready"}
+    evidence = []
+    traces = []
+    engine._db_get_task = lambda _task_id: {**task, **state}
+    engine._db_add_step = lambda *_args, **_kwargs: "step-1"
+    engine._now = lambda: "2026-10-06T00:00:00Z"
+    engine._db_update_task = lambda _task_id, **kwargs: state.update(kwargs)
+    engine._db_update_step = lambda *_args, **_kwargs: None
+    engine._db_add_evidence = lambda *args, **kwargs: evidence.append((args, kwargs))
+    engine._db_add_trace = lambda *args, **kwargs: traces.append((args, kwargs))
+    engine._dispatch_execution = lambda *_args: result_data
+    engine._verify_result = lambda *_args: pytest.fail("unavailable AI must not pass result verification")
+
+    result = engine._execute_once("task-1", 0)
+
+    assert state["status"] == "failed"
+    assert state["error"] == expected_code
+    assert result["status"] == "failed"
+    assert '"execution_status": "FAILED"' in result["result_json"]
+    assert evidence and evidence[0][0][1] == "owned_ai_unavailable"
+    assert traces and traces[0][0][3] == "error"
+
+
 def test_data_query_exposes_summary_rule_state_without_summary(monkeypatch):
     class _Row:
         def fetchone(self):
@@ -203,14 +257,15 @@ def test_data_query_exposes_summary_rule_state_without_summary(monkeypatch):
     monkeypatch.setattr(task_engine_module, "get_db", _Connection)
     engine = _engine()
     engine._try_ai_summarize = lambda *_args: {
-        "status": "rule",
-        "provider": "rule",
+        "status": "unavailable",
+        "provider": "owned",
         "response": None,
-        "model": "deterministic_rule",
+        "model": None,
+        "error": "OWNED_RUNTIME_NOT_BOUND",
     }
 
     result = engine._execute_data_query({"user_input": "count"}, "query_data")
 
     assert result["ai_summary"] is None
-    assert result["ai_summary_status"] == "rule"
-    assert result["ai_summary_provider"] == "rule"
+    assert result["ai_summary_status"] == "unavailable"
+    assert result["ai_summary_provider"] == "owned"

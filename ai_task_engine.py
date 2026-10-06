@@ -3138,6 +3138,36 @@ class TaskEngine:
             intent = task.get("intent", "unknown")
             result_data = self._dispatch_execution(task, agent_id, intent)
 
+            ai_failure_code = self._owned_ai_failure_code(agent_id, result_data)
+            if ai_failure_code:
+                result_data["task_outcome"] = "UNAVAILABLE"
+                result_data["task_error"] = ai_failure_code
+                final_result = {
+                    "task_id": task_id, "intent": intent, "agent_id": agent_id,
+                    "skill_id": task.get("skill_id"), "output": result_data,
+                    "verification": None, "execution_status": "FAILED",
+                    "failure_code": ai_failure_code, "executed_at": self._now(),
+                }
+                self._db_update_task(
+                    task_id, status=TaskStatus.FAILED.value, error=ai_failure_code,
+                    result_json=json.dumps(final_result, ensure_ascii=False, default=str),
+                    finished_at=self._now(),
+                )
+                self._db_update_step(
+                    step_id, status="failed", error=ai_failure_code,
+                    detail="Owned AI result unavailable; task was not marked successful.",
+                )
+                self._db_add_evidence(
+                    task_id, "owned_ai_unavailable", ai_failure_code,
+                    source="owned_gateway", step_id=step_id, authenticity_score=1.0,
+                )
+                self._db_add_trace(
+                    task_id, "task.execute", ai_failure_code, "error",
+                    started_at=trace_start, finished_at=self._now(),
+                    metadata={"attempt": attempt, "provider": "owned", "task_outcome": "UNAVAILABLE"},
+                )
+                return self._db_get_task(task_id)
+
             # 验证
             verification = self._verify_result(task, result_data, step_id)
 
@@ -3173,6 +3203,27 @@ class TaskEngine:
             self._db_add_trace(task_id, "task.execute", f"Execution failed: {e}", "error",
                                started_at=trace_start, finished_at=self._now())
             raise
+
+    @staticmethod
+    def _owned_ai_failure_code(agent_id: str, result_data: Any) -> Optional[str]:
+        """Fail AI-dependent tasks when the owned Gateway produced no answer.
+
+        Data queries may still succeed when their database result is real and
+        their optional AI summary is unavailable.
+        """
+        if not isinstance(result_data, dict):
+            return None
+        if agent_id == "analysis_agent" and (
+            result_data.get("ai_analysis_status") != "completed"
+            or result_data.get("ai_analysis") is None
+        ):
+            return (result_data.get("ai_analysis_error") or "OWNED_RUNTIME_NOT_BOUND")
+        if "ai_response" in result_data and (
+            result_data.get("ai_status") != "completed"
+            or result_data.get("ai_response") is None
+        ):
+            return (result_data.get("ai_error") or "OWNED_RUNTIME_NOT_BOUND")
+        return None
 
     def _dispatch_execution(
         self,
@@ -3331,71 +3382,54 @@ class TaskEngine:
         text: str,
         data: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """Call the canonical Gateway and preserve its outcome for the task.
-
-        Provider selection, local/cloud policy, budget checks, and fallback are
-        owned by ``core.chat``. A rule fallback is recorded as ``rule`` and is
-        never presented as a completed model response.
-        """
+        """Call the owned SYSTEM Gateway only; never select a legacy provider."""
         result_holder: Dict[str, Any] = {}
 
         def _ai_worker() -> None:
             try:
                 from lumenis.system.ai_gateway import core as ai_gateway
-
-                route_status = ai_gateway.ai_status()
-                requested_provider = os.environ.get("AI_PROVIDER", "auto").lower()
-                allow_cloud = os.environ.get("ALLOW_CLOUD_AI", "").lower() in (
-                    "1", "true", "yes", "on", "y",
-                )
-                local_providers = {"ollama", "lmstudio", "llama_cpp"}
-                auto_local_only = requested_provider in ("", "auto") and not allow_cloud
-                unavailable_explicit_local = requested_provider in local_providers
-                if not route_status.get("enabled") and (
-                    auto_local_only or unavailable_explicit_local
-                ):
-                    result_holder["result"] = {
-                        "status": "rule",
-                        "provider": "rule",
-                        "response": None,
-                        "model": route_status.get("model") or "deterministic_rule",
-                    }
-                    return
-
                 user_parts = [f"Operation: {operation}", f"Input:\n{text or ''}"]
                 if data:
                     user_parts.append(
                         "Context JSON:\n" + json.dumps(data, ensure_ascii=False, default=str)
                     )
-                response, provider, metadata = ai_gateway.chat(
-                    "You are the LUMENIS task assistant. Complete the requested operation "
-                    "using only the supplied input and context. State uncertainty clearly.",
-                    "\n\n".join(user_parts),
-                    level="medium",
-                    use_cache=False,
-                    track=True,
-                    capability="daily",
+                gateway_result = ai_gateway.run_owned_analysis(
+                    text=(
+                        "You are the LUMENIS task assistant. Complete the requested operation "
+                        "using only the supplied input and context. State uncertainty clearly.\n\n"
+                        + "\n\n".join(user_parts)
+                    ),
+                    analysis_type=f"task_engine_{operation}",
                 )
-                metadata = metadata if isinstance(metadata, dict) else {}
-                provider = str(provider or "unknown")
-                content = response.strip() if isinstance(response, str) else ""
-                if provider in ("rule", "local_rule", "local_rules"):
-                    status = "rule"
-                elif provider == "budget_blocked":
-                    status = "budget_blocked"
-                elif provider == "error":
-                    status = "error"
-                elif not content:
-                    status = "empty"
-                elif provider == "unknown":
-                    status = "error"
-                else:
-                    status = "completed"
+                if not isinstance(gateway_result, dict):
+                    gateway_result = {
+                        "ok": False, "status": "ERROR",
+                        "code": "OWNED_GATEWAY_RESULT_INVALID", "provider": "owned",
+                    }
+                gateway_status = str(gateway_result.get("status") or "ERROR").upper()
+                analysis = gateway_result.get("analysis")
+                response = analysis.strip() if isinstance(analysis, str) else ""
+                if isinstance(analysis, dict):
+                    for key in ("response", "text", "answer", "summary", "reply"):
+                        value = analysis.get(key)
+                        if isinstance(value, str) and value.strip():
+                            response = value.strip()
+                            break
+                completed = (
+                    gateway_result.get("ok") is True and gateway_status == "COMPLETED"
+                    and gateway_result.get("provider") == "owned" and bool(response)
+                )
+                status = "completed" if completed else (
+                    gateway_status.lower() if gateway_status != "COMPLETED" else "error"
+                )
                 result_holder["result"] = {
                     "status": status,
-                    "provider": provider,
-                    "response": content or None,
-                    "model": metadata.get("model"),
+                    "provider": "owned",
+                    "response": response if completed else None,
+                    "model": gateway_result.get("model"),
+                    **({} if completed else {
+                        "error": gateway_result.get("code") or "OWNED_ANALYSIS_NOT_COMPLETED",
+                    }),
                 }
             except Exception as exc:
                 # Store only the exception type: provider exceptions can include
