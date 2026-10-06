@@ -765,6 +765,8 @@ def validate() -> None:
         "The local working tree is not visible to a reader",
         "same delivery cycle",
         "DESIGN_READY",
+        "Approved D1–D5 convergence",
+        "source-target-contract-v1.json",
         label="CURRENT takeover",
     )
     for stale_claim in (
@@ -780,6 +782,7 @@ def validate() -> None:
         "DESIGN_EXPLORATION",
         "DESIGN_READY",
         "implementation from a PDF, screenshot, fixture, Figma frame",
+        "Platform-native Source → Source/Evidence/Canonical → LUMENIS presentation → Open Original → Return",
         label="CURRENT product architecture",
     )
 
@@ -792,6 +795,9 @@ def validate() -> None:
         "copied directly into production UI",
         "M returns `REWORK`",
         "three user-visible language versions",
+        "Platform-native SourceTarget / Open Original",
+        "LUMENIS SourceTarget v1",
+        "SYS-06",
         label="CURRENT Experience Constitution",
     )
 
@@ -829,6 +835,9 @@ def validate() -> None:
         "LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
         "LUMENIS_INTERNAL_FULL_UNIVERSE_READY",
         "Cross-round capability gap register",
+        "APPROVED D1–D5 historical-package convergence",
+        "EIGHT OWNER RESULT PACKAGES",
+        "Production admission = 0",
         label="CURRENT source owner index",
     )
 
@@ -908,6 +917,9 @@ def validate() -> None:
         "CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION",
         "ADOPT / ADAPT / DEFER / REJECT",
         "RESEARCH COMPLETE / NO JUSTIFIED UPGRADE",
+        "OPEN ORIGINAL / SOURCE TARGET ACCEPTANCE",
+        "source-target-contract-v1.json",
+        "Production admission = 0",
         label="CURRENT real-delivery overlay",
     )
     # Preserve all 15 historical coverage groups without routing them as
@@ -983,6 +995,8 @@ def validate() -> None:
         "DESIGN_READY",
         "direct code target",
         "REWORK",
+        "source-target-contract-v1.json",
+        "lumenis.source-target/v1",
         label="Experience contract router",
     )
 

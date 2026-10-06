@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract": "lumenis.source-target",
+  "version": 1,
+  "status": "APPROVED_TARGET_NOT_IMPLEMENTATION_PROOF",
+  "authority": {
+    "product": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+    "experience": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "routing": "AGENTS.md",
+    "owners": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md"
+  },
+  "purpose": "Preserve platform-native facts and lineage while LUMENIS re-composes task-specific presentation and permits an explicit read-only original-source handoff with exact Return.",
+  "canonical_path": [
+    "platform_native_observation",
+    "Source",
+    "Evidence",
+    "Canonical",
+    "CTH_or_BMP_LUMENIS_presentation",
+    "Trace",
+    "Open_Original",
+    "system_browser_handoff",
+    "Return"
+  ],
+  "required_fields": [
+    "source_platform",
+    "source_url",
+    "source_id",
+    "canonical_ref",
+    "evidence_ref",
+    "locator",
+    "published_at",
+    "captured_at",
+    "availability",
+    "open_mode",
+    "return_context"
+  ],
+  "nullable_fields": [
+    "source_url",
+    "source_id",
+    "locator",
+    "published_at",
+    "captured_at"
+  ],
+  "availability_states": [
+    "READY",
+    "URL_MISSING",
+    "INVALID_URL",
+    "DENIED",
+    "UNSUPPORTED",
+    "SOURCE_WITHDRAWN",
+    "STALE",
+    "UNKNOWN"
+  ],
+  "handoff_states": [
+    "NOT_REQUESTED",
+    "LAUNCH_REJECTED",
+    "LAUNCH_FAILED",
+    "HANDOFF_ACCEPTED",
+    "RETURNED"
+  ],
+  "url_policy": {
+    "allowed_schemes": [
+      "https"
+    ],
+    "server_projected": true,
+    "same_row_lineage_required": true,
+    "credentials_or_tokens_forbidden": true,
+    "recheck_at_use": true
+  },
+  "presentation": {
+    "lumenis_recomposition_required": true,
+    "retain_native_facts_and_attribution": true,
+    "copy_source_platform_feed_or_chrome": false,
+    "endless_swipe": false,
+    "forced_autoplay": false,
+    "generic_repeated_card_template": false
+  },
+  "open_original": {
+    "action_id": "source.open_original",
+    "user_gesture_required": true,
+    "read_only": true,
+    "system_browser_handoff": true,
+    "cookie_read": false,
+    "silent_login": false,
+    "collection_side_effect": false,
+    "evidence_capture": false,
+    "canonical_write": false,
+    "external_write": false,
+    "success_semantics": "HANDOFF_ACCEPTED proves only that the operating system or browser accepted the launch request; it does not prove page load, availability, authentication or readability."
+  },
+  "controlled_capture": {
+    "owner": "SYS-06",
+    "separate_action": true,
+    "ordinary_open_original_never_substitutes_for_capture": true
+  },
+  "return_context_required": [
+    "route",
+    "context_mode",
+    "domain_id",
+    "subject_id",
+    "brand_focus_id",
+    "filters",
+    "selection",
+    "scroll_offset"
+  ],
+  "surface_roles": {
+    "public_website": "explanation_only_no_protected_source_action",
+    "web_workspace": "task_specific_source_trace_and_system_browser_handoff",
+    "desktop_app": "task_specific_source_trace_and_system_browser_handoff",
+    "mobile_companion": "task_specific_source_trace_and_system_browser_handoff"
+  },
+  "implementation_gate": [
+    "typed_SourceTarget_DTO",
+    "verified_same_row_projection",
+    "allowed_https_validation",
+    "platform_launcher_binding",
+    "honest_handoff_states",
+    "Return_state_restoration",
+    "zh_CN_en_ko",
+    "accessibility",
+    "web_desktop_mobile_runtime_E2E"
+  ],
+  "historical_candidate_production_admission": 0
+}

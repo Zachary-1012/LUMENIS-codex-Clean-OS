@@ -120,18 +120,20 @@
       "domain": "CTH",
       "title": "实时监测",
       "viewmodel": {
-        "realtime_series": [
-          "number"
+        "records": [
+          "{canonical_id,title,source_platform,published_at,captured_at,analysis_state,quality_status,source_target}"
         ],
+        "source_target": "lumenis.source-target/v1",
         "collectors": [
-          "{name,state,detail}"
+          "{name,state,detail,projection}"
         ]
       },
       "binding": {
-        "stream": "CODEX_VERIFY (collector_v2/realtime endpoints = UNKNOWN)"
+        "stream": "BOUND_PARTIAL: /api/experience/screen/CTH-03 -> experience_screens._build_cth03() -> canonical_data.list_scoped_canonical() with lumenis.scope-read-binding.v1 and per-row v2 projection",
+        "open_original": "CODEX_BINDING_REQUIRED: backend returns source_url but Flutter Cth03Record currently drops SourceTarget and no system-browser launcher/Return result is bound"
       },
       "unknown_binding_keys": [
-        "stream"
+        "open_original"
       ]
     },
     "CTH-04": {

@@ -12,6 +12,20 @@ The current execution topology is M + F + C1-C6. M controls cross-window truth, 
 
 The local working tree is not visible to a reader of GitHub. Distinguish current commit, dirty/untracked source, loaded runtime and user acceptance. Approved code, current state and owning evidence must be published in the same delivery cycle. Resolve current `HEAD`, cached `origin/main` and live remote rather than relying on a historical hash.
 
+### Approved D1–D5 convergence — 2026-10-06
+
+The Product Owner approved the fresh historical-package audit against synchronized local/origin/live base `73ca4b962bab45aacac6429d7dea3b7858f56c89`. The 51 historical rows are now routed into the eight existing-owner result packages in Source Owner Index; no historical product, page family, collector, database, AI route or execution queue is restored.
+
+- C1 closes source fields, native continuation/pagination, durable task/result receipts and attempt fencing.
+- C2 removes provider bypass/default-score behavior and closes real owned training/inference/evaluation/promotion only through the sole Gateway.
+- C3 closes the CTH/BMP task loops and replaces fixed propagation/impact assumptions with Evidence-bounded state.
+- C4 consumes the same source/Brief/version chain for pitch/video/podcast and preserves source trace through edits and exports.
+- C5 owns SourceTarget, precise citation, historical quarantine, SavedWork/report/settings continuity and source-correction propagation.
+- C6 binds the shared API/runtime/system-browser handoff, same-SHA integration, recovery and release gates.
+- F implements task-specific LUMENIS presentation and `Trace → Open Original → Return` on the approved operational surfaces without copying platform UI.
+
+`contracts/experience/source-target-contract-v1.json` is an approved target contract, not implementation proof. Historical package data remains `Production admission = 0`. Current Product/App/Critical E2E, six-platform live collection, Owned AI service binding and user verification remain open. Existing C1/C2/C5 dirty and `work/` stay protected and are not part of this governance/specification Batch.
+
 | Round / window | Placement | Scope | Current evidence and remaining work |
 |---|---|---|---|
 | C1 / W1 | Local Codex | Data and collection | Purpose-query API and signed Scheduler share Collector/Permission/five-table transaction; original 100-term input is packaged and checked. The latest supplied runtime record (2026-10-05 22:52 +08) reported the approved narrow HK RedNote Guangzhou Taikoo Hui scheduler/resident active with healthy guard/session state and zero observed collections; M did not re-probe that runtime during this repair task. The 23:36 source-only review at main `52cd770c` found the Facebook result-constructor defect, false file/config-only readiness, manual-flag/alias inconsistencies and missing durable/native continuation binding. M fixed result constructors and false readiness: Facebook cookie metadata is `NEED_VERIFY`; the status API preserves cache records as historical/UNKNOWN and skips XHS Cookie lookup. Facebook/X manual flags and XHS config/registry alias resolution are fixed; background `enabled` remains false. The business API now passes its typed query checkpoint into the existing plan executor. Seventeen adapter tests, six isolated status-API tests, three alias/capability tests and eight checkpoint/route tests pass; credential reads and cache writes in these tests are mocked/temp-only. The absence of an in-repo real status producer, caller-supplied checkpoint provenance, native platform pagination, durable end-to-end collection, live six-platform coverage and Source→Evidence→Canonical acceptance remain OPEN. No live platform request or XHS Cookie read occurred. |

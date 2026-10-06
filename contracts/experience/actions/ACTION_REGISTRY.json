@@ -10,9 +10,9 @@
     "evidence_effect",
     "binding_owner"
   ],
-  "total": 66,
+  "total": 67,
   "by_class": {
-    "NAVIGATION": 47,
+    "NAVIGATION": 48,
     "DRAFT": 12,
     "QUERY": 4,
     "EFFECT": 1,
@@ -222,7 +222,31 @@
       }
     ],
     "CTH-02": [],
-    "CTH-03": [],
+    "CTH-03": [
+      {
+        "action_id": "CTH-03.open-original",
+        "display_label_zh": "查看原贴",
+        "display_key": "source.open_original",
+        "action_class": "NAVIGATION",
+        "capability_status": "CODEX_BINDING_REQUIRED",
+        "permission_requirement": "source:read (reuse exact row scope/Evidence; no write)",
+        "input_context": {
+          "screen": "CTH-03",
+          "section": "table.rows[].source_target",
+          "scope": "exact row projection scope",
+          "target": "lumenis.source-target/v1"
+        },
+        "success_state": "HANDOFF_ACCEPTED then RETURNED; page load/readability remains unknown",
+        "failure_state": "URL_MISSING | INVALID_URL | DENIED | UNSUPPORTED | LAUNCH_REJECTED | LAUNCH_FAILED",
+        "evidence_effect": "READ_ONLY_NO_NEW_EVIDENCE",
+        "binding_owner": "F+C6 with C1/C3/C5 source contract",
+        "high_risk_confirmation_required": false,
+        "prototype_behavior": "disabled until typed SourceTarget, platform launcher and Return restoration are bound",
+        "icon": "external-link",
+        "binding_conclusion": "BLOCKED_BY_EXTERNAL_DEPENDENCY",
+        "binding_note": "Approved target only. Ordinary original-source opening must not read cookies, silently log in, start collection, capture Evidence, write Canonical Data or substitute SYS-06."
+      }
+    ],
     "CTH-04": [
       {
         "action_id": "CTH-04.new-event",

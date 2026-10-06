@@ -3,7 +3,7 @@
 ```yaml
 screen_id: CTH-03
 status: BLOCKED
-revision: 2
+revision: 3
 owner_domain: CTH
 binding_ids:
   - BACKEND-GAP-009
@@ -14,14 +14,14 @@ presentation_design_decision: DESIGN_READY_BOUNDED_READABLE_SOURCE_TIME
 artifact_disposition: NON_AUTHORITATIVE_EXPLORATION_ONLY
 reviewer: Codex delegated ROUND-10 bounded source review
 reviewed_at: 2026-09-30
-approval_reference: published read-scope slice 3d6e0924dd883a23616ba2f63a01962e10b76e1e; presentation review in section 11; this is not full-screen or round acceptance
+approval_reference: published read-scope slice 3d6e0924dd883a23616ba2f63a01962e10b76e1e; bounded presentation review in section 11; Product Owner-approved D1–D5 SourceTarget direction 2026-10-06; this is not implementation, full-screen or round acceptance
 ```
 
 ## 0. Authority basis and artifact disposition
 
 - The governing experience row is the CTH-03 real-time monitoring blueprint in `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md`.
 - The delivery overlay requires a real new event and honest separation of live, empty, not-collected and failed collection states before ROUND 10 can pass.
-- The binding inputs are `contracts/experience/screen_meta.json`, `contracts/experience/viewmodels/VIEWMODEL_REGISTRY.json`, `contracts/experience/unknown-bindings.json`, `contracts/experience/actions/CTH-03.actions.json` and the current `experience_screens._build_cth03()` source. Fixture and sketch files are exploration evidence only.
+- The binding inputs are `contracts/experience/screen_meta.json`, `contracts/experience/viewmodels/VIEWMODEL_REGISTRY.json`, `contracts/experience/unknown-bindings.json`, `contracts/experience/screens/CTH-03/CTH-03.actions.json` and the current `experience_screens._build_cth03()` source. Fixture and sketch files are exploration evidence only.
 - This specification is not a generic dashboard: the update rhythm is organized as pulse → source lanes → prioritized stream. A repeated KPI/card renderer would fail the CTH-03 blueprint.
 - Sol design decision: `BLOCKED`; implementation may expose a source-backed read-only shell but cannot claim live Subject monitoring or `DESIGN_READY`.
 
@@ -31,14 +31,14 @@ approval_reference: published read-scope slice 3d6e0924dd883a23616ba2f63a01962e1
 - **Context:** the screen accepts the Product Core context returned by `LumenisCoreClient.settingsContext()`: `GLOBAL_ALL`, or `FOCUS` with `domain_id=CTH` and a non-empty Subject. The global view means the returned global scope; it is not a license to show focused data.
 - **Completion signal for this slice:** returned pulse metrics, source-lane status, and returned stream fields are visible with their returned state. A missing source-level freshness or Subject authorization remains visible as a limitation.
 - **Invariant:** CTH remains Subject-first. The route, `bound=true` and a returned list do not prove actor-to-Subject authorization or Evidence lineage.
-- **Out of scope:** starting/stopping a collector, pinning an event, opening source evidence, exporting, classifying, creating a Case, or any external effect. No button is shown for an action without a verified callable, Permission result, effect fence and Trace.
+- **Out of scope for this bounded read slice:** starting/stopping a collector, pinning an event, exporting, classifying, creating a Case, controlled Evidence capture or any external write. Product Owner has approved user-gesture **Open Original** as the required source-trace target; it remains disabled until the shared SourceTarget, launcher and Return contracts are bound and tested.
 
 ## 2. Route, entry, exit and return
 
 - **Entry:** `Cth03Screen(client: ...)` after the existing CTH shell selects the monitoring workflow; this batch adds no route or second navigation owner.
 - **Read sequence:** `settingsContext()` is read first, then `screen('CTH-03')` through the existing scoped Core client. The published read slice accepts `lumenis.scope-read-binding.v1` for `commercial_realtime_stream`: `local-workspace-read-v1` or `actor-exact-scope-v1`, with exact CTH product/domain, applied/read-allowed/verified scope and exact GLOBAL or Subject match. A page read decision is not row Evidence. Every displayed row separately needs the verified v2 projection, stored Subject and Evidence integrity; metrics and source lanes need their own projections. Unknown policies, contracts or mismatched scope fail closed.
 - **Current source:** `experience_screens._build_cth03()` reads `canonical_data.list_scoped_canonical()` with the selected Subject or GLOBAL. It returns scope-verified records, their publication time and source platform, while `coverage=NOT_VERIFIED` and `source_freshness=UNKNOWN` remain explicit. Recent-window and negative counts remain unavailable. The published 2026-09-29 read acceptance covered GLOBAL, Guangzhou Taikoo Hui and Shenzhen MixC Luohu, clear-to-GLOBAL, offline clearing and retry recovery. It did not accept live monitoring, source freshness, collector actions or a whole native surface.
-- **Exit / return:** selecting a local source lane filters the mounted stream; clearing it returns to all returned records. The selection is presentation state only and preserves the context label. No deep-link or server mutation is introduced.
+- **Exit / return:** selecting a local source lane filters the mounted stream; clearing it returns to all returned records. The selection is presentation state only and preserves the context label. For an eligible row, the approved future exit is `Trace → Open Original` through `lumenis.source-target/v1`; Return restores the same scope, lane filter, row selection and scroll position. No server mutation, collection or Evidence capture is implied.
 
 ## 3. Verified data and callable bindings
 
@@ -48,6 +48,7 @@ approval_reference: published read-scope slice 3d6e0924dd883a23616ba2f63a01962e1
 | P1 | Recent and negative pulse | CTH read builder | `_build_cth03()` `kpis.items[id,value,state]` for `cth03.recent` and `cth03.negative` | Returned record counts; no inferred rate or trend | Current builder returns no verified numeric value; `empty`, `notcollected`, `offline` and unknown remain distinct | BACKEND-GAP-009 | Current source mapping; metric-level analysis/projection not verified |
 | P1 | Source lanes | CTH read builder | `_build_cth03()` `platforms.items[platform,status,schedule/detail]` | Returned lane availability/status text | A missing lane is not “healthy”; no collector action is inferred | BACKEND-GAP-009 | Current source mapping |
 | P1 | Prioritized stream | CTH read builder | `_build_cth03()` `table.rows[date,title,platform,sentiment,risk]` | Returned business fields only | A row is displayed only with explicit matching scope, read permission, verified Evidence lineage and a trace/evidence reference; otherwise it is withheld | BACKEND-GAP-009 | Published v2 row projection and writer-authenticated integrity check; sentiment/risk are not verified |
+| P1 TARGET | SourceTarget / Open Original | CTH row + Shared Evidence contract; F/C6 consumer | `table.rows[].source_url` plus row `projection`; approved shape `lumenis.source-target/v1` | Same source/canonical/Evidence row; public HTTPS handoff only | Missing/invalid/denied/unsupported/launch-failed remain explicit; source URL does not prove page load | BACKEND-GAP-009 | Backend field exists; Flutter DTO/launcher/Return remain unbound |
 | BLOCKED | Live pulse/freshness clock and collector health action | CTH/SYSTEM owners unresolved | ViewModel declares `realtime_series` and `collectors`; no verified endpoint or action contract | No verified source-level freshness, realtime series, health command or Permission | Do not label response generation time as source freshness; show unavailable copy where needed | BACKEND-GAP-009 | `collector_v2/realtime` and health action remain UNKNOWN |
 
 The current App adapter uses only the shared `LumenisCoreClient`; it adds no API, database, Evidence, collector or localization owner. Pagination, cancellation, source-level freshness and collector actions remain unverified. Subject-scoped reads are accepted only by the exact current server/row contracts above. The adapter never invents local Permission or lineage defaults: a response without its valid server binding is blocked, and an untraceable row is withheld.
@@ -77,7 +78,7 @@ The current App adapter uses only the shared `LumenisCoreClient`; it adds no API
 ## 5A. Web Workspace composition and desktop-only capability boundary
 
 - Web Workspace and desktop use the same Core client, ViewModel states and read-only scope semantics. No browser-only collector action is introduced.
-- Pointer and keyboard filtering must leave the current scope visible. A future source/evidence open action requires an approved destination and lineage contract; until then the lane/stream remains read-only.
+- Pointer and keyboard filtering must leave the current scope visible. The approved source destination/lineage contract is `contracts/experience/source-target-contract-v1.json`; until the typed DTO, public-HTTPS validator, platform launcher and Return state are bound, the control remains disabled and the lane/stream remains readable.
 - There is no desktop-only completion claim. Runtime/browser E2E is required before accepting the page.
 
 ## 6. Purpose-built mobile composition
@@ -95,7 +96,8 @@ The current App adapter uses only the shared `LumenisCoreClient`; it adds no API
 | Load context and stream | SYSTEM context + CTH read builder; exact server scope binding from §2 | Existing local-workspace or actor-exact-scope READ policy | Read only | N/A | Returned Canonical row projection/Evidence; no new Evidence write | Render verified rows or honest blocked/error state; no account wall |
 | Filter/clear source lane | Flutter local presentation state | None | No server effect | Reversible immediately | None | Local selection is enabled |
 | Refresh | Existing Core read | Same as load | Read only | Repeatable | New response only | Retry; no optimistic values |
-| Pause/resume, pin, open source evidence, health action | Owner/callable/Permission/effect/Trace UNKNOWN | UNKNOWN | UNKNOWN or consequential | UNKNOWN | UNKNOWN | No enabled control |
+| Open Original | CTH row read + Shared SourceTarget; exact current row scope/Evidence; F/C6 launcher | Reuse current row READ; no write/effect permission | User-gesture public HTTPS system-browser handoff; no collection/capture/login/write | Repeatable; Return restores route/context/filter/selection/scroll | No new Evidence; retain existing source/canonical/Evidence refs and handoff state | Disabled until `lumenis.source-target/v1` and platform launcher are bound; honest URL/launch failure states |
+| Pause/resume, pin, health action, controlled capture | Collector/SYSTEM/SYS-06 owner/callable/Permission/effect/Trace UNKNOWN | UNKNOWN | UNKNOWN or consequential | UNKNOWN | UNKNOWN | No enabled control |
 
 ## 8. Accessibility, motion and localization
 
@@ -119,10 +121,12 @@ The current App adapter uses only the shared `LumenisCoreClient`; it adds no API
 | CTH03-W-008 | Return `bound=true` with records but no server global grant/lineage; the repository blocks and shows no aggregate or record | Global authorization/lineage block | Repository/widget | Repository test | Implemented hostile fixture |
 | CTH03-W-009 | Return authorized `GLOBAL_ALL` and exact Guangzhou Taikoo Hui `FOCUS`; only the matching scope is decoded | Authorized global/focus read | Repository + browser | Repository test + actual scoped read | 3d6e verified GLOBAL → Guangzhou Taikoo Hui → Shenzhen MixC Luohu → clear-to-GLOBAL; no production write or coverage claim |
 
+| CTH03-W-010 | From one authorized LUMENIS-composed row, activate Open Original, receive an honest handoff state, then Return to the same scope/lane/selection/scroll | URL missing/invalid/denied/unsupported/launch failure/Return recovery | Web Workspace, Windows/macOS/Linux Desktop, Android/iOS Mobile as promised | Contract + widget + platform integration + runtime E2E | Approved target; current Flutter DTO drops SourceTarget and no platform launcher/Return result is accepted |
+
 ## 10. Review decision and open questions
 
 - **Decision:** the full live-monitoring design, J1 and ROUND-10 remain `BLOCKED`. The published read/scope/recovery slice and the bounded presentation review below do not close those gates.
-- **Open owners:** Collector must define and demonstrate realtime/health/freshness behavior; CTH must establish the recent-window and analysis contracts before presenting their values. Per-Subject read scope and row lineage now use the published contracts in §2; their existence does not prove the wider business task.
+- **Open owners:** C1/Collector must define and demonstrate realtime/health/freshness and native continuation; C3 must establish recent-window/business-analysis contracts; C5/F/C6 must bind SourceTarget, system-browser handoff and Return. Per-Subject read scope and row lineage now use the published contracts in §2; their existence does not prove the wider business task or original-page availability.
 - **Required before full acceptance:** a real new event through Source → Event → Evidence → monitoring UI; live/freshness semantics; negative/offline/not-collected separation; and applicable Web/Desktop/Mobile E2E. Preserve the historical acceptance rows above as the original gate record; §11 records the newer narrow review and evidence scope.
 
 ## 11. Bounded read-presentation review — 2026-09-30
@@ -196,3 +200,16 @@ date may silently remove an explicit offset or add hours to a date-only source.
   `DESIGN_READY_BOUNDED_READABLE_SOURCE_TIME` authorizes only §11's changes.
   The whole-screen decision above remains `BLOCKED`, regardless of this smaller
   maintenance acceptance.
+
+## 12. Approved SourceTarget / Open Original integration — 2026-10-06
+
+Product Owner approval fixes the product meaning without promoting implementation status:
+
+```text
+platform-native row → Source/Evidence/Canonical
+→ LUMENIS monitoring composition
+→ Trace → Open Original → system browser
+→ Return to exact CTH-03 context
+```
+
+The source control consumes `lumenis.source-target/v1`; it never renders a copied platform feed, reads cookies, silently authenticates, launches collection or invokes SYS-06 capture. Backend `source_url` presence is only one field. Full acceptance requires same-row projection/Evidence, allowed HTTPS validation, typed Flutter DTO, per-platform launcher, honest handoff states, three-language/accessibility behavior, Return restoration and runtime E2E. Until then the action remains `CODEX_BINDING_REQUIRED` and the whole screen remains `BLOCKED` for live-monitoring acceptance.

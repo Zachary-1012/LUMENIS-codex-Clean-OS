@@ -1,39 +1,46 @@
 {
   "screen": "CTH-03",
   "viewmodel": {
-    "realtime_series": [
-      "number"
+    "records": [
+      "{canonical_id,title,source_platform,published_at,captured_at,analysis_state,quality_status,source_target}"
     ],
+    "source_target": "lumenis.source-target/v1",
     "collectors": [
-      "{name,state,detail}"
+      "{name,state,detail,projection}"
     ]
   },
   "binding": {
-    "stream": "CODEX_VERIFY (collector_v2/realtime endpoints = UNKNOWN)"
+    "stream": "BOUND_PARTIAL: /api/experience/screen/CTH-03 -> experience_screens._build_cth03() -> canonical_data.list_scoped_canonical() with lumenis.scope-read-binding.v1 and per-row v2 projection",
+    "open_original": "CODEX_BINDING_REQUIRED: backend returns source_url but Flutter Cth03Record currently drops SourceTarget and no system-browser launcher/Return result is bound"
   },
   "ports": {
     "ViewModel": [
-      "realtime_series",
+      "records",
+      "source_target",
       "collectors"
     ],
     "Capability": [
-      "PAT-DATA-01"
+      "PAT-DATA-01",
+      "lumenis.source-target/v1"
     ],
     "Motion": [
       "M06",
       "M14"
     ],
     "State": {
-      "context_state_source": "DESIGN_ONLY fixture"
+      "context_state_source": "Product Core settingsContext + scoped CTH-03 response"
     },
     "Action": "CTH-03.actions.json",
-    "Permission": [],
+    "Permission": [
+      "current CTH scope READ; Open Original reuses same-row read lineage and performs no write"
+    ],
     "Evidence": [
-      "RUNTIME: collector/pipeline"
+      "canonical row projection v2",
+      "contracts/experience/source-target-contract-v1.json"
     ]
   },
   "unknown_binding_keys": [
-    "stream"
+    "open_original"
   ],
-  "binding_owner_default": "CODEX"
+  "binding_owner_default": "C1+C3+C5+C6+F"
 }

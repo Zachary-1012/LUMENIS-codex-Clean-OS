@@ -18,6 +18,10 @@ current source / runtime / Permission / Evidence truth
   owner, Permission and Evidence inventories. They do not define layout.
 - `screens/`, `actions/`, `states/`, `permissions/`, `evidence/` and `viewmodels/`
   constrain the product meaning that every approved surface must preserve.
+- `source-target-contract-v1.json` defines the subordinate `lumenis.source-target/v1`
+  meaning for platform-native facts, LUMENIS re-composition, user-gesture Open Original,
+  honest handoff states and exact Return. It does not create a browser, Evidence owner,
+  Permission plane, generic feed or implementation claim.
 - `screen-specifications/` is the pre-implementation design gate. Only a current,
   Sol-reviewed `DESIGN_READY` specification may guide a screen implementation.
 - Audit PDFs, taskbooks, screenshots, wireframes, Figma frames and fixtures remain

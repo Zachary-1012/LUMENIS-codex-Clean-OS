@@ -14,6 +14,9 @@ CONTRACT_README = ROOT / "contracts" / "experience" / "README.md"
 SPEC_DIR = ROOT / "contracts" / "experience" / "screen-specifications"
 SPEC_README = SPEC_DIR / "README.md"
 SPEC_TEMPLATE = SPEC_DIR / "SCREEN_SPEC_TEMPLATE.md"
+SOURCE_TARGET_CONTRACT = ROOT / "contracts" / "experience" / "source-target-contract-v1.json"
+CTH03_ACTIONS = ROOT / "contracts" / "experience" / "screens" / "CTH-03" / "CTH-03.actions.json"
+ACTION_REGISTRY = ROOT / "contracts" / "experience" / "actions" / "ACTION_REGISTRY.json"
 BLUEPRINT_HEADING = "## 36. The 44 screen-specific UX blueprints"
 BLUEPRINT_TABLE_END = "### Blueprint implementation rules"
 SCREEN_ID = re.compile(r"^(?:ACC|CTH|BMP|AI|SYS|SH)-\d{2}$")
@@ -286,11 +289,69 @@ def _validate_design_gate_contract() -> None:
             raise AssertionError(f"{path.relative_to(ROOT)} is not bound to the sole design authority")
 
 
+
+def _validate_source_target_contract(sources: dict[str, Any]) -> None:
+    for path in (SOURCE_TARGET_CONTRACT, CTH03_ACTIONS, ACTION_REGISTRY):
+        if not path.is_file():
+            raise AssertionError(f"missing SourceTarget contract input: {path.relative_to(ROOT)}")
+    contract = _load_json_bytes(SOURCE_TARGET_CONTRACT.read_bytes(), str(SOURCE_TARGET_CONTRACT.relative_to(ROOT)))
+    if contract.get("contract") != "lumenis.source-target" or contract.get("version") != 1:
+        raise AssertionError("SourceTarget must be lumenis.source-target/v1")
+    if contract.get("status") != "APPROVED_TARGET_NOT_IMPLEMENTATION_PROOF":
+        raise AssertionError("SourceTarget approval must not be represented as implementation proof")
+    required = {"source_platform", "source_url", "source_id", "canonical_ref", "evidence_ref", "locator",
+                "published_at", "captured_at", "availability", "open_mode", "return_context"}
+    if not required.issubset(set(contract.get("required_fields", []))):
+        raise AssertionError("SourceTarget required fields regressed")
+    open_original = contract.get("open_original")
+    if not isinstance(open_original, dict) or not all((
+        open_original.get("user_gesture_required") is True,
+        open_original.get("read_only") is True,
+        open_original.get("system_browser_handoff") is True,
+        open_original.get("cookie_read") is False,
+        open_original.get("silent_login") is False,
+        open_original.get("collection_side_effect") is False,
+        open_original.get("evidence_capture") is False,
+        open_original.get("canonical_write") is False,
+        open_original.get("external_write") is False,
+    )):
+        raise AssertionError("Open Original safety/effect boundary regressed")
+    if contract.get("controlled_capture", {}).get("owner") != "SYS-06":
+        raise AssertionError("controlled source capture must remain SYS-06-owned")
+    if contract.get("historical_candidate_production_admission") != 0:
+        raise AssertionError("historical package candidates must remain zero-admission")
+
+    vm = sources["contracts/experience/viewmodels/VIEWMODEL_REGISTRY.json"]["screens"].get("CTH-03", {})
+    if vm.get("viewmodel", {}).get("source_target") != "lumenis.source-target/v1":
+        raise AssertionError("CTH-03 ViewModel must reference SourceTarget v1")
+    if vm.get("unknown_binding_keys") != ["open_original"]:
+        raise AssertionError("CTH-03 current stream is mapped; only Open Original binding remains unknown")
+
+    per_screen = _load_json_bytes(CTH03_ACTIONS.read_bytes(), str(CTH03_ACTIONS.relative_to(ROOT)))
+    central = _load_json_bytes(ACTION_REGISTRY.read_bytes(), str(ACTION_REGISTRY.relative_to(ROOT)))
+    per_actions = per_screen.get("actions") if isinstance(per_screen, dict) else None
+    central_actions = central.get("screens", {}).get("CTH-03") if isinstance(central, dict) else None
+    if not isinstance(per_actions, list) or len(per_actions) != 1 or per_actions != central_actions:
+        raise AssertionError("CTH-03 Open Original action registry is missing or divergent")
+    action = per_actions[0]
+    if (action.get("action_id"), action.get("capability_status"), action.get("binding_conclusion")) != (
+        "CTH-03.open-original", "CODEX_BINDING_REQUIRED", "BLOCKED_BY_EXTERNAL_DEPENDENCY"
+    ):
+        raise AssertionError("CTH-03 Open Original must remain approved-but-unbound")
+
+    spec = (SPEC_DIR / "CTH-03.md").read_text(encoding="utf-8")
+    for marker in ("Approved SourceTarget / Open Original integration", "lumenis.source-target/v1",
+                   "CTH03-W-010", "current Flutter DTO drops SourceTarget"):
+        if marker not in spec:
+            raise AssertionError(f"CTH-03 specification missing SourceTarget marker: {marker}")
+
+
 def validate() -> tuple[int, int]:
     _validate_design_gate_contract()
     registry = _load_registry()
     sources = _validate_source_snapshot(registry)
     _validate_source_ids(registry, sources)
+    _validate_source_target_contract(sources)
     screens = registry.get("screens")
     bindings = registry.get("bindings")
     if not isinstance(screens, list) or not isinstance(bindings, list):

@@ -635,6 +635,25 @@ Default entry is useful work in GLOBAL/ALL, with optional exact Subject/BrandFoc
 
 All collected platform lists, details, media, source results and recommendations use LUMENIS information hierarchy, interaction and visual language. Retain native facts, original logos/attribution, source URL, locators, times and metrics; source-platform visual chrome, copied XHS/Douyin feed/layout, endless swipe or forced autoplay are not the product interface. Avoid replacing them with one generic repeated card template. Detail/media reading is reversible and preserves task/context/scroll continuity and honest states.
 
+### Platform-native SourceTarget / Open Original — Product Owner approved 2026-10-06
+
+The approved source handoff is **LUMENIS SourceTarget v1**, subordinate to this Constitution and the existing Product Core, Permission and Evidence owners. Its canonical path is:
+
+```text
+platform-native observation
+→ Source → Evidence → Canonical
+→ CTH/BMP task-specific LUMENIS presentation
+→ Trace → Open Original
+→ system-browser handoff
+→ Return to exact task/context/filter/selection/scroll state
+```
+
+`contracts/experience/source-target-contract-v1.json` is the machine-readable binding contract. A usable target retains `source_platform`, nullable `source_url`, source/canonical/Evidence references, locator, publication/capture time, availability and a Return context. Missing, invalid, denied, unsupported, launch-rejected and launch-failed states remain distinct; a browser accepting a handoff does **not** prove the page loaded, remained available, authenticated or readable.
+
+“查看原贴 / Open Original” is an explicit user-gesture, read-only handoff to an allowlisted public HTTPS destination. It must never silently inspect or export local cookies/session state, log in, start or resume collection, capture Evidence, mutate Canonical Data, publish, message, purchase or perform any external write. Ordinary source opening and SYS-06 controlled navigation/capture are separate actions and separate acceptance paths.
+
+Web Workspace, Desktop and Mobile recompose the same source truth for their task and form factor; they do not recreate the source platform UI. Public Website may explain the behavior but never exposes protected business rows or owns the source action. Return preserves the originating route, GLOBAL/FOCUS, Subject/BrandFocus, filters, selected object and scroll position. This approval defines the required result only; it is not implementation, live launch, device or user acceptance evidence.
+
 The existing SH-01 research/creation workspace includes a bounded Discover view: task-relevant trends, observed hotspots and similar works, with explicit scope/platform/time filters, relevance explanation, source/citation and missing/partial states. A single-platform collection request remains available. The owned Gateway may analyze authorized product materials and suggest alternatives, reasons and original creative directions; static entry cards, source excerpts or Codex answers cannot pretend to be this analysis. Selected references enter existing Brief/creation owners with actual use authorization.
 
 AI-01, ACC-03 and SH-01 specifications carry the detailed bounded design. A design-approved requirement or this rule is not implemented/live accepted. F keeps each screen's task-specific composition, responsive behavior, localization and accessibility; W6 binds the same real Core contracts across approved surfaces. No new screen ID, model owner, database, recommendation authority or design system is created.

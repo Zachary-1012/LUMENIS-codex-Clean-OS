@@ -447,6 +447,47 @@ through Real Delivery, including semantic and same-budget peer comparisons.
 User-reviewed100-term foundation input: C1 owns topic/query/entity binding; C5 existing Source/Importer contracts and C6 formal storage/deployment coordinate. Global§10 retains immutable originals, additive effective versions, all original evidence/null/time fields and runtime admission;100 terms across4 named subjects is not100 subjects, a verified hotlist or global/platform coverage. Existing permission and model-training use remain distinct.
 
 
+## APPROVED D1–D5 historical-package convergence — 2026-10-06
+
+This section records the Product Owner-approved disposition of the historical revision package after fresh local/origin/runtime/source review at audit base `73ca4b962bab45aacac6429d7dea3b7858f56c89`. It is an execution/acceptance map inside the existing owners, not a new architecture, round, queue, product, database, collector, AI gateway, Permission plane or design authority.
+
+| Decision | Approved current meaning |
+| --- | --- |
+| D1 | Preserve platform-native facts and lineage, present them through task-specific LUMENIS composition, provide governed `Trace → Open Original → Return`, and keep ordinary source opening separate from SYS-06 controlled capture. |
+| D2 | The package's 51 rows converge into **EIGHT OWNER RESULT PACKAGES** below; never restore them as 51 parallel features or a historical product. |
+| D3 | Historical notes/comments/brands/relations/cases/web mentions remain immutable evidence, parser/regression, reconciliation or reacquisition inputs. **Production admission = 0** until current rights, source, identity, Scope, Permission, freshness and complete-field gates pass. |
+| D4 | Dependency order is Truth/Safety → Collector/durable task → CTH/BMP business → SourceTarget/Open Original → Shared result continuity → Owned AI → same-SHA release. Independent owners may proceed in parallel when their real dependencies permit; this is not a new serial round plan. |
+| D5 | Update only the existing Product Architecture, Experience, Source Owner Index, Real Delivery/CURRENT, screen/binding/action contracts and blocking validators. AGENTS remains the sole router and the current Only-One architecture is unchanged. |
+
+### EIGHT OWNER RESULT PACKAGES
+
+| Result package | Primary current owner | Required participating owners | Complete result / acceptance exit |
+| --- | --- | --- | --- |
+| 1. Source / Collector / Durable Task | C1 | C5 source/rights; C6 API/runtime; C3 consumer; F operation | Purpose-bound query and authorized source produce native records, continuation/native pagination, durable task receipt and fenced attempts, Source/Evidence/Canonical, truthful partial/failure/recovery and a useful business result. |
+| 2. SourceTarget / Open Original / Return | C5 Shared Evidence/Research contract + F Experience + C6 transport | C1 source fields; C3 CTH/BMP meaning | The same authorized record carries `lumenis.source-target/v1`; LUMENIS renders it without copying platform chrome; user-gesture HTTPS handoff reports honest launch state and Return restores exact context. |
+| 3. CTH business loop | C3 | C1, C2 when bound, C5, C6, F | Monitoring/event/calendar/feedback/trend/case/risk/decision/action/outcome/evaluation use exact Subject, source and time; save/revise/reopen/recover and source trace work. |
+| 4. BMP / Entity / Official Source | C3 | C1 entity/source, C5 research, C2 when bound, C6, F | Exact BrandFocus/market/competitor/creator/content/propagation/campaign flow, canonical identity/relations and official-source handling produce a useful result without CTH/default-Subject leakage. |
+| 5. Shared / Reporting / Settings / Recovery | C5 | C3/C4 consumers; C6; F | Import/library/search/citation, SavedWork/Artifact/report/export/notification/preferences and source-correction continuity preserve rights, versions, parents, rollback and honest states. |
+| 6. Owned AI / Agent / Learning | C2 | C3/C4/C5 consumers; C6; F | Real training step/loss/checkpoint/reload/resume, held-out evaluation, normal Gateway business inference, Agent/Skills/Memory, reviewed learning, promotion/rollback; unbound runtime stays unavailable. |
+| 7. Historical Intake / Quarantine | C5 | C1 identity/reacquisition; C6 storage/migration | Immutable package/hash, field-presence and rights/scope decisions, duplicate/current-vs-observation reconciliation and explicit reacquisition; no direct Production/metric/report/training admission. |
+| 8. Four-surface Integration / Release | F + C6 | M acceptance and every owning C window | One same-SHA Core/DB/API/build contract across Website/Web/Desktop/Mobile roles, real task/state/recovery/Return, Product/App/Critical E2E, packaging and rollback; no source/build/HTTP-only release claim. |
+
+### Fresh verified repair targets from this approval
+
+These are current owner targets, not completion claims:
+
+1. CTH-03 backend already returns `source_url` plus verified Canonical/Evidence projection, while the Flutter DTO drops that target; bind the shared SourceTarget contract rather than adding a one-off raw URL button.
+2. Generic `bound=true` is route wiring, not screen acceptance. At the audited source only CTH-03 and BMP-01 receive exact scoped read binding in the generic screen route; every other consumer must obtain its own exact owner/scope/projection contract.
+3. CTH calendar/trend helper failure can currently collapse dependency error into `0 / ready / live`; missing, failed and measured zero must be separated before business use.
+4. SYSTEM task completion needs active-attempt fencing across ack/fail/heartbeat/checkpoint; an old worker must not complete a re-leased task.
+5. Collector query checkpoints need authenticated durable task/result receipt binding and must remain separate from native platform cursors.
+6. `case_ai_evaluate.py` still bypasses the Owned Gateway and converts invalid scores to `5.0`; it must fail unavailable/unknown and never create a synthetic overall.
+7. The legacy special-report route contains fixed propagation and business-impact assumptions; migrate useful rules into evidence-bounded Observed/Inferred/Hypothesis/Unknown outputs and current report owners.
+8. SH-03 calls the Canonical connection helper with the wrong signature and can display offline while Canonical data exists; repair the caller, not the database.
+9. Historical package candidates remain `0 admitted`; current source/rights/scope/freshness and complete data must be re-established before any Current view, report, metric or training use.
+
+`contracts/experience/source-target-contract-v1.json` is the subordinate machine contract for package 2. Every relevant screen specification maps its own task-specific composition and Return behavior; the shared contract does not authorize a generic copied feed, generic drawer or second source browser.
+
 ## Complete outcome cards and owner routing after the six closure red lines
 
 The cards below specify full user outcomes, not competing work queues. Current

@@ -117,6 +117,36 @@ These are acceptance inputs to existing C/R/J/U cards, not another round or queu
 The existing responsible windows are C2 owned understanding/reasoning, C3 domain decisions/campaigns, C4 original pitch/video/podcast, C5 source/research/versioned Artifact, C1 source facts, F operation/layout and C6 binding/publication. No second budget store, inference service, Evidence owner or permission plane is introduced.
 
 
+### APPROVED D1–D5 convergence / OPEN ORIGINAL / SOURCE TARGET ACCEPTANCE — 2026-10-06
+
+This approval applies to the current C1–C6/F outcomes and retained R/J/U coverage. It does not add a round, queue or parallel architecture. The subordinate machine contract is `contracts/experience/source-target-contract-v1.json`; it does not create another owner or prove implementation.
+
+**OPEN ORIGINAL / SOURCE TARGET ACCEPTANCE** requires one real authorized platform record to complete all of the following on the same accepted version:
+
+```text
+native platform fact
+→ Source → Evidence → Canonical
+→ task-specific CTH/BMP LUMENIS presentation
+→ verified lumenis.source-target/v1
+→ explicit user Open Original
+→ honest browser-handoff result
+→ Return with route/scope/filter/selection/scroll restored
+```
+
+Acceptance must prove:
+
+- internal presentation preserves native body/author/platform/time/metrics/attribution and Evidence lineage while using LUMENIS visual and interaction language, not copied source-platform Feed/chrome;
+- source URL is server-projected, tied to the same row's Canonical/Evidence reference, restricted to an allowed public HTTPS target and rechecked at use time;
+- `URL_MISSING`, `INVALID_URL`, `DENIED`, `UNSUPPORTED`, `LAUNCH_REJECTED`, `LAUNCH_FAILED`, `HANDOFF_ACCEPTED` and `RETURNED` remain distinct; `HANDOFF_ACCEPTED` proves only that the OS/browser accepted the request, not that the original post loaded or was readable;
+- the action is a user gesture and has no implicit Cookie/session read, silent login, collection, Evidence capture, Canonical write, publish, purchase or other external effect;
+- SYS-06 controlled navigation/capture remains a separate Permission/Evidence action;
+- Web, Desktop and Mobile use the same SourceTarget meaning while composing their own interface; Public Website owns no protected source action;
+- cancellation, unavailable source, browser failure, app background/foreground and Return preserve or honestly recover the originating task state.
+
+The 51 historical package rows are accepted only through the eight existing-owner result packages in Source Owner Index. Historical candidate data stays quarantined with **Production admission = 0** until current rights/source/identity/scope/Permission/freshness/completeness gates pass. A parser pass, stored archive, URL string, row count or old report never grants Current view, metric, report, Learning or MODEL_TRAIN admission.
+
+Implementation order follows actual dependencies: Truth/Safety first; then Collector/durable task; CTH/BMP business and source trace; Shared result continuity; Owned AI; same-SHA release. Independent work continues in parallel when its dependencies are real. Each accepted Batch must publish its source, current contract/evidence and CURRENT status together, then prove local HEAD, `origin/main`, live GitHub main and loaded runtime identity. Documentation-only convergence is not product completion.
+
 三、统一完成语义
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

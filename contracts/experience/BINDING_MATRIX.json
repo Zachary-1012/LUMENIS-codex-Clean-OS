@@ -67,10 +67,10 @@
     },
     {
       "screen": "CTH-03",
-      "field": "stream",
-      "current_source": "experience_screens._build_cth03() → verified notes/negative comments with query keyword filtering.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
-      "owner": "CTH",
+      "field": "source_target",
+      "current_source": "experience_screens._build_cth03() returns exact-scope Canonical rows with source_url plus verified row projection/Evidence integrity; Flutter Cth03Record currently drops the SourceTarget fields.",
+      "frontend_viewmodel": "FLUTTER_READ_SCREEN_TESTED_SOURCE_TARGET_NOT_BOUND_LIVE_UNVERIFIED",
+      "owner": "CTH + Shared Evidence + F/C6",
       "status": "PARTIAL"
     },
     {
