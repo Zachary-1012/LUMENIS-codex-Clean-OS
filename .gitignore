@@ -176,3 +176,9 @@ _*.py
 
 # 浏览行为session数据（含凭证，不入库）
 intelligence_library/09_Research-Hub/影子学习/*.json
+
+# 受保护的本地材料：历史候选/私有训练配置/C1 研究回执，永不入库
+# Protected local-only material — never commit (see CURRENT-PROTECTED-LOCAL-BOUNDARIES-20261005.json)
+work/
+config/ai-owned-training-runtime.json
+00-GOVERNANCE/evidence/round-06/C1-W1-DATA-COLLECTION-2026-10-02.md
