@@ -11,7 +11,7 @@ execution instructions.
 
 ## 1. Authority
 
-## Current execution instruction ? M + F + C1-C6 execution restored 2026-10-06
+## Current execution instruction — M + F + C1-C6 execution restored 2026-10-06
 
 Current task: at 2026-10-06 15:40 +08 the Product Owner explicitly restored the
 approved execution topology: **M is the root controller/integrator, F is the
