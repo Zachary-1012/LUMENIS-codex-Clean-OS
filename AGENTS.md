@@ -62,12 +62,14 @@ new rental, recharge or retired model providers.
    instruction to rent. This task performs no model/GPU execution without a
    separate current authorization.
 6. Preserve the Product Owner's current manually selected account, model,
-   reasoning effort and speed/service tier for each active window. This router
-   assigns no model or speed by window and supersedes historical Sol/Luna/Astra
-   allocation text as a setting source. Do not change current or persistent
-   defaults, add CLI/profile overrides, or auto-switch models. Distinguish the
-   visible selection from the executed backend; if either cannot be read back,
-   mark it `SETTINGS_UNVERIFIED` and do not infer a substitute. M handles complete
+   reasoning effort and speed/service tier; that current manual Codex UI selection
+   is the sole authority. This router assigns no model or speed by window, and
+   LUMENIS keeps no repository, user-config, subagent, hook or historical default
+   model/effort assignment. Do not pin a model in config, add CLI/profile/env
+   overrides, inherit an old Sol/Luna/Astra assignment, or auto-switch/downgrade/
+   upgrade for cost or speed. Distinguish the visible selection from the executed
+   backend; if either model or effort cannot be read back, mark it
+   `SETTINGS_UNVERIFIED` and do not infer or substitute a default. M handles complete
    results, necessary decisions and urgent risks; when no actionable work remains,
    M pauses its own Goal.
 
