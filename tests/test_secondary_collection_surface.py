@@ -634,6 +634,50 @@ def test_product_route_requires_explicit_human_read_only_confirmation():
     assert missing_confirmation.get_json()["code"] == "READ_ONLY_CONFIRMATION_REQUIRED"
 
 
+def test_product_business_route_forwards_query_checkpoint_and_rejects_it_for_single_source(monkeypatch):
+    from flask import Flask
+    import experience_runtime
+
+    app = Flask(__name__)
+    app.register_blueprint(experience_runtime.experience_bp)
+    client = app.test_client()
+    checkpoint = {"input_fingerprint": "a" * 64, "completed_query_keys": ["b" * 64]}
+    captured = {}
+    actor = object()
+    scope = {"domain_id": "cth", "global_scope": True}
+    monkeypatch.setattr(experience_runtime, "_content_project_scope",
+                        lambda *_args, **_kwargs: (actor, scope))
+
+    def collect_business_queries(requests, **kwargs):
+        captured.update(requests=requests, **kwargs)
+        return {"ok": True, "status": "PARTIAL", "checkpoint": checkpoint,
+                "coverage_complete": False, "runs": []}
+
+    monkeypatch.setattr(surface, "collect_business_queries", collect_business_queries)
+    monkeypatch.setattr(surface, "collect_search",
+                        lambda *_args, **_kwargs: pytest.fail("single-source path must not run"))
+
+    resumed = client.post(
+        "/api/experience/cth/platform-collection/search",
+        json={"operator": "human", "confirm_read_only": True,
+              "business_requests": [{"purpose": "test-only route envelope"}],
+              "checkpoint": checkpoint, "max_queries": 4},
+    )
+    assert resumed.status_code == 200
+    assert captured["checkpoint"] == checkpoint
+    assert captured["max_queries"] == 4
+    assert captured["actor"] is actor and captured["scopes"] == {"cth": scope}
+    assert resumed.get_json()["coverage_complete"] is False
+
+    wrong_route = client.post(
+        "/api/experience/cth/platform-collection/search",
+        json={"operator": "human", "confirm_read_only": True,
+              "platform": "douyin", "keyword": "brand", "checkpoint": checkpoint},
+    )
+    assert wrong_route.status_code == 400
+    assert wrong_route.get_json()["status"] == "invalid_request"
+
+
 def test_douyin_requires_explicit_remote_browser_worker(monkeypatch):
     from lumenis.adapters.douyin import _configured_browser_worker_url
 

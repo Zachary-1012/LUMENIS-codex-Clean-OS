@@ -854,7 +854,7 @@ def cth_platform_collection_search():
     """
     body = request.get_json(silent=True)
     allowed_fields = {"operator", "confirm_read_only", "platform", "keyword", "max_results",
-                      "business_requests", "max_queries", "continuation"}
+                      "business_requests", "max_queries", "continuation", "checkpoint"}
     if not isinstance(body, dict) or set(body) - allowed_fields:
         return jsonify({"ok": False, "status": "invalid_request", "code": "INVALID_COLLECTION_REQUEST",
                         "read_only": True, "external_write": False}), 400
@@ -895,9 +895,10 @@ def cth_platform_collection_search():
             domain = "bmp" if scope["domain_id"] in {"bmp", "zbmp"} else "cth"
             result = collect_business_queries(body["business_requests"], actor=actor,
                 scopes={domain: scope}, operator=operator, max_results=max_results,
-                max_queries=max_queries, continuation=body.get("continuation"))
+                max_queries=max_queries, continuation=body.get("continuation"),
+                checkpoint=body.get("checkpoint"))
         else:
-            if set(body) & {"max_queries", "continuation"}:
+            if set(body) & {"max_queries", "continuation", "checkpoint"}:
                 raise ValueError("Business continuation fields require business_requests")
             result = collect_search(platform, keyword, max_results=max_results, operator=operator,
                                     actor=actor, scope=scope)
