@@ -16553,7 +16553,7 @@
         ],
         "operationId": "v4.v4_importer.confirm_import",
         "x-flask-rule": "/v4/importer/confirm",
-        "summary": "确认导入，将选中的笔记入库"
+        "summary": "Confirm a whole uploaded document through the canonical Source/Evidence/Canonical owner."
       }
     },
     "/v4/importer/upload": {

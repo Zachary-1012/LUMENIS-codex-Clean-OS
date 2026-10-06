@@ -3,7 +3,11 @@ from __future__ import annotations
 import sys
 import types
 import builtins
-import sqlite3
+import hashlib
+import io
+import json
+import uuid
+from flask import Flask
 
 import pytest
 
@@ -64,6 +68,47 @@ def test_markitdown_missing_dependency_is_honest(tmp_path, monkeypatch):
     # dependency must be visible to the caller rather than becoming success.
     with pytest.raises(ImportError, match="markitdown"):
         parse_file(str(source))
+
+
+def test_upload_preview_binds_file_hash_actor_scope_and_capture_time(tmp_path, monkeypatch):
+    import lumenis.importer.service as service
+    from lumenis.importer.parser import ParseResult
+
+    app = Flask("import-preview-test")
+    monkeypatch.setattr(service, "UPLOAD_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        service, "_current_import_actor_scope",
+        lambda: ("actor:17", {
+            "domain_id": "cth", "subject_id": "subject-1",
+            "brand_focus_id": None, "global_scope": False,
+        }, object()),
+    )
+    monkeypatch.setattr(service, "log_audit", lambda *_args, **_kwargs: None)
+    parsed = ParseResult()
+    parsed.metadata["format"] = "txt"
+    parsed.text = "source text"
+    monkeypatch.setattr(service, "parse_file", lambda _path: parsed)
+    note = service.AnalyzedNote()
+    note.title, note.content = "Source", "source text"
+    monkeypatch.setattr(service, "analyze_parsed", lambda *_args, **_kwargs: [note])
+
+    with app.test_request_context(
+        "/v4/importer/upload", method="POST",
+        data={"file": (io.BytesIO(b"source text"), "brief.txt")},
+        content_type="multipart/form-data",
+    ):
+        response = service.upload_file.__wrapped__()
+
+    body = response.get_json()
+    task_id = body["task_id"]
+    task_dir = tmp_path / task_id
+    manifest = json.loads((task_dir / "preview.json").read_text(encoding="utf-8"))
+    assert body["success"] is True
+    assert manifest["actor_ref"] == "actor:17"
+    assert manifest["scope"]["subject_id"] == "subject-1"
+    assert manifest["source_sha256"] == hashlib.sha256(b"source text").hexdigest()
+    assert manifest["preview_note_count"] == 1
+    assert manifest["uploaded_at"].endswith("Z")
 
 
 def test_existing_parser_stays_authoritative_for_docx(tmp_path):
@@ -164,34 +209,103 @@ def test_import_analysis_summary_distinguishes_partial_from_not_run():
     }
 
 
-def test_tabular_import_persists_unknown_analysis_without_claiming_ai(tmp_path, monkeypatch):
-    from lumenis.importer.analyzer import analyze_parsed
-    from lumenis.importer.parser import ParseResult
+def test_direct_notes_import_helper_is_retired():
     import lumenis.importer.service as service
-    from lumenis.shared.database.business_schema import apply_business_schema
+    with pytest.raises(RuntimeError, match="DIRECT_NOTES_IMPORT_RETIRED_USE_CANONICAL_DOCUMENT_IMPORT"):
+        service._insert_notes([])
 
-    database_path = tmp_path / "importer.db"
-    with sqlite3.connect(database_path) as connection:
-        apply_business_schema(connection)
 
-    class IsolatedRepository:
-        def connect(self):
-            return sqlite3.connect(database_path)
+def test_import_confirmation_uses_shared_document_owner_and_replays_receipt(tmp_path, monkeypatch):
+    import lumenis.importer.documents as documents
+    import lumenis.importer.service as service
 
-    monkeypatch.setattr(service, "get_repository", IsolatedRepository)
-    parsed = ParseResult()
-    parsed.metadata["format"] = "csv"
-    parsed.tables = [[
-        ["标题", "内容"],
-        ["餐饮体验", "口味不错，但排队很久。"],
-    ]]
-    note = analyze_parsed(parsed)[0]
+    task_id = uuid.uuid4().hex
+    task_dir = tmp_path / task_id
+    task_dir.mkdir()
+    source_path = task_dir / "brief.txt"
+    source_bytes = b"Owner-approved source brief"
+    source_path.write_bytes(source_bytes)
+    scope = {
+        "domain_id": "cth", "subject_id": "subject-1",
+        "brand_focus_id": None, "global_scope": False,
+    }
+    manifest = {
+        "schema": "import-preview/v1", "task_id": task_id, "state": "PREVIEWED",
+        "actor_ref": "actor:17", "scope": scope, "original_filename": "brief.txt",
+        "source_sha256": hashlib.sha256(source_bytes).hexdigest(),
+        "source_size_bytes": len(source_bytes), "uploaded_at": "2026-10-06T10:00:00Z",
+        "preview_note_count": 1, "total_note_count": 1,
+        "preview_analysis": {"analysis_status": "UNAVAILABLE"},
+    }
+    service._write_manifest(service._manifest_path(task_dir), manifest)
+    monkeypatch.setattr(service, "UPLOAD_DIR", str(tmp_path))
+    actor = object()
+    calls = []
 
-    assert service._insert_notes([note]) == 1
-    with sqlite3.connect(database_path) as connection:
-        row = connection.execute(
-            "SELECT sentiment, sentiment_score, risk_level, risk_score, ai_provider, ai_analyzed_at, summary "
-            "FROM notes"
-        ).fetchone()
+    def import_document(file_path, *, actor, scope, provenance):
+        calls.append((file_path, actor, scope, provenance))
+        return {
+            "source_id": "DOC-123", "evidence_id": 42, "canonical_id": "CAN-123",
+            "source_artifact_ref": "ART-123", "scope": scope, "replayed": False,
+        }
 
-    assert row == ("unknown", None, "unknown", None, "unknown", "", "")
+    monkeypatch.setattr(documents, "import_document", import_document)
+    body = {
+        "task_id": task_id, "confirm_whole_source": True,
+        "note_indices": [0], "target_table": "notes",
+        "provenance": {
+            "rights": "owner-approved",
+            "content_origin": {"kind": "self-authored", "claim_type": "author_statement"},
+        },
+    }
+
+    first = service._confirm_source_document(body, actor_ref="actor:17", scope=scope, actor=actor)
+    second = service._confirm_source_document(body, actor_ref="actor:17", scope=scope, actor=actor)
+
+    assert len(calls) == 1
+    assert calls[0][1] is actor
+    assert calls[0][2] == scope
+    assert calls[0][3]["captured_at"] == "2026-10-06T10:00:00Z"
+    assert calls[0][3]["source_origin"] == {
+        "kind": "approved-file", "ref": "file-upload-" + hashlib.sha256(source_bytes).hexdigest(),
+    }
+    assert first["status"] == "SOURCE_IMPORTED"
+    assert first["inserted_kind"] == "source_document"
+    assert first["note_rows_inserted"] == 0
+    assert first["document"]["canonical_id"] == "CAN-123"
+    assert second["document"]["replayed"] is True
+    assert second["inserted"] == 0
+    assert not source_path.exists()
+
+
+def test_import_confirmation_rejects_partial_note_selection(tmp_path, monkeypatch):
+    import lumenis.importer.service as service
+
+    task_id = uuid.uuid4().hex
+    task_dir = tmp_path / task_id
+    task_dir.mkdir()
+    source_path = task_dir / "brief.txt"
+    source_bytes = b"Source text"
+    source_path.write_bytes(source_bytes)
+    scope = {
+        "domain_id": "cth", "subject_id": "subject-1",
+        "brand_focus_id": None, "global_scope": False,
+    }
+    service._write_manifest(service._manifest_path(task_dir), {
+        "schema": "import-preview/v1", "task_id": task_id, "state": "PREVIEWED",
+        "actor_ref": "actor:17", "scope": scope, "original_filename": "brief.txt",
+        "source_sha256": hashlib.sha256(source_bytes).hexdigest(),
+        "source_size_bytes": len(source_bytes), "uploaded_at": "2026-10-06T10:00:00Z",
+        "preview_note_count": 2, "total_note_count": 2,
+        "preview_analysis": {"analysis_status": "NOT_RUN"},
+    })
+    monkeypatch.setattr(service, "UPLOAD_DIR", str(tmp_path))
+
+    with pytest.raises(ValueError, match="PARTIAL_NOTE_SELECTION_UNSUPPORTED_FOR_SOURCE_IMPORT"):
+        service._confirm_source_document({
+            "task_id": task_id, "confirm_whole_source": True, "note_indices": [0],
+            "provenance": {
+                "rights": "owner-approved",
+                "content_origin": {"kind": "self-authored", "claim_type": "author_statement"},
+            },
+        }, actor_ref="actor:17", scope=scope, actor=object())
