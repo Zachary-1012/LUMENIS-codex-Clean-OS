@@ -672,7 +672,13 @@ class TrainingProcessFence:
         The child waits for the existing owner's actual binding before loading
         anything. It receives public material and receipts; no signer or session.
         """
-        if (type(python_executable) is not type(Path()) or not python_executable.is_absolute()
+        if type(python_executable) is not type(Path()):
+            raise TrainingBlocked("TRAINING_WORKER_SOURCE_MISMATCH")
+        # Hosted Linux toolchains expose ``python`` as a symlink to the real
+        # interpreter. Resolve it before validation so the fence checks the
+        # actual regular executable while argv still launches the same binary.
+        python_executable = python_executable.resolve()
+        if (not python_executable.is_absolute()
                 or type(source_pins) is not dict or source_pins != training_worker_source_pins(cwd)
                 or type(replace) is not bool
                 or remote_transport is not None and any(not callable(getattr(remote_transport, name, None))

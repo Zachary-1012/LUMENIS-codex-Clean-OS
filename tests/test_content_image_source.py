@@ -91,7 +91,13 @@ def test_report_job_analyzes_imported_image_reopens_signed_result_and_never_repl
     assert confirm(api, pending.get_json()['confirmation']['confirmation_id']).status_code == 200
     imported = api.post(url, headers=HEADERS, data=payload, content_type='application/octet-stream')
     ref = imported.get_json()['result']['artifact']['artifact_id']
-    monkeypatch.setattr(core, 'vision_chat', lambda *args, **kwargs: (None, 'ollama_error'))
+    calls = []
+
+    def unavailable_gateway(**_kwargs):
+        return {'ok': False, 'status': 'UNAVAILABLE', 'code': 'OWNED_RUNTIME_NOT_BOUND',
+                'provider': 'owned', 'model': None, 'execution_ref': None, 'analysis': None}
+
+    monkeypatch.setattr(core, 'run_owned_multimodal_analysis', unavailable_gateway)
     failed_response = api.post('/api/experience/reports/source-brief/generate', headers=HEADERS,
                                json={'image_source_ref': ref})
     assert failed_response.status_code == 200, failed_response.get_json()
@@ -99,22 +105,23 @@ def test_report_job_analyzes_imported_image_reopens_signed_result_and_never_repl
     assert failed['multimodal']['state'] == 'unavailable'
     assert failed['multimodal']['real_input_bound'] is False
     assert failed['requested_image_source_ref'] == ref
-    calls = []
 
-    def vision(system, user, image, **kwargs):
-        import base64
+    def owned_vision(**kwargs):
         calls.append(kwargs)
-        observed = base64.b64decode(image)
+        observed = kwargs['image_bytes']
         if large_image:
+            assert kwargs['media_type'] == 'image/jpeg'
             assert observed.startswith(b'\xff\xd8\xff') and observed != payload
         else:
+            assert kwargs['media_type'] == 'image/png'
             assert observed == payload
-        assert kwargs['local_only'] is True
-        return json.dumps({'visible_facts': ['A uniform reddish image.'],
-                           'unverifiable': ['No brand can be identified.'],
-                           'business_implications': []}), 'ollama'
+        return {'ok': True, 'status': 'COMPLETED', 'provider': 'owned',
+                'model': 'owned-vision-test', 'execution_ref': 'exec-owned-vision-1',
+                'analysis': {'visible_facts': ['A uniform reddish image.'],
+                             'unverifiable': ['No brand can be identified.'],
+                             'business_implications': []}}
 
-    monkeypatch.setattr(core, 'vision_chat', vision)
+    monkeypatch.setattr(core, 'run_owned_multimodal_analysis', owned_vision)
     response = api.post('/api/experience/reports/source-brief/generate', headers=HEADERS,
                         json={'retry_media_job_id': failed['job_id']})
     assert response.status_code == 200, response.get_json()

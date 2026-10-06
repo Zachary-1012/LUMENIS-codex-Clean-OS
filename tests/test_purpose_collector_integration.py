@@ -154,4 +154,5 @@ def test_existing_http_entry_forwards_task_purpose_to_real_collector(collector_c
     assert completed['status']=='BATCH_COMPLETED' and completed['ok'] is True, completed
     assert completed['runs'][0]['result']['native_fields_synced']==1
     assert completed['query_plan']['queries'][0]['business_context']['purpose']=='Review service discussion'
-    assert send({**body,'checkpoint':completed['checkpoint']}).status_code==400
+    resumed = send({**body, 'checkpoint': completed['checkpoint']})
+    assert resumed.status_code == 200, resumed.get_json()

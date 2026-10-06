@@ -154,14 +154,12 @@ def test_primary_hk_sync_writes_note_evidence_canonical_and_trace(tmp_path, monk
         )
 
         chain_canonical = conn.execute(
-            "SELECT evidence_id, normalized_content, subject_hit, engagement_metrics "
-            "FROM zbc_canonical_data WHERE evidence_id=?",
+            "SELECT evidence_id FROM zbc_canonical_data WHERE evidence_id=?",
             (evidence[0],),
         ).fetchone()
-        assert chain_canonical is not None
-        assert chain_canonical[1] == "香港测试笔记标题 仅供自动化测试使用的合成内容。"
-        assert chain_canonical[2] == 1
-        assert json.loads(chain_canonical[3])["comments"] is None
+        # The retired zbc_canonical_data overlay is no longer written; the one
+        # business canonical row is the canonical_data row verified above.
+        assert chain_canonical is None
 
         stages = {
             row[0]

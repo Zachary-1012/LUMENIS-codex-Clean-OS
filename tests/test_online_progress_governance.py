@@ -54,7 +54,15 @@ class SixRoundGovernanceTests(unittest.TestCase):
                 "| C5 / W5 | Local Codex | Importer, Research, Reporting, Artifact and notifications |",
                 "| C6 / W6 | Local Codex | Integration, Runtime and Release |",
                 "The separate front-end window F joins all six deliveries.",
-                "The root Sol controller M owns review and acceptance.",
+                "The root controller M owns review and acceptance.",
+                "M/controller = `gpt-6-astra`",
+                "F/frontend = `gpt-6-astra`",
+                "C1-C6 = `gpt-6.1-sol`",
+                "Spawned task agents default to `gpt-6-luna` + `max`",
+                "A choice made manually by the Product Owner overrides the role default.",
+                "Hooks must never mutate model/effort/service tier.",
+                "When no work remains, M stops and waits.",
+                "The 49 audit dispositions are D01-D49, distinct from acceptance requirements R01-R15.",
             )
         )
 
@@ -62,7 +70,7 @@ class SixRoundGovernanceTests(unittest.TestCase):
         return " ".join(
             (
                 "fixed base SHA",
-                "approved minimal/public sample inputs",
+                "approved bounded/public sample inputs",
                 "never upload secrets credentials Cookies private sessions complete production database",
                 "must not create a branch open a PR directly push main or deploy",
                 "W6 applies that exact patch",
@@ -151,9 +159,10 @@ class SixRoundGovernanceTests(unittest.TestCase):
             _assert_execution_boundaries(controls + " Use Ollama first.")
 
     def test_readme_old_sequential_worker_route_is_blocking(self) -> None:
-        _assert_readme_routing_consistent("See AGENTS.md for execution routing.")
+        readme = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
+        _assert_readme_routing_consistent(readme)
         with self.assertRaisesRegex(AssertionError, "obsolete execution/provider routes"):
-            _assert_readme_routing_consistent("15 个顺序 Codex 任务")
+            _assert_readme_routing_consistent(readme + "\n15 个顺序 Codex 任务")
 
     def _assertion_section(self) -> str:
         path = Path(__file__).resolve().parents[1] / "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md"

@@ -37,13 +37,14 @@ class TestProviderBreaker:
 
 class TestProviderChain:
     def test_default_chain(self, monkeypatch):
+        # Retired local/external providers must never be selected implicitly.
         monkeypatch.delenv("AI_PROVIDER_CHAIN", raising=False)
-        chain = ac.provider_chain()
-        assert chain == ["zhipu", "ark", "ollama"]
+        assert ac.provider_chain() == []
 
     def test_custom_chain(self, monkeypatch):
+        # A retired first candidate fail-closes the whole explicit chain.
         monkeypatch.setenv("AI_PROVIDER_CHAIN", "zhipu,ark,qwen")
-        assert ac.provider_chain() == ["zhipu", "ark", "qwen"]
+        assert ac.provider_chain() == []
 
 
 class TestRouteWithFallback:
