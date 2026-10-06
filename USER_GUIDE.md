@@ -1,3 +1,6 @@
+> **HISTORICAL LEGACY USER GUIDE — NOT CURRENT PRODUCT OR EXPERIENCE AUTHORITY.**
+> It describes the former Guangzhou Taikoo Hui monitoring product. Current product identity is 序境 / LUMENIS, default context is GLOBAL / ALL, and current user-visible behavior is governed by Product Architecture + Experience Constitution + current Runtime truth.
+
 # 用户指南
 
 ## 系统简介

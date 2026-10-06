@@ -1,3 +1,6 @@
+> **HISTORICAL / LEGACY UPGRADE GUIDE — NOT CURRENT RUNTIME OR RELEASE AUTHORITY.**
+> Do not execute legacy DB copy/stop/upgrade steps as current instructions. Use root `AGENTS.md`, current Source Owner Index, canonical launcher/runtime contracts and current migration/backup gates.
+
 # 升级指南
 
 ## 升级前准备

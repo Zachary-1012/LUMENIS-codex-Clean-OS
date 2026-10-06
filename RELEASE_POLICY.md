@@ -1,3 +1,7 @@
+> **SUPPORTING RELEASE SAFETY POLICY ? NOT A SECOND PRODUCT/EXECUTION AUTHORITY.**
+> Root `AGENTS.md` owns execution, the sole Product Architecture owns scope, C6/W6 owns integration/runtime/release, and M owns final engineering acceptance. This file preserves release safety rules only; it cannot reduce functionality, create another product or redefine current status.
+> Machine markers: `NO_SCOPE_REDUCTION_ON_RELEASE` / `SINGLE_PRODUCT_FOUR_SURFACES` / `C6_W6_RELEASE_OWNER`.
+
 # RELEASE_POLICY.md
 
 ## 目标

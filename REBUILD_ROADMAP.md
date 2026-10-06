@@ -1,3 +1,6 @@
+> **HISTORICAL ROADMAP SNAPSHOT — NOT CURRENT EXECUTION STATUS OR TASK PLAN.**
+> Current execution starts at root `AGENTS.md`, current facts at `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`, and product scope at the sole current Product Architecture. Historical `IMPLEMENTATION NOT STARTED` or release statements below must not override current source/runtime evidence.
+
 # LUMENIS 纯净产品重建、上线准备与持续闭环路线
 
 状态：十二大类第 12 类交付物

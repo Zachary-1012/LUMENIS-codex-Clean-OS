@@ -1,0 +1,159 @@
+{
+  "description": "Portable template only: register these handlers once per workstation after reviewing local Python/path availability. Native /hooks trust is required; never bypassed.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -X utf8 \"$(git rev-parse --show-toplevel)/.codex/hooks/lumenis_hooks.py\"",
+            "commandWindows": "powershell.exe -NoProfile -Command \"$root = git rev-parse --show-toplevel; py -3 -X utf8 (Join-Path $root '.codex\\hooks\\lumenis_hooks.py')\"",
+            "timeout": 20,
+            "statusMessage": "Resolving LUMENIS local/remote truth",
+            "additionalContextLimit": 2400
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -X utf8 \"$(git rev-parse --show-toplevel)/.codex/hooks/lumenis_hooks.py\"",
+            "commandWindows": "powershell.exe -NoProfile -Command \"$root = git rev-parse --show-toplevel; py -3 -X utf8 (Join-Path $root '.codex\\hooks\\lumenis_hooks.py')\"",
+            "timeout": 20,
+            "statusMessage": "Routing task to LUMENIS capabilities",
+            "additionalContextLimit": 2400
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|exec_command|shell|shell_command|apply_patch|Edit|Write|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -X utf8 \"$(git rev-parse --show-toplevel)/.codex/hooks/lumenis_hooks.py\"",
+            "commandWindows": "powershell.exe -NoProfile -Command \"$root = git rev-parse --show-toplevel; py -3 -X utf8 (Join-Path $root '.codex\\hooks\\lumenis_hooks.py')\"",
+            "timeout": 20,
+            "statusMessage": "Checking LUMENIS safety and ownership boundaries",
+            "additionalContextLimit": 2400
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|exec_command|shell|shell_command|apply_patch|Edit|Write|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -X utf8 \"$(git rev-parse --show-toplevel)/.codex/hooks/lumenis_hooks.py\"",
+            "commandWindows": "powershell.exe -NoProfile -Command \"$root = git rev-parse --show-toplevel; py -3 -X utf8 (Join-Path $root '.codex\\hooks\\lumenis_hooks.py')\"",
+            "timeout": 20,
+            "statusMessage": "Recording LUMENIS execution evidence",
+            "additionalContextLimit": 2400
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "manual|auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -X utf8 \"$(git rev-parse --show-toplevel)/.codex/hooks/lumenis_hooks.py\"",
+            "commandWindows": "powershell.exe -NoProfile -Command \"$root = git rev-parse --show-toplevel; py -3 -X utf8 (Join-Path $root '.codex\\hooks\\lumenis_hooks.py')\"",
+            "timeout": 20,
+            "statusMessage": "Persisting LUMENIS task state"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "manual|auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -X utf8 \"$(git rev-parse --show-toplevel)/.codex/hooks/lumenis_hooks.py\"",
+            "commandWindows": "powershell.exe -NoProfile -Command \"$root = git rev-parse --show-toplevel; py -3 -X utf8 (Join-Path $root '.codex\\hooks\\lumenis_hooks.py')\"",
+            "timeout": 20,
+            "statusMessage": "Restoring LUMENIS task state"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -X utf8 \"$(git rev-parse --show-toplevel)/.codex/hooks/lumenis_hooks.py\"",
+            "commandWindows": "powershell.exe -NoProfile -Command \"$root = git rev-parse --show-toplevel; py -3 -X utf8 (Join-Path $root '.codex\\hooks\\lumenis_hooks.py')\"",
+            "timeout": 20,
+            "statusMessage": "Scoping LUMENIS subagent",
+            "additionalContextLimit": 2400
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -X utf8 \"$(git rev-parse --show-toplevel)/.codex/hooks/lumenis_hooks.py\"",
+            "commandWindows": "powershell.exe -NoProfile -Command \"$root = git rev-parse --show-toplevel; py -3 -X utf8 (Join-Path $root '.codex\\hooks\\lumenis_hooks.py')\"",
+            "timeout": 20,
+            "statusMessage": "Checking LUMENIS subagent handoff"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -X utf8 \"$(git rev-parse --show-toplevel)/.codex/hooks/lumenis_hooks.py\"",
+            "commandWindows": "powershell.exe -NoProfile -Command \"$root = git rev-parse --show-toplevel; py -3 -X utf8 (Join-Path $root '.codex\\hooks\\lumenis_hooks.py')\"",
+            "timeout": 20,
+            "statusMessage": "Checking LUMENIS completion gate"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -X utf8 \"$(git rev-parse --show-toplevel)/.codex/hooks/lumenis_hooks.py\"",
+            "commandWindows": "powershell.exe -NoProfile -Command \"$root = git rev-parse --show-toplevel; py -3 -X utf8 (Join-Path $root '.codex\\hooks\\lumenis_hooks.py')\"",
+            "timeout": 3,
+            "statusMessage": "Saving LUMENIS session state"
+          }
+        ]
+      }
+    ],
+    "Interrupt": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -X utf8 \"$(git rev-parse --show-toplevel)/.codex/hooks/lumenis_hooks.py\"",
+            "commandWindows": "powershell.exe -NoProfile -Command \"$root = git rev-parse --show-toplevel; py -3 -X utf8 (Join-Path $root '.codex\\hooks\\lumenis_hooks.py')\"",
+            "timeout": 3
+          }
+        ]
+      }
+    ]
+  }
+}

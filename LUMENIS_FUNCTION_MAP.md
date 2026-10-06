@@ -1,3 +1,6 @@
+> **HISTORICAL / SUPPORTING FUNCTION INVENTORY — NOT CURRENT PRODUCT/CAPABILITY AUTHORITY.**
+> Current product scope comes from the sole Product Architecture; current owners/gaps come from the Source Owner Index and fresh source/runtime evidence. The inventory below is provenance and may contain stale candidate/status labels.
+
 # LUMENIS 现有功能地图
 
 状态：Canonical Function Inventory Entry

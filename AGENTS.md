@@ -41,7 +41,13 @@ GPU, new rental, recharge or retired model providers.
 1. Every action serves the existing product closure. Deliver real permitted
    input -> useful result -> save/revise/reopen/recover -> Evaluation with
    consistent Source/Evidence, model/recipe, runtime and Artifact versions.
-2. Execute complete outcomes with the strongest feasible existing-owner method.
+2. Execute and maximize the complete approved outcome with the strongest feasible
+   existing-owner method. Once a window passes current-state admission, continue its
+   full owned result through implementation, real execution, save/reopen/recovery,
+   Evaluation and acceptance until it passes or reaches a real external blocker.
+   Optimization may reduce redundant reading, repeated tests and unnecessary steps;
+   it must never reduce approved functionality, data/research coverage, four-surface
+   Experience, recovery, quality, user outcome or acceptance scope.
    Reuse valid pinned evidence. Do not produce meaningless candidates, unchanged
    tests, repeated audits or per-function handoffs. Necessary affected safety,
    recovery and acceptance checks remain required. On a new failure, identify
@@ -81,12 +87,15 @@ GPU, new rental, recharge or retired model providers.
    Scope/Permission/session/rate-limit contracts on platforms that are actually
    ready; a blocked identity/source blocks only that path and must never be
    rewritten as ACTIVE.
-6. Preserve the Product Owner's current manually selected account, model,
-   reasoning effort and speed/service tier for every Codex/Codex CLI window.
-   That manual selection is the sole Codex model authority. This router assigns no model or speed by window
-   across M/F/C1-C6 and does not pin, downgrade, upgrade or
-   substitute models through repository config, subagents, hooks or historical
-   Sol/Luna/Astra text. If the executed backend/effort cannot be verified, mark
+6. Preserve exactly the Product Owner's current manual selection in each Codex /
+   Codex CLI window: account, model, reasoning effort and speed/service tier. The
+   selection visible in that window is the sole Codex model authority; when the
+   Product Owner changes it in the window, the new selection supersedes immediately
+   without any repository/config edit. This router assigns no model or speed by
+   window across M/F/C1-C6 and does not pin, downgrade, upgrade or substitute models
+   through repository config, CLI/profile/env arguments, subagents, hooks or
+   historical Sol/Luna/Astra text. Repository code must not assign a subagent model;
+   native Codex inheritance from the current window remains unmodified. Native Codex UI/session state may persist the Product Owner's own last selection; that is allowed native behavior, not a LUMENIS-authored default. If the executed backend/effort cannot be verified, mark
    it SETTINGS_UNVERIFIED rather than infer a substitute. OpenCode is currently
    shelved; do not invoke it, route tasks to it, or treat its configured free
    model as a fallback unless the Product Owner explicitly resumes that path.
@@ -292,7 +301,7 @@ Use:
 
 ```text
 Progressive Disclosure
-Minimal Context Loading
+Focused Context Loading (never scope reduction)
 Source / Runtime Truth First
 Reuse Before Rebuild
 Batch Related Fixes
@@ -303,7 +312,11 @@ Explicit Completion Criteria
 
 ### Complete outcome execution — latest Product Owner instruction, 2026-10-04
 
-All outcome windows use the user's **最大完整成果执行** mode. Continue the
+All outcome windows use the user's **最大完整成果执行** mode. Maximize the
+approved complete user outcome across every owned capability; this must never
+reduce approved functionality, data/research coverage, Experience states,
+recovery, quality, acceptance depth or promised surfaces. Do not choose a minimum
+viable subset when the complete approved outcome is actionable. Continue the
 entire assigned user result through research, implementation, real execution,
 saved/retrievable outputs, applicable recovery and evaluation, then complete
 acceptance. A bounded Task Card limits owners, files, authority and effects;
@@ -342,22 +355,31 @@ current M/F/C1-C6 instruction at the top and the approved blueprint. Reuse compl
 evidence; a historical correction does not restart an already resolved task.
 Material coverage and capability requirements are not reduced.
 
-For a capability or bug, research relevant current GitHub implementations and
-frontier/real-product cases before selecting its method. Compare task fitness,
-accuracy, full capability, recovery, licensing, maintainability and actual cost/
-latency; choose the strongest feasible fit, not the easiest implementation or a
-smaller product. Reuse pinned valid research where applicable instead of creating
-a new research loop. Then implement the selected path directly and verify the
-actual outcome with affected checks. Required accuracy/recovery/security gates
-remain; irrelevant tests, repeated unchanged trials, speculative parallel
-candidates and repeated reports are prohibited.
+For every capability, bug, regression or technical blocker, the owning active
+window must resolve it end-to-end instead of bouncing routine engineering work to
+M, another window or the Product Owner. Reproduce the failure once with a bounded
+case, locate the actual Owner/caller/contract, then research the strongest current
+solution using authoritative vendor/standard documentation, the maintained
+upstream GitHub project, and high-quality current implementations or engineering
+practice relevant to the exact stack. When frontier methods materially matter,
+compare multiple credible approaches for task fitness, correctness, complete
+capability, recovery, security, licensing, maintainability, latency and real
+cost. Choose the strongest feasible solution that preserves the approved product,
+not the easiest patch, cheapest model, smallest feature or speculative rewrite.
+Implement it in the existing Owner, run affected checks plus the real outcome,
+and continue the same window toward closure. Reuse still-valid pinned research;
+do not open a duplicate research/window loop merely to repeat an unchanged
+question. Escalate only a genuine Product Owner/product decision, permission or
+credential boundary, paid-resource approval, material security/data risk, or an
+external dependency that the owning window cannot control.
 
-Each active delivery window owns defects inside its assigned owner through resolution:
-diagnose/research, fix, verify the effect and report the complete outcome. M owns
-cross-window conflicts, integration and acceptance rather than absorbing routine window work.
-report the result. Do not bounce it back to the reporter or require another user
-reminder. A real permission/environment blocker is recorded once with the next
-executable step. Protect existing source/data and active shared writers.
+Each active delivery window therefore owns ordinary defects and blockers through
+research -> repair -> verification -> recovery -> complete outcome. M owns
+cross-window conflicts, integration and acceptance rather than absorbing routine
+window work. Do not bounce a solvable bug back to the reporter or wait for another
+user reminder. Record a genuine external blocker once with the exact next
+executable step, then continue independent in-scope work. Protect existing
+source/data and active shared writers.
 
 Keep one current input/version manifest per outcome and pointers to archived
 evidence. Classify superseded candidates without deleting unique valid work;
@@ -369,13 +391,17 @@ count completes the full requested corpus.
 
 ### Direct execution and continuous collection
 
-Choose the shortest evidence-supported feasible implementation in the existing
-owner and execute it through the complete real user outcome. Do not manufacture
-unrelated alternatives, speculative candidates, repeated scans, new research
-loops or repeated tests without a changed hypothesis/source or a real remaining
-acceptance risk. Reuse valid pinned evidence. Run only directly affected
+Choose the strongest evidence-supported feasible implementation in the existing
+Owner that maximizes the approved complete user outcome. Optimize away redundant
+reading, duplicate scans and meaningless retries—not functionality, data/research
+coverage, Experience states, recovery, quality, acceptance depth or promised
+surfaces. Do not choose a minimum viable subset, tiny patch, easier substitute or
+narrower product merely to finish sooner. Execute the full owned outcome through
+the complete real user result and stop only at a genuine external blocker or a
+completed acceptance boundary. Reuse valid pinned evidence. Run directly affected
 verification and legitimate blocking gates; the Product Owner's ban concerns
-irrelevant/redundant work, not falsifying results or disabling necessary checks.
+irrelevant/redundant work, not reducing scope, falsifying results or disabling
+necessary checks.
 An isolated integration copy protecting a dirty tree is not a competing product.
 Reject an incorrect approach without deleting protected data or unknown work.
 
@@ -477,7 +503,7 @@ Product Owner-authorized account 2804907467@qq.com and repository Zachary-1012/L
 current repository rules, exact allowed/forbidden paths, shared-interface
 contracts and acceptance target. Do not change account or infer a base SHA.
 
-Cloud inputs are approved minimal/public sample inputs and task materials with
+Cloud inputs are approved bounded/public sample inputs and task materials with
 source, scope, time and permitted-use provenance. Never upload secrets,
 credentials, Cookies, private sessions, browser state or a complete production
 database. Do not expose personal workstation configuration; attach only the

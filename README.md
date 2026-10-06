@@ -107,22 +107,18 @@ Product Owner 已恢复批准的完整执行拓扑：
 
 ### 当前执行器
 
-- **Codex / Codex CLI**：当前研发执行器。每个窗口使用 Product Owner 当下手动选择的模型、推理强度和服务档位；仓库不自动分配 Sol/Luna/Astra 等模型。
+- **Codex / Codex CLI**：当前研发执行器。每个窗口严格使用 Product Owner 当下在该窗口手动选择的模型、推理强度和服务档位；LUMENIS 不在仓库、Hook、CLI/Profile/环境变量或 Subagent 中人为指定、切换或降级工程模型。Codex 原生 UI/会话若自行持久化 Product Owner 刚刚做出的选择，属于 Codex 默认行为，可以保留；窗口改选后立即以新选择为权威。Machine invariant: `NO_LUMENIS_AUTHORED_MODEL_OVERRIDE`; native Codex UI/session persistence of the Product Owner's own selection is allowed.
 - **OpenCode**：**当前搁置，不属于本轮执行路径，也不是 Codex 额度不足时的自动 fallback。** 已有安装/配置不等于获准执行；除非 Product Owner 以后明确恢复，否则任何窗口都不要把任务派给 OpenCode。
 - TRAE、Apple、ChatGPT 等只在各自既有规则内作为 Experience/研究参考，不拥有序境产品架构或执行权。
 
-## 当前状态摘要
+## 当前状态摘要（开工时必须重新取证）
 
-截至 `2026-10-06 15:40 +08` 的重新取证：
+README **不固化 current HEAD、Runtime、DB 行数、dirty文件清单或窗口进度**，因为这些会随每次交付变化。每次开工先执行 `git fetch origin main`、读取 `HEAD` / `origin/main` / dirty，再核 Runtime、DB、Permission、Evidence 和真实用户结果；最新逐能力事实、当前缺口和最近证据只记录在 [CURRENT](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)。
 
-- 本轮状态更新前的冻结基线为 `local HEAD == origin/main == 90192058e0cb6cce9b8d0a1d7577d5e6e4a56f50`、分歧 `0 / 0`；发布后必须重新 `git fetch` 获取新的当前HEAD，不能把这个SHA当永久基线。
-- Core `:8201 /healthz` 返回 `200`，`service=lumenis-core`，Database=`ok`。
-- 产品身份已收敛为 `序境 / LUMENIS`，Runtime 默认上下文为 `GLOBAL / ALL`；历史广州太古汇采集记录仍作为业务数据保留。
-- Only-One 产品/Owner 方向已建立，但完整用户结果、六平台真实持续运行、C2 真实训练/Promotion/Service binding、F 批准体验的完整实现、四端真实 E2E 和 Release 仍需各责任窗口继续闭合。
-- 本地仍有受保护的未提交 Importer 候选、Collector 运行状态、C1 证据、C2 训练配置与 `work/` 材料；任何窗口开工前先识别这些 dirty 的 Owner，**不得 reset/clean/覆盖**。
-- 当前阶段是工程闭环执行，不得写成 `RELEASED` 或 `OPERATING`，除非对应 Product Gate、Runtime、真实用户结果和发布证据全部成立。
-
-更细的逐能力状态始终以 [CURRENT](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md) 为准。
+- 当前产品身份是 `序境 / LUMENIS`；默认工作宇宙是 `GLOBAL / ALL`。具体运行进程是否已加载这一版本必须现场验证。
+- 当前执行拓扑是 **M 总控 + F 前端/Experience + C1–C6 六个独立交付窗口**；窗口通过准入后持续完成完整结果直到验收或真实阻塞。
+- 本地工作树中的任何 dirty/untracked 都先按 Owner 识别并保护；README 不枚举或推断其完成状态，**不得 reset/clean/覆盖未知工作**。
+- 当前总体阶段是工程闭环执行；只有对应 Product/App/Critical E2E、Runtime、用户结果和Release证据真实成立后，才能分别声明 `USER_VERIFIED`、`RELEASED` 或 `OPERATING`。
 
 ## 人类工程师安全开工流程
 
@@ -212,6 +208,7 @@ LUMENIS原始材料采用仓库根目录 [LICENSE](LICENSE) 中的 **LUMENIS PRO
 
 - `main` 是唯一当前实现；不要创建第二产品、第二Owner、第二DB/Evidence store、第二AI Gateway或长期并行候选架构。
 - 并行窗口可以工作，但共享Owner/共享文件需要显式M/W6协调，不能互相覆盖。
+- 每个窗口对自己Owner内的普通Bug、回归和技术阻塞负责到底：先做一次明确复现并定位Owner/调用链，再查当前官方/标准文档、维护中的上游GitHub和高质量最新实现；必要时比较多种前沿方案，选择对完整能力、正确性、恢复、安全、许可、维护、延迟和实际成本最优的可行方案，直接修复、验证并继续同一窗口闭环。不要把可解决的问题反复抛给M/别的窗口/用户，也不要为同一问题新开重复研究窗口。只有产品决策、权限/凭据、付费资源、安全/数据重大风险或不可控外部依赖才升级。
 - 提交只stage当前交付的精确文件；本地未知dirty/untracked工作必须先归Owner，禁止bulk-stage、`reset --hard`、`clean -fd`或“顺手整理”。
 - 新研究必须落实到已存在的能力、质量标准或真实结果；研究、线框、报告、测试、文档和Mock都不能取代实现/Runtime/User Outcome。
 - 修改产品定位、Owner、Permission、Canonical、数据语义、模型Promotion或Release标准必须遵守现有治理和Product Owner授权，不能由单个工程师自行改写。

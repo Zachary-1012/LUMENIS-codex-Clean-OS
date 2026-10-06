@@ -1,0 +1,13 @@
+# Preserve the complete LUMENIS execution router. Codex applies this as a shared project-instruction budget; keep headroom above the current root AGENTS.md so current rules cannot be silently truncated.
+project_doc_max_bytes = 131072
+# LUMENIS / 序境 — repository-local Codex execution layer.
+# This file configures engineering behavior only. It is not Product Truth.
+# Do not set model/effort defaults here. Inherit the current Codex window's manual selection exactly.
+sandbox_mode = "danger-full-access"
+approval_policy = "never"
+web_search = "live"
+
+[features]
+hooks = true
+multi_agent = true
+shell_snapshot = true

@@ -1,6 +1,9 @@
+> **SUPERSEDED / HISTORICAL PROVIDER SNAPSHOT — NOT CURRENT EXECUTION POLICY.**
+> Current product AI uses the sole SYSTEM AI Gateway/C2 owned-model route; local/Ollama/Zhipu/ARK/Jev provider defaults/fallbacks are retired unless a current owner explicitly reclassifies them. Engineering Codex model selection is manual per window.
+
 # AI Provider Runtime Policy V1
 
-Status: Frozen execution policy
+Status: SUPERSEDED / HISTORICAL PROVIDER SNAPSHOT
 
 ## Objective
 Keep only AI providers/models that have an evidenced runtime path; remove dead implementations and stale configuration while preserving a clean provider interface.

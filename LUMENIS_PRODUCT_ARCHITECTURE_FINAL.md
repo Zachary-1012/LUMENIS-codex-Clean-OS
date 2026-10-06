@@ -1,6 +1,11 @@
+> **SUPERSEDED / HISTORICAL PRODUCT ARCHITECTURE — NOT CURRENT PRODUCT AUTHORITY.**
+> Current sole product authority: `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`.
+> Current execution: root `AGENTS.md`; current state: `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`.
+> Retain the content below as provenance only; it must not override current owners, surfaces, scope or acceptance.
+
 # 序境 / LUMENIS 最终产品架构
 
-状态：Canonical Product Architecture
+状态：SUPERSEDED / HISTORICAL SNAPSHOT
 
 ## 1. 产品定义
 

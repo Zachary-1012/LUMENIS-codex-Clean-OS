@@ -1,3 +1,6 @@
+> **HISTORICAL / SUPPORTING CAPABILITY INVENTORY — NOT CURRENT OWNER OR EXECUTION AUTHORITY.**
+> Current ownership and activation are defined by `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md` and root `AGENTS.md`. Statuses below are dated inventory evidence and must be revalidated against current source/runtime before use.
+
 # LUMENIS Capability Registry
 
 状态：Canonical Ownership Registry V1

@@ -1,0 +1,15 @@
+# LUMENIS project ExecPolicy — defense in depth for protected shared work.
+# Root AGENTS.md remains the execution authority; hooks add semantic checks.
+prefix_rule(pattern=["git","push","--force"], decision="forbidden", justification="LUMENIS main must never be force-pushed.")
+prefix_rule(pattern=["git","push","-f"], decision="forbidden", justification="LUMENIS main must never be force-pushed.")
+prefix_rule(pattern=["git","push","origin","--force"], decision="forbidden", justification="LUMENIS main must never be force-pushed.")
+prefix_rule(pattern=["git","reset","--hard"], decision="forbidden", justification="Preserve unknown and uncommitted local work.")
+prefix_rule(pattern=["git","clean"], decision="forbidden", justification="Never delete unclassified local work; classify exact paths instead.")
+prefix_rule(pattern=["git","checkout","--","."], decision="forbidden", justification="Broad checkout can overwrite another window's protected dirty work.")
+prefix_rule(pattern=["git","checkout","HEAD","--","."], decision="forbidden", justification="Broad checkout can overwrite another window's protected dirty work.")
+prefix_rule(pattern=["git","restore","."], decision="forbidden", justification="Broad restore can overwrite another window's protected dirty work.")
+prefix_rule(pattern=["git","add","."], decision="forbidden", justification="Stage exact delivery files only; never absorb unrelated dirty work.")
+prefix_rule(pattern=["git","add","-A"], decision="forbidden", justification="Stage exact delivery files only; never absorb unrelated dirty work.")
+prefix_rule(pattern=["git","add","--all"], decision="forbidden", justification="Stage exact delivery files only; never absorb unrelated dirty work.")
+prefix_rule(pattern=["git","commit","-a"], decision="forbidden", justification="Commit only explicitly reviewed/staged files.")
+prefix_rule(pattern=["git","branch","-D"], decision="prompt", justification="Verify unique commits before deleting a branch.")

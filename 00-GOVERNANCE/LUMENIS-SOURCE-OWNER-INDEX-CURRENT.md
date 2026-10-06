@@ -313,7 +313,7 @@ The historical caller-cleanup dependency order preserves Database/Permission/Evi
 
 ## 7. Cross-round capability gap register
 
-This table is a dated owner/dependency lead, not a scheduling or activation queue. C1–C6 activation comes only from the top of `AGENTS.md`. When an owner is later authorized, it must resolve current `origin/main` and runtime truth and use the existing complete outcome card; a dated live check below is evidence, not a durable availability promise.
+This table is a dated owner/dependency lead, not a scheduling or activation queue. Current activation comes only from the top of `AGENTS.md`. M, F and C1–C6 are currently active there; before each actual task, the owning window still resolves fresh `origin/main`, protected dirty work, owner/callers, runtime/DB/Permission/Evidence and external dependencies. A dated live check below is evidence, not a durable availability promise.
 
 | Gap / verified lead | Historical lead and current disposition | Current C owner and retained R acceptance input | Boundary |
 | --- | --- | --- | --- |
@@ -327,7 +327,7 @@ This table is a dated owner/dependency lead, not a scheduling or activation queu
 
 This is a Task Card input derived from the Product Owner's business calibration, not another Product Architecture or evidence of round acceptance. It was mapped against local `main` at `5ba1aefc53a1babc293e990c23c62f841724c843` with protected, uncommitted work. Local source presence is not a released user outcome; recheck the active source and evidence at each owning round. At that historical mapping, ROUND 02 still needed coherent executable-source integration; the later committed [ROUND 02 Charter](LUMENIS-ROUND-02-CHARTER-CURRENT.md) records a bounded `PASS` for its actual Windows SYS-01 job. Neither status enlarges acceptance to the App or business rows below.
 
-| Real user / job / deliverable | Need | Existing owner and local implementation | Current evidence limit | Owning rounds and minimum exit proof |
+| Real user / job / deliverable | Need | Existing owner and local implementation | Current evidence limit | Owning rounds and required complete exit proof |
 | --- | --- | --- | --- | --- |
 | Commerce operator: verify a venue's actual brand, store, event and on-site resources; deliver an actionable content or operations plan | REQUIRED | CTH Subject/workflow plus Shared `content_generation.py`, `lumenis/shared/reporting/`; `experience_runtime.py` and Flutter CTH/Shared screens are local consumers | `PARTIAL / LOCAL_ONLY`: one official public Source→Evidence→Canonical→report slice was run in isolation. Store availability, on-site exclusivity, internal resources, approval and outcome were not established | ROUND 06, 10–11, 14–15: distinguish brand-wide launch, local stock, store priority and unconfirmed claims; carry verified resources into a plan, human confirmation, action and outcome with trace |
 | Brand lead: relate consumer need, market and competitors to positioning, content, channel and creator choice; deliver a decision basis and Brief | REQUIRED | BMP domain in `experience_screens.py`, local Flutter BMP screens, Shared creation/reporting, canonical Evidence/Permission | `PARTIAL / LOCAL_ONLY`: screen/source presence and tests do not prove real creator fit, channel results or a completed brand job | ROUND 12–13, 15: real authorized brand/competitor/creator input, comparable alternatives, approval, artifact and measured feedback; no popularity-only recommendation |
@@ -370,14 +370,14 @@ recorded rather than invented or silently excluded.
 Research enters both product-capability improvement and separately authorized
 AI training/learning. Books, courses, papers, open-source work, user videos/images
 and official product/support/release material remain traceable to actual changes.
-M corrects narrowed rules and owns each authorized source repair through scoped
-verification and publication; an audit finding alone is not resolution. The
-current AGENTS instruction authorizes M-only product-source repairs, not
-production DB/migrations, runtime, collection, model/GPU, deployment or product
-E2E. Execution state, account/model selection and resource authorization come
-only from current AGENTS and direct Product Owner instructions. C1-C6 and F remain
-assigned responsibilities but no other window is active in this task. Existing/
-free compute is preferred; no historical budget authorizes payment.
+Each active owning window corrects narrowed rules inside its scope and owns its
+authorized work through real outcome verification; M resolves cross-window rule,
+architecture, integration and acceptance conflicts. An audit finding alone is not
+resolution. Current execution state, account/model selection and resource
+authorization come only from current `AGENTS.md` and direct Product Owner
+instructions. M, F and C1–C6 are active delivery participants; capability-specific
+Permission, runtime/session/resource and paid-effect boundaries still apply.
+Existing/free compute is preferred; no historical budget authorizes payment.
 
 ## 11. Active material accountability and missing-entry requirements
 
@@ -385,8 +385,9 @@ The Product Owner assigned video/material work to existing outcome Owners. Use
 [Material Owner Contract](evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-CONTRACT.md)
 and [per-reference manifest](evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-MANIFEST.json)
 as evidence and lookup, not another authority. F/C4 own their reference corpora;
-C3+C5 owns cross-material intake/transfer until a receiving Owner ACKs; C1/C2/C6
-own their respective data/AI/runtime inputs. Every recovered and newly discovered
+C5 owns cross-material intake, source/rights/citation/research transfer and the
+receiving-owner handoff record; C3 consumes accepted research/business inputs for
+CTH/BMP outcomes. C1/C2/C6 own their respective data/AI/runtime inputs. Every recovered and newly discovered
 item gets a primary Owner; unread/missing remains an obligation. These are
 responsibility assignments, not activation. M checks completeness and repairs
 current rule conflicts; it does not inspect F's independent materials or redo a
@@ -448,11 +449,12 @@ User-reviewed100-term foundation input: C1 owns topic/query/entity binding; C5 e
 
 ## Complete outcome cards and owner routing after the six closure red lines
 
-The cards below specify full user outcomes, not active work queues. Current
+The cards below specify full user outcomes, not competing work queues. Current
 activation, pause state, model/account selection and allowed effects come only
-from the top of `AGENTS.md`. The current task authorizes M-only source repair;
-C1–C6 and F remain assigned responsibilities but no other window is active or
-contacted. Do not create parallel task-card files: each row links its existing
+from the top of `AGENTS.md`. Under the current route M is controller/integrator,
+F is active for Experience, and C1–C6 are six active local delivery windows.
+Each window continues its complete card after task admission until acceptance or
+a real blocker; activation never bypasses owner/effect/resource boundaries. Do not create parallel task-card files: each row links its existing
 source routes in §3 to J/U/R coverage, the existing material manifest, and the
 Real Delivery Card/acceptance fields in the Overlay.
 
@@ -462,9 +464,10 @@ The retained RC identifiers below locate the existing research corpus, not new
 work queues or completed adoption. Original locators, actual read intervals and
 rights remain in MATERIAL-OWNER-MANIFEST and each source receipt. The precise
 product path below is the implementation destination; summaries alone cannot
-close it. Current activation comes only from AGENTS.md. M executes the current
-authorized repair; C1–C6 rows retain their complete outcome responsibilities,
-and F remains the separate Experience owner without active work in this task.
+close it. Current activation comes only from AGENTS.md. C1–C6 execute their
+complete outcome responsibilities, F executes the separate Experience scope, and
+M reviews cross-window completeness/integration rather than replacing those
+owners.
 
 For direct materials, the manifest's `primary_owner` is the reading and
 capability-adoption owner; `source_owner_paths` is the existing product route,

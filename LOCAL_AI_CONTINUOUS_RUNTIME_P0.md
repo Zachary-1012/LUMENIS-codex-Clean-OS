@@ -1,6 +1,9 @@
+> **SUPERSEDED / HISTORICAL LOCAL-AI REQUIREMENT — NOT CURRENT AI RUNTIME POLICY.**
+> The current AI runtime owner is C2 through the sole SYSTEM AI Gateway and LUMENIS-owned model route. Retired local-provider/Ollama fallback concepts below are provenance only and must not be reactivated by this document.
+
 # Local AI Continuous Runtime — P0
 
-Status: Frozen execution requirement
+Status: SUPERSEDED / HISTORICAL SNAPSHOT
 
 ## Goal
 Local AI must be treated as a supervised runtime service, not a manually started best-effort process.

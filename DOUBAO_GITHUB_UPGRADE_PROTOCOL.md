@@ -1,3 +1,7 @@
+> **HISTORICAL / RETIRED ENGINEERING PROTOCOL — NOT ACTIVE.**
+> Doubao is not a current LUMENIS engineering executor. Codex/Codex CLI use the Product Owner's manual window selection; `scripts/github_upgrade_check.py` derives current `origin/main` and assigns no model/agent/platform priority.
+> The protocol below is provenance only and must not schedule, route or authorize development.
+
 # 豆包 × GitHub 定时升级协议
 
 ## 目标

@@ -225,8 +225,12 @@ def _assert_six_round_routing(agents: str) -> None:
         raise AssertionError("AGENTS.md must route front-end window F through all six deliveries")
     if not re.search(r"root controller m", lowered) or "review" not in lowered or "acceptance" not in lowered:
         raise AssertionError("AGENTS.md must identify M as the review and acceptance owner")
-    if "assigns no model or speed by window" not in lowered or "current manually selected account, model" not in lowered:
-        raise AssertionError("AGENTS.md must preserve the Product Owner's current manual model and speed selections")
+    if (
+        "assigns no model or speed by window" not in lowered
+        or "selection visible in that window is the sole codex model authority" not in lowered
+        or "repository code must not assign a subagent model" not in lowered
+    ):
+        raise AssertionError("AGENTS.md must preserve the Product Owner's exact current-window model/effort/speed selection without repository or subagent overrides")
     if "d01-d49" not in lowered or "distinct from acceptance requirements r01-r15" not in lowered:
         raise AssertionError("AGENTS.md must distinguish D01-D49 dispositions from R01-R15 acceptance requirements")
     if "only repository execution router" not in lowered:
@@ -348,7 +352,7 @@ def _assert_legacy_coverage_mapping(source_index: str, *, require_assertions: bo
 def _assert_execution_boundaries(agents: str) -> None:
     required = (
         "fixed base SHA",
-        "approved minimal/public sample inputs",
+        "approved bounded/public sample inputs",
         "never upload secrets",
         "Cookies",
         "private sessions",
@@ -390,6 +394,249 @@ def _assert_readme_routing_consistent(readme: str) -> None:
     present = [phrase for phrase in obsolete_routes if phrase in readme]
     if present:
         raise AssertionError(f"README.md contains obsolete execution/provider routes: {present}")
+    if re.search(r"local HEAD\s*==\s*origin/main\s*==\s*[0-9a-f]{8,40}", readme):
+        raise AssertionError("README.md must not freeze a current Git SHA; CURRENT/fresh git is authoritative")
+    _require_collapsed(
+        readme,
+        "README **不固化 current HEAD",
+        "NO_LUMENIS_AUTHORED_MODEL_OVERRIDE",
+        "native Codex UI/session persistence of the Product Owner's own selection is allowed",
+        "窗口改选后立即以新选择为权威",
+        "窗口通过准入后持续完成完整结果直到验收或真实阻塞",
+        label="README dynamic/manual-selection routing",
+    )
+
+
+
+
+def _assert_current_authority_consistency(source_index: str, agents: str) -> None:
+    """Block stale current-routing phrases that can silently shrink active delivery."""
+    normalized = re.sub(r"\s+", " ", source_index)
+    stale_current = (
+        "current AGENTS instruction authorizes M-only product-source repairs",
+        "The current task authorizes M-only source repair",
+        "no other window is active in this task",
+        "without active work in this task",
+        "When an owner is later authorized",
+        "C3+C5 owns cross-material intake/transfer",
+    )
+    present = [phrase for phrase in stale_current if phrase.casefold() in normalized.casefold()]
+    if present:
+        raise AssertionError(
+            "Source Owner Index contains stale current execution guidance: "
+            f"{present}"
+        )
+
+    if "Choose the shortest evidence-supported feasible implementation" in agents:
+        raise AssertionError(
+            "AGENTS.md must not optimize delivery by choosing the shortest implementation"
+        )
+    _require_collapsed(
+        agents,
+        "最大完整成果执行",
+        "Maximize the approved complete user outcome",
+        "must never reduce approved functionality, data/research coverage",
+        "Do not choose a minimum viable subset",
+        label="full-outcome maximization policy",
+    )
+    _require_collapsed(
+        agents,
+        "owning active window must resolve it end-to-end",
+        "authoritative vendor/standard documentation",
+        "maintained upstream GitHub project",
+        "do not open a duplicate research/window loop",
+        "Escalate only a genuine Product Owner/product decision",
+        label="self-resolving blocker policy",
+    )
+
+
+def _assert_legacy_root_docs_classified() -> None:
+    """Prevent visually authoritative legacy root docs from competing with current truth."""
+    required_markers = {
+        "LUMENIS_PRODUCT_ARCHITECTURE_FINAL.md": (
+            "SUPERSEDED / HISTORICAL PRODUCT ARCHITECTURE",
+            "NOT CURRENT PRODUCT AUTHORITY",
+        ),
+        "DOUBAO_GITHUB_UPGRADE_PROTOCOL.md": (
+            "HISTORICAL / RETIRED ENGINEERING PROTOCOL",
+            "NOT ACTIVE",
+        ),
+        "USER_GUIDE.md": (
+            "HISTORICAL LEGACY USER GUIDE",
+            "NOT CURRENT PRODUCT OR EXPERIENCE AUTHORITY",
+        ),
+        "REBUILD_ROADMAP.md": (
+            "HISTORICAL ROADMAP SNAPSHOT",
+            "NOT CURRENT EXECUTION STATUS OR TASK PLAN",
+        ),
+        "UPGRADE.md": (
+            "HISTORICAL / LEGACY UPGRADE GUIDE",
+            "NOT CURRENT RUNTIME OR RELEASE AUTHORITY",
+        ),
+        "AI_POLICY.md": (
+            "SUPPORTING HISTORICAL AI POLICY",
+            "NOT CURRENT EXECUTION/PROVIDER AUTHORITY",
+        ),
+        "AI_PROVIDER_RUNTIME_POLICY_V1.md": (
+            "SUPERSEDED / HISTORICAL PROVIDER SNAPSHOT",
+            "NOT CURRENT EXECUTION POLICY",
+        ),
+        "CAPABILITY_REGISTRY.md": (
+            "HISTORICAL / SUPPORTING CAPABILITY INVENTORY",
+            "NOT CURRENT OWNER OR EXECUTION AUTHORITY",
+        ),
+        "LUMENIS_FUNCTION_MAP.md": (
+            "HISTORICAL / SUPPORTING FUNCTION INVENTORY",
+            "NOT CURRENT PRODUCT/CAPABILITY AUTHORITY",
+        ),
+        "LOCAL_AI_CONTINUOUS_RUNTIME_P0.md": (
+            "SUPERSEDED / HISTORICAL LOCAL-AI REQUIREMENT",
+            "NOT CURRENT AI RUNTIME POLICY",
+        ),
+        "RELEASE_POLICY.md": (
+            "SUPPORTING RELEASE SAFETY POLICY",
+            "NOT A SECOND PRODUCT/EXECUTION AUTHORITY",
+        ),
+    }
+    for rel, markers in required_markers.items():
+        path = ROOT / rel
+        if not path.is_file():
+            continue
+        text = path.read_text("utf-8-sig")
+        missing = [m for m in markers if m not in text[:2400]]
+        if missing:
+            raise AssertionError(
+                f"legacy root document can compete with current authority: {rel}; "
+                f"missing={missing}"
+            )
+
+    release_policy = ROOT / "RELEASE_POLICY.md"
+    if release_policy.is_file():
+        text = release_policy.read_text("utf-8-sig")
+        _require_collapsed(
+            text,
+            "SUPPORTING RELEASE SAFETY POLICY",
+            "NO_SCOPE_REDUCTION_ON_RELEASE",
+            "SINGLE_PRODUCT_FOUR_SURFACES",
+            "C6_W6_RELEASE_OWNER",
+            "C6/W6 owns integration/runtime/release",
+            label="supporting release safety policy",
+        )
+
+
+def _assert_repository_model_neutrality() -> None:
+    """Repository engineering config must never choose the Product Owner's Codex model."""
+    cfg = ROOT / ".codex" / "config.toml"
+    if cfg.is_file():
+        text = cfg.read_text("utf-8-sig")
+        forbidden_keys = (
+            "model", "model_provider", "service_tier", "model_reasoning_effort",
+            "plan_mode_reasoning_effort", "model_reasoning_summary", "model_verbosity",
+            "model_catalog_json", "default_subagent_model",
+            "default_subagent_reasoning_effort",
+        )
+        for key in forbidden_keys:
+            if re.search(rf"(?m)^\s*{re.escape(key)}\s*=", text):
+                raise AssertionError(
+                    f"repository Codex config must not set {key}; use the current window selection"
+                )
+        if "Inherit the current Codex window's manual selection exactly" not in text:
+            raise AssertionError(
+                "repository Codex config must explicitly preserve current window selection"
+            )
+        budget_match = re.search(r"(?m)^\s*project_doc_max_bytes\s*=\s*(\d+)\s*$", text)
+        if not budget_match:
+            raise AssertionError("repository Codex config must set project_doc_max_bytes explicitly")
+        budget = int(budget_match.group(1))
+        router_bytes = len((ROOT / "AGENTS.md").read_bytes())
+        if budget < router_bytes + 16 * 1024:
+            raise AssertionError(
+                "Codex project instruction budget is too small for the current root AGENTS.md "
+                f"with safety headroom: budget={budget}, root_bytes={router_bytes}"
+            )
+
+        required_project_codex = (
+            ".codex/config.toml",
+            ".codex/README.md",
+            ".codex/engineering.py",
+            ".codex/mcp/server.mjs",
+            ".codex/hooks/lumenis_hooks.py",
+            ".codex/hooks.example.json",
+            ".codex/rules/lumenis.rules",
+            ".codex/tests/test_engineering.py",
+        )
+        redundant_rule = ROOT / ".codex" / "rules" / "engineering-safety.rules"
+        if redundant_rule.exists():
+            raise AssertionError(
+                "duplicate Codex ExecPolicy is forbidden; keep only .codex/rules/lumenis.rules"
+            )
+        for rel in required_project_codex:
+            proc = subprocess.run(
+                ["git", "ls-files", "--error-unmatch", rel],
+                cwd=ROOT, capture_output=True, text=True, check=False,
+            )
+            if proc.returncode != 0:
+                raise AssertionError(
+                    f"portable Codex project configuration must be tracked on main: {rel}"
+                )
+
+        engineering = (ROOT / ".codex" / "engineering.py").read_text("utf-8-sig")
+        forbidden_local_helpers = (
+            r"D:\codex\agent-skills",
+            "C:\\Users\\",
+            "settings.json",
+        )
+        present = [token for token in forbidden_local_helpers if token in engineering]
+        if present:
+            raise AssertionError(
+                "portable LUMENIS engineering MCP must not depend on workstation-local "
+                f"absolute helper paths: {present}"
+            )
+        if "def source_read(" not in engineering or "def route_task(" not in engineering:
+            raise AssertionError(
+                "portable LUMENIS engineering MCP must own its bounded source helpers in-repo"
+            )
+
+    dev_ai = ROOT / "scripts" / "dev_ai.py"
+    if dev_ai.is_file():
+        text = dev_ai.read_text("utf-8-sig")
+        forbidden = ("DEFAULT_MODEL", "FALLBACK_MODEL", "glm-4.7", "glm-4.5-air")
+        present = [token for token in forbidden if token in text]
+        if present:
+            raise AssertionError(
+                f"retired engineering helper reintroduced default/fallback models: {present}"
+            )
+        if "RETIRED" not in text or "no default engineering model" not in text:
+            raise AssertionError(
+                "scripts/dev_ai.py must remain a fail-closed retired compatibility marker"
+            )
+
+    env_example = ROOT / ".env.example"
+    if env_example.is_file():
+        text = env_example.read_text("utf-8-sig")
+        for key in ("AI_PROVIDER", "LOCAL_AI_PREFERRED"):
+            if re.search(rf"(?m)^\s*{re.escape(key)}\s*=", text):
+                raise AssertionError(
+                    f".env.example must not define active retired provider selector {key}"
+                )
+        retired_model_keys = (
+            "OLLAMA_MODEL",
+            "LMSTUDIO_MODEL",
+            "LLAMA_CPP_MODEL",
+            "QWEN_MODEL",
+            "OPENAI_MODEL",
+            "DEEPSEEK_MODEL",
+            "ZHIPU_MODEL",
+            "ZHIPU_STRONG_MODEL",
+            "ARK_MODEL",
+        )
+        for key in retired_model_keys:
+            match = re.search(rf"(?m)^[ \t]*{re.escape(key)}[ \t]*=[ \t]*(.*)$", text)
+            if match and match.group(1).strip():
+                raise AssertionError(
+                    f".env.example retired compatibility model key must stay blank: {key}"
+                )
+
 
 
 def _assert_single_machine_contract() -> None:
@@ -438,6 +685,10 @@ def validate() -> None:
     registry = _read("registry")
     platform_workflow = _read("platform_workflow")
     contract = json.loads(_read("contract"))
+
+    _assert_current_authority_consistency(source_index, agents)
+    _assert_legacy_root_docs_classified()
+    _assert_repository_model_neutrality()
 
     _assert_single_machine_contract()
     _assert_six_round_routing(agents)
