@@ -1,6 +1,6 @@
 # LUMENIS local candidate consolidation — 2026-10-07
 
-> Status: **LOCAL_ONLY / NOT_PUSHED**. This is the single local candidate, held for Product Owner approval before publication.
+> Status: **PUBLISHED** as commit `f6c0d024` (Product Gate `37529252692` success, 2026-10-07 04:57 +08). Prepared as the single local candidate and approved by the Product Owner before publication.
 > Base: local = origin/main = live `main` `3be8298a3ae853b98fde90b2fda943a5c9462a58` (2026-10-07 04:07 +08).
 
 ## 1. Candidate contents
