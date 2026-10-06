@@ -8782,7 +8782,7 @@
         ],
         "operationId": "kos.api_kos_collect",
         "x-flask-rule": "/api/kos/collect",
-        "summary": "品牌采集：统一暂停门 + 品牌主体过滤 + CDP 复用（链路复用 live_engine，不重写采集逻辑）。"
+        "summary": "Compatibility entry into the canonical scoped secondary-collection flow."
       }
     },
     "/api/kos/comments": {

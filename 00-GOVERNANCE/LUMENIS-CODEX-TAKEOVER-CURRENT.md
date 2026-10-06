@@ -96,6 +96,8 @@ F retains four-surface behavior and design responsibilities through existing Flu
 
 53. At 2026-10-06 08:34 +08, the existing business collection route now allowlists and forwards the typed query-level `checkpoint` only with `business_requests`, and rejects it on the single-source route. `tests/test_business_collection_runtime.py` plus the two HTTP route checks passed 8 tests with fake collectors and an isolated DB seed; no platform request ran. This resumes completed planned queries only. The checkpoint is caller-supplied, not durably bound to an authenticated task/result receipt, and `coverage_complete` remains false; native platform pagination and the full collection result path remain OPEN.
 
+54. At 2026-10-06 08:39 +08, `openapi_spec.py` regenerated the checked-in OpenAPI and route-matrix documents using its own disposable app/DB environment. The only Git content delta is the current `/api/kos/collect` operation summary; the route matrix remains byte-identical. `tests/test_openapi_spec.py` passed all 7 tests, including current route coverage, the HTTP Basic/v4 security object shape and the protected-database isolation assertion. The previously reported stale KOS description is resolved on this generated contract; OpenAPI remains source/runtime documentation, not product-operation evidence.
+
 ## 3. Authority and retained evidence
 
 - `00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`: real job, useful outcome, recovery and final states.
