@@ -30,27 +30,20 @@ def _enable_mock_providers(monkeypatch, *names):
 class TestProviderChain:
     """provider_chain 验证"""
 
-    def test_provider_chain_contains_zhipu_ark_ollama(self):
+    def test_provider_chain_has_no_implicit_or_retired_provider_route(self, monkeypatch):
         from lumenis.system.ai_gateway import channel as ac
-        chain = ac.provider_chain()
-        assert 'zhipu' in chain
-        assert 'ark' in chain
-        assert 'ollama' in chain
+        monkeypatch.setattr(ac, '_env', lambda _name, _default='': '')
+        assert ac.provider_chain() == []
 
-    def test_provider_chain_zhipu_is_first(self):
+    def test_provider_chain_filters_retired_names_from_explicit_configuration(self, monkeypatch):
         from lumenis.system.ai_gateway import channel as ac
-        chain = ac.provider_chain()
-        assert chain[0] == 'zhipu'
+        monkeypatch.setattr(ac, '_env', lambda name, _default='': 'zhipu,ark,ollama' if name == 'AI_PROVIDER_CHAIN' else '')
+        assert ac.provider_chain() == []
 
-    def test_provider_chain_env_override(self):
+    def test_provider_chain_keeps_active_primary_without_retired_fallback(self, monkeypatch):
         from lumenis.system.ai_gateway import channel as ac
-        os.environ['AI_PROVIDER_CHAIN'] = 'zhipu,ark'
-        try:
-            chain = ac.provider_chain()
-            assert chain == ['zhipu', 'ark']
-        finally:
-            del os.environ['AI_PROVIDER_CHAIN']
-
+        monkeypatch.setattr(ac, '_env', lambda name, _default='': 'ark,zhipu,ollama' if name == 'AI_PROVIDER_CHAIN' else '')
+        assert ac.provider_chain() == ['ark']
 
 class TestProviderStatus:
     """Provider 状态验证"""

@@ -51,6 +51,147 @@ def test_ai_analyze_returns_owned_runtime_unavailable_without_provider_fallback(
     assert body["analysis"] is None
 
 
+def test_legacy_ai_analyze_uses_owned_gateway_and_keeps_compatibility_shape(ai_client, monkeypatch):
+    seen = {}
+
+    def owned_analysis(**kwargs):
+        seen.update(kwargs)
+        return {
+            "ok": False, "status": "UNAVAILABLE", "code": "OWNED_RUNTIME_NOT_BOUND",
+            "provider": "owned", "analysis": None,
+        }
+
+    monkeypatch.setattr(ai_api.intelligence, "chat", lambda *_a, **_k: pytest.fail("legacy provider called"))
+    monkeypatch.setattr(ai_api.intelligence, "run_owned_analysis", owned_analysis)
+
+    response = ai_client.post("/api/ai/analyze-v570", json={
+        "text": "source text", "context": "brief context", "note_id": "note-7",
+    })
+
+    assert response.status_code == 503
+    assert response.get_json() == {
+        "ok": False, "status": "UNAVAILABLE", "code": "OWNED_RUNTIME_NOT_BOUND",
+        "text": "source text", "context": "brief context", "provider": "owned",
+        "analysis": None, "error": "OWNED_RUNTIME_NOT_BOUND",
+    }
+    assert seen == {
+        "text": "source text\n\nContext supplied with the source:\nbrief context",
+        "analysis_type": "summary", "note_id": "note-7",
+    }
+
+
+def test_legacy_ai_analyze_rejects_empty_source_without_gateway_call(ai_client, monkeypatch):
+    monkeypatch.setattr(
+        ai_api.intelligence, "run_owned_analysis",
+        lambda **_kwargs: pytest.fail("Gateway must not run without source text"),
+    )
+
+    response = ai_client.post("/api/ai/analyze-v570", json={"text": "  "})
+
+    assert response.status_code == 400
+    assert response.get_json()["ok"] is False
+    assert response.get_json()["analysis"] is None
+
+
+@pytest.mark.parametrize(
+    ("path", "payload", "analysis_type"),
+    [
+        ("/api/ai/test", {"text": "real test input"}, "conversation"),
+        ("/api/ark/chat", {"message": "real chat input"}, "conversation"),
+        ("/api/ark/sentiment", {"text": "real sentiment input"}, "sentiment"),
+        ("/api/ark/summary", {"text": "real summary input"}, "summary"),
+        ("/api/ark/keywords", {"text": "real keyword input"}, "keywords"),
+    ],
+)
+def test_legacy_ai_routes_do_not_fake_success_or_call_provider_fallback(
+    ai_client, monkeypatch, path, payload, analysis_type,
+):
+    seen = []
+    monkeypatch.setattr(
+        ai_api.ai_governance._usage_tracker, "check_quota",
+        lambda: (True, {"call_remaining": 1}),
+    )
+    monkeypatch.setattr(ai_api.ai_governance, "desensitize_text", lambda value: (value, {}))
+    monkeypatch.setattr(ai_api.ai_governance, "record_ai_call", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        ai_api.ai_governance, "mark_ai_output",
+        lambda *_a, **_k: pytest.fail("unavailable analysis must not be marked as output"),
+    )
+
+    def unavailable(**kwargs):
+        seen.append(kwargs)
+        return {
+            "ok": False, "status": "UNAVAILABLE", "code": "OWNED_RUNTIME_NOT_BOUND",
+            "provider": "owned", "analysis": None,
+        }
+
+    monkeypatch.setattr(ai_api.intelligence, "run_owned_analysis", unavailable)
+    for name in ("test_connection", "analyze_sentiment", "generate_summary", "extract_keywords", "_chat"):
+        monkeypatch.setattr(
+            ai_api.intelligence, name,
+            lambda *_a, _name=name, **_k: pytest.fail(f"legacy provider path called: {_name}"),
+        )
+
+    response = ai_client.post(path, json=payload)
+
+    assert response.status_code == 503
+    body = response.get_json()
+    assert body["ok"] is False
+    assert body["status"] == "UNAVAILABLE"
+    assert body["provider"] == "owned"
+    assert body["analysis"] is None
+    assert seen and seen[0]["analysis_type"] == analysis_type
+
+
+def test_ai_chat_uses_owned_gateway_and_exposes_retrieval_separately_when_unavailable(
+    ai_client, monkeypatch,
+):
+    monkeypatch.setattr(ai_api.function_registry, "build_context", lambda *_a: "retrieved product facts")
+    monkeypatch.setattr(ai_api.db, "get_stats", lambda: {})
+    monkeypatch.setattr(ai_api, "_canonical_report_metrics", lambda *_a: {})
+    seen = []
+
+    def unavailable(**kwargs):
+        seen.append(kwargs)
+        return {
+            "ok": False, "status": "UNAVAILABLE", "code": "OWNED_RUNTIME_NOT_BOUND",
+            "provider": "owned", "analysis": None,
+        }
+
+    monkeypatch.setattr(ai_api.intelligence, "run_owned_analysis", unavailable)
+    monkeypatch.setattr(ai_api.intelligence, "_chat", lambda *_a, **_k: pytest.fail("provider route called"))
+    monkeypatch.setattr(ai_api.intelligence, "ai_status", lambda: pytest.fail("provider status route called"))
+    monkeypatch.setattr(
+        ai_api.intelligence, "owned_inference_status",
+        lambda: {"available": False, "service_binding": "NOT_BOUND", "state": "UNAVAILABLE"},
+    )
+
+    response = ai_client.post("/api/ai/chat", json={"message": "What changed?"})
+
+    assert response.status_code == 503
+    assert response.get_json()["ok"] is False
+    assert response.get_json()["reply"] is None
+    assert response.get_json()["context"] == "retrieved product facts"
+    assert seen and seen[0]["analysis_type"] == "conversation"
+
+
+def test_ai_provider_status_exposes_only_owned_gateway_without_local_discovery(ai_client, monkeypatch):
+    monkeypatch.setattr(
+        ai_api.intelligence, "owned_inference_status",
+        lambda: {"available": False, "service_binding": "NOT_BOUND", "state": "UNAVAILABLE"},
+    )
+    monkeypatch.setattr(ai_api.intelligence, "ai_status", lambda: pytest.fail("retired provider discovery"))
+
+    status = ai_client.get("/api/ai/status").get_json()
+    providers = ai_client.get("/api/ai/providers").get_json()
+
+    assert status["providers"] == ["owned_gateway"]
+    assert status["fallback_allowed"] is False
+    assert status["enabled"] is False
+    assert providers["remote"] == []
+    assert providers["owned"]["service_binding"] == "NOT_BOUND"
+
+
 def test_ai_analyze_rejects_unknown_analysis_type(ai_client, monkeypatch):
     monkeypatch.setattr(
         ai_api.intelligence,

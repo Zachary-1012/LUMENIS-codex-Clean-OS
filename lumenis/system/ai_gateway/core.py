@@ -26,10 +26,11 @@ def _get_call_meta():
     with _last_call_meta_lock:
         return dict(_last_call_meta)
 
-"""广州太古汇本地智能层。
+"""LUMENIS SYSTEM AI Gateway compatibility module.
 
-设计目标：无预算也能工作；如果电脑本地已经运行 Ollama / LM Studio / llama.cpp，自动发现并调用本地模型；
-否则自动退回可审计的本地规则智能引擎。外部 API Key 永远不是必需项。
+Retired local and Zhipu routes remain only for compatibility and history.
+Product-owned inference is the sole AI-task route and stays explicitly
+unavailable until an approved runtime is bound.
 """
 import json, os, re, urllib.request, urllib.error, time, shutil, platform
 from urllib.parse import urlsplit
@@ -37,7 +38,7 @@ from lumenis.system.ai_gateway import channel as ai_channel  # [StableChannel] �
 
 # ZBC Phase 7: module status markers
 MODULE_STATUS = 'ACTIVE_PRIMARY'
-AI_ROLE = 'CENTRAL_GATEWAY'  # all AI calls route through _chat/chat; local-first, rule final fallback
+AI_ROLE = 'CENTRAL_GATEWAY'  # Product AI uses the owned Gateway; retired routes fail closed
 PROVIDER_POLICY = 'retired providers fail closed; explicitly selected active providers only'
 
 _CACHE = {'ts': 0, 'provider': None, 'model': None, 'base': None}
@@ -98,6 +99,50 @@ def run_owned_analysis(*, text, analysis_type, note_id=None):
         "ok": False, "status": "UNAVAILABLE", "code": "OWNED_SERVICE_EXECUTOR_NOT_BOUND",
         "provider": "owned", "note_id": note_id, "analysis": None,
         "runtime": runtime,
+    }
+
+
+def run_owned_multimodal_analysis(*, image_bytes, media_type, text, analysis_type,
+                                  response_schema, note_id=None):
+    """Fail closed at the owned multimodal boundary until its service is bound.
+
+    This entry never probes or falls back to retired local/external vision
+    providers. An offline text candidate is not an image-capable product
+    executor. A promoted multimodal service must implement this same contract.
+    """
+    image_valid = False
+    if type(image_bytes) is bytes and 0 < len(image_bytes) <= 8 * 1024 * 1024:
+        image_valid = (
+            media_type == "image/png" and image_bytes.startswith(b"\x89PNG\r\n\x1a\n")
+            or media_type == "image/jpeg" and image_bytes.startswith(b"\xff\xd8\xff")
+            and image_bytes.endswith(b"\xff\xd9")
+            or media_type == "image/webp" and len(image_bytes) >= 12
+            and image_bytes[:4] == b"RIFF" and image_bytes[8:12] == b"WEBP"
+            and int.from_bytes(image_bytes[4:8], "little") + 8 == len(image_bytes)
+        )
+    if (not image_valid
+            or not isinstance(text, str) or not text.strip() or len(text) > 5000
+            or not isinstance(analysis_type, str) or not analysis_type.strip()
+            or not isinstance(response_schema, dict)):
+        return {
+            "ok": False, "status": "INVALID_INPUT", "code": "OWNED_MULTIMODAL_INPUT_INVALID",
+            "provider": "owned", "model": None, "note_id": note_id,
+            "execution_ref": None, "analysis": None,
+        }
+
+    runtime = owned_inference_status()
+    if runtime.get("available") is not True or runtime.get("service_binding") != "BOUND":
+        return {
+            "ok": False, "status": "UNAVAILABLE",
+            "code": runtime.get("reason") or "OWNED_RUNTIME_NOT_BOUND",
+            "provider": "owned", "model": runtime.get("model_id"), "note_id": note_id,
+            "execution_ref": None, "analysis": None, "runtime": runtime,
+        }
+
+    return {
+        "ok": False, "status": "UNAVAILABLE", "code": "OWNED_MULTIMODAL_EXECUTOR_NOT_BOUND",
+        "provider": "owned", "model": runtime.get("model_id"), "note_id": note_id,
+        "execution_ref": None, "analysis": None, "runtime": runtime,
     }
 
 def _get_json(url, timeout=1.5):
@@ -207,9 +252,8 @@ def _provider_config():
                 key, base, model = configs[lookup_key]
                 detected=(provider_name,model,base.rstrip('/')) if key else None
         else:
-            # 正式架构 Ollama-only：auto 只自动发现本机模型；本机没有即回退本地规则引擎（离线可跑、
-            # 绝不因云端网络挂起而把批量复核卡死）。云端为 Legacy/Optional，默认不自动启用：
-            # 确需云端请显式 AI_PROVIDER=<provider>，或置 ALLOW_CLOUD_AI=true 让 auto 纳入已配 Key 的云端。
+            # Legacy compatibility route. Current selection policy fails closed
+            # for `auto` and retired local providers before reaching discovery.
             detected=_detect_local()
             if not detected and _env('ALLOW_CLOUD_AI','').lower() in ('1','true','yes','on','y'):
                 for p,key,base,model in [
@@ -232,74 +276,46 @@ def ai_enabled(): return bool(_provider_config())
 
 
 # ============================================================
-# P1-5: AI Capability-Based Routing
-# 按任务能力自动选择模型，保持 provider-agnostic，主 provider 不可用时自动降级
+# Capability metadata for the single owned Gateway route.
 # ============================================================
 _CAPABILITY_MODEL_MAP = {
     'vision': {
-        'provider': 'zhipu',
-        'model': 'glm-4.6v',
-        'fallback_chain': ['zhipu:glm-4.5-air', 'ark', 'ollama'],
-        'description': '视觉理解（图片分析/OCR/多模态）',
+        'provider': 'owned', 'model': None, 'fallback_chain': [],
+        'description': 'Owned Gateway multimodal capability; unavailable until a vision executor is bound',
     },
     'web_search': {
-        'provider': 'zhipu',
-        'model': 'web-search-pro',
-        'fallback_chain': ['zhipu:glm-4.5-air', 'ark', 'ollama'],
-        'description': '联网搜索（实时信息/事实核查）',
+        'provider': 'owned', 'model': None, 'fallback_chain': [],
+        'description': 'Owned Gateway analysis; verified retrieval Evidence is required',
     },
     'strong_reasoning': {
-        'provider': 'zhipu',
-        'model': 'glm-4.7',
-        'fallback_chain': ['zhipu:glm-4.5-air', 'ark', 'ollama'],
-        'description': '强推理（复杂分析/逻辑链/深度研判）',
+        'provider': 'owned', 'model': None, 'fallback_chain': [],
+        'description': 'Owned Gateway reasoning; unavailable until a promoted runtime is bound',
     },
     'daily': {
-        'provider': 'zhipu',
-        'model': 'glm-4.5-air',
-        'fallback_chain': ['ollama'],
-        'description': '日常最小输出（摘要/分类/情绪/轻量对话，使用已授权智谱资源包）',
-        'thinking_disabled': True,
+        'provider': 'owned', 'model': None, 'fallback_chain': [],
+        'description': 'Owned Gateway analysis; unavailable until a promoted runtime is bound',
     },
     'offline_fallback': {
-        'provider': 'ollama',
-        'model': 'local-model',
-        'fallback_chain': ['lmstudio', 'llama_cpp', 'rule'],
-        'description': '离线兜底（本地模型/确定性规则）',
+        'provider': 'owned', 'model': None, 'fallback_chain': [],
+        'description': 'Legacy capability alias; retired local providers are not called',
     },
 }
 
 
 def select_model_by_capability(capability='daily'):
-    """按任务能力选择 AI 模型，返回 {provider, model, fallback_chain, ...}。
-
-    capability 可选值:
-      - 'vision'           -> glm-4.6v（智谱视觉）
-      - 'web_search'       -> web-search-pro（智谱联网）
-      - 'strong_reasoning' -> glm-4.7（当前已授权智谱强推理资源）
-      - 'daily'            -> glm-4.5-air（智谱日常，关思考）
-      - 'offline_fallback' -> ollama 本地模型
-
-    返回 dict 包含 provider, model, fallback_chain, description。
-    主 provider 不可用时，调用方应按 fallback_chain 顺序降级。
-    不绑定单一模型，保持 provider-agnostic。
-    """
+    """Describe an owned Gateway capability without selecting a fallback provider."""
     cap = (capability or 'daily').lower().strip()
     if cap not in _CAPABILITY_MODEL_MAP:
         cap = 'daily'  # 未知 capability 安全降级到 daily
     entry = dict(_CAPABILITY_MODEL_MAP[cap])
     entry['capability'] = cap
-    # 运行时检查主 provider 可用性，不可用时标记并建议 fallback
-    try:
-        from lumenis.system.ai_gateway.providers import is_provider_available, provider_status
-        primary = entry['provider']
-        entry['primary_available'] = is_provider_available(primary)
-        entry['primary_status'] = provider_status(primary)
-        if not entry['primary_available']:
-            entry['fallback_chain'] = []
-    except Exception:
-        entry['primary_available'] = True
-        entry['primary_status'] = 'UNKNOWN'
+    runtime = owned_inference_status()
+    entry['primary_available'] = (
+        runtime.get('available') is True and runtime.get('service_binding') == 'BOUND'
+    )
+    entry['primary_status'] = runtime.get('reason') or runtime.get('state') or 'UNAVAILABLE'
+    entry['model'] = runtime.get('model_id')
+    entry['fallback_chain'] = []
     return entry
 
 
@@ -833,123 +849,16 @@ def local_embeddings(texts, *, model=None, timeout_seconds=60):
         return None, 'ollama_error', _meta('ollama_error')
 
 
-def vision_chat(system, user_text, image_base64, model=None, temperature=0.2, max_tokens=2000, level='medium', *, local_only=False, response_schema=None):
-    """视觉模型对话，默认本地优先；local_only 禁止任何非回环模型请求。
-    分级：level 决定超时（low 60s / medium 90s / high 120s / critical 180s，视觉较慢分档更大）。
-    预算：检查并记录 glm_4_6v 视觉资源包（600万 tokens；require_confirmation=False（2026-09-04 用户放开，视觉模型随便用））。
-    Args:
-        system: 系统提示词
-        user_text: 用户文本
-        image_base64: 图片 base64 编码（不含 data:image/... 前缀）
-        model: 模型名称；本地默认 qwen3.5:4b，云端默认 ZHIPU_VISION_MODEL
-        temperature: 温度
-        max_tokens: 最大输出 tokens
-        level: low/medium/high/critical 任务分级（决定超时）
-    Returns:
-        (content, provider/status) 元组
-    """
-    requested = _env('AI_PROVIDER', 'auto').lower()
-    if local_only or requested in ('ollama', 'lmstudio', 'llama_cpp'):
-        return _ollama_vision_chat(
-            system, user_text, image_base64, model, temperature, max_tokens, response_schema,
-        )
-    if requested == 'auto' or not is_provider_available(requested):
-        _set_call_meta(provider='provider_disabled', model=model or requested)
-        return None, 'provider_disabled'
-    cloud_allowed = _env('ALLOW_CLOUD_AI', '').lower() in ('1', 'true', 'yes', 'on', 'y')
-    if response_schema is not None:
-        return None, 'structured_vision_requires_local'
-    if not cloud_allowed:
-        _set_call_meta(provider='cloud_disabled', model=model)
-        return None, 'cloud_disabled'
-    if requested not in ('zhipu', 'glm', 'auto'):
-        _set_call_meta(provider='provider_unsupported', model=model)
-        return None, 'provider_unsupported'
-    if model is None:
-        model = _env('ZHIPU_VISION_MODEL', 'glm-4.6v')
-    api_key = _env('ZHIPU_API_KEY', '')
-    base = _env('ZHIPU_BASE_URL', 'https://open.bigmodel.cn/api/paas/v4')
-    if not api_key:
-        return None, 'no_key'
-    # 分级超时：视觉模型较慢，比文本分档更大
-    _VISION_TIMEOUT = {'low': 60, 'medium': 90, 'high': 120, 'critical': 180}
-    _to = _VISION_TIMEOUT.get((level or 'medium').lower(), 90)
-    # 预算估算：图片大小分档（每张图约 1k-10k tokens）；纯文本 500
-    est_tokens = 500
-    if image_base64:
-        try:
-            img_bytes = len(image_base64) * 3 // 4
-            if img_bytes < 200 * 1024:
-                est_tokens = 1500
-            elif img_bytes < 1024 * 1024:
-                est_tokens = 3000
-            elif img_bytes < 3 * 1024 * 1024:
-                est_tokens = 6000
-            else:
-                est_tokens = 10000
-        except Exception:
-            est_tokens = 1500
-    # 预算检查（glm_4_6v 600万 tokens；require_confirmation=False（2026-09-04 用户放开，视觉模型随便用），函数内不重复确认）
-    try:
-        import ai_resource_packs
-        q = ai_resource_packs.check_quota('glm_4_6v', est_tokens)
-        if not q.get('allowed'):
-            return None, 'budget_blocked'
-    except Exception:
-        pass
-    # 智谱视觉模型输入格式：content 为数组，包含 text 和 image_url
-    messages = []
-    if system:
-        messages.append({'role': 'system', 'content': system})
-    user_content = [{'type': 'text', 'text': user_text}]
-    if image_base64:
-        # 自动判断图片格式
-        img_format = 'png'
-        if image_base64.startswith('/9j/'):
-            img_format = 'jpeg'
-        elif image_base64.startswith('R0lGOD'):
-            img_format = 'gif'
-        elif image_base64.startswith('UklGR'):
-            img_format = 'webp'
-        user_content.append({
-            'type': 'image_url',
-            'image_url': {'url': f'data:image/{img_format};base64,{image_base64}'}
-        })
-    messages.append({'role': 'user', 'content': user_content})
-    payload_obj = {
-        'model': model,
-        'temperature': temperature,
-        'max_tokens': max_tokens,
-        'messages': messages,
-        'thinking': {'type': 'disabled'}
-    }
-    payload = json.dumps(payload_obj, ensure_ascii=False).encode('utf-8')
-    try:
-        req = urllib.request.Request(
-            base.rstrip('/') + '/chat/completions',
-            data=payload,
-            headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + api_key},
-            method='POST'
-        )
-        with urllib.request.urlopen(req, timeout=_to) as resp:
-            data = json.loads(resp.read().decode('utf-8', 'replace'))
-        # 预算记录：优先 API 真实 usage.total_tokens，拿不到用估算
-        used_tokens = est_tokens
-        try:
-            _u = data.get('usage', {}) or {}
-            used_tokens = int(_u.get('total_tokens', 0) or 0) or est_tokens
-        except Exception:
-            pass
-        try:
-            import ai_resource_packs
-            ai_resource_packs.record_usage('glm_4_6v', used_tokens, endpoint='vision_chat', detail=(system or '')[:40])
-        except Exception:
-            pass
-        return data['choices'][0]['message']['content'], model
-    except Exception as exc:
-        print(f'[AI-Vision] {model} failed:', exc)
-        return None, 'error'
+def vision_chat(system, user_text, image_base64, model=None, temperature=0.2, max_tokens=2000,
+                level='medium', *, local_only=False, response_schema=None):
+    """Legacy vision compatibility interface; retired provider routes stay inert.
 
+    New product callers use ``run_owned_multimodal_analysis``. This preserved
+    signature never discovers, probes, calls or falls back to a retired local
+    or external provider.
+    """
+    _set_call_meta(provider='provider_disabled', model=model or '')
+    return None, 'provider_disabled'
 
 def _json_from_text(text):
     if not text:return None

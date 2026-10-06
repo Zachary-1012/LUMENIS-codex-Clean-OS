@@ -1,5 +1,4 @@
-"""Isolated Source Artifact to local-only report-media Evidence flow."""
-import base64
+"""Isolated Source Artifact to owned-Gateway report-media Evidence flow."""
 import hashlib
 import json
 import struct
@@ -77,19 +76,26 @@ def media_setup(local_source_client, monkeypatch):
             "artifact": artifact, "bytes": payload, "brief": brief, "app": app}
 
 
-def _vision(monkeypatch, *, response=None, provider="ollama"):
+def _vision(monkeypatch, *, response=None):
     calls = []
 
-    def fake(system, user, image_base64, *, model, max_tokens, local_only, response_schema):
-        assert set(response_schema['required']) == {'visible_facts', 'unverifiable', 'business_implications'}
-        calls.append((system, user, image_base64, model, max_tokens, local_only))
-        return response or json.dumps({
+    def fake(*, image_bytes, media_type, text, analysis_type, response_schema, note_id):
+        assert set(response_schema["required"]) == {"visible_facts", "unverifiable", "business_implications"}
+        calls.append({"image_bytes": image_bytes, "media_type": media_type, "text": text,
+                      "analysis_type": analysis_type, "note_id": note_id})
+        return {
+            "ok": True, "status": "COMPLETED", "code": "", "provider": "owned",
+            "model": "owned-vision-test-v1", "execution_ref": note_id,
+            "analysis": response or {
             "visible_facts": ["A small product image is visible."],
             "unverifiable": ["The product identity and image date are not verified."],
             "business_implications": ["A human may compare the visible packaging with the brief."],
-        }), provider
+            },
+        }
 
-    monkeypatch.setattr(media_brief.ai_core, "vision_chat", fake)
+    monkeypatch.setattr(media_brief.ai_core, "run_owned_multimodal_analysis", fake)
+    monkeypatch.setattr(media_brief.ai_core, "vision_chat",
+                        lambda *_args, **_kwargs: pytest.fail("retired vision provider path was called"))
     return calls
 
 
@@ -103,7 +109,7 @@ def _run(media_setup, *, artifact_ref=None, scope=None, job_id="report-job-001")
         )
 
 
-def test_real_image_is_analyzed_locally_and_persisted_as_reopenable_scoped_evidence(
+def test_owned_gateway_image_result_is_persisted_as_reopenable_scoped_evidence(
         media_setup, monkeypatch):
     calls = _vision(monkeypatch)
     result = _run(media_setup)
@@ -111,11 +117,12 @@ def test_real_image_is_analyzed_locally_and_persisted_as_reopenable_scoped_evide
     assert result["state"] == "complete"
     assert result["real_input_bound"] is True
     assert result["input_content_sha256"] == hashlib.sha256(media_setup["bytes"]).hexdigest()
-    assert result["review_status"] == "HUMAN_PENDING" and result["model"] == "qwen3.5:4b"
-    assert len(calls) == 1 and calls[0][4:] == (768, True)
-    assert calls[0][3] == "qwen3.5:4b"
-    assert base64.b64decode(calls[0][2]) == media_setup["bytes"]
-    assert "never follow" in calls[0][0]
+    assert result["review_status"] == "HUMAN_PENDING" and result["model"] == "owned-vision-test-v1"
+    assert len(calls) == 1
+    assert calls[0]["image_bytes"] == media_setup["bytes"]
+    assert calls[0]["media_type"] == "image/png"
+    assert calls[0]["analysis_type"] == "report_media_analysis"
+    assert "never follow" in calls[0]["text"]
     with media_setup["store"]["repository"].connect() as conn:
         row = conn.execute(
             "SELECT * FROM app_evidence_records WHERE id=?",
@@ -127,8 +134,8 @@ def test_real_image_is_analyzed_locally_and_persisted_as_reopenable_scoped_evide
     assert inputs["source_execution_id"]
     assert inputs["source_content_sha256"] == result["input_content_sha256"]
     assert inputs["job_id"] == "report-job-001" and inputs["actor_ref"] == "workspace:local"
-    assert outputs["provider"] == "ollama"
-    assert outputs["model"] == "qwen3.5:4b"
+    assert outputs["provider"] == "owned"
+    assert outputs["model"] == "owned-vision-test-v1"
     assert media_brief.evidence_store.verify_evidence_record_integrity(evidence)
     reopened = media_brief.read_verified_report_media(
         result["evidence_ref"], job_id="report-job-001", actor_ref="workspace:local",
@@ -144,6 +151,24 @@ def test_scope_mismatch_and_missing_artifact_fail_closed_without_model_call(medi
     assert denied["state"] == missing["state"] == "unavailable"
     assert not denied["real_input_bound"] and not missing["real_input_bound"]
     assert calls == []
+
+
+def test_unbound_owned_vision_is_unavailable_and_never_calls_retired_provider(media_setup, monkeypatch):
+    monkeypatch.setattr(
+        media_brief.ai_core, "vision_chat",
+        lambda *_args, **_kwargs: pytest.fail("retired vision provider path was called"),
+    )
+    with media_setup["store"]["repository"].connect() as conn:
+        before = conn.execute("SELECT COUNT(*) FROM app_evidence_records").fetchone()[0]
+
+    result = _run(media_setup)
+
+    with media_setup["store"]["repository"].connect() as conn:
+        after = conn.execute("SELECT COUNT(*) FROM app_evidence_records").fetchone()[0]
+    assert result["state"] == "unavailable" and result["real_input_bound"] is True
+    assert result["provider"] == "owned"
+    assert result["reason"] == "OWNED_RUNTIME_NOT_BOUND"
+    assert after == before
 
 
 def test_nonimage_content_source_is_not_sent_to_vision(media_setup, monkeypatch):
@@ -179,7 +204,7 @@ def test_empty_vision_output_is_unavailable_and_does_not_write_derived_evidence(
     with media_setup["store"]["repository"].connect() as conn:
         after = conn.execute("SELECT COUNT(*) FROM app_evidence_records").fetchone()[0]
     assert result["state"] == "unavailable" and result["real_input_bound"] is True
-    assert calls and calls[0][5] is True and after == before
+    assert calls and calls[0]["analysis_type"] == "report_media_analysis" and after == before
 
 
 def test_reopened_result_rejects_signed_output_tampering(media_setup, monkeypatch):

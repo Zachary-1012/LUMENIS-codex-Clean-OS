@@ -15,7 +15,6 @@ bp = Blueprint("ai_api", __name__)
 # 依赖模块（与 app.py 保持一致）
 from lumenis.system.ai_gateway import core as intelligence
 import ai_governance
-import ai_analyzer
 import ai_filter
 from lumenis.system.ai_gateway import channel as ai_channel
 from lumenis.shared.learning import operations as learning_operations
@@ -24,87 +23,183 @@ import database as db
 from lumenis.shared.reporting.routes import _canonical_report_metrics
 
 
+def _owned_runtime_status():
+    try:
+        status = intelligence.owned_inference_status()
+    except Exception:
+        status = None
+    if not isinstance(status, dict):
+        return {
+            'provider': 'owned', 'available': False, 'service_binding': 'NOT_BOUND',
+            'state': 'UNAVAILABLE', 'reason': 'OWNED_RUNTIME_STATUS_UNAVAILABLE',
+        }
+    return status
+
+
+def _run_owned_analysis(text, analysis_type, note_id=None):
+    try:
+        result = intelligence.run_owned_analysis(
+            text=text, analysis_type=analysis_type, note_id=note_id,
+        )
+    except Exception:
+        return {
+            'ok': False, 'status': 'ERROR', 'code': 'OWNED_ANALYSIS_EXECUTION_FAILED',
+            'provider': 'owned', 'analysis': None,
+        }
+    if not isinstance(result, dict):
+        return {
+            'ok': False, 'status': 'ERROR', 'code': 'OWNED_ANALYSIS_RESULT_INVALID',
+            'provider': 'owned', 'analysis': None,
+        }
+    return result
+
+
+def _owned_result_complete(result):
+    if not isinstance(result, dict) or result.get('ok') is not True:
+        return False
+    if result.get('status') != 'COMPLETED' or result.get('provider') != 'owned':
+        return False
+    analysis = result.get('analysis')
+    return bool(analysis.strip()) if isinstance(analysis, str) else bool(analysis)
+
+
+def _owned_result_text(result):
+    analysis = result.get('analysis') if isinstance(result, dict) else None
+    if isinstance(analysis, str):
+        return analysis.strip()
+    if isinstance(analysis, dict):
+        for key in ('reply', 'summary', 'text', 'content'):
+            value = analysis.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    return None
+
+
+def _owned_failure_response(result, **fields):
+    status = result.get('status') if isinstance(result, dict) else 'ERROR'
+    code = result.get('code') if isinstance(result, dict) else None
+    if not isinstance(code, str) or not code:
+        code = 'OWNED_ANALYSIS_NOT_COMPLETED'
+    return jsonify({
+        **fields, 'ok': False, 'status': status or 'ERROR', 'code': code,
+        'provider': 'owned', 'analysis': None,
+    }), 503 if status == 'UNAVAILABLE' else 502
+
+
 @bp.route('/api/ai/status')
 def api_ai_status():
-    status = intelligence.ai_status()
-    return jsonify({'ok': True, **status, 'interface': 'local-ai-gateway', 'fallback': 'local_rule', 'providers': ['ollama','lmstudio','llama_cpp','qwen','openai','deepseek']})
+    status = _owned_runtime_status()
+    return jsonify({
+        'ok': True, 'enabled': status.get('available') is True,
+        'status': status.get('state') or 'UNAVAILABLE',
+        'provider': 'owned', 'interface': 'system-ai-gateway',
+        'service_binding': status.get('service_binding') or 'NOT_BOUND',
+        'fallback_allowed': False, 'providers': ['owned_gateway'], 'runtime': status,
+    })
 
 @bp.route('/api/ai/test', methods=['POST'])
 def api_ai_test():
-    data = request.get_json(silent=True) or {}
-    text = str(data.get('text') or '请用一句话说明广州太古汇舆情监测系统正在监测什么。').strip()[:1200]
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'JSON_OBJECT_REQUIRED'}), 400
+    text = data.get('text')
+    if not isinstance(text, str) or not text.strip():
+        return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'ANALYSIS_TEXT_REQUIRED'}), 400
+    if len(text) > 4000:
+        return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'ANALYSIS_TEXT_TOO_LARGE'}), 413
     # AI 治理：额度检查
     allowed, quota = ai_governance._usage_tracker.check_quota()
     if not allowed:
         return jsonify({'ok': False, 'error': 'AI 每日额度已超限', 'quota': quota}), 429
     # AI 治理：脱敏
     desensitized_text, mapping = ai_governance.desensitize_text(text)
-    result = intelligence.test_connection(desensitized_text)
+    result = _run_owned_analysis(desensitized_text, 'conversation')
+    owned_reply = _owned_result_text(result)
+    if not _owned_result_complete(result) or not owned_reply:
+        ai_governance.record_ai_call(
+            'ai/test', provider='owned', success=False, prompt_tokens=0,
+            completion_tokens=0, total_tokens=0,
+        )
+        return _owned_failure_response(result, reply=None)
     # AI 治理：回传补回实体
-    if isinstance(result, dict) and 'reply' in result:
-        result['reply'] = ai_governance.restore_text(str(result['reply']), mapping)
+    reply = ai_governance.restore_text(owned_reply, mapping)
     # AI 治理：记录使用统计
     ai_governance.record_ai_call('ai/test', prompt_tokens=len(text)//2,
-                                   completion_tokens=len(str(result.get('reply','')))//2 if isinstance(result, dict) else 0,
-                                   total_tokens=len(text)//2, provider=result.get('provider','zhipu') if isinstance(result, dict) else 'zhipu',
-                                   success=True)
+                                   completion_tokens=len(reply)//2,
+                                   total_tokens=(len(text)+len(reply))//2,
+                                   provider='owned', success=True)
     # AI 治理：输出标记
-    marked = ai_governance.mark_ai_output(result if isinstance(result, dict) else {'result': result},
-                                             provider=result.get('provider','zhipu') if isinstance(result, dict) else 'zhipu',
-                                             endpoint='ai/test')
+    marked = ai_governance.mark_ai_output(
+        {'ok': True, 'reply': reply, 'provider': 'owned', 'status': 'COMPLETED'},
+        provider='owned', endpoint='ai/test',
+    )
     return jsonify(marked)
 
-# ========== 豆包AI API（ark_llm）- 可选辅助功能 ==========
-# 【S1 2026-09-02】云智(ARK)已停用，改用智谱(zhipu)驱动（intelligence 网关）。
-# 保留路由名/响应结构与前端兼容；provider 字段标记真实来源（zhipu/local/rule）。
+# Legacy `/api/ark/*` URLs remain as compatibility routes; all execution goes
+# through the SYSTEM Gateway and the owned runtime, never a provider-specific API.
 
 @bp.route('/api/ark/status')
 def api_ark_status():
-    """AI API状态查询（智谱驱动）"""
-    try:
-        st = intelligence.ai_status()
-        return jsonify({'ok': True, 'enabled': st.get('enabled'), 'provider': st.get('provider'),
-                        'model': st.get('model'), 'runtime': st.get('runtime'),
-                        'detail': st.get('detail', '')})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e), 'provider': 'local_rule', 'enabled': False}), 500
+    """Legacy status shape backed by the owned runtime status only."""
+    status = _owned_runtime_status()
+    return jsonify({
+        'ok': True, 'enabled': status.get('available') is True,
+        'status': status.get('state') or 'UNAVAILABLE', 'provider': 'owned',
+        'model': status.get('model_id'), 'runtime': 'owned',
+        'service_binding': status.get('service_binding') or 'NOT_BOUND',
+        'detail': status.get('reason') or 'OWNED_RUNTIME_NOT_BOUND',
+    })
 
 @bp.route('/api/ark/chat', methods=['POST'])
 def api_ark_chat():
-    """AI通用聊天（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）"""
+    """Legacy chat contract routed to owned inference without local fallback."""
     try:
         data = request.get_json(silent=True) or {}
         message = str(data.get('message') or data.get('text') or '').strip()
         if not message:
             return jsonify({'ok': False, 'error': '消息不能为空'}), 400
+        if len(message) > 4000:
+            return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'MESSAGE_TOO_LARGE'}), 413
         system_prompt = data.get('system_prompt')
+        if system_prompt is not None and not isinstance(system_prompt, str):
+            return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'SYSTEM_PROMPT_INVALID'}), 400
+        if isinstance(system_prompt, str) and len(system_prompt) > 4000:
+            return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'SYSTEM_PROMPT_TOO_LARGE'}), 413
         # AI 治理：额度检查
         allowed, quota = ai_governance._usage_tracker.check_quota()
         if not allowed:
-            return jsonify({'ok': False, 'error': 'AI 每日额度已超限', 'quota': quota, 'fallback': 'local'}), 429
+            return jsonify({'ok': False, 'status': 'BUDGET_BLOCKED',
+                            'code': 'AI_DAILY_QUOTA_EXCEEDED', 'quota': quota}), 429
         # AI 治理：脱敏
         desensitized_msg, mapping = ai_governance.desensitize_text(message)
-        raw, provider = intelligence._chat(system_prompt or '你是广州太古汇舆情监测系统的智能助手', desensitized_msg, 0.15, 1800)
-        # AI 治理：回传补回实体
-        reply = ai_governance.restore_text(raw.strip() if raw else 'AI引擎已就绪', mapping)
+        prompt = ((system_prompt or 'LUMENIS assistant') + '\n\n' + desensitized_msg)
+        result = _run_owned_analysis(prompt, 'conversation', data.get('note_id'))
+        owned_reply = _owned_result_text(result)
+        if not _owned_result_complete(result) or not owned_reply:
+            ai_governance.record_ai_call('ark/chat', provider='owned', success=False)
+            if _owned_result_complete(result):
+                result = {'status': 'ERROR', 'code': 'OWNED_CHAT_RESULT_INVALID'}
+            failed, status_code = _owned_failure_response(result, reply=None)
+            return failed, status_code
+        reply = ai_governance.restore_text(owned_reply, mapping)
         # AI 治理：记录使用统计
         ai_governance.record_ai_call('ark/chat', prompt_tokens=len(message)//2,
                                        completion_tokens=len(reply)//2,
                                        total_tokens=(len(message)+len(reply))//2,
-                                       provider=provider or 'local_rule', success=True)
+                                       provider='owned', success=True)
         # AI 治理：输出标记
         result = ai_governance.mark_ai_output(
-            {'ok': True, 'reply': reply, 'provider': provider or 'local_rule',
-             'fallback': provider in ('rule', 'local_rule'), 'desensitized': bool(mapping)},
-            provider=provider or 'local_rule', endpoint='ark/chat')
+            {'ok': True, 'status': 'COMPLETED', 'reply': reply, 'provider': 'owned',
+             'fallback': False, 'desensitized': bool(mapping)},
+            provider='owned', endpoint='ark/chat')
         return jsonify(result)
     except Exception as e:
-        ai_governance.record_ai_call('ark/chat', provider='zhipu', success=False)
+        ai_governance.record_ai_call('ark/chat', provider='owned', success=False)
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 @bp.route('/api/ark/sentiment', methods=['POST'])
 def api_ark_sentiment():
-    """AI舆情分析（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）"""
+    """Legacy sentiment contract backed only by owned inference."""
     try:
         data = request.get_json(silent=True) or {}
         text = str(data.get('text') or data.get('content') or '').strip()
@@ -114,32 +209,50 @@ def api_ark_sentiment():
         allowed, quota = ai_governance._usage_tracker.check_quota()
         if not allowed:
             return jsonify({'ok': False, 'error': 'AI 每日额度已超限', 'quota': quota}), 429
-        # AI 治理：脱敏
         desensitized_text, mapping = ai_governance.desensitize_text(text)
-        result = intelligence.analyze_sentiment(desensitized_text)
-        # AI 治理：回传补回实体
-        if result.get('summary'):
-            result['summary'] = ai_governance.restore_text(str(result['summary']), mapping)
-        # AI 治理：记录使用统计
+        result = _run_owned_analysis(desensitized_text, 'sentiment', data.get('note_id'))
+        if not _owned_result_complete(result) or not isinstance(result.get('analysis'), dict):
+            ai_governance.record_ai_call('ark/sentiment', provider='owned', success=False)
+            return _owned_failure_response(
+                result if not _owned_result_complete(result) else {
+                    'status': 'ERROR', 'code': 'OWNED_SENTIMENT_RESULT_INVALID',
+                },
+                sentiment=None, label=None, summary=None, keywords=None,
+            )
+        analysis = dict(result['analysis'])
+        sentiment = analysis.get('sentiment')
+        label = analysis.get('label')
+        keywords = analysis.get('keywords')
+        if (type(sentiment) is not int or sentiment not in {-1, 0, 1}
+                or label not in {'positive', 'neutral', 'negative'}
+                or not isinstance(analysis.get('summary'), str)
+                or not isinstance(keywords, list)
+                or any(not isinstance(item, str) or not item.strip() for item in keywords)):
+            ai_governance.record_ai_call('ark/sentiment', provider='owned', success=False)
+            return _owned_failure_response(
+                {'status': 'ERROR', 'code': 'OWNED_SENTIMENT_RESULT_INVALID'},
+                sentiment=None, label=None, summary=None, keywords=None,
+            )
+        if isinstance(analysis.get('summary'), str):
+            analysis['summary'] = ai_governance.restore_text(analysis['summary'], mapping)
         ai_governance.record_ai_call('ark/sentiment', prompt_tokens=len(text)//2,
-                                       completion_tokens=len(str(result.get('summary','')))//2,
-                                       total_tokens=len(text)//2,
-                                       provider=result.get('provider','zhipu'), success=True)
-        # AI 治理：输出标记
+                                       completion_tokens=len(str(analysis.get('summary') or ''))//2,
+                                       total_tokens=(len(text)+len(str(analysis.get('summary') or '')))//2,
+                                       provider='owned', success=True)
         marked = ai_governance.mark_ai_output(
-            {'ok': True, 'sentiment': result.get('sentiment'), 'label': result.get('label'),
-             'summary': result.get('summary'), 'keywords': result.get('keywords'),
-             'provider': result.get('provider'), 'fallback': result.get('provider') == 'rule',
+            {'ok': True, 'status': 'COMPLETED', 'sentiment': analysis.get('sentiment'),
+             'label': analysis.get('label'), 'summary': analysis.get('summary'),
+             'keywords': analysis.get('keywords'), 'provider': 'owned', 'fallback': False,
              'desensitized': bool(mapping)},
-            provider=result.get('provider','zhipu'), endpoint='ark/sentiment')
+            provider='owned', endpoint='ark/sentiment')
         return jsonify(marked)
     except Exception as e:
-        ai_governance.record_ai_call('ark/sentiment', provider='zhipu', success=False)
+        ai_governance.record_ai_call('ark/sentiment', provider='owned', success=False)
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 @bp.route('/api/ark/summary', methods=['POST'])
 def api_ark_summary():
-    """AI摘要生成（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）"""
+    """Legacy summary contract backed only by owned inference."""
     try:
         data = request.get_json(silent=True) or {}
         text = str(data.get('text') or data.get('content') or '').strip()
@@ -150,34 +263,41 @@ def api_ark_summary():
             max_length = int(max_length)
         except Exception:
             max_length = 200
+        if not 1 <= max_length <= 2000:
+            return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'MAX_LENGTH_INVALID'}), 400
         # AI 治理：额度检查
         allowed, quota = ai_governance._usage_tracker.check_quota()
         if not allowed:
-            return jsonify({'ok': False, 'error': 'AI 每日额度已超限', 'quota': quota, 'fallback': 'local'}), 429
-        # AI 治理：脱敏（敏感实体→占位符）
+            return jsonify({'ok': False, 'status': 'BUDGET_BLOCKED',
+                            'code': 'AI_DAILY_QUOTA_EXCEEDED', 'quota': quota}), 429
         desensitized_text, mapping = ai_governance.desensitize_text(text)
-        # 调用智谱
-        summary = intelligence.generate_summary(desensitized_text, max_length=max_length)
-        # AI 治理：回传补回实体
-        summary = ai_governance.restore_text(summary, mapping)
-        # AI 治理：记录使用统计
+        result = _run_owned_analysis(desensitized_text, 'summary', data.get('note_id'))
+        summary = _owned_result_text(result)
+        if not _owned_result_complete(result) or not summary:
+            ai_governance.record_ai_call('ark/summary', provider='owned', success=False)
+            return _owned_failure_response(
+                result if not _owned_result_complete(result) else {
+                    'status': 'ERROR', 'code': 'OWNED_SUMMARY_RESULT_INVALID',
+                }, summary=None,
+            )
+        summary = ai_governance.restore_text(summary[:max_length], mapping)
         ai_governance.record_ai_call('ark/summary', prompt_tokens=len(text)//2,
                                        completion_tokens=len(summary)//2,
                                        total_tokens=(len(text)+len(summary))//2,
-                                       provider='zhipu', success=True)
-        # AI 治理：输出标记（增强层，非 System Truth，可用于 Zachary 学习）
+                                       provider='owned', success=True)
         result = ai_governance.mark_ai_output(
-            {'ok': True, 'summary': summary, 'desensitized': bool(mapping),
+            {'ok': True, 'status': 'COMPLETED', 'summary': summary,
+             'provider': 'owned', 'desensitized': bool(mapping),
              'quota_remaining': quota['call_remaining']},
-            provider='zhipu', endpoint='ark/summary')
+            provider='owned', endpoint='ark/summary')
         return jsonify(result)
     except Exception as e:
-        ai_governance.record_ai_call('ark/summary', provider='zhipu', success=False)
+        ai_governance.record_ai_call('ark/summary', provider='owned', success=False)
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 @bp.route('/api/ark/keywords', methods=['POST'])
 def api_ark_keywords():
-    """AI关键词提取（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）"""
+    """Legacy keyword contract backed only by owned inference."""
     try:
         data = request.get_json(silent=True) or {}
         text = str(data.get('text') or data.get('content') or '').strip()
@@ -188,35 +308,38 @@ def api_ark_keywords():
             num_keywords = int(num_keywords)
         except Exception:
             num_keywords = 10
+        if not 1 <= num_keywords <= 30:
+            return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'NUM_KEYWORDS_INVALID'}), 400
         # AI 治理：额度检查
         allowed, quota = ai_governance._usage_tracker.check_quota()
         if not allowed:
-            # 额度超限直接回退本地
-            topics = ai_analyzer.extract_topics(text, '')
-            return jsonify({'ok': True, 'keywords': topics, 'provider': 'local',
-                            'fallback': True, 'quota_exceeded': True}), 200
-        # AI 治理：脱敏
+            return jsonify({'ok': False, 'status': 'BUDGET_BLOCKED',
+                            'code': 'AI_DAILY_QUOTA_EXCEEDED', 'quota': quota}), 429
         desensitized_text, mapping = ai_governance.desensitize_text(text)
-        # 调用智谱
-        keywords = intelligence.extract_keywords(desensitized_text, num_keywords=num_keywords)
-        if keywords:
-            # AI 治理：回传补回实体（关键词列表）
-            restored_keywords = [ai_governance.restore_text(kw, mapping) for kw in keywords]
-            ai_governance.record_ai_call('ark/keywords', prompt_tokens=len(text)//2,
-                                           completion_tokens=sum(len(k) for k in restored_keywords)//2,
-                                           total_tokens=(len(text)+sum(len(k) for k in restored_keywords))//2,
-                                           provider='zhipu', success=True)
-            result = ai_governance.mark_ai_output(
-                {'ok': True, 'keywords': restored_keywords, 'desensitized': bool(mapping),
-                 'quota_remaining': quota['call_remaining']},
-                provider='zhipu', endpoint='ark/keywords')
-            return jsonify(result)
-        # 回退本地规则提取
-        topics = ai_analyzer.extract_topics(text, '')
-        ai_governance.record_ai_call('ark/keywords', provider='local', success=True)
-        return jsonify({'ok': True, 'keywords': topics, 'provider': 'local', 'fallback': True})
+        result = _run_owned_analysis(desensitized_text, 'keywords', data.get('note_id'))
+        analysis = result.get('analysis') if isinstance(result, dict) else None
+        keywords = analysis.get('keywords') if isinstance(analysis, dict) else None
+        if (not _owned_result_complete(result) or not isinstance(keywords, list)
+                or not keywords or any(not isinstance(item, str) or not item.strip() for item in keywords)):
+            ai_governance.record_ai_call('ark/keywords', provider='owned', success=False)
+            return _owned_failure_response(
+                result if not _owned_result_complete(result) else {
+                    'status': 'ERROR', 'code': 'OWNED_KEYWORD_RESULT_INVALID',
+                }, keywords=None,
+            )
+        restored_keywords = [ai_governance.restore_text(item, mapping) for item in keywords[:num_keywords]]
+        ai_governance.record_ai_call('ark/keywords', prompt_tokens=len(text)//2,
+                                       completion_tokens=sum(len(item) for item in restored_keywords)//2,
+                                       total_tokens=(len(text)+sum(len(item) for item in restored_keywords))//2,
+                                       provider='owned', success=True)
+        return jsonify(ai_governance.mark_ai_output(
+            {'ok': True, 'status': 'COMPLETED', 'keywords': restored_keywords,
+             'provider': 'owned', 'fallback': False, 'desensitized': bool(mapping),
+             'quota_remaining': quota['call_remaining']},
+            provider='owned', endpoint='ark/keywords',
+        ))
     except Exception as e:
-        ai_governance.record_ai_call('ark/keywords', provider='zhipu', success=False)
+        ai_governance.record_ai_call('ark/keywords', provider='owned', success=False)
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 # ========== 采集器自动化 API ==========
@@ -273,79 +396,128 @@ def api_web_sentiment_history():
 
 @bp.route('/api/ai/chat', methods=['POST'])
 def api_ai_chat():
-    data=request.get_json(silent=True) or {}
-    text=str(data.get('message') or data.get('text') or '').strip()[:4000]
-    if not text: return jsonify({'ok':False,'error':'问题不能为空'}),400
-    context=function_registry.build_context(text, db)
-    try: stats=db.get_stats()
-    except Exception: stats={}
-    # UDIP V1.0 (P5): AI 语义层——业务指标走 Canonical，不自行计算/推断
-    # MET-RISK-01/02 由 daily_report.generate_today_summary 权威计算，AI 只消费、不重算
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'JSON_OBJECT_REQUIRED'}), 400
+    text = data.get('message', data.get('text'))
+    if not isinstance(text, str) or not text.strip():
+        return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'MESSAGE_REQUIRED'}), 400
+    if len(text) > 4000:
+        return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'MESSAGE_TOO_LARGE'}), 413
+    context = function_registry.build_context(text, db)
     try:
-        _canonical_ai = _canonical_report_metrics('daily', None)
-        _canonical_str = 'Canonical 指标(权威,AI只引用不重算): ' + json.dumps(_canonical_ai, ensure_ascii=False, default=str)[:1200]
+        stats = db.get_stats()
     except Exception:
-        _canonical_ai = {}
-        _canonical_str = 'Canonical 指标暂不可用'
-    history=data.get('history') or []
-    if not isinstance(history,list): history=[]
-    history_text=[]
+        stats = {}
+    try:
+        canonical_metrics = _canonical_report_metrics('daily', None)
+    except Exception:
+        canonical_metrics = None
+    history = data.get('history') or []
+    if not isinstance(history, list):
+        history = []
+    history_text = []
     for item in history[-6:]:
-        if isinstance(item,dict):
-            role='用户' if item.get('role') in ('user','human') else '诺米'
-            content=str(item.get('content') or '')[:800]
-            if content: history_text.append(f'{role}：{content}')
-    system='你是广州太古汇舆情监测系统的智能助手“诺米”。你拥有系统结构化检索能力。必须优先依据检索结果回答，不编造数据库事实；涉及舆情事实时明确区分“系统已监测”“用户描述”“待核验”。可以回答系统操作、品牌/业态、品牌官网、案例、公关回复、风险分析、报告、事件与架构问题。需要处置建议时使用：判断→依据→动作→责任方/时限→复盘指标。若没有足够数据，明确告诉用户缺什么，不要用常识冒充系统数据。'
-    user=f'用户问题：{text}\n\n函数与数据检索结果：\n{context}\n\n当前统计：{json.dumps(stats,ensure_ascii=False,default=str)[:5000]}\n\n{_canonical_str}'
-    if history_text: user += '\n\n最近对话：\n' + '\n'.join(history_text)
-    status=intelligence.ai_status()
-    # Explicitly stay local/rule when no model is actually ready.  This keeps
-    # a missing Ollama model from falling through to an unrequested cloud call
-    # and preserves the user's local-first/no-waste boundary.
-    if not status.get('enabled'):
-        fallback='我已完成系统检索，但当前本机模型暂不可用，未发起站外模型调用。\n\n' + context
-        return jsonify({'ok':True,'reply':fallback,'provider':'local_rule','ai_status':status,'context':context})
-    try: raw,provider=intelligence._chat(system,user,0.15,1800)
-    except Exception as exc: raw,provider=None,'rule'; print('[Nomi] chat failed:',exc)
-    if raw: return jsonify({'ok':True,'reply':raw.strip(),'provider':provider,'ai_status':status,'context':context})
-    fallback='我已完成系统检索，但当前可调用模型暂不可用。\n\n' + context
-    return jsonify({'ok':True,'reply':fallback,'provider':'local_rule','ai_status':status,'context':context})
+        if isinstance(item, dict):
+            role = '用户' if item.get('role') in ('user', 'human') else 'LUMENIS'
+            content = str(item.get('content') or '')[:800]
+            if content:
+                history_text.append(f'{role}：{content}')
+    prompt = (
+        '你是 LUMENIS 的业务助手。回答必须优先依据检索结果和 Canonical 指标，'
+        '区分已核验事实、用户描述和待核验信息，不得编造缺失数据。\n\n'
+        f'用户问题：{text.strip()}\n检索结果：{context}\n'
+        f'当前统计：{json.dumps(stats, ensure_ascii=False, default=str)[:5000]}\n'
+        f'Canonical 指标：{json.dumps(canonical_metrics, ensure_ascii=False, default=str)[:1200]}'
+    )
+    if history_text:
+        prompt += '\n最近对话：\n' + '\n'.join(history_text)
+    if len(prompt) > 24000:
+        return jsonify({'ok': False, 'status': 'INVALID_INPUT', 'code': 'CONTEXT_TOO_LARGE'}), 413
+    result = _run_owned_analysis(prompt, 'conversation', data.get('note_id'))
+    runtime = _owned_runtime_status()
+    if not _owned_result_complete(result):
+        failure, status_code = _owned_failure_response(
+            result, reply=None, context=context, ai_status=runtime,
+        )
+        return failure, status_code
+    reply = _owned_result_text(result)
+    if not reply:
+        return _owned_failure_response(
+            {'status': 'ERROR', 'code': 'OWNED_CHAT_RESULT_INVALID'},
+            reply=None, context=context, ai_status=runtime,
+        )
+    return jsonify({
+        'ok': True, 'status': 'COMPLETED', 'reply': reply,
+        'provider': 'owned', 'ai_status': runtime, 'context': context,
+    })
 
 @bp.route('/api/ai/providers')
 def api_ai_providers_v570():
-    try:
-        local = ai_analyzer.ai_status() if hasattr(ai_analyzer, 'ai_status') else {'available': False, 'model': 'none', 'message': '本地AI未配置'}
-    except Exception:
-        local = {'available': False, 'model': 'none', 'message': '本地AI状态获取失败'}
-    # P1-A(2026-09-02): ai_gateway_v570已废弃，统一到intelligence.py
-    try:
-        ai_stat = intelligence.ai_status()
-        remote = [{
-            'id': ai_stat.get('provider', 'unknown'),
-            'name': f"AI Provider ({ai_stat.get('provider', 'unknown')})",
-            'type': ai_stat.get('runtime', 'unknown'),
-            'status': 'available' if ai_stat.get('enabled') else 'unavailable',
-            'model': ai_stat.get('model', 'unknown')
-        }] if ai_stat.get('enabled') else []
-    except Exception:
-        remote = []
-    return jsonify({'ok': True, 'local': local, 'remote': remote})
+    status = _owned_runtime_status()
+    return jsonify({
+        'ok': True, 'provider': 'owned', 'owned': status,
+        'local': {'available': False, 'provider': 'retired', 'status': 'DISABLED'},
+        'remote': [], 'fallback_allowed': False,
+    })
 
 @bp.route('/api/ai/analyze-v570',methods=['POST'])
 def api_ai_analyze_v570():
-    # P1-A(2026-09-02): ai_gateway_v570已废弃，统一到intelligence._chat()
-    data=request.get_json(silent=True) or {}
-    text=data.get('text','')
-    context=data.get('context','')
-    if not text:
-        return jsonify({'ok': False, 'text': text, 'context': context, 'provider': 'none', 'analysis': '', 'error': '文本为空'})
+    """Legacy response shape backed by the owned Gateway, with honest status."""
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({
+            'ok': False, 'status': 'INVALID_INPUT', 'code': 'JSON_OBJECT_REQUIRED',
+            'text': '', 'context': '', 'provider': 'owned', 'analysis': None,
+            'error': 'JSON_OBJECT_REQUIRED',
+        }), 400
+
+    text = data.get('text')
+    context = data.get('context', '')
+    note_id = data.get('note_id')
+    if (not isinstance(text, str) or not text.strip()
+            or not isinstance(context, str)
+            or (note_id is not None and not isinstance(note_id, (str, int)))):
+        return jsonify({
+            'ok': False, 'status': 'INVALID_INPUT', 'code': 'ANALYSIS_INPUT_INVALID',
+            'text': text if isinstance(text, str) else '',
+            'context': context if isinstance(context, str) else '',
+            'provider': 'owned', 'analysis': None, 'error': 'ANALYSIS_INPUT_INVALID',
+        }), 400
+    if len(text) > 12000 or len(context) > 12000:
+        return jsonify({
+            'ok': False, 'status': 'INVALID_INPUT', 'code': 'ANALYSIS_TEXT_TOO_LARGE',
+            'text': text, 'context': context, 'provider': 'owned',
+            'analysis': None, 'error': 'ANALYSIS_TEXT_TOO_LARGE',
+        }), 413
+
+    source_text = text.strip()
+    if context.strip():
+        source_text += '\n\nContext supplied with the source:\n' + context.strip()
     try:
-        system_prompt = "你是广州太古汇舆情分析助手。请分析以下内容的情感倾向、风险等级和关键要点。"
-        user_prompt = f"内容：{text}\n上下文：{context or '无'}\n请给出：1)情感倾向 2)风险等级 3)关键要点 4)建议"
-        raw, provider, _ = intelligence.chat(system_prompt, user_prompt, level='medium', temperature=0.3, max_tokens=800, pack_id='glm_4_5_air')
-        return jsonify({'ok': True, 'text': text, 'context': context, 'provider': provider, 'analysis': raw or '', 'error': ''})
-    except Exception as e:
-        return jsonify({'ok': False, 'text': text, 'context': context, 'provider': 'none', 'analysis': '', 'error': str(e)})
+        result = intelligence.run_owned_analysis(
+            text=source_text, analysis_type='summary', note_id=note_id,
+        )
+    except Exception:
+        result = None
+    if (isinstance(result, dict) and result.get('ok') is True
+            and result.get('status') == 'COMPLETED' and result.get('analysis')):
+        return jsonify({
+            'ok': True, 'status': 'COMPLETED', 'code': None,
+            'text': text, 'context': context, 'provider': 'owned',
+            'analysis': result['analysis'], 'error': '',
+        })
+
+    status = result.get('status') if isinstance(result, dict) else 'ERROR'
+    code = result.get('code') if isinstance(result, dict) else None
+    if not isinstance(code, str) or not code:
+        code = 'OWNED_ANALYSIS_NOT_COMPLETED'
+    http_status = 503 if status == 'UNAVAILABLE' else 502
+    return jsonify({
+        'ok': False, 'status': status or 'ERROR', 'code': code,
+        'text': text, 'context': context, 'provider': 'owned',
+        'analysis': None, 'error': code,
+    }), http_status
 
 @bp.route('/api/ai-filter/stats')
 def api_ai_filter_stats():

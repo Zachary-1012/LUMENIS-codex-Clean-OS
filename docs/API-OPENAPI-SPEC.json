@@ -785,7 +785,8 @@
           }
         ],
         "operationId": "ai_api.api_ai_analyze_v570",
-        "x-flask-rule": "/api/ai/analyze-v570"
+        "x-flask-rule": "/api/ai/analyze-v570",
+        "summary": "Legacy response shape backed by the owned Gateway, with honest status."
       }
     },
     "/api/ai/capabilities": {
@@ -1553,7 +1554,7 @@
         ],
         "operationId": "ai_api.api_ark_chat",
         "x-flask-rule": "/api/ark/chat",
-        "summary": "AI通用聊天（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）"
+        "summary": "Legacy chat contract routed to owned inference without local fallback."
       }
     },
     "/api/ark/keywords": {
@@ -1572,7 +1573,7 @@
         ],
         "operationId": "ai_api.api_ark_keywords",
         "x-flask-rule": "/api/ark/keywords",
-        "summary": "AI关键词提取（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）"
+        "summary": "Legacy keyword contract backed only by owned inference."
       }
     },
     "/api/ark/sentiment": {
@@ -1591,7 +1592,7 @@
         ],
         "operationId": "ai_api.api_ark_sentiment",
         "x-flask-rule": "/api/ark/sentiment",
-        "summary": "AI舆情分析（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）"
+        "summary": "Legacy sentiment contract backed only by owned inference."
       }
     },
     "/api/ark/status": {
@@ -1610,7 +1611,7 @@
         ],
         "operationId": "ai_api.api_ark_status",
         "x-flask-rule": "/api/ark/status",
-        "summary": "AI API状态查询（智谱驱动）"
+        "summary": "Legacy status shape backed by the owned runtime status only."
       }
     },
     "/api/ark/summary": {
@@ -1629,7 +1630,7 @@
         ],
         "operationId": "ai_api.api_ark_summary",
         "x-flask-rule": "/api/ark/summary",
-        "summary": "AI摘要生成（智谱驱动+AI治理：脱敏回传/额度控制/使用统计/输出标记）"
+        "summary": "Legacy summary contract backed only by owned inference."
       }
     },
     "/api/auth-recovery/health": {

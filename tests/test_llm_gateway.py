@@ -90,21 +90,21 @@ def test_auto_priority(monkeypatch):
     assert calls == []
 
 
-def test_daily_capability_uses_authorized_zhipu_pack():
+def test_daily_capability_reports_owned_gateway_unavailable_without_fallback():
     selected = intelligence.select_model_by_capability("daily")
-    assert selected["provider"] == "zhipu"
-    assert selected["model"] == "glm-4.5-air"
+    assert selected["provider"] == "owned"
+    assert selected["model"] is None
     assert selected["primary_available"] is False
-    assert selected["primary_status"] == "DISABLED"
+    assert selected["primary_status"] == "OWNED_RUNTIME_NOT_BOUND"
     assert selected["fallback_chain"] == []
 
 
-def test_strong_reasoning_uses_authorized_glm_47_pack():
+def test_strong_reasoning_reports_owned_gateway_unavailable_without_fallback():
     selected = intelligence.select_model_by_capability("strong_reasoning")
-    assert selected["provider"] == "zhipu"
-    assert selected["model"] == "glm-4.7"
+    assert selected["provider"] == "owned"
+    assert selected["model"] is None
     assert selected["primary_available"] is False
-    assert selected["primary_status"] == "DISABLED"
+    assert selected["primary_status"] == "OWNED_RUNTIME_NOT_BOUND"
     assert selected["fallback_chain"] == []
 
 

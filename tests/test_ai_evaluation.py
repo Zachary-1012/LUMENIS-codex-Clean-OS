@@ -447,13 +447,11 @@ class TestAINotReplacingRules:
 # ============================================================
 class TestProviderFallback:
     def test_provider_chain_default(self, monkeypatch):
-        """Legacy chain metadata is retained, while a retired first route fails closed."""
+        """No implicit chain is synthesized from retired-provider metadata."""
         from lumenis.system.ai_gateway import channel
-        monkeypatch.delenv('AI_PROVIDER_CHAIN', raising=False)
-        chain = channel.provider_chain()
-        assert 'zhipu' in chain
-        assert chain[0] == 'zhipu'  # retained compatibility configuration
-        assert channel.full_fallback_chain() == ['rule']
+        monkeypatch.setattr(channel, '_env', lambda name, _default='': '')
+        assert channel.provider_chain() == []
+        assert channel.full_fallback_chain() == []
 
     def test_route_with_fallback_all_fail(self):
         """选中已退役路由时 fail closed，且不启动任何后备通道。"""

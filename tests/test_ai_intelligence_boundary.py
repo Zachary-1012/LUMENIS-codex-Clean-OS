@@ -153,13 +153,15 @@ class TestOSAIRequestBoundary:
 # 3. AI Provider降级链
 # ═══════════════════════════════════════════════════════════════
 
-class TestProviderFallbackChain:
-    def test_fallback_chain_structure(self, engine):
-        """降级链应包含智谱→ARK→千问→Ollama→本地规则"""
+class TestOwnedGatewayRoute:
+    def test_ai_capabilities_report_owned_gateway_without_retired_fallback(self, engine):
+        """AI tasks use the owned Gateway and do not list retired provider fallbacks."""
         caps = engine.get_capabilities()
-        chain = caps.get("osai_boundary", {}).get("ai_provider_chain", [])
-        assert "zhipu" in chain
-        assert "local_rules" in chain
+        boundary = caps.get("osai_boundary", {})
+        assert boundary["ai_provider_chain"] == ["owned_gateway"]
+        assert boundary["ai_runtime_status"] == "OWNED_RUNTIME_NOT_BOUND"
+        assert boundary["fallback_allowed"] is False
+        assert "unavailable" in boundary["osai_down_impact"].lower()
 
     def test_provider_failure_degrades(self, engine):
         """AI Provider失败时自动降级"""

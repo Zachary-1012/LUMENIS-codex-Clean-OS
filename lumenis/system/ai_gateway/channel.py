@@ -23,7 +23,7 @@ import urllib.request, urllib.error
 from runtime_guardian import CircuitBreaker as _BaseCircuitBreaker
 from runtime_guardian import CircuitState as _RGCircuitState
 from lumenis.system.ai_gateway.providers import (
-    is_provider_available, provider_info, provider_status,
+    is_provider_available, is_provider_retired, provider_info, provider_status,
 )
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -360,14 +360,20 @@ def all_provider_snapshots():
         return {name: pb.snapshot() for name, pb in _PROVIDER_BREAKERS.items()}
 
 
-# Provider 优先级配置（环境变量可覆盖）
-# 主通道智谱（最大算力），备用豆包（最小输出兜底），最后本地规则
+# Only an explicit chain may opt into active, non-retired providers.
 def provider_chain():
-    """返回 Provider 优先级列表 [主, 备...]。环境变量 AI_PROVIDER_CHAIN 可覆盖（逗号分隔）。"""
+    """Return explicitly configured, currently allowed provider fallbacks."""
     raw = _env('AI_PROVIDER_CHAIN', '').strip()
-    if raw:
-        return [p.strip() for p in raw.split(',') if p.strip()]
-    return ['zhipu', 'ark', 'ollama']  # V1.0: zhipu primary -> ark fallback -> ollama local -> rule final
+    if not raw:
+        return []
+    candidates = [p.strip() for p in raw.split(',') if p.strip()]
+    if (not candidates or is_provider_retired(candidates[0])
+            or _known_provider_disabled(candidates[0])):
+        return []
+    return [
+        provider for provider in candidates
+        if not is_provider_retired(provider) and is_provider_available(provider)
+    ]
 
 
 def route_with_fallback(call_fn, providers=None, on_result=None):
@@ -378,10 +384,10 @@ def route_with_fallback(call_fn, providers=None, on_result=None):
     auth / bad_request 等 fatal error 立即终止 provider 链，避免无效切换与额度浪费。
     on_result(provider, result, ok) 用于审计/额度记录。
     """
-    chain = providers or provider_chain()
+    chain = providers if providers is not None else provider_chain()
     attempted = False
     for prov in chain:
-        if _known_provider_disabled(prov):
+        if is_provider_retired(prov) or _known_provider_disabled(prov):
             if not attempted:
                 return None, 'provider_disabled'
             continue
@@ -557,7 +563,7 @@ def get_channel_status_detailed():
         "providers_available": available_providers,
         "overall_available": available_providers > 0,
         "provider_chain": provider_chain(),
-        "fallback_chain": ["zhipu", "ark", "doubao", "rule"],
+        "fallback_chain": provider_chain(),
         "hard_limits": {
             "max_attempts": _HARD_MAX_ATTEMPTS,
             "max_backoff_sec": _MAX_BACKOFF,
@@ -579,40 +585,25 @@ def get_channel_status_detailed():
 # Track B 补全：豆包最小兜底通道配置
 # ============================================================
 def get_doubao_fallback_config():
-    """获取豆包（Doubao）最小兜底通道配置。
-
-    豆包作为最小输出兜底：当智谱主通道和 ark 备用通道都失败/熔断时，
-    使用豆包的最小模型（如 doubao-1.5-lite）做最短响应，保证业务不中断。
-    """
+    """Return legacy Doubao metadata without enabling an implicit fallback."""
     return {
         "provider": "doubao",
-        "role": "minimal_fallback",
-        "priority": 3,  # 1=zhipu主, 2=ark备, 3=doubao兜底, 4=rule本地
-        "model": _env('DOUBAO_FALLBACK_MODEL', 'doubao-1.5-lite-32k'),
-        "endpoint": _env('DOUBAO_FALLBACK_ENDPOINT', ''),
-        "max_tokens": int(_env('DOUBAO_FALLBACK_MAX_TOKENS', '256')),
-        "temperature": 0.3,
-        "timeout_sec": 15,
-        "description": "豆包最小兜底通道：仅在主通道和备用通道都失败时使用，输出最短响应",
+        "role": "explicit_selection_only",
+        "status": "NOT_IN_AUTOMATIC_CHAIN",
+        "priority": None,
+        "model": None,
+        "endpoint": None,
+        "max_tokens": None,
+        "temperature": None,
+        "timeout_sec": None,
+        "description": "Legacy compatibility metadata; no implicit provider fallback is configured",
         "circuit_breaker": get_provider_breaker('doubao').snapshot(),
     }
 
 
 def full_fallback_chain():
-    """完整故障转移链：智谱主 → ark备 → 豆包兜底 → 本地规则。
-
-    24h 保活目标：任何时刻至少有一个通道可用。
-    """
-    chain = provider_chain()
-    if chain and _known_provider_disabled(chain[0]):
-        return ['rule']
-    # 确保豆包兜底在链中（如果未配置则追加）
-    if 'doubao' not in chain:
-        chain = chain + ['doubao']
-    # 本地规则始终是最后兜底
-    if 'rule' not in chain:
-        chain = chain + ['rule']
-    return chain
+    """Return only an explicitly configured chain; never synthesize fallbacks."""
+    return provider_chain()
 
 
 # ============================================================
@@ -661,7 +652,7 @@ def reconnect_with_backoff(connect_fn, max_attempts=5, base_delay=1.0,
 # ============================================================
 def track_b_self_check():
     """Describe implemented transport and configured routing without probing it."""
-    selected = _env("AI_PROVIDER", "zhipu").strip().lower()
+    selected = _env("AI_PROVIDER", "owned").strip().lower()
     info = provider_info(selected)
     status = provider_status(selected) if info else "NOT_CONFIGURED"
     return {
@@ -705,14 +696,15 @@ def track_b_self_check():
 # ============================================================
 import uuid as _uuid
 
-# 6层 Provider 层级定义
+# Preserved response metadata. Retired providers are reported disabled and are
+# never eligible for dispatch; this table is not the active fallback contract.
 PROVIDER_LAYERS_V1 = [
-    {"layer": 1, "provider": "zhipu",   "role": "cloud_primary",    "models": ["glm-4.5-air", "glm-5.3", "glm-4.6v", "web-search-pro"]},
-    {"layer": 2, "provider": "ark",     "role": "cloud_fallback",   "models": ["doubao-lite-4k", "doubao-pro-32k"]},
-    {"layer": 3, "provider": "qwen",    "role": "cloud_standby",    "models": ["qwen-flash", "qwen-turbo"]},
-    {"layer": 4, "provider": "ollama",  "role": "local_primary",    "models": ["qwen2.5-coder:7b-agent"]},
-    {"layer": 5, "provider": "lmstudio","role": "local_secondary",  "models": ["local-model"]},
-    {"layer": 6, "provider": "rule",    "role": "deterministic",    "models": ["deterministic_rule"]},
+    {"layer": 1, "provider": "zhipu",   "role": "retired_compatibility", "models": ["glm-4.5-air", "glm-5.3", "glm-4.6v", "web-search-pro"]},
+    {"layer": 2, "provider": "ark",     "role": "explicit_selection_only", "models": ["doubao-lite-4k", "doubao-pro-32k"]},
+    {"layer": 3, "provider": "qwen",    "role": "explicit_selection_only", "models": ["qwen-flash", "qwen-turbo"]},
+    {"layer": 4, "provider": "ollama",  "role": "retired_compatibility", "models": ["qwen2.5-coder:7b-agent"]},
+    {"layer": 5, "provider": "lmstudio","role": "retired_compatibility", "models": ["local-model"]},
+    {"layer": 6, "provider": "rule",    "role": "deterministic_non_ai", "models": ["deterministic_rule"]},
 ]
 
 # 切换审计日志（内存环形缓冲，最近 200 条）
@@ -790,10 +782,7 @@ def get_failover_log(limit=50):
 
 
 def build_fallback_chain_v1():
-    """构建 V1.0 6层 fallback 链（基于 .env 配置动态过滤）。
-    有 API Key 的云端 Provider + 可探测的本地 Provider + 最终 rule。
-    返回 provider 名称列表，按层级顺序。
-    """
+    """Compatibility entry; retired primary means no provider discovery/fallback."""
     if _known_provider_disabled('zhipu'):
         return ['rule']
     ensure_env_loaded()
@@ -820,7 +809,8 @@ def build_fallback_chain_v1():
 
 def route_with_fallback_v1(call_fn, providers=None, on_result=None,
                             task_id="", trace_id=""):
-    """V1.0 多 Provider 故障转移执行器（6层链 + 切换审计 + rule 标记）。
+    """Compatibility dispatcher; never probes a disabled or retired provider.
+
     call_fn(provider_name) -> (result_text, usage_dict) 或抛异常。
     usage_dict: {prompt_tokens, completion_tokens, total_tokens}
     按 providers 顺序尝试；每个 Provider 独立熔断；全部失败返回 (None, "rule", usage, switch_log)。

@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-"""AI Hub 服务层：统一对话 / 任意模块分析 / 学习记录。
+"""AI Hub compatibility service routed through the single SYSTEM AI Gateway.
 
-三级能力来源（与主系统口径一致，外部 AI 永远不是必需项）：
-  1) 本机模型（Ollama / LM Studio / llama.cpp，自动发现）
-  2) 已配置 Key 的云端模型（智谱 / 千问 / DeepSeek / 豆包Ark / OpenAI）
-  3) 内置可审计规则引擎（永远在线，保证核心脱离 AI 也能跑）
-对话前先用 function_registry 取系统内真实数据作为上下文，AI 只可据此回答，不补造事实。
+It retrieves product context and asks the owned runtime for analysis. It does
+not discover provider APIs or turn rule output into completed AI work.
 """
 from __future__ import annotations
 import os, sys, json, time, threading, logging
@@ -27,8 +24,7 @@ _learn_lock = threading.Lock()
 LEARN_LOG = os.path.join(os.path.dirname(DB_PATH), "ai_learning_log.jsonl")
 
 SYSTEM_ROLE = (
-    "你是 Zachary，CTH-POMS（CorTech Lab·广州太古汇舆情监控系统）的内置智能助手，"
-    "服务于内部品牌舆情团队。回答要求：\n"
+    "你是序境 LUMENIS 的业务助手，服务于 CTH 与 BMP 工作流。回答要求：\n"
     "1. 只依据“系统内可核对数据”和用户给出的内容作答，数据不足就明确说不足，绝不编造数字、来源或事实；\n"
     "2. 单一用户/单一来源的指控一律表述为“待证实”，不得写成已确认事实；\n"
     "3. 结论优先、结构清晰，必要时分点；涉及风险给出可执行的下一步；\n"
@@ -59,11 +55,25 @@ def _get_db():
 
 
 def status():
-    """当前 AI 运行态：provider/model/runtime + 规则保底是否在线。"""
-    st = intelligence.ai_status()
-    st["rule_fallback"] = True
-    st["ok"] = True
-    return st
+    """Report the owned runtime without probing legacy local or cloud providers."""
+    try:
+        runtime = intelligence.owned_inference_status()
+    except Exception:
+        runtime = None
+    if not isinstance(runtime, dict):
+        runtime = {
+            "provider": "owned", "available": False,
+            "service_binding": "NOT_BOUND", "state": "UNAVAILABLE",
+            "reason": "OWNED_RUNTIME_STATUS_UNAVAILABLE",
+        }
+    return {
+        **runtime,
+        "provider": "owned",
+        "enabled": runtime.get("available") is True and runtime.get("service_binding") == "BOUND",
+        "rule_fallback": False,
+        "fallback_allowed": False,
+        "ok": True,
+    }
 
 
 def retrieve(question: str, limit: int = 8) -> dict:
@@ -90,39 +100,48 @@ def _context_text(question: str) -> str:
             return "未检索到与问题直接对应的结构化记录。"
 
 
-def _rule_reply(question: str, hits: dict) -> str:
-    """无任何模型可用时的可审计规则答复：如实汇报系统内命中，不伪装成 AI 生成。"""
-    lines = ["（当前未连接本地/云端模型，以下由内置规则引擎依据系统内数据给出，不做主观推断）"]
-    funcs = hits.get("functions", [])
-    if funcs:
-        lines.append("· 对应模块：" + "、".join(f"{f['label']}" for f in funcs[:4]))
-    for key, label in (("brands", "匹配品牌"), ("cases", "相关案例"),
-                       ("notes", "相关笔记"), ("events", "相关事件")):
-        items = hits.get(key, [])
-        if items:
-            if key in ("brands",):
-                names = [str(x.get("brand_cn") or x.get("brand_en", "")) for x in items[:5]]
-            elif key == "cases":
-                names = [f"{x.get('id','')} {x.get('title','')}" for x in items[:5]]
-            elif key == "events":
-                names = [str(x.get("title", "")) for x in items[:5]]
-            else:
-                names = [str(x.get("title") or x.get("summary") or "")[:40] for x in items[:5]]
-            names = [n for n in names if n]
-            if names:
-                lines.append(f"· {label}（{len(items)}）：" + "；".join(names))
-    if len(lines) == 1:
-        lines.append("系统内暂未检索到与该问题直接对应的记录，可换个关键词，或先在采集中心采集相关数据。")
-    lines.append("启动本地 Ollama/LM Studio 或在设置配置任一云端 Key 后，我可给出更深入的分析。")
-    return "\n".join(lines)
+def _owned_result_text(result):
+    analysis = result.get("analysis") if isinstance(result, dict) else None
+    if isinstance(analysis, str) and analysis.strip():
+        return analysis.strip()
+    if isinstance(analysis, dict):
+        for key in ("reply", "summary", "text", "content"):
+            value = analysis.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    return None
+
+
+def _run_owned(text, analysis_type):
+    try:
+        result = intelligence.run_owned_analysis(text=text, analysis_type=analysis_type)
+    except Exception:
+        return {
+            "ok": False, "status": "ERROR", "code": "OWNED_ANALYSIS_EXECUTION_FAILED",
+            "provider": "owned", "analysis": None,
+        }
+    if not isinstance(result, dict):
+        return {
+            "ok": False, "status": "ERROR", "code": "OWNED_ANALYSIS_RESULT_INVALID",
+            "provider": "owned", "analysis": None,
+        }
+    return result
+
+
+def _completed(result):
+    return (
+        isinstance(result, dict) and result.get("ok") is True
+        and result.get("status") == "COMPLETED" and result.get("provider") == "owned"
+        and _owned_result_text(result) is not None
+    )
 
 
 def chat(question: str, history=None, scope: str = "all") -> dict:
-    """统一对话：检索真实数据 → 模型生成 → 规则兜底。返回可序列化 dict。"""
+    """Retrieve product context and return a result only from the owned runtime."""
     t0 = time.time()
     question = (question or "").strip()
     if not question:
-        return {"ok": False, "error": "问题不能为空"}
+        return {"ok": False, "status": "INVALID_INPUT", "code": "MESSAGE_REQUIRED"}
     hits = retrieve(question)
     context = _context_text(question)
     hint = MODULE_HINTS.get(scope, "")
@@ -139,21 +158,27 @@ def chat(question: str, history=None, scope: str = "all") -> dict:
     else:
         sys_prompt += "\n\n【约束】只引用上面给出的真实数据，未提供的数字一律不要编造。"
 
-    raw, provider = intelligence._chat(sys_prompt, question, 0.2, 1000)
-    used_rule = False
-    if not raw:
-        raw = _rule_reply(question, hits)
-        provider = "rule"
-        used_rule = True
-
     targets = [{"id": f.get("id"), "label": f.get("label"), "page": f.get("page")}
                for f in hits.get("functions", [])[:5]]
     st = status()
-    record_learning("chat", {"q": question[:120], "provider": provider, "scope": scope})
+    prompt = sys_prompt + "\n\n用户问题：" + question
+    result = _run_owned(prompt, "conversation")
+    completed = _completed(result)
+    provider = "owned"
+    record_learning("chat", {
+        "q": question[:120], "provider": provider, "scope": scope,
+        "status": result.get("status"), "code": result.get("code"),
+    })
     return {
-        "ok": True, "reply": (raw or "").strip(), "provider": provider,
-        "model": st.get("model", ""), "runtime": st.get("runtime", "rule"),
-        "used_rule_fallback": used_rule, "targets": targets,
+        "ok": completed,
+        "status": "COMPLETED" if completed else (
+            result.get("status") if result.get("status") != "COMPLETED" else "ERROR"
+        ) or "ERROR",
+        "code": None if completed else (result.get("code") or "OWNED_ANALYSIS_NOT_COMPLETED"),
+        "reply": _owned_result_text(result) if completed else None,
+        "provider": provider, "model": st.get("model_id"), "runtime": st.get("state"),
+        "used_rule_fallback": False, "fallback_allowed": False, "targets": targets,
+        "context": context,
         "matched": {"brands": len(hits.get("brands", [])), "cases": len(hits.get("cases", [])),
                     "notes": len(hits.get("notes", [])), "events": len(hits.get("events", []))},
         "elapsed_seconds": round(time.time() - t0, 2),
@@ -161,12 +186,12 @@ def chat(question: str, history=None, scope: str = "all") -> dict:
 
 
 def analyze_module(module: str, text: str, meta=None) -> dict:
-    """对系统内任意模块的一段内容做结构化分析（摘要/情感/风险/建议）。模型不可用则规则保底。"""
+    """Analyze supplied module text through the owned Gateway, without rule substitution."""
     t0 = time.time()
     module = (module or "").strip() or "notes"
     text = (text or "").strip()
     if not text:
-        return {"ok": False, "error": "待分析内容为空"}
+        return {"ok": False, "status": "INVALID_INPUT", "code": "ANALYSIS_TEXT_REQUIRED"}
     meta = meta or {}
     sys_prompt = (
         SYSTEM_ROLE
@@ -176,37 +201,36 @@ def analyze_module(module: str, text: str, meta=None) -> dict:
         "单一来源指控保持待证实，不要夸大。"
     )
     user = f"模块附加信息：{json.dumps(meta, ensure_ascii=False)[:800]}\n待分析内容：\n{text[:6000]}"
-    raw, provider = intelligence._chat(sys_prompt, user, 0.0, 800)
-    data = None
-    if raw:
-        data = intelligence._json_from_text(raw)
-    if not data:
-        # 规则保底：主系统本地规则分析器
-        try:
-            import ai_analyzer
-            base = ai_analyzer.analyze_note(
-                {"title": text[:120], "content": text, "likes": 0, "comments": 0},
-                provider="rule",
-            )
-            data = {
-                "summary": (base.get("summary") or "")[:60] or "规则引擎已完成基础判定，建议接入模型获得更细分析。",
-                "sentiment": base.get("sentiment", "neutral"),
-                "risk_level": base.get("risk_level", "low"),
-                "risk_points": base.get("sentiment_reasons", [])[:3],
-                "suggestion": "按既有审核流程核查原始来源后再定级。",
-            }
-            provider = "rule"
-        except Exception:
-            data = {"summary": "模型与规则分析均不可用。", "sentiment": "neutral",
-                    "risk_level": "low", "risk_points": [], "suggestion": "稍后重试或检查本地AI。"}
-            provider = "rule"
-    data["provider"] = provider
-    data["module"] = module
-    data["elapsed_seconds"] = round(time.time() - t0, 2)
-    data["ok"] = True
-    record_learning("analyze", {"module": module, "provider": provider,
-                                "len": len(text)})
-    return data
+    result = _run_owned(user, "module_analysis")
+    analysis = result.get("analysis") if isinstance(result, dict) else None
+    completed = _completed(result) and isinstance(analysis, dict)
+    if completed:
+        required = ("summary", "sentiment", "risk_level", "risk_points", "suggestion")
+        completed = (
+            all(key in analysis for key in required)
+            and isinstance(analysis.get("summary"), str)
+            and analysis.get("sentiment") in {"positive", "neutral", "negative"}
+            and analysis.get("risk_level") in {"high", "medium", "low"}
+            and isinstance(analysis.get("risk_points"), list)
+            and all(isinstance(item, str) for item in analysis.get("risk_points", []))
+            and isinstance(analysis.get("suggestion"), str)
+        )
+    record_learning("analyze", {
+        "module": module, "provider": "owned", "status": result.get("status"),
+        "code": result.get("code"), "len": len(text),
+    })
+    if not completed:
+        return {
+            "ok": False,
+            "status": (result.get("status") if result.get("status") != "COMPLETED" else "ERROR") or "ERROR",
+            "code": result.get("code") or "OWNED_MODULE_ANALYSIS_NOT_COMPLETED",
+            "provider": "owned", "module": module, "analysis": None,
+            "elapsed_seconds": round(time.time() - t0, 2),
+        }
+    return {
+        **analysis, "ok": True, "status": "COMPLETED", "provider": "owned",
+        "module": module, "elapsed_seconds": round(time.time() - t0, 2),
+    }
 
 
 def record_learning(kind: str, payload: dict) -> None:

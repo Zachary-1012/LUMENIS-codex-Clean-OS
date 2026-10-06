@@ -107,14 +107,18 @@ class TestTrackBReconnect:
 class TestTrackBObservability:
     """验证可观测性（连接状态/最后成功/失败计数/熔断）。"""
 
-    def test_get_channel_status_detailed(self):
-        from lumenis.system.ai_gateway.channel import get_channel_status_detailed
+    def test_get_channel_status_detailed(self, monkeypatch):
+        from lumenis.system.ai_gateway import channel
+        monkeypatch.setattr(channel, '_env', lambda name, _default='': '' if name == 'AI_PROVIDER_CHAIN' else '')
+        get_channel_status_detailed = channel.get_channel_status_detailed
         status = get_channel_status_detailed()
         assert status["module"] == "lumenis.system.ai_gateway.channel"
         assert status["track_b_status"] == "ACTIVE"
         assert "global_breaker" in status
         assert "providers" in status
         assert "provider_chain" in status
+        assert status["provider_chain"] == []
+        assert status["fallback_chain"] == []
         assert "hard_limits" in status
         assert "encoding" in status
         assert "heartbeat" in status
@@ -130,18 +134,18 @@ class TestTrackBObservability:
         assert pb1.breaker.failure_count > 0
 
     def test_full_fallback_chain(self, monkeypatch):
-        from lumenis.system.ai_gateway.channel import full_fallback_chain
-        monkeypatch.delenv("AI_PROVIDER_CHAIN", raising=False)
-        chain = full_fallback_chain()
-        assert chain == ["rule"]
+        from lumenis.system.ai_gateway import channel
+        monkeypatch.setattr(channel, '_env', lambda name, _default='': '' if name == 'AI_PROVIDER_CHAIN' else '')
+        assert channel.full_fallback_chain() == []
 
     def test_doubao_fallback_config(self):
         from lumenis.system.ai_gateway.channel import get_doubao_fallback_config
         config = get_doubao_fallback_config()
         assert config["provider"] == "doubao"
-        assert config["role"] == "minimal_fallback"
-        assert config["priority"] == 3
-        assert "model" in config
+        assert config["role"] == "explicit_selection_only"
+        assert config["status"] == "NOT_IN_AUTOMATIC_CHAIN"
+        assert config["priority"] is None
+        assert config["model"] is None
 
     def test_track_b_self_check(self, monkeypatch):
         from lumenis.system.ai_gateway import channel, providers

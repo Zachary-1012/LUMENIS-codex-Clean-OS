@@ -3716,8 +3716,13 @@ class TaskEngine:
             "engine_version": "task-engine-v1.0.0",
             "osai_boundary": {
                 "zbc_depends_on_osai": False,
-                "osai_down_impact": "none (ZBC core functions continue)",
-                "ai_provider_chain": ["zhipu", "ark", "qianwen", "ollama", "local_rules"],
+                "osai_down_impact": (
+                    "AI-dependent tasks are unavailable until the LUMENIS-owned "
+                    "Gateway runtime is bound; non-AI Core workflows continue"
+                ),
+                "ai_provider_chain": ["owned_gateway"],
+                "ai_runtime_status": "OWNED_RUNTIME_NOT_BOUND",
+                "fallback_allowed": False,
             },
         }
 
@@ -3734,7 +3739,10 @@ class TaskEngine:
             "parser": "available",
             "agent_registry": "available",
             "permission_gate": "available" if self.permission_gate else "unavailable (degraded)",
-            "osai_boundary": "independent (ZBC does not depend on OSAI)",
+            "osai_boundary": (
+                "LUMENIS-owned AI uses the SYSTEM Gateway; AI tasks remain unavailable "
+                "until the owned runtime is bound; non-AI Core workflows continue"
+            ),
             "timestamp": self._now(),
         }
 

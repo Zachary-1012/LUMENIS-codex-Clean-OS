@@ -19,7 +19,10 @@ def ai_chat():
     data = request.get_json() or {}
     q = data.get("message") or data.get("question") or ""
     result = service.chat(q, history=data.get("history"), scope=data.get("scope", "all"))
-    return jsonify({"success": result.pop("ok", True), **result})
+    success = result.pop("ok", False)
+    status = result.get("status")
+    http_status = 200 if success else (400 if status == "INVALID_INPUT" else 503 if status == "UNAVAILABLE" else 502)
+    return jsonify({"success": success, **result}), http_status
 
 
 @ai_bp.route("/ai/analyze", methods=["POST"])
@@ -27,7 +30,10 @@ def ai_chat():
 def ai_analyze():
     data = request.get_json() or {}
     result = service.analyze_module(data.get("module", ""), data.get("text", ""), data.get("meta"))
-    return jsonify({"success": result.pop("ok", True), **result})
+    success = result.pop("ok", False)
+    status = result.get("status")
+    http_status = 200 if success else (400 if status == "INVALID_INPUT" else 503 if status == "UNAVAILABLE" else 502)
+    return jsonify({"success": success, **result}), http_status
 
 
 @ai_bp.route("/ai/learn", methods=["GET"])
