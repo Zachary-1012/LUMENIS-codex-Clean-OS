@@ -31,6 +31,23 @@ def test_xhs_aliases_all_normalize():
         assert normalize_platform(alias) == "xiaohongshu", alias
 
 
+def test_registry_and_capability_config_resolve_xhs_aliases_without_session_access(monkeypatch):
+    from lumenis.adapters import cookie_vault
+    from lumenis.system.collector.adapters.config import get_platform_capabilities
+    from lumenis.system.collector.adapters.registry import get_adapter
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("alias resolution must not read or probe any Cookie/session")
+
+    monkeypatch.setattr(cookie_vault, "load_cookies", forbidden)
+    monkeypatch.setattr(cookie_vault, "check_cookie_status", forbidden)
+
+    for alias in ("xhs", "xiaohongshu", "rednote", "xiaohongshu-cdp", "小红书"):
+        adapter = get_adapter(alias, backend=object())
+        assert adapter.platform == "xhs"
+        assert get_platform_capabilities(alias)["name"] == "小红书"
+
+
 def test_other_platform_aliases():
     assert normalize_platform("aweme") == "douyin"
     assert normalize_platform("抖音") == "douyin"

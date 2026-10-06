@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Dict, Type
 
 from .base import BasePlatformAdapter
-from .config import PLATFORM_CAPABILITIES
+from .config import PLATFORM_CAPABILITIES, resolve_platform_config_key
 
 _ADAPTERS: Dict[str, Type[BasePlatformAdapter]] = {}
 
@@ -20,9 +20,7 @@ def list_adapters() -> list[str]:
 
 
 def get_adapter(platform: str, **kwargs):
-    key = platform.strip().lower()
-    if key == "xiaohongshu":
-        key = "xhs"  # Canonical content spelling, same protected primary adapter.
+    key = resolve_platform_config_key(platform)
     adapter_cls = _ADAPTERS.get(key)
     if adapter_cls is None and key == "wechat":
         from . import wechat  # Register the existing public-article adapter.

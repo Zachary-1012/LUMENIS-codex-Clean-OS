@@ -192,12 +192,20 @@ class TestCapabilityMatrix:
 
     def test_all_secondary_full_capability(self):
         from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES
-        for p in ["douyin", "bilibili", "weibo", "zhihu", "instagram"]:
+        for p in ["douyin", "bilibili", "weibo", "zhihu", "instagram", "facebook", "x"]:
             cap = PLATFORM_CAPABILITIES[p]
             assert cap["search"] is True, f"{p} search should be True"
             assert cap["detail"] is True, f"{p} detail should be True"
             assert cap["comments"] is True, f"{p} comments should be True"
             assert cap["creator"] is True, f"{p} creator should be True"
+
+    def test_facebook_and_x_are_manual_read_only_without_background_enablement(self):
+        from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES
+        for platform in ("facebook", "x"):
+            cap = PLATFORM_CAPABILITIES[platform]
+            assert cap["enabled"] is False
+            assert cap["manual_collection_enabled"] is True
+            assert cap["collection_mode"] == "human_triggered_read_only"
 
 
 def test_search_stops_on_risk_and_never_returns_stale_fallback():

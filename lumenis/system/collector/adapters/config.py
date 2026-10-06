@@ -149,6 +149,8 @@ PLATFORM_CAPABILITIES = {
     "facebook": {
         "name": "Facebook",
         "enabled": False,
+        "manual_collection_enabled": True,
+        "collection_mode": "human_triggered_read_only",
         "priority": "secondary",
         "search": True,
         "detail": True,
@@ -161,6 +163,8 @@ PLATFORM_CAPABILITIES = {
     "x": {
         "name": "X",
         "enabled": False,
+        "manual_collection_enabled": True,
+        "collection_mode": "human_triggered_read_only",
         "priority": "secondary",
         "search": True,
         "detail": True,
@@ -173,8 +177,21 @@ PLATFORM_CAPABILITIES = {
 }
 
 
+def resolve_platform_config_key(platform: str) -> str:
+    """Resolve XHS/RedNote aliases to the existing adapter/config key.
+
+    Canonical source identity remains ``xiaohongshu`` in platform naming and
+    stored data; the registered adapter's stable key remains ``xhs`` for
+    compatibility. Other platform/provider aliases retain their exact keys.
+    """
+    key = str(platform or "").strip().lower()
+    from .platform_naming import normalize_platform_name
+
+    return "xhs" if normalize_platform_name(key) == "xiaohongshu" else key
+
+
 def get_platform_capabilities(platform: str) -> dict:
-    key = platform.strip().lower()
+    key = resolve_platform_config_key(platform)
     if key not in PLATFORM_CAPABILITIES:
         raise KeyError(f"Unsupported platform: {platform}")
     return dict(PLATFORM_CAPABILITIES[key])
