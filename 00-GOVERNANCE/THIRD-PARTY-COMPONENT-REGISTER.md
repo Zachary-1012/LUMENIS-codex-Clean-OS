@@ -83,25 +83,30 @@ LUMENIS performance. Codex CLI licensing covers tool source, not Codex weights.
 
 The observations below are historical inventory, not active routing. Product
 Owner subsequently retired Ollama/LM Studio/llama.cpp/Zhipu inference for product
-and development work. Preserve interfaces and provenance; do not restore these
-models, probes or fallbacks. The newer approved foundation direction is OpenAI
-commercially permitted open weights plus LUMENIS-owned tuning/deployment through
-the existing SYSTEM AI Gateway. No weight download, training or deployment is
-implied by a register entry.
+and development work. On 2026-10-06 the current workstation was rechecked: the
+Ollama executable/service is absent, the user `.ollama` directory was removed,
+and active OpenCode/PATH configuration no longer contains an Ollama provider.
+Historical Ollama-managed Qwen/BGE rows therefore record provenance only; their
+current physical presence outside that retired store is NOT VERIFIED and they
+must not be treated as installed or available. Preserve compatibility interfaces
+and provenance; do not restore these models, probes or fallbacks. The approved
+foundation direction remains commercially permitted open weights plus
+LUMENIS-owned tuning/deployment through the existing SYSTEM AI Gateway. No weight
+download, training or deployment is implied by a register entry.
 
 | Component | Observed runtime | Boundary / decision | License and distribution obligations |
 | --- | --- | --- | --- |
-| [Ollama](https://github.com/ollama/ollama) | Local service reports 0.34.2 | ADAPT existing SYSTEM AI Gateway; loopback-only image requests, no proxy/redirect; not a second AI owner | [MIT](https://github.com/ollama/ollama/blob/main/LICENSE), retain copyright/license when distributed; recheck shipped binary notices |
-| [Qwen3.5-4B](https://huggingface.co/Qwen/Qwen3.5-4B) | Already installed `qwen3.5:4b`; digest `2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd` | ADAPT optional replaceable vision provider; image observations are derivative, human review pending | Model card declares Apache-2.0; preserve upstream attribution/license/notices on redistribution; quantization packaging must be reconciled before a distributed release |
-| [Qwen3.5-9B](https://huggingface.co/Qwen/Qwen3.5-9B) | Already installed `qwen3.5:9b`; digest `6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7` | EVALUATE task-relevance reranking behind SYSTEM AI Gateway, only Reporting-authorized Canonical snippets; no Truth/Permission authority | [Upstream LICENSE](https://huggingface.co/Qwen/Qwen3.5-9B/raw/main/LICENSE) checked 2026-10-01: Apache-2.0; preserve attribution/license/notices; local quantization redistribution still requires package reconciliation; model and useful-result acceptance remain separate |
-| [BAAI BGE-M3](https://huggingface.co/BAAI/bge-m3) | Already installed `bge-m3:latest`; digest `7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab` (2026-10-01) | ADAPT bounded local embedding interface in existing SYSTEM AI Gateway; Reporting promotion rejected after actual quality/latency failures; no vector DB/new truth owner; replaceable model/adapter | Upstream model card declares MIT; retain copyright/license notices on redistribution, reconcile Ollama model packaging before distributed release |
+| [Ollama](https://github.com/ollama/ollama) | HISTORICAL: previously observed 0.34.2; current workstation executable/service and `.ollama` store absent as rechecked 2026-10-06 | ADAPT existing SYSTEM AI Gateway; loopback-only image requests, no proxy/redirect; not a second AI owner | [MIT](https://github.com/ollama/ollama/blob/main/LICENSE), retain copyright/license when distributed; recheck shipped binary notices |
+| [Qwen3.5-4B](https://huggingface.co/Qwen/Qwen3.5-4B) | HISTORICAL Ollama-managed observation: `qwen3.5:4b`, digest `2a654d98e6fba55d452b7043684e9b57a947e393bbffa62485a7aac05ee4eefd`; current presence NOT VERIFIED after retired Ollama store removal | ADAPT optional replaceable vision provider; image observations are derivative, human review pending | Model card declares Apache-2.0; preserve upstream attribution/license/notices on redistribution; quantization packaging must be reconciled before a distributed release |
+| [Qwen3.5-9B](https://huggingface.co/Qwen/Qwen3.5-9B) | HISTORICAL Ollama-managed observation: `qwen3.5:9b`, digest `6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7`; current presence NOT VERIFIED after retired Ollama store removal | EVALUATE task-relevance reranking behind SYSTEM AI Gateway, only Reporting-authorized Canonical snippets; no Truth/Permission authority | [Upstream LICENSE](https://huggingface.co/Qwen/Qwen3.5-9B/raw/main/LICENSE) checked 2026-10-01: Apache-2.0; preserve attribution/license/notices; local quantization redistribution still requires package reconciliation; model and useful-result acceptance remain separate |
+| [BAAI BGE-M3](https://huggingface.co/BAAI/bge-m3) | HISTORICAL Ollama-managed observation: `bge-m3:latest`, digest `7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab` (2026-10-01); current presence NOT VERIFIED after retired Ollama store removal | ADAPT bounded local embedding interface in existing SYSTEM AI Gateway; Reporting promotion rejected after actual quality/latency failures; no vector DB/new truth owner; replaceable model/adapter | Upstream model card declares MIT; retain copyright/license notices on redistribution, reconcile Ollama model packaging before distributed release |
 
 Sources accessed 2026-10-01. [Ollama vision API](https://docs.ollama.com/capabilities/vision)
-supports base64 images. This batch uses existing installed binaries/weights and
-adds no model download or new package requirement. Upstream weights remain
-third-party work; LUMENIS owns its adapters and business orchestration, not the
-underlying foundation model. Local inference is not proof of operation after
-the developer computer is powered off.
+was part of the historical local-runtime evaluation. Those historical observations
+do not establish current installation or availability after the 2026-10-06 cleanup.
+Upstream weights remain third-party work; LUMENIS owns its adapters and business
+orchestration, not the underlying foundation model. A historical local inference
+receipt is not current product operation or release evidence.
 
 ## 3. Python development/test dependencies observed in `requirements-dev.txt`
 
@@ -165,6 +170,13 @@ metadata exists. Package integration and fixture playback checks do not establis
 a released media feature, a customer listening review, or support for all native
 platforms. Release packaging must retain BSD notices and reconcile the actual
 dependency graph shipped on each target.
+
+## 5A. Engineering tools not shipped as LUMENIS product runtime
+
+| Component | Current workstation state | Product boundary | License / release treatment |
+| --- | --- | --- | --- |
+| OpenCode CLI/server | 1.18.34 installed locally; current execution route is **SHELVED** by Product Owner | Development tool only; not SYSTEM AI Gateway, not product inference, not a C1-C6 Owner and not a Codex fallback | Not part of the product distribution by current design. If any OpenCode binary/source is ever bundled or redistributed, verify the exact upstream license/notices for that shipped version before release. |
+| Codex / Codex CLI | External engineering runtime selected manually by Product Owner | Development/control tooling only; never LUMENIS-owned product AI or Product Truth | Tool/service terms are separate from LUMENIS proprietary materials and third-party product dependencies; do not infer model-weight rights from CLI/tool licensing. |
 
 ## 6. Built-in / platform dependencies
 

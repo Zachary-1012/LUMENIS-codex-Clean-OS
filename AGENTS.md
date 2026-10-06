@@ -60,9 +60,11 @@ GPU, new rental, recharge or retired model providers.
    second implementation or a new product candidate. Preserve older research,
    originals and failure evidence as history until their exact disposition is
    verified.
-3. Before editing each capability, M reads its actual assigned materials and
-   source owner/callers/contracts, records the complete result in the existing
-   task/evidence record, and uses it continuously. A coverage table or
+3. Before editing each capability, the owning active window reads its actual assigned
+   materials and source owner/callers/contracts, records the complete result in the
+   existing task/evidence record, and uses it continuously. M reads the same
+   boundary when reviewing cross-window integration or acceptance; M does not
+   substitute for the owning window's implementation duty. A coverage table or
    unreviewed summary does not satisfy material review. Do not generate
    progress-only reports or repeated ACKs.
 4. Close the agreed capabilities without adding products, owners, frameworks or

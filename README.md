@@ -88,6 +88,23 @@ Product Owner 已恢复批准的完整执行拓扑：
 
 **M + F + C1–C6 现在都属于当前执行体系。** 各窗口可按真实依赖并行推进，但不能因为“窗口已恢复”就盲启：每个任务开工前仍必须核对 fresh `origin/main`、本地 dirty、Owner/调用方、Runtime、DB、Permission、Evidence 以及平台 Session/GPU 等真实前置条件。
 
+## 产品完整闭环职责（不可由 README 摘要缩减）
+
+下面只是给人类工程师和 Coding Agent 的**导航摘要**。完整要求仍由 [Source Owner Index](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)、Product Architecture、Experience Constitution、R01–R15、J1–J8、U01–U25、现有研究/材料采用义务和各 Screen/Owner 合同共同约束。**任何 README、状态表、测试数量或窗口名称都不能把这些要求缩短成更小的产品。**
+
+| 窗口 | 必须完成的完整结果 |
+|---|---|
+| **M · 总控** | 冻结当前线上/本地/Runtime/DB/dirty真相；解决跨窗口 Product Architecture、Owner、接口与共享写冲突；审查各窗口完整用户成果；协调 W6 统一整合、发布和回归；不替代 F/C1–C6 的实现职责，也不把局部修复冒充全产品完成。 |
+| **F · Frontend / Experience** | 把所有已批准能力完整落到官网、Web Workspace、Desktop、Mobile 的真实界面和交互；完成真实 API 绑定、信息架构、屏幕状态、loading/empty/error/denied/offline/cancel/retry/recovery、保存/重开、响应式、中文/英文/韩文、本地化和可访问性。设计稿或 DESIGN_READY 不等于运行验收。 |
+| **C1 / W1 · Data & Collection** | 建立并持续维护 GLOBAL/ALL、Subject/BrandFocus/关系和真实数据宇宙；对 Instagram、Facebook、微信公众号、RedNote/XHS、抖音、X 的批准路径执行真实采集、历史/增量维护、原生字段/时间/互动/评论/允许媒体、分页/续跑/去重/恢复，并进入唯一 Source→Evidence→Canonical 真相链；样本、Seed、Cookie文件或配置存在都不能冒充覆盖率。 |
+| **C2 / W2 · Owned AI & Agent** | 通过唯一 SYSTEM AI Gateway 完成 LUMENIS 自有模型的真实训练、checkpoint/resume、独立 held-out Evaluation、正常业务推理、多模态理解、Agent/Skills/Memory/Context、反馈/Learning、低置信与失败恢复、受控 Promotion/Rollback；当前免费资源优先，模型文件/preflight/三步训练都不能冒充质量或部署完成。 |
+| **C3 / W3 · CTH & BMP Workflows** | 完整完成商业运营与品牌市场真实工作：监测/事件/日历、消费者/媒体/趋势/风险、市场/竞品/Creator/传播、Case→Insight→Decision→Action→Outcome→Evaluation、内容/Campaign生命周期及实际效果；必须保留精确 Subject/BrandFocus、市场、时间、单位、分母、来源和不确定性。报告或提案不等于已执行结果。 |
+| **C4 / W4 · Pitch / Video / Podcast** | 分别交付原创专业提案、真正可编辑且可播放的成片、完整可听可编辑的播客；覆盖真实 Brief/素材/预算约束、时间线、编辑/替换/预览/渲染、音频/字幕/章节/转录、保存/导出/重开/取消/恢复、版本和人工质量复核。三类成果各自独立验收，Demo 不能替代完整工作流。 |
+| **C5 / W5 · Importer / Research / Shared** | 完成资料导入、Library/Search、精确 Citation、逐篇/逐页/逐段/逐帧/时间码研究、Reporting、Artifact、SavedWork、通知和共享偏好；所有原件、rights、source hash、父子版本、撤销/恢复可追溯。191行 manifest 不是全部语料，未读正文、未采用研究和 UNKNOWN rights 不能被写成“已吸收”。 |
+| **C6 / W6 · Integration / Runtime / Release** | 把已验收 Owner 能力整合成同一 SHA 的 Core/API/DB/四端/FFmpeg/Supervisor/CI/Packaging/Recovery；协调正式 DB 变更、共享调用、启动/重启/取消/回滚、Product/App/Critical E2E 和最终 Evidence bundle；代码存在、build成功或 health=200 都不能单独写成 RELEASED/OPERATING。 |
+
+产品最终闭环不是“所有窗口都有代码”，而是对应真实用户任务能够从**真实输入 → 有依据的结果 → 保存/修改/重开/恢复 → Outcome/Evaluation → 跨端继续使用**完整成立。
+
 ### 当前执行器
 
 - **Codex / Codex CLI**：当前研发执行器。每个窗口使用 Product Owner 当下手动选择的模型、推理强度和服务档位；仓库不自动分配 Sol/Luna/Astra 等模型。
@@ -127,6 +144,77 @@ git status --short
 6. 改动后运行**受影响测试 + 合法 blocking gates**，不靠删除测试或降低标准获得绿色。
 7. 完成完整结果后由对应窗口交付；共享整合走 W6，M 做跨窗口审查/验收。
 8. 发布后再次 `git fetch` 并证明本地 HEAD 与 `origin/main` 一致；源码、CURRENT 和必要 Evidence 在同一交付周期对齐。
+
+## 仓库结构
+
+下面只列当前人类工程师最需要辨认的入口，不代表完整文件清单：
+
+```text
+00-GOVERNANCE/   当前治理、Product Architecture、Owner、CURRENT、Evidence、第三方登记
+lumenis/         当前主要产品源码与 SYSTEM / Shared / domain 实现
+app/             Flutter Web / Desktop / Mobile Experience
+website/         Public Website
+contracts/       现有机器/接口合同
+config/          受控配置；本地秘密不得提交
+migrations/      DB 迁移与版本化变更
+alembic/         Alembic migration tooling
+scripts/         启动、审计、Gate、维护与受控工具
+ tests/           单元/集成/合同/回归测试
+research/ docs/  研究、说明与历史材料；不是当前产品真相本身
+work/ staging/ output/ tmp/  工作区/候选/输出；不能因文件存在就当成 main 或 Production Truth
+```
+
+根目录仍有历史兼容文件和旧命名包装层。它们只有在当前 Owner/调用链仍引用时才是兼容边界；**文件数量、旧名称或历史目录不能重新定义产品架构。**
+
+## 开发环境、配置与秘密
+
+- Python 依赖以 `requirements.txt` / `requirements-dev.txt` 和当前 `.venv` 实际状态为准；不要为了“统一环境”擅自重建环境或升级全部依赖。
+- Flutter 依赖以 `app/pubspec.yaml` / `app/pubspec.lock` 为准；各平台实际构建能力仍需对应平台验证。
+- Node/Browser脚本依赖以 `package.json` / `package-lock.json` 为准。
+- `.env`、Cookie、API Key、平台 Session、生产 DB、用户文件和本机私有路径属于本地/受保护配置，**不得提交、打印到日志、写进README或Evidence正文**。
+- 新依赖、模型、字体、二进制工具或外部服务加入产品前，必须同时更新 Owner、第三方登记、License/Notice、运行/恢复和Release影响。
+- 当前 OpenCode 已搁置；其本机安装状态不构成序境产品依赖或运行时 Provider。
+
+## 测试与质量 Gate
+
+测试是证据，不是产品成果。正常改动至少执行**受影响测试 + 当前合法 blocking gates**；不能通过删除测试、跳过失败、改断言或换成 fixture 来制造绿色。
+
+当前治理级基础检查包括：
+
+```powershell
+.\.venv\Scripts\python.exe scripts\audit_tools\verify_ai_native_constitution.py
+.\.venv\Scripts\python.exe scripts\audit_tools\verify_codex_takeover_governance.py
+.\.venv\Scripts\python.exe scripts\audit_tools\verify_lumenis_single_product.py
+```
+
+Product Gate、App Gate、Critical E2E、真实Runtime和User Outcome仍需按对应Owner/CI/Release合同分别成立。旧CI、旧SHA、旧数据库、旧截图或历史成功日志不能代替当前证据。
+
+## 安全、隐私与数据边界
+
+- Permission、Action Firewall、Effect Fence、Scope和Source/Evidence边界不能为了开发速度绕过。
+- 真实平台采集只处理已批准范围和允许的数据；Cookie/Session授权与产品账号体系分离。
+- 用户材料、第三方内容、模型训练语料和导出结果必须保留来源、用途、rights和版本；未知权利状态保持UNKNOWN/未批准，不自动升级为可训练/可发布。
+- Production DB写入、破坏性迁移、外部发布、自动评论/投放/消息、付费资源和模型Promotion使用各自现有授权边界。
+- 日志、测试夹具和Evidence不得泄露密码、Token、Cookie、个人浏览器状态或原始生产数据库内容。
+
+## License、知识产权与第三方声明
+
+LUMENIS原始材料采用仓库根目录 [LICENSE](LICENSE) 中的 **LUMENIS PROPRIETARY LICENSE NOTICE**：除特定文件或组件另有声明外，序境/LUMENIS的原创源码、文档、产品逻辑、架构、设计、Schema、Workflow、Prompt、Dataset、配置及其他原创材料均为专有材料，`Copyright (c) 2026 Zachary-1012. All rights reserved.`。访问私有仓库、参与开发或看到源码**不自动授予复制、分发、再许可、销售、公开部署或商业利用权**；相关许可需仓库所有者明确书面授权。
+
+第三方/开源软件、模型、字体、图标、数据集、工具和资产**不被LUMENIS重新许可或主张所有权**，继续受其各自License、Attribution、Notice、Usage Policy和分发义务约束。当前规范登记入口为：
+
+- [Third-Party / Open-Source Component Register](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)
+- [LICENSE](LICENSE)
+
+登记册中的 `VERIFY_BEFORE_RELEASE` / `NOT VERIFIED` 是真实Release阻塞，不允许根据“常见许可证”自行猜测。每次Release前必须重新对齐实际 shipped dependency graph、锁文件、二进制、字体/图标、模型/权重、FFmpeg构建和相应Notice/Source义务。
+
+## 贡献、整合与变更规则
+
+- `main` 是唯一当前实现；不要创建第二产品、第二Owner、第二DB/Evidence store、第二AI Gateway或长期并行候选架构。
+- 并行窗口可以工作，但共享Owner/共享文件需要显式M/W6协调，不能互相覆盖。
+- 提交只stage当前交付的精确文件；本地未知dirty/untracked工作必须先归Owner，禁止bulk-stage、`reset --hard`、`clean -fd`或“顺手整理”。
+- 新研究必须落实到已存在的能力、质量标准或真实结果；研究、线框、报告、测试、文档和Mock都不能取代实现/Runtime/User Outcome。
+- 修改产品定位、Owner、Permission、Canonical、数据语义、模型Promotion或Release标准必须遵守现有治理和Product Owner授权，不能由单个工程师自行改写。
 
 ## 运行入口
 
