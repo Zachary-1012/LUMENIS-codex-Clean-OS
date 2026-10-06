@@ -1,5 +1,5 @@
 """
-广州太古汇舆情监测系统 - 统一配置管理
+LUMENIS compatibility configuration adapter
 统一.env配置，避免硬编码
 
 使用方法：

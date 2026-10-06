@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
-AI 双域上下文隔离（ZBC V2.0 AI+Risk+Evidence+Permission+Report 双域隔离）
+"""LUMENIS CTH/BMP AI domain-context compatibility layer.
 
-CTH = Guangzhou Taikoo Hui Protected Production Domain（生产真相域）
-ZBMP = Multi-Subject Brand Management Platform（多主体平台域）
+CTH is LUMENIS Commerce Operations (Subject-first).
+BMP is LUMENIS Brand & Market; ZBMP/zbmp remain persisted compatibility IDs.
+Guangzhou Taikoo Hui is a controlled reference Subject, never the product
+default. The workspace default is GLOBAL / ALL.
 
-核心约束：
-  1. CTH prompt 不得流入 ZBMP，ZBMP prompt 不得流入 CTH
-  2. AI 请求根据当前线程 SubjectContext.product_id 选择对应 Context
-  3. call_ai_with_governance 入口校验 domain_id 与 prompt context 匹配
-  4. AI 输出标记 system_truth=False（AI 不能替代核心规则）
-  5. Rule→AI辅助→Evidence→Evaluation→Final Decision 链中域身份贯穿全链
+The layer preserves domain isolation and AI-result provenance. It must not infer
+an unauthorized Subject/BrandFocus or turn AI output into Product Truth.
 """
 from __future__ import annotations
 
@@ -32,8 +29,8 @@ logger = logging.getLogger(__name__)
 DOMAIN_CTH = "cth"
 DOMAIN_ZBMP = "zbmp"
 
-PROMPT_VERSION_CTH = "cth-v2.0"
-PROMPT_VERSION_ZBMP = "zbmp-v2.0"
+PROMPT_VERSION_CTH = "cth-v3.0-lumenis"
+PROMPT_VERSION_ZBMP = "bmp-v3.0-lumenis"
 
 
 # ============================================================
@@ -68,29 +65,25 @@ CTH_CONTEXT = DomainPromptContext(
     product_id=PRODUCT_CTH,
     prompt_version=PROMPT_VERSION_CTH,
     system_prompt=(
-        "你是广州太古汇专项舆情分析助手。你的职责是对广州太古汇（Taikoo Hui）"
-        "相关的社交媒体内容（小红书、微博、抖音等）进行精准的舆情分析。\n\n"
-        "分析范围严格限定于：\n"
-        "- 广州太古汇商场本体及场内 199 个品牌\n"
-        "- 太古汇 9 大业态（零售、餐饮、娱乐、文化、服务等）\n"
-        "- 太古汇相关舆情事件、活动、消费者体验\n"
-        "- 太古汇品牌声誉与客户满意度\n\n"
-        "分析原则：\n"
-        "1. 仅分析与太古汇直接相关的内容，不扩展到无关品牌\n"
-        "2. 情感判断必须基于文本证据，不得臆测\n"
-        "3. 风险评级遵循太古汇专项风险策略（舆情扩散/安全/歧视/集中负面/KOC集中传播）\n"
-        "4. 输出必须包含 sentiment / risk_level / topics / summary / evidence_ref\n"
-        "5. 你的输出是 AI 辅助分析，不是最终决策；最终决策由 Rule→Evidence→Evaluation 链路给出"
+        "You are the Commerce Operations analysis capability of LUMENIS. "
+        "CTH is Subject-first and is not a Guangzhou Taikoo Hui-specific product. "
+        "Use only the Subject, sources, Evidence, market and time scope explicitly "
+        "authorized for the current request. GLOBAL / ALL has no implicit Subject. "
+        "Guangzhou Taikoo Hui and Shenzhen Luohu MixC are representative reference "
+        "Subjects only when explicitly focused. Distinguish issuer claims, consumer "
+        "discussion, media reporting, advertising and observed operational outcomes. "
+        "Keep missing footfall, sales, satisfaction, effect or causal evidence as "
+        "UNKNOWN / NOT_AVAILABLE. Bind judgments to locatable sources and timestamps. "
+        "AI never owns Permission, Evidence, Canonical Truth or external effects."
     ),
     analysis_focus=[
-        "太古汇商场本体舆情",
-        "场内199品牌动态",
-        "9业态分布与表现",
-        "舆情事件追踪",
-        "小红书/微博/抖音平台声量",
-        "消费者体验与满意度",
-        "KOC/KOL传播分析",
-        "太古汇品牌声誉",
+        "authorized commercial Subject operations",
+        "events, consumer feedback and risk",
+        "venue and tenant/category relationships",
+        "source roles and communication changes",
+        "cross-platform comparable native signals",
+        "actionable operations recommendations with evidence",
+        "outcomes, unknown states and evaluation",
     ],
     output_schema_hint=(
         '{"sentiment": "positive|neutral|negative|unknown", '
@@ -99,9 +92,9 @@ CTH_CONTEXT = DomainPromptContext(
         '"confidence": 0.0-1.0, "domain_id": "cth"}'
     ),
     prohibited_topics=[
-        "非太古汇品牌的独立分析",
-        "与太古汇无关的市场宏观预测",
-        "竞品的深度策略建议（仅做对比参考）",
+        "treating a reference Subject as the default product scope",
+        "analyzing a Subject outside current Permission / Context",
+        "turning missing data, model inference, sentiment or attention into verified operational fact",
     ],
 )
 
@@ -111,31 +104,24 @@ ZBMP_CONTEXT = DomainPromptContext(
     product_id=PRODUCT_ZBMP,
     prompt_version=PROMPT_VERSION_ZBMP,
     system_prompt=(
-        "你是多主体品牌管理平台（ZBMP）的品牌智能分析助手。"
-        "你的职责是对多个品牌进行品牌智能分析，包括品牌传播、竞争格局、"
-        "市场趋势和品牌增长视角。\n\n"
-        "分析范围：\n"
-        "- 多品牌传播效果与声量分析\n"
-        "- 竞品动态与竞争格局\n"
-        "- 行业市场趋势识别\n"
-        "- 品牌增长机会与策略建议\n"
-        "- 内容表现与互动分析\n\n"
-        "分析原则：\n"
-        "1. 多品牌视角，不局限于单一主体\n"
-        "2. 竞争分析需基于可验证的数据\n"
-        "3. 风险评级遵循 ZBMP 品牌风险策略（品牌声誉/竞品冲击/传播异常/用户负反馈/品牌危机）\n"
-        "4. 输出必须包含 sentiment / risk_level / topics / summary / evidence_ref\n"
-        "5. 你的输出是 AI 辅助分析，不是最终决策；最终决策由 Rule→Evidence→Evaluation 链路给出"
+        "You are the Brand & Market analysis capability of LUMENIS. "
+        "BMP is Brand/Market-first; ZBMP/zbmp are persisted compatibility identifiers, "
+        "not another product. Use only the BrandFocus, market, sources, Evidence and "
+        "time scope authorized for the current request. GLOBAL / ALL has no implicit "
+        "brand. Nike and Le Labo are representative acceptance brands only when "
+        "explicitly focused. Preserve comparable market/time/platform definitions and "
+        "separate competitors, consumers, creators, communication, content and Campaign "
+        "signals from verified commercial outcomes. Missing sales, conversion, effect "
+        "or causal evidence stays UNKNOWN / NOT_AVAILABLE. AI never owns Permission, "
+        "Evidence, Canonical Truth or external effects."
     ),
     analysis_focus=[
-        "多品牌传播分析",
-        "竞品冲击与竞争格局",
-        "市场趋势识别",
-        "品牌增长机会",
-        "内容表现评估",
-        "用户负反馈监测",
-        "品牌声誉管理",
-        "跨平台声量对比",
+        "authorized BrandFocus and market scope",
+        "competitor, consumer and creator signals",
+        "communication, content and Campaign performance",
+        "source role, market and time comparability",
+        "brand opportunities, risks and alternative strategies",
+        "outcomes, unknown states and evaluation",
     ],
     output_schema_hint=(
         '{"sentiment": "positive|neutral|negative|unknown", '
@@ -144,9 +130,9 @@ ZBMP_CONTEXT = DomainPromptContext(
         '"confidence": 0.0-1.0, "domain_id": "zbmp"}'
     ),
     prohibited_topics=[
-        "太古汇专项舆情规则（CTH 专属）",
-        "太古汇 subject_hit 过滤逻辑",
-        "太古汇 199 品牌/9 业态的专项分类",
+        "treating any reference brand as the default product scope",
+        "analyzing a brand or market outside current Permission / Context",
+        "turning missing data, model inference or correlation into verified commercial outcome",
     ],
 )
 
@@ -160,13 +146,12 @@ DOMAIN_CONTEXTS: Dict[str, DomainPromptContext] = {
 # 3. 域身份解析
 # ============================================================
 def product_id_to_domain(product_id: str) -> str:
-    """将 product_id 映射为 domain_id。"""
+    """Map a known compatibility product ID to its business domain; unknown IDs fail closed."""
     if product_id == PRODUCT_CTH:
         return DOMAIN_CTH
     if product_id == PRODUCT_ZBMP:
         return DOMAIN_ZBMP
-    # 默认 CTH（生产安全默认）
-    return DOMAIN_CTH
+    raise ValueError(f"unknown product_id: {product_id}")
 
 
 def get_current_domain() -> str:
@@ -182,12 +167,11 @@ def get_current_domain() -> str:
 
 
 def get_domain_context(domain_id: Optional[str] = None) -> DomainPromptContext:
-    """获取指定域的 Prompt 上下文。默认从当前线程解析。"""
+    """Resolve an explicit/current AI business domain; unknown domains fail closed."""
     did = domain_id or get_current_domain()
     ctx = DOMAIN_CONTEXTS.get(did)
     if ctx is None:
-        logger.warning("未知 domain_id=%s，回退 CTH 上下文", did)
-        ctx = CTH_CONTEXT
+        raise ValueError(f"unknown domain_id: {did}")
     return ctx
 
 

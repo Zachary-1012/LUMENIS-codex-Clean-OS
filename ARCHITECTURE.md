@@ -1,3 +1,5 @@
+> **HISTORICAL / COMPATIBILITY REFERENCE - NOT CURRENT PRODUCT AUTHORITY.** Current execution starts at AGENTS.md; current product identity is LUMENIS, the sole blueprint is 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md, and workspace context defaults to GLOBAL / ALL. Historical Guangzhou Taikoo Hui, CTH-POMS, ZBMP, Z-Brand-Core and old deployment paths below are provenance only unless a current owner explicitly revalidates them.
+
 # 广州太古汇舆情监测系统 - 架构文档
 
 ## 系统概述

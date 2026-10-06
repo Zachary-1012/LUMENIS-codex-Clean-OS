@@ -1,3 +1,5 @@
+> **HISTORICAL / COMPATIBILITY REFERENCE - NOT CURRENT PRODUCT AUTHORITY.** Current execution starts at AGENTS.md; current product identity is LUMENIS, the sole blueprint is 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md, and workspace context defaults to GLOBAL / ALL. Legacy names below are provenance/compatibility only.
+
 # Zachary AI Platform — Z-Brand-Core Integration Baseline
 
 > **IMMUTABLE PLATFORM BASELINE**

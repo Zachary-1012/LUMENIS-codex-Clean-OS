@@ -759,7 +759,7 @@ def api_intelligence_evidence():
 
 
 def _get_domain_context():
-    """Resolve current domain from cookie/header/query, default cth."""
+    """Legacy domain-API resolver; its cth fallback is compatibility-only, never GLOBAL / ALL truth."""
     dom = (request.cookies.get('zbc_domain')
            or request.headers.get('X-Domain-Id')
            or request.args.get('domain')
@@ -786,7 +786,7 @@ def api_domain_overview():
         result = {
             "ok": True,
             "domain": domain,
-            "domain_name": "CTH (Guangzhou Taikoo Hui)" if domain == "cth" else "ZBMP (Multi-Brand Platform)" if domain == "zbmp" else "SYSTEM",
+            "domain_name": "CTH / LUMENIS Commerce Operations" if domain == "cth" else "BMP / LUMENIS Brand & Market" if domain == "zbmp" else "SYSTEM",
             "stats": stats,
             "overview": {
                 "trend": [],  # populated by /api/metric-trend for specific entities

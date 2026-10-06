@@ -1,5 +1,5 @@
 """
-广州太古汇舆情监测系统 - 微信通知中心
+LUMENIS notification compatibility module
 支持多渠道微信推送，消息去重，失败自动重试，推送日志
 
 推送渠道：

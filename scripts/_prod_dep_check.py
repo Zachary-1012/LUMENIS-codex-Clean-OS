@@ -1,4 +1,4 @@
-"""Z-Brand-Core 生产启动前最小依赖检查。返回退出码 0=OK 2=MISSING
+"""LUMENIS Product Core startup minimal dependency check. exit 0=OK, 2=MISSING
 输出 stdout 最后一行： OK 或 MISSING:a,b,c
 """
 import sys

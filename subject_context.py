@@ -1,12 +1,10 @@
-"""LUMENIS Subject Context（V2 P0-19）
+"""LUMENIS Subject Context compatibility layer.
 
-建立 ProductContext → SubjectContext → ScopeContext → Resource 四层上下文。
-消除 active_brand 作为系统真实数据边界，所有数据操作携带 Subject Scope。
-
-CTH = Guangzhou Taikoo Hui Protected Production Domain（生产真相域）
-ZBMP = Multi-Subject Brand Management Platform（多主体平台域）
-
-向后兼容：get_active_brand() 仍可用，但内部通过 SubjectContext 管理。
+Current product context is selected by the canonical GLOBAL / ALL -> FOCUS
+contract. CTH means LUMENIS Commerce Operations and BMP means LUMENIS Brand &
+Market. Guangzhou Taikoo Hui is a controlled deep-reference Subject. Historical
+no-argument CTH/Guangzhou fallbacks remain only for legacy callers and must not
+be exposed as the product default.
 """
 import os
 import threading
@@ -121,7 +119,7 @@ class ProductContext:
 PRODUCTS = {
     PRODUCT_CTH: ProductContext(
         product_id=PRODUCT_CTH,
-        name="Guangzhou Taikoo Hui Protected Production Domain",
+        name="LUMENIS Commerce Operations",
         is_protected=True,
         default_subject=CTH_SUBJECT_ID,
     ),

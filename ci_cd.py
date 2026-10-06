@@ -1,5 +1,5 @@
 """
-广州太古汇舆情监测系统 - CI/CD 自动化脚本
+LUMENIS legacy CI/CD helper; current release gates live under .github/workflows
 自动化测试、构建、部署、发布
 
 使用方法：

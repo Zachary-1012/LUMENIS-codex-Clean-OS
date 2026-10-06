@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Z-Brand-Core KOS 归因模块（多触点贡献分解）
+"""LUMENIS BMP KOS attribution compatibility module
 
 原则：
 1. 不把最终结果简单全部归因给最后一个KOS。

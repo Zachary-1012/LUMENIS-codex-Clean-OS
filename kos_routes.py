@@ -4,7 +4,7 @@
 
 
 
-"""Z-Brand-Core KOS API Blueprint（KOS 传播主体 API）
+"""LUMENIS BMP KOS API compatibility blueprint
 
 
 

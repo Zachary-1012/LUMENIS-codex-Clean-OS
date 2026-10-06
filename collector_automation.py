@@ -1,5 +1,5 @@
 """
-采集器自动化模块 - 广州太古汇舆情监测系统 v5.8.0
+LUMENIS SYSTEM Collector automation compatibility module
 实现自动启动→采集→自动关闭的完整流程
 """
 # 采集生产主链固定使用香港/国际账号；大陆身份只保留诊断能力，不进入采集。

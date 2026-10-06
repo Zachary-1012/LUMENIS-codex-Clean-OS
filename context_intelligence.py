@@ -1,5 +1,5 @@
 """
-Z-Brand-Core Context Intelligence Engine (Shadow / non-invasive)
+LUMENIS compatibility Context Intelligence Engine (shadow / non-invasive)
 
 Purpose
 -------

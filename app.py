@@ -1,4 +1,4 @@
-"""广州太古汇舆情监测系统 v4：本地动态版 + 定时采集 + 严格主体过滤。"""
+"""LUMENIS Product Core compatibility entry; current product identity is 序境 / LUMENIS."""
 import os, sys, json, threading, time, shutil, sqlite3, secrets, argparse, concurrent.futures, subprocess, csv, io, re, tempfile
 from pathlib import Path
 
@@ -1352,6 +1352,8 @@ def event_graph_delete_event(event_id):
 
 # V3.0 品牌分析报告API
 APP_VERSION='5.9.9'
+PRODUCT_NAME='\u5e8f\u5883 / LUMENIS'
+CORE_SERVICE_NAME='lumenis-core'
 APP_HOST=os.getenv('TAIKOO_HOST','0.0.0.0')
 APP_PORT=int(os.getenv('TAIKOO_PORT','8200'))
 AUTH_USER=os.getenv('TAIKOO_AUTH_USER','')
@@ -3192,7 +3194,7 @@ def healthz():
         'status': 'healthy' if healthy else 'unavailable',
         'dependencies': {'database': database_status},
         'version': APP_VERSION,
-        'service': 'taikoo-monitor',
+        'service': CORE_SERVICE_NAME,
     }), (200 if healthy else 503)
 
 @app.route('/api/health')
@@ -3224,7 +3226,7 @@ def api_health():
         _db_error = str(_e)
     _payload = {
         'ok': _db_status == 'ok',
-        'service': 'taikoo-monitor',
+        'service': CORE_SERVICE_NAME,
         'version': APP_VERSION,
         'pid': os.getpid(),
         'port': _port,
@@ -3239,7 +3241,7 @@ def api_health():
 def api_system_health():
     """产品级健康状态：区分‘系统正常’与‘数据源没有数据’。"""
     now=datetime.now()
-    result={'version':APP_VERSION,'service':'taikoo-monitor','time':now.strftime('%Y-%m-%d %H:%M:%S')}
+    result={'version':APP_VERSION,'service':CORE_SERVICE_NAME,'time':now.strftime('%Y-%m-%d %H:%M:%S')}
     try:
         stats=db.get_stats()
         latest=''
@@ -3613,7 +3615,7 @@ def api_status():
     stats=db.get_stats()
     with db.get_db() as conn:
         clause,sp=_subject_sql_and_values(); unanalyzed=conn.execute(f"SELECT COUNT(*) c FROM notes WHERE (ai_analyzed_at='' OR ai_analyzed_at IS NULL) AND is_taikoo_verified=1 AND {clause}",tuple(sp)).fetchone()['c']; last=conn.execute('SELECT * FROM collection_logs ORDER BY id DESC LIMIT 1').fetchone()
-    return jsonify({'ok':True,'system':'广州太古汇舆情监测系统','version':APP_VERSION,'collector':'Playwright/XHS search + rednote CDP','analyzer':'AI provider + auditable rule fallback','qian_gua_integration':False,'data_source':'公开网页发现 → 关键词反馈 → 小红书/rednote浏览器采集','total_notes':stats['total'],'verified_notes':stats['verified_count'],'unanalyzed':unanalyzed,'last_collection':dict(last) if last else None,'server_time':datetime.now().strftime('%Y-%m-%d %H:%M:%S'),'ai_enabled':intelligence.ai_enabled(),'ai_detail':intelligence.ai_status().get('detail'),'ai_provider':intelligence.ai_status().get('provider'),'ai_model':intelligence.ai_status().get('model'),'web_sources':['Google News RSS','GDELT','custom RSS'],'rednote_cdp_enabled':bool(os.getenv('XHS_CDP_URL','')),'company_domain':os.getenv('TAIKOO_COMPANY_DOMAIN',''),'auto_interval_minutes':int(os.getenv('AUTO_INTERVAL_MINUTES','90'))})
+    return jsonify({'ok':True,'system':PRODUCT_NAME,'version':APP_VERSION,'collector':'Playwright/XHS search + rednote CDP','analyzer':'AI provider + auditable rule fallback','qian_gua_integration':False,'data_source':'公开网页发现 → 关键词反馈 → 小红书/rednote浏览器采集','total_notes':stats['total'],'verified_notes':stats['verified_count'],'unanalyzed':unanalyzed,'last_collection':dict(last) if last else None,'server_time':datetime.now().strftime('%Y-%m-%d %H:%M:%S'),'ai_enabled':intelligence.ai_enabled(),'ai_detail':intelligence.ai_status().get('detail'),'ai_provider':intelligence.ai_status().get('provider'),'ai_model':intelligence.ai_status().get('model'),'web_sources':['Google News RSS','GDELT','custom RSS'],'rednote_cdp_enabled':bool(os.getenv('XHS_CDP_URL','')),'company_domain':os.getenv('TAIKOO_COMPANY_DOMAIN',''),'auto_interval_minutes':int(os.getenv('AUTO_INTERVAL_MINUTES','90'))})
 
 # ===== v5.4 rednote CDP 采集 API =====
 @app.route('/api/rednote/collect', methods=['POST'])
@@ -5116,7 +5118,7 @@ def _start_app_automations(args):
 
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser(description='广州太古汇舆情监测系统')
+    parser=argparse.ArgumentParser(description=f'{PRODUCT_NAME} Product Core')
     parser.add_argument('--host',default=APP_HOST,help='监听地址，默认0.0.0.0（支持本地/局域网/5G热点访问）')
     parser.add_argument('--port',type=int,default=APP_PORT)
     parser.add_argument('--no-scheduler',action='store_true',help='仅启动 Web，不启动自动采集调度器')
@@ -5140,7 +5142,7 @@ if __name__=='__main__':
         and not INTERNAL_BETA_SAFE_STARTUP
         and _automatic_collection_opted_in()
     )
-    print(f'广州太古汇舆情监测系统 v{APP_VERSION} | {args.host}:{args.port} | 自动采集：{auto_collection} | HTTP认证：{auth_state}')
+    print(f'{PRODUCT_NAME} Product Core v{APP_VERSION} | {args.host}:{args.port} | 自动采集：{auto_collection} | HTTP认证：{auth_state}')
 
 # ===== SYSTEM AI Gateway health =====
 @app.route('/api/xhs/p0/status', methods=['GET'])
@@ -7481,7 +7483,7 @@ if __name__ == '__main__':
     RUN_HOST = getattr(globals().get('args'), 'host', APP_HOST)
     RUN_PORT = getattr(globals().get('args'), 'port', APP_PORT)
     print("=" * 60)
-    print(f"广州太古汇舆情监测系统 v{APP_VERSION}")
+    print(f"{PRODUCT_NAME} Product Core v{APP_VERSION}")
     print(f"启动地址: http://{RUN_HOST}:{RUN_PORT}")
     print(f"多线程模式: 开启")
     print(f"详细日志: {os.path.join(log_dir, 'system.log')}")

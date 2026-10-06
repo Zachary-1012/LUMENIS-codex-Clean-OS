@@ -1,11 +1,9 @@
-"""LUMENIS Domain Isolation（V2 P0-1）
+"""LUMENIS business-domain isolation compatibility layer.
 
-CTH 和 ZBMP 是 ZBC 的两个业务域，共享 Capability/AI/Skill/Evaluation/Security/UI，
-但隔离 Data/Subject/Historical Truth/Evidence Namespace/Permission Scope/Runtime/Business Rules。
-
-CTH = Guangzhou Taikoo Hui Protected Production Domain（生产真相域，受保护）
-ZBMP = Multi-Subject Brand Management Platform（多主体平台域）
-SYSTEM = 系统基础设施域（Guardian/Collector/AI/Runtime 共享层）
+CTH is LUMENIS Commerce Operations. BMP is LUMENIS Brand & Market; zbmp/ZBMP
+remains a persisted compatibility identifier. Guangzhou Taikoo Hui is a
+controlled reference Subject, not the default product context. GLOBAL / ALL
+selection is owned by the canonical context contract.
 """
 import os
 import threading
@@ -65,7 +63,7 @@ class DomainBoundary:
 CTH_DOMAIN = DomainBoundary(
     domain_id="cth",
     product_id=PRODUCT_CTH,
-    name="Guangzhou Taikoo Hui Protected Production Domain",
+    name="LUMENIS Commerce Operations",
     is_protected=True,
     isolated_resources=[
         "database", "subject_words", "subject_exclude_words",
@@ -83,7 +81,7 @@ CTH_DOMAIN = DomainBoundary(
 ZBMP_DOMAIN = DomainBoundary(
     domain_id="zbmp",
     product_id=PRODUCT_ZBMP,
-    name="Multi-Subject Brand Management Platform",
+    name="LUMENIS Brand & Market (ZBMP compatibility id)",
     is_protected=False,
     isolated_resources=[
         "brand_profiles", "campaigns", "subject_configs",

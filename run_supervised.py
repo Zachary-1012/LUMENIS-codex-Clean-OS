@@ -1,19 +1,10 @@
 # -*- coding: utf-8 -*-
-# ============================================================
-# Z-Brand-Core · Zachary-OS-AI T0-3 Legacy Redirect Notice
-#  此入口已标注为 LEGACY（保留用于调试/历史兼容）。官方统一生产入口已收敛为：
-#     powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
-#  如确需直接执行此 .py，请使用项目 .venv：  .venv\Scripts\python.exe <this_file>.py
-# ============================================================
-"""Z-Brand Core / CTH-POMS 进程看门狗（生产常驻监督器）。
+"""LUMENIS Product Core process supervisor.
 
-解决两类宕机：
-1) 子进程真退出（含原生崩溃，退出码非0）-> 3 秒自动拉起；快速连续崩溃 -> 指数长冷却，不疯狂刷。
-2) “假活”：Flask 为 multiprocessing 父子双进程，真正监听端口的 worker 原生崩溃后，父进程可能
-   不退出，只盯进程会误判存活。故叠加 /healthz 端口探测：进程在但端口连续 N 次不通 => 杀整棵进程树重启。
-
-监督器自身需以“脱离会话的独立常驻进程”方式启动（pythonw + Start-Process / 计划任务 / 启动项），
-不依赖任何交互式 shell，否则会话结束监督器会被一并回收。
+The canonical Windows launcher is scripts/start_production.ps1. This module is
+its owned 8201 child supervisor: it restarts a crashed Core and detects a live
+process whose health endpoint is unavailable. Historical Z-Brand/CTH-POMS names
+do not define the current product identity.
 """
 import errno
 import os

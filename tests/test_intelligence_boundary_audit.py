@@ -48,7 +48,7 @@ def test_01_app_api_health_readonly():
     resp = client.get('/api/health')
     assert resp.status_code == 200
     body = resp.get_json()
-    assert body.get('service') == 'taikoo-monitor'
+    assert body.get('service') == 'lumenis-core'
 
 
 # ---------------------------------------------------------------------------

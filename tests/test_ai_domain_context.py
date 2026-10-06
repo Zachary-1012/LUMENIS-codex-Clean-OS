@@ -36,12 +36,12 @@ class TestDomainContextDefinitions:
     def test_cth_context_exists(self):
         assert CTH_CONTEXT.domain_id == "cth"
         assert CTH_CONTEXT.product_id == "CTH"
-        assert CTH_CONTEXT.prompt_version == "cth-v2.0"
+        assert CTH_CONTEXT.prompt_version == "cth-v3.0-lumenis"
 
     def test_zbmp_context_exists(self):
         assert ZBMP_CONTEXT.domain_id == "zbmp"
         assert ZBMP_CONTEXT.product_id == "ZBMP"
-        assert ZBMP_CONTEXT.prompt_version == "zbmp-v2.0"
+        assert ZBMP_CONTEXT.prompt_version == "bmp-v3.0-lumenis"
 
     def test_contexts_are_different(self):
         """CTH 和 ZBMP 的 system_prompt、analysis_focus、prohibited_topics 必须不同。"""
@@ -49,26 +49,27 @@ class TestDomainContextDefinitions:
         assert CTH_CONTEXT.analysis_focus != ZBMP_CONTEXT.analysis_focus
         assert CTH_CONTEXT.prohibited_topics != ZBMP_CONTEXT.prohibited_topics
 
-    def test_cth_focus_on_taikoo(self):
-        """CTH 分析焦点必须包含太古汇专项内容。"""
+    def test_cth_is_subject_first_not_reference_default(self):
         focus_text = " ".join(CTH_CONTEXT.analysis_focus)
-        assert "太古汇" in focus_text or "舆情" in focus_text
+        assert "authorized commercial Subject" in focus_text
+        assert "GLOBAL / ALL has no implicit Subject" in CTH_CONTEXT.system_prompt
+        assert "not a Guangzhou Taikoo Hui-specific product" in CTH_CONTEXT.system_prompt
 
-    def test_zbmp_focus_on_brand(self):
-        """ZBMP 分析焦点必须包含多品牌/竞争/增长内容。"""
+    def test_bmp_focus_on_authorized_brand_market(self):
         focus_text = " ".join(ZBMP_CONTEXT.analysis_focus)
-        assert "品牌" in focus_text or "竞争" in focus_text or "增长" in focus_text
+        assert "authorized BrandFocus" in focus_text
+        assert "GLOBAL / ALL has no implicit brand" in ZBMP_CONTEXT.system_prompt
 
-    def test_cth_prohibits_zbmp_specific(self):
-        """CTH 禁止话题应包含 ZBMP 专项内容（不串域）。"""
+    def test_cth_prohibits_reference_subject_as_default(self):
         prohibited = " ".join(CTH_CONTEXT.prohibited_topics)
-        # CTH 不应做非太古汇品牌的独立分析
-        assert any("非太古汇" in p or "无关" in p for p in CTH_CONTEXT.prohibited_topics)
+        assert "default product scope" in prohibited
+        assert "Permission / Context" in prohibited
 
-    def test_zbmp_prohibits_cth_specific(self):
-        """ZBMP 禁止话题应包含 CTH 专项规则（不串域）。"""
+    def test_bmp_prohibits_reference_brand_as_default(self):
         prohibited = " ".join(ZBMP_CONTEXT.prohibited_topics)
-        assert "太古汇" in prohibited or "CTH" in prohibited or "subject_hit" in prohibited
+        assert "default product scope" in prohibited
+        assert "Permission / Context" in prohibited
+
 
 
 class TestDomainResolution:
@@ -80,8 +81,9 @@ class TestDomainResolution:
     def test_product_id_to_domain_zbmp(self):
         assert product_id_to_domain(PRODUCT_ZBMP) == "zbmp"
 
-    def test_product_id_to_domain_default(self):
-        assert product_id_to_domain("UNKNOWN") == "cth"  # 生产安全默认
+    def test_product_id_to_domain_unknown_fails_closed(self):
+        with pytest.raises(ValueError, match="unknown product_id"):
+            product_id_to_domain("UNKNOWN")
 
     def test_get_domain_context_cth(self):
         ctx = get_domain_context("cth")
@@ -91,9 +93,9 @@ class TestDomainResolution:
         ctx = get_domain_context("zbmp")
         assert ctx.domain_id == "zbmp"
 
-    def test_get_domain_context_unknown_fallback(self):
-        ctx = get_domain_context("nonexistent")
-        assert ctx.domain_id == "cth"  # 回退 CTH
+    def test_get_domain_context_unknown_fails_closed(self):
+        with pytest.raises(ValueError, match="unknown domain_id"):
+            get_domain_context("nonexistent")
 
     def test_current_domain_default_cth(self):
         """无线程上下文时，默认 CTH。"""
@@ -167,7 +169,7 @@ class TestAIResultDomainMarking:
         )
         assert result["domain_id"] == "cth"
         assert result["product_id"] == "CTH"
-        assert result["prompt_version"] == "cth-v2.0"
+        assert result["prompt_version"] == "cth-v3.0-lumenis"
         assert result["system_truth"] is False
         assert result["ai_enhanced"] is True
         assert result["confidence"] == 0.85
@@ -199,7 +201,7 @@ class TestPrepareDomainAIRequest:
         req = prepare_domain_ai_request("测试舆情内容", domain_id="cth")
         assert req["domain_id"] == "cth"
         assert req["product_id"] == "CTH"
-        assert req["prompt_version"] == "cth-v2.0"
+        assert req["prompt_version"] == "cth-v3.0-lumenis"
         assert len(req["input_hash"]) == 32
         assert len(req["messages"]) == 2
 

@@ -1,31 +1,9 @@
-"""Z-Brand-Core 小红书 P0 生产编排层（双子星库 Contract 落地）。
+"""LUMENIS SYSTEM XHS/RedNote compatibility orchestrator.
 
-职责边界（用户指令·职责钉死）：
-  Zachary-OS-AI  = 研究 / 学习（本模块不承载研究逻辑）
-  Z-Brand-Core   = 开发 / 执行 / 生产（本模块 = 采集链生产执行编排）
-
-P0 目标流程（硬编码在 run_once / trigger_collection）：
-  系统启动 → 小红书 Runtime 检查 → Session 有效 → 直接驻场
-        │                     └ Session 失效 → 系统内部弹出扫码(二维码)
-        │                                      → 人工扫码一次
-        │                                      → 验证成功
-        │                                      → 长期驻场
-  有采集任务 → 调用指定身份(硬白名单) → 采集 → 入库
-            → Z-Brand-Core 主体过滤 → 舆情 / 事件 / 风险
-
-依赖（全部为本仓既有真实模块，不新增未验证依赖）：
-  xhs_cookie_bridge  : select_account / verify_account / runtime_preflight_check /
-                       ACCOUNT_PROFILES / ALLOWED_USER_IDS / XHS_CN_PRIMARY_NAME / XHS_RETINAUT_NAME
-  runtime_preflight  : run_preflight（启动预检）
-  auth_recovery_center : recovery_center 服务层（create_task / mark_in_progress /
-                       mark_completed / mark_failed）——不依赖 HTTP 请求上下文，可后台线程调用
-
-生产采集身份门禁（RedNote HK-only Contract）：
-  XHS_RETINAUT    = 香港/国际生产采集身份
-  XHS_CN_PRIMARY  = 保留为诊断/历史凭证映射，但不得进入生产采集任务。
-  除香港/国际身份外，任何身份无法进入采集任务。
-
-本模块是"编排 + 状态聚合"，不复制任何采集实现（防止两套 Core）。
+This is an existing collector caller, not a second product or architecture
+owner. Guangzhou Taikoo Hui can appear only as an explicitly scoped reference
+Subject; product context defaults to GLOBAL / ALL through the current context
+owner.
 """
 from __future__ import annotations
 

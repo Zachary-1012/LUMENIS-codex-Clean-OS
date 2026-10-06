@@ -1,29 +1,18 @@
 #!/usr/bin/env python3
-"""Check GitHub for a newer Z-Brand-Core revision and emit a Doubao upgrade task.
+"""Check the current LUMENIS origin/main and emit a local sync task.
 
-This script is intentionally local-only: it does not modify source code, credentials,
-Cookies, databases or platform accounts. It only compares the remote Git HEAD with
-local Git HEAD and writes a deterministic task file for the local AI/dev workflow.
-
-Usage:
-    python scripts/github_upgrade_check.py
-    python scripts/github_upgrade_check.py --repo-dir .
-
-The local machine should run this after each local development task and periodically
-via Windows Task Scheduler. Doubao can read the generated task file, inspect the GitHub
-revision, audit the local source, run tests, and only then apply compatible changes.
+This helper never chooses a coding model, development agent, product scope or
+platform priority. The configured Git origin is the repository authority;
+AGENTS.md and CURRENT route all follow-up engineering work.
 """
-
 from __future__ import annotations
 
 import argparse
 import json
 import subprocess
-import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-REPO = "Zachary-1012/Z-Brand-Core"
 DEFAULT_BRANCH = "main"
 TASK_FILE = Path(".runtime") / "github_upgrade_task.md"
 STATE_FILE = Path(".runtime") / "github_upgrade_state.json"
@@ -31,20 +20,61 @@ STATE_FILE = Path(".runtime") / "github_upgrade_state.json"
 
 def run_git(repo_dir: Path, *args: str) -> str:
     result = subprocess.run(
-        ["git", *args], cwd=repo_dir, capture_output=True, text=True, check=True
+        ["git", *args],
+        cwd=repo_dir,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=True,
     )
     return result.stdout.strip()
 
 
-def remote_head() -> str:
-    url = f"https://api.github.com/repos/{REPO}/commits/{DEFAULT_BRANCH}"
-    request = urllib.request.Request(
-        url,
-        headers={"Accept": "application/vnd.github+json", "User-Agent": "Z-Brand-Core-upgrade-check"},
+def remote_head(repo_dir: Path) -> tuple[str, str]:
+    remote_url = run_git(repo_dir, "remote", "get-url", "origin")
+    result = subprocess.run(
+        ["git", "ls-remote", "--heads", "origin", f"refs/heads/{DEFAULT_BRANCH}"],
+        cwd=repo_dir,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=True,
     )
-    with urllib.request.urlopen(request, timeout=15) as response:
-        payload = json.load(response)
-    return payload["sha"]
+    fields = result.stdout.strip().split()
+    if len(fields) != 2 or fields[1] != f"refs/heads/{DEFAULT_BRANCH}":
+        raise RuntimeError("origin/main remote head unavailable")
+    return fields[0], remote_url
+
+
+def task_text(now: str, remote_url: str, local_head: str, remote: str) -> str:
+    if local_head == remote:
+        return (
+            "# LUMENIS main sync check\n\n"
+            f"Time: {now}\n"
+            f"Repository: origin ({remote_url})\n"
+            f"Local HEAD: {local_head}\n"
+            f"origin/main: {remote}\n\n"
+            "Status: synchronized. Do not modify source merely to create work.\n"
+        )
+    return (
+        "# LUMENIS main sync task\n\n"
+        f"Time: {now}\n"
+        f"Repository: origin ({remote_url})\n"
+        f"Local HEAD: {local_head}\n"
+        f"origin/main: {remote}\n\n"
+        "Execution rules:\n"
+        "1. Resolve fresh origin/main and preserve the complete local working tree.\n"
+        "2. Root AGENTS.md is the sole execution router; Product Architecture is the sole product blueprint.\n"
+        "3. Do not reset, clean, bulk overwrite, or infer current truth from historical documents.\n"
+        "4. Current source/runtime/DB/Permission/Evidence truth has precedence.\n"
+        "5. Product context defaults to GLOBAL / ALL; Subject or BrandFocus requires explicit focus.\n"
+        "6. CTH/BMP/Shared/SYSTEM and platform work follow their current Owner/Permission contracts; this helper assigns no priority.\n"
+        "7. Run affected tests and blocking gates before delivery.\n"
+        "8. Push main in the same delivery cycle and fetch again to prove local/online equality.\n\n"
+        "Completion requires the active objective, data safety, verification, and Git state to agree with current LUMENIS governance.\n"
+    )
 
 
 def main() -> int:
@@ -54,59 +84,27 @@ def main() -> int:
 
     repo_dir = Path(args.repo_dir).resolve()
     local_head = run_git(repo_dir, "rev-parse", "HEAD")
-    remote = remote_head()
+    remote, remote_url = remote_head(repo_dir)
     now = datetime.now(timezone.utc).isoformat()
+    status = "synced" if local_head == remote else "remote_differs"
 
-    TASK_FILE.parent.mkdir(parents=True, exist_ok=True)
-    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-
-    if local_head == remote:
-        TASK_FILE.write_text(
-            "# GitHub 升级检查\n\n"
-            f"时间: {now}\n"
-            f"仓库: {REPO}\n"
-            f"本地 HEAD: `{local_head}`\n"
-            f"GitHub main: `{remote}`\n\n"
-            "状态：已同步。无需自动修改源码。继续执行本地健康检查即可。\n",
-            encoding="utf-8",
-        )
-        status = "synced"
-    else:
-        TASK_FILE.write_text(
-            "# GitHub 升级任务（供豆包/本地开发代理执行）\n\n"
-            f"时间: {now}\n"
-            f"仓库: {REPO}\n"
-            f"本地 HEAD: `{local_head}`\n"
-            f"GitHub main: `{remote}`\n\n"
-            "## 执行顺序\n"
-            "1. 先读取 GitHub 最新提交和变更文件。\n"
-            "2. 先审计、再修改；禁止直接覆盖本地生产源码。\n"
-            "3. 保留现有数据库、主体过滤、风险、事件、报告等核心逻辑。\n"
-            "4. 优先采用向后兼容的小补丁。\n"
-            "5. 小红书为主平台，抖音为第二重点；其他五个平台只维护 Adapter 插槽。\n"
-            "6. 禁止复制 MediaCrawler 的受限许可证代码；仅可独立实现兼容接口和设计思想。\n"
-            "7. 禁止绕过验证码、安全验证、IP 风控或平台访问控制。\n"
-            "8. 修改后运行现有测试、语法检查和关键回归测试。\n"
-            "9. 测试通过后才允许提交 Git。\n"
-            "10. 将变更摘要、测试结果和回滚方式写入升级日志。\n\n"
-            "## 绝对保护项\n"
-            "- `SUBJECT_WORDS`\n"
-            "- `SUBJECT_EXCLUDE_WORDS`\n"
-            "- `subject_hit()`\n"
-            "- `_subject_sql_and_values()`\n"
-            "- `aggregate_events()` 主体过滤\n"
-            "- `build_daily_report()` 主体过滤\n"
-            "- `publish_datetime` / `captured_at` 时间口径\n"
-            "- 生产 SQLite 数据及历史数据\n\n"
-            "## 完成条件\n"
-            "本次任务只有在代码、测试、数据安全和 Git 状态全部正常时才标记完成。\n",
-            encoding="utf-8",
-        )
-        status = "upgrade_available"
-
-    STATE_FILE.write_text(
+    task_file = repo_dir / TASK_FILE
+    state_file = repo_dir / STATE_FILE
+    task_file.parent.mkdir(parents=True, exist_ok=True)
+    state_file.parent.mkdir(parents=True, exist_ok=True)
+    task_file.write_text(
+        task_text(now, remote_url, local_head, remote),
+        encoding="utf-8",
+    )
+    state_file.write_text(
         json.dumps(
-            {"checked_at": now, "local_head": local_head, "remote_head": remote, "status": status},
+            {
+                "checked_at": now,
+                "local_head": local_head,
+                "remote_head": remote,
+                "remote_url": remote_url,
+                "status": status,
+            },
             ensure_ascii=False,
             indent=2,
         ),

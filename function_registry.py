@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""广州太古汇舆情系统：函数/数据目标映射与统一检索层。
+"""LUMENIS legacy function/data lookup compatibility layer.
 
 设计目标：把"用户问题/系统功能/底层数据源/页面"建立稳定映射。
 不改变原有主体过滤口径；该模块只负责查询与路由，不负责放宽采集范围。

@@ -1,5 +1,5 @@
 """
-广州太古汇舆情监测系统 v5.3.2 - AI过滤层
+LUMENIS CTH reference-subject compatibility filter
 ============================================
 数据流转：原始数据 → 主体过滤 → AI二次判断 → 有效舆情库 → 事件分析 → 日报
 

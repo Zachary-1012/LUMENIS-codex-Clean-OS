@@ -1,3 +1,5 @@
+> **HISTORICAL / COMPATIBILITY REFERENCE - NOT CURRENT PRODUCT AUTHORITY.** Current execution starts at AGENTS.md; current product identity is LUMENIS, the sole blueprint is 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md, and workspace context defaults to GLOBAL / ALL. Historical Guangzhou Taikoo Hui, CTH-POMS, ZBMP, Z-Brand-Core and old deployment paths below are provenance only unless a current owner explicitly revalidates them.
+
 # Z-Brand-Core 当前协作基线
 
 > 生效日期：2026-08-31

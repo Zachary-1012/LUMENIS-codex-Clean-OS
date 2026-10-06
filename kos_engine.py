@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Z-Brand-Core KOS Engine（KOS 传播主体引擎）
+"""LUMENIS BMP KOS Engine compatibility module
 
 复用现有 notes/note_comments/events/evidence 表，不重建内容库。
 核心能力：作者聚合、S/A/B/C 分层、生命周期、潜力/风险识别、

@@ -1,5 +1,5 @@
 """
-广州太古汇舆情监测系统 - 本地规则分析引擎
+LUMENIS CTH reference-subject compatibility analyzer - local auditable rules
 不依赖外部 AI API；使用可审计的本地规则完成情感、风险、话题、分类与摘要分析
 - 情感分析 (sentiment): positive / neutral / negative
 - 风险评级 (risk_level): high / medium / low

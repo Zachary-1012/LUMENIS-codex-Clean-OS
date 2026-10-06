@@ -214,22 +214,19 @@ def runtime_identity():
     except Exception as exc:  # noqa: BLE001
         identity["database"] = {"exists": False, "error": str(exc)}
 
-    # 当前主体 / 域（subject_context 真实解析）
-    try:
-        import subject_context as sc
-
-        scope = sc.current_scope()
-        identity["subject"] = {
-            "subject_id": scope.get("subject", {}).get("subject_id"),
-            "brand_key": scope.get("subject", {}).get("brand_key"),
-            "product": scope.get("product", {}).get("product_id"),
-        }
-        dom = request.cookies.get("zbc_domain") or request.headers.get("X-Domain-Id") \
-            or request.args.get("domain") or "cth"
-        identity["domain"] = dom if dom in ("cth", "zbmp", "system") else "cth"
-    except Exception as exc:  # noqa: BLE001
-        identity["subject"] = {"error": str(exc)}
-        identity["domain"] = "cth"
+    # Runtime identity owns process/database health only. Workspace focus is
+    # selected through /api/settings/context. Never project the legacy
+    # Guangzhou reference Subject (or any other Subject) as the product default.
+    identity["context"] = {
+        "mode": "GLOBAL_ALL",
+        "domain_id": None,
+        "subject_id": None,
+        "brand_focus_id": None,
+        "resource_type": "GLOBAL",
+        "selection_authority": "/api/settings/context",
+    }
+    identity["subject"] = None
+    identity["domain"] = None
 
     # 运行时守护者健康（真实，失败诚实降级）
     try:
@@ -253,14 +250,15 @@ def runtime_subjects():
     原有规则；没有登记数据时返回空数组，不用 fixture 冒充生产主体。
     """
     try:
-        import subject_context as sc
         from subject_registry import list_subjects
 
-        scope = sc.current_scope()
         return jsonify({
             "ok": True,
-            "current": scope.get("subject"),
-            "product": scope.get("product"),
+            "current": None,
+            "product": None,
+            "context": {"mode": "GLOBAL_ALL", "domain_id": None,
+                        "subject_id": None, "brand_focus_id": None,
+                        "resource_type": "GLOBAL"},
             "domains": [
                 {"id": "CTH", "name": "商业运营"},
                 {"id": "BMP", "name": "品牌市场"},

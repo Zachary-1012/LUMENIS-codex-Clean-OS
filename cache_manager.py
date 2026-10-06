@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-广州太古汇舆情系统：本地缓存降级模块
+LUMENIS local cache compatibility module
 
 功能：
 1. 每次成功采集后保存数据快照到 data/cache/

@@ -1,3 +1,5 @@
+> **HISTORICAL / COMPATIBILITY REFERENCE - NOT CURRENT PRODUCT AUTHORITY.** Current execution starts at AGENTS.md; current product identity is LUMENIS, the sole blueprint is 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md, and workspace context defaults to GLOBAL / ALL. Legacy names below are provenance/compatibility only.
+
 # Z-Brand-Core 项目状态基线
 
 > 用途：给主开发窗口、豆包、本地部署与后续协作者提供统一事实基线。

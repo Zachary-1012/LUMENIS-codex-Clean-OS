@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Z-Brand-Core KOS Intel 增量适配模块（Phase A 双账号采集可用，不依赖蓝V/聚光）
+"""LUMENIS BMP KOS intelligence compatibility adapter
 
 能力：
 1. classify_intent / analyze_comments_intent —— 意向评论分层（强/弱/无意向）

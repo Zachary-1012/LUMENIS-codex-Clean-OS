@@ -1,20 +1,9 @@
 # -*- coding: utf-8 -*-
-"""ZBC Agent Runtime Adapter — Team 9 (Shard B)
+"""LUMENIS compatibility adapter for the canonical shared-intelligence repository.
 
-桥接 ZBC 运行链与 OSAI Agent Identity / Delegation / OBO / JIT 模块。
-
-设计原则（对齐 AGENTS.md + 方案文档）：
-- 禁止 Runtime 硬耦合：通过 subprocess 调用 OSAI，不直接 import osai_engine
-- OSAI 不可用时显式返回 UNAVAILABLE，不造假数据、不伪造身份
-- fail-close：任何异常 → DENY / UNAVAILABLE + AUDIT + TRACE
-- Agent ≠ User ≠ Task ≠ Run ≠ Credential ≠ Resource（实体严格分离）
-- Identity / Delegation / OBO / JIT 真实进入运行链
-
-调用链：
-  ZBC API → AgentRuntimeAdapter → subprocess → OSAI agent_identity / obo_jit
-  → JSON → ZBC Response
-
-权限：只读身份查询 + 委托创建（不修改 OSAI 持久化状态，OSAI 侧为内存注册表）
+Cross-repository runtime dependency is optional and fail-closed. The external
+repository may supply Shared Intelligence Assets but never owns or overwrites
+LUMENIS Production Truth, Permission, Evidence or product runtime.
 """
 import json
 import os

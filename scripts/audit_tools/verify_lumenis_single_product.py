@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import os
 import subprocess
 import sys
@@ -375,6 +376,64 @@ def main() -> int:
         ):
             if retired in agent_loop_text:
                 errors.append(f"Agent Runtime bypasses canonical SYSTEM security owner: {retired}")
+
+    # Current product identity/default-context guard. Historical compatibility
+    # IDs may exist only behind the documented compatibility boundary; active
+    # runtime/config surfaces must not reintroduce a Taikoo-only product.
+    app_identity_text = (ROOT / "app.py").read_text(encoding="utf-8")
+    for marker in ("???????????", "taikoo-monitor"):
+        if marker in app_identity_text:
+            errors.append(f"active Product Core reintroduced legacy product identity: {marker}")
+
+    experience_runtime_text = (ROOT / "experience_runtime.py").read_text(encoding="utf-8")
+    for marker in (
+        '"mode": "GLOBAL_ALL"',
+        '"selection_authority": "/api/settings/context"',
+        'identity["subject"] = None',
+        'identity["domain"] = None',
+    ):
+        if marker not in experience_runtime_text:
+            errors.append(f"runtime identity lost GLOBAL / ALL selection marker: {marker}")
+    if "scope = sc.current_scope()" in experience_runtime_text[
+        experience_runtime_text.find("def runtime_identity()"):
+        experience_runtime_text.find('@experience_bp.route("/api/experience/subjects")')
+    ]:
+        errors.append("runtime identity must not project legacy subject_context fallback as current product focus")
+
+    package_path = ROOT / "package.json"
+    if package_path.is_file():
+        try:
+            package = json.loads(package_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            errors.append(f"cannot inspect package identity: {exc}")
+        else:
+            if package.get("name") != "lumenis-core-tools":
+                errors.append("active Node helper package must use lumenis-core-tools identity")
+
+    repo_registry_path = ROOT / "repo_registry.json"
+    if repo_registry_path.is_file():
+        try:
+            repository_registry = json.loads(repo_registry_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            errors.append(f"cannot inspect repository registry: {exc}")
+        else:
+            production = [
+                row for row in repository_registry.get("repositories", [])
+                if row.get("role") == "production_core" and row.get("status") == "active"
+            ]
+            if len(production) != 1 or production[0].get("git_remote") != (
+                "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS.git"
+            ):
+                errors.append("repo_registry active production_core is not the canonical LUMENIS repository")
+
+    sync_helper = ROOT / "scripts/github_upgrade_check.py"
+    if sync_helper.is_file():
+        helper_text = sync_helper.read_text(encoding="utf-8")
+        for marker in ("Zachary-1012/Z-Brand-Core", "Doubao", "??"):
+            if marker in helper_text:
+                errors.append(f"current Git sync helper reintroduced legacy development authority: {marker}")
+        if 'remote", "get-url", "origin"' not in helper_text:
+            errors.append("current Git sync helper must derive repository authority from origin")
 
     routes_path = ROOT / "lumenis/shared/reporting/routes.py"
     if routes_path.is_file():

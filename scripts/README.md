@@ -1,6 +1,6 @@
-# 工具脚本目录
+# LUMENIS tools
 
-广州太古汇舆情监测系统 - 工具脚本
+Current product: LUMENIS. Guangzhou-specific scripts are scoped compatibility tools, not the product default.
 
 ## 脚本列表
 
@@ -32,13 +32,10 @@ python scripts/backup_db.py restore <backup_name>
 python scripts/check_system.py
 ```
 
-### 4. collect_now.py - 立即采集
-触发一次小红书舆情采集。
+### 4. collect_now.py - focused CTH compatibility collection
+This legacy helper is only for an explicitly focused reference Subject; current product collection uses the SYSTEM Collector with exact Scope and Permission.
 
 ```bash
-# 默认采集（关键词：广州太古汇）
-python scripts/collect_now.py
-
 # 指定关键词
 python scripts/collect_now.py "广州太古汇 投诉"
 
@@ -68,7 +65,7 @@ python scripts/export_report.py yearly 2026
 所有脚本都需要在项目根目录下运行，或者将项目根目录添加到Python路径中。
 
 ```bash
-cd /path/to/taikoo-monitor
+cd /path/to/LUMENIS-codex-Clean-OS
 python scripts/<script_name>.py [arguments]
 ```
 

@@ -1,5 +1,5 @@
 """
-广州太古汇舆情监测系统 - RedNote 采集模块
+LUMENIS SYSTEM Collector - Guangzhou reference-subject RedNote compatibility module
 使用 rednote-cli 浏览器实例 + 自定义 Playwright 搜索脚本
 采集小红书广州太古汇相关笔记
 """

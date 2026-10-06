@@ -1,15 +1,15 @@
 {
-  "version": "1.0",
-  "description": "LUMENIS Repository Registry — V2 P0-18. 禁止硬编码个人路径，通过本文件发现仓库。",
+  "version": "2.0",
+  "description": "LUMENIS local repository compatibility registry. Cross-repository authority is 00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md plus its machine contract.",
   "repositories": [
     {
-      "repository_id": "zbc",
-      "name": "Z-Brand-Core",
+      "repository_id": "lumenis",
+      "name": "LUMENIS-codex-Clean-OS",
       "role": "production_core",
       "root_path": "",
-      "git_remote": "https://github.com/Zachary-1012/Z-Brand-Core.git",
+      "git_remote": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS.git",
       "default_branch": "main",
-      "runtime": "python",
+      "runtime": "python_flutter",
       "permissions": "production_truth",
       "status": "active"
     },
@@ -21,7 +21,7 @@
       "git_remote": "https://github.com/Zachary-1012/Zachary-OS-AI.git",
       "default_branch": "main",
       "runtime": "python",
-      "permissions": "intelligence",
+      "permissions": "shared_intelligence_assets",
       "status": "active"
     },
     {
@@ -32,9 +32,20 @@
       "git_remote": "https://github.com/Zachary-1012/global-growth-intelligence.git",
       "default_branch": "main",
       "runtime": "python",
-      "permissions": "independent_product",
+      "permissions": "research_growth_truth",
+      "status": "active"
+    },
+    {
+      "repository_id": "lumenis-command",
+      "name": "lumenis-command",
+      "role": "engineering_control_sidecar",
+      "root_path": "",
+      "git_remote": "https://github.com/Zachary-1012/lumenis-command.git",
+      "default_branch": "main",
+      "runtime": "engineering",
+      "permissions": "engineering_evidence",
       "status": "active"
     }
   ],
-  "notes": "root_path 留空时由适配器自动扫描同级目录。如需固定路径，填入绝对路径并确保跨平台可用。"
+  "notes": "Stable technical IDs may remain for compatibility, but no historical repository is an active Production Truth owner."
 }

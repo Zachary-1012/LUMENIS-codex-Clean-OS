@@ -1,14 +1,9 @@
-"""LUMENIS Cross-Core Skill Adapter — ZBC 消费 OSAI Canonical Skill Registry。
+"""LUMENIS cross-repository Skill compatibility adapter.
 
-ZBC 不再维护独立 Skill Truth。所有 Skill 数据通过本 Adapter 从 OSAI
-Canonical Registry 获取。OSAI 不可用时返回 PARTIALLY_CONNECTED，
-不造假数据、不固定返回 SYNCED。
-
-调用链：
-  ZBC API → CrossCoreSkillAdapter → subprocess → OSAI canonical_skill_registry
-  → JSON → ZBC Response
-
-权限：只读，不修改 OSAI 任何状态。
+The canonical external Shared Intelligence repository remains optional. LUMENIS
+owns its Product Truth and fails closed when that repository is unavailable.
+Stable ZBC/OSAI capability IDs in persisted metadata are compatibility aliases,
+not current product identities.
 """
 import json
 import os

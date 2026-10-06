@@ -237,6 +237,11 @@ def test_identity_has_no_secrets_or_abspath(isolated_client):
     import json
     blob = json.dumps(j, ensure_ascii=False)
     assert j["database"]["exists"] is True
+    assert j["context"]["mode"] == "GLOBAL_ALL"
+    assert j["context"]["domain_id"] is None
+    assert j["context"]["subject_id"] is None
+    assert j["subject"] is None
+    assert j["domain"] is None
     assert db_file not in blob and ":\\" not in blob  # 不暴露绝对路径
     low = blob.lower()
     for secret in ("secret", "password", "api_key", "token", "cookie"):

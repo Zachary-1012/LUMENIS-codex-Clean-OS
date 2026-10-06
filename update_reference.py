@@ -47,7 +47,7 @@ def log(msg):
 def http_json(url, retries=2, timeout=15):
     """带 token、重试、限流处理的 GET JSON。"""
     headers = {'Accept': 'application/vnd.github+json',
-               'User-Agent': 'taikoo-monitor-reference-updater'}
+               'User-Agent': 'lumenis-reference-updater'}
     if TOKEN:
         headers['Authorization'] = f'Bearer {TOKEN}'
     last_err = None

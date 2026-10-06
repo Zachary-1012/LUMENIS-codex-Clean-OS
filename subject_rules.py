@@ -1,4 +1,4 @@
-﻿"""广州太古汇主体口径：全系统唯一、可审计的硬过滤规则。
+﻿"""Guangzhou Taikoo Hui controlled reference-Subject compatibility filter. It is not the LUMENIS GLOBAL / ALL product default.
 
 原则：
 1. SUBJECT_EXCLUDE_WORDS 一票否决。

@@ -3,7 +3,7 @@
 
 设计原则：
 - 复用现有 v4 用户/会话体系（v4_users / v4_sessions），只新增"工作区级 API Key"授权层，不新造账号体系。
-- CTH-POMS 默认进入；ZBMP 为受限工作区，必须用工作区密钥 unlock。
+- This module preserves the historical workspace-key compatibility contract; it does not define the current LUMENIS default context or product entry.
 - 明文密钥仅在签发时返回一次；数据库只存 PBKDF2 hash（复用 security.hash_password）。
 - 全部 CREATE TABLE IF NOT EXISTS，向后兼容、不删不改任何既有表；删除本文件与对应路由即可完整回滚。
 - AI 不参与授权判定；授权完全由本模块的规则与数据库状态决定。

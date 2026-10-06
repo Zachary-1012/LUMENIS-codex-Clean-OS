@@ -48,7 +48,7 @@ def test_healthz_requires_existing_canonical_notes_schema_and_read_only_connecti
         'status': 'healthy',
         'dependencies': {'database': 'ok'},
         'version': product_core.APP_VERSION,
-        'service': 'taikoo-monitor',
+        'service': 'lumenis-core',
     }
     assert repository.options == {'read_only': True, 'wal': False}
     assert repository.connection_value.sql == (

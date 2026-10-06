@@ -1,4 +1,4 @@
-"""广州太古汇舆情监测系统 - SQLite 数据层（v4 修复版）"""
+"""LUMENIS legacy/root database compatibility caller; Shared Database remains canonical"""
 import sqlite3
 import json
 import os

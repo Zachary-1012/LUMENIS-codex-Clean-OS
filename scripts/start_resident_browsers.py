@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Zachary OS AI · Z-Brand-Core 驻场浏览器（Resident Browser）统一启动器
+LUMENIS SYSTEM Resident Browser launcher
 ================================================================================
 按采集 Contract（xhs_cookie_bridge 单一事实源）幂等拉起香港/国际采集与通用浏览
 香港采集与产品内置浏览器分别使用独立 profile：

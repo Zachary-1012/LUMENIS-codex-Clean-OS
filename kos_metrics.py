@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Z-Brand-Core KOS Metrics 模块（CTR-KOS-METRICS-P1-01 · Phase A 施工）
+"""LUMENIS BMP KOS Metrics compatibility module
 
 能力：
 1. funnel_metrics(...) — KOS 三阶漏斗：Viewership(曝光) → WeCom(加企微) → Sales(销售归因)
