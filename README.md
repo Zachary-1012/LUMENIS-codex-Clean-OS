@@ -1,6 +1,6 @@
 # 序境 / LUMENIS
 
-序境是面向商业运营与品牌市场的一个产品，当前处于工程闭环阶段。它通过官网、Web Workspace、Desktop App和Mobile Companion四个入口，共用一套Product Core、数据、Evidence、权限、AI Gateway与成果版本。
+序境是面向商业运营与品牌市场的一个产品，当前处于工程闭环阶段。已批准的产品体验覆盖官网、Web Workspace、Desktop App和Mobile Companion四个入口，共用一套Product Core、数据、Evidence、权限、AI Gateway与成果版本；各入口的当前实现、运行和验收状态以CURRENT及对应源码/运行证据为准。
 
 Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)。
 
@@ -24,6 +24,16 @@ AGENTS.md
 
 **CTH · 商业运营**采用Subject-first；**BMP · 品牌市场**采用Brand/Market-first。Shared Capability负责资料、研究、创作、Artifact、评价与学习；SYSTEM负责采集、浏览器、调度、数据库、权限、AI和运行。AI增强结果，不拥有Production Truth。
 
+## 当前执行阶段与执行器
+
+当前已进入**受控执行阶段**，但不是把C1–C6全部同时启动。每个任务开工前先重新读取origin/main与本地HEAD/dirty，定位当前Owner、调用方和合同，再核Runtime、DB、Permission、Evidence以及平台Session/GPU等外部前置条件；没有真实缺口、前置条件不满足或已被其他当前工作覆盖时，不制造任务、不绕过阻塞。
+
+- **Codex / Codex CLI**：主控制器与高风险工程执行器。Codex使用产品负责人当前手动选择的模型/推理档位，不由仓库或旧规则自动换模。
+- **OpenCode**：M/Codex可调用的受控基础Worker，不是第二产品、第二窗口或第二Owner。当前批准的零成本Worker为opencode/mimo-v2.6-flash-free，允许在已验证的免费白名单内自动选用最强可用模型；当前白名单只开放这一项，**没有付费fallback**。
+- OpenCode优先承担明确范围的基础工作，例如Collector适配器/状态/Checkpoint/Source-Evidence检查、测试选择与dry-run准备，以及C2训练输入/hash/recipe/checkpoint/evaluation preflight。默认不做全仓发现式审计。
+- OpenCode不得修改产品蓝图、Owner、Permission、Production DB、模型Promotion或发布判断，也不得直接commit/push main。真实平台采集和免费GPU训练只有在现有Scope/Permission/Session/资源前置条件真实满足后才进入执行；配置存在、模型可见或授权存在都不等于任务已完成。
+
+
 ## 正常工作闭环
 
 真实目标与资料 → 授权来源/Evidence/Canonical → 有依据的研究与判断 → 提案/可编辑视频/播客 → 保存与业务使用 → 来源或预算改变 → 定位受影响处并明确采用新版 → 局部修订 → 重开/恢复/回滚 → Outcome/Evaluation。
@@ -43,7 +53,7 @@ Core健康：`http://127.0.0.1:8201/healthz`。Flutter Web入口由同一Core的
 
 ## 当前执行约束
 
-本轮M只完成开工前规则、材料、Owner、依赖和验收收敛，不实施产品源码或运行操作。C1–C6保持暂停；F按产品负责人单独授权独立工作，M不读取、管理或联系F。现有/免费GPU优先不构成本轮训练或付费授权；全部需求和材料保留，研究必须映射到既有产品能力，未读/未采用不得称吸收完成。
+当前由M按AGENTS.md控制执行和main整合；C1–C6与F仍是完整责任/验收映射，不作为需要同时启动的平行队列。Codex负责主控、高风险修复与最终判断，OpenCode只作为被M/Codex调用的基础Worker。C1只读采集与C2免费GPU路径已有执行方向，但每次真实启动仍必须先通过对应Scope/Permission/Session/零成本资源等现有前置条件；条件不满足就记录真实阻塞，不靠换Provider、放宽权限或假状态推进。正式Production DB写入、部署、付费资源和外部业务效果继续按AGENTS.md的精确边界执行。全部需求和材料继续归现有Owner，研究须落实到产品能力；未读或未采用不得称为已吸收。
 
 每项能力只保留一个当前主实现、已有完整任务卡和一个当前成果入口，不新增并行候选源码目录。按真实依赖连续完成，不做无变化的重复审计、测试或逐函数交接。必要验证保留。主线发布与CURRENT/证据在同一交付完成，读取remote核对；其他dirty工作保护到单独验证后。
 

@@ -11,19 +11,29 @@ execution instructions.
 
 ## 1. Authority
 
-## Current execution instruction — M-only product repairs 2026-10-06
+## Current execution instruction — controlled execution stage 2026-10-06
 
-Current task: the Product Owner explicitly directed M to execute the confirmed
-source repairs in the current repair objective and continue toward full product
-closure. This supersedes the prior preparation-only instruction. M is the only
-active executor; do not message, resume, or start other windows, including F.
+Current task: the Product Owner explicitly authorized the controlled execution
+stage and directed work to continue toward full product closure. This supersedes
+the prior preparation-only instruction. M remains the controller/integrator and
+the only authority-bearing active executor. A bounded OpenCode worker may be
+invoked by M or the current Codex session as a local engineering subprocess for
+low-risk, explicitly scoped tasks; it is not another C1-C6 window, product owner,
+source owner, acceptance authority or parallel architecture. Do not message,
+resume or start F or another window merely because execution is active.
+
 The C1-C6 map, all R01-R15/J1-J8/U requirements and existing owner contracts
-remain the complete scope, not parallel active work queues. D01-D49 audit
-disposition IDs are distinct from acceptance requirements R01-R15 and are not
-ordinal-mapped. The sole approved product blueprint is
-`00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`.
-Existing/free compute is preferred; this convergence does not authorize paid GPU,
-new rental, recharge or retired model providers.
+remain the complete scope, not parallel active work queues. Before starting any
+capability, resolve fresh origin/main, the protected dirty tree, its actual owner
+and callers, runtime/DB/Permission/Evidence truth and required external
+preconditions. If there is no current actionable gap, or a required session,
+permission, zero-cost resource or external dependency is unavailable, do not
+manufacture work or bypass the blocker. D01-D49 audit disposition IDs are
+distinct from acceptance requirements R01-R15 and are not ordinal-mapped. The
+sole approved product blueprint is
+00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md.
+Existing/free compute is preferred; this execution stage does not authorize paid
+GPU, new rental, recharge or retired model providers.
 
 1. Every action serves the existing product closure. Deliver real permitted
    input -> useful result -> save/revise/reopen/recover -> Evaluation with
@@ -55,34 +65,48 @@ new rental, recharge or retired model providers.
    speculative features. C3+C5 research serves capability improvement, data
    credibility and separately approved training/evaluation; product improvement
    does not wait for GPU. Keep unread/missing material and original rights honest.
-5. Existing/free GPU resources are preferred. Verify actual availability,
-   capacity and license before selecting a recipe; a free development environment
-   is not production model hosting. No paid resource starts without current
-   explicit cost authorization. The historical 5090 budget is not a standing
-   instruction to rent. This task performs no model/GPU execution without a
-   separate current authorization.
+5. Existing/free GPU resources are preferred. The Product Owner has authorized
+   the C2 free-GPU path and the use of a zero-cost development worker, but actual
+   execution still requires the current owner contract, exact model/recipe/data
+   hashes, required MODEL_TRAIN Permission, real zero-cost GPU capacity and the
+   existing checkpoint/evaluation boundaries. A free development environment is
+   not production model hosting. No paid resource starts without current explicit
+   cost authorization; the historical 5090 budget is not a standing instruction
+   to rent. C1 read-only collection likewise starts only through the existing
+   Scope/Permission/session/rate-limit contracts on platforms that are actually
+   ready; authorization is not permission to fabricate ACTIVE status or bypass a
+   blocked platform.
 6. Preserve the Product Owner's current manually selected account, model,
-   reasoning effort and speed/service tier; that current manual Codex UI selection
-   is the sole authority. This router assigns no model or speed by window, and
-   LUMENIS keeps no repository, user-config, subagent, hook or historical default
-   model/effort assignment. Do not pin a model in config, add CLI/profile/env
-   overrides, inherit an old Sol/Luna/Astra assignment, or auto-switch/downgrade/
-   upgrade for cost or speed. Distinguish the visible selection from the executed
-   backend; if either model or effort cannot be read back, mark it
-   `SETTINGS_UNVERIFIED` and do not infer or substitute a default. M handles complete
-   results, necessary decisions and urgent risks; when no actionable work remains,
-   M pauses its own Goal.
+   reasoning effort and speed/service tier for Codex/Codex CLI; that current
+   manual Codex selection is the sole Codex model authority. This router assigns no
+   model or speed by window for Codex/Codex CLI. Do not pin, downgrade,
+   upgrade or substitute the Codex controller model from repository config,
+   subagents, hooks or historical Sol/Luna/Astra text. The bounded OpenCode basic
+   worker is a separate development-runtime exception: it may automatically use
+   the strongest currently verified zero-cost model from an approved free
+   allowlist, with no paid fallback or silent provider switch. The current
+   approved free worker model is opencode/mimo-v2.6-flash-free; changing that
+   allowlist requires fresh capability/availability verification, not a product
+   architecture change. The worker model has no authority over Product
+   Architecture, Owner, Permission, Production Truth, Promotion or release.
+   If the executed backend or required worker state cannot be verified, stop and
+   mark it SETTINGS_UNVERIFIED / blocked rather than infer a substitute. M
+   handles complete results, necessary decisions and urgent risks; when no
+   actionable work remains, M pauses its own Goal.
 
-W6 remains the normal integration owner but is not resumed for this task. Under
-the Product Owner's direct instruction, M alone may repair confirmed product
-sources, update necessary governing/current records, run affected acceptance
-gates, commit to `main`, and verify the same online content. Do not bulk-stage
-the dirty tree. This instruction does not authorize production-database writes,
-deployment/restart, live collection, model/GPU execution, paid resources or
-external business effects. Keep those separate unless the Product Owner gives
-their exact required authorization. F and the other windows remain unopened.
-
-
+W6 remains the normal integration owner but is not resumed as a parallel window.
+Under the Product Owner's direct instruction, M alone may integrate confirmed
+product repairs, update necessary governing/current records, run affected
+acceptance gates, commit to main, and verify the same online content. A bounded
+OpenCode worker may execute delegated low-risk preparation/inspection work in an
+isolated workspace, but it never commits or pushes main, rewrites governance,
+changes owners, performs Production DB writes, approves Promotion or declares
+acceptance. Do not bulk-stage the dirty tree. C1 live read-only collection and
+C2 free-GPU work may proceed only when their existing capability-specific
+Permission/session/resource preconditions are actually satisfied; missing
+preconditions remain blockers. Deployment, paid resources and external business
+effects still require their exact existing authorization boundaries. F and the
+other windows remain unopened unless explicitly resumed.
 
 Current explicit Product Owner requirements define the required outcome and
 scope. Source/runtime truth describes what exists and what is proven; missing
@@ -695,6 +719,10 @@ behind the existing SYSTEM AI Gateway. Do not change the user's persistent
 Codex model selection or Windows user environment to enforce this policy.
 Codex Cloud remains a development environment, not a deployed LUMENIS model or
 AI service.
+OpenCode may be used only as a bounded local engineering worker under
+this router. Its approved free-worker model is not the LUMENIS-owned
+product AI, does not enter SYSTEM AI Gateway as a provider, and must not
+become an implicit runtime fallback.
 
 Development may supplement incomplete collection with verified public-web
 materials through the existing Source/Import -> Evidence -> Canonical path.
@@ -713,6 +741,7 @@ The following may be used by Codex when installed on the workstation:
 Git CLI
 Playwright MCP
 Filesystem MCP
+OpenCode CLI/server through the bounded LUMENIS basic-worker boundary
 ripgrep / rg
 fd
 jq
@@ -726,6 +755,9 @@ Rules:
 - Filesystem MCP must be scoped to the active repository/workspace, not entire disks unless explicitly required;
 - Playwright MCP may validate UI/E2E/runtime, but it does not replace the repository's own Playwright/browser runtime contracts;
 - CLI inspection must be read-only against protected production data unless the active task explicitly requires and safely authorizes a write.
+- OpenCode worker tasks start with an explicit capability and file/context boundary, normally in an isolated temporary workspace; do not give the free worker an open-ended whole-repository rediscovery task;
+- the OpenCode worker may prepare Collector/C2 checks and run approved bounded validation, but live collection, GPU execution or any write/effect still passes the existing owner/Permission/session/resource boundary;
+- no OpenCode worker may commit/push main, alter Product Architecture/Owner/Permission, approve model Promotion, enable paid fallback or declare Product/User acceptance.
 
 ## 8. Zero-auth acquisition capability program
 
