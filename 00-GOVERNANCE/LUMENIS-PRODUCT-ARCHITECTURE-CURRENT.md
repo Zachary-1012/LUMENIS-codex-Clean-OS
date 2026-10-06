@@ -157,6 +157,12 @@ Current provider and engineering roles (2026-10-01/02):
 
 The platform identity boundary is also explicit: media Cookie/session/browser authorization belongs to the SYSTEM collector/browser chain and stays separate from the future LUMENIS product account. Product account and password design is deferred until product closure reaches 100%, followed by a Product Owner redesign; this timing does not weaken server-side Permission, approval or effect-fence enforcement.
 
+### Platform acquisition decision — Product Owner, 2026-10-07
+
+The current pre-investment closure does not assume that social platforms have granted LUMENIS official/partner API access. Current capability therefore continues to use approved public sources, Product-Owner-authorized owned R&D accounts and managed read-only session/browser connectors where required. Lack of official authorization must not be used to downgrade a proven collection outcome merely to simplify engineering.
+
+The six current primary social platforms are an acceptance baseline rather than a final product limit. Platform acquisition converges on a universal connector contract: one PlatformManifest, one PlatformSession truth owner and one shared recovery Experience over the existing SYSTEM Collector/Browser. Future official or partner APIs are additional providers under that same connector, not a new product, truth stack or prerequisite for current product closure. New platforms must reuse the same Source → Evidence → Canonical path and may not create their own scheduler, account system, Evidence/Canonical store or frontend platform architecture.
+
 Production write chain:
 
 ```text

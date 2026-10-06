@@ -1002,6 +1002,28 @@ Hard constraints:
 - Fact Wall must fail honestly when factual Evidence/Brief support is absent;
 - `RELEASED != OPERATING`.
 
+### Product Owner collector convergence decision — 2026-10-07
+
+The pre-investment/product-closure stage does **not** assume that LUMENIS already has official platform/partner API authorization. Missing official authorization is not permission to weaken an already approved collection capability. During R&D/internal-beta, C1 may use Product-Owner-authorized owned platform identities, managed Cookie/session/CDP/browser workers, public sources, exact URLs, uploads and imports under the existing read-only/Permission/risk rules. A later official or partner API is another Provider behind the same platform connector and must not require CTH/BMP/Shared or Canonical consumers to be redesigned.
+
+The six current primary platforms are an acceptance baseline, not the platform ceiling. New platforms must join the existing SYSTEM Collector through one platform contract; do not add another collector, scheduler, Evidence/Canonical truth, product account, or per-platform frontend architecture.
+
+Before scaling platform count, C1/C6/F must close these outcomes in order:
+
+1. `COLLECTOR-P0-01`: XHS/RedNote recovery follows only the approved HK/International identity and current production endpoint; the protected Mainland identity/9222 route is never selected by production recovery.
+2. `COLLECTOR-P0-02`: Task completion/failure is fenced by the active attempt identity/lease/run, so a stale worker cannot acknowledge or fail a newer run.
+3. `COLLECTOR-P0-03`: query/task continuation has a durable server-authored receipt. Reusing a terminal checkpoint may return the immutable terminal result, but must never re-execute completed queries/effects or act as authorization. Platform-native cursors remain separate.
+4. `COLLECTOR-P0-04`: retained `/api/collect` and every compatibility entry are callers of the one Collector/Permission/Source/Evidence/Canonical transaction; direct notes-only acquisition is not an independent production truth path.
+5. `COLLECTOR-P0-05`: tests and gates enforce the sole `canonical_data` business truth and must not restore legacy `zbc_canonical_data` dual-write expectations.
+
+Then converge three shared foundations instead of adding more per-platform special cases:
+
+- `COLLECTOR-FND-01 PlatformManifest`: one machine-readable platform identity, aliases, native fields, capabilities, provider modes, session/recovery requirements, adapter binding and maturity truth; generated/validated projections replace drifting hand-maintained platform lists.
+- `COLLECTOR-FND-02 PlatformSession`: one SYSTEM owner for platform identity, session/auth/verification/risk/health/recovery truth. Cookie files, CDP ports, browser profiles, status JSON and provider-specific details are implementation details and never competing product truth.
+- `COLLECTOR-FND-03 LumenisPlatformRecoverySheet`: one F/C6 Experience contract over the SYSTEM session owner. QR-capable platforms show an in-product LUMENIS-styled scan state; form/login platforms use the controlled browser surface; VERIFY and BLOCKED/cooldown remain distinct. Successful human login is followed by server health readback before the pending task resumes.
+
+Do not implement a new platform by cloning a login manager, status file, route family, platform list or UI modal when the shared foundations can own it.
+
 ## 13. Experience / user-visible completion
 
 A page, route or test existing is not completion.

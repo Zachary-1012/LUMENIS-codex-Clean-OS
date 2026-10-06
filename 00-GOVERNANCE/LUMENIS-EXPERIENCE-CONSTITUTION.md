@@ -403,6 +403,34 @@ It must never imply that a source is authorized, captured, logged in or healthy 
 
 Acquisition converges toward Evidence/Canonical truth, not a parallel browser-data silo.
 
+### 11.1 Platform connector recovery
+
+Media-platform authentication recovery is a SYSTEM connector operation, not the future LUMENIS product-account login.
+
+During approved R&D/internal-beta work, a Product-Owner-authorized owned platform identity may back a managed read-only connector. When its session expires or requires legitimate human interaction, the operational surfaces use one `LumenisPlatformRecoverySheet` contract rather than platform-specific app pages or raw browser windows:
+
+```text
+AUTH_REQUIRED
+→ LUMENIS recovery sheet
+→ QR scan when the platform provides QR
+
+LOGIN_FORM_REQUIRED
+→ LUMENIS recovery sheet
+→ controlled internal-browser login surface
+
+VERIFY / CAPTCHA
+→ explicit human-verification state
+→ never describe it as ordinary login
+
+BLOCKED / IP_RISK / COOLDOWN
+→ risk/cooldown state
+→ do not show a QR as if login could solve it
+```
+
+The recovery sheet uses LUMENIS visual language while preserving the platform's actual QR/login content inside the controlled boundary. It never displays or logs Cookie values, tokens, profile paths, CDP endpoints or internal session identifiers. A button press, QR scan or login-form completion is not success by itself: the server-owned PlatformSession must re-read the real platform/runtime health before marking the connector recovered and resuming the exact pending task/checkpoint.
+
+Recovery returns to the originating CTH/BMP/Shared/SYSTEM task with scope, selection and work state preserved. Platform recovery must not create a second product account, silently expand source rights, start unrelated collection or perform social writes.
+
 ## 12. Evidence presentation
 
 Evidence is first-class.

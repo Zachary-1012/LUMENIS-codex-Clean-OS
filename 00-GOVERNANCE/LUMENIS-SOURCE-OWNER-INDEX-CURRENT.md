@@ -2,7 +2,7 @@
 
 > Status: **CURRENT EXECUTION INDEX / SIX-ROUND DELIVERY / COMPLETE LEGACY COVERAGE**
 >
-> Updated: 2026-10-06; earlier baseline tables remain dated provenance
+> Updated: 2026-10-07; earlier baseline tables remain dated provenance
 > Approved ROUND 01 source-audit baseline: `df15a99de6f5ffc3eb85e2c9924afb59c1c3c781` (provenance only; resolve the live `origin/main` before every change)
 
 This file is the fixed repository navigation and delivery index for 序境 / LUMENIS. It classifies current source by owner and tells Codex where to look after the one-time source audit. It is not a second product architecture, Experience authority, progress ledger, or proof that a runtime capability works.
@@ -295,6 +295,25 @@ The table below records the earlier audit baseline, not live source status. The 
 | Legacy-looking root callers | Root modules still carry active compatibility/caller behavior. | **CLASSIFIED, NOT DELETION-READY**. Move/delete only after call graph, behavior, data and tests converge on the canonical owner. |
 
 This disposition freezes where work starts; it does not freeze code. Each delivered slice updates its own specification, evidence and affected index row so future work resumes from the fixed path rather than rediscovering the repository.
+
+### Current Collector platform-convergence ownership — Product Owner 2026-10-07
+
+The current platform program is not capped at the six primary acceptance platforms. C1 owns universal platform acquisition through the existing one Collector; C6 owns shared runtime/integration/release; F owns the single platform-recovery Experience; M accepts the cross-owner result. The absence of official/partner API authorization before investment/product closure is an explicit current condition and does not lower the required data capability. Product-Owner-authorized owned R&D accounts and managed read-only sessions remain valid development sources under current safety/Permission rules. Future official/partner APIs are provider upgrades behind the same connector.
+
+Mandatory convergence IDs:
+
+| ID | Owner(s) | Required result |
+|---|---|---|
+| COLLECTOR-P0-01 | C1 C6 | Production XHS/RedNote recovery can resolve only the approved HK/International identity/current endpoint; protected Mainland/9222 cannot be selected. |
+| COLLECTOR-P0-02 | C1 C6 | Queue ack/fail/checkpoint/heartbeat are fenced to the active server-issued attempt/lease/run; stale workers cannot mutate a newer attempt. |
+| COLLECTOR-P0-03 | C1 C6 | Server-authored durable task/result receipt; terminal replay never re-executes completed work; native pagination remains separate from query continuation. |
+| COLLECTOR-P0-04 | C1 C6 | `/api/collect` and all retained compatibility callers use the one Collector/Permission/Source/Evidence/Canonical transaction instead of notes-only production success. |
+| COLLECTOR-P0-05 | C1 C6 | `canonical_data` remains sole business Canonical truth; tests/gates reject required legacy dual-write restoration. |
+| COLLECTOR-FND-01 | C1 C6 | One PlatformManifest owns/validates aliases, native fields, capabilities, providers, runtime registration, recovery needs and maturity projections. |
+| COLLECTOR-FND-02 | C1 C6 | One PlatformSession owner projects auth/verify/risk/runtime/recovery truth; Cookie/CDP/status-file details are implementations, not competing truth. |
+| COLLECTOR-FND-03 | F C6 C1 | One LUMENIS recovery sheet handles QR, controlled login, VERIFY and cooldown states, health-readback and exact-task resume across applicable operational surfaces. |
+
+Do not scale the platform count by cloning independent login managers, status files, route families, hard-coded platform lists or UI modals. A new platform must prove runtime registration, truthful capability/state, Source/Evidence/Canonical admission, recovery/retry semantics and a useful consumer result.
 
 ## 6. Historical ROUND 02 Root Caller convergence snapshot
 

@@ -204,6 +204,134 @@ path only; other approved collection and entity admission continue. Technical
 access, use rights and commercial-readiness states remain separately honest.
 
 
+## 3.2 Product Owner approved universal platform-acquisition convergence — 2026-10-07
+
+This decision refines the existing Collector Runtime without creating a second Collector or lowering current capability.
+
+### Current commercial/R&D boundary
+
+LUMENIS does not currently assume official/partner API authorization for the social platforms. Product closure must therefore continue to prove real data acquisition using legitimately available routes, including Product-Owner-authorized owned R&D accounts, managed sessions/Cookies/CDP/browser workers, public pages, public search/discovery, exact URLs, upload/import and other approved sources. The absence of an official API is a source-state constraint, not permission to replace a complete promised field/capability with a weaker demo.
+
+Future official/partner APIs are provider additions or replacements behind the same connector. They may improve durability, rights, scale or field coverage, but they do not define a new product architecture and must not force consumers to change the Source/Evidence/Canonical contract.
+
+The six current primary platforms (Instagram, Facebook, WeChat Official Accounts, RedNote/XHS, Douyin and X) are the present acceptance baseline only. Bilibili, Weibo, Zhihu, Kuaishou, Channels, YouTube, TikTok, Reddit, LinkedIn and later platforms remain valid expansion targets. A platform source file, schema row or adapter class is not runtime registration or working capability.
+
+### Capability must stay strong while access cost falls
+
+Optimize acquisition cost and recovery effort, not the promised data outcome. For each task, reuse available Canonical observations, public/native sources, discovery/exact-URL resolution, managed authenticated sessions and approved user materials as applicable. Logged-in read-only capability remains available where it supplies fields that zero-auth/public paths cannot currently provide. Do not delete or downgrade proven session capability merely because a public path also exists.
+
+The user-facing product does not expose Cookie/CDP/profile mechanics. During R&D the Product Owner may use their own approved platform identities. When an authorized platform session expires, LUMENIS should recover it inside the controlled product/browser experience and resume only after actual session health is re-read. Future customer/platform identity policy remains separate from the deferred LUMENIS product-account redesign.
+
+### Mandatory P0 convergence before platform-scale work
+
+`COLLECTOR-P0-01 — HK/International XHS recovery fence`
+
+- Production RedNote/XHS recovery must resolve through the current approved HK/International identity/policy/worker (`intl`, RedNote, current production endpoint). The protected Mainland personal identity and historical 9222 recovery path cannot be selected by a production recovery task.
+- Generic Auth Recovery and XHS-specific login/keepalive APIs must share this identity decision instead of maintaining conflicting login destinations.
+- CAPTCHA/VERIFY and IP/BLOCKED remain different states; neither may be disguised as a login problem.
+
+`COLLECTOR-P0-02 — durable task attempt fencing`
+
+- `dequeue`, heartbeat, checkpoint, ack and fail must bind the same server-issued attempt identity (task + attempt/execution ID + lease owner/run or equivalent opaque completion token).
+- A stale/zombie worker from an older lease cannot complete, fail, checkpoint or mutate a newer attempt.
+- Reap/retry/DLQ/restart must preserve this invariant.
+
+`COLLECTOR-P0-03 — terminal continuation and durable receipt`
+
+- A client checkpoint is never authorization or durable task truth.
+- Query-level continuation and platform-native pagination are separate.
+- A server-issued terminal receipt cannot cause completed work/effects to run again. An idempotent terminal replay may return the immutable prior terminal result; otherwise reject it explicitly. Never silently start a new attempt.
+- Resume must preserve accepted partial results, failed/deferred pages and exact actor/scope/Permission/source binding.
+
+`COLLECTOR-P0-04 — one ingestion truth`
+
+- Retained `/api/collect`, old V4/root routes, scripts and compatibility callers must converge into the same SYSTEM Collector → Permission → Source → Evidence → Canonical transaction and the same durable task/result semantics.
+- `notes` or a platform raw table may remain a compatibility/read model, but a direct notes-only write cannot constitute successful production acquisition.
+- Preserve unique legacy behavior until equivalent canonical behavior has tests and runtime evidence; then retire only the duplicate caller/side write.
+
+`COLLECTOR-P0-05 — sole Canonical acceptance`
+
+- `canonical_data` remains the sole current business Canonical truth.
+- Tests/gates must reject reintroduction of `zbc_canonical_data` as a required acquisition dual-write. Historical/derived rows may stay readable as provenance only.
+- Current main may already satisfy part of this item; fresh source/runtime/tests decide completion and no code should be changed merely to recreate an obsolete assertion.
+
+### Three shared foundations
+
+`COLLECTOR-FND-01 — PlatformManifest`
+
+One machine-readable platform contract owns:
+
+```text
+platform/canonical ID + aliases
+display/localization identity
+native field map + unsupported/unknown semantics
+discover/search/detail/comments/replies/creator/media/tracking capability
+provider modes: public | managed_session | connector | future_official
+adapter binding + runtime registration
+session/recovery requirements
+raw/canonical mapping
+maturity/configured/verified/live states
+```
+
+Existing `PLATFORM_ALIASES`, platform capabilities/connection metadata, runtime registry, secondary/primary lists, recovery profiles and UI projections must be generated from or validated against this one contract. No test may depend on import-order side effects to make an adapter appear registered. Adding a platform should normally require the Manifest + Adapter/Provider + recovery recipe + native fixture/contract tests, not edits to many independent lists.
+
+`COLLECTOR-FND-02 — PlatformSession`
+
+One SYSTEM owner projects:
+
+```text
+platform
+identity_ref
+provider_mode
+auth_state
+verification_state
+risk_state
+runtime/worker health
+checked_at / expiry
+recovery_mode / recovery_task
+resume binding
+```
+
+Cookie/header files, status JSON, in-memory login sessions, browser profile, CDP endpoint and platform-specific keepalive state are implementation details. They may not independently claim `READY`. PlatformSession must distinguish AUTH_REQUIRED, VERIFY/CAPTCHA, BLOCKED/COOLDOWN, worker unavailable and healthy.
+
+`COLLECTOR-FND-03 — LumenisPlatformRecoverySheet`
+
+F/C6 consume PlatformSession/RecoveryTask through one Experience contract:
+
+```text
+task continues
+→ source reports auth/verify/risk problem
+→ RecoveryTask
+→ LUMENIS recovery sheet
+   ├─ QR scan when the platform supports it
+   ├─ controlled login/browser form when QR is unavailable
+   ├─ explicit VERIFY handling
+   └─ BLOCKED/COOLDOWN state without fake login recovery
+→ user completes legitimate platform step
+→ server re-reads session/health
+→ resume the exact pending attempt/checkpoint
+→ return to the original task/context
+```
+
+The sheet uses LUMENIS visual language and never exposes Cookie strings, tokens, profile paths, CDP endpoints or raw credential storage. It is a platform connector recovery surface, not the future LUMENIS product-account login.
+
+### Platform expansion exit contract
+
+After P0/foundations, each additional platform must prove at least:
+
+```text
+Manifest is registered and truthfully projected
+Adapter/provider is callable through the normal runtime without import-order tricks
+required session/recovery state is represented
+native fields preserve NULL/UNKNOWN/UNAVAILABLE
+Source/Evidence/Canonical transaction succeeds
+checkpoint/retry/recovery cannot duplicate accepted effects
+field/capability coverage is reported honestly
+real task result reaches a CTH/BMP/Shared consumer
+```
+
+Do not call a skeleton, schema, file presence or planned adapter a working platform. Do not block unrelated working platforms when one source is unavailable.
+
 ## 4. Canonical Content Intelligence
 
 Cross-platform analysis requires one canonical content entity rather than raw platform schemas.
