@@ -11,3 +11,12 @@ web_search = "live"
 hooks = true
 multi_agent = true
 shell_snapshot = true
+goals = true
+skill_search = true
+
+[mcp_servers.openaiDeveloperDocs]
+url = "https://developers.openai.com/mcp"
+enabled = true
+required = false
+startup_timeout_sec = 30
+tool_timeout_sec = 60

@@ -118,7 +118,8 @@ def verification_kind(text: str) -> str | None:
 
 def route_prompt(prompt: str) -> list[str]:
     rules = [
-        (r"flutter|dart|sdk|package|playwright|openai|依赖|框架", "lumenis-current-docs: resolve installed versions, then Context7 or official docs."),
+        (r"openai|codex|chatgpt|plugin|responses api|agents sdk", "lumenis-openai-current-docs: use the project-configured openaiDeveloperDocs MCP first, then current official OpenAI domains and maintained openai/codex GitHub as needed."),
+        (r"flutter|dart|sdk|package|playwright|依赖|框架", "lumenis-current-docs: resolve installed versions, then Context7, authoritative vendor docs, and maintained upstream GitHub."),
         (r"sqlite|migration|database|数据库|持久化", "lumenis-database-safety: isolated test DB; preserve production data."),
         (r"flutter|页面|界面|导航|accessibility|\bui\b|\bux\b", "lumenis-flutter-experience: current screen contract, real bindings and appropriate native/web acceptance."),
         (r"browser|playwright|e2e|浏览器|console|network", "lumenis-browser-e2e-debug: isolated browser profile; never personal work sessions."),

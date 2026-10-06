@@ -321,10 +321,18 @@ entire assigned user result through research, implementation, real execution,
 saved/retrievable outputs, applicable recovery and evaluation, then complete
 acceptance. A bounded Task Card limits owners, files, authority and effects;
 it does not mean a minimum function, tiny slice or an easier substitute outcome.
-Minimal context loading limits redundant reading, never delivery scope.
+Focused context loading limits redundant reading, never delivery scope.
 
 Do not stop per function/file, repeatedly hand off unchanged pins, generate
 progress-only reports, re-audit stable source or wait for M's per-step approval.
+For multi-turn work whose path may change while the finish line is stable, use a
+native thread-scoped Codex Goal when supported: bind it to the current window's
+complete approved outcome, concrete verification surfaces, non-regression
+constraints and genuine blocked-stop conditions. A Goal is continuity state, not
+a new Product Authority, Owner, scope or acceptance rule; never mark it complete
+until current evidence satisfies the owning R/J/U and user-outcome requirements.
+Skill Search may discover reusable engineering workflows, but a Skill likewise
+cannot redefine Product Architecture, Owner, Permission, Truth or delivery scope.
 Resolve ordinary dependencies directly between their existing Owners and W6.
 Read current valid context once and continue; recheck when relevant source,
 authorization, inputs or an actual acceptance risk changes. Reuse valid evidence;
@@ -367,11 +375,15 @@ capability, recovery, security, licensing, maintainability, latency and real
 cost. Choose the strongest feasible solution that preserves the approved product,
 not the easiest patch, cheapest model, smallest feature or speculative rewrite.
 Implement it in the existing Owner, run affected checks plus the real outcome,
-and continue the same window toward closure. Reuse still-valid pinned research;
-do not open a duplicate research/window loop merely to repeat an unchanged
-question. Escalate only a genuine Product Owner/product decision, permission or
-credential boundary, paid-resource approval, material security/data risk, or an
-external dependency that the owning window cannot control.
+and continue the same window toward closure. For OpenAI/Codex/ChatGPT/plugin/API
+questions, use the project-configured official `openaiDeveloperDocs` MCP first
+when available, then current official OpenAI domains and the maintained
+`openai/codex` GitHub source/issues as needed; never rely on stale model memory.
+Reuse still-valid pinned research; do not open a duplicate research/window loop
+merely to repeat an unchanged question. Escalate only a genuine Product
+Owner/product decision, permission or credential boundary, paid-resource
+approval, material security/data risk, or an external dependency that the owning
+window cannot control.
 
 Each active delivery window therefore owns ordinary defects and blockers through
 research -> repair -> verification -> recovery -> complete outcome. M owns

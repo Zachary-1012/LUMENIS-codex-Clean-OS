@@ -4,6 +4,7 @@ import json
 import os
 import re
 import subprocess
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -529,25 +530,49 @@ def _assert_repository_model_neutrality() -> None:
     cfg = ROOT / ".codex" / "config.toml"
     if cfg.is_file():
         text = cfg.read_text("utf-8-sig")
+        data = tomllib.loads(text)
         forbidden_keys = (
-            "model", "model_provider", "service_tier", "model_reasoning_effort",
-            "plan_mode_reasoning_effort", "model_reasoning_summary", "model_verbosity",
-            "model_catalog_json", "default_subagent_model",
-            "default_subagent_reasoning_effort",
+            "model", "model_provider", "service_tier", "review_model", "profile",
+            "model_reasoning_effort", "plan_mode_reasoning_effort",
+            "model_reasoning_summary", "model_verbosity", "model_context_window",
+            "model_auto_compact_token_limit", "model_catalog_json",
+            "default_subagent_model", "default_subagent_reasoning_effort",
         )
         for key in forbidden_keys:
             if re.search(rf"(?m)^\s*{re.escape(key)}\s*=", text):
                 raise AssertionError(
                     f"repository Codex config must not set {key}; use the current window selection"
                 )
+        agents_cfg = data.get("agents", {})
+        for key in ("default_subagent_model", "default_subagent_reasoning_effort"):
+            if key in agents_cfg:
+                raise AssertionError(
+                    f"repository Codex agents config must not set {key}; subagents inherit the current window selection"
+                )
         if "Inherit the current Codex window's manual selection exactly" not in text:
             raise AssertionError(
                 "repository Codex config must explicitly preserve current window selection"
             )
-        budget_match = re.search(r"(?m)^\s*project_doc_max_bytes\s*=\s*(\d+)\s*$", text)
-        if not budget_match:
+        if data.get("web_search") != "live":
+            raise AssertionError("repository Codex config must keep live web search for current blocker research")
+        features = data.get("features", {})
+        for key in ("hooks", "multi_agent", "shell_snapshot", "goals", "skill_search"):
+            if features.get(key) is not True:
+                raise AssertionError(f"repository Codex config must enable stable feature: {key}")
+        docs_mcp = data.get("mcp_servers", {}).get("openaiDeveloperDocs", {})
+        expected_docs_mcp = {
+            "url": "https://developers.openai.com/mcp",
+            "enabled": True,
+            "required": False,
+        }
+        for key, expected in expected_docs_mcp.items():
+            if docs_mcp.get(key) != expected:
+                raise AssertionError(
+                    f"repository OpenAI docs MCP must set {key}={expected!r}; got {docs_mcp.get(key)!r}"
+                )
+        budget = int(data.get("project_doc_max_bytes") or 0)
+        if not budget:
             raise AssertionError("repository Codex config must set project_doc_max_bytes explicitly")
-        budget = int(budget_match.group(1))
         router_bytes = len((ROOT / "AGENTS.md").read_bytes())
         if budget < router_bytes + 16 * 1024:
             raise AssertionError(

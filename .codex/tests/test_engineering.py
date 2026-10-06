@@ -170,6 +170,11 @@ class EngineeringTests(unittest.TestCase):
         self.assertIn("lumenis-self-resolve", text)
         self.assertIn("maintained upstream GitHub", text)
 
+    def test_openai_route_uses_official_docs_mcp_first(self):
+        text = " ".join(h.route_prompt("Codex OpenAI plugin API bug"))
+        self.assertIn("openaiDeveloperDocs MCP first", text)
+        self.assertIn("openai/codex GitHub", text)
+
     def test_engineering_routes_compile_and_support_chinese(self):
         import re
         for name, pattern, _ in eng.ROUTES:
