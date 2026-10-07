@@ -638,16 +638,16 @@ class TestMissingDomainRejection:
             url="https://example.com/missing",
             # 不传 product_id，用默认
         )
-        # 默认应为 CTH（生产安全默认），不应是 SYSTEM
+        # 记录旧业务域缺省兼容行为；这不能证明 GLOBAL 默认或 Permission。
         assert rec.product_id in ("CTH", "ZBMP"), f"默认 product_id 不应静默落 SYSTEM: {rec.product_id}"
         assert rec.domain_id in ("cth", "zbmp"), f"默认 domain_id 不应静默落 system: {rec.domain_id}"
 
-    def test_domain_isolation_rejects_unknown_domain(self):
-        """域隔离：未知域不应被静默接受。"""
+    def test_legacy_unknown_product_does_not_map_to_system(self):
+        """仅核对旧映射不进入 SYSTEM；并未证明未知域被拒绝。"""
         from domain_isolation import product_to_domain
         # 未知 product_id 映射
         result = product_to_domain("UNKNOWN_PRODUCT")
-        # 应返回安全默认或空，不应是 system
+        # 保留原兼容断言。UNKNOWN→CTH 的真实修复须同时迁移相关调用方。
         assert result in ("cth", "zbmp", ""), f"未知 product 不应静默落 system: {result}"
 
 

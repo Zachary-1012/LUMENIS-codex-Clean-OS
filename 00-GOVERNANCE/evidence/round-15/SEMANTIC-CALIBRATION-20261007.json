@@ -1,0 +1,1138 @@
+{
+  "schema": "lumenis.semantic-calibration-evidence/v1",
+  "authority": false,
+  "baseline": "f6dac9216cbb331e730329a70513e0c90c306e73",
+  "observed_at": "2026-10-07T22:29:15.231631+08:00",
+  "status": "CALIBRATED_WITH_OPEN_BEHAVIOR_DEBT",
+  "scope": "产品身份、域/焦点、真相链、全部指定状态、AI、四Surface；不是全仓安全审计或全Runtime验收",
+  "entries": [
+    {
+      "canonical_term": "序境 / LUMENIS",
+      "current_definition": "唯一当前产品；内含 CTH/BMP/Shared/SYSTEM",
+      "owner": "Product Architecture",
+      "user_visible_label": "序境 / LUMENIS",
+      "machine_storage_identifier": "LUMENIS",
+      "legacy_alias": "ZBC / Z-Brand-Core / 母平台",
+      "compatibility_required": true,
+      "forbidden_conflation": "旧名不是当前独立产品层级",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 13,
+          "anchor": "ONE Product / ONE Repository",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 13,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L13",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "ZBC",
+      "current_definition": "历史包、环境变量和协议前缀",
+      "owner": "C6 / SYSTEM",
+      "user_visible_label": "不作产品标题",
+      "machine_storage_identifier": "ZBC_DB_PATH / ZBC_PRODUCT_ID",
+      "legacy_alias": "Z-Brand-Core",
+      "compatibility_required": true,
+      "forbidden_conflation": "变量前缀不是新产品或第二数据库",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 272,
+          "anchor": "ZBC_DB_PATH",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 240,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L240",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "ZBMP",
+      "current_definition": "BMP 的持久化兼容标识",
+      "owner": "C3/C6 / domain owner",
+      "user_visible_label": "BMP",
+      "machine_storage_identifier": "product_id=ZBMP; domain_id=zbmp",
+      "legacy_alias": "Multi-Subject Brand Management Platform",
+      "compatibility_required": true,
+      "forbidden_conflation": "不能把兼容 ID 当第二产品",
+      "affected_source_caller": [
+        {
+          "path": "subject_context.py",
+          "line": 16,
+          "anchor": "PRODUCT_ZBMP =",
+          "local_sha256": "4d67ce48ae4ed3769d92994405cb121717af853c176135eb13be29120b04be5f",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 16,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/subject_context.py#L16",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO_ID_RENAME",
+      "status": "LABEL_CORRECTED_IDS_PRESERVED"
+    },
+    {
+      "canonical_term": "Z-Brand-Core",
+      "current_definition": "历史仓库/协议命名",
+      "owner": "C6 / API compatibility",
+      "user_visible_label": "序境 / LUMENIS",
+      "machine_storage_identifier": "已有 contract_version 字符串",
+      "legacy_alias": "Z-Brand-Core",
+      "compatibility_required": true,
+      "forbidden_conflation": "旧协议字符串不决定当前产品身份",
+      "affected_source_caller": [
+        {
+          "path": "app.py",
+          "line": 2613,
+          "anchor": "Z-Brand-Core",
+          "local_sha256": "29a7edaa60896a96dd3b95e5241f6ab2db38abe99ae3b5ed69c63a6b63487df1",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 2636,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/app.py#L2636",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "CALLER_REVIEW_BEFORE_SCHEMA_CHANGE",
+      "status": "COMPATIBILITY_RETAINED"
+    },
+    {
+      "canonical_term": "母平台",
+      "current_definition": "历史解释性用词，不是当前产品层级",
+      "owner": "Product Architecture",
+      "user_visible_label": "序境 / LUMENIS",
+      "machine_storage_identifier": "NONE",
+      "legacy_alias": "母平台",
+      "compatibility_required": false,
+      "forbidden_conflation": "不可推导额外子产品/权限层",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 13,
+          "anchor": "ONE Product / ONE Repository",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 13,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L13",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "APP ONLY",
+      "current_definition": "已替代的历史交付方向",
+      "owner": "F / Experience",
+      "user_visible_label": "四 Surface",
+      "machine_storage_identifier": "NONE",
+      "legacy_alias": "App-only / Web-only / Website-login",
+      "compatibility_required": false,
+      "forbidden_conflation": "历史方向不能缩减四端",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 148,
+          "anchor": "历史APP ONLY",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 116,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L116",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "HISTORICAL_ONLY"
+    },
+    {
+      "canonical_term": "CTH",
+      "current_definition": "商业主体运营域；Subject-first",
+      "owner": "C3 / CTH",
+      "user_visible_label": "商业运营",
+      "machine_storage_identifier": "CTH / cth",
+      "legacy_alias": "原广州太古汇限定",
+      "compatibility_required": true,
+      "forbidden_conflation": "CTH 不等于某一家商业体",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 78,
+          "anchor": "CTH：商业主体运营",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 46,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L46",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "BMP",
+      "current_definition": "品牌市场域；Brand/Market-first",
+      "owner": "C3 / BMP",
+      "user_visible_label": "品牌市场",
+      "machine_storage_identifier": "ZBMP / zbmp（兼容）；部分合同 BMP",
+      "legacy_alias": "ZBMP",
+      "compatibility_required": true,
+      "forbidden_conflation": "BMP不是另一个产品；不要跨合同直接替换ID",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 80,
+          "anchor": "BMP：品牌与市场",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 48,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L48",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "product_id",
+      "current_definition": "历史接口中的业务域/系统标识",
+      "owner": "C3/C6 / context",
+      "user_visible_label": "按上下文显示商业运营或品牌市场",
+      "machine_storage_identifier": "CTH / ZBMP / SYSTEM",
+      "legacy_alias": "PRODUCT_CTH / PRODUCT_ZBMP",
+      "compatibility_required": true,
+      "forbidden_conflation": "字段名不意味着多个产品",
+      "affected_source_caller": [
+        {
+          "path": "subject_context.py",
+          "line": 15,
+          "anchor": "PRODUCT_CTH =",
+          "local_sha256": "4d67ce48ae4ed3769d92994405cb121717af853c176135eb13be29120b04be5f",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 15,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/subject_context.py#L15",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "PERSISTED_AND_API_MAPPING_REVIEW",
+      "status": "BEHAVIOR_REVIEW_REQUIRED"
+    },
+    {
+      "canonical_term": "domain_id",
+      "current_definition": "调用与数据合同中的领域标识",
+      "owner": "C3/C6 / domain isolation",
+      "user_visible_label": "领域",
+      "machine_storage_identifier": "cth / zbmp / system；合同限定别名",
+      "legacy_alias": "bmp",
+      "compatibility_required": true,
+      "forbidden_conflation": "UNKNOWN/BMP别名不得静默成为CTH",
+      "affected_source_caller": [
+        {
+          "path": "domain_isolation.py",
+          "line": 39,
+          "anchor": "def domain_to_product",
+          "local_sha256": "373de201360cc2f237f87517b66c104f1dd3230e8d088f8ecc3a1c5f8802318f",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 36,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/domain_isolation.py#L36",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "PERSISTED_CALLER_AND_API_REVIEW",
+      "status": "BEHAVIOR_REVIEW_REQUIRED"
+    },
+    {
+      "canonical_term": "Subject",
+      "current_definition": "具体商业主体及其稳定身份与范围",
+      "owner": "C1/C3 / registry",
+      "user_visible_label": "商业主体",
+      "machine_storage_identifier": "subject_id / scope.subject_id",
+      "legacy_alias": "CTH_SUBJECT_ID",
+      "compatibility_required": true,
+      "forbidden_conflation": "同名/跨城/商场/门店不合并",
+      "affected_source_caller": [
+        {
+          "path": "subject_context.py",
+          "line": 19,
+          "anchor": "CTH_SUBJECT_ID",
+          "local_sha256": "4d67ce48ae4ed3769d92994405cb121717af853c176135eb13be29120b04be5f",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 19,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/subject_context.py#L19",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "REFERENCE_DEFAULT_CALLER_REVIEW",
+      "status": "BEHAVIOR_REVIEW_REQUIRED"
+    },
+    {
+      "canonical_term": "BrandFocus",
+      "current_definition": "品牌任务的显式聚焦范围",
+      "owner": "C1/C3 / registry/context",
+      "user_visible_label": "品牌聚焦",
+      "machine_storage_identifier": "brand_key / brand_focus",
+      "legacy_alias": "旧 brand_scope",
+      "compatibility_required": true,
+      "forbidden_conflation": "不是Subject随意别名；聚焦不授予权限",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 86,
+          "anchor": "明确选取相应Subject或BrandFocus",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 54,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L54",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "GLOBAL / ALL",
+      "current_definition": "默认未聚焦，受当前权限限制的全域工作范围",
+      "owner": "C1/C3/C6 / context",
+      "user_visible_label": "全部 / 全局",
+      "machine_storage_identifier": "GLOBAL / ALL / GLOBAL_ALL（各现有合同）",
+      "legacy_alias": "隐式参考主体",
+      "compatibility_required": true,
+      "forbidden_conflation": "不是无限权限、隐式Subject或全球覆盖已完成",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 86,
+          "anchor": "默认工作范围保留GLOBAL",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 54,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L54",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "Clear focus",
+      "current_definition": "清当前聚焦，保留历史任务范围和版本",
+      "owner": "F/C3/C5 / context+SavedWork",
+      "user_visible_label": "清除聚焦",
+      "machine_storage_identifier": "现有 clear 行为",
+      "legacy_alias": "清空资料",
+      "compatibility_required": false,
+      "forbidden_conflation": "不能删除来源/旧成果/授权档案",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 86,
+          "anchor": "Clear只清当前聚焦",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 54,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L54",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "Source",
+      "current_definition": "可定位的输入来源及原始版本",
+      "owner": "C1/C5 / source owner",
+      "user_visible_label": "来源",
+      "machine_storage_identifier": "source_id / source_url / source hash",
+      "legacy_alias": "source note",
+      "compatibility_required": true,
+      "forbidden_conflation": "URL存在不是已读取，也不是Evidence准入",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 68,
+          "anchor": "Platform-native Source",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 36,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L36",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "Evidence",
+      "current_definition": "带来源、时间、范围、身份的证据",
+      "owner": "C1/C5 / Shared Evidence",
+      "user_visible_label": "证据 / 引用",
+      "machine_storage_identifier": "evidence_id / source identity",
+      "legacy_alias": "摘要/笔记",
+      "compatibility_required": true,
+      "forbidden_conflation": "相同内容不合并不同来源身份",
+      "affected_source_caller": [
+        {
+          "path": "lumenis/shared/evidence/store.py",
+          "line": 19,
+          "anchor": "record_evidence(**kwargs)",
+          "local_sha256": "abcf2898ab42656736fe79d3bd715446d84df79f7ed1fda753dc4eb09a2156b4",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 19,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/lumenis/shared/evidence/store.py#L19",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "Canonical",
+      "current_definition": "通过当前准入合同的规范业务数据",
+      "owner": "C1/C5/C6 / canonical owner",
+      "user_visible_label": "规范记录",
+      "machine_storage_identifier": "canonical_data / canonical_id",
+      "legacy_alias": "zbc_canonical_data",
+      "compatibility_required": true,
+      "forbidden_conflation": "AI输出/Mock/缓存/旧报告不自动成真相",
+      "affected_source_caller": [
+        {
+          "path": "canonical_data.py",
+          "line": 241,
+          "anchor": "class Canonical",
+          "local_sha256": "5c19bae536c49852123b2382c5d858c89b2b01fa6b8ba48069d925439d4430b5",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 241,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/canonical_data.py#L241",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO_HISTORICAL_ROW_REWRITE",
+      "status": "LOCAL_OWNER_REPAIR_RETAINED"
+    },
+    {
+      "canonical_term": "Metric",
+      "current_definition": "特定单位、期间、分母下的测量/计算值",
+      "owner": "C3 / metric owners",
+      "user_visible_label": "指标",
+      "machine_storage_identifier": "现有指标字段与MetricSnapshot",
+      "legacy_alias": "热度/满意率概括",
+      "compatibility_required": true,
+      "forbidden_conflation": "missing≠0；平台热度≠样本热度",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 38,
+          "anchor": "Metric / Truth Table / ViewModel",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": null,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "Truth Table",
+      "current_definition": "由规范事实和指标支撑的业务解释表",
+      "owner": "C3 / truth owners",
+      "user_visible_label": "业务数据表",
+      "machine_storage_identifier": "现有 truth table 合同",
+      "legacy_alias": "任意AI表格",
+      "compatibility_required": true,
+      "forbidden_conflation": "表格生成不证明事实成立",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 38,
+          "anchor": "Metric / Truth Table / ViewModel",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": null,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "ViewModel",
+      "current_definition": "将已有事实与状态按任务呈现",
+      "owner": "C6/F / experience_runtime",
+      "user_visible_label": "任务/内容/结果",
+      "machine_storage_identifier": "现有 JSON ViewModel",
+      "legacy_alias": "前端fixture",
+      "compatibility_required": true,
+      "forbidden_conflation": "不建立第二业务真相",
+      "affected_source_caller": [
+        {
+          "path": "experience_runtime.py",
+          "line": 920,
+          "anchor": "def _content_project_scope",
+          "local_sha256": "e8571b1cf84ebc7e739482b661b8c02e26b8f3939363fececbbd4a3ce1178f4c",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 920,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/experience_runtime.py#L920",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "Artifact / SavedWork",
+      "current_definition": "任务成果的可保存版本与可重开引用",
+      "owner": "C4/C5 / Shared Artifact",
+      "user_visible_label": "成果 / 已保存作品",
+      "machine_storage_identifier": "artifact_id / version / parent / hash",
+      "legacy_alias": "文件存在",
+      "compatibility_required": true,
+      "forbidden_conflation": "有文件≠正式保存/发布/用户验收",
+      "affected_source_caller": [
+        {
+          "path": "lumenis/shared/reporting/saved_work.py",
+          "line": 419,
+          "anchor": "def save_work",
+          "local_sha256": "ce84ef4d45a6126cc318b9080b78181d1d13a564033f6fdd3841605c3bc0ce6a",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 419,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/lumenis/shared/reporting/saved_work.py#L419",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "Outcome / Evaluation",
+      "current_definition": "实际结果和对结果的评价",
+      "owner": "C3/C2/C5 / existing owners",
+      "user_visible_label": "结果 / 评价",
+      "machine_storage_identifier": "现有 Outcome/Evaluation 对象",
+      "legacy_alias": "task completed",
+      "compatibility_required": true,
+      "forbidden_conflation": "Action已执行不代表商业效果已知",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 78,
+          "anchor": "结果评价",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 46,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L46",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "UNKNOWN",
+      "current_definition": "未建立事实或当前证据不足",
+      "owner": "各现有数据/运行Owner",
+      "user_visible_label": "未知 / 待核实",
+      "machine_storage_identifier": "UNKNOWN / null（按字段）",
+      "legacy_alias": "0 / healthy",
+      "compatibility_required": true,
+      "forbidden_conflation": "未知不能推为0、CTH、正常或拒绝",
+      "affected_source_caller": [
+        {
+          "path": "collector_status_api.py",
+          "line": 11,
+          "anchor": "- UNKNOWN",
+          "local_sha256": "418a21f9a9b71d8d26e353b8a0c312fa4864ee36a3ca32b772d11a9448cea65c",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 11,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/collector_status_api.py#L11",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "NOT_CONFIGURED",
+      "current_definition": "所需适配/配置未建立",
+      "owner": "C1/C2 / adapter/Gateway",
+      "user_visible_label": "未配置",
+      "machine_storage_identifier": "CollectionStatus.NOT_CONFIGURED",
+      "legacy_alias": "UNAVAILABLE",
+      "compatibility_required": true,
+      "forbidden_conflation": "未配置不是内容为空",
+      "affected_source_caller": [
+        {
+          "path": "lumenis/system/collector/adapters/base.py",
+          "line": 13,
+          "anchor": "NOT_CONFIGURED =",
+          "local_sha256": "b40e67e5d31ef348e357f0149b14a475a27f329c5ba20510d30582441446fb1c",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 13,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/lumenis/system/collector/adapters/base.py#L13",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "NEED_VERIFY — auth metadata",
+      "current_definition": "已有认证元数据但未核当前连通",
+      "owner": "C1 / legacy status API",
+      "user_visible_label": "登录状态待检查",
+      "machine_storage_identifier": "cookie_status=NEED_VERIFY",
+      "legacy_alias": "NEED_VERIFY",
+      "compatibility_required": true,
+      "forbidden_conflation": "不能直接等同平台验证码挑战",
+      "affected_source_caller": [
+        {
+          "path": "collector_status_api.py",
+          "line": 9,
+          "anchor": "- NEED_VERIFY",
+          "local_sha256": "418a21f9a9b71d8d26e353b8a0c312fa4864ee36a3ca32b772d11a9448cea65c",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 9,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/collector_status_api.py#L9",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "PRESENTATION_REASON_BINDING_REVIEW",
+      "status": "QUALIFIER_REQUIRED"
+    },
+    {
+      "canonical_term": "NEED_VERIFY — collector guard",
+      "current_definition": "平台要求合法人机验证，受影响路径等待",
+      "owner": "C1/C6 / risk guard",
+      "user_visible_label": "需要平台验证",
+      "machine_storage_identifier": "guard.state=need_verify",
+      "legacy_alias": "NEED_VERIFY",
+      "compatibility_required": true,
+      "forbidden_conflation": "不能解释成可继续自动请求",
+      "affected_source_caller": [
+        {
+          "path": "lumenis/system/collector/guard/state.py",
+          "line": 23,
+          "anchor": "NEED_VERIFY =",
+          "local_sha256": "da22c4e0c00e9ede8bb9ee6b482ebde1f36f5719df6ad1a7103820d8d48cc66a",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 23,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/lumenis/system/collector/guard/state.py#L23",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO_ENUM_RENAME",
+      "status": "QUALIFIER_REQUIRED"
+    },
+    {
+      "canonical_term": "READY — query plan",
+      "current_definition": "计划及有效查询已形成，仍须执行准入",
+      "owner": "C1 / acquisition plan",
+      "user_visible_label": "查询计划已准备",
+      "machine_storage_identifier": "plan.status=READY",
+      "legacy_alias": "READY",
+      "compatibility_required": true,
+      "forbidden_conflation": "计划就绪≠Session/GPU/成果就绪",
+      "affected_source_caller": [
+        {
+          "path": "lumenis/system/collector/acquisition_plan.py",
+          "line": 25,
+          "anchor": "READY =",
+          "local_sha256": "21323787edab9707fe0d1392a8300fdaedd46d9455756e138f2525d7159422df",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 25,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/lumenis/system/collector/acquisition_plan.py#L25",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO_ENUM_RENAME",
+      "status": "QUALIFIER_REQUIRED"
+    },
+    {
+      "canonical_term": "RUNNING — collection attempt",
+      "current_definition": "某次已认领采集尝试运行中",
+      "owner": "C1/C6 / task queue",
+      "user_visible_label": "采集中",
+      "machine_storage_identifier": "tasks.status=running + run_id/lease",
+      "legacy_alias": "RUNNING",
+      "compatibility_required": true,
+      "forbidden_conflation": "进程存在/窗口运行不代表采集运行",
+      "affected_source_caller": [
+        {
+          "path": "lumenis/system/collector/guard/task_queue.py",
+          "line": 87,
+          "anchor": "def dequeue",
+          "local_sha256": "5a0e4096e2c2fe5062ea924a1a025d26d9ba359c1d781b8f07d40075300c0609",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 85,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/lumenis/system/collector/guard/task_queue.py#L85",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO_ENUM_RENAME",
+      "status": "LOCAL_OWNER_REPAIR_RETAINED"
+    },
+    {
+      "canonical_term": "RUNNING — live dispatch",
+      "current_definition": "当前任务已派工并通过准入",
+      "owner": "M / local live dispatch",
+      "user_visible_label": "当前任务执行中",
+      "machine_storage_identifier": "dispatch.roles.*.state=RUNNING",
+      "legacy_alias": "active/enabled",
+      "compatibility_required": true,
+      "forbidden_conflation": "发布拓扑和ELIGIBLE不表示正在工作",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
+          "line": 119,
+          "anchor": "\"RUNNING\"",
+          "local_sha256": "4af8b25807434c283adb37e2e055bfa8c0eded60288721cdce935fc0621e6ee2",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 119,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json#L119",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "BLOCKED",
+      "current_definition": "具体依赖、身份或权限阻塞，带原因与范围",
+      "owner": "各Owner",
+      "user_visible_label": "受阻：具体原因",
+      "machine_storage_identifier": "BLOCKED / blocked（按Owner）",
+      "legacy_alias": "FAILED",
+      "compatibility_required": true,
+      "forbidden_conflation": "一条路径受阻不扩散成全平台停止",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
+          "line": 148,
+          "anchor": "\"blocked_reason\"",
+          "local_sha256": "4af8b25807434c283adb37e2e055bfa8c0eded60288721cdce935fc0621e6ee2",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 148,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json#L148",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "COOLDOWN",
+      "current_definition": "风险/频率触发的停止请求和冷却阶段",
+      "owner": "C1/C6 / guard",
+      "user_visible_label": "冷却等待",
+      "machine_storage_identifier": "cooldown",
+      "legacy_alias": "BLOCKED",
+      "compatibility_required": true,
+      "forbidden_conflation": "不是服务器健康或已恢复",
+      "affected_source_caller": [
+        {
+          "path": "lumenis/system/collector/guard/state.py",
+          "line": 20,
+          "anchor": "COOLDOWN =",
+          "local_sha256": "da22c4e0c00e9ede8bb9ee6b482ebde1f36f5719df6ad1a7103820d8d48cc66a",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 20,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/lumenis/system/collector/guard/state.py#L20",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "PARTIAL",
+      "current_definition": "只完成明确范围，注明已知/缺失部分",
+      "owner": "对应资料/覆盖Owner",
+      "user_visible_label": "部分完成",
+      "machine_storage_identifier": "PARTIAL",
+      "legacy_alias": "成功/全覆盖",
+      "compatibility_required": true,
+      "forbidden_conflation": "几条样本不能代表全平台或市场",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
+          "line": 139,
+          "anchor": "PARTIAL",
+          "local_sha256": "49b521457adba7cfe8cfaf860bb3b51437de104990bb5f2e4c69264bb350a624",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 139,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md#L139",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "VERIFIED — historical connection",
+      "current_definition": "某时点的历史验证结果",
+      "owner": "C1 / status cache",
+      "user_visible_label": "上次验证结果及时间",
+      "machine_storage_identifier": "last_check + cached VERIFIED",
+      "legacy_alias": "当前VERIFIED",
+      "compatibility_required": true,
+      "forbidden_conflation": "历史连通不等于当前Session可用",
+      "affected_source_caller": [
+        {
+          "path": "collector_status_api.py",
+          "line": 8,
+          "anchor": "- ACTIVE / VERIFIED",
+          "local_sha256": "418a21f9a9b71d8d26e353b8a0c312fa4864ee36a3ca32b772d11a9448cea65c",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 8,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/collector_status_api.py#L8",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "VERIFIED — product completion",
+      "current_definition": "有适用Runtime/E2E证据的行为验证阶段",
+      "owner": "C6/M / completion contract",
+      "user_visible_label": "已验证（注明版本/范围）",
+      "machine_storage_identifier": "VERIFIED",
+      "legacy_alias": "TESTED",
+      "compatibility_required": true,
+      "forbidden_conflation": "不是JOB_CLOSED/USER_VERIFIED",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
+          "line": 162,
+          "anchor": "\"VERIFIED\"",
+          "local_sha256": "4af8b25807434c283adb37e2e055bfa8c0eded60288721cdce935fc0621e6ee2",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 162,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json#L162",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "JOB_CLOSED",
+      "current_definition": "完整所分配Owner用户成果通过适用验收",
+      "owner": "M/Owner / completion",
+      "user_visible_label": "本任务已验收",
+      "machine_storage_identifier": "JOB_CLOSED",
+      "legacy_alias": "函数完成",
+      "compatibility_required": true,
+      "forbidden_conflation": "不是发布，不接受仅代码/测试成功",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
+          "line": 167,
+          "anchor": "\"mapped_user_outcome_complete_from\"",
+          "local_sha256": "4af8b25807434c283adb37e2e055bfa8c0eded60288721cdce935fc0621e6ee2",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 167,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json#L167",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "RELEASED",
+      "current_definition": "适用发布门禁及同版本证据成立",
+      "owner": "C6/M / release",
+      "user_visible_label": "已发布",
+      "machine_storage_identifier": "RELEASED",
+      "legacy_alias": "git push / green CI",
+      "compatibility_required": true,
+      "forbidden_conflation": "不是持续运行或市场效果",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
+          "line": 169,
+          "anchor": "\"release_requires_same_sha_evidence\"",
+          "local_sha256": "4af8b25807434c283adb37e2e055bfa8c0eded60288721cdce935fc0621e6ee2",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 169,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json#L169",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "OPERATING",
+      "current_definition": "真实持续操作产生要求的运行证据",
+      "owner": "C6 / runtime+outcome",
+      "user_visible_label": "运行中（有运行依据）",
+      "machine_storage_identifier": "OPERATING",
+      "legacy_alias": "health=200",
+      "compatibility_required": true,
+      "forbidden_conflation": "不是只启动一次或已发布",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
+          "line": 165,
+          "anchor": "\"OPERATING\"",
+          "local_sha256": "4af8b25807434c283adb37e2e055bfa8c0eded60288721cdce935fc0621e6ee2",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 165,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json#L165",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "PUBLISHED_STATE",
+      "current_definition": "GitHub/current 已发布事实与职责",
+      "owner": "M/C6 / repository",
+      "user_visible_label": "已发布状态",
+      "machine_storage_identifier": "HEAD / CURRENT",
+      "legacy_alias": "全窗口当前活跃",
+      "compatibility_required": true,
+      "forbidden_conflation": "不能当实时调度",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
+          "line": 114,
+          "anchor": "\"published_state_is_live_scheduler\"",
+          "local_sha256": "4af8b25807434c283adb37e2e055bfa8c0eded60288721cdce935fc0621e6ee2",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 114,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json#L114",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "ELIGIBLE",
+      "current_definition": "角色可接受派工，没有隐含任务",
+      "owner": "M / dispatch",
+      "user_visible_label": "待命",
+      "machine_storage_identifier": "ELIGIBLE",
+      "legacy_alias": "恢复拓扑=开工",
+      "compatibility_required": true,
+      "forbidden_conflation": "ELIGIBLE不等于RUNNING",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
+          "line": 117,
+          "anchor": "\"ELIGIBLE\"",
+          "local_sha256": "4af8b25807434c283adb37e2e055bfa8c0eded60288721cdce935fc0621e6ee2",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 117,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json#L117",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "WAITING_DEPENDENCY",
+      "current_definition": "等待已列明依赖/用户指令，恢复不扩范围",
+      "owner": "M / dispatch",
+      "user_visible_label": "等待依赖",
+      "machine_storage_identifier": "WAITING_DEPENDENCY + resume_condition",
+      "legacy_alias": "自动扩任务",
+      "compatibility_required": true,
+      "forbidden_conflation": "条件满足不授权新功能/新效果",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
+          "line": 126,
+          "anchor": "\"wait_resume_condition_is_binding\"",
+          "local_sha256": "4af8b25807434c283adb37e2e055bfa8c0eded60288721cdce935fc0621e6ee2",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 126,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json#L126",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "Product AI",
+      "current_definition": "已有单一Gateway中的获准自有推理",
+      "owner": "C2 / AI Gateway",
+      "user_visible_label": "序境 AI（状态如实）",
+      "machine_storage_identifier": "provider=owned; service_binding",
+      "legacy_alias": "工程模型",
+      "compatibility_required": true,
+      "forbidden_conflation": "Provider注册/训练文件不是产品可用",
+      "affected_source_caller": [
+        {
+          "path": "lumenis/system/ai_gateway/owned_inference.py",
+          "line": 27,
+          "anchor": "def owned_inference_status",
+          "local_sha256": "aa32bf5dd91973faea65c123d495f76911df7989632dbd1f75e365562341859f",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 27,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/lumenis/system/ai_gateway/owned_inference.py#L27",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "SERVICE_BINDING_REQUIRES_OWNER_EXECUTION",
+      "status": "UNAVAILABLE_IN_SOURCE_CONTRACT"
+    },
+    {
+      "canonical_term": "Engineering models",
+      "current_definition": "Codex研发资源，用户手动设置优先",
+      "owner": "M/F/C1-C6 / engineering",
+      "user_visible_label": "不作为产品Provider选项",
+      "machine_storage_identifier": "Astra/Sol/Luna; .codex/model-routing.toml",
+      "legacy_alias": "Product AI",
+      "compatibility_required": true,
+      "forbidden_conflation": "模型切换不改变Owner/Permission",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 185,
+          "anchor": "Codex/Cloud are development resources",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 153,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L153",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "Provider registry status",
+      "current_definition": "兼容路由的登记状态",
+      "owner": "C2 / providers+channel",
+      "user_visible_label": "不能代替产品推理可用性",
+      "machine_storage_identifier": "ACTIVE_FALLBACK / AVAILABLE / DISABLED",
+      "legacy_alias": "configured=working",
+      "compatibility_required": true,
+      "forbidden_conflation": "旧ARK兜底登记不证明owned执行或授权",
+      "affected_source_caller": [
+        {
+          "path": "lumenis/system/ai_gateway/providers.py",
+          "line": 14,
+          "anchor": "ACTIVE_FALLBACK =",
+          "local_sha256": "6ab4a9cf1353d4571446460b4edf8dbac03519fd3a34b5a6f8eefcf4f0fd6650",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 14,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/lumenis/system/ai_gateway/providers.py#L14",
+          "same_bytes_as_published": true
+        }
+      ],
+      "migration_required": "CALLER_AND_APPROVAL_REVIEW",
+      "status": "LEGACY_STATUS_DEBT"
+    },
+    {
+      "canonical_term": "Public Website",
+      "current_definition": "一个产品在该目标端的体验；共用Core与事实",
+      "owner": "F/C6 / Experience",
+      "user_visible_label": "官网",
+      "machine_storage_identifier": "现有 website/ 或 app/ 路由",
+      "legacy_alias": "历史单端部署词",
+      "compatibility_required": true,
+      "forbidden_conflation": "端存在不代表业务闭环；不同端不建重复真相",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 92,
+          "anchor": "| Public Website 官网",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 60,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L60",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "Web Workspace",
+      "current_definition": "一个产品在该目标端的体验；共用Core与事实",
+      "owner": "F/C6 / Experience",
+      "user_visible_label": "Web工作区",
+      "machine_storage_identifier": "现有 website/ 或 app/ 路由",
+      "legacy_alias": "历史单端部署词",
+      "compatibility_required": true,
+      "forbidden_conflation": "端存在不代表业务闭环；不同端不建重复真相",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 93,
+          "anchor": "| Web Workspace",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 61,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L61",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "Desktop",
+      "current_definition": "一个产品在该目标端的体验；共用Core与事实",
+      "owner": "F/C6 / Experience",
+      "user_visible_label": "桌面端",
+      "machine_storage_identifier": "现有 website/ 或 app/ 路由",
+      "legacy_alias": "Desktop App",
+      "compatibility_required": true,
+      "forbidden_conflation": "端存在不代表业务闭环；不同端不建重复真相",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 40,
+          "anchor": "| Desktop App",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 62,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L62",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    },
+    {
+      "canonical_term": "Mobile Companion",
+      "current_definition": "一个产品在该目标端的体验；共用Core与事实",
+      "owner": "F/C6 / Experience",
+      "user_visible_label": "移动伴随端",
+      "machine_storage_identifier": "现有 website/ 或 app/ 路由",
+      "legacy_alias": "历史单端部署词",
+      "compatibility_required": true,
+      "forbidden_conflation": "端存在不代表业务闭环；不同端不建重复真相",
+      "affected_source_caller": [
+        {
+          "path": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+          "line": 95,
+          "anchor": "| Mobile Companion",
+          "local_sha256": "d81f83adc16d3bbd9c69b5b9d6e1ce1ed1073c8148d5a59aed579ff3a17a028d",
+          "baseline_commit": "f6dac9216cbb331e730329a70513e0c90c306e73",
+          "baseline_line": 63,
+          "baseline_link": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/f6dac9216cbb331e730329a70513e0c90c306e73/00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#L63",
+          "same_bytes_as_published": false
+        }
+      ],
+      "migration_required": "NO",
+      "status": "CALIBRATED"
+    }
+  ]
+}

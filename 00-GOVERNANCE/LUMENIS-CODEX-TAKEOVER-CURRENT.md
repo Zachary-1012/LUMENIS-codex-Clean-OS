@@ -8,6 +8,46 @@ Root `AGENTS.md` is the only repository execution router. [The Product Owner's l
 
 ## 1. Online reader's current-state snapshot
 
+### 2026-10-07 semantic calibration and Math research preparation
+
+The Product Owner authorized a bounded M task: safe online/local alignment,
+full-product vocabulary calibration, and original-paper research based on the
+supplied combined instruction. The fresh research baseline was local/origin/live
+`f6dac9216cbb331e730329a70513e0c90c306e73`. This dated observation is not a fixed
+current HEAD. It does not dispatch F/C1-C6 or resume J1-J8 closure.
+
+- [Semantic calibration](evidence/round-15/SEMANTIC-CALIBRATION-20261007.md)
+  records 47 terms across every requested family, owners, compatibility IDs,
+  source anchors and unresolved behavior. Product Architecture owns meaning;
+  the ledger is evidence/index only. `ZBMP/zbmp`, `ZBC` and retained protocol IDs
+  are not additional user-facing products. The BMP display name and misleading
+  fallback/test descriptions are corrected; persisted IDs and API behavior are
+  unchanged. The old cross-repo contract is explicitly historical/superseded.
+- Actual isolated source reproduction found unknown/BMP-alias legacy fallback
+  to CTH and a generic conflicting-header pair. Blueprint hooks override the
+  pair on their routes, so this is not proof all routes misroute or permissions
+  are bypassed. Implicit reference Subject and compatibility migrations remain
+  open for caller/data review and the required Product Owner decision. They are
+  not repaired merely by this vocabulary update.
+- [OpenAI Math research/adoption map](evidence/round-15/OPENAI-MATH-ADOPTION-20261007.md)
+  contains original-paper methods, assumptions, limitations and adoption cards
+  for the nine selected families plus Lean/Comparator, mapped to existing owners.
+  Reading/extraction/formalization claims/independent proof replay are separate.
+  Method-level ADAPT is preparation; no algorithm, training data or production
+  capability is promoted by the report. Model learning remains separately gated.
+- Previously unpublished local files, `work/`, private C2 configuration and
+  Production DB remain protected; they are not included in this publication.
+  Local protection receipts live outside the checkout. At the earlier 18:08
+  admission probe Core was not listening on 8201; runtime was not started by
+  this task. Current runtime must be read separately from published source.
+
+The bounded preparation ends in **READY_FOR_PO_REVIEW**, not JOB_CLOSED for any
+product window. F/C1-C6 remain eligible/waiting under the newest Product Owner
+dispatch. M stops after the total package; only an explicit Product Owner
+approval to start closure resumes development. Machine governance v1.1.0,
+model-routing defaults, all R/J/U requirements and the four-surface outcome are
+unchanged.
+
 The published execution topology is M + F + C1-C6. M controls cross-window truth, conflicts, acceptance and integration; F owns frontend/Experience; C1-C6 are six eligible delivery roles and retain their complete R/J/U outcomes. This topology states ownership/capability, not current activity. Local windows proceed only when explicitly dispatched, and parallelism follows the newest Product Owner scheduling instruction plus actual Source/Owner/Permission/runtime/file dependencies. OpenCode is shelved and is not a current worker or fallback. Existing/free compute is preferred; C2 may use only verified zero-cost training resources under its existing MODEL_TRAIN/checkpoint/evaluation contracts, and no paid GPU/model resource is authorized without a new explicit cost approval. C1 live read-only collection remains subject to the existing Scope/Permission/session/rate-limit contracts. The latest user-requested Codex settings remain separate from product configuration. The 49 audit dispositions are D01-D49, distinct from R01-R15 acceptance requirements.
 
 The local working tree and local live dispatch are not visible to a reader of GitHub. Distinguish published commit/status, each window's newest Product Owner dispatch, dirty/untracked source, loaded runtime and user acceptance. Approved code, current state and owning evidence must be published in the same delivery cycle. Resolve current `HEAD`, cached `origin/main` and live remote rather than relying on a historical hash.

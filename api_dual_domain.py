@@ -911,8 +911,10 @@ def _api_response(data: Any = None, error: str = "",
 def _resolve_domain_from_request() -> Dict[str, str]:
     """从请求头 / session / 查询参数解析域身份。
 
-    优先级：X-Domain-Id header > session domain_id > ?domain_id= > 默认 cth
-    product_id 从 domain_id 映射，或从 X-Product-Id 显式指定。
+    现有兼容优先级：X-Domain-Id header > session domain_id > ?domain_id= > cth。
+    product_id 从 domain_id 映射，或从 X-Product-Id 显式指定。此函数仍有
+    未识别域回退及冲突 header 未拒绝的语义债；不能用解析成功证明身份合法、
+    GLOBAL 范围或 Permission。行为修复须协调下游和持久化兼容。
     """
     domain_id = ""
     product_id = ""
@@ -941,7 +943,7 @@ def _resolve_domain_from_request() -> Dict[str, str]:
 
     # 4. 映射 + 默认
     if domain_id and domain_id not in (DOMAIN_CTH, DOMAIN_ZBMP, DOMAIN_SYSTEM):
-        domain_id = DOMAIN_CTH  # 生产安全默认
+        domain_id = DOMAIN_CTH  # 历史兼容回退，不能解释为安全授权或有效 CTH 身份
     if not domain_id:
         domain_id = DOMAIN_CTH
 

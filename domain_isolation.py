@@ -29,12 +29,15 @@ _DOMAIN_TO_PRODUCT = {v: k for k, v in _PRODUCT_TO_DOMAIN.items()}
 
 
 def product_to_domain(product_id: str) -> str:
-    """product_id -> domain_id 映射。未知默认 cth（生产安全默认）。"""
+    """旧 product_id -> domain_id 映射；未知回退 cth 是待迁移兼容行为。
+
+    UNKNOWN 不等于 CTH；该返回值本身不证明域有效或拥有 Permission。
+    """
     return _PRODUCT_TO_DOMAIN.get(product_id, DOMAIN_CTH)
 
 
 def domain_to_product(domain_id: str) -> str:
-    """domain_id -> product_id 映射。未知默认 CTH。"""
+    """旧 domain_id -> product_id 映射；未知回退 CTH 不代表已校验域身份。"""
     return _DOMAIN_TO_PRODUCT.get(domain_id, PRODUCT_CTH)
 
 
@@ -115,7 +118,7 @@ DOMAINS = {"cth": CTH_DOMAIN, "zbmp": ZBMP_DOMAIN, "system": SYSTEM_DOMAIN}
 
 
 def get_domain(domain_id: Optional[str] = None) -> DomainBoundary:
-    """获取域边界。默认 CTH（生产安全默认）。"""
+    """读取兼容域边界；现有 CTH 回退不是产品默认或授权结论。"""
     did = domain_id or os.environ.get("ZBC_DOMAIN", "cth")
     return DOMAINS.get(did, CTH_DOMAIN)
 

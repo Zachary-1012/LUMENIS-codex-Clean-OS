@@ -11,11 +11,11 @@ import threading
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
-# 产品域常量
+# 历史接口的域标识（不是独立产品）；用户可见名称为 CTH / BMP。
 PRODUCT_CTH = "CTH"
 PRODUCT_ZBMP = "ZBMP"
 
-# CTH 固定主体
+# 旧 CTH 调用的参考主体；不能据此建立 GLOBAL / ALL 的默认聚焦。
 CTH_SUBJECT_ID = "GUANGZHOU_TAIKOO_HUI"
 CTH_BRAND_KEY = "guangzhou_taikoo_hui"
 
@@ -115,7 +115,7 @@ class ProductContext:
         }
 
 
-# 预定义产品上下文
+# 兼容 product_id 字段的域上下文；存储标识保留，不执行 ID 迁移。
 PRODUCTS = {
     PRODUCT_CTH: ProductContext(
         product_id=PRODUCT_CTH,
@@ -125,7 +125,7 @@ PRODUCTS = {
     ),
     PRODUCT_ZBMP: ProductContext(
         product_id=PRODUCT_ZBMP,
-        name="Multi-Subject Brand Management Platform",
+        name="LUMENIS Brand & Market",
         is_protected=False,
         default_subject=None,
     ),
@@ -133,7 +133,12 @@ PRODUCTS = {
 
 
 def get_product_context(product_id: Optional[str] = None) -> ProductContext:
-    """获取产品上下文。默认 CTH（生产安全默认）。"""
+    """读取旧 product_id 域上下文。
+
+    当前实现仍会将缺省或未识别标识回退为 CTH；这是待迁移的兼容行为，
+    不是授权判断，也不是 GLOBAL / ALL 的产品默认。新入口应使用其现有
+    严格域/范围校验；修改这里的行为须先核对调用方与持久化兼容。
+    """
     pid = product_id or os.environ.get("ZBC_PRODUCT_ID", PRODUCT_CTH)
     return PRODUCTS.get(pid, PRODUCTS[PRODUCT_CTH])
 

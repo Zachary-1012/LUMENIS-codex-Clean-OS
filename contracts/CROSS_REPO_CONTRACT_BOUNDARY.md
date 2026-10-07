@@ -1,7 +1,15 @@
 # Cross-Repository Contract Boundary — ZBC / OSAI / GGI / LUMENIS Command
 
 > Version: 1.0 · Date: 2026-09-06 · Owner: Shard D / Team 1
-> Status: ACTIVE · Governed by LUMENIS Dual-Core Architecture
+> Status: **HISTORICAL / SUPERSEDED — NOT AN EXECUTION AUTHORITY**
+>
+> 本文保留 2026-09-06 的接口与命名历史。当前跨仓边界以
+> [Canonical Registry](../00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md)
+> 及其指向的 `lumenis-ggi-cross-product` 机器合同为准；产品语义以
+> [Product Architecture](../00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)
+> 为准。下文的 Dual-Core、ZBC/ZBMP 产品层级、CTH 固定主体及
+> Zhipu/Local 可调用表述均是历史记录，不授权恢复旧 Provider、默认聚焦、
+> 旧部署或跨仓写入。仍被调用的技术标识保留兼容，不能据本文迁移数据。
 
 ## 1. Repository Roles
 

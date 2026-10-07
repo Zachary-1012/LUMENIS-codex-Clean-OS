@@ -24,6 +24,38 @@ the existing Agent Runtime and never become another business or security owner.
 Desktop on Windows/macOS/Linux, and Mobile on Android/iOS share the same Core.
 Platform availability and acceptance are verified separately from this target.
 
+### 当前语义与兼容边界（2026-10-07 校准）
+
+本节澄清已有产品定义，不迁移存储 ID、增加 Owner 或改变机器治理合同。
+
+| 概念 | 当前含义 | 兼容与禁止混用 |
+|---|---|---|
+| 序境 / LUMENIS | 一个产品 | ZBC、Z-Brand-Core、母平台等旧命名不得成为当前用户可见产品层级；旧仓库/包/环境变量名按调用方保留 |
+| CTH / BMP | 商业运营域 / 品牌市场域 | `PRODUCT_CTH`、`PRODUCT_ZBMP`、`product_id=CTH/ZBMP` 和 `domain_id=cth/zbmp` 是现存技术合同；`product_id` 字段名不意味着两个产品 |
+| Subject / BrandFocus | 商业主体上下文 / 品牌聚焦上下文 | 不互作别名，不从名字、页面或 Context 推导 Permission；同名主体、城市、门店、时间分别绑定 |
+| GLOBAL / ALL | 默认未聚焦的获准全域工作范围 | 不等于隐式广州太古汇，不等于无限权限或全球数据已齐全；Clear 保留历史成果的原范围 |
+| Source / Evidence / Canonical | 来源、可定位且带出处的证据、经当前合同接收的规范事实 | 研究笔记、AI 输出、缓存、文件存在、mock、旧报告不能自行升级为 Production Truth |
+| Metric / Truth Table / ViewModel | 按明确单位/分母/时间口径计算及表达事实 | `0` 是已知数值，`UNKNOWN`/缺测不是零；ViewModel 不创建另一份业务真相 |
+| Product AI | 单一 SYSTEM Owned AI Gateway 及获准绑定的执行版本 | Codex/Astra/Sol/Luna 是工程资源；兼容 Provider 注册和状态枚举不证明产品推理可用或允许 fallback |
+| 四 Surface | Public Website / Web Workspace / Desktop / Mobile Companion | Desktop App 是 Desktop 的描述性名称；Flutter 是实现技术；历史 APP ONLY/Web-only 不再决定产品范围 |
+
+状态必须随其已有 Owner/字段解释：例如 `query_plan.status=READY` 只说明查询计划可提交，
+不证明平台 Session 已就绪；`collector_guard=NEED_VERIFY` 是平台验证挑战，旧
+`cookie_status=NEED_VERIFY` 仅表示认证元数据还未验证连通。报告、API 组合与界面必须保留
+已有字段名、reason、时间和范围，不能把不同来源状态合并成一个无限定的“已就绪/已验证”。
+这里只规定解释与呈现，不新增通用状态服务，不批量改枚举或历史数据。
+
+`PUBLISHED_STATE` 与 `LIVE_DISPATCH`、`ELIGIBLE` 与 `RUNNING`、`VERIFIED` 与
+`JOB_CLOSED`、`JOB_CLOSED` 与 `RELEASED`、`RELEASED` 与 `OPERATING` 分别独立。
+治理状态的机器语义继续由 Governance Machine v1.1 定义；采集、队列、AI 与数据状态
+继续由其已有源码/合同定义。发现冲突应修相应边界，不能把某一领域枚举复制为全产品状态权威。
+
+逐项源码证据、兼容词及尚待行为修复项见
+[Semantic Calibration Ledger](evidence/round-15/SEMANTIC-CALIBRATION-20261007.md)。
+该清单是本蓝图及现有合同的索引，不是第二份语义权威。旧未知域回退、固定参考主体和
+冲突请求头仍有实际调用/测试依赖，不能因文档已校准就宣称行为已修好；更改前按清单核对
+调用者、持久化含义和审批边界，不直接重命名 ID 或放宽权限。
+
 Design artifacts remain DESIGN_EXPLORATION until a current screen specification
 passes DESIGN_READY. Do not authorize implementation from a PDF, screenshot, fixture, Figma frame
 or a generic swapped-title renderer. Original capabilities and later valid

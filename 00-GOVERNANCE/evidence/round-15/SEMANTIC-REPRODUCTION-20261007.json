@@ -1,0 +1,120 @@
+{
+  "observed_at": "2026-10-07T21:44:49.060504+08:00",
+  "method": "AST-extracted exact pure functions with in-memory request; no app/module imports, DB, permission or HTTP executed; does not prove unauthorized access",
+  "source_pins": {
+    "subject_context.py": "c9be7e4cb25732c16d186c56d950547f1ca5b38973f9b532c5ca6ca839a86128",
+    "domain_isolation.py": "9be0b2f5c383a335374305e3f3384a64386798674a336326999eefcdb4610757",
+    "api_dual_domain.py": "00aa6c56a3f4136e5a30253d9fff9c8892fc0cb67d0d7ad6391aedf49970eb24"
+  },
+  "cases": [
+    {
+      "call": "product_to_domain",
+      "input": "CTH",
+      "observed": "cth"
+    },
+    {
+      "call": "product_to_domain",
+      "input": "ZBMP",
+      "observed": "zbmp"
+    },
+    {
+      "call": "product_to_domain",
+      "input": "SYSTEM",
+      "observed": "system"
+    },
+    {
+      "call": "product_to_domain",
+      "input": "BMP",
+      "observed": "cth"
+    },
+    {
+      "call": "product_to_domain",
+      "input": "bogus",
+      "observed": "cth"
+    },
+    {
+      "call": "domain_to_product",
+      "input": "cth",
+      "observed": "CTH"
+    },
+    {
+      "call": "domain_to_product",
+      "input": "zbmp",
+      "observed": "ZBMP"
+    },
+    {
+      "call": "domain_to_product",
+      "input": "system",
+      "observed": "SYSTEM"
+    },
+    {
+      "call": "domain_to_product",
+      "input": "bmp",
+      "observed": "CTH"
+    },
+    {
+      "call": "domain_to_product",
+      "input": "bogus",
+      "observed": "CTH"
+    },
+    {
+      "call": "_resolve_domain_from_request",
+      "input": {
+        "X-Domain-Id": "bmp"
+      },
+      "observed": {
+        "domain_id": "cth",
+        "product_id": "CTH"
+      }
+    },
+    {
+      "call": "_resolve_domain_from_request",
+      "input": {
+        "X-Domain-Id": "bogus"
+      },
+      "observed": {
+        "domain_id": "cth",
+        "product_id": "CTH"
+      }
+    },
+    {
+      "call": "_resolve_domain_from_request",
+      "input": {
+        "X-Domain-Id": "system"
+      },
+      "observed": {
+        "domain_id": "system",
+        "product_id": "SYSTEM"
+      }
+    },
+    {
+      "call": "_resolve_domain_from_request",
+      "input": {
+        "X-Domain-Id": "zbmp"
+      },
+      "observed": {
+        "domain_id": "zbmp",
+        "product_id": "ZBMP"
+      }
+    },
+    {
+      "call": "_resolve_domain_from_request",
+      "input": {
+        "X-Domain-Id": "zbmp",
+        "X-Product-Id": "CTH"
+      },
+      "observed": {
+        "domain_id": "zbmp",
+        "product_id": "CTH"
+      }
+    },
+    {
+      "call": "_resolve_domain_from_request",
+      "input": {},
+      "observed": {
+        "domain_id": "cth",
+        "product_id": "CTH"
+      }
+    }
+  ]
+}

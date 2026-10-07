@@ -180,6 +180,14 @@ Current source / runtime / DB / API / Permission / Evidence truth
 
 ### Machine-readable governance semantics
 
+Product vocabulary is defined by the current Product Architecture's semantic and
+compatibility section. The dated Semantic Calibration Ledger under evidence/round-15
+is a source-backed index, not another authority. Preserve persisted IDs and distinguish
+owner-qualified states; do not infer authorization from legacy Context fallback.
+Research adoption cards are preparation evidence under the existing capability-evolution
+contract, not live dispatch, training approval, or implemented capability. Completion of
+a synchronization/calibration/research task does not resume paused product windows.
+
 The machine-readable execution/governance contract is
 `00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json`. It defines the
 canonical role set, live-dispatch states, completion ladder, gate tiers, approval

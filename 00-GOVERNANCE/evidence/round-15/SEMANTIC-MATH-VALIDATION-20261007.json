@@ -1,0 +1,57 @@
+{
+  "scope": "Semantic/display/documentation/research publication only",
+  "gates": [
+    {
+      "name": "constitution",
+      "exit_code": 0,
+      "output": "AI-NATIVE CONSTITUTION GATE: PASS\r\n - 18 lightweight principles present\r\n - AGENTS/README bootstrap routes through the constitution\r\n - non-bypass status and dirty-worktree protections present\r\n - missing!=0 and CI anti-bypass regression anchors present\r\n - Product Gate executes this validator as BLOCKING\r\n"
+    },
+    {
+      "name": "machine",
+      "exit_code": 0,
+      "output": "GOVERNANCE MACHINE CONTRACT: PASS\r\n - current semantic governance is JSON-backed\r\n - model routing is validated from structured TOML, not prose markers\r\n - delivery commits co-publish CURRENT through machine policy\r\n - live dispatch stays local/untracked\r\n - PO approvals require receipts; agents cannot self-approve\r\n - Change / Owner Closure / Release gates remain distinct\r\n - branch hardening is deferred to INTERNAL_BETA_ENTRY\r\n"
+    },
+    {
+      "name": "takeover",
+      "exit_code": 0,
+      "output": "CODEX TAKEOVER GOVERNANCE OK lumenis-ggi-cross-product v1.1.0 68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f cross-product-contract=PASS human-routing-mirror=PASS legacy-coverage=PASS historical-authority=PASS retired-route-regressions=PASS workflow-guards=PASS\r\n"
+    }
+  ],
+  "ast_verification": "SCOPED-AST-VERIFICATION.json",
+  "product_e2e": "NOT_RUN",
+  "lean_proof_replay": "NOT_RUN",
+  "all_product_tests": "NOT_RUN_NOT_REQUIRED_FOR_THIS_BATCH",
+  "no_test_weakened": true,
+  "observed_at": "2026-10-07T22:37:12.649047+08:00",
+  "schema_checks": {
+    "semantic_rows": 47,
+    "adoption_cards": 10,
+    "required_fields": "PASS",
+    "new_execution_entry_links": "PASS"
+  },
+  "ast_checks": [
+    {
+      "path": "subject_context.py",
+      "ast_behavior_unchanged_except_approved_display_label_and_test_name": true,
+      "sha256": "4d67ce48ae4ed3769d92994405cb121717af853c176135eb13be29120b04be5f"
+    },
+    {
+      "path": "domain_isolation.py",
+      "ast_behavior_unchanged_except_approved_display_label_and_test_name": true,
+      "sha256": "373de201360cc2f237f87517b66c104f1dd3230e8d088f8ecc3a1c5f8802318f"
+    },
+    {
+      "path": "api_dual_domain.py",
+      "ast_behavior_unchanged_except_approved_display_label_and_test_name": true,
+      "sha256": "71202cbb994618dca2e24e929accd53f88a6382c2397e9a646e790e91ae59743"
+    },
+    {
+      "path": "tests/test_dual_domain_e2e.py",
+      "ast_behavior_unchanged_except_approved_display_label_and_test_name": true,
+      "sha256": "07959b990b939ccb3e1f97b092f417c2f5546c0e2e8de89cb81f23a1e758905f"
+    }
+  ],
+  "protected_source_files_byte_identical": 21,
+  "runtime": "healthz healthy 2026-10-07 22:28; source SHA not verified; task did not start or reload Core",
+  "baseline": "f6dac9216cbb331e730329a70513e0c90c306e73"
+}

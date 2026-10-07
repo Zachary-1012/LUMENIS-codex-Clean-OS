@@ -88,6 +88,19 @@ Product Owner 已恢复批准的完整执行拓扑：
 
 **M + F + C1–C6 现在都属于当前执行体系。** 各窗口可按真实依赖并行推进，但不能因为“窗口已恢复”就盲启：每个任务开工前仍必须核对 fresh `origin/main`、本地 dirty、Owner/调用方、Runtime、DB、Permission、Evidence 以及平台 Session/GPU 等真实前置条件。
 
+这里的“恢复/可执行”只表示角色 **ELIGIBLE**，不是实时派工。最新 Product Owner 指令和
+本地 Live Dispatch 决定各窗口是否开工。规则同步、语义校准或研究准备完成都不会自动恢复
+C1–C6/F 的产品研发；不能把 README 的拓扑当作运行状态。
+
+### 语义校准与研究采用入口
+
+产品词义以 [Product Architecture 当前语义与兼容边界](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)
+为准。[语义清单](00-GOVERNANCE/evidence/round-15/SEMANTIC-CALIBRATION-20261007.md)
+记录当前术语、旧技术标识、源码证据及未闭行为差异。`CTH/BMP` 是序境内的领域；
+`ZBMP/zbmp/ZBC_*` 保留技术兼容，不建立第二产品，也不得直接批量替换持久化 ID。
+[OpenAI Math 采用清单](00-GOVERNANCE/evidence/round-15/OPENAI-MATH-ADOPTION-20261007.md)
+记录原文适用条件与现有 Owner 接续位置；研究完成不等于算法已采用、训练已授权或产品已验收。
+
 ## 产品完整闭环职责（不可由 README 摘要缩减）
 
 下面只是给人类工程师和 Coding Agent 的**导航摘要**。完整要求仍由 [Source Owner Index](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)、Product Architecture、Experience Constitution、R01–R15、J1–J8、U01–U25、现有研究/材料采用义务和各 Screen/Owner 合同共同约束。**任何 README、状态表、测试数量或窗口名称都不能把这些要求缩短成更小的产品。**
