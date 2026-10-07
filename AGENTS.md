@@ -11,11 +11,11 @@ execution instructions.
 
 ## 1. Authority
 
-## Current execution instruction — M + F + C1-C6 execution restored 2026-10-06
+## Current execution topology — M + F + C1-C6 eligible; live dispatch follows Product Owner instruction
 
 Current task: at 2026-10-06 15:40 +08 the Product Owner explicitly restored the
 approved execution topology: **M is the root controller/integrator, F is the
-front-end/Experience executor, and C1-C6 are six active delivery windows**.
+front-end/Experience delivery role, and C1-C6 are six eligible delivery roles**.
 This supersedes the temporary M-only/controlled-worker wording. Each window
 executes its existing owned outcome and may proceed in parallel when its real
 dependencies permit; no window may invent a second owner, architecture, data
@@ -23,6 +23,25 @@ store, model service or acceptance standard. M does not duplicate window work:
 it freezes current truth, resolves cross-window conflicts, reviews/accepts or
 returns outcomes, and controls integration/publication with W6. OpenCode is
 shelved and is not a current execution path or fallback.
+
+### Live dispatch semantics — NON-BYPASS
+
+Repository status and execution topology are **not a real-time task scheduler**. The words `active`, `enabled` or `eligible` in repository/history mean that a role is permitted to receive work; they do **not** mean that every corresponding local Codex window is currently executing.
+
+Use this execution-state vocabulary:
+
+```text
+ELIGIBLE            = role exists and may receive work; no current task is implied
+DISPATCHED          = Product Owner has explicitly assigned a current task
+RUNNING             = dispatched task passed fresh admission and execution has started
+WAITING_DEPENDENCY  = Product Owner or a real dependency requires this window to wait
+BLOCKED             = execution cannot continue because of a verified blocker
+JOB_CLOSED          = the assigned owner outcome passed its applicable completion evidence
+```
+
+The newest explicit Product Owner instruction addressed to a specific current/local window controls **scheduling, order and the bounded task** for that window. It may tell a window to repair first, wait for another owner, resume later, or work only a named slice without changing the product's canonical scope. Repository `main` remains authoritative for product truth, owners, contracts, red lines and acceptance; a local dispatch instruction does not silently create a new owner, architecture, data truth or reduced product requirement.
+
+If the Product Owner says, for example, “M repairs first; F/C1/C2 wait until that repair is accepted”, then M is `RUNNING`, F/C1/C2 are `WAITING_DEPENDENCY`, and other registered roles remain `ELIGIBLE` unless separately dispatched. Historical/current repository wording that the full topology is restored must never be interpreted as an instruction to start all windows concurrently.
 
 The C1-C6 map, all R01-R15/J1-J8/U requirements and existing owner contracts
 remain the complete scope and are now active delivery windows, not competing
@@ -103,8 +122,8 @@ GPU, new rental, recharge or retired model providers.
    shelved and is never a fallback unless the Product Owner explicitly resumes it.
 
 M is the root controller and final engineering acceptance/integration authority.
-F is active for the approved four-surface Experience/frontend implementation.
-C1-C6 are active as six separate delivery windows under the map below. W6 owns
+F is the eligible owner for the approved four-surface Experience/frontend implementation.
+C1-C6 are eligible as six separate delivery roles under the map below; eligibility is not live execution state. W6 owns
 accepted shared composition and mainline integration paths; M reviews and
 controls acceptance/publication, while each C-window remains responsible for
 its own source, tests, runtime evidence and complete user outcome. Protect all
@@ -154,6 +173,19 @@ Current source / runtime / DB / API / Permission / Evidence truth
 → existing complete Owner Task Card
 → taskbook/report/PDF/sketch as non-authoritative evidence only
 ```
+
+### Lean execution cadence — strict exits, lighter inner loop
+
+The final product standard remains strict; the inner development loop is intentionally lighter so Codex spends effort on implementation rather than repeatedly proving the same unchanged context.
+
+1. **Full bootstrap once, delta bootstrap thereafter.** Run the full canonical bootstrap when a window/session starts, when relevant authority/main changed, after a conflicting handoff, or when current truth is uncertain. During continuous work on the same admitted task, refresh `origin/main`, worktree/dirty ownership and only the changed/relevant authority + owner/caller/contract slice; do not reread the entire governance corpus on every function or retry.
+2. **Research only when it can change the repair.** A repository-internal deterministic defect (wrong field, stale assertion, internal caller mismatch, obvious transaction bug) may go directly reproduce → owner/caller → repair → affected verification. Current official/upstream research is mandatory when the failure depends on an external framework/API/platform/standard, when root cause is genuinely uncertain, or when the chosen implementation needs current external evidence.
+3. **Incremental engineering is allowed; completion language stays strict.** A bounded correct repair may be integrated after its affected tests and mandatory blocking guards pass; it need not pretend the entire Job is closed. Use the state ladder `DEFINED → IMPLEMENTED → INTEGRATED → VERIFIED → JOB_CLOSED → RELEASED → OPERATING`. Only `JOB_CLOSED` or a later state counts the mapped user outcome as complete.
+4. **Gate scope is proportional inside the loop.** Each bounded change runs affected tests plus currently mandatory blocking guards. Owner closure runs the owner's full mapped acceptance. Whole-product release runs the complete R01-R15/J1-J8/U01-U25 and release evidence ladder. Do not rerun unrelated expensive suites merely to restate already valid evidence.
+5. **M reviews outcome packages, not every function.** The owning window resolves ordinary bugs and validates the bounded outcome continuously. M intervenes for shared-writer conflicts, cross-owner interfaces, acceptance/integration packages and final publication—not as a per-edit approval bottleneck.
+6. **Product Owner approves policies/batches, not routine rows.** Existing approved rules may admit ordinary same-class records/actions automatically when the canonical owner, rights, privacy, quality and guard contracts all pass. New sensitive sources, new rights, new paid resources, new external effects, new model/provider scope or other explicit human gates still require Product Owner approval.
+
+This cadence reduces governance overhead only. It does not weaken Permission, Evidence, Canonical truth, protected-account boundaries, no-fabrication rules, no-paid-resource rules, owner exclusivity, or final user-outcome/release acceptance.
 
 ### Mandatory Codex bootstrap
 
