@@ -2,6 +2,7 @@ import json
 import pytest
 from lumenis.system.collector.adapters.instagram import InstagramAdapter, parse_public_instagram_document
 from lumenis.system.collector.adapters.public_source import PublicResponse
+from lumenis.system.collector.adapters.base import CollectionStatus
 
 
 def document(code='NativePost', pk='3950357121996910485', caption='原始文案 #城市限定'):
@@ -41,9 +42,26 @@ def test_public_exact_post_path_does_not_touch_credential_engine():
     assert result.metadata['original_body_available'] is True
 
 
-def test_foreign_host_is_rejected_before_any_request():
+@pytest.mark.parametrize('url', [
+    'https://example.com/reel/NativePost/',
+    'https://attacker.example/not-an-instagram-post',
+    'https://www.instagram.com.attacker.example/reel/NativePost/',
+    'http://www.instagram.com/reel/NativePost/',
+    'https://user:password@www.instagram.com/reel/NativePost/',
+    'https://www.instagram.com:8443/reel/NativePost/',
+    'https://www.instagram.com/reel/NativePost/extra',
+    'https://[',
+    'https://',
+])
+def test_invalid_public_url_is_rejected_before_any_request_or_session(url):
     adapter=InstagramAdapter(public_fetcher=lambda _:pytest.fail('unexpected source fetch'))
-    with pytest.raises(ValueError):adapter.search('https://example.com/reel/NativePost/')
+    adapter._get_engine=lambda:pytest.fail('invalid URL must not read session or Cookie')
+    for method in (adapter.search, adapter.detail, adapter.comments, adapter.creator):
+        result=method(url)
+        assert result.status is CollectionStatus.NOT_SUPPORTED
+        assert not result.ok and not result.items
+    # Direct internal calls retain the same pre-request URL boundary.
+    with pytest.raises(ValueError):adapter._public_detail(url)
 
 
 def test_public_comment_user_fields_never_export_viewer_or_private_tracking():

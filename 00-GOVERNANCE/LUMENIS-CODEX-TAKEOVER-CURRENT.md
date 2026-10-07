@@ -11,14 +11,22 @@ Root `AGENTS.md` is the only repository execution router. [The Product Owner's l
 Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-This follow-up co-publishes the bounded Instagram pre-request rejection repair
-with current rules/research. Product-source baseline before this repair is
-`2d0f8d61aed85d073abef8f67752200503927d7b`: App Gate passed, Product Gate run
-37686084801 failed at the foreign-host exception contract. The route resolver had
-returned NOT_SUPPORTED before the existing host validator could reject it. URL
-inputs now reach strict pre-request validation; 5 isolated Instagram tests pass.
-New exact-SHA CI must be read from GitHub. Core was not reloaded; protected local
-work, sessions and Production DB remain unchanged. This is no live-collection claim.
+This follow-up reconciles the Instagram public-input contract after Product Gate
+37689917151 exposed conflicting expectations at source baseline
+`53b248c973639aa903104493eaf4be22009df901`. The public adapter returns the existing
+structured NOT_SUPPORTED result for unsupported URLs; its internal exact-post
+validator still rejects invalid scheme/host/credentials/port/path before I/O.
+The regression now checks both no public fetch and no session-engine access for
+all four public entry methods, rather than requiring an escaping ValueError from
+search alone. No legitimate acquisition or security assertion is removed.
+Malformed HTTP(S) inputs also remain URL-shaped and cannot fall through to an
+authenticated topic-query route when URL parsing fails.
+Verification: 35 isolated tests across public Instagram documents, public-source
+adapters and capability routing pass. Constitution, machine-governance and staged
+takeover-governance gates pass; unchanged Experience gates retain the prior evidence.
+That baseline's App Gate passed. New exact-SHA CI must be read from GitHub.
+Core was not reloaded; protected local work, sessions and Production DB remain
+unchanged. This is no live-collection claim.
 
 The latest rules remove the universal collection date and require accurate visible
 dimensions with honest missing values. Other source changes remain OPEN. The new

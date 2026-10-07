@@ -156,11 +156,9 @@ def _is_public_post_url(value: Any) -> bool:
 
 def _is_http_url(value: Any) -> bool:
     """Recognize URL-shaped inputs so they cannot fall through as search text."""
-    try:
-        parsed = urlsplit(str(value or "").strip())
-        return parsed.scheme.lower() in {"http", "https"} and bool(parsed.netloc and parsed.hostname)
-    except ValueError:
-        return False
+    # Syntax errors (for example an unmatched IPv6 bracket) do not turn an
+    # attempted URL into a topic query for an authenticated session worker.
+    return re.match(r"^https?://", str(value or "").strip(), re.IGNORECASE) is not None
 
 
 def _is_wechat_article_url(value: Any) -> bool:
