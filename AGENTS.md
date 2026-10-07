@@ -178,6 +178,24 @@ Current source / runtime / DB / API / Permission / Evidence truth
 → taskbook/report/PDF/sketch as non-authoritative evidence only
 ```
 
+### Machine-readable governance semantics
+
+The machine-readable execution/governance contract is
+`00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json`. It defines the
+canonical role set, live-dispatch states, completion ladder, gate tiers, approval
+receipt requirements, capability-evolution dual outputs and the pre-Internal-Beta
+branch policy. It is a governance contract only and has no authority to redefine
+Product Architecture, business capability, Experience, Source/Evidence/Canonical
+truth or Permission.
+
+Markdown remains the human explanation; validators must prefer the structured
+contract for machine semantics rather than require incidental sentence wording,
+capitalization or prose order. Live dispatch is stored only in the ignored local
+`data/runtime/governance/live_dispatch.json` ledger and can be managed with
+`python scripts/audit_tools/lumenis_live_dispatch.py`. That local ledger is a
+scheduler/continuity aid, never Product Truth and never a substitute for the
+Product Owner's newest explicit instruction.
+
 ### Lean execution cadence — strict exits, lighter inner loop
 
 The final product standard remains strict; the inner development loop is intentionally lighter so Codex spends effort on implementation rather than repeatedly proving the same unchanged context.
@@ -197,6 +215,7 @@ This root `AGENTS.md` is the first coding-agent instruction boundary. Before cha
 
 ```text
 AGENTS.md
+→ 00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json
 → 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
 → 00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md
 → 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md

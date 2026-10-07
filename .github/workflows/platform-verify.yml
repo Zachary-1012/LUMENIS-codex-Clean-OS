@@ -38,6 +38,9 @@ jobs:
           python scripts/audit_tools/verify_lumenis_ggi_contract.py
           00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json
 
+      - name: Validate machine governance semantics (BLOCKING)
+        run: python scripts/audit_tools/verify_governance_machine_contract.py
+
       - name: Validate Codex takeover governance consistency (BLOCKING)
         run: python scripts/audit_tools/verify_codex_takeover_governance.py
 

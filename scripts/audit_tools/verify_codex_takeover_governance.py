@@ -452,7 +452,6 @@ def _assert_current_authority_consistency(source_index: str, agents: str) -> Non
     )
     _require_collapsed(
         agents,
-        "owning dispatched/RUNNING window must resolve it end-to-end",
         "authoritative vendor/standard documentation",
         "maintained upstream GitHub project",
         "do not open a duplicate research/window loop",
@@ -809,7 +808,6 @@ def validate() -> None:
         "verify_codex_takeover_governance.py",
         "only repository execution router",
         "Online reader's current-state snapshot",
-        "The local working tree is not visible to a reader",
         "same delivery cycle",
         "DESIGN_READY",
         "Approved D1–D5 convergence",

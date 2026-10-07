@@ -1,0 +1,229 @@
+{
+  "schema": "lumenis.governance-machine-contract/v1",
+  "contract_id": "lumenis-governance-machine",
+  "contract_version": "1.0.0",
+  "status": "ACTIVE",
+  "scope": "GOVERNANCE_ONLY",
+  "product_semantics_may_change": false,
+  "repository": {
+    "full_name": "Zachary-1012/LUMENIS-codex-Clean-OS",
+    "canonical_branch": "main",
+    "published_state_path": "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+    "execution_router": "AGENTS.md"
+  },
+  "authorities": {
+    "product_architecture": "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+    "experience": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "source_owner_index": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "real_delivery": "00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
+    "global_universe": "00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md"
+  },
+  "roles": {
+    "M": {
+      "kind": "controller_integrator_acceptance",
+      "eligible": true
+    },
+    "F": {
+      "kind": "frontend_experience",
+      "eligible": true
+    },
+    "C1": {
+      "kind": "collection_data",
+      "eligible": true
+    },
+    "C2": {
+      "kind": "owned_ai_agent_learning",
+      "eligible": true
+    },
+    "C3": {
+      "kind": "cth_bmp_business",
+      "eligible": true
+    },
+    "C4": {
+      "kind": "pitch_video_podcast",
+      "eligible": true
+    },
+    "C5": {
+      "kind": "research_import_reporting_artifact",
+      "eligible": true
+    },
+    "C6": {
+      "kind": "integration_runtime_release",
+      "eligible": true
+    }
+  },
+  "dispatch": {
+    "published_state_is_live_scheduler": false,
+    "live_authority": "latest_explicit_product_owner_instruction_for_that_window",
+    "allowed_states": [
+      "ELIGIBLE",
+      "DISPATCHED",
+      "RUNNING",
+      "WAITING_DEPENDENCY",
+      "BLOCKED",
+      "JOB_CLOSED"
+    ],
+    "runtime_state_path": "data/runtime/governance/live_dispatch.json",
+    "runtime_state_tracked": false,
+    "wait_resume_condition_is_binding": true,
+    "resume_after_condition_without_second_approval": true,
+    "newer_product_owner_instruction_supersedes": true,
+    "state_requirements": {
+      "ELIGIBLE": [],
+      "DISPATCHED": [
+        "task_id",
+        "dispatch_ref"
+      ],
+      "RUNNING": [
+        "task_id",
+        "dispatch_ref",
+        "admission_ref"
+      ],
+      "WAITING_DEPENDENCY": [
+        "task_id",
+        "dispatch_ref",
+        "resume_condition"
+      ],
+      "BLOCKED": [
+        "task_id",
+        "dispatch_ref",
+        "blocked_reason"
+      ],
+      "JOB_CLOSED": [
+        "task_id",
+        "dispatch_ref",
+        "closure_evidence"
+      ]
+    }
+  },
+  "completion": {
+    "ladder": [
+      "DEFINED",
+      "IMPLEMENTED",
+      "INTEGRATED",
+      "VERIFIED",
+      "JOB_CLOSED",
+      "RELEASED",
+      "OPERATING"
+    ],
+    "mapped_user_outcome_complete_from": "JOB_CLOSED",
+    "source_or_test_alone_is_completion": false,
+    "release_requires_same_sha_evidence": true
+  },
+  "gates": {
+    "change_gate": {
+      "purpose": "bounded_change",
+      "requires": [
+        "affected_tests",
+        "mandatory_blocking_guards"
+      ]
+    },
+    "owner_closure_gate": {
+      "purpose": "owner_job_closure",
+      "requires": [
+        "mapped_R_J_U",
+        "normal_path",
+        "applicable_save_reopen",
+        "applicable_recovery",
+        "evidence_evaluation"
+      ]
+    },
+    "release_gate": {
+      "purpose": "whole_product_release",
+      "requires": [
+        "R01-R15",
+        "J1-J8",
+        "U01-U25",
+        "Product_Gate",
+        "App_Gate",
+        "Critical_E2E",
+        "applicable_package_runtime",
+        "rollback_recovery",
+        "Product_Owner_repeat"
+      ]
+    }
+  },
+  "approval": {
+    "receipt_schema": "lumenis.po-approval-receipt/v1",
+    "receipt_directory": "00-GOVERNANCE/evidence/approvals",
+    "approved_by_value": "Product Owner",
+    "required_fields": [
+      "schema",
+      "approval_id",
+      "status",
+      "approved_by",
+      "approved_at",
+      "approval_source_type",
+      "scope_manifest",
+      "constraints"
+    ],
+    "allowed_source_types": [
+      "direct_product_owner_instruction",
+      "product_owner_batch_policy",
+      "superseding_product_owner_instruction"
+    ],
+    "explicit_human_required_for": [
+      "new_sensitive_source",
+      "new_rights_or_license_scope",
+      "new_paid_resource",
+      "new_external_effect",
+      "new_model_or_provider_scope",
+      "new_product_or_feature_family",
+      "destructive_production_data_action",
+      "release_or_deployment_when_existing_policy_requires_it"
+    ],
+    "policy_admission_allowed_for_same_class": true,
+    "agent_may_self_assert_po_approved": false
+  },
+  "capability_evolution": {
+    "enabled": true,
+    "feature_creep_allowed": false,
+    "input_chain": [
+      "real_task_or_gap",
+      "targeted_current_world_retrieval",
+      "source_date_rights_reliability_check",
+      "distillation"
+    ],
+    "output_branches": [
+      "PRODUCT_ADOPTION",
+      "MODEL_LEARNING_CANDIDATE"
+    ],
+    "product_adoption_requires": [
+      "existing_owner",
+      "existing_capability",
+      "ADOPT_ADAPT_DEFER_REJECT",
+      "real_validation"
+    ],
+    "model_learning_requires": [
+      "rights",
+      "privacy",
+      "quality",
+      "heldout",
+      "evaluation",
+      "promotion"
+    ],
+    "feedback_chain": [
+      "Outcome",
+      "Evaluation",
+      "Research",
+      "Learning"
+    ],
+    "stop_rule": "DEFER_IF_NO_MATERIAL_CURRENT_JOB_BENEFIT_OR_UNJUSTIFIED_CLOSURE_DELAY"
+  },
+  "branch_policy": {
+    "phase": "PRE_INTERNAL_BETA_CLOSURE",
+    "platform_branch_protection_required_now": false,
+    "direct_main_allowed": true,
+    "force_push_allowed": false,
+    "branch_delete_allowed": false,
+    "harden_at": "INTERNAL_BETA_ENTRY",
+    "hardening_target": [
+      "protect_main",
+      "disallow_force_push",
+      "disallow_delete",
+      "require_Product_Gate",
+      "require_App_Gate",
+      "preserve_same_sha_release_policy"
+    ]
+  }
+}
