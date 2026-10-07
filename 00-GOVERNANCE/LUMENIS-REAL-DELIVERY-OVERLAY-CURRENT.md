@@ -1167,6 +1167,10 @@ Product Owner clarification (2026-10-02): 本轮工程/产品闭环必须完成�
 
 Collector、Browser、AI、Content、Agent、Reporting、Evaluation、Learning 与 CTH/BMP workflow 依据真实 Evidence 持续演进。候选改进必须映射回 canonical owner、对象、Permission、Evidence、workflow 和 LUMENIS Experience，并经过版本化资产、测试、真实运行/E2E、效果评估、可观测性、回滚与 M 验收后才可晋级。注册、import、模型输出、论文结论或外部项目活跃度都不能直接成为产品能力。
 
+研究输入必须走一条双出口但不双重建库的能力进化链：`真实任务/缺口 → 定向检索 → 来源/时效/权利/可靠性核验 → 蒸馏`，随后分别进入 **PRODUCT ADOPTION** 与 **MODEL LEARNING CANDIDATE**。PRODUCT ADOPTION 只能增强当前已经批准的能力，并落实到现有 Owner/Contract/Experience，记录 `ADOPT / ADAPT / DEFER / REJECT` 及真实验证结果；MODEL LEARNING CANDIDATE 仍需经过 C2/C5 现有 rights/privacy/quality/held-out/Evaluation/Promotion 边界，不能因为同一资料已被产品采用就自动获得训练资格。真实运行后的 Outcome/Evaluation 必须反哺 Research/Learning，形成“真实世界 → 产品 → 结果 → 学习 → 下一轮产品”的闭环。
+
+能力进化允许提高现有能力的行业理解、数据覆盖/新鲜度、判断深度、grounding、创作/多模态质量、操作效率、可靠性、恢复能力和表达质量；不得以“进化”为名新增未批准功能、第二 Owner/真相栈或外部效果。若候选改进不能对当前 Job 产生可验证的实质提升，或会在没有验收收益证据的情况下拖延闭环，则记录 `DEFER` 并继续当前闭环；持续研究不能成为永久保持 OPEN 的理由。
+
 若本轮研究后没有适用升级，仍必须记录 `RESEARCH COMPLETE / NO JUSTIFIED UPGRADE` 和拒绝/延后证据；不得省略研究门。外部账号、许可证或商业授权不清仅阻止对应采用，不得拖延无冲突研发。
 
 ## Product Owner full-scope correction — 2026-10-03

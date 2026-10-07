@@ -442,6 +442,32 @@ training/learning use. Capturing, reading, adopting, implementing and accepting
 are distinct states. No summary, selected sample, navigation map or reference
 count completes the full requested corpus.
 
+### Capability evolution loop — product improvement, not feature creep
+
+Governance must improve the product, not only constrain Codex. Before a mapped Job is `JOB_CLOSED`, every dispatched owner may strengthen an **already-approved capability** when current real-world evidence shows a materially better method, deeper domain understanding, better data coverage/freshness, stronger grounding/quality, safer recovery, better usability, or more reliable execution. This is capability evolution, not permission to add a new product, feature family, owner, data truth or effect.
+
+Use one bounded loop:
+
+```text
+real task / observed capability gap
+→ targeted current-world retrieval
+→ source / date / rights / reliability check
+→ distill into reusable research knowledge
+→ PRODUCT ADOPTION branch: map to existing Owner/contract and ADOPT/ADAPT/DEFER/REJECT
+→ MODEL LEARNING branch: create a separately governed learning candidate
+→ implement only the justified improvement inside the existing capability
+→ real task / E2E / Outcome / Evaluation
+→ feed the evaluated result back into Research/Learning
+```
+
+Rules:
+- Retrieval is targeted and fast: search only what can materially improve the current capability or resolve a real knowledge gap. Do not run open-ended research merely because more material exists.
+- Retrieved material is not Production Truth by default. Preserve source, date, jurisdiction/market, rights, version and uncertainty; promote factual product/business claims only through the existing Source/Evidence/Canonical owners.
+- Product adoption and model learning are two outputs of the same research intake, not the same admission decision. Product adoption must land in the existing capability Owner; model learning must pass the existing C2/C5 rights/privacy/quality/evaluation/held-out controls before training.
+- Distillation means extracting methods, constraints, evidence, counterexamples and evaluation criteria. It must not copy restricted expression, treat model output as ground truth, or bypass source/use rights.
+- Evolution may improve depth, quality, coverage, reasoning, workflow efficiency, reliability and presentation of an existing approved function. It may not silently add a new function or expand external effects.
+- **Stop rule:** if a candidate improvement does not materially improve the current Job, cannot be validated within the current Owner, or would delay closure without a demonstrated acceptance benefit, record `DEFER` and continue to closure. Research is never an excuse to keep a Job permanently open.
+
 ### Direct execution and continuous collection
 
 Choose the strongest evidence-supported feasible implementation in the existing
