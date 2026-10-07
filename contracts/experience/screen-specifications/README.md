@@ -4,6 +4,7 @@ This folder holds the reviewed implementation specification for each canonical A
 
 ## Rules
 
+- Follow the current authorization and actual live dispatch/admission state in root AGENTS.md and its local-ledger/tool-receipt evidence; each window is RUNNING only after fresh admission. This index defines screen-specification requirements and does not assign execution windows.
 - Create one `<SCREEN-ID>.md` from [`SCREEN_SPEC_TEMPLATE.md`](SCREEN_SPEC_TEMPLATE.md) for each screen before implementing that screen. A file existing is not enough: M must review and record `DESIGN_READY` using the current user-selected model; no historical model assignment overrides that selection.
 - Use `contracts/experience/lumenis_app_binding_registry.json` as the binding inventory. Update it only from current source/runtime evidence; never treat historical `BOUND`, task assignee or ViewModel labels as proof.
 - Keep CTH Subject-first, BMP Brand/Market-first, Shared lineage and SYSTEM infrastructure boundaries intact.

@@ -1171,7 +1171,7 @@ pan/seek/reopen evidence remain separate from this rule publication.
 
 ## 38. Current frontend reference scope and scrolling
 
-### Intelligent UI adoption — approved research/rules, implementation waiting (2026-10-08)
+### Intelligent UI adoption — approved rules, implementation in current dispatch (2026-10-08)
 
 The Product Owner supplied `https://x.com/i/trending/2107900056858722693` and
 required research, rule adoption and a C1-C6/F mapping for later execution.
@@ -1181,10 +1181,10 @@ OpenAI describes task-shaped interactive answers and progressive rendering.
 This is reference evidence; its release does not expose an installable compiler,
 grant LUMENIS that capability, or change Codex/model settings.
 
-**State: research/rule adoption approved; implementation WAITING_DISPATCH.**
-This paragraph does not resume F/C1-C6 or authorize a new UI engine, product,
-provider or cloud dependency. Apply it to existing approved jobs/screens when
-their existing owner is subsequently dispatched. This constitution remains the
+**State: research/rule adoption approved; mapped implementation is covered by the current F/C1-C6 dispatch, pending fresh owner admission.**
+This paragraph itself does not change dispatch or authorize a new UI engine,
+product, provider or cloud dependency. Apply it within existing approved
+jobs/screens after their owner passes fresh admission. This constitution remains the
 sole Experience authority; research notes are supporting evidence only.
 
 Required adaptation inside existing screen owners:
@@ -1286,7 +1286,7 @@ Research evidence and exact source/owner mapping:
 
 The actual F user turns are retained in USER-ADDITIONS-20261004.md; their latest
 instruction supersedes prior exhaustive historical-video execution obligations.
-The Product Owner's 2026-10-04 resume is historical scheduling evidence, not a current start command. F follows the newest explicit live dispatch; this rule update does not resume implementation. The two new
+The Product Owner's 2026-10-04 resume is historical scheduling evidence, not a current start command. F follows the newest explicit live dispatch; the 2026-10-08 instruction now dispatches F after fresh admission. The two new
 recordings d16fc1c8ad774b0e950e3e7a4e444fe3.mp4 and
 7ac450632cf2611ee2ff3a6b29a41669.mp4 plus the earlier five, valid existing
 analysis, OpenAI official pages and current product rules are the current study
@@ -1444,7 +1444,7 @@ frame extraction, gate or build cannot establish Product Truth.
 
 这是基于已读官方材料的序境设计适配，不宣称GPT/Apple/Tesla全站全部已研究，不复制UI/品牌资产、车辆功能或第三方登录依赖。官方读取出处及限制记于现有 `INTELLIGENT-UI-ADOPTION-20261008.md`。保持二维手绘水彩/版画、可丰富而克制的色彩、按脚本创作角色、中英韩和无障碍。官网以外非必要不整页上下滚动；媒体横向时间轴和必要长内容滚动保留，不以压缩布局或减少交互损失功能。
 
-J5/J6具体操作和真实任务在既有SH-01、BMP-08规范增补；不再全量重写44屏。实时预览、临时导出、正式保存、重开不同；Read Aloud、录音、ASR、节目成品不同；脚本变更不代表录音已改。现有组件/变量/可编辑Figma映射沿原规则，不因文档新增晋升DESIGN_READY/IMPLEMENTED。后续F/C1-C6实施等待PO明确确认。
+J5/J6具体操作和真实任务在既有SH-01、BMP-08规范增补；不再全量重写44屏。实时预览、临时导出、正式保存、重开不同；Read Aloud、录音、ASR、节目成品不同；脚本变更不代表录音已改。现有组件/变量/可编辑Figma映射沿原规则，不因文档新增晋升DESIGN_READY/IMPLEMENTED。当前PO派工已覆盖F/C1-C6；各Owner fresh admission后执行完整既有成果，文档更新仍不代表实现或验收完成。
 
 客户验收采用现有Overlay两层卡：既能完成成熟基础工作，也能继续使用序境的真实来源/预算/业务范围/版本/评价。检验正确性、可修改性、误操作恢复、重复输入和有效等待，不以外观相似或控件数量判断体验达标。
 

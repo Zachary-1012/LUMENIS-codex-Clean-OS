@@ -1,6 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
+> 2026-10-08 dispatch: Product Owner dispatched M/F/C1-C6 to their full existing J/R/U outcomes. Each window enters RUNNING only after fresh admission. M checks changed complete outcomes, shared conflicts, CI and risks every 30 minutes, then waits when no actionable work remains. This publication changes dispatch rules only; model, reasoning-effort, speed and service-tier settings, runtime status and user-acceptance status are unchanged. Previous source publication at `749803ba271435ac9c28fab370392219d2188722` remains historical.
 > Published topology: M is the root controller/integrator, F owns frontend/Experience, and C1-C6 are restored as six eligible delivery roles under the current AGENTS.md instruction. This file records the latest published repository state; it is not a live process list. A local window executes only when explicitly dispatched and after current-state admission; explicit Product Owner wait/resume instructions control local scheduling without changing the canonical product scope. Product Architecture and D01-D49 dispositions were approved 2026-10-04; D labels remain separate from R01-R15 requirements.
 > current HEAD = READ WITH git fetch + git rev-parse origin/main
 
@@ -8,10 +9,27 @@ Root `AGENTS.md` is the only repository execution router. [The Product Owner's l
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-This follow-up reconciles the Instagram public-input contract after Product Gate
+The Product Owner's direct full-closure resume approval is recorded in
+`evidence/approvals/PO-20261008-FULL-CLOSURE-RESUME.json`. Existing outcomes and
+all completion boundaries remain unchanged. Native Goal updates, message delivery
+and actual admission are separate local receipts; role authorization is not proof
+that every window is RUNNING. M waits between actionable reviews.
+
+Source baseline `749803ba271435ac9c28fab370392219d2188722` Product Gate run
+37691558962 is FAILED at
+`tests/test_wechat_public_sources.py::test_detail_rejects_foreign_host_before_transport`:
+the expectation of ValueError conflicts with the structured adapter rejection.
+C1 owns the source/caller/contract repair; C6 integrates and verifies. Do not weaken
+the no-network/no-session security boundary or mark that run PASS.
+
+### Historical implementation publication — 749803ba
+
+Historical source publication state: `PUBLISHED_SOURCE_VERIFIED`
+
+The previous follow-up reconciled the Instagram public-input contract after Product Gate
 37689917151 exposed conflicting expectations at source baseline
 `53b248c973639aa903104493eaf4be22009df901`. The public adapter returns the existing
 structured NOT_SUPPORTED result for unsupported URLs; its internal exact-post
@@ -33,7 +51,9 @@ dimensions with honest missing values. Other source changes remain OPEN. The new
 Intelligent UI rules detail useful progressive components, factual correction,
 edit preservation and measured wait quality across the existing product. The
 whole-product logic review is supporting evidence, not another authority. These
-rule/design updates do not implement those features or dispatch F/C1-C6.
+rule/design updates did not implement those features or themselves dispatch
+F/C1-C6; the subsequent explicit Product Owner instruction now dispatches
+M/F/C1-C6 after fresh admission.
 
 The governance publication validator now permits an explicit RULES_ONLY_PUBLICATION
 for changes confined to governance/documentation and its own validator/tests;
@@ -41,7 +61,7 @@ it cannot include product behavior or claim loaded runtime. Published-source
 claims still require same-commit source and CURRENT. This prevents forcing a
 future rules-only update to manufacture a product change or claim unpublished code.
 
-### 2026-10-08 newest collection correction — rules adopted, implementation waiting
+### 2026-10-08 newest collection correction — rules adopted, owner work dispatched
 
 The Product Owner removed the universal publication-start cutoff and clarified
 that complete collection capability does not require every data value to exist.
@@ -50,12 +70,13 @@ native time; show required, correctly defined dimensions with “—” plus hon
 state/reason when missing. Do not substitute zero or hide acquisition defects.
 Global §10 records the exact remaining hard-coded date in acquisition_plan and
 prelaunch_baseline and the C1/C6/F continuation. These source changes are still
-OPEN; this update changes rules, not runtime plans or platform activity. Other
-windows remain waiting for PO confirmation. The earlier 197-row material inventory
+OPEN; this update changes rules, not runtime plans or platform activity. The
+subsequent explicit Product Owner instruction dispatches M/F/C1-C6 after fresh
+admission. The earlier 197-row material inventory
 is unchanged; these two direct chat corrections are recorded in the same approval
 receipt and canonical rules rather than invented as attached files.
 
-### 2026-10-08 latest mature-capability supplements: rules first
+### 2026-10-08 latest mature-capability supplements: rules adopted; owner execution dispatched
 
 Both supplied instruction bodies are adopted into the existing Architecture,
 Experience §38, Owner mapping, Real Delivery Overlay and relevant SH-01/BMP-08
@@ -64,15 +85,17 @@ versioned business continuity are distinct required acceptance layers. The
 existing capability-observation fields do not replace machine completion states.
 GPT/Apple/Tesla operation principles are adapted with official-source provenance;
 optional media/ASR components are conditional, not installed or production-bound.
-M completes this rule convergence and its previously authorized repair batch.
-F/C1-C6 await explicit Product Owner confirmation. The historical instruction
-snapshots and imperative attachment wording do not dispatch product work.
+M completed this rule convergence and its previously authorized repair batch.
+The Product Owner's later instruction dispatches M/F/C1-C6; each window enters
+RUNNING only after fresh admission. Historical instruction snapshots and
+imperative attachment wording alone do not dispatch product work.
 
 ### 2026-10-08 latest Product Owner frontend-audit supplement
 
-M updates the existing rules, blueprint, all 44 screen specs, editable-design/source
-mapping and text wireframes first. Other user windows remain waiting for Product
-Owner confirmation; this publication does not dispatch them. ACC-03/ACC-04 stale
+M updated the existing rules, blueprint, all 44 screen specs, editable-design/source
+mapping and text wireframes first. That publication did not itself dispatch the
+windows; the subsequent explicit Product Owner instruction dispatches M/F/C1-C6
+after fresh admission. ACC-03/ACC-04 stale
 `NO_FLUTTER_SCREEN` declarations are corrected without accepting their target Home,
 return continuity, Permission or live behavior. Default CTH-01 vs approved ACC-03
 remains an implementation gap for F/C6. CTH-04 causal edges require actual source
@@ -126,8 +149,9 @@ Core; Production DB and protected local work are unchanged by this Batch.
   through the sole blueprint, Experience, surface decision, all 44 existing screen
   specifications, their index/template and dated text-wireframe amendments. Existing
   C1-C6/F owners retain source/version continuity and server-authorized actions.
-  Status is `RESEARCH_ADOPTED / IMPLEMENTATION_WAITING_DISPATCH`; no additional
-  UI implementation or window dispatch is authorized by this record. Evidence:
+  Status is `RESEARCH_ADOPTED`; mapped implementation is included in the current
+  F/C1-C6 dispatch and proceeds after fresh owner admission. This record does not
+  prove UI implementation or acceptance. Evidence:
   `evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md`.
 
 AGENTS, Product Architecture, sole Experience Constitution, Multi-Surface Decision,
@@ -181,8 +205,9 @@ No runtime restart, paid compute, training, network collection, deployment or
 user acceptance was performed. Exact-SHA CI and loaded runtime remain separate.
 
 Machine governance v1.1.0/model-routing and R/J/U acceptance are unchanged.
-The earlier report-only status is historical. This repair does not dispatch
-C1-C6/F; all windows obey the newest explicit Product Owner instruction.
+The earlier report-only status is historical. That repair did not itself dispatch
+C1-C6/F; all windows obey the newest explicit Product Owner instruction, which
+now dispatches them after fresh admission.
 
 ### Approved D1–D5 convergence — 2026-10-06
 

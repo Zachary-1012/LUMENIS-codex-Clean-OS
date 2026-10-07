@@ -355,7 +355,7 @@ LUMENIS production repositories = 1
 
 ### 2026-10-08 前端审计与工具维护增补
 
-采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。其余窗口待 Product Owner 确认后执行，本轮只由 M 收敛规则、处理已授权修复/工具维护和同步。
+采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。Product Owner 已授权 M/F/C1-C6 启动完整既有成果；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。本规则更新不提升运行或用户验收状态。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
@@ -377,11 +377,11 @@ LUMENIS production repositories = 1
 
 竞品机制沿原Owner增强：多源可比信号/事件关系/解释/预警→C1/C3/C5；创意审阅/版本差异/局部修订/审批复用→C4/C5；文本与真实音视频双向时间定位→C4；按需工具/引用/checkpoint恢复→C2/C5。来源、方法及可证明的任务收益写回现有验收，不把竞品宣传当事实或追平证据。
 
-本次为规则采用，具体实施等待Product Owner确认。逐项事实状态与两层正常用户任务验收归 Real Delivery Overlay；界面、可编辑设计及GPT/Apple/Tesla操作对标归Experience §38。原用户要求/资料/历史失败证据保留，未经明确后置的功能不删除。
+本次为规则采用；Product Owner 已授权 M/F/C1-C6 启动全部既有窗口成果，实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING，并依现有 Owner 与门禁执行。逐项事实状态与两层正常用户任务验收归 Real Delivery Overlay；界面、可编辑设计及 GPT/Apple/Tesla 操作对标归Experience §38。原用户要求/资料/历史失败证据保留，未经明确后置的功能不删除。规则采用和派工均不证明实现、运行或用户验收完成。
 
 ### 2026-10-08 采集范围与数据可得性
 
-采集按主体/话题/任务语义及显式用户约束运行，不设全产品统一历史起点。Source/Evidence保留出版/事件/采集时间并区分，视图按任务正确整理；旧资料不删除。维度定义完整、采集能力闭环、实际数据覆盖是三个不同判据：准确维度即使缺值仍展示“—”及真实原因，不要求客观不可得的数据全部非空。必要业务证据不足仍不可给结论；缺值不得掩盖实现缺口。详细唯一合同与当前旧日期源码待改处见Global§10，后续Owner实施等待PO确认。
+采集按主体/话题/任务语义及显式用户约束运行，不设全产品统一历史起点。Source/Evidence保留出版/事件/采集时间并区分，视图按任务正确整理；旧资料不删除。维度定义完整、采集能力闭环、实际数据覆盖是三个不同判据：准确维度即使缺值仍展示“—”及真实原因，不要求客观不可得的数据全部非空。必要业务证据不足仍不可给结论；缺值不得掩盖实现缺口。详细唯一合同与当前旧日期源码待改处见Global§10；相关Owner在PO授权范围内，实际派发/运行状态仍需本地ledger及真实工具回执。
 
 ### 2026-10-08 全产品逻辑收敛与逐步交付
 
@@ -391,4 +391,4 @@ LUMENIS production repositories = 1
 
 来源/预算变化时沿已有引用/父版本找出受影响成果，未能追踪的依赖明确未知；局部修订由对应文稿/媒体Owner执行，不把通用SavedWork修订用于绕开task-owned合同。Action回执、Outcome观测与Evaluation分别存在，学习与模型晋升仍单独准入。产品代码拥有采集和持续任务，不依赖Codex代操作。
 
-本轮[全产品逻辑审阅记录](evidence/round-15/PRODUCT-LOGIC-REVIEW-20261008.md)覆盖J1–J8/U01–U25的逻辑与交接，给出已发布源码断点及顺序。它是本蓝图的取证材料，不是第二执行蓝图。改进首先收敛现有连接与正常结果；不新增产品能力家族、平行候选或无收益研究。其他窗口依旧等PO确认。
+本轮[全产品逻辑审阅记录](evidence/round-15/PRODUCT-LOGIC-REVIEW-20261008.md)覆盖J1–J8/U01–U25的逻辑与交接，给出已发布源码断点及顺序。它是本蓝图的取证材料，不是第二执行蓝图。改进首先收敛现有连接与正常结果；不新增产品能力家族、平行候选或无收益研究。已获授权的窗口按本地ledger、真实工具回执和 fresh admission 确定实际执行状态。

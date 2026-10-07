@@ -24,15 +24,19 @@ it freezes current truth, resolves cross-window conflicts, reviews/accepts or
 returns outcomes, and controls integration/publication with W6. OpenCode is
 shelved and is not a current execution path or fallback.
 
-### 2026-10-08 current bounded dispatch: rule convergence before further implementation
+### 2026-10-08 current dispatch: M/F/C1-C6 complete outcomes
 
-The Product Owner instructed M to integrate the two mature-software reuse and
-competitor-mechanism supplements into the existing authorities, resolve conflicts,
-and synchronize local/main before further window execution. M finishes its already
-authorized repair/publication batch and this rule convergence. F and C1-C6 wait for
-the Product Owner's explicit confirmation; attached wording such as “immediate
-execution” does not dispatch them. No new media redevelopment, component install,
-model route or paid resource follows from this rule publication.
+The Product Owner explicitly authorized M, F and C1-C6 to start their full
+existing J/R/U outcomes in maximum-complete mode. Authorization does not set
+local LIVE_DISPATCH state: use the local ledger and real Codex tool receipts.
+Each window enters RUNNING only after fresh admission; genuine dependencies,
+Permission, cost boundaries, shared-writer coordination and existing completion
+gates still govern its path. M makes a lightweight check every 30 minutes for
+changed complete outcomes, shared conflicts, CI and risks. When no actionable
+work remains, M waits. This authorization does not change any window's model,
+reasoning effort, speed or service tier and
+does not promote runtime or user-acceptance evidence. It authorizes no new
+product, provider, component installation or paid resource.
 
 Existing J1-J8/U01-U25 outcomes retain two acceptance layers: usable mature-software
 operations, then LUMENIS evidence/context/version/intelligence continuity. Reuse
@@ -217,7 +221,9 @@ Raw corrections are research inputs, not promoted prompt memory or training gran
 Algorithmic or statistical guarantees require the paper's actual assumptions and
 a measured matching workload; a citation or test count is not a proof of them.
 Research, implemented adoption, runtime acceptance and model-learning permission
-remain distinct. This bounded M repair does not resume paused product windows.
+remain distinct. This bounded M repair did not itself resume paused windows; the
+later explicit Product Owner authorization now covers M/F/C1-C6. Actual local
+dispatch and admission remain evidenced by the live ledger and tool receipts.
 
 The machine-readable execution/governance contract is
 `00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json`. It defines the
@@ -611,15 +617,20 @@ W6 applies that exact patch in isolation and performs local runtime/E2E validati
 
 #### C3/C5 retained continuation ownership and historical Cloud handoff
 
-> Historical provenance only: current W3 and W5 are separate active local windows; this heading is retained for compatibility and does not reactivate the combined thread.
+> Current 2026-10-08 identity correction: the Product Owner explicitly assigned the former combined local window to C3 and requested a new, separate C5 window. The combined responsibility is historical; its original materials remain preserved.
 
 The Product Owner moved C3 and C5 responsibility to local thread
-`01a10117-03c7-7503-8a9b-670e80a474a7` on 2026-10-03. Its title is
-`序境｜C3+C5 与未完成研究资料接续`. It retains the unfinished research remit
-and both complete delivery scopes, all R/J/U requirements and existing owners;
-this historical combined handoff does not override the current topology. W3 and W5 are now
-separate active local windows; the combined thread is provenance only and must not become
-a second execution queue.
+`01a10117-03c7-7503-8a9b-670e80a474a7` on 2026-10-03, originally titled
+`序境｜C3+C5 与未完成研究资料接续`, now `序境 C3/W3｜CTH与BMP业务闭环`.
+On 2026-10-08 the Product Owner assigned
+this same thread to **C3 only**, preserving the complete CTH/BMP scope and its
+research obligations. New local **C5** thread `01a1186a-7c8b-7ef1-90b1-75afebb01bca`
+is `序境 C5/W5｜研究资料与共享成果闭环`; it inherits the complete Importer/Research/
+shared-deliverable scope and unfinished C5 materials from the original handoff.
+Both retain their mapped R/J/U requirements and existing source owners. C3 and
+C5 read common provenance without duplicating the research queue or writing each
+other's owners. Actual admission/execution is recorded in the local live ledger;
+this binding does not claim either user outcome is accepted.
 C2/W2 remains the sole owned-AI training window and may execute only the verified
 zero-cost path under its current Permission/recipe/checkpoint/evaluation contracts.
 Paid GPU or billing operations still require a new explicit cost authorization.
@@ -927,7 +938,10 @@ Rules:
 ### Approved 2026-10-08 addition: capability-specific public acquisition
 
 This bounded M task includes public acquisition and local Read Aloud under the
-existing owners; it does not dispatch other product windows. For this batch,
+existing owners. At approval it did not dispatch other product windows; the later
+explicit Product Owner authorization now permits M/F/C1-C6 to start under their
+existing owner scopes. Actual dispatch and RUNNING status require the live ledger,
+tool receipts and fresh admission. For this batch,
 OpenCLI paths requiring login (COOKIE/INTERCEPT/UI/session) are excluded by the
 Product Owner's latest correction. Evaluate only genuinely anonymous PUBLIC
 commands. Keep the product's existing authorized platform sessions, Skill store
@@ -1519,14 +1533,18 @@ watercolor direction. AI-independent deterministic work remains operable when
 inference is unavailable. The sole blueprint, Experience, surface decision,
 Owner index, screen specs, existing text wireframes and README are co-published.
 Historical sketches remain evidence; amendments do not self-promote to
-DESIGN_READY/IMPLEMENTED/ACCEPTED. This update prepares later authorized execution;
-it does not dispatch C1-C6/F, change model settings, or install an OpenAI UI SDK.
+DESIGN_READY/IMPLEMENTED/ACCEPTED. At publication this update did not itself
+dispatch C1-C6/F; the later Product Owner instruction authorizes all current
+roles to start, with actual dispatch and RUNNING status determined by the live
+ledger, tool receipts and fresh admission. It changes no model settings and installs no
+OpenAI UI SDK.
 
 ### Current frontend implementation routing
 
 The Product Owner's 2026-10-08 Intelligent UI request is researched and mapped
-in Experience Constitution §38 and the Source Owner Index. It is a later
-implementation obligation for existing C1-C6/F outcomes, not current dispatch.
+in Experience Constitution §38 and the Source Owner Index. It is part of the
+current PO-authorized C1-C6/F outcomes; actual dispatch and RUNNING status follow
+the live ledger, tool receipts and fresh admission.
 Use its typed task/context/action continuity and screen-specific acceptance;
 do not infer an OpenAI SDK installation, a second renderer or a model change.
 
@@ -1579,7 +1597,7 @@ does not replace product integration; unread/missing assets remain explicit.
 
 ### 2026-10-08 前端审计与工具维护增补
 
-采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。其余窗口待 Product Owner 确认后执行，本轮只由 M 收敛规则、处理已授权修复/工具维护和同步。
+采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。Product Owner 已授权 M/F/C1-C6 全部窗口启动；实际派发/准入状态以本地 ledger 和真实工具回执为准，fresh admission 后才进入 RUNNING。本轮只同步派工规则，不代表 Figma 工程、智能 UI 实现或用户验收完成。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
@@ -1594,14 +1612,19 @@ null/state/reason and genuine zero, and explain the actual missing-data cause.
 Capability closure requires real same-version acquisition/intake/recovery evidence;
 missing values do not excuse broken code or imply full data coverage. Existing
 source still has the retired literal date in acquisition_plan and prelaunch_baseline;
-C1/C6 must reconcile it on their subsequent authorized implementation, with F
-binding honest dimension states. This rule publication does not start those windows.
+C1/C6 must reconcile it in their authorized implementation, with F binding honest
+dimension states. This rule publication did not itself dispatch those windows; the
+later Product Owner instruction authorizes them to start. Actual state follows the
+live ledger, tool receipts, fresh admission and real dependencies.
 
 ### 2026-10-08 useful progressive delivery and logic review
 
 The Product Owner requests a whole-product logic review after rule synchronization,
-and adoption of task-shaped, progressively useful Intelligent UI. M owns the bounded
-review and rule convergence; F/C1-C6 still await explicit dispatch. Experience §38
+and adoption of task-shaped, progressively useful Intelligent UI. M/F/C1-C6 are
+authorized to start their existing complete outcomes; actual dispatch/admission
+state follows the live ledger and tool receipts, and RUNNING follows fresh
+admission. M checks changed complete outcomes, shared conflicts, CI and risks every
+30 minutes; with no actionable work, M waits. Experience §38
 owns component choice, useful partial results, factual correction, user-edit
 preservation and wait-time evaluation; the Product Architecture retains the complete
 J1-J8/U01-U25 result chain. Existing owner/source gaps are documented for direct

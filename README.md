@@ -88,9 +88,9 @@ Product Owner 已恢复批准的完整执行拓扑：
 
 **M + F + C1–C6 现在都属于当前执行体系。** 各窗口可按真实依赖并行推进，但不能因为“窗口已恢复”就盲启：每个任务开工前仍必须核对 fresh `origin/main`、本地 dirty、Owner/调用方、Runtime、DB、Permission、Evidence 以及平台 Session/GPU 等真实前置条件。
 
-这里的“恢复/可执行”只表示角色 **ELIGIBLE**，不是实时派工。最新 Product Owner 指令和
-本地 Live Dispatch 决定各窗口是否开工。规则同步、语义校准或研究准备完成都不会自动恢复
-C1–C6/F 的产品研发；不能把 README 的拓扑当作运行状态。
+这里的“恢复/可执行”只表示角色 **ELIGIBLE**，不是实时派工。Product Owner 已授权 M/F/C1-C6
+启动完整既有成果；实际派发与准入仍以本地 Live Dispatch ledger 和真实工具回执为准，fresh
+admission 后才进入 RUNNING。不能把 README 的拓扑当作运行状态。
 
 ### 语义校准与研究采用入口
 
@@ -249,10 +249,10 @@ Core 健康：`http://127.0.0.1:8201/healthz`。Flutter Web 入口由同一 Core
 
 ## 执行与安全边界
 
-- C1 获当前明确派工后可继续真实只读采集，但必须遵守已有 Scope、Permission、Session、频率与平台规则；一个平台 Blocked 不能伪装成 ACTIVE，也不应暂停其他已满足前置的平台。
-- C2 获当前明确派工后可继续免费 GPU 训练闭环，但必须先验证真实零成本 GPU、精确 model/recipe/data hash、MODEL_TRAIN Permission、Checkpoint/Evaluation 合同；**不得自动租 GPU、充值或启用付费 fallback**。
-- F 获当前明确派工后可继续已批准 Experience 实现，但设计状态不等于 Runtime/用户验收。
-- C3–C5 获当前明确派工后继续各自真实用户成果，不能用 fixture、文档、测试或 Mock 替代实际业务结果。
+- C1 在完成 fresh admission 且真实前置条件满足后可执行真实只读采集，并遵守已有 Scope、Permission、Session、频率与平台规则；一个平台 Blocked 不能伪装成 ACTIVE，也不应暂停其他已满足前置的平台。
+- C2 在完成 fresh admission 后可执行已批准的免费 GPU 训练闭环，但必须先验证真实零成本 GPU、精确 model/recipe/data hash、MODEL_TRAIN Permission、Checkpoint/Evaluation 合同；**不得自动租 GPU、充值或启用付费 fallback**。
+- F 在完成 fresh admission 后执行已批准 Experience 成果；设计状态不等于 Runtime/用户验收。
+- C3–C5 在完成 fresh admission 后继续各自真实用户成果，不能用 fixture、文档、测试或 Mock 替代实际业务结果。
 - C6 负责整合、Runtime/Release，不得把单模块绿色扩写成全产品绿色。
 - Production DB 写入、破坏性迁移、部署/Release、付费资源和外部业务效果仍遵守 `AGENTS.md` 的精确授权边界。
 
@@ -275,15 +275,15 @@ IMPLEMENTED
 
 ### 2026-10-08 全产品智能交互规则
 
-智能 UI 采用范围覆盖全部现有能力、44屏及四端，包含研究/业务/创作、设置/通知/恢复。唯一执行依据是[产品蓝图](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)与[Experience §38](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)；[44屏规范索引](contracts/experience/screen-specifications/README.md)逐屏给出实际用户任务和后续采用入口，[既有文字草图](00-GOVERNANCE/evidence/round-15/experience-review-2026-10-06/LUMENIS-44-SCREEN-TEXT-WIREFRAMES-1.5.md)保留历史并同步日期增补。规则/蓝图/草图同步不表示44屏已经实现，后续窗口按既有Owner和明确派工执行。
+智能 UI 采用范围覆盖全部现有能力、44屏及四端，包含研究/业务/创作、设置/通知/恢复。唯一执行依据是[产品蓝图](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)与[Experience §38](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)；[44屏规范索引](contracts/experience/screen-specifications/README.md)逐屏给出实际用户任务和后续采用入口，[既有文字草图](00-GOVERNANCE/evidence/round-15/experience-review-2026-10-06/LUMENIS-44-SCREEN-TEXT-WIREFRAMES-1.5.md)保留历史并同步日期增补。规则/蓝图/草图同步不表示44屏已经实现；授权启动后的实际派发/准入以本地ledger与真实工具回执为准。
 
-2026-10-08 前端审计增补已纳入上述唯一规则：全44屏和官网家族需可编辑设计与源码/动作/验收映射，详见[ScreenSpec索引](contracts/experience/screen-specifications/README.md)。其余窗口等待 Product Owner 确认；规则同步不代表 Figma 工程、智能UI实现或用户验收完成。
+2026-10-08 前端审计增补已纳入上述唯一规则：全44屏和官网家族需可编辑设计与源码/动作/验收映射，详见[ScreenSpec索引](contracts/experience/screen-specifications/README.md)。Product Owner 已授权 M/F/C1-C6 启动完整既有成果；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。规则同步不代表 Figma 工程、智能 UI 实现或用户验收完成。
 
 ### 2026-10-08 成熟基础能力、竞品机制与用户操作期待
 
 两份最新增补已合并进[唯一产品蓝图](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)、[Owner执行映射](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)、[双层真实验收](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)和[Experience §38](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)：先让用户完成成熟软件基础操作，再证明序境的来源、业务、智能、版本与学习连续性。SH-01/BMP-08及原文字草图细化真实剪辑/播放/波形/录音/重开；GPT/Apple/Tesla只贡献适用操作原则。开源选择遵守[组件准入](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)，不重造现有内核。
 
-当前M完成本次规则及已授权修复同步；F/C1–C6等待Product Owner明确确认再执行。规则收录不是这些能力已实现，也不自动安装新组件或形成训练许可。历史材料保留，最新材料清单为197项（原191+本轮6增补），不代表全部历史资料已读完。
+Product Owner 已授权 M/F/C1-C6 启动完整既有 J/R/U 成果闭环；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。M 每 30 分钟轻量核对有变化的完整成果、共享冲突、CI/风险，无实际可处理事项即待命。规则收录不表示能力已实现或验收，也不自动安装新组件或形成训练许可。历史材料保留，最新材料清单为197项（原191+本轮6增补），不代表全部历史资料已读完。
 
 ### 2026-10-08 采集日期与维度展示更正
 

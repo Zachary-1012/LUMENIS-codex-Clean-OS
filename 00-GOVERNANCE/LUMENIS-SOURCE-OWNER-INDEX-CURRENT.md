@@ -16,7 +16,9 @@ When this index conflicts with current executable source or runtime evidence, cu
 The existing Experience Constitution §38 owns this approved later-execution
 requirement. Read its exact C1-C6/F table with the existing screen specification
 and caller; do not create another Task Card, generic renderer or capability owner.
-Status is `RESEARCH_ADOPTED / IMPLEMENTATION_WAITING_DISPATCH`, not IMPLEMENTED.
+Status is `RESEARCH_ADOPTED`; mapped implementation is included in the current
+F/C1-C6 dispatch and proceeds after fresh owner admission. It is not thereby
+IMPLEMENTED.
 
 | Owner | Current source entry | Required relationship |
 |---|---|---|
@@ -623,7 +625,7 @@ M rechecked these findings against the pinned source `52cd770cde458f73f99e407301
 
 ### 2026-10-08 前端审计与工具维护增补
 
-采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。其余窗口待 Product Owner 确认后执行，本轮只由 M 收敛规则、处理已授权修复/工具维护和同步。
+采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。Product Owner 已明确派发 M/F/C1-C6；各窗 fresh admission 后执行既有完整成果，本轮仅同步派工规则，不提升运行或用户验收状态。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
@@ -639,8 +641,8 @@ M rechecked these findings against the pinned source `52cd770cde458f73f99e407301
 | C4 | `lumenis/shared/content_creation/{video_editing,rendering}.py`、`shared_artifacts.py`、`podcast/intelligence/episode_runtime.py`、原音视频研究材料 | J4提案、J5视频、J6播客分别交付；连已有trim/split/reorder/delete/undo/mix/fade/transition/caption/FFmpeg；核单视频轨限制；播客按播放/真波形/录音/混音→降噪转录/脚本声音关联。与F协调原SH-01/BMP-08；不另建Timeline或Runtime |
 | C5 | Importer/Research、`lumenis/shared/reporting/saved_work.py`、Artifact/引用/材料清单 | 资料全文和方法采用进入产品能力；J4/J7现有编辑/审核/预算/版本/重开/导出，提供C4有rights的素材/原文时间码和版本合同；承接GenStudio式审阅修订复用，保持原文及父版本 |
 | C6 | 当前Core/API/experience_runtime、FFmpeg/FFprobe、Artifact/DB/恢复集成 | 关闭Flutter→API→既有Owner断链；每种预览/导出/保存/重开有对应真实版本；按目标OS核二进制与媒体许可/资源。App/Product Gate故障继续修复，不因新规则延后；没有真实效果不可通过 |
-| F | Experience§38，既有44ScreenSpec及可编辑设计映射；本次仅SH-01/BMP-08增加具体媒体规则 | 普通操作可发现、可直接控制、反馈与撤回；横向时间轴/真实播放器/波形/触控键盘/完整状态；先基础可用再增强智能呈现，保留四端角色和手绘水彩。等PO明确确认实施 |
-| M | 同一Blueprint/Experience/Overlay、两增补及现有有效研究、精确Main/dirty/Owner/CI | 收敛规则冲突/绑定登记，审查完整成果，按源/运行/数据/用户验收分层；本次不启动其他窗口、不用附文立即执行替代PO派工 |
+| F | Experience§38，既有44ScreenSpec及可编辑设计映射；本次仅SH-01/BMP-08增加具体媒体规则 | 普通操作可发现、可直接控制、反馈与撤回；横向时间轴/真实播放器/波形/触控键盘/完整状态；先基础可用再增强智能呈现，保留四端角色和手绘水彩。完整F成果按当前派发执行，fresh admission 后进入 RUNNING |
+| M | 同一Blueprint/Experience/Overlay、两增补及现有有效研究、精确Main/dirty/Owner/CI | M 每30分钟轻量核对有变化的完整成果、共享冲突、CI/风险；解决跨窗冲突并审查完整成果；无实际可处理事项立即待命 |
 
 复用方案必须经过第三方登记册的当前版本/许可/平台/性能/安全/回退准入。FFmpeg现有优先；OTIO仅交换；RNNoise仅有降噪缺口；whisper.cpp仅有ASR缺口；播放器/录音组件仅现有工程不足时；OpenShot/MLT须证明现有renderer不能合理满足原批准功能。未选择/未验证的库不能登记为产品已接入。
 
@@ -648,10 +650,10 @@ M rechecked these findings against the pinned source `52cd770cde458f73f99e407301
 
 ### 2026-10-08 日期与缺值更正的后续落实
 
-C1/C6沿`acquisition_plan.py`和`adapters/scheduling/prelaunch_baseline.py`移除全局固定起点校验/默认/seed生成，复用原时间和计划版本Owner，保留用户显式范围及旧receipt可回读、不重放。C5/Shared Evidence保持原始时间和缺值原因；C3/Metric保证维度定义、单位、范围与可比性；F在原界面保留维度并显示“—”及可理解原因/最后核验；C2不能据缺值补造事实。具体合同和已定位源码缺口见Global§10。实现仍待PO确认，未宣称运行策略已改变。
+C1/C6沿`acquisition_plan.py`和`adapters/scheduling/prelaunch_baseline.py`移除全局固定起点校验/默认/seed生成，复用原时间和计划版本Owner，保留用户显式范围及旧receipt可回读、不重放。C5/Shared Evidence保持原始时间和缺值原因；C3/Metric保证维度定义、单位、范围与可比性；F在原界面保留维度并显示“—”及可理解原因/最后核验；C2不能据缺值补造事实。具体合同和已定位源码缺口见Global§10。相关Owner已纳入当前派发；源码、运行和验收仍须各自证据证明。
 
 ### 2026-10-08 逐步交付与逻辑接续定位
 
 详细呈现合同唯一归Experience §38；源码取证和J/U覆盖见 `evidence/round-15/PRODUCT-LOGIC-REVIEW-20261008.md`。后续C2/C6/F先接`ai01_repository.dart`/AI-01真实提交与`ai_gateway/core.py`已有服务执行缺口，再沿同一Task增加语义分段和取消/恢复；不能把body收齐后打字动画当作流式结果。C2负责表现提案与准确度，F复用原生组件，C6按实际合同补齐run/块/版本与顺序；不新造组件注册表或运行时。
 
-C3/C5/C4复用已有SourceBrief/creation-upstream/SavedWork，补业务决策成果到制作的固定版本入口和逐条引用；C4补编辑Timeline→实际渲染→Artifact→重开，C5补引用影响与各自Owner的回滚衔接。C1/C6改旧日期并接持久采集receipt/原生cursor/兼容入口；这些是原完整成果的依赖顺序，不增加另一组任务编号。具体源码行和未验证范围在同一审阅记录，实施仍等PO确认。
+C3/C5/C4复用已有SourceBrief/creation-upstream/SavedWork，补业务决策成果到制作的固定版本入口和逐条引用；C4补编辑Timeline→实际渲染→Artifact→重开，C5补引用影响与各自Owner的回滚衔接。C1/C6改旧日期并接持久采集receipt/原生cursor/兼容入口；这些是原完整成果的依赖顺序，不增加另一组任务编号。具体源码行和未验证范围在同一审阅记录；PO已于2026-10-08明确恢复完整执行，各Owner通过fresh admission后继续，无需重复审批。原合并本地窗口现承接C3，新建本地窗口承接C5，精确身份只依AGENTS当前绑定。

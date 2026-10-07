@@ -1,0 +1,40 @@
+{
+  "schema": "lumenis.po-approval-receipt/v1",
+  "approval_id": "PO-20261008-FULL-CLOSURE-RESUME",
+  "status": "APPROVED",
+  "approved_by": "Product Owner",
+  "approved_at": "2026-10-08",
+  "approval_source_type": "superseding_product_owner_instruction",
+  "scope_manifest": {
+    "instruction": "更新目标：现在窗口全部开工，按照规则执行闭环，你作为总控要定期把关不要出现偏移，无事你就待命",
+    "followup": "记得更新目标不要出错，效率要提高",
+    "window_identity_instruction": "原先窗口作为c3，你再开一个作为c5",
+    "c3_thread_id": "01a10117-03c7-7503-8a9b-670e80a474a7",
+    "c5_thread_id": "01a1186a-7c8b-7ef1-90b1-75afebb01bca",
+    "roles": [
+      "M",
+      "F",
+      "C1",
+      "C2",
+      "C3",
+      "C4",
+      "C5",
+      "C6"
+    ],
+    "outcome": "既有完整J1-J8/R01-R15/U01-U25用户成果，正常路径、保存修订重开恢复、Evidence/Evaluation、同版本集成；不扩大功能或减少能力",
+    "supersedes": "上一轮M规则先行、F/C1-C6等待PO确认的派工限制；原审批材料与历史修复事实保留",
+    "model_and_speed": "保持用户手动设置，不修改模型、推理强度或服务速度",
+    "controller_cadence": "每30分钟一次轻量增量把关；只处理有变化完整成果、依赖、共享冲突、CI或实际风险，无事待命",
+    "dispatch_truth": "授权不等于消息送达或RUNNING；真实窗口绑定、发送回执、准入与阻塞记录在被忽略的本地live_dispatch和回执中",
+    "latest_window_model_instruction": "前端：GPT-6 Astra / ultra；C1-C6：GPT-6.1 Sol / ultra。当前窗口按用户手选；不启用1.5倍速度。"
+  },
+  "constraints": [
+    "当前治理机器合同语义、Product Architecture和唯一Owner不变",
+    "fresh admission完成后才可记录RUNNING",
+    "保留既有dirty/untracked/work/私有配置、Cookie/session和Production DB，不批量暂存或覆盖",
+    "共享文件由C6/W6协调集成；各Owner承担普通问题并完整执行，不重复逐函数交接",
+    "真实权限、来源使用范围、模型训练和外部效果边界保持；本次未新增付费算力或充值授权",
+    "不启动旧Cloud或历史执行队列，不猜测不存在的独立窗口身份",
+    "Product Gate实际FAIL不得改报PASS，规则发布不提升运行、用户、Released或Operating验收"
+  ]
+}

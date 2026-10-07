@@ -1302,10 +1302,11 @@ source transfer; semantic queries in actual capture/refresh/recovery; same-versi
 integration/environment reproduction; and four-surface operation when F's
 separately authorized deliverable is reviewed. These are retained product gates,
 not current task activation commands.
-These are complete outcome obligations, not activation commands. Current window
-activation comes only from the latest explicit Product Owner instruction under
-AGENTS.md. Current M rule convergence does not resume F or C1-C6; all await
-Product Owner confirmation for subsequent implementation. When an owner is later activated, it
+These are complete outcome obligations, not activation commands. The Product
+Owner has authorized M, F and C1-C6 to start these outcomes under AGENTS.md.
+Actual local dispatch/admission follows the live ledger and real tool receipts;
+each window enters RUNNING only after fresh admission. A real dependency blocks
+only its affected path. When an owner is active, it
 continues the whole outcome rather than safety refusal or per-function reports.
 Original six-window/R/J/U/special exits, global data construction, real
 outcome/Evaluation and final human repeat gate remain without shrinking useful
@@ -1335,7 +1336,7 @@ external document grants collection or deployment permission.
 
 ## 2026-10-08 双层正常成果验收与成熟基础能力
 
-本节补充现有 REAL DELIVERY CARD，不新建任务编号、验收队列或机器治理状态。最新派工为M收敛规则和已授权修复，F/C1-C6等待PO确认；本节要求在随后获派工的原完整成果中执行。
+本节补充现有 REAL DELIVERY CARD，不新建任务编号、验收队列或机器治理状态。Product Owner 已授权 M/F/C1-C6 启动完整既有成果；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING，再按原完整成果执行本节要求。
 
 每个原有J1–J8/U01–U25能力行记录 `capability_observation`：`ALREADY_WORKING`（真实操作证据）、`SOURCE_ONLY`、`UI_ONLY`、`PARTIAL`、`MISSING`、`BLOCKED`（确切外部依赖）、`PO_DEFERRED`（明确PO出处）。同时记录当前源码/调用/运行差距、复用或修复对象、材料采用位置和下一动作。该字段描述能力观察，不能代替治理机器合同的 completion ladder 或 LIVE_DISPATCH。旧报告/附件计数和SHA只是其时快照，不能直接标成当前状态。
 
