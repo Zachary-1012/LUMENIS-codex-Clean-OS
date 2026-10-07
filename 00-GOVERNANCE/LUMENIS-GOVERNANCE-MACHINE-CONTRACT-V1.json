@@ -1,7 +1,7 @@
 {
   "schema": "lumenis.governance-machine-contract/v1",
   "contract_id": "lumenis-governance-machine",
-  "contract_version": "1.0.0",
+  "contract_version": "1.1.0",
   "status": "ACTIVE",
   "scope": "GOVERNANCE_ONLY",
   "product_semantics_may_change": false,
@@ -21,35 +21,93 @@
   "roles": {
     "M": {
       "kind": "controller_integrator_acceptance",
-      "eligible": true
+      "eligible": true,
+      "window": null,
+      "environment": "Codex",
+      "responsibilities": [
+        "cross_window_truth",
+        "conflict_resolution",
+        "integration_review",
+        "acceptance"
+      ]
     },
     "F": {
       "kind": "frontend_experience",
-      "eligible": true
+      "eligible": true,
+      "window": null,
+      "environment": "Codex",
+      "responsibilities": [
+        "frontend",
+        "experience",
+        "four_surface"
+      ]
     },
     "C1": {
       "kind": "collection_data",
-      "eligible": true
+      "eligible": true,
+      "window": "W1",
+      "environment": "Local Codex",
+      "responsibilities": [
+        "data",
+        "collection"
+      ]
     },
     "C2": {
       "kind": "owned_ai_agent_learning",
-      "eligible": true
+      "eligible": true,
+      "window": "W2",
+      "environment": "Local Codex",
+      "responsibilities": [
+        "owned_ai",
+        "agent",
+        "learning"
+      ]
     },
     "C3": {
       "kind": "cth_bmp_business",
-      "eligible": true
+      "eligible": true,
+      "window": "W3",
+      "environment": "Local Codex",
+      "responsibilities": [
+        "cth",
+        "bmp",
+        "business"
+      ]
     },
     "C4": {
       "kind": "pitch_video_podcast",
-      "eligible": true
+      "eligible": true,
+      "window": "W4",
+      "environment": "Local Codex",
+      "responsibilities": [
+        "original_pitch",
+        "video",
+        "podcast"
+      ]
     },
     "C5": {
       "kind": "research_import_reporting_artifact",
-      "eligible": true
+      "eligible": true,
+      "window": "W5",
+      "environment": "Local Codex",
+      "responsibilities": [
+        "importer",
+        "research",
+        "reporting",
+        "artifact",
+        "notification"
+      ]
     },
     "C6": {
       "kind": "integration_runtime_release",
-      "eligible": true
+      "eligible": true,
+      "window": "W6",
+      "environment": "Local Codex",
+      "responsibilities": [
+        "integration",
+        "runtime",
+        "release"
+      ]
     }
   },
   "dispatch": {
@@ -224,6 +282,147 @@
       "require_Product_Gate",
       "require_App_Gate",
       "preserve_same_sha_release_policy"
+    ]
+  },
+  "execution_policy": {
+    "full_outcome_required": true,
+    "minimum_subset_for_gate_forbidden": true,
+    "incremental_integration_allowed": true,
+    "owner_resolves_ordinary_failures": true,
+    "m_review_granularity": "outcome_package",
+    "progress_only_report_is_delivery": false,
+    "no_actionable_work_policy": "WAIT",
+    "full_bootstrap_triggers": [
+      "new_session",
+      "relevant_authority_change",
+      "conflicting_handoff",
+      "current_truth_uncertain"
+    ],
+    "delta_bootstrap_for_continuous_same_task": true,
+    "deterministic_internal_failure_requires_external_research": false,
+    "external_or_uncertain_failure_requires_current_research": true,
+    "external_research_triggers": [
+      "external_framework_or_api",
+      "platform_or_standard_behavior",
+      "genuinely_uncertain_root_cause",
+      "external_evidence_can_materially_change_repair"
+    ]
+  },
+  "model_routing": {
+    "routing_source": ".codex/model-routing.toml",
+    "project_config_source": ".codex/config.toml",
+    "manual_window_selection_wins": true,
+    "hooks_may_change_model": false,
+    "profiles_are_launch_helpers_only": true,
+    "role_defaults": {
+      "M": {
+        "model": "gpt-6-astra",
+        "reasoning_effort": "ultra"
+      },
+      "F": {
+        "model": "gpt-6-astra",
+        "reasoning_effort": "ultra"
+      },
+      "C1": {
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "ultra"
+      },
+      "C2": {
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "ultra"
+      },
+      "C3": {
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "ultra"
+      },
+      "C4": {
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "ultra"
+      },
+      "C5": {
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "ultra"
+      },
+      "C6": {
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "ultra"
+      }
+    },
+    "subagents": {
+      "model": "gpt-6-luna",
+      "reasoning_effort": "max",
+      "explicit_spawn_overrides_default": true
+    },
+    "project_config": {
+      "top_level_model_selection_forbidden": true,
+      "web_search": "live",
+      "required_features": [
+        "hooks",
+        "multi_agent",
+        "shell_snapshot",
+        "goals",
+        "skill_search"
+      ],
+      "official_docs_mcp": {
+        "name": "openaiDeveloperDocs",
+        "url": "https://developers.openai.com/mcp",
+        "enabled": true,
+        "required": false
+      },
+      "project_doc_headroom_bytes": 16384
+    }
+  },
+  "red_lines": {
+    "second_product_or_owner": false,
+    "second_truth_stack": false,
+    "fabricate_missing_or_unknown_as_zero": false,
+    "mock_fixture_as_production_acceptance": false,
+    "bypass_permission_evidence_canonical_or_effect_fence": false,
+    "destructive_production_data_without_explicit_approval": false,
+    "new_paid_resource_without_explicit_approval": false,
+    "retired_provider_probe_fallback_or_reactivation": false,
+    "protected_personal_account_access": false,
+    "reduce_approved_functionality_to_make_gate_green": false,
+    "delete_or_weaken_legitimate_failing_test_to_make_gate_green": false,
+    "force_push_main": false
+  },
+  "semantic_change_policy": {
+    "machine_contract_is_semantic_source": true,
+    "markdown_is_human_explanation": true,
+    "markdown_only_change_may_change_machine_semantics": false,
+    "semantic_machine_change_requires_po_receipt": true,
+    "semantic_machine_paths": [
+      "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
+      ".codex/model-routing.toml"
+    ],
+    "product_authorities_remain_external_references": true
+  },
+  "publication_policy": {
+    "current_status_path": "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+    "copublish_current_for_delivery_commit": true,
+    "exact_paths": [
+      "AGENTS.md"
+    ],
+    "prefixes": [
+      ".github/workflows/",
+      "account/",
+      "agent_",
+      "app/",
+      "contracts/",
+      "lumenis/",
+      "scripts/",
+      "tests/",
+      "website/",
+      "00-GOVERNANCE/evidence/round-",
+      "00-GOVERNANCE/LUMENIS-ROUND-"
+    ],
+    "root_extensions": [
+      ".py",
+      ".ps1",
+      ".json",
+      ".toml",
+      ".yaml",
+      ".yml"
     ]
   }
 }

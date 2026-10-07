@@ -190,7 +190,10 @@ truth or Permission.
 
 Markdown remains the human explanation; validators must prefer the structured
 contract for machine semantics rather than require incidental sentence wording,
-capitalization or prose order. Live dispatch is stored only in the ignored local
+capitalization or prose order. A Markdown-only edit cannot change machine governance
+semantics. Any change to the machine semantic contract or structured model-routing
+authority requires a same-change Product Owner approval receipt; product authorities
+remain separate and are never redefined by this governance contract. Live dispatch is stored only in the ignored local
 `data/runtime/governance/live_dispatch.json` ledger and can be managed with
 `python scripts/audit_tools/lumenis_live_dispatch.py`. That local ledger is a
 scheduler/continuity aid, never Product Truth and never a substitute for the

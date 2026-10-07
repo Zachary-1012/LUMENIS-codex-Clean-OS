@@ -1,0 +1,34 @@
+{
+  "schema": "lumenis.po-approval-receipt/v1",
+  "approval_id": "PO-20261007-GOVERNANCE-SEMANTIC-MIGRATION-V1",
+  "status": "APPROVED",
+  "approved_by": "Product Owner",
+  "approved_at": "2026-10-07",
+  "approval_source_type": "direct_product_owner_instruction",
+  "scope_manifest": {
+    "change": "Migrate current governance semantics from Markdown/string validator into Governance Machine v1.1",
+    "semantic_migration": [
+      "role/window/environment responsibility semantics",
+      "execution/full-outcome/bootstrap/research semantics",
+      "structured engineering model-routing semantics",
+      "governance red lines",
+      "CURRENT co-publication semantics",
+      "semantic-change receipt requirement"
+    ],
+    "retained_legacy_regression": [
+      "historical authority classification",
+      "R/J/U coverage integrity",
+      "cross-repo protocol mirrors",
+      "retired provider and route non-reactivation",
+      "portable tracked engineering files",
+      "stale current-route exclusions",
+      "historical evidence placement"
+    ]
+  },
+  "constraints": [
+    "governance-only migration",
+    "no product functionality or business semantics change",
+    "no weakening of security/Permission/Evidence/Canonical/release acceptance",
+    "no paid resource, deployment or Production DB mutation"
+  ]
+}

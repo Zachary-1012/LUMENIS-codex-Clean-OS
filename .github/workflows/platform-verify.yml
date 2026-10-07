@@ -41,7 +41,7 @@ jobs:
       - name: Validate machine governance semantics (BLOCKING)
         run: python scripts/audit_tools/verify_governance_machine_contract.py
 
-      - name: Validate Codex takeover governance consistency (BLOCKING)
+      - name: Validate governance history/authority regressions (BLOCKING)
         run: python scripts/audit_tools/verify_codex_takeover_governance.py
 
       - name: Validate current configuration and Flutter toolchain (BLOCKING)

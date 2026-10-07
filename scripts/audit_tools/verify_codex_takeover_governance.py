@@ -16,6 +16,9 @@ EXPECTED_LOCAL_REPO = "Zachary-1012/LUMENIS-codex-Clean-OS"
 CONTRACT_BASENAME = "LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json"
 ONLINE_STATUS_PATH = "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md"
 
+SIX_DELIVERY_IDS = {"C1", "C2", "C3", "C4", "C5", "C6"}
+
+# Historical coverage maps below remain regression evidence; current execution semantics live in the governance machine contract.
 SIX_ROUND_ASSIGNMENTS = {
     "C1": ("Local Codex", ("data", "collection")),
     "C2": ("Local Codex", ("owned ai", "agent")),
@@ -77,88 +80,6 @@ JOB_ASSERTION_COVERAGE = {
 }
 
 
-def _requires_online_progress(path: str) -> bool:
-    if path == "AGENTS.md" or path.startswith(
-        (
-            ".github/workflows/",
-            "account/",
-            "agent_",
-            "app/",
-            "contracts/",
-            "lumenis/",
-            "scripts/",
-            "tests/",
-            "website/",
-            "00-GOVERNANCE/evidence/round-",
-            "00-GOVERNANCE/LUMENIS-ROUND-",
-        )
-    ):
-        return True
-    return "/" not in path and path.endswith(
-        (".py", ".ps1", ".json", ".toml", ".yaml", ".yml")
-    )
-
-
-def _assert_online_progress_for_paths(changed_paths: set[str]) -> None:
-    delivered_paths = sorted(
-        path for path in changed_paths if _requires_online_progress(path)
-    )
-    if delivered_paths and ONLINE_STATUS_PATH not in changed_paths:
-        raise AssertionError(
-            "source/round evidence changed without CURRENT online progress in "
-            f"the same commit: {delivered_paths[:12]}"
-        )
-
-
-def _assert_head_online_progress() -> None:
-    result = subprocess.run(
-        [
-            "git",
-            "diff-tree",
-            "--root",
-            "--first-parent",
-            "--no-commit-id",
-            "--name-only",
-            "-r",
-            "HEAD",
-        ],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise AssertionError(
-            "cannot verify CURRENT online progress against HEAD: "
-            f"{result.stderr.strip()}"
-        )
-    _assert_online_progress_for_paths(set(result.stdout.splitlines()))
-
-PATHS = {
-    "agents": ROOT / "AGENTS.md",
-    "readme": ROOT / "README.md",
-    "takeover": ROOT / "00-GOVERNANCE" / "LUMENIS-CODEX-TAKEOVER-CURRENT.md",
-    "architecture": ROOT / "00-GOVERNANCE" / "LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
-    "experience": ROOT / "00-GOVERNANCE" / "LUMENIS-EXPERIENCE-CONSTITUTION.md",
-    "surface_decision": ROOT / "00-GOVERNANCE" / "LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
-    "source_index": ROOT / "00-GOVERNANCE" / "LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
-    "real_delivery_overlay": ROOT / "00-GOVERNANCE" / "LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
-    "global_universe_contract": ROOT / "00-GOVERNANCE" / "LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
-    "round02_charter": ROOT / "00-GOVERNANCE" / "LUMENIS-ROUND-02-CHARTER-CURRENT.md",
-    "round02_frontier_research": ROOT / "00-GOVERNANCE" / "evidence" / "round-02" / "ROUND-02-CONTINUOUS-FRONTIER-RESEARCH.md",
-    "launch_plan": ROOT / "00-GOVERNANCE" / "LAUNCH-CONVERGENCE-MASTER-PLAN-V1.md",
-    "experience_contracts": ROOT / "contracts" / "experience" / "README.md",
-    "skill_current_truth": ROOT / ".agents" / "skills" / "lumenis-current-truth" / "SKILL.md",
-    "skill_task_router": ROOT / ".agents" / "skills" / "lumenis-task-router" / "SKILL.md",
-    "skill_release_completion": ROOT / ".agents" / "skills" / "lumenis-release-completion" / "SKILL.md",
-    "skill_progressive_context": ROOT / ".agents" / "skills" / "lumenis-progressive-context" / "SKILL.md",
-    "skill_ai_agent": ROOT / ".agents" / "skills" / "lumenis-ai-agent" / "SKILL.md",
-    "registry": ROOT / "00-GOVERNANCE" / "CROSS-REPO-CANONICAL-REGISTRY-V1.md",
-    "contract": ROOT / "00-GOVERNANCE" / CONTRACT_BASENAME,
-    "platform_workflow": ROOT / ".github" / "workflows" / "platform-verify.yml",
-}
-
-
 def _read(name: str) -> str:
     path = PATHS[name]
     if not path.is_file():
@@ -196,54 +117,20 @@ def _routing_rows(text: str) -> dict[str, str]:
     return rows
 
 
+
 def _assert_six_round_routing(agents: str) -> None:
+    """Human-doc mirror only: keep C1/W1..C6/W6 rows present exactly once.
+
+    Current role responsibilities, environments, dispatch semantics and model routing
+    are validated by verify_governance_machine_contract.py from structured sources.
+    """
     rows = _routing_rows(agents)
-    missing = sorted(set(SIX_ROUND_ASSIGNMENTS) - set(rows))
-    extra = sorted(set(rows) - set(SIX_ROUND_ASSIGNMENTS))
+    missing = sorted(SIX_DELIVERY_IDS - set(rows))
+    extra = sorted(set(rows) - SIX_DELIVERY_IDS)
     if missing or extra:
         raise AssertionError(
-            f"AGENTS.md six-round execution matrix mismatch: missing={missing}, extra={extra}"
+            f"AGENTS.md human routing mirror mismatch: missing={missing}, extra={extra}"
         )
-
-    for round_id, (environment, terms) in SIX_ROUND_ASSIGNMENTS.items():
-        line = rows[round_id].casefold()
-        if environment.casefold() not in line:
-            raise AssertionError(
-                f"{round_id} must use {environment} in its canonical AGENTS.md row"
-            )
-        missing_terms = [term for term in terms if term not in line]
-        if missing_terms:
-            raise AssertionError(
-                f"{round_id} row is missing its approved responsibilities: {missing_terms}"
-            )
-
-    lowered = re.sub(r"\s+", " ", agents).casefold()
-    frontend_route = (
-        "front-end window f" in lowered
-        and ("all six deliveries" in lowered or "all six rounds" in lowered)
-    )
-    if not frontend_route:
-        raise AssertionError("AGENTS.md must route front-end window F through all six deliveries")
-    if not re.search(r"root controller m", lowered) or "review" not in lowered or "acceptance" not in lowered:
-        raise AssertionError("AGENTS.md must identify M as the review and acceptance owner")
-    if (
-        "m/controller = `gpt-6-astra`" not in lowered
-        or "f/frontend = `gpt-6-astra`" not in lowered
-        or "c1-c6 = `gpt-6.1-sol`" not in lowered
-        or "spawned task agents default to `gpt-6-luna` + `max`" not in lowered
-        or "made manually by the product owner" not in lowered
-        or "hooks must never mutate model/effort/service tier" not in lowered
-        or "m stops and waits" not in lowered
-    ):
-        raise AssertionError(
-            "AGENTS.md must preserve the approved role defaults, manual override precedence, "
-            "Hook non-authority and M idle-wait policy"
-        )
-    if "d01-d49" not in lowered or "distinct from acceptance requirements r01-r15" not in lowered:
-        raise AssertionError("AGENTS.md must distinguish D01-D49 dispositions from R01-R15 acceptance requirements")
-    if "only repository execution router" not in lowered:
-        raise AssertionError("AGENTS.md must remain the only repository execution router")
-
 
 def _assert_current_round_statuses(current: str) -> None:
     rows = _routing_rows(current)
@@ -357,44 +244,24 @@ def _assert_legacy_coverage_mapping(source_index: str, *, require_assertions: bo
         _assert_job_assertions(assertions, observed)
 
 
-def _assert_execution_boundaries(agents: str) -> None:
-    required = (
-        "fixed base SHA",
-        "approved bounded/public sample inputs",
-        "never upload secrets",
-        "Cookies",
-        "private sessions",
-        "complete production database",
-        "must not create a branch",
-        "open a PR",
-        "directly push main",
-        "or deploy",
-        "W6 applies that exact patch",
-        "local runtime/E2E validation",
-        "do not call, auto-discover, probe, fall back to, or reactivate them",
-        "legacy Ollama/local-model-provider, Zhipu",
-        "Jev",
-        "interfaces and historical artifacts",
-        "The Product Owner performs the repeated core-job acceptance only after engineering is fully operable",
-        "development window E2E does not mark USER_VERIFIED, RELEASED or OPERATING",
-    )
-    normalized = re.sub(r"\s+", " ", agents)
-    missing = [term for term in required if term.casefold() not in normalized.casefold()]
-    if missing:
-        raise AssertionError(f"AGENTS.md six-round execution boundaries missing: {missing}")
 
-    obsolete_active_routes = (
+def _assert_execution_boundaries(agents: str) -> None:
+    """Regression-only: obsolete execution/provider routes must never reappear."""
+    obsolete_routes = (
         "Product Owner's parallelism target is ten",
         "ten is also the approved operating ceiling",
         "Use OpenCode with the configured Zhipu provider first",
         "Use Ollama first",
+        "ROUND 02 starts only in a new Sol-controlled task",
     )
-    present = [phrase for phrase in obsolete_active_routes if phrase in normalized]
+    normalized = " ".join(agents.split())
+    present = [phrase for phrase in obsolete_routes if phrase in normalized]
     if present:
-        raise AssertionError(f"AGENTS.md contains obsolete active execution routes: {present}")
+        raise AssertionError(f"AGENTS.md reintroduced obsolete execution routes: {present}")
 
 
 def _assert_readme_routing_consistent(readme: str) -> None:
+    """Regression-only: README cannot revive obsolete routing or freeze a live SHA."""
     obsolete_routes = (
         "15 个顺序 Codex 任务",
         "Ollama 与获批候选 Jev 均位于单一 SYSTEM AI Gateway 边界内",
@@ -404,25 +271,11 @@ def _assert_readme_routing_consistent(readme: str) -> None:
         raise AssertionError(f"README.md contains obsolete execution/provider routes: {present}")
     if re.search(r"local HEAD\s*==\s*origin/main\s*==\s*[0-9a-f]{8,40}", readme):
         raise AssertionError("README.md must not freeze a current Git SHA; CURRENT/fresh git is authoritative")
-    _require_collapsed(
-        readme,
-        "README **不固化 current HEAD",
-        "M/F=`GPT-6 Astra / ultra`",
-        "C1–C6=`GPT-6.1 Sol / ultra`",
-        "任务 Subagent=`GPT-6 Luna / max`",
-        "手动模型、推理强度、速度/服务档位选择始终即时覆盖角色默认",
-        "Hook 不拥有模型选择权",
-        "无任务时停止待命",
-        "窗口通过准入后持续完成完整结果直到验收或真实阻塞",
-        label="README dynamic/model-routing consistency",
-    )
-
-
 
 
 def _assert_current_authority_consistency(source_index: str, agents: str) -> None:
-    """Block stale current-routing phrases that can silently shrink active delivery."""
-    normalized = re.sub(r"\s+", " ", source_index)
+    """Regression-only: block stale route text that can resurrect retired execution."""
+    normalized = " ".join(source_index.split())
     stale_current = (
         "current AGENTS instruction authorizes M-only product-source repairs",
         "The current task authorizes M-only source repair",
@@ -437,28 +290,10 @@ def _assert_current_authority_consistency(source_index: str, agents: str) -> Non
             "Source Owner Index contains stale current execution guidance: "
             f"{present}"
         )
-
     if "Choose the shortest evidence-supported feasible implementation" in agents:
         raise AssertionError(
-            "AGENTS.md must not optimize delivery by choosing the shortest implementation"
+            "AGENTS.md reintroduced the retired minimum-subset execution wording"
         )
-    _require_collapsed(
-        agents,
-        "最大完整成果执行",
-        "Maximize the approved complete user outcome",
-        "must never reduce approved functionality, data/research coverage",
-        "Do not choose a minimum viable subset",
-        label="full-outcome maximization policy",
-    )
-    _require_collapsed(
-        agents,
-        "authoritative vendor/standard documentation",
-        "maintained upstream GitHub project",
-        "do not open a duplicate research/window loop",
-        "Escalate only a genuine Product Owner/product decision",
-        label="self-resolving blocker policy",
-    )
-
 
 def _assert_legacy_root_docs_classified() -> None:
     """Prevent visually authoritative legacy root docs from competing with current truth."""
@@ -538,139 +373,51 @@ def _assert_legacy_root_docs_classified() -> None:
         )
 
 
+
 def _assert_repository_model_neutrality() -> None:
-    """Validate approved role defaults while preserving manual-window precedence."""
-    cfg = ROOT / ".codex" / "config.toml"
-    if cfg.is_file():
-        text = cfg.read_text("utf-8-sig")
-        data = tomllib.loads(text)
-        forbidden_keys = (
-            "model", "model_provider", "service_tier", "review_model", "profile",
-            "model_reasoning_effort", "plan_mode_reasoning_effort",
-            "model_reasoning_summary", "model_verbosity", "model_context_window",
-            "model_auto_compact_token_limit", "model_catalog_json",
+    """Regression/hygiene only; structured model semantics live in machine governance."""
+    required_project_codex = (
+        ".codex/config.toml",
+        ".codex/model-routing.toml",
+        ".codex/README.md",
+        ".codex/engineering.py",
+        ".codex/mcp/server.mjs",
+        ".codex/hooks/lumenis_hooks.py",
+        ".codex/hooks.example.json",
+        ".codex/rules/lumenis.rules",
+        ".codex/tests/test_engineering.py",
+    )
+    redundant_rule = ROOT / ".codex" / "rules" / "engineering-safety.rules"
+    if redundant_rule.exists():
+        raise AssertionError(
+            "duplicate Codex ExecPolicy is forbidden; keep only .codex/rules/lumenis.rules"
         )
-        for key in forbidden_keys:
-            if re.search(rf"(?m)^\s*{re.escape(key)}\s*=", text):
-                raise AssertionError(
-                    f"repository Codex config must not set top-level {key}; manual window selection wins"
-                )
-        agents_cfg = data.get("agents", {})
-        expected_agents = {
-            "default_subagent_model": "gpt-6-luna",
-            "default_subagent_reasoning_effort": "max",
-        }
-        for key, expected in expected_agents.items():
-            if agents_cfg.get(key) != expected:
-                raise AssertionError(
-                    f"repository Codex agents config must set {key}={expected!r}; "
-                    f"got {agents_cfg.get(key)!r}"
-                )
-        if "any Product Owner manual window selection wins" not in text:
+    for rel in required_project_codex:
+        proc = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", rel],
+            cwd=ROOT, capture_output=True, text=True, check=False,
+        )
+        if proc.returncode != 0:
             raise AssertionError(
-                "repository Codex config must explicitly preserve manual-window precedence"
+                f"portable Codex project configuration must be tracked on main: {rel}"
             )
 
-        routing_path = ROOT / ".codex" / "model-routing.toml"
-        if not routing_path.is_file():
-            raise AssertionError("missing .codex/model-routing.toml role-default contract")
-        routing = tomllib.loads(routing_path.read_text("utf-8-sig"))
-        if routing.get("manual_window_selection_wins") is not True:
-            raise AssertionError("model routing must preserve manual window selection as highest priority")
-        if routing.get("hooks_may_change_model") is not False:
-            raise AssertionError("model routing must forbid Hooks from changing model/effort")
-        expected_roles = {
-            "M": ("gpt-6-astra", "ultra"),
-            "F": ("gpt-6-astra", "ultra"),
-            "C1": ("gpt-6.1-sol", "ultra"),
-            "C2": ("gpt-6.1-sol", "ultra"),
-            "C3": ("gpt-6.1-sol", "ultra"),
-            "C4": ("gpt-6.1-sol", "ultra"),
-            "C5": ("gpt-6.1-sol", "ultra"),
-            "C6": ("gpt-6.1-sol", "ultra"),
-        }
-        roles = routing.get("roles", {})
-        for role, (model, effort) in expected_roles.items():
-            actual = roles.get(role, {})
-            if actual.get("model") != model or actual.get("reasoning_effort") != effort:
-                raise AssertionError(
-                    f"model routing mismatch for {role}: expected {model}/{effort}, got "
-                    f"{actual.get('model')}/{actual.get('reasoning_effort')}"
-                )
-        task_agents = routing.get("subagents", {})
-        if task_agents.get("model") != "gpt-6-luna" or task_agents.get("reasoning_effort") != "max":
-            raise AssertionError("task subagents must default to gpt-6-luna/max")
-        if task_agents.get("explicit_spawn_overrides_default") is not True:
-            raise AssertionError("explicit subagent spawn selection must override the project default")
-        if data.get("web_search") != "live":
-            raise AssertionError("repository Codex config must keep live web search for current blocker research")
-        features = data.get("features", {})
-        for key in ("hooks", "multi_agent", "shell_snapshot", "goals", "skill_search"):
-            if features.get(key) is not True:
-                raise AssertionError(f"repository Codex config must enable stable feature: {key}")
-        docs_mcp = data.get("mcp_servers", {}).get("openaiDeveloperDocs", {})
-        expected_docs_mcp = {
-            "url": "https://developers.openai.com/mcp",
-            "enabled": True,
-            "required": False,
-        }
-        for key, expected in expected_docs_mcp.items():
-            if docs_mcp.get(key) != expected:
-                raise AssertionError(
-                    f"repository OpenAI docs MCP must set {key}={expected!r}; got {docs_mcp.get(key)!r}"
-                )
-        budget = int(data.get("project_doc_max_bytes") or 0)
-        if not budget:
-            raise AssertionError("repository Codex config must set project_doc_max_bytes explicitly")
-        router_bytes = len((ROOT / "AGENTS.md").read_bytes())
-        if budget < router_bytes + 16 * 1024:
-            raise AssertionError(
-                "Codex project instruction budget is too small for the current root AGENTS.md "
-                f"with safety headroom: budget={budget}, root_bytes={router_bytes}"
-            )
-
-        required_project_codex = (
-            ".codex/config.toml",
-            ".codex/model-routing.toml",
-            ".codex/README.md",
-            ".codex/engineering.py",
-            ".codex/mcp/server.mjs",
-            ".codex/hooks/lumenis_hooks.py",
-            ".codex/hooks.example.json",
-            ".codex/rules/lumenis.rules",
-            ".codex/tests/test_engineering.py",
+    engineering = (ROOT / ".codex" / "engineering.py").read_text("utf-8-sig")
+    forbidden_local_helpers = (
+        r"D:\\codex\\agent-skills",
+        "C:\\Users\\",
+        "settings.json",
+    )
+    present = [token for token in forbidden_local_helpers if token in engineering]
+    if present:
+        raise AssertionError(
+            "portable LUMENIS engineering MCP must not depend on workstation-local "
+            f"absolute helper paths: {present}"
         )
-        redundant_rule = ROOT / ".codex" / "rules" / "engineering-safety.rules"
-        if redundant_rule.exists():
-            raise AssertionError(
-                "duplicate Codex ExecPolicy is forbidden; keep only .codex/rules/lumenis.rules"
-            )
-        for rel in required_project_codex:
-            proc = subprocess.run(
-                ["git", "ls-files", "--error-unmatch", rel],
-                cwd=ROOT, capture_output=True, text=True, check=False,
-            )
-            if proc.returncode != 0:
-                raise AssertionError(
-                    f"portable Codex project configuration must be tracked on main: {rel}"
-                )
-
-        engineering = (ROOT / ".codex" / "engineering.py").read_text("utf-8-sig")
-        forbidden_local_helpers = (
-            r"D:\codex\agent-skills",
-            "C:\\Users\\",
-            "settings.json",
+    if "def source_read(" not in engineering or "def route_task(" not in engineering:
+        raise AssertionError(
+            "portable LUMENIS engineering MCP must own its bounded source helpers in-repo"
         )
-        present = [token for token in forbidden_local_helpers if token in engineering]
-        if present:
-            raise AssertionError(
-                "portable LUMENIS engineering MCP must not depend on workstation-local "
-                f"absolute helper paths: {present}"
-            )
-        if "def source_read(" not in engineering or "def route_task(" not in engineering:
-            raise AssertionError(
-                "portable LUMENIS engineering MCP must own its bounded source helpers in-repo"
-            )
 
     dev_ai = ROOT / "scripts" / "dev_ai.py"
     if dev_ai.is_file():
@@ -711,8 +458,6 @@ def _assert_repository_model_neutrality() -> None:
                 raise AssertionError(
                     f".env.example retired compatibility model key must stay blank: {key}"
                 )
-
-
 
 def _assert_single_machine_contract() -> None:
     canonical = PATHS["contract"].resolve()
@@ -797,22 +542,17 @@ def validate() -> None:
         takeover,
         "Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**",
         "AGENTS.md",
+        "LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
         "00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md",
         "00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json",
         "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
         "00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
         "00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
         "git rev-parse origin/main",
-        "version     = 1.1.0",
         EXPECTED_FINGERPRINT,
-        "verify_codex_takeover_governance.py",
-        "only repository execution router",
-        "Online reader's current-state snapshot",
-        "same delivery cycle",
-        "DESIGN_READY",
         "Approved D1–D5 convergence",
         "source-target-contract-v1.json",
-        label="CURRENT takeover",
+        label="CURRENT takeover provenance/mirror",
     )
     for stale_claim in (
         "ROUND 02 starts only in a new Sol-controlled task",
@@ -1105,62 +845,22 @@ def validate() -> None:
     _require(
         agents,
         "### Mandatory Codex bootstrap",
+        "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
         "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md",
-        "00-GOVERNANCE/CROSS-REPO-CANONICAL-REGISTRY-V1.md",
-        "00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json",
         "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
         "00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
+        "00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
+        "00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
+        "00-GOVERNANCE/LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json",
         "### Six-round execution windows and retained acceptance coverage",
-        "### Accepted Batch online-publication gate",
-        "Industry Business",
-        "only repository execution router",
         "**C1 / W1 — Data and Collection**",
         "**C2 / W2 — Owned AI and Agent**",
         "**C3 / W3 — CTH and BMP Business Workflows**",
         "**C4 / W4 — Original Pitch, Video and Podcast**",
         "**C5 / W5 — Importer, Research and Shared Deliverables**",
         "**C6 / W6 — Integration, Runtime and Release**",
-        "The separate front-end window F remains independent across all six deliveries",
-        "01a10117-03c7-7503-8a9b-670e80a474a7",
-        "C3/C5 retained continuation ownership and historical Cloud handoff",
-        "The root controller M retains the independent review and acceptance role",
-        "LUMENIS role default is GPT-6 Astra ultra",
-        "manual window",
-        "M stops and waits when no assigned or unresolved",
-        "R01–R15 remain the complete acceptance and technical-dependency coverage",
-        "J1–J8 remain the mapped source of user-job requirements",
-        "Do not add a ten-worker target, hidden helper window, per-leaf stop rule",
-        "#### Codex Cloud window constraints",
-        "REAL USER WORK E2E ACCEPTANCE — C1 through C6 and mapped R checkpoints",
-        "Missing E2E evidence forces REWORK or BLOCKED",
-        "REAL USER JOB",
-        "USER-VISIBLE RESULT",
-        "FAILURE/RECOVERY",
-        "ACCEPTANCE ASSERTION",
-        "真实用户工作闭环验收",
-        "REAL DELIVERY CARD",
-        "COMMERCIAL OVERLAY IMPACT",
-        "00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
-        "00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
-        "one Product/Core/Data/Evidence/Permission/API/Context/Experience stack",
-        "Global Commercial Coverage",
-        "Global Brand Coverage",
-        "Guangzhou Taikoo Hui Reference Coverage",
-        "LUMENIS_INTERNAL_FULL_UNIVERSE_READY=YES",
-        "RANDOM ENTITY DATA ACCEPTANCE",
-        "sample count zero",
-        "CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION",
-        "ADOPT / ADAPT / DEFER / REJECT",
-        "RESEARCH COMPLETE / NO JUSTIFIED UPGRADE",
-        "COMMERCIAL_READY=NO",
-        "fixtures, mocks, hard-coded examples",
-        "DESIGN_EXPLORATION",
-        "DESIGN_READY",
-        "M returns `REWORK`",
-        "git rev-parse origin/main",
-        "v1.1.0",
-        EXPECTED_FINGERPRINT,
-        label="root AGENTS.md",
+        "### Accepted Batch online-publication gate",
+        label="root AGENTS human governance mirror",
     )
 
     _require(
@@ -1175,8 +875,9 @@ def validate() -> None:
     _require(
         platform_workflow,
         "verify_lumenis_ggi_contract.py",
+        "verify_governance_machine_contract.py",
         "verify_codex_takeover_governance.py",
-        label="platform verify workflow",
+        label="platform verify workflow regression",
     )
 
     # Dated source-audit SHAs may remain as provenance. What must never regress is
@@ -1184,7 +885,6 @@ def validate() -> None:
     if "current HEAD = READ WITH git fetch + git rev-parse origin/main" not in takeover:
         raise AssertionError("CURRENT takeover must resolve origin/main dynamically")
 
-    _assert_head_online_progress()
 
 
 if __name__ == "__main__":
@@ -1192,6 +892,6 @@ if __name__ == "__main__":
     print(
         "CODEX TAKEOVER GOVERNANCE OK "
         f"{EXPECTED_CONTRACT_ID} v{EXPECTED_VERSION} {EXPECTED_FINGERPRINT} "
-        "single-machine-contract=PASS six-round-routing=PASS legacy-coverage=PASS "
-        "cloud-boundaries=PASS workflow-guards=PASS online-progress=PASS"
+        "cross-product-contract=PASS human-routing-mirror=PASS legacy-coverage=PASS "
+        "historical-authority=PASS retired-route-regressions=PASS workflow-guards=PASS"
     )

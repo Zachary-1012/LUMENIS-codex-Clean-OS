@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -11,6 +12,7 @@ AGENTS_PATH = ROOT / "AGENTS.md"
 CURRENT_PATH = ROOT / "00-GOVERNANCE" / "LUMENIS-CODEX-TAKEOVER-CURRENT.md"
 
 EXPECTED_ROLES = {"M", "F", "C1", "C2", "C3", "C4", "C5", "C6"}
+EXPECTED_C_WINDOWS = {f"C{i}": f"W{i}" for i in range(1, 7)}
 EXPECTED_STATES = [
     "ELIGIBLE",
     "DISPATCHED",
@@ -46,11 +48,117 @@ def load_json(path: Path) -> dict:
     return value
 
 
+def changed_paths() -> set[str]:
+    proc = subprocess.run(
+        ["git", "diff-tree", "--root", "--first-parent", "--no-commit-id", "--name-only", "-r", "HEAD"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        fail(f"cannot inspect HEAD changed paths: {proc.stderr.strip()}")
+    return {line.strip() for line in proc.stdout.splitlines() if line.strip()}
+
+
+def path_requires_current(path: str, publication: dict) -> bool:
+    if path in set(publication["exact_paths"]):
+        return True
+    if any(path.startswith(prefix) for prefix in publication["prefixes"]):
+        return True
+    if "/" not in path and any(path.endswith(ext) for ext in publication["root_extensions"]):
+        return True
+    return False
+
+
+def validate_publication_policy(contract: dict, paths: set[str]) -> None:
+    publication = contract["publication_policy"]
+    if publication.get("copublish_current_for_delivery_commit") is not True:
+        fail("delivery commits must co-publish CURRENT")
+    delivered = sorted(path for path in paths if path_requires_current(path, publication))
+    if delivered and publication["current_status_path"] not in paths:
+        fail(f"delivery commit changed without CURRENT co-publication: {delivered[:12]}")
+
+
+def validate_semantic_change_receipt(contract: dict, paths: set[str]) -> None:
+    policy = contract["semantic_change_policy"]
+    if policy.get("machine_contract_is_semantic_source") is not True:
+        fail("machine contract must remain the semantic governance source")
+    if policy.get("markdown_only_change_may_change_machine_semantics") is not False:
+        fail("Markdown-only edits may not change machine governance semantics")
+    if policy.get("product_authorities_remain_external_references") is not True:
+        fail("governance machine contract may not become a second product authority")
+    changed_semantic = set(policy["semantic_machine_paths"]) & paths
+    if not changed_semantic:
+        return
+    if policy.get("semantic_machine_change_requires_po_receipt") is not True:
+        fail("semantic machine changes must require a PO approval receipt")
+    prefix = contract["approval"]["receipt_directory"].rstrip("/") + "/"
+    receipts = [path for path in paths if path.startswith(prefix) and path.endswith(".json")]
+    if not receipts:
+        fail(f"semantic governance changed without same-commit PO approval receipt: {sorted(changed_semantic)}")
+
+
+def validate_model_routing(contract: dict) -> None:
+    semantics = contract["model_routing"]
+    routing_path = ROOT / semantics["routing_source"]
+    config_path = ROOT / semantics["project_config_source"]
+    if not routing_path.is_file() or not config_path.is_file():
+        fail("structured Codex routing/config files are missing")
+
+    routing = tomllib.loads(routing_path.read_text(encoding="utf-8-sig"))
+    config = tomllib.loads(config_path.read_text(encoding="utf-8-sig"))
+
+    if routing.get("manual_window_selection_wins") is not semantics["manual_window_selection_wins"]:
+        fail("manual-window selection precedence drift")
+    if routing.get("hooks_may_change_model") is not semantics["hooks_may_change_model"]:
+        fail("Hook model authority drift")
+    if routing.get("profiles_are_launch_helpers_only") is not semantics["profiles_are_launch_helpers_only"]:
+        fail("profile model authority drift")
+
+    roles = routing.get("roles", {})
+    for role, expected in semantics["role_defaults"].items():
+        actual = roles.get(role, {})
+        if actual.get("model") != expected["model"] or actual.get("reasoning_effort") != expected["reasoning_effort"]:
+            fail(f"structured model routing mismatch for {role}")
+
+    expected_sub = semantics["subagents"]
+    actual_sub = routing.get("subagents", {})
+    for key in ("model", "reasoning_effort", "explicit_spawn_overrides_default"):
+        if actual_sub.get(key) != expected_sub[key]:
+            fail(f"structured subagent routing mismatch: {key}")
+
+    cfg_sem = semantics["project_config"]
+    forbidden = {
+        "model", "model_provider", "service_tier", "review_model", "profile",
+        "model_reasoning_effort", "plan_mode_reasoning_effort",
+        "model_reasoning_summary", "model_verbosity", "model_context_window",
+        "model_auto_compact_token_limit", "model_catalog_json",
+    }
+    if cfg_sem["top_level_model_selection_forbidden"] and forbidden.intersection(config):
+        fail(f"repository config sets forbidden top-level model keys: {sorted(forbidden.intersection(config))}")
+    if config.get("web_search") != cfg_sem["web_search"]:
+        fail("repository live web-search policy drift")
+    features = config.get("features", {})
+    for key in cfg_sem["required_features"]:
+        if features.get(key) is not True:
+            fail(f"required Codex feature disabled: {key}")
+    mcp_expected = cfg_sem["official_docs_mcp"]
+    mcp_actual = config.get("mcp_servers", {}).get(mcp_expected["name"], {})
+    for key in ("url", "enabled", "required"):
+        if mcp_actual.get(key) != mcp_expected[key]:
+            fail(f"official developer-docs MCP drift: {key}")
+    budget = int(config.get("project_doc_max_bytes") or 0)
+    needed = len(AGENTS_PATH.read_bytes()) + int(cfg_sem["project_doc_headroom_bytes"])
+    if budget < needed:
+        fail(f"project_doc_max_bytes below AGENTS+headroom: budget={budget} needed={needed}")
+
+
 def validate_contract() -> dict:
     c = load_json(CONTRACT_PATH)
     if c.get("schema") != "lumenis.governance-machine-contract/v1":
         fail("unexpected governance contract schema")
-    if c.get("contract_id") != "lumenis-governance-machine" or c.get("contract_version") != "1.0.0":
+    if c.get("contract_id") != "lumenis-governance-machine" or c.get("contract_version") != "1.1.0":
         fail("unexpected governance contract identity/version")
     if c.get("status") != "ACTIVE" or c.get("scope") != "GOVERNANCE_ONLY":
         fail("governance machine contract must remain ACTIVE and GOVERNANCE_ONLY")
@@ -61,10 +169,18 @@ def validate_contract() -> dict:
     if repo.get("full_name") != "Zachary-1012/LUMENIS-codex-Clean-OS" or repo.get("canonical_branch") != "main":
         fail("governance contract repository/main identity drift")
 
-    if set(c.get("roles", {})) != EXPECTED_ROLES:
-        fail(f"governance role set drift: {sorted(c.get('roles', {}))}")
-    if any(not data.get("eligible") for data in c["roles"].values()):
+    roles = c.get("roles", {})
+    if set(roles) != EXPECTED_ROLES:
+        fail(f"governance role set drift: {sorted(roles)}")
+    if any(not data.get("eligible") for data in roles.values()):
         fail("all canonical delivery roles must remain eligible")
+    for role, window in EXPECTED_C_WINDOWS.items():
+        if roles[role].get("window") != window or roles[role].get("environment") != "Local Codex":
+            fail(f"{role} delivery window/environment drift")
+    if roles["M"].get("kind") != "controller_integrator_acceptance":
+        fail("M controller/integration/acceptance role drift")
+    if roles["F"].get("kind") != "frontend_experience":
+        fail("F Experience role drift")
 
     dispatch = c.get("dispatch", {})
     if dispatch.get("published_state_is_live_scheduler") is not False:
@@ -77,6 +193,34 @@ def validate_contract() -> dict:
         fail("live dispatch authority drift")
     if dispatch.get("wait_resume_condition_is_binding") is not True:
         fail("WAITING_DEPENDENCY resume condition must remain binding")
+    if dispatch.get("resume_after_condition_without_second_approval") is not True:
+        fail("satisfied resume conditions must not require redundant re-approval")
+
+    execution = c.get("execution_policy", {})
+    required_true = (
+        "full_outcome_required",
+        "minimum_subset_for_gate_forbidden",
+        "incremental_integration_allowed",
+        "owner_resolves_ordinary_failures",
+        "delta_bootstrap_for_continuous_same_task",
+    )
+    for key in required_true:
+        if execution.get(key) is not True:
+            fail(f"execution semantic drift: {key}")
+    if execution.get("m_review_granularity") != "outcome_package":
+        fail("M must review coherent outcome packages, not every function")
+    if execution.get("progress_only_report_is_delivery") is not False:
+        fail("progress-only reports may not count as delivery")
+    if execution.get("no_actionable_work_policy") != "WAIT":
+        fail("idle controller/window policy drift")
+    if execution.get("deterministic_internal_failure_requires_external_research") is not False:
+        fail("deterministic internal bugs must not force unrelated research")
+    if execution.get("external_or_uncertain_failure_requires_current_research") is not True:
+        fail("external/uncertain failures must retain current research")
+
+    red = c.get("red_lines", {})
+    if not red or any(value is not False for value in red.values()):
+        fail("all governance red lines must remain false/forbidden")
 
     completion = c.get("completion", {})
     if completion.get("ladder") != EXPECTED_LADDER:
@@ -128,12 +272,8 @@ def validate_contract() -> dict:
     runtime_rel = dispatch.get("runtime_state_path")
     if not isinstance(runtime_rel, str) or not runtime_rel.startswith("data/runtime/governance/"):
         fail("live dispatch path must stay under ignored data/runtime/governance")
-    check = subprocess.run(
-        ["git", "check-ignore", "-q", runtime_rel],
-        cwd=ROOT,
-        check=False,
-    )
-    if check.returncode != 0:
+    ignored = subprocess.run(["git", "check-ignore", "-q", runtime_rel], cwd=ROOT, check=False)
+    if ignored.returncode != 0:
         fail(f"live dispatch runtime path is not git-ignored: {runtime_rel}")
     tracked = subprocess.run(
         ["git", "ls-files", "--error-unmatch", runtime_rel],
@@ -150,6 +290,7 @@ def validate_contract() -> dict:
         if CONTRACT_PATH.name not in text:
             fail(f"{path.name} must reference the governance machine contract")
 
+    validate_model_routing(c)
     return c
 
 
@@ -203,12 +344,17 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--live-dispatch", type=Path)
     args = parser.parse_args()
+    paths = changed_paths()
     contract = validate_contract()
     validate_approval_receipts(contract)
+    validate_semantic_change_receipt(contract, paths)
+    validate_publication_policy(contract, paths)
     if args.live_dispatch is not None:
         validate_live_dispatch(args.live_dispatch, contract)
     print("GOVERNANCE MACHINE CONTRACT: PASS")
-    print(" - semantic governance is JSON-backed, not Markdown-string-backed")
+    print(" - current semantic governance is JSON-backed")
+    print(" - model routing is validated from structured TOML, not prose markers")
+    print(" - delivery commits co-publish CURRENT through machine policy")
     print(" - live dispatch stays local/untracked")
     print(" - PO approvals require receipts; agents cannot self-approve")
     print(" - Change / Owner Closure / Release gates remain distinct")
