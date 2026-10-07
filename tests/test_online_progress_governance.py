@@ -109,6 +109,44 @@ It is not published Product Source. Promotion requires one coherent delivery.
             },
         )
 
+    def test_rules_only_publication_requires_governance_changes_and_unverified_runtime(self) -> None:
+        rules_only = """
+## 1. Online reader's current-state snapshot
+### Repair
+Implementation publication state: `RULES_ONLY_PUBLICATION`
+Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+### Approved D1–D5 convergence — 2026-10-06
+"""
+        current_path = "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md"
+        rules_paths = {
+            current_path,
+            "AGENTS.md",
+            "00-GOVERNANCE/evidence/round-15/NEW-RULES-REPORT.md",
+            "scripts/audit_tools/verify_codex_takeover_governance.py",
+            "tests/test_online_progress_governance.py",
+        }
+        _assert_current_publication_truth(rules_only, changed_paths=rules_paths)
+
+        with self.assertRaisesRegex(AssertionError, "CURRENT co-publication"):
+            _assert_current_publication_truth(
+                rules_only,
+                changed_paths={"AGENTS.md"},
+            )
+
+        with self.assertRaisesRegex(AssertionError, "governance/documentation paths only"):
+            _assert_current_publication_truth(
+                rules_only,
+                changed_paths=rules_paths | {"app.py"},
+            )
+
+        with self.assertRaisesRegex(AssertionError, "runtime state"):
+            _assert_current_publication_truth(
+                rules_only.replace(
+                    "NOT_LOADED_OR_NOT_VERIFIED", "LOADED_AND_VERIFIED"
+                ),
+                changed_paths=rules_paths,
+            )
+
     def test_current_publication_truth_requires_explicit_state_markers(self) -> None:
         with self.assertRaisesRegex(AssertionError, "publication state"):
             _assert_current_publication_truth(

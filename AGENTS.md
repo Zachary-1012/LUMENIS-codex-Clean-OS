@@ -1424,8 +1424,9 @@ identity or popularity claim. The existing Collector/registry/Source owners own
 this vocabulary and query plan, not another store or Collector. Global §10 is
 the detailed temporal/continuous-acquisition contract.
 
-The user explicitly authorized this internal scoped program to backfill from
-2026-01-01 by actual publication/event time and continue incremental collection
+The user explicitly authorized this internal scoped program to acquire by subject,
+topic and task semantics, without a universal publication-start date (2026-10-08
+correction), and continue incremental collection
 while other work, training or rule publication occurs. Platforms may rotate;
 one platform's challenge/outage pauses only its affected authorized path. Existing
 SYSTEM Collector/Scheduler code, persistent cursor/backoff/checkpoint/overdue
@@ -1581,3 +1582,28 @@ does not replace product integration; unread/missing assets remain explicit.
 采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。其余窗口待 Product Owner 确认后执行，本轮只由 M 收敛规则、处理已授权修复/工具维护和同步。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
+
+### 2026-10-08 collection time and missing-data correction
+
+Global §10 is the single detailed owner for the latest Product Owner corrections:
+no universal historical start date; exact user/task time constraints still apply;
+retain native publication/event time separately from capture time. Topic/semantic
+collection stays scoped, budgeted and continuous. Required dimensions stay visible
+with accurate definitions even when no value is available: render “—”, preserve
+null/state/reason and genuine zero, and explain the actual missing-data cause.
+Capability closure requires real same-version acquisition/intake/recovery evidence;
+missing values do not excuse broken code or imply full data coverage. Existing
+source still has the retired literal date in acquisition_plan and prelaunch_baseline;
+C1/C6 must reconcile it on their subsequent authorized implementation, with F
+binding honest dimension states. This rule publication does not start those windows.
+
+### 2026-10-08 useful progressive delivery and logic review
+
+The Product Owner requests a whole-product logic review after rule synchronization,
+and adoption of task-shaped, progressively useful Intelligent UI. M owns the bounded
+review and rule convergence; F/C1-C6 still await explicit dispatch. Experience §38
+owns component choice, useful partial results, factual correction, user-edit
+preservation and wait-time evaluation; the Product Architecture retains the complete
+J1-J8/U01-U25 result chain. Existing owner/source gaps are documented for direct
+execution, not a new product or parallel Task Card. Do not present research,
+streamed text or a rules publication as implemented UI or an accepted user outcome.

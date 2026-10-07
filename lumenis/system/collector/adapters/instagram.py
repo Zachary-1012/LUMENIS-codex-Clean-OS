@@ -17,6 +17,15 @@ from .public_source import fetch_public_url, public_source_provenance
 from .routing import resolve_capability_route
 
 
+def _is_http_url_input(value: Any) -> bool:
+    raw = str(value or "").strip()
+    try:
+        parts = urlsplit(raw)
+    except ValueError:
+        return bool(re.match(r"^https?://", raw, re.IGNORECASE))
+    return parts.scheme.lower() in {"http", "https"} and bool(parts.netloc and parts.hostname)
+
+
 def parse_public_instagram_document(response, shortcode):
     """Inspect only the matching public post, keeping media/caption times distinct."""
     from bs4 import BeautifulSoup
@@ -162,6 +171,12 @@ class InstagramAdapter(BasePlatformAdapter):
     def search(self, keyword: str, **kwargs: Any) -> CollectionResult:
         route = resolve_capability_route("instagram", "search", request_value=keyword)
         if route is None:
+            if _is_http_url_input(keyword):
+                # Route selection only admits the exact Instagram public-post
+                # URL contract. URL-shaped input that misses it must pass the
+                # adapter's pre-request validator instead of becoming a silent
+                # NOT_SUPPORTED result.
+                return self._public_detail(keyword)
             return CollectionResult(
                 CollectionStatus.NOT_SUPPORTED, self.platform,
                 message="当前输入不匹配已实现的 Instagram 搜索/公开帖子路径",
@@ -194,19 +209,26 @@ class InstagramAdapter(BasePlatformAdapter):
             )
 
     def _public_detail(self, url):
-        parts = urlsplit(url)
-        match = re.search(r'/(?:p|reel|tv)/([A-Za-z0-9_-]+)(?:/|$)', parts.path)
-        if (parts.scheme != 'https' or parts.hostname not in {'instagram.com', 'www.instagram.com'}
+        raw_url = str(url or "").strip()
+        try:
+            parts = urlsplit(raw_url)
+            port = parts.port
+        except (TypeError, ValueError) as exc:
+            raise ValueError('exact public Instagram post URL required') from exc
+        match = re.fullmatch(r'/(?:p|reel|tv)/([A-Za-z0-9_-]+)/?', parts.path)
+        if (parts.scheme.lower() != 'https'
+                or parts.hostname not in {'instagram.com', 'www.instagram.com'}
+                or port not in (None, 443)
                 or parts.username or parts.password or not match):
             raise ValueError('exact public Instagram post URL required')
         try:
-            response = self._public_fetcher(url)
+            response = self._public_fetcher(raw_url)
             if urlsplit(response.url).hostname not in {'instagram.com', 'www.instagram.com'}:
                 return CollectionResult(CollectionStatus.BLOCKED, self.platform, metadata={'original_body_available': False})
             item = parse_public_instagram_document(response, match.group(1))
             return CollectionResult(CollectionStatus.SUCCESS if item else CollectionStatus.PROVIDER_UNAVAILABLE,
                 self.platform, items=[item] if item else [], raw_count=1 if item else 0,
-                metadata={**public_source_provenance(response, url), 'provider': 'public_native_post_document',
+                metadata={**public_source_provenance(response, raw_url), 'provider': 'public_native_post_document',
                           'original_body_available': item is not None, 'requires_auth': False})
         except Exception as exc:
             return CollectionResult(CollectionStatus.PROVIDER_UNAVAILABLE, self.platform,

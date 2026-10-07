@@ -272,13 +272,18 @@ Relevance and exact-scope checks must reach real capture/intake and the consumer
 job, not stop at a query-plan candidate. Unknown/conflicting bindings stay honest
 while the owner resolves them; useful authorized results remain the real exit.
 
-The user explicitly opts this internal approved program into continuous operation
-from publication/event date2026-01-01 inclusive, onward without a fixed end.
+The user explicitly opted this internal approved program into continuous operation.
+The 2026-10-08 correction removes the former universal publication-start date.
+Acquire by authorized subject/topic and task semantics with bounded budgets,
+then classify/order/filter by genuine source publication and event time.
+An explicit user/task time range still constrains its query; no global earliest
+date is inferred when none was requested, and this is not unlimited historical crawling.
 Retain source timezone/date precision and normalize by the current time owner;
 capture/import/refresh time cannot replace source publication/event time.
 Unknown publication/timezone and unsupported history windows remain explicit
 coverage gaps, never in-window proof, all-zero buckets or silent omissions.
-Keep preexisting older evidence intact; it is not counted as this backfill.
+Keep all older evidence intact and eligible for its actual authorized task; historical
+material is not excluded merely because it predates a global calendar cutoff.
 
 Persistent product Scheduler/Collector own backfill cursors, per-platform window/
 progress, incremental watermark, last attempt/success, next due cycle, bounded
@@ -301,7 +306,7 @@ rotating identities, CAPTCHA bypass or presumed immunity to platform bans.
 After a user reports verification complete, the session owner reads back actual
 authorized state and resumes only the pending scoped work.
 
-Acceptance requires real Jan2026→current historical-window receipts/gaps,
+Acceptance requires real topic/task coverage and explicit requested-window receipts/gaps,
 topic/task→query→Capture→Evidence→Canonical→useful normal business result,
 repeated due cycles while another job runs, one-platform failure isolation and
 restart recovery. Mocks, replay clocks, a name search, raw posts, imported rows
@@ -382,3 +387,17 @@ program. Current schedules require source identity, approved policy, bounded
 retry/cooldown, observable outcomes and recovery through the existing Scheduler.
 No new module starts collection implicitly; actual risk/authorization failures
 stop only the affected path and preserve evidence for recovery.
+
+### 2026-10-08 维度完整、真实缺失与采集能力闭环
+
+Product Owner明确取消“所有数据必须采全”的要求。产品必须保留业务需要且定义准确的维度，但不承诺平台未提供、无权访问或客观不存在的数据。完整基线名录/主体关系与每个主体每个字段100%有值是不同要求；本节不取消已批准主体/品牌登记、真实采集能力、六平台接入责任、持续运行和有效业务成果。
+
+维度沿现有Metric/Truth Table/ViewModel定义其名称、含义、单位、范围、时期、来源和可比条件；缺值仍展示该维度及“—”，可查看具体原因和最后实际核验时间。展示层横杠不进入Canonical作数值，API/存储保留null及当前状态/原因。真实0仍显示0，未采集、未提供、权限受限、失败、过期、部分、未知和不适用不能混成同一事实。不把缺值维度隐藏，不用抓取时间冒充发布时间，不以旧值冒充新值。
+
+只有对应能力在真实授权来源上走通 query→fetch/parse→Source/Evidence/Canonical→用户可见结果→刷新/取消/恢复并有同版本回执，才能把仍缺失的字段归因于已核实的来源限制。对确实不可接入的平台保留BLOCKED/原因，不把其他平台成功当它的闭环。程序解析缺陷、接口未接、没有执行、权限过期或未知原因都仍是原Owner待办；横杠不能替代修复和能力验收。来源空结果可作为一次真实运行结果，不能单独证明所有能力已闭环。
+
+成熟度分别记录能力状态、维度定义/展示覆盖、实际数据覆盖/时效和来源限制；不以100%非空为统一门槛，也不把允许缺失改成100%覆盖。保留真实分子/分母、受限/缺失/失败数和影响；业务问题所必需的证据不足时，相关结论仍未知或不可用，不能因为UI完整就通过业务结果。Global/Reference三项原验收维度采用已披露范围及可解释限制，不声称全球数据齐全。
+
+时间排序保留原始出版、事件、采集/刷新三类时间、时区与精度；按任务选择对应时间轴，同源同精度可比较。未知时间单列“日期未知”，不得补造；只有日期精度不伪造秒级先后。明确用户时间筛选时，无法确认落入范围的项单独提示，不算已覆盖。无全局硬起点不等于无范围、无节流或无限回溯；Scheduler沿现有预算、游标、水位与授权轮换持续运行。
+
+**当前执行差距（2d0f8d61源码观察，后续C1/C6落实）：** `lumenis/system/collector/acquisition_plan.py` 在query编译、结果资格和seed plan三处仍写死旧起点；`adapters/scheduling/prelaunch_baseline.py`也检查该字面日期。后续必须改成可选、经校验的任务时间范围，维持原Scope/授权/实际capture上界与精度；保留旧plan/receipt历史，不就地改其fingerprint。`tests/test_business_acquisition_contract.py`的旧默认及拒绝2025断言需随新合同更新，新增明确范围、未指定范围、未知日期及旧回执恢复的受影响验收。此次只更新规则和执行入口，未修改该源码、运行计划或启动采集；不得提前声称新策略已运行。

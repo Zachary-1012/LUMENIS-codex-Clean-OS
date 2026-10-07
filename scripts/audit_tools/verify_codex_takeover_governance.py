@@ -159,7 +159,11 @@ def _assert_current_round_statuses(current: str) -> None:
     )
 
 
-CURRENT_PUBLICATION_STATES = {"LOCAL_CANDIDATE_NOT_PUBLISHED", "PUBLISHED_SOURCE_VERIFIED"}
+CURRENT_PUBLICATION_STATES = {
+    "LOCAL_CANDIDATE_NOT_PUBLISHED",
+    "PUBLISHED_SOURCE_VERIFIED",
+    "RULES_ONLY_PUBLICATION",
+}
 CURRENT_RUNTIME_STATES = {"NOT_LOADED_OR_NOT_VERIFIED", "LOADED_AND_VERIFIED"}
 
 
@@ -184,6 +188,25 @@ def _is_product_behavior_source(path: str) -> bool:
     return (
         path.endswith((".py", ".dart", ".ts", ".tsx", ".js", ".mjs"))
         or path.startswith(("app/lib/", "website/src/", "lumenis/"))
+    )
+
+
+def _is_rules_only_publication_path(path: str) -> bool:
+    path = path.replace("\\", "/")
+    if path in {
+        "AGENTS.md",
+        "README.md",
+        "scripts/audit_tools/verify_codex_takeover_governance.py",
+        "tests/test_online_progress_governance.py",
+    }:
+        return True
+    if path.startswith("00-GOVERNANCE/") and path.endswith(".md"):
+        return True
+    if path.startswith("00-GOVERNANCE/evidence/approvals/") and path.endswith(".json"):
+        return True
+    return (
+        path.startswith("contracts/experience/screen-specifications/")
+        and path.endswith(".md")
     )
 
 
@@ -217,6 +240,33 @@ def _assert_current_publication_truth(
 
     paths = _publication_changed_paths() if changed_paths is None else set(changed_paths)
     current_path = str(PATHS["takeover"].relative_to(ROOT)).replace("\\", "/")
+
+    if state == "RULES_ONLY_PUBLICATION":
+        if runtime.group(1) != "NOT_LOADED_OR_NOT_VERIFIED":
+            raise AssertionError(
+                "RULES_ONLY_PUBLICATION requires runtime state NOT_LOADED_OR_NOT_VERIFIED"
+            )
+        if current_path not in paths:
+            raise AssertionError(
+                "RULES_ONLY_PUBLICATION requires CURRENT co-publication in the same commit"
+            )
+        if not paths:
+            raise AssertionError("RULES_ONLY_PUBLICATION requires changed governance paths")
+        disallowed_paths = sorted(
+            path for path in paths if not _is_rules_only_publication_path(path)
+        )
+        if disallowed_paths:
+            raise AssertionError(
+                "RULES_ONLY_PUBLICATION permits governance/documentation paths only; "
+                f"found {disallowed_paths}"
+            )
+        product_paths = sorted(path for path in paths if _is_product_behavior_source(path))
+        if product_paths:
+            raise AssertionError(
+                "RULES_ONLY_PUBLICATION cannot include product behavior source"
+            )
+        return
+
     if current_path not in paths:
         raise AssertionError(
             "PUBLISHED_SOURCE_VERIFIED requires CURRENT co-publication in the same commit"

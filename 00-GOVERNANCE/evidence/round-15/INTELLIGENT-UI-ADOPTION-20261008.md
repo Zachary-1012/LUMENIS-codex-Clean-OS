@@ -85,3 +85,19 @@
 没有宣称产品已无全部Bug或后续运行无冲突；本批统一了所读材料与现有规则的已识别矛盾。后续每Owner执行前以同一main+保护中的本地工作做fresh admission，并在原任务中解决新事实，不另开候选或反复交接。
 
 ACC-04进一步只读追踪：`experience_runtime._all_builders()`会懒合并`experience_screens.SCREEN_BUILDERS`，因此不能断言接口必返`bound=false`。旧builder的`sections`/`bound=true`不提供Flutter期待的`guard/recovery_paths`，typed guard仍不可用。这是合同不匹配，既不能报页面不存在，也不能报恢复已绑定。此次仅校准四份绑定元数据；其余旧快照行保留原未验收证据，不冒称54行全部重新核实。
+
+## 逐步回答、组件选择与等待时间：本轮原文复核
+
+用户又提供一段员工论述，没有给出作者/原帖URL，因此员工身份与逐字出处未独立认证；不把该引文身份当事实。再次实际读取[OpenAI官方发布](https://openai.com/index/gpt-6-for-everyone/)的“How Intelligent UI works”与“Frontier Intelligence – delivered more quickly”：其描述组件逐步呈现、任务适配的表达选择和边工作边形成有用回答，与用户所述机制一致。没有据此断言同款组件编译器对外开源或API可直接获得。
+
+另实际读取[官方流式响应指南](https://developers.openai.com/api/docs/guides/streaming-responses)：类型化事件区分增量、完成和错误，部分内容与完整输出的校验条件不同。[Plugin UI guidelines](https://developers.openai.com/plugins/concepts/ui-guidelines)提供轻量交互/复杂编辑的承载空间及状态连续性参考；其ChatGPT内专属样式和卡片数量约束不套入序境。
+
+**序境自身适配判断，非OpenAI实现声明：**在既有Task/Core/ViewModel与Flutter屏幕扩展类型化分段、稳定组件ID/版本、局部校验、来源绑定与重连；每段有用，晚到结果不能覆盖用户编辑；最终核对全答一致性。普通公式复用确定性业务逻辑；模型负责解释及表现提案。无新框架/服务/provider/训练许可。精确规则归Experience §38“智能UI的逐步交付与组件选择合同”，蓝图/Owner/ScreenSpec索引与原文字草图同批同步。
+
+### 本次源码事实（已发布2d0f8d61）
+
+- `app/lib/features/ai01/ai01_screen.dart:656`的提交按钮仍`onPressed:null`；repository只提供screen读取。`ai01_view_model.dart:30`的拒绝文案仍要求Subject/Brand Lens，与GLOBAL可读任务目标需校准；不能仅改文案就启用无权限提交。
+- `lumenis/system/ai_gateway/core.py:73`以下的owned路径仍无实际service executor，正常推理未接通。不能把已有provider状态或新UI计划宣称产品AI可用。
+- `app/lib/core/transport/lumenis_http_transport_web.dart:29`当前普通HTTP把body收齐后返回。二进制下载中的chunk循环也不是智能UI语义流。定向检索AI-01、Core client、experience_runtime、lumenis_app_api和Gateway未证明完整响应增量链；不据此断言全仓没有任何流式能力。
+
+因此后续接续先闭合真实任务提交/结果，再在这条链实现有用分段；不另造演示播放器遮住缺口。全部为SOURCE观察，runtime/实际体验尚未验收。

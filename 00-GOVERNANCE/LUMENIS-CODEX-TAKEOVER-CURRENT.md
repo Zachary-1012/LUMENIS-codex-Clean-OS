@@ -8,6 +8,45 @@ Root `AGENTS.md` is the only repository execution router. [The Product Owner's l
 
 ## 1. Online reader's current-state snapshot
 
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+
+This follow-up co-publishes the bounded Instagram pre-request rejection repair
+with current rules/research. Product-source baseline before this repair is
+`2d0f8d61aed85d073abef8f67752200503927d7b`: App Gate passed, Product Gate run
+37686084801 failed at the foreign-host exception contract. The route resolver had
+returned NOT_SUPPORTED before the existing host validator could reject it. URL
+inputs now reach strict pre-request validation; 5 isolated Instagram tests pass.
+New exact-SHA CI must be read from GitHub. Core was not reloaded; protected local
+work, sessions and Production DB remain unchanged. This is no live-collection claim.
+
+The latest rules remove the universal collection date and require accurate visible
+dimensions with honest missing values. Other source changes remain OPEN. The new
+Intelligent UI rules detail useful progressive components, factual correction,
+edit preservation and measured wait quality across the existing product. The
+whole-product logic review is supporting evidence, not another authority. These
+rule/design updates do not implement those features or dispatch F/C1-C6.
+
+The governance publication validator now permits an explicit RULES_ONLY_PUBLICATION
+for changes confined to governance/documentation and its own validator/tests;
+it cannot include product behavior or claim loaded runtime. Published-source
+claims still require same-commit source and CURRENT. This prevents forcing a
+future rules-only update to manufacture a product change or claim unpublished code.
+
+### 2026-10-08 newest collection correction — rules adopted, implementation waiting
+
+The Product Owner removed the universal publication-start cutoff and clarified
+that complete collection capability does not require every data value to exist.
+Acquire by subject/topic/task semantics, preserve explicit requested ranges and
+native time; show required, correctly defined dimensions with “—” plus honest
+state/reason when missing. Do not substitute zero or hide acquisition defects.
+Global §10 records the exact remaining hard-coded date in acquisition_plan and
+prelaunch_baseline and the C1/C6/F continuation. These source changes are still
+OPEN; this update changes rules, not runtime plans or platform activity. Other
+windows remain waiting for PO confirmation. The earlier 197-row material inventory
+is unchanged; these two direct chat corrections are recorded in the same approval
+receipt and canonical rules rather than invented as attached files.
+
 ### 2026-10-08 latest mature-capability supplements: rules first
 
 Both supplied instruction bodies are adopted into the existing Architecture,
@@ -94,7 +133,7 @@ C1-C6/F task was started. New research is not a competing execution authority.
 
 ### 2026-10-08 semantic behavior repair and applied Math methods
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Historical source publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 Repair baseline: `6ff2cc0b68d8b9c3ae8ea658678242df8deac7dc`
 
@@ -333,3 +372,6 @@ F owns four-surface behavior and design responsibilities through existing Flutte
 - `evidence/round-06/C1-RUNTIME-ACTIVATION-20261005.md`: current narrow HK resident/scheduler runtime readback and explicit six-platform/result limits.
 
 Previous CURRENT snapshots and source/runtime histories remain at [fixed base](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/blob/be347f03eb9f2bc470a39644df281be3a3d704c9/00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md). They are provenance, not current pause/resume/paid-resource instructions. Historical acceptance artifacts are retained, not deleted or relabeled as current success.
+
+
+提交前精确暂存树验证：6项治理/Experience门禁通过；治理发布及Instagram受影响19项检查通过。没有把此前同SHA App Gate或父版本CI状态当作本次新提交PASS。

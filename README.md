@@ -284,3 +284,11 @@ IMPLEMENTED
 两份最新增补已合并进[唯一产品蓝图](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)、[Owner执行映射](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)、[双层真实验收](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)和[Experience §38](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)：先让用户完成成熟软件基础操作，再证明序境的来源、业务、智能、版本与学习连续性。SH-01/BMP-08及原文字草图细化真实剪辑/播放/波形/录音/重开；GPT/Apple/Tesla只贡献适用操作原则。开源选择遵守[组件准入](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)，不重造现有内核。
 
 当前M完成本次规则及已授权修复同步；F/C1–C6等待Product Owner明确确认再执行。规则收录不是这些能力已实现，也不自动安装新组件或形成训练许可。历史材料保留，最新材料清单为197项（原191+本轮6增补），不代表全部历史资料已读完。
+
+### 2026-10-08 采集日期与维度展示更正
+
+已取消全局固定采集起点：按主体/话题/任务语义采集，显式用户时间范围仍遵守，按真实出版/事件时间整理，未知时间不伪造。无需每项数据都采到，但业务维度必须准确定义并保留；缺值显示“—”和原因，真实0仍是0。采集能力必须用真实正常链及恢复验收，不能靠横杠掩盖Bug。详细合同、旧日期源码及后续C1/C6/F落实入口见[Global§10](00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md)。本轮仅规则同步，未改变运行计划或启动采集。
+
+### 2026-10-08 智能UI逐步交付与产品逻辑审阅
+
+[Experience §38](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)已细化任务选组件、先给有依据的有用部分、持续补充/更正、保留用户编辑、真实保存及取消/重连；待后续Owner实施。[逻辑审阅](00-GOVERNANCE/evidence/round-15/PRODUCT-LOGIC-REVIEW-20261008.md)覆盖既有J1–J8/U01–U25及跨模块断点，优化归入原蓝图与Owner，不另起系统或恢复窗口。研究/源码/运行状态分开，不声称产品智能UI已交付。

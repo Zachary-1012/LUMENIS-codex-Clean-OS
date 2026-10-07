@@ -19,7 +19,11 @@
     "mature_software_source_sha256": [
       "ecc5057a2fa3e6e7e2a39c942c3ff396fb009558daa9f7b6ed3dfd6f332c460e",
       "5b98b2a31c5b6299dd014b7aab09df478d54ee99dce2717a98c1fbf2a30cd97b"
-    ]
+    ],
+    "collection_time_correction": "Direct Product Owner chat: remove universal 2026-01-01 collection start; acquire by topics/task semantics and organize by genuine dates, respecting explicit user ranges. Rules now; later owner implementation under unchanged waiting dispatch.",
+    "collection_missing_dimensions_correction": "Direct Product Owner chat: not every data value must be collected; required dimensions remain accurately shown, missing numeric values display dash with honest reasons, only after actual capability closure may verified source limits explain remaining gaps. Do not hide bugs.",
+    "product_logic_review": "Direct Product Owner request: after rule updates, review the entire existing product logic for better optimizations; keep the sole blueprint and existing owners, other windows await confirmation.",
+    "progressive_intelligent_ui": "Direct Product Owner pasted rationale: research and improve rules for task-appropriate native streamable components, useful progressive answers while work continues, completeness/factuality and wait-time-aware quality. Rule adoption now; no implicit product implementation dispatch."
   },
   "constraints": [
     "Preserve pre-existing dirty/untracked/private work and Production DB",

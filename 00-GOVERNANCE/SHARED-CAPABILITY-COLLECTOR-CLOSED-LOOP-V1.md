@@ -118,7 +118,9 @@ The Product Owner requires collection and new brand/commercial-entity admission
 to continue alongside the other product work. Current main social-platform work
 covers XHS/RedNote, Douyin, WeChat, Instagram, X and Facebook. Retain other planned
 platform capability obligations; these six are not a reason to delete them.
-Use genuine native publication time from 2026-01-01 through each actual capture.
+Use subject/topic/task-semantic acquisition with no universal earliest publication
+date. Honor an explicit user/task time window and preserve genuine native time
+through each actual capture; Global §10 owns the 2026-10-08 correction.
 Keep unknown publication time separately for review; capture time is never a
 replacement publication date, and future observations cannot be invented.
 
@@ -746,3 +748,7 @@ Acquire reality
 ```
 
 Collector remains SYSTEM-owned infrastructure. Shared Capability consumes canonical outputs and closes the research → creation → evaluation → learning loop. No fifth domain is created.
+
+### 2026-10-08 缺值呈现不替代采集能力验收
+
+所需维度由现有Owner准确定义并保持可见；未取得数值在UI显示“—”，Canonical/API保留null及状态/原因，真实0不变。来源未提供/未采集/权限受限/失败/未知分开。只有真实采集、正式准入、刷新恢复已验后，才能把仍不可得项归为有证据的来源限制；解析Bug或未执行路径必须修复。无须所有数据采全，但不得因此跳过平台/能力闭环或伪造覆盖。时间语义、排序及当前源码迁移入口统一见Global§10，不另建状态或采集真相。
