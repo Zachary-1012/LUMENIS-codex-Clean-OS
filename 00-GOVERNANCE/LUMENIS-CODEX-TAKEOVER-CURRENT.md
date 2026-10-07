@@ -178,6 +178,8 @@ F owns four-surface behavior and design responsibilities through existing Flutte
 
 88. **LEGACY SEMANTIC DUPLICATE CLEANUP — 2026-10-07.** Final static cleanup removes the now-unused legacy `SIX_ROUND_ASSIGNMENTS` responsibility dictionary and unused semantic imports/constants from `verify_codex_takeover_governance.py`. The historical validator now checks only the presence of the C1/W1–C6/W6 human routing mirror by ID; current role responsibilities/environment semantics come solely from Governance Machine v1.1.0. No product or governance behavior changes beyond eliminating this duplicate semantic source.
 
+89. **GOVERNANCE TEST OWNERSHIP MIGRATION — 2026-10-07.** The clean-checkout pytest on `e7883d0c` reached all governance/config/authority gates successfully, then collection failed because `tests/test_online_progress_governance.py` still imported the retired `ONLINE_STATUS_PATH` and publication helpers from the historical-regression validator. The tests are now split by the same ownership boundary as production governance: `test_governance_machine_contract.py` validates structured publication, live-dispatch, role/window, model-routing and semantic-change approval behavior from Governance Machine v1.1; `test_online_progress_governance.py` retains only human-routing mirror, stale-route and R/J/U historical coverage regression tests. No obsolete semantic API is restored, preventing a second source of governance truth.
+
 ## 3. Authority and retained evidence
 
 - `00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`: real job, useful outcome, recovery and final states.
