@@ -80,6 +80,31 @@ JOB_ASSERTION_COVERAGE = {
 }
 
 
+
+PATHS = {
+    "agents": ROOT / "AGENTS.md",
+    "readme": ROOT / "README.md",
+    "takeover": ROOT / "00-GOVERNANCE" / "LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+    "architecture": ROOT / "00-GOVERNANCE" / "LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+    "experience": ROOT / "00-GOVERNANCE" / "LUMENIS-EXPERIENCE-CONSTITUTION.md",
+    "surface_decision": ROOT / "00-GOVERNANCE" / "LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md",
+    "source_index": ROOT / "00-GOVERNANCE" / "LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+    "real_delivery_overlay": ROOT / "00-GOVERNANCE" / "LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
+    "global_universe_contract": ROOT / "00-GOVERNANCE" / "LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
+    "round02_charter": ROOT / "00-GOVERNANCE" / "LUMENIS-ROUND-02-CHARTER-CURRENT.md",
+    "round02_frontier_research": ROOT / "00-GOVERNANCE" / "evidence" / "round-02" / "ROUND-02-CONTINUOUS-FRONTIER-RESEARCH.md",
+    "launch_plan": ROOT / "00-GOVERNANCE" / "LAUNCH-CONVERGENCE-MASTER-PLAN-V1.md",
+    "experience_contracts": ROOT / "contracts" / "experience" / "README.md",
+    "skill_current_truth": ROOT / ".agents" / "skills" / "lumenis-current-truth" / "SKILL.md",
+    "skill_task_router": ROOT / ".agents" / "skills" / "lumenis-task-router" / "SKILL.md",
+    "skill_release_completion": ROOT / ".agents" / "skills" / "lumenis-release-completion" / "SKILL.md",
+    "skill_progressive_context": ROOT / ".agents" / "skills" / "lumenis-progressive-context" / "SKILL.md",
+    "skill_ai_agent": ROOT / ".agents" / "skills" / "lumenis-ai-agent" / "SKILL.md",
+    "registry": ROOT / "00-GOVERNANCE" / "CROSS-REPO-CANONICAL-REGISTRY-V1.md",
+    "contract": ROOT / "00-GOVERNANCE" / CONTRACT_BASENAME,
+    "platform_workflow": ROOT / ".github" / "workflows" / "platform-verify.yml",
+}
+
 def _read(name: str) -> str:
     path = PATHS[name]
     if not path.is_file():
