@@ -9,7 +9,7 @@
     "routing": "AGENTS.md",
     "owners": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md"
   },
-  "purpose": "Preserve platform-native facts and lineage while LUMENIS re-composes task-specific presentation and permits an explicit read-only original-source handoff with exact Return.",
+  "purpose": "Preserve platform-native facts and lineage with task-specific presentation, default in-product source viewing, explicit external opening and exact Return.",
   "canonical_path": [
     "platform_native_observation",
     "Source",
@@ -18,7 +18,7 @@
     "CTH_or_BMP_LUMENIS_presentation",
     "Trace",
     "Open_Original",
-    "system_browser_handoff",
+    "in_product_SYS06_view_or_explicit_external_choice",
     "Return"
   ],
   "required_fields": [
@@ -80,13 +80,17 @@
     "user_gesture_required": true,
     "read_only": true,
     "system_browser_handoff": true,
+    "system_browser_handoff_scope": "supported explicit EXTERNAL branch only; never the IN_PRODUCT default or an automatic fallback",
     "cookie_read": false,
     "silent_login": false,
     "collection_side_effect": false,
     "evidence_capture": false,
     "canonical_write": false,
     "external_write": false,
-    "success_semantics": "HANDOFF_ACCEPTED proves only that the operating system or browser accepted the launch request; it does not prove page load, availability, authentication or readability."
+    "success_semantics": "IN_PRODUCT requires actual authorized session/navigation and a fresh matching page observation. HANDOFF_ACCEPTED applies only to explicit EXTERNAL and proves launch acceptance, not page load, availability, authentication or readability.",
+    "default_mode": "IN_PRODUCT",
+    "external_choice_enabled": true,
+    "external_requires_separate_user_gesture": true
   },
   "controlled_capture": {
     "owner": "SYS-06",
@@ -105,9 +109,9 @@
   ],
   "surface_roles": {
     "public_website": "explanation_only_no_protected_source_action",
-    "web_workspace": "task_specific_source_trace_and_system_browser_handoff",
-    "desktop_app": "task_specific_source_trace_and_system_browser_handoff",
-    "mobile_companion": "task_specific_source_trace_and_system_browser_handoff"
+    "web_workspace": "task_specific_source_trace_internal_SYS06_default_explicit_external_option",
+    "desktop_app": "task_specific_source_trace_internal_SYS06_default_explicit_external_option",
+    "mobile_companion": "task_specific_source_trace_internal_SYS06_default_explicit_external_option"
   },
   "implementation_gate": [
     "typed_SourceTarget_DTO",
@@ -118,7 +122,54 @@
     "Return_state_restoration",
     "zh_CN_en_ko",
     "accessibility",
-    "web_desktop_mobile_runtime_E2E"
+    "web_desktop_mobile_runtime_E2E",
+    "typed_open_mode_resolution",
+    "SYS06_internal_default_binding",
+    "no_silent_external_fallback"
   ],
-  "historical_candidate_production_admission": 0
+  "historical_candidate_production_admission": 0,
+  "implementation_scope": "APPROVED_MODE_MIGRATION_REQUIRED_NOT_RUNTIME_PROOF",
+  "presentation_requirement_20261008": {
+    "authority": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md#11-internal-browser--acquisition",
+    "default_target": "SYS-06_IN_PRODUCT",
+    "external_browser": "EXPLICIT_USER_CHOICE_ONLY",
+    "silent_external_fallback": false,
+    "current_v1_canonical_path_scope": "IN_PRODUCT default; legacy_external_canonical_path only for explicit external choice",
+    "implementation_state": "F_C6_CALLER_AND_TYPED_MODE_MIGRATION_REQUIRED",
+    "preserve": [
+      "url_policy",
+      "lineage",
+      "return_context",
+      "read_only_source_open",
+      "no_session_transfer"
+    ]
+  },
+  "legacy_external_canonical_path": [
+    "platform_native_observation",
+    "Source",
+    "Evidence",
+    "Canonical",
+    "CTH_or_BMP_LUMENIS_presentation",
+    "Trace",
+    "Open_Original",
+    "system_browser_handoff",
+    "Return"
+  ],
+  "open_mode_policy": {
+    "allowed_values": [
+      "IN_PRODUCT",
+      "EXTERNAL"
+    ],
+    "default_for_new_user_open_action": "IN_PRODUCT",
+    "missing_mode": "normalize to IN_PRODUCT before validating the required typed field; no launch during normalization",
+    "unknown_mode": "reject as unsupported; never silently select EXTERNAL",
+    "legacy_external_aliases": [
+      "system_browser_handoff"
+    ],
+    "legacy_record_mapping": "map a known external-only record to explicit-external capability metadata; stored mode alone never authorizes launch; ordinary Open Original still selects IN_PRODUCT",
+    "external_selection": "separate current user gesture and URL/scope/Return validation required",
+    "internal_unavailable": "show honest unavailable/error and Return; retain explicit external option; never auto-launch it",
+    "precedence": "this policy controls default resolution; legacy_external_canonical_path and handoff_states describe only the explicit EXTERNAL compatibility branch",
+    "runtime_admission": "F/C6 must migrate typed producer, all callers and runtime together; approved policy is not evidence of implementation"
+  }
 }

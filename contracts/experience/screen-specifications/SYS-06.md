@@ -3,7 +3,7 @@
 ```yaml
 screen_id: SYS-06
 status: IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED
-revision: 4
+revision: 5
 owner_domain: SYSTEM Browser / CDP
 binding_ids:
   - BACKEND-GAP-041
@@ -26,7 +26,7 @@ approval_reference: Product Owner direct internal-browser repair approval
 
 ## 0.1 Current source binding — 2026-10-05
 
-This section is the direct execution contract for current SYS-06 source. It
+This section records the implemented revision-4 reader contract for current SYS-06 source. The approved revision-5 interaction target in §0.3 extends it; read-only and no-external-option statements here describe current implementation, not final restrictions. It
 supersedes the capacity-only behavior in the revision-2 sections below wherever
 they conflict; those sections remain historical provenance and explain why the
 reader has its present boundaries.
@@ -59,8 +59,9 @@ reader has its present boundaries.
   session.
 - **State truth.** A pending frame, empty frame, denied scope, occupied
   capacity, invalid address, unavailable runtime and an explicitly ended session
-  are separate visible states. The screen never opens an external browser or
-  turns a failed frame into source/Evidence/collection success.
+  are separate visible states. The revision-4 reader has no external-opening option;
+  §0.3 requires an explicit safe option and forbids automatic external fallback.
+  Failed frames never become source/Evidence/collection success.
 
 ### Current source evidence
 
@@ -99,6 +100,46 @@ LumenisPlatformRecoverySheet
 QR-capable recovery remains in the shared RecoverySheet and need not open SYS-06. BLOCKED/IP-risk/cooldown states do not open a browser merely to simulate progress. SYS-06 never exposes Cookie/token/profile/CDP details, never performs social writes, and never converts “browser opened” or “login form completed” into “session healthy” without the PlatformSession owner readback.
 
 When multiple platforms require attention, SYS-06 serves only the one active recovery item selected by the single RecoverySheet queue; platform-specific browser windows or stacked modal recovery surfaces are forbidden.
+
+## 0.3 Approved interactive computer/browser target — 2026-10-08
+
+The Product Owner supplied `ScreenRecording_10-08-2026 06-26-05_1.mp4` and directly
+requires product-owned computer operation plus an internal browser on phone,
+Desktop and Web, with explicit optional external opening. M reviewed the 12.34s
+visual flow. Experience §11/§38 remains the design authority. The existing
+DESIGN_READY/source decision applies to the implemented reader; the following
+interaction target is approved, with runtime/action bindings still OPEN. Sections
+0.1 and 11 record the old read-only/source limits, not a prohibition on completing
+this target. Do not enable UI actions until the existing owner advertises and
+enforces their real contract; implement that owner gap instead of removing scope.
+
+| Element | Complete required behavior | Owner/binding condition |
+|---|---|---|
+| Mobile task-to-browser | Open from current task to safe URL/title and real viewport; keep Return and draft/context; touch/keyboard/insets/landscape work | Existing router + SYS-06, same task/session/target |
+| Computer/browser control | Visible Agent action, current real frame, human takeover, stop; click/input/scroll/select/history when supported | Existing Browser actions; exclusive input owner, fresh frame/revision, Permission/Firewall/Fence |
+| Live/history | Live only while fresh connected observation exists; event review shows actual earlier time; Return to live explicit | Existing Task/Trace/action observations; do not invent a second event store |
+| Desktop/Web | View and operate controlled browser inside workspace, adapting panels to available room | Existing SYSTEM worker, secure actor/session API; no arbitrary iframe or browser-private device access |
+| External option | User chooses safe external opening; no automatic popout; failed/unsupported internal path stays honestly unfinished | Existing SourceTarget URL/use/Return validation; migrate modes with existing callers |
+| Full computer tasks | Show authorized target/application and actual operation/result, stop and resume | C2/C6 add missing bounded OS executor inside existing Runtime; browser actions alone do not satisfy it |
+| Takeover/return | Grant exclusive control before input; Agent cannot race human; close view/stop task/end session remain separate | Same server-owned task/session/lease and action receipts |
+
+Fresh session/target/frame/revision/viewport binding is required for coordinate
+actions. Revoke/expiry clears protected content and prevents new effects. Local
+pan/zoom is not remote page scrolling. An old frame is neither live nor input
+authority. Real non-loopback Core use requires secure deployment/actor/session
+binding; deleting `_requireLocalBrowserEndpoint` alone is not a repair. Unknown
+capability stays unavailable while its owner implements the required path.
+
+SourceTarget v1's current external launch action is a compatibility implementation,
+not the new default presentation. Source opening never silently captures Evidence,
+collects, copies sessions or performs writes. Preserve its existing return semantics.
+Review adds no arbitrary desktop permission, paid worker or protected-account access.
+
+Acceptance extends the existing SYS06-ENTRY/SCOPE/FRAME/ACTION/RETURN/A11Y/TRUTH
+checks and Overlay J1/J7/J8: real in-product phone/Web/Desktop operation, explicit
+external option, exclusive takeover, stale frame rejection, stop/revoke/reconnect,
+unchanged task context and actual result. OS operation is separately evidenced.
+All new implementation/runtime/user acceptance remains OPEN until actually proved.
 
 ## Historical capacity-only specification — revision 2 provenance
 

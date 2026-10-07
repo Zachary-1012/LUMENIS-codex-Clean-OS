@@ -127,6 +127,24 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
         }
         _assert_current_publication_truth(rules_only, changed_paths=rules_paths)
 
+        _assert_current_publication_truth(
+            rules_only,
+            changed_paths=rules_paths | {
+                "00-GOVERNANCE/evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-MANIFEST.json",
+                "contracts/experience/source-target-contract-v1.json",
+            },
+        )
+        for runtime_path in (
+            "data/runtime/governance/live_dispatch.json",
+            "lumenis/system/browser/config.json",
+            "contracts/experience/unreviewed-runtime.json",
+        ):
+            with self.subTest(runtime_path=runtime_path):
+                with self.assertRaisesRegex(AssertionError, "governance/documentation paths only"):
+                    _assert_current_publication_truth(
+                        rules_only, changed_paths=rules_paths | {runtime_path}
+                    )
+
         with self.assertRaisesRegex(AssertionError, "CURRENT co-publication"):
             _assert_current_publication_truth(
                 rules_only,

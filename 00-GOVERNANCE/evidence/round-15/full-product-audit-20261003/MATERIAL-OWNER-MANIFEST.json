@@ -1,10 +1,10 @@
 {
   "state": "EXACT_ORIGINAL_LOCATORS_RECONCILED_BODY_READING_AND_CAPABILITY_ACCEPTANCE_REMAIN_PER_ITEM",
-  "scope": "197 direct material rows: original191 preserved +6 dated current supplements; not full corpus or complete historical reading",
+  "scope": "198 direct material rows: original197 preserved + current 12.34-second browser reference; not full historical corpus or complete reading",
   "source_sha256": "23380ad9008228df72f5890e98f9e72eb7aff25928c9c0a478cd2c264382f2b0",
   "owner_counts": {
     "C3+C5": 32,
-    "F": 84,
+    "F": 85,
     "C2": 2,
     "C1": 5,
     "C4": 71,
@@ -7235,10 +7235,45 @@
       },
       "next_action": "PO确认后原窗口复用当前源码/既有材料，按双层真实任务关闭调用缺口与缺失能力；组件按实际缺口准入，不重造内核。",
       "availability_checked_at": "2026-10-08T04:42:37.997508+08:00"
+    },
+    {
+      "material_id": "MAT-516721b6d9e98cf5418c",
+      "display_name": "1-ScreenRecording_10-08-2026-06-26-05_1.mp4",
+      "kind": "user_supplied_video_reference",
+      "corpus": "controlled_computer_browser_experience",
+      "original_locator": "C:\\Users\\28049\\.codex\\codex-remote-attachments\\01a0cd84-7685-7a73-97d9-83a14a546e71\\311B9D7A-A526-43C5-B6DE-948A9FD98B45\\1-ScreenRecording_10-08-2026-06-26-05_1.mp4",
+      "original_sha256": "516721b6d9e98cf5418cdebe1016a17cdd7ae1f81b89a6caeba13c8a188f2890",
+      "original_bytes": 5980707,
+      "primary_owner": "F",
+      "supporting_owners": [
+        "M",
+        "C1",
+        "C2",
+        "C6"
+      ],
+      "thread_id": "01a0cd84-7685-7a73-97d9-83a14a546e71",
+      "status": "VISUAL_FLOW_REVIEWED_RULES_ADOPTED_IMPLEMENTATION_OPEN",
+      "body_read_status": "FULL_DURATION_VISUAL_FLOW_0_5_SECOND_SAMPLING_AUDIO_NOT_REVIEWED",
+      "training_use": "NOT_GRANTED",
+      "owner_obligation": "手机任务内受控电脑/浏览器、PC/Web内置使用、可选外部打开、实际接管停止/恢复；OS能力不由browser成功替代。",
+      "source_owner_paths": [
+        "ai_browser_api.py",
+        "ai_browser_runtime.py",
+        "lumenis/system/browser/runtime/",
+        "agent_runtime/",
+        "app/lib/features/system/sys06/",
+        "contracts/experience/screen-specifications/SYS-06.md"
+      ],
+      "product_adoption": {
+        "state": "RULES_ADOPTED_IMPLEMENTATION_OPEN",
+        "evidence": "00-GOVERNANCE/evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md"
+      },
+      "next_action": "F/C2/C6在现有Owner闭合真实输入、控制权、安全远端绑定和OS executor缺口，C1复用获准采集。",
+      "availability_checked_at": "2026-10-08"
     }
   ],
   "frontend_reference_video_scope": {
-    "status": "PAUSED_PENDING_USER_RESUME",
+    "status": "FOLLOW_CURRENT_PO_DISPATCH",
     "new_videos": [
       "D:/微信数据/微信下载/xwechat_files/wxid_tkz9s7tlr1kn22_0eec/msg/video/2026-10/d16fc1c8ad774b0e950e3e7a4e444fe3.mp4",
       "D:/微信数据/微信下载/xwechat_files/wxid_tkz9s7tlr1kn22_0eec/msg/video/2026-10/7ac450632cf2611ee2ff3a6b29a41669.mp4"
@@ -7254,23 +7289,31 @@
     "further_exhaustive_other_historical_video_study": "SUPERSEDED_BY_LATEST_USER",
     "old_originals_and_analysis_retained": true,
     "source_thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
-    "source_turn_id": "01a102b8-7fd4-79b2-8873-57bc3278f3c0"
+    "source_turn_id": "01a102b8-7fd4-79b2-8873-57bc3278f3c0",
+    "historical_status_20261003": "PAUSED_PENDING_USER_RESUME",
+    "dispatch_authority": "AGENTS.md and local live_dispatch; 2026-10-08 direct PO correction resumes existing F outcome; old material-scope pause is not a live stop"
   },
   "current_original_integrity": "Missing originals and malformed locators remain explicit; derivative frames/analysis do not replace originals.",
   "current_supplement": {
-    "date": "2026-10-08T04:42:37.997508+08:00",
     "original_191_rows": "PRESERVED",
-    "new_rows": 6,
-    "total_rows": 197,
+    "new_rows": 7,
+    "total_rows": 198,
     "purpose": "current approved supplements mapped to existing owners; no automatic dispatch or training admission",
     "latest_frontend_audit": {
       "material_id": "MAT-9ddd5bb4884e46c2afb0",
-      "total_material_count": 197,
-      "state": "RULES_ADOPTED_IMPLEMENTATION_WAITING_PO"
+      "state": "RULES_ADOPTED_IMPLEMENTATION_WAITING_PO",
+      "total_material_count_at_recording": 197
     },
     "mature_software_supplements": [
       "MAT-ecc5057a2fa3e6e7e2a3",
       "MAT-5b98b2a31c5b6299dd01"
-    ]
-  }
+    ],
+    "browser_video": {
+      "material_id": "MAT-516721b6d9e98cf5418c",
+      "evidence": "00-GOVERNANCE/evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md",
+      "registered_at": "2026-10-07T23:06:46.534340+00:00"
+    },
+    "original_six_supplement_recorded_at": "2026-10-08T04:42:37.997508+08:00"
+  },
+  "current_execution_note": "2026-10-08 direct PO resumes existing Owner outcomes. Historical row/adoption WAITING_PO, PAUSED_PENDING_USER_RESUME and next_action wording describe earlier intake only; they do not override current dispatch. Read/rights/training/implementation evidence stays unchanged; original reference scope remains, with the new computer/browser video added explicitly."
 }

@@ -283,7 +283,7 @@ IMPLEMENTED
 
 两份最新增补已合并进[唯一产品蓝图](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)、[Owner执行映射](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)、[双层真实验收](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)和[Experience §38](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)：先让用户完成成熟软件基础操作，再证明序境的来源、业务、智能、版本与学习连续性。SH-01/BMP-08及原文字草图细化真实剪辑/播放/波形/录音/重开；GPT/Apple/Tesla只贡献适用操作原则。开源选择遵守[组件准入](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)，不重造现有内核。
 
-Product Owner 已授权 M/F/C1-C6 启动完整既有 J/R/U 成果闭环；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。M 每 30 分钟轻量核对有变化的完整成果、共享冲突、CI/风险，无实际可处理事项即待命。规则收录不表示能力已实现或验收，也不自动安装新组件或形成训练许可。历史材料保留，最新材料清单为197项（原191+本轮6增补），不代表全部历史资料已读完。
+Product Owner 已授权 M/F/C1-C6 启动完整既有 J/R/U 成果闭环；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。M 每 30 分钟轻量核对有变化的完整成果、共享冲突、CI/风险，无实际可处理事项即待命。规则收录不表示能力已实现或验收，也不自动安装新组件或形成训练许可。历史材料保留，最新材料清单为198项（原191+6份文字增补+本次电脑/浏览器视频），不代表全部历史资料已读完。
 
 ### 2026-10-08 采集日期与维度展示更正
 
@@ -292,3 +292,9 @@ Product Owner 已授权 M/F/C1-C6 启动完整既有 J/R/U 成果闭环；实际
 ### 2026-10-08 智能UI逐步交付与产品逻辑审阅
 
 [Experience §38](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)已细化任务选组件、先给有依据的有用部分、持续补充/更正、保留用户编辑、真实保存及取消/重连；待后续Owner实施。[逻辑审阅](00-GOVERNANCE/evidence/round-15/PRODUCT-LOGIC-REVIEW-20261008.md)覆盖既有J1–J8/U01–U25及跨模块断点，优化归入原蓝图与Owner，不另起系统或恢复窗口。研究/源码/运行状态分开，不声称产品智能UI已交付。
+
+### 2026-10-08 电脑操作、内置浏览器与派工纠偏
+
+用户已明确纠正未经核清范围的全局暂停，M/F/C1-C6继续既有完整目标；窗口转述必须保留PO原话与适用范围，不把局部暂停广播为全局。定期把关继续，无事待命。
+
+序境产品本身须完成授权电脑任务；手机可在任务内查看/接管受控浏览器，Desktop/Web在产品内使用，外部浏览器为明确可选。当前已有受控Browser动作服务，SYS-06前端仍只读、远端绑定及OS executor未闭合，不能声称已完成。[SYS-06](contracts/experience/screen-specifications/SYS-06.md)与[取证及执行映射](00-GOVERNANCE/evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md)记录准确差距。材料清单现198项（原197+本次视频），不是历史资料全部完成阅读或训练准入。

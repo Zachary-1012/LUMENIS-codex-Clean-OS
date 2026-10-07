@@ -48,7 +48,7 @@ approval_reference: published read-scope slice 3d6e0924dd883a23616ba2f63a01962e1
 | P1 | Recent and negative pulse | CTH read builder | `_build_cth03()` `kpis.items[id,value,state]` for `cth03.recent` and `cth03.negative` | Returned record counts; no inferred rate or trend | Current builder returns no verified numeric value; `empty`, `notcollected`, `offline` and unknown remain distinct | BACKEND-GAP-009 | Current source mapping; metric-level analysis/projection not verified |
 | P1 | Source lanes | CTH read builder | `_build_cth03()` `platforms.items[platform,status,schedule/detail]` | Returned lane availability/status text | A missing lane is not “healthy”; no collector action is inferred | BACKEND-GAP-009 | Current source mapping |
 | P1 | Prioritized stream | CTH read builder | `_build_cth03()` `table.rows[date,title,platform,sentiment,risk]` | Returned business fields only | A row is displayed only with explicit matching scope, read permission, verified Evidence lineage and a trace/evidence reference; otherwise it is withheld | BACKEND-GAP-009 | Published v2 row projection and writer-authenticated integrity check; sentiment/risk are not verified |
-| P1 TARGET | SourceTarget / Open Original | CTH row + Shared Evidence contract; F/C6 consumer | `table.rows[].source_url` plus row `projection`; approved shape `lumenis.source-target/v1` | Same source/canonical/Evidence row; public HTTPS handoff only | Missing/invalid/denied/unsupported/launch-failed remain explicit; source URL does not prove page load | BACKEND-GAP-009 | Backend field exists; Flutter DTO/launcher/Return remain unbound |
+| P1 TARGET | SourceTarget / Open Original | CTH row + Shared Evidence contract; F/C6 consumer | `table.rows[].source_url` plus row `projection`; approved shape `lumenis.source-target/v1` | Same source/canonical/Evidence row; public HTTPS internal SYS-06 view by default; explicit external option | Missing/invalid/denied/unsupported/launch-failed remain explicit; source URL does not prove page load | BACKEND-GAP-009 | Backend field exists; Flutter DTO/launcher/Return remain unbound |
 | BLOCKED | Live pulse/freshness clock and collector health action | CTH/SYSTEM owners unresolved | ViewModel declares `realtime_series` and `collectors`; no verified endpoint or action contract | No verified source-level freshness, realtime series, health command or Permission | Do not label response generation time as source freshness; show unavailable copy where needed | BACKEND-GAP-009 | `collector_v2/realtime` and health action remain UNKNOWN |
 
 The current App adapter uses only the shared `LumenisCoreClient`; it adds no API, database, Evidence, collector or localization owner. Pagination, cancellation, source-level freshness and collector actions remain unverified. Subject-scoped reads are accepted only by the exact current server/row contracts above. The adapter never invents local Permission or lineage defaults: a response without its valid server binding is blocked, and an untraceable row is withheld.
@@ -96,7 +96,7 @@ The current App adapter uses only the shared `LumenisCoreClient`; it adds no API
 | Load context and stream | SYSTEM context + CTH read builder; exact server scope binding from §2 | Existing local-workspace or actor-exact-scope READ policy | Read only | N/A | Returned Canonical row projection/Evidence; no new Evidence write | Render verified rows or honest blocked/error state; no account wall |
 | Filter/clear source lane | Flutter local presentation state | None | No server effect | Reversible immediately | None | Local selection is enabled |
 | Refresh | Existing Core read | Same as load | Read only | Repeatable | New response only | Retry; no optimistic values |
-| Open Original | CTH row read + Shared SourceTarget; exact current row scope/Evidence; F/C6 launcher | Reuse current row READ; no write/effect permission | User-gesture public HTTPS system-browser handoff; no collection/capture/login/write | Repeatable; Return restores route/context/filter/selection/scroll | No new Evidence; retain existing source/canonical/Evidence refs and handoff state | Disabled until `lumenis.source-target/v1` and platform launcher are bound; honest URL/launch failure states |
+| Open Original | CTH row read + Shared SourceTarget; exact current row scope/Evidence; F/C6 launcher | Reuse current row READ; no write/effect permission | User-gesture public HTTPS internal SYS-06 view; external handoff only by separate explicit choice; no collection/capture/login/write | Repeatable; Return restores route/context/filter/selection/scroll | No new Evidence; retain existing source/canonical/Evidence refs and handoff state | Disabled until `lumenis.source-target/v1` and platform launcher are bound; honest URL/launch failure states |
 | Pause/resume, pin, health action, controlled capture | Collector/SYSTEM/SYS-06 owner/callable/Permission/effect/Trace UNKNOWN | UNKNOWN | UNKNOWN or consequential | UNKNOWN | UNKNOWN | No enabled control |
 
 ## 8. Accessibility, motion and localization
@@ -126,7 +126,7 @@ The current App adapter uses only the shared `LumenisCoreClient`; it adds no API
 ## 10. Review decision and open questions
 
 - **Decision:** the full live-monitoring design, J1 and ROUND-10 remain `BLOCKED`. The published read/scope/recovery slice and the bounded presentation review below do not close those gates.
-- **Open owners:** C1/Collector must define and demonstrate realtime/health/freshness and native continuation; C3 must establish recent-window/business-analysis contracts; C5/F/C6 must bind SourceTarget, system-browser handoff and Return. Per-Subject read scope and row lineage now use the published contracts in §2; their existence does not prove the wider business task or original-page availability.
+- **Open owners:** C1/Collector must define and demonstrate realtime/health/freshness and native continuation; C3 must establish recent-window/business-analysis contracts; C5/F/C6 must bind SourceTarget mode selection, internal SYS-06 / explicit external handoff and Return. Per-Subject read scope and row lineage now use the published contracts in §2; their existence does not prove the wider business task or original-page availability.
 - **Required before full acceptance:** a real new event through Source → Event → Evidence → monitoring UI; live/freshness semantics; negative/offline/not-collected separation; and applicable Web/Desktop/Mobile E2E. Preserve the historical acceptance rows above as the original gate record; §11 records the newer narrow review and evidence scope.
 
 ## 11. Bounded read-presentation review — 2026-09-30
@@ -208,7 +208,7 @@ Product Owner approval fixes the product meaning without promoting implementatio
 ```text
 platform-native row → Source/Evidence/Canonical
 → LUMENIS monitoring composition
-→ Trace → Open Original → system browser
+→ Trace → Open Original → in-product SYS-06 (explicit external option)
 → Return to exact CTH-03 context
 ```
 
@@ -232,7 +232,7 @@ The source control consumes `lumenis.source-target/v1`; it never renders a copie
 
 ### 可编辑设计到源码映射（2026-10-08 审计采用）
 
-F 在 Product Owner 明确恢复后，在本屏现有规范中补齐同一条链；本轮只更新规则，不创建或修改 Figma 工程：
+F 按 AGENTS 与最新 PO live dispatch 在本屏现有规范中补齐同一条链；规则发布本身不创建或修改 Figma 工程，当前已恢复的执行不再等待历史暂停条件：
 
 - **设计资产：** Figma file key / node ID / revision / 可编辑访问状态 = `NOT_VERIFIED`（本轮未连接核实，不能推断不存在）。复用获授权既有工程；需要新建时先取得必要访问及 PO 认可，不上传私有生产资料。
 - **源码与动作：** 本屏原有 Flutter Screen/Component → Repository/ViewModel → Action → Core/Permission/状态；逐项回读真实路径，不复制旧绑定表里的状态。
@@ -244,3 +244,8 @@ F 在 Product Owner 明确恢复后，在本屏现有规范中补齐同一条链
 ## Topic/time and truthful missing dimensions — 2026-10-08
 
 Follow Global §10 and Experience §38's latest correction. Collection is subject/topic/task driven with no universal start date; explicit task dates still apply. Distinguish publication/event/capture time, group unknown dates honestly, and preserve precision/timezone. Required dimension definitions remain visible even without values: display “—” with accessible reason/state/last verified time, never zero-fill, hide required columns or invent chart continuity. Real zero remains zero. A source limitation requires actual collection-chain evidence; missing code, skipped execution, parsing failure or expired authorization stays an owner defect/blocker. No requirement for every data value to be obtainable, no automatic acceptance of collector capability. C1/C6 still need to migrate the pinned old date literal; this specification does not activate them or promote design/runtime acceptance.
+
+
+### 2026-10-08 SourceTarget mode correction
+
+The current approved source-opening target is internal SYS-06 by default on operational surfaces, with a separate explicit external-browser choice. SourceTarget v1 now defines the required mode resolution; old external-only call sites must migrate with F/C6, never silently fall back or infer consent from a stored mode. Earlier handoff-only acceptance covers the external option only. Internal reading additionally requires the authorized session and fresh matching page observation; neither launch acceptance nor a screen file proves page readability. Preserve the exact same-row lineage, READ scope, no collection/capture/write side effects and Return context. These are required targets, not a promotion of this screen's existing implementation/design/runtime state.

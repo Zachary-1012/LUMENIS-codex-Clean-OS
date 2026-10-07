@@ -48,6 +48,22 @@ GPT, Apple and Tesla are task/operation references, never additional product/des
 or security authorities. No paper, component installation or policy update proves
 that its associated capability is implemented or accepted.
 
+### Cross-window scheduling provenance — 2026-10-08 correction
+
+The Product Owner directly rejected the relayed global pause and required closure
+to continue. M/F/C1-C6 resume their existing goals; a previously admitted window
+checks only relevant changes and does not restart unchanged bootstrap or tests.
+F owns frontend, not global dispatch. A relayed pause/resume must identify the
+actual Product Owner instruction, time, source window and applicable roles/tasks.
+Do not present an agent paraphrase as verified Product Owner speech, broaden a
+local pause to other windows, or rebroadcast it as a global order. A direct user
+stop is obeyed immediately. If relay scope is uncertain, preserve the affected
+state while M checks the original instruction; uncertainty does not authorize a
+new global stop. A later direct Product Owner correction controls scheduling.
+This clarifies existing instruction provenance; it creates no new approval owner
+or machine state. M reviews changed complete outcomes every 30 minutes and waits
+when no actionable work remains. The current goal and manual model/tier remain.
+
 ### Live dispatch semantics — NON-BYPASS
 
 Repository status and execution topology are **not a real-time task scheduler**. The words `active`, `enabled` or `eligible` in repository/history mean that a role is permitted to receive work; they do **not** mean that every corresponding local Codex window is currently executing.
@@ -1630,3 +1646,19 @@ preservation and wait-time evaluation; the Product Architecture retains the comp
 J1-J8/U01-U25 result chain. Existing owner/source gaps are documented for direct
 execution, not a new product or parallel Task Card. Do not present research,
 streamed text or a rules publication as implemented UI or an accepted user outcome.
+
+### Product-owned computer operation and internal browser — 2026-10-08
+
+The Product Owner requires LUMENIS itself to operate an authorized computer and
+provide an in-product controlled browser on Mobile, Desktop and Web Workspace.
+External opening is an explicit option, never the silent default or an automatic
+escape from an unimplemented internal path. Codex/CUA developer operation cannot
+prove this product capability. C2 owns Agent/tool planning; C6 owns the existing
+SYSTEM execution/session/API/runtime integration; C1 consumes its permitted
+collection path; F owns SYS-06 and task-preserving controls. General OS operation
+is a distinct required gap, not satisfied by browser-only automation. Implement
+within existing owners, never a second runtime, Permission or Evidence store.
+Architecture, Experience §11/§38, SYS-06 and the Real Delivery Overlay define the
+complete result and gates. Current source's read-only preview/loopback restriction
+is an implementation gap, not a scope reduction. No new paid host, unattended
+external write or protected-account access is approved by this requirement.

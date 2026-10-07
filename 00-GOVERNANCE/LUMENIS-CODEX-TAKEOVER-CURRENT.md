@@ -1,13 +1,32 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
-> 2026-10-08 dispatch: Product Owner dispatched M/F/C1-C6 to their full existing J/R/U outcomes. Each window enters RUNNING only after fresh admission. M checks changed complete outcomes, shared conflicts, CI and risks every 30 minutes, then waits when no actionable work remains. This publication changes dispatch rules only; model, reasoning-effort, speed and service-tier settings, runtime status and user-acceptance status are unchanged. Previous source publication at `749803ba271435ac9c28fab370392219d2188722` remains historical.
+> 2026-10-08 dispatch: Product Owner dispatched M/F/C1-C6 to their full J/R/U outcomes and added product-owned computer/browser requirements. Each window enters RUNNING only after fresh admission. M checks changed complete outcomes, shared conflicts, CI and risks every 30 minutes, then waits when no actionable work remains. This publication updates approved rules, material mapping, source-opening modes and the exact rules-only path classifier; it does not deliver product interaction. Model, reasoning-effort, speed and service-tier settings, runtime status and user-acceptance status are unchanged. Previous source publication at `749803ba271435ac9c28fab370392219d2188722` remains historical.
 > Published topology: M is the root controller/integrator, F owns frontend/Experience, and C1-C6 are restored as six eligible delivery roles under the current AGENTS.md instruction. This file records the latest published repository state; it is not a live process list. A local window executes only when explicitly dispatched and after current-state admission; explicit Product Owner wait/resume instructions control local scheduling without changing the canonical product scope. Product Architecture and D01-D49 dispositions were approved 2026-10-04; D labels remain separate from R01-R15 requirements.
 > current HEAD = READ WITH git fetch + git rev-parse origin/main
 
 Root `AGENTS.md` is the only repository execution router. [The Product Owner's lightweight AI-native constitution](AI-NATIVE-PRODUCT-CONSTITUTION.md) remains a principle layer. The sole product blueprint is [Product Architecture](LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md); [Experience](LUMENIS-EXPERIENCE-CONSTITUTION.md) owns UI/UX and DESIGN_READY screen specifications. A report is evidence, never another blueprint.
 
 ## 1. Online reader's current-state snapshot
+
+Latest 2026-10-08 correction: the Product Owner directly rejected the unverified
+global pause relay and requires closure to continue. Native M/F/C1-C6 Goals were
+resumed and all seven window messages delivered; admission/runtime remain separate.
+M's 30-minute incremental review is active again, idle otherwise. No ordinary
+Owner should wait for repeated scheduling confirmation from another window.
+Approval: `evidence/approvals/PO-20261008-BROWSER-COMPUTER-RESUME-CORRECTION.json`.
+
+The user also requires product-owned computer operation and in-product browser
+use on Mobile/Desktop/Web, with explicit optional external opening. The supplied
+12.34s video was visually reviewed across its flow; audio and every decoded frame
+were not reviewed. Material manifest now has 198 rows. Architecture/Experience,
+SYS-06, SourceTarget compatibility scope, Overlay and existing wireframes are
+updated coherently. Source at 409e6d2c has browser action services but readonly
+Flutter preview and loopback-only binding; generic OS executor was not found in
+the targeted audit. These required gaps belong to C2/C6/F (C1 reuses acquisition),
+not a new runtime or a claim of implementation. Evidence:
+`evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
+
 
 Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
@@ -100,7 +119,7 @@ after fresh admission. ACC-03/ACC-04 stale
 return continuity, Permission or live behavior. Default CTH-01 vs approved ACC-03
 remains an implementation gap for F/C6. CTH-04 causal edges require actual source
 relations, not a new drawing. Material manifest now retains the original 191 plus
-six current supplements (197 rows), with separate product-adoption/training states.
+six text supplements plus the current computer/browser video (198 rows), with separate product-adoption/training states.
 
 The existing npm Codex CLI was upgraded 0.160.1 → 0.161.0. User/project configuration
 hashes and 45 installed-plugin version/enabled pairs are unchanged. Desktop update
@@ -218,7 +237,7 @@ The Product Owner approved the fresh historical-package audit against synchroniz
 - C3 closes the CTH/BMP task loops and replaces fixed propagation/impact assumptions with Evidence-bounded state.
 - C4 consumes the same source/Brief/version chain for pitch/video/podcast and preserves source trace through edits and exports.
 - C5 owns SourceTarget, precise citation, historical quarantine, SavedWork/report/settings continuity and source-correction propagation.
-- C6 binds the shared API/runtime/system-browser handoff, same-SHA integration, recovery and release gates.
+- C6 binds the shared API/runtime/in-product browser and explicit external option, same-SHA integration, recovery and release gates; the general computer executor remains its existing SYSTEM responsibility with C2.
 - F implements task-specific LUMENIS presentation and `Trace → Open Original → Return` on the approved operational surfaces without copying platform UI.
 
 `contracts/experience/source-target-contract-v1.json` is an approved target contract, not implementation proof. The Experience binding snapshot is generated from accepted source-contract commit `3ebe60f99d0f928bbcc92aaea7ce99225535d65e`; the registry publication commit changes no product source, runtime or acceptance state. Historical package data remains `Production admission = 0`. Current Product/App/Critical E2E, six-platform live collection, Owned AI service binding and user verification remain open. Existing C1/C2/C5 dirty and `work/` stay protected and are not part of this governance/specification Batch.
@@ -240,7 +259,7 @@ F owns four-surface behavior and design responsibilities through existing Flutte
 2. At base `be347f03`, the direct repair retained 551 passing isolated checks, two explicit optional skips and a clean-source 87-case source-bound chain; actual Core monitor evidence records TCP listener8201 with health/database OK. These are dated scoped evidence in `evidence/round-15/DIRECT-REPAIR-20261004.md`.
 3. Product Gate run37210553807 on `8e6d238e` found six bounded regressions: Bilibili Canonical author-ID type, obsolete social URL-limit assertions, obsolete local-Instagram-worker assertions, and a RedNote detail-failure metric overwrite. The coherent repair `887c85ae` passed Product run37220886120 and App run37220888962. Product run37222360010 passed for `2738bbe5`; App run37222362990 exposed an omitted required native media source file. The scoped repair `a95daf23` is recorded in `evidence/round-14/MEDIA-WORKBENCH-CI-REPAIR-20261005.md` and passed App run37223425460 plus Product run37223440005.
 4. Keep other local media, native-player, platform adapters and source-metric work protected until its unique changes and real outcome are integrated. Do not bulk-stage, reset or delete it.
-5. Material locators and adoption belong to the existing manifest plus named owners. The currently tracked material snapshot `evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-MANIFEST.json` retains its original 191 rows and now has 6 dated 2026-10-08 supplement rows (197 total) for public acquisition, local Read Aloud, full-product Intelligent UI, frontend audit and two mature-capability instructions. Every new row names its existing owner/source, adoption evidence, actual limitations and next action; training admission and live dispatch are not inferred. The following counts describe the original 191-row snapshot only. At its 2026-10-03 snapshot, row states are 185 `ASSIGNED_INCOMPLETE`, 3 `PAUSED_PENDING_USER_RESUME` and 3 `USER_REVIEWED_PENDING_PRODUCT_INTAKE`; recorded locator states are 71 `EXISTS`, 95 `REMOTE_NOT_RECHECKED` and 25 `MISSING_OR_MALFORMED`. The same snapshot does not claim body reading for 185 rows; 185 require separate purpose/rights approval for training. These are dated locator/assignment states, not current availability or product adoption; newer inputs require exact-ID reconciliation. Research summaries are not product completion.
+5. Material locators and adoption belong to the existing manifest plus named owners. The currently tracked material snapshot `evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-MANIFEST.json` retains its original 191 rows and now has 7 dated 2026-10-08 supplement rows (198 total) for public acquisition, local Read Aloud, full-product Intelligent UI, frontend audit, two mature-capability instructions and the computer/browser reference video. Every new row names its existing owner/source, adoption evidence, actual limitations and next action; training admission and live dispatch are not inferred. The following counts describe the original 191-row snapshot only. At its 2026-10-03 snapshot, row states are 185 `ASSIGNED_INCOMPLETE`, 3 `PAUSED_PENDING_USER_RESUME` and 3 `USER_REVIEWED_PENDING_PRODUCT_INTAKE`; recorded locator states are 71 `EXISTS`, 95 `REMOTE_NOT_RECHECKED` and 25 `MISSING_OR_MALFORMED`. The same snapshot does not claim body reading for 185 rows; 185 require separate purpose/rights approval for training. These are dated locator/assignment states, not current availability or product adoption; newer inputs require exact-ID reconciliation. Research summaries are not product completion.
 6. Dependencies such as model availability block only their actual consumer. Continue independent source admission, deterministic credibility checks, editing and recovery. Do not revive stopped providers to disguise an unavailable owned model.
 7. The static owned-foundation policy binding is recorded in `evidence/round-07/OWNED-FOUNDATION-POLICY-BINDING-20261005.md`. It does not authorize a GPU, paid compute, endpoint use, model download, training, inference or promotion; the next C2 gate is the documented real preflight and execution chain.
 8. Retired provider compatibility is recorded in `evidence/round-07/RETIRED-PROVIDER-COMPATIBILITY-20261005.md`. Historical endpoints and quota observations remain readable but cannot start local/Zhipu discovery, inference, fallback or usage accounting.

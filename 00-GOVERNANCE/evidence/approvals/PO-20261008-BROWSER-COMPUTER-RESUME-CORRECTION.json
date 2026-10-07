@@ -1,0 +1,31 @@
+{
+  "schema": "lumenis.po-approval-receipt/v1",
+  "approval_id": "PO-20261008-BROWSER-COMPUTER-RESUME-CORRECTION",
+  "status": "APPROVED",
+  "approved_by": "Product Owner",
+  "approved_at": "2026-10-08",
+  "approval_source_type": "superseding_product_owner_instruction",
+  "scope_manifest": {
+    "instruction": "序境也应该拥有操控电脑的能力，并且我的序境内置浏览器，应该在手机上的呈现和功能性是这样的，可以选择跳转外部浏览器，pc和网页端应该是支持产品内浏览器使用的这点要核对更新，同时为什么会出现暂停这个不对吧，很影响执行闭环",
+    "video_sha256": "516721b6d9e98cf5418cdebe1016a17cdd7ae1f81b89a6caeba13c8a188f2890",
+    "dispatch": "resume_existing_M_F_C1_C6_outcomes_after_erroneous_pause_relay",
+    "owners": [
+      "M",
+      "F",
+      "C1",
+      "C2",
+      "C6"
+    ],
+    "capability": "product_owned_authorized_computer_operation_and_in_product_browser",
+    "rules_only_publication": true
+  },
+  "constraints": [
+    "same existing Agent/SYSTEM/Browser/Permission/Evidence owners",
+    "no new paid GPU or computer hosting",
+    "no protected identity access or challenge bypass",
+    "external browser explicit only",
+    "source preview does not prove interaction or OS control",
+    "manual model/effort/ordinary speed preserved",
+    "no product runtime or acceptance claim from this rule publication"
+  ]
+}

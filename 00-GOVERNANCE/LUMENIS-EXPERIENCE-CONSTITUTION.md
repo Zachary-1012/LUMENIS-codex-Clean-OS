@@ -395,6 +395,61 @@ No fake thinking, fake progress, fake tool usage, fake confidence or fake succes
 
 ## 11. Internal browser / acquisition
 
+### 2026-10-08 approved task, computer and browser continuity
+
+LUMENIS product code must perform the authorized computer/browser task without a
+Codex operator. Viewing, human takeover and Agent execution share the same task,
+actor, permitted device/session/target and source/version context. Browser control
+and general OS application control are separate capability claims. The latter
+must use a bounded executor inside the existing SYSTEM/Agent owners; a browser
+preview or CDP action is not proof of OS-wide operation. A phone may view/control
+the authorized execution computer; this does not imply arbitrary control of iOS
+or Android itself. Website remains explanation/demo only.
+
+Mobile: return/close and task identity at the top, safe destination and real page
+viewport in the center, visible takeover/stop/current action, and a compact live
+or historical-event strip below. Keyboard, touch, landscape, safe areas and
+necessary page scrolling must work; historical frames are explicitly distinguished
+from a fresh live session. Closing the view, stopping the task and ending a session
+are different actions. Preserve draft, focus, selected source and return location.
+
+Desktop and Web Workspace: keep the actual controlled page inside LUMENIS, with
+task/operation context beside it when space permits. The product-owned browser
+session may run on an authorized local/remote worker; do not promise arbitrary
+third-party iframe embedding, control of the user's installed browser from a web
+page, or silent access to local devices. Browser CSP/frame restrictions remain
+enforced; never strip them through a proxy. A native WebView is optional only if
+it demonstrably reuses the same owner/session/security contract and is justified.
+
+Open externally is user-selected and uses the existing safe SourceTarget launch
+boundary. No silent popup/fallback. Internal unavailable/error states keep Return
+and the explicit external option; choosing external does not accept the unfinished
+internal capability. No cookie, login or session state is copied to another app.
+Navigation history controls and Return-to-task have different meanings. Tabs and
+address editing are governed by actual existing supported actions, not inferred
+from the video. The reference video shows browser task/viewport/takeover/status;
+it does not prove the external option or full OS control.
+
+Agent control and human takeover have an exclusive server-owned control lease.
+Fresh target/frame/revision and coordinate transformation must be checked before
+click/input/scroll; old actions cannot operate a new page. Stop/revoke/expiry must
+prevent new actions and report in-flight uncertain effects honestly. Observation,
+text entry, form submission and destructive/external writes are different effects
+and pass existing Permission → Firewall → Effect Fence → execution → verification
+and Evidence. Content is untrusted; no platform-challenge bypass, protected personal
+profile access, credential projection, hidden arbitrary shell/CDP or account-wide
+desktop access. Allow only task-authorized applications, files and device scope.
+No broad new account wall: remote/session security is implemented through existing
+owners, preserving permitted local access.
+
+Current baseline: SYS-06 is a source-implemented read-only preview; click/type/
+scroll, legitimate takeover, live action feed and secure non-loopback binding are
+not yet accepted. Generic OS executor was not found in the scoped current-source
+audit. These are required delivery gaps. F/C2/C6 close the normal product path;
+C1 reuses it for authorized acquisition. Detailed current source vs approved target
+and acceptance remain in SYS-06 and the Real Delivery Overlay.
+
+
 The internal browser is an Evidence/acquisition workspace, not a decorative browser demo.
 
 It makes source, identity/session boundary, collection state, provenance, risk and capture result understandable.
@@ -676,13 +731,13 @@ platform-native observation
 → Source → Evidence → Canonical
 → CTH/BMP task-specific LUMENIS presentation
 → Trace → Open Original
-→ system-browser handoff
+→ in-product SYS-06 viewing (explicit external-browser option)
 → Return to exact task/context/filter/selection/scroll state
 ```
 
 `contracts/experience/source-target-contract-v1.json` is the machine-readable binding contract. A usable target retains `source_platform`, nullable `source_url`, source/canonical/Evidence references, locator, publication/capture time, availability and a Return context. Missing, invalid, denied, unsupported, launch-rejected and launch-failed states remain distinct; a browser accepting a handoff does **not** prove the page loaded, remained available, authenticated or readable.
 
-“查看原贴 / Open Original” is an explicit user-gesture, read-only handoff to an allowlisted public HTTPS destination. It must never silently inspect or export local cookies/session state, log in, start or resume collection, capture Evidence, mutate Canonical Data, publish, message, purchase or perform any external write. Ordinary source opening and SYS-06 controlled navigation/capture are separate actions and separate acceptance paths.
+“查看原贴 / Open Original” is an explicit user-gesture, read-only opening of an allowlisted public HTTPS destination. The 2026-10-08 requirement makes the existing SYS-06 controlled in-product view the target default on operational surfaces; “Open externally” is a separate explicit choice. SourceTarget v1 currently binds the legacy external adapter only and does not satisfy that new default. F/C6 must migrate its mode selection and callers together without weakening URL, lineage or Return checks. It must never silently inspect or export local cookies/session state, log in, start or resume collection, capture Evidence, mutate Canonical Data, publish, message, purchase or perform any external write. Ordinary source opening and SYS-06 controlled navigation/capture are separate actions and separate acceptance paths.
 
 Web Workspace, Desktop and Mobile recompose the same source truth for their task and form factor; they do not recreate the source platform UI. Public Website may explain the behavior but never exposes protected business rows or owns the source action. Return preserves the originating route, GLOBAL/FOCUS, Subject/BrandFocus, filters, selected object and scroll position. This approval defines the required result only; it is not implementation, live launch, device or user acceptance evidence.
 

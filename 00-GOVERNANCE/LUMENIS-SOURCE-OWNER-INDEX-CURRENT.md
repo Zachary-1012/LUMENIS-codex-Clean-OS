@@ -657,3 +657,15 @@ C1/C6沿`acquisition_plan.py`和`adapters/scheduling/prelaunch_baseline.py`移�
 详细呈现合同唯一归Experience §38；源码取证和J/U覆盖见 `evidence/round-15/PRODUCT-LOGIC-REVIEW-20261008.md`。后续C2/C6/F先接`ai01_repository.dart`/AI-01真实提交与`ai_gateway/core.py`已有服务执行缺口，再沿同一Task增加语义分段和取消/恢复；不能把body收齐后打字动画当作流式结果。C2负责表现提案与准确度，F复用原生组件，C6按实际合同补齐run/块/版本与顺序；不新造组件注册表或运行时。
 
 C3/C5/C4复用已有SourceBrief/creation-upstream/SavedWork，补业务决策成果到制作的固定版本入口和逐条引用；C4补编辑Timeline→实际渲染→Artifact→重开，C5补引用影响与各自Owner的回滚衔接。C1/C6改旧日期并接持久采集receipt/原生cursor/兼容入口；这些是原完整成果的依赖顺序，不增加另一组任务编号。具体源码行和未验证范围在同一审阅记录；PO已于2026-10-08明确恢复完整执行，各Owner通过fresh admission后继续，无需重复审批。原合并本地窗口现承接C3，新建本地窗口承接C5，精确身份只依AGENTS当前绑定。
+
+### 2026-10-08 受控电脑与内置浏览器接续
+
+| Owner | 本次应完成的既有路径 | 精确源码/合同与验收 |
+|---|---|---|
+| C6 / SYSTEM Browser与Runtime | 既有session/action/observe/verify/capture/stop复用；安全远端actor/session绑定、输入与画面revision、独占接管/停止恢复、设备执行适配与共享API | `ai_browser_api.py`、`ai_browser_runtime.py`、`lumenis/system/browser/runtime/`；协调F的`app/lib/core/lumenis_core_client.dart`，不能只删loopback guard |
+| C2 / Agent与typed tools | 实际Agent调用上述浏览动作；授权OS电脑任务的真实executor适配既有Runtime/Permission/Effect链；观察/规划/动作/验证/checkpoint/撤权恢复 | `agent_runtime/`、`agent_capability/`、`agent_smart_tool/`、现有SYSTEM security；浏览器能力不等于OS能力；无人值守外部写入未获授权 |
+| C1 / Collector | 复用同一会话与当前允许身份，只读采集、受控验证恢复和Source→Evidence→Canonical；继续其他正常平台 | 既有Collector/PlatformSession；`VERIFY`不绕过，个人大陆小红书不触碰 |
+| F / Experience | SYS-06手机任务→电脑/浏览器视口→接管→停止→Return；Desktop/Web产品内真实浏览；外部打开可选，SourceTarget模式和调用者一致 | `sys06_screen.dart`、`sys06_browser_repository.dart`、core client、现有SourceTarget/CTH-03/SH-02；既有纯预览不是目标终态 |
+| C3/C4/C5 | 同Task/来源/版本消费操作结果与真实资料，不新建执行器 | 已有业务/创作/Artifact引用和回执；研究与训练准入分开 |
+
+基线409e6d2c：浏览器服务已有click/input/select/scroll/keyboard等动作，但Flutter只调用navigate/reload/frame，远端Core受loopback限制；未找到通用OS桌面executor。本次是源缺口与执行标准，不是runtime通过。逐项取证见 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`；新视频已进入现有材料清单，非训练素材批准。
