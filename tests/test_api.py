@@ -27,49 +27,50 @@ class TestDashboardAPI:
         assert 'stats' in data
 
     def test_stats_api(self, client, auth_headers):
-        """测试统计API"""
+        """统计接口必须具备明确的业务域选择；Basic Auth 不代表业务范围。"""
         response = client.get('/api/stats', headers=auth_headers)
-        assert response.status_code == 200
+        assert response.status_code == 400
         data = response.get_json()
-        assert data['ok'] is True
+        assert data['ok'] is False
+        assert data['code'] == 'DOMAIN_SELECTION_REQUIRED'
 
     def test_overview_api(self, client, auth_headers):
-        """测试概览API"""
+        """概览接口不从历史主体或进程默认值推断业务域。"""
         response = client.get('/api/overview', headers=auth_headers)
-        assert response.status_code == 200
+        assert response.status_code == 400
         data = response.get_json()
-        assert data['ok'] is True
+        assert data['ok'] is False
+        assert data['code'] == 'DOMAIN_SELECTION_REQUIRED'
 
 class TestNotesAPI:
     """笔记API测试"""
 
     def test_notes_list(self, client, auth_headers):
-        """测试笔记列表API"""
+        """笔记列表不能把认证身份误当作已选择的业务域。"""
         response = client.get('/api/notes?page=1&per_page=10', headers=auth_headers)
-        assert response.status_code == 200
+        assert response.status_code == 400
         data = response.get_json()
-        assert data['ok'] is True
-        assert 'notes' in data
+        assert data['ok'] is False
+        assert data['code'] == 'DOMAIN_SELECTION_REQUIRED'
 
     def test_notes_detail(self, client, auth_headers):
-        """测试笔记详情API"""
-        # 先获取一个笔记ID
-        response = client.get('/api/notes?page=1&per_page=1', headers=auth_headers)
+        """精确详情查询也需要显式业务域，不能继承隐式广州主体。"""
+        response = client.get('/api/notes/known-note-id', headers=auth_headers)
+        assert response.status_code == 400
         data = response.get_json()
-        if data.get('notes') and len(data['notes']) > 0:
-            note_id = data['notes'][0]['note_id']
-            response = client.get(f'/api/notes/{note_id}', headers=auth_headers)
-            assert response.status_code == 200
+        assert data['ok'] is False
+        assert data['code'] == 'DOMAIN_SELECTION_REQUIRED'
 
 class TestEventsAPI:
     """事件API测试"""
 
     def test_events_list(self, client, auth_headers):
-        """测试事件列表API"""
+        """事件查询也不能从认证身份推断业务域。"""
         response = client.get('/api/events', headers=auth_headers)
-        assert response.status_code == 200
+        assert response.status_code == 400
         data = response.get_json()
-        assert data['ok'] is True
+        assert data['ok'] is False
+        assert data['code'] == 'DOMAIN_SELECTION_REQUIRED'
 
 class TestAIAPI:
     """AI API测试"""
@@ -101,8 +102,9 @@ class TestSystemAPI:
         assert data['health']['ai']['provider'] == 'owned'
         assert data['health']['ai']['fallback_allowed'] is False
 
-    def test_system_status(self, client, auth_headers):
-        """测试系统状态API"""
+    def test_system_status(self, client, auth_headers, monkeypatch):
+        """SYSTEM 状态保留采集历史，但业务统计留在明确范围的接口。"""
+        monkeypatch.delenv('TAIKOO_WEB_DISCOVERY', raising=False)
         response = client.get('/api/status', headers=auth_headers)
         assert response.status_code == 200
         data = response.get_json()
@@ -113,6 +115,9 @@ class TestSystemAPI:
         assert data['ai_fallback_allowed'] is False
         assert data['last_collection_semantics'] == 'historical_observation_not_current_readiness'
         assert data['web_discovery_enabled'] is False
+        assert data['total_notes'] is None
+        assert data['verified_notes'] is None
+        assert data['business_metrics_state'] == 'SCOPE_REQUIRED'
 
 class TestAuthAPI:
     """认证API测试"""

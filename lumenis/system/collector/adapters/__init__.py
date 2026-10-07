@@ -5,7 +5,7 @@ Platform-specific collection code must only return normalized public/content dat
 subject filtering, risk, event aggregation and reporting remain in the core system.
 """
 
-from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
+from .base import AccessClass, BasePlatformAdapter, CollectionResult, CollectionStatus
 from .registry import get_adapter, list_adapters, register_adapter
 
 # Import built-in adapters so registration happens when the package is imported.
@@ -28,6 +28,7 @@ from . import github as _github  # noqa: F401,E402
 
 __all__ = [
     "BasePlatformAdapter",
+    "AccessClass",
     "CollectionResult",
     "CollectionStatus",
     "get_adapter",

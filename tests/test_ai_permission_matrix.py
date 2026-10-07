@@ -156,6 +156,30 @@ class TestHumanApproval:
 
 class TestPermissionGateIntegration:
     @pytest.fixture(autouse=True)
+    def _explicit_system_domain_for_gate_checks(self):
+        """Low-level gate behavior is evaluated in an explicit SYSTEM domain."""
+        from domain_isolation import (
+            DomainContext, clear_domain_context, get_domain_context,
+            set_domain_context,
+        )
+        from subject_context import (
+            clear_thread_context, get_thread_context, set_thread_context,
+        )
+
+        prior_domain = get_domain_context()
+        prior_thread = get_thread_context()
+        clear_domain_context()
+        clear_thread_context()
+        set_domain_context(DomainContext(domain_id="system", product_id="SYSTEM"))
+        yield
+        clear_domain_context()
+        clear_thread_context()
+        if prior_domain is not None:
+            set_domain_context(prior_domain)
+        if prior_thread is not None:
+            set_thread_context(prior_thread)
+
+    @pytest.fixture(autouse=True)
     def _strict_permission_gate(self):
         # 本类验证权限门严格模式（fail-closed/高风险审批/审计/审批令牌），必须关闭 TESTING 旁路
         set_testing_bypass(False)

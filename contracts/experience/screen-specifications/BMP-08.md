@@ -107,8 +107,19 @@ callable. Show real sources and clip ranges, an actual saved audio player and
 voice/music/effects tracks. Support existing trim/split/placement/gain/fades,
 fixed-duration source replacement, Delete and Undo. Hide video-ratio, video
 track and caption-overlay controls in audio mode without deleting stored data.
-Do not fabricate waveforms, meters, beat grids, live draft sound, transcription
-or synthesis. Source stream choices must describe the actual inspected asset.
+Any waveform, meter or beat-grid visualization must derive from actual decoded
+audio and its exact time range; never fabricate a visual substitute. Do not
+claim live draft sound, transcription or synthesis unless the corresponding
+existing owner returns it. Source stream choices must describe the actual
+inspected asset.
+
+The existing scope-approved, user-visible local script draft may use a
+transient local Read Aloud preview with an exact installed zh-CN, en-US or
+ko-KR device voice and 0.75×/1.0×/1.25× rates. It reads only the current local
+draft; it does not synthesize final podcast audio, create/persist an audio
+Artifact, translate the script or call a remote voice. Draft, selected section,
+scope or screen changes stop the session. It remains separate from the real
+audio editing/export path below.
 
 Keep output_kind consistent across save, export, retrieval and reopen. A video
 project is never silently converted to audio or stripped of its tracks/overlays;
@@ -127,14 +138,15 @@ selected material/Evidence, constraints and upstream versions. Ask only for
 missing production inputs. A new manually imported project does not substitute
 for that cross-capability requirement or remove the older source binding gap.
 
-Required actual outcome: admitted files -> stream/range/mix editing -> actual
-WAV export and listening -> saved version -> reopen -> meaningful revision and
-re-export -> return to the same studio. Verify revoked source/scope, invalid
-media, stale revision, retrieval/render failure, cancellation and retained prior
-output. Web and Windows audio playback require their own real evidence; other
-native platforms remain explicitly unavailable until verified. Builds and local
-request drafts cannot establish podcast completion. Owned audio understanding
-and synthesis retain their separate C2/C4 acceptance.
+Required actual outcome: admitted files -> actual playback/listening -> actual
+waveform and stream/range/mix editing -> actual WAV export and listening -> saved
+version -> reopen -> meaningful revision and re-export -> return to the same
+studio. Verify revoked source/scope, invalid media, stale revision,
+retrieval/render failure, cancellation and retained prior output. Web and Windows
+audio playback require their own real evidence; other native platforms remain
+explicitly unavailable until verified. Builds and local request drafts cannot
+establish podcast completion. Owned audio understanding and synthesis retain
+their separate C2/C4 acceptance.
 
 F owns the existing BMP-08/workbench/player interface and affected tests; W4
 owns media processing, W5 source/Evidence/Artifact lineage and W6 shared binding,
@@ -144,3 +156,131 @@ The older podcast read remains blocked wherever its real scope/lineage is absent
 ## Audio timeline panning completeness — 2026-10-03
 
 Podcast/audio editing must satisfy Experience §37 through the existing shared Timeline owner. Horizontal panning, actual audio seek/playhead, segment selection, zoom anchor and long-episode endpoints must work without forcing page-level vertical travel or corrupting segment/source positions. Reopen/Return retains the appropriate viewing context. F owns the viewport, C4 owns actual audio behavior, C6 integration; an existing video scrollbar cannot alone accept podcast behavior.
+
+## Complete podcast creation and editing — requirement update 2026-10-08
+
+This update completes the existing BMP-08 outcome through the existing Shared
+media and Artifact owners. It does not create a second audio engine, player,
+timeline, store, Evidence owner, AI service or permission path. This document
+update does not change frontmatter or promote any design, implementation,
+runtime or acceptance status, and does not dispatch or resume F or C1–C6.
+
+The earlier note that live recording was postposed is superseded for the product
+target by P0-C below; it remains a truthful description of that earlier
+presentation snapshot only. Podcast Read Aloud remains a transient text preview:
+it is not recording, an episode, generated audio, an audio Artifact or proof of
+playback. Script changes never claim to change already recorded sound.
+
+### P0-A — actual audio playback
+
+Import or record authorized audio through existing Source/Permission owners and
+play the actual returned bytes in the shared player. Support pause/resume,
+seek, replay, timecode and the current segment/source relation. Playback must
+identify the exact audio and version; unavailable media, decoder errors,
+permission denial and interruption remain honest states. Reuse the existing
+player and lifecycle owner rather than creating a competing player.
+
+### P0-B — actual waveform
+
+Render a time-aligned waveform from decoded samples of the exact authorized
+audio, with horizontal zoom/pan and selection aligned to the real playhead and
+timeline. The waveform is not a placeholder inferred from text, guessed
+duration, random bars or a decorative asset. Keep the text/timecode equivalent
+accessible. If sample extraction or the media is unavailable, show an honest
+unavailable state and keep playback/editing state truthful.
+
+### P0-C — authorized recording
+
+Provide user-initiated local microphone recording through the current platform
+permission and media owners, with explicit permission, record, pause/resume and
+stop controls, real elapsed time and recovery after denial, interruption or
+device loss. The resulting recording is a source with actual bytes, scope,
+rights and version; it is not a final episode until edited, rendered, saved and
+reopened. No background or remote recording and no permission bypass. All four
+surface roles remain in scope; unsupported device/runtime paths stay
+`NOT_VERIFIED` while the applicable behavior is retained for acceptance.
+
+### P0-D — edit and mix
+
+Use the existing Shared Timeline/render owner for real clip placement,
+selection, move, trim, split, delete, replacement and multi-track voice,
+background music and effect editing. Provide actual per-track/clip volume or
+gain, fades, Duck and applicable mix controls such as mute/solo/loop; preserve exact
+source ranges and synchronization. Support undo/redo, cancellation,
+interruption-safe recovery, actual listening before and after edits, playable
+export, immutable parent-linked save and exact reopen. The timeline scrolls and
+zooms horizontally across the full episode without unnecessary page-level
+vertical travel. It must not lose unaffected tracks, clips or script bindings.
+
+### P1-E — audio quality and transcript
+
+Keep manual transcript entry and correction fully usable without an AI provider.
+Support the approved noise-reduction and loudness workflow with actual processed
+audio and measured results; never claim a quality change from a control or
+preview alone. ASR is optional and, when available, goes through the existing
+C2 AI Gateway and its model/version, rights, Permission and evaluation rules.
+Provider/model unavailability does not disable manual transcript work. Preserve
+source transcript, machine suggestion and human correction as distinct,
+versioned records; never make ASR output truth by itself.
+
+### P1-F — script and audio binding
+
+Bind the existing Brief/script, paragraph or segment, speaker, chapter,
+transcript, timecode, actual audio clip and exact versions through current
+Task/Brief/Artifact owners. A script edit changes script intent only; it does
+not modify audio bytes or transcript automatically. Show the affected segment
+and let the user record, replace or edit only the audio range that requires it.
+Save a new child version, retain prior script/audio and their source lineage,
+and restore the binding on reopen. Scope, rights or source changes trigger a
+fresh owner check and isolate stale versions.
+
+### Real podcast task acceptance
+
+Use an authorized real Brief and imported or user-recorded audio: open the same
+source/goal without re-entering or reselecting it -> listen to the actual audio
+-> inspect its real waveform -> edit/delete one selected passage and mix voice,
+music or effects -> adjust and verify audio quality -> enter or correct a
+transcript manually, with optional Gateway ASR only if actually available ->
+verify script/speaker/chapter/timecode bindings -> export and play the actual
+episode -> formally save -> close and reopen the exact project/result -> change
+one passage, undo/redo and save/re-export a child while preserving the parent.
+Exercise source revocation, scope change, permission denial, missing platform
+voice/device, interruption and render/save failure without false success or
+loss of recoverable work.
+
+Web Workspace, Desktop App, Mobile Companion and Public Website remain within
+their existing four-surface roles and the applicable review/acceptance scope.
+Operational editing uses the authorized workspace surfaces; the Public Website
+only presents approved public episodes and does not expose private editing or
+recording. Retain the full user outcome on every applicable surface and record
+unexercised platform/device behavior as `NOT_VERIFIED`, not as a reason to omit
+it. These requirements do not promote the existing `DESIGN_READY` presentation
+field or the `BLOCKED` business decision; current status fields remain unchanged
+until their own evidence gates pass.
+
+
+## Intelligent UI 逐屏采用项（2026-10-08）
+
+当前已绑定动作限定本轮可执行范围，不限定已批准的产品终态。任何尚未接通的既有能力必须列为现有 Owner 的 OPEN 依赖，补齐合同、真实正常结果与恢复验收；不得因接口暂缺把完整交互目标缩减成只读页，也不得用未绑定按钮假装已实现。
+
+> 本节是屏幕专属设计补充，沿用本规范已有 owner、绑定、权限、状态与审查结论；不改变 frontmatter 状态，也不自动提升 DESIGN_READY。未知绑定继续 UNKNOWN/BLOCKED。
+
+- **真实任务与完成信号：** 把授权来源变成可审阅脚本及可编辑播客音轨。
+- **屏幕专属呈现：** 脚本、来源、rights、音轨和发布状态分层；横向拖动时间轴
+- **来源、范围与版本连续性：** 同Brief/来源/audio version连续；本地Read Aloud不等于成片
+- **四端差异：** Web/Desktop脚本与音轨并列；Mobile分段查看；官网只放授权成片
+- **失败与恢复：** 源/版权未知不导出；scope/文本变更停止本地朗读
+- **补充验收：** 保存重开实际工程，改一段不损其它段；无回执不称完成。
+
+- **交互与视觉约束：** 按本屏任务组合文字、图形、可编辑对象和局部操作；只使用上文已绑定字段/动作。AI建议可检查、编辑或拒绝，服务端Owner/Permission决定是否执行。保留序境二维手绘水彩/版画色彩语言与有功能含义的线性控件；颜色可丰富但不过量，不单独表达真假/权限/状态。不得复制社交平台页面或套统一卡片模板；真实角色按用户Brief/脚本描述创作，只借鉴手绘平面笔触与色彩，不复制参考人物、不用3D质感。
+
+### 可编辑设计到源码映射（2026-10-08 审计采用）
+
+F 在 Product Owner 明确恢复后，在本屏现有规范中补齐同一条链；本轮只更新规则，不创建或修改 Figma 工程：
+
+- **设计资产：** Figma file key / node ID / revision / 可编辑访问状态 = `NOT_VERIFIED`（本轮未连接核实，不能推断不存在）。复用获授权既有工程；需要新建时先取得必要访问及 PO 认可，不上传私有生产资料。
+- **源码与动作：** 本屏原有 Flutter Screen/Component → Repository/ViewModel → Action → Core/Permission/状态；逐项回读真实路径，不复制旧绑定表里的状态。
+- **变量和变体：** LumenisTheme / 语义颜色与字号 → Figma Variables/Variants/Auto Layout/Prototype；记录对应名称与版本。Website Astro/CSS共享设计语义，不硬共用不兼容实现。
+- **覆盖：** 四端职责、中文/英文/韩文、明暗模式、宽度/字号、键盘/读屏、加载/空/未知/拒绝/离线/错误/恢复；必要长内容可滚动，其余避免无意义整页上下滚动。
+- **变更及验收：** 设计 diff → 受影响组件/Token/Action → 原状态/焦点/路由/任务连续性回归 → 实际操作证据及回退。只修对应部分，不重生成全 App；源码/设计/测试状态分别记录。
+- **完成边界：** 当前 Figma 链和真实四端操作证据未核实，不提升本屏状态。PNG、伪造 .fig、44张示意图、路由存在或 Widget 可显示都不能代替可编辑设计和真实用户结果。

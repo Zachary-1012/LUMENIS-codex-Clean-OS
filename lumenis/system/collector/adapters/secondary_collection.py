@@ -29,6 +29,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from .base import CollectionResult, CollectionStatus
 from .config import PLATFORM_CAPABILITIES
 from .registry import get_adapter
+from .routing import RouteIdentityMismatch, bind_collection_route
 from .safe_collection import CollectionHygienePolicy, RateGovernor
 
 
@@ -90,6 +91,21 @@ def _canonical_status(result: CollectionResult | None) -> str:
         return "UNAVAILABLE"
     value = result.status.value if isinstance(result.status, CollectionStatus) else str(result.status)
     return value.upper()
+
+
+def _observed_raw_count(collection: CollectionResult | None, returned_count: int) -> int | None:
+    """Keep an unobserved source count UNKNOWN; zero is valid only after a read."""
+    if collection is None:
+        return None
+    raw = collection.raw_count
+    raw_count = raw if type(raw) is int and raw >= 0 else None
+    if raw_count is not None and raw_count > 0:
+        return max(raw_count, returned_count)
+    if collection.ok:
+        return max(raw_count if raw_count is not None else 0, returned_count)
+    if returned_count > 0:
+        return returned_count
+    return None
 
 
 def _status_message(status: str, *, detail: str = "") -> str:
@@ -165,15 +181,23 @@ def _last_run(platform: str) -> Dict[str, Any] | None:
             else:
                 state = "COLLECT_ERROR"
         else:
-            state = "SUCCESS" if int(row[4] or 0) > 0 else "NO_NEW_DATA"
+            fetched_count = row[4] if type(row[4]) is int and row[4] >= 0 else None
+            state = (
+                "SUCCESS" if fetched_count is not None and fetched_count > 0 else
+                "NO_NEW_DATA" if fetched_count == 0 else
+                "UNKNOWN"
+            )
+        fetched = row[4] if type(row[4]) is int and row[4] >= 0 else None
+        accepted = row[5] if type(row[5]) is int and row[5] >= 0 else None
+        rejected = row[6] if type(row[6]) is int and row[6] >= 0 else None
         return {
             "platform": row[0],
             "query": row[1],
             "started_at": row[2],
             "finished_at": row[3],
-            "fetched": int(row[4] or 0),
-            "accepted": int(row[5] or 0),
-            "rejected": int(row[6] or 0),
+            "fetched": fetched,
+            "accepted": accepted,
+            "rejected": rejected,
             "state": state,
             "error_recorded": bool(row[7]),
         }
@@ -264,6 +288,8 @@ def _adapter_health(platform: str, **source_kwargs: Any) -> Dict[str, Any]:
             for key in (
                 "engine_ok", "cookie_required", "provider", "source",
                 "healthcheck_scope", "session_state", "endpoint_configured",
+                "requires_auth", "requires_authorization", "cookies_used",
+                "availability", "worker_binding_registered", "login_and_collection_verified",
             )
             if key in metadata
         }
@@ -606,7 +632,8 @@ def _mark_subject_and_sync(note_ids: Iterable[str], keyword: str) -> Dict[str, A
 
 
 def _write_run_log(platform: str, keyword: str, *, started: str, finished: str,
-                   fetched: int, accepted: int, rejected: int, error: str = "") -> None:
+                   fetched: int | None, accepted: int | None, rejected: int | None,
+                   error: str = "") -> None:
     import database as db
 
     db.log_web_run(platform, keyword, started, finished, fetched, accepted, rejected, error)
@@ -935,12 +962,12 @@ def _write_prelaunch_evidence(platform: str, keyword: str, result: Dict[str, Any
             test_name=f"{prefix.lower()}_collection_{platform}",
             result="PASS" if result.get("ok") else "FAIL", started_at=started,
             inputs=inputs,
-            outputs={"notes_collected": result.get("raw_count", 0),
+            outputs={"notes_collected": result.get("raw_count"),
                      "notes_inserted": result.get("imported", 0),
                      "notes_updated": result.get("updated", 0),
                      "entity_mentions": result.get("entity_mentions")},
             actual=result.get("status", "COLLECT_ERROR"), account=f"{prefix}_{platform.upper()}",
-            provider=(result.get("provenance") or {}).get("provider", "platform_adapter"),
+            provider=(result.get("provenance") or {}).get("provider") or "unreported",
             collection_metadata=result.get("provenance"),
             domain_id="zbmp" if bmp else "cth", subject_id=scope.get("subject_id"),
             brand_focus_id=scope.get("brand_focus_id"),
@@ -1441,8 +1468,8 @@ def _write_evidence(platform: str, keyword: str, result: Dict[str, Any], *, star
         evidence_id = record_collection_evidence(
             account=f"CTH_{platform.upper()}_RUNTIME",
             platform=platform,
-            notes_collected=int(result.get("raw_count", 0) or 0),
-            notes_filtered=int(result.get("filtered_count", 0) or 0),
+            notes_collected=result.get("raw_count"),
+            notes_filtered=result.get("filtered_count"),
             notes_inserted=int(result.get("imported", 0) or 0),
             notes_updated=int(result.get("updated", 0) or 0),
             duration_ms=int(result.get("duration_ms", 0) or 0),
@@ -1454,7 +1481,7 @@ def _write_evidence(platform: str, keyword: str, result: Dict[str, Any], *, star
             started_at=started,
             version="secondary-collection-v1",
             feature_id=f"CTH_{platform.upper()}_COLLECT",
-            provider=provenance.get("provider") or "platform_adapter",
+            provider=provenance.get("provider") or "unreported",
             source=provenance.get("source") or f"platform:{platform}",
             collected_at=provenance.get("collected_at") or "",
             collection_metadata=provenance,
@@ -1715,7 +1742,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         health = ({"status": "LOCAL_CAPTURE_INPUT", "can_attempt": True,
                    "healthcheck_scope": "local_original_capture_only"} if raw_capture is not None or native_capture is not None else (
             _adapter_health(platform, url=keyword)
-            if platform in {"public_http", "web_atom", "instagram", "wechat"} else _adapter_health(platform)
+            if platform in {"public_http", "web_atom", "sitemap", "instagram", "wechat"} else _adapter_health(platform)
         ))
 
 
@@ -1725,8 +1752,8 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             error = f"{health_status}: {_status_message(health_status)}"
             result = {
                 "ok": False, "status": health_status, "platform": platform,
-                "keyword": keyword, "raw_count": 0, "returned_count": 0,
-                "imported": 0, "updated": 0, "filtered_count": 0,
+                "keyword": keyword, "raw_count": None, "returned_count": None,
+                "imported": 0, "updated": 0, "filtered_count": None,
                 "health_status": health_status, "error": error,
                 "error_type": "PREFLIGHT_NOT_READY", "read_only": True,
                 "external_write": False, "publish_authority": "human_manual_only",
@@ -1748,15 +1775,43 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                     "error": f"EVIDENCE_WRITE_FAILED: {_status_message('EVIDENCE_WRITE_FAILED')}",
                 })
             _write_run_log(platform, keyword, started=started_at, finished=finished,
-                           fetched=0, accepted=0, rejected=0, error=result["error"])
+                           fetched=None, accepted=None, rejected=None, error=result["error"])
             return result
 
+        collection = None
         try:
             collection = (_native_capture_collection(native_capture) if native_capture is not None else
                           _public_raw_collection(raw_capture) if raw_capture is not None
                           else _get_runtime_adapter(platform).search(keyword, max_results=max_results))
             if not isinstance(collection, CollectionResult):
                 raise TypeError("adapter returned a non-CollectionResult value")
+            if native_capture is None and raw_capture is None:
+                bind_collection_route(
+                    collection, platform=platform, capability="search", request_value=keyword,
+                )
+        except RouteIdentityMismatch as exc:
+            source_result = collection if isinstance(collection, CollectionResult) else None
+            source_metadata = (
+                source_result.metadata if source_result is not None
+                and isinstance(source_result.metadata, dict) else {}
+            )
+            source_provenance = {
+                "route_state": "IDENTITY_MISMATCH",
+                "requested_platform": platform,
+                "source_platform": source_result.platform if source_result is not None else None,
+                "actual_access_state": "ATTEMPTED_ONLY",
+                "error_type": type(exc).__name__,
+            }
+            actual_provider = source_metadata.get("provider") or source_metadata.get("engine")
+            if actual_provider:
+                source_provenance["provider"] = str(actual_provider)[:100]
+            collection = CollectionResult(
+                status=CollectionStatus.PROVIDER_UNAVAILABLE,
+                platform=platform,
+                message="adapter result identity did not match the requested platform",
+                metadata={"error_type": type(exc).__name__},
+                provenance=source_provenance,
+            )
         except Exception as exc:
             if raw_capture is not None:
                 return {"ok": False, "status": "INVALID_ORIGINAL_CAPTURE", "platform": platform,
@@ -1766,7 +1821,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 status=CollectionStatus.PROVIDER_UNAVAILABLE,
                 platform=platform,
                 message="provider request failed",
-                metadata={"provider": "platform_adapter", "error_type": type(exc).__name__},
+                metadata={"error_type": type(exc).__name__},
             )
         status = _canonical_status(collection)
         items = [item for item in (collection.items or []) if isinstance(item, dict)]
@@ -1827,11 +1882,12 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 "publish_authority": "human_manual_only",
             }
         metadata = collection.metadata if isinstance(collection.metadata, dict) else {}
-        provenance = {
-            "provider": str(metadata.get("provider") or metadata.get("engine") or "platform_adapter")[:100],
-            "source": str(metadata.get("source") or f"platform:{platform}")[:180],
-            "collected_at": str(metadata.get("collected_at") or captured_at)[:40],
-        }
+        provenance = dict(collection.provenance) if isinstance(collection.provenance, dict) else {}
+        actual_provider = metadata.get("provider") or metadata.get("engine")
+        if actual_provider:
+            provenance.setdefault("provider", str(actual_provider)[:100])
+        provenance.setdefault("source", str(metadata.get("source") or f"platform:{platform}")[:180])
+        provenance.setdefault("collected_at", str(metadata.get("collected_at") or captured_at)[:40])
         if native_capture is not None:
             provenance["native_capture_sha256"] = native_capture.sha256
             provenance["source_version"] = native_capture.sha256
@@ -1909,8 +1965,17 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                     "status": final_status,
                     "platform": platform,
                     "keyword": keyword,
-                    "raw_count": int(collection.raw_count or len(items) or 0),
-                    "returned_count": source_item_count,
+                    "raw_count": _observed_raw_count(collection, source_item_count),
+                    "returned_count": (
+                        source_item_count
+                        if collection.ok or source_item_count > 0
+                        or _observed_raw_count(collection, source_item_count) is not None
+                        else None
+                    ),
+                    "filtered_count": (
+                        max(0, source_item_count - len(items))
+                        if collection.ok or source_item_count > 0 else None
+                    ),
                     "imported": int(import_result.get("imported", 0) or 0),
                     "updated": int(import_result.get("updated", 0) or 0),
                     "failed": int(import_result.get("failed", 0) or 0),
@@ -2128,7 +2193,8 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                     "SCOPE_UNAUTHORIZED", "PERMISSION_UNAVAILABLE"}:
                 try:
                     _write_run_log(platform, keyword, started=started_at, finished=_now(),
-                        fetched=source_item_count, accepted=0, rejected=source_item_count,
+                        fetched=_observed_raw_count(collection, source_item_count), accepted=0,
+                        rejected=(source_item_count if collection.ok or source_item_count > 0 else None),
                         error=result.get("error") or str(result.get("status")))
                     result["run_log_recorded"] = True
                 except Exception:
@@ -2142,12 +2208,14 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                     "evidence_recorded": False, "refresh_verified": False,
                     "read_only": True, "external_write": False}
         accepted_count = int(result.get("canonical_synced", 0) or 0)
+        fetched_count = _observed_raw_count(collection, source_item_count)
+        read_completed = collection.ok or source_item_count > 0
         try:
             _write_run_log(
                 platform, keyword, started=started_at, finished=finished,
-                fetched=int(collection.raw_count or len(items) or 0),
-                accepted=accepted_count,
-                rejected=max(0, source_item_count - accepted_count),
+                fetched=fetched_count,
+                accepted=accepted_count if read_completed else None,
+                rejected=max(0, source_item_count - accepted_count) if read_completed else None,
                 error=result["error"],
             )
             result["run_log_recorded"] = True

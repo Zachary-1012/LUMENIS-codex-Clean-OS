@@ -466,6 +466,8 @@ def _verified_base(alias=''):
 
 def _apply_filters(query, params, filters):
     filters = filters or {}
+    if filters.get('note_id') is not None:
+        query += ' AND note_id=?'; params.append(filters['note_id'])
     if filters.get('sentiment'): query += ' AND sentiment=?'; params.append(filters['sentiment'])
     if filters.get('risk_level'): query += ' AND risk_level=?'; params.append(filters['risk_level'])
     if filters.get('category'): query += ' AND (category=? OR topics LIKE ?)'; params.extend([filters['category'], f"%{filters['category']}%"])
@@ -498,6 +500,271 @@ def get_note_count(filters=None):
     base, subject_params = _verified_base()
     query, params = _apply_filters(f"SELECT COUNT(*) AS cnt FROM notes WHERE {base}", list(subject_params), filters)
     with get_db() as conn: return conn.execute(query,params).fetchone()['cnt']
+
+
+def _canonical_note_id_clause(note_ids):
+    """Build a bounded note-ID predicate after the Canonical owner authorized it.
+
+    These helpers intentionally do not resolve Subject Context. Their caller
+    must first obtain the exact IDs from the signed Canonical read owner.
+    """
+    # SQLite builds vary in their bind-variable limit. Callers with a larger
+    # authorized set must split it into bounded chunks instead of truncating
+    # the source universe at an arbitrary 1,000 IDs.
+    if type(note_ids) is not list or len(note_ids) > 900:
+        raise ValueError("CANONICAL_NOTE_IDS_INVALID")
+    normalized = []
+    seen = set()
+    for note_id in note_ids:
+        if (type(note_id) is not str or not note_id or note_id != note_id.strip()
+                or len(note_id) > 512
+                or any(ord(char) < 32 or 127 <= ord(char) <= 159 for char in note_id)):
+            raise ValueError("CANONICAL_NOTE_IDS_INVALID")
+        if note_id in seen:
+            raise ValueError("CANONICAL_NOTE_IDS_DUPLICATE")
+        seen.add(note_id)
+        normalized.append(note_id)
+    if not normalized:
+        return "0=1", []
+    return "note_id IN (" + ",".join("?" for _ in normalized) + ")", normalized
+
+
+def _canonical_note_id_chunks(note_ids, chunk_size=900):
+    if type(note_ids) is not list:
+        raise ValueError("CANONICAL_NOTE_IDS_INVALID")
+    seen = set()
+    for start in range(0, len(note_ids), chunk_size):
+        chunk = note_ids[start:start + chunk_size]
+        _canonical_note_id_clause(chunk)
+        duplicate = seen.intersection(chunk)
+        if duplicate:
+            raise ValueError("CANONICAL_NOTE_IDS_DUPLICATE")
+        seen.update(chunk)
+        yield chunk
+
+
+def get_notes_for_canonical_source_ids(note_ids, filters=None, limit=100, offset=0):
+    """Read legacy note fields only for IDs returned by signed Canonical scope.
+
+    This is a compatibility projection, not a second scope resolver. It never
+    falls back to subject_rules or the workstation's historical active brand.
+    """
+    limit = max(1, min(int(limit), 1000))
+    offset = max(0, int(offset))
+    if not note_ids:
+        _canonical_note_id_clause(note_ids)
+        return []
+    # Keep each SQL statement below SQLite's conservative variable limit.
+    # For each chunk, only its first offset+limit rows can affect the global
+    # requested page; merge those ordered candidates before applying offset.
+    per_chunk_limit = offset + limit
+    rows = []
+    with get_db() as conn:
+        for chunk in _canonical_note_id_chunks(note_ids):
+            clause, ids = _canonical_note_id_clause(chunk)
+            query, params = _apply_filters(f"SELECT * FROM notes WHERE {clause}", ids, filters)
+            query += " ORDER BY COALESCE(publish_date, collected_at) DESC, collected_at DESC LIMIT ?"
+            params.append(per_chunk_limit)
+            rows.extend(note_to_dict(row) for row in conn.execute(query, params).fetchall())
+    rows.sort(key=lambda row: (
+        str(row.get("publish_date") or row.get("collected_at") or ""),
+        str(row.get("collected_at") or ""),
+    ), reverse=True)
+    return rows[offset:offset + limit]
+
+
+def get_note_count_for_canonical_source_ids(note_ids, filters=None):
+    if not note_ids:
+        _canonical_note_id_clause(note_ids)
+        return 0
+    count = 0
+    with get_db() as conn:
+        for chunk in _canonical_note_id_chunks(note_ids):
+            clause, ids = _canonical_note_id_clause(chunk)
+            query, params = _apply_filters(f"SELECT COUNT(*) AS cnt FROM notes WHERE {clause}", ids, filters)
+            count += int(conn.execute(query, params).fetchone()["cnt"])
+    return count
+
+
+def _canonical_note_projection_candidate_query(scope, filters=None):
+    """Build a note-ID-only candidate query under an already authorized scope.
+
+    Returned IDs are not access grants. Callers must send them back through
+    `canonical_data.list_scoped_canonical` before exposing note fields.
+    """
+    if (not isinstance(scope, dict) or scope.get("domain_id") != "cth"
+            or scope.get("product_id") != "CTH"):
+        raise ValueError("CANONICAL_NOTE_SCOPE_REQUIRED")
+    predicate = (
+        "EXISTS (SELECT 1 FROM canonical_data c WHERE c.source_id=n.note_id "
+        "AND c.product_id='CTH' AND c.domain_id='cth' "
+        "AND c.scope_status='VERIFIED' AND c.source_type='note' "
+        "AND c.source_table='notes' AND TRIM(COALESCE(c.source_id,''))!=''"
+    )
+    params = []
+    subject_id = scope.get("subject_id")
+    if subject_id is not None:
+        predicate += " AND c.subject_id=? AND (c.brand_focus_id IS NULL OR c.brand_focus_id='')"
+        params.append(subject_id)
+    predicate += ")"
+    query, params = _apply_filters(
+        f"SELECT n.note_id FROM notes n WHERE {predicate}", params, filters,
+    )
+    return query, params
+
+
+def get_canonical_note_projection_count(scope, filters=None):
+    query, params = _canonical_note_projection_candidate_query(scope, filters)
+    query = query.replace("SELECT n.note_id", "SELECT COUNT(*) AS count", 1)
+    with get_db() as conn:
+        return int(conn.execute(query, params).fetchone()["count"])
+
+
+def get_canonical_note_projection_candidate_page(scope, filters=None, *, limit=100, offset=0):
+    """Return ordered note IDs only; signed Canonical revalidation is mandatory."""
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError("CANONICAL_NOTE_CANDIDATE_LIMIT_INVALID")
+    if type(offset) is not int or offset < 0:
+        raise ValueError("CANONICAL_NOTE_CANDIDATE_OFFSET_INVALID")
+    query, params = _canonical_note_projection_candidate_query(scope, filters)
+    query = query.replace(
+        "SELECT n.note_id",
+        "SELECT n.note_id",
+        1,
+    )
+    query += (
+        " ORDER BY COALESCE(n.publish_date, n.collected_at) DESC, "
+        "n.collected_at DESC, n.note_id ASC LIMIT ? OFFSET ?"
+    )
+    params.extend([limit, offset])
+    with get_db() as conn:
+        return [row["note_id"] for row in conn.execute(query, params).fetchall()]
+
+
+def get_stats_for_canonical_source_ids(note_ids):
+    if not note_ids:
+        _canonical_note_id_clause(note_ids)
+        return {
+            "total": 0, "positive": 0, "neutral": 0, "negative": 0,
+            "unknown_sentiment": 0, "critical_risk": 0, "high_risk": 0,
+            "medium_risk": 0, "low_risk": 0, "unknown_risk": 0,
+            "total_likes": 0, "total_comments": 0, "total_engagements": 0,
+            "official_count": 0,
+        }
+    sums = {key: 0 for key in (
+        "total", "positive", "neutral", "negative", "unknown_sentiment",
+        "critical_risk", "high_risk", "medium_risk", "low_risk",
+        "unknown_risk", "official_count",
+    )}
+    likes_known = comments_known = engagements_known = True
+    likes_sum = comments_sum = engagements_sum = 0
+    with get_db() as conn:
+        for chunk in _canonical_note_id_chunks(note_ids):
+            clause, ids = _canonical_note_id_clause(chunk)
+            def count(extra=""):
+                return int(conn.execute(
+                    f"SELECT COUNT(*) AS c FROM notes WHERE {clause}{extra}", tuple(ids),
+                ).fetchone()["c"])
+            row = conn.execute(
+                f"SELECT COUNT(*) AS rows_total, COUNT(likes) AS likes_known, SUM(likes) AS likes, "
+                f"COUNT(comments) AS comments_known, SUM(comments) AS comments, "
+                f"SUM(CASE WHEN likes IS NOT NULL AND comments IS NOT NULL "
+                f"AND collects IS NOT NULL AND shares IS NOT NULL THEN 1 ELSE 0 END) AS engagement_rows_known, "
+                f"SUM(CASE WHEN likes IS NOT NULL AND comments IS NOT NULL "
+                f"AND collects IS NOT NULL AND shares IS NOT NULL "
+                f"THEN likes+comments+collects+shares ELSE NULL END) AS engagements "
+                f"FROM notes WHERE {clause}", tuple(ids),
+            ).fetchone()
+            for key, extra in {
+                "total": "", "positive": " AND sentiment='positive'",
+                "neutral": " AND sentiment='neutral'", "negative": " AND sentiment='negative'",
+                "unknown_sentiment": " AND COALESCE(sentiment,'unknown') NOT IN ('positive','neutral','negative')",
+                "critical_risk": " AND risk_level='critical'", "high_risk": " AND risk_level='high'",
+                "medium_risk": " AND risk_level='medium'", "low_risk": " AND risk_level='low'",
+                "unknown_risk": " AND COALESCE(risk_level,'unknown') NOT IN ('low','medium','high','critical')",
+                "official_count": " AND is_official=1",
+            }.items():
+                sums[key] += count(extra)
+            likes_known = likes_known and row["likes_known"] == row["rows_total"]
+            comments_known = comments_known and row["comments_known"] == row["rows_total"]
+            engagements_known = engagements_known and row["engagement_rows_known"] == row["rows_total"]
+            likes_sum += row["likes"] or 0
+            comments_sum += row["comments"] or 0
+            engagements_sum += row["engagements"] or 0
+    return {
+        **sums,
+        "total_likes": likes_sum if likes_known else None,
+        "total_comments": comments_sum if comments_known else None,
+        "total_engagements": engagements_sum if engagements_known else None,
+    }
+
+
+def get_category_distribution_for_canonical_source_ids(note_ids):
+    grouped = {}
+    with get_db() as conn:
+        for chunk in _canonical_note_id_chunks(note_ids):
+            clause, ids = _canonical_note_id_clause(chunk)
+            rows = conn.execute(
+                f"SELECT category, COUNT(*) AS cnt FROM notes WHERE {clause} "
+                "GROUP BY category", tuple(ids),
+            ).fetchall()
+            for row in rows:
+                grouped[row["category"]] = grouped.get(row["category"], 0) + int(row["cnt"])
+    return sorted(({"category": key, "count": value} for key, value in grouped.items()),
+                  key=lambda item: item["count"], reverse=True)
+
+
+def get_top_topics_for_canonical_source_ids(note_ids, limit=12):
+    counts = {}
+    with get_db() as conn:
+        rows = []
+        for chunk in _canonical_note_id_chunks(note_ids):
+            clause, ids = _canonical_note_id_clause(chunk)
+            rows.extend(conn.execute(
+                f"SELECT topics FROM notes WHERE {clause} AND topics IS NOT NULL AND topics!=''",
+                tuple(ids),
+            ).fetchall())
+    for row in rows:
+        try:
+            values = json.loads(row["topics"] or "[]")
+        except (TypeError, ValueError):
+            values = [item.strip() for item in str(row["topics"] or "").split(",")]
+        if isinstance(values, list):
+            for value in values:
+                topic = str(value).strip()
+                if topic:
+                    counts[topic] = counts.get(topic, 0) + 1
+    return sorted(counts.items(), key=lambda item: item[1], reverse=True)[:max(1, int(limit))]
+
+
+def get_active_event_count_for_canonical_source_ids(note_ids, *, since):
+    """Count active events linked to exact, already authorized note source IDs.
+
+    `None` means the legacy event mention binding is unavailable; zero is an
+    observed count for a successfully queried binding table.
+    """
+    if not note_ids:
+        _canonical_note_id_clause(note_ids)
+        return None
+    event_ids = set()
+    with get_db() as conn:
+        try:
+            conn.execute("SELECT 1 FROM event_mentions LIMIT 0")
+        except sqlite3.OperationalError:
+            return None
+        for chunk in _canonical_note_id_chunks(note_ids):
+            clause, ids = _canonical_note_id_clause(chunk)
+            # event_mentions may contain a platform post ID, URL, or a legacy
+            # note ID. Only exact IDs from the signed selected scope can bind.
+            rows = conn.execute(
+                "SELECT DISTINCT e.id FROM events e "
+                "JOIN event_mentions em ON em.event_id=e.id "
+                f"WHERE e.status='active' AND COALESCE(e.last_seen,e.first_seen,'')>=? AND em.source_id IN "
+                "(" + ",".join("?" for _ in ids) + ")",
+                (since, *ids),
+            ).fetchall()
+            event_ids.update(row["id"] for row in rows)
+    return len(event_ids)
 
 
 def get_stats():

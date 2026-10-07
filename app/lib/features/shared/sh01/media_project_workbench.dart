@@ -11,6 +11,7 @@ import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
 import '../../../navigation/lumenis_leave_guard.dart';
 import 'media_preview.dart';
+import '../read_aloud_action.dart';
 import 'media_project_controller.dart';
 import 'media_project_files.dart';
 import 'media_project_snapshot.dart';
@@ -2074,8 +2075,24 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                         for (final overlay in overlays)
                                           Padding(
                                             padding: const EdgeInsets.all(8),
-                                            child: Text(
-                                              '${_seconds(overlay.startSec)}–${_seconds(overlay.endSec)} s · ${overlay.text}',
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  '${_seconds(overlay.startSec)}–${_seconds(overlay.endSec)} s · ${overlay.text}',
+                                                ),
+                                                if (overlay.kind == 'caption')
+                                                  ReadAloudAction(
+                                                    sessionId:
+                                                        'sh01:${overlay.overlayId}',
+                                                    scopeVersion:
+                                                        '${_controller.domain}:${_controller.repository.contextKey}:${timeline.version}',
+                                                    text: overlay.text,
+                                                    purpose: ReadAloudPurpose
+                                                        .videoCaption,
+                                                  ),
+                                              ],
                                             ),
                                           ),
                                         const SizedBox(height: 12),

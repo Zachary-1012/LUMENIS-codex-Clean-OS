@@ -1244,8 +1244,8 @@ window to continue its whole accepted delivery contract through actual results,
 not serial minimum function slices. Do not insert per-function M approvals,
 unchanged handoff checks or progress-only reports into that path. Existing
 owners coordinate dependencies directly; preserved valid evidence and required
-affected recovery/security/E2E gates still apply. F follows its separate current
-Product Owner instruction; M does not supervise or inspect F in this task. C2
+affected recovery/security/E2E gates still apply. F follows the newest Product Owner dispatch; M may audit its source and contracts
+for the authorized convergence without resuming F's implementation. C2
 prioritizes existing/free compute; no GPU SKU is preselected by this Overlay.
 Paid compute requires current explicit cost authorization under AGENTS.md;
 historic 4090/5090 proposals and leases are evidence only.
@@ -1274,8 +1274,8 @@ acceptance of 'research→AI pitch'. owned_model_execution=NOT_RUN cannot establ
 owned analysis. Internal Word/DOCX/SavedWork composition can prove its own
 bounded behavior but not that missing normal research/owned-AI path. For an
 F-owned screen, the required real submission must be operable; an onPressed:null
-editor/entry is not a completed action. M does not inspect or verify F's
-independent implementation in this preparation.
+editor/entry is not a completed action. M's bounded source audit does not prove
+F's implementation or user-flow acceptance.
 
 Domestic semantic quality must distinguish same-named commercial entities,
 cross-city shops, current versus historical claims, brand self-description versus
@@ -1303,9 +1303,9 @@ integration/environment reproduction; and four-surface operation when F's
 separately authorized deliverable is reviewed. These are retained product gates,
 not current task activation commands.
 These are complete outcome obligations, not activation commands. Current window
-activation comes only from the top of AGENTS.md. In the current M-only preparation
-C1–C6 remain paused; F is separately authorized by the Product Owner and M does
-not inspect or manage F's independent work. When an owner is later activated, it
+activation comes only from the latest explicit Product Owner instruction under
+AGENTS.md. Current M rule convergence does not resume F or C1-C6; all await
+Product Owner confirmation for subsequent implementation. When an owner is later activated, it
 continues the whole outcome rather than safety refusal or per-function reports.
 Original six-window/R/J/U/special exits, global data construction, real
 outcome/Evaluation and final human repeat gate remain without shrinking useful
@@ -1332,3 +1332,24 @@ recovery/cooldown, permission before external effects, and a stoppable release
 with rollback that preserves Evidence. A green repository gate is necessary
 but not proof of target-runtime operation. No historical fixed schedule or
 external document grants collection or deployment permission.
+
+## 2026-10-08 双层正常成果验收与成熟基础能力
+
+本节补充现有 REAL DELIVERY CARD，不新建任务编号、验收队列或机器治理状态。最新派工为M收敛规则和已授权修复，F/C1-C6等待PO确认；本节要求在随后获派工的原完整成果中执行。
+
+每个原有J1–J8/U01–U25能力行记录 `capability_observation`：`ALREADY_WORKING`（真实操作证据）、`SOURCE_ONLY`、`UI_ONLY`、`PARTIAL`、`MISSING`、`BLOCKED`（确切外部依赖）、`PO_DEFERRED`（明确PO出处）。同时记录当前源码/调用/运行差距、复用或修复对象、材料采用位置和下一动作。该字段描述能力观察，不能代替治理机器合同的 completion ladder 或 LIVE_DISPATCH。旧报告/附件计数和SHA只是其时快照，不能直接标成当前状态。
+
+在现有卡增加两组证据及共同版本清单：
+
+1. **基础操作层**：普通用户从真实入口，选择/导入/搜索/筛选/编辑/撤销/保存/预览/导出/重开/恢复，完成该Job承诺的常规成果。必须给真实输入、实际操作、可读取/播放的输出、持久化父版本及错误恢复，不能用源码、Widget、Demo、文件存在或测试计数取代。
+2. **序境增强层**：在同一任务继续使用Scope、时间、预算、Source/Evidence/Canonical和引用；研究进入创作无需重述Brief或重选资料；分析/建议与实际执行分开；源或约束变化定位受影响范围，经明确采用形成新版，保留未变部分、原因、旧版、回滚及Evaluation。两层均有证据才关闭原Job。
+3. **统一回执**：材料/授权用途、模型/配方（如实际使用）、主线SHA+受保护overlay/构建/执行进程/DB/API、Artifact/项目/Timeline版本、验证时间及局限匹配；Product/App Gate、Critical E2E、Runtime、Production DB、USER_VERIFIED各自报告。原有效证据可复用，不为统计数量重跑。
+
+| 原成果 | 必须完成的普通操作验收 | 增强与失败恢复 |
+| --- | --- | --- |
+| J5 视频 | 授权真实素材→导入/缩略图→剪辑/横向时间线/播放头→字幕和多轨音频→预览→可播放导出→正式保存→关闭→重开再编辑；核对时间码/音画同步/分辨率/采样率/体积 | 编辑预览/临时导出/正式保存/重开分开；Undo/Redo后导出与可见版本一致；缺媒体/取消/失败可恢复；素材Evidence/rights不绕过；已批准分层任务如被单视频轨阻挡由现有renderer补齐 |
+| J6 播客 | 导入或明确授权录音→真实声音/Seek→真实样本时间码波形→删一段/配乐/音量/混音→可听导出→保存关闭→重开局部修改再导出；录音路线另验许可拒绝/暂停/停止/实际文件/中断 | P0播放→波形→录音→编辑混音；P1降噪响度/转录→脚本声音关联。顺序是依赖，不是删减；适用OS未验证保持OPEN。人工转录可独立用；ReadAloud/静态Plan/随机波形/静音测试音频不算交付 |
+| J1/J2/J3 | 真来源检索过滤排序详情分页刷新；真主体/品牌范围、可比指标/趋势、事件/Campaign、保存报告/导出/历史 | UNKNOWN非0，城市/时点/样本/广告与自然内容分清；原文和引用可回读；实际动作与Outcome证据独立 |
+| J4/J7/J8 | 文稿预算编辑/审阅/版本/Word重开；材料定位引用/Skill管理/任务取消恢复；四端输入导航/设置通知/无障碍及任务恢复 | 同Brief和引用进入现有SavedWork；Agent checkpoint和效果不重复；设备/权限差异真实表达，界面不要求普通用户理解研发术语 |
+
+对标在相同材料、任务、约束及设备条件下记录：成果正确性、误改/丢失、重复输入、人工补救、等待、步骤与恢复时间；没有实测不宣称提效百分比。GPT启发任务适配的直接交互，Apple启发可预期可撤回的控制与反馈，Tesla启发有状态的操作、偏好保存/恢复；这些是原体验的验证视角，不增加汽车能力、账号壁垒或新的批准权威。用户可选操作必须可达，减少无意义步骤不等于减少交互/功能。

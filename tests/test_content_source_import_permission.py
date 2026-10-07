@@ -176,6 +176,19 @@ def test_another_gate_and_audit_with_changed_scope_cannot_be_borrowed(boundary):
         p.content_source_import_resource(forged, changed, gate=gate)
 
 
+def test_cth_scope_receipt_cannot_authorize_bmp_upload(boundary):
+    gate, bmp_upload, _ = boundary
+    cth_upload = replace(
+        bmp_upload, domain_id="cth", subject_id="subject-a", brand_focus_id=None,
+    )
+    cth_receipt = scope(gate, cth_upload)
+
+    assert cth_receipt.allowed is True
+    assert cth_receipt.domain_id == "cth"
+    with pytest.raises(ValueError, match="CONTENT_SOURCE_RESOURCE_BINDING_INVALID"):
+        p.content_source_import_resource(cth_receipt, bmp_upload, gate=gate)
+
+
 @pytest.mark.parametrize("change", [
     {"actor_id": True}, {"size_bytes": True}, {"size_bytes": 0},
     {"size_bytes": 128 * 1024 * 1024 + 1}, {"body_sha256": "a" * 63},

@@ -169,6 +169,38 @@ def test_open_workspace_permission_requires_exact_scope_and_manual_approval(regi
     ) == token
 
 
+def test_bmp_scope_alias_uses_canonical_receipt_and_exact_approval(registry, gate, app):
+    candidate = _candidate()
+    principal = _workspace_principal(app)
+    resource = _workspace_resource(candidate, principal, app, domain="bmp")
+    gate.grant_approval(
+        p.OperationType.CONFIG_MODIFY.value, resource=resource, granted_by="test-human",
+    )
+
+    decision = _workspace_check(candidate, gate, principal, app, domain="bmp")
+
+    assert decision.allowed is True
+    assert decision.code == "SKILL_METADATA_APPROVED"
+    assert decision.resource == resource
+    assert decision.domain_id == "bmp"
+
+
+def test_cth_skill_metadata_approval_cannot_authorize_bmp_scope(registry, gate, app):
+    candidate = _candidate()
+    principal = _workspace_principal(app)
+    cth_resource = _workspace_resource(candidate, principal, app, domain="cth")
+    bmp_resource = _workspace_resource(candidate, principal, app, domain="bmp")
+    assert cth_resource != bmp_resource
+    gate.grant_approval(
+        p.OperationType.CONFIG_MODIFY.value, resource=cth_resource, granted_by="test-human",
+    )
+
+    decision = _workspace_check(candidate, gate, principal, app, domain="bmp")
+
+    assert decision.allowed is False
+    assert decision.code == "SKILL_METADATA_MANUAL_APPROVAL_REQUIRED"
+
+
 @pytest.mark.parametrize("headers,remote_addr,open_workspace", [
     ({}, "127.0.0.1", False),
     ({}, "192.0.2.7", True),

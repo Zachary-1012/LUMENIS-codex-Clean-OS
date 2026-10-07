@@ -11,6 +11,30 @@ When this index conflicts with current executable source or runtime evidence, cu
 
 ## 1. Retained R01–R15 acceptance coverage and historical audit groups
 
+### 2026-10-08 Intelligent UI research adoption routing
+
+The existing Experience Constitution §38 owns this approved later-execution
+requirement. Read its exact C1-C6/F table with the existing screen specification
+and caller; do not create another Task Card, generic renderer or capability owner.
+Status is `RESEARCH_ADOPTED / IMPLEMENTATION_WAITING_DISPATCH`, not IMPLEMENTED.
+
+| Owner | Current source entry | Required relationship |
+|---|---|---|
+| C1 | `lumenis/system/collector/`; `collector_status_api.py`; existing SourceTarget contract | Native source, time, scope, coverage and honest state for interactive exploration. |
+| C2 | `lumenis/system/ai_gateway/`; `agent_runtime/`; `agent_capability/` | Grounded typed presentation/action proposals through current Gateway and authorization. |
+| C3 | `cth_cases.py`; `lumenis/bmp/`; existing business workflow locator | Same business task/constraints/Evidence across comparison, scenario and decision. |
+| C4 | `lumenis/shared/content_creation/`; `podcast/`; existing Timeline/Artifact owners; `app/lib/features/shared/sh01/` | Editable pitch/video/podcast and stable selected scene/segment/version state. |
+| C5 | `lumenis/shared/reporting/`; `lumenis/importer/`; `shared_artifacts.py`; existing Research/SavedWork owner | Source navigation, conflict/revision comparison, save/reopen and correction impact. |
+| C6 | `experience_runtime.py`; `lumenis_app_api.py`; current SYSTEM runtime | Version-bound actions, streaming/cancellation/recovery and exact integrated contract. |
+| F | `app/lib/`; `website/`; `contracts/experience/screen-specifications/` | Reviewed screen-specific four-surface presentation; read contracts above before implementation. |
+
+The 2026-10-08 clarification covers all 44 existing screens and all four surfaces, including settings, notifications and recovery. The per-screen execution/adoption index is `contracts/experience/screen-specifications/README.md`; each row uses its original spec and the dated amendment in the existing 44-screen text wireframes. No additional task queue or UI implementation state is implied.
+
+Directory navigation is not proof of implementation; resolve exact current
+paths through the capability locator before changing source. Research source,
+limits and decisions are in
+`evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md`.
+
 Live dispatch follows the current instruction at the top of AGENTS.md; eligibility/ownership in this index does not assert that a local window is currently running. C1–C6 are the six complete delivery responsibilities; R01–R15 are retained acceptance/dependency requirements mapped into those outcomes. The numbered table below is historical coverage context, not a second execution schedule and not the R01–R15 identifier list. D01–D49 are audit dispositions; their original audit labels are not product requirements. This index does not activate paused windows or create sequential dispatch. Valid evidence may cover multiple IDs. No mapping turns a missing gate into PASS. M accepts complete outcomes; W6 integrates when authorized.
 
 | Historical coverage group | Delivery | Scope | Exit gate |
@@ -595,3 +619,29 @@ M rechecked these findings against the pinned source `52cd770cde458f73f99e407301
 
 
 当前执行事实只见CURRENT。source-bound/v3曾在`be347f03`发布；该SHA只作历史出处，不是当前基线，其隔离验证不代表Owned AI或真实用户验收。批准后的规则、研究采用与副本处置见 `00-GOVERNANCE/evidence/round-15/APPROVED-CONVERGENCE-20261004.md`。未合入的独有工作继续受保护，不再复制平行实现。
+
+
+### 2026-10-08 前端审计与工具维护增补
+
+采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。其余窗口待 Product Owner 确认后执行，本轮只由 M 收敛规则、处理已授权修复/工具维护和同步。
+
+工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
+
+### 2026-10-08 成熟能力复用与竞品机制：原任务的执行定位
+
+两份已全文读取的增补在既有材料清单新增两行；不取代原RC01–RC14研究、原件、有效分析及原窗口完整责任。后续窗口读取其原完整任务、当前源码和本表对应差距，不重新开展无关全仓审计。本表补充原Owner的输入/动作，不新建任务队列。
+
+| 接收方 | 必须复用/核对的源码与输入 | 后续直接执行与退出证据 |
+| --- | --- | --- |
+| C1 | 现有SYSTEM Collector/Browser、`subject_registry.py`、`lumenis/shared/evidence/`、query/session/runtime合同 | 完成J1基础检索/过滤/原文/分页/增量/恢复；多源趋势与事件资料进入正式真相链，给C3/C5/F真实字段及可用操作，持续采集和六平台边界不变 |
+| C2 | AI Gateway、Agent/Skills/Memory/Evaluation及C4转录真实缺口 | 只在需要时评估离线ASR，经现有模型/权重/设备/zh-en-ko质量准入；whisper.cpp音频适配不激活被停用的llama.cpp/Ollama等LLM路径。AI不可用不阻止确定性编辑，研究资料产品采用与训练准入分开 |
+| C3 | 当前CTH/BMP服务、事件/Case/Decision/Action/Outcome | 完成真实可比指标、趋势/事件/Campaign、竞品创作者分析、保存导出和效果；吸收Meltwater/Brandwatch/数说故事/识微的适用机制，回到实际任务，不以外部宣传证明序境可用 |
+| C4 | `lumenis/shared/content_creation/{video_editing,rendering}.py`、`shared_artifacts.py`、`podcast/intelligence/episode_runtime.py`、原音视频研究材料 | J4提案、J5视频、J6播客分别交付；连已有trim/split/reorder/delete/undo/mix/fade/transition/caption/FFmpeg；核单视频轨限制；播客按播放/真波形/录音/混音→降噪转录/脚本声音关联。与F协调原SH-01/BMP-08；不另建Timeline或Runtime |
+| C5 | Importer/Research、`lumenis/shared/reporting/saved_work.py`、Artifact/引用/材料清单 | 资料全文和方法采用进入产品能力；J4/J7现有编辑/审核/预算/版本/重开/导出，提供C4有rights的素材/原文时间码和版本合同；承接GenStudio式审阅修订复用，保持原文及父版本 |
+| C6 | 当前Core/API/experience_runtime、FFmpeg/FFprobe、Artifact/DB/恢复集成 | 关闭Flutter→API→既有Owner断链；每种预览/导出/保存/重开有对应真实版本；按目标OS核二进制与媒体许可/资源。App/Product Gate故障继续修复，不因新规则延后；没有真实效果不可通过 |
+| F | Experience§38，既有44ScreenSpec及可编辑设计映射；本次仅SH-01/BMP-08增加具体媒体规则 | 普通操作可发现、可直接控制、反馈与撤回；横向时间轴/真实播放器/波形/触控键盘/完整状态；先基础可用再增强智能呈现，保留四端角色和手绘水彩。等PO明确确认实施 |
+| M | 同一Blueprint/Experience/Overlay、两增补及现有有效研究、精确Main/dirty/Owner/CI | 收敛规则冲突/绑定登记，审查完整成果，按源/运行/数据/用户验收分层；本次不启动其他窗口、不用附文立即执行替代PO派工 |
+
+复用方案必须经过第三方登记册的当前版本/许可/平台/性能/安全/回退准入。FFmpeg现有优先；OTIO仅交换；RNNoise仅有降噪缺口；whisper.cpp仅有ASR缺口；播放器/录音组件仅现有工程不足时；OpenShot/MLT须证明现有renderer不能合理满足原批准功能。未选择/未验证的库不能登记为产品已接入。
+
+已有能力观测、两层用户验收及最终证据字段见Real Delivery Overlay“2026-10-08 双层正常成果验收”；状态未测保持真实未验证，不因本表收录升级为已完成。

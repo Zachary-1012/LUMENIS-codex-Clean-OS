@@ -20,16 +20,16 @@
     {
       "screen": "ACC-03",
       "field": "launch",
-      "current_source": "experience_screens._build_acc03() → runtime_guardian.legacy_health_check() for runtime health.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "current_source": "Flutter CoreAcc03Repository.load() calls LumenisCoreClient.runtimeIdentity() -> GET /api/experience/runtime/identity, then settingsContext() -> GET /api/settings/context. It does not call /api/experience/screen/ACC-03; the separate lazy-merged legacy experience_screens._build_acc03() is not this Flutter call path. Runtime identity is operational process/database state; settings context is context-selection data.",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_TARGET_HOME_INCOMPLETE_LIVE_UNVERIFIED",
       "owner": "SYSTEM",
       "status": "PARTIAL"
     },
     {
       "screen": "ACC-04",
       "field": "guard",
-      "current_source": "experience_screens._build_acc04() → auth_recovery_center.get_recovery_summary() for recovery-queue summary.",
-      "frontend_viewmodel": "NO_FLUTTER_SCREEN",
+      "current_source": "Flutter CoreAcc04Repository.load() calls screen('ACC-04') -> GET /api/experience/screen/ACC-04. experience_runtime._all_builders() lazily merges experience_screens.SCREEN_BUILDERS, including _build_acc04() -> legacy _envelope(source='runtime', bound=true, sections=...) with no guard object. Flutter Acc04Snapshot.fromResponse marks guard available only when source='runtime', bound=true, and guard is a map; the legacy bound flag alone does not satisfy this typed guard contract.",
+      "frontend_viewmodel": "FLUTTER_SCREEN_EXISTS_RETURN_ONLY_LIVE_UNVERIFIED",
       "owner": "SYSTEM / Account",
       "status": "PARTIAL"
     },

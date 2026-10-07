@@ -69,7 +69,8 @@ def test_registered_focus_uses_sealed_server_principal_and_retains_pending_effec
     assert args["scope"] == {"domain_id": "cth", "subject_id": entry["subject_id"],
                              "brand_focus_id": None, "global_scope": False}
     assert args["operator"] == "human"
-    assert not gate.check(permission.OperationType.DATA_IMPORT, resource="exact-import-resource", caller="workspace:local").allowed
+    assert not gate.check(permission.OperationType.DATA_IMPORT, resource="exact-import-resource",
+                          caller="workspace:local", domain_id="cth").allowed
 
 
 def test_missing_focus_and_global_with_focus_cannot_reach_io(route):

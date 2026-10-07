@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -72,6 +73,15 @@ def test_render_route_stages_real_artifact_and_exposes_no_absolute_path(artifact
     assert payload["publish_status"] == "not_performed"
     assert payload["external_fetch"] is False
     assert payload["artifact"]["domain_id"] == "zbmp"
+    assert payload["artifact"]["product_id"] == "ZBMP"
+    assert payload["evidence_recorded"] is True
+    with sqlite3.connect(tmp_path / "artifact-runtime.db") as connection:
+        evidence_identity = connection.execute(
+            "SELECT domain_id, product_id FROM zbc_evidence "
+            "WHERE source_type='skill_execution' AND source_id=?",
+            (payload["execution_id"],),
+        ).fetchone()
+    assert evidence_identity == ("zbmp", "ZBMP")
     assert ":\\" not in json.dumps(payload, ensure_ascii=False)
 
     artifact_id = payload["artifact"]["artifact_id"]
@@ -104,6 +114,23 @@ def test_render_route_rejects_remote_media_and_missing_assets(artifact_client):
     assert missing.get_json()["code"] == "LOCAL_ASSETS_REQUIRED"
 
 
+def test_local_video_renderer_requires_a_coherent_explicit_domain_identity(artifact_client, monkeypatch):
+    _, tmp_path, artifacts = artifact_client
+    asset = tmp_path / "source.png"
+    asset.write_bytes(b"local-test-asset")
+
+    def ffmpeg_must_not_run():
+        pytest.fail("identity validation must happen before media rendering")
+
+    monkeypatch.setattr(artifacts, "_ffmpeg_path", ffmpeg_must_not_run)
+    with pytest.raises(artifacts.LocalArtifactError, match="ARTIFACT_DOMAIN_IDENTITY_REQUIRED"):
+        artifacts.render_local_video_artifact([str(asset)])
+    with pytest.raises(artifacts.LocalArtifactError, match="DOMAIN_PRODUCT_MISMATCH"):
+        artifacts.render_local_video_artifact(
+            [str(asset)], domain_id="zbmp", product_id="CTH",
+        )
+
+
 def test_publish_request_is_traceable_and_never_external(artifact_client, monkeypatch):
     client, tmp_path, artifacts = artifact_client
     artifact_file = artifacts.artifact_root() / "ART-test.mp4"
@@ -112,7 +139,7 @@ def test_publish_request_is_traceable_and_never_external(artifact_client, monkey
     artifact = artifacts._register_artifact(
         artifact_id="ART-test",
         kind="video_shotcraft_render",
-        product_id="LUMENIS",
+        product_id="CTH",
         domain_id="cth",
         source_execution_id="exec-test",
         evidence_id="",

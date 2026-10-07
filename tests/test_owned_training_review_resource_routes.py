@@ -68,7 +68,10 @@ def test_real_request_prepares_exact_resource_without_approval_or_database_write
     assert result["source_evidence"][0]["evidence_ref"] == body["source_evidence_refs"][0]
     assert result["scope_permission_audit_id"] and result["preview_permission_audit_id"]
     assert counts(path) == before and gate._approvals == {}
-    assert not gate.check(p.OperationType.MODEL_TRAIN, resource=expected, exact_approval_required=True).allowed
+    assert not gate.check(
+        p.OperationType.MODEL_TRAIN, resource=expected,
+        exact_approval_required=True, domain_id="cth",
+    ).allowed
 
 
 @pytest.mark.parametrize("extra", ["actor_id", "principal", "approval_token", "training_eligible", "expected_scope"])

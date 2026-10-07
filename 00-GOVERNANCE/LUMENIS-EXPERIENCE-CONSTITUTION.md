@@ -1128,6 +1128,22 @@ The design review records pass/fail per screen in `contracts/experience/screen-s
 
 ## 37. Scrollable editing timelines and deferred developer-mode record
 
+### Approved shared local Read Aloud action — 2026-10-08
+
+Provide an accessible user-triggered Read/Stop action, local voice availability
+and 0.75×/1×/1.25× rate controls on authorized visible reports/Briefs and podcast
+or video scripts. Preserve the existing text/scope/version owner and editing
+workflow. This is script preview/review, never a replacement for final podcast
+audio, video voiceover or timeline playback. Do not add speakers to every field,
+create a Voice Studio, auto-play, steal focus or introduce page-level scrolling.
+Expose pause/resume only when genuinely supported. Stop when the source text
+version, scope or page changes; only one read-aloud session may play per surface.
+Use installed local voices only, without translating text or silently changing
+languages. Missing voices are clearly unavailable. Each target platform retains
+its own actual runtime evidence; another platform's unit/widget result is not
+acceptance. These requirements are reflected in the affected detailed screen
+specifications under this same Experience authority.
+
 The Product Owner explicitly requires a usable horizontally scrollable timeline
 in BOTH video editing and podcast/audio editing. It is a necessary editing
 interaction, consistent with no unnecessary page-level vertical scrolling.
@@ -1155,9 +1171,101 @@ pan/seek/reopen evidence remain separate from this rule publication.
 
 ## 38. Current frontend reference scope and scrolling
 
+### Intelligent UI adoption — approved research/rules, implementation waiting (2026-10-08)
+
+The Product Owner supplied `https://x.com/i/trending/2107900056858722693` and
+required research, rule adoption and a C1-C6/F mapping for later execution.
+The X page returned 403 during research; the matching official release was read
+at `https://openai.com/index/gpt-6-for-everyone/` (published 2026-10-07).
+OpenAI describes task-shaped interactive answers and progressive rendering.
+This is reference evidence; its release does not expose an installable compiler,
+grant LUMENIS that capability, or change Codex/model settings.
+
+**State: research/rule adoption approved; implementation WAITING_DISPATCH.**
+This paragraph does not resume F/C1-C6 or authorize a new UI engine, product,
+provider or cloud dependency. Apply it to existing approved jobs/screens when
+their existing owner is subsequently dispatched. This constitution remains the
+sole Experience authority; research notes are supporting evidence only.
+
+Required adaptation inside existing screen owners:
+
+1. Choose presentation for the user's task and actual available data: direct
+   text, comparison, chart, map, editable plan, form or media timeline. Keep
+   plain text when it is sufficient. Do not force every result into chat cards,
+   generic swapped-title pages, or a universal schema-driven screen renderer.
+2. Preserve one Task/Brief, actor, domain, subject/brand focus, time range,
+   budget/constraints, Evidence/citations and result version across research,
+   comparison, proposal and creation. A screen transition must not require
+   re-entering the same Brief or reselecting the same permitted materials.
+3. AI may propose a typed presentation/interaction plan using the existing
+   screen's supported components and actions. The existing Core/ViewModel,
+   Permission and Effect Fence remain authoritative. Do not execute generated
+   HTML/JavaScript, invented endpoints, model-authored authorization, or a
+   pending action merely because it is rendered as a button.
+4. Bind each actionable result to source/result version, action contract and
+   applicable permission. Scope/version changes invalidate stale actions;
+   failed or partial streams stay honestly partial. Show only validated pieces
+   progressively, preserve focus/selection and reduced-motion preferences, and
+   do not label a partial response as a saved/complete result.
+5. Budget, date or source changes first produce an explicit proposed delta.
+   Use existing affected-only revision, parent-version, save/reopen and rollback
+   owners. Deterministic arithmetic uses actual typed units/currency/time; a
+   scenario or model estimate is labeled as such, never Canonical observation.
+6. Retain LUMENIS's approved hand-drawn/watercolor 2D visual direction, useful
+   rich interaction, four-surface roles and no unnecessary operational
+   page-level vertical scrolling. A website explains the capability with
+   truthful approved examples; Web/Desktop execute work, and Mobile exposes
+   appropriate review/adjustment/approval. Do not copy ChatGPT's visual system
+   or transplant its plugin-card limits into the whole LUMENIS product.
+
+| Owner | Existing work to apply this to | Concrete handoff to F / other owners |
+|---|---|---|
+| C1 | Six-platform collected-result and topic/trend exploration | Typed native fields, source/time/scope/coverage, official-vs-sample heat, honest missing states, exact SourceTarget; selectable sources remain the same references downstream. No client-side invented popularity. |
+| C2 | Existing AI Gateway/Agent explanation and action proposal | Grounded typed presentation/action proposals, actual model/recipe state, component/action compatibility and quality evaluation. Model output proposes; Core resolves and authorizes. No claim of UI-model training or OpenAI compiler reuse. |
+| C3 | CTH/BMP comparison, decision, campaign and budget planning | Comparable units/periods/markets; editable scenario constraints; explicit revision delta and actual Action/Outcome state. Preserve the same task and sources through business use. |
+| C4 | Existing pitch, video and podcast workbenches | Structured editable sections, scene/segment references, horizontal timeline, selection/edit/preview/reopen state and real media status. System Read Aloud previews authorized text; it does not become a final voice asset. |
+| C5 | Research, citations, reports, SavedWork and Artifact | Click-through provenance, side-by-side source conflict/revision comparison, precise selected text, source correction impact and existing saved parent versions. No repeated import or detached display-only report. |
+| C6 | Core/API/ViewModel and runtime integration | Versioned response/action contracts, bounded progressive updates, cancellation/reconnect, idempotence, stale-version/permission rejection and same-version integration evidence. No second runtime or DB. |
+| F | Existing screen-specific four-surface UI/UX/AIGC | Select task-appropriate composition; integrate C1-C6 contracts; preserve context and interaction state, keyboard/screen-reader access, responsive layout and visual identity. Update relevant existing screen specification and obtain DESIGN_READY before implementation. |
+
+Acceptance in each existing outcome: actual authorized material → task-shaped
+interactive result → user changes a constraint/selection → correct affected
+result → save/reopen with unchanged provenance → recovery and applicable
+revocation. Verify normal success as well as missing data, stale result,
+interrupted stream and permission denial. Compare task correctness, user
+re-entry burden and time to useful result; layout novelty, animations, mock
+widgets or a schema-valid model response alone do not pass. Reuse applicable
+existing tests/evidence and add only affected meaningful checks.
+
+### 全产品智能交互执行细则 — Product Owner 2026-10-08 增补
+
+当前已绑定动作限定本轮可执行范围，不限定已批准的产品终态。任何尚未接通的既有能力必须列为现有 Owner 的 OPEN 依赖，补齐合同、真实正常结果与恢复验收；不得因接口暂缺把完整交互目标缩减成只读页，也不得用未绑定按钮假装已实现。
+
+适用范围是全部现有能力与四个入口：44个App屏幕、官网已有内容家族，以及贯穿其中的导航、检索、列表、详情、编辑、设置、通知、导入导出、任务接续、错误与恢复。不能只在首页、AI聊天或少数展示卡片采用。该要求改进现有能力的呈现和操作，不新增业务、页面家族或第二渲染系统。
+
+**每个现有屏幕规范必须明确以下八项，并在本屏真实用户任务中验收：**
+
+1. **用户任务与最合适的表达。** 写清这屏要让用户理解或完成的事情，以及表格、图、时间线、对照、表单、阅读器、画布或直接文字的选择理由。简单信息保留简单表达；复杂编辑给足操作空间。不能把“每个角落”解释成处处自动生成或处处加聊天框。
+2. **可理解的真实数据。** 每个事实可追踪原来源、主体/城市、出版/发生/采集时点、样本范围、单位/币种与版本。平台热度、内部样本计算、模型估计分别标明；缺失、零、未采集、过期与不可访问不混合。图表筛选不会偷偷改变统计口径。
+3. **用户可以直接操作。** 用户能选择、对比、筛选、调整参数、检查引用、局部编辑或启动本屏已有动作。按当前功能确定实际控件，不以装饰动画代替操作；结果和操作就近出现，有明确的返回、撤销和后续工作入口。
+4. **同一任务连续使用。** 将当前Task/Brief、actor、GLOBAL/Focus、材料选择、时间/预算约束、Evidence、版本、选区/播放头随当前合同传递。研究→方案→文稿/视频/播客不重复输入。跨端重开恢复到该任务允许的状态；不得仅携带页面标题而丢失业务上下文。
+5. **变化可解释、可采用。** 调整预算、时间、来源或作品局部后，显示影响范围和建议差异；用户明确采用后由原Owner保存新版本、父版本与原因。未受影响内容保持；旧成果可重开/回滚。预测场景不覆盖真实观测，来源更正不改原Evidence。
+6. **执行真实且可恢复。** 可交互项绑定现有服务动作、版本与Permission。加载/部分/无记录/未知/离线/拒绝/失败/取消/重试有本屏含义；可安全恢复同一任务，不重复外部效果。只有Core确认的保存/执行回执才能显示成功。AI不可用时保留仍可工作的确定性阅读、筛选、编辑与保存，不假装AI已执行。
+7. **四端与无障碍。** 官网解释和演示须对应实证状态；Web/Desktop承载完整工作；Mobile按已有职责重排查看、审阅、调整和接续，不缩小PC画面。键盘、触控、屏幕阅读器、焦点、缩放和减少动效均可用；保留中英韩。操作端无必要的整页上下滚动，必要长文/表格/无障碍区域仍能滚动，视频与播客有实际横向时间轴。
+8. **序境自己的视觉。** 功能线条清晰；手绘水彩、彩铅、版画纸感用于层级、对象识别、讲解和任务合适的AIGC。保持二维平面，颜色可丰富但有语义节制；五位架构身份不代替数据或权限状态。人物按当前脚本描述创造，不复制参考照片人物。不复制ChatGPT、社交平台或通用SaaS模板。
+
+**真实世界验收至少覆盖：**不同城市同名主体、不同期间/币种不可直接比较、来源撤回、预算变更、长任务中断、权限收回、模型不可用、资料不足及跨端继续。每个屏幕挑其实际相关风险，不在不相关页面硬加控件或重复全部测试。验收同时证明正常成功路径：有用结果→用户调整→正确局部结果→保存→重开/恢复；仅能拒绝错误输入仍不交付。
+
+**统一交付记录：**每个屏幕在自己的既有规范中记录任务、对应Source/Core输入与动作、四端差异、视觉动线、上述验收证据和未闭项；44屏索引统一放在 `contracts/experience/screen-specifications/README.md`。既有文字视觉草图保留历史，并以日期标明本次任务动线增补；不建立另一份执行蓝图或复制另一套UI引擎。蓝图、Experience、Owner、屏幕规范、草图与README同批发布，按同一提交核对；历史草图不是已实现视觉资产，也不能自动获得DESIGN_READY。
+
+**实现准入：**此轮批准的是全产品规则、蓝图与设计输入细化。各屏原有实现/验收状态与阻塞不自动提升；新增交互设计差异待本屏Owner按当前source/contract审阅后进入DESIGN_READY，再在后续明确派工中实施。读规则不需要每函数请示，既有窗口也不会被本段自动恢复。
+
+Research evidence and exact source/owner mapping:
+`evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md`.
+
 The actual F user turns are retained in USER-ADDITIONS-20261004.md; their latest
 instruction supersedes prior exhaustive historical-video execution obligations.
-F is active under the Product Owner's 2026-10-04 resume, including code, scoped research, tests and new tasks. The two new
+The Product Owner's 2026-10-04 resume is historical scheduling evidence, not a current start command. F follows the newest explicit live dispatch; this rule update does not resume implementation. The two new
 recordings d16fc1c8ad774b0e950e3e7a4e444fe3.mp4 and
 7ac450632cf2611ee2ff3a6b29a41669.mp4 plus the earlier five, valid existing
 analysis, OpenAI official pages and current product rules are the current study
@@ -1289,3 +1397,32 @@ scrolling without unnecessary full-page scroll. Classify reference conclusions
 as OBSERVED / INFERRED / ADAPTED / DEFERRED / UNAVAILABLE. Record implementation,
 tests, live operation and acceptance independently; a research report, demo,
 frame extraction, gate or build cannot establish Product Truth.
+
+
+### 可编辑设计工程与源码同步 — 2026-10-08 审计增补
+
+既有 F 负责全部 44 屏与官网内容家族的可编辑设计工程，M 负责审查，C1-C6 提供真实字段/动作/状态合同，C6 协调共享绑定。执行须等 Product Owner 确认；本轮 M 更新规则和工具链不恢复任何其他窗口。
+
+在现有 ScreenSpec/README 保存 `Screen ID → 设计规格 → Figma file/node/revision → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence` 的映射，不建第二设计注册表或权威。Figma 是开发设计资产，唯一 Experience Constitution 和既有 Product Core 真相不变；无访问时保留 NOT_VERIFIED/BLOCKED，禁止用 PNG 或伪造 .fig 冒充。优先复用获授权现有工程；新建工程须必要访问与 PO 认可。
+
+先补完整信息架构、组件/变量关系和当前真实状态，再沿五个 Golden Pages（AI-01、CTH-01、BMP-01、SH-01、SYS-01）与业务依赖推进高保真和实现，不削减其余页面。全部 44 屏及官网家族保留四端适配、中英韩、明暗主题、字号/宽度、可访问性与完整失败恢复；Figma 使用可编辑 Components/Variants/Variables/Auto Layout/Prototype。主题尽量映射既有 LumenisTheme，Website Astro/CSS只共享语义设计决策。
+
+每次设计修改必须定位受影响源组件/Token/动作、必要回归和回退版本，保留未修改工作、状态恢复、焦点和路由；不得为了重构巨型 Screen/Shell 或统一样式而重写业务。CTH事件因果边、ACC-03/04绑定登记及默认入口需分别核对，缺少关系数据或真实 callable 不能靠绘图宣告完成。
+
+验收同时看真实输入、可信 Evidence、Core/ViewModel、用户操作、成果保存/重开/修订、失败恢复和 Evaluation。SOURCE / RUNTIME / DATABASE / TEST-CI / USER OUTCOME 独立记录；设计采用、实现存在与实际完成分开。工具链升级只改善研发环境，不能算序境产品新增能力。
+
+### 成熟操作体验与GPT / Apple / Tesla对标 — 2026-10-08
+
+本节补充§38，不建立第二设计权威。设计先确保普通用户不懂代码也能完成原J1–J8工作：导入/选择/搜索/筛选/编辑/撤销/试听预览/保存/导出/重开/恢复，再增加来源解释、业务上下文与智能建议。AI或第三方不可用时，仍保留可独立执行的确定性操作。按钮必须有真实动作，已存在功能优先接通；未实现的原承诺保留OPEN而不降为永久只读。
+
+| 用户与客户期待 | 本产品采用方式 | 必须看到的结果 |
+| --- | --- | --- |
+| GPT：输入目的后就能继续处理结果 | 按任务选文字/图/表/表单/编辑器/时间轴；建议可检查、修改、拒绝，继续原Brief和版本；保留非聊天的专业操作 | 无需重复解释或选材料；呈现和动作均有真实合同；AI建议不变成权限 |
+| Apple：动作可预测、反馈清楚、能挽回误操作 | 控件/快捷键/触控语义一致；Undo/Redo说明撤回对象并展示受影响位置；进度、完成、失败各有真实反馈；普通状态内联表达，重要边界才中断 | 撤回后可见内容、项目版本和导出一致；状态不要求猜测；反馈不能谎称已保存 |
+| Tesla：在当前任务里直接控制并看到状态，偏好可保存/恢复 | 复用现有任务/设置Owner保存布局/播放位置/可允许偏好，区分未保存与已保存；明确继续/停止/恢复，设备切换只恢复已授权适用状态 | 重开保留同一工作、失败不丢输入；自动状态可停止；Scope/权限不随偏好或设备转移而扩大 |
+
+这是基于已读官方材料的序境设计适配，不宣称GPT/Apple/Tesla全站全部已研究，不复制UI/品牌资产、车辆功能或第三方登录依赖。官方读取出处及限制记于现有 `INTELLIGENT-UI-ADOPTION-20261008.md`。保持二维手绘水彩/版画、可丰富而克制的色彩、按脚本创作角色、中英韩和无障碍。官网以外非必要不整页上下滚动；媒体横向时间轴和必要长内容滚动保留，不以压缩布局或减少交互损失功能。
+
+J5/J6具体操作和真实任务在既有SH-01、BMP-08规范增补；不再全量重写44屏。实时预览、临时导出、正式保存、重开不同；Read Aloud、录音、ASR、节目成品不同；脚本变更不代表录音已改。现有组件/变量/可编辑Figma映射沿原规则，不因文档新增晋升DESIGN_READY/IMPLEMENTED。后续F/C1-C6实施等待PO明确确认。
+
+客户验收采用现有Overlay两层卡：既能完成成熟基础工作，也能继续使用序境的真实来源/预算/业务范围/版本/评价。检验正确性、可修改性、误操作恢复、重复输入和有效等待，不以外观相似或控件数量判断体验达标。

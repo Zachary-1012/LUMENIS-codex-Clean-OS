@@ -3119,6 +3119,9 @@ def render_shared_video_artifact():
             "code": "DOMAIN_NOT_ALLOWED",
             "reason": "视频共享能力只接受 CTH/BMP 产品领域。",
         }), 400
+    from domain_isolation import resolve_domain_identity
+
+    domain_id, product_id = resolve_domain_identity(domain_id=domain_id)
     evidence_id = str(payload.get("evidence_id") or "").strip()
     note_id = str(payload.get("note_id") or "").strip()
     if evidence_id or note_id:
@@ -3133,7 +3136,7 @@ def render_shared_video_artifact():
     task = str(body.get("task") or payload.get("brief") or "视频本地素材成片草稿").strip()[:4000]
     normalized_payload = dict(payload)
     normalized_payload["domain"] = domain_id
-    normalized_payload["product"] = "LUMENIS"
+    normalized_payload["product"] = product_id
 
     from lumenis.shared.agents.skills.execution import ActionType, SkillRuntimeInfo, run_execution_chain
 
@@ -3153,7 +3156,7 @@ def render_shared_video_artifact():
         return render_local_video_artifact(
             normalized_payload["asset_paths"],
             brief=task,
-            product_id="LUMENIS",
+            product_id=product_id,
             domain_id=domain_id,
             source_execution_id=_ctx.execution_id,
             evidence_id=evidence_id,
@@ -3167,7 +3170,7 @@ def render_shared_video_artifact():
             input_payload=normalized_payload,
             action_type=ActionType.EXPORT,
             user_role="user",
-            product="LUMENIS",
+            product=product_id,
             domain=domain_id,
             skill_info=runtime_info,
             handler=_render,

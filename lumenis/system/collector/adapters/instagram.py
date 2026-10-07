@@ -14,6 +14,7 @@ from lumenis.adapters.base import optional_int
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
 from .registry import register_adapter
 from .public_source import fetch_public_url, public_source_provenance
+from .routing import resolve_capability_route
 
 
 def parse_public_instagram_document(response, shortcode):
@@ -159,7 +160,14 @@ class InstagramAdapter(BasePlatformAdapter):
     # Public API
     # ------------------------------------------------------------------
     def search(self, keyword: str, **kwargs: Any) -> CollectionResult:
-        if str(keyword).startswith('https://'):
+        route = resolve_capability_route("instagram", "search", request_value=keyword)
+        if route is None:
+            return CollectionResult(
+                CollectionStatus.NOT_SUPPORTED, self.platform,
+                message="当前输入不匹配已实现的 Instagram 搜索/公开帖子路径",
+                metadata={"route_state": "UNKNOWN"},
+            )
+        if route.backend == "public_native_post_document":
             return self._public_detail(keyword)
         try:
             engine = self._get_engine()
@@ -205,7 +213,14 @@ class InstagramAdapter(BasePlatformAdapter):
                                     metadata={'error_type': type(exc).__name__, 'original_body_available': False})
 
     def detail(self, content_id: str, **kwargs: Any) -> CollectionResult:
-        if str(content_id).startswith('https://'):
+        route = resolve_capability_route("instagram", "detail", request_value=content_id)
+        if route is None:
+            return CollectionResult(
+                CollectionStatus.NOT_SUPPORTED, self.platform,
+                message="当前输入不匹配已实现的 Instagram 详情路径",
+                metadata={"route_state": "UNKNOWN"},
+            )
+        if route.backend == "public_native_post_document":
             return self._public_detail(content_id)
         try:
             engine = self._get_engine()
@@ -234,6 +249,13 @@ class InstagramAdapter(BasePlatformAdapter):
             )
 
     def comments(self, content_id: str, *, include_replies: bool = False, **kwargs: Any) -> CollectionResult:
+        route = resolve_capability_route("instagram", "comments", request_value=content_id)
+        if route is None:
+            return CollectionResult(
+                CollectionStatus.NOT_SUPPORTED, self.platform,
+                message="当前输入不匹配已实现的 Instagram 评论路径",
+                metadata={"route_state": "UNKNOWN"},
+            )
         try:
             engine = self._get_engine()
             result = engine.comments(content_id, max_comments=kwargs.get("max_comments", 20))
@@ -268,6 +290,13 @@ class InstagramAdapter(BasePlatformAdapter):
             )
 
     def creator(self, creator_id: str, **kwargs: Any) -> CollectionResult:
+        route = resolve_capability_route("instagram", "creator", request_value=creator_id)
+        if route is None:
+            return CollectionResult(
+                CollectionStatus.NOT_SUPPORTED, self.platform,
+                message="当前输入不匹配已实现的 Instagram 作者路径",
+                metadata={"route_state": "UNKNOWN"},
+            )
         try:
             engine = self._get_engine()
             result = engine.creator(creator_id)
@@ -298,7 +327,10 @@ class InstagramAdapter(BasePlatformAdapter):
         Cookie/proxy file presence cannot prove a registered permitted worker,
         authentication, acquisition access or readiness. No browser is touched.
         """
-        if str(kwargs.get('url') or '').startswith('https://'):
+        route = resolve_capability_route(
+            "instagram", "detail", request_value=kwargs.get("url"),
+        )
+        if route is not None and route.backend == "public_native_post_document":
             return CollectionResult(CollectionStatus.NEED_VERIFY, self.platform,
                 metadata={'provider': 'public_native_post_document', 'requires_auth': False,
                           'healthcheck_scope': 'public_document_requires_actual_read'})

@@ -479,6 +479,25 @@ _RESOURCE_SCOPE_DOMAINS = {
 _RESOURCE_SCOPE_ACTIONS = frozenset({"read", "write"})
 
 
+def _canonical_business_domain_id(domain_id: Any) -> str:
+    """Resolve an accepted domain alias to its persisted identity for comparisons.
+
+    Permission lookup keys and serialized resources intentionally retain the
+    historical ``bmp`` spelling. Scope and approval receipts use ``zbmp``.
+    This helper is only for comparing those identities; callers must keep
+    their existing resource construction and authorization checks unchanged.
+    """
+    if type(domain_id) is not str or not domain_id or domain_id != domain_id.strip():
+        return ""
+    try:
+        from domain_isolation import resolve_domain_identity
+
+        canonical, _ = resolve_domain_identity(domain_id=domain_id)
+    except (TypeError, ValueError):
+        return ""
+    return canonical if canonical in {"cth", "zbmp"} else ""
+
+
 def _is_valid_scope_id(value: Any) -> bool:
     return (
         isinstance(value, str)
@@ -1113,6 +1132,9 @@ def _owned_training_payload(
     domain_config = _RESOURCE_SCOPE_DOMAINS.get(normalized_domain)
     if domain_config is None:
         raise ValueError("training domain must be CTH or BMP")
+    canonical_domain = _canonical_business_domain_id(normalized_domain)
+    if not canonical_domain:
+        raise ValueError("training domain must be CTH or BMP")
     if type(request.domain_id) is not str or request.domain_id != normalized_domain:
         raise ValueError("training request domain must match the authorized domain")
     product_id = domain_config[0]
@@ -1270,6 +1292,9 @@ def make_owned_training_approval_verifier(
     domain_config = _RESOURCE_SCOPE_DOMAINS.get(normalized_domain)
     if domain_config is None:
         raise ValueError("training domain must be CTH or BMP")
+    canonical_domain = _canonical_business_domain_id(normalized_domain)
+    if not canonical_domain:
+        raise ValueError("training domain must be CTH or BMP")
     # Copy and validate the descriptor map once so caller mutation cannot widen it.
     if type(context) is not dict or set(context) != {"scope_descriptors"}:
         raise ValueError("canonical scope descriptors are required")
@@ -1324,7 +1349,8 @@ def make_owned_training_approval_verifier(
                     type(scope) is ActorScopePermissionResult and scope.allowed is True
                     and scope.verification_state == "verified"
                     and scope.actor_id == identity["actor_id"]
-                    and scope.caller == caller and scope.domain_id == normalized_domain
+                    and scope.caller == caller
+                    and _canonical_business_domain_id(scope.domain_id) == canonical_domain
                     and scope.principal_kind == identity["principal_kind"]
                     and scope.principal_ref == identity["principal_ref"]
                     and scope.subject_id == descriptor["subject_id"]
@@ -1347,7 +1373,7 @@ def make_owned_training_approval_verifier(
                 approval.allowed is True and approval.requires_approval is True
                 and approval.operation_type == OperationType.MODEL_TRAIN.value
                 and approval.resource == resource and approval.caller == caller
-                and approval.domain_id == normalized_domain
+                and _canonical_business_domain_id(approval.domain_id) == canonical_domain
                 and approval.approval_token and token == approval.approval_token
             )
         except Exception:
@@ -1510,13 +1536,19 @@ def check_skill_metadata_change_permission(
             scope = check_actor_scope_permission(
                 {"id": actor_id}, module="skills", action="write", gate=gate, **scope_args,
             )
+        canonical_domain = _canonical_business_domain_id(scope_args["domain_id"])
+        if not canonical_domain:
+            return denied("SKILL_METADATA_SCOPE_DENIED")
         focus = scope_args["subject_id"] or scope_args["brand_focus_id"]
         scope_resource = f"{scope_args['domain_id']}:{'GLOBAL / ALL' if scope_args['global_scope'] else focus}"
+        expected_scope = {**identity, **scope_args}
+        expected_scope.pop("domain_id", None)
         if not (type(scope) is ActorScopePermissionResult and scope.allowed is True
                 and scope.verification_state == "verified" and scope.scope_action == "write"
                 and scope.operation_type == "resource_scope_write" and scope.resource == scope_resource
                 and scope.audit_id and scope.scope_audit_id == scope.audit_id
-                and all(getattr(scope, key) == value for key, value in {**identity, **scope_args}.items())):
+                and _canonical_business_domain_id(scope.domain_id) == canonical_domain
+                and all(getattr(scope, key) == value for key, value in expected_scope.items())):
             return denied("SKILL_METADATA_SCOPE_DENIED")
         fields["scope_audit_id"] = scope.scope_audit_id
         approval = gate.check(
@@ -1529,7 +1561,7 @@ def check_skill_metadata_change_permission(
                 and approval.idempotent_hit is False and approval.audit_id
                 and approval.operation_type == OperationType.CONFIG_MODIFY.value
                 and approval.resource == fields["resource"] and approval.caller == identity["caller"]
-                and approval.domain_id == scope_args["domain_id"]
+                and _canonical_business_domain_id(approval.domain_id) == canonical_domain
                 and approval.risk_level in {RiskLevel.HIGH.value, RiskLevel.CRITICAL.value}
                 and approval.permission_required == PermissionLevel.COMMIT.value
                 and type(token) is str and bool(token) and token == approval.approval_token):
@@ -1702,8 +1734,10 @@ def content_source_import_resource(
         or type(upload) is not ContentSourceImport
         or not (account_identity or workspace_identity)
         or type(upload.global_scope) is not bool
+        or _canonical_business_domain_id(upload.domain_id)
+        != _canonical_business_domain_id(scope_permission.domain_id)
         or any(getattr(upload, key) != getattr(scope_permission, key) for key in (
-            "actor_id", "domain_id", "subject_id", "brand_focus_id", "global_scope"
+            "actor_id", "subject_id", "brand_focus_id", "global_scope"
         ))
         or upload.domain_id not in {"cth", "bmp"}
         or type(upload.size_bytes) is not int
@@ -2865,7 +2899,8 @@ class PermissionGate:
                 or approval.requires_approval is not True
                 or approval.operation_type != OperationType.MODEL_TRAIN.value
                 or approval.resource != resource or approval.caller != identity["caller"]
-                or approval.domain_id != payload["domain_id"]
+                or _canonical_business_domain_id(approval.domain_id)
+                != _canonical_business_domain_id(payload["domain_id"])
                 or type(approval.audit_id) is not str
                 or re.fullmatch(r"aud_[0-9a-f]{16}", approval.audit_id) is None
                 or type(approval.approval_token) is not str or not approval.approval_token):
@@ -2913,6 +2948,9 @@ class PermissionGate:
         if len(domains) != 1:
             raise PermissionError("OWNED_TRAINING_PHASE_BINDING_MISMATCH")
         domain = next(iter(domains))
+        canonical_domain = _canonical_business_domain_id(domain)
+        if not canonical_domain:
+            raise PermissionError("OWNED_TRAINING_PHASE_BINDING_MISMATCH")
         for descriptor in value["scope_descriptors"].values():
             scope_args = {"domain_id": domain, "action": "write", "module": "owned_training",
                           "subject_id": descriptor["subject_id"], "brand_focus_id": descriptor["brand_focus_id"],
@@ -2926,7 +2964,8 @@ class PermissionGate:
                     or scoped.verification_state != "verified"
                     or scoped.actor_id != identity["actor_id"] or scoped.caller != identity["caller"]
                     or scoped.principal_kind != identity["principal_kind"] or scoped.principal_ref != identity["principal_ref"]
-                    or scoped.domain_id != domain or scoped.subject_id != descriptor["subject_id"]
+                    or _canonical_business_domain_id(scoped.domain_id) != canonical_domain
+                    or scoped.subject_id != descriptor["subject_id"]
                     or scoped.brand_focus_id != descriptor["brand_focus_id"]
                     or scoped.global_scope is not descriptor["global_scope"] or scoped.resource != expected_resource
                     or type(scoped.audit_id) is not str or re.fullmatch(r"aud_[0-9a-f]{16}", scoped.audit_id) is None):
@@ -2940,7 +2979,8 @@ class PermissionGate:
         if (type(approval) is not PermissionResult or approval.allowed is not True
                 or approval.requires_approval is not True or approval.resource != value["resource"]
                 or approval.operation_type != OperationType.MODEL_TRAIN.value
-                or approval.caller != identity["caller"] or approval.domain_id != domain
+                or approval.caller != identity["caller"]
+                or _canonical_business_domain_id(approval.domain_id) != canonical_domain
                 or not approval.approval_token or type(approval.audit_id) is not str
                 or re.fullmatch(r"aud_[0-9a-f]{16}", approval.audit_id) is None):
             raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REQUIRED")
@@ -3013,7 +3053,8 @@ class PermissionGate:
                 or approval.requires_approval is not True
                 or approval.operation_type != OperationType.MODEL_TRAIN.value
                 or approval.resource != resource or approval.caller != identity["caller"]
-                or approval.domain_id != payload["domain_id"]
+                or _canonical_business_domain_id(approval.domain_id)
+                != _canonical_business_domain_id(payload["domain_id"])
                 or not approval.audit_id or not approval.approval_token):
             raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REQUIRED")
         token_hash = hashlib.sha256(approval.approval_token.encode("utf-8")).hexdigest()

@@ -1212,9 +1212,16 @@ def _creative_pitch_check_export():
     if (_pg is None or _pg is not get_permission_gate()
             or not _pg.fail_closed or is_testing_bypass_enabled()):
         raise RuntimeError('PITCH_PERMISSION_UNAVAILABLE')
+    from domain_isolation import get_domain_context
+    context = get_domain_context()
+    # This compatibility operation exports the caller's supplied manuscript.
+    # A selected business context remains selected; an unbound file conversion
+    # is SYSTEM work, never an implicit CTH/Guangzhou request.
+    domain = context.domain_id if context is not None and context.domain_id else 'system'
     result = _pg.check(operation_type=OperationType.DATA_EXPORT,
                        resource=request.path,
-                       caller='http:{}:{}'.format(request.method, request.path))
+                       caller='http:{}:{}'.format(request.method, request.path),
+                       domain_id=domain)
     if not result.allowed:
         raise PermissionError('PITCH_EXPORT_DENIED')
 
@@ -3072,10 +3079,16 @@ def subject_hit_note_safe(note):
 @app.route('/api/note/<note_id>')
 @app.route('/api/notes/<note_id>')
 def api_note_detail(note_id):
-    with db.get_db() as conn: row=conn.execute('SELECT * FROM notes WHERE note_id=?',(note_id,)).fetchone()
-    note=db.note_to_dict(row) if row else None
-    if note and not subject_hit_note_safe(note): note=None
-    return (jsonify({'ok':True,'note':note}),200) if note else (jsonify({'ok':False,'error':'Not found'}),404)
+    from data_query_api import LegacyScopeReadError, read_scoped_legacy_note_rows
+    try:
+        result = read_scoped_legacy_note_rows(
+            module='content', filters={'note_id': note_id}, limit=1,
+            require_complete=True,
+        )
+    except LegacyScopeReadError as exc:
+        return jsonify({'ok': False, 'error': exc.code, 'code': exc.code}), exc.status
+    note = result['notes'][0] if result['notes'] else None
+    return (jsonify({'ok': True, 'note': note, 'scope': result['scope']}), 200) if note else (jsonify({'ok': False, 'error': 'Not found'}), 404)
 @app.route('/api/historical-notes')
 def api_historical_notes():
     now=datetime.now(); today=now.strftime('%Y-%m-%d'); period=request.args.get('period','daily')
@@ -3303,22 +3316,23 @@ def api_health():
 
 @app.route('/api/system/health')
 def api_system_health():
-    """产品级健康状态：区分‘系统正常’与‘数据源没有数据’。"""
-    now=datetime.now()
-    result={'version':APP_VERSION,'service':CORE_SERVICE_NAME,'time':now.strftime('%Y-%m-%d %H:%M:%S')}
+    """SYSTEM health is technical; business metrics require a selected scope."""
+    now = datetime.now()
+    result = {
+        'version': APP_VERSION, 'service': CORE_SERVICE_NAME,
+        'time': now.strftime('%Y-%m-%d %H:%M:%S'),
+        'business_metrics': None, 'business_metrics_state': 'SCOPE_REQUIRED',
+    }
     try:
-        stats=db.get_stats()
-        latest=''
         with db.get_db() as conn:
-            clause,sp=_subject_sql_and_values(); row=conn.execute(f"SELECT MAX(COALESCE(collected_at,publish_date)) AS latest, COUNT(*) AS total FROM notes WHERE is_taikoo_verified=1 AND {clause}",tuple(sp)).fetchone()
-            latest=row['latest'] or ''
-        result.update({'database':'ok','verified_notes':int(stats.get('verified_count',0) or 0),'latest_data':latest})
-    except Exception as e:
-        result.update({'database':'error','database_error':str(e)})
+            conn.execute('SELECT 1').fetchone()
+        result['database'] = 'ok'
+    except Exception as exc:
+        result.update({'database': 'error', 'database_error': type(exc).__name__})
     from lumenis.system.ai_gateway.core import owned_inference_status
     result['ai'] = owned_inference_status()
-    result['web_discovery_enabled']=os.getenv('TAIKOO_WEB_DISCOVERY','0').lower() not in ('0','false','no','off')
-    return jsonify({'ok':result.get('database')=='ok','health':result})
+    result['web_discovery_enabled'] = os.getenv('TAIKOO_WEB_DISCOVERY', '0').lower() not in ('0', 'false', 'no', 'off')
+    return jsonify({'ok': result.get('database') == 'ok', 'health': result})
 
 # ===== ZBC Lifecycle Contract V1.0: Runtime Worker API =====
 # ========== Security API（P0修复：前端调用/api/security/scan 404） ==========
@@ -3660,48 +3674,120 @@ def api_collector_guard_status():
 # ===== v5.3.2 智能日报 API =====
 @app.route('/api/overview')
 def api_overview():
-    now=datetime.now()
-    start=(now-timedelta(days=13)).strftime('%Y-%m-%d')
-    end=now.strftime('%Y-%m-%d')
-    with db.get_db() as conn:
-        clause,sp=_subject_sql_and_values(); rows=conn.execute(f"SELECT publish_date, COUNT(*) total, SUM(CASE WHEN sentiment='negative' THEN 1 ELSE 0 END) negative, SUM(CASE WHEN risk_level='high' THEN 1 ELSE 0 END) high FROM notes WHERE is_taikoo_verified=1 AND {clause} AND publish_date BETWEEN ? AND ? GROUP BY publish_date ORDER BY publish_date",tuple(sp)+(start,end)).fetchall()
-        active=sum(1 for e in db.get_events(500) if e.get('status')=='active' and (e.get('last_seen') or '')>=start)
-    by={r['publish_date']:{'total':r['total'] or 0,'negative':r['negative'] or 0,'high':r['high'] or 0} for r in rows}
-    trend=[]
-    for i in range(14):
-        d=(now-timedelta(days=13-i)).strftime('%Y-%m-%d')
-        x=by.get(d,{'total':0,'negative':0,'high':0})
-        trend.append({'date':d,'label':d[5:],'total':x['total'],'negative':x['negative'],'high':x['high']})
-    recent_negative=sum(x['negative'] for x in trend)
-    return jsonify({'ok':True,'trend':trend,'active_events':active,'recent_negative':recent_negative})
+    """Summarize observed records within the explicitly selected CTH scope."""
+    from data_query_api import LegacyScopeReadError, read_scoped_legacy_note_rows
+    now = datetime.now()
+    start = (now - timedelta(days=13)).strftime('%Y-%m-%d')
+    end = now.strftime('%Y-%m-%d')
+    try:
+        result = read_scoped_legacy_note_rows(
+            module='reports', limit=1000, scan_all=True,
+            include_all_projection=True,
+        )
+    except LegacyScopeReadError as exc:
+        return jsonify({'ok': False, 'error': exc.code, 'code': exc.code}), exc.status
+
+    scope_complete = (
+        result['data_state'] == 'READY' and not result['truncated']
+        and result['total'] is not None and result['total'] == len(result['notes'])
+    )
+    dated_rows = []
+    unknown_publication_time = False
+    if scope_complete:
+        for note in result['notes']:
+            day = str(note.get('publish_date') or '')[:10]
+            if len(day) != 10:
+                unknown_publication_time = True
+                continue
+            if start <= day <= end:
+                dated_rows.append((day, note))
+    trend_complete = scope_complete and not unknown_publication_time
+    counts = {}
+    if trend_complete:
+        for day, note in dated_rows:
+            bucket = counts.setdefault(day, {'total': 0, 'negative': 0, 'high': 0})
+            bucket['total'] += 1
+            bucket['negative'] += int(note.get('sentiment') == 'negative')
+            bucket['high'] += int(note.get('risk_level') == 'high')
+    trend = []
+    for index in range(14):
+        day = (now - timedelta(days=13-index)).strftime('%Y-%m-%d')
+        value = counts.get(day) if trend_complete else None
+        trend.append({
+            'date': day, 'label': day[5:],
+            'total': value['total'] if value is not None else None,
+            'negative': value['negative'] if value is not None else None,
+            'high': value['high'] if value is not None else None,
+        })
+
+    active_events = None
+    if scope_complete and result['_verified_source_ids']:
+        try:
+            active_events = db.get_active_event_count_for_canonical_source_ids(
+                result['_verified_source_ids'], since=start,
+            )
+        except Exception:
+            active_events = None
+    active_events_state = (
+        'OBSERVED_FROM_SCOPED_CANONICAL_MENTIONS' if type(active_events) is int
+        else 'UNKNOWN_EVENT_SOURCE_BINDING'
+    )
+    recent_negative = (
+        sum(note.get('sentiment') == 'negative' for _, note in dated_rows)
+        if trend_complete else None
+    )
+    return jsonify({
+        'ok': True, 'scope': result['scope'], 'trend': trend,
+        'active_events': active_events, 'active_events_state': active_events_state,
+        'recent_negative': recent_negative,
+        'data_state': result['data_state'], 'truncated': result['truncated'],
+        'trend_state': 'READY' if trend_complete else (
+            'UNKNOWN_PUBLICATION_TIME' if scope_complete else result['data_state']
+        ),
+        'coverage_semantics': 'Observed signed Canonical notes in the selected CTH scope; not all platform activity',
+        'scope_sample_count': result['verified_source_count'],
+    })
 
 @app.route('/api/status')
 def api_status():
-    stats=db.get_stats()
-    with db.get_db() as conn:
-        clause,sp=_subject_sql_and_values(); unanalyzed=conn.execute(f"SELECT COUNT(*) c FROM notes WHERE (ai_analyzed_at='' OR ai_analyzed_at IS NULL) AND is_taikoo_verified=1 AND {clause}",tuple(sp)).fetchone()['c']; last=conn.execute('SELECT * FROM collection_logs ORDER BY id DESC LIMIT 1').fetchone()
+    """Return SYSTEM status without selecting an implicit CTH business scope."""
+    database_state = 'ok'
+    last = None
+    try:
+        with db.get_db() as conn:
+            conn.execute('SELECT 1').fetchone()
+            last = conn.execute('SELECT * FROM collection_logs ORDER BY id DESC LIMIT 1').fetchone()
+    except Exception as exc:
+        database_state = 'error'
+        database_error = type(exc).__name__
     from lumenis.system.ai_gateway.core import owned_inference_status
     owned = owned_inference_status()
     configured_web_sources = [item.strip() for item in os.getenv('WEB_ADAPTERS', '').split(',') if item.strip()]
-    return jsonify({
-        'ok': True, 'system': PRODUCT_NAME, 'version': APP_VERSION,
+    payload = {
+        'ok': database_state == 'ok', 'system': PRODUCT_NAME, 'version': APP_VERSION,
+        'database_state': database_state,
         'collector': 'SYSTEM Collector / source-specific adapters',
         'collector_mode': 'permission-scoped read/intake; no implicit publishing',
         'analyzer': 'deterministic rules plus owned AI Gateway when service-bound',
         'qian_gua_integration': False, 'data_source': 'Source → Evidence → Canonical',
-        'total_notes': stats['total'], 'verified_notes': stats['verified_count'],
-        'unanalyzed': unanalyzed, 'last_collection': dict(last) if last else None,
+        'total_notes': None, 'verified_notes': None, 'unanalyzed': None,
+        'last_collection': dict(last) if last else None,
         'last_collection_semantics': 'historical_observation_not_current_readiness',
+        'business_metrics_state': 'SCOPE_REQUIRED',
         'server_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'ai_enabled': owned.get('available') is True and owned.get('service_binding') == 'BOUND',
         'ai_detail': owned.get('reason'), 'ai_provider': 'owned',
-        'ai_model': owned.get('model_id'), 'ai_service_binding': owned.get('service_binding'),
-        'ai_fallback_allowed': False, 'web_sources': configured_web_sources,
-        'web_discovery_enabled': os.getenv('TAIKOO_WEB_DISCOVERY', '0').lower() not in ('0','false','no','off'),
+        'ai_fallback_allowed': False,
+        'web_discovery_enabled': os.getenv('TAIKOO_WEB_DISCOVERY', '0').lower() not in ('0', 'false', 'no', 'off'),
+        'ai_analyzer_enabled': True, 'report_enabled': True, 'notes_count': None,
+        'web_sources': configured_web_sources,
         'rednote_cdp_enabled': bool(os.getenv('XHS_CDP_URL','')),
         'company_domain': os.getenv('TAIKOO_COMPANY_DOMAIN',''),
         'auto_interval_minutes': int(os.getenv('AUTO_INTERVAL_MINUTES','90')),
-    })
+    }
+    if database_state == 'error':
+        payload['database_error'] = database_error
+    return jsonify(payload)
 
 # ===== v5.4 rednote CDP 采集 API =====
 @app.route('/api/rednote/collect', methods=['POST'])
@@ -4618,6 +4704,36 @@ def api_case_match():
     matched.sort(key=lambda x: level_order.get(x.get('level','🟢'), 3))
     return jsonify({'ok': True, 'total': len(matched), 'cases': matched[:5]})
 
+def _special_report_source_rows(filters=None):
+    """Reuse the scoped Canonical-backed reader; a template is not an AI run."""
+    from data_query_api import read_scoped_legacy_note_rows
+    try:
+        return read_scoped_legacy_note_rows(
+            module='reports', filters=filters, limit=100, require_complete=True,
+        ), None
+    except Exception as exc:
+        code = getattr(exc, 'code', None)
+        status = getattr(exc, 'status', None)
+        if code is None or status is None:
+            code, status = 'SPECIAL_REPORT_SOURCE_UNAVAILABLE', 503
+        return None, (jsonify({'ok': False, 'code': code, 'data_state': 'UNAVAILABLE'}), status)
+
+
+def _special_report_engagement(note):
+    """Do not silently convert absent platform measurements into zero."""
+    values = [note.get('likes'), note.get('comments')]
+    if any(isinstance(value, bool) or value is None for value in values):
+        return None
+    try:
+        numbers = [int(value) for value in values]
+        if any(number < 0 or str(number) != str(value).strip()
+               for number, value in zip(numbers, values)):
+            return None
+        return numbers[0] + numbers[1] * 3
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
 # ===== v5.4 舆情事件专报自动生成（模块一1.2） =====
 @app.route('/api/special-report/generate', methods=['POST'])
 def api_generate_special_report():
@@ -4629,17 +4745,14 @@ def api_generate_special_report():
     note_id = data.get('note_id', '')
     event_title = data.get('event_title', '')
 
-    # 获取相关笔记
-    notes = []
-    if note_id:
-        note = db.get_note_by_id(note_id) if hasattr(db, 'get_note_by_id') else None
-        if note:
-            notes = [note]
-    if not notes and keyword:
-        notes = db.search_notes_by_keyword(keyword, 20) if hasattr(db, 'search_notes_by_keyword') else []
-    if not notes:
-        # 获取最近的高风险/负面笔记
-        notes = db.get_high_risk_notes(10)
+    filters = {'note_id': note_id} if note_id else ({'keyword': keyword} if keyword else None)
+    scoped, error = _special_report_source_rows(filters)
+    if error is not None:
+        return error
+    notes = scoped['notes']
+    if not note_id and not keyword:
+        notes = [n for n in notes if n.get('negative_confirmed') != 2
+                 and (n.get('sentiment') == 'negative' or n.get('risk_level') in ('high', 'critical'))][:10]
 
     if not notes:
         return jsonify({'ok': False, 'error': '未找到相关舆情数据'}), 404
@@ -4648,11 +4761,12 @@ def api_generate_special_report():
     total = len(notes)
     negative_notes = [n for n in notes if n.get('sentiment') == 'negative' or n.get('risk_level') in ('high', 'critical')]
     negative_count = len(negative_notes)
-    max_engagement = max([int(n.get('likes',0) or 0) + int(n.get('comments',0) or 0)*3 for n in notes], default=0)
+    engagements = [_special_report_engagement(n) for n in notes]
+    max_engagement = max(engagements) if engagements and all(v is not None for v in engagements) else None
     high_risk_count = len([n for n in notes if n.get('risk_level') in ('high', 'critical')])
 
     # 判断舆情等级
-    if high_risk_count >= 3 or max_engagement >= 500 or negative_count >= 3:
+    if high_risk_count >= 3 or (max_engagement is not None and max_engagement >= 500) or negative_count >= 3:
         level = '🔴重大'
     elif high_risk_count >= 1 or negative_count >= 1:
         level = '🟡关注'
@@ -4661,13 +4775,13 @@ def api_generate_special_report():
 
     # 事件概述
     main_note = notes[0]
-    event_name = event_title or main_note.get('title', '')[:50] or keyword or '广州太古汇舆情事件'
-    first_date = main_note.get('publish_date', datetime.now().strftime('%Y-%m-%d'))
-    platform = main_note.get('source_platform', 'xhs')
+    event_name = event_title or main_note.get('title', '')[:50] or keyword or '所选范围舆情事件'
+    first_date = main_note.get('publish_date')
+    platform = main_note.get('source_platform')
 
     # 传播路径分析
-    spread_path = f'{platform}素人发帖 → 评论区共鸣 → 本地KOC/号转发 → 跨平台扩散 → 媒体关注 → 集团问询'
-    if max_engagement > 500:
+    spread_path = '待核验的可能传播路径：原帖 → 评论讨论 → 转发 → 跨平台或媒体关注'
+    if max_engagement is not None and max_engagement > 500:
         spread_path += '（已达到高传播阈值）'
 
     # 案例对标：自动匹配案例库
@@ -4693,8 +4807,8 @@ def api_generate_special_report():
 
     # toC影响评估
     toc_impact = '中等' if negative_count >= 2 else '较低'
-    toc_detail = f'负面笔记{negative_count}条，最高互动{max_engagement}，品牌好感度可能受影响，到店意愿短期下降'
-    if max_engagement > 500:
+    toc_detail = f'负面笔记{negative_count}条，最高互动{max_engagement}，品牌好感度和到店意愿是否受影响需要进一步证据'
+    if max_engagement is not None and max_engagement > 500:
         toc_impact = '较高'
         toc_detail += '，高传播内容可能引发口碑扩散'
 
@@ -4727,7 +4841,7 @@ def api_generate_special_report():
 
     # 风险预警
     risk_warnings = []
-    if max_engagement > 200:
+    if max_engagement is not None and max_engagement > 200:
         risk_warnings.append('高互动内容需密切关注传播趋势，必要时启动公关响应')
     if negative_count >= 2:
         risk_warnings.append('负面内容集中，需警惕评论区共鸣引发二次传播')
@@ -4739,6 +4853,13 @@ def api_generate_special_report():
     # 生成专报
     report = {
         'report_type': 'special',
+        'scope': scoped['scope'],
+        'source_state': scoped['data_state'],
+        'analysis_kind': 'RULE_BASED_PROPOSAL',
+        'owned_model_execution': 'NOT_RUN',
+        'business_outcome': 'UNKNOWN',
+        'spread_path_status': 'HYPOTHESIS_NOT_OBSERVED',
+        'engagement_state': 'KNOWN' if max_engagement is not None else 'UNKNOWN',
         'report_title': f'【舆情专报】{event_name}',
         'level': level,
         'event_name': event_name,
@@ -4757,7 +4878,7 @@ def api_generate_special_report():
         'comprehensive_level': comprehensive_level,
         'strategies': strategies,
         'risk_warnings': risk_warnings,
-        'related_notes': [{'note_id': n.get('note_id',''), 'title': n.get('title','')[:50], 'engagement': int(n.get('likes',0) or 0)+int(n.get('comments',0) or 0)*3, 'sentiment': n.get('sentiment',''), 'risk_level': n.get('risk_level','')} for n in notes[:10]],
+        'related_notes': [{'note_id': n.get('note_id',''), 'title': n.get('title','')[:50], 'engagement': _special_report_engagement(n), 'sentiment': n.get('sentiment',''), 'risk_level': n.get('risk_level','')} for n in notes[:10]],
         'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
     }
 
@@ -4958,19 +5079,24 @@ def _weekly_scheduler():
 @app.route('/api/special-report/check-trigger')
 def api_check_special_report_trigger():
     """检查是否触发专报条件"""
-    notes = db.get_high_risk_notes(20)
+    scoped, error = _special_report_source_rows()
+    if error is not None:
+        return error
+    notes = [n for n in scoped['notes'] if n.get('negative_confirmed') != 2
+             and (n.get('sentiment') == 'negative' or n.get('risk_level') in ('high', 'critical'))][:20]
     negative_notes = [n for n in notes if n.get('sentiment') == 'negative']
-    max_engagement = max([int(n.get('likes',0) or 0) + int(n.get('comments',0) or 0)*3 for n in notes], default=0)
+    engagements = [_special_report_engagement(n) for n in notes]
+    max_engagement = max(engagements) if engagements and all(v is not None for v in engagements) else None
 
     triggers = []
-    if max_engagement >= 500:
+    if max_engagement is not None and max_engagement >= 500:
         triggers.append(f'单条负面互动≥500（当前最高{max_engagement}）')
     if len(negative_notes) >= 3:
         triggers.append(f'负面帖≥3条集中爆发（当前{len(negative_notes)}条）')
     if any('安全' in (n.get('title','')+n.get('content','')) or '歧视' in (n.get('title','')+n.get('content','')) for n in notes):
         triggers.append('涉及安全·歧视·违法类话题')
 
-    return jsonify({'ok': True, 'triggered': len(triggers) > 0, 'triggers': triggers, 'max_engagement': max_engagement, 'negative_count': len(negative_notes)})
+    return jsonify({'ok': True, 'scope': scoped['scope'], 'data_state': scoped['data_state'], 'triggered': True if triggers else (False if notes and max_engagement is not None else None), 'engagement_state': 'KNOWN' if max_engagement is not None else 'UNKNOWN', 'triggers': triggers, 'max_engagement': max_engagement, 'negative_count': len(negative_notes)})
 
 def _next_half_hour(now=None):
     now=now or datetime.now()

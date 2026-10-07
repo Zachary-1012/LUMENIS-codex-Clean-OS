@@ -66,13 +66,11 @@ def _record_fault(name, detected, logged, no_crash, recovery_triggered, detail="
 class TestCollectorCrash:
     """模拟采集器异常退出，验证 guardian 检测到并标记 FAILED"""
 
-    def test_collector_crash_detection(self):
+    def test_collector_crash_detection(self, tmp_path):
         from runtime_guardian import RuntimeGuardian, WorkerStatus, init_db
 
         # 使用独立的测试 DB 路径
-        test_db = os.path.join(os.path.dirname(__file__), "_l5_test_guardian.db")
-        if os.path.exists(test_db):
-            os.remove(test_db)
+        test_db = str(tmp_path / "l5-collector-crash.db")
         init_db(test_db)
 
         guardian = RuntimeGuardian(name="l5_collector_crash", db_path=test_db)
@@ -96,13 +94,6 @@ class TestCollectorCrash:
         recovered = guardian.get_worker(worker_id)
         recovery_triggered = recovered["status"] == WorkerStatus.RECOVERING.value
 
-        # 清理（忽略文件占用错误，连接可能尚未释放）
-        try:
-            if os.path.exists(test_db):
-                os.remove(test_db)
-        except PermissionError:
-            pass
-
         _record_fault("collector_crash", detected, logged, no_crash, recovery_triggered,
                       f"worker={worker_id}, detected FAILED, recovery triggered")
         assert detected, "未检测到采集器崩溃"
@@ -116,12 +107,10 @@ class TestCollectorCrash:
 class TestAITimeout:
     """模拟 AI 调用超时，验证 retry 和 fallback 到 rule-based"""
 
-    def test_ai_timeout_retry_and_fallback(self):
+    def test_ai_timeout_retry_and_fallback(self, tmp_path):
         from runtime_guardian import RuntimeGuardian, CircuitBreaker, RetryPolicy, init_db
 
-        test_db = os.path.join(os.path.dirname(__file__), "_l5_test_ai_timeout.db")
-        if os.path.exists(test_db):
-            os.remove(test_db)
+        test_db = str(tmp_path / "l5-ai-timeout.db")
         init_db(test_db)
 
         guardian = RuntimeGuardian(name="l5_ai_timeout", db_path=test_db)
@@ -165,12 +154,6 @@ class TestAITimeout:
         if retry_count > 0:
             logged = True
 
-        if os.path.exists(test_db):
-            try:
-                os.remove(test_db)
-            except PermissionError:
-                pass
-
         _record_fault("ai_timeout", detected, logged, no_crash, recovery_triggered,
                       f"calls={call_count['n']}, retries={retry_count}")
         assert detected, "AI 超时未被检测到"
@@ -183,12 +166,10 @@ class TestAITimeout:
 class TestDBLock:
     """模拟数据库锁定，验证重试和超时"""
 
-    def test_db_lock_retry(self):
+    def test_db_lock_retry(self, tmp_path):
         from runtime_guardian import RuntimeGuardian, init_db
 
-        test_db = os.path.join(os.path.dirname(__file__), "_l5_test_db_lock.db")
-        if os.path.exists(test_db):
-            os.remove(test_db)
+        test_db = str(tmp_path / "l5-db-lock.db")
         init_db(test_db)
 
         guardian = RuntimeGuardian(name="l5_db_lock", db_path=test_db)
@@ -222,12 +203,6 @@ class TestDBLock:
             detected = True
             logged = True
             recovery_triggered = True  # DLQ 是恢复机制的一种
-
-        if os.path.exists(test_db):
-            try:
-                os.remove(test_db)
-            except PermissionError:
-                pass
 
         _record_fault("db_lock", detected, logged, no_crash, recovery_triggered,
                       f"attempts={attempt_count['n']}")
@@ -280,12 +255,10 @@ class TestNetworkTimeout:
 class TestWorkerDeath:
     """模拟 worker 心跳停止，验证 reaper 回收租约"""
 
-    def test_worker_death_reaper(self):
+    def test_worker_death_reaper(self, tmp_path):
         from runtime_guardian import RuntimeGuardian, WorkerStatus, init_db
 
-        test_db = os.path.join(os.path.dirname(__file__), "_l5_test_worker_death.db")
-        if os.path.exists(test_db):
-            os.remove(test_db)
+        test_db = str(tmp_path / "l5-worker-death.db")
         init_db(test_db)
 
         guardian = RuntimeGuardian(name="l5_worker_death", db_path=test_db)
@@ -315,12 +288,6 @@ class TestWorkerDeath:
         # 验证 worker 被标记为 DEAD
         worker = guardian.get_worker(worker_id)
         recovery_triggered = worker is not None and worker["status"] == WorkerStatus.DEAD.value
-
-        if os.path.exists(test_db):
-            try:
-                os.remove(test_db)
-            except PermissionError:
-                pass
 
         _record_fault("worker_death", detected, logged, no_crash, recovery_triggered,
                       f"reaped={reaped}, worker_status={worker['status'] if worker else 'unknown'}")
@@ -423,12 +390,10 @@ class TestEmptyData:
 class TestDuplicateData:
     """模拟重复数据，验证去重不重复入库"""
 
-    def test_duplicate_data_dedup(self):
-        from lumenis.shared.evidence.chain import EvidenceStore, init_db, compute_content_hash
+    def test_duplicate_data_dedup(self, tmp_path):
+        from lumenis.shared.evidence.chain import EvidenceStore, init_db
 
-        test_db = os.path.join(os.path.dirname(__file__), "_l5_test_duplicate.db")
-        if os.path.exists(test_db):
-            os.remove(test_db)
+        test_db = str(tmp_path / "l5-duplicate-evidence.db")
         init_db(test_db)
 
         store = EvidenceStore(db_path=test_db)
@@ -442,6 +407,9 @@ class TestDuplicateData:
             source_id="dup_test_001",
             raw_content=raw_content,
             provider="l5_test",
+            domain_id="system",
+            product_id="SYSTEM",
+            subject_scope="GLOBAL / ALL",
         )
 
         # 第二次插入相同内容（不同 source_id 但相同 content_hash）
@@ -451,6 +419,9 @@ class TestDuplicateData:
             source_id="dup_test_001_duplicate",
             raw_content=raw_content,
             provider="l5_test",
+            domain_id="system",
+            product_id="SYSTEM",
+            subject_scope="GLOBAL / ALL",
         )
 
         detected = is_new1 is True and is_new2 is False
@@ -462,12 +433,6 @@ class TestDuplicateData:
         # 验证 DB 中只有一条记录
         count = store.count()
         recovery_triggered = recovery_triggered and count == 1
-
-        if os.path.exists(test_db):
-            try:
-                os.remove(test_db)
-            except PermissionError:
-                pass
 
         _record_fault("duplicate_data", detected, logged, no_crash, recovery_triggered,
                       f"first_new={is_new1}, second_new={is_new2}, same_id={ev1.evidence_id == ev2.evidence_id}, count={count}")

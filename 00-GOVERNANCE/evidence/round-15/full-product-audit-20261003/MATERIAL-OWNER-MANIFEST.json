@@ -1,13 +1,14 @@
 {
   "state": "EXACT_ORIGINAL_LOCATORS_RECONCILED_BODY_READING_AND_CAPABILITY_ACCEPTANCE_REMAIN_PER_ITEM",
-  "scope": "191 direct references: initial185 plus3 new frontend inputs and3 seed representations; not full universe or read completion",
+  "scope": "197 direct material rows: original191 preserved +6 dated current supplements; not full corpus or complete historical reading",
   "source_sha256": "23380ad9008228df72f5890e98f9e72eb7aff25928c9c0a478cd2c264382f2b0",
   "owner_counts": {
     "C3+C5": 32,
-    "F": 83,
+    "F": 84,
     "C2": 2,
-    "C1": 4,
-    "C4": 70
+    "C1": 5,
+    "C4": 71,
+    "M": 3
   },
   "materials": [
     {
@@ -6997,6 +6998,243 @@
         ],
         "normalization": "Original 100 terms and 41 sources unchanged; no implicit hotlist, entity promotion or MODEL_TRAIN grant"
       }
+    },
+    {
+      "material_id": "MAT-b130f4fa4af7717173d0",
+      "display_name": "Collector公开入口与多后端增补",
+      "kind": "user_instruction_with_research",
+      "corpus": "approved_capability_supplement",
+      "original_locator": "C:/Users/28049/.codex/attachments/5eba08cc-fd59-471a-a466-6bf2f441b5ff/已粘贴的文本.txt",
+      "source_input_ids": [
+        "public-acquisition-20261008"
+      ],
+      "primary_owner": "C1",
+      "thread_id": null,
+      "supporting_owners": [
+        "C5",
+        "C6"
+      ],
+      "owner_obligation": "采用到既有产品能力、实际输入/处理/呈现/验收；与独立训练用途准入分开。",
+      "status": "IMPLEMENTED_AFFECTED_VERIFIED_LIVE_FIELD_ADMISSION_OPEN",
+      "body_read_status": "SUPPLIED_BODY_READ_AND_SCOPED_PRIMARY_RESEARCH_RECORDED",
+      "training_use": "NOT_GRANTED_REQUIRES_SEPARATE_PURPOSE_RIGHTS_APPROVAL",
+      "source_owner_paths": [
+        "lumenis/system/collector/adapters/routing.py",
+        "lumenis/system/collector/adapters/secondary_collection.py"
+      ],
+      "next_action": "复用72项矩阵及已有匿名/授权路由，真实材料字段解析与正式Source/Evidence/Canonical准入仍须实际结果；本批不启用需登录OpenCLI。",
+      "integration_state": "IMPLEMENTED_AFFECTED_VERIFIED_LIVE_FIELD_ADMISSION_OPEN",
+      "product_adoption": {
+        "state": "IMPLEMENTED_AFFECTED_VERIFIED_LIVE_FIELD_ADMISSION_OPEN",
+        "evidence": "00-GOVERNANCE/evidence/round-06/PUBLIC-ACQUISITION-RESEARCH-20261008.md",
+        "rule_authority": "AGENTS.md"
+      },
+      "availability_checked_at": "2026-10-08T03:59:34.921615+08:00",
+      "resolved_original_references": [
+        "C:/Users/28049/.codex/attachments/5eba08cc-fd59-471a-a466-6bf2f441b5ff/已粘贴的文本.txt"
+      ],
+      "local_exists_at_snapshot": true,
+      "sha256": "5fdc2d3130134c9bf67cf52428511986727616d3900237552ec603810e876cd4",
+      "size_bytes": 22507
+    },
+    {
+      "material_id": "MAT-649cfe6690e6ee401522",
+      "display_name": "System TTS / Read Aloud增补及播客视频预听",
+      "kind": "user_instruction_with_research",
+      "corpus": "approved_capability_supplement",
+      "original_locator": "C:/Users/28049/.codex/attachments/741ea1ee-40ed-490b-b4bf-58d0fab8c32f/已粘贴的文本.txt",
+      "source_input_ids": [
+        "system-read-aloud-20261008"
+      ],
+      "primary_owner": "C4",
+      "thread_id": null,
+      "supporting_owners": [
+        "C5",
+        "C6",
+        "F"
+      ],
+      "owner_obligation": "采用到既有产品能力、实际输入/处理/呈现/验收；与独立训练用途准入分开。",
+      "status": "IMPLEMENTED_WINDOWS_SMOKE_REAL_PRODUCT_E2E_OPEN",
+      "body_read_status": "SUPPLIED_BODY_READ_AND_SCOPED_PRIMARY_RESEARCH_RECORDED",
+      "training_use": "NOT_GRANTED_REQUIRES_SEPARATE_PURPOSE_RIGHTS_APPROVAL",
+      "source_owner_paths": [
+        "app/lib/features/shared/read_aloud_service.dart",
+        "app/lib/features/shared/read_aloud_action.dart"
+      ],
+      "next_action": "沿现有授权文本与Shared服务完成真实SavedWork/Brief/播客版本操作及各目标设备验收；只作本机预听，不生成正式语音Artifact。",
+      "integration_state": "IMPLEMENTED_WINDOWS_SMOKE_REAL_PRODUCT_E2E_OPEN",
+      "product_adoption": {
+        "state": "IMPLEMENTED_WINDOWS_SMOKE_REAL_PRODUCT_E2E_OPEN",
+        "evidence": "00-GOVERNANCE/evidence/round-15/READ-ALOUD-SYSTEM-20261008.md",
+        "rule_authority": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
+      },
+      "availability_checked_at": "2026-10-08T03:59:34.921615+08:00",
+      "resolved_original_references": [
+        "C:/Users/28049/.codex/attachments/741ea1ee-40ed-490b-b4bf-58d0fab8c32f/已粘贴的文本.txt"
+      ],
+      "local_exists_at_snapshot": true,
+      "sha256": "10b4cb985cc631b982d1469e4918047e5f3fa946fd21a31a1c6874557af29f80",
+      "size_bytes": 13909
+    },
+    {
+      "material_id": "MAT-4719ecdcd4acbad63310",
+      "display_name": "OpenAI智能UI与全产品真实世界应用增补",
+      "kind": "user_instruction_with_research",
+      "corpus": "approved_capability_supplement",
+      "original_locator": "https://openai.com/index/gpt-6-for-everyone/",
+      "source_input_ids": [
+        "intelligent-ui-20261008"
+      ],
+      "primary_owner": "F",
+      "thread_id": null,
+      "supporting_owners": [
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "M"
+      ],
+      "owner_obligation": "采用到既有产品能力、实际输入/处理/呈现/验收；与独立训练用途准入分开。",
+      "status": "RESEARCH_ADOPTED_IMPLEMENTATION_WAITING_DISPATCH",
+      "body_read_status": "SUPPLIED_BODY_READ_AND_SCOPED_PRIMARY_RESEARCH_RECORDED",
+      "training_use": "NOT_GRANTED_REQUIRES_SEPARATE_PURPOSE_RIGHTS_APPROVAL",
+      "source_owner_paths": [
+        "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+        "contracts/experience/screen-specifications/README.md"
+      ],
+      "next_action": "按全44屏既有规范、四端蓝图及日期草图增补完成相关合同/设计审阅后实施；保留真实数据、来源版本、局部修改与恢复，不以规则存在当产品通过。",
+      "integration_state": "RESEARCH_ADOPTED_IMPLEMENTATION_WAITING_DISPATCH",
+      "product_adoption": {
+        "state": "RESEARCH_ADOPTED_IMPLEMENTATION_WAITING_DISPATCH",
+        "evidence": "00-GOVERNANCE/evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md",
+        "rule_authority": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
+      },
+      "availability_checked_at": "2026-10-08T03:59:34.921615+08:00",
+      "resolved_original_references": [
+        "https://openai.com/index/gpt-6-for-everyone/",
+        "https://x.com/i/trending/2107900056858722693"
+      ],
+      "availability": [
+        {
+          "reference": "https://openai.com/index/gpt-6-for-everyone/",
+          "state": "OFFICIAL_BODY_READ"
+        },
+        {
+          "reference": "https://x.com/i/trending/2107900056858722693",
+          "state": "HTTP_403_NO_BYPASS"
+        }
+      ]
+    },
+    {
+      "material_id": "MAT-9ddd5bb4884e46c2afb0",
+      "display_name": "2026-10-08 前端源码审计与 Codex 规则升级",
+      "kind": "user_supplied_audit",
+      "corpus": "approved_capability_supplement",
+      "original_locator": "C:\\Users\\28049\\.codex\\attachments\\25ec74c3-9f5d-4731-8d5f-4e7ed6c77c21\\已粘贴的文本.txt",
+      "original_sha256": "9ddd5bb4884e46c2afb05989b8de4e576b4bbaf0fe9bf3c837620dcc1616be2e",
+      "original_bytes": 25087,
+      "primary_owner": "M",
+      "supporting_owners": [
+        "F",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "thread_id": null,
+      "status": "RULES_ADOPTED_IMPLEMENTATION_WAITING_PO",
+      "body_read_status": "FULL_BODY_READ",
+      "training_use": "NOT_GRANTED",
+      "owner_obligation": "现有规则和设计/源码/验收映射收敛；安全工具维护；其他窗口等待PO确认后执行。",
+      "source_owner_paths": [
+        "AGENTS.md",
+        "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
+        "contracts/experience/screen-specifications/README.md"
+      ],
+      "product_adoption": {
+        "state": "RULES_ADOPTED_IMPLEMENTATION_WAITING_PO",
+        "evidence": "00-GOVERNANCE/evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md"
+      },
+      "next_action": "F在PO确认后复核44屏/官网与可编辑Figma工程，按Golden Pages及业务依赖实施；C6关闭默认入口/绑定差异；M控制验收。",
+      "availability_checked_at": "2026-10-08T04:24:11.710790+08:00"
+    },
+    {
+      "material_id": "MAT-ecc5057a2fa3e6e7e2a3",
+      "display_name": "成熟软件基础能力复用与竞品特色升级",
+      "kind": "user_supplied_execution_supplement",
+      "corpus": "approved_capability_supplement",
+      "original_locator": "C:\\Users\\28049\\.codex\\attachments\\a399c625-63f7-4566-aff8-070f13b74064\\已粘贴的文本.txt",
+      "original_sha256": "ecc5057a2fa3e6e7e2a39c942c3ff396fb009558daa9f7b6ed3dfd6f332c460e",
+      "original_bytes": 13197,
+      "primary_owner": "M",
+      "supporting_owners": [
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "F"
+      ],
+      "thread_id": null,
+      "status": "RULES_ADOPTED_IMPLEMENTATION_WAITING_PO",
+      "body_read_status": "FULL_BODY_READ",
+      "training_use": "NOT_GRANTED",
+      "owner_obligation": "既有J1-J8/U01-U25基础能力与序境特色双层验收，原Owner按最新PO派工实现。",
+      "source_owner_paths": [
+        "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+        "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+        "00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
+        "contracts/experience/screen-specifications/SH-01.md",
+        "contracts/experience/screen-specifications/BMP-08.md"
+      ],
+      "product_adoption": {
+        "state": "RULES_ADOPTED_IMPLEMENTATION_WAITING_PO",
+        "evidence": "00-GOVERNANCE/evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md"
+      },
+      "next_action": "PO确认后原窗口复用当前源码/既有材料，按双层真实任务关闭调用缺口与缺失能力；组件按实际缺口准入，不重造内核。",
+      "availability_checked_at": "2026-10-08T04:42:37.997508+08:00"
+    },
+    {
+      "material_id": "MAT-5b98b2a31c5b6299dd01",
+      "display_name": "M总控增补：成熟基础能力真正落地与竞品特色融合",
+      "kind": "user_supplied_execution_supplement",
+      "corpus": "approved_capability_supplement",
+      "original_locator": "C:\\Users\\28049\\.codex\\attachments\\f24d5301-b60c-426d-9c71-b710fbc01b15\\已粘贴的文本.txt",
+      "original_sha256": "5b98b2a31c5b6299dd014b7aab09df478d54ee99dce2717a98c1fbf2a30cd97b",
+      "original_bytes": 10677,
+      "primary_owner": "M",
+      "supporting_owners": [
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "F"
+      ],
+      "thread_id": null,
+      "status": "RULES_ADOPTED_IMPLEMENTATION_WAITING_PO",
+      "body_read_status": "FULL_BODY_READ",
+      "training_use": "NOT_GRANTED",
+      "owner_obligation": "既有J1-J8/U01-U25基础能力与序境特色双层验收，原Owner按最新PO派工实现。",
+      "source_owner_paths": [
+        "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md",
+        "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+        "00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
+        "contracts/experience/screen-specifications/SH-01.md",
+        "contracts/experience/screen-specifications/BMP-08.md"
+      ],
+      "product_adoption": {
+        "state": "RULES_ADOPTED_IMPLEMENTATION_WAITING_PO",
+        "evidence": "00-GOVERNANCE/evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md"
+      },
+      "next_action": "PO确认后原窗口复用当前源码/既有材料，按双层真实任务关闭调用缺口与缺失能力；组件按实际缺口准入，不重造内核。",
+      "availability_checked_at": "2026-10-08T04:42:37.997508+08:00"
     }
   ],
   "frontend_reference_video_scope": {
@@ -7018,5 +7256,21 @@
     "source_thread_id": "01a0cf2d-6ece-7c90-8877-b58fc80a4480",
     "source_turn_id": "01a102b8-7fd4-79b2-8873-57bc3278f3c0"
   },
-  "current_original_integrity": "Missing originals and malformed locators remain explicit; derivative frames/analysis do not replace originals."
+  "current_original_integrity": "Missing originals and malformed locators remain explicit; derivative frames/analysis do not replace originals.",
+  "current_supplement": {
+    "date": "2026-10-08T04:42:37.997508+08:00",
+    "original_191_rows": "PRESERVED",
+    "new_rows": 6,
+    "total_rows": 197,
+    "purpose": "current approved supplements mapped to existing owners; no automatic dispatch or training admission",
+    "latest_frontend_audit": {
+      "material_id": "MAT-9ddd5bb4884e46c2afb0",
+      "total_material_count": 197,
+      "state": "RULES_ADOPTED_IMPLEMENTATION_WAITING_PO"
+    },
+    "mature_software_supplements": [
+      "MAT-ecc5057a2fa3e6e7e2a3",
+      "MAT-5b98b2a31c5b6299dd01"
+    ]
+  }
 }

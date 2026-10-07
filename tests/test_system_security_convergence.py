@@ -16,6 +16,7 @@ def test_action_firewall_consumes_canonical_permission():
         resource="skill:test",
         caller="test",
         operation_id="fw-read-1",
+        domain_id="system",
     )
     assert permission.allowed is True
 
@@ -116,6 +117,7 @@ def test_high_risk_permission_still_requires_human_approval(monkeypatch):
         resource="staging_db",
         caller="test",
         operation_id="write-approval-1",
+        domain_id="system",
     )
     assert denied.allowed is False
     assert denied.requires_approval is True
@@ -126,6 +128,7 @@ def test_high_risk_permission_still_requires_human_approval(monkeypatch):
         resource="staging_db",
         caller="test",
         operation_id="write-approval-2",
+        domain_id="system",
     )
     assert allowed.allowed is True
     assert allowed.approval_token
@@ -167,7 +170,9 @@ def test_agent_runtime_uses_canonical_security_and_completes_fence(monkeypatch):
             risk_level="high",
         )
 
-        security = loop._check_security(step, {"domain": "SYSTEM"})
+        security = loop._check_security(
+            step, {"domain": "SYSTEM", "domain_id": "system"},
+        )
         assert security["allowed"] is True
         assert security["permission"]["allowed"] is True
         assert security["firewall"]["requires_effect_fence"] is True

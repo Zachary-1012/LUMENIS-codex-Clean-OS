@@ -30,7 +30,7 @@ def collect_now(keyword=None, max_scroll=5, max_details=20, *, domain_id=None,
         print(f"❌ 采集范围未绑定，已阻止执行: {exc}")
         return False
     print("=" * 60)
-    print("广州太古汇舆情监测系统 - 立即采集")
+    print("序境 - 按已选业务范围立即采集")
     print(f"采集时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"关键词: {keyword}")
     print("=" * 60)

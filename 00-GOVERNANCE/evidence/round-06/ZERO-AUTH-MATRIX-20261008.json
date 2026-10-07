@@ -1,0 +1,1592 @@
+{
+  "schema_version": "1.0.0",
+  "research_id": "ZERO-AUTH-MATRIX-20261008",
+  "created_at": "2026-10-08T03:25:20.8953065+08:00",
+  "matrix_rows": 72,
+  "classification_counts": {
+    "UNKNOWN": 32,
+    "Z0": 15,
+    "Z2": 22,
+    "Z1": 3
+  },
+  "baseline": {
+    "repository": "Zachary-1012/LUMENIS-codex-Clean-OS",
+    "local_root": "D:\\LUMENIS_REBUILD\\序\\序境",
+    "branch": "main",
+    "local_head": "288f222decb48e2c8e9217c712e7af6f6c1aa9ce",
+    "cached_origin_main": "288f222decb48e2c8e9217c712e7af6f6c1aa9ce",
+    "live_main": "288f222decb48e2c8e9217c712e7af6f6c1aa9ce",
+    "divergence": "0/0 at observation",
+    "worktree": "DIRTY; other owners' candidates pre-existed and were preserved"
+  },
+  "scope": {
+    "platforms": [
+      "小红书／RedNote",
+      "抖音",
+      "Instagram",
+      "Facebook",
+      "微信公众号",
+      "X"
+    ],
+    "capabilities": [
+      "搜索",
+      "帖子／笔记／文章详情",
+      "创作者／主页",
+      "创作者作品列表",
+      "评论",
+      "评论回复",
+      "互动指标",
+      "发布时间",
+      "媒体 URL",
+      "标签／话题",
+      "分享／转发指标",
+      "发现／趋势／热点"
+    ],
+    "fetch_owner": "lumenis.system.collector.adapters.public_source.fetch_public_url",
+    "mode": "anonymous public GET only",
+    "excluded": [
+      "SESSION",
+      "COOKIE",
+      "INTERCEPT",
+      "UI",
+      "OpenCLI commands",
+      "existing browser profiles"
+    ],
+    "product_source_changed": false,
+    "tests_run": false,
+    "production_database": "NOT READ OR WRITTEN",
+    "evidence_canonical_admission": "NOT PERFORMED"
+  },
+  "definitions": {
+    "Z0": "anonymous public route; HTTP 200 proves reachability only",
+    "Z1": "authorized session/browser source route; not exercised",
+    "Z2": "official API docs route needing app/token/permission; not called",
+    "BLOCKED": "a specific path actually encountered a denial/challenge; not inferred from non-use",
+    "UNKNOWN": "insufficient capability-specific evidence"
+  },
+  "environment": {
+    "initial_system_dns": "each of six hosts resolved only to private/RFC1918 range; raw IP values omitted",
+    "proxy_env": "no HTTP_PROXY/HTTPS_PROXY/ALL_PROXY/NO_PROXY values or static pins observed",
+    "first_action": "no HTTP sent after fail-closed public-address preflight",
+    "safe_fallback": "process-local LUMENIS_PUBLIC_SOURCE_DOH_FALLBACK=1; existing TLS-verified Google DoH/global address/host pin/redirect checks; no source or persistent config change",
+    "requests": "GET via existing owner; trust_env=false; deny-all CookiePolicy; no auth/cookie/token; TLS verify true; no retry"
+  },
+  "live_samples": [
+    {
+      "id": "R_XHS_HOME",
+      "platform": "rednote",
+      "url": "https://www.xiaohongshu.com/explore",
+      "status": 200,
+      "bytes": 36679,
+      "redirects": 1,
+      "fields": [
+        "og:image",
+        "timestamp (embedded marker)"
+      ],
+      "method": "GET",
+      "auth": false,
+      "cookie": false,
+      "api_key": false,
+      "content_type": "text/html",
+      "final_host": "www.xiaohongshu.com",
+      "resolver_chain": [
+        "doh_google",
+        "operator_pin"
+      ],
+      "field_values_extracted": false,
+      "challenge_markers": false,
+      "time_window": "2026-10-08 03:15–03:18 +08 approximate; per-response time not instrumented",
+      "notes": null
+    },
+    {
+      "id": "R_XHS_DETAIL",
+      "platform": "rednote",
+      "url": "https://www.rednote.com/discovery/item/69a7bc76000000002203aa75",
+      "status": 200,
+      "bytes": 279263,
+      "redirects": 2,
+      "fields": [
+        "og:image",
+        "timestamp (embedded marker)"
+      ],
+      "method": "GET",
+      "auth": false,
+      "cookie": false,
+      "api_key": false,
+      "content_type": "text/html",
+      "final_host": "www.rednote.com",
+      "resolver_chain": [
+        "doh_google",
+        "operator_pin"
+      ],
+      "field_values_extracted": false,
+      "challenge_markers": false,
+      "time_window": "2026-10-08 03:15–03:18 +08 approximate; per-response time not instrumented",
+      "notes": "URL originated in an existing public test fixture; fixture was not treated as field evidence."
+    },
+    {
+      "id": "R_DOUYIN_DETAIL",
+      "platform": "douyin",
+      "url": "https://www.douyin.com/video/7117200114686414094",
+      "status": 200,
+      "bytes": 72914,
+      "redirects": 0,
+      "fields": [],
+      "method": "GET",
+      "auth": false,
+      "cookie": false,
+      "api_key": false,
+      "content_type": "text/html",
+      "final_host": "www.douyin.com",
+      "resolver_chain": [
+        "doh_google"
+      ],
+      "field_values_extracted": false,
+      "challenge_markers": false,
+      "time_window": "2026-10-08 03:15–03:18 +08 approximate; per-response time not instrumented",
+      "notes": null
+    },
+    {
+      "id": "R_IG_POST",
+      "platform": "instagram",
+      "url": "https://www.instagram.com/p/CmUv48DLvxd/",
+      "status": 200,
+      "bytes": 1038476,
+      "redirects": 0,
+      "fields": [
+        "og:description",
+        "og:image",
+        "og:title",
+        "og:type",
+        "og:url",
+        "twitter:card",
+        "twitter:image",
+        "twitter:title",
+        "like_count (key marker)",
+        "comment_count (key marker)",
+        "timestamp (key marker)",
+        "screen_name (key marker)",
+        "user_id (key marker)"
+      ],
+      "method": "GET",
+      "auth": false,
+      "cookie": false,
+      "api_key": false,
+      "content_type": "text/html",
+      "final_host": "www.instagram.com",
+      "resolver_chain": [
+        "doh_google"
+      ],
+      "field_values_extracted": false,
+      "challenge_markers": false,
+      "time_window": "2026-10-08 03:15–03:18 +08 approximate; per-response time not instrumented",
+      "notes": null
+    },
+    {
+      "id": "R_FB_POST",
+      "platform": "facebook",
+      "url": "https://www.facebook.com/PhilipsHomeLivingMY/posts/register-your-product-now-with-our-online-registration-portal-to-get-2-to-5-year/2530989226953745/",
+      "status": 200,
+      "bytes": 811756,
+      "redirects": 0,
+      "fields": [
+        "og:description",
+        "og:image",
+        "og:title",
+        "og:type",
+        "og:url",
+        "twitter:title",
+        "twitter:description",
+        "twitter:image",
+        "twitter:card",
+        "comment_count (key marker)",
+        "share_count (key marker)",
+        "publish_time (key marker)",
+        "timestamp (key marker)",
+        "comment_list (key marker)"
+      ],
+      "method": "GET",
+      "auth": false,
+      "cookie": false,
+      "api_key": false,
+      "content_type": "text/html",
+      "final_host": "www.facebook.com",
+      "resolver_chain": [
+        "doh_google"
+      ],
+      "field_values_extracted": false,
+      "challenge_markers": false,
+      "time_window": "2026-10-08 03:15–03:18 +08 approximate; per-response time not instrumented",
+      "notes": null
+    },
+    {
+      "id": "R_WECHAT_ARTICLE",
+      "platform": "wechat",
+      "url": "https://mp.weixin.qq.com/s/ClOUA5AHJqmAFYSUONk8Ww",
+      "status": 200,
+      "bytes": 18165,
+      "redirects": 1,
+      "fields": [],
+      "method": "GET",
+      "auth": false,
+      "cookie": false,
+      "api_key": false,
+      "content_type": "text/html",
+      "final_host": "mp.weixin.qq.com",
+      "resolver_chain": [
+        "doh_google",
+        "operator_pin"
+      ],
+      "field_values_extracted": false,
+      "challenge_markers": false,
+      "time_window": "2026-10-08 03:15–03:18 +08 approximate; per-response time not instrumented",
+      "notes": null
+    },
+    {
+      "id": "R_X_POST",
+      "platform": "x",
+      "url": "https://x.com/HurriyatEN/status/2041724546366202299",
+      "status": 200,
+      "bytes": 99198,
+      "redirects": 0,
+      "fields": [
+        "og:description",
+        "og:image",
+        "og:title",
+        "og:type",
+        "og:url",
+        "twitter:card",
+        "twitter:description",
+        "twitter:image",
+        "twitter:title",
+        "article:author",
+        "article:published_time",
+        "timestamp (key marker)",
+        "media_url (key marker)",
+        "screen_name (key marker)"
+      ],
+      "method": "GET",
+      "auth": false,
+      "cookie": false,
+      "api_key": false,
+      "content_type": "text/html",
+      "final_host": "x.com",
+      "resolver_chain": [
+        "doh_google"
+      ],
+      "field_values_extracted": false,
+      "challenge_markers": false,
+      "time_window": "2026-10-08 03:15–03:18 +08 approximate; per-response time not instrumented",
+      "notes": null
+    }
+  ],
+  "official_sources": [
+    {
+      "id": "S_XHS_API",
+      "title": "小红书开放平台 API 参考",
+      "url": "https://openaccount.xiaohongshu.com/docs/api-reference",
+      "kind": "Official",
+      "checked": "2026-10-08; page last update 2026-08-19",
+      "evidence": "目录列 OAuth/device authorization/current authorized-user basic info；basic_info 要 access_token，返回 open_id/nickname/avatar/gender/region。所查目录未见公开内容搜索，不据此断言整个服务没有其它 API。"
+    },
+    {
+      "id": "S_DY_SEARCH",
+      "title": "抖音关键词视频搜索",
+      "url": "https://open.douyin.com/platform/resource/docs/openapi/search-management/keywords-video-list/keywords-video/",
+      "kind": "Official",
+      "checked": "2026-10-08",
+      "evidence": "video.search 需应用权限和用户授权；文档称只返回最近 1 天。"
+    },
+    {
+      "id": "S_DY_LIST",
+      "title": "抖音授权账号视频列表",
+      "url": "https://open.douyin.com/platform/resource/docs/openapi/video-management/douyin/search-video/account-video-list",
+      "kind": "Official",
+      "checked": "2026-10-08",
+      "evidence": "video.list 需用户授权，仅列授权用户作品；最多四页、不支持时间过滤；样例含 title/create_time/cover/statistics。"
+    },
+    {
+      "id": "S_DY_PROFILE",
+      "title": "抖音获取用户基本信息",
+      "url": "https://open.douyin.com/platform/resource/docs/openapi/account-management/get-account-open-info/",
+      "kind": "Official",
+      "checked": "2026-10-08",
+      "evidence": "user_info 要求用户 access token；不等同任意创作者公开查询。"
+    },
+    {
+      "id": "S_DY_COMMENT",
+      "title": "抖音关键词视频评论列表",
+      "url": "https://open.douyin.com/platform/resource/docs/openapi/search-management/keywords-video-comment-management/comment-list/",
+      "kind": "Official",
+      "checked": "2026-10-08",
+      "evidence": "client_token 不需用户授权，但仍需 app token/scope；样例有 content/create_time/digg_count/reply_comment_total。"
+    },
+    {
+      "id": "S_DY_REPLY",
+      "title": "抖音关键词评论回复列表",
+      "url": "https://open.douyin.com/platform/resource/docs/openapi/search-management/keywords-video-comment-management/comment-reply-list/",
+      "kind": "Official",
+      "checked": "2026-10-08",
+      "evidence": "文档列出 video.search.comment 下的回复列表；本轮未调用。"
+    },
+    {
+      "id": "S_DY_VIDEO_DATA",
+      "title": "抖音单视频数据",
+      "url": "https://open.douyin.com/platform/resource/docs/openapi/video-management/douyin/search-video/video-data",
+      "kind": "Official",
+      "checked": "2026-10-08",
+      "evidence": "video.data 需用户授权，只能查 token 对应账号上传的视频；文档涉及点赞/播放指标。"
+    },
+    {
+      "id": "S_IG_META",
+      "title": "Meta Instagram API 官方 Postman collection",
+      "url": "https://www.postman.com/meta/instagram/documentation/6yqw8pt/instagram-api",
+      "kind": "Official Meta workspace",
+      "checked": "2026-10-08",
+      "evidence": "官方材料介绍专业账号媒体、评论管理、hashtags、部分 Business/Creator 元数据和指标；须 app/token/permission，未调用。"
+    },
+    {
+      "id": "S_FB_PAGE_SEARCH",
+      "title": "Meta Pages API 平台公告",
+      "url": "https://about.fb.com/news/2018/07/a-platform-update/",
+      "kind": "Official historical",
+      "checked": "2026-10-08",
+      "published": "2018-07-02",
+      "evidence": "2018 公告称 Page search 需要 Page Public Content Access 和 app review；当前 access policy 需复核。"
+    },
+    {
+      "id": "S_X_SEARCH",
+      "title": "X API Search Posts",
+      "url": "https://docs.x.com/x-api/posts/search/introduction",
+      "kind": "Official current docs",
+      "checked": "2026-10-08",
+      "evidence": "Recent Search 7 天、Full Archive 付费/Enterprise；需 approved developer account、Project/App、keys/tokens；query operator 支持 hashtags。"
+    },
+    {
+      "id": "S_WECHAT_OFFICIAL_UNAVAILABLE",
+      "title": "微信公众号开发者文档访问尝试",
+      "url": "https://developers.weixin.qq.com/doc/offiaccount/Getting_Started/Overview.html",
+      "kind": "Official retrieval attempt",
+      "checked": "2026-10-08",
+      "evidence": "本轮浏览工具返回内部错误/空内容；没有使用第三方镜像代替官方事实。"
+    },
+    {
+      "id": "S_LUMENIS_X",
+      "title": "LUMENIS X adapter source",
+      "url": null,
+      "kind": "Current source",
+      "checked": "2026-10-08",
+      "evidence": "System/V4 X routes use CDP/browser + cookie_vault；本批未使用，不代表 session 已授权/可用。"
+    },
+    {
+      "id": "S_CONFIG",
+      "title": "LUMENIS platform adapter config",
+      "url": null,
+      "kind": "Current source",
+      "checked": "2026-10-08",
+      "evidence": "Douyin disabled pending worker/session; Instagram/Facebook proxy+Cookie; WeChat original public article+Permission; X Cookie+browser gate。"
+    },
+    {
+      "id": "S_PUBLIC_SOURCE",
+      "title": "LUMENIS public_source",
+      "url": null,
+      "kind": "Current source",
+      "checked": "2026-10-08",
+      "evidence": "拒绝 Authorization/Cookie；TLS verify、DNS address validation、host pin 与 redirect validation；有 process-local DoH fallback。"
+    },
+    {
+      "id": "S_DIRTY_WECHAT",
+      "title": "WeChat adapter working-tree candidate",
+      "url": null,
+      "kind": "Unpublished dirty source",
+      "checked": "2026-10-08",
+      "evidence": "含文章 parser/Sogou URL discovery，但未运行且不属于 published main truth。"
+    },
+    {
+      "id": "S_DIRTY_INSTAGRAM",
+      "title": "Instagram adapter working-tree candidate",
+      "url": null,
+      "kind": "Unpublished dirty source",
+      "checked": "2026-10-08",
+      "evidence": "含 public HTML parser/detail candidate；文件 dirty，未运行或发布。"
+    }
+  ],
+  "upstream_research": [
+    {
+      "name": "Agent-Reach",
+      "url": "https://github.com/Panniantong/Agent-Reach/tree/94f06c1969dfc1834001269d79d3ad0972d9dee6",
+      "sha": "94f06c1969dfc1834001269d79d3ad0972d9dee6",
+      "license": "MIT",
+      "decision": "ADAPT PRINCIPLES ONLY",
+      "notes": "ordered backend routing/per-backend checks useful; some social routes use OpenCLI with existing Chrome session or Cookie, therefore Z1; no parallel Collector/store."
+    },
+    {
+      "name": "OpenCLI",
+      "url": "https://github.com/jackwener/OpenCLI/tree/24136945847afbfad266c6c46a8cd335377f9112",
+      "sha": "24136945847afbfad266c6c46a8cd335377f9112",
+      "license": "Apache-2.0",
+      "decision": "NO INTEGRATION THIS BATCH; ADAPT ERROR/ACCESS SEMANTICS",
+      "notes": "README explicitly uses logged-in Chrome, Browser Bridge extension and daemon; session/UI/intercept paths excluded. No install/command run."
+    },
+    {
+      "name": "NVIDIA OpenShell",
+      "url": "https://github.com/NVIDIA/OpenShell/tree/e406c2befbe65501409026d49259602669f7246a",
+      "sha": "e406c2befbe65501409026d49259602669f7246a",
+      "license": "Apache-2.0",
+      "decision": "RESEARCH ONLY",
+      "notes": "policy sandbox for files/process/network; Windows WSL2 is experimental and requires Docker/Podman or virtualization; no install."
+    }
+  ],
+  "source_file_pins": [
+    {
+      "path": "lumenis/system/collector/adapters/config.py",
+      "tree_state": "clean at 288f222",
+      "sha256": "8349c2ec04bcdf475baf334de0a9a75624a779883593036fc1d0c3b367c71bd6"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/public_source.py",
+      "tree_state": "clean at 288f222",
+      "sha256": "b338080b2fa5a7fc8346a11104eba85a71cfaf4aa1fb851233d659773822c712"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/xhs.py",
+      "tree_state": "clean at 288f222",
+      "sha256": "8789b112db0dce3dbedb9971f6e38cc1e9e1beeee3b2f46796a53cc3ecce6bac"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/douyin.py",
+      "tree_state": "clean at 288f222",
+      "sha256": "19049a44afacb263da8e064795e22786bbbe8c874520ad19b24f422fd47eaf05"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/facebook.py",
+      "tree_state": "clean at 288f222",
+      "sha256": "427df5a92d26afe6a1ec33a1726db398e4f128d0ba6201e8f1c3fa11235c9912"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/x_platform.py",
+      "tree_state": "clean at 288f222",
+      "sha256": "9808a186548283958d3b8f4a7050b3ef1295937616cb9f4272e5c8dd3d08e650"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/instagram.py",
+      "tree_state": "dirty local candidate",
+      "sha256": "4795d2dbbc6e613efba7ac271fb72f6526e28902db91a56300814e4867efa9d5"
+    },
+    {
+      "path": "lumenis/system/collector/adapters/wechat.py",
+      "tree_state": "dirty local candidate",
+      "sha256": "d1c4fe723ad304b0ea30cf5888b2e99dbfb5cea4f8b5bc4bf133af04cbf3dc21"
+    },
+    {
+      "path": "lumenis/adapters/douyin.py",
+      "tree_state": "clean at 288f222",
+      "sha256": "f25ae30baa690b6c8e03a00bc14d39272ec2e1eea1ac2e0eec73b4231ce43d92"
+    },
+    {
+      "path": "lumenis/adapters/instagram.py",
+      "tree_state": "clean at 288f222",
+      "sha256": "c9feb90285a8f118271a561aad18dc9e6d32346b59a85b969fdc8d7c7ee8779"
+    },
+    {
+      "path": "lumenis/adapters/facebook.py",
+      "tree_state": "clean at 288f222",
+      "sha256": "1c23619d8bff4a3061741d267a310c4886ae6f0469ac16da591e47d3246845a0"
+    },
+    {
+      "path": "lumenis/adapters/x_platform.py",
+      "tree_state": "clean at 288f222",
+      "sha256": "8c40983a8436a6c6b0c7ef075ff93b944740d62c6f0a5022f1caba929cbd837f"
+    }
+  ],
+  "matrix": [
+    {
+      "platform_id": "rednote",
+      "platform": "小红书／RedNote",
+      "capability_id": "search",
+      "capability": "搜索",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "未对匿名关键词搜索页/接口发请求。官方当前 API 目录列 OAuth 与授权用户基本信息；未在所查目录看到公开搜索，目录未覆盖处不推断不存在。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_XHS_API"
+      ],
+      "unknown_reason": "未对匿名关键词搜索页/接口发请求。官方当前 API 目录列 OAuth 与授权用户基本信息；未在所查目录看到公开搜索，目录未覆盖处不推断不存在。"
+    },
+    {
+      "platform_id": "rednote",
+      "platform": "小红书／RedNote",
+      "capability_id": "detail",
+      "capability": "帖子／笔记／文章详情",
+      "classification": "Z0",
+      "evidence_state": "LIVE_ANONYMOUS_HTTP_REACHABILITY_ONLY",
+      "determination": "单条公开笔记匿名 GET HTTP 200；只观察到 og:image 字段名及 timestamp marker，正文/作者/值未提取。",
+      "live_sample_ids": [
+        "R_XHS_HOME",
+        "R_XHS_DETAIL"
+      ],
+      "source_ids": [
+        "S_XHS_API",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "rednote",
+      "platform": "小红书／RedNote",
+      "capability_id": "creator_profile",
+      "capability": "创作者／主页",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "官方 min_user_info 需 access_token，只返回当前授权用户基本资料；不能推导任意创作者查询。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_XHS_API"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "rednote",
+      "platform": "小红书／RedNote",
+      "capability_id": "creator_posts",
+      "capability": "创作者作品列表",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有作者作品列表实测或当前官方 API 证据。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_XHS_API"
+      ],
+      "unknown_reason": "没有作者作品列表实测或当前官方 API 证据。"
+    },
+    {
+      "platform_id": "rednote",
+      "platform": "小红书／RedNote",
+      "capability_id": "comments",
+      "capability": "评论",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有评论字段实测或官方目录证据。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_XHS_API"
+      ],
+      "unknown_reason": "没有评论字段实测或官方目录证据。"
+    },
+    {
+      "platform_id": "rednote",
+      "platform": "小红书／RedNote",
+      "capability_id": "replies",
+      "capability": "评论回复",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有回复列表实测。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_XHS_API"
+      ],
+      "unknown_reason": "没有回复列表实测。"
+    },
+    {
+      "platform_id": "rednote",
+      "platform": "小红书／RedNote",
+      "capability_id": "engagement_metrics",
+      "capability": "互动指标",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有互动指标数值提取。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_XHS_API"
+      ],
+      "unknown_reason": "没有互动指标数值提取。"
+    },
+    {
+      "platform_id": "rednote",
+      "platform": "小红书／RedNote",
+      "capability_id": "publication_time",
+      "capability": "发布时间",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "仅观察到 timestamp marker，未提取值或时区。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_XHS_API"
+      ],
+      "unknown_reason": "仅观察到 timestamp marker，未提取值或时区。"
+    },
+    {
+      "platform_id": "rednote",
+      "platform": "小红书／RedNote",
+      "capability_id": "media_urls",
+      "capability": "媒体 URL",
+      "classification": "Z0",
+      "evidence_state": "LIVE_ANONYMOUS_HTTP_REACHABILITY_ONLY",
+      "determination": "发现 og:image 字段名；URL 值未保存，媒体有效性/权利未查。",
+      "live_sample_ids": [
+        "R_XHS_HOME",
+        "R_XHS_DETAIL"
+      ],
+      "source_ids": [
+        "S_XHS_API",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "rednote",
+      "platform": "小红书／RedNote",
+      "capability_id": "tags_topics",
+      "capability": "标签／话题",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有提取标签/话题；搜索词不能证明平台标签。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_XHS_API"
+      ],
+      "unknown_reason": "没有提取标签/话题；搜索词不能证明平台标签。"
+    },
+    {
+      "platform_id": "rednote",
+      "platform": "小红书／RedNote",
+      "capability_id": "share_repost_metrics",
+      "capability": "分享／转发指标",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有分享/转发计数值证据。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_XHS_API"
+      ],
+      "unknown_reason": "没有分享/转发计数值证据。"
+    },
+    {
+      "platform_id": "rednote",
+      "platform": "小红书／RedNote",
+      "capability_id": "discovery_trending",
+      "capability": "发现／趋势／热点",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "只访问发现首页，不解析榜单/趋势；首页 HTTP 200 不等于热点采集。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_XHS_API"
+      ],
+      "unknown_reason": "只访问发现首页，不解析榜单/趋势；首页 HTTP 200 不等于热点采集。"
+    },
+    {
+      "platform_id": "douyin",
+      "platform": "抖音",
+      "capability_id": "search",
+      "capability": "搜索",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "官方关键词视频搜索要求 video.search 权限和用户授权；文档称只返回最近 1 天。本轮未调用 API。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_DY_SEARCH"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "douyin",
+      "platform": "抖音",
+      "capability_id": "detail",
+      "capability": "帖子／笔记／文章详情",
+      "classification": "Z0",
+      "evidence_state": "LIVE_ANONYMOUS_HTTP_REACHABILITY_ONLY",
+      "determination": "指定公开视频页匿名 GET HTTP 200，但扫描未识别可用 OG/JSON-LD/详情字段。",
+      "live_sample_ids": [
+        "R_DOUYIN_DETAIL"
+      ],
+      "source_ids": [
+        "S_DY_SEARCH"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "douyin",
+      "platform": "抖音",
+      "capability_id": "creator_profile",
+      "capability": "创作者／主页",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "官方 user_info 需授权 token；证明的是授权账号资料，不是任意创作者搜索。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_DY_PROFILE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "douyin",
+      "platform": "抖音",
+      "capability_id": "creator_posts",
+      "capability": "创作者作品列表",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "官方 video.list 需用户授权，只列该账号自己的作品；最多 4 页且无时间筛选。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_DY_LIST"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "douyin",
+      "platform": "抖音",
+      "capability_id": "comments",
+      "capability": "评论",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "官方关键词视频评论接口需 client_token/应用权限（无需用户授权）；不是零凭证 Z0。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_DY_COMMENT"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "douyin",
+      "platform": "抖音",
+      "capability_id": "replies",
+      "capability": "评论回复",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "官方关键词评论回复列表文档存在，需应用 token/权限；未调用。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_DY_REPLY"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "douyin",
+      "platform": "抖音",
+      "capability_id": "engagement_metrics",
+      "capability": "互动指标",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "video.data 需用户授权，只支持该 token 对应用户的视频指标。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_DY_VIDEO_DATA"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "douyin",
+      "platform": "抖音",
+      "capability_id": "publication_time",
+      "capability": "发布时间",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "授权视频列表样例含 create_time；未验证真实 API 返回。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_DY_LIST"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "douyin",
+      "platform": "抖音",
+      "capability_id": "media_urls",
+      "capability": "媒体 URL",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "授权视频列表样例含 cover URL；链接有效性未验证。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_DY_LIST"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "douyin",
+      "platform": "抖音",
+      "capability_id": "tags_topics",
+      "capability": "标签／话题",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "关键词搜索/作品标题可能含话题字样；未确认结构化标签字段。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_DY_LIST"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "douyin",
+      "platform": "抖音",
+      "capability_id": "share_repost_metrics",
+      "capability": "分享／转发指标",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "授权作品 statistics 样例含 share_count/forward_count；没有真实返回。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_DY_LIST"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "douyin",
+      "platform": "抖音",
+      "capability_id": "discovery_trending",
+      "capability": "发现／趋势／热点",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "内容关键词搜索不等于趋势排序；未找到趋势端点证据。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_DY_SEARCH"
+      ],
+      "unknown_reason": "内容关键词搜索不等于趋势排序；未找到趋势端点证据。"
+    },
+    {
+      "platform_id": "instagram",
+      "platform": "Instagram",
+      "capability_id": "search",
+      "capability": "搜索",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "Meta 官方 API 文档列 hashtag media / Business Discovery 等授权能力；没有匿名搜索 smoke。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_IG_META"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "instagram",
+      "platform": "Instagram",
+      "capability_id": "detail",
+      "capability": "帖子／笔记／文章详情",
+      "classification": "Z0",
+      "evidence_state": "LIVE_ANONYMOUS_HTTP_REACHABILITY_ONLY",
+      "determination": "公开帖子 GET HTTP 200；观察到 OG/Twitter 字段名与 like/comment/timestamp key markers，值未提取。",
+      "live_sample_ids": [
+        "R_IG_POST"
+      ],
+      "source_ids": [
+        "S_DIRTY_INSTAGRAM",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "instagram",
+      "platform": "Instagram",
+      "capability_id": "creator_profile",
+      "capability": "创作者／主页",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "Meta API 面向 Business/Creator 专业账号，受 token/权限限制。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_IG_META"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "instagram",
+      "platform": "Instagram",
+      "capability_id": "creator_posts",
+      "capability": "创作者作品列表",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "专业账号媒体 API 有文档说明；本轮未请求。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_IG_META"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "instagram",
+      "platform": "Instagram",
+      "capability_id": "comments",
+      "capability": "评论",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "官方文档支持专业账号自身媒体评论管理；没有证明任意第三方帖子评论可读。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_IG_META"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "instagram",
+      "platform": "Instagram",
+      "capability_id": "replies",
+      "capability": "评论回复",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "文档提及评论管理/回复，但未确认读取已有回复 endpoint；发回复属于外部写操作。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_IG_META"
+      ],
+      "unknown_reason": "文档提及评论管理/回复，但未确认读取已有回复 endpoint；发回复属于外部写操作。"
+    },
+    {
+      "platform_id": "instagram",
+      "platform": "Instagram",
+      "capability_id": "engagement_metrics",
+      "capability": "互动指标",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "文档提及专业账号和部分 Business/Creator 的基本 metadata/metrics；字段范围未核。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_IG_META"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "instagram",
+      "platform": "Instagram",
+      "capability_id": "publication_time",
+      "capability": "发布时间",
+      "classification": "Z0",
+      "evidence_state": "LIVE_ANONYMOUS_HTTP_REACHABILITY_ONLY",
+      "determination": "匿名页面观察到 timestamp key marker；值、时区、语义未解析。",
+      "live_sample_ids": [
+        "R_IG_POST"
+      ],
+      "source_ids": [
+        "S_DIRTY_INSTAGRAM",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "instagram",
+      "platform": "Instagram",
+      "capability_id": "media_urls",
+      "capability": "媒体 URL",
+      "classification": "Z0",
+      "evidence_state": "LIVE_ANONYMOUS_HTTP_REACHABILITY_ONLY",
+      "determination": "匿名页面有 og:image/twitter:image 字段名；URL 未读取/检查。",
+      "live_sample_ids": [
+        "R_IG_POST"
+      ],
+      "source_ids": [
+        "S_DIRTY_INSTAGRAM",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "instagram",
+      "platform": "Instagram",
+      "capability_id": "tags_topics",
+      "capability": "标签／话题",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "官方 API 有 hashtagged-media 能力；需 API 授权，不等于趋势榜。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_IG_META"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "instagram",
+      "platform": "Instagram",
+      "capability_id": "share_repost_metrics",
+      "capability": "分享／转发指标",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有确证通用 share/repost count 字段；匿名页数值未提取。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_DIRTY_INSTAGRAM",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "没有确证通用 share/repost count 字段；匿名页数值未提取。"
+    },
+    {
+      "platform_id": "instagram",
+      "platform": "Instagram",
+      "capability_id": "discovery_trending",
+      "capability": "发现／趋势／热点",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "Hashtag 搜索不等于趋势榜；本轮没有趋势 endpoint/result。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_DIRTY_INSTAGRAM",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "Hashtag 搜索不等于趋势榜；本轮没有趋势 endpoint/result。"
+    },
+    {
+      "platform_id": "facebook",
+      "platform": "Facebook",
+      "capability_id": "search",
+      "capability": "搜索",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "Meta 2018 官方公告称 Page search 需 Page Public Content Access 和 app review；当前权限须复核。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_FB_PAGE_SEARCH"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "facebook",
+      "platform": "Facebook",
+      "capability_id": "detail",
+      "capability": "帖子／笔记／文章详情",
+      "classification": "Z0",
+      "evidence_state": "LIVE_ANONYMOUS_HTTP_REACHABILITY_ONLY",
+      "determination": "公开 Page post GET HTTP 200；OG/Twitter 和 comment/share/publish key markers 出现，值未提取。",
+      "live_sample_ids": [
+        "R_FB_POST"
+      ],
+      "source_ids": [
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "facebook",
+      "platform": "Facebook",
+      "capability_id": "creator_profile",
+      "capability": "创作者／主页",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "Page API 历史官方材料涉及公开 Page；当前 app permission/版本未验证。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_FB_PAGE_SEARCH"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "facebook",
+      "platform": "Facebook",
+      "capability_id": "creator_posts",
+      "capability": "创作者作品列表",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "Page posts 是历史官方 API 范围；当前 permission 未重新读取或调用。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_FB_PAGE_SEARCH"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "facebook",
+      "platform": "Facebook",
+      "capability_id": "comments",
+      "capability": "评论",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "HTML 有 comment_count key marker，正文/分页未提取；当前官方 comments edge 文档未取得。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "HTML 有 comment_count key marker，正文/分页未提取；当前官方 comments edge 文档未取得。"
+    },
+    {
+      "platform_id": "facebook",
+      "platform": "Facebook",
+      "capability_id": "replies",
+      "capability": "评论回复",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有回复列表实测或当前官方字段文档。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "没有回复列表实测或当前官方字段文档。"
+    },
+    {
+      "platform_id": "facebook",
+      "platform": "Facebook",
+      "capability_id": "engagement_metrics",
+      "capability": "互动指标",
+      "classification": "Z0",
+      "evidence_state": "LIVE_ANONYMOUS_HTTP_REACHABILITY_ONLY",
+      "determination": "HTML 有 comment/share 计数字段名，数值和口径未提取。",
+      "live_sample_ids": [
+        "R_FB_POST"
+      ],
+      "source_ids": [
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "facebook",
+      "platform": "Facebook",
+      "capability_id": "publication_time",
+      "capability": "发布时间",
+      "classification": "Z0",
+      "evidence_state": "LIVE_ANONYMOUS_HTTP_REACHABILITY_ONLY",
+      "determination": "HTML 有 publish_time/timestamp key marker；未取得具体值。",
+      "live_sample_ids": [
+        "R_FB_POST"
+      ],
+      "source_ids": [
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "facebook",
+      "platform": "Facebook",
+      "capability_id": "media_urls",
+      "capability": "媒体 URL",
+      "classification": "Z0",
+      "evidence_state": "LIVE_ANONYMOUS_HTTP_REACHABILITY_ONLY",
+      "determination": "HTML 有 og:image 字段名，URL 未保存或核权。",
+      "live_sample_ids": [
+        "R_FB_POST"
+      ],
+      "source_ids": [
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "facebook",
+      "platform": "Facebook",
+      "capability_id": "tags_topics",
+      "capability": "标签／话题",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "未获取标签/topic 字段；不以历史功能代替当前证据。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "未获取标签/topic 字段；不以历史功能代替当前证据。"
+    },
+    {
+      "platform_id": "facebook",
+      "platform": "Facebook",
+      "capability_id": "share_repost_metrics",
+      "capability": "分享／转发指标",
+      "classification": "Z0",
+      "evidence_state": "LIVE_ANONYMOUS_HTTP_REACHABILITY_ONLY",
+      "determination": "HTML 有 share_count key marker，但没有值。",
+      "live_sample_ids": [
+        "R_FB_POST"
+      ],
+      "source_ids": [
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "facebook",
+      "platform": "Facebook",
+      "capability_id": "discovery_trending",
+      "capability": "发现／趋势／热点",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有实际趋势 endpoint/结果；Page search 不等于趋势。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "没有实际趋势 endpoint/结果；Page search 不等于趋势。"
+    },
+    {
+      "platform_id": "wechat",
+      "platform": "微信公众号",
+      "capability_id": "search",
+      "capability": "搜索",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "未发关键词搜索请求。本地 dirty 候选含 Sogou URL discovery，但不是 live 或官方内容证据。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_WECHAT_OFFICIAL_UNAVAILABLE",
+        "S_DIRTY_WECHAT",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "未发关键词搜索请求。本地 dirty 候选含 Sogou URL discovery，但不是 live 或官方内容证据。"
+    },
+    {
+      "platform_id": "wechat",
+      "platform": "微信公众号",
+      "capability_id": "detail",
+      "capability": "帖子／笔记／文章详情",
+      "classification": "Z0",
+      "evidence_state": "LIVE_ANONYMOUS_HTTP_REACHABILITY_ONLY",
+      "determination": "一篇文章匿名 GET HTTP 200；通用字段扫描未识别文章字段，parser 未运行。",
+      "live_sample_ids": [
+        "R_WECHAT_ARTICLE"
+      ],
+      "source_ids": [
+        "S_WECHAT_OFFICIAL_UNAVAILABLE",
+        "S_DIRTY_WECHAT",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "wechat",
+      "platform": "微信公众号",
+      "capability_id": "creator_profile",
+      "capability": "创作者／主页",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有作者/公众号主页匿名样本。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_WECHAT_OFFICIAL_UNAVAILABLE",
+        "S_DIRTY_WECHAT",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "没有作者/公众号主页匿名样本。"
+    },
+    {
+      "platform_id": "wechat",
+      "platform": "微信公众号",
+      "capability_id": "creator_posts",
+      "capability": "创作者作品列表",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有作者作品列表实测。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_WECHAT_OFFICIAL_UNAVAILABLE",
+        "S_DIRTY_WECHAT",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "没有作者作品列表实测。"
+    },
+    {
+      "platform_id": "wechat",
+      "platform": "微信公众号",
+      "capability_id": "comments",
+      "capability": "评论",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "当前配置 comments=false；本轮未实测。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_WECHAT_OFFICIAL_UNAVAILABLE",
+        "S_DIRTY_WECHAT",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "当前配置 comments=false；本轮未实测。"
+    },
+    {
+      "platform_id": "wechat",
+      "platform": "微信公众号",
+      "capability_id": "replies",
+      "capability": "评论回复",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有评论回复证据。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_WECHAT_OFFICIAL_UNAVAILABLE",
+        "S_DIRTY_WECHAT",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "没有评论回复证据。"
+    },
+    {
+      "platform_id": "wechat",
+      "platform": "微信公众号",
+      "capability_id": "engagement_metrics",
+      "capability": "互动指标",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "文章响应未解析，不能推断阅读/点赞/在看数。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_WECHAT_OFFICIAL_UNAVAILABLE",
+        "S_DIRTY_WECHAT",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "文章响应未解析，不能推断阅读/点赞/在看数。"
+    },
+    {
+      "platform_id": "wechat",
+      "platform": "微信公众号",
+      "capability_id": "publication_time",
+      "capability": "发布时间",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "dirty parser 有时间提取逻辑，但本次响应未解析；代码存在不证明现场返回。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_WECHAT_OFFICIAL_UNAVAILABLE",
+        "S_DIRTY_WECHAT",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "dirty parser 有时间提取逻辑，但本次响应未解析；代码存在不证明现场返回。"
+    },
+    {
+      "platform_id": "wechat",
+      "platform": "微信公众号",
+      "capability_id": "media_urls",
+      "capability": "媒体 URL",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有解析图片 URL/媒体。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_WECHAT_OFFICIAL_UNAVAILABLE",
+        "S_DIRTY_WECHAT",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "没有解析图片 URL/媒体。"
+    },
+    {
+      "platform_id": "wechat",
+      "platform": "微信公众号",
+      "capability_id": "tags_topics",
+      "capability": "标签／话题",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有获取文章话题标签字段。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_WECHAT_OFFICIAL_UNAVAILABLE",
+        "S_DIRTY_WECHAT",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "没有获取文章话题标签字段。"
+    },
+    {
+      "platform_id": "wechat",
+      "platform": "微信公众号",
+      "capability_id": "share_repost_metrics",
+      "capability": "分享／转发指标",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有分享计数观察。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_WECHAT_OFFICIAL_UNAVAILABLE",
+        "S_DIRTY_WECHAT",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "没有分享计数观察。"
+    },
+    {
+      "platform_id": "wechat",
+      "platform": "微信公众号",
+      "capability_id": "discovery_trending",
+      "capability": "发现／趋势／热点",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有读取官方热点/趋势结果；搜索发现不等于趋势。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_WECHAT_OFFICIAL_UNAVAILABLE",
+        "S_DIRTY_WECHAT",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "没有读取官方热点/趋势结果；搜索发现不等于趋势。"
+    },
+    {
+      "platform_id": "x",
+      "platform": "X",
+      "capability_id": "search",
+      "capability": "搜索",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "官方文档给出 recent search（7天）与 full archive（pay-per-use/Enterprise）；需核准开发者账号、Project/App、keys/tokens。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_X_SEARCH"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "x",
+      "platform": "X",
+      "capability_id": "detail",
+      "capability": "帖子／笔记／文章详情",
+      "classification": "Z0",
+      "evidence_state": "LIVE_ANONYMOUS_HTTP_REACHABILITY_ONLY",
+      "determination": "Status 匿名 GET HTTP 200；观察到 OG/Twitter/article/key markers，字段值未提取。",
+      "live_sample_ids": [
+        "R_X_POST"
+      ],
+      "source_ids": [
+        "S_LUMENIS_X",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "x",
+      "platform": "X",
+      "capability_id": "creator_profile",
+      "capability": "创作者／主页",
+      "classification": "Z1",
+      "evidence_state": "SOURCE_ROUTE_ONLY_NOT_RUN",
+      "determination": "当前 LUMENIS adapter 源码使用 CDP + cookie_vault；本轮未用 session 路径。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_LUMENIS_X",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "x",
+      "platform": "X",
+      "capability_id": "creator_posts",
+      "capability": "创作者作品列表",
+      "classification": "Z1",
+      "evidence_state": "SOURCE_ROUTE_ONLY_NOT_RUN",
+      "determination": "现有 browser adapter 有作者内容读取路径，但依赖 session owner；本轮未启用。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_LUMENIS_X",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "x",
+      "platform": "X",
+      "capability_id": "comments",
+      "capability": "评论",
+      "classification": "Z1",
+      "evidence_state": "SOURCE_ROUTE_ONLY_NOT_RUN",
+      "determination": "现有 adapter 有评论读取路径，需要 authorized browser/session；本轮未启用。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_LUMENIS_X",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "x",
+      "platform": "X",
+      "capability_id": "replies",
+      "capability": "评论回复",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有精确 replies 读取端点证据；to: operator 不证明完整回复线程。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_LUMENIS_X",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "没有精确 replies 读取端点证据；to: operator 不证明完整回复线程。"
+    },
+    {
+      "platform_id": "x",
+      "platform": "X",
+      "capability_id": "engagement_metrics",
+      "capability": "互动指标",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有读取有效互动数值；未核实 API public_metrics 字段和请求参数。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_LUMENIS_X",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "没有读取有效互动数值；未核实 API public_metrics 字段和请求参数。"
+    },
+    {
+      "platform_id": "x",
+      "platform": "X",
+      "capability_id": "publication_time",
+      "capability": "发布时间",
+      "classification": "Z0",
+      "evidence_state": "LIVE_ANONYMOUS_HTTP_REACHABILITY_ONLY",
+      "determination": "匿名 HTML 有 article:published_time key marker；值未抽取。",
+      "live_sample_ids": [
+        "R_X_POST"
+      ],
+      "source_ids": [
+        "S_LUMENIS_X",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "x",
+      "platform": "X",
+      "capability_id": "media_urls",
+      "capability": "媒体 URL",
+      "classification": "Z0",
+      "evidence_state": "LIVE_ANONYMOUS_HTTP_REACHABILITY_ONLY",
+      "determination": "匿名 HTML 有 og:image/twitter:image key；URL 未读取/校验。",
+      "live_sample_ids": [
+        "R_X_POST"
+      ],
+      "source_ids": [
+        "S_LUMENIS_X",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "x",
+      "platform": "X",
+      "capability_id": "tags_topics",
+      "capability": "标签／话题",
+      "classification": "Z2",
+      "evidence_state": "OFFICIAL_API_DOCUMENTATION_ONLY_NOT_CALLED",
+      "determination": "官方 Search Posts 文档支持 hashtag query operator，API 仍需 developer app/token。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_X_SEARCH"
+      ],
+      "unknown_reason": null
+    },
+    {
+      "platform_id": "x",
+      "platform": "X",
+      "capability_id": "share_repost_metrics",
+      "capability": "分享／转发指标",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "没有验证 repost/share count 字段和值。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_LUMENIS_X",
+        "S_PUBLIC_SOURCE"
+      ],
+      "unknown_reason": "没有验证 repost/share count 字段和值。"
+    },
+    {
+      "platform_id": "x",
+      "platform": "X",
+      "capability_id": "discovery_trending",
+      "capability": "发现／趋势／热点",
+      "classification": "UNKNOWN",
+      "evidence_state": "NOT_VERIFIED",
+      "determination": "官方导航可见 Trends 章节，但未读取具体 endpoint/permission，也未请求。",
+      "live_sample_ids": [],
+      "source_ids": [
+        "S_X_SEARCH"
+      ],
+      "unknown_reason": "官方导航可见 Trends 章节，但未读取具体 endpoint/permission，也未请求。"
+    }
+  ],
+  "limitations": [
+    "Per-response timestamp not instrumented; time is approximate batch window.",
+    "Bodies were not retained as formal Evidence and field values were not extracted, only names/markers.",
+    "No exact rights/use/actor/scope receipt; no Source/Evidence/Canonical admission.",
+    "HTTP 200, parser existence or API docs do not prove product capability.",
+    "Instagram and WeChat adapter files were dirty local candidates; unchanged and not treated as published source.",
+    "No tests, DB access, login/session/browser/CLI/API credential, installation, paid service or training."
+  ]
+}

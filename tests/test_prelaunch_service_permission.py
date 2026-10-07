@@ -47,7 +47,9 @@ def test_service_grant_survives_gate_restart_without_human_tokens(signed_plan):
         assert gate.check_prelaunch_maintenance(auth, **request).allowed
         assert not gate.has_permission(permission.PermissionLevel.COMMIT)
         assert not gate._approvals
-        assert not gate.check(permission.OperationType.DATA_IMPORT, 'another-write').allowed
+        assert not gate.check(
+            permission.OperationType.DATA_IMPORT, 'another-write', domain_id='bmp',
+        ).allowed
 
 
 @pytest.mark.parametrize('change', ['url', 'brand', 'domain', 'platform'])

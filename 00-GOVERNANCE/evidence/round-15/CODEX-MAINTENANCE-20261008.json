@@ -1,0 +1,367 @@
+{
+  "observed_at": "2026-10-08T04:25:50.320292+08:00",
+  "cli_before": "0.160.1",
+  "cli_after": "codex-cli 0.161.0",
+  "installation": "existing npm prefix; entry D:/devtools/bin/codex.cmd unchanged",
+  "configs_unchanged": {
+    "0": true,
+    "1": true
+  },
+  "installed_plugins": [
+    {
+      "pluginId": "documents@openai-primary-runtime",
+      "version": "26.905.11957",
+      "enabled": true
+    },
+    {
+      "pluginId": "pdf@openai-primary-runtime",
+      "version": "26.905.11957",
+      "enabled": true
+    },
+    {
+      "pluginId": "spreadsheets@openai-primary-runtime",
+      "version": "26.905.11957",
+      "enabled": true
+    },
+    {
+      "pluginId": "presentations@openai-primary-runtime",
+      "version": "26.905.11957",
+      "enabled": true
+    },
+    {
+      "pluginId": "template-creator@openai-primary-runtime",
+      "version": "26.905.11957",
+      "enabled": true
+    },
+    {
+      "pluginId": "codex-app-tools@openai-bundled",
+      "version": "0.1.5",
+      "enabled": true
+    },
+    {
+      "pluginId": "browser@openai-bundled",
+      "version": "26.1002.51308",
+      "enabled": true
+    },
+    {
+      "pluginId": "unified-computer-use@openai-bundled",
+      "version": "26.1002.51308",
+      "enabled": true
+    },
+    {
+      "pluginId": "chrome@openai-bundled",
+      "version": "26.1002.51308",
+      "enabled": true
+    },
+    {
+      "pluginId": "computer-use@openai-bundled",
+      "version": "26.1002.51308",
+      "enabled": true
+    },
+    {
+      "pluginId": "code-review@openai-bundled",
+      "version": "26.1002.51308",
+      "enabled": true
+    },
+    {
+      "pluginId": "visualize@openai-bundled",
+      "version": "1.0.47",
+      "enabled": true
+    },
+    {
+      "pluginId": "ae-method@ae-method-dev",
+      "version": "0.1.0",
+      "enabled": true
+    },
+    {
+      "pluginId": "gmail@openai-curated-remote",
+      "version": "0.1.10",
+      "enabled": true
+    },
+    {
+      "pluginId": "app-6a057d268ebc81919918d37eec718425@openai-curated-remote",
+      "version": "1.0.0",
+      "enabled": true
+    },
+    {
+      "pluginId": "google-drive@openai-curated-remote",
+      "version": "0.1.16",
+      "enabled": true
+    },
+    {
+      "pluginId": "github@openai-curated-remote",
+      "version": "0.1.12-5f7cd798dc99",
+      "enabled": true
+    },
+    {
+      "pluginId": "outlook-email@openai-curated-remote",
+      "version": "0.1.8",
+      "enabled": true
+    },
+    {
+      "pluginId": "supabase@openai-curated-remote",
+      "version": "1.0.0",
+      "enabled": true
+    },
+    {
+      "pluginId": "app-6a314a73f8ac819195b0d55e36b9c609@openai-curated-remote",
+      "version": "2.2.0",
+      "enabled": true
+    },
+    {
+      "pluginId": "app-69ea4ed2cf7c8191b742ef3622479ddd@openai-curated-remote",
+      "version": "4.0.1",
+      "enabled": true
+    },
+    {
+      "pluginId": "app-6a624c56bfe081918f7544f7d58f6faf@openai-curated-remote",
+      "version": "1.0.1",
+      "enabled": true
+    },
+    {
+      "pluginId": "notion@openai-curated-remote",
+      "version": "3.0.0",
+      "enabled": true
+    },
+    {
+      "pluginId": "canva@openai-curated-remote",
+      "version": "17.0.1",
+      "enabled": true
+    },
+    {
+      "pluginId": "slack@openai-curated-remote",
+      "version": "0.1.8",
+      "enabled": true
+    },
+    {
+      "pluginId": "app-6a502589384081919c5decf93496c9d1@openai-curated-remote",
+      "version": "1.0.0",
+      "enabled": true
+    },
+    {
+      "pluginId": "google-calendar@openai-curated-remote",
+      "version": "1.2.7",
+      "enabled": true
+    },
+    {
+      "pluginId": "app-695325bae7348191b58ae9349a963d22@openai-curated-remote",
+      "version": "2.0.0",
+      "enabled": true
+    },
+    {
+      "pluginId": "linear@openai-curated-remote",
+      "version": "5.0.1",
+      "enabled": true
+    },
+    {
+      "pluginId": "app-6a05e3b201788191be12b590b43e6ce3@openai-curated-remote",
+      "version": "1.3.1",
+      "enabled": true
+    },
+    {
+      "pluginId": "figma@openai-curated-remote",
+      "version": "15.0.0",
+      "enabled": true
+    },
+    {
+      "pluginId": "app-6943c531f50c8191b40bcd2ca978c780@openai-curated-remote",
+      "version": "2.0.0",
+      "enabled": true
+    },
+    {
+      "pluginId": "app-69949aa62bf48191be5e57a01202beca@openai-curated-remote",
+      "version": "1.0.0",
+      "enabled": true
+    },
+    {
+      "pluginId": "app-69ef18c674308191a2f952431f91ea61@openai-curated-remote",
+      "version": "1.0.0",
+      "enabled": true
+    },
+    {
+      "pluginId": "finances@openai-curated-remote",
+      "version": "0.1.1",
+      "enabled": true
+    },
+    {
+      "pluginId": "codex-security@openai-curated-remote",
+      "version": "0.1.32",
+      "enabled": true
+    },
+    {
+      "pluginId": "write-like-me@openai-curated-remote",
+      "version": "0.1.1",
+      "enabled": true
+    },
+    {
+      "pluginId": "openai-developers@openai-curated-remote",
+      "version": "1.3.6",
+      "enabled": true
+    },
+    {
+      "pluginId": "google-contacts@openai-curated-remote",
+      "version": "1.0.0",
+      "enabled": true
+    },
+    {
+      "pluginId": "cloud-environment@openai-curated-remote",
+      "version": "0.1.2",
+      "enabled": true
+    },
+    {
+      "pluginId": "openai-templates@openai-curated-remote",
+      "version": "0.1.1",
+      "enabled": true
+    },
+    {
+      "pluginId": "pages@openai-curated-remote",
+      "version": "0.1.20",
+      "enabled": true
+    },
+    {
+      "pluginId": "sites@openai-curated-remote",
+      "version": "0.1.75",
+      "enabled": true
+    },
+    {
+      "pluginId": "plugin-management@openai-curated-remote",
+      "version": "0.1.0",
+      "enabled": true
+    },
+    {
+      "pluginId": "work-pets@openai-curated-remote",
+      "version": "0.1.6",
+      "enabled": true
+    }
+  ],
+  "plugin_versions_states_unchanged": true,
+  "marketplace_upgrade": {
+    "selectedMarketplaces": [],
+    "upgradedRoots": [],
+    "errors": []
+  },
+  "doctor": {
+    "app_server.status": {
+      "status": "warning",
+      "summary": "background server socket is stale or unreachable"
+    },
+    "auth.credentials": {
+      "status": "ok",
+      "summary": "auth is configured"
+    },
+    "config.load": {
+      "status": "ok",
+      "summary": "config loaded"
+    },
+    "desktop.app.version": {
+      "status": "ok",
+      "summary": "the desktop application is installed"
+    },
+    "desktop.app_server.handshake": {
+      "status": "ok",
+      "summary": "the desktop app-server initialized successfully"
+    },
+    "desktop.security.enforcement": {
+      "status": "ok",
+      "summary": "no locally visible recent Codex security enforcement was found"
+    },
+    "git.environment": {
+      "status": "ok",
+      "summary": "git executable found; execution not verified"
+    },
+    "git.worktree.dev_drive": {
+      "status": "warning",
+      "summary": "this worktree is not on a Windows Dev Drive; moving it to a trusted Dev Drive can significantly improve repository and filesystem performance"
+    },
+    "installation": {
+      "status": "ok",
+      "summary": "installation looks consistent"
+    },
+    "mcp.config": {
+      "status": "warning",
+      "summary": "MCP configuration has optional issues"
+    },
+    "network.env": {
+      "status": "ok",
+      "summary": "network-related environment looks readable"
+    },
+    "network.provider_reachability": {
+      "status": "ok",
+      "summary": "active provider endpoints are reachable over HTTP"
+    },
+    "network.websocket_reachability": {
+      "status": "ok",
+      "summary": "Responses WebSocket handshake succeeded"
+    },
+    "runtime.provenance": {
+      "status": "ok",
+      "summary": "running npm on windows-x86_64"
+    },
+    "runtime.search": {
+      "status": "ok",
+      "summary": "search command found (bundled); execution not verified"
+    },
+    "sandbox.filesystem_paths": {
+      "status": "ok",
+      "summary": "no explicit filesystem paths to probe"
+    },
+    "sandbox.helpers": {
+      "status": "ok",
+      "summary": "sandbox configuration is readable"
+    },
+    "security.endpoint": {
+      "status": "warning",
+      "summary": "endpoint protection detected; Codex exclusions are unverified"
+    },
+    "state.paths": {
+      "status": "ok",
+      "summary": "state paths and databases are inspectable"
+    },
+    "state.rollout_db_parity": {
+      "status": "warning",
+      "summary": "rollout files and state DB thread inventory differ"
+    },
+    "system.disk": {
+      "status": "ok",
+      "summary": "sufficient free disk space (16.8 GiB)"
+    },
+    "system.environment": {
+      "status": "ok",
+      "summary": "OS language zh-CN"
+    },
+    "terminal.env": {
+      "status": "warning",
+      "summary": "TERM=dumb - colors and cursor control are disabled in this non-interactive run"
+    },
+    "terminal.title": {
+      "status": "ok",
+      "summary": "terminal title default"
+    },
+    "updates.status": {
+      "status": "ok",
+      "summary": "update configuration is locally consistent"
+    }
+  },
+  "desktop_information_check": {
+    "installedVersion": "26.1002.51308",
+    "installedBuildVersion": "13417",
+    "status": "unavailable",
+    "reason": "Windows Store eligibility requires a check that may download; no installation/restart performed."
+  },
+  "current_thread_model_effort_speed": "MANUAL_SELECTION_PRESERVED_BACKEND_NOT_INSPECTED",
+  "runtime_limits": [
+    "Existing desktop app-server handshake passed; separate CLI daemon control socket connection refused; no restart or session repair performed.",
+    "node_repl requires CODEX_WINDOWS_REGISTERED_CORE in standalone CLI environment; no global environment edits.",
+    "Rollout/state inventory mismatch is diagnostic only; no session or database migration performed.",
+    "Defender exclusions and Dev Drive are optional diagnostic findings; not modified.",
+    "Plugin version list is not live authorization verification of every connector.",
+    "Mobile version/pairing/remote-control E2E not verified; no user task resumed."
+  ],
+  "read_only_tool_checks": {
+    "openaiDeveloperDocs": "search and developer-commands fetch succeeded; changelog fetch unavailable, official web fallback read",
+    "lumenis_engineering": "repo_truth returned expected repo/HEAD",
+    "node_repl": "non-sensitive JavaScript evaluation succeeded",
+    "github_cli": "fresh fetch and live main read succeeded",
+    "other_connectors": "NOT_VERIFIED; installed/enabled inventory only"
+  }
+}

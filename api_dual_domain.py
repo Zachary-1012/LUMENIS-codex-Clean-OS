@@ -1109,14 +1109,15 @@ def _authorize_cth_read(connection: sqlite3.Connection, *, module: str) -> Dict[
 def read_cth_scoped_canonical(
     connection: sqlite3.Connection, *, module: str, limit: int = 100,
     source_ids: Optional[List[str]] = None, platform: Optional[str] = None,
-    offset: int = 0,
+    offset: int = 0, source_type: Optional[str] = None,
+    source_table: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Read signed Canonical rows after fresh CTH scope authorization.
 
-    Optional platform paging selects candidate source IDs from the existing
-    Canonical table, then sends those IDs through the Canonical owner's signed
-    scope validator. The candidate query grants no access and returns no rows
-    directly.
+    Optional platform or typed-source paging selects candidate source IDs from
+    the existing Canonical table, then sends those IDs through the Canonical
+    owner's signed scope validator. Candidate queries grant no access and
+    return no business rows directly.
     """
     if not isinstance(connection, sqlite3.Connection):
         raise CTHScopedReadError("CTH_CANONICAL_CONNECTION_INVALID", 503)
@@ -1126,16 +1127,69 @@ def read_cth_scoped_canonical(
         raise CTHScopedReadError("INVALID_CTH_READ_OFFSET", 400)
     if source_ids is not None and (platform is not None or offset != 0):
         raise CTHScopedReadError("CTH_SOURCE_SELECTION_CONFLICT", 400)
+    if source_ids is not None and source_type is not None:
+        raise CTHScopedReadError("CTH_SOURCE_SELECTION_CONFLICT", 400)
+    if platform is not None and source_type is not None:
+        raise CTHScopedReadError("CTH_SOURCE_SELECTION_CONFLICT", 400)
+    if (source_type is None) != (source_table is None):
+        raise CTHScopedReadError("CTH_SOURCE_TYPE_TABLE_PAIR_REQUIRED", 400)
+    if source_type is not None and (source_type, source_table) not in {
+        ("note", "notes"), ("web_mention", "web_mentions"),
+    }:
+        raise CTHScopedReadError("CTH_SOURCE_TYPE_TABLE_UNSUPPORTED", 400)
 
     scope = _authorize_cth_read(connection, module=module)
     try:
         import canonical_data
-        if platform is None:
+        if platform is None and source_type is None and offset == 0:
             canonical = canonical_data.list_scoped_canonical(
                 connection, product_id=PRODUCT_CTH,
                 subject_id=scope["subject_id"], limit=limit,
                 source_ids=source_ids,
             )
+        elif platform is None:
+            filters = [
+                "product_id=?", "domain_id=?", "scope_status='VERIFIED'",
+                "source_id IS NOT NULL", "TRIM(source_id) != ''",
+            ]
+            params: List[Any] = [PRODUCT_CTH, DOMAIN_CTH]
+            if scope["subject_id"] is not None:
+                filters.extend(["subject_id=?", "(brand_focus_id IS NULL OR brand_focus_id='')"])
+                params.append(scope["subject_id"])
+            if source_type is not None:
+                filters.extend(["source_type=?", "source_table=?"])
+                params.extend([source_type, source_table])
+            predicate = " AND ".join(filters)
+            total = connection.execute(
+                "SELECT COUNT(*) FROM (SELECT source_id FROM canonical_data WHERE "
+                + predicate + " GROUP BY source_id)", tuple(params),
+            ).fetchone()[0]
+            rows = connection.execute(
+                "SELECT source_id, MAX(COALESCE(captured_at,'')) AS latest "
+                "FROM canonical_data WHERE " + predicate
+                + " GROUP BY source_id ORDER BY latest DESC, source_id ASC LIMIT ? OFFSET ?",
+                tuple(params + [limit, offset]),
+            ).fetchall()
+            selected_ids = [row[0] for row in rows]
+            if selected_ids:
+                canonical = canonical_data.list_scoped_canonical(
+                    connection, product_id=PRODUCT_CTH,
+                    subject_id=scope["subject_id"], limit=limit,
+                    source_ids=selected_ids,
+                )
+            else:
+                canonical = {
+                    "records": [], "candidate_count": 0, "scanned_count": 0,
+                    "rejected_count": 0, "returned_count": 0,
+                    "limit": limit, "truncated": False,
+                }
+            canonical["page"] = {
+                "candidate_source_count": total,
+                "offset": offset,
+                "limit": limit,
+                "returned_source_count": len(selected_ids),
+                "truncated": offset + len(selected_ids) < total or canonical.get("truncated", False),
+            }
         else:
             from lumenis.system.collector.adapters.platform_naming import (
                 get_platform_aliases, normalize_platform,

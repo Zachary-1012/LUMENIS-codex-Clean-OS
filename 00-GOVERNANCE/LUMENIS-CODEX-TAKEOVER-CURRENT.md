@@ -8,6 +8,90 @@ Root `AGENTS.md` is the only repository execution router. [The Product Owner's l
 
 ## 1. Online reader's current-state snapshot
 
+### 2026-10-08 latest mature-capability supplements: rules first
+
+Both supplied instruction bodies are adopted into the existing Architecture,
+Experience §38, Owner mapping, Real Delivery Overlay and relevant SH-01/BMP-08
+specifications/text sketches. Mature baseline operations and LUMENIS grounded,
+versioned business continuity are distinct required acceptance layers. The
+existing capability-observation fields do not replace machine completion states.
+GPT/Apple/Tesla operation principles are adapted with official-source provenance;
+optional media/ASR components are conditional, not installed or production-bound.
+M completes this rule convergence and its previously authorized repair batch.
+F/C1-C6 await explicit Product Owner confirmation. The historical instruction
+snapshots and imperative attachment wording do not dispatch product work.
+
+### 2026-10-08 latest Product Owner frontend-audit supplement
+
+M updates the existing rules, blueprint, all 44 screen specs, editable-design/source
+mapping and text wireframes first. Other user windows remain waiting for Product
+Owner confirmation; this publication does not dispatch them. ACC-03/ACC-04 stale
+`NO_FLUTTER_SCREEN` declarations are corrected without accepting their target Home,
+return continuity, Permission or live behavior. Default CTH-01 vs approved ACC-03
+remains an implementation gap for F/C6. CTH-04 causal edges require actual source
+relations, not a new drawing. Material manifest now retains the original 191 plus
+six current supplements (197 rows), with separate product-adoption/training states.
+
+The existing npm Codex CLI was upgraded 0.160.1 → 0.161.0. User/project configuration
+hashes and 45 installed-plugin version/enabled pairs are unchanged. Desktop update
+eligibility, standalone daemon and full connector/remote-control recovery are not
+claimed verified. See `evidence/round-15/CODEX-MAINTENANCE-20261008.md` and its JSON.
+Figma editability/file/node/version remains NOT_VERIFIED; no new Figma file or
+frontend implementation was started for this supplement.
+
+### 2026-10-08 CI caller closure, anonymous acquisition and local Read Aloud
+
+This bounded implementation/rule Batch is co-published with its source. Its parent
+is `288f222decb48e2c8e9217c712e7af6f6c1aa9ce`; the parent App Gate passed and its
+Product Gate failed. New exact-SHA CI must be read from GitHub, never inherited
+from a different SHA. Runtime remains `NOT_LOADED_OR_NOT_VERIFIED` for the product
+Core; Production DB and protected local work are unchanged by this Batch.
+
+- **Semantic repair / Math application:** closes the observed CI caller regressions
+  without restoring implicit CTH/reference Subject, retired Provider execution,
+  unsigned legacy notes as Truth, or weaker permission tests. Signed Canonical
+  scope controls legacy projections, pagination and aggregates. Normal L4/API
+  success uses real isolated registry/actor/Evidence/Canonical contracts. The
+  scoped 515-case run had 5 failures; all were resolved in the overlapping 34-case
+  rerun. Evidence: `evidence/round-15/SEMANTIC-CALIBRATION-20261007.json`.
+- **Collector:** one existing adapter route resolver distinguishes public access,
+  authorized session access and official API contracts. No Z2 adapter is claimed
+  without binding. Exact public URLs cannot silently become session queries;
+  attempted route, returned provider identity and actual read state are separate.
+  Existing Collector Permission/Source/Evidence/Canonical transaction is retained.
+  This batch excludes login-required OpenCLI routes, not the existing authorized
+  platform capabilities, Skill Store or GitHub enhancements. No CLI or browser
+  extension from the researched projects was installed. Fixed upstream findings
+  and the six-platform × twelve-capability anonymous matrix are under
+  `evidence/round-06/PUBLIC-ACQUISITION-RESEARCH-20261008.md` and
+  `evidence/round-06/ZERO-AUTH-MATRIX-20261008.md`. Matrix completeness means each
+  cell has an honest disposition, not that 72 capabilities are live-verified.
+- **Shared Read Aloud:** existing CTH-10/BMP-08/SH-04 text results and SH-01
+  podcast/video scripts have one device-local read-aloud controller. Android,
+  Apple, Windows and Web bindings select local installed voices, expose locale,
+  speed/stop and honest missing-voice state, and stop on lifecycle/context changes.
+  This is script/result preview, not a generated voice track, finished media,
+  cloud TTS or an owned-model inference claim. Native/platform evidence and limits
+  are recorded in `evidence/round-15/READ-ALOUD-SYSTEM-20261008.md`; four-surface
+  user acceptance cannot be inferred from a Web build or one Windows run.
+- **Intelligent UI:** the actual OpenAI 2026-10-07 announcement and official UI
+  guidance were read. The Product Owner's full-product clarification is mapped
+  through the sole blueprint, Experience, surface decision, all 44 existing screen
+  specifications, their index/template and dated text-wireframe amendments. Existing
+  C1-C6/F owners retain source/version continuity and server-authorized actions.
+  Status is `RESEARCH_ADOPTED / IMPLEMENTATION_WAITING_DISPATCH`; no additional
+  UI implementation or window dispatch is authorized by this record. Evidence:
+  `evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md`.
+
+AGENTS, Product Architecture, sole Experience Constitution, Multi-Surface Decision,
+Source Owner Index, README, all 44 screen specifications and existing text
+wireframe amendments are updated together; no historic artwork is overwritten. Governance Machine
+v1.1.0/model routing and complete R/J/U acceptance remain unchanged. Prior dirty
+assets stay protected: app.py and secondary_collection.py publish only this
+Batch's independent accepted hunks; all other original edits remain local.
+No paid resource, training, production DB mutation, platform login, or unrelated
+C1-C6/F task was started. New research is not a competing execution authority.
+
 ### 2026-10-08 semantic behavior repair and applied Math methods
 
 Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
@@ -84,7 +168,7 @@ F owns four-surface behavior and design responsibilities through existing Flutte
 2. At base `be347f03`, the direct repair retained 551 passing isolated checks, two explicit optional skips and a clean-source 87-case source-bound chain; actual Core monitor evidence records TCP listener8201 with health/database OK. These are dated scoped evidence in `evidence/round-15/DIRECT-REPAIR-20261004.md`.
 3. Product Gate run37210553807 on `8e6d238e` found six bounded regressions: Bilibili Canonical author-ID type, obsolete social URL-limit assertions, obsolete local-Instagram-worker assertions, and a RedNote detail-failure metric overwrite. The coherent repair `887c85ae` passed Product run37220886120 and App run37220888962. Product run37222360010 passed for `2738bbe5`; App run37222362990 exposed an omitted required native media source file. The scoped repair `a95daf23` is recorded in `evidence/round-14/MEDIA-WORKBENCH-CI-REPAIR-20261005.md` and passed App run37223425460 plus Product run37223440005.
 4. Keep other local media, native-player, platform adapters and source-metric work protected until its unique changes and real outcome are integrated. Do not bulk-stage, reset or delete it.
-5. Material locators and adoption belong to the existing manifest plus named owners. The currently tracked material snapshot `evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-MANIFEST.json` contains 191 rows; all rows have an owner, source path, obligation and next action. At its 2026-10-03 snapshot, row states are 185 `ASSIGNED_INCOMPLETE`, 3 `PAUSED_PENDING_USER_RESUME` and 3 `USER_REVIEWED_PENDING_PRODUCT_INTAKE`; recorded locator states are 71 `EXISTS`, 95 `REMOTE_NOT_RECHECKED` and 25 `MISSING_OR_MALFORMED`. The same snapshot does not claim body reading for 185 rows; 185 require separate purpose/rights approval for training. These are dated locator/assignment states, not current availability or product adoption; newer inputs require exact-ID reconciliation. Research summaries are not product completion.
+5. Material locators and adoption belong to the existing manifest plus named owners. The currently tracked material snapshot `evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-MANIFEST.json` retains its original 191 rows and now has 6 dated 2026-10-08 supplement rows (197 total) for public acquisition, local Read Aloud, full-product Intelligent UI, frontend audit and two mature-capability instructions. Every new row names its existing owner/source, adoption evidence, actual limitations and next action; training admission and live dispatch are not inferred. The following counts describe the original 191-row snapshot only. At its 2026-10-03 snapshot, row states are 185 `ASSIGNED_INCOMPLETE`, 3 `PAUSED_PENDING_USER_RESUME` and 3 `USER_REVIEWED_PENDING_PRODUCT_INTAKE`; recorded locator states are 71 `EXISTS`, 95 `REMOTE_NOT_RECHECKED` and 25 `MISSING_OR_MALFORMED`. The same snapshot does not claim body reading for 185 rows; 185 require separate purpose/rights approval for training. These are dated locator/assignment states, not current availability or product adoption; newer inputs require exact-ID reconciliation. Research summaries are not product completion.
 6. Dependencies such as model availability block only their actual consumer. Continue independent source admission, deterministic credibility checks, editing and recovery. Do not revive stopped providers to disguise an unavailable owned model.
 7. The static owned-foundation policy binding is recorded in `evidence/round-07/OWNED-FOUNDATION-POLICY-BINDING-20261005.md`. It does not authorize a GPU, paid compute, endpoint use, model download, training, inference or promotion; the next C2 gate is the documented real preflight and execution chain.
 8. Retired provider compatibility is recorded in `evidence/round-07/RETIRED-PROVIDER-COMPATIBILITY-20261005.md`. Historical endpoints and quota observations remain readable but cannot start local/Zhipu discovery, inference, fallback or usage accounting.

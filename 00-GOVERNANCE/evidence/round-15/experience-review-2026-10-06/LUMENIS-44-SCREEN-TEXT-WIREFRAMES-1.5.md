@@ -80,7 +80,7 @@ App 页面按已有 screen repository/Client 读取；本任务不运行其中�
 | BMP-05 | BMP Creator / Source and Risk | 创作者身份、内容、真实表现、合作risk | screen source存在；推荐/fit没有该服务结果时保持Unknown | owner_domain=BMP; status=BLOCKED; BACKEND-GAP-022; [BMP-05.md](../../../../contracts/experience/screen-specifications/BMP-05.md) |
 | BMP-06 | BMP Content / Brief / Permission / Artifact | Brief、内容版本、权利、review、发布handoff | screen source存在；对外Publish和回执未验证 | owner_domain=BMP; status=OWNER_REVIEW; no BACKEND-GAP ID in frontmatter; [BMP-06.md](../../../../contracts/experience/screen-specifications/BMP-06.md) |
 | BMP-07 | BMP Campaign / Planning / Outcomes | objective、budget/target（若任务给定）、channel和实际结果 | screen source存在；计划、审批、发布、Outcome需连真实服务 | owner_domain=BMP; status=OWNER_REVIEW; no BACKEND-GAP ID in frontmatter; [BMP-07.md](../../../../contracts/experience/screen-specifications/BMP-07.md) |
-| BMP-08 | Shared Audio / Artifact / AI Gateway when available | 文件音频、脚本、时码、speaker/track、render/export | screen/UI actions存在；文件播放/混音/版本E2E未完成于本轮；live mic后置 | owner_domain=BMP; status=OWNER_REVIEW; no BACKEND-GAP ID in frontmatter; [BMP-08.md](../../../../contracts/experience/screen-specifications/BMP-08.md) |
+| BMP-08 | Shared Audio / Artifact / AI Gateway when available | 文件音频、脚本、时码、speaker/track、render/export、授权本地录音 | screen/UI actions存在；文件播放/混音/版本E2E未完成于本轮；录音与各端运行态仍未验证 | owner_domain=BMP; status=OWNER_REVIEW; no BACKEND-GAP ID in frontmatter; [BMP-08.md](../../../../contracts/experience/screen-specifications/BMP-08.md) |
 | BMP-09 | BMP Evaluation / Metric / Evidence | 品牌维度、基线、期间、coverage、confidence来源 | screen source存在；不可比和缺分母需验 | owner_domain=BMP; status=OWNER_REVIEW; no BACKEND-GAP ID in frontmatter; [BMP-09.md](../../../../contracts/experience/screen-specifications/BMP-09.md) |
 | BMP-10 | BMP Brand Risk / Event / Permission | 事件证据、责任、response draft、Effect状态 | screen source存在；未批准的response不执行 | owner_domain=BMP; status=OWNER_REVIEW; no BACKEND-GAP ID in frontmatter; [BMP-10.md](../../../../contracts/experience/screen-specifications/BMP-10.md) |
 | BMP-11 | BMP Benchmark / Metrics / Evidence | 对象集合、统一metric定义/期间和来源 | screen source存在；单位/口径不兼容时状态未知 | owner_domain=BMP; status=OWNER_REVIEW; no BACKEND-GAP ID in frontmatter; [BMP-11.md](../../../../contracts/experience/screen-specifications/BMP-11.md) |
@@ -382,10 +382,12 @@ Desktop:
 │ 00:00       00:15  播放头  00:30       00:45     →横向时间轴  │
 │ [选择轨道] [Solo] [Mute] [Loop区间] [监听] [混音器]             │
 └───────────────────────────────────────────────────────────────┘
-Mobile: 音频播放器/时码+脚本跟随视图→音轨列表→选轨细节；不是完整混音界面缩小。
+Mobile: 实际播放器/时码+脚本跟随→横向可操作波形与音轨→选轨细节；同样保留导入、录音授权、核心剪辑/混音、撤销/重做和版本恢复，以单个可逆工作区适配窄屏，不删减完整任务能力。
 ~~~
 
-音频文件导入、理解、播放、回听、编辑、导出和重开纳入目标。文本修订和音轨修订各自独立显示版本。实时录音/麦克风不纳入当前UI流程，保留后置标记。
+音频文件导入、实际播放与回听、由解码媒体生成的真实波形、授权本地麦克风录音、剪辑/混音、导出和重开纳入完整目标。文本修订和音轨修订各自独立显示版本；Read Aloud 只是脚本临时朗读，不是录音或节目音轨。图中波形是目标表达，不证明运行版已有波形。录音要求取代旧“后置”备注；具体设备、权限和平台能力仍逐端验证，不能将未验证平台从四端验收中删除。
+
+预览分成实际原始/当前可播放内容、临时预览导出和正式保存的 SavedWork/Artifact。临时导出不能冒称正式成果；正式保存后必须按同一版本重开、播放、修改并产生保留父版本的新版本。脚本编辑不自动改写现有录音；ASR 可选并经现有 C2 Gateway，手工录入/修订转录必须在无 AI 时可用。降噪和响度要有真实处理结果及测量，不因按钮存在就显示完成。
 
 ### BMP-09 品牌评价
 
@@ -647,6 +649,8 @@ Desktop / Web
 
 目标状态覆盖精确选择、切分/修剪/重排、已批准的吸附与定位、轨道/字幕/音频处理、实际预览、导出后播放/重开。波形/缩略帧只用实际媒体。当前源代码/processor未绑定的项仍是目标缺口，不从目标图删除，也不在当前运行版假称可用。主方案§7.6是完整宽屏+手机构图的展开稿，§8.1是对应正常结果和恢复验收。
 
+版本与真实验收：视口横向平移/缩放不改项目数据；播放头与真实 Viewer/时码对应；选取素材及操作轨道均保留来源、范围、rights 和父版本。Undo/Redo 恢复实际编辑快照。使用真实授权多轨素材完成编辑与同步检查，分别回放当前实际预览、临时导出和正式 Artifact；正式保存后重开同一项目，改动一处保存成子版本，验证旧版仍可播放并能恢复。Web Workspace、Desktop App、Mobile Companion 和 Public Website 按现有角色分别保留适用验收；未运行的设备/平台记为 `NOT_VERIFIED`，不代表省略目标。当前单视频轨限制需按多层画面目标实查：若妨碍 B-roll/叠加层，记录为能力缺口，不能将它固化成产品上限。
+
 状态关系：选中clip后稳定clip identity与区间突出显示，Inspector切到该对象；播放头拖动/逐帧只更新Viewer与时码，不自动换选中对象。变更对象前若有未应用属性，先给Apply/Discard/Cancel。时间尺横向平移、缩放、seek与trim是四种独立动作；键盘/菜单提供选择、逐帧、入出点、播放头分割、修剪、缩放/横移及撤销/重做。正式快捷键必须由Editor owner冻结后才显示；在此之前不照搬Final Cut/Premiere键位。
 
 #### SH-01 已有材料导入与处理确认（同一Owner）
@@ -812,3 +816,558 @@ Phone: 分lane通知列表→原Task/Approval/Artifact全屏→Return回原条�
 | SH | 搜索/阅读六平台单帖来源，进入既有研究或创作 | SH-02类型化Reader→引用锚点→BMP/CTH/Brief→保存/重开 | 六平台各自保持原生结构；未获Source refs/权利不作生产/官网/训练材料 |
 
 每次上线审核需将此表具体化为当前ScreenSpec/Test ID/真实输入/服务返回及各端设备操作。该文件仅构成设计和流程输入，不会自动把设计状态提升为DESIGN_READY或用户验收。
+
+## 2026-10-08 Intelligent UI 逐屏视觉与动线增补
+
+当前已绑定动作限定本轮可执行范围，不限定已批准的产品终态。任何尚未接通的既有能力必须列为现有 Owner 的 OPEN 依赖，补齐合同、真实正常结果与恢复验收；不得因接口暂缺把完整交互目标缩减成只读页，也不得用未绑定按钮假装已实现。
+
+本节追加在历史草图之后，不覆盖旧修订或逐屏内容。每屏使用任务适配的组合式布局，避免统一卡片模板。序境二维手绘、水彩与版画色彩感仍是视觉语言，线性控件保持功能含义；角色依用户当前Brief/脚本描述创作，只借鉴手绘平面笔触与色彩，不复制参考人物，不用3D质感。色彩可丰富但不滥用，插画不表示数据真假、风险或授权状态。
+
+以下图示是文字视觉草图。字段与操作仍由对应Spec已绑定Owner提供；缺失项如实显示UNKNOWN/UNAVAILABLE。Web、Desktop、Mobile共享Product Core和上下文、按端侧任务重排；Public Website只承载已验证的公开能力或标记示例。非官网避免无必要纵向滚动，保留可访问性和长内容所需滚动；视频/播客Timeline横向拖动。
+
+### ACC-01
+
+**任务：** 确认内部工作区入口可用并继续宿主指定目标。
+
+~~~text
+主路径: 显示入口状态与宿主提供的继续动作；无 callback 不伪造路由或账户流程
+延续: 传递宿主实际 route 与原任务位置，失败时保留入口
+端侧: Web接浏览器route；Desktop回原窗口；Mobile恢复原任务；官网只说明公开入口
+失败恢复: 身份失败、离线、callback缺失分别标识；重试仅读取identity
+验收: 有/无真实callback分别验证；只有真实导航成功才报告继续
+~~~
+
+### ACC-02
+
+**任务：** 查看当前GLOBAL_ALL或明确选择一个可访问Subject视角。
+
+~~~text
+主路径: 列表、当前视角和确认预览并置；说明选择不授予业务读取权限
+延续: 只有服务端确认的scope envelope传递给下游，切换后回原工作
+端侧: Web/Desktop提供目录与预览；Mobile逐项选择；官网不展示私有目录
+失败恢复: 拒绝/目录错误保留原scope与草稿，不本地切换
+验收: 无选择为GLOBAL_ALL；合法FOCUS服务器确认；拒绝无业务读取
+~~~
+
+### ACC-03
+
+**任务：** 从首页开始真实工作或继续原任务。
+
+~~~text
+主路径: 以任务、草稿、已访问页面和既有工作流组织，不做KPI营销模板
+延续: 恢复Task/Brief/scope/Artifact版本，建议只开草稿不触发效果
+端侧: Web多区并读；Desktop快捷续接；Mobile突出一个待续任务；官网只作公开介绍
+失败恢复: 空、失效链接、离线、权限过期独立呈现，保留原任务状态
+验收: 新建/续接/空记录三路径；不会强迫选择焦点或误报恢复
+~~~
+
+### ACC-04
+
+**任务：** 理解一项真实阻断并沿已有恢复路径返回。
+
+~~~text
+主路径: 展示发生了什么、影响哪个任务、已绑定的恢复路径
+延续: 关联原Task、请求scope、operation与恢复receipt，保留未提交内容
+端侧: Web/Desktop并列工作与受控说明；Mobile按阻断→影响→恢复；官网不显示内部诊断
+失败恢复: unbound明确unavailable，不跳到AI或其他页绕权限
+验收: 拒绝、重试、恢复后均回原任务；无receipt不称恢复
+~~~
+
+### AI-01
+
+**任务：** 把用户目标、当前资料与约束组成可检查的执行意图。
+
+~~~text
+主路径: 自然语言目标与现有Brief/Evidence/scope/Budget/缺项并列；建议可编辑拒绝
+延续: 沿用同一Task/Brief/引用/Actor/scope；真实结果返回execution ID及Evidence状态
+端侧: Web/Desktop并看输入与资料；Mobile逐项确认；官网仅公开且标注示例
+失败恢复: 未绑定、拒绝、部分、取消、效果未知分开；未知时查同ID不自动重提
+验收: 复用资料不要求重选；无授权或服务时无伪造Evidence
+~~~
+
+### AI-02
+
+**任务：** 跟踪真实任务阶段与持久化产物。
+
+~~~text
+主路径: 按服务端实际状态组合阶段轴、当前输出和Evidence/Artifact检视
+延续: 同一run/model/recipe/input scope版本贯穿恢复与保存
+端侧: Web/Desktop阶段轴加检视；Mobile聚焦当前阶段；官网不呈现内部运行
+失败恢复: 取消/失败/等待/效果未知分开，断线后按原run ID查询
+验收: 阶段只能随真实回执推进；无action binding按钮不可用
+~~~
+
+### AI-03
+
+**任务：** 逐条核验分析结论的来源并继续修订。
+
+~~~text
+主路径: Claim—Citation—不确定性阅读，围绕一个结论局部修订
+延续: 保留Evidence ID、source locator、scope和父版本；下游复用同Brief
+端侧: Web/Desktop消息与引用并读；Mobile先结论后引用；官网不显示私有讨论
+失败恢复: 撤源时对应结论需复核，草稿可恢复，未绑定Case/发布不显示
+验收: 结论可回源；撤回标记准确；修订保存新版本而不覆盖事实
+~~~
+
+### AI-04
+
+**任务：** 查找适合当前任务的已验证能力，并按现有 Owner 合同完成已批准的使用与生命周期操作。
+
+~~~text
+主路径: 呈现能力输入/输出、版本、许可、风险与评估；当前目录只读，已批准的启用/运行/更新/停用等操作按现有 Skills owner 补齐，缺口保持 OPEN
+延续: 保留既有 skill ID/version、输入和原 Task；每个生命周期/运行操作单独经过既有 Permission，不因选择而授权
+端侧: Web/Desktop目录与详情；Mobile显示当前Task可用能力；官网只列已验证能力
+失败恢复: 退役/未绑定/风险未知项不可执行，旧信息标stale
+验收: 条目状态真实；选择能力不产生权限或安装效果
+~~~
+
+### AI-05
+
+**任务：** 查看AI服务真实状态和延迟样本。
+
+~~~text
+主路径: 脱敏状态、采样时间及有界延迟；不显示原始provider/model
+延续: 诊断与具体业务任务版本分开，不把诊断数据写回任务
+端侧: Web/Desktop状态与样本；Mobile显示当前状态；官网不暴露拓扑
+失败恢复: 缺失不为0，fallback仅按现有明确合同，过期/离线分开
+验收: 验证安全投影和fallback条件；不宣称模型质量或业务可用
+~~~
+
+### BMP-01
+
+**任务：** 回答授权品牌的市场信号与值得关注的趋势。
+
+~~~text
+主路径: 市场脉冲、趋势候选和证据抽屉；给时间窗、样本与来源覆盖
+延续: 品牌/global scope、Evidence、采集时间和指标版本随同一Brief进入方案
+端侧: Web/Desktop信号与来源并读；Mobile先优先信号再证据；官网只讲已验证能力
+失败恢复: 未授权、样本不足、撤源时隐藏结论，unknown不补零
+验收: 从信号回源并继承资料；推荐不能直接成为决策
+~~~
+
+### BMP-02
+
+**任务：** 理解品牌组合、子品牌与竞品关系。
+
+~~~text
+主路径: 带来源关系图加选中实体档案，明确已核实/推断/未知
+延续: 每条边保留BrandFocus、entity ID、关系来源和版本
+端侧: Web/Desktop图和档案；Mobile可展开关系列表；官网不展示私有谱系
+失败恢复: 跨焦点、来源缺失或过期关系不显示为事实
+验收: GLOBAL/FOCUS授权分别成立；本地选择不改谱系/授权
+~~~
+
+### BMP-03
+
+**任务：** 识别需要进一步验证的机会信号。
+
+~~~text
+主路径: 置信/动量图、排序清单和来源简报并置，解释排名依据
+延续: 信号ID/来源/窗口/scope/评分版本随同一Brief传给提案
+端侧: Web/Desktop图、列表、简报并读；Mobile排序原因后详情；官网仅公开审定案例
+失败恢复: 窗口不可比不画坐标，失效候选保留旧版并提示复核
+验收: 信号回源且不执行推荐；无owner动作不新增提案
+~~~
+
+### BMP-04
+
+**任务：** 看品牌传播链哪些阶段实际有观测。
+
+~~~text
+主路径: 左到右渠道路径与定义矩阵，每阶段区分observed/unavailable
+延续: 渠道、单位、来源、时间和品牌范围绑定；选中渠道不改归因事实
+端侧: Web/Desktop河流和矩阵；Mobile逐阶段下钻；官网不呈私有数据
+失败恢复: 缺阶段不为零、不同比较窗不合并；scope变化清旧缓存
+验收: 同窗口切换渠道可回位；不从相关性宣称因果
+~~~
+
+### BMP-05
+
+**任务：** 比较创作者匹配度和风险依据。
+
+~~~text
+主路径: 按已返回KOS/KOL/KOC/UGC类别呈列表和来源档案
+延续: 指标定义、时间、BrandFocus、来源及评估版本进入后续任务
+端侧: Web/Desktop列表与档案；Mobile先理由后样本；官网仅授权案例
+失败恢复: 同名和跨焦点隔离，样本不足未知；无联系/支付动作
+验收: 候选逐项可追来源，切scope后旧档案不残留
+~~~
+
+### BMP-06
+
+**任务：** 把授权素材和内容想法推进为可审阅版本。
+
+~~~text
+主路径: Draft→Review→Approved→Delivered专属编辑流程，来源/rights贴近正文
+延续: 继承同Brief/Evidence/品牌/语言；修改保存子版本和受影响片段
+端侧: Web/Desktop正文与证据并读；Mobile聚焦待审与修订；官网不编辑内部稿件
+失败恢复: rights未知/授权不足时阻止对应动作，离开保留草稿
+验收: 真实brief到修订子版本再重开；AI草稿不标批准或已发布
+~~~
+
+### BMP-07
+
+**任务：** 连接活动目标、预算、里程碑和实际结果。
+
+~~~text
+主路径: 目标→受众→渠道→预算→Outcome时间线；估算/承诺/实支各自分层
+延续: 预算/日期变化定位受影响活动段、素材、资源和日程，父版可回滚
+端侧: Web/Desktop编辑计划和影响预览；Mobile逐项审预算；官网仅公开示例
+失败恢复: 无真实活动不造ROI；预算变化不触发付款/发布，冲突可回父版
+验收: 修改后只有受影响内容变化，新旧版本可重开比较
+~~~
+
+### BMP-08
+
+**任务：** 把授权来源变成可审阅脚本及可编辑播客音轨。
+
+~~~text
+主路径: 脚本、来源、rights、音轨和发布状态分层；横向拖动时间轴
+延续: 同Brief/来源/audio version连续；本地Read Aloud不等于成片
+端侧: Web/Desktop脚本与音轨并列；Mobile分段查看；官网只放授权成片
+失败恢复: 源/版权未知不导出；scope/文本变更停止本地朗读
+验收: 保存重开实际工程，改一段不损其它段；无回执不称完成
+~~~
+
+### BMP-09
+
+**任务：** 理解品牌评估变化、置信和覆盖情况。
+
+~~~text
+主路径: 维度、真实Outcome、置信、分母和方法并列，文本意见不冒充分数
+延续: 绑定原Outcome/Evidence/评估方法与版本，不改写源事实
+端侧: Web/Desktop可比较维度和周期；Mobile逐维度和来源；官网只发布审核结果
+失败恢复: 未评估/样本不足为UNKNOWN；历史版本保留但可标stale
+验收: 分数可回样本和方法，结果变化生成新版本，不自动Promotion
+~~~
+
+### BMP-10
+
+**任务：** 按严重性、扩散和时效处理有证据的品牌风险。
+
+~~~text
+主路径: 风险队列、原始依据、派生判断、后续状态分开
+延续: 绑定品牌scope、Evidence、判断版本与决策receipt
+端侧: Web/Desktop队列和详情；Mobile先风险依据和原文；官网不呈私有风险
+失败恢复: 笔记不升级成事件；来源撤回保留历史并停止当前效果
+验收: 观察与判断分开；无批准/Effect receipt不称已响应
+~~~
+
+### BMP-11
+
+**任务：** 在口径一致时比较品牌基准。
+
+~~~text
+主路径: 先展示币种/期间/口径/分母，再显示可比矩阵和差距
+延续: 每格保留定义、币种、样本、来源、范围、计算版本
+端侧: Web/Desktop多品牌矩阵；Mobile逐项查看口径；官网不公开客户比较
+失败恢复: 不一致即待核而不排名，未知值不补零
+验收: 条件变化使旧排名stale；无可比数据明确说明
+~~~
+
+### CTH-01
+
+**任务：** 查看商业运营活动并检视单个事件。
+
+~~~text
+主路径: Subject/context、运营脉冲、事件流和选中详情组合
+延续: 保留scope、时间窗、event ID和来源锚点；下游继承相同范围
+端侧: Web/Desktop流和详情并读；Mobile按脉冲→事件；官网不显示私有运营
+失败恢复: 无权限、空、未采集和错误分开；切主体清除旧数据
+验收: 事件返回同一位置；不从时间顺序推因果
+~~~
+
+### CTH-02
+
+**任务：** 浏览商业主体目录与已核实关联。
+
+~~~text
+主路径: 主体列表和有证关系档案；资料暂缺不能由名称猜补
+延续: 目录选择元数据不更改live Subject；正式切换经ACC-02确认
+端侧: Web/Desktop列表和关系档案；Mobile搜索展开；官网不公开内部名录
+失败恢复: 关系无source则资料暂缺；读权失败不推断主体不存在
+验收: 目录读与主体业务权限分开；不借静态目录授权
+~~~
+
+### CTH-03
+
+**任务：** 查看监测变化、平台lane并阅读一条信号。
+
+~~~text
+主路径: 时间窗脉冲+Collector lane+单条reader；平台热度与自有样本分开
+延续: 原始platform ID、发布时间、采集时间、scope、Evidence进入Research
+端侧: Web/Desktop流与lane检视；Mobile先变化后单条；官网只讲已验证采集
+失败恢复: 验证码/登录墙/限流仅阻断对应lane；保持原帖定位
+验收: 允许时打开原文并返回同信号；无授权不得起采集/导出
+~~~
+
+### CTH-04
+
+**任务：** 理解事件先后和证实的关系边而不推因果。
+
+~~~text
+主路径: 实际时间轴与有证关系图切换；选节点看原来源
+延续: 保留事件ID、源时间/capture time、relation version
+端侧: Web/Desktop时间轴/关系图；Mobile按时间下钻；官网无内部事件图
+失败恢复: 部分返回标partial；缺证据不画边；scope切换清旧图
+验收: 节点回源且返回定位准确；不做因果或写入动作
+~~~
+
+### CTH-05
+
+**任务：** 寻找真实变化日期并查看当日样本。
+
+~~~text
+主路径: 真实日密度与当日列表关联，标记分子/分母/窗口
+延续: 保留scope、日期、时区、metric定义和source
+端侧: Web/Desktop日历+列表；Mobile日期摘要后列表；官网不显示内部日历
+失败恢复: 零/无数据/未采集/失败区分，缺分母不画热度
+验收: 点日准确过滤当日样本；缺失日期不自动为0
+~~~
+
+### CTH-06
+
+**任务：** 分拣反馈并读原始措辞。
+
+~~~text
+主路径: triage队列加原文Reader；派生类别可编辑且不等于事故/Case
+延续: 保留原文、平台时间、Evidence、scope及人工/AI分类版本
+端侧: Web/Desktop队列与原文并读；Mobile逐条打开再回队列；官网不呈私密反馈
+失败恢复: 未分类保持待分类；撤源标需复核，不删原文
+验收: 分类与原文可分别核对；无Case receipt不称已建Case
+~~~
+
+### CTH-07
+
+**任务：** 解读有定义指标在特定窗口内的变化。
+
+~~~text
+主路径: 图表、表格、分母/定义/单位/时间/来源并列
+延续: 同指标和scope进入分析；解释带同一Evidence版本
+端侧: Web/Desktop图与定义表并读；Mobile看变化再展开数据点；官网只用核准公开数
+失败恢复: 空值/缺分母/stale/error不转0；不同比较窗阻止趋势
+验收: 图表表格一致可回源；没有归因证据不解释原因
+~~~
+
+### CTH-08
+
+**任务：** 追踪真实Case到Outcome并区分复用知识。
+
+~~~text
+主路径: Case→Insight→Decision→Action→Outcome泳道；知识独立显示审阅状态
+延续: 所有节点绑定同一canonical Case/scope/来源和版本；知识不覆盖事实
+端侧: Web/Desktop全链和知识并看；Mobile逐阶段返回；官网不露私有Case
+失败恢复: 没有canonical Case不以note替代；receipt未知留待核
+验收: 父子阶段可追踪，未发生步骤不显示完成，知识有审阅依据
+~~~
+
+### CTH-09
+
+**任务：** 区分风险依据、决策状态、审批和实际动作。
+
+~~~text
+主路径: 风险、Decision ledger、Action receipt分区显示提案到执行状态
+延续: 沿用已有Actor/scope/approval/effect ID，不为风险创建平行任务
+端侧: Web/Desktop并列风险与账本；Mobile先状态再依据；官网不露内部审批
+失败恢复: 未经批准无执行控制；effect UNKNOWN禁止重试并保留上下文
+验收: 服务端状态一致；真实Outcome/Evaluation才能称闭环完成
+~~~
+
+### CTH-10
+
+**任务：** 创建或重开有来源的运营简报并检查结论。
+
+~~~text
+主路径: 正文/方法/引用/Action-Outcome分页阅读；从同一SourceBrief Job重开
+延续: 沿用job/report/hash/brief/evidence/scope/父版；源失效局部复核
+端侧: Web/Desktop正文与来源栏；Mobile逐页返回；官网仅审批公开版；朗读限当前绑定文本
+失败恢复: ACK丢失查询同ID；无导出回执不称导出成功；换scope/hash停止朗读
+验收: 保存重开后逐条回源；段落修改成子版本，不丢方法引用
+~~~
+
+### SH-01
+
+**任务：** 发现共享能力并进入当前研究/创作/媒体工作。
+
+~~~text
+主路径: 当前Task→已绑定能力→原生Reader/编辑器；Timeline/ShotPlan保留专用工作区
+延续: 沿用Brief/SourceTarget/Evidence/Artifact/timeline版本，目录本身不执行
+端侧: Web/Desktop承担并读与复杂编辑；Mobile任务摘要后打开素材；官网只列已证能力
+失败恢复: 能力未绑定不运行；时间轴冲突可撤回；取消保留未应用编辑；朗读只预览当前字幕
+验收: 同源进入后保存/重开；timeline横向拖动，未授权Action不可执行
+~~~
+
+完整媒体结果补充：继承同一 Task/Brief/Source/Evidence/rights，进入原生视频 Viewer 与可横向平移/缩放的 Timeline；支持真实素材选择、拖放、修剪、分割、删除、重排、字幕与多层画面/声音编辑；检验单视频轨是否阻断 B-roll/overlay，不能把实际限制写成产品目标。时间轴编辑后的实际 Viewer/时码、临时预览导出、正式 SavedWork/Artifact 和重开后的确切版本必须分开标识；Undo/Redo 恢复实际编辑，正式子版本保留并可回放父版本。真实授权媒体完成端到端操作；四端按现有产品角色逐一验收，未验证端保持 `NOT_VERIFIED`。
+
+### SH-02
+
+**任务：** 检索并阅读同一组有来源研究材料。
+
+~~~text
+主路径: 按平台原生形态组合图文/长文/短视频/线程/音频Reader
+延续: 保留Source/Evidence/platform ID/scope/time/rights；进入Brief不重搜
+端侧: Web/Desktop列表与Reader并行；Mobile搜索→列表→单篇→原位返回；官网不载内部资料
+失败恢复: 缺字段留unknown；poster-only与完整视频分开；撤源留历史并标不可用
+验收: 六平台显示原生结构且字段诚实；跨到Research/Creation引用不丢
+~~~
+
+### SH-03
+
+**任务：** 理解Canonical指标定义、成熟度和Source链。
+
+~~~text
+主路径: Schema/Metric树加逐级lineage，不展示原始DB表/路径
+延续: 查询沿用GLOBAL/FOCUS读权，Metric版本和Evidence引用可带入分析
+端侧: Web/Desktop树+关系；Mobile搜索→定义→来源；官网仅展示公开核准口径
+失败恢复: 链路断点指出具体层；未授权不读全局计数；不提供修复
+验收: 值/单位/定义/来源一致，页面保持只读
+~~~
+
+### SH-04
+
+**任务：** 重开真实Artifact、比较版本并回到原Task。
+
+~~~text
+主路径: 类型化Viewer和版本序列展示父版、来源、局部diff
+延续: Artifact ID/hash、父Brief/Task、scope、source refs保持一致；本地朗读只读READY重开文本
+端侧: Web/Desktop专属Viewer；Mobile成果→差异→原任务；官网不提供私有Artifact
+失败恢复: 超时查询同ID；失效来源保留旧版本；非persisted/blocked不下载或朗读
+验收: 重开版本与差异准确，回原Task；无Effect receipt不报导出成功
+~~~
+
+### SH-05
+
+**任务：** 审阅学习资产的样本、方法、反例和生命周期。
+
+~~~text
+主路径: candidate/verified/rejected/promoted/rollback证据流，页面只读
+延续: 引用Outcome/Evidence/Evaluation及父版；Promotion回Learning owner审批
+端侧: Web/Desktop候选和版本差异；Mobile状态→依据→原Owner；官网无内部资产
+失败恢复: 样本不足不显示通过；权限/范围缺失保持阻断
+验收: 每个状态有可定位证据；本页不能自主推广或改写源
+~~~
+
+### SH-06
+
+**任务：** 从任务/通知/警报返回原业务工作。
+
+~~~text
+主路径: 任务、通知、警报分lane，选中呈来源/scope/状态/下一步
+延续: 保留原Task/Notification/Artifact ID和origin，打开回原任务
+端侧: Web/Desktop列表+详情；Mobile lane→原工作→返回同一条；官网无内部通知
+失败恢复: 来源或actor range不明不显示；无owner支持不提供审批/重试
+验收: 完整往返同一条目，真实授权计数；失败不变0/已处理
+~~~
+
+### SYS-01
+
+**任务：** 读RuntimeGuardian状态和Worker/DLQ保护指标。
+
+~~~text
+主路径: health snapshot按整体→队列→防护解释，采样时间在场
+延续: 同一guardian/source/timestamp；业务指标不得混入
+端侧: Web/Desktop状态脊柱；Mobile故障优先；官网不承诺内部健康
+失败恢复: offline/degraded/partial分开；无操作绑定不显示重启
+验收: 真实采样值和时间一致；旧快照不充当前状态
+~~~
+
+### SYS-02
+
+**任务：** 查Collector各平台lane和进入Evidence的真实状态。
+
+~~~text
+主路径: 平台manifest/lane/attempt/receipt显示configured/active/partial/blocked
+延续: 关联真实Collector task与Source/Evidence receipt，不伪造覆盖率
+端侧: Web/Desktop矩阵和单lane详情；Mobile按平台读；官网只讲验证过能力
+失败恢复: 挑战/身份/限流阻断单lane，刷新失败标stale
+验收: 读出与receipt一致；页面不查看Cookie或触发无绑定重试
+~~~
+
+### SYS-03
+
+**任务：** 核对schema、integrity、readability与Truth chain层次。
+
+~~~text
+主路径: 分别呈schema、自检、应用读取、链路阶段，不给总绿灯掩盖缺口
+延续: 绑定实际check/time/chain ref；不泄漏DB路径/业务行
+端侧: Web/Desktop分层检查；Mobile阻断优先；官网不呈系统诊断
+失败恢复: 数据库不可读或检查失败只读报告，不执行迁移
+验收: PASS/UNKNOWN/ERROR各自有证据；无误报健康
+~~~
+
+### SYS-04
+
+**任务：** 安全理解允许范围和审计可用性。
+
+~~~text
+主路径: allowlisted安全级别、控制化scope与audit状态，不显示策略细节
+延续: 真实permission仍按Actor/scope/operation服务端判定，本页不授予权限
+端侧: Web/Desktop访问姿态+审计；Mobile逐行展示；官网不露策略
+失败恢复: scope未知为未确认；鉴权错不泄漏敏感原因；不提供写操作
+验收: 任何画面交互均不改变权限；无证据不显示audit ready
+~~~
+
+### SYS-05
+
+**任务：** 调整设备外观并返回相同工作状态。
+
+~~~text
+主路径: 本地偏好预览/对照/撤销，配色和壁纸只影响本端呈现
+延续: 保持route/scroll/selection/draft；偏好使用现有本地owner，不变业务数据
+端侧: Web按网页本端；Desktop适配窗口；Mobile适配触摸；官网使用公开品牌视觉而非用户私有壁纸
+失败恢复: 持久化失败不称已保存；撤销回旧偏好；壁纸不上传、不写Evidence
+验收: 四端偏好不串scope，预览保存重启恢复分别可验证
+~~~
+
+### SYS-06
+
+**任务：** 在原任务授权范围内读取和操作受控来源，完成必要的验证并返回原任务。
+
+~~~text
+主路径: 按真实 capability 显示地址、当前来源、页面与允许操作；RecoverySheet 需要 LOGIN_FORM/VERIFY 时承接受控交互，再交还 PlatformSession 健康复核；不露账号/profile/port/path
+延续: 保留 Task/来源/target/page revision，返回恢复草稿和选择；来源保存经既有 Evidence owner，浏览画面不自动成为 Evidence；不接触私人 profile
+端侧: Web/Desktop 承接授权浏览与原 Task；Mobile 适配已批准的阅读/验证/返回流程，能力不具备时保留 OPEN 而非永久只读；官网不执行内部浏览
+失败恢复: 不可用即明确提示，不用外部个人浏览器伪装；人机验证走现有受控流程
+验收: 不泄密、无未绑定打开动作；失败回原Task并保留原因
+~~~
+
+### SYS-07
+
+**任务：** 检查实际Evaluation gate证据和未完成项。
+
+~~~text
+主路径: check→scope→run version→Evidence→状态，分开blocked/unknown/pass
+延续: 关联实际Evaluation版本；审批推广由相应owner执行
+端侧: Web/Desktop检查与证据；Mobile先阻断；官网只讲真实验证能力
+失败恢复: 无样本/证据不足非通过；本页不启动测试或发布
+验收: 状态可追到证据；空清单不显示pass
+~~~
+
+### SYS-08
+
+**任务：** 查看脱敏日志目录和可追溯Trace。
+
+~~~text
+主路径: 仅呈实际inventory/时间/结构化trace；无trace不画假图
+延续: trace绑定合法Task/run ID后回原任务；路径和秘密在投影前脱敏
+端侧: Web/Desktop摘要与trace；Mobile按Run查看；官网不公开日志
+失败恢复: 文件损坏/权限不足不导出原始日志；旧数据标stale；不清理
+验收: 真实trace存在才呈现且可回Task；无绝对路径/秘密
+~~~
+
+### 跨屏视觉与任务连续性
+
+```text
+真实任务 → 同一 Task / Brief / Actor / Scope → Source / Evidence / 版本
+→ 适配本屏的文字/图表/阅读器/编辑器/时间轴 → 可检查、可编辑、可拒绝的建议
+→ 现有服务端 Owner + Permission + Effect Fence → Action / Artifact / Outcome / Evaluation
+→ 保存新版本 → 原任务重开 → 仅修订受影响内容 → 恢复或回滚
+```
+
+研究进入制作时继续使用同一批资料和约束，不让用户重述目标、重选来源或重复核查。预算、来源或scope改变后，应指出具体受影响内容，显式采用新版本并保留父版本、修订原因和回滚。部分、失败、拒绝与效果未知不能被成功动画覆盖。此草图是设计输入，不改变ScreenSpec review status，也不证明实现、四端运行或用户验收。
+
+### 2026-10-08 前端审计与工具维护增补
+
+采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。其余窗口待 Product Owner 确认后执行，本轮只由 M 收敛规则、处理已授权修复/工具维护和同步。
+
+工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。

@@ -43,15 +43,15 @@
     },
     {
       "file": "contracts/experience/unknown-bindings.json",
-      "sha256": "0834999388bfeed9ad4d0621bf9fdb8e97fdc78d26a03b6b3e3195c2619fbe01"
+      "sha256": "9273e0ef22c53f0ba9bd1709d435e096dc3d7989026f64590f7e304f9fb338ab"
     },
     {
       "file": "contracts/experience/BINDING_MATRIX.json",
-      "sha256": "27b20961de3f1684df1c7d8d48d0ec35f45e7f3231fad2083104f8d11aac1e85"
+      "sha256": "8e3e25aff77d2fc57f209f1642365e0d81c6fc430096908797411b11bb76223c"
     },
     {
       "file": "contracts/experience/BACKEND_GAP.json",
-      "sha256": "dfd9b195dfb5133450c46c99f988f20ce5022449e8d054358c9abf01811609be"
+      "sha256": "fb8959e32b36001256f8f314ca15e8b4a8c0b3cba48ae71dabf9780545956bd1"
     }
   ],
   "screens": [
@@ -933,18 +933,18 @@
           ]
         }
       ],
-      "api_callable": "experience_screens._build_acc03() → runtime_guardian.legacy_health_check() for runtime health.",
+      "api_callable": "Flutter CoreAcc03Repository.load() calls LumenisCoreClient.runtimeIdentity() -> GET /api/experience/runtime/identity, then settingsContext() -> GET /api/settings/context. It does not call /api/experience/screen/ACC-03; the separate lazy-merged legacy experience_screens._build_acc03() is not this Flutter call path. Runtime identity is operational process/database state; settings context is context-selection data.",
       "api_claims_requiring_code_verification": {
         "unknown_bindings_has_non_unknown_api_claim": true,
-        "backend_gap_api": "experience_screens._build_acc03() → runtime_guardian.legacy_health_check() for runtime health.",
+        "backend_gap_api": "Flutter CoreAcc03Repository.load() calls LumenisCoreClient.runtimeIdentity() -> GET /api/experience/runtime/identity, then settingsContext() -> GET /api/settings/context. It does not call /api/experience/screen/ACC-03; the separate lazy-merged legacy experience_screens._build_acc03() is not this Flutter call path. Runtime identity is operational process/database state; settings context is context-selection data.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_TARGET_HOME_INCOMPLETE_LIVE_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "SYSTEM operator scope; infrastructure reads do not establish business-product truth.",
         "verified_actor_identity": "UNKNOWN",
         "verified_domain_product_scope": "UNKNOWN",
-        "source_scope_claim": "GET screen route: optional global Basic Auth only; no per-screen SYSTEM READ Permission/actor scope is enforced."
+        "source_scope_claim": "Per-screen actor/target READ Permission for ACC-03 Home remains UNKNOWN. Runtime identity is operational state; settings-context selection is not a permission grant, and neither proves authorization for the Home launch binding."
       },
       "viewmodel": {
         "screen_domain": "ACCOUNT",
@@ -961,13 +961,13 @@
       },
       "permission": {
         "canonical_operation": "READ",
-        "verified_permission": "No per-screen READ Permission is verified; optional global Basic Auth is not actor/target authorization.",
-        "source_claim": "GET screen route: optional global Basic Auth only; no per-screen SYSTEM READ Permission/actor scope is enforced."
+        "verified_permission": "UNKNOWN: No per-screen READ Permission is verified; optional global Basic Auth is not actor/target authorization.",
+        "source_claim": "Per-screen actor/target READ Permission for ACC-03 Home remains UNKNOWN. Runtime identity is operational state; settings-context selection is not a permission grant, and neither proves authorization for the Home launch binding."
       },
       "evidence_lineage": {
         "verified_lineage": "UNKNOWN",
         "source_claim_present": true,
-        "required_invariant": "Global Basic Auth only when configured; screen GET has no per-screen READ decision. Runtime health output is operational state, not business Evidence."
+        "required_invariant": "Runtime identity reports operational process/database state and settings context reports context selection; neither is business Evidence for the Home binding. Actor-scoped Evidence lineage remains UNKNOWN."
       },
       "read_write_effect": "Read-only current source/ViewModel; no write or external effect is accepted by this binding.",
       "truth_status": "UNVERIFIED_ACCEPTANCE_PENDING",
@@ -976,13 +976,13 @@
         "binding_matrix_status": "PARTIAL",
         "binding_matrix_owner_claim": "SYSTEM",
         "backend_gap_api_status": "PARTIAL",
-        "backend_gap_permission_status": "GET screen route: optional global Basic Auth only; no per-screen SYSTEM READ Permission/actor scope is enforced.",
-        "backend_gap_evidence_status": "Global Basic Auth only when configured; screen GET has no per-screen READ decision. Runtime health output is operational state, not business Evidence.",
+        "backend_gap_permission_status": "Per-screen actor/target READ Permission for ACC-03 Home remains UNKNOWN. Runtime identity is operational state; settings-context selection is not a permission grant, and neither proves authorization for the Home launch binding.",
+        "backend_gap_evidence_status": "Runtime identity reports operational process/database state and settings context reports context selection; neither is business Evidence for the Home binding. Actor-scoped Evidence lineage remains UNKNOWN.",
         "viewmodel_has_unknown_binding_key": true
       },
       "source_conflicts": [],
-      "acceptance_reference": "PENDING: current source mapping exists, but actor scope, Permission, Evidence, App behavior, and executable acceptance are not all verified.",
-      "next_action": "Bind health reads to an authorized SYSTEM actor and validate runtime state, timestamp, and recovery semantics.",
+      "acceptance_reference": "PENDING: current source mapping exists, but actor scope, Permission, Evidence, App behavior, and executable acceptance are not all verified. 2026-10-08 scoped source read at 288f222d confirms Flutter route/component exists; no live acceptance promotion.",
+      "next_action": "F/W6: adopt existing ACC-03 specification target Home with AI-01 editor and four destinations; reconcile root/manifest/Shell currently CTH-01; retain actor/Permission checks and exact deep links.",
       "source_snapshot_head": "3ebe60f99d0f928bbcc92aaea7ce99225535d65e"
     },
     {
@@ -1044,18 +1044,18 @@
           ]
         }
       ],
-      "api_callable": "experience_screens._build_acc04() → auth_recovery_center.get_recovery_summary() for recovery-queue summary.",
+      "api_callable": "Flutter CoreAcc04Repository.load() calls screen('ACC-04') -> GET /api/experience/screen/ACC-04. experience_runtime._all_builders() lazily merges experience_screens.SCREEN_BUILDERS, including _build_acc04() -> legacy _envelope(source='runtime', bound=true, sections=...) with no guard object. Flutter Acc04Snapshot.fromResponse marks guard available only when source='runtime', bound=true, and guard is a map; the legacy bound flag alone does not satisfy this typed guard contract.",
       "api_claims_requiring_code_verification": {
         "unknown_bindings_has_non_unknown_api_claim": true,
-        "backend_gap_api": "experience_screens._build_acc04() → auth_recovery_center.get_recovery_summary() for recovery-queue summary.",
+        "backend_gap_api": "Flutter CoreAcc04Repository.load() calls screen('ACC-04') -> GET /api/experience/screen/ACC-04. experience_runtime._all_builders() lazily merges experience_screens.SCREEN_BUILDERS, including _build_acc04() -> legacy _envelope(source='runtime', bound=true, sections=...) with no guard object. Flutter Acc04Snapshot.fromResponse marks guard available only when source='runtime', bound=true, and guard is a map; the legacy bound flag alone does not satisfy this typed guard contract.",
         "binding_matrix_api_status": "PARTIAL",
-        "viewmodel_binding_declaration": "NO_FLUTTER_SCREEN"
+        "viewmodel_binding_declaration": "FLUTTER_SCREEN_EXISTS_RETURN_ONLY_LIVE_UNVERIFIED"
       },
       "actor_scope": {
         "canonical_scope_invariant": "SYSTEM operator scope; infrastructure reads do not establish business-product truth.",
         "verified_actor_identity": "UNKNOWN",
         "verified_domain_product_scope": "UNKNOWN",
-        "source_scope_claim": "Optional global Basic Auth only; it does not establish an account actor, SSO identity, or account-scoped Permission."
+        "source_scope_claim": "Account actor identity and account-scoped READ Permission remain UNKNOWN; optional global Basic Auth does not establish either."
       },
       "viewmodel": {
         "screen_domain": "ACCOUNT",
@@ -1067,13 +1067,13 @@
       },
       "permission": {
         "canonical_operation": "READ",
-        "verified_permission": "No per-screen READ Permission is verified; optional global Basic Auth is not actor/target authorization.",
-        "source_claim": "Optional global Basic Auth only; it does not establish an account actor, SSO identity, or account-scoped Permission."
+        "verified_permission": "UNKNOWN: No per-screen READ Permission is verified; optional global Basic Auth is not actor/target authorization.",
+        "source_claim": "Account actor identity and account-scoped READ Permission remain UNKNOWN; optional global Basic Auth does not establish either."
       },
       "evidence_lineage": {
         "verified_lineage": "UNKNOWN",
         "source_claim_present": true,
-        "required_invariant": "Global Basic Auth only when configured; recovery summary is not an authentication guard or per-account Permission result. Operational records have no verified actor-scoped Evidence link."
+        "required_invariant": "Legacy recovery-summary sections are not a typed account guard or Permission result. Operational records have no verified actor-scoped Evidence link; Evidence lineage remains UNKNOWN."
       },
       "read_write_effect": "Read-only current source/ViewModel; no write or external effect is accepted by this binding.",
       "truth_status": "UNVERIFIED_ACCEPTANCE_PENDING",
@@ -1082,13 +1082,15 @@
         "binding_matrix_status": "PARTIAL",
         "binding_matrix_owner_claim": "SYSTEM / Account",
         "backend_gap_api_status": "PARTIAL",
-        "backend_gap_permission_status": "Optional global Basic Auth only; it does not establish an account actor, SSO identity, or account-scoped Permission.",
-        "backend_gap_evidence_status": "Global Basic Auth only when configured; recovery summary is not an authentication guard or per-account Permission result. Operational records have no verified actor-scoped Evidence link.",
+        "backend_gap_permission_status": "Account actor identity and account-scoped READ Permission remain UNKNOWN; optional global Basic Auth does not establish either.",
+        "backend_gap_evidence_status": "Legacy recovery-summary sections are not a typed account guard or Permission result. Operational records have no verified actor-scoped Evidence link; Evidence lineage remains UNKNOWN.",
         "viewmodel_has_unknown_binding_key": true
       },
-      "source_conflicts": [],
-      "acceptance_reference": "PENDING: current source mapping exists, but actor scope, Permission, Evidence, App behavior, and executable acceptance are not all verified.",
-      "next_action": "Keep the existing recovery owner; connect a trusted account actor, scope recovery records, and verify the recovery action boundary.",
+      "source_conflicts": [
+        "Flutter typed guard mismatch: lazy-merged legacy _build_acc04() returns a bound=true sections envelope without a guard object; Acc04Snapshot requires source=runtime, bound=true, and a guard map. Do not infer bound=false or treat legacy bound=true as guard availability."
+      ],
+      "acceptance_reference": "PENDING: current source mapping exists, but actor scope, Permission, Evidence, App behavior, and executable acceptance are not all verified. 2026-10-08 scoped source read at 288f222d confirms Flutter route/component exists; no live acceptance promotion.",
+      "next_action": "F/W6 and existing SYSTEM Permission/recovery owner: preserve trusted originating Task/scope/operation and return context; bind actual recovery receipts before reporting recovery. CODEX-ACC04-GUARD is the ScreenSpec acceptance slice over this BACKEND-GAP-004 row, not another permission owner.",
       "source_snapshot_head": "3ebe60f99d0f928bbcc92aaea7ce99225535d65e"
     },
     {

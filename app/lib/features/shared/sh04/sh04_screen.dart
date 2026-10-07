@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
+import '../read_aloud_action.dart';
 import 'sh04_repository.dart';
 import 'sh04_snapshot.dart';
 import 'sh04_view_model.dart';
@@ -68,7 +69,10 @@ class _Workspace extends StatelessWidget {
       final wide = constraints.maxWidth >= 1120;
       final snapshot = viewModel.snapshot!;
       final queue = _ExportQueue(viewModel: viewModel);
-      final inspector = _ArtifactInspector(exportItem: viewModel.selected);
+      final inspector = _ArtifactInspector(
+        exportItem: viewModel.selected,
+        scope: snapshot.scope,
+      );
       return Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
@@ -343,9 +347,10 @@ class _ExportRow extends StatelessWidget {
 }
 
 class _ArtifactInspector extends StatelessWidget {
-  const _ArtifactInspector({required this.exportItem});
+  const _ArtifactInspector({required this.exportItem, required this.scope});
 
   final Sh04Export? exportItem;
+  final Sh04Scope scope;
 
   @override
   Widget build(BuildContext context) {
@@ -459,6 +464,16 @@ class _ArtifactInspector extends StatelessWidget {
                     ),
                   ),
                 ],
+                if (item.state == Sh04ExportState.ready &&
+                    item.reopenable &&
+                    item.preview.isNotEmpty)
+                  ReadAloudAction(
+                    sessionId: 'sh04:${item.internalId}',
+                    scopeVersion:
+                        '${scope.mode.name}:${scope.domain ?? 'GLOBAL'}:${scope.focusId ?? ''}:${item.internalId}:${item.generatedAt}',
+                    text: item.preview,
+                    purpose: ReadAloudPurpose.savedPreview,
+                  ),
                 const SizedBox(height: 13),
                 Text(
                   _copy(

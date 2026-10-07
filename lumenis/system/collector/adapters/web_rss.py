@@ -108,12 +108,12 @@ class WebRSSAdapter(BasePlatformAdapter):
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
         return CollectionResult(
-            status=CollectionStatus.SUCCESS,
+            status=CollectionStatus.NEED_VERIFY,
             platform=self.platform,
-            message="public RSS provider is configured; network is checked during collection",
+            message="public RSS network availability is checked only during this collection",
             metadata={
                 "provider": "google_news_rss",
-                "healthcheck_scope": "configuration_only",
+                "healthcheck_scope": "collection_required",
                 "requires_authorization": False,
             },
         )

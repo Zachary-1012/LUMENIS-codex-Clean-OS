@@ -4,6 +4,7 @@ import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
 import '../../navigation/lumenis_leave_guard.dart';
+import '../shared/read_aloud_action.dart';
 import 'bmp08_repository.dart';
 import 'bmp08_snapshot.dart';
 import 'bmp08_view_model.dart';
@@ -1303,6 +1304,15 @@ class _ScriptPanel extends StatelessWidget {
                 ),
               ),
             ),
+            if (localDraft.trim().isNotEmpty)
+              ReadAloudAction(
+                sessionId:
+                    'bmp08:${snapshot.scope.mode}:${snapshot.scope.brandId ?? 'GLOBAL_ALL'}:$selectedSection',
+                scopeVersion:
+                    '${snapshot.scope.mode}:${snapshot.scope.brandId ?? 'GLOBAL_ALL'}:$selectedSection',
+                text: localDraft,
+                purpose: ReadAloudPurpose.podcastScript,
+              ),
           ],
         ],
       ),

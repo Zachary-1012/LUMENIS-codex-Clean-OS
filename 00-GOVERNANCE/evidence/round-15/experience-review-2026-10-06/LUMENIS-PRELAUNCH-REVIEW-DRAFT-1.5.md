@@ -1915,3 +1915,76 @@ F-01—F-12对应 `Frontend_Delivery_Audit.md` 的原12项发现；F-13—F-18�
 
 审计中的通用权限UI边界按本会话Product Owner直接指令处理：整体账号/登录/通用角色配置留待完整产品闭环后重新规划；本稿继续保留原业务动作内的服务端Permission、明确批准/拒绝、来源授权、Effect回执与审计，不恢复登录墙。审计未复演全部视频帧；本稿只沿用已有的指定视频覆盖记录/观察和对应采用点，不声称本轮重新逐帧观看。
 
+
+## 2026-10-08 Intelligent UI 任务适配与全屏索引
+
+当前已绑定动作限定本轮可执行范围，不限定已批准的产品终态。任何尚未接通的既有能力必须列为现有 Owner 的 OPEN 依赖，补齐合同、真实正常结果与恢复验收；不得因接口暂缺把完整交互目标缩减成只读页，也不得用未绑定按钮假装已实现。
+
+本次增补依据 [Intelligent UI 采用研究](../INTELLIGENT-UI-ADOPTION-20261008.md) 与现行 Experience Constitution §38，将“任务决定呈现形态、同一结果可阅读/调整/继续使用”逐屏映射到现有44份ScreenSpec。此处是1.6蓝图的日期增补，保留原始1.5/1.6内容、审阅状态和历史草图，不创设第二设计权威。每项的详细交互、四端差异、来源/版本连续性、失败恢复和补充验收见链接Spec末尾及[ScreenSpec README逐屏映射](../../../../contracts/experience/screen-specifications/README.md#intelligent-ui-全屏语义映射2026-10-08)；对应字符视觉草图见同目录44-screen wireframe增补。
+
+### 全屏索引
+
+| Screen | 本屏 Intelligent UI 用户任务 | 屏幕规范 |
+|---|---|---|
+| ACC-01 | 确认内部工作区入口可用并继续宿主指定目标 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/ACC-01.md#intelligent-ui-逐屏采用项2026-10-08) |
+| ACC-02 | 查看当前GLOBAL_ALL或明确选择一个可访问Subject视角 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/ACC-02.md#intelligent-ui-逐屏采用项2026-10-08) |
+| ACC-03 | 从首页开始真实工作或继续原任务 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/ACC-03.md#intelligent-ui-逐屏采用项2026-10-08) |
+| ACC-04 | 理解一项真实阻断并沿已有恢复路径返回 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/ACC-04.md#intelligent-ui-逐屏采用项2026-10-08) |
+| AI-01 | 把用户目标、当前资料与约束组成可检查的执行意图 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/AI-01.md#intelligent-ui-逐屏采用项2026-10-08) |
+| AI-02 | 跟踪真实任务阶段与持久化产物 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/AI-02.md#intelligent-ui-逐屏采用项2026-10-08) |
+| AI-03 | 逐条核验分析结论的来源并继续修订 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/AI-03.md#intelligent-ui-逐屏采用项2026-10-08) |
+| AI-04 | 查找适合当前任务的已验证能力，并按现有 Owner 合同完成已批准的使用与生命周期操作 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/AI-04.md#intelligent-ui-逐屏采用项2026-10-08) |
+| AI-05 | 查看AI服务真实状态和延迟样本 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/AI-05.md#intelligent-ui-逐屏采用项2026-10-08) |
+| BMP-01 | 回答授权品牌的市场信号与值得关注的趋势 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/BMP-01.md#intelligent-ui-逐屏采用项2026-10-08) |
+| BMP-02 | 理解品牌组合、子品牌与竞品关系 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/BMP-02.md#intelligent-ui-逐屏采用项2026-10-08) |
+| BMP-03 | 识别需要进一步验证的机会信号 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/BMP-03.md#intelligent-ui-逐屏采用项2026-10-08) |
+| BMP-04 | 看品牌传播链哪些阶段实际有观测 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/BMP-04.md#intelligent-ui-逐屏采用项2026-10-08) |
+| BMP-05 | 比较创作者匹配度和风险依据 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/BMP-05.md#intelligent-ui-逐屏采用项2026-10-08) |
+| BMP-06 | 把授权素材和内容想法推进为可审阅版本 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/BMP-06.md#intelligent-ui-逐屏采用项2026-10-08) |
+| BMP-07 | 连接活动目标、预算、里程碑和实际结果 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/BMP-07.md#intelligent-ui-逐屏采用项2026-10-08) |
+| BMP-08 | 把授权来源变成可审阅脚本及可编辑播客音轨 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/BMP-08.md#intelligent-ui-逐屏采用项2026-10-08) |
+| BMP-09 | 理解品牌评估变化、置信和覆盖情况 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/BMP-09.md#intelligent-ui-逐屏采用项2026-10-08) |
+| BMP-10 | 按严重性、扩散和时效处理有证据的品牌风险 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/BMP-10.md#intelligent-ui-逐屏采用项2026-10-08) |
+| BMP-11 | 在口径一致时比较品牌基准 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/BMP-11.md#intelligent-ui-逐屏采用项2026-10-08) |
+| CTH-01 | 查看商业运营活动并检视单个事件 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/CTH-01.md#intelligent-ui-逐屏采用项2026-10-08) |
+| CTH-02 | 浏览商业主体目录与已核实关联 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/CTH-02.md#intelligent-ui-逐屏采用项2026-10-08) |
+| CTH-03 | 查看监测变化、平台lane并阅读一条信号 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/CTH-03.md#intelligent-ui-逐屏采用项2026-10-08) |
+| CTH-04 | 理解事件先后和证实的关系边而不推因果 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/CTH-04.md#intelligent-ui-逐屏采用项2026-10-08) |
+| CTH-05 | 寻找真实变化日期并查看当日样本 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/CTH-05.md#intelligent-ui-逐屏采用项2026-10-08) |
+| CTH-06 | 分拣反馈并读原始措辞 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/CTH-06.md#intelligent-ui-逐屏采用项2026-10-08) |
+| CTH-07 | 解读有定义指标在特定窗口内的变化 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/CTH-07.md#intelligent-ui-逐屏采用项2026-10-08) |
+| CTH-08 | 追踪真实Case到Outcome并区分复用知识 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/CTH-08.md#intelligent-ui-逐屏采用项2026-10-08) |
+| CTH-09 | 区分风险依据、决策状态、审批和实际动作 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/CTH-09.md#intelligent-ui-逐屏采用项2026-10-08) |
+| CTH-10 | 创建或重开有来源的运营简报并检查结论 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/CTH-10.md#intelligent-ui-逐屏采用项2026-10-08) |
+| SH-01 | 发现共享能力并进入当前研究/创作/媒体工作 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/SH-01.md#intelligent-ui-逐屏采用项2026-10-08) |
+| SH-02 | 检索并阅读同一组有来源研究材料 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/SH-02.md#intelligent-ui-逐屏采用项2026-10-08) |
+| SH-03 | 理解Canonical指标定义、成熟度和Source链 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/SH-03.md#intelligent-ui-逐屏采用项2026-10-08) |
+| SH-04 | 重开真实Artifact、比较版本并回到原Task | [打开逐屏规范](../../../../contracts/experience/screen-specifications/SH-04.md#intelligent-ui-逐屏采用项2026-10-08) |
+| SH-05 | 审阅学习资产的样本、方法、反例和生命周期 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/SH-05.md#intelligent-ui-逐屏采用项2026-10-08) |
+| SH-06 | 从任务/通知/警报返回原业务工作 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/SH-06.md#intelligent-ui-逐屏采用项2026-10-08) |
+| SYS-01 | 读RuntimeGuardian状态和Worker/DLQ保护指标 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/SYS-01.md#intelligent-ui-逐屏采用项2026-10-08) |
+| SYS-02 | 查Collector各平台lane和进入Evidence的真实状态 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/SYS-02.md#intelligent-ui-逐屏采用项2026-10-08) |
+| SYS-03 | 核对schema、integrity、readability与Truth chain层次 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/SYS-03.md#intelligent-ui-逐屏采用项2026-10-08) |
+| SYS-04 | 安全理解允许范围和审计可用性 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/SYS-04.md#intelligent-ui-逐屏采用项2026-10-08) |
+| SYS-05 | 调整设备外观并返回相同工作状态 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/SYS-05.md#intelligent-ui-逐屏采用项2026-10-08) |
+| SYS-06 | 在原任务授权范围内读取和操作受控来源，完成必要的验证并返回原任务 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/SYS-06.md#intelligent-ui-逐屏采用项2026-10-08) |
+| SYS-07 | 检查实际Evaluation gate证据和未完成项 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/SYS-07.md#intelligent-ui-逐屏采用项2026-10-08) |
+| SYS-08 | 查看脱敏日志目录和可追溯Trace | [打开逐屏规范](../../../../contracts/experience/screen-specifications/SYS-08.md#intelligent-ui-逐屏采用项2026-10-08) |
+
+### 跨屏闭环要求
+
+- **同一任务连续性：** 用户从研究进入分析、业务决策或创作，继续使用原 Task/Brief/Actor/Scope/时间窗/预算约束、Source/Evidence及其版本；不要要求重复解释目标、重选同一批材料或重核同一来源。
+- **有影响的变化：** 来源、范围、预算或内容变化时，显示受影响对象及保留项；只有经用户明确采用的新版本才成为当前版本，父版本、变更原因与回滚路径仍可查。
+- **智能呈现的权力边界：** 模型可以提出有依据且可检查、编辑、拒绝的呈现/行动建议；当前Owner、服务端Permission和Effect Fence继续决定数据及执行，建议本身不能成为授权或成功回执。
+- **四端与视觉：** Public Website讲已验证公开能力或明确标记示例；Web Workspace/Desktop承载并读和精细编辑；Mobile以任务聚焦、触控、返回和恢复适配。四端保持同一业务语义、各自适配。二维手绘水彩/版画可丰富用色但不滥用；人物根据用户的具体脚本描述原创呈现，不复制参考照片人物，也不做3D AI质感。
+- **状态与验收：** unknown/not collected/stale/partial/denied/error/blocked分别表达；只运行真实绑定的动作。本次只是蓝图/文字草图/ScreenSpec补充，不改变已有 review status，不代表DESIGN_READY、实现、运行、四端验收或USER_VERIFIED。
+
+### 2026-10-08 前端审计与工具维护增补
+
+采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。其余窗口待 Product Owner 确认后执行，本轮只由 M 收敛规则、处理已授权修复/工具维护和同步。
+
+工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
+
+### 2026-10-08 两份成熟能力增补的审阅落点
+
+本审阅草图继续从唯一Product Architecture和Experience§38派生，不成为第二蓝图。44屏原智能交互输入复用，本次只对SH-01视频制作与BMP-08播客的真实编辑/播放/波形/录音/保存重开动线细化（见原44屏文字草图对应增补）。其他J1–J8基础操作与序境特色按Real Delivery Overlay双层验收，GPT/Apple/Tesla启发的任务适配、反馈、可撤回和偏好恢复适用于原有屏幕。新组件仅条件评估，Figma/美术稿未因本文更新自动完成。所有后续窗口实施等待Product Owner确认。

@@ -881,8 +881,13 @@ def test_collect_now_uses_shared_database_and_fails_closed_without_quota_state(m
         lambda *_args, **_kwargs: pytest.fail("collect_now must not open a raw SQLite connection"),
     )
 
-    assert module.collect_now("registered term") is False
-    assert "已阻止请求" in capsys.readouterr().out
+    assert module.collect_now(
+        "registered term", domain_id="cth", product_id="CTH",
+        subject_id="quota-test-subject", brand_key="quota-test-brand",
+    ) is False
+    output = capsys.readouterr().out
+    assert "采集限额状态不可用，已阻止请求" in output
+    assert "COLLECTION_DOMAIN_REQUIRED" not in output
 
 
 def test_note_ingestion_keeps_missing_analysis_unknown_and_preserves_existing_result(collector_case):

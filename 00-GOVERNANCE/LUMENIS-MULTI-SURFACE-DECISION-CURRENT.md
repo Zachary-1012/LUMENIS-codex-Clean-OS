@@ -154,3 +154,27 @@ Approval is not implementation evidence. Current source contains the trilingual 
 - ROUND 15: prove Public Website → trial/login entry → Web Workspace → real context/workflow/Evidence → Desktop advanced execution when applicable → Web result → Mobile notification/approval when applicable → Report/Evaluation/Learning.
 
 Stop and return `BLOCKED` rather than creating a second truth when identity/tenant scope, Permission, Evidence, API/ViewModel, desktop handoff, provider legal terms, secret handling or runtime ownership is unresolved.
+
+## 2026-10-08 全产品智能交互的四端落实
+
+本节是唯一Product Architecture和Experience §38的四端路由，不新增设计权威。用户要求覆盖每个现有产品角落，44屏与官网已有内容家族均须有具体应用；页面形态按任务选择，不能强塞同一聊天/卡片模板。
+
+| 入口 | 现有任务中的具体落实 | 同一任务与验收要求 |
+|---|---|---|
+| Public Website | 产品/能力说明用可操作且标注真实状态的示例、对照和步骤；帮助/说明/更新日志可查找并定位相关能力；真实入口明确。 | 演示数据和实测运行明确分开；不从示例开通业务权限，不把未来能力写成已上线。手机官网也独立排版，允许内容所需滚动。 |
+| Web Workspace | 实际材料进入阅读器、对照、图表、方案表单、文稿/媒体工作台；就地筛选与修改，来源和结果联动。 | 同Task/Brief/Scope/Source/版本；键盘/屏幕阅读器完整；流式中断、断网与重开保留可确认进度。 |
+| Desktop | 延续同一工作对象，适配多窗格、大文件、真实播放器、横向轨道/选区和本机系统朗读。 | 不新建本地业务真相；本机处理/服务端执行分别显示；关闭/重启恢复版本及用户选区，修改后旧播放不继续。 |
+| Mobile Companion | 用触控顺序重排事实、依据、审阅、允许的轻编辑/参数调整、审批和通知返回；可把复杂工作接续到Web/Desktop。 | 不把不可运行的重计算假装在手机完成；可用动作与原权限一致，不重新解释任务或重复选择来源；焦点与回退可达。 |
+
+四端共同要求：二维手绘水彩/版画方向、功能glyph与来源标识分层、颜色有节制、保留有用丰富交互，中英韩/无障碍；操作端避免不必要的整页上下滑动，长文等必要区域不截断。各端实际实现/运行证据独立记录，文档同步不提升已有状态。本轮仅更新规则和设计输入，不自动派工。
+
+
+### 2026-10-08 前端审计与工具维护增补
+
+采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。其余窗口待 Product Owner 确认后执行，本轮只由 M 收敛规则、处理已授权修复/工具维护和同步。
+
+工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
+
+### 2026-10-08 成熟操作与智能增强的四端一致性
+
+按Product Architecture与Experience§38在现有四端角色内同时验收基础可用与序境增强；不新增入口。Web/Desktop承载实际编辑，Mobile保持已批准触控/轻操作/恢复范围，适用的录音与音频播放逐端验证，缺设备的项目保留OPEN；官网呈现真实已验证能力和明确标记的演示，不宣传尚未实现的媒体/AI。GPT/Apple/Tesla只作为操作、反馈、撤回和状态连续性的参考。SH-01/BMP-08完整媒体操作沿原合同，必要媒体时间轴横向滚动不违反非必要不上下滚动。当前规则更新不恢复F/C1-C6，待PO确认。

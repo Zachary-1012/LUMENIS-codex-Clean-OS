@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
+import '../../shared/read_aloud_action.dart';
 import 'source_brief_copy.dart';
 import 'source_brief_view_model.dart';
 
@@ -398,6 +399,14 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
         }),
         style: const TextStyle(height: 1.6),
       ),
+      if (result.analysis case final analysis?)
+        ReadAloudAction(
+          sessionId: 'source-brief:${result.reportId}',
+          scopeVersion:
+              '${result.scope.scopeKey}:${result.reportId}:${result.artifactHash}',
+          text: _speechText(result, analysis),
+          purpose: ReadAloudPurpose.sourceBrief,
+        ),
       if (result.analysis case final analysis?) ...[
         if (result.businessQuestion case final question?) ...[
           const SizedBox(height: 16),
@@ -454,6 +463,35 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
       ],
     ],
   );
+
+  String _speechText(
+    SourceBriefResult result,
+    SourceBriefBusinessAnalysis analysis,
+  ) {
+    final lines = <String>[];
+    final question = result.businessQuestion?.trim();
+    if (question != null && question.isNotEmpty) lines.add(question);
+    for (final observation in analysis.sourceObservations) {
+      if (observation.excerpt.trim().isNotEmpty) lines.add(observation.excerpt);
+    }
+    for (final interpretation in analysis.interpretations) {
+      if (interpretation.text.trim().isNotEmpty) lines.add(interpretation.text);
+    }
+    for (final action in analysis.proposedActions) {
+      lines.addAll([action.action, action.reason, action.check]);
+      if (action.pilot case final pilot?) {
+        lines.addAll([
+          pilot.audience,
+          pilot.procedure,
+          pilot.measure,
+          pilot.continueIf,
+          pilot.stopIf,
+        ]);
+      }
+    }
+    lines.addAll(analysis.unknowns);
+    return lines.where((line) => line.trim().isNotEmpty).join('\n\n');
+  }
 
   Widget _sources(SourceBriefCopy copy, SourceBriefResult result) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,

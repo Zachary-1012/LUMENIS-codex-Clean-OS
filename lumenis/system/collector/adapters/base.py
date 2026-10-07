@@ -21,6 +21,18 @@ class CollectionStatus(str, Enum):
     COOLING_DOWN = "COOLING_DOWN"
 
 
+class AccessClass(str, Enum):
+    """How this exact adapter call obtained its source material.
+
+    These labels describe the route. They do not grant platform or LUMENIS
+    permissions; those remain owned by the existing Permission/session paths.
+    """
+
+    Z0_PUBLIC = "Z0"
+    Z1_AUTHORIZED_SESSION = "Z1"
+    Z2_OFFICIAL_API = "Z2"
+
+
 @dataclass
 class CollectionResult:
     status: CollectionStatus
@@ -31,6 +43,20 @@ class CollectionResult:
     raw_count: int = 0
     new_count: int = 0
     metadata: Dict[str, Any] = field(default_factory=dict)
+    # Explicit route/provenance fields are appended for positional compatibility.
+    # The secondary Collector binds these after the adapter returns, then writes
+    # this record through the existing Evidence transaction.
+    provenance: Dict[str, Any] = field(default_factory=dict)
+    access_class: Optional[AccessClass] = None
+    backend: Optional[str] = None
+    capability: Optional[str] = None
+    route_id: Optional[str] = None
+    # Selected route and observed acquisition facts remain separate. The
+    # attempted fields describe dispatch; access_class/backend describe only
+    # facts the adapter actually returned or a completed read can establish.
+    attempted_access_class: Optional[AccessClass] = None
+    attempted_backend: Optional[str] = None
+    actual_access_state: Optional[str] = None
 
     @property
     def ok(self) -> bool:

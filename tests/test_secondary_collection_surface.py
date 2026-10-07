@@ -36,9 +36,10 @@ def approved_global_request():
 
 
 def _stub_approved_global_guard(monkeypatch, request):
-    def allow(actor, scope, platform, keyword, max_results):
+    def allow(actor, scope, platform, keyword, max_results, **kwargs):
         assert actor is request["actor"]
         assert scope == request["scope"]
+        assert kwargs.get("max_scroll") is None
         return dict(request["scope"]), None
 
     monkeypatch.setattr(surface, "_manual_collection_guard", allow)
@@ -311,7 +312,11 @@ def test_collect_search_follows_read_only_import_and_evidence_chain(monkeypatch,
     assert result["native_fields_synced"] == 1 and result["refresh_verified"] is True
     assert result["evidence_recorded"] is True
     assert result["provenance"]["source"] == "platform:douyin"
-    assert result["provenance"]["provider"] == "platform_adapter"
+    assert "provider" not in result["provenance"]
+    assert result["provenance"]["attempted_backend"] == "lumenis.adapters.douyin.DouyinAdapter"
+    assert result["provenance"]["attempted_access_class"] == "Z1"
+    assert result["provenance"]["access_class"] == "Z1"
+    assert result["provenance"]["route_id"] == "douyin.search.session"
 
 
 def test_native_web_rss_record_maps_existing_canonical_fields():
@@ -561,6 +566,60 @@ def test_provider_exception_isolated_and_recorded(monkeypatch, approved_global_r
     assert "private provider failure detail" not in result["error"]
     assert run_log["error"].startswith("PROVIDER_UNAVAILABLE:")
     assert evidence["provenance"]["source"] == "platform:bilibili"
+
+
+def test_preflight_without_a_source_request_keeps_observation_counts_unknown(monkeypatch, approved_global_request):
+    run_log = {}
+    evidence = {}
+    monkeypatch.setattr(surface, "_daily_action_count", lambda _platform, _at: 0)
+    monkeypatch.setattr(surface, "_adapter_health", lambda _platform, **_kwargs: {
+        "status": "NOT_CONFIGURED", "ready": False, "can_attempt": False,
+        "message": "not configured", "metadata": {},
+    })
+    monkeypatch.setattr(surface, "_write_run_log", lambda *args, **kwargs: run_log.update(kwargs))
+    _stub_approved_global_guard(monkeypatch, approved_global_request)
+    monkeypatch.setattr(
+        surface, "_write_prelaunch_evidence",
+        lambda _platform, _keyword, result, **_kwargs: evidence.update(result) or 13,
+    )
+    monkeypatch.setitem(surface._last_action, "bilibili", 0.0)
+
+    result = surface.collect_search(
+        "bilibili", "brand", max_results=1, operator="human",
+        actor=approved_global_request["actor"], scope=approved_global_request["scope"],
+    )
+
+    assert result["status"] == "NOT_CONFIGURED"
+    assert result["raw_count"] is None
+    assert result["returned_count"] is None
+    assert result["filtered_count"] is None
+    assert evidence["raw_count"] is None
+    assert evidence["filtered_count"] is None
+    assert run_log["fetched"] is None
+    assert run_log["accepted"] is None
+    assert run_log["rejected"] is None
+
+
+def test_last_run_preserves_null_counts_and_does_not_infer_empty_success(monkeypatch):
+    import database as db
+    from contextlib import nullcontext
+
+    class Cursor:
+        def fetchone(self):
+            return ("bilibili", "brand", "start", "finish", None, None, None, "")
+
+    class Connection:
+        def execute(self, *_args, **_kwargs):
+            return Cursor()
+
+    monkeypatch.setattr(db, "get_db", lambda: nullcontext(Connection()))
+
+    result = surface._last_run("bilibili")
+
+    assert result["fetched"] is None
+    assert result["accepted"] is None
+    assert result["rejected"] is None
+    assert result["state"] == "UNKNOWN"
 
 
 def test_evidence_failure_marker_is_not_reported_as_persisted(monkeypatch, approved_global_request):

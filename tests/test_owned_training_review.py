@@ -186,6 +186,26 @@ def test_bmp_brand_focus_scope_round_trips_to_gateway_domain(review_db):
     assert record["domain_id"] == "bmp" and record["scope"] == "BRAND-A"
 
 
+def test_cth_training_review_approval_cannot_authorize_bmp_submission(review_db):
+    cth_scope = _scope("SUBJ-A")
+    bmp_scope = _scope("BRAND-A", domain="zbmp")
+    _grant_scope(review_db, 1, "CTH", {"subject_ids": ["SUBJ-A"]})
+    _grant_scope(review_db, 1, "ZBMP", {"brand_focus_ids": ["BRAND-A"]})
+    with sqlite3.connect(review_db) as connection:
+        cth_source = _source(connection, cth_scope, name="cth-source")
+        bmp_source = _source(connection, bmp_scope, name="bmp-source")
+    cth_args = _args(cth_scope, cth_source)
+    bmp_args = _args(bmp_scope, bmp_source)
+    cth_resource = training_review.training_review_approval_resource(**cth_args)
+    bmp_resource = training_review.training_review_approval_resource(**bmp_args)
+    assert cth_resource != bmp_resource
+    gate, _ = _gate(cth_resource)
+
+    with pytest.raises(PermissionError, match="EXACT_APPROVAL_REQUIRED"):
+        training_review.submit_training_review(gate=gate, **bmp_args)
+    assert _review_count(review_db) == 0
+
+
 @pytest.mark.parametrize("approval", ["missing", "wrong_resource", "revoked"])
 def test_denied_or_revoked_exact_approval_writes_no_learning_evidence(review_db, approval):
     scope = _scope()

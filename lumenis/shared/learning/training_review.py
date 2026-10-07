@@ -125,6 +125,9 @@ def _authorize(gate: permission.PermissionGate, material: dict, resource: str) -
     if identity != material["identity"]:
         raise PermissionError("OWNED_TRAINING_REVIEW_IDENTITY_CHANGED")
     domain = "bmp" if scope["domain_id"] == "zbmp" else "cth"
+    canonical_domain = permission._canonical_business_domain_id(domain)
+    if not canonical_domain:
+        raise PermissionError("OWNED_TRAINING_REVIEW_SCOPE_DENIED")
     scope_args = dict(domain_id=domain, action="write", module="owned_training",
                       subject_id=scope["subject_id"], brand_focus_id=scope["brand_focus_id"],
                       global_scope=scope["global"], gate=gate)
@@ -137,10 +140,11 @@ def _authorize(gate: permission.PermissionGate, material: dict, resource: str) -
     scope_resource = f"{domain}:{'GLOBAL / ALL' if scope['global'] else focus}"
     if type(scoped) is not permission.ActorScopePermissionResult or (
             scoped.allowed, scoped.verification_state, scoped.actor_id, scoped.caller,
-            scoped.domain_id, scoped.subject_id, scoped.brand_focus_id, scoped.global_scope,
+            scoped.subject_id, scoped.brand_focus_id, scoped.global_scope,
             scoped.scope_action, scoped.operation_type, scoped.resource,
-    ) != (True, "verified", actor_id, caller, domain, scope["subject_id"],
+    ) != (True, "verified", actor_id, caller, scope["subject_id"],
           scope["brand_focus_id"], scope["global"], "write", "resource_scope_write", scope_resource) \
+            or permission._canonical_business_domain_id(scoped.domain_id) != canonical_domain \
             or not scoped.audit_id or scoped.scope_audit_id != scoped.audit_id:
         raise PermissionError("OWNED_TRAINING_REVIEW_SCOPE_DENIED")
     if (scoped.principal_kind, scoped.principal_ref) != (identity["principal_kind"], identity["principal_ref"]):
@@ -152,7 +156,7 @@ def _authorize(gate: permission.PermissionGate, material: dict, resource: str) -
     token = gate.get_valid_approval_token(permission.OperationType.MODEL_TRAIN.value, resource, exact=True)
     if (approval.allowed, approval.requires_approval, approval.operation_type, approval.resource,
             approval.caller, approval.domain_id, approval.risk_level, approval.permission_required) != (
-            True, True, permission.OperationType.MODEL_TRAIN.value, resource, caller, domain,
+            True, True, permission.OperationType.MODEL_TRAIN.value, resource, caller, canonical_domain,
             permission.RiskLevel.HIGH, permission.PermissionLevel.COMMIT,
     ) or not approval.audit_id or not approval.approval_token or token != approval.approval_token:
         raise PermissionError("OWNED_TRAINING_REVIEW_EXACT_APPROVAL_REQUIRED")

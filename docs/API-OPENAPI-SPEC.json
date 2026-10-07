@@ -5001,7 +5001,7 @@
         ],
         "operationId": "cth_api.cth_events",
         "x-flask-rule": "/api/cth/events",
-        "summary": "CTH 事件列表：从 notes/canonical_data 中提取 event_hint 和话题事件。"
+        "summary": "List topic/event hints from signed Canonical rows in the requested scope."
       }
     },
     "/api/cth/overview": {
@@ -5020,7 +5020,7 @@
         ],
         "operationId": "cth_api.cth_overview",
         "x-flask-rule": "/api/cth/overview",
-        "summary": "CTH 太古汇总览：从 canonical_data 按 product_id=CTH 聚合 + subject_rules 过滤。"
+        "summary": "Scoped CTH overview backed only by signed Canonical records."
       }
     },
     "/api/cth/xiaohongshu": {
@@ -5039,7 +5039,7 @@
         ],
         "operationId": "cth_api.cth_xiaohongshu",
         "x-flask-rule": "/api/cth/xiaohongshu",
-        "summary": "CTH 小红书数据：从 notes 表筛选小红书平台的太古汇相关数据。"
+        "summary": "List verified scoped RedNote Canonical records without inferred focus."
       }
     },
     "/api/daily-report/5sections": {
@@ -5272,7 +5272,7 @@
         ],
         "operationId": "domain_api.api_domain_brands",
         "x-flask-rule": "/api/domain/brands",
-        "summary": "Domain-scoped brand list — CTH: 199 brands; ZBMP: managed brands."
+        "summary": "Compatibility brand projection from the authorized Canonical slice."
       }
     },
     "/api/domain/context": {
@@ -5310,7 +5310,7 @@
         ],
         "operationId": "domain_api.api_domain_overview",
         "x-flask-rule": "/api/domain/overview",
-        "summary": "Domain-scoped overview data — 绑定真实 /api/stats + domain context。"
+        "summary": "Compatibility overview backed by the current scoped Canonical owner."
       }
     },
     "/api/domain/risk": {
@@ -5329,7 +5329,7 @@
         ],
         "operationId": "domain_api.api_domain_risk",
         "x-flask-rule": "/api/domain/risk",
-        "summary": "Domain-scoped risk data — 从真实 risk_alerts 获取。"
+        "summary": "Compatibility risk view from the authorized Canonical slice."
       }
     },
     "/api/engineering-metrics": {
@@ -10392,7 +10392,8 @@
           }
         ],
         "operationId": "api_overview",
-        "x-flask-rule": "/api/overview"
+        "x-flask-rule": "/api/overview",
+        "summary": "Summarize observed records within the explicitly selected CTH scope."
       }
     },
     "/api/platform-health": {
@@ -11539,7 +11540,7 @@
         ],
         "operationId": "data_query.api_risk_active",
         "x-flask-rule": "/api/risk/active",
-        "summary": "活跃风险列表：high/medium/critical 风险且未人工驳回的笔记。"
+        "summary": "读取所选业务域中已授权 Canonical 投影的活跃风险记录。"
       }
     },
     "/api/risks/active": {
@@ -11558,7 +11559,7 @@
         ],
         "operationId": "data_query.api_risks_active",
         "x-flask-rule": "/api/risks/active",
-        "summary": "活跃风险列表：high/medium/critical 风险且未人工驳回的笔记。"
+        "summary": "读取所选业务域中已授权 Canonical 投影的活跃风险记录。"
       }
     },
     "/api/runtime/archive-dead": {
@@ -12278,7 +12279,8 @@
           }
         ],
         "operationId": "api_status",
-        "x-flask-rule": "/api/status"
+        "x-flask-rule": "/api/status",
+        "summary": "Return SYSTEM status without selecting an implicit CTH business scope."
       }
     },
     "/api/subject-classifier/classify": {
@@ -13711,7 +13713,7 @@
         ],
         "operationId": "api_system_health",
         "x-flask-rule": "/api/system/health",
-        "summary": "产品级健康状态：区分‘系统正常’与‘数据源没有数据’。"
+        "summary": "SYSTEM health is technical; business metrics require a selected scope."
       }
     },
     "/api/system/health/detailed": {

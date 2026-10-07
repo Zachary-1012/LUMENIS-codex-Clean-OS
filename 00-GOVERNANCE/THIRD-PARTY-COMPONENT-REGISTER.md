@@ -303,3 +303,19 @@ dependency installation. Private key configuration stays inside existing
 SYSTEM Security secret management; only public verification keys may leave
 the workstation. Replacement remains possible behind the same versioned
 receipt contract and requires equivalent signature/expiry/binding tests.
+
+### 2026-10-08 已批准研究范围内的成熟媒体组件准入
+
+本表是条件研究处置，不是安装/采用/再分发许可，具体版本与义务待实际选择时核准。
+
+| 项目 | 本次状态与适配边界 | 接收Owner与必要判断 |
+| --- | --- | --- |
+| FFmpeg / FFprobe | REUSE_EXISTING_FIRST；读取实际使用构建/路径，不新增媒体Runtime | C4/C6核能力、依赖、编译选项和许可证；LGPL/GPL及libx264等随构建变化，不笼统承诺商用分发许可 |
+| OpenTimelineIO | CONDITIONAL_NOT_ADOPTED；仅有实际格式互通需求才适配 | C4转换层；不提供播放器/renderer，不替代现有Timeline |
+| RNNoise | CONDITIONAL_NOT_ADOPTED；现有滤镜不满足的真实降噪缺口才评估 | C4/C6核音频质量/延迟/平台/代码与模型许可 |
+| whisper.cpp | CONDITIONAL_NOT_ADOPTED；离线转录缺口，经C2原Gateway/模型准入 | C2/C4区分代码、依赖和权重许可，CPU/GPU、zh/en/ko真实效果；不恢复已退役LLM provider、不接付费云转录 |
+| Flutter播放/录音/波形组件（含just_audio、record） | CONDITIONAL_NOT_ADOPTED；先复用SH-01播放与FFmpeg解码/Flutter绘制 | F/C4/C6证明现有缺口再选；录音真实许可/文件/中断，四端及目标OS逐一验证 |
+| libopenshot / MLT | DEFER_PENDING_PROVEN_GAP；禁止替换已可用内核 | C4证明原renderer无法合理满足已批准任务，M审兼容性和许可后才适配 |
+| Audacity；Dify | MECHANISM_REFERENCE_ONLY；未许可引入其完整代码 | 前者GPL兼容与后者附加许可条件按精确版本核查；不得据公开仓库推断可复制 |
+
+每次采用记录固定version/commit、源/依赖/权重/二进制许可与再分发义务、Windows/macOS/Linux/Android/iOS及Web适用性、维护/漏洞/性能/离线/资源、隔离验证、可替换接口与卸载回退。不得为“免费”无理由全局装大型依赖、增加登录/费用或扩大权限。现有模型、Identity、Permission、Evidence、Artifact及媒体Owner保持唯一。本轮规则更新未安装这些可选组件。

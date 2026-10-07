@@ -96,7 +96,9 @@ def test_exact_scope_and_revocation_apply_to_first_write_and_retry(client):
     assert api.post(path, headers=focus, json=_payload()).status_code == 403
     assert _counts(db) == (1, 1)
     # A different high-risk database write did not gain an automatic allow.
-    assert not gate.check(p.OperationType.DB_WRITE, resource="arbitrary", caller="test").allowed
+    assert not gate.check(
+        p.OperationType.DB_WRITE, resource="arbitrary", caller="test", domain_id="cth",
+    ).allowed
 
 
 @pytest.mark.parametrize("mutate", [

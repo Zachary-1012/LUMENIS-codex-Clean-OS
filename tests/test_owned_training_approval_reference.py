@@ -170,6 +170,64 @@ def test_reference_tracks_issuance_separately_from_fresh_check_audits(app, gate)
     assert "approval_token" not in first_reference
 
 
+def test_bmp_approval_reference_and_commit_lease_accept_canonical_zbmp_receipts(
+    app, gate, canonical_db,
+):
+    request = _request_data(domain_id="bmp")
+    context = {"scope_descriptors": {"GLOBAL / ALL": {
+        "domain_id": "bmp", "product_id": "ZBMP", "global_scope": True,
+        "subject_id": None, "brand_focus_id": None,
+    }}}
+    with _request_context(app):
+        principal = p.resolve_local_workspace_principal(
+            module="owned_training", action="write",
+        )
+        resource = p.owned_training_approval_resource(
+            request, principal=principal, domain_id="bmp", context=context,
+        )
+        gate.grant_approval(
+            p.OperationType.MODEL_TRAIN.value, resource=resource,
+            granted_by="isolated-test-human",
+        )
+        decision = gate.check(
+            p.OperationType.MODEL_TRAIN, resource=resource,
+            caller="workspace:local", domain_id="bmp", exact_approval_required=True,
+        )
+        assert decision.allowed is True and decision.domain_id == "zbmp"
+        reference = gate.owned_training_approval_reference(
+            training_request=request, principal=principal, domain_id="bmp",
+            context=context, approval=decision,
+        )
+        binding = {
+            "resource": resource,
+            "identity": {
+                "actor_id": None, "caller": "workspace:local",
+                "principal_kind": "local_workspace", "principal_ref": "workspace:local",
+            },
+            "scope_descriptors": context["scope_descriptors"],
+        }
+        history_reference = gate.owned_training_history_approval_reference(
+            binding, principal=principal,
+        )
+        assert history_reference["resource"] == resource
+
+    connection = sqlite3.connect(canonical_db, timeout=2)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        with _request_context(app):
+            with gate.owned_training_phase_commit_lease(
+                training_request=request, principal=principal, domain_id="bmp",
+                context=context, approval=decision, connection=connection,
+                expected_approval_reference=reference,
+            ):
+                connection.commit()
+        assert connection.in_transaction is False
+    finally:
+        if connection.in_transaction:
+            connection.rollback()
+        connection.close()
+
+
 @pytest.mark.parametrize(("field", "value"), [
     ("caller", "different-caller"),
     ("resource", "different-resource"),

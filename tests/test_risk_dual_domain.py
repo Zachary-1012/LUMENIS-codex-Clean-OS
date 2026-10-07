@@ -25,6 +25,29 @@ from risk_engine import (
 )
 
 
+@pytest.fixture
+def isolated_domain_context():
+    """Keep policy-selection tests independent of stale request/job context."""
+    from domain_isolation import (
+        clear_domain_context, get_domain_context, set_domain_context,
+    )
+    from subject_context import (
+        clear_thread_context, get_thread_context, set_thread_context,
+    )
+
+    prior_domain = get_domain_context()
+    prior_thread = get_thread_context()
+    clear_domain_context()
+    clear_thread_context()
+    yield
+    clear_domain_context()
+    clear_thread_context()
+    if prior_domain is not None:
+        set_domain_context(prior_domain)
+    if prior_thread is not None:
+        set_thread_context(prior_thread)
+
+
 class TestRiskPolicyDefinitions:
     """验证双域风险策略定义独立。"""
 
@@ -79,13 +102,46 @@ class TestGetRiskPolicy:
     def test_get_zbmp_policy(self):
         assert get_risk_policy("zbmp").domain_id == "zbmp"
 
-    def test_unknown_fallback_cth(self):
-        assert get_risk_policy("nonexistent").domain_id == "cth"
+    def test_unknown_explicit_domain_is_rejected_without_context_fallback(
+        self, isolated_domain_context,
+    ):
+        from domain_isolation import DomainContext, set_domain_context
 
-    def test_default_is_cth(self):
-        """默认从线程上下文，无上下文时回退 CTH。"""
+        set_domain_context(DomainContext.from_domain("cth"))
+        with pytest.raises(ValueError, match="INVALID_DOMAIN_ID"):
+            get_risk_policy("nonexistent")
+        assert get_risk_policy(None).domain_id == "cth"
+
+    def test_bmp_alias_keeps_canonical_zbmp_policy(self):
+        policy = get_risk_policy("BMP")
+        assert policy.domain_id == "zbmp"
+        assert policy.product_id == "ZBMP"
+
+    def test_system_domain_has_no_business_risk_policy(self):
+        with pytest.raises(ValueError, match="RISK_POLICY_UNAVAILABLE_FOR_DOMAIN:system"):
+            get_risk_policy("system")
+
+    @pytest.mark.parametrize("domain_id", ["cth", "zbmp"])
+    def test_default_uses_bound_domain_context(self, isolated_domain_context, domain_id):
+        from domain_isolation import DomainContext, set_domain_context
+
+        set_domain_context(DomainContext.from_domain(domain_id))
         policy = get_risk_policy(None)
-        assert policy.domain_id in ("cth", "zbmp")  # 取决于线程上下文
+        assert policy.domain_id == domain_id
+
+    def test_default_without_context_is_unselected_and_does_not_leak(
+        self, isolated_domain_context,
+    ):
+        from domain_isolation import DomainContext, clear_domain_context, set_domain_context
+
+        with pytest.raises(ValueError, match="DOMAIN_NOT_SELECTED"):
+            get_risk_policy(None)
+
+        set_domain_context(DomainContext.from_domain("zbmp"))
+        assert get_risk_policy(None).domain_id == "zbmp"
+        clear_domain_context()
+        with pytest.raises(ValueError, match="DOMAIN_NOT_SELECTED"):
+            get_risk_policy(None)
 
 
 class TestComputeDomainRiskScore:

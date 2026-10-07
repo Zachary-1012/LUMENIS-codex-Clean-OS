@@ -1257,5 +1257,64 @@
       "subtests_passed": 26,
       "unresolved": 0
     }
+  },
+  "post_publication_ci_followup": {
+    "base": "288f222decb48e2c8e9217c712e7af6f6c1aa9ce",
+    "app_gate": {
+      "run_id": 37662512015,
+      "conclusion": "success"
+    },
+    "product_gate": {
+      "run_id": 37662512186,
+      "conclusion": "failure",
+      "stage": "first hermetic shard",
+      "failed_cases": 10
+    },
+    "categories": [
+      "standalone PermissionGate tests omitted domain",
+      "generic legacy statistics/notes/status callers retained implicit subject dependence"
+    ],
+    "negative_test_integrity": "Explicit domain also restored for denial assertions so missing-domain rejection cannot mask intended permission checks.",
+    "verification_state": "AFFECTED_VERIFIED",
+    "protected_assets_manifest": "CI-FOLLOWUP-PROTECTED.json",
+    "runtime": "NOT_LOADED_OR_NOT_VERIFIED",
+    "production_db": "UNMODIFIED_BY_THIS_TASK",
+    "repair_categories": [
+      "Explicit Domain in direct PermissionGate callers and negative tests; BMP/ZBMP aliases compared only within existing domain semantics, resource approval hashes preserved.",
+      "Canonical-scope projection for legacy note/status/statistics reads; global and focused reads use signed lineage and current Permission; pagination and aggregate cover beyond 1000 records.",
+      "Report and pitch callers bind explicit domain/scope instead of falling back to reference Subject or treating SYSTEM as business domain.",
+      "L4 positive path now creates real isolated registry, actor authorization, Evidence and Canonical records before exercising normal API success."
+    ],
+    "initial_affected_run": {
+      "tests": 515,
+      "passed": 510,
+      "failed": 5,
+      "junit_sha256": "18ea9421c5a649d3168f25cfafc332f05c41f7d0a3aef5f8b6e640c8c617c9d8"
+    },
+    "resolved_failure_rerun": {
+      "tests": 34,
+      "passed": 34,
+      "failed": 0,
+      "junit_sha256": "998dcf28b89658e184ac39fc9ca6bc0ef6977fa56174ea7043120fa08335cf82",
+      "counts_overlap_not_added": true
+    },
+    "unresolved_in_observed_affected_cases": 0,
+    "environment": {
+      "database": "explicit empty seed and isolated disposable test DB; no Production DB seed copy",
+      "media": "existing FFmpeg/ffprobe explicit paths",
+      "pptx": "declared optional dependency installed only in temporary isolated dependency directory"
+    },
+    "blocking_gates": {
+      "constitution": "PASS",
+      "machine_governance": "PASS",
+      "takeover_governance": "PASS",
+      "database_authority": "PASS",
+      "single_product": "PASS",
+      "experience_authority": "PASS",
+      "experience_anti_template": "PASS",
+      "experience_screen_blueprints": "PASS"
+    },
+    "new_exact_sha_ci": "PENDING_PUBLICATION",
+    "user_acceptance": "NOT_PERFORMED"
   }
 }

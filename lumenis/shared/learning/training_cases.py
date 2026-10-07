@@ -197,6 +197,9 @@ def _authorize_workspace_export(principal, gate, actor_ref: str, scope: dict, re
     if identity["caller"] != actor_ref:
         raise PermissionError("OWNED_TRAINING_EXPORT_IDENTITY_MISMATCH")
     domain = "bmp" if scope["domain_id"] == "zbmp" else "cth"
+    canonical_domain = permission._canonical_business_domain_id(domain)
+    if not canonical_domain:
+        raise PermissionError("OWNED_TRAINING_EXPORT_SCOPE_DENIED")
     result = permission.check_local_workspace_scope_permission(
         principal, domain_id=domain, action="read", module="owned_training", gate=gate,
         subject_id=scope["subject_id"], brand_focus_id=scope["brand_focus_id"], global_scope=scope["global"],
@@ -204,12 +207,13 @@ def _authorize_workspace_export(principal, gate, actor_ref: str, scope: dict, re
     focus = scope["subject_id"] if domain == "cth" else scope["brand_focus_id"]
     if type(result) is not permission.ActorScopePermissionResult or (
             result.allowed, result.verification_state, result.caller, result.actor_id,
-            result.principal_kind, result.principal_ref, result.domain_id,
+            result.principal_kind, result.principal_ref,
             result.subject_id, result.brand_focus_id, result.global_scope, result.scope_action,
             result.operation_type, result.resource,
-    ) != (True, "verified", actor_ref, None, "local_workspace", "workspace:local", domain,
+    ) != (True, "verified", actor_ref, None, "local_workspace", "workspace:local",
           scope["subject_id"], scope["brand_focus_id"], scope["global"], "read", "resource_scope_read",
           f"{domain}:{'GLOBAL / ALL' if scope['global'] else focus}") \
+            or permission._canonical_business_domain_id(result.domain_id) != canonical_domain \
             or not result.audit_id or result.scope_audit_id != result.audit_id:
         raise PermissionError("OWNED_TRAINING_EXPORT_SCOPE_DENIED")
     resource = "owned_training_case_export:v1:" + hashlib.sha256(_json({
@@ -217,10 +221,12 @@ def _authorize_workspace_export(principal, gate, actor_ref: str, scope: dict, re
     }).encode()).hexdigest()
     read = gate.check(permission.OperationType.DATA_EXPORT, resource=resource, caller=actor_ref,
                       domain_id=domain, risk_level=permission.RiskLevel.MEDIUM)
-    if (read.allowed, read.operation_type, read.resource, read.caller, read.domain_id,
+    if (read.allowed, read.operation_type, read.resource, read.caller,
             read.permission_required, read.risk_level) != (
-            True, permission.OperationType.DATA_EXPORT.value, resource, actor_ref, domain,
+            True, permission.OperationType.DATA_EXPORT.value, resource, actor_ref,
             permission.PermissionLevel.VERIFY, permission.RiskLevel.MEDIUM) or not read.audit_id:
+        raise PermissionError("OWNED_TRAINING_EXPORT_READ_DENIED")
+    if permission._canonical_business_domain_id(read.domain_id) != canonical_domain:
         raise PermissionError("OWNED_TRAINING_EXPORT_READ_DENIED")
 
 

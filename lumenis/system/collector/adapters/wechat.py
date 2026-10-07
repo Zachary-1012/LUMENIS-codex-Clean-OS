@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
 from .public_source import PublicResponse, fetch_public_url, public_source_provenance
 from .registry import register_adapter
+from .routing import resolve_capability_route
 
 
 def _challenge(soup: BeautifulSoup) -> bool:
@@ -123,11 +124,11 @@ class WechatPublicAdapter(BasePlatformAdapter):
             metadata={'can_attempt': True, 'requires_auth': False, 'cookies_used': False})
 
     def detail(self, content_id: str, **kwargs):
-        if not isinstance(content_id, str) or not content_id.startswith('https://'):
-            raise ValueError('WeChat detail requires its original public article URL')
-        host = urlsplit(content_id).hostname
-        if host not in {'mp.weixin.qq.com', 'weixin.sogou.com'}:
-            raise ValueError('WeChat original source host required')
+        route = resolve_capability_route("wechat", "detail", request_value=content_id)
+        if route is None:
+            return CollectionResult(CollectionStatus.NOT_SUPPORTED, self.platform,
+                message='公众号详情仅支持可识别的微信原文公开文章链接',
+                metadata={'route_state': 'UNKNOWN', 'original_body_available': False})
         try:
             response = self.fetcher(content_id)
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -138,13 +139,19 @@ class WechatPublicAdapter(BasePlatformAdapter):
             return CollectionResult(CollectionStatus.SUCCESS if item else CollectionStatus.PROVIDER_UNAVAILABLE,
                 self.platform, items=[item] if item else [], raw_count=1 if item else 0,
                 metadata={**public_source_provenance(response, content_id),
+                          'provider': route.backend,
                           'original_body_available': item is not None, 'index_only': False})
         except Exception as exc:
             return CollectionResult(CollectionStatus.PROVIDER_UNAVAILABLE, self.platform,
                 metadata={'error_type': type(exc).__name__, 'original_body_available': False})
 
     def search(self, keyword: str, *, max_results=20, page=1, **kwargs):
-        if keyword.startswith('https://'):
+        route = resolve_capability_route("wechat", "search", request_value=keyword)
+        if route is None:
+            return CollectionResult(CollectionStatus.NOT_SUPPORTED, self.platform,
+                message='输入未匹配已实现的公众号公开来源路径',
+                metadata={'route_state': 'UNKNOWN'})
+        if route.backend == "public_original_article_fetch":
             return self.detail(keyword)
         if type(page) is not int or page < 1 or type(max_results) is not int or not 1 <= max_results <= 20:
             raise ValueError('explicit positive search page and bounded per-request size required')
@@ -164,11 +171,13 @@ class WechatPublicAdapter(BasePlatformAdapter):
                 items.extend(result.items)
                 if result.status in {CollectionStatus.NEED_VERIFY, CollectionStatus.BLOCKED}:
                     return CollectionResult(result.status, self.platform, items=items, raw_count=len(candidates),
-                        metadata={'discovery_candidates': candidates, 'original_outcomes': original_outcomes,
-                                  'next_search_url': next_url, 'partial': True, 'original_body_available': bool(items)})
+                metadata={'discovery_candidates': candidates, 'original_outcomes': original_outcomes,
+                          'provider': route.backend,
+                          'next_search_url': next_url, 'partial': True, 'original_body_available': bool(items)})
             status = CollectionStatus.SUCCESS if items else CollectionStatus.PROVIDER_UNAVAILABLE if candidates else CollectionStatus.NO_NEW_DATA
             return CollectionResult(status, self.platform, items=items, raw_count=len(candidates),
                 metadata={'discovery_candidates': candidates, 'original_outcomes': original_outcomes,
+                          'provider': route.backend,
                           'next_search_url': next_url, 'index_only': not bool(items),
                           'original_body_available': bool(items), 'search_page': page,
                           'per_request_deferred_source_count': max(0, len(candidates)-max_results)})

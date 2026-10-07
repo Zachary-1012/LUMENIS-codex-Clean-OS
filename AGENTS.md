@@ -24,6 +24,26 @@ it freezes current truth, resolves cross-window conflicts, reviews/accepts or
 returns outcomes, and controls integration/publication with W6. OpenCode is
 shelved and is not a current execution path or fallback.
 
+### 2026-10-08 current bounded dispatch: rule convergence before further implementation
+
+The Product Owner instructed M to integrate the two mature-software reuse and
+competitor-mechanism supplements into the existing authorities, resolve conflicts,
+and synchronize local/main before further window execution. M finishes its already
+authorized repair/publication batch and this rule convergence. F and C1-C6 wait for
+the Product Owner's explicit confirmation; attached wording such as “immediate
+execution” does not dispatch them. No new media redevelopment, component install,
+model route or paid resource follows from this rule publication.
+
+Existing J1-J8/U01-U25 outcomes retain two acceptance layers: usable mature-software
+operations, then LUMENIS evidence/context/version/intelligence continuity. Reuse
+working source, repair broken callers, adapt a justified missing primitive through
+its existing owner, then verify the differentiated outcome. Exact acceptance and
+capability-observation fields live in Real Delivery Overlay; source/material routes
+live in Source Owner Index; UI behavior lives in Experience §38 and existing specs.
+GPT, Apple and Tesla are task/operation references, never additional product/design
+or security authorities. No paper, component installation or policy update proves
+that its associated capability is implemented or accepted.
+
 ### Live dispatch semantics — NON-BYPASS
 
 Repository status and execution topology are **not a real-time task scheduler**. The words `active`, `enabled` or `eligible` in repository/history mean that a role is permitted to receive work; they do **not** mean that every corresponding local Codex window is currently executing.
@@ -904,6 +924,27 @@ Rules:
 
 ## 8. Zero-auth acquisition capability program
 
+### Approved 2026-10-08 addition: capability-specific public acquisition
+
+This bounded M task includes public acquisition and local Read Aloud under the
+existing owners; it does not dispatch other product windows. For this batch,
+OpenCLI paths requiring login (COOKIE/INTERCEPT/UI/session) are excluded by the
+Product Owner's latest correction. Evaluate only genuinely anonymous PUBLIC
+commands. Keep the product's existing authorized platform sessions, Skill store
+and GitHub account connections; this batch restriction does not retire those
+optional enhancement capabilities or change their authorization rules.
+
+Z0 means no platform account, Cookie/session or API key; Z1 means explicitly
+authorized read-only platform session; Z2 means official API authorization.
+Classify each platform capability separately and record actual backend, access
+class, verification time, available fields and fallback reason. Installed tools,
+bridge connectivity and HTTP 200 do not establish usable platform access.
+Retain missing values as unknown and keep discovery snippets distinct from
+original-source Evidence. Never cross a login/challenge/rate-limit/access-policy
+boundary by changing backend. An unavailable anonymous capability stays honest.
+Source-only study of Agent-Reach/OpenCLI/OpenShell grants no install, extension,
+personal-profile, paid-resource or second Collector/Truth authority.
+
 Canonical acceptance matrix:
 
 ```text
@@ -1464,7 +1505,41 @@ pin. Do not edit global defaults or user configuration to align them with this
 router. If the effective selection cannot be read back, report
 `SETTINGS_UNVERIFIED`.
 
+### Intelligent UI full-product coverage — 2026-10-08 Product Owner clarification
+
+Apply Experience §38's eight concrete requirements to every existing capability,
+all 44 App screens and the existing Public Website content families, including
+navigation, source/results, editing, settings, notifications and failure/recovery.
+Do not limit adoption to AI chat, a homepage or decorative result cards. Each
+screen records its real job, source/action/version contract, task-specific visual
+interaction, four-surface differences and normal-success/recovery acceptance in
+its existing specification. Preserve full product scope and the hand-drawn 2D
+watercolor direction. AI-independent deterministic work remains operable when
+inference is unavailable. The sole blueprint, Experience, surface decision,
+Owner index, screen specs, existing text wireframes and README are co-published.
+Historical sketches remain evidence; amendments do not self-promote to
+DESIGN_READY/IMPLEMENTED/ACCEPTED. This update prepares later authorized execution;
+it does not dispatch C1-C6/F, change model settings, or install an OpenAI UI SDK.
+
 ### Current frontend implementation routing
+
+The Product Owner's 2026-10-08 Intelligent UI request is researched and mapped
+in Experience Constitution §38 and the Source Owner Index. It is a later
+implementation obligation for existing C1-C6/F outcomes, not current dispatch.
+Use its typed task/context/action continuity and screen-specific acceptance;
+do not infer an OpenAI SDK installation, a second renderer or a model change.
+
+The Product Owner approved local System Read Aloud on 2026-10-08 in existing
+Shared/Media/Flutter platform owners. Bind the same shared action to already
+authorized visible SavedWork/Report/Brief and podcast/video script previews.
+Use only installed local device/browser voices, explicit user initiation,
+locale/rate controls and one active session per surface. Scope, text version,
+navigation or disposal changes stop playback. No external TTS/cloud voice,
+automatic translation, new model, audio export/Artifact or Evidence record is
+authorized. Preview is not final podcast/video voice production. Preserve
+honest unavailable locale/platform states and verify supported runtime targets
+separately. Experience Constitution and the existing screen specifications own
+presentation; the approval receipt is provenance, not a new design authority.
 
 Experience Constitution section 38 owns the consolidated Cue/four-surface
 reference mapping and F1-F5 outcome boundaries. F implements its existing screen
@@ -1499,3 +1574,10 @@ record is under evidence/round-15; it records actions, not a new authority.
 Research is adopted through an existing capability's real inputs, processing,
 quality/credibility requirements and user outcome. Reading or training alone
 does not replace product integration; unread/missing assets remain explicit.
+
+
+### 2026-10-08 前端审计与工具维护增补
+
+采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。其余窗口待 Product Owner 确认后执行，本轮只由 M 收敛规则、处理已授权修复/工具维护和同步。
+
+工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。

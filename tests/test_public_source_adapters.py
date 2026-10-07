@@ -8,6 +8,7 @@ from lumenis.system.collector.adapters.public_source import PublicResponse, Publ
 from lumenis.system.collector.adapters.sitemap import SitemapAdapter
 from lumenis.system.collector.adapters.web_atom import AtomAdapter
 from lumenis.system.collector.adapters.web_rss import WebRSSAdapter
+from lumenis.system.collector.adapters.wechat import WechatPublicAdapter
 
 
 class _ServerActorStub:
@@ -27,9 +28,10 @@ def approved_global_request():
 
 
 def _stub_approved_global_guard(monkeypatch, surface, request):
-    def allow(actor, scope, platform, keyword, max_results):
+    def allow(actor, scope, platform, keyword, max_results, **kwargs):
         assert actor is request["actor"]
         assert scope == request["scope"]
+        assert kwargs.get("max_scroll") is None
         return dict(request["scope"]), None
 
     monkeypatch.setattr(surface, "_manual_collection_guard", allow)
@@ -220,6 +222,78 @@ def test_public_url_rejects_local_network_targets():
         raise AssertionError("loopback source must be rejected")
 
 
+def test_instagram_arbitrary_urls_do_not_reach_authorized_session_engine():
+    from lumenis.system.collector.adapters.instagram import InstagramAdapter
+
+    calls = []
+
+    class Engine:
+        def search(self, *args, **kwargs):
+            calls.append("search")
+            raise AssertionError("arbitrary URL reached Instagram session search")
+
+        def detail(self, *args, **kwargs):
+            calls.append("detail")
+            raise AssertionError("arbitrary URL reached Instagram session detail")
+
+        def comments(self, *args, **kwargs):
+            calls.append("comments")
+            raise AssertionError("arbitrary URL reached Instagram session comments")
+
+        def creator(self, *args, **kwargs):
+            calls.append("creator")
+            raise AssertionError("arbitrary URL reached Instagram session creator")
+
+    adapter = InstagramAdapter(engine=Engine())
+    url = "https://attacker.example/not-an-instagram-post"
+    assert adapter.search(url).status is CollectionStatus.NOT_SUPPORTED
+    assert adapter.detail(url).status is CollectionStatus.NOT_SUPPORTED
+    assert adapter.comments(url).status is CollectionStatus.NOT_SUPPORTED
+    assert adapter.creator(url).status is CollectionStatus.NOT_SUPPORTED
+    assert calls == []
+
+
+def test_wechat_sogou_url_is_not_treated_as_article_or_search_query():
+    calls = []
+    adapter = WechatPublicAdapter(fetcher=lambda url: calls.append(url) or _response("", "text/html"))
+    sogou_url = "https://weixin.sogou.com/weixin?type=2&query=brand"
+
+    assert adapter.search(sogou_url).status is CollectionStatus.NOT_SUPPORTED
+    assert adapter.detail(sogou_url).status is CollectionStatus.NOT_SUPPORTED
+    assert calls == []
+
+
+def test_wechat_plain_query_uses_existing_public_discovery_and_original_article_path():
+    calls = []
+    article_url = "https://mp.weixin.qq.com/s/article_123"
+    sogou_html = (
+        '<ul><li id="sogou_vr_1"><div class="txt-box"><h3>'
+        f'<a href="{article_url}">Public article</a></h3>'
+        '<div class="txt-info">Article excerpt</div></div></li></ul>'
+    )
+    article_html = (
+        '<html><head><title>Public article</title></head><body>'
+        '<h2 id="activity-name">Public article</h2><div id="js_content">Article body</div>'
+        '</body></html>'
+    )
+
+    def fetcher(url):
+        calls.append(url)
+        if "weixin.sogou.com" in url:
+            return PublicResponse(url, sogou_html.encode(), "text/html", 200)
+        return PublicResponse(url, article_html.encode(), "text/html", 200)
+
+    result = WechatPublicAdapter(fetcher=fetcher).search("brand")
+
+    assert result.status is CollectionStatus.SUCCESS
+    assert len(result.items) == 1
+    assert result.items[0]["content"] == "Article body"
+    assert calls[0].startswith("https://weixin.sogou.com/weixin?")
+    assert calls[1] == article_url
+    assert result.metadata["provider"] == "public_sogou_discovery_original_fetch"
+    assert result.metadata["original_body_available"] is True
+
+
 def test_public_source_runs_through_existing_evidence_boundary(monkeypatch, approved_global_request):
     import database as db
     import lumenis.system.collector.adapters.secondary_collection as surface
@@ -274,8 +348,14 @@ def test_public_source_runs_through_existing_evidence_boundary(monkeypatch, appr
     assert result["native_fields_synced"] == 1 and result["refresh_verified"] is True
     assert result["provenance"]["provider"] == "public_http"
     assert result["provenance"]["source"].startswith("https://")
+    assert result["provenance"]["access_class"] == "Z0"
+    assert result["provenance"]["route_id"] == "public-http.search"
+    assert result["provenance"]["source_access_mode"] == "public_read_only"
+    assert result["provenance"]["requested_source_url"] == "https://public.example.test/article"
     assert result["external_write"] is False
     assert captured["provenance"]["provider"] == "public_http"
+    assert captured["provenance"]["access_class"] == "Z0"
+    assert captured["provenance"]["final_source_url"] == "https://public.example.test/source"
 
 
 def test_sitemap_rejects_non_sitemap_xml_before_canonical_import(monkeypatch, approved_global_request):
@@ -308,8 +388,8 @@ def test_sitemap_rejects_non_sitemap_xml_before_canonical_import(monkeypatch, ap
 
     assert result["ok"] is False
     assert result["status"] == "PROVIDER_UNAVAILABLE"
-    assert result["raw_count"] == 0
-    assert result["returned_count"] == 0
+    assert result["raw_count"] is None
+    assert result["returned_count"] is None
     assert result["imported"] == 0
     assert result["canonical_synced"] == 0
     assert result["evidence_recorded"] is True

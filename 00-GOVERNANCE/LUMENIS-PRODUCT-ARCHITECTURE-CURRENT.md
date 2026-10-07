@@ -80,6 +80,24 @@ capabilities must survive convergence.
 
 示例三：来源更正。某来源撤回或被纠错，序境能定位引用它的判断、报告、文稿、镜头和节目段落，展示影响，要求明确采用新版后修订，保存旧版和原因。原始Evidence不被新结论覆盖。
 
+### 全产品智能交互蓝图（2026-10-08）
+
+用户应能在任何现有工作环节直接理解结果并继续操作：从采集原始材料、研究比较、判断与方案，到提案/视频/播客的编辑、版本修订、保存、跨端恢复以及运行问题处理，交互始终由真实任务和当前资料决定。智能UI不是一个独立模块，也不局限在AI聊天页；全44屏及官网已有内容家族逐项适配，功能范围保持现有J1–J8/U要求。
+
+```text
+同一用户目标与获准材料
+  → 现有Core返回事实、范围、来源/版本、可用动作与诚实状态
+  → 当前屏幕选择合适的文字/对照/图形/表单/阅读器/编辑画布/时间轴
+  → 用户直接筛选、比较、调整或修改，并可回看依据
+  → 现有Owner验证权限与版本，计算影响并显示差异
+  → 明确采用 → 保存新成果/父版本 → 重开、跨端接续、撤销/恢复
+  → 真实Outcome/Evaluation反馈到现有能力改进
+```
+
+例如商业体比较能检查城市与时间口径；活动预算调整能看到受影响段落和镜头；媒体编辑能在同一来源/脚本/时间轴中定位并只改选中部分；来源撤回能定位对应结论；采集/模型不可用时能理解缺口并继续不依赖它的工作。设置、通知、任务状态和恢复入口也按实际动作与返回关系设计。模型只提出有依据的解释/方案，UI和AI都不创造事实、权限或外部效果。
+
+唯一Experience §38细化八项要求与验收；44屏在既有screen-specifications中明确各自任务和视觉动线，既有文字草图同步增补，四端角色见Multi-Surface Decision。保留二维手绘水彩、丰富且有用的交互、中英韩与无障碍、操作端避免不必要整页滚动。该蓝图定义闭环目标，不能据此把规则更新等同功能已上线或屏幕已验收。
+
 二、锁定的产品组成
 
 CTH：商业主体运营。覆盖场所、场内品牌/业态、事件、消费者反馈、风险、案例、运营决策、活动和结果评价。广州太古汇、深圳罗湖万象城用于代表性深度验收，不是产品默认范围。
@@ -213,6 +231,23 @@ AI/Agent cannot bypass Permission or directly overwrite Production Truth.
 
 ## 7. Product independence
 
+### Approved public acquisition and local presentation addition — 2026-10-08
+
+SYSTEM Collector's existing PlatformAdapter/CollectionResult boundary owns
+capability-specific access classification and backend selection. Anonymous public
+HTTP/feeds/DOM precede any separately authorized session route; no backend owns
+Evidence, Canonical, Permission or persistence. This batch excludes login-based
+OpenCLI integration. Optional Skill store and GitHub connections retain their
+existing account authorization; this restriction does not change those features.
+
+Shared/Media and the Flutter platform boundary own **System Read Aloud**: current
+authorized visible text → selected installed local voice/locale/rate → transient
+playback. Report/Brief review, podcast script listening and video narration-script
+review share this capability. It creates no audio Artifact, Source, Evidence or
+model-learning input, and is not the final production voice owner. No third-party
+service account, cloud speech or paid model is introduced. A future saved voice
+output remains a separate explicitly authorized Media/AI capability.
+
 LUMENIS Production Core must run independently.
 
 - LUMENIS does not depend on GGI production code or production databases.
@@ -316,3 +351,30 @@ blocking CI = GREEN
 critical E2E = PASS
 LUMENIS production repositories = 1
 ```
+
+
+### 2026-10-08 前端审计与工具维护增补
+
+采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。其余窗口待 Product Owner 确认后执行，本轮只由 M 收敛规则、处理已授权修复/工具维护和同步。
+
+工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
+
+### 2026-10-08 成熟基础能力与序境特色的统一升级
+
+现有 J1–J8 / U01–U25 产品终态同时包含两层：普通用户能直接操作的成熟基础能力；在这些能力上连续使用 Source/Evidence/Canonical、CTH/BMP、业务约束、研究、创作版本及 Evaluation/Learning。智能建议、组件数量或安装成功不能替代第一层。现有可靠能力复用，断开的调用先修，确实缺失的通用底层能力才经第三方准入适配；不创建另一套编辑器内核、Timeline、播放器服务、Agent、Truth、Runtime或永久候选。
+
+| 已有用户工作 | 必须保留的基础能力与组合结果 | 现有Owner |
+| --- | --- | --- |
+| J1 数据 | 真实来源发现、搜索/筛选/排序/详情/分页/刷新、历史与增量、时间语义/去重、原文打开与失败恢复，再以正式来源回答业务问题 | C1；C5来源准入；C6组合；F交互 |
+| J2/J3 商业与品牌 | 主体/品牌选择、同口径比较/时间范围/趋势/图表、事件/Campaign、竞品/创作者分析、保存/收藏/报告/导出/历史版本；判断回到确切来源与实际行动/Outcome | C3；C1/C5输入；C2受控分析；C6/F |
+| J4 提案 | 资料导入/阅读、文档编辑、实际预算调整、审阅/版本/保存/重开/Word导出；继承原Brief和引用，改约束只影响关联内容 | C4；C3/C5内容与SavedWork；C6/F |
+| J5 视频 | 真实素材导入/缩略图/预览，选择拖动裁切分割删除重排，横向时间轴平移/缩放/吸附/定位，轨道/音量/淡变/混音/字幕/转场/画幅，撤销重做/保存/恢复/重开/实际可播放导出；项目与导出状态一致 | C4现有content_creation Timeline/rendering、shared_artifacts；C6/F |
+| J6 播客 | 导入或授权录音、真实播放/Seek/波形、多轨编辑/混音/静音/淡变/Duck、降噪/响度、手工转录及修订、脚本/章节/时间码/声音关联、成品保存重开重导出；形成研究→节目→Evaluation连续链 | C4现有podcast、Shared Timeline/Renderer；C5 SavedWork；C2仅ASR/模型；C6/F |
+| J7 资料与Agent | 阅读/搜索/精确定位/引用/版本/任务历史、Skill发现与管理、取消/恢复/checkpoint、真实结果保存；沿现有Agent/Skills/Memory/Research/Evaluation，不复制第二平台 | C5资料；C2执行；C3消费；C6/F |
+| J8 四端 | 导航/文件选择/输入/设置/通知、中英韩、键盘与触控/无障碍、加载与真实错误、恢复同一任务；Website/Web/Desktop/Mobile依批准角色呈现同一业务语义 | F呈现；C6运行/共享；各C提供业务合同 |
+
+视频/播客先连已有 Flutter→Core→Timeline→Renderer→Artifact/SavedWork。实时编辑预览、临时导出、正式保存、独立重开分别验收；现有一条视频轨若阻塞已批准分层任务，只扩现有renderer。Read Aloud只预览文本，不能代替录音、ASR或成品。AI/外部平台阻塞不暂停可独立进行的确定性编辑、手工转录和文档能力。
+
+竞品机制沿原Owner增强：多源可比信号/事件关系/解释/预警→C1/C3/C5；创意审阅/版本差异/局部修订/审批复用→C4/C5；文本与真实音视频双向时间定位→C4；按需工具/引用/checkpoint恢复→C2/C5。来源、方法及可证明的任务收益写回现有验收，不把竞品宣传当事实或追平证据。
+
+本次为规则采用，具体实施等待Product Owner确认。逐项事实状态与两层正常用户任务验收归 Real Delivery Overlay；界面、可编辑设计及GPT/Apple/Tesla操作对标归Experience §38。原用户要求/资料/历史失败证据保留，未经明确后置的功能不删除。

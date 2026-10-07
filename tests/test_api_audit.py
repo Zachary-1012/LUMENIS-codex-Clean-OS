@@ -295,6 +295,30 @@ class TestErrorCodes:
 
 class TestPermissionGateBehavior:
     @pytest.fixture(autouse=True)
+    def _explicit_system_domain_for_gate_checks(self):
+        """Standalone gate behavior checks run under an explicit SYSTEM context."""
+        from domain_isolation import (
+            DomainContext, clear_domain_context, get_domain_context,
+            set_domain_context,
+        )
+        from subject_context import (
+            clear_thread_context, get_thread_context, set_thread_context,
+        )
+
+        prior_domain = get_domain_context()
+        prior_thread = get_thread_context()
+        clear_domain_context()
+        clear_thread_context()
+        set_domain_context(DomainContext(domain_id="system", product_id="SYSTEM"))
+        yield
+        clear_domain_context()
+        clear_thread_context()
+        if prior_domain is not None:
+            set_domain_context(prior_domain)
+        if prior_thread is not None:
+            set_thread_context(prior_thread)
+
+    @pytest.fixture(autouse=True)
     def _strict_permission_gate(self):
         # 本类验证权限门严格行为（拒绝/授权放行/装饰器/审计），必须关闭 TESTING 旁路，结束还原
         from lumenis.system.security import set_testing_bypass

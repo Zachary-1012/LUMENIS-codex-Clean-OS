@@ -217,6 +217,7 @@ def test_scope_admission_does_not_grant_effect_gate_or_change_account_actor_path
         p.OperationType.DB_WRITE,
         resource=admitted.resource,
         caller=admitted.caller,
+        domain_id="cth",
     )
     assert not effect.allowed
 
@@ -263,7 +264,10 @@ def test_collector_scope_requires_registry_and_does_not_approve_import(app, monk
     assert admitted.allowed and admitted.audit_id
     missing = _scope(app, principal, module="collector", action="write", subject_id="subject-missing")
     assert not missing.allowed and missing.code == "scope_not_registered"
-    effect = gate.check(p.OperationType.DATA_IMPORT, resource=admitted.resource, caller=admitted.caller)
+    effect = gate.check(
+        p.OperationType.DATA_IMPORT, resource=admitted.resource,
+        caller=admitted.caller, domain_id="cth",
+    )
     assert not effect.allowed
     app.config["LUMENIS_OPEN_WORKSPACE"] = False
     assert not _scope(app, principal, module="collector", action="write", subject_id="subject-123").allowed

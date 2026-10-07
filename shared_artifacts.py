@@ -1420,8 +1420,8 @@ def render_local_video_artifact(
     asset_paths: Iterable[Any],
     *,
     brief: str = "",
-    product_id: str = "LUMENIS",
-    domain_id: str = "cth",
+    product_id: Optional[str] = None,
+    domain_id: Optional[str] = None,
     source_execution_id: str = "",
     evidence_id: str = "",
     note_id: str = "",
@@ -1432,6 +1432,16 @@ def render_local_video_artifact(
     metadata-only staged artifact record only after ffmpeg has produced a real
     file from the validated inputs.
     """
+    from domain_isolation import resolve_domain_identity
+
+    try:
+        domain_id, product_id = resolve_domain_identity(
+            domain_id=domain_id, product_id=product_id,
+        )
+    except ValueError as exc:
+        raise LocalArtifactError(str(exc)) from exc
+    if not domain_id or not product_id:
+        raise LocalArtifactError("ARTIFACT_DOMAIN_IDENTITY_REQUIRED")
     values = list(asset_paths or [])
     if not values:
         raise LocalArtifactError("LOCAL_ASSETS_REQUIRED")

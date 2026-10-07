@@ -86,11 +86,23 @@ class SitemapAdapter(BasePlatformAdapter):
         return CollectionResult(status=CollectionStatus.NOT_SUPPORTED, platform=self.platform, message="Sitemap detail is not part of URL discovery")
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
+        source_url = str(kwargs.get("url") or kwargs.get("sitemap_url") or "").strip()
+        if not source_url:
+            return CollectionResult(
+                status=CollectionStatus.NOT_CONFIGURED,
+                platform=self.platform,
+                message="尚未提供本次读取所需的公开 Sitemap 地址",
+                metadata={
+                    "provider": "public_sitemap_xml",
+                    "healthcheck_scope": "source_input_required",
+                    "requires_authorization": False,
+                },
+            )
         return CollectionResult(
-            status=CollectionStatus.SUCCESS,
+            status=CollectionStatus.NEED_VERIFY,
             platform=self.platform,
-            message="public Sitemap adapter is ready; source is checked per human-triggered collection",
-            metadata={"provider": "public_sitemap_xml", "healthcheck_scope": "public_endpoint_configuration", "requires_authorization": False},
+            message="public Sitemap availability is checked only during this collection",
+            metadata={"provider": "public_sitemap_xml", "healthcheck_scope": "collection_required", "requires_authorization": False},
         )
 
 
