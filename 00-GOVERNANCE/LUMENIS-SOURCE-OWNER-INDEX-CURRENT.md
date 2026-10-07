@@ -11,7 +11,7 @@ When this index conflicts with current executable source or runtime evidence, cu
 
 ## 1. Retained R01–R15 acceptance coverage and historical audit groups
 
-Activation follows the current instruction at the top of AGENTS.md. C1–C6 are the six complete delivery responsibilities; R01–R15 are retained acceptance/dependency requirements mapped into those outcomes. The numbered table below is historical coverage context, not a second execution schedule and not the R01–R15 identifier list. D01–D49 are audit dispositions; their original audit labels are not product requirements. This index does not activate paused windows or create sequential dispatch. Valid evidence may cover multiple IDs. No mapping turns a missing gate into PASS. M accepts complete outcomes; W6 integrates when authorized.
+Live dispatch follows the current instruction at the top of AGENTS.md; eligibility/ownership in this index does not assert that a local window is currently running. C1–C6 are the six complete delivery responsibilities; R01–R15 are retained acceptance/dependency requirements mapped into those outcomes. The numbered table below is historical coverage context, not a second execution schedule and not the R01–R15 identifier list. D01–D49 are audit dispositions; their original audit labels are not product requirements. This index does not activate paused windows or create sequential dispatch. Valid evidence may cover multiple IDs. No mapping turns a missing gate into PASS. M accepts complete outcomes; W6 integrates when authorized.
 
 | Historical coverage group | Delivery | Scope | Exit gate |
 | --- | --- | --- | --- |
@@ -166,11 +166,11 @@ These are blocking requirements for C1–C6 and mapped checkpoints:
 10. Every change proves the requested improvement and preservation of affected behavior with proportional tests and, for user-visible workflows, real runtime/E2E evidence. A build, fixture, HTTP 200, screenshot or document alone is insufficient.
 11. The approved ROUND 01 PDF/report/register are evidence and coverage indexes only. Their sketches remain `DESIGN_EXPLORATION`; implementation requires a current M-reviewed `DESIGN_READY` screen specification using the Product Owner's current manually selected model. Direct PDF/sketch implementation is `REWORK`.
 12. Product Skill Store is a named P0 capability under Shared Agent Skills and AI-04. Preserve discovery, trust/license, input/output, Permission, enablement, verified run, history, update, disable and uninstall semantics; do not reduce it to the historical `FUNCTION_MAP`.
-13. ROUND 02–15 cannot close on source, tests or governance evidence alone. Route each active Owner Task Card and M decision through `LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`, including its real-user E2E, `REAL DELIVERY CARD` and Section 23 `COMMERCIAL OVERLAY IMPACT`; a commercial gap sets `COMMERCIAL_READY=NO` without falsely failing unrelated engineering work.
+13. ROUND 02–15 cannot close on source, tests or governance evidence alone. Route each dispatched Owner Task Card and M acceptance decision through `LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`, including its real-user E2E, `REAL DELIVERY CARD` and Section 23 `COMMERCIAL OVERLAY IMPACT`; a commercial gap sets `COMMERCIAL_READY=NO` without falsely failing unrelated engineering work.
 14. Route every context/data-related round through `LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md`. The product default is `GLOBAL / ALL`; Subject/BrandFocus selection changes focus only and never grants Permission or controls background execution. Report `Global Commercial Coverage`, `Global Brand Coverage` and `Guangzhou Taikoo Hui Reference Coverage` as three acceptance dimensions of the same internal full-universe edition. They must not create separate products, releases or truth stacks. All three `YES` is required for `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=YES`.
 15. Every related round runs the contract's `RANDOM ENTITY DATA ACCEPTANCE` with rotating stratified non-fixture samples and preserves seed/list/version/request/surface/Evidence/result evidence. A covered/mature blank or fabricated sample forces `REWORK`/`BLOCKED`; an unavailable registry is reported as sample count zero and assigned to its owning round, never postponed silently to ROUND 15.
 16. An accepted Batch is not an online delivery until its reviewed source, Round evidence and CURRENT status are coherently committed, pushed and verified against live `origin/main` in the same delivery cycle under `AGENTS.md` §2. Preserve unaccepted work as `LOCAL_ONLY`; a documentation-only push does not make its source visible to GitHub readers.
-17. Six complete C1-C6 delivery responsibilities use six separate local Codex delivery windows. Independent frontend F is active across all six deliveries; controller M retains review/integration/acceptance; W6 retains shared integration/runtime/release ownership. C2 alone owns product GPU training. Historical combined C3/C5 and Cloud W3/W5 handoffs remain provenance only and do not create a second queue. No ten-worker target. Report actual capacity/activity, preserve explicit pauses and genuine dependencies.
+17. Six complete C1-C6 delivery responsibilities use six separate local Codex delivery windows. Independent frontend F owns Experience across all six deliveries and executes only when dispatched; controller M retains review/integration/acceptance; W6 retains shared integration/runtime/release ownership. C2 alone owns product GPU training. Historical combined C3/C5 and Cloud W3/W5 handoffs remain provenance only and do not create a second queue. No ten-worker target. Report actual capacity/activity, preserve explicit pauses and genuine dependencies.
 18. Chinese, English and Korean are product-surface commitments, not merely Public Website copy. Apply the sole Experience Constitution's per-screen three-language and responsive/accessibility gate to every promised operational surface; unverified Korean UI is an explicit gap, never a silently dropped requirement.
 
 ### Product Owner requirement routing check
@@ -332,7 +332,7 @@ The historical caller-cleanup dependency order preserves Database/Permission/Evi
 
 ## 7. Cross-round capability gap register
 
-This table is a dated owner/dependency lead, not a scheduling or activation queue. Current activation comes only from the top of `AGENTS.md`. M, F and C1–C6 are currently active there; before each actual task, the owning window still resolves fresh `origin/main`, protected dirty work, owner/callers, runtime/DB/Permission/Evidence and external dependencies. A dated live check below is evidence, not a durable availability promise.
+This table is a dated owner/dependency lead, not a scheduling or activation queue. Current live dispatch comes from the top of `AGENTS.md` plus the newest explicit Product Owner instruction for the specific window. M, F and C1–C6 are eligible roles there, not an assertion that all are running; before each dispatched task, the owning window still resolves fresh `origin/main`, protected dirty work, owner/callers, runtime/DB/Permission/Evidence and external dependencies. A dated live check below is evidence, not a durable availability promise.
 
 | Gap / verified lead | Historical lead and current disposition | Current C owner and retained R acceptance input | Boundary |
 | --- | --- | --- | --- |
@@ -389,16 +389,16 @@ recorded rather than invented or silently excluded.
 Research enters both product-capability improvement and separately authorized
 AI training/learning. Books, courses, papers, open-source work, user videos/images
 and official product/support/release material remain traceable to actual changes.
-Each active owning window corrects narrowed rules inside its scope and owns its
+Each dispatched/RUNNING owning window corrects narrowed rules inside its scope and owns its
 authorized work through real outcome verification; M resolves cross-window rule,
 architecture, integration and acceptance conflicts. An audit finding alone is not
 resolution. Current execution state, account/model selection and resource
 authorization come only from current `AGENTS.md` and direct Product Owner
-instructions. M, F and C1–C6 are active delivery participants; capability-specific
+instructions. M, F and C1–C6 are eligible delivery participants; live activity is determined by the current dispatch state, and capability-specific
 Permission, runtime/session/resource and paid-effect boundaries still apply.
 Existing/free compute is preferred; no historical budget authorizes payment.
 
-## 11. Active material accountability and missing-entry requirements
+## 11. Material accountability and missing-entry requirements
 
 The Product Owner assigned video/material work to existing outcome Owners. Use
 [Material Owner Contract](evidence/round-15/full-product-audit-20261003/MATERIAL-OWNER-CONTRACT.md)
@@ -514,11 +514,12 @@ C6 owns the current runtime/configuration/toolchain composition; F consumes the 
 ## Complete outcome cards and owner routing after the six closure red lines
 
 The cards below specify full user outcomes, not competing work queues. Current
-activation, pause state, model/account selection and allowed effects come only
-from the top of `AGENTS.md`. Under the current route M is controller/integrator,
-F is active for Experience, and C1–C6 are six active local delivery windows.
-Each window continues its complete card after task admission until acceptance or
-a real blocker; activation never bypasses owner/effect/resource boundaries. Do not create parallel task-card files: each row links its existing
+live dispatch, pause/wait state, model/account selection and allowed effects come from
+the top of `AGENTS.md` plus the newest explicit Product Owner instruction for the
+specific local window. Under the current route M is controller/integrator, while F
+and C1–C6 are eligible owners rather than a live process list. Each dispatched window
+continues its complete card after task admission until acceptance, an explicit wait
+condition or a real blocker; dispatch never bypasses owner/effect/resource boundaries. Do not create parallel task-card files: each row links its existing
 source routes in §3 to J/U/R coverage, the existing material manifest, and the
 Real Delivery Card/acceptance fields in the Overlay.
 
@@ -528,10 +529,11 @@ The retained RC identifiers below locate the existing research corpus, not new
 work queues or completed adoption. Original locators, actual read intervals and
 rights remain in MATERIAL-OWNER-MANIFEST and each source receipt. The precise
 product path below is the implementation destination; summaries alone cannot
-close it. Current activation comes only from AGENTS.md. C1–C6 execute their
-complete outcome responsibilities, F executes the separate Experience scope, and
-M reviews cross-window completeness/integration rather than replacing those
-owners.
+close it. Current live dispatch comes from AGENTS.md plus the newest explicit Product Owner
+instruction for the relevant local window. Only dispatched/RUNNING roles execute;
+eligible or WAITING_DEPENDENCY roles do not self-start. C1–C6 retain their complete
+outcome responsibilities, F retains the separate Experience scope, and M reviews
+cross-window completeness/integration rather than replacing those owners.
 
 For direct materials, the manifest's `primary_owner` is the reading and
 capability-adoption owner; `source_owner_paths` is the existing product route,
@@ -562,8 +564,8 @@ Existing source-owner rows above remain the precise path/contract authority. The
 
 The shared `REAL DELIVERY CARD` fields remain in the Overlay; the card rows
 below bind complete outcomes to exact existing source families and J/U/R
-acceptance. Under the current AGENTS route, F and C1-C6 are active delivery
-windows and M is the controller/integrator. These rows are complete outcome
+acceptance. Under the current AGENTS route, F and C1-C6 are eligible delivery
+roles and M is the controller/integrator; live execution requires explicit dispatch. These rows are complete outcome
 contracts, not permission to bypass real dependencies or create parallel owners.
 
 | Window | User input and canonical source routes | Dependencies, deliverable, recovery and acceptance |
@@ -575,7 +577,7 @@ contracts, not permission to bypass real dependencies or create parallel owners.
 | C5 | Inputs: direct C5/importer/research/shared manifest rows plus second-level references assigned through the material route, approved files/web/audio/video, permitted source refs and versioned constraints. Source: `lumenis/importer/documents.py`, `lumenis/shared/reporting/source_brief_job.py`, `saved_work.py`, `artifact.py`, citation/research/reporting/notification/shared-preference owners and research routes RC01-RC14. | Deliver material import/library/search/precise citation, article-by-article research intake, useful research/report results, versioned Artifact/SavedWork, notifications/preferences and save/revise/reopen/export/rollback with exact source/rights/parent/digest/revocation lineage. The 191-row manifest is not the full corpus; official-site 4,797 URL inventory and dated 723+18 unread-body entries remain obligations until actually read/adopted or explicitly disposed. Dependencies: C1 source truth, C2 owned analysis only when bound, C3/C4 consumers and C6 shared Core/API/DB. Acceptance J7, U16/U17/U24 and mapped R gates; unread/unknown-rights/unadopted material remains explicit and cannot be called absorbed. |
 | C4 | Inputs: 70 direct C4 manifest materials, real Brief/inherited Evidence, permitted media and actual resource constraints; keep 12 editing exercises separate. Source: `lumenis/shared/content_creation/`, Timeline/Artifact/render owners and `podcast/`; research routes RC-08/09. | Deliver separate editable pitch, genuinely rendered/editable video and playable/listenable podcast. Read assigned V2/audio/media methods with exact visual/audio read intervals and rights. Verify timeline pan vs seek, ruler/track/playhead, edit/replace/render, save/export/reopen/cancel/recovery, human review and unaffected-part integrity. Dependencies: C3/C5 source inheritance and C6 runtime/FFmpeg/player; F interface work remains F-owned. Acceptance J4–J6/U13–U15, separate normal results for all three. |
 | C6 | Inputs: exact accepted C-owner deltas, source/runtime/DB/API/build/Artifact identity and existing test/runtime receipts. Source: `app.py`, `lumenis_app_api.py`, `experience_runtime.py`, `collector_status_api.py`, `lumenis/blueprint.py`, `lumenis/adapters/collector_service.py`, Shared Database/Evidence, FFmpeg/supervisor and deployment/release owners in §3. | Dependencies: real owner contracts and exact path reservations; preserve dirty/untracked work. Deliver one same-SHA integrated runtime/package with actual API/surface operation, failure/cancel/restart/rollback recovery, required gates and final evidence. For collection, converge existing canonical and V4 callers on one Collector/Task/status/write contract while preserving unique legacy behavior; bind task checkpoints through HTTP and distinguish task query checkpoints from platform-native page cursors. F-reported API-to-Flutter projection/POST issues remain F-owned and were not inspected by M. Developer mode remains user-deferred and recorded, not a blocker. Acceptance J8/U21–U25 and mapped R gates; code/build/health alone cannot prove operation or release. |
-| F | Independent four-surface Experience responsibility; detailed front-end source/input remains F-owned. Sole contract: Experience Constitution section 38 and screen-specific DESIGN_READY contracts. F is active across all six deliveries and owns existing Flutter/Website implementation, real API binding, screen/interaction/state behavior, responsive composition, zh-CN/en/ko localization and accessibility. | Deliver the complete approved Website/Web/Desktop/Mobile experience for every mapped capability, including loading/empty/error/denied/offline/cancel/retry/recovery states, saved-work continuity and user-operable flows. F does not redefine backend truth, Owner, Permission or business acceptance; its complete output and acceptance remain separately owned and feed M/W6 integration. |
+| F | Independent four-surface Experience responsibility; detailed front-end source/input remains F-owned. Sole contract: Experience Constitution section 38 and screen-specific DESIGN_READY contracts. F owns Experience across all six deliveries and, when dispatched, owns existing Flutter/Website implementation, real API binding, screen/interaction/state behavior, responsive composition, zh-CN/en/ko localization and accessibility. | Deliver the complete approved Website/Web/Desktop/Mobile experience for every mapped capability, including loading/empty/error/denied/offline/cancel/retry/recovery states, saved-work continuity and user-operable flows. F does not redefine backend truth, Owner, Permission or business acceptance; its complete output and acceptance remain separately owned and feed M/W6 integration. |
 
 ### C1/C6 collector source audit — verified repair target, not a new owner
 

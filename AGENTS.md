@@ -41,10 +41,12 @@ JOB_CLOSED          = the assigned owner outcome passed its applicable completio
 
 The newest explicit Product Owner instruction addressed to a specific current/local window controls **scheduling, order and the bounded task** for that window. It may tell a window to repair first, wait for another owner, resume later, or work only a named slice without changing the product's canonical scope. Repository `main` remains authoritative for product truth, owners, contracts, red lines and acceptance; a local dispatch instruction does not silently create a new owner, architecture, data truth or reduced product requirement.
 
-If the Product Owner says, for example, “M repairs first; F/C1/C2 wait until that repair is accepted”, then M is `RUNNING`, F/C1/C2 are `WAITING_DEPENDENCY`, and other registered roles remain `ELIGIBLE` unless separately dispatched. Historical/current repository wording that the full topology is restored must never be interpreted as an instruction to start all windows concurrently.
+Online/current repository text is **PUBLISHED_STATE**, not a live process list. A local Codex window may hold a newer bounded dispatch, wait condition or task priority than the last published status. That local instruction is authoritative for that window's live scheduling until superseded, but it does not become product truth for other windows. Other windows must not infer or copy a local task unless the Product Owner or an explicit M/owner handoff dispatches it to them.
+
+If the Product Owner says, for example, “M repairs first; F/C1/C2 wait until that repair is accepted, then start”, then M is `RUNNING`, F/C1/C2 are `WAITING_DEPENDENCY` with `resume_condition = M repair accepted`, and other registered roles remain `ELIGIBLE` unless separately dispatched. Once an explicit resume condition is evidenced satisfied, the waiting window may continue the already-dispatched task without asking for a second approval, unless a newer Product Owner instruction supersedes it. Historical/current repository wording that the full topology is restored must never be interpreted as an instruction to start all windows concurrently.
 
 The C1-C6 map, all R01-R15/J1-J8/U requirements and existing owner contracts
-remain the complete scope and are now active delivery windows, not competing
+remain the complete scope and are eligible delivery responsibilities, not competing
 architectures or permission to bypass entry dependencies. Before starting any
 capability, resolve fresh origin/main, the protected dirty tree, its actual owner
 and callers, runtime/DB/Permission/Evidence truth and required external
@@ -70,12 +72,14 @@ GPU, new rental, recharge or retired model providers.
    Reuse valid pinned evidence. Do not produce meaningless candidates, unchanged
    tests, repeated audits or per-function handoffs. Necessary affected safety,
    recovery and acceptance checks remain required. On a new failure, identify
-   the concrete source/caller and consult current official/GitHub and relevant
-   web evidence before further trials. Each owner resolves its ordinary failures
+   the concrete source/caller first. Consult current official/GitHub or relevant
+   web evidence when the failure depends on an external framework/API/platform/standard,
+   when root cause is genuinely uncertain, or when external evidence can materially
+   change the repair; deterministic repository-internal defects do not require unrelated research. Each owner resolves its ordinary failures
    through repair and meaningful validation; do not hand them to M, wait for
    per-function decisions or substitute exchanged reports for actual outcomes.
    Escalate only for a real permission/cost gap or an owner/product decision
-   that cannot be resolved within existing authority. Each active window resolves ordinary
+   that cannot be resolved within existing authority. Each dispatched/RUNNING window resolves ordinary
    failures inside its existing owner; M resolves cross-window conflicts, integration
    and acceptance rather than becoming a substitute implementation window.
    `main` is the sole current implementation. Do not create parallel candidate
@@ -85,7 +89,7 @@ GPU, new rental, recharge or retired model providers.
    second implementation or a new product candidate. Preserve older research,
    originals and failure evidence as history until their exact disposition is
    verified.
-3. Before editing each capability, the owning active window reads its actual assigned
+3. Before editing each capability, the owning dispatched/RUNNING window reads its actual assigned
    materials and source owner/callers/contracts, records the complete result in the
    existing task/evidence record, and uses it continuously. M reads the same
    boundary when reviewing cross-window integration or acceptance; M does not
@@ -96,13 +100,13 @@ GPU, new rental, recharge or retired model providers.
    speculative features. C3+C5 research serves capability improvement, data
    credibility and separately approved training/evaluation; product improvement
    does not wait for GPU. Keep unread/missing material and original rights honest.
-5. Existing/free GPU resources are preferred. C2/W2 is active and may execute
+5. Existing/free GPU resources are preferred. C2/W2 is eligible and, when dispatched, may execute
    the already-approved zero-cost training path only after its exact
    model/recipe/data hashes, MODEL_TRAIN Permission, worker/source pins and real
    zero-cost GPU capacity are verified. A free development environment is not
    production model hosting. No paid GPU, rental, recharge or paid model
    fallback starts without a new explicit cost authorization. C1/W1 is likewise
-   active: live read-only collection runs only through the existing
+   eligible and, when dispatched, may run live read-only collection only through the existing
    Scope/Permission/session/rate-limit contracts on platforms that are actually
    ready; a blocked identity/source blocks only that path and must never be
    rewritten as ACTIVE.
@@ -397,13 +401,16 @@ current M/F/C1-C6 instruction at the top and the approved blueprint. Reuse compl
 evidence; a historical correction does not restart an already resolved task.
 Material coverage and capability requirements are not reduced.
 
-For every capability, bug, regression or technical blocker, the owning active
+For every capability, bug, regression or technical blocker, the owning dispatched/RUNNING
 window must resolve it end-to-end instead of bouncing routine engineering work to
 M, another window or the Product Owner. Reproduce the failure once with a bounded
-case, locate the actual Owner/caller/contract, then research the strongest current
-solution using authoritative vendor/standard documentation, the maintained
-upstream GitHub project, and high-quality current implementations or engineering
-practice relevant to the exact stack. When frontier methods materially matter,
+case and locate the actual Owner/caller/contract. For deterministic repository-internal
+defects, repair directly and validate the affected behavior. When the defect depends
+on an external framework/API/platform/standard, the root cause is uncertain, or
+external evidence can materially change the repair, research the strongest current
+solution using authoritative vendor/standard documentation, the maintained upstream
+GitHub project, and high-quality current implementations or engineering practice
+relevant to the exact stack. When frontier methods materially matter,
 compare multiple credible approaches for task fitness, correctness, complete
 capability, recovery, security, licensing, maintainability, latency and real
 cost. Choose the strongest feasible solution that preserves the approved product,
@@ -419,7 +426,7 @@ Owner/product decision, permission or credential boundary, paid-resource
 approval, material security/data risk, or an external dependency that the owning
 window cannot control.
 
-Each active delivery window therefore owns ordinary defects and blockers through
+Each dispatched/RUNNING delivery window therefore owns ordinary defects and blockers through
 research -> repair -> verification -> recovery -> complete outcome. M owns
 cross-window conflicts, integration and acceptance rather than absorbing routine
 window work. Do not bounce a solvable bug back to the reporter or wait for another

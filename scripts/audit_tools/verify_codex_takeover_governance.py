@@ -452,7 +452,7 @@ def _assert_current_authority_consistency(source_index: str, agents: str) -> Non
     )
     _require_collapsed(
         agents,
-        "owning active window must resolve it end-to-end",
+        "owning dispatched/running window must resolve it end-to-end",
         "authoritative vendor/standard documentation",
         "maintained upstream GitHub project",
         "do not open a duplicate research/window loop",
