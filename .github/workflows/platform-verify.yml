@@ -163,12 +163,30 @@ jobs:
             deselect_args+=("--deselect=$node")
           done < tests/ci_quarantined_nodeids.txt
 
-          echo "Running ${#test_files[@]} hermetic test files"
-          python -m pytest \
-            "${test_files[@]}" \
-            -m "not online" \
-            "${deselect_args[@]}" \
-            -q --tb=line
+          # Keep the exact selected coverage and deselections, but isolate the
+          # large hermetic suite into deterministic sequential Python processes.
+          # This prevents accumulated native-extension/runtime state from turning
+          # one process crash into a false product regression while preserving
+          # blocking semantics: any shard failure still fails the Gate.
+          shard_count=6
+          total="${#test_files[@]}"
+          shard_size=$(( (total + shard_count - 1) / shard_count ))
+          echo "Running $total hermetic test files in up to $shard_count sequential shards"
+
+          for ((shard=0; shard<shard_count; shard++)); do
+            start=$(( shard * shard_size ))
+            (( start >= total )) && break
+            remaining=$(( total - start ))
+            count="$shard_size"
+            (( remaining < count )) && count="$remaining"
+            shard_files=("${test_files[@]:start:count}")
+            echo "=== hermetic shard $((shard + 1))/$shard_count: files $start..$((start + count - 1)) ==="
+            PYTHONFAULTHANDLER=1 python -m pytest \
+              "${shard_files[@]}" \
+              -m "not online" \
+              "${deselect_args[@]}" \
+              -q --tb=line
+          done
 
       - name: Production/live and quarantine inventory (INFORMATIONAL)
         if: ${{ always() }}
