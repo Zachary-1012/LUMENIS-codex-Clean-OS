@@ -8,49 +8,51 @@ Root `AGENTS.md` is the only repository execution router. [The Product Owner's l
 
 ## 1. Online reader's current-state snapshot
 
-### 2026-10-07 semantic calibration and Math research preparation
+### 2026-10-08 semantic behavior repair — local candidate, not published
 
-The Product Owner authorized a bounded M task: safe online/local alignment,
-full-product vocabulary calibration, and original-paper research based on the
-supplied combined instruction. The fresh research baseline was local/origin/live
-`f6dac9216cbb331e730329a70513e0c90c306e73`. This dated observation is not a fixed
-current HEAD. It does not dispatch F/C1-C6 or resume J1-J8 closure.
+Implementation publication state: `LOCAL_CANDIDATE_NOT_PUBLISHED`
+Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+Published product-source baseline: `6ff2cc0b68d8b9c3ae8ea658678242df8deac7dc`
 
-- [Semantic calibration](evidence/round-15/SEMANTIC-CALIBRATION-20261007.md)
-  records 47 terms across every requested family, owners, compatibility IDs,
-  source anchors and unresolved behavior. Product Architecture owns meaning;
-  the ledger is evidence/index only. `ZBMP/zbmp`, `ZBC` and retained protocol IDs
-  are not additional user-facing products. The BMP display name and misleading
-  fallback/test descriptions are corrected; persisted IDs and API behavior are
-  unchanged. The old cross-repo contract is explicitly historical/superseded.
-- Actual isolated source reproduction found unknown/BMP-alias legacy fallback
-  to CTH and a generic conflicting-header pair. Blueprint hooks override the
-  pair on their routes, so this is not proof all routes misroute or permissions
-  are bypassed. Implicit reference Subject and compatibility migrations remain
-  open for caller/data review and the required Product Owner decision. They are
-  not repaired merely by this vocabulary update.
-- [OpenAI Math research/adoption map](evidence/round-15/OPENAI-MATH-ADOPTION-20261007.md)
-  contains original-paper methods, assumptions, limitations and adoption cards
-  for the nine selected families plus Lean/Comparator, mapped to existing owners.
-  Reading/extraction/formalization claims/independent proof replay are separate.
-  Method-level ADAPT is preparation; no algorithm, training data or production
-  capability is promoted by the report. Model learning remains separately gated.
-- Previously unpublished local files, `work/`, private C2 configuration and
-  Production DB remain protected; they are not included in this publication.
-  Local protection receipts live outside the checkout. At the earlier 18:08
-  admission probe Core was not listening on 8201; runtime was not started by
-  this task. Current runtime must be read separately from published source.
+The Product Owner explicitly instructed M to repair the recorded semantic/source
+defects and apply the original-paper research. That authorization is active, but
+the behavior repair is **not yet part of GitHub main**. The statements below
+describe the current protected local candidate only; they are not published
+Product Source, loaded Runtime truth, user acceptance or release evidence.
 
-The bounded preparation ends in **READY_FOR_PO_REVIEW**, not JOB_CLOSED for any
-product window. F/C1-C6 remain eligible/waiting under the newest Product Owner
-dispatch. M stops after the total package; only an explicit Product Owner
-approval to start closure resumes development. Machine governance v1.1.0,
-model-routing defaults, all R/J/U requirements and the four-surface outcome are
-unchanged.
+At the published baseline `6ff2cc0b68d8b9c3ae8ea658678242df8deac7dc`,
+the relevant product-source defects remain present. In particular, the two retained
+`/api/collector/status` registrations still have different implementations, and
+the published provider registry still exposes ARK/Doubao through the historical
+fallback-availability semantics. The stricter Domain/Subject identity and
+GLOBAL/ALL corrections are likewise local candidate work until co-published.
 
-The published execution topology is M + F + C1-C6. M controls cross-window truth, conflicts, acceptance and integration; F owns frontend/Experience; C1-C6 are six eligible delivery roles and retain their complete R/J/U outcomes. This topology states ownership/capability, not current activity. Local windows proceed only when explicitly dispatched, and parallelism follows the newest Product Owner scheduling instruction plus actual Source/Owner/Permission/runtime/file dependencies. OpenCode is shelved and is not a current worker or fallback. Existing/free compute is preferred; C2 may use only verified zero-cost training resources under its existing MODEL_TRAIN/checkpoint/evaluation contracts, and no paid GPU/model resource is authorized without a new explicit cost approval. C1 live read-only collection remains subject to the existing Scope/Permission/session/rate-limit contracts. The latest user-requested Codex settings remain separate from product configuration. The 49 audit dispositions are D01-D49, distinct from R01-R15 acceptance requirements.
+The current local candidate is intended to:
+- reject unknown/conflicting Domain/Subject identities while preserving the
+  existing BMP alias and SYSTEM identity without inferring Guangzhou from CTH;
+- make both retained Collector status routes consume one response owner while
+  preserving process-lifecycle, auth-metadata and historical-verification
+  qualifiers as separate truth dimensions;
+- keep registry-only legacy providers compatibility-only rather than callable
+  fallback routes;
+- apply the approved Math/Comparator contract-versus-implementation discipline
+  to the existing owners without promoting raw corrections to model learning.
 
-The local working tree and local live dispatch are not visible to a reader of GitHub. Distinguish published commit/status, each window's newest Product Owner dispatch, dirty/untracked source, loaded runtime and user acceptance. Approved code, current state and owning evidence must be published in the same delivery cycle. Resolve current `HEAD`, cached `origin/main` and live remote rather than relying on a historical hash.
+Exact local changes and tests may be recorded in the semantic/applied-research
+evidence, but those receipts do not promote the candidate to published product
+behavior. Promotion requires one coherent delivery in which:
+1. the real product-source repair and this CURRENT state are co-published;
+2. the resulting exact SHA passes its applicable Product/App gates;
+3. loaded Runtime identity and behavior are verified separately; and
+4. Critical E2E / user outcome gates remain independent where applicable.
+
+Pre-existing dirty work, protected `work/`, private C2 material and Production DB
+remain protected. This bounded repair does not authorize paid compute, training,
+live collection, deployment or external product effects.
+
+Machine governance v1.1.0/model-routing and R/J/U acceptance scope are unchanged.
+The earlier 2026-10-07 preparation remains provenance in Git history. Other
+windows continue to follow the newest explicit Product Owner dispatch.
 
 ### Approved D1–D5 convergence — 2026-10-06
 

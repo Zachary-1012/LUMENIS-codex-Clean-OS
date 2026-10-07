@@ -158,6 +158,73 @@ def _assert_current_round_statuses(current: str) -> None:
     )
 
 
+CURRENT_PUBLICATION_STATES = {"LOCAL_CANDIDATE_NOT_PUBLISHED", "PUBLISHED_SOURCE_VERIFIED"}
+CURRENT_RUNTIME_STATES = {"NOT_LOADED_OR_NOT_VERIFIED", "LOADED_AND_VERIFIED"}
+
+
+def _head_changed_paths() -> set[str]:
+    proc = subprocess.run(
+        ["git", "diff-tree", "--root", "--first-parent", "--no-commit-id", "--name-only", "-r", "HEAD"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise AssertionError(f"cannot inspect HEAD changed paths: {proc.stderr.strip()}")
+    return {line.strip() for line in proc.stdout.splitlines() if line.strip()}
+
+
+def _is_product_behavior_source(path: str) -> bool:
+    if path.startswith(("00-GOVERNANCE/", "docs/", "tests/", "scripts/audit_tools/", ".github/")):
+        return False
+    return (
+        path.endswith((".py", ".dart", ".ts", ".tsx", ".js", ".mjs"))
+        or path.startswith(("app/lib/", "website/src/", "lumenis/"))
+    )
+
+
+def _assert_current_publication_truth(
+    current: str, *, changed_paths: set[str] | None = None
+) -> None:
+    heading = "## 1. Online reader's current-state snapshot"
+    if heading not in current:
+        raise AssertionError("CURRENT missing current-state snapshot heading")
+    section = current.split(heading, 1)[1].split("### Approved D1", 1)[0]
+    publication = re.search(
+        r"Implementation publication state:\s*`([A-Z_]+)`", section
+    )
+    runtime = re.search(r"Runtime load state:\s*`([A-Z_]+)`", section)
+    if publication is None or publication.group(1) not in CURRENT_PUBLICATION_STATES:
+        raise AssertionError("CURRENT requires a valid implementation publication state")
+    if runtime is None or runtime.group(1) not in CURRENT_RUNTIME_STATES:
+        raise AssertionError("CURRENT requires a valid runtime load state")
+
+    state = publication.group(1)
+    if state == "LOCAL_CANDIDATE_NOT_PUBLISHED":
+        _require(
+            section,
+            "not yet part of GitHub main",
+            "current protected local candidate only",
+            "not published Product Source",
+            "Promotion requires one coherent delivery",
+            label="CURRENT local-candidate publication truth",
+        )
+        return
+
+    paths = _head_changed_paths() if changed_paths is None else set(changed_paths)
+    current_path = str(PATHS["takeover"].relative_to(ROOT)).replace("\\", "/")
+    if current_path not in paths:
+        raise AssertionError(
+            "PUBLISHED_SOURCE_VERIFIED requires CURRENT co-publication in the same commit"
+        )
+    product_paths = sorted(path for path in paths if _is_product_behavior_source(path))
+    if not product_paths:
+        raise AssertionError(
+            "PUBLISHED_SOURCE_VERIFIED requires same-commit product behavior source"
+        )
+
+
 def _mapping_tokens(text: str) -> set[str]:
     tokens = {f"C{value}" for value in re.findall(r"\bC([1-6])\b", text)}
     tokens.update(f"W{value}" for value in re.findall(r"\bW([1-6])\b", text))
@@ -523,6 +590,7 @@ def validate() -> None:
     _assert_single_machine_contract()
     _assert_six_round_routing(agents)
     _assert_current_round_statuses(takeover)
+    _assert_current_publication_truth(takeover)
     _assert_legacy_coverage_mapping(source_index, require_assertions=True)
     _assert_execution_boundaries(agents)
     _assert_readme_routing_consistent(readme)

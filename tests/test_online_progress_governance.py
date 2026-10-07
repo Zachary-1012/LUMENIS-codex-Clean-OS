@@ -5,6 +5,7 @@ from pathlib import Path
 
 from scripts.audit_tools.verify_codex_takeover_governance import (
     JOB_ASSERTIONS_HEADING,
+    _assert_current_publication_truth,
     _assert_current_round_statuses,
     _assert_execution_boundaries,
     _assert_legacy_coverage_mapping,
@@ -74,6 +75,47 @@ class GovernanceHistoryRegressionTests(unittest.TestCase):
         without_c4 = "\n".join(line for line in current.splitlines() if "C4 / W4" not in line)
         with self.assertRaisesRegex(AssertionError, "C4"):
             _assert_current_round_statuses(without_c4)
+
+    def test_current_publication_truth_separates_local_candidate_from_published_source(self) -> None:
+        local = """
+## 1. Online reader's current-state snapshot
+### Repair
+Implementation publication state: `LOCAL_CANDIDATE_NOT_PUBLISHED`
+Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+The repair is not yet part of GitHub main and describes the current protected local candidate only.
+It is not published Product Source. Promotion requires one coherent delivery.
+### Approved D1–D5 convergence — 2026-10-06
+"""
+        _assert_current_publication_truth(local, changed_paths=set())
+
+        false_published = local.replace(
+            "LOCAL_CANDIDATE_NOT_PUBLISHED", "PUBLISHED_SOURCE_VERIFIED"
+        )
+        with self.assertRaisesRegex(
+            AssertionError, "same-commit product behavior source|co-publication"
+        ):
+            _assert_current_publication_truth(
+                false_published,
+                changed_paths={
+                    "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md"
+                },
+            )
+
+        _assert_current_publication_truth(
+            false_published,
+            changed_paths={
+                "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+                "collection_api.py",
+            },
+        )
+
+    def test_current_publication_truth_requires_explicit_state_markers(self) -> None:
+        with self.assertRaisesRegex(AssertionError, "publication state"):
+            _assert_current_publication_truth(
+                "## 1. Online reader's current-state snapshot\n"
+                "### Approved D1–D5 convergence — 2026-10-06",
+                changed_paths=set(),
+            )
 
     def test_obsolete_execution_routes_are_blocking(self) -> None:
         _assert_execution_boundaries("current human explanation")
