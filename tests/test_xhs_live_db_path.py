@@ -12,12 +12,13 @@ from pathlib import Path
 from types import SimpleNamespace
 
 
-def _source_function(source_path: Path) -> ast.FunctionDef:
+def _source_functions(source_path: Path) -> list[ast.FunctionDef]:
     tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
-    for node in tree.body:
-        if isinstance(node, ast.FunctionDef) and node.name == "_bypass_evidence_canonical_live":
-            return node
-    raise AssertionError("_bypass_evidence_canonical_live was not found")
+    functions = [node for node in tree.body if isinstance(node, ast.FunctionDef)
+                 and node.name in {"resolve_live_scope", "_bypass_evidence_canonical_live"}]
+    if {node.name for node in functions} != {"resolve_live_scope", "_bypass_evidence_canonical_live"}:
+        raise AssertionError("live scope resolver and Evidence writer were not found")
+    return functions
 
 
 def test_bypass_uses_current_shared_database_path_for_both_side_writes(
@@ -86,7 +87,7 @@ def test_bypass_uses_current_shared_database_path_for_both_side_writes(
     safe_builtins = dict(vars(builtins))
     safe_builtins["__import__"] = fake_import
     namespace = {"database": stale_database, "__builtins__": safe_builtins}
-    function_module = ast.Module(body=[_source_function(source_path)], type_ignores=[])
+    function_module = ast.Module(body=_source_functions(source_path), type_ignores=[])
     exec(compile(function_module, str(source_path), "exec"), namespace)
     namespace["_bypass_evidence_canonical_live"](
         {
@@ -94,7 +95,8 @@ def test_bypass_uses_current_shared_database_path_for_both_side_writes(
             "title": "mock title",
             "content": "mock content",
             "url": "https://example.invalid/mock-note",
-        }
+        },
+        domain_id="cth", product_id="CTH", subject_id="GUANGZHOU_TAIKOO_HUI",
     )
 
     expected_path = os.path.abspath(str(call_time_path))

@@ -24,6 +24,11 @@ def run_keywords(
     cdp_url: str | None = None,
     account: str | None = None,
     subject_hit: Callable[[str], bool] | None = None,
+    domain_id: str | None = None,
+    product_id: str | None = None,
+    subject_id: str | None = None,
+    brand_focus_id: str | None = None,
+    brand_key: str | None = None,
 ) -> dict[str, Any]:
     """Run the canonical XHS engine for multiple keywords.
 
@@ -32,13 +37,23 @@ def run_keywords(
     existing live engine.  No vendor or alternate browser path is introduced.
     """
 
-    if subject_hit is None:
-        try:
-            from subject_rules import subject_hit_text
+    try:
+        from .xhs.live_engine import resolve_live_scope
+        domain_id, product_id, subject_id, brand_focus_id, _scope = resolve_live_scope(
+            domain_id=domain_id, product_id=product_id,
+            subject_id=subject_id, brand_focus_id=brand_focus_id,
+        )
+    except ValueError as exc:
+        return {"ok": False, "status": "scope_unavailable", "error": str(exc), "results": []}
 
-            subject_hit = subject_hit_text
+    if subject_hit is None and brand_key:
+        try:
+            from subject_rules import subject_hit_for_brand
+            subject_hit = lambda text: subject_hit_for_brand(title=text, brand_key=brand_key)
         except Exception:
-            subject_hit = lambda _text: False
+            return {"ok": False, "status": "filter_unavailable", "error": "COLLECTION_FILTER_UNAVAILABLE", "results": []}
+    if subject_hit is None:
+        return {"ok": False, "status": "filter_unavailable", "error": "COLLECTION_FILTER_REQUIRED", "results": []}
 
     results: list[dict[str, Any]] = []
     for keyword in [str(item).strip() for item in keywords if str(item).strip()]:
@@ -51,7 +66,10 @@ def run_keywords(
             cdp_url=cdp_url,
             account=account,
         )
-        persisted = persist_live(data, subject_hit)
+        persisted = persist_live(
+            data, subject_hit, domain_id=domain_id, product_id=product_id,
+            subject_id=subject_id, brand_focus_id=brand_focus_id,
+        )
         results.append(
             {
                 "keyword": keyword,
@@ -76,6 +94,12 @@ def main() -> int:
     parser.add_argument("--max-comment-pages", type=int, default=5)
     parser.add_argument("--cdp-url", default="")
     parser.add_argument("--account", default="XHS_RETINAUT")
+    parser.add_argument("--domain-id", required=True)
+    parser.add_argument("--product-id", required=True)
+    focus = parser.add_mutually_exclusive_group(required=True)
+    focus.add_argument("--subject-id")
+    focus.add_argument("--brand-focus-id")
+    parser.add_argument("--brand-key", required=True, help="与已审核主体过滤词库对应的精确 key")
     parser.add_argument("--no-comments", action="store_true")
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args()
@@ -88,6 +112,9 @@ def main() -> int:
         comments=not args.no_comments,
         cdp_url=args.cdp_url or None,
         account=args.account or None,
+        domain_id=args.domain_id, product_id=args.product_id,
+        subject_id=args.subject_id, brand_focus_id=args.brand_focus_id,
+        brand_key=args.brand_key,
     )
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

@@ -76,6 +76,28 @@ def test_generate_reopen_focus_global_and_recovery(client):
         assert con.execute("SELECT COUNT(*) FROM daily_reports").fetchone()[0] == 2
 
 
+def test_generate_permission_is_bound_to_server_resolved_domain(client, monkeypatch):
+    api, _app, _db, _entry, gate = client
+    calls = []
+    check = gate.check
+
+    def record_check(*args, **kwargs):
+        calls.append(kwargs.copy())
+        return check(*args, **kwargs)
+
+    monkeypatch.setattr(gate, "check", record_check)
+    response = api.post(URL + "/generate", headers=GLOBAL, json={})
+
+    assert response.status_code == 200, response.get_json()
+    generate_checks = [
+        call for call in calls
+        if call.get("resource") == URL + "/generate"
+        and not str(call.get("caller") or "").startswith("http:")
+    ]
+    assert generate_checks, calls
+    assert all(call.get("domain_id") == "cth" for call in generate_checks)
+
+
 def test_explicit_older_materials_preserve_order_and_reopen(client):
     api, app, db, entry, _gate = client
     with sqlite3.connect(db) as con:

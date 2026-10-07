@@ -89,8 +89,32 @@ def run_live(keyword: str, *, max_scroll=5, max_details=20, max_comment_pages=5,
     return data
 
 
+def resolve_live_scope(*, domain_id=None, product_id=None, subject_id=None,
+                       brand_focus_id=None):
+    """Validate the exact business scope required before an XHS write."""
+    from domain_isolation import resolve_domain_identity
+    domain_id, product_id = resolve_domain_identity(domain_id, product_id)
+    if not domain_id or not product_id:
+        raise ValueError("COLLECTION_DOMAIN_REQUIRED")
+    for value in (subject_id, brand_focus_id):
+        if value is not None and (not isinstance(value, str) or not value or value != value.strip()):
+            raise ValueError("COLLECTION_FOCUS_INVALID")
+    if domain_id == "cth":
+        if not subject_id or brand_focus_id is not None:
+            raise ValueError("CTH_COLLECTION_SUBJECT_REQUIRED")
+        subject_scope = subject_id
+    elif domain_id == "zbmp":
+        if not brand_focus_id or subject_id is not None:
+            raise ValueError("BMP_COLLECTION_BRAND_FOCUS_REQUIRED")
+        subject_scope = brand_focus_id
+    else:
+        raise ValueError("BUSINESS_COLLECTION_DOMAIN_REQUIRED")
+    return domain_id, product_id, subject_id, brand_focus_id, subject_scope
+
+
 def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2', *,
-                                    subject_scope='CTH', domain_id='cth', product_id='CTH'):
+                                    domain_id, product_id, subject_id=None,
+                                    brand_focus_id=None):
     """Write the sole business canonical row, then attach Evidence lineage.
 
     The legacy ``zbc_canonical_data`` overlay is intentionally not written here.
@@ -98,6 +122,11 @@ def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2', *,
     the one business Canonical writer and EvidenceChain records only provenance
     plus a lifecycle link to that row.
     """
+    domain_id, product_id, subject_id, brand_focus_id, subject_scope = resolve_live_scope(
+        domain_id=domain_id, product_id=product_id,
+        subject_id=subject_id, brand_focus_id=brand_focus_id,
+    )
+
     from lumenis.shared.database import main_db_path
     db_path = main_db_path()
     source_id = str(note_data.get('note_id') or '')
@@ -109,6 +138,10 @@ def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2', *,
     try:
         import canonical_data as _cd
         _cd.ensure_canonical_table(db_path)
+        note_data["domain_id"] = domain_id
+        note_data["product_id"] = product_id
+        note_data["subject_id"] = subject_id or ""
+        note_data["brand_focus_id"] = brand_focus_id or ""
         record = _cd.note_to_canonical(note_data, product_id=product_id)
         _con = _cd.get_connection(db_path)
         try:
@@ -152,8 +185,17 @@ def _bypass_evidence_canonical_live(note_data, provider='xhs-live-v2', *,
     return result
 
 
-def persist_live(data: dict, subject_hit: Callable[[str], bool], *,
-                 subject_scope='CTH', domain_id='cth', product_id='CTH') -> dict:
+def persist_live(data: dict, subject_hit: Callable[[str], bool], *, domain_id=None,
+                 product_id=None, subject_id=None, brand_focus_id=None) -> dict:
+    try:
+        domain_id, product_id, subject_id, brand_focus_id, _ = resolve_live_scope(
+            domain_id=domain_id, product_id=product_id,
+            subject_id=subject_id, brand_focus_id=brand_focus_id,
+        )
+    except ValueError as exc:
+        return {"ok": False, "status": "scope_unavailable", "accepted": 0,
+                "persisted": 0, "reason": str(exc)}
+
     if data.get('code') in ('account_paused', 'region_paused', 'policy_unavailable',
                             'policy_error', 'cdp_port_not_allowed'):
         return {'ok': False, 'status': 'policy_blocked', 'accepted': 0,
@@ -177,6 +219,10 @@ def persist_live(data: dict, subject_hit: Callable[[str], bool], *,
         n['data_quality_status'] = q.get('status','unknown')
         n['data_quality_score'] = q.get('score')
         n['collector_version'] = 'xhs-live-v2'
+        n['domain_id'] = domain_id
+        n['product_id'] = product_id
+        n['subject_id'] = subject_id or ""
+        n['brand_focus_id'] = brand_focus_id or ""
         n['captured_at'] = n.get('fetched_at') or datetime.now().isoformat()
         n['comments_collected'] = n.get('comments_collected')
         if not isinstance(n.get('sentiment'), str) or not n['sentiment'].strip():
@@ -185,8 +231,8 @@ def persist_live(data: dict, subject_hit: Callable[[str], bool], *,
             n['risk_level'] = 'unknown'
         database.insert_note(n)
         lineage = _bypass_evidence_canonical_live(
-            n, provider='xhs-live-v2', subject_scope=subject_scope,
-            domain_id=domain_id, product_id=product_id,
+            n, provider='xhs-live-v2', domain_id=domain_id, product_id=product_id,
+            subject_id=subject_id, brand_focus_id=brand_focus_id,
         )
         stats['canonical_synced'] += int(bool(lineage.get('canonical_id')))
         stats['evidence_recorded'] += int(bool(lineage.get('evidence_id')))

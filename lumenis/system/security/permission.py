@@ -659,11 +659,14 @@ def check_actor_scope_permission(
     explicit matching JSON data_scope; only a literal global=true is global.
     Selected resources are verified against the canonical subject registry.
     """
-    normalized_domain = (
-        domain_id.strip().lower() if isinstance(domain_id, str) else ""
-    )
-    if normalized_domain == "zbmp":
-        normalized_domain = "bmp"
+    try:
+        from domain_isolation import resolve_domain_identity
+        receipt_domain, _ = resolve_domain_identity(domain_id=domain_id)
+    except (TypeError, ValueError):
+        receipt_domain = ""
+    # Permission lookup uses the BMP compatibility key while receipts use the
+    # canonical persisted domain ID, matching PermissionGate.check().
+    normalized_domain = "bmp" if receipt_domain == "zbmp" else receipt_domain
     domain_config = _RESOURCE_SCOPE_DOMAINS.get(normalized_domain)
 
     try:
@@ -806,7 +809,7 @@ def check_actor_scope_permission(
         risk_level="low" if action_value == "read" else "medium",
         permission_required=action_value or "read",
         caller=f"actor:{actor_id}" if valid_actor_id else "anonymous",
-        domain_id=normalized_domain or None,
+        domain_id=receipt_domain or None,
         actor_id=actor_id if valid_actor_id else None,
         subject_id=scope_subject_id,
         brand_focus_id=scope_brand_focus_id,
@@ -988,16 +991,28 @@ def bind_scope_permission_approval(
         else PermissionResult(allowed=False, reason="invalid approval receipt")
     )
     verified = scope.verification_state == "verified"
-    focus = scope.subject_id if scope.domain_id == "cth" else scope.brand_focus_id
-    other_focus = scope.brand_focus_id if scope.domain_id == "cth" else scope.subject_id
+    try:
+        from domain_isolation import resolve_domain_identity
+        scope_domain, _ = resolve_domain_identity(domain_id=scope.domain_id)
+        approval_domain, _ = resolve_domain_identity(domain_id=approval.domain_id)
+    except (TypeError, ValueError):
+        scope_domain = approval_domain = ""
+    # The scope owner retains `bmp` as its internal compatibility key, while
+    # receipts and PermissionGate use canonical `zbmp`. Compare identity after
+    # the shared resolver, but retain exact operation/resource/audit matching.
+    scope_lookup_domain = "bmp" if scope_domain == "zbmp" else scope_domain
+    focus = scope.subject_id if scope_lookup_domain == "cth" else scope.brand_focus_id
+    other_focus = scope.brand_focus_id if scope_lookup_domain == "cth" else scope.subject_id
     valid_scope = (
-        scope.domain_id in _RESOURCE_SCOPE_DOMAINS and type(scope.global_scope) is bool
+        scope_domain in {"cth", "zbmp"}
+        and scope_lookup_domain in _RESOURCE_SCOPE_DOMAINS
+        and type(scope.global_scope) is bool
         and (
             focus is None and other_focus is None if scope.global_scope
             else _is_valid_scope_id(focus) and other_focus is None
         )
     )
-    scope_resource = f"{scope.domain_id}:{'GLOBAL / ALL' if scope.global_scope else focus}"
+    scope_resource = f"{scope_lookup_domain}:{'GLOBAL / ALL' if scope.global_scope else focus}"
     matched = (
         not is_testing_bypass_enabled()
         and valid_scope and scope.resource == scope_resource
@@ -1011,7 +1026,7 @@ def bind_scope_permission_approval(
         and bool(approval.approval_token) and bool(approval.audit_id)
         and approval.resource == scope.resource
         and approval.caller == scope.caller
-        and approval.domain_id == scope.domain_id
+        and approval_domain == scope_domain
     )
     try:
         if matched:
@@ -1065,7 +1080,7 @@ def bind_scope_permission_approval(
         operation_type=approval.operation_type, resource=scope.resource,
         risk_level="high", permission_required="write+human_approval",
         caller=scope.caller, operation_id=approval.operation_id if matched else None,
-        domain_id=scope.domain_id, actor_id=scope.actor_id,
+        domain_id=scope_domain or scope.domain_id, actor_id=scope.actor_id,
         subject_id=scope.subject_id, brand_focus_id=scope.brand_focus_id,
         global_scope=scope.global_scope, scope_action=scope.scope_action,
         scope_audit_id=scope.audit_id,
@@ -2589,13 +2604,23 @@ class PermissionGate:
                 caller=caller or 'test_runner',
             )
 
-        # 0. 域身份解析（默认从线程上下文）
-        if domain_id is None:
-            try:
+        # 0. 域身份解析。未知域不得继承上一次检查或静默落入 CTH。
+        self._current_check_domain = None
+        try:
+            from domain_isolation import resolve_domain_identity
+            if domain_id is None:
                 from ai_domain_context import get_current_domain
                 domain_id = get_current_domain()
-            except ImportError:
-                domain_id = "cth"
+            else:
+                domain_id, _ = resolve_domain_identity(domain_id=domain_id)
+            if not domain_id:
+                raise ValueError("DOMAIN_NOT_SELECTED")
+        except (ImportError, TypeError, ValueError) as exc:
+            return self._deny(
+                operation_type, resource, risk_level or RiskLevel.HIGH,
+                PermissionLevel.VERIFY, caller or self.default_caller, operation_id,
+                reason=f"domain_context_unavailable:{exc}",
+            )
 
         # 0b. 跨域权限检查：ZBMP 角色不天然拥有 CTH Admin 权限
         if role and not self._check_role_domain_permission(role, domain_id, operation_type):

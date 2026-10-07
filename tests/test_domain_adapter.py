@@ -4,7 +4,7 @@
 Verifies:
 1. ZBMPAdapter strips CTH-only fields (taikoo_hui_specific, xhs_subject_match, etc.)
 2. CTHAdapter strips ZBMP-only fields (multi_brand_config, brand_profiles, etc.)
-3. CTHAdapter forces subject=guangzhou_taikoo_hui
+3. CTHAdapter preserves the exact Subject and does not invent a focus
 4. Domain mismatch raises ValueError (ZBMP adapter rejects CTH record and vice versa)
 5. Round-trip conversion preserves core fields
 6. get_adapter() factory returns correct adapter by domain_id
@@ -76,7 +76,7 @@ class TestZBMPAdapter:
 
 
 class TestCTHAdapter:
-    """CTH adapter must strip ZBMP-only fields and force CTH subject."""
+    """CTH adapter strips ZBMP-only fields and preserves CTH scope identity."""
 
     def test_cth_adapter_strips_zbmp_fields(self):
         """CTH adapter output must not contain any ZBMP-only field keys."""
@@ -94,13 +94,16 @@ class TestCTHAdapter:
         with pytest.raises(ValueError, match="Domain mismatch"):
             adapter.to_domain(rec)
 
-    def test_cth_adapter_forces_subject(self):
-        """CTH adapter must force subject_id=GUANGZHOU_TAIKOO_HUI and brand_key=guangzhou_taikoo_hui."""
-        rec = CanonicalRecord(product_id=PRODUCT_CTH, title="test", subject_id="WRONG_SUBJECT")
+    def test_cth_adapter_preserves_subject_without_inventing_focus(self):
+        rec = CanonicalRecord(product_id=PRODUCT_CTH, title="test", subject_id="SUBJECT-A")
         adapter = CTHAdapter()
         result = adapter.to_domain(rec)
-        assert result.subject_id == "GUANGZHOU_TAIKOO_HUI"
-        assert result.brand_key == "guangzhou_taikoo_hui"
+        assert result.subject_id == "SUBJECT-A"
+        assert result.brand_key == ""
+
+        no_focus = adapter.to_domain(CanonicalRecord(product_id=PRODUCT_CTH, title="global"))
+        assert no_focus.subject_id == ""
+        assert no_focus.brand_key == ""
 
     def test_cth_round_trip(self):
         """CTH round-trip preserves core identity."""
@@ -110,7 +113,16 @@ class TestCTHAdapter:
         back = adapter.from_domain(domain_rec)
         assert back.product_id == PRODUCT_CTH
         assert back.domain_id == DOMAIN_CTH
+        assert back.subject_id == ""
         assert back.title == "CTH Round Trip"
+
+    def test_cth_round_trip_preserves_exact_subject(self):
+        rec = CanonicalRecord(
+            product_id=PRODUCT_CTH, domain_id=DOMAIN_CTH,
+            subject_id="SUBJECT-B", title="Focused CTH",
+        )
+        back = CTHAdapter().from_domain(CTHAdapter().to_domain(rec))
+        assert back.subject_id == "SUBJECT-B"
 
 
 class TestAdapterFactory:
@@ -124,10 +136,27 @@ class TestAdapterFactory:
         adapter = get_adapter(DOMAIN_ZBMP)
         assert isinstance(adapter, ZBMPAdapter)
 
-    def test_get_adapter_unknown_defaults_cth(self):
-        """Unknown domain_id defaults to CTH (production safety default)."""
-        adapter = get_adapter("unknown_domain")
-        assert isinstance(adapter, CTHAdapter)
+    def test_get_adapter_unknown_fails_closed(self):
+        with pytest.raises(ValueError, match="INVALID_DOMAIN_ID"):
+            get_adapter("unknown_domain")
+
+    def test_get_adapter_system_has_no_business_adapter(self):
+        with pytest.raises(ValueError, match="No domain adapter"):
+            get_adapter("system")
+
+    @pytest.mark.parametrize("domain_id", ["cth", "CTH"])
+    def test_get_adapter_accepts_registered_cth_aliases(self, domain_id):
+        assert isinstance(get_adapter(domain_id), CTHAdapter)
+
+    def test_to_domain_rejects_contradictory_domain_product_pair(self):
+        rec = CanonicalRecord(product_id=PRODUCT_CTH, domain_id=DOMAIN_ZBMP)
+        with pytest.raises(ValueError, match="CanonicalRecord domain/product identity"):
+            CTHAdapter().to_domain(rec)
+
+    def test_from_domain_rejects_mutated_cross_domain_identity(self):
+        value = CTHRecord(product_id=PRODUCT_ZBMP, domain_id=DOMAIN_ZBMP, subject_id="SUBJECT-A")
+        with pytest.raises(ValueError, match="Domain mismatch"):
+            CTHAdapter().from_domain(value)
 
     def test_adapt_to_domain_zbmp(self):
         rec = CanonicalRecord(product_id=PRODUCT_ZBMP, title="adapt test")

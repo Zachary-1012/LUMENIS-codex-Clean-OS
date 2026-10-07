@@ -50,8 +50,6 @@ class LearningMemory(BaseMemoryLayer):
 
     def __init__(self, db_path: Optional[str] = None, enabled: bool = False):
         super().__init__(db_path=db_path, enabled=enabled)
-        self._positive_samples: List[Dict[str, Any]] = []
-        self._negative_samples: List[Dict[str, Any]] = []
 
     # ── 反馈关键词（基于 feedback_keywords） ─────────────────────
 
@@ -122,7 +120,7 @@ class LearningMemory(BaseMemoryLayer):
             },
         )
         # 持久化到 agent_learning_records 表（如果表已存在）
-        if rec and self.db_path:
+        if rec and self.db_path is not None:
             self._persist_learning_record(rec, record_data)
         return rec
 
@@ -142,15 +140,19 @@ class LearningMemory(BaseMemoryLayer):
     def record_correction(self, original_output: str, corrected_output: str,
                           context: Optional[Dict[str, Any]] = None,
                           source: str = "human",
-                          related_task_id: Optional[str] = None) -> Optional[MemoryRecord]:
+                          related_task_id: Optional[str] = None,
+                          sample_type: Optional[SampleType] = None) -> Optional[MemoryRecord]:
         """记录 AI 输出修正（original → corrected 的 diff）。"""
+        content = {
+            "original_output": original_output,
+            "corrected_output": corrected_output,
+            "context": context or {},
+        }
+        if sample_type is not None:
+            content["sample_type"] = sample_type.value
         return self.record_learning(
             learning_type=LearningType.CORRECTION,
-            content={
-                "original_output": original_output,
-                "corrected_output": corrected_output,
-                "context": context or {},
-            },
+            content=content,
             source=source,
             confidence=0.9,  # 人工修正置信度高
             related_task_id=related_task_id,
@@ -159,28 +161,116 @@ class LearningMemory(BaseMemoryLayer):
     # ── 样本库管理 ───────────────────────────────────────────────
 
     def add_positive_sample(self, sample: Dict[str, Any]) -> bool:
-        """添加正样本（AI输出被人工确认）。"""
+        """记录候选正样本；只有该记录经生命周期提升后才可读取。"""
         if not self.enabled:
             return False
-        sample["sample_type"] = SampleType.POSITIVE.value
-        sample["added_at"] = _utc_now_iso()
-        self._positive_samples.append(sample)
-        return True
+        return self._record_sample(sample, SampleType.POSITIVE) is not None
 
     def add_negative_sample(self, sample: Dict[str, Any]) -> bool:
-        """添加负样本（AI输出被拒绝）。"""
+        """记录候选负样本；只有该记录经生命周期提升后才可读取。"""
         if not self.enabled:
             return False
-        sample["sample_type"] = SampleType.NEGATIVE.value
-        sample["added_at"] = _utc_now_iso()
-        self._negative_samples.append(sample)
-        return True
+        return self._record_sample(sample, SampleType.NEGATIVE) is not None
+
+    def _record_sample(self, sample: Dict[str, Any],
+                       sample_type: SampleType) -> Optional[MemoryRecord]:
+        payload = dict(sample)
+        content = {
+            "sample_type": sample_type.value,
+            "sample": payload,
+            "original_output": payload.get("original", payload.get("original_output", "")),
+            "corrected_output": payload.get("corrected", payload.get("corrected_output", "")),
+            "context": payload.get("context") or {},
+        }
+        return self.record_learning(
+            learning_type=LearningType.CORRECTION,
+            content=content,
+            source="learning_sample_api",
+            confidence=0.9,
+        )
 
     def get_positive_samples(self, limit: int = 50) -> List[Dict[str, Any]]:
-        return self._positive_samples[-limit:]
+        return self._get_promoted_samples(SampleType.POSITIVE, limit)
 
     def get_negative_samples(self, limit: int = 50) -> List[Dict[str, Any]]:
-        return self._negative_samples[-limit:]
+        return self._get_promoted_samples(SampleType.NEGATIVE, limit)
+
+    def _get_promoted_samples(self, sample_type: SampleType,
+                              limit: int) -> List[Dict[str, Any]]:
+        """Read only promoted samples from the configured lifecycle authority."""
+        if not self.enabled or limit <= 0:
+            return []
+
+        records: Dict[str, Dict[str, Any]] = {}
+        if self.db_path is not None:
+            try:
+                conn = get_db_connection(self.db_path)
+                try:
+                    rows = conn.execute(
+                        """SELECT record_id, content_json, lifecycle_stage, created_at
+                           FROM agent_learning_records
+                           WHERE learning_type=? AND lifecycle_stage=?
+                           ORDER BY created_at DESC""",
+                        (LearningType.CORRECTION.value, LifecycleStage.PROMOTED.value),
+                    )
+                    for row in rows:
+                        try:
+                            content = json.loads(row["content_json"] or "{}")
+                        except (TypeError, json.JSONDecodeError):
+                            continue
+                        if not isinstance(content, dict):
+                            continue
+                        if content.get("sample_type") != sample_type.value:
+                            continue
+                        records[row["record_id"]] = self._sample_from_content(
+                            row["record_id"], content, row["created_at"])
+                finally:
+                    conn.close()
+            except Exception:
+                # A configured persistence owner is authoritative. A read
+                # failure must not revive a stale promoted in-memory copy.
+                return []
+            return list(reversed(list(records.values())[:limit]))
+
+        # Memory-only operation is explicit: it is available only when no DB
+        # owner was configured for this LearningMemory instance.
+        for record in self._in_memory.values():
+            value = record.value
+            if value.get("learning_type") != LearningType.CORRECTION.value:
+                continue
+            if value.get("lifecycle_stage") != LifecycleStage.PROMOTED.value:
+                continue
+            if value.get("content", {}).get("sample_type") != sample_type.value:
+                continue
+            records.setdefault(
+                record.record_id,
+                self._sample_from_content(
+                    record.record_id, value.get("content", {}), record.timestamp),
+            )
+
+        ordered = sorted(
+            records.values(), key=lambda item: item.get("recorded_at", ""))
+        return ordered[-limit:]
+
+    @staticmethod
+    def _sample_from_content(record_id: str, content: Dict[str, Any],
+                             recorded_at: Optional[str]) -> Dict[str, Any]:
+        sample = content.get("sample")
+        if not isinstance(sample, dict):
+            sample = {
+                "original": content.get("original_output", ""),
+                "corrected": content.get("corrected_output", ""),
+                "context": content.get("context") or {},
+            }
+        else:
+            sample = dict(sample)
+        sample.update({
+            "sample_type": content.get("sample_type"),
+            "learning_record_id": record_id,
+            "lifecycle_stage": LifecycleStage.PROMOTED.value,
+            "recorded_at": recorded_at,
+        })
+        return sample
 
     # ── 生命周期推进 ─────────────────────────────────────────────
 
@@ -194,37 +284,8 @@ class LearningMemory(BaseMemoryLayer):
         archived 也可作为任一非终态的人工拒绝/收口终点。
         只有 promoted 阶段的记录才能进入 prompt context 或影响后续规则使用。
         """
-        rec = next(
-            (r for r in self._in_memory.values() if r.record_id == record_id),
-            None,
-        )
-
-        current_stage: Optional[str] = None
-        if rec:
-            current_stage = rec.value.get("lifecycle_stage", LifecycleStage.RAW.value)
-
-        # 允许跨进程继续治理：内存没有记录时，从持久化表读取当前阶段。
-        if current_stage is None and self.db_path:
-            try:
-                conn = get_db_connection(self.db_path)
-                try:
-                    row = conn.execute(
-                        "SELECT lifecycle_stage FROM agent_learning_records WHERE record_id=?",
-                        (record_id,),
-                    ).fetchone()
-                    if row:
-                        current_stage = row["lifecycle_stage"]
-                finally:
-                    conn.close()
-            except Exception:
-                current_stage = None
-
-        if current_stage is None:
-            return False
-
-        # 幂等推进。
-        if current_stage == new_stage.value:
-            return True
+        rec = next((r for r in self._in_memory.values()
+                    if r.record_id == record_id), None)
 
         allowed = {
             LifecycleStage.RAW.value: {
@@ -244,27 +305,61 @@ class LearningMemory(BaseMemoryLayer):
             },
             LifecycleStage.ARCHIVED.value: set(),
         }
+
+        if self.db_path is not None:
+            conn = None
+            try:
+                conn = get_db_connection(self.db_path)
+                row = conn.execute(
+                    "SELECT lifecycle_stage FROM agent_learning_records WHERE record_id=?",
+                    (record_id,),
+                ).fetchone()
+                if not row:
+                    return False
+                current_stage = row["lifecycle_stage"]
+                if current_stage == new_stage.value:
+                    if rec:
+                        rec.value["lifecycle_stage"] = current_stage
+                        rec.metadata["lifecycle_stage"] = current_stage
+                    return True
+                if new_stage.value not in allowed.get(current_stage, set()):
+                    return False
+                updated = conn.execute(
+                    """UPDATE agent_learning_records SET lifecycle_stage=?
+                       WHERE record_id=? AND lifecycle_stage=?""",
+                    (new_stage.value, record_id, current_stage),
+                )
+                if updated.rowcount != 1:
+                    return False
+                conn.commit()
+            except Exception:
+                if conn:
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+                return False
+            finally:
+                if conn:
+                    conn.close()
+
+            if rec:
+                rec.value["lifecycle_stage"] = new_stage.value
+                rec.metadata["lifecycle_stage"] = new_stage.value
+            return True
+
+        # Without a configured DB, only this explicit in-memory owner may
+        # advance records; no persisted record is inferred from a stale cache.
+        if not rec:
+            return False
+        current_stage = rec.value.get("lifecycle_stage", LifecycleStage.RAW.value)
+        if current_stage == new_stage.value:
+            return True
         if new_stage.value not in allowed.get(current_stage, set()):
             return False
 
-        if rec:
-            rec.value["lifecycle_stage"] = new_stage.value
-            rec.metadata["lifecycle_stage"] = new_stage.value
-
-        if self.db_path:
-            try:
-                conn = get_db_connection(self.db_path)
-                try:
-                    conn.execute(
-                        "UPDATE agent_learning_records SET lifecycle_stage=? WHERE record_id=?",
-                        (new_stage.value, record_id),
-                    )
-                    conn.commit()
-                finally:
-                    conn.close()
-            except Exception:
-                # 迁移表尚未创建时，内存推进仍然有效；Production Truth 不受影响。
-                pass
+        rec.value["lifecycle_stage"] = new_stage.value
+        rec.metadata["lifecycle_stage"] = new_stage.value
 
         return True
 
@@ -273,8 +368,7 @@ class LearningMemory(BaseMemoryLayer):
         if not self.enabled:
             return []
 
-        persisted: List[Dict[str, Any]] = []
-        if self.db_path:
+        if self.db_path is not None:
             try:
                 conn = get_db_connection(self.db_path)
                 try:
@@ -285,12 +379,15 @@ class LearningMemory(BaseMemoryLayer):
                            WHERE learning_type=? AND lifecycle_stage=?
                            ORDER BY created_at DESC LIMIT 100""",
                         (LearningType.RULE_SUGGESTION.value, LifecycleStage.PROMOTED.value),
-                    ).fetchall()
+                    )
+                    persisted = []
                     for row in rows:
                         try:
                             content = json.loads(row["content_json"] or "{}")
                         except (TypeError, json.JSONDecodeError):
-                            content = {}
+                            continue
+                        if not isinstance(content, dict):
+                            continue
                         persisted.append({
                             "record_id": row["record_id"],
                             "learning_type": row["learning_type"],
@@ -303,11 +400,11 @@ class LearningMemory(BaseMemoryLayer):
                         })
                 finally:
                     conn.close()
+                return persisted
             except Exception:
-                persisted = []
-
-        if persisted:
-            return persisted
+                # Do not revive a cached promotion when the configured
+                # persistence owner cannot establish current lifecycle state.
+                return []
 
         results = self.query({"learning_type": "rule_suggestion"}, limit=100)
         return [
@@ -357,6 +454,6 @@ class LearningMemory(BaseMemoryLayer):
                     conn.close()
             except Exception:
                 pass
-        s["positive_samples"] = len(self._positive_samples)
-        s["negative_samples"] = len(self._negative_samples)
+        s["positive_samples"] = len(self.get_positive_samples())
+        s["negative_samples"] = len(self.get_negative_samples())
         return s

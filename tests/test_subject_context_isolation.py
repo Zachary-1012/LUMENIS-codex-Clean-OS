@@ -5,7 +5,7 @@ Verifies:
 1. get_active_brand() defaults to CTH (guangzhou_taikoo_hui)
 2. brand_scope context manager switches brand locally and restores after
 3. Thread context is isolated between threads
-4. CTH protection blocks non-CTH brand switch when ZBC_PRODUCT_ID=CTH
+4. Machine environment cannot override an explicit domain and subject
 5. subject_hit() respects brand scope (Guangzhou vs Chengdu isolation)
 """
 import os
@@ -20,16 +20,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 class TestSubjectContextIsolation:
     """Product/Subject/Scope isolation tests."""
 
-    def test_default_brand_is_cth(self):
-        """Default active brand must be Guangzhou Taikoo Hui (CTH)."""
+    def test_unselected_context_has_no_reference_subject(self):
+        """An unselected product context is GLOBAL, not a reference Subject."""
         from subject_context import clear_thread_context, get_subject_context
         clear_thread_context()
         # Ensure no env override
         old = os.environ.pop("ZBC_ACTIVE_BRAND", None)
         try:
             ctx = get_subject_context()
-            assert ctx.brand_key == "guangzhou_taikoo_hui"
-            assert ctx.product_id == "CTH"
+            assert ctx.brand_key == ""
+            assert ctx.product_id == ""
         finally:
             if old:
                 os.environ["ZBC_ACTIVE_BRAND"] = old
@@ -54,7 +54,7 @@ class TestSubjectContextIsolation:
         old = os.environ.pop("ZBC_ACTIVE_BRAND", None)
         try:
             assert get_active_brand() == "guangzhou_taikoo_hui"
-            with brand_scope("hainan_cdf"):
+            with brand_scope("hainan_cdf", product_id="ZBMP"):
                 assert get_active_brand() == "hainan_cdf"
                 ctx = get_thread_context()
                 assert ctx is not None
@@ -73,9 +73,9 @@ class TestSubjectContextIsolation:
         clear_thread_context()
         old = os.environ.pop("ZBC_ACTIVE_BRAND", None)
         try:
-            with brand_scope("hainan_cdf"):
+            with brand_scope("hainan_cdf", product_id="ZBMP"):
                 assert get_active_brand() == "hainan_cdf"
-                with brand_scope("tokyo_dfs"):
+                with brand_scope("tokyo_dfs", product_id="ZBMP"):
                     assert get_active_brand() == "tokyo_dfs"
                 assert get_active_brand() == "hainan_cdf"
             assert get_active_brand() == "guangzhou_taikoo_hui"
@@ -93,7 +93,7 @@ class TestSubjectContextIsolation:
 
         def worker(brand, key):
             try:
-                with brand_scope(brand):
+                with brand_scope(brand, product_id="ZBMP"):
                     results[key] = get_active_brand()
             except Exception as e:
                 results[key] = f"ERROR: {e}"
@@ -113,19 +113,19 @@ class TestSubjectContextIsolation:
             if old:
                 os.environ["ZBC_ACTIVE_BRAND"] = old
 
-    def test_cth_protection_blocks_brand_switch(self):
-        """When ZBC_PRODUCT_ID=CTH, brand_scope must reject non-CTH brands."""
+    def test_machine_env_does_not_override_explicit_bmp(self):
+        """An explicit BMP context remains BMP under a legacy process default."""
         from subject_context import clear_thread_context, brand_scope
         clear_thread_context()
         old_product = os.environ.get("ZBC_PRODUCT_ID")
         old_brand = os.environ.pop("ZBC_ACTIVE_BRAND", None)
         try:
             os.environ["ZBC_PRODUCT_ID"] = "CTH"
-            with pytest.raises(PermissionError):
-                with brand_scope("hainan_cdf"):
-                    pass
+            with brand_scope("hainan_cdf", product_id="ZBMP") as ctx:
+                assert ctx.product_id == "ZBMP"
+                assert ctx.brand_key == "hainan_cdf"
             # CTH brand itself is allowed
-            with brand_scope("guangzhou_taikoo_hui"):
+            with brand_scope("guangzhou_taikoo_hui", product_id="CTH"):
                 from subject_rules import get_active_brand
                 assert get_active_brand() == "guangzhou_taikoo_hui"
         finally:
@@ -148,7 +148,7 @@ class TestSubjectContextIsolation:
             # Chengdu Taikoo Li should NOT hit CTH (exclude words)
             assert subject_hit(title="成都太古里新店开业") is False
             # Hainan CDF brand: should hit Hainan content
-            with brand_scope("hainan_cdf"):
+            with brand_scope("hainan_cdf", product_id="ZBMP"):
                 assert subject_hit(title="海南中免免税店") is True
                 assert subject_hit(title="广州太古汇") is False  # different brand
         finally:
@@ -164,7 +164,7 @@ class TestSubjectContextIsolation:
         try:
             info = subject_policy_info()
             assert info["active_brand"] == "guangzhou_taikoo_hui"
-            with brand_scope("hainan_cdf"):
+            with brand_scope("hainan_cdf", product_id="ZBMP"):
                 info2 = subject_policy_info()
                 assert info2["active_brand"] == "hainan_cdf"
         finally:

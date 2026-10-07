@@ -21,6 +21,17 @@ LOGGER = logging.getLogger(__name__)
 
 report_bp = Blueprint('report', __name__)
 
+
+def _report_failure(exc, *, fallback_status=500):
+    code = str(exc)
+    if code in {
+        "REPORT_DOMAIN_REQUIRED", "REPORT_REFERENCE_SUBJECT_REQUIRED",
+        "REPORT_CONTEXT_MISMATCH", "LEGACY_REPORT_DOMAIN_UNSUPPORTED",
+    }:
+        return jsonify({'ok': False, 'code': code, 'error': code}), 409
+    status = 400 if isinstance(exc, ValueError) else fallback_status
+    return jsonify({'ok': False, 'error': code}), status
+
 # ===== 报告 API（从 app.py 拆分，函数体零改动）=====
 
 @report_bp.route('/api/v2/report-center/preview')
@@ -160,6 +171,10 @@ def api_report_daily():
         except (TypeError,ValueError): return 0
     date_str = request.args.get('date') or datetime.now().strftime('%Y-%m-%d')
     try:
+        report_engine._resolve_legacy_report_scope()
+    except (ValueError, PermissionError) as exc:
+        return _report_failure(exc, fallback_status=409)
+    try:
         today_d = datetime.strptime(date_str, '%Y-%m-%d').date()
     except Exception:
         today_d = datetime.now().date()
@@ -281,7 +296,7 @@ def api_report(report_type):
                         'artifact_verified':bundle.get('artifact_verified',False),
                         'report_id':rpt.get('report_id',''),'artifact_hash':rpt.get('artifact_hash','')})
     except Exception as exc:
-        return jsonify({'ok':False,'error':str(exc)}),500
+        return _report_failure(exc)
 
 
 @report_bp.route('/api/report/generate',methods=['POST'])
@@ -309,7 +324,7 @@ def api_generate_report():
             return jsonify({'ok': False, 'error': '部分报告未真实落库', 'verified': verified}), 500
         return jsonify({'ok':True,'message':'日报/周报/月报/年报已生成','reports':result,'verified':verified})
     except Exception as exc:
-        return jsonify({'ok':False,'error':str(exc)}),500
+        return _report_failure(exc)
 
 # ===== 优化版报告API（v2）：按发布日期筛选，周期报告负面必须二次确认 =====
 

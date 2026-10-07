@@ -66,7 +66,11 @@ def test_live_persist_binds_source_scoped_evidence_dedupe(monkeypatch):
         "data_quality": {},
         "comments_data": [],
     }
-    result = live_engine.persist_live({"notes": [note]}, lambda _text: True)
+    result = live_engine.persist_live(
+        {"notes": [note]}, lambda _text: True,
+        domain_id="cth", product_id="CTH",
+        subject_id="GUANGZHOU_TAIKOO_HUI",
+    )
 
     assert result["ok"] is True
     assert result["persisted"] == 1

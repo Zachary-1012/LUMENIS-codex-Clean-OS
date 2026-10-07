@@ -76,7 +76,7 @@ class SkillExecutionContext:
 @dataclass
 class SkillRuntimeInfo:
     skill_id: str; name: str = ""; description: str = ""
-    product: str = "SYSTEM"; domain: str = "global"; version: str = "1.0.0"
+    product: str = "SYSTEM"; domain: str = "system"; version: str = "1.0.0"
     state: SkillState = SkillState.REGISTERED
     enabled: bool = False
     config: Dict[str, Any] = field(default_factory=dict)
@@ -673,7 +673,7 @@ def record_execution_evidence(ctx):
             source_url=f"skill://{ctx.skill_id}/{ctx.execution_id}",
             source_id=ctx.execution_id,
             raw_content=raw_content,
-            subject_scope=ctx.domain or "SYSTEM",
+            subject_scope="GLOBAL / ALL",
             task_id=ctx.execution_id,
             trace_id=ctx.execution_id,
             collection_metadata={
@@ -686,8 +686,8 @@ def record_execution_evidence(ctx):
                 "evaluation": ctx.evaluation,
             },
             provider="lumenis.shared.agents.skills.execution",
-            domain_id=ctx.domain or "system",
-            product_id=ctx.product or "SYSTEM",
+            domain_id=ctx.domain or None,
+            product_id=ctx.product or None,
         )
         return {"ok": True, "evidence_id": ev.evidence_id, "is_new": is_new}
     except Exception as e:
@@ -695,7 +695,7 @@ def record_execution_evidence(ctx):
 
 
 def run_execution_chain(skill_id, task="", input_payload=None, action_type=ActionType.ANALYZE,
-                        user_id=None, user_role="user", product="SYSTEM", domain="global",
+                        user_id=None, user_role="user", product="SYSTEM", domain="system",
                         permission_role=None,
                         skill_info=None, handler=None, content_source_import=None,
                         request_context=None, workspace_principal=None):
@@ -828,7 +828,7 @@ def get_skills_light_status(product=None):
         for s in list_skills(product=product, status="enabled"):
             results.append({"skill_id": s["skill_id"], "name": s.get("name", s["skill_id"]),
                 "description": s.get("description", ""), "product": s.get("product", "SYSTEM"),
-                "domain": s.get("domain", "global"), "status": "enabled", "state": "enabled",
+                "domain": s.get("domain", "system"), "status": "enabled", "state": "enabled",
                 "version": s.get("version", "1.0"), "source": "db"})
     except Exception: pass
     try:
@@ -838,7 +838,7 @@ def get_skills_light_status(product=None):
             if meta.skill_id in existing: continue
             results.append({"skill_id": meta.skill_id, "name": meta.skill_id.replace("zbc.", "").replace("_", " ").title(),
                 "description": meta.description, "product": getattr(meta, "product", "SYSTEM"),
-                "domain": getattr(meta, "domain", "global"), "status": "registered", "state": "registered",
+                "domain": getattr(meta, "domain", "system"), "status": "registered", "state": "registered",
                 "version": meta.version, "risk_level": meta.risk_level.value, "source": "builtin_registry"})
     except Exception: pass
     return results

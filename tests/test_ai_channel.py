@@ -145,10 +145,10 @@ def test_channel_health_available_flag():
         assert retired['provider'] == 'zhipu'
         assert retired['provider_status'] == 'DISABLED'
 
-        # Provider retirement must not erase health behavior for an active
-        # non-retired route.
+        # Legacy compatibility providers remain observable but unavailable.
         h = ac.channel_health('ark', 'doubao-test')
-        assert h['available'] is True and h['provider'] == 'ark'
+        assert h['available'] is False and h['provider'] == 'ark'
+        assert h['provider_status'] == 'LEGACY'
         b.record_failure('network')
         h2 = ac.channel_health('ark', 'doubao-test')
         assert h2['available'] is False and h2['state'] == 'OPEN'

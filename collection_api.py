@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """采集控制 API 蓝图（app.py 巨石拆分 · 批2a，P1-10）。
 
-本批只抽依赖“可 import 模块”（collector_automation / xhs_cookie_bridge / database）的
-采集器状态与启停接口，函数体零逻辑改动，显式保留原 endpoint 名。
+本批抽取依赖“可 import 模块”（collector_automation / xhs_cookie_bridge / database）的
+采集器状态与启停接口，显式保留原 endpoint 名。状态查询委托给统一 status API owner。
 涉及 app.py 运行时锁/线程的更复杂接口留待后续批次。
 """
 from __future__ import annotations
@@ -14,6 +14,7 @@ import database as db
 import xhs_cookie_bridge
 from flask import Blueprint, jsonify, request
 from lumenis.system.collector.adapters.rednote_policy import automatic_collection_opt_in_enabled
+from collector_status_api import get_collector_status_payload
 
 
 def register_collection_api(app):
@@ -22,13 +23,11 @@ def register_collection_api(app):
 
     @bp.route('/api/collector/status', endpoint='api_collector_status')
     def api_collector_status():
-        """采集器状态查询"""
+        """Compatibility route backed by the single Collector status payload."""
         try:
-            collector = collector_automation.get_collector_automation()
-            status = collector.get_status()
-            return jsonify({'ok': True, **status})
+            return jsonify(get_collector_status_payload())
         except Exception as e:
-            return jsonify({'ok': False, 'error': str(e)}), 500
+            return jsonify({'ok': False, 'success': False, 'data': None, 'error': str(e)}), 500
 
     @bp.route('/api/collect/schedule-status', endpoint='api_collect_schedule_status')
     def api_collect_schedule_status():

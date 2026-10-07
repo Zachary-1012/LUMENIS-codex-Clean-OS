@@ -100,11 +100,12 @@ class TestEnvVarActivation:
         assert sr.subject_hit(title="海南中免CDF攻略") is True
         assert sr.subject_hit(title="广州太古汇探店") is False
 
-    def test_invalid_env_brand_falls_back_to_guangzhou(self, monkeypatch):
-        """无效品牌名回退到广州太古汇（安全默认）。"""
+    def test_invalid_env_brand_is_rejected(self, monkeypatch):
+        """无效品牌名不能污染广州太古汇口径。"""
         monkeypatch.setenv("ZBC_ACTIVE_BRAND", "nonexistent_brand")
-        cfg = sr.get_brand_config()
-        assert cfg.get("display_name") == "广州太古汇"
+        import pytest
+        with pytest.raises(ValueError, match="UNKNOWN_SUBJECT_PROFILE"):
+            sr.get_brand_config()
 
 
 def test_kos_collection_uses_canonical_scoped_secondary_writer(monkeypatch):

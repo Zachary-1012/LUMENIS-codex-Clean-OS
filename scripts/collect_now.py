@@ -13,8 +13,22 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
 
-def collect_now(keyword='广州太古汇', max_scroll=5, max_details=20):
+def collect_now(keyword=None, max_scroll=5, max_details=20, *, domain_id=None,
+                product_id=None, subject_id=None, brand_focus_id=None, brand_key=None):
     """立即执行采集"""
+    try:
+        from lumenis.system.collector.runtime.xhs.live_engine import resolve_live_scope
+        domain_id, product_id, subject_id, brand_focus_id, _ = resolve_live_scope(
+            domain_id=domain_id, product_id=product_id,
+            subject_id=subject_id, brand_focus_id=brand_focus_id,
+        )
+        if not isinstance(brand_key, str) or not brand_key or brand_key != brand_key.strip():
+            raise ValueError("COLLECTION_BRAND_PROFILE_REQUIRED")
+        if not isinstance(keyword, str) or not keyword or keyword != keyword.strip():
+            raise ValueError("COLLECTION_QUERY_REQUIRED")
+    except ValueError as exc:
+        print(f"❌ 采集范围未绑定，已阻止执行: {exc}")
+        return False
     print("=" * 60)
     print("广州太古汇舆情监测系统 - 立即采集")
     print(f"采集时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -60,14 +74,18 @@ def collect_now(keyword='广州太古汇', max_scroll=5, max_details=20):
     # 通过 SYSTEM Collector 的当前 XHS runtime 采集并按现行 Subject 规则入库。
     try:
         from lumenis.system.collector.runtime.xhs.live_engine import run_live, persist_live
-        from subject_rules import subject_hit_text
+        from subject_rules import subject_hit_for_brand
 
         result = run_live(
             keyword,
             max_scroll=max_scroll,
             max_details=max_details,
         )
-        stats = persist_live(result, subject_hit_text)
+        stats = persist_live(
+            result, lambda text: subject_hit_for_brand(title=text, brand_key=brand_key),
+            domain_id=domain_id, product_id=product_id,
+            subject_id=subject_id, brand_focus_id=brand_focus_id,
+        )
         print(f"采集结果: {result}")
         print(f"入库结果: {stats}")
         return bool(stats.get("ok"))
@@ -80,9 +98,23 @@ def collect_now(keyword='广州太古汇', max_scroll=5, max_details=20):
 
 
 if __name__ == '__main__':
-    keyword = sys.argv[1] if len(sys.argv) > 1 else '广州太古汇'
-    max_scroll = int(sys.argv[2]) if len(sys.argv) > 2 else 5
-    max_details = int(sys.argv[3]) if len(sys.argv) > 3 else 20
+    import argparse
+    parser = argparse.ArgumentParser(description="按显式业务范围执行一次 XHS 采集")
+    parser.add_argument("--keyword", required=True)
+    parser.add_argument("--max-scroll", type=int, default=5)
+    parser.add_argument("--max-details", type=int, default=20)
+    parser.add_argument("--domain-id", required=True)
+    parser.add_argument("--product-id", required=True)
+    focus = parser.add_mutually_exclusive_group(required=True)
+    focus.add_argument("--subject-id")
+    focus.add_argument("--brand-focus-id")
+    parser.add_argument("--brand-key", required=True)
+    args = parser.parse_args()
 
-    success = collect_now(keyword, max_scroll, max_details)
+    success = collect_now(
+        args.keyword, args.max_scroll, args.max_details,
+        domain_id=args.domain_id, product_id=args.product_id,
+        subject_id=args.subject_id, brand_focus_id=args.brand_focus_id,
+        brand_key=args.brand_key,
+    )
     sys.exit(0 if success else 1)

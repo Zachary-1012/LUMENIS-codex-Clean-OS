@@ -209,3 +209,21 @@ It is not published Product Source. Promotion requires one coherent delivery.
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_publication_paths_keep_staged_and_committed_evidence_separate(monkeypatch):
+    from types import SimpleNamespace
+    from scripts.audit_tools import verify_codex_takeover_governance as gate
+
+    seen = []
+    def git_result(command, **kwargs):
+        seen.append(command)
+        if command[1] == 'diff':
+            return SimpleNamespace(returncode=0, stdout='collection_api.py\n00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md\n', stderr='')
+        return SimpleNamespace(returncode=0, stdout='README.md\n', stderr='')
+    monkeypatch.setattr(gate.subprocess, 'run', git_result)
+    assert gate._publication_changed_paths() == {'README.md'}
+    assert gate._publication_changed_paths(staged=True) == {
+        'collection_api.py', '00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md'}
+    assert '--cached' not in seen[0]
+    assert '--cached' in seen[1]

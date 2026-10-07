@@ -2369,8 +2369,13 @@ def generate_source_brief_job():
         if "retry_media_job_id" in body and ("resume_job_id" in body or "image_source_ref" in body):
             raise ValueError("SOURCE_BRIEF_RETRY_INPUT_INVALID")
         actor_ref, audit_ref, scope, actor = _source_brief_context("write", include_actor=True)
+        from domain_isolation import resolve_domain_identity
+        domain_id, _product_id = resolve_domain_identity(product_id=scope.get("product_id"))
+        if not domain_id:
+            raise ValueError("DOMAIN_REQUIRED")
         allowed = get_permission_gate().check(
             OperationType.REPORT_GENERATE, resource=request.path, caller=actor_ref,
+            domain_id=domain_id,
         )
         if not allowed.allowed:
             raise PermissionError("SOURCE_BRIEF_GENERATE_DENIED")
@@ -3372,7 +3377,30 @@ def run_shared_skill_route(skill_id: str):
     # execution firewall contract uses canonical scopes (cth/zbmp).  Normalize
     # at this boundary instead of weakening the firewall or leaking a second
     # domain vocabulary into the execution chain.
-    raw_domain = str(body.get("domain") or payload.get("domain") or "CTH").strip().upper()
+    requested_domain = body.get("domain") if "domain" in body else payload.get("domain")
+    if requested_domain is None:
+        try:
+            from ai_domain_context import get_current_domain
+            raw_domain = get_current_domain().upper()
+        except (ImportError, TypeError, ValueError):
+            return jsonify({
+                "ok": False, "status": "denied", "code": "DOMAIN_REQUIRED",
+                "reason": "共享能力需要当前服务端请求绑定的产品域。",
+            }), 400
+    elif type(requested_domain) is not str or not requested_domain or requested_domain != requested_domain.strip():
+        return jsonify({
+            "ok": False, "status": "denied", "code": "DOMAIN_NOT_ALLOWED",
+            "reason": "共享能力需要规范的 CTH/BMP 产品域。",
+        }), 400
+    else:
+        raw_domain = requested_domain.upper()
+    if ("domain" in body and "domain" in payload
+            and type(payload["domain"]) is str
+            and payload["domain"].upper() != raw_domain):
+        return jsonify({
+            "ok": False, "status": "denied", "code": "CONTEXT_SCOPE_MISMATCH",
+            "reason": "请求域与资料域不一致。",
+        }), 400
     domain_id = {"CTH": "cth", "BMP": "zbmp", "ZBMP": "zbmp", "SYSTEM": "system"}.get(raw_domain)
     if not domain_id:
         return jsonify({
@@ -3386,6 +3414,9 @@ def run_shared_skill_route(skill_id: str):
     payload["product"] = "LUMENIS"
 
     from lumenis.shared.agents.skills.execution import ActionType, SkillRuntimeInfo, run_execution_chain
+    from domain_isolation import resolve_domain_identity
+
+    domain_id, product_id = resolve_domain_identity(domain_id=domain_id)
 
     try:
         action_type = ActionType(action_value)
@@ -3406,7 +3437,7 @@ def run_shared_skill_route(skill_id: str):
             input_payload=payload,
             action_type=action_type,
             user_role="user",
-            product="LUMENIS",
+            product=product_id,
             domain=domain_id,
             skill_info=runtime_info,
             handler=lambda execution_ctx: run_shared_skill(

@@ -278,12 +278,44 @@ class SmartTool:
         target = str(params.get("target") or self.tool_id or self.name or "unnamed_tool")
         tool_id = str(self.tool_id or self.name or "unnamed_tool")
 
+        # Permission scope comes only from the server-bound request/job context.
+        # A model or caller-supplied `domain` parameter can confirm that scope,
+        # but it cannot select a domain or widen the current operation.
+        try:
+            from ai_domain_context import get_current_domain
+            from domain_isolation import resolve_domain_identity
+
+            domain_id = get_current_domain()
+            domain_id, _product_id = resolve_domain_identity(domain_id=domain_id)
+            if not domain_id:
+                raise ValueError("DOMAIN_NOT_SELECTED")
+            if "domain" in params and params.get("domain") is not None:
+                requested_domain, _requested_product = resolve_domain_identity(
+                    domain_id=params.get("domain"),
+                )
+                if requested_domain != domain_id:
+                    raise ValueError("REQUESTED_DOMAIN_CONTEXT_MISMATCH")
+            gate_evidence["domain_id"] = domain_id
+            gate_evidence["checks"]["domain_context"] = {
+                "bound": True,
+                "domain_id": domain_id,
+                "request_parameter_used_for_identity": False,
+            }
+        except (ImportError, TypeError, ValueError) as exc:
+            gate_evidence["checks"]["domain_context"] = {
+                "bound": False,
+                "reason": str(exc)[:200],
+                "request_parameter_used_for_identity": False,
+            }
+            return False, "server-bound domain context unavailable", gate_evidence
+
         try:
             permission = _get_permission_gate().check(
                 operation_type=operation_type,
                 resource=target,
                 risk_level=risk_level,
                 caller=f"smart_tool:{tool_id}",
+                domain_id=domain_id,
             )
             gate_evidence["checks"]["permission_gate"] = {
                 "called": True,
@@ -292,6 +324,21 @@ class SmartTool:
             }
             if not permission.allowed:
                 return False, f"permission_gate denied: {permission.reason}", gate_evidence
+            result_domain = permission.domain_id
+            if result_domain is None:
+                # The repository's explicit pytest bypass intentionally omits
+                # identity from PermissionResult. Production decisions must
+                # echo the exact domain passed above.
+                from lumenis.system.security import permission as permission_module
+                if not permission_module.is_testing_bypass_enabled():
+                    gate_evidence["checks"]["permission_gate"]["allowed"] = False
+                    gate_evidence["checks"]["permission_gate"]["reason"] = "permission result domain missing"
+                    return False, "permission_gate did not bind the domain", gate_evidence
+                gate_evidence["checks"]["permission_gate"]["testing_bypass_domain_echo"] = False
+            elif result_domain != domain_id:
+                gate_evidence["checks"]["permission_gate"]["allowed"] = False
+                gate_evidence["checks"]["permission_gate"]["reason"] = "permission result domain mismatch"
+                return False, "permission_gate returned a different domain", gate_evidence
 
             action_request = _ActionRequest(
                 identity=f"smart_tool:{tool_id}",
@@ -299,7 +346,7 @@ class SmartTool:
                 tool=tool_id,
                 parameters=params,
                 target=target,
-                scope=str(params.get("domain") or "global").lower(),
+                scope=domain_id,
                 action=action,
             )
             firewall = _validate_action(action_request, permission_result=permission)

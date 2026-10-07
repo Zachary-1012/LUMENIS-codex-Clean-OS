@@ -151,6 +151,18 @@ class TestLearningLoopFullChain:
                 accepted=False,
             )
 
+        # Newly recorded corrections remain RAW and cannot be consumed.
+        assert loop.learning_memory.get_positive_samples() == []
+        assert loop.learning_memory.get_negative_samples() == []
+
+        records = loop.learning_memory.query({"learning_type": "correction"}, limit=10)
+        for record in records:
+            for stage in (
+                LifecycleStage.REVIEWED,
+                LifecycleStage.VALIDATED,
+                LifecycleStage.PROMOTED,
+            ):
+                assert loop.learning_memory.promote_record(record.record_id, stage)
         assert len(loop.learning_memory.get_positive_samples()) == 3
         assert len(loop.learning_memory.get_negative_samples()) == 2
 

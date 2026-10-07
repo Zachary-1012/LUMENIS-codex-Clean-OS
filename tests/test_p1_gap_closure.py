@@ -142,7 +142,7 @@ class TestTrackBObservability:
         from lumenis.system.ai_gateway.channel import get_doubao_fallback_config
         config = get_doubao_fallback_config()
         assert config["provider"] == "doubao"
-        assert config["role"] == "explicit_selection_only"
+        assert config["role"] == "compatibility_only"
         assert config["status"] == "NOT_IN_AUTOMATIC_CHAIN"
         assert config["priority"] is None
         assert config["model"] is None
@@ -159,6 +159,8 @@ class TestTrackBObservability:
 
         monkeypatch.setattr(channel, "route_with_fallback", forbidden_call("inference"))
         monkeypatch.setattr(channel.urllib.request, "urlopen", forbidden_call("HTTP"))
+        # A registry mutation cannot reactivate a retired provider.
+        monkeypatch.setitem(providers.PROVIDER_REGISTRY["zhipu"], "status", providers.ACTIVE)
         monkeypatch.setenv("AI_PROVIDER", "zhipu")
         check = channel.track_b_self_check()
         assert check["status"] == "DISABLED"
@@ -179,10 +181,24 @@ class TestTrackBObservability:
 
         monkeypatch.setitem(providers.PROVIDER_REGISTRY["ark"], "status", providers.ACTIVE)
         monkeypatch.setenv("AI_PROVIDER", "ark")
+        compatibility_only = channel.track_b_self_check()
+        assert compatibility_only["status"] == "UNVERIFIED"
+        assert compatibility_only["readiness_verified"] is False
+        assert compatibility_only["multi_channel"]["primary"] == "ark"
+        assert compatibility_only["multi_channel"]["provider_status"] == providers.LEGACY
+
+        # An active but unverified route can be described without probing it.
+        synthetic = "synthetic_gateway_provider"
+        monkeypatch.setitem(
+            providers.PROVIDER_REGISTRY,
+            synthetic,
+            {"status": providers.ACTIVE, "role": "test_only"},
+        )
+        monkeypatch.setenv("AI_PROVIDER", synthetic)
         active_unverified = channel.track_b_self_check()
         assert active_unverified["status"] == "UNVERIFIED"
         assert active_unverified["readiness_verified"] is False
-        assert active_unverified["multi_channel"]["primary"] == "ark"
+        assert active_unverified["multi_channel"]["primary"] == synthetic
         assert active_unverified["multi_channel"]["provider_status"] == providers.ACTIVE
         assert calls == []
 

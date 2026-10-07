@@ -26,9 +26,10 @@ class TestProviderRegistry:
         assert provider_status("ollama") == DISABLED
         assert is_provider_available("ollama") is False
 
-    def test_ark_active_fallback(self):
-        from lumenis.system.ai_gateway.providers import provider_status, ACTIVE_FALLBACK
-        assert provider_status("ark") == ACTIVE_FALLBACK
+    def test_ark_is_compatibility_only(self):
+        from lumenis.system.ai_gateway.providers import provider_status, LEGACY, is_provider_available
+        assert provider_status("ark") == LEGACY
+        assert is_provider_available("ark") is False
 
     def test_qwen_not_configured(self):
         from lumenis.system.ai_gateway.providers import provider_status, NOT_CONFIGURED
@@ -55,15 +56,21 @@ class TestProviderRegistry:
 
 
 class TestSubjectContext:
-    def test_cth_default(self):
+    def test_global_default(self):
         from subject_context import get_subject_context, CTH_BRAND_KEY, PRODUCT_CTH
         ctx = get_subject_context()
-        assert ctx.brand_key == CTH_BRAND_KEY
-        assert ctx.product_id == PRODUCT_CTH
+        assert ctx.brand_key == ""
+        assert ctx.product_id == ""
 
     def test_cth_protection(self):
-        from subject_context import assert_cth_protection
-        assert_cth_protection()
+        from subject_context import assert_cth_protection, brand_scope
+        with pytest.raises(PermissionError):
+            assert_cth_protection()
+        with brand_scope("guangzhou_taikoo_hui", product_id="CTH"):
+            assert_cth_protection()
+        with brand_scope("other_venue", product_id="CTH"):
+            with pytest.raises(PermissionError):
+                assert_cth_protection()
 
     def test_subject_to_dict(self):
         from subject_context import get_subject_context

@@ -3,8 +3,8 @@
 test_ai_provider_failover.py — AI Provider 额度切换规则 V1.0 测试套件
 
 基于 commit 20da4c5 实际实现编写，覆盖：
-1. provider_chain 包含 zhipu/ark/ollama
-2. ACTIVE_FALLBACK 状态存在，ark/doubao 升级
+1. provider_chain 不隐式包含 retired/legacy providers
+2. legacy ARK/Doubao 状态不能授权 Owned Gateway 或旧通道调用
 3. qwen=NOT_CONFIGURED
 4. rule_fallback 不计算在失败率内（success=1, model=deterministic_rule）
 5. token_usage 正确记录（_set_call_meta / _get_call_meta / extract_token_usage）
@@ -17,14 +17,6 @@ import sys
 import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-
-def _enable_mock_providers(monkeypatch, *names):
-    from lumenis.system.ai_gateway import providers
-    retired = providers.RETIRED_PROVIDERS - set(names)
-    monkeypatch.setattr(providers, 'RETIRED_PROVIDERS', retired)
-    for name in names:
-        monkeypatch.setitem(providers.PROVIDER_REGISTRY[name], 'status', providers.ACTIVE)
 
 
 class TestProviderChain:
@@ -40,10 +32,10 @@ class TestProviderChain:
         monkeypatch.setattr(ac, '_env', lambda name, _default='': 'zhipu,ark,ollama' if name == 'AI_PROVIDER_CHAIN' else '')
         assert ac.provider_chain() == []
 
-    def test_provider_chain_keeps_active_primary_without_retired_fallback(self, monkeypatch):
+    def test_provider_chain_excludes_legacy_ark_even_when_explicit(self, monkeypatch):
         from lumenis.system.ai_gateway import channel as ac
         monkeypatch.setattr(ac, '_env', lambda name, _default='': 'ark,zhipu,ollama' if name == 'AI_PROVIDER_CHAIN' else '')
-        assert ac.provider_chain() == ['ark']
+        assert ac.provider_chain() == []
 
 class TestProviderStatus:
     """Provider 状态验证"""
@@ -53,13 +45,17 @@ class TestProviderStatus:
         assert hasattr(pr, 'ACTIVE_FALLBACK')
         assert pr.ACTIVE_FALLBACK == 'ACTIVE_FALLBACK'
 
-    def test_ark_is_active_fallback(self):
+    def test_ark_is_legacy_compatibility_only(self):
         from lumenis.system.ai_gateway import providers as pr
-        assert pr.provider_status('ark') == 'ACTIVE_FALLBACK'
+        assert pr.provider_status('ark') == pr.LEGACY
+        assert pr.provider_info('ark')['role'] == 'compatibility_only'
+        assert pr.is_provider_available('ark') is False
 
-    def test_doubao_is_active_fallback(self):
+    def test_doubao_alias_is_legacy_compatibility_only(self):
         from lumenis.system.ai_gateway import providers as pr
-        assert pr.provider_status('doubao') == 'ACTIVE_FALLBACK'
+        assert pr.provider_status('doubao') == pr.LEGACY
+        assert pr.provider_info('doubao')['role'] == 'compatibility_only'
+        assert pr.is_provider_available('doubao') is False
 
     def test_qwen_is_not_configured(self):
         from lumenis.system.ai_gateway import providers as pr
@@ -70,19 +66,28 @@ class TestProviderStatus:
         assert pr.provider_status('zhipu') == 'DISABLED'
         assert pr.is_provider_available('zhipu') is False
 
-    def test_ark_available_for_call(self):
-        from lumenis.system.ai_gateway import providers as pr
-        assert pr.is_provider_available('ark') is True
-
-    def test_doubao_available_for_call(self):
-        from lumenis.system.ai_gateway import providers as pr
-        assert pr.is_provider_available('doubao') is True
-
     def test_ai_call_logger_provider_status(self):
         import ai_call_logger as acl
-        assert acl.get_provider_status('ark') == 'ACTIVE_FALLBACK'
-        assert acl.get_provider_status('doubao') == 'ACTIVE_FALLBACK'
+        assert acl.get_provider_status('ark') == 'LEGACY'
+        assert acl.get_provider_status('doubao') == 'LEGACY'
         assert acl.get_provider_status('qwen') == 'NOT_CONFIGURED'
+
+    def test_channel_status_does_not_infer_runtime_from_key_or_breaker(self, monkeypatch):
+        from lumenis.system.ai_gateway import channel as ac
+        monkeypatch.setattr(ac, 'ensure_env_loaded', lambda: pytest.fail('must not read provider config'))
+        monkeypatch.setenv('ARK_API_KEY', 'test-only-not-read')
+        status = ac.get_provider_status_v1()['ark']
+        assert status['status'] == 'LEGACY'
+        assert status['role'] == 'compatibility_only'
+        assert status['dispatchable'] is False
+        assert status['runtime_verified'] is False
+        assert status['api_key_configured'] is None
+
+    def test_explicit_legacy_ark_chat_fails_before_provider_config(self, monkeypatch):
+        from lumenis.system.ai_gateway import core
+        monkeypatch.setenv('AI_PROVIDER', 'ark')
+        monkeypatch.setattr(core, '_provider_config', lambda: pytest.fail('provider config must not be read'))
+        assert core._chat('system', 'user') == (None, 'provider_disabled')
 
 
 class TestRuleFallbackLogging:
@@ -230,29 +235,27 @@ class TestRouteWithFallback:
 
     def test_fallback_returns_rule_when_all_fail(self, monkeypatch):
         from lumenis.system.ai_gateway import channel as ac
-        _enable_mock_providers(monkeypatch, 'zhipu', 'ark', 'ollama')
         def always_fail(prov):
             raise ConnectionError(f"{prov} down")
         result, used = ac.route_with_fallback(
-            always_fail, providers=['zhipu', 'ark', 'ollama']
+            always_fail, providers=['mock-primary', 'mock-secondary', 'mock-tertiary']
         )
         assert used == 'rule'
         assert result is None
 
     def test_fallback_returns_first_success(self, monkeypatch):
         from lumenis.system.ai_gateway import channel as ac
-        _enable_mock_providers(monkeypatch, 'zhipu', 'ark', 'ollama')
         call_count = {'n': 0}
-        def succeed_on_ark(prov):
+        def succeed_on_secondary(prov):
             call_count['n'] += 1
-            if prov == 'zhipu':
-                raise ConnectionError("zhipu down")
-            return "ark response", prov
+            if prov == 'mock-primary':
+                raise ConnectionError("mock primary down")
+            return "backup response", prov
         result, used = ac.route_with_fallback(
-            succeed_on_ark, providers=['zhipu', 'ark', 'ollama']
+            succeed_on_secondary, providers=['mock-primary', 'mock-secondary', 'mock-tertiary']
         )
-        assert used == 'ark'
-        assert result == 'ark response'
+        assert used == 'mock-secondary'
+        assert result == 'backup response'
         assert call_count['n'] == 2
 
     def test_disabled_primary_never_falls_back_to_paid_provider(self):
@@ -264,6 +267,15 @@ class TestRouteWithFallback:
         )
         assert (result, used) == (None, 'provider_disabled')
         assert calls == []
+
+    def test_ark_status_mutation_cannot_restore_legacy_fallback(self, monkeypatch):
+        from lumenis.system.ai_gateway import providers as registry
+        monkeypatch.setitem(registry.PROVIDER_REGISTRY['ark'], 'status', registry.ACTIVE)
+        registry.set_provider_status('ark', registry.ACTIVE)
+        assert registry.provider_status('ark') == registry.LEGACY
+        assert registry.provider_status('doubao') == registry.LEGACY
+        assert registry.is_provider_available('ark') is False
+        assert registry.is_provider_available('doubao') is False
 
     def test_local_probe_and_status_mutation_cannot_reactivate_retired_routes(self, monkeypatch):
         from lumenis.system.ai_gateway import providers as pr
@@ -304,20 +316,20 @@ class TestRouteWithFallback:
         assert started is False
         assert calls == []
 
-    def test_fallback_skips_circuit_open(self):
+    def test_fallback_skips_circuit_open(self, monkeypatch):
         from lumenis.system.ai_gateway import channel as ac
-        # 先把 zhipu 熔断打开
+        # 先把第一个模拟路由熔断打开
         pb = ac.get_provider_breaker('test_skip_open')
         for _ in range(5):
             pb.record_failure('rate_limit')
-        # 熔断打开时应该跳过 zhipu 直接到 ark
-        def ark_ok(prov):
+        # 熔断打开时应该跳过第一个模拟路由
+        def backup_ok(prov):
             return f"{prov} ok", prov
         result, used = ac.route_with_fallback(
-            ark_ok, providers=['test_skip_open', 'ark']
+            backup_ok, providers=['test_skip_open', 'mock-backup']
         )
-        # test_skip_open 熔断中，应该跳过到 ark
-        assert used in ('ark', 'test_skip_open')
+        # test_skip_open 熔断中，应该使用模拟备用路由
+        assert used == 'mock-backup'
         # 清理
         pb.breaker.record_success()
 

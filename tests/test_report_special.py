@@ -53,8 +53,17 @@ def test_generate_special_smoke(monkeypatch):
     monkeypatch.setattr(report_engine, "db", FakeDb())
     monkeypatch.setattr(report_engine.ai_filter, "run_filter_batch", lambda limit=500: None)
     monkeypatch.setattr(report_engine.daily, "generate_daily_digest", lambda d: None)
-
-    report, digest = report_engine.generate_report("special", "2026-08-01", "2026-08-31")
+    from domain_isolation import DomainContext, clear_domain_context, set_domain_context
+    from subject_context import CTH_BRAND_KEY, CTH_SUBJECT_ID, SubjectContext, clear_thread_context, set_thread_context
+    set_domain_context(DomainContext(domain_id="cth", product_id="CTH",
+                                     subject_id=CTH_SUBJECT_ID, brand_key=CTH_BRAND_KEY))
+    set_thread_context(SubjectContext(subject_id=CTH_SUBJECT_ID,
+                                      brand_key=CTH_BRAND_KEY, product_id="CTH"))
+    try:
+        report, digest = report_engine.generate_report("special", "2026-08-01", "2026-08-31")
+    finally:
+        clear_domain_context()
+        clear_thread_context()
     assert captured["rtype"] == "special"
     assert report["report_type"] == "special"
     assert report["period_start"] == "2026-08-01"

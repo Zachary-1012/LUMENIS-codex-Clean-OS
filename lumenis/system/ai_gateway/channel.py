@@ -588,7 +588,7 @@ def get_doubao_fallback_config():
     """Return legacy Doubao metadata without enabling an implicit fallback."""
     return {
         "provider": "doubao",
-        "role": "explicit_selection_only",
+        "role": "compatibility_only",
         "status": "NOT_IN_AUTOMATIC_CHAIN",
         "priority": None,
         "model": None,
@@ -596,7 +596,7 @@ def get_doubao_fallback_config():
         "max_tokens": None,
         "temperature": None,
         "timeout_sec": None,
-        "description": "Legacy compatibility metadata; no implicit provider fallback is configured",
+        "description": "Legacy compatibility metadata; not an Owned Gateway fallback",
         "circuit_breaker": get_provider_breaker('doubao').snapshot(),
     }
 
@@ -700,7 +700,7 @@ import uuid as _uuid
 # never eligible for dispatch; this table is not the active fallback contract.
 PROVIDER_LAYERS_V1 = [
     {"layer": 1, "provider": "zhipu",   "role": "retired_compatibility", "models": ["glm-4.5-air", "glm-5.3", "glm-4.6v", "web-search-pro"]},
-    {"layer": 2, "provider": "ark",     "role": "explicit_selection_only", "models": ["doubao-lite-4k", "doubao-pro-32k"]},
+    {"layer": 2, "provider": "ark",     "role": "compatibility_only", "models": ["doubao-lite-4k", "doubao-pro-32k"]},
     {"layer": 3, "provider": "qwen",    "role": "explicit_selection_only", "models": ["qwen-flash", "qwen-turbo"]},
     {"layer": 4, "provider": "ollama",  "role": "retired_compatibility", "models": ["qwen2.5-coder:7b-agent"]},
     {"layer": 5, "provider": "lmstudio","role": "retired_compatibility", "models": ["local-model"]},
@@ -877,53 +877,31 @@ def route_with_fallback_v1(call_fn, providers=None, on_result=None,
 
 
 def get_provider_status_v1():
-    """V1.0 获取所有 Provider 运行时状态（基于 .env 配置 + 熔断状态）。"""
-    ensure_env_loaded()
+    """Return registry policy and in-memory breaker state without config reads.
+
+    Provider presence, a key, or a breaker snapshot is not an Owned Gateway
+    binding and cannot mark a compatibility provider as available.
+    """
     statuses = {}
     for layer in PROVIDER_LAYERS_V1:
         prov = layer["provider"]
         if prov == "rule":
             statuses[prov] = {"status": "DETERMINISTIC_FALLBACK", "layer": layer["layer"], "role": layer["role"]}
             continue
-        if provider_info(prov) is not None and _known_provider_disabled(prov):
-            statuses[prov] = {
-                "status": provider_status(prov), "layer": layer["layer"],
-                "role": layer["role"], "models": layer["models"],
-                "api_key_configured": False,
-            }
-            continue
-        # 检查 API key
-        key_env = {
-            "zhipu": "ZHIPU_API_KEY",
-            "ark": "ARK_API_KEY",
-            "qwen": "DASHSCOPE_API_KEY",
-            "ollama": None,
-            "lmstudio": None,
-        }.get(prov)
-        has_key = True
-        if key_env:
-            has_key = bool(_env(key_env))
-        # 检查熔断状态
         try:
             pb = get_provider_breaker(prov)
             cb_state = pb.state
         except Exception:
             cb_state = "UNKNOWN"
-        # 确定状态
-        if not has_key:
-            st = "NOT_CONFIGURED"
-        elif cb_state == "OPEN":
-            st = "CIRCUIT_OPEN"
-        elif prov == "zhipu":
-            st = "ACTIVE"
-        else:
-            st = "ACTIVE_FALLBACK"
+        info = provider_info(prov) or {}
         statuses[prov] = {
-            "status": st,
+            "status": provider_status(prov),
             "layer": layer["layer"],
-            "role": layer["role"],
+            "role": info.get("role", layer["role"]),
             "models": layer["models"],
             "circuit_breaker": cb_state,
-            "api_key_configured": has_key,
+            "api_key_configured": None,
+            "dispatchable": is_provider_available(prov),
+            "runtime_verified": False,
         }
     return statuses

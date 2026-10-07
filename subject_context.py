@@ -2,11 +2,9 @@
 
 Current product context is selected by the canonical GLOBAL / ALL -> FOCUS
 contract. CTH means LUMENIS Commerce Operations and BMP means LUMENIS Brand &
-Market. Guangzhou Taikoo Hui is a controlled deep-reference Subject. Historical
-no-argument CTH/Guangzhou fallbacks remain only for legacy callers and must not
-be exposed as the product default.
+Market. Guangzhou Taikoo Hui is a controlled deep-reference Subject. Missing selection stays GLOBAL / ALL. Reference-Subject compatibility filters
+explicitly bind their own subject; no machine environment can select it for users.
 """
-import os
 import threading
 from dataclasses import dataclass, field
 from typing import Dict, Optional
@@ -121,7 +119,7 @@ PRODUCTS = {
         product_id=PRODUCT_CTH,
         name="LUMENIS Commerce Operations",
         is_protected=True,
-        default_subject=CTH_SUBJECT_ID,
+        default_subject=None,
     ),
     PRODUCT_ZBMP: ProductContext(
         product_id=PRODUCT_ZBMP,
@@ -129,37 +127,37 @@ PRODUCTS = {
         is_protected=False,
         default_subject=None,
     ),
+    "SYSTEM": ProductContext(product_id="SYSTEM", name="System Infrastructure Domain"),
 }
 
 
 def get_product_context(product_id: Optional[str] = None) -> ProductContext:
-    """读取旧 product_id 域上下文。
-
-    当前实现仍会将缺省或未识别标识回退为 CTH；这是待迁移的兼容行为，
-    不是授权判断，也不是 GLOBAL / ALL 的产品默认。新入口应使用其现有
-    严格域/范围校验；修改这里的行为须先核对调用方与持久化兼容。
-    """
-    pid = product_id or os.environ.get("ZBC_PRODUCT_ID", PRODUCT_CTH)
-    return PRODUCTS.get(pid, PRODUCTS[PRODUCT_CTH])
+    """Return a validated domain label or an unselected GLOBAL context."""
+    from domain_isolation import resolve_domain_identity
+    if product_id is None:
+        ctx = get_thread_context()
+        product_id = ctx.product_id if ctx else None
+    _, pid = resolve_domain_identity(product_id=product_id)
+    return PRODUCTS[pid] if pid else ProductContext("", "LUMENIS / GLOBAL")
 
 
 def get_subject_context(brand_key: Optional[str] = None,
                         product_id: Optional[str] = None) -> SubjectContext:
-    """获取主体上下文。
+    """Read the bound selection or construct an explicitly selected subject.
 
-    优先级：显式 brand_key > 环境变量 ZBC_ACTIVE_BRAND > CTH 默认。
-    CTH 保护由 domain_isolation 层在 SQL/执行边界强制执行，
-    不在此强制 brand_key，以支持多品牌 KOS 场景的环境变量切换。
-    不依赖 subject_rules，避免循环导入。
+    Blank fields represent no focus, not a synthetic subject or authorization.
+    Environment defaults never establish a request's domain or subject.
     """
-    bk = brand_key or os.environ.get("ZBC_ACTIVE_BRAND", CTH_BRAND_KEY)
+    bound = get_thread_context()
+    if brand_key is None and product_id is None and bound is not None:
+        return bound
     product = get_product_context(product_id)
-    subject_id = bk.upper().replace("-", "_").replace(" ", "_")
-
+    bk = (brand_key or "").strip()
+    if bk and not product.product_id:
+        raise ValueError("FOCUS_DOMAIN_REQUIRED")
     return SubjectContext(
-        subject_id=subject_id,
-        brand_key=bk,
-        product_id=product.product_id,
+        subject_id=bk.upper().replace("-", "_").replace(" ", "_"),
+        brand_key=bk, product_id=product.product_id,
     )
 
 
@@ -203,131 +201,104 @@ def assert_cth_protection() -> None:
 # Flask Request-Level Isolation (Shard D / Team 1)
 # ---------------------------------------------------------------------------
 
-def get_request_brand():
-    """从当前 Flask 请求中解析 brand_key（请求级，非全局）。
+def resolve_request_identity(default_domain=None):
+    """Resolve a whole identity pair at one precedence level, then bind a route.
 
-    优先级：
-      1. 请求头 X-Brand-Key
-      2. Session 中的 brand_key
-      3. 查询参数 ?brand_key=
-      4. 环境变量 ZBC_ACTIVE_BRAND（兼容旧行为）
-      5. CTH 默认（guangzhou_taikoo_hui）
-
-    不在 Flask 请求上下文中时返回 None，调用方应回退到 get_subject_context()。
+    Headers precede session, which precedes query. Values from different levels
+    cannot form a contradictory identity. Empty supplied values are invalid.
+    Domain routes establish a domain, never a reference Subject or Permission.
     """
-    try:
-        from flask import request, session
-    except Exception:
+    from flask import request, session
+    from domain_isolation import resolve_domain_identity
+    pairs = (
+        (request.headers.get("X-Domain-Id"), request.headers.get("X-Product-Id")),
+        (session.get("domain_id"), session.get("product_id")),
+        (request.args.get("domain_id"), request.args.get("product_id")),
+    )
+    domain, product = "", ""
+    for raw_domain, raw_product in pairs:
+        if raw_domain is not None or raw_product is not None:
+            for raw in (raw_domain, raw_product):
+                if raw is not None and (not isinstance(raw, str) or not raw.strip()):
+                    raise ValueError("INVALID_DOMAIN_IDENTITY")
+            domain, product = resolve_domain_identity(raw_domain, raw_product)
+            break
+    if default_domain is not None:
+        route_domain, route_product = resolve_domain_identity(default_domain)
+        if domain and domain != route_domain:
+            raise ValueError("ROUTE_DOMAIN_MISMATCH")
+        domain, product = route_domain, route_product
+    return domain, product
+
+
+def get_request_brand():
+    """Explicit request brand only; no environment or reference fallback."""
+    from flask import has_request_context, request, session
+    if not has_request_context():
         return None
-
-    # 1. Header
-    brand = request.headers.get("X-Brand-Key", "").strip()
-    if brand:
-        return brand
-
-    # 2. Session
-    brand = session.get("brand_key", "")
-    if brand:
-        return brand
-
-    # 3. Query param
-    brand = request.args.get("brand_key", "").strip()
-    if brand:
-        return brand
-
+    explicit_identity = any(key in request.headers for key in ("X-Domain-Id", "X-Product-Id")) or any(
+        key in request.args for key in ("domain_id", "product_id"))
+    # Changing a request's domain must not inherit the previous session's focus.
+    for brand in (request.headers.get("X-Brand-Key"), request.args.get("brand_key"),
+                  None if explicit_identity else session.get("brand_key")):
+        if brand is not None:
+            if not isinstance(brand, str) or not brand.strip():
+                raise ValueError("INVALID_BRAND_KEY")
+            return brand.strip()
     return None
 
 
+def bind_request_context(default_domain=None):
+    """Bind validated request metadata. Permission still belongs to its owner."""
+    from flask import g, request
+    from domain_isolation import DomainContext, set_domain_context
+    domain, product = resolve_request_identity(default_domain)
+    brand = get_request_brand() or ""
+    raw_subject_id = request.headers.get("X-Subject-Id")
+    if raw_subject_id is not None and (
+        not raw_subject_id.strip()
+        or any(ord(char) < 32 or ord(char) == 127 for char in raw_subject_id)
+    ):
+        raise ValueError("INVALID_SUBJECT_ID")
+    subject_id = raw_subject_id.strip() if raw_subject_id is not None else ""
+    ctx = DomainContext(domain_id=domain, product_id=product,
+                        brand_key=brand, subject_id=subject_id)
+    set_domain_context(ctx)
+    subject = ctx.to_subject_context()
+    set_thread_context(subject)
+    g.domain_context = ctx
+    g.subject_context = subject
+    # This is untrusted request metadata, not a validated Focus selection.
+    # The existing settings/Scope/Permission owners perform registry admission.
+    return ctx
+
+
 def init_app(app):
-    """注册 Flask before_request / after_request 钩子，实现请求级主体+域隔离。
-
-    每个 HTTP 请求自动：
-      - 从请求头 X-Domain-Id / X-Product-Id 解析域身份
-      - 从请求上下文解析 brand_key
-      - 设置线程级 SubjectContext + DomainContext
-      - 请求结束后清除线程上下文（防止线程复用时的品牌/域泄漏）
-
-    CTH 保护：当 domain_id=cth 或 ZBC_PRODUCT_ID=CTH 时，
-    强制 brand_key=guangzhou_taikoo_hui，任何请求级 brand 切换都不允许覆盖 CTH 生产主体。
-
-    双域核心扩展（V2.0）：除了 brand_key，还从 X-Domain-Id / X-Product-Id 解析域身份，
-    before_request 中设置线程 DomainContext（product_id + domain_id），after_request 中清除。
-
-    用法（在 app.py 中）：
-        from subject_context import init_app
-        init_app(app)
-    """
-    from flask import g
+    """Bind request identity and reliably clear it across success and errors."""
+    from flask import jsonify, request
+    from domain_isolation import clear_domain_context
 
     @app.before_request
     def _set_subject_context():
-        # 双域核心：从请求头解析 domain_id / product_id
-        domain_id = ""
-        product_id = None
+        clear_thread_context()
+        clear_domain_context()
         try:
-            from flask import request as _req
-            domain_id = _req.headers.get("X-Domain-Id", "").strip().lower()
-            product_id_hdr = _req.headers.get("X-Product-Id", "").strip().upper()
-            if product_id_hdr:
-                product_id = product_id_hdr
-        except Exception:
-            pass
-
-        brand = get_request_brand()
-
-        # CTH 强制保护：domain_id=cth 或环境变量 ZBC_PRODUCT_ID=CTH
-        is_cth = (domain_id == "cth" or os.environ.get("ZBC_PRODUCT_ID") == PRODUCT_CTH)
-        if is_cth:
-            brand = CTH_BRAND_KEY
-            product_id = PRODUCT_CTH
-            domain_id = "cth"
-        elif domain_id == "zbmp":
-            # 双域核心：显式 X-Domain-Id: zbmp 时强制 product_id=ZBMP
-            # （否则 get_product_context 默认 CTH，导致域身份不一致）
-            product_id = PRODUCT_ZBMP
-        elif domain_id == "system":
-            product_id = "SYSTEM"
-
-        ctx = get_subject_context(brand_key=brand, product_id=product_id)
-        set_thread_context(ctx)
-        g.subject_context = ctx
-
-        # 双域核心：设置线程 DomainContext（懒导入避免循环依赖）
-        try:
-            from domain_isolation import DomainContext, set_domain_context, domain_to_product
-            if not domain_id:
-                domain_id = "cth" if ctx.product_id == PRODUCT_CTH else "zbmp"
-            dctx = DomainContext(
-                domain_id=domain_id,
-                product_id=ctx.product_id,
-                brand_key=brand or CTH_BRAND_KEY,
-                subject_id=ctx.subject_id,
-            )
-            set_domain_context(dctx)
-            g.domain_context = dctx
-        except Exception as _dc_err:
-            # DomainContext 设置失败不阻断请求（SubjectContext 已设置）
-            g.domain_context = None
+            route_domain = {"cth_api": "cth", "zbmp_api": "zbmp", "system_api": "system"}.get(
+                request.blueprint)
+            bind_request_context(route_domain)
+        except ValueError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
 
     @app.after_request
     def _clear_subject_context(response):
         clear_thread_context()
-        # 双域核心：清除 DomainContext
-        try:
-            from domain_isolation import clear_domain_context
-            clear_domain_context()
-        except Exception:
-            pass
+        clear_domain_context()
         return response
 
     @app.teardown_request
     def _teardown_subject_context(exc=None):
         clear_thread_context()
-        try:
-            from domain_isolation import clear_domain_context
-            clear_domain_context()
-        except Exception:
-            pass
+        clear_domain_context()
 
     return app
 
@@ -342,30 +313,33 @@ class brand_scope:
         # 退出后恢复原上下文
 
     这是显式的、局部的主体切换，不修改全局状态。
-    CTH 保护：当 ZBC_PRODUCT_ID=CTH 时，不允许切换到非 CTH 品牌。
+    A domain must be explicit or already bound; process environment is not consent.
     """
 
     def __init__(self, brand_key: str, product_id: Optional[str] = None):
         self.brand_key = brand_key
         self.product_id = product_id
         self._previous = None
+        self._previous_domain = None
 
     def __enter__(self):
-        # CTH 保护
-        if os.environ.get("ZBC_PRODUCT_ID") == PRODUCT_CTH:
-            if self.brand_key != CTH_BRAND_KEY:
-                raise PermissionError(
-                    f"CTH Protection: cannot switch brand to {self.brand_key} "
-                    f"when ZBC_PRODUCT_ID=CTH"
-                )
+        from domain_isolation import DomainContext, get_domain_context, set_domain_context
         self._previous = get_thread_context()
+        self._previous_domain = get_domain_context()
         ctx = get_subject_context(brand_key=self.brand_key, product_id=self.product_id)
+        domain = DomainContext.from_product(ctx.product_id, ctx.subject_id, ctx.brand_key)
         set_thread_context(ctx)
+        set_domain_context(domain)
         return ctx
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        from domain_isolation import clear_domain_context, set_domain_context
         if self._previous is not None:
             set_thread_context(self._previous)
         else:
             clear_thread_context()
+        if self._previous_domain is None:
+            clear_domain_context()
+        else:
+            set_domain_context(self._previous_domain)
         return False

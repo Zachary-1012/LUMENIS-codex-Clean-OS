@@ -178,9 +178,9 @@ class TestAICallLogger:
         assert stats['total_tokens'] == 200
 
     def test_provider_status_registry(self):
-        assert acl.get_provider_status('zhipu') == 'ACTIVE'
-        assert acl.get_provider_status('ark') == 'ACTIVE_FALLBACK'
-        assert acl.get_provider_status('ollama') == 'ACTIVE_FALLBACK'
+        assert acl.get_provider_status('zhipu') == 'DISABLED'
+        assert acl.get_provider_status('ark') == 'LEGACY'
+        assert acl.get_provider_status('ollama') == 'DISABLED'
         assert acl.get_provider_status('nonexistent') == 'UNKNOWN'
 
 
@@ -480,26 +480,34 @@ class TestProviderFallback:
         assert call_order == []
 
     def test_route_with_fallback_active_secondary_takes_over(self, monkeypatch):
-        """非退役 Provider 仍支持通过 mock transport 做故障转移验证。"""
+        """Synthetic active providers retain the normal mocked fallback path."""
         from lumenis.system.ai_gateway import channel
         from lumenis.system.ai_gateway import providers
-        monkeypatch.setitem(providers.PROVIDER_REGISTRY['qwen'], 'status', providers.ACTIVE)
-        monkeypatch.setitem(channel._PROVIDER_BREAKERS, 'ark', channel.ProviderBreaker('ark'))
-        monkeypatch.setitem(channel._PROVIDER_BREAKERS, 'qwen', channel.ProviderBreaker('qwen'))
-        channel.get_provider_breaker('ark').breaker.record_success()
-        channel.get_provider_breaker('qwen').breaker.record_success()
+        primary = 'synthetic_primary'
+        secondary = 'synthetic_secondary'
+        for name in (primary, secondary):
+            monkeypatch.setitem(
+                providers.PROVIDER_REGISTRY,
+                name,
+                {'status': providers.ACTIVE, 'role': 'test_only'},
+            )
+            monkeypatch.setitem(
+                channel._PROVIDER_BREAKERS, name, channel.ProviderBreaker(name),
+            )
 
         call_order = []
 
         def mock_call(provider):
             call_order.append(provider)
-            if provider == 'ark':
-                raise ConnectionError('ark down')
+            if provider == primary:
+                raise ConnectionError('synthetic primary unavailable')
             return f'result from {provider}', provider
 
-        result, used = channel.route_with_fallback(mock_call, providers=['ark', 'qwen'])
-        assert (result, used) == ('result from qwen', 'qwen')
-        assert call_order == ['ark', 'qwen']
+        result, used = channel.route_with_fallback(
+            mock_call, providers=[primary, secondary],
+        )
+        assert (result, used) == (f'result from {secondary}', secondary)
+        assert call_order == [primary, secondary]
 
     def test_intelligence_local_fallback_path(self, monkeypatch):
         """显式选择退役本地模型时不探测、不调用、也不规则伪成功。"""

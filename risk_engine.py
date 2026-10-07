@@ -406,16 +406,18 @@ DOMAIN_RISK_POLICIES: Dict[str, DomainRiskPolicy] = {
 
 
 def get_risk_policy(domain_id: _Optional[str] = None) -> DomainRiskPolicy:
-    """获取指定域的风险策略。默认从当前线程解析，回退 CTH。"""
+    """Resolve a selected business domain; unknown or system domains fail closed."""
     if domain_id is None:
-        try:
-            from ai_domain_context import get_current_domain
-            domain_id = get_current_domain()
-        except ImportError:
-            domain_id = "cth"
+        from ai_domain_context import get_current_domain
+        domain_id = get_current_domain()
+    else:
+        from domain_isolation import resolve_domain_identity
+        domain_id, _ = resolve_domain_identity(domain_id=domain_id)
+    if not domain_id:
+        raise ValueError("RISK_DOMAIN_REQUIRED")
     policy = DOMAIN_RISK_POLICIES.get(domain_id)
     if policy is None:
-        policy = CTH_RISK_POLICY  # 生产安全默认
+        raise ValueError(f"RISK_POLICY_UNAVAILABLE_FOR_DOMAIN:{domain_id}")
     return policy
 
 

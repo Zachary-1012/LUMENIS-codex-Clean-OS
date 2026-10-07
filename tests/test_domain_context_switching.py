@@ -47,27 +47,25 @@ class TestBackendDomainHeaderResolution:
     """验证后端 API 正确读取 X-Domain-Id / X-Product-Id，且不同域返回不同数据。"""
 
     @pytest.fixture
-    def client(self):
+    def client(self, monkeypatch):
         import base64
         from app import app
-        app.config["TESTING"] = True
+        monkeypatch.setitem(app.config, "TESTING", True)
         c = app.test_client()
-        # P1-1: ZBMP/system endpoints now require auth
-        _env = {}
-        _env_path = os.path.join(PROJECT_ROOT, ".env")
-        try:
-            for _line in open(_env_path, encoding="utf-8"):
-                _line = _line.strip()
-                if "=" in _line and not _line.startswith("#"):
-                    _k, _v = _line.split("=", 1)
-                    _env[_k.strip()] = _v.strip().strip('"')
-        except Exception:
-            pass
-        _u = _env.get("TAIKOO_AUTH_USER", os.environ.get("TAIKOO_AUTH_USER", "zachary"))
-        _p = _env.get("TAIKOO_AUTH_PASSWORD", os.environ.get("TAIKOO_AUTH_PASSWORD", "Zachary01"))
-        if _u and _p:
-            _tok = base64.b64encode(("%s:%s" % (_u, _p)).encode()).decode()
-            c.environ_base["HTTP_AUTHORIZATION"] = "Basic " + _tok
+        username = os.environ.get("TAIKOO_AUTH_USER")
+        password = os.environ.get("TAIKOO_AUTH_PASSWORD")
+        assert username and password, "tests/conftest.py must provide isolated test credentials"
+        token = base64.b64encode(f"{username}:{password}".encode()).decode()
+        c.environ_base["HTTP_AUTHORIZATION"] = f"Basic {token}"
+        return c
+
+    @pytest.fixture
+    def cth_client(self, monkeypatch):
+        """Use the server-opened local workspace while retaining CTH scope checks."""
+        from app import app
+        monkeypatch.setitem(app.config, "LUMENIS_OPEN_WORKSPACE", True)
+        c = app.test_client()
+        assert "HTTP_AUTHORIZATION" not in c.environ_base
         return c
 
     def test_zbmp_api_returns_zbmp_domain(self, client):
@@ -82,9 +80,9 @@ class TestBackendDomainHeaderResolution:
         assert data.get("domain_id") == "zbmp", f"期望 domain_id=zbmp, 实际 {data.get('domain_id')}"
         assert data.get("product_id") == "ZBMP", f"期望 product_id=ZBMP, 实际 {data.get('product_id')}"
 
-    def test_cth_api_returns_cth_domain(self, client):
+    def test_cth_api_returns_cth_domain(self, cth_client):
         """带 X-Domain-Id: cth 的 /api/cth/overview 返回 domain_id=cth。"""
-        resp = client.get("/api/cth/overview", headers={
+        resp = cth_client.get("/api/cth/overview", headers={
             "X-Domain-Id": "cth",
             "X-Product-Id": "CTH"
         })
@@ -106,7 +104,7 @@ class TestBackendDomainHeaderResolution:
         assert data.get("domain_id") == "system"
         assert data.get("product_id") == "SYSTEM"
 
-    def test_domain_switch_data_not_cross_contaminated(self, client):
+    def test_domain_switch_data_not_cross_contaminated(self, client, cth_client):
         """域切换后数据不串域：ZBMP API 不返回 CTH 专项字段，反之亦然。
 
         验证"标题变了数据还是另一域"的反模式不存在。
@@ -119,7 +117,7 @@ class TestBackendDomainHeaderResolution:
         assert zbmp_data.get("domain_id") == "zbmp"
 
         # CTH 请求（模拟域切换后的新请求）
-        cth_resp = client.get("/api/cth/overview", headers={
+        cth_resp = cth_client.get("/api/cth/overview", headers={
             "X-Domain-Id": "cth", "X-Product-Id": "CTH"
         })
         cth_data = cth_resp.get_json()
@@ -139,9 +137,9 @@ class TestBackendDomainHeaderResolution:
         assert data.get("domain_id") == "zbmp"
         assert data.get("product_id") == "ZBMP"
 
-    def test_cth_events_domain_tagged(self, client):
+    def test_cth_events_domain_tagged(self, cth_client):
         """CTH events API 返回域标签。"""
-        resp = client.get("/api/cth/events", headers={
+        resp = cth_client.get("/api/cth/events", headers={
             "X-Domain-Id": "cth", "X-Product-Id": "CTH"
         })
         assert resp.status_code == 200
@@ -149,7 +147,7 @@ class TestBackendDomainHeaderResolution:
         assert data.get("domain_id") == "cth"
         assert data.get("product_id") == "CTH"
 
-    def test_api_response_always_has_domain_fields(self, client):
+    def test_api_response_always_has_domain_fields(self, client, cth_client):
         """所有双域 API 响应必须带 domain_id / product_id 字段（不缺失）。"""
         endpoints = [
             ("/api/zbmp/overview", {"X-Domain-Id": "zbmp", "X-Product-Id": "ZBMP"}),
@@ -162,7 +160,8 @@ class TestBackendDomainHeaderResolution:
             ("/api/system/domains", {"X-Domain-Id": "system", "X-Product-Id": "SYSTEM"}),
         ]
         for url, headers in endpoints:
-            resp = client.get(url, headers=headers)
+            active_client = cth_client if url.startswith("/api/cth/") else client
+            resp = active_client.get(url, headers=headers)
             assert resp.status_code == 200, f"{url} 返回 {resp.status_code}"
             data = resp.get_json()
             assert "domain_id" in data, f"{url} 响应缺少 domain_id"

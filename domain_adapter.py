@@ -30,6 +30,7 @@ from domain_isolation import (
     DOMAIN_SYSTEM,
     product_to_domain,
     domain_to_product,
+    resolve_domain_identity,
 )
 
 # ---------------------------------------------------------------------------
@@ -102,12 +103,12 @@ class ZBMPRecord:
 
 @dataclass
 class CTHRecord:
-    """CTH 域专属记录：太古汇生产真相视图，已剥离 ZBMP 多品牌字段。"""
+    """CTH 域专属记录，已剥离 ZBMP 多品牌字段。"""
     canonical_id: str = ""
     product_id: str = PRODUCT_CTH
     domain_id: str = DOMAIN_CTH
-    subject_id: str = "GUANGZHOU_TAIKOO_HUI"
-    brand_key: str = "guangzhou_taikoo_hui"
+    subject_id: str = ""
+    brand_key: str = ""
     source_platform: str = ""
     title: str = ""
     content: str = ""
@@ -127,6 +128,8 @@ class CTHRecord:
     tags: str = "[]"
     event_hint: str = ""
     source_type: str = SOURCE_TYPE_NOTE
+    # Retained for response compatibility only; it is never Subject scope or
+    # Evidence/Permission proof and is omitted from scoped CTH API projections.
     is_taikoo_verified: bool = False
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -162,19 +165,19 @@ class BaseDomainAdapter(ABC):
 
     def _validate_domain(self, record: CanonicalRecord) -> None:
         """校验记录的域身份是否匹配本适配器。不匹配抛 ValueError。"""
-        if record.domain_id and record.domain_id != self.domain_id:
-            raise ValueError(
-                f"Domain mismatch: adapter={self.domain_id}, "
-                f"record.domain_id={record.domain_id}, "
-                f"record.product_id={record.product_id}"
+        if not isinstance(record, CanonicalRecord):
+            raise ValueError("a CanonicalRecord is required")
+        try:
+            domain_id, product_id = resolve_domain_identity(
+                record.domain_id or None, record.product_id or None,
             )
-        if record.product_id != self.product_id:
-            # 允许 product_id 为空时自动映射，但显式不匹配时拒绝
-            if record.product_id and record.product_id != self.product_id:
-                raise ValueError(
-                    f"Product mismatch: adapter={self.product_id}, "
-                    f"record.product_id={record.product_id}"
-                )
+        except (AttributeError, TypeError, ValueError) as exc:
+            raise ValueError("CanonicalRecord domain/product identity is invalid") from exc
+        if domain_id != self.domain_id or product_id != self.product_id:
+            raise ValueError(
+                f"Domain mismatch: adapter={self.domain_id}/{self.product_id}, "
+                f"record={domain_id}/{product_id}"
+            )
 
     def safe_to_dict(self, record: CanonicalRecord) -> Dict[str, Any]:
         """安全地将 CanonicalRecord 转为 dict，已剥离本域禁用字段。"""
@@ -266,26 +269,25 @@ class ZBMPAdapter(BaseDomainAdapter):
 # CTHAdapter
 # ---------------------------------------------------------------------------
 class CTHAdapter(BaseDomainAdapter):
-    """CTH 太古汇生产真相适配器。
+    """CTH commerce-operations adapter.
 
-    强制剥离 ZBMP 多品牌字段（multi_brand_config / brand_profiles 等），
-    确保 CTH 生产真相不被多品牌配置污染。
-    CTH 保护：subject 强制为 guangzhou_taikoo_hui，不允许切换。
+    Strips ZBMP-only fields and carries the exact CTH Subject unchanged.
+    Missing focus remains blank; this adapter does not select a reference venue.
     """
     domain_id = DOMAIN_CTH
     product_id = PRODUCT_CTH
     forbidden_fields = ZBMP_ONLY_FIELDS
 
     def to_domain(self, record: CanonicalRecord) -> CTHRecord:
-        """CanonicalRecord -> CTHRecord（剥离 ZBMP 多品牌字段，强制 CTH 主体）。"""
+        """CanonicalRecord -> CTHRecord（保留原 CTH Subject，不创建焦点）。"""
         self._validate_domain(record)
         data = self.safe_to_dict(record)
         return CTHRecord(
             canonical_id=data.get("canonical_id", ""),
             product_id=self.product_id,
             domain_id=self.domain_id,
-            subject_id="GUANGZHOU_TAIKOO_HUI",  # CTH 保护：强制主体
-            brand_key="guangzhou_taikoo_hui",
+            subject_id=data.get("subject_id") or "",
+            brand_key=data.get("brand_key") or "",
             source_platform=data.get("source_platform", ""),
             title=data.get("title", ""),
             content=data.get("content", ""),
@@ -315,12 +317,23 @@ class CTHAdapter(BaseDomainAdapter):
         """CTHRecord -> CanonicalRecord。"""
         if not isinstance(domain_record, CTHRecord):
             raise ValueError(f"Expected CTHRecord, got {type(domain_record).__name__}")
+        try:
+            domain_id, product_id = resolve_domain_identity(
+                domain_record.domain_id or None, domain_record.product_id or None,
+            )
+        except (AttributeError, TypeError, ValueError) as exc:
+            raise ValueError("CTHRecord domain/product identity is invalid") from exc
+        if domain_id != self.domain_id or product_id != self.product_id:
+            raise ValueError(
+                f"Domain mismatch: adapter={self.domain_id}/{self.product_id}, "
+                f"record={domain_id}/{product_id}"
+            )
         data = domain_record.to_dict()
         rec = CanonicalRecord(
             canonical_id=data.get("canonical_id") or _new_id(),
             product_id=self.product_id,
             domain_id=self.domain_id,
-            subject_id="GUANGZHOU_TAIKOO_HUI",  # CTH 保护
+            subject_id=data.get("subject_id") or "",
             source_platform=data.get("source_platform", ""),
             title=data.get("title", ""),
             content=data.get("content", ""),
@@ -354,8 +367,13 @@ _ADAPTERS = {
 
 
 def get_adapter(domain_id: str) -> BaseDomainAdapter:
-    """按 domain_id 获取适配器。未知域默认 CTH（生产安全默认）。"""
-    return _ADAPTERS.get(domain_id, _ADAPTERS[DOMAIN_CTH])
+    """按已知 domain_id 获取适配器；未知域或无适配器的域必须失败。"""
+    normalized = domain_to_product(domain_id)
+    canonical_domain = product_to_domain(normalized)
+    try:
+        return _ADAPTERS[canonical_domain]
+    except KeyError as exc:
+        raise ValueError(f"No domain adapter is registered for {canonical_domain}") from exc
 
 
 def get_adapter_by_product(product_id: str) -> BaseDomainAdapter:

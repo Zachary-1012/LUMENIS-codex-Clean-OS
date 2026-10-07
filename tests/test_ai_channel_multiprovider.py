@@ -4,15 +4,6 @@ import pytest
 from lumenis.system.ai_gateway import channel as ac
 
 
-def _enable_mock_provider(monkeypatch, *names):
-    from lumenis.system.ai_gateway import providers
-    monkeypatch.setattr(
-        providers, 'RETIRED_PROVIDERS', providers.RETIRED_PROVIDERS - set(names),
-    )
-    for name in names:
-        monkeypatch.setitem(providers.PROVIDER_REGISTRY[name], 'status', providers.ACTIVE)
-
-
 class TestProviderBreaker:
     def test_independent_breaker(self):
         """不同 Provider 熔断互不影响。"""
@@ -50,67 +41,62 @@ class TestProviderChain:
 class TestRouteWithFallback:
     def test_primary_success(self, monkeypatch):
         """主通道成功，不调用备用。"""
-        _enable_mock_provider(monkeypatch, 'zhipu', 'ark')
         calls = []
         def fn(prov):
             calls.append(prov)
-            if prov == "zhipu":
-                return "hello from zhipu", "zhipu"
+            if prov == "mock-primary":
+                return "hello from mock-primary", "mock-primary"
             raise RuntimeError("should not reach backup")
-        result, used = ac.route_with_fallback(fn, providers=["zhipu", "ark"])
-        assert result == "hello from zhipu"
-        assert used == "zhipu"
-        assert calls == ["zhipu"]
+        result, used = ac.route_with_fallback(fn, providers=["mock-primary", "mock-backup"])
+        assert result == "hello from mock-primary"
+        assert used == "mock-primary"
+        assert calls == ["mock-primary"]
 
     def test_fallback_to_backup(self, monkeypatch):
         """主通道失败，自动切备用。"""
-        _enable_mock_provider(monkeypatch, 'zhipu', 'ark')
         calls = []
         def fn(prov):
             calls.append(prov)
-            if prov == "zhipu":
-                raise ConnectionError("zhipu timeout")
-            return "backup result", "ark"
-        result, used = ac.route_with_fallback(fn, providers=["zhipu", "ark"])
+            if prov == "mock-primary":
+                raise ConnectionError("mock primary timeout")
+            return "backup result", "mock-backup"
+        result, used = ac.route_with_fallback(fn, providers=["mock-primary", "mock-backup"])
         assert result == "backup result"
-        assert used == "ark"
-        assert calls == ["zhipu", "ark"]
+        assert used == "mock-backup"
+        assert calls == ["mock-primary", "mock-backup"]
 
     def test_all_fail_returns_rule(self, monkeypatch):
         """全部失败，返回 (None, 'rule')。"""
-        _enable_mock_provider(monkeypatch, 'zhipu', 'ark')
         def fn(prov):
             raise ConnectionError(f"{prov} down")
-        result, used = ac.route_with_fallback(fn, providers=["zhipu", "ark"])
+        result, used = ac.route_with_fallback(fn, providers=["mock-primary", "mock-backup"])
         assert result is None
         assert used == "rule"
 
     def test_breaker_skips_open_provider(self, monkeypatch):
         """熔断中的 Provider 被跳过，不浪费调用。"""
-        _enable_mock_provider(monkeypatch, 'zhipu')
         pb = ac.get_provider_breaker("test_open", fail_threshold=1, cooldown_sec=30)
         pb.record_failure("network")  # 触发 OPEN
         calls = []
         def fn(prov):
             calls.append(prov)
             return "ok", prov
-        result, used = ac.route_with_fallback(fn, providers=["test_open", "zhipu"])
-        # test_open 熔断中被跳过，直接用 zhipu
+        result, used = ac.route_with_fallback(fn, providers=["test_open", "mock-backup"])
+        # test_open 熔断中被跳过，使用模拟备用路由
         assert "test_open" not in calls
-        assert used == "zhipu"
+        assert used == "mock-backup"
 
     def test_auth_error_no_fallback(self, monkeypatch):
         """鉴权错误（不可重试）不切下一个 Provider。"""
-        _enable_mock_provider(monkeypatch, 'zhipu', 'ark')
         calls = []
         def fn(prov):
             calls.append(prov)
             import urllib.error
             raise urllib.error.HTTPError(None, 401, "Unauthorized", None, None)
-        result, used = ac.route_with_fallback(fn, providers=["zhipu", "ark"])
+        result, used = ac.route_with_fallback(fn, providers=["mock-primary", "mock-backup"])
         assert result is None
         assert used == "rule"
-        assert calls == ["zhipu"]  # 只调了主通道，没切备用
+        assert calls == ["mock-primary"]  # 只调了主通道，没切备用
 
 
 class TestSnapshots:

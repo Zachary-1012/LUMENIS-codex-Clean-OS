@@ -126,3 +126,65 @@ def test_http_start_defaults_to_manual_and_status_has_no_auto_schedule(monkeypat
     body = status.get_json()
     assert body["auto_enabled"] is False
     assert body["next_collect"] == "未开启自动采集"
+
+
+def test_collector_status_routes_share_one_payload_in_either_registration_order(monkeypatch):
+    import collector_status_api as status_api
+
+    runtime_status = {
+        "is_running": False,
+        "lifecycle_state": "STOPPED",
+        "stop_requested": False,
+        "current_task": None,
+        "browser_running": False,
+        "cdp_port": None,
+        "active_cdp_port": None,
+        "edge_path": "",
+        "history_count": 0,
+        "today_count": 0,
+    }
+
+    class FakeCollector:
+        def get_status(self):
+            return dict(runtime_status)
+
+    monkeypatch.setattr(
+        collection_api.collector_automation,
+        "get_collector_automation",
+        lambda: FakeCollector(),
+    )
+    monkeypatch.setattr(status_api, "get_all_status", lambda: {
+        "timestamp": "2026-10-08T00:00:00+08:00",
+        "total_platforms": 1,
+        "platforms": [{
+            "platform": "facebook",
+            "cookie_status": "UNKNOWN",
+            "last_verified_status": "NEED_VERIFY",
+            "last_check": "2026-10-05T10:00:00+08:00",
+            "status_source": "VERIFICATION_CACHE",
+            "freshness": "UNKNOWN",
+        }],
+        "summary": {"active": 0, "need_verify": 0, "unknown": 1,
+                    "last_verified": {"need_verify": 1}},
+    })
+
+    bodies = []
+    for status_first in (False, True):
+        flask_app = Flask(f"collector-status-{status_first}")
+        if status_first:
+            flask_app.register_blueprint(status_api.collector_status_bp)
+            collection_api.register_collection_api(flask_app)
+        else:
+            collection_api.register_collection_api(flask_app)
+            flask_app.register_blueprint(status_api.collector_status_bp)
+        response = flask_app.test_client().get("/api/collector/status")
+        assert response.status_code == 200
+        body = response.get_json()
+        assert body["ok"] is True
+        assert body["success"] is True
+        assert body["is_running"] is False  # legacy collection_api fields
+        assert body["data"]["platforms"][0]["last_verified_status"] == "NEED_VERIFY"
+        assert body["data"]["collector_runtime"] == runtime_status
+        bodies.append(body)
+
+    assert bodies[0] == bodies[1]

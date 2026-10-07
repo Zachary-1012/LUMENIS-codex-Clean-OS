@@ -131,3 +131,17 @@ def test_shared_route_rejects_write_and_unknown_domain(shared_client):
     )
     assert unknown.status_code == 400
     assert unknown.get_json()["code"] == "DOMAIN_NOT_ALLOWED"
+
+
+def test_shared_route_does_not_default_missing_domain_to_cth(shared_client):
+    response = shared_client.post(
+        "/api/experience/shared-skills/shared.social_card/run",
+        json={
+            "action_type": "SUGGEST",
+            "task": "为序境生成一个事实入口草稿",
+            "input": {"title": "序境 · Evidence First"},
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["code"] == "DOMAIN_REQUIRED"

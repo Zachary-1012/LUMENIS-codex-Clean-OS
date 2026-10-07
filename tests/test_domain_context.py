@@ -4,7 +4,7 @@
 Verifies:
 1. DomainContext.from_product() correctly maps product_id to domain_id
 2. DomainContext.from_domain() correctly maps domain_id to product_id
-3. CTH DomainContext forces subject=guangzhou_taikoo_hui
+3. Domain selection does not invent or replace a Subject
 4. SYSTEM_DOMAIN exists with correct properties
 5. DOMAINS dict contains cth, zbmp, system
 6. product_to_domain / domain_to_product mapping functions
@@ -60,12 +60,12 @@ class TestDomainContextConstruction:
         ctx = DomainContext.from_domain(DOMAIN_SYSTEM)
         assert ctx.product_id == PRODUCT_SYSTEM
 
-    def test_cth_forces_subject(self):
-        """CTH DomainContext must force brand_key=guangzhou_taikoo_hui."""
+    def test_cth_preserves_explicit_subject(self):
+        """CTH supports non-reference subjects without silently changing identity."""
         ctx = DomainContext(domain_id=DOMAIN_CTH, product_id=PRODUCT_CTH,
-                            brand_key="wrong_brand", subject_id="WRONG")
-        assert ctx.brand_key == CTH_BRAND_KEY
-        assert "GUANGZHOU" in ctx.subject_id
+                            brand_key="other_venue", subject_id="OTHER_VENUE")
+        assert ctx.brand_key == "other_venue"
+        assert ctx.subject_id == "OTHER_VENUE"
 
     def test_zbmp_allows_custom_subject(self):
         """ZBMP DomainContext allows custom brand_key (multi-brand platform)."""
@@ -74,10 +74,10 @@ class TestDomainContextConstruction:
         assert ctx.brand_key == "hainan_cdf"
         assert ctx.subject_id == "HAINAN_CDF"
 
-    def test_post_init_syncs_product_domain(self):
-        """__post_init__ must sync product_id when domain_id is set."""
-        ctx = DomainContext(domain_id=DOMAIN_ZBMP, product_id=PRODUCT_CTH)
-        assert ctx.product_id == PRODUCT_ZBMP  # synced to match domain_id
+    def test_post_init_rejects_conflicting_identity(self):
+        """A conflicting pair cannot be silently corrected."""
+        with pytest.raises(ValueError, match="DOMAIN_PRODUCT_MISMATCH"):
+            DomainContext(domain_id=DOMAIN_ZBMP, product_id=PRODUCT_CTH)
 
 
 class TestMappingFunctions:
@@ -92,8 +92,9 @@ class TestMappingFunctions:
     def test_product_to_domain_system(self):
         assert product_to_domain(PRODUCT_SYSTEM) == DOMAIN_SYSTEM
 
-    def test_product_to_domain_unknown_defaults_cth(self):
-        assert product_to_domain("UNKNOWN") == DOMAIN_CTH
+    def test_product_to_domain_unknown_rejected(self):
+        with pytest.raises(ValueError, match="INVALID_PRODUCT_ID"):
+            product_to_domain("UNKNOWN")
 
     def test_domain_to_product_cth(self):
         assert domain_to_product(DOMAIN_CTH) == PRODUCT_CTH
@@ -144,9 +145,9 @@ class TestThreadLocalDomainContext:
         ctx = DomainContext.from_domain(DOMAIN_CTH)
         set_domain_context(ctx)
         clear_domain_context()
-        # After clear, get_domain_context returns default (from env)
+        # After clear, there is no bound domain.
         got = get_domain_context()
-        assert got is not None  # returns default context
+        assert got is None
 
     def test_thread_isolation(self):
         """DomainContext must be thread-local."""

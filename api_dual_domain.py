@@ -4,14 +4,16 @@ ZBC API Dual-Domain Namespace（双域核心扩展）
 ================================================
 三个独立域路由蓝图：
   - zbmp_bp: /api/zbmp/*  多品牌平台域
-  - cth_bp:  /api/cth/*   太古汇生产真相域
+  - cth_bp:  /api/cth/*   CTH 商业运营域
   - system_bp: /api/system/*  系统基础设施域
 
 每个端点：
   1. 从请求头 X-Domain-Id / X-Product-Id 或 session 解析域身份
   2. 设置线程 SubjectContext + DomainContext
-  3. 读真实数据库（canonical_data / notes / web_mentions / runtime_guardian）
+  3. 业务读取须通过当前 Scope / Permission / Canonical owner；系统状态使用现有 runtime owner
   4. 返回统一 JSON: {success, data, error, domain_id, product_id}
+
+CTH 的缺省选择保持 GLOBAL / ALL；参考主体不会因兼容路由而自动选中。
 
 Compatibility Layer：现有 /api/* 端点保持不变，本模块仅新增域命名空间端点。
 硬约束：禁止假数据/Mock，禁止吞异常，ZBMP 不读 CTH 专项字段。
@@ -909,73 +911,27 @@ def _api_response(data: Any = None, error: str = "",
 
 
 def _resolve_domain_from_request() -> Dict[str, str]:
-    """从请求头 / session / 查询参数解析域身份。
-
-    现有兼容优先级：X-Domain-Id header > session domain_id > ?domain_id= > cth。
-    product_id 从 domain_id 映射，或从 X-Product-Id 显式指定。此函数仍有
-    未识别域回退及冲突 header 未拒绝的语义债；不能用解析成功证明身份合法、
-    GLOBAL 范围或 Permission。行为修复须协调下游和持久化兼容。
-    """
-    domain_id = ""
-    product_id = ""
-
-    # 1. Header
-    domain_id = request.headers.get("X-Domain-Id", "").strip().lower()
-    product_id = request.headers.get("X-Product-Id", "").strip().upper()
-
-    # 2. Session
-    if not domain_id:
-        try:
-            domain_id = (request.session.get("domain_id") or "").strip().lower()
-        except Exception:
-            pass
-    if not product_id:
-        try:
-            product_id = (request.session.get("product_id") or "").strip().upper()
-        except Exception:
-            pass
-
-    # 3. Query param
-    if not domain_id:
-        domain_id = request.args.get("domain_id", "").strip().lower()
-    if not product_id:
-        product_id = request.args.get("product_id", "").strip().upper()
-
-    # 4. 映射 + 默认
-    if domain_id and domain_id not in (DOMAIN_CTH, DOMAIN_ZBMP, DOMAIN_SYSTEM):
-        domain_id = DOMAIN_CTH  # 历史兼容回退，不能解释为安全授权或有效 CTH 身份
-    if not domain_id:
-        domain_id = DOMAIN_CTH
-
-    if not product_id:
-        product_id = domain_to_product(domain_id)
-    elif product_id not in (PRODUCT_CTH, PRODUCT_ZBMP, PRODUCT_SYSTEM):
-        product_id = domain_to_product(domain_id)
-
+    """Use the shared strict request identity resolver (not an authority grant)."""
+    from subject_context import resolve_request_identity
+    domain_id, product_id = resolve_request_identity()
     return {"domain_id": domain_id, "product_id": product_id}
 
 
 def _setup_domain_context(domain_id: str, product_id: str) -> DomainContext:
-    """设置线程级 DomainContext + SubjectContext。CTH 保护强制主体。"""
-    brand_key = CTH_BRAND_KEY if domain_id == DOMAIN_CTH else ""
-    ctx = DomainContext(
-        domain_id=domain_id,
-        product_id=product_id,
-        brand_key=brand_key,
-        subject_id=brand_key.upper().replace("-", "_").replace(" ", "_") if brand_key else "",
-    )
-    set_domain_context(ctx)
+    """Bind the route domain while retaining only explicitly supplied focus."""
+    from subject_context import bind_request_context
+    from domain_isolation import resolve_domain_identity
+    domain_id, _ = resolve_domain_identity(domain_id, product_id)
+    return bind_request_context(domain_id)
 
-    # 同步设置 SubjectContext（兼容现有体系）
-    subject_ctx = SubjectContext(
-        subject_id=ctx.subject_id or "UNKNOWN",
-        brand_key=ctx.brand_key or "default",
-        product_id=product_id,
-    )
-    set_thread_context(subject_ctx)
-    g.domain_context = ctx
-    g.subject_context = subject_ctx
-    return ctx
+
+def _bind_blueprint_context(domain_id):
+    _teardown_domain_context()
+    try:
+        _setup_domain_context(domain_id, domain_to_product(domain_id))
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    return None
 
 
 def _teardown_domain_context():
@@ -1024,6 +980,225 @@ def _canonical_from_row(row: sqlite3.Row):
         if field_name in keys and row[field_name] is not None:
             values[field_name] = row[field_name]
     return CanonicalRecord(**values)
+
+
+class CTHScopedReadError(RuntimeError):
+    """A CTH read could not resolve or authorize its explicit request scope."""
+
+    def __init__(self, code: str, status: int):
+        super().__init__(code)
+        self.code = code
+        self.status = status
+
+
+def _scope_alias(value: str) -> str:
+    import re
+    import unicodedata
+
+    return re.sub(r"\s+", " ", unicodedata.normalize("NFKC", value).strip()).casefold()
+
+
+def _cth_request_subject(connection: sqlite3.Connection) -> Optional[str]:
+    """Resolve request metadata to one active canonical CTH Subject, or GLOBAL."""
+    context = get_domain_context()
+    if context is None or context.domain_id != DOMAIN_CTH:
+        raise CTHScopedReadError("CTH_REQUEST_CONTEXT_UNAVAILABLE", 503)
+
+    subject_id = context.subject_id
+    brand_key = context.brand_key
+    for value in (subject_id, brand_key):
+        if (not isinstance(value, str) or value != value.strip()
+                or any(ord(char) < 32 or ord(char) == 127 for char in value)):
+            raise CTHScopedReadError("INVALID_CTH_FOCUS", 400)
+    if not subject_id and not brand_key:
+        return None
+
+    try:
+        from subject_registry import list_subjects
+        subjects = list_subjects("CTH", connection=connection)
+    except Exception as exc:
+        raise CTHScopedReadError("CTH_SUBJECT_REGISTRY_UNAVAILABLE", 503) from exc
+
+    selected = None
+    if subject_id:
+        matches = [row for row in subjects if row.get("subject_id") == subject_id]
+        if len(matches) != 1:
+            raise CTHScopedReadError("CTH_SUBJECT_NOT_FOUND", 404)
+        selected = matches[0]
+
+    if brand_key:
+        requested_alias = _scope_alias(brand_key)
+        alias_matches = []
+        for row in subjects:
+            aliases = [row.get("subject_id"), row.get("name_en"), row.get("name_zh")]
+            aliases.extend(row.get("keywords") if isinstance(row.get("keywords"), list) else [])
+            if requested_alias in {
+                _scope_alias(alias) for alias in aliases
+                if isinstance(alias, str) and alias.strip()
+            }:
+                alias_matches.append(row)
+        unique_matches = {row.get("subject_id"): row for row in alias_matches}
+        if len(unique_matches) != 1:
+            raise CTHScopedReadError(
+                "CTH_FOCUS_ALIAS_AMBIGUOUS" if unique_matches else "CTH_FOCUS_ALIAS_NOT_FOUND",
+                400 if unique_matches else 404,
+            )
+        alias_subject = next(iter(unique_matches.values()))
+        if selected is not None and selected.get("subject_id") != alias_subject.get("subject_id"):
+            raise CTHScopedReadError("CTH_FOCUS_IDENTITY_CONFLICT", 400)
+        selected = alias_subject
+
+    if selected is None or selected.get("subject_type") != "company":
+        raise CTHScopedReadError("INVALID_CTH_SUBJECT_TYPE", 400)
+    return selected["subject_id"]
+
+
+def _authorize_cth_read(connection: sqlite3.Connection, *, module: str) -> Dict[str, Any]:
+    """Resolve request identity and ask the canonical Permission owner on every read."""
+    if module not in {"content", "reports", "cases", "collector"}:
+        raise CTHScopedReadError("INVALID_CTH_READ_MODULE", 400)
+    subject_id = _cth_request_subject(connection)
+    global_scope = subject_id is None
+    try:
+        from lumenis.auth.service import get_current_user
+        from lumenis.system.security.permission import (
+            check_actor_scope_permission,
+            check_local_workspace_scope_permission,
+            resolve_local_workspace_principal,
+        )
+
+        actor = get_current_user(read_only=True)
+        if isinstance(actor, dict) and type(actor.get("id")) is int and actor["id"] > 0:
+            decision = check_actor_scope_permission(
+                actor, domain_id=DOMAIN_CTH, action="read", module=module,
+                subject_id=subject_id, global_scope=global_scope,
+                connection=connection,
+            )
+        else:
+            principal = resolve_local_workspace_principal(module=module, action="read")
+            if principal is None:
+                raise CTHScopedReadError("AUTH_REQUIRED", 401)
+            decision = check_local_workspace_scope_permission(
+                principal, domain_id=DOMAIN_CTH, action="read", module=module,
+                subject_id=subject_id, global_scope=global_scope,
+                connection=connection,
+            )
+    except CTHScopedReadError:
+        raise
+    except Exception as exc:
+        raise CTHScopedReadError("CTH_SCOPE_AUTHORIZATION_UNAVAILABLE", 503) from exc
+
+    if getattr(decision, "verification_state", None) != "verified":
+        raise CTHScopedReadError("CTH_SCOPE_AUTHORIZATION_UNAVAILABLE", 503)
+    if not getattr(decision, "allowed", False):
+        raise CTHScopedReadError("CTH_SCOPE_READ_DENIED", 403)
+    audit_id = getattr(decision, "audit_id", None)
+    if not isinstance(audit_id, str) or not audit_id:
+        raise CTHScopedReadError("CTH_SCOPE_AUDIT_UNAVAILABLE", 503)
+
+    return {
+        "mode": "GLOBAL_ALL" if global_scope else "FOCUS",
+        "domain_id": DOMAIN_CTH,
+        "product_id": PRODUCT_CTH,
+        "subject_id": subject_id,
+        "global": global_scope,
+        "permission_audit_id": audit_id,
+    }
+
+
+def read_cth_scoped_canonical(
+    connection: sqlite3.Connection, *, module: str, limit: int = 100,
+    source_ids: Optional[List[str]] = None, platform: Optional[str] = None,
+    offset: int = 0,
+) -> Dict[str, Any]:
+    """Read signed Canonical rows after fresh CTH scope authorization.
+
+    Optional platform paging selects candidate source IDs from the existing
+    Canonical table, then sends those IDs through the Canonical owner's signed
+    scope validator. The candidate query grants no access and returns no rows
+    directly.
+    """
+    if not isinstance(connection, sqlite3.Connection):
+        raise CTHScopedReadError("CTH_CANONICAL_CONNECTION_INVALID", 503)
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise CTHScopedReadError("INVALID_CTH_READ_LIMIT", 400)
+    if type(offset) is not int or offset < 0:
+        raise CTHScopedReadError("INVALID_CTH_READ_OFFSET", 400)
+    if source_ids is not None and (platform is not None or offset != 0):
+        raise CTHScopedReadError("CTH_SOURCE_SELECTION_CONFLICT", 400)
+
+    scope = _authorize_cth_read(connection, module=module)
+    try:
+        import canonical_data
+        if platform is None:
+            canonical = canonical_data.list_scoped_canonical(
+                connection, product_id=PRODUCT_CTH,
+                subject_id=scope["subject_id"], limit=limit,
+                source_ids=source_ids,
+            )
+        else:
+            from lumenis.system.collector.adapters.platform_naming import (
+                get_platform_aliases, normalize_platform,
+            )
+            normalized_platform = normalize_platform(platform)
+            if normalized_platform is None:
+                raise CTHScopedReadError("UNKNOWN_PLATFORM_ALIAS", 400)
+            aliases = get_platform_aliases(normalized_platform)
+            placeholders = ",".join("?" for _ in aliases)
+            filters = [
+                "product_id=?", "domain_id=?", "scope_status='VERIFIED'",
+                "source_id IS NOT NULL", "TRIM(source_id) != ''",
+                f"LOWER(source_platform) IN ({placeholders})",
+            ]
+            params: List[Any] = [PRODUCT_CTH, DOMAIN_CTH, *aliases]
+            if scope["subject_id"] is not None:
+                filters.extend(["subject_id=?", "(brand_focus_id IS NULL OR brand_focus_id='')"])
+                params.append(scope["subject_id"])
+            predicate = " AND ".join(filters)
+            total = connection.execute(
+                "SELECT COUNT(*) FROM (SELECT source_id FROM canonical_data WHERE "
+                + predicate + " GROUP BY source_id)", tuple(params),
+            ).fetchone()[0]
+            rows = connection.execute(
+                "SELECT source_id, MAX(COALESCE(captured_at,'')) AS latest "
+                "FROM canonical_data WHERE " + predicate
+                + " GROUP BY source_id ORDER BY latest DESC, source_id ASC LIMIT ? OFFSET ?",
+                tuple(params + [limit, offset]),
+            ).fetchall()
+            selected_ids = [row[0] for row in rows]
+            if selected_ids:
+                canonical = canonical_data.list_scoped_canonical(
+                    connection, product_id=PRODUCT_CTH,
+                    subject_id=scope["subject_id"], limit=limit,
+                    source_ids=selected_ids,
+                )
+            else:
+                canonical = {
+                    "records": [], "candidate_count": 0, "scanned_count": 0,
+                    "rejected_count": 0, "returned_count": 0,
+                    "limit": limit, "truncated": False,
+                }
+            canonical["records"] = [
+                row for row in canonical["records"]
+                if normalize_platform(row.get("source_platform")) == normalized_platform
+            ]
+            canonical["returned_count"] = len(canonical["records"])
+            canonical["page"] = {
+                "candidate_source_count": total,
+                "offset": offset,
+                "limit": limit,
+                "returned_source_count": len(selected_ids),
+                "truncated": offset + len(selected_ids) < total,
+            }
+    except CTHScopedReadError:
+        raise
+    except ValueError as exc:
+        raise CTHScopedReadError("INVALID_CTH_CANONICAL_SCOPE", 400) from exc
+    except Exception as exc:
+        raise CTHScopedReadError("CTH_CANONICAL_SCOPE_UNAVAILABLE", 503) from exc
+
+    return {"scope": {key: value for key, value in scope.items() if key != "permission_audit_id"},
+            "permission_audit_id": scope["permission_audit_id"], "canonical": canonical}
 
 
 def _safe_zbmp_record(row: sqlite3.Row, adapter: Any) -> Optional[Dict[str, Any]]:
@@ -1240,11 +1415,7 @@ def get_zbmp_product_snapshot() -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 @zbmp_bp.before_request
 def _zbmp_before():
-    identity = _resolve_domain_from_request()
-    # ZBMP 蓝图强制 domain_id=zbmp
-    identity["domain_id"] = DOMAIN_ZBMP
-    identity["product_id"] = PRODUCT_ZBMP
-    _setup_domain_context(identity["domain_id"], identity["product_id"])
+    return _bind_blueprint_context(DOMAIN_ZBMP)
 
 
 @zbmp_bp.after_request
@@ -1255,11 +1426,7 @@ def _zbmp_after(response):
 
 @cth_bp.before_request
 def _cth_before():
-    identity = _resolve_domain_from_request()
-    # CTH 蓝图强制 domain_id=cth + 主体保护
-    identity["domain_id"] = DOMAIN_CTH
-    identity["product_id"] = PRODUCT_CTH
-    _setup_domain_context(identity["domain_id"], identity["product_id"])
+    return _bind_blueprint_context(DOMAIN_CTH)
 
 
 @cth_bp.after_request
@@ -1270,10 +1437,7 @@ def _cth_after(response):
 
 @system_bp.before_request
 def _system_before():
-    identity = _resolve_domain_from_request()
-    identity["domain_id"] = DOMAIN_SYSTEM
-    identity["product_id"] = PRODUCT_SYSTEM
-    _setup_domain_context(identity["domain_id"], identity["product_id"])
+    return _bind_blueprint_context(DOMAIN_SYSTEM)
 
 
 @system_bp.after_request
@@ -1337,239 +1501,208 @@ def zbmp_metrics():
 # ===========================================================================
 # CTH 端点
 # ===========================================================================
+def _cth_scoped_projection(snapshot: Dict[str, Any], *, include_content: bool = False) -> List[Dict[str, Any]]:
+    """Project only verified Canonical rows into the existing CTH view shape."""
+    adapter = get_adapter(DOMAIN_CTH)
+    allowed = (
+        "canonical_id", "product_id", "domain_id", "subject_id", "source_platform",
+        "title", "content", "url", "author_name", "publish_datetime", "captured_at",
+        "sentiment", "sentiment_score", "risk_level", "risk_score", "engagement_likes",
+        "engagement_comments", "engagement_collects", "engagement_shares", "topics", "tags",
+        "event_hint", "source_type", "source_id", "scope_status", "scope_evidence_ref",
+        "provenance", "evidence_ref",
+    )
+    projected: List[Dict[str, Any]] = []
+    for row in snapshot["canonical"]["records"]:
+        # Adaptation is the existing domain boundary; raw row keys are then
+        # explicitly allow-listed so adapter defaults cannot invent facts.
+        adapter.to_domain(_canonical_from_row(row))
+        item = {key: row.get(key) for key in allowed if key in row}
+        if not include_content:
+            item.pop("content", None)
+        elif isinstance(item.get("content"), str):
+            item["content"] = item["content"][:500]
+        projected.append(item)
+    return projected
+
+
+def _cth_read_error_response(exc: Exception):
+    if isinstance(exc, CTHScopedReadError):
+        return _api_response(error=exc.code, domain_id=DOMAIN_CTH,
+                             product_id=PRODUCT_CTH, status=exc.status)
+    return _api_response(error="CTH_SCOPED_READ_UNAVAILABLE", domain_id=DOMAIN_CTH,
+                         product_id=PRODUCT_CTH, status=503)
+
+
+# ===========================================================================
+# CTH 端点 — scoped Canonical only
+# ===========================================================================
 @cth_bp.route("/overview", methods=["GET"])
 def cth_overview():
-    """CTH 太古汇总览：从 canonical_data 按 product_id=CTH 聚合 + subject_rules 过滤。
-
-    读真实数据：canonical_data(product_id=CTH)、notes、web_mentions。
-    CTH 保护：强制 subject=guangzhou_taikoo_hui，不读 ZBMP 多品牌字段。
-    """
+    """Scoped CTH overview backed only by signed Canonical records."""
+    conn = None
     try:
         conn = _get_conn()
+        snapshot = read_cth_scoped_canonical(conn, module="reports", limit=100)
+        records = _cth_scoped_projection(snapshot)
+        canonical = snapshot["canonical"]
+
+        def distribution(field: str) -> Dict[str, int]:
+            result: Dict[str, int] = {}
+            for record in records:
+                value = record.get(field)
+                if isinstance(value, str) and value.strip():
+                    result[value] = result.get(value, 0) + 1
+            return result
+
+        def engagement(field: str) -> Optional[int]:
+            values = [record.get(field) for record in records]
+            return _sum_optional(values)
+
+        complete_scan = not canonical["truncated"] and canonical["rejected_count"] == 0
         data = {
-            "subject": "guangzhou_taikoo_hui",
-            "total_canonical": 0,
-            "total_notes": 0,
-            "total_web_mentions": 0,
-            "by_platform": {},
-            "by_sentiment": {},
-            "by_risk": {},
-            "recent_records": [],
-            "engagement_summary": {},
+            "scope": snapshot["scope"],
+            "subject_id": snapshot["scope"]["subject_id"],
+            "total_canonical": canonical["returned_count"] if complete_scan else None,
+            "total_notes": None,
+            "total_web_mentions": None,
+            "source_tables_state": "NOT_READ_OUTSIDE_CANONICAL_OWNER",
+            "by_platform": distribution("source_platform"),
+            "by_sentiment": distribution("sentiment"),
+            "by_risk": distribution("risk_level"),
+            "recent_records": records[:20],
+            "engagement_summary": {
+                "likes": engagement("engagement_likes"),
+                "comments": engagement("engagement_comments"),
+                "collects": engagement("engagement_collects"),
+                "shares": engagement("engagement_shares"),
+                "basis": "VERIFIED_RETURNED_CANONICAL_ROWS",
+            },
+            "canonical_read": {
+                "candidate_count": canonical["candidate_count"],
+                "scanned_count": canonical["scanned_count"],
+                "rejected_count": canonical["rejected_count"],
+                "verified_returned_count": canonical["returned_count"],
+                "truncated": canonical["truncated"],
+            },
         }
-
-        # canonical_data CTH 聚合
-        try:
-            row = conn.execute(
-                "SELECT COUNT(*) as c FROM canonical_data WHERE product_id = ?",
-                (PRODUCT_CTH,)
-            ).fetchone()
-            data["total_canonical"] = row["c"] if row else 0
-
-            # 最近记录（通过 CTHAdapter 剥离 ZBMP 字段）
-            rows = conn.execute(
-                "SELECT * FROM canonical_data WHERE product_id = ? ORDER BY captured_at DESC LIMIT 20",
-                (PRODUCT_CTH,)
-            ).fetchall()
-            adapter = get_adapter(DOMAIN_CTH)
-            from canonical_data import CanonicalRecord
-            recent = []
-            for r in rows:
-                rec_dict = dict(r)
-                rec = CanonicalRecord(**{k: v for k, v in rec_dict.items()
-                                          if k in CanonicalRecord.__dataclass_fields__})
-                try:
-                    domain_rec = adapter.to_domain(rec)
-                    recent.append(domain_rec.to_dict())
-                except ValueError:
-                    continue
-            data["recent_records"] = recent
-        except Exception as e:
-            data["canonical_error"] = str(e)
-
-        # notes 统计（CTH 主体过滤：subject_hit 逻辑简化为关键词匹配）
-        try:
-            row = conn.execute("SELECT COUNT(*) as c FROM notes").fetchone()
-            data["total_notes"] = row["c"] if row else 0
-
-            # 平台分布
-            rows = conn.execute(
-                "SELECT source_platform, COUNT(*) as cnt FROM notes GROUP BY source_platform"
-            ).fetchall()
-            data["by_platform"] = {r["source_platform"] or "unknown": r["cnt"] for r in rows}
-
-            # 情感分布
-            rows = conn.execute(
-                "SELECT sentiment, COUNT(*) as cnt FROM notes WHERE sentiment != '' GROUP BY sentiment"
-            ).fetchall()
-            data["by_sentiment"] = {r["sentiment"]: r["cnt"] for r in rows}
-
-            # 风险分布
-            rows = conn.execute(
-                "SELECT risk_level, COUNT(*) as cnt FROM notes WHERE risk_level != '' GROUP BY risk_level"
-            ).fetchall()
-            data["by_risk"] = {r["risk_level"]: r["cnt"] for r in rows}
-
-            # 互动汇总
-            row = conn.execute(
-                "SELECT SUM(likes) as l, SUM(comments) as c, SUM(collects) as col, SUM(shares) as s FROM notes"
-            ).fetchone()
-            if row:
-                data["engagement_summary"] = {
-                    "likes": row["l"] or 0,
-                    "comments": row["c"] or 0,
-                    "collects": row["col"] or 0,
-                    "shares": row["s"] or 0,
-                }
-        except Exception as e:
-            data["notes_error"] = str(e)
-
-        # web_mentions 统计
-        try:
-            row = conn.execute("SELECT COUNT(*) as c FROM web_mentions").fetchone()
-            data["total_web_mentions"] = row["c"] if row else 0
-        except Exception:
-            pass
-
-        conn.close()
         return _api_response(data=data, domain_id=DOMAIN_CTH, product_id=PRODUCT_CTH)
-    except Exception as e:
-        return _api_response(error=str(e), domain_id=DOMAIN_CTH, product_id=PRODUCT_CTH, status=500)
+    except Exception as exc:
+        return _cth_read_error_response(exc)
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 @cth_bp.route("/events", methods=["GET"])
 def cth_events():
-    """CTH 事件列表：从 notes/canonical_data 中提取 event_hint 和话题事件。
-
-    读真实数据：notes(topics/event_hint)、canonical_data(event_hint)。
-    """
+    """List topic/event hints from signed Canonical rows in the requested scope."""
+    conn = None
     try:
         conn = _get_conn()
+        snapshot = read_cth_scoped_canonical(conn, module="reports", limit=100)
+        records = _cth_scoped_projection(snapshot)
         events = []
-
-        # 从 canonical_data 提取事件
-        try:
-            rows = conn.execute(
-                "SELECT canonical_id, title, event_hint, topics, tags, publish_datetime, "
-                "captured_at, sentiment, risk_level, source_platform "
-                "FROM canonical_data WHERE product_id = ? AND (event_hint != '' OR topics != '[]') "
-                "ORDER BY captured_at DESC LIMIT 50",
-                (PRODUCT_CTH,)
-            ).fetchall()
-            for r in rows:
-                d = dict(r)
-                events.append({
-                    "event_id": d["canonical_id"],
-                    "title": d["title"],
-                    "event_hint": d["event_hint"],
-                    "topics": d["topics"],
-                    "tags": d["tags"],
-                    "publish_datetime": d["publish_datetime"],
-                    "captured_at": d["captured_at"],
-                    "sentiment": d["sentiment"],
-                    "risk_level": d["risk_level"],
-                    "platform": d["source_platform"],
-                    "domain": DOMAIN_CTH,
-                })
-        except Exception as e:
-            events.append({"error": f"canonical events: {e}"})
-
-        # 从 notes 提取话题事件
-        try:
-            rows = conn.execute(
-                "SELECT note_id, title, topics, publish_date, collected_at, "
-                "sentiment, risk_level, source_platform "
-                "FROM notes WHERE topics != '' AND topics IS NOT NULL AND topics != '[]' "
-                "ORDER BY collected_at DESC LIMIT 30"
-            ).fetchall()
-            for r in rows:
-                d = dict(r)
-                events.append({
-                    "event_id": f"note_{d['note_id']}",
-                    "title": d["title"],
-                    "event_hint": "",
-                    "topics": d["topics"],
-                    "tags": "[]",
-                    "publish_datetime": d["publish_date"],
-                    "captured_at": d["collected_at"],
-                    "sentiment": d["sentiment"],
-                    "risk_level": d["risk_level"],
-                    "platform": d["source_platform"],
-                    "domain": DOMAIN_CTH,
-                })
-        except Exception:
-            pass
-
-        conn.close()
-        data = {"events": events, "total_events": len(events)}
+        for record in records:
+            event_hint = record.get("event_hint")
+            topics = record.get("topics")
+            has_topics = bool(topics)
+            if isinstance(topics, str):
+                normalized_topics = topics.strip()
+                if normalized_topics in {"", "[]", "{}", "null"}:
+                    has_topics = False
+                else:
+                    try:
+                        has_topics = bool(json.loads(normalized_topics))
+                    except (TypeError, ValueError):
+                        has_topics = True
+            if not (isinstance(event_hint, str) and event_hint.strip()) and not has_topics:
+                continue
+            events.append({
+                "event_id": record.get("canonical_id"),
+                "title": record.get("title"),
+                "event_hint": event_hint,
+                "topics": topics,
+                "tags": record.get("tags"),
+                "publish_datetime": record.get("publish_datetime"),
+                "captured_at": record.get("captured_at"),
+                "sentiment": record.get("sentiment"),
+                "risk_level": record.get("risk_level"),
+                "platform": record.get("source_platform"),
+                "domain": DOMAIN_CTH,
+                "subject_id": record.get("subject_id"),
+                "source_id": record.get("source_id"),
+                "scope_evidence_ref": record.get("scope_evidence_ref"),
+            })
+        canonical = snapshot["canonical"]
+        data = {
+            "scope": snapshot["scope"],
+            "events": events,
+            "total_events": len(events),
+            "canonical_read": {
+                "candidate_count": canonical["candidate_count"],
+                "scanned_count": canonical["scanned_count"],
+                "rejected_count": canonical["rejected_count"],
+                "truncated": canonical["truncated"],
+            },
+        }
         return _api_response(data=data, domain_id=DOMAIN_CTH, product_id=PRODUCT_CTH)
-    except Exception as e:
-        return _api_response(error=str(e), domain_id=DOMAIN_CTH, product_id=PRODUCT_CTH, status=500)
+    except Exception as exc:
+        return _cth_read_error_response(exc)
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 @cth_bp.route("/xiaohongshu", methods=["GET"])
 def cth_xiaohongshu():
-    """CTH 小红书数据：从 notes 表筛选小红书平台的太古汇相关数据。
-
-    读真实数据：notes(source_platform='xhs' 或 note_type 含 xhs)。
-    CTH 保护：仅返回太古汇主体数据，不包含 ZBMP 多品牌字段。
-    """
+    """List verified scoped RedNote Canonical records without inferred focus."""
+    conn = None
     try:
+        try:
+            limit = int(request.args.get("limit", 50))
+            offset = int(request.args.get("offset", 0))
+        except (TypeError, ValueError):
+            raise CTHScopedReadError("INVALID_CTH_READ_PAGINATION", 400)
         conn = _get_conn()
-        limit = int(request.args.get("limit", 50))
-        offset = int(request.args.get("offset", 0))
-
-        # 筛选小红书数据（source_platform 包含 xhs 或 rednote）
-        rows = conn.execute(
-            "SELECT * FROM notes WHERE source_platform LIKE '%xhs%' "
-            "OR source_platform LIKE '%rednote%' OR note_type LIKE '%xhs%' "
-            "ORDER BY collected_at DESC LIMIT ? OFFSET ?",
-            (limit, offset)
-        ).fetchall()
-
-        records = []
-        for r in rows:
-            d = dict(r)
-            # CTH 视图：剥离 ZBMP 多品牌字段，仅保留 CTH 相关字段
-            records.append({
-                "note_id": d.get("note_id", ""),
-                "title": d.get("title", ""),
-                "content": d.get("content", "")[:500],  # 截断长内容
-                "url": d.get("url", ""),
-                "author_nickname": d.get("author_nickname", ""),
-                "publish_date": d.get("publish_date", ""),
-                "collected_at": d.get("collected_at", ""),
-                "sentiment": d.get("sentiment", ""),
-                "sentiment_score": d.get("sentiment_score", 0),
-                "risk_level": d.get("risk_level", ""),
-                "likes": d.get("likes") or 0,
-                "comments": d.get("comments") or 0,
-                "collects": d.get("collects") or 0,
-                "shares": d.get("shares") or 0,
-                "topics": d.get("topics", "[]"),
-                "is_taikoo_verified": bool(d.get("is_taikoo_verified", 0)),
-                "platform": d.get("source_platform", "xhs"),
-                "domain": DOMAIN_CTH,
-            })
-
-        # 统计
-        total_row = conn.execute(
-            "SELECT COUNT(*) as c FROM notes WHERE source_platform LIKE '%xhs%' "
-            "OR source_platform LIKE '%rednote%' OR note_type LIKE '%xhs%'"
-        ).fetchone()
-        total = total_row["c"] if total_row else 0
-
-        conn.close()
+        snapshot = read_cth_scoped_canonical(
+            conn, module="content", limit=limit, offset=offset, platform="xiaohongshu",
+        )
+        records = _cth_scoped_projection(snapshot, include_content=True)
+        output = []
+        for record in records:
+            item = dict(record)
+            # Preserve the legacy response field names without converting
+            # unknown engagement into zero or asserting a Taikoo match.
+            item["note_id"] = item.get("source_id")
+            item["publish_date"] = item.get("publish_datetime")
+            item["collected_at"] = item.get("captured_at")
+            item["likes"] = item.get("engagement_likes")
+            item["comments"] = item.get("engagement_comments")
+            item["collects"] = item.get("engagement_collects")
+            item["shares"] = item.get("engagement_shares")
+            item["platform"] = item.get("source_platform")
+            item["domain"] = DOMAIN_CTH
+            output.append(item)
+        canonical = snapshot["canonical"]
+        page = canonical.get("page", {})
         data = {
-            "records": records,
-            "total": total,
+            "scope": snapshot["scope"],
+            "records": output,
+            "total_candidates": page.get("candidate_source_count"),
             "limit": limit,
             "offset": offset,
             "platform": "xiaohongshu",
+            "verified_records_count": len(output),
+            "rejected_count": canonical["rejected_count"],
+            "truncated": page.get("truncated", canonical["truncated"]),
         }
         return _api_response(data=data, domain_id=DOMAIN_CTH, product_id=PRODUCT_CTH)
-    except Exception as e:
-        return _api_response(error=str(e), domain_id=DOMAIN_CTH, product_id=PRODUCT_CTH, status=500)
+    except Exception as exc:
+        return _cth_read_error_response(exc)
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 # ===========================================================================

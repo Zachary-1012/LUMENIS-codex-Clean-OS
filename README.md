@@ -96,10 +96,13 @@ C1–C6/F 的产品研发；不能把 README 的拓扑当作运行状态。
 
 产品词义以 [Product Architecture 当前语义与兼容边界](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)
 为准。[语义清单](00-GOVERNANCE/evidence/round-15/SEMANTIC-CALIBRATION-20261007.md)
-记录当前术语、旧技术标识、源码证据及未闭行为差异。`CTH/BMP` 是序境内的领域；
+记录当前术语、旧技术标识、实际修复与验证边界。`CTH/BMP` 是序境内的领域；
 `ZBMP/zbmp/ZBC_*` 保留技术兼容，不建立第二产品，也不得直接批量替换持久化 ID。
 [OpenAI Math 采用清单](00-GOVERNANCE/evidence/round-15/OPENAI-MATH-ADOPTION-20261007.md)
-记录原文适用条件与现有 Owner 接续位置；研究完成不等于算法已采用、训练已授权或产品已验收。
+记录原文适用条件和实际采用点：严格域/焦点解析、状态来源分离、Provider 兼容标识、
+学习记录晋升后的消费，以及相应正常结果与反例验证。C1–C6/F复用这些已发布公共边界与
+证据，继续自己的真实用户成果；不重复实现或重做原文审计。研究、代码验证、实际业务验收
+和模型训练准入分别记录，不能互相替代。
 
 ## 产品完整闭环职责（不可由 README 摘要缩减）
 

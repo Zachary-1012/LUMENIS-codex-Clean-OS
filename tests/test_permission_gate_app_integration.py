@@ -299,6 +299,19 @@ class TestBeforeRequestHook:
 class TestPermissionGateCore:
     """PermissionGate 核心行为补充测试。"""
 
+    @pytest.fixture(autouse=True)
+    def explicit_system_operation_context(self):
+        from domain_isolation import (
+            DomainContext, get_domain_context, set_domain_context, clear_domain_context,
+        )
+        prior = get_domain_context()
+        set_domain_context(DomainContext(domain_id="system", product_id="SYSTEM"))
+        yield
+        if prior is None:
+            clear_domain_context()
+        else:
+            set_domain_context(prior)
+
     def setup_method(self):
         reset_permission_gate()
         self.gate = PermissionGate()

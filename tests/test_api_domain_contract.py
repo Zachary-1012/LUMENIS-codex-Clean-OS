@@ -18,13 +18,27 @@ sys.path.insert(0, PROJECT_ROOT)
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
     import base64
     from app import app
-    app.config["TESTING"] = True
+    monkeypatch.setitem(app.config, "TESTING", True)
     c = app.test_client()
-    auth = base64.b64encode(b"Zachary:Zachary01").decode()
+    username = os.environ.get("TAIKOO_AUTH_USER")
+    password = os.environ.get("TAIKOO_AUTH_PASSWORD")
+    assert username and password, "tests/conftest.py must provide isolated test credentials"
+    auth = base64.b64encode(f"{username}:{password}".encode()).decode()
     c.environ_base["HTTP_AUTHORIZATION"] = f"Basic {auth}"
+    return c
+
+
+@pytest.fixture
+def cth_client(monkeypatch):
+    """Use the explicit local-workspace principal; CTH scope Permission stays active."""
+    from app import app
+    monkeypatch.setitem(app.config, "TESTING", True)
+    monkeypatch.setitem(app.config, "LUMENIS_OPEN_WORKSPACE", True)
+    c = app.test_client()
+    assert "HTTP_AUTHORIZATION" not in c.environ_base
     return c
 
 
@@ -59,9 +73,9 @@ class TestDualDomainNamespace:
         data = resp.get_json()
         assert data["domain_id"] == "zbmp"
 
-    def test_cth_overview(self, client):
+    def test_cth_overview(self, cth_client):
         """/api/cth/overview 可达且带域标签。"""
-        resp = client.get("/api/cth/overview", headers={
+        resp = cth_client.get("/api/cth/overview", headers={
             "X-Domain-Id": "cth", "X-Product-Id": "CTH"
         })
         assert resp.status_code == 200
@@ -124,9 +138,9 @@ class TestUnifiedResponseEnvelope:
         data = resp.get_json()
         assert "success" in data
 
-    def test_response_has_data_field(self, client):
+    def test_response_has_data_field(self, cth_client):
         """响应带 data 字段。"""
-        resp = client.get("/api/cth/overview", headers={
+        resp = cth_client.get("/api/cth/overview", headers={
             "X-Domain-Id": "cth", "X-Product-Id": "CTH"
         })
         data = resp.get_json()
@@ -138,7 +152,7 @@ class TestUnifiedResponseEnvelope:
         data = resp.get_json()
         assert "error" in data
 
-    def test_response_has_domain_fields(self, client):
+    def test_response_has_domain_fields(self, client, cth_client):
         """响应带 domain_id / product_id 字段。"""
         endpoints = [
             ("/api/zbmp/overview", {"X-Domain-Id": "zbmp", "X-Product-Id": "ZBMP"}),
@@ -146,7 +160,8 @@ class TestUnifiedResponseEnvelope:
             ("/api/system/status", {}),
         ]
         for url, headers in endpoints:
-            resp = client.get(url, headers=headers)
+            active_client = cth_client if url.startswith("/api/cth/") else client
+            resp = active_client.get(url, headers=headers)
             data = resp.get_json()
             assert "domain_id" in data, f"{url} 缺少 domain_id"
             assert "product_id" in data, f"{url} 缺少 product_id"

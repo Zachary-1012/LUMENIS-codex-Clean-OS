@@ -62,10 +62,123 @@ class TestLearningMemory:
         lm = LearningMemory(db_path=seeded_db, enabled=True)
         lm.add_positive_sample({"text": "good output"})
         lm.add_negative_sample({"text": "bad output"})
-        assert len(lm.get_positive_samples()) == 1
-        assert len(lm.get_negative_samples()) == 1
-        assert lm.get_positive_samples()[0]["sample_type"] == "positive"
-        assert lm.get_negative_samples()[0]["sample_type"] == "negative"
+        assert lm.get_positive_samples() == []
+        assert lm.get_negative_samples() == []
+
+        records = lm.query({"learning_type": "correction"}, limit=10)
+        assert len(records) == 2
+        for record in records:
+            assert lm.promote_record(record.record_id, LifecycleStage.REVIEWED)
+            assert lm.promote_record(record.record_id, LifecycleStage.VALIDATED)
+            assert lm.promote_record(record.record_id, LifecycleStage.PROMOTED)
+        assert [s["sample_type"] for s in lm.get_positive_samples()] == ["positive"]
+        assert [s["sample_type"] for s in lm.get_negative_samples()] == ["negative"]
+
+    def test_samples_follow_persisted_lifecycle_across_restart(self, seeded_db):
+        lm = LearningMemory(db_path=seeded_db, enabled=True)
+        rec = lm.record_correction(
+            original_output="draft",
+            corrected_output="reviewed result",
+            sample_type=SampleType.POSITIVE,
+        )
+        assert rec is not None
+        assert lm.get_positive_samples() == []
+
+        assert lm.promote_record(rec.record_id, LifecycleStage.REVIEWED)
+        assert lm.promote_record(rec.record_id, LifecycleStage.VALIDATED)
+        assert lm.promote_record(rec.record_id, LifecycleStage.PROMOTED)
+        assert lm.get_positive_samples()[0]["corrected"] == "reviewed result"
+
+        restarted = LearningMemory(db_path=seeded_db, enabled=True)
+        promoted = restarted.get_positive_samples()
+        assert len(promoted) == 1
+        assert promoted[0]["learning_record_id"] == rec.record_id
+        assert promoted[0]["lifecycle_stage"] == "promoted"
+
+        assert restarted.promote_record(rec.record_id, LifecycleStage.ARCHIVED)
+        assert lm.get_positive_samples() == []  # 旧实例缓存也不能覆盖持久化归档状态。
+        after_archive = LearningMemory(db_path=seeded_db, enabled=True)
+        assert after_archive.get_positive_samples() == []
+
+    def test_configured_db_read_failure_cannot_revive_archived_learning(self, seeded_db, monkeypatch):
+        import sqlite3
+        import lumenis.shared.learning.memory as memory_module
+
+        stale = LearningMemory(db_path=seeded_db, enabled=True)
+        sample = stale.record_correction(
+            original_output="draft",
+            corrected_output="promoted sample",
+            sample_type=SampleType.POSITIVE,
+        )
+        rule = stale.record_learning(
+            learning_type=LearningType.RULE_SUGGESTION,
+            content={"suggestion_text": "promoted rule"},
+        )
+        assert sample is not None and rule is not None
+        for record_id in (sample.record_id, rule.record_id):
+            assert stale.promote_record(record_id, LifecycleStage.REVIEWED)
+            assert stale.promote_record(record_id, LifecycleStage.VALIDATED)
+            assert stale.promote_record(record_id, LifecycleStage.PROMOTED)
+        assert stale.get_positive_samples()
+        assert stale.get_promoted_rules()
+
+        # A second owner archives both persisted records while `stale` retains
+        # PROMOTED cache entries from before the archive.
+        archive_owner = LearningMemory(db_path=seeded_db, enabled=True)
+        assert archive_owner.promote_record(sample.record_id, LifecycleStage.ARCHIVED)
+        assert archive_owner.promote_record(rule.record_id, LifecycleStage.ARCHIVED)
+
+        def locked_connection(_db_path):
+            raise sqlite3.OperationalError("database is locked")
+
+        monkeypatch.setattr(memory_module, "get_db_connection", locked_connection)
+        assert stale.get_positive_samples() == []
+        assert stale.get_promoted_rules() == []
+        # The stale PROMOTED value must not make an idempotent promotion appear
+        # successful when the configured lifecycle owner cannot be read.
+        assert stale.promote_record(sample.record_id, LifecycleStage.PROMOTED) is False
+
+    def test_configured_db_missing_record_cannot_promote_cached_record(self, seeded_db):
+        import sqlite3
+
+        lm = LearningMemory(db_path=seeded_db, enabled=True)
+        rec = lm.record_correction(
+            original_output="draft",
+            corrected_output="uncertain sample",
+            sample_type=SampleType.POSITIVE,
+        )
+        assert rec is not None
+        conn = sqlite3.connect(seeded_db)
+        conn.execute(
+            "DELETE FROM agent_learning_records WHERE record_id=?",
+            (rec.record_id,),
+        )
+        conn.commit()
+        conn.close()
+
+        assert lm.promote_record(rec.record_id, LifecycleStage.REVIEWED) is False
+        assert rec.value["lifecycle_stage"] == LifecycleStage.RAW.value
+        assert lm.get_positive_samples() == []
+
+    def test_explicit_memory_only_learning_lifecycle(self):
+        lm = LearningMemory(enabled=True)
+        sample = lm.record_correction(
+            original_output="draft",
+            corrected_output="memory-only promoted sample",
+            sample_type=SampleType.POSITIVE,
+        )
+        rule = lm.record_learning(
+            learning_type=LearningType.RULE_SUGGESTION,
+            content={"suggestion_text": "memory-only promoted rule"},
+        )
+        for record in (sample, rule):
+            assert record is not None
+            assert lm.promote_record(record.record_id, LifecycleStage.REVIEWED)
+            assert lm.promote_record(record.record_id, LifecycleStage.VALIDATED)
+            assert lm.promote_record(record.record_id, LifecycleStage.PROMOTED)
+
+        assert lm.get_positive_samples()[0]["corrected"] == "memory-only promoted sample"
+        assert lm.get_promoted_rules()[0]["content"]["suggestion_text"] == "memory-only promoted rule"
 
     def test_promote_record(self, seeded_db):
         lm = LearningMemory(db_path=seeded_db, enabled=True)

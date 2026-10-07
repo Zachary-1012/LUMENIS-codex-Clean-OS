@@ -759,12 +759,133 @@ def api_intelligence_evidence():
 
 
 def _get_domain_context():
-    """Legacy domain-API resolver; its cth fallback is compatibility-only, never GLOBAL / ALL truth."""
-    dom = (request.cookies.get('zbc_domain')
-           or request.headers.get('X-Domain-Id')
-           or request.args.get('domain')
-           or 'cth')
-    return dom if dom in ('zbmp', 'cth', 'system') else 'cth'
+    """Resolve an explicit domain selection without inventing a CTH default.
+
+    The shared request resolver owns header/session/domain_id precedence. The
+    old ``zbc_domain`` cookie and ``domain`` query key remain accepted as
+    compatibility selectors only when they agree with that resolved identity.
+    Selection does not grant access; each data path still performs its owner
+    Permission check.
+    """
+    from domain_isolation import DomainContext, get_domain_context, set_domain_context
+    from subject_context import (
+        get_request_brand, resolve_request_identity, set_thread_context,
+    )
+
+    domain, product = resolve_request_identity()
+    legacy_values = []
+    cookie_domain = request.cookies.get("zbc_domain")
+    if cookie_domain is not None:
+        legacy_values.append(cookie_domain)
+    if "domain" in request.args:
+        values = request.args.getlist("domain")
+        if len(values) != 1:
+            raise ValueError("INVALID_DOMAIN_IDENTITY")
+        legacy_values.append(values[0])
+
+    legacy_identity = None
+    for value in legacy_values:
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("INVALID_DOMAIN_IDENTITY")
+        from domain_isolation import resolve_domain_identity
+        candidate = resolve_domain_identity(value)
+        if legacy_identity is not None and legacy_identity != candidate:
+            raise ValueError("DOMAIN_IDENTITY_CONFLICT")
+        legacy_identity = candidate
+
+    if domain and legacy_identity and (domain, product) != legacy_identity:
+        raise ValueError("DOMAIN_IDENTITY_CONFLICT")
+    if not domain and legacy_identity:
+        domain, product = legacy_identity
+
+    bound = get_domain_context()
+    if bound and bound.domain_id:
+        if domain and (bound.domain_id, bound.product_id) != (domain, product):
+            raise ValueError("DOMAIN_CONTEXT_CONFLICT")
+        if not domain:
+            domain, product = bound.domain_id, bound.product_id
+
+    if domain and (not bound or not bound.domain_id):
+        # Compatibility selectors bind only a validated domain. Focus is kept
+        # only when it was explicitly supplied in request metadata.
+        subject_id = request.headers.get("X-Subject-ID", "")
+        brand_key = get_request_brand() or ""
+        context = DomainContext(domain_id=domain, product_id=product,
+                                subject_id=subject_id, brand_key=brand_key)
+        set_domain_context(context)
+        set_thread_context(context.to_subject_context())
+    return domain or None
+
+
+def _domain_api_selection_only(domain=None):
+    return {
+        "ok": True,
+        "domain": domain,
+        "mode": "GLOBAL_ALL" if domain is None else "DOMAIN_SELECTED",
+        "data_state": "DOMAIN_UNSELECTED" if domain is None else "SCOPE_NOT_READ",
+        "selection_only": True,
+    }
+
+
+def _domain_api_canonical(domain, module):
+    """Use the existing scoped Canonical and Permission owners for API reads."""
+    import api_dual_domain
+    from domain_isolation import get_domain_context
+
+    if domain == "system":
+        raise ValueError("BUSINESS_DOMAIN_REQUIRED")
+    if domain == "cth":
+        connection = api_dual_domain._get_conn()
+        try:
+            result = api_dual_domain.read_cth_scoped_canonical(
+                connection, module=module, limit=100,
+            )
+        finally:
+            connection.close()
+        return result["scope"], result["canonical"]
+
+    if domain != "zbmp":
+        raise ValueError("BUSINESS_DOMAIN_REQUIRED")
+
+    # Reuse the existing experience scope owner. It performs fresh Permission
+    # checks for GLOBAL_ALL and exact registered BrandFocus requests.
+    from experience_runtime import _bmp01_read_scope
+    binding, error = _bmp01_read_scope()
+    if error is not None:
+        response, status = error
+        raise _DomainApiScopeError(response.get_json().get("code", "SCOPE_UNAVAILABLE"), status)
+    current = get_domain_context()
+    if current and (current.subject_id or current.brand_key):
+        if (binding.get("canonical_scope") != "FOCUS"
+                or binding.get("subject_id") != current.subject_id):
+            raise _DomainApiScopeError("FOCUS_SCOPE_HEADER_REQUIRED", 400)
+
+    from lumenis.shared.database import get_repository
+    import canonical_data
+    connection = get_repository().connect()
+    try:
+        result = canonical_data.list_scoped_canonical(
+            connection, product_id="ZBMP",
+            brand_focus_id=binding.get("brand_focus_id"), limit=100,
+        )
+    finally:
+        connection.close()
+    scope = {
+        "mode": binding["canonical_scope"],
+        "domain_id": binding["domain_id"],
+        "product_id": binding["product_id"],
+        "subject_id": binding.get("subject_id"),
+        "brand_focus_id": binding.get("brand_focus_id"),
+        "global": binding["canonical_scope"] == "GLOBAL_ALL",
+    }
+    return scope, result
+
+
+class _DomainApiScopeError(RuntimeError):
+    def __init__(self, code, status):
+        super().__init__(code)
+        self.code = code
+        self.status = status
 
 
 
@@ -772,89 +893,136 @@ def _get_domain_context():
 
 @domain_api_bp.route("/api/domain/overview")
 def api_domain_overview():
-    """Domain-scoped overview data — 绑定真实 /api/stats + domain context。
-
-    Returns stats filtered by current domain context. CTH uses subject_rules
-    filtering (199 brands / 9 industries); ZBMP returns multi-brand aggregate.
-    """
-    import database as db
-    domain = _get_domain_context()
+    """Compatibility overview backed by the current scoped Canonical owner."""
     try:
-        stats = db.get_stats()
-        # CTH: subject-filtered stats already applied by db layer (subject_rules)
-        # ZBMP: multi-brand aggregate (current db is CTH-scoped, mark as cross-domain)
+        domain = _get_domain_context()
+        if domain is None:
+            return jsonify(_domain_api_selection_only())
+        scope, canonical = _domain_api_canonical(domain, "content")
+        records = canonical.get("records", [])
+        stats = {
+            "returned_records": len(records),
+            "candidate_count": canonical.get("candidate_count"),
+            "truncated": canonical.get("truncated"),
+        }
+        for field, output in (("sentiment", "sentiment_distribution"),
+                              ("risk_level", "risk_distribution"),
+                              ("source_platform", "platform_distribution")):
+            counts = {}
+            for row in records:
+                value = row.get(field)
+                if isinstance(value, str) and value.strip():
+                    counts[value] = counts.get(value, 0) + 1
+            stats[output] = counts
         result = {
             "ok": True,
             "domain": domain,
             "domain_name": "CTH / LUMENIS Commerce Operations" if domain == "cth" else "BMP / LUMENIS Brand & Market" if domain == "zbmp" else "SYSTEM",
             "stats": stats,
+            "scope": scope,
+            "canonical_records": records,
+            "data_state": "READY" if records else "NOT_COLLECTED",
             "overview": {
                 "trend": [],  # populated by /api/metric-trend for specific entities
                 "time_range": "all",
             },
-            "data_source": "database.get_stats() (real, no mock)",
-            "subject_filter": "cth_subject_rules" if domain == "cth" else "multi_brand" if domain == "zbmp" else "system_level",
+            "data_source": "permission-checked canonical_data.list_scoped_canonical",
         }
         return jsonify(result)
+    except _DomainApiScopeError as e:
+        return jsonify({"ok": False, "code": e.code}), e.status
+    except ValueError as e:
+        return jsonify({"ok": False, "code": str(e)}), 400
     except Exception as e:
-        return jsonify({"ok": False, "domain": domain, "error": str(e), "stats": {}}), 500
+        if hasattr(e, "code") and hasattr(e, "status"):
+            return jsonify({"ok": False, "code": e.code}), e.status
+        return jsonify({"ok": False, "code": "DOMAIN_OVERVIEW_UNAVAILABLE", "error": str(e)}), 503
 
 
 @domain_api_bp.route("/api/domain/brands")
 def api_domain_brands():
-    """Domain-scoped brand list — CTH: 199 brands; ZBMP: managed brands."""
-    import database as db
-    domain = _get_domain_context()
+    """Compatibility brand projection from the authorized Canonical slice."""
     try:
-        # CTH: get brand distribution from notes
-        categories = db.get_category_distribution()
-        brands = []
-        if isinstance(categories, list):
-            for cat in categories[:50]:
-                if isinstance(cat, dict):
-                    brands.append({"name": cat.get('category', cat.get('name', 'unknown')),
-                                   "count": cat.get('count', 0)})
-                elif isinstance(cat, (list, tuple)) and len(cat) >= 2:
-                    brands.append({"name": str(cat[0]), "count": int(cat[1])})
+        domain = _get_domain_context()
+        if domain is None:
+            return jsonify({**_domain_api_selection_only(), "brands": [], "total": None})
+        scope, canonical = _domain_api_canonical(domain, "content")
+        counts = {}
+        for row in canonical.get("records", []):
+            name = row.get("brand_focus_id") if domain == "zbmp" else row.get("brand_key")
+            if isinstance(name, str) and name.strip():
+                counts[name] = counts.get(name, 0) + 1
+        brands = [{"name": name, "count": count} for name, count in sorted(counts.items())]
         return jsonify({
-            "ok": True, "domain": domain, "brands": brands,
+            "ok": True, "domain": domain, "scope": scope,
+            "data_state": "READY" if brands else "NOT_COLLECTED", "brands": brands,
             "total": len(brands),
-            "cth_brand_count": 199, "cth_industry_count": 9,
-            "data_source": "database.get_category_distribution() (real)",
+            "canonical_returned": canonical.get("returned_count", 0),
+            "truncated": canonical.get("truncated"),
+            "data_source": "permission-checked canonical_data.list_scoped_canonical",
         })
+    except _DomainApiScopeError as e:
+        return jsonify({"ok": False, "code": e.code}), e.status
+    except ValueError as e:
+        return jsonify({"ok": False, "code": str(e)}), 400
     except Exception as e:
-        return jsonify({"ok": False, "domain": domain, "error": str(e), "brands": []}), 500
+        if hasattr(e, "code") and hasattr(e, "status"):
+            return jsonify({"ok": False, "code": e.code}), e.status
+        return jsonify({"ok": False, "code": "DOMAIN_BRANDS_UNAVAILABLE", "error": str(e)}), 503
 
 
 @domain_api_bp.route("/api/domain/risk")
 def api_domain_risk():
-    """Domain-scoped risk data — 从真实 risk_alerts 获取。"""
-    import database as db
-    domain = _get_domain_context()
+    """Compatibility risk view from the authorized Canonical slice."""
     try:
-        risks = db.get_high_risk_notes(30)
-        stats = db.get_stats()
+        domain = _get_domain_context()
+        if domain is None:
+            return jsonify({**_domain_api_selection_only(), "risk_notes": [], "risk_stats": {}})
+        scope, canonical = _domain_api_canonical(domain, "reports")
+        records = canonical.get("records", [])
+        risk_notes = [row for row in records
+                      if isinstance(row.get("risk_level"), str)
+                      and row["risk_level"].strip().lower() in {"critical", "high", "medium", "低", "中", "高", "严重"}]
+        risk_stats = {}
+        for row in records:
+            level = row.get("risk_level")
+            if isinstance(level, str) and level.strip():
+                key = level.strip().lower()
+                risk_stats[key] = risk_stats.get(key, 0) + 1
         return jsonify({
-            "ok": True, "domain": domain,
-            "risk_notes": risks if isinstance(risks, list) else [],
-            "risk_stats": {
-                "critical": 0,
-                "high": stats.get('high_risk', 0),
-                "medium": stats.get('medium_risk', 0),
-                "low": stats.get('low_risk', 0),
-            },
-            "data_source": "database.get_high_risk_notes() + get_stats() (real)",
+            "ok": True, "domain": domain, "scope": scope,
+            "data_state": "READY" if records else "NOT_COLLECTED",
+            "risk_notes": risk_notes,
+            "risk_stats": risk_stats,
+            "canonical_returned": canonical.get("returned_count", 0),
+            "truncated": canonical.get("truncated"),
+            "data_source": "permission-checked canonical_data.list_scoped_canonical",
         })
+    except _DomainApiScopeError as e:
+        return jsonify({"ok": False, "code": e.code}), e.status
+    except ValueError as e:
+        return jsonify({"ok": False, "code": str(e)}), 400
     except Exception as e:
-        return jsonify({"ok": False, "domain": domain, "error": str(e), "risk_notes": []}), 500
+        if hasattr(e, "code") and hasattr(e, "status"):
+            return jsonify({"ok": False, "code": e.code}), e.status
+        return jsonify({"ok": False, "code": "DOMAIN_RISK_UNAVAILABLE", "error": str(e)}), 503
 
 
 @domain_api_bp.route("/api/domain/context")
 def api_domain_context():
     """Return current domain context + isolation boundaries."""
-    domain = _get_domain_context()
     try:
+        domain = _get_domain_context()
         from domain_isolation import DOMAINS, get_domain
+        if domain is None:
+            return jsonify({
+                "ok": True,
+                "current_domain": None,
+                "domain_info": None,
+                "selection": "GLOBAL / ALL",
+                "available_domains": {k: v.name for k, v in DOMAINS.items()},
+                "header_required": "X-Domain-Id or explicit context selection",
+            })
         d = get_domain(domain)
         return jsonify({
             "ok": True,
@@ -863,5 +1031,7 @@ def api_domain_context():
             "available_domains": {k: v.name for k, v in DOMAINS.items()},
             "header_required": "X-Domain-Id or cookie zbc_domain",
         })
+    except ValueError as e:
+        return jsonify({"ok": False, "current_domain": None, "code": str(e)}), 400
     except Exception as e:
         return jsonify({"ok": False, "current_domain": domain, "error": str(e)}), 500

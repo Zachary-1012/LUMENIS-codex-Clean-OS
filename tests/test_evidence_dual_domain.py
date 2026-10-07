@@ -215,8 +215,8 @@ class TestEvidenceImmutability:
     """验证证据不可变性在双域下仍生效。"""
 
     def test_immutable_fields_listed(self):
-        assert "domain_id" not in EvidenceStore.IMMUTABLE_FIELDS or True
-        # domain_id 是写入时确定的，属于不可变范畴
+        assert "domain_id" in EvidenceStore.IMMUTABLE_FIELDS
+        assert "product_id" in EvidenceStore.IMMUTABLE_FIELDS
         assert "raw_content" in EvidenceStore.IMMUTABLE_FIELDS
         assert "content_hash" in EvidenceStore.IMMUTABLE_FIELDS
 
@@ -234,3 +234,22 @@ class TestEvidenceImmutability:
         assert new1 is True
         assert new2 is False
         assert ev1.evidence_id == ev2.evidence_id
+
+    def test_identical_content_does_not_dedupe_across_domain_or_scope(self, temp_db):
+        store = EvidenceStore(temp_db)
+        cth, cth_new = store.add_evidence(
+            source_type="web", source_url="same-url", raw_content="same text",
+            domain_id="cth", product_id="CTH", subject_scope="GLOBAL / ALL",
+        )
+        bmp, bmp_new = store.add_evidence(
+            source_type="web", source_url="same-url", raw_content="same text",
+            domain_id="zbmp", product_id="BMP", subject_scope="GLOBAL / ALL",
+        )
+        focused, focused_new = store.add_evidence(
+            source_type="web", source_url="same-url", raw_content="same text",
+            domain_id="cth", product_id="CTH", subject_scope="SUBJECT-1",
+        )
+
+        assert cth_new and bmp_new and focused_new
+        assert cth.evidence_id != bmp.evidence_id
+        assert cth.evidence_id != focused.evidence_id

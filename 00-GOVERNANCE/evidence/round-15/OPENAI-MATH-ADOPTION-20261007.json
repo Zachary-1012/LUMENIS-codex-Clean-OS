@@ -2,12 +2,41 @@
   "schema": "lumenis.research-adoption-evidence/v1",
   "authority": false,
   "research_at": "2026-10-07T22:33:55.156246+08:00",
+  "reassessed_at": "2026-10-08T00:41:42+08:00",
   "product_baseline": "f6dac9216cbb331e730329a70513e0c90c306e73",
+  "implementation_baseline": "6ff2cc0b68d8b9c3ae8ea658678242df8deac7dc",
   "math_baseline": "adc7f1241b42e322a6451854ab7e4b4c146bf78a",
-  "status": "RESEARCH_AND_ADOPTION_PREPARATION_NOT_PRODUCT_IMPLEMENTATION",
+  "status": "RESEARCH_ADOPTED_WITH_BOUNDED_SOURCE_REPAIR",
   "formal_verification": "NOT_REPLAYED",
   "training": "NOT_ADMITTED_NOT_RUN",
-  "dispatch": "WAIT_FOR_PRODUCT_OWNER",
+  "dispatch": "BOUNDED_REPAIR_AUTHORIZED; GLOBAL_C1_C6_F_J1_J8_DISPATCH_NOT_IMPLIED",
+  "implementation_updates": [
+    {
+      "finding": "Accepted/rejected correction records remained RAW but entered process-local sample lists and the prompt builder did not enforce lifecycle; samples disappeared after restart.",
+      "files": [
+        "lumenis/shared/learning/loop.py",
+        "lumenis/shared/learning/memory.py",
+        "tests/agent_memory/test_learning_loop.py",
+        "tests/agent_memory/test_learning_memory.py",
+        "tests/agent_memory/test_memory_integration.py"
+      ],
+      "repair": "Persist sample_type on the existing correction record; only PROMOTED records are returned; persisted lifecycle overrides stale memory and ARCHIVED records disappear. No automatic promotion or new approval owner.",
+      "verification": "39 targeted agent_memory tests passed using isolated temporary SQLite; includes raw exclusion, promotion, restart readback, archive/revocation, archived-cache rejection after simulated sqlite3.OperationalError, missing-row rejection and explicit memory-only operation. The connection-error injection does not simulate OS file-lock contention.",
+      "state": "IMPLEMENTED_TARGETED_TESTED_SAME_CHANGE_DELIVERY"
+    },
+    {
+      "finding": "Collector status registration order could change route meaning and metadata NEED_VERIFY could be confused with cached platform verification/challenge state.",
+      "files": [
+        "lumenis/shared/collector/collector_status_api.py",
+        "lumenis/shared/collector/collection_api.py",
+        "tests/test_collector_multi_platform.py",
+        "tests/test_collector_mode_default.py"
+      ],
+      "repair": "Share one status payload across compatibility routes and distinguish auth metadata from cached platform verification using existing fields/source/freshness.",
+      "verification": "2 targeted status API tests passed; no cookie/session read, network request, service start or production DB access.",
+      "state": "IMPLEMENTED_TARGETED_TESTED_SAME_CHANGE_DELIVERY"
+    }
+  ],
   "cards": [
     {
       "family_id": 102,
@@ -403,7 +432,7 @@
       "next_action": "Existing owners retain seven invariant checks; F consumes qualified business states, no blanket VERIFIED success badge."
     }
   ],
-  "stop": "No closure development, training, collection scaling, frontend work or release until explicit Product Owner approval.",
+  "stop": "The Product Owner approved this bounded research application and repair. Do not infer global C1-C6/F/J1-J8 dispatch, GPU training, collection scaling, frontend execution or release from this approval; current source changes remain local and unpublished pending integration and acceptance.",
   "source_manifests": {
     "pdf-139-140-manifest.json": [
       {
@@ -1070,5 +1099,8 @@
       }
     ],
     "research-139-140-formal": []
-  }
+  },
+  "current_adoption_state": "IMPLEMENTED_AND_ISOLATED_INTEGRATION_TESTED",
+  "delivery_evidence": "SEMANTIC-CALIBRATION-20261007.json#repair_verification",
+  "historical_status_note": "Earlier preparation/LOCAL_UNPUBLISHED states describe 2026-10-07 or intermediate evidence; current delivery is this same-change repair, not runtime release."
 }

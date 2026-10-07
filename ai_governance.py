@@ -331,7 +331,15 @@ def call_ai_with_governance(messages: List[Dict], endpoint: str = "generic",
         from ai_domain_context import (
             get_current_domain, validate_prompt_domain_isolation, DomainMismatchError,
         )
-        expected_domain = domain_id or get_current_domain()
+        from domain_isolation import resolve_domain_identity
+        if domain_id is None:
+            expected_domain = get_current_domain()
+        else:
+            expected_domain, _ = resolve_domain_identity(domain_id=domain_id)
+            if not expected_domain:
+                raise ValueError("AI_BUSINESS_DOMAIN_REQUIRED")
+        if expected_domain not in {"cth", "zbmp"}:
+            raise ValueError("AI_BUSINESS_DOMAIN_UNAVAILABLE")
         prompt_domain = validate_prompt_domain_isolation(messages)
         if prompt_domain and prompt_domain != expected_domain:
             return mark_ai_output({
@@ -341,8 +349,13 @@ def call_ai_with_governance(messages: List[Dict], endpoint: str = "generic",
                 "fallback": "domain_violation_blocked",
                 "domain_id": expected_domain,
             }, endpoint=endpoint, provider=provider)
-    except ImportError:
-        expected_domain = domain_id or "cth"
+    except (ImportError, ValueError) as exc:
+        return mark_ai_output({
+            "ok": False,
+            "error": str(exc) or "AI_BUSINESS_DOMAIN_UNAVAILABLE",
+            "fallback": "domain_context_unavailable",
+            "domain_id": None,
+        }, endpoint=endpoint, provider=provider)
 
     # 0b. OWASP Agentic Top10 安全门（IC-035）
     sec_check = owasp_agentic_security_check(messages, endpoint=endpoint)

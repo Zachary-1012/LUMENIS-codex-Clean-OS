@@ -579,6 +579,39 @@ def get_high_risk_notes(limit=20):
     with get_db() as conn: return [note_to_dict(r) for r in conn.execute(sql,tuple(sp)+(limit,)).fetchall()]
 
 
+def get_high_risk_note_dismissal_states(note_ids):
+    """Read only dismissal states for a caller's already-authorized note IDs.
+
+    The active-risk compatibility API must first resolve an exact, Permission-
+    checked Canonical source set. This helper intentionally reads neither note
+    content nor scope and never searches outside those supplied IDs; it only
+    reuses the existing ``notes.negative_confirmed`` review state.
+    """
+    if not isinstance(note_ids, (list, tuple)) or not note_ids:
+        raise ValueError("NOTE_REVIEW_IDS_REQUIRED")
+    if len(note_ids) > 100:
+        raise ValueError("NOTE_REVIEW_IDS_LIMIT_EXCEEDED")
+    normalized = []
+    seen = set()
+    for note_id in note_ids:
+        if not isinstance(note_id, str) or not note_id or note_id != note_id.strip():
+            raise ValueError("INVALID_NOTE_REVIEW_ID")
+        if note_id not in seen:
+            normalized.append(note_id)
+            seen.add(note_id)
+    if not normalized:
+        raise ValueError("NOTE_REVIEW_IDS_REQUIRED")
+
+    placeholders = ",".join("?" for _ in normalized)
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT note_id, COALESCE(negative_confirmed, 0) AS review_state "
+            f"FROM notes WHERE note_id IN ({placeholders})",
+            tuple(normalized),
+        ).fetchall()
+    return {str(row["note_id"]): row["review_state"] for row in rows}
+
+
 def get_category_distribution():
     base,sp=_verified_base()
     with get_db() as conn: return [{'category':r['category'],'count':r['cnt']} for r in conn.execute(f"SELECT category,COUNT(*) cnt FROM notes WHERE {base} GROUP BY category ORDER BY cnt DESC",tuple(sp)).fetchall()]

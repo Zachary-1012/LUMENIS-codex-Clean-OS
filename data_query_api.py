@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import database as db
+import json
 from flask import Blueprint, jsonify, request
 from lumenis.system.collector.guard.resource_guard import ResourceGuard
 
@@ -55,27 +56,138 @@ def register_data_query_api(app):
     def api_risk_alerts():
         return jsonify({'ok': True, 'notes': db.get_high_risk_notes(30)})
 
-    # P0 断链修复：前端调用 /api/risks/active（复数），原路由为 /api/risk-alerts。
-    # 添加 /api/risks/active 和 /api/risk/active（单数）兼容路由，返回活跃风险（high/medium/critical，未驳回）。
+    # P0 断链兼容路由：保留两个旧 URL，但风险读取必须有显式业务域，
+    # 并复用当前 Permission + Canonical owner；不能把跨域 GLOBAL 映射成旧 notes 查询。
     @bp.route('/api/risks/active', endpoint='api_risks_active')
     @bp.route('/api/risk/active', endpoint='api_risk_active')
     def api_risks_active():
-        """活跃风险列表：high/medium/critical 风险且未人工驳回的笔记。"""
+        """读取所选业务域中已授权 Canonical 投影的活跃风险记录。"""
         limit = max(1, min(200, request.args.get('limit', 50, type=int)))
-        notes = db.get_high_risk_notes(limit)
-        # 按风险等级分组统计
-        by_level = {}
-        for n in notes:
-            lvl = n.get('risk_level', 'unknown')
-            by_level[lvl] = by_level.get(lvl, 0) + 1
-        return jsonify({
-            'ok': True,
-            'risks': notes,
-            'total': len(notes),
-            'by_level': by_level,
-            'limit': limit,
-            'source': 'notes (risk_level IN critical/high/medium, negative_confirmed<>2)',
-        })
+        try:
+            # This legacy URL is neutral across CTH/BMP. Requiring an explicit
+            # domain keeps GLOBAL / ALL from silently selecting a CTH policy or
+            # reading the unscoped legacy notes table.
+            import lumenis_app_api
+            domain = lumenis_app_api._get_domain_context()
+            if domain is None:
+                return jsonify({
+                    'ok': False,
+                    'code': 'DOMAIN_SELECTION_REQUIRED',
+                    'error': 'Select CTH or BMP before reading active risks.',
+                    'risks': None,
+                    'total': None,
+                    'selection_required': True,
+                }), 400
+
+            # Resolve the existing domain risk policy as an explicit support
+            # check; records themselves remain sourced from scoped Canonical.
+            from risk_engine import get_risk_policy
+            policy = get_risk_policy(domain)
+            scope, canonical = lumenis_app_api._domain_api_canonical(domain, 'reports')
+            records = canonical.get('records', [])
+            active_levels = {'critical', 'high', 'medium', '严重', '高', '中'}
+            risk_candidates = [
+                row for row in records
+                if isinstance(row.get('risk_level'), str)
+                and row['risk_level'].strip().lower() in active_levels
+            ]
+
+            # Preserve the established human-dismissal behavior, but only for
+            # note IDs already selected by the signed Canonical scope read.
+            # Non-note rows or an inconsistent source reference cannot safely
+            # inherit a note review state, so fail closed rather than surface a
+            # possibly dismissed record as active.
+            review_ids = []
+            for row in risk_candidates:
+                source_id = row.get('source_id')
+                raw_ref = row.get('raw_ref')
+                try:
+                    source_ref = json.loads(raw_ref) if isinstance(raw_ref, str) else None
+                except (TypeError, ValueError):
+                    source_ref = None
+                if (
+                    row.get('source_type') != 'note'
+                    or row.get('source_table') != 'notes'
+                    or not isinstance(source_id, str) or not source_id.strip()
+                    or row.get('external_id') != source_id
+                    or not isinstance(source_ref, dict)
+                    or source_ref.get('table') != 'notes'
+                    or source_ref.get('note_id') != source_id
+                ):
+                    return jsonify({
+                        'ok': False,
+                        'code': 'RISK_DISMISSAL_SOURCE_MAPPING_UNAVAILABLE',
+                        'error': 'Canonical risk source cannot be matched safely to its review state.',
+                        'risks': None,
+                        'total': None,
+                        'data_state': 'UNAVAILABLE',
+                    }), 503
+                review_ids.append(source_id)
+
+            if risk_candidates:
+                try:
+                    review_states = db.get_high_risk_note_dismissal_states(review_ids)
+                except Exception:
+                    return jsonify({
+                        'ok': False,
+                        'code': 'RISK_DISMISSAL_STATE_UNAVAILABLE',
+                        'error': 'The existing note review state could not be read.',
+                        'risks': None,
+                        'total': None,
+                        'data_state': 'UNAVAILABLE',
+                    }), 503
+                if set(review_states) != set(review_ids) or any(
+                    isinstance(state, bool) or state not in (0, 1, 2)
+                    for state in review_states.values()
+                ):
+                    return jsonify({
+                        'ok': False,
+                        'code': 'RISK_DISMISSAL_STATE_UNAVAILABLE',
+                        'error': 'A Canonical risk source has no reliable note review state.',
+                        'risks': None,
+                        'total': None,
+                        'data_state': 'UNAVAILABLE',
+                    }), 503
+                risk_candidates = [
+                    row for row in risk_candidates
+                    if review_states[row['source_id']] != 2
+                ]
+
+            risks = risk_candidates[:limit]
+
+            by_level = {}
+            for row in risks:
+                level = row['risk_level'].strip().lower()
+                by_level[level] = by_level.get(level, 0) + 1
+
+            return jsonify({
+                'ok': True,
+                'domain': domain,
+                'domain_id': scope.get('domain_id'),
+                'product_id': scope.get('product_id'),
+                'scope': scope,
+                'risks': risks,
+                'total': len(risks),
+                'by_level': by_level,
+                'limit': limit,
+                'risk_policy_version': policy.policy_version,
+                'canonical_returned': canonical.get('returned_count', len(records)),
+                'canonical_candidate_count': canonical.get('candidate_count'),
+                'truncated': canonical.get('truncated'),
+                'data_state': 'READY' if records else 'NOT_COLLECTED',
+                'source': 'permission-checked canonical_data.list_scoped_canonical',
+                'dismissal_state': 'APPLIED_FOR_CANONICAL_NOTE_SOURCE_IDS',
+            })
+        except ValueError as exc:
+            return jsonify({'ok': False, 'code': str(exc)}), 400
+        except Exception as exc:
+            if hasattr(exc, 'code') and hasattr(exc, 'status'):
+                return jsonify({'ok': False, 'code': exc.code}), exc.status
+            return jsonify({
+                'ok': False,
+                'code': 'RISK_CANONICAL_UNAVAILABLE',
+                'error': 'Authorized Canonical risk data is unavailable.',
+            }), 503
 
     @bp.route('/api/hot-notes', endpoint='api_hot_notes')
     def api_hot_notes():

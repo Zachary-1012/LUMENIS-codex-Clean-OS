@@ -5,7 +5,6 @@ remains a persisted compatibility identifier. Guangzhou Taikoo Hui is a
 controlled reference Subject, not the default product context. GLOBAL / ALL
 selection is owned by the canonical context contract.
 """
-import os
 import threading
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -29,16 +28,40 @@ _DOMAIN_TO_PRODUCT = {v: k for k, v in _PRODUCT_TO_DOMAIN.items()}
 
 
 def product_to_domain(product_id: str) -> str:
-    """旧 product_id -> domain_id 映射；未知回退 cth 是待迁移兼容行为。
-
-    UNKNOWN 不等于 CTH；该返回值本身不证明域有效或拥有 Permission。
-    """
-    return _PRODUCT_TO_DOMAIN.get(product_id, DOMAIN_CTH)
+    """Validate a domain identity; BMP retains the persisted ZBMP identifier."""
+    key = product_id.strip().upper() if isinstance(product_id, str) else ""
+    if key == "BMP":
+        key = PRODUCT_ZBMP
+    if key not in _PRODUCT_TO_DOMAIN:
+        raise ValueError("INVALID_PRODUCT_ID")
+    return _PRODUCT_TO_DOMAIN[key]
 
 
 def domain_to_product(domain_id: str) -> str:
-    """旧 domain_id -> product_id 映射；未知回退 CTH 不代表已校验域身份。"""
-    return _DOMAIN_TO_PRODUCT.get(domain_id, PRODUCT_CTH)
+    """Validate domain IDs without assigning unknown inputs to CTH."""
+    key = domain_id.strip().lower() if isinstance(domain_id, str) else ""
+    if key == "bmp":
+        key = DOMAIN_ZBMP
+    if key not in _DOMAIN_TO_PRODUCT:
+        raise ValueError("INVALID_DOMAIN_ID")
+    return _DOMAIN_TO_PRODUCT[key]
+
+
+def resolve_domain_identity(domain_id=None, product_id=None):
+    """Resolve an optional coherent pair. Empty pair means no selected domain.
+
+    It grants no permission and selects no Subject. Explicit mismatches fail
+    before downstream routing; callers requiring a domain must reject ('', '').
+    """
+    did = product_to_domain(domain_to_product(domain_id)) if domain_id is not None and domain_id != "" else ""
+    pid = domain_to_product(product_to_domain(product_id)) if product_id is not None and product_id != "" else ""
+    if did and pid and domain_to_product(did) != pid:
+        raise ValueError("DOMAIN_PRODUCT_MISMATCH")
+    if did:
+        return did, domain_to_product(did)
+    if pid:
+        return product_to_domain(pid), pid
+    return "", ""
 
 
 @dataclass
@@ -118,15 +141,17 @@ DOMAINS = {"cth": CTH_DOMAIN, "zbmp": ZBMP_DOMAIN, "system": SYSTEM_DOMAIN}
 
 
 def get_domain(domain_id: Optional[str] = None) -> DomainBoundary:
-    """读取兼容域边界；现有 CTH 回退不是产品默认或授权结论。"""
-    did = domain_id or os.environ.get("ZBC_DOMAIN", "cth")
-    return DOMAINS.get(did, CTH_DOMAIN)
+    """Read an explicit or bound domain; a global selection is not CTH."""
+    if domain_id is None:
+        ctx = get_domain_context()
+        domain_id = ctx.domain_id if ctx else None
+    return DOMAINS[product_to_domain(domain_to_product(domain_id))]
 
 
 def assert_isolation(domain_id: str, resource: str) -> None:
     """断言资源隔离：CTH 的隔离资源不允许被 ZBMP 访问，反之亦然。"""
     domain = get_domain(domain_id)
-    other = DOMAINS["zbmp"] if domain_id == "cth" else DOMAINS["cth"]
+    other = DOMAINS["zbmp"] if domain.domain_id == "cth" else DOMAINS["cth"]
     if resource in other.isolated_resources and domain.domain_id != other.domain_id:
         raise PermissionError(
             f"Domain Isolation Violation: {domain.domain_id} cannot access "
@@ -147,9 +172,10 @@ def assert_cth_protection() -> None:
 def cross_domain_access_allowed(from_domain: str, to_domain: str,
                                 resource: str) -> bool:
     """检查跨域访问是否允许。共享资源允许，隔离资源拒绝。"""
-    if from_domain == to_domain:
-        return True
+    source = get_domain(from_domain)
     target = get_domain(to_domain)
+    if source.domain_id == target.domain_id:
+        return True
     return resource in target.shared_resources
 
 
@@ -166,26 +192,21 @@ class DomainContext:
     作为所有数据操作、API 请求、Runtime 任务的域身份载体。
     domain_id 和 product_id 同时存在，二者通过映射保持一致。
     """
-    domain_id: str = DOMAIN_CTH
-    product_id: str = PRODUCT_CTH
+    domain_id: str = ""
+    product_id: str = ""
     subject_id: str = ""
-    brand_key: str = CTH_BRAND_KEY
+    brand_key: str = ""
     scope: ScopeContext = field(default_factory=ScopeContext)
     trace_id: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
-        # 确保 domain_id 和 product_id 一致
-        if self.domain_id == DOMAIN_CTH and self.product_id != PRODUCT_CTH:
-            self.product_id = PRODUCT_CTH
-        elif self.domain_id == DOMAIN_ZBMP and self.product_id != PRODUCT_ZBMP:
-            self.product_id = PRODUCT_ZBMP
-        elif self.domain_id == DOMAIN_SYSTEM and self.product_id != PRODUCT_SYSTEM:
-            self.product_id = PRODUCT_SYSTEM
-        # CTH 保护：强制 subject
-        if self.domain_id == DOMAIN_CTH:
-            self.brand_key = CTH_BRAND_KEY
-            self.subject_id = CTH_BRAND_KEY.upper().replace("-", "_").replace(" ", "_")
+        self.domain_id, self.product_id = resolve_domain_identity(
+            self.domain_id, self.product_id)
+        if (self.subject_id or self.brand_key) and not self.domain_id:
+            raise ValueError("FOCUS_DOMAIN_REQUIRED")
+        if (self.subject_id or self.brand_key) and self.domain_id == DOMAIN_SYSTEM:
+            raise ValueError("SYSTEM_BUSINESS_FOCUS_FORBIDDEN")
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -216,7 +237,7 @@ class DomainContext:
                      brand_key: str = "", trace_id: str = "") -> "DomainContext":
         """从 product_id 构建 DomainContext，自动映射 domain_id。"""
         domain_id = product_to_domain(product_id)
-        bk = brand_key or (CTH_BRAND_KEY if domain_id == DOMAIN_CTH else "")
+        bk = brand_key
         sid = subject_id or bk.upper().replace("-", "_").replace(" ", "_")
         return cls(
             domain_id=domain_id,
@@ -240,13 +261,8 @@ def set_domain_context(ctx: DomainContext) -> None:
 
 
 def get_domain_context() -> Optional[DomainContext]:
-    """获取当前线程的 DomainContext。不存在时从环境变量/默认构建。"""
-    ctx = getattr(_domain_local, "domain_context", None)
-    if ctx is not None:
-        return ctx
-    # 回退：从环境变量构建
-    domain_id = os.environ.get("ZBC_DOMAIN", DOMAIN_CTH)
-    return DomainContext.from_domain(domain_id)
+    """Return only the bound context; machine environment cannot select a user."""
+    return getattr(_domain_local, "domain_context", None)
 
 
 def clear_domain_context() -> None:
@@ -257,9 +273,10 @@ def clear_domain_context() -> None:
 
 def domain_summary() -> Dict[str, Any]:
     """返回域隔离总览。"""
+    ctx = get_domain_context()
     return {
         "domains": {k: v.to_dict() for k, v in DOMAINS.items()},
-        "current_domain": get_domain().domain_id,
-        "current_product": get_product_context().product_id,
-        "current_domain_context": get_domain_context().to_dict() if get_domain_context() else None,
+        "current_domain": ctx.domain_id if ctx else None,
+        "current_product": ctx.product_id if ctx else None,
+        "current_domain_context": ctx.to_dict() if ctx else None,
     }

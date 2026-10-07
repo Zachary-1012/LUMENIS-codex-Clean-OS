@@ -6,6 +6,7 @@ agent_smart_tool 测试用例
 执行成功、执行失败重试、不可重试异常、自描述输出、与ToolDefinition兼容。
 """
 import pytest
+from domain_isolation import DomainContext, clear_domain_context, set_domain_context
 
 from agent_smart_tool import (
     SmartTool,
@@ -17,6 +18,16 @@ from agent_smart_tool import (
     ParamCorrector,
     NO_RETRY_POLICY,
 )
+
+
+@pytest.fixture(autouse=True)
+def _bind_system_context_for_standalone_tools():
+    """Standalone tool tests run inside an explicit SYSTEM-owned task scope."""
+    set_domain_context(DomainContext.from_domain("system"))
+    try:
+        yield
+    finally:
+        clear_domain_context()
 
 
 # ── 测试用工具 ─────────────────────────────────────────────────
@@ -591,8 +602,56 @@ class TestSecurityGatesFallback:
         assert result.evidence["security_gates"]["checks"].get("skipped") == "use_security_gates=False"
 
     def test_gates_dont_block_when_unavailable(self):
-        """网关模块不存在时，工具应正常执行（仅记录）。"""
+        """可用的 canonical SYSTEM gate should preserve a bound SYSTEM call."""
         tool = _AddTool()
         result = tool.execute({"a": 5, "b": 5})
         assert result.success is True
         assert result.data == 10
+
+    def test_unbound_tool_cannot_select_domain_from_parameters(self):
+        tool = _AddTool()
+        tool._run = lambda _params: pytest.fail("unbound tool reached execution")
+        clear_domain_context()
+
+        result = tool.execute({"a": 5, "domain": "cth"})
+
+        assert result.success is False
+        assert "server-bound domain context unavailable" in result.error
+        assert result.evidence["security_gates"]["checks"]["domain_context"]["bound"] is False
+
+    def test_permission_and_firewall_use_bound_domain(self, monkeypatch):
+        import agent_smart_tool.base as smart_base
+        from lumenis.system.security import PermissionGate
+        from lumenis.system.security import permission as permission_module
+
+        set_domain_context(DomainContext.from_domain("CTH"))
+        monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
+        monkeypatch.setattr(permission_module, "_TESTING_BYPASS_ENABLED", False)
+        gate = PermissionGate()
+        monkeypatch.setattr(smart_base, "_get_permission_gate", lambda: gate)
+        captured_scopes = []
+        validate = smart_base._validate_action
+
+        def capture_scope(action_request, **kwargs):
+            captured_scopes.append(action_request.scope)
+            return validate(action_request, **kwargs)
+
+        monkeypatch.setattr(smart_base, "_validate_action", capture_scope)
+        result = _AddTool().execute({"a": 3, "b": 4, "domain": "CTH"})
+
+        assert result.success is True
+        assert result.evidence["security_gates"]["domain_id"] == "cth"
+        assert captured_scopes == ["cth"]
+
+    def test_request_cannot_override_bound_domain(self):
+        tool = _AddTool()
+        tool._run = lambda _params: pytest.fail("cross-domain request reached execution")
+        set_domain_context(DomainContext.from_domain("cth"))
+
+        result = tool.execute({"a": 5, "domain": "zbmp"})
+
+        assert result.success is False
+        assert "security gate denied" in result.error
+        assert "REQUESTED_DOMAIN_CONTEXT_MISMATCH" in str(
+            result.evidence["security_gates"]["checks"]["domain_context"]
+        )

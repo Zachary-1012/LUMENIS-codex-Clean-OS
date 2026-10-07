@@ -1,4 +1,4 @@
-# OpenAI Math 定向深读与现有能力采用准备
+# OpenAI Math 定向深读与现有能力应用
 
 本报告落实用户 2026-10-07 的 A/B/C 合并指令。它是现有 Product Architecture/Owner 的研究证据，不是新权威、模型训练许可或窗口派工。
 固定上游：`openai/math@adc7f1241b42e322a6451854ab7e4b4c146bf78a`；产品取证基线 `f6dac9216cbb331e730329a70513e0c90c306e73`。
@@ -10,13 +10,13 @@
 
 PRODUCT_ADOPTION 与 MODEL_LEARNING 分列；CANDIDATE 仅为待审方法卡，不是新的源代码候选树或获准训练集。现有材料、源码、状态机、Gateway、Permission/Evidence Owner 均保留。
 
-## 跨 Owner 的直接接续（获准恢复后）
+## 跨 Owner 复用入口（修复已实施；其余业务执行仍按实际派工）
 
 | Owner | 复用位置 | 下一步与通过条件 |
 |---|---|---|
 | C1 | acquisition_plan / canonical_data / task_queue | 把词条/查询覆盖与总体代表性分开，native cursor、server checkpoint、run/lease分别验证；真实来源进同一 Evidence链。 |
 | C2 | owned Gateway / Agent / Memory / Evaluation | 固定模型、配方、Evidence、token预算，测记忆保持/引文/约束；owned未绑定则诚实不可运行，研究不代替训练。 |
-| C3 | CTH/BMP决策、传播和业务流程 | 明确优化/可行性/计数目标，事实关联不升为因果；处理未知域与隐式Subject需兼容调用审核。 |
+| C3 | CTH/BMP决策、传播和业务流程 | 明确优化/可行性/计数目标，事实关联不升为因果；未知域与隐式Subject已沿现有调用链修复；复用本文末尾同版本验收，勿重建域规则。 |
 | C4 | Timeline/Artifact/SavedWork | 复用同一来源/版本和约束；没有当前图计数或矩阵指数瓶颈，不引入数学框架；修订不得改来源身份。 |
 | C5 | Source Brief/Research/citation/Evaluation | 保存原文假设、反例、时间/范围/rights；选中的最新8份资料不是市场概率样本；方法采用与训练准入分开。 |
 | C6 | Scheduler/Permission/Gate/integration | 复用七项invariant、同版gate和恢复合同；不把随机博弈定理套作重试策略，不把schema有效当状态真实。 |
@@ -560,11 +560,50 @@ Comparator 核对期望声明与提交声明的一致性、许可公理和内核
 
 Math 和 Comparator 采用仓库明确许可证约束；Math 根 LICENSE 为 Apache-2.0，引用的第三方作品不因被引用自动获得再分发/训练许可。方法卡应原创概括、保留归属和固定版本；不复制全文训练，不复制未公开推理。
 
-本轮成果是原文的定向深读、假设审计、采用准备和代码 Owner 对应。没有证明序境采样、记忆、训练或业务能力获得某个数值提升。下一步只有在 Product Owner 批准恢复闭环后，才由现有 Owner 按实际任务/缺口实施。无当前任务收益、假设不成立、资源不具备或需第二权威时 DEFER/REJECT。
+本轮成果是原文的定向深读、假设审计、采用准备和代码 Owner 对应。没有证明序境采样、记忆、训练或业务能力获得某个数值提升。这是 10 月 7 日研究时点的原结论；10 月 8 日已获准并完成的研究方法应用见后续补录，其他任务仍遵守各自实际派工。无当前任务收益、假设不成立、资源不具备或需第二权威时 DEFER/REJECT。
 
 
 ---
 
-## 收口
+## 10 月 7 日历史收口
 
-本轮只做安全语义校准、源文研究和采用准备。没有运行论文算法、训练、真实业务推理、生产数据准入、UI开发或发布上线。现有未发布代码保持保护。完整产品能力及R/J/U验收要求均未缩减。完成总包后等待 Product Owner 审批。
+当时仅做安全语义校准、源文研究和采用准备。没有运行论文算法、训练、真实业务推理、生产数据准入、UI开发或发布上线。现有未发布代码保持保护。完整产品能力及R/J/U验收要求均未缩减。完成总包后等待 Product Owner 审批。
+
+## 2026-10-08 研究方法实际应用补录
+
+**本节是 10 月 8 日的后续记录，更新 10 月 7 日收口时的状态。** Product Owner 随后明确要求把研究应用到实际产品缺陷，并批准本轮修复。本轮修复从 `6ff2cc0b68d8b9c3ae8ea658678242df8deac7dc` 开始；本节与修复源码同提交发布。精确提交和线上状态由 Git 查询确认，不使用历史基线冒充当前 HEAD。
+
+### 把“声明检查通过”收紧为“实际语义成立”
+
+Comparator 的官方说明指出：声明/常量图检查和内核接受不能自动证明业务定义符合意图，允许定义空洞时尤其要做额外语义审查。本轮没有运行 Comparator，也没有把 Lean 用作序境运行时验证器；采用的是其可迁移的审查方法：先固定状态语义，再用会区分相邻状态的真实调用链反例验证消费者。
+
+在 Shared Learning 中复现并修复了一个违反现有生命周期合同的问题：人工把模型输出标为接受或拒绝后，记录仍是 `RAW`，旧实现却立即放进进程内正/负样本列表；`get_positive_samples()` 不检查 lifecycle，导致 `build_prompt_context()` 可消费未经晋级的样本；进程重启后样本列表又消失。现在样本类型随既有 `agent_learning_records` 修正记录保存，读取端只接受 `PROMOTED`；若 SQLite 中存在该记录，以持久化 lifecycle 为准，`ARCHIVED` 会从旧进程缓存和重启后结果中移除。普通 `accepted=true` 只标记类型，不再自动晋级，也不生成第二套授权或审批。
+
+落点：`lumenis/shared/learning/loop.py` 的 `record_ai_correction()`、`lumenis/shared/learning/memory.py` 的样本/规则读取和 `promote_record()`，以及 `tests/agent_memory/test_learning_loop.py`、`test_learning_memory.py`、`test_memory_integration.py`。隔离 SQLite 回归现为 **39 项通过**，覆盖 RAW 不进入 prompt、完成 RAW→REVIEWED→VALIDATED→PROMOTED 后可消费、重启后相同样本可用、持久化归档覆盖旧进程缓存并移除样本。新增反例先通过第二个真实 DB 连接归档样本/规则，再模拟 `sqlite3.OperationalError("database is locked")`：旧进程不得复活缓存样本/规则，也不得仅凭缓存报告晋级成功；另验证 DB 有配置但记录已缺失时不得从缓存晋级。仅显式 `db_path=None` 的 memory-only 模式允许使用本地生命周期状态。错误注入模拟连接读取失败，不等同于操作系统文件锁压力测试。测试使用临时 seeded DB；没有读取或写入产品数据库。
+
+### 收紧采集状态的来源语义
+
+另一处已完成的定向修复统一了旧 `/api/collector/status` 注册入口，使路由注册顺序不再决定含义，并把凭据元数据 `NEED_VERIFY` 与历史平台验证/挑战结果分开。历史结果保留原检查时间并标为缓存来源、当前新鲜度未知；仅配置元数据没有证明平台已验证，故保持未核验。对应两个定向 API 用例 **2 项通过**。它不读取 Cookie/session、不发平台请求、不启动服务；现有 Collector Owner、原响应兼容字段和状态枚举保留。
+
+本次复核的同一隔离测试批次合计 **41 项通过**（Learning 39 项 + Collector 状态 2 项），且未检测到后台线程泄漏。
+
+### 研究范围与限制
+
+- Family 140 的“有限持久状态、单遍观测和明示假设”提醒我们把记忆预算和数据来源写入比较条件；它**不是** LLM context/KV cache 的数学下界。这里修复的是已存在的 lifecycle 语义漏洞，并未声称提升模型准确率。
+- Family 139 的查询复杂度不适用于社媒/API 请求；本轮没有引入其算法。
+- 没有运行 Lean/Comparator、GPU训练、真实 Owned AI 推理、网络采集、生产 DB、服务重启或用户验收。真实运行是否把已提升样本绑定到生产 AI Gateway，仍需现有 Runtime/Evaluation Owner 的集成证据。
+- 交付状态为源码实现与隔离组合验证；发布边界及精确测试见同目录语义校准 JSON 的 repair_verification。不能称为生产进程已加载、Owned AI 训练成果或全产品闭环。研究原件、历史材料和旧失败证据保留。
+
+本轮报告中的“等待审批”仅记录 10 月 7 日研究时点；Product Owner 后续授权的范围是上述定向研究应用与缺陷修复，不自动恢复或派发 C1–C6、F 或 J1–J8。
+
+
+### 对产品、研发和真实业务的现行应用
+
+| 层次 | 已采用方法及现有落点 | 直接效果与限制 |
+|---|---|---|
+| 产品请求 | 将意图与实现分开核验；`domain_isolation`/`subject_context`统一身份，HTTP/API/Permission/Evidence consumers共享解析 | 未选焦点保持GLOBAL；非法焦点/域不会变成合法CTH或全局读取。合法身份仍须真实Scope授权。 |
+| 真实业务 | 受控参考主体与一般商业体分开；CTH和风险读取复用签名Canonical，已驳回风险保留原状态判断 | 同一请求不会借默认广州或遗留notes读取代替目标主体；隔离数据库证明正常成功与拒绝，不替代客户实际重复验收。 |
+| 反馈学习 | 生命周期的声明与消费者一起验：RAW→REVIEWED→VALIDATED→PROMOTED，归档/持久化失败不能借缓存复活 | 已进入Learning源码和重启验证；不是模型训练或质量提升百分比。 |
+| Codex研发 | 先固定意图、列可区分的反例，再核对真实调用组合；本轮用独立期望的有限身份枚举、数据库权限组合、源版本隔离和共享调用回归 | 修复与入口文档同提交；后续窗口读取本记录与现有owner即可复用，不重新建研究表、候选目录或重复运行不变证据。 |
+
+以上应用来自对假设、声明一致性、状态持久性和验证方法的适配。复杂图计数、随机博弈或渐近矩阵算法只有当现有任务确实满足假设且有可测收益时采用；保持既有DEFER结论，避免把论文名称变成实现理由。

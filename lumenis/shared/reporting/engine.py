@@ -51,6 +51,47 @@ DUAL_DOMAIN_REPORTS = {
 }
 
 
+def _resolve_legacy_report_scope(domain_id: str | None = None) -> tuple[str, str]:
+    """Require the exact CTH reference Subject used by this legacy DB reader.
+
+    This engine still reads the Guangzhou-filtered ``database.py`` path. A
+    selected business domain alone is insufficient to pick that Subject, and
+    this reader cannot safely serve BMP or GLOBAL / ALL.
+    """
+    from domain_isolation import get_domain_context, resolve_domain_identity
+    from subject_context import CTH_BRAND_KEY, CTH_SUBJECT_ID, get_thread_context
+
+    bound = get_domain_context()
+    thread = get_thread_context()
+    if domain_id is None:
+        if bound is not None:
+            domain_id, product_id = resolve_domain_identity(
+                bound.domain_id, bound.product_id,
+            )
+        elif thread is not None:
+            domain_id, product_id = resolve_domain_identity(product_id=thread.product_id)
+        else:
+            raise ValueError("REPORT_DOMAIN_REQUIRED")
+    else:
+        domain_id, product_id = resolve_domain_identity(domain_id=domain_id)
+        if not domain_id:
+            raise ValueError("REPORT_DOMAIN_REQUIRED")
+
+    if domain_id != "cth":
+        raise ValueError("LEGACY_REPORT_DOMAIN_UNSUPPORTED")
+    selected_subject = (bound.subject_id if bound is not None else
+                        thread.subject_id if thread is not None else "")
+    selected_brand = (bound.brand_key if bound is not None else
+                      thread.brand_key if thread is not None else "")
+    if selected_subject != CTH_SUBJECT_ID or selected_brand != CTH_BRAND_KEY:
+        raise ValueError("REPORT_REFERENCE_SUBJECT_REQUIRED")
+    if bound is not None and (bound.domain_id, bound.product_id) != (domain_id, product_id):
+        raise ValueError("REPORT_CONTEXT_MISMATCH")
+    if thread is not None and thread.product_id != product_id:
+        raise ValueError("REPORT_CONTEXT_MISMATCH")
+    return domain_id, product_id
+
+
 # ZBC Lifecycle Contract V1.0 (bypass-mode)
 try:
     from lifecycle_mixin import lifecycle_task as _lifecycle_task
@@ -80,13 +121,9 @@ def period_for(report_type: str, now: datetime | None = None):
 def generate_report(report_type: str, start: str | None = None, end: str | None = None,
                     domain_id: str | None = None):
     started_at = datetime.now().isoformat()
-    # LUMENIS dual-domain reporting 双域隔离：解析域身份
-    if domain_id is None:
-        try:
-            from ai_domain_context import get_current_domain
-            domain_id = get_current_domain()
-        except ImportError:
-            domain_id = "cth"
+    # This compatibility engine uses the Guangzhou-filtered CTH database
+    # reader. Require its exact bound Subject before filters, cache or writes.
+    domain_id, product_id = _resolve_legacy_report_scope(domain_id)
 
     # 域报告类型校验
     domain_reports = DUAL_DOMAIN_REPORTS.get(domain_id, {})
@@ -139,7 +176,9 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
     report.update({
         'report_type': report_type,
         'domain_id': domain_id,
-        'product_id': 'CTH' if domain_id == 'cth' else 'ZBMP',
+        'product_id': product_id,
+        'subject_id': 'GUANGZHOU_TAIKOO_HUI',
+        'brand_key': 'guangzhou_taikoo_hui',
         'report_date': end,
         'period_start': start,
         'period_end': end,
@@ -208,23 +247,30 @@ def generate_report(report_type: str, start: str | None = None, end: str | None 
     return report, digest
 
 
-def generate_all(now: datetime | None = None):
+def generate_all(now: datetime | None = None, domain_id: str | None = None):
+    domain_id, _product_id = _resolve_legacy_report_scope(domain_id)
     out = {}
     for typ in REPORT_TYPES:
-        report, digest = generate_report(typ, *period_for(typ, now))
+        report, digest = generate_report(typ, *period_for(typ, now), domain_id=domain_id)
         out[typ] = {'report': report, 'digest': digest}
     return out
 
 
-def get_bundle(report_type: str, date_str: str | None = None):
+def get_bundle(report_type: str, date_str: str | None = None, domain_id: str | None = None):
+    domain_id, product_id = _resolve_legacy_report_scope(domain_id)
     if report_type not in REPORT_TYPES:
         raise ValueError(f'无效报告类型: {report_type}')
     report = db.get_latest_report(report_type)
+    if report and (report.get('domain_id') != domain_id
+                   or report.get('product_id') != product_id
+                   or report.get('subject_id') != 'GUANGZHOU_TAIKOO_HUI'
+                   or report.get('brand_key') != 'guangzhou_taikoo_hui'):
+        report = None
     if date_str and report and report.get('report_date') != date_str:
         report = None
     if not report:
         # 缓存未命中：即时生成（标记 regenerated=True，便于上层判断数据漂移风险）
-        report, digest = generate_report(report_type, *(period_for(report_type)))
+        report, digest = generate_report(report_type, *(period_for(report_type)), domain_id=domain_id)
         return {'report': report, 'digest': digest, 'report_type': report_type,
                 'regenerated': True, 'artifact_verified': report.get('_artifact_verified', False)}
     else:
@@ -257,6 +303,18 @@ def generate_domain_report(
             "report_data": {...},
         }
     """
+    from domain_isolation import get_domain_context, resolve_domain_identity
+    resolved_domain, resolved_product = resolve_domain_identity(domain_id=domain_id)
+    if not resolved_domain:
+        raise ValueError("REPORT_DOMAIN_REQUIRED")
+    bound = get_domain_context()
+    if (bound is None or (bound.domain_id, bound.product_id) !=
+            (resolved_domain, resolved_product)):
+        raise ValueError("REPORT_CONTEXT_MISMATCH")
+    if resolved_domain == "cth":
+        _resolve_legacy_report_scope(resolved_domain)
+    domain_id = resolved_domain
+
     # Lifecycle Contract V1.0 (bypass-mode, never breaks report generation)
     _lc_worker = None
     if _LIFECYCLE_AVAILABLE:

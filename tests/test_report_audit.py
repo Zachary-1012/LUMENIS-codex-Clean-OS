@@ -463,6 +463,24 @@ class TestExportArtifactReuse:
 class TestReportEngineArtifactVerification:
     """Shared Reporting engine.generate_report 必须验证落库成功。"""
 
+    @pytest.fixture(autouse=True)
+    def _bind_explicit_reference_scope(self):
+        from domain_isolation import DomainContext, clear_domain_context, set_domain_context
+        from subject_context import (
+            CTH_BRAND_KEY, CTH_SUBJECT_ID, clear_thread_context, set_thread_context,
+            SubjectContext,
+        )
+        set_domain_context(DomainContext(
+            domain_id="cth", product_id="CTH", subject_id=CTH_SUBJECT_ID,
+            brand_key=CTH_BRAND_KEY,
+        ))
+        set_thread_context(SubjectContext(
+            subject_id=CTH_SUBJECT_ID, brand_key=CTH_BRAND_KEY, product_id="CTH",
+        ))
+        yield
+        clear_domain_context()
+        clear_thread_context()
+
     def test_generate_report_raises_on_zero_row_id(self):
         """save_daily_report 返回 0 或 None 时必须抛异常（禁止假成功）。"""
         from lumenis.shared.reporting import engine as report_engine
@@ -514,6 +532,8 @@ class TestReportEngineArtifactVerification:
         from lumenis.shared.reporting import engine as report_engine
         cached_report = {
             "report_type": "daily", "report_date": "2026-09-01",
+            "domain_id": "cth", "product_id": "CTH",
+            "subject_id": "GUANGZHOU_TAIKOO_HUI", "brand_key": "guangzhou_taikoo_hui",
             "total_notes": 5, "report_id": "RPT-daily-2026-09-01-2026-09-01",
         }
         with patch.object(report_engine.db, 'get_latest_report', return_value=cached_report), \

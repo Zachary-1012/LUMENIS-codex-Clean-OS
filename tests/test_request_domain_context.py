@@ -5,7 +5,7 @@ Verifies:
 1. subject_context.init_app(app) registers before_request/after_request hooks
 2. X-Domain-Id header sets thread DomainContext
 3. X-Product-Id header is parsed and mapped
-4. CTH protection: domain_id=cth forces brand_key=guangzhou_taikoo_hui
+4. Domain selection preserves explicit focus without an implicit reference
 5. after_request clears thread context (no leakage between requests)
 6. DomainContext is accessible via flask.g during request
 """
@@ -85,20 +85,21 @@ class TestRequestDomainContext:
         data = resp.get_json()
         assert data["domain_context"]["domain_id"] == "zbmp"
 
-    def test_cth_protection_forces_brand(self, client):
-        """When domain_id=cth, brand_key must be forced to guangzhou_taikoo_hui."""
+    def test_cth_preserves_explicit_brand(self, client):
+        """Selecting a domain must not replace the requested subject."""
         resp = client.get("/test/domain-context",
-                          headers={"X-Domain-Id": "cth", "X-Brand-Key": "wrong_brand"})
+                          headers={"X-Domain-Id": "cth", "X-Brand-Key": "other_venue"})
         data = resp.get_json()
-        assert data["subject_context"]["brand_key"] == "guangzhou_taikoo_hui"
-        assert data["domain_context"]["brand_key"] == "guangzhou_taikoo_hui"
+        assert data["subject_context"]["brand_key"] == "other_venue"
+        assert data["domain_context"]["brand_key"] == "other_venue"
 
-    def test_default_domain_is_cth(self, client):
-        """Without headers, default domain should be cth (production safety default)."""
+    def test_default_is_unfocused_global(self, client):
+        """No headers means GLOBAL, irrespective of machine defaults."""
         resp = client.get("/test/domain-context")
         data = resp.get_json()
-        # Default is CTH (from environment or subject_context default)
-        assert data["subject_context"]["product_id"] in ("CTH", "ZBMP")
+        # Neither domain nor subject is inferred.
+        assert data["subject_context"]["product_id"] == ""
+        assert data["subject_context"]["subject_id"] == ""
 
     def test_context_cleared_after_request(self, client):
         """Thread context must be cleared after request (no leakage)."""
@@ -118,15 +119,10 @@ class TestSubjectContextIntegration:
         resp = client.get("/test/domain-context", headers={"X-Domain-Id": "zbmp"})
         data = resp.get_json()
         assert "subject_context" in data
-        # When ZBC_PRODUCT_ID=CTH (production lock), all requests forced to CTH.
-        # Otherwise X-Domain-Id: zbmp should set ZBMP.
-        if os.environ.get("ZBC_PRODUCT_ID") == "CTH":
-            assert data["subject_context"]["product_id"] == "CTH"
-        else:
-            assert data["subject_context"]["product_id"] == "ZBMP"
+        assert data["subject_context"]["product_id"] == "ZBMP"
 
-    def test_cth_subject_forced(self, client):
+    def test_cth_without_focus_is_not_reference_subject(self, client):
         resp = client.get("/test/domain-context", headers={"X-Domain-Id": "cth"})
         data = resp.get_json()
-        assert data["subject_context"]["brand_key"] == "guangzhou_taikoo_hui"
+        assert data["subject_context"]["brand_key"] == ""
         assert data["subject_context"]["product_id"] == "CTH"

@@ -5,11 +5,11 @@
   用户对AI输出的修正 → 记录到 Learning Memory → 沉淀为规则建议
   → 写入 rule_version_registry（需人工确认）→ 影响后续AI调用的prompt context
 
-  AI输出人工确认 → 标记为 verified sample → 进入正样本库
-  AI输出被拒绝 → 标记为 negative sample → 进入负样本库
+  AI输出人工确认/拒绝 → 记录带类型的原始样本
+  → 经过现有生命周期晋级后才进入可消费样本库
 
 安全约束：
-  - 学习结果不直接成为 Production Truth，需规则验证或人工确认
+  - 学习结果不直接成为 Production Truth；样本必须走完现有生命周期
   - 复用 ai_call_logs（1587行）做调用质量分析
   - 复用 rule_version_registry 做规则版本管理
   - 默认不启用，通过 Feature Flag 控制
@@ -123,19 +123,10 @@ class LearningLoop:
             context=context,
             source="human",
             related_task_id=related_task_id,
+            sample_type=(
+                SampleType.POSITIVE if accepted else SampleType.NEGATIVE
+            ),
         )
-        if rec:
-            sample = {
-                "original": original_output,
-                "corrected": corrected_output,
-                "context": context or {},
-                "related_task_id": related_task_id,
-                "learning_record_id": rec.record_id,
-            }
-            if accepted:
-                self.learning_memory.add_positive_sample(sample)
-            else:
-                self.learning_memory.add_negative_sample(sample)
         return rec.record_id if rec else None
 
     # ── 规则沉淀 ─────────────────────────────────────────────────

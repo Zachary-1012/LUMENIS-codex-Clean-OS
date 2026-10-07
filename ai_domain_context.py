@@ -17,8 +17,11 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from subject_context import (
-    PRODUCT_CTH, PRODUCT_ZBMP, CTH_BRAND_KEY,
-    get_subject_context, get_thread_context,
+    PRODUCT_CTH, PRODUCT_ZBMP, get_thread_context,
+)
+from domain_isolation import (
+    get_domain_context as get_bound_domain_context,
+    resolve_domain_identity,
 )
 
 logger = logging.getLogger(__name__)
@@ -146,32 +149,45 @@ DOMAIN_CONTEXTS: Dict[str, DomainPromptContext] = {
 # 3. 域身份解析
 # ============================================================
 def product_id_to_domain(product_id: str) -> str:
-    """Map a known compatibility product ID to its business domain; unknown IDs fail closed."""
-    if product_id == PRODUCT_CTH:
-        return DOMAIN_CTH
-    if product_id == PRODUCT_ZBMP:
-        return DOMAIN_ZBMP
-    raise ValueError(f"unknown product_id: {product_id}")
+    """Map a validated product identity; unknown and missing IDs stay unknown."""
+    domain_id, _ = resolve_domain_identity(product_id=product_id)
+    if not domain_id:
+        raise ValueError("DOMAIN_REQUIRED")
+    return domain_id
 
 
 def get_current_domain() -> str:
-    """获取当前线程的域身份。
+    """Return the bound request/job domain; GLOBAL/ALL has no business domain."""
+    context = get_bound_domain_context()
+    if context is not None:
+        domain_id, _ = resolve_domain_identity(
+            domain_id=context.domain_id,
+            product_id=context.product_id,
+        )
+        if domain_id:
+            return domain_id
 
-    优先级：线程上下文 > 环境默认 > CTH
-    """
-    ctx = get_thread_context()
-    if ctx is not None:
-        return product_id_to_domain(ctx.product_id)
-    ctx = get_subject_context()
-    return product_id_to_domain(ctx.product_id)
+    # Some explicit legacy callers bind only a SubjectContext. Never call the
+    # no-argument compatibility getter here: it must not select CTH or a Subject.
+    context = get_thread_context()
+    if context is not None:
+        domain_id, _ = resolve_domain_identity(product_id=context.product_id)
+        if domain_id:
+            return domain_id
+    raise ValueError("DOMAIN_NOT_SELECTED")
 
 
 def get_domain_context(domain_id: Optional[str] = None) -> DomainPromptContext:
     """Resolve an explicit/current AI business domain; unknown domains fail closed."""
-    did = domain_id or get_current_domain()
+    if domain_id is None:
+        did = get_current_domain()
+    else:
+        did, _ = resolve_domain_identity(domain_id=domain_id)
+        if not did:
+            raise ValueError("DOMAIN_REQUIRED")
     ctx = DOMAIN_CONTEXTS.get(did)
     if ctx is None:
-        raise ValueError(f"unknown domain_id: {did}")
+        raise ValueError(f"AI_BUSINESS_PROMPT_UNAVAILABLE_FOR_DOMAIN: {did}")
     return ctx
 
 
@@ -318,10 +334,12 @@ def prepare_domain_ai_request(
             "input_hash": str,
         }
     """
-    messages, ctx = build_domain_messages(user_content, domain_id, extra_context)
+    expected = get_current_domain() if domain_id is None else resolve_domain_identity(domain_id=domain_id)[0]
+    if not expected:
+        raise ValueError("DOMAIN_REQUIRED")
+    messages, ctx = build_domain_messages(user_content, expected, extra_context)
 
     # 校验：构建的 context 域身份与请求域一致
-    expected = domain_id or get_current_domain()
     validate_domain_match(expected, ctx, operation="prepare_ai_request")
 
     # 计算输入哈希
@@ -344,6 +362,11 @@ def prepare_domain_ai_request(
 # ============================================================
 def get_domain_context_summary() -> Dict[str, Any]:
     """获取双域上下文总览（用于审计/状态接口）。"""
+    try:
+        current_domain = get_current_domain()
+    except ValueError:
+        # A global or unbound request has no CTH/BMP prompt selection.
+        current_domain = None
     return {
         "domains": {
             did: {
@@ -354,7 +377,7 @@ def get_domain_context_summary() -> Dict[str, Any]:
             }
             for did, ctx in DOMAIN_CONTEXTS.items()
         },
-        "current_domain": get_current_domain(),
+        "current_domain": current_domain,
         "isolation_enforced": True,
         "note": "CTH and ZBMP prompts are fully isolated; cross-domain flow raises DomainMismatchError",
     }

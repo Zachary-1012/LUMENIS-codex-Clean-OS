@@ -72,7 +72,7 @@ class SkillMetadata:
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     prohibited_actions: List[str] = field(default_factory=lambda: list(SKILL_PROHIBITIONS))
     product: str = "SYSTEM"
-    domain: str = "global"
+    domain: str = "system"
     cross_domain_allowed: List[str] = field(default_factory=list)
     category: str = "系统"
 
@@ -279,7 +279,7 @@ def _register_builtin_skills(reg: SkillRegistry) -> None:
             evaluation_status=EvaluationStatus.EVALUATED,
             description="read-only subject authority status (counts only)",
             tags=["subject", "readonly", "authority"],
-            product="SYSTEM", domain="global", category="开发者工具",
+            product="SYSTEM", domain="system", category="开发者工具",
         ),
         SkillMetadata(
             skill_id="zbc.skill_registry_snapshot",
@@ -294,7 +294,7 @@ def _register_builtin_skills(reg: SkillRegistry) -> None:
             evaluation_status=EvaluationStatus.EVALUATED,
             description="read-only skill registry stats snapshot",
             tags=["registry", "readonly"],
-            product="SYSTEM", domain="global", category="开发者工具",
+            product="SYSTEM", domain="system", category="开发者工具",
         ),
         SkillMetadata(
             skill_id="zbc.agent_boundary_audit",
@@ -309,7 +309,7 @@ def _register_builtin_skills(reg: SkillRegistry) -> None:
             evaluation_status=EvaluationStatus.EVALUATED,
             description="read-only agent boundary and permission audit",
             tags=["agent", "audit", "boundary"],
-            product="SYSTEM", domain="global", category="开发者工具",
+            product="SYSTEM", domain="system", category="开发者工具",
         ),
     ]
     # The six user-specified creation/research tools are one shared capability

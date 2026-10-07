@@ -181,12 +181,23 @@ Current source / runtime / DB / API / Permission / Evidence truth
 ### Machine-readable governance semantics
 
 Product vocabulary is defined by the current Product Architecture's semantic and
-compatibility section. The dated Semantic Calibration Ledger under evidence/round-15
-is a source-backed index, not another authority. Preserve persisted IDs and distinguish
-owner-qualified states; do not infer authorization from legacy Context fallback.
-Research adoption cards are preparation evidence under the existing capability-evolution
-contract, not live dispatch, training approval, or implemented capability. Completion of
-a synchronization/calibration/research task does not resume paused product windows.
+compatibility section. The Semantic Calibration Ledger under evidence/round-15
+is a source-backed index, not another authority. Context is routing metadata,
+never Permission: unknown/conflicting domain IDs are rejected, BMP resolves to
+its existing ZBMP storage identifier, and no selection invents a reference Subject.
+Only an explicitly named legacy reference filter may retain that reference scope;
+GLOBAL consumers use existing scoped Canonical/Evidence services.
+
+OpenAI Math methods are applied inside existing owners when their assumptions
+match the actual task. Freeze the intended contract independently from the code,
+exercise valid outcomes and counterexamples, and preserve failed evidence. The
+current adoption record links executable domain/state and Learning regressions;
+reuse these pins instead of asking C1-C6/F to repeat the same investigation.
+Raw corrections are research inputs, not promoted prompt memory or training grants.
+Algorithmic or statistical guarantees require the paper's actual assumptions and
+a measured matching workload; a citation or test count is not a proof of them.
+Research, implemented adoption, runtime acceptance and model-learning permission
+remain distinct. This bounded M repair does not resume paused product windows.
 
 The machine-readable execution/governance contract is
 `00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json`. It defines the

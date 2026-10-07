@@ -42,6 +42,16 @@ def test_exact_live_receipts_bind_without_changing_legacy_json(receipts):
     assert gate.get_audit_log(operation_type="resource_scope_approval")[-1]["result"] == "allowed"
 
 
+def test_bmp_alias_uses_canonical_domain_for_real_receipt_binding(receipts):
+    gate, scope, approval, _ = receipts  # receipt input is domain_id="bmp"
+
+    assert scope.domain_id == "zbmp"
+    assert approval.domain_id == scope.domain_id
+    bound = p.bind_scope_permission_approval(scope, approval, gate=gate)
+    assert bound.allowed
+    assert bound.domain_id == "zbmp"
+
+
 @pytest.mark.parametrize("change", [
     {"actor_id": 2}, {"brand_focus_id": "brand-b"}, {"subject_id": "other"},
     {"global_scope": True}, {"global_scope": 1}, {"domain_id": "cth"},

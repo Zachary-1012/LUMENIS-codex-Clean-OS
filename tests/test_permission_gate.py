@@ -58,6 +58,22 @@ def _strict_mode_for_unit_tests():
     set_testing_bypass(True)
 
 
+@pytest.fixture(autouse=True)
+def _explicit_system_domain_for_operation_tests():
+    """Generic operation-gate tests run in an explicit SYSTEM domain."""
+    from domain_isolation import (
+        DomainContext, clear_domain_context, set_domain_context,
+    )
+    from subject_context import clear_thread_context
+
+    clear_domain_context()
+    clear_thread_context()
+    set_domain_context(DomainContext(domain_id="system", product_id="SYSTEM"))
+    yield
+    clear_domain_context()
+    clear_thread_context()
+
+
 @pytest.fixture
 def gate():
     """每个测试用独立的 PermissionGate 实例，避免全局状态污染。"""
@@ -197,6 +213,28 @@ class TestOperationRegistry:
 
 class TestFailClosed:
     """高风险操作 fail-closed 验证。"""
+
+    def test_missing_and_invalid_domain_fail_closed_without_domain_leak(self, gate):
+        from domain_isolation import (
+            DomainContext, clear_domain_context, set_domain_context,
+        )
+        from subject_context import clear_thread_context
+
+        # An invalid explicit domain must not inherit the previously bound CTH.
+        set_domain_context(DomainContext(domain_id="cth", product_id="CTH"))
+        invalid = gate.check(OperationType.AI_CALL, resource="test", domain_id="unknown")
+        assert invalid.allowed is False
+        assert invalid.domain_id is None
+        assert "INVALID_DOMAIN_ID" in invalid.reason
+
+        # Once the context is cleared, absence remains a denial and cannot reuse
+        # the last domain from either the context or PermissionGate instance.
+        clear_domain_context()
+        clear_thread_context()
+        missing = gate.check(OperationType.AI_CALL, resource="test")
+        assert missing.allowed is False
+        assert missing.domain_id is None
+        assert "DOMAIN_NOT_SELECTED" in missing.reason
 
     def test_high_risk_denied_without_approval(self, gate):
         """HIGH 风险操作无审批时被拒绝（先授予权限，再验证需人工审批）。"""

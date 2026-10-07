@@ -52,9 +52,16 @@ Platform availability and acceptance are verified separately from this target.
 
 逐项源码证据、兼容词及尚待行为修复项见
 [Semantic Calibration Ledger](evidence/round-15/SEMANTIC-CALIBRATION-20261007.md)。
-该清单是本蓝图及现有合同的索引，不是第二份语义权威。旧未知域回退、固定参考主体和
-冲突请求头仍有实际调用/测试依赖，不能因文档已校准就宣称行为已修好；更改前按清单核对
-调用者、持久化含义和审批边界，不直接重命名 ID 或放宽权限。
+该清单是本蓝图及现有合同的索引，不是第二份语义权威。当前域边界严格拒绝未知值和
+矛盾标识；BMP/zbmp 只在已批准的兼容边界归一为 ZBMP/zbmp，不改历史存储 ID。
+无选择保持 GLOBAL / ALL，明确 CTH 只选择业务域，不暗中选择广州参考主体。机器环境
+不能覆盖请求；跨域与 Subject 权限仍由原 Permission/registry owner 核实。旧参考过滤器
+只承担明确的历史参考用途，不能为 GLOBAL 或其他商业体生成参考主体结果。
+
+研究方法须通过现有产品输入、处理、校验与成果路径采用。冻结业务命题/约束与独立
+反例后验证实际实现；人工纠正保留来源和生命周期，仅获准晋升的学习记录进入提示上下文。
+OpenAI Math/Lean/Comparator 是方法来源，不构成序境已获形式化证明、商业因果或训练授权。
+具体实现、证据和未验证运行范围见同一语义清单及 Math 采用记录。
 
 Design artifacts remain DESIGN_EXPLORATION until a current screen specification
 passes DESIGN_READY. Do not authorize implementation from a PDF, screenshot, fixture, Figma frame

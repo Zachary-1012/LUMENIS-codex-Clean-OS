@@ -494,25 +494,16 @@ def get_correction_stats(since: str = '') -> Dict[str, Any]:
 # ============================================================
 # 7) 模块自描述：Provider 状态注册表（供审计报告引用）
 # ============================================================
-PROVIDER_STATUS = {
-    'zhipu': 'ACTIVE',
-    'glm': 'ACTIVE',          # zhipu 别名
-    'ark': 'ACTIVE_FALLBACK',
-    'doubao': 'ACTIVE_FALLBACK',
-    'ollama': 'ACTIVE_FALLBACK',    # Track3：本地兜底模型，运行时探测后 ACTIVE
-    'lmstudio': 'AVAILABLE',
-    'llama_cpp': 'AVAILABLE',
-    'qwen': 'NOT_CONFIGURED',
-    'openai': 'DISABLED',
-    'deepseek': 'NOT_CONFIGURED',
-    'rule': 'RULE_FALLBACK',
-    'local_rule': 'RULE_FALLBACK',
-    'deterministic_rule': 'RULE_FALLBACK',
-}
-
-
 def get_provider_status(provider: str) -> str:
-    return PROVIDER_STATUS.get(provider.lower(), 'UNKNOWN')
+    """Return canonical registry policy, not inferred runtime availability."""
+    name = str(provider or '').strip().lower()
+    if name in {'rule', 'local_rule', 'deterministic_rule'}:
+        return 'RULE_FALLBACK'
+    from lumenis.system.ai_gateway.providers import provider_info, provider_status
+
+    if provider_info(name) is None:
+        return 'UNKNOWN'
+    return provider_status(name)
 
 
 # 启动时自动建表（旁路，失败不影响）

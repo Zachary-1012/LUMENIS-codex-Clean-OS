@@ -11,19 +11,21 @@ import urllib.error
 
 # Provider 状态枚举
 ACTIVE = "ACTIVE"
-ACTIVE_FALLBACK = "ACTIVE_FALLBACK"  # V1.0: 可用兜底Provider
+ACTIVE_FALLBACK = "ACTIVE_FALLBACK"  # Historical status only; not dispatch permission.
 AVAILABLE = "AVAILABLE"      # 已配置但未运行时验证（本地 Provider 默认态）
 BLOCKED = "BLOCKED"          # 运行时探测失败，不可调用
 LEGACY = "LEGACY"
 DISABLED = "DISABLED"
 REMOVE_CANDIDATE = "REMOVE_CANDIDATE"
 NOT_CONFIGURED = "NOT_CONFIGURED"
-ACTIVE_FALLBACK = "ACTIVE_FALLBACK"
 
 # Product-owner retirement gate. Keep adapter interfaces available for
 # compatibility and isolated mocked tests; production callers cannot promote
 # these providers through discovery, probe results or status mutation.
 RETIRED_PROVIDERS = frozenset({"zhipu", "ollama", "lmstudio", "llama_cpp"})
+# ARK/Doubao adapters remain importable for historical compatibility, but
+# runtime status mutation must never promote them back into a product route.
+COMPATIBILITY_ONLY_PROVIDERS = frozenset({"ark"})
 
 # Canonical Provider Registry
 PROVIDER_REGISTRY: Dict[str, Dict] = {
@@ -65,18 +67,18 @@ PROVIDER_REGISTRY: Dict[str, Dict] = {
         "description": "已停用；兼容适配器保留",
     },
     "ark": {
-        "status": ACTIVE_FALLBACK,
-        "role": "cloud_fallback",
+        "status": LEGACY,
+        "role": "compatibility_only",
         "models": ["doubao-seed-evolving-latest-version"],
         "env_key": "ARK_API_KEY",
-        "description": "豆包 ARK 兜底（用户要求保留，不作为主力）",
+        "description": "Legacy adapter retained for compatibility; not an Owned Gateway fallback",
     },
     "doubao": {
-        "status": ACTIVE_FALLBACK,
-        "role": "cloud_fallback",
+        "status": LEGACY,
+        "role": "compatibility_only",
         "alias_of": "ark",
         "env_key": "ARK_API_KEY",
-        "description": "豆包别名，映射到 ark",
+        "description": "Legacy alias retained for compatibility; not an Owned Gateway route",
     },
     "qwen": {
         "status": NOT_CONFIGURED,
@@ -104,6 +106,8 @@ def provider_status(name: str) -> str:
     key = _canonical_name(name)
     if key in RETIRED_PROVIDERS:
         return DISABLED
+    if key in COMPATIBILITY_ONLY_PROVIDERS:
+        return LEGACY
     entry = PROVIDER_REGISTRY.get(key)
     return entry["status"] if entry else DISABLED
 
@@ -119,13 +123,12 @@ def is_provider_retired(name: str) -> bool:
 
 
 def is_provider_available(name: str) -> bool:
-    """Provider 是否可用（ACTIVE / AVAILABLE / LEGACY 均视为可尝试调用）。
+    """Return whether the current registry explicitly permits dispatch.
 
-    AVAILABLE 表示已配置但未验证；调用方应先 probe 再使用。
-    BLOCKED / DISABLED 不可用。
+    Legacy and ACTIVE_FALLBACK are retained status labels, not call permission.
     """
     return not is_provider_retired(name) and provider_status(name) in (
-        ACTIVE, ACTIVE_FALLBACK, AVAILABLE, LEGACY,
+        ACTIVE, AVAILABLE,
     )
 
 
@@ -140,7 +143,7 @@ def active_providers() -> List[str]:
 
 
 def available_providers() -> List[str]:
-    """返回所有可尝试的 Provider（ACTIVE + AVAILABLE + LEGACY）。"""
+    """Return providers explicitly permitted for dispatch (ACTIVE/AVAILABLE)."""
     return [k for k in PROVIDER_REGISTRY if is_provider_available(k)]
 
 
@@ -158,14 +161,17 @@ def provider_info(name: str) -> Optional[Dict]:
     result = dict(entry)
     if key in RETIRED_PROVIDERS:
         result["status"] = DISABLED
+    elif key in COMPATIBILITY_ONLY_PROVIDERS:
+        result["status"] = LEGACY
+        result["role"] = "compatibility_only"
     return result
 
 
 def registry_summary() -> Dict[str, int]:
     """返回 Registry 状态统计。"""
     counts = {}
-    for v in PROVIDER_REGISTRY.values():
-        s = v["status"]
+    for name in PROVIDER_REGISTRY:
+        s = provider_status(name)
         counts[s] = counts.get(s, 0) + 1
     return counts
 
@@ -224,4 +230,9 @@ def set_provider_status(name: str, status: str) -> None:
     key = _canonical_name(name)
     entry = PROVIDER_REGISTRY.get(key)
     if entry:
-        entry["status"] = DISABLED if key in RETIRED_PROVIDERS else status
+        if key in RETIRED_PROVIDERS:
+            entry["status"] = DISABLED
+        elif key in COMPATIBILITY_ONLY_PROVIDERS:
+            entry["status"] = LEGACY
+        else:
+            entry["status"] = status

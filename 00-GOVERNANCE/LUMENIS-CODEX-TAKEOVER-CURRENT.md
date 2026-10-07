@@ -8,51 +8,50 @@ Root `AGENTS.md` is the only repository execution router. [The Product Owner's l
 
 ## 1. Online reader's current-state snapshot
 
-### 2026-10-08 semantic behavior repair — local candidate, not published
+### 2026-10-08 semantic behavior repair and applied Math methods
 
-Implementation publication state: `LOCAL_CANDIDATE_NOT_PUBLISHED`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
-Published product-source baseline: `6ff2cc0b68d8b9c3ae8ea658678242df8deac7dc`
+Repair baseline: `6ff2cc0b68d8b9c3ae8ea658678242df8deac7dc`
 
-The Product Owner explicitly instructed M to repair the recorded semantic/source
-defects and apply the original-paper research. That authorization is active, but
-the behavior repair is **not yet part of GitHub main**. The statements below
-describe the current protected local candidate only; they are not published
-Product Source, loaded Runtime truth, user acceptance or release evidence.
+This section is co-published with the actual bounded product-source repair.
+The publication marker means source and scoped engineering evidence are in the
+same Git commit; it does not mean the running process has loaded that commit,
+that CI has already finished, or that a full user Job is accepted. Fetch the
+current main and query its exact workflow status rather than reuse the baseline.
 
-At the published baseline `6ff2cc0b68d8b9c3ae8ea658678242df8deac7dc`,
-the relevant product-source defects remain present. In particular, the two retained
-`/api/collector/status` registrations still have different implementations, and
-the published provider registry still exposes ARK/Doubao through the historical
-fallback-availability semantics. The stricter Domain/Subject identity and
-GLOBAL/ALL corrections are likewise local candidate work until co-published.
+- Strict shared Domain/Subject parsing rejects unknown/conflicting identities,
+  retains BMP/ZBMP compatibility and SYSTEM, and does not infer Guangzhou.
+  Explicit malformed focus is rejected instead of silently becoming GLOBAL.
+- CTH and compatible risk reads use existing Scope/Permission and signed Canonical;
+  risk dismissal remains source-bound. Existing scheduled reference reports bind
+  their exact reference explicitly. HTTP/SmartTool/Skill consumers keep their
+  existing permission and effect checks.
+- Both retained Collector status routes share their payload owner and distinguish
+  process state, auth metadata and historical verification with source/time.
+- Retired providers stay compatibility-only. Learning consumers accept only
+  persisted PROMOTED records; archive and DB errors cannot revive cached samples.
+- Math/Comparator's statement-versus-intent discipline is applied to these existing
+  owners and the engineering counterexamples, without claiming Lean proof or
+  training gains. The semantic ledger and research record give exact source pins.
 
-The current local candidate is intended to:
-- reject unknown/conflicting Domain/Subject identities while preserving the
-  existing BMP alias and SYSTEM identity without inferring Guangzhou from CTH;
-- make both retained Collector status routes consume one response owner while
-  preserving process-lifecycle, auth-metadata and historical-verification
-  qualifiers as separate truth dimensions;
-- keep registry-only legacy providers compatibility-only rather than callable
-  fallback routes;
-- apply the approved Math/Comparator contract-versus-implementation discipline
-  to the existing owners without promoting raw corrections to model learning.
+Affected isolated coverage: 1,092 cases; all 10 initially failing legacy assumptions
+were repaired and passed affected reruns (40 Permission App + 11 Provider cases,
+overlapping counts not added). Five architecture/governance blocking guards pass.
+Full logs and hashes are in the existing semantic-calibration evidence record.
 
-Exact local changes and tests may be recorded in the semantic/applied-research
-evidence, but those receipts do not promote the candidate to published product
-behavior. Promotion requires one coherent delivery in which:
-1. the real product-source repair and this CURRENT state are co-published;
-2. the resulting exact SHA passes its applicable Product/App gates;
-3. loaded Runtime identity and behavior are verified separately; and
-4. Critical E2E / user outcome gates remain independent where applicable.
+Pre-existing unpublished edits and local assets are preserved. app.py contributes
+only four bounded caller hunks; its earlier dirty changes are not co-published.
+The concurrent governance publication `3f9a9840` is retained as this delivery's parent.
+Its publication guard now checks the index with --staged before commit and HEAD
+after commit; 13 regression tests plus 26 subtests pass.
+Production DB, private C2 material and work/ remain outside the publication.
+No runtime restart, paid compute, training, network collection, deployment or
+user acceptance was performed. Exact-SHA CI and loaded runtime remain separate.
 
-Pre-existing dirty work, protected `work/`, private C2 material and Production DB
-remain protected. This bounded repair does not authorize paid compute, training,
-live collection, deployment or external product effects.
-
-Machine governance v1.1.0/model-routing and R/J/U acceptance scope are unchanged.
-The earlier 2026-10-07 preparation remains provenance in Git history. Other
-windows continue to follow the newest explicit Product Owner dispatch.
+Machine governance v1.1.0/model-routing and R/J/U acceptance are unchanged.
+The earlier report-only status is historical. This repair does not dispatch
+C1-C6/F; all windows obey the newest explicit Product Owner instruction.
 
 ### Approved D1–D5 convergence — 2026-10-06
 

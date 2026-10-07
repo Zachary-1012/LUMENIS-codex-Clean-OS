@@ -28,6 +28,7 @@ from subject_context import (
     PRODUCT_CTH, PRODUCT_ZBMP, set_thread_context, clear_thread_context,
     get_subject_context,
 )
+from domain_isolation import clear_domain_context
 
 
 class TestDomainContextDefinitions:
@@ -82,7 +83,7 @@ class TestDomainResolution:
         assert product_id_to_domain(PRODUCT_ZBMP) == "zbmp"
 
     def test_product_id_to_domain_unknown_fails_closed(self):
-        with pytest.raises(ValueError, match="unknown product_id"):
+        with pytest.raises(ValueError, match="INVALID_PRODUCT_ID"):
             product_id_to_domain("UNKNOWN")
 
     def test_get_domain_context_cth(self):
@@ -94,13 +95,15 @@ class TestDomainResolution:
         assert ctx.domain_id == "zbmp"
 
     def test_get_domain_context_unknown_fails_closed(self):
-        with pytest.raises(ValueError, match="unknown domain_id"):
+        with pytest.raises(ValueError, match="INVALID_DOMAIN_ID"):
             get_domain_context("nonexistent")
 
-    def test_current_domain_default_cth(self):
-        """无线程上下文时，默认 CTH。"""
+    def test_current_domain_without_bound_context_fails_closed(self):
+        """No bound request/job context must not silently select CTH."""
         clear_thread_context()
-        assert get_current_domain() == "cth"
+        clear_domain_context()
+        with pytest.raises(ValueError, match="DOMAIN_NOT_SELECTED"):
+            get_current_domain()
 
 
 class TestPromptBuilding:

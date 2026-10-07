@@ -26,7 +26,14 @@ class TestLearningLoop:
             accepted=True,
         )
         assert rec_id is not None
-        # 正样本库应有记录
+        # 人工确认只记录样本类型；未完成生命周期晋级前不可消费。
+        assert loop.learning_memory.get_positive_samples() == []
+        for stage in (
+            LifecycleStage.REVIEWED,
+            LifecycleStage.VALIDATED,
+            LifecycleStage.PROMOTED,
+        ):
+            assert loop.learning_memory.promote_record(rec_id, stage)
         assert len(loop.learning_memory.get_positive_samples()) == 1
 
     def test_record_ai_correction_rejected(self, seeded_db):
@@ -37,6 +44,13 @@ class TestLearningLoop:
             accepted=False,
         )
         assert rec_id is not None
+        assert loop.learning_memory.get_negative_samples() == []
+        for stage in (
+            LifecycleStage.REVIEWED,
+            LifecycleStage.VALIDATED,
+            LifecycleStage.PROMOTED,
+        ):
+            assert loop.learning_memory.promote_record(rec_id, stage)
         assert len(loop.learning_memory.get_negative_samples()) == 1
 
     def test_generate_rule_suggestion(self, seeded_db):
@@ -145,12 +159,25 @@ class TestLearningLoop:
 
     def test_build_prompt_context(self, seeded_db):
         loop = LearningLoop(db_path=seeded_db, enabled=True)
-        # 添加正样本
-        loop.record_ai_correction("orig", "corrected", accepted=True)
+        # 原始修正不能直接进入 prompt context。
+        rec_id = loop.record_ai_correction("orig", "corrected", accepted=True)
+        assert rec_id is not None
         ctx = loop.build_prompt_context()
         assert isinstance(ctx, str)
+        assert "corrected" not in ctx
         # 应包含关注关键词
-        assert "关注关键词" in ctx or "参考正样本" in ctx or "已验证学习规则" in ctx
+        assert "关注关键词" in ctx
+
+        for stage in (
+            LifecycleStage.REVIEWED,
+            LifecycleStage.VALIDATED,
+            LifecycleStage.PROMOTED,
+        ):
+            assert loop.learning_memory.promote_record(rec_id, stage)
+        assert "corrected" in loop.build_prompt_context()
+
+        restarted = LearningLoop(db_path=seeded_db, enabled=True)
+        assert "corrected" in restarted.build_prompt_context()
 
     def test_run_learning_cycle(self, seeded_db):
         loop = LearningLoop(db_path=seeded_db, enabled=True)
@@ -165,6 +192,7 @@ class TestLearningLoop:
         assert "rule_suggestion_id" in result
         assert result["rule_suggestion_status"] == "proposed (requires human review)"
         assert result["prompt_context_updated"] is True
+        assert "中风险" not in loop._prompt_context_cache
 
     def test_disabled(self, seeded_db):
         loop = LearningLoop(db_path=seeded_db, enabled=False)

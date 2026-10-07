@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import re
@@ -162,16 +163,18 @@ CURRENT_PUBLICATION_STATES = {"LOCAL_CANDIDATE_NOT_PUBLISHED", "PUBLISHED_SOURCE
 CURRENT_RUNTIME_STATES = {"NOT_LOADED_OR_NOT_VERIFIED", "LOADED_AND_VERIFIED"}
 
 
-def _head_changed_paths() -> set[str]:
+def _publication_changed_paths(*, staged: bool = False) -> set[str]:
+    command = (["git", "diff", "--cached", "--name-only", "HEAD"] if staged else
+               ["git", "diff-tree", "--root", "--first-parent", "--no-commit-id", "--name-only", "-r", "HEAD"])
     proc = subprocess.run(
-        ["git", "diff-tree", "--root", "--first-parent", "--no-commit-id", "--name-only", "-r", "HEAD"],
+        command,
         cwd=ROOT,
         capture_output=True,
         text=True,
         check=False,
     )
     if proc.returncode != 0:
-        raise AssertionError(f"cannot inspect HEAD changed paths: {proc.stderr.strip()}")
+        raise AssertionError(f"cannot inspect publication changed paths: {proc.stderr.strip()}")
     return {line.strip() for line in proc.stdout.splitlines() if line.strip()}
 
 
@@ -212,7 +215,7 @@ def _assert_current_publication_truth(
         )
         return
 
-    paths = _head_changed_paths() if changed_paths is None else set(changed_paths)
+    paths = _publication_changed_paths() if changed_paths is None else set(changed_paths)
     current_path = str(PATHS["takeover"].relative_to(ROOT)).replace("\\", "/")
     if current_path not in paths:
         raise AssertionError(
@@ -560,7 +563,7 @@ def _scan_error(error: OSError) -> None:
     raise error
 
 
-def validate() -> None:
+def validate(*, staged: bool = False) -> None:
     agents = _read("agents")
     readme = _read("readme")
     takeover = _read("takeover")
@@ -590,7 +593,19 @@ def validate() -> None:
     _assert_single_machine_contract()
     _assert_six_round_routing(agents)
     _assert_current_round_statuses(takeover)
-    _assert_current_publication_truth(takeover)
+    if staged:
+        current_path = str(PATHS["takeover"].relative_to(ROOT)).replace("\\", "/")
+        staged_current = subprocess.run(
+            ["git", "show", f":{current_path}"], cwd=ROOT,
+            capture_output=True, text=True, encoding="utf-8", check=False,
+        )
+        if staged_current.returncode != 0:
+            raise AssertionError("cannot read staged CURRENT publication state")
+        _assert_current_publication_truth(
+            staged_current.stdout, changed_paths=_publication_changed_paths(staged=True)
+        )
+    else:
+        _assert_current_publication_truth(takeover)
     _assert_legacy_coverage_mapping(source_index, require_assertions=True)
     _assert_execution_boundaries(agents)
     _assert_readme_routing_consistent(readme)
@@ -966,7 +981,10 @@ def validate() -> None:
 
 
 if __name__ == "__main__":
-    validate()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--staged", action="store_true",
+                        help="Check proposed index co-publication before commit; default checks HEAD")
+    validate(staged=parser.parse_args().staged)
     print(
         "CODEX TAKEOVER GOVERNANCE OK "
         f"{EXPECTED_CONTRACT_ID} v{EXPECTED_VERSION} {EXPECTED_FINGERPRINT} "

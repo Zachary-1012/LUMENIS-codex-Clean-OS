@@ -1740,10 +1740,17 @@ def _permission_gate_write_check():
                 'error': 'PermissionGate未初始化（fail-closed）',
             }), 503
         op_type = _pg_resolve_operation_type(request.path, request.method)
+        from domain_isolation import get_domain_context
+        bound_context = get_domain_context()
+        # This is the SYSTEM HTTP-effect gate. A selected business domain is
+        # preserved; a later owner must still authorize its actual actor/scope.
+        effect_domain = (bound_context.domain_id if bound_context is not None
+                         and bound_context.domain_id else 'system')
         result = _pg.check(
             operation_type=op_type,
             resource=request.path,
             caller='http:{}:{}'.format(request.method, request.path),
+            domain_id=effect_domain,
         )
         if not result.allowed:
             return jsonify({
@@ -1957,7 +1964,10 @@ def _run_collect_task(task_id,keywords,max_scroll,query_plan=None):
         except RuntimeError: pass
 
 def _generate_all_reports():
-    return report_engine.generate_all()
+    # Existing scheduled reference job; never infer this focus for user requests.
+    from subject_context import brand_scope, CTH_BRAND_KEY
+    with brand_scope(CTH_BRAND_KEY, "CTH"):
+        return report_engine.generate_all(domain_id="cth")
 
 # ========== rednote CDP 采集 ==========
 REDNOTE_SCRIPT = Path(__file__).parent / 'rednote_collector.cjs'
@@ -4886,7 +4896,10 @@ def _generate_daily_report(date_str=None):
     """通过 Shared Reporting canonical engine 生成并验证日报。"""
     try:
         date_str = date_str or datetime.now().strftime('%Y-%m-%d')
-        report, _digest = report_engine.generate_report('daily', date_str, date_str)
+        from subject_context import brand_scope, CTH_BRAND_KEY
+        with brand_scope(CTH_BRAND_KEY, "CTH"):
+            report, _digest = report_engine.generate_report(
+                "daily", date_str, date_str, domain_id="cth")
         if not (report.get('_artifact_verified') and report.get('_db_row_id')):
             raise RuntimeError('Shared Reporting 日报未通过落库/artifact 验证')
         print(f'[Report] 日报生成完成: {date_str}')
@@ -4902,7 +4915,10 @@ def _generate_weekly_report():
         now = datetime.now()
         week_start = (now - timedelta(days=now.weekday())).strftime('%Y-%m-%d')
         week_end = now.strftime('%Y-%m-%d')
-        report, _digest = report_engine.generate_report('weekly', week_start, week_end)
+        from subject_context import brand_scope, CTH_BRAND_KEY
+        with brand_scope(CTH_BRAND_KEY, "CTH"):
+            report, _digest = report_engine.generate_report(
+                "weekly", week_start, week_end, domain_id="cth")
         if not (report.get('_artifact_verified') and report.get('_db_row_id')):
             raise RuntimeError('Shared Reporting 周报未通过落库/artifact 验证')
         print(f'[Report] 周报生成完成: {week_start}~{week_end}')

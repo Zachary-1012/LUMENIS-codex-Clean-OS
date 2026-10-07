@@ -36,6 +36,8 @@ from lumenis.shared.evidence.chain import (
     generate_canonical_id,
     init_db,
 )
+from domain_isolation import DomainContext, clear_domain_context, set_domain_context
+from subject_context import clear_thread_context
 
 
 # ============================================================
@@ -72,6 +74,19 @@ def lifecycle(tmp_db):
 @pytest.fixture
 def chain(tmp_db):
     return EvidenceChain(tmp_db)
+
+
+@pytest.fixture(autouse=True)
+def selected_cth_global_context():
+    """Legacy CTH-focused unit cases run with an explicit domain selection."""
+    clear_domain_context()
+    clear_thread_context()
+    set_domain_context(DomainContext.from_product("CTH"))
+    try:
+        yield
+    finally:
+        clear_domain_context()
+        clear_thread_context()
 
 
 # ============================================================

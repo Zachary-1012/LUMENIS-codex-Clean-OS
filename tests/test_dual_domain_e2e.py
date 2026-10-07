@@ -67,7 +67,7 @@ def zbmp_domain_ctx():
 
 @pytest.fixture
 def cth_domain_ctx():
-    """设置 CTH 域上下文（强制主体保护）。"""
+    """显式选择受控参考主体；此 fixture 不代表 CTH 的 GLOBAL 默认。"""
     from domain_isolation import DomainContext, set_domain_context, clear_domain_context
     from subject_context import SubjectContext, set_thread_context, clear_thread_context
     ctx = DomainContext(
@@ -642,13 +642,10 @@ class TestMissingDomainRejection:
         assert rec.product_id in ("CTH", "ZBMP"), f"默认 product_id 不应静默落 SYSTEM: {rec.product_id}"
         assert rec.domain_id in ("cth", "zbmp"), f"默认 domain_id 不应静默落 system: {rec.domain_id}"
 
-    def test_legacy_unknown_product_does_not_map_to_system(self):
-        """仅核对旧映射不进入 SYSTEM；并未证明未知域被拒绝。"""
+    def test_unknown_product_is_rejected_before_domain_routing(self):
         from domain_isolation import product_to_domain
-        # 未知 product_id 映射
-        result = product_to_domain("UNKNOWN_PRODUCT")
-        # 保留原兼容断言。UNKNOWN→CTH 的真实修复须同时迁移相关调用方。
-        assert result in ("cth", "zbmp", ""), f"未知 product 不应静默落 system: {result}"
+        with pytest.raises(ValueError, match="INVALID_PRODUCT_ID"):
+            product_to_domain("UNKNOWN_PRODUCT")
 
 
 # ============================================================================
@@ -658,31 +655,27 @@ class TestApiDomainEndToEnd:
     """API 层：请求头→域上下文→响应域标签，端到端不丢域。"""
 
     @pytest.fixture
-    def client(self):
-        """Flask test client with Basic Auth for ZBMP/system endpoints.
-
-        P1-1 auth收窄后 /api/zbmp/* 需要 Basic Auth；CTH 只读 GET 仍免密。
-        Auth header 对所有请求都发送（对免密端点无害）。
-        """
+    def client(self, monkeypatch):
+        """Authenticated test client for endpoints requiring account authentication."""
         import base64
         from app import app
-        app.config["TESTING"] = True
+        monkeypatch.setitem(app.config, "TESTING", True)
         c = app.test_client()
-        _env = {}
-        _env_path = os.path.join(PROJECT_ROOT, ".env")
-        try:
-            for _line in open(_env_path, encoding="utf-8"):
-                _line = _line.strip()
-                if "=" in _line and not _line.startswith("#"):
-                    _k, _v = _line.split("=", 1)
-                    _env[_k.strip()] = _v.strip().strip('"')
-        except Exception:
-            pass
-        _u = _env.get("TAIKOO_AUTH_USER", os.environ.get("TAIKOO_AUTH_USER", "zachary"))
-        _p = _env.get("TAIKOO_AUTH_PASSWORD", os.environ.get("TAIKOO_AUTH_PASSWORD", "Zachary01"))
-        if _u and _p:
-            _tok = base64.b64encode(("%s:%s" % (_u, _p)).encode()).decode()
-            c.environ_base["HTTP_AUTHORIZATION"] = "Basic " + _tok
+        username = os.environ.get("TAIKOO_AUTH_USER")
+        password = os.environ.get("TAIKOO_AUTH_PASSWORD")
+        assert username and password, "tests/conftest.py must provide isolated test credentials"
+        token = base64.b64encode(f"{username}:{password}".encode()).decode()
+        c.environ_base["HTTP_AUTHORIZATION"] = f"Basic {token}"
+        return c
+
+    @pytest.fixture
+    def cth_client(self, monkeypatch):
+        """Use the server-opened local workspace; CTH scope Permission remains active."""
+        from app import app
+        monkeypatch.setitem(app.config, "TESTING", True)
+        monkeypatch.setitem(app.config, "LUMENIS_OPEN_WORKSPACE", True)
+        c = app.test_client()
+        assert "HTTP_AUTHORIZATION" not in c.environ_base
         return c
 
     def test_zbmp_api_chain_domain_e2e(self, client):
@@ -695,9 +688,9 @@ class TestApiDomainEndToEnd:
         assert data["domain_id"] == "zbmp"
         assert data["product_id"] == "ZBMP"
 
-    def test_cth_api_chain_domain_e2e(self, client):
+    def test_cth_api_chain_domain_e2e(self, cth_client):
         """CTH API 链：请求头 X-Product-Id=CTH → 响应 domain_id=cth。"""
-        resp = client.get("/api/cth/overview", headers={
+        resp = cth_client.get("/api/cth/overview", headers={
             "X-Domain-Id": "cth", "X-Product-Id": "CTH"
         })
         assert resp.status_code == 200
@@ -705,7 +698,7 @@ class TestApiDomainEndToEnd:
         assert data["domain_id"] == "cth"
         assert data["product_id"] == "CTH"
 
-    def test_api_domain_switch_no_cross_contamination(self, client):
+    def test_api_domain_switch_no_cross_contamination(self, client, cth_client):
         """API 域切换：先 ZBMP 后 CTH，数据不串域。"""
         # ZBMP 请求
         r1 = client.get("/api/zbmp/overview", headers={
@@ -715,7 +708,7 @@ class TestApiDomainEndToEnd:
         assert d1["domain_id"] == "zbmp"
 
         # CTH 请求（模拟切换）
-        r2 = client.get("/api/cth/overview", headers={
+        r2 = cth_client.get("/api/cth/overview", headers={
             "X-Domain-Id": "cth", "X-Product-Id": "CTH"
         })
         d2 = r2.get_json()

@@ -5,10 +5,12 @@
 GET /api/collector/status → 返回最近验证记录与当前认证元数据的分层状态。
 
 状态定义（真实，禁止伪造）：
-  - ACTIVE / VERIFIED / PARTIAL / EXPIRED / BLOCKED : 仅作带时间戳的上次验证结果
-  - NEED_VERIFY : 认证 Cookie 元数据存在，但没有连通验证
-  - INVALID / MISSING : 当前 Cookie 元数据检查结果
-  - UNKNOWN : 身份范围或验证时效未绑定；不能声称当前连通
+  - cookie_status=NEED_VERIFY 且 status_source=AUTH_METADATA：只表示发现认证元数据，尚未检查平台连通性；不表示平台返回了 challenge。
+  - last_verified_status=NEED_VERIFY 且 status_source=VERIFICATION_CACHE：带 last_check 时间的历史平台验证结果（例如平台 challenge）；当前 cookie_status 仍为 UNKNOWN。
+  - ACTIVE / VERIFIED / PARTIAL / EXPIRED / BLOCKED 等缓存值：仅作带时间戳的上次验证结果，不表示当前可用。
+  - acquisition plan 的 READY/STAGED/BLOCKED 是计划状态，不是本 API 的平台验证结果。
+  - INVALID / MISSING：当前认证元数据检查结果。
+  - UNKNOWN：身份范围或验证时效未绑定；不能声称当前连通或准备就绪。
 
 返回字段：platform / cookie_status / last_check / records_parsed / error / http_status
 """
@@ -44,8 +46,16 @@ PLATFORM_DISPLAY = {
     "smzdm": "什么值得买", "dianping": "大众点评", "facebook": "Facebook",
 }
 
-# 状态缓存文件（最近一次真实验证结果）
+# 状态缓存文件（最近一次真实平台验证结果；不接受 acquisition-plan 状态）
 _STATUS_CACHE = Path(__file__).resolve().parent / "data" / "collector_status_cache.json"
+
+# These are platform-verification outcomes, not query-plan or worker lifecycle states.
+# NEED_VERIFY is included because an actual verification may encounter a platform
+# challenge. Its source/time remain separate from cookie metadata and current readiness.
+_HISTORICAL_VERIFICATION_STATUSES = {
+    "ACTIVE", "VERIFIED", "PARTIAL", "EXPIRED", "INVALID", "MISSING",
+    "BLOCKED", "NEED_VERIFY",
+}
 
 
 def _now_iso() -> str:
@@ -73,11 +83,13 @@ def _save_cache(data: dict):
 
 def update_platform_status(platform: str, status: str, records_parsed: int = 0,
                            error: str = "", http_status: int = None):
-    """更新单个平台验证状态（由验证脚本/采集器调用）。
+    """Record a platform-verification outcome, not a query-plan readiness state.
 
     Args:
         platform: 平台名
-        status: ACTIVE/VERIFIED/PARTIAL/EXPIRED/INVALID/MISSING/BLOCKED
+        status: platform outcome such as ACTIVE/VERIFIED/PARTIAL/EXPIRED/
+            INVALID/MISSING/BLOCKED/NEED_VERIFY. READY/STAGED are plan states
+            and are not current platform verification.
         records_parsed: 解析到的记录数
         error: 错误信息（如有）
         http_status: HTTP 状态码（如有）
@@ -127,16 +139,27 @@ def get_all_status() -> dict:
         if isinstance(cached, dict):
             verified_status = cached.get("cookie_status")
             last_check = cached.get("last_check")
-            if verified_status in {"ACTIVE", "VERIFIED", "PARTIAL", "EXPIRED", "INVALID", "MISSING", "BLOCKED"} \
+            if verified_status in _HISTORICAL_VERIFICATION_STATUSES \
                     and isinstance(last_check, str) and last_check.strip():
+                # Do not expose arbitrary cached exception text: it may contain
+                # URLs, identifiers, or credential fragments. The status value
+                # itself is the safe reason code; freshness/source/time explain
+                # its historical scope.
+                cached_error = (
+                    "historical platform verification required; current readiness is not established"
+                    if verified_status == "NEED_VERIFY"
+                    else "stored verification retained; current freshness is not established"
+                )
                 results.append({
                     "platform": p,
                     "display": PLATFORM_DISPLAY.get(p, p),
                     "cookie_status": "UNKNOWN",
                     "last_verified_status": verified_status,
+                    # Compatibility field: for VERIFICATION_CACHE rows this is
+                    # the original verification time, never this API read time.
                     "last_check": last_check,
                     "records_parsed": cached.get("records_parsed"),
-                    "error": "stored verification retained; current freshness is not established",
+                    "error": cached_error,
                     "http_status": cached.get("http_status"),
                     "status_source": "VERIFICATION_CACHE",
                     "freshness": "UNKNOWN",
@@ -184,6 +207,7 @@ def get_all_status() -> dict:
         "invalid": sum(1 for s in last_verified if s == "INVALID"),
         "missing": sum(1 for s in last_verified if s == "MISSING"),
         "blocked": sum(1 for s in last_verified if s == "BLOCKED"),
+        "need_verify": sum(1 for s in last_verified if s == "NEED_VERIFY"),
     }
     return {
         "timestamp": _now_iso(),
@@ -203,12 +227,32 @@ def get_all_status() -> dict:
     }
 
 
+def get_collector_status_payload() -> dict:
+    """Build the shared status payload used by both legacy GET registrations.
+
+    Keep collector process lifecycle and per-platform auth/verification as
+    separate named dimensions. The top-level runtime keys preserve the older
+    collection_api response; ``data`` preserves the platform status contract.
+    """
+    import collector_automation
+
+    runtime = collector_automation.get_collector_automation().get_status()
+    platform_status = get_all_status()
+    platform_status["collector_runtime"] = runtime
+    return {
+        "ok": True,
+        **runtime,
+        "success": True,
+        "data": platform_status,
+        "error": None,
+    }
+
+
 @collector_status_bp.route("/api/collector/status", methods=["GET"])
 def collector_status():
-    """GET /api/collector/status → 各平台连通状态（统一信封 success/data/error）。"""
+    """GET status with one shared runtime + platform-status response contract."""
     try:
-        data = get_all_status()
-        return jsonify({"success": True, "data": data, "error": None})
+        return jsonify(get_collector_status_payload())
     except Exception as e:
         logger.exception("collector_status API 异常")
-        return jsonify({"success": False, "data": None, "error": str(e)}), 500
+        return jsonify({"ok": False, "success": False, "data": None, "error": str(e)}), 500

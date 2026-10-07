@@ -44,6 +44,64 @@ from typing import Any, Dict, List, Optional, Tuple
 from lumenis.shared.database import DatabaseRepository, main_db_path
 DB_PATH = main_db_path()
 
+
+def _resolve_evidence_identity(domain_id=None, product_id=None, subject_scope=None):
+    """Resolve a real domain binding before any Evidence or Canonical write.
+
+    Explicit arguments take precedence as one coherent identity pair. With no
+    arguments, only a bound request/task context may supply the identity;
+    environment defaults and historical CTH labels are never consulted.
+    """
+    from domain_isolation import get_domain_context, resolve_domain_identity
+
+    explicit = domain_id is not None or product_id is not None
+    if explicit:
+        for value in (domain_id, product_id):
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError("INVALID_EVIDENCE_DOMAIN_IDENTITY")
+        resolved_domain, resolved_product = resolve_domain_identity(domain_id, product_id)
+    else:
+        context = get_domain_context()
+        resolved_domain = resolved_product = ""
+        if context is not None and context.domain_id:
+            resolved_domain, resolved_product = resolve_domain_identity(
+                context.domain_id, context.product_id
+            )
+        else:
+            from subject_context import get_thread_context
+            subject = get_thread_context()
+            if subject is not None and subject.product_id:
+                resolved_domain, resolved_product = resolve_domain_identity(
+                    product_id=subject.product_id
+                )
+
+    if not resolved_domain or not resolved_product:
+        raise ValueError("EVIDENCE_DOMAIN_REQUIRED")
+
+    if subject_scope is None:
+        scope = "GLOBAL / ALL"
+        context = get_domain_context()
+        if context is not None and context.domain_id == resolved_domain:
+            scope = context.subject_id or context.brand_key or scope
+        else:
+            try:
+                from subject_context import get_thread_context
+                subject = get_thread_context()
+                if subject is not None and subject.product_id:
+                    subject_domain, subject_product = resolve_domain_identity(
+                        product_id=subject.product_id
+                    )
+                    if (subject_domain == resolved_domain
+                            and subject_product == resolved_product):
+                        scope = subject.subject_id or subject.brand_key or scope
+            except ImportError:
+                pass
+    elif not isinstance(subject_scope, str) or not subject_scope.strip():
+        raise ValueError("INVALID_EVIDENCE_SUBJECT_SCOPE")
+    else:
+        scope = subject_scope.strip()
+    return resolved_domain, resolved_product, scope
+
 # 规则版本：每次规则变更递增，历史数据保留创建时的版本
 RULE_VERSION = "evidence-chain-v1.0.0"
 
@@ -165,12 +223,12 @@ class Evidence:
     task_id: str = ""              # Track3：采集任务 ID，关联采集批次
     trace_id: str = ""             # Track3：全链路追踪 ID
     publish_datetime: Optional[str] = None  # 内容真实发布时间
-    subject_scope: str = "CTH"     # 主体范围（广州太古汇=CTH）
+    subject_scope: str = ""        # Unbound records stay explicitly unassigned.
     collection_metadata: Dict[str, Any] = field(default_factory=dict)
     provider: str = "rule"         # 采集提供者/适配器
     authenticity_score: float = 1.0  # 真实性评分 0-1
-    domain_id: str = "cth"           # ZBC V2.0 双域隔离：域身份
-    product_id: str = "CTH"          # 产品 ID（CTH/ZBMP）
+    domain_id: str = ""             # ZBC V2.0 双域隔离：域身份
+    product_id: str = ""            # 产品 ID（CTH/ZBMP）
     evaluation_id: str = ""          # 关联评估 ID
     final_decision: str = ""         # 最终判断（Rule→AI辅助→Evidence→Evaluation→Final Decision）
     rule_id: str = ""                # 经过的规则 ID
@@ -465,7 +523,8 @@ class EvidenceStore:
     IMMUTABLE_FIELDS = frozenset({
         "evidence_id", "source_type", "source_url", "raw_content",
         "content_hash", "captured_at", "publish_datetime", "subject_scope",
-        "collection_metadata", "provider", "authenticity_score", "created_at",
+        "collection_metadata", "provider", "authenticity_score", "domain_id",
+        "product_id", "created_at",
     })
 
     def __init__(self, db_path: Optional[str] = None):
@@ -481,15 +540,15 @@ class EvidenceStore:
         source_id: str = "",
         captured_at: str = "",
         publish_datetime: Optional[str] = None,
-        subject_scope: str = "CTH",
+        subject_scope: Optional[str] = None,
         task_id: str = "",
         trace_id: str = "",
         collection_metadata: Optional[Dict[str, Any]] = None,
         provider: str = "rule",
         dedupe_by_source: bool = False,
         authenticity_score: float = 1.0,
-        domain_id: str = "",
-        product_id: str = "",
+        domain_id: Optional[str] = None,
+        product_id: Optional[str] = None,
         evaluation_id: str = "",
         final_decision: str = "",
         rule_id: str = "",
@@ -500,26 +559,16 @@ class EvidenceStore:
         Returns:
             (Evidence, is_new) —— is_new=True 表示新插入，False 表示 hash 命中已有记录
         """
+        domain_id, product_id, subject_scope = _resolve_evidence_identity(
+            domain_id, product_id, subject_scope
+        )
         content_hash = compute_content_hash(raw_content)
         captured_at = captured_at or _now()
-        # ZBC V2.0 双域隔离：默认从线程上下文解析域身份
-        if not domain_id or not product_id:
-            try:
-                from ai_domain_context import get_current_domain, product_id_to_domain
-                from subject_context import get_subject_context
-                _ctx = get_subject_context()
-                if not domain_id:
-                    domain_id = get_current_domain()
-                if not product_id:
-                    product_id = _ctx.product_id
-            except ImportError:
-                domain_id = domain_id or "cth"
-                product_id = product_id or "CTH"
 
         conn = _get_conn(self.db_path)
         try:
-            # 默认保持历史上的全局内容哈希去重；采集入口可按来源身份收窄，
-            # 避免不同笔记恰好同文时复用首条 Evidence、丢失后续 source/provider。
+            # Evidence 可只在同一域、产品和精确 subject scope 内复用。
+            # 相同文本跨域/跨主体不等于相同来源事实，不能借全局 hash 去重串域。
             if dedupe_by_source:
                 existing = conn.execute(
                     "SELECT * FROM zbc_evidence WHERE content_hash = ? AND source_type = ? "
@@ -528,13 +577,13 @@ class EvidenceStore:
                     "ORDER BY created_at LIMIT 1",
                     (content_hash, str(source_type or "unknown"), str(source_id or ""),
                      str(source_url or ""), str(provider or "rule"),
-                     str(subject_scope or "CTH"), str(domain_id or "cth"),
-                     str(product_id or "CTH")),
+                     subject_scope, domain_id, product_id),
                 ).fetchone()
             else:
                 existing = conn.execute(
-                    "SELECT * FROM zbc_evidence WHERE content_hash = ?",
-                    (content_hash,),
+                    "SELECT * FROM zbc_evidence WHERE content_hash = ? AND domain_id = ? "
+                    "AND product_id = ? AND subject_scope = ? ORDER BY created_at LIMIT 1",
+                    (content_hash, domain_id, product_id, subject_scope),
                 ).fetchone()
             if existing:
                 return Evidence.from_row(existing), False
@@ -1010,7 +1059,7 @@ class EvidenceChain:
         engagement_metrics: Optional[Dict[str, Any]] = None,
         ai_analysis: Optional[Dict[str, Any]] = None,
         publish_datetime: Optional[str] = None,
-        subject_scope: str = "CTH",
+        subject_scope: Optional[str] = None,
         task_id: str = "",
         trace_id: str = "",
         evaluation_id: str = "",
@@ -1018,8 +1067,8 @@ class EvidenceChain:
         provider: str = "rule",
         dedupe_by_source: bool = False,
         rule_version: str = RULE_VERSION,
-        domain_id: str = "",
-        product_id: str = "",
+        domain_id: Optional[str] = None,
+        product_id: Optional[str] = None,
         final_decision: str = "",
         rule_id: str = "",
         ai_call_id: str = "",
@@ -1038,6 +1087,9 @@ class EvidenceChain:
                 "tracking_ids": [...],
             }
         """
+        domain_id, product_id, subject_scope = _resolve_evidence_identity(
+            domain_id, product_id, subject_scope
+        )
         # 1. Evidence 阶段（含 hash 去重）
         ev, is_new = self.evidence_store.add_evidence(
             source_type=source_type,
@@ -1122,14 +1174,14 @@ class EvidenceChain:
         source_id: str = "",
         captured_at: Optional[str] = None,
         publish_datetime: Optional[str] = None,
-        subject_scope: str = "CTH",
+        subject_scope: Optional[str] = None,
         task_id: str = "",
         trace_id: str = "",
         collection_metadata: Optional[Dict[str, Any]] = None,
         provider: str = "unknown",
         dedupe_by_source: bool = True,
-        domain_id: str = "",
-        product_id: str = "",
+        domain_id: Optional[str] = None,
+        product_id: Optional[str] = None,
         rule_version: str = RULE_VERSION,
     ) -> Dict[str, Any]:
         """Record Evidence and link it to an existing authoritative canonical row.
@@ -1140,6 +1192,9 @@ class EvidenceChain:
         """
         if not isinstance(canonical_id, str):
             raise TypeError("canonical_id must be a string")
+        domain_id, product_id, subject_scope = _resolve_evidence_identity(
+            domain_id, product_id, subject_scope
+        )
         evidence, is_new = self.evidence_store.add_evidence(
             source_type=source_type,
             source_url=source_url,
@@ -1233,9 +1288,9 @@ def capture_note_lineage(
     *,
     db_path: Optional[str] = None,
     provider: str = "unknown",
-    subject_scope: str = "CTH",
-    domain_id: str = "cth",
-    product_id: str = "CTH",
+    subject_scope: Optional[str] = None,
+    domain_id: Optional[str] = None,
+    product_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Record a stored note in the sole business Canonical owner and Evidence lineage.
 
@@ -1244,6 +1299,13 @@ def capture_note_lineage(
     and a lifecycle reference to that exact row. The legacy zbc canonical
     analysis overlay is not written by this ingestion path.
     """
+    try:
+        domain_id, product_id, subject_scope = _resolve_evidence_identity(
+            domain_id, product_id, subject_scope
+        )
+    except (ImportError, TypeError, ValueError) as exc:
+        return {"ok": False, "errors": [{"stage": "validation", "error_type": str(exc)}]}
+
     note = dict(note_data or {})
     source_id = str(note.get("note_id") or note.get("source_id") or "").strip()
     if not source_id:
@@ -1385,14 +1447,20 @@ __all__ = [
 # ============================================================
 def list_evidence_by_domain(
     db_path: str = None,
-    domain_id: str = "cth",
+    domain_id: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
+    *,
+    product_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """按域查询证据（CTH 和 ZBMP 证据存储在同一表但 domain_id 区分）。
+    """按显式或已绑定域查询证据，不把未选择的 GLOBAL 映射到 CTH。
 
-    默认按当前域过滤，禁止跨域混查。
+    CTH 和 ZBMP 证据存储在同一表但 domain_id 区分。没有显式域时只
+    接受当前已绑定的 DomainContext/SubjectContext；没有绑定则明确失败。
     """
+    domain_id, product_id, _subject_scope = _resolve_evidence_identity(
+        domain_id, product_id, None
+    )
     store = EvidenceStore(db_path)
     evidence_list = store.list_evidence(domain_id=domain_id, limit=limit, offset=offset)
     return [

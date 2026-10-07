@@ -118,32 +118,28 @@ ACTIVE_BRAND = "guangzhou_taikoo_hui"  # 生产安全默认=广州太古汇（CT
 
 
 def get_active_brand() -> str:
-    """获取当前激活品牌key。
+    """Legacy reference filter with explicit request isolation.
 
-    V2 P0-19: 委托给 SubjectContext 管理主体边界。
-    active_brand 不再承担系统数据边界职责，仅作为兼容层返回 brand_key。
-    真实的主体边界由 subject_context.get_subject_context() 统一管理。
-
-    优先级（Shard D 请求级隔离）：
-      1. 线程级 SubjectContext（由 Flask before_request 或 brand_scope 设置）
-      2. 环境变量 ZBC_ACTIVE_BRAND
-      3. CTH 默认 guangzhou_taikoo_hui
+    Outside a bound request this module retains its named reference filter.
+    A bound GLOBAL/domain-only request never acquires that legacy focus.
     """
-    try:
-        from subject_context import get_thread_context, get_subject_context
-        ctx = get_thread_context()
-        if ctx is not None:
-            return ctx.brand_key
-        return get_subject_context().brand_key
-    except Exception:
-        import os
-        return os.environ.get("ZBC_ACTIVE_BRAND", ACTIVE_BRAND)
+    from subject_context import get_thread_context
+    ctx = get_thread_context()
+    if ctx is not None:
+        return ctx.brand_key
+    import os
+    return os.environ.get("ZBC_ACTIVE_BRAND", ACTIVE_BRAND)
 
 
 def get_brand_config(brand_key: str = "") -> dict:
-    """获取指定品牌配置，默认当前激活品牌。"""
+    """Resolve an explicit legacy profile; unknown never becomes Guangzhou."""
     key = brand_key or get_active_brand()
-    return BRAND_PROFILES.get(key, BRAND_PROFILES["guangzhou_taikoo_hui"])
+    if not key:
+        return {"brand_key": "", "display_name": "未聚焦", "subject_words": [],
+                "exclude_words": [], "collect_keywords": []}
+    if key not in BRAND_PROFILES:
+        raise ValueError("UNKNOWN_SUBJECT_PROFILE")
+    return BRAND_PROFILES[key]
 
 
 def subject_hit_for_brand(title="", body="", content="", source_keyword="", matched_keywords="", brand_key="") -> bool:
@@ -211,13 +207,7 @@ def _subject_sql_and_values(alias: str = '') -> tuple[str, list[str]]:
     V4 P0-01：委托品牌化版本，确保 Python/SQL/采集/报告/统计口径统一。
     V2 P0-1：接入 Domain Isolation，CTH 域强制主体保护。
     旧调用点无需修改，自动走当前激活品牌配置。"""
-    brand = get_active_brand()
-    # V2 P0-1: CTH 域隔离保护 — 仅当显式设置 ZBC_PRODUCT_ID=CTH 时强制主体
-    # 默认尊重 ZBC_ACTIVE_BRAND 环境变量（多品牌 KOS 场景）
-    import os
-    if os.environ.get("ZBC_PRODUCT_ID") == "CTH" and brand != "guangzhou_taikoo_hui":
-        brand = "guangzhou_taikoo_hui"
-    return _subject_sql_and_values_for(brand, alias)
+    return _subject_sql_and_values_for(get_active_brand(), alias)
 
 
 # 保留项目历史命名，避免旧模块/脚本调用断裂。
@@ -244,6 +234,11 @@ def _subject_sql_and_values_for(brand_key: str, alias: str = '') -> tuple[str, l
     cfg = get_brand_config(brand_key)
     sw = cfg.get("subject_words", SUBJECT_WORDS)
     ew = cfg.get("exclude_words", SUBJECT_EXCLUDE_WORDS)
+    if not sw:
+        # This is a legacy subject filter, not a GLOBAL data reader.
+        # Returning an always-false predicate would disguise missing scope as
+        # a measured zero in the legacy statistics callers.
+        raise ValueError("LEGACY_SUBJECT_SCOPE_REQUIRED")
     positives = []
     values: list[str] = []
     for field in SUBJECT_FIELDS:
@@ -255,7 +250,8 @@ def _subject_sql_and_values_for(brand_key: str, alias: str = '') -> tuple[str, l
         for word in ew:
             excludes.append(f"{_column(alias, field)} LIKE ?")
             values.append(f'%{word.lower()}%')
-    return f"({' OR '.join(positives)}) AND NOT ({' OR '.join(excludes)})", values
+    exclusion = f" AND NOT ({' OR '.join(excludes)})" if excludes else ""
+    return f"({' OR '.join(positives)}){exclusion}", values
 
 
 def subject_sql_and_values_for(brand_key: str = "", alias: str = '') -> tuple[str, list[str]]:

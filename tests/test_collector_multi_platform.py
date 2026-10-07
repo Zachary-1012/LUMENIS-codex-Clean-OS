@@ -246,6 +246,79 @@ class TestCollectorStatusAPI:
         assert result["summary"]["active"] == 0
         assert result["summary"]["last_verified"]["active"] == 1
 
+    def test_metadata_need_verify_is_distinct_from_historical_platform_challenge(self, monkeypatch):
+        import collector_status_api as status_api
+
+        challenge_time = "2026-10-05T10:00:00+08:00"
+        monkeypatch.setattr(status_api, "_load_cache", lambda: {
+            "facebook": {
+                "cookie_status": "NEED_VERIFY",
+                "last_check": challenge_time,
+                "records_parsed": 0,
+                "error": "platform challenge: verification_required",
+            },
+            "douyin": {
+                "cookie_status": "VERIFIED",
+                "last_check": challenge_time,
+                "records_parsed": 12,
+                "error": "",
+            },
+            # READY is an acquisition-plan state, not a platform verification.
+            "sogou_search": {
+                "cookie_status": "READY",
+                "last_check": challenge_time,
+                "records_parsed": 3,
+                "error": "query plan ready",
+            },
+        })
+        monkeypatch.setattr(
+            status_api,
+            "check_cookie_status",
+            lambda platform: {
+                "platform": platform,
+                "status": "ACTIVE" if platform == "weibo" else "MISSING",
+                "has_auth_cookie": platform == "weibo",
+            },
+        )
+
+        result = status_api.get_all_status()
+        rows = {item["platform"]: item for item in result["platforms"]}
+        historical_challenge = rows["facebook"]
+        historical_verified = rows["douyin"]
+        metadata_only = rows["weibo"]
+        plan_only = rows["sogou_search"]
+
+        assert historical_challenge["cookie_status"] == "UNKNOWN"
+        assert historical_challenge["last_verified_status"] == "NEED_VERIFY"
+        assert historical_challenge["last_check"] == challenge_time
+        assert historical_challenge["status_source"] == "VERIFICATION_CACHE"
+        assert historical_challenge["freshness"] == "UNKNOWN"
+        assert historical_challenge["error"] == (
+            "historical platform verification required; current readiness is not established"
+        )
+
+        assert historical_verified["cookie_status"] == "UNKNOWN"
+        assert historical_verified["last_verified_status"] == "VERIFIED"
+        assert historical_verified["last_check"] == challenge_time
+        assert historical_verified["status_source"] == "VERIFICATION_CACHE"
+        assert historical_verified["freshness"] == "UNKNOWN"
+        assert historical_verified["records_parsed"] == 12
+
+        assert metadata_only["cookie_status"] == "NEED_VERIFY"
+        assert metadata_only["last_verified_status"] is None
+        assert metadata_only["last_check"] is None
+        assert metadata_only["status_source"] == "AUTH_METADATA"
+        assert metadata_only["freshness"] == "NOT_CHECKED"
+        assert "connectivity was not checked" in metadata_only["error"]
+
+        assert plan_only["cookie_status"] == "MISSING"
+        assert plan_only["last_verified_status"] is None
+        assert plan_only["last_check"] is None
+        assert plan_only["status_source"] == "AUTH_METADATA"
+        assert plan_only["freshness"] == "NOT_CHECKED"
+
+        assert result["summary"]["need_verify"] == 1
+        assert result["summary"]["last_verified"]["need_verify"] == 1
 
 # ============================================================
 # 4. 数据精准门禁测试
