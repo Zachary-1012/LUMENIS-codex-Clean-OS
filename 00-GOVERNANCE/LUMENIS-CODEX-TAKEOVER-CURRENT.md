@@ -176,6 +176,8 @@ F owns four-surface behavior and design responsibilities through existing Flutte
 
 87. **LEGACY-REGRESSION VALIDATOR REPAIR — 2026-10-07.** Product Gate on `25b8cb2a` proved the new machine governance validator PASS, including structured model routing and CURRENT co-publication semantics, then the retained historical-regression validator failed before validation because the semantic-migration refactor accidentally removed its static `PATHS` lookup table together with the retired publication helper. This follow-up restores only that path registry. It changes no governance semantics, product capability, approval scope, Gate policy, Product Architecture, runtime or data; the machine contract remains v1.1.0 and authoritative for current governance semantics.
 
+88. **LEGACY SEMANTIC DUPLICATE CLEANUP — 2026-10-07.** Final static cleanup removes the now-unused legacy `SIX_ROUND_ASSIGNMENTS` responsibility dictionary and unused semantic imports/constants from `verify_codex_takeover_governance.py`. The historical validator now checks only the presence of the C1/W1–C6/W6 human routing mirror by ID; current role responsibilities/environment semantics come solely from Governance Machine v1.1.0. No product or governance behavior changes beyond eliminating this duplicate semantic source.
+
 ## 3. Authority and retained evidence
 
 - `00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`: real job, useful outcome, recovery and final states.

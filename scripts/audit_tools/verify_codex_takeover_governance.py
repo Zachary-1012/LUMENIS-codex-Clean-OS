@@ -4,7 +4,6 @@ import json
 import os
 import re
 import subprocess
-import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -14,23 +13,9 @@ EXPECTED_VERSION = "1.1.0"
 EXPECTED_FINGERPRINT = "68caa37c3f4a8d50f0c0b77befac0e8ae0c954b63b1a7583a8f822a28eaa690f"
 EXPECTED_LOCAL_REPO = "Zachary-1012/LUMENIS-codex-Clean-OS"
 CONTRACT_BASENAME = "LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json"
-ONLINE_STATUS_PATH = "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md"
-
 SIX_DELIVERY_IDS = {"C1", "C2", "C3", "C4", "C5", "C6"}
 
 # Historical coverage maps below remain regression evidence; current execution semantics live in the governance machine contract.
-SIX_ROUND_ASSIGNMENTS = {
-    "C1": ("Local Codex", ("data", "collection")),
-    "C2": ("Local Codex", ("owned ai", "agent")),
-    "C3": ("Local Codex", ("cth", "bmp", "business")),
-    "C4": ("Local Codex", ("original pitch", "video", "podcast")),
-    "C5": (
-        "Local Codex",
-        ("importer", "research", "reporting", "artifact", "notification"),
-    ),
-    "C6": ("Local Codex", ("integration", "runtime", "release")),
-}
-
 ROUND_COVERAGE = {
     "R01": {"M", "W6"},
     "R02": {"M", "W6"},
@@ -159,8 +144,8 @@ def _assert_six_round_routing(agents: str) -> None:
 
 def _assert_current_round_statuses(current: str) -> None:
     rows = _routing_rows(current)
-    missing = sorted(set(SIX_ROUND_ASSIGNMENTS) - set(rows))
-    extra = sorted(set(rows) - set(SIX_ROUND_ASSIGNMENTS))
+    missing = sorted(SIX_DELIVERY_IDS - set(rows))
+    extra = sorted(set(rows) - SIX_DELIVERY_IDS)
     if missing or extra:
         raise AssertionError(
             f"CURRENT status table must report C1–C6 exactly once: missing={missing}, extra={extra}"
