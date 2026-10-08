@@ -182,3 +182,10 @@ intelligence_library/09_Research-Hub/影子学习/*.json
 work/
 config/ai-owned-training-runtime.json
 00-GOVERNANCE/evidence/round-06/C1-W1-DATA-COLLECTION-2026-10-02.md
+
+# Approved portable local developer configuration; private editor state stays ignored.
+!.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/extensions.json

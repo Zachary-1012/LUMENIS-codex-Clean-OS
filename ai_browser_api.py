@@ -12,6 +12,12 @@ ZBC AI Browser Runtime API — REST Contract
   POST   /api/browser/sessions/<session_id>/action          执行 Action（带 Verification）
   POST   /api/browser/sessions/<session_id>/verify          验证状态
   POST   /api/browser/sessions/<session_id>/stop            关闭 Session
+  POST   /api/browser/sessions/<session_id>/human-control/acquire
+  POST   /api/browser/sessions/<session_id>/human-control/release
+  POST   /api/browser/sessions/<session_id>/human-control/navigate
+  POST   /api/browser/sessions/<session_id>/human-control/action
+  GET    /api/browser/sessions/<session_id>/agent/status     智能浏览准入状态（不调用模型）
+  POST   /api/browser/sessions/<session_id>/agent/run        未满足准入时明确 UNAVAILABLE
   GET    /api/browser/sessions/<session_id>/evidence        Evidence 列表
   GET    /api/browser/sessions                                 列出所有 Session
   GET    /api/browser/security/status                         安全状态（Firewall/Injection/CB）
@@ -25,8 +31,8 @@ ZBC AI Browser Runtime API — REST Contract
 """
 from __future__ import annotations
 
-import json
 import logging
+import re
 from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
@@ -75,6 +81,10 @@ def register_ai_browser_api(app):
         BrowserCapacityError,
         BrowserFramePending,
         BrowserFrameEmpty,
+        BrowserFrameStaleError,
+        BrowserHumanControlError,
+        BrowserSessionBindingError,
+        HUMAN_CONTROL_ACTIONS,
         ExpectedState,
         SessionStatus,
         sanitize_sensitive,
@@ -130,6 +140,11 @@ def register_ai_browser_api(app):
             custom_check=exp_data.get("custom_check"),
         )
 
+    def _json_object_body():
+        """Read a JSON object body; lists/scalars are never coerced to empty input."""
+        data = request.get_json(silent=True)
+        return data if isinstance(data, dict) else None
+
     def _action_result_to_dict(result) -> Dict[str, Any]:
         """将 ActionExecutionResult 转为可序列化 dict（脱敏）。"""
         d = result.to_dict()
@@ -152,9 +167,12 @@ def register_ai_browser_api(app):
           - idle_timeout: int (秒，默认 600)
           - max_lifetime: int (秒，默认 3600)
           - auto_start: bool (是否自动启动浏览器，默认 True)
+          - task_id/run_id: paired client claims only; unverified until a server-owned task resolver exists.
         """
         try:
-            data = request.get_json(silent=True) or {}
+            data = _json_object_body()
+            if data is None:
+                return jsonify({"ok": False, "error_code": "BROWSER_JSON_OBJECT_REQUIRED"}), 400
             if (data.get("cdp_port", 9224) != 9224 or
                     data.get("headless", True) is not True or
                     data.get("user_data_dir") not in (None, "")):
@@ -172,9 +190,13 @@ def register_ai_browser_api(app):
                     owner_principal_ref=g.browser_principal_ref,
                     idle_timeout=int(data.get("idle_timeout", 600)),
                     max_lifetime=int(data.get("max_lifetime", 3600)),
+                    task_id=data.get("task_id"),
+                    run_id=data.get("run_id"),
                 )
             except BrowserCapacityError:
                 return jsonify({"ok": False, "error_code": "BROWSER_CAPACITY_OCCUPIED"}), 409
+            except BrowserSessionBindingError as exc:
+                return jsonify({"ok": False, "error_code": exc.code}), 409
 
             started = session.status == SessionStatus.RUNNING
             start_error = None
@@ -204,6 +226,13 @@ def register_ai_browser_api(app):
                 "engine_label": session.engine_label,
                 "target_id": session._target_id,
                 "page_revision": session._page_revision,
+                "task_binding_status": session.task_binding_status,
+                "task_binding_verified": False,
+                "task_id": session.task_id,
+                "run_id": session.run_id,
+                "human_control_active": session.is_human_control_active(),
+                "human_actions": list(HUMAN_CONTROL_ACTIONS),
+                "human_actions_require_lease": True,
                 "allowed_actions": ["navigate", "reload", "frame"] if started else [],
                 "idle_timeout": session.idle_timeout,
                 "max_lifetime": session.max_lifetime,
@@ -275,6 +304,9 @@ def register_ai_browser_api(app):
         response.headers["X-LUMENIS-Captured-At"] = frame["captured_at"]
         response.headers["X-LUMENIS-Frame-Width"] = str(frame["width"])
         response.headers["X-LUMENIS-Frame-Height"] = str(frame["height"])
+        response.headers["X-LUMENIS-Viewport-Width"] = str(frame["viewport"]["width"])
+        response.headers["X-LUMENIS-Viewport-Height"] = str(frame["viewport"]["height"])
+        response.headers["X-LUMENIS-Viewport-DPR"] = str(frame["viewport"]["dpr"])
         return response
 
     @bp.route("/api/browser/sessions/<session_id>/stop", methods=["POST"])
@@ -294,6 +326,196 @@ def register_ai_browser_api(app):
             })
         except Exception as e:
             return jsonify({"ok": False, "error": sanitize_sensitive(str(e)[:300])}), 500
+
+    @bp.route("/api/browser/sessions/<session_id>/human-control/acquire", methods=["POST"])
+    def acquire_human_control(session_id: str):
+        """Acquire an in-memory exclusive lease for this authenticated browser owner."""
+        session, err = _get_session_or_404(session_id)
+        if err:
+            return err
+        try:
+            data = _json_object_body()
+            if data is None:
+                return jsonify({"ok": False, "error_code": "BROWSER_JSON_OBJECT_REQUIRED"}), 400
+            lease = session.acquire_human_control(
+                lease_seconds=data.get("lease_ttl_seconds", 120)
+            )
+            response = jsonify({
+                "ok": True,
+                "control_mode": "HUMAN_EXCLUSIVE",
+                "session_id": session_id,
+                "human_actions": list(HUMAN_CONTROL_ACTIONS),
+                **lease,
+            })
+            response.headers["Cache-Control"] = "no-store, private"
+            response.headers["Pragma"] = "no-cache"
+            return response
+        except BrowserHumanControlError as exc:
+            return jsonify({"ok": False, "error_code": exc.code}), 409
+        except Exception:
+            logger.exception("AI Browser human-control acquisition unavailable")
+            return jsonify({"ok": False, "error_code": "BROWSER_HUMAN_CONTROL_UNAVAILABLE"}), 503
+
+    @bp.route("/api/browser/sessions/<session_id>/human-control/release", methods=["POST"])
+    def release_human_control(session_id: str):
+        """Release the bearer lease supplied only in the request header."""
+        session, err = _get_session_or_404(session_id)
+        if err:
+            return err
+        try:
+            released = session.release_human_control(
+                request.headers.get("X-LUMENIS-Human-Control-Lease")
+            )
+            response = jsonify({"ok": released, "released": released})
+            response.headers["Cache-Control"] = "no-store, private"
+            return response
+        except BrowserHumanControlError as exc:
+            return jsonify({"ok": False, "error_code": exc.code}), 409
+
+    @bp.route("/api/browser/sessions/<session_id>/human-control/navigate", methods=["POST"])
+    def human_control_navigate(session_id: str):
+        """Navigate from the currently displayed, version-pinned frame."""
+        session, err = _get_session_or_404(session_id)
+        if err:
+            return err
+        try:
+            data = _json_object_body()
+            if data is None:
+                return jsonify({"ok": False, "error_code": "BROWSER_JSON_OBJECT_REQUIRED"}), 400
+            url_value = data.get("url")
+            url = url_value.strip() if isinstance(url_value, str) else ""
+            if not url or len(url) > 2048:
+                return jsonify({"ok": False, "error_code": "BROWSER_URL_REQUIRED"}), 400
+            result = session.navigate(
+                url=url,
+                expected=_parse_expected_state(data),
+                task_id=data.get("task_id"),
+                run_id=data.get("run_id"),
+                step_id=data.get("step_id"),
+                control_mode="human",
+                human_control_token=request.headers.get("X-LUMENIS-Human-Control-Lease"),
+                frame_binding=data.get("frame_binding"),
+            )
+            return jsonify({
+                "ok": result.success,
+                "page_revision": session._page_revision,
+                "target_id": session._target_id,
+                "task_binding_status": session.task_binding_status,
+                "task_binding_verified": False,
+                **_action_result_to_dict(result),
+            })
+        except (BrowserHumanControlError, BrowserFrameStaleError, BrowserSessionBindingError) as exc:
+            return jsonify({"ok": False, "error_code": exc.code}), 409
+        except Exception:
+            logger.exception("AI Browser human-control navigation unavailable")
+            return jsonify({"ok": False, "error_code": "BROWSER_NAVIGATION_UNAVAILABLE"}), 503
+
+    @bp.route("/api/browser/sessions/<session_id>/human-control/action", methods=["POST"])
+    def human_control_action(session_id: str):
+        """Execute one existing Action Firewall operation against the pinned frame."""
+        session, err = _get_session_or_404(session_id)
+        if err:
+            return err
+        try:
+            data = _json_object_body()
+            if data is None:
+                return jsonify({"ok": False, "error_code": "BROWSER_JSON_OBJECT_REQUIRED"}), 400
+            action_value = data.get("action")
+            action_str = action_value.lower().strip() if isinstance(action_value, str) else ""
+            if not action_str:
+                return jsonify({"ok": False, "error_code": "BROWSER_ACTION_REQUIRED"}), 400
+            try:
+                action_type = BrowserActionType(action_str)
+            except ValueError:
+                return jsonify({"ok": False, "error_code": "BROWSER_ACTION_UNSUPPORTED"}), 400
+            if action_str not in set(HUMAN_CONTROL_ACTIONS) - {"navigate"}:
+                return jsonify({
+                    "ok": False,
+                    "error_code": "BROWSER_HUMAN_ACTION_NOT_ALLOWED",
+                    "human_actions": list(HUMAN_CONTROL_ACTIONS),
+                }), 403
+            if action_str == "scroll":
+                raw_scroll = data.get("value", "500")
+                if isinstance(raw_scroll, bool) or not re.fullmatch(r"-?[0-9]+", str(raw_scroll)):
+                    return jsonify({"ok": False, "error_code": "BROWSER_SCROLL_VALUE_INVALID"}), 400
+                scroll_delta = int(raw_scroll)
+                if scroll_delta == 0 or abs(scroll_delta) > 2000:
+                    return jsonify({"ok": False, "error_code": "BROWSER_SCROLL_RANGE_INVALID"}), 400
+                data["value"] = str(scroll_delta)
+            result = session.execute_action(
+                action_type=action_type,
+                target=data.get("target", ""),
+                selector=data.get("selector", ""),
+                text=data.get("text", ""),
+                value=data.get("value", ""),
+                url=data.get("url", ""),
+                expected=_parse_expected_state(data),
+                task_id=data.get("task_id"),
+                run_id=data.get("run_id"),
+                step_id=data.get("step_id"),
+                risk_level=data.get("risk_level", "medium"),
+                control_mode="human",
+                human_control_token=request.headers.get("X-LUMENIS-Human-Control-Lease"),
+                frame_binding=data.get("frame_binding"),
+            )
+            return jsonify({
+                "ok": result.success,
+                "control_actor": "HUMAN_DIRECT",
+                "task_binding_status": session.task_binding_status,
+                "task_binding_verified": False,
+                "page_revision": session._page_revision,
+                "target_id": session._target_id,
+                **_action_result_to_dict(result),
+            })
+        except (BrowserHumanControlError, BrowserFrameStaleError, BrowserSessionBindingError) as exc:
+            return jsonify({"ok": False, "error_code": exc.code}), 409
+        except Exception:
+            logger.exception("AI Browser human-control action unavailable")
+            return jsonify({"ok": False, "error_code": "BROWSER_ACTION_UNAVAILABLE"}), 503
+
+    @bp.route("/api/browser/sessions/<session_id>/agent/status", methods=["GET"])
+    def browser_agent_status(session_id: str):
+        """Report the optional intelligent-browser gates without invoking a model."""
+        session, err = _get_session_or_404(session_id)
+        if err:
+            return err
+        try:
+            from lumenis.system.browser.runtime.browser_use_adapter import browser_use_readiness
+
+            response = jsonify({"ok": True, **browser_use_readiness(session)})
+            response.headers["Cache-Control"] = "no-store, private"
+            return response
+        except Exception:
+            logger.exception("AI Browser agent status unavailable")
+            return jsonify({"ok": False, "status": "UNAVAILABLE",
+                            "code": "BROWSER_AGENT_STATUS_UNAVAILABLE"}), 503
+
+    @bp.route("/api/browser/sessions/<session_id>/agent/run", methods=["POST"])
+    def run_browser_agent_step(session_id: str):
+        """Use the existing session only; no model/provider fallback is allowed."""
+        session, err = _get_session_or_404(session_id)
+        if err:
+            return err
+        try:
+            data = _json_object_body()
+            if data is None:
+                return jsonify({"ok": False, "error_code": "BROWSER_JSON_OBJECT_REQUIRED"}), 400
+            from lumenis.system.browser.runtime.browser_use_adapter import run_browser_use_step
+
+            result = run_browser_use_step(
+                session,
+                instruction=data.get("instruction"),
+                # Source/use decisions must be server-owned; client JSON is not
+                # admitted as an authoritative binding.
+                source_binding=None,
+            )
+            response = jsonify(result)
+            response.headers["Cache-Control"] = "no-store, private"
+            return response, 200 if result.get("status") == "AVAILABLE" else 503
+        except Exception:
+            logger.exception("AI Browser agent run unavailable")
+            return jsonify({"ok": False, "status": "UNAVAILABLE",
+                            "code": "BROWSER_AGENT_UNAVAILABLE", "output": None}), 503
 
     # ──────────────────────────────────────────────────────────
     # 2. 导航
@@ -329,7 +551,10 @@ def register_ai_browser_api(app):
             )
             return jsonify({"ok": result.success, "page_revision": session._page_revision,
                             "target_id": session._target_id,
+                            "task_binding_status": session.task_binding_status,
                             **_action_result_to_dict(result)})
+        except (BrowserHumanControlError, BrowserSessionBindingError) as exc:
+            return jsonify({"ok": False, "error_code": exc.code}), 409
         except Exception as e:
             logger.error(f"[AI Browser API] navigate error: {e}")
             return jsonify({"ok": False, "error": sanitize_sensitive(str(e)[:300])}), 500
@@ -441,6 +666,7 @@ def register_ai_browser_api(app):
 
             response = {"ok": result.success, "page_revision": session._page_revision,
                         "target_id": session._target_id,
+                        "task_binding_status": session.task_binding_status,
                         **_action_result_to_dict(result)}
 
             # 如果需要人工升级，返回 400 + escalation 信息
@@ -450,6 +676,8 @@ def register_ai_browser_api(app):
                 return jsonify(response), 200  # 200 但包含 escalation 标记
 
             return jsonify(response)
+        except (BrowserHumanControlError, BrowserSessionBindingError) as exc:
+            return jsonify({"ok": False, "error_code": exc.code}), 409
         except Exception as e:
             logger.error(f"[AI Browser API] execute_action error: {e}")
             return jsonify({"ok": False, "error": sanitize_sensitive(str(e)[:300])}), 500
@@ -636,6 +864,8 @@ def register_ai_browser_api(app):
                 "human_approved": True,
                 **_action_result_to_dict(result),
             })
+        except (BrowserHumanControlError, BrowserSessionBindingError) as exc:
+            return jsonify({"ok": False, "error_code": exc.code}), 409
         except Exception as e:
             return jsonify({"ok": False, "error": sanitize_sensitive(str(e)[:300])}), 500
 

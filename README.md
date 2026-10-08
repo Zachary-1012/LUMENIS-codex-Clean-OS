@@ -6,6 +6,8 @@
 
 ## 当前交付顺序
 
+**基础业务不依赖 AI。** 没有模型、外部 AI API、GPU 或推理服务时，正常的采集、确定性分析、人工业务决策、研究、编辑、浏览器操作和成果保存/修订/重开/恢复仍必须可用。AI 专属增强可明确不可用，不得阻断基础任务；先验收无 AI 业务成果，再单独评价 AI 收益。该要求不代表所有源码断点已修复；详见唯一产品蓝图与真实交付规则。
+
 **前端直接构建，不先做设计稿。** 复用已有设计和44屏规范并随源码更新。后续原生客户端只交付 **Windows、macOS 和 iOS**；Android/Linux原生客户端不再是交付目标，保留其历史源码与证据。Linux服务器/CI和Web的跨OS浏览器、窄屏体验不受此限制。
 
 **先闭环官网（Public Website）和 Web Workspace，再推进 Desktop App 与 Mobile Companion。** 后置两端的需求、源码、设计和验收任务完整保留，不当作通过。当前两端的真实业务、来源/权限、成果保存/修改/重开/恢复及适用评价仍须闭环；Web必要的Core/SYSTEM服务继续推进。M + 独立F + 一个业务窗口及零新增付费不变。此顺序不等于四端整体完成或新增部署授权；详见现有[多端决策](00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md)与[真实交付规则](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)。
@@ -155,6 +157,8 @@ README **不固化 current HEAD、Runtime、DB 行数、dirty文件清单或窗�
 - 当前总体阶段是工程闭环执行；只有对应 Product/App/Critical E2E、Runtime、用户结果和Release证据真实成立后，才能分别声明 `USER_VERIFIED`、`RELEASED` 或 `OPERATING`。
 
 ## 人类工程师安全开工流程
+
+本地零新增费用研发入口：VS Code 使用官方 Python/Pylance/Ruff、Dart/Flutter、PowerShell 与 Astro 语言服务；原生 Tasks 调用 [现有 PowerShell 工具](scripts/local_development.ps1)。快照、定向静态检查、差异、格式预览、既有生成器预览和构建不调用模型，不运行模块测试，不自动提交或启动产品服务。授权写入与恢复采用精确 HEAD/hash/Owner/预约和私有回执；用法见 [.codex/README.md](.codex/README.md)。它不改变 C1 派工、产品蓝图、权限或验收标准，也不证明产品能力闭环。
 
 ```powershell
 Set-Location D:\LUMENIS_REBUILD\序\序境

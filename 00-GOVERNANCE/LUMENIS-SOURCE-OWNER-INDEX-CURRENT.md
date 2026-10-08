@@ -1,5 +1,7 @@
 # LUMENIS Source Owner Index — CURRENT
 
+> 2026-10-09 最新直接 PO：C1 暂停，F/C2-C6 保持暂停；M 仅继续已授权工具/Browser/AgentZero收尾、CURRENT收敛及A0/B0/C0准入准备。基础业务无AI独立运行是全产品要求，AI增强单独验收。下文旧C1恢复/连续执行表述保留其职责，实际执行须等待PO恢复；模型/effort/tier不变。来源：现有AI-OPTIONAL-PREPARATION-C1-PAUSE审批回执。
+
 > 2026-10-08 PO 正式验收策略变更：单元/集成及换名模块自动测试不再是开发、合并、验收或发布条件，Codex 不新建、不执行这些套件；保留历史测试和 FAILED 证据。当前执行真实任务→既有源码→构建运行→实际用户操作→真实结果→保存/修订/重开→恢复→验收→正式集成。适用编译、静态质量、安全/权限、数据一致性及真实产品 E2E 保留；历史材料中的测试命令不构成当前执行义务，真实缺陷仍必须修复。R01–R15/J1–J8/U01–U25 与 Owner/权益/生产数据边界不变；机器合同 v1.2.0 的 verification_policy 记录现行语义。仅 M 与 C1 本轮恢复；C1 当前指定 GPT-6 Astra / ultra，其余窗口暂停状态按最新直接指令保留。
 
 > Status: **CURRENT EXECUTION INDEX / SIX-ROUND DELIVERY / COMPLETE LEGACY COVERAGE**
@@ -755,3 +757,22 @@ C3/C5/C4原职责复用已有SourceBrief/creation-upstream/SavedWork，补业务
 账户密码整体重设计、Realtime实时语音、开发者模式等明确后置项维持原决定；现有认证/权限、Evidence完整性、备份恢复不是这些后置项。已批准本地Read Aloud不因Realtime后置而停工。各Owner继续既有完整结果，C2/C3/C4/F不因该报告另开重复审计。
 
 报告中的WeChat旧断言已随`6a1db538`接受发布，复用受影响证据。该SHA的App Gate `37706227173`已成功；Product Gate `37706227134`在两项Agent Memory learning-loop断言失败，C6协调C2修复，不重置旧WeChat修复为未完成、不把新失败写成PASS。此处仅为2026-10-08观察，运行加载/完整用户验收仍按CURRENT独立记录。
+
+## 2026-10-09 existing-owner AI-optional/source adoption delta
+
+| Existing owner / source | Current bounded adoption | Exact remaining operation |
+|---|---|---|
+| M engineering tools; `.codex/local_workflow.py`, `scripts/local_development.ps1`, `.vscode/` | Deterministic Tasks, scoped static/build/format/recovery and real private receipts | Actual editor completion/diagnostic UI still NOT VERIFIED; tools do not close a product Job |
+| SYSTEM Browser / C6 and F SYS-06; `ai_browser_runtime.py`, `ai_browser_api.py`, existing Core client/repository/screen | Exclusive short lease and frame/target/revision/viewport binding; manual navigate/history/reload/scroll | Server-authored Task/Run and source-use binding, safe remote authenticated Web, result SavedWork/Artifact save/reopen/recovery; no click/input implemented |
+| Same Browser owner; `lumenis/system/browser/runtime/browser_use_adapter.py` | Disabled optional readiness boundary only; no provider/model fallback | Existing owned BaseChatModel/action bridge and enforced DNS/private-IP/redirect/WebSocket egress; currently no intelligent execution |
+| Existing Agent/Task Runtime; `ai_task_engine.py`, `agent_runtime/agent_zero_gui_executor.py` | Disabled optional injected GUI executor contract; no parallel queue/database/runtime | Real isolated worker protocol/startup binder, exact Permission/Scope/Gateway/Artifact/Outcome readback and resource admission; no Docker/GUI runtime accepted |
+| SYSTEM Gateway / C2; `lumenis/system/ai_gateway/core.py` | Explicitly authorized M cleanup: signatures/history retained, retired execution inert; owned functions unchanged | Owned model still NOT_BOUND; no new model/API/training authorization |
+| C2 Task analysis; `_execute_analysis`, `_owned_ai_failure_code` in `ai_task_engine.py` | V2 source-only preparation confirms AI-optional label/failure-gate mismatch; no repair claim | On explicit Owner restoration, implement real deterministic/manual analysis result separately from typed source-aware AI enhancement; verify actual task/save/reopen/recovery, not fabricated rule-based text |
+| C1/C3/C4/C5/C6/F existing contracts | Seven-domain normal-business no-AI requirement added to Architecture/Real Delivery/Experience | Each existing normal user chain must demonstrate permitted real inputs and results without inference; then separately measure AI gains; preserve all R/J/U scope |
+
+Original research, user references, model candidates, source/Artifact history and
+failure receipts remain protected. These rows are an existing-owner implementation
+and dependency index, not a new plan, dispatch or acceptance authority. V2 provider
+and dataset statements remain preparation inputs until exact current official
+license/version/rights are verified; no external corpus or API was accessed here.
+Evidence: `evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md`.

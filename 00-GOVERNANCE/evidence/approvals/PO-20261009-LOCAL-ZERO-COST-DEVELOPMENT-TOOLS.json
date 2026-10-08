@@ -1,0 +1,40 @@
+{
+  "schema": "lumenis.po-approval-receipt/v1",
+  "approval_id": "PO-20261009-LOCAL-ZERO-COST-DEVELOPMENT-TOOLS",
+  "status": "APPROVED",
+  "approved_by": "Product Owner",
+  "approved_at": "2026-10-09",
+  "approval_source_type": "direct_product_owner_instruction",
+  "scope_manifest": {
+    "source_thread_id": "01a0cd84-7685-7a73-97d9-83a14a546e71",
+    "direct_quote": "优先完成这个：完成后向我报告：序境 / LUMENIS｜本地零新增费用研发自动化与 Codex 额度优化执行令",
+    "refinement_quote": "优化了刚才的指令",
+    "refinement_sha256": "8d13afcb9788ceb1ec6577a96151d79d27d6184d9be1900e22c70a40e86f5913",
+    "executor": "M",
+    "scope": "Free official local language tools, VS Code preferences/Tasks, deterministic scoped PowerShell workflow, protected receipts, actual development-tool acceptance and bounded publication",
+    "C1_continues_independently": true,
+    "prior_M_product_material_convergence_preserved": true,
+    "paused_windows_resumed": false,
+    "product_business_source_included": false,
+    "machine_governance_or_role_defaults_changed": false,
+    "new_cost": 0,
+    "not_authorized": [
+      "automatic model calls or model/provider install",
+      "unit/integration or renamed module suites",
+      "new account/subscription/GPU/service/runtime",
+      "credentials/network/proxy/model/effort/tier changes",
+      "production database or running service changes",
+      "workspace/publisher trust bypass",
+      "automatic Git publication or bulk staging"
+    ],
+    "refinement_adaptation": "Use the existing local workflow. Reject the attachment's repeated codex exec, unfrozen candidate/apply/publish and arbitrary acceptance-command mechanisms; retain traceable preview, exact input, recovery and efficiency methods."
+  },
+  "constraints": [
+    "Only free official local development tools and bounded deterministic repository automation are authorized.",
+    "No model/provider download, automatic Codex invocation, unit/integration suite, new fee/account/service or trust bypass.",
+    "Preserve current model/effort/tier, credentials, network/proxy, production services/data and protected Owner work.",
+    "Original C1 independence was superseded by the later direct C1 pause; this historical approval does not resume it.",
+    "Tool installation and static checks do not constitute actual editor or product acceptance."
+  ],
+  "implementation_acceptance": "Recorded separately; approval is not a tooling or product PASS."
+}

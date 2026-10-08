@@ -3,7 +3,7 @@
 ```yaml
 screen_id: SYS-06
 status: IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED
-revision: 5
+revision: 6
 owner_domain: SYSTEM Browser / CDP
 binding_ids:
   - BACKEND-GAP-041
@@ -24,7 +24,36 @@ approval_reference: Product Owner direct internal-browser repair approval
 - Current source decision: the bounded reader below is implemented; runtime,
   accessibility and real-user acceptance remain open.
 
-## 0.1 Current source binding — 2026-10-05
+## 0.1a Current revision-6 source delta — 2026-10-09
+
+The current source adds server-owned short-lived exclusive human control and
+frame/target/page-revision/viewport binding. SYS-06 exposes only actions actually
+advertised by the server: navigate, back, forward, reload and remote scroll.
+Local image pan/zoom remains different from remote page scroll. Click, input,
+select, upload and download are not implemented by this delta; the complete
+approved interaction target in §0.3 remains OPEN, not reduced.
+
+Acquire control before a human action; a lease blocks competing Agent actions.
+Each action uses the current server frame binding and refreshes after success.
+Stale frames, expired leases, denied actions and stopped sessions are explicit
+failures. Stop and Return-to-task remain separate. A failed stop retains the
+control token for retry; a failed readback attempts release without claiming it
+succeeded. Task/run association is BOUND only with server verification; client
+IDs alone stay UNBOUND/UNVERIFIED and are not published as task Evidence.
+
+No model is required for these deterministic/manual controls. The optional
+Browser Use route stays UNAVAILABLE until Task/Source-use/Gateway/egress/action
+bridges are bound; it must not disable the manual path. Agent Zero is a separately
+disabled executor behind the existing Task Runtime, not a second runtime.
+
+The loopback guard remains until secure remote actor/session transport exists.
+Remote Web use, session-result SavedWork/Artifact save/reopen/recovery, computer
+GUI operation and actual runtime/user acceptance remain OPEN. Source/static
+verification does not establish these outcomes or any full four-surface closure.
+Revision-4/5 text and historical tests below are provenance; historical suites
+are not current execution requirements under the formal PO testing policy.
+
+## 0.1 Historical source binding — 2026-10-05
 
 This section records the implemented revision-4 reader contract for current SYS-06 source. The approved revision-5 interaction target in §0.3 extends it; read-only and no-external-option statements here describe current implementation, not final restrictions. It
 supersedes the capacity-only behavior in the revision-2 sections below wherever

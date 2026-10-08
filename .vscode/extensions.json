@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff",
+    "Dart-Code.flutter",
+    "ms-vscode.PowerShell",
+    "astro-build.astro-vscode"
+  ]
+}

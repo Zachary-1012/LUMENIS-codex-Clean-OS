@@ -64,6 +64,12 @@ The table records direct manifest entries, not every transitive dependency.
 
 The current `requirements.txt` mentions, but does not require-install: `openai`, `ollama`, `docx2pdf`, `pypdf`, and Windows-specific `win32-setctime`. Presence at runtime must be checked before treating any of them as active dependencies.
 
+## 2B. Optional Browser Use research adapter (not a production dependency)
+
+| Component | Exact source/version | Current product disposition | License / boundary |
+| --- | --- | --- | --- |
+| [Browser Use](https://github.com/browser-use/browser-use/tree/0.13.10) | Upstream tag `0.13.10`; optional direct pins are recorded in `requirements-browser-use.txt`; no package is declared by the production `requirements.txt` and no isolated environment was installed in this change. | `DEFER` intelligent execution. `browser_use_adapter.py` is only a fail-closed availability diagnostic; it does not invoke Browser Use or provide an Agent/Action bridge. Current intelligent execution is `UNAVAILABLE`: no server-owned Task/Run or Source/use resolver, no task-domain Gateway executor for Browser, no Action Firewall tool bridge, and no enforced DNS/private-IP/redirect/WebSocket egress boundary. The deterministic SYSTEM Browser remains independent; this batch adds a short-lived human lease and read-only navigation/history/scroll routes only. | MIT ([tagged LICENSE](https://github.com/browser-use/browser-use/blob/0.13.10/LICENSE)). Upstream tag declares `posthog==7.7.0` and several provider SDKs, including Ollama; upstream Agent/session defaults may initialize telemetry or a separate browser session. The LUMENIS adapter must not import/instantiate the package before every gate passes, must not call telemetry or any provider/cloud fallback, and must not claim `allowed_domains` is network egress enforcement. Direct pins are not a transitive hash lock; isolated installation and full notices remain unverified. |
+
 ## 2A. Approved owned-AI foundation and retained model inventory (2026-10-01)
 
 | Component | Exact candidate / presence | Decision and owner | License / notices |

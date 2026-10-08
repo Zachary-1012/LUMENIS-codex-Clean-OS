@@ -1,0 +1,45 @@
+# Optional upstream direct-dependency pins for an isolated, non-product
+# development venv. Source: browser-use/browser-use tag 0.13.10 pyproject.toml.
+# This file is not included by requirements.txt and must never be installed
+# into the production/Core environment. These are not a transitive hash lock.
+# Do not install or activate until telemetry, provider-SDK, browser-session and
+# egress boundaries have passed review. Provider SDKs below are dependencies
+# declared upstream; their presence is not permission to call any provider.
+browser-use==0.13.10
+aiohttp==3.14.3
+anyio==4.12.1
+bubus==1.5.6
+click==8.3.3
+InquirerPy==0.3.4
+rich==14.3.3
+google-api-core==2.29.0
+httpx==0.28.1
+posthog==7.7.0
+psutil==7.2.2
+pydantic==2.13.5
+pydantic-settings==2.15.0
+pyobjc==12.1; sys_platform == 'darwin'
+python-dotenv==1.2.2
+requests==2.33.0
+screeninfo==0.8.1; platform_system != 'Darwin'
+typing-extensions==4.15.0
+uuid7==0.1.0
+google-genai==1.65.0
+openai==2.26.0
+anthropic==0.76.0
+groq==1.0.0
+ollama==0.6.1
+google-api-python-client==2.188.0
+google-auth==2.48.0
+google-auth-oauthlib==1.2.4
+mcp==2.1.1
+pypdf==6.16.2
+reportlab==4.4.9
+cdp-use==1.4.5
+pyotp==2.9.0
+pillow==12.3.0
+cloudpickle==3.1.2
+markdownify==1.2.2
+python-docx==1.2.0
+browser-use-sdk==3.4.2
+browser-harness==0.1.13

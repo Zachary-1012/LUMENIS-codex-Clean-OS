@@ -21,10 +21,13 @@ ZBC AI Browser Runtime — Production-Ready Browser Agent Runtime
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import logging
+import math
 import os
 import re
+import secrets
 import sqlite3
 import struct
 import threading
@@ -32,7 +35,7 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, asdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Callable
@@ -95,6 +98,9 @@ class BrowserActionType(str, Enum):
     STOP = "stop"
 
 
+HUMAN_CONTROL_ACTIONS = ("navigate", "back", "forward", "reload", "scroll")
+
+
 class ActionResult(str, Enum):
     """Action 验证结果。"""
     PASS = "PASS"
@@ -114,6 +120,30 @@ class SessionStatus(str, Enum):
     BLOCKED = "blocked"
     ERROR = "error"
     CLOSED = "closed"
+
+
+class BrowserHumanControlError(RuntimeError):
+    """A browser action conflicts with the server-owned human control lease."""
+
+    def __init__(self, code: str):
+        super().__init__(code)
+        self.code = code
+
+
+class BrowserFrameStaleError(RuntimeError):
+    """A human action refers to a frame that is no longer current."""
+
+    def __init__(self, code: str = "BROWSER_FRAME_STALE"):
+        super().__init__(code)
+        self.code = code
+
+
+class BrowserSessionBindingError(ValueError):
+    """The requested task/run binding conflicts with the immutable session binding."""
+
+    def __init__(self, code: str = "BROWSER_TASK_BINDING_CONFLICT"):
+        super().__init__(code)
+        self.code = code
 
 
 class FailureClass(str, Enum):
@@ -1191,6 +1221,8 @@ class AIBrowserRuntime:
         owner_principal_ref: Optional[str] = None,
         idle_timeout: int = DEFAULT_SESSION_IDLE_TIMEOUT,
         max_lifetime: int = DEFAULT_SESSION_MAX_LIFETIME,
+        task_id: Optional[str] = None,
+        run_id: Optional[str] = None,
     ):
         self.session_id = session_id or f"bs_{uuid.uuid4().hex[:12]}"
         self.cdp_port = cdp_port
@@ -1207,6 +1239,20 @@ class AIBrowserRuntime:
         self.owner_principal_ref = owner_principal_ref
         self.idle_timeout = idle_timeout
         self.max_lifetime = max_lifetime
+        if (task_id is None) != (run_id is None):
+            raise BrowserSessionBindingError("BROWSER_TASK_BINDING_PAIR_REQUIRED")
+        for trace_value in (task_id, run_id):
+            if trace_value is not None and (
+                not isinstance(trace_value, str)
+                or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}", trace_value)
+            ):
+                raise BrowserSessionBindingError("BROWSER_TASK_BINDING_INVALID")
+        # These values may be supplied by a UI, but this runtime slice has no
+        # server-owned Task/Run resolver. Never use a client claim as Evidence
+        # lineage. Keep the claim visible for diagnostics and mark it honestly.
+        self.task_id = task_id
+        self.run_id = run_id
+        self.task_binding_status = "UNVERIFIED" if task_id is not None else "UNBOUND"
 
         # 状态
         self.status = SessionStatus.CREATED
@@ -1221,8 +1267,17 @@ class AIBrowserRuntime:
         self._pages: Dict[str, Any] = {}  # tab_id -> page
         self._target_id: Optional[str] = None
         self._page_revision = 0
+        self._latest_frame_binding: Optional[Dict[str, Any]] = None
+        self._latest_frame_image_sha256: Optional[str] = None
         self._last_navigation_at = 0.0
         self.engine_label = ""
+
+        # Human control is a short-lived, server-owned exclusive lease. Only a
+        # digest is retained; the bearer token is returned once and never logged.
+        self._control_lock = threading.RLock()
+        self._human_control_token_digest: Optional[str] = None
+        self._human_control_expires_at = 0.0
+        self._active_control_actions = 0
 
         # 组件
         self.verifier = ActionVerifier()
@@ -1374,6 +1429,11 @@ class AIBrowserRuntime:
                 return
             self._closed = True
             self.status = SessionStatus.CLOSED
+            with self._control_lock:
+                self._human_control_token_digest = None
+                self._human_control_expires_at = 0.0
+            self._latest_frame_binding = None
+            self._latest_frame_image_sha256 = None
             try:
                 if self._page:
                     self._page.close()
@@ -1414,6 +1474,14 @@ class AIBrowserRuntime:
             "current_title": sanitize_sensitive(self._page.title() if self._page else ""),
             "target_id": self._target_id,
             "page_revision": self._page_revision,
+            "task_binding_status": self.task_binding_status,
+            "task_binding_verified": False,
+            "task_id": self.task_id,
+            "run_id": self.run_id,
+            "human_control_active": self.is_human_control_active(),
+            "human_control_expires_at": self._human_control_expiry_iso(),
+            "human_actions": list(HUMAN_CONTROL_ACTIONS),
+            "human_actions_require_lease": True,
             "engine_label": self.engine_label,
             "allowed_actions": ["navigate", "reload", "frame"]
             if self.status == SessionStatus.RUNNING and self._page else [],
@@ -1506,7 +1574,231 @@ class AIBrowserRuntime:
     # 核心：execute_action（带 Verification 闭环）
     # ──────────────────────────────────────────────────────────
 
+    def _expire_human_control_locked(self) -> None:
+        if self._human_control_token_digest and time.time() >= self._human_control_expires_at:
+            self._human_control_token_digest = None
+            self._human_control_expires_at = 0.0
+
+    def is_human_control_active(self) -> bool:
+        with self._control_lock:
+            self._expire_human_control_locked()
+            return self._human_control_token_digest is not None
+
+    def _human_control_expiry_iso(self) -> Optional[str]:
+        with self._control_lock:
+            self._expire_human_control_locked()
+            if self._human_control_token_digest is None:
+                return None
+            return datetime.fromtimestamp(
+                self._human_control_expires_at, tz=timezone.utc
+            ).isoformat()
+
+    def acquire_human_control(self, lease_seconds: int = 120) -> Dict[str, Any]:
+        """Acquire a short-lived exclusive lease for the authenticated session owner."""
+        if self.status != SessionStatus.RUNNING or self._closed:
+            raise BrowserHumanControlError("BROWSER_SESSION_NOT_RUNNING")
+        if type(lease_seconds) is not int:
+            raise BrowserHumanControlError("BROWSER_HUMAN_LEASE_TTL_INVALID")
+        lease_seconds = max(30, min(lease_seconds, 300))
+        with self._control_lock:
+            self._expire_human_control_locked()
+            if self._active_control_actions:
+                raise BrowserHumanControlError("BROWSER_ACTION_IN_PROGRESS")
+            if self._human_control_token_digest is not None:
+                raise BrowserHumanControlError("BROWSER_HUMAN_CONTROL_ACTIVE")
+            token = secrets.token_urlsafe(32)
+            self._human_control_token_digest = hashlib.sha256(
+                token.encode("utf-8")
+            ).hexdigest()
+            self._human_control_expires_at = time.time() + lease_seconds
+            expires_at = datetime.fromtimestamp(
+                self._human_control_expires_at, tz=timezone.utc
+            ).isoformat()
+        return {
+            "lease_token": token,
+            "lease_ttl_seconds": lease_seconds,
+            "lease_expires_at": expires_at,
+        }
+
+    def release_human_control(self, token: Optional[str]) -> bool:
+        """Release exactly the current session lease without logging its token."""
+        if not isinstance(token, str) or not token or len(token) > 256:
+            raise BrowserHumanControlError("BROWSER_HUMAN_LEASE_REQUIRED")
+        digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        with self._control_lock:
+            self._expire_human_control_locked()
+            current = self._human_control_token_digest
+            if current is None:
+                raise BrowserHumanControlError("BROWSER_HUMAN_LEASE_EXPIRED")
+            if not hmac.compare_digest(current, digest):
+                raise BrowserHumanControlError("BROWSER_HUMAN_LEASE_INVALID")
+            if self._active_control_actions:
+                raise BrowserHumanControlError("BROWSER_ACTION_IN_PROGRESS")
+            self._human_control_token_digest = None
+            self._human_control_expires_at = 0.0
+        return True
+
+    def _resolve_task_trace(
+        self, task_id: Optional[str], run_id: Optional[str]
+    ) -> Tuple[Optional[str], Optional[str]]:
+        if self.task_binding_status == "UNVERIFIED":
+            # A client-provided trace is not an authoritative association. Reject
+            # contradictory claims, but keep Evidence unbound until an existing
+            # server-owned Task/Run resolver is connected.
+            if task_id not in (None, self.task_id) or run_id not in (None, self.run_id):
+                raise BrowserSessionBindingError("BROWSER_TASK_BINDING_CONFLICT")
+            return None, None
+        if self.task_binding_status != "BOUND":
+            # A trace supplied only on an action is not an authoritative
+            # association. Keep the browser operation usable and Evidence unbound.
+            return None, None
+        if task_id not in (None, self.task_id) or run_id not in (None, self.run_id):
+            raise BrowserSessionBindingError("BROWSER_TASK_BINDING_CONFLICT")
+        return self.task_id, self.run_id
+
+    def _begin_control_action(
+        self, *, control_mode: str, human_control_token: Optional[str]
+    ) -> None:
+        if control_mode not in {"agent", "human"}:
+            raise BrowserHumanControlError("BROWSER_CONTROL_MODE_INVALID")
+        with self._control_lock:
+            self._expire_human_control_locked()
+            active = self._human_control_token_digest is not None
+            if control_mode == "human":
+                if (not isinstance(human_control_token, str) or not human_control_token
+                        or len(human_control_token) > 256):
+                    raise BrowserHumanControlError("BROWSER_HUMAN_LEASE_REQUIRED")
+                if not active:
+                    raise BrowserHumanControlError("BROWSER_HUMAN_LEASE_EXPIRED")
+                supplied = hashlib.sha256(human_control_token.encode("utf-8")).hexdigest()
+                if not hmac.compare_digest(self._human_control_token_digest, supplied):
+                    raise BrowserHumanControlError("BROWSER_HUMAN_LEASE_INVALID")
+            elif active:
+                raise BrowserHumanControlError("BROWSER_HUMAN_CONTROL_ACTIVE")
+            self._active_control_actions += 1
+
+    def _end_control_action(self) -> None:
+        with self._control_lock:
+            self._active_control_actions = max(0, self._active_control_actions - 1)
+
+    def _current_viewport(self) -> Dict[str, Any]:
+        if not self._page:
+            raise BrowserFrameStaleError("BROWSER_FRAME_UNAVAILABLE")
+        value = self._page.evaluate(
+            "() => ({width: window.innerWidth, height: window.innerHeight, "
+            "dpr: window.devicePixelRatio || 1})"
+        )
+        if not isinstance(value, dict):
+            raise BrowserFrameStaleError("BROWSER_FRAME_UNAVAILABLE")
+        width, height, dpr = value.get("width"), value.get("height"), value.get("dpr")
+        if (type(width) is not int or width <= 0 or type(height) is not int or height <= 0
+                or isinstance(dpr, bool) or not isinstance(dpr, (int, float))
+                or not math.isfinite(float(dpr)) or float(dpr) <= 0):
+            raise BrowserFrameStaleError("BROWSER_FRAME_UNAVAILABLE")
+        return {"width": width, "height": height, "dpr": round(float(dpr), 3)}
+
+    def assert_current_frame_binding(self, binding: Any) -> None:
+        """Reject missing, stale, altered or viewport-mismatched human frame input."""
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            return self._run_on_browser_thread(lambda: self.assert_current_frame_binding(binding))
+        if not isinstance(binding, dict):
+            raise BrowserFrameStaleError("BROWSER_FRAME_BINDING_REQUIRED")
+        viewport = binding.get("viewport")
+        if (set(binding) != {"frame_id", "target_id", "page_revision", "viewport"}
+                or not isinstance(binding.get("frame_id"), str)
+                or not binding["frame_id"]
+                or len(binding["frame_id"]) > 128
+                or not isinstance(binding.get("target_id"), str)
+                or not binding["target_id"]
+                or len(binding["target_id"]) > 128
+                or type(binding.get("page_revision")) is not int
+                or not isinstance(viewport, dict)
+                or set(viewport) != {"width", "height", "dpr"}
+                or type(viewport.get("width")) is not int
+                or not 0 < viewport["width"] <= 32768
+                or type(viewport.get("height")) is not int
+                or not 0 < viewport["height"] <= 32768
+                or isinstance(viewport.get("dpr"), bool)
+                or not isinstance(viewport.get("dpr"), (int, float))
+                or not math.isfinite(float(viewport["dpr"]))
+                or not 0 < float(viewport["dpr"]) <= 16):
+            raise BrowserFrameStaleError("BROWSER_FRAME_BINDING_REQUIRED")
+        expected = {
+            "frame_id": binding["frame_id"],
+            "target_id": binding["target_id"],
+            "page_revision": binding["page_revision"],
+            "viewport": viewport,
+        }
+        if self._latest_frame_binding is None or expected != self._latest_frame_binding:
+            raise BrowserFrameStaleError("BROWSER_FRAME_STALE")
+        if (expected["target_id"] != self._target_id
+                or expected["page_revision"] != self._page_revision
+                or expected["viewport"] != self._current_viewport()):
+            raise BrowserFrameStaleError("BROWSER_FRAME_STALE")
+        current_image = self.screenshot(full_page=False)
+        if (self._latest_frame_image_sha256 is None
+                or not hmac.compare_digest(
+                    hashlib.sha256(current_image).hexdigest(),
+                    self._latest_frame_image_sha256,
+                )):
+            raise BrowserFrameStaleError("BROWSER_FRAME_STALE")
+
     def execute_action(
+        self,
+        action_type: BrowserActionType,
+        target: str = "",
+        selector: str = "",
+        text: str = "",
+        value: str = "",
+        url: str = "",
+        expected: Optional[ExpectedState] = None,
+        task_id: Optional[str] = None,
+        run_id: Optional[str] = None,
+        step_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        skill_id: Optional[str] = None,
+        risk_level: str = "medium",
+        *,
+        control_mode: str = "agent",
+        human_control_token: Optional[str] = None,
+        frame_binding: Optional[Dict[str, Any]] = None,
+    ) -> ActionExecutionResult:
+        """Apply control lease, immutable task trace and optional frame binding."""
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            return self._run_on_browser_thread(lambda: self.execute_action(
+                action_type, target, selector, text, value, url, expected,
+                task_id, run_id, step_id, agent_id, skill_id, risk_level,
+                control_mode=control_mode,
+                human_control_token=human_control_token,
+                frame_binding=frame_binding,
+            ))
+        if control_mode == "human":
+            self.assert_current_frame_binding(frame_binding)
+        resolved_task_id, resolved_run_id = self._resolve_task_trace(task_id, run_id)
+        self._begin_control_action(
+            control_mode=control_mode,
+            human_control_token=human_control_token,
+        )
+        try:
+            return self._execute_action_impl(
+                action_type=action_type,
+                target=target,
+                selector=selector,
+                text=text,
+                value=value,
+                url=url,
+                expected=expected,
+                task_id=resolved_task_id,
+                run_id=resolved_run_id,
+                step_id=step_id,
+                agent_id="human_direct" if control_mode == "human" else agent_id,
+                skill_id=skill_id,
+                risk_level=risk_level,
+            )
+        finally:
+            self._end_control_action()
+
+    def _execute_action_impl(
         self,
         action_type: BrowserActionType,
         target: str = "",
@@ -1532,6 +1824,8 @@ class AIBrowserRuntime:
                 task_id, run_id, step_id, agent_id, skill_id, risk_level,
             ))
         self._page_revision += 1
+        self._latest_frame_binding = None
+        self._latest_frame_image_sha256 = None
         if action_type in {BrowserActionType.NAVIGATE, BrowserActionType.RELOAD,
                            BrowserActionType.BACK, BrowserActionType.FORWARD}:
             self._last_navigation_at = time.monotonic()
@@ -2027,10 +2321,20 @@ class AIBrowserRuntime:
                     raise BrowserFramePending("Browser page is still painting")
                 raise BrowserFrameEmpty("Browser page has no usable visible content")
         frame_id = f"bf_{uuid.uuid4().hex}"
+        viewport = self._current_viewport()
+        frame_binding = {
+            "frame_id": frame_id,
+            "target_id": self._target_id,
+            "page_revision": self._page_revision,
+            "viewport": viewport,
+        }
+        self._latest_frame_binding = frame_binding
+        self._latest_frame_image_sha256 = hashlib.sha256(image).hexdigest()
         return {
             "frame_id": frame_id,
             "target_id": self._target_id,
             "page_revision": self._page_revision,
+            "viewport": viewport,
             "captured_at": datetime.now(timezone.utc).isoformat(),
             "width": width,
             "height": height,
@@ -2083,6 +2387,8 @@ class BrowserSessionManager:
         owner_principal_ref: Optional[str] = None,
         idle_timeout: int = DEFAULT_SESSION_IDLE_TIMEOUT,
         max_lifetime: int = DEFAULT_SESSION_MAX_LIFETIME,
+        task_id: Optional[str] = None,
+        run_id: Optional[str] = None,
     ) -> AIBrowserRuntime:
         """Create only a session on the verified isolated product browser."""
         if cdp_port != 9224 or headless is not True or user_data_dir not in (None, ""):
@@ -2099,6 +2405,10 @@ class BrowserSessionManager:
                             existing.status not in {SessionStatus.CLOSED, SessionStatus.ERROR} and
                             existing.is_alive()):
                         if self._session_owner_key(existing) == owner_key:
+                            if existing.task_id != task_id or existing.run_id != run_id:
+                                raise BrowserSessionBindingError(
+                                    "BROWSER_TASK_BINDING_CONFLICT"
+                                )
                             return existing
                         raise BrowserCapacityError("AI Browser is busy with another product login")
             session = AIBrowserRuntime(
@@ -2110,6 +2420,8 @@ class BrowserSessionManager:
                 owner_principal_ref=owner_principal_ref,
                 idle_timeout=idle_timeout,
                 max_lifetime=max_lifetime,
+                task_id=task_id,
+                run_id=run_id,
             )
             self._sessions[session.session_id] = session
         logger.info(f"[SessionManager] Session 创建: {session.session_id}")

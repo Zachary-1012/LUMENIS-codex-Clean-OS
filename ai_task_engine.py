@@ -905,6 +905,8 @@ class TaskEngine:
         self._lock = threading.Lock()
         self._running_tasks: Dict[str, threading.Thread] = {}
         self._cancelled: set = set()
+        self._agent_zero_lock_guard = threading.Lock()
+        self._agent_zero_task_locks: Dict[str, Any] = {}
 
         # Lifecycle Contract V1.0 (bypass-mode)
         self._lifecycle_worker = None
@@ -1002,6 +1004,122 @@ class TaskEngine:
                 except (json.JSONDecodeError, TypeError):
                     d[json_field.replace("_json", "")] = {}
         return d
+
+    def _claim_agent_zero_attempt(self, task_id: str, attempt: Dict[str, Any]) -> bool:
+        """Persist the one-shot GUI dispatch claim before any external request."""
+        from agent_runtime.agent_zero_gui_executor import AGENT_ZERO_TASK_RECORD
+
+        if (attempt.get("task_id") != task_id or attempt.get("state") != "dispatching"
+                or not isinstance(attempt.get("attempt_id"), str)):
+            return False
+        with self._agent_zero_task_lock(task_id):
+            if task_id in self._cancelled:
+                return False
+            with get_repository().transaction(timeout=30) as conn:
+                row = conn.execute(
+                    "SELECT parameters_json, permission_result, status FROM ai_task WHERE task_id=?",
+                    (task_id,),
+                ).fetchone()
+                if row is None or row["permission_result"] != "allowed":
+                    return False
+                if row["status"] not in {TaskStatus.RUNNING.value, TaskStatus.READY.value}:
+                    return False
+                raw = row["parameters_json"] or "{}"
+                params = _strict_json_loads(raw, field_name="Agent Zero task parameters")
+                if type(params) is not dict or AGENT_ZERO_TASK_RECORD in params:
+                    return False
+                params[AGENT_ZERO_TASK_RECORD] = dict(attempt)
+                encoded = _serialize_strict_json(params, field_name="Agent Zero task parameters")
+                cursor = conn.execute(
+                    "UPDATE ai_task SET parameters_json=?, updated_at=? "
+                    "WHERE task_id=? AND parameters_json=? AND permission_result='allowed' AND status IN ('running','ready')",
+                    (encoded, self._now(), task_id, raw),
+                )
+                return cursor.rowcount == 1
+
+    def _transition_agent_zero_attempt(
+        self, task_id: str, attempt_id: str, replacement: Dict[str, Any],
+    ) -> bool:
+        """CAS an existing dispatch record without creating a second attempt."""
+        from agent_runtime.agent_zero_gui_executor import AGENT_ZERO_TASK_RECORD
+
+        if (replacement.get("task_id") != task_id
+                or replacement.get("attempt_id") != attempt_id
+                or replacement.get("state") not in {
+                    "dispatching", "submitted", "outcome_unknown", "completed", "failed", "cancelled",
+                }):
+            return False
+        allowed = {
+            "dispatching": {"submitted", "outcome_unknown", "completed", "failed", "cancelled"},
+            "submitted": {"submitted", "outcome_unknown", "completed", "failed", "cancelled"},
+            "outcome_unknown": {"outcome_unknown", "cancelled"},
+        }
+        with self._agent_zero_task_lock(task_id), get_repository().transaction(timeout=30) as conn:
+            row = conn.execute(
+                "SELECT parameters_json FROM ai_task WHERE task_id=?", (task_id,),
+            ).fetchone()
+            if row is None:
+                return False
+            raw = row["parameters_json"] or "{}"
+            params = _strict_json_loads(raw, field_name="Agent Zero task parameters")
+            if type(params) is not dict:
+                return False
+            current = params.get(AGENT_ZERO_TASK_RECORD)
+            if (type(current) is not dict or current.get("attempt_id") != attempt_id
+                    or replacement["state"] not in allowed.get(current.get("state"), set())):
+                return False
+            params[AGENT_ZERO_TASK_RECORD] = dict(replacement)
+            encoded = _serialize_strict_json(params, field_name="Agent Zero task parameters")
+            cursor = conn.execute(
+                "UPDATE ai_task SET parameters_json=?, updated_at=? WHERE task_id=? AND parameters_json=?",
+                (encoded, self._now(), task_id, raw),
+            )
+            return cursor.rowcount == 1
+
+    def _agent_zero_task_lock(self, task_id: str) -> Any:
+        with self._agent_zero_lock_guard:
+            lock = self._agent_zero_task_locks.get(task_id)
+            if lock is None:
+                # Reentrant because cancellation owns the lock while recording
+                # the worker receipt through the same CAS callback.
+                lock = threading.RLock()
+                self._agent_zero_task_locks[task_id] = lock
+            return lock
+
+    def _agent_zero_permission(self, task_id: str, action: str) -> Dict[str, Any]:
+        """Obtain a fresh exact Permission receipt before an Agent Zero effect."""
+        try:
+            gate = self.permission_gate
+            if gate is None:
+                return {}
+            from lumenis.system.security import OperationType
+
+            operation_id = f"agent_zero_{action}_{task_id}"
+            result = gate.check(
+                operation_type=OperationType.BROWSER_OPERATION,
+                resource=f"ai_task:{task_id}",
+                caller="task_engine",
+                operation_id=operation_id,
+            )
+            return {
+                "allowed": result.allowed is True,
+                "operation_type": result.operation_type,
+                "resource": result.resource,
+                "operation_id": result.operation_id,
+                "requires_approval": result.requires_approval is True,
+                "audit_id": result.audit_id,
+            }
+        except Exception:
+            logger.warning("Agent Zero Permission recheck unavailable; request denied")
+            return {}
+
+    def _agent_zero_cancelled(self, task_id: str) -> bool:
+        if task_id in self._cancelled:
+            return True
+        current = self._db_get_task(task_id)
+        return current is None or current.get("status") not in {
+            TaskStatus.RUNNING.value, TaskStatus.READY.value,
+        }
 
     def _db_add_step(
         self,
@@ -3061,6 +3179,15 @@ class TaskEngine:
         if not task:
             raise ValueError(f"Task not found: {task_id}")
 
+        from agent_runtime.agent_zero_gui_executor import is_agent_zero_gui_task
+        if is_agent_zero_gui_task(task):
+            from agent_runtime.agent_zero_gui_executor import AGENT_ZERO_TASK_RECORD
+            record = (task.get("parameters") or {}).get(AGENT_ZERO_TASK_RECORD)
+            if (task.get("status") in {
+                    TaskStatus.SUCCEEDED.value, TaskStatus.CANCELLED.value, TaskStatus.UNKNOWN.value,
+            } or (record and task.get("status") == TaskStatus.FAILED.value)):
+                return task
+
         # 熔断检查
         if not self._circuit.can_execute():
             reason = f"CIRCUIT_BREAKER_OPEN: {self._circuit.get_state()}"
@@ -3069,7 +3196,10 @@ class TaskEngine:
             self._db_add_evidence(task_id, "circuit_breaker", reason, source="circuit_breaker")
             return self._db_get_task(task_id)
 
-        max_retries = task.get("max_retries", self.default_max_retries)
+        from agent_runtime.agent_zero_gui_executor import is_agent_zero_gui_task
+        # External GUI tasks have durable attempt identity and may not be replayed
+        # by the generic retry loop after an ambiguous worker result.
+        max_retries = 0 if is_agent_zero_gui_task(task) else task.get("max_retries", self.default_max_retries)
         last_error = None
 
         for attempt in range(max_retries + 1):
@@ -3137,6 +3267,64 @@ class TaskEngine:
             agent_id = task.get("agent_id", "")
             intent = task.get("intent", "unknown")
             result_data = self._dispatch_execution(task, agent_id, intent)
+
+            from agent_runtime.agent_zero_gui_executor import is_agent_zero_gui_task
+            if is_agent_zero_gui_task(task) and isinstance(result_data, dict):
+                current_task = self._db_get_task(task_id) or task
+                if current_task.get("status") in {TaskStatus.UNKNOWN.value, TaskStatus.CANCELLED.value}:
+                    self._db_update_step(
+                        step_id,
+                        status="unknown" if current_task.get("status") == TaskStatus.UNKNOWN.value else "cancelled",
+                        error=current_task.get("error"),
+                        detail="Agent Zero task state changed while the external attempt was in flight.",
+                    )
+                    return current_task
+                if result_data.get("task_outcome") != "COMPLETED":
+                    task_outcome = result_data.get("task_outcome")
+                    if task_outcome == "OUTCOME_UNKNOWN":
+                        status = TaskStatus.UNKNOWN.value
+                        step_status = "unknown"
+                    elif task_outcome == "CANCELLED":
+                        status = TaskStatus.CANCELLED.value
+                        step_status = "cancelled"
+                    else:
+                        status = TaskStatus.FAILED.value
+                        step_status = "failed"
+                    failure_code = result_data.get("failure_code") or "AGENT_ZERO_EXECUTION_UNAVAILABLE"
+                    final_result = {
+                        "task_id": task_id,
+                        "intent": intent,
+                        "agent_id": agent_id,
+                        "skill_id": task.get("skill_id"),
+                        "output": result_data,
+                        "verification": None,
+                        "execution_status": task_outcome or "UNAVAILABLE",
+                        "failure_code": failure_code,
+                        "executed_at": self._now(),
+                    }
+                    self._db_update_task(
+                        task_id, status=status, error=failure_code,
+                        result_json=json.dumps(final_result, ensure_ascii=False, default=str),
+                        finished_at=self._now(),
+                    )
+                    self._db_update_step(
+                        step_id, status=step_status, error=failure_code,
+                        detail="Agent Zero did not produce a verified completed result.",
+                    )
+                    self._db_add_evidence(
+                        task_id, "agent_zero_execution_state", failure_code,
+                        source="agent_zero_gui_executor", step_id=step_id, authenticity_score=1.0,
+                    )
+                    self._db_add_trace(
+                        task_id, "task.execute", failure_code, step_status,
+                        started_at=trace_start, finished_at=self._now(),
+                        metadata={
+                            "attempt_id": result_data.get("attempt_id"),
+                            "external_submission": result_data.get("external_submission") is True,
+                            "task_outcome": task_outcome,
+                        },
+                    )
+                    return self._db_get_task(task_id)
 
             ai_failure_code = self._owned_ai_failure_code(agent_id, result_data)
             if ai_failure_code:
@@ -3336,6 +3524,43 @@ class TaskEngine:
 
     def _execute_browser(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
         """浏览器 Agent：只读操作。严格遵守官方账号只读保护。"""
+        from agent_runtime.agent_zero_gui_executor import (
+            AGENT_ZERO_TASK_RECORD,
+            get_agent_zero_gui_executor,
+            is_agent_zero_gui_task,
+        )
+        if is_agent_zero_gui_task(task):
+            task_id = task.get("task_id")
+            with self._agent_zero_task_lock(task_id):
+                current = self._db_get_task(task_id) or task
+                if current.get("status") in {TaskStatus.CANCELLED.value, TaskStatus.UNKNOWN.value}:
+                    outcome = (
+                        "CANCELLED" if current.get("status") == TaskStatus.CANCELLED.value
+                        else "OUTCOME_UNKNOWN"
+                    )
+                    return {
+                        "executor": "agent_zero_gui",
+                        "execution_status": outcome,
+                        "task_outcome": outcome,
+                        "failure_code": current.get("error") or "AGENT_ZERO_TASK_STATE_CHANGED",
+                        "external_submission": False,
+                    }
+                record = (current.get("parameters") or {}).get(AGENT_ZERO_TASK_RECORD)
+                permission = self._agent_zero_permission(task_id, "dispatch")
+                executor = get_agent_zero_gui_executor()
+            # Never hold the per-task lock over preflight or worker I/O. The
+            # durable attempt CAS serializes dispatch/cancel transitions while
+            # allowing a cancel request to reach the bounded worker request.
+            return executor.execute(
+                current,
+                permission=permission,
+                existing_record=record if isinstance(record, dict) else None,
+                claim_attempt=lambda attempt: self._claim_agent_zero_attempt(task_id, attempt),
+                transition_attempt=lambda attempt_id, replacement: self._transition_agent_zero_attempt(
+                    task_id, attempt_id, dict(replacement),
+                ),
+                is_cancelled=lambda: self._agent_zero_cancelled(task_id),
+            )
         return {
             "browser_action": intent,
             "mode": "read_only",
@@ -3607,9 +3832,70 @@ class TaskEngine:
     # 8. 取消任务
     # ──────────────────────────────────────────────────────────
 
+    def _cancel_agent_zero_task(self, task_id: str, reason: str) -> Dict[str, Any]:
+        from agent_runtime.agent_zero_gui_executor import (
+            AGENT_ZERO_TASK_RECORD,
+            get_agent_zero_gui_executor,
+        )
+
+        with self._agent_zero_task_lock(task_id):
+            task = self._db_get_task(task_id)
+            if not task:
+                raise ValueError(f"Task not found: {task_id}")
+            record = (task.get("parameters") or {}).get(AGENT_ZERO_TASK_RECORD)
+            if (task.get("status") in {TaskStatus.SUCCEEDED.value, TaskStatus.CANCELLED.value}
+                    or (isinstance(record, dict)
+                        and record.get("state") in {"completed", "failed", "cancelled"})
+                    or (task.get("status") == TaskStatus.UNKNOWN.value
+                        and (not isinstance(record, dict)
+                             or record.get("state") not in {"submitted", "outcome_unknown"}))):
+                return task
+            self._cancelled.add(task_id)
+            if isinstance(record, dict):
+                cancel_result = get_agent_zero_gui_executor().cancel(
+                    task,
+                    permission=self._agent_zero_permission(task_id, "cancel"),
+                    existing_record=record,
+                    transition_attempt=lambda attempt_id, replacement: self._transition_agent_zero_attempt(
+                        task_id, attempt_id, dict(replacement),
+                    ),
+                )
+                if cancel_result.get("task_outcome") == "CANCELLED":
+                    status = TaskStatus.CANCELLED.value
+                    state = "cancelled"
+                else:
+                    # Local cancellation is not proof the remote process stopped.
+                    status = TaskStatus.UNKNOWN.value
+                    state = "unknown"
+                error = cancel_result.get("failure_code") or reason
+                self._db_update_task(
+                    task_id, status=status, error=error,
+                    result_json=json.dumps(cancel_result, ensure_ascii=False, default=str),
+                    finished_at=self._now(),
+                )
+                self._db_add_step(
+                    task_id, StepPhase.ERROR.value, state, detail=error, error=error,
+                )
+                self._db_add_trace(task_id, "task.cancel", error, state)
+                return self._db_get_task(task_id)
+            self._db_update_task(
+                task_id, status=TaskStatus.CANCELLED.value,
+                error=reason, finished_at=self._now(),
+            )
+            self._db_add_step(task_id, StepPhase.ERROR.value, "cancelled", detail=reason)
+            self._db_add_trace(task_id, "task.cancel", reason, "cancelled")
+            return self._db_get_task(task_id)
+
     def cancel_task(self, task_id: str, reason: str = "user_cancelled") -> Dict[str, Any]:
         """取消任务。"""
         _guard_generic_task_access(task_id)
+        from agent_runtime.agent_zero_gui_executor import is_agent_zero_gui_task
+        task = self._db_get_task(task_id)
+        if not task:
+            raise ValueError(f"Task not found: {task_id}")
+        if is_agent_zero_gui_task(task):
+            return self._cancel_agent_zero_task(task_id, reason)
+
         self._cancelled.add(task_id)
         self._db_update_task(
             task_id, status=TaskStatus.CANCELLED.value,
@@ -3626,6 +3912,19 @@ class TaskEngine:
     def run_task(self, task_id: str) -> Dict[str, Any]:
         """完整运行任务：解析 → Agent/Skill选择 → 权限 → 执行。"""
         _guard_generic_task_access(task_id)
+        from agent_runtime.agent_zero_gui_executor import (
+            AGENT_ZERO_TASK_RECORD,
+            is_agent_zero_gui_task,
+        )
+        current = self._db_get_task(task_id)
+        if current and is_agent_zero_gui_task(current):
+            record = (current.get("parameters") or {}).get(AGENT_ZERO_TASK_RECORD)
+            if (isinstance(record, dict) or current.get("status") in {
+                    TaskStatus.SUCCEEDED.value, TaskStatus.CANCELLED.value, TaskStatus.UNKNOWN.value,
+            }):
+                # A new API call may inspect this task, but never resubmits its
+                # external GUI effect. Ambiguous attempts stay UNKNOWN.
+                return current
         # 1. 解析
         task = self.parse_task(task_id)
         if task.get("status") in (TaskStatus.FAILED.value, TaskStatus.CANCELLED.value):

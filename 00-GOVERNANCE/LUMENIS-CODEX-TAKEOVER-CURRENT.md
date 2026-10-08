@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
-> Latest direct PO state, 2026-10-09: formal real-outcome verification policy is adopted in Governance Machine v1.2.0. Unit/integration and renamed module suites are removed from mandatory gates and may not be created or executed; historical failures remain. Build/static/security/data integrity and actual user E2E/recovery/release remain. M continues non-C1 candidate/material integration and synchronizes the full data-to-business upgrade; C1 executes its complete existing collection-to-user-result chain. M/C1 current-window selection is GPT-6.1 Sol / ultra (defaults and speed unchanged; executed backend remains independently unverified). F and C2-C6 retain their latest direct pause; topology is not dispatch. Approval: `evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json`.
+> Latest direct PO correction, 2026-10-09: **C1 is paused**; F/C2-C6 remain paused. M continues only the already authorized developer-tool, Browser/AgentZero integration, CURRENT cleanup and A0/B0/C0 preparation. No C2 restart, external model API, corpus acquisition/import, training, provider activation or deployment is granted. All normal business tasks must work without AI; AI-only enhancement may be unavailable without blocking deterministic/manual work. Product Architecture and Real Delivery own the seven-domain requirement. Manual model/effort/tier remains unchanged. Approval: `evidence/approvals/PO-20261009-AI-OPTIONAL-PREPARATION-C1-PAUSE.json`.
 > Retained approved topology (not current dispatch): M + independent F + one M-selected business window. W6 integration occupies the same business slot; other C windows wait with complete work/Goals preserved. Figma-first is superseded by reuse of existing editable design and an immediate zero-new-cost Flutter/Dart/SVG fallback when the free tool path is limited. All 44 screens, Website families, four surfaces and J/R/U acceptance remain. Authorization does not prove RUNNING, implementation, runtime load or user acceptance. Existing manual model/effort/tier and security boundaries remain.
 > Direct-build/native-target correction: F builds real frontend immediately from existing contracts without separate design drafts/Figma or M DESIGN_READY coding prerequisite. Later native Desktop targets Windows/macOS only; Mobile targets iOS only. Android/Linux native client delivery requirements are superseded, with existing source/history preserved. Linux server/CI and browser access are separate.
 > Latest surface priority, 2026-10-08: close Public Website and Web Workspace first; defer dedicated Desktop/Mobile design, implementation, packaging and device acceptance until those two surfaces close. Preserve all four-surface requirements and existing work. Web-required Core/SYSTEM dependencies remain in scope. This changes order, not actual capability/acceptance or deployment/cost authority. Approval: `evidence/approvals/PO-20261008-WEBSITE-WEB-FIRST.json`.
@@ -9,6 +9,52 @@
 > current HEAD = READ WITH git fetch + git rev-parse origin/main
 
 Root `AGENTS.md` is the only repository execution router. [The Product Owner's lightweight AI-native constitution](AI-NATIVE-PRODUCT-CONSTITUTION.md) remains a principle layer. The sole product blueprint is [Product Architecture](LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md); [Experience](LUMENIS-EXPERIENCE-CONSTITUTION.md) owns UI/UX and DESIGN_READY screen specifications. A report is evidence, never another blueprint.
+
+## 2026-10-09 bounded source publication and current limits
+
+The existing developer workflow now has portable VS Code Tasks and a PowerShell
+entry backed by `.codex/local_workflow.py`, exact Owner/HEAD/hash reservations,
+private receipts, format preview/apply/rollback and deterministic generator/build
+reuse. Actual local check, format rollback, idempotent preview, Owner refusal and
+Astro build/cache have receipts. Editor completion is configured with official
+local language servers; actual editor completion/diagnostic acceptance remains
+NOT VERIFIED because the UI bridge could not obtain the VS Code process/window.
+Tools spawn no model calls; this does not measure total Codex Token savings.
+
+`PRODUCT-POSITIONING-CURRENT.md` no longer imposes Linux/Android native delivery
+or Figma/DESIGN_READY before coding. Gateway compatibility symbols remain, but
+retired executable transports/discovery/fallback are inert. All seven owned
+binding/execution/status function ASTs are unchanged by that cleanup.
+
+The Browser source adds short-lived exclusive human control and server-frame
+binding; SYS-06 exposes only advertised navigation/history/reload/remote scroll.
+An independent source review found a misplaced CLOSED enum; it was restored before
+publication. These are source changes with syntax/static proof, not a live session
+or user outcome. Task/run association stays UNVERIFIED without a server resolver.
+The optional Browser Use readiness boundary is **not a working intelligent agent**:
+typed Task/Source-use/Gateway/action bridges and egress enforcement remain missing.
+Manual Browser operations do not depend on that AI route. Result save/reopen and
+secure remote Web transport remain OPEN; the loopback safety guard is retained.
+
+Agent Zero is an optional disabled executor on the existing Task Engine; no startup
+binder/worker contract is installed. No Docker service is available and workstation
+memory is insufficient for the proposed GUI image. Permission, attempt claims,
+non-replay, cancellation and outcome validation are required; absence is honest
+UNAVAILABLE/NOT VERIFIED. No container, new model or service was started.
+
+The AI-optional V2 ZIP's five files were fully read as preparation evidence.
+A0/B0/C0 are not C1/C2 window IDs or an Agent Zero activation grant. Source review
+confirmed a remaining C2-owned analysis path: a rule-based/AI-optional label still
+reaches the owned-AI failure gate without actual deterministic analysis. Its real
+user impact is NOT VERIFIED and its repair requires the paused Owner's authority;
+the basic-business requirement is retained, not waived or declared fulfilled.
+
+Existing Core has not loaded this batch. Production DB and real user outcomes
+are independent; no restart, deployment or production-data write occurred here.
+C1 unfinished dirty source and prior unaccepted icon/material changes are preserved
+and excluded from this bounded publication. Full R/J/U, research, media, design and
+native follow-up requirements remain OPEN as applicable. Exact evidence and open
+bindings: [bounded delivery](evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md).
 
 ## 1. Online reader's current-state snapshot
 
@@ -27,7 +73,7 @@ route: original media locators -> permitted asynchronous processing through the
 existing queue/Gateway/media owners -> versioned, locatable downstream results.
 OCR, speech, temporal visual analysis, coverage and unavailable execution remain
 distinct. Media executor/job binding is still OPEN, not proved by metadata or this
-rule publication. C1 continues its own work; no other paused window is resumed.
+rule publication. C1 retains this scope but is paused by the latest direct PO; no paused window is resumed.
 
 SourceBrief's existing query sample and actual analysis sample have distinct
 denominators. `available_brief_count` currently means returned verified records
@@ -119,7 +165,7 @@ not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 This 2026-10-09 update reconciles existing adoption/status evidence, duplicate

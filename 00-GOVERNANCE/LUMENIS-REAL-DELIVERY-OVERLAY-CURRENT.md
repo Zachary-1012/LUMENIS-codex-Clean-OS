@@ -1,6 +1,25 @@
+
+## 2026-10-09 AI 非依赖原则与分层验收
+
+序境所有基础业务能力在无模型、无外部 AI API、无 GPU、无推理服务时，仍须完成正常任务。AI 只增强效率、理解、建议、生成及辅助决策，不生产事实，不拥有 Canonical Data，不是核心业务链必经条件。AI 专属动作缺模型可准确标为 UNAVAILABLE，不能因此阻断普通任务。安全/权限拒绝、来源权益失效和真实输入缺失仍是有效阻塞，不能伪造或绕过。
+
+| 领域 | 无 AI 必须完成的基础任务 | 可选 AI 增强 |
+| --- | --- | --- |
+| C1 数据采集 | 真实采集、来源记录、去重、入库、刷新、恢复 | 页面理解和提取辅助 |
+| CTH | 监测、指标计算、事件、风险规则、人工判断记录、报告 | 解释、趋势推断、建议 |
+| BMP | 品牌资料、传播分析、竞品比较、Campaign 管理 | 创意、洞察、方案辅助 |
+| Shared 研究 | 导入、检索、引用、归档、人工研究、导出 | 语义检索、摘要、关联 |
+| 提案/视频/播客 | 人工编写编辑、素材处理、播放、渲染、保存、导出 | 生成、转写、剪辑建议 |
+| Browser/Computer | 确定性操作、人工接管、文件处理、恢复 | 自主规划、智能 GUI |
+| SYSTEM | 权限、调度、数据库、运行恢复、安全 | 异常分析、修复建议 |
+
+第一优先：真实来源→规范数据→确定性计算/人工操作→有用成果→保存/修订/重开/恢复。第二优先：以同一真实任务证实 AI 增益。第三优先：另获许可的数据、训练、评估和晋升。保留全部批准的增强范围，不把其未完成记作已完成；不能借模型缺失延迟基础任务。现有 REAL DELIVERY CARD 分别记录 no-AI 基础结果和 AI 增强状态，不新增验收体系或第二执行合同。
+
+A0/B0/C0 V2 本轮仅准入准备：外部模型条款/默认关闭设计审阅、数据卡与上游/Teacher 权利审阅、自研 AI 现状及非 AI 任务断点核查。A1 外部 API、B1 数据下载导入、B2 训练及模型部署各需独立授权，C2 未恢复。包内 C1 RUNNING 是旧快照；最新直接 PO 已暂停 C1。A0 方案编号不表示 Agent Zero，也不表示 C1 业务窗口。待核实的 analysis_agent 全任务失败不能靠改状态或规则文字冒称修复。
+
 > Status: **CURRENT SUBORDINATE REAL-DELIVERY OVERLAY / NOT A SECOND PRODUCT OR EXPERIENCE AUTHORITY**
 
-> 2026-10-08 PO 正式验收策略变更：单元/集成及换名模块自动测试不再是开发、合并、验收或发布条件，Codex 不新建、不执行这些套件；保留历史测试和 FAILED 证据。当前执行真实任务→既有源码→构建运行→实际用户操作→真实结果→保存/修订/重开→恢复→验收→正式集成。适用编译、静态质量、安全/权限、数据一致性及真实产品 E2E 保留；历史材料中的测试命令不构成当前执行义务，真实缺陷仍必须修复。R01–R15/J1–J8/U01–U25 与 Owner/权益/生产数据边界不变；机器合同 v1.2.0 的 verification_policy 记录现行语义。仅 M 与 C1 本轮恢复；M/C1 最新当前窗口指定 GPT-6.1 Sol / ultra（不改角色默认/速度，实际执行模型另核），其余窗口暂停状态按最新直接指令保留。
+> 2026-10-08 PO 正式验收策略变更：单元/集成及换名模块自动测试不再是开发、合并、验收或发布条件，Codex 不新建、不执行这些套件；保留历史测试和 FAILED 证据。当前执行真实任务→既有源码→构建运行→实际用户操作→真实结果→保存/修订/重开→恢复→验收→正式集成。适用编译、静态质量、安全/权限、数据一致性及真实产品 E2E 保留；历史材料中的测试命令不构成当前执行义务，真实缺陷仍必须修复。R01–R15/J1–J8/U01–U25 与 Owner/权益/生产数据边界不变；机器合同 v1.2.0 的 verification_policy 记录现行语义。最新直接 PO 已暂停 C1；仅 M 继续当前获批收尾与准备；M/C1 最新当前窗口指定 GPT-6.1 Sol / ultra（不改角色默认/速度，实际执行模型另核），其余窗口暂停状态按最新直接指令保留。
 >
 > Authority boundary: this overlay adds delivery evidence and commercial-readiness gates to the six C1–C6 outcomes and retained R01–R15 acceptance coverage. The historical numbered coverage groups below preserve acceptance provenance, not an execution schedule. This overlay does not create another queue, bypass dependencies, replace Product Architecture/Experience, or erase completed source work.
 >
@@ -48,7 +67,7 @@ Use OBSERVED / INFERRED / NOT VERIFIED; only demonstrated applicable user
 acceptance permits ACCEPTED. M integrates exact frozen accepted paths and CURRENT
 with remote readback; publication never implies loaded Runtime or RELEASED.
 Existing R/J/U, three Gate tiers and no-unit/integration policy remain unchanged.
-M/C1 continue; this increment does not resume F/C2-C6 or cancel M's original
+C1 is now paused by direct PO; M continues authorized integration/preparation. This does not resume F/C2-C6 or cancel M's original
 candidate/material integration. Current window request is Sol 6.1 / ultra;
 manual speed/defaults remain intact.
 

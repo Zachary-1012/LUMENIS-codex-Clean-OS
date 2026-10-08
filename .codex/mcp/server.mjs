@@ -23,7 +23,7 @@ const definitions = [
   ['runtime_health', 'Read the loopback core health endpoint; not an E2E acceptance result.', empty, true],
   ['config_inventory', 'Read non-secret Codex/MCP/skill inventory; configured does not mean verified.', empty, true],
   ['source_owner', 'Find bounded excerpts in the current local LUMENIS source owner index.', {type:'object', properties:{query:{type:'string', maxLength:80}}, required:['query'], additionalProperties:false}, true],
-  ['verification_plan', 'Suggest existing tests for changed paths. Heuristic; does not execute product tests.', {type:'object', properties:{paths:{type:'array', maxItems:100, items:{type:'string'}}}, required:['paths'], additionalProperties:false}, true],
+  ['verification_plan', 'Plan retained static, build, security/data and real-user verification; no unit/integration suites or execution.', {type:'object', properties:{paths:{type:'array', maxItems:100, items:{type:'string'}}}, required:['paths'], additionalProperties:false}, true],
 ];
 const server = new Server({name:'lumenis-engineering', version:'1.0.0'}, {capabilities:{tools:{}}});
 server.setRequestHandler(ListToolsRequestSchema, async () => ({tools:definitions.map(([name,description,inputSchema,readOnlyHint]) => ({name,description,inputSchema,annotations:{readOnlyHint,destructiveHint:false,openWorldHint:false}}))}));

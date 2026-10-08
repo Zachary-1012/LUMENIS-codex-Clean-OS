@@ -13,9 +13,13 @@ The final user-facing product is **one product with four coordinated experience 
 
 Web Workspace, Desktop App and Mobile Companion share **ONE Product Core, ONE Canonical API / ViewModel contract, ONE Canonical Data, ONE Evidence, ONE Permission and ONE workflow meaning**. Flutter remains the approved shared application technology for Web Workspace, Desktop App and Mobile Companion; terminal-specific composition and capability boundaries are required instead of identical layouts. Public Website is separately deployable presentation and acquisition surface, not a second product or business-logic owner.
 
-The approved application targets remain Web, Windows, macOS, Linux, Android and iOS; target presence is not release evidence, and each platform still requires its own runtime and release gate.
+Public Website and Web Workspace close first. Later native application targets are Windows/macOS Desktop and iOS Mobile only. Android and Linux native clients are removed from active delivery requirements; preserve their existing source and history. Linux servers/CI, browser access on supported operating systems and narrow-screen Web accessibility remain in scope. Target presence is not release evidence; each retained surface still needs its applicable runtime and release gate.
 
-Generated PDFs, audit illustrations, screenshots, mockups and Figma explorations are `DESIGN_EXPLORATION`, not implementation authority. A screen may be implemented only after the current Experience Constitution and its detailed screen specification record a Sol-reviewed `DESIGN_READY` decision.
+Generated PDFs, audit illustrations, screenshots, mockups and Figma explorations are `DESIGN_EXPLORATION`, not implementation authority. Implement the current Experience Constitution and detailed screen specifications directly in existing frontend source, maintaining necessary decisions alongside code. A separate design draft, Figma file or M `DESIGN_READY` review is not an implementation prerequisite. Preserve existing editable design assets and honest design-review records; compilation, real operation, accessibility, security and full user-outcome acceptance remain required.
+
+## AI-independent product operation
+
+All normal business capabilities must complete without a model, external AI API, GPU or inference service. AI enhances but never owns Canonical facts. Pure AI actions may be UNAVAILABLE; deterministic work, manual decisions/editing, saving, exporting, reopening and recovery remain operable. Actual missing inputs, rights and Permission denials stay honest. Accept the no-AI business outcome first, measure AI benefits separately, and train only under its separate authorization. Exact seven-domain coverage remains in the sole Product Architecture and Real Delivery Overlay.
 
 ## Four product domains
 

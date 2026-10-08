@@ -186,6 +186,7 @@ def _is_product_behavior_source(path: str) -> bool:
     # Engineering-policy entrypoints, not LUMENIS user/runtime behavior.
     if path in {
         ".codex/hooks/lumenis_hooks.py", ".codex/engineering.py",
+        ".codex/local_workflow.py", ".codex/mcp/server.mjs",
         "scripts/production_baseline_check.py", "scripts/lean_footprint.py",
     }:
         return False
@@ -210,6 +211,12 @@ def _is_rules_only_publication_path(path: str) -> bool:
         'scripts/lean_footprint.py',
         '.codex/hooks/lumenis_hooks.py',
         '.codex/engineering.py',
+        '.codex/local_workflow.py',
+        '.codex/mcp/server.mjs',
+        'scripts/local_development.ps1',
+        '.vscode/settings.json',
+        '.vscode/tasks.json',
+        '.vscode/extensions.json',
         '.codex/README.md',
         '.agents/skills/lumenis-local-engineering-tools/SKILL.md',
 
