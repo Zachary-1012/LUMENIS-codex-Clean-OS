@@ -55,6 +55,7 @@ DB_PATH = main_db_path()
 DEFAULT_SESSION_IDLE_TIMEOUT = 600      # 空闲 10 分钟自动关闭
 DEFAULT_SESSION_MAX_LIFETIME = 3600     # 最大生命周期 1 小时
 DEFAULT_ACTION_TIMEOUT = 30000           # 单 Action 超时（ms）
+MAX_OBSERVATION_TEXT_LENGTH = 2000
 
 # Circuit Breaker 配置
 CB_FAILURE_THRESHOLD = 5                 # 连续失败 N 次熔断
@@ -843,15 +844,14 @@ class ActionVerifier:
 
         expected_dict = asdict(expected)
 
+        if actual_state.get("error"):
+            differences.append("页面观察失败，无法确认操作结果")
+
         # 1. URL 检查
         if expected.url_equals and actual_url != expected.url_equals:
-            differences.append(
-                f"URL不匹配: expected={expected.url_equals}, actual={actual_url}"
-            )
+            differences.append("URL不匹配")
         if expected.url_contains and expected.url_contains not in actual_url:
-            differences.append(
-                f"URL不包含: expected_contains={expected.url_contains}, actual={actual_url}"
-            )
+            differences.append("URL不包含要求的内容")
 
         # 2. Title 检查
         if expected.title_contains and expected.title_contains not in actual_title:
@@ -923,12 +923,18 @@ class ActionVerifier:
             differences.append("页面仍在加载中（loading=true）")
 
         passed = len(differences) == 0
+        # Full URLs are used above only for comparisons. Verification is also
+        # persisted in Evidence, so query credentials must not escape here.
+        expected_dict["url_equals"] = (
+            safe_browser_display_url(expected.url_equals) if expected.url_equals else None
+        )
+        expected_dict["url_contains"] = "[REDACTED]" if expected.url_contains else None
 
         return VerificationResult(
             passed=passed,
             expected=expected_dict,
             actual={
-                "url": sanitize_sensitive(actual_url),
+                "url": safe_browser_display_url(actual_url),
                 "title": sanitize_sensitive(actual_title),
                 "status_code": actual_status,
                 "loading": actual_loading,
@@ -1150,19 +1156,26 @@ class BrowserPageState:
     loading: bool = False
     status_code: Optional[int] = None
     error: Optional[str] = None
-    element_count: int = 0
+    element_count: int | None = None
     body_text: str = ""
     elements: Dict[str, Any] = field(default_factory=dict)
     console_errors: List[str] = field(default_factory=list)
+    observation_errors: dict[str, str] = field(default_factory=dict)
+    truncated_fields: list[str] = field(default_factory=list)
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
-        d["body_text"] = sanitize_sensitive(d.get("body_text", ""))[:2000]
-        return d
+        d["url"] = safe_browser_display_url(self.url)
+        d["body_text"] = sanitize_sensitive(self.body_text)[:MAX_OBSERVATION_TEXT_LENGTH]
+        return sanitize_dict(d)
 
     def state_hash(self) -> str:
         return hash_state(self.to_dict())
+
+    def verification_state(self) -> dict[str, Any]:
+        """Raw URL is for in-memory comparisons only, never API/Evidence output."""
+        return {**self.to_dict(), "url": self.url}
 
 
 @dataclass
@@ -1503,6 +1516,10 @@ class AIBrowserRuntime:
 
         网页内容标记为 untrusted_content，经过 Prompt Injection 扫描和敏感信息脱敏。
         """
+        if (type(include_dom) is not bool or type(include_accessibility) is not bool
+                or type(max_text_length) is not int
+                or not 0 <= max_text_length <= MAX_OBSERVATION_TEXT_LENGTH):
+            raise ValueError("BROWSER_OBSERVATION_OPTIONS_INVALID")
         if self._browser_worker and threading.get_ident() != self._browser_thread_id:
             return self._run_on_browser_thread(
                 lambda: self.observe(include_dom, include_accessibility, max_text_length)
@@ -1521,12 +1538,22 @@ class AIBrowserRuntime:
 
             # 获取 body 文本（脱敏 + 注入扫描）
             try:
-                body_text = self._page.evaluate("() => document.body ? document.body.innerText : ''")
+                # Bound the browser-to-Python transfer, including the scan input.
+                extracted = self._page.evaluate(
+                    "limit => { const text = document.body ? document.body.innerText : ''; "
+                    "return {text: text.slice(0, limit), truncated: text.length > limit}; }",
+                    max_text_length,
+                )
+                body_text = extracted["text"]
+                if extracted["truncated"]:
+                    state.truncated_fields.append("body_text")
                 # Prompt Injection 扫描
                 injection_result = self.injection_guard.scan(body_text, source="page_observe")
                 state.body_text = injection_result.sanitized_text[:max_text_length]
             except Exception:
                 state.body_text = ""
+                state.error = "BROWSER_PAGE_TEXT_UNAVAILABLE"
+                state.observation_errors["body_text"] = state.error
 
             # 元素计数
             try:
@@ -1534,7 +1561,8 @@ class AIBrowserRuntime:
                     "() => document.querySelectorAll('*').length"
                 )
             except Exception:
-                state.element_count = 0
+                state.element_count = None
+                state.observation_errors["element_count"] = "BROWSER_ELEMENT_COUNT_UNAVAILABLE"
 
             # 控制台错误
             state.console_errors = list(self._console_errors[-10:])
@@ -1547,23 +1575,52 @@ class AIBrowserRuntime:
                         return Array.from(els).slice(0, 50).map(el => ({
                             tag: el.tagName,
                             type: el.type || '',
-                            text: (el.innerText || el.value || '').trim().slice(0, 100),
-                            id: el.id || '',
+                            text: (el.innerText || '').trim().slice(0, 100),
+                            id: (el.id || '').slice(0, 100),
                             className: (el.className || '').toString().slice(0, 100),
                             visible: el.offsetParent !== null,
                         }));
                     }""")
                     state.elements["_dom_summary"] = sanitize_dict(dom_summary)
                 except Exception:
-                    pass
+                    state.observation_errors["dom"] = "BROWSER_DOM_UNAVAILABLE"
 
             # Accessibility Tree（可选）
             if include_accessibility:
                 try:
                     snapshot = self._page.accessibility.snapshot()
-                    state.elements["_accessibility"] = sanitize_dict(snapshot) if snapshot else {}
+                    budget = [128]
+
+                    def bounded_node(node, depth=0):
+                        if not isinstance(node, dict):
+                            return {}
+                        if depth > 6 or budget[0] <= 0:
+                            if "accessibility" not in state.truncated_fields:
+                                state.truncated_fields.append("accessibility")
+                            return {}
+                        budget[0] -= 1
+                        # Never return input values, including passwords, from
+                        # a page's accessibility tree.
+                        result = {key: str(node[key])[:200] for key in ("role", "name") if key in node}
+                        children = node.get("children", [])
+                        if isinstance(children, list):
+                            if depth >= 6 and children:
+                                state.truncated_fields.append("accessibility")
+                                return result
+                            result["children"] = []
+                            for child in children[:budget[0]]:
+                                if budget[0] <= 0:
+                                    state.truncated_fields.append("accessibility")
+                                    break
+                                result["children"].append(bounded_node(child, depth + 1))
+                            if len(result["children"]) < len(children):
+                                state.truncated_fields.append("accessibility")
+                        return result
+
+                    state.elements["_accessibility"] = sanitize_dict(bounded_node(snapshot))
+                    state.truncated_fields = list(dict.fromkeys(state.truncated_fields))
                 except Exception:
-                    pass
+                    state.observation_errors["accessibility"] = "BROWSER_ACCESSIBILITY_UNAVAILABLE"
 
         except Exception as e:
             state.error = sanitize_sensitive(str(e)[:300])
@@ -1943,7 +2000,7 @@ class AIBrowserRuntime:
 
             # Verification
             if expected:
-                verification = self.verifier.verify(expected, after_state.to_dict())
+                verification = self.verifier.verify(expected, after_state.verification_state())
                 result.verification = verification
                 if verification.passed:
                     result.success = True
@@ -1988,7 +2045,7 @@ class AIBrowserRuntime:
                     after_state = self.observe()
                     result.after_state = after_state
                     if expected:
-                        verification = self.verifier.verify(expected, after_state.to_dict())
+                        verification = self.verifier.verify(expected, after_state.verification_state())
                         result.verification = verification
                         if verification.passed:
                             result.success = True

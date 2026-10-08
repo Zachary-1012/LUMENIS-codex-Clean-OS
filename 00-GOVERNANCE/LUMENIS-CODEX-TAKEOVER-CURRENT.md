@@ -33,17 +33,32 @@ binding/execution/status function ASTs are unchanged by that cleanup.
 The Browser source adds short-lived exclusive human control and server-frame
 binding; SYS-06 exposes only advertised navigation/history/reload/remote scroll.
 An independent source review found a misplaced CLOSED enum; it was restored before
-publication. These are source changes with syntax/static proof, not a live session
-or user outcome. Task/run association stays UNVERIFIED without a server resolver.
+publication. A subsequent isolated, real Flutter/Core operation observed an
+allowed public Bing page, manual control, note save/revise, browser stop and
+reopen after a full Web reload, with old versions retained and no model call.
+This bounded result is not full SYS-06 closure. Task/run association stays
+UNVERIFIED without a server resolver.
 The optional Browser Use readiness boundary is **not a working intelligent agent**:
 typed Task/Source-use/Gateway/action bridges and egress enforcement remain missing.
 The session Evidence API now applies the existing actor/account-session/
 principal ownership guard before reading records; static review supports the
-repair, while real session acceptance remains NOT VERIFIED. The current safe
-startup profile lacks Browser admission and app.py is outside this M reservation;
-no production restart or safety-fence bypass was used. Manual Browser operations
-do not depend on the AI route. Result save/reopen and
-secure remote Web transport remain OPEN; the loopback safety guard is retained.
+repair; cross-actor adversarial runtime acceptance remains NOT VERIFIED. An exact
+M shared reservation now permits a fresh-temp-only Browser acceptance profile in
+app.py; its original unrelated dirty regions remain excluded from publication.
+No production restart or safety-fence bypass was used. Manual Browser operations
+do not depend on the AI route. Manual browser research-note save/list/reopen/revise now uses existing Shared
+SavedWork. Captured Source/Task-bound results and secure remote Web transport
+remain OPEN; the loopback safety guard is retained. Notes are user writing,
+not imported/verified webpage Evidence. The bounded M acceptance entry uses a
+fresh OS-temp DB and Web artifact; no production service is replaced. The complete
+screen, remote transport, Source-bound outcomes and computer operations remain
+OPEN. Actual evidence and source-version limits are in the existing delivery record.
+
+The deterministic observation API now rejects invalid/oversized options, reports
+capture failures instead of unconditional success and bounds returned content.
+Missing element counts remain unknown. Query/fragment values are removed from
+public state and verification records while exact URL comparisons stay in memory.
+This is source/static evidence; the production process has not loaded this delta.
 
 Agent Zero is an optional disabled executor on the existing Task Engine; no startup
 binder/worker contract is installed. No Docker service is available and workstation
@@ -199,7 +214,7 @@ not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 Historical protected local-only M icon batch (not integrated; not an execution instruction): this earlier local increment includes the bounded 37-path/102-call historical

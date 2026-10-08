@@ -26,6 +26,8 @@ Gateway `core.py` 清除退役 Provider 的可执行发现、网络传输、云�
 
 ## 3. Browser / SYS-06 本轮实际源码
 
+**最新增量状态（2026-10-09 07:52 北京）：** 下表及其后06时记录是前次源码阶段，运行未验收表述由本节末的实际操作结果更新；未完成的完整能力要求不变。
+
 | 路径/已有 Owner | 本轮改变 | 当前状态 |
 |---|---|---|
 | `ai_browser_runtime.py` / SYSTEM Browser | 短时人工独占租约；frame/target/revision/viewport 和实际图像核验；Agent 与人工动作隔离 | IMPLEMENTED，语法/源码审查；运行未加载 |
@@ -40,6 +42,34 @@ Gateway `core.py` 清除退役 Provider 的可执行发现、网络传输、云�
 这些缺口不能统称“等 GPU”；其中多项是尚未完成的源码连接。基础人工/确定性 Browser 不依赖 Browser Use 推理准入，批准的完整交互范围保留。
 
 06时增量源码审查发现 `/api/browser/sessions/<session_id>/evidence` 只有模块读取授权，缺少其他会话接口已有的归属检查。现已复用 `_get_session_or_404`，核对 actor、account session、principal，任一不一致返回404后才读取记录；正常归属路径的查询不变。独立审查与AST/Ruff支持该修复，不能据此宣称真实跨会话操作验收通过。现有安全Workspace启动配置不放行Browser接口，普通启动会带起其他服务；当前M Browser预约又明确排除`app.py`。未重启8201、未扩开该配置；完整运行验收需在既有共享预约下补足隔离入口。
+
+### 后续源码修复：观察结果真实性
+
+`/observe` 原先会把页面读取失败、无活动页面和部分请求项失败包装为 `ok:true`。
+本次在现有两个 Browser 文件内修正：4 KiB 请求上限、严格布尔/整数参数、正文在浏览器端截断后传输、DOM/无障碍返回上限、字段错误与截断标识、截图格式和大小验证、no-store 及明确 `ai_used:false`。元素计数读取失败保持 null；不读取 DOM 表单值。无障碍树在官方 snapshot 返回后裁剪，仅证明返回大小受限，不声称上游获取内存已受限。
+
+URL 原文只用于内存中的精确验证；公开状态、验证结果、失败说明与对应 Evidence 不保留 URL 查询参数或片段。独立审查发现过“去掉查询参数导致验证失败”风险，已将内部比较与公开序列化分开；页面观察失败不能产生验证 PASS。
+
+两文件 AST 通过；Ruff 全文件仍有既存诊断，原始失败回执保留。按同一工具/规则比较修改前后，API 26→25、Runtime 218→216，新增诊断0；这不是全文件 Ruff PASS。未运行单元、集成或替代模块套件。
+
+### 实际无模型手动浏览与 SavedWork 结果
+
+沿既有 M/W6 预约 revision 25 补足了 `app.py` 的隔离验收入口：必须显式选择原安全 Workspace 配置、新建 OS-temp DB、loopback 非生产端口；只开放既有 Browser 和 Shared SavedWork 端点，端点自身 Permission/会话归属仍生效。可选择 OS-temp 编译产物，不覆盖生产 Web build。额外修复安全配置导入时可能加载代理节点和启动健康探测的问题；本次运行日志显示节点数0，未启动该循环；新防护仅完成源码验证，不冒称已在本次进程加载。
+
+真实 Flutter Web 编译成功。首次读取真实 PNG 暴露客户端过滤 viewport 响应头导致预览失败，已在原 transport allowlist 补齐3个确切字段并实际看到页面。租约到期后旧 session 状态会让接管按钮停留禁用，已修复为服务端状态回读；07:55实际在租约过期后恢复接管按钮，重新取得人工租约，随后正常停止，证据为`lease-recovery-ui.json`。无关旧源码/测试诊断保留。
+
+| 真实产品操作 | 实际结果与范围 |
+|---|---|
+| 开启受控浏览、人工接管、访问网页 | 现有通用产品 Browser 的新隔离 context/page；真实 `https://www.bing.com/` 页面标题“搜索 - Microsoft 必应”及1280×720画面可见；没有使用个人账户 |
+| 权限边界 | `python.org` 不在现有允许域内，实际拒绝；没有扩白名单求成功。目标页初次绘制返回202，刷新后得到真实画面；保留失败记录 |
+| 无模型创建笔记 | 明确选择CTH，人工输入标题与正文，沿真实 Shared SavedWork 保存；不是原网页导入或正式业务事实 |
+| 保存与修订 | work `WORK-64037a2d29eedc39b547f6a3`；v1 `ART-7908bbef538b40cc`，v2 `ART-8c59aca534f1410d`，随后v3；parent/hash链由服务端生成并返回。自动化fill曾追加而非替换文本，实际Ctrl+A重新编辑为v3，v2未抹除 |
+| 停止与重开 | 产品界面显示会话已结束；完整刷新Web应用后，从笔记列表打开v3，正文逐字一致；重开v1内容仍与原版一致 |
+| 数据与权限 | 全部写入新的临时验收数据库/Artifact目录；来源状态NOT_IMPORTED/NOT_VERIFIED，Task UNBOUND，模型调用0；未写Production DB |
+
+证据：受保护本地路径 `work/m-governance-20261008/browser-agentzero/observation/` 下的 `saved-work-ui-receipts.json`、`ui-outcome-summary.json`、`notes-reopened.png`、`runtime-launch.json`、构建记录及服务日志。原失败和中间版本保留。前端构建使用固定 `56f2aba8` 加确切M文件；Core验收实际使用受保护当前工作树，包含未发布旧区域，不能称纯main或生产同SHA运行。最后代理安全增量未在该进程加载。Production 8201未重启。
+
+上述有界手动笔记链为 OBSERVED。捕获正文成为Source/Evidence、Task/Run绑定、远端Web认证传输、任意点击/输入/选择、完整电脑操作、Browser Use智能执行仍未闭；不标整个SYS-06/J任务ACCEPTED、JOB_CLOSED或RELEASED。后续必要工程连接不能全部归咎于GPU。
 
 ## 4. Agent Zero 本轮实际源码与硬阻塞
 
@@ -115,7 +145,7 @@ VS Code 负责本地补全、导航、诊断；PowerShell/Python 负责确定性
 
 ### I. 未闭项目
 
-实际编辑器补全验收、Browser/SYS-06 运行用户操作及保存重开、Browser Use 智能桥、Agent Zero GUI 资源/协议/Outcome、C2 AI-optional 正常分析修复均未闭。本轮不依次恢复暂停窗口、不申请付费或以 HTTP 200/安装/CI 代替真实结果。
+四种语言编辑器补全已有第5C节实证，Browser本地Web手动笔记链已有第3节实证。完整Browser/SYS-06的Source/Task、远程认证及电脑操作，Browser Use智能桥，Agent Zero GUI资源/协议/Outcome，C2 AI-optional正常分析修复仍未闭。本轮不恢复暂停窗口、不申请付费或以HTTP 200/安装/CI代替真实结果。
 
 ## 6. 四层独立结论
 
@@ -124,7 +154,7 @@ VS Code 负责本地补全、导航、诊断；PowerShell/Python 负责确定性
 | SOURCE | 本轮规则与有界改动存在，适用语法/静态/源码安全和机器治理检查；正式发布以 exact Git/CI 读取为准 |
 | RUNTIME | 本轮 read-only health 为 5.9.9、DB dependency ok；原 PID/boot 保持，未重启加载新改动；Owned NOT_BOUND，无新 GUI/Browser Use 服务 |
 | DATABASE | 本轮没有执行 Production DB 写入/迁移；不能据此声称其他 Owner 的历史数据验收或全库逐字未变 |
-| USER OUTCOME | 工具的实际预览/构建/回滚/拒绝可复核；编辑器补全和产品 Browser/GUI 完整用户闭环 NOT VERIFIED；不标 JOB_CLOSED/RELEASED/OPERATING |
+| USER OUTCOME | 工具预览/构建/回滚/拒绝及四语言编辑器补全可复核；隔离本地Web Browser手动笔记保存/修订/停止后重开为OBSERVED；完整Browser/GUI及七域无AI业务闭环仍未验收，不标JOB_CLOSED/RELEASED/OPERATING |
 
 最终采用 OBSERVED / INFERRED / NOT VERIFIED。规则已统一不等于业务已修好；只在真实结果通过既有验收时使用 ACCEPTED。
 

@@ -116,6 +116,11 @@ class LumenisBrowserFrame {
     required this.capturedAt,
     required this.width,
     required this.height,
+    // Older read-only frame callers may omit server binding metadata. Zero is
+    // deliberately invalid so these frames cannot authorize human actions.
+    this.viewportWidth = 0,
+    this.viewportHeight = 0,
+    this.devicePixelRatio = 0,
   });
 
   final Uint8List bytes;
@@ -123,8 +128,53 @@ class LumenisBrowserFrame {
   final String targetId;
   final int pageRevision;
   final DateTime capturedAt;
+
+  /// PNG dimensions in image pixels.
   final int width;
   final int height;
+
+  /// Browser viewport dimensions in CSS pixels, bound by the server to this frame.
+  final int viewportWidth;
+  final int viewportHeight;
+  final double devicePixelRatio;
+
+  LumenisBrowserFrameBinding get binding => LumenisBrowserFrameBinding(
+    frameId: frameId,
+    targetId: targetId,
+    pageRevision: pageRevision,
+    viewportWidth: viewportWidth,
+    viewportHeight: viewportHeight,
+    devicePixelRatio: devicePixelRatio,
+  );
+}
+
+class LumenisBrowserFrameBinding {
+  const LumenisBrowserFrameBinding({
+    required this.frameId,
+    required this.targetId,
+    required this.pageRevision,
+    required this.viewportWidth,
+    required this.viewportHeight,
+    required this.devicePixelRatio,
+  });
+
+  final String frameId;
+  final String targetId;
+  final int pageRevision;
+  final int viewportWidth;
+  final int viewportHeight;
+  final double devicePixelRatio;
+
+  Map<String, Object?> toJson() => {
+    'frame_id': frameId,
+    'target_id': targetId,
+    'page_revision': pageRevision,
+    'viewport': {
+      'width': viewportWidth,
+      'height': viewportHeight,
+      'dpr': devicePixelRatio,
+    },
+  };
 }
 
 class LumenisCoreClient {
@@ -660,6 +710,122 @@ class LumenisCoreClient {
     );
   }
 
+  /// Reads the existing Shared SavedWork registry for Browser-authored notes.
+  /// The server still resolves and authorizes the actor and exact CTH/BMP scope.
+  Future<Map<String, dynamic>> listBrowserResearchNotes({
+    required String domainId,
+    int limit = 100,
+    String? cursor,
+  }) {
+    if (limit < 1 || limit > 100) {
+      throw ArgumentError.value(limit, 'limit');
+    }
+    if (cursor != null &&
+        (cursor.isEmpty ||
+            cursor.length > 4096 ||
+            RegExp(r'[\x00-\x1f\x7f]').hasMatch(cursor))) {
+      throw const FormatException('Invalid SavedWork cursor.');
+    }
+    final queryParameters = <String, String>{
+      'kind': 'research',
+      'limit': '$limit',
+    };
+    if (cursor != null) queryParameters['cursor'] = cursor;
+    final query = Uri(queryParameters: queryParameters).query;
+    return _request(
+      'GET',
+      '/api/experience/saved-work?$query',
+      operationContext: _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
+
+  Future<Map<String, dynamic>> saveBrowserResearchNote({
+    required String domainId,
+    required String title,
+    required String markdown,
+    required Map<String, Object?> payload,
+    required String requestId,
+  }) {
+    _validateSavedWorkRequestId(requestId);
+    return _request(
+      'POST',
+      '/api/experience/saved-work',
+      operationContext: _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {
+        'title': title,
+        'markdown': markdown,
+        'kind': 'research',
+        'payload': payload,
+        'citations': const <Object?>[],
+        'request_id': requestId,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> reopenBrowserResearchNote({
+    required String domainId,
+    required String artifactId,
+  }) {
+    _validateSavedWorkArtifactId(artifactId);
+    return _request(
+      'GET',
+      '/api/experience/saved-work/$artifactId',
+      operationContext: _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
+
+  Future<Map<String, dynamic>> reviseBrowserResearchNote({
+    required String domainId,
+    required String artifactId,
+    required String requestId,
+    required String expectedSha256,
+    required String reason,
+    required String expectedTitle,
+    required String title,
+    required String expectedMarkdown,
+    required String markdown,
+  }) {
+    _validateSavedWorkArtifactId(artifactId);
+    _validateSavedWorkRequestId(requestId);
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(expectedSha256)) {
+      throw const FormatException('Invalid SavedWork version digest.');
+    }
+    return _request(
+      'POST',
+      '/api/experience/saved-work/$artifactId/revise',
+      operationContext: _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {
+        'request_id': requestId,
+        'expected_sha256': expectedSha256,
+        'reason': reason,
+        'edits': [
+          {'pointer': '/title', 'expected': expectedTitle, 'value': title},
+          {
+            'pointer': '/markdown',
+            'expected': expectedMarkdown,
+            'value': markdown,
+          },
+        ],
+      },
+    );
+  }
+
+  static void _validateSavedWorkArtifactId(String value) {
+    if (!RegExp(r'^ART-[0-9a-f]{16}$').hasMatch(value)) {
+      throw const FormatException('Invalid SavedWork artifact identifier.');
+    }
+  }
+
+  static void _validateSavedWorkRequestId(String value) {
+    if (!RegExp(r'^[A-Za-z0-9_-]{8,128}$').hasMatch(value)) {
+      throw const FormatException('Invalid SavedWork request identifier.');
+    }
+  }
+
   Future<Map<String, dynamic>> navigateBrowserSession({
     required String sessionId,
     required String url,
@@ -696,6 +862,105 @@ class LumenisCoreClient {
       '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/stop',
       payload: const <String, Object?>{},
       withContext: false,
+    );
+  }
+
+  /// Acquire the server-owned, exclusive human lease for this session.
+  /// The bearer token is returned once and must remain in memory only.
+  Future<Map<String, dynamic>> acquireBrowserHumanControl(String sessionId) {
+    _validateBrowserSessionId(sessionId);
+    _requireLocalBrowserEndpoint();
+    return _request(
+      'POST',
+      '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/human-control/acquire',
+      payload: const <String, Object?>{},
+      withContext: false,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      connectionTimeout: const Duration(seconds: 20),
+    );
+  }
+
+  Future<Map<String, dynamic>> releaseBrowserHumanControl({
+    required String sessionId,
+    required String leaseToken,
+  }) {
+    _validateBrowserSessionId(sessionId);
+    _validateBrowserLeaseToken(leaseToken);
+    _requireLocalBrowserEndpoint();
+    return _request(
+      'POST',
+      '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/human-control/release',
+      payload: const <String, Object?>{},
+      withContext: false,
+      requestHeaders: {
+        'Cache-Control': 'no-store',
+        'X-LUMENIS-Human-Control-Lease': leaseToken,
+      },
+      connectionTimeout: const Duration(seconds: 20),
+    );
+  }
+
+  Future<Map<String, dynamic>> navigateBrowserSessionWithHumanControl({
+    required String sessionId,
+    required String url,
+    required String leaseToken,
+    required LumenisBrowserFrameBinding frameBinding,
+  }) {
+    _validateBrowserSessionId(sessionId);
+    _validateBrowserLeaseToken(leaseToken);
+    _validateBrowserUrl(url);
+    _requireLocalBrowserEndpoint();
+    return _request(
+      'POST',
+      '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/human-control/navigate',
+      payload: <String, Object?>{
+        'url': url,
+        'frame_binding': frameBinding.toJson(),
+      },
+      withContext: false,
+      requestHeaders: {
+        'Cache-Control': 'no-store',
+        'X-LUMENIS-Human-Control-Lease': leaseToken,
+      },
+      connectionTimeout: const Duration(seconds: 20),
+    );
+  }
+
+  /// Calls only existing human-safe actions exposed by the server capability.
+  /// This client intentionally has no coordinate, upload, download or stop action.
+  Future<Map<String, dynamic>> executeBrowserHumanAction({
+    required String sessionId,
+    required String action,
+    required String leaseToken,
+    required LumenisBrowserFrameBinding frameBinding,
+    String value = '',
+  }) {
+    _validateBrowserSessionId(sessionId);
+    _validateBrowserLeaseToken(leaseToken);
+    if (!const {'back', 'forward', 'reload', 'scroll'}.contains(action)) {
+      throw const FormatException('Unsupported human browser action.');
+    }
+    if (action == 'scroll') {
+      final delta = int.tryParse(value);
+      if (delta == null || delta == 0 || delta.abs() > 2000) {
+        throw const FormatException('Human scroll distance is invalid.');
+      }
+    }
+    _requireLocalBrowserEndpoint();
+    return _request(
+      'POST',
+      '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/human-control/action',
+      payload: <String, Object?>{
+        'action': action,
+        if (action == 'scroll') 'value': value,
+        'frame_binding': frameBinding.toJson(),
+      },
+      withContext: false,
+      requestHeaders: {
+        'Cache-Control': 'no-store',
+        'X-LUMENIS-Human-Control-Lease': leaseToken,
+      },
+      connectionTimeout: const Duration(seconds: 20),
     );
   }
 
@@ -746,6 +1011,15 @@ class LumenisCoreClient {
       final height = int.tryParse(
         response.headers['x-lumenis-frame-height'] ?? '',
       );
+      final viewportWidth = int.tryParse(
+        response.headers['x-lumenis-viewport-width'] ?? '',
+      );
+      final viewportHeight = int.tryParse(
+        response.headers['x-lumenis-viewport-height'] ?? '',
+      );
+      final devicePixelRatio = double.tryParse(
+        response.headers['x-lumenis-viewport-dpr'] ?? '',
+      );
       if (!_isOpaqueBrowserId(frameId) ||
           !_isOpaqueBrowserId(targetId) ||
           revision == null ||
@@ -756,7 +1030,17 @@ class LumenisCoreClient {
           width < 1 ||
           height < 1 ||
           width > 16384 ||
-          height > 16384) {
+          height > 16384 ||
+          viewportWidth == null ||
+          viewportHeight == null ||
+          viewportWidth < 1 ||
+          viewportHeight < 1 ||
+          viewportWidth > 16384 ||
+          viewportHeight > 16384 ||
+          devicePixelRatio == null ||
+          !devicePixelRatio.isFinite ||
+          devicePixelRatio <= 0 ||
+          devicePixelRatio > 16) {
         throw const FormatException('Browser frame metadata is invalid.');
       }
       return LumenisBrowserFrame(
@@ -767,6 +1051,9 @@ class LumenisCoreClient {
         capturedAt: capturedAt.toUtc(),
         width: width,
         height: height,
+        viewportWidth: viewportWidth,
+        viewportHeight: viewportHeight,
+        devicePixelRatio: devicePixelRatio,
       );
     } on LumenisTransportException {
       throw const LumenisCoreException(
@@ -791,6 +1078,12 @@ class LumenisCoreClient {
   static void _validateBrowserSessionId(String value) {
     if (!RegExp(r'^bs_[a-f0-9]{12}$').hasMatch(value)) {
       throw const FormatException('Invalid browser session identifier.');
+    }
+  }
+
+  static void _validateBrowserLeaseToken(String value) {
+    if (!RegExp(r'^[A-Za-z0-9_-]{16,256}$').hasMatch(value)) {
+      throw const FormatException('Invalid browser control lease.');
     }
   }
 

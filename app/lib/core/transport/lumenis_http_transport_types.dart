@@ -55,6 +55,9 @@ class LumenisTransportResponse {
     'x-lumenis-captured-at',
     'x-lumenis-frame-width',
     'x-lumenis-frame-height',
+    'x-lumenis-viewport-width',
+    'x-lumenis-viewport-height',
+    'x-lumenis-viewport-dpr',
   };
 
   final int statusCode;
@@ -91,6 +94,9 @@ class LumenisBinaryTransportResponse {
     'x-lumenis-captured-at',
     'x-lumenis-frame-width',
     'x-lumenis-frame-height',
+    'x-lumenis-viewport-width',
+    'x-lumenis-viewport-height',
+    'x-lumenis-viewport-dpr',
   };
 
   final int statusCode;

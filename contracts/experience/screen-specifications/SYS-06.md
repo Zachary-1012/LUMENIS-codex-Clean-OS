@@ -3,7 +3,7 @@
 ```yaml
 screen_id: SYS-06
 status: IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED
-revision: 6
+revision: 7
 owner_domain: SYSTEM Browser / CDP
 binding_ids:
   - BACKEND-GAP-041
@@ -22,7 +22,41 @@ approval_reference: Product Owner direct internal-browser repair approval
 - References: `KEEP_AS_EXPLORATION`; no external browser UI is copied.
 - Anti-template check: capability boundary + safe instance state composition, not a browser tab clone or generic dashboard.
 - Current source decision: the bounded reader below is implemented; runtime,
-  accessibility and real-user acceptance remain open.
+  full accessibility and whole-screen real-user acceptance remain open. Revision 7
+  has the bounded local-Web manual-note runtime evidence described below.
+
+## 0.1b Current revision-7 source delta — 2026-10-09
+
+Manual research notes use the existing Shared SavedWork owner: choose an explicit
+CTH/BMP context, write a note while viewing an authorized public page, save,
+list/reopen and revise with server Artifact SHA and parent-version checks.
+No model is required. Automatic locator metadata keeps only the site origin;
+credentials, paths, queries and fragments are omitted. Notes have empty citations,
+NOT_IMPORTED / NOT_VERIFIED source status and UNBOUND task status. They are user
+writing, not captured Source/Evidence or a completed Task/Run binding.
+
+Existing scope/Permission and effect fences reauthorize every operation. A changed
+context or stale async response cannot silently replace the current draft. An
+unconfirmed save reuses its request ID; revisions preserve the earlier Artifact.
+The UI can reopen saved notes after the browser session ends. The binary transport
+retains all three server viewport headers required for safe human frame binding.
+Malformed frame metadata is a preview failure, not an invalid user URL.
+
+The isolated Browser-outcome startup profile permits only existing manual Browser
+and Shared SavedWork endpoints alongside the safe Workspace reads. It requires a
+new OS-temp DB, loopback/non-production port and no automatic product services.
+An explicitly selected OS-temp Web artifact avoids overwriting the live build.
+This is a development acceptance entry, not deployment or a Permission bypass.
+Runtime evidence and any remaining failures are recorded in the existing round-15
+M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY record; full SYS-06 remains OPEN.
+
+Observed local-Web outcome: real allowed Bing page and visible frame, manual note
+v1, reopen, revisions v2/v3, explicit browser stop, full Web reload, reopen v3 and
+unchanged v1. The actual Shared SavedWork service persisted all versions in a fresh
+temporary database. No model, mock or production database was used. UI automation
+initially appended text during replacement; actual Ctrl+A editing corrected it in
+v3 without deleting v2. This proves manual-note continuity only, not imported
+Source/Evidence, Task binding, arbitrary page control or production acceptance.
 
 ## 0.1a Current revision-6 source delta — 2026-10-09
 

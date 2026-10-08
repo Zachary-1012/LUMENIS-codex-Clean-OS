@@ -85,6 +85,7 @@ def register_ai_browser_api(app):
         BrowserHumanControlError,
         BrowserSessionBindingError,
         HUMAN_CONTROL_ACTIONS,
+        MAX_OBSERVATION_TEXT_LENGTH,
         ExpectedState,
         SessionStatus,
         sanitize_sensitive,
@@ -570,25 +571,47 @@ def register_ai_browser_api(app):
         Request JSON:
           - include_dom: bool (默认 False)
           - include_accessibility: bool (默认 False)
-          - max_text_length: int (默认 2000)
+          - max_text_length: int (0..2000，默认 2000)
           - screenshot: bool (是否返回 base64 截图，默认 False)
         """
         session, err = _get_session_or_404(session_id)
         if err:
             return err
         try:
-            data = request.get_json(silent=True) or {}
+            import json
+
+            if request.content_length is not None and request.content_length > 4096:
+                return jsonify({"ok": False, "error_code": "BROWSER_OBSERVATION_REQUEST_TOO_LARGE"}), 413
+            raw = request.stream.read(4097)
+            if len(raw) > 4096:
+                return jsonify({"ok": False, "error_code": "BROWSER_OBSERVATION_REQUEST_TOO_LARGE"}), 413
+            try:
+                data = json.loads(raw) if request.is_json else None
+            except (ValueError, UnicodeDecodeError):
+                data = None
+            if not isinstance(data, dict):
+                return jsonify({"ok": False, "error_code": "BROWSER_JSON_OBJECT_REQUIRED"}), 400
+            fields = {"include_dom", "include_accessibility", "max_text_length", "screenshot"}
+            text_limit = data.get("max_text_length", MAX_OBSERVATION_TEXT_LENGTH)
+            if (set(data) - fields or type(text_limit) is not int
+                    or not 0 <= text_limit <= MAX_OBSERVATION_TEXT_LENGTH
+                    or any(type(data.get(key, False)) is not bool
+                           for key in ("include_dom", "include_accessibility", "screenshot"))):
+                return jsonify({"ok": False, "error_code": "BROWSER_OBSERVATION_OPTIONS_INVALID"}), 400
+            if session.status != SessionStatus.RUNNING:
+                return jsonify({"ok": False, "error_code": "BROWSER_SESSION_NOT_RUNNING"}), 409
             state = session.observe(
-                include_dom=bool(data.get("include_dom", False)),
-                include_accessibility=bool(data.get("include_accessibility", False)),
-                max_text_length=int(data.get("max_text_length", 2000)),
+                include_dom=data.get("include_dom", False),
+                include_accessibility=data.get("include_accessibility", False),
+                max_text_length=text_limit,
             )
 
             response = {
-                "ok": True,
+                "ok": not state.error and not state.observation_errors,
                 "session_id": session_id,
                 "state": sanitize_dict(state.to_dict()),
                 "state_hash": state.state_hash(),
+                "ai_used": False,
                 "untrusted_content": True,  # 网页内容标记为不可信
                 "injection_scan": session.injection_guard.scan(
                     state.body_text, source="api_observe"
@@ -596,18 +619,28 @@ def register_ai_browser_api(app):
             }
 
             # 可选截图（base64，不存 Evidence）
-            if data.get("screenshot", False):
+            if data.get("screenshot", False) and not state.error:
                 try:
                     import base64
                     screenshot_bytes = session.screenshot(full_page=False)
+                    if (not screenshot_bytes.startswith(b"\x89PNG\r\n\x1a\n")
+                            or not 24 <= len(screenshot_bytes) <= 16 * 1024 * 1024):
+                        raise ValueError("BROWSER_SCREENSHOT_UNAVAILABLE")
                     response["screenshot_base64"] = base64.b64encode(screenshot_bytes).decode("ascii")
-                except Exception as e:
-                    response["screenshot_error"] = sanitize_sensitive(str(e)[:200])
+                except Exception:
+                    response["ok"] = False
+                    response["screenshot_error"] = "BROWSER_SCREENSHOT_UNAVAILABLE"
 
-            return jsonify(response)
-        except Exception as e:
-            logger.error(f"[AI Browser API] observe error: {e}")
-            return jsonify({"ok": False, "error": sanitize_sensitive(str(e)[:300])}), 500
+            response["partial"] = not response["ok"] and not state.error
+            if not response["ok"]:
+                response["error_code"] = "BROWSER_OBSERVATION_INCOMPLETE"
+            reply = jsonify(response)
+            reply.headers["Cache-Control"] = "no-store, private"
+            reply.headers["Pragma"] = "no-cache"
+            return reply, 200 if response["ok"] else 503
+        except Exception:
+            logger.exception("AI Browser observation unavailable")
+            return jsonify({"ok": False, "error_code": "BROWSER_OBSERVATION_UNAVAILABLE"}), 503
 
     # ──────────────────────────────────────────────────────────
     # 4. Action（执行 Action，带 Verification 闭环）
@@ -703,7 +736,7 @@ def register_ai_browser_api(app):
                 return jsonify({"ok": False, "error": "expected state is required"}), 400
 
             current_state = session.observe()
-            verification = session.verifier.verify(expected, current_state.to_dict())
+            verification = session.verifier.verify(expected, current_state.verification_state())
 
             return jsonify({
                 "ok": True,

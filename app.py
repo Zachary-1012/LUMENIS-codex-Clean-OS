@@ -31,6 +31,7 @@ def _cli_option_value(argv, option):
 
 
 _INTERNAL_BETA_WORKSPACE_CONTEXT_FLAG = '--internal-beta-workspace-context-acceptance'
+_INTERNAL_BETA_BROWSER_OUTCOME_FLAG = '--internal-beta-browser-outcome-acceptance'
 _INTERNAL_BETA_RESERVED_PORTS = frozenset({5000, 5001, 8200, 8201, 9222, 9223, 9224})
 
 
@@ -46,10 +47,17 @@ def _validate_internal_beta_workspace_context_arguments(argv, environ=None):
 
     values = {}
     seen_no_scheduler = False
+    seen_browser_outcome = False
     index = 0
     while index < len(argv):
         item = argv[index]
         if item == flag:
+            index += 1
+            continue
+        if item == _INTERNAL_BETA_BROWSER_OUTCOME_FLAG:
+            if seen_browser_outcome:
+                raise ValueError('Browser outcome acceptance flag must appear only once')
+            seen_browser_outcome = True
             index += 1
             continue
         if item == '--no-scheduler':
@@ -150,7 +158,19 @@ def _activate_internal_beta_environment(
     env['ZB_WSGI'] = ''
     env['ZBC_PREFLIGHT_ENFORCE'] = '0'
     env['ZBC_GUARDIAN_ENABLED'] = '0'
-    env.pop('LUMENIS_WORKSPACE_BUILD_DIR', None)
+    env['ZBC_BROWSER_EVIDENCE_DIR'] = os.path.join(data_dir, 'browser-evidence')
+    build_dir = env.pop('LUMENIS_WORKSPACE_BUILD_DIR', None)
+    if _INTERNAL_BETA_BROWSER_OUTCOME_FLAG in sys.argv and build_dir:
+        # An explicit temporary build avoids replacing the running product's
+        # artifact. Never serve a personal directory or inherit a generic path.
+        resolved_build = os.path.realpath(os.path.abspath(build_dir))
+        resolved_temp = os.path.realpath(tempfile.gettempdir())
+        if (not os.path.isabs(build_dir)
+                or resolved_build == resolved_temp
+                or not _is_path_within(resolved_build, resolved_temp)
+                or not os.path.isfile(os.path.join(resolved_build, 'index.html'))):
+            raise ValueError('Browser outcome build must be an existing build under OS temp')
+        env['LUMENIS_WORKSPACE_BUILD_DIR'] = resolved_build
     env.pop('LUMENIS_FLUTTER_WEB_BUILD_DIR', None)
     if isolate_auth:
         # Never inherit a workstation or production Basic credential into this
@@ -204,6 +224,9 @@ if any(value.startswith(_INTERNAL_BETA_WORKSPACE_CONTEXT_FLAG + '=') for value i
 INTERNAL_BETA_WORKSPACE_CONTEXT_ACCEPTANCE = (
     _INTERNAL_BETA_WORKSPACE_CONTEXT_FLAG in sys.argv
 )
+INTERNAL_BETA_BROWSER_OUTCOME_ACCEPTANCE = _INTERNAL_BETA_BROWSER_OUTCOME_FLAG in sys.argv
+if INTERNAL_BETA_BROWSER_OUTCOME_ACCEPTANCE and not INTERNAL_BETA_WORKSPACE_CONTEXT_ACCEPTANCE:
+    raise SystemExit('Browser outcome acceptance requires the isolated Workspace/context profile')
 if INTERNAL_BETA_ACCEPTANCE and INTERNAL_BETA_WORKSPACE_CONTEXT_ACCEPTANCE:
     raise SystemExit('health-only and Workspace/context acceptance profiles cannot be combined')
 INTERNAL_BETA_SAFE_STARTUP = (
@@ -460,11 +483,37 @@ def _internal_beta_workspace_context_request_allowed():
     return False
 
 
+def _internal_beta_browser_outcome_request_allowed():
+    # Exact opt-in routes; existing actor/scope/Permission/effect checks still run.
+    # No model execution, source import, Collector, personal session or OS APIs.
+    methods = {
+        'ai_browser_runtime.create_session': {'POST'},
+        'ai_browser_runtime.list_sessions': {'GET'},
+        'ai_browser_runtime.get_session_status': {'GET'},
+        'ai_browser_runtime.read_session_frame': {'GET'},
+        'ai_browser_runtime.acquire_human_control': {'POST'},
+        'ai_browser_runtime.release_human_control': {'POST'},
+        'ai_browser_runtime.human_control_navigate': {'POST'},
+        'ai_browser_runtime.human_control_action': {'POST'},
+        'ai_browser_runtime.observe': {'POST'},
+        'ai_browser_runtime.stop_session': {'POST'},
+        'ai_browser_runtime.get_evidence': {'GET'},
+        'experience_runtime.save_shared_work': {'POST'},
+        'experience_runtime.search_shared_work': {'GET'},
+        'experience_runtime.read_shared_work': {'GET'},
+        'experience_runtime.revise_shared_work': {'POST'},
+        'experience_runtime.export_shared_work': {'GET'},
+    }
+    return (INTERNAL_BETA_BROWSER_OUTCOME_ACCEPTANCE
+            and request.method in methods.get(request.endpoint, set()))
+
+
 @app.before_request
 def _internal_beta_workspace_context_request_fence():
     if not INTERNAL_BETA_WORKSPACE_CONTEXT_ACCEPTANCE:
         return None
-    if _internal_beta_workspace_context_request_allowed():
+    if (_internal_beta_workspace_context_request_allowed()
+            or _internal_beta_browser_outcome_request_allowed()):
         return None
     return jsonify({
         'ok': False,
@@ -1427,7 +1476,7 @@ def _proxy_health_loop(interval=300):
         except Exception:
             time.sleep(60)
 
-if PROXY_POOL_AVAILABLE:
+if PROXY_POOL_AVAILABLE and not INTERNAL_BETA_SAFE_STARTUP:
     try:
         _load_proxy_nodes()
         if _proxy_mgr.nodes and os.environ.get('ZBC_TEST_OFFLINE') != '1':
@@ -5538,11 +5587,14 @@ if __name__=='__main__':
     parser.add_argument('--no-scheduler',action='store_true',help='仅启动 Web，不启动自动采集调度器')
     parser.add_argument('--internal-beta-acceptance',action='store_true',help='loopback health-only safe probe; only GET /healthz, not Product E2E')
     parser.add_argument('--internal-beta-workspace-context-acceptance',action='store_true',help='loopback Workspace/context and scoped Evidence GET acceptance; no automatic runtime services')
+    parser.add_argument(_INTERNAL_BETA_BROWSER_OUTCOME_FLAG,action='store_true',help='explicit Browser/manual SavedWork operations in a fresh isolated Workspace; no model/Collector or automatic services')
     args=parser.parse_args()
     if args.internal_beta_acceptance and not _is_internal_beta_loopback(args.host):
         parser.error('--internal-beta-acceptance requires --host 127.0.0.1')
     if args.internal_beta_acceptance != INTERNAL_BETA_ACCEPTANCE:
         parser.error('internal beta acceptance profile must be selected before app imports')
+    if args.internal_beta_browser_outcome_acceptance != INTERNAL_BETA_BROWSER_OUTCOME_ACCEPTANCE:
+        parser.error('Browser outcome profile must be selected before app imports')
     if args.internal_beta_workspace_context_acceptance != INTERNAL_BETA_WORKSPACE_CONTEXT_ACCEPTANCE:
         parser.error('Workspace/context acceptance profile must be selected before app imports')
     if args.internal_beta_workspace_context_acceptance and (
