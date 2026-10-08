@@ -728,6 +728,9 @@ def register_ai_browser_api(app):
           - limit: int (默认 50，最大 200)
           - offset: int (默认 0)
         """
+        session, err = _get_session_or_404(session_id)
+        if err:
+            return err
         try:
             store = get_evidence_store()
             result_filter = request.args.get("result", "")

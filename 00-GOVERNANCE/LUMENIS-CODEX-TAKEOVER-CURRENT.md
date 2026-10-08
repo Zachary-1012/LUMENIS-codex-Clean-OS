@@ -16,9 +16,13 @@ The existing developer workflow now has portable VS Code Tasks and a PowerShell
 entry backed by `.codex/local_workflow.py`, exact Owner/HEAD/hash reservations,
 private receipts, format preview/apply/rollback and deterministic generator/build
 reuse. Actual local check, format rollback, idempotent preview, Owner refusal and
-Astro build/cache have receipts. Editor completion is configured with official
-local language servers; actual editor completion/diagnostic acceptance remains
-NOT VERIFIED because the UI bridge could not obtain the VS Code process/window.
+Astro build/cache have receipts. Actual VS Code Python, Dart, PowerShell and
+Astro/TypeScript completion is now observed, with syntax/type diagnostics and
+recovery; Dart definition navigation reaches the real app class. The broken
+extension path, PowerShell language-host selection and Dart historical-folder
+exclusions were repaired without restarting product services. Historical App
+test-source diagnostics remain visible and unexecuted; this is tool acceptance,
+not product closure. Exact observations and limits are in the existing delivery record.
 Tools spawn no model calls; this does not measure total Codex Token savings.
 
 `PRODUCT-POSITIONING-CURRENT.md` no longer imposes Linux/Android native delivery
@@ -33,7 +37,12 @@ publication. These are source changes with syntax/static proof, not a live sessi
 or user outcome. Task/run association stays UNVERIFIED without a server resolver.
 The optional Browser Use readiness boundary is **not a working intelligent agent**:
 typed Task/Source-use/Gateway/action bridges and egress enforcement remain missing.
-Manual Browser operations do not depend on that AI route. Result save/reopen and
+The session Evidence API now applies the existing actor/account-session/
+principal ownership guard before reading records; static review supports the
+repair, while real session acceptance remains NOT VERIFIED. The current safe
+startup profile lacks Browser admission and app.py is outside this M reservation;
+no production restart or safety-fence bypass was used. Manual Browser operations
+do not depend on the AI route. Result save/reopen and
 secure remote Web transport remain OPEN; the loopback safety guard is retained.
 
 Agent Zero is an optional disabled executor on the existing Task Engine; no startup
@@ -190,7 +199,7 @@ not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 This 2026-10-09 update reconciles existing adoption/status evidence, duplicate

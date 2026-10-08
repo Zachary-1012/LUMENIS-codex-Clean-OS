@@ -56,3 +56,34 @@ Only a matching current Owner/RESERVED/head/exact allowed path is eligible. This
 Every action writes ignored private JSON receipts with times, actual exit, source/version range, bounded error, authorization/recovery and tool-spawned model calls (zero). Failed receipts remain failed; later success records recovery separately. Read-only actions and equal formatting inputs do not write source. Static/build/tool acceptance cannot mark a business Job closed, nor prove Runtime/DB/user acceptance. M/W6 still review the exact accepted source and CURRENT co-publication before ordinary main integration.
 
 Rollback this developer configuration by restoring its private preimage backups after verifying no later user change, disabling these Tasks or uninstalling only this delivery's added extensions via the official Code CLI. Never reset/clean the product tree or restore an entire old profile. Existing C1 and earlier M source/material work stay protected and independently unfinished.
+
+### Editor recovery without another tool stack
+
+Compare the running Code process's actual `--extensions-dir` and `--user-data-dir`
+with the installed extension directory before reinstalling anything. A stale
+launcher path can leave installed language extensions inactive. Keep the durable
+extension directory; repair only the verified missing local alias or launcher
+path, with a private preimage and link-target record. Do not bypass publisher or
+workspace trust. Restart only the affected language/extension host after checking
+that it does not own another active task; do not restart product services.
+
+For PowerShell, select the already-installed compatible PowerShell 7 executable
+through `powershell.powerShellAdditionalExePaths` and
+`powershell.powerShellDefaultVersion` in the actual profile. Keep machine-specific
+paths out of portable repository settings. Do not install a second shell to fix a
+discovery error or change the user's general terminal/profile selection.
+
+Dart-Code 3.144 resolves `dart.analysisExcludedFolders` relative to each workspace
+folder; it does not expand `${workspaceFolder}` in that setting. Use the checked-in
+relative paths, close temporary Dart files inside excluded historical copies, and
+restart the Dart analysis server after this setting changes. Retain the real
+`app/` project, its existing type/lint policy and diagnostics. Do not suppress
+legitimate errors, delete historical tests or set the deprecated
+`onlyAnalyzeProjectsWithOpenFiles` to hide the scanning problem.
+
+Use the native **Trigger Suggest** command for non-model completion; do not confuse
+it with **Trigger Inline Suggestion**. Check keybindings before diagnostics actions:
+the PowerShell extension can bind F8 to run a selection. Inspect Problems directly
+instead of executing a script. Real editor acceptance and exact private receipts
+are indexed in the existing round-15 bounded delivery record; they are development
+tool evidence, not product Job closure or a total Codex-token savings claim.

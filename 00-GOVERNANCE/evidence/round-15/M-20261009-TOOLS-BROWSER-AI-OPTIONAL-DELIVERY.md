@@ -14,7 +14,7 @@ V2 ZIP SHA-256：`c466e4af2557eeca92d72cf224b0357c39ea0c4af5bd7a14a817bac6e7d36f
 | 七域基础业务无 AI 正常运行 | Product Architecture / Real Delivery；AGENTS 路由，Experience/README 镜像 | OBSERVED：规则已写入；各域实际无 AI 闭环未由此证明 |
 | 无 AI 成果优先，AI 增强收益独立，训练第三顺位 | 同一既有 R/J/U 与分层 Gate | OBSERVED：保留完整范围，没有新增验收体系 |
 | C2 继续暂停，A0/B0/C0 不自动授予 API/训练/部署 | 现有 PO Receipt / CURRENT / live dispatch | OBSERVED：不启动、不绑定、不导入 |
-| 外部模型和数据清单 | 现有来源/rights/Learning 准入 | NOT VERIFIED：附件中的具体版本、许可、免费额度不冒称本轮已逐源重验 |
+| 外部模型和数据清单 | 现有来源/rights/Learning 准入 | 官方文档/许可核对已记录在第8节；实际账户额度、数据逐条权利与执行准入仍未证明 |
 
 ## 2. 已修复的治理和 Gateway 源码问题
 
@@ -29,7 +29,7 @@ Gateway `core.py` 清除退役 Provider 的可执行发现、网络传输、云�
 | 路径/已有 Owner | 本轮改变 | 当前状态 |
 |---|---|---|
 | `ai_browser_runtime.py` / SYSTEM Browser | 短时人工独占租约；frame/target/revision/viewport 和实际图像核验；Agent 与人工动作隔离 | IMPLEMENTED，语法/源码审查；运行未加载 |
-| `ai_browser_api.py` / 同一 Browser API | acquire/release/human navigate/action；仅公布 navigate/back/forward/reload/scroll | IMPLEMENTED；旧 Permission/actor/session 边界保留 |
+| `ai_browser_api.py` / 同一 Browser API | acquire/release/human navigate/action；仅公布 navigate/back/forward/reload/scroll；Evidence读取补齐现有会话owner guard | IMPLEMENTED；AST/Ruff与调用链审查，实际会话运行尚未验证 |
 | 现有 SYS-06 client/repository/screen | 服务端能力驱动控件、逐帧绑定、读回、停止/返回分别处理，失败保留真实恢复条件 | 三文件定向 Dart analyze 无问题；用户操作 NOT VERIFIED |
 | `browser_use_adapter.py` / 同一 Browser Runtime | 可选关闭状态和真实准入诊断，不实例化第二套 Browser/Provider | 非 working agent；智能执行 UNAVAILABLE |
 
@@ -38,6 +38,8 @@ Gateway `core.py` 清除退役 Provider 的可执行发现、网络传输、云�
 本轮仍缺：服务端 Task/Run resolver、typed Source-use/撤权绑定、Owned BaseChatModel 和 Action Firewall 桥、DNS/private-IP/redirect/WebSocket 一体化出口、结果 SavedWork/Artifact 保存重开/恢复、合法远程 Web actor/session transport、点击/输入/选择及完整电脑操作。客户端传来的 task/run ID 保持 UNVERIFIED，不冒充 Evidence。loopback guard 保留；不能为使 Web 看似可用而移除身份边界。
 
 这些缺口不能统称“等 GPU”；其中多项是尚未完成的源码连接。基础人工/确定性 Browser 不依赖 Browser Use 推理准入，批准的完整交互范围保留。
+
+06时增量源码审查发现 `/api/browser/sessions/<session_id>/evidence` 只有模块读取授权，缺少其他会话接口已有的归属检查。现已复用 `_get_session_or_404`，核对 actor、account session、principal，任一不一致返回404后才读取记录；正常归属路径的查询不变。独立审查与AST/Ruff支持该修复，不能据此宣称真实跨会话操作验收通过。现有安全Workspace启动配置不放行Browser接口，普通启动会带起其他服务；当前M Browser预约又明确排除`app.py`。未重启8201、未扩开该配置；完整运行验收需在既有共享预约下补足隔离入口。
 
 ## 4. Agent Zero 本轮实际源码与硬阻塞
 
@@ -66,7 +68,18 @@ Gateway `core.py` 清除退役 Provider 的可执行发现、网络传输、云�
 
 ### C. 编辑器补全
 
-已配置 Python、Dart/Flutter、PowerShell、Astro/TS/JS 的本地语言服务。实际编辑器 UI 验收 **NOT VERIFIED**：用户已恢复窗口，但 UI bridge 仍返回不能取得窗口 process ID，无法观察补全列表或诊断。没有重新要求用户操作、绕过 trust 或重启/丢失其窗口。扩展已安装不等于验收 A 通过。
+最初的窗口获取失败已恢复。真实VS Code窗口中已观察到以下本地语言服务结果，证据为保护路径内`editor-ui-acceptance.json`与`editor-language-recovery.json`，不是安装推断或模块套件：
+
+| 语言 | 实际编辑器观察 | 状态 |
+|---|---|---|
+| Python | Path成员的absolute/as_uri/exists/glob等补全；未完成表达式显示2个语法错误，修正后撤销语法错误 | OBSERVED |
+| Dart/Flutter | Directory成员及类型补全；`app/lib/main.dart`的LumenisApp通过F12跳到实际类构造器 | OBSERVED |
+| PowerShell | Get-ChildItem与Path参数补全；PowerShell7.6.5语言状态；缺失右花括号产生1条错误，补齐后撤销 | OBSERVED |
+| Astro/TypeScript | 字符串成员补全；将string赋给number时准确报告ts2322，line2/col7；改回string后撤销 | OBSERVED |
+
+发现并修复三项真实本机问题：正在运行的Code指向不存在的扩展目录（用本地junction接回已有持久目录，没有重复下载安装）；PowerShell语言服务未正确选择已安装的7.6.5（仅指定其语言服务路径）；Dart排除项误用不展开的`${workspaceFolder}`，导致扫描历史副本（改为工作区相对路径并仅重启分析服务）。历史诊断洪泛停止，真实app仍能导航；最终仍显示15条旧SYS-06测试源码接口诊断及1条临时Python告警，未删除、执行或隐藏它们。普通代码补全使用本地语言服务，未请求生成式补全。全仓类型正确性、每种语言所有重构动作和额外网络遥测审计不在这些观察的证明范围。
+
+本轮没有重启VS Code主应用、电脑或产品服务，没有绕过信任。一次F8被PowerShell扩展解释成运行选择并向终端提交空行，未执行函数体或非空命令；之后直接使用Problems面板。该操作记录保留，不把它描述为完全没有终端交互。实际产品源码未因编辑器演示而修改。
 
 ### D/E. 可调用任务与执行分工
 

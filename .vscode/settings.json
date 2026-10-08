@@ -45,15 +45,15 @@
     "editor.codeActionsOnSave": {}
   },
   "dart.analysisExcludedFolders": [
-    "${workspaceFolder}/work",
-    "${workspaceFolder}/.venv",
-    "${workspaceFolder}/node_modules",
-    "${workspaceFolder}/website/node_modules",
-    "${workspaceFolder}/app/build",
-    "${workspaceFolder}/.git",
-    "${workspaceFolder}/data",
-    "${workspaceFolder}/.codex",
-    "${workspaceFolder}/00-GOVERNANCE",
-    "${workspaceFolder}/02-ARCHITECTURE"
+    "work",
+    ".venv",
+    "node_modules",
+    "website/node_modules",
+    "app/build",
+    ".git",
+    "data",
+    ".codex",
+    "00-GOVERNANCE",
+    "02-ARCHITECTURE"
   ]
 }
