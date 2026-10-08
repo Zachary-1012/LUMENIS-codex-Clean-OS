@@ -208,7 +208,7 @@ F 在 Product Owner 明确恢复后，在本屏现有规范中补齐同一条链
 ### 2026-10-09 source-to-result acceptance increment — OPEN implementation/acceptance
 
 Consume the same actual SourceBrief/report job, source refs, actor/scope and
-source/Artifact versions through existing Core APIs. Present available source-count,
+source/Artifact versions through existing Core APIs. Present returned verified source-count,
 selection/truncation/method and semantic-interpretation limits separately from the
 useful report; metadata or a title is not full source/media reading. UNASSIGNED
 pending raw observations are accessible only through their allowed source-review
@@ -220,3 +220,14 @@ parent/history; revoked use stops dependent reading. Reports may give honest
 partial results, never fabricated trends, conversion or causal claims. Existing
 SourceBrief sample/analysis metadata must be bound into the actual reader when
 implemented; this requirement does not claim the current UI already shows it.
+
+The existing `business_analysis.sample.available_brief_count` is the number of
+verified records returned by this particular limited/filtered query, not all
+sources available in the scope. Label that denominator explicitly. Keep the
+original SourceBrief intake sample separate from its actual analysis sample;
+empty-body records can be returned without being analyzed. Display actual
+returned/analyzed/omitted, selection, truncation and PARTIAL fields when supplied;
+candidate/scanned/rejected/withheld counts and platform/time ranges retain their
+own returned definitions and missing states. Do not fabricate missing metadata,
+infer semantic evaluation from lexical matches, or label a query sample as full
+market coverage. Save/reopen/revision must preserve the same result metadata.

@@ -29,6 +29,15 @@ OCR, speech, temporal visual analysis, coverage and unavailable execution remain
 distinct. Media executor/job binding is still OPEN, not proved by metadata or this
 rule publication. C1 continues its own work; no other paused window is resumed.
 
+SourceBrief's existing query sample and actual analysis sample have distinct
+denominators. `available_brief_count` currently means returned verified records
+within this limited/filtered query, not a scope-wide total. The CTH-10 specification
+now preserves that meaning and unknown metadata through saved/reopened results.
+Its ViewModel/panel binding remains OPEN; C1 has an exact existing W6 revision-10
+handoff for that affected Web consumer, with F paused and architecture owners
+unchanged. The full-product rule batch at `2f879211` has exact-SHA Product/App
+SUCCESS evidence; these source/rule checks do not establish the user outcome.
+
 The current C4 handoff's three production files (video_editing.py, rendering.py,
 episode_runtime.py) match main bytes. They require no duplicate source apply;
 its retained real-media receipts have their original scope, and full media

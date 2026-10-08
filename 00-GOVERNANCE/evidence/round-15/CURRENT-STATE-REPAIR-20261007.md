@@ -502,3 +502,17 @@ Formal-source/identity/permission checks remain intact; raw pending material mus
 not become a confirmed Subject fact. M makes no product-source/Runtime/DB change
 in this rule-only publication. No source task, model training, real user E2E or
 whole-product acceptance is promoted by these documents.
+
+#### Exact sample-denominator adoption — 2026-10-09
+
+Original business research and actual SourceBrief callers expose one remaining
+mapping defect: `business_analysis.sample.available_brief_count` is assigned
+the returned verified count for this query, not all available sources in the
+scope. `omitted_source_count` also includes returned empty-body records that
+were not analyzed. The original intake sample and actual analysis sample must
+stay separate. CTH-10 now defines these exact existing fields and honest absent
+metadata; no aggregate market coverage or semantic relevance is inferred from
+a lexical window. The backend pins and three existing Web consumer regions are
+reserved to C1 in W6 revision 10; F is not resumed. SourceBrief UI implementation
+and actual save/reopen/revision acceptance remain NOT VERIFIED. This is a
+research-to-existing-product contract adoption, not a new feature or model grant.
