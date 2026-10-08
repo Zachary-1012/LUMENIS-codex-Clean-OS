@@ -1,7 +1,7 @@
 {
   "name": "序境 · LUMENIS Workspace",
   "short_name": "序境",
-  "start_url": "./workspace/CTH-01",
+    "start_url": "./workspace/ACC-03",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0B0F10",

@@ -308,6 +308,7 @@ class _SubjectMetadataRow extends StatelessWidget {
         container: true,
         label: [
           subject.name,
+          subject.id,
           if (subject.type.isNotEmpty) subject.type,
           if (subject.industry.isNotEmpty) subject.industry,
         ].join(' · '),

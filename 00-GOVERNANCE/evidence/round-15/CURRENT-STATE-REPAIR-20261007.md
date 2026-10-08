@@ -391,3 +391,35 @@ This reduces unnecessary installation and makes the failing layer observable;
 it does not disable checks, rewrite the cancelled run or prove new-SHA CI.
 Method reference: [Debian apt-get manual](https://manpages.debian.org/trixie/apt/apt-get.8.en.html),
 consulted 2026-10-08; no external package/provider or fee was added.
+
+### Unique historical frontend behavior retained
+
+The protected original frontend candidate contains a CTH-02 subject-row semantic
+ID that is absent from current source. Existing CTH-02 specification §7 requires
+name, ID, type and industry in the screen-reader label. The single unique line
+is adopted into the existing screen; current visual layout, scope and callers
+remain intact. Original patch/hash records remain preserved.
+
+BMP-03 specification §5B still described the old momentum-from-confidence
+fallback. Current `bmp03_snapshot.dart` independently parses both nullable
+measures and `bmp03_screen.dart` presents unknowns without invented chart points.
+The specification now reflects that source correction, without upgrading full
+BMP-03/CTH-02 runtime or user acceptance. This is a bounded candidate integration,
+not an assertion that all protected frontend candidates or screens are closed.
+
+The original candidates also contain the unique Web manifest start URL correction
+from CTH-01 to ACC-03. Current Workspace routes and default launch already use
+ACC-03. Only this single manifest field is retained; original brand/icon changes
+are not restored. Build output must contain this exact current manifest; actual
+installed-PWA launch and user acceptance remain separately unverified.
+
+Actual Dart analysis of CTH-02 returned no issues. The local Web build launcher
+timed out after 300 seconds; a direct installed-SDK retry then completed its
+release Web build (285.6 seconds, exit 0). The timeout is preserved, not changed
+to PASS. The generated manifest is read back against source. DTD found no running
+debug app, so no existing session was hot-reloaded. The applicable new-SHA App
+CI and actual installed-PWA/readout evidence
+remain required and OPEN. Static authority/anti-template/screen guards passed;
+none is substituted for a full user outcome. The preceding runtime-preflight
+source SHA 20970bac has observed Product CI SUCCESS (run 37798307267); that is
+not same-SHA proof for this frontend reconciliation.

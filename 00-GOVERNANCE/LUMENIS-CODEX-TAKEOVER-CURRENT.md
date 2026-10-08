@@ -112,6 +112,18 @@ honest, and restores this source's existing runtime owner/locator route. The
 actual CLI ran with an isolated temporary data directory: no P0 blockers, one
 LIVE_NOT_VERIFIED capability warning, configured attestation written and no DB
 created. This is preflight execution, not a Core reload or full product E2E.
+The next bounded historical frontend reconciliation retains the CTH-02 subject
+ID in its screen-reader label, as the existing screen contract requires, and
+corrects BMP-03's obsolete claim that missing momentum falls back to confidence,
+and aligns the Web manifest start URL with the existing ACC-03 root/launch route.
+These unique behavior corrections are adopted; original candidates remain
+preserved. Build/static evidence is separate from screen-reader/runtime and
+full-screen user acceptance, which remain unverified for this small recovery.
+Its actual Dart analysis passed. The local Web build launcher timed out at 300
+seconds; that failed attempt remains preserved. The direct installed-SDK retry
+then completed the release Web build (285.6 seconds, exit 0), with its actual
+manifest checked separately. Installed-PWA/assistive-technology acceptance remains
+OPEN; a successful build is not a complete user outcome.
 Prior publication dbb551ad clarified C1's post-intake internal analysis route;
 its App run 37793516793 succeeded and Product run 37793516806 ended CANCELLED
 while apt was still downloading the FFmpeg installation's 99 packages (94.1 MB),
