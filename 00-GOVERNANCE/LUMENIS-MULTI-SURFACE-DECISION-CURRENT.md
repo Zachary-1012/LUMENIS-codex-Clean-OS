@@ -14,6 +14,16 @@ with independent frontend F. The earlier approval is a coverage baseline, not im
 artifacts remain `DESIGN_EXPLORATION` until the sole Experience authority and a
 current detailed screen specification establish `DESIGN_READY`.
 
+### 2026-10-08 最新执行顺序：官网与 Web 优先闭环
+
+Product Owner 最新明确：先完成 Public Website 与 Web Workspace，Desktop App 与 Mobile Companion 的专项实现、打包和实机验收在前两端闭环后继续。四端最终范围、44 屏、官网内容家族和全部既定 R/J/U 要求仍保留；现有原件、源码、设计和回执不删除，后置项不标 PASS。M + 独立 F + 一个业务窗口及零新增付费不变。
+
+本轮完整交付官网既定内容与真实入口，以及 Web 适用的研究、业务、创作、来源和权限、成果保存/修改/重开/恢复/评价。Web 任务必需的 Core/SYSTEM 服务不因桌面客户端后置而后置；复用现有共享源码并保留兼容。官网展示不得夸大能力，Web 不用模拟后端或桌面端跳转代替已批准的 Web 能力。手机浏览器窄屏属于 Web 响应式验收，不等于原生 Mobile Companion。
+
+按既有 Gate 独立验收官网/Web 当前成果；后置两端不阻塞本轮门槛，但四端完整 Goal、跨端 parity 与完整产品 Release 仍待各自真实证据，不能从本轮自动宣告完成。部署、费用、身份和外部效果的授权边界不变。最新直接授权见 `evidence/approvals/PO-20261008-WEBSITE-WEB-FIRST.json`。
+
+最新直接补充：F 不先做独立设计稿，依既有 Experience/ScreenSpec/真实合同直接构建，必要设计决定随代码回写原规范；不等待 Figma 或 M 的 DESIGN_READY 前置审批。原有设计和审核状态作为事实保留，不能据此冒称真实用户验收。后续原生客户端目标仅 Windows/macOS 与 iOS；Android/Linux 原生客户端已从交付目标移除，原件/源码/旧构建证据保留为历史，不列后续待交付。Linux 服务端/CI、各操作系统浏览器与窄屏 Web 不受该原生平台修正影响。
+
 ## 1. Approved product-surface structure
 
 ```text
@@ -64,8 +74,8 @@ The approved route is hybrid and keeps one Product Core:
 ```text
 Public Website     SEO-capable independent presentation deployment
 Web Workspace      Flutter Web target from the existing app/ codebase
-Desktop App        Flutter Windows/macOS/Linux targets from app/
-Mobile Companion   Flutter Android/iOS targets from app/
+Desktop App        Flutter Windows/macOS targets from app/ (after Website/Web closure)
+Mobile Companion   Flutter iOS target from app/ (after Website/Web closure)
 Product Core       existing Python/Flask canonical API and runtime owners
 ```
 
@@ -171,13 +181,13 @@ Stop and return `BLOCKED` rather than creating a second truth when identity/tena
 
 ### 2026-10-08 前端审计与工具维护增补
 
-采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；各窗完成 fresh admission 后执行既有完整成果。本轮仅同步派工规则，不提升运行或用户验收状态。
+按最新PO直接构建真实前端，依既有Experience/ScreenSpec/Owner合同随源码更新设计决定与验收证据；不等待独立设计稿/Figma或M逐屏设计审批。原DESIGN_EXPLORATION/DESIGN_READY保留为真实设计审核记录，不再作为强制编码阶段；实现与验收据实记录，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；各窗完成 fresh admission 后执行既有完整成果。本轮仅同步派工规则，不提升运行或用户验收状态。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
 ### 2026-10-08 成熟操作与智能增强的四端一致性
 
-按Product Architecture与Experience§38在现有四端角色内同时验收基础可用与序境增强；不新增入口。Web/Desktop承载实际编辑，Mobile保持已批准触控/轻操作/恢复范围，适用的录音与音频播放逐端验证，缺设备的项目保留OPEN；官网呈现真实已验证能力和明确标记的演示，不宣传尚未实现的媒体/AI。GPT/Apple/Tesla只作为操作、反馈、撤回和状态连续性的参考。SH-01/BMP-08完整媒体操作沿原合同，必要媒体时间轴横向滚动不违反非必要不上下滚动。当前PO指令为M+独立F+唯一业务窗口；选定窗口fresh admission后按现有依赖与门禁执行，其余等待。
+按Product Architecture与Experience§38在当前优先的官网/Web验收基础可用与序境增强，Desktop/Mobile的专项验收后置；保留四端完整范围，不新增入口。Web/Desktop承载实际编辑，Mobile保持已批准触控/轻操作/恢复范围，适用的录音与音频播放逐端验证，缺设备的项目保留OPEN；官网呈现真实已验证能力和明确标记的演示，不宣传尚未实现的媒体/AI。GPT/Apple/Tesla只作为操作、反馈、撤回和状态连续性的参考。SH-01/BMP-08完整媒体操作沿原合同，必要媒体时间轴横向滚动不违反非必要不上下滚动。当前PO指令为M+独立F+唯一业务窗口；选定窗口fresh admission后按现有依赖与门禁执行，其余等待。
 
 ### 2026-10-08 浏览器与受控电脑的端能力
 

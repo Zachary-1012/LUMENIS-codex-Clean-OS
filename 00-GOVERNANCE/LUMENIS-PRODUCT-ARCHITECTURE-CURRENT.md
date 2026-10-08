@@ -21,8 +21,10 @@ Shared Capability Layer serves both domains. Agent Groups coordinate through
 the existing Agent Runtime and never become another business or security owner.
 
 **Multi-surface product direction:** Public Website, Flutter Web Workspace,
-Desktop on Windows/macOS/Linux, and Mobile on Android/iOS share the same Core.
+Desktop on Windows/macOS, and Mobile on iOS share the same Core.
 Platform availability and acceptance are verified separately from this target.
+
+2026-10-08 最新 PO 顺序：优先闭环 Public Website + Web Workspace；Desktop App/Mobile Companion 专项实现、打包与实机验收后置至前两端闭环以后。保留全部四端/44屏/官网家族及 R/J/U 能力，不删旧成果、不将后置项记为通过。当前 Web 所需业务与 Core/SYSTEM 能力仍完整推进，沿既有 Owner/Permission/Evidence 与真实保存、修改、重开、恢复、评价链验收。既有三层 Gate 按本轮表面记录，四端完整 Goal/Release 不因本轮完成自动关闭。具体表面边界见 Multi-Surface Decision；M+独立F+唯一业务窗口、零新增费用不变。
 
 ### 当前语义与兼容边界（2026-10-07 校准）
 
@@ -67,10 +69,7 @@ Collector→Canonical→CTH/BMP→SourceBrief→SavedWork/Content Project→Eval
 OpenAI Math/Lean/Comparator 是方法来源，不构成序境已获形式化证明、商业因果或训练授权。
 具体实现、证据和未验证运行范围见同一语义清单及 Math 采用记录。
 
-Design artifacts remain DESIGN_EXPLORATION until a current screen specification
-passes DESIGN_READY. Do not authorize implementation from a PDF, screenshot, fixture, Figma frame
-or a generic swapped-title renderer. Original capabilities and later valid
-capabilities must survive convergence.
+Latest PO: F builds real frontend directly from current Experience, screen contracts and source; no separate design draft, Figma completion or M DESIGN_READY approval is a coding prerequisite. Update existing specifications alongside code. Existing design artifacts and review states remain provenance, not proof of implementation. Do not authorize implementation from a PDF, screenshot, fixture, Figma frame or a generic swapped-title renderer alone; the current contracts and direct PO construction instruction govern. Website/Web closes first, then native Windows/macOS and iOS only. Android/Linux native clients are no longer delivery targets; preserve historical source/evidence. Linux server/CI and browser access remain separate. Preserve all other current capabilities and acceptance requirements.
 
 一、闭环后，用户实际得到什么
 
@@ -296,7 +295,7 @@ website/                     committed Public Website implementation; release st
 
 This is an ownership target, not permission to mass-move files. Every move requires owner/caller/read-write/runtime/test tracing.
 
-For each vertical delivery slice, record the surface matrix over one Product Core contract: Web Workspace primary/available; Desktop enhanced/exclusive; Mobile view/notify/approve/light action; Public Website explanation/demo only. Layouts need not match, but business meaning and state semantics must. Start acceptance on actual available browser, desktop and mobile reference hosts; record unavailable device/runtime combinations as `UNVERIFIED`, and do not claim a surface or OS release until its build and runtime flows pass.
+For each vertical delivery slice, record the surface matrix over one Product Core contract: Web Workspace primary/available; Desktop enhanced/exclusive; Mobile view/notify/approve/light action; Public Website explanation/demo only. Layouts need not match, but business meaning and state semantics must. Start current acceptance on actual Website/Web browsers; native Windows/macOS and iOS hosts follow Website/Web closure; record unavailable device/runtime combinations as `UNVERIFIED`, and do not claim a surface or OS release until its build and runtime flows pass.
 
 ### Current runtime caller map
 
@@ -359,7 +358,7 @@ LUMENIS production repositories = 1
 
 ### 2026-10-08 前端审计与工具维护增补
 
-采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。本规则更新不提升运行或用户验收状态。
+按最新PO直接构建真实前端，依既有Experience/ScreenSpec/Owner合同随源码更新设计决定与验收证据；不等待独立设计稿/Figma或M逐屏设计审批。原DESIGN_EXPLORATION/DESIGN_READY保留为真实设计审核记录，不再作为强制编码阶段；实现与验收据实记录，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。本规则更新不提升运行或用户验收状态。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 

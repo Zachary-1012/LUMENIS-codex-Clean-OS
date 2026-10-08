@@ -6,6 +6,10 @@ The approved Product Architecture defines the complete outcome scope; historical
 Golden Pages and route counts are compatibility/evidence, not a product limit.
 Current implementation and acceptance state is read from CURRENT and exact source.
 
+## Current direct-build and platform priority
+
+F builds Website/Web interactions directly from the existing Experience, screen specifications and real Core contracts; no separate design draft, Figma completion or M DESIGN_READY prerequisite. Keep source/design decisions and evidence in the existing screen record. First close Public Website and Web Workspace, then native Desktop Windows/macOS and native Mobile iOS only. Android/Linux native client delivery is superseded; preserve original source and historical checks. Linux CI/server, cross-OS browser use and narrow Web viewports remain separate. Real behavior, visual quality, rights/Permission, save/revise/reopen/recovery and current acceptance gates remain required.
+
 ## Retained implementation observations — not current acceptance
 
 - **Approved pre-beta boundary:** the LUMENIS product account is deferred until after internal beta and does not block App entry. Core's existing transport authentication remains separate from a product account. Media-platform Cookie/session/browser authorization is separate and remains in the existing SYSTEM collector path.
@@ -15,7 +19,7 @@ Current implementation and acceptance state is read from CURRENT and exact sourc
 - CTH-02 opens from CTH-01 as `浏览 CTH 主体登记目录`; it does not add a sixth top-level destination or change the active Subject/context. It requests metadata from the existing server-protected registry only when opened. A server denial is shown locally on CTH-02 and does not eject the user from the App. Subject → business unit → brand/format ownership remains `NOT_COLLECTED`; the full profile remains blocked until its owner, read permission and Evidence lineage are verified.
 - BMP BrandFocus is shown only when Core returns both `domain=zbmp` and `subject.product=ZBMP`; a CTH `brand_key` is not a BMP brand context. CTH remains Subject-first, BMP remains Brand/Market-first, Shared retains source-domain lineage, and SYSTEM remains infrastructure.
 - The five Golden Page slices use screen-specific mappings and compositions. Their presence does **not** mean the Experience contracts or full workflows are accepted. The repository defines 44 screen-specific UX blueprints and 54 truth-binding rows. The binding registry constrains data/API/actor/permission/Evidence truth; legacy `sectionTypes` do not prescribe layouts, and a generic renderer is prohibited.
-- Windows and Android Release compilation have been verified locally. The Windows packaged binary also passed a launch smoke with the expected window title and a responsive process; this does not establish authenticated Product Core or screen-workflow acceptance. Android device acceptance and macOS/Linux/iOS packaging/runtime remain open.
+- Windows and Android Release compilation have been verified locally. The Windows packaged binary also passed a launch smoke with the expected window title and a responsive process; this does not establish authenticated Product Core or screen-workflow acceptance. Those Android build facts are historical, not an active target. Windows/macOS/iOS native acceptance follows Website/Web closure; Android/Linux native clients are no longer required.
 
 Do not invent UI data, backend behavior, permission results or successful actions to make an unbound screen appear complete. Keep `UNKNOWN`, `NOT_AVAILABLE`, `NOT_COLLECTED`, `STALE`, `BLOCKED` and `ERROR` distinct. A contract or fixture is not proof of a working endpoint or feature.
 
@@ -135,9 +139,9 @@ This section governs the App code structure and engineering sequence. The Experi
 
 1. **Plan lock:** the product owner accepted this architecture and §§30–36 on 2026-09-20. Continue implementation without requesting overall-plan approval again; this approval is not per-screen acceptance.
 2. **Capability and owner mapping:** for the chosen workflow, reconcile existing behavior against its canonical module, route, fields, actor, scope, permission, Evidence, effects and regression tests. Record unresolved source claims as blocked; do not infer equivalence from filenames or a ViewModel.
-3. **Screen specification:** create one reviewed specification from `../contracts/experience/screen-specifications/SCREEN_SPEC_TEMPLATE.md`. It must resolve owner and callable, entry/return paths, information priority, PC/mobile composition, state matrix, accessibility, side effects and executable acceptance.
+3. **Screen specification alongside implementation:** reuse the existing screen record; capture actual owner/callable, entry/return, information priority, state matrix, accessibility, effects and executable acceptance while directly constructing the current Web workflow. Separate design artifacts/M design approval are not coding prerequisites; native Windows/macOS/iOS layouts follow Website/Web closure.
 4. **Vertical slice:** implement one end-to-end workflow in its owning feature, reusing stable shared primitives only. Keep CTH Subject-first, BMP Brand/Market-first, Shared cross-domain, and SYSTEM infrastructure boundaries.
-5. **Acceptance before expansion:** verify source/auth behavior (allowed, denied, missing, stale and error), ViewModel/repository behavior, PC and mobile layouts at representative window widths, keyboard/mouse/touch input, focus/contrast/reduced motion, Evidence traceability, and regression of the preserved capability. Review the actual running app before marking the screen accepted.
+5. **Acceptance before expansion:** verify current Website/Web source/auth (allowed, denied, missing, stale/error), actual API/results, ViewModel/repository, representative wide/narrow browser layouts, applicable keyboard/mouse/touch, accessibility, Evidence and recovery. Native Windows/macOS/iOS acceptance is deferred until Website/Web closure, not marked PASS. Review real running flows before acceptance.
 6. **Release gate:** only supported platforms with a real build and runtime acceptance may be listed as supported. Keep failed, skipped and unrun checks distinct in the release evidence.
 
 This is an implementation and acceptance path, not a completed-product claim.
@@ -160,13 +164,13 @@ Windows builds and remaining platform/business gates, is in
 
 ## Current toolchain authority and historical development checks
 
-- Toolchain machine authority: `app/toolchain.json` pins Flutter 3.47.5 (`6a19cca56475dbfba1478ee68d7bd0c2ef891da1`) and Dart 3.13.4; App Gate reads and verifies this same file. Android API 36 / Build Tools 36 and JDK 21 remain platform prerequisites.
+- Toolchain machine authority: `app/toolchain.json` pins Flutter 3.47.5 (`6a19cca56475dbfba1478ee68d7bd0c2ef891da1`) and Dart 3.13.4; App Gate reads and verifies this same file. The historical Android API 36 / Build Tools 36 / JDK 21 prerequisites are not current client delivery requirements.
 - `flutter analyze`: passed with no issues.
 - `flutter test --no-pub`: 75 tests passed, including 1440 px / 390 px Shell and screen-layout coverage.
 - `py -3.13 -m pytest tests/test_experience_runtime.py tests/test_subject_registry.py tests/test_shared_database_migrations.py`: 48 passed; no background-thread leaks. The cookie-route test isolates the unrelated app-startup migration from its file/identity assertions.
 - Backend capability/permission regressions across BMP truth isolation, AI intent, App permission integration, Shared skills, RuntimeGuardian, login and dual-domain gates: 298 passed; no background-thread leaks.
 - `flutter build windows --release --no-pub`: succeeded; `build/windows/x64/runner/Release/lumenis_app.exe` launched locally with title `序境 - LUMENIS` and `Responding=True`.
 - `flutter build apk --release`: succeeded; `build/app/outputs/flutter-apk/app-release.apk`, 50,150,362 bytes, SHA-256 `F33E1F471343A0625EC3126FF40B78D895608997E880768DD821E8E22B0E6317`.
-- These results prove analysis, tests, compilation and the stated Windows launch smoke only. The APK currently uses the Flutter scaffold's debug signing key. Live authenticated Product Core acceptance, Windows screen-workflow E2E, Android device runtime, store signing, and macOS/Linux/iOS builds remain unverified.
+- These results prove analysis, tests, compilation and the stated Windows launch smoke only. The APK currently uses the Flutter scaffold's debug signing key. Live authenticated Product Core acceptance, Windows screen-workflow E2E, required Windows/macOS/iOS native runtime/build/signing remain later checks after Website/Web closure. Historical Android/Linux native acceptance is no longer a delivery requirement.
 
 Run Flutter checks from `app/`; run the focused Python suite from the repository root. Keep each failed, skipped and unrun release check distinct. Never report a build as a screen acceptance or platform release.

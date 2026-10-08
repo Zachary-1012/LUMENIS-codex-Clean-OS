@@ -11,6 +11,27 @@ execution instructions.
 
 ## 1. Authority
 
+### 2026-10-08 direct Product Owner pause and verification limit
+
+The Product Owner has manually paused **all M/F/C1–C6 product-development tasks**.
+M may perform only the expressly requested online/local reconciliation and
+current capability audit. The earlier M + F + one business-window topology below
+is the retained **resume topology**, not a current dispatch. No window resumes
+because this document is published; the Product Owner must explicitly lift the
+pause. The ignored local `live_dispatch.json` records the actual wait state;
+GitHub `main` records published rules and source, not live window execution.
+
+The Product Owner also expressly prohibited running unit and integration tests
+in the current execution instruction and asked for actual product closure.
+Do not execute or relabel those suites while this instruction remains in force.
+Retain the test sources and historical failures. Static inspection and read-only
+audit may continue for this authorized reconciliation; no static check, skipped
+CI run, HTTP 200 or prior test receipt may be called a current real-user result
+or a passed Release Gate. The existing machine release requirements remain
+unmet where their proof is absent; reconcile the verification policy before
+resuming product publication rather than silently bypassing a gate. Provenance:
+`00-GOVERNANCE/evidence/approvals/PO-20261008-ALL-TASK-PAUSE-AUDIT.json`.
+
 ## Current execution topology — M + F + C1-C6 eligible; live dispatch follows Product Owner instruction
 
 The Product Owner's latest 2026-10-08 direct instruction sets **M + independent
@@ -24,6 +45,53 @@ store, model service or acceptance standard. M does not duplicate window work:
 it freezes current truth, resolves cross-window conflicts, reviews/accepts or
 returns outcomes, and controls integration/publication with W6. OpenCode is
 shelved and is not a current execution path or fallback.
+
+### 2026-10-08 latest surface priority: Website and Web first
+
+The Product Owner now requires **Public Website + Web Workspace closure first**.
+Desktop App and Mobile Companion specific implementation, packaging and
+device acceptance follow after those two surfaces close. Preserve their complete
+requirements, source, editable designs and evidence as deferred work; do not delete
+or mark them accepted. The existing M + independent F + one business window
+schedule and zero-new-cost boundary remain. F and the selected Owner focus their
+existing Goals on the Website/Web result first; no extra task queue or framework.
+
+Complete all approved Website content families and applicable Web screen/workflow
+requirements, with real Core/Permission/Source/Evidence, useful results,
+save/revise/reopen/recovery and Evaluation where applicable. Backend/SYSTEM work
+needed for a Web task remains in scope even when it runs on a local machine;
+postponing the Desktop client does not postpone that dependency or permit a mock.
+Shared Flutter/Core changes preserve existing compatibility without starting
+unneeded native platform work. Website/Web browser viewport, locale and
+accessibility coverage remains required, including narrow screens.
+
+Accept bounded Website/Web outcomes using the existing gate tiers and explicit
+surface evidence. Native builds/devices and full four-surface parity are later
+checks, not preconditions for this current milestone. Missing native evidence
+stays OPEN/DEFERRED, never PASS; do not close a full four-surface Goal or claim
+whole-product RELEASED from this milestone. Paid hosting, deployment and external
+effects keep their existing approval boundaries. Exact provenance:
+`00-GOVERNANCE/evidence/approvals/PO-20261008-WEBSITE-WEB-FIRST.json`.
+
+### Latest direct frontend build and native targets — 2026-10-08
+
+F proceeds directly with real frontend implementation using the current Experience,
+44 screen specifications and actual owner contracts. A separate design draft,
+Figma deliverable or per-screen M DESIGN_READY approval is no longer a coding
+prerequisite. Reuse existing design assets; update the existing specification with
+necessary decisions alongside code. Keep DESIGN_READY as an honest design-review
+record when such review occurred, not a synthetic promotion or mandatory phase.
+Unknown owner/Permission/lineage still blocks the dependent action, and actual
+usability, visual quality, security and end-to-end acceptance remain mandatory.
+
+Website/Web closure is first. Later native Desktop delivery targets **Windows and
+macOS only**; native Mobile delivery targets **iOS only**. Android and Linux native
+clients are removed from the active delivery requirements, not deferred obligations.
+Preserve their original source/history without unsupported deletion. Linux servers,
+CI runners, browser access from any supported OS and narrow-screen Web testing are
+not removed by this native-client decision. All remaining capabilities, 44 screens,
+Website families and applicable R/J/U acceptance continue. Existing historical
+platform lists/design-first instructions are superseded for execution by this rule.
 
 ### 2026-10-08 current dispatch: one business window, independent F, zero new cost
 
@@ -76,8 +144,8 @@ This clarifies existing instruction provenance; it creates no new approval owner
 or machine state. M reviews changed complete outcomes every 30 minutes and waits
 when no actionable work remains. The current goal and manual model/tier remain.
 
-The latest Product Owner instruction removes mandatory Figma-first ordering.
-F continues the same complete Goal: reuse the existing editable Figma file,
+The latest Product Owner instruction requires direct frontend construction; no separate design draft or M design approval precedes coding.
+F continues the same complete Goal on the current native target set: preserve the existing editable Figma file,
 Foundation and nodes. If its free path is limited, immediately use the existing
 Flutter/Dart components, design variables, SVG/vector assets and available free
 local tools for high-quality editable design and real interaction delivery.
@@ -658,7 +726,7 @@ acceptance gate pass.
 | **C6 / W6 — Integration, Runtime and Release** | Local Codex | Accepted shared API composition and bindings, canonical database-change coordination, Core/runtime/FFmpeg/supervisor, mainline integration, four-surface operation, packaging, CI, recovery/rollback and final evidence bundle. C6 integrates owned capabilities; it does not replace them. |
 
 The separate front-end window F remains independent across all six deliveries; it is not an additional delivery round. It owns existing Flutter and Website interface work,
-screen-specific DESIGN_READY implementation, real interface binding, responsive
+screen-specific direct implementation with in-place contract records, real interface binding, responsive
 composition, Chinese/English/Korean localization and accessibility through all
 six deliveries. Backend windows provide field and behavior contracts; F owns
 screen layout and user interaction.
@@ -793,7 +861,7 @@ Production Truth. Improvements are versioned and pass applicable real E2E,
 page/effect evaluation, regression, observability and rollback. If no upgrade
 is justified, record RESEARCH COMPLETE / NO JUSTIFIED UPGRADE with evidence.
 
-When a round involves a page, deliver and run the actual operable page on every target surface promised by that round under the sole Experience Constitution and an M-reviewed `DESIGN_READY` specification. Commercial-readiness gaps are recorded as `COMMERCIAL READINESS GAP / BLOCKED FOR COMMERCIAL_READY`; they set `COMMERCIAL_READY=NO` but do not stop unrelated in-scope engineering work.
+When a round involves a page, deliver and run the actual operable page on every target surface promised by that round under the sole Experience Constitution and current screen-specific contract. Website/Web acceptance is first; Windows/macOS Desktop and iOS native acceptance follows. Separate design-draft or M DESIGN_READY review is not a coding prerequisite. Commercial-readiness gaps are recorded as `COMMERCIAL READINESS GAP / BLOCKED FOR COMMERCIAL_READY`; they set `COMMERCIAL_READY=NO` but do not stop unrelated in-scope engineering work.
 
 The Product Owner accepted the ROUND 01 source audit, missing-capability
 register and multi-surface direction on 2026-09-21 as planning evidence. The
@@ -906,7 +974,7 @@ Learning is derivative. It may recommend, evaluate and promote a tested version 
 
 LUMENIS is one product with four approved surfaces: Public Website, Web Workspace, Desktop App and Mobile Companion. `00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md` records their approved roles and delivery route; it is subordinate to the sole Product Architecture and Experience Constitution.
 
-The Flutter application under `app/` is the shared implementation for Web Workspace, Windows/macOS/Linux Desktop and Android/iOS Mobile. The committed `website/` foundation is restricted to the Public Website; its presence is not proof of configured commercial entry or release acceptance. Flask routes remain the one Product Core/API/ViewModel boundary; neither surface may create parallel business logic, data, Permission, Evidence or runtime truth. Historical `templates/`, `static/` and `experience_v2/` must not be restored. Before removing any remaining user-visible capability, trace its business purpose, ViewModel, permission, state, Evidence and acceptance evidence into the canonical Product Core and approved surfaces.
+The Flutter application under `app/` is the shared implementation for Web Workspace, Windows/macOS Desktop and iOS Mobile. The committed `website/` foundation is restricted to the Public Website; its presence is not proof of configured commercial entry or release acceptance. Flask routes remain the one Product Core/API/ViewModel boundary; neither surface may create parallel business logic, data, Permission, Evidence or runtime truth. Historical `templates/`, `static/` and `experience_v2/` must not be restored. Before removing any remaining user-visible capability, trace its business purpose, ViewModel, permission, state, Evidence and acceptance evidence into the canonical Product Core and approved surfaces.
 
 All UI/UX/visual/presentation decisions remain subordinate to the sole authority:
 
@@ -926,9 +994,10 @@ or a mandate to reduce interactions.
 The approved audit PDF, its 44 sketches and any later AI/Figma/wireframe output are
 `DESIGN_EXPLORATION` unless the applicable `<SCREEN-ID>.md` has been reviewed and
 promoted to `DESIGN_READY` under the Experience Constitution. They may illustrate
-questions and surface deltas, but they may not be copied directly into code, used to
-authorize a shared renderer, or treated as acceptance evidence. If an implementation
-copies a PDF/sketch or generic repeated frame without the current screen-specific gate,
+questions and surface deltas, but they may not authorize a shared renderer or
+serve as acceptance evidence. Direct source construction uses current contracts
+without requiring separate draft approval. If an implementation
+copies a PDF/sketch or generic repeated frame without the current screen-specific contract,
 M returns `REWORK`.
 
 ## 5. No duplicate truth
@@ -1297,7 +1366,7 @@ For any user-visible Experience/UI task, the **sole design authority** is:
 
 No nested router, archived screen, or prototype document may define a second design authority.
 
-The product owner accepted §§30–36, including all 44 screen-specific UX blueprints, on 2026-09-20. App implementation proceeds through reviewed screen specifications under `contracts/experience/screen-specifications/` and source-backed vertical slices; this approval is not evidence that a screen or workflow is implemented or accepted. Each specification must pass §36's owner, binding, entry/return, field-priority, state, desktop/mobile, permission/effect, accessibility and executable-acceptance gates. The 54-row binding registry is a data/permission/Evidence truth ledger only; it is not a layout system. Any `UNKNOWN` owner, callable, permission or lineage blocks the dependent behavior. Legacy `sectionTypes` must not drive a generic renderer or swapped-title page template. Reusable components may share accessible behavior and design tokens, while each screen keeps its own task, hierarchy, composition and interaction path.
+The product owner accepted §§30–36, including all 44 screen-specific UX blueprints, on 2026-09-20. App implementation proceeds directly with current screen contracts maintained alongside source under `contracts/experience/screen-specifications/` and source-backed vertical slices; this approval is not evidence that a screen or workflow is implemented or accepted. Each specification must pass §36's owner, binding, entry/return, field-priority, state, desktop/mobile, permission/effect, accessibility and executable-acceptance gates. The 54-row binding registry is a data/permission/Evidence truth ledger only; it is not a layout system. Any `UNKNOWN` owner, callable, permission or lineage blocks the dependent behavior. Legacy `sectionTypes` must not drive a generic renderer or swapped-title page template. Reusable components may share accessible behavior and design tokens, while each screen keeps its own task, hierarchy, composition and interaction path.
 
 Screen design states are distinct from implementation states:
 
@@ -1305,8 +1374,7 @@ Screen design states are distinct from implementation states:
 DESIGN_EXPLORATION → DESIGN_READY → IMPLEMENTED → ACCEPTED
 ```
 
-Only a detailed screen specification reviewed by M under the Product Owner's
-current manually selected model may establish `DESIGN_READY`.
+Only an actual detailed design review establishes the design record `DESIGN_READY`; the latest PO instruction allows direct frontend construction without waiting for that design-review state. Keep actual implementation and outcome acceptance evidence separate.
 PDFs, screenshots, prototypes, Figma frames and fixtures cannot self-promote.
 
 Before claiming Experience work complete, run all three blocking checks:
@@ -1676,7 +1744,7 @@ does not replace product integration; unread/missing assets remain explicit.
 
 ### 2026-10-08 前端审计与工具维护增补
 
-采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；实际派发/准入状态以本地 ledger 和真实工具回执为准，fresh admission 后才进入 RUNNING。本轮只同步派工规则，不代表 Figma 工程、智能 UI 实现或用户验收完成。
+按最新PO直接构建真实前端，依既有Experience/ScreenSpec/Owner合同随源码更新设计决定与验收证据；不等待独立设计稿/Figma或M逐屏设计审批。原DESIGN_EXPLORATION/DESIGN_READY保留为真实设计审核记录，不再作为强制编码阶段；实现与验收据实记录，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；实际派发/准入状态以本地 ledger 和真实工具回执为准，fresh admission 后才进入 RUNNING。本轮只同步派工规则，不代表 Figma 工程、智能 UI 实现或用户验收完成。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 

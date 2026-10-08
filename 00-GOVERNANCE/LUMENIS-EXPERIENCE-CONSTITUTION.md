@@ -898,7 +898,7 @@ Current production CSS/JS/assets may temporarily contain legacy implementation s
 
 ## 30. Canonical multi-surface architecture and feature ownership
 
-The product is delivered through an SEO-capable Public Website plus one Flutter implementation for Web Workspace, Desktop App and Mobile Companion. All surfaces share business semantics and contracts while adapting composition and input to browser, Windows, macOS, Linux, Android and iOS. The approved roles and capability boundary are recorded in `LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md`; this Constitution remains the sole design authority.
+The product is delivered through an SEO-capable Public Website plus one Flutter implementation for Web Workspace, Desktop App and Mobile Companion. All surfaces share business semantics and contracts while adapting composition and input to browsers, native Windows/macOS and native iOS. Website/Web closure precedes native client work; Linux server/CI and browser availability are distinct from native delivery targets. The approved roles and capability boundary are recorded in `LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md`; this Constitution remains the sole design authority.
 
 ```text
 Flutter composition root
@@ -1011,7 +1011,7 @@ Do not build all screens from a generic template. Work in this order, with a cap
 2. **Make the shell real:** implement Product Core connectivity, current context, routing, error/offline/retry states, keyboard/focus behavior and restorable navigation. The LUMENIS product account is deferred until product engineering closure and subsequent Product Owner redesign and must not block pre-beta browsing or existing product use. Keep server Permission/effect fences intact, and keep media Cookie/session authorization entirely inside the SYSTEM collector/browser chain. Keep CTH SubjectContext separate from BMP BrandFocus.
 3. **Prove the five Golden Pages:** AI-01, CTH-01, BMP-01, SH-01 and SYS-01 each use their semantic signature in §25 and bind to live owners. Do not mark a fixture-backed page complete.
 4. **Migrate by workflow family:** bind remaining contract screens only after their source/API/Permission/Evidence owner is verified. Preserve established behavior before removing any migrated surface.
-5. **Reach surface parity:** run applicable Web Workspace, Desktop and Mobile interaction, accessibility, responsive, error/recovery and screenshot checks at §20 widths. Verify Public Website acquisition/workspace-entry separately; do not require identical layouts.
+5. **Reach surface parity in the approved order:** first run applicable Website/Web Workspace interaction, accessibility, responsive, error/recovery and screenshot checks at §20 widths; Desktop and Mobile native-specific checks follow Website/Web closure and remain required for final four-surface parity. Verify Public Website acquisition/workspace-entry separately; do not require identical layouts.
 6. **Release evidence:** require widget and repository tests, affected Python/API integration tests, critical runtime/E2E, clean-clone acceptance and current-main CI evidence. Record unavailable infrastructure as `UNVERIFIED`, never as PASS.
 
 For each domain, acceptance must include its invariant in §30, real ViewModel truth, permission response, Evidence trace and return, honest missing/error states, keyboard/touch operation, reduced motion, persistence or explicit non-persistence, and the result after a real action. A screen is complete only when its user task completes end to end.
@@ -1086,10 +1086,10 @@ The supplied [`motion-web` repository](https://github.com/Zachary-1012/motion-we
 
 1. **Freeze product semantics:** validate CTH Subject-first, BMP Brand/Market-first, Shared lineage and SYSTEM infrastructure boundaries against the current owner map. These are domain ownership semantics, not mandatory selected-Focus entry gates. Reject merging domain meanings or making Subject/Brand selection a prerequisite for a GLOBAL-capable task.
 2. **Resolve all 54 bindings:** one registry row per `BACKEND-GAP-001..054`; inspect code and live contracts, assign the canonical owner, record exact callable/route and typed fields, actor/scope, permission operation, evidence fields, side effects, truth status and test. Unknown remains blocked with an explicit next action.
-3. **Implement foundations:** typed API clients, session and context boundaries, deep links, cancellation/retry, offline/error handling, accessibility, event logging without sensitive content, state restoration and explicit surface capability state. Establish browser/desktop keyboard and mobile touch baselines before screens.
+3. **Implement foundations:** typed API clients, session and context boundaries, deep links, cancellation/retry, offline/error handling, accessibility, event logging without sensitive content, state restoration and explicit surface capability state. Establish the current Website/Web browser keyboard and applicable browser touch baselines before their screens; native Desktop/Mobile-specific baselines follow Website/Web closure.
 4. **Deliver workflow slices:** for each capability, finish read → explain → decide → authorize → act → observe → Trace/Return before moving on. Prioritize AI-01, CTH-01, BMP-01, SH-01 and SYS-01 as distinct Golden Pages, then migrate by shared interaction/workflow family while preserving parity.
 5. **Optimize analytical and operational modules:** measure decision completion time, signal-to-action time, evidence coverage, freshness, false-positive rate, campaign delivery/impact attribution quality, workflow SLA and recovery success. Each metric has a canonical definition, owner, denominator and freshness; do not optimize engagement at the cost of trust or business outcomes.
-6. **Prove cross-surface parity:** exercise applicable Web Workspace, Desktop, tablet and Mobile Companion paths with real endpoints; test pointer, keyboard, touch, screen reader, reduced motion, localization, slow/offline connection, empty/stale/partial/error states, permission denial, persistence and return. Verify Public Website entry/demo truth separately. Compare screenshots only after semantic and functional checks pass.
+6. **Prove cross-surface parity in the approved order:** exercise Website/Web browser paths first, including applicable narrow/tablet browser layouts; native Desktop/Mobile Companion paths follow Website/Web closure and remain OPEN until verified. Use real endpoints; test pointer, keyboard, touch, screen reader, reduced motion, localization, slow/offline connection, empty/stale/partial/error states, permission denial, persistence and return. Verify Public Website entry/demo truth separately. Compare screenshots only after semantic and functional checks pass.
 7. **Release by evidence:** attach the binding ID and test/runtime evidence to every completed capability. A package import, generic renderer, fixture, screenshot or CI pass alone does not make a user workflow complete. Mark unavailable platform accounts, device coverage or production data as `UNVERIFIED` with an owner and follow-up.
 
 ### Definition of done per capability
@@ -1112,9 +1112,9 @@ The binding registry is an implementation and acceptance ledger. It is not evide
 
 These blueprints are product design decisions, not claims that the App, endpoints, or data have shipped. The matching screen ID is retained only for navigation and contract traceability. Each composition must be built and accepted as its own workflow. A common header, typography scale, evidence citation treatment and input behavior may recur; layout grammar, primary visualization and task choreography may not be copied blindly between screens.
 
-### Mandatory per-screen specification gate before implementation
+### Per-screen implementation and acceptance record — direct construction
 
-Do not begin feature implementation for any screen until its screen-specific specification is reviewed and accepted. The specification must link the ScreenId and applicable binding IDs, and record:
+The latest PO authorizes F to build directly from this Experience and existing contracts, without first delivering a design draft/Figma or waiting for M DESIGN_READY approval. Maintain the existing screen specification alongside implementation; do not create duplicate plans. Resolve the actual owner, callable and Permission before invoking dependent behavior. The record links ScreenId and binding IDs and retains:
 
 1. Intended role, user task, entry route/context, exit paths and Trace/Return restoration behavior.
 2. Key fields and their visual priority, with each field tied to its verified source/ViewModel contract; unresolved fields remain `UNKNOWN` and block implementation of dependent behavior.
@@ -1123,7 +1123,7 @@ Do not begin feature implementation for any screen until its screen-specific spe
 5. Every read/write action's owner, actor/scope, permission decision, side effect, idempotency/reversal behavior and Evidence lineage; UI affordances are never authorization.
 6. Stable test IDs and executable acceptance cases covering the real task, state/error paths, responsive behavior and Trace/Return; include widget, API/integration and runtime/E2E cases as applicable.
 
-The design review records pass/fail per screen in `contracts/experience/screen-specifications/<SCREEN-ID>.md`, using `SCREEN_SPEC_TEMPLATE.md`. These detailed specifications are a post-plan, pre-implementation gate: the current 44 rows below are distinct UX blueprints, not proof that every field, route, state and action is implementation-ready. A screen with unresolved owner/API/permission/lineage or missing acceptance evidence can proceed only as a clearly labeled `DESIGN_EXPLORATION`; it cannot be marked `DESIGN_READY`, implementation-ready or shipped. `DESIGN_READY` requires an M-reviewed detailed specification using the Product Owner's current manually selected model, with its authority basis, artifact disposition, surface matrix, anti-template check and executable acceptance complete. Reusable tokens and accessible behaviors are allowed, but this gate does not permit a shared renderer or substituted-title template.
+F records actual source, necessary layout decisions and executable acceptance in the existing `contracts/experience/screen-specifications/<SCREEN-ID>.md`. No separate pre-implementation design/M approval phase is required. DESIGN_EXPLORATION and DESIGN_READY remain design-history facts and do not auto-promote source or acceptance. An unresolved owner/API/Permission/lineage blocks its dependent operation; independent known behavior may be implemented directly. Missing runtime evidence prevents an accepted/shipped claim, not all coding. Preserve the typed contract, task-specific layout, state matrix, anti-template checks and real E2E; no shared generic renderer or substituted-title template.
 
 | Screen | Purpose-built information composition and visual language | Primary interaction and result | PC → mobile recomposition |
 | --- | --- | --- | --- |
@@ -1175,11 +1175,11 @@ The design review records pass/fail per screen in `contracts/experience/screen-s
 ### Blueprint implementation rules
 
 1. Validate each row's user problem with its intended role; amend composition where a real workflow contradicts the proposal without changing owner semantics.
-2. Build each row's applicable Web Workspace, Desktop and Mobile Companion composition as separate layout decisions over the same typed owner contract. Public Website may explain or demo the capability only. Do not equate responsive resizing with mobile UX or browser availability with local capability.
+2. Build each row's applicable compositions over the same typed owner contract in the current PO order: Web Workspace first; retain Desktop/Mobile specifications and defer their dedicated design/implementation until Website/Web closure. Public Website may explain or demo the capability only. Do not equate responsive resizing with mobile UX or browser availability with local capability.
 3. Derive screen-specific typography, data density and visualization from its task. Reuse semantic tokens and accessibility behavior, never a universal card grid, generic dashboard or template-based page builder.
 4. Keep the design blueprint, binding registry and implementation state separate: the blueprint says how a verified task should work; the binding registry says where truth and authorization come from; tests/runtime evidence say whether implementation works.
-5. Complete visual regression only after live binding and action behavior pass. Review each applicable screen in Web Workspace, Desktop, tablet and Mobile Companion contexts with realistic long text, missing data and permission denial; review Public Website pages against their separate commercial-entry contract.
-6. Treat audit/taskbook sketches, screenshots, prototypes and Figma output as references with status `DESIGN_EXPLORATION`. If code follows one of those artifacts without a current `DESIGN_READY` specification, or reproduces its repeated frame as a generic template, M returns `REWORK`.
+5. Complete visual regression only after live binding and action behavior pass. Review each applicable Web screen in its browser viewport contexts with realistic long text, missing data and permission denial; native Desktop/Mobile review follows Website/Web closure and remains required for final parity; review Public Website pages against their separate commercial-entry contract.
+6. Treat audit/taskbook sketches, screenshots, prototypes and Figma output as reference evidence, not implementation or acceptance proof. Direct construction follows this Constitution and existing screen contracts without a design-draft prerequisite. For a generic repeated frame or unbound/fabricated behavior, M returns `REWORK`.
 
 ## 37. Scrollable editing timelines and deferred developer-mode record
 
@@ -1281,7 +1281,7 @@ Required adaptation inside existing screen owners:
 | C4 | Existing pitch, video and podcast workbenches | Structured editable sections, scene/segment references, horizontal timeline, selection/edit/preview/reopen state and real media status. System Read Aloud previews authorized text; it does not become a final voice asset. |
 | C5 | Research, citations, reports, SavedWork and Artifact | Click-through provenance, side-by-side source conflict/revision comparison, precise selected text, source correction impact and existing saved parent versions. No repeated import or detached display-only report. |
 | C6 | Core/API/ViewModel and runtime integration | Versioned response/action contracts, bounded progressive updates, cancellation/reconnect, idempotence, stale-version/permission rejection and same-version integration evidence. No second runtime or DB. |
-| F | Existing screen-specific four-surface UI/UX/AIGC | Select task-appropriate composition; integrate C1-C6 contracts; preserve context and interaction state, keyboard/screen-reader access, responsive layout and visual identity. Update relevant existing screen specification and obtain DESIGN_READY before implementation. |
+| F | Existing screen-specific four-surface UI/UX/AIGC | Select task-appropriate composition; integrate C1-C6 contracts; preserve context and interaction state, keyboard/screen-reader access, responsive layout and visual identity. Build directly and update the existing specification alongside code; no separate design draft or M DESIGN_READY prerequisite. |
 
 Acceptance in each existing outcome: actual authorized material → task-shaped
 interactive result → user changes a constraint/selection → correct affected
@@ -1334,7 +1334,7 @@ C2后续可将经准入的“任务→表现选择→操作结果→评价”作
 
 **统一交付记录：**每个屏幕在自己的既有规范中记录任务、对应Source/Core输入与动作、四端差异、视觉动线、上述验收证据和未闭项；44屏索引统一放在 `contracts/experience/screen-specifications/README.md`。既有文字视觉草图保留历史，并以日期标明本次任务动线增补；不建立另一份执行蓝图或复制另一套UI引擎。蓝图、Experience、Owner、屏幕规范、草图与README同批发布，按同一提交核对；历史草图不是已实现视觉资产，也不能自动获得DESIGN_READY。
 
-**实现准入：**各屏原有实现/验收状态与阻塞不自动提升；新增交互设计差异由本屏Owner按当前source/contract审阅后进入DESIGN_READY，再按当前已授权派工实施。读规则不需要每函数请示。执行状态只服从最新直接PO指令和适用依赖，不从历史规则采用时间推导暂停。
+**实现准入：**最新PO允许依既有Experience/ScreenSpec与真实合同直接构建，不以独立设计稿、Figma或M逐屏DESIGN_READY审批作为编码前置。必要设计决定和证据随代码回写原规范。未知Owner/callable/Permission/lineage仍阻塞其依赖行为；真实完成、质量与用户验收标准不变。授权状态服从最新直接PO与实际依赖，不从历史设计流程推导停工。
 
 Research evidence and exact source/owner mapping:
 `evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md`.
@@ -1475,13 +1475,21 @@ tests, live operation and acceptance independently; a research report, demo,
 frame extraction, gate or build cannot establish Product Truth.
 
 
+### 当前交付顺序：官网与 Web 先闭环 — 2026-10-08 最新 PO
+
+后续直接 PO 补充：前端直接构建，不先交设计稿；复用现有设计与44屏规格，不以Figma或M的DESIGN_READY审批阻塞编码，视觉/交互决策随源代码在原规范记录，真实质量/权限/验收要求继续执行。原生Desktop仅Windows/macOS，原生Mobile仅iOS；Android/Linux原生客户端不再是当前/后续交付目标，保留其历史原件和证据，不进行无依据删除。Linux服务端/CI、不同操作系统的浏览器和窄屏Web不被移除。
+
+本条控制 §§23、34–36 和本节中所有“逐端实现/设计/回归/打包”的执行顺序：当前先完成 Public Website + Web Workspace 的全部适用要求；Desktop App 与 Mobile Companion 的专项工作在前两端闭环后进行，需求、规格、原始素材及已有成果完整保留为 OPEN/DEFERRED，不冒称通过。F 与唯一业务窗口继续，零新增费用。
+
+当前官网/Web的真实内容入口、业务操作、智能交互、来源/权限、保存修订重开恢复、三语言、无障碍和必要宽窄屏/浏览器输入验收必须完整。保留2D手绘水彩方向和可编辑设计，不为等待原生设备、native包装或全部跨端parity推迟可独立完成的Web成果。Web所需Core/SYSTEM不是被后置的桌面客户端。既有44屏/官网家族与四端最终设计范围不变，完整四端Goal与Release保持原完整标准；按Multi-Surface Decision及Real Delivery记录本轮和后续证据。
+
 ### 可编辑设计工程与源码同步 — 2026-10-08 审计增补
 
-既有 F 负责全部 44 屏与官网内容家族的可编辑设计工程，M 负责审查，C1-C6 保留真实字段/动作/状态合同职责，C6 协调共享绑定。2026-10-08 最新直接指令明确 F 独立继续，与 M 选择的唯一业务窗口并行；Figma-first 不再是强制前置。保留已有 Figma 工程/Foundation/节点与现有源码。免费额度、权限或调用受限时，立即采用现有 Flutter/Dart、设计变量、SVG/矢量及本地免费工具形成可编辑设计与真实交互，不因付费工具暂停完整 F Goal。
+既有 F 直接构建全部44屏与官网内容家族的真实前端和可编辑源码，M负责成果审查，C1-C6 保留真实字段/动作/状态合同职责，C6 协调共享绑定。2026-10-08 最新直接指令明确 F 独立继续，与 M 选择的唯一业务窗口并行；Figma-first 不再是强制前置。保留已有 Figma 工程/Foundation/节点与现有源码。免费额度、权限或调用受限时，立即采用现有 Flutter/Dart、设计变量、SVG/矢量及本地免费工具形成可编辑设计与真实交互，不因付费工具暂停完整 F Goal。
 
 在现有 ScreenSpec/README 保存 `Screen ID → 设计规格 → 可编辑载体/路径/版本 → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence` 映射。Figma 载体记录 file/node/revision；源码载体记录 Dart/Token/SVG 路径、版本及编辑/预览方法，明确不等同于原生 Figma。工具受限仅标记该路径，禁止 PNG、PPT、静态截图或伪造 .fig 冒充完整可编辑交付。复用现有文件，不重复创建，不新增收费服务。唯一 Experience、设计状态及 Product Core 真相不变。
 
-完整信息架构、组件/变量关系、全部屏幕与官网家族的可编辑设计和任务交互仍须交付；不再要求全部 Figma 页面先完成才修已有 Flutter 交互。各屏继续按 DESIGN_READY 实现与验收。优先接通 ACC-03 入口/续接、AI-01 提交/结果/恢复、CTH/BMP 来源/修改/保存、SH-01/BMP-08 媒体操作及 SYS-06 浏览器/返回任务；这只是顺序，不缩减 44 屏和官网。保留四端角色、中英韩、主题、字号/宽度、无障碍、失败恢复、2D手绘水彩与真实字段/动作/状态。Figma 复用可编辑组件/变量/原型，源码路径保留可编辑组件/变量/矢量与预览；提供真实载体/版本和 ScreenSpec覆盖缺口。主题映射既有 LumenisTheme，Website Astro/CSS共享语义决策。只连已有真实 Core 合同，不造模拟后端；Widget通过不等于保存或跨端运行验收。
+完整信息架构、组件/变量、全部屏幕与官网家族的可编辑源码和真实任务交互仍须交付，不另立设计稿阶段；不再要求全部 Figma 页面先完成才修已有 Flutter 交互。各屏依现有合同直接构建，必要设计决定与验收证据同步回写原规范，不再等待独立设计稿或 DESIGN_READY 前置审批。优先接通 ACC-03 入口/续接、AI-01 提交/结果/恢复、CTH/BMP 来源/修改/保存、SH-01/BMP-08 媒体操作及 SYS-06 浏览器/返回任务；这只是顺序，不缩减 44 屏和官网。保留四端最终角色与全部设计要求，按本节最新顺序先完成官网/Web，Desktop/Mobile专项工作后置；本轮继续中英韩、主题、字号/宽度、无障碍、失败恢复、2D手绘水彩与真实字段/动作/状态。Figma 复用可编辑组件/变量/原型，源码路径保留可编辑组件/变量/矢量与预览；提供真实载体/版本和 ScreenSpec覆盖缺口。主题映射既有 LumenisTheme，Website Astro/CSS共享语义决策。只连已有真实 Core 合同，不造模拟后端；Widget通过不等于保存或跨端运行验收。
 
 每次设计修改必须定位受影响源组件/Token/动作、必要回归和回退版本，保留未修改工作、状态恢复、焦点和路由；不得为了重构巨型 Screen/Shell 或统一样式而重写业务。CTH事件因果边、ACC-03/04绑定登记及默认入口需分别核对，缺少关系数据或真实 callable 不能靠绘图宣告完成。
 

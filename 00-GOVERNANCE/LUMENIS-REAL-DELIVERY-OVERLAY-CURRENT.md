@@ -10,6 +10,8 @@ REAL DELIVERY OVERLAY FOR C1–C6 / R01–R15 ACCEPTANCE COVERAGE
 
 REAL USER WORK E2E ACCEPTANCE remains mandatory for each complete C-window outcome and every applicable mapped requirement.
 
+2026-10-08 最新 PO 顺序：先验收 Public Website + Web Workspace 完整适用成果，再处理 Desktop App/Mobile Companion 专项实现、打包及实机验收。使用原 REAL DELIVERY CARD 与三层 Gate，逐项注明本轮适用表面、真实输入/结果/保存修订重开恢复/Evidence/版本和未完成项。官网内容、演示真实性、可用入口，以及 Web 业务正常成功路径必须实际验证；当前 Web 所需 Core/SYSTEM 不能随原生客户端后置。后置两端保留 OPEN/DEFERRED、原 Owner 和恢复条件（官网/Web 闭环），不得以原生包/设备缺失阻塞本轮表面成果，也不得标 PASS、删除 R/J/U 或宣告四端 Goal/整产品 RELEASED。原部署、费用及外部效果授权不变。后续原生目标仅Windows/macOS桌面和iOS移动；Android/Linux原生客户端不再是待交付项，保留历史源码/回执。前端直接构建，独立设计稿/Figma/M设计审批不作为实现前置；原真实结果与质量门禁不变。
+
 本协议约束 C1–C6。旧编号01–15的验收/依赖覆盖材料由六个C成果承接；它不是新的窗口、派工队列或十五段串行执行计划。
 
 分配只见 AGENTS.md，完整映射只见 Source Owner Index；保留真实依赖、全部能力与现有 Product Architecture。
@@ -193,7 +195,9 @@ ONLINE DELIVERY / LOCAL-TO-MAIN CLOSURE：
 - if publication fails: `LOCAL_ONLY / NOT_PUBLISHED`, not online PASS
 
 THREE-LANGUAGE SURFACE ACCEPTANCE：
-- promised Public Website / Web Workspace / Desktop / Mobile screen matrix
+- latest native targets: Desktop Windows/macOS only; Mobile iOS only; Android/Linux native requirements superseded by direct PO, retain history without claiming PASS
+- F directly constructs from current contracts; separate design drafts/Figma/M DESIGN_READY approval do not gate coding; actual operation/visual quality/accessibility/E2E and all existing security gates remain
+- retain the promised four-surface matrix; current acceptance: Public Website / Web Workspace; Desktop / Mobile native-specific work follows Website/Web closure and stays OPEN/DEFERRED until verified
 - `zh-CN` / `en` / `ko` user task, result, error, denied and unavailable copy
 - locale switch, persistence, Trace/Return, responsive and accessibility evidence
 - missing locale or key remains an explicit screen/surface acceptance gap

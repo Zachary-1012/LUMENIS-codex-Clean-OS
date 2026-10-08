@@ -5,13 +5,13 @@ This folder holds the reviewed implementation specification for each canonical A
 ## Rules
 
 - Follow the current authorization and actual live dispatch/admission state in root AGENTS.md and its local-ledger/tool-receipt evidence; each window is RUNNING only after fresh admission. This index defines screen-specification requirements and does not assign execution windows.
-- Create one `<SCREEN-ID>.md` from [`SCREEN_SPEC_TEMPLATE.md`](SCREEN_SPEC_TEMPLATE.md) for each screen before implementing that screen. A file existing is not enough: M must review and record `DESIGN_READY` using the current user-selected model; no historical model assignment overrides that selection.
+- Reuse the existing `<SCREEN-ID>.md` and update it alongside implementation. F directly constructs from the Experience and real owner contracts; no separate design draft/Figma or M DESIGN_READY prerequisite. A specification file or design status alone never proves acceptance.
 - Use `contracts/experience/lumenis_app_binding_registry.json` as the binding inventory. Update it only from current source/runtime evidence; never treat historical `BOUND`, task assignee or ViewModel labels as proof.
 - Keep CTH Subject-first, BMP Brand/Market-first, Shared lineage and SYSTEM infrastructure boundaries intact.
 - Do not copy screen layouts into a shared renderer. Shared tokens and semantic interaction primitives may be referenced, while each specification must define its own information hierarchy, composition and task choreography.
 - `UNKNOWN` owner, callable, field source, actor scope, permission or evidence lineage blocks the dependent behavior. Record it as `DESIGN_EXPLORATION` if useful; never describe it as production-ready.
 - PDFs, taskbooks, screenshots, wireframes, Figma frames, fixtures and generated visual proposals are non-authoritative references. List their disposition in the spec; never copy them directly or infer approval from visual polish.
-- A repeated audit sketch frame does not authorize a shared renderer, universal card grid or substituted-title screen. Direct implementation without a current `DESIGN_READY` decision is `REWORK`.
+- A repeated audit sketch frame does not authorize a shared renderer, universal card grid or substituted-title screen. Direct implementation is authorized by the latest PO and current contracts; unbound/fabricated behavior or generic repeated layouts remain REWORK.
 - Set `APPROVED` only after the product owner or delegated design owner has reviewed the specification and its open questions. Record reviewer, date and the accepted change/review reference. A batch approval must list every covered screen ID and cannot silently approve unreviewed exceptions.
 - Implementation, test and runtime status must cite current artifacts. A spec approval is not implementation acceptance.
 
@@ -19,11 +19,15 @@ This folder holds the reviewed implementation specification for each canonical A
 
 `DESIGN_EXPLORATION` → `OWNER_REVIEW` → `DESIGN_READY` → `IMPLEMENTED` → `ACCEPTED`
 
-Use `BLOCKED` when a verified owner, contract, authorization or acceptance dependency is missing. `DESIGN_READY` is the only pre-implementation pass state. Do not skip states or infer status from code presence.
+Use `BLOCKED` when a verified owner, contract, authorization or acceptance dependency is missing. Design-review states record actual historical review and are no longer a mandatory coding sequence. F builds directly under the latest PO instruction and maintains existing specifications with source. Do not fabricate DESIGN_READY or infer acceptance from code presence.
 
 ## Delivery order
 
-After the overall product plan is accepted, resolve source bindings and detailed specifications for one end-to-end workflow slice at a time. Review distinct desktop and mobile compositions, then implement and accept that slice before starting dependent screens. Begin with the five proposed Golden Pages (AI-01, CTH-01, BMP-01, SH-01 and SYS-01) only when their bindings and user tasks are verified; this order does not override owner boundaries or authorize a generic shell.
+最新PO补充：直接前端构建，不先交独立设计稿/Figma、不等待M逐屏DESIGN_READY审批；现有规格随代码更新。官网/Web优先；后续原生Desktop仅Windows/macOS，Mobile仅iOS。Android/Linux原生客户端从目标移除，保留历史源码证据；浏览器跨OS/窄屏与Linux服务端/CI不受影响。
+
+2026-10-08 最新直接 PO：官网与 Web Workspace 优先完整闭环；Desktop/Mobile 专项工作后置。完整44屏、官网家族、四端规格/原始参考与现有可编辑工程保留；本轮先填实 Web 的实际绑定、操作、来源、保存/修改/重开/恢复及三语言/无障碍/宽窄屏证据，后置端保持 OPEN/DEFERRED，不删除要求、不用 Widget 或构建代替真实结果。F 与唯一业务窗口并行，按 Experience 的当前顺序持续推进。
+
+After the overall product plan is accepted, resolve source bindings and detailed specifications for one end-to-end workflow slice at a time. Apply the latest PO surface order: review and implement the applicable Website/Web composition and accept that real slice before dependent screens; keep Desktop/Mobile specifications and defer their dedicated implementation, packaging and device acceptance until Website/Web closure. Native completeness is not this milestone prerequisite and is not marked PASS. Begin with the five proposed Golden Pages (AI-01, CTH-01, BMP-01, SH-01 and SYS-01) only when their bindings and user tasks are verified; this order does not override owner boundaries or authorize a generic shell.
 
 ## Intelligent UI 全屏语义映射（2026-10-08）
 
@@ -87,11 +91,11 @@ After the overall product plan is accepted, resolve source bindings and detailed
 
 ### 可编辑设计工程与源码同步 — 2026-10-08 审计增补
 
-既有 F 独立推进全部 44 屏与官网内容家族的可编辑设计及真实四端交互，M 审查，当前唯一业务窗口按 Owner 合同衔接，C6 协调共享绑定。最新 PO 已取消强制 Figma-first：保留现有工程/Foundation/节点，免费路径受限时立即用现有 Flutter/Dart、变量、SVG/矢量和本地免费工具继续；不等待充值，不因业务窗口轮换暂停 F。
+既有 F 保留全部44屏、官网家族和四端范围，当前先独立构建官网/Web真实界面与交互，不要求先交设计稿，Desktop/Mobile专项工作后置，M 审查，当前唯一业务窗口按 Owner 合同衔接，C6 协调共享绑定。最新 PO 已取消强制 Figma-first：保留现有工程/Foundation/节点，免费路径受限时立即用现有 Flutter/Dart、变量、SVG/矢量和本地免费工具继续；不等待充值，不因业务窗口轮换暂停 F。
 
 现有映射为 `Screen ID → 设计规格 → 可编辑载体/路径/版本 → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence`。Figma 保留 file/node/revision；源码载体保留 Dart/Token/SVG 路径、版本、编辑和预览方式，不能称为原生 Figma。工具受限单独记录；禁止 PNG、PPT、静态截图、假 .fig 替代完整可编辑交付，不重复创建设计文件或新增收费服务。Experience仍是唯一设计权威。
 
-完整信息架构、组件/变量、全部44屏及官网家族的可编辑设计和任务交互继续交付；已有Flutter交互按其DESIGN_READY规范直接修复，不等待全部Figma页面完成。优先ACC-03、AI-01、CTH/BMP、SH-01/BMP-08、SYS-06接线，Golden Pages均为排序而非范围上限。保留四端、中英韩、主题、字号/宽度、可访问性、失败恢复和2D手绘水彩方向。Figma或源码载体均给出真实可编辑路径/版本、原有ScreenSpec映射和缺口；截图仅辅助。主题复用LumenisTheme，官网Astro/CSS保持既定边界；真实Core/Permission/来源/保存/恢复与跨端验收不可由Widget测试替代。
+完整信息架构、组件/变量、全部44屏及官网家族直接通过可编辑源码和真实任务交互交付，不另立设计稿阶段；已有Flutter交互按其现有真实合同直接修复，不等待全部Figma页面完成。优先ACC-03、AI-01、CTH/BMP、SH-01/BMP-08、SYS-06接线，Golden Pages均为排序而非范围上限。保留四端、中英韩、主题、字号/宽度、可访问性、失败恢复和2D手绘水彩方向。Figma或源码载体均给出真实可编辑路径/版本、原有ScreenSpec映射和缺口；截图仅辅助。主题复用LumenisTheme，官网Astro/CSS保持既定边界；真实Core/Permission/来源/保存/恢复与跨端验收不可由Widget测试替代。
 
 每次设计修改必须定位受影响源组件/Token/动作、必要回归和回退版本，保留未修改工作、状态恢复、焦点和路由；不得为了重构巨型 Screen/Shell 或统一样式而重写业务。CTH事件因果边、ACC-03/04绑定登记及默认入口需分别核对，缺少关系数据或真实 callable 不能靠绘图宣告完成。
 

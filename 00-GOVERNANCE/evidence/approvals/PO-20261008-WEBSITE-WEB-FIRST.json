@@ -1,0 +1,48 @@
+{
+  "schema": "lumenis.po-approval-receipt/v1",
+  "approval_id": "PO-20261008-WEBSITE-WEB-FIRST",
+  "status": "APPROVED",
+  "approved_by": "Product Owner",
+  "approved_at": "2026-10-08",
+  "approval_source_type": "superseding_product_owner_instruction",
+  "scope_manifest": {
+    "source_thread_id": "01a0cd84-7685-7a73-97d9-83a14a546e71",
+    "direct_quote": "来四端，优先把官网和web端闭环，其余的等闭环以后再说，这样会提高效率",
+    "current_surfaces": [
+      "Public Website",
+      "Web Workspace"
+    ],
+    "deferred_surfaces": [
+      "Desktop App",
+      "Mobile Companion"
+    ],
+    "resume_condition": "Public Website and Web Workspace closure through existing applicable outcome gates",
+    "change": "Execution/acceptance order only; preserve complete four-surface scope and source",
+    "supersedes": "Simultaneous four-surface dedicated design/implementation/packaging/device acceptance as prerequisite for the current Website/Web outcome",
+    "additional_direct_quote": "前端不用先做设计稿，直接执行前端构建，我要的是执行闭环，然后移动端只做ios，你不要丢东西，你自己看看蓝图，pc端只做，win和mac，该更新的规则要更新，不要在执行中出现冲突和矛盾，以及理解错误，依旧先闭环官网和web端",
+    "direct_frontend_construction": true,
+    "separate_design_draft_prerequisite": false,
+    "m_design_ready_coding_prerequisite": false,
+    "native_desktop_targets": [
+      "Windows",
+      "macOS"
+    ],
+    "native_mobile_targets": [
+      "iOS"
+    ],
+    "superseded_native_targets": [
+      "Android",
+      "Linux"
+    ]
+  },
+  "constraints": [
+    "M + independent F + one C1-C6 business window; W6 consumes that business slot",
+    "zero newly paid resources; manual model/effort/tier unchanged",
+    "retain existing product capabilities, 44 screens, Website families and applicable R/J/U except explicitly superseded native Android/Linux targets; preserve original designs, source and receipts",
+    "current Website/Web outcomes require real behavior and applicable save/revise/reopen/recovery/Evidence; necessary Core/SYSTEM dependencies remain in scope",
+    "native deferred work is OPEN/DEFERRED, not accepted or deleted; full four-surface Goal and Release require full original evidence",
+    "existing Permission, Evidence, Canonical, effect fences, production DB, identity, deployment and external-effect approvals unchanged",
+    "existing rules, owners and gate tiers only; no new governance framework",
+    "Linux server/CI and browser coverage are distinct from native client targets; no validator weakening or synthetic acceptance"
+  ]
+}

@@ -4,6 +4,12 @@
 
 仓库：`Zachary-1012/LUMENIS-codex-Clean-OS`；唯一开发/整合分支：`main`。本机标准目录为 `D:/LUMENIS_REBUILD/序/序境`。**当前状态必须由 Git、源码、Runtime、DB、测试和用户结果重新取证，不从 README、旧报告或聊天记录猜测。**
 
+## 当前交付顺序
+
+**前端直接构建，不先做设计稿。** 复用已有设计和44屏规范并随源码更新。后续原生客户端只交付 **Windows、macOS 和 iOS**；Android/Linux原生客户端不再是交付目标，保留其历史源码与证据。Linux服务器/CI和Web的跨OS浏览器、窄屏体验不受此限制。
+
+**先闭环官网（Public Website）和 Web Workspace，再推进 Desktop App 与 Mobile Companion。** 后置两端的需求、源码、设计和验收任务完整保留，不当作通过。当前两端的真实业务、来源/权限、成果保存/修改/重开/恢复及适用评价仍须闭环；Web必要的Core/SYSTEM服务继续推进。M + 独立F + 一个业务窗口及零新增付费不变。此顺序不等于四端整体完成或新增部署授权；详见现有[多端决策](00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md)与[真实交付规则](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)。
+
 ## 从这里开始
 
 Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)。
@@ -35,8 +41,8 @@ AGENTS.md
 四个产品入口
 Public Website
 Flutter Web Workspace
-Desktop App (Windows / macOS / Linux)
-Mobile Companion (Android / iOS)
+Desktop App (Windows / macOS)
+Mobile Companion (iOS)
         │
         ▼
 一个 Product Core
@@ -277,7 +283,7 @@ IMPLEMENTED
 
 智能 UI 采用范围覆盖全部现有能力、44屏及四端，包含研究/业务/创作、设置/通知/恢复。唯一执行依据是[产品蓝图](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)与[Experience §38](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)；[44屏规范索引](contracts/experience/screen-specifications/README.md)逐屏给出实际用户任务和后续采用入口，[既有文字草图](00-GOVERNANCE/evidence/round-15/experience-review-2026-10-06/LUMENIS-44-SCREEN-TEXT-WIREFRAMES-1.5.md)保留历史并同步日期增补。规则/蓝图/草图同步不表示44屏已经实现；授权启动后的实际派发/准入以本地ledger与真实工具回执为准。
 
-2026-10-08 前端审计增补已纳入上述唯一规则：F保留全44屏和官网家族的可编辑设计、四端差异与任务交互，优先复用Figma；免费受限立即用现有Flutter/Dart/变量/SVG继续，不新增费用，不等全部Figma完成才修已有交互；仍按逐屏DESIGN_READY实施。原生Figma与可编辑源码分别记录，载体/版本与源码/动作/验收映射详见[ScreenSpec索引](contracts/experience/screen-specifications/README.md)。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；历史等待文字不再构成暂停指令，M待命也不暂停执行窗口。实际派发/准入以当前直接PO指令、本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。规则同步不代表 Figma 工程、智能 UI 实现或用户验收完成。
+2026-10-08 前端审计增补已纳入上述唯一规则：F保留全44屏和官网家族的可编辑设计、四端差异与任务交互，优先复用Figma；免费受限立即用现有Flutter/Dart/变量/SVG继续，不新增费用，不等全部Figma完成才修已有交互；依既有逐屏合同直接构建，必要设计决定随代码记录，不再等待独立设计稿/Figma或M设计审批。原生Figma与可编辑源码分别记录，载体/版本与源码/动作/验收映射详见[ScreenSpec索引](contracts/experience/screen-specifications/README.md)。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；历史等待文字不再构成暂停指令，M待命也不暂停执行窗口。实际派发/准入以当前直接PO指令、本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。规则同步不代表 Figma 工程、智能 UI 实现或用户验收完成。
 
 ### 2026-10-08 成熟基础能力、竞品机制与用户操作期待
 

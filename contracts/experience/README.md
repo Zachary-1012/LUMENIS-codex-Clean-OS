@@ -22,8 +22,11 @@ current source / runtime / Permission / Evidence truth
   meaning for platform-native facts, LUMENIS re-composition, user-gesture Open Original,
   honest handoff states and exact Return. It does not create a browser, Evidence owner,
   Permission plane, generic feed or implementation claim.
-- `screen-specifications/` is the pre-implementation design gate. Only a current,
-  Sol-reviewed `DESIGN_READY` specification may guide a screen implementation.
+- `screen-specifications/` is the existing per-screen implementation/acceptance record.
+  Latest PO: F constructs directly from real contracts and updates records with code;
+  separate design drafts/Figma or M DESIGN_READY approval are not coding prerequisites.
+  Website/Web closes first; native Windows/macOS and iOS follow. Android/Linux native
+  client targets are superseded; Linux server/CI and browser access are not.
 - Audit PDFs, taskbooks, screenshots, wireframes, Figma frames and fixtures remain
   `DESIGN_EXPLORATION`; they cannot become a second authority or direct code target.
 - Web Workspace, Desktop and Mobile may recompose interaction and density over the
@@ -32,4 +35,4 @@ current source / runtime / Permission / Evidence truth
 - `UNKNOWN` never authorizes a new API, owner, permission, metric or successful UI.
 
 Any implementation copied directly from a generated artifact, generic card grid or
-substituted-title renderer without the detailed screen gate is rejected as `REWORK`.
+substituted-title renderer without the actual screen-specific contract is rejected as `REWORK`.

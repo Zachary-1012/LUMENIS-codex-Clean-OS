@@ -196,6 +196,9 @@ def _is_rules_only_publication_path(path: str) -> bool:
     if path in {
         "AGENTS.md",
         "README.md",
+        "app/README.md",
+        "contracts/experience/README.md",
+        ".agents/skills/lumenis-flutter-experience/SKILL.md",
         "scripts/audit_tools/verify_codex_takeover_governance.py",
         "tests/test_online_progress_governance.py",
         # These exact JSON files are material/approved-target documentation,

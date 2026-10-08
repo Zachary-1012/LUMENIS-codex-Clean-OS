@@ -14,6 +14,8 @@ reviewed_at: UNKNOWN
 approval_reference: UNKNOWN
 ```
 
+Latest PO direct-build rule: reuse current screen records and implement from real contracts without a separate design draft/Figma or M DESIGN_READY prerequisite. Design review fields above record facts, not a coding gate. Website/Web first; native Windows/macOS and iOS later. Unknown business/auth contracts still block dependent actions; acceptance requires actual operation.
+
 ## 0. Authority basis and artifact disposition
 
 - Constitution sections applied:
@@ -113,7 +115,7 @@ Acceptance must prove the real owner callable, server-side authorization, origin
 - Decision: `DESIGN_EXPLORATION` / `DESIGN_READY` / `BLOCKED`
 - Reviewer and date:
 - Open questions with owners and next action:
-- Changes required before implementation:
+- Actual contract blockers and changes required before dependent behavior/acceptance (not a separate design-draft gate):
 - Acceptance evidence required after implementation:
 
 
