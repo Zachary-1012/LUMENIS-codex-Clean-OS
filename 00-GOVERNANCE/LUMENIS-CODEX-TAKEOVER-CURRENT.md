@@ -199,16 +199,18 @@ not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-This 2026-10-09 update reconciles existing adoption/status evidence, duplicate
-router prose and stale Experience dispatch/test wording; it adds no product source or
-resume a paused window. The preceding implementation batch is published at
-`560c4f3f332f24404ee52f6a9c98ece64651fb9e`, with observed Product run
-`37801876006` and App run `37801876135` both SUCCESS. Fresh HEAD/origin/live
-main matched that source before this update. Its installed-PWA/readout and
-full-screen user acceptance remain OPEN; a new rules commit has its own CI.
+Historical protected local-only M icon batch (not integrated; not an execution instruction): this earlier local increment includes the bounded 37-path/102-call historical
+supported-icon source adoption and existing RC-06 research-method criteria.
+The canonical-only validation copy excludes C1's in-flight changes; its Dart
+lib analysis and actual Web release build pass. Build/source verification does
+not establish normal user jobs, installed-PWA/readout or complete visual acceptance.
+F/C1/C2-C6 are now paused; the prior independent C1 state is superseded. The preceding whole-product
+rule batch is `274f2742c17550ef421d845c82c066166e2e9826`, with Product run
+`37817302602` and App run `37817302584` both SUCCESS. This source publication
+requires its own exact-SHA CI; historical failed and rule-only receipts are retained.
 
 W2's fifteen production paths are preserved in main: five match the frozen
 source and ten have equivalent or stronger successor behavior. The two SH-01
@@ -748,3 +750,35 @@ Seven protected C6 runtime/test paths implement Core entry/launch/boot identity 
 This rules revision carries M's final 14-path Website/Web-first, direct-build and native-target correction from `WEB-PRIORITY-DELIVERY.json` (SHA256 `39ebdfd9aab2f93c7db0c1645b9a7024c0dd2fdb7541eab33a461433f8dd30aa`, exact 9b211052 base), plus factual composition in CURRENT and its existing Round record. Runtime/F candidates and the machine semantic contract are excluded. Existing implementation, native platform projects, source materials, models, design/media assets and failure history are preserved. Exact final staged guard and remote readback receipts govern publication; this text alone proves no push, runtime load, release or user acceptance.
 
 Historical dispatch/Goal observation for that earlier C6 batch only: M + F + C6 and its then PAUSED Goal are not current scheduling. Latest direct PO instead authorizes M convergence/research/integration and continuous C1 full data-to-business closure; F/C2-C6 remain paused. The retained topology and Website/Web-first target are unchanged. Current-window M/C1 request is Sol 6.1 / ultra with existing speed; backend settings are SETTINGS_UNVERIFIED. Current native Goal state must be read from its actual API, not this historical receipt. Full C6, USER_VERIFIED, RELEASED and OPERATING remain unaccepted.
+
+### 2026-10-09 retained non-C1 research and unpublished source
+
+The full data-to-business upgrade remains published across existing product,
+Experience, data/Collector and screen contracts; it is not a C1-only scope. M's
+original non-C1 convergence/material adoption continues. Source Owner RC-06 maps
+actually read teaching/course/statistical methods into existing Research,
+Reporting, C3/C4 and Evaluation: business question, measurement/sample/denominator,
+interpretation/causal limits and same-task source/result revision continuity.
+A course, sample chapter or research record grants neither model training nor Job closure.
+
+The preserved local-only icon work contains 102 independently mapped historical
+supported-icon constructor hunks on 37 paths that were clean at its admission,
+through the existing LumenisIcon renderer. These hunks are not integrated by this
+rules publication and are not a current instruction to resume frontend work.
+Current arguments, controls, layout, navigation, draft guards and task contracts
+are retained. Five CTH-10 screen hunks remain deferred while C1 owns affected
+work; its three active SourceBrief files and all C1 Runtime/source/data are excluded.
+Historical local W6 reservation revision 11 records that bounded M region; current
+dispatch/reservations control any future work. Regressive AI
+draft/lifecycle overlays are rejected with originals preserved; AI-01 submission
+and full media/user outcomes remain OPEN. This increment is source adoption only;
+exact build/static/publication receipts remain separate from visual/runtime user
+acceptance, USER_VERIFIED, RELEASED and OPERATING.
+
+This consistency update publishes the retained RC-06 method requirements and
+labels earlier icon work LOCAL_ONLY without staging its source. The immediately
+preceding six-file tool/API repair is `b69b221d031b106abfe76a9f95760707a6b5651c`,
+whose Product Gate run `37854315256` is SUCCESS. No same-SHA App Gate was triggered;
+older App success is not promoted. This rules revision requires its own CI.
+Current rule files are synchronized; unrelated dirty source and its raw backups
+remain protected. C1/F/C2-C6 remain paused; no product runtime or DB was changed.
