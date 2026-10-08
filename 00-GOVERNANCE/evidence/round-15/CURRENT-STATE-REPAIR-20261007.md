@@ -394,8 +394,8 @@ consulted 2026-10-08; no external package/provider or fee was added.
 
 ### Unique historical frontend behavior retained
 
-The protected original frontend candidate contains a CTH-02 subject-row semantic
-ID that is absent from current source. Existing CTH-02 specification §7 requires
+The protected original frontend candidate contained a CTH-02 subject-row semantic
+ID absent from the pre-560c source. Existing CTH-02 specification §7 requires
 name, ID, type and industry in the screen-reader label. The single unique line
 is adopted into the existing screen; current visual layout, scope and callers
 remain intact. Original patch/hash records remain preserved.
@@ -417,9 +417,88 @@ Actual Dart analysis of CTH-02 returned no issues. The local Web build launcher
 timed out after 300 seconds; a direct installed-SDK retry then completed its
 release Web build (285.6 seconds, exit 0). The timeout is preserved, not changed
 to PASS. The generated manifest is read back against source. DTD found no running
-debug app, so no existing session was hot-reloaded. The applicable new-SHA App
-CI and actual installed-PWA/readout evidence
-remain required and OPEN. Static authority/anti-template/screen guards passed;
+debug app, so no existing session was hot-reloaded. The exact 560c4f3f source
+has observed App CI SUCCESS (37801876135) and Product CI SUCCESS (37801876006).
+Actual installed-PWA/readout evidence remains required and OPEN.
+Static authority/anti-template/screen guards passed;
 none is substituted for a full user outcome. The preceding runtime-preflight
 source SHA 20970bac has observed Product CI SUCCESS (run 37798307267); that is
 not same-SHA proof for this frontend reconciliation.
+
+## 2026-10-09 historical source adjudication and active-rule correction
+
+The exact reviewed production baseline is
+`560c4f3f332f24404ee52f6a9c98ece64651fb9e`; fresh local/origin/live main
+matched before this update. This is evidence/rule reconciliation, not another
+implementation candidate, a production restart or a full user acceptance.
+
+| Existing input | Current-source decision | Retained unfinished result |
+|---|---|---|
+| W2 projection: fifteen production paths | Five normalized sources match the frozen manifest; ten candidate deltas have equivalent or stronger successors. Exact Agent replan/outcome, skill lease/trace, learning review/export, training approval callbacks, auth and Effect Fence callers were reviewed. Do not replay the old patch. | No new actual training/held-out or owned-serving result is proved. |
+| Owned inference and speech from that projection | Loader/transcriber source is already preserved. A pinned production search finds no external caller of `load_owned_inference`, `load_owned_production_runtime` or `transcribe_audio`. | Actual Gateway/Media task binding and admitted-runtime user outcomes remain OPEN; unavailable status remains honest. |
+| SH-01 replacement/manual-overlay localization | All eleven replacement keys and existing overlay/precondition keys have current editor consumers. Twenty-one media strings agree across generated Dart and zh-CN/en/ko; all three registry counts are 850. | Actual locale rendering and user editing/recovery are not accepted by a source comparison. |
+| C4 Brief parser candidate-03 | Exact unique parser delta is already published at 85b16ae7; its current Git blob agrees with that source. The old local-pending metadata is superseded in the existing disposition, with originals preserved. | This does not accept customer pitch or full C4. |
+| Prior supervisor lifecycle package | Existing publication 4a318776 and repaired-source runtime receipt are preserved, including the earlier failed orphan run. Subsequent main changes do not require replay of the old tree. | The old bounded health-only run does not verify current C1 runtime, all business flows or C6 closure. |
+
+Exact local manifests, candidate anchors, source hashes and research readbacks stay
+in the existing ignored M/Owner records, not in a second execution tree. Original
+patches/tests/failure/media/model/design evidence remain intact. No module test,
+provider call, training, Production DB operation or C1 source/runtime write occurs.
+Other original-material research and unresolved unique handoffs remain explicit.
+
+Experience's stale all-window dispatch and ambiguous test wording is corrected
+to the latest AGENTS/PO policy: C1 continues its own complete closure; F/C2-C6
+stay paused. The machine contract and full R/J/U/44-screen requirements do not
+change. Official Intelligent UI product/Help Center scope is reread and linked
+in the existing Experience §38; it informs existing task-specific/progressive
+interaction, not an assumed SDK, a model switch or a product-completion claim.
+
+The exact-main Windows rule check initially failed its actual document-budget
+guard: CRLF AGENTS plus the required 16384-byte headroom needed 132843 bytes,
+above the configured 131072 bytes. Only duplicate frontend/complete-outcome
+explanations are compressed; all full scope, native Goal, locator, preservation,
+dispatch and acceptance rules remain. The compressed intermediate AGENTS was 112724 LF bytes / 114516
+Windows checkout bytes, needing 130900 including headroom; the final C1 amendment
+is measured again in the same validation receipt. No model/default/tier
+or budget is changed; the failed receipt remains evidence. This repairs portable
+admission, not a user-task runtime or a new capability. Only affected rule guards
+are repeated after this change; historical module suites remain unexecuted.
+
+### C1 media-understanding clarification in the same publication
+
+The existing C1 plan records a direct PO clarification on 2026-10-09: preserve
+actual image/video understanding and downstream use while reducing acquisition
+latency. M read its exact `latest_po_media_understanding` and
+`media_processing_research` sections, along with the current C1 turn. Global §10,
+the existing Collector contract, Architecture, Experience and README now separate
+one-cover synchronous intake from permitted asynchronous media analysis, exact
+source/image/time locators, per-use rights, versioned reuse and honest coverage.
+This is product adoption of the existing capability requirement, not a new queue,
+provider, model grant, dependency installation or resumption of paused owners.
+The unavailable executor/speech caller/media job path remains OPEN; C1 collection
+continues. C1's reported new natural X batches are its runtime evidence, not a
+fresh M/whole-product acceptance or proof of media semantic quality.
+
+### Full data-to-business PO instruction and retained original M goal
+
+The subsequent direct PO instruction upgrades the full existing data-to-user
+chain, not only collection. Global §10 maps sections 0–10 and 1.1–2.3 to the
+actual current functions, observation/intake/review/analysis boundaries, six
+platform independent evidence, affected downstream/Web consumers, comparable
+performance, exact integration and final A–F result. Architecture/Owner/Collector,
+Experience and the existing CTH-02/CTH-10/SH-01/SYS-06 specifications are updated
+without implementation/acceptance promotion or a new architecture. Original M
+non-C1 candidate integration and complete material adoption continue; their
+remaining gaps are not erased by the C1 dispatch.
+
+Current top-level M/C1 request is GPT-6.1 Sol / ultra, preserved in the existing
+PO receipt. Role defaults and speed are untouched; a tool request is not proof
+of executed backend. Stale CURRENT C6/PAUSED-Goal dispatch is explicitly dated
+history rather than live status. F/C2-C6 remain paused. The existing local W6
+reservation advances to revision 9 for C1's exact documents.py pending-observation
+reader functions at the independently matched 40846-byte / SHA256
+703d43d545d54b3c059dedcfaa926914ffbfafe9b536d0fb7678e6ce9990c3d6 pin.
+Formal-source/identity/permission checks remain intact; raw pending material must
+not become a confirmed Subject fact. M makes no product-source/Runtime/DB change
+in this rule-only publication. No source task, model training, real user E2E or
+whole-product acceptance is promoted by these documents.

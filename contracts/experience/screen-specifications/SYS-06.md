@@ -414,3 +414,16 @@ F 在 Product Owner 明确恢复后，在本屏现有规范中补齐同一条链
 - **覆盖：** 四端职责、中文/英文/韩文、明暗模式、宽度/字号、键盘/读屏、加载/空/未知/拒绝/离线/错误/恢复；必要长内容可滚动，其余避免无意义整页上下滚动。
 - **变更及验收：** 设计 diff → 受影响组件/Token/Action → 原状态/焦点/路由/任务连续性回归 → 实际操作证据及回退。只修对应部分，不重生成全 App；源码/设计/测试状态分别记录。
 - **完成边界：** 当前 Figma 链和真实四端操作证据未核实，不提升本屏状态。PNG、伪造 .fig、44张示意图、路由存在或 Widget 可显示都不能代替可编辑设计和真实用户结果。
+
+### 2026-10-09 acquired-original return increment — OPEN implementation/acceptance
+
+Opening an actual permitted original post from its source/result preserves the
+same task/Brief/scope/version and provides a controlled in-product browser plus
+return to that work. External opening remains an explicit choice, not a fallback
+that silently loses context. Source target/native identity, access state and task
+state come from the existing SYSTEM Browser/Permission owners. Platform challenge,
+session loss, access restriction and cooldown remain distinct recoverable states;
+no protected personal account or unauthorized fallback is used. Returning resumes
+only the still-permitted source/result action, not a fabricated capture/analysis
+success. Verify this real running Web operation with the data-to-business chain;
+this requirement increment alone is not browser implementation or acceptance.

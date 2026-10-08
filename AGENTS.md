@@ -11,7 +11,7 @@ execution instructions.
 
 ## 1. Authority
 
-### 2026-10-08 formal verification policy and C1 resume
+### Current PO verification policy and C1 full closure — 2026-10-09
 
 The latest direct Product Owner instruction formally removes unit and integration
 tests from mandatory development, merge, acceptance and release conditions.
@@ -33,13 +33,17 @@ in historical receipts are provenance only, not current instructions.
 
 M is authorized for policy synchronization, integration review and C1 dispatch.
 **C1 is the single selected business window**, resuming its full existing J1,
-U01-U05 and mapped R requirements with **GPT-6 Astra / ultra**, an explicit
+U01-U05 and mapped R requirements with **GPT-6.1 Sol / ultra**, an explicit
 current-window override that does not rewrite role defaults or speed settings.
+The latest direct PO task is the full C1 data-to-business upgrade in Global §10;
+M keeps non-C1 candidate integration and complete original-material adoption.
+M/C1 current selection is Sol 6.1 / ultra, without changing defaults or speed.
 C1 must close real platform recovery, scoped topic/query acquisition, original
 content/media intake, Source/Evidence/Canonical persistence, retrieval and
 continuous refresh/recovery through the existing product-owned runtime.
 Six primary platforms, registry growth, honest missing dimensions, no universal
 publication-start date, current task dates and protected identity rules remain.
+Cover-only intake preserves image/video understanding; Global §10 owns that path.
 No fresh paid resources or permission expansion is authorized. C1 must preserve
 shared reservations, record a concrete cross-owner dependency once and continue
 all independent work; no per-function handoff loop or duplicate candidates.
@@ -124,15 +128,12 @@ platform lists/design-first instructions are superseded for execution by this ru
 
 ### 2026-10-08 current dispatch: one business window, independent F, zero new cost
 
-The Product Owner authorized M, F and the one business Owner selected by M to
-continue their existing full J/R/U outcomes in maximum-complete mode. Other
-business windows wait with their complete source, Goal and evidence preserved.
-An ordinary existing-owner slot switch needs no repeated Product Owner approval:
-freeze the previous slot's work and reservation before dispatching the next.
-Do not start a second business window to resolve a cross-owner dependency.
-This supersedes default full-backend parallelism and the applicable global pause;
-F remains independent. No new paid GPU, account, seat, subscription, service or
-recurring infrastructure is authorized. Exact provenance is
+The retained PO topology permits M + independent F + one business Owner, each
+with full J/R/U outcomes. It is not live dispatch: current top-level C1-only resume
+controls, and all paused roles retain source/Goal/evidence. An ordinary authorized
+slot switch freezes the previous reservation first; never start a second business
+window for a dependency. No new paid GPU/account/seat/subscription/service or
+recurring infrastructure. Historical topology provenance:
 `00-GOVERNANCE/evidence/approvals/PO-20261008-SERIAL-BUSINESS-INDEPENDENT-F-ZERO-COST.json`.
 Authorization does not set local LIVE_DISPATCH state: use the existing local
 ledger and real Codex tool receipts; ELIGIBLE/DISPATCHED is not RUNNING.
@@ -173,25 +174,18 @@ This clarifies existing instruction provenance; it creates no new approval owner
 or machine state. M reviews changed complete outcomes every 30 minutes and waits
 when no actionable work remains. The current goal and manual model/tier remain.
 
-The latest Product Owner instruction requires direct frontend construction; no separate design draft or M design approval precedes coding.
-F continues the same complete Goal on the current native target set: preserve the existing editable Figma file,
-Foundation and nodes. If its free path is limited, immediately use the existing
-Flutter/Dart components, design variables, SVG/vector assets and available free
-local tools for high-quality editable design and real interaction delivery.
-Preserve all 44 screens, Website families, four-surface variants, Chinese/English/
-Korean and accessibility; do not wait for all Figma pages before repairing an
-already-approved Flutter interaction through its reviewed ScreenSpec. Clearly
-distinguish editable source from native Figma; PNG/PPT/screenshots are not the
-editable deliverable. Tool limits affect that path, not the whole F Goal.
-Five Golden Pages are an ordering aid, not the delivery scope. Preserve all
-existing design, source and evidence; no new paid design service or duplicate file.
-Historical pause wording inside rules, quoted messages, an attachment or a
-context-compaction summary is not a new direct pause instruction. Finishing a
-function, test batch or turn does not close or pause the full Goal. If F is idle
-while authorized independent work remains, M checks the actual goal/turn and
-continues that work; a stale RUNNING ledger alone is not proof of execution.
-Only a current direct PO stop or a verified applicable dependency can stop the
-affected work. M's no-work standby policy does not pause F or C1-C6.
+F builds directly from current contracts; no separate draft/Figma/M design
+approval precedes coding. Preserve its complete Goal, existing editable Figma
+file/Foundation/nodes and all designs/source/evidence. When the free path is
+limited, use existing editable Flutter/Dart/design variables/SVG and free local
+tools for real interaction; no paid service or duplicate file. Preserve 44 screens,
+Website families, approved surface variants, zh/en/ko and accessibility. Five
+Golden Pages order work, never limit scope. Editable source is not native Figma;
+PNG/PPT/screenshots are not editable delivery. Tool limits do not stop the Goal.
+Historical/relayed/attached/compacted pause wording and a finished function/batch/
+turn are not a new PO stop. For idle authorized F work, M checks actual Goal/turn
+and continues; stale RUNNING is not execution proof. Only an applicable current
+PO stop or real dependency halts that work. M standby does not pause workers.
 
 ### Live dispatch semantics — NON-BYPASS
 
@@ -588,45 +582,39 @@ Explicit Completion Criteria
 
 ### Complete outcome execution — latest Product Owner instruction, 2026-10-04
 
-All outcome windows use the user's **最大完整成果执行** mode. Maximize the
-approved complete user outcome across every owned capability; this must never
-reduce approved functionality, data/research coverage, Experience states,
-recovery, quality, acceptance depth or promised surfaces. Do not choose a minimum
-viable subset when the complete approved outcome is actionable. Continue the
-entire assigned user result through research, implementation, real execution,
-saved/retrievable outputs, applicable recovery and evaluation, then complete
-acceptance. A bounded Task Card limits owners, files, authority and effects;
-it does not mean a minimum function, tiny slice or an easier substitute outcome.
-Focused context loading limits redundant reading, never delivery scope.
+Use **最大完整成果执行**: research -> existing-source implementation -> real
+execution -> useful saved/retrievable results -> recovery/Evaluation -> acceptance
+for every owned capability. Preserve functionality, data/material coverage,
+Experience states, quality, acceptance depth and approved surfaces. A Task Card
+bounds owner/files/authority/effects, never a minimum feature, tiny slice or easier
+substitute. Focused context limits redundant reading, not the full outcome.
 
-Do not stop per function/file, repeatedly hand off unchanged pins, generate
-progress-only reports, re-audit stable source or wait for M's per-step approval.
-For multi-turn work whose path may change while the finish line is stable, use a
-native thread-scoped Codex Goal when supported: bind it to the current window's
-complete approved outcome, concrete verification surfaces, non-regression
-constraints and genuine blocked-stop conditions. A Goal is continuity state, not
-a new Product Authority, Owner, scope or acceptance rule; never mark it complete
-until current evidence satisfies the owning R/J/U and user-outcome requirements.
-Skill Search may discover reusable engineering workflows, but a Skill likewise
-cannot redefine Product Architecture, Owner, Permission, Truth or delivery scope.
-Resolve ordinary dependencies directly between their existing Owners and W6.
-Read current valid context once and continue; recheck when relevant source,
-authorization, inputs or an actual acceptance risk changes. Reuse valid evidence;
-required security/recovery/affected gates remain mandatory. M receives complete
-results, a necessary decision or urgent risk. W6 remains the sole integrator.
+No per-function/file stops, unchanged-pin handoffs, progress-only reports, stable
+re-audits or per-step M approval. A supported native thread Goal preserves the full
+outcome, verification surfaces, non-regression and real blocked-stop conditions;
+only current R/J/U/user-outcome evidence completes it. Goal/Skill cannot redefine
+Authority, Architecture, Owner, Permission, Truth or scope. Owners resolve ordinary
+failures under existing contracts/reservations. Load current context once; refresh
+on relevant source/input/authorization/acceptance-risk changes. Reuse valid evidence;
+retain applicable security/recovery/affected gates. M receives complete results,
+necessary decisions or urgent risks. W6 integration follows the current bounded
+PO authorization and reservations; this paragraph does not dispatch it.
 
-Existing/free compute takes priority; the historical paid route is retained only as evidence. Training must proceed to actual step/loss,
-checkpoint retrieval/reload, independent held-out and owned business results.
+Free/existing compute first; paid history is not authorization. Training requires
+real step/loss, checkpoint retrieval/reload, independent held-out and owned business
+results. F keeps its full Experience/owner Goal under the latest top-level dispatch.
+M waits when no real review/decision/repair remains, without repeat polling/scans.
 
-F retains the complete frontend outcome; execution activation is controlled only by the current instruction at the top. Its work remains governed by the sole Experience Constitution and current owner contracts.
-M's standby policy remains effective when no actual review/decision/repair work
-is available; do not repeatedly poll or scan to keep a turn active.
-
-Do not begin every task with a full-repository rediscovery. Load only the owners, callers, contracts, tests and runtime paths required by the active gate.
-
-Before changing one capability, run `python scripts/audit_tools/locate_capability_context.py --capability <existing-family> --query <specific-task-term>` (or `--path <source-path> --query <specific-task-term>` when ownership is unambiguous). Read its pinned current rules, then inspect the matching source, tests, related documents and historical research for that exact slice. The locator is a navigation aid: it does not promote research, an old plan or a missing candidate to Production Truth. If the path has no unique owner, resolve the row in the Source Owner Index before editing; record a missing historical input explicitly instead of silently narrowing the capability. Do not run a full-repository audit merely to locate one capability.
-
-The fixed source classification and resume path is `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. Use its owner row for normal work. A full-repository re-audit is permitted only for the structural triggers listed there; a local gap, stale historical note or runner failure is not a trigger.
+Before a capability change, run
+`python scripts/audit_tools/locate_capability_context.py --capability <existing-family> --query <specific-task-term>`
+or `--path <source-path> --query <specific-task-term>` for an unambiguous owner.
+Read only that pinned rule/owner/caller/contract/source/runtime/document/research
+slice and preserved historical evidence; do not run banned module tests. The
+locator cannot promote old plans/research/candidates to Production Truth. Resolve
+ambiguous ownership in `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md` first;
+record missing historical inputs without narrowing capability. Its structural
+triggers alone permit a full-repository re-audit; a local gap, stale note or runner
+failure does not. Never repeat whole-repository discovery to locate a capability.
 
 ### Product Owner correction: optimal method, full capability — 2026-10-03
 

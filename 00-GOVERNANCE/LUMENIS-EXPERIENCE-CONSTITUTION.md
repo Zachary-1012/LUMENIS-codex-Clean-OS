@@ -1236,7 +1236,16 @@ OpenAI describes task-shaped interactive answers and progressive rendering.
 This is reference evidence; its release does not expose an installable compiler,
 grant LUMENIS that capability, or change Codex/model settings.
 
-**State: research/rule adoption approved; mapped implementation is covered by the current F/C1-C6 dispatch, pending fresh owner admission.**
+Official scope rechecked 2026-10-09: the [Help Center](https://help.openai.com/en/articles/20001598-intelligent-ui-in-chatgpt)
+limits this OpenAI feature to Chat, excluding Work, Voice and the Pro Astra
+reasoning option. The [product announcement](https://openai.com/index/gpt-6-for-everyone/)
+states this release does not change Work/Codex models. This does not constrain
+LUMENIS's approved cross-product Experience: adopt task-appropriate presentation
+and progressively useful, factual results through existing owners, not an
+assumed OpenAI SDK or a change to the user's selected model. Product task/version
+and save/reopen/recovery contracts remain the basis for durable UI state.
+
+**State: research/rule adoption approved; mapped requirements remain assigned to their existing owners. Execution follows the latest root AGENTS and actual live dispatch. C1 continues its complete closure; F and C2-C6 retain their current pause until explicitly resumed.**
 This paragraph itself does not change dispatch or authorize a new UI engine,
 product, provider or cloud dependency. Apply it within existing approved
 jobs/screens after their owner passes fresh admission. This constitution remains the
@@ -1290,11 +1299,13 @@ revocation. Verify normal success as well as missing data, stale result,
 interrupted stream and permission denial. Compare task correctness, user
 re-entry burden and time to useful result; layout novelty, animations, mock
 widgets or a schema-valid model response alone do not pass. Reuse applicable
-existing tests/evidence and add only affected meaningful checks.
+historical evidence without rerunning unit/integration/widget or renamed module
+suites. Apply only retained build/static/security/data guards and genuine
+complete-product operations/recovery under the formal PO verification policy.
 
 ### 智能UI的逐步交付与组件选择合同（2026-10-08）
 
-用户补充的员工论述作为研究输入；官方发布说明已独立核对。下列为序境在现有Owner内的适配要求，当前PO已授权F/C1-C6执行，实际状态依据当前派工与准入记录；规则采用不代表实现完成，不宣称获得OpenAI内部编译器、权重或训练方法。
+用户补充的员工论述作为研究输入；官方发布说明已独立核对。下列为序境在现有Owner内的适配要求，能力范围保留，实际执行只依据最新根AGENTS、PO指令和本地派工准入记录；当前C1持续闭环，F及C2-C6保持暂停，不能由本段恢复。规则采用不代表实现完成，不宣称获得OpenAI内部编译器、权重或训练方法。
 
 1. **选择表达，而非固定模板。** C2根据任务、现有证据、用户调整需求和设备能力提出表现计划；F以本屏已有原生组件、设计Token及动作合同承接。简短事实用文字，比较用带同口径的表/图，参数变化用可解释计算器，复杂创作保持专用编辑器/横向时间轴。用户可查看文字/数据依据并继续原任务；模型不重写导航或制造新业务动作。
 2. **先给第一份有用内容。** 有可信输入时先展示已成立的事实、明确限定的比较或可读段落，再逐步补齐相关部分。空卡、骨架、重复“正在分析”和假进度不算首个有用结果。证据尚不足时显示缺口与实际进度，不先猜结论；只展示可供用户使用的解释和结果，不输出内部推理链或私密工具内容。
@@ -1479,13 +1490,13 @@ frame extraction, gate or build cannot establish Product Truth.
 
 后续直接 PO 补充：前端直接构建，不先交设计稿；复用现有设计与44屏规格，不以Figma或M的DESIGN_READY审批阻塞编码，视觉/交互决策随源代码在原规范记录，真实质量/权限/验收要求继续执行。原生Desktop仅Windows/macOS，原生Mobile仅iOS；Android/Linux原生客户端不再是当前/后续交付目标，保留其历史原件和证据，不进行无依据删除。Linux服务端/CI、不同操作系统的浏览器和窄屏Web不被移除。
 
-本条控制 §§23、34–36 和本节中所有“逐端实现/设计/回归/打包”的执行顺序：当前先完成 Public Website + Web Workspace 的全部适用要求；Desktop App 与 Mobile Companion 的专项工作在前两端闭环后进行，需求、规格、原始素材及已有成果完整保留为 OPEN/DEFERRED，不冒称通过。F 与唯一业务窗口继续，零新增费用。
+本条控制 §§23、34–36 和本节中所有“逐端实现/设计/回归/打包”的执行顺序：当前先完成 Public Website + Web Workspace 的全部适用要求；Desktop App 与 Mobile Companion 的专项工作在前两端闭环后进行，需求、规格、原始素材及已有成果完整保留为 OPEN/DEFERRED，不冒称通过。保留 M+独立 F+唯一业务席位拓扑；实际执行依最新根 AGENTS/PO 派工，零新增费用。
 
 当前官网/Web的真实内容入口、业务操作、智能交互、来源/权限、保存修订重开恢复、三语言、无障碍和必要宽窄屏/浏览器输入验收必须完整。保留2D手绘水彩方向和可编辑设计，不为等待原生设备、native包装或全部跨端parity推迟可独立完成的Web成果。Web所需Core/SYSTEM不是被后置的桌面客户端。既有44屏/官网家族与四端最终设计范围不变，完整四端Goal与Release保持原完整标准；按Multi-Surface Decision及Real Delivery记录本轮和后续证据。
 
 ### 可编辑设计工程与源码同步 — 2026-10-08 审计增补
 
-既有 F 直接构建全部44屏与官网内容家族的真实前端和可编辑源码，M负责成果审查，C1-C6 保留真实字段/动作/状态合同职责，C6 协调共享绑定。2026-10-08 最新直接指令明确 F 独立继续，与 M 选择的唯一业务窗口并行；Figma-first 不再是强制前置。保留已有 Figma 工程/Foundation/节点与现有源码。免费额度、权限或调用受限时，立即采用现有 Flutter/Dart、设计变量、SVG/矢量及本地免费工具形成可编辑设计与真实交互，不因付费工具暂停完整 F Goal。
+既有 F 直接构建全部44屏与官网内容家族的真实前端和可编辑源码，M负责成果审查，C1-C6 保留真实字段/动作/状态合同职责，C6 协调共享绑定。2026-10-08 曾批准 F 独立并行的拓扑；其后的 C1-only 恢复不解除 F 暂停，实际执行依最新根 AGENTS/PO 派工。Figma-first 不再是强制前置。保留已有 Figma 工程/Foundation/节点与现有源码。免费额度、权限或调用受限时，立即采用现有 Flutter/Dart、设计变量、SVG/矢量及本地免费工具形成可编辑设计与真实交互，不因付费工具暂停完整 F Goal。
 
 在现有 ScreenSpec/README 保存 `Screen ID → 设计规格 → 可编辑载体/路径/版本 → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence` 映射。Figma 载体记录 file/node/revision；源码载体记录 Dart/Token/SVG 路径、版本及编辑/预览方法，明确不等同于原生 Figma。工具受限仅标记该路径，禁止 PNG、PPT、静态截图或伪造 .fig 冒充完整可编辑交付。复用现有文件，不重复创建，不新增收费服务。唯一 Experience、设计状态及 Product Core 真相不变。
 
@@ -1507,9 +1518,13 @@ frame extraction, gate or build cannot establish Product Truth.
 
 这是基于已读官方材料的序境设计适配，不宣称GPT/Apple/Tesla全站全部已研究，不复制UI/品牌资产、车辆功能或第三方登录依赖。官方读取出处及限制记于现有 `INTELLIGENT-UI-ADOPTION-20261008.md`。保持二维手绘水彩/版画、可丰富而克制的色彩、按脚本创作角色、中英韩和无障碍。官网以外非必要不整页上下滚动；媒体横向时间轴和必要长内容滚动保留，不以压缩布局或减少交互损失功能。
 
-J5/J6具体操作和真实任务在既有SH-01、BMP-08规范增补；不再全量重写44屏。实时预览、临时导出、正式保存、重开不同；Read Aloud、录音、ASR、节目成品不同；脚本变更不代表录音已改。现有组件/变量/可编辑Figma映射沿原规则，不因文档新增晋升DESIGN_READY/IMPLEMENTED。当前PO派工已覆盖F/C1-C6；各Owner fresh admission后执行完整既有成果，文档更新仍不代表实现或验收完成。
+J5/J6具体操作和真实任务在既有SH-01、BMP-08规范增补；不再全量重写44屏。实时预览、临时导出、正式保存、重开不同；Read Aloud、录音、ASR、节目成品不同；脚本变更不代表录音已改。现有组件/变量/可编辑Figma映射沿原规则，不因文档新增晋升DESIGN_READY/IMPLEMENTED。映射保留F/C1-C6完整职责，但执行以最新PO适用范围、根AGENTS和真实派工为准；未获恢复的窗口继续等待。文档更新仍不代表实现或验收完成。
 
 客户验收采用现有Overlay两层卡：既能完成成熟基础工作，也能继续使用序境的真实来源/预算/业务范围/版本/评价。检验正确性、可修改性、误操作恢复、重复输入和有效等待，不以外观相似或控件数量判断体验达标。
+
+### C1 媒体结果呈现 — 2026-10-09 需求澄清
+
+依 Global §10 和已有来源/媒体/研究屏合同呈现真实媒体与理解结果，不新增独立界面或 Owner。单封面是同步采集预算，不能向用户表示完整图片或视频已分析。原帖、图位置/视频时间码、来源与派生版本可定位；原件、OCR、语音转写、视觉内容、模型解释和部分覆盖限制分开显示。排队、进行中、无权限、未取得、执行器不可用、失败和真实结果各有明确状态；无真实任务登记不显示“已排队”，无结果不补造标签/摘要。下游沿同一获准材料/Brief 和当前版本继续研究、业务或创作，不重新选择同一批来源。分析状态不覆盖原文或借界面扩大权益；当前 F 仍遵守实际暂停，本条保留其恢复后的执行要求，不以规则发布冒称 UI 已实现。
 
 ### 2026-10-08 准确维度与缺失值呈现
 

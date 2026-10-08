@@ -1,6 +1,6 @@
 > Status: **CURRENT SUBORDINATE REAL-DELIVERY OVERLAY / NOT A SECOND PRODUCT OR EXPERIENCE AUTHORITY**
 
-> 2026-10-08 PO 正式验收策略变更：单元/集成及换名模块自动测试不再是开发、合并、验收或发布条件，Codex 不新建、不执行这些套件；保留历史测试和 FAILED 证据。当前执行真实任务→既有源码→构建运行→实际用户操作→真实结果→保存/修订/重开→恢复→验收→正式集成。适用编译、静态质量、安全/权限、数据一致性及真实产品 E2E 保留；历史材料中的测试命令不构成当前执行义务，真实缺陷仍必须修复。R01–R15/J1–J8/U01–U25 与 Owner/权益/生产数据边界不变；机器合同 v1.2.0 的 verification_policy 记录现行语义。仅 M 与 C1 本轮恢复；C1 当前指定 GPT-6 Astra / ultra，其余窗口暂停状态按最新直接指令保留。
+> 2026-10-08 PO 正式验收策略变更：单元/集成及换名模块自动测试不再是开发、合并、验收或发布条件，Codex 不新建、不执行这些套件；保留历史测试和 FAILED 证据。当前执行真实任务→既有源码→构建运行→实际用户操作→真实结果→保存/修订/重开→恢复→验收→正式集成。适用编译、静态质量、安全/权限、数据一致性及真实产品 E2E 保留；历史材料中的测试命令不构成当前执行义务，真实缺陷仍必须修复。R01–R15/J1–J8/U01–U25 与 Owner/权益/生产数据边界不变；机器合同 v1.2.0 的 verification_policy 记录现行语义。仅 M 与 C1 本轮恢复；M/C1 最新当前窗口指定 GPT-6.1 Sol / ultra（不改角色默认/速度，实际执行模型另核），其余窗口暂停状态按最新直接指令保留。
 >
 > Authority boundary: this overlay adds delivery evidence and commercial-readiness gates to the six C1–C6 outcomes and retained R01–R15 acceptance coverage. The historical numbered coverage groups below preserve acceptance provenance, not an execution schedule. This overlay does not create another queue, bypass dependencies, replace Product Architecture/Experience, or erase completed source work.
 >
@@ -11,6 +11,46 @@
 REAL DELIVERY OVERLAY FOR C1–C6 / R01–R15 ACCEPTANCE COVERAGE
 
 REAL USER WORK E2E ACCEPTANCE remains mandatory for each complete C-window outcome and every applicable mapped requirement.
+
+### 2026-10-09 full data-to-business acceptance increment
+
+The existing C1 REAL DELIVERY CARD adopts Global §10's complete direct PO order,
+not a separate acceptance system. Actual path: permitted subject/focus selection
+-> real authorized platform capture -> recoverable original Source observations
+-> Evidence/Canonical admission or explicit pending identity -> existing workflow
+analysis/classification -> useful CTH/BMP result -> save -> close -> reopen ->
+revise -> exact source trace -> interruption recovery. At least one permitted
+platform must prove this full running-product path. Each of the six primary
+platforms independently records actual task/post/source/use/transaction evidence,
+counts/denominators/time window, demonstrated fields/paging/media/recovery and
+BLOCKED/NOT VERIFIED gaps; aggregate success cannot erase another platform gap.
+
+Known actual conditions must reject wrong identity, unauthorized use and invalid
+sources, while permitted unresolved raw observations remain saved/reopenable in
+the existing pending path. Duplicate fetches do not add facts/engagement; revoked
+use cannot continue. Partial source/analysis coverage exposes sampling, selection,
+truncation, method and uncertainty, not invented trends/conversion/causality.
+Initial one-cover intake does not count as full image/video understanding. Actual
+changed Web entries/statuses/source return consume real Core contracts; no mock,
+static UI, module-level automated test, HTTP 200 or metadata-only result is E2E.
+
+Compare legally captured/persisted observations, scope coverage/missingness,
+repeated requests, intake/analysis latency, identity/data errors, recovery and
+saved/reopened useful results using the same or explicitly comparable
+platform/account-rights/task/time scope. Without an observed prior baseline,
+record BASELINE NOT VERIFIED rather than an improvement percentage.
+
+Final existing outcome record contains A actual source/old-path replacement,
+B sanitized platform/Source/Evidence/Canonical/pending/analysis trail, C real
+user operations, D measured comparable performance or limits, E separate
+local/GitHub/runtime/DB/user states, F all open gaps/impact/resume conditions.
+Use OBSERVED / INFERRED / NOT VERIFIED; only demonstrated applicable user
+acceptance permits ACCEPTED. M integrates exact frozen accepted paths and CURRENT
+with remote readback; publication never implies loaded Runtime or RELEASED.
+Existing R/J/U, three Gate tiers and no-unit/integration policy remain unchanged.
+M/C1 continue; this increment does not resume F/C2-C6 or cancel M's original
+candidate/material integration. Current window request is Sol 6.1 / ultra;
+manual speed/defaults remain intact.
 
 2026-10-08 最新 PO 顺序：先验收 Public Website + Web Workspace 完整适用成果，再处理 Desktop App/Mobile Companion 专项实现、打包及实机验收。使用原 REAL DELIVERY CARD 与三层 Gate，逐项注明本轮适用表面、真实输入/结果/保存修订重开恢复/Evidence/版本和未完成项。官网内容、演示真实性、可用入口，以及 Web 业务正常成功路径必须实际验证；当前 Web 所需 Core/SYSTEM 不能随原生客户端后置。后置两端保留 OPEN/DEFERRED、原 Owner 和恢复条件（官网/Web 闭环），不得以原生包/设备缺失阻塞本轮表面成果，也不得标 PASS、删除 R/J/U 或宣告四端 Goal/整产品 RELEASED。原部署、费用及外部效果授权不变。后续原生目标仅Windows/macOS桌面和iOS移动；Android/Linux原生客户端不再是待交付项，保留历史源码/回执。前端直接构建，独立设计稿/Figma/M设计审批不作为实现前置；原真实结果与质量门禁不变。
 
@@ -1364,7 +1404,7 @@ external document grants collection or deployment permission.
 
 ### 2026-10-08 采集验收补正
 
-采集能力完成与数据全部非空分别验收，不要求获取所有客观不可得的数据。保留准确维度，缺值显示“—”并带可查看的现有状态/原因/来源及核验时间，真实0保持0；解析缺陷/未执行/权限失效不因横杠通过。真实授权正常链、正式准入、连续刷新及恢复仍是能力门槛；业务结论必要证据不足仍不可用。取消全局固定历史起点，按话题任务采集、原始出版/事件时间组织、显式时间范围过滤；未知日期单独诚实处理。Global§10为详细合同，已定位旧日期源码待后续C1/C6实施，不把本次规则发布算新运行策略上线。
+采集能力完成与数据全部非空分别验收，不要求获取所有客观不可得的数据。保留准确维度，缺值显示“—”并带可查看的现有状态/原因/来源及核验时间，真实0保持0；解析缺陷/未执行/权限失效不因横杠通过。真实授权正常链、正式准入、连续刷新及恢复仍是能力门槛；业务结论必要证据不足仍不可用。取消全局固定历史起点，按话题任务采集、原始出版/事件时间组织、显式时间范围过滤；未知日期单独诚实处理。Global§10为详细合同，已定位旧日期源码由当前C1在其获准闭环调用链内处理，M审阅与集成，C6保持暂停；不把本次规则发布算新运行策略上线。
 
 ### 2026-10-08 智能UI的有用分段验收
 

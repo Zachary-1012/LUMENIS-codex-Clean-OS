@@ -204,3 +204,19 @@ F 在 Product Owner 明确恢复后，在本屏现有规范中补齐同一条链
 - **覆盖：** 四端职责、中文/英文/韩文、明暗模式、宽度/字号、键盘/读屏、加载/空/未知/拒绝/离线/错误/恢复；必要长内容可滚动，其余避免无意义整页上下滚动。
 - **变更及验收：** 设计 diff → 受影响组件/Token/Action → 原状态/焦点/路由/任务连续性回归 → 实际操作证据及回退。只修对应部分，不重生成全 App；源码/设计/测试状态分别记录。
 - **完成边界：** 当前 Figma 链和真实四端操作证据未核实，不提升本屏状态。PNG、伪造 .fig、44张示意图、路由存在或 Widget 可显示都不能代替可编辑设计和真实用户结果。
+
+### 2026-10-09 source-to-result acceptance increment — OPEN implementation/acceptance
+
+Consume the same actual SourceBrief/report job, source refs, actor/scope and
+source/Artifact versions through existing Core APIs. Present available source-count,
+selection/truncation/method and semantic-interpretation limits separately from the
+useful report; metadata or a title is not full source/media reading. UNASSIGNED
+pending raw observations are accessible only through their allowed source-review
+path, not assertions about a confirmed commercial Subject. Consumer opinion,
+source statements and verified operating facts remain distinct. The running Web
+flow must create a useful result from at least one real acquired permitted source,
+save, close, reopen, revise, trace original source, recover interruption and keep
+parent/history; revoked use stops dependent reading. Reports may give honest
+partial results, never fabricated trends, conversion or causal claims. Existing
+SourceBrief sample/analysis metadata must be bound into the actual reader when
+implemented; this requirement does not claim the current UI already shows it.

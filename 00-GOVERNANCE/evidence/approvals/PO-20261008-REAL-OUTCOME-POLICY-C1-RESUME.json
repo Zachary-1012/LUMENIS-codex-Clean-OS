@@ -95,6 +95,51 @@
         "reporting_business_source_use_checks_weakened": false,
         "other_windows_resumed": false
       }
+    },
+    "C1_full_product_data_business_upgrade_20261009": {
+      "source": "Direct current M thread Product Owner instruction",
+      "source_thread_id": "01a0cd84-7685-7a73-97d9-83a14a546e71",
+      "title": "序境 / LUMENIS｜C1 数据能力重构与全产品业务闭环升级执行令",
+      "status": "APPROVED",
+      "recorded_at": "2026-10-08T17:05:43.301490+00:00",
+      "executor": "Existing C1/W1; M controller/reservations/integration",
+      "sections": [
+        "0 current admission and dirty/runtime/checkpoint protection",
+        "1.1 authorized subject acquisition separate from business relevance",
+        "1.2 immutable native observations / candidate identity / Source-Evidence-Canonical / unknown fields",
+        "1.3 initial one-cover only; later permitted media use preserved",
+        "2.1 acquisition_plan Registry/limits/cursor/fingerprint/relevance/topic catalog",
+        "2.2 secondary_collection raw intake/review/keyword/backlog/transaction/duplicate recovery",
+        "2.3 measured limits/paging/requests/DB/lock/risk/rotation",
+        "3 six platform native and live capabilities independently",
+        "4 Shared/CTH/BMP/Research/Reporting/Evaluation/SYSTEM consumers",
+        "5 actual affected Web UX/source return, no 44-screen rewrite",
+        "6 verified legacy caller convergence, preserve originals/compatibility/data/tests/failures",
+        "7 real permitted complete product operation, no unit/integration or renamed module suites",
+        "8 comparable observed performance or BASELINE NOT VERIFIED",
+        "9 frozen exact accepted source/main publication and independent Runtime states",
+        "10 final A-F evidence; OBSERVED/INFERRED/NOT VERIFIED, demonstrated ACCEPTED only"
+      ],
+      "rule_route": "existing Global section 10 + Architecture + Source Owner + Experience + Real Delivery; AGENTS sole router",
+      "other_windows_resumed": false,
+      "canonical_owners_redefined": false,
+      "new_store_runtime_provider_cost_or_permission": false,
+      "M_original_candidate_and_material_goal_cancelled": false
+    },
+    "current_window_selection_20261009": {
+      "source": "Direct Product Owner current M thread clarification",
+      "direct_quote": "sol6.1ultra，同时你原先的集成工作和候选那个也别丢了也要做",
+      "roles": [
+        "M",
+        "C1"
+      ],
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "ultra",
+      "speed_service_tier": "Preserve current manual setting; no automatic speed change",
+      "role_defaults_or_persistent_config_changed": false,
+      "executed_backend": "SETTINGS_UNVERIFIED",
+      "C1_tool_override_requested": true,
+      "root_model_control_API": "No current-turn root model-switch/readback tool available; do not claim executed backend from this receipt"
     }
   },
   "constraints": [

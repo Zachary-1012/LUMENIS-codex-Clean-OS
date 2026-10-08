@@ -155,11 +155,25 @@ platform-specific fields and honest NULL/UNKNOWN/UNAVAILABLE. Source-derived
 sentiment/risk/relevance/event interpretation stays distinguishable from raw
 facts and carries its method/version and evidence.
 
-Admission checks exact entity/market and task relevance, locatable source content,
-source identity and time quality. Navigation, login/challenge pages, fetch errors
-and unrelated same-name entities are not a successful body. Classify advertising
-and finance by business purpose: an advertising case may be useful, but unrelated
-financial/navigation material cannot stand in for a creative brief. Preserve
+Global §10 owns the current subject-batch/post-intake order and media-processing
+budget. One native cover per post limits synchronous intake work; it never retires
+actual image/video understanding. Preserve original media locators and separate
+coverage, OCR, speech transcription, temporal visual analysis and derived results.
+Reuse the existing SYSTEM queue/Gateway and Shared media owners with per-use
+Permission, versioned Source/Artifact and downstream citations. No queued job or
+semantic success is claimed without its actual handler/executor and result.
+Unavailable analysis blocks only that purpose; admitted collection continues.
+
+Acquisition authorization, raw observation retention, source validity, candidate
+identity/confirmation and business analysis are separate. Retain legally acquired
+observations through the existing Source/quarantine/review path when business
+relevance or exact entity binding is unresolved; name/keyword omission alone must
+not erase them. Formal entity facts still require actual identity/scope admission.
+Invalid navigation/challenge/fetch results, conflicting source identity and
+unauthorized/out-of-scope input remain rejected or quarantined, never successful
+bodies. Business relevance/advertising/finance interpretation occurs after intake
+through existing workflows and cannot turn unrelated material into a creative
+brief. The current full data-to-business requirements live in Global §10. Preserve
 original/republished lineage, use stable platform/native identity, append genuine
 metric changes and retain content revisions; do not erase low-quality raw input
 or turn duplicates into additional coverage. Sampled posts do not establish

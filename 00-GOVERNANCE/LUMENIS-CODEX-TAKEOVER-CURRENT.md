@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
-> Latest direct PO state, 2026-10-08: formal real-outcome verification policy is adopted in Governance Machine v1.2.0. Unit/integration and renamed module suites are removed from mandatory gates and may not be created or executed; historical failures remain. Build/static/security/data integrity and actual user E2E/recovery/release remain. M synchronizes this policy and dispatches only C1 for its complete existing data/collection closure using GPT-6 Astra / ultra (current-window override, speed unchanged). F and C2-C6 retain their latest direct pause; topology is not dispatch. Approval: `evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json`.
+> Latest direct PO state, 2026-10-09: formal real-outcome verification policy is adopted in Governance Machine v1.2.0. Unit/integration and renamed module suites are removed from mandatory gates and may not be created or executed; historical failures remain. Build/static/security/data integrity and actual user E2E/recovery/release remain. M continues non-C1 candidate/material integration and synchronizes the full data-to-business upgrade; C1 executes its complete existing collection-to-user-result chain. M/C1 current-window selection is GPT-6.1 Sol / ultra (defaults and speed unchanged; executed backend remains independently unverified). F and C2-C6 retain their latest direct pause; topology is not dispatch. Approval: `evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json`.
 > Retained approved topology (not current dispatch): M + independent F + one M-selected business window. W6 integration occupies the same business slot; other C windows wait with complete work/Goals preserved. Figma-first is superseded by reuse of existing editable design and an immediate zero-new-cost Flutter/Dart/SVG fallback when the free tool path is limited. All 44 screens, Website families, four surfaces and J/R/U acceptance remain. Authorization does not prove RUNNING, implementation, runtime load or user acceptance. Existing manual model/effort/tier and security boundaries remain.
 > Direct-build/native-target correction: F builds real frontend immediately from existing contracts without separate design drafts/Figma or M DESIGN_READY coding prerequisite. Later native Desktop targets Windows/macOS only; Mobile targets iOS only. Android/Linux native client delivery requirements are superseded, with existing source/history preserved. Linux server/CI and browser access are separate.
 > Latest surface priority, 2026-10-08: close Public Website and Web Workspace first; defer dedicated Desktop/Mobile design, implementation, packaging and device acceptance until those two surfaces close. Preserve all four-surface requirements and existing work. Web-required Core/SYSTEM dependencies remain in scope. This changes order, not actual capability/acceptance or deployment/cost authority. Approval: `evidence/approvals/PO-20261008-WEBSITE-WEB-FIRST.json`.
@@ -20,6 +20,14 @@ an excuse to overwrite files. Raw originals, model/media/design history, failed
 receipts, credentials and Production DB retain their existing preservation and
 publication boundaries. Older batch states below are dated provenance, never a
 resume instruction or proof that a current defect still exists.
+
+C1's 2026-10-09 clarification retains actual image/video understanding while
+limiting synchronous acquisition to one cover. Global §10 is the detailed current
+route: original media locators -> permitted asynchronous processing through the
+existing queue/Gateway/media owners -> versioned, locatable downstream results.
+OCR, speech, temporal visual analysis, coverage and unavailable execution remain
+distinct. Media executor/job binding is still OPEN, not proved by metadata or this
+rule publication. C1 continues its own work; no other paused window is resumed.
 
 The current C4 handoff's three production files (video_editing.py, rendering.py,
 episode_runtime.py) match main bytes. They require no duplicate source apply;
@@ -102,8 +110,35 @@ not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+
+This 2026-10-09 update reconciles existing adoption/status evidence, duplicate
+router prose and stale Experience dispatch/test wording; it adds no product source or
+resume a paused window. The preceding implementation batch is published at
+`560c4f3f332f24404ee52f6a9c98ece64651fb9e`, with observed Product run
+`37801876006` and App run `37801876135` both SUCCESS. Fresh HEAD/origin/live
+main matched that source before this update. Its installed-PWA/readout and
+full-screen user acceptance remain OPEN; a new rules commit has its own CI.
+
+W2's fifteen production paths are preserved in main: five match the frozen
+source and ten have equivalent or stronger successor behavior. The two SH-01
+candidate packages' five localization paths have all actual media keys and
+current editor consumers, with generated values matching the three locales.
+Do not replay these historical source trees. The exact private disposition and
+original pins remain in the existing M evidence record; source preservation
+does not establish a full task outcome. In particular, pinned production source
+has no external caller of the owned inference loaders or speech transcriber;
+service/user-task binding and real training still remain OPEN. Full original
+material reading remains IN_PROGRESS, never inferred from these source reviews.
+
+The Windows exact-main validation exposed a real documentation-budget failure:
+CRLF checkout needed 132843 bytes including the required 16384-byte headroom,
+above the unchanged 131072-byte budget. Duplicate AGENTS explanations are
+compressed with their complete routing/outcome/preservation requirements kept.
+The revised Windows checkout needs 130900 bytes including headroom. No model,
+effort, tier, account or persistent budget setting changes; the first failed
+validation remains preserved. Applicable checks are rerun on the changed rules.
 
 This bounded source publication repairs the existing runtime preflight's legacy
 product/directory claims, fixed root/data writes and unverified capability PASS.
@@ -112,7 +147,7 @@ honest, and restores this source's existing runtime owner/locator route. The
 actual CLI ran with an isolated temporary data directory: no P0 blockers, one
 LIVE_NOT_VERIFIED capability warning, configured attestation written and no DB
 created. This is preflight execution, not a Core reload or full product E2E.
-The next bounded historical frontend reconciliation retains the CTH-02 subject
+The published bounded historical frontend reconciliation retains the CTH-02 subject
 ID in its screen-reader label, as the existing screen contract requires, and
 corrects BMP-03's obsolete claim that missing momentum falls back to confidence,
 and aligns the Web manifest start URL with the existing ACC-03 root/launch route.
@@ -623,4 +658,4 @@ Seven protected C6 runtime/test paths implement Core entry/launch/boot identity 
 
 This rules revision carries M's final 14-path Website/Web-first, direct-build and native-target correction from `WEB-PRIORITY-DELIVERY.json` (SHA256 `39ebdfd9aab2f93c7db0c1645b9a7024c0dd2fdb7541eab33a461433f8dd30aa`, exact 9b211052 base), plus factual composition in CURRENT and its existing Round record. Runtime/F candidates and the machine semantic contract are excluded. Existing implementation, native platform projects, source materials, models, design/media assets and failure history are preserved. Exact final staged guard and remote readback receipts govern publication; this text alone proves no push, runtime load, release or user acceptance.
 
-Latest execution remains M + independent F + one C6 business slot. Public Website and Web Workspace close first; F implements directly through existing contracts. Later native clients target Windows/macOS and iOS; Linux server/CI/browser coverage remains. C1-C5 retain their full work while waiting. Manual settings remain unchanged and SETTINGS_UNVERIFIED. The native Goal remains PAUSED because the available API has no resume operation; actual PO continuation authorization is preserved without an ACTIVE claim. Full C6 is NOT_ACCEPTED; USER_VERIFIED, RELEASED and OPERATING are not claimed.
+Historical dispatch/Goal observation for that earlier C6 batch only: M + F + C6 and its then PAUSED Goal are not current scheduling. Latest direct PO instead authorizes M convergence/research/integration and continuous C1 full data-to-business closure; F/C2-C6 remain paused. The retained topology and Website/Web-first target are unchanged. Current-window M/C1 request is Sol 6.1 / ultra with existing speed; backend settings are SETTINGS_UNVERIFIED. Current native Goal state must be read from its actual API, not this historical receipt. Full C6, USER_VERIFIED, RELEASED and OPERATING remain unaccepted.
