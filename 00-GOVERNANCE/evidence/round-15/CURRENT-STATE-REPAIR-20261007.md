@@ -333,3 +333,21 @@ the new batch's exact-SHA CI or a running user outcome. C1's in-flight source,
 configuration, sessions and production DB are excluded from this publication.
 Research summaries, full reading, source adoption and learning permission retain
 their separate states; the remaining original-material corpus stays OPEN.
+
+### C1 post-intake purpose binding — current-rule clarification
+
+Direct PO message 01a11bb2-b90c-7c53-b3b8-1327cc8b54b0 explicitly requires
+post-acquisition keyword/topic analysis. Source inspection at 85b16ae7 confirmed
+Permission.check_prelaunch_maintenance currently produces only DATA_IMPORT,
+while Reporting._source_use_material and SavedWork._verified_evidence require
+their own real actor/source-use/rights. Those are not interchangeable grants.
+Global §10 now routes C1's bounded internal READ/ANALYZE implementation through
+the existing SYSTEM principal and signed plan, bound to each admitted source,
+content hash/version, exact scope, purpose, revocation and current-source checks.
+Derived persistence retains its existing write/version gate. It leaves original
+source rights UNREVIEWED where unknown, with no commercial quotation, training,
+export, publication, provider or cost expansion. No permission source, running
+C1 process, signed private configuration or Production DB was changed by M.
+This batch is RULES_ONLY, not a product/runtime acceptance. Earlier exact
+85b16ae7 Product/App runs succeeded (37787646720 / 37787646714); historical
+failures remain untouched and new-SHA CI must be read separately.

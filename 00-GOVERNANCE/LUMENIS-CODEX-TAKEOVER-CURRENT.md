@@ -102,13 +102,15 @@ not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-This bounded publication adopts the exact existing C4 Brief-parser source delta
-and synchronizes the newest C1 processing order through the existing Global §10,
-blueprint, owner route and approval receipt. It does not load Core or verify a
-real pitch/collection user outcome. Prior rules baseline `519c7d7e` has observed
+This bounded rules-only publication clarifies C1's post-intake internal analysis
+purpose and existing SYSTEM principal/source-use implementation route through
+Global §10, blueprint, owner route and the original direct PO receipt. The prior
+source publication at 85b16ae7 adopted the exact existing C4 Brief-parser delta
+and C1 processing-order rules. This change does not load Core or verify a real
+pitch/collection user outcome. Prior rules baseline `519c7d7e` has observed
 successful Product/App runs `37784756684` / `37784756793`; these are not CI proof
 for this new commit. Source batches `67e26a39` and `fa65267d` retain their own
 successful receipts. Product run `37768238335` at `8850b8cd` remains historical
@@ -123,6 +125,16 @@ task dates, authorization/rates/cursors and other media locators/history. C1
 continuously implements and verifies this inside its own existing full Goal;
 no pause, C6 transfer, account/cost expansion or other-window resume is implied.
 Detailed semantics and preserved limits: Global §10's current C1 priority.
+The necessary post-intake internal READ/ANALYZE principal/use binding is part of
+C1's existing assigned closure. Its current maintenance check audits DATA_IMPORT
+only; Reporting/SavedWork source-use checks do not grant a maintenance analysis
+identity. C1 repairs the bounded existing SYSTEM chain with exact source/hash/
+scope/version, current-purpose/revocation and derived-write checks. Original
+UNREVIEWED source rights remain unchanged; business quotation, training, export
+and external effects remain separately gated. This is a rules-only clarification,
+not an implemented or runtime-verified permission grant. Baseline 85b16ae7 has
+observed Product/App success (37787646720 / 37787646714); those runs do not prove
+the new publication's exact-SHA checks. C1 continues without a C6 transfer.
 
 The adopted `brief-ingestion-complete-candidate-03` parser has LF SHA256
 `d032a23c9f749f9fed3ed27a79647fce8733d6d39862ac349aa2b02d4d9b0965`.

@@ -118,7 +118,7 @@ Owner承接，状态与限制见 [CURRENT](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-
 证据，继续自己的真实用户成果；不重复实现或重做原文审计。研究、代码验证、实际业务验收
 和模型训练准入分别记录，不能互相替代。
 
-当前 C1 先按真实主体批量采集相关发帖，每批返回立即经原 Source/Evidence/Canonical 数据链处理，词条/主题分析后置，图片每帖最多处理一张真实封面；不等完整词库或六个平台结束。准确范围、原文覆盖、幂等/权益/恢复与未读状态保留，详见 [Global §10](00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md)。
+当前 C1 先按真实主体批量采集相关发帖，每批返回立即经原 Source/Evidence/Canonical 数据链处理，词条/主题分析后置，图片每帖最多处理一张真实封面；不等完整词库或六个平台结束。C1 自行落实同一 SYSTEM 权限链的内部分析用途绑定，导入回执不冒充分析授权，派生候选不冒充业务结论或改写原来源权益。准确范围、原文覆盖、幂等/权益/恢复与未读状态保留，详见 [Global §10](00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md)。
 
 ## 产品完整闭环职责（不可由 README 摘要缩减）
 

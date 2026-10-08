@@ -595,7 +595,7 @@ native time/role/metric facts and downstream source continuity. C1 implements it
 own closure and necessary runtime dependencies without a C6 slot switch. M sends
 one exact published delta for a relevant changed rule, not per-function approvals.
 Do not wait for all research or training before adopting a justified current fix.
-Latest direct C1 instruction is subject-led batch acquisition → immediate existing Source/Evidence/Canonical processing → post-intake term analysis, with at most one native cover image per post. Global §10 owns its exact bounded order; full vocabulary/media processing is not a prerequisite, and current owner/identity/rights/coverage/recovery remain enforced.
+Latest direct C1 instruction is subject-led batch acquisition → immediate existing Source/Evidence/Canonical processing → post-intake term analysis, with at most one native cover image per post. Global §10 owns its exact bounded order; full vocabulary/media processing is not a prerequisite, and current owner/identity/rights/coverage/recovery remain enforced. C1 also implements the necessary existing SYSTEM Permission/maintenance-principal internal READ/ANALYZE binding for that post-intake purpose. DATA_IMPORT alone is insufficient; pin each source/hash/version/scope, recheck revocation, preserve original rights, and use existing derived-version/write gates. Reporting/SavedWork business source-use checks are separate consumers and must not be weakened or fed a fabricated user identity. No C6 slot switch or per-function approval is required for this already assigned bounded chain.
 
 Local C2 material-helper corrections are reading/admission preparation only;
 the existing current-context/one admission entry selects inputs, while its old

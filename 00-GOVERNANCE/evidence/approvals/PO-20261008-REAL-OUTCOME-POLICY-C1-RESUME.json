@@ -63,7 +63,38 @@
       "rule_owner": "existing Global section 10; AGENTS sole router",
       "new_permission_account_cost_or_product_scope": false,
       "other_windows_resumed": false,
-      "historical_media_and_materials_preserved": true
+      "historical_media_and_materials_preserved": true,
+      "post_intake_purpose_implementation": {
+        "basis": "The same direct PO quote explicitly requests post-intake keyword analysis; M resolves the bounded existing-owner implementation, not third-party rights",
+        "executor": "C1",
+        "existing_owner": "SYSTEM Permission / signed maintenance plan / existing collector derived processing",
+        "internal_purpose": "Keyword/topic candidate extraction and scoped batch material statistics only",
+        "existing_reuse": "lumenis/system/collector/acquisition_plan.py build_observed_topic_catalog; projection remains derivative and not formal admission",
+        "required_bindings": [
+          "real server-held maintenance principal",
+          "current revocable signed plan",
+          "exact Source/Evidence refs",
+          "content hash and source version",
+          "domain/entity/task scope",
+          "use/policy/processing version",
+          "source-policy/privacy checks",
+          "existing derived-write/version/audit gates"
+        ],
+        "not_granted": [
+          "commercial quotation",
+          "training",
+          "export",
+          "publication",
+          "third-party rights",
+          "new provider",
+          "external effect"
+        ],
+        "original_source_rights": "Preserve UNREVIEWED/allowed_uses and all original source bytes",
+        "implementation_state": "REQUIRED_NOT_VERIFIED",
+        "current_DATA_IMPORT_receipt_authorizes_analysis": false,
+        "reporting_business_source_use_checks_weakened": false,
+        "other_windows_resumed": false
+      }
     }
   },
   "constraints": [
