@@ -461,6 +461,7 @@ final class MediaProjectOverlay {
     required this.startSec,
     required this.endSec,
     required this.text,
+    this.layoutProfile,
   });
 
   final String overlayId;
@@ -468,6 +469,7 @@ final class MediaProjectOverlay {
   final double startSec;
   final double endSec;
   final String text;
+  final String? layoutProfile;
 
   factory MediaProjectOverlay.fromJson(Object? value) {
     final json = _object(value, {
@@ -476,6 +478,7 @@ final class MediaProjectOverlay {
       'start_sec',
       'end_sec',
       'text',
+      if (value is Map && value.containsKey('layout_profile')) 'layout_profile',
     }, 'overlay');
     final overlay = MediaProjectOverlay(
       overlayId: _string(json['overlay_id'], 'overlay_id'),
@@ -483,12 +486,20 @@ final class MediaProjectOverlay {
       startSec: _number(json['start_sec'], 'start_sec'),
       endSec: _number(json['end_sec'], 'end_sec'),
       text: _string(json['text'], 'text'),
+      layoutProfile: json.containsKey('layout_profile')
+          ? _string(json['layout_profile'], 'layout_profile')
+          : null,
     );
     overlay._validate();
     return overlay;
   }
 
   void _validate() {
+    _require(
+      layoutProfile == null ||
+          (kind == 'caption' && layoutProfile == 'literal-wide-720p-v2'),
+      'overlay layout profile is unsupported',
+    );
     _require(
       kind == 'caption' || kind == 'text',
       'overlay kind is unsupported',
@@ -502,6 +513,7 @@ final class MediaProjectOverlay {
     'start_sec': startSec,
     'end_sec': endSec,
     'text': text,
+    if (layoutProfile != null) 'layout_profile': layoutProfile,
   };
 }
 
@@ -905,6 +917,78 @@ final class MediaProjectSnapshot {
     );
   }
 
+  MediaProjectSnapshot replaceClipSource(
+    String clipId, {
+    required String mediaAssetId,
+    required double sourceIn,
+    required String audioRole,
+    required int? audioStreamIndex,
+  }) {
+    final (track, clip) = _clip(clipId);
+    final asset = _asset(mediaAssetId);
+    final video = track.kind == 'video';
+    if (video) _guardVideoEdits();
+    _number(sourceIn, 'source_in');
+    final sourceOut = sourceIn + clip.durationSec;
+    _number(sourceOut, 'source_out');
+    _require(
+      sourceOut > sourceIn && sourceOut <= asset.durationSec,
+      'replacement is outside inspected media',
+    );
+    if (video) {
+      _require(asset.hasVideo, 'video track requires video media');
+      _require(
+        audioRole == 'original' || audioRole == 'muted',
+        'video audio role is invalid',
+      );
+      if (audioRole == 'muted') {
+        _require(audioStreamIndex == null, 'muted video cannot select audio');
+      } else {
+        audioStreamIndex ??= asset.audioStreamCount == 1 ? 0 : null;
+        _require(
+          asset.audioStreamCount <= 1 || audioStreamIndex != null,
+          'multi-stream video requires explicit audio selection',
+        );
+      }
+    } else {
+      _require(asset.audioStreamCount > 0, 'audio track requires audio media');
+      _require(audioRole == track.kind, 'audio role must match track kind');
+      audioStreamIndex ??= asset.audioStreamCount == 1 ? 0 : null;
+      _require(audioStreamIndex != null, 'audio stream selection is required');
+    }
+    if (audioStreamIndex != null) {
+      _integer(audioStreamIndex, 'audio_stream_index', maximum: 255);
+      _require(
+        audioStreamIndex < asset.audioStreamCount,
+        'audio stream index is out of range',
+      );
+    }
+    final replaced = clip.copyWith(
+      mediaAssetId: mediaAssetId,
+      sourceIn: sourceIn,
+      sourceOut: sourceOut,
+      audioRole: audioRole,
+      audioStreamIndex: audioStreamIndex,
+    );
+    // A fixed-window replacement must not reflow neighboring clips.
+    return _commit(
+      tracks: [
+        for (final item in tracks)
+          if (item.trackId == track.trackId)
+            MediaProjectTrack(
+              trackId: item.trackId,
+              kind: item.kind,
+              clips: [
+                for (final original in item.clips)
+                  original.clipId == clipId ? replaced : original,
+              ],
+            )
+          else
+            item,
+      ],
+    );
+  }
+
   MediaProjectSnapshot trimClip(
     String clipId, {
     required double sourceIn,
@@ -1186,9 +1270,46 @@ final class MediaProjectSnapshot {
       kind: kind,
       startSec: startSec,
       endSec: endSec,
-      text: text.trim(),
+      text: text,
     );
     return _commit(overlays: [...overlays, overlay]);
+  }
+
+  MediaProjectSnapshot updateOverlay(
+    String overlayId, {
+    required double startSec,
+    required double endSec,
+    required String text,
+  }) {
+    final index = overlays.indexWhere(
+      (overlay) => overlay.overlayId == overlayId,
+    );
+    _require(index >= 0, 'overlay not found');
+    _number(startSec, 'overlay start');
+    _number(endSec, 'overlay end');
+    _require(endSec > startSec, 'overlay range must have positive duration');
+    _require(text.trim().isNotEmpty, 'overlay text is required');
+
+    final current = overlays[index];
+    final changed = overlays.toList();
+    changed[index] = MediaProjectOverlay(
+      overlayId: current.overlayId,
+      kind: current.kind,
+      startSec: startSec,
+      endSec: endSec,
+      text: text,
+      layoutProfile: current.layoutProfile,
+    );
+    return _commit(overlays: changed);
+  }
+
+  MediaProjectSnapshot deleteOverlay(String overlayId) {
+    final index = overlays.indexWhere(
+      (overlay) => overlay.overlayId == overlayId,
+    );
+    _require(index >= 0, 'overlay not found');
+    final changed = overlays.toList()..removeAt(index);
+    return _commit(overlays: changed);
   }
 
   MediaProjectSnapshot _replaceClip(

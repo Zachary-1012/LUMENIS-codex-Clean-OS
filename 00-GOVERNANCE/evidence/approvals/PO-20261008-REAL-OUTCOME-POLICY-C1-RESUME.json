@@ -39,6 +39,19 @@
       "other_windows_resumed": false,
       "C1_work_overwritten": false,
       "new_test_or_paid_scope": false
+    },
+    "M_material_adoption_extension": {
+      "source": "Direct PO messages in current M thread, 2026-10-08",
+      "quotes": [
+        "特别是规划，很多都是升级优化了的，闭环的过程中就要落实，然后那些没有研究完的材料，线上本地，你开智能体，全部研究透彻，按照规则落实应用，和蒸馏什么的",
+        "包括升级后的规划，以及本地和线上仓库的资料",
+        "不能缺失不能未读，我要求的就是100%"
+      ],
+      "executor": "M with bounded research assistants",
+      "scope": "Recover original inputs and prior DeepSeek/ancestor analysis; complete actual reading coverage; apply justified findings to existing approved capabilities and current closure, preserving all original materials",
+      "training_admission": "Separate rights/purpose/quality approval remains required; no automatic training grant",
+      "C1_independent": true,
+      "paused_product_windows_resumed": false
     }
   },
   "constraints": [

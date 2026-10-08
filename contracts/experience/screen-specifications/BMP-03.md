@@ -173,3 +173,10 @@ F 在 Product Owner 明确恢复后，在本屏现有规范中补齐同一条链
 - **覆盖：** 四端职责、中文/英文/韩文、明暗模式、宽度/字号、键盘/读屏、加载/空/未知/拒绝/离线/错误/恢复；必要长内容可滚动，其余避免无意义整页上下滚动。
 - **变更及验收：** 设计 diff → 受影响组件/Token/Action → 原状态/焦点/路由/任务连续性回归 → 实际操作证据及回退。只修对应部分，不重生成全 App；源码/设计/测试状态分别记录。
 - **完成边界：** 当前 Figma 链和真实四端操作证据未核实，不提升本屏状态。PNG、伪造 .fig、44张示意图、路由存在或 Widget 可显示都不能代替可编辑设计和真实用户结果。
+
+
+### 2026-10-08 existing candidate source reconciliation
+
+Existing section 5B signal reading and return candidate is reconciled into current source. No missing source summary or confidence/momentum value is fabricated. Current authorization and actual scoped-signal/Evidence acceptance remain independent; this source recovery does not promote the whole-screen status.
+Historical module-test rows above are preserved evidence only under the current
+formal PO verification policy; they are not instructions to run those suites.

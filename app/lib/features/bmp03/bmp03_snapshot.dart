@@ -215,8 +215,8 @@ class Bmp03Signal {
   final String title;
   final String kind;
   final Map<String, String> kindLabel;
-  final num confidence;
-  final num momentum;
+  final num? confidence;
+  final num? momentum;
   final String source;
   final String evidenceReference;
   final String? capturedAt;
@@ -230,9 +230,10 @@ class Bmp03Signal {
     final title = _safeText(json['title']);
     final kind = _safeText(json['kind']);
     final confidence = _safeNumber(json['confidence'], max: 100);
-    final momentum =
-        _safeNumber(json['momentum'] ?? json['momentum_score'], max: 100) ??
-        confidence;
+    final momentum = _safeNumber(
+      json.containsKey('momentum') ? json['momentum'] : json['momentum_score'],
+      max: 100,
+    );
     final source = _safeText(json['source'] ?? json['source_name']);
     final evidenceReference = _canonicalEvidenceReference(json['evidence']);
     if ((json.containsKey('brand_focus_id') &&
@@ -241,7 +242,6 @@ class Bmp03Signal {
         id == null ||
         title == null ||
         kind == null ||
-        confidence == null ||
         source == null ||
         evidenceReference == null) {
       return null;
@@ -253,7 +253,7 @@ class Bmp03Signal {
       kind: kind,
       kindLabel: _localizedMap(json['kind_label']),
       confidence: confidence,
-      momentum: momentum!,
+      momentum: momentum,
       source: source,
       evidenceReference: evidenceReference,
       capturedAt: _safeText(json['captured_at'] ?? json['time']),
@@ -368,7 +368,9 @@ Map<String, Object?>? _canonicalScope(Object? value) {
     'subject_id',
     'brand_focus_id',
   };
-  if (scope == null || scope.length != keys.length || !scope.keys.every(keys.contains)) {
+  if (scope == null ||
+      scope.length != keys.length ||
+      !scope.keys.every(keys.contains)) {
     return null;
   }
   final mode = scope['mode'];
@@ -383,9 +385,7 @@ Map<String, Object?>? _canonicalScope(Object? value) {
   }
   final subjectId = _scopeId(scope['subject_id']);
   final brandFocusId = _scopeId(scope['brand_focus_id']);
-  return subjectId != null &&
-          brandFocusId != null &&
-          subjectId != brandFocusId
+  return subjectId != null && brandFocusId != null && subjectId != brandFocusId
       ? scope
       : null;
 }

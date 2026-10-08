@@ -7,6 +7,7 @@
 > 最新 PO 执行纠正：C1 持续自行完成真实采集闭环及其必需的既有 Core/Runtime、Scheduler、现有授权服务端绑定修复和受控运行操作，不暂停 C1、不转交 C6。源码的架构 Owner 不变；本次必要调用链的实际执行者为 C1，沿已有 W6 Shared Reservations 记录有界交接并保护原冻结成果和无关工作。进程归属、在途任务、备份恢复、Permission、账号与零新增费用边界不变。M 负责边界同步、成果审核和正式集成，不代做 C1 普通修复。其余窗口继续暂停；不据此声称任何能力已验收。
 >
 > 本次 PO 另行指定 M 收敛非 C1 的既有本地候选与未集成源码；沿本索引原 Owner 认领逐项发布，不恢复暂停窗口、不代做 C1。C1 已冻结 F-08/F-09 数据合同作为业务依赖按原哈希吸收，其活动采集源码继续独立保护。源码集成、真实运行和完整用户验收分别记录；入口为既有 Round 15 CURRENT-STATE-REPAIR-20261007.md。
+> 最新 PO 增补要求 M 用研究子智能体完整追回并实际研究未完成的本地/线上原始材料、DeepSeek祖先分析和升级规划，按现有 Owner/源码落实能力；材料索引、摘要、蒸馏包与真实产品采用分别核实，未读/未取得不得结项，训练另行准入。
 >
 > Updated: 2026-10-07; earlier baseline tables remain dated provenance
 > Approved ROUND 01 source-audit baseline: `df15a99de6f5ffc3eb85e2c9924afb59c1c3c781` (provenance only; resolve the live `origin/main` before every change)

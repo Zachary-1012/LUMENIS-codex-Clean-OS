@@ -829,6 +829,27 @@
   "shell.auth_unavailable": "Connection authorization expired",
   "shell.restricted": "Service access restricted",
   "shell.error": "Connection failed",
-  "shell.degraded": "Some services unavailable"
+  "shell.degraded": "Some services unavailable",
+  "sh01.media.overlay_add": "Captions and text",
+  "sh01.media.overlay_caption": "Caption",
+  "sh01.media.overlay_text": "Text",
+  "sh01.media.overlay_content": "Text content",
+  "sh01.media.overlay_start": "Start (seconds)",
+  "sh01.media.overlay_end": "End (seconds)",
+  "sh01.media.overlay_invalid": "Enter text and a valid start and end time.",
+  "sh01.media.overlay_delete": "Remove text",
+  "sh01.media.apply_before_export": "Apply or cancel the changes in Properties before exporting.",
+  "sh01.media.apply_before_undo": "Apply or cancel the changes in Properties before undoing the timeline.",
+  "sh01.media.replace_source": "Replace source",
+  "sh01.media.replacement_source": "New source",
+  "sh01.media.replacement_range": "Keep {duration} s · Source {start}–{end} s",
+  "sh01.media.replacement_apply": "Apply replacement",
+  "sh01.media.replacement_empty": "Import another compatible video or audio source first",
+  "sh01.media.replacement_short": "The new source is too short to preserve the clip duration; adjust its start or choose another source",
+  "sh01.media.replacement_invalid": "Check the source, start time, and audio selection",
+  "sh01.media.apply_before_replace": "Apply or cancel the current adjustments first",
+  "sh01.media.cancel_adjustment": "Cancel adjustments",
+  "sh01.media.replacement_audio_missing": "This source has no audio, so the clip will remain silent",
+  "sh01.media.replacement_transition_blocked": "This project contains transitions; clip replacement is unavailable"
  }
 }

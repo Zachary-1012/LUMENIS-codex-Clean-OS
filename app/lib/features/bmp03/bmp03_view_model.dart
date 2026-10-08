@@ -49,6 +49,16 @@ class Bmp03ViewModel extends ChangeNotifier {
     try {
       final snapshot = await _repository.load();
       if (_disposed) return;
+      final previousFocus = _snapshot?.focus;
+      final focus = snapshot.focus;
+      if (previousFocus == null ||
+          previousFocus.mode != focus.mode ||
+          previousFocus.subjectId != focus.subjectId ||
+          previousFocus.brandFocusId != focus.brandFocusId ||
+          !snapshot.scopeReady) {
+        _kindFilter = null;
+        _selectedSignalId = null;
+      }
       _snapshot = snapshot;
       _phase = Bmp03LoadPhase.ready;
       if (!_snapshot!.signals.any((signal) => signal.id == _selectedSignalId)) {
@@ -69,6 +79,11 @@ class Bmp03ViewModel extends ChangeNotifier {
   void setKindFilter(String? kind) {
     if (_kindFilter == kind) return;
     _kindFilter = kind;
+    if (!filteredSignals.any((signal) => signal.id == _selectedSignalId)) {
+      _selectedSignalId = filteredSignals.isEmpty
+          ? null
+          : filteredSignals.first.id;
+    }
     notifyListeners();
   }
 

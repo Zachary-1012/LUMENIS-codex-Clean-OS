@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
+import '../../../core/lumenis_icon.dart';
 import '../../../l10n/lumenis_localizations.dart';
 import '../../../navigation/lumenis_leave_guard.dart';
 import 'media_preview.dart';
@@ -64,6 +65,8 @@ class MediaProjectWorkbench extends StatefulWidget {
   State<MediaProjectWorkbench> createState() => _MediaProjectWorkbenchState();
 }
 
+enum _MediaProjectWorkbenchLayer { sources, properties, actions }
+
 class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   late MediaProjectController _controller;
   late SavedMediaProjectsController _savedProjects;
@@ -90,8 +93,13 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   double? _timelinePlayheadSec;
   Duration? _previewSeekPosition;
   int _previewSeekRequest = 0;
-  bool _layerOpen = false;
+  _MediaProjectWorkbenchLayer? _activeLayer;
+  bool get _layerOpen => _activeLayer != null;
   final _inspectorDrafts = <String, _ClipInspectorDraft>{};
+  final _overlayDrafts = <String, _OverlayInspectorDraft>{};
+  final _newOverlayDrafts = <String, _OverlayInspectorDraft>{};
+  String? _selectedOverlayId;
+  String? _newOverlayKind;
   LumenisLeaveGuard? _leaveGuard;
 
   @override
@@ -236,26 +244,39 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
           _ => 'importing',
         };
 
-  bool get _hasUnappliedInspectorDrafts {
+  bool get _hasUnappliedInspectorDrafts =>
+      _hasUnappliedClipDrafts ||
+      _newOverlayDrafts.isNotEmpty ||
+      _overlayDrafts.entries.any((entry) {
+        final overlay = _controllerInitialized
+            ? _controller.timeline?.overlays
+                  .where((overlay) => overlay.overlayId == entry.key)
+                  .firstOrNull
+            : null;
+        return overlay == null || !entry.value.matches(overlay);
+      });
+
+  bool get _hasUnappliedClipDrafts {
     if (_inspectorDrafts.isEmpty) return false;
     final timeline = _controllerInitialized ? _controller.timeline : null;
     for (final entry in _inspectorDrafts.entries) {
+      if (entry.value.replacement != null) return true;
       final clip = timeline?.tracks
           .expand((track) => track.clips)
           .where((candidate) => candidate.clipId == entry.key)
           .firstOrNull;
       if (clip == null) return true;
-      final expected = <String, String>{
-        'source_in': _seconds(clip.sourceIn),
-        'source_out': _seconds(clip.sourceOut),
-        'position': _seconds(clip.timelineStart),
-        'gain': _seconds(clip.audioMix.volume),
-        'fade_in': _seconds(clip.audioMix.fadeInSec),
-        'fade_out': _seconds(clip.audioMix.fadeOutSec),
-        'split_position': _seconds((clip.sourceIn + clip.sourceOut) / 2),
+      final expected = <String, double>{
+        'source_in': clip.sourceIn,
+        'source_out': clip.sourceOut,
+        'position': clip.timelineStart,
+        'gain': clip.audioMix.volume,
+        'fade_in': clip.audioMix.fadeInSec,
+        'fade_out': clip.audioMix.fadeOutSec,
+        'split_position': (clip.sourceIn + clip.sourceOut) / 2,
       };
       if (entry.value.values.entries.any(
-        (value) => expected[value.key] != value.value,
+        (value) => expected[value.key] != double.tryParse(value.value),
       )) {
         return true;
       }
@@ -317,6 +338,10 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     if (_controller.failureCode == null &&
         _controller.version?.artifactId == artifactId) {
       _inspectorDrafts.clear();
+      _overlayDrafts.clear();
+      _newOverlayDrafts.clear();
+      _selectedOverlayId = null;
+      _newOverlayKind = null;
       _savedReference.text = artifactId;
       _leaveGuard?.refresh();
     }
@@ -701,6 +726,16 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
               .toSet() ??
           <String>{};
       _inspectorDrafts.removeWhere((id, _) => !remainingClips.contains(id));
+      final remainingOverlays =
+          _controller.timeline?.overlays
+              .map((overlay) => overlay.overlayId)
+              .toSet() ??
+          <String>{};
+      _overlayDrafts.removeWhere((id, _) => !remainingOverlays.contains(id));
+      if (_selectedOverlayId != null &&
+          !remainingOverlays.contains(_selectedOverlayId)) {
+        _selectedOverlayId = null;
+      }
       setState(() => _notice = null);
       _leaveGuard?.refresh();
       _sheetUpdates.refresh();
@@ -739,7 +774,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
         .firstOrNull
         ?.clips;
     if (_notice == null && clips != null && clips.isNotEmpty) {
-      _controller.selectClip(clips.last.clipId);
+      _selectClip(clips.last.clipId);
     }
   }
 
@@ -1023,7 +1058,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                   SizedBox(
                                     key: const Key('media-timeline-region'),
                                     height: timelineHeight,
-                                    child: _timeline(timeline),
+                                    child: _timeline(timeline, wide: wide),
                                   ),
                                 ],
                               ),
@@ -1147,12 +1182,15 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
             key: 'media-open-sources',
             title: 'sources',
             icon: Icons.video_library_outlined,
-            selected: wide && _sourcesVisible,
+            selected: wide
+                ? _sourcesVisible
+                : _activeLayer == _MediaProjectWorkbenchLayer.sources,
             onPressed: () {
               if (wide) {
                 setState(() => _sourcesVisible = !_sourcesVisible);
               } else {
                 _openLayerSheet(
+                  layer: _MediaProjectWorkbenchLayer.sources,
                   title: _copy(context, 'sources'),
                   content: (_, sheetContext) => _sources(
                     _canUseCurrentContext ? _controller.timeline : null,
@@ -1169,31 +1207,31 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
             key: 'media-open-properties',
             title: 'properties',
             icon: Icons.tune_rounded,
-            selected: wide && _propertiesVisible,
+            selected: wide
+                ? _propertiesVisible
+                : _activeLayer == _MediaProjectWorkbenchLayer.properties,
             onPressed: () {
               if (wide) {
                 setState(() => _propertiesVisible = !_propertiesVisible);
               } else {
-                _openLayerSheet(
-                  title: _copy(context, 'properties'),
-                  content: (_, _) {
-                    final latest = _canUseCurrentContext
-                        ? _controller.timeline
-                        : null;
-                    return _inspector(latest, _selectedClip(latest));
-                  },
-                );
+                _openPropertiesLayer();
               }
             },
           ),
           IconButton(
             key: const Key('media-toolbar-undo'),
-            tooltip: _copy(context, 'undo'),
+            tooltip: _copy(
+              context,
+              _hasUnappliedInspectorDrafts ? 'apply_before_undo' : 'undo',
+            ),
             constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-            onPressed: timeline?.canUndo == true && !_isBusy
+            onPressed:
+                timeline?.canUndo == true &&
+                    !_isBusy &&
+                    !_hasUnappliedInspectorDrafts
                 ? () => _edit((s) => s.undo())
                 : null,
-            icon: const Icon(Icons.undo_rounded),
+            icon: const LumenisIcon(Icons.undo_rounded),
           ),
         ],
       );
@@ -1205,6 +1243,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     required bool selected,
     required VoidCallback onPressed,
   }) => Semantics(
+    key: Key('$key-selected-semantics'),
     selected: selected,
     child: OutlinedButton.icon(
       key: Key(key),
@@ -1367,13 +1406,14 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   }
 
   Future<void> _openLayerSheet({
+    required _MediaProjectWorkbenchLayer layer,
     required String title,
     required Widget Function(
       StateSetter setSheetState,
       BuildContext sheetContext,
     )
     content,
-  }) => _showLayerSheet(title: title, content: content);
+  }) => _showLayerSheet(layer: layer, title: title, content: content);
 
   MediaProjectClip? _selectedClip(MediaProjectSnapshot? timeline) => timeline
       ?.tracks
@@ -1385,16 +1425,140 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       _pane(
         context,
         'properties',
-        _ClipInspector(
-          timeline: timeline,
-          clip: clip,
-          onEdit: _edit,
-          draft: clip == null ? null : _inspectorDrafts[clip.clipId],
-          onDraftChanged: _updateInspectorDraft,
-        ),
+        _selectedOverlayId != null || _newOverlayKind != null
+            ? _overlayInspector(timeline)
+            : _ClipInspector(
+                timeline: timeline,
+                clip: clip,
+                onEdit: _edit,
+                draft: clip == null ? null : _inspectorDrafts[clip.clipId],
+                onDraftChanged: _updateInspectorDraft,
+                onImportSource: () {
+                  if (_activeLayer == _MediaProjectWorkbenchLayer.properties) {
+                    Navigator.of(context).pop();
+                  }
+                  _choose();
+                },
+              ),
       );
 
+  Future<void> _openPropertiesLayer() => _openLayerSheet(
+    layer: _MediaProjectWorkbenchLayer.properties,
+    title: _copy(context, 'properties'),
+    content: (_, _) {
+      final timeline = _canUseCurrentContext ? _controller.timeline : null;
+      return _inspector(timeline, _selectedClip(timeline));
+    },
+  );
+
+  void _selectClip(String? id) {
+    _selectedOverlayId = null;
+    _newOverlayKind = null;
+    _controller.selectClip(id);
+  }
+
+  void _selectOverlay(String id, {required bool wide}) {
+    if (!_canUseCurrentContext ||
+        !_controller.timeline!.overlays.any((item) => item.overlayId == id)) {
+      return;
+    }
+    setState(() {
+      _selectedOverlayId = id;
+      _newOverlayKind = null;
+      _propertiesVisible = true;
+    });
+    if (!wide) _openPropertiesLayer();
+  }
+
+  void _beginOverlay(String kind, {required bool wide}) {
+    if (_isBusy || !_canUseCurrentContext) return;
+    setState(() {
+      _selectedOverlayId = null;
+      _newOverlayKind = kind;
+      _propertiesVisible = true;
+    });
+    if (!wide) _openPropertiesLayer();
+  }
+
+  void _overlayDraftChanged(
+    String? id,
+    String kind,
+    _OverlayInspectorDraft? draft,
+  ) {
+    final drafts = id == null ? _newOverlayDrafts : _overlayDrafts;
+    final key = id ?? kind;
+    if (draft == null) {
+      drafts.remove(key);
+    } else {
+      drafts[key] = draft;
+    }
+    _leaveGuard?.refresh();
+    _sheetUpdates.refresh();
+    if (mounted) setState(() {});
+  }
+
+  Widget _overlayInspector(MediaProjectSnapshot? timeline) {
+    if (timeline == null) return Text(_copy(context, 'context'));
+    final overlay = timeline.overlays
+        .where((item) => item.overlayId == _selectedOverlayId)
+        .firstOrNull;
+    final kind = _newOverlayKind ?? overlay?.kind;
+    if (kind == null) return Text(_copy(context, 'select'));
+    final id = overlay?.overlayId;
+    return _OverlayInspector(
+      key: ValueKey(id == null ? 'new-overlay-$kind' : 'overlay-inspector-$id'),
+      overlay: overlay,
+      kind: kind,
+      defaultEnd: math.min(3.0, timeline.durationSec),
+      draft: id == null ? _newOverlayDrafts[kind] : _overlayDrafts[id],
+      enabled: !_isBusy && _canUseCurrentContext,
+      onChanged: (draft) => _overlayDraftChanged(id, kind, draft),
+      onApply: (draft) {
+        if (_isBusy || !_canUseCurrentContext) return false;
+        final applied = _edit(
+          (snapshot) => id == null
+              ? snapshot.addOverlay(
+                  kind: kind,
+                  startSec: draft.startSec,
+                  endSec: draft.endSec,
+                  text: draft.text,
+                )
+              : snapshot.updateOverlay(
+                  id,
+                  startSec: draft.startSec,
+                  endSec: draft.endSec,
+                  text: draft.text,
+                ),
+        );
+        if (!applied) return false;
+        _overlayDraftChanged(id, kind, null);
+        setState(() {
+          _selectedOverlayId =
+              id ?? _controller.timeline!.overlays.last.overlayId;
+          _newOverlayKind = null;
+        });
+        _sheetUpdates.refresh();
+        return true;
+      },
+      onCancel: () {
+        _overlayDraftChanged(id, kind, null);
+        setState(() {
+          _selectedOverlayId = id;
+          _newOverlayKind = null;
+        });
+        _sheetUpdates.refresh();
+      },
+      onDelete: id == null
+          ? null
+          : () {
+              if (_isBusy || !_canUseCurrentContext) return false;
+              return _edit((snapshot) => snapshot.deleteOverlay(id));
+            },
+    );
+  }
+
   Future<void> _openActionsSheet() => _showLayerSheet(
+    layer: _MediaProjectWorkbenchLayer.actions,
     title: _copy(context, 'versions_export'),
     content: (setSheetState, sheetContext) => _actions(
       _canUseCurrentContext ? _controller.timeline : null,
@@ -1415,6 +1579,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   }
 
   Future<void> _showLayerSheet({
+    required _MediaProjectWorkbenchLayer layer,
     required String title,
     required Widget Function(
       StateSetter setSheetState,
@@ -1422,7 +1587,8 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     )
     content,
   }) async {
-    setState(() => _layerOpen = true);
+    if (_activeLayer != null) return;
+    setState(() => _activeLayer = layer);
     try {
       await showModalBottomSheet<void>(
         context: context,
@@ -1512,7 +1678,9 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
         ),
       );
     } finally {
-      if (mounted) setState(() => _layerOpen = false);
+      if (mounted && _activeLayer == layer) {
+        setState(() => _activeLayer = null);
+      }
     }
   }
 
@@ -1552,25 +1720,46 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                   timeline == null ||
                       working ||
                       !_canUseCurrentContext ||
+                      _hasUnappliedInspectorDrafts ||
                       _controller.completionUnknown
                   ? null
                   : () => _controller.export(
                       outputKind: 'video',
                       demoAcknowledged: _demo,
                     ),
-              icon: const Icon(Icons.file_download_outlined),
+              icon: const LumenisIcon(Icons.file_download_outlined),
               label: Text(_copy(context, 'export')),
             ),
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
-              onPressed: timeline?.canUndo == true
-                  ? () => _edit((s) => s.undo())
-                  : null,
-              icon: const Icon(Icons.undo),
-              label: Text(_copy(context, 'undo')),
+            Tooltip(
+              message: _copy(
+                context,
+                _hasUnappliedInspectorDrafts ? 'apply_before_undo' : 'undo',
+              ),
+              child: OutlinedButton.icon(
+                key: const Key('media-actions-undo'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                ),
+                onPressed:
+                    timeline?.canUndo == true &&
+                        !working &&
+                        !_hasUnappliedInspectorDrafts
+                    ? () => _edit((s) => s.undo())
+                    : null,
+                icon: const LumenisIcon(Icons.undo),
+                label: Text(_copy(context, 'undo')),
+              ),
             ),
           ],
         ),
+        if (_hasUnappliedInspectorDrafts && _canUseCurrentContext)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(
+              _copy(context, 'apply_before_export'),
+              key: const Key('media-apply-before-export'),
+            ),
+          ),
         if (_controller.needsOriginalFiles)
           Padding(
             padding: const EdgeInsets.only(top: 12),
@@ -1738,7 +1927,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     ),
   );
 
-  Widget _timeline(MediaProjectSnapshot? timeline) {
+  Widget _timeline(MediaProjectSnapshot? timeline, {required bool wide}) {
     final palette = LumenisTheme.of(context);
     final textSize = MediaQuery.textScalerOf(context).scale(14);
     final rowHeight = math.max(72.0, textSize * 3 + 20);
@@ -1789,24 +1978,41 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                             .58,
                           );
                         }),
-                  icon: const Icon(Icons.keyboard_arrow_up_rounded),
+                  icon: const LumenisIcon(Icons.keyboard_arrow_up_rounded),
                 ),
                 if (timeline != null &&
-                    tracks.any((track) => track.clips.isNotEmpty))
-                  PopupMenuButton<String>(
+                    (tracks.any((track) => track.clips.isNotEmpty) ||
+                        overlays.isNotEmpty))
+                  PopupMenuButton<Object>(
                     key: const Key('media-clip-list'),
                     tooltip: _copy(context, 'select'),
-                    icon: const Icon(Icons.view_list_outlined),
-                    onSelected: _controller.selectClip,
+                    icon: const LumenisIcon(Icons.view_list_outlined),
+                    onSelected: (item) {
+                      if (item is MediaProjectOverlay) {
+                        _selectOverlay(item.overlayId, wide: wide);
+                      } else if (item is MediaProjectClip) {
+                        _selectClip(item.clipId);
+                      }
+                    },
                     itemBuilder: (_) => [
                       for (final track in tracks)
                         for (final clip in track.clips)
                           PopupMenuItem(
-                            value: clip.clipId,
+                            value: clip,
                             child: Text(
                               '${timeline.assets.firstWhere((a) => a.assetId == clip.mediaAssetId).filename} · ${_seconds(clip.timelineStart)} s',
                             ),
                           ),
+                      for (final overlay in overlays)
+                        PopupMenuItem<Object>(
+                          key: Key('media-overlay-menu-${overlay.overlayId}'),
+                          value: overlay,
+                          child: Text(
+                            '${_copy(context, 'overlay_${overlay.kind}')} · ${_seconds(overlay.startSec)} s · ${overlay.text}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                     ],
                   ),
                 PopupMenuButton<double>(
@@ -1824,6 +2030,27 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                       PopupMenuItem(
                         value: zoom,
                         child: Text('${(zoom * 100).round()}%'),
+                      ),
+                  ],
+                ),
+                PopupMenuButton<String>(
+                  key: const Key('media-add-overlay'),
+                  tooltip: _copy(context, 'overlay_add'),
+                  enabled:
+                      !_isBusy &&
+                      timeline != null &&
+                      tracks.any(
+                        (track) =>
+                            track.kind == 'video' && track.clips.isNotEmpty,
+                      ),
+                  icon: const LumenisIcon(Icons.add_rounded),
+                  onSelected: (kind) => _beginOverlay(kind, wide: wide),
+                  itemBuilder: (_) => [
+                    for (final kind in ['caption', 'text'])
+                      PopupMenuItem(
+                        key: Key('media-add-overlay-$kind'),
+                        value: kind,
+                        child: Text(_copy(context, 'overlay_$kind')),
                       ),
                   ],
                 ),
@@ -1901,6 +2128,29 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                         style: Theme.of(
                                           context,
                                         ).textTheme.labelMedium,
+                                      ),
+                                    ),
+                                  for (final overlay in overlays)
+                                    SizedBox(
+                                      height: rowHeight,
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                        ),
+                                        child: Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            _copy(
+                                              context,
+                                              'overlay_${overlay.kind}',
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.labelMedium,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                 ],
@@ -2073,27 +2323,98 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                             ),
                                           ),
                                         for (final overlay in overlays)
-                                          Padding(
-                                            padding: const EdgeInsets.all(8),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  '${_seconds(overlay.startSec)}–${_seconds(overlay.endSec)} s · ${overlay.text}',
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              SizedBox(
+                                                height: rowHeight,
+                                                child: Stack(
+                                                  children: [
+                                                    Positioned(
+                                                      left:
+                                                          overlay.startSec *
+                                                          scale,
+                                                      width:
+                                                          (overlay.endSec -
+                                                              overlay
+                                                                  .startSec) *
+                                                          scale,
+                                                      top: 6,
+                                                      bottom: 6,
+                                                      child: Semantics(
+                                                        selected:
+                                                            _selectedOverlayId ==
+                                                            overlay.overlayId,
+                                                        child: OutlinedButton(
+                                                          key: ValueKey(
+                                                            'media-overlay-${overlay.overlayId}',
+                                                          ),
+                                                          style: OutlinedButton.styleFrom(
+                                                            minimumSize:
+                                                                const Size(
+                                                                  0,
+                                                                  48,
+                                                                ),
+                                                            shape: RoundedRectangleBorder(
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    3,
+                                                                  ),
+                                                            ),
+                                                            alignment: Alignment
+                                                                .centerLeft,
+                                                            padding:
+                                                                const EdgeInsets.symmetric(
+                                                                  horizontal: 8,
+                                                                ),
+                                                            side: BorderSide(
+                                                              color:
+                                                                  _selectedOverlayId ==
+                                                                      overlay
+                                                                          .overlayId
+                                                                  ? palette
+                                                                        .foreground
+                                                                  : palette
+                                                                        .line,
+                                                              width:
+                                                                  _selectedOverlayId ==
+                                                                      overlay
+                                                                          .overlayId
+                                                                  ? 2
+                                                                  : 1,
+                                                            ),
+                                                          ),
+                                                          onPressed: () =>
+                                                              _selectOverlay(
+                                                                overlay
+                                                                    .overlayId,
+                                                                wide: wide,
+                                                              ),
+                                                          child: Text(
+                                                            '${_seconds(overlay.startSec)}–${_seconds(overlay.endSec)} s · ${overlay.text}',
+                                                            maxLines: 2,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
-                                                if (overlay.kind == 'caption')
-                                                  ReadAloudAction(
-                                                    sessionId:
-                                                        'sh01:${overlay.overlayId}',
-                                                    scopeVersion:
-                                                        '${_controller.domain}:${_controller.repository.contextKey}:${timeline.version}',
-                                                    text: overlay.text,
-                                                    purpose: ReadAloudPurpose
-                                                        .videoCaption,
-                                                  ),
-                                              ],
-                                            ),
+                                              ),
+                                              if (overlay.kind == 'caption')
+                                                ReadAloudAction(
+                                                  sessionId:
+                                                      'sh01:${overlay.overlayId}',
+                                                  scopeVersion:
+                                                      '${_controller.domain}:${_controller.repository.contextKey}:${timeline.version}',
+                                                  text: overlay.text,
+                                                  purpose: ReadAloudPurpose
+                                                      .videoCaption,
+                                                ),
+                                            ],
                                           ),
                                         const SizedBox(height: 12),
                                       ],
@@ -2115,7 +2436,10 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
 
   Widget _timelineClip(MediaProjectSnapshot timeline, MediaProjectClip clip) {
     final palette = LumenisTheme.of(context);
-    final selected = clip.clipId == _controller.selectedClipId;
+    final selected =
+        clip.clipId == _controller.selectedClipId &&
+        _selectedOverlayId == null &&
+        _newOverlayKind == null;
     final asset = timeline.assets.firstWhere(
       (a) => a.assetId == clip.mediaAssetId,
     );
@@ -2145,7 +2469,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               alignment: Alignment.centerLeft,
             ),
-            onPressed: () => _controller.selectClip(clip.clipId),
+            onPressed: () => _selectClip(clip.clipId),
             child: Text(
               label,
               maxLines: 2,
@@ -2202,7 +2526,7 @@ class _AddClipDialogState extends State<_AddClipDialog> {
   late int? _stream = widget.asset.audioStreamCount == 1 ? 0 : null;
   final _start = TextEditingController(text: '0');
   late final _end = TextEditingController(
-    text: _seconds(widget.asset.durationSec),
+    text: widget.asset.durationSec.toString(),
   );
   bool _invalid = false;
   @override
@@ -2307,10 +2631,213 @@ Widget _numberField(
   ),
 );
 
+class _OverlayInspectorDraft {
+  const _OverlayInspectorDraft({
+    required this.text,
+    required this.start,
+    required this.end,
+  });
+
+  final String text;
+  final String start;
+  final String end;
+  double get startSec => double.tryParse(start) ?? double.nan;
+  double get endSec => double.tryParse(end) ?? double.nan;
+
+  bool matches(MediaProjectOverlay overlay) =>
+      text == overlay.text &&
+      startSec == overlay.startSec &&
+      endSec == overlay.endSec;
+}
+
+class _OverlayInspector extends StatefulWidget {
+  const _OverlayInspector({
+    super.key,
+    required this.overlay,
+    required this.kind,
+    required this.defaultEnd,
+    required this.draft,
+    required this.enabled,
+    required this.onChanged,
+    required this.onApply,
+    required this.onCancel,
+    required this.onDelete,
+  });
+
+  final MediaProjectOverlay? overlay;
+  final String kind;
+  final double defaultEnd;
+  final _OverlayInspectorDraft? draft;
+  final bool enabled;
+  final ValueChanged<_OverlayInspectorDraft> onChanged;
+  final bool Function(_OverlayInspectorDraft) onApply;
+  final VoidCallback onCancel;
+  final bool Function()? onDelete;
+
+  @override
+  State<_OverlayInspector> createState() => _OverlayInspectorState();
+}
+
+class _OverlayInspectorState extends State<_OverlayInspector> {
+  final _text = TextEditingController();
+  final _start = TextEditingController();
+  final _end = TextEditingController();
+  bool _invalid = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(covariant _OverlayInspector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.overlay, widget.overlay) ||
+        oldWidget.draft != null && widget.draft == null) {
+      _invalid = false;
+      _sync();
+    }
+  }
+
+  void _sync() {
+    _text.text = widget.draft?.text ?? widget.overlay?.text ?? '';
+    _start.text =
+        widget.draft?.start ?? (widget.overlay?.startSec ?? 0).toString();
+    _end.text =
+        widget.draft?.end ??
+        (widget.overlay?.endSec ?? widget.defaultEnd).toString();
+  }
+
+  _OverlayInspectorDraft get _draft => _OverlayInspectorDraft(
+    text: _text.text,
+    start: _start.text,
+    end: _end.text,
+  );
+
+  void _changed(String _) {
+    if (_invalid) setState(() => _invalid = false);
+    widget.onChanged(_draft);
+  }
+
+  @override
+  void dispose() {
+    _text.dispose();
+    _start.dispose();
+    _end.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text(
+        _copy(context, 'overlay_${widget.kind}'),
+        style: Theme.of(context).textTheme.titleSmall,
+      ),
+      const SizedBox(height: 12),
+      TextField(
+        key: const Key('media-overlay-text'),
+        controller: _text,
+        enabled: widget.enabled,
+        minLines: 3,
+        maxLines: 6,
+        onChanged: _changed,
+        decoration: InputDecoration(
+          labelText: _copy(context, 'overlay_content'),
+        ),
+      ),
+      for (final field in {'start': _start, 'end': _end}.entries)
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: TextField(
+            key: Key('media-overlay-${field.key}'),
+            controller: field.value,
+            enabled: widget.enabled,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onChanged: _changed,
+            decoration: InputDecoration(
+              labelText: _copy(context, 'overlay_${field.key}'),
+            ),
+          ),
+        ),
+      if (_invalid)
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Semantics(
+            liveRegion: true,
+            child: Text(
+              _copy(context, 'overlay_invalid'),
+              key: const Key('media-overlay-invalid'),
+            ),
+          ),
+        ),
+      const SizedBox(height: 16),
+      FilledButton(
+        key: const Key('media-overlay-apply'),
+        style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+        onPressed: !widget.enabled
+            ? null
+            : () {
+                final draft = _draft;
+                if (draft.text.trim().isEmpty ||
+                    !draft.startSec.isFinite ||
+                    !draft.endSec.isFinite ||
+                    draft.startSec < 0 ||
+                    draft.endSec <= draft.startSec ||
+                    draft.endSec > 86400) {
+                  setState(() => _invalid = true);
+                  return;
+                }
+                final applied = widget.onApply(draft);
+                if (mounted) setState(() => _invalid = !applied);
+              },
+        child: Text(_copy(context, 'apply')),
+      ),
+      TextButton(
+        key: const Key('media-overlay-cancel'),
+        style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+        onPressed: widget.enabled ? widget.onCancel : null,
+        child: Text(_copy(context, 'cancel')),
+      ),
+      if (widget.onDelete != null)
+        TextButton(
+          key: const Key('media-overlay-delete'),
+          style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+          onPressed: !widget.enabled
+              ? null
+              : () {
+                  final removed = widget.onDelete!();
+                  if (mounted) setState(() => _invalid = !removed);
+                },
+          child: Text(_copy(context, 'overlay_delete')),
+        ),
+    ],
+  );
+}
+
 class _ClipInspectorDraft {
-  const _ClipInspectorDraft({required this.values, required this.stream});
+  const _ClipInspectorDraft({
+    required this.values,
+    required this.stream,
+    this.replacement,
+  });
 
   final Map<String, String> values;
+  final int? stream;
+  final _ClipReplacementDraft? replacement;
+}
+
+class _ClipReplacementDraft {
+  const _ClipReplacementDraft({
+    required this.mediaAssetId,
+    required this.sourceIn,
+    required this.stream,
+  });
+
+  final String? mediaAssetId;
+  final String sourceIn;
   final int? stream;
 }
 
@@ -2325,6 +2852,7 @@ class _ClipInspector extends StatefulWidget {
     required this.onEdit,
     required this.draft,
     required this.onDraftChanged,
+    required this.onImportSource,
   });
   final MediaProjectSnapshot? timeline;
   final MediaProjectClip? clip;
@@ -2332,12 +2860,16 @@ class _ClipInspector extends StatefulWidget {
   onEdit;
   final _ClipInspectorDraft? draft;
   final void Function(String clipId, _ClipInspectorDraft? draft) onDraftChanged;
+  final VoidCallback onImportSource;
   @override
   State<_ClipInspector> createState() => _ClipInspectorState();
 }
 
 class _ClipInspectorState extends State<_ClipInspector> {
   bool _invalid = false;
+  _ClipReplacementDraft? _replacement;
+  bool _replacementInvalid = false;
+  final _replacementStart = TextEditingController();
   final _fields = {
     for (final name in [
       'source_in',
@@ -2366,10 +2898,13 @@ class _ClipInspectorState extends State<_ClipInspector> {
     }
   }
 
-  void _sync() {
+  void _sync({bool discardDraft = false}) {
     final clip = widget.clip;
     if (clip == null) return;
-    final draft = widget.draft;
+    final draft = discardDraft ? null : widget.draft;
+    _replacement = draft?.replacement;
+    _replacementStart.text = _replacement?.sourceIn ?? '0';
+    _replacementInvalid = false;
     if (draft != null) {
       for (final entry in draft.values.entries) {
         _fields[entry.key]?.text = entry.value;
@@ -2387,7 +2922,7 @@ class _ClipInspectorState extends State<_ClipInspector> {
       'split_position': (clip.sourceIn + clip.sourceOut) / 2,
     };
     for (final entry in values.entries) {
-      _fields[entry.key]!.text = _seconds(entry.value);
+      _fields[entry.key]!.text = entry.value.toString();
     }
     _stream = clip.audioRole == 'muted' ? -1 : clip.audioStreamIndex;
   }
@@ -2402,12 +2937,14 @@ class _ClipInspectorState extends State<_ClipInspector> {
           for (final entry in _fields.entries) entry.key: entry.value.text,
         },
         stream: _stream,
+        replacement: _replacement,
       ),
     );
   }
 
   @override
   void dispose() {
+    _replacementStart.dispose();
     for (final controller in _fields.values) {
       controller.dispose();
     }
@@ -2432,47 +2969,138 @@ class _ClipInspectorState extends State<_ClipInspector> {
         _stream != (clip.audioRole == 'muted' ? -1 : clip.audioStreamIndex);
   }
 
-  @override
-  Widget build(BuildContext context) {
+  bool get _hasReplacementBlockingChanges {
     final clip = widget.clip;
-    final timeline = widget.timeline;
-    if (clip == null || timeline == null) return Text(_copy(context, 'select'));
-    final track = timeline.tracks.firstWhere((t) => t.trackId == clip.trackId);
+    return clip != null &&
+        (_hasClipFieldChanges ||
+            _value('split_position') != (clip.sourceIn + clip.sourceOut) / 2);
+  }
+
+  Widget _replacementEditor(
+    MediaProjectSnapshot timeline,
+    MediaProjectTrack track,
+    MediaProjectClip clip,
+  ) {
+    final draft = _replacement!;
     final video = track.kind == 'video';
-    final asset = timeline.assets.firstWhere(
-      (a) => a.assetId == clip.mediaAssetId,
-    );
-    final index = track.clips.indexOf(clip);
+    final choices = timeline.assets
+        .where(
+          (asset) =>
+              asset.assetId != clip.mediaAssetId &&
+              (video ? asset.hasVideo : asset.audioStreamCount > 0),
+        )
+        .toList();
+    final asset = choices
+        .where((asset) => asset.assetId == draft.mediaAssetId)
+        .firstOrNull;
+    final start = double.tryParse(draft.sourceIn);
+    final end = start == null ? null : start + clip.durationSec;
+    final tooShort =
+        asset != null &&
+        start != null &&
+        start.isFinite &&
+        start >= 0 &&
+        end != null &&
+        end > asset.durationSec;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(asset.filename, maxLines: 3, overflow: TextOverflow.ellipsis),
-        for (final name in ['source_in', 'source_out', if (!video) 'position'])
-          _numberField(
-            context,
-            name,
-            _fields[name]!,
-            onChanged: (_) => _saveDraft(),
+        const SizedBox(height: 12),
+        if (choices.isEmpty) ...[
+          Text(_copy(context, 'replacement_empty')),
+          OutlinedButton(
+            key: const Key('media-replacement-import'),
+            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: widget.onImportSource,
+            child: Text(_copy(context, 'import')),
           ),
-        ExpansionTile(
-          key: const Key('media-sound-settings'),
-          maintainState: true,
-          tilePadding: EdgeInsets.zero,
-          title: Text(_copy(context, 'sound_settings')),
-          children: [
-            for (final name in ['gain', 'fade_in', 'fade_out'])
-              _numberField(
-                context,
-                name,
-                _fields[name]!,
-                onChanged: (_) => _saveDraft(),
-              ),
-            if (asset.audioStreamCount > 0)
+        ] else ...[
+          DropdownButtonFormField<String>(
+            icon: const LumenisIcon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 18,
+            ),
+            key: ValueKey(
+              'media-replacement-source-${clip.clipId}-${draft.mediaAssetId}',
+            ),
+            isExpanded: true,
+            initialValue: asset?.assetId,
+            decoration: InputDecoration(
+              labelText: _copy(context, 'replacement_source'),
+            ),
+            items: choices
+                .map(
+                  (item) => DropdownMenuItem(
+                    value: item.assetId,
+                    child: Text(
+                      '${item.filename} · ${_seconds(item.durationSec)} s',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                )
+                .toList(),
+            onChanged: (id) {
+              final chosen = choices.firstWhere((item) => item.assetId == id);
+              setState(() {
+                _replacementStart.text = '0';
+                _replacement = _ClipReplacementDraft(
+                  mediaAssetId: id,
+                  sourceIn: '0',
+                  stream:
+                      video &&
+                          (clip.audioRole == 'muted' ||
+                              chosen.audioStreamCount == 0)
+                      ? -1
+                      : (chosen.audioStreamCount == 1 ? 0 : null),
+                );
+                _replacementInvalid = false;
+              });
+              _saveDraft();
+            },
+          ),
+          if (asset != null) ...[
+            _numberField(
+              context,
+              'source_in',
+              _replacementStart,
+              onChanged: (value) {
+                setState(() {
+                  _replacement = _ClipReplacementDraft(
+                    mediaAssetId: draft.mediaAssetId,
+                    sourceIn: value,
+                    stream: draft.stream,
+                  );
+                  _replacementInvalid = false;
+                });
+                _saveDraft();
+              },
+            ),
+            Text(
+              _copy(context, 'replacement_range')
+                  .replaceAll('{duration}', clip.durationSec.toString())
+                  .replaceAll(
+                    '{start}',
+                    start?.isFinite == true ? start.toString() : '—',
+                  )
+                  .replaceAll(
+                    '{end}',
+                    end?.isFinite == true ? end.toString() : '—',
+                  ),
+            ),
+            if (asset.audioStreamCount == 0)
+              Text(_copy(context, 'replacement_audio_missing'))
+            else
               DropdownButtonFormField<int>(
-                key: ValueKey(
-                  '${clip.clipId}-${clip.audioRole}-${clip.audioStreamIndex}',
+                icon: const LumenisIcon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 18,
                 ),
-                initialValue: _stream,
+                key: ValueKey(
+                  'media-replacement-stream-${clip.clipId}-${asset.assetId}-${draft.stream}',
+                ),
+                isExpanded: true,
+                initialValue: draft.stream,
                 decoration: InputDecoration(
                   labelText: _copy(context, 'stream'),
                 ),
@@ -2490,119 +3118,307 @@ class _ClipInspectorState extends State<_ClipInspector> {
                     ),
                   ),
                 ],
-                onChanged: (value) {
-                  setState(() => _stream = value);
+                onChanged: (stream) {
+                  setState(() {
+                    _replacement = _ClipReplacementDraft(
+                      mediaAssetId: draft.mediaAssetId,
+                      sourceIn: _replacementStart.text,
+                      stream: stream,
+                    );
+                    _replacementInvalid = false;
+                  });
                   _saveDraft();
                 },
               ),
           ],
-        ),
-        if (_invalid)
+        ],
+        if (tooShort || _replacementInvalid)
           Semantics(
             liveRegion: true,
             child: Text(
-              _copy(context, 'invalid'),
-              key: const Key('media-inspector-invalid'),
+              _copy(
+                context,
+                tooShort ? 'replacement_short' : 'replacement_invalid',
+              ),
+              key: const Key('media-replacement-error'),
             ),
           ),
         const SizedBox(height: 12),
         FilledButton(
+          key: const Key('media-replacement-apply'),
           style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
           onPressed: () {
+            final current = _replacement;
+            final currentAsset = choices
+                .where((item) => item.assetId == current?.mediaAssetId)
+                .firstOrNull;
+            final currentStart = double.tryParse(_replacementStart.text);
+            if (current == null ||
+                currentAsset == null ||
+                currentStart == null) {
+              setState(() => _replacementInvalid = true);
+              return;
+            }
             final applied = widget.onEdit(
-              (s) => s.adjustClip(
+              (snapshot) => snapshot.replaceClipSource(
                 clip.clipId,
-                sourceIn: _value('source_in'),
-                sourceOut: _value('source_out'),
-                timelineStart: _value('position'),
-                audioMix: MediaProjectAudioMix(
-                  volume: _value('gain'),
-                  fadeInSec: _value('fade_in'),
-                  fadeOutSec: _value('fade_out'),
-                  ducking: clip.audioMix.ducking,
-                ),
+                mediaAssetId: currentAsset.assetId,
+                sourceIn: currentStart,
                 audioRole: video
-                    ? (_stream == -1 ? 'muted' : 'original')
+                    ? (current.stream == -1 ? 'muted' : 'original')
                     : track.kind,
-                audioStreamIndex: _stream == -1 ? null : _stream,
+                audioStreamIndex: current.stream == -1 ? null : current.stream,
               ),
             );
-            setState(() => _invalid = !applied);
+            setState(() {
+              _replacementInvalid = !applied;
+              if (applied) _replacement = null;
+            });
             if (applied) widget.onDraftChanged(clip.clipId, null);
           },
-          child: Text(_copy(context, 'apply')),
+          child: Text(_copy(context, 'replacement_apply')),
         ),
-        ExpansionTile(
-          key: const Key('media-clip-operations'),
-          maintainState: true,
-          tilePadding: EdgeInsets.zero,
-          title: Text(_copy(context, 'clip_operations')),
-          children: [
+        TextButton(
+          key: const Key('media-replacement-cancel'),
+          style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+          onPressed: () {
+            setState(() => _sync(discardDraft: true));
+            widget.onDraftChanged(clip.clipId, null);
+          },
+          child: Text(_copy(context, 'cancel')),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clip = widget.clip;
+    final timeline = widget.timeline;
+    if (clip == null || timeline == null) return Text(_copy(context, 'select'));
+    final track = timeline.tracks.firstWhere((t) => t.trackId == clip.trackId);
+    final video = track.kind == 'video';
+    final asset = timeline.assets.firstWhere(
+      (a) => a.assetId == clip.mediaAssetId,
+    );
+    final index = track.clips.indexOf(clip);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(asset.filename, maxLines: 3, overflow: TextOverflow.ellipsis),
+        if (_replacement != null)
+          _replacementEditor(timeline, track, clip)
+        else ...[
+          if (_hasReplacementBlockingChanges)
+            Text(
+              _copy(context, 'apply_before_replace'),
+              key: const Key('media-apply-before-replace'),
+            ),
+          if (video && timeline.transitions.isNotEmpty)
+            Text(_copy(context, 'replacement_transition_blocked')),
+          OutlinedButton(
+            key: const Key('media-replace-source'),
+            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed:
+                _hasReplacementBlockingChanges ||
+                    (video && timeline.transitions.isNotEmpty)
+                ? null
+                : () {
+                    setState(() {
+                      _replacement = const _ClipReplacementDraft(
+                        mediaAssetId: null,
+                        sourceIn: '0',
+                        stream: null,
+                      );
+                      _replacementStart.text = '0';
+                      _replacementInvalid = false;
+                    });
+                    _saveDraft();
+                  },
+            child: Text(_copy(context, 'replace_source')),
+          ),
+          for (final name in [
+            'source_in',
+            'source_out',
+            if (!video) 'position',
+          ])
             _numberField(
               context,
-              'split_position',
-              _fields['split_position']!,
+              name,
+              _fields[name]!,
               onChanged: (_) => _saveDraft(),
             ),
-            if (_hasClipFieldChanges)
-              Text(
-                _copy(context, 'apply_before_split'),
-                key: const Key('media-apply-before-split'),
+          ExpansionTile(
+            trailing: const LumenisExpansionIndicator(),
+            key: const Key('media-sound-settings'),
+            maintainState: true,
+            tilePadding: EdgeInsets.zero,
+            title: Text(_copy(context, 'sound_settings')),
+            children: [
+              for (final name in ['gain', 'fade_in', 'fade_out'])
+                _numberField(
+                  context,
+                  name,
+                  _fields[name]!,
+                  onChanged: (_) => _saveDraft(),
+                ),
+              if (asset.audioStreamCount > 0)
+                DropdownButtonFormField<int>(
+                  icon: const LumenisIcon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                  ),
+                  key: ValueKey(
+                    '${clip.clipId}-${clip.audioRole}-${clip.audioStreamIndex}',
+                  ),
+                  initialValue: _stream,
+                  decoration: InputDecoration(
+                    labelText: _copy(context, 'stream'),
+                  ),
+                  items: [
+                    if (video)
+                      DropdownMenuItem(
+                        value: -1,
+                        child: Text(_copy(context, 'muted')),
+                      ),
+                    ...List.generate(
+                      asset.audioStreamCount,
+                      (i) => DropdownMenuItem(
+                        value: i,
+                        child: Text('${_copy(context, 'stream')} ${i + 1}'),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _stream = value);
+                    _saveDraft();
+                  },
+                ),
+            ],
+          ),
+          if (_invalid)
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                _copy(context, 'invalid'),
+                key: const Key('media-inspector-invalid'),
               ),
-            OutlinedButton(
-              key: const Key('media-split-clip'),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
-              onPressed: _hasClipFieldChanges
-                  ? null
-                  : () {
-                      final applied = widget.onEdit(
-                        (s) => s.splitClip(
-                          clip.clipId,
-                          atSec: _value('split_position'),
-                        ),
-                      );
-                      if (!applied) setState(() => _invalid = true);
-                    },
-              child: Text(_copy(context, 'split')),
             ),
-            if (video)
-              Wrap(
-                spacing: 8,
-                children: [
-                  TextButton(
-                    onPressed: index == 0
-                        ? null
-                        : () => widget.onEdit(
-                            (s) => s.reorderVideoClip(
-                              clip.clipId,
-                              newIndex: index - 1,
-                            ),
-                          ),
-                    child: Text(_copy(context, 'earlier')),
+          const SizedBox(height: 12),
+          FilledButton(
+            style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: () {
+              final applied = widget.onEdit(
+                (s) => s.adjustClip(
+                  clip.clipId,
+                  sourceIn: _value('source_in'),
+                  sourceOut: _value('source_out'),
+                  timelineStart: _value('position'),
+                  audioMix: MediaProjectAudioMix(
+                    volume: _value('gain'),
+                    fadeInSec: _value('fade_in'),
+                    fadeOutSec: _value('fade_out'),
+                    ducking: clip.audioMix.ducking,
                   ),
-                  TextButton(
-                    onPressed: index == track.clips.length - 1
-                        ? null
-                        : () => widget.onEdit(
-                            (s) => s.reorderVideoClip(
-                              clip.clipId,
-                              newIndex: index + 1,
-                            ),
-                          ),
-                    child: Text(_copy(context, 'later')),
-                  ),
-                ],
-              ),
+                  audioRole: video
+                      ? (_stream == -1 ? 'muted' : 'original')
+                      : track.kind,
+                  audioStreamIndex: _stream == -1 ? null : _stream,
+                ),
+              );
+              setState(() => _invalid = !applied);
+              if (applied) widget.onDraftChanged(clip.clipId, null);
+            },
+            child: Text(_copy(context, 'apply')),
+          ),
+          if (_hasReplacementBlockingChanges)
             TextButton(
-              onPressed: () => widget.onEdit(
-                (s) => video
-                    ? s.deleteVideoClip(clip.clipId)
-                    : s.deleteAudioClip(clip.clipId),
-              ),
-              child: Text(_copy(context, 'delete')),
+              key: const Key('media-cancel-adjustment'),
+              style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+              onPressed: () {
+                setState(() {
+                  _invalid = false;
+                  _sync(discardDraft: true);
+                });
+                widget.onDraftChanged(clip.clipId, null);
+              },
+              child: Text(_copy(context, 'cancel_adjustment')),
             ),
-          ],
-        ),
+          ExpansionTile(
+            trailing: const LumenisExpansionIndicator(),
+            key: const Key('media-clip-operations'),
+            maintainState: true,
+            tilePadding: EdgeInsets.zero,
+            title: Text(_copy(context, 'clip_operations')),
+            children: [
+              _numberField(
+                context,
+                'split_position',
+                _fields['split_position']!,
+                onChanged: (_) => _saveDraft(),
+              ),
+              if (_hasClipFieldChanges)
+                Text(
+                  _copy(context, 'apply_before_split'),
+                  key: const Key('media-apply-before-split'),
+                ),
+              OutlinedButton(
+                key: const Key('media-split-clip'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                ),
+                onPressed: _hasClipFieldChanges
+                    ? null
+                    : () {
+                        final applied = widget.onEdit(
+                          (s) => s.splitClip(
+                            clip.clipId,
+                            atSec: _value('split_position'),
+                          ),
+                        );
+                        if (!applied) setState(() => _invalid = true);
+                      },
+                child: Text(_copy(context, 'split')),
+              ),
+              if (video)
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    TextButton(
+                      onPressed: index == 0
+                          ? null
+                          : () => widget.onEdit(
+                              (s) => s.reorderVideoClip(
+                                clip.clipId,
+                                newIndex: index - 1,
+                              ),
+                            ),
+                      child: Text(_copy(context, 'earlier')),
+                    ),
+                    TextButton(
+                      onPressed: index == track.clips.length - 1
+                          ? null
+                          : () => widget.onEdit(
+                              (s) => s.reorderVideoClip(
+                                clip.clipId,
+                                newIndex: index + 1,
+                              ),
+                            ),
+                      child: Text(_copy(context, 'later')),
+                    ),
+                  ],
+                ),
+              TextButton(
+                onPressed: () => widget.onEdit(
+                  (s) => video
+                      ? s.deleteVideoClip(clip.clipId)
+                      : s.deleteAudioClip(clip.clipId),
+                ),
+                child: Text(_copy(context, 'delete')),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }

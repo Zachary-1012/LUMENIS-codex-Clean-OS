@@ -50,9 +50,10 @@ sole executor of that bounded call chain; architecture owners remain unchanged.
 Record the handoff in existing W6 reservations, preserve unrelated work and reuse
 frozen source. Verify process ownership, in-flight work, rollback and Permission;
 never force unknown processes, fabricate grants or expand source/account/cost scope.
-M does not take over C1 or require per-function approval. The PO separately assigns
-M all other local-candidate/unintegrated repair and formal integration; protect C1
-writes and do not resume paused windows. The proposed C6 switch is withdrawn.
+M integrates non-C1 work; research agents complete all original reading/adoption,
+including DeepSeek/ancestor inputs and upgraded plans (CURRENT/approval below).
+C1 remains independent; paused windows stay paused; training needs its own grant.
+The proposed C6 switch is withdrawn.
 F and C2-C6 retain their latest explicit pause until separately resumed. The
 retained topology is M + independent F + one business window; topology alone is
 not live dispatch. Website/Web closure stays first; Windows/macOS and iOS follow.

@@ -12,6 +12,25 @@ Root `AGENTS.md` is the only repository execution router. [The Product Owner's l
 
 ## 1. Online reader's current-state snapshot
 
+Latest M convergence: first exact source batch `67e26a39` has observed successful
+Product Gate `37761953084` and App Gate `37761952871`. Historical failures stay
+unchanged. The subsequent source recovery integrates previously omitted BMP-03
+reading/return and SH-01 manual overlay/fixed-duration source-replacement edits,
+preserving current scope/epoch guards, playback seek and local Read Aloud. This
+is source convergence, not actual user media/market acceptance.
+
+The subsequent direct PO research instruction requires complete original-material
+coverage and actual reading, including prior DeepSeek/ancestor analysis, upgraded
+plans and local/online materials. Three M research agents work on business,
+engineering and visual/media groups through existing material records. The
+199-row manifest is a starting index, explicitly not the complete historical
+corpus or reading proof. Missing originals and unread pages/frames keep this task
+open. Adopted methods must reach existing source and real user outcomes;
+distillation alone is not implementation or MODEL_TRAIN approval. Protected
+credentials are excluded from research and learning. C1 continues independently;
+original paused F/C2-C6 windows remain paused.
+
+
 Current dispatch: M handles the approved policy/publication and C1 outcome review;
 the latest direct PO instruction additionally assigns M the existing non-C1 local
 candidate and unintegrated-work convergence, repair and formal integration. This

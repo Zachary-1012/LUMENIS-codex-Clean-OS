@@ -829,6 +829,27 @@
   "shell.auth_unavailable": "연결 승인 만료",
   "shell.restricted": "서비스 접근 제한",
   "shell.error": "연결 실패",
-  "shell.degraded": "일부 서비스 사용 불가"
+  "shell.degraded": "일부 서비스 사용 불가",
+  "sh01.media.overlay_add": "자막과 텍스트",
+  "sh01.media.overlay_caption": "자막",
+  "sh01.media.overlay_text": "텍스트",
+  "sh01.media.overlay_content": "텍스트 내용",
+  "sh01.media.overlay_start": "시작(초)",
+  "sh01.media.overlay_end": "끝(초)",
+  "sh01.media.overlay_invalid": "텍스트와 유효한 시작 및 종료 시간을 입력하세요.",
+  "sh01.media.overlay_delete": "텍스트 삭제",
+  "sh01.media.apply_before_export": "내보내기 전에 속성에서 변경 사항을 적용하거나 취소하세요.",
+  "sh01.media.apply_before_undo": "타임라인을 실행 취소하기 전에 속성에서 변경 사항을 적용하거나 취소하세요.",
+  "sh01.media.replace_source": "소스 교체",
+  "sh01.media.replacement_source": "새 소스",
+  "sh01.media.replacement_range": "{duration}초 유지 · 원본 {start}–{end}초",
+  "sh01.media.replacement_apply": "교체 적용",
+  "sh01.media.replacement_empty": "먼저 호환되는 다른 동영상 또는 오디오 소스를 가져오세요",
+  "sh01.media.replacement_short": "새 소스가 클립 길이를 유지하기에 너무 짧습니다. 시작점을 조정하거나 다른 소스를 선택하세요",
+  "sh01.media.replacement_invalid": "소스, 시작 시간 및 오디오 선택을 확인하세요",
+  "sh01.media.apply_before_replace": "먼저 현재 조정을 적용하거나 취소하세요",
+  "sh01.media.cancel_adjustment": "조정 취소",
+  "sh01.media.replacement_audio_missing": "이 소스에는 오디오가 없어 클립은 무음으로 유지됩니다",
+  "sh01.media.replacement_transition_blocked": "이 프로젝트에는 전환 효과가 있어 클립 교체를 사용할 수 없습니다"
  }
 }

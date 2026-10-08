@@ -3,13 +3,13 @@
  "source_of_truth": "contracts/experience/i18n/{zh-CN,en,ko}.delta.json",
  "locales": {
   "zh-CN": {
-   "key_count": 829
+   "key_count": 850
   },
   "en": {
-   "key_count": 829
+   "key_count": 850
   },
   "ko": {
-   "key_count": 829
+   "key_count": 850
   }
  },
  "naming": "dot-namespaced semantic copy keys; Flutter consumes the locale deltas via generated runtime copy"

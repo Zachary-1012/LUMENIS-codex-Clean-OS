@@ -173,3 +173,34 @@ Source whitespace check passes; a pre-existing trailing blank in the retained hi
 test remains recorded rather than rewriting it. Tracked credential-path inventory
 reports no leaks. Original historical test bytes all match the freeze. These are
 source/build observations, not real customer or model execution.
+
+## 2026-10-08 archived frontend unique-delta recovery
+
+First batch `67e26a39ef5581fda0fd4da9ce0d81ac76e1ec94` has observed successful
+Product/App runs 37761953084 / 37761952871. A follow-up comparison found genuine
+unintegrated production hunks in the preserved BMP-03 reading, manual overlay,
+clip replacement and media precision patches. They are recovered through current
+source, not by restoring an old whole App tree. Seven changed-context hunks are
+reconciled while retaining current Read Aloud, playhead/seek, scope/epoch quarantine
+and original server contracts. Translation additions use the existing three
+locale delta maps and generated copy; no second UI/backend owner is introduced.
+
+Changes: selected market-signal brief and return state; absent-summary/metric
+semantics; caption/text add/edit/delete and per-overlay drafts; fixed-duration
+source replacement with explicit stream choice, invalid-range rejection, draft
+apply/cancel/undo guards; exact editable numeric precision. These are existing
+SH-01 sections 10.12/10.13 and BMP-03 section 5B requirements, not new features.
+All original patches/test hunks remain protected; no module test is run.
+
+Exact original hashes and hunk reconciliation are in the existing ignored
+`work/m-governance-20261008/archive-frontend-reconciliation.json`; the previous
+byte-only CURRENT_SUCCESSOR labels are preliminary, not sufficient proof that
+behavior is integrated. Strict Dart analysis and Web release build are checked
+against this follow-up source. Real scoped API results, actual edit/export/reopen
+and viewing/listening/user acceptance remain independently OPEN.
+
+The latest PO also requires complete unfinished-material research and adoption.
+M research assistants use the original manifest plus existing research-hub and
+continuation ledgers, recover missing original sources and account for actual
+read coverage. Research, source adoption, real operation and separate training
+rights remain distinct; this record does not claim the whole corpus is read.

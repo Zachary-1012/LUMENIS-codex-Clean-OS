@@ -829,6 +829,27 @@
   "shell.auth_unavailable": "连接授权已失效",
   "shell.restricted": "服务访问受限",
   "shell.error": "连接失败",
-  "shell.degraded": "部分服务不可用"
+  "shell.degraded": "部分服务不可用",
+  "sh01.media.overlay_add": "字幕与文字",
+  "sh01.media.overlay_caption": "字幕",
+  "sh01.media.overlay_text": "文字",
+  "sh01.media.overlay_content": "文字内容",
+  "sh01.media.overlay_start": "开始时间（秒）",
+  "sh01.media.overlay_end": "结束时间（秒）",
+  "sh01.media.overlay_invalid": "请填写文字，并设置有效的开始与结束时间。",
+  "sh01.media.overlay_delete": "删除文字",
+  "sh01.media.apply_before_export": "请先应用或取消属性中的修改，再导出。",
+  "sh01.media.apply_before_undo": "请先应用或取消属性中的修改，再撤销时间线。",
+  "sh01.media.replace_source": "替换素材",
+  "sh01.media.replacement_source": "新素材",
+  "sh01.media.replacement_range": "保留 {duration} 秒 · 素材 {start}–{end} 秒",
+  "sh01.media.replacement_apply": "应用替换",
+  "sh01.media.replacement_empty": "先从素材中导入另一段兼容的视频或音频",
+  "sh01.media.replacement_short": "新素材不足以保留片段时长，请调整起点或选择其他素材",
+  "sh01.media.replacement_invalid": "检查素材、起点和声音选择",
+  "sh01.media.apply_before_replace": "先应用或取消当前调整",
+  "sh01.media.cancel_adjustment": "取消调整",
+  "sh01.media.replacement_audio_missing": "这段素材没有音频，将保留静音",
+  "sh01.media.replacement_transition_blocked": "此工程含转场，暂不能替换镜头"
  }
 }
