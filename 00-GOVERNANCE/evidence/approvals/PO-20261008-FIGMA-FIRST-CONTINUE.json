@@ -1,0 +1,25 @@
+{
+  "schema": "lumenis.po-approval-receipt/v1",
+  "approval_id": "PO-20261008-FIGMA-FIRST-CONTINUE",
+  "status": "APPROVED",
+  "approved_by": "Product Owner",
+  "approved_at": "2026-10-08",
+  "approval_source_type": "direct_product_owner_instruction",
+  "scope_manifest": {
+    "instruction": "为什么前端又暂停了，做一做就暂停，这个问题要解决，还有我不是说让他先用figma把产品整体的设计都做出来吗，可编辑文件",
+    "source_thread_id": "01a0cd84-7685-7a73-97d9-83a14a546e71",
+    "owner": "F",
+    "dispatch": "continue_existing_goal_with_whole_product_editable_figma_design_first",
+    "design_scope": "all existing 44 App screens and Website content families, approved surface variants and task interaction prototypes",
+    "preserve_existing_work": true
+  },
+  "constraints": [
+    "existing Experience Constitution and ScreenSpecs remain authoritative",
+    "reuse authorized Figma file first; create necessary file when no reusable file is accessible",
+    "real editable file/node/version readback; no screenshot or fake .fig substitution",
+    "no new paid resource, public publication or credential access",
+    "no manual model/effort/speed/tier change",
+    "local dependency affects only its path; M standby does not pause workers",
+    "rule publication is not completed design or product acceptance"
+  ]
+}

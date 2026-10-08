@@ -69,6 +69,41 @@ def _analysis_window(body: str, question: str | None) -> tuple[str, dict]:
                   "matched_query_terms": len(overlap), "semantic_relevance": "NOT_EVALUATED"}
 
 
+def _group_source_records(rows: list[dict]) -> dict[str, list[dict]]:
+    grouped: dict[str, list[dict]] = {}
+    for row in rows:
+        source_id = row.get("source_id")
+        if isinstance(source_id, str) and source_id:
+            grouped.setdefault(source_id, []).append(row)
+    return grouped
+
+
+def _source_level_record(rows: list[dict]) -> dict | None:
+    """Resolve Canonical projections to one exact logical-source record.
+
+    Document imports retain a parent ``document`` row and zero or more signed
+    ``document_row`` projections under the same source ID and Evidence. The
+    Source Brief remains source-level, so it pins the parent. Other duplicate
+    Canonical identities stay ambiguous and fail closed.
+    """
+    if len(rows) == 1:
+        return rows[0]
+    if not rows:
+        return None
+    identity = {
+        (row.get("scope_evidence_ref"), row.get("product_id"), row.get("domain_id"),
+         row.get("subject_id") or "", row.get("brand_focus_id") or "")
+        for row in rows
+    }
+    if len(identity) != 1:
+        return None
+    parents = [row for row in rows if row.get("source_type") == "document"]
+    projections = [row for row in rows if row.get("source_type") == "document_row"]
+    if len(parents) == 1 and len(parents) + len(projections) == len(rows):
+        return parents[0]
+    return None
+
+
 def build_scoped_source_brief(
     con: sqlite3.Connection, *, product_id: str, global_scope: bool,
     entity_label: str, subject_id: str | None = None,
@@ -110,14 +145,33 @@ def build_scoped_source_brief(
     result = canonical_data.list_scoped_canonical(
         con, product_id=product_id, subject_id=subject_id,
         brand_focus_id=brand_focus_id, limit=limit, source_ids=source_ids,
+        source_level=True,
     )
+    source_groups = _group_source_records(result.get("records", []))
+    ambiguous_source_count = 0
     if source_ids is not None:
-        selected = result.get("records", [])
-        by_id = {row.get("source_id"): row for row in selected}
+        selected = {}
+        for source_id in source_ids:
+            rows = source_groups.get(source_id, [])
+            primary = _source_level_record(rows)
+            if primary is None:
+                raise PermissionError("SOURCE_BRIEF_SELECTED_SOURCE_UNAVAILABLE")
+            selected[source_id] = primary
         if (result.get("candidate_count") != len(source_ids)
-                or len(selected) != len(source_ids) or set(by_id) != set(source_ids)):
+                or result.get("rejected_count") != 0 or result.get("truncated") is True
+                or set(source_groups) != set(source_ids)
+                or len(selected) != len(source_ids)):
             raise PermissionError("SOURCE_BRIEF_SELECTED_SOURCE_UNAVAILABLE")
-        result["records"] = [by_id[source_id] for source_id in source_ids]
+        result["records"] = [selected[source_id] for source_id in source_ids]
+    else:
+        source_records = []
+        for rows in source_groups.values():
+            primary = _source_level_record(rows)
+            if primary is None:
+                ambiguous_source_count += 1
+                continue
+            source_records.append(primary)
+        result["records"] = source_records
     counts = {}
     for key in ("candidate_count", "scanned_count", "rejected_count", "returned_count"):
         value = result.get(key)
@@ -164,6 +218,7 @@ def build_scoped_source_brief(
         captured = captured.strip() if isinstance(captured, str) and captured.strip() else None
         records.append({
             "source_id": source_id, "title": title or None, "title_truncated": title_truncated,
+            "canonical_id": row.get("canonical_id"),
             "source_url": url, "source_link_status": url_status,
             "source_type": row.get("source_type") or "UNKNOWN", "source_platform": row.get("source_platform") or "UNKNOWN",
             "publish_datetime": publish, "publish_status": "KNOWN" if publish else "UNKNOWN", "captured_at": captured,
@@ -182,7 +237,7 @@ def build_scoped_source_brief(
                 "source_platform": row.get("source_platform") or "UNKNOWN",
             })
 
-    withheld_count = counts["rejected_count"] + unsafe_links
+    withheld_count = counts["rejected_count"] + unsafe_links + ambiguous_source_count
     truncated = result["truncated"]
     status = "PARTIAL" if withheld_count or truncated else "AVAILABLE" if records else "EMPTY"
     source_counts, platform_counts = _counter(records, "source_type"), _counter(records, "source_platform")

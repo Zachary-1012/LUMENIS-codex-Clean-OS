@@ -137,6 +137,12 @@ def test_selected_preview_rows_project_to_canonical_children_under_source_eviden
         expected_preview_rows_sha256=expected_fingerprint,
     )
     assert imported["replayed"] is False
+    parent = workspace["repo"].query_one(
+        "SELECT canonical_id, source_type FROM canonical_data WHERE source_id=? AND source_type='document'",
+        (imported["source_id"],),
+    )
+    assert parent["canonical_id"] == imported["canonical_id"]
+    assert parent["source_type"] == "document"
     assert imported["selected_row_indices"] == [1]
     assert imported["canonical_rows_inserted"] == 1
     assert len(imported["canonical_row_records"]) == 1
@@ -175,6 +181,7 @@ def test_selected_preview_rows_project_to_canonical_children_under_source_eviden
         expected_preview_rows_sha256=expected_fingerprint,
     )
     assert replayed["replayed"] is True
+    assert replayed["canonical_id"] == imported["canonical_id"]
     assert replayed["canonical_rows_inserted"] == 0
     assert replayed["canonical_row_records"] == imported["canonical_row_records"]
     assert workspace["repo"].query_one("SELECT COUNT(*) FROM canonical_data")[0] == 2

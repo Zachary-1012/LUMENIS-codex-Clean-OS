@@ -76,9 +76,10 @@ class PublicBaselinePlan:
                 raise ValueError("a full source-derived purpose query is required")
             query = _purpose_query(self.purpose_query)
             context = query.business_context or {}
+            from ...acquisition_plan import _validate_publication_period
+            _validate_publication_period(context.get("publication_since"), context.get("publication_until"))
             if (query.keyword != self.source_url or not 1 <= len(query.keyword) <= 256
                     or context.get("platform") not in {self.platform, "xiaohongshu" if self.platform == "xhs" else self.platform}
-                    or context.get("publication_since") != "2026-01-01"
                     or query.subject_id != self.subject_id or query.brand_focus_id != self.brand_focus_id
                     or ("cth" if query.domain_id == "CTH" else "bmp") != self.domain_id):
                 raise ValueError("purpose query must bind exact plan identity, scope and requested period")

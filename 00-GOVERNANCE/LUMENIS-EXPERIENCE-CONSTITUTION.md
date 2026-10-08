@@ -1294,7 +1294,7 @@ existing tests/evidence and add only affected meaningful checks.
 
 ### 智能UI的逐步交付与组件选择合同（2026-10-08）
 
-用户补充的员工论述作为研究输入；官方发布说明已独立核对。下列为序境在现有Owner内的适配要求，状态仍为规则采用、后续实施等待派工；不宣称获得OpenAI内部编译器、权重或训练方法。
+用户补充的员工论述作为研究输入；官方发布说明已独立核对。下列为序境在现有Owner内的适配要求，当前PO已授权F/C1-C6执行，实际状态依据当前派工与准入记录；规则采用不代表实现完成，不宣称获得OpenAI内部编译器、权重或训练方法。
 
 1. **选择表达，而非固定模板。** C2根据任务、现有证据、用户调整需求和设备能力提出表现计划；F以本屏已有原生组件、设计Token及动作合同承接。简短事实用文字，比较用带同口径的表/图，参数变化用可解释计算器，复杂创作保持专用编辑器/横向时间轴。用户可查看文字/数据依据并继续原任务；模型不重写导航或制造新业务动作。
 2. **先给第一份有用内容。** 有可信输入时先展示已成立的事实、明确限定的比较或可读段落，再逐步补齐相关部分。空卡、骨架、重复“正在分析”和假进度不算首个有用结果。证据尚不足时显示缺口与实际进度，不先猜结论；只展示可供用户使用的解释和结果，不输出内部推理链或私密工具内容。
@@ -1334,7 +1334,7 @@ C2后续可将经准入的“任务→表现选择→操作结果→评价”作
 
 **统一交付记录：**每个屏幕在自己的既有规范中记录任务、对应Source/Core输入与动作、四端差异、视觉动线、上述验收证据和未闭项；44屏索引统一放在 `contracts/experience/screen-specifications/README.md`。既有文字视觉草图保留历史，并以日期标明本次任务动线增补；不建立另一份执行蓝图或复制另一套UI引擎。蓝图、Experience、Owner、屏幕规范、草图与README同批发布，按同一提交核对；历史草图不是已实现视觉资产，也不能自动获得DESIGN_READY。
 
-**实现准入：**此轮批准的是全产品规则、蓝图与设计输入细化。各屏原有实现/验收状态与阻塞不自动提升；新增交互设计差异待本屏Owner按当前source/contract审阅后进入DESIGN_READY，再在后续明确派工中实施。读规则不需要每函数请示，既有窗口也不会被本段自动恢复。
+**实现准入：**各屏原有实现/验收状态与阻塞不自动提升；新增交互设计差异由本屏Owner按当前source/contract审阅后进入DESIGN_READY，再按当前已授权派工实施。读规则不需要每函数请示。执行状态只服从最新直接PO指令和适用依赖，不从历史规则采用时间推导暂停。
 
 Research evidence and exact source/owner mapping:
 `evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md`.
@@ -1477,11 +1477,11 @@ frame extraction, gate or build cannot establish Product Truth.
 
 ### 可编辑设计工程与源码同步 — 2026-10-08 审计增补
 
-既有 F 负责全部 44 屏与官网内容家族的可编辑设计工程，M 负责审查，C1-C6 提供真实字段/动作/状态合同，C6 协调共享绑定。执行须等 Product Owner 确认；本轮 M 更新规则和工具链不恢复任何其他窗口。
+既有 F 负责全部 44 屏与官网内容家族的可编辑设计工程，M 负责审查，C1-C6 提供真实字段/动作/状态合同，C6 协调共享绑定。Product Owner 已明确要求 F 继续，先完成全产品 Figma 可编辑设计；不存在等待再次开工确认的前置。后端窗口继续各自授权工作，现有前端修改保留。
 
-在现有 ScreenSpec/README 保存 `Screen ID → 设计规格 → Figma file/node/revision → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence` 的映射，不建第二设计注册表或权威。Figma 是开发设计资产，唯一 Experience Constitution 和既有 Product Core 真相不变；无访问时保留 NOT_VERIFIED/BLOCKED，禁止用 PNG 或伪造 .fig 冒充。优先复用获授权现有工程；新建工程须必要访问与 PO 认可。
+在现有 ScreenSpec/README 保存 `Screen ID → 设计规格 → Figma file/node/revision → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence` 的映射，不建第二设计注册表或权威。Figma 是开发设计资产，唯一 Experience Constitution 和既有 Product Core 真相不变；无访问时保留 NOT_VERIFIED/BLOCKED，禁止用 PNG 或伪造 .fig 冒充。优先复用获授权现有工程；无可用工程时，本次明确的全产品可编辑设计要求已授权创建必要设计文件，仍须具备真实编辑权限，不包含新费用或公开发布。
 
-先补完整信息架构、组件/变量关系和当前真实状态，再沿五个 Golden Pages（AI-01、CTH-01、BMP-01、SH-01、SYS-01）与业务依赖推进高保真和实现，不削减其余页面。全部 44 屏及官网家族保留四端适配、中英韩、明暗主题、字号/宽度、可访问性与完整失败恢复；Figma 使用可编辑 Components/Variants/Variables/Auto Layout/Prototype。主题尽量映射既有 LumenisTheme，Website Astro/CSS只共享语义设计决策。
+先交完整信息架构、组件/变量关系、全部屏幕与官网家族的可编辑视觉设计及任务交互原型，再按 DESIGN_READY 逐屏实现。五个 Golden Pages（AI-01、CTH-01、BMP-01、SH-01、SYS-01）只用于设计排序，不是可交付范围上限，也不能做完五页就停。全部 44 屏及官网家族保留四端适配、中英韩、明暗主题、字号/宽度、可访问性与完整失败恢复；Figma 使用可编辑 Components/Variants/Variables/Auto Layout/Prototype，保留既定2D手绘水彩方向及真实字段/动作/状态。交付须给出可打开编辑的文件链接、节点与版本，以及既有ScreenSpec映射中的覆盖和缺口；截图仅作辅助。主题尽量映射既有 LumenisTheme，Website Astro/CSS只共享语义设计决策。
 
 每次设计修改必须定位受影响源组件/Token/动作、必要回归和回退版本，保留未修改工作、状态恢复、焦点和路由；不得为了重构巨型 Screen/Shell 或统一样式而重写业务。CTH事件因果边、ACC-03/04绑定登记及默认入口需分别核对，缺少关系数据或真实 callable 不能靠绘图宣告完成。
 
@@ -1507,4 +1507,4 @@ J5/J6具体操作和真实任务在既有SH-01、BMP-08规范增补；不再全�
 
 全产品原有列表、详情、比较、图表、报告及导出保留任务需要的准确维度；未取得的数值以“—”展示，并以键盘/触控/读屏均可用的说明展示未采集、来源未提供、权限受限、失败、未知、不适用或过期等真实原因。沿现有状态字段，不把所有缺值合并成0/无数据或隐藏列；CSV/API等机器输出保留null和状态，图表不画零值点或凭空补线。真实0显示0；旧观测保留其时点和过期状态。
 
-按话题/主体/任务语义采集，再按真实出版或事件时间排序/分组/筛选，页面明确所用时间语义；采集时间单列，未知日期单列，用户显式范围保留。维度完整不等于数据采全，更不证明能力已闭环；底层Bug仍由原Owner修复。Global§10与Real Delivery共同定义证据门槛，F和C窗口在后续确认派工后实施，不重新审阅全部44屏。
+按话题/主体/任务语义采集，再按真实出版或事件时间排序/分组/筛选，页面明确所用时间语义；采集时间单列，未知日期单列，用户显式范围保留。维度完整不等于数据采全，更不证明能力已闭环；底层Bug仍由原Owner修复。Global§10与Real Delivery共同定义证据门槛，F和C窗口按当前已批准派工实施，不重新审阅未变化的44屏材料。

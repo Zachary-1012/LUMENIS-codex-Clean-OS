@@ -5,7 +5,9 @@ import uuid
 
 import pytest
 
+import canonical_data
 import lumenis.shared.reporting.source_brief_job as jobs
+from lumenis.shared.reporting import business_brief
 from canonical_data import CanonicalRecord, ensure_canonical_table, persist_canonical
 from lumenis.shared.database.business_schema import apply_business_schema
 from lumenis.shared.evaluation.recorder import init_db
@@ -36,7 +38,7 @@ def job_db(tmp_path, monkeypatch):
     return path
 
 
-def _source(conn, source_id="brief-job-source", subject="SUBJECT-A"):
+def _source(conn, source_id="brief-job-source", subject="SUBJECT-A", *, source_type="web_mention"):
     evidence_id = evidence_store.record_evidence(
         connection=conn, source="public_http", project="LUMENIS",
         product="CTH", feature_id="SOURCE_BRIEF_JOB_TEST", test_name="signed_source",
@@ -46,10 +48,72 @@ def _source(conn, source_id="brief-job-source", subject="SUBJECT-A"):
     persist_canonical(conn, CanonicalRecord(
         canonical_id="canonical-" + source_id, product_id="CTH", domain_id="cth",
         subject_id=subject, scope_status="VERIFIED", scope_evidence_ref=str(evidence_id),
-        source_id=source_id, external_id=source_id, source_type="web_mention",
+        source_id=source_id, external_id=source_id, source_type=source_type,
         source_platform="web", title="Real public source", url="https://source.example/item/1",
         content="Private source body is not part of the brief", captured_at="2026-09-30T12:00:00Z",
     ))
+    return evidence_id
+
+
+def _document_row(conn, source_id, evidence_id, subject="SUBJECT-A"):
+    persist_canonical(conn, CanonicalRecord(
+        canonical_id="canonical-row-" + source_id, product_id="CTH", domain_id="cth",
+        subject_id=subject, scope_status="VERIFIED", scope_evidence_ref=str(evidence_id),
+        source_id=source_id, external_id=source_id + ":row:1", source_type="document_row",
+        source_platform="approved_research_document", title="Selected row",
+        url="https://source.example/item/1", content="Selected row body",
+        captured_at="2026-09-30T12:00:00Z",
+        provenance=json.dumps({
+            "schema": "document-row-projection/v1",
+            "source_locator": {"unit": "parsed_table_row", "table_index": 0, "row_index": 1},
+            "source_row_sha256": "a" * 64,
+        }),
+        raw_ref=json.dumps({"source_id": source_id, "evidence_id": evidence_id}),
+    ))
+
+
+def _mock_report_read_permission(monkeypatch):
+    from lumenis.shared.reporting import saved_work
+
+    monkeypatch.setattr(
+        saved_work, "authorize",
+        lambda actor, scope, *, action, connection=None: {
+            **scope, "principal_kind": "local_workspace", "principal_ref": "workspace:local",
+        },
+    )
+
+
+def _mock_research(monkeypatch):
+    calls = []
+
+    def run(_system, user, **_kwargs):
+        payload = json.loads(user)
+        calls.append(payload)
+        source_id = payload["sources"][0]["source_id"]
+        result = {
+            "source_observations": [{"source_id": source_id, "excerpt_index": 0}],
+            "interpretations": [{
+                "text": "单条来源只能形成待验证假设。", "source_ids": [source_id],
+            }],
+            "proposed_actions": [{
+                "action": "将这条来源作为后续内容讨论材料。",
+                "reason": "当前只有这一项已绑定来源。",
+                "check": "由团队复核来源后再决定是否采用。",
+                "source_ids": [source_id],
+                "pilot": {
+                    "audience": "建议邀请少量目标受众参与复核。",
+                    "procedure": "先展示来源，再收集参与者的独立理解。",
+                    "measure": "记录理解是否与预期表达一致。",
+                    "continue_if": "反馈一致时再讨论下一步。",
+                    "stop_if": "反馈不一致或不足时先补充材料。",
+                },
+            }],
+            "unknowns": ["实际反馈、权利与执行资源仍需确认。"],
+        }
+        return json.dumps(result, ensure_ascii=False), "ollama", {"model": "isolated-fake"}
+
+    monkeypatch.setattr(business_brief, "_request_business_inference", run)
+    return calls
 
 
 def _request(con, job_id=None, **overrides):
@@ -102,6 +166,112 @@ def test_job_persists_reopens_exact_scope_and_records_real_artifact_evaluation(j
     snapshot = json.loads(row[3])
     assert snapshot["permission_audit_ref"] == "permission-audit:read-source-brief"
     assert snapshot["source_brief"]["records"][0]["scope_evidence_ref"]
+
+
+def test_document_and_selected_row_share_one_source_brief_record_and_reopen_by_canonical_id(job_db, monkeypatch):
+    source_id = "brief-document-with-row"
+    research_calls = _mock_research(monkeypatch)
+    with sqlite3.connect(job_db) as conn:
+        conn.row_factory = sqlite3.Row
+        evidence_id = _source(conn, source_id, source_type="document")
+        _document_row(conn, source_id, evidence_id)
+        conn.commit()
+        result = _request(
+            conn, job_id="job-document-row-0001", source_ids=[source_id], limit=1,
+            business_question="What should be checked before using this source?",
+        )
+
+    records = result["source_brief"]["records"]
+    assert result["job_state"] == "completed"
+    assert len(records) == 1
+    assert records[0]["source_id"] == source_id
+    assert records[0]["canonical_id"] == "canonical-" + source_id
+    assert records[0]["source_type"] == "document"
+    assert records[0]["scope_evidence_ref"] == str(evidence_id)
+    assert result["source_brief"]["sample"]["returned_verified_count"] == 1
+    assert result["source_brief"]["sample"]["candidate_count"] == 1
+    assert result["business_analysis"]["state"] == "draft"
+    assert len(research_calls) == 1
+    assert research_calls[0]["sources"][0]["source_id"] == source_id
+    assert "Private source body" in "".join(research_calls[0]["sources"][0]["excerpts"])
+    with sqlite3.connect(job_db) as conn:
+        conn.row_factory = sqlite3.Row
+        canonical_rows = canonical_data.list_scoped_canonical(
+            conn, product_id="CTH", subject_id="SUBJECT-A", source_ids=[source_id], limit=10,
+        )
+        source_rows = canonical_data.list_scoped_canonical(
+            conn, product_id="CTH", subject_id="SUBJECT-A", source_ids=[source_id],
+            limit=1, source_level=True,
+        )
+    assert len(canonical_rows["records"]) == 2
+    assert canonical_rows["candidate_count"] == 2
+    assert len(source_rows["records"]) == 1
+    assert source_rows["candidate_count"] == 1 and source_rows["truncated"] is False
+
+    _mock_report_read_permission(monkeypatch)
+    reopened = jobs.get_source_brief_job(
+        result["job_id"], actor_id="workspace:local", actor=object(),
+    )
+    assert reopened["source_brief"]["records"] == records
+    assert reopened["artifact_outcome"] == result["artifact_outcome"]
+
+
+def test_legacy_report_resolves_document_by_type_and_evidence_after_row_projection(job_db, monkeypatch):
+    source_id = "legacy-document-with-row"
+    with sqlite3.connect(job_db) as conn:
+        conn.row_factory = sqlite3.Row
+        evidence_id = _source(conn, source_id, source_type="document")
+        conn.commit()
+        result = _request(conn, job_id="job-legacy-document-0001", source_ids=[source_id], limit=1)
+
+    with sqlite3.connect(job_db) as conn:
+        row = conn.execute(
+            "SELECT report_type,report_date,total_notes,summary,source_snapshot "
+            "FROM daily_reports WHERE report_id=?", (result["job_id"],),
+        ).fetchone()
+        snapshot = json.loads(row[4])
+        snapshot["source_brief"]["records"][0].pop("canonical_id")
+        source_snapshot = jobs._json(snapshot)
+        artifact_hash = jobs._hash_artifact(
+            report_id=result["job_id"], report_type=row[0], report_date=row[1],
+            total_notes=row[2], summary=row[3], source_snapshot=source_snapshot,
+        )
+        conn.execute(
+            "UPDATE daily_reports SET source_snapshot=?,artifact_hash=? WHERE report_id=?",
+            (source_snapshot, artifact_hash, result["job_id"]),
+        )
+        _document_row(conn, source_id, evidence_id)
+        conn.commit()
+
+    _mock_report_read_permission(monkeypatch)
+    reopened = jobs.get_source_brief_job(
+        result["job_id"], actor_id="workspace:local", actor=object(),
+    )
+    assert reopened["source_brief"]["records"][0]["source_id"] == source_id
+    assert "canonical_id" not in reopened["source_brief"]["records"][0]
+    assert reopened["artifact_outcome"]["artifact_hash"] == artifact_hash
+    assert reopened["artifact_outcome"]["source_count"] == result["artifact_outcome"]["source_count"]
+
+
+def test_mismatched_document_row_evidence_is_not_hidden_by_source_level_read(job_db):
+    source_id = "brief-document-row-evidence-conflict"
+    with sqlite3.connect(job_db) as conn:
+        conn.row_factory = sqlite3.Row
+        evidence_id = _source(conn, source_id, source_type="document")
+        _document_row(conn, source_id, evidence_id)
+        conn.execute(
+            "UPDATE canonical_data SET scope_evidence_ref='foreign-evidence' "
+            "WHERE canonical_id=?", ("canonical-row-" + source_id,),
+        )
+        conn.commit()
+        source_rows = canonical_data.list_scoped_canonical(
+            conn, product_id="CTH", subject_id="SUBJECT-A", source_ids=[source_id],
+            limit=1, source_level=True,
+        )
+        assert source_rows["candidate_count"] == 2
+        assert source_rows["truncated"] is True
+        with pytest.raises(PermissionError, match="SOURCE_BRIEF_SELECTED_SOURCE_UNAVAILABLE"):
+            _request(conn, job_id="job-document-row-conflict-001", source_ids=[source_id], limit=1)
 
 
 def test_reopened_job_is_actor_and_scope_bound(job_db):

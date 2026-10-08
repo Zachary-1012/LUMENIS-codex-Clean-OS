@@ -1156,7 +1156,7 @@ def validate_source_ids(source_ids: list[str] | None, *, limit: int = 100) -> li
 def list_scoped_canonical(
     con: sqlite3.Connection, *, product_id: str, subject_id: Optional[str] = None,
     brand_focus_id: Optional[str] = None, limit: int = 30,
-    source_ids: list[str] | None = None,
+    source_ids: list[str] | None = None, source_level: bool = False,
 ) -> Dict[str, Any]:
     """Read Canonical rows only when their exact signed scope still verifies."""
     if not isinstance(con, sqlite3.Connection):
@@ -1171,6 +1171,8 @@ def list_scoped_canonical(
         raise TypeError("limit must be an integer")
     if not 1 <= limit <= 100:
         raise ValueError("limit must be between 1 and 100")
+    if type(source_level) is not bool:
+        raise TypeError("source_level must be an explicit boolean")
     source_ids = validate_source_ids(source_ids, limit=limit)
 
     def validate_focus(value: Optional[str], name: str) -> Optional[str]:
@@ -1203,6 +1205,31 @@ def list_scoped_canonical(
     if source_ids is not None:
         where.append("source_id IN (" + ",".join("?" for _ in source_ids) + ")")
         params.extend(source_ids)
+    if source_level:
+        # A selected document row is a Canonical projection of its parent
+        # source, not another source-level sample. Hide that projection only
+        # when its unique parent has the same signed Evidence and exact scope.
+        # Duplicated parents or mismatched Evidence/scope remain visible so the
+        # Source Brief owner can fail closed instead of masking the conflict.
+        where.append("""(
+            source_type <> 'document_row'
+            OR NOT EXISTS (
+                SELECT 1 FROM canonical_data AS parent
+                WHERE parent.source_id=canonical_data.source_id
+                  AND parent.product_id=canonical_data.product_id
+                  AND parent.source_type='document'
+                  AND parent.scope_evidence_ref=canonical_data.scope_evidence_ref
+                  AND parent.domain_id=canonical_data.domain_id
+                  AND COALESCE(parent.subject_id,'')=COALESCE(canonical_data.subject_id,'')
+                  AND COALESCE(parent.brand_focus_id,'')=COALESCE(canonical_data.brand_focus_id,'')
+                  AND 1=(
+                      SELECT COUNT(*) FROM canonical_data AS parent_count
+                      WHERE parent_count.source_id=canonical_data.source_id
+                        AND parent_count.product_id=canonical_data.product_id
+                        AND parent_count.source_type='document'
+                  )
+            )
+        )""")
     predicate = " AND ".join(where)
     candidate_count = con.execute(
         f"SELECT COUNT(*) FROM {CANONICAL_TABLE} WHERE {predicate}", tuple(params),

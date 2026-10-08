@@ -128,7 +128,10 @@ class WechatPublicAdapter(BasePlatformAdapter):
         if route is None:
             return CollectionResult(CollectionStatus.NOT_SUPPORTED, self.platform,
                 message='公众号详情仅支持可识别的微信原文公开文章链接',
-                metadata={'route_state': 'UNKNOWN', 'original_body_available': False})
+                metadata={'route_state': 'UNKNOWN', 'reason': 'SOURCE_URL_NOT_SUPPORTED',
+                          'original_body_available': False, 'network_attempted': False,
+                          'persistence_attempted': False, 'requires_auth': False,
+                          'cookies_used': False})
         try:
             response = self.fetcher(content_id)
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -150,7 +153,10 @@ class WechatPublicAdapter(BasePlatformAdapter):
         if route is None:
             return CollectionResult(CollectionStatus.NOT_SUPPORTED, self.platform,
                 message='输入未匹配已实现的公众号公开来源路径',
-                metadata={'route_state': 'UNKNOWN'})
+                metadata={'route_state': 'UNKNOWN', 'reason': 'SOURCE_URL_NOT_SUPPORTED',
+                          'original_body_available': False, 'network_attempted': False,
+                          'persistence_attempted': False, 'requires_auth': False,
+                          'cookies_used': False})
         if route.backend == "public_original_article_fetch":
             return self.detail(keyword)
         if type(page) is not int or page < 1 or type(max_results) is not int or not 1 <= max_results <= 20:

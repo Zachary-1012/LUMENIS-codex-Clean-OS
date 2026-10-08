@@ -191,3 +191,92 @@ def test_report_route_reopens_bound_quality_feedback_without_new_generation(clie
     with sqlite3.connect(db) as con:
         assert con.execute("SELECT COUNT(*) FROM daily_reports").fetchone()[0] == 1
         assert con.execute("SELECT COUNT(*) FROM evaluation_records").fetchone()[0] == 4
+
+
+@pytest.mark.parametrize("resume", [False, True])
+def test_report_recovery_rechecks_each_original_source_scope(client, monkeypatch, resume):
+    from lumenis.shared.reporting import saved_work
+
+    api, _app, db, entry, _gate = client
+    result = api.post(URL + "/generate", headers=GLOBAL, json={}).get_json()["result"]
+    real_authorize = saved_work.authorize
+
+    def authorize(actor, scope, *, action, connection=None):
+        if scope["subject_id"] == entry["subject_id"]:
+            raise saved_work.SavedWorkError("WORK_PERMISSION_DENIED")
+        return real_authorize(actor, scope, action=action, connection=connection)
+
+    monkeypatch.setattr(saved_work, "authorize", authorize)
+    if resume:
+        response = api.post(URL + "/generate", headers=GLOBAL,
+                            json={"resume_job_id": result["job_id"]})
+    else:
+        response = api.get(URL + "/jobs/" + result["job_id"], headers=GLOBAL)
+    assert response.status_code == 403, response.get_json()
+    assert response.get_json()["code"] == "WORK_PERMISSION_DENIED"
+    assert "result" not in response.get_json()
+    with sqlite3.connect(db) as con:
+        assert con.execute("SELECT COUNT(*) FROM daily_reports").fetchone()[0] == 1
+        assert con.execute("SELECT COUNT(*) FROM evaluation_records").fetchone()[0] == 3
+
+
+@pytest.mark.parametrize("change,code", [
+    ("denied", "CONTENT_SCOPE_DENIED"),
+    ("actor", "SOURCE_BRIEF_ACTOR_MISMATCH"),
+    ("scope", "SOURCE_BRIEF_SCOPE_MISMATCH"),
+])
+def test_reopen_checks_current_context_after_render(client, monkeypatch, change, code):
+    import experience_runtime
+
+    api, _app, _db, entry, _gate = client
+    result = api.post(URL + "/generate", headers=GLOBAL, json={}).get_json()["result"]
+    real_jsonify = experience_runtime.jsonify
+    real_context = experience_runtime._source_brief_context
+    rendered = False
+
+    def render(*args, **kwargs):
+        nonlocal rendered
+        response = real_jsonify(*args, **kwargs)
+        if args and isinstance(args[0], dict) and args[0].get("ok") is True:
+            rendered = True
+        return response
+
+    def current_context(*args, **kwargs):
+        context = real_context(*args, **kwargs)
+        if not rendered:
+            return context
+        if change == "denied":
+            raise PermissionError("CONTENT_SCOPE_DENIED")
+        actor_ref, audit_ref, scope, actor = context
+        if change == "actor":
+            actor_ref = "workspace:changed"
+        else:
+            scope = {**scope, "global_scope": False, "subject_id": entry["subject_id"]}
+        return actor_ref, audit_ref, scope, actor
+
+    monkeypatch.setattr(experience_runtime, "jsonify", render)
+    monkeypatch.setattr(experience_runtime, "_source_brief_context", current_context)
+    response = api.get(URL + "/jobs/" + result["job_id"], headers=GLOBAL)
+    assert response.status_code == 403, response.get_json()
+    assert response.get_json()["code"] == code
+    assert "result" not in response.get_json()
+
+
+def test_generate_rechecks_permission_after_projection_before_persistence(client, monkeypatch):
+    from lumenis.shared.reporting import source_brief_job
+
+    api, _app, db, _entry, gate = client
+    real_build = source_brief_job.build_scoped_source_brief
+
+    def build(*args, **kwargs):
+        brief = real_build(*args, **kwargs)
+        gate.revoke_permission(p.PermissionLevel.ANALYZE)
+        return brief
+
+    monkeypatch.setattr(source_brief_job, "build_scoped_source_brief", build)
+    response = api.post(URL + "/generate", headers=GLOBAL, json={})
+    assert response.status_code == 403, response.get_json()
+    assert "result" not in response.get_json()
+    with sqlite3.connect(db) as con:
+        assert con.execute("SELECT COUNT(*) FROM daily_reports").fetchone()[0] == 0
+        assert con.execute("SELECT COUNT(*) FROM evaluation_records").fetchone()[0] == 0

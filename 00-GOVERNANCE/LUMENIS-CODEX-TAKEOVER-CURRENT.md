@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
-> 2026-10-08 dispatch: Product Owner dispatched M/F/C1-C6 to their full J/R/U outcomes and added product-owned computer/browser requirements. Each window enters RUNNING only after fresh admission. M checks changed complete outcomes, shared conflicts, CI and risks every 30 minutes, then waits when no actionable work remains. This publication updates approved rules, material mapping, source-opening modes and the exact rules-only path classifier; it does not deliver product interaction. Model, reasoning-effort, speed and service-tier settings, runtime status and user-acceptance status are unchanged. Previous source publication at `749803ba271435ac9c28fab370392219d2188722` remains historical.
+> 2026-10-08 dispatch: Product Owner dispatched M/F/C1-C6 to their full J/R/U outcomes and added product-owned computer/browser requirements. Each window enters RUNNING only after fresh admission. M checks changed complete outcomes, shared conflicts, CI and risks every 30 minutes, then waits when no actionable work remains. This publication co-publishes the M-accepted bounded Collector/Importer/SourceBrief source repairs and the approved Figma-first continuation rules. Controlled browser/computer operation and complete user outcomes still require implementation and real acceptance. Model, reasoning-effort, speed and service-tier settings, runtime status and user-acceptance status are unchanged. Previous source publication at `749803ba271435ac9c28fab370392219d2188722` remains historical.
 > Published topology: M is the root controller/integrator, F owns frontend/Experience, and C1-C6 are restored as six eligible delivery roles under the current AGENTS.md instruction. This file records the latest published repository state; it is not a live process list. A local window executes only when explicitly dispatched and after current-state admission; explicit Product Owner wait/resume instructions control local scheduling without changing the canonical product scope. Product Architecture and D01-D49 dispositions were approved 2026-10-04; D labels remain separate from R01-R15 requirements.
 > current HEAD = READ WITH git fetch + git rev-parse origin/main
 
@@ -28,8 +28,14 @@ not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+
+C6 bounded source publication, 2026-10-08: M accepted the exact 31-path source/test/status/evidence package on parent `e42f0246568b5a6c9f41e2cfb29ec549b3e14672`, plus five pinned Figma-first governance paths. Only CURRENT and the owning Round 15 evidence were amended for final publication status. The batch retains the existing queue-attempt fencing, protected XHS recovery, terminal replay, compatibility collection and selected-document parent/source identity repairs. It binds the three SourceBrief recovery callers to the server principal, rechecks original source scopes, connects the existing before-persist guard and checks current identity/scope after rendering. 179 affected tests pass with two unavailable optional legacy-format skips; the 26 report-route tests pass. Five new permission counterexamples were observed failing before the caller repair. These are scoped source/contract results, not complete C1/C6 acceptance. Evidence: `evidence/round-15/CURRENT-STATE-REPAIR-20261007.md`.
+
+Current Core remains healthy but its loaded source revision is unverified. SourceBrief historical artifacts reopened with unchanged hashes (GLOBAL 29, Guangzhou 29, Nike 3); those initial HTTP receipts do not prove fresh source-use permission, Shared Artifact admission, actual AI or business quality. The scheduled maintenance action still executes the old fixed 3d6e0924 source. Same-version reload, scheduler binding, C5 source-content/use bindings, controlled browser/OS interaction and complete C-window E2E remain open. Other owners' dirty changes are protected and excluded from this batch. C1's seven accepted paths provide structured WeChat rejection before transport, original-body success, optional explicit publication bounds and additive task-semantic queries. The 122-test/14-subtest owner receipt is pinned and the 51 joined acquisition/compatibility/WeChat checks pass without skips; source time and actual capture remain distinct. This resolves the known WeChat return-contract mismatch in source. The historical failed CI run remains failed; new CI belongs to this exact published SHA and must be observed separately.
+
+F continues its existing full outcome without another scheduling confirmation. The latest direct Product Owner instruction requires real editable Figma design first for all 44 App screens, Website content families and their approved surface/interaction variants, then implementation through the existing DESIGN_READY gates. Reuse an accessible authorized file or create the necessary editable file under the same Experience owner; existing source is preserved. Actual file/node/version readback is still NOT_VERIFIED here. A missing Figma connection affects that dependency only, not all windows. Approval: `evidence/approvals/PO-20261008-FIGMA-FIRST-CONTINUE.json`.
 
 The Product Owner's direct full-closure resume approval is recorded in
 `evidence/approvals/PO-20261008-FULL-CLOSURE-RESUME.json`. Existing outcomes and
@@ -41,8 +47,9 @@ Source baseline `749803ba271435ac9c28fab370392219d2188722` Product Gate run
 37691558962 is FAILED at
 `tests/test_wechat_public_sources.py::test_detail_rejects_foreign_host_before_transport`:
 the expectation of ValueError conflicts with the structured adapter rejection.
-C1 owns the source/caller/contract repair; C6 integrates and verifies. Do not weaken
-the no-network/no-session security boundary or mark that run PASS.
+C1's source/caller/contract repair is included in the bounded publication above.
+The no-network/no-session security boundary is preserved; that historical run is
+not changed to PASS by a later repair.
 
 ### Historical implementation publication — 749803ba
 
@@ -80,7 +87,7 @@ it cannot include product behavior or claim loaded runtime. Published-source
 claims still require same-commit source and CURRENT. This prevents forcing a
 future rules-only update to manufacture a product change or claim unpublished code.
 
-### 2026-10-08 newest collection correction — rules adopted, owner work dispatched
+### 2026-10-08 newest collection correction — source integrated, runtime work remains
 
 The Product Owner removed the universal publication-start cutoff and clarified
 that complete collection capability does not require every data value to exist.
@@ -88,8 +95,9 @@ Acquire by subject/topic/task semantics, preserve explicit requested ranges and
 native time; show required, correctly defined dimensions with “—” plus honest
 state/reason when missing. Do not substitute zero or hide acquisition defects.
 Global §10 records the exact remaining hard-coded date in acquisition_plan and
-prelaunch_baseline and the C1/C6/F continuation. These source changes are still
-OPEN; this update changes rules, not runtime plans or platform activity. The
+prelaunch_baseline and the C1/C6/F continuation. The corresponding C1 source
+changes are included in the bounded publication above; current signed runtime
+plans and actual platform activity remain separate, unverified work. The
 subsequent explicit Product Owner instruction dispatches M/F/C1-C6 after fresh
 admission. The earlier 197-row material inventory
 is unchanged; these two direct chat corrections are recorded in the same approval

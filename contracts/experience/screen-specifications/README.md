@@ -87,11 +87,11 @@ After the overall product plan is accepted, resolve source bindings and detailed
 
 ### 可编辑设计工程与源码同步 — 2026-10-08 审计增补
 
-既有 F 负责全部 44 屏与官网内容家族的可编辑设计工程，M 负责审查，C1-C6 提供真实字段/动作/状态合同，C6 协调共享绑定。执行须等 Product Owner 确认；本轮 M 更新规则和工具链不恢复任何其他窗口。
+既有 F 负责全部 44 屏与官网内容家族的可编辑设计工程，M 负责审查，C1-C6 提供真实字段/动作/状态合同，C6 协调共享绑定。Product Owner 已明确要求 F 继续，先完成全产品 Figma 可编辑设计；不存在等待再次开工确认的前置。后端窗口继续各自授权工作，现有前端修改保留。
 
-在现有 ScreenSpec/README 保存 `Screen ID → 设计规格 → Figma file/node/revision → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence` 的映射，不建第二设计注册表或权威。Figma 是开发设计资产，唯一 Experience Constitution 和既有 Product Core 真相不变；无访问时保留 NOT_VERIFIED/BLOCKED，禁止用 PNG 或伪造 .fig 冒充。优先复用获授权现有工程；新建工程须必要访问与 PO 认可。
+在现有 ScreenSpec/README 保存 `Screen ID → 设计规格 → Figma file/node/revision → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence` 的映射，不建第二设计注册表或权威。Figma 是开发设计资产，唯一 Experience Constitution 和既有 Product Core 真相不变；无访问时保留 NOT_VERIFIED/BLOCKED，禁止用 PNG 或伪造 .fig 冒充。优先复用获授权现有工程；无可用工程时，本次明确的全产品可编辑设计要求已授权创建必要设计文件，仍须具备真实编辑权限，不包含新费用或公开发布。
 
-先补完整信息架构、组件/变量关系和当前真实状态，再沿五个 Golden Pages（AI-01、CTH-01、BMP-01、SH-01、SYS-01）与业务依赖推进高保真和实现，不削减其余页面。全部 44 屏及官网家族保留四端适配、中英韩、明暗主题、字号/宽度、可访问性与完整失败恢复；Figma 使用可编辑 Components/Variants/Variables/Auto Layout/Prototype。主题尽量映射既有 LumenisTheme，Website Astro/CSS只共享语义设计决策。
+先交完整信息架构、组件/变量关系、全部屏幕与官网家族的可编辑视觉设计及任务交互原型，再按 DESIGN_READY 逐屏实现。五个 Golden Pages（AI-01、CTH-01、BMP-01、SH-01、SYS-01）只用于设计排序，不是可交付范围上限，也不能做完五页就停。全部 44 屏及官网家族保留四端适配、中英韩、明暗主题、字号/宽度、可访问性与完整失败恢复；Figma 使用可编辑 Components/Variants/Variables/Auto Layout/Prototype，保留既定2D手绘水彩方向及真实字段/动作/状态。交付须给出可打开编辑的文件链接、节点与版本，以及既有ScreenSpec映射中的覆盖和缺口；截图仅作辅助。主题尽量映射既有 LumenisTheme，Website Astro/CSS只共享语义设计决策。
 
 每次设计修改必须定位受影响源组件/Token/动作、必要回归和回退版本，保留未修改工作、状态恢复、焦点和路由；不得为了重构巨型 Screen/Shell 或统一样式而重写业务。CTH事件因果边、ACC-03/04绑定登记及默认入口需分别核对，缺少关系数据或真实 callable 不能靠绘图宣告完成。
 

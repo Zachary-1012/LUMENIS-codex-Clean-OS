@@ -652,7 +652,7 @@ def _update_detail_progress(result):
                               'pagination_exhausted': False})
 
 
-def _write_checkpoint(output, result, run_id, *, complete=False):
+def _write_checkpoint(output, result, run_id, *, complete=False, checkpoint_override=None):
     """Atomically replace the existing Raw artifact after each observation."""
     if not output:
         return
@@ -660,11 +660,14 @@ def _write_checkpoint(output, result, run_id, *, complete=False):
     folder = os.path.dirname(os.path.abspath(output))
     os.makedirs(folder, exist_ok=True)
     snapshot = dict(result)
-    snapshot['partial'] = not complete
-    snapshot['checkpoint'] = {'run_id': run_id, 'source_host': COLLECTION_HOST,
-                              'complete': complete,
-                              'verified_identity_fingerprint': _identity_fingerprint() if result.get('identity_verified') else '',
-                              'written_at': datetime.now().astimezone().isoformat()}
+    if checkpoint_override is None:
+        snapshot['partial'] = not complete
+        snapshot['checkpoint'] = {'run_id': run_id, 'source_host': COLLECTION_HOST,
+                                  'complete': complete,
+                                  'verified_identity_fingerprint': _identity_fingerprint() if result.get('identity_verified') else '',
+                                  'written_at': datetime.now().astimezone().isoformat()}
+    else:
+        snapshot['checkpoint'] = dict(checkpoint_override)
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=folder,
@@ -1463,12 +1466,18 @@ def main():
     progress = lambda value: _write_checkpoint(args.output, value, args.run_id)
     initial = {'ok': False, 'keyword': args.keyword, 'notes': [], 'summary': {'phase': 'starting'},
                'search_diagnostics': {'version': 'xhs-search-state-v1', 'observations': []}}
-    progress(initial)
+    terminal_replay = False
+    previous = None
     try:
         previous = _load_resume_checkpoint(args.resume_from, args.keyword)
-        resume_ids = _completed_detail_ids(previous)
-        resume_options = {'resume_cards': _resume_pending_cards(previous, resume_ids)} if previous is not None else {}
-        res = collect(args.keyword, args.max_scroll, args.max_details, args.cdp_url, args.human, progress, deadline, resume_ids, **resume_options)
+        if previous is not None and (previous.get('checkpoint') or {}).get('complete') is True:
+            res = previous
+            terminal_replay = True
+        else:
+            progress(initial)
+            resume_ids = _completed_detail_ids(previous)
+            resume_options = {'resume_cards': _resume_pending_cards(previous, resume_ids)} if previous is not None else {}
+            res = collect(args.keyword, args.max_scroll, args.max_details, args.cdp_url, args.human, progress, deadline, resume_ids, **resume_options)
     except Exception as e:
         res = initial
         if args.output:
@@ -1482,10 +1491,15 @@ def main():
                 pass
         code = str(e) if re.fullmatch(r'[A-Z][A-Z0-9_]{0,100}', str(e)) else type(e).__name__
         res.update({'ok': False, 'partial': True, 'error': f'CDP_EXCEPTION: {code}'})
-    res['elapsed'] = round(time.time() - t0, 1)
-    res['partial'] = bool(res.get('error') or res.get('partial'))
+    if not terminal_replay:
+        res['elapsed'] = round(time.time() - t0, 1)
+        res['partial'] = bool(res.get('error') or res.get('partial'))
     if args.output:
-        res['checkpoint'] = _write_checkpoint(args.output, res, args.run_id, complete=not res['partial'])
+        if terminal_replay:
+            _write_checkpoint(args.output, res, args.run_id,
+                              complete=True, checkpoint_override=res['checkpoint'])
+        else:
+            res['checkpoint'] = _write_checkpoint(args.output, res, args.run_id, complete=not res['partial'])
     print('\n---RESULT_JSON---')
     print(json.dumps(res, ensure_ascii=False))
     sys.exit(0 if res.get('ok') else 1)

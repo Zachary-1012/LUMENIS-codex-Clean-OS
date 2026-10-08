@@ -33,19 +33,30 @@ class QueueWorker:
     def process_once(self):
         """消费一个到期任务：成功 ack，失败 fail（task_queue 内部指数退避+上限转 failed）。
         无任务返回 None；有任务返回 (task_id, ok)。"""
-        task = self.queue.dequeue(worker_id=self.worker_id, lease_owner=self.lease_owner, run_id=uuid.uuid4().hex)
+        task = self.queue.dequeue(worker_id=self.worker_id, lease_owner=self.lease_owner)
         if task is None:
             return None
         task_id = task["id"]
-        self.queue.heartbeat(task_id, self.worker_id)
+        # Capture the server-issued attempt receipt before handing the mutable
+        # task dict to processor code.
+        receipt = {
+            "run_id": task.get("run_id"),
+            "worker_id": self.worker_id,
+            "lease_owner": self.lease_owner,
+        }
+        if not self.queue.heartbeat(
+            task_id, self.worker_id, run_id=receipt["run_id"],
+            lease_owner=receipt["lease_owner"],
+        ):
+            return (task_id, False)
         try:
             ok = self.processor(task)
         except Exception:
             ok = False
         if ok:
-            self.queue.ack(task_id)
+            ok = self.queue.ack(task_id, **receipt)
         else:
-            self.queue.fail(task_id, error="worker processor failed")
+            self.queue.fail(task_id, error="worker processor failed", **receipt)
         return (task_id, ok)
 
     def drain(self):

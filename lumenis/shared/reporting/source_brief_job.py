@@ -174,6 +174,13 @@ def _verify_report(row: dict[str, Any], *, job_id: str, actor_id: str,
                 or not record.get("evidence_id") or not record.get("scope_evidence_ref")
                 or record["evidence_id"] != record["scope_evidence_ref"]):
             raise RuntimeError("SOURCE_BRIEF_STORED_EVIDENCE_INVALID")
+        canonical_id = record.get("canonical_id")
+        if canonical_id is not None and (
+            not isinstance(canonical_id, str) or not canonical_id
+            or canonical_id != canonical_id.strip() or len(canonical_id) > 512
+            or any(ord(char) < 32 or 127 <= ord(char) <= 159 for char in canonical_id)
+        ):
+            raise RuntimeError("SOURCE_BRIEF_STORED_CANONICAL_ID_INVALID")
     multimodal = snapshot.get("multimodal")
     if isinstance(multimodal, dict) and multimodal.get("state") == "complete":
         if _multimodal_snapshot(multimodal, job_id=job_id, actor_id=actor_id, scope=scope) != multimodal:
@@ -367,6 +374,7 @@ def create_source_brief_job(
     for record in records:
         if (not isinstance(record, dict) or not record.get("source_id")
                 or not record.get("evidence_id") or not record.get("scope_evidence_ref")
+                or not record.get("canonical_id")
                 or record["evidence_id"] != record["scope_evidence_ref"]):
             raise RuntimeError("SOURCE_BRIEF_CANONICAL_EVIDENCE_INVALID")
     if not isinstance(brief.get("markdown"), str) or not isinstance(brief.get("content_hash"), str):
@@ -500,19 +508,15 @@ def get_source_brief_job(job_id: str, *, actor_id: str,
         reader = get_repository().connection(read_only=True, wal=False) if connection is None else nullcontext(connection)
         with reader as con:
             for source in verified["source_brief"]["records"]:
-                selected = con.execute("SELECT product_id,domain_id,subject_id,brand_focus_id,scope_status,scope_evidence_ref FROM canonical_data WHERE source_id=? AND product_id=?",
-                                       (source["source_id"], scope["product_id"])).fetchall()
-                if len(selected) != 1:
-                    raise RuntimeError("SOURCE_BRIEF_CURRENT_SOURCE_INVALID")
-                item = selected[0]
-                original = {"domain_id": item[1], "subject_id": item[2] or None,
-                            "brand_focus_id": item[3] or None, "global_scope": not bool(item[2] or item[3])}
-                if str(item[5]) != str(source["scope_evidence_ref"]):
-                    raise RuntimeError("SOURCE_BRIEF_CURRENT_SOURCE_CHANGED")
+                item = _resolve_current_source(con, source, scope["product_id"])
+                original = {"domain_id": item[4], "subject_id": item[5] or None,
+                            "brand_focus_id": item[6] or None, "global_scope": not bool(item[5] or item[6])}
                 authorize(actor, original, action="read", connection=con)
                 canonical_data._validate_canonical_scope(con, canonical_data.CanonicalRecord(
-                    source_id=source["source_id"], product_id=item[0], domain_id=item[1], subject_id=item[2],
-                    brand_focus_id=item[3], scope_status=item[4], scope_evidence_ref=str(item[5])))
+                    canonical_id=item[0], source_id=item[1], source_type=item[2],
+                    product_id=item[3], domain_id=item[4], subject_id=item[5],
+                    brand_focus_id=item[6], scope_status=item[7],
+                    scope_evidence_ref=str(item[8])))
     evaluation_ids = verified["snapshot"].get("evaluation_ids")
     evaluations = [get_evaluation_record(evaluation_ids[name]) for name in _evaluation_ids(job_id)]
     present = [record for record in evaluations if record]
@@ -522,3 +526,44 @@ def get_source_brief_job(job_id: str, *, actor_id: str,
     if actor is not None:
         authorize(actor, target, action="read", **options)
     return result
+
+
+def _resolve_current_source(con, source: dict[str, Any], product_id: str):
+    """Resolve the report's exact Canonical row, including legacy snapshots.
+
+    New snapshots pin ``canonical_id``. Older snapshots are still recoverable by
+    their stored source type and signed Evidence reference. For legacy document
+    records, the unique parent document disambiguates its selected-row children.
+    """
+    columns = (
+        "canonical_id,source_id,source_type,product_id,domain_id,subject_id,"
+        "brand_focus_id,scope_status,scope_evidence_ref"
+    )
+    expected_id = source.get("canonical_id")
+    if expected_id is not None:
+        rows = con.execute(
+            f"SELECT {columns} FROM canonical_data WHERE canonical_id=? AND source_id=? AND product_id=?",
+            (expected_id, source["source_id"], product_id),
+        ).fetchall()
+    else:
+        rows = con.execute(
+            f"SELECT {columns} FROM canonical_data WHERE source_id=? AND product_id=?",
+            (source["source_id"], product_id),
+        ).fetchall()
+    if not rows:
+        raise RuntimeError("SOURCE_BRIEF_CURRENT_SOURCE_INVALID")
+
+    evidence_ref = str(source["scope_evidence_ref"])
+    matching = [row for row in rows if str(row[8] or "") == evidence_ref]
+    if not matching:
+        raise RuntimeError("SOURCE_BRIEF_CURRENT_SOURCE_CHANGED")
+    expected_type = source.get("source_type")
+    if expected_type is not None:
+        matching = [row for row in matching if row[2] == expected_type]
+    if expected_id is None and expected_type == "document":
+        # Older reports did not store canonical_id. The signed parent document
+        # is the logical source; selected document_row records are projections.
+        matching = [row for row in matching if row[2] == "document"]
+    if len(matching) != 1:
+        raise RuntimeError("SOURCE_BRIEF_CURRENT_SOURCE_INVALID")
+    return matching[0]

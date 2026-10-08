@@ -31,6 +31,7 @@ import time
 import threading
 from pathlib import Path
 from typing import Dict, Optional
+from urllib.parse import urlsplit
 from .risk_controller import risk_controller, NEED_VERIFY, IP_RISK, LIGHT, MEDIUM, RECOVERING
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -66,8 +67,8 @@ KIND_AUTH = "AUTH"        # A 登录失效→弹码
 KIND_VERIFY = "VERIFY"    # B 人机验证→人工过验证
 KIND_BLOCKED = "BLOCKED"  # C IP/强风控→冷却，不可扫码解
 
-# 各真人平台配置：新增平台只改这里（框架不动）
-# 9222=主采集Profile（小红书/抖音/微博/B站），9223=代理Profile（Google/Instagram）
+# 各真人平台配置：新增平台只改这里（框架不动）。XHS 身份与端点由
+# SYSTEM Collector 的现有策略/会话 owner 在每个入口重新解析。
 RECOVERY_PROFILES = {
     "douyin": {
         "port": 9222, "profile": "edge-cdp-newaccount", "proxy_env": "",
@@ -77,11 +78,10 @@ RECOVERY_PROFILES = {
         "display": "抖音", "remote_hint": "用抖音App扫码登录",
     },
     "xiaohongshu": {
-        "port": 9222, "profile": "edge-cdp-newaccount", "proxy_env": "",
-        "login_url": "https://www.xiaohongshu.com",
+        "login_url": "https://www.rednote.com/",
         "auth_cookies": ["web_session", "a1"],
         "qr_selectors": ["img.qrcode", "[class*='qrcode'] img", "[class*='login'] canvas", "canvas"],
-        "display": "小红书", "remote_hint": "用小红书App扫码登录（300012风控不属于此项，请走冷却）",
+        "display": "小红书", "remote_hint": "在获准的香港/国际账号上完成登录（风控状态请走冷却）",
     },
     "instagram": {
         "port": 9223, "profile": "edge-cdp-proxy", "proxy_env": "GOOGLE_PROXY",
@@ -156,8 +156,76 @@ def classify_kind(platform: str, source_state: str = "", detail: str = "") -> st
 
 
 # ---------- 浏览器探测（不启动浏览器时返回 UNKNOWN，绝不误判失效） ----------
+_XHS_RECOVERY_PLATFORM = "xiaohongshu"
+_XHS_RECOVERY_REGION = "intl"
+_XHS_RECOVERY_HOST = "www.rednote.com"
+
+
+def _resolve_recovery_profile(platform: str):
+    """Resolve XHS identity and CDP endpoint through the existing Collector owner."""
+    profile = RECOVERY_PROFILES.get(platform)
+    if not profile:
+        return None, "RECOVERY_PLATFORM_NOT_CONFIGURED"
+    resolved = dict(profile)
+    if platform != _XHS_RECOVERY_PLATFORM and (
+            resolved.get("port") == 9222
+            or str(resolved.get("profile") or "").casefold() == "edge-cdp-newaccount"):
+        return None, "PROTECTED_PROFILE_NOT_COLLECTION_ASSET"
+    if platform != _XHS_RECOVERY_PLATFORM:
+        return resolved, ""
+
+    try:
+        import collector
+
+        policy_gate = getattr(collector, "_collection_policy_gate", None)
+        endpoint_resolver = getattr(collector, "_resolve_server_cdp_url", None)
+        if not callable(policy_gate) or not callable(endpoint_resolver):
+            return None, "XHS_RECOVERY_POLICY_UNAVAILABLE"
+
+        # The current owner selects and validates the approved default identity.
+        identity = policy_gate(region=_XHS_RECOVERY_REGION)
+        if not isinstance(identity, dict) or identity.get("ok") is not True:
+            return None, "XHS_RECOVERY_POLICY_BLOCKED"
+        account = identity.get("account")
+        region = identity.get("region")
+        host = str(identity.get("host") or "").strip().lower()
+        if (not isinstance(account, str) or not account.strip()
+                or region != _XHS_RECOVERY_REGION or host != _XHS_RECOVERY_HOST):
+            return None, "XHS_RECOVERY_IDENTITY_REJECTED"
+
+        endpoint, endpoint_error = endpoint_resolver(account=account, region=region)
+        if endpoint_error or not isinstance(endpoint, str) or not endpoint.strip():
+            if endpoint_error == "COLLECTOR_ENDPOINT_NOT_CONFIGURED":
+                return None, "XHS_RECOVERY_ENDPOINT_NOT_CONFIGURED"
+            if endpoint_error == "POLICY_BLOCKED":
+                return None, "XHS_RECOVERY_POLICY_BLOCKED"
+            return None, "XHS_RECOVERY_ENDPOINT_INVALID"
+        try:
+            endpoint_port = urlsplit(endpoint).port
+        except ValueError:
+            return None, "XHS_RECOVERY_ENDPOINT_INVALID"
+        # Defense in depth for the forbidden legacy Mainland endpoint. The
+        # canonical resolver remains responsible for all other endpoint policy.
+        if endpoint_port == 9222:
+            return None, "XHS_RECOVERY_POLICY_BLOCKED"
+
+        resolved["region"] = region
+        resolved["account"] = account
+        resolved["cdp_url"] = endpoint
+        return resolved, ""
+    except Exception:
+        return None, "XHS_RECOVERY_POLICY_UNAVAILABLE"
+
+
 def _connect_hb(cfg: dict, auto_ensure: bool = True):
-    from .human_browser import HumanBrowser, is_cdp_open
+    from .human_browser import HumanBrowser
+    if cfg.get("cdp_url"):
+        # Use the owner-resolved browser context; never launch a local profile
+        # as a fallback for XHS recovery.
+        return HumanBrowser(
+            cdp_url=cfg["cdp_url"], launch_url="about:blank", auto_ensure=False,
+        )
+    from .human_browser import is_cdp_open
     return HumanBrowser(
         port=cfg["port"], profile_dir=str(ROOT / cfg["profile"]),
         proxy_server=_proxy_for(cfg), launch_url="about:blank",
@@ -165,14 +233,21 @@ def _connect_hb(cfg: dict, auto_ensure: bool = True):
     )
 
 
-def _read_auth_cookies(platform: str, launch: bool = False):
+def _read_auth_cookies(platform: str, launch: bool = False, cfg: Optional[dict] = None):
     """返回 (status, cookie_dict)。launch=False 时浏览器没开→UNKNOWN 不启动、不误判失效。"""
-    cfg = RECOVERY_PROFILES.get(platform)
+    if cfg is None:
+        cfg, _error = _resolve_recovery_profile(platform)
     if not cfg:
         return UNKNOWN, {}
-    from .human_browser import is_cdp_open
-    if not launch and not is_cdp_open(port=cfg["port"]):
-        return UNKNOWN, {}
+    if not launch:
+        if cfg.get("cdp_url"):
+            from .human_browser import is_cdp_url_open
+            if not is_cdp_url_open(cfg["cdp_url"]):
+                return UNKNOWN, {}
+        else:
+            from .human_browser import is_cdp_open
+            if not is_cdp_open(port=cfg["port"]):
+                return UNKNOWN, {}
     hb = _connect_hb(cfg, auto_ensure=launch)
     try:
         hb.connect()
@@ -195,9 +270,14 @@ def _read_auth_cookies(platform: str, launch: bool = False):
 
 def health_check(platform: str) -> dict:
     """主动健康检查（不改动风险状态）：AUTH_VALID / EXPIRED / UNKNOWN。"""
+    cfg, error = _resolve_recovery_profile(platform)
+    if not cfg:
+        if platform not in RECOVERY_PROFILES:
+            return {"success": False, "status": UNKNOWN, "error": "非真人浏览器平台，无需登录态检查"}
+        return {"success": False, "platform": platform, "status": UNKNOWN, "error": error}
     if platform not in RECOVERY_PROFILES:
         return {"success": False, "status": UNKNOWN, "error": "非真人浏览器平台，无需登录态检查"}
-    status, ck = _read_auth_cookies(platform, launch=False)
+    status, ck = _read_auth_cookies(platform, launch=False, cfg=cfg)
     return {"success": True, "platform": platform, "status": status,
             "status_cn": STATE_CN.get(status, status), "cookie_keys": sorted(ck.keys())}
 
@@ -245,7 +325,11 @@ def _capture(page, platform: str, cfg: dict):
 
 
 def _open_and_watch(platform: str, kind: str):
-    cfg = RECOVERY_PROFILES[platform]
+    cfg, _ = _resolve_recovery_profile(platform)
+    if not cfg:
+        _set(platform, state=AUTH_FAILED,
+             message="当前获准身份或浏览器端点不可用，恢复已拒绝")
+        return
     _set(platform, state=REQUIRED, kind=kind, account=cfg["display"],
          steps={"open": True, "scan": False, "done": False})
     hb = _connect_hb(cfg)
@@ -277,7 +361,9 @@ def _open_and_watch(platform: str, kind: str):
             pass
         # 保留登录标签：只断开自动化连接，不关页面
     except Exception as e:
-        _set(platform, state=QR_FAILED, message=f"打开登录页失败：{e}（可在{cfg['port']}浏览器手动登录后点检测）")
+        browser_hint = "获准浏览器端点" if cfg.get("cdp_url") else f"{cfg['port']}浏览器"
+        _set(platform, state=QR_FAILED,
+             message=f"打开登录页失败：{e}（请检查{browser_hint}后重试）")
     finally:
         try:
             hb.close()
@@ -298,7 +384,12 @@ def _open_and_watch(platform: str, kind: str):
                 and cur.get("state") in (WAITING_SCAN, QR_DISPLAYED, QR_EXPIRED):
             _refresh_shot(platform, cfg)
 
-        status, ck = _read_auth_cookies(platform, launch=False)
+        cfg, _ = _resolve_recovery_profile(platform)
+        if not cfg:
+            _set(platform, state=AUTH_FAILED,
+                 message="当前获准身份或浏览器端点不可用，恢复已停止")
+            return
+        status, ck = _read_auth_cookies(platform, launch=False, cfg=cfg)
         fp = {k: ck.get(k) for k in cfg["auth_cookies"]}
         present = [k for k in cfg["auth_cookies"] if fp.get(k)]
         if status == AUTH_VALID and present:
@@ -328,6 +419,11 @@ def _open_and_watch(platform: str, kind: str):
 
 def _refresh_shot(platform: str, cfg: dict):
     """二维码过期：重连当前登录标签重新截图。"""
+    cfg, _ = _resolve_recovery_profile(platform)
+    if not cfg:
+        _set(platform, state=AUTH_FAILED,
+             message="当前获准身份或浏览器端点不可用，恢复已停止")
+        return
     _set(platform, state=QR_EXPIRED)
     hb = _connect_hb(cfg)
     try:
@@ -394,9 +490,9 @@ def _bridge_to_recovery_center(platform: str, source_state: str, detail: str, ki
 
 def request_recovery(platform: str, source_state: str = "", detail: str = "") -> dict:
     """发起恢复（幂等）。BLOCKED 类不开浏览器、不伪装成扫码可解。"""
-    cfg = RECOVERY_PROFILES.get(platform)
+    cfg, config_error = _resolve_recovery_profile(platform)
     if not cfg:
-        return {"success": False, "error": f"平台 {platform} 无登录恢复配置（免登平台无需恢复）"}
+        return {"success": False, "error": config_error}
     kind = classify_kind(platform, source_state, detail)
     existing = _get(platform)
     if existing and existing.get("state") in (REQUIRED, QR_DISPLAYED, WAITING_SCAN, SCANNED, CONFIRMING):
@@ -428,9 +524,11 @@ def request_recovery(platform: str, source_state: str = "", detail: str = "") ->
 
 def check_recovery(platform: str) -> dict:
     """手动立即探测一次。"""
-    if platform not in RECOVERY_PROFILES:
-        return {"success": False, "recovered": False, "status": UNKNOWN}
-    status, ck = _read_auth_cookies(platform, launch=True)
+    cfg, config_error = _resolve_recovery_profile(platform)
+    if not cfg:
+        return {"success": False, "recovered": False, "status": UNKNOWN,
+                "error": config_error}
+    status, ck = _read_auth_cookies(platform, launch=True, cfg=cfg)
     recovered = status == AUTH_VALID
     if recovered:
         risk_controller.mark_recovered(platform)
@@ -462,8 +560,8 @@ def recovery_status() -> list:
 
 def recovery_platforms() -> list:
     """可恢复平台清单（前端据此知道哪些是真人平台及其账号/端口）。"""
-    return [{"platform": k, "display": v["display"], "port": v["port"],
-             "profile": v["profile"], "remote_hint": v.get("remote_hint", "")}
+    return [{"platform": k, "display": v["display"], "port": v.get("port"),
+             "profile": v.get("profile"), "remote_hint": v.get("remote_hint", "")}
             for k, v in RECOVERY_PROFILES.items()]
 
 

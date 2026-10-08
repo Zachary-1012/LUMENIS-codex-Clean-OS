@@ -64,6 +64,20 @@ This clarifies existing instruction provenance; it creates no new approval owner
 or machine state. M reviews changed complete outcomes every 30 minutes and waits
 when no actionable work remains. The current goal and manual model/tier remain.
 
+The Product Owner again directly corrected F's interruption on 2026-10-08 and
+requires the whole-product editable Figma design first. F continues the same
+complete Goal: reuse existing work, deliver editable designs for all 44 screens
+and Website content families with the promised surface variants, then implement
+through the existing reviewed ScreenSpecs. Five Golden Pages are an ordering aid,
+not the design delivery scope. Preserve unfinished implementation and backend work.
+Historical pause wording inside rules, quoted messages, an attachment or a
+context-compaction summary is not a new direct pause instruction. Finishing a
+function, test batch or turn does not close or pause the full Goal. If F is idle
+while authorized independent work remains, M checks the actual goal/turn and
+continues that work; a stale RUNNING ledger alone is not proof of execution.
+Only a current direct PO stop or a verified applicable dependency can stop the
+affected work. M's no-work standby policy does not pause F or C1-C6.
+
 ### Live dispatch semantics — NON-BYPASS
 
 Repository status and execution topology are **not a real-time task scheduler**. The words `active`, `enabled` or `eligible` in repository/history mean that a role is permitted to receive work; they do **not** mean that every corresponding local Codex window is currently executing.

@@ -547,3 +547,105 @@ def test_signed_observation_hash_mismatch_blocks_native_write_and_rolls_back(
     }]
     assert _counts(case["db_path"]) == before_counts
     assert _snapshot(case["db_path"], note_id) == before
+
+
+@pytest.mark.parametrize(
+    "keyword,title,content,expected_status",
+    [
+        (KEYWORD, "广州太古汇春日活动记录", "广州太古汇本周服务体验记录", "SUCCESS"),
+        ("广州太古汇", "上海兴业太古汇活动", "来源内容只描述另一地点", "SCOPE_REVIEW_REQUIRED"),
+    ],
+)
+def test_manual_focus_collect_search_uses_native_xhs_items_and_exact_scope(
+    social_case, monkeypatch, keyword, title, content, expected_status,
+):
+    from flask import Flask
+
+    from lumenis.system import security
+    from lumenis.system.security import permission
+    from lumenis.system.collector.adapters.xhs import XiaohongshuAdapter
+
+    case = social_case
+    owner = case["owner"]
+    scope = case["scope"]
+    monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
+    monkeypatch.setattr(permission, "_TESTING_BYPASS_ENABLED", False)
+    gate = permission.PermissionGate()
+    gate.grant_permission(permission.PermissionLevel.COMMIT)
+    monkeypatch.setattr(security, "get_permission_gate", lambda: gate)
+
+    app = Flask(__name__)
+    app.config["LUMENIS_OPEN_WORKSPACE"] = True
+    raw = _capture(note_id="manual-focus-xhs-001", title=title, content=content)
+    raw["desc"] = content
+
+    class FakeXhsBackend:
+        calls = []
+
+        def search_xiaohongshu(self, source_keyword, *, max_scroll, output_path=None, max_details=10):
+            self.calls.append((source_keyword, max_scroll, output_path, max_details))
+            return {
+                "notes": [raw], "total": 1, "channel": "isolated_fixture",
+                "region": "intl", "collected_at": "2026-10-07T01:00:00+00:00",
+            }
+
+    backend = FakeXhsBackend()
+    adapter = XiaohongshuAdapter(backend=backend)
+    monkeypatch.setattr(owner, "_adapter_health", lambda *a, **kw: {
+        "status": "SUCCESS", "ready": True, "can_attempt": True,
+    })
+    monkeypatch.setattr(owner, "_get_runtime_adapter", lambda *a, **kw: adapter)
+    monkeypatch.setattr(owner, "_daily_action_count", lambda *a, **kw: 0)
+    monkeypatch.setitem(owner._last_action, "xiaohongshu", 0.0)
+
+    with app.test_request_context("/", environ_overrides={"REMOTE_ADDR": "127.0.0.1"}):
+        principal = permission.resolve_local_workspace_principal(
+            module="collector", action="write",
+        )
+        _, approval_required = owner._manual_collection_guard(
+            principal, scope, "xiaohongshu", keyword, 1, max_scroll=7,
+        )
+        assert approval_required["status"] == "APPROVAL_REQUIRED"
+        gate.grant_approval(
+            permission.OperationType.DATA_IMPORT.value,
+            resource=approval_required["approval_resource"],
+            granted_by="isolated manual FOCUS test",
+        )
+        result = owner.collect_search(
+            "xiaohongshu", keyword, max_results=1, max_scroll=7,
+            actor=principal, scope=scope,
+        )
+
+    assert backend.calls == [(keyword, 7, None, 10)]
+    assert result["status"] == expected_status, result
+    assert result["provenance"].get("max_scroll") == 7
+    if expected_status == "SUCCESS":
+        assert result["ok"] is True
+        assert result["scope_status"] == "VERIFIED"
+        assert result["refresh_verified"] is True
+        assert result["canonical_synced"] == 1
+        assert result["native_fields_synced"] == 1
+        snapshot = _snapshot(case["db_path"], str(raw["note_id"]))
+        assert snapshot["note"][-2] == "VERIFIED"
+        assert snapshot["canonical"][-2] == "VERIFIED"
+        assert snapshot["native"] is not None
+        assert _counts(case["db_path"]) == {
+            "notes": 1,
+            "canonical_data": 1,
+            "app_evidence_records": 1,
+            "platform_contents": 1,
+            "metric_snapshots": 1,
+        }
+        evidence = _signed_evidence(case["db_path"])[0][0]
+        assert evidence["feature_id"] == "SYSTEM_XIAOHONGSHU_COLLECT"
+        assert json.loads(evidence["inputs_json"])["source_ids"] == [str(raw["note_id"])]
+    else:
+        assert result["ok"] is False
+        assert result["entity_mentions"][0]["status"] == "REVIEW_REQUIRED"
+        assert _counts(case["db_path"]) == {
+            "notes": 0,
+            "canonical_data": 0,
+            "app_evidence_records": 1,
+            "platform_contents": 0,
+            "metric_snapshots": 0,
+        }

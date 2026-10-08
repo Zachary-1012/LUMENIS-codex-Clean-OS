@@ -59,6 +59,13 @@ def test_query_scope_period_and_version_bound(tmp_path):
         platform=nextplan.platform,scope={"domain_id":"bmp","subject_id":None,"brand_focus_id":"BRAND-NIKE"})
     changed["purpose_query"]["business_context"]["publication_since"]="2025-01-01"
     signed(path,[changed])
+    historical=load_prelaunch_baseline_config(str(path),hmac_key=KEY)["plans"][0]
+    assert historical.plan_id != nextplan.plan_id
+    assert not maintenance_authorization(nextplan).matches(historical,
+        source_url=historical.source_url, platform=historical.platform,
+        scope={"domain_id":"bmp","subject_id":None,"brand_focus_id":"BRAND-NIKE"})
+    changed["purpose_query"]["business_context"]["publication_since"]="2025-02-30"
+    signed(path,[changed])
     with pytest.raises(BaselineConfigError):load_prelaunch_baseline_config(str(path),hmac_key=KEY)
 
 def test_source_and_query_scope_disagreement_rejected(tmp_path):

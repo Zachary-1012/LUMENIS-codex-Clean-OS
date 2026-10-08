@@ -2031,7 +2031,7 @@ def _source_brief_context(action, *, include_actor=False, module="reports"):
 
 def _source_brief_job_error(exc):
     code = _content_project_error_code(exc)
-    if isinstance(exc, PermissionError):
+    if isinstance(exc, PermissionError) or code == "WORK_PERMISSION_DENIED":
         status = 403
     elif isinstance(exc, LookupError):
         status = 404
@@ -2381,7 +2381,9 @@ def generate_source_brief_job():
             raise PermissionError("SOURCE_BRIEF_GENERATE_DENIED")
         retry_of = body.get("retry_media_job_id")
         if "retry_media_job_id" in body:
-            previous = get_source_brief_job(retry_of, actor_id=actor_ref, expected_scope=_scope_material(**scope))
+            previous = get_source_brief_job(
+                retry_of, actor_id=actor_ref, expected_scope=_scope_material(**scope), actor=actor,
+            )
             image_ref = previous.get("requested_image_source_ref")
             question = previous.get("business_question")
             source_ids = previous.get("requested_source_ids")
@@ -2391,9 +2393,25 @@ def generate_source_brief_job():
         job_id = body.get("resume_job_id")
         if job_id is not None:
             # A client can retry an existing server-issued job, never choose a new ID.
-            get_source_brief_job(job_id, actor_id=actor_ref, expected_scope=_scope_material(**scope))
+            get_source_brief_job(
+                job_id, actor_id=actor_ref, expected_scope=_scope_material(**scope), actor=actor,
+            )
         else:
             job_id = "brief-" + uuid.uuid4().hex
+
+        def before_persist():
+            current_ref, _, current_scope = _source_brief_context("write")
+            if current_ref != actor_ref:
+                raise PermissionError("SOURCE_BRIEF_ACTOR_MISMATCH")
+            if _scope_material(**current_scope) != _scope_material(**scope):
+                raise PermissionError("SOURCE_BRIEF_SCOPE_MISMATCH")
+            allowed = get_permission_gate().check(
+                OperationType.REPORT_GENERATE, resource=request.path, caller=current_ref,
+                domain_id=domain_id,
+            )
+            if not allowed.allowed:
+                raise PermissionError("SOURCE_BRIEF_GENERATE_DENIED")
+
         con = get_repository().connect(read_only=True, wal=False)
         try:
             result = create_source_brief_job(
@@ -2403,10 +2421,14 @@ def generate_source_brief_job():
                 retry_of_job_id=retry_of,
                 business_question=question,
                 source_ids=source_ids,
+                before_persist=before_persist,
             )
         finally:
             con.close()
-        return jsonify({"ok": True, "result": result, "publish_status": "not_performed"})
+        response = jsonify({"ok": True, "result": result, "publish_status": "not_performed"})
+        response.headers["Cache-Control"] = "no-store"
+        before_persist()
+        return response
     except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
         return _source_brief_job_error(exc)
     except Exception:
@@ -2418,9 +2440,18 @@ def reopen_source_brief_job(job_id):
     from lumenis.shared.reporting.source_brief_job import get_source_brief_job, _scope_material
 
     try:
-        actor_ref, _audit_ref, scope = _source_brief_context("read")
-        result = get_source_brief_job(job_id, actor_id=actor_ref, expected_scope=_scope_material(**scope))
-        return jsonify({"ok": True, "result": result, "publish_status": "not_performed"})
+        actor_ref, _audit_ref, scope, actor = _source_brief_context("read", include_actor=True)
+        result = get_source_brief_job(
+            job_id, actor_id=actor_ref, expected_scope=_scope_material(**scope), actor=actor,
+        )
+        response = jsonify({"ok": True, "result": result, "publish_status": "not_performed"})
+        response.headers["Cache-Control"] = "no-store"
+        current_ref, _, current_scope, _ = _source_brief_context("read", include_actor=True)
+        if current_ref != actor_ref:
+            raise PermissionError("SOURCE_BRIEF_ACTOR_MISMATCH")
+        if _scope_material(**current_scope) != _scope_material(**scope):
+            raise PermissionError("SOURCE_BRIEF_SCOPE_MISMATCH")
+        return response
     except (ValueError, LookupError, PermissionError, RuntimeError) as exc:
         return _source_brief_job_error(exc)
     except Exception:

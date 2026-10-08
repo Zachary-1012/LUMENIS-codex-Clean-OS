@@ -403,7 +403,7 @@ def build_acquisition_plan(
         )
     source_policy, rate_policy = _safe_policy_metadata(policy)
     if business_requests is not None:
-        source_policy = {"source": "SYSTEM_COLLECTOR_QUERY_CONTRACT", "rule_version": "lumenis.business-query.v1",
+        source_policy = {"source": "SYSTEM_COLLECTOR_QUERY_CONTRACT", "rule_version": BUSINESS_RULE_VERSION,
                          "mode": "MANUAL", "identity_or_source_use_granted": False}
         rate_policy = {"source": "existing_platform_owner", "status": "EXECUTION_OWNER_REQUIRED"}
     if source_policy.get("status") == "UNAVAILABLE":
@@ -680,7 +680,62 @@ _BUSINESS_DIMENSIONS = frozenset({
     "creator_content", "venue_operations",
 })
 _PRIMARY_PLATFORMS = frozenset({"xhs", "douyin", "wechat", "instagram", "x", "facebook"})
-BUSINESS_RULE_VERSION = "lumenis.business-query.v1"
+BUSINESS_RULE_VERSION = "lumenis.business-query.v2"
+
+
+def _publication_boundary(value: Any, *, field: str):
+    """Parse task time without supplying missing native time or timezone.
+
+    A calendar date uses the supplied native timestamp's calendar date. A
+    timestamp with an explicit offset compares instants. None adds no boundary.
+    """
+    from datetime import date, datetime
+
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value or value != value.strip():
+        raise AcquisitionPlanError(f"{field} must be an ISO date or offset-aware timestamp")
+    try:
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            return date.fromisoformat(value)
+        result = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if result.tzinfo is None or result.utcoffset() is None:
+            raise ValueError("offset required")
+        return result
+    except ValueError as exc:
+        raise AcquisitionPlanError(f"{field} must be an ISO date or offset-aware timestamp") from exc
+
+
+def _validate_publication_period(since=None, until=None):
+    from datetime import datetime
+
+    start = _publication_boundary(since, field="publication_since")
+    end = _publication_boundary(until, field="publication_until")
+    if start is not None and end is not None:
+        if isinstance(start, datetime) and isinstance(end, datetime):
+            reversed_period = start > end
+        elif not isinstance(start, datetime) and not isinstance(end, datetime):
+            reversed_period = start > end
+        else:
+            # Mixed precision needs the observed source offset. Comparing the
+            # endpoint labels here would reject a valid local calendar day
+            # whose UTC instant falls on the preceding date.
+            reversed_period = False
+        if reversed_period:
+            raise AcquisitionPlanError("publication_since must not be after publication_until")
+    return start, end
+
+
+def _outside_publication_period(published, start, end) -> bool:
+    from datetime import datetime
+
+    return (
+        start is not None and (published < start if isinstance(start, datetime)
+                               else published.date() < start)
+    ) or (
+        end is not None and (published > end if isinstance(end, datetime)
+                             else published.date() > end)
+    )
 
 
 def _public_query_target(value: Any) -> str:
@@ -736,19 +791,21 @@ def _purpose_queries(entries, requests, mode, focus_key):
         geography = _as_terms(request.get("geography_terms"), field="geography_terms")
         venue = _as_terms(request.get("venue_boundary_terms"), field="venue_boundary_terms")
         topics = _as_terms(request.get("topic_terms"), field="topic_terms")
+        expansion = request.get("task_semantic_expansion")
+        expansion_term = None
+        if expansion is not None:
+            if not isinstance(expansion, Mapping):
+                raise AcquisitionPlanError("task_semantic_expansion must be an explicit term and reason")
+            expansion_term = _normalise_text(expansion.get("term"), field="task_semantic_expansion.term", max_length=256)
+            expansion_reason = _normalise_text(expansion.get("reason"), field="task_semantic_expansion.reason", max_length=512)
+            if not expansion_term or not expansion_reason:
+                raise AcquisitionPlanError("task_semantic_expansion requires a nonempty term and reason")
+            if _normalised_key(expansion_term) not in {_normalised_key(t) for t in topics}:
+                topics.append(expansion_term)
         exclude = _as_terms(request.get("exclude_terms"), field="exclude_terms")
-        since = request.get("publication_since", "2026-01-01")
-        if since != "2026-01-01":
-            raise AcquisitionPlanError("current task publication starts2026-01-01; preserve historical sources separately")
+        since = request.get("publication_since")
         until = request.get("publication_until")
-        if until is not None:
-            from datetime import datetime
-            try:
-                cutoff = datetime.fromisoformat(str(until).replace("Z", "+00:00"))
-                if cutoff.tzinfo is None:
-                    raise ValueError("offset required")
-            except ValueError as exc:
-                raise AcquisitionPlanError("publication_until must be an observed offset-aware cutoff") from exc
+        _validate_publication_period(since, until)
         tracking = request.get("tracking_sources") or []
         if not isinstance(tracking, (list, tuple)):
             raise AcquisitionPlanError("tracking_sources must be a list")
@@ -759,14 +816,17 @@ def _purpose_queries(entries, requests, mode, focus_key):
             for topic in topics:
                 parts = [alias] + [v for v in geography + venue if v not in alias] + [topic]
                 keyword = _normalise_text(" ".join(p for p in parts if p), field="business_query", max_length=256)
-                seeds.append((keyword, "DISCOVERY", None))
+                origin = ("TASK_SEMANTIC_EXPANSION" if expansion_term
+                          and _normalised_key(topic) == _normalised_key(expansion_term)
+                          else "TASK_SELECTED_TOPIC")
+                seeds.append((keyword, "DISCOVERY", None, origin))
         for source in tracking:
             if (not isinstance(source, Mapping) or not source.get("evidence_ref")
                     or source.get("scope_key") != key or entry is None):
                 raise AcquisitionPlanError("tracking source needs matching entity and locatable identity evidence")
-            seeds.append((_public_query_target(source.get("url")), "TRACKING", str(source["evidence_ref"])))
+            seeds.append((_public_query_target(source.get("url")), "TRACKING", str(source["evidence_ref"]), "SOURCE_TRACKING"))
         for platform in platforms:
-            for keyword, kind, source_ref in seeds:
+            for keyword, kind, source_ref, query_origin in seeds:
                 unique = (platform, domain, key, purpose, dimension, keyword.casefold())
                 if unique in seen:
                     continue
@@ -774,15 +834,17 @@ def _purpose_queries(entries, requests, mode, focus_key):
                 context = {
                     "rule_version": BUSINESS_RULE_VERSION, "platform": platform, "purpose": purpose,
                     "dimension": dimension, "task_type": kind, "entity_aliases": tuple(aliases), "geography_terms": tuple(geography),
+                    "query_origin": query_origin,
                     "venue_boundary_terms": tuple(venue), "topic_terms": tuple(topics),
                     "exclude_terms": tuple(exclude), "source_identity_evidence_ref": source_ref,
                     "publication_since": since, "publication_until": until,
+                    "publication_boundary_basis": "NATIVE_CALENDAR_DATE_OR_EXPLICIT_OFFSET_INSTANT",
                     "time_role": "NATIVE_PUBLICATION_NOT_CAPTURE", "mode": "MANUAL",
                     "native_scope_bound": False, "source_use_grant": None,
                     "market_typed_ref": request.get("market_typed_ref"),
                     "unregistered_discovery": discovery and entry is None,
                     "user_seed_topic_ref": request.get("user_seed_topic_ref"),
-                    "task_semantic_expansion": request.get("task_semantic_expansion"),
+                    "task_semantic_expansion": dict(expansion) if expansion is not None else None,
                 }
                 result.append(AcquisitionQuery(
                     keyword=keyword, domain_id=domain, product_id="CTH" if domain=="CTH" else "ZBMP",
@@ -811,21 +873,22 @@ def assess_query_relevance(record: Mapping[str, Any], query: AcquisitionQuery) -
     aliases = context.get("entity_aliases", ())
     if aliases and not any(str(a).casefold() in text for a in aliases):
         reasons.append("ENTITY_ALIAS_NOT_OBSERVED")
-    from datetime import datetime, timezone
+    from datetime import datetime
     stamp = record.get("published_at")
     if stamp:
         try:
             published = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
             if published.tzinfo is None:
                 raise ValueError("native offset unavailable")
-            start = datetime.fromisoformat(context.get("publication_since", "2026-01-01") + "T00:00:00+08:00")
-            end = record.get("capture_observation_utc") or context.get("publication_until")
-            if published < start:
+            start, end = _validate_publication_period(
+                context.get("publication_since"), context.get("publication_until"))
+            if _outside_publication_period(published, start, end):
                 return {"status": "OUTSIDE_REQUESTED_PUBLICATION_PERIOD", "derivative": True, "admitted": False}
-            if end is None:
+            capture = record.get("capture_observation_utc")
+            if capture is None:
                 reasons.append("ACTUAL_CAPTURE_CUTOFF_MISSING")
-            if end is not None:
-                observed = datetime.fromisoformat(str(end).replace("Z", "+00:00"))
+            if capture is not None:
+                observed = datetime.fromisoformat(str(capture).replace("Z", "+00:00"))
                 if observed.tzinfo is None:
                     raise ValueError("observation offset unavailable")
                 if published > observed:
@@ -844,7 +907,8 @@ def assess_query_relevance(record: Mapping[str, Any], query: AcquisitionQuery) -
             "reasons": reasons, "derivative": True, "method": BUSINESS_RULE_VERSION,
             "admitted": False, "entity_scope_verified": False, "source_use_grant": None}
 
-def build_observed_topic_catalog(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
+def build_observed_topic_catalog(observations: Iterable[Mapping[str, Any]], *,
+                                 publication_since=None, publication_until=None) -> dict[str, Any]:
     """Retain native topic provenance as a discovery asset, without admitting it.
 
     The caller supplies locators from inspected native fields. A count is the
@@ -852,9 +916,9 @@ def build_observed_topic_catalog(observations: Iterable[Mapping[str, Any]]) -> d
     representative demand. Unknown time, source and topic quality stay reviewable.
     This pure function owns neither a store nor collection effects.
     """
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime
 
-    start = datetime(2026, 1, 1, tzinfo=timezone(timedelta(hours=8)))
+    start, end = _validate_publication_period(publication_since, publication_until)
     entries: dict[tuple[str, str], dict[str, Any]] = {}
     review = []
     input_count = 0
@@ -870,7 +934,7 @@ def build_observed_topic_catalog(observations: Iterable[Mapping[str, Any]]) -> d
             captured = datetime.fromisoformat(str(observation.get("capture_observation_utc") or "").replace("Z", "+00:00"))
             if published.tzinfo is None or captured.tzinfo is None:
                 reason = "NATIVE_TIME_OFFSET_UNKNOWN"
-            elif published < start:
+            elif _outside_publication_period(published, start, end):
                 reason = "OUTSIDE_REQUESTED_PUBLICATION_PERIOD"
             elif published > captured:
                 reason = "PUBLICATION_AFTER_ACTUAL_OBSERVATION"
@@ -934,8 +998,10 @@ def build_observed_topic_catalog(observations: Iterable[Mapping[str, Any]]) -> d
     nodes = list(entries.values())
     for node in nodes:
         node["sample_distinct_content_count"] = len(node["distinct_content_keys"])
-    return {"version": "lumenis.observed-topic-catalog.v1", "input_observation_count": input_count,
-            "publication_since": "2026-01-01", "time_role": "NATIVE_PUBLICATION_NOT_CAPTURE",
+    return {"version": "lumenis.observed-topic-catalog.v2", "input_observation_count": input_count,
+            "publication_since": publication_since, "publication_until": publication_until,
+            "publication_boundary_basis": "NATIVE_CALENDAR_DATE_OR_EXPLICIT_OFFSET_INSTANT",
+            "time_role": "NATIVE_PUBLICATION_NOT_CAPTURE",
             "terms": nodes, "review": review, "platform_heat": None,
             "representative_demand": None, "automatic_adoption": False,
             "purpose": "SOURCE_LINKED_DISCOVERY_AND_TASK_QUERY_REVIEW", "admitted": False}

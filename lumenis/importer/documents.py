@@ -473,10 +473,16 @@ def _result(con, source_id, evidence_id, parsed, scope, product, *, replayed,
             source_replayed=False,
             selected_indices=None, row_records=None, rows_inserted=0,
             preview_rows_sha256=None):
-    row = con.execute("SELECT canonical_id FROM canonical_data WHERE source_id=? AND product_id=?",
-                      (source_id, product)).fetchone()
-    if row is None:
+    rows = con.execute(
+        "SELECT canonical_id FROM canonical_data WHERE source_id=? AND product_id=? "
+        "AND source_type='document' AND scope_evidence_ref=?",
+        (source_id, product, str(evidence_id)),
+    ).fetchall()
+    if not rows:
         raise SavedWorkError("DOCUMENT_CANONICAL_MISSING")
+    if len(rows) != 1:
+        raise SavedWorkError("DOCUMENT_CANONICAL_CONFLICT")
+    row = rows[0]
     stored = con.execute("SELECT collection_metadata FROM app_evidence_records WHERE id=?",(evidence_id,)).fetchone()
     signed = json.loads(stored[0])
     return {"source_id": source_id, "evidence_id": evidence_id, "canonical_id": row[0],

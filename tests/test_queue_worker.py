@@ -5,6 +5,8 @@ import time
 
 from lumenis.system.collector.guard.task_queue import TaskQueue
 from lumenis.system.collector.guard.queue_worker import QueueWorker, collect_processor_factory
+from lumenis.system.collector.guard.dlq_replay import DeadLetterQueue
+from lumenis.system.collector.guard.runtime_guardian import RuntimeGuardian
 
 
 def _mk_queue(tmp_path):
@@ -82,3 +84,51 @@ def test_collect_processor_factory(tmp_path):
     w = QueueWorker(q, collect_processor_factory(collect_fn))
     assert w.process_once()[1] is True
     assert got["k"] == "X"
+
+
+def test_runtime_guardian_forwards_attempt_receipt_end_to_end(tmp_path):
+    q = _mk_queue(tmp_path)
+    task_id = q.enqueue("collect_keyword", {"keyword": "X"})
+    guardian = None
+    calls = {}
+
+    def proc(task):
+        receipt = {key: task[key] for key in ("run_id", "worker_id", "lease_owner")}
+        calls["heartbeat"] = guardian.heartbeat(task["id"], **receipt)
+        calls["checkpoint"] = guardian.checkpoint(
+            task["id"], "keyword:X", **receipt)
+        return True
+
+    guardian = RuntimeGuardian(
+        q, proc, worker_id="guardian-worker",
+        dlq=DeadLetterQueue(str(tmp_path / "dlq.jsonl")),
+        audit_path=str(tmp_path / "recovery-audit.jsonl"),
+    )
+
+    assert guardian.process_once() == (task_id, True)
+    assert calls == {"heartbeat": True, "checkpoint": True}
+
+    second_id = q.enqueue("collect_keyword", {"keyword": "Y"})
+    old = q.dequeue(worker_id=guardian.worker.worker_id,
+                    lease_owner=guardian.worker.lease_owner)
+    assert old["id"] == second_id
+    with q._conn:
+        q._conn.execute("UPDATE tasks SET last_heartbeat_at=0 WHERE id=?", (second_id,))
+    assert q.reap_stale(1) == [second_id]
+    with q._conn:
+        q._conn.execute("UPDATE tasks SET scheduled_at=0 WHERE id=?", (second_id,))
+    current = q.dequeue(worker_id=guardian.worker.worker_id,
+                        lease_owner=guardian.worker.lease_owner)
+    assert current["run_id"] != old["run_id"]
+
+    old_receipt = {key: old[key] for key in ("run_id", "worker_id", "lease_owner")}
+    current_receipt = {
+        key: current[key] for key in ("run_id", "worker_id", "lease_owner")
+    }
+    assert guardian.heartbeat(second_id) is False
+    assert guardian.checkpoint(second_id, "missing") is False
+    assert guardian.heartbeat(second_id, **old_receipt) is False
+    assert guardian.checkpoint(second_id, "stale", **old_receipt) is False
+    assert guardian.heartbeat(second_id, **current_receipt) is True
+    assert guardian.checkpoint(second_id, "current", **current_receipt) is True
+    assert q.ack(second_id, **current_receipt) is True

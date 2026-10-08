@@ -26,7 +26,7 @@ def test_purpose_bound_query_keeps_identity_period_and_unregistered_market_separ
     assert {q.business_context['platform'] for q in p.queries}=={'x','douyin'}
     assert all(q.subject_id=='SUBJ-MALL' for q in p.queries)
     assert all(q.business_context['market_typed_ref'] is None for q in p.queries)
-    assert all(q.business_context['publication_since']=='2026-01-01' for q in p.queries)
+    assert all(q.business_context['publication_since'] is None for q in p.queries)
     assert all(q.business_context['publication_until'] is None for q in p.queries)
     assert all(q.business_context['source_use_grant'] is None for q in p.queries)
     assert all(q.to_dict()['scope_role']=='PLANNED_TARGET_NOT_VERIFIED_SOURCE_BINDING' for q in p.queries)
@@ -38,6 +38,115 @@ def test_selected_facet_does_not_generate_unselected_global_catalog_topics():
     assert p.queries[0].business_context['dimension']=='consumer_experience'
     assert '联名' not in p.queries[0].keyword
     assert 'Brand One' not in p.queries[0].keyword
+
+
+def native_record(**changes):
+    return {'native_id':'POST-TIME', 'source_url':'https://example.org/p/time',
+            'content':'海港商场 广州 停车 体验',
+            'published_at':'2025-03-02T08:00:00+08:00',
+            'capture_observation_utc':'2026-10-08T00:00:00Z', **changes}
+
+
+def test_no_global_cutoff_accepts_history_and_explicit_task_period_still_filters():
+    record=native_record()
+    assert assess_query_relevance(record, plan().queries[0])['status']=='CANDIDATE_TASK_RELEVANT'
+    request=deepcopy(REQUEST)
+    request['publication_since']='2026-01-01'
+    query=plan([request]).queries[0]
+    assert query.business_context['publication_since']=='2026-01-01'
+    assert assess_query_relevance(record, query)['status']=='OUTSIDE_REQUESTED_PUBLICATION_PERIOD'
+    request['publication_since']='2024-01-01'
+    request['publication_until']='2025-03-01'
+    assert assess_query_relevance(record, plan([request]).queries[0])['status']=='OUTSIDE_REQUESTED_PUBLICATION_PERIOD'
+
+
+def test_offset_instant_boundaries_and_source_calendar_dates_are_distinct():
+    request=deepcopy(REQUEST)
+    request.update(publication_since='2025-03-02T00:00:00Z',
+                   publication_until='2025-03-02T00:00:00Z')
+    record=native_record()
+    assert assess_query_relevance(record, plan([request]).queries[0])['status']=='CANDIDATE_TASK_RELEVANT'
+    request.update(publication_since='2025-03-02', publication_until='2025-03-02')
+    result=assess_query_relevance(native_record(published_at='2025-03-02T00:05:00+09:00'),
+                                 plan([request]).queries[0])
+    assert result['status']=='CANDIDATE_TASK_RELEVANT'
+
+
+def test_mixed_date_and_instant_bounds_use_observed_offset_without_early_rejection():
+    request=deepcopy(REQUEST)
+    request.update(publication_since='2025-03-02',
+                   publication_until='2025-03-01T23:00:00Z')
+    result=assess_query_relevance(native_record(published_at='2025-03-02T00:05:00+09:00'),
+                                 plan([request]).queries[0])
+    assert result['status']=='CANDIDATE_TASK_RELEVANT'
+
+
+def test_explicit_until_neither_replaces_capture_nor_allows_future_publication():
+    request=deepcopy(REQUEST)
+    request['publication_until']='2029-01-01T00:00:00Z'
+    query=plan([request]).queries[0]
+    missing=assess_query_relevance(native_record(capture_observation_utc=None), query)
+    assert 'ACTUAL_CAPTURE_CUTOFF_MISSING' in missing['reasons']
+    future=assess_query_relevance(native_record(published_at='2027-01-01T00:00:00Z'), query)
+    assert 'PUBLICATION_AFTER_ACTUAL_OBSERVATION' in future['reasons']
+    assert future['admitted'] is False
+
+
+@pytest.mark.parametrize('change', [
+    {'publication_since':'2025-03-02T08:00:00'},
+    {'publication_until':'not-a-date'},
+    {'publication_since':False},
+    {'publication_since':'2027-01-01', 'publication_until':'2026-12-31'},
+    {'publication_since':'2025-03-02T00:00:01Z', 'publication_until':'2025-03-02T00:00:00Z'},
+])
+def test_invalid_or_reversed_period_rejected_before_collection(change):
+    request=deepcopy(REQUEST)
+    request.update(change)
+    with pytest.raises(AcquisitionPlanError):
+        plan([request])
+
+
+def test_changed_explicit_period_invalidates_query_continuation():
+    first=plan(max_queries=1)
+    request=deepcopy(REQUEST)
+    request['publication_since']='2025-01-01'
+    with pytest.raises(AcquisitionPlanError, match='continuation'):
+        plan([request], continuation=first.next_cursor)
+
+
+def test_semantic_expansion_generates_real_additive_queries_without_source_claims():
+    request=deepcopy(REQUEST)
+    request['topic_terms']=['停车 体验']
+    request['task_semantic_expansion']={'term':'服务 评价', 'reason':'Task explicitly requests service feedback'}
+    before=deepcopy(request)
+    result=plan([request])
+    assert len(result.queries)==4
+    assert {q.keyword for q in result.queries}=={'海港商场 广州 停车 体验','海港商场 广州 服务 评价'}
+    expanded=[q for q in result.queries if q.keyword.endswith('服务 评价')]
+    assert len(expanded)==2
+    assert all(q.business_context['query_origin']=='TASK_SEMANTIC_EXPANSION' for q in expanded)
+    assert all(q.business_context['source_use_grant'] is None and
+               q.business_context['native_scope_bound'] is False for q in expanded)
+    assert request==before
+
+
+def test_existing_expansion_term_is_not_duplicated_and_expansion_can_supply_selected_facet():
+    request=deepcopy(REQUEST)
+    request['task_semantic_expansion']={'term':'服务 评价', 'reason':'Current task intent'}
+    assert plan([request]).total_queries==4
+    request['topic_terms']=[]
+    result=plan([request])
+    assert result.total_queries==2
+    assert all(q.keyword.endswith('服务 评价') for q in result.queries)
+
+
+@pytest.mark.parametrize('expansion', ['unbound term', {'term':'服务 评价'},
+                                     {'term':'', 'reason':'Task intent'}])
+def test_unexplained_semantic_expansion_rejected(expansion):
+    request=deepcopy(REQUEST)
+    request['task_semantic_expansion']=expansion
+    with pytest.raises(AcquisitionPlanError):
+        plan([request])
 
 def test_bounded_continuation_visits_every_query_without_duplicates():
     first=plan(max_queries=2)
@@ -68,7 +177,7 @@ def test_legacy_registry_plan_also_has_complete_batch_continuation():
 
 @pytest.mark.parametrize('change',[{'purpose':''},{'dimension':'all_topics'},
     {'aliases':['not registered']},{'scope_key':'SUBJ-OTHER'},
-    {'platforms':[]},{'topic_terms':[]},{'publication_since':'2025-01-01'}])
+    {'platforms':[]},{'topic_terms':[]},{'publication_since':'2025-02-30'}])
 def test_missing_or_unapproved_task_binding_is_rejected(change):
     r=deepcopy(REQUEST);r.update(change)
     with pytest.raises(AcquisitionPlanError):plan([r])
@@ -129,7 +238,9 @@ def test_relevant_content_remains_derivative_candidate_not_permission_or_truth()
 @pytest.mark.parametrize('stamp,code', [('2025-12-30T00:00:00Z','OUTSIDE_REQUESTED_PUBLICATION_PERIOD'),
     ('2027-01-01T00:00:00Z','REVIEW_REQUIRED'), ('09-30','REVIEW_REQUIRED'), ('2026-10-03T00:00:00','REVIEW_REQUIRED')])
 def test_native_time_must_fit_actual_observation_and_keep_unknown_unassigned(stamp,code):
-    q=plan().queries[0]
+    request=deepcopy(REQUEST)
+    request['publication_since']='2026-01-01'
+    q=plan([request]).queries[0]
     result=assess_query_relevance({'native_id':'1','source_url':'https://example.org/',
         'published_at':stamp,'capture_observation_utc':'2026-10-03T01:00:00Z',
         'content':'海港商场 广州 停车 体验'},q)

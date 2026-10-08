@@ -292,3 +292,127 @@ def test_resume_never_overwrites_its_input_artifact(tmp_path, monkeypatch):
         worker.main()
     assert stopped.value.code == 2
     assert output.read_bytes() == previous
+
+
+def test_completed_resume_replays_terminal_result_without_collect_or_receipt_change(
+        tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv('XHS_EXPECTED_COLLECTION_USER_ID', 'a' * 24)
+    resume_from = tmp_path / 'completed.json'
+    output = tmp_path / 'replayed.json'
+    worker._write_checkpoint(str(resume_from), {
+        'keyword': 'query', 'identity_verified': True, 'ok': True, 'partial': False,
+        'elapsed': 3.5, 'notes': [{'note_id': 'b' * 24, 'detail_fetched': True, 'desc': 'saved result'}],
+        'summary': {'detail_success': 1, 'detail_total': 1},
+    }, 'original-run', complete=True)
+    terminal_result = json.loads(resume_from.read_text('utf-8'))
+    original_receipt = dict(terminal_result['checkpoint'])
+    original_bytes = resume_from.read_bytes()
+    collect_calls = []
+
+    def unexpected_collect(*args, **kwargs):
+        collect_calls.append((args, kwargs))
+        return {'keyword': 'query', 'ok': True, 'partial': False, 'notes': [], 'summary': {}}
+
+    monkeypatch.setattr(worker, 'collect', unexpected_collect)
+    monkeypatch.setattr(sys, 'argv', [
+        'worker', '--keyword', 'query', '--output', str(output),
+        '--resume-from', str(resume_from), '--run-id', 'new-run',
+    ])
+
+    with pytest.raises(SystemExit) as stopped:
+        worker.main()
+
+    assert stopped.value.code == 0
+    assert collect_calls == []
+    replayed = json.loads(output.read_text('utf-8'))
+    printed = json.loads(capsys.readouterr().out.split('---RESULT_JSON---\n', 1)[1])
+    assert replayed == terminal_result
+    assert printed == terminal_result
+    assert replayed['checkpoint'] == original_receipt
+    assert resume_from.read_bytes() == original_bytes
+
+
+def test_partial_resume_preserves_pending_native_card_and_completed_ids(
+        tmp_path, monkeypatch):
+    monkeypatch.setenv('XHS_EXPECTED_COLLECTION_USER_ID', 'a' * 24)
+    resume_from = tmp_path / 'partial.json'
+    output = tmp_path / 'continued.json'
+    completed_id = 'b' * 24
+    pending_id = 'c' * 24
+    pending_card = {
+        'note_id': pending_id,
+        'url': f'https://{worker.COLLECTION_HOST}/explore/{pending_id}',
+        'title': 'pending native card',
+    }
+    worker._write_checkpoint(str(resume_from), {
+        'keyword': 'query', 'identity_verified': True, 'ok': False, 'partial': True,
+        'notes': [
+            {'note_id': completed_id, 'detail_fetched': True},
+            {**pending_card, 'detail_fetched': False},
+        ],
+        'discovered_cards': [pending_card],
+        'summary': {'pending_note_ids': [pending_id], 'resumed_note_ids': ['d' * 24]},
+    }, 'partial-run', complete=False)
+    original_receipt = json.loads(resume_from.read_text('utf-8'))['checkpoint']
+    original_bytes = resume_from.read_bytes()
+    calls = []
+
+    def fake_collect(keyword, max_scroll, max_details, cdp_url, human, progress,
+                     deadline, resume_ids, resume_cards=None):
+        calls.append({
+            'keyword': keyword,
+            'resume_ids': set(resume_ids),
+            'resume_cards': resume_cards,
+        })
+        return {
+            'keyword': keyword, 'identity_verified': True, 'ok': True, 'partial': False,
+            'notes': [{'note_id': pending_id, 'detail_fetched': True}], 'summary': {},
+        }
+
+    monkeypatch.setattr(worker, 'collect', fake_collect)
+    monkeypatch.setattr(sys, 'argv', [
+        'worker', '--keyword', 'query', '--output', str(output),
+        '--resume-from', str(resume_from), '--run-id', 'continued-run',
+    ])
+
+    with pytest.raises(SystemExit) as stopped:
+        worker.main()
+
+    assert stopped.value.code == 0
+    assert calls == [{
+        'keyword': 'query',
+        'resume_ids': {completed_id, 'd' * 24},
+        'resume_cards': [pending_card],
+    }]
+    assert json.loads(resume_from.read_text('utf-8'))['checkpoint'] == original_receipt
+    assert resume_from.read_bytes() == original_bytes
+
+
+def test_completed_resume_rejects_mismatched_identity_before_collect(
+        tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv('XHS_EXPECTED_COLLECTION_USER_ID', 'a' * 24)
+    resume_from = tmp_path / 'completed.json'
+    output = tmp_path / 'rejected.json'
+    worker._write_checkpoint(str(resume_from), {
+        'keyword': 'query', 'identity_verified': True, 'ok': True, 'partial': False,
+        'notes': [{'note_id': 'b' * 24, 'detail_fetched': True}], 'summary': {},
+    }, 'original-run', complete=True)
+    original_bytes = resume_from.read_bytes()
+    monkeypatch.setenv('XHS_EXPECTED_COLLECTION_USER_ID', 'c' * 24)
+    collect_calls = []
+    monkeypatch.setattr(worker, 'collect', lambda *args, **kwargs: collect_calls.append((args, kwargs)))
+    monkeypatch.setattr(sys, 'argv', [
+        'worker', '--keyword', 'query', '--output', str(output),
+        '--resume-from', str(resume_from), '--run-id', 'new-run',
+    ])
+
+    with pytest.raises(SystemExit) as stopped:
+        worker.main()
+
+    assert stopped.value.code == 1
+    assert collect_calls == []
+    result = json.loads(output.read_text('utf-8'))
+    assert result['error'] == 'CDP_EXCEPTION: RESUME_INPUT_MISMATCH'
+    assert result['partial'] is True
+    assert resume_from.read_bytes() == original_bytes
+    assert 'CDP_EXCEPTION: RESUME_INPUT_MISMATCH' in capsys.readouterr().out

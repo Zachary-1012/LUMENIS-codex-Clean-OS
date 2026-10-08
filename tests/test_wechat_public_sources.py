@@ -56,6 +56,42 @@ def test_native_query_tuple_does_not_change_with_referral_parameters():
     assert a['raw']['native_article_identity']==b['raw']['native_article_identity']
 
 
-def test_detail_rejects_foreign_host_before_transport():
+@pytest.mark.parametrize('url', [
+    'https://example.com/not-wechat',
+    'https://mp.weixin.qq.com.example.com/s/article',
+    'https://mp.weixin.qq.com@evil.example/s/article',
+    'https://user:password@mp.weixin.qq.com/s/article',
+    'https://mp.weixin.qq.com:444/s/article',
+    'http://mp.weixin.qq.com/s/article',
+    'https://mp.weixin.qq.com/not-an-article',
+    'https://[malformed/s/article',
+])
+def test_detail_rejects_foreign_host_before_transport(url):
     adapter=WechatPublicAdapter(fetcher=lambda _: pytest.fail('foreign target reached transport'))
-    with pytest.raises(ValueError):adapter.detail('https://example.com/not-wechat')
+    result=adapter.detail(url)
+    assert result.status is CollectionStatus.NOT_SUPPORTED
+    assert result.items == [] and result.ok is False
+    assert result.metadata['reason'] == 'SOURCE_URL_NOT_SUPPORTED'
+    assert result.metadata['original_body_available'] is False
+    assert result.metadata['network_attempted'] is False
+    assert result.metadata['persistence_attempted'] is False
+    assert result.metadata['requires_auth'] is False
+    assert result.metadata['cookies_used'] is False
+
+
+def test_foreign_url_search_does_not_fall_through_to_discovery():
+    adapter=WechatPublicAdapter(fetcher=lambda _: pytest.fail('foreign URL reached transport'))
+    result=adapter.search('https://example.com/not-wechat')
+    assert result.status is CollectionStatus.NOT_SUPPORTED
+    assert result.items == [] and result.metadata['network_attempted'] is False
+
+
+def test_supported_original_url_still_reaches_original_body():
+    calls=[]
+    def fetch(url):
+        calls.append(url)
+        return response('<div id="js_content">原生完整正文</div>', url)
+    url='https://mp.weixin.qq.com/s/native-share-path'
+    result=WechatPublicAdapter(fetcher=fetch).detail(url)
+    assert calls == [url] and result.status is CollectionStatus.SUCCESS
+    assert result.items[0]['content'] == '原生完整正文'

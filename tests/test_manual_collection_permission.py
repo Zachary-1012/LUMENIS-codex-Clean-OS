@@ -35,8 +35,11 @@ def _scope_fence_schema(conn):
     conn.execute("CREATE TABLE canonical_data(source_id TEXT," + fields + ")")
 
 
-def _approve(principal, gate, scope=SCOPE, keyword="Mall", max_results=1):
-    _, denied = surface._manual_collection_guard(principal, scope, "weibo", keyword, max_results)
+def _approve(principal, gate, scope=SCOPE, keyword="Mall", max_results=1, *,
+             platform="weibo", max_scroll=None):
+    _, denied = surface._manual_collection_guard(
+        principal, scope, platform, keyword, max_results, max_scroll=max_scroll,
+    )
     assert denied["status"] == "APPROVAL_REQUIRED"
     return gate.grant_approval(
         p.OperationType.DATA_IMPORT.value, resource=denied["approval_resource"],
@@ -83,6 +86,44 @@ def test_exact_approval_does_not_expand_to_another_request(local_request, scope,
     _approve(principal, gate)
     _, denied = surface._manual_collection_guard(principal, scope, "weibo", keyword, limit)
     assert denied["status"] == "APPROVAL_REQUIRED"
+
+
+def test_xhs_scroll_depth_is_part_of_the_exact_import_approval(local_request):
+    _, principal, gate = local_request
+    _approve(principal, gate, keyword="Mall", platform="xiaohongshu", max_scroll=7)
+
+    admitted, denied = surface._manual_collection_guard(
+        principal, SCOPE, "xiaohongshu", "Mall", 1, max_scroll=7,
+    )
+    assert denied is None and admitted == SCOPE
+
+    _, denied = surface._manual_collection_guard(
+        principal, SCOPE, "xiaohongshu", "Mall", 1, max_scroll=8,
+    )
+    assert denied["status"] == "APPROVAL_REQUIRED"
+
+
+@pytest.mark.parametrize("platform,max_scroll,status", [
+    ("weibo", 2, "NOT_SUPPORTED"),
+    ("xiaohongshu", 0, "INVALID_SCROLL_LIMIT"),
+    ("xiaohongshu", True, "INVALID_SCROLL_LIMIT"),
+    ("xiaohongshu", 21, "INVALID_SCROLL_LIMIT"),
+])
+def test_scroll_depth_is_rejected_before_collection_when_unsupported_or_unbounded(
+    local_request, monkeypatch, platform, max_scroll, status,
+):
+    _, principal, _ = local_request
+    monkeypatch.setattr(
+        surface, "_adapter_health",
+        lambda *a, **kw: pytest.fail("unsupported scroll input reached source preflight"),
+    )
+    result = surface.collect_search(
+        platform, "Mall", actor=principal, scope=SCOPE, max_results=1,
+        max_scroll=max_scroll,
+    )
+    assert result["status"] == status
+    assert result["network_attempted"] is False
+    assert result["persistence_attempted"] is False
 
 
 def test_workspace_revocation_rechecks_before_capture(local_request, monkeypatch):

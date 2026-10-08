@@ -277,7 +277,7 @@ IMPLEMENTED
 
 智能 UI 采用范围覆盖全部现有能力、44屏及四端，包含研究/业务/创作、设置/通知/恢复。唯一执行依据是[产品蓝图](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)与[Experience §38](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)；[44屏规范索引](contracts/experience/screen-specifications/README.md)逐屏给出实际用户任务和后续采用入口，[既有文字草图](00-GOVERNANCE/evidence/round-15/experience-review-2026-10-06/LUMENIS-44-SCREEN-TEXT-WIREFRAMES-1.5.md)保留历史并同步日期增补。规则/蓝图/草图同步不表示44屏已经实现；授权启动后的实际派发/准入以本地ledger与真实工具回执为准。
 
-2026-10-08 前端审计增补已纳入上述唯一规则：全44屏和官网家族需可编辑设计与源码/动作/验收映射，详见[ScreenSpec索引](contracts/experience/screen-specifications/README.md)。Product Owner 已授权 M/F/C1-C6 启动完整既有成果；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。规则同步不代表 Figma 工程、智能 UI 实现或用户验收完成。
+2026-10-08 前端审计增补已纳入上述唯一规则：F先完成全44屏和官网家族的真实Figma可编辑设计、四端差异与任务交互原型，再按现有DESIGN_READY实施；文件/节点/版本与源码/动作/验收映射详见[ScreenSpec索引](contracts/experience/screen-specifications/README.md)。Product Owner 已授权 M/F/C1-C6 启动完整既有成果；历史等待文字不再构成暂停指令，M待命也不暂停执行窗口。实际派发/准入以当前直接PO指令、本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。规则同步不代表 Figma 工程、智能 UI 实现或用户验收完成。
 
 ### 2026-10-08 成熟基础能力、竞品机制与用户操作期待
 

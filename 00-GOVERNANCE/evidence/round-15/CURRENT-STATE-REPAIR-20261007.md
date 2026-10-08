@@ -1,0 +1,74 @@
+# 2026-10-07 当前状态与缺陷修复
+
+本记录属于现有 Round 15 证据，不是新的产品规则或执行队列。
+
+## 冻结基线
+
+2026-10-07 13:56–14:06 +08，canonical checkout `D:/LUMENIS_REBUILD/序/序境`，remote `Zachary-1012/LUMENIS-codex-Clean-OS`，本地 HEAD / fetch 后 origin/main / live refs/heads/main / GitHub API 全部为 `2e643b0ddadc09ddada5835c19be0c2aae0bd581`，main 分歧 0/0，status clean。忽略的 work/、私有配置和原始研究保留，不据此宣称它们全部已采用。
+
+该 SHA Product Gate 37530973017 / App Gate 37530972891 均 success。它们证明各自已执行的检查，不证明 Critical E2E、四端运行或产品闭环。
+
+## 当前实际状态
+
+- 13:58–14:00 Core 健康请求不可达，8201无监听，未发现对应Python Core/Supervisor进程。最后成功 health 在12:37:35。
+- 14:19只读Windows状态显示系统在13:24:03重启。supervisor_state仍记录12:37:35 running，是过期状态；当前进程不存在，不能当作仍运行，也不能直接认定新崩溃。
+- 现有 `LUMENIS-Prelaunch-Maintenance-5m` 定时任务处于Ready，动作仍指向固定旧源码目录 `prelaunch-baseline-3d6e0924dd883a23616ba2f63a01962e10b76e1e`。这是实际执行版本与新main不同的风险；未修改该计划任务或其私有环境/授权材料。
+- 14:25–14:26以SQLite mode=ro/query_only读取现有正式monitor.db：Evidence498、Canonical277、Evaluation134、Subjects179、platform_contents270、Artifact17、daily_reports69、CTH Cases1；ai_task22，其中succeeded16、ready6。数量不是用户成果或模型训练证明。未读取来源正文/账号秘密，未修改正式DB。
+
+## 已确认缺陷与修复范围
+
+|缺陷|既有Owner与处理|边界|
+|---|---|---|
+|旧worker可能确认/拒绝新attempt|TaskQueue每次dequeue产生独有run_id，ack/fail/heartbeat/checkpoint和Guardian wrapper要求当前run/worker/lease；过期回收事务重核|队列恢复保证，不等于六平台持续业务通过|
+|完整XHS checkpoint再次collect|校验身份/关键词/来源后返回不可变terminal结果，partial继续原恢复链|本地Raw恢复；服务端持久回执仍OPEN，不把客户端文件当授权|
+|XHS恢复选择个人大陆账号|Auth Recovery复用现有Collector政策与端点，拒绝不匹配/未配置和受保护profile|真实登录/平台健康另验，不绕验证|
+|兼容/api/collect直写notes、越范围、假done|绑定真实actor/scope，进入现有collect_search的Permission与Source/Evidence/Canonical事务，列表及回读隔离，暂停/拒绝保持未完成|in-memory兼容任务恢复仍OPEN，未调用AI，不冒充完整C1|
+|选定行导入的父Canonical与Source Brief消歧|在原Importer/Reporting链处理父document与document_row共用source_id的选择/重开|受影响回归与旧报告兼容，正式数据不迁移|
+
+## 执行安排
+
+六窗口总体职责体系保持；本轮M先处理已确认错误并同步，C1、C2与F随后各自完成已有完整成果。C3/C4/C5/C6不独立开新任务；本次明确授权的跨Owner修复由M组织。免费资源优先，无新付费GPU/充值/模型fallback授权。
+
+## 研究依据
+
+- SQLite无ORDER BY的多行顺序不保证；通过明确身份消歧，不能靠偶然返回首行：[SELECT](https://www.sqlite.org/lang_select.html)。
+- 每次接收使用新的receipt而非仅message/task ID：[AWS SQS receipt](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-queue-message-identifiers.html)。此处只复用机制，无AWS依赖。
+- 事务内获得写预留：[SQLite BEGIN IMMEDIATE](https://www.sqlite.org/lang_transaction.html)。
+- terminal重放保留已有结果：[AWS idempotency](https://docs.aws.amazon.com/wellarchitected/latest/framework/rel_prevent_interaction_failure_idempotent.html)。
+- Flask后台线程需要自己的有效request context；请求体已在主线程读取，worker只使用已解析输入与只读transport验证：[Flask API](https://flask.palletsprojects.com/en/stable/api/#flask.copy_current_request_context)。
+
+## 验证与交付状态
+
+本节在实际验证和发布后填写。当前为LOCAL_MODIFIED，尚未声称已推送、运行加载或用户验收。Production Owned AI、六平台完整持续采集、F完整四端用户操作、RELEASED/OPERATING仍OPEN。
+
+
+## 2026-10-08 C6 integration review of the preserved repair
+
+The later Product Owner full-closure authorization and e42f024 rules supersede the historical scheduling paragraph above. C6 passed fresh admission on main, preserved the exact 21 local repair paths and classified their owners. All 21 protected bytes still matched admission before this evidence append. Separate C1/C3/C4/C5/F work is excluded from this batch.
+
+The existing repairs pass 179 affected tests; two binary legacy DOC/XLS cases remain skipped because their optional LibreOffice/xlrd runtime is unavailable. These skips are not format acceptance. The nine required constitution/governance/cross-product/database/Experience checks pass on the exact isolated snapshot; the first cross-product invocation omitted its required path and failed, then the corrected invocation passed. Both logs are retained. No production DB was copied or migrated and no protected identity was used.
+
+The actual SourceBrief HTTP recovery caller did not pass its server principal to the existing owner. Five original-source/final-return permission counterexamples reproduced HTTP 200 before repair. The three reopen/resume/media-retry callers now pass the principal; the existing source owner verifies current Canonical identity and original scope. Generation passes the existing before-persist callback with fresh exact actor/scope and REPORT_GENERATE checks. The returned response is uncached and follows a fresh context check. All 26 route cases, including normal Focus/GLOBAL generation and idempotent recovery, pass after repair, with no skips or background-thread leaks.
+
+Local evidence receipts are under `work/w6-integration-20261002/dispatch-20261008/protected-repair-validation` and `source-brief-caller-repair`: exact argv, raw logs, exit codes and JUnit counts are retained. The original 21 source bytes plus the two caller/test files are pinned in the integration review manifest; published Git blobs use their exact LF hashes. Validation workspace is temporary and exists only to protect unrelated dirty source.
+
+Core health is currently healthy; the elevated service's loaded source revision cannot yet be proved. Initial real SourceBrief recoveries preserve hashes 59b5efb3a98623106b35883a533b1b4d9a73576a3f02a79af6df082e438acff6 (GLOBAL CTH, 29 rows), 55d7114b8512a8d4ac2abe59b1f64ad8e2c486d769ee66a4af9361662dc2bf00 (Guangzhou, 29 rows) and 677b71e3d9d416944a30132a3a75c5b66f58ee4694ed5af64e994e0937663240 (Nike, 3 rows). They are historical daily_reports snapshots, not new Shared Artifact/source-content rights, model execution or usefulness acceptance.
+
+Disposition: INTEGRATION_REVIEW_READY / NOT_PUBLISHED / NOT_RUNTIME_LOADED. Complete C6 and C1-C5/F outcomes, same-version scheduler/runtime, production AI, controlled Browser/OS actions, source-purpose intake, four-surface operation and final human acceptance remain open. M acceptance and coherent exact main publication are the next integration step, not a per-function product closure.
+
+
+### Coherent C1 source addition, 2026-10-08
+
+C1 delivered seven exact e42f024-owned source/test postimages (handoff SHA e7b072d43c414c0be60b5a66fb188bda126311e16af79d7e9283c61b7c36b9c4, patch SHA 4e4473ba478ea6ca6c92a33200f3f828d7580e88bbc18be5224bc9b1597b1f5a, ZIP SHA 96af3de383fbc611b8c368775e6483fb4a1e8e552ff2515dde60fc27cf855ef0). W6 verified every main preimage and current raw/LF/ZIP postimage, with no protected-21 overlap. The reviewed source removes the universal publication cutoff, preserves explicit native-calendar or offset-instant boundaries independently from actual capture, keeps semantic expansions derivative and scope-bound, and returns structured unsupported WeChat results before any transport/session access. Normal public-original parsing remains covered. C1 reports 122 tests plus 14 subtests passed under external-effect/Production/private hard-deny; the exact JUnit receipt was read. These are implementation/contract checks, not live Source admission, six-platform operation or C1 acceptance. W6 checks the joined acquisition/compatibility caller boundary below.
+
+Joined verification: 51 acquisition/compatibility/WeChat caller cases pass in the exact e42f024 validation snapshot with all accepted source deltas. No skips or thread leaks. The final staged diff, constitution and takeover-publication guards all exit 0. These checks support this coherent bounded integration; they do not close C1 or C6 real operations.
+
+## 2026-10-08 M-accepted bounded source publication
+
+M's actual native acceptance is `ACCEPT_BOUNDED_SOURCE_BATCH` for the original 31-path manifest SHA `aabeaa0573090fd771a28fa62c8f85cf2ac0b001b333d3efbe22e1e83dbb8c88` and patch SHA `42613047a2e50ab11e00a9f1689e16efccfb52ec13e952a0f41640548cb852f4`, parent `e42f0246568b5a6c9f41e2cfb29ec549b3e14672`. M read all 31 LF postimages and the pinned verification receipts; independent permission/queue/XHS and acquisition/time/WeChat reviews found no material blocker. The 136-entry C1 JUnit includes 122 tests and 14 subtests, not 136 distinct tests.
+
+The coherent publication adds only M's five exact governance postimages: AGENTS, Experience Constitution, ScreenSpec README, root README and `PO-20261008-FIGMA-FIRST-CONTINUE.json`. W6 amended CURRENT and this existing evidence record for publication truth; the remaining accepted source pins are unchanged. The final exact 36-path staged snapshot receives the three Experience checks and required constitution/governance/publication guards. Unchanged affected tests are reused at their pinned source versions. Local exact argv/log/exit/hash receipts remain in the existing integration-review directory; final main/live-ref and new CI observations follow publication and are never inherited from an earlier SHA.
+
+The Product Owner's Figma-first continuation covers all 44 existing App screens and Website content families with approved surface and task interaction variants. F remains dispatched to its complete existing outcome and preserves its source. Actual editable Figma file/node/version evidence is NOT_VERIFIED in this bounded package. Ordinary workers do not pause for M standby or another scheduling confirmation.
+
+Disposition: accepted bounded source integration and co-publication only. No Core reload, scheduler rebinding, formal DB migration, new source-use grant, owned inference, protected identity access or release occurred in this source batch. The old scheduled action still points to 3d6e0924, and Core's loaded source SHA remains unknown. Initial SourceBrief HTTP returns remain historical daily_reports recoveries. Shared content/source-purpose admission, normal saved/revised/reopened outputs, controlled Browser/OS operation, production AI, four-surface E2E and full C1/C6 acceptance remain OPEN. USER_VERIFIED, RELEASED and OPERATING are not claimed.

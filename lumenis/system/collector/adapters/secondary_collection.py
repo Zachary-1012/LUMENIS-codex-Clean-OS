@@ -53,6 +53,7 @@ PLATFORM_NAMES = {
     "xiaohongshu": "小红书",
 }
 MAX_RESULTS = 20
+MAX_XHS_SCROLL = 20
 MIN_INTERVAL_SECONDS = 3.0
 
 _DEFAULT_GET_ADAPTER = get_adapter
@@ -438,6 +439,15 @@ def _native_record(item: Dict[str, Any], platform: str, keyword: str, captured_a
     payloads in the HTTP response.
     """
     raw = item.get("raw") if isinstance(item.get("raw"), dict) else {}
+    if (platform == "xiaohongshu" and not raw
+            and item.get("note_id") not in (None, "")):
+        # The existing XHS adapter returns the collector's native note objects
+        # directly (note_id/time/liked_count), unlike adapters that wrap them
+        # under `raw`. Preserve the native observation through the established
+        # credential filter and XHS field projection before the common importer.
+        return prepare_xhs_observations(
+            [item], keyword=keyword, captured_at=captured_at,
+        )[0]
     record: Dict[str, Any] = dict(raw)
     record["source_raw"] = dict(raw)
     from .platform_naming import get_platform_fields, normalize_content_id
@@ -967,7 +977,7 @@ def _write_prelaunch_evidence(platform: str, keyword: str, result: Dict[str, Any
                      "notes_updated": result.get("updated", 0),
                      "entity_mentions": result.get("entity_mentions")},
             actual=result.get("status", "COLLECT_ERROR"), account=f"{prefix}_{platform.upper()}",
-            provider=(result.get("provenance") or {}).get("provider") or "unreported",
+            provider=(result.get("provenance") or {}).get("provider", "unreported"),
             collection_metadata=result.get("provenance"),
             domain_id="zbmp" if bmp else "cth", subject_id=scope.get("subject_id"),
             brand_focus_id=scope.get("brand_focus_id"),
@@ -1491,7 +1501,9 @@ def _write_evidence(platform: str, keyword: str, result: Dict[str, Any], *, star
         return None
 
 
-def _manual_collection_approval_resource(scope, platform, keyword, max_results, receipt):
+def _manual_collection_approval_resource(
+    scope, platform, keyword, max_results, receipt, *, max_scroll=None,
+):
     """Bind approval to the server identity and the exact bounded source request."""
     binding = {
         "module": "collector", "action": "write", "platform": platform,
@@ -1501,11 +1513,13 @@ def _manual_collection_approval_resource(scope, platform, keyword, max_results, 
         "actor_id": receipt.actor_id, "principal_kind": receipt.principal_kind,
         "principal_ref": receipt.principal_ref,
     }
+    if max_scroll is not None:
+        binding["max_scroll"] = max_scroll
     encoded = json.dumps(binding, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return "collector-source-import:v1:" + hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
-def _manual_collection_guard(actor, scope, platform, keyword, max_results):
+def _manual_collection_guard(actor, scope, platform, keyword, max_results, *, max_scroll=None):
     """Check live Collector admission and separate import approval; never grant it."""
     from lumenis.system.security import (
         LocalWorkspacePrincipal, OperationType, check_actor_scope_permission,
@@ -1518,6 +1532,18 @@ def _manual_collection_guard(actor, scope, platform, keyword, max_results):
             "ok": False, "status": status, "platform": platform, "keyword": keyword,
             "read_only": True, "external_write": False, **extra,
         }
+
+    if max_scroll is not None:
+        canonical_platform = str(platform or "").strip().lower()
+        if canonical_platform == "xhs":
+            canonical_platform = "xiaohongshu"
+        if canonical_platform != "xiaohongshu":
+            return denied("NOT_SUPPORTED", network_attempted=False,
+                          persistence_attempted=False)
+        if (type(max_scroll) is not int
+                or not 1 <= max_scroll <= MAX_XHS_SCROLL):
+            return denied("INVALID_SCROLL_LIMIT", network_attempted=False,
+                          persistence_attempted=False)
 
     if actor is None:
         return denied("AUTH_REQUIRED")
@@ -1548,6 +1574,7 @@ def _manual_collection_guard(actor, scope, platform, keyword, max_results):
             return denied("SCOPE_UNAUTHORIZED")
         resource = _manual_collection_approval_resource(
             exact, platform, keyword, max_results, receipt,
+            max_scroll=max_scroll,
         )
         approval = gate.check(
             OperationType.DATA_IMPORT, resource,
@@ -1577,6 +1604,7 @@ class _CollectionWriteRejected(Exception):
 def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULTS,
                    operator: str = "human", scope: Mapping[str, Any] | None = None,
                    actor: Any = None,
+                   max_scroll: int | None = None,
                    prelaunch_local_import: bool = False,
                    prelaunch_authorization: Any = None,
                    raw_capture: PublicRawCapture | None = None,
@@ -1590,6 +1618,24 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
     if maintenance_operator and not prelaunch_local_import:
         return {"ok": False, "status": "SCOPE_UNAUTHORIZED", "platform": platform,
                 "keyword": keyword, "read_only": True, "external_write": False}
+    if max_scroll is not None:
+        requested_platform = str(platform or "").strip().lower()
+        if requested_platform == "xhs":
+            requested_platform = "xiaohongshu"
+        if requested_platform != "xiaohongshu":
+            return {"ok": False, "status": "NOT_SUPPORTED", "platform": requested_platform,
+                    "keyword": keyword, "read_only": True, "external_write": False,
+                    "network_attempted": False, "persistence_attempted": False}
+        if type(max_scroll) is not int or not 1 <= max_scroll <= MAX_XHS_SCROLL:
+            return {"ok": False, "status": "INVALID_SCROLL_LIMIT", "platform": requested_platform,
+                    "keyword": keyword, "read_only": True, "external_write": False,
+                    "network_attempted": False, "persistence_attempted": False}
+        # Scroll depth is an exact manual XHS acquisition boundary. Other
+        # import modes use their own signed request contract and cannot accept it.
+        if prelaunch_local_import or raw_capture is not None or native_capture is not None:
+            return {"ok": False, "status": "NOT_SUPPORTED", "platform": requested_platform,
+                    "keyword": keyword, "read_only": True, "external_write": False,
+                    "network_attempted": False, "persistence_attempted": False}
     if platform == "xhs":
         platform = "xiaohongshu"
     platform, keyword, max_results = _validate_request(platform, keyword, max_results)
@@ -1629,6 +1675,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
     if not prelaunch_local_import:
         manual_scope, denial = _manual_collection_guard(
             actor, scope, platform, permission_keyword, max_results,
+            max_scroll=max_scroll,
         )
         if denial is not None:
             return denial
@@ -1780,9 +1827,12 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
 
         collection = None
         try:
+            search_kwargs = {"max_results": max_results}
+            if max_scroll is not None:
+                search_kwargs["max_scroll"] = max_scroll
             collection = (_native_capture_collection(native_capture) if native_capture is not None else
                           _public_raw_collection(raw_capture) if raw_capture is not None
-                          else _get_runtime_adapter(platform).search(keyword, max_results=max_results))
+                          else _get_runtime_adapter(platform).search(keyword, **search_kwargs))
             if not isinstance(collection, CollectionResult):
                 raise TypeError("adapter returned a non-CollectionResult value")
             if native_capture is None and raw_capture is None:
@@ -1836,7 +1886,10 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                                     else datetime.now(timezone.utc).isoformat())
             business_reviews = _business_source_reviews(records, business_query, business_observed_at)
         if manual_scope is not None:
-            _, denial = _manual_collection_guard(actor, manual_scope, platform, permission_keyword, max_results)
+            _, denial = _manual_collection_guard(
+                actor, manual_scope, platform, permission_keyword, max_results,
+                max_scroll=max_scroll,
+            )
             if denial is not None:
                 return denial
         source_item_count = len(items)
@@ -1888,6 +1941,8 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             provenance.setdefault("provider", str(actual_provider)[:100])
         provenance.setdefault("source", str(metadata.get("source") or f"platform:{platform}")[:180])
         provenance.setdefault("collected_at", str(metadata.get("collected_at") or captured_at)[:40])
+        if max_scroll is not None:
+            provenance["max_scroll"] = max_scroll
         if native_capture is not None:
             provenance["native_capture_sha256"] = native_capture.sha256
             provenance["source_version"] = native_capture.sha256
@@ -1959,17 +2014,17 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                     final_status = "IMPORT_FAILED"
                 finished = _now()
                 error = "" if final_status in {"SUCCESS", "NO_NEW_DATA"} else f"{final_status}: {_status_message(final_status)}"
+                observed_raw_count = _observed_raw_count(collection, source_item_count)
                 result = {
                     "ok": bool(collection.ok and not prelaunch_scope_conflict and not import_result.get("failed")
                                and not prelaunch_import_incomplete and not canonical_failed),
                     "status": final_status,
                     "platform": platform,
                     "keyword": keyword,
-                    "raw_count": _observed_raw_count(collection, source_item_count),
+                    "raw_count": observed_raw_count,
                     "returned_count": (
                         source_item_count
-                        if collection.ok or source_item_count > 0
-                        or _observed_raw_count(collection, source_item_count) is not None
+                        if collection.ok or source_item_count > 0 or observed_raw_count is not None
                         else None
                     ),
                     "filtered_count": (
@@ -2157,7 +2212,10 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                         "approval_resource_keyword":permission_keyword,"signature_verified":True,
                         "per_use_admission":{"DATA_IMPORT":"CURRENT_CALLER_APPROVED","READ_ANALYZE_SAVE_EXPORT":"CHECK_EACH_CURRENT_USE","MODEL_TRAIN":"NOT_GRANTED"}}
                 if manual_scope is not None:
-                    _, denial = _manual_collection_guard(actor, manual_scope, platform, permission_keyword, max_results)
+                    _, denial = _manual_collection_guard(
+                        actor, manual_scope, platform, permission_keyword, max_results,
+                        max_scroll=max_scroll,
+                    )
                     if denial is not None:
                         raise _CollectionWriteRejected(denial)
                 elif prelaunch_scope is not None:

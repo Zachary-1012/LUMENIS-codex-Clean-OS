@@ -29,11 +29,26 @@ class RuntimeGuardian:
     def process_once(self):
         return self.worker.process_once()
 
-    def heartbeat(self, task_id):
-        return self.queue.heartbeat(task_id, self.worker.worker_id)
+    def _owns_attempt_receipt(self, worker_id, lease_owner):
+        """Reject receipts from workers other than this guardian's worker."""
+        return (worker_id == self.worker.worker_id
+                and lease_owner == self.worker.lease_owner)
 
-    def checkpoint(self, task_id, checkpoint_id):
-        return self.queue.checkpoint(task_id, self.worker.worker_id, checkpoint_id)
+    def heartbeat(self, task_id, *, run_id=None, worker_id=None, lease_owner=None):
+        """Renew a lease only with the complete receipt returned by dequeue."""
+        if not self._owns_attempt_receipt(worker_id, lease_owner):
+            return False
+        return self.queue.heartbeat(
+            task_id, worker_id, run_id=run_id, lease_owner=lease_owner)
+
+    def checkpoint(self, task_id, checkpoint_id, *, run_id=None, worker_id=None,
+                   lease_owner=None):
+        """Persist progress only for this guardian's active queue attempt."""
+        if not self._owns_attempt_receipt(worker_id, lease_owner):
+            return False
+        return self.queue.checkpoint(
+            task_id, worker_id, checkpoint_id,
+            run_id=run_id, lease_owner=lease_owner)
 
     def reap(self):
         """Recover stale leases; terminal failures are retained in the DLQ."""

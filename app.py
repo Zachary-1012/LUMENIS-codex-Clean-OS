@@ -303,7 +303,7 @@ try:
     _NODE_BIN = _resolve_node() or 'node'
 except Exception:
     _NODE_BIN = 'node'
-from flask import Flask, jsonify, request, send_file, Response, redirect
+from flask import Flask, jsonify, request, send_file, Response, redirect, copy_current_request_context
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # === v5.9.9 统一日志增强：yyds-logger补丁模式，一行启用，不影响现有logging调用 ===
 # 多实例隔离/JSON结构化/request_id/按sink级别/异常捕获，所有后续模块自动受益
@@ -1880,95 +1880,72 @@ def _strict_verify(note):
     title=note.get('title','') or ''; content=note.get('content','') or ''
     return ai_analyzer.verify_taikoo_location(title,content)
 
-def _run_collect_task(task_id,keywords,max_scroll,query_plan=None):
-    started=time.time()
+def _collect_request_context(action):
+    """Compatibility callers use the same live principal/scope owner as Experience."""
+    from experience_runtime import _content_project_scope
+    actor, scope, decision = _content_project_scope(
+        action, module="collector", include_decision=True)
+    owner = decision.principal_ref or f"account:{decision.actor_id}"
+    return actor, scope, owner
+
+
+def _public_collect_task(task):
+    return {key: value for key, value in task.items() if not key.startswith('_')}
+
+
+def _run_collect_task(task_id, queries, max_results, actor, operator, scope, max_scroll):
+    """Execute compatibility requests through the canonical scoped transaction.
+
+    The plan is navigation, never permission or verified source identity. Each
+    query passes collect_search's fresh Permission/import checks and canonical
+    Source/Evidence transaction. No legacy notes-only or implicit AI side path.
+    """
+    from lumenis.system.collector.adapters.secondary_collection import collect_search
+    started = time.monotonic()
+    runs = []
     try:
-        # 统一采集前置门：用户暂停时全网发现+小红书回搜一律不发起（与 bridge.sync 同一暂停信号，所有采集遵循同一规则）
-        try:
+        for query in queries:
             if xhs_cookie_bridge.is_user_paused():
-                with _task_lock: collect_tasks[task_id].update(status='done',progress=100,
-                    message='采集已由用户暂停，本次全网发现/回搜不发起',
-                    finished_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                with _task_lock:
+                    collect_tasks[task_id].update(
+                        status='paused', code='COLLECTION_USER_PAUSED',
+                        message='采集已暂停，尚未执行的查询保持未完成', runs=runs)
                 return
-        except Exception:
-            pass
-        with _task_lock: collect_tasks[task_id].update(status='web-discovery',message='正在检索公开网页舆情并提取事件关键词…',progress=5)
-        # 全网发现是辅助能力，不能阻塞小红书主采集链。
-        web_result={'fetched':0,'keywords':[],'error':'disabled_or_timeout'}
-        if os.getenv('TAIKOO_WEB_DISCOVERY','0').lower() not in ('0','false','no','off'):
-            _ex=concurrent.futures.ThreadPoolExecutor(max_workers=1)
-            _future=_ex.submit(reprocess.discover_web,limit=80,translate=False)
-            try:
-                web_result=_future.result(timeout=max(5,int(os.getenv('TAIKOO_WEB_DISCOVERY_TIMEOUT','8'))))
-            except concurrent.futures.TimeoutError:
-                _future.cancel()
-                web_result={'fetched':0,'keywords':[],'error':'timeout'}
-            except Exception as _e:
-                web_result={'fetched':0,'keywords':[],'error':str(_e)}
-            finally:
-                # 不等待超时任务结束，避免采集锁被“假超时”长期占用。
-                _ex.shutdown(wait=False, cancel_futures=True)
-        # 反馈词先清洗英文停用词/单字符/纯符号噪声并限量，避免无意义词拖慢采集、徒增风控暴露
-        # The API has already resolved an exact Registry-owned plan. Feedback
-        # may refine an accepted registered alias, but it must never widen the
-        # scope into an unregistered keyword after the worker starts.
-        allowed_keywords = {
-            str(item).strip().casefold()
-            for item in (query_plan or {}).get('keywords', keywords)
-            if str(item).strip()
-        }
-        feedback=[]
-        for _x in db.get_feedback_keywords(12):
-            _kw=(_x.get('keyword') or '').strip()
-            if (_kw and _kw.casefold() in allowed_keywords and _kw not in keywords
-                    and not collector._is_noise_keyword(_kw)):
-                feedback.append(_kw)
-            if len(feedback)>=6:
-                break
-        effective=list(dict.fromkeys(list(keywords)+feedback))[:20]
-        with _task_lock: collect_tasks[task_id].update(status='collecting',message=f'全网发现完成，正在用 {len(effective)} 个关键词回搜小红书…',progress=18,web_discovered=web_result.get('fetched',0),feedback_keywords=feedback)
-        notes,results=collector.collect_all(keywords=effective,max_scroll=max_scroll)
-        verified=[]; rejected=0
-        for n in notes:
-            ok,reason=ai_analyzer.verify_taikoo_location(n.get('title',''),n.get('content',''))
-            n['is_taikoo_verified']=1 if ok else 0; n['verify_reason']=reason; n['source_platform']='xhs'
-            if ok: verified.append(n)
-            else: rejected+=1
-        with _task_lock: collect_tasks[task_id].update(status='saving',message=f'采集 {len(notes)} 条，通过主体硬过滤 {len(verified)} 条',progress=45,collected=len(notes),verified=len(verified),rejected=rejected)
-        inserted=updated=0
-        for note in verified:
-            _,is_new=db.insert_note(note); inserted += int(is_new); updated += int(not is_new)
-        for r in results:
-            # 六态归一化：SUCCESS/EMPTY/AUTH_REQUIRED/CAPTCHA/BLOCKED/NETWORK_ERROR，绝不含糊记成 error
-            _err = (r.get('error') or '')
-            cstate = collector.classify_collect_state(_err, r.get('guard_state', ''), r.get('count', 0))
-            db.log_collection(r['keyword'], r.get('count', 0), cstate, _err)
-            # 需人工介入的态：自动创建统一恢复任务（幂等，已存在则复用；BLOCKED 只冷却不开浏览器），
-            # 这样夜间失效也会保留登录/验证入口，手机打开即可恢复，而不是次日才发现失败。
-            if cstate in ('AUTH_REQUIRED', 'CAPTCHA', 'BLOCKED'):
-                try:
-                    from lumenis.adapters import auth_recovery as _ar
-                    _ar.request_recovery('xiaohongshu', source_state=cstate, detail=_err)
-                    print(f'[Collect] 检测到 {cstate}，已自动创建登录/验证恢复任务（{r.get("keyword","")}）')
-                except Exception as _re:  # 恢复通道异常绝不影响采集主流程
-                    print('[Collect] 自动创建恢复任务失败(不影响主流程):', _re)
-        with _task_lock: collect_tasks[task_id].update(status='ai-review',message='正在进行AI/规则复核、去噪、正负面判断与事件提示…',progress=62,inserted=inserted,updated=updated)
-        with db.get_db() as conn:
-            clause,sp=_subject_sql_and_values(); rows=conn.execute(f"SELECT * FROM notes WHERE is_taikoo_verified=1 AND (ai_analyzed_at='' OR ai_analyzed_at IS NULL) AND {clause} ORDER BY id DESC LIMIT 500",tuple(sp)).fetchall()
-        analyzed=0; rejected_ai=0
-        for row in rows:
-            result=reprocess.analyze_note_row(row,translate=False)
-            analyzed += 1; rejected_ai += int(result=='rejected')
-        events=reprocess.build_cross_platform_events()
-        with _task_lock: collect_tasks[task_id].update(status='reporting',message='正在生成日报/周报/月报/年报…',progress=90,analyzed=analyzed,rejected_ai=rejected_ai,events=len(events))
-        _generate_all_reports()
-        with _task_lock: collect_tasks[task_id].update(status='done',message=f'完成：全网发现{web_result.get("fetched",0)}，小红书原始{len(notes)}，有效{len(verified)}，新增{inserted}，更新{updated}，AI复核{analyzed}，事件{len(events)}',progress=100,finished_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),duration_seconds=round(time.time()-started,1))
-    except Exception as e:
-        with _task_lock: collect_tasks[task_id].update(status='error',message=str(e),error=str(e),finished_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        db.log_collection(','.join(keywords[:3]),0,'error',str(e))
+            with _task_lock:
+                collect_tasks[task_id].update(status='collecting',
+                    message='正在按已授权范围采集并保存来源',
+                    progress=int(100 * len(runs) / len(queries)))
+            result = collect_search('xiaohongshu', query.keyword,
+                max_results=max_results, operator=operator, actor=actor,
+                scope=scope, max_scroll=max_scroll)
+            # Never return raw platform material or adapter diagnostics in task listings.
+            receipt = {key: result[key] for key in (
+                'ok', 'status', 'platform', 'imported', 'updated', 'count',
+                'evidence_ids', 'canonical_ids', 'evidence_ref', 'evidence_recorded',
+                'canonical_synced', 'raw_count', 'network_attempted',
+                'persistence_attempted') if key in result}
+            receipt['keyword'] = query.keyword
+            runs.append(receipt)
+            if result.get('ok') is not True or result.get('status') not in {'SUCCESS', 'NO_NEW_DATA'}:
+                with _task_lock:
+                    collect_tasks[task_id].update(
+                        status='blocked', code=result.get('status') or 'COLLECTION_UNAVAILABLE',
+                        message='当前来源未完成采集，请查看来源状态', runs=runs)
+                return
+        with _task_lock:
+            collect_tasks[task_id].update(status='done', progress=100,
+                message='采集结果已通过来源、证据与正式数据事务保存', runs=runs,
+                analysis_status='NOT_RUN', coverage_complete=False)
+    except Exception as exc:
+        with _task_lock:
+            collect_tasks[task_id].update(status='error', code='COLLECTION_FAILED',
+                error_type=type(exc).__name__, message='采集未完成，已保存的来源保留', runs=runs)
     finally:
-        try: _collect_lock.release()
-        except RuntimeError: pass
+        with _task_lock:
+            collect_tasks[task_id].update(
+                finished_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                duration_seconds=round(time.monotonic()-started, 1))
+        _collect_lock.release()
 
 def _generate_all_reports():
     # Existing scheduled reference job; never infer this focus for user requests.
@@ -3017,46 +2994,115 @@ def api_cache_snapshots():
 
 @app.route('/api/collect',methods=['POST'])
 def api_collect():
-    data=request.get_json(silent=True) or {}
-    keywords=data.get('keywords')
-    if isinstance(keywords,str):
-        keywords=[x.strip() for x in keywords.split(',') if x.strip()]
-    elif keywords is not None and not isinstance(keywords,(list,tuple,set)):
-        return jsonify({'ok':False,'error':'keywords 必须为字符串或列表'}),400
-
+    import uuid
+    from dataclasses import replace
+    from experience_runtime import _content_project_error
+    from shared_artifacts import LocalArtifactError
     from lumenis.system.collector.acquisition_plan import build_acquisition_plan
-    query_plan=build_acquisition_plan(keywords)
-    if not query_plan.is_runnable:
-        return jsonify({
-            'ok':False,'code':'ACQUISITION_PLAN_BLOCKED',
-            'error':query_plan.reason or query_plan.reason_code,
-            'query_plan':query_plan.to_dict(),
-        }),409
-    keywords=list(dict.fromkeys(query_plan.keywords))[:20]
-    try: max_scroll=max(1,min(20,int(data.get('max_scroll',4))))
-    except (TypeError,ValueError): return jsonify({'ok':False,'error':'max_scroll 必须为整数'}),400
-    if not _collect_lock.acquire(blocking=False): return jsonify({'ok':False,'error':'已有采集任务正在运行，请稍后再试'}),409
-    task_id=f"{datetime.now():%Y%m%d%H%M%S}{int(time.time()*1000)%1000:03d}"
+    from lumenis.system.collector.adapters.secondary_collection import _manual_collection_guard
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or set(data) - {
+            'keywords', 'max_scroll', 'max_results', 'operator', 'confirm_read_only'}:
+        return jsonify({'ok': False, 'code': 'INVALID_COLLECTION_REQUEST'}), 400
+    operator = data.get('operator')
+    if operator not in {'human', 'human_ui'}:
+        return jsonify({'ok': False, 'code': 'HUMAN_OPERATOR_REQUIRED'}), 403
+    if data.get('confirm_read_only') is not True:
+        return jsonify({'ok': False, 'code': 'READ_ONLY_CONFIRMATION_REQUIRED'}), 400
+    keywords = data.get('keywords')
+    if isinstance(keywords, str):
+        keywords = [word.strip() for word in keywords.split(',') if word.strip()]
+    if keywords is not None and (not isinstance(keywords, list) or
+            not keywords or any(not isinstance(word, str) or not word.strip() for word in keywords)):
+        return jsonify({'ok': False, 'code': 'INVALID_COLLECTION_KEYWORDS'}), 400
+    max_results = data.get('max_results', 20)
+    if type(max_results) is not int or not 1 <= max_results <= 20:
+        return jsonify({'ok': False, 'code': 'INVALID_COLLECTION_LIMIT'}), 400
+    # Explicit legacy depth is passed through the same approval/adapter contract.
+    max_scroll = data.get('max_scroll')
+    if max_scroll is not None and (type(max_scroll) is not int or not 1 <= max_scroll <= 20):
+        return jsonify({'ok': False, 'code': 'INVALID_COLLECTION_SCROLL_LIMIT'}), 400
+    try:
+        actor, scope, owner = _collect_request_context('write')
+        plan = build_acquisition_plan(keywords,
+            context_mode='GLOBAL_ALL' if scope['global_scope'] else 'FOCUS',
+            domain_id=None if scope['global_scope'] else ('CTH' if scope['domain_id'] == 'cth' else 'BMP'),
+            subject_id=scope.get('subject_id'), brand_focus_id=scope.get('brand_focus_id'),
+            max_queries=20)
+        queries = tuple(query for query in plan.queries
+            if query.scope['domain_id'] == scope['domain_id'] and
+            (scope['global_scope'] or query.scope == scope))
+        if not plan.is_runnable or not queries:
+            return jsonify({'ok': False, 'code': 'ACQUISITION_PLAN_BLOCKED',
+                            'query_plan': plan.to_dict()}), 409
+        plan = replace(plan, queries=queries)
+        # Admission is checked before work starts and again at execution/write time.
+        for query in queries:
+            _, denial = _manual_collection_guard(actor, scope,
+                'xiaohongshu', query.keyword, max_results, max_scroll=max_scroll)
+            if denial is not None:
+                return jsonify(denial), (503 if denial['status'] == 'PERMISSION_UNAVAILABLE' else 403)
+    except LocalArtifactError as exc:
+        return _content_project_error(exc)
+    except ValueError:
+        return jsonify({'ok': False, 'code': 'INVALID_ACQUISITION_PLAN'}), 400
+    if not _collect_lock.acquire(blocking=False):
+        return jsonify({'ok': False, 'code': 'COLLECTOR_BUSY'}), 409
+    task_id = uuid.uuid4().hex
     with _task_lock:
-        collect_tasks[task_id]={
-            'task_id':task_id,'status':'pending','message':'任务已创建','progress':0,
-            'created_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'keywords':keywords,'query_plan':query_plan.to_dict(),
+        collect_tasks[task_id] = {
+            'task_id': task_id, 'status': 'pending', 'message': '任务已创建', 'progress': 0,
+            'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'keywords': [query.keyword for query in queries], 'query_plan': plan.to_dict(),
+            'max_results': max_results, 'max_scroll': max_scroll,
+            'pagination_owner': 'SYSTEM_COLLECTOR', 'resume_supported': False,
+            '_owner': owner, '_scope': dict(scope),
         }
-    threading.Thread(
-        target=_run_collect_task,
-        args=(task_id,keywords,max_scroll,query_plan.to_dict()),
-        daemon=True,
-    ).start()
-    return jsonify({'ok':True,'task_id':task_id,'query_plan':query_plan.to_dict()})
+    @copy_current_request_context
+    def run():
+        _run_collect_task(task_id, queries, max_results, actor, operator, scope, max_scroll)
+    try:
+        threading.Thread(target=run, daemon=True).start()
+    except Exception:
+        with _task_lock:
+            collect_tasks[task_id].update(status='error', code='COLLECTOR_START_FAILED')
+        _collect_lock.release()
+        return jsonify({'ok': False, 'code': 'COLLECTOR_START_FAILED', 'task_id': task_id}), 503
+    return jsonify({'ok': True, 'task_id': task_id, 'query_plan': plan.to_dict(),
+                    'max_results': max_results, 'resume_supported': False})
+
+
 @app.route('/api/collect/status/<task_id>')
 def api_collect_status(task_id):
-    with _task_lock: task=collect_tasks.get(task_id)
-    return (jsonify({'ok':True,'task':task}),200) if task else (jsonify({'ok':False,'error':'任务不存在'}),404)
+    from experience_runtime import _content_project_error
+    from shared_artifacts import LocalArtifactError
+    try:
+        _, scope, owner = _collect_request_context('read')
+    except LocalArtifactError as exc:
+        return _content_project_error(exc)
+    with _task_lock:
+        task = collect_tasks.get(task_id)
+        visible = task and task.get('_owner') == owner and task.get('_scope') == scope
+        result = _public_collect_task(task) if visible else None
+    return (jsonify({'ok': True, 'task': result}), 200) if result else (
+        jsonify({'ok': False, 'error': '任务不存在'}), 404)
+
+
 @app.route('/api/collect/tasks')
 def api_collect_tasks():
-    with _task_lock: tasks=sorted(collect_tasks.values(),key=lambda x:x['created_at'],reverse=True)[:20]
-    return jsonify({'ok':True,'tasks':tasks})
+    from experience_runtime import _content_project_error
+    from shared_artifacts import LocalArtifactError
+    try:
+        _, scope, owner = _collect_request_context('read')
+    except LocalArtifactError as exc:
+        return _content_project_error(exc)
+    with _task_lock:
+        tasks = [_public_collect_task(task) for task in collect_tasks.values()
+                 if task.get('_owner') == owner and task.get('_scope') == scope]
+    return jsonify({'ok': True, 'tasks': sorted(tasks,
+        key=lambda task: task['created_at'], reverse=True)[:20]})
+
+
 @app.route('/api/analyze',methods=['POST'])
 def api_analyze():
     try: limit=max(1,min(5000,int((request.get_json(silent=True) or {}).get('limit',500))))

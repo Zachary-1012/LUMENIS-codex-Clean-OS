@@ -9,7 +9,8 @@ neotask（neopen/neotask, 2026-03）是 Celery 的轻量零依赖替代——SQL
 能力：
   - enqueue(task_type, payload, priority, delay)  -> id
   - dequeue()                                      -> 取到期最高优先级任务并标记 running（worker 用）
-  - ack(id) / fail(id, error)                      -> 完成确认 / 失败退避重试（attempts 上限转 failed）
+  - ack/fail/heartbeat/checkpoint require the server-issued run_id receipt
+    returned by dequeue, so a reclaimed task cannot be mutated by an old worker.
   - stats()                                        -> 各状态计数（监控/Observatory 用）
 零第三方依赖（纯 sqlite3），数据落盘可恢复（数据零丢失）。
 """
@@ -17,6 +18,7 @@ import json
 import os
 import threading
 import time
+import uuid
 
 from lumenis.shared.database import DatabaseRepository
 from lumenis.shared.database.registry import get_data_dir
@@ -82,10 +84,18 @@ class TaskQueue:
                  now, now + float(delay)))
             return cur.lastrowid
 
-    def dequeue(self, worker_id="", lease_owner="", run_id=""):
-        """取到期最高优先级任务并标记 running（原子，防多 worker 重复取）。
-        无到期任务返回 None。返回的 dict 反映 UPDATE 后的最新状态。"""
+    def dequeue(self, worker_id="", lease_owner=""):
+        """Claim the next due task and issue a fresh server-owned run_id receipt.
+
+        A new receipt is generated for every claim, including retries. Callers
+        must return that receipt with every lease mutation. No due task returns
+        None; otherwise the returned dict reflects the claimed row.
+        """
+        worker_id = str(worker_id or "")
+        lease_owner = str(lease_owner or worker_id)
         with _LOCK, self._conn:
+            # Serialize the read/claim pair across processes, not only threads.
+            self._conn.execute("BEGIN IMMEDIATE")
             row = self._conn.execute(
                 "SELECT * FROM tasks WHERE status='pending' AND scheduled_at <= ? "
                 "ORDER BY priority ASC, scheduled_at ASC, id ASC LIMIT 1",
@@ -94,10 +104,13 @@ class TaskQueue:
                 return None
             now = time.time()
             task_id = row["id"]
-            self._conn.execute(
+            run_id = uuid.uuid4().hex
+            claimed = self._conn.execute(
                 "UPDATE tasks SET status='running', locked_at=?, worker_id=?, lease_owner=?, run_id=?, "
-                "started_at=?, last_heartbeat_at=? WHERE id=?",
-                (now, worker_id, lease_owner or worker_id, run_id, now, now, task_id))
+                "started_at=?, last_heartbeat_at=? WHERE id=? AND status='pending'",
+                (now, worker_id, lease_owner, run_id, now, now, task_id))
+            if claimed.rowcount != 1:
+                return None
             # 重新查询以返回 UPDATE 后的最新数据（避免返回旧的 status/pending）
             updated = self._conn.execute(
                 "SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
@@ -108,55 +121,99 @@ class TaskQueue:
                 pass
             return d
 
-    def ack(self, task_id):
-        """确认完成 -> done。"""
-        with _LOCK, self._conn:
-            self._conn.execute("UPDATE tasks SET status='done', last_success_at=?, lease_owner='' WHERE id=?",
-                               (time.time(), task_id))
+    @staticmethod
+    def _has_attempt_receipt(run_id, worker_id, lease_owner):
+        return bool(run_id) and worker_id is not None and lease_owner is not None
 
-    def heartbeat(self, task_id, worker_id):
-        """Renew a running task lease; reject a stale/non-owner worker."""
+    def ack(self, task_id, *, run_id=None, worker_id=None, lease_owner=None):
+        """Acknowledge only the currently running attempt identified by dequeue."""
+        if not self._has_attempt_receipt(run_id, worker_id, lease_owner):
+            return False
         with _LOCK, self._conn:
-            cur = self._conn.execute("UPDATE tasks SET last_heartbeat_at=? WHERE id=? AND status='running' AND worker_id=?",
-                                     (time.time(), task_id, worker_id))
+            cur = self._conn.execute(
+                "UPDATE tasks SET status='done', last_success_at=?, lease_owner='' "
+                "WHERE id=? AND status='running' AND run_id=? AND worker_id=? AND lease_owner=?",
+                (time.time(), task_id, run_id, worker_id, lease_owner))
             return cur.rowcount == 1
 
-    def checkpoint(self, task_id, worker_id, checkpoint_id):
-        """Persist a resumable checkpoint only for the active lease owner."""
+    def heartbeat(self, task_id, worker_id, *, run_id=None, lease_owner=None):
+        """Renew only the active attempt; old or incomplete receipts fail closed."""
+        if not self._has_attempt_receipt(run_id, worker_id, lease_owner):
+            return False
+        with _LOCK, self._conn:
+            cur = self._conn.execute(
+                "UPDATE tasks SET last_heartbeat_at=? "
+                "WHERE id=? AND status='running' AND run_id=? AND worker_id=? AND lease_owner=?",
+                (time.time(), task_id, run_id, worker_id, lease_owner))
+            return cur.rowcount == 1
+
+    def checkpoint(self, task_id, worker_id, checkpoint_id, *, run_id=None, lease_owner=None):
+        """Persist a checkpoint only for the active attempt receipt."""
+        if not self._has_attempt_receipt(run_id, worker_id, lease_owner):
+            return False
         with _LOCK, self._conn:
             now = time.time()
-            cur = self._conn.execute("UPDATE tasks SET checkpoint_id=?, last_checkpoint_at=? WHERE id=? AND status='running' AND worker_id=?",
-                                     (str(checkpoint_id), now, task_id, worker_id))
+            cur = self._conn.execute(
+                "UPDATE tasks SET checkpoint_id=?, last_checkpoint_at=? "
+                "WHERE id=? AND status='running' AND run_id=? AND worker_id=? AND lease_owner=?",
+                (str(checkpoint_id), now, task_id, run_id, worker_id, lease_owner))
             return cur.rowcount == 1
 
-    def fail(self, task_id, error=""):
-        """失败 -> attempts+1；未达上限回 pending 并指数退避重排（下次更晚），否则 failed。"""
+    def fail(self, task_id, error="", *, run_id=None, worker_id=None, lease_owner=None):
+        """Fail only the active attempt; return False for a stale receipt."""
+        return self._fail_attempt(
+            task_id, error, run_id=run_id, worker_id=worker_id,
+            lease_owner=lease_owner)
+
+    def _fail_attempt(self, task_id, error, *, run_id, worker_id, lease_owner,
+                      stale_before=None):
+        if not self._has_attempt_receipt(run_id, worker_id, lease_owner):
+            return False
+        where = (
+            "id=? AND status='running' AND run_id=? AND worker_id=? AND lease_owner=?"
+        )
+        identity = [task_id, run_id, worker_id, lease_owner]
+        if stale_before is not None:
+            where += " AND last_heartbeat_at < ?"
+            identity.append(float(stale_before))
+        error_text = str(error or "")[:500]
         with _LOCK, self._conn:
-            row = self._conn.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
+            # Hold the SQLite write reservation across validation and transition.
+            self._conn.execute("BEGIN IMMEDIATE")
+            row = self._conn.execute(
+                "SELECT attempts FROM tasks WHERE " + where, identity).fetchone()
             if row is None:
-                return
-            attempts = row["attempts"] + 1
+                return False
+            attempts = int(row["attempts"] or 0) + 1
             if attempts >= self.max_attempts:
-                self._conn.execute(
-                    "UPDATE tasks SET status='failed', attempts=?, last_error=?, lease_owner='', recovery_reason=? WHERE id=?",
-                    (attempts, (error or "")[:500], (error or "")[:500], task_id))
-                return
+                cur = self._conn.execute(
+                    "UPDATE tasks SET status='failed', attempts=?, last_error=?, "
+                    "lease_owner='', recovery_reason=? WHERE " + where,
+                    (attempts, error_text, error_text, *identity))
+                return cur.rowcount == 1
             # 指数退避：2^attempts 秒（首次失败 2s，二次 4s...）
             backoff = 2 ** attempts
-            self._conn.execute(
+            cur = self._conn.execute(
                 "UPDATE tasks SET status='pending', attempts=?, last_error=?, "
-                "scheduled_at=?, locked_at=0, lease_owner='', recovery_reason=? WHERE id=?",
-                (attempts, (error or "")[:500], time.time() + backoff, (error or "")[:500], task_id))
+                "scheduled_at=?, locked_at=0, lease_owner='', recovery_reason=? WHERE " + where,
+                (attempts, error_text, time.time() + backoff, error_text, *identity))
+            return cur.rowcount == 1
 
     def reap_stale(self, timeout_seconds, reason="heartbeat timeout"):
         """Recover stale running leases through bounded retry, never leave them running."""
         cutoff = time.time() - max(0, float(timeout_seconds))
         with _LOCK, self._conn:
-            rows = self._conn.execute("SELECT id FROM tasks WHERE status='running' AND last_heartbeat_at < ?", (cutoff,)).fetchall()
-        ids = [row["id"] for row in rows]
-        for task_id in ids:
-            self.fail(task_id, reason)
-        return ids
+            rows = self._conn.execute(
+                "SELECT id, run_id, worker_id, lease_owner FROM tasks "
+                "WHERE status='running' AND last_heartbeat_at < ? AND COALESCE(run_id, '') <> ''",
+                (cutoff,)).fetchall()
+        recovered = []
+        for row in rows:
+            if self._fail_attempt(
+                row["id"], reason, run_id=row["run_id"], worker_id=row["worker_id"],
+                lease_owner=row["lease_owner"], stale_before=cutoff):
+                recovered.append(row["id"])
+        return recovered
 
     def close(self):
         """关闭数据库连接（测试/清理用）。"""
