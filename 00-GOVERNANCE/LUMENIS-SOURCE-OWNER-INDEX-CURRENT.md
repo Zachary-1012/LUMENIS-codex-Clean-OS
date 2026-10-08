@@ -776,3 +776,16 @@ and dependency index, not a new plan, dispatch or acceptance authority. V2 provi
 and dataset statements remain preparation inputs until exact current official
 license/version/rights are verified; no external corpus or API was accessed here.
 Evidence: `evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md`.
+
+### A0/B0/C0 preparation source readback — 2026-10-09
+
+Official provider/dataset sources and fixed foundation-license hash evidence are
+in `evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md` section 8.
+M preparation does not activate C2 or external routes. C5 owns original/source
+metadata and rights intake; C2 owns the separate MODEL_TRAIN/model admission;
+C3/C4/F consume the preserved deterministic/manual business contracts. Existing
+training_review/training_cases require their exact reviewed source/rights/actor
+Evidence; a dataset label, teacher name, this research or read-only count cannot
+become training eligibility. Preserve unknown upstream/teacher/PII/benchmark and
+dataset revision/hash as REVIEW_REQUIRED/HOLD. No new table/API/provider or
+ordinary paused-owner production modification is granted by this record.

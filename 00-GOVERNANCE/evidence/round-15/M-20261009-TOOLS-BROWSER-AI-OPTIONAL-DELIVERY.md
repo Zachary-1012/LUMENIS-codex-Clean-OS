@@ -120,3 +120,55 @@ VS Code 负责本地补全、导航、诊断；PowerShell/Python 负责确定性
 前一有界源码提交为 `6793a0695fde5bf638b8ab9ffc2d323ff2d520dc`，最终核对发现根 AGENTS.md 的同轮政策修改尚未进入该提交。本次仅补齐根路由并同步 CURRENT 的规则发布状态；未混入旧 icon/F/C1 本地成果。最新暂停、七域无 AI 要求与 A0/B0/C0 准备边界一致，保留原审批回执与全部未完成要求。精确 HEAD/origin/live 与各 SHA 的 CI 结果由实际发布读回确定；没有重启加载或生产数据操作。
 
 独立只读复核另指出 Owner Index 顶部旧“恢复/Astra、不暂停”调度措辞仍可能误导，已明确替换为当前暂停和保留职责，历史政策来源继续保留；不恢复任何窗口。
+
+## 8. A0 / B0 / C0 官方来源与准入核查增量
+
+取证日期：2026-10-09，北京时间；本轮来源复核基线为 `ec92c0c3f1a8c1284d94c40a79788989f1e1117a`。该 SHA 的 Product/App Gate 已实际 SUCCESS，分别为 runs `37847212517` / `37847212402`；本次资料增量的后续 SHA 仍需其自己的 CI。此前第1节的“本轮未逐源重验”是先前观察，以下新增只读官方来源核查取代相应准备状态，不将原包改写为已获训练/调用授权。
+
+### A0：来源已核，外部路线全部 OFF
+
+| 资源 | 官方观测与必要校准 | 当前裁决 |
+|---|---|---|
+| OpenAI | ChatGPT 与 API Platform 计费分离；订阅不能当作无限 API 配额。[官方计费](https://help.openai.com/en/articles/9039756-managing-billing-for-chatgpt-and-the-api-platform) | OFF；不调用/新建 Key |
+| Anthropic | Claude 订阅/API 分开；部分订阅有条件 API credits，不能概括为全部免费或无限。[计费说明](https://support.claude.com/en/articles/9876003-i-have-a-paid-claude-subscription-pro-max-team-or-enterprise-plans-why-is-claude-api-usage-billed-separately-from-my-paid-claude-plan)、[credits](https://platform.claude.com/docs/en/about-claude/api-credits-for-subscribers) | OFF；账号资格、费用和用途未准入 |
+| xAI | 使用量计费，数据留存/无训练承诺有适用条件，不能从聊天订阅推导产品 API。[价格](https://docs.x.ai/developers/pricing)、[数据处理](https://docs.x.ai/developers/faq/security) | OFF |
+| Groq | 配额按模型/organization；公开表不是本账户额度保证。默认不保留推理内容仍有可靠性/滥用等例外。[限额](https://console.groq.com/docs/rate-limits)、[数据](https://console.groq.com/docs/your-data)、[协议](https://console.groq.com/docs/legal/services-agreement) | OFF；不写死附件中的固定免费额度/转售授权 |
+| Gemini | 免费输入/输出可能用于改进且被人工审阅；地区规则及不得开发竞争模型的条款需遵守。[条款](https://ai.google.dev/gemini-api/terms.md)、[地区](https://ai.google.dev/gemini-api/docs/available-regions) | OFF；不外发客户/隐私/凭据，不自动蒸馏 |
+| Cloudflare Workers AI | 当前文档有10,000 Neurons/日，但部分模型需付费；不是任意模型永久免费。[计费](https://developers.cloudflare.com/workers-ai/platform/pricing/)、[数据](https://developers.cloudflare.com/workers-ai/platform/data-usage/) | OFF；账号/模型配额未经实际准入 |
+| OpenRouter | 免费方案公开50请求/日；被路由的下游 Provider 有独立数据政策。[价格](https://openrouter.ai/pricing/)、[隐私](https://openrouter.ai/privacy) | OFF；不以中间商承诺代替下游 rights |
+| Manus API | 创建/管理异步 Agent task，不能作为普通 chat model 的同义替换。[概览](https://open.manus.im/docs/v2/introduction)、[生命周期](https://open.manus.im/docs/v2/task-lifecycle) | OFF；不授予外部 Agent 会话/DB/电脑权限 |
+| Meta Muse Spark | 官方 Model API 已 public preview，并列 Muse Spark1.3；Standard 与允许数据训练的 Contributor 不同。附件“API未证实”已过时，不能误标 UNKNOWN，也不能视为账号可用。[API](https://dev.meta.ai/products/meta-model-api)、[模型/分层](https://dev.meta.ai/docs/models) | OFF；账号/地区/零成本及数据准入仍 NOT VERIFIED |
+
+以上仅读公开文档，没有调用推理接口或发送产品数据。A0默认禁用与现有 owned-only 策略保持；A1实际调用、账号/BYOK、外部数据和效果仍需独立批准，不把新的来源目录变成 Provider 或 fallback。
+
+### B0：十项候选卡核对，零数据集导入/训练
+
+| 精确候选/官方来源 | 公开标签及当前未决项 | 用途/裁决 |
+|---|---|---|
+| [OpenThoughts-Agent-SFT-100K](https://huggingface.co/datasets/open-thoughts/OpenThoughts-Agent-SFT-100K) | Apache-2.0；卡称GLM-4.7-AWQ教师和多来源任务。上游/教师输出权、PII、评测重叠未逐条证明 | Agent训练候选；REVIEW_REQUIRED，历史教师名不激活退役Provider |
+| [OpenThoughts-Agent-RL-5K](https://huggingface.co/datasets/open-thoughts/OpenThoughts-Agent-RL-5K/raw/main/README.md) | Apache-2.0；可执行任务的源码/测试上游权利及评测重叠未核 | RL候选；REVIEW_REQUIRED，B2未准 |
+| [SWE-smith-trajectories](https://huggingface.co/datasets/SWE-bench/SWE-smith-trajectories/raw/main/README.md) | MIT；Claude3.7轨迹，任务仓库及教师条款另审 | 修复轨迹候选；REVIEW_REQUIRED，不能冒称CTH/BMP领域训练 |
+| [Wikidata](https://www.wikidata.org/wiki/Wikidata:Licensing) | 结构化数据CC0；其他文字/媒体不同，个人实体仍有隐私/用途边界 | 知识事实候选，经现有Source/Entity核验；不是自动SFT准入 |
+| [Overture Places](https://docs.overturemaps.org/guides/places/)、[归属](https://docs.overturemaps.org/attribution/) | 按来源CDLA-Permissive-2.0/Apache-2.0/CC0；具体release/来源/归属未选定 | 地点/实体事实候选；REVIEW_REQUIRED，名称匹配不建立商业关系 |
+| [Mozilla Common Voice/MDC](https://mozilladatacollective.com/)、[官方目录](https://commonvoice.mozilla.org/en/datasets) | 公开CC0表述；具体语种/版本、MDC下载/分发条款和个人录音用途待核。总控直接terms页面仅返回JS，完整现行条款 NOT VERIFIED | 语音候选；REVIEW_REQUIRED，镜像不作为已准来源 |
+| [Tulu-3-SFT-mixture](https://huggingface.co/datasets/allenai/tulu-3-sft-mixture) | ODC-BY集合含非商业子集及另行约束输出，不能整体商用推定 | 完整商业训练HOLD；按子集权利再审 |
+| [stack-v3-train](https://huggingface.co/datasets/HuggingFaceCode/stack-v3-train) | ODC-BY；原仓库许可保留，检测/PII过滤不是完全保证 | 代码预训练候选；REVIEW_REQUIRED，本轮不下载 |
+| [FineWeb2](https://huggingface.co/datasets/HuggingFaceFW/fineweb-2) | ODC-BY/Common Crawl；网页原权、残留PII和污染未获逐项审查 | 预训练候选；REVIEW_REQUIRED，非零成本闭环必需 |
+| [Dolma3.5精确卡：allenai/dolma3.5_pool](https://huggingface.co/datasets/allenai/dolma3.5_pool) | ODC-BY且卡指研究/教育；混合网页/论文/代码/OCR及合成教师权利未全审 | 商业训练HOLD，不扩大为已批准全文语料 |
+
+本轮只读取官方卡/许可元数据；网页自动显示的预览不被导入或作为训练样本。未下载数据集文件或样本包，未选择固定dataset revision/文件hash，未写生产Evidence/Canonical。集合标签不等于全部上游/教师商业训练权；没有任何候选标记 training_eligible=true。B1取样/去重/PII/held-out准备和B2训练仍分别未授权。
+
+现有 `training_review.py` / `training_cases.py` 已要求单独MODEL_TRAIN精确批准、reviewer target、rights/source Evidence和scope一致。当前 rights output 只接受 purpose/rights_disposition 两项，并不替代这些外部候选的逐源/teacher/PII/benchmark审查；不能把本表直接塞入已批准训练记录。C5/C2恢复并获精确准入后沿原Source/Evidence保存版本化元数据及批准映射，不新增表/数据库/网关。
+
+### C0：固定模型与四层事实
+
+| 层 | 本轮可核事实 | 仍未证明 |
+|---|---|---|
+| SOURCE | `config/ai-owned-foundation.json`仍为gpt-oss-20b，revision `6cee5e81ee83917806bbde320786a8fb61efebee`，APPROVED_FOUNDATION_NOT_TRAINED；manifest SHA256 `8139a5398fcdcd34103dd94d1e0cb54f0196f9a826b234317451ac58d553a666`。只读取固定revision的LICENSE/USAGE_POLICY，11357/200字节及hash均与原pin一致 | 当前权重/adapter/checkpoint物理文件没有由本次许可核查验证；不改模型pin或recipes |
+| RUNTIME | 05:38北京只读现有 `/api/ai/status`：owned、NOT_BOUND、UNAVAILABLE/OWNED_RUNTIME_NOT_BOUND，generation_probe=false、fallback=false | 无真实模型生成/训练准入；没有加载/重启/调用Provider |
+| DATABASE | `data/monitor.db`以mode=ro/query_only读取聚合：ai_task23（ready6/succeeded17）、shared_artifacts941 | 该路径与运行进程所选DB未独立读回；计数不能证明训练、rights、用户成果或941个有效作品 |
+| USER OUTCOME | `_execute_analysis`“AI optional”与实际AI失败门的源码断点已定位，原七域无AI要求完整保留 | C2暂停，普通业务分支未获修复授权；真实无AI分析/保存/重开未通过验收，不能伪造规则结果 |
+
+固定LICENSE hash：`58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd`；USAGE_POLICY hash：`d6387ef7985019c45db8d9801e6ac5fd9f98f02b9f1c56f8c5af80c3e8f385d0`。[固定模型](https://huggingface.co/openai/gpt-oss-20b/tree/6cee5e81ee83917806bbde320786a8fb61efebee)、[官方模型说明](https://openai.com/index/introducing-gpt-oss/)。官方16GB内存运行描述不是“本机剩余1GB就能训练/常驻”的证明；本次不下载权重、不调用Ollama/LM Studio、不启动GPU。
+
+TRL/vLLM是未来可复用的训练/服务工具文档，不是本轮安装或启用授权；文档中的默认下载/服务命令未执行。[TRL](https://huggingface.co/docs/trl/index)、[vLLM](https://docs.vllm.ai/en/latest/serving/openai_compatible_server/)。准入准备的完成与 SOURCE/运行/DB/用户成果真实闭环分别记录，当前不能标三方案运行 ACCEPTED。

@@ -67,6 +67,20 @@ activated. The preceding bounded implementation is published at
 co-publication, runtime load and real user acceptance remain distinct; the latest
 commit requires its own exact-SHA CI, never an inherited or fabricated PASS.
 
+### 2026-10-09 A0/B0/C0 official-source admission readback
+
+The existing bounded delivery record now contains the nine external-service and
+ten dataset official-source checks, exact gpt-oss LICENSE/USAGE_POLICY hash
+readback, current owned NOT_BOUND status and scoped read-only DB aggregates.
+This is preparation, not route activation or training admission: all external
+routes remain OFF, dataset upstream/teacher/privacy/benchmark rights stay
+REVIEW_REQUIRED/HOLD, and no dataset revision/bytes or production facts were
+imported. Meta Muse Spark has official API documentation; its actual account,
+region, data tier and zero-cost eligibility remain unverified. C1/F/C2-C6 stay
+paused. The precise C2 analysis gap and all no-AI business outcomes stay OPEN.
+See the existing bounded delivery section 8; this adds no second authority,
+Provider, Source store, approval or user-outcome claim.
+
 ## 1. Online reader's current-state snapshot
 
 2026-10-08 continuous synchronization correction: accepted source/rule/plan and
