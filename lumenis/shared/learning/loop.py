@@ -23,6 +23,7 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from math import fsum, isfinite
 from typing import Any, Dict, List, Optional, Tuple
 
 from agent_memory.base import get_db_connection, _utc_now_iso
@@ -257,7 +258,9 @@ class LearningLoop:
                              provider: Optional[str] = None) -> Dict[str, Any]:
         """分析 ai_call_logs 的调用质量。
 
-        维度：总调用数、成功率、平均延迟、人审修正率、失败原因分布。
+        返回调用数、可计算的成功率/延迟和失败原因分布。
+        修正记录可计数；因未记录复核分母，修正率保持未知。
+        每个数值指标单独报告有效/未知样本数；缺失值不会变成零。
         """
         if not self.enabled or not self.db_path:
             return {"enabled": False}
@@ -276,26 +279,105 @@ class LearningLoop:
                 rows = conn.execute(sql, params).fetchall()
 
                 total = len(rows)
-                success = sum(1 for r in rows if r["success"])
-                corrections = sum(1 for r in rows if r["human_correction"])
-                avg_latency = (sum(r["latency_ms"] or 0 for r in rows) / total
-                               if total > 0 else 0)
+                success_samples = []
+                latency_samples = []
+                latency_zero_samples = 0
+                corrections = 0
                 failure_reasons: Dict[str, int] = {}
                 for r in rows:
-                    if not r["success"] and r["failure_reason"]:
-                        fr = r["failure_reason"]
-                        failure_reasons[fr] = failure_reasons.get(fr, 0) + 1
+                    success_value = r["success"]
+                    if type(success_value) is int and success_value in (0, 1):
+                        success_samples.append(success_value)
+                        if success_value == 0:
+                            reason = r["failure_reason"]
+                            if type(reason) is str and reason:
+                                failure_reasons[reason] = failure_reasons.get(reason, 0) + 1
+
+                    correction_value = r["human_correction"]
+                    if type(correction_value) is str and correction_value:
+                        corrections += 1
+
+                    latency_value = r["latency_ms"]
+                    if (type(latency_value) in (int, float)
+                            and isfinite(latency_value) and latency_value >= 0):
+                        if latency_value == 0:
+                            latency_zero_samples += 1
+                        else:
+                            latency_samples.append(latency_value)
+
+                success = sum(value == 1 for value in success_samples)
+
+                def sample_status(valid_count: int) -> Dict[str, Any]:
+                    unknown_count = total - valid_count
+                    if total == 0:
+                        state = "no_data"
+                    elif valid_count == 0:
+                        state = "unknown"
+                    elif unknown_count:
+                        state = "partial"
+                    else:
+                        state = "available"
+                    return {
+                        "state": state,
+                        "valid_samples": valid_count,
+                        "unknown_samples": unknown_count,
+                    }
+
+                success_rate = (round(success / len(success_samples), 4)
+                                if success_samples else None)
+                # The field stores corrections but has no explicit reviewed /
+                # not-reviewed state. Its denominator is therefore unknown.
+                correction_rate = None
+                avg_latency = (
+                    round(fsum(value / len(latency_samples) for value in latency_samples), 2)
+                    if latency_samples else None
+                )
+                latency_sample_status = sample_status(len(latency_samples))
+                latency_sample_status.update({
+                    "zero_value_samples": latency_zero_samples,
+                    "zero_value_provenance": (
+                        "unresolved_legacy_default_or_measured_zero"
+                        if latency_zero_samples else "no_zero_values"
+                    ),
+                })
 
                 return {
                     "period_days": days,
                     "total_calls": total,
                     "success_count": success,
-                    "success_rate": round(success / total, 4) if total > 0 else 0.0,
+                    "success_rate": success_rate,
                     "human_correction_count": corrections,
-                    "human_correction_rate": round(corrections / total, 4) if total > 0 else 0.0,
-                    "avg_latency_ms": round(avg_latency, 2),
+                    "human_correction_rate": correction_rate,
+                    "avg_latency_ms": avg_latency,
                     "failure_reasons": failure_reasons,
                     "provider_filter": provider,
+                    "metric_definitions": {
+                        "human_correction_rate": {
+                            "numerator": "calls_with_nonempty_human_correction",
+                            "denominator": "reviewed_calls_not_recorded",
+                            "meaning": (
+                                "rate is unavailable because the reviewed-call denominator "
+                                "is not recorded; the numerator is an observed correction count"
+                            ),
+                        },
+                    },
+                    "human_correction_state": "REVIEW_DENOMINATOR_NOT_RECORDED",
+                    "human_review_coverage": {
+                        "state": "unknown",
+                        "reviewed_calls": None,
+                        "coverage_rate": None,
+                    },
+                    "metric_samples": {
+                        "success_rate": sample_status(len(success_samples)),
+                        "human_correction_rate": {
+                            "state": "no_data" if total == 0 else "unknown",
+                            "valid_samples": 0,
+                            "unknown_samples": total,
+                            "observed_corrections": corrections,
+                            "denominator_state": "REVIEWED_CALLS_NOT_RECORDED",
+                        },
+                        "avg_latency_ms": latency_sample_status,
+                    },
                 }
             finally:
                 conn.close()

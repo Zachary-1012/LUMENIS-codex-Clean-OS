@@ -63,14 +63,47 @@ def _provider_disabled_meta(level='medium', model=None):
     }
 
 
-def owned_inference_status():
-    """Return owned-runtime state without discovering or loading providers."""
+def bind_owned_service(binding):
+    """Explicitly bind one admitted, server-held production executor."""
+    from .owned_service import bind_owned_service as bind
+
+    return bind(binding)
+
+
+def clear_owned_service(domain_id, expected_binding_sha256):
+    """Safety-stop one domain binding without retrying or replaying work."""
+    from .owned_service import clear_owned_service as clear
+
+    return clear(domain_id, expected_binding_sha256)
+
+
+def revoke_owned_service(admission_verifier):
+    """Revoke exactly the active binding named by a fresh canonical decision."""
+    from .owned_service import revoke_owned_service as revoke
+
+    return revoke(admission_verifier)
+
+
+def run_owned_request(request, *, is_cancelled=None):
+    """Run a complete typed, source-authorized request through the one Gateway."""
+    from .owned_service import run_owned_request as run
+
+    return run(request, is_cancelled=is_cancelled)
+
+
+def owned_inference_status(domain_id=None):
+    """Read a scoped service slot, or the legacy non-production candidate status."""
+    if domain_id is not None:
+        from .owned_service import owned_service_status
+
+        return owned_service_status(domain_id)
     from . import owned_inference
 
     return owned_inference.owned_inference_status()
 
 
-def run_owned_analysis(*, text, analysis_type, note_id=None):
+def run_owned_analysis(*, text=None, analysis_type=None, note_id=None, request=None,
+                       is_cancelled=None):
     """Route analysis through the owned-runtime boundary without provider fallback.
 
     The current offline candidate loader is evaluation-only. Until a promoted
@@ -78,6 +111,12 @@ def run_owned_analysis(*, text, analysis_type, note_id=None):
     instead of treating an evaluation candidate or another provider as product
     inference.
     """
+    if request is not None:
+        result = run_owned_request(request, is_cancelled=is_cancelled)
+        if note_id is not None:
+            result.setdefault("note_id", note_id)
+        return result
+
     if not isinstance(text, str) or not text.strip():
         return {
             "ok": False, "status": "INVALID_INPUT", "code": "ANALYSIS_TEXT_REQUIRED",
@@ -1355,8 +1394,10 @@ def chat(system, user, level='medium', use_cache=False, temperature=None, max_to
             prompt_version=f'chat:{level}',
             input_hash=_acl.compute_input_hash(system, user, level),
             output=(out or '')[:4000],
-            confidence=0.0,
-            latency_ms=meta.get('elapsed_ms', 0),
+            # No confidence estimator is bound to this call path. Unknown must
+            # not be recorded as a measured zero.
+            confidence=None,
+            latency_ms=meta.get('elapsed_ms'),
             token_usage=_tokens_log,
             success=_success_log,
             failure_reason=_fail_reason,

@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 import sqlite3
 import threading
@@ -37,7 +38,7 @@ import traceback
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 from lumenis.shared.database import get_repository
 
 # ============================================================
@@ -57,7 +58,7 @@ CREATE TABLE IF NOT EXISTS ai_call_logs (
     input_hash TEXT DEFAULT '',
     input_text TEXT DEFAULT '',
     output TEXT DEFAULT '',
-    confidence REAL DEFAULT 0.0,
+    confidence REAL,
     rule_result TEXT DEFAULT '',
     final_result TEXT DEFAULT '',
     final_decision TEXT DEFAULT '',
@@ -65,8 +66,8 @@ CREATE TABLE IF NOT EXISTS ai_call_logs (
     trace_id TEXT DEFAULT '',
     timestamp TEXT DEFAULT '',
     human_correction TEXT DEFAULT '',
-    latency_ms INTEGER DEFAULT 0,
-    token_usage INTEGER DEFAULT 0,
+    latency_ms INTEGER,
+    token_usage INTEGER,
     failure_reason TEXT DEFAULT '',
     success INTEGER DEFAULT 1,
     created_at TEXT DEFAULT (datetime('now','localtime')),
@@ -184,7 +185,7 @@ def log_call(
     input_hash: str = '',
     input_text: str = '',
     output: str = '',
-    confidence: float = 0.0,
+    confidence: Optional[Union[int, float]] = None,
     rule_result: str = '',
     final_result: str = '',
     final_decision: str = '',
@@ -192,8 +193,8 @@ def log_call(
     trace_id: str = '',
     timestamp: str = '',
     human_correction: str = '',
-    latency_ms: int = 0,
-    token_usage: int = 0,
+    latency_ms: Optional[Union[int, float]] = None,
+    token_usage: Optional[int] = None,
     failure_reason: str = '',
     success: bool = True,
     domain_id: str = '',
@@ -224,6 +225,25 @@ def log_call(
         fail_str = str(failure_reason)[:500] if failure_reason is not None else ''
         in_str = _sanitize_input(input_text)[:2000] if input_text else ''
         ts = timestamp or datetime.now().isoformat(timespec='seconds')
+        if type(latency_ms) is int:
+            latency_value = (latency_ms if 0 <= latency_ms <= 9223372036854775807
+                             else None)
+        elif (type(latency_ms) is float and math.isfinite(latency_ms)
+              and latency_ms >= 0):
+            latency_value = latency_ms
+        else:
+            latency_value = None
+        if type(confidence) is int:
+            confidence_value = float(confidence) if confidence in (0, 1) else None
+        elif type(confidence) is float and math.isfinite(confidence) and 0 <= confidence <= 1:
+            confidence_value = confidence
+        else:
+            confidence_value = None
+        token_value = (
+            token_usage
+            if type(token_usage) is int and 0 <= token_usage <= 9223372036854775807
+            else None
+        )
         # G2: 新字段 None→空串
         tt = str(target_type)[:100] if target_type is not None else ''
         tid = str(target_id)[:200] if target_id is not None else ''
@@ -245,10 +265,10 @@ def log_call(
                     (
                         provider or '', model or '', prompt_version or '',
                         input_hash or '', in_str, out_str,
-                        float(confidence or 0.0),
+                        confidence_value,
                         rule_str, final_str, decision_str,
                         task_id or '', trace_id or '', ts, corr_str,
-                        int(latency_ms or 0), int(token_usage or 0),
+                        latency_value, token_value,
                         fail_str, 1 if success else 0,
                         domain_id or '', product_id or '', output_hash or '',
                         tt, tid, mv, sr, acc,
@@ -315,21 +335,23 @@ def log_ai_call(
                 else:
                     out_text = str(result)[:4000]
 
-                conf = 0.0
+                conf = None
                 if extract_confidence:
                     try:
-                        conf = float(extract_confidence(result) or 0.0)
+                        conf = extract_confidence(result)
                     except Exception:
                         pass
                 elif isinstance(result, dict):
-                    conf = float(result.get('confidence', 0.0) or 0.0)
+                    conf = result.get('confidence')
 
-                tokens = 0
+                tokens = None
                 if extract_tokens:
                     try:
-                        tokens = int(extract_tokens(result) or 0)
+                        tokens = extract_tokens(result)
                     except Exception:
                         pass
+                elif isinstance(result, dict):
+                    tokens = result.get('token_usage')
 
                 # 从返回值提取 provider/model/final_decision（如果是 dict）
                 prov = provider
@@ -355,9 +377,9 @@ def log_ai_call(
                 latency_ms = int((time.time() - t0) * 1000)
                 log_call(
                     provider=provider, model=model, prompt_version=prompt_version,
-                    input_hash=input_hash, input_text=input_text, output='', confidence=0.0,
+                    input_hash=input_hash, input_text=input_text, output='', confidence=None,
                     task_id=_task_id, trace_id=_trace_id,
-                    latency_ms=latency_ms, token_usage=0,
+                    latency_ms=latency_ms, token_usage=None,
                     failure_reason=f'{type(exc).__name__}: {str(exc)[:300]}',
                     success=False,
                 )
@@ -430,9 +452,16 @@ def get_stats(provider: str = '', since: str = '') -> Dict[str, Any]:
             COUNT(*) as total,
             SUM(CASE WHEN success=1 THEN 1 ELSE 0 END) as success_count,
             SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) as failure_count,
-            AVG(latency_ms) as avg_latency,
+            SUM(CASE WHEN success IN (0,1) THEN 1 ELSE 0 END) as known_outcomes,
+            AVG(CASE WHEN latency_ms > 0 THEN latency_ms END) as avg_latency,
+            SUM(CASE WHEN latency_ms = 0 THEN 1 ELSE 0 END) as ambiguous_zero_latency,
+            SUM(CASE WHEN latency_ms IS NULL THEN 1 ELSE 0 END) as unknown_latency,
             SUM(token_usage) as total_tokens,
-            AVG(confidence) as avg_confidence
+            COUNT(token_usage) as token_usage_samples,
+            SUM(CASE WHEN token_usage IS NULL THEN 1 ELSE 0 END) as unknown_token_usage,
+            AVG(CASE WHEN confidence > 0 THEN confidence END) as avg_confidence,
+            SUM(CASE WHEN confidence = 0 THEN 1 ELSE 0 END) as ambiguous_zero_confidence,
+            SUM(CASE WHEN confidence IS NULL THEN 1 ELSE 0 END) as unknown_confidence
             FROM ai_call_logs WHERE 1=1"""
         params: List[Any] = []
         if provider:
@@ -447,7 +476,10 @@ def get_stats(provider: str = '', since: str = '') -> Dict[str, Any]:
                 return {}
             d = dict(row)
             total = d.get('total', 0) or 0
-            d['failure_rate'] = (d.get('failure_count', 0) or 0) / total if total else 0.0
+            known = d.get('known_outcomes', 0) or 0
+            d['failure_rate'] = ((d.get('failure_count', 0) or 0) / known
+                                 if known else None)
+            d['unknown_outcomes'] = total - known
             return d
     except Exception as e:
         print(f'[AICallLogger] get_stats failed: {e}')

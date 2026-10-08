@@ -4,7 +4,7 @@
 重点：
 1) Q1 方案甲：high 桶绝不含 critical，critical 独立。
 2) 五态：unknown / missing / other / 空集 / 分母0 不伪装成 0。
-3) 真实库一致性：若生产 monitor.db 存在，Canonical 结果必须等于 SQL GROUP BY（迁移零变化证据）。
+3) 隔离样本 SQL 一致性：Canonical 结果必须等于同一明确样本的 SQL GROUP BY/SUM。
 """
 import os
 import sys
@@ -76,8 +76,10 @@ def test_risk_empty():
 # ---------- FN-ENGAGEMENT ----------
 def test_engagement_of_four_fields():
     assert engagement_of({"likes": 1, "comments": 2, "collects": 3, "shares": 4}) == 10
-    # 字符串数字 / 浮点可转
-    assert engagement_of({"likes": "5", "comments": 1.0, "collects": None, "shares": ""}) == 6
+    # The partial subtotal exists but is not the complete four-component total.
+    partial = {"likes": "5", "comments": 1.0, "collects": None, "shares": ""}
+    assert engagement_of(partial) is None
+    assert engagement_stats([partial])["observed_sum"] == 6
 
 
 def test_engagement_stats_missing_tracked_not_silent():
@@ -86,15 +88,22 @@ def test_engagement_stats_missing_tracked_not_silent():
         {"likes": 5, "comments": None, "collects": 0, "shares": 0}, # 缺1字段=5，记 missing
     ]
     r = engagement_stats(notes)
-    assert r["sum"] == 21 and r["count"] == 2 and r["nonzero"] == 2
-    assert r["per_field"] == {"likes": 15, "comments": 1, "collects": 2, "shares": 3}
+    assert r["sum"] is None and r["count"] == 2 and r["nonzero"] == 2
+    assert r["observed_sum"] == 21
+    assert r["per_field"] == {"likes": 15, "comments": None, "collects": 2, "shares": 3}
+    assert r["observed_per_field"]["comments"] == 1
     assert r["quality"]["missing_field_notes"] == 1  # 缺字段不静默
-    assert r["avg"] == 10.5
+    assert r["quality"]["state"] == "PARTIAL"
+    assert r["quality"]["known_field_count"] == 7
+    assert r["quality"]["expected_field_count"] == 8
+    assert r["avg"] is None
 
 
 def test_engagement_empty_avg_is_none_not_zero():
     r = engagement_stats([])
-    assert r["sum"] == 0 and r["avg"] is None and r["quality"]["empty"] is True
+    assert r["sum"] is None and r["avg"] is None and r["quality"]["empty"] is True
+    assert r["observed_sum"] is None
+    assert r["quality"]["state"] == "NO_DATA"
 
 
 def test_as_int_negative_clamped():
@@ -134,22 +143,25 @@ def test_registry_snapshot_is_copy():
     assert registry_snapshot()["FN-RISK-COUNT"]["version"] == "1.0"  # 改副本不污染内部
 
 
-# ---------- 真实生产库一致性（迁移零数字变化证据）----------
-DB = os.environ["ZBC_DB_PATH"]
-
-
-@pytest.mark.skipif(not os.path.exists(DB), reason="隔离测试数据库不存在时跳过")
-def test_canonical_matches_live_sql():
+# ---------- 同一隔离样本的 SQL / Canonical 一致性 ----------
+def test_canonical_matches_isolated_sql(tmp_path):
     import sqlite3
-    conn = sqlite3.connect(DB)
+    db = tmp_path / "canonical-metric-parity.sqlite3"
+    conn = sqlite3.connect(db)
     conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE notes(sentiment TEXT, risk_level TEXT, likes INTEGER, comments INTEGER, collects INTEGER, shares INTEGER)")
+    conn.executemany("INSERT INTO notes VALUES(?,?,?,?,?,?)", [
+        ("positive", "critical", 0, 0, 0, 0),
+        ("neutral", "high", 4, 1, 0, 3),
+        ("negative", "low", 2, 0, 3, 4),
+    ])
+    conn.commit()
     rows = [dict(r) for r in conn.execute(
         "SELECT sentiment, risk_level, likes, comments, collects, shares FROM notes")]
-    conn.close()
-    assert rows, "生产 notes 不应为空"
+    assert len(rows) == 3
 
     # 情感：Canonical == SQL GROUP BY
-    sql_sent = {r[0]: r[1] for r in __import__("sqlite3").connect(DB).execute(
+    sql_sent = {r[0]: r[1] for r in conn.execute(
         "SELECT sentiment, COUNT(*) FROM notes GROUP BY sentiment")}
     sc = sentiment_count(rows)
     assert sc["positive"] == sql_sent.get("positive", 0)
@@ -157,16 +169,31 @@ def test_canonical_matches_live_sql():
     assert sc["negative"] == sql_sent.get("negative", 0)
 
     # 风险：high 只等于 SQL 里 risk_level='high'（不含任何 critical）
-    sql_high = __import__("sqlite3").connect(DB).execute(
+    sql_high = conn.execute(
         "SELECT COUNT(*) FROM notes WHERE risk_level='high'").fetchone()[0]
     rc = risk_count(rows)
     assert rc["high"] == sql_high
-    sql_critical = __import__("sqlite3").connect(DB).execute(
+    sql_critical = conn.execute(
         "SELECT COUNT(*) FROM notes WHERE risk_level='critical'").fetchone()[0]
-    assert rc["critical"] == sql_critical  # critical 同样与 live SQL 实时对齐，不写死历史基线
+    assert rc["critical"] == sql_critical
 
     # 互动：Canonical sum == SQL 四字段求和
-    sql_eng = __import__("sqlite3").connect(DB).execute(
-        "SELECT COALESCE(SUM(likes+comments+collects+shares),0) FROM notes").fetchone()[0]
+    sql_eng = conn.execute(
+        "SELECT SUM(likes+comments+collects+shares) FROM notes").fetchone()[0]
     es = engagement_stats(rows)
     assert es["sum"] == sql_eng
+    assert es["quality"]["state"] == "COMPLETE"
+    conn.close()
+
+
+def test_nullable_sql_subtotal_requires_coverage(tmp_path):
+    import sqlite3
+    with sqlite3.connect(tmp_path / "nullable-metrics.sqlite3") as conn:
+        conn.execute("CREATE TABLE notes(likes INTEGER, comments INTEGER, collects INTEGER, shares INTEGER)")
+        conn.executemany("INSERT INTO notes VALUES(?,?,?,?)", [(0, None, None, None), (None, None, None, None)])
+        sql_sum, known, total = conn.execute("SELECT SUM(likes), COUNT(likes), COUNT(*) FROM notes").fetchone()
+        result = engagement_stats([{"likes": r[0], "comments": r[1], "collects": r[2], "shares": r[3]}
+                                   for r in conn.execute("SELECT * FROM notes")])
+    assert result["sum"] is None
+    assert result["observed_sum"] == sql_sum == 0
+    assert result["quality"]["per_field"]["likes"] == {"known": known, "expected": total}

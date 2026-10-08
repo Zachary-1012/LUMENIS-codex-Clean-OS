@@ -127,10 +127,10 @@ def test_mixed_or_mismatched_domain_scope_is_rejected(
     scope_db, product, domain, subject, brand,
 ):
     with sqlite3.connect(scope_db) as conn:
-        record = CanonicalRecord(
-            canonical_id="CAN-invalid-scope", product_id=product, domain_id=domain,
-            subject_id=subject, brand_focus_id=brand,
-        )
         with pytest.raises(ValueError):
+            record = CanonicalRecord(
+                canonical_id="CAN-invalid-scope", product_id=product, domain_id=domain,
+                subject_id=subject, brand_focus_id=brand,
+            )
             persist_canonical(conn, record)
         assert conn.execute("SELECT count(*) FROM canonical_data").fetchone()[0] == 0

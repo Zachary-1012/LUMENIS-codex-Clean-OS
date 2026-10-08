@@ -797,7 +797,7 @@ def api_special_report_export():
     report=data.get('report') or {}
     fmt=str(data.get('format','docx')).lower()
     if fmt not in ('docx','pdf','html'): return jsonify({'ok':False,'error':'format仅支持docx/pdf/html'}),400
-    title=str(report.get('event_name') or report.get('title') or '广州太古汇舆情专报')
+    title=str(report.get('event_name') or report.get('title') or '舆情专报')
     safe=re.sub(r'[^0-9A-Za-z\u4e00-\u9fff_-]+','_',title)[:80]
     sections=[('一、事件概述',report.get('event_overview','')),('二、传播路径',report.get('spread_path','')),
               ('三、案例对标','\n'.join(f"{c.get('id')}｜{c.get('title')}：{c.get('taikoo_insight','')}" for c in report.get('matched_cases',[]))),
@@ -824,16 +824,25 @@ def api_special_report_export():
     try:
         from reportlab.platypus import SimpleDocTemplate,Paragraph,Spacer
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-        pdfmetrics.registerFont(UnicodeCIDFont('STSong-Light'))
-        path=Path(tempfile.gettempdir())/(safe+'.pdf'); styles=getSampleStyleSheet()
-        cn=ParagraphStyle('CN', parent=styles['Normal'], fontName='STSong-Light', fontSize=10, leading=16)
-        h1=ParagraphStyle('CNH1', parent=styles['Heading1'], fontName='STSong-Light', fontSize=15, leading=20)
-        story=[Paragraph(re.sub(r'([&<>])',lambda m:{'&':'&amp;','<':'&lt;','>':'&gt;'}[m.group(1)],title),ParagraphStyle('CNT',parent=styles['Title'],fontName='STSong-Light')),Spacer(1,12)]
-        for a,b in sections:
-            txt=str(b).replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('\n','<br/>')
-            story += [Paragraph(str(a),h1),Paragraph(txt or '—',cn),Spacer(1,8)]
-        SimpleDocTemplate(str(path)).build(story)
-        return send_file(path,as_attachment=True,download_name=path.name,mimetype='application/pdf')
-    except Exception as exc: return jsonify({'ok':False,'error':'PDF导出依赖未安装：'+str(exc)}),503
+        from .word_pdf_export import pdf_text_context
+        output=io.BytesIO(); styles=getSampleStyleSheet()
+        with pdf_text_context() as (font_name,markup):
+            cn=ParagraphStyle('CN', parent=styles['Normal'], fontName=font_name, fontSize=10, leading=16, wordWrap='CJK')
+            h1=ParagraphStyle('CNH1', parent=styles['Heading1'], fontName=font_name, fontSize=15, leading=20, wordWrap='CJK')
+            heading=ParagraphStyle('CNT',parent=styles['Title'],fontName=font_name,wordWrap='CJK')
+            story=[Paragraph(markup(title),heading),Spacer(1,12)]
+            for label,body in sections:
+                story += [Paragraph(markup(label),h1),Paragraph(markup(body or '—'),cn),Spacer(1,8)]
+            SimpleDocTemplate(output).build(story)
+        output.seek(0)
+        return send_file(output,as_attachment=True,download_name=safe+'.pdf',mimetype='application/pdf')
+    except ImportError as exc:
+        return jsonify({'ok':False,'code':'PDF_EXPORT_DEPENDENCY_UNAVAILABLE','error':'PDF导出依赖未安装：'+str(exc)}),503
+    except (RuntimeError, ValueError) as exc:
+        code=str(exc)
+        if code in {'WORK_EXPORT_FONT_UNAVAILABLE','WORK_EXPORT_GLYPH_UNAVAILABLE'}:
+            return jsonify({'ok':False,'code':code,'error':'当前PDF字体无法显示所需文本'}),503
+        return jsonify({'ok':False,'code':'PDF_EXPORT_FAILED','error':'PDF导出失败'}),500
+    except Exception:
+        LOGGER.exception('Special report PDF export failed')
+        return jsonify({'ok':False,'code':'PDF_EXPORT_FAILED','error':'PDF导出失败'}),500

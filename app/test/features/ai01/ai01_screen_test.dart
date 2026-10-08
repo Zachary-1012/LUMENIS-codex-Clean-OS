@@ -1,36 +1,94 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
+import 'package:lumenis_app/features/ai01/ai01_draft_files.dart';
 import 'package:lumenis_app/features/ai01/ai01_repository.dart';
 import 'package:lumenis_app/features/ai01/ai01_screen.dart';
 import 'package:lumenis_app/features/ai01/ai01_snapshot.dart';
 
 void main() {
-  testWidgets('phone keeps one task surface and shows the scope boundary', (
+  testWidgets('captures desktop and phone widget renders when configured', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final outputPath = Platform.environment['AI01_VISUAL_CAPTURE_DIR'];
+    if (outputPath == null || outputPath.trim().isEmpty) return;
+    addTearDown(() => _resetTestSurface(tester));
+
+    final outputDirectory = Directory(outputPath);
+    await tester.runAsync(() async {
+      await outputDirectory.create(recursive: true);
+      await (FontLoader(
+        'LumenisSansSC',
+      )..addFont(rootBundle.load('assets/fonts/NotoSansSC.ttf'))).load();
+      await (FontLoader(
+        'LumenisSansKR',
+      )..addFont(rootBundle.load('assets/fonts/NotoSansKR.ttf'))).load();
+    });
+    const scenes = [
+      (fileName: 'AI01-desktop-widget-not-live.png', size: Size(1440, 1000)),
+      (
+        fileName: 'AI01-phone-390x844-widget-not-live.png',
+        size: Size(390, 844),
+      ),
+    ];
+
+    for (final scene in scenes) {
+      await _setTestSurface(tester, scene.size);
+      await tester.pumpWidget(_app());
+      await tester.pumpAndSettle();
+      final boundary = tester.renderObject<RenderRepaintBoundary>(
+        find.byKey(const ValueKey('ai01-capture-boundary')),
+      );
+      final png = await tester.runAsync(() async {
+        final image = await boundary.toImage(pixelRatio: 1);
+        try {
+          final data = await image.toByteData(format: ui.ImageByteFormat.png);
+          if (data == null) return null;
+          return data.buffer.asUint8List(
+            data.offsetInBytes,
+            data.lengthInBytes,
+          );
+        } finally {
+          image.dispose();
+        }
+      });
+      expect(png, isNotNull);
+      final file = File(
+        '${outputDirectory.path}${Platform.pathSeparator}${scene.fileName}',
+      );
+      await tester.runAsync(() => file.writeAsBytes(png!, flush: true));
+    }
+  });
+
+  testWidgets('phone keeps one task surface with optional global focus', (
+    tester,
+  ) async {
+    await _setTestSurface(tester, const Size(390, 844));
+    addTearDown(() => _resetTestSurface(tester));
 
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 
     expect(find.text('今天，想完成什么？'), findsOneWidget);
     expect(find.text('AI 助手'), findsNothing);
-    expect(find.text('尚未确认可用的经营对象'), findsOneWidget);
+    expect(find.text('范围可选'), findsOneWidget);
     expect(
-      find.text('当前尚未确认可处理的经营主体或品牌，暂不能开始分析。'),
+      find.text('AI 任务提交能力尚未接入。草稿可编辑，但目前不会发送。'),
       findsNothing,
-      reason: 'Keep the longer blocked paragraph out of the composer body.',
+      reason: 'The unavailable reason belongs in the disabled action tooltip.',
     );
     expect(find.text('开始分析'), findsOneWidget);
-    expect(find.text('数据依据'), findsOneWidget);
+    expect(find.text('查看资料依据'), findsOneWidget);
+    expect(find.text('业务资料依据'), findsNothing);
     _expectComposerSurface(tester);
     final editorRect = tester.getRect(
       find.byKey(const ValueKey('ai01-task-input')),
@@ -59,23 +117,28 @@ void main() {
       '检查风险变化并列出已有来源',
     );
 
-    await tester.ensureVisible(find.text('数据依据'));
-    await tester.tap(find.text('数据依据'));
+    final detailsOpener = find.byKey(const ValueKey('ai01-details-open'));
+    await tester.ensureVisible(detailsOpener);
+    await tester.tap(detailsOpener);
     await tester.pumpAndSettle();
-    expect(find.text('当前账号与经营主体或品牌的查看权限尚未确认，因此暂不展示资料总数或历史内容。'), findsOneWidget);
+    expect(find.byKey(const ValueKey('ai01-details-dialog')), findsOneWidget);
+    expect(find.text('本页面尚未接入可核验的业务资料统计，因此不显示总数。'), findsOneWidget);
+    expect(find.text('本页面尚未接入业务资料检索与明细，因此这里不会展示资料记录。'), findsOneWidget);
+    expect(find.text('AI 模型服务'), findsOneWidget);
+    expect(find.text('近期分析记录'), findsOneWidget);
     expect(find.text('全局私有任务'), findsNothing);
-
-    await tester.ensureVisible(find.text('模型服务状态'));
-    await tester.tap(find.text('模型服务状态'));
-    await tester.pumpAndSettle();
     expect(find.text('未启动'), findsOneWidget);
     expect(find.text('daemon/model not ready'), findsNothing);
-
-    await tester.ensureVisible(find.text('近期分析记录'));
-    await tester.tap(find.text('近期分析记录'));
-    await tester.pumpAndSettle();
-    expect(find.text('当前账号可查看的经营范围尚未确认，暂时无法显示近期分析记录。'), findsOneWidget);
+    expect(find.text('本页面尚未接入近期分析记录，因此暂不显示历史内容。'), findsOneWidget);
     _expectNoImplementationTerms(tester);
+
+    await tester.tap(find.byKey(const ValueKey('ai01-details-close')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('ai01-details-dialog')), findsNothing);
+    expect(
+      tester.widget<TextButton>(detailsOpener).focusNode!.hasFocus,
+      isTrue,
+    );
 
     final submit = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, '开始分析'),
@@ -84,20 +147,243 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('desktop keeps the Evidence inspector beside the composer', (
+  testWidgets(
+    'embedded composer defaults global and supports local draft open and save',
+    (tester) async {
+      await _setTestSurface(tester, const Size(390, 844));
+      addTearDown(() => _resetTestSurface(tester));
+      final files = _FakeScreenDraftFiles()..opened = '从文件恢复的草稿';
+
+      await tester.pumpWidget(_app(embedded: true, draftFiles: files));
+      await tester.pumpAndSettle();
+
+      final embeddedContent = find.byKey(
+        const ValueKey('ai01-embedded-content'),
+      );
+      expect(embeddedContent, findsOneWidget);
+      final embeddedSize = tester.getSize(embeddedContent);
+      expect(embeddedSize.width, lessThanOrEqualTo(820));
+      expect(embeddedSize.height, lessThan(844));
+      expect(
+        find.descendant(
+          of: embeddedContent,
+          matching: find.byType(SingleChildScrollView),
+        ),
+        findsNothing,
+      );
+      expect(find.text('今天，想完成什么？'), findsNothing);
+      expect(find.text('范围可选'), findsOneWidget);
+      expect(find.textContaining('尚未确认可用'), findsNothing);
+      expect(find.textContaining('暂不能开始分析'), findsNothing);
+      expect(find.byTooltip('AI 任务提交能力尚未接入。草稿可编辑，但目前不会发送。'), findsOneWidget);
+      _expectSubmitDisabled(tester);
+
+      final input = find.byKey(const ValueKey('ai01-task-input'));
+      await tester.enterText(input, '先保存本地任务');
+      expect(tester.widget<TextField>(input).controller!.text, '先保存本地任务');
+      await tester.enterText(input, '');
+      await tester.tap(find.text('打开文本草稿'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(input).controller!.text, '从文件恢复的草稿');
+      expect(find.textContaining('当前内容不会发送或启动分析'), findsOneWidget);
+
+      await tester.enterText(input, 'embedded local draft');
+      await tester.pump();
+      await tester.tap(find.text('保存文本草稿'));
+      await tester.pumpAndSettle();
+      expect(files.saved, ['embedded local draft']);
+      expect(find.textContaining('文本草稿已保存'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'uses an injected session draft controller and supplied scope label',
+    (tester) async {
+      await _setTestSurface(tester, const Size(390, 844));
+      addTearDown(() => _resetTestSurface(tester));
+      final sessionDraft = TextEditingController(
+        text: 'restored session draft',
+      );
+      final nextSessionDraft = TextEditingController(text: 'scope reset draft');
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        sessionDraft.dispose();
+        nextSessionDraft.dispose();
+      });
+
+      await tester.pumpWidget(
+        _app(
+          embedded: true,
+          draftController: sessionDraft,
+          scopeLabel: 'GLOBAL_ALL',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final input = find.byKey(const ValueKey('ai01-task-input'));
+      expect(tester.widget<TextField>(input).controller, same(sessionDraft));
+      expect(sessionDraft.text, 'restored session draft');
+      expect(find.text('GLOBAL_ALL'), findsOneWidget);
+      expect(find.byTooltip('无需先选择经营主体或品牌；焦点选择只会缩小当前任务范围。'), findsOneWidget);
+      final submitRect = tester.getRect(
+        find.widgetWithText(FilledButton, '开始分析'),
+      );
+      final scopeRect = tester.getRect(find.text('GLOBAL_ALL'));
+      expect((submitRect.center.dy - scopeRect.center.dy).abs(), lessThan(18));
+
+      await tester.enterText(input, 'edited through Home session');
+      expect(sessionDraft.text, 'edited through Home session');
+
+      await tester.pumpWidget(
+        _app(
+          embedded: true,
+          draftController: nextSessionDraft,
+          scopeLabel: '品牌焦点',
+          textScale: 2,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(input).controller,
+        same(nextSessionDraft),
+      );
+      expect(nextSessionDraft.text, 'scope reset draft');
+      expect(find.text('品牌焦点'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      void listener() {}
+
+      sessionDraft.addListener(listener);
+      sessionDraft.removeListener(listener);
+      nextSessionDraft.addListener(listener);
+      nextSessionDraft.removeListener(listener);
+    },
+  );
+
+  testWidgets(
+    'replacing the read owner clears stale results and retains the draft',
+    (tester) async {
+      final oldRead = Completer<Ai01Snapshot>();
+      final currentRead = Completer<Ai01Snapshot>();
+      final draft = TextEditingController.fromValue(
+        const TextEditingValue(
+          text: 'keep my current task',
+          selection: TextSelection(baseOffset: 2, extentOffset: 7),
+        ),
+      );
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        draft.dispose();
+      });
+      final oldRepository = _ControlledAi01Repository([oldRead]);
+      final currentRepository = _ControlledAi01Repository([currentRead]);
+      await tester.pumpWidget(
+        _app(repository: oldRepository, draftController: draft),
+      );
+      await tester.pumpWidget(
+        _app(repository: currentRepository, draftController: draft),
+      );
+      expect(currentRepository._loadCount, 1);
+
+      oldRead.complete(_readySnapshot());
+      await tester.pump();
+      expect(find.text('查看风险变化'), findsNothing);
+      expect(find.text('正在读取 AI 服务状态'), findsOneWidget);
+
+      currentRead.complete(
+        const Ai01Snapshot(
+          isBound: true,
+          generatedAt: null,
+          providers: [],
+          suggestions: [],
+          unavailableFields: [],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('正在读取 AI 服务状态'), findsNothing);
+      expect(find.text('查看风险变化'), findsNothing);
+      expect(draft.text, 'keep my current task');
+      expect(
+        draft.selection,
+        const TextSelection(baseOffset: 2, extentOffset: 7),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'a confirmed new draft closes the old focused editor without copying it',
+    (tester) async {
+      final repository = _FakeAi01Repository();
+      final nextDraft = TextEditingController(text: 'new scope task');
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        nextDraft.dispose();
+      });
+      await tester.pumpWidget(_app(repository: repository));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('ai01-task-input')),
+        'old scope task',
+      );
+      await tester.tap(find.byKey(const ValueKey('ai01-focus-open')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('ai01-focus-dialog')), findsOneWidget);
+
+      await tester.pumpWidget(
+        _app(repository: repository, draftController: nextDraft),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('ai01-focus-dialog')), findsNothing);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('ai01-task-input')))
+            .controller,
+        same(nextDraft),
+      );
+      expect(nextDraft.text, 'new scope task');
+      expect(find.text('old scope task'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('desktop centers the task field and opens details on demand', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(1440, 1000));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _setTestSurface(tester, const Size(1440, 1000));
+    addTearDown(() => _resetTestSurface(tester));
 
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 
-    expect(find.text('写下你的任务'), findsOneWidget);
+    expect(find.text('写下你的任务'), findsNothing);
     expect(find.text('AI 助手'), findsNothing);
-    expect(find.text('尚未确认可用的经营对象'), findsOneWidget);
-    expect(find.text('当前尚未确认可处理的经营主体或品牌，暂不能开始分析。'), findsNothing);
+    expect(find.text('范围可选'), findsOneWidget);
+    expect(find.textContaining('暂不能开始分析'), findsNothing);
     _expectComposerSurface(tester);
+    expect(find.text('业务资料依据'), findsNothing);
+    expect(find.text('模型服务状态'), findsNothing);
+    expect(find.text('近期分析记录'), findsNothing);
+    final composerRect = tester.getRect(
+      find.byKey(const ValueKey('ai01-composer-surface')),
+    );
+    expect(composerRect.width, lessThanOrEqualTo(820));
+    expect(composerRect.center.dx, closeTo(720, 1));
+    await tester.tap(find.byKey(const ValueKey('ai01-details-open')));
+    await tester.pumpAndSettle();
+    final detailsSurface = find
+        .ancestor(
+          of: find.byKey(const ValueKey('ai01-details-panel')),
+          matching: find.byType(Material),
+        )
+        .first;
+    final detailsRect = tester.getRect(detailsSurface);
+    expect(detailsRect.width, lessThanOrEqualTo(520));
     expect(find.text('业务资料依据'), findsOneWidget);
     expect(find.text('模型服务状态'), findsOneWidget);
     expect(find.text('近期分析记录'), findsOneWidget);
@@ -105,47 +391,247 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final locale in [
+    const Locale('zh', 'CN'),
+    const Locale('en'),
+    const Locale('ko'),
+  ]) {
+    testWidgets(
+      'details opener and return action use ${locale.languageCode} copy',
+      (tester) async {
+        await _setTestSurface(tester, const Size(390, 844));
+        addTearDown(() => _resetTestSurface(tester));
+        await tester.pumpWidget(_app(locale: locale, textScale: 2));
+        await tester.pumpAndSettle();
+
+        final copy = LumenisLocalizations(locale);
+        final openerLabel = copy.text('ai01.inspector.show');
+        final closeLabel = copy.text('ai01.inspector.hide');
+        expect(find.text(copy.text('ai01.context.label')), findsOneWidget);
+        expect(find.text(copy.text('ai01.draft.notice')), findsOneWidget);
+        expect(
+          find.byTooltip(copy.text('ai01.blocked_reason')),
+          findsOneWidget,
+        );
+        final submit = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, copy.text('ai01.submit')),
+        );
+        expect(submit.onPressed, isNull);
+        await tester.ensureVisible(find.text(openerLabel));
+        await tester.tap(find.text(openerLabel));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const ValueKey('ai01-details-dialog')),
+          findsOneWidget,
+        );
+        expect(find.byTooltip(closeLabel), findsOneWidget);
+        expect(find.text(copy.text('ai01.evidence.title')), findsOneWidget);
+        expect(find.text(copy.text('ai01.providers.title')), findsOneWidget);
+        expect(find.text(copy.text('ai01.executions.title')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+
+        await tester.tap(find.byKey(const ValueKey('ai01-details-close')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('ai01-details-dialog')), findsNothing);
+      },
+    );
+  }
+
+  testWidgets(
+    'details stays bounded and returns focus and draft on close, Escape, and Back',
+    (tester) async {
+      addTearDown(() => _resetTestSurface(tester));
+
+      const widths = <double>[320, 390, 768, 1440];
+      for (var index = 0; index < widths.length; index++) {
+        final width = widths[index];
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        await _setTestSurface(tester, Size(width, 844));
+        await tester.pumpWidget(_app(textScale: width <= 390 ? 2 : 1));
+        await tester.pumpAndSettle();
+
+        final inputFinder = find.byKey(const ValueKey('ai01-task-input'));
+        final input = tester.widget<TextField>(inputFinder);
+        final controller = input.controller!;
+        controller.value = const TextEditingValue(
+          text: 'local draft — 任务 👩🏻‍💻\nnotes',
+          selection: TextSelection(baseOffset: 2, extentOffset: 9),
+        );
+        await tester.pump();
+        final actionsFinder = find.byKey(
+          const ValueKey('ai01-draft-actions'),
+          skipOffstage: false,
+        );
+        final actionsState = tester.state(actionsFinder);
+        final detailsOpener = find.byKey(const ValueKey('ai01-details-open'));
+        await tester.ensureVisible(detailsOpener);
+        await tester.tap(detailsOpener);
+        await tester.pumpAndSettle();
+
+        final dialog = find.byKey(const ValueKey('ai01-details-dialog'));
+        expect(dialog, findsOneWidget);
+        final detailsSurface = find
+            .ancestor(
+              of: find.byKey(const ValueKey('ai01-details-panel')),
+              matching: find.byType(Material),
+            )
+            .first;
+        final dialogRect = tester.getRect(detailsSurface);
+        expect(dialogRect.width, lessThanOrEqualTo(width - 24));
+        expect(dialogRect.width, lessThanOrEqualTo(520));
+        expect(dialogRect.height, lessThanOrEqualTo(720));
+        if (width < 768) {
+          expect(dialogRect.width, closeTo(width - 24, 1));
+        } else {
+          expect(dialogRect.right, closeTo(width - 24, 1));
+        }
+        expect(
+          find.byKey(const ValueKey('ai01-details-scroll')),
+          findsOneWidget,
+        );
+        expect(controller.text, 'local draft — 任务 👩🏻‍💻\nnotes');
+        expect(
+          controller.selection,
+          const TextSelection(baseOffset: 2, extentOffset: 9),
+        );
+
+        if (index == 0) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        } else if (index == 1) {
+          await tester.binding.handlePopRoute();
+        } else {
+          await tester.tap(find.byKey(const ValueKey('ai01-details-close')));
+        }
+        await tester.pumpAndSettle();
+
+        expect(dialog, findsNothing);
+        expect(controller.text, 'local draft — 任务 👩🏻‍💻\nnotes');
+        expect(
+          controller.selection,
+          const TextSelection(baseOffset: 2, extentOffset: 9),
+        );
+        expect(tester.state(actionsFinder), same(actionsState));
+        expect(
+          tester.widget<TextButton>(detailsOpener).focusNode!.hasFocus,
+          isTrue,
+        );
+        _expectSubmitDisabled(tester);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
+  testWidgets(
+    'details follows the current read through retry without replacing the draft',
+    (tester) async {
+      await _setTestSurface(tester, const Size(390, 844));
+      addTearDown(() => _resetTestSurface(tester));
+      final repository = _RecoveringAi01Repository(503);
+      await tester.pumpWidget(_app(repository: repository));
+      await tester.pumpAndSettle();
+
+      final inputFinder = find.byKey(const ValueKey('ai01-task-input'));
+      await tester.enterText(
+        inputFinder,
+        'keep this task while details refresh',
+      );
+      final input = tester.widget<TextField>(inputFinder);
+      final controller = input.controller!;
+      controller.selection = const TextSelection(
+        baseOffset: 5,
+        extentOffset: 9,
+      );
+      await tester.pump();
+      final actionsFinder = find.byKey(
+        const ValueKey('ai01-draft-actions'),
+        skipOffstage: false,
+      );
+      final actionsState = tester.state(actionsFinder);
+
+      await tester.tap(find.byKey(const ValueKey('ai01-details-open')));
+      await tester.pumpAndSettle();
+      final detailsDialog = find.byKey(const ValueKey('ai01-details-dialog'));
+      expect(
+        find.descendant(of: detailsDialog, matching: find.text('请稍后重新读取服务状态。')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: detailsDialog, matching: find.text('AI 模型服务')),
+        findsNothing,
+      );
+
+      await tester.tap(
+        find.descendant(
+          of: detailsDialog,
+          matching: find.byKey(const ValueKey('ai01-read-retry')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(repository.calls, 2);
+      expect(
+        find.descendant(of: detailsDialog, matching: find.text('请稍后重新读取服务状态。')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: detailsDialog, matching: find.text('暂未收到模型服务的状态。')),
+        findsOneWidget,
+      );
+      expect(controller.text, 'keep this task while details refresh');
+      expect(
+        controller.selection,
+        const TextSelection(baseOffset: 5, extentOffset: 9),
+      );
+      expect(tester.state(actionsFinder), same(actionsState));
+      _expectSubmitDisabled(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextButton>(find.byKey(const ValueKey('ai01-details-open')))
+            .focusNode!
+            .hasFocus,
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('tablet uses the localized task shell', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(1024, 900));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _setTestSurface(tester, const Size(1024, 900));
+    addTearDown(() => _resetTestSurface(tester));
 
     await tester.pumpWidget(_app(locale: const Locale('en')));
     await tester.pumpAndSettle();
 
     expect(find.text('What would you like to work on?'), findsOneWidget);
-    expect(find.text('Describe your task'), findsOneWidget);
+    expect(find.text('Describe your task'), findsNothing);
     expect(find.byType(TextField), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('narrow English phone keeps the unbound composer usable', (
+  testWidgets('narrow English phone keeps task editing available', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(360, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _setTestSurface(tester, const Size(360, 800));
+    addTearDown(() => _resetTestSurface(tester));
 
     await tester.pumpWidget(_app(locale: const Locale('en')));
     await tester.pumpAndSettle();
 
     expect(find.text('What would you like to work on?'), findsOneWidget);
-    expect(
-      find.text('No usable business subject or brand is confirmed'),
-      findsOneWidget,
-    );
-    expect(
-      find.text(
-        'A usable business subject or brand is not confirmed, so analysis cannot start.',
-      ),
-      findsNothing,
-    );
+    expect(find.text('Optional focus'), findsOneWidget);
+    expect(find.textContaining('analysis cannot start'), findsNothing);
     expect(find.text('AI assistant'), findsNothing);
     _expectComposerSurface(tester);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('never exposes arbitrary provider identifiers', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _setTestSurface(tester, const Size(390, 844));
+    addTearDown(() => _resetTestSurface(tester));
 
     await tester.pumpWidget(
       _app(
@@ -154,8 +640,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('模型服务状态'));
-    await tester.tap(find.text('模型服务状态'));
+    await tester.tap(find.byKey(const ValueKey('ai01-details-open')));
     await tester.pumpAndSettle();
 
     expect(find.text('zhipu-private-prod-17'), findsNothing);
@@ -166,8 +651,8 @@ void main() {
   testWidgets('filters untrusted suggestions before Text and EditableText', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _setTestSurface(tester, const Size(390, 844));
+    addTearDown(() => _resetTestSurface(tester));
 
     await tester.pumpWidget(
       _app(
@@ -294,8 +779,8 @@ void main() {
   testWidgets(
     'keeps local draft and actions through read failure, retry, and recovery',
     (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _setTestSurface(tester, const Size(390, 844));
+      addTearDown(() => _resetTestSurface(tester));
       final messenger =
           TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
       String? copiedText;
@@ -355,7 +840,7 @@ void main() {
 
       expect(find.text('AI 服务暂时无法连接'), findsOneWidget);
       expect(find.text('请检查网络连接后重试。'), findsOneWidget);
-      expect(find.text('你仍可在本机打开、编辑和复制任务草稿。'), findsOneWidget);
+      expect(find.text('草稿未提交。关闭或切换范围前请保存文本。'), findsOneWidget);
       expect(find.text('草稿已复制，可粘贴到你选择的位置。'), findsOneWidget);
       expect(find.text('查看风险变化'), findsNothing);
       expect(find.text('近期分析记录'), findsNothing);
@@ -407,12 +892,12 @@ void main() {
   testWidgets(
     'expanded draft returns exact text, selection, and focus at each width',
     (tester) async {
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      addTearDown(() => _resetTestSurface(tester));
 
       for (final width in <double>[320, 390, 768, 1440]) {
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pumpAndSettle();
-        await tester.binding.setSurfaceSize(Size(width, 900));
+        await _setTestSurface(tester, Size(width, 900));
         await tester.pumpWidget(_app());
         await tester.pumpAndSettle();
 
@@ -466,7 +951,7 @@ void main() {
         await tester.pump();
 
         if (width == 1440) {
-          await tester.binding.setSurfaceSize(const Size(390, 900));
+          await _setTestSurface(tester, const Size(390, 900));
           await tester.pumpAndSettle();
           expect(controller.text, finalText);
           expect(controller.selection, finalSelection);
@@ -480,7 +965,7 @@ void main() {
             same(draftActions),
           );
 
-          await tester.binding.setSurfaceSize(const Size(1440, 900));
+          await _setTestSurface(tester, const Size(1440, 900));
           await tester.pumpAndSettle();
           expect(controller.text, finalText);
           expect(controller.selection, finalSelection);
@@ -519,8 +1004,8 @@ void main() {
   testWidgets(
     'Escape and system Back return without losing local draft state',
     (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _setTestSurface(tester, const Size(390, 844));
+      addTearDown(() => _resetTestSurface(tester));
 
       final initialRead = Completer<Ai01Snapshot>();
       final retryRead = Completer<Ai01Snapshot>();
@@ -609,8 +1094,8 @@ void main() {
   testWidgets(
     'expanded editor scales text and stays above phone keyboard insets',
     (tester) async {
-      addTearDown(() {
-        tester.binding.setSurfaceSize(null);
+      addTearDown(() async {
+        await _resetTestSurface(tester);
         tester.view.resetViewInsets();
       });
 
@@ -618,10 +1103,13 @@ void main() {
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pumpAndSettle();
         final height = width <= 390 ? 480.0 : 900.0;
-        await tester.binding.setSurfaceSize(Size(width, height));
+        await _setTestSurface(tester, Size(width, height));
         tester.view.resetViewInsets();
         await tester.pumpWidget(_app(textScale: 2));
         await tester.pumpAndSettle();
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('ai01-focus-open')),
+        );
         await tester.tap(find.byKey(const ValueKey('ai01-focus-open')));
         await tester.pumpAndSettle();
 
@@ -674,6 +1162,18 @@ void main() {
   );
 }
 
+Future<void> _setTestSurface(WidgetTester tester, Size size) async {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = size;
+  await tester.binding.setSurfaceSize(size);
+}
+
+Future<void> _resetTestSurface(WidgetTester tester) async {
+  await tester.binding.setSurfaceSize(null);
+  tester.view.resetPhysicalSize();
+  tester.view.resetDevicePixelRatio();
+}
+
 void _expectComposerSurface(WidgetTester tester) {
   final surface = tester.widget<Container>(
     find.byKey(const ValueKey('ai01-composer-surface')),
@@ -688,7 +1188,9 @@ void _expectComposerSurface(WidgetTester tester) {
   expect(editor.style?.height, 1.5);
   expect(editor.decoration?.filled, isFalse);
   expect(editor.decoration?.border, InputBorder.none);
-  expect(editor.decoration?.focusedBorder, isA<UnderlineInputBorder>());
+  expect(editor.decoration?.focusedBorder, InputBorder.none);
+  expect(editor.minLines, 3);
+  expect(editor.maxLines, 10);
 }
 
 void _expectSubmitDisabled(WidgetTester tester) {
@@ -700,9 +1202,21 @@ void _expectSubmitDisabled(WidgetTester tester) {
 
 Widget _app({
   Ai01Repository? repository,
+  Ai01DraftFiles? draftFiles,
+  TextEditingController? draftController,
+  String? scopeLabel,
+  bool embedded = false,
   Locale locale = const Locale('zh', 'CN'),
   double textScale = 1,
 }) {
+  final screen = Ai01Screen(
+    client: LumenisCoreClient(),
+    repository: repository ?? _FakeAi01Repository(),
+    draftFiles: draftFiles,
+    draftController: draftController,
+    scopeLabel: scopeLabel,
+    embedded: embedded,
+  );
   return MaterialApp(
     theme: LumenisTheme.dark,
     locale: locale,
@@ -720,12 +1234,29 @@ Widget _app({
       GlobalCupertinoLocalizations.delegate,
     ],
     home: Scaffold(
-      body: Ai01Screen(
-        client: LumenisCoreClient(),
-        repository: repository ?? _FakeAi01Repository(),
+      body: RepaintBoundary(
+        key: const ValueKey('ai01-capture-boundary'),
+        child: embedded ? SingleChildScrollView(child: screen) : screen,
       ),
     ),
   );
+}
+
+class _FakeScreenDraftFiles extends Ai01DraftFiles {
+  String? opened;
+  final saved = <String>[];
+
+  @override
+  bool get canSave => true;
+
+  @override
+  Future<String?> open() async => opened;
+
+  @override
+  Future<bool> save(String text) async {
+    saved.add(text);
+    return true;
+  }
 }
 
 class _FakeAi01Repository implements Ai01Repository {

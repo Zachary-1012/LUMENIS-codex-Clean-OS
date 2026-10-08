@@ -6,8 +6,9 @@ attach transcript, story and evidence adapters without changing this contract.
 from __future__ import annotations
 
 import json
+import hashlib
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Any
 
@@ -240,6 +241,73 @@ class PodcastPlan:
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), ensure_ascii=False, allow_nan=False)
 
+    def content_digest(self) -> str:
+        """Return a deterministic digest of this plan's serialized content."""
+        canonical = json.dumps(
+            self.to_dict(), ensure_ascii=False, sort_keys=True,
+            separators=(",", ":"), allow_nan=False,
+        ).encode("utf-8")
+        return hashlib.sha256(canonical).hexdigest()
+
+    def _check_edit_base(self, expected_revision: int, expected_digest: str) -> None:
+        if type(expected_revision) is not int or expected_revision < 1:
+            raise ValueError("expected_revision must be a positive exact integer")
+        if type(expected_digest) is not str or not expected_digest:
+            raise ValueError("expected_digest must be non-empty text")
+        if expected_revision != self.revision or expected_digest != self.content_digest():
+            raise ValueError("stale podcast plan revision or digest")
+
+    def with_transcript_corrections(
+        self,
+        corrections: dict[str, str],
+        *,
+        expected_revision: int,
+        expected_digest: str,
+    ) -> "PodcastPlan":
+        """Return a corrected-text revision without changing source transcript facts."""
+        self._check_edit_base(expected_revision, expected_digest)
+        if type(corrections) is not dict:
+            raise ValueError("corrections must be a dict")
+        by_id = {segment.segment_id: segment for segment in self.segments}
+        for segment_id, text in corrections.items():
+            if type(segment_id) is not str or segment_id not in by_id:
+                raise ValueError("corrections contain an unknown segment ID")
+            _required_text(text, "correction text")
+        updated = tuple(
+            replace(segment, corrected_text=corrections[segment.segment_id])
+            if segment.segment_id in corrections and corrections[segment.segment_id] != segment.corrected_text
+            else segment
+            for segment in self.segments
+        )
+        if updated == self.segments:
+            return self
+        return replace(self, segments=updated, revision=self.revision + 1)
+
+    def reordered_segments(
+        self,
+        segment_ids: tuple[str, ...],
+        *,
+        expected_revision: int,
+        expected_digest: str,
+    ) -> "PodcastPlan":
+        """Return a new plan ordering while preserving every original segment."""
+        self._check_edit_base(expected_revision, expected_digest)
+        if type(segment_ids) is not tuple:
+            raise ValueError("segment_ids must be a tuple")
+        if any(type(segment_id) is not str for segment_id in segment_ids):
+            raise ValueError("segment_ids must contain text IDs")
+        current = {segment.segment_id: segment for segment in self.segments}
+        if len(segment_ids) != len(self.segments):
+            raise ValueError("segment_ids must include every segment exactly once")
+        if len(set(segment_ids)) != len(segment_ids):
+            raise ValueError("segment_ids must not contain duplicates")
+        if set(segment_ids) != set(current):
+            raise ValueError("segment_ids contain unknown or missing IDs")
+        ordered = tuple(current[segment_id] for segment_id in segment_ids)
+        if ordered == self.segments:
+            return self
+        return replace(self, segments=ordered, revision=self.revision + 1)
+
     @classmethod
     def from_dict(cls, payload: Any) -> "PodcastPlan":
         fields = {"version", "title", "description", "language", "revision", "segments"}
@@ -279,6 +347,47 @@ class PodcastPlan:
         except (json.JSONDecodeError, TypeError, RecursionError) as exc:
             raise ValueError("Podcast plan JSON is invalid") from exc
         return cls.from_dict(payload)
+
+    def with_segment_source(
+        self, segment_id: str, *, asset: MediaAsset, source_in: float, source_out: float,
+        new_source_text: str, new_source_speaker: str, audio_stream_index: int | None = None,
+        expected_revision: int, expected_digest: str,
+    ) -> "PodcastPlan":
+        """Adopt an explicit new utterance and range without truncating its words.
+
+        New-source text and speaker are supplied authoring intent, not ASR or
+        identity proof. The prior plan retains the old source and corrections.
+        Chapters and both transcript views use the revised ordered durations.
+        The caller retains the permitted old and new media for rebuild/rollback.
+        """
+        self._check_edit_base(expected_revision, expected_digest)
+        target = next((item for item in self.segments if item.segment_id == segment_id), None)
+        if target is None:
+            raise ValueError("source replacement contains an unknown segment ID")
+        if not isinstance(asset, MediaAsset):
+            raise ValueError("source replacement requires fingerprinted media")
+        asset.validate()
+        start = _finite_time(source_in, "source_in")
+        end = _finite_time(source_out, "source_out")
+        if start >= end or end > asset.duration_sec:
+            raise ValueError("source replacement range is outside media")
+        if asset.audio_stream_count < 1:
+            raise ValueError("source replacement media has no audio stream")
+        if audio_stream_index is None:
+            if asset.audio_stream_count > 1:
+                raise ValueError("source replacement requires an explicit audio stream")
+            audio_stream_index = 0
+        if type(audio_stream_index) is not int or not 0 <= audio_stream_index < asset.audio_stream_count:
+            raise ValueError("source replacement audio stream is out of range")
+        text = _required_text(new_source_text, "new_source_text")
+        speaker = _required_text(new_source_speaker, "new_source_speaker")
+        replacement = replace(target, media_asset_id=asset.asset_id, source_in=start, source_out=end,
+                              original_text=text, corrected_text=text, speaker=speaker,
+                              evidence_refs=asset.evidence_refs, audio_stream_index=audio_stream_index)
+        if replacement == target:
+            return self
+        return replace(self, revision=self.revision + 1,
+                       segments=tuple(replacement if item.segment_id == segment_id else item for item in self.segments))
 
     def _output_segments(self) -> tuple[tuple[PodcastSegment, float, float], ...]:
         result = []
@@ -358,7 +467,13 @@ class PodcastPlan:
             lines.append(f"[{_timecode(start)}] {segment.speaker} {segment.corrected_text}")
         return "\n".join(lines)
 
-    def transcript_vtt(self) -> str:
+    def original_script_text(self) -> str:
+        lines = [self.title, self.description, ""]
+        for segment, start, _ in self._output_segments():
+            lines.append(f"[{_timecode(start)}] {segment.speaker} {segment.original_text}")
+        return "\n".join(lines)
+
+    def _transcript_vtt(self, text_field: str) -> str:
         cues = ["WEBVTT", ""]
         for index, (segment, start, end) in enumerate(self._output_segments(), start=1):
             start_code, end_code = _timecode(start), _timecode(end)
@@ -367,7 +482,8 @@ class PodcastPlan:
             # Escape markup while preserving the Unicode text as visible cue content.
             speaker = " ".join(segment.speaker.split())
             speaker = speaker.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            body = segment.corrected_text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            body = getattr(segment, text_field)
+            body = body.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             if "\x00" in speaker or "\x00" in body:
                 raise ValueError("Podcast transcript contains a null character")
             # WebVTT uses physical line breaks, not HTML br elements. Keep
@@ -381,6 +497,63 @@ class PodcastPlan:
                 "",
             ))
         return "\n".join(cues)
+
+    def transcript_vtt(self) -> str:
+        return self._transcript_vtt("corrected_text")
+
+    def original_transcript_vtt(self) -> str:
+        return self._transcript_vtt("original_text")
+
+    def editable_documents(self) -> dict[str, str]:
+        """Build content members for the existing Artifact wrapper; persist nothing."""
+        corrections = {
+            "version": 1,
+            "segments": [
+                {
+                    "segment_id": segment.segment_id,
+                    "original_text": segment.original_text,
+                    "corrected_text": segment.corrected_text,
+                    "changed": segment.original_text != segment.corrected_text,
+                    "media_asset_id": segment.media_asset_id,
+                    "source_in": segment.source_in,
+                    "source_out": segment.source_out,
+                    "speaker": segment.speaker,
+                    "chapter_title": segment.chapter_title,
+                    "evidence_refs": list(segment.evidence_refs),
+                }
+                for segment in self.segments
+            ],
+        }
+        metadata = {
+            "original_text_semantics": (
+                "Preserved plan source text; it does not automatically establish verified ASR."
+            ),
+            "transcript_edits_change_audio": False,
+            "transcript_to_existing_audio_alignment": (
+                "Not asserted by this plan; correcting a transcript to match an existing recording requires actual alignment review."
+            ),
+            "intended_spoken_content_and_audio_identity": (
+                "Not asserted by this plan; a new intended wording or order requires matching recorded or generated media and an actual render before claiming a match."
+            ),
+            "human_listening_acceptance": "not_asserted_by_plan",
+            "persistence_semantics": (
+                "This builder only serializes content members and performs no persistence."
+            ),
+            "artifact_evidence_permission_binding": (
+                "Not asserted by the plan; bind actual media identity, provenance, permission, review and artifact references through the existing external owners."
+            ),
+            "revision": self.revision,
+            "content_digest": self.content_digest(),
+        }
+        return {
+            "podcast-plan.json": json.dumps(self.to_dict(), ensure_ascii=False, indent=2, allow_nan=False),
+            "script.txt": self.script_text(),
+            "transcript-original.vtt": self.original_transcript_vtt(),
+            "transcript-corrected.vtt": self.transcript_vtt(),
+            "chapters.json": json.dumps(self.chapter_document(), ensure_ascii=False, indent=2, allow_nan=False),
+            "corrections.json": json.dumps(corrections, ensure_ascii=False, indent=2, allow_nan=False),
+            "metadata.json": json.dumps(metadata, ensure_ascii=False, indent=2, allow_nan=False),
+        }
 
 
 __all__ = [

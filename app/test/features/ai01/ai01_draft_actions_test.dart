@@ -10,6 +10,42 @@ import 'package:lumenis_app/features/ai01/ai01_draft_files.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 
 void main() {
+  testWidgets('late file selection preserves newer edits', (tester) async {
+    final controller = TextEditingController(text: 'original');
+    final pending = Completer<String?>();
+    final files = _Files()..pendingOpen = pending;
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(_app(controller, files));
+    await tester.tap(find.text('打开文本草稿'));
+    await tester.pump();
+    controller.text = 'newer work';
+    pending.complete('old file');
+    await tester.pumpAndSettle();
+    expect(controller.text, 'newer work');
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.textContaining('发生了变化'), findsOneWidget);
+  });
+
+  testWidgets('late file selection cannot enter a replacement draft', (
+    tester,
+  ) async {
+    final previous = TextEditingController();
+    final replacement = TextEditingController();
+    final pending = Completer<String?>();
+    final files = _Files()..pendingOpen = pending;
+    addTearDown(previous.dispose);
+    addTearDown(replacement.dispose);
+    await tester.pumpWidget(_app(previous, files));
+    await tester.tap(find.text('打开文本草稿'));
+    await tester.pump();
+    await tester.pumpWidget(_app(replacement, files));
+    pending.complete('previous task file');
+    await tester.pumpAndSettle();
+    expect(replacement.text, isEmpty);
+    expect(previous.text, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('opening or replacing a file returns typing to the composer', (
     tester,
   ) async {
@@ -96,7 +132,8 @@ void main() {
       await tester.tap(find.text('打开并替换'));
       await tester.pumpAndSettle();
       expect(controller.text, '从文件恢复');
-      expect(find.textContaining('文件不会触发分析'), findsOneWidget);
+      expect(find.textContaining('尚未提交'), findsOneWidget);
+      expect(find.textContaining('不会发送或启动分析'), findsOneWidget);
     },
   );
 

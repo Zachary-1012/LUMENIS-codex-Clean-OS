@@ -2871,6 +2871,67 @@ class PermissionGate:
         finally:
             self._approval_lock.release()
 
+    @contextmanager
+    def owned_evaluation_capture_commit_lease(
+        self, *, material: Mapping[str, Any], resource: str,
+        authorization: Mapping[str, Any], connection: Any,
+        timeout_seconds: float = 1.0,
+    ):
+        """Serialize the exact evaluation Evidence commit with grant revocation.
+
+        The caller holds the canonical writer transaction and has completed
+        scope/approval checks. Hold this lease only around connection.commit;
+        never invoke Gate.check while the non-reentrant approval lock is held.
+        """
+        from .effect_fence import EffectFence
+        from lumenis.system.ai_gateway.owned_evaluation import (
+            _capture_identity, _evaluation_capture_resource,
+        )
+
+        if (type(self) is not PermissionGate or self is not get_permission_gate()
+                or not self.fail_closed or is_testing_bypass_enabled()
+                or not EffectFence._skill_metadata_connection_is_canonical(connection)):
+            raise PermissionError("OWNED_EVALUATION_COMMIT_LEASE_UNAVAILABLE")
+        if type(timeout_seconds) not in {int, float} or not 0 < timeout_seconds <= 2:
+            raise ValueError("OWNED_EVALUATION_COMMIT_LEASE_TIMEOUT_INVALID")
+        if (resource != _evaluation_capture_resource(material)
+                or type(authorization) is not dict
+                or set(authorization) != {"scope_audit_id", "permission_audit_id", "approval_token"}
+                or any(not isinstance(authorization.get(key), str) or not authorization[key]
+                       for key in authorization)
+                or any(re.fullmatch(r"aud_[0-9a-f]{16}", authorization[key]) is None
+                       for key in ("scope_audit_id", "permission_audit_id"))):
+            raise PermissionError("OWNED_EVALUATION_COMMIT_LEASE_BINDING_INVALID")
+        token = authorization["approval_token"]
+        if not self._approval_lock.acquire(timeout=float(timeout_seconds)):
+            raise PermissionError("OWNED_EVALUATION_COMMIT_LEASE_TIMEOUT")
+        try:
+            identity = material["identity"]
+            current_identity = _capture_identity(
+                {"id": identity["actor_id"]} if identity["identity_kind"] == "account" else None,
+                material["principal"],
+            )
+            if current_identity != identity:
+                raise PermissionError("OWNED_EVALUATION_IDENTITY_CHANGED")
+            spec = self.get_operation_spec(OperationType.DB_WRITE)
+            if (not self.fail_closed or is_testing_bypass_enabled()
+                    or not self.has_permission(PermissionLevel.COMMIT)
+                    or type(spec) is not OperationSpec
+                    or spec.permission is not PermissionLevel.COMMIT
+                    or spec.risk is not RiskLevel.HIGH or spec.auto_allow is not False):
+                raise PermissionError("OWNED_EVALUATION_DB_WRITE_POLICY_CHANGED")
+            grant = self._approvals.get(token)
+            if (type(grant) is not ApprovalToken
+                    or grant.operation != OperationType.DB_WRITE.value
+                    or grant.resource != resource
+                    or type(grant.token) is not str
+                    or not secrets.compare_digest(grant.token, token)
+                    or not grant.is_valid(OperationType.DB_WRITE.value, resource)):
+                raise PermissionError("OWNED_EVALUATION_EXACT_DB_WRITE_APPROVAL_REQUIRED")
+            yield
+        finally:
+            self._approval_lock.release()
+
     def owned_training_approval_reference(
         self, *, training_request: Any, actor_id: Optional[int] = None,
         principal: Optional[LocalWorkspacePrincipal] = None, domain_id: str,

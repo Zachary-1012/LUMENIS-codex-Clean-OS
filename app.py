@@ -849,7 +849,7 @@ def case_analysis_crisis_sop():
 
 @app.route('/api/case-analysis/ai-evaluate', methods=['POST'])
 def case_analysis_ai_evaluate():
-    """案例库 AI 评估：4维评分(影响/创新/可复制/风险) + 推荐处置模板 + 建议（智谱增强层）"""
+    """案例评估兼容入口；本地模板与实际 Owned AI 执行状态分开。"""
     try:
         data = request.get_json(silent=True) or {}
         case_id = str(data.get('case_id') or '')
@@ -862,7 +862,11 @@ def case_analysis_ai_evaluate():
             return jsonify({'ok': False, 'error': '案例不存在'}), 404
         result = evaluate_case(case)
         result['case_id'] = case_id
-        return jsonify({'ok': True, **result})
+        ai = result.get('ai') or {}
+        completed = ai.get('enabled') is True and ai.get('status') == 'COMPLETED'
+        # A legacy case cannot manufacture the typed source-use request needed
+        # by the owned service. Keep advisory templates without claiming AI ran.
+        return jsonify({'ok': completed, **result}), (200 if completed else 503)
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
@@ -2960,11 +2964,17 @@ def api_brand_industry_stats_alias():
 
 @app.route('/api/brand-industry/recompute', methods=['POST'])
 def api_brand_industry_recompute():
-    """品牌业态统计一键重算：用实时 LIKE 口径刷新预聚合字段，修复历史统计污染"""
+    """兼容入口保留；未绑定精确品牌范围时不得重写全库预聚合。"""
     try:
         from brand_stats_recompute import recompute_brand_stats
         result = recompute_brand_stats(verbose=False)
         return jsonify({'ok': True, **result})
+    except PermissionError:
+        return jsonify({
+            'ok': False, 'status': 'UNAVAILABLE',
+            'code': 'BRAND_AGGREGATE_SCOPE_BINDING_REQUIRED',
+            'error': '当前入口尚未绑定精确品牌范围与授权读取，未执行统计写入。',
+        }), 409
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 

@@ -827,66 +827,183 @@ _SPECIAL_REPORT_KEYWORDS = {
 }
 
 
-def check_special_report_trigger(event: dict) -> tuple:
-    """P1-D: 专报触发检测。
+def special_report_trigger_decision(event: dict) -> dict:
+    """Evaluate the five special-report rules without turning unknown into false.
 
-    Args:
-        event: 事件/笔记字典，可包含：
-            - engagement: 互动量（likes+comments*3+shares等）
-            - sentiment: 情感（negative/positive/neutral/unknown）
-            - title/content: 文本内容（用于关键词检测）
-            - negative_count_24h: 24小时内负面帖数量
-            - is_koc_forwarded: 是否本地KOC转发（bool）
-            - is_media_inquiry: 是否集团或媒体问询（bool，人工标记）
-            - subject_hit: subject_rules 判定结果（dict）
-
-    Returns:
-        (triggered: bool, reasons: list)
-        triggered=True 时 reasons 包含所有命中的触发条件描述。
+    The result is a rule-derived trigger decision. It does not assert an observed
+    event, propagation path, business impact, or outcome.
     """
-    reasons = []
-    engagement = int(event.get("engagement", 0) or 0)
-    sentiment = (event.get("sentiment") or "").lower()
-    text = (event.get("title", "") or "") + " " + (event.get("content", "") or "")
-    text_lower = text.lower()
+    import canonical_metrics
 
-    # 触发条件1: 单条负面互动 ≥ 500
-    if sentiment == "negative" and engagement >= SPECIAL_REPORT_TRIGGER_THRESHOLD:
+    condition_names = (
+        "negative_engagement",
+        "negative_cluster_24h",
+        "safety_discrimination_or_illegal",
+        "local_koc_forward",
+        "group_or_media_inquiry",
+    )
+    event_valid = isinstance(event, dict)
+    values = event if event_valid else {}
+
+    def _field_problem(key):
+        if not event_valid:
+            return "INVALID:event"
+        if key not in values or values.get(key) is None:
+            return f"MISSING:{key}"
+        return f"INVALID:{key}"
+
+    def _exact_count(key):
+        if not event_valid:
+            return None, "INVALID:event"
+        if key not in values or values.get(key) is None:
+            return None, f"MISSING:{key}"
+        parsed = canonical_metrics.engagement_count(values[key])
+        if parsed is None:
+            return None, f"INVALID:{key}"
+        return parsed, None
+
+    def _condition(value, reason=None):
+        return {"value": value, "reason": reason}
+
+    def _combined_reason(parts):
+        return ";".join(dict.fromkeys(part for part in parts if part)) or None
+
+    engagement, engagement_problem = _exact_count("engagement")
+    negative_count, count_problem = _exact_count("negative_count_24h")
+
+    sentiment = values.get("sentiment") if event_valid else None
+    sentiment_known = type(sentiment) is str and sentiment in canonical_metrics.SENTIMENT_KNOWN
+    sentiment_problem = None
+    if not sentiment_known:
+        if not event_valid:
+            sentiment_problem = "INVALID:event"
+        elif "sentiment" not in values or sentiment is None:
+            sentiment_problem = "MISSING:sentiment"
+        else:
+            sentiment_problem = "INVALID:sentiment"
+
+    negative_engagement = None
+    negative_engagement_problem = None
+    if sentiment_known and sentiment != canonical_metrics.SENTIMENT_NEGATIVE:
+        negative_engagement = False
+    elif engagement is not None and engagement < SPECIAL_REPORT_TRIGGER_THRESHOLD:
+        negative_engagement = False
+    elif sentiment_known and sentiment == canonical_metrics.SENTIMENT_NEGATIVE and engagement is not None:
+        negative_engagement = True
+    else:
+        negative_engagement_problem = _combined_reason((
+            sentiment_problem if not sentiment_known else None,
+            engagement_problem if engagement is None else None,
+        ))
+
+    negative_cluster = None if negative_count is None else negative_count >= SPECIAL_REPORT_NEGATIVE_CLUSTER
+
+    text_values = []
+    text_problems = []
+    for key in ("title", "content"):
+        raw = values.get(key) if event_valid and key in values else None
+        if type(raw) is str:
+            text_values.append(raw.lower())
+        else:
+            text_problems.append(_field_problem(key))
+
+    hit_categories = []
+    for category, keywords in _SPECIAL_REPORT_KEYWORDS.items():
+        if any(keyword in text for keyword in keywords for text in text_values):
+            hit_categories.append(category)
+
+    subject_hit = values.get("subject_hit") if event_valid else None
+    subject_risk = None
+    subject_problem = None
+    if not event_valid:
+        subject_problem = "INVALID:event"
+    elif "subject_hit" not in values or subject_hit is None:
+        subject_problem = "MISSING:subject_hit"
+    elif not isinstance(subject_hit, dict):
+        subject_problem = "INVALID:subject_hit"
+    elif "is_high_risk" not in subject_hit or subject_hit.get("is_high_risk") is None:
+        subject_problem = "MISSING:subject_hit.is_high_risk"
+    elif type(subject_hit.get("is_high_risk")) is not bool:
+        subject_problem = "INVALID:subject_hit.is_high_risk"
+    else:
+        subject_risk = subject_hit["is_high_risk"]
+
+    if hit_categories or subject_risk is True:
+        if subject_risk is True:
+            hit_categories.append("subject_rules_high_risk")
+        keyword_condition = True
+        keyword_problem = None
+    elif not text_problems and subject_risk is False:
+        keyword_condition = False
+        keyword_problem = None
+    else:
+        keyword_condition = None
+        keyword_problem = _combined_reason((*text_problems, subject_problem))
+
+    def _exact_flag(key):
+        if not event_valid:
+            return None, "INVALID:event"
+        if key not in values or values.get(key) is None:
+            return None, f"MISSING:{key}"
+        value = values[key]
+        if type(value) is not bool:
+            return None, f"INVALID:{key}"
+        return value, None
+
+    is_koc_forwarded, koc_problem = _exact_flag("is_koc_forwarded")
+    is_media_inquiry, media_problem = _exact_flag("is_media_inquiry")
+
+    conditions = {
+        condition_names[0]: _condition(negative_engagement, negative_engagement_problem),
+        condition_names[1]: _condition(negative_cluster, count_problem),
+        condition_names[2]: _condition(keyword_condition, keyword_problem),
+        condition_names[3]: _condition(is_koc_forwarded, koc_problem),
+        condition_names[4]: _condition(is_media_inquiry, media_problem),
+    }
+
+    reasons = []
+    if negative_engagement is True:
         reasons.append(
             f"单条负面互动≥{SPECIAL_REPORT_TRIGGER_THRESHOLD}（当前{engagement}）"
         )
-
-    # 触发条件2: 负面帖 ≥ 3 条集中爆发（24小时窗口）
-    negative_count = int(event.get("negative_count_24h", 0) or 0)
-    if negative_count >= SPECIAL_REPORT_NEGATIVE_CLUSTER:
+    if negative_cluster is True:
         reasons.append(
             f"24h内负面帖≥{SPECIAL_REPORT_NEGATIVE_CLUSTER}条集中爆发（当前{negative_count}条）"
         )
-
-    # 触发条件3: 涉及安全·歧视·违法（关键词 + subject_rules 联动）
-    hit_categories = []
-    for cat, keywords in _SPECIAL_REPORT_KEYWORDS.items():
-        if any(kw in text_lower for kw in keywords):
-            hit_categories.append(cat)
-    # subject_rules 联动：如果 event 中有 subject_hit 且标记了高风险主体
-    subject_hit = event.get("subject_hit")
-    if isinstance(subject_hit, dict) and subject_hit.get("is_high_risk"):
-        hit_categories.append("subject_rules_high_risk")
-    if hit_categories:
+    if keyword_condition is True:
         reasons.append(
             f"涉及安全/歧视/违法关键词（命中: {', '.join(hit_categories)}）"
         )
-
-    # 触发条件4: 本地 KOC 转发（kos_profiles 联动）
-    if event.get("is_koc_forwarded"):
+    if is_koc_forwarded is True:
         reasons.append("本地KOC转发（kos_profiles联动）")
-
-    # 触发条件5: 集团或媒体问询（人工标记触发）
-    if event.get("is_media_inquiry"):
+    if is_media_inquiry is True:
         reasons.append("集团或媒体问询（人工标记触发）")
 
-    triggered = len(reasons) > 0
-    return triggered, reasons
+    condition_values = [condition["value"] for condition in conditions.values()]
+    if any(value is True for value in condition_values):
+        triggered, state = True, "TRIGGERED"
+    elif all(value is False for value in condition_values):
+        triggered, state = False, "NOT_TRIGGERED"
+    else:
+        triggered, state = None, "UNKNOWN"
+
+    return {
+        "recipe": "SPECIAL_REPORT_TRIGGER_V2",
+        "triggered": triggered,
+        "state": state,
+        "conditions": conditions,
+        "unknown_conditions": [
+            name for name, condition in conditions.items() if condition["value"] is None
+        ],
+        "reasons": reasons,
+        "metadata": {"basis": "RULE_DERIVED", "business_outcome_measured": False},
+    }
+
+
+def check_special_report_trigger(event: dict) -> tuple:
+    """Keep the legacy tuple API while preserving an unknown decision as ``None``."""
+    decision = special_report_trigger_decision(event)
+    return decision["triggered"], decision["reasons"]
 
 
 def get_special_report_trigger_config() -> dict:

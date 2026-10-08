@@ -481,7 +481,7 @@ void main() {
     await tester.pumpWidget(_app(client, initialScreenId: 'AI-01'));
     await tester.pumpAndSettle();
     final firstState = tester.state(find.byType(Ai01Screen));
-    await tester.enterText(find.byType(TextField), '离开页面即丢弃');
+    await tester.enterText(find.byType(TextField), '同范围跨页面保留的草稿');
     await tester.pump();
 
     await _openWorkspaceNavigation(tester);
@@ -504,7 +504,7 @@ void main() {
     expect(routeReturnedState, isNot(same(firstState)));
     expect(
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
-      '',
+      '同范围跨页面保留的草稿',
     );
 
     await tester.enterText(find.byType(TextField), '范围变化即重建');
@@ -525,6 +525,83 @@ void main() {
     expect(client.envelope['context']['mode'], 'FOCUS');
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'Home clears draft and previous page only on confirmed scope change',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final client = _ShellClient(
+        settingsContextError: const LumenisCoreException(
+          'context temporarily unavailable',
+          statusCode: 503,
+          messageKey: 'context.error.unavailable',
+        ),
+        settingsContextErrorCount: 1,
+      );
+
+      await tester.pumpWidget(_app(client, initialScreenId: 'ACC-03'));
+      await tester.pumpAndSettle();
+
+      final input = find.byKey(const ValueKey('ai01-task-input'));
+      expect(
+        tester.widget<Ai01Screen>(find.byType(Ai01Screen)).embedded,
+        isTrue,
+      );
+      const draft = '同一范围暂时读取失败时保留的草稿';
+      await tester.enterText(input, draft);
+      await tester.pump();
+
+      await tester.tap(find.byTooltip('选择查看范围'));
+      await tester.pumpAndSettle();
+      final retry = find.byKey(const ValueKey('context-picker-retry'));
+      expect(retry, findsOneWidget);
+      expect(client.envelope['context']['mode'], 'GLOBAL_ALL');
+      expect(tester.widget<TextField>(input).controller!.text, draft);
+
+      await tester.tap(retry);
+      await tester.pumpAndSettle();
+      expect(client.envelope['context']['mode'], 'GLOBAL_ALL');
+      expect(tester.widget<TextField>(input).controller!.text, draft);
+      await tester.tap(find.byKey(const ValueKey('context-picker-close')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('acc03-destination-CTH-01')));
+      await tester.pumpAndSettle();
+      expect(find.byType(Cth01Screen), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('workspace-home')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('acc03-last-opened')), findsOneWidget);
+      expect(tester.widget<TextField>(input).controller!.text, draft);
+
+      await tester.tap(find.byTooltip('选择查看范围'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 250));
+      final subject = find.text('示例商业主体');
+      await tester.ensureVisible(subject);
+      await tester.tap(subject);
+      await tester.pumpAndSettle();
+
+      expect(client.lastSelectedDomain, 'CTH');
+      expect(client.lastSelectedSubject, 'INTERNAL-SUBJECT-ID');
+      expect(client.envelope['context']['mode'], 'FOCUS');
+      expect(find.byType(Acc03Screen), findsOneWidget);
+      expect(find.byKey(const ValueKey('acc03-last-opened')), findsNothing);
+      final inputAfterScopeChange = find.byKey(
+        const ValueKey('ai01-task-input'),
+      );
+      expect(
+        tester.widget<Ai01Screen>(find.byType(Ai01Screen)).embedded,
+        isTrue,
+      );
+      expect(
+        tester.widget<TextField>(inputAfterScopeChange).controller!.text,
+        isEmpty,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('subject selection and clearing use server-confirmed context', (
     tester,
@@ -807,7 +884,13 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('workspace-nav-AI-01')));
     await tester.pumpAndSettle();
 
-    expect(find.text('查看范围暂不可用'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(Ai01Screen),
+        matching: find.text('查看范围暂不可用'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('旧查看范围'), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -927,7 +1010,11 @@ void main() {
       expect(find.byType(Acc03Screen), findsOneWidget);
       expect(find.text('全部可访问范围'), findsNothing);
       expect(find.text('示例商业主体'), findsOneWidget);
-      await tester.tap(find.widgetWithText(OutlinedButton, '继续').first);
+      final commerceDestination = find.byKey(
+        const ValueKey('acc03-destination-CTH-01'),
+      );
+      expect(commerceDestination, findsOneWidget);
+      await tester.tap(commerceDestination);
       await tester.pumpAndSettle();
       expect(find.byType(Cth01Screen), findsOneWidget);
       expect(find.text('示例商业主体'), findsOneWidget);

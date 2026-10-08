@@ -91,6 +91,8 @@ def test_reads_global_and_exact_focus_with_safe_scope_proofs(scope_db):
         cth_limited = list_scoped_canonical(conn, product_id="CTH", limit=1)
         bmp_focus = list_scoped_canonical(conn, product_id="ZBMP", brand_focus_id="BRAND-A")
         bmp_global = list_scoped_canonical(conn, product_id="zbmp")
+        bmp_alias_focus = list_scoped_canonical(conn, product_id="BMP", brand_focus_id="BRAND-A")
+        bmp_alias_global = list_scoped_canonical(conn, product_id="bmp")
         selected_focus = list_scoped_canonical(
             conn, product_id="CTH", subject_id="SUBJ-A",
             source_ids=["raw-cth-a", "raw-cth-b", "raw-bmp-a"],
@@ -119,6 +121,10 @@ def test_reads_global_and_exact_focus_with_safe_scope_proofs(scope_db):
     assert [row["source_id"] for row in bmp_focus["records"]] == ["raw-bmp-a"]
     assert [row["source_id"] for row in bmp_global["records"]] == ["raw-bmp-a"]
     assert bmp_global["candidate_count"] == 1
+    assert bmp_alias_focus == bmp_focus
+    assert bmp_alias_global == bmp_global
+    assert bmp_alias_global["records"][0]["product_id"] == "ZBMP"
+    assert bmp_alias_global["records"][0]["domain_id"] == "zbmp"
     assert injected_focus["records"] == []
     assert injected_focus["candidate_count"] == 0
 
@@ -234,7 +240,7 @@ def test_source_ids_inputs_are_strict(scope_db, source_ids, limit):
 @pytest.mark.parametrize(
     ("kwargs", "error", "message"),
     [
-        ({"product_id": "BMP"}, ValueError, "product_id"),
+        ({"product_id": "OTHER"}, ValueError, "product_id"),
         ({"product_id": "CTH", "subject_id": "SUBJ", "brand_focus_id": "BRAND"}, ValueError, "mixed"),
         ({"product_id": "CTH", "brand_focus_id": "BRAND"}, ValueError, "CTH"),
         ({"product_id": "ZBMP", "subject_id": "SUBJ"}, ValueError, "ZBMP"),

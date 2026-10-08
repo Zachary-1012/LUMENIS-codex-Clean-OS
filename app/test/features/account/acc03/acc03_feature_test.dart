@@ -20,7 +20,7 @@ void main() {
             : Acc03RuntimeState.restricted,
       );
       expect(result.currentView, isNull);
-      expect(result.launchCards, hasLength(3));
+      expect(result.launchCards, hasLength(4));
     });
   }
 
@@ -57,7 +57,14 @@ void main() {
       expect(snapshot.launchCards.map((card) => card.domain), [
         'CTH',
         'BMP',
-        'AI',
+        'SH',
+        'SH',
+      ]);
+      expect(snapshot.launchCards.map((card) => card.destination), [
+        Acc03Destination.commerce,
+        Acc03Destination.brand,
+        Acc03Destination.research,
+        Acc03Destination.creation,
       ]);
     },
   );

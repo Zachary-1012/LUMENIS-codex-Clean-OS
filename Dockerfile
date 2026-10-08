@@ -8,9 +8,8 @@
 #   (XHS_CDP_URL / DOUYIN_CDP_URL). Staging never collects.
 # - Runtime DB path is injected via ZBC_DB_PATH (database.py reads it), so the
 #   image stays stateless and the SQLite file lives on a mounted volume.
-# - Default CMD mirrors the locally-verified launch path (python app.py).
-#   A production WSGI server (gunicorn) is a documented later hardening step,
-#   not enabled until it is actually tested.
+# - CMD remains on app.py and enables its existing Waitress WSGI mode.
+#   This packaging configuration alone is not runtime or deployment acceptance.
 # Build:  docker build -t zbrand-core:latest .
 # =====================================================================
 FROM python:3.12-slim
@@ -19,7 +18,9 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONIOENCODING=utf-8 \
     LANG=C.UTF-8 \
     PIP_NO_CACHE_DIR=1 \
-    ZBC_DB_PATH=/app/data/monitor.db
+    ZBC_DB_PATH=/app/data/monitor.db \
+    ZB_WSGI=waitress \
+    HOME=/home/lumenis
 
 WORKDIR /app
 
@@ -35,7 +36,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Application code (see .dockerignore for what is excluded).
 COPY . .
 
-RUN mkdir -p /app/data /app/logs
+# Fresh named volumes inherit the ownership of these mountpoints.
+RUN mkdir -p /app/data /app/logs /home/lumenis \
+    && chown -R 10001:10001 /app/data /app/logs /home/lumenis
 
 EXPOSE 8201
 
@@ -44,5 +47,6 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
+USER 10001:10001
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["python", "app.py", "--host", "0.0.0.0", "--port", "8201"]

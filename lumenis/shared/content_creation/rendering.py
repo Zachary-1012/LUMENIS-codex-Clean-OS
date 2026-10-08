@@ -10,6 +10,7 @@ from bisect import bisect_left
 import json
 import math
 import os
+import re
 import shutil
 import subprocess
 import struct
@@ -196,9 +197,54 @@ def _verify_caption_glyphs(text: str) -> None:
         raise VideoEditingError("OVERLAY_GLYPH_UNAVAILABLE")
 
 
+def _wide_caption_lines(text: str) -> list[str]:
+    """Keep every character and prefer a space boundary within 48 base characters."""
+    lines = []
+    for original in text.split("\n"):
+        clusters: list[str] = []
+        for char in original:
+            if clusters and unicodedata.category(char).startswith("M"):
+                clusters[-1] += char
+            else:
+                clusters.append(char)
+        while len(clusters) > 48:
+            spaces = [index + 1 for index, cluster in enumerate(clusters[:48]) if cluster == " "]
+            boundary = spaces[-1] if spaces else 48
+            lines.append("".join(clusters[:boundary]))
+            clusters = clusters[boundary:]
+        lines.append("".join(clusters))
+    return lines
+
+
+def _measure_caption_box(ffmpeg: str, *, work: Path, filename: str,
+                         font: str, check_continue: Callable[[], None] | None = None) -> tuple[float, float]:
+    """Fail closed if the actual installed drawtext cannot report stable dimensions."""
+    report = _run([ffmpeg, "-v", "info", "-nostats", "-nostdin", "-filter_threads", "1",
+                   "-f", "lavfi", "-i", "color=c=black:s=1280x720:r=30:d=0.04", "-vf",
+                   f"drawtext={font}:textfile={filename}:expansion=none:reload=0:"
+                   "fontsize=35:line_spacing=8:x='print(text_w)':y='print(text_h)'",
+                   "-frames:v", "1", "-f", "null", "-"], cwd=work, check_continue=check_continue)
+    numbers = [float(value) for value in re.findall(
+        r"^\[Eval @ [^\]]+\] ([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)\s*$",
+        report, flags=re.MULTILINE)]
+    if not numbers or len(numbers) % 3 or len(numbers) > 24:
+        raise VideoEditingError("CAPTION_LAYOUT_MEASUREMENT_UNAVAILABLE")
+    boxes = []
+    for index in range(0, len(numbers), 3):
+        width, height, width_again = numbers[index:index + 3]
+        if (not all(math.isfinite(value) and value > 0 for value in (width, height, width_again))
+                or width != width_again):
+            raise VideoEditingError("CAPTION_LAYOUT_MEASUREMENT_UNAVAILABLE")
+        boxes.append((width, height))
+    if any(box != boxes[0] for box in boxes):
+        raise VideoEditingError("CAPTION_LAYOUT_MEASUREMENT_UNAVAILABLE")
+    return boxes[0]
+
+
 def _overlay_filters(timeline: Timeline, *, duration: float, width: int, height: int,
                      ffmpeg: str, work: Path,
-                     check_continue: Callable[[], None] | None = None) -> list[str]:
+                     check_continue: Callable[[], None] | None = None,
+                     layout_readback: list[dict[str, Any]] | None = None) -> list[str]:
     if not timeline.overlays:
         return []
     if len(timeline.overlays) > 64:
@@ -222,6 +268,12 @@ def _overlay_filters(timeline: Timeline, *, duration: float, width: int, height:
         text = overlay.text.replace("\r\n", "\n")
         if any(unicodedata.category(char).startswith("C") and char != "\n" for char in text):
             raise VideoEditingError("OVERLAY_TEXT_NOT_SUPPORTED")
+        profile = overlay.layout_profile
+        if profile is not None and (profile != "literal-wide-720p-v2" or overlay.kind != "caption"):
+            raise VideoEditingError("OVERLAY_LAYOUT_PROFILE_NOT_SUPPORTED")
+        if profile is not None and (width, height) != (1280, 720):
+            raise VideoEditingError("CAPTION_LAYOUT_REQUIRES_1280_720")
+        columns_per_line = 48 if profile is not None else 28
         # Preserve every explicit line (including blank lines), space and codepoint.
         # Wrap only before a base character, never between it and its combining marks.
         lines = []
@@ -229,15 +281,17 @@ def _overlay_filters(timeline: Timeline, *, duration: float, width: int, height:
             line, columns = "", 0
             for char in original_line:
                 is_mark = unicodedata.category(char).startswith("M")
-                if columns == 28 and not is_mark:
+                if columns == columns_per_line and not is_mark:
                     lines.append(line)
                     line, columns = "", 0
                 line += char
                 columns += int(not is_mark)
             lines.append(line)
+        if profile is not None:
+            lines = _wide_caption_lines(text)
         if len(lines) > 4:
             raise VideoEditingError("OVERLAY_LAYOUT_EXCEEDS_FOUR_LINES")
-        prepared.append((overlay.kind, start, end, "\n".join(lines)))
+        prepared.append((overlay.kind, start, end, "\n".join(lines), profile, overlay.overlay_id))
     if os.name != "nt" or not CAPTION_FONT.is_file():
         raise VideoEditingError("CAPTION_FONT_UNAVAILABLE")
     _verify_caption_glyphs("\n".join(item[3] for item in prepared))
@@ -264,12 +318,22 @@ def _overlay_filters(timeline: Timeline, *, duration: float, width: int, height:
         raise
     size, margin = max(16, width // 36), max(16, height // 24)
     filters = []
-    for index, (kind, start, end, text) in enumerate(prepared):
+    for index, (kind, start, end, text, profile, overlay_id) in enumerate(prepared):
         if check_continue:
             check_continue()
         filename = f"caption-{index:03d}.txt"
         with (work / filename).open("x", encoding="utf-8", newline="\n") as handle:
             handle.write(text)
+        if profile is not None:
+            box_width, box_height = _measure_caption_box(ffmpeg, work=work, filename=filename,
+                                                          font=font, check_continue=check_continue)
+            if box_width + 16 > width - 2 * margin or box_height + 16 > height * .3:
+                raise VideoEditingError("CAPTION_LAYOUT_EXCEEDS_PIXEL_BOUNDS")
+            if layout_readback is not None:
+                layout_readback.append({"overlay_id": overlay_id, "profile": profile,
+                                        "text_width_px": box_width, "text_height_px": box_height,
+                                        "box_border_px": 8, "horizontal_margin_px": margin,
+                                        "maximum_box_height_ratio": .3})
         y = f"h-text_h-{margin}" if kind == "caption" else str(margin)
         filters.append(f"drawtext={font}:textfile={filename}:expansion=none:reload=0:"
                        f"fontsize={size}:fontcolor=white:box=1:boxcolor=black@0.6:boxborderw=8:"
@@ -597,8 +661,9 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
 
     with tempfile.TemporaryDirectory(prefix="timeline-render-", dir=output.parent) as temporary:
         work = Path(temporary)
+        caption_layouts: list[dict[str, Any]] = []
         overlays = _overlay_filters(timeline, duration=duration, width=width, height=height,
-                                    ffmpeg=ffmpeg, work=work, **run_options)
+                                    ffmpeg=ffmpeg, work=work, layout_readback=caption_layouts, **run_options)
         audio = _render_audio(timeline, duration=duration, ffmpeg=ffmpeg, work=work, **run_options)
         rendered = work / ("media.mp4" if output_kind == "video" else "media.wav")
         if video_tracks:
@@ -657,7 +722,10 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
                         "-t", _number(duration), "-map_metadata", "-1",
                         "-metadata", "comment=Demo - source rights not verified", "-movflags", "+faststart",
                         str(rendered)]
-            _run(command, cwd=work, **run_options)
+            # A complete programme can take longer than the command helper's
+            # short default. Keep a finite duration-based budget and the same
+            # cancellation callback, rather than discarding a valid long render.
+            _run(command, cwd=work, timeout=max(60.0, duration * 4.0), **run_options)
         elif audio is not None:
             shutil.copyfile(audio, rendered)
         else:
@@ -695,7 +763,9 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
             "media_sha256": digest.hexdigest(), "size_bytes": output.stat().st_size,
             "measurement": measured, "renderer": "lumenis-timeline-4",
             "overlay_processing": {"count": len(timeline.overlays),
-                                   "profile": "literal-cjk-windows-v1" if timeline.overlays else None},
+                                   "profile": ("mixed-literal-windows-v2" if caption_layouts else
+                                               "literal-cjk-windows-v1" if timeline.overlays else None),
+                                   **({"measured_layouts": caption_layouts} if caption_layouts else {})},
             "transition_processing": {"profile": "centred-handles-30fps-v1" if transitions else None,
                                       "visual_only": True, "applied": list(transitions.values())},
             "audio_processing": {"pre_encode_sample_peak_limit_dbfs": -1 if has_audio else None,

@@ -216,6 +216,8 @@ class MetricValue:
     unit: str = ""
     label: str = ""
     breakdown: Dict[str, Any] = field(default_factory=dict)  # 如 sentiment={positive,neutral,negative}
+    status: Optional[str] = None  # JSON-safe for retained consumers of __dict__.
+    reason: Optional[str] = None
 
     @property
     def is_known(self) -> bool:
@@ -278,22 +280,24 @@ class MetricLayer:
                            breakdown={"high": high, "medium": med, "low": low, "critical": crit, "unknown": unk})
 
     def engagement_total(self, records: List[Dict[str, Any]]) -> MetricValue:
-        """互动总量 = likes + comments + collects + shares。"""
-        if self._canonical and hasattr(self._canonical, "engagement_sum"):
-            raw = self._canonical.engagement_sum(records)
-            return MetricValue(name="engagement", value=raw.get("total"), label="互动总量",
-                               breakdown=raw.get("breakdown", {}))
-        total = 0
-        bd = {"likes": 0, "comments": 0, "collects": 0, "shares": 0}
-        for r in records:
-            if not isinstance(r, dict):
-                continue
-            for k in bd:
-                v = r.get(k)
-                if isinstance(v, (int, float)):
-                    bd[k] += int(v)
-                    total += int(v)
-        return MetricValue(name="engagement", value=total, label="互动总量", breakdown=bd)
+        """Complete total plus explicitly covered measured subsets from the metric owner."""
+        if not self._canonical or not hasattr(self._canonical, "engagement_stats"):
+            return MetricValue(name="engagement", value=None, label="互动总量",
+                               status=DataStatus.UNAVAILABLE.value, reason="CANONICAL_METRICS_UNAVAILABLE")
+        raw = self._canonical.engagement_stats(records)
+        quality = raw.get("quality", {})
+        if quality.get("version") != "2.0":
+            return MetricValue(name="engagement", value=None, label="互动总量",
+                               status=DataStatus.UNAVAILABLE.value, reason="ENGAGEMENT_CONTRACT_VERSION_MISMATCH")
+        status = {"UNKNOWN": DataStatus.UNAVAILABLE.value, "PARTIAL": DataStatus.PARTIAL.value,
+                  "NO_DATA": DataStatus.NO_DATA.value}.get(quality["state"])
+        return MetricValue(
+            name="engagement", value=raw["sum"], label="互动总量", status=status,
+            reason=quality["reason"], breakdown={
+                **raw["per_field"], "observed_sum": raw["observed_sum"],
+                "observed_per_field": raw["observed_per_field"], "coverage": quality,
+            },
+        )
 
     def count(self, records: List[Dict[str, Any]], name: str = "total", label: str = "总数") -> MetricValue:
         """通用计数。"""
@@ -484,6 +488,7 @@ class ViewMetric:
     breakdown: Dict[str, Any] = field(default_factory=dict)
     chart_type: ChartType = ChartType.METRIC_CARD
     status: DataStatus = DataStatus.NO_DATA
+    reason: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -503,6 +508,7 @@ class ViewMetric:
             "breakdown": self.breakdown,
             "chart_type": self.chart_type.value,
             "status": self.status.value,
+            "reason": self.reason,
         }
 
 
@@ -680,7 +686,9 @@ class ViewModelBuilder:
                 evidence_refs=self._extract_evidence(func_result.records[:5]),
                 breakdown=mval.breakdown,
                 chart_type=default_visualization_for_metric(mkey, mval.label).chart_type,
-                status=truth.status,
+                status=(truth.status if truth.status in (DataStatus.ERROR, DataStatus.UNAVAILABLE)
+                        else DataStatus(mval.status) if mval.status else truth.status),
+                reason=mval.reason,
             )
             # Step 6: Visualization
             vm.visualizations.append(default_visualization_for_metric(mkey, mval.label))

@@ -1,3 +1,4 @@
+import 'package:lumenis_app/core/lumenis_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -5,44 +6,123 @@ import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
 import 'ai01_draft_actions.dart';
+import 'ai01_draft_files.dart';
 import 'ai01_repository.dart';
 import 'ai01_snapshot.dart';
 import 'ai01_view_model.dart';
 
 class Ai01Screen extends StatefulWidget {
-  const Ai01Screen({required this.client, this.repository, super.key});
+  const Ai01Screen({
+    required this.client,
+    this.repository,
+    this.draftFiles,
+    this.draftController,
+    this.scopeLabel,
+    this.embedded = false,
+    super.key,
+  });
 
   final LumenisCoreClient client;
   final Ai01Repository? repository;
+  final Ai01DraftFiles? draftFiles;
+  final TextEditingController? draftController;
+  final String? scopeLabel;
+  final bool embedded;
 
   @override
   State<Ai01Screen> createState() => _Ai01ScreenState();
 }
 
 class _Ai01ScreenState extends State<Ai01Screen> {
-  late final Ai01ViewModel _viewModel = Ai01ViewModel(
-    repository: widget.repository ?? CoreAi01Repository(client: widget.client),
-  );
-  final TextEditingController _draftController = TextEditingController();
+  late Ai01ViewModel _viewModel;
+  late TextEditingController _draftController;
+  TextEditingController? _ownedDraftController;
   final FocusNode _draftFocus = FocusNode();
-  final GlobalKey _composerKey = GlobalKey(debugLabel: 'ai01-composer');
-  bool _showInspector = false;
+  final FocusNode _detailsOpenerFocus = FocusNode(
+    debugLabel: 'ai01-details-opener',
+  );
+  final _ownedDialogs = <DialogRoute<void>>{};
 
   @override
   void initState() {
     super.initState();
+    _viewModel = _createViewModel();
+    _draftController = widget.draftController ?? TextEditingController();
+    if (widget.draftController == null) {
+      _ownedDraftController = _draftController;
+    }
     _draftController.addListener(_syncDraft);
+    _syncDraft();
     _viewModel.refresh();
   }
 
   @override
+  void didUpdateWidget(covariant Ai01Screen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final readOwnerChanged =
+        !identical(oldWidget.repository, widget.repository) ||
+        (widget.repository == null &&
+            !identical(oldWidget.client, widget.client));
+    if (readOwnerChanged) {
+      _closeOwnedDialogs();
+      _viewModel.dispose();
+      _viewModel = _createViewModel();
+      _syncDraft();
+      _viewModel.refresh();
+    }
+    if (oldWidget.draftController == widget.draftController) return;
+
+    _closeOwnedDialogs();
+    final previousController = _draftController;
+    final previousValue = previousController.value;
+    previousController.removeListener(_syncDraft);
+    if (identical(_ownedDraftController, previousController)) {
+      // The outgoing TextField and any focused editor finish unmounting first.
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => previousController.dispose(),
+      );
+      _ownedDraftController = null;
+    }
+
+    final nextController = widget.draftController;
+    if (nextController != null) {
+      _draftController = nextController;
+    } else {
+      _draftController = TextEditingController.fromValue(previousValue);
+      _ownedDraftController = _draftController;
+    }
+    _draftController.addListener(_syncDraft);
+    _syncDraft();
+  }
+
+  @override
   void dispose() {
-    _draftController
-      ..removeListener(_syncDraft)
-      ..dispose();
+    _closeOwnedDialogs();
+    _draftController.removeListener(_syncDraft);
+    _ownedDraftController?.dispose();
     _viewModel.dispose();
     _draftFocus.dispose();
+    _detailsOpenerFocus.dispose();
     super.dispose();
+  }
+
+  Ai01ViewModel _createViewModel() => Ai01ViewModel(
+    repository: widget.repository ?? CoreAi01Repository(client: widget.client),
+  );
+
+  void _closeOwnedDialogs() {
+    final dialogs = _ownedDialogs.toList();
+    _ownedDialogs.clear();
+    if (dialogs.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        for (final route in dialogs) {
+          final navigator = route.navigator;
+          if (navigator != null && navigator.mounted && route.isActive) {
+            navigator.removeRoute(route);
+          }
+        }
+      });
+    }
   }
 
   void _syncDraft() => _viewModel.updateDraft(_draftController.text);
@@ -58,8 +138,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
   Future<void> _openFocusedEditor() async {
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    await showDialog<void>(
-      context: context,
+    await _showOwnedDialog(
       useSafeArea: false,
       animationStyle: reduceMotion
           ? AnimationStyle.noAnimation
@@ -73,20 +152,63 @@ class _Ai01ScreenState extends State<Ai01Screen> {
     if (mounted) _draftFocus.requestFocus();
   }
 
+  Future<void> _openDetails() async {
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    await _showOwnedDialog(
+      animationStyle: reduceMotion
+          ? AnimationStyle.noAnimation
+          : const AnimationStyle(
+              duration: Duration(milliseconds: 170),
+              reverseDuration: Duration(milliseconds: 170),
+              curve: Curves.easeOutCubic,
+            ),
+      builder: (context) => AnimatedBuilder(
+        animation: _viewModel,
+        builder: (context, _) => _Ai01DetailsDialog(
+          snapshot: _viewModel.snapshot,
+          phase: _viewModel.phase,
+          failureKind: _viewModel.failureKind,
+          onRetry: _viewModel.refresh,
+        ),
+      ),
+    );
+    if (mounted) _detailsOpenerFocus.requestFocus();
+  }
+
+  Future<void> _showOwnedDialog({
+    required WidgetBuilder builder,
+    required AnimationStyle animationStyle,
+    bool useSafeArea = true,
+  }) async {
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final route = DialogRoute<void>(
+      context: context,
+      builder: builder,
+      themes: InheritedTheme.capture(from: context, to: navigator.context),
+      useSafeArea: useSafeArea,
+      animationStyle: animationStyle,
+      traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop,
+    );
+    _ownedDialogs.add(route);
+    try {
+      await navigator.push(route);
+    } finally {
+      _ownedDialogs.remove(route);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final content = AnimatedBuilder(
+      animation: _viewModel,
+      builder: (context, _) => _buildState(context),
+    );
+    if (widget.embedded) return content;
+
     return DecoratedBox(
       decoration: BoxDecoration(color: LumenisTheme.of(context).canvas),
-      child: Stack(
-        children: [
-          SafeArea(
-            child: AnimatedBuilder(
-              animation: _viewModel,
-              builder: (context, _) => _buildState(context),
-            ),
-          ),
-        ],
-      ),
+      child: Stack(children: [SafeArea(child: content)]),
     );
   }
 
@@ -97,6 +219,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
       phase: _viewModel.phase,
       failureKind: _viewModel.failureKind,
       onRetry: _viewModel.refresh,
+      embedded: widget.embedded,
     );
   }
 
@@ -106,131 +229,78 @@ class _Ai01ScreenState extends State<Ai01Screen> {
     required Ai01LoadPhase phase,
     required Ai01FailureKind? failureKind,
     required VoidCallback onRetry,
+    required bool embedded,
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final wide = width >= 1100;
-        final phone = width < 768;
-        final inset = phone ? 18.0 : 36.0;
+        final phone = constraints.maxWidth < 600;
+        final inset = phone ? 18.0 : 28.0;
 
-        return Align(
-          alignment: Alignment.topCenter,
+        final workbench = Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1440),
-            child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(inset, phone ? 18 : 30, inset, 40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            constraints: const BoxConstraints(maxWidth: 820),
+            child: Column(
+              key: embedded ? const ValueKey('ai01-embedded-content') : null,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (!embedded) ...[
                   _PageHeading(compact: phone),
-                  SizedBox(height: phone ? 12 : 20),
-                  if (wide)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 7,
-                          child: _ComposerPane(
-                            key: _composerKey,
-                            controller: _draftController,
-                            focusNode: _draftFocus,
-                            blockedReason: context.lumenisL10n.text(
-                              'ai01.blocked_reason',
-                            ),
-                            suggestions: snapshot?.suggestions ?? const [],
-                            onChooseSuggestion: _chooseSuggestion,
-                            onExpand: _openFocusedEditor,
-                            compact: false,
-                          ),
-                        ),
-                        const SizedBox(width: 18),
-                        Expanded(
-                          flex: 5,
-                          child: snapshot == null
-                              ? _ServiceReadStatus(
-                                  phase: phase,
-                                  failureKind: failureKind,
-                                  onRetry: onRetry,
-                                )
-                              : _EvidenceInspector(
-                                  snapshot: snapshot,
-                                  showRuntimeNotice: !snapshot.isBound,
-                                ),
-                        ),
-                      ],
-                    )
-                  else ...[
-                    _ComposerPane(
-                      key: _composerKey,
-                      controller: _draftController,
-                      focusNode: _draftFocus,
-                      blockedReason: context.lumenisL10n.text(
-                        'ai01.blocked_reason',
-                      ),
-                      suggestions: snapshot?.suggestions ?? const [],
-                      onChooseSuggestion: _chooseSuggestion,
-                      onExpand: _openFocusedEditor,
-                      compact: phone,
-                    ),
-                    if (snapshot == null) ...[
-                      SizedBox(height: phone ? 12 : 18),
-                      _ServiceReadStatus(
-                        phase: phase,
-                        failureKind: failureKind,
-                        onRetry: onRetry,
-                      ),
-                    ] else if (phone)
-                      _MobileEvidenceSections(
-                        snapshot: snapshot,
-                        showRuntimeNotice: !snapshot.isBound,
-                      )
-                    else ...[
-                      const SizedBox(height: 14),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          onPressed: () =>
-                              setState(() => _showInspector = !_showInspector),
-                          icon: Icon(
-                            _showInspector
-                                ? Icons.expand_less
-                                : Icons.account_tree_outlined,
-                          ),
-                          label: Text(
-                            context.lumenisL10n.text(
-                              _showInspector
-                                  ? 'ai01.inspector.hide'
-                                  : 'ai01.inspector.show',
-                            ),
-                          ),
-                        ),
-                      ),
-                      AnimatedSize(
-                        duration:
-                            MediaQuery.maybeOf(context)?.disableAnimations ==
-                                true
-                            ? Duration.zero
-                            : const Duration(milliseconds: 180),
-                        curve: Curves.easeOut,
-                        child: _showInspector
-                            ? Padding(
-                                padding: const EdgeInsets.only(top: 12),
-                                child: _EvidenceInspector(
-                                  snapshot: snapshot,
-                                  showRuntimeNotice: !snapshot.isBound,
-                                ),
-                              )
-                            : const SizedBox.shrink(),
-                      ),
-                    ],
-                  ],
-                  const SizedBox(height: 18),
-                  const _TruthBoundaryNote(),
+                  SizedBox(height: phone ? 18 : 24),
                 ],
-              ),
+                _ComposerPane(
+                  controller: _draftController,
+                  focusNode: _draftFocus,
+                  draftFiles: widget.draftFiles,
+                  scopeLabel: widget.scopeLabel,
+                  blockedReason: context.lumenisL10n.text(
+                    'ai01.blocked_reason',
+                  ),
+                  suggestions: snapshot?.suggestions ?? const [],
+                  onChooseSuggestion: _chooseSuggestion,
+                  onExpand: _openFocusedEditor,
+                  compact: phone,
+                ),
+                if (snapshot == null) ...[
+                  const SizedBox(height: 14),
+                  _ServiceReadStatus(
+                    phase: phase,
+                    failureKind: failureKind,
+                    onRetry: onRetry,
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const ValueKey('ai01-details-open'),
+                    focusNode: _detailsOpenerFocus,
+                    onPressed: _openDetails,
+                    icon: const LumenisIcon(
+                      Icons.account_tree_outlined,
+                      size: 18,
+                    ),
+                    label: Text(
+                      context.lumenisL10n.text('ai01.inspector.show'),
+                    ),
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+        );
+        if (embedded) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: workbench,
+          );
+        }
+        return SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(inset, phone ? 18 : 36, inset, 32),
+          child: workbench,
         );
       },
     );
@@ -244,34 +314,19 @@ class _PageHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          context.lumenisL10n.text('ai01.title'),
-          style:
-              (compact
-                      ? Theme.of(context).textTheme.headlineMedium
-                      : Theme.of(context).textTheme.displaySmall)
-                  ?.copyWith(
-                    color: LumenisTheme.of(context).foreground,
-                    fontSize: compact ? 24 : 28,
-                    height: 1.25,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0,
-                  ),
-        ),
-        if (!compact) ...[
-          const SizedBox(height: 6),
-          Text(
-            context.lumenisL10n.text('ai01.subtitle'),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: LumenisTheme.of(context).muted,
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ],
+    return Text(
+      context.lumenisL10n.text('ai01.title'),
+      style:
+          (compact
+                  ? Theme.of(context).textTheme.headlineMedium
+                  : Theme.of(context).textTheme.displaySmall)
+              ?.copyWith(
+                color: LumenisTheme.of(context).foreground,
+                fontSize: compact ? 25 : 30,
+                height: 1.25,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0,
+              ),
     );
   }
 }
@@ -294,7 +349,7 @@ class _RuntimeUnboundNotice extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
+          LumenisIcon(
             Icons.sync_problem,
             color: LumenisTheme.of(context).caution,
             size: 20,
@@ -315,37 +370,43 @@ class _RuntimeUnboundNotice extends StatelessWidget {
 }
 
 class _ContextBoundary extends StatelessWidget {
-  const _ContextBoundary();
+  const _ContextBoundary({this.scopeLabel});
+
+  final String? scopeLabel;
 
   @override
   Widget build(BuildContext context) {
-    final label = context.lumenisL10n.text('ai01.context.label');
-    return Semantics(
-      container: true,
-      excludeSemantics: true,
-      liveRegion: true,
-      label: label,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Icon(
-              Icons.lock_outline,
-              color: LumenisTheme.of(context).caution,
-              size: 16,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+    final copy = context.lumenisL10n;
+    final label = scopeLabel ?? copy.text('ai01.context.label');
+    return Tooltip(
+      message: copy.text('ai01.context.detail'),
+      child: Semantics(
+        container: true,
+        excludeSemantics: true,
+        liveRegion: true,
+        label: '$label. ${copy.text('ai01.context.detail')}',
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: LumenisIcon(
+                Icons.public_rounded,
                 color: LumenisTheme.of(context).muted,
+                size: 16,
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: LumenisTheme.of(context).muted,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -355,16 +416,19 @@ class _ComposerPane extends StatelessWidget {
   const _ComposerPane({
     required this.controller,
     required this.focusNode,
+    required this.draftFiles,
+    required this.scopeLabel,
     required this.blockedReason,
     required this.suggestions,
     required this.onChooseSuggestion,
     required this.onExpand,
     required this.compact,
-    super.key,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
+  final Ai01DraftFiles? draftFiles;
+  final String? scopeLabel;
   final String blockedReason;
   final List<Ai01Suggestion> suggestions;
   final ValueChanged<Ai01Suggestion> onChooseSuggestion;
@@ -379,7 +443,7 @@ class _ComposerPane extends StatelessWidget {
     return Container(
       key: const ValueKey('ai01-composer-surface'),
       width: double.infinity,
-      padding: EdgeInsets.all(compact ? 16 : 22),
+      padding: EdgeInsets.all(compact ? 14 : 18),
       decoration: BoxDecoration(
         color: LumenisTheme.of(context).surface,
         borderRadius: BorderRadius.circular(16),
@@ -388,32 +452,6 @@ class _ComposerPane extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            runSpacing: 8,
-            children: [
-              Text(
-                context.lumenisL10n.text('ai01.draft.title'),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              _StatusTag(
-                label: context.lumenisL10n.text('ai01.draft.badge'),
-                color: LumenisTheme.of(context).ai,
-              ),
-              TextButton.icon(
-                key: const ValueKey('ai01-focus-open'),
-                onPressed: onExpand,
-                icon: const Icon(Icons.open_in_full_rounded, size: 17),
-                label: Text(context.lumenisL10n.text('ai01.focus.open')),
-                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
           TextField(
             key: const ValueKey('ai01-task-input'),
             controller: controller,
@@ -421,8 +459,8 @@ class _ComposerPane extends StatelessWidget {
             style: Theme.of(
               context,
             ).textTheme.bodyLarge?.copyWith(fontSize: 16, height: 1.5),
-            minLines: compact ? 4 : 6,
-            maxLines: compact ? 8 : 10,
+            minLines: 3,
+            maxLines: 10,
             maxLength: 4000,
             textInputAction: TextInputAction.newline,
             decoration: InputDecoration(
@@ -437,37 +475,11 @@ class _ComposerPane extends StatelessWidget {
               alignLabelWithHint: true,
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(
-                  color: Theme.of(context).colorScheme.primary,
-                  width: 1.5,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Theme(
-            data: Theme.of(context).copyWith(
-              textButtonTheme: TextButtonThemeData(
-                style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
-              ),
-            ),
-            child: Ai01DraftActions(
-              key: const ValueKey('ai01-draft-actions'),
-              controller: controller,
-              focusNode: focusNode,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            context.lumenisL10n.text('ai01.draft.notice'),
-            style: TextStyle(
-              color: LumenisTheme.of(context).quiet,
-              fontSize: 12,
+              focusedBorder: InputBorder.none,
             ),
           ),
           if (safeSuggestions.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Text(
               context.lumenisL10n.text('ai01.suggestions.title'),
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -498,31 +510,76 @@ class _ComposerPane extends StatelessWidget {
               ],
             ),
           ],
-          const SizedBox(height: 14),
-          Divider(height: 1, color: LumenisTheme.of(context).line),
-          const SizedBox(height: 12),
-          if (compact)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const _ContextBoundary(),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 48,
-                  child: _submitButton(context, blockedReason),
+          const SizedBox(height: 6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    textButtonTheme: TextButtonThemeData(
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(64, 48),
+                      ),
+                    ),
+                  ),
+                  child: Ai01DraftActions(
+                    key: const ValueKey('ai01-draft-actions'),
+                    controller: controller,
+                    focusNode: focusNode,
+                    files: draftFiles,
+                  ),
                 ),
-              ],
-            )
-          else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Expanded(child: _ContextBoundary()),
-                const SizedBox(width: 12),
-                _submitButton(context, blockedReason),
-              ],
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                key: const ValueKey('ai01-focus-open'),
+                tooltip: context.lumenisL10n.text('ai01.focus.open'),
+                onPressed: onExpand,
+                icon: const LumenisIcon(Icons.open_in_full_rounded, size: 18),
+                constraints: const BoxConstraints.tightFor(
+                  width: 48,
+                  height: 48,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            context.lumenisL10n.text('ai01.draft.notice'),
+            style: TextStyle(
+              color: LumenisTheme.of(context).quiet,
+              fontSize: 12,
             ),
+          ),
           const SizedBox(height: 10),
+          Divider(height: 1, color: LumenisTheme.of(context).line),
+          const SizedBox(height: 8),
+          LayoutBuilder(
+            builder: (context, constraints) => SizedBox(
+              width: constraints.maxWidth,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth
+                          .clamp(0.0, 140.0)
+                          .toDouble(),
+                    ),
+                    child: _ContextBoundary(scopeLabel: scopeLabel),
+                  ),
+                  SizedBox(
+                    height: 48,
+                    child: _submitButton(context, blockedReason),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -576,7 +633,7 @@ class _FocusedDraftEditorState extends State<_FocusedDraftEditor> {
                           child: TextButton.icon(
                             key: const ValueKey('ai01-focus-return'),
                             onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(
+                            icon: const LumenisIcon(
                               Icons.arrow_back_rounded,
                               size: 20,
                             ),
@@ -653,11 +710,120 @@ class _FocusedDraftEditorState extends State<_FocusedDraftEditor> {
   }
 }
 
+class _Ai01DetailsDialog extends StatelessWidget {
+  const _Ai01DetailsDialog({
+    required this.snapshot,
+    required this.phase,
+    required this.failureKind,
+    required this.onRetry,
+  });
+
+  final Ai01Snapshot? snapshot;
+  final Ai01LoadPhase phase;
+  final Ai01FailureKind? failureKind;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
+    final theme = LumenisTheme.of(context);
+    final currentSnapshot = snapshot;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final desktop = constraints.maxWidth >= 768;
+        final availableHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : MediaQuery.sizeOf(context).height;
+        final maxHeight = (availableHeight * 0.86)
+            .clamp(160.0, 720.0)
+            .toDouble();
+        return CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.escape): () =>
+                Navigator.of(context).pop(),
+          },
+          child: Dialog(
+            key: const ValueKey('ai01-details-dialog'),
+            alignment: desktop ? Alignment.centerRight : Alignment.bottomCenter,
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: desktop ? 24 : 12,
+              vertical: 12,
+            ),
+            constraints: BoxConstraints(maxWidth: 520, maxHeight: maxHeight),
+            backgroundColor: theme.surface,
+            child: SizedBox(
+              key: const ValueKey('ai01-details-panel'),
+              width: double.infinity,
+              height: maxHeight,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 8, 8, 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            copy.text('ai01.inspector.show'),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(color: theme.foreground),
+                          ),
+                        ),
+                        IconButton(
+                          key: const ValueKey('ai01-details-close'),
+                          tooltip: copy.text('ai01.inspector.hide'),
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const LumenisIcon(
+                            Icons.close_rounded,
+                            size: 20,
+                          ),
+                          constraints: const BoxConstraints.tightFor(
+                            width: 48,
+                            height: 48,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, color: theme.line),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      key: const ValueKey('ai01-details-scroll'),
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (currentSnapshot == null)
+                            _ServiceReadStatus(
+                              phase: phase,
+                              failureKind: failureKind,
+                              onRetry: onRetry,
+                            )
+                          else
+                            _EvidenceInspector(
+                              snapshot: currentSnapshot,
+                              showRuntimeNotice: !currentSnapshot.isBound,
+                            ),
+                          const SizedBox(height: 18),
+                          const _TruthBoundaryNote(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 Widget _submitButton(BuildContext context, String blockedReason) => Tooltip(
   message: blockedReason,
   child: FilledButton.icon(
     onPressed: null,
-    icon: const Icon(Icons.arrow_forward, size: 18),
+    icon: const LumenisIcon(Icons.arrow_forward, size: 18),
     label: Text(context.lumenisL10n.text('ai01.submit')),
     style: FilledButton.styleFrom(shape: const StadiumBorder()),
   ),
@@ -674,30 +840,25 @@ class _EvidenceInspector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SurfacePanel(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (showRuntimeNotice) ...[
-            const _RuntimeUnboundNotice(),
-            const SizedBox(height: 18),
-          ],
-          _EvidencePanel(contained: true),
-          Divider(height: 30, color: LumenisTheme.of(context).line),
-          _ProviderPanel(providers: snapshot.providers, contained: true),
-          Divider(height: 30, color: LumenisTheme.of(context).line),
-          _ExecutionPanel(contained: true),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (showRuntimeNotice) ...[
+          const _RuntimeUnboundNotice(),
+          const SizedBox(height: 18),
         ],
-      ),
+        const _EvidencePanel(),
+        Divider(height: 30, color: LumenisTheme.of(context).line),
+        _ProviderPanel(providers: snapshot.providers),
+        Divider(height: 30, color: LumenisTheme.of(context).line),
+        const _ExecutionPanel(),
+      ],
     );
   }
 }
 
 class _EvidencePanel extends StatelessWidget {
-  const _EvidencePanel({this.contained = false});
-
-  final bool contained;
+  const _EvidencePanel();
 
   @override
   Widget build(BuildContext context) {
@@ -716,7 +877,7 @@ class _EvidencePanel extends StatelessWidget {
         const _TraceBoundary(),
       ],
     );
-    return contained ? content : _SurfacePanel(child: content);
+    return content;
   }
 }
 
@@ -740,10 +901,9 @@ class _TraceBoundary extends StatelessWidget {
 }
 
 class _ProviderPanel extends StatelessWidget {
-  const _ProviderPanel({required this.providers, this.contained = false});
+  const _ProviderPanel({required this.providers});
 
   final List<Ai01ProviderState> providers;
-  final bool contained;
 
   @override
   Widget build(BuildContext context) {
@@ -764,7 +924,7 @@ class _ProviderPanel extends StatelessWidget {
           ],
       ],
     );
-    return contained ? content : _SurfacePanel(child: content);
+    return content;
   }
 }
 
@@ -815,9 +975,7 @@ class _ProviderRow extends StatelessWidget {
 }
 
 class _ExecutionPanel extends StatelessWidget {
-  const _ExecutionPanel({this.contained = false});
-
-  final bool contained;
+  const _ExecutionPanel();
 
   @override
   Widget build(BuildContext context) {
@@ -834,87 +992,7 @@ class _ExecutionPanel extends StatelessWidget {
         ),
       ],
     );
-    return contained ? content : _SurfacePanel(child: content);
-  }
-}
-
-class _MobileEvidenceSections extends StatelessWidget {
-  const _MobileEvidenceSections({
-    required this.snapshot,
-    required this.showRuntimeNotice,
-  });
-
-  final Ai01Snapshot snapshot;
-  final bool showRuntimeNotice;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const SizedBox(height: 12),
-        _DisclosureSection(
-          title: context.lumenisL10n.text('ai01.disclosure.evidence'),
-          icon: Icons.account_tree_outlined,
-          child: _EvidencePanel(contained: true),
-        ),
-        const SizedBox(height: 8),
-        _DisclosureSection(
-          title: context.lumenisL10n.text('ai01.disclosure.providers'),
-          icon: Icons.hub_outlined,
-          child: Column(
-            children: [
-              if (showRuntimeNotice) ...[
-                const _RuntimeUnboundNotice(),
-                const SizedBox(height: 8),
-              ],
-              _ProviderPanel(providers: snapshot.providers, contained: true),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        _DisclosureSection(
-          title: context.lumenisL10n.text('ai01.disclosure.executions'),
-          icon: Icons.history,
-          child: _ExecutionPanel(contained: true),
-        ),
-      ],
-    );
-  }
-}
-
-class _DisclosureSection extends StatelessWidget {
-  const _DisclosureSection({
-    required this.title,
-    required this.icon,
-    required this.child,
-  });
-
-  final String title;
-  final IconData icon;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-      child: ExpansionTile(
-        leading: Icon(icon, color: LumenisTheme.of(context).shared),
-        title: Text(title),
-        tilePadding: const EdgeInsets.symmetric(horizontal: 12),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        collapsedShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: BorderSide(color: LumenisTheme.of(context).line),
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: BorderSide(color: LumenisTheme.of(context).line),
-        ),
-        backgroundColor: LumenisTheme.of(context).surface,
-        collapsedBackgroundColor: LumenisTheme.of(context).surface,
-        children: [child],
-      ),
-    );
+    return content;
   }
 }
 
@@ -950,26 +1028,6 @@ class _PanelEyebrow extends StatelessWidget {
   }
 }
 
-class _StatusTag extends StatelessWidget {
-  const _StatusTag({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-        borderRadius: BorderRadius.circular(99),
-      ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 11)),
-    );
-  }
-}
-
 class _StateDot extends StatelessWidget {
   const _StateDot({required this.color});
 
@@ -981,30 +1039,6 @@ class _StateDot extends StatelessWidget {
       width: 8,
       height: 8,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-}
-
-class _SurfacePanel extends StatelessWidget {
-  const _SurfacePanel({
-    required this.child,
-    this.padding = const EdgeInsets.all(16),
-  });
-
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: padding,
-      decoration: BoxDecoration(
-        color: LumenisTheme.of(context).surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: LumenisTheme.of(context).line),
-      ),
-      child: child,
     );
   }
 }
@@ -1043,11 +1077,11 @@ class _ServiceReadStatus extends StatelessWidget {
       _ => null,
     };
 
-    return _SurfacePanel(
-      padding: const EdgeInsets.all(14),
-      child: Semantics(
-        container: true,
-        liveRegion: true,
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1063,7 +1097,7 @@ class _ServiceReadStatus extends StatelessWidget {
                     ),
                   )
                 else
-                  Icon(
+                  LumenisIcon(
                     Icons.info_outline,
                     size: 18,
                     color: LumenisTheme.of(context).caution,
@@ -1090,19 +1124,14 @@ class _ServiceReadStatus extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              copy.text('ai01.local.available'),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: LumenisTheme.of(context).muted,
-              ),
-            ),
             if (failed) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               TextButton.icon(
+                key: const ValueKey('ai01-read-retry'),
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh, size: 18),
+                icon: const LumenisIcon(Icons.refresh, size: 18),
                 label: Text(copy.text('ai01.retry')),
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
               ),
             ],
           ],

@@ -9,9 +9,12 @@ v1.1 变更（P0 修复）：
 - P1-6：trend_notes 与 _get_notes_series 去重，trend_notes 委托 _get_notes_series
 - P1-8：动态列名/表名使用白名单校验，裸 except 改为 except Exception + log warning
 """
+import hashlib
+import json
+import re
 import sqlite3
 import logging
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from flask import Blueprint, request, jsonify
 from lumenis.shared.database import get_repository, main_db_path
 
@@ -22,6 +25,184 @@ logger = logging.getLogger(__name__)
 trend_bp = Blueprint('trend', __name__)
 
 DB_PATH = main_db_path()
+
+
+def read_cth_temporal_metrics(connection, *, start_date, end_date, authorize):
+    """Count existing scoped Canonical observations by their native publication day.
+
+    The caller supplies the current SYSTEM scope authorizer. Scope Evidence
+    verifies source identity and lineage, not the correctness of stored analysis
+    labels. This domain read emits neither an approval nor new Evidence.
+    """
+    from canonical_data import list_scoped_canonical
+    from canonical_metrics import RISK_KNOWN, SENTIMENT_KNOWN, risk_count, sentiment_count
+
+    def exact_date(value):
+        if type(value) is not str or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            raise ValueError("window dates must be exact ISO calendar dates")
+        return date.fromisoformat(value)
+
+    start, end = exact_date(start_date), exact_date(end_date)
+    if end < start or (end - start).days >= 90 or end > date.today():
+        raise ValueError("window must contain 1 to 90 elapsed calendar days")
+    if not callable(authorize):
+        raise PermissionError("current scope authorization is required")
+
+    def current_binding():
+        binding = authorize()
+        if not isinstance(binding, dict) or any(binding.get(key) is not True for key in (
+            "applied", "read_allowed", "scope_verified",
+        )) or (binding.get("contract"), binding.get("product_id"), binding.get("domain_id")) != (
+            "lumenis.scope-read-binding.v1", "CTH", "CTH",
+        ):
+            raise PermissionError("CTH scope read is not authorized")
+        mode, subject = binding.get("canonical_scope"), binding.get("subject_id")
+        policy, actor_scope = binding.get("policy"), binding.get("actor_scope")
+        if (policy, actor_scope) not in {
+            ("actor-exact-scope-v1", "authenticated"),
+            ("local-workspace-read-v1", "anonymous_read"),
+        }:
+            raise PermissionError("CTH scope read policy is invalid")
+        if mode == "GLOBAL_ALL" and subject is None:
+            pass
+        elif mode == "FOCUS" and type(subject) is str and subject and subject == subject.strip():
+            pass
+        else:
+            raise PermissionError("CTH read scope is invalid")
+        granted = mode == "GLOBAL_ALL" and policy == "actor-exact-scope-v1"
+        if binding.get("global_all_granted") is not granted:
+            raise PermissionError("CTH global grant conflicts with the read scope")
+        # Freeze the receipt before a second callback can mutate its object.
+        return json.loads(json.dumps(binding, sort_keys=True, allow_nan=False))
+
+    binding = current_binding()
+    window = {
+        "start_date": start_date, "end_date": end_date,
+        "time_basis": "native_publication_calendar_day",
+        "unit": "canonical_record_count", "timezone_conversion": "none",
+    }
+    recipe = "CTH_NATIVE_PUBLICATION_COUNTS_V1"
+    dates = [start + timedelta(days=offset) for offset in range((end - start).days + 1)]
+    keys = ("total", "negative", "high", "critical")
+
+    def unavailable(code):
+        point = {key: {"value": None, "observed_count": None, "state": "error"} for key in keys}
+        return {
+            "state": "error", "code": code, "source": "canonical_data", "window": window,
+            "recipe": recipe,
+            "binding": binding, "coverage": "NOT_VERIFIED", "source_freshness": "UNKNOWN",
+            "days": [{"date": day.isoformat(), **point} for day in dates], "totals": point,
+            "contributions": [], "snapshot_sha256": None,
+        }
+
+    try:
+        snapshot = list_scoped_canonical(
+            connection, product_id="CTH", subject_id=binding["subject_id"],
+            limit=100, source_level=True,
+        )
+    except Exception:  # Canonical dependency failure is not an empty observation set.
+        if current_binding() != binding:
+            raise PermissionError("CTH scope changed during the read")
+        return unavailable("CANONICAL_READ_UNAVAILABLE")
+    if current_binding() != binding:
+        raise PermissionError("CTH scope changed during the read")
+
+    if not isinstance(snapshot, dict) or type(snapshot.get("records")) is not list:
+        return unavailable("CANONICAL_READ_INVALID")
+    count_keys = ("candidate_count", "scanned_count", "rejected_count", "returned_count", "limit")
+    if (any(type(snapshot.get(key)) is not int or snapshot[key] < 0 for key in count_keys)
+            or type(snapshot.get("truncated")) is not bool
+            or not 1 <= snapshot["limit"] <= 100
+            or snapshot["returned_count"] != len(snapshot["records"])
+            or snapshot["scanned_count"] != snapshot["returned_count"] + snapshot["rejected_count"]
+            or snapshot["scanned_count"] > min(snapshot["candidate_count"], snapshot["limit"])
+            or snapshot["truncated"] != (snapshot["candidate_count"] > snapshot["scanned_count"])):
+        return unavailable("CANONICAL_READ_INVALID")
+
+    grouped = {day.isoformat(): [] for day in dates}
+    contributions, unknown_time, outside_window = [], 0, 0
+    identities = set()
+    for record in snapshot["records"]:
+        if (not isinstance(record, dict) or record.get("product_id") != "CTH"
+                or record.get("domain_id") != "cth" or record.get("scope_status") != "VERIFIED"
+                or record.get("brand_focus_id") not in (None, "")
+                or not isinstance(record.get("scope_evidence"), dict)
+                or type(record.get("canonical_id")) is not str or not record["canonical_id"]
+                or record["canonical_id"] in identities
+                or type(record.get("subject_id")) is not str or not record["subject_id"]
+                or type(record.get("source_id")) is not str or not record["source_id"]
+                or any(record.get(key) is not None and type(record[key]) is not str
+                       for key in ("sentiment", "risk_level", "quality_status"))
+                or (binding["canonical_scope"] == "FOCUS" and record.get("subject_id") != binding["subject_id"])):
+            return unavailable("CANONICAL_READ_INVALID")
+        identities.add(record["canonical_id"])
+        publication = record.get("publish_datetime")
+        native_day = None
+        if type(publication) is str and re.match(r"^\d{4}-\d{2}-\d{2}(?:$|[T ])", publication):
+            try:
+                native_day = (date.fromisoformat(publication) if len(publication) == 10
+                              else datetime.fromisoformat(publication).date())
+            except ValueError:
+                pass
+        if native_day is None:
+            unknown_time += 1
+        elif start <= native_day <= end:
+            grouped[native_day.isoformat()].append(record)
+        else:
+            outside_window += 1
+        contributions.append({
+            "canonical_id": record["canonical_id"], "source_id": record.get("source_id"),
+            "publish_datetime": publication, "captured_at": record.get("captured_at"),
+            "publication_day": native_day.isoformat() if native_day else None,
+            "scope_evidence": record["scope_evidence"],
+        })
+
+    incomplete = bool(snapshot["truncated"] or snapshot["rejected_count"] or unknown_time)
+
+    def counts(records):
+        sentiment, risk = sentiment_count(records), risk_count(records)
+        observed = {"total": len(records), "negative": sentiment["negative"],
+                    "high": risk["high"], "critical": risk["critical"]}
+        unknown = {
+            "total": sum(record.get("quality_status") != "ok" for record in records),
+            "negative": sum(record.get("quality_status") != "ok" or record.get("sentiment") not in SENTIMENT_KNOWN
+                            for record in records),
+            "high": sum(record.get("quality_status") != "ok" or record.get("risk_level") not in RISK_KNOWN
+                        for record in records),
+        }
+        unknown["critical"] = unknown["high"]
+        return {key: {
+            "value": observed[key] if records and not incomplete and not unknown[key] else None,
+            "observed_count": observed[key], "unknown_count": unknown[key],
+            "state": "partial" if incomplete or unknown[key] else "ready" if records else "notcollected",
+        } for key in keys}
+
+    in_window = [record for records in grouped.values() for record in records]
+    days = [{"date": day, **counts(records)} for day, records in grouped.items()]
+    result = {
+        "state": "partial" if incomplete or (in_window and any(
+            point[key]["state"] != "ready" for point in days for key in keys
+        )) else "ready" if in_window else "notcollected",
+        "source": "canonical_data", "window": window, "binding": binding, "recipe": recipe,
+        "metric_definitions": {
+            "total": "returned verified Canonical records with a native publication day",
+            "negative": "FN-SENTIMENT-COUNT:v1 negative stored labels",
+            "high": "FN-RISK-COUNT:v1 high stored labels; excludes critical",
+            "critical": "FN-RISK-COUNT:v1 critical stored labels",
+        },
+        "coverage": "NOT_VERIFIED", "source_freshness": "UNKNOWN",
+        "classification_provenance": "stored_canonical_labels; analysis_correctness_not_verified",
+        "days": days,
+        "totals": counts(in_window), "contributions": contributions,
+        "unknown_publication_count": unknown_time, "outside_window_count": outside_window,
+        "read": {key: snapshot[key] for key in (*count_keys, "truncated")},
+    }
+    # A deterministic derived snapshot pin, not writer-authenticated Evidence.
+    material = {"recipe": recipe, "window": window, "records": snapshot["records"], "read": result["read"]}
+    result["snapshot_sha256"] = hashlib.sha256(json.dumps(
+        material, ensure_ascii=False, sort_keys=True, allow_nan=False,
+    ).encode("utf-8")).hexdigest()
+    return result
 
 # ============================================================
 # 白名单：动态列名 / 表名（P1-8：防 SQL 注入）

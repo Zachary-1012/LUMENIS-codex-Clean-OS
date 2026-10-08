@@ -12,6 +12,8 @@ import 'package:lumenis_app/features/ai04/ai04_screen.dart';
 import 'package:lumenis_app/features/bmp01/bmp01_screen.dart';
 import 'package:lumenis_app/features/cth/cth01/cth01_screen.dart';
 import 'package:lumenis_app/features/cth/cth02/cth02_screen.dart';
+import 'package:lumenis_app/features/shared/sh01/sh01_screen.dart';
+import 'package:lumenis_app/features/shared/sh02/sh02_screen.dart';
 import 'package:lumenis_app/features/system/sys05/sys05_appearance_controller.dart';
 import 'package:lumenis_app/features/system/sys06/sys06_screen.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
@@ -19,6 +21,29 @@ import 'package:lumenis_app/navigation/lumenis_router.dart';
 import 'package:lumenis_app/navigation/lumenis_workspace_routes.dart';
 
 void main() {
+  testWidgets('root and workspace entry open the product home', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 960));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final router = createLumenisRouter(
+      client: _RouterClient(),
+      onLocaleChanged: (_) {},
+      initialLocation: '/',
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(_app(router));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/workspace/ACC-03');
+    expect(find.byType(Acc03Screen), findsOneWidget);
+    expect(find.byType(Cth01Screen), findsNothing);
+
+    router.go('/workspace');
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/workspace/ACC-03');
+    expect(find.byType(Acc03Screen), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   test('workflow regrouping preserves every legacy capability deep link', () {
     final grouped = LumenisWorkspaceRoutes.workflowsByGroup.values
         .expand((workflows) => workflows.values)
@@ -174,10 +199,13 @@ void main() {
       addTearDown(router.dispose);
       await tester.pumpWidget(_app(router));
       await tester.pumpAndSettle();
-      expect(find.text('访问受限'), findsOneWidget);
-      expect(find.text('查看范围访问受限'), findsOneWidget);
       expect(find.text('全局查看范围（未命名）'), findsNothing);
-      final aiEntry = find.widgetWithText(OutlinedButton, '继续').last;
+      await tester.tap(find.byKey(const ValueKey('acc03-entry-details')));
+      await tester.pumpAndSettle();
+      expect(find.text('访问受限'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('acc03-entry-details-close')));
+      await tester.pumpAndSettle();
+      final aiEntry = find.byKey(const ValueKey('acc03-start-task'));
       await tester.ensureVisible(aiEntry);
       await tester.tap(aiEntry);
       await tester.pumpAndSettle();
@@ -241,9 +269,11 @@ void main() {
       expect(find.byType(Acc03Screen), findsOneWidget);
 
       final destinations = [
-        ('/workspace/CTH-01', Cth01Screen),
-        ('/workspace/BMP-01', Bmp01Screen),
-        ('/workspace/AI-01', Ai01Screen),
+        ('acc03-destination-CTH-01', '/workspace/CTH-01', Cth01Screen),
+        ('acc03-destination-BMP-01', '/workspace/BMP-01', Bmp01Screen),
+        ('acc03-destination-SH-02', '/workspace/SH-02', Sh02Screen),
+        ('acc03-destination-SH-01', '/workspace/SH-01', Sh01Screen),
+        ('acc03-start-task', '/workspace/AI-01', Ai01Screen),
       ];
       for (var index = 0; index < destinations.length; index++) {
         if (index > 0) {
@@ -254,15 +284,15 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.byType(Acc03Screen), findsOneWidget);
         }
-        final open = find.widgetWithText(OutlinedButton, '继续').at(index);
+        final open = find.byKey(ValueKey(destinations[index].$1));
         await tester.ensureVisible(open);
         await tester.tap(open);
         await tester.pumpAndSettle();
         expect(
           router.routeInformationProvider.value.uri.path,
-          destinations[index].$1,
+          destinations[index].$2,
         );
-        expect(find.byType(destinations[index].$2), findsOneWidget);
+        expect(find.byType(destinations[index].$3), findsOneWidget);
         expect(tester.takeException(), isNull);
       }
     });

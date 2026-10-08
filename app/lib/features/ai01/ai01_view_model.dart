@@ -27,8 +27,7 @@ class Ai01ViewModel extends ChangeNotifier {
   String? get failureMessage => _failureMessage;
   String get draft => _draft;
 
-  String get submitBlockedReason =>
-      '当前没有服务端确认的 Subject 或 Brand Lens，暂不提交 AI 意图。';
+  String get submitBlockedReason => 'AI 任务提交能力尚未接入；当前草稿可以编辑，但不会发送。';
 
   Future<void> refresh() async {
     if (_disposed) return;
@@ -101,9 +100,9 @@ class Ai01ViewModel extends ChangeNotifier {
   }
 
   static String _failureText(Ai01FailureKind kind) => switch (kind) {
-    Ai01FailureKind.authentication => '需要登录后才能读取 AI-01 实时状态。',
-    Ai01FailureKind.permissionDenied => '当前账号无权读取 AI-01 实时状态。',
-    Ai01FailureKind.offline => '暂时无法连接 Production Core。',
+    Ai01FailureKind.authentication => '服务连接授权已失效，无法读取 AI-01 实时状态。',
+    Ai01FailureKind.permissionDenied => '此操作不可访问 AI-01 实时状态。',
+    Ai01FailureKind.offline => '暂时无法连接 AI 服务。',
     Ai01FailureKind.server => 'AI-01 实时数据读取失败。',
   };
 }

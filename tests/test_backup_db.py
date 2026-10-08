@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
-"""T-P0A-2 scripts/backup_db.py 备份完整性校验规范单测。
-
-- backup API 在线一致性备份 + quick_check 校验
-- 校验失败时删除不可用备份（不产生假备份）
-- 锁定类异常才 fallback 文件拷贝（WAL 下拷贝可能不一致）
-"""
+"""Isolated contracts for the backup CLI adapter and business validation."""
 import os
 import sqlite3
 import sys
@@ -65,8 +60,10 @@ def test_backup_database_produces_verified_backup(tmp_path, monkeypatch):
     _make_db(src)
     monkeypatch.setattr(backup_db, 'DB_PATH', src)
     monkeypatch.setattr(backup_db, 'BACKUP_DIR', str(tmp_path / 'backups'))
+    monkeypatch.setenv('ZBC_DB_PATH', src)
     out = backup_db.backup_database('t1.db')
     assert out is not None
+    assert out == str(tmp_path / 'backups' / 't1.db')
     assert os.path.exists(out)
     v = backup_db.verify_backup(out)
     assert v['ok'] is True
@@ -79,9 +76,44 @@ def test_backup_corrupt_source_no_fake_backup(tmp_path, monkeypatch):
         f.write('not a real sqlite db at all ..........')
     monkeypatch.setattr(backup_db, 'DB_PATH', src)
     monkeypatch.setattr(backup_db, 'BACKUP_DIR', str(tmp_path / 'backups'))
+    monkeypatch.setenv('ZBC_DB_PATH', src)
     out = backup_db.backup_database('t2.db')
-    # 可能返回 None 或产生一个校验失败的备份被删除
-    if out is not None:
-        assert not os.path.exists(out), '校验失败的备份应被删除'
-    else:
-        assert True
+    assert out is None
+    assert not (tmp_path / 'backups' / 't2.db').exists()
+
+
+def test_backup_uses_call_time_db_path(tmp_path, monkeypatch):
+    stale = str(tmp_path / 'stale.db')
+    current = str(tmp_path / 'current.db')
+    with open(stale, 'w', encoding='utf-8') as f:
+        f.write('not the current database')
+    _make_db(current)
+
+    # The compatibility constants remain for the untouched legacy restore
+    # function, but backup source and destination come from the current owner.
+    monkeypatch.setattr(backup_db, 'DB_PATH', stale)
+    monkeypatch.setattr(backup_db, 'BACKUP_DIR', str(tmp_path / 'stale-backups'))
+    monkeypatch.setenv('ZBC_DB_PATH', current)
+
+    out = backup_db.backup_database('call-time.db')
+
+    assert out == str(tmp_path / 'backups' / 'call-time.db')
+    assert backup_db.verify_backup(out)['ok'] is True
+    assert not (tmp_path / 'stale-backups' / 'call-time.db').exists()
+
+
+def test_locked_backup_api_failure_never_falls_back_to_raw_copy(tmp_path, monkeypatch):
+    src = str(tmp_path / 'monitor.db')
+    _make_db(src)
+    backup_dir = tmp_path / 'backups'
+    monkeypatch.setattr(backup_db, 'DB_PATH', src)
+    monkeypatch.setattr(backup_db, 'BACKUP_DIR', str(backup_dir))
+    monkeypatch.setenv('ZBC_DB_PATH', src)
+
+    def fail_locked(_backup_name=None):
+        raise sqlite3.OperationalError('database is locked')
+
+    monkeypatch.setattr(backup_db.migrations, 'backup_database', fail_locked)
+
+    assert backup_db.backup_database('locked.db') is None
+    assert not (backup_dir / 'locked.db').exists()

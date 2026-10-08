@@ -1,16 +1,18 @@
-"""Report-only held-out evaluation for an exact locally trained AI Gateway candidate.
+"""Held-out evaluation and scoped capture for an exact owned Gateway candidate.
 
-Inference is supplied by an already loaded local runtime. This module owns no
-provider, model loader, persistence, business verdict, or promotion path.
+Inference is supplied by an already loaded local runtime. Derived reports use
+the existing Evidence owner; no separate store, provider, model loader,
+business verdict, or promotion path is created here.
 """
 from __future__ import annotations
 
 import hashlib
 import json
 import re
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Mapping
+from typing import Any, Callable, Mapping
 
 from . import owned_training
 
@@ -38,6 +40,716 @@ BUSINESS_REVIEW_RUBRIC = (
     ("PERMISSION_AND_RIGHTS", "Does it stay within the approved scope and avoid unsupported rights or external effects?"),
     ("LIMITS_AND_RECOVERY", "Are material uncertainty, stop conditions, and failure or recovery needs explicit?"),
 )
+
+_EVALUATION_CAPTURE_VERSION = "owned-evaluation-packet:v1"
+_EVALUATION_CAPTURE_RESOURCE = "owned_evaluation_capture:v1:"
+_EVALUATION_FEATURE = "OWNED_MODEL_EVALUATION_PACKET"
+_EVALUATION_REF = re.compile(r"^app_evidence_records:([1-9][0-9]*)$")
+_EVALUATION_UUID = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+)
+_EVALUATION_PACKET_FIELDS = frozenset({
+    "evaluation_status", "candidate_status", "business_acceptance",
+    "runtime_verification", "generation_config", "promotion_status",
+    "candidate_identity", "candidate_identity_sha256", "heldout_case_count",
+    "completed_final_count", "business_review_rubric", "cases",
+})
+_EVALUATION_CASE_FIELDS = frozenset({
+    "case_id", "domain_id", "scope", "source_evidence_refs", "heldout_origin",
+    "prompt_sha256", "completion_state", "final_text", "raw_output_sha256",
+    "citation_state", "termination_token", "cited_source_refs",
+    "unresolved_citation_refs", "business_review",
+})
+_CANDIDATE_IDENTITY_FIELDS = frozenset({
+    *_STATUS_IDENTITY, "execution_state", "candidate_status",
+    "training_status_sha256", "adapter_sha256", "adapter_config_sha256",
+})
+_COMPLETION_STATES = frozenset({
+    "COMPLETED_FINAL", "OUTPUT_MISSING",
+    "TERMINATION_TOKEN_UNSPECIFIED_OR_UNSUPPORTED",
+    "FINAL_CHANNEL_PREFILL_METADATA_INVALID", "GENERATION_NOT_COMPLETE",
+    "CONFIGURED_TERMINATION_MISSING_OR_TRUNCATED", "FINAL_CHANNEL_MISSING",
+    "FINAL_CHANNEL_OR_PREFILL_MISSING", "FINAL_CHANNEL_EMPTY_OR_INVALID",
+})
+
+
+def _evaluation_json(value: Any) -> str:
+    """Serialize evaluator data without lossy key coercion or non-finite values."""
+    def json_types(item: Any) -> bool:
+        if item is None or type(item) in (str, bool, int):
+            return True
+        if type(item) is float:
+            return item == item and item not in (float("inf"), float("-inf"))
+        if type(item) is list:
+            return all(json_types(child) for child in item)
+        if type(item) is dict:
+            return all(type(key) is str and json_types(child) for key, child in item.items())
+        return False
+
+    if not json_types(value):
+        raise ValueError("OWNED_EVALUATION_JSON_VALUE_INVALID")
+    return json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+        allow_nan=False,
+    )
+
+
+def _evaluation_packet_sha256(packet: Mapping[str, Any]) -> str:
+    return hashlib.sha256(_evaluation_json(packet).encode("utf-8")).hexdigest()
+
+
+def _clean_packet_text(value: Any, *, limit: int = 4096, empty: bool = False) -> bool:
+    return (
+        type(value) is str
+        and (empty or bool(value))
+        and len(value) <= limit
+        and not any(ord(character) < 32 and character not in "\t\n\r" for character in value)
+    )
+
+
+def _capture_scope(expected_scope: Any) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Reuse the existing owned-training scope normalizer, never infer GLOBAL."""
+    from lumenis.shared.learning import training_cases
+
+    try:
+        scope_input = json.loads(_evaluation_json(expected_scope))
+        return training_cases._scope(scope_input)
+    except Exception as exc:
+        raise ValueError("OWNED_EVALUATION_SCOPE_INVALID") from exc
+
+
+def _capture_identity(
+    authenticated_actor: Mapping[str, Any] | None,
+    principal: Any,
+) -> dict[str, Any]:
+    from lumenis.system.security import permission
+
+    if principal is None:
+        actor_id = authenticated_actor.get("id") if isinstance(authenticated_actor, Mapping) else None
+        if type(actor_id) is not int or actor_id <= 0:
+            raise PermissionError("OWNED_EVALUATION_AUTHENTICATED_ACTOR_REQUIRED")
+    else:
+        if authenticated_actor is not None:
+            raise PermissionError("OWNED_EVALUATION_IDENTITY_MIXED")
+        actor_id = None
+    try:
+        identity = permission.owned_training_identity(actor_id=actor_id, principal=principal)
+    except Exception as exc:
+        raise PermissionError("OWNED_EVALUATION_SERVER_IDENTITY_REQUIRED") from exc
+    if identity.get("identity_kind") == "workspace":
+        try:
+            current = permission.resolve_local_workspace_principal(
+                module="owned_model_admission", action="write",
+            )
+        except Exception:
+            current = None
+        if not (
+            type(principal) is permission.LocalWorkspacePrincipal
+            and permission._is_server_local_workspace_principal(principal)
+            and type(current) is permission.LocalWorkspacePrincipal
+            and permission._is_server_local_workspace_principal(current)
+            and current == principal
+        ):
+            raise PermissionError("OWNED_EVALUATION_WORKSPACE_PRINCIPAL_STALE")
+    return identity
+
+
+def _validate_evaluation_packet(
+    packet: Any,
+    *,
+    expected_scope: Mapping[str, Any],
+) -> tuple[dict[str, Any], str]:
+    if type(packet) is not dict or set(packet) != _EVALUATION_PACKET_FIELDS:
+        raise ValueError("OWNED_EVALUATION_PACKET_SCHEMA_INVALID")
+    packet_json = _evaluation_json(packet)
+    frozen_packet = json.loads(packet_json)
+    if type(expected_scope) is not dict:
+        raise ValueError("OWNED_EVALUATION_SCOPE_INVALID")
+    scope, _marker = _capture_scope(expected_scope)
+    scope_domain = "bmp" if scope["domain_id"] == "zbmp" else "cth"
+    scope_label = (
+        "GLOBAL / ALL" if scope["global"]
+        else scope.get("subject_id") or scope.get("brand_focus_id")
+    )
+
+    identity = frozen_packet["candidate_identity"]
+    if type(identity) is not dict or set(identity) != _CANDIDATE_IDENTITY_FIELDS:
+        raise ValueError("OWNED_EVALUATION_CANDIDATE_IDENTITY_INVALID")
+    identity_domain = identity.get("domain_id")
+    if identity_domain == "zbmp":
+        identity_domain = "bmp"
+    if identity_domain != scope_domain:
+        raise ValueError("OWNED_EVALUATION_CANDIDATE_SCOPE_MISMATCH")
+    identity_scopes = identity.get("scopes")
+    if (
+        type(identity_scopes) is not list
+        or not identity_scopes
+        or any(not _clean_packet_text(item, limit=512) for item in identity_scopes)
+        or len(set(identity_scopes)) != len(identity_scopes)
+        or scope_label not in identity_scopes
+    ):
+        raise ValueError("OWNED_EVALUATION_CANDIDATE_SCOPE_MISMATCH")
+    for field in (
+        "model_id", "model_revision", "training_recipe", "base_revision_state",
+        "status", "execution_state", "candidate_status",
+    ):
+        if not _clean_packet_text(identity.get(field), limit=512):
+            raise ValueError("OWNED_EVALUATION_CANDIDATE_IDENTITY_INVALID")
+    for field in (
+        "manifest_sha256", "train_sha256", "heldout_sha256", "training_status_sha256",
+        "adapter_sha256", "adapter_config_sha256",
+    ):
+        if type(identity.get(field)) is not str or _DIGEST.fullmatch(identity[field]) is None:
+            raise ValueError("OWNED_EVALUATION_CANDIDATE_IDENTITY_INVALID")
+    for field in ("train_case_count", "heldout_case_count"):
+        if type(identity.get(field)) is not int or identity[field] < 1:
+            raise ValueError("OWNED_EVALUATION_CANDIDATE_IDENTITY_INVALID")
+    if (identity["execution_state"], identity["candidate_status"]) != (
+        "TRAINED_NOT_EVALUATED", "NOT_EVALUATED",
+    ):
+        raise ValueError("OWNED_EVALUATION_CANDIDATE_STATUS_CONTRADICTORY")
+    candidate_identity_sha256 = hashlib.sha256(json.dumps(
+        identity, sort_keys=True, separators=(",", ":"), allow_nan=False,
+    ).encode("utf-8")).hexdigest()
+    if frozen_packet.get("candidate_identity_sha256") != candidate_identity_sha256:
+        raise ValueError("OWNED_EVALUATION_CANDIDATE_IDENTITY_HASH_MISMATCH")
+
+    generation = frozen_packet["generation_config"]
+    accepted_terminators = sorted(_TERMINATORS)
+    if (
+        type(generation) is not dict
+        or set(generation) != {"max_new_tokens", "accepted_termination_tokens"}
+        or type(generation.get("max_new_tokens")) is not int
+        or not 1 <= generation["max_new_tokens"] <= 4096
+        or generation.get("accepted_termination_tokens") != accepted_terminators
+    ):
+        raise ValueError("OWNED_EVALUATION_GENERATION_CONFIG_INVALID")
+    expected_rubric = [
+        {"criterion": key, "question": question}
+        for key, question in BUSINESS_REVIEW_RUBRIC
+    ]
+    if frozen_packet.get("business_review_rubric") != expected_rubric:
+        raise ValueError("OWNED_EVALUATION_REVIEW_RUBRIC_INVALID")
+    if (
+        frozen_packet.get("candidate_status") != "NOT_ACCEPTED"
+        or frozen_packet.get("business_acceptance") != "HUMAN_REVIEW_REQUIRED"
+        or frozen_packet.get("runtime_verification") != "CALLER_SUPPLIED_NOT_INDEPENDENTLY_VERIFIED"
+        or frozen_packet.get("promotion_status") != "NOT_PROMOTED"
+    ):
+        raise ValueError("OWNED_EVALUATION_ACCEPTANCE_STATUS_CONTRADICTORY")
+
+    cases = frozen_packet.get("cases")
+    if (
+        type(cases) is not list or not cases
+        or type(frozen_packet.get("heldout_case_count")) is not int
+        or frozen_packet["heldout_case_count"] != len(cases)
+        or type(frozen_packet.get("completed_final_count")) is not int
+    ):
+        raise ValueError("OWNED_EVALUATION_CASE_COUNT_INVALID")
+    case_ids: set[str] = set()
+    completed = 0
+    for case in cases:
+        if type(case) is not dict or set(case) != _EVALUATION_CASE_FIELDS:
+            raise ValueError("OWNED_EVALUATION_CASE_SCHEMA_INVALID")
+        case_id = case.get("case_id")
+        if not _clean_packet_text(case_id, limit=512) or case_id in case_ids:
+            raise ValueError("OWNED_EVALUATION_CASE_ID_INVALID")
+        case_ids.add(case_id)
+        if case.get("domain_id") != scope_domain or case.get("scope") != scope_label:
+            raise ValueError("OWNED_EVALUATION_MIXED_OR_MISMATCHED_SCOPE")
+        refs = case.get("source_evidence_refs")
+        if (
+            type(refs) is not list or not refs
+            or any(not _clean_packet_text(ref, limit=1024) for ref in refs)
+            or len(set(refs)) != len(refs)
+        ):
+            raise ValueError("OWNED_EVALUATION_SOURCE_REFS_INVALID")
+        origin = case.get("heldout_origin")
+        if (
+            type(origin) is not dict
+            or set(origin) != {"dataset_role", "dataset_sha256", "record_sha256"}
+            or origin.get("dataset_role") != "heldout"
+            or any(type(origin.get(name)) is not str or _DIGEST.fullmatch(origin[name]) is None
+                   for name in ("dataset_sha256", "record_sha256"))
+            or origin["dataset_sha256"] != identity["heldout_sha256"]
+        ):
+            raise ValueError("OWNED_EVALUATION_HELDOUT_ORIGIN_INVALID")
+        if any(type(case.get(name)) is not str or _DIGEST.fullmatch(case[name]) is None
+               for name in ("prompt_sha256",)):
+            raise ValueError("OWNED_EVALUATION_CASE_HASH_INVALID")
+        state = case.get("completion_state")
+        if not (
+            (type(state) is str and state in _COMPLETION_STATES)
+            or (type(state) is str and re.fullmatch(r"INFERENCE_ERROR:[A-Za-z][A-Za-z0-9_]{0,127}", state))
+        ):
+            raise ValueError("OWNED_EVALUATION_COMPLETION_STATE_INVALID")
+        if type(case.get("final_text")) is not str or not _clean_packet_text(
+            case["final_text"], limit=65536, empty=True,
+        ):
+            raise ValueError("OWNED_EVALUATION_FINAL_TEXT_INVALID")
+        raw_hash = case.get("raw_output_sha256")
+        if type(raw_hash) is not str or (raw_hash and _DIGEST.fullmatch(raw_hash) is None):
+            raise ValueError("OWNED_EVALUATION_RAW_OUTPUT_HASH_INVALID")
+        terminator = case.get("termination_token")
+        if not _clean_packet_text(terminator, limit=128, empty=True):
+            raise ValueError("OWNED_EVALUATION_TERMINATION_METADATA_INVALID")
+        if state == "COMPLETED_FINAL":
+            if not case["final_text"] or not raw_hash or terminator not in _TERMINATORS:
+                raise ValueError("OWNED_EVALUATION_COMPLETED_OUTPUT_INVALID")
+            completed += 1
+        elif case["final_text"]:
+            raise ValueError("OWNED_EVALUATION_INCOMPLETE_OUTPUT_CONTRADICTORY")
+
+        citations = _CITATION.findall(case["final_text"])
+        expected_known = sorted({ref for ref in citations if ref in refs})
+        expected_unknown = sorted({ref for ref in citations if ref not in refs})
+        if (
+            case.get("cited_source_refs") != expected_known
+            or case.get("unresolved_citation_refs") != expected_unknown
+            or case.get("citation_state") != (
+                "PRESENT" if expected_known else "UNRESOLVED" if citations else "MISSING"
+            )
+        ):
+            raise ValueError("OWNED_EVALUATION_CITATION_STATE_INVALID")
+        review = case.get("business_review")
+        expected_criteria = {key: "PENDING" for key, _ in BUSINESS_REVIEW_RUBRIC}
+        if (
+            type(review) is not dict or set(review) != {"state", "criteria"}
+            or review.get("state") != "HUMAN_REVIEW_REQUIRED"
+            or review.get("criteria") != expected_criteria
+        ):
+            raise ValueError("OWNED_EVALUATION_BUSINESS_REVIEW_NOT_PENDING")
+
+    if (
+        frozen_packet["completed_final_count"] != completed
+        or identity["heldout_case_count"] != len(cases)
+    ):
+        raise ValueError("OWNED_EVALUATION_COMPLETED_COUNT_MISMATCH")
+    expected_status = "STRUCTURAL_OUTPUTS_CAPTURED" if completed == len(cases) else "INCOMPLETE_OUTPUTS_RECORDED"
+    if frozen_packet.get("evaluation_status") != expected_status:
+        raise ValueError("OWNED_EVALUATION_STATUS_MISMATCH")
+    return frozen_packet, packet_json
+
+
+def _evaluation_capture_material(
+    *,
+    authenticated_actor: Mapping[str, Any] | None,
+    expected_scope: dict[str, Any],
+    submission_id: str,
+    evaluation_packet: Any,
+    principal: Any,
+) -> dict[str, Any]:
+    if (
+        type(submission_id) is not str
+        or _EVALUATION_UUID.fullmatch(submission_id) is None
+        or str(uuid.UUID(submission_id)) != submission_id
+    ):
+        raise ValueError("OWNED_EVALUATION_SUBMISSION_ID_INVALID")
+    identity = _capture_identity(authenticated_actor, principal)
+    scope, marker = _capture_scope(expected_scope)
+    packet, packet_json = _validate_evaluation_packet(
+        evaluation_packet, expected_scope=scope,
+    )
+    packet_sha256 = hashlib.sha256(packet_json.encode("utf-8")).hexdigest()
+    return {
+        "identity": identity,
+        "principal": principal,
+        "scope": scope,
+        "scope_marker": marker,
+        "submission_id": submission_id,
+        "packet": packet,
+        "packet_json": packet_json,
+        "packet_sha256": packet_sha256,
+        "candidate_identity_sha256": packet["candidate_identity_sha256"],
+    }
+
+
+def _evaluation_capture_resource(material: Mapping[str, Any]) -> str:
+    identity = material["identity"]
+    scope = material["scope"]
+    payload = {
+        "schema_version": 1,
+        "operation": "db_write",
+        "purpose": "derived_owned_evaluation_packet_capture",
+        "candidate_identity_sha256": material["candidate_identity_sha256"],
+        "evaluation_packet_sha256": material["packet_sha256"],
+        "submission_id": material["submission_id"],
+        "actor_id": identity["actor_id"],
+        "caller": identity["caller"],
+        "identity_kind": identity["identity_kind"],
+        "domain_id": scope["domain_id"],
+        "scope": scope,
+    }
+    if identity["identity_kind"] == "workspace":
+        payload["principal_kind"] = identity["principal_kind"]
+        payload["principal_ref"] = identity["principal_ref"]
+    resource_hash = hashlib.sha256(_evaluation_json(payload).encode("utf-8")).hexdigest()
+    return _EVALUATION_CAPTURE_RESOURCE + resource_hash
+
+
+def owned_evaluation_capture_approval_resource(
+    *,
+    authenticated_actor: Mapping[str, Any] | None = None,
+    expected_scope: dict[str, Any],
+    submission_id: str,
+    evaluation_packet: Any,
+    principal: Any = None,
+) -> str:
+    """Build the exact capture-only DB_WRITE resource; this grants no permission."""
+    material = _evaluation_capture_material(
+        authenticated_actor=authenticated_actor,
+        expected_scope=expected_scope,
+        submission_id=submission_id,
+        evaluation_packet=evaluation_packet,
+        principal=principal,
+    )
+    return _evaluation_capture_resource(material)
+
+
+def _authorize_evaluation_capture(
+    gate: Any,
+    material: Mapping[str, Any],
+    resource: str,
+    *,
+    connection: Any = None,
+) -> dict[str, str]:
+    from lumenis.system.security import permission
+
+    if (
+        type(gate) is not permission.PermissionGate
+        or permission.get_permission_gate() is not gate
+        or gate.fail_closed is not True
+        or permission.is_testing_bypass_enabled()
+        or not gate.has_permission(permission.PermissionLevel.COMMIT)
+    ):
+        raise PermissionError("OWNED_EVALUATION_PERMISSION_GATE_UNAVAILABLE")
+    operation_spec = gate._registry.get(permission.OperationType.DB_WRITE)
+    if not (
+        type(operation_spec) is permission.OperationSpec
+        and operation_spec.permission is permission.PermissionLevel.COMMIT
+        and operation_spec.risk is permission.RiskLevel.HIGH
+        and operation_spec.auto_allow is False
+    ):
+        raise PermissionError("OWNED_EVALUATION_DB_WRITE_POLICY_CHANGED")
+
+    identity = _capture_identity(
+        {"id": material["identity"]["actor_id"]}
+        if material["identity"]["identity_kind"] == "account" else None,
+        material["principal"],
+    )
+    if identity != material["identity"]:
+        raise PermissionError("OWNED_EVALUATION_IDENTITY_CHANGED")
+    scope = material["scope"]
+    domain = "bmp" if scope["domain_id"] == "zbmp" else "cth"
+    scope_args = {
+        "domain_id": domain,
+        "action": "write",
+        "module": "owned_model_admission",
+        "subject_id": scope.get("subject_id"),
+        "brand_focus_id": scope.get("brand_focus_id"),
+        "global_scope": scope["global"],
+        "gate": gate,
+    }
+    if connection is not None:
+        scope_args["connection"] = connection
+    if identity["identity_kind"] == "workspace":
+        scoped = permission.check_local_workspace_scope_permission(
+            material["principal"], **scope_args,
+        )
+    else:
+        scoped = permission.check_actor_scope_permission(
+            {"id": identity["actor_id"]}, **scope_args,
+        )
+    canonical_domain = permission._canonical_business_domain_id(domain)
+    focus = scope.get("subject_id") if domain == "cth" else scope.get("brand_focus_id")
+    expected_scope_resource = f"{domain}:{'GLOBAL / ALL' if scope['global'] else focus}"
+    if not (
+        type(scoped) is permission.ActorScopePermissionResult
+        and scoped.allowed is True
+        and scoped.verification_state == "verified"
+        and scoped.actor_id == identity["actor_id"]
+        and scoped.caller == identity["caller"]
+        and permission._canonical_business_domain_id(scoped.domain_id) == canonical_domain
+        and scoped.principal_kind == identity["principal_kind"]
+        and scoped.principal_ref == identity["principal_ref"]
+        and scoped.subject_id == scope.get("subject_id")
+        and scoped.brand_focus_id == scope.get("brand_focus_id")
+        and scoped.global_scope is scope["global"]
+        and scoped.scope_action == "write"
+        and scoped.operation_type == "resource_scope_write"
+        and scoped.resource == expected_scope_resource
+        and type(scoped.audit_id) is str and bool(scoped.audit_id)
+        and scoped.scope_audit_id == scoped.audit_id
+    ):
+        raise PermissionError("OWNED_EVALUATION_SCOPE_WRITE_DENIED")
+
+    approval = gate.check(
+        permission.OperationType.DB_WRITE,
+        resource=resource,
+        risk_level=permission.RiskLevel.HIGH,
+        caller=identity["caller"],
+        operation_id=f"owned-evaluation-capture:{uuid.uuid4().hex}",
+        domain_id=domain,
+        exact_approval_required=True,
+    )
+    token = gate.get_valid_approval_token(
+        permission.OperationType.DB_WRITE.value, resource, exact=True,
+    )
+    if not (
+        approval.allowed is True
+        and approval.requires_approval is True
+        and approval.operation_type == permission.OperationType.DB_WRITE.value
+        and approval.resource == resource
+        and approval.caller == identity["caller"]
+        and permission._canonical_business_domain_id(approval.domain_id) == canonical_domain
+        and approval.risk_level in {permission.RiskLevel.HIGH, permission.RiskLevel.HIGH.value}
+        and approval.permission_required in {permission.PermissionLevel.COMMIT, permission.PermissionLevel.COMMIT.value}
+        and type(approval.audit_id) is str and bool(approval.audit_id)
+        and type(approval.approval_token) is str and bool(approval.approval_token)
+        and type(token) is str and token == approval.approval_token
+    ):
+        raise PermissionError("OWNED_EVALUATION_EXACT_DB_WRITE_APPROVAL_REQUIRED")
+    return {
+        "scope_audit_id": scoped.audit_id,
+        "permission_audit_id": approval.audit_id,
+        "approval_token": token,
+    }
+
+
+def _evaluation_capture_row(
+    connection: Any,
+    row_id: int,
+    material: Mapping[str, Any],
+    resource: str,
+) -> dict[str, Any]:
+    from lumenis.shared.evidence import store
+
+    row = connection.execute(
+        "SELECT * FROM app_evidence_records WHERE id=?", (row_id,),
+    ).fetchone()
+    if row is None:
+        raise RuntimeError("OWNED_EVALUATION_EVIDENCE_READBACK_MISSING")
+    result = dict(row)
+    if not store.verify_evidence_record_integrity(result):
+        raise RuntimeError("OWNED_EVALUATION_EVIDENCE_INTEGRITY_FAILED")
+    try:
+        inputs = json.loads(result["inputs_json"])
+        outputs = json.loads(result["outputs_json"])
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("OWNED_EVALUATION_EVIDENCE_CONTENT_INVALID") from exc
+    scope = material["scope"]
+    expected_inputs = {
+        "schema_version": 1,
+        "capture_status": "RECORDED",
+        "submission_id": material["submission_id"],
+        "caller": material["identity"]["caller"],
+        "actor_id": material["identity"]["actor_id"],
+        "identity_kind": material["identity"]["identity_kind"],
+        "principal_kind": material["identity"]["principal_kind"],
+        "principal_ref": material["identity"]["principal_ref"],
+        "scope": scope,
+        "candidate_identity_sha256": material["candidate_identity_sha256"],
+        "evaluation_packet_sha256": material["packet_sha256"],
+        "approval_resource": resource,
+    }
+    if material["identity"]["identity_kind"] == "workspace":
+        expected_inputs["principal_kind"] = material["identity"]["principal_kind"]
+        expected_inputs["principal_ref"] = material["identity"]["principal_ref"]
+    else:
+        expected_inputs["principal_kind"] = None
+        expected_inputs["principal_ref"] = None
+    scope_audit_ref = inputs.get("scope_audit_ref") if type(inputs) is dict else None
+    permission_audit_ref = inputs.get("permission_audit_ref") if type(inputs) is dict else None
+    if any(
+        type(value) is not str or not value.strip() or len(value) > 256
+        for value in (scope_audit_ref, permission_audit_ref)
+    ):
+        raise RuntimeError("OWNED_EVALUATION_EVIDENCE_AUDIT_BINDING_INVALID")
+    expected_inputs["scope_audit_ref"] = scope_audit_ref
+    expected_inputs["permission_audit_ref"] = permission_audit_ref
+    expected_inputs["_lumenis_scope"] = material["scope_marker"]
+    expected_outputs = {
+        "evaluation_packet": material["packet"],
+        "evaluation_packet_sha256": material["packet_sha256"],
+        "capture_status": "RECORDED",
+    }
+    if (
+        result.get("source") != "owned_ai_gateway"
+        or result.get("feature_id") != _EVALUATION_FEATURE
+        or result.get("asset_id") != material["submission_id"]
+        or result.get("test_name") != material["submission_id"]
+        or result.get("version") != _EVALUATION_CAPTURE_VERSION + ":" + resource.removeprefix(_EVALUATION_CAPTURE_RESOURCE)
+        or result.get("product_id") != scope["product_id"]
+        or result.get("domain_id") != scope["domain_id"]
+        or result.get("result") != "RECORDED"
+        or result.get("status") != "derived"
+        or result.get("capture_mode") != "derived_evaluation"
+        or inputs != expected_inputs
+        or outputs != expected_outputs
+        or _evaluation_packet_sha256(outputs.get("evaluation_packet", {})) != material["packet_sha256"]
+    ):
+        raise RuntimeError("OWNED_EVALUATION_EVIDENCE_BINDING_INVALID")
+    return result
+
+
+def _find_existing_evaluation_capture(
+    connection: Any,
+    material: Mapping[str, Any],
+    resource: str,
+) -> dict[str, Any] | None:
+    rows = connection.execute(
+        "SELECT * FROM app_evidence_records WHERE source=? AND feature_id=? "
+        "AND (asset_id=? OR test_name=?) ORDER BY id LIMIT 3",
+        ("owned_ai_gateway", _EVALUATION_FEATURE,
+         material["submission_id"], material["submission_id"]),
+    ).fetchall()
+    if not rows:
+        return None
+    if len(rows) != 1:
+        raise RuntimeError("OWNED_EVALUATION_SUBMISSION_DUPLICATE")
+    row = dict(rows[0])
+    if (row.get("asset_id"), row.get("test_name")) != (
+        material["submission_id"], material["submission_id"],
+    ):
+        raise ValueError("OWNED_EVALUATION_SUBMISSION_CONFLICT")
+    verified = _evaluation_capture_row(connection, int(row["id"]), material, resource)
+    return verified
+
+
+def record_owned_evaluation_evidence(
+    *,
+    expected_scope: dict[str, Any],
+    submission_id: str,
+    evaluation_packet: Any,
+    authenticated_actor: Mapping[str, Any] | None = None,
+    principal: Any = None,
+) -> dict[str, Any]:
+    """Persist one exact-scope evaluator packet as derived Evidence.
+
+    Capture records the evaluator's structural report only. It creates no
+    approval, human review, quality acceptance, runtime proof, or promotion.
+    """
+    from lumenis.shared.database import get_repository
+    from lumenis.shared.evidence import store
+    from lumenis.system.security import permission
+
+    material = _evaluation_capture_material(
+        authenticated_actor=authenticated_actor,
+        expected_scope=expected_scope,
+        submission_id=submission_id,
+        evaluation_packet=evaluation_packet,
+        principal=principal,
+    )
+    resource = _evaluation_capture_resource(material)
+    gate = permission.get_permission_gate()
+    initial = _authorize_evaluation_capture(gate, material, resource)
+    repository = get_repository()
+    row_id: int | None = None
+    already_recorded = False
+    with repository.transaction(timeout=10) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        current = _authorize_evaluation_capture(
+            gate, material, resource, connection=connection,
+        )
+        if current["approval_token"] != initial["approval_token"]:
+            raise PermissionError("OWNED_EVALUATION_APPROVAL_CHANGED")
+        existing = _find_existing_evaluation_capture(connection, material, resource)
+        if existing is not None:
+            current = _authorize_evaluation_capture(
+                gate, material, resource, connection=connection,
+            )
+            if current["approval_token"] != initial["approval_token"]:
+                raise PermissionError("OWNED_EVALUATION_APPROVAL_CHANGED")
+            row_id = int(existing["id"])
+            already_recorded = True
+        else:
+            inputs = {
+                "schema_version": 1,
+                "capture_status": "RECORDED",
+                "submission_id": material["submission_id"],
+                "caller": material["identity"]["caller"],
+                "actor_id": material["identity"]["actor_id"],
+                "identity_kind": material["identity"]["identity_kind"],
+                "principal_kind": material["identity"]["principal_kind"],
+                "principal_ref": material["identity"]["principal_ref"],
+                "scope": material["scope"],
+                "candidate_identity_sha256": material["candidate_identity_sha256"],
+                "evaluation_packet_sha256": material["packet_sha256"],
+                "approval_resource": resource,
+                "scope_audit_ref": current["scope_audit_id"],
+                "permission_audit_ref": current["permission_audit_id"],
+            }
+            outputs = {
+                "evaluation_packet": material["packet"],
+                "evaluation_packet_sha256": material["packet_sha256"],
+                "capture_status": "RECORDED",
+            }
+            row_id = store.record_evidence(
+                connection=connection,
+                source="owned_ai_gateway",
+                project="LUMENIS",
+                product=material["scope"]["product_id"],
+                feature_id=_EVALUATION_FEATURE,
+                asset_id=material["submission_id"],
+                test_name=material["submission_id"],
+                version=_EVALUATION_CAPTURE_VERSION + ":" + resource.removeprefix(_EVALUATION_CAPTURE_RESOURCE),
+                env="local",
+                level="L4",
+                capture_mode="derived_evaluation",
+                result="RECORDED",
+                inputs=inputs,
+                outputs=outputs,
+                metric_name="owned_ai_evaluation_capture",
+                metric_value="RECORDED",
+                status="derived",
+                domain_id=material["scope"]["domain_id"],
+                subject_id=material["scope"].get("subject_id"),
+                brand_focus_id=material["scope"].get("brand_focus_id"),
+                global_scope=material["scope"]["global"],
+                notes=(
+                    "Derived evaluator packet captured. Human review is required; "
+                    "candidate acceptance, independent runtime verification, and promotion were not performed."
+                ),
+            )
+            if type(row_id) is not int or row_id < 1:
+                raise RuntimeError("OWNED_EVALUATION_EVIDENCE_WRITE_FAILED")
+            _evaluation_capture_row(connection, row_id, material, resource)
+            current = _authorize_evaluation_capture(
+                gate, material, resource, connection=connection,
+            )
+            if current["approval_token"] != initial["approval_token"]:
+                raise PermissionError("OWNED_EVALUATION_APPROVAL_CHANGED")
+            if _evaluation_json(material["packet"]) != material["packet_json"]:
+                raise RuntimeError("OWNED_EVALUATION_PACKET_CHANGED_DURING_CAPTURE")
+
+        # Final authorization and commit must not race approval revocation.
+        # The repository's subsequent commit is a no-op: no writes follow this.
+        with gate.owned_evaluation_capture_commit_lease(
+            material=material, resource=resource, authorization=current,
+            connection=connection,
+        ):
+            connection.commit()
+
+    if row_id is None:
+        raise RuntimeError("OWNED_EVALUATION_EVIDENCE_WRITE_FAILED")
+    with repository.connection(read_only=True, wal=False) as connection:
+        row = _evaluation_capture_row(connection, row_id, material, resource)
+        _authorize_evaluation_capture(gate, material, resource, connection=connection)
+    return {
+        "state": "already_recorded" if already_recorded else "recorded",
+        "evaluation_ref": f"app_evidence_records:{row_id}",
+        "content_sha256": material["packet_sha256"],
+        "candidate_identity_sha256": material["candidate_identity_sha256"],
+        "submission_id": material["submission_id"],
+        "scope": material["scope"],
+        "integrity_verified": True,
+        "evidence_status": row["status"],
+        "evidence_result": row["result"],
+        "candidate_status": material["packet"]["candidate_status"],
+        "business_acceptance": material["packet"]["business_acceptance"],
+        "runtime_verification": material["packet"]["runtime_verification"],
+        "promotion_status": material["packet"]["promotion_status"],
+    }
 
 
 class CandidateEvaluationBlocked(RuntimeError):

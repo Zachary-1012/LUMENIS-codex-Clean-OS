@@ -14,6 +14,7 @@ import pytest
 from lumenis.system.ai_gateway import owned_training as training
 from lumenis.system.ai_gateway import owned_training_checkpoints as checkpoints
 from lumenis.system.ai_gateway.owned_training_phases import TrainingPhaseClient
+from lumenis.system.security import permission
 from lumenis.system.security import training_receipts
 
 
@@ -49,6 +50,28 @@ def policy_material():
     return document, versions, config, order
 
 
+def schema2_policy_material(policy_material, *, epochs):
+    rows = [digest({"synthetic_row": index}) for index in range(4)]
+    cursor = checkpoints.TrainingDataCursor(dataset_sha256="d" * 64, row_sha256=rows,
+        gradient_accumulation_steps=4, base_recipe=training.T4_RECIPE,
+        policy_schema_version=2, num_train_epochs=epochs)
+    trainer, config = config_fixture()
+    config["num_train_epochs"] = float(epochs)
+    config["save_steps"] = 1
+    trainer_config = checkpoints.trainer_checkpoint_config(
+        trainer, base_recipe=training.T4_RECIPE,
+        policy_schema_version=2, num_train_epochs=epochs)
+    document = copy.deepcopy(policy_material[0])
+    document.update({
+        "schema_version": 2,
+        "num_train_epochs": epochs,
+        "checkpoint_interval_steps": 1,
+        "trainer_config_sha256": digest(trainer_config),
+        "data_order_sha256": digest(cursor.data_order),
+    })
+    return document, policy_material[1], trainer_config, cursor.data_order
+
+
 @pytest.fixture
 def checkpoint_tree(tmp_path, policy_material):
     document, _, _, _ = policy_material
@@ -73,6 +96,54 @@ def test_policy_is_immutable_and_changes_recipe_identity(policy_material):
     copy_out = policy.document
     copy_out["required_roles"].clear()
     assert policy.document["required_roles"]
+
+
+@pytest.mark.parametrize("epochs", [True, 0, 101, 2.0])
+def test_schema2_policy_accepts_only_bounded_integer_epochs(policy_material, epochs):
+    document, _, _, _ = schema2_policy_material(policy_material, epochs=2)
+    document["num_train_epochs"] = epochs
+    with pytest.raises(training.TrainingBlocked, match="CHECKPOINT_REQUEST_INVALID"):
+        checkpoints.CheckpointPolicy.validate(document)
+
+
+def test_schema1_policy_keeps_its_exact_field_set(policy_material):
+    document = copy.deepcopy(policy_material[0])
+    document["num_train_epochs"] = 2
+    with pytest.raises(training.TrainingBlocked, match="CHECKPOINT_REQUEST_INVALID"):
+        checkpoints.CheckpointPolicy.validate(document)
+
+
+def test_schema2_epoch_change_changes_policy_hashes_and_approval_identity(policy_material):
+    one_material = schema2_policy_material(policy_material, epochs=1)
+    two_material = schema2_policy_material(policy_material, epochs=2)
+    one = checkpoints.CheckpointPolicy.validate(one_material[0])
+    two = checkpoints.CheckpointPolicy.validate(two_material[0])
+    assert one.sha256 != two.sha256
+    assert one.recipe != two.recipe
+    assert one_material[0]["trainer_config_sha256"] != two_material[0]["trainer_config_sha256"]
+    assert one_material[0]["data_order_sha256"] != two_material[0]["data_order_sha256"]
+
+    def fingerprints(policy):
+        request = training.TrainingApprovalRequest(
+            training.T4_MODEL_ID, training.T4_MODEL_REVISION, "a" * 64, "b" * 64,
+            ("GLOBAL / ALL",), policy.recipe, "c" * 64, "cth")
+        context = {"scope_descriptors": {"GLOBAL / ALL": {
+            "domain_id": "cth", "product_id": "CTH", "global_scope": True,
+            "subject_id": None, "brand_focus_id": None,
+        }}}
+        return permission.owned_training_phase_fingerprints(
+            request, actor_id=17, domain_id="cth", context=context)
+
+    before, after = fingerprints(one), fingerprints(two)
+    assert {key for key in before if before[key] != after[key]} == {"request_sha256", "recipe_sha256"}
+
+    two.validate_runtime(
+        framework_versions=two_material[1], trainer_config=two_material[2],
+        data_order=two_material[3], scaler_present=False)
+    with pytest.raises(training.TrainingBlocked, match="CHECKPOINT_HASH_MISMATCH"):
+        two.validate_runtime(
+            framework_versions=one_material[1], trainer_config=one_material[2],
+            data_order=one_material[3], scaler_present=False)
 
 
 @pytest.mark.parametrize("field,value", [
@@ -277,6 +348,94 @@ def test_data_position_survives_interruption_without_skipping_rows():
     assert resumed.snapshot() == reference.snapshot()
     assert resumed.snapshot()["sampler_state"]["consumed_row_sha256"] == rows
     assert resumed.snapshot()["data_position"]["completed_step"] == 3
+
+
+def epoch_cursor(rows, *, epochs=2):
+    return checkpoints.TrainingDataCursor(
+        dataset_sha256="d" * 64, row_sha256=rows,
+        gradient_accumulation_steps=4, base_recipe=training.T4_RECIPE,
+        policy_schema_version=2, num_train_epochs=epochs)
+
+
+def test_schema2_cursor_restores_epoch_boundary_and_continues_optimizer_step_two():
+    rows = [digest({"synthetic_row": index}) for index in range(4)]
+    reference, resumed = epoch_cursor(rows), epoch_cursor(rows)
+    consume_update(reference, rows, 0, 4, 1)
+    consume_update(resumed, rows, 0, 4, 1)
+    committed = json.loads(json.dumps(resumed.snapshot()))
+    assert committed["data_position"] == {
+        "dataset_sha256": "d" * 64,
+        "sampler_state_sha256": committed["data_position"]["sampler_state_sha256"],
+        "epoch_index": 1, "next_batch_index": 0,
+        "completed_step": 1, "gradient_accumulation_offset": 0,
+    }
+    assert committed["sampler_state"]["consumed_row_sha256"] == rows
+
+    recovered = epoch_cursor(rows)
+    recovered.restore(committed)
+    consume_update(reference, rows, 0, 4, 2)
+    consume_update(recovered, rows, 0, 4, 2)
+    final = recovered.snapshot()
+    assert final == reference.snapshot()
+    assert final["data_position"]["epoch_index"] == 2
+    assert final["data_position"]["next_batch_index"] == 0
+    assert final["data_position"]["completed_step"] == 2
+    assert final["sampler_state"]["consumed_row_sha256"] == rows + rows
+    with pytest.raises(training.TrainingBlocked, match="CHECKPOINT_RESTORED_STATE_MISMATCH"):
+        recovered.begin_batch(0, rows[0])
+
+
+def test_schema2_cursor_resumes_partial_epoch_using_exact_next_batch():
+    rows = [digest({"synthetic_row": index}) for index in range(5)]
+    cursor = epoch_cursor(rows)
+    consume_update(cursor, rows, 0, 4, 1)
+    partial = cursor.snapshot()
+    assert partial["data_position"]["epoch_index"] == 0
+    assert partial["data_position"]["next_batch_index"] == 4
+
+    recovered = epoch_cursor(rows)
+    recovered.restore(partial)
+    consume_update(recovered, rows, 4, 5, 2)
+    boundary = recovered.snapshot()
+    assert boundary["data_position"]["epoch_index"] == 1
+    assert boundary["data_position"]["next_batch_index"] == 0
+    assert boundary["sampler_state"]["consumed_row_sha256"] == rows
+    consume_update(recovered, rows, 0, 4, 3)
+    consume_update(recovered, rows, 4, 5, 4)
+    assert recovered.snapshot()["sampler_state"]["consumed_row_sha256"] == rows + rows
+
+
+@pytest.mark.parametrize("change", ["epoch", "next_batch", "step", "row_order"])
+def test_schema2_cursor_rejects_wrong_epoch_position_or_row_history(change):
+    rows = [digest({"synthetic_row": index}) for index in range(4)]
+    cursor = epoch_cursor(rows)
+    consume_update(cursor, rows, 0, 4, 1)
+    snapshot = copy.deepcopy(cursor.snapshot())
+    if change == "epoch":
+        snapshot["data_position"]["epoch_index"] = 0
+    elif change == "next_batch":
+        snapshot["data_position"]["next_batch_index"] = 1
+    elif change == "step":
+        snapshot["data_position"]["completed_step"] = 3
+    else:
+        snapshot["sampler_state"]["consumed_row_sha256"][0] = "f" * 64
+        snapshot["data_position"]["sampler_state_sha256"] = checkpoints._digest(snapshot["sampler_state"])
+    with pytest.raises(training.TrainingBlocked, match="CHECKPOINT_RESTORED_STATE_MISMATCH"):
+        epoch_cursor(rows).restore(snapshot)
+
+
+def test_schema2_cursor_refuses_partial_accumulation_commit_and_snapshot():
+    rows = [digest({"synthetic_row": index}) for index in range(4)]
+    cursor = epoch_cursor(rows)
+    cursor.begin_batch(0, rows[0])
+    cursor.complete_batch()
+    with pytest.raises(training.TrainingBlocked, match="CHECKPOINT_STATE_INCOMPLETE"):
+        cursor.snapshot()
+    for index in range(1, 2):
+        cursor.begin_batch(index, rows[index])
+        cursor.complete_batch()
+    with pytest.raises(training.TrainingBlocked, match="CHECKPOINT_STATE_INCOMPLETE"):
+        cursor.complete_optimizer_step(1, sync_gradients=True, optimizer_step_was_skipped=False)
 
 
 @pytest.mark.parametrize("boundary", ["before_any_batch", "pending_batch", "partial_accumulation",
@@ -686,6 +845,21 @@ def registered_checkpoint_inputs(tmp_path, monkeypatch, policy_material):
     return paths, policy
 
 
+def registered_schema2_checkpoint_inputs(tmp_path, monkeypatch, policy_material, *, epochs=2):
+    from tests.test_owned_ai_training import _record, _t4_inputs, _write_jsonl
+
+    paths = _t4_inputs(tmp_path, monkeypatch)
+    _write_jsonl(paths[2], [_record(f"TRAIN-{i}", f"Synthetic question {i}") for i in range(4)])
+    material = schema2_policy_material(policy_material, epochs=epochs)
+    policy = checkpoints.CheckpointPolicy.validate(material[0])
+    manifest = json.loads(paths[1].read_text())
+    manifest["checkpoint_recovery_policies"] = {
+        "schema_version": 1, "policies": {policy.sha256: policy.document},
+    }
+    paths[1].write_text(json.dumps(manifest), encoding="utf-8")
+    return paths, policy
+
+
 def test_recovery_preflight_keeps_exact_extended_recipe_and_derivative(tmp_path, monkeypatch, policy_material):
     paths, policy = registered_checkpoint_inputs(tmp_path, monkeypatch, policy_material)
     model, manifest, train, heldout, output = paths
@@ -701,6 +875,36 @@ def test_recovery_preflight_keeps_exact_extended_recipe_and_derivative(tmp_path,
             manifest_path=manifest, recipe=policy.recipe, execute=True,
             approval_verifier=lambda request: True, checkpoint_adapter={"authorized": True})
     assert not output.exists()
+
+
+def test_schema2_four_row_t4_preflight_allows_step_one_interrupt_only(tmp_path, monkeypatch, policy_material):
+    paths, policy = registered_schema2_checkpoint_inputs(tmp_path, monkeypatch, policy_material, epochs=2)
+    model, manifest, train, heldout, output = paths
+    result = training.run_owned_lora_training(model, train, heldout, output,
+        manifest_path=manifest, recipe=policy.recipe, stop_after_checkpoint_step=1)
+    assert result["train_case_count"] == 4
+    assert result["num_train_epochs"] == 2
+    assert result["optimizer_steps_per_epoch"] == 1
+    assert result["total_optimizer_steps"] == 2
+    assert result["execution_state"] == "PREFLIGHT_ONLY"
+    assert not output.exists()
+    with pytest.raises(training.TrainingBlocked, match="CHECKPOINT_REQUEST_INVALID"):
+        training.run_owned_lora_training(model, train, heldout, output,
+            manifest_path=manifest, recipe=policy.recipe, stop_after_checkpoint_step=2)
+    assert not output.exists()
+
+
+def test_schema2_recipe_still_requires_its_exact_registered_hash(tmp_path, monkeypatch, policy_material):
+    paths, policy = registered_schema2_checkpoint_inputs(tmp_path, monkeypatch, policy_material, epochs=2)
+    manifest = json.loads(paths[1].read_text())
+    manifest["checkpoint_recovery_policies"]["policies"].clear()
+    paths[1].write_text(json.dumps(manifest), encoding="utf-8")
+    approvals = []
+    with pytest.raises(training.TrainingBlocked, match="CHECKPOINT_RECIPE_NOT_AUTHORIZED"):
+        training.run_owned_lora_training(paths[0], paths[2], paths[3], paths[4],
+            manifest_path=paths[1], recipe=policy.recipe, execute=True,
+            approval_verifier=lambda request: approvals.append(request))
+    assert not approvals and not paths[4].exists()
 
 
 def test_extended_recipe_must_be_registered_before_any_training_boundary(tmp_path, monkeypatch, policy_material):
@@ -761,6 +965,23 @@ def test_effective_trainer_config_normalizes_only_owner_paths_and_verified_absen
     trainer.args.hub_token = "unit-token-never-transmitted"
     with pytest.raises(training.TrainingBlocked, match="CHECKPOINT_REQUEST_INVALID"):
         checkpoints.trainer_checkpoint_config(trainer)
+
+
+def test_schema2_effective_trainer_config_binds_epoch_count():
+    trainer, config = config_fixture()
+    config["num_train_epochs"] = 2.0
+    config["save_steps"] = 1
+    observed = checkpoints.trainer_checkpoint_config(
+        trainer, base_recipe=training.T4_RECIPE,
+        policy_schema_version=2, num_train_epochs=2)
+    assert observed["num_train_epochs"] == 2.0
+    assert observed["lumenis_state_representation"] == "lumenis-training-state-v1"
+    assert observed["lumenis_sampler"] == "sequential-epoch-v2"
+    config["num_train_epochs"] = 1.0
+    with pytest.raises(training.TrainingBlocked, match="CHECKPOINT_REQUEST_INVALID"):
+        checkpoints.trainer_checkpoint_config(
+            trainer, base_recipe=training.T4_RECIPE,
+            policy_schema_version=2, num_train_epochs=2)
 
 
 @pytest.mark.parametrize("key,value", [("dataloader_num_workers", 1), ("packing", True),

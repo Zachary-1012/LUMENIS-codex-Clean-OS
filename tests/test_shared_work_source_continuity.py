@@ -165,6 +165,77 @@ def test_evidence_query_locates_each_cited_version_with_scope_bound_pagination(w
     assert changed.status_code == 400 and changed.json["code"] == "WORK_CURSOR_INVALID"
 
 
+def test_explicit_source_correction_adoption_preserves_parent_and_impact(workspace):
+    ws = workspace
+    _, _, original_source = _source(ws, filename="correction-original.txt",
+                                    source_url="https://example.org/correction/v1")
+    original_quote = ws["documents"].locate_quote(
+        original_source["evidence_id"], actor=ws["actor"], scope=ws["scope"], start=0, end=20
+    )["citation"]
+    original_markdown = "The original source supports this statement."
+    saved = _save(ws, request_id="correction-parent-01", markdown=original_markdown,
+                  citations=[original_quote])
+
+    corrected_text = "Corrected source text replaces the earlier statement."
+    corrected_path = ws["root"] / "correction-v2.txt"
+    corrected_path.write_text(corrected_text + "\n", encoding="utf-8")
+    provenance = {
+        "source_url": "https://example.org/correction/v2",
+        "published_at": "2026-10-08T00:00:00Z",
+        "captured_at": "2026-10-08T00:01:00Z",
+        "rights": "public-reference-only",
+        "title": "Corrected self-contained test source",
+        "intended_use": "research_reference",
+    }
+    args = {"actor": ws["actor"], "scope": ws["scope"], "provenance": provenance}
+    resource = ws["documents"].document_import_resource(str(corrected_path), **args)
+    ws["gate"].grant_approval(OperationType.DATA_IMPORT.value, resource=resource,
+                              granted_by="isolated-engineering")
+    corrected_source = ws["documents"].import_document(str(corrected_path), **args)
+    corrected_quote = ws["documents"].locate_quote(
+        corrected_source["evidence_id"], actor=ws["actor"], scope=ws["scope"],
+        start=0, end=len(corrected_text)
+    )["citation"]
+
+    revised_markdown = "The revised statement adopts the corrected source."
+    revised = ws["work"].revise_work(
+        saved["artifact"]["artifact_id"], actor=ws["actor"], scope=ws["scope"],
+        request_id="correction-revision-01", expected_sha256=saved["artifact"]["sha256"],
+        reason="Reviewed the corrected source and explicitly adopted its newer Evidence.",
+        edits=[{"pointer": "/markdown", "start": 0, "end": len(original_markdown),
+                "expected": original_markdown, "replacement": revised_markdown}],
+        citations=[corrected_quote],
+        source_adoptions=[{"from_evidence_id": original_source["evidence_id"],
+                           "to_evidence_id": corrected_source["evidence_id"]}],
+    )
+
+    note = revised["document"]["payload"]["revision_note"]
+    assert revised["document"]["version"] == 2
+    assert revised["document"]["markdown"] == revised_markdown
+    assert note["reason"] == "Reviewed the corrected source and explicitly adopted its newer Evidence."
+    assert note["parent"] == {"artifact_id": saved["artifact"]["artifact_id"],
+                              "sha256": saved["artifact"]["sha256"], "version": 1}
+    assert note["source_adoptions"] == [{"from_evidence_id": original_source["evidence_id"],
+                                         "to_evidence_id": corrected_source["evidence_id"]}]
+    revised_citation = revised["document"]["citations"][0]
+    assert revised_citation["evidence_id"] == corrected_source["evidence_id"]
+    assert revised_citation["quote"] == corrected_quote["quote"]
+    reopened_parent = ws["work"].reopen_work(saved["artifact"]["artifact_id"],
+                                             actor=ws["actor"], scope=ws["scope"])
+    parent_citation = reopened_parent["document"]["citations"][0]
+    assert parent_citation["evidence_id"] == original_source["evidence_id"]
+    assert parent_citation["quote"] == original_quote["quote"]
+
+    old_impact = ws["work"].search_work(actor=ws["actor"], scope=ws["scope"],
+                                         evidence_id=original_source["evidence_id"])
+    new_impact = ws["work"].search_work(actor=ws["actor"], scope=ws["scope"],
+                                         evidence_id=corrected_source["evidence_id"])
+    assert [item["artifact"]["artifact_id"] for item in old_impact["items"]] == [saved["artifact"]["artifact_id"]]
+    assert [item["artifact"]["artifact_id"] for item in new_impact["items"]] == [revised["artifact"]["artifact_id"]]
+    assert old_impact["items"][0]["source_matches"]["uncited_dependencies"] == "NOT_VERIFIED"
+    assert new_impact["items"][0]["source_matches"]["uncited_dependencies"] == "NOT_VERIFIED"
+
+
 def test_normal_preferences_notifications_acknowledgement_and_replay(workspace):
     ws = workspace
     saved = _save(ws, request_id="notification-work-01")

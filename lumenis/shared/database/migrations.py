@@ -16,6 +16,7 @@ import sys
 import sqlite3
 import tempfile
 from datetime import datetime
+from pathlib import Path
 from typing import Optional, List, Dict, Any
 
 
@@ -144,18 +145,128 @@ def set_version(
         conn.commit()
 
 
+def _validate_backup_snapshot(connection: sqlite3.Connection) -> None:
+    """Reject a snapshot unless SQLite reports exactly one clean integrity result."""
+    results = [row[0] for row in connection.execute("PRAGMA integrity_check").fetchall()]
+    if results != ["ok"]:
+        raise sqlite3.DatabaseError(f"备份完整性校验失败: {results!r}")
+
+
+def _backup_database_to_path(destination_path: os.PathLike | str, db_path: str) -> str:
+    """Create and atomically publish a validated snapshot at an explicit path.
+
+    The source is always the call-time canonical database. The destination must
+    be a new path; existing files and SQLite source/sidecar paths are never
+    overwritten. The temporary snapshot is created beside the destination so
+    publication is a same-filesystem, no-clobber hard-link operation.
+    """
+    destination_value = os.fsdecode(os.fspath(destination_path))
+    if not destination_value.strip():
+        raise ValueError("destination_path must not be empty")
+
+    db_path = os.path.abspath(db_path)
+    backup_path = os.path.abspath(destination_value)
+    normalize = os.path.normcase
+    protected_paths = {
+        normalize(db_path),
+        normalize(db_path + "-wal"),
+        normalize(db_path + "-shm"),
+        normalize(db_path + "-journal"),
+    }
+    if normalize(backup_path) in protected_paths:
+        raise ValueError("backup destination must not be the canonical database or a SQLite sidecar")
+    if not os.path.isfile(db_path):
+        raise FileNotFoundError(f"数据库不存在: {db_path}")
+
+    if os.path.lexists(backup_path):
+        try:
+            if os.path.samefile(db_path, backup_path):
+                raise ValueError("backup destination resolves to the canonical database")
+        except OSError:
+            pass
+        raise FileExistsError(f"拒绝覆盖已有备份目标: {backup_path}")
+
+    backup_dir = os.path.dirname(backup_path)
+    os.makedirs(backup_dir, exist_ok=True)
+    temp_path = None
+    published = False
+    try:
+        fd, temp_path = tempfile.mkstemp(
+            prefix=f".{os.path.basename(backup_path)}.",
+            suffix=".tmp",
+            dir=backup_dir,
+        )
+        os.close(fd)
+
+        # The source is read-only here. If it disappears after the existence
+        # check, SQLite must fail instead of silently creating a new empty DB.
+        source_uri = f"{Path(db_path).resolve().as_uri()}?mode=ro"
+        source = sqlite3.connect(source_uri, uri=True, timeout=30)
+        try:
+            snapshot = sqlite3.connect(temp_path, timeout=30)
+            try:
+                source.backup(snapshot)
+                _validate_backup_snapshot(snapshot)
+            finally:
+                snapshot.close()
+        finally:
+            source.close()
+
+        # os.link publishes the fully closed snapshot atomically and fails if
+        # another caller created the destination after the preflight check.
+        os.link(temp_path, backup_path)
+        published = True
+        return backup_path
+    finally:
+        if temp_path and os.path.lexists(temp_path):
+            try:
+                os.unlink(temp_path)
+            except OSError as exc:
+                if not published:
+                    raise
+                _safe_print(f"⚠️ 备份已发布，但临时文件清理失败: {temp_path}: {exc}")
+
+
+def backup_database_to_path(destination_path: os.PathLike | str) -> str:
+    """Snapshot the call-time canonical database to an explicit destination."""
+    return _backup_database_to_path(destination_path, get_db_path())
+
+
+def _read_current_version_for_backup(db_path: str) -> int:
+    """Read the naming version without creating tables or changing the source DB."""
+    db_uri = f"{Path(db_path).resolve().as_uri()}?mode=ro"
+    connection = sqlite3.connect(db_uri, uri=True, timeout=30)
+    try:
+        table = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_version'"
+        ).fetchone()
+        if table is None:
+            return 0
+        versions = []
+        for row in connection.execute("SELECT version FROM schema_version").fetchall():
+            value = row[0]
+            if isinstance(value, int):
+                versions.append(value)
+            elif isinstance(value, str):
+                try:
+                    versions.append(int(value.strip()))
+                except (ValueError, TypeError):
+                    pass
+        return max(versions) if versions else 0
+    finally:
+        connection.close()
+
+
 def backup_database(backup_name: Optional[str] = None) -> str:
     """Create a validated, WAL-consistent backup of the call-time canonical DB."""
-    db_path = get_db_path()
+    db_path = os.path.abspath(get_db_path())
+    if not os.path.isfile(db_path):
+        raise FileNotFoundError(f"数据库不存在: {db_path}")
     backup_dir = os.path.join(os.path.dirname(db_path), "backups")
 
     if not backup_name:
-        version_conn = get_connection()
-        try:
-            current_version = get_current_version(version_conn)
-        finally:
-            version_conn.close()
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        current_version = _read_current_version_for_backup(db_path)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         backup_name = f"monitor_db_v{current_version}_{timestamp}.db"
     else:
         backup_name = os.fspath(backup_name)
@@ -168,42 +279,7 @@ def backup_database(backup_name: Optional[str] = None) -> str:
             raise ValueError("backup_name must be a filename within the canonical backup folder")
 
     os.makedirs(backup_dir, exist_ok=True)
-    backup_path = os.path.join(backup_dir, backup_name)
-    if not os.path.isfile(db_path):
-        raise FileNotFoundError(f"数据库不存在: {db_path}")
-
-    temp_path = None
-    source = None
-    destination = None
-    try:
-        fd, temp_path = tempfile.mkstemp(
-            prefix=f".{os.path.basename(backup_path)}.",
-            suffix=".tmp",
-            dir=backup_dir,
-        )
-        os.close(fd)
-        source = sqlite3.connect(db_path)
-        destination = sqlite3.connect(temp_path)
-        source.backup(destination)
-        result = destination.execute("PRAGMA integrity_check").fetchone()
-        if not result or result[0] != "ok":
-            raise sqlite3.DatabaseError(f"备份完整性校验失败: {result!r}")
-        destination.close()
-        destination = None
-        source.close()
-        source = None
-        os.replace(temp_path, backup_path)
-        temp_path = None
-    except Exception:
-        if destination is not None:
-            destination.close()
-        if source is not None:
-            source.close()
-        raise
-    finally:
-        if temp_path and os.path.exists(temp_path):
-            os.unlink(temp_path)
-
+    backup_path = _backup_database_to_path(os.path.join(backup_dir, backup_name), db_path)
     _safe_print(f"✅ 数据库已备份到: {backup_path}")
     _safe_print(f"   备份大小: {os.path.getsize(backup_path) / 1024 / 1024:.2f} MB")
     return backup_path

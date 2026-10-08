@@ -555,3 +555,86 @@ def test_reopen_never_reads_paths_or_approval_from_untrusted_document(tmp_path, 
     restored = Timeline.from_dict(document, assets=(asset,))
     assert restored.to_export_request()["status"] == "blocked"
     assert restored.to_dict()["approval_required"] is True
+
+
+@pytest.fixture
+def caption_edit_asset(tmp_path, monkeypatch):
+    source = tmp_path / "caption-edit.mp4"
+    source.write_bytes(b"technical fixture; not real movie")
+    monkeypatch.setattr(video_editing, "_probe_media_info", lambda _: video_editing._MediaProbe(12, True, 1))
+    return fingerprint_local_media(str(source))
+
+
+def test_caption_layout_legacy_serialization_remains_exact(caption_edit_asset):
+    timeline = Timeline.from_assets((caption_edit_asset,), "16:9").add_caption(0, 1, "old")
+    assert set(timeline.to_dict()["overlays"][0]) == {"overlay_id", "kind", "start_sec", "end_sec", "text"}
+    assert Timeline.from_dict(timeline.to_dict(), assets=(caption_edit_asset,)).to_dict() == timeline.to_dict()
+
+
+def test_caption_update_remove_undo_reopen_preserve_other_edits(caption_edit_asset):
+    original = Timeline.from_assets((caption_edit_asset,), "16:9").add_clip(caption_edit_asset.asset_id)
+    original = original.add_caption(0, 1, "old").add_text_overlay(0, 2, "retained title")
+    caption_id = original.overlays[0].overlay_id
+    literal = "  All words, spaces and punctuation are retained.  "
+    changed = original.update_caption(caption_id, .5, 3, literal, layout_profile="literal-wide-720p-v2")
+    assert changed.version == original.version + 1
+    assert changed.overlays[0].overlay_id == caption_id and changed.overlays[0].text == literal
+    assert changed.tracks == original.tracks and changed.assets == original.assets
+    assert changed.overlays[1] == original.overlays[1] and changed.transitions == original.transitions
+    assert changed.to_dict()["overlays"][0]["layout_profile"] == "literal-wide-720p-v2"
+    reopened = Timeline.from_dict(changed.to_dict(), assets=(caption_edit_asset,))
+    assert reopened.to_dict() == changed.to_dict()
+    restored = changed.undo()
+    assert restored.overlays == original.overlays and restored.version == changed.version + 1
+    removed = reopened.remove_overlay(caption_id)
+    assert removed.version == reopened.version + 1 and removed.overlays == (original.overlays[1],)
+    assert removed.undo().overlays == reopened.overlays
+    assert original.overlays[0].text == "old" and original.overlays[0].layout_profile is None
+    reset = reopened.update_caption(caption_id, 0, 1, "new default")
+    assert "layout_profile" not in reset.to_dict()["overlays"][0]
+
+
+@pytest.mark.parametrize("bad_profile", ["arbitrary-font", "literal-cjk-windows-v1", "", True, {}, 35])
+def test_caption_profile_rejects_unregistered_values(caption_edit_asset, bad_profile):
+    timeline = Timeline.from_assets((caption_edit_asset,), "16:9")
+    with pytest.raises(VideoEditingError, match="OVERLAY_LAYOUT_PROFILE_NOT_SUPPORTED"):
+        timeline.add_caption(0, 1, "text", layout_profile=bad_profile)
+    assert not timeline.overlays and timeline.version == 1
+
+
+@pytest.mark.parametrize("bad_field,value", [("layout_profile", None), ("layout_profile", "unknown"),
+                                           ("fontfile", "private.ttf"), ("fontsize", 5)])
+def test_caption_profile_reopen_rejects_injected_fields(caption_edit_asset, bad_field, value):
+    timeline = Timeline.from_assets((caption_edit_asset,), "16:9").add_caption(0, 1, "text")
+    payload = timeline.to_dict()
+    payload["overlays"][0][bad_field] = value
+    with pytest.raises(VideoEditingError):
+        Timeline.from_dict(payload, assets=(caption_edit_asset,))
+
+
+def test_caption_operations_fail_without_mutating_original(caption_edit_asset):
+    original = Timeline.from_assets((caption_edit_asset,), "16:9").add_caption(0, 1, "caption")
+    original = original.add_text_overlay(0, 1, "title")
+    before = original.to_dict()
+    for operation in (lambda: original.remove_overlay("missing"),
+                      lambda: original.update_caption("missing", 0, 1, "replacement"),
+                      lambda: original.update_caption(original.overlays[1].overlay_id, 0, 1, "replacement"),
+                      lambda: original.update_caption(original.overlays[0].overlay_id, float("nan"), 1, "replacement"),
+                      lambda: original.update_caption(original.overlays[0].overlay_id, 0, 1, 123)):
+        with pytest.raises(VideoEditingError):
+            operation()
+        assert original.to_dict() == before
+    ambiguous = replace(original, overlays=(original.overlays[0], original.overlays[0]))
+    for operation in (lambda: ambiguous.remove_overlay(original.overlays[0].overlay_id),
+                      lambda: ambiguous.update_caption(original.overlays[0].overlay_id, 0, 1, "replacement")):
+        with pytest.raises(VideoEditingError, match="OVERLAY_ID_AMBIGUOUS"):
+            operation()
+
+
+def test_caption_profile_is_not_a_title_or_permission_grant(caption_edit_asset):
+    with pytest.raises(VideoEditingError, match="OVERLAY_LAYOUT_PROFILE_NOT_SUPPORTED"):
+        TimedOverlay("title", "text", 0, 1, "title", "literal-wide-720p-v2")
+    captioned = Timeline.from_assets((caption_edit_asset,), "16:9").add_caption(
+        0, 1, "literal", layout_profile="literal-wide-720p-v2")
+    assert captioned.to_dict()["approval_required"] is True
+    assert captioned.assets[0].rights_status == "unknown" and captioned.assets[0].evidence_refs == ()

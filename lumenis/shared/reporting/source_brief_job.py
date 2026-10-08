@@ -119,7 +119,7 @@ def _read_report(job_id: str, *, connection=None) -> dict[str, Any] | None:
 
 
 def _verify_report(row: dict[str, Any], *, job_id: str, actor_id: str,
-                   expected_scope: dict[str, Any] | None = None) -> dict[str, Any]:
+                   expected_scope: dict[str, Any] | None = None, actor=None) -> dict[str, Any]:
     try:
         snapshot = json.loads(row.get("source_snapshot") or "")
     except (TypeError, ValueError) as exc:
@@ -193,11 +193,19 @@ def _verify_report(row: dict[str, Any], *, job_id: str, actor_id: str,
         from .business_brief import read_business_brief
         expected = read_business_brief(
             business.get("evidence_ref"), job_id=job_id, actor_ref=actor_id, scope=_media_scope(scope),
+            actor=actor,
         )
-        if expected != business or business.get("question") != snapshot.get("business_question"):
+        comparable = business
+        if expected.get('provider') == 'ollama':
+            comparable = {**business, 'real_input_bound': False, 'source_use_state': 'HISTORICAL_NOT_REVERIFIED'}
+        if expected != comparable or business.get("question") != snapshot.get("business_question"):
             raise RuntimeError("SOURCE_BRIEF_BUSINESS_EVIDENCE_MISMATCH")
         if business.get("revision") != snapshot.get("revision"):
             raise RuntimeError("SOURCE_BRIEF_REVISION_EVIDENCE_MISMATCH")
+        # Preserve the immutable historical snapshot and hash on disk; readback
+        # reflects its current source-use assurance instead of promoting it.
+        if expected.get('provider') == 'ollama':
+            snapshot = {**snapshot, 'business_analysis': expected}
     return {"row": row, "snapshot": snapshot, "source_brief": brief}
 
 
@@ -329,7 +337,7 @@ def create_source_brief_job(
     )
     existing = _read_report(job_id)
     if existing:
-        verified = _verify_report(existing, job_id=job_id, actor_id=actor_id, expected_scope=scope)
+        verified = _verify_report(existing, job_id=job_id, actor_id=actor_id, expected_scope=scope, actor=image_actor)
         if before_persist is not None:
             before_persist()
         evaluations = _record_evaluations(verified)
@@ -407,7 +415,7 @@ def create_source_brief_job(
                 business_analysis = analyze_business_brief(
                     question=business_question, sources=sources, scope=_media_scope(scope),
                     job_id=job_id, actor_ref=actor_id,
-                    revision=revision, before_evidence=before_evidence,
+                    revision=revision, before_evidence=before_evidence, actor=image_actor,
                     sample={"available_brief_count": count, "analyzed_source_count": len(sources),
                             "selection": ("explicit operator-selected verified sources; task-term window up to 1200 characters each"
                                           if source_ids is not None else
@@ -469,7 +477,7 @@ def create_source_brief_job(
     reopened = _read_report(job_id)
     if not reopened:
         raise RuntimeError("SOURCE_BRIEF_REPORT_REOPEN_FAILED")
-    verified = _verify_report(reopened, job_id=job_id, actor_id=actor_id, expected_scope=scope)
+    verified = _verify_report(reopened, job_id=job_id, actor_id=actor_id, expected_scope=scope, actor=image_actor)
     evaluations = _record_evaluations(verified)
     return _response(verified, evaluations)
 
@@ -488,7 +496,7 @@ def get_source_brief_job(job_id: str, *, actor_id: str,
     row = _read_report(job_id, **options)
     if not row:
         raise LookupError("SOURCE_BRIEF_JOB_NOT_FOUND")
-    verified = _verify_report(row, job_id=job_id, actor_id=actor_id, expected_scope=expected_scope)
+    verified = _verify_report(row, job_id=job_id, actor_id=actor_id, expected_scope=expected_scope, actor=actor)
     if connection is not None:
         committed = _read_report(job_id)
         if committed is None or any(committed.get(key) != row.get(key) for key in (

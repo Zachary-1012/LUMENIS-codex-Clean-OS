@@ -149,7 +149,8 @@ class TestAdapterFactory:
         assert isinstance(get_adapter(domain_id), CTHAdapter)
 
     def test_to_domain_rejects_contradictory_domain_product_pair(self):
-        rec = CanonicalRecord(product_id=PRODUCT_CTH, domain_id=DOMAIN_ZBMP)
+        rec = CanonicalRecord(product_id=PRODUCT_CTH)
+        rec.domain_id = DOMAIN_ZBMP
         with pytest.raises(ValueError, match="CanonicalRecord domain/product identity"):
             CTHAdapter().to_domain(rec)
 

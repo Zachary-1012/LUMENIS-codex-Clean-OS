@@ -10,226 +10,212 @@ import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/features/cth/cth01/cth01_screen.dart';
 import 'package:lumenis_app/features/launch/launch_surface.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
+import 'package:lumenis_app/navigation/lumenis_workspace_routes.dart';
+import 'package:lumenis_app/shell/lumenis_workspace_shell.dart';
 
 void main() {
-  testWidgets('loading state has the launch Material text and color baseline', (
-    tester,
-  ) async {
-    final identity = Completer<Map<String, dynamic>>();
-    final client = _PendingIdentityClient(identity.future);
-    await tester.binding.setSurfaceSize(const Size(360, 520));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets(
+    'Home task entry is available while runtime and context are pending',
+    (tester) async {
+      final client = _ControlledLaunchClient();
 
-    await tester.pumpWidget(_app(client, withScaffold: false));
-    await tester.pump();
+      await tester.pumpWidget(_app(client));
+      await tester.pump();
 
-    final title = find.text('序境');
-    expect(title, findsOneWidget);
-    expect(find.text('正在连接工作区…'), findsOneWidget);
-    final detailStyle = tester
-        .widget<RichText>(
-          find.descendant(
-            of: find.text('正在连接工作区…'),
-            matching: find.byType(RichText),
-          ),
-        )
-        .text
-        .style!;
-    expect(
-      detailStyle.fontSize,
-      LumenisTheme.dark.textTheme.bodyMedium!.fontSize,
-    );
-    expect(detailStyle.decoration ?? TextDecoration.none, TextDecoration.none);
-    final material = tester.widget<Material>(
-      find.ancestor(of: title, matching: find.byType(Material)).first,
-    );
-    expect(
-      material.color,
-      LumenisTheme.dark.extension<LumenisPalette>()!.canvas,
-    );
-    expect(
-      tester.widget<Text>(title).style?.color,
-      LumenisTheme.dark.extension<LumenisPalette>()!.foreground,
-    );
-    expect(
-      tester.widget<Text>(find.text('正在连接工作区…')).style?.color,
-      LumenisTheme.dark.extension<LumenisPalette>()!.muted,
-    );
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('unavailable state scrolls at large text and retry recovers', (
-    tester,
-  ) async {
-    final client = _RetryingIdentityClient();
-    await tester.binding.setSurfaceSize(const Size(320, 200));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-
-    await tester.pumpWidget(
-      _app(client, withScaffold: false, textScaler: const TextScaler.linear(2)),
-    );
-    await tester.pumpAndSettle();
-
-    final title = find.text('工作区暂未连接');
-    expect(title, findsOneWidget);
-    expect(find.text('暂时无法读取工作区，请检查连接后重试。'), findsOneWidget);
-    final detailStyle = tester
-        .widget<RichText>(
-          find.descendant(
-            of: find.text('暂时无法读取工作区，请检查连接后重试。'),
-            matching: find.byType(RichText),
-          ),
-        )
-        .text
-        .style!;
-    expect(
-      detailStyle.fontSize,
-      LumenisTheme.dark.textTheme.bodyMedium!.fontSize,
-    );
-    expect(detailStyle.decoration ?? TextDecoration.none, TextDecoration.none);
-    expect(find.byType(SingleChildScrollView), findsOneWidget);
-    expect(
-      tester.widget<Text>(title).style?.color,
-      LumenisTheme.dark.extension<LumenisPalette>()!.foreground,
-    );
-    expect(
-      tester.widget<Text>(find.text('暂时无法读取工作区，请检查连接后重试。')).style?.color,
-      LumenisTheme.dark.extension<LumenisPalette>()!.muted,
-    );
-    expect(
-      find.ancestor(of: title, matching: find.byType(Material)),
-      findsOneWidget,
-    );
-    final scrollable = find.descendant(
-      of: find.byType(SingleChildScrollView),
-      matching: find.byType(Scrollable),
-    );
-    expect(
-      tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
-      greaterThan(0),
-    );
-    expect(tester.takeException(), isNull);
-
-    await tester.binding.setSurfaceSize(const Size(1024, 768));
-    await tester.pumpAndSettle();
-    final retry = find.text('重新连接');
-    await tester.ensureVisible(retry);
-    await tester.tap(retry);
-    await tester.pumpAndSettle();
-
-    expect(client.identityCalls, 2);
-    expect(find.text('工作区暂未连接'), findsNothing);
-    expect(find.byType(Cth01Screen), findsOneWidget);
-    expect(find.text('登录序境'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('opens the existing workspace without a product account', (
-    tester,
-  ) async {
-    await _runWithRealHttp(() async {
-      final server = await tester.runAsync(() => _TestCoreServer.start());
-      expect(server, isNotNull);
-      addTearDown(() => server!.close());
-
-      await tester.pumpWidget(
-        _app(LumenisCoreClient(baseUrl: server!.baseUrl)),
+      final shell = tester.widget<LumenisWorkspaceShell>(
+        find.byType(LumenisWorkspaceShell),
       );
-      await _pumpNetwork(tester);
+      expect(shell.initialScreenId, LumenisWorkspaceRoutes.rootScreenId);
+      expect(shell.runtime['state'], 'LOADING');
+      expect(shell.contextEnvelope, isNull);
+      expect(client.identityCalls, 1);
+      expect(client.contextCalls, 1);
 
-      expect(
-        find.descendant(
-          of: find.byType(Cth01Screen),
-          matching: find.text('商业运营总览'),
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('登录序境'), findsNothing);
-      expect(find.byTooltip('退出登录'), findsNothing);
-      expect(
-        server.requests.map((request) => request.path),
-        containsAllInOrder([
-          '/api/auth/config',
-          '/api/experience/runtime/identity',
-          '/api/settings/context',
-          '/api/experience/screen/CTH-01',
-        ]),
+      await tester.enterText(
+        find.byKey(const ValueKey('ai01-task-input')),
+        '整理本周客户风险变化',
       );
       expect(
-        server.requests.any((request) => request.path.startsWith('/v4/auth/')),
-        isFalse,
-      );
-      expect(
-        server.requests.any(
-          (request) => request.path == '/api/settings/subjects',
-        ),
-        isFalse,
-      );
-      expect(server.requests.first.authorization, isNull);
-      expect(
-        server.requests
-            .where((request) => request.path != '/api/auth/config')
-            .every((request) => request.authorization == _authorization),
-        isTrue,
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('ai01-task-input')))
+            .controller
+            ?.text,
+        '整理本周客户风险变化',
       );
       expect(tester.takeException(), isNull);
-    });
-  });
+    },
+  );
 
-  testWidgets('auth-disabled Core also opens without a product account', (
-    tester,
-  ) async {
-    await _runWithRealHttp(() async {
-      final server = await tester.runAsync(
-        () => _TestCoreServer.start(authEnabled: false),
-      );
-      expect(server, isNotNull);
-      addTearDown(() => server!.close());
+  testWidgets(
+    'runtime and context completing preserves Home draft and selection',
+    (tester) async {
+      final client = _ControlledLaunchClient();
 
-      await tester.pumpWidget(
-        _app(LumenisCoreClient(baseUrl: server!.baseUrl)),
+      await tester.pumpWidget(_app(client));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const ValueKey('ai01-task-input')),
+        '保留中的任务草稿',
       );
-      await _pumpNetwork(tester);
+
+      final inputFinder = find.byKey(const ValueKey('ai01-task-input'));
+      final controller = tester.widget<TextField>(inputFinder).controller!;
+      controller.selection = const TextSelection.collapsed(offset: 4);
+
+      client.identityResponses.single.complete(_healthyIdentity);
+      await tester.pump();
 
       expect(
-        find.descendant(
-          of: find.byType(Cth01Screen),
-          matching: find.text('商业运营总览'),
-        ),
-        findsOneWidget,
+        tester.widget<TextField>(inputFinder).controller,
+        same(controller),
       );
-      expect(find.text('登录序境'), findsNothing);
-      expect(server.requests.last.path, '/api/experience/screen/CTH-01');
+      expect(controller.text, '保留中的任务草稿');
+      expect(controller.selection, const TextSelection.collapsed(offset: 4));
       expect(
-        server.requests.every((request) => request.authorization == null),
-        isTrue,
+        tester
+            .widget<LumenisWorkspaceShell>(find.byType(LumenisWorkspaceShell))
+            .runtime['state'],
+        'CONNECTED',
       );
+
+      client.contextResponses.single.complete(_globalContext);
+      await tester.pumpAndSettle(const Duration(milliseconds: 180));
+
+      final shell = tester.widget<LumenisWorkspaceShell>(
+        find.byType(LumenisWorkspaceShell),
+      );
+      expect(shell.contextEnvelope, same(_globalContext));
+      expect(inputFinder, findsOneWidget);
+      expect(
+        tester.widget<TextField>(inputFinder).controller,
+        same(controller),
+      );
+      expect(controller.text, '保留中的任务草稿');
+      expect(controller.selection, const TextSelection.collapsed(offset: 4));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final healthCase in [
+    (guardian: 'degraded', expected: 'DEGRADED'),
+    (guardian: 'offline', expected: 'OFFLINE'),
+    (guardian: null, expected: 'UNKNOWN'),
+  ]) {
+    testWidgets('runtime ${healthCase.expected} state stays explicit', (
+      tester,
+    ) async {
+      final client = _ControlledLaunchClient();
+
+      await tester.pumpWidget(_app(client));
+      await tester.pump();
+      client.identityResponses.single.complete({
+        'ok': true,
+        if (healthCase.guardian != null)
+          'runtime_guardian': {'overall': healthCase.guardian},
+      });
+      await tester.pump();
+
+      final runtime = tester
+          .widget<LumenisWorkspaceShell>(find.byType(LumenisWorkspaceShell))
+          .runtime;
+      expect(runtime['state'], healthCase.expected);
+      expect(runtime['ok'], isFalse);
+      expect(runtime['runtime_available'], isFalse);
       expect(tester.takeException(), isNull);
     });
-  });
+  }
 
-  testWidgets('CTH directory denial stays on CTH-02 without ejecting the App', (
+  testWidgets('offline Home stays editable and retry rereads runtime only', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(1440, 900));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    final client = _DeniedDirectoryClient();
+    final client = _ControlledLaunchClient();
 
     await tester.pumpWidget(_app(client));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('查看经营主体目录'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const ValueKey('ai01-task-input')),
+      '离线时继续编辑',
+    );
+    final inputFinder = find.byKey(const ValueKey('ai01-task-input'));
+    final controller = tester.widget<TextField>(inputFinder).controller!;
+    controller.selection = const TextSelection.collapsed(offset: 3);
 
-    expect(find.text('经营主体目录 · 当前经营范围不变'), findsOneWidget);
-    expect(find.textContaining('主体名单授权尚未接入'), findsOneWidget);
-    expect(find.byType(Cth01Screen), findsNothing);
-    expect(find.text('登录序境'), findsNothing);
-    expect(find.byTooltip('返回商业运营总览'), findsOneWidget);
-    expect(client.settingsSubjectsCalls, 1);
+    client.contextResponses.single.complete(_globalContext);
+    await tester.pumpAndSettle(const Duration(milliseconds: 180));
+    expect(inputFinder, findsOneWidget);
+    expect(tester.widget<TextField>(inputFinder).controller, same(controller));
+    expect(controller.text, '离线时继续编辑');
+    expect(controller.selection, const TextSelection.collapsed(offset: 3));
+
+    client.identityResponses[0].completeError(
+      const LumenisCoreException('Core is temporarily unavailable.'),
+    );
+    await tester.pumpAndSettle(const Duration(milliseconds: 180));
+
+    var shell = tester.widget<LumenisWorkspaceShell>(
+      find.byType(LumenisWorkspaceShell),
+    );
+    expect(shell.runtime['state'], 'OFFLINE');
+    expect(shell.onRetryRuntime, isNotNull);
+    expect(client.identityCalls, 1);
+    expect(client.contextCalls, 1);
+    expect(inputFinder, findsOneWidget);
+    expect(tester.widget<TextField>(inputFinder).controller, same(controller));
+    expect(controller.text, '离线时继续编辑');
+    expect(controller.selection, const TextSelection.collapsed(offset: 3));
+
+    await tester.tap(find.byKey(const ValueKey('workspace-runtime-retry')));
+    await tester.pump();
+    expect(client.identityCalls, 2);
+    expect(client.contextCalls, 1);
+    client.identityResponses[1].complete(_healthyIdentity);
+    await tester.pumpAndSettle(const Duration(milliseconds: 180));
+
+    shell = tester.widget<LumenisWorkspaceShell>(
+      find.byType(LumenisWorkspaceShell),
+    );
+    expect(shell.runtime['state'], 'CONNECTED');
+    expect(inputFinder, findsOneWidget);
+    expect(tester.widget<TextField>(inputFinder).controller, same(controller));
+    expect(controller.text, '离线时继续编辑');
+    expect(controller.selection, const TextSelection.collapsed(offset: 3));
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Core 401 shows recoverable connection state, never login form', (
+  testWidgets('late responses from a replaced Core client are ignored', (
+    tester,
+  ) async {
+    final oldClient = _ControlledLaunchClient();
+    final newClient = _ControlledLaunchClient();
+
+    await tester.pumpWidget(_app(oldClient));
+    await tester.pump();
+    await tester.pumpWidget(_app(newClient));
+    await tester.pump();
+
+    newClient.identityResponses.single.complete(_healthyIdentity);
+    newClient.contextResponses.single.complete(_contextNamed('新客户端范围'));
+    await tester.pump();
+
+    oldClient.identityResponses.single.completeError(
+      const LumenisCoreException('old client failed', statusCode: 403),
+    );
+    oldClient.contextResponses.single.complete(_contextNamed('旧客户端范围'));
+    await tester.pump();
+
+    final shell = tester.widget<LumenisWorkspaceShell>(
+      find.byType(LumenisWorkspaceShell),
+    );
+    expect(shell.client, same(newClient));
+    expect(shell.runtime['state'], 'CONNECTED');
+    expect(shell.contextEnvelope, same(newClient.completedContext));
+    expect(shell.contextEnvelope, isNot(same(oldClient.completedContext)));
+    expect(newClient.contextCalls, 1);
+    expect(oldClient.contextCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Core 401 remains an access failure without an account wall', (
     tester,
   ) async {
     await _runWithRealHttp(() async {
@@ -244,15 +230,31 @@ void main() {
       );
       await _pumpNetwork(tester);
 
-      expect(find.byType(Cth01Screen), findsOneWidget);
-      expect(find.text('当前访问暂不可用'), findsNothing);
+      final shell = tester.widget<LumenisWorkspaceShell>(
+        find.byType(LumenisWorkspaceShell),
+      );
+      expect(shell.runtime['state'], 'AUTH_REQUIRED');
+      expect(shell.runtime['status_code'], HttpStatus.unauthorized);
+      expect(find.byKey(const ValueKey('ai01-task-input')), findsOneWidget);
       expect(find.text('登录序境'), findsNothing);
       expect(find.text('领域登录入口'), findsNothing);
+      expect(
+        server.requests.map((request) => request.path),
+        contains('/api/experience/screen/AI-01'),
+      );
+      expect(
+        server.requests.any((request) => request.path.startsWith('/v4/auth/')),
+        isFalse,
+      );
+      expect(
+        server.requests.every((request) => request.authorization == null),
+        isTrue,
+      );
       expect(tester.takeException(), isNull);
     });
   });
 
-  testWidgets('Core 403 remains distinct and does not ask for an account', (
+  testWidgets('Core 403 remains distinct and keeps Home available', (
     tester,
   ) async {
     await _runWithRealHttp(() async {
@@ -267,13 +269,230 @@ void main() {
       );
       await _pumpNetwork(tester);
 
-      expect(find.byType(Cth01Screen), findsOneWidget);
-      expect(find.text('当前访问暂不可用'), findsNothing);
+      final shell = tester.widget<LumenisWorkspaceShell>(
+        find.byType(LumenisWorkspaceShell),
+      );
+      expect(shell.runtime['state'], 'ACCESS_UNAVAILABLE');
+      expect(shell.runtime['status_code'], HttpStatus.forbidden);
+      expect(find.byKey(const ValueKey('ai01-task-input')), findsOneWidget);
       expect(find.text('登录序境'), findsNothing);
       expect(find.text('领域登录入口'), findsNothing);
+      expect(
+        server.requests.every((request) => request.authorization == null),
+        isTrue,
+      );
       expect(tester.takeException(), isNull);
     });
   });
+
+  testWidgets('local Core opens Home without a product account', (
+    tester,
+  ) async {
+    await _runWithRealHttp(() async {
+      final server = await tester.runAsync(() => _TestCoreServer.start());
+      expect(server, isNotNull);
+      addTearDown(() => server!.close());
+
+      await tester.pumpWidget(
+        _app(LumenisCoreClient(baseUrl: server!.baseUrl)),
+      );
+      await _pumpNetwork(tester);
+
+      expect(find.byKey(const ValueKey('ai01-task-input')), findsOneWidget);
+      expect(find.text('登录序境'), findsNothing);
+      expect(find.byTooltip('退出登录'), findsNothing);
+      expect(
+        server.requests.map((request) => request.path),
+        containsAll([
+          '/api/experience/runtime/identity',
+          '/api/settings/context',
+          '/api/experience/screen/AI-01',
+        ]),
+      );
+      expect(
+        server.requests.any((request) => request.path.startsWith('/v4/auth/')),
+        isFalse,
+      );
+      expect(
+        server.requests.map((request) => request.path),
+        isNot(contains('/api/auth/config')),
+      );
+      expect(
+        server.requests.any(
+          (request) => request.path == '/api/settings/subjects',
+        ),
+        isFalse,
+      );
+      expect(
+        server.requests.every((request) => request.authorization == null),
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  testWidgets('auth-disabled Core opens Home without credentials', (
+    tester,
+  ) async {
+    await _runWithRealHttp(() async {
+      final server = await tester.runAsync(
+        () => _TestCoreServer.start(authEnabled: false),
+      );
+      expect(server, isNotNull);
+      addTearDown(() => server!.close());
+
+      await tester.pumpWidget(
+        _app(LumenisCoreClient(baseUrl: server!.baseUrl)),
+      );
+      await _pumpNetwork(tester);
+
+      expect(find.byKey(const ValueKey('ai01-task-input')), findsOneWidget);
+      expect(find.text('登录序境'), findsNothing);
+      expect(
+        server.requests.any(
+          (request) => request.path == '/api/experience/screen/AI-01',
+        ),
+        isTrue,
+      );
+      expect(
+        server.requests.every((request) => request.authorization == null),
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  testWidgets('explicit CTH deep link remains openable from LaunchSurface', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(_SuccessfulLaunchClient(), initialScreenId: 'CTH-01'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Cth01Screen), findsOneWidget);
+    final cthScreen = find.byType(Cth01Screen);
+    expect(
+      find.descendant(of: cthScreen, matching: find.text('商业运营总览')),
+      findsOneWidget,
+    );
+    expect(
+      find
+          .text('商业运营总览')
+          .evaluate()
+          .where(
+            (element) =>
+                element
+                        .findAncestorWidgetOfExactType<
+                          LumenisWorkspaceShell
+                        >() !=
+                    null &&
+                element.findAncestorWidgetOfExactType<Cth01Screen>() == null,
+          ),
+      hasLength(1),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('CTH directory denial stays on CTH-02 without ejecting the App', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final client = _DeniedDirectoryClient();
+
+    await tester.pumpWidget(_app(client, initialScreenId: 'CTH-01'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('查看经营主体目录'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('经营主体目录 · 当前经营范围不变'), findsOneWidget);
+    expect(find.textContaining('主体名单授权尚未接入'), findsOneWidget);
+    expect(find.byType(Cth01Screen), findsNothing);
+    expect(find.text('登录序境'), findsNothing);
+    expect(find.byTooltip('返回商业运营总览'), findsOneWidget);
+    expect(client.settingsSubjectsCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+Widget _app(
+  LumenisCoreClient client, {
+  String initialScreenId = LumenisWorkspaceRoutes.rootScreenId,
+  bool withScaffold = true,
+}) => MaterialApp(
+  locale: const Locale('zh', 'CN'),
+  theme: LumenisTheme.dark,
+  supportedLocales: LumenisLocalizations.supportedLocales,
+  localizationsDelegates: const [
+    LumenisLocalizations.delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+  ],
+  home: withScaffold
+      ? Scaffold(
+          body: LaunchSurface(client: client, initialScreenId: initialScreenId),
+        )
+      : LaunchSurface(client: client, initialScreenId: initialScreenId),
+);
+
+class _ControlledLaunchClient extends LumenisCoreClient {
+  final identityResponses = <Completer<Map<String, dynamic>>>[];
+  final contextResponses = <Completer<Map<String, dynamic>>>[];
+  int identityCalls = 0;
+  int contextCalls = 0;
+  Map<String, dynamic>? completedContext;
+
+  @override
+  Future<Map<String, dynamic>> runtimeIdentity() {
+    identityCalls++;
+    final response = Completer<Map<String, dynamic>>();
+    identityResponses.add(response);
+    return response.future;
+  }
+
+  @override
+  Future<Map<String, dynamic>> settingsContext() {
+    contextCalls++;
+    final response = Completer<Map<String, dynamic>>();
+    contextResponses.add(response);
+    return response.future.then((value) {
+      completedContext = value;
+      return value;
+    });
+  }
+
+  @override
+  Future<Map<String, dynamic>> screen(String screenId) async =>
+      screenId == 'AI-01' ? _ai01Screen : _cthScreen;
+}
+
+class _SuccessfulLaunchClient extends LumenisCoreClient {
+  @override
+  Future<Map<String, dynamic>> runtimeIdentity() async => _healthyIdentity;
+
+  @override
+  Future<Map<String, dynamic>> settingsContext() async => _globalContext;
+
+  @override
+  Future<Map<String, dynamic>> screen(String screenId) async =>
+      screenId == 'AI-01' ? _ai01Screen : _cthScreen;
+}
+
+class _DeniedDirectoryClient extends _SuccessfulLaunchClient {
+  int settingsSubjectsCalls = 0;
+
+  @override
+  Future<Map<String, dynamic>> settingsSubjects({
+    String domainId = 'CTH',
+  }) async {
+    settingsSubjectsCalls++;
+    throw const LumenisCoreException(
+      'GET /api/settings/subjects?domain_id=CTH failed with HTTP 401',
+      statusCode: HttpStatus.unauthorized,
+    );
+  }
 }
 
 Future<void> _runWithRealHttp(Future<void> Function() body) =>
@@ -292,31 +511,6 @@ class _RealHttpOverrides extends HttpOverrides {
   }
 }
 
-Widget _app(
-  LumenisCoreClient client, {
-  bool withScaffold = true,
-  TextScaler? textScaler,
-}) => MaterialApp(
-  locale: const Locale('zh', 'CN'),
-  theme: LumenisTheme.dark,
-  builder: textScaler == null
-      ? null
-      : (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
-          child: child!,
-        ),
-  supportedLocales: LumenisLocalizations.supportedLocales,
-  localizationsDelegates: const [
-    LumenisLocalizations.delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-  ],
-  home: withScaffold
-      ? Scaffold(body: LaunchSurface(client: client))
-      : LaunchSurface(client: client),
-);
-
 Future<void> _pumpNetwork(WidgetTester tester) async {
   for (var attempt = 0; attempt < 12; attempt++) {
     await tester.runAsync(
@@ -324,83 +518,14 @@ Future<void> _pumpNetwork(WidgetTester tester) async {
     );
     await tester.pump();
   }
+  await tester.pumpAndSettle(const Duration(milliseconds: 180));
 }
-
-const _username = 'operator';
-const _password = 'secret';
-final _authorization =
-    'Basic ${base64Encode(utf8.encode('$_username:$_password'))}';
 
 class _RecordedRequest {
   const _RecordedRequest({required this.path, required this.authorization});
 
   final String path;
   final String? authorization;
-}
-
-class _DeniedDirectoryClient extends LumenisCoreClient {
-  int settingsSubjectsCalls = 0;
-
-  @override
-  Future<Map<String, dynamic>> runtimeIdentity() async => _identity;
-
-  @override
-  Future<Map<String, dynamic>> screen(String screenId) async => _cthScreen;
-
-  @override
-  Future<Map<String, dynamic>> settingsSubjects({
-    String domainId = 'CTH',
-  }) async {
-    settingsSubjectsCalls += 1;
-    throw const LumenisCoreException(
-      'GET /api/settings/subjects?domain_id=CTH failed with HTTP 401',
-      statusCode: HttpStatus.unauthorized,
-    );
-  }
-}
-
-class _PendingIdentityClient extends LumenisCoreClient {
-  _PendingIdentityClient(this.identity);
-
-  final Future<Map<String, dynamic>> identity;
-
-  @override
-  Future<Map<String, dynamic>> runtimeIdentity() => identity;
-}
-
-class _RetryingIdentityClient extends LumenisCoreClient {
-  int identityCalls = 0;
-
-  @override
-  Future<Map<String, dynamic>> runtimeIdentity() async {
-    identityCalls += 1;
-    if (identityCalls == 1) {
-      throw const LumenisCoreException('Core is temporarily unavailable.');
-    }
-    return _identity;
-  }
-
-  @override
-  Future<Map<String, dynamic>> settingsContext() async => const {
-    'ok': true,
-    'contract': 'lumenis.context.v1',
-    'context': {
-      'mode': 'GLOBAL_ALL',
-      'mode_label_key': 'context.mode.global_all',
-      'domain_id': null,
-      'product_id': null,
-      'subject_id': null,
-      'display_name': null,
-      'display_state': 'not_applicable',
-    },
-    'authorized_domains': [
-      {'id': 'CTH', 'name': 'Business', 'product': 'CTH'},
-    ],
-    'selection_only': true,
-  };
-
-  @override
-  Future<Map<String, dynamic>> screen(String screenId) async => _cthScreen;
 }
 
 class _TestCoreServer {
@@ -453,44 +578,31 @@ class _TestCoreServer {
       await _reply(request, HttpStatus.ok, {
         'ok': true,
         'auth_enabled': authEnabled,
-        'auth_header': authEnabled ? _authorization : '',
       });
       return;
     }
 
-    final authorized = !authEnabled || authorization == _authorization;
+    final isLocalRequest = authorization == null;
     if (path == '/api/experience/runtime/identity') {
       final status =
           identityStatus ??
-          (authorized ? HttpStatus.ok : HttpStatus.unauthorized);
+          (isLocalRequest ? HttpStatus.ok : HttpStatus.unauthorized);
       await _reply(
         request,
         status,
-        status == HttpStatus.ok ? _identity : const {'error': 'denied'},
+        status == HttpStatus.ok ? _healthyIdentity : const {'error': 'denied'},
       );
       return;
     }
-    if (path == '/api/settings/context' && authorized) {
-      await _reply(request, HttpStatus.ok, const {
-        'ok': true,
-        'contract': 'lumenis.context.v1',
-        'context': {
-          'mode': 'GLOBAL_ALL',
-          'mode_label_key': 'context.mode.global_all',
-          'domain_id': null,
-          'product_id': null,
-          'subject_id': null,
-          'display_name': null,
-          'display_state': 'not_applicable',
-        },
-        'authorized_domains': [
-          {'id': 'CTH', 'name': 'Business', 'product': 'CTH'},
-        ],
-        'selection_only': true,
-      });
+    if (path == '/api/settings/context' && isLocalRequest) {
+      await _reply(request, HttpStatus.ok, _globalContext);
       return;
     }
-    if (path == '/api/experience/screen/CTH-01' && authorized) {
+    if (path == '/api/experience/screen/AI-01' && isLocalRequest) {
+      await _reply(request, HttpStatus.ok, _ai01Screen);
+      return;
+    }
+    if (path == '/api/experience/screen/CTH-01' && isLocalRequest) {
       await _reply(request, HttpStatus.ok, _cthScreen);
       return;
     }
@@ -516,16 +628,54 @@ class _TestCoreServer {
   }
 }
 
-const Map<String, dynamic> _identity = {
+const Map<String, dynamic> _healthyIdentity = {
   'ok': true,
   'app': 'LUMENIS Core',
   'api': 'experience_runtime.v1',
-  'domain': 'cth',
-  'subject': {
-    'subject_id': 'CTH-SUBJECT-7',
-    'brand_key': 'cth-brand',
-    'product': 'CTH',
+  'runtime_guardian': {'overall': 'healthy'},
+};
+
+const Map<String, dynamic> _globalContext = {
+  'ok': true,
+  'contract': 'lumenis.context.v1',
+  'context': {
+    'mode': 'GLOBAL_ALL',
+    'mode_label_key': 'context.mode.global_all',
+    'domain_id': null,
+    'product_id': null,
+    'subject_id': null,
+    'display_name': null,
+    'display_state': 'not_applicable',
   },
+  'authorized_domains': [
+    {'id': 'CTH', 'name': 'Business', 'product': 'CTH'},
+  ],
+  'selection_only': true,
+};
+
+Map<String, dynamic> _contextNamed(String name) => {
+  ..._globalContext,
+  'context': {
+    ...(_globalContext['context'] as Map<String, dynamic>),
+    'display_name': {'zh-CN': name},
+  },
+};
+
+const Map<String, dynamic> _ai01Screen = {
+  'ok': true,
+  'screen': 'AI-01',
+  'bound': true,
+  'source': 'runtime',
+  'binding': {'unavailable': []},
+  'sections': [
+    {
+      'type': 'split',
+      'side': [
+        {'type': 'runtime', 'items': []},
+      ],
+    },
+    {'type': 'cards', 'items': []},
+  ],
 };
 
 const Map<String, dynamic> _cthScreen = {

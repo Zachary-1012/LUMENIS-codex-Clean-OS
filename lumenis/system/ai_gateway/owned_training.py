@@ -467,10 +467,19 @@ def run_owned_lora_training(
         "heldout_case_count": len(heldout), "scopes": list(scopes),
         "domain_id": domain_id,
     }
+    training_epochs = 1
     if checkpoint_policy is not None:
         result["checkpoint_policy_sha256"] = checkpoint_policy.sha256
+        from .owned_training_checkpoints import checkpoint_training_plan
         accumulation = recipe_gradient_accumulation_steps(base_recipe)
-        total_steps = (len(train) + accumulation - 1) // accumulation
+        training_epochs = checkpoint_policy.document.get("num_train_epochs", 1)
+        updates_per_epoch, total_steps = checkpoint_training_plan(
+            len(train), accumulation, training_epochs)
+        result.update({
+            "num_train_epochs": training_epochs,
+            "optimizer_steps_per_epoch": updates_per_epoch,
+            "total_optimizer_steps": total_steps,
+        })
         if stop_after_checkpoint_step is not None and (
                 stop_after_checkpoint_step >= total_steps
                 or stop_after_checkpoint_step % checkpoint_policy.document["checkpoint_interval_steps"]):
@@ -597,7 +606,7 @@ def run_owned_lora_training(
                 }
 
             args = SFTConfig(
-                learning_rate=2e-4, gradient_checkpointing=True, num_train_epochs=1,
+                learning_rate=2e-4, gradient_checkpointing=True, num_train_epochs=training_epochs,
                 logging_steps=1, per_device_train_batch_size=1 if low_memory else 4,
                 gradient_accumulation_steps=recipe_gradient_accumulation_steps(base_recipe),
                 max_length=max_length, warmup_ratio=0.03, lr_scheduler_type="cosine_with_min_lr",

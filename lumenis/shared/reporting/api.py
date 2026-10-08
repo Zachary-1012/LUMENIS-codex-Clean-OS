@@ -96,6 +96,13 @@ def export():
         from lumenis.shared.reporting import ReportExporter
         exporter = ReportExporter()
         result = exporter.generate_and_export(brand_mode=brand_mode, period=period)
+        missing_formats = [format for format in ("word", "pdf") if not result.get(format + "_path")]
+        if missing_formats:
+            return jsonify({
+                "ok": False, "code": "REPORT_EXPORT_INCOMPLETE", "error": "所需报告格式未能导出",
+                "unavailable_formats": missing_formats, "brand_mode": brand_mode, "period": period,
+                "word_path": result.get("word_path"), "pdf_path": result.get("pdf_path"),
+            }), 503
         return jsonify({
             "ok": True,
             "brand_mode": brand_mode,

@@ -20,6 +20,62 @@ def plan(*segments):
     return PodcastPlan("Source review episode", "An attributed discussion", "en", tuple(segments or (segment(),)))
 
 
+@pytest.mark.parametrize("text", ["完整中文条件。", "Keep the complete condition.", "조건을 온전히 보존합니다.", "中文 English 한국어 condition"])
+def test_editorial_revision_exports_all_members_without_claiming_new_audio(text):
+    original = plan()
+    corrected = original.with_transcript_corrections(
+        {"s1": text}, expected_revision=original.revision,
+        expected_digest=original.content_digest(),
+    )
+    documents = corrected.editable_documents()
+    assert set(documents) == {
+        "podcast-plan.json", "script.txt", "transcript-original.vtt",
+        "transcript-corrected.vtt", "chapters.json", "corrections.json", "metadata.json",
+    }
+    assert PodcastPlan.from_json(documents["podcast-plan.json"]) == corrected
+    assert text in documents["transcript-corrected.vtt"]
+    assert "raw transcription" in documents["transcript-original.vtt"]
+    assert original.segments[0].original_text == corrected.segments[0].original_text
+    assert original.segments[0].media_asset_id == corrected.segments[0].media_asset_id
+    assert original.segments[0].source_in == corrected.segments[0].source_in
+    assert original.segments[0].source_out == corrected.segments[0].source_out
+    assert corrected.revision == original.revision + 1
+    metadata = json.loads(documents["metadata.json"])
+    assert metadata["transcript_edits_change_audio"] is False
+    assert metadata["human_listening_acceptance"] == "not_asserted_by_plan"
+    assert original.segments[0].corrected_text == "Reviewed transcription"
+
+
+def test_editorial_revision_rejects_stale_or_foreign_base_and_unknown_segment():
+    original = plan()
+    for revision, digest in [(original.revision + 1, original.content_digest()),
+                             (original.revision, "0" * 64)]:
+        with pytest.raises(ValueError, match="stale"):
+            original.with_transcript_corrections({"s1": "new wording"},
+                expected_revision=revision, expected_digest=digest)
+    with pytest.raises(ValueError, match="unknown"):
+        original.with_transcript_corrections({"missing": "new wording"},
+            expected_revision=original.revision, expected_digest=original.content_digest())
+    assert original.revision == 1
+    assert original.with_transcript_corrections({}, expected_revision=1,
+        expected_digest=original.content_digest()) is original
+
+
+def test_editorial_reorder_rebuilds_chapters_without_rewriting_source_or_losing_segments():
+    original = plan(segment("first", source_in=1, source_out=3, chapter_title="First"),
+                    segment("second", source_in=10, source_out=14, chapter_title="Second"))
+    changed = original.reordered_segments(("second", "first"),
+        expected_revision=1, expected_digest=original.content_digest())
+    assert changed.segments == tuple(reversed(original.segments))
+    assert changed.chapter_document()["chapters"][1]["startTime"] == 4
+    assert "00:00:04.000 --> 00:00:06.000" in changed.original_transcript_vtt()
+    assert PodcastPlan.from_json(changed.to_json()).content_digest() == changed.content_digest()
+    with pytest.raises(ValueError, match="duplicates"):
+        original.reordered_segments(("first", "first"), expected_revision=1,
+            expected_digest=original.content_digest())
+    assert [item.segment_id for item in original.segments] == ["first", "second"]
+
+
 def test_correction_and_reviewed_revision_reopen_without_rewriting_source():
     first = plan()
     revised_segment = replace(first.segments[0], corrected_text="Reviewed source correction")

@@ -30,6 +30,15 @@
       "canonical_architecture_owners_changed": false,
       "other_windows_resumed": false,
       "new_permission_or_cost_scope": false
+    },
+    "M_existing_candidate_convergence": {
+      "quote": "给你的任务把本地候选和未集成全部解决，c1仍旧还负责他自己的，你负责把这些都解决",
+      "source": "Direct PO M thread, 2026-10-08",
+      "executor": "M",
+      "scope": "Existing non-C1 local/unintegrated source and unique work: reconcile, repair, verify, integrate and publish; C1 retains its ongoing closure",
+      "other_windows_resumed": false,
+      "C1_work_overwritten": false,
+      "new_test_or_paid_scope": false
     }
   },
   "constraints": [

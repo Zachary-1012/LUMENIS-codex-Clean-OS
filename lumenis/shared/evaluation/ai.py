@@ -3,13 +3,13 @@
 lumenis.shared.evaluation.ai — LUMENIS Shared Evaluation AI 质量评估
 
 核心原则：AI 是辅助判断层，永远不替代核心确定性规则。
-评估体系追踪 AI 与规则的一致性、人工修正率、Provider 可靠性，
+评估体系追踪 AI 与规则的一致性、已记录的人工修正、Provider 可靠性，
 形成「AI 输出 → 规则对比 → 人工修正 → 规则沉淀」的闭环。
 
 追踪指标：
 - 规则一致率（rule_agreement_rate；ai_accuracy为兼容别名）：不是独立正确率
 - AI 替代率（ai_replacement_rate）：最终结果采用 AI 而非规则的比例
-- 人工修正率（human_correction_rate）：被人工修正的调用比例
+- 人工修正数（human_correction_count）；没有复核分母时修正率保持未知
 - 置信度分布（confidence_distribution）：低/中/高置信度占比
 - Provider 失败率（provider_failure_rate）：按 provider 统计失败比例
 - 回退率（fallback_rate）：AI 失败回退到规则的比例
@@ -25,7 +25,7 @@ import os
 import sqlite3
 import threading
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import ai_call_logger as acl
 from lumenis.shared.database import get_repository
@@ -52,11 +52,11 @@ def record_rule_vs_ai(
     rule_result: str,
     ai_result: str,
     final_result: str,
-    confidence: float = 0.0,
+    confidence: Optional[Union[int, float]] = None,
     prompt_version: str = '',
     input_hash: str = '',
-    latency_ms: int = 0,
-    token_usage: int = 0,
+    latency_ms: Optional[Union[int, float]] = None,
+    token_usage: Optional[int] = None,
     success: bool = True,
     failure_reason: str = '',
 ) -> Optional[int]:
@@ -153,13 +153,19 @@ def evaluate_ai_quality(since: str = '', provider: str = '', limit: int = 5000) 
         'rule_agreement_rate': None, 'ai_accuracy': None,
         'ai_accuracy_semantics': 'COMPATIBILITY_ALIAS_RULE_AGREEMENT_NOT_GROUND_TRUTH',
         'independent_accuracy': None, 'independent_accuracy_state': 'NOT_MEASURED',
-        'ai_replacement_rate': None, 'human_correction_rate': None,
+        'ai_replacement_rate': None, 'human_correction_count': 0,
+        'human_correction_rate': None,
+        'human_correction_state': 'NO_SAMPLES',
+        'human_review_coverage': {'state': 'unknown', 'reviewed_calls': None, 'coverage_rate': None},
         'confidence_distribution': {'low': None, 'medium': None, 'high': None},
         'provider_failure_rate': {}, 'fallback_rate': None,
         'latency': {'avg_ms': None, 'p50_ms': None, 'p95_ms': None, 'max_ms': None},
         'token_cost': {'total_tokens': None, 'avg_tokens': None},
         'sample_counts': {'rule_comparisons': 0, 'final_comparisons': 0,
-                          'confidence': 0, 'latency': 0, 'token_usage': 0},
+                          'confidence': 0, 'confidence_ambiguous_zero': 0,
+                          'confidence_unknown': 0, 'latency': 0,
+                          'latency_ambiguous_zero': 0, 'latency_unknown': 0,
+                          'token_usage': 0, 'human_correction_observations': 0},
         'period': {'since': since, 'until': '', 'sampled': 0},
     }
     try:
@@ -178,6 +184,9 @@ def evaluate_ai_quality(since: str = '', provider: str = '', limit: int = 5000) 
         return {**empty, 'state': 'UNAVAILABLE', 'error': type(exc).__name__,
                 'reason': 'AI_EVALUATION_QUERY_FAILED', 'total_calls': None,
                 'success_count': None, 'failure_count': None,
+                'human_correction_count': None,
+                'human_correction_state': 'UNAVAILABLE',
+                'sample_counts': {key: None for key in empty['sample_counts']},
                 'period': {'since': since, 'until': '', 'sampled': None}}
     if not rows:
         return empty
@@ -188,35 +197,65 @@ def evaluate_ai_quality(since: str = '', provider: str = '', limit: int = 5000) 
     final = [row for row in success if row.get('final_result') and row.get('output')]
     replaced = sum(_results_match(row['final_result'], row['output']) and
                    not (row.get('rule_result') and _results_match(row['rule_result'], row['output'])) for row in final)
-    confidences = numbers(success, 'confidence', 1)
-    latencies = sorted(numbers(success, 'latency_ms'))
+    raw_confidences = numbers(success, 'confidence', 1)
+    confidence_zero_samples = sum(value == 0 for value in raw_confidences)
+    # Old logger versions defaulted absent confidence to 0. Without a versioned
+    # observation marker those zeros cannot safely be treated as measured.
+    confidences = [value for value in raw_confidences if value > 0]
+    raw_latencies = numbers(success, 'latency_ms')
+    latency_zero_samples = sum(value == 0 for value in raw_latencies)
+    # Legacy schema defaults also wrote 0 for unknown latency; exclude ambiguous
+    # zero rows from timing estimates while exposing their count below.
+    latencies = sorted(value for value in raw_latencies if value > 0)
     tokens = numbers(success, 'token_usage')
+    correction_count = sum(bool(row.get('human_correction')) for row in rows)
+    confidence_unknown = max(0, len(success) - len(raw_confidences))
+    latency_unknown = max(0, len(success) - len(raw_latencies))
     providers = {}
     for row in rows:
         name = row.get('provider') or 'unknown'
-        record = providers.setdefault(name, {'total': 0, 'failures': 0})
+        record = providers.setdefault(name, {'total': 0, 'failures': 0, 'known': 0})
         record['total'] += 1; record['failures'] += row.get('success') == 0
+        record['known'] += row.get('success') in (0, 1)
     return {
         **empty, 'state': 'OBSERVED', 'total_calls': len(rows),
         'success_count': len(success), 'failure_count': len(failure),
         'rule_agreement_rate': agreement, 'ai_accuracy': agreement,
         'ai_replacement_rate': rounded_ratio(replaced, len(final)),
-        'human_correction_rate': rounded_ratio(sum(bool(row.get('human_correction')) for row in rows), len(rows)),
+        'human_correction_count': correction_count,
+        'human_correction_rate': None,
+        'human_correction_state': 'REVIEW_DENOMINATOR_NOT_RECORDED',
+        'human_review_coverage': {
+            'state': 'unknown', 'reviewed_calls': None, 'coverage_rate': None,
+        },
         'confidence_distribution': {
             'low': rounded_ratio(sum(v < 0.4 for v in confidences), len(confidences)),
             'medium': rounded_ratio(sum(0.4 <= v < 0.7 for v in confidences), len(confidences)),
             'high': rounded_ratio(sum(v >= 0.7 for v in confidences), len(confidences)),
         },
-        'provider_failure_rate': {name: rounded_ratio(v['failures'], v['total']) for name, v in providers.items()},
+        'provider_failure_rate': {name: rounded_ratio(v['failures'], v['known']) for name, v in providers.items()},
         'fallback_rate': rounded_ratio(sum((row.get('provider') or '').lower() in ('rule', 'local_rule') for row in rows), len(rows)),
         'latency': {'avg_ms': int(sum(latencies) / len(latencies)) if latencies else None,
                     'p50_ms': latencies[len(latencies) // 2] if latencies else None,
                     'p95_ms': latencies[min(int(len(latencies) * 0.95), len(latencies) - 1)] if latencies else None,
-                    'max_ms': latencies[-1] if latencies else None},
+                    'max_ms': latencies[-1] if latencies else None,
+                    'ambiguous_zero_samples': latency_zero_samples,
+                    'unknown_samples': latency_unknown,
+                    'zero_value_provenance': (
+                        'unresolved_legacy_default_or_measured_zero'
+                        if latency_zero_samples else 'no_zero_values'
+                    )},
         'token_cost': {'total_tokens': int(sum(tokens)) if tokens else None,
                        'avg_tokens': int(sum(tokens) / len(tokens)) if tokens else None},
         'sample_counts': {'rule_comparisons': len(comparable), 'final_comparisons': len(final),
-                          'confidence': len(confidences), 'latency': len(latencies), 'token_usage': len(tokens)},
+                          'confidence': len(confidences),
+                          'confidence_ambiguous_zero': confidence_zero_samples,
+                          'confidence_unknown': confidence_unknown,
+                          'latency': len(latencies),
+                          'latency_ambiguous_zero': latency_zero_samples,
+                          'latency_unknown': latency_unknown,
+                          'token_usage': len(tokens),
+                          'human_correction_observations': correction_count},
         'period': {'since': since, 'until': rows[0].get('created_at', ''), 'sampled': len(rows)},
     }
 
@@ -301,7 +340,9 @@ def evaluate_provider_health(since: str = '') -> Dict[str, Any]:
             sql = ("SELECT provider, COUNT(*) as total, "
                    "SUM(CASE WHEN success=1 THEN 1 ELSE 0 END) as success, "
                    "SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) as failure, "
-                   "AVG(latency_ms) as avg_latency "
+                   "AVG(CASE WHEN latency_ms > 0 THEN latency_ms END) as avg_latency, "
+                   "SUM(CASE WHEN latency_ms = 0 THEN 1 ELSE 0 END) as ambiguous_zero_latency, "
+                   "SUM(CASE WHEN success IN (0,1) THEN 1 ELSE 0 END) as known_outcomes "
                    "FROM ai_call_logs WHERE 1=1")
             params: List[Any] = []
             if since:
@@ -320,13 +361,17 @@ def evaluate_provider_health(since: str = '') -> Dict[str, Any]:
         p = r.get('provider', 'unknown') or 'unknown'
         total = r.get('total', 0) or 0
         failure = r.get('failure', 0) or 0
-        failure_rate = failure / total if total else 0.0
+        known_outcomes = r.get('known_outcomes', 0) or 0
+        failure_rate = failure / known_outcomes if known_outcomes else None
+        unknown_outcomes = total - known_outcomes
         # 状态判定
-        if failure_rate >= 0.5:
+        if failure_rate is None:
+            status = 'UNKNOWN'
+        elif failure_rate >= 0.5:
             status = 'UNHEALTHY'
         elif failure_rate >= 0.2:
             status = 'DEGRADED'
-        elif total == 0:
+        elif total == 0 or unknown_outcomes:
             status = 'UNKNOWN'
         else:
             status = 'HEALTHY'
@@ -334,8 +379,11 @@ def evaluate_provider_health(since: str = '') -> Dict[str, Any]:
             'total': total,
             'success': r.get('success', 0) or 0,
             'failure': failure,
-            'failure_rate': round(failure_rate, 4),
-            'avg_latency_ms': int(r.get('avg_latency', 0) or 0),
+            'failure_rate': round(failure_rate, 4) if failure_rate is not None else None,
+            'known_outcomes': known_outcomes,
+            'unknown_outcomes': unknown_outcomes,
+            'avg_latency_ms': int(r['avg_latency']) if r.get('avg_latency') is not None else None,
+            'ambiguous_zero_latency_samples': r.get('ambiguous_zero_latency', 0) or 0,
             'status': status,
             'configured_status': acl.get_provider_status(p),
         }
@@ -407,6 +455,9 @@ def generate_evaluation_report(since: str = '') -> str:
     def pct(value):
         return '未知／未测量' if value is None else f'{value:.1%}'
 
+    def measured(value, unit=''):
+        return '未知／未测量' if value is None else f'{value}{unit}'
+
     lines = [
         '=' * 60,
         'AI 质量评估报告',
@@ -424,6 +475,8 @@ def generate_evaluation_report(since: str = '') -> str:
         f'  AI与规则一致率（非独立正确率）: {pct(quality.get("rule_agreement_rate"))}',
         f'  AI 替代率: {pct(quality.get("ai_replacement_rate"))}',
         f'  人工修正率: {pct(quality.get("human_correction_rate"))}',
+        f'  已记录人工修正数: {quality.get("human_correction_count", 0)}',
+        '  人工复核覆盖: 未记录',
         '',
         '【置信度分布】',
         f'  低 (<0.4): {pct(quality.get("confidence_distribution", {}).get("low"))}',
@@ -431,19 +484,19 @@ def generate_evaluation_report(since: str = '') -> str:
         f'  高 (>=0.7): {pct(quality.get("confidence_distribution", {}).get("high"))}',
         '',
         '【延迟】',
-        f'  平均: {quality.get("latency", {}).get("avg_ms", 0)}ms',
-        f'  P50: {quality.get("latency", {}).get("p50_ms", 0)}ms',
-        f'  P95: {quality.get("latency", {}).get("p95_ms", 0)}ms',
+        f'  平均: {measured(quality.get("latency", {}).get("avg_ms"), "ms")}',
+        f'  P50: {measured(quality.get("latency", {}).get("p50_ms"), "ms")}',
+        f'  P95: {measured(quality.get("latency", {}).get("p95_ms"), "ms")}',
         '',
         '【Token 成本】',
-        f'  总用量: {quality.get("token_cost", {}).get("total_tokens", 0)}',
-        f'  平均: {quality.get("token_cost", {}).get("avg_tokens", 0)}',
+        f'  总用量: {measured(quality.get("token_cost", {}).get("total_tokens"))}',
+        f'  平均: {measured(quality.get("token_cost", {}).get("avg_tokens"))}',
         '',
         '【Provider 健康】',
     ]
     for p, h in provider_health.items():
         lines.append(
-            f'  {p}: 总量={h["total"]} 失败率={h["failure_rate"]:.1%} '
+            f'  {p}: 总量={h["total"]} 失败率={pct(h["failure_rate"])} '
             f'状态={h["status"]} (配置={h["configured_status"]})'
         )
     lines.extend([
@@ -471,7 +524,10 @@ def quick_summary() -> Dict[str, Any]:
         'ai_accuracy_semantics': q.get('ai_accuracy_semantics'),
         'independent_accuracy': q.get('independent_accuracy'),
         'ai_replacement_rate': q.get('ai_replacement_rate'),
+        'human_correction_count': q.get('human_correction_count'),
         'human_correction_rate': q.get('human_correction_rate'),
+        'human_correction_state': q.get('human_correction_state'),
+        'sample_counts': q.get('sample_counts'),
         'fallback_rate': q.get('fallback_rate'),
         'provider_health': evaluate_provider_health(),
         'rule_verification': verify_ai_not_replacing_rules(),

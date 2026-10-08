@@ -960,18 +960,9 @@ def backup_database(destination):
 
     不直接 copy monitor.db，避免 WAL 模式运行中复制数据库时得到不完整快照。
     """
-    os.makedirs(os.path.dirname(os.path.abspath(destination)), exist_ok=True)
-    src = get_repository().connect(timeout=30)
-    try:
-        dst = DatabaseRepository(destination).connect(
-            wal=False, foreign_keys=False, row_factory=False
-        )
-        try:
-            src.backup(dst)
-        finally:
-            dst.close()
-    finally:
-        src.close()
+    from lumenis.shared.database.migrations import backup_database_to_path
+
+    backup_database_to_path(destination)
     return destination
 
 

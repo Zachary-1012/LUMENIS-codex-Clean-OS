@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import uuid
 from dataclasses import dataclass, field, replace
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 from urllib.parse import urlsplit
@@ -524,11 +525,18 @@ class TimedOverlay:
     start_sec: float
     end_sec: float
     text: str
+    layout_profile: Optional[str] = None
 
     def __post_init__(self) -> None:
         self.validate()
 
     def validate(self) -> None:
+        if self.layout_profile is not None and (
+            not isinstance(self.layout_profile, str)
+            or self.layout_profile != "literal-wide-720p-v2"
+            or self.kind != "caption"
+        ):
+            raise VideoEditingError("OVERLAY_LAYOUT_PROFILE_NOT_SUPPORTED")
         start = _bounded_number(
             self.start_sec, error_code="INVALID_TIMED_OVERLAY", minimum=0, maximum=MAX_EDIT_TIME_SEC
         )
@@ -551,11 +559,13 @@ class TimedOverlay:
             "start_sec": self.start_sec,
             "end_sec": self.end_sec,
             "text": self.text,
+            **({"layout_profile": self.layout_profile} if self.layout_profile is not None else {}),
         }
 
 
 @dataclass(frozen=True)
 class _TimelineSnapshot:
+    assets: Tuple[MediaAsset, ...]
     tracks: Tuple[TimelineTrack, ...]
     transitions: Tuple[Transition, ...]
     overlays: Tuple[TimedOverlay, ...]
@@ -810,13 +820,16 @@ class Timeline:
         overlays: List[TimedOverlay] = []
         overlay_fields = ("overlay_id", "kind", "start_sec", "end_sec", "text")
         for stored_overlay in document_list(root["overlays"]):
-            item = document_object(stored_overlay, overlay_fields)
+            has_profile = type(stored_overlay) is dict and "layout_profile" in stored_overlay
+            item = document_object(stored_overlay,
+                                   overlay_fields + (("layout_profile",) if has_profile else ()))
             overlays.append(TimedOverlay(
                 overlay_id=document_string(item["overlay_id"]),
                 kind=document_string(item["kind"]),
                 start_sec=item["start_sec"],
                 end_sec=item["end_sec"],
                 text=document_string(item["text"]),
+                layout_profile=document_string(item["layout_profile"]) if has_profile else None,
             ))
 
         return cls(
@@ -873,11 +886,12 @@ class Timeline:
         return self._commit(tracks=(*self.tracks, track))
 
     def _snapshot(self) -> _TimelineSnapshot:
-        return _TimelineSnapshot(self.tracks, self.transitions, self.overlays, self.format_ratio)
+        return _TimelineSnapshot(self.assets, self.tracks, self.transitions, self.overlays, self.format_ratio)
 
     def _commit(
         self,
         *,
+        assets: Optional[Tuple[MediaAsset, ...]] = None,
         tracks: Optional[Tuple[TimelineTrack, ...]] = None,
         transitions: Optional[Tuple[Transition, ...]] = None,
         overlays: Optional[Tuple[TimedOverlay, ...]] = None,
@@ -885,6 +899,7 @@ class Timeline:
     ) -> "Timeline":
         return replace(
             self,
+            assets=assets if assets is not None else self.assets,
             tracks=tracks if tracks is not None else self.tracks,
             transitions=transitions if transitions is not None else self.transitions,
             overlays=overlays if overlays is not None else self.overlays,
@@ -999,6 +1014,164 @@ class Timeline:
                 if clip.clip_id == clip_id:
                     return track, clip
         raise VideoEditingError("TIMELINE_CLIP_NOT_FOUND")
+
+    def replace_clip_source(
+        self, clip_id: str, *, asset: MediaAsset, source_in: float,
+        audio_stream_index: Optional[int] = None,
+    ) -> "Timeline":
+        """Replace one inspected source while retaining the complete edit geometry.
+
+        The Artifact caller still resolves scope, permissions and source refs.
+        A longer utterance is a script/sequence revision, not this duration-
+        preserving operation. Existing renderer rules verify any transitions.
+        """
+        self.validate()
+        track, clip = self._find_clip(clip_id)
+        if not isinstance(asset, MediaAsset):
+            raise VideoEditingError("TIMELINE_MEDIA_ASSETS_INVALID")
+        asset.validate()
+        start = _bounded_number(source_in, error_code="REPLACEMENT_RANGE_OUTSIDE_MEDIA_ASSET",
+                                minimum=0, maximum=MAX_EDIT_TIME_SEC)
+        end = start + (clip.source_out - clip.source_in)
+        if end > asset.duration_sec:
+            raise VideoEditingError("REPLACEMENT_RANGE_OUTSIDE_MEDIA_ASSET")
+        if track.kind == "video" and not asset.has_video:
+            raise VideoEditingError("VIDEO_TRACK_REQUIRES_VIDEO_ASSET")
+        if clip.audio_role == "muted":
+            if audio_stream_index is not None:
+                raise VideoEditingError("MUTED_VIDEO_CLIP_CANNOT_SELECT_AUDIO")
+        elif track.kind != "video" or asset.audio_stream_count:
+            if asset.audio_stream_count < 1:
+                raise VideoEditingError("AUDIO_TRACK_REQUIRES_AUDIO_ASSET")
+            if audio_stream_index is None:
+                if asset.audio_stream_count > 1:
+                    raise VideoEditingError("MULTIPLE_SOURCE_AUDIO_TRACKS_REQUIRE_EXPLICIT_SELECTION")
+                audio_stream_index = 0
+            if type(audio_stream_index) is not int or not 0 <= audio_stream_index < asset.audio_stream_count:
+                raise VideoEditingError("AUDIO_STREAM_INDEX_OUT_OF_RANGE")
+        elif self._asset(clip.media_asset_id).audio_stream_count or audio_stream_index is not None:
+            raise VideoEditingError("REPLACEMENT_WOULD_REMOVE_SOURCE_AUDIO")
+
+        existing = next((item for item in self.assets if item.asset_id == asset.asset_id), None)
+        if existing is not None and (
+            existing.sha256 != asset.sha256 or existing.duration_sec != asset.duration_sec
+            or existing.has_video != asset.has_video or existing.audio_stream_count != asset.audio_stream_count
+        ):
+            raise VideoEditingError("TIMELINE_DUPLICATE_MEDIA_ASSET")
+        assets = self.assets if existing is not None else (*self.assets, asset)
+        updated_clip = replace(clip, media_asset_id=asset.asset_id, source_in=start, source_out=end,
+                               audio_stream_index=audio_stream_index, evidence_refs=asset.evidence_refs)
+        if updated_clip == clip and assets == self.assets:
+            return self
+        tracks = tuple(
+            replace(item, clips=tuple(updated_clip if old.clip_id == clip_id else old for old in item.clips))
+            if item.track_id == track.track_id else item for item in self.tracks
+        )
+        candidate = replace(self, assets=assets, tracks=tracks)
+        if self.transitions:
+            # Reuse the current 30fps centred-handle contract, including boundary
+            # conflicts and unsupported types. Do not weaken the export guard.
+            from .rendering import _video_transition_plan
+            video_clips = [item for layer in candidate.tracks if layer.kind == "video" for item in layer.clips]
+            _video_transition_plan(candidate, video_clips)
+        return self._commit(assets=assets, tracks=tracks)
+
+    def replace_audio_source(
+        self, clip_id: str, *, asset: MediaAsset, source_in: float, source_out: float,
+        ripple_track_ids: Iterable[str], audio_stream_index: Optional[int] = None,
+        overlay_ranges: Optional[Mapping[str, Tuple[float, float]]] = None,
+    ) -> "Timeline":
+        """Revise a full audio range using an explicit, bounded ripple scope.
+
+        Later selected tracks move by the duration difference. Intersecting
+        clips require a separate replan; intersecting overlays need explicit
+        authored ranges. Source audio is never stretched, padded or shortened
+        to fit an old slot. The caller keeps and reviews the resulting time map.
+        """
+        self.validate()
+        target_track, target = self._find_clip(clip_id)
+        if target_track.kind == "video":
+            raise VideoEditingError("AUDIO_SOURCE_REVISION_REQUIRES_AUDIO_CLIP")
+        if not isinstance(asset, MediaAsset):
+            raise VideoEditingError("TIMELINE_MEDIA_ASSETS_INVALID")
+        asset.validate()
+        start = _bounded_number(source_in, error_code="REPLACEMENT_RANGE_OUTSIDE_MEDIA_ASSET",
+                                minimum=0, maximum=MAX_EDIT_TIME_SEC)
+        end = _bounded_number(source_out, error_code="REPLACEMENT_RANGE_OUTSIDE_MEDIA_ASSET",
+                              minimum=0, maximum=MAX_EDIT_TIME_SEC)
+        if end <= start or end > asset.duration_sec:
+            raise VideoEditingError("REPLACEMENT_RANGE_OUTSIDE_MEDIA_ASSET")
+        if asset.audio_stream_count < 1:
+            raise VideoEditingError("AUDIO_TRACK_REQUIRES_AUDIO_ASSET")
+        if audio_stream_index is None:
+            if asset.audio_stream_count > 1:
+                raise VideoEditingError("MULTIPLE_SOURCE_AUDIO_TRACKS_REQUIRE_EXPLICIT_SELECTION")
+            audio_stream_index = 0
+        if type(audio_stream_index) is not int or not 0 <= audio_stream_index < asset.audio_stream_count:
+            raise VideoEditingError("AUDIO_STREAM_INDEX_OUT_OF_RANGE")
+        if not isinstance(ripple_track_ids, (tuple, list)) or any(type(item) is not str for item in ripple_track_ids):
+            raise VideoEditingError("AUDIO_REVISION_RIPPLE_SCOPE_INVALID")
+        selected = set(ripple_track_ids)
+        known = {track.track_id for track in self.tracks}
+        if len(selected) != len(ripple_track_ids) or not selected <= known or target_track.track_id not in selected:
+            raise VideoEditingError("AUDIO_REVISION_RIPPLE_SCOPE_INVALID")
+        overrides = {} if overlay_ranges is None else overlay_ranges
+        if not isinstance(overrides, Mapping) or not set(overrides) <= {item.overlay_id for item in self.overlays}:
+            raise VideoEditingError("AUDIO_REVISION_OVERLAY_RANGES_INVALID")
+
+        existing = next((item for item in self.assets if item.asset_id == asset.asset_id), None)
+        if existing is not None and (
+            existing.sha256 != asset.sha256 or existing.duration_sec != asset.duration_sec
+            or existing.has_video != asset.has_video or existing.audio_stream_count != asset.audio_stream_count
+        ):
+            raise VideoEditingError("TIMELINE_DUPLICATE_MEDIA_ASSET")
+        assets = self.assets if existing is not None else (*self.assets, asset)
+        replacement = replace(target, media_asset_id=asset.asset_id, source_in=start, source_out=end,
+                              audio_stream_index=audio_stream_index, evidence_refs=asset.evidence_refs)
+        # Compare the stored decimal clock, without treating binary addition
+        # noise as an overlap or discarding a user's fractional position.
+        delta = Decimal(str(replacement.duration_sec)) - Decimal(str(target.duration_sec))
+        target_start = Decimal(str(target.timeline_start))
+        old_end = target_start + Decimal(str(target.duration_sec))
+        tracks = []
+        for track in self.tracks:
+            clips = []
+            for clip in track.clips:
+                if clip.clip_id == clip_id:
+                    clips.append(replacement)
+                    continue
+                if delta and track.track_id in selected:
+                    clip_start = Decimal(str(clip.timeline_start))
+                    clip_end = clip_start + Decimal(str(clip.duration_sec))
+                    if clip_start < old_end and clip_end > target_start:
+                        raise VideoEditingError("AUDIO_REVISION_INTERSECTING_CLIP_REQUIRES_REPLAN")
+                    if clip_start >= old_end:
+                        clip = replace(clip, timeline_start=float(clip_start + delta))
+                clips.append(clip)
+            tracks.append(replace(track, clips=tuple(clips)))
+        overlays = []
+        for overlay in self.overlays:
+            if overlay.overlay_id in overrides:
+                value = overrides[overlay.overlay_id]
+                if not isinstance(value, (tuple, list)) or len(value) != 2:
+                    raise VideoEditingError("AUDIO_REVISION_OVERLAY_RANGES_INVALID")
+                overlay = replace(overlay, start_sec=value[0], end_sec=value[1])
+            elif delta:
+                overlay_start = Decimal(str(overlay.start_sec))
+                overlay_end = Decimal(str(overlay.end_sec))
+                if overlay_start < old_end and overlay_end > target_start:
+                    raise VideoEditingError("AUDIO_REVISION_INTERSECTING_OVERLAY_REQUIRES_RANGE")
+                if overlay_start >= old_end:
+                    overlay = replace(overlay, start_sec=float(overlay_start + delta), end_sec=float(overlay_end + delta))
+            overlays.append(overlay)
+        candidate = replace(self, assets=assets, tracks=tuple(tracks), overlays=tuple(overlays))
+        if self.transitions:
+            from .rendering import _video_transition_plan
+            video_clips = [clip for track in candidate.tracks if track.kind == "video" for clip in track.clips]
+            _video_transition_plan(candidate, video_clips)
+        if candidate.to_dict() == self.to_dict():
+            return self
+        return self._commit(assets=assets, tracks=tuple(tracks), overlays=tuple(overlays))
 
     def trim(self, clip_id: str, *, source_in: float, source_out: float) -> "Timeline":
         self.validate()
@@ -1132,13 +1305,15 @@ class Timeline:
             raise VideoEditingError("TIMELINE_DURATION_OUT_OF_RANGE")
         return self._replace_clip(track, replace(clip, timeline_start=start))
 
-    def add_caption(self, start_sec: float, end_sec: float, text: str) -> "Timeline":
-        return self._add_overlay("caption", start_sec, end_sec, text)
+    def add_caption(self, start_sec: float, end_sec: float, text: str, *,
+                    layout_profile: Optional[str] = None) -> "Timeline":
+        return self._add_overlay("caption", start_sec, end_sec, text, layout_profile=layout_profile)
 
     def add_text_overlay(self, start_sec: float, end_sec: float, text: str) -> "Timeline":
         return self._add_overlay("text", start_sec, end_sec, text)
 
-    def _add_overlay(self, kind: str, start_sec: float, end_sec: float, text: str) -> "Timeline":
+    def _add_overlay(self, kind: str, start_sec: float, end_sec: float, text: str, *,
+                     layout_profile: Optional[str] = None) -> "Timeline":
         self.validate()
         start = _bounded_number(
             start_sec, error_code="INVALID_TIMED_OVERLAY", minimum=0, maximum=MAX_EDIT_TIME_SEC
@@ -1148,8 +1323,36 @@ class Timeline:
         )
         if end <= start or not str(text).strip():
             raise VideoEditingError("INVALID_TIMED_OVERLAY")
-        overlay = TimedOverlay(_id("OVERLAY"), kind, start, end, str(text).strip())
+        overlay = TimedOverlay(_id("OVERLAY"), kind, start, end, str(text).strip(), layout_profile)
         return self._commit(overlays=(*self.overlays, overlay))
+
+    def update_caption(self, overlay_id: str, start_sec: float, end_sec: float,
+                       text: str, *, layout_profile: Optional[str] = None) -> "Timeline":
+        """Replace one caption through the normal version/undo operation."""
+        self.validate()
+        matches = [item for item in self.overlays if item.overlay_id == overlay_id]
+        if not isinstance(overlay_id, str) or not overlay_id or not matches:
+            raise VideoEditingError("OVERLAY_NOT_FOUND")
+        if len(matches) != 1:
+            raise VideoEditingError("OVERLAY_ID_AMBIGUOUS")
+        if matches[0].kind != "caption":
+            raise VideoEditingError("CAPTION_OVERLAY_REQUIRED")
+        if not isinstance(text, str):
+            raise VideoEditingError("INVALID_TIMED_OVERLAY")
+        updated = replace(matches[0], start_sec=start_sec, end_sec=end_sec,
+                          text=text, layout_profile=layout_profile)
+        return self._commit(overlays=tuple(updated if item.overlay_id == overlay_id else item
+                                           for item in self.overlays))
+
+    def remove_overlay(self, overlay_id: str) -> "Timeline":
+        """Remove one explicitly selected overlay, retaining every other edit."""
+        self.validate()
+        matches = [item for item in self.overlays if item.overlay_id == overlay_id]
+        if not isinstance(overlay_id, str) or not overlay_id or not matches:
+            raise VideoEditingError("OVERLAY_NOT_FOUND")
+        if len(matches) != 1:
+            raise VideoEditingError("OVERLAY_ID_AMBIGUOUS")
+        return self._commit(overlays=tuple(item for item in self.overlays if item.overlay_id != overlay_id))
 
     def set_format(self, format_ratio: str) -> "Timeline":
         if format_ratio not in ALLOWED_FORMAT_RATIOS:
@@ -1162,6 +1365,7 @@ class Timeline:
         snapshot = self._history[-1]
         return replace(
             self,
+            assets=snapshot.assets,
             tracks=snapshot.tracks,
             transitions=snapshot.transitions,
             overlays=snapshot.overlays,
@@ -1169,6 +1373,153 @@ class Timeline:
             version=self.version + 1,
             _history=self._history[:-1],
         )
+
+    @property
+    def duration_sec(self) -> float:
+        """Return the existing clip extent, independently of the editor view."""
+        self.validate()
+        return max(
+            (clip.timeline_start + clip.duration_sec for track in self.tracks for clip in track.clips),
+            default=0.0,
+        )
+
+    def _view_digest(self) -> str:
+        document = json.dumps(self.to_dict(), ensure_ascii=False, sort_keys=True,
+                              separators=(",", ":"), allow_nan=False)
+        return hashlib.sha256(document.encode("utf-8")).hexdigest()
+
+    def describe_window(
+        self, *, start_sec: float = 0.0, span_sec: float = 30.0, playhead_sec: float = 0.0,
+    ) -> Dict[str, Any]:
+        """Project an unchanged timeline into a bounded horizontal editor view.
+
+        Ranges use this model's seconds, not inferred source PTS or word times.
+        The caller still owns Artifact scope, source resolution and playback.
+        """
+        self.validate()
+        requested_start = _bounded_number(start_sec, error_code="TIMELINE_VIEW_INVALID",
+                                          minimum=0, maximum=MAX_EDIT_TIME_SEC)
+        requested_span = _bounded_number(span_sec, error_code="TIMELINE_VIEW_INVALID",
+                                         minimum=0.000001, maximum=MAX_EDIT_TIME_SEC)
+        duration = self.duration_sec
+        playhead = _bounded_number(playhead_sec, error_code="TIMELINE_PLAYHEAD_OUT_OF_RANGE",
+                                   minimum=0, maximum=duration)
+        span = min(requested_span, duration) if duration else requested_span
+        start = min(requested_start, max(0.0, duration - span))
+        end = start + span
+        assets = {asset.asset_id: asset for asset in self.assets}
+        active = []
+        tracks = []
+        visible_clip_ids = set()
+        for track in self.tracks:
+            visible = []
+            for clip in track.clips:
+                clip_start, clip_end = clip.timeline_start, clip.timeline_start + clip.duration_sec
+                asset = assets[clip.media_asset_id]
+                if clip_start <= playhead < clip_end:
+                    active.append({
+                        "clip_id": clip.clip_id, "track_id": track.track_id,
+                        "media_asset_id": clip.media_asset_id, "source_sha256": asset.sha256,
+                        "source_position_sec": clip.source_in + (playhead - clip_start),
+                        "audio_role": clip.audio_role, "audio_stream_index": clip.audio_stream_index,
+                        "stream_index_kind": "audio_type_relative_ordinal",
+                        "mapping_method": "current_unit_rate_timeline_seconds",
+                    })
+                visible_start, visible_end = max(start, clip_start), min(end, clip_end)
+                if visible_start >= visible_end:
+                    continue
+                visible_clip_ids.add(clip.clip_id)
+                visible.append({
+                    "clip": clip.to_dict(), "source_sha256": asset.sha256,
+                    "media_kind": asset.media_kind,
+                    "visible_timeline_range_sec": [visible_start, visible_end],
+                    "visible_source_range_sec": [
+                        clip.source_in + (visible_start - clip_start),
+                        clip.source_in + (visible_end - clip_start),
+                    ],
+                    "start_fraction": (visible_start - start) / span,
+                    "width_fraction": (visible_end - visible_start) / span,
+                    "clipped_at_left": clip_start < start, "clipped_at_right": clip_end > end,
+                })
+            tracks.append({"track_id": track.track_id, "kind": track.kind, "clips": visible})
+        overlays = []
+        for overlay in self.overlays:
+            a, b = max(start, overlay.start_sec), min(end, overlay.end_sec)
+            if a < b:
+                overlays.append({
+                    "overlay": overlay.to_dict(), "visible_range_sec": [a, b],
+                    "start_fraction": (a - start) / span, "width_fraction": (b - a) / span,
+                })
+        transitions = [transition.to_dict() for transition in self.transitions
+                       if transition.from_clip in visible_clip_ids or transition.to_clip in visible_clip_ids]
+        state = {
+            "timeline_version": self.version, "timeline_digest": self._view_digest(),
+            "window_start_sec": start, "window_span_sec": span, "playhead_sec": playhead,
+        }
+        return {
+            "schema": "lumenis.timeline-window/v1", "state": state, "duration_sec": duration,
+            "window": {
+                "start_sec": start, "end_sec": end, "span_sec": span,
+                "clamped": start != requested_start or span != requested_span,
+                "scroll_fraction": start / (duration - span) if duration > span else 0.0,
+            },
+            "playhead": {
+                "time_sec": playhead, "timeline_fraction": playhead / duration if duration else None,
+                "window_fraction": (playhead - start) / span if start <= playhead <= end else None,
+                "inside_window": start <= playhead <= end,
+                "at_timeline_end": bool(duration and playhead == duration),
+                "active_clips": active,
+            },
+            "tracks": tracks, "overlays": overlays, "related_transition_plans": transitions,
+            "range_convention": "half_open_clip_and_overlay_ranges",
+            "source_pts_mapping": "NOT_RETAINED_BY_CURRENT_TIMELINE_MODEL",
+            "waveform": None, "waveform_state": "NOT_COMPUTED",
+            "render_and_playback_acceptance": "REQUIRES_ACTUAL_ARTIFACT_AND_PLAYER_REVIEW",
+        }
+
+    def navigate_window(
+        self, state: Mapping[str, Any], *, action: str, value: float,
+        anchor_sec: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Pan, zoom or seek without committing an edit or changing source media."""
+        self.validate()
+        fields = {"timeline_version", "timeline_digest", "window_start_sec", "window_span_sec", "playhead_sec"}
+        if not isinstance(state, Mapping) or set(state) != fields:
+            raise VideoEditingError("TIMELINE_VIEW_STATE_INVALID")
+        if (type(state["timeline_version"]) is not int or state["timeline_version"] != self.version
+                or state["timeline_digest"] != self._view_digest()):
+            raise VideoEditingError("TIMELINE_VIEW_SOURCE_CHANGED")
+        current = self.describe_window(start_sec=state["window_start_sec"], span_sec=state["window_span_sec"],
+                                       playhead_sec=state["playhead_sec"])
+        if current["state"] != dict(state):
+            raise VideoEditingError("TIMELINE_VIEW_STATE_INVALID")
+        start, span, playhead = state["window_start_sec"], state["window_span_sec"], state["playhead_sec"]
+        if action == "pan":
+            if anchor_sec is not None:
+                raise VideoEditingError("TIMELINE_VIEW_INVALID")
+            delta = _bounded_number(value, error_code="TIMELINE_VIEW_INVALID",
+                                    minimum=-MAX_EDIT_TIME_SEC, maximum=MAX_EDIT_TIME_SEC)
+            start = min(max(0.0, start + delta), max(0.0, self.duration_sec - span))
+        elif action == "zoom":
+            factor = _bounded_number(value, error_code="TIMELINE_VIEW_INVALID",
+                                     minimum=0.000001, maximum=MAX_SERIALIZED_INTEGER)
+            anchor = start + span / 2 if anchor_sec is None else _bounded_number(
+                anchor_sec, error_code="TIMELINE_VIEW_INVALID", minimum=start, maximum=start + span,
+            )
+            fraction = (anchor - start) / span
+            new_span = max(0.000001, min(MAX_EDIT_TIME_SEC, span / factor))
+            if self.duration_sec:
+                new_span = min(new_span, self.duration_sec)
+            start = min(max(0.0, anchor - fraction * new_span), max(0.0, self.duration_sec - new_span))
+            span = new_span
+        elif action == "seek":
+            if anchor_sec is not None:
+                raise VideoEditingError("TIMELINE_VIEW_INVALID")
+            playhead = _bounded_number(value, error_code="TIMELINE_PLAYHEAD_OUT_OF_RANGE",
+                                       minimum=0, maximum=self.duration_sec)
+        else:
+            raise VideoEditingError("TIMELINE_VIEW_ACTION_NOT_SUPPORTED")
+        return self.describe_window(start_sec=start, span_sec=span, playhead_sec=playhead)
 
     def to_export_request(self) -> Dict[str, Any]:
         self.validate()

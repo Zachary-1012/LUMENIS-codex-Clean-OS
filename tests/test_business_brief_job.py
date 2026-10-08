@@ -6,6 +6,9 @@ import pytest
 
 from tests.test_source_brief_job_routes import client, GLOBAL, URL
 from tests.test_source_brief_job import job_db
+from tests.business_brief_fixture import (
+    attach_legacy_brief_to_job, prepare_synthetic_content_sources,
+)
 from lumenis.shared.reporting import business_brief as analysis
 
 
@@ -36,22 +39,31 @@ def _answer(payload):
     return value
 
 
-def _mock_model(monkeypatch, transform=lambda value: value):
+def _mock_model(monkeypatch, client, transform=lambda value: value):
+    from lumenis.system.ai_gateway.owned_service import OwnedServiceRequest
+    from tests.test_business_brief_typed_owned import _owned_result
+
+    prepared = prepare_synthetic_content_sources(client, monkeypatch)
     calls = []
-    def model(system, user, **kwargs):
-        calls.append(json.loads(user))
-        assert kwargs["timeout_seconds"] == 180
-        result = transform(_answer(user))
-        if "revision" in json.loads(user):
-            result = {"changes": [{"section": "unknowns", "reason": "Address the saved review."}], "analysis": result}
-        return json.dumps(result), "ollama", {"model": "test-local"}
-    monkeypatch.setattr(analysis, "_request_business_inference", model)
+    def run_owned(request):
+        assert type(request) is OwnedServiceRequest
+        assert request.operation == "business_brief"
+        assert request.max_output_tokens == 4096
+        payload = json.loads(request.user_payload)
+        calls.append(payload)
+        result = transform(_answer(request.user_payload))
+        if "revision" in payload:
+            result = {"changes": [{"section": "unknowns", "reason": "Address the saved review."}],
+                      "analysis": result}
+        return _owned_result(request, actor=prepared["actor"], analysis=result)
+
+    monkeypatch.setattr(analysis.gateway, "run_owned_request", run_owned)
     return calls
 
 
 def test_real_route_derivative_and_reopen_are_scoped_immutable_not_business_success(client, monkeypatch):
     api, app, path, entry, _ = client
-    calls = _mock_model(monkeypatch)
+    calls = _mock_model(monkeypatch, client)
     focus = {**GLOBAL, "X-Lumenis-Context-Mode": "FOCUS", "X-Subject-ID": entry["subject_id"]}
     result = api.post(URL + "/generate", headers=focus, json={
         "business_question": "What should this venue do next, and what information is missing?",
@@ -87,7 +99,7 @@ def test_real_job_selects_task_material_beyond_article_prefix(client, monkeypatc
     body = "Navigation and unrelated introduction. " * 100 + material + " Method and limits. " * 50
     with sqlite3.connect(path) as con:
         con.execute("UPDATE canonical_data SET content=? WHERE source_id='brief-job-source'", (body,))
-    calls = _mock_model(monkeypatch)
+    calls = _mock_model(monkeypatch, client)
     focus = {**GLOBAL, "X-Lumenis-Context-Mode": "FOCUS", "X-Subject-ID": entry["subject_id"]}
     response = api.post(URL + "/generate", headers=focus, json={
         "source_ids": ["brief-job-source"], "business_question": question,
@@ -119,7 +131,7 @@ def test_explicit_materials_bind_model_input_or_fail_without_partial_analysis(cl
         con.execute("UPDATE canonical_data SET captured_at='2020-01-01' WHERE source_id='selected-older'")
         if missing_body:
             con.execute("UPDATE canonical_data SET content='' WHERE source_id='selected-older'")
-    calls = _mock_model(monkeypatch)
+    calls = _mock_model(monkeypatch, client)
     selected = ["selected-older", "brief-job-source"]
     focus = {**GLOBAL, "X-Lumenis-Context-Mode": "FOCUS", "X-Subject-ID": entry["subject_id"]}
     response = api.post(URL + "/generate", headers=focus, json={
@@ -148,8 +160,8 @@ def test_model_cannot_invent_quote_or_cite_other_scope(client, monkeypatch, bad)
         else:
             value["proposed_actions"][0]["source_ids"] = ["OTHER-BRAND"]
         return value
-    _mock_model(monkeypatch, corrupt)
     api, _, path, _, _ = client
+    _mock_model(monkeypatch, client, corrupt)
     result = api.post(URL + "/generate", headers=GLOBAL, json={"business_question": "Recommend an operating action."})
     job = result.get_json()["result"]
     assert job["business_analysis"]["state"] == "unavailable"
@@ -160,17 +172,23 @@ def test_model_cannot_invent_quote_or_cite_other_scope(client, monkeypatch, bad)
         assert rejected[0] == 'FAIL' and 'rejected_model_output' in json.loads(rejected[1])
 
 
-@pytest.mark.parametrize("provider,reason", [
-    ("ollama_timeout", "BUSINESS_BRIEF_LOCAL_MODEL_TIMEOUT"),
-    ("provider_disabled", "BUSINESS_BRIEF_PROVIDER_DISABLED"),
+@pytest.mark.parametrize("failure_code,reason", [
+    ("OWNED_SERVICE_TIMEOUT", "BUSINESS_BRIEF_OWNED_SERVICE_TIMEOUT"),
+    (None, "BUSINESS_BRIEF_OWNED_SERVICE_FAILED"),
 ])
-def test_unavailable_provider_is_reopenable_without_fake_analysis_or_retry(client, monkeypatch, provider, reason):
+def test_unavailable_owned_service_is_reopenable_without_fake_analysis_or_retry(
+    client, monkeypatch, failure_code, reason,
+):
     api, _, path, _, _ = client
+    prepare_synthetic_content_sources(client, monkeypatch)
     calls = []
-    def timeout_model(*args, **kwargs):
-        calls.append(kwargs)
-        return None, provider, {"status": provider}
-    monkeypatch.setattr(analysis, "_request_business_inference", timeout_model)
+    def unavailable(request):
+        calls.append(request)
+        result = {"ok": False, "status": "UNAVAILABLE"}
+        if failure_code is not None:
+            result["code"] = failure_code
+        return result
+    monkeypatch.setattr(analysis.gateway, "run_owned_request", unavailable)
     response = api.post(URL + "/generate", headers=GLOBAL, json={"business_question": "Which action is supported?"})
     assert response.status_code == 200
     job = response.get_json()["result"]
@@ -185,7 +203,7 @@ def test_unavailable_provider_is_reopenable_without_fake_analysis_or_retry(clien
 
 def test_empty_body_never_substitutes_title_and_no_model_call(client, monkeypatch):
     api, _, path, _, _ = client
-    calls = _mock_model(monkeypatch)
+    calls = _mock_model(monkeypatch, client)
     with sqlite3.connect(path) as con:
         con.execute("UPDATE canonical_data SET content=''")
     result = api.post(URL + "/generate", headers=GLOBAL, json={"business_question": "What can we conclude?"})
@@ -195,11 +213,15 @@ def test_empty_body_never_substitutes_title_and_no_model_call(client, monkeypatc
 
 def test_model_error_preserves_source_report_and_does_not_claim_analysis(client, monkeypatch):
     api, _, path, _, _ = client
+    prepare_synthetic_content_sources(client, monkeypatch)
+    calls = []
     def failed(*args, **kwargs):
+        calls.append(args[0])
         raise TimeoutError("model unavailable")
-    monkeypatch.setattr(analysis, "_request_business_inference", failed)
+    monkeypatch.setattr(analysis.gateway, "run_owned_request", failed)
     job = api.post(URL + "/generate", headers=GLOBAL, json={"business_question": "What should the team do?"}).get_json()["result"]
     assert job["business_analysis"]["state"] == "error"
+    assert len(calls) == 1
     assert api.get(URL + "/jobs/" + job["job_id"], headers=GLOBAL).get_json()["result"] == job
     assert job["artifact_outcome"]["source_count"] == 1
 
@@ -222,8 +244,8 @@ def test_model_schema_diagnostic_is_rejected_not_silently_removed(client, monkey
         else:
             value[field][0]["check"] = "Validate excerpt_index first."
         return value
-    _mock_model(monkeypatch, diagnostic)
     api, _, path, _, _ = client
+    _mock_model(monkeypatch, client, diagnostic)
     job = api.post(URL + "/generate", headers=GLOBAL, json={
         "business_question": "Propose a content research direction and validation method.",
     }).get_json()["result"]
@@ -237,16 +259,40 @@ def test_model_schema_diagnostic_is_rejected_not_silently_removed(client, monkey
 @pytest.mark.parametrize("version", ["report-business-brief/1", "report-business-brief/2", "report-business-brief/3", "report-business-brief/4", "report-business-brief/5", "report-business-brief/6"])
 def test_previous_signed_artifact_remains_reopenable_after_upgrade(client, monkeypatch, version):
     api, _, _, _, _ = client
-    calls = _mock_model(monkeypatch)
-    with monkeypatch.context() as previous:
-        previous.setattr(analysis, "_VERSION", version)
-        job = api.post(URL + "/generate", headers=GLOBAL, json={
-            "business_question": "Propose an operating research direction.",
-        }).get_json()["result"]
-    assert job["business_analysis"]["state"] == "draft"
+    from lumenis.shared.reporting.operational_brief import _analysis_window
+
+    prepared = prepare_synthetic_content_sources(client, monkeypatch)
+    monkeypatch.setattr(
+        analysis.gateway, "run_owned_request",
+        lambda *_args, **_kwargs: pytest.fail("historical replay must not call the Gateway"),
+    )
+    job = api.post(URL + "/generate", headers=GLOBAL, json={}).get_json()["result"]
+    question = "Propose an operating research direction."
+    payload = {"sources": [{"source_id": job["source_brief"]["records"][0]["source_id"]}]}
+    historical_analysis = _answer(json.dumps(payload))
+    if version not in analysis._PILOT_VERSIONS:
+        for action in historical_analysis["proposed_actions"]:
+            action.pop("pilot", None)
+    sources = []
+    for record in job["source_brief"]["records"]:
+        source = prepared["sources"][record["source_id"]]
+        text, selection = _analysis_window(source["text"], question)
+        sources.append({**source, "text": text, "text_selection": selection,
+                        "truncated": len(text) < len(source["text"])})
+    historical_analysis = analysis._validate(
+        analysis._resolve_excerpts(historical_analysis, sources), sources, version=version,
+    )
+    historical = attach_legacy_brief_to_job(
+        client, prepared, job, version=version, question=question,
+        stored_analysis=historical_analysis,
+    )
     reopened = api.get(URL + "/jobs/" + job["job_id"], headers=GLOBAL)
-    assert reopened.status_code == 200 and reopened.get_json()["result"] == job
-    assert len(calls) == 1
+    assert reopened.status_code == 200
+    result = reopened.get_json()["result"]
+    assert result["business_analysis"] == historical
+    assert result["business_analysis"]["state"] == "draft"
+    assert result["business_analysis"]["provider"] == "ollama"
+    assert result["business_question"] == question
 
 
 @pytest.mark.parametrize("bad", ["missing", "partial", "extra", "empty", "too_long", "wrong_type", "diagnostic"])
@@ -262,14 +308,14 @@ def test_malformed_pilot_is_rejected_without_repairing_model_output(client, monk
         elif bad == "empty":
             action["pilot"]["measure"] = " "
         elif bad == "too_long":
-            action["pilot"]["measure"] = "x" * 181
+            action["pilot"]["measure"] = "x" * 801
         elif bad == "wrong_type":
             action["pilot"] = []
         else:
             action["pilot"]["measure"] = "source_ids_unknown"
         return value
-    _mock_model(monkeypatch, corrupt)
     api, _, path, _, _ = client
+    _mock_model(monkeypatch, client, corrupt)
     job = api.post(URL + "/generate", headers=GLOBAL, json={"business_question": "Plan a small content experiment."}).get_json()["result"]
     assert job["business_analysis"]["state"] == "unavailable"
     with sqlite3.connect(path) as con:

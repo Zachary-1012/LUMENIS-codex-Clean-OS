@@ -9,7 +9,7 @@
 4. collected_note_to_canonical 中缺失互动为 None
 5. 真实 0 值与缺失值可区分
 6. display_missing 前端展示正确
-7. engagement_total 正确处理 None（求和时按 0 计，但字段保留 None）
+7. engagement_total 缺测为 None；部分实测合计附覆盖语义，真实 0 保留
 8. persist_canonical 能正确存储 None（DB 中为 NULL）
 
 运行: .venv\\Scripts\\python.exe -m pytest tests/test_missing_values.py -v
@@ -210,13 +210,17 @@ class TestCollectedNoteToCanonicalMissing:
 class TestEngagementTotalWithNone:
     """验证 engagement_total 正确处理 None。"""
 
-    def test_all_none_returns_zero(self):
+    def test_all_none_returns_unknown(self):
         rec = CanonicalRecord(title="test")
         rec.engagement_likes = None
         rec.engagement_comments = None
         rec.engagement_collects = None
         rec.engagement_shares = None
-        assert rec.engagement_total() == 0
+        assert rec.engagement_total() is None
+        observation = rec.engagement_observation()
+        assert observation["observed_sum"] is None
+        assert observation["quality"]["state"] == "UNKNOWN"
+        assert observation["quality"]["known_field_count"] == 0
 
     def test_mixed_none_and_values(self):
         rec = CanonicalRecord(title="test")
@@ -224,7 +228,12 @@ class TestEngagementTotalWithNone:
         rec.engagement_comments = None
         rec.engagement_collects = 50
         rec.engagement_shares = None
-        assert rec.engagement_total() == 150
+        assert rec.engagement_total() is None
+        observation = rec.engagement_observation()
+        assert observation["observed_sum"] == 150
+        assert observation["quality"]["state"] == "PARTIAL"
+        assert observation["quality"]["known_field_count"] == 2
+        assert observation["quality"]["expected_field_count"] == 4
 
     def test_all_real_values(self):
         rec = CanonicalRecord(title="test")

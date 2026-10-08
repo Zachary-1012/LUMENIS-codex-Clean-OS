@@ -120,3 +120,56 @@ C2–C6 remain paused. Their dirty source, current reservations and original ass
 are preserved. The revised C1 outcome record spells out real platform recovery,
 original content/media intake, formal lineage, useful business consumption,
 continuous product-owned operation and recovery. Module-test receipts cannot close it.
+
+
+## 2026-10-08 existing local-candidate source convergence (M direct authorization)
+
+The direct PO instruction assigns M all non-C1 existing local candidates and
+unintegrated work. C1 continuously owns its collection closure and necessary
+runtime dependencies; paused F/C2-C6 are not resumed. Parent is 9f77d9a1.
+Before-image archive SHA256 is
+`b32ec63737c19cc2ff4267f581d99c7628022c80501ec3fe531ffe9e4d3410a1`.
+The ignored local exact manifest/receipts live in the existing
+`work/m-governance-20261008` evidence directory. No private data is published.
+
+| Existing outcome/source | Integration disposition and actual boundary |
+|---|---|
+| C2 Gateway/owned admission/evaluation/checkpoint/Learning | Existing typed service/admission/checkpoint code integrated. M repairs honest confidence/token/latency/correction denominators and serializes exact approval with evaluation Evidence commit. Runtime service NOT_BOUND; no GPU, model run, training or promotion. |
+| C3 CTH/BMP metrics/cases/trend/brand aggregate | Existing identity/time/quality-aware consumers integrated with exact frozen C1 v2 metrics. Unbound Case inference reports unavailable; legacy brand mutation requires real scoped-reader authorization instead of broad name matching. No invented authorization/callback. |
+| C5 Importer/SourceBrief/SavedWork/export | Existing collected-original identity/hash/parent verification, typed source-use propagation and real Word/PDF export changes integrated. Missing live source-use/model binding remains open; no fixture becomes a real report. |
+| C4 Timeline/renderer/PodcastPlan | Exact existing source pins retained. Historical output/reopen receipts remain provenance; this batch does not rerender or assert actual playback, all-language listening or formal Artifact acceptance. |
+| C6 backup/packaging | Existing canonical WAL-aware backup and no-overwrite protection integrated; missing source opens readonly rather than silently creating a DB. Staging health follows 8301; image nonroot and loopback defaults retained. Docker unavailable locally; no deployment/migration. |
+| F Flutter/locale/icons | Existing Home/launch/AI/browser/shell/navigation and 122-geometry/164-alias editable icon source integrated. Dart strict full-project analysis and Web release build are required current evidence; actual four-surface outcomes and 44 screens are not thereby accepted. |
+| Frozen C1 F-08/F-09 | All twelve handoff raw hashes matched current source before staging; include original unchanged dependency bytes. No C1 active adapter/Collector/startup source is taken over. |
+
+No unit/integration/widget/renamed module suite was created or run. Existing dirty
+and untracked historical tests are preserved byte-for-byte from the task freeze.
+The empty account.xml (zero tests) is preserved in that archive and in the ignored
+local evidence directory; it is not acceptance. Old protected-current-1613 patch
+contains only superseded CURRENT prose; old importer candidate is superseded by
+the subsequent mainline importer changes. The 20261001 OSAI resume candidate is
+superseded by the richer existing mainline durable resume/context/lease/budget
+implementation. Those original inputs remain retained and are not reapplied.
+
+Local Flutter analyze hit the upstream non-ASCII-path LSP issue
+[flutter/flutter#191309](https://github.com/flutter/flutter/issues/191309).
+Same pinned SDK `dart analyze --fatal-infos .` is used without weakening lints.
+The crash log is retained. CI runs its original flutter analyze on its ASCII path.
+Applicable constitution, governance, source/security/data/Experience checks apply
+to the exact staged tree. Same-SHA hosted CI is recorded after push, never inferred.
+
+Source publication is not runtime loading. No Production DB write/migration,
+protected-account access, runtime restart, fee, external effect, provider change
+or whole-product completion is performed. C1 ongoing local source remains dirty
+and protected. Honest missing runtime/source-use/model/brand-projection/actual
+media and user acceptance remain unresolved capabilities, not extra source trees.
+
+Exact pre-publication observations: all ten retained static/governance/data/Experience
+checks pass on the selected source; 1301 tracked Python files compile. The snapshot's
+first machine check hit CRLF-expanded AGENTS byte sizing; exporting its exact indexed
+LF blob resolved this without changing the rule or budget. The first result remains
+recorded. Strict Dart full-project analysis exits 0, final release Web build exits 0.
+Source whitespace check passes; a pre-existing trailing blank in the retained historical
+test remains recorded rather than rewriting it. Tracked credential-path inventory
+reports no leaks. Original historical test bytes all match the freeze. These are
+source/build observations, not real customer or model execution.

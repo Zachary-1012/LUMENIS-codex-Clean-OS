@@ -58,6 +58,26 @@ def render_calls(monkeypatch, tmp_path):
     return calls
 
 
+def test_long_video_encoder_has_programme_budget_and_keeps_cancel_callback(media, render_calls, tmp_path, monkeypatch):
+    fixture_run = rendering._run
+    final_calls = []
+    def record_run(command, **kwargs):
+        if Path(command[-1]).name == "media.mp4":
+            final_calls.append(kwargs)
+        return fixture_run(command, **kwargs)
+    monkeypatch.setattr(rendering, "_run", record_run)
+    timeline = Timeline.from_assets((media,), "16:9")
+    for _ in range(6):
+        timeline = timeline.add_clip(media.asset_id, source_in=0, source_out=12, audio_role="muted")
+    checks = []
+    def check_continue():
+        checks.append(True)
+    rendering.render_timeline(timeline, tmp_path / "long-video.mp4", check_continue=check_continue)
+    assert len(final_calls) == 1 and checks
+    assert timeline.duration_sec <= final_calls[0]["timeout"] <= timeline.duration_sec * 8
+    assert final_calls[0]["check_continue"] is check_continue
+
+
 def test_trim_selected_audio_gain_fades_and_fixed_decoder_arguments(media, render_calls, tmp_path):
     timeline = Timeline.from_assets([media]).add_clip(media.asset_id, source_in=2, source_out=4, audio_stream_index=1)
     timeline = timeline.set_audio_mix(timeline.tracks[0].clips[0].clip_id, AudioMix(volume=.5, fade_in_sec=.1, fade_out_sec=.2))
@@ -767,3 +787,111 @@ def test_real_dissolve_blends_frames_without_shortening_mixed_cut_sequence(tmp_p
     reopened = Timeline.from_dict(timeline.to_dict(), assets=[video_editing.fingerprint_local_media(asset.path) for asset in assets])
     assert reopened.transitions == timeline.transitions
     assert not list(tmp_path.glob("timeline-render-*"))
+
+
+@pytest.fixture
+def wide_caption_measurement(render_calls, monkeypatch):
+    fixture_run = rendering._run
+    def run(command, **kwargs):
+        report = fixture_run(command, **kwargs)
+        if "-vf" in command and "print(text_w)" in command[command.index("-vf") + 1]:
+            return "[Eval @ 001] 835.000000\n[Eval @ 001] 190.000000\n[Eval @ 001] 835.000000\n"
+        return report
+    monkeypatch.setattr(rendering, "_run", run)
+
+
+def test_wide_caption_explicit_profile_preserves_full_literal_and_four_line_guard(
+    media, render_calls, caption_font, wide_caption_measurement, tmp_path,
+):
+    literal = "Three recorded answers would be returned to their speakers before the final edit. A complete transcript would keep another way into the work."
+    timeline = Timeline.from_assets((media,), "16:9").add_caption(0, 1, literal, layout_profile="literal-wide-720p-v2")
+    readback = []
+    filters = rendering._overlay_filters(timeline, duration=1, width=1280, height=720,
+                                         ffmpeg="unit-ffmpeg", work=tmp_path, layout_readback=readback)
+    wrapped = (tmp_path / "caption-000.txt").read_text(encoding="utf-8")
+    assert wrapped.replace("\n", "") == literal
+    assert len(wrapped.split("\n")) == 4 and "fontsize=35" in filters[0] and "line_spacing=8" in filters[0]
+    assert all(line.endswith(" ") for line in wrapped.split("\n")[:-1])
+    assert readback[0]["text_width_px"] == 835 and readback[0]["text_height_px"] == 190
+    assert "returned" not in filters[0] and "expansion=none:reload=0" in filters[0]
+    legacy = Timeline.from_assets((media,)).add_caption(0, 1, literal)
+    with pytest.raises(VideoEditingError, match="OVERLAY_LAYOUT_EXCEEDS_FOUR_LINES"):
+        overlay_filters(legacy, tmp_path)
+    over_limit = Timeline.from_assets((media,), "16:9").add_caption(0, 1, "a" * 193,
+        layout_profile="literal-wide-720p-v2")
+    with pytest.raises(VideoEditingError, match="OVERLAY_LAYOUT_EXCEEDS_FOUR_LINES"):
+        overlay_filters(over_limit, tmp_path)
+
+
+@pytest.mark.parametrize("dimensions", [(720, 1280), (320, 180), (810, 1080)])
+def test_wide_caption_rejects_other_frame_sizes_before_any_process(media, render_calls, tmp_path, dimensions):
+    timeline = Timeline.from_assets((media,), "16:9").add_caption(0, 1, "text", layout_profile="literal-wide-720p-v2")
+    with pytest.raises(VideoEditingError, match="CAPTION_LAYOUT_REQUIRES_1280_720"):
+        rendering._overlay_filters(timeline, duration=1, width=dimensions[0], height=dimensions[1],
+                                   ffmpeg="unit-ffmpeg", work=tmp_path)
+    assert not render_calls and not list(tmp_path.glob("caption-*.txt"))
+
+
+@pytest.mark.parametrize("box", [(1680, 38), (1205, 190), (835, 201)])
+def test_wide_caption_actual_pixel_bounds_reject_overflow(media, render_calls, caption_font, tmp_path, monkeypatch, box):
+    monkeypatch.setattr(rendering, "_measure_caption_box", lambda *a, **k: box)
+    timeline = Timeline.from_assets((media,), "16:9").add_caption(0, 1, "text", layout_profile="literal-wide-720p-v2")
+    with pytest.raises(VideoEditingError, match="CAPTION_LAYOUT_EXCEEDS_PIXEL_BOUNDS"):
+        overlay_filters(timeline, tmp_path)
+    assert list(tmp_path.glob("*.mp4")) == [Path(media.path)]
+    assert not list(tmp_path.glob("timeline-render-*"))
+
+
+@pytest.mark.parametrize("report", ["", "[Eval @ 001] 42.000000\n", "[Eval @ 001] nan\n",
+    "[Eval @ 001] ...\n", "[Eval @ 001] e\n",
+    "[Eval @ 001] 835.000000\n[Eval @ 001] 190.000000\n[Eval @ 001] 836.000000\n",
+    "[Eval @ 001] 835.000000\n[Eval @ 001] 190.000000\n[Eval @ 001] 835.000000\n[Eval @ 001] 835.000000\n[Eval @ 001] 191.000000\n[Eval @ 001] 835.000000\n"])
+def test_wide_caption_measurement_unavailable_is_explicit(tmp_path, monkeypatch, report):
+    monkeypatch.setattr(rendering, "_run", lambda *a, **k: report)
+    with pytest.raises(VideoEditingError, match="CAPTION_LAYOUT_MEASUREMENT_UNAVAILABLE"):
+        rendering._measure_caption_box("unit-ffmpeg", work=tmp_path, filename="caption-000.txt", font="fixed-font")
+
+
+def test_wide_caption_measurement_cancellation_preserves_previous(media, render_calls, caption_font, tmp_path, monkeypatch):
+    prior = tmp_path / "previous.mp4"
+    prior.write_bytes(b"previous verified output")
+    captioned = Timeline.from_assets((media,), "16:9").add_clip(media.asset_id, source_out=1, audio_role="muted")
+    captioned = captioned.add_caption(0, 1, "complete caption", layout_profile="literal-wide-720p-v2")
+    error = PermissionError("actual current access revoked")
+    monkeypatch.setattr(rendering, "_measure_caption_box", lambda *a, **k: (_ for _ in ()).throw(error))
+    with pytest.raises(PermissionError) as caught:
+        rendering.render_timeline(captioned, tmp_path / "cancelled.mp4")
+    assert caught.value is error and prior.read_bytes() == b"previous verified output"
+    assert not (tmp_path / "cancelled.mp4").exists() and not list(tmp_path.glob("timeline-render-*"))
+
+
+def test_actual_wide_caption_measurement_rejects_cjk_overflow(installed_caption_runtime, tmp_path):
+    ffmpeg, source = installed_caption_runtime
+    asset = video_editing.fingerprint_local_media(str(source))
+    timeline = Timeline.from_assets((asset,), "16:9").add_caption(0, 1, "界" * 48,
+        layout_profile="literal-wide-720p-v2")
+    with pytest.raises(VideoEditingError, match="CAPTION_LAYOUT_EXCEEDS_PIXEL_BOUNDS"):
+        rendering._overlay_filters(timeline, duration=1, width=1280, height=720,
+                                   ffmpeg=ffmpeg, work=tmp_path)
+
+
+def test_actual_wide_caption_export_reopen_retains_audio_and_parent(installed_caption_runtime, tmp_path, monkeypatch):
+    ffmpeg, source = installed_caption_runtime
+    import shared_artifacts
+    monkeypatch.setattr(shared_artifacts, "_ffmpeg_path", lambda: ffmpeg)
+    asset = video_editing.fingerprint_local_media(str(source))
+    base = Timeline.from_assets((asset,), "16:9").add_clip(asset.asset_id, source_out=1, audio_stream_index=0)
+    original = base.add_caption(0, 1, "short original")
+    literal = "Some have always known this coast. Some learned the name of the river after they arrived. Some are deciding whether to stay."
+    changed = original.update_caption(original.overlays[0].overlay_id, 0, 1, literal,
+        layout_profile="literal-wide-720p-v2")
+    reopened = Timeline.from_dict(changed.to_dict(), assets=(asset,))
+    baseline = tmp_path / "base.mp4"
+    rendered = tmp_path / "wide.mp4"
+    rendering.render_timeline(base, baseline)
+    result = rendering.render_timeline(reopened, rendered)
+    assert result["measurement"]["video_frames"] == 30
+    assert result["overlay_processing"]["measured_layouts"][0]["profile"] == "literal-wide-720p-v2"
+    assert _audio_packets(video_editing._ffprobe_path(), baseline) == _audio_packets(video_editing._ffprobe_path(), rendered)
+    assert original.overlays[0].text == "short original" and original.version + 1 == changed.version
+    assert reopened.to_dict() == changed.to_dict() and not list(tmp_path.glob("timeline-render-*"))

@@ -162,7 +162,7 @@ class TestZeroDenominatorProtection:
         """空集互动 avg=None，不伪装 0。"""
         r = cm.engagement_stats([])
         assert r["avg"] is None
-        assert r["sum"] == 0
+        assert r["sum"] is None
         assert r["quality"]["empty"] is True
 
     def test_alert_engine_neg_ratio_none_no_typeerror(self):

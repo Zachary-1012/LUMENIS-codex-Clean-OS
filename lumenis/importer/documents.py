@@ -436,7 +436,7 @@ def _source_bytes(con, evidence):
     import shared_artifacts
     provenance = evidence["provenance"]
     artifact_id = provenance.get("source_artifact_ref")
-    cur = con.execute("SELECT * FROM lumenis_shared_artifacts WHERE artifact_id=? AND kind='imported_document_source'", (artifact_id,))
+    cur = con.execute("SELECT * FROM lumenis_shared_artifacts WHERE artifact_id=? AND kind IN ('imported_document_source','collected_source')", (artifact_id,))
     row = cur.fetchone()
     if row is None:
         raise SavedWorkError("DOCUMENT_SOURCE_ARTIFACT_MISSING")
@@ -452,7 +452,75 @@ def _source_bytes(con, evidence):
         raw = source.read(8*1024*1024+1)
     if len(raw) != record["size_bytes"] or hashlib.sha256(raw).hexdigest() != record["sha256"]:
         raise SavedWorkError("DOCUMENT_SOURCE_ARTIFACT_INVALID")
+    if record['kind'] == 'collected_source':
+        _verify_collected_source(con, evidence, raw, record)
     return raw, record
+
+
+def _verify_collected_source(con, evidence, raw, record):
+    """Consume a source-specific Collector original through the existing owner.
+
+    The Collector stages and commits these bytes with its Source/Canonical
+    transaction. This reader does not import, relabel, grant rights, or create
+    an alternate Canonical record. Native body offsets are Unicode code points
+    in the unchanged body, never byte offsets into its JSON transport envelope.
+    """
+    signed = evidence['provenance']
+    binding = signed.get('native_source_binding')
+    if (evidence.get('feature_id') != 'COLLECTED_SOURCE'
+            or evidence.get('source') != 'collector'
+            or signed.get('source_kind') != 'collected_source'
+            or not isinstance(binding, dict)
+            or set(binding) != {'platform','native_id','stable_source_key','source_id',
+                               'body_sha256','collection_evidence_ref'}
+            or binding.get('source_id') != evidence.get('asset_id')
+            or record.get('note_id') != evidence.get('asset_id')):
+        raise SavedWorkError('COLLECTED_SOURCE_BINDING_INVALID')
+    try:
+        # Native identity/lineage/public URL validation remains Collector-owned.
+        # This pure reader makes no collection, session or network invocation.
+        from lumenis.system.collector.adapters.secondary_collection import NativePublicCapture, _native_capture_record
+        original = _native_capture_record(NativePublicCapture(binding['platform'], raw, record['sha256']))
+    except (TypeError, ValueError, UnicodeError) as exc:
+        raise SavedWorkError('COLLECTED_SOURCE_ORIGINAL_INVALID') from exc
+    if not isinstance(original, dict) or not isinstance(original.get('publication') or {}, dict):
+        raise SavedWorkError('COLLECTED_SOURCE_ORIGINAL_INVALID')
+    source = signed.get('provenance')
+    body = original.get('body')
+    if (not isinstance(source, dict) or not isinstance(body, str) or not body.strip()
+            or signed.get('parsed_text') != body
+            or not isinstance(binding['platform'], str)
+            or not isinstance(binding['native_id'], str) or not binding['native_id']
+            or binding['stable_source_key'] != binding['platform'] + ':' + binding['native_id']
+            or any(original.get(k) != binding[k] for k in ('platform','native_id','stable_source_key','body_sha256'))
+            or hashlib.sha256(body.encode('utf-8')).hexdigest() != binding['body_sha256']
+            or signed.get('source_url') != original.get('source_url')
+            or source.get('source_url') != original.get('source_url')
+            or source.get('captured_at') != original.get('capture_observation_native')
+            or source.get('published_at') != (original.get('publication') or {}).get('published_at_utc')
+            or original.get('body_state') in {'OG_PREVIEW_ONLY_NOT_NATIVE_FULL_POST','NATIVE_BODY_UNAVAILABLE'}):
+        raise SavedWorkError('COLLECTED_SOURCE_ORIGINAL_INVALID')
+    expected_locator = {'unit':'native-post-body', 'json_path':'$.body',
+                        'start':0, 'end':len(body), 'offset_unit':'unicode-codepoint'}
+    if signed.get('locators') != [expected_locator]:
+        raise SavedWorkError('COLLECTED_SOURCE_LOCATOR_INVALID')
+    ref = binding['collection_evidence_ref']
+    if not isinstance(ref, str) or not re.fullmatch(r'app_evidence_records:[1-9]\d*', ref):
+        raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+    parent = con.execute('SELECT * FROM app_evidence_records WHERE id=?', (int(ref.split(':')[1]),)).fetchone()
+    if parent is None:
+        raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+    parent = dict(parent)
+    try:
+        parent_inputs = json.loads(parent['inputs_json'])
+    except (TypeError, ValueError) as exc:
+        raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID') from exc
+    integrity = evidence_store.classify_evidence_integrity(parent)
+    if (integrity.get('verified') is not True or integrity.get('assurance') != 'writer-authenticated'
+            or parent.get('status') != 'verified' or parent.get('result') != 'PASS'
+            or parent_inputs.get('_lumenis_scope') != json.loads(evidence['inputs_json']).get('_lumenis_scope')
+            or binding['source_id'] not in [str(value) for value in parent_inputs.get('source_ids', [])]):
+        raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
 
 
 def reopen_imported_source(evidence_id: int, *, actor: Any, scope: Mapping) -> dict:

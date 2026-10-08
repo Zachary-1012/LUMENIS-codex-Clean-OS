@@ -4,14 +4,63 @@ Word / PDF 报告导出模块
 将标准化报告数据导出为Word(.docx)和PDF文件
 支持 CTH / 序境·商业运营与 BMP / 序境·品牌市场模板
 
-依赖：python-docx（Word）、docx2pdf或reportlab（PDF）
+依赖：python-docx（Word）、reportlab与已有嵌入字体（PDF）
 """
 import os
+from contextlib import contextmanager
 from datetime import datetime
+from html import escape
+from threading import RLock
 from typing import Optional
 
 from .report_generator import ReportGenerator
 from .standard_taxonomy import RiskLevel, Sentiment
+
+
+_PDF_EXPORT_LOCK = RLock()
+
+
+def _display_value(value):
+    return "—" if value is None else str(value)
+
+
+@contextmanager
+def pdf_text_context():
+    """Embed the existing product fonts and serialize ReportLab font subsets."""
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from lumenis.shared.database import resolve_path
+
+    # ReportLab's TTFont objects must not build different documents concurrently.
+    with _PDF_EXPORT_LOCK:
+        fonts = []
+        for name, filename in (("LumenisNotoSC", "NotoSansSC.ttf"),
+                               ("LumenisNotoKR", "NotoSansKR.ttf")):
+            path = resolve_path("app/assets/fonts/" + filename)
+            if not os.path.isfile(path):
+                raise RuntimeError("WORK_EXPORT_FONT_UNAVAILABLE")
+            if name not in pdfmetrics.getRegisteredFontNames():
+                pdfmetrics.registerFont(TTFont(name, path))
+            fonts.append(pdfmetrics.getFont(name))
+
+        def line_markup(text):
+            runs = []
+            for char in str(text).replace("\t", "    "):
+                font = next((font for font in fonts
+                             if font.face.charToGlyph.get(ord(char), 0)), None)
+                if font is None:
+                    raise RuntimeError("WORK_EXPORT_GLYPH_UNAVAILABLE")
+                if runs and runs[-1][0] == font.fontName:
+                    runs[-1][1].append(char)
+                else:
+                    runs.append((font.fontName, [char]))
+            return "".join(f'<font name="{name}">{escape("".join(chars))}</font>'
+                           for name, chars in runs) or "&#160;"
+
+        def markup(text):
+            return "<br/>".join(line_markup(line) for line in str(text).splitlines() or [""])
+
+        yield fonts[0].fontName, markup
 
 
 class ReportExporter:
@@ -44,21 +93,18 @@ class ReportExporter:
                     doc.add_paragraph(line)
             doc.save(output)
         elif format == "pdf":
-            from html import escape
             from reportlab.lib.pagesizes import A4
             from reportlab.lib.styles import ParagraphStyle
-            from reportlab.pdfbase import pdfmetrics
-            from reportlab.pdfbase.cidfonts import UnicodeCIDFont
             from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-            pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
-            style = ParagraphStyle("SavedWork", fontName="STSong-Light", fontSize=9,
-                                   leading=13, wordWrap="CJK")
-            story = []
-            for section in sections:
-                for line in section.splitlines():
-                    story.append(Paragraph(escape(line) or "&#160;", style))
-                story.append(Spacer(1, 12))
-            SimpleDocTemplate(output, pagesize=A4).build(story)
+            with pdf_text_context() as (font_name, markup):
+                style = ParagraphStyle("SavedWork", fontName=font_name, fontSize=9,
+                                       leading=13, wordWrap="CJK")
+                story = []
+                for section in sections:
+                    for line in section.splitlines():
+                        story.append(Paragraph(markup(line), style))
+                    story.append(Spacer(1, 12))
+                SimpleDocTemplate(output, pagesize=A4).build(story)
         elif format == "xlsx":
             from openpyxl import Workbook
             book = Workbook()
@@ -123,14 +169,14 @@ class ReportExporter:
         for m in metrics:
             row = table.add_row().cells
             row[0].text = m.get("name", "")
-            row[1].text = str(m.get("value", ""))
+            row[1].text = _display_value(m.get("value"))
             row[2].text = m.get("unit", "")
 
         # 3. 风险事件
         doc.add_heading("三、风险事件", level=1)
         risk_events = report.get("risk_events", [])
         if not risk_events:
-            doc.add_paragraph("本周期无风险事件。")
+            doc.add_paragraph("风险事件数据不可用。" if report.get("risk_events") is None else "本周期无风险事件。")
         for evt in risk_events:
             p = doc.add_paragraph()
             risk_label = evt.get("risk_label", evt.get("risk_level", ""))
@@ -138,7 +184,7 @@ class ReportExporter:
             run.bold = True
             if evt.get("risk_level") in ("critical", "high"):
                 run.font.color.rgb = RGBColor(0xC0, 0x00, 0x00)
-            doc.add_paragraph(f"风险指数：{evt.get('risk_score', 0)} | 提及数：{evt.get('mention_count', 0)} | 来源数：{evt.get('source_count', 1)}")
+            doc.add_paragraph(f"风险指数：{_display_value(evt.get('risk_score'))} | 提及数：{_display_value(evt.get('mention_count'))} | 来源数：{_display_value(evt.get('source_count'))}")
             doc.add_paragraph(f"预警：{evt.get('alert_message', '')}")
             doc.add_paragraph()
 
@@ -148,22 +194,22 @@ class ReportExporter:
         dist = sentiment.get("distribution", {})
         doc.add_paragraph(
             f"整体情感：{sentiment.get('overall_label', '')} | "
-            f"正面{dist.get('positive', 0)}条（{dist.get('positive_ratio', 0)}%） | "
-            f"负面{dist.get('negative', 0)}条（{dist.get('negative_ratio', 0)}%） | "
-            f"中性{dist.get('neutral', 0)}条"
+            f"正面{_display_value(dist.get('positive'))}条（{_display_value(dist.get('positive_ratio'))}%） | "
+            f"负面{_display_value(dist.get('negative'))}条（{_display_value(dist.get('negative_ratio'))}%） | "
+            f"中性{_display_value(dist.get('neutral'))}条"
         )
 
         # 5. 传播分析
         doc.add_heading("五、传播分析", level=1)
         prop = report.get("propagation_analysis", {})
-        doc.add_paragraph(f"互动水平：{prop.get('engagement_level', '')} | 总互动量：{prop.get('total_engagement', 0)}")
+        doc.add_paragraph(f"互动水平：{prop.get('engagement_level', '')} | 总互动量：{_display_value(prop.get('total_engagement'))}")
         top_notes = prop.get("top_notes", [])
         if top_notes:
             doc.add_paragraph("热门笔记Top5：")
             for i, n in enumerate(top_notes, 1):
                 doc.add_paragraph(
                     f"{i}. {n.get('title', '')}（{n.get('author', '')}）"
-                    f" - 互动{n.get('engagement', 0)} - {n.get('sentiment', '')}",
+                    f" - 互动{_display_value(n.get('engagement'))} - {n.get('sentiment', '')}",
                     style="List Bullet"
                 )
 
@@ -172,7 +218,7 @@ class ReportExporter:
         for ins in report.get("key_insights", []):
             p = doc.add_paragraph(style="List Bullet")
             p.add_run(f"[{ins.get('type', '')}] {ins.get('insight', '')}")
-            if ins.get("metric"):
+            if ins.get("metric") is not None:
                 p.add_run(f"（{ins['metric']}）").font.size = Pt(9)
 
         # 7. 行动建议
@@ -192,9 +238,9 @@ class ReportExporter:
         doc.add_heading("八、数据质量", level=1)
         dq = report.get("data_quality", {})
         doc.add_paragraph(
-            f"采集总数：{dq.get('total_collected', 0)}条 | "
-            f"质量评分：{dq.get('quality_score', 0)}/100 | "
-            f"采集完整：{'是' if dq.get('collection_complete') else '否'}"
+            f"采集总数：{_display_value(dq.get('total_collected'))}条 | "
+            f"质量评分：{_display_value(dq.get('quality_score'))}/100 | "
+            f"采集完整：{('是' if dq['collection_complete'] else '否') if dq.get('collection_complete') is not None else '—'}"
         )
         for w in dq.get("warnings", []):
             if w:
@@ -207,7 +253,7 @@ class ReportExporter:
             tone = cth.get("tone_evaluation", {})
             doc.add_paragraph(
                 f"调性匹配：{tone.get('overall', '')} | "
-                f"温暖{tone.get('warm_ratio', 0)}% | 精致{tone.get('refined_ratio', 0)}% | 仪式感{tone.get('ritual_ratio', 0)}%"
+                f"温暖{_display_value(tone.get('warm_ratio'))}% | 精致{_display_value(tone.get('refined_ratio'))}% | 仪式感{_display_value(tone.get('ritual_ratio'))}%"
             )
             nodes = cth.get("active_activity_nodes", [])
             if nodes:
@@ -238,23 +284,14 @@ class ReportExporter:
     def export_pdf(self, report: dict, filename: str = None) -> str:
         """
         导出为PDF
-        优先用docx2pdf（需要Word），回退用reportlab
+        使用已有ReportLab与嵌入字体生成完整报告。
         """
         # 先生成Word
         word_path = self.export_word(report, filename.replace(".pdf", ".docx") if filename else None)
         if not word_path:
             return ""
 
-        # 尝试docx2pdf
-        try:
-            from docx2pdf import convert
-            pdf_path = word_path.replace(".docx", ".pdf")
-            convert(word_path, pdf_path)
-            return pdf_path
-        except Exception:
-            pass
-
-        # 回退：用reportlab生成简单PDF
+        # All PDF paths share the verified glyph checks and embedded fonts.
         try:
             from reportlab.lib.pagesizes import A4
             from reportlab.lib.styles import getSampleStyleSheet
@@ -268,47 +305,103 @@ class ReportExporter:
                 filename = f"{brand}_{period}_{date_str}.pdf"
 
             pdf_path = os.path.join(self.output_dir, filename)
-            doc = SimpleDocTemplate(pdf_path, pagesize=A4)
-            styles = getSampleStyleSheet()
-            story = []
+            with pdf_text_context() as (font_name, markup):
+                doc = SimpleDocTemplate(pdf_path, pagesize=A4)
+                styles = getSampleStyleSheet()
+                for style in styles.byName.values():
+                    style.fontName = font_name
+                    style.wordWrap = "CJK"
+                story = []
 
-            story.append(Paragraph(f"{report.get('brand_name', '')} {report.get('period_label', '')}", styles["Title"]))
-            story.append(Spacer(1, 0.5 * cm))
-            story.append(Paragraph(f"周期：{report.get('start_date', '')} 至 {report.get('end_date', '')}", styles["Normal"]))
-            story.append(Paragraph(f"生成：{report.get('generated_at', '')}", styles["Normal"]))
-            story.append(Spacer(1, 0.5 * cm))
+                story.append(Paragraph(markup(f"{report.get('brand_name', '')} {report.get('period_label', '')}"), styles["Title"]))
+                story.append(Spacer(1, 0.5 * cm))
+                story.append(Paragraph(markup(f"周期：{report.get('start_date', '')} 至 {report.get('end_date', '')}"), styles["Normal"]))
+                story.append(Paragraph(markup(f"生成：{report.get('generated_at', '')}"), styles["Normal"]))
+                story.append(Paragraph(markup(f"报告ID：{report.get('report_id', '')}"), styles["Normal"]))
+                story.append(Spacer(1, 0.5 * cm))
 
-            story.append(Paragraph("执行摘要", styles["Heading2"]))
-            story.append(Paragraph(report.get("executive_summary", ""), styles["Normal"]))
-            story.append(Spacer(1, 0.3 * cm))
+                story.append(Paragraph(markup("执行摘要"), styles["Heading2"]))
+                story.append(Paragraph(markup(report.get("executive_summary", "")), styles["Normal"]))
+                story.append(Spacer(1, 0.3 * cm))
 
-            story.append(Paragraph("关键指标", styles["Heading2"]))
-            metric_data = [["指标", "数值", "单位"]]
-            for m in report.get("key_metrics", []):
-                metric_data.append([m.get("name", ""), str(m.get("value", "")), m.get("unit", "")])
-            story.append(Table(metric_data))
-            story.append(Spacer(1, 0.3 * cm))
+                story.append(Paragraph(markup("关键指标"), styles["Heading2"]))
+                metric_data = [[Paragraph(markup(value), styles["Normal"]) for value in ("指标", "数值", "单位")]]
+                for metric in report.get("key_metrics", []):
+                    display_value = "—" if metric.get("value") is None else str(metric["value"])
+                    metric_data.append([Paragraph(markup(cell), styles["Normal"]) for cell in
+                                        (metric.get("name", ""), display_value, metric.get("unit", ""))])
+                story.append(Table(metric_data))
+                story.append(Spacer(1, 0.3 * cm))
 
-            story.append(Paragraph("风险事件", styles["Heading2"]))
-            for evt in report.get("risk_events", []):
-                story.append(Paragraph(
-                    f"【{evt.get('risk_label', '')}】{evt.get('title', '')} - 风险指数{evt.get('risk_score', 0)}",
-                    styles["Normal"]
-                ))
-            story.append(Spacer(1, 0.3 * cm))
+                story.append(Paragraph(markup("风险事件"), styles["Heading2"]))
+                if not report.get("risk_events"):
+                    story.append(Paragraph(markup(
+                        "风险事件数据不可用。" if report.get("risk_events") is None else "本周期无风险事件。"), styles["Normal"]))
+                for evt in report.get("risk_events", []):
+                    score = "—" if evt.get("risk_score") is None else str(evt["risk_score"])
+                    story.append(Paragraph(markup(
+                        f"【{evt.get('risk_label', evt.get('risk_level', ''))}】{evt.get('title', '')} - 风险指数{score}"), styles["Normal"]))
+                    story.append(Paragraph(markup(
+                        f"提及数：{_display_value(evt.get('mention_count'))} | 来源数：{_display_value(evt.get('source_count'))}"), styles["Normal"]))
+                    story.append(Paragraph(markup(f"预警：{evt.get('alert_message', '')}"), styles["Normal"]))
+                story.append(Spacer(1, 0.3 * cm))
 
-            story.append(Paragraph("行动建议", styles["Heading2"]))
-            for act in report.get("action_items", []):
-                story.append(Paragraph(
-                    f"【{act.get('priority', '')}】{act.get('action', '')}（{act.get('owner', '')}，{act.get('deadline', '')}）",
-                    styles["Normal"]
-                ))
+                story.append(Paragraph(markup("情感分析"), styles["Heading2"]))
+                sentiment = report.get("sentiment_analysis", {})
+                dist = sentiment.get("distribution", {})
+                story.append(Paragraph(markup(
+                    f"整体情感：{sentiment.get('overall_label', '')} | "
+                    f"正面{_display_value(dist.get('positive'))}条（{_display_value(dist.get('positive_ratio'))}%） | "
+                    f"负面{_display_value(dist.get('negative'))}条（{_display_value(dist.get('negative_ratio'))}%） | "
+                    f"中性{_display_value(dist.get('neutral'))}条"), styles["Normal"]))
 
-            doc.build(story)
+                story.append(Paragraph(markup("传播分析"), styles["Heading2"]))
+                prop = report.get("propagation_analysis", {})
+                story.append(Paragraph(markup(
+                    f"互动水平：{prop.get('engagement_level', '')} | 总互动量：{_display_value(prop.get('total_engagement'))}"), styles["Normal"]))
+                for index, note in enumerate(prop.get("top_notes", []), 1):
+                    story.append(Paragraph(markup(
+                        f"{index}. {note.get('title', '')}（{note.get('author', '')}） - "
+                        f"互动{_display_value(note.get('engagement'))} - {note.get('sentiment', '')}"), styles["Normal"]))
+
+                story.append(Paragraph(markup("关键洞察"), styles["Heading2"]))
+                for insight in report.get("key_insights", []):
+                    metric = f"（{insight['metric']}）" if insight.get("metric") is not None else ""
+                    story.append(Paragraph(markup(
+                        f"[{insight.get('type', '')}] {insight.get('insight', '')}{metric}"), styles["Normal"]))
+
+                story.append(Paragraph(markup("行动建议"), styles["Heading2"]))
+                for act in report.get("action_items", []):
+                    story.append(Paragraph(markup(
+                        f"【{act.get('priority', '')}】{act.get('action', '')}（{act.get('owner', '')}，{act.get('deadline', '')}）"),
+                        styles["Normal"]))
+
+                story.append(Paragraph(markup("数据质量"), styles["Heading2"]))
+                quality = report.get("data_quality", {})
+                complete = ('是' if quality['collection_complete'] else '否') if quality.get('collection_complete') is not None else '—'
+                story.append(Paragraph(markup(
+                    f"采集总数：{_display_value(quality.get('total_collected'))}条 | "
+                    f"质量评分：{_display_value(quality.get('quality_score'))}/100 | 采集完整：{complete}"), styles["Normal"]))
+                for warning in quality.get("warnings", []):
+                    if warning:
+                        story.append(Paragraph(markup(f"警告：{warning}"), styles["Normal"]))
+
+                if "cth_specific" in report:
+                    story.append(Paragraph(markup("太古汇专属分析"), styles["Heading2"]))
+                    cth = report["cth_specific"]
+                    tone = cth.get("tone_evaluation", {})
+                    story.append(Paragraph(markup(
+                        f"调性匹配：{tone.get('overall', '')} | 温暖{_display_value(tone.get('warm_ratio'))}% | "
+                        f"精致{_display_value(tone.get('refined_ratio'))}% | 仪式感{_display_value(tone.get('ritual_ratio'))}%"), styles["Normal"]))
+                    for node in cth.get("active_activity_nodes", []):
+                        story.append(Paragraph(markup(
+                            f"{node.get('name', '')}（{node.get('month', '')}）- {node.get('tone', '')}"), styles["Normal"]))
+
+                doc.build(story)
             return pdf_path
         except Exception as e:
             print(f"PDF导出失败: {e}")
-            return word_path  # 返回Word路径作为兜底
+            return ""
 
     def generate_and_export(self, brand_mode: str = "cth", period: str = "daily",
                             start_date: str = None, end_date: str = None,

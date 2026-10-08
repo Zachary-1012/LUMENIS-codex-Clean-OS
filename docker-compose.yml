@@ -13,11 +13,13 @@ services:
     build: .
     image: zbrand-core:latest
     container_name: zbc-prod
+    # Loopback is the default. A non-loopback bind is explicit config, not public-use authorization.
     ports:
-      - "8201:8201"
+      - "${LUMENIS_DOCKER_BIND_IP:-127.0.0.1}:8201:8201"
     environment:
       - TAIKOO_HOST=0.0.0.0
       - TAIKOO_PORT=8201
+      - ZB_WSGI=waitress
       - ZBC_DB_PATH=/app/data/monitor.db
       - ZBC_DATA_DIR=/app/data
       - XHS_CDP_URL=${XHS_CDP_URL:-}

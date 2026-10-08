@@ -21,21 +21,40 @@ class Sys06Screen extends StatefulWidget {
 }
 
 class _Sys06ScreenState extends State<Sys06Screen> {
-  late final Sys06BrowserRepository _repository;
+  late Sys06BrowserRepository _repository;
   late final TextEditingController _addressController;
 
   Sys06BrowserSession? _session;
   Sys06BrowserFrame? _frame;
   _Sys06Notice _notice = _Sys06Notice.ready;
+  int _generation = 0;
+  int? _activeOperation;
   bool _busy = false;
+  bool _stopping = false;
 
   @override
   void initState() {
     super.initState();
-    _repository =
-        widget.browserRepository ??
-        CoreSys06BrowserRepository(client: widget.client);
+    _repository = _repositoryFor(widget);
     _addressController = TextEditingController();
+  }
+
+  @override
+  void didUpdateWidget(covariant Sys06Screen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (identical(oldWidget.client, widget.client) &&
+        identical(oldWidget.browserRepository, widget.browserRepository)) {
+      return;
+    }
+    _generation++;
+    _activeOperation = null;
+    _repository = _repositoryFor(widget);
+    _session = null;
+    _frame = null;
+    _notice = _Sys06Notice.ready;
+    _busy = false;
+    _stopping = false;
+    _addressController.clear();
   }
 
   @override
@@ -44,14 +63,14 @@ class _Sys06ScreenState extends State<Sys06Screen> {
     super.dispose();
   }
 
-  Future<void> _open() => _run(() async {
-    final session = await _repository.open();
-    if (!mounted) return;
+  Future<void> _open() => _run((generation, repository) async {
+    final session = await repository.open();
+    if (!_isCurrent(generation, repository)) return;
     _adoptSession(session, clearFrame: true);
-    await _readFrame(session);
+    await _readFrame(session, generation, repository);
   });
 
-  Future<void> _navigate() => _run(() async {
+  Future<void> _navigate() => _run((generation, repository) async {
     final session = _session;
     if (session == null || !session.allowedActions.contains('navigate')) return;
     final address = _addressController.text.trim();
@@ -69,16 +88,16 @@ class _Sys06ScreenState extends State<Sys06Screen> {
         _notice = _Sys06Notice.navigating;
       });
     }
-    final updated = await _repository.navigate(
+    final updated = await repository.navigate(
       sessionId: session.sessionId,
       url: address,
     );
-    if (!mounted || _session?.sessionId != session.sessionId) return;
+    if (!_isCurrentSession(generation, repository, session.sessionId)) return;
     _adoptSession(updated, clearFrame: true);
-    await _readFrame(updated);
+    await _readFrame(updated, generation, repository);
   });
 
-  Future<void> _reload() => _run(() async {
+  Future<void> _reload() => _run((generation, repository) async {
     final session = _session;
     if (session == null || !session.allowedActions.contains('reload')) return;
     if (mounted) {
@@ -87,42 +106,67 @@ class _Sys06ScreenState extends State<Sys06Screen> {
         _notice = _Sys06Notice.navigating;
       });
     }
-    final updated = await _repository.reload(session.sessionId);
-    if (!mounted || _session?.sessionId != session.sessionId) return;
+    final updated = await repository.reload(session.sessionId);
+    if (!_isCurrentSession(generation, repository, session.sessionId)) return;
     _adoptSession(updated, clearFrame: true);
-    await _readFrame(updated);
+    await _readFrame(updated, generation, repository);
   });
 
-  Future<void> _refreshFrame() => _run(() async {
+  Future<void> _refreshFrame() => _run((generation, repository) async {
     final session = _session;
     if (session == null) return;
-    await _readFrame(session);
+    await _readFrame(session, generation, repository);
   });
 
-  Future<void> _stop() => _run(() async {
+  Future<void> _stop() async {
     final session = _session;
-    if (session == null) return;
-    await _repository.stop(session.sessionId);
-    if (!mounted || _session?.sessionId != session.sessionId) return;
+    if (session == null || _stopping) return;
+    final repository = _repository;
+    final generation = ++_generation;
+    _activeOperation = null;
     setState(() {
-      _session = null;
+      _busy = false;
+      _stopping = true;
       _frame = null;
-      _addressController.clear();
-      _notice = _Sys06Notice.closed;
+      _notice = _Sys06Notice.stopping;
     });
-  });
+    try {
+      await repository.stop(session.sessionId);
+      if (!_isCurrentSession(generation, repository, session.sessionId)) return;
+      setState(() {
+        _session = null;
+        _frame = null;
+        _addressController.clear();
+        _notice = _Sys06Notice.closed;
+        _stopping = false;
+      });
+    } catch (error) {
+      if (!_isCurrentSession(generation, repository, session.sessionId)) return;
+      setState(() {
+        _frame = null;
+        _notice = _noticeForError(error);
+        _stopping = false;
+      });
+    }
+  }
 
-  Future<void> _readFrame(Sys06BrowserSession expected) async {
+  Future<void> _readFrame(
+    Sys06BrowserSession expected,
+    int generation,
+    Sys06BrowserRepository repository,
+  ) async {
     if (!expected.allowedActions.contains('frame') ||
         expected.targetId == null) {
-      if (mounted && _session?.sessionId == expected.sessionId) {
+      if (_isCurrentSession(generation, repository, expected.sessionId)) {
         setState(() => _notice = _Sys06Notice.enterAddress);
       }
       return;
     }
     try {
-      final frame = await _repository.readFrame(expected.sessionId);
-      if (!mounted || _session?.sessionId != expected.sessionId) return;
+      final frame = await repository.readFrame(expected.sessionId);
+      if (!_isCurrentSession(generation, repository, expected.sessionId)) {
+        return;
+      }
       final current = _session;
       if (current == null ||
           frame.frame.targetId != current.targetId ||
@@ -134,7 +178,9 @@ class _Sys06ScreenState extends State<Sys06Screen> {
         _notice = _Sys06Notice.previewReady;
       });
     } catch (error) {
-      if (!mounted || _session?.sessionId != expected.sessionId) return;
+      if (!_isCurrentSession(generation, repository, expected.sessionId)) {
+        return;
+      }
       setState(() {
         _frame = null;
         _notice = _noticeForError(error);
@@ -142,22 +188,46 @@ class _Sys06ScreenState extends State<Sys06Screen> {
     }
   }
 
-  Future<void> _run(Future<void> Function() operation) async {
-    if (_busy) return;
+  Future<void> _run(
+    Future<void> Function(int generation, Sys06BrowserRepository repository)
+    operation,
+  ) async {
+    if (_busy || _stopping) return;
+    final generation = ++_generation;
+    final repository = _repository;
+    _activeOperation = generation;
     setState(() => _busy = true);
     try {
-      await operation();
+      await operation(generation, repository);
     } catch (error) {
-      if (mounted) {
+      if (_isCurrent(generation, repository)) {
         setState(() {
           _frame = null;
           _notice = _noticeForError(error);
         });
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && _activeOperation == generation) {
+        _activeOperation = null;
+        setState(() => _busy = false);
+      }
     }
   }
+
+  bool _isCurrent(int generation, Sys06BrowserRepository repository) =>
+      mounted &&
+      generation == _generation &&
+      identical(repository, _repository);
+
+  bool _isCurrentSession(
+    int generation,
+    Sys06BrowserRepository repository,
+    String sessionId,
+  ) => _isCurrent(generation, repository) && _session?.sessionId == sessionId;
+
+  Sys06BrowserRepository _repositoryFor(Sys06Screen source) =>
+      source.browserRepository ??
+      CoreSys06BrowserRepository(client: source.client);
 
   void _adoptSession(Sys06BrowserSession session, {required bool clearFrame}) {
     setState(() {
@@ -218,7 +288,8 @@ class _Sys06ScreenState extends State<Sys06Screen> {
               copy: copy,
               addressController: _addressController,
               session: _session,
-              busy: _busy,
+              busy: _busy || _stopping,
+              stopping: _stopping,
               onOpen: _open,
               onNavigate: _navigate,
               onReload: _reload,
@@ -229,7 +300,7 @@ class _Sys06ScreenState extends State<Sys06Screen> {
               copy: copy,
               frame: _frame,
               notice: _notice,
-              busy: _busy,
+              busy: _busy || _stopping,
               onRefresh: _refreshFrame,
             );
             final content = _ReaderBoundary(copy: copy);
@@ -347,6 +418,7 @@ class _ReaderControls extends StatelessWidget {
     required this.addressController,
     required this.session,
     required this.busy,
+    required this.stopping,
     required this.onOpen,
     required this.onNavigate,
     required this.onReload,
@@ -358,6 +430,7 @@ class _ReaderControls extends StatelessWidget {
   final TextEditingController addressController;
   final Sys06BrowserSession? session;
   final bool busy;
+  final bool stopping;
   final VoidCallback onOpen;
   final VoidCallback onNavigate;
   final VoidCallback onReload;
@@ -440,7 +513,7 @@ class _ReaderControls extends StatelessWidget {
                   ),
                   OutlinedButton.icon(
                     key: const ValueKey('sys06-stop'),
-                    onPressed: busy ? null : onStop,
+                    onPressed: stopping ? null : onStop,
                     icon: const Icon(Icons.stop_circle_outlined),
                     label: Text(copy.text('end')),
                   ),
@@ -638,6 +711,7 @@ class _ReaderBoundary extends StatelessWidget {
 enum _Sys06Notice {
   ready,
   enterAddress,
+  stopping,
   navigating,
   reading,
   previewReady,
@@ -723,6 +797,7 @@ class _Sys06Copy {
       'previewReady': '已更新只读预览',
       'notice.ready': '尚未开启受控会话。',
       'notice.enterAddress': '会话已开启。输入一个允许的公开来源地址。',
+      'notice.stopping': '正在请求结束受控会话。',
       'notice.navigating': '正在请求受控导航。',
       'notice.reading': '正在读取已授权页面。',
       'notice.previewReady': '已更新只读预览。',
@@ -737,6 +812,8 @@ class _Sys06Copy {
       'empty.ready.detail': '先开启受控会话，再输入一个允许的公开来源地址。',
       'empty.enterAddress.title': '输入来源地址',
       'empty.enterAddress.detail': '导航成功后，系统会显示已授权页面的只读快照。',
+      'empty.stopping.title': '正在结束会话',
+      'empty.stopping.detail': '正在向当前受控会话请求停止。',
       'empty.navigating.title': '正在导航',
       'empty.navigating.detail': '不会打开外部浏览器。',
       'empty.reading.title': '正在生成预览',
@@ -781,6 +858,7 @@ class _Sys06Copy {
       'notice.ready': 'No controlled session is open.',
       'notice.enterAddress':
           'Session opened. Enter an allowed public source address.',
+      'notice.stopping': 'Requesting the controlled session to stop.',
       'notice.navigating': 'Requesting controlled navigation.',
       'notice.reading': 'Reading the authorized page.',
       'notice.previewReady': 'Read-only preview updated.',
@@ -797,6 +875,9 @@ class _Sys06Copy {
       'empty.enterAddress.title': 'Enter a source address',
       'empty.enterAddress.detail':
           'After navigation, the system shows a read-only snapshot of the authorized page.',
+      'empty.stopping.title': 'Ending session',
+      'empty.stopping.detail':
+          'Requesting stop for the current controlled session.',
       'empty.navigating.title': 'Navigating',
       'empty.navigating.detail': 'No external browser will open.',
       'empty.reading.title': 'Preparing preview',
@@ -845,6 +926,7 @@ class _Sys06Copy {
       'previewReady': '읽기 전용 미리보기가 갱신되었습니다',
       'notice.ready': '제어된 세션이 열려 있지 않습니다.',
       'notice.enterAddress': '세션이 열렸습니다. 허용된 공개 소스 주소를 입력하세요.',
+      'notice.stopping': '제어 세션 종료를 요청하고 있습니다.',
       'notice.navigating': '제어된 탐색을 요청하고 있습니다.',
       'notice.reading': '승인된 페이지를 읽고 있습니다.',
       'notice.previewReady': '읽기 전용 미리보기가 갱신되었습니다.',
@@ -859,6 +941,8 @@ class _Sys06Copy {
       'empty.ready.detail': '제어된 세션을 연 다음 허용된 공개 소스 주소를 입력하세요.',
       'empty.enterAddress.title': '소스 주소 입력',
       'empty.enterAddress.detail': '탐색 뒤에 시스템이 승인된 페이지의 읽기 전용 스냅샷을 표시합니다.',
+      'empty.stopping.title': '세션 종료 중',
+      'empty.stopping.detail': '현재 제어 세션에 종료를 요청하고 있습니다.',
       'empty.navigating.title': '탐색 중',
       'empty.navigating.detail': '외부 브라우저를 열지 않습니다.',
       'empty.reading.title': '미리보기 준비 중',

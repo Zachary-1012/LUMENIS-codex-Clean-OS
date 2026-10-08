@@ -24,6 +24,7 @@
 from __future__ import annotations
 
 from typing import Any, Callable, Dict, Iterable, List, Optional
+import re
 
 # ---- 取值域常量（唯一口径来源，禁止在各业务文件另写一份）----
 SENTIMENT_POSITIVE = "positive"
@@ -136,53 +137,100 @@ def risk_count(notes: List[dict], key: str = "risk_level") -> Dict[str, Any]:
 
 
 # ============================================================
-# FN-ENGAGEMENT v1
+# FN-ENGAGEMENT v2
 # ============================================================
-def engagement_of(note: dict, keys: Iterable[str] = ENGAGEMENT_KEYS) -> int:
-    """单条互动量 = likes+comments+collects+shares；缺字段按 0（质量由 engagement_stats 统计）。"""
-    if not isinstance(note, dict):
-        return 0
-    return sum(_as_int(note.get(k)) for k in keys)
+def engagement_count(value: Any) -> Optional[int]:
+    """An exact measured nonnegative count, never a guessed/rounded count."""
+    if type(value) is int:
+        return value if value >= 0 else None
+    if type(value) is float:
+        return int(value) if 0 <= value < 2**53 and value.is_integer() else None
+    if isinstance(value, str):
+        text = value.strip()
+        if re.fullmatch(r"(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)", text):
+            try:
+                return int(text.replace(",", ""))
+            except ValueError:
+                # Preserve the runtime's integer-conversion safety limit.
+                return None
+    return None
+
+
+def engagement_of(note: dict, keys: Iterable[str] = ENGAGEMENT_KEYS) -> Optional[int]:
+    """Complete per-post total; use engagement_stats for measured partial sums."""
+    return engagement_stats([note], keys=keys)["sum"]
 
 
 def engagement_stats(notes: List[dict], keys: Iterable[str] = ENGAGEMENT_KEYS) -> Dict[str, Any]:
     """FN-ENGAGEMENT：互动量聚合。
 
-    output: {sum, avg(None when empty), count, nonzero, per_field{likes,comments,collects,shares},
-             quality:{missing_field_notes, empty}}
-    - 缺字段按 0 参与求和，同时在 quality.missing_field_notes 暴露缺失条数，不静默掩盖。
+    sum/avg and per_field require complete coverage. Measured partial subtotals
+    live in observed_sum/observed_per_field with explicit component coverage.
+    Empty or entirely unobserved inputs never manufacture a zero total.
     """
     rows = _ensure_list(notes)
     keys = tuple(keys)
-    per_field = {k: 0 for k in keys}
+    if not keys or len(set(keys)) != len(keys):
+        raise ValueError("engagement keys must be nonempty and unique")
+    field_sums = {k: 0 for k in keys}
+    field_known = {k: 0 for k in keys}
     missing_notes = 0
+    invalid_fields = 0
+    observed_notes = 0
+    complete_notes = 0
     nonzero = 0
-    total = 0
     for n in rows:
-        if not isinstance(n, dict):
-            missing_notes += 1
-            continue
-        row_missing = False
+        row_known = 0
         row_sum = 0
         for k in keys:
-            v = n.get(k)
-            if _is_missing(v):
-                row_missing = True
-            iv = _as_int(v)
-            per_field[k] += iv
+            v = n.get(k) if isinstance(n, dict) else None
+            iv = engagement_count(v)
+            if iv is None:
+                if not _is_missing(v):
+                    invalid_fields += 1
+                continue
+            row_known += 1
+            field_known[k] += 1
+            field_sums[k] += iv
             row_sum += iv
-        if row_missing:
+        if row_known != len(keys):
             missing_notes += 1
+        else:
+            complete_notes += 1
+        if row_known:
+            observed_notes += 1
         if row_sum > 0:
             nonzero += 1
-        total += row_sum
+    known = sum(field_known.values())
+    expected = len(rows) * len(keys)
+    state = "NO_DATA" if not rows else "UNKNOWN" if not known else "COMPLETE" if known == expected else "PARTIAL"
+    observed_sum = sum(field_sums.values()) if known else None
+    complete = state == "COMPLETE"
+    reason = {"NO_DATA": "NO_RECORDS", "UNKNOWN": "NO_MEASURED_ENGAGEMENT_COMPONENTS",
+              "PARTIAL": "INCOMPLETE_ENGAGEMENT_COMPONENT_COVERAGE", "COMPLETE": None}[state]
+    average = None
+    average_reason = reason
+    if complete:
+        try:
+            average = observed_sum / len(rows)
+        except OverflowError:
+            average_reason = "ENGAGEMENT_AVERAGE_OUT_OF_RANGE"
     return {
-        "sum": total,
-        "avg": (total / len(rows)) if rows else None,  # 空集 None=不可算，不伪装 0
+        "sum": observed_sum if complete else None,
+        "avg": average,
         "count": len(rows),
-        "nonzero": nonzero,
-        "per_field": per_field,
-        "quality": {"missing_field_notes": missing_notes, "empty": len(rows) == 0},
+        "nonzero": nonzero,  # Number of posts with a measured positive component.
+        "per_field": {k: field_sums[k] if rows and field_known[k] == len(rows) else None for k in keys},
+        "observed_sum": observed_sum,
+        "observed_per_field": {k: field_sums[k] if field_known[k] else None for k in keys},
+        "quality": {
+            "version": "2.0", "state": state, "reason": reason, "avg_reason": average_reason,
+            "missing_field_notes": missing_notes, "empty": not rows,
+            "known_field_count": known, "expected_field_count": expected,
+            "missing_field_count": expected - known, "invalid_field_count": invalid_fields,
+            "observed_notes": observed_notes, "complete_notes": complete_notes,
+            "per_field": {k: {"known": field_known[k], "expected": len(rows)} for k in keys},
+        },
     }
 
 
@@ -250,12 +298,12 @@ CANONICAL_FUNCTIONS: Dict[str, Dict[str, Any]] = {
         "error_policy": "critical 独立桶；high 永不并入 critical", "status": "production-verified",
     },
     "FN-ENGAGEMENT": {
-        "function_id": "FN-ENGAGEMENT", "version": "1.0", "owner": "xujing-core",
+        "function_id": "FN-ENGAGEMENT", "version": "2.0", "owner": "xujing-core",
         "purpose": "互动量=likes+comments+collects+shares 聚合",
         "inputs": "list[dict note]",
-        "outputs": "sum/avg/count/nonzero/per_field/quality",
-        "formula": "四字段求和；缺字段按0并记 missing_field_notes", "unit": "count",
-        "error_policy": "空集 avg=None；非数字按0", "status": "production-verified",
+        "outputs": "sum/avg/count/nonzero/per_field/observed_sum/observed_per_field/quality",
+        "formula": "完整四字段合计；部分实测合计附组件覆盖语义", "unit": "count",
+        "error_policy": "缺测/非法计数不转0；不完整或空集sum/avg=None", "status": "implemented",
     },
     "MET-NEG-RATIO": {
         "function_id": "MET-NEG-RATIO", "version": "1.0", "owner": "xujing-core",

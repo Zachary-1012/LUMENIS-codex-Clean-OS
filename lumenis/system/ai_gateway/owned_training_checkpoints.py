@@ -29,7 +29,7 @@ _HASH = re.compile(r"[0-9a-f]{64}")
 _RECIPE = re.compile(r"(" + "|".join(re.escape(x) for x in sorted(NF4_RECIPES)) + r")\+checkpoint-v1:([0-9a-f]{64})")
 _MAX_METADATA_BYTES = 1024 * 1024
 _MAX_FILES = 4096
-_POLICY_FIELDS = frozenset({
+_POLICY_FIELDS_V1 = frozenset({
     "schema_version", "base_recipe", "checkpoint_interval_steps",
     "max_replay_optimizer_steps", "retain_committed",
     "save_only_at_completed_optimizer_step", "save_only_model",
@@ -37,6 +37,8 @@ _POLICY_FIELDS = frozenset({
     "rng_devices", "required_roles", "framework_lock_sha256",
     "trainer_config_sha256", "data_order_sha256", "numerical_tolerance",
 })
+_POLICY_FIELDS = _POLICY_FIELDS_V1
+_POLICY_FIELDS_V2 = _POLICY_FIELDS_V1 | {"num_train_epochs"}
 _REQUIRED_ROLES = frozenset({
     "adapter_or_model", "model_config", "tokenizer", "optimizer", "scheduler",
     "rng_cpu", "rng_cuda", "trainer_state", "data_position", "callback_state",
@@ -227,10 +229,19 @@ class CheckpointPolicy:
 
     @classmethod
     def validate(cls, value: object) -> CheckpointPolicy:
-        if type(value) is not dict or set(value) != _POLICY_FIELDS:
+        if type(value) is not dict:
             raise TrainingBlocked("CHECKPOINT_REQUEST_INVALID")
-        if (type(value["schema_version"]) is not int or value["schema_version"] != 1
-                or type(value["base_recipe"]) is not str or value["base_recipe"] not in NF4_RECIPES):
+        schema_version = value.get("schema_version")
+        expected_fields = (_POLICY_FIELDS_V1 if type(schema_version) is int and schema_version == 1
+                           else _POLICY_FIELDS_V2 if type(schema_version) is int and schema_version == 2
+                           else None)
+        if expected_fields is None or set(value) != expected_fields:
+            raise TrainingBlocked("CHECKPOINT_REQUEST_INVALID")
+        if (type(value["base_recipe"]) is not str or value["base_recipe"] not in NF4_RECIPES):
+            raise TrainingBlocked("CHECKPOINT_REQUEST_INVALID")
+        if schema_version == 2 and (
+                type(value["num_train_epochs"]) is not int
+                or not 1 <= value["num_train_epochs"] <= 100):
             raise TrainingBlocked("CHECKPOINT_REQUEST_INVALID")
         for key, minimum in [("checkpoint_interval_steps", 1), ("max_replay_optimizer_steps", 0)]:
             if type(value[key]) is not int or not minimum <= value[key] <= 1_000_000:
@@ -316,7 +327,7 @@ def load_recovery_policy(recipe: str, manifest_path: Path) -> CheckpointPolicy:
 
 
 class TrainingDataCursor:
-    """Observe consumed rows for the single-epoch, recipe-pinned sampler.
+    """Observe consumed rows for the recipe-pinned sequential sampler.
 
     A batch is counted only after its training_step returns. A checkpoint can
     capture this cursor only after a completed optimizer update. Framework
@@ -325,21 +336,36 @@ class TrainingDataCursor:
     """
 
     def __init__(self, *, dataset_sha256: str, row_sha256: list[str],
-                 gradient_accumulation_steps: int, base_recipe: str = T4_RECIPE):
+                 gradient_accumulation_steps: int, base_recipe: str = T4_RECIPE,
+                 policy_schema_version: int = 1, num_train_epochs: int = 1):
         if (not _is_hash(dataset_sha256) or type(row_sha256) is not list
                 or not row_sha256 or any(not _is_hash(item) for item in row_sha256)
                 or type(gradient_accumulation_steps) is not int
                 or type(base_recipe) is not str or base_recipe not in NF4_RECIPES
-                or gradient_accumulation_steps != recipe_gradient_accumulation_steps(base_recipe)):
+                or gradient_accumulation_steps != recipe_gradient_accumulation_steps(base_recipe)
+                or type(policy_schema_version) is not int or policy_schema_version not in {1, 2}
+                or type(num_train_epochs) is not int or not 1 <= num_train_epochs <= 100
+                or (policy_schema_version == 1 and num_train_epochs != 1)):
             raise TrainingBlocked("CHECKPOINT_REQUEST_INVALID")
-        self._order = canonical_bytes({
-            "schema_version": 1, "sampler": "sequential-v1", "epochs": 1,
-            "batch_size": 1, "gradient_accumulation_steps": gradient_accumulation_steps,
-            "dataset_sha256": dataset_sha256, "row_sha256": row_sha256,
-        })
+        self._policy_schema_version = policy_schema_version
+        self._num_train_epochs = num_train_epochs
         self._row_hashes = tuple(row_sha256)
         self._accumulation_steps = gradient_accumulation_steps
         self._dataset_sha256 = dataset_sha256
+        self._updates_per_epoch, self._total_steps = checkpoint_training_plan(
+            len(row_sha256), gradient_accumulation_steps, num_train_epochs)
+        if policy_schema_version == 1:
+            self._order = canonical_bytes({
+                "schema_version": 1, "sampler": "sequential-v1", "epochs": 1,
+                "batch_size": 1, "gradient_accumulation_steps": gradient_accumulation_steps,
+                "dataset_sha256": dataset_sha256, "row_sha256": row_sha256,
+            })
+        else:
+            self._order = canonical_bytes({
+                "schema_version": 2, "sampler": "sequential-epoch-v2", "epochs": num_train_epochs,
+                "batch_size": 1, "gradient_accumulation_steps": gradient_accumulation_steps,
+                "dataset_sha256": dataset_sha256, "row_sha256": row_sha256,
+            })
         self._consumed: list[str] = []
         self._pending_row = None
         self._accumulation = 0
@@ -352,8 +378,13 @@ class TrainingDataCursor:
 
     def begin_batch(self, row_index: int, row_sha256: str) -> None:
         """Check the actual collated row before the forward/backward call."""
+        expected_index = (len(self._consumed) if self._policy_schema_version == 1
+                          else len(self._consumed) % len(self._row_hashes))
+        expected_epoch = (len(self._consumed) // len(self._row_hashes)
+                          if self._policy_schema_version == 2 else 0)
         if (self._failed or self._pending_row is not None or self._accumulation >= self._accumulation_steps
-                or type(row_index) is not int or row_index != len(self._consumed)
+                or type(row_index) is not int or row_index != expected_index
+                or expected_epoch >= self._num_train_epochs
                 or row_index >= len(self._row_hashes)
                 or row_sha256 != self._row_hashes[row_index]):
             self._failed = True
@@ -375,20 +406,76 @@ class TrainingDataCursor:
 
     def complete_optimizer_step(self, completed_step: int, *,
                                 sync_gradients: bool, optimizer_step_was_skipped: bool) -> None:
-        last_partial = len(self._consumed) == len(self._row_hashes) and 0 < self._accumulation < self._accumulation_steps
+        epoch_boundary = (len(self._consumed) > 0
+                          and len(self._consumed) % len(self._row_hashes) == 0)
+        last_partial = (len(self._consumed) == len(self._row_hashes)
+                        and 0 < self._accumulation < self._accumulation_steps)
+        if self._policy_schema_version == 2:
+            last_partial = epoch_boundary and 0 < self._accumulation < self._accumulation_steps
         if (self._failed or self._pending_row is not None
                 or type(completed_step) is not int or completed_step != self._completed_step + 1
+                or (self._policy_schema_version == 2 and completed_step > self._total_steps)
                 or sync_gradients is not True or optimizer_step_was_skipped is not False
                 or (self._accumulation != self._accumulation_steps and not last_partial)):
             self._failed = True
             raise TrainingBlocked("CHECKPOINT_STATE_INCOMPLETE")
+        if self._policy_schema_version == 2:
+            expected = self._v2_position(completed_step)
+            if (len(self._consumed) != expected["consumed_count"]
+                    or not self._ordered_prefix_matches(self._consumed)):
+                self._failed = True
+                raise TrainingBlocked("CHECKPOINT_STATE_INCOMPLETE")
         self._completed_step = completed_step
         self._accumulation = 0
+
+    def _v2_position(self, completed_step: int) -> dict:
+        if (type(completed_step) is not int or not 1 <= completed_step <= self._total_steps):
+            raise TrainingBlocked("CHECKPOINT_STATE_INCOMPLETE")
+        completed_epochs, updates_in_epoch = divmod(completed_step, self._updates_per_epoch)
+        next_batch_index = min(updates_in_epoch * self._accumulation_steps, len(self._row_hashes))
+        return {
+            "epoch_index": completed_epochs,
+            "next_batch_index": next_batch_index,
+            "consumed_count": completed_epochs * len(self._row_hashes) + next_batch_index,
+            "completed_step": completed_step,
+            "gradient_accumulation_offset": 0,
+        }
+
+    def _ordered_prefix_matches(self, consumed: list[str]) -> bool:
+        return all(value == self._row_hashes[index % len(self._row_hashes)]
+                   for index, value in enumerate(consumed))
+
+    @property
+    def total_optimizer_steps(self) -> int:
+        return self._total_steps
 
     def snapshot(self) -> dict:
         if (self._failed or self._pending_row is not None or self._accumulation
                 or self._completed_step == 0):
             raise TrainingBlocked("CHECKPOINT_STATE_INCOMPLETE")
+        if self._policy_schema_version == 2:
+            position = self._v2_position(self._completed_step)
+            if (len(self._consumed) != position["consumed_count"]
+                    or not self._ordered_prefix_matches(self._consumed)):
+                raise TrainingBlocked("CHECKPOINT_STATE_INCOMPLETE")
+            sampler = {
+                "schema_version": 2, "sampler": "sequential-epoch-v2",
+                "data_order_sha256": hashlib.sha256(self._order).hexdigest(),
+                "consumed_row_sha256": list(self._consumed),
+            }
+            result = {
+                "schema_version": 2, "sampler_state": sampler,
+                "data_position": {
+                    "dataset_sha256": self._dataset_sha256,
+                    "sampler_state_sha256": _digest(sampler),
+                    "epoch_index": position["epoch_index"],
+                    "next_batch_index": position["next_batch_index"],
+                    "completed_step": self._completed_step,
+                    "gradient_accumulation_offset": 0,
+                },
+            }
+            canonical_bytes(result)
+            return result
         sampler = {
             "schema_version": 1, "sampler": "sequential-v1",
             "data_order_sha256": hashlib.sha256(self._order).hexdigest(),
@@ -414,6 +501,9 @@ class TrainingDataCursor:
         """
         if self._consumed or self._pending_row is not None or self._failed or self._completed_step:
             raise TrainingBlocked("CHECKPOINT_OPERATION_CONFLICT")
+        if self._policy_schema_version == 2:
+            self._restore_v2(snapshot)
+            return
         if (type(snapshot) is not dict
                 or set(snapshot) != {"schema_version", "sampler_state", "data_position"}
                 or type(snapshot["schema_version"]) is not int or snapshot["schema_version"] != 1):
@@ -445,6 +535,53 @@ class TrainingDataCursor:
         canonical_bytes(snapshot)
         self._consumed = list(sampler["consumed_row_sha256"])
         self._completed_step = position["completed_step"]
+
+    def _restore_v2(self, snapshot: object) -> None:
+        if (type(snapshot) is not dict
+                or set(snapshot) != {"schema_version", "sampler_state", "data_position"}
+                or type(snapshot["schema_version"]) is not int or snapshot["schema_version"] != 2):
+            raise TrainingBlocked("CHECKPOINT_RESTORED_STATE_MISMATCH")
+        sampler, position = snapshot["sampler_state"], snapshot["data_position"]
+        if (type(sampler) is not dict
+                or set(sampler) != {"schema_version", "sampler", "data_order_sha256", "consumed_row_sha256"}
+                or type(sampler["schema_version"]) is not int or sampler["schema_version"] != 2
+                or sampler["sampler"] != "sequential-epoch-v2"
+                or sampler["data_order_sha256"] != hashlib.sha256(self._order).hexdigest()
+                or type(sampler["consumed_row_sha256"]) is not list
+                or type(position) is not dict
+                or set(position) != {"dataset_sha256", "sampler_state_sha256", "epoch_index",
+                                     "next_batch_index", "completed_step", "gradient_accumulation_offset"}):
+            raise TrainingBlocked("CHECKPOINT_RESTORED_STATE_MISMATCH")
+        step = position["completed_step"]
+        if type(step) is not int or not 1 <= step <= self._total_steps:
+            raise TrainingBlocked("CHECKPOINT_RESTORED_STATE_MISMATCH")
+        expected = self._v2_position(step)
+        expected_position = {
+            "dataset_sha256": self._dataset_sha256,
+            "sampler_state_sha256": _digest(sampler),
+            **{key: expected[key] for key in (
+                "epoch_index", "next_batch_index", "completed_step", "gradient_accumulation_offset")},
+        }
+        consumed = sampler["consumed_row_sha256"]
+        if (len(consumed) != expected["consumed_count"]
+                or not self._ordered_prefix_matches(consumed)
+                or any(type(position[key]) is not type(value) or position[key] != value
+                       for key, value in expected_position.items())):
+            raise TrainingBlocked("CHECKPOINT_RESTORED_STATE_MISMATCH")
+        canonical_bytes(snapshot)
+        self._consumed = list(consumed)
+        self._completed_step = step
+
+
+def checkpoint_training_plan(dataset_size: int, gradient_accumulation_steps: int,
+                             num_train_epochs: int) -> tuple[int, int]:
+    """Match pinned Trainer v4.56.2 ceil-per-epoch optimizer step planning."""
+    if (type(dataset_size) is not int or dataset_size < 1
+            or type(gradient_accumulation_steps) is not int or gradient_accumulation_steps < 1
+            or type(num_train_epochs) is not int or not 1 <= num_train_epochs <= 100):
+        raise TrainingBlocked("CHECKPOINT_REQUEST_INVALID")
+    updates_per_epoch = (dataset_size + gradient_accumulation_steps - 1) // gradient_accumulation_steps
+    return updates_per_epoch, updates_per_epoch * num_train_epochs
 
 
 def _regular_stat(path: Path, *, directory: bool = False):
@@ -554,9 +691,14 @@ def _uuid4(value: object) -> bool:
     return parsed.version == 4 and str(parsed) == value
 
 
-def trainer_checkpoint_config(trainer, *, base_recipe: str = T4_RECIPE) -> dict:
+def trainer_checkpoint_config(trainer, *, base_recipe: str = T4_RECIPE,
+                             policy_schema_version: int = 1,
+                             num_train_epochs: int = 1) -> dict:
     """Bind the full effective config, with owner-selected paths normalized."""
-    if type(base_recipe) is not str or base_recipe not in NF4_RECIPES:
+    if (type(base_recipe) is not str or base_recipe not in NF4_RECIPES
+            or type(policy_schema_version) is not int or policy_schema_version not in {1, 2}
+            or type(num_train_epochs) is not int or not 1 <= num_train_epochs <= 100
+            or (policy_schema_version == 1 and num_train_epochs != 1)):
         raise TrainingBlocked("CHECKPOINT_REQUEST_INVALID")
     material = trainer.args.to_dict()
     if type(material) is not dict:
@@ -570,7 +712,7 @@ def trainer_checkpoint_config(trainer, *, base_recipe: str = T4_RECIPE) -> dict:
     required = {
         "per_device_train_batch_size": 1,
         "gradient_accumulation_steps": recipe_gradient_accumulation_steps(base_recipe),
-        "num_train_epochs": 1, "dataloader_num_workers": 0,
+        "num_train_epochs": num_train_epochs, "dataloader_num_workers": 0,
         "dataloader_drop_last": False, "remove_unused_columns": False,
         "save_only_model": False, "save_total_limit": None,
         "restore_callback_states_from_checkpoint": True, "ignore_data_skip": False,
@@ -597,7 +739,7 @@ def trainer_checkpoint_config(trainer, *, base_recipe: str = T4_RECIPE) -> dict:
     material["output_dir"] = "<owner-reserved-output>"
     material["logging_dir"] = "<owner-reserved-logs>"
     material["lumenis_state_representation"] = "lumenis-training-state-v1"
-    material["lumenis_sampler"] = "sequential-v1"
+    material["lumenis_sampler"] = "sequential-v1" if policy_schema_version == 1 else "sequential-epoch-v2"
     canonical_bytes(material)
     return material
 
@@ -1070,10 +1212,13 @@ class TrainingCheckpointAdapter:
         if _ROW_MARKER in dataset.column_names:
             raise TrainingBlocked("CHECKPOINT_REQUEST_INVALID")
         row_hashes = [_digest(dict(row)) for row in dataset]
+        schema_version = self.policy.document["schema_version"]
+        num_train_epochs = self.policy.document.get("num_train_epochs", 1)
         cursor = TrainingDataCursor(dataset_sha256=self._request.train_sha256,
             row_sha256=row_hashes,
             gradient_accumulation_steps=recipe_gradient_accumulation_steps(self.policy.document["base_recipe"]),
-            base_recipe=self.policy.document["base_recipe"])
+            base_recipe=self.policy.document["base_recipe"],
+            policy_schema_version=schema_version, num_train_epochs=num_train_epochs)
         original_collator = trainer.data_collator
 
         def collate(rows):
@@ -1104,7 +1249,10 @@ class TrainingCheckpointAdapter:
             packages = {name: version(name) for name in sorted(_FRAMEWORK_PACKAGES)}
         except PackageNotFoundError:
             raise TrainingBlocked("CHECKPOINT_HASH_MISMATCH") from None
-        config = trainer_checkpoint_config(trainer, base_recipe=self.policy.document["base_recipe"])
+        config = trainer_checkpoint_config(
+            trainer, base_recipe=self.policy.document["base_recipe"],
+            policy_schema_version=self.policy.document["schema_version"],
+            num_train_epochs=self.policy.document.get("num_train_epochs", 1))
         self.policy.validate_runtime(
             framework_versions=packages, trainer_config=config,
             data_order=self._cursor.data_order,
@@ -1122,7 +1270,11 @@ class TrainingCheckpointAdapter:
             optimizer_step_was_skipped=trainer.accelerator.optimizer_step_was_skipped,
         )
         state = self._cursor.snapshot()
-        if state["data_position"]["next_batch_index"] == len(trainer.train_dataset):
+        position = state["data_position"]
+        at_data_boundary = (position["next_batch_index"] == len(trainer.train_dataset)
+                            if self.policy.document["schema_version"] == 1
+                            else position["next_batch_index"] == 0)
+        if at_data_boundary:
             control.should_save = True
         return control
 

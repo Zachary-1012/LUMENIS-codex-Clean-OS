@@ -1,116 +1,251 @@
 # -*- coding: utf-8 -*-
-"""UDIP V1.0 P6: Cross-Surface 一致性测试
-验证同一 Metric 在不同消费面取值一致：
-  a) canonical_metrics 计数 == 直算 SQL 计数（表=图=报告底层一致）
-  b) daily_report MET-RISK-01/02 == /api/metrics/canonical 出口一致
-  c) 五值语义：无数据时区分 0 / NULL / NOT_AVAILABLE / STALE / ERROR（不伪装 0）
-原则：出现差异必须定位 Function/Metric/View/Filter/TimeWindow，禁止改展示层数字对齐。
+"""UDIP V1.0 P6: Cross-surface metric consistency checks.
+
+The fixture uses the current Shared Database repository and reporting owner,
+with a disposable database so every SQL comparison sees the same deterministic
+rows and cannot read the workstation's production database.
 """
-import os
-import sys
-import sqlite3
 import importlib
 
 import pytest
 
-ZBC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB = os.environ['ZBC_DB_PATH']
+from lumenis.shared.database import DatabaseRepository, apply_business_schema
+
+
+REPORT_DATE = "2026-10-08"
+OFFLINE_COLLECTION_HEALTH = {
+    "complete": None,
+    "state": "NOT_RUN",
+    "detail": "offline parity fixture",
+}
 
 
 def _load():
-    """确保可导入 canonical_metrics 与 daily_report（含路径）"""
-    for mod in ('canonical_metrics', 'daily_report'):
-        for name in list(sys.modules):
-            if name == mod or name.startswith(mod + '.'):
-                del sys.modules[name]
-    sys.path.insert(0, ZBC)
-    cm = importlib.import_module('canonical_metrics')
-    dr = importlib.import_module('daily_report')
-    return cm, dr
+    """Load the canonical metric functions and current Shared Reporting owner."""
+    canonical_metrics = importlib.import_module("canonical_metrics")
+    daily = importlib.import_module("lumenis.shared.reporting.daily")
+    return canonical_metrics, daily
 
 
 @pytest.fixture()
-def env(monkeypatch):
-    monkeypatch.setenv('ZBC_DB_PATH', DB)
-    monkeypatch.chdir(ZBC)
-    return _load()
+def env(monkeypatch, tmp_path):
+    """Bind production callers to a schema-backed, disposable Shared DB."""
+    db_path = tmp_path / "udip-consistency.sqlite3"
+    monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
+    repository = DatabaseRepository(str(db_path))
+    with repository.transaction() as connection:
+        apply_business_schema(connection)
+
+    canonical_metrics, daily = _load()
+    # The compatibility database module used by daily.py resolves each query
+    # through Shared DatabaseRepository. Pin that binding to this test DB.
+    monkeypatch.setattr(daily.db, "get_repository", lambda: repository)
+
+    notes = [
+        ("udip-positive", "广州太古汇正面体验", "positive", "low", 10, 2, 1, 1),
+        ("udip-neutral", "广州太古汇中性反馈", "neutral", "medium", 4, 1, 0, 2),
+        ("udip-negative", "广州太古汇负面反馈", "negative", "high", 12, 3, 2, 1),
+        ("udip-unknown", "广州太古汇待核反馈", "unknown", "critical", 3, 0, 1, 0),
+    ]
+    with repository.transaction() as connection:
+        connection.executemany(
+            """INSERT INTO notes (
+                   note_id, title, body, content, source_keyword, matched_keywords,
+                   publish_date, sentiment, risk_level, likes, comments, collects,
+                   shares, is_taikoo_verified, relevance_status, ai_filter_status
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            [
+                (
+                    note_id,
+                    title,
+                    title,
+                    title,
+                    "广州太古汇",
+                    "太古汇",
+                    REPORT_DATE,
+                    sentiment,
+                    risk_level,
+                    likes,
+                    comments,
+                    collects,
+                    shares,
+                    1,
+                    "relevant",
+                    "accepted",
+                )
+                for (
+                    note_id,
+                    title,
+                    sentiment,
+                    risk_level,
+                    likes,
+                    comments,
+                    collects,
+                    shares,
+                ) in notes
+            ],
+        )
+        connection.execute(
+            """INSERT INTO events (
+                   event_key, title, summary, first_seen, last_seen, event_date,
+                   mention_count, source_count, risk_level, risk_score, status,
+                   keywords, translations, ai_provider
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "udip-event",
+                "广州太古汇停车体验反馈",
+                "固定日期的一致性夹具事件",
+                REPORT_DATE,
+                REPORT_DATE,
+                REPORT_DATE,
+                2,
+                2,
+                "medium",
+                20,
+                "active",
+                "[]",
+                "{}",
+                "rule",
+            ),
+        )
+
+    # The legacy collection-health check can import an XHS bridge. This SQL
+    # parity fixture explicitly isolates that owner and never probes a profile.
+    monkeypatch.setattr(
+        daily,
+        "_collection_health",
+        lambda date_str=None: dict(OFFLINE_COLLECTION_HEALTH),
+    )
+    return canonical_metrics, daily, repository
 
 
 def test_canonical_metrics_sentiment_matches_sql(env):
-    """a1) FN-SENTIMENT-COUNT 与直算 SQL 情感分布完全一致"""
-    cm, _ = env
-    conn = sqlite3.connect(DB)
-    rows = conn.execute(
-        "SELECT sentiment, COUNT(*) c FROM notes GROUP BY sentiment"
-    ).fetchall()
-    conn.close()
-    sql_map = {r[0]: r[1] for r in rows}
-    notes = [{'sentiment': r[0]} for r in sqlite3.connect(DB).execute(
-        "SELECT sentiment FROM notes").fetchall()]
-    got = cm.sentiment_count(notes)
-    assert got['total'] == sum(sql_map.values())
-    for k, v in sql_map.items():
-        assert got.get(k) == v, f'sentiment {k}: canonical={got.get(k)} sql={v}'
+    """FN-SENTIMENT-COUNT agrees with direct SQL, including unknown values."""
+    canonical_metrics, _, repository = env
+    with repository.connection() as connection:
+        rows = connection.execute(
+            "SELECT sentiment, COUNT(*) AS count FROM notes GROUP BY sentiment"
+        ).fetchall()
+        sentiment_rows = connection.execute(
+            "SELECT sentiment FROM notes"
+        ).fetchall()
+
+    sql_map = {row["sentiment"]: row["count"] for row in rows}
+    notes = [{"sentiment": row["sentiment"]} for row in sentiment_rows]
+    got = canonical_metrics.sentiment_count(notes)
+    assert got["total"] == sum(sql_map.values())
+    for sentiment, count in sql_map.items():
+        assert got.get(sentiment) == count, (
+            f"sentiment {sentiment}: canonical={got.get(sentiment)} sql={count}"
+        )
 
 
 def test_canonical_metrics_risk_matches_sql(env):
-    """a2) FN-RISK-COUNT 与直算 SQL 风险等级分布完全一致（方案甲：critical 独立）"""
-    cm, _ = env
-    conn = sqlite3.connect(DB)
-    rows = conn.execute(
-        "SELECT risk_level, COUNT(*) c FROM notes GROUP BY risk_level"
-    ).fetchall()
-    conn.close()
-    sql_map = {r[0]: r[1] for r in rows}
-    notes = [{'risk_level': r[0]} for r in sqlite3.connect(DB).execute(
-        "SELECT risk_level FROM notes").fetchall()]
-    got = cm.risk_count(notes)
-    for k in ('high', 'medium', 'low', 'critical'):
-        assert got.get(k) == sql_map.get(k, 0), f'risk {k}: canonical={got.get(k)} sql={sql_map.get(k,0)}'
+    """FN-RISK-COUNT keeps high and critical as separate SQL-matched buckets."""
+    canonical_metrics, _, repository = env
+    with repository.connection() as connection:
+        rows = connection.execute(
+            "SELECT risk_level, COUNT(*) AS count FROM notes GROUP BY risk_level"
+        ).fetchall()
+        risk_rows = connection.execute(
+            "SELECT risk_level FROM notes"
+        ).fetchall()
+
+    sql_map = {row["risk_level"]: row["count"] for row in rows}
+    notes = [{"risk_level": row["risk_level"]} for row in risk_rows]
+    got = canonical_metrics.risk_count(notes)
+    for risk_level in ("high", "medium", "low", "critical"):
+        assert got.get(risk_level) == sql_map.get(risk_level, 0), (
+            f"risk {risk_level}: canonical={got.get(risk_level)} "
+            f"sql={sql_map.get(risk_level, 0)}"
+        )
 
 
-def test_daily_report_risk_index_matches_canonical_api(env):
-    """b) MET-RISK-01/02 计算逻辑与 /api/metrics/canonical 出口一致（同一函数实现）"""
-    _, dr = env
-    summary = dr.generate_today_summary()
-    ri = summary.get('risk_index')
-    bh = summary.get('brand_health_score')
-    assert 0.0 <= ri <= 100.0, f'risk_index out of range: {ri}'
-    assert 0.0 <= bh <= 100.0, f'brand_health out of range: {bh}'
-    # 与 P2/P4 出口的 lineage 一致性：同一函数、同一 registry 标识
-    assert summary.get('date') == os.environ.get('ZBC_DB_PATH', DB).split('monitor.db')[0].endswith('data\\') or True
+def test_daily_summary_risk_metrics_match_owner_functions(env):
+    """The dated daily summary matches its risk functions and canonical date."""
+    _, daily, _ = env
+    summary = daily.generate_today_summary(REPORT_DATE)
+
+    notes = daily.db.get_notes_by_date_range(REPORT_DATE, REPORT_DATE)
+    effective_notes = [
+        note for note in notes if note.get("ai_filter_status") == "accepted"
+    ]
+    if not effective_notes and notes:
+        effective_notes = notes
+    events = daily.db.get_events(20)
+    dated_events = [
+        event
+        for event in events
+        if (event.get("last_seen") or "")[:10] >= REPORT_DATE
+        or (event.get("first_seen") or "")[:10] <= REPORT_DATE
+        <= (event.get("last_seen") or "")[:10]
+    ]
+    expected_risk = daily.calculate_risk_index(effective_notes, dated_events)
+    expected_health = daily.calculate_brand_health_score(
+        effective_notes, expected_risk
+    )
+
+    assert summary["date"] == REPORT_DATE
+    assert summary["total_found"] == summary["effective_count"] == 4
+    assert summary["positive_count"] == summary["neutral_count"] == 1
+    assert summary["risk_count"] == 2
+    assert summary["events_count"] == 1
+    assert summary["risk_index"] == expected_risk
+    assert summary["brand_health_score"] == expected_health
+    assert 0.0 <= summary["risk_index"] <= 100.0
+    assert 0.0 <= summary["brand_health_score"] <= 100.0
+    assert summary["collection_health"] == OFFLINE_COLLECTION_HEALTH
 
 
 def test_five_value_semantics_no_data(env):
-    """c) 五值语义：空数据时 quality.empty=True，且不把缺失伪装成 0"""
-    cm, _ = env
-    # 情感：空列表
-    empty_sent = cm.sentiment_count([])
-    assert empty_sent['total'] == 0
-    assert empty_sent['quality']['empty'] is True
-    # 风险：缺失值进入 missing 而非 0
-    notes_missing = [{'risk_level': None}, {'risk_level': ''}]
-    got = cm.risk_count(notes_missing)
-    assert got['missing'] == 2, f'missing should be 2, got {got["missing"]}'
-    assert got['high'] == 0 and got['other'] == 0
-    # 互动：缺字段按 0 参与求和，但 quality 暴露缺失条数
-    # 两条均缺字段（第一条缺 comments/collects/shares，第二条 likes=None）→ 均计入 missing
-    eng = cm.engagement_stats([{'likes': 1}, {'likes': None}])
-    assert eng['sum'] == 1
-    assert eng['quality']['missing_field_notes'] == 2
+    """Empty and missing values remain distinct from measured zero."""
+    canonical_metrics, _, _ = env
+    empty_sentiment = canonical_metrics.sentiment_count([])
+    assert empty_sentiment["total"] == 0
+    assert empty_sentiment["quality"]["empty"] is True
+
+    missing_risk = canonical_metrics.risk_count(
+        [{"risk_level": None}, {"risk_level": ""}]
+    )
+    assert missing_risk["missing"] == 2
+    assert missing_risk["high"] == 0 and missing_risk["other"] == 0
+
+    # Incomplete interaction totals stay unknown while observed values remain
+    # visible; complete fixture rows above exercise the SQL parity case.
+    engagement = canonical_metrics.engagement_stats(
+        [{"likes": 1}, {"likes": None}]
+    )
+    assert engagement["sum"] is None
+    assert engagement["observed_sum"] == 1
+    assert engagement["quality"]["state"] == "PARTIAL"
+    assert engagement["quality"]["missing_field_notes"] == 2
 
 
 def test_engagement_stats_consistency(env):
-    """a3) FN-ENGAGEMENT 与 SQL SUM(likes+comments+collects+shares) 一致"""
-    cm, _ = env
-    conn = sqlite3.connect(DB)
-    total_eng = conn.execute(
-        "SELECT COALESCE(SUM(likes+comments+collects+shares),0) FROM notes"
-    ).fetchone()[0]
-    conn.close()
-    # sqlite3 默认 row_factory 是 tuple，需用索引
-    notes = [{'likes': r[0], 'comments': r[1], 'collects': r[2], 'shares': r[3]}
-             for r in sqlite3.connect(DB).execute(
-                 "SELECT likes,comments,collects,shares FROM notes").fetchall()]
-    got = cm.engagement_stats(notes)
-    assert got['sum'] == total_eng, f'engagement: canonical={got["sum"]} sql={total_eng}'
+    """FN-ENGAGEMENT equals SQL SUM over all four complete count fields."""
+    canonical_metrics, _, repository = env
+    with repository.connection() as connection:
+        total_engagement = connection.execute(
+            """SELECT SUM(likes + comments + collects + shares)
+               FROM notes"""
+        ).fetchone()[0]
+        rows = connection.execute(
+            "SELECT likes, comments, collects, shares FROM notes"
+        ).fetchall()
+
+    notes = [
+        {
+            "likes": row["likes"],
+            "comments": row["comments"],
+            "collects": row["collects"],
+            "shares": row["shares"],
+        }
+        for row in rows
+    ]
+    got = canonical_metrics.engagement_stats(notes)
+    assert got["count"] == 4
+    assert got["quality"]["state"] == "COMPLETE"
+    assert got["quality"]["known_field_count"] == got["quality"]["expected_field_count"] == 16
+    assert got["sum"] == total_engagement, (
+        f"engagement: canonical={got['sum']} sql={total_engagement}"
+    )

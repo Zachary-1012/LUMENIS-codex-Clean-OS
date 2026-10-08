@@ -1,3 +1,4 @@
+import 'package:lumenis_app/core/lumenis_icon.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -45,9 +46,13 @@ class _Ai01DraftActionsState extends State<Ai01DraftActions> {
   }
 
   Future<String?> _open() async {
+    final controller = widget.controller;
+    final before = controller.text;
     final text = await _files.open();
-    if (!mounted || text == null) return null;
-    final before = widget.controller.text;
+    if (!mounted || !identical(controller, widget.controller) || text == null) {
+      return null;
+    }
+    if (controller.text != before) return 'ai01.file.changed';
     if (before.isNotEmpty && before != text) {
       final replace = await showDialog<bool>(
         context: context,
@@ -69,10 +74,14 @@ class _Ai01DraftActionsState extends State<Ai01DraftActions> {
           );
         },
       );
-      if (!mounted || replace != true) return null;
+      if (!mounted ||
+          !identical(controller, widget.controller) ||
+          replace != true) {
+        return null;
+      }
     }
-    if (widget.controller.text != before) return 'ai01.file.changed';
-    widget.controller.value = TextEditingValue(
+    if (controller.text != before) return 'ai01.file.changed';
+    controller.value = TextEditingValue(
       text: text,
       selection: TextSelection.collapsed(offset: text.length),
     );
@@ -94,7 +103,7 @@ class _Ai01DraftActionsState extends State<Ai01DraftActions> {
             children: [
               TextButton.icon(
                 onPressed: _busy ? null : () => _run(_open),
-                icon: const Icon(Icons.folder_open_outlined, size: 18),
+                icon: const LumenisIcon(Icons.folder_open_outlined, size: 18),
                 label: Text(copy.text('ai01.file.open')),
               ),
               if (_files.canSave)
@@ -109,7 +118,7 @@ class _Ai01DraftActionsState extends State<Ai01DraftActions> {
                                     : 'ai01.file.saved')
                               : null;
                         }),
-                  icon: const Icon(Icons.save_alt_outlined, size: 18),
+                  icon: const LumenisIcon(Icons.save_alt_outlined, size: 18),
                   label: Text(copy.text('ai01.file.save')),
                 ),
               TextButton.icon(
@@ -121,7 +130,7 @@ class _Ai01DraftActionsState extends State<Ai01DraftActions> {
                         );
                         return 'ai01.file.copied';
                       }),
-                icon: const Icon(Icons.copy_outlined, size: 18),
+                icon: const LumenisIcon(Icons.copy_outlined, size: 18),
                 label: Text(copy.text('ai01.file.copy')),
               ),
             ],

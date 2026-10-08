@@ -13,6 +13,9 @@ Root `AGENTS.md` is the only repository execution router. [The Product Owner's l
 ## 1. Online reader's current-state snapshot
 
 Current dispatch: M handles the approved policy/publication and C1 outcome review;
+the latest direct PO instruction additionally assigns M the existing non-C1 local
+candidate and unintegrated-work convergence, repair and formal integration. This
+is not a resume of F/C2-C6 or a transfer of C1's ongoing closure/dependencies.
 C1 is the sole selected business window for existing J1/U01-U05 collection closure.
 C1 also executes the necessary existing Core/runtime, scheduler and server-side
 authorization-binding dependencies itself under the PO's subsequent direct
@@ -39,21 +42,33 @@ not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-This rules/CI publication changes verification policy, not product behavior,
-loaded runtime or DB. Product Gate keeps compilation, static governance/security/
-data authority and actual disposable schema/media prerequisites; App Gate keeps
-analysis and now builds Web instead of running widget/module tests. New exact-SHA
-CI is observed separately; no historical FAILED result is promoted. Neither gate
-alone proves an accepted real user outcome.
-The preceding `9b211052be9505764c13fae9481b6b7f8a0644b3` source batch
-remains published historical truth with Product and App Gates both FAILED at
-that exact SHA. Protected local C1–C6/F candidates are not published by this
-documentation batch. The user-requested status audit is preserved locally in
-`work/m-governance-20261008/PAUSED-CAPABILITY-AUDIT-20261008.md` pending its
-own verified disposition; that ignored work file is not GitHub Product Truth.
+Current bounded source convergence (2026-10-08, parent `9f77d9a1`): M integrates
+the existing non-C1 business/reporting/media/AI/backup/Flutter source and preserved
+historical tests. The unchanged C1 F-08/F-09 twelve-file handoff is a frozen read-only
+dependency, not a takeover of active collection. Only two named app.py handlers
+enter this batch; C1's active startup/auth/Collector/Scheduler changes stay protected.
+The existing Round 15 record contains the exact source inventory and limitations.
+Historical module suites are preserved but were not created or executed here.
+
+Actual repairs include honest missing Learning measurements, exact evaluation
+approval/commit serialization, readonly WAL-safe backup source opening, staging
+health on 8301 and frontend lint/build corrections. Case owned-model execution
+and legacy brand aggregate mutation return explicit unavailable states when their
+real bindings are absent; no fake source-use/model/Scope grant is introduced.
+Owned model admission/service code is integrated, but no production service binding,
+training, inference or promotion is claimed. New same-SHA CI must be observed after
+publication; the historical failures at `9b211052` remain failed.
+
+The Web release build and strict whole-project Dart analysis are actual development
+evidence. Flutter's local non-ASCII-path LSP crash is retained, not reported PASS;
+the same SDK's Dart analyzer is the verified local alternative. No unit/integration
+or renamed module tests ran. Core has not been reloaded by M and Production DB has
+not been migrated. Complete real-user operations, all 44 screens, full C-window
+closure, USER_VERIFIED, RELEASED and OPERATING remain open. C1 continues its own
+closure; this source integration does not resume any paused window.
 
 
 C6 authentication and owner-composition source batch, 2026-10-08: the auth metadata endpoint returns only enabled state and never the reusable Basic header. A product session no longer authorizes arbitrary root APIs. Exact registered scoped owners handle normal Workspace, Shared work, collection and Evidence requests; manual Evidence writes enforce the owner’s material or row/hash/scope/actor/reason approval rather than an unrelated raw-path approval. Weibo health reads only bounded saved metadata with fresh collector-read checks, without opening Cookie/profile state. Key-login attempts are transactionally serialized per actual peer. The Flutter client stops fetching or transmitting the server credential; only its necessary transport/direct tests and six localized connection states are included. Unrelated frontend design/source remains protected.

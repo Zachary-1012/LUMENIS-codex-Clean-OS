@@ -1,6 +1,7 @@
 """Read-only, exact-scope source brief projection over Canonical Data."""
 from collections import Counter
 import hashlib
+import json
 from html import escape
 import re
 import sqlite3
@@ -14,6 +15,44 @@ from .artifact import compute_scoped_content_hash, compute_scoped_scope_key
 def _markdown_text(value: str) -> str:
     text = escape(value, quote=False).replace("\r", " ").replace("\n", " ")
     return re.sub(r"([\\`*_{}\[\]()#+\-.!|])", r"\\\1", text)
+
+
+def _content_evidence_ref(con, row, scope_ref):
+    """Carry an explicit original reference; a scope receipt is not source use.
+
+    Importer originals already serve as their own scope Evidence. Collector
+    originals have a separate reference in the existing Canonical raw_ref.
+    The BusinessBrief owner resolves bytes, scope and use rights afresh.
+    """
+    raw_ref = row.get('raw_ref')
+    if isinstance(raw_ref, str) and raw_ref:
+        try:
+            declared = json.loads(raw_ref)
+        except ValueError:
+            declared = None
+        if isinstance(declared, dict) and 'content_evidence_ref' in declared:
+            ref = declared['content_evidence_ref']
+            if isinstance(ref, str) and re.fullmatch(r'app_evidence_records:[1-9]\d*', ref):
+                return ref
+            return None
+    # Check the source-specific original metadata rather than infer content
+    # authority from a scope signature or Canonical body alone.
+    original = con.execute(
+        'SELECT asset_id,content_hash,collection_metadata FROM app_evidence_records WHERE id=?',
+        (scope_ref,),
+    ).fetchone()
+    if original is None or str(original[0] or '') != row.get('source_id'):
+        return None
+    try:
+        metadata = json.loads(original[2])
+    except (ValueError, TypeError):
+        return None
+    body = row.get('content')
+    if (not isinstance(metadata, dict) or not metadata.get('source_artifact_ref')
+            or not isinstance(body, str) or metadata.get('parsed_text') != body
+            or hashlib.sha256(body.encode()).hexdigest() != original[1]):
+        return None
+    return 'app_evidence_records:' + str(scope_ref)
 
 
 def _source_url(value: Any) -> tuple[str | None, str]:
@@ -230,6 +269,7 @@ def build_scoped_source_brief(
             selected_text, selection = _analysis_window(body, analysis_question)
             analysis_sources.append({
                 "source_id": source_id, "evidence_ref": scope_ref,
+                "content_evidence_ref": _content_evidence_ref(con, row, scope_ref),
                 "title": title, "text": selected_text, "truncated": len(body) > len(selected_text),
                 "text_selection": selection,
                 "body_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),

@@ -36,6 +36,8 @@ import json
 import os
 import sqlite3
 from lumenis.shared.database import DatabaseRepository
+from lumenis.shared.database.scope import normalize_product_domain
+from canonical_metrics import engagement_count, engagement_stats
 import time
 import uuid
 from dataclasses import dataclass, field, asdict
@@ -61,6 +63,27 @@ SOURCE_TYPE_COLLECTED = "collected_note"
 
 PRODUCT_CTH = "CTH"  # 广州太古汇客户交付版
 PRODUCT_ZBMP = "ZBMP"  # Z-Brand Monitoring Platform 母平台
+
+
+def _canonical_record_identity(product_id: Any, domain_id: Any = "") -> tuple[str, str]:
+    """Require explicit known identity, using the existing compatibility owner."""
+    if not isinstance(product_id, str) or not product_id or product_id != product_id.strip():
+        raise ValueError("Canonical product_id must be a non-empty exact string")
+    if not isinstance(domain_id, str) or domain_id != domain_id.strip():
+        raise ValueError("Canonical domain_id must be an exact string")
+    return normalize_product_domain(product_id, domain_id)
+
+
+def _inbound_canonical_identity(row: Dict[str, Any], product_id: Any) -> tuple[str, str]:
+    """An inbound declaration cannot override or contradict the caller's identity."""
+    product, domain = _canonical_record_identity(product_id, row.get("domain_id", ""))
+    if "product_id" in row:
+        declared_product, declared_domain = _canonical_record_identity(
+            row["product_id"], row.get("domain_id", ""),
+        )
+        if (declared_product, declared_domain) != (product, domain):
+            raise ValueError("Canonical inbound product_id conflicts with caller identity")
+    return product, domain
 
 CANONICAL_TABLE = "canonical_data"
 SCHEMA_VERSION = "1.0.0"
@@ -327,14 +350,10 @@ class CanonicalRecord:
     updated_at: str = field(default_factory=_now_str)
 
     def __post_init__(self):
-        """双域核心：domain_id 从 product_id 映射，确保二者一致。"""
-        if not self.domain_id:
-            if self.product_id == PRODUCT_CTH:
-                self.domain_id = "cth"
-            elif self.product_id == PRODUCT_ZBMP:
-                self.domain_id = "zbmp"
-            else:
-                self.domain_id = "cth"  # 生产安全默认
+        """Preserve declared CTH defaults and normalize only supported identities."""
+        self.product_id, self.domain_id = _canonical_record_identity(
+            self.product_id, self.domain_id,
+        )
 
     def compute_hash(self) -> str:
         """基于 title+content+url 计算内容哈希，用于去重检测。"""
@@ -348,12 +367,19 @@ class CanonicalRecord:
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
-    def engagement_total(self) -> int:
-        """互动总量 = likes+comments+collects+shares。缺失值(None)按 0 计入求和，但字段本身保留 None。"""
-        return (
-            (self.engagement_likes or 0) + (self.engagement_comments or 0)
-            + (self.engagement_collects or 0) + (self.engagement_shares or 0)
-        )
+    def engagement_observation(self) -> Dict[str, Any]:
+        """Measured components, complete total and coverage from the sole metric owner."""
+        return engagement_stats([{
+            "likes": self.engagement_likes, "comments": self.engagement_comments,
+            "collects": self.engagement_collects, "shares": self.engagement_shares,
+        }])
+
+    def engagement_total(self) -> Optional[int]:
+        """Complete four-component total; partial/unknown remains None.
+
+        engagement_observation exposes any measured subtotal with its coverage.
+        """
+        return self.engagement_observation()["sum"]
 
 
 # ============================================================
@@ -564,20 +590,24 @@ def _validate_canonical_scope(
     subject = exact_text(record.subject_id, "subject_id")
     brand = exact_text(record.brand_focus_id, "brand_focus_id")
     evidence_ref = exact_text(record.scope_evidence_ref, "scope_evidence_ref")
-    expected_domain = {PRODUCT_CTH: "cth", PRODUCT_ZBMP: "zbmp"}.get(product)
+    normalized_product, expected_domain = _canonical_record_identity(product, domain)
+    if (product, domain) != (normalized_product, expected_domain):
+        raise ValueError("Canonical product_id and domain_id must use normalized storage identity")
+    for metric in ("engagement_likes", "engagement_comments", "engagement_collects", "engagement_shares"):
+        value = getattr(record, metric)
+        if value is not None and (type(value) is not int or value < 0):
+            raise ValueError(f"Canonical {metric} must be an exact nonnegative integer or None")
 
     if not status or status != status.upper():
         raise ValueError("Canonical scope_status must be a non-empty uppercase value")
     if subject and brand:
         raise ValueError("Canonical scope cannot mix Subject and BrandFocus")
-    if expected_domain is not None and domain != expected_domain:
+    if domain != expected_domain:
         raise ValueError("Canonical product_id and domain_id conflict")
     if subject and product != PRODUCT_CTH:
         raise ValueError("only CTH Canonical records may carry subject_id")
     if brand and product != PRODUCT_ZBMP:
         raise ValueError("only BMP Canonical records may carry brand_focus_id")
-    if (subject or brand) and expected_domain is None:
-        raise ValueError("scoped Canonical records require a supported product")
     if status != "VERIFIED":
         return None
 
@@ -848,6 +878,7 @@ def note_to_canonical(note_row: Dict[str, Any], product_id: str = PRODUCT_CTH) -
       - captured_at ← note_row['captured_at']（优先）或 collected_at
       二者绝不混用。
     """
+    product_id, domain_id = _inbound_canonical_identity(note_row, product_id)
     note_id = _safe_str(note_row.get("note_id"))
     publish_dt = _safe_str(note_row.get("publish_datetime") or note_row.get("publish_date"))
     captured = _safe_str(note_row.get("captured_at") or note_row.get("collected_at"))
@@ -855,7 +886,7 @@ def note_to_canonical(note_row: Dict[str, Any], product_id: str = PRODUCT_CTH) -
     rec = CanonicalRecord(
         canonical_id=f"can_note_{note_id}" if note_id else _new_canonical_id("can_note"),
         product_id=product_id,
-        domain_id=_safe_str(note_row.get("domain_id")),
+        domain_id=domain_id,
         subject_id=_safe_str(note_row.get("subject_id")),
         brand_focus_id=_safe_str(note_row.get("brand_focus_id")),
         scope_status=_safe_str(note_row.get("scope_status") or "UNASSIGNED").upper(),
@@ -885,10 +916,10 @@ def note_to_canonical(note_row: Dict[str, Any], product_id: str = PRODUCT_CTH) -
         verification_status=_safe_str(note_row.get("verification_status") or "review"),
         subject_type=_safe_str(note_row.get("subject_type")),
         content_type=_safe_str(note_row.get("content_type")),
-        engagement_likes=_safe_int_or_none(note_row.get("likes")),
-        engagement_comments=_safe_int_or_none(note_row.get("comments")),
-        engagement_collects=_safe_int_or_none(note_row.get("collects")),
-        engagement_shares=_safe_int_or_none(note_row.get("shares")),
+        engagement_likes=engagement_count(note_row.get("likes")),
+        engagement_comments=engagement_count(note_row.get("comments")),
+        engagement_collects=engagement_count(note_row.get("collects")),
+        engagement_shares=engagement_count(note_row.get("shares")),
         topics=_safe_str(note_row.get("topics") or "[]"),
         event_hint=_safe_str(note_row.get("event_hint")),
         ai_provider=_safe_str(note_row.get("ai_provider") or "rule"),
@@ -911,6 +942,7 @@ def web_mention_to_canonical(web_row: Dict[str, Any], product_id: str = PRODUCT_
       - publish_datetime ← web_row['published_at']
       - captured_at ← web_row['fetched_at']
     """
+    product_id, domain_id = _inbound_canonical_identity(web_row, product_id)
     source_id = _safe_str(web_row.get("source_id"))
     publish_dt = _safe_str(web_row.get("published_at"))
     captured = _safe_str(web_row.get("fetched_at"))
@@ -918,6 +950,11 @@ def web_mention_to_canonical(web_row: Dict[str, Any], product_id: str = PRODUCT_
     rec = CanonicalRecord(
         canonical_id=f"can_web_{source_id}" if source_id else _new_canonical_id("can_web"),
         product_id=product_id,
+        domain_id=domain_id,
+        subject_id=_safe_str(web_row.get("subject_id")),
+        brand_focus_id=_safe_str(web_row.get("brand_focus_id")),
+        scope_status=_safe_str(web_row.get("scope_status") or "UNASSIGNED").upper(),
+        scope_evidence_ref=_safe_str(web_row.get("scope_evidence_ref")),
         source_id=source_id,
         external_id=source_id,
         source_type=SOURCE_TYPE_WEB_MENTION,
@@ -971,6 +1008,11 @@ def collected_note_to_canonical(collected: Any, source_platform: str = "",
       - publish_datetime ← collected.publish_date（平台发布时间）
       - captured_at ← 当前采集时刻（本函数写入）
     """
+    identity = {
+        key: getattr(collected, key)
+        for key in ("product_id", "domain_id") if hasattr(collected, key)
+    }
+    product_id, domain_id = _inbound_canonical_identity(identity, product_id)
     title = _safe_str(getattr(collected, "title", ""))
     content = _safe_str(getattr(collected, "content", ""))
     url = _safe_str(getattr(collected, "url", ""))
@@ -996,6 +1038,11 @@ def collected_note_to_canonical(collected: Any, source_platform: str = "",
     rec = CanonicalRecord(
         canonical_id=canonical_id,
         product_id=product_id,
+        domain_id=domain_id,
+        subject_id=_safe_str(getattr(collected, "subject_id", "")),
+        brand_focus_id=_safe_str(getattr(collected, "brand_focus_id", "")),
+        scope_status=_safe_str(getattr(collected, "scope_status", "UNASSIGNED") or "UNASSIGNED").upper(),
+        scope_evidence_ref=_safe_str(getattr(collected, "scope_evidence_ref", "")),
         source_id=f"{platform}_{external_id}" if external_id else f"{platform}_{stable_hash}",
         external_id=external_id,
         source_type=SOURCE_TYPE_COLLECTED,
@@ -1021,10 +1068,10 @@ def collected_note_to_canonical(collected: Any, source_platform: str = "",
         verification_status="pending",
         subject_type="normal_user",
         content_type="ugc",
-        engagement_likes=_safe_int_or_none(getattr(collected, "likes", None)),
-        engagement_comments=_safe_int_or_none(getattr(collected, "comments", None)),
-        engagement_collects=_safe_int_or_none(getattr(collected, "collects", None)),
-        engagement_shares=_safe_int_or_none(getattr(collected, "shares", None)),
+        engagement_likes=engagement_count(getattr(collected, "likes", None)),
+        engagement_comments=engagement_count(getattr(collected, "comments", None)),
+        engagement_collects=engagement_count(getattr(collected, "collects", None)),
+        engagement_shares=engagement_count(getattr(collected, "shares", None)),
         topics="[]",
         event_hint="",
         ai_provider="rule",
@@ -1051,6 +1098,7 @@ def sync_all_to_canonical(db_path: str, product_id: str = PRODUCT_CTH) -> Dict[s
     返回统计 dict：{notes_total, notes_inserted, notes_updated,
                      web_total, web_inserted, web_updated, errors}
     """
+    product_id, _ = _canonical_record_identity(product_id)
     ensure_canonical_table(db_path)
     con = get_connection(db_path)
     stats = {
@@ -1164,7 +1212,8 @@ def list_scoped_canonical(
     if type(product_id) is not str:
         raise TypeError("product_id must be a string")
     products = {"CTH": (PRODUCT_CTH, "cth"), "cth": (PRODUCT_CTH, "cth"),
-                "ZBMP": (PRODUCT_ZBMP, "zbmp"), "zbmp": (PRODUCT_ZBMP, "zbmp")}
+                "ZBMP": (PRODUCT_ZBMP, "zbmp"), "zbmp": (PRODUCT_ZBMP, "zbmp"),
+                "BMP": (PRODUCT_ZBMP, "zbmp"), "bmp": (PRODUCT_ZBMP, "zbmp")}
     if product_id not in products:
         raise ValueError("product_id must be CTH/cth or ZBMP/zbmp")
     if type(limit) is not int:

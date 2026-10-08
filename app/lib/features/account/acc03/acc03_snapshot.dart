@@ -1,6 +1,6 @@
 enum Acc03RuntimeState { connected, degraded, unavailable, unknown, restricted }
 
-enum Acc03Destination { commerce, brand, ai }
+enum Acc03Destination { commerce, brand, research, creation, ai }
 
 class Acc03StartupCheck {
   const Acc03StartupCheck({required this.name, required this.state});
@@ -23,6 +23,33 @@ class Acc03LaunchCard {
   final String domain;
 }
 
+const acc03HomeDestinations = <Acc03LaunchCard>[
+  Acc03LaunchCard(
+    destination: Acc03Destination.commerce,
+    title: '商业运营',
+    description: '查看运营脉络与经营工作。',
+    domain: 'CTH',
+  ),
+  Acc03LaunchCard(
+    destination: Acc03Destination.brand,
+    title: '品牌市场',
+    description: '从品牌与市场视角开展工作。',
+    domain: 'BMP',
+  ),
+  Acc03LaunchCard(
+    destination: Acc03Destination.research,
+    title: '研究与资料',
+    description: '查看研究输入与可引用材料。',
+    domain: 'SH',
+  ),
+  Acc03LaunchCard(
+    destination: Acc03Destination.creation,
+    title: '内容创作',
+    description: '进入现有内容与交付工作。',
+    domain: 'SH',
+  ),
+];
+
 class Acc03Snapshot {
   const Acc03Snapshot({
     required this.runtimeState,
@@ -30,6 +57,7 @@ class Acc03Snapshot {
     required this.launchCards,
     required this.startupChecks,
     this.currentView,
+    this.currentViewNames = const {},
   });
 
   final Acc03RuntimeState runtimeState;
@@ -37,6 +65,7 @@ class Acc03Snapshot {
   final List<Acc03LaunchCard> launchCards;
   final List<Acc03StartupCheck> startupChecks;
   final String? currentView;
+  final Map<String, String> currentViewNames;
 
   factory Acc03Snapshot.fromResponses({
     required Map<String, dynamic> identity,
@@ -64,41 +93,37 @@ class Acc03Snapshot {
                 'GLOBAL_ALL' || 'FOCUS' => Acc03RuntimeState.connected,
                 _ => Acc03RuntimeState.unavailable,
               });
-    final viewName = contextState == Acc03RuntimeState.connected
-        ? _safeText(_asMap(contextMap?['display_name'])?['zh']) ??
-              _safeText(_asMap(contextMap?['display_name'])?['en'])
-        : null;
+    final viewNames = contextState == Acc03RuntimeState.connected
+        ? _safeDisplayNames(contextMap?['display_name'])
+        : const <String, String>{};
+    final viewName =
+        viewNames['zh-CN'] ??
+        viewNames['zh'] ??
+        viewNames['en'] ??
+        viewNames['ko'];
 
     return Acc03Snapshot(
       runtimeState: runtimeState,
       contextState: contextState,
       currentView: viewName,
-      launchCards: const [
-        Acc03LaunchCard(
-          destination: Acc03Destination.commerce,
-          title: '商业运营',
-          description: '进入主体优先的运营工作区。',
-          domain: 'CTH',
-        ),
-        Acc03LaunchCard(
-          destination: Acc03Destination.brand,
-          title: '品牌市场',
-          description: '进入品牌与市场工作区。',
-          domain: 'BMP',
-        ),
-        Acc03LaunchCard(
-          destination: Acc03Destination.ai,
-          title: '智能任务',
-          description: '进入可审阅的智能任务入口。',
-          domain: 'AI',
-        ),
-      ],
+      currentViewNames: viewNames,
+      launchCards: acc03HomeDestinations,
       startupChecks: [
         Acc03StartupCheck(name: '工作区入口', state: runtimeState),
         Acc03StartupCheck(name: '查看范围', state: contextState),
       ],
     );
   }
+}
+
+Map<String, String> _safeDisplayNames(Object? value) {
+  if (value is! Map) return const {};
+  final names = <String, String>{};
+  for (final locale in const ['zh-CN', 'zh', 'en', 'ko']) {
+    final name = _safeText(value[locale]);
+    if (name != null) names[locale] = name;
+  }
+  return Map.unmodifiable(names);
 }
 
 Acc03RuntimeState _parseState(Object? value) =>

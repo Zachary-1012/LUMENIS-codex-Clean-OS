@@ -68,7 +68,16 @@ def _authorized(authorize):
     return audits
 
 
+def _source_report(row, *, job_id, actor_ref, scope):
+    from api_dual_domain import _same_business_scope
+    verified = _verify_report(row, job_id=job_id, actor_id=actor_ref)
+    if not _same_business_scope(verified["snapshot"]["scope"], scope):
+        raise PermissionError("SOURCE_BRIEF_SCOPE_MISMATCH")
+    return verified
+
+
 def _checked(connection, row, *, actor_ref, expected_scope):
+    from api_dual_domain import _same_business_scope
     row = dict(row)
     signed = connection.execute("SELECT * FROM app_evidence_records WHERE id=?",
                                 (row["creation_evidence_ref"],)).fetchone()
@@ -78,7 +87,7 @@ def _checked(connection, row, *, actor_ref, expected_scope):
     inputs = json.loads(signed["inputs_json"])
     scope = inputs.get("scope")
     _scope(scope)
-    if inputs.get("actor_ref") != actor_ref or scope != expected_scope:
+    if inputs.get("actor_ref") != actor_ref or not _same_business_scope(scope, expected_scope):
         raise PermissionError("CTH_CASE_CONTEXT_MISMATCH")
     _subject(connection, scope)
     if (signed.get("feature_id") != FEATURE or signed.get("source") != "cth_case"
@@ -102,8 +111,8 @@ def _checked(connection, row, *, actor_ref, expected_scope):
     if report is None:
         raise RuntimeError("CTH_CASE_SOURCE_JOB_INVALID")
     report = dict(report)
-    verified = _verify_report(
-        report, job_id=source_job_id, actor_id=actor_ref, expected_scope=scope,
+    verified = _source_report(
+        report, job_id=source_job_id, actor_ref=actor_ref, scope=scope,
     )
     if report.get("artifact_hash") != inputs.get("source_report_hash"):
         raise RuntimeError("CTH_CASE_SOURCE_JOB_CHANGED")
@@ -143,7 +152,7 @@ def create_cth_case(*, actor_ref, expected_scope, submission_id, title, question
     report = _read_report(source_job_id)
     if report is None:
         raise LookupError("CTH_CASE_SOURCE_JOB_NOT_FOUND")
-    verified = _verify_report(report, job_id=source_job_id, actor_id=actor_ref, expected_scope=expected_scope)
+    verified = _source_report(report, job_id=source_job_id, actor_ref=actor_ref, scope=expected_scope)
     available = {r["source_id"]: r for r in verified["source_brief"]["records"]}
     if any(source_id not in available for source_id in source_ids):
         raise PermissionError("CTH_CASE_SOURCE_NOT_IN_JOB")
@@ -166,7 +175,7 @@ def create_cth_case(*, actor_ref, expected_scope, submission_id, title, question
         ).fetchone()
         if current_report is None:
             raise LookupError("CTH_CASE_SOURCE_JOB_NOT_FOUND")
-        _verify_report(dict(current_report), job_id=source_job_id, actor_id=actor_ref, expected_scope=expected_scope)
+        _source_report(dict(current_report), job_id=source_job_id, actor_ref=actor_ref, scope=expected_scope)
         if current_report["artifact_hash"] != report["artifact_hash"]:
             raise RuntimeError("CTH_CASE_SOURCE_JOB_CHANGED")
         # Recheck after lock acquisition and all source/report validation,

@@ -1,6 +1,6 @@
 abstract final class LumenisWorkspaceRoutes {
-  static const root = '/workspace/CTH-01';
-  static const rootScreenId = 'CTH-01';
+  static const root = '/workspace/ACC-03';
+  static const rootScreenId = 'ACC-03';
   static const cth01 = '/workspace/CTH-01';
 
   /// Kept for links issued before the complete workspace navigation shipped.
