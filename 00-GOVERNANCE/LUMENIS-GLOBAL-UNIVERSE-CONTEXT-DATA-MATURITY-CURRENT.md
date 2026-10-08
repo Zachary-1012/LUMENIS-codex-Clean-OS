@@ -369,6 +369,10 @@ entity. The explicit user task selects purpose and facets; packaging grants no
 trend status, entity promotion, source-use permission or model training.
 Retain this original when adding subsequent source-backed topic versions.
 
+These seed checks apply to requests explicitly referencing that seed. They do
+not require every subject-scoped collection batch to await all 100 terms or
+post-intake keyword analysis; the current C1 priority below controls that order.
+
 The existing platform-collection search API accepts task-selected
 `business_requests`, bounded `max_queries` and a checked plan continuation.
 It resolves the actual actor/scope; a client cannot upload a completed-checkpoint
@@ -401,6 +405,17 @@ Product Owner明确取消“所有数据必须采全”的要求。产品必须�
 时间排序保留原始出版、事件、采集/刷新三类时间、时区与精度；按任务选择对应时间轴，同源同精度可比较。未知时间单列“日期未知”，不得补造；只有日期精度不伪造秒级先后。明确用户时间筛选时，无法确认落入范围的项单独提示，不算已覆盖。无全局硬起点不等于无范围、无节流或无限回溯；Scheduler沿现有预算、游标、水位与授权轮换持续运行。
 
 **当前执行归属：** C1 持续完成自身闭环及所需既有 Core/runtime、Scheduler、授权绑定依赖，不暂停或切给 C6；架构 Owner 和共享文件保护不变。`2d0f8d61` 对 `acquisition_plan.py`、`adapters/scheduling/prelaunch_baseline.py` 硬编码起点的观察只作历史定位，不代表当前未提交源码或运行状态。C1 按当前源码及真实执行回执处理可选任务时间范围、Scope/授权、capture 上界与精度；保留旧 plan/receipt 及 fingerprint。依最新 PO 策略保留历史测试与失败，不新建、运行或修改模块测试求绿。通过实际产品操作核明确范围、未指定范围、未知日期、旧回执恢复、真实持久化和持续刷新；规则发布不等于运行通过。
+
+### 当前 C1 提速顺序 — 主体批量采集、后置分析与单封面
+
+2026-10-08 Product Owner 在 C1 原窗口的直接补充（消息
+`01a11bb2-b90c-7c53-b3b8-1327cc8b54b0`）调整本轮处理顺序：根据主体大量采集相关发帖，返回后直接跑数据处理，关键词采回后分析；图片只处理一张封面。M 在当前窗口被明确要求优化、同步并回传 C1。它覆盖旧说明中与该顺序矛盾的前置词条完善或逐图处理，不扩大身份、权限、来源或费用。
+
+1. **先按主体扩面。** 用已绑定的 Subject/BrandFocus、真实名称/别名和任务语义编译现有平台可执行查询；登记来源、市场/门店、任务时间及歧义。批量、分页和平台轮换沿原 Collector/Scheduler 的许可、预算、速率、冷却、游标与恢复执行。无需先补齐完整话题词库、热榜或 AI 分析再开始当前主体的真实采集；不能为扩大数量放宽范围校验或混入同名异地主体。
+2. **每批立即进入原数据链。** 返回的允许内容按原有身份/幂等/事务规则进入 Source→Evidence→Canonical，并可供检索和下游消费；不等待六个平台或所有查询结束。一个坏来源/媒体/受限平台不能撤销其他有效结果，也不能使整批假成功；保留逐项接收/拒绝/待补状态、原文覆盖、检查原因、断点和真实接收计数。摘要或截断观察不冒充全文；只有现有正式准入通过的记录进入 Canonical。
+3. **关键词后置。** 从已取得的原文和来源版本分析主题/词条，沿现有词库追加版本、关联与有效时期；旧词不删。来源语言、任务用词和检索别名仍可用于采集，但词库增长、热度测量和模型推理不是采集前置。无可用分析服务时保留待分析，不阻塞已有真实数据处理；不虚构主题、官方标签、热点或热度。
+4. **只处理一张封面。** 当前批量采集每帖最多处理一张平台实际提供的封面/主图；无封面保留缺失原因。保留其他原媒体的定位、元数据、来源与版本，但不在此路径批量下载/转码其他图片、抽帧或逐图分析，也不重写已存原件。一张封面不证明全图集/全视频已看；既有创作/资料任务所需原媒体、具体用户输入和其独立验收范围保留，不能把本项成本优化误读为删除媒体能力或抹除原材料。
+5. **C1 持续自闭环。** 沿自己现有 Task/Goal、Scope、授权、Core/runtime 与 Scheduler 执行并记录实际吞吐、延迟、准入数、错误原因和恢复；不另造采集器/队列、无逐帖审批或逐函数消息。采集及处理必须由产品代码持续执行，Codex 手动操作不替代。源码、规则、当前状态随合格有界批次发布；仅统计计划/Raw 数量不能宣称闭环。
 
 ### 已核读资料进入 C1 当前闭环 — 2026-10-08
 

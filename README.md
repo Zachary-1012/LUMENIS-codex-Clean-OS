@@ -118,6 +118,8 @@ Owner承接，状态与限制见 [CURRENT](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-
 证据，继续自己的真实用户成果；不重复实现或重做原文审计。研究、代码验证、实际业务验收
 和模型训练准入分别记录，不能互相替代。
 
+当前 C1 先按真实主体批量采集相关发帖，每批返回立即经原 Source/Evidence/Canonical 数据链处理，词条/主题分析后置，图片每帖最多处理一张真实封面；不等完整词库或六个平台结束。准确范围、原文覆盖、幂等/权益/恢复与未读状态保留，详见 [Global §10](00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md)。
+
 ## 产品完整闭环职责（不可由 README 摘要缩减）
 
 下面只是给人类工程师和 Coding Agent 的**导航摘要**。完整要求仍由 [Source Owner Index](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)、Product Architecture、Experience Constitution、R01–R15、J1–J8、U01–U25、现有研究/材料采用义务和各 Screen/Owner 合同共同约束。**任何 README、状态表、测试数量或窗口名称都不能把这些要求缩短成更小的产品。**
@@ -130,7 +132,7 @@ Owner承接，状态与限制见 [CURRENT](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-
 | **C2 / W2 · Owned AI & Agent** | 通过唯一 SYSTEM AI Gateway 完成 LUMENIS 自有模型的真实训练、checkpoint/resume、独立 held-out Evaluation、正常业务推理、多模态理解、Agent/Skills/Memory/Context、反馈/Learning、低置信与失败恢复、受控 Promotion/Rollback；当前免费资源优先，模型文件/preflight/三步训练都不能冒充质量或部署完成。 |
 | **C3 / W3 · CTH & BMP Workflows** | 完整完成商业运营与品牌市场真实工作：监测/事件/日历、消费者/媒体/趋势/风险、市场/竞品/Creator/传播、Case→Insight→Decision→Action→Outcome→Evaluation、内容/Campaign生命周期及实际效果；必须保留精确 Subject/BrandFocus、市场、时间、单位、分母、来源和不确定性。报告或提案不等于已执行结果。 |
 | **C4 / W4 · Pitch / Video / Podcast** | 分别交付原创专业提案、真正可编辑且可播放的成片、完整可听可编辑的播客；覆盖真实 Brief/素材/预算约束、时间线、编辑/替换/预览/渲染、音频/字幕/章节/转录、保存/导出/重开/取消/恢复、版本和人工质量复核。三类成果各自独立验收，Demo 不能替代完整工作流。 |
-| **C5 / W5 · Importer / Research / Shared** | 完成资料导入、Library/Search、精确 Citation、逐篇/逐页/逐段/逐帧/时间码研究、Reporting、Artifact、SavedWork、通知和共享偏好；所有原件、rights、source hash、父子版本、撤销/恢复可追溯。191行 manifest 不是全部语料，未读正文、未采用研究和 UNKNOWN rights 不能被写成“已吸收”。 |
+| **C5 / W5 · Importer / Research / Shared** | 完成资料导入、Library/Search、精确 Citation、逐篇/逐页/逐段/逐帧/时间码研究、Reporting、Artifact、SavedWork、通知和共享偏好；所有原件、rights、source hash、父子版本、撤销/恢复可追溯。当前199行 manifest（原191+8增补）不是全部语料，未读正文、未采用研究和 UNKNOWN rights 不能被写成“已吸收”。 |
 | **C6 / W6 · Integration / Runtime / Release** | 把已验收 Owner 能力整合成同一 SHA 的 Core/API/DB/四端/FFmpeg/Supervisor/CI/Packaging/Recovery；协调正式 DB 变更、共享调用、启动/重启/取消/回滚、Product/App/Critical E2E 和最终 Evidence bundle；代码存在、build成功或 health=200 都不能单独写成 RELEASED/OPERATING。 |
 
 产品最终闭环不是“所有窗口都有代码”，而是对应真实用户任务能够从**真实输入 → 有依据的结果 → 保存/修改/重开/恢复 → Outcome/Evaluation → 跨端继续使用**完整成立。
@@ -291,7 +293,7 @@ IMPLEMENTED
 
 两份最新增补已合并进[唯一产品蓝图](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)、[Owner执行映射](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)、[双层真实验收](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)和[Experience §38](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)：先让用户完成成熟软件基础操作，再证明序境的来源、业务、智能、版本与学习连续性。SH-01/BMP-08及原文字草图细化真实剪辑/播放/波形/录音/重开；GPT/Apple/Tesla只贡献适用操作原则。开源选择遵守[组件准入](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)，不重造现有内核。
 
-Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；完整J/R/U不缩减；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。M 每 30 分钟轻量核对有变化的完整成果、共享冲突、CI/风险，无实际可处理事项即待命。规则收录不表示能力已实现或验收，也不自动安装新组件或形成训练许可。历史材料保留，最新材料清单为198项（原191+6份文字增补+本次电脑/浏览器视频），不代表全部历史资料已读完。
+保留的职责拓扑为 M + 独立 F + 一个业务窗口，不代表当前所有角色已恢复；最新 AGENTS/CURRENT 直接指令控制实际派工，当前 C1 持续执行、其余原暂停窗口不由本段恢复。源码/Goal 与完整 J/R/U 保留；实际派发/准入以本地 ledger 和真实工具回执为准，fresh admission 后才进入 RUNNING。M 仅核对有变化的成果、共享冲突、CI/风险，无实际可处理事项即待命。规则收录不表示能力实现、验收、组件安装或训练许可。最新材料清单为199项（原191+8增补，含电脑/浏览器视频及12项安全核查），不是全部历史资料已读证明。
 
 ### 2026-10-08 采集日期与维度展示更正
 

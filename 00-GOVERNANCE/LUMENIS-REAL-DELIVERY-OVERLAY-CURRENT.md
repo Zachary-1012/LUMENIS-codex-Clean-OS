@@ -1171,7 +1171,7 @@ Product Owner clarification (2026-10-02): 本轮工程/产品闭环必须完成�
 
 涉及页面的C成果必须主动研究当前前沿、原创、非模板化体验，且不得把 Toss Shopping、KakaoTalk Channel、Toss Design System、`motion-web` 或任何后续样本当作白名单或范围上限。外部输入只能提炼原则；禁止复制布局、视觉身份、代码、资产、参数、交互序列或受限衍生工作流。禁止 AdminLTE/Tabler 式通用后台、通用 Dashboard、Bento、Card Grid 批量套屏。只有长期 canonical 原则才可更新唯一 `LUMENIS-EXPERIENCE-CONSTITUTION.md`；研究记录、截图、Figma、模型输出和 GitHub star 都不是设计权威或 Production Truth。
 
-Collector、Browser、AI、Content、Agent、Reporting、Evaluation、Learning 与 CTH/BMP workflow 依据真实 Evidence 持续演进。候选改进必须映射回 canonical owner、对象、Permission、Evidence、workflow 和 LUMENIS Experience，并经过版本化资产、测试、真实运行/E2E、效果评估、可观测性、回滚与 M 验收后才可晋级。注册、import、模型输出、论文结论或外部项目活跃度都不能直接成为产品能力。
+Collector、Browser、AI、Content、Agent、Reporting、Evaluation、Learning 与 CTH/BMP workflow 依据真实 Evidence 持续演进。候选改进必须映射回 canonical owner、对象、Permission、Evidence、workflow 和 LUMENIS Experience，并经过版本化资产、适用构建/静态质量/安全/数据检查、真实运行/E2E、效果评估、可观测性、回滚与 M 验收后才可晋级。注册、import、模型输出、论文结论或外部项目活跃度都不能直接成为产品能力。
 
 研究输入必须走一条双出口但不双重建库的能力进化链：`真实任务/缺口 → 定向检索 → 来源/时效/权利/可靠性核验 → 蒸馏`，随后分别进入 **PRODUCT ADOPTION** 与 **MODEL LEARNING CANDIDATE**。PRODUCT ADOPTION 只能增强当前已经批准的能力，并落实到现有 Owner/Contract/Experience，记录 `ADOPT / ADAPT / DEFER / REJECT` 及真实验证结果；MODEL LEARNING CANDIDATE 仍需经过 C2/C5 现有 rights/privacy/quality/held-out/Evaluation/Promotion 边界，不能因为同一资料已被产品采用就自动获得训练资格。真实运行后的 Outcome/Evaluation 必须反哺 Research/Learning，形成“真实世界 → 产品 → 结果 → 学习 → 下一轮产品”的闭环。
 

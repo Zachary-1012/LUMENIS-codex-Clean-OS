@@ -297,3 +297,39 @@ Their private corpus is not uploaded; no GPU/model/provider or inference execute
 This batch only corrects existing rules/locators/observations. Full research,
 product source adoption, loaded runtime and real user closure remain independent
 OPEN states. Historical module suites/failures are not run or changed.
+
+
+## 2026-10-08 C1 direct throughput priority and unique Brief recovery
+
+The current PO message in the original C1 thread is
+`01a11bb2-b90c-7c53-b3b8-1327cc8b54b0`, read as actual user text, not an agent
+summary. M was separately instructed to optimize, co-publish and send C1 the
+verified revision. Existing Global section 10 now defines subject-scoped bulk
+posts, immediate processing of each batch through Source/Evidence/Canonical,
+post-intake keyword/topic versions and at most one actual cover per post.
+Existing seed-specific checks do not become a prerequisite to finish all seed
+terms before a subject batch. Identity/scope/permission, rate/backoff/continuation,
+native time, original coverage and unknown dimensions remain enforced. Other
+media locators/history and separate creation/research requirements are preserved.
+C1 continuously owns its existing full task and runtime/scheduler dependencies;
+no other paused window is resumed by this change. No new collector, queue, fee,
+account scope, module tests or production-data operation was introduced by M.
+
+The existing C4 `brief-ingestion-complete-candidate-03` unique source is adopted
+into `scripts/pitch_parser.py`, after matching the current LF preimage
+`41a713892d7ef01b8735b7bf3c7df9e84308ab6e5dd55576bffd9fcb44a3297e` and
+candidate LF postimage
+`d032a23c9f749f9fed3ed27a79647fce8733d6d39862ac349aa2b02d4d9b0965`.
+ASCII keyword boundaries, absent Brief fields, explicit creative hypotheses and
+unobserved metric nulls are recovered rather than restoring an old whole tree.
+The current HTTP caller and Word export already consume this parser; source
+inspection confirmed export renders absent fields as a dash. Python compilation
+passed. Historical module receipts are preserved, not rerun; actual running
+pitch generation/export/reopen and Owned execution are not verified here.
+
+Preceding baseline `519c7d7e392a23d747c6446990d201d212adea51` had observed
+successful Product `37784756684` and App `37784756793` runs. They do not establish
+the new batch's exact-SHA CI or a running user outcome. C1's in-flight source,
+configuration, sessions and production DB are excluded from this publication.
+Research summaries, full reading, source adoption and learning permission retain
+their separate states; the remaining original-material corpus stays OPEN.

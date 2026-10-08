@@ -52,6 +52,18 @@
       "training_admission": "Separate rights/purpose/quality approval remains required; no automatic training grant",
       "C1_independent": true,
       "paused_product_windows_resumed": false
+    },
+    "C1_subject_batch_postanalysis_single_cover": {
+      "source": "Direct PO C1 message read through current Codex thread plus direct M follow-up",
+      "source_thread_id": "01a0f86f-6435-78d0-8e48-522e2ca09ca2",
+      "source_message_id": "01a11bb2-b90c-7c53-b3b8-1327cc8b54b0",
+      "direct_quote": "现在采集太慢了，升维，根据主体，大量采集相关发帖，回来以后直接跑通整个数据处理，关键词那些采集回来后分析，图片只取封面一张，最小化图片处理，",
+      "M_sync_quote": "我给c1下了新需求，你需要优化一下，同步线上线下，并在给c1同步一下",
+      "executor": "C1",
+      "rule_owner": "existing Global section 10; AGENTS sole router",
+      "new_permission_account_cost_or_product_scope": false,
+      "other_windows_resumed": false,
+      "historical_media_and_materials_preserved": true
     }
   },
   "constraints": [

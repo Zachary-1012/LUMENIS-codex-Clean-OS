@@ -112,9 +112,14 @@ PITCH_TOC = [
 
 
 def detect_category(text):
+    normalized = text.lower()
     for cat, kws in CATEGORIES.items():
-        for k in kws:
-            if k.lower() in text.lower():
+        for keyword in kws:
+            if keyword.isascii():
+                # ASCII boundaries reject app in application while allowing 中文AI创作.
+                if re.search(rf"\b{re.escape(keyword)}\b", text, re.IGNORECASE | re.ASCII):
+                    return cat
+            elif keyword.lower() in normalized:
                 return cat
     return "通用"
 
@@ -125,14 +130,14 @@ def detect_circle(text):
         s = sum(1 for k in kws if k in text)
         if s > score:
             best, score = c, s
-    return best or "都市职场"
+    return best
 
 
 def detect_tonality(text):
     for t, kws in TONALITY_KEYWORDS.items():
         if any(k in text for k in kws):
             return t
-    return "premium"
+    return None
 
 
 def detect_channels(text):
@@ -231,7 +236,7 @@ def build_benchmark(category, tonality, circle):
                 "有没有一个可复制/可记忆的符号？（符号化）",
                 "用户参与机制在哪？互动即传播？（参与式）",
                 "是否绑定当下的文化时机/热点？（时效）",
-                "调性「%s」与圈层「%s」的沟通语言是否一致？" % (tonality, circle),
+                "调性「%s」与圈层「%s」的沟通语言是否一致？" % (tonality or "未提供", circle or "未提供"),
             ]}
 
 
@@ -240,10 +245,22 @@ def analyze_pitch(text, brand_hint="", n_ideas=3, hotspot=""):
     category = detect_category(text)
     circle = detect_circle(text)
     tonality = detect_tonality(text)
-    signals = {"topics": extract_creative_leads(text), "sentiment": "neutral",
-               "negative_rate": 0.0, "risk_events": 0, "circle": circle,
-               "hotspot": hotspot, "volume_notes": 0}
-    ideas = generate_ideas(detect_brand(text, brand_hint), category, signals, n_ideas, tonality)
+    # Creative defaults are hypotheses, never extracted Brief values.
+    generation_circle = circle or "都市职场"
+    generation_tonality = tonality or "premium"
+    assumptions = {}
+    if circle is None:
+        assumptions["circle"] = generation_circle
+    if tonality is None:
+        assumptions["tonality"] = generation_tonality
+    signals = {"topics": extract_creative_leads(text), "sentiment": "UNKNOWN",
+               "negative_rate": None, "risk_events": None, "circle": generation_circle,
+               "hotspot": hotspot, "volume_notes": None}
+    ideas = generate_ideas(detect_brand(text, brand_hint), category, signals, n_ideas, generation_tonality)
+    ideas["meta"]["assumed_brief_fields"] = assumptions
+    ideas["meta"]["observed_signals_state"] = "NOT_COLLECTED"
+    for idea in ideas["ideas"]:
+        idea["why"] = "以下为创意假设，尚无平台数据支持：" + idea["why"]
     # 营销节点适配（芥子→须弥：当月/当天节点 + 情感主题 + 建议调性）
     try:
         from scripts.marketing_calendar import suggest_hotspot

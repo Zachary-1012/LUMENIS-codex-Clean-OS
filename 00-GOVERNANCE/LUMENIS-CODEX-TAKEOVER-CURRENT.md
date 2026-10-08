@@ -102,15 +102,35 @@ not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-This publication updates existing execution rules and research-adoption routes.
-It does not re-publish or re-verify product behavior. Source batches `67e26a39`
-and `fa65267d` retain their own successful exact-SHA CI receipts. Product run
-`37768238335` at `8850b8cd` failed because this snapshot incorrectly retained
-the earlier source-publication state; that failure remains historical FAILED.
-Only the current publication's actually executed checks can establish its status.
+This bounded publication adopts the exact existing C4 Brief-parser source delta
+and synchronizes the newest C1 processing order through the existing Global §10,
+blueprint, owner route and approval receipt. It does not load Core or verify a
+real pitch/collection user outcome. Prior rules baseline `519c7d7e` has observed
+successful Product/App runs `37784756684` / `37784756793`; these are not CI proof
+for this new commit. Source batches `67e26a39` and `fa65267d` retain their own
+successful receipts. Product run `37768238335` at `8850b8cd` remains historical
+FAILED. Only the new publication's actually executed checks establish its status.
+
+Latest C1 direct PO message `01a11bb2-b90c-7c53-b3b8-1327cc8b54b0`:
+subject-scoped bulk posts -> each returned batch immediately through existing
+Source/Evidence/Canonical -> post-intake keyword/topic analysis; process at most
+one actual cover per post. Do not wait for a complete term library, every image
+or all platforms. Preserve source identity, genuine original coverage, explicit
+task dates, authorization/rates/cursors and other media locators/history. C1
+continuously implements and verifies this inside its own existing full Goal;
+no pause, C6 transfer, account/cost expansion or other-window resume is implied.
+Detailed semantics and preserved limits: Global §10's current C1 priority.
+
+The adopted `brief-ingestion-complete-candidate-03` parser has LF SHA256
+`d032a23c9f749f9fed3ed27a79647fce8733d6d39862ac349aa2b02d4d9b0965`.
+It avoids ASCII substring category mistakes, keeps absent Brief circle/tone
+unknown, labels creative defaults as hypotheses, and preserves unobserved
+metrics as unknown rather than zero. Python compilation passed; historical
+module-test receipts are preserved without rerunning them. Actual pitch
+generation/export/reopen and Owned AI involvement remain NOT_VERIFIED/NOT_RUN.
 
 Latest direct PO clarification: verified product-relevant research improvements
 must update the existing blueprint, owner route and applicable detailed contract
