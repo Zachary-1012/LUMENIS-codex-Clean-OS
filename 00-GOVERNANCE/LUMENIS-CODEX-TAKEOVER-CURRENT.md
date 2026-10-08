@@ -56,6 +56,17 @@ and excluded from this bounded publication. Full R/J/U, research, media, design 
 native follow-up requirements remain OPEN as applicable. Exact evidence and open
 bindings: [bounded delivery](evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md).
 
+### 2026-10-09 root execution-router co-publication
+
+This rules-only increment publishes the latest direct PO pause and whole-product
+AI-independent business requirements in root AGENTS.md alongside the existing
+Architecture, Real Delivery, Experience, Owner index and approval receipt. A0/B0/C0
+remain preparation only; no paused Owner, API, corpus, training or deployment is
+activated. The preceding bounded implementation is published at
+`6793a0695fde5bf638b8ab9ffc2d323ff2d520dc`. Source publication, this policy
+co-publication, runtime load and real user acceptance remain distinct; the latest
+commit requires its own exact-SHA CI, never an inherited or fabricated PASS.
+
 ## 1. Online reader's current-state snapshot
 
 2026-10-08 continuous synchronization correction: accepted source/rule/plan and
@@ -165,7 +176,7 @@ not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 This 2026-10-09 update reconciles existing adoption/status evidence, duplicate

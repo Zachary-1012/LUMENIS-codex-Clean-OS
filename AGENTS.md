@@ -11,7 +11,25 @@ execution instructions.
 
 ## 1. Authority
 
-### Current PO verification policy and C1 full closure — 2026-10-09
+### Current PO state — C1 paused; AI-independent business first — 2026-10-09
+
+Latest direct PO: C1 is paused with source/Goal/receipts preserved; F and C2-C6
+remain paused. M continues the already authorized tool/browser integration,
+CURRENT reconciliation and A0/B0/C0 preparation only. Preparation does not resume
+C2, grant external AI APIs, download training corpora, train/deploy a model or
+change the approved foundation/provider policy. Local LIVE_DISPATCH records
+actual scheduling; repository publication is not a running-window claim.
+
+Every normal business workflow must work without any model, AI API, GPU or
+inference service. AI-only actions may be UNAVAILABLE, but cannot block existing
+deterministic computation, manual editing/decisions, save/export/reopen/recovery.
+Verify the no-AI useful business outcome first and AI gains separately through
+the existing R/J/U and Gate structure; preserve rights/Permission/data guards.
+The seven-domain requirements live in Product Architecture and Real Delivery.
+This is a required outcome, not a claim that every current path is fixed.
+Approval: `00-GOVERNANCE/evidence/approvals/PO-20261009-AI-OPTIONAL-PREPARATION-C1-PAUSE.json`.
+
+### Retained verification policy and C1 scope (execution waits for PO resume)
 
 The latest direct Product Owner instruction formally removes unit and integration
 tests from mandatory development, merge, acceptance and release conditions.
@@ -31,39 +49,23 @@ Change/Owner Closure/Release remain distinct under the machine contract; only
 checks actually retained and executed may pass. Earlier unit/integration mandates
 in historical receipts are provenance only, not current instructions.
 
-M is authorized for policy synchronization, integration review and C1 dispatch.
-**C1 is the single selected business window**, resuming its full existing J1,
-U01-U05 and mapped R requirements with **GPT-6.1 Sol / ultra**, an explicit
-current-window override that does not rewrite role defaults or speed settings.
-The latest direct PO task is the full C1 data-to-business upgrade in Global §10;
-M keeps non-C1 candidate integration and complete original-material adoption.
-M/C1 current selection is Sol 6.1 / ultra, without changing defaults or speed.
-C1 must close real platform recovery, scoped topic/query acquisition, original
-content/media intake, Source/Evidence/Canonical persistence, retrieval and
-continuous refresh/recovery through the existing product-owned runtime.
-Six primary platforms, registry growth, honest missing dimensions, no universal
-publication-start date, current task dates and protected identity rules remain.
-Cover-only intake preserves image/video understanding; Global §10 owns that path.
-No fresh paid resources or permission expansion is authorized. C1 must preserve
-shared reservations, record a concrete cross-owner dependency once and continue
-all independent work; no per-function handoff loop or duplicate candidates.
-Latest direct PO correction: **C1 continuously completes its own closure and
-necessary Core/runtime, scheduler and existing authorization-binding repairs and
-controlled operations. Do not pause C1 or transfer dependencies to C6.** C1 is the
-sole executor of that bounded call chain; architecture owners remain unchanged.
-Record the handoff in existing W6 reservations, preserve unrelated work and reuse
-frozen source. Verify process ownership, in-flight work, rollback and Permission;
-never force unknown processes, fabricate grants or expand source/account/cost scope.
-M integrates non-C1 work; research agents complete all original reading/adoption,
-including DeepSeek/ancestor inputs and upgraded plans (CURRENT/approval below).
-C1 remains independent; paused windows stay paused; training needs its own grant.
-The proposed C6 switch is withdrawn.
-F and C2-C6 retain their latest explicit pause until separately resumed. The
-retained topology is M + independent F + one business window; topology alone is
-not live dispatch. Website/Web closure stays first; Windows/macOS and iOS follow.
-Fresh admission is required before RUNNING; local live_dispatch is the execution
-ledger, not published product truth. Approval:
-`00-GOVERNANCE/evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json`.
+M continues current policy/tool/browser integration and non-C1 material/source
+convergence. C1 is paused by the latest direct PO, retaining full J1/U01-U05
+and mapped R scope and the manual GPT-6.1 Sol/ultra selection; no default/speed
+change. After an explicit resume, C1 itself closes six-platform collection,
+original content/media intake, Source/Evidence/Canonical, retrieval and
+continuous refresh/recovery, including necessary Core/Scheduler/Permission
+repairs under existing W6 reservations. Do not switch dependencies to C6.
+Registry growth, task dates/no universal start date, honest dimensions, cover-only
+intake with later media understanding, Source rights and protected identities
+remain mandatory; detailed behavior is owned by Global §10 and the Collector
+contract. Permission, in-flight/process ownership, rollback and unrelated work
+are protected; no forced unknown processes, fabricated grants or new costs.
+F/C2-C6 remain paused. Website/Web closure is first; Windows/macOS and iOS
+follow. Topology is eligibility, not dispatch: only actual fresh admission and
+tool/ledger evidence establish RUNNING. M's original research/adoption includes
+DeepSeek/ancestor inputs and upgraded plans; training needs its separate grant.
+Earlier resume provenance: `00-GOVERNANCE/evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json`; latest pause/AI-independent correction is above.
 
 ## Current execution topology — M + F + C1-C6 eligible; live dispatch follows Product Owner instruction
 
@@ -129,7 +131,7 @@ platform lists/design-first instructions are superseded for execution by this ru
 ### 2026-10-08 current dispatch: one business window, independent F, zero new cost
 
 The retained PO topology permits M + independent F + one business Owner, each
-with full J/R/U outcomes. It is not live dispatch: current top-level C1-only resume
+with full J/R/U outcomes. It is not live dispatch: the current top-level PO pause
 controls, and all paused roles retain source/Goal/evidence. An ordinary authorized
 slot switch freezes the previous reservation first; never start a second business
 window for a dependency. No new paid GPU/account/seat/subscription/service or
@@ -174,18 +176,14 @@ This clarifies existing instruction provenance; it creates no new approval owner
 or machine state. M reviews changed complete outcomes every 30 minutes and waits
 when no actionable work remains. The current goal and manual model/tier remain.
 
-F builds directly from current contracts; no separate draft/Figma/M design
-approval precedes coding. Preserve its complete Goal, existing editable Figma
-file/Foundation/nodes and all designs/source/evidence. When the free path is
-limited, use existing editable Flutter/Dart/design variables/SVG and free local
-tools for real interaction; no paid service or duplicate file. Preserve 44 screens,
-Website families, approved surface variants, zh/en/ko and accessibility. Five
-Golden Pages order work, never limit scope. Editable source is not native Figma;
-PNG/PPT/screenshots are not editable delivery. Tool limits do not stop the Goal.
-Historical/relayed/attached/compacted pause wording and a finished function/batch/
-turn are not a new PO stop. For idle authorized F work, M checks actual Goal/turn
-and continues; stale RUNNING is not execution proof. Only an applicable current
-PO stop or real dependency halts that work. M standby does not pause workers.
+F's direct-build/free editable-source route above preserves its complete Goal,
+Figma/Foundation/nodes, 44 screens, Website families, approved surface variants,
+zh/en/ko and accessibility. Five Golden Pages only order work. Source is not
+native Figma; PNG/PPT/screenshots are not editable delivery. Historical/relayed/
+attached/compacted pauses and finished functions/batches/turns are not new PO
+stops. Only an applicable current PO stop or real dependency halts work. For idle
+authorized F, M checks actual Goal/turn and continues; stale RUNNING is not proof.
+M standby does not pause workers. Current direct pauses at the top remain binding.
 
 ### Live dispatch semantics — NON-BYPASS
 
@@ -1764,17 +1762,13 @@ live ledger, tool receipts, fresh admission and real dependencies.
 
 ### 2026-10-08 useful progressive delivery and logic review
 
-The Product Owner requests a whole-product logic review after rule synchronization,
-and adoption of task-shaped, progressively useful Intelligent UI. M, independent F and one M-selected business window are
-authorized to continue their existing complete outcomes; actual dispatch/admission
-state follows the live ledger and tool receipts, and RUNNING follows fresh
-admission. M checks changed complete outcomes, shared conflicts, CI and risks every
-30 minutes; with no actionable work, M waits. Experience §38
-owns component choice, useful partial results, factual correction, user-edit
-preservation and wait-time evaluation; the Product Architecture retains the complete
-J1-J8/U01-U25 result chain. Existing owner/source gaps are documented for direct
-execution, not a new product or parallel Task Card. Do not present research,
-streamed text or a rules publication as implemented UI or an accepted user outcome.
+The PO requires a whole-product logic review after synchronization and task-shaped
+progressively useful Intelligent UI. Experience §38 owns component choice, useful
+partial results, factual correction, user-edit preservation and wait-time review;
+Architecture retains full J1-J8/U01-U25. Keep existing owner/source gap records,
+not parallel Task Cards. Research/streaming/rule publication is not UI acceptance.
+Current dispatch/pause and M's 30-minute changed-outcome checks follow the top;
+without actionable work M waits.
 
 ### Product-owned computer operation and internal browser — 2026-10-08
 

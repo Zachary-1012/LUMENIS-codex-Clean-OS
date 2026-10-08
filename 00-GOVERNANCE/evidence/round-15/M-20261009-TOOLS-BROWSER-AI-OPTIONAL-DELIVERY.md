@@ -114,3 +114,9 @@ VS Code 负责本地补全、导航、诊断；PowerShell/Python 负责确定性
 | USER OUTCOME | 工具的实际预览/构建/回滚/拒绝可复核；编辑器补全和产品 Browser/GUI 完整用户闭环 NOT VERIFIED；不标 JOB_CLOSED/RELEASED/OPERATING |
 
 最终采用 OBSERVED / INFERRED / NOT VERIFIED。规则已统一不等于业务已修好；只在真实结果通过既有验收时使用 ACCEPTED。
+
+## 7. 唯一路由发布补齐
+
+前一有界源码提交为 `6793a0695fde5bf638b8ab9ffc2d323ff2d520dc`，最终核对发现根 AGENTS.md 的同轮政策修改尚未进入该提交。本次仅补齐根路由并同步 CURRENT 的规则发布状态；未混入旧 icon/F/C1 本地成果。最新暂停、七域无 AI 要求与 A0/B0/C0 准备边界一致，保留原审批回执与全部未完成要求。精确 HEAD/origin/live 与各 SHA 的 CI 结果由实际发布读回确定；没有重启加载或生产数据操作。
+
+独立只读复核另指出 Owner Index 顶部旧“恢复/Astra、不暂停”调度措辞仍可能误导，已明确替换为当前暂停和保留职责，历史政策来源继续保留；不恢复任何窗口。
