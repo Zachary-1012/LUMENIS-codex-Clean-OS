@@ -1716,12 +1716,12 @@
       "body_read_status": "NOT_CLAIMED_BY_ASSIGNMENT",
       "training_use": "REQUIRES_SEPARATE_PURPOSE_AND_RIGHTS_APPROVAL",
       "resolved_original_references": [
-        "https://pan.baidu.com/s/12K1Tf8yOh3KM6eSxTXVyPA?pwd=1111"
+        "https://pan.baidu.com/s/12K1Tf8yOh3KM6eSxTXVyPA?credential_redacted=true"
       ],
       "availability_checked_at": "2026-10-04T21:51:22.415623+08:00",
       "availability": [
         {
-          "reference": "https://pan.baidu.com/s/12K1Tf8yOh3KM6eSxTXVyPA?pwd=1111",
+          "reference": "https://pan.baidu.com/s/12K1Tf8yOh3KM6eSxTXVyPA?credential_redacted=true",
           "state": "REMOTE_NOT_RECHECKED"
         }
       ],
@@ -7280,13 +7280,30 @@
       "original_sha256": "3a0307e5d044554c7be4399998006e3c2f4624a663c39291a6341d557c70ccb2",
       "original_bytes": 17700,
       "primary_owner": "M",
-      "supporting_owners": ["C6", "C5", "C1", "F"],
+      "supporting_owners": [
+        "C6",
+        "C5",
+        "C1",
+        "F"
+      ],
       "thread_id": "01a0cd84-7685-7a73-97d9-83a14a546e71",
       "status": "SOURCE_REVIEWED_OWNER_REPAIRS_DISPATCHED_NOT_ACCEPTED",
       "body_read_status": "FULL_REPORT_READ_12_FINDINGS_SCOPED_SOURCE_CHECKED",
       "training_use": "NOT_GRANTED",
       "owner_obligation": "M保留原审计编号和证据界限；C6修认证/备份/打包，C5修Evidence授权/生命周期，C1修Canonical身份/缺测；明确后置项不重启。",
-      "source_owner_paths": ["app.py", "lumenis/auth/", "lumenis/shared/evidence/manual.py", "canonical_data.py", "lumenis/shared/database/", "scripts/backup_db.py", "deployment/backup.py", "Dockerfile", "docker-compose.yml", ".dockerignore", "requirements.txt"],
+      "source_owner_paths": [
+        "app.py",
+        "lumenis/auth/",
+        "lumenis/shared/evidence/manual.py",
+        "canonical_data.py",
+        "lumenis/shared/database/",
+        "scripts/backup_db.py",
+        "deployment/backup.py",
+        "Dockerfile",
+        "docker-compose.yml",
+        ".dockerignore",
+        "requirements.txt"
+      ],
       "product_adoption": {
         "state": "BOUNDED_REPAIRS_ASSIGNED_EXISTING_OWNERS",
         "evidence": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md#2026-10-08-用户只读审计当前修复责任与后置边界",
@@ -7345,5 +7362,177 @@
       "state": "REVIEWED_DISPATCHED_NOT_FIXED"
     }
   },
-  "current_execution_note": "2026-10-08 direct PO resumes existing Owner outcomes. Historical row/adoption WAITING_PO, PAUSED_PENDING_USER_RESUME and next_action wording describe earlier intake only; they do not override current dispatch. Read/rights/training/implementation evidence stays unchanged; original reference scope remains, with the new computer/browser video added explicitly."
+  "current_execution_note": "2026-10-08 direct PO resumes existing Owner outcomes. Historical row/adoption WAITING_PO, PAUSED_PENDING_USER_RESUME and next_action wording describe earlier intake only; they do not override current dispatch. Read/rights/training/implementation evidence stays unchanged; original reference scope remains, with the new computer/browser video added explicitly.",
+  "current_research_readback": {
+    "recorded_at": "2026-10-08T11:07:51.918447+00:00",
+    "state": "PARTIAL_ORIGINAL_READBACK_FULL_CORPUS_OPEN",
+    "scope": "Supplementary exact-byte local original readback, not an exhaustive corpus or new execution authority; match existing materials by original hash before counting.",
+    "docx": [
+      {
+        "original_file_basename": "01_小红书_XHS_内容研究结论.docx",
+        "sha256": "76610a222b73c36f815a227d36038cae22a252eedc9bf3af10e7b55748a6661e",
+        "paragraphs_total": 64,
+        "paragraphs_read": 64,
+        "method_summary": "ADAPT to existing C4 content creation: hook → real scene → experience detail → value → light CTA; vary story angle and validate platform-native format. Treat timing bands as editorial hypotheses, not platform guarantees; do not copy creators' expression or infer success from one post."
+      },
+      {
+        "original_file_basename": "02_KOS_KOL_KOC_账号运营研究结论.docx",
+        "sha256": "33e65f4b508a77f30ba44ad3fae7ea566aef1dcb434699ac899767c3f3d1b0da",
+        "paragraphs_total": 37,
+        "paragraphs_read": 37,
+        "method_summary": "ADAPT to existing C3/BMP briefs and C4 production: distinguish sustained brand voice, paid/influential creator, peer-use evidence and spontaneous user content; preserve negative/ordinary cases; compare format, audience, hook and CTA. The source itself does not establish causal KOL/KOC lift or universal conversion rates."
+      },
+      {
+        "original_file_basename": "03_播客_访谈_凉子访谈录研究结论.docx",
+        "sha256": "cc79b248f00607c14341ec8628968b7099c7b09a961ddb26fa0251183964e891",
+        "paragraphs_total": 51,
+        "paragraphs_read": 51,
+        "method_summary": "ADAPT to existing C4 podcast/video production: preserve the chain Person → Interview → Story → Human Problem → Asset → Platform → Audience Signal → Learning; retain transcript/time locators and adapt packaging by platform. Engagement is not proof of business impact; actual audio/video output and review remain necessary."
+      },
+      {
+        "original_file_basename": "04_内容制作_文案_叙事研究结论.docx",
+        "sha256": "c017debf7538acaa0a51f51323a8d73d2999ba47c8f87af726d64528402d9082",
+        "paragraphs_total": 36,
+        "paragraphs_read": 36,
+        "method_summary": "ADAPT to existing C3/C4 creation: keep narrative function stable while varying angle, phrasing and role; localize for Chinese context rather than translate literally; replace unsupported luxury adjectives with verifiable materials/process/ritual details. Claims and creative framing still need evidence, rights and review."
+      },
+      {
+        "original_file_basename": "05_爆款失败案例_传播_跨平台复用研究结论.docx",
+        "sha256": "3ef5c199d9fa298ec15b69fd7f73c4503d7c9b80688b827a73318e6034e524e8",
+        "paragraphs_total": 39,
+        "paragraphs_read": 39,
+        "method_summary": "ADAPT to existing C3 evaluation and C4 production: compare high-performing, ordinary and failed cases; retain counterexamples; reuse story function while adapting cover/title/hook/length/interaction/CTA. Co-occurrence is not causality; budget affects scale but does not guarantee quality; technology supports the story rather than replacing it."
+      },
+      {
+        "original_file_basename": "06_内容研究资料索引与筛选说明.docx",
+        "sha256": "01b7fa3b2b5a065058894562dbf2cd6c4a0dc393148766100c43d860fc884af6",
+        "paragraphs_total": 40,
+        "paragraphs_read": 40,
+        "method_summary": "RETAIN as provenance and screening guidance only. The index is a derivative selection/summary, not official platform policy, product architecture, verified performance evidence or training-rights grant."
+      },
+      {
+        "original_file_basename": "广州太古汇·舆情监测系统_v5.3_明日运行说明书.docx",
+        "sha256": "dbf09894c25a399cca7ec98cb6ae82cf85dcc9100c9fc85a27d64cdafcdcf135",
+        "paragraphs_total": 104,
+        "paragraphs_read": 104,
+        "method_summary": "ADAPT only the business distinctions: source time versus capture time, separate positive/neutral/negative signals, event/subject context and report/recovery needs. DEFER the old single-venue, platform-specific runtime, port, account, database and operating commands; they are not current LUMENIS truth."
+      },
+      {
+        "original_file_basename": "广州太古汇舆情监测系统_完整项目文档_v5.3.1.docx",
+        "sha256": "9e040033667512cf6c9e46612df9dc88bba43277bbe5c0330297b6fc4be7e590",
+        "paragraphs_total": 128,
+        "paragraphs_read": 128,
+        "method_summary": "PRESERVE as historical project provenance. ADAPT source/capture time and explicit subject scope as domain lessons; REJECT reuse of its old one-platform, local-provider, database, account/profile and deployment assumptions. Embedded operational instructions are not executed or transferred."
+      },
+      {
+        "original_file_basename": "广州太古汇舆情监测系统打包清单list.docx",
+        "sha256": "c3162edd56c9b4fcbefa93bad236aefc96331c5a9a95a89299b3a0df1bbb759d",
+        "paragraphs_total": 79,
+        "paragraphs_read": 79,
+        "method_summary": "ADAPT its packaging separation of deliverables from environment secrets, cookies/keys and raw production data. Current LUMENIS security, permission, source-rights and artifact contracts remain authoritative; no new packaging system is proposed."
+      },
+      {
+        "original_file_basename": "广州太古汇舆情系统-升级模块-8.27.docx",
+        "sha256": "78e8954d7da7d93fa3b013be737fcfe052be6d1af7bbc006cf8f0ede78a46539",
+        "paragraphs_total": 440,
+        "paragraphs_read": 440,
+        "method_summary": "Treat feature checkmarks as proposals, not implementation proof. ADAPT only existing-scope concepts that align with current owners: provenance-bearing topics, native/event/capture time separation, durable collection status and honest trend dimensions. DEFER or REJECT old fixed entity/platform quotas, polling intervals, APIs, database tables, providers, notification effects and single-mall assumptions unless current canonical contracts independently require them."
+      }
+    ],
+    "pdfs": [
+      {
+        "display_name": "播客先声.pdf",
+        "sha256": "e95361f939372a8ce4d1d71f2d606adb3734b19605255474b2a5cb486d2385d5",
+        "size_bytes": 6599096,
+        "page_count": 17,
+        "prior_extract_pages_read": 14,
+        "new_pages_read": "1-17",
+        "text_read": "FULL",
+        "visual_read": "FULL_PAGE_CONTACT_SHEETS_1-17",
+        "owner": "C4",
+        "decision": "ADAPT",
+        "claims_limit": "2022/2024 audience and platform claims are historical and unverified; price card is not current pricing.",
+        "distilled": "Treat podcast work as editorial + production + distribution + community workflow; retain idea/brief, guest/rights, script, recording, edit/mix, artwork, metadata, distribution and outcome evidence as separate linked stages. Listener intimacy/companionship are hypotheses to evaluate per task, not guaranteed impact.",
+        "mapping": [
+          "C4 existing PodcastPlan/Timeline/Artifact owners",
+          "contracts/experience/screen-specifications/SH-01.md",
+          "contracts/experience/screen-specifications/BMP-08.md"
+        ]
+      },
+      {
+        "display_name": "《凉子访谈录》深度研究报告.pdf",
+        "sha256": "3161747a39fc16c971cfa7fa6d895fc7bf2bdf553a6d0a113ce5a93a8dd342b6",
+        "size_bytes": 3508042,
+        "page_count": 24,
+        "prior_extract_pages_read": 14,
+        "new_pages_read": "1-24",
+        "text_read": "FULL",
+        "visual_read": "FULL_PAGE_CONTACT_SHEETS_1-24",
+        "owner": "C4",
+        "decision": "ADAPT",
+        "claims_limit": "The report’s sample sizes, score dimensions, proposed 20/20/20 grouping and causal/virality claims are unvalidated proposals; do not hard-code them as fact.",
+        "distilled": "A usable interview-research chain: person/context → evidence-bearing timeline → hook/context/story/conflict/choice/change/meaning → cross-platform assets. Associate every claim/turning point with transcript/source and timecode; separate observation, interpretation, hypothesis and causal claim; retain low/baseline/failure cases and UNKNOWN; interview subject rights/consent remain explicit.",
+        "mapping": [
+          "C4 existing PodcastPlan/Timeline/Artifact owners",
+          "contracts/experience/screen-specifications/SH-01.md",
+          "contracts/experience/screen-specifications/BMP-08.md"
+        ]
+      },
+      {
+        "display_name": "日谈公园介绍2024版.pdf",
+        "sha256": "3ddec38e5ca48a6aee57dd7c81f92a2961e5ff10efb5a260bdcfd366cc287292",
+        "size_bytes": 25824764,
+        "page_count": 36,
+        "prior_extract_pages_read": 14,
+        "new_pages_read": "1-36",
+        "text_read": "FULL",
+        "visual_read": "FULL_PAGE_CONTACT_SHEETS_1-36",
+        "owner": "C4",
+        "decision": "ADAPT",
+        "claims_limit": "2024 sales deck; audience metrics, campaign performance, reach and client outcomes are dated/promotional statements, not current market truth or causal proof.",
+        "distilled": "Model a campaign deliverable as brief/audience/brand constraint → editorial concept → audio/video/content/event variants → channel-specific cutdowns and metadata → actual publication/receipt/outcome. Keep services and operations connected to an editable source project and versioned artifact; separate proposal from delivered results.",
+        "mapping": [
+          "C4 existing ContentProject/Timeline/Artifact owners",
+          "contracts/experience/screen-specifications/SH-01.md",
+          "contracts/experience/screen-specifications/BMP-08.md",
+          "Public Website existing capabilities, only where current content contracts support it"
+        ]
+      },
+      {
+        "display_name": "uth又识mediakit2025.pdf",
+        "sha256": "ef058a6c8097199d93780873102cf04b13b05cd543597440c35053131bf30707",
+        "size_bytes": 12872765,
+        "page_count": 56,
+        "prior_extract_pages_read": 14,
+        "new_pages_read": "1-56",
+        "text_read": "FULL",
+        "visual_read": "FULL_PAGE_CONTACT_SHEETS_1-56",
+        "owner": "C4",
+        "decision": "ADAPT",
+        "claims_limit": "2025 media kit; follower/audience metrics, collaboration claims and outcome language are vendor-provided and time-bound. Images/brands/people are copyrighted examples, not reusable product assets or likeness prompts.",
+        "distilled": "Creative production can link editorial identity, physical/online activation, styling/art direction, partner-specific content and channel versions while preserving audience, rights and deliverable provenance. Use as workflow evidence, not as a style mandate: LUMENIS retains PO-approved hand-drawn 2D watercolor/print direction; avoid copying people, photos, logos or campaign expression.",
+        "mapping": [
+          "C4 existing ContentProject/Timeline/Artifact owners",
+          "contracts/experience/screen-specifications/SH-01.md",
+          "contracts/experience/screen-specifications/BMP-08.md",
+          "Public Website existing capabilities, only where current content contracts support it"
+        ]
+      }
+    ],
+    "docx_paragraph_nodes": 1018,
+    "pdf_pages": 133,
+    "previous_pdf_extract_pages": 56,
+    "previous_pdf_omitted_pages": 77,
+    "product_pdf_parser": "Existing lumenis/importer/parser.py reads every PDF page; 14-page truncation was offline research extraction.",
+    "material_research_results": [
+      "work/w3-business-continuation-20261002/research-adoption-20261008.json",
+      "work/frontend-2026-10-03/material-adoption-20261008.json"
+    ],
+    "product_adoption": "METHODS_MAPPED_CURRENT_CALL_CHAIN_REVIEW_IN_PROGRESS",
+    "runtime_acceptance": "NOT_CLAIMED",
+    "model_training": "NOT_GRANTED_BY_READING",
+    "deepseek_provenance": "Local C2 traceability links prior extraction, but these originals alone do not prove DeepSeek authorship or full prior consumption.",
+    "unread_missing_originals": "OPEN_NOT_WAIVED",
+    "sensitive_access_parameters": "REMOVED_FROM_PUBLISHED_REFERENCES_ORIGINAL_PRIVATE_RECORD_PRESERVED"
+  }
 }

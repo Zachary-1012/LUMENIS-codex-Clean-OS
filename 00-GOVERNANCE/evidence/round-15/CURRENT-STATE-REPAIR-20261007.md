@@ -204,3 +204,41 @@ M research assistants use the original manifest plus existing research-hub and
 continuation ledgers, recover missing original sources and account for actual
 read coverage. Research, source adoption, real operation and separate training
 rights remain distinct; this record does not claim the whole corpus is read.
+
+## 2026-10-08 local material recovery and actual navigation repair
+
+Source baseline for this increment is `fa65267d06c358ceb9509a7c853cb9fccbcbb945`.
+Its Product/App runs 37764831601 / 37764831745 were observed successful; this
+increment does not relabel those runs as a later-SHA result.
+
+The real command `locate_capability_context.py --path lumenis/importer/documents.py`
+previously rejected that existing C5 source as having no owner route. The same
+reporting family now includes `lumenis/importer/`, matching the already-published
+C5 intake ownership. A current CLI invocation resolves that path with no missing
+rules; the locator source compiles. No new owner/family, product parser, database,
+framework or unit/integration suite is introduced.
+
+Local original recovery found both Desktop 20260914 research DOCX packages and
+older product documents. Four podcast PDFs still match the original recorded
+hashes, but contain 17/24/36/56 pages respectively; the historical 14-page-per-file
+extraction omitted 77 of 133 pages. The visual/media researcher has now read their
+complete extracted text; charts and other visual content retain separate review
+states. The existing product `lumenis/importer/parser.py` reads every PDF page, so
+this research-extraction failure must not be attributed to that product parser.
+
+C2's historical 152-item disposition/DONE claim does not establish full reading.
+The local material pipeline also inferred CURRENT/RAG admission from filenames
+and discarded source distinctions during heuristic deduplication. M's engineering
+research worker is correcting those local helpers while preserving original
+packages and the exact eight approved training rows. Those helper changes remain
+local until a separately inspected publication; no runtime RAG use or new model
+training is claimed. Full original-material coverage and actual product adoption
+remain OPEN, including all missing or unread originals; this increment is not a
+complete-corpus or user-outcome acceptance.
+
+The existing Material Owner Manifest now retains its original 199 rows plus exact
+hash readbacks for ten local DOCX originals (1,018 paragraph nodes) and four PDFs
+(133 pages, full text plus full-page visual contact-sheet review). These are bounded
+reading receipts, not corpus-wide completion or production adoption. Two access
+parameter values were removed from published source locators; original private
+locators remain locally protected and are not research/training inputs.

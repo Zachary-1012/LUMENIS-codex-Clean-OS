@@ -12,6 +12,19 @@ Root `AGENTS.md` is the only repository execution router. [The Product Owner's l
 
 ## 1. Online reader's current-state snapshot
 
+Material recovery correction (2026-10-08): inspect the existing local original
+packages and C2 continuation records, including the Desktop 20260914 content
+and platform/knowledge DOCX packages. A mention of DeepSeek is a provenance lead,
+not proof of authorship or complete reading. Four local podcast PDFs contain 133
+pages; the old C2 extraction read only 14 pages per file (56 total), omitting 77.
+This is an offline research-extraction gap: the current product PDF parser iterates
+all pages. Text extraction, actual text reading, chart/visual review, adoption and
+training admission remain separate. The importer source now resolves through the
+existing C5/reporting capability locator instead of returning an unroutable path.
+The prior 152-item OPEN=0 report is not a full-read certificate. Existing originals
+and historical reports remain preserved; full-corpus research is still OPEN.
+
+
 Latest M convergence: first exact source batch `67e26a39` has observed successful
 Product Gate `37761953084` and App Gate `37761952871`. Historical failures stay
 unchanged. The subsequent source recovery integrates previously omitted BMP-03
