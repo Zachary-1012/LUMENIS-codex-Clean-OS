@@ -43,6 +43,15 @@ publication-start date, current task dates and protected identity rules remain.
 No fresh paid resources or permission expansion is authorized. C1 must preserve
 shared reservations, record a concrete cross-owner dependency once and continue
 all independent work; no per-function handoff loop or duplicate candidates.
+Latest direct PO correction: **C1 continuously completes its own closure and
+necessary Core/runtime, scheduler and existing authorization-binding repairs and
+controlled operations. Do not pause C1 or transfer dependencies to C6.** C1 is the
+sole executor of that bounded call chain; architecture owners remain unchanged.
+Record the handoff in existing W6 reservations, preserve unrelated work and reuse
+frozen source. Verify process ownership, in-flight work, rollback and Permission;
+never force unknown processes, fabricate grants or expand source/account/cost scope.
+M reviews outcomes and formal integration, without per-function approval or taking
+over implementation. The proposed temporary C6 switch is withdrawn.
 F and C2-C6 retain their latest explicit pause until separately resumed. The
 retained topology is M + independent F + one business window; topology alone is
 not live dispatch. Website/Web closure stays first; Windows/macOS and iOS follow.

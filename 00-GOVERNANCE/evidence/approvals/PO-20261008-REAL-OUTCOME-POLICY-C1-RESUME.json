@@ -17,6 +17,19 @@
       "reasoning_effort": "ultra",
       "speed": "preserve user setting",
       "persistent_role_defaults_changed": false
+    },
+    "c1_continuous_execution_correction": {
+      "source": "Direct Product Owner messages in M current thread, 2026-10-08",
+      "quotes": [
+        "C1的闭环由自己完成，对应的东西也是C1自己完成",
+        "C1持续执行，闭环所需由他自己执行，ok？懂？"
+      ],
+      "supersedes": "Proposed C1 freeze / temporary C6 resume",
+      "executor": "C1",
+      "scope": "Existing C1 full closure plus necessary Core/runtime/scheduler/existing authorization binding repairs and controlled operations",
+      "canonical_architecture_owners_changed": false,
+      "other_windows_resumed": false,
+      "new_permission_or_cost_scope": false
     }
   },
   "constraints": [

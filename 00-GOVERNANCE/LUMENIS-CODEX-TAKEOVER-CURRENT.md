@@ -14,6 +14,13 @@ Root `AGENTS.md` is the only repository execution router. [The Product Owner's l
 
 Current dispatch: M handles the approved policy/publication and C1 outcome review;
 C1 is the sole selected business window for existing J1/U01-U05 collection closure.
+C1 also executes the necessary existing Core/runtime, scheduler and server-side
+authorization-binding dependencies itself under the PO's subsequent direct
+correction; it does not pause or switch its work to C6. The existing reservation
+records this bounded implementation handoff without replacing architectural
+owners or expanding Permission/cost/account scope. M reviews results and formal
+integration; the earlier proposed C6 restart is withdrawn. This rule update is
+not evidence that runtime loading, collection or full C1 acceptance has passed.
 F/C2-C6 remain paused until explicitly resumed. The retained M + independent F +
 one business-window topology and Website/Web priority are unchanged. No new cost,
 protected identity access or shared-owner overwrite is authorized. Actual delivery,

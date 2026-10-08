@@ -3,6 +3,8 @@
 > 2026-10-08 PO 正式验收策略变更：单元/集成及换名模块自动测试不再是开发、合并、验收或发布条件，Codex 不新建、不执行这些套件；保留历史测试和 FAILED 证据。当前执行真实任务→既有源码→构建运行→实际用户操作→真实结果→保存/修订/重开→恢复→验收→正式集成。适用编译、静态质量、安全/权限、数据一致性及真实产品 E2E 保留；历史材料中的测试命令不构成当前执行义务，真实缺陷仍必须修复。R01–R15/J1–J8/U01–U25 与 Owner/权益/生产数据边界不变；机器合同 v1.2.0 的 verification_policy 记录现行语义。仅 M 与 C1 本轮恢复；C1 当前指定 GPT-6 Astra / ultra，其余窗口暂停状态按最新直接指令保留。
 
 > Status: **CURRENT EXECUTION INDEX / SIX-ROUND DELIVERY / COMPLETE LEGACY COVERAGE**
+
+> 最新 PO 执行纠正：C1 持续自行完成真实采集闭环及其必需的既有 Core/Runtime、Scheduler、现有授权服务端绑定修复和受控运行操作，不暂停 C1、不转交 C6。源码的架构 Owner 不变；本次必要调用链的实际执行者为 C1，沿已有 W6 Shared Reservations 记录有界交接并保护原冻结成果和无关工作。进程归属、在途任务、备份恢复、Permission、账号与零新增费用边界不变。M 负责边界同步、成果审核和正式集成，不代做 C1 普通修复。其余窗口继续暂停；不据此声称任何能力已验收。
 >
 > Updated: 2026-10-07; earlier baseline tables remain dated provenance
 > Approved ROUND 01 source-audit baseline: `df15a99de6f5ffc3eb85e2c9924afb59c1c3c781` (provenance only; resolve the live `origin/main` before every change)
