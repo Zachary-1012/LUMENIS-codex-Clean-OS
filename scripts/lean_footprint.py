@@ -79,20 +79,10 @@ def measure_runtime():
 
 
 def measure_tests():
-    import subprocess
-    try:
-        r = subprocess.run([sys.executable, "-m", "pytest", "tests/", "-m", "not online",
-                            "--collect-only", "-q", "-p", "no:warnings"],
-                           cwd=ROOT, capture_output=True, text=True, timeout=120)
-        out = (r.stdout or "") + (r.stderr or "")
-        n = 0
-        for ln in out.splitlines():
-            m = re.search(r":\s*(\d+)\s*$", ln.strip())
-            if m:
-                n += int(m.group(1))
-        return {"collected": n}
-    except Exception as e:  # noqa: BLE001
-        return {"collected": None, "error": repr(e)}
+    # Retain schema/history without importing or collecting module test suites.
+    return {"collected": None, "executed": False,
+            "status": "NOT_REQUIRED_BY_PO_POLICY",
+            "reason": "PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME"}
 
 
 def measure_db():

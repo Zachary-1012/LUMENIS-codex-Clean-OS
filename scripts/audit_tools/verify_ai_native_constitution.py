@@ -126,7 +126,14 @@ workflow_step = (
     "        run: python scripts/audit_tools/verify_ai_native_constitution.py"
 )
 require(workflow, workflow_step, "Product Gate")
-require(workflow, "Run clean-checkout hermetic pytest (BLOCKING)", "Product Gate")
+require(workflow, "Compile tracked Python sources (BLOCKING)", "Product Gate")
+require(workflow, "Validate Shared Database authority (BLOCKING)", "Product Gate")
+require(workflow, "Prepare product schema and media tools (BLOCKING)", "Product Gate")
+require(app_workflow, "run: flutter analyze", "App Gate")
+require(app_workflow, "run: flutter build web --release", "App Gate")
+for name, body in (("Product Gate", workflow), ("App Gate", app_workflow)):
+    if re.search(r"(?m)^\s*(?:run:\s*(?:>-)?\s*)?(?:python(?:3)? -m (?:pytest|unittest)|flutter test|dart test)\b", body):
+        errors.append(f"{name}: unit/integration suite execution violates formal PO policy")
 require(
     app_workflow,
     "- name: Validate AI-native product constitution execution chain (BLOCKING)\n"
@@ -152,8 +159,8 @@ for token in (
     require(report_test, token, "missing != 0 regression")
 
 for token in (
-    "quarantine is temporary and is not PASS",
-    "Do not move a failing deterministic regression into Tier C or quarantine merely to make CI green.",
+    "Historical FAILED remains FAILED",
+    "Renaming module suites does not make them real user E2E.",
 ):
     require(test_tiers, token, "CI test-tier anti-bypass")
 

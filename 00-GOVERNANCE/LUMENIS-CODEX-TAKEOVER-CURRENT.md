@@ -1,7 +1,7 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
-> Latest direct PO state, 2026-10-08: all M/F/C1–C6 product-development tasks are paused by the user. M is authorized only to reconcile online/local state and audit every current capability. Earlier M + F + one business-window instructions remain the resume topology, not live dispatch. The local ignored ledger records WAITING_DEPENDENCY; no window may infer resume from this publication. The user has prohibited executing unit/integration suites; existing test files, CI failures and release requirements remain, with unrun proof reported NOT_RUN/OPEN. See `evidence/approvals/PO-20261008-ALL-TASK-PAUSE-AUDIT.json`.
+> Latest direct PO state, 2026-10-08: formal real-outcome verification policy is adopted in Governance Machine v1.2.0. Unit/integration and renamed module suites are removed from mandatory gates and may not be created or executed; historical failures remain. Build/static/security/data integrity and actual user E2E/recovery/release remain. M synchronizes this policy and dispatches only C1 for its complete existing data/collection closure using GPT-6 Astra / ultra (current-window override, speed unchanged). F and C2-C6 retain their latest direct pause; topology is not dispatch. Approval: `evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json`.
 > 2026-10-08 latest PO dispatch: M + independent F + one M-selected business window. W6 integration occupies the same business slot; other C windows wait with complete work/Goals preserved. Figma-first is superseded by reuse of existing editable design and an immediate zero-new-cost Flutter/Dart/SVG fallback when the free tool path is limited. All 44 screens, Website families, four surfaces and J/R/U acceptance remain. Authorization does not prove RUNNING, implementation, runtime load or user acceptance. Existing manual model/effort/tier and security boundaries remain.
 > Direct-build/native-target correction: F builds real frontend immediately from existing contracts without separate design drafts/Figma or M DESIGN_READY coding prerequisite. Later native Desktop targets Windows/macOS only; Mobile targets iOS only. Android/Linux native client delivery requirements are superseded, with existing source/history preserved. Linux server/CI and browser access are separate.
 > Latest surface priority, 2026-10-08: close Public Website and Web Workspace first; defer dedicated Desktop/Mobile design, implementation, packaging and device acceptance until those two surfaces close. Preserve all four-surface requirements and existing work. Web-required Core/SYSTEM dependencies remain in scope. This changes order, not actual capability/acceptance or deployment/cost authority. Approval: `evidence/approvals/PO-20261008-WEBSITE-WEB-FIRST.json`.
@@ -12,13 +12,13 @@ Root `AGENTS.md` is the only repository execution router. [The Product Owner's l
 
 ## 1. Online reader's current-state snapshot
 
-Latest direct PO correction: M continues control/review; F continues independently;
-M selects one C1-C6 business window and switches it through frozen owner handoff.
-W6 is included in that limit. No new paid resource is authorized. Ordinary slot
-switches within these existing full tasks do not require repeated PO approval.
-Actual DISPATCHED/admission/RUNNING and native Goal state are separate receipts.
-M retains the 30-minute lightweight review and waits when nothing is actionable.
-Approval: `evidence/approvals/PO-20261008-SERIAL-BUSINESS-INDEPENDENT-F-ZERO-COST.json`.
+Current dispatch: M handles the approved policy/publication and C1 outcome review;
+C1 is the sole selected business window for existing J1/U01-U05 collection closure.
+F/C2-C6 remain paused until explicitly resumed. The retained M + independent F +
+one business-window topology and Website/Web priority are unchanged. No new cost,
+protected identity access or shared-owner overwrite is authorized. Actual delivery,
+fresh admission and RUNNING are separate local receipts. M heartbeat stays paused.
+Approval: `evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json`.
 
 The user also requires product-owned computer operation and in-product browser
 use on Mobile/Desktop/Web, with explicit optional external opening. The supplied
@@ -35,7 +35,12 @@ not a new runtime or a claim of implementation. Evidence:
 Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-This rules-only publication changes no product behavior, loaded runtime or DB.
+This rules/CI publication changes verification policy, not product behavior,
+loaded runtime or DB. Product Gate keeps compilation, static governance/security/
+data authority and actual disposable schema/media prerequisites; App Gate keeps
+analysis and now builds Web instead of running widget/module tests. New exact-SHA
+CI is observed separately; no historical FAILED result is promoted. Neither gate
+alone proves an accepted real user outcome.
 The preceding `9b211052be9505764c13fae9481b6b7f8a0644b3` source batch
 remains published historical truth with Product and App Gates both FAILED at
 that exact SHA. Protected local C1–C6/F candidates are not published by this

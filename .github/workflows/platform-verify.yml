@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   verify:
-    name: production truth + hermetic platform verification
+    name: production source integrity + runtime prerequisites
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -80,42 +80,12 @@ jobs:
           echo "Compiling ${python_files} tracked Python files"
           git ls-files -z '*.py' | xargs -0 -r -n 120 python -m py_compile
 
-      - name: Validate CI test-tier manifests (BLOCKING)
+      # PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME: module suites are historical.
+      # Build, static security/data guards and real runtime prerequisites remain.
+      - name: Install product runtime dependencies (EXECUTION-LAYER)
         shell: bash
         run: |
-          missing=0
-          while IFS='|' read -r raw_path reason; do
-            path="$(echo "$raw_path" | xargs)"
-            [[ -z "$path" || "$path" == \#* ]] && continue
-            if [[ ! -e "$path" ]]; then
-              echo "Missing environment-tier path: $path"
-              missing=1
-            fi
-          done < tests/ci_environment_tests.txt
-
-          while IFS='|' read -r raw_node reason; do
-            node="$(echo "$raw_node" | xargs)"
-            [[ -z "$node" || "$node" == \#* ]] && continue
-            file="${node%%::*}"
-            if [[ ! -f "$file" ]]; then
-              echo "Missing quarantined-node file: $file"
-              missing=1
-            fi
-          done < tests/ci_quarantined_nodeids.txt
-
-          python tests/select_ci_tests.py > /tmp/lumenis-hermetic-tests.txt
-          selected_count="$(wc -l < /tmp/lumenis-hermetic-tests.txt | xargs)"
-          if [[ "$selected_count" -lt 1 ]]; then
-            echo "Hermetic selector produced no tests"
-            missing=1
-          fi
-          echo "Hermetic test files selected: $selected_count"
-          exit "$missing"
-
-      - name: Install development/test dependencies (EXECUTION-LAYER)
-        shell: bash
-        run: |
-          python -m pip install --disable-pip-version-check --retries 4 --timeout 30 -r requirements-dev.txt
+          python -m pip install --disable-pip-version-check --retries 4 --timeout 30 -r requirements.txt
 
       - name: Credential-path boundary diagnostic (INFORMATIONAL)
         shell: bash
@@ -130,72 +100,24 @@ jobs:
               print('tracked-boundary-path:', path)
           PY
 
-      - name: Prepare isolated schema and media tools (BLOCKING)
+      - name: Prepare product schema and media tools (BLOCKING)
         shell: bash
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg
           ffmpeg -version
           ffprobe -version
-          seed_dir="$(mktemp -d "$RUNNER_TEMP/lumenis-hermetic-seed.XXXXXX")"
-          export ZBC_DB_PATH="$seed_dir/monitor-test-seed.db"
+          seed_dir="$(mktemp -d "$RUNNER_TEMP/lumenis-runtime-schema.XXXXXX")"
+          export ZBC_DB_PATH="$seed_dir/monitor-runtime-schema.db"
           python -c "from lumenis.shared.database.migrations import migrate; assert migrate(), 'Disposable schema bootstrap failed'"
-          echo "LUMENIS_TEST_SEED_DB=$ZBC_DB_PATH" >> "$GITHUB_ENV"
 
-      - name: Run hermetic Shared Database acceptance (BLOCKING)
-        run: >-
-          python -m pytest -q
-          tests/test_database.py
-          tests/test_db_isolation_contract.py
-          tests/test_shared_database_owner.py
-          tests/test_shared_database_migrations.py
 
-      - name: Run clean-checkout hermetic pytest (BLOCKING)
-        shell: bash
-        timeout-minutes: 15
-        run: |
-          mapfile -t test_files < <(python tests/select_ci_tests.py)
-
-          deselect_args=()
-          while IFS='|' read -r raw_node reason; do
-            node="$(echo "$raw_node" | xargs)"
-            [[ -z "$node" || "$node" == \#* ]] && continue
-            deselect_args+=("--deselect=$node")
-          done < tests/ci_quarantined_nodeids.txt
-
-          # Keep the exact selected coverage and deselections, but isolate the
-          # large hermetic suite into deterministic sequential Python processes.
-          # This prevents accumulated native-extension/runtime state from turning
-          # one process crash into a false product regression while preserving
-          # blocking semantics: any shard failure still fails the Gate.
-          shard_count=6
-          total="${#test_files[@]}"
-          shard_size=$(( (total + shard_count - 1) / shard_count ))
-          echo "Running $total hermetic test files in up to $shard_count sequential shards"
-
-          for ((shard=0; shard<shard_count; shard++)); do
-            start=$(( shard * shard_size ))
-            (( start >= total )) && break
-            remaining=$(( total - start ))
-            count="$shard_size"
-            (( remaining < count )) && count="$remaining"
-            shard_files=("${test_files[@]:start:count}")
-            echo "=== hermetic shard $((shard + 1))/$shard_count: files $start..$((start + count - 1)) ==="
-            PYTHONFAULTHANDLER=1 python -m pytest \
-              "${shard_files[@]}" \
-              -m "not online" \
-              "${deselect_args[@]}" \
-              -q --tb=line
-          done
-
-      - name: Production/live and quarantine inventory (INFORMATIONAL)
+      - name: Record gate scope (INFORMATIONAL)
         if: ${{ always() }}
-        shell: bash
         run: |
-          echo "=== Environment / Production-Live suites ==="
-          cat tests/ci_environment_tests.txt
-          echo "=== Exact quarantined nodeids ==="
-          cat tests/ci_quarantined_nodeids.txt
+          echo "Unit/integration suites are not executed under the formal PO policy."
+          echo "Historical failures remain failed; real E2E and user acceptance require separate actual evidence."
+          echo "This source/runtime-prerequisite gate alone does not close a user job or release."
 
       - name: Boundary Check (ADVISORY)
         if: ${{ always() }}

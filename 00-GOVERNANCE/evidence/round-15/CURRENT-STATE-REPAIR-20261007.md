@@ -101,3 +101,22 @@ Actual same-SHA Product Gate `37732342519` and App Gate `37732342535` remain FAI
 M separately accepted the final 14-path rules package on exact 9b211052 base, including its direct PO receipt and implementation guides. W6 publishes that accepted selection with factual CURRENT/this existing Round composition only. Required final staged guards and same-commit remote pins remain explicit publication receipts. No product source/machine-contract edits or deletion of historical/native/source/model/design/media assets enter this selection. Website + Web Workspace have priority, F builds directly, and later native targets are Windows/macOS/iOS with Linux server/CI/browser retained. Existing Permission, Evidence, source-use, cost and deployment gates are unchanged.
 
 No production restart, formal DB write, retired-provider activation, paid resource, model execution or C-window completion is claimed. The loaded Core revision, normal useful saved/revised/reopened results, Scheduler continuity, controlled Browser/OS, actual owned AI and full C6 closure remain open. Native Goal PAUSED/readback and SETTINGS_UNVERIFIED are preserved; actual newest PO continuation controls execution. USER_VERIFIED / RELEASED / OPERATING remain unclaimed.
+# 2026-10-08 formal PO verification-policy and C1 dispatch delta
+
+The direct PO receipt `PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME` authorizes the
+existing governance machine contract v1.2.0 and corresponding current docs, CI,
+engineering-hook/helper and skill changes. Unit/integration and renamed module
+suites are no longer created, run or required; their files, assertions, historical
+failures and all real product defects are preserved. Compilation, static quality,
+security/Permission, data consistency, genuine user E2E, recovery and Release
+evidence remain. No product behavior, Production DB, session or paid resource is
+changed by this policy batch. Exact new CI results remain pending until observed;
+the failed Product/App runs at `9b211052` remain failed.
+
+C1 is selected for the existing full J1/U01–U05 outcome with the user-requested
+GPT-6 Astra / ultra window override. Dispatch is recorded locally after publication;
+actual admission/RUNNING and native Goal state require tool/owner readback. F and
+C2–C6 remain paused. Their dirty source, current reservations and original assets
+are preserved. The revised C1 outcome record spells out real platform recovery,
+original content/media intake, formal lineage, useful business consumption,
+continuous product-owned operation and recovery. Module-test receipts cannot close it.

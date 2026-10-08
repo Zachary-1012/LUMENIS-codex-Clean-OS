@@ -1,7 +1,7 @@
 {
   "schema": "lumenis.governance-machine-contract/v1",
   "contract_id": "lumenis-governance-machine",
-  "contract_version": "1.1.0",
+  "contract_version": "1.2.0",
   "status": "ACTIVE",
   "scope": "GOVERNANCE_ONLY",
   "product_semantics_may_change": false,
@@ -172,7 +172,8 @@
     "change_gate": {
       "purpose": "bounded_change",
       "requires": [
-        "affected_tests",
+        "applicable_build_static_security_data_checks",
+        "applicable_real_operation_evidence",
         "mandatory_blocking_guards"
       ]
     },
@@ -424,5 +425,34 @@
       ".yaml",
       ".yml"
     ]
+  },
+  "verification_policy": {
+    "approval_receipt": "00-GOVERNANCE/evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json",
+    "unit_integration_required": false,
+    "create_unit_integration_allowed": false,
+    "run_unit_integration_allowed": false,
+    "renamed_module_suites_allowed": false,
+    "historical_tests_and_failures_preserved": true,
+    "known_real_defects_must_be_repaired": true,
+    "retained_checks": [
+      "compilation",
+      "static_quality",
+      "security_permission",
+      "data_consistency",
+      "real_user_e2e",
+      "recovery",
+      "release_verification"
+    ],
+    "real_e2e_requires": [
+      "running_product",
+      "permitted_real_inputs",
+      "actual_user_operations",
+      "useful_result",
+      "applicable_save_revise_reopen",
+      "applicable_recovery",
+      "evidence_evaluation"
+    ],
+    "mock_fixture_http_success_is_acceptance": false,
+    "gate_pass_is_product_closure": false
   }
 }

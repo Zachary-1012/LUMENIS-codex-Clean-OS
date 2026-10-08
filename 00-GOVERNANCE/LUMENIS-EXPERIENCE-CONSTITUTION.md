@@ -1012,7 +1012,7 @@ Do not build all screens from a generic template. Work in this order, with a cap
 3. **Prove the five Golden Pages:** AI-01, CTH-01, BMP-01, SH-01 and SYS-01 each use their semantic signature in §25 and bind to live owners. Do not mark a fixture-backed page complete.
 4. **Migrate by workflow family:** bind remaining contract screens only after their source/API/Permission/Evidence owner is verified. Preserve established behavior before removing any migrated surface.
 5. **Reach surface parity in the approved order:** first run applicable Website/Web Workspace interaction, accessibility, responsive, error/recovery and screenshot checks at §20 widths; Desktop and Mobile native-specific checks follow Website/Web closure and remain required for final four-surface parity. Verify Public Website acquisition/workspace-entry separately; do not require identical layouts.
-6. **Release evidence:** require widget and repository tests, affected Python/API integration tests, critical runtime/E2E, clean-clone acceptance and current-main CI evidence. Record unavailable infrastructure as `UNVERIFIED`, never as PASS.
+6. **Release evidence:** require applicable compilation, static quality/security/data checks, actual complete user runtime/E2E, clean-clone build/runtime acceptance and current-main CI evidence. Under the formal 2026-10-08 PO policy, do not create/run unit, integration or renamed module suites; preserve their historical files and failures. Record unavailable infrastructure as `UNVERIFIED`, never as PASS.
 
 For each domain, acceptance must include its invariant in §30, real ViewModel truth, permission response, Evidence trace and return, honest missing/error states, keyboard/touch operation, reduced motion, persistence or explicit non-persistence, and the result after a real action. A screen is complete only when its user task completes end to end.
 
@@ -1103,7 +1103,7 @@ AND success, partial, empty, stale, blocked, offline and error states are truthf
 AND each approved operational surface completes its assigned part of the business task with suitable composition
 AND keyboard, touch, screen reader and reduced motion have equivalent paths
 AND a real action result can be inspected and returned to its origin
-AND focused tests plus affected integration/runtime regressions pass
+AND applicable build/static/security/data checks and actual user-operation/recovery acceptance pass
 ```
 
 The binding registry is an implementation and acceptance ledger. It is not evidence that every planned module has shipped; completion is reported only for rows whose source, runtime behavior and acceptance are verified.

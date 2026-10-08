@@ -14,23 +14,67 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 OWNER = ROOT / "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md"
+VERIFICATION_POLICY = ROOT / "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json"
 
 TEXT_SOURCE = {".py", ".dart", ".md", ".toml", ".yaml", ".yml", ".json", ".js", ".ts", ".txt", ".ps1", ".cmd", ".rules"}
 DENY_SOURCE = re.compile(r"(^|/)(\.git|\.env[^/]*|auth\.json|credentials[^/]*|[^/]*cookies?[^/]*|[^/]*profile[^/]*|[^/]*secrets?[^/]*)(/|$)", re.I)
 ROUTES = [
     ("current-docs", r"api|sdk|package|dependenc|library|framework|\u6587\u6863|\u4f9d\u8d56|\u7248\u672c", "Context7 / openaiDeveloperDocs / official docs"),
     ("source-navigation", r"refactor|implement|source|code|owner|\u4ee3\u7801|\u5b9e\u73b0|\u91cd\u6784|\u5f00\u53d1", "git / rg / engineering"),
-    ("database-integrity", r"database|sqlite|migration|repository|\u6570\u636e\u5e93|\u8fc1\u79fb|\u6301\u4e45\u5316", "canonical database owner; read-only inspection"),
-    ("python-contracts", r"python|flask|backend|endpoint|\u540e\u7aef|\u63a5\u53e3", "Python AST; pytest in native sandbox"),
-    ("flutter-runtime", r"flutter|dart|widget|app/|mobile|desktop|\u79fb\u52a8|\u684c\u9762|\u9875\u9762", "dart MCP; existing Flutter skills"),
+    ("database-integrity", r"database|sqlite|migration|repository|\u6570\u636e\u5e93|\u8fc1\u79fb|\u6301\u4e45\u5316", "canonical database owner; safe data-consistency and recovery evidence"),
+    ("python-contracts", r"python|flask|backend|endpoint|\u540e\u7aef|\u63a5\u53e3", "Python AST/compile and applicable static, security, and data checks"),
+    ("flutter-runtime", r"flutter|dart|widget|app/|mobile|desktop|\u79fb\u52a8|\u684c\u9762|\u9875\u9762", "Dart/Flutter analysis and target build; actual promised surface acceptance"),
     ("browser-debug", r"browser|web|console|network|playwright|\u6d4f\u89c8\u5668|\u7f51\u9875|\u524d\u7aef", "verified browser/chrome/playwright tooling"),
     ("security-effects", r"permission|auth|cookie|secret|security|publish|\u6743\u9650|\u8ba4\u8bc1|\u5b89\u5168|\u53d1\u5e03", "Codex Security; Permission/effect owner"),
-    ("testing-evidence", r"test|accept|e2e|bug|fix|\u6d4b\u8bd5|\u9a8c\u6536|\u4fee\u590d|\u62a5\u9519", "scoped tests; runtime/E2E evidence"),
+    ("release-completion", r"test|accept|e2e|bug|fix|\u6d4b\u8bd5|\u9a8c\u6536|\u4fee\u590d|\u62a5\u9519", "retained compile/static/security/data/recovery checks and real-user E2E; module suites prohibited by machine policy"),
     ("release-ci", r"release|deploy|ci\b|workflow|\u4e0a\u7ebf|\u90e8\u7f72|\u6d41\u6c34\u7ebf", "GitHub; approved deployment provider"),
     ("research-adoption", r"research|compare|oss|license|\u7814\u7a76|\u6bd4\u8f83|\u5f00\u6e90|\u9009\u578b", "current primary sources; licenses"),
     ("review-delegation", r"review|audit|agent|\u5ba1\u8ba1|\u5ba1\u67e5|\u5e76\u884c", "bounded native subagents/reviewer"),
     ("recovery-continuity", r"resume|continue|compact|handoff|\u7ee7\u7eed|\u63a5\u624b|\u6062\u590d", "checkpoint; fresh local/remote state"),
 ]
+
+
+def current_verification_policy():
+    try:
+        contract = json.loads(VERIFICATION_POLICY.read_text("utf-8-sig"))
+        policy = contract.get("verification_policy")
+        return policy if isinstance(policy, dict) else None
+    except (OSError, json.JSONDecodeError, AttributeError):
+        return None
+
+
+def module_suite_policy(policy=None):
+    policy = current_verification_policy() if policy is None else policy
+    if not isinstance(policy, dict):
+        return {"status": "POLICY_UNAVAILABLE", "create_allowed": False, "run_allowed": False, "renamed_suites_allowed": False}
+    return {
+        "status": "PROHIBITED" if policy.get("run_unit_integration_allowed") is not True else "POLICY_CONTROLLED",
+        "create_allowed": policy.get("create_unit_integration_allowed") is True,
+        "run_allowed": policy.get("run_unit_integration_allowed") is True,
+        "renamed_suites_allowed": policy.get("renamed_module_suites_allowed") is True,
+    }
+
+
+def applicable_retained_checks(paths, policy):
+    retained = set(policy.get("retained_checks", [])) if isinstance(policy, dict) else set()
+    joined = " ".join(paths).lower()
+    suffixes = {Path(path).suffix.lower() for path in paths}
+    checks = []
+    if suffixes.intersection({".py", ".dart", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".rs"}):
+        checks.extend(("compilation", "static_quality"))
+    if re.search(r"security|permission|auth|effect|cookie", joined):
+        checks.append("security_permission")
+    if re.search(r"database|sqlite|migration|canonical|evidence|data", joined):
+        checks.append("data_consistency")
+    if re.search(r"runtime|recovery|backup|restore|supervisor|startup", joined):
+        checks.append("recovery")
+    if re.search(r"app/|experience|screen|route|view_model|api", joined):
+        checks.append("real_user_e2e")
+    if re.search(r"release|deploy|package|workflow|ci", joined):
+        checks.append("release_verification")
+    if not checks:
+        checks.append("static_quality")
+    return [check for check in dict.fromkeys(checks) if check in retained]
 def _redact(text: str) -> str:
     text = re.sub(r"\b(?:sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9]{15,})", "[REDACTED]", text)
     return re.sub(r"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+", r"\1[REDACTED]", text)
@@ -99,14 +143,21 @@ def validation_plan(paths):
     joined = " ".join(paths)
     plan = []
     if ".py" in joined:
-        plan.append("AST then owner-matched pytest in an isolated test DB, through native sandbox.")
+        plan.append("Compile Python source and apply the retained static-quality checks through the native sandbox; do not create or run module suites.")
     if ".dart" in joined:
-        plan.append("Dart MCP diagnostics, scoped unit/widget tests, actual promised target surfaces.")
+        plan.append("Run Dart/Flutter analysis and build the promised target; verify the actual user flow on the applicable product surface.")
     if re.search(r"database|migration|permission|evidence|runtime", joined, re.I):
-        plan.append("Shared primitive: widen integration/regression and preserve protected production DB.")
+        plan.append("Preserve production data; perform applicable permission, data-consistency, runtime, and recovery verification through existing owners.")
     if re.search(r"app/|experience|screen", joined, re.I):
-        plan.append("Current screen specification, Experience/anti-template gates, real-user E2E and failure recovery.")
-    return {"paths": paths, "plan": plan or ["Resolve current Owner and proportional acceptance checks."], "execution": "Not run. Use native sandbox; retain exact command, exit status, output and source fingerprint."}
+        plan.append("Use the current screen specification and blocking Experience audits; complete the real-user E2E and recovery path.")
+    plan.append("Complete the owning capability's real-user E2E with permitted real inputs, useful result, applicable save/reopen behavior, recovery, and evidence evaluation.")
+    policy = current_verification_policy()
+    return {
+        "paths": paths,
+        "plan": plan,
+        "module_suite_policy": module_suite_policy(policy),
+        "execution": "NOT_RUN; planning only. Retain exact compile/static/build, security, data, runtime, recovery, and real-E2E evidence as applicable.",
+    }
 
 def git(*args):
     p = subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, encoding="utf-8", errors="strict", timeout=15)
@@ -135,16 +186,15 @@ def verification_plan(paths):
     for value in paths:
         if not isinstance(value, str): raise ValueError("Expected path strings")
         checked_path(value)
-    inventory = git("ls-files", "--cached", "--others", "--exclude-standard", "-z").split("\0")
-    candidates = sorted({p for p in inventory if (p.startswith("tests/") or p.startswith("app/test/")) and (p.endswith(".py") or p.endswith(".dart"))})
-    relevant = [p for p in candidates if (p.startswith("app/test/") and any(x.endswith(".dart") for x in paths)) or (p.startswith("tests/") and any(x.endswith(".py") for x in paths))]
-    stems = {Path(p).stem for p in paths}
-    entrypoint = bool(stems & {"main", "app", "__init__"})
-    matched = [p for p in relevant if entrypoint or any(Path(p).stem in {"test_"+s, s+"_test"} or Path(p).stem.startswith("test_"+s+"_") for s in stems)][:100]
-    broad = any(any(s in p.lower() for s in ["database", "permission", "evidence", "gateway", "runtime"]) for p in paths)
-    return {"input_paths": paths, "suggested_existing_tests": matched, "widen_regression": broad or entrypoint,
-            "selection_is_heuristic": True, "executed": False,
-            "requirements": ["Read current source owner and caller contracts.", "Use isolated DBs and current CI test tiers.", "Native Flutter tests are not replaced by browser tests.", "User-visible completion requires real runtime/E2E evidence."]}
+    policy = current_verification_policy()
+    if policy is None:
+        return {"input_paths": paths, "status": "VERIFICATION_POLICY_UNAVAILABLE", "required_checks": [],
+                "module_suite_policy": module_suite_policy(policy), "executed": False}
+    required = applicable_retained_checks(paths, policy)
+    return {"input_paths": paths, "status": "PLANNED_NOT_EXECUTED", "required_checks": required,
+            "module_suite_policy": module_suite_policy(policy),
+            "acceptance": "Complete applicable real-user E2E with permitted real inputs and useful results; preserve save/reopen, recovery, and evidence evaluation.",
+            "executed": False}
 
 def source_owner(query):
     if not isinstance(query, str) or len(query) > 80: raise ValueError("Query exceeds limit")
@@ -170,6 +220,15 @@ def runtime_health():
         return {"reachable": False, "error_type": type(error).__name__, "status": "UNAVAILABLE", "product_e2e_verified": False}
 
 def run_engineering_checks():
+    policy = current_verification_policy()
+    if policy is None:
+        return {"status": "VERIFICATION_POLICY_UNAVAILABLE", "exit_code": None, "scope": "engineering-layer-only",
+                "product_tests_run": False, "executed": False, "reason": "Machine verification_policy could not be read; no suite was invoked."}
+    if policy.get("run_unit_integration_allowed") is not True:
+        return {"status": "PROHIBITED_BY_POLICY", "exit_code": None, "scope": "engineering-layer-only",
+                "product_tests_run": False, "executed": False,
+                "policy_path": VERIFICATION_POLICY.relative_to(ROOT).as_posix(),
+                "reason": "Current machine verification_policy prohibits unit/integration suite execution; no subprocess was started."}
     p = subprocess.run([sys.executable, "-X", "utf8", "-m", "unittest", "discover", "-s", str(ROOT/".codex/tests"), "-v"],
                        cwd=ROOT, capture_output=True, encoding="utf-8", errors="replace", timeout=90)
     return {"exit_code": p.returncode, "scope": "engineering-layer-only", "product_tests_run": False, "output": (p.stdout+p.stderr)[-14000:]}

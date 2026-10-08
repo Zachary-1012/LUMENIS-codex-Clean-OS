@@ -158,7 +158,7 @@ def validate_contract() -> dict:
     c = load_json(CONTRACT_PATH)
     if c.get("schema") != "lumenis.governance-machine-contract/v1":
         fail("unexpected governance contract schema")
-    if c.get("contract_id") != "lumenis-governance-machine" or c.get("contract_version") != "1.1.0":
+    if c.get("contract_id") != "lumenis-governance-machine" or c.get("contract_version") != "1.2.0":
         fail("unexpected governance contract identity/version")
     if c.get("status") != "ACTIVE" or c.get("scope") != "GOVERNANCE_ONLY":
         fail("governance machine contract must remain ACTIVE and GOVERNANCE_ONLY")
@@ -235,8 +235,27 @@ def validate_contract() -> dict:
     gates = c.get("gates", {})
     if set(gates) != {"change_gate", "owner_closure_gate", "release_gate"}:
         fail("governance requires exactly Change/Owner Closure/Release gate semantics")
-    if "affected_tests" not in gates["change_gate"].get("requires", []):
-        fail("Change Gate must retain affected tests")
+    policy = c.get("verification_policy", {})
+    for key in ("unit_integration_required", "create_unit_integration_allowed",
+                "run_unit_integration_allowed", "renamed_module_suites_allowed",
+                "mock_fixture_http_success_is_acceptance", "gate_pass_is_product_closure"):
+        if policy.get(key) is not False:
+            fail(f"PO verification policy drift: {key}")
+    for key in ("historical_tests_and_failures_preserved", "known_real_defects_must_be_repaired"):
+        if policy.get(key) is not True:
+            fail(f"verification integrity missing: {key}")
+    required_checks = {"compilation", "static_quality", "security_permission", "data_consistency",
+                       "real_user_e2e", "recovery", "release_verification"}
+    if not required_checks.issubset(policy.get("retained_checks", [])):
+        fail("retained build/static/security/data/E2E/recovery/release checks missing")
+    receipt = load_json(ROOT / policy["approval_receipt"])
+    if receipt.get("approved_by") != "Product Owner" or receipt.get("status") != "APPROVED":
+        fail("verification policy lacks actual PO receipt")
+    requirements = set(gates["change_gate"].get("requires", []))
+    if "affected_tests" in requirements or not {
+        "applicable_build_static_security_data_checks", "applicable_real_operation_evidence",
+        "mandatory_blocking_guards"}.issubset(requirements):
+        fail("Change Gate does not implement current real-outcome policy")
     if "mapped_R_J_U" not in gates["owner_closure_gate"].get("requires", []):
         fail("Owner Closure Gate must retain mapped R/J/U")
     for item in ("R01-R15", "J1-J8", "U01-U25", "Product_Gate", "App_Gate", "Critical_E2E"):

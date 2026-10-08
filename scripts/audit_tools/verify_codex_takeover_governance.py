@@ -183,6 +183,12 @@ def _publication_changed_paths(*, staged: bool = False) -> set[str]:
 
 
 def _is_product_behavior_source(path: str) -> bool:
+    # Engineering-policy entrypoints, not LUMENIS user/runtime behavior.
+    if path in {
+        ".codex/hooks/lumenis_hooks.py", ".codex/engineering.py",
+        "scripts/production_baseline_check.py", "scripts/lean_footprint.py",
+    }:
+        return False
     if path.startswith(("00-GOVERNANCE/", "docs/", "tests/", "scripts/audit_tools/", ".github/")):
         return False
     return (
@@ -200,6 +206,22 @@ def _is_rules_only_publication_path(path: str) -> bool:
         "contracts/experience/README.md",
         ".agents/skills/lumenis-flutter-experience/SKILL.md",
         "scripts/audit_tools/verify_codex_takeover_governance.py",
+        'scripts/production_baseline_check.py',
+        'scripts/lean_footprint.py',
+        '.codex/hooks/lumenis_hooks.py',
+        '.codex/engineering.py',
+        '.codex/README.md',
+        '.agents/skills/lumenis-local-engineering-tools/SKILL.md',
+
+        '.github/workflows/platform-verify.yml',
+        '.github/workflows/app-verify.yml',
+        'tests/CI_TEST_TIERS.md',
+        '00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json',
+        'scripts/audit_tools/verify_governance_machine_contract.py',
+        'scripts/audit_tools/verify_ai_native_constitution.py',
+        '.agents/skills/lumenis-testing/SKILL.md',
+        '.agents/skills/lumenis-release-completion/SKILL.md',
+
         "tests/test_online_progress_governance.py",
         # These exact JSON files are material/approved-target documentation,
         # not runtime configuration. Keep arbitrary JSON outside this allowlist.

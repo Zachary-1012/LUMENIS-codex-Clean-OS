@@ -1,0 +1,31 @@
+{
+  "schema": "lumenis.po-approval-receipt/v1",
+  "approval_id": "PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME",
+  "status": "APPROVED",
+  "approved_by": "Product Owner",
+  "approved_at": "2026-10-08",
+  "approval_source_type": "superseding_product_owner_instruction",
+  "scope_manifest": {
+    "source_thread_id": "01a0cd84-7685-7a73-97d9-83a14a546e71",
+    "direct_policy_quote": "从本指令生效起，序境研发不再以单元测试、集成测试作为开发、合并、验收或发布的强制条件。",
+    "direct_resume_quote": "我要C1-真实数据和采集能力闭环，这个窗口一次性闭环，按照对应的规划执行闭环！！！给他开6astra ultra",
+    "policy_change": "remove unit/integration execution and creation, including renamed module suites; retain build/static/security/data/real E2E/recovery/release",
+    "machine_contract_version": "1.2.0",
+    "current_dispatch": "M policy synchronization and C1 sole business outcome; F/C2-C6 pauses not lifted",
+    "c1_window_model_override": {
+      "model": "gpt-6-astra",
+      "reasoning_effort": "ultra",
+      "speed": "preserve user setting",
+      "persistent_role_defaults_changed": false
+    }
+  },
+  "constraints": [
+    "Preserve all R01-R15/J1-J8/U01-U25 outcomes and real defects until resolved",
+    "Preserve historical tests/assertions/FAILED evidence without fabrication",
+    "No new costs, platform, framework, R&D window, provider or permission expansion",
+    "Preserve all dirty/untracked source and original research/media/model assets",
+    "Retain Permission/Evidence/Canonical/Effect Fence/source rights/Production DB protection",
+    "Actual build/static/security/data/real-user E2E and recovery remain required when applicable; CI PASS alone is not JOB_CLOSED",
+    "Website/Web first; Windows/macOS and iOS later; direct frontend build remains permitted when F separately resumes"
+  ]
+}

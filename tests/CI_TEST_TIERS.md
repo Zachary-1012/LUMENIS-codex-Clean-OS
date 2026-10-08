@@ -1,71 +1,42 @@
-# LUMENIS Test Tiers
+# LUMENIS Verification and Historical Test Inventory
 
-This file defines how tests are interpreted in CI. It prevents two failure modes:
+## Current formal Product Owner policy — 2026-10-08
 
-1. false-green CI that hides real syntax/test failures;
-2. false-red clean-checkout CI caused by tests that require private cookies, protected production data, resident browsers, or a specific developer machine.
+Authority: `AGENTS.md`, Governance Machine v1.2.0 and
+`00-GOVERNANCE/evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json`.
 
-## Tier A — Repository Integrity (BLOCKING)
+Unit/integration tests are no longer development, merge, acceptance or release
+requirements. Codex must not create or run these module suites, add coverage-only
+tests, or rename them contract/functional/scenario tests to keep executing them.
+Renaming module suites does not make them real user E2E.
 
-Runs on every PR/push from a clean checkout:
+## Retained blocking checks
 
-- dependency installation;
-- `python -m compileall -q .`;
-- test-tier manifest validation;
-- pytest collection and clean-checkout reproducible tests.
+- Product Gate: tracked Python compilation, current governance/authority checks,
+  static configuration, security/data-boundary checks at their existing severity,
+  runtime dependency installation, actual disposable product schema initialization
+  and FFmpeg/ffprobe availability. This is not product E2E acceptance.
+- App Gate: pinned toolchain, locked dependency resolution, static Flutter analysis,
+  current Experience/authority checks and an actual release Web build.
+- Owner Closure and Release: genuine running-product user operation with permitted
+  real inputs, useful persistent results, save/revise/reopen/recovery, required
+  Permission/Evidence/Evaluation and same-version runtime/release/PO acceptance.
+  The mapped R01-R15/J1-J8/U01-U25 obligations remain complete.
 
-A failure here is a real repository blocker.
+Missing live evidence remains LIVE_NOT_VERIFIED/OPEN/BLOCKED. A build, static check,
+HTTP 200, mock/fixture or CI badge alone cannot establish JOB_CLOSED or RELEASED.
+Only actually retained and executed checks may report PASS.
 
-## Tier B — Hermetic Product/Contract Regression (BLOCKING)
+## Preserved historical inventories
 
-Runs all non-online tests except files listed in `tests/ci_environment_tests.txt` and exact nodeids listed in `tests/ci_quarantined_nodeids.txt`.
+Existing `tests/`, `app/test/`, `tests/select_ci_tests.py`,
+`tests/ci_environment_tests.txt` and `tests/ci_quarantined_nodeids.txt` are retained
+with their historical fixtures, assertions and evidence. Their former Tier A/B/C
+and exact-node selections are historical classifications, not current execution
+requirements. Do not delete or alter them to manufacture a green result.
+Historical FAILED remains FAILED. Removing a suite from the current gate does
+not repair an observed product defect; reproduce and repair the actual user
+failure through the existing owner and real product operation.
 
-Requirements for a Tier B test:
-
-- no real cookies/tokens/session files;
-- no protected production database;
-- no fixed developer-machine path;
-- no resident browser/CDP dependency;
-- no live external platform/network requirement;
-- deterministic fixture setup and teardown.
-
-Shared Database and platform data-center schema tests use temporary SQLite databases. Keep them in Tier B and exercise the production migration and API route contracts without opening a local production database.
-
-If a product/contract test can be made hermetic, move it out of the environment list instead of weakening its assertions.
-
-## Tier C — Production / Live / Environment Gate
-
-Files in `tests/ci_environment_tests.txt` remain required acceptance evidence, but must run only where their prerequisites exist. Examples:
-
-- protected production-candidate DB copy;
-- platform credentials/session state;
-- resident browser/CDP;
-- generated production baseline;
-- local recovery/rollback environment.
-
-Excluded does **not** mean PASS, obsolete, or optional. Production readiness cannot be declared from Tier A/B alone.
-
-## Exact-node quarantine
-
-`tests/ci_quarantined_nodeids.txt` is only for a narrow test whose own scope/fixture is currently invalid for clean CI while the rest of its module should remain blocking.
-
-Rules:
-
-- exact nodeid only; never quarantine an entire deterministic module to hide a regression;
-- every line requires a reason;
-- quarantine is temporary and is not PASS;
-- restore the node once its scanner/fixture is correctly scoped.
-
-## Change rule
-
-When adding or moving a test between tiers, record the reason. Do not move a failing deterministic regression into Tier C or quarantine merely to make CI green.
-
-Preferred migration direction:
-
-`environment-dependent test -> temp fixture / fake adapter / production-candidate copy -> Tier B`
-
-## Release interpretation
-
-- Tier A/B green = clean repository is reproducible and its hermetic contracts pass.
-- Tier C evidence green = environment/live acceptance passed for the tested release candidate.
-- `PRODUCTION_READY = YES` requires the repository's full release gates, not merely a green GitHub Actions badge.
+No current unit/integration selector, quarantine expansion or coverage target is
+required. The prior policy is preserved in Git history, including b90fce808959de09e889ed178973a49f0fa8148d.

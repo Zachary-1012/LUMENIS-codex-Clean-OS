@@ -26,6 +26,16 @@ ROLE_DEFAULTS = {
     "C6": ("gpt-6.1-sol", "ultra"),
 }
 TASK_AGENT_DEFAULT = ("gpt-6-luna", "max")
+VERIFICATION_POLICY_PATH = Path("00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json")
+
+
+def load_verification_policy(root: Path) -> dict | None:
+    try:
+        contract = json.loads((root / VERIFICATION_POLICY_PATH).read_text("utf-8-sig"))
+        policy = contract.get("verification_policy")
+        return policy if isinstance(policy, dict) else None
+    except (OSError, json.JSONDecodeError, AttributeError):
+        return None
 
 
 def model_policy_context(event: dict) -> str:
@@ -154,8 +164,8 @@ def exit_status(response) -> int | None:
 
 def verification_kind(text: str) -> str | None:
     start = r"(?:^|[;\n]|&&)\s*(?:&\s*)?"
-    py = r"(?:python(?:3|\.exe)?|py(?:\s+-3)?)(?:\s+-X\s+utf8)?"
-    if re.search(start + r"(?:pytest\b|" + py + r"\s+-m\s+(?:pytest|unittest)\b|flutter(?:\.bat)?\s+test\b)", text, re.I): return "tests"
+    py = r"(?:(?:[A-Za-z]:)?[^\s;&|\"']*[\\/])?(?:python(?:3|\.exe)?|py(?:\s+-3)?)(?:\s+-X\s+utf8)?"
+    if re.search(start + r"(?:flutter(?:\.bat)?\s+build\b|dart\s+compile\b|" + py + r"\s+-m\s+compileall\b)", text, re.I): return "compile"
     if re.search(start + r"(?:git\s+diff\s+--check\b|(?:flutter|dart)(?:\.bat)?\s+analyze\b|" + py + r"\s+-m\s+py_compile\b|codex\s+doctor\b)", text, re.I): return "static"
     return None
 
@@ -252,13 +262,32 @@ def handle(event: dict, root: Path, state: dict) -> dict:
     if name == "Stop":
         if not state.get("mutation_observed"): return {}
         now = snapshot(root); baseline = state.get("baseline", {}).get("files", {})
-        changed = {p for p in set(baseline) | set(now["files"]) if baseline.get(p) != now["files"].get(p)}
-        required = "tests" if any(Path(p).suffix in CODE for p in changed) else "static"
-        current = [r for r in state.get("receipts", []) if r["fingerprint"] == now["fingerprint"] and (r["kind"] == required or r["kind"] == "tests")]
+        policy = load_verification_policy(root)
+        policy_explicitly_prohibits_suites = bool(
+            policy
+            and policy.get("unit_integration_required") is False
+            and policy.get("create_unit_integration_allowed") is False
+            and policy.get("run_unit_integration_allowed") is False
+            and policy.get("renamed_module_suites_allowed") is False
+        )
+        if not policy_explicitly_prohibits_suites:
+            state["verification_status"] = "BLOCKED_VERIFICATION_POLICY_UNAVAILABLE"
+            reason = "The current machine verification_policy is unavailable or does not explicitly prohibit unit/integration suites; no suite will be run. Reconcile policy before claiming completion."
+            if event.get("stop_hook_active"):
+                return {"continue": False, "stopReason": reason, "systemMessage": "LUMENIS verification policy is unavailable; stopped without running a suite."}
+            return {"decision": "block", "reason": reason}
+        retained = set(policy.get("retained_checks", []))
+        if not retained.intersection({"compilation", "static_quality"}):
+            state["verification_status"] = "BLOCKED_RETAINED_CHECK_MISSING"
+            reason = "The current machine verification_policy does not retain compilation or static-quality checks; reconcile the policy before claiming completion."
+            if event.get("stop_hook_active"):
+                return {"continue": False, "stopReason": reason, "systemMessage": "LUMENIS verification policy is incomplete; stopped without running a suite."}
+            return {"decision": "block", "reason": reason}
+        current = [r for r in state.get("receipts", []) if r["fingerprint"] == now["fingerprint"] and r["kind"] in {"compile", "static"}]
         good = bool(current) and current[-1]["exit_code"] == 0
         state["verification_status"] = "SCOPED_CHECK_OBSERVED" if good else "BLOCKED_MISSING_SUCCESSFUL_CHECK"
         if good: return {}
-        reason = "No successful current-snapshot " + required + " result was recorded. Failed/unknown exit codes and checks before newer edits are not PASS. Run proportional verification; if genuinely blocked, report BLOCKED and the concrete reason, never claim completion. Real user E2E remains separately required by AGENTS.md."
+        reason = "No successful current-snapshot compilation/static result was recorded. Unit/integration test modules are prohibited and cannot satisfy this gate. Run the retained compile/static check; report genuine blockers honestly. Applicable security, data-consistency, recovery, and real-user E2E evidence remain separate acceptance requirements."
         if event.get("stop_hook_active"):
             return {"continue": False, "stopReason": reason, "systemMessage": "LUMENIS verification is BLOCKED; stopped without an unbounded retry loop."}
         return {"decision": "block", "reason": reason}

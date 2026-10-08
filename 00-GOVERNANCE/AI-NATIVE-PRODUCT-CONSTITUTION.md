@@ -1,5 +1,7 @@
 # AI 原生产品研发宪法 — 轻量版 v1.0（序境适配）
 
+> 2026-10-08 PO 正式验收策略变更：单元/集成及换名模块自动测试不再是开发、合并、验收或发布条件，Codex 不新建、不执行这些套件；保留历史测试和 FAILED 证据。当前执行真实任务→既有源码→构建运行→实际用户操作→真实结果→保存/修订/重开→恢复→验收→正式集成。适用编译、静态质量、安全/权限、数据一致性及真实产品 E2E 保留；历史材料中的测试命令不构成当前执行义务，真实缺陷仍必须修复。R01–R15/J1–J8/U01–U25 与 Owner/权益/生产数据边界不变；机器合同 v1.2.0 的 verification_policy 记录现行语义。仅 M 与 C1 本轮恢复；C1 当前指定 GPT-6 Astra / ultra，其余窗口暂停状态按最新直接指令保留。
+
 > 来源：Product Owner 提供的 `AI_Native_Product_Development_Constitution_Light_v1.0.md` 和同版 Word，2026-09-26 核对，两者均含 18 项原则。原始 Markdown SHA-256：`3470BB520E91611E446D8B49A1F024B403642ECCC8BAC3B8A745B62DBB3E99D3`。本文是增补和适配，不是原件的逐字副本。
 
 本文件提供可复用的产品研发原则。在序境仓库，根目录 `AGENTS.md` 仍是唯一执行路由；`LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`、`LUMENIS-EXPERIENCE-CONSTITUTION.md`、`LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md` 和 `LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md` 分别保持其现有领域权威。当前源码、运行、数据、权限和验收证据决定实际状态。本文件不新增产品、架构、设计系统、轮次或发布权限。
@@ -66,7 +68,7 @@ PASS、PARTIAL、BLOCKED、UNKNOWN、FAILED 可作一般沟通用语。具体项
 
 ## 16. 生命周期 Gate
 
-Discovery 确认问题和用户；Definition 确认流程、范围、数据和验收；Development 完成实现与测试；Integration 验证真实链路；Release 验证版本、部署、安全和回滚；Production 证明稳定运行；Commercial 闭合价值、合同、支持和合规。序境按 AGENTS.md 的 C1–C6 六轮执行；R01–R15 与 J1–J8 保留全部验收覆盖和真实依赖，不另立执行队列。
+Discovery 确认问题和用户；Definition 确认流程、范围、数据和验收；Development 完成实现与构建、静态/安全/数据检查；Integration 验证真实产品操作链路；Release 验证版本、部署、安全和回滚；Production 证明稳定运行；Commercial 闭合价值、合同、支持和合规。序境按 AGENTS.md 的 C1–C6 六轮执行；R01–R15 与 J1–J8 保留全部验收覆盖和真实依赖，不另立执行队列。
 
 ## 17. 红线
 

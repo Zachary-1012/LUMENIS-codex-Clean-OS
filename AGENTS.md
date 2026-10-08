@@ -11,26 +11,44 @@ execution instructions.
 
 ## 1. Authority
 
-### 2026-10-08 direct Product Owner pause and verification limit
+### 2026-10-08 formal verification policy and C1 resume
 
-The Product Owner has manually paused **all M/F/C1–C6 product-development tasks**.
-M may perform only the expressly requested online/local reconciliation and
-current capability audit. The earlier M + F + one business-window topology below
-is the retained **resume topology**, not a current dispatch. No window resumes
-because this document is published; the Product Owner must explicitly lift the
-pause. The ignored local `live_dispatch.json` records the actual wait state;
-GitHub `main` records published rules and source, not live window execution.
+The latest direct Product Owner instruction formally removes unit and integration
+tests from mandatory development, merge, acceptance and release conditions.
+Do not create or execute module-level automated tests, including renamed contract,
+functional or scenario suites; do not pursue test coverage or relabel the same
+tests as E2E. Preserve all historical test files, assertions and failed receipts.
+Known real defects still require repair. This is an explicit policy change, not
+permission to fabricate a green result or hide defects.
 
-The Product Owner also expressly prohibited running unit and integration tests
-in the current execution instruction and asked for actual product closure.
-Do not execute or relabel those suites while this instruction remains in force.
-Retain the test sources and historical failures. Static inspection and read-only
-audit may continue for this authorized reconciliation; no static check, skipped
-CI run, HTTP 200 or prior test receipt may be called a current real-user result
-or a passed Release Gate. The existing machine release requirements remain
-unmet where their proof is absent; reconcile the verification policy before
-resuming product publication rather than silently bypassing a gate. Provenance:
-`00-GOVERNANCE/evidence/approvals/PO-20261008-ALL-TASK-PAUSE-AUDIT.json`.
+Use real task -> existing-source repair -> build/run -> actual user operation ->
+real result -> save/revise/reopen -> recovery -> acceptance -> formal integration.
+Retain applicable compilation, static quality/security, Permission/Evidence/
+Canonical/Effect Fence, data consistency, source rights and real user E2E.
+Real E2E must exercise the complete running product with genuine permitted inputs
+and persistent outcomes, never mocks/fixtures, isolated module calls or HTTP 200.
+Change/Owner Closure/Release remain distinct under the machine contract; only
+checks actually retained and executed may pass. Earlier unit/integration mandates
+in historical receipts are provenance only, not current instructions.
+
+M is authorized for policy synchronization, integration review and C1 dispatch.
+**C1 is the single selected business window**, resuming its full existing J1,
+U01-U05 and mapped R requirements with **GPT-6 Astra / ultra**, an explicit
+current-window override that does not rewrite role defaults or speed settings.
+C1 must close real platform recovery, scoped topic/query acquisition, original
+content/media intake, Source/Evidence/Canonical persistence, retrieval and
+continuous refresh/recovery through the existing product-owned runtime.
+Six primary platforms, registry growth, honest missing dimensions, no universal
+publication-start date, current task dates and protected identity rules remain.
+No fresh paid resources or permission expansion is authorized. C1 must preserve
+shared reservations, record a concrete cross-owner dependency once and continue
+all independent work; no per-function handoff loop or duplicate candidates.
+F and C2-C6 retain their latest explicit pause until separately resumed. The
+retained topology is M + independent F + one business window; topology alone is
+not live dispatch. Website/Web closure stays first; Windows/macOS and iOS follow.
+Fresh admission is required before RUNNING; local live_dispatch is the execution
+ledger, not published product truth. Approval:
+`00-GOVERNANCE/evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json`.
 
 ## Current execution topology — M + F + C1-C6 eligible; live dispatch follows Product Owner instruction
 
@@ -336,7 +354,7 @@ state, version and error semantics explicitly; callers must not guess. Flutter,
 API controllers and DB utilities must not become alternate business-rule owners.
 Preserve working code and convert legacy identifiers through existing resolvers;
 do not rename the whole repository, migrate DBs or invent a universal model.
-Use affected positive and boundary regressions to prove the original problem is
+Use actual normal user operations and applicable permission/error/recovery checks to prove the original problem is
 resolved, normal user operation continues, cross-boundary data is correct and
 existing functionality is retained. Existing Change/Owner Closure/Release Gates
 apply. No DDD phase, full audit, specialized window, new framework/adapter stack,
@@ -392,8 +410,8 @@ The final product standard remains strict; the inner development loop is intenti
 
 1. **Full bootstrap once, delta bootstrap thereafter.** Run the full canonical bootstrap when a window/session starts, when relevant authority/main changed, after a conflicting handoff, or when current truth is uncertain. During continuous work on the same admitted task, refresh `origin/main`, worktree/dirty ownership and only the changed/relevant authority + owner/caller/contract slice; do not reread the entire governance corpus on every function or retry.
 2. **Research only when it can change the repair.** A repository-internal deterministic defect (wrong field, stale assertion, internal caller mismatch, obvious transaction bug) may go directly reproduce → owner/caller → repair → affected verification. Current official/upstream research is mandatory when the failure depends on an external framework/API/platform/standard, when root cause is genuinely uncertain, or when the chosen implementation needs current external evidence.
-3. **Incremental engineering is allowed; completion language stays strict.** A bounded correct repair may be integrated after its affected tests and mandatory blocking guards pass; it need not pretend the entire Job is closed. Use the state ladder `DEFINED → IMPLEMENTED → INTEGRATED → VERIFIED → JOB_CLOSED → RELEASED → OPERATING`. Only `JOB_CLOSED` or a later state counts the mapped user outcome as complete.
-4. **Gate scope is proportional inside the loop.** Each bounded change runs affected tests plus currently mandatory blocking guards. Owner closure runs the owner's full mapped acceptance. Whole-product release runs the complete R01-R15/J1-J8/U01-U25 and release evidence ladder. Do not rerun unrelated expensive suites merely to restate already valid evidence.
+3. **Incremental engineering is allowed; completion language stays strict.** A bounded correct repair may be integrated after its applicable build, static/security/data guards and real-operation checks pass; it need not pretend the entire Job is closed. Use the state ladder `DEFINED → IMPLEMENTED → INTEGRATED → VERIFIED → JOB_CLOSED → RELEASED → OPERATING`. Only `JOB_CLOSED` or a later state counts the mapped user outcome as complete.
+4. **Gate scope is proportional inside the loop.** Each bounded change verifies its applicable build, static/security/data guards and actual user-operation outcome. Owner closure runs the owner's full mapped acceptance. Whole-product release runs the complete R01-R15/J1-J8/U01-U25 and release evidence ladder. Do not rerun unrelated expensive suites merely to restate already valid evidence.
 5. **M reviews outcome packages, not every function.** The owning window resolves ordinary bugs and validates the bounded outcome continuously. M intervenes for shared-writer conflicts, cross-owner interfaces, acceptance/integration packages and final publication—not as a per-edit approval bottleneck.
 6. **Product Owner approves policies/batches, not routine rows.** Existing approved rules may admit ordinary same-class records/actions automatically when the canonical owner, rights, privacy, quality and guard contracts all pass. New sensitive sources, new rights, new paid resources, new external effects, new model/provider scope or other explicit human gates still require Product Owner approval.
 
@@ -444,8 +462,8 @@ origin/main truth
 → bounded Task Card
 → current source and runtime truth
 → implementation
-→ proportional automated tests
-→ Integration / E2E when applicable
+→ compilation / static quality / security / data consistency
+→ real user E2E when applicable
 → runtime / recovery evidence when applicable
 → blocking gates
 → commit
@@ -460,7 +478,7 @@ or `BLOCKED`; product/commercial choices that belong to the Product Owner are
 
 Non-bypass red lines:
 
-- never delete, skip, weaken, quarantine or move a legitimate failing test to another tier solely to obtain green;
+- never delete, skip, weaken, quarantine or rewrite historical failures solely to obtain green; the explicit PO policy removes unit/integration execution requirements while preserving their files and known defects;
 - never turn a blocking gate into advisory / informational or add `continue-on-error` solely to bypass a failure;
 - never convert missing/unknown/uncollected data to zero, fabricate HTTP success, or use Mock/fixture/demo data as production acceptance;
 - never bypass the current Permission, Evidence, Canonical owner, Effect Fence or approval boundary to complete a task;
@@ -686,10 +704,9 @@ coverage, Experience states, recovery, quality, acceptance depth or promised
 surfaces. Do not choose a minimum viable subset, tiny patch, easier substitute or
 narrower product merely to finish sooner. Execute the full owned outcome through
 the complete real user result and stop only at a genuine external blocker or a
-completed acceptance boundary. Reuse valid pinned evidence. Run directly affected
-verification and legitimate blocking gates; the Product Owner's ban concerns
-irrelevant/redundant work, not reducing scope, falsifying results or disabling
-necessary checks.
+completed acceptance boundary. Reuse valid pinned evidence. Run applicable build/static/security/data checks and actual complete user operations.
+The formal PO ban excludes unit/integration execution even when a renamed module
+suite would have been called relevant; preserve genuine E2E and all product scope.
 An isolated integration copy protecting a dirty tree is not a competing product.
 Reject an incorrect approach without deleting protected data or unknown work.
 
@@ -893,8 +910,8 @@ ACTIVE GATE / TICKET
 → verify existing capability before adding dependencies
 → reuse / adapt / bind
 → implement on main
-→ scoped test
-→ affected regression
+→ applicable build / static security and data checks
+→ actual affected user operation
 → runtime / E2E when required
 → evidence
 → coherent commit
@@ -1179,7 +1196,7 @@ source fixture / real public source
 → failure isolation
 → API binding
 → UI binding where user-visible
-→ targeted tests
+→ applicable build / static checks
 → runtime/E2E
 ```
 
@@ -1213,7 +1230,7 @@ excluded test → PASS
 
 Tests/staging must use explicit isolated/disposable DBs and prove the protected production DB is unchanged when persistence is touched.
 
-`data/monitor.db` selected by `ZBC_DB_PATH` is the sole business/Canonical Production Truth database. A separately owned SYSTEM operational store such as the durable task queue may remain only when its path and schema owner are explicit, it contains no CTH/BMP business truth or Evidence, it opens through `lumenis/shared/database` repository/connection abstractions, and its durability/replay/recovery is covered by tests. Do not add another per-module SQLite file silently; consolidating an existing store requires a data-preserving migration.
+`data/monitor.db` selected by `ZBC_DB_PATH` is the sole business/Canonical Production Truth database. A separately owned SYSTEM operational store such as the durable task queue may remain only when its path and schema owner are explicit, it contains no CTH/BMP business truth or Evidence, it opens through `lumenis/shared/database` repository/connection abstractions, and its durability/replay/recovery is proved by actual runtime and recovery evidence. Do not add another per-module SQLite file silently; consolidating an existing store requires a data-preserving migration.
 
 Do not delete, rewrite, migrate or repair real production data without required evidence and approval.
 
@@ -1323,7 +1340,7 @@ Before scaling platform count, C1/C6/F must close these outcomes in order:
 2. `COLLECTOR-P0-02`: Task completion/failure is fenced by the active attempt identity/lease/run, so a stale worker cannot acknowledge or fail a newer run.
 3. `COLLECTOR-P0-03`: query/task continuation has a durable server-authored receipt. Reusing a terminal checkpoint may return the immutable terminal result, but must never re-execute completed queries/effects or act as authorization. Platform-native cursors remain separate.
 4. `COLLECTOR-P0-04`: retained `/api/collect` and every compatibility entry are callers of the one Collector/Permission/Source/Evidence/Canonical transaction; direct notes-only acquisition is not an independent production truth path.
-5. `COLLECTOR-P0-05`: tests and gates enforce the sole `canonical_data` business truth and must not restore legacy `zbc_canonical_data` dual-write expectations.
+5. `COLLECTOR-P0-05`: current data/authority checks enforce the sole `canonical_data` business truth and must not restore legacy `zbc_canonical_data` dual-write expectations.
 
 Then converge three shared foundations instead of adding more per-platform special cases:
 
@@ -1348,8 +1365,8 @@ UI Entry
 → Real Result
 → Evidence / Trace
 → Honest Error State
-→ Automated Test
-→ E2E
+→ Build / Static / Security / Data Checks
+→ Real User E2E
 ```
 
 No fake values, fake 200s, `undefined`, `NaN`, `[object Object]`, or silent missing→0 transformations in production acceptance.
@@ -1390,49 +1407,30 @@ Preserve original user references and valid research as provenance-bearing
 materials under their existing owner; use their accepted adaptations through the
 current Experience and product contracts.
 
-## 14. Testing policy
+## 14. Real product verification policy
 
-Default progression:
+The formal 2026-10-08 PO policy replaces the previous unit/integration progression.
+Do not create, run or require unit/integration suites, coverage quotas, Flutter
+widget test suites or equivalent renamed module checks. Historical test files,
+failure evidence and known product defects remain intact. A failing historical
+test does not block current development by itself; a real unresolved defect
+still blocks the affected useful result, safety or release requirement.
 
-```text
-fast/static
-→ targeted unit
-→ affected integration
-→ neighbour regression
-→ representative/domain E2E
-→ full regression at convergence/release points
-```
+Work from one real user task through existing source, build/run, actual operation,
+useful output, save/revise/reopen and recovery. Use applicable static quality,
+security, permission and data-consistency guards, and genuine full-product E2E
+with allowed real inputs. No mock, fixture, isolated service assertion, HTTP 200
+or screenshot substitutes for a complete actual result. Do not rename retired
+module suites and run them under an E2E/contract/scenario label.
 
-Do not burn quota by running thousands of unrelated tests after every leaf edit.
-
-When a bug or failed user result appears, capture one concrete reproduction and
-identify its owning call path. Before repeated trials, research the exact failure
-against current official documentation and maintained GitHub implementations;
-select the best fit for the existing contract, record the relevant source and
-apply the bounded fix. Do not repeat a scan or test without a changed hypothesis,
-changed source or unresolved acceptance risk. Reuse valid evidence at its pinned
-SHA; run affected regressions and required blocking gates once for the coherent
-outcome Batch. Full-product checks belong at integration/release convergence.
-Research, reproduction and tests each support the repair; none alone closes the
-user job or permits weakening its acceptance standard.
-
-Widen testing when shared primitives, persistence, permission, Evidence, Canonical contracts or runtime infrastructure change.
-
-Never delete, skip or weaken a legitimate test merely to obtain PASS.
-
-Test-tier truth is defined in:
-
-```text
-tests/CI_TEST_TIERS.md
-```
-
-Interpretation:
-
-```text
-Tier A/B green = clean repository/hermetic contract evidence
-Tier C green   = environment/live acceptance evidence
-Tier A/B green alone != PRODUCTION_READY
-```
+Change Gate checks the bounded change's applicable build/static/security/data and
+real-operation result; Owner Closure retains full mapped R/J/U, normal operation,
+save/reopen/recovery and Evidence/Evaluation; Release retains same-version CI,
+real critical E2E, packaging/runtime, recovery and PO repeat operation. Preserve
+all retained checks as blocking where previously required. Report NOT_RUN,
+LIVE_NOT_VERIFIED or BLOCKED when evidence is absent; a policy change never
+rewrites a historical FAILED result. The existing `tests/CI_TEST_TIERS.md` records
+this current policy and the preserved historical suite inventories.
 
 ## 15. CI truthfulness
 
@@ -1534,7 +1532,7 @@ Public adapters such as ChatGPT/MCP must use allowlisted/versioned internal cont
 
 ```text
 IMPLEMENTED = code exists
-TESTED      = scoped automated tests pass
+TESTED      = historical automated-test evidence only; not a current required stage
 VERIFIED    = runtime/E2E evidence proves behavior
 RELEASED    = required production/security/recovery/rollback gates pass
 OPERATING   = real operation produces required live/scheduled evidence

@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """P0-A 生产安全基线检查（UNIFIED-BASELINE §四 施工规则的统一安全门）。
 
-后续每个 P0/P1 阶段开工前与完工后各跑一次，6 段检查：
-  Git → Runtime → Data(含一致性备份) → Test(collect/可选全量) → Rollback → Evidence
+仅在当前任务确需运行/数据基线且已具备相应授权时使用；不作为每次修改的固定步骤：
+  Git → Runtime → Data(含一致性备份) → Rollback → Evidence；历史 tests 字段不执行、不计 PASS
 只读为主；唯一写操作：① sqlite 一致性备份到 staging/baseline-backups/
 ② Evidence JSON 写到 staging/baseline-evidence/（均已 gitignore，绝不入库、不碰生产库内容）。
 
 用法：
-  python scripts/production_baseline_check.py            # 快速门（测试只 collect）
-  python scripts/production_baseline_check.py --full     # 顺带跑全量回归（not online）
+  python scripts/production_baseline_check.py            # 实际基线核验（不执行测试套件）
+  python scripts/production_baseline_check.py --full     # 已停用；明确拒绝旧测试参数
 退出码：全部硬检查通过=0，存在 FAIL=1。
 """
 import argparse
@@ -153,51 +153,31 @@ def check_data(report, do_backup=True):
 
 
 def check_tests(report, full=False):
-    seg = {"name": "tests", "checks": {}}
-    cmd = [sys.executable, "-m", "pytest", "tests/", "-m", "not online", "-q",
-           "-p", "no:warnings"]
-    if not full:
-        cmd.insert(4, "--collect-only")
-    t0 = time.time()
-    try:
-        r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True,
-                           encoding="utf-8", errors="replace", timeout=900 if full else 120)
-        out = (r.stdout or "") + (r.stderr or "")
-        if full:
-            collected = out.count(".")
-            failed = out.count(" F") + out.count("F ") + out.lower().count("failed")
-            seg["checks"]["full_regression"] = {"ok": r.returncode == 0,
-                                                "value": f"exit={r.returncode}, dots={collected}"}
-        else:
-            # collect-only：统计用例行数（:: 分隔的测试项）
-            import re as _re
-            n = 0
-            for ln in out.splitlines():
-                m = _re.search(r':\s*(\d+)\s*$', ln.strip())
-                if m:
-                    n += int(m.group(1))
-            seg["checks"]["collected"] = {"ok": n > 300, "value": f"{n} tests collected"}
-        seg["elapsed_s"] = round(time.time() - t0, 1)
-    except Exception as e:  # noqa: BLE001
-        seg["checks"]["run"] = {"ok": False, "value": repr(e)}
-    seg["ok"] = all(c["ok"] for c in seg["checks"].values())
-    report["tests"] = seg
-    return seg["ok"]
+    """Preserve the historical report field without collecting/executing suites."""
+    report["tests"] = {
+        "name": "tests", "status": "NOT_REQUIRED_BY_PO_POLICY", "ok": None,
+        "executed": False, "historical_failures_preserved": True,
+        "reason": "PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME",
+    }
+    return None
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--full", action="store_true", help="跑全量回归而非仅 collect")
+    ap.add_argument("--full", action="store_true", help="历史参数；现行 PO 策略禁止测试套件执行")
     ap.add_argument("--no-backup", action="store_true", help="跳过 DB 备份")
     args = ap.parse_args()
+    if args.full:
+        ap.error("--full suite execution is prohibited by current Product Owner policy")
 
     report = {"ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "mode": "full" if args.full else "fast"}
     results = {
         "git": check_git(report),
         "runtime": check_runtime(report),
         "data": check_data(report, do_backup=not args.no_backup),
-        "tests": check_tests(report, full=args.full),
+
     }
+    check_tests(report)  # Historical non-required field; never part of PASS calculation.
     # Rollback 信息已在 git 段；Evidence 落盘
     report["overall"] = "PASS" if all(results.values()) else "FAIL"
     report["segment_results"] = results

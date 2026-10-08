@@ -122,6 +122,6 @@ jobs:
         working-directory: app
         run: flutter analyze
 
-      - name: Test canonical app
+      - name: Build real Web Workspace (BLOCKING)
         working-directory: app
-        run: flutter test
+        run: flutter build web --release
