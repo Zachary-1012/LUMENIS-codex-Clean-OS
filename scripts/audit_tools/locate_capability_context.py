@@ -72,7 +72,7 @@ FAMILIES = {
     "runtime": {
         "concern": "Startup/runtime",
         "terms": ("runtime", "startup", "scheduler", "recovery", "运行", "恢复"),
-        "roots": ("lumenis/system/runtime", "run_supervised.py", "scripts/start_production.ps1"),
+        "roots": ("lumenis/system/runtime", "runtime_preflight.py", "run_supervised.py", "scripts/start_production.ps1"),
         "rules": (),
     },
     "ai_gateway": {

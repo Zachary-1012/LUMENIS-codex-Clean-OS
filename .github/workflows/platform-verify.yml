@@ -103,11 +103,18 @@ jobs:
       - name: Prepare product schema and media tools (BLOCKING)
         shell: bash
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
           ffmpeg -version
           ffprobe -version
+
+      - name: Prepare disposable product schema (BLOCKING)
+        shell: bash
+        run: |
           seed_dir="$(mktemp -d "$RUNNER_TEMP/lumenis-runtime-schema.XXXXXX")"
+          export ZBC_DATA_DIR="$seed_dir"
           export ZBC_DB_PATH="$seed_dir/monitor-runtime-schema.db"
           python -c "from lumenis.shared.database.migrations import migrate; assert migrate(), 'Disposable schema bootstrap failed'"
 

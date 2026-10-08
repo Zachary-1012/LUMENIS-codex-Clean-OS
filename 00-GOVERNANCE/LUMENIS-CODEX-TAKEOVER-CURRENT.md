@@ -102,15 +102,24 @@ not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-This bounded rules-only publication clarifies C1's post-intake internal analysis
-purpose and existing SYSTEM principal/source-use implementation route through
-Global §10, blueprint, owner route and the original direct PO receipt. The prior
-source publication at 85b16ae7 adopted the exact existing C4 Brief-parser delta
-and C1 processing-order rules. This change does not load Core or verify a real
-pitch/collection user outcome. Prior rules baseline `519c7d7e` has observed
+This bounded source publication repairs the existing runtime preflight's legacy
+product/directory claims, fixed root/data writes and unverified capability PASS.
+It reuses the Shared Database path registry, makes incomplete/error checks
+honest, and restores this source's existing runtime owner/locator route. The
+actual CLI ran with an isolated temporary data directory: no P0 blockers, one
+LIVE_NOT_VERIFIED capability warning, configured attestation written and no DB
+created. This is preflight execution, not a Core reload or full product E2E.
+Prior publication dbb551ad clarified C1's post-intake internal analysis route;
+its App run 37793516793 succeeded and Product run 37793516806 ended CANCELLED
+while apt was still downloading the FFmpeg installation's 99 packages (94.1 MB),
+before schema bootstrap; the cancellation cause itself is unverified. The same
+blocking preparation now reuses installed media tools, omits optional recommended
+packages and separately records disposable schema bootstrap. Both binaries and
+the schema assertion remain required. These observations do not establish this
+new commit's CI. Prior rules baseline `519c7d7e` has observed
 successful Product/App runs `37784756684` / `37784756793`; these are not CI proof
 for this new commit. Source batches `67e26a39` and `fa65267d` retain their own
 successful receipts. Product run `37768238335` at `8850b8cd` remains historical

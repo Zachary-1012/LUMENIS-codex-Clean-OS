@@ -1,25 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-Z-Brand Runtime Integrity Preflight（运行时完整性启动预检）
+LUMENIS Runtime Integrity Preflight（运行时完整性启动预检）
 =========================================================
 工单：ZB-RUNTIME-PREFLIGHT-001（P0）
-对齐：ZBIP 统一启动闸门（Runtime Preflight Contract）、《四产品总执行规则》安全运行底座。
+归属：现有 SYSTEM runtime 与 Shared Database 路径注册器；当前 AGENTS/Owner 路由。
 
 启动前检查（PASS 才正常运行；P0 硬项失败在 enforce 模式下阻断）：
   1. identity     产品身份 / VERSION / Git 来源(head,branch)
   2. permissions  关键目录可读、数据目录可写（临时文件探测后即删）
-  3. dependencies 核心依赖与红线模块可导入（Flask + 数据、主体、风险、事件与当前日报 owner）
+  3. dependencies 核心依赖与红线模块可定位（不以定位代替加载或运行验证）
   4. data_boundary复用 data_boundary：凭证不得入 Git 跟踪面、数据库分区识别
   5. sensitive    被跟踪源码不得含明文 Cookie/Token/密钥（复用 security_scanner 规则，只记路径行号不记值）
   6. dangerous    危险运行组合（debug 暴露 0.0.0.0 / 隔离库却开生产采集 等）
-  7. capability   采集能力状态（RedNote/XHS 处于 research/shadow，不得伪装 production）
+  7. capability   明确 LIVE_NOT_VERIFIED；预检不访问平台身份或证明采集闭环
   8. config       版本与数据路径配置可解析
 
 阻断策略（最高优先：不破坏现网生产）：
 - 默认 enforce=False：只记录 + 打印 + 写 Attestation，绝不阻断启动；
 - ZBC_PREFLIGHT_ENFORCE=1 或显式 enforce=True：存在 P0 blocker 时 SystemExit(3)（CI / Staging / Docker 使用）。
 
-产物：data/security/attestation_latest.json（及带时间戳副本）——即 ZBIP Attestation 运行证明，
+产物：当前注册数据目录 security/attestation_latest.json（及带时间戳副本）——仅预检记录，
 落盘前经 data_boundary.sanitize_mapping 脱敏，不含任何 Cookie/Token/密钥值。该目录已被 .gitignore 忽略。
 """
 from __future__ import annotations
@@ -31,23 +31,24 @@ import json
 import time
 import importlib.util
 import subprocess
+import tempfile
 from datetime import datetime
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT_DIR)
 
 import data_boundary  # noqa: E402
+from lumenis.shared.database.registry import get_data_dir, get_db_path  # noqa: E402
 
-PRODUCT = "Z-Brand-Core"
-PRODUCT_FULL = "Z-Brand 品牌业务生产平台 / Z-Brand-Core（承载 CTH-POMS 与 ZBMP）"
-ATTEST_DIR = os.path.join(ROOT_DIR, "data", "security")
+PRODUCT = "LUMENIS"
+PRODUCT_FULL = "序境 / LUMENIS"
 
 # 核心红线模块：缺一即 P0（对应生产红线：主体/风险/事件/报告/数据层）
 CORE_MODULES = [
     "flask", "database", "subject_rules", "risk_engine",
     "event_graph", "lumenis.shared.reporting.daily", "config",
 ]
-READ_DIRS = ["static", "templates", "tests", "docs"]
+READ_DIRS = ["lumenis", "scripts", "contracts"]
 # 敏感扫描只覆盖被 Git 跟踪的代码文件，且不扫数据/依赖目录
 SENSITIVE_EXTS = (".py", ".js", ".html")
 SENSITIVE_SCAN_FILE_CAP = 4000
@@ -89,12 +90,25 @@ def check_identity():
 
 
 def check_permissions():
-    missing = [d for d in READ_DIRS if not os.path.isdir(os.path.join(ROOT_DIR, d))]
+    missing, unreadable = [], []
+    for directory in READ_DIRS:
+        path = os.path.join(ROOT_DIR, directory)
+        if not os.path.isdir(path):
+            missing.append(directory)
+            continue
+        try:
+            with os.scandir(path) as entries:
+                next(entries, None)
+        except OSError:
+            unreadable.append(directory)
     # 数据目录可写探测（写后即删）
-    os.makedirs(os.path.join(ROOT_DIR, "data"), exist_ok=True)
-    probe = os.path.join(ROOT_DIR, "data", f".preflight_probe_{os.getpid()}.tmp")
+    probe = None
     writable = False
     try:
+        data_dir = get_data_dir()
+        os.makedirs(data_dir, exist_ok=True)
+        fd, probe = tempfile.mkstemp(prefix=".preflight_probe_", suffix=".tmp", dir=data_dir)
+        os.close(fd)
         with open(probe, "w", encoding="utf-8") as f:
             f.write("ok")
         writable = True
@@ -102,15 +116,16 @@ def check_permissions():
         return _check("PERM-WRITE", "permissions", "P0", "fail", f"data 目录不可写: {type(e).__name__}")
     finally:
         try:
-            if os.path.exists(probe):
+            if probe and os.path.exists(probe):
                 os.remove(probe)
         except OSError:
             pass
-    if missing:
+    if missing or unreadable:
         return _check("PERM-READ", "permissions", "P1", "warn",
-                      f"data 可写={writable}；缺失目录 {missing}", writable=writable, missing=missing)
+                      f"注册数据目录可写={writable}；缺失目录 {missing}；不可读目录 {unreadable}",
+                      writable=writable, missing=missing, unreadable=unreadable)
     return _check("PERM-READ", "permissions", "P1", "pass",
-                  f"关键目录可读、data 可写={writable}", writable=writable)
+                  f"当前源码目录可读、注册数据目录可写={writable}", writable=writable)
 
 
 def check_dependencies():
@@ -125,7 +140,7 @@ def check_dependencies():
         return _check("DEP-CORE", "dependencies", "P0", "fail",
                       f"核心依赖/红线模块无法定位: {missing}", missing=missing)
     return _check("DEP-CORE", "dependencies", "P0", "pass",
-                  f"核心模块全部可导入: {', '.join(CORE_MODULES)}")
+                  f"核心模块全部可定位，加载/运行另行核验: {', '.join(CORE_MODULES)}")
 
 
 def check_data_boundary():
@@ -180,12 +195,14 @@ def check_sensitive_tracked():
     import re as _re
     targets = [p for p in tracked
                if p.lower().endswith(SENSITIVE_EXTS) and not _re.search(r"tests?/|docs/|\.example|intelligence_library/|audit/", p.lower())]
+    total_targets = len(targets)
     targets = targets[:SENSITIVE_SCAN_FILE_CAP]
     findings = []
+    unreadable = []
     for rel in targets:
         fp = os.path.join(ROOT_DIR, rel.replace("/", os.sep))
         try:
-            with open(fp, "r", encoding="utf-8", errors="ignore") as f:
+            with open(fp, "r", encoding="utf-8-sig") as f:
                 for ln, line in enumerate(f, 1):
                     stripped = line.strip()
                     if stripped.startswith("#") or stripped.startswith("//"):
@@ -195,14 +212,23 @@ def check_sensitive_tracked():
                         if mm and _looks_like_real_secret(line, mm):
                             findings.append({"file": rel, "line": ln, "type": desc})
                             break
-        except Exception:
-            continue
+        except (OSError, UnicodeError):
+            unreadable.append(rel)
         if len(findings) >= 50:
             break
     if findings:
         return _check("SEC-SCAN", "sensitive", "P0", "fail",
                       f"被跟踪源码发现 {len(findings)} 处疑似明文凭证（必须移入环境变量/.env 且不入库）",
                       findings=findings)
+    if unreadable:
+        return _check("SEC-SCAN", "sensitive", "P0", "fail",
+                      "被跟踪源码存在无法读取的检查目标，扫描未完成",
+                      unreadable=unreadable[:50], unreadable_count=len(unreadable))
+    if total_targets > len(targets):
+        return _check("SEC-SCAN", "sensitive", "P1", "warn",
+                      "扫描达到文件上限，完整跟踪面尚未核验",
+                      scanned_count=len(targets), target_count=total_targets,
+                      verification_state="INCOMPLETE")
     return _check("SEC-SCAN", "sensitive", "P0", "pass",
                   f"扫描 {len(targets)} 个被跟踪代码文件，未发现明文 Cookie/Token/密钥")
 
@@ -225,29 +251,20 @@ def check_dangerous_mode():
 
 
 def check_capability():
-    """采集能力门禁：研究/影子能力不得被标记为生产。只记录状态，不触发任何采集。"""
-    cap_doc = os.path.join(ROOT_DIR, "docs", "CAPABILITY_BASELINE.md")
-    has_doc = os.path.isfile(cap_doc)
-    # App Evidence 当前应为 shadow_only（不自动采集 App）
-    mode = "unknown"
-    try:
-        from lumenis.shared.evidence import manual as app_evidence
-        mode = getattr(app_evidence, "MODULE_VERSION", "unknown")
-    except Exception:
-        pass
-    return _check("CAP-XHS", "capability", "P2", "pass",
-                  f"RedNote/XHS 采集当前以香港来源研究/运行为主、国内暂缓；App Evidence={mode} 保持 shadow，不标记为自动生产",
-                  capability_doc=has_doc, app_evidence=mode)
+    """Only report this preflight's boundary; it does not inspect platform sessions."""
+    return _check("CAP-XHS", "capability", "P2", "warn",
+                  "采集/平台会话及完整成果须由现有 Collector/Permission 运行证据核验；启动预检未验证",
+                  verification_state="LIVE_NOT_VERIFIED",
+                  scope="preflight only; no platform or protected-account access")
 
 
 def check_config():
     try:
-        from database import DB_PATH
-        ok = bool(DB_PATH)
+        ok = bool(get_db_path())
     except Exception as e:
         return _check("CFG", "config", "P0", "fail", f"统一数据入口不可用: {type(e).__name__}")
     return _check("CFG", "config", "P1", "pass" if ok else "warn",
-                  "统一配置与数据路径入口可解析（值不写入证据）", db_resolvable=bool(ok))
+                  "统一数据路径可解析（不打开数据库、不证明数据/服务可用）", db_resolvable=bool(ok))
 
 
 CHECKS = [
@@ -269,8 +286,11 @@ def run_preflight(enforce=None, write_attestation=True):
         try:
             results.append(fn())
         except Exception as e:  # 单项异常不应炸掉整个预检
-            results.append(_check(fn.__name__, "exception", "P1", "warn",
-                                  f"检查项异常: {type(e).__name__}: {e}"))
+            required = fn in (check_permissions, check_dependencies, check_data_boundary,
+                              check_sensitive_tracked, check_config)
+            results.append(_check(fn.__name__, "exception", "P0" if required else "P1",
+                                  "fail" if required else "warn",
+                                  f"检查项未完成: {type(e).__name__}"))
     blockers = [c for c in results if c["level"] == "P0" and c["status"] == "fail"]
     warnings_ = [c for c in results if c["status"] in ("warn", "fail") and c not in blockers]
     overall = "block" if blockers else ("warn" if warnings_ else "pass")
@@ -278,6 +298,7 @@ def run_preflight(enforce=None, write_attestation=True):
     report = {
         "product": PRODUCT,
         "product_full": PRODUCT_FULL,
+        "proof_scope": "startup-preflight checks only; not product runtime or user acceptance",
         "started_at": _now(),
         "elapsed_ms": int((time.time() - t0) * 1000),
         "enforce": bool(enforce) if enforce is not None else str(os.environ.get("ZBC_PREFLIGHT_ENFORCE", "")).lower() in ("1", "true", "yes"),
@@ -300,33 +321,37 @@ def run_preflight(enforce=None, write_attestation=True):
 
 
 def _write_attestation(report):
-    os.makedirs(ATTEST_DIR, exist_ok=True)
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    payload = {k: v for k, v in report.items() if k != "attestation"}
-    payload["attestation_kind"] = "runtime-preflight"
-    stamped = os.path.join(ATTEST_DIR, f"attestation_{stamp}.json")
-    latest = os.path.join(ATTEST_DIR, "attestation_latest.json")
     try:
+        attest_dir = os.path.join(get_data_dir(), "security")
+        os.makedirs(attest_dir, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        payload = data_boundary.sanitize_mapping({k: v for k, v in report.items() if k != "attestation"})
+        payload["attestation_kind"] = "runtime-preflight"
+        stamped = os.path.join(attest_dir, f"attestation_{stamp}.json")
+        latest = os.path.join(attest_dir, "attestation_latest.json")
         with open(stamped, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
         with open(latest, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
-        return {"written": True, "latest": os.path.relpath(latest, ROOT_DIR), "stamped": os.path.relpath(stamped, ROOT_DIR)}
+        # Relative to the registered data root, including cross-drive staging.
+        return {"written": True, "root": "configured_data_dir",
+                "latest": os.path.relpath(latest, get_data_dir()),
+                "stamped": os.path.relpath(stamped, get_data_dir())}
     except Exception as e:
-        return {"written": False, "error": f"{type(e).__name__}: {e}"}
+        return {"written": False, "error": type(e).__name__}
 
 
 def format_summary(r):
     icon = {"pass": "PASS", "warn": "WARN", "block": "BLOCK"}
     lines = ["-" * 64,
-             f"[Preflight] Z-Brand Runtime Integrity  总体={icon.get(r['overall'], r['overall'])}  "
+             f"[Preflight] LUMENIS Runtime Integrity  总体={icon.get(r['overall'], r['overall'])}  "
              f"P0阻断={r['blocker_count']} 警告={r['warning_count']}  耗时={r['elapsed_ms']}ms"]
     for c in r["checks"]:
         mark = {"pass": "✓", "warn": "!", "fail": "✗"}.get(c["status"], "?")
         lines.append(f"   {mark} [{c['level']}] {c['category']:<13} {c['detail']}")
     att = r.get("attestation") or {}
     if att.get("written"):
-        lines.append(f"   运行证明(Attestation): {att.get('latest')}")
+        lines.append(f"   启动预检记录(Attestation): {att.get('latest')}")
     lines.append("-" * 64)
     return "\n".join(lines)
 

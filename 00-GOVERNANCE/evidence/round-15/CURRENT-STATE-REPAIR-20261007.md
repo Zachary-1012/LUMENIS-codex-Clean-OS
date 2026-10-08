@@ -351,3 +351,43 @@ C1 process, signed private configuration or Production DB was changed by M.
 This batch is RULES_ONLY, not a product/runtime acceptance. Earlier exact
 85b16ae7 Product/App runs succeeded (37787646720 / 37787646714); historical
 failures remain untouched and new-SHA CI must be read separately.
+
+### Existing startup preflight source repair — bounded SYSTEM runtime
+
+At dbb551ad, runtime_preflight.py still named Z-Brand, required retired
+static/templates directories, wrote probes/attestations to fixed root/data, and
+reported CAP-XHS PASS from an unrelated manual Evidence module-version string.
+The existing source now uses LUMENIS identity, active Core source directories
+and the existing Shared Database get_data_dir/get_db_path registry. It does not
+import the root DB merely to resolve its path, create another store, inspect a
+platform identity or turn source/module discovery into runtime acceptance.
+
+Preflight reports LIVE_NOT_VERIFIED capability rather than static PASS. Required
+check exceptions/unreadable scan targets are failures; capped scans remain
+incomplete rather than claiming full coverage. Attestation payloads are sanitized
+before write, and both probe and attestation follow the configured data root.
+The existing runtime locator/Owner Index now routes this actual source, replacing
+its previous unroutable exact-path result without creating another authority.
+
+An actual `python runtime_preflight.py --enforce` execution used a fresh OS-temp
+data directory and explicit isolated DB path, not a mocked module suite. It
+returned exit 0, overall WARN, zero P0 blockers and one capability-not-verified
+warning; its two real attestation files landed in that configured directory.
+No database file was created, no Core/Collector/browser process was started and
+no C1 in-flight source, session, private plan or Production DB was modified by M.
+The normal production startup caller still needs its own loaded-version evidence;
+this repair does not establish any full R/J/U user job or production operating
+state. Historical tests/failures remain unchanged and were not run.
+
+Product run 37793516806 at dbb551ad ended CANCELLED. Its actual log shows apt
+requested 99 new packages / 94.1 MB and was still downloading recommended media
+packages when cancelled; the schema command had not executed. Its trigger for
+cancellation is not proven. The existing blocking preparation now uses installed
+ffmpeg/ffprobe when present and otherwise installs ffmpeg with
+`--no-install-recommends`; required dependencies remain installed by apt. Both
+binary version commands still must succeed. The separate blocking schema step
+uses explicit temporary data/DB paths and retains its migrate-success assertion.
+This reduces unnecessary installation and makes the failing layer observable;
+it does not disable checks, rewrite the cancelled run or prove new-SHA CI.
+Method reference: [Debian apt-get manual](https://manpages.debian.org/trixie/apt/apt-get.8.en.html),
+consulted 2026-10-08; no external package/provider or fee was added.
