@@ -324,6 +324,8 @@ This disposition freezes where work starts; it does not freeze code. Each delive
 
 ### Current Collector platform-convergence ownership — Product Owner 2026-10-07
 
+2026-10-08定向DDD执行补充：本索引的Owner行和既有caller/contract就是限界上下文与上下文映射入口；不建立新的DDD台账。仅对当前任务实际暴露的名称/身份、规则、映射、越界调用或状态/来源传递问题，由当前唯一业务窗口修复原Owner/兼容层，保留Permission/Evidence/Canonical及全部功能。F消费合同，不在界面重定义业务；M处理跨Owner冲突。正向操作、越界拒绝、身份/版本/来源连续性及不退化沿原Gate验证；无当前成果收益则DEFER。
+
 The current platform program is not capped at the six primary acceptance platforms. C1 owns universal platform acquisition through the existing one Collector; C6 owns shared runtime/integration/release; F owns the single platform-recovery Experience; M accepts the cross-owner result. The absence of official/partner API authorization before investment/product closure is an explicit current condition and does not lower the required data capability. Product-Owner-authorized owned R&D accounts and managed read-only sessions remain valid development sources under current safety/Permission rules. Future official/partner APIs are provider upgrades behind the same connector.
 
 Mandatory convergence IDs:
@@ -501,7 +503,7 @@ This section records the Product Owner-approved disposition of the historical re
 | D1 | Preserve platform-native facts and lineage, present them through task-specific LUMENIS composition, provide governed `Trace → Open Original → Return`, and keep ordinary source opening separate from SYS-06 controlled capture. |
 | D2 | The package's 51 rows converge into **EIGHT OWNER RESULT PACKAGES** below; never restore them as 51 parallel features or a historical product. |
 | D3 | Historical notes/comments/brands/relations/cases/web mentions remain immutable evidence, parser/regression, reconciliation or reacquisition inputs. **Production admission = 0** until current rights, source, identity, Scope, Permission, freshness and complete-field gates pass. |
-| D4 | Dependency order is Truth/Safety → Collector/durable task → CTH/BMP business → SourceTarget/Open Original → Shared result continuity → Owned AI → same-SHA release. Independent owners may proceed in parallel when their real dependencies permit; this is not a new serial round plan. |
+| D4 | Dependency order is Truth/Safety → Collector/durable task → CTH/BMP business → SourceTarget/Open Original → Shared result continuity → Owned AI → same-SHA release. M selects one business Owner at a time by actual dependency; W6 integration consumes that slot. F proceeds independently within shared-region reservations. This does not change the six outcome owners or impose numeric round order. |
 | D5 | Update only the existing Product Architecture, Experience, Source Owner Index, Real Delivery/CURRENT, screen/binding/action contracts and blocking validators. AGENTS remains the sole router and the current Only-One architecture is unchanged. |
 
 ### EIGHT OWNER RESULT PACKAGES
@@ -625,7 +627,7 @@ M rechecked these findings against the pinned source `52cd770cde458f73f99e407301
 
 ### 2026-10-08 前端审计与工具维护增补
 
-采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。Product Owner 已明确派发 M/F/C1-C6；各窗 fresh admission 后执行既有完整成果，本轮仅同步派工规则，不提升运行或用户验收状态。
+采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；各窗 fresh admission 后执行既有完整成果，本轮仅同步派工规则，不提升运行或用户验收状态。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
@@ -669,3 +671,28 @@ C3/C5/C4复用已有SourceBrief/creation-upstream/SavedWork，补业务决策成
 | C3/C4/C5 | 同Task/来源/版本消费操作结果与真实资料，不新建执行器 | 已有业务/创作/Artifact引用和回执；研究与训练准入分开 |
 
 基线409e6d2c：浏览器服务已有click/input/select/scroll/keyboard等动作，但Flutter只调用navigate/reload/frame，远端Core受loopback限制；未找到通用OS桌面executor。本次是源缺口与执行标准，不是runtime通过。逐项取证见 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`；新视频已进入现有材料清单，非训练素材批准。
+
+### 2026-10-08 用户只读审计：当前修复责任与后置边界
+
+材料 `MAT-3a0307e5d044554c7be4` 原报告基线为 `e42f0246568b5a6c9f41e2cfb29ec549b3e14672`；M逐项核对的接续发布基线为 `6a1db538abceffd3059aa6eac48b9a4f81bf9095`。下表 `Audit-20261008/F-01` 至 `F-12` 只表示该报告原编号，不与前端审阅的同号条目混用。报告作者的clean状态不代表本机受保护dirty工作树。静态风险不是运行实例已被利用的证明；不读取生产凭据/数据库来复现。
+
+这些修复加入原Owner完整目标，不建立新队列、第二权威或全局暂停。正常授权结果、拒绝反例和失败恢复共同构成验收；W6按共享路径预约集成，M接收完整修复包。
+
+| 原审计编号 | 当前负责人/优先级 | 既有源码及直接执行边界 |
+|---|---|---|
+| F-01 | C6 / P0 | `app.py` 的 `/api/auth/config` 不得匿名返回可还原Basic凭据；协调F现有core client bootstrap，保留非敏感状态及正常受控访问，不新增账户墙。 |
+| F-02 | C6 / P0 | `docker-compose.yml`、启动配置的默认网络暴露收敛到本机/明确受控边界；空认证不等于获准公网开放。实际公网部署、费用不在本次授权内。 |
+| F-03 | C6 / P0 | `app.py` 的V4会话回退限定真实允许路由/方法；`GET /api/weibo/cookies`不可将登录当作秘密读取权限。写请求PermissionGate不能保护GET。 |
+| F-04 | C5主责、C6整合 / P0 | `lumenis/shared/evidence/manual.py` 已注册旧读取入口须复用现有scoped Evidence owner，精确actor/domain/focus；保留必要兼容能力，不能只删旧入口或新增Evidence库。 |
+| F-05 | C5主责、C6协调DB / P0 | 同一Evidence生命周期中修复先删文件后删记录、引用保护、原因/actor及补偿恢复；`cth_cases.py:58`、`entity_relations.py:109`确有FK引用。全局DATA_DELETE审批不替代记录范围/文件事务。只用隔离库验证失败。 |
+| F-06 | C6 / P0 | `.dockerignore` 与 `Dockerfile` 排除`.env.*`、顶层`work/`及私有运行输入，精确保留必要模板；用无秘密哨兵验证构建上下文，不读取真实秘密。 |
+| F-07 | C6 / P1 | `lumenis/auth/{service,security}.py` 修复`__access_key__`哨兵不计锁定的问题，复用既有安全记录，不创建虚构用户。`hmac.compare_digest`已存在。 |
+| F-08 | C1主责、C6整合 / P1 | `canonical_data.py`构造/持久化及入站caller明确拒绝未知/矛盾product/domain；保留明确CTH兼容默认和BMP/ZBMP存储映射，不猜身份、不盲删默认。 |
+| F-09 | C1主责、实际消费者配合 / P1 | `CanonicalRecord.engagement_total`全缺测不转0、部分和有覆盖语义、真实0保留；沿实际caller核对`ui_view_model.py`同名聚合及F缺值呈现。未发现直接生产caller不等于可以保留错误公共合同，也不证明所有页面受影响。 |
+| F-10 | C6 / P0 | `scripts/backup_db.py`及现有HTTP/deployment caller统一Shared Database call-time路径、一致快照、验证和受控恢复；移除WAL raw-copy/未经确认覆盖行为，临时库演练。`deployment/backup.py`实际调用root `database.backup_database`，支持绝对路径，不能照报告误改成仅basename。 |
+| F-11 | C6 / P1 | 现有Docker/Compose打包明确非root/WSGI及卷权限与启动诊断；属于准备可靠产品包，不是新增公网部署。 |
+| F-12 | C6 / P1 | 现有Python部署依赖与镜像采用可复现的已验证解析/哈希和受控更新；不顺带全量升级，不宣称未核实CVE或已实测构建漂移。 |
+
+账户密码整体重设计、Realtime实时语音、开发者模式等明确后置项维持原决定；现有认证/权限、Evidence完整性、备份恢复不是这些后置项。已批准本地Read Aloud不因Realtime后置而停工。各Owner继续既有完整结果，C2/C3/C4/F不因该报告另开重复审计。
+
+报告中的WeChat旧断言已随`6a1db538`接受发布，复用受影响证据。该SHA的App Gate `37706227173`已成功；Product Gate `37706227134`在两项Agent Memory learning-loop断言失败，C6协调C2修复，不重置旧WeChat修复为未完成、不把新失败写成PASS。此处仅为2026-10-08观察，运行加载/完整用户验收仍按CURRENT独立记录。

@@ -12,6 +12,7 @@ ZBC Phase 12 — API 层逐端点审计回归测试
 
 禁止：不启动真实服务、不执行真实采集/AI调用、不修改数据库。
 """
+import ast
 import os
 import re
 import sys
@@ -74,8 +75,8 @@ class TestFakeSuccessFixes:
         """/api/auth/config: except 块应返回 ok=False + 错误码。"""
         source = _read_file(APP_PY)
         # 验证 auth_config_api 函数的 except 块
-        assert 'AUTH_HEADER_ENCODE_ERROR' in source, (
-            "auth_config except 块应包含错误码 AUTH_HEADER_ENCODE_ERROR"
+        assert 'AUTH_CONFIG_UNAVAILABLE' in source, (
+            "auth_config failure must expose a safe structured state"
         )
         # 验证该端点 except 不再返回 ok=True
         auth_section = source[source.find('def auth_config_api'):source.find('def auth_config_api') + 800]
@@ -254,7 +255,7 @@ class TestErrorCodes:
     """验证修复端点包含结构化错误码。"""
 
     EXPECTED_ERROR_CODES = [
-        'AUTH_HEADER_ENCODE_ERROR',
+        'AUTH_CONFIG_UNAVAILABLE',
         'BRAND_INDUSTRY_QUERY_ERROR',
         'BRAND_INDUSTRY_STATS_ERROR',
         'NEGATIVE_REVIEW_STATS_ERROR',
@@ -277,16 +278,21 @@ class TestErrorCodes:
     def test_error_responses_have_code_field(self):
         """修复的 except 块返回值应包含 'code' 字段。"""
         source = _read_file(APP_PY)
-        # 检查包含错误码的 return 语句是否有 code 字段（逐行检查，避免嵌套括号正则问题）
+        # Inspect the serialized error object, including responses assigned
+        # before headers/status are applied.
+        serialized = []
+        for node in ast.walk(ast.parse(source)):
+            if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                    and node.func.id == 'jsonify'):
+                for value in node.args:
+                    if isinstance(value, ast.Dict):
+                        serialized.append({key.value: item.value
+                            for key, item in zip(value.keys, value.values)
+                            if isinstance(key, ast.Constant) and isinstance(item, ast.Constant)})
         for code in self.EXPECTED_ERROR_CODES[:4]:  # 前4个是 except 块的
-            found = False
-            for line in source.split('\n'):
-                if code in line and 'return' in line and 'jsonify' in line:
-                    assert "'code'" in line or '"code"' in line, (
-                        f"错误码 {code} 的返回应包含 'code' 字段: {line.strip()}"
-                    )
-                    found = True
-            assert found, f"错误码 {code} 应在 jsonify 返回中"
+            assert any(value.get('code') == code for value in serialized), (
+                f"错误码 {code} 应在 jsonify 的 code 字段中"
+            )
 
 
 # ═══════════════════════════════════════════════════════════════

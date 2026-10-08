@@ -1051,6 +1051,10 @@ def record_evidence(
     global_scope: bool = False,
 
     connection=None,
+    evidence_path: Optional[str] = None,
+    parse_confidence: Optional[float] = None,
+    verified_by: Optional[str] = None,
+    verified_at: Optional[str] = None,
 
 ) -> int:
 
@@ -1166,6 +1170,10 @@ def record_evidence(
         "topic": topic, "status": status, "notes": notes,
 
         "evidence_hash": ev_hash, "capture_mode": capture_mode,
+        "evidence_path": evidence_path,
+        "parse_confidence": parse_confidence,
+        "verified_by": verified_by,
+        "verified_at": verified_at,
         "captured_at": captured_at or now,
 
         "created_at": now, "updated_at": now,

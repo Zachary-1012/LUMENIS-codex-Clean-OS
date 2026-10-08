@@ -86,10 +86,10 @@ Product Owner 已恢复批准的完整执行拓扑：
 | **C5 / W5 · Importer / Research / Shared** | 资料导入、Research、Citation、Reporting、Artifact、通知、共享偏好和版本化成果。 |
 | **C6 / W6 · Integration / Runtime / Release** | 共享 API 组合、DB 变更协调、Core/Runtime/Supervisor、四端整合、CI、恢复/回滚与最终发布证据。 |
 
-**M + F + C1–C6 现在都属于当前执行体系。** 各窗口可按真实依赖并行推进，但不能因为“窗口已恢复”就盲启：每个任务开工前仍必须核对 fresh `origin/main`、本地 dirty、Owner/调用方、Runtime、DB、Permission、Evidence 以及平台 Session/GPU 等真实前置条件。
+**M + 独立 F + C1–C6 中唯一当前业务窗口。** 六个完整职责均保留，M按真实依赖串行切换，W6共享集成占同一业务席位；F独立推进，但不能因为“窗口已恢复”就盲启：每个任务开工前仍必须核对 fresh `origin/main`、本地 dirty、Owner/调用方、Runtime、DB、Permission、Evidence 以及平台 Session/GPU 等真实前置条件。
 
-这里的“恢复/可执行”只表示角色 **ELIGIBLE**，不是实时派工。Product Owner 已授权 M/F/C1-C6
-启动完整既有成果；实际派发与准入仍以本地 Live Dispatch ledger 和真实工具回执为准，fresh
+这里的“恢复/可执行”只表示角色 **ELIGIBLE**，不是实时派工。最新PO已授权M、独立F和M选定的唯一业务窗口
+继续完整既有成果；实际派发与准入仍以本地 Live Dispatch ledger 和真实工具回执为准，fresh
 admission 后才进入 RUNNING。不能把 README 的拓扑当作运行状态。
 
 ### 语义校准与研究采用入口
@@ -230,7 +230,7 @@ LUMENIS原始材料采用仓库根目录 [LICENSE](LICENSE) 中的 **LUMENIS PRO
 ## 贡献、整合与变更规则
 
 - `main` 是唯一当前实现；不要创建第二产品、第二Owner、第二DB/Evidence store、第二AI Gateway或长期并行候选架构。
-- 并行窗口可以工作，但共享Owner/共享文件需要显式M/W6协调，不能互相覆盖。
+- F与当前唯一业务窗口独立工作；共享Owner/文件区域按M/W6认领冻结与交接，不同时写入。
 - 每个窗口对自己Owner内的普通Bug、回归和技术阻塞负责到底：先做一次明确复现并定位Owner/调用链，再查当前官方/标准文档、维护中的上游GitHub和高质量最新实现；必要时比较多种前沿方案，选择对完整能力、正确性、恢复、安全、许可、维护、延迟和实际成本最优的可行方案，直接修复、验证并继续同一窗口闭环。不要把可解决的问题反复抛给M/别的窗口/用户，也不要为同一问题新开重复研究窗口。只有产品决策、权限/凭据、付费资源、安全/数据重大风险或不可控外部依赖才升级。
 - 提交只stage当前交付的精确文件；本地未知dirty/untracked工作必须先归Owner，禁止bulk-stage、`reset --hard`、`clean -fd`或“顺手整理”。
 - 新研究必须落实到已存在的能力、质量标准或真实结果；研究、线框、报告、测试、文档和Mock都不能取代实现/Runtime/User Outcome。
@@ -277,13 +277,13 @@ IMPLEMENTED
 
 智能 UI 采用范围覆盖全部现有能力、44屏及四端，包含研究/业务/创作、设置/通知/恢复。唯一执行依据是[产品蓝图](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)与[Experience §38](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)；[44屏规范索引](contracts/experience/screen-specifications/README.md)逐屏给出实际用户任务和后续采用入口，[既有文字草图](00-GOVERNANCE/evidence/round-15/experience-review-2026-10-06/LUMENIS-44-SCREEN-TEXT-WIREFRAMES-1.5.md)保留历史并同步日期增补。规则/蓝图/草图同步不表示44屏已经实现；授权启动后的实际派发/准入以本地ledger与真实工具回执为准。
 
-2026-10-08 前端审计增补已纳入上述唯一规则：F先完成全44屏和官网家族的真实Figma可编辑设计、四端差异与任务交互原型，再按现有DESIGN_READY实施；文件/节点/版本与源码/动作/验收映射详见[ScreenSpec索引](contracts/experience/screen-specifications/README.md)。Product Owner 已授权 M/F/C1-C6 启动完整既有成果；历史等待文字不再构成暂停指令，M待命也不暂停执行窗口。实际派发/准入以当前直接PO指令、本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。规则同步不代表 Figma 工程、智能 UI 实现或用户验收完成。
+2026-10-08 前端审计增补已纳入上述唯一规则：F保留全44屏和官网家族的可编辑设计、四端差异与任务交互，优先复用Figma；免费受限立即用现有Flutter/Dart/变量/SVG继续，不新增费用，不等全部Figma完成才修已有交互；仍按逐屏DESIGN_READY实施。原生Figma与可编辑源码分别记录，载体/版本与源码/动作/验收映射详见[ScreenSpec索引](contracts/experience/screen-specifications/README.md)。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；历史等待文字不再构成暂停指令，M待命也不暂停执行窗口。实际派发/准入以当前直接PO指令、本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。规则同步不代表 Figma 工程、智能 UI 实现或用户验收完成。
 
 ### 2026-10-08 成熟基础能力、竞品机制与用户操作期待
 
 两份最新增补已合并进[唯一产品蓝图](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)、[Owner执行映射](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)、[双层真实验收](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)和[Experience §38](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)：先让用户完成成熟软件基础操作，再证明序境的来源、业务、智能、版本与学习连续性。SH-01/BMP-08及原文字草图细化真实剪辑/播放/波形/录音/重开；GPT/Apple/Tesla只贡献适用操作原则。开源选择遵守[组件准入](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)，不重造现有内核。
 
-Product Owner 已授权 M/F/C1-C6 启动完整既有 J/R/U 成果闭环；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。M 每 30 分钟轻量核对有变化的完整成果、共享冲突、CI/风险，无实际可处理事项即待命。规则收录不表示能力已实现或验收，也不自动安装新组件或形成训练许可。历史材料保留，最新材料清单为198项（原191+6份文字增补+本次电脑/浏览器视频），不代表全部历史资料已读完。
+Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；完整J/R/U不缩减；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。M 每 30 分钟轻量核对有变化的完整成果、共享冲突、CI/风险，无实际可处理事项即待命。规则收录不表示能力已实现或验收，也不自动安装新组件或形成训练许可。历史材料保留，最新材料清单为198项（原191+6份文字增补+本次电脑/浏览器视频），不代表全部历史资料已读完。
 
 ### 2026-10-08 采集日期与维度展示更正
 
@@ -295,6 +295,6 @@ Product Owner 已授权 M/F/C1-C6 启动完整既有 J/R/U 成果闭环；实际
 
 ### 2026-10-08 电脑操作、内置浏览器与派工纠偏
 
-用户已明确纠正未经核清范围的全局暂停，M/F/C1-C6继续既有完整目标；窗口转述必须保留PO原话与适用范围，不把局部暂停广播为全局。定期把关继续，无事待命。
+最新直接PO指令覆盖旧全窗恢复/全停调度：M与F继续，C1-C6仅M选定的一窗继续完整目标；窗口转述必须保留PO原话与适用范围，不把局部暂停广播为全局。定期把关继续，无事待命。
 
 序境产品本身须完成授权电脑任务；手机可在任务内查看/接管受控浏览器，Desktop/Web在产品内使用，外部浏览器为明确可选。当前已有受控Browser动作服务，SYS-06前端仍只读、远端绑定及OS executor未闭合，不能声称已完成。[SYS-06](contracts/experience/screen-specifications/SYS-06.md)与[取证及执行映射](00-GOVERNANCE/evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md)记录准确差距。材料清单现198项（原197+本次视频），不是历史资料全部完成阅读或训练准入。

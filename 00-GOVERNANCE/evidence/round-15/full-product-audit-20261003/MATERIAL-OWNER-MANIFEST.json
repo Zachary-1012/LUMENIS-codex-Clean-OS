@@ -1,6 +1,6 @@
 {
   "state": "EXACT_ORIGINAL_LOCATORS_RECONCILED_BODY_READING_AND_CAPABILITY_ACCEPTANCE_REMAIN_PER_ITEM",
-  "scope": "198 direct material rows: original197 preserved + current 12.34-second browser reference; not full historical corpus or complete reading",
+  "scope": "199 direct material rows: original198 preserved + current user repository audit; not full historical corpus or complete reading",
   "source_sha256": "23380ad9008228df72f5890e98f9e72eb7aff25928c9c0a478cd2c264382f2b0",
   "owner_counts": {
     "C3+C5": 32,
@@ -8,7 +8,7 @@
     "C2": 2,
     "C1": 5,
     "C4": 71,
-    "M": 3
+    "M": 4
   },
   "materials": [
     {
@@ -7270,6 +7270,31 @@
       },
       "next_action": "F/C2/C6在现有Owner闭合真实输入、控制权、安全远端绑定和OS executor缺口，C1复用获准采集。",
       "availability_checked_at": "2026-10-08"
+    },
+    {
+      "material_id": "MAT-3a0307e5d044554c7be4",
+      "display_name": "序境 _ LUMENIS 仓库只读审计报告.md",
+      "kind": "user_supplied_repository_audit",
+      "corpus": "current_source_security_data_integrity",
+      "original_locator": "C:\\Users\\28049\\.codex\\codex-remote-attachments\\01a0cd84-7685-7a73-97d9-83a14a546e71\\5868397B-4817-4B1B-8317-904C0095CC07\\1-序境-_-LUMENIS-仓库只读审计报告.md",
+      "original_sha256": "3a0307e5d044554c7be4399998006e3c2f4624a663c39291a6341d557c70ccb2",
+      "original_bytes": 17700,
+      "primary_owner": "M",
+      "supporting_owners": ["C6", "C5", "C1", "F"],
+      "thread_id": "01a0cd84-7685-7a73-97d9-83a14a546e71",
+      "status": "SOURCE_REVIEWED_OWNER_REPAIRS_DISPATCHED_NOT_ACCEPTED",
+      "body_read_status": "FULL_REPORT_READ_12_FINDINGS_SCOPED_SOURCE_CHECKED",
+      "training_use": "NOT_GRANTED",
+      "owner_obligation": "M保留原审计编号和证据界限；C6修认证/备份/打包，C5修Evidence授权/生命周期，C1修Canonical身份/缺测；明确后置项不重启。",
+      "source_owner_paths": ["app.py", "lumenis/auth/", "lumenis/shared/evidence/manual.py", "canonical_data.py", "lumenis/shared/database/", "scripts/backup_db.py", "deployment/backup.py", "Dockerfile", "docker-compose.yml", ".dockerignore", "requirements.txt"],
+      "product_adoption": {
+        "state": "BOUNDED_REPAIRS_ASSIGNED_EXISTING_OWNERS",
+        "evidence": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md#2026-10-08-用户只读审计当前修复责任与后置边界",
+        "source_baseline": "e42f0246568b5a6c9f41e2cfb29ec549b3e14672",
+        "review_publication_baseline": "6a1db538abceffd3059aa6eac48b9a4f81bf9095"
+      },
+      "next_action": "Owner并入现有完整目标修复正常成功/拒绝/恢复，W6同版本整合，M验收；不将报告存在/派发视作已修复。",
+      "availability_checked_at": "2026-10-08T08:18:57+08:00"
     }
   ],
   "frontend_reference_video_scope": {
@@ -7296,8 +7321,8 @@
   "current_original_integrity": "Missing originals and malformed locators remain explicit; derivative frames/analysis do not replace originals.",
   "current_supplement": {
     "original_191_rows": "PRESERVED",
-    "new_rows": 7,
-    "total_rows": 198,
+    "new_rows": 8,
+    "total_rows": 199,
     "purpose": "current approved supplements mapped to existing owners; no automatic dispatch or training admission",
     "latest_frontend_audit": {
       "material_id": "MAT-9ddd5bb4884e46c2afb0",
@@ -7313,7 +7338,12 @@
       "evidence": "00-GOVERNANCE/evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md",
       "registered_at": "2026-10-07T23:06:46.534340+00:00"
     },
-    "original_six_supplement_recorded_at": "2026-10-08T04:42:37.997508+08:00"
+    "original_six_supplement_recorded_at": "2026-10-08T04:42:37.997508+08:00",
+    "repository_audit": {
+      "material_id": "MAT-3a0307e5d044554c7be4",
+      "original_finding_ids": "Audit-20261008/F-01..F-12; not frontend F identifiers",
+      "state": "REVIEWED_DISPATCHED_NOT_FIXED"
+    }
   },
   "current_execution_note": "2026-10-08 direct PO resumes existing Owner outcomes. Historical row/adoption WAITING_PO, PAUSED_PENDING_USER_RESUME and next_action wording describe earlier intake only; they do not override current dispatch. Read/rights/training/implementation evidence stays unchanged; original reference scope remains, with the new computer/browser video added explicitly."
 }

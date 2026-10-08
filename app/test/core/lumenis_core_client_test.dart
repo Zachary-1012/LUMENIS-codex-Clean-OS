@@ -6,7 +6,7 @@ import 'package:lumenis_app/core/lumenis_core_client.dart';
 
 void main() {
   test(
-    'bootstraps existing Core transport without a product account',
+    'reads the open workspace without fetching or forwarding Core credentials',
     () async {
       final server = await _CoreStub.start();
       addTearDown(server.close);
@@ -19,16 +19,12 @@ void main() {
       expect(catalog['capability'], 'Shared Content & Creation');
       expect(evidence['evidence']['evidence_id'], 'CGE-contract %?value');
       expect(server.requests.map((request) => request.path), [
-        '/api/auth/config',
         '/api/experience/runtime/identity',
         '/api/experience/shared-skills',
         '/api/experience/content/evidence/CGE-contract%20%25%3Fvalue',
       ]);
-      expect(server.requests.first.authorization, isNull);
       expect(
-        server.requests
-            .skip(1)
-            .every((request) => request.authorization == _authorization),
+        server.requests.every((request) => request.authorization == null),
         isTrue,
       );
       expect(
@@ -102,18 +98,105 @@ void main() {
     },
   );
 
-  test('Core auth disabled keeps existing public runtime access', () async {
-    final server = await _CoreStub.start(authEnabled: false);
+  test(
+    'client cleanup does not request or recreate a Core credential',
+    () async {
+      final server = await _CoreStub.start();
+      addTearDown(server.close);
+      final client = LumenisCoreClient(baseUrl: server.baseUrl);
+
+      expect((await client.runtimeIdentity())['ok'], isTrue);
+      client.clearCredentials();
+      expect((await client.runtimeIdentity())['ok'], isTrue);
+      expect(server.requests.map((request) => request.path), [
+        '/api/experience/runtime/identity',
+        '/api/experience/runtime/identity',
+      ]);
+      expect(server.requests.last.authorization, isNull);
+    },
+  );
+
+  for (final status in [HttpStatus.unauthorized, HttpStatus.forbidden]) {
+    test(
+      'runtime HTTP $status is preserved without credential recovery',
+      () async {
+        final server = await _CoreStub.start(runtimeStatus: status);
+        addTearDown(server.close);
+        final client = LumenisCoreClient(baseUrl: server.baseUrl);
+
+        await expectLater(
+          client.runtimeIdentity(),
+          throwsA(
+            isA<LumenisCoreException>().having(
+              (error) => error.statusCode,
+              'statusCode',
+              status,
+            ),
+          ),
+        );
+        expect(server.requests.map((request) => request.path), [
+          '/api/experience/runtime/identity',
+        ]);
+        expect(server.requests.single.authorization, isNull);
+      },
+    );
+  }
+
+  test('media file read never inherits a runtime credential', () async {
+    final server = await _CoreStub.start();
     addTearDown(server.close);
     final client = LumenisCoreClient(baseUrl: server.baseUrl);
 
-    expect((await client.runtimeIdentity())['ok'], isTrue);
+    await client.runtimeIdentity();
+    final file = await client.contentProjectFile(
+      domainId: 'CTH',
+      artifactId: 'ART-contract',
+      package: true,
+    );
+
+    expect(file.filename, 'ART-contract.zip');
+    expect(file.mediaType, 'application/zip');
+    expect(file.bytes, [80, 75, 5, 6, ...List<int>.filled(18, 0)]);
     expect(server.requests.map((request) => request.path), [
-      '/api/auth/config',
       '/api/experience/runtime/identity',
+      '/api/experience/content-projects/ART-contract/package',
     ]);
-    expect(server.requests.last.authorization, isNull);
+    expect(
+      server.requests.every((request) => request.authorization == null),
+      isTrue,
+    );
+    expect(server.requests.last.domainId, 'CTH');
   });
+
+  for (final status in [HttpStatus.unauthorized, HttpStatus.forbidden]) {
+    test(
+      'media HTTP $status remains denied without bootstrap or retry',
+      () async {
+        final server = await _CoreStub.start(fileStatus: status);
+        addTearDown(server.close);
+        final client = LumenisCoreClient(baseUrl: server.baseUrl);
+
+        await expectLater(
+          client.contentProjectFile(
+            domainId: 'CTH',
+            artifactId: 'ART-contract',
+            package: true,
+          ),
+          throwsA(
+            isA<LumenisCoreException>().having(
+              (error) => error.statusCode,
+              'statusCode',
+              status,
+            ),
+          ),
+        );
+        expect(server.requests.map((request) => request.path), [
+          '/api/experience/content-projects/ART-contract/package',
+        ]);
+        expect(server.requests.single.authorization, isNull);
+      },
+    );
+  }
 
   test(
     'controlled browser transport omits bootstrap credentials and context headers',
@@ -183,7 +266,7 @@ void main() {
       );
       expect((await client.sharedSkillsCatalog())['ok'], isTrue);
       expect(server.requests.last.path, '/api/experience/shared-skills');
-      expect(server.requests.last.authorization, _authorization);
+      expect(server.requests.last.authorization, isNull);
       expect(
         server.requests.any((request) => request.path.startsWith('/v4/auth/')),
         isFalse,
@@ -209,7 +292,7 @@ void main() {
         ),
       ),
     );
-    expect(server.requests.last.authorization, _authorization);
+    expect(server.requests.last.authorization, isNull);
   });
 
   test('Core redirects fail closed without forwarding context', () async {
@@ -268,11 +351,6 @@ void main() {
     );
   }
 }
-
-const _username = 'operator';
-const _password = 'secret';
-final _authorization =
-    'Basic ${base64Encode(utf8.encode('$_username:$_password'))}';
 
 const _browserPng = <int>[
   137,
@@ -379,7 +457,8 @@ class _RecordedRequest {
 class _CoreStub {
   _CoreStub._({
     required this.server,
-    required this.authEnabled,
+    required this.runtimeStatus,
+    required this.fileStatus,
     required this.catalogStatus,
     required this.subjectStatus,
     required this.redirectCatalog,
@@ -390,7 +469,8 @@ class _CoreStub {
   }
 
   final HttpServer server;
-  final bool authEnabled;
+  final int runtimeStatus;
+  final int fileStatus;
   final int catalogStatus;
   final int subjectStatus;
   final bool redirectCatalog;
@@ -400,7 +480,8 @@ class _CoreStub {
   String get baseUrl => 'http://127.0.0.1:${server.port}';
 
   static Future<_CoreStub> start({
-    bool authEnabled = true,
+    int runtimeStatus = HttpStatus.ok,
+    int fileStatus = HttpStatus.ok,
     int catalogStatus = HttpStatus.ok,
     int subjectStatus = HttpStatus.ok,
     bool redirectCatalog = false,
@@ -409,7 +490,8 @@ class _CoreStub {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     return _CoreStub._(
       server: server,
-      authEnabled: authEnabled,
+      runtimeStatus: runtimeStatus,
+      fileStatus: fileStatus,
       catalogStatus: catalogStatus,
       subjectStatus: subjectStatus,
       redirectCatalog: redirectCatalog,
@@ -436,14 +518,20 @@ class _CoreStub {
     );
 
     if (path == '/api/auth/config') {
-      await _reply(request, HttpStatus.ok, {
-        'ok': true,
-        'auth_enabled': authEnabled,
-        'auth_header': authEnabled ? _authorization : '',
-      });
+      await _reply(request, HttpStatus.ok, {'ok': true, 'auth_enabled': true});
       return;
     }
-    final authorized = !authEnabled || authorization == _authorization;
+    // Simulate the server-owned open-workspace boundary, which rejects any
+    // client-supplied identity credential. This is contract evidence only.
+    final authorized = authorization == null;
+    if (path == '/api/experience/content-projects/ART-contract/package') {
+      request.response
+        ..statusCode = authorized ? fileStatus : HttpStatus.unauthorized
+        ..headers.contentType = ContentType('application', 'zip')
+        ..add([80, 75, 5, 6, ...List<int>.filled(18, 0)]);
+      await request.response.close();
+      return;
+    }
     if (path == '/api/settings/context') {
       if (!authorized) {
         await _reply(request, HttpStatus.unauthorized, const {'ok': false});
@@ -455,7 +543,7 @@ class _CoreStub {
     if (path == '/api/experience/runtime/identity') {
       await _reply(
         request,
-        authorized ? HttpStatus.ok : HttpStatus.unauthorized,
+        authorized ? runtimeStatus : HttpStatus.unauthorized,
         const {'ok': true},
       );
       return;

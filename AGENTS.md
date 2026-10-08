@@ -13,22 +13,32 @@ execution instructions.
 
 ## Current execution topology — M + F + C1-C6 eligible; live dispatch follows Product Owner instruction
 
-Current task: at 2026-10-06 15:40 +08 the Product Owner explicitly restored the
-approved execution topology: **M is the root controller/integrator, F is the
-front-end/Experience delivery role, and C1-C6 are six eligible delivery roles**.
-This supersedes the temporary M-only/controlled-worker wording. Each window
-executes its existing owned outcome and may proceed in parallel when its real
-dependencies permit; no window may invent a second owner, architecture, data
+The Product Owner's latest 2026-10-08 direct instruction sets **M + independent
+F + one current business window selected from C1-C6**. All six business roles
+retain their complete owned outcomes, protected source and Goals; M selects and
+switches the single business slot by real dependency and safe frozen handoff.
+W6 shared integration consumes that same slot. F continues independently with
+the selected business window, subject to shared-region reservations. No window
+may invent a second owner, architecture, data
 store, model service or acceptance standard. M does not duplicate window work:
 it freezes current truth, resolves cross-window conflicts, reviews/accepts or
 returns outcomes, and controls integration/publication with W6. OpenCode is
 shelved and is not a current execution path or fallback.
 
-### 2026-10-08 current dispatch: M/F/C1-C6 complete outcomes
+### 2026-10-08 current dispatch: one business window, independent F, zero new cost
 
-The Product Owner explicitly authorized M, F and C1-C6 to start their full
-existing J/R/U outcomes in maximum-complete mode. Authorization does not set
-local LIVE_DISPATCH state: use the local ledger and real Codex tool receipts.
+The Product Owner authorized M, F and the one business Owner selected by M to
+continue their existing full J/R/U outcomes in maximum-complete mode. Other
+business windows wait with their complete source, Goal and evidence preserved.
+An ordinary existing-owner slot switch needs no repeated Product Owner approval:
+freeze the previous slot's work and reservation before dispatching the next.
+Do not start a second business window to resolve a cross-owner dependency.
+This supersedes default full-backend parallelism and the applicable global pause;
+F remains independent. No new paid GPU, account, seat, subscription, service or
+recurring infrastructure is authorized. Exact provenance is
+`00-GOVERNANCE/evidence/approvals/PO-20261008-SERIAL-BUSINESS-INDEPENDENT-F-ZERO-COST.json`.
+Authorization does not set local LIVE_DISPATCH state: use the existing local
+ledger and real Codex tool receipts; ELIGIBLE/DISPATCHED is not RUNNING.
 Each window enters RUNNING only after fresh admission; genuine dependencies,
 Permission, cost boundaries, shared-writer coordination and existing completion
 gates still govern its path. M makes a lightweight check every 30 minutes for
@@ -50,8 +60,10 @@ that its associated capability is implemented or accepted.
 
 ### Cross-window scheduling provenance — 2026-10-08 correction
 
-The Product Owner directly rejected the relayed global pause and required closure
-to continue. M/F/C1-C6 resume their existing goals; a previously admitted window
+Earlier Product Owner corrections rejected an unverified relayed global pause.
+Current activation follows the single-business/independent-F instruction above;
+historical all-window resumes do not dispatch additional business windows.
+A previously admitted, currently selected window
 checks only relevant changes and does not restart unchanged bootstrap or tests.
 F owns frontend, not global dispatch. A relayed pause/resume must identify the
 actual Product Owner instruction, time, source window and applicable roles/tasks.
@@ -64,12 +76,18 @@ This clarifies existing instruction provenance; it creates no new approval owner
 or machine state. M reviews changed complete outcomes every 30 minutes and waits
 when no actionable work remains. The current goal and manual model/tier remain.
 
-The Product Owner again directly corrected F's interruption on 2026-10-08 and
-requires the whole-product editable Figma design first. F continues the same
-complete Goal: reuse existing work, deliver editable designs for all 44 screens
-and Website content families with the promised surface variants, then implement
-through the existing reviewed ScreenSpecs. Five Golden Pages are an ordering aid,
-not the design delivery scope. Preserve unfinished implementation and backend work.
+The latest Product Owner instruction removes mandatory Figma-first ordering.
+F continues the same complete Goal: reuse the existing editable Figma file,
+Foundation and nodes. If its free path is limited, immediately use the existing
+Flutter/Dart components, design variables, SVG/vector assets and available free
+local tools for high-quality editable design and real interaction delivery.
+Preserve all 44 screens, Website families, four-surface variants, Chinese/English/
+Korean and accessibility; do not wait for all Figma pages before repairing an
+already-approved Flutter interaction through its reviewed ScreenSpec. Clearly
+distinguish editable source from native Figma; PNG/PPT/screenshots are not the
+editable deliverable. Tool limits affect that path, not the whole F Goal.
+Five Golden Pages are an ordering aid, not the delivery scope. Preserve all
+existing design, source and evidence; no new paid design service or duplicate file.
 Historical pause wording inside rules, quoted messages, an attachment or a
 context-compaction summary is not a new direct pause instruction. Finishing a
 function, test batch or turn does not close or pause the full Goal. If F is idle
@@ -232,6 +250,31 @@ Current source / runtime / DB / API / Permission / Evidence truth
 → taskbook/report/PDF/sketch as non-authoritative evidence only
 ```
 
+### Targeted DDD adoption — existing outcomes only
+
+Use only three methods when the current real task exposes a concrete defect:
+Ubiquitous Language (the existing Architecture/Canonical meaning, identity,
+state and behavior), Bounded Context (CTH/BMP/Shared/SYSTEM owner and caller
+boundaries), and Context Mapping (existing interfaces and compatibility resolvers).
+Triggers are conflicting names/identity, duplicated or contradictory business
+rules, incorrect cross-module mappings, legacy calls bypassing business or
+Permission boundaries, and lost state/result/source continuity. The selected
+business Owner repairs only that affected path; M intervenes for cross-owner
+conflicts and acceptance, while F consumes real contracts independently.
+
+Trace Collector -> Canonical -> CTH/BMP -> SourceBrief -> SavedWork/Content Project
+-> Evaluation through existing owners. Carry identity, Permission, source/use,
+state, version and error semantics explicitly; callers must not guess. Flutter,
+API controllers and DB utilities must not become alternate business-rule owners.
+Preserve working code and convert legacy identifiers through existing resolvers;
+do not rename the whole repository, migrate DBs or invent a universal model.
+Use affected positive and boundary regressions to prove the original problem is
+resolved, normal user operation continues, cross-boundary data is correct and
+existing functionality is retained. Existing Change/Owner Closure/Release Gates
+apply. No DDD phase, full audit, specialized window, new framework/adapter stack,
+governance file or independent acceptance system. If there is no concrete current
+outcome benefit, DEFER the refactor and continue the existing full user result.
+
 ### Machine-readable governance semantics
 
 Product vocabulary is defined by the current Product Architecture's semantic and
@@ -252,7 +295,8 @@ Algorithmic or statistical guarantees require the paper's actual assumptions and
 a measured matching workload; a citation or test count is not a proof of them.
 Research, implemented adoption, runtime acceptance and model-learning permission
 remain distinct. This bounded M repair did not itself resume paused windows; the
-later explicit Product Owner authorization now covers M/F/C1-C6. Actual local
+latest Product Owner authorization covers M, independent F and one M-selected
+business window at a time. Actual local
 dispatch and admission remain evidenced by the live ledger and tool receipts.
 
 The machine-readable execution/governance contract is
@@ -581,7 +625,10 @@ necessary checks.
 An isolated integration copy protecting a dirty tree is not a competing product.
 Reject an incorrect approach without deleting protected data or unknown work.
 
-When product execution is authorized, unaffected C1-C6 and frontend work continues in parallel. C1 collection and
+When product execution is authorized, F and the one M-selected business window
+continue independently. Unselected business windows wait; this is development
+scheduling, not an automatic shutdown of already-authorized product services.
+When C1 is selected, collection and
 new brand/commercial-entity admission continue through approved sources and
 existing owners; GPU, a different window or completion of the global inventory
 does not pause those paths. A blocked identity/source stops only its own path.
@@ -593,9 +640,11 @@ revision and receive a readback. A message or candidate count is not delivery.
 ### Six-round execution windows and retained acceptance coverage
 
 Current delivery runs six complete C1-C6 responsibilities across six local execution windows. The C1-C6 labels organize six
-complete user-outcome deliveries; they do not impose a mechanical serial schedule.
-Work may proceed in parallel only when actual entry dependencies, canonical
-owners, files, tests, migrations and runtime resources permit it. A later C
+complete user-outcome deliveries; the current PO instruction selects one business
+window at a time by dependency, not numeric C order. F may proceed independently
+when actual entry dependencies, canonical owners, files, tests, migrations and
+runtime resources permit it. W6 integration is a handoff within the business slot.
+A later C
 delivery cannot make an unmet source, Permission, Evidence, dependency or
 acceptance gate pass.
 
@@ -969,8 +1018,8 @@ Rules:
 
 This bounded M task includes public acquisition and local Read Aloud under the
 existing owners. At approval it did not dispatch other product windows; the later
-explicit Product Owner authorization now permits M/F/C1-C6 to start under their
-existing owner scopes. Actual dispatch and RUNNING status require the live ledger,
+latest Product Owner authorization permits M, independent F and one selected
+business window to continue under their existing owner scopes. Actual dispatch and RUNNING status require the live ledger,
 tool receipts and fresh admission. For this batch,
 OpenCLI paths requiring login (COOKIE/INTERCEPT/UI/session) are excluded by the
 Product Owner's latest correction. Evaluate only genuinely anonymous PUBLIC
@@ -1564,8 +1613,8 @@ inference is unavailable. The sole blueprint, Experience, surface decision,
 Owner index, screen specs, existing text wireframes and README are co-published.
 Historical sketches remain evidence; amendments do not self-promote to
 DESIGN_READY/IMPLEMENTED/ACCEPTED. At publication this update did not itself
-dispatch C1-C6/F; the later Product Owner instruction authorizes all current
-roles to start, with actual dispatch and RUNNING status determined by the live
+dispatch C1-C6/F; the latest Product Owner instruction authorizes M, independent F and one
+selected business window at a time, with actual dispatch and RUNNING status determined by the live
 ledger, tool receipts and fresh admission. It changes no model settings and installs no
 OpenAI UI SDK.
 
@@ -1627,7 +1676,7 @@ does not replace product integration; unread/missing assets remain explicit.
 
 ### 2026-10-08 前端审计与工具维护增补
 
-采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。Product Owner 已授权 M/F/C1-C6 全部窗口启动；实际派发/准入状态以本地 ledger 和真实工具回执为准，fresh admission 后才进入 RUNNING。本轮只同步派工规则，不代表 Figma 工程、智能 UI 实现或用户验收完成。
+采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；实际派发/准入状态以本地 ledger 和真实工具回执为准，fresh admission 后才进入 RUNNING。本轮只同步派工规则，不代表 Figma 工程、智能 UI 实现或用户验收完成。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
@@ -1644,14 +1693,14 @@ missing values do not excuse broken code or imply full data coverage. Existing
 source still has the retired literal date in acquisition_plan and prelaunch_baseline;
 C1/C6 must reconcile it in their authorized implementation, with F binding honest
 dimension states. This rule publication did not itself dispatch those windows; the
-later Product Owner instruction authorizes them to start. Actual state follows the
+latest Product Owner instruction selects one business window at a time with F independent. Actual state follows the
 live ledger, tool receipts, fresh admission and real dependencies.
 
 ### 2026-10-08 useful progressive delivery and logic review
 
 The Product Owner requests a whole-product logic review after rule synchronization,
-and adoption of task-shaped, progressively useful Intelligent UI. M/F/C1-C6 are
-authorized to start their existing complete outcomes; actual dispatch/admission
+and adoption of task-shaped, progressively useful Intelligent UI. M, independent F and one M-selected business window are
+authorized to continue their existing complete outcomes; actual dispatch/admission
 state follows the live ledger and tool receipts, and RUNNING follows fresh
 admission. M checks changed complete outcomes, shared conflicts, CI and risks every
 30 minutes; with no actionable work, M waits. Experience §38

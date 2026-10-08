@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'lumenis_http_transport_types.dart';
 
-const supportsLocalCoreCredentialBootstrap = true;
+const supportsLocalCoreCredentialBootstrap = false;
 
 Future<LumenisTransportResponse> sendLumenisHttpRequest(
   LumenisTransportRequest request,

@@ -87,11 +87,11 @@ After the overall product plan is accepted, resolve source bindings and detailed
 
 ### 可编辑设计工程与源码同步 — 2026-10-08 审计增补
 
-既有 F 负责全部 44 屏与官网内容家族的可编辑设计工程，M 负责审查，C1-C6 提供真实字段/动作/状态合同，C6 协调共享绑定。Product Owner 已明确要求 F 继续，先完成全产品 Figma 可编辑设计；不存在等待再次开工确认的前置。后端窗口继续各自授权工作，现有前端修改保留。
+既有 F 独立推进全部 44 屏与官网内容家族的可编辑设计及真实四端交互，M 审查，当前唯一业务窗口按 Owner 合同衔接，C6 协调共享绑定。最新 PO 已取消强制 Figma-first：保留现有工程/Foundation/节点，免费路径受限时立即用现有 Flutter/Dart、变量、SVG/矢量和本地免费工具继续；不等待充值，不因业务窗口轮换暂停 F。
 
-在现有 ScreenSpec/README 保存 `Screen ID → 设计规格 → Figma file/node/revision → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence` 的映射，不建第二设计注册表或权威。Figma 是开发设计资产，唯一 Experience Constitution 和既有 Product Core 真相不变；无访问时保留 NOT_VERIFIED/BLOCKED，禁止用 PNG 或伪造 .fig 冒充。优先复用获授权现有工程；无可用工程时，本次明确的全产品可编辑设计要求已授权创建必要设计文件，仍须具备真实编辑权限，不包含新费用或公开发布。
+现有映射为 `Screen ID → 设计规格 → 可编辑载体/路径/版本 → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence`。Figma 保留 file/node/revision；源码载体保留 Dart/Token/SVG 路径、版本、编辑和预览方式，不能称为原生 Figma。工具受限单独记录；禁止 PNG、PPT、静态截图、假 .fig 替代完整可编辑交付，不重复创建设计文件或新增收费服务。Experience仍是唯一设计权威。
 
-先交完整信息架构、组件/变量关系、全部屏幕与官网家族的可编辑视觉设计及任务交互原型，再按 DESIGN_READY 逐屏实现。五个 Golden Pages（AI-01、CTH-01、BMP-01、SH-01、SYS-01）只用于设计排序，不是可交付范围上限，也不能做完五页就停。全部 44 屏及官网家族保留四端适配、中英韩、明暗主题、字号/宽度、可访问性与完整失败恢复；Figma 使用可编辑 Components/Variants/Variables/Auto Layout/Prototype，保留既定2D手绘水彩方向及真实字段/动作/状态。交付须给出可打开编辑的文件链接、节点与版本，以及既有ScreenSpec映射中的覆盖和缺口；截图仅作辅助。主题尽量映射既有 LumenisTheme，Website Astro/CSS只共享语义设计决策。
+完整信息架构、组件/变量、全部44屏及官网家族的可编辑设计和任务交互继续交付；已有Flutter交互按其DESIGN_READY规范直接修复，不等待全部Figma页面完成。优先ACC-03、AI-01、CTH/BMP、SH-01/BMP-08、SYS-06接线，Golden Pages均为排序而非范围上限。保留四端、中英韩、主题、字号/宽度、可访问性、失败恢复和2D手绘水彩方向。Figma或源码载体均给出真实可编辑路径/版本、原有ScreenSpec映射和缺口；截图仅辅助。主题复用LumenisTheme，官网Astro/CSS保持既定边界；真实Core/Permission/来源/保存/恢复与跨端验收不可由Widget测试替代。
 
 每次设计修改必须定位受影响源组件/Token/动作、必要回归和回退版本，保留未修改工作、状态恢复、焦点和路由；不得为了重构巨型 Screen/Shell 或统一样式而重写业务。CTH事件因果边、ACC-03/04绑定登记及默认入口需分别核对，缺少关系数据或真实 callable 不能靠绘图宣告完成。
 

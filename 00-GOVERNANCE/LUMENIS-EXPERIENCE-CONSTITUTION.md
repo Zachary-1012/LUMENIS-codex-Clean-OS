@@ -1477,11 +1477,11 @@ frame extraction, gate or build cannot establish Product Truth.
 
 ### 可编辑设计工程与源码同步 — 2026-10-08 审计增补
 
-既有 F 负责全部 44 屏与官网内容家族的可编辑设计工程，M 负责审查，C1-C6 提供真实字段/动作/状态合同，C6 协调共享绑定。Product Owner 已明确要求 F 继续，先完成全产品 Figma 可编辑设计；不存在等待再次开工确认的前置。后端窗口继续各自授权工作，现有前端修改保留。
+既有 F 负责全部 44 屏与官网内容家族的可编辑设计工程，M 负责审查，C1-C6 保留真实字段/动作/状态合同职责，C6 协调共享绑定。2026-10-08 最新直接指令明确 F 独立继续，与 M 选择的唯一业务窗口并行；Figma-first 不再是强制前置。保留已有 Figma 工程/Foundation/节点与现有源码。免费额度、权限或调用受限时，立即采用现有 Flutter/Dart、设计变量、SVG/矢量及本地免费工具形成可编辑设计与真实交互，不因付费工具暂停完整 F Goal。
 
-在现有 ScreenSpec/README 保存 `Screen ID → 设计规格 → Figma file/node/revision → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence` 的映射，不建第二设计注册表或权威。Figma 是开发设计资产，唯一 Experience Constitution 和既有 Product Core 真相不变；无访问时保留 NOT_VERIFIED/BLOCKED，禁止用 PNG 或伪造 .fig 冒充。优先复用获授权现有工程；无可用工程时，本次明确的全产品可编辑设计要求已授权创建必要设计文件，仍须具备真实编辑权限，不包含新费用或公开发布。
+在现有 ScreenSpec/README 保存 `Screen ID → 设计规格 → 可编辑载体/路径/版本 → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence` 映射。Figma 载体记录 file/node/revision；源码载体记录 Dart/Token/SVG 路径、版本及编辑/预览方法，明确不等同于原生 Figma。工具受限仅标记该路径，禁止 PNG、PPT、静态截图或伪造 .fig 冒充完整可编辑交付。复用现有文件，不重复创建，不新增收费服务。唯一 Experience、设计状态及 Product Core 真相不变。
 
-先交完整信息架构、组件/变量关系、全部屏幕与官网家族的可编辑视觉设计及任务交互原型，再按 DESIGN_READY 逐屏实现。五个 Golden Pages（AI-01、CTH-01、BMP-01、SH-01、SYS-01）只用于设计排序，不是可交付范围上限，也不能做完五页就停。全部 44 屏及官网家族保留四端适配、中英韩、明暗主题、字号/宽度、可访问性与完整失败恢复；Figma 使用可编辑 Components/Variants/Variables/Auto Layout/Prototype，保留既定2D手绘水彩方向及真实字段/动作/状态。交付须给出可打开编辑的文件链接、节点与版本，以及既有ScreenSpec映射中的覆盖和缺口；截图仅作辅助。主题尽量映射既有 LumenisTheme，Website Astro/CSS只共享语义设计决策。
+完整信息架构、组件/变量关系、全部屏幕与官网家族的可编辑设计和任务交互仍须交付；不再要求全部 Figma 页面先完成才修已有 Flutter 交互。各屏继续按 DESIGN_READY 实现与验收。优先接通 ACC-03 入口/续接、AI-01 提交/结果/恢复、CTH/BMP 来源/修改/保存、SH-01/BMP-08 媒体操作及 SYS-06 浏览器/返回任务；这只是顺序，不缩减 44 屏和官网。保留四端角色、中英韩、主题、字号/宽度、无障碍、失败恢复、2D手绘水彩与真实字段/动作/状态。Figma 复用可编辑组件/变量/原型，源码路径保留可编辑组件/变量/矢量与预览；提供真实载体/版本和 ScreenSpec覆盖缺口。主题映射既有 LumenisTheme，Website Astro/CSS共享语义决策。只连已有真实 Core 合同，不造模拟后端；Widget通过不等于保存或跨端运行验收。
 
 每次设计修改必须定位受影响源组件/Token/动作、必要回归和回退版本，保留未修改工作、状态恢复、焦点和路由；不得为了重构巨型 Screen/Shell 或统一样式而重写业务。CTH事件因果边、ACC-03/04绑定登记及默认入口需分别核对，缺少关系数据或真实 callable 不能靠绘图宣告完成。
 

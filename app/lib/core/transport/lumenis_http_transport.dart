@@ -6,11 +6,10 @@ import 'lumenis_http_transport_types.dart';
 
 export 'lumenis_http_transport_types.dart';
 
-/// Whether this platform may consume the loopback-only Core bootstrap header.
+/// Retained compatibility capability; all platforms return false.
 ///
-/// Browser clients never receive that reusable local credential. Protected Web
-/// Workspace access remains a server-owned product capability, not a client
-/// shortcut around Permission.
+/// No client may fetch the server's reusable credential. Workspace and session
+/// authorization remain server-owned on every platform.
 bool get supportsLocalCoreCredentialBootstrap =>
     platform.supportsLocalCoreCredentialBootstrap;
 

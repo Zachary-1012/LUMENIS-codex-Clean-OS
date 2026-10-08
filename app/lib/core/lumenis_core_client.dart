@@ -140,8 +140,6 @@ class LumenisCoreClient {
               : _defaultCoreBaseUrl);
 
   final String baseUrl;
-  String? _coreAuthorization;
-  bool _authorizationBootstrapped = false;
   Map<String, String> _contextHeaders = const {
     'X-Lumenis-Context-Mode': 'GLOBAL_ALL',
   };
@@ -151,73 +149,13 @@ class LumenisCoreClient {
   /// still reauthorizes each request carrying the focus headers.
   Map<String, dynamic>? get currentContextEnvelope => _contextEnvelope;
 
-  /// Core transport credentials are read only from a loopback Core runtime
-  /// and kept in memory. They are not a product account and do not create an
-  /// account session.
-  void clearCredentials() {
-    _coreAuthorization = null;
-    _authorizationBootstrapped = false;
-  }
+  /// Retained for the existing launch lifecycle. The client no longer obtains
+  /// or stores Core credentials. Server-owned workspace/session authorization
+  /// is checked on every request; this hook cannot create or revoke a session.
+  void clearCredentials() {}
 
-  Future<void> _bootstrapCoreAuthorization() async {
-    if (_authorizationBootstrapped) return;
-
-    if (!supportsLocalCoreCredentialBootstrap) {
-      // A browser must never receive the reusable credential returned by the
-      // loopback-only bootstrap endpoint. Any protected Web Workspace route
-      // therefore remains an honest server-owned unavailable/denied state.
-      _authorizationBootstrapped = true;
-      return;
-    }
-
-    final uri = _uri('/api/auth/config');
-    if (!_isLoopback(uri)) {
-      // /api/auth/config returns a reusable Basic header. It is intentionally
-      // consumed only by a local Core process, never by a remote client.
-      _authorizationBootstrapped = true;
-      return;
-    }
-
-    try {
-      final config = await _get(
-        '/api/auth/config',
-        useCoreAuthorization: false,
-        withContext: false,
-      );
-      if (config['ok'] != true || config['auth_enabled'] is! bool) {
-        throw const FormatException('Core auth configuration is invalid.');
-      }
-
-      if (config['auth_enabled'] == true) {
-        final authorization = config['auth_header'];
-        if (authorization is! String ||
-            !authorization.startsWith('Basic ') ||
-            authorization.contains('\r') ||
-            authorization.contains('\n')) {
-          throw const FormatException(
-            'Core did not provide a valid configured authorization header.',
-          );
-        }
-        _coreAuthorization = authorization;
-      } else {
-        _coreAuthorization = null;
-      }
-      _authorizationBootstrapped = true;
-    } on LumenisCoreException catch (error) {
-      // Older/local Core builds may not expose this optional bootstrap route.
-      // Try the normal no-credential read; an actual 401 remains visible.
-      if (error.statusCode == 404) {
-        _authorizationBootstrapped = true;
-        return;
-      }
-      rethrow;
-    }
-  }
-
-  Future<Map<String, dynamic>> runtimeIdentity() async {
-    await _bootstrapCoreAuthorization();
-    return _get('/api/experience/runtime/identity', withContext: false);
-  }
+  Future<Map<String, dynamic>> runtimeIdentity() =>
+      _get('/api/experience/runtime/identity', withContext: false);
 
   Future<List<Map<String, dynamic>>> subjects() async {
     final payload = await settingsSubjects();
@@ -650,12 +588,6 @@ class LumenisCoreClient {
     final uri = _uri(
       '/api/experience/content-projects/$artifactId/${package ? 'package' : 'media'}',
     );
-    final authorization = _coreAuthorization;
-    if (authorization != null && !_allowsAuthorization(uri)) {
-      throw const LumenisCoreException(
-        'Core credentials require a loopback Core endpoint.',
-      );
-    }
     try {
       final response = await sendLumenisBinaryRequest(
         LumenisTransportRequest(
@@ -664,7 +596,6 @@ class LumenisCoreClient {
           headers: {
             ...context,
             'Accept': package ? 'application/zip' : 'video/mp4, audio/wav',
-            'Authorization': ?authorization,
           },
           connectionTimeout: const Duration(minutes: 2),
           followRedirects: false,
@@ -715,7 +646,6 @@ class LumenisCoreClient {
       'POST',
       '/api/browser/sessions',
       payload: const <String, Object?>{},
-      useCoreAuthorization: false,
       withContext: false,
     );
   }
@@ -726,7 +656,6 @@ class LumenisCoreClient {
     return _request(
       'GET',
       '/api/browser/sessions/${Uri.encodeComponent(sessionId)}',
-      useCoreAuthorization: false,
       withContext: false,
     );
   }
@@ -742,7 +671,6 @@ class LumenisCoreClient {
       'POST',
       '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/navigate',
       payload: <String, Object?>{'url': url},
-      useCoreAuthorization: false,
       withContext: false,
       connectionTimeout: const Duration(seconds: 20),
     );
@@ -755,7 +683,6 @@ class LumenisCoreClient {
       'POST',
       '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/action',
       payload: const <String, Object?>{'action': 'reload'},
-      useCoreAuthorization: false,
       withContext: false,
       connectionTimeout: const Duration(seconds: 20),
     );
@@ -768,7 +695,6 @@ class LumenisCoreClient {
       'POST',
       '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/stop',
       payload: const <String, Object?>{},
-      useCoreAuthorization: false,
       withContext: false,
     );
   }
@@ -901,22 +827,13 @@ class LumenisCoreClient {
     );
   }
 
-  Future<Map<String, dynamic>> _get(
-    String path, {
-    bool useCoreAuthorization = true,
-    bool withContext = true,
-  }) => _request(
-    'GET',
-    path,
-    useCoreAuthorization: useCoreAuthorization,
-    withContext: withContext,
-  );
+  Future<Map<String, dynamic>> _get(String path, {bool withContext = true}) =>
+      _request('GET', path, withContext: withContext);
 
   Future<Map<String, dynamic>> _request(
     String method,
     String path, {
     Map<String, Object?>? payload,
-    bool useCoreAuthorization = true,
     bool withContext = true,
     Map<String, String>? operationContext,
     Duration connectionTimeout = const Duration(seconds: 8),
@@ -927,21 +844,12 @@ class LumenisCoreClient {
       throw const FormatException('Only one request body is allowed.');
     }
     final uri = _uri(path);
-    final authorization = useCoreAuthorization ? _coreAuthorization : null;
-    if (authorization != null && !_allowsAuthorization(uri)) {
-      throw const LumenisCoreException(
-        'Core credentials require a loopback Core endpoint.',
-      );
-    }
 
     try {
       final headers = <String, String>{
         'Accept': 'application/json',
         ...requestHeaders,
       };
-      if (authorization != null) {
-        headers['Authorization'] = authorization;
-      }
       if (withContext) {
         headers.addAll(operationContext ?? _contextHeaders);
       }
@@ -1023,10 +931,6 @@ class LumenisCoreClient {
       throw const LumenisCoreException('Invalid LUMENIS Core URL.');
     }
     return uri;
-  }
-
-  static bool _allowsAuthorization(Uri uri) {
-    return _isLoopback(uri);
   }
 
   static bool _isLoopback(Uri uri) {

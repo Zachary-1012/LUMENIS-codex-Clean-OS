@@ -197,7 +197,7 @@ def resolve_local_workspace_principal(
     """Resolve the fixed workspace principal from the current server request."""
     if (
         type(module) is not str
-        or module not in {"content", "reports", "cases", "collector", "owned_training", "skills", "browser"}
+        or module not in {"content", "reports", "cases", "collector", "owned_training", "owned_model_admission", "skills", "browser", "evidence"}
         or type(action) is not str
         or action not in _RESOURCE_SCOPE_ACTIONS
     ):
@@ -888,7 +888,7 @@ def check_local_workspace_scope_permission(
 
     valid_request = (
         domain_config is not None
-        and module_value in {"content", "reports", "cases", "collector", "owned_training", "skills"}
+        and module_value in {"content", "reports", "cases", "collector", "owned_training", "owned_model_admission", "skills", "evidence"}
         and (module_value != "cases" or normalized_domain == "cth")
         and action_value in _RESOURCE_SCOPE_ACTIONS
         and type(global_scope) is bool

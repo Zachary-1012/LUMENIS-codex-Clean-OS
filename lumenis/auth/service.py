@@ -4,11 +4,11 @@
 import time
 import sqlite3
 from functools import wraps
-from flask import request, jsonify, g
+from flask import request, jsonify, g, has_request_context
 from .models import get_db, init_auth_db
 from .security import (
     verify_password, generate_token, check_login_attempts,
-    record_login_attempt, verify_security_questions
+    record_login_attempt, verify_security_questions, normalize_login_ip
 )
 from ..config import AUTH_CONFIG, ROLE_PERMISSIONS
 
@@ -29,12 +29,13 @@ def login(username: str, password: str, ip: str = None, user_agent: str = None) 
     返回: {"success": bool, "token": str, "user": dict, "error": str}
     """
     ensure_initialized()
-    ip = ip or request.remote_addr if request else "unknown"
+    if not ip and has_request_context():
+        ip = request.remote_addr
+    ip = normalize_login_ip(ip)
 
     # 检查登录限流
     check = check_login_attempts(username, ip)
     if not check["allowed"]:
-        record_login_attempt(username, ip, False)
         return {"success": False, "error": f"账号已锁定，请{check['locked_until']}后再试", "remaining": 0}
 
     conn = get_db()
@@ -84,29 +85,36 @@ def login_by_key(access_key: str, ip: str = None, user_agent: str = None) -> dic
     """
     import hmac
     ensure_initialized()
-    ip = ip or (request.remote_addr if request else "unknown")
+    if not ip and has_request_context():
+        ip = request.remote_addr
+    ip = normalize_login_ip(ip)
     master = AUTH_CONFIG.get("master_access_key", "")
-
-    check = check_login_attempts("__access_key__", ip)
-    if not check["allowed"]:
-        record_login_attempt("__access_key__", ip, False)
-        return {"success": False, "error": f"尝试过多已锁定，请{check['locked_until']}后再试", "remaining": 0}
-
-    if not master or not access_key or not hmac.compare_digest(
-        str(access_key).strip().encode("utf-8"), str(master).strip().encode("utf-8")
-    ):
-        record_login_attempt("__access_key__", ip, False)
-        remaining = check["remaining"] - 1
-        return {"success": False, "error": f"密钥错误，剩余尝试次数：{max(0, remaining)}",
-                "remaining": max(0, remaining)}
 
     conn = get_db()
     try:
+        # Serialize the per-IP check, comparison, attempt record and session
+        # insert so concurrent bad keys cannot all pass the final slot.
+        conn.execute("BEGIN IMMEDIATE")
+        check = check_login_attempts("__access_key__", ip, conn=conn)
+        if not check["allowed"]:
+            conn.rollback()
+            return {"success": False, "error": f"尝试过多已锁定，请{check['locked_until']}后再试", "remaining": 0}
+
+        if not master or not access_key or not hmac.compare_digest(
+            str(access_key).strip().encode("utf-8"), str(master).strip().encode("utf-8")
+        ):
+            record_login_attempt("__access_key__", ip, False, conn=conn)
+            conn.commit()
+            remaining = check["remaining"] - 1
+            return {"success": False, "error": f"密钥错误，剩余尝试次数：{max(0, remaining)}",
+                    "remaining": max(0, remaining)}
+
         cur = conn.execute("SELECT * FROM v4_users WHERE role='owner' AND status='active' ORDER BY id LIMIT 1")
         user = cur.fetchone()
         if not user:
+            conn.rollback()
             return {"success": False, "error": "主账号未初始化，请先用账号密码登录一次"}
-        record_login_attempt("__access_key__", ip, True)
+        record_login_attempt("__access_key__", ip, True, conn=conn)
         token = generate_token(user["id"])
         expires_at = time.strftime("%Y-%m-%d %H:%M:%S",
                                    time.localtime(time.time() + AUTH_CONFIG["token_expire_hours"] * 3600))
@@ -123,6 +131,10 @@ def login_by_key(access_key: str, ip: str = None, user_agent: str = None) -> dic
             },
             "expires_at": expires_at,
         }
+    except Exception:
+        if conn.in_transaction:
+            conn.rollback()
+        raise
     finally:
         conn.close()
 

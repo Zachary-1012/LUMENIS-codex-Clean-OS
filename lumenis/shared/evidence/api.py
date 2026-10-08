@@ -19,6 +19,138 @@ _EVIDENCE_REPLAY_ACTION = "evidence.replay_failed"
 _EVIDENCE_REPLAY_RESOURCE = "evidence.replay_failed"
 _EVIDENCE_REPLAY_LOCK = threading.Lock()
 
+def _scope_error(code, message, status):
+    from flask import jsonify
+    return jsonify({"ok": False, "code": code, "error": message}), status
+
+
+def resolve_evidence_request_scope(action="read"):
+    """Require a server-issued actor, exact CTH/BMP scope, and Permission.
+
+    GLOBAL_ALL needs X-Domain-Id on Evidence data routes because the store
+    has separate exact CTH and BMP global markers; this differs from the
+    selection-only /api/settings/context response, whose global context has
+    no domain. It returns only explicitly global-marked Evidence rows.
+    """
+    from flask import request
+    from lumenis.auth.service import get_current_user
+    from subject_registry import (
+        SubjectValidationError,
+        get_subject_by_id,
+        normalize_domain,
+    )
+    from lumenis.system.security import permission
+
+    try:
+        actor = get_current_user()
+    except Exception:
+        return None, _scope_error(
+            "AUTH_UNAVAILABLE", "账号会话暂不可用", 503
+        )
+    if actor is None:
+        actor = permission.resolve_local_workspace_principal(module="evidence", action=action)
+    if type(actor) is not permission.LocalWorkspacePrincipal and (not isinstance(actor, dict) or type(actor.get("id")) is not int):
+        return None, _scope_error("AUTH_REQUIRED", "需要有效账号会话", 401)
+
+    mode = request.headers.get("X-Lumenis-Context-Mode", "")
+    raw_domain = request.headers.get("X-Domain-Id", "")
+    raw_subject = request.headers.get("X-Subject-ID", "")
+    if mode not in {"FOCUS", "GLOBAL_ALL"} or not raw_domain:
+        return None, _scope_error(
+            "EVIDENCE_SCOPE_REQUIRED",
+            "Evidence 查询需要上下文模式及 CTH/BMP 域；GLOBAL_ALL 还需明确域",
+            400,
+        )
+    try:
+        normalized_domain = normalize_domain(raw_domain)
+    except SubjectValidationError:
+        return None, _scope_error("INVALID_EVIDENCE_SCOPE", "业务域无效", 400)
+    if normalized_domain not in {"CTH", "BMP"}:
+        return None, _scope_error("INVALID_EVIDENCE_SCOPE", "仅支持 CTH 或 BMP Evidence", 400)
+
+    subject_id = None
+    brand_focus_id = None
+    global_scope = mode == "GLOBAL_ALL"
+    if global_scope:
+        if raw_subject or request.headers.get("X-Brand-Focus-ID"):
+            return None, _scope_error(
+                "INVALID_EVIDENCE_SCOPE", "GLOBAL_ALL 不能携带聚焦主体", 400
+            )
+    else:
+        if not raw_subject or raw_subject != raw_subject.strip():
+            return None, _scope_error(
+                "INVALID_EVIDENCE_SCOPE", "FOCUS 需要有效 X-Subject-ID", 400
+            )
+        try:
+            subject = get_subject_by_id(normalized_domain, raw_subject)
+        except Exception:
+            return None, _scope_error(
+                "SUBJECT_REGISTRY_UNAVAILABLE", "主体注册表暂不可用", 503
+            )
+        if not isinstance(subject, dict):
+            return None, _scope_error("SUBJECT_NOT_FOUND", "主体未在有效注册表中", 404)
+        expected_type = "company" if normalized_domain == "CTH" else "brand"
+        if subject.get("subject_type") != expected_type:
+            return None, _scope_error(
+                "INVALID_EVIDENCE_SCOPE", "主体类型与业务域不匹配", 400
+            )
+        if normalized_domain == "CTH":
+            subject_id = raw_subject
+        else:
+            brand_focus_id = subject.get("brand_focus_id")
+            if not isinstance(brand_focus_id, str) or not brand_focus_id:
+                return None, _scope_error(
+                    "INVALID_EVIDENCE_SCOPE", "主体未绑定有效 BrandFocus", 400
+                )
+
+    try:
+        checker = (permission.check_local_workspace_scope_permission if type(actor) is permission.LocalWorkspacePrincipal
+                   else permission.check_actor_scope_permission)
+        decision = checker(
+            actor,
+            domain_id=normalized_domain,
+            action=action,
+            module="evidence",
+            subject_id=subject_id,
+            brand_focus_id=brand_focus_id,
+            global_scope=global_scope,
+        )
+    except Exception:
+        return None, _scope_error(
+            "AUTHORIZATION_UNAVAILABLE", "Evidence 范围授权暂不可用", 503
+        )
+    if decision.verification_state != "verified":
+        return None, _scope_error(
+            "AUTHORIZATION_UNAVAILABLE", "Evidence 范围授权暂不可用", 503
+        )
+    if not decision.allowed:
+        return None, _scope_error(
+            "EVIDENCE_SCOPE_DENIED", "没有读取该 Evidence 范围的权限", 403
+        )
+
+    return {
+        "actor": actor,
+        "product": "CTH" if normalized_domain == "CTH" else "ZBMP",
+        "domain_id": "cth" if normalized_domain == "CTH" else "zbmp",
+        "subject_id": subject_id,
+        "brand_focus_id": brand_focus_id,
+        "global_scope": global_scope,
+        "response": {
+            "mode": mode,
+            "domain_id": normalized_domain,
+            "subject_id": subject_id,
+            "brand_focus_id": brand_focus_id,
+            "global_scope": global_scope,
+            "evidence_scope": (
+                "EXPLICIT_GLOBAL_MARKED_EVIDENCE_ONLY"
+                if global_scope
+                else "EXACT_SUBJECT_OR_BRAND_FOCUS_EVIDENCE"
+            ),
+        },
+    }, None
+
+
+
 def register_evidence_api(app):
     """在 Flask app 上注册 Evidence 查询蓝图。"""
     from flask import Blueprint, jsonify, request
@@ -71,123 +203,7 @@ def register_evidence_api(app):
         return jsonify({"ok": False, "code": code, "error": message}), status
 
     def _authorized_read_scope():
-        """Require a session actor, selected CTH/BMP data scope, and Permission.
-
-        GLOBAL_ALL needs X-Domain-Id on Evidence data routes because the store
-        has separate exact CTH and BMP global markers; this differs from the
-        selection-only /api/settings/context response, whose global context has
-        no domain. It returns only explicitly global-marked Evidence rows.
-        """
-        from lumenis.auth.service import get_current_user
-        from subject_registry import (
-            SubjectValidationError,
-            get_subject_by_id,
-            normalize_domain,
-        )
-        from lumenis.system.security.permission import check_actor_scope_permission
-
-        try:
-            actor = get_current_user()
-        except Exception:
-            return None, _read_error(
-                "AUTH_UNAVAILABLE", "账号会话暂不可用", 503
-            )
-        if not isinstance(actor, dict) or type(actor.get("id")) is not int:
-            return None, _read_error("AUTH_REQUIRED", "需要有效账号会话", 401)
-
-        mode = request.headers.get("X-Lumenis-Context-Mode", "")
-        raw_domain = request.headers.get("X-Domain-Id", "")
-        raw_subject = request.headers.get("X-Subject-ID", "")
-        if mode not in {"FOCUS", "GLOBAL_ALL"} or not raw_domain:
-            return None, _read_error(
-                "EVIDENCE_SCOPE_REQUIRED",
-                "Evidence 查询需要上下文模式及 CTH/BMP 域；GLOBAL_ALL 还需明确域",
-                400,
-            )
-        try:
-            normalized_domain = normalize_domain(raw_domain)
-        except SubjectValidationError:
-            return None, _read_error("INVALID_EVIDENCE_SCOPE", "业务域无效", 400)
-        if normalized_domain not in {"CTH", "BMP"}:
-            return None, _read_error("INVALID_EVIDENCE_SCOPE", "仅支持 CTH 或 BMP Evidence", 400)
-
-        subject_id = None
-        brand_focus_id = None
-        global_scope = mode == "GLOBAL_ALL"
-        if global_scope:
-            if raw_subject or request.headers.get("X-Brand-Focus-ID"):
-                return None, _read_error(
-                    "INVALID_EVIDENCE_SCOPE", "GLOBAL_ALL 不能携带聚焦主体", 400
-                )
-        else:
-            if not raw_subject or raw_subject != raw_subject.strip():
-                return None, _read_error(
-                    "INVALID_EVIDENCE_SCOPE", "FOCUS 需要有效 X-Subject-ID", 400
-                )
-            try:
-                subject = get_subject_by_id(normalized_domain, raw_subject)
-            except Exception:
-                return None, _read_error(
-                    "SUBJECT_REGISTRY_UNAVAILABLE", "主体注册表暂不可用", 503
-                )
-            if not isinstance(subject, dict):
-                return None, _read_error("SUBJECT_NOT_FOUND", "主体未在有效注册表中", 404)
-            expected_type = "company" if normalized_domain == "CTH" else "brand"
-            if subject.get("subject_type") != expected_type:
-                return None, _read_error(
-                    "INVALID_EVIDENCE_SCOPE", "主体类型与业务域不匹配", 400
-                )
-            if normalized_domain == "CTH":
-                subject_id = raw_subject
-            else:
-                brand_focus_id = subject.get("brand_focus_id")
-                if not isinstance(brand_focus_id, str) or not brand_focus_id:
-                    return None, _read_error(
-                        "INVALID_EVIDENCE_SCOPE", "主体未绑定有效 BrandFocus", 400
-                    )
-
-        try:
-            decision = check_actor_scope_permission(
-                actor,
-                domain_id=normalized_domain,
-                action="read",
-                module="evidence",
-                subject_id=subject_id,
-                brand_focus_id=brand_focus_id,
-                global_scope=global_scope,
-            )
-        except Exception:
-            return None, _read_error(
-                "AUTHORIZATION_UNAVAILABLE", "Evidence 范围授权暂不可用", 503
-            )
-        if decision.verification_state != "verified":
-            return None, _read_error(
-                "AUTHORIZATION_UNAVAILABLE", "Evidence 范围授权暂不可用", 503
-            )
-        if not decision.allowed:
-            return None, _read_error(
-                "EVIDENCE_SCOPE_DENIED", "没有读取该 Evidence 范围的权限", 403
-            )
-
-        return {
-            "product": "CTH" if normalized_domain == "CTH" else "ZBMP",
-            "domain_id": "cth" if normalized_domain == "CTH" else "zbmp",
-            "subject_id": subject_id,
-            "brand_focus_id": brand_focus_id,
-            "global_scope": global_scope,
-            "response": {
-                "mode": mode,
-                "domain_id": normalized_domain,
-                "subject_id": subject_id,
-                "brand_focus_id": brand_focus_id,
-                "global_scope": global_scope,
-                "evidence_scope": (
-                    "EXPLICIT_GLOBAL_MARKED_EVIDENCE_ONLY"
-                    if global_scope
-                    else "EXACT_SUBJECT_OR_BRAND_FOCUS_EVIDENCE"
-                ),
-            },
-        }, None
+        return resolve_evidence_request_scope()
 
     def _query_scope(scope, *, limit, offset, after_created_at=None, after_id=None):
         return evidence_store.query_scoped_evidence(

@@ -202,15 +202,16 @@ def test_workspace_context_evidence_allowlist_and_startup_fences(tmp_path):
         auth_config = client.get("/api/auth/config")
         assert auth_config.status_code == 200
         auth_payload = auth_config.get_json()
-        assert auth_payload["ok"] is True and auth_payload["auth_enabled"] is True
-        decoded_auth = base64.b64decode(
-            auth_payload["auth_header"].split(" ", 1)[1]
-        ).decode("utf-8")
-        auth_user, auth_password = decoded_auth.split(":", 1)
+        assert auth_payload == {"ok": True, "auth_enabled": True}
+        assert auth_config.headers["Cache-Control"] == "no-store"
+        # Only the disposable in-process profile supplies synthetic test
+        # credentials; the anonymous metadata endpoint never exposes them.
+        auth_user, auth_password = core.AUTH_USER, core.AUTH_PASSWORD
         assert auth_user.startswith("lumenis-acceptance-")
         assert auth_user != "inherited-auth-user-sentinel"
         assert auth_password != "inherited-auth-password-sentinel"
-        workspace_headers = {"Authorization": auth_payload["auth_header"]}
+        test_header = base64.b64encode(f"{auth_user}:{auth_password}".encode()).decode("ascii")
+        workspace_headers = {"Authorization": "Basic " + test_header}
         response = client.get("/workspace", headers=workspace_headers)
         assert response.status_code == 200, response.get_data(as_text=True)
         assert "Workspace fixture" in response.get_data(as_text=True)
@@ -232,7 +233,7 @@ def test_workspace_context_evidence_allowlist_and_startup_fences(tmp_path):
         }
         rejected_auth = client.get("/api/settings/context", headers=scope_headers)
         assert rejected_auth.status_code == 401
-        assert rejected_auth.get_json().get("auth_required") is True
+        assert rejected_auth.get_json()["code"] == "AUTH_REQUIRED"
 
         auth_service.get_current_user = lambda: actor
         subject_registry.get_subject_by_id = lambda domain, subject_id: {
@@ -247,7 +248,7 @@ def test_workspace_context_evidence_allowlist_and_startup_fences(tmp_path):
 
         authorized_headers = {
             **scope_headers,
-            "Authorization": auth_payload["auth_header"],
+            "Authorization": "Basic " + test_header,
         }
         context = client.get("/api/settings/context", headers=authorized_headers)
         assert context.status_code == 200, context.get_data(as_text=True)

@@ -1491,22 +1491,131 @@ def _subject_sql_and_values(alias=''):
 
 @app.route('/api/auth/config')
 def auth_config_api():
-    """P0-B(2026-09-02): 前端 Auth 动态注入端点 — 前端从此读取凭证，前端代码库不再硬编码任何凭证。
-    放行认证（列入 _basic_auth 白名单），仅返回 auth_enabled + auth_header。
-    auth_header 仅在认证开启时返回；凭证单一来源在此端点（后端环境变量），可动态轮换/环境分离。
-    """
-    if not _auth_enabled():
-        return jsonify({'ok': True, 'auth_enabled': False, 'auth_header': ''})
+    """Public authentication metadata; credentials stay on the server."""
     try:
-        import base64 as _b64
-        header = 'Basic ' + _b64.b64encode(('%s:%s' % (AUTH_USER, AUTH_PASSWORD)).encode('utf-8')).decode('ascii')
-        return jsonify({'ok': True, 'auth_enabled': True, 'auth_header': header})
-    except Exception as _e:
-        return jsonify({'ok': False, 'error': 'auth_header 生成失败: ' + str(_e), 'code': 'AUTH_HEADER_ENCODE_ERROR'}), 500
+        response = jsonify({'ok': True, 'auth_enabled': _auth_enabled()})
+        status = 200
+    except Exception:
+        response = jsonify({'ok': False, 'code': 'AUTH_CONFIG_UNAVAILABLE'})
+        status = 503
+    response.headers['Cache-Control'] = 'no-store'
+    return response, status
+
+
+def _owner_authorized_root_request():
+    """Delegate only registered entries with their own fresh owner guards.
+
+    This transfers authentication to the named handler, not authorization to a
+    logged-in user. The owner still verifies actor, module, scope and effects.
+    """
+    if request.blueprint == 'ai_browser_runtime':
+        from flask import current_app
+        # This blueprint's before_request enforces SYSTEM/browser permission
+        # and binds every route to the current account or sealed workspace.
+        return any(guard.__name__ == '_require_browser_actor'
+                   for guard in current_app.before_request_funcs.get(request.blueprint, ()))
+    routes = {
+        'subject_registry.get_subjects': ('/api/settings/subjects', {'GET'}),
+        'api_collect': ('/api/collect', {'POST'}),
+        'api_collect_status': ('/api/collect/status/<task_id>', {'GET'}),
+        'api_collect_tasks': ('/api/collect/tasks', {'GET'}),
+        'evidence_api.evidence_stats': ('/api/evidence/stats', {'GET'}),
+        'evidence_api.evidence_list': ('/api/evidence/list', {'GET'}),
+        'evidence_api.evidence_detail': ('/api/evidence/<int:record_id>', {'GET'}),
+        'evidence_api.evidence_timeline': ('/api/evidence/timeline', {'GET'}),
+        'api_evidence_stats': ('/api/app_evidence/stats', {'GET'}),
+        'api_evidence_list': ('/api/app_evidence/list', {'GET'}),
+        'api_evidence_get': ('/api/app_evidence/<int:record_id>', {'GET'}),
+        'api_evidence_upload': ('/api/app_evidence/upload', {'POST'}),
+        'api_evidence_confirm': ('/api/app_evidence/<int:record_id>/confirm', {'POST'}),
+        'api_evidence_reject': ('/api/app_evidence/<int:record_id>/reject', {'POST'}),
+        'api_evidence_shadow': ('/api/app_evidence/<int:record_id>/shadow', {'POST'}),
+        'api_evidence_restore': ('/api/app_evidence/<int:record_id>/restore', {'POST'}),
+        'api_evidence_delete': ('/api/app_evidence/<int:record_id>', {'DELETE'}),
+        'domain_api.api_settings_context': ('/api/settings/context', {'GET', 'PUT', 'DELETE'}),
+        'domain_api.api_business_work_prepare': ('/api/experience/business-works', {'POST'}),
+        'domain_api.api_business_work_read': ('/api/experience/business-works/<work_id>', {'GET'}),
+        'domain_api.api_business_work_advance': ('/api/experience/business-works/<work_id>/<operation>', {'POST'}),
+        'domain_api.api_internal_pitch_prepare': ('/api/experience/creation/internal-pitches', {'POST'}),
+        'domain_api.api_internal_pitch_read': ('/api/experience/creation/internal-pitches/<task_id>', {'GET'}),
+        'domain_api.api_internal_pitch_action': ('/api/experience/creation/internal-pitches/<task_id>/<action>', {'POST'}),
+        'domain_api.api_internal_pitch_export': ('/api/experience/creation/internal-pitches/<task_id>/export', {'GET'}),
+        'experience_runtime.import_shared_document': ('/api/experience/materials/documents', {'POST'}),
+        'experience_runtime.read_shared_document': ('/api/experience/materials/documents/<int:evidence_id>', {'GET'}),
+        'experience_runtime.download_shared_document': ('/api/experience/materials/documents/<int:evidence_id>/file', {'GET'}),
+        'experience_runtime.quote_shared_document': ('/api/experience/materials/documents/<int:evidence_id>/quote', {'GET'}),
+        'experience_runtime.save_shared_work': ('/api/experience/saved-work', {'POST'}),
+        'experience_runtime.search_shared_work': ('/api/experience/saved-work', {'GET'}),
+        'experience_runtime.read_shared_work': ('/api/experience/saved-work/<artifact_id>', {'GET'}),
+        'experience_runtime.revise_shared_work': ('/api/experience/saved-work/<artifact_id>/revise', {'POST'}),
+        'experience_runtime.export_shared_work': ('/api/experience/saved-work/<artifact_id>/export', {'GET'}),
+        'experience_runtime.read_reporting_preferences': ('/api/experience/saved-work/preferences', {'GET'}),
+        'experience_runtime.save_reporting_preferences': ('/api/experience/saved-work/preferences', {'POST'}),
+        'experience_runtime.read_reporting_notifications': ('/api/experience/saved-work/notifications', {'GET'}),
+        'experience_runtime.generate_source_brief_job': ('/api/experience/reports/source-brief/generate', {'POST'}),
+        'experience_runtime.reopen_source_brief_job': ('/api/experience/reports/source-brief/jobs/<job_id>', {'GET'}),
+        'experience_runtime.submit_source_brief_review': ('/api/experience/reports/source-brief/jobs/<job_id>/reviews', {'POST'}),
+        'experience_runtime.start_source_brief_task': ('/api/experience/reports/source-brief/start', {'POST'}),
+        'experience_runtime.source_brief_task_status': ('/api/experience/reports/source-brief/tasks/<task_id>', {'GET'}),
+        'experience_runtime.resume_source_brief_task': ('/api/experience/reports/source-brief/tasks/<task_id>/resume', {'POST'}),
+        'experience_runtime.create_cth_work_case': ('/api/experience/cth/cases', {'POST'}),
+        'experience_runtime.read_cth_case_list': ('/api/experience/cth/cases', {'GET'}),
+        'experience_runtime.reopen_cth_work_case': ('/api/experience/cth/cases/<case_id>', {'GET'}),
+        'experience_runtime.inspect_content_project_media': ('/api/experience/shared-skills/shared.content_project/inspect', {'POST'}),
+        'experience_runtime.import_content_source': ('/api/experience/content-sources', {'POST'}),
+        'experience_runtime.confirm_content_source_import_request': ('/api/experience/content-source-confirmations/<confirmation_id>', {'POST'}),
+        'experience_runtime.content_source_detail': ('/api/experience/content-sources/<artifact_id>', {'GET'}),
+        'experience_runtime.export_content_project': ('/api/experience/content-projects/export', {'POST'}),
+        'experience_runtime.content_project_list': ('/api/experience/content-projects', {'GET'}),
+        'experience_runtime.content_project_detail': ('/api/experience/content-projects/<artifact_id>', {'GET'}),
+        'experience_runtime.content_project_package': ('/api/experience/content-projects/<artifact_id>/package', {'GET'}),
+        'experience_runtime.content_project_media': ('/api/experience/content-projects/<artifact_id>/media', {'GET'}),
+        'experience_runtime.prepare_owned_training_review_resource': ('/api/experience/owned-training/review-resources', {'POST'}),
+        'experience_runtime.submit_owned_training_review': ('/api/experience/owned-training/review-submissions', {'POST'}),
+        'experience_runtime.export_owned_training_reviews': ('/api/experience/owned-training/review-exports', {'POST'}),
+        'experience_runtime.confirm_owned_training_execution_approval': ('/api/experience/owned-training/execution-approvals', {'POST'}),
+        'experience_runtime.prepare_owned_training_phase_task': ('/api/experience/owned-training/phase-tasks', {'POST'}),
+        'experience_runtime.read_owned_training_execution_configuration': ('/api/experience/owned-training/execution-configuration', {'POST'}),
+        'experience_runtime.preflight_owned_training_execution': ('/api/experience/owned-training/execution-preflight', {'POST'}),
+        'experience_runtime.execute_owned_training_phase_task': ('/api/experience/owned-training/phase-tasks/<task_id>/execute', {'POST'}),
+        'experience_runtime.prepare_owned_training_phase_challenge': ('/api/experience/owned-training/phase-tasks/<task_id>/challenges', {'POST'}),
+        'experience_runtime.issue_owned_training_phase_decision': ('/api/experience/owned-training/phase-tasks/<task_id>/challenge-decisions', {'POST'}),
+        'experience_runtime.read_owned_training_phase_receipt': ('/api/experience/owned-training/phase-tasks/<task_id>/receipts/<nonce>', {'GET'}),
+        'experience_runtime.interrupt_owned_training_phase_task': ('/api/experience/owned-training/phase-tasks/<task_id>/interrupt', {'POST'}),
+        'experience_runtime.resume_owned_training_phase_task': ('/api/experience/owned-training/phase-tasks/<task_id>/resume', {'POST'}),
+        'api_weibo_cookies': ('/api/weibo/cookies', {'GET'}),
+    }
+    expected = routes.get(request.endpoint)
+    return (expected is not None and request.url_rule is not None
+            and request.url_rule.rule == expected[0] and request.method in expected[1])
 
 
 @app.before_request
 def _basic_auth():
+    if _owner_authorized_root_request():
+        return None
+    if (request.method == 'GET'
+            and request.endpoint == 'experience_runtime.runtime_subjects'
+            and request.url_rule is not None
+            and request.url_rule.rule == '/api/experience/subjects'):
+        from lumenis.system.security.permission import local_workspace_read_allowed
+        if local_workspace_read_allowed(module='subject_registry', action='read'):
+            return None
+    if (request.method == 'GET'
+            and request.endpoint == 'experience_runtime.shared_skills_catalog'
+            and request.url_rule is not None
+            and request.url_rule.rule == '/api/experience/shared-skills'):
+        from lumenis.system.security.permission import resolve_local_workspace_principal
+        if resolve_local_workspace_principal(module='skills', action='read') is not None:
+            return None
+    if request.method in {'GET', 'HEAD'} and request.endpoint in {
+        'lumenis_workspace_host.root', 'lumenis_workspace_host.root_slash',
+        'lumenis_workspace_host.resource', 'lumenis_workspace_host.asset',
+        'experience_runtime.runtime_identity', 'experience_runtime.screen_viewmodel',
+    }:
+        from lumenis.system.security.permission import resolve_local_workspace_principal
+        if resolve_local_workspace_principal(module='reports', action='read') is not None:
+            return None
     # A server-opened local workspace uses the existing sealed principal and
     # exact current Registry scope. The route still rechecks scope and effects.
     if request.path.startswith(('/api/experience/materials/documents', '/api/experience/saved-work')):
@@ -1522,22 +1631,31 @@ def _basic_auth():
         if _internal_pitch_local_access_allowed():
             return None
     # /v4 升级模块使用独立 token/密钥认证（自带登录页），不走现网 HTTP Basic；其余路由维持 Basic 兜底不变
-    # /api/auth/config 放行：前端 Auth 动态注入端点（P0-B），返回凭证供前端读取
+    # /api/auth/config exposes non-sensitive metadata only.
     # P0-R6: CTH 免密浏览态只读 GET 放行（CTH 页面依赖的旧版只读 API，仅 GET，不含 ZBMP 专属接口）
-    if not _auth_enabled() or request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health', '/api/system/health/summary', '/api/system/status', '/api/system/runtime', '/api/risks/active', '/api/risk/active', '/cth/login', '/zbmp/login', '/system/settings') or request.path.startswith('/v4/') or _is_cth_readonly_get(request.path, request.method):
+    if request.path in ('/healthz', '/api/health', '/api/collector-guard/status', '/api/auth/config', '/favicon.ico', '/api/kos/report/view', '/api/system/health', '/api/system/health/summary', '/api/system/status', '/api/system/runtime', '/api/risks/active', '/api/risk/active', '/cth/login', '/zbmp/login', '/system/settings') or request.path.startswith('/v4/') or _is_cth_readonly_get(request.path, request.method):
         return None
+    try:
+        if not _auth_enabled():
+            return None
+    except Exception:
+        response = jsonify({'ok': False, 'code': 'AUTH_CONFIG_UNAVAILABLE'})
+        response.headers['Cache-Control'] = 'no-store'
+        return response, 503
     auth=request.authorization
     if auth and secrets.compare_digest(auth.username or '', AUTH_USER) and secrets.compare_digest(auth.password or '', AUTH_PASSWORD):
         return None
-    # 统一认证 Contract（V1.0 基线）：Basic 之外也认可 v4 有效会话（Bearer/同名 session cookie），
-    # 使手机端登录 v4 后根级只读健康 API（/api/platform-health 等）可被全局 Auth 健康中心取到；
-    # 未登录/无效会话仍 401，安全等级不降，现网 HTTP Basic 行为完全保留。
-    try:
-        from lumenis.auth.service import get_current_user
-        if get_current_user():
-            return None
-    except Exception:
-        pass
+    # A product session can read these legacy health endpoints. It is not a
+    # blanket authorization for unrelated root routes or mutating methods.
+    if request.method == 'GET' and request.path in {
+        '/api/platform-health', '/api/xhs/collect-health',
+    }:
+        try:
+            from lumenis.auth.service import get_current_user
+            if get_current_user(read_only=True):
+                return None
+        except Exception:
+            pass
     # 仅顶层 HTML 文档导航回 WWW-Authenticate（触发浏览器原生登录框）。
     # API/XHR/fetch 等子请求回纯 401 JSON、不带挑战头：避免文档弹框期间 favicon/轮询等
     # 并发 401 同 realm 挑战反复重置原生登录框（“账号密码输到一半弹窗跳没又出现”的根因）。
@@ -1693,6 +1811,21 @@ def _permission_gate_write_check():
     except Exception:
         pass
     if request.method not in _PG_WRITE_METHODS:
+        return None
+    manual_evidence_rules = {
+        'api_evidence_upload': ('/api/app_evidence/upload', 'POST'),
+        'api_evidence_confirm': ('/api/app_evidence/<int:record_id>/confirm', 'POST'),
+        'api_evidence_reject': ('/api/app_evidence/<int:record_id>/reject', 'POST'),
+        'api_evidence_shadow': ('/api/app_evidence/<int:record_id>/shadow', 'POST'),
+        'api_evidence_restore': ('/api/app_evidence/<int:record_id>/restore', 'POST'),
+        'api_evidence_delete': ('/api/app_evidence/<int:record_id>', 'DELETE'),
+    }
+    manual_rule = manual_evidence_rules.get(request.endpoint)
+    if (manual_rule is not None and request.url_rule is not None
+            and request.url_rule.rule == manual_rule[0] and request.method == manual_rule[1]):
+        # The owner checks current actor/scope and the exact material or
+        # row/hash/reason approval before and inside its SQL transaction.
+        # A second path-only approval cannot bind that same operation.
         return None
     training_phase_rules = {
         'experience_runtime.prepare_owned_training_phase_task': '/api/experience/owned-training/phase-tasks',
@@ -5737,19 +5870,47 @@ def api_weibo_clear_login():
 
 @app.route('/api/weibo/cookies', methods=['GET'])
 def api_weibo_cookies():
-    """获取微博cookies（用于采集）"""
+    """Compatibility state endpoint; cookie material never leaves its owner."""
     try:
-        from weibo_login_manager import get_weibo_manager
-        manager = get_weibo_manager()
-        cookies = manager.get_cookies()
-        cookie_string = manager.get_cookie_string()
-        return jsonify({
-            'ok': True, 
-            'cookie_count': len(cookies), 
-            'cookie_string': cookie_string[:100] + '...' if len(cookie_string) > 100 else cookie_string
-        })
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        from weibo_login_manager import WeiboLoginManager
+        actor_ref = _weibo_session_metadata_actor()
+        metadata = WeiboLoginManager.read_saved_session_metadata()
+        if _weibo_session_metadata_actor() != actor_ref:
+            raise PermissionError('SESSION_ACTOR_CHANGED')
+        response = jsonify({'ok': True, **metadata})
+        status = 200
+    except PermissionError as exc:
+        code = str(exc)
+        response = jsonify({'ok': False, 'code': code})
+        status = 401 if code == 'AUTH_REQUIRED' else 403
+    except Exception:
+        response = jsonify({'ok': False, 'code': 'SESSION_METADATA_UNAVAILABLE'})
+        status = 503
+    response.headers['Cache-Control'] = 'no-store'
+    return response, status
+
+
+def _weibo_session_metadata_actor():
+    from lumenis.auth.service import get_current_user
+    from lumenis.shared.database import get_repository
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    from account.authorization import check_dual_domain_permission
+
+    principal = resolve_local_workspace_principal(module='collector', action='read')
+    if principal is not None:
+        return principal.principal_ref
+    actor = get_current_user(read_only=True)
+    if type(actor) is not dict or type(actor.get('id')) is not int or actor['id'] <= 0:
+        raise PermissionError('AUTH_REQUIRED')
+    connection = get_repository().connect(read_only=True, wal=False)
+    try:
+        if not check_dual_domain_permission(
+            actor['id'], 'SYSTEM', module='collector', action='read', connection=connection,
+        ):
+            raise PermissionError('SESSION_PERMISSION_DENIED')
+    finally:
+        connection.close()
+    return f"actor:{actor['id']}"
 
 # ===== B站登录管理API =====
 @app.route('/api/bilibili/login-status', methods=['GET'])

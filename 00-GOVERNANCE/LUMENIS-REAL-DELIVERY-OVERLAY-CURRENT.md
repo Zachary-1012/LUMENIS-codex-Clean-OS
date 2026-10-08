@@ -145,7 +145,7 @@ Acceptance must prove:
 
 The 51 historical package rows are accepted only through the eight existing-owner result packages in Source Owner Index. Historical candidate data stays quarantined with **Production admission = 0** until current rights/source/identity/scope/Permission/freshness/completeness gates pass. A parser pass, stored archive, URL string, row count or old report never grants Current view, metric, report, Learning or MODEL_TRAIN admission.
 
-Implementation order follows actual dependencies: Truth/Safety first; then Collector/durable task; CTH/BMP business and source trace; Shared result continuity; Owned AI; same-SHA release. Independent work continues in parallel when its dependencies are real. Each accepted Batch must publish its source, current contract/evidence and CURRENT status together, then prove local HEAD, `origin/main`, live GitHub main and loaded runtime identity. Documentation-only convergence is not product completion.
+Implementation order follows actual dependencies: Truth/Safety first; then Collector/durable task; CTH/BMP business and source trace; Shared result continuity; Owned AI; same-SHA release. F continues independently alongside the one M-selected business Owner; W6 integration occupies that business slot. Dependencies determine handoff order without reducing complete outcomes. Each accepted Batch must publish its source, current contract/evidence and CURRENT status together, then prove local HEAD, `origin/main`, live GitHub main and loaded runtime identity. Documentation-only convergence is not product completion.
 
 三、统一完成语义
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1303,7 +1303,8 @@ integration/environment reproduction; and four-surface operation when F's
 separately authorized deliverable is reviewed. These are retained product gates,
 not current task activation commands.
 These are complete outcome obligations, not activation commands. The Product
-Owner has authorized M, F and C1-C6 to start these outcomes under AGENTS.md.
+Owner has authorized M, independent F and one M-selected business window at a
+time under AGENTS.md; other business windows preserve their full outcomes and wait.
 Actual local dispatch/admission follows the live ledger and real tool receipts;
 each window enters RUNNING only after fresh admission. A real dependency blocks
 only its affected path. When an owner is active, it
@@ -1336,7 +1337,7 @@ external document grants collection or deployment permission.
 
 ## 2026-10-08 双层正常成果验收与成熟基础能力
 
-本节补充现有 REAL DELIVERY CARD，不新建任务编号、验收队列或机器治理状态。Product Owner 已授权 M/F/C1-C6 启动完整既有成果；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING，再按原完整成果执行本节要求。
+本节补充现有 REAL DELIVERY CARD，不新建任务编号、验收队列或机器治理状态。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING，再按原完整成果执行本节要求。
 
 每个原有J1–J8/U01–U25能力行记录 `capability_observation`：`ALREADY_WORKING`（真实操作证据）、`SOURCE_ONLY`、`UI_ONLY`、`PARTIAL`、`MISSING`、`BLOCKED`（确切外部依赖）、`PO_DEFERRED`（明确PO出处）。同时记录当前源码/调用/运行差距、复用或修复对象、材料采用位置和下一动作。该字段描述能力观察，不能代替治理机器合同的 completion ladder 或 LIVE_DISPATCH。旧报告/附件计数和SHA只是其时快照，不能直接标成当前状态。
 

@@ -264,7 +264,11 @@ class LearningLoop:
         try:
             conn = get_db_connection(self.db_path)
             try:
-                sql = "SELECT * FROM ai_call_logs WHERE created_at >= datetime('now', ?)"
+                # Parse stored ISO-8601 timestamps before comparing. Comparing
+                # the raw text against SQLite's space-separated datetime can
+                # include records just outside the requested window because
+                # the ISO ``T`` separator sorts after a space.
+                sql = "SELECT * FROM ai_call_logs WHERE datetime(created_at) >= datetime('now', ?)"
                 params = [f"-{days} days"]
                 if provider:
                     sql += " AND provider=?"

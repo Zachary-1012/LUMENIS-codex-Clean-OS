@@ -6,6 +6,7 @@
 import os
 import sys
 import json
+import sqlite3
 import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -172,12 +173,33 @@ class TestLearningLoopFullChain:
 
     def test_call_quality_analysis_drives_improvement(self, seeded_db):
         """AI 调用质量分析 → 发现问题 → 生成优化建议。"""
+        conn = sqlite3.connect(seeded_db)
+        timestamps = conn.execute(
+            """SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-29 days'),
+                      strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+                      strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-30 days', '-1 minute')"""
+        ).fetchone()
+        conn.executemany(
+            """INSERT INTO ai_call_logs
+               (provider, model, success, latency_ms, human_correction,
+                failure_reason, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            [
+                ("integration_test", "fixture", 1, 1200, None, None, timestamps[0]),
+                ("integration_test", "fixture", 0, 5000, None, "timeout", timestamps[1]),
+                # This record is just outside the window and must stay excluded.
+                ("integration_test", "fixture", 1, 900, None, None, timestamps[2]),
+            ],
+        )
+        conn.commit()
+        conn.close()
+
         loop = LearningLoop(db_path=seeded_db, enabled=True)
 
         # 分析调用质量
-        quality = loop.analyze_call_quality(days=30)
-        assert quality["total_calls"] >= 2
-        assert quality["success_rate"] > 0
+        quality = loop.analyze_call_quality(days=30, provider="integration_test")
+        assert quality["total_calls"] == 2
+        assert quality["success_rate"] == 0.5
 
         # 如果有失败，生成规则建议
         if quality["failure_reasons"]:

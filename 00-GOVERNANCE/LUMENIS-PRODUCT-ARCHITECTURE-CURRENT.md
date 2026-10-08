@@ -26,6 +26,10 @@ Platform availability and acceptance are verified separately from this target.
 
 ### 当前语义与兼容边界（2026-10-07 校准）
 
+2026-10-08 PO定向DDD增补：仅对当前真实任务的名称/身份冲突、规则重复矛盾、跨模块映射错误、旧调用越界、状态/结果/来源传递丢失，采用统一领域语言、既有CTH/BMP/Shared/SYSTEM限界上下文及现有接口上下文映射。Subject、BrandFocus、Source、Evidence、Brief、Artifact、Outcome在各当前上下文保持既定含义/身份/状态/行为；兼容名称由原解析器转换，不全仓重命名、迁库或新建统一对象模型。业务规则与状态变更归现有Owner，Flutter/API Controller/DB工具只是调用方。正常代码不因形式重构。
+
+Collector→Canonical→CTH/BMP→SourceBrief→SavedWork/Content Project→Evaluation沿既有合同传递身份、权限、来源用途、状态、版本及错误，不让下游猜测；只修真实受影响调用/适配层。当前唯一业务Owner完成具体问题修复、正常操作恢复、跨界正向/越界回归和原功能保持；M只处理跨Owner冲突及成果验收，F独立消费真实合同。保留原三层Gate；不新建DDD阶段、审计窗口、框架或验收体系。不能直接改善当前结果正确性、可用性或效率的调整按既有规则DEFER。
+
 本节澄清已有产品定义，不迁移存储 ID、增加 Owner 或改变机器治理合同。
 
 | 概念 | 当前含义 | 兼容与禁止混用 |
@@ -176,11 +180,11 @@ P0执行入口裁决已经收敛，不再作为单独待办批次：`AGENTS.md` 
 
 第二批：视频与播客完整正常路径。合并仍在本地的必要媒体实现，解决播放、横向时间轴、实际渲染/试听、版本与Artifact绑定。与F完成对应端的实际操作；不等待自有训练先验证确定性的编辑和恢复。
 
-并行批：自有AI实际训练与服务。现有/免费资源优先，许可允许的基础权重、自有训练部署、实际step/loss/checkpoint/重载/独立语义评价。以真实CTH/BMP/创作结果验收；Codex Cloud和免费临时GPU不冒充上线推理服务。开发电脑关闭、Codex停止、外部模型API禁用时，承诺的产品运行必须由序境自有运行环境完成；部署与资源可用性要实际证明。
+独立能力链：自有AI实际训练与服务；研发窗口按AGENTS当前唯一业务席位调度。现有/免费资源优先，许可允许的基础权重、自有训练部署、实际step/loss/checkpoint/重载/独立语义评价。以真实CTH/BMP/创作结果验收；Codex Cloud和免费临时GPU不冒充上线推理服务。开发电脑关闭、Codex停止、外部模型API禁用时，承诺的产品运行必须由序境自有运行环境完成；部署与资源可用性要实际证明。
 
 第三批：跨端统一运行与发布。一个同版本成果在承诺的四入口衔接；不要求四端相同布局。验证启动/崩溃/取消/撤权/重试/重开/恢复，完成同SHA Product/App门禁、备份回滚与打包。工程可用后由你重复完成核心任务，记录耗时、成本、正确性、修改成本与人工补救。
 
-此顺序按真实依赖并行，不要求先完成全部中国/全球目录才验证业务，也不能用几个代表性任务冒充覆盖完成。
+此顺序按真实依赖切换唯一业务窗口，F独立继续，不要求先完成全部中国/全球目录才验证业务，也不能用几个代表性任务冒充覆盖完成。
 
 
 
@@ -355,7 +359,7 @@ LUMENIS production repositories = 1
 
 ### 2026-10-08 前端审计与工具维护增补
 
-采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。Product Owner 已授权 M/F/C1-C6 启动完整既有成果；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。本规则更新不提升运行或用户验收状态。
+采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。本规则更新不提升运行或用户验收状态。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
@@ -377,7 +381,7 @@ LUMENIS production repositories = 1
 
 竞品机制沿原Owner增强：多源可比信号/事件关系/解释/预警→C1/C3/C5；创意审阅/版本差异/局部修订/审批复用→C4/C5；文本与真实音视频双向时间定位→C4；按需工具/引用/checkpoint恢复→C2/C5。来源、方法及可证明的任务收益写回现有验收，不把竞品宣传当事实或追平证据。
 
-本次为规则采用；Product Owner 已授权 M/F/C1-C6 启动全部既有窗口成果，实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING，并依现有 Owner 与门禁执行。逐项事实状态与两层正常用户任务验收归 Real Delivery Overlay；界面、可编辑设计及 GPT/Apple/Tesla 操作对标归Experience §38。原用户要求/资料/历史失败证据保留，未经明确后置的功能不删除。规则采用和派工均不证明实现、运行或用户验收完成。
+本次为规则采用；Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位，实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING，并依现有 Owner 与门禁执行。逐项事实状态与两层正常用户任务验收归 Real Delivery Overlay；界面、可编辑设计及 GPT/Apple/Tesla 操作对标归Experience §38。原用户要求/资料/历史失败证据保留，未经明确后置的功能不删除。规则采用和派工均不证明实现、运行或用户验收完成。
 
 ### 2026-10-08 采集范围与数据可得性
 

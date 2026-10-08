@@ -171,13 +171,13 @@ Stop and return `BLOCKED` rather than creating a second truth when identity/tena
 
 ### 2026-10-08 前端审计与工具维护增补
 
-采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。Product Owner 已明确派发 M/F/C1-C6 全部窗口；各窗完成 fresh admission 后执行既有完整成果。本轮仅同步派工规则，不提升运行或用户验收状态。
+采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；各窗完成 fresh admission 后执行既有完整成果。本轮仅同步派工规则，不提升运行或用户验收状态。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
 ### 2026-10-08 成熟操作与智能增强的四端一致性
 
-按Product Architecture与Experience§38在现有四端角色内同时验收基础可用与序境增强；不新增入口。Web/Desktop承载实际编辑，Mobile保持已批准触控/轻操作/恢复范围，适用的录音与音频播放逐端验证，缺设备的项目保留OPEN；官网呈现真实已验证能力和明确标记的演示，不宣传尚未实现的媒体/AI。GPT/Apple/Tesla只作为操作、反馈、撤回和状态连续性的参考。SH-01/BMP-08完整媒体操作沿原合同，必要媒体时间轴横向滚动不违反非必要不上下滚动。当前 PO 指令已派发 M/F/C1-C6，各窗 fresh admission 后按既有依赖与验收门禁执行。
+按Product Architecture与Experience§38在现有四端角色内同时验收基础可用与序境增强；不新增入口。Web/Desktop承载实际编辑，Mobile保持已批准触控/轻操作/恢复范围，适用的录音与音频播放逐端验证，缺设备的项目保留OPEN；官网呈现真实已验证能力和明确标记的演示，不宣传尚未实现的媒体/AI。GPT/Apple/Tesla只作为操作、反馈、撤回和状态连续性的参考。SH-01/BMP-08完整媒体操作沿原合同，必要媒体时间轴横向滚动不违反非必要不上下滚动。当前PO指令为M+独立F+唯一业务窗口；选定窗口fresh admission后按现有依赖与门禁执行，其余等待。
 
 ### 2026-10-08 浏览器与受控电脑的端能力
 

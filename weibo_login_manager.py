@@ -21,6 +21,37 @@ from datetime import datetime
 
 class WeiboLoginManager:
     """微博登录管理器"""
+
+    @classmethod
+    def read_saved_session_metadata(cls):
+        """Read cached state without loading Cookies or creating a profile.
+
+        A saved login receipt is historical metadata, never current session
+        verification. Missing/invalid values retain an explicit unknown state.
+        """
+        result = {'state': 'UNVERIFIED', 'saved_logged_in': None,
+                  'cookie_count': None, 'last_login': None}
+        status_file = Path(__file__).resolve().parent / 'data' / 'weibo_login_status.json'
+        if not status_file.is_file():
+            return {**result, 'state': 'NOT_AVAILABLE'}
+        try:
+            if status_file.stat().st_size > 65536:
+                raise ValueError('session metadata is too large')
+            status = json.loads(status_file.read_text(encoding='utf-8'))
+            if type(status) is not dict:
+                raise ValueError('session metadata must be an object')
+            if type(status.get('logged_in')) is bool:
+                result['saved_logged_in'] = status['logged_in']
+            count = status.get('cookie_count')
+            if type(count) is int and count >= 0:
+                result['cookie_count'] = count
+            timestamp = status.get('last_login')
+            if type(timestamp) is str:
+                datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+                result['last_login'] = timestamp
+            return result
+        except (OSError, ValueError, TypeError):
+            return {**result, 'state': 'ERROR'}
     
     def __init__(self, user_data_dir=None):
         """

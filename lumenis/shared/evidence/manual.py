@@ -29,6 +29,7 @@ AppEvidence
 import os
 import logging
 import json
+import re
 import hashlib
 import sqlite3
 from pathlib import Path
@@ -72,16 +73,15 @@ from . import store as evidence_store
 
 logger = logging.getLogger(__name__)
 
+class ManualEvidenceError(ValueError):
+    """Stable errors for the existing manual Evidence adapter."""
+
+
 def _get_db():
-    """获取数据库连接"""
-    conn = get_repository().connect()
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
+    return get_repository().connect()
 
 
 def init_db():
-    """初始化 Shared Evidence Store（manual adapter 不拥有 schema）。"""
     evidence_store.init_evidence_store(main_db_path())
 
 
@@ -89,290 +89,450 @@ def _now():
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
-def _row_to_dict(row):
+def _authorize(actor, scope, action='read', connection=None):
+    from lumenis.system.security import permission
+    if not isinstance(scope, dict) or set(scope) != {'domain_id', 'subject_id', 'brand_focus_id', 'global_scope'}:
+        raise ManualEvidenceError('EVIDENCE_SCOPE_REQUIRED')
+    domain = scope['domain_id']
+    product = 'CTH' if domain == 'cth' else 'ZBMP'
+    expected = evidence_store._normalize_record_evidence_scope(product=product, **scope)
+    checker = (permission.check_local_workspace_scope_permission
+               if type(actor) is permission.LocalWorkspacePrincipal else permission.check_actor_scope_permission)
+    decision = checker(actor, module='evidence', action=action, **scope, connection=connection)
+    if decision.verification_state != 'verified':
+        raise ManualEvidenceError('EVIDENCE_AUTHORIZATION_UNAVAILABLE')
+    if not decision.allowed:
+        raise PermissionError('EVIDENCE_SCOPE_DENIED')
+    identity = (actor.principal_ref if type(actor) is permission.LocalWorkspacePrincipal else 'actor:' + str(actor['id']))
+    return expected, identity
+
+
+def _read_record(con, record_id, expected):
+    if type(record_id) is not int or record_id < 1:
+        raise ManualEvidenceError('EVIDENCE_ID_INVALID')
+    row = con.execute('SELECT * FROM app_evidence_records WHERE id=?', (record_id,)).fetchone()
     if row is None:
         return None
-    return dict(row)
+    record = dict(row)
+    try:
+        marker = json.loads(record['inputs_json']).get(evidence_store._EVIDENCE_SCOPE_KEY)
+    except (ValueError, TypeError, AttributeError):
+        return None
+    if (marker != expected or record.get('domain_id') != expected['domain_id']
+            or record.get('product_id') != expected['product_id'] or record.get('source') not in SUPPORTED_SOURCES
+            or record.get('feature_id') not in ('APP_MANUAL_EVIDENCE', '', None)):
+        return None
+    if not evidence_store.verify_evidence_record_integrity(record):
+        raise ManualEvidenceError('EVIDENCE_INTEGRITY_UNAVAILABLE')
+    return record
 
 
-# ========== CRUD 操作 ==========
+def _file_state(record):
+    path = record.get('evidence_path')
+    if not path:
+        return 'NOT_APPLICABLE'
+    resolved = Path(path).resolve()
+    if Path(EVIDENCE_DIR).resolve() not in resolved.parents or Path(path).is_symlink():
+        return 'OUTSIDE_MANAGED_STORE'
+    if not resolved.is_file():
+        return 'MISSING'
+    # New captures bind the original bytes into the signed Evidence metadata.
+    # Legacy rows without this field retain their existence-only file state.
+    inputs = json.loads(record.get('inputs_json') or '{}')
+    expected_hash = inputs.get('manual_capture', {}).get('file_sha256')
+    if expected_hash:
+        try:
+            with resolved.open('rb') as stream:
+                actual_hash = hashlib.file_digest(stream, 'sha256').hexdigest()
+        except OSError:
+            return 'CHECK_UNAVAILABLE'
+        if actual_hash != expected_hash:
+            return 'INTEGRITY_MISMATCH'
+    return 'AVAILABLE'
+
+
+def _discard_uncommitted_upload(path):
+    """Remove only an uncommitted file created by this upload attempt.
+
+    Readback/response failure can happen after a durable commit. In that case,
+    or when DB state is uncertain, preserve the original bytes for recovery.
+    """
+    if not path:
+        return
+    try:
+        with get_repository().connection(read_only=True, wal=False) as con:
+            committed = con.execute(
+                'SELECT 1 FROM app_evidence_records WHERE evidence_path=? LIMIT 1', (path,)
+            ).fetchone()
+        if committed is None and _file_state({'evidence_path': path}) == 'AVAILABLE':
+            os.remove(path)
+    except (OSError, sqlite3.Error):
+        logger.warning('Failed upload bytes retained because cleanup state is uncertain')
+
+
+def get_evidence(record_id, *, actor=None, scope=None):
+    expected, _ = _authorize(actor, scope)
+    with get_repository().connection(read_only=True, wal=False) as con:
+        record = _read_record(con, record_id, expected)
+    _authorize(actor, scope)
+    return {**record, 'file_state': _file_state(record)} if record else None
+
+
+def _records(actor, scope):
+    expected, _ = _authorize(actor, scope)
+    rows, offset = [], 0
+    while True:
+        page = evidence_store.query_scoped_evidence(product=expected['product_id'], **scope, limit=200, offset=offset)
+        if not page:
+            break
+        for record in page:
+            if record.get('source') not in SUPPORTED_SOURCES or record.get('feature_id') not in ('APP_MANUAL_EVIDENCE', '', None):
+                continue
+            if not evidence_store.verify_evidence_record_integrity(record):
+                raise ManualEvidenceError('EVIDENCE_INTEGRITY_UNAVAILABLE')
+            rows.append({**record, 'file_state': _file_state(record)})
+        offset += len(page)
+    _authorize(actor, scope)
+    return rows
+
+
+def list_evidence(status=None, topic=None, source=None, limit=50, offset=0, *, actor=None, scope=None):
+    if type(limit) is not int or not 1 <= limit <= 200 or type(offset) is not int or offset < 0:
+        raise ManualEvidenceError('INVALID_EVIDENCE_QUERY')
+    rows = [row for row in _records(actor, scope)
+            if (not status or row['status'] == status) and (not topic or topic in (row.get('topic') or ''))
+            and (not source or row['source'] == source)]
+    return {'records': rows[offset:offset+limit], 'total': len(rows), 'limit': limit, 'offset': offset}
+
+
+def get_stats(*, actor=None, scope=None):
+    rows = _records(actor, scope)
+    result = {name: sum(row['status'] == name for row in rows)
+              for name in (STATUS_PENDING, STATUS_CONFIRMED, STATUS_REJECTED, STATUS_SHADOW, 'withdrawn')}
+    result.update(total=len(rows), by_source={}, by_metric={}, module_version=MODULE_VERSION, mode='shadow_only')
+    for row in rows:
+        for group, key in (('by_source', 'source'), ('by_metric', 'metric_name')):
+            value = row.get(key)
+            result[group][value] = result[group].get(value, 0) + 1
+    return result
+
+
+def _resource(expected, identity, action, material):
+    payload = {'scope': expected, 'actor': identity, 'action': action, 'material': material}
+    raw = json.dumps(payload, sort_keys=True, ensure_ascii=False, allow_nan=False).encode('utf-8')
+    return 'manual-evidence:v1:' + hashlib.sha256(raw).hexdigest()
+
+
+def _effect(actor, scope, operation, resource, connection=None):
+    from lumenis.system.security import permission
+    _, identity = _authorize(actor, scope, 'write', connection)
+    if permission.is_testing_bypass_enabled():
+        raise PermissionError('EVIDENCE_PERMISSION_UNVERIFIED')
+    decision = permission.get_permission_gate().check(operation, resource=resource, caller=identity,
+        domain_id='bmp' if scope['domain_id'] in ('bmp','zbmp') else 'cth',
+        exact_approval_required=operation == permission.OperationType.DATA_DELETE)
+    if not decision.allowed:
+        raise PermissionError('EVIDENCE_EFFECT_PERMISSION_DENIED')
+    return identity
+
+
+def _fenced(resource):
+    from lumenis.system.security.action_firewall import AgentAction
+    from lumenis.system.security.effect_fence import get_effect_fence
+    import uuid
+    fence = get_effect_fence()
+    decision = fence.check(action=AgentAction.WRITE, target='manual-evidence-shadow',
+                           payload={'effect_mode':'staging', 'resource':resource},
+                           operation_id='manual-evidence-attempt:' + uuid.uuid4().hex)
+    if not decision.allowed:
+        raise PermissionError('EVIDENCE_EFFECT_FENCE_DENIED')
+    return fence, decision
+
+
+def _scope_args(expected):
+    return {'product': expected['product_id'], 'domain_id': expected['domain_id'],
+            'subject_id': expected.get('subject_id'), 'brand_focus_id': expected.get('brand_focus_id'),
+            'global_scope': expected['global']}
+
+
 def create_evidence(source='xhs_app', capture_mode='screenshot', captured_at=None,
                     topic=None, metric_name=None, metric_value=None,
-                    evidence_path=None, parse_confidence=1.0, notes=None):
-    """创建一条证据记录"""
-    if not metric_name or metric_value is None:
-        return None, 'metric_name 和 metric_value 不能为空'
-
-    if source not in SUPPORTED_SOURCES:
-        return None, f'不支持的来源平台: {source}'
-
-    if capture_mode not in SUPPORTED_CAPTURE_MODES:
-        return None, f'不支持的采集方式: {capture_mode}'
-
-    # 计算证据文件哈希（用于去重）
-    evidence_hash = None
-    if evidence_path and os.path.exists(evidence_path):
-        with open(evidence_path, 'rb') as f:
-            evidence_hash = hashlib.md5(f.read()).hexdigest()
-        # 检查是否已存在相同哈希的记录
-        with _get_db() as conn:
-            existing = conn.execute(
-                "SELECT id FROM app_evidence_records WHERE evidence_hash=? AND status != 'rejected'",
-                (evidence_hash,)
-            ).fetchone()
-            if existing:
-                return None, f'证据文件已存在（ID: {existing["id"]}），请勿重复上传'
-
-    now = _now()
-    with _get_db() as conn:
-        cursor = conn.execute("""
-            INSERT INTO app_evidence_records
-            (source, capture_mode, captured_at, topic, metric_name, metric_value,
-             evidence_hash, evidence_path, parse_confidence, status, notes, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            source, capture_mode, captured_at or now, topic, metric_name, str(metric_value),
-            evidence_hash, evidence_path, parse_confidence, STATUS_PENDING, notes, now, now
-        ))
-        conn.commit()
-        record_id = cursor.lastrowid
-
-    return get_evidence(record_id), None
+                    evidence_path=None, parse_confidence=1.0, notes=None, *, actor=None, scope=None):
+    expected, identity = _authorize(actor, scope, 'write')
+    if not metric_name or metric_value is None or source not in SUPPORTED_SOURCES or capture_mode not in SUPPORTED_CAPTURE_MODES:
+        raise ManualEvidenceError('EVIDENCE_INPUT_INVALID')
+    file_hash = None
+    if evidence_path:
+        state = _file_state({'evidence_path':evidence_path})
+        if state != 'AVAILABLE':
+            raise ManualEvidenceError('EVIDENCE_FILE_UNAVAILABLE')
+        with open(evidence_path, 'rb') as stream:
+            file_hash = hashlib.file_digest(stream, 'sha256').hexdigest()
+    material = {'source':source, 'capture_mode':capture_mode, 'captured_at':captured_at,
+                'topic':topic, 'metric_name':metric_name, 'metric_value':str(metric_value),
+                'file_sha256':file_hash, 'notes':notes}
+    resource = _resource(expected, identity, 'create', material)
+    from lumenis.system.security.permission import OperationType
+    _effect(actor, scope, OperationType.DB_WRITE, resource)
+    fence, attempt = _fenced(resource)
+    committed = False
+    try:
+        with get_repository().transaction() as con:
+            _effect(actor, scope, OperationType.DB_WRITE, resource, con)
+            record_id = evidence_store.record_evidence(source=source, feature_id='APP_MANUAL_EVIDENCE',
+                capture_mode=capture_mode, captured_at=captured_at, metric_name=metric_name,
+                metric_value=str(metric_value), topic=topic or '', notes=notes or '', status=STATUS_PENDING,
+                result='PENDING', inputs={'manual_capture':material, 'actor':identity, 'resource':resource,
+                                         'fence_operation_id':attempt.idempotency_key,
+                                         'use_permission':'NOT_GRANTED_BY_MANUAL_CAPTURE'},
+                evidence_path=evidence_path, parse_confidence=parse_confidence,
+                **_scope_args(expected), connection=con)
+            _effect(actor, scope, OperationType.DB_WRITE, resource, con)
+        committed = True
+        fence.complete(attempt.idempotency_key, success=True)
+    except BaseException:
+        if not committed:
+            fence.complete(attempt.idempotency_key, success=False)
+        raise
+    return get_evidence(record_id, actor=actor, scope=scope), None
 
 
-def get_evidence(record_id):
-    """获取单条证据记录"""
-    with _get_db() as conn:
-        row = conn.execute("SELECT * FROM app_evidence_records WHERE id=?", (record_id,)).fetchone()
-        return _row_to_dict(row)
+def _has_references(con, record_id):
+    def quote(name): return '"' + name.replace('"', '""') + '"'
+    values = {str(record_id), 'app_evidence_records:' + str(record_id)}
+    def references(value):
+        if isinstance(value, list):
+            return any(references(item) for item in value)
+        if isinstance(value, dict):
+            return any((key in {'evidence_id','evidence_ref','scope_evidence_ref','source_evidence_ref','creation_evidence_ref',
+                               'rights_evidence_ref','review_evidence_ref','analysis_evidence_ref','rejected_candidate_evidence_ref'} and str(item) in values)
+                       or (key in {'source_evidence_refs','evidence_refs','review_evidence_refs'} and isinstance(item,list)
+                           and any(str(ref) in values for ref in item))
+                       or (isinstance(item, (list,dict)) and references(item)) for key,item in value.items())
+        return isinstance(value, str) and value == 'app_evidence_records:' + str(record_id)
+    for (table,) in con.execute("SELECT name FROM sqlite_master WHERE type='table'"):
+        for fk in con.execute('PRAGMA foreign_key_list(' + quote(table) + ')'):
+            if fk[2].lower() == 'app_evidence_records' and fk[4] in (None, 'id'):
+                if con.execute('SELECT 1 FROM ' + quote(table) + ' WHERE ' + quote(fk[3]) + '=? LIMIT 1', (record_id,)).fetchone():
+                    return True
+        columns = {row[1] for row in con.execute('PRAGMA table_info(' + quote(table) + ')')}
+        for column in columns & {'scope_evidence_ref','source_evidence_ref','creation_evidence_ref','evidence_ref','evidence_id'}:
+            if con.execute('SELECT 1 FROM ' + quote(table) + ' WHERE CAST(' + quote(column) + ' AS TEXT) IN (?,?) LIMIT 1',
+                           (str(record_id), 'app_evidence_records:' + str(record_id))).fetchone():
+                return True
+        json_columns = columns & {'source_refs_json', 'evidence_refs_json'}
+        if table == 'daily_reports' and 'source_snapshot' in columns:
+            json_columns.add('source_snapshot')
+        if table == 'evaluation_records' and 'metadata' in columns:
+            json_columns.add('metadata')
+        if table == 'app_evidence_records':
+            json_columns.update(columns & {'inputs_json', 'outputs_json', 'collection_metadata'})
+        for column in json_columns:
+            query = ('SELECT ' + quote(column) + ' FROM ' + quote(table) +
+                     ' WHERE ' + quote(column) + " IS NOT NULL AND " + quote(column) + " != ''")
+            parameters = ()
+            if table == 'app_evidence_records':
+                query += ' AND id != ?'
+                parameters = (record_id,)
+            for row in con.execute(query, parameters):
+                # The retained Reporting engine writes this exact legacy text
+                # format, containing note/time/count criteria and no Evidence
+                # IDs. Unknown non-JSON snapshots still fail closed.
+                if (table == 'daily_reports' and column == 'source_snapshot'
+                        and isinstance(row[0], str)
+                        and re.fullmatch(r'notes:publish_date\[[^,\[\];]{1,64},[^,\[\];]{1,64}\];subject:verified;stats_count=\d+', row[0])):
+                    continue
+                try:
+                    parsed = json.loads(row[0])
+                    if (references(parsed) or column == 'evidence_refs_json' and isinstance(parsed,list)
+                            and any(str(ref) in values for ref in parsed)):
+                        return True
+                except (TypeError, ValueError) as exc:
+                    raise ManualEvidenceError('EVIDENCE_REFERENCE_CHECK_UNAVAILABLE') from exc
+    # SavedWork's Artifact row indexes the first citation only; the existing
+    # immutable document owner retains every citation in its JSON bytes.
+    if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='lumenis_shared_artifacts'").fetchone():
+        from lumenis.shared.reporting import saved_work
+        import shared_artifacts
+        root = shared_artifacts.artifact_root()
+        for row in con.execute("SELECT artifact_id,relative_path FROM lumenis_shared_artifacts WHERE kind='saved_document'"):
+            try:
+                path = (root / row['relative_path']).resolve()
+                if not path.is_relative_to(root) or not path.is_file() or not 0 < path.stat().st_size <= saved_work._LIMIT:
+                    raise ValueError('SavedWork reference bytes unavailable')
+                # The owner reader validates registry size/hash, full schema and
+                # context. This guard reads references only, grants no content
+                # use and never exposes another saved document to the caller.
+                with path.open('rb') as stream:
+                    context = json.loads(stream.read(saved_work._LIMIT + 1)).get('context')
+                document = saved_work._read(con, row['artifact_id'], context, verify_sources=False)['document']
+                if references(document['citations']):
+                    return True
+            except (OSError, TypeError, ValueError, KeyError) as exc:
+                raise ManualEvidenceError('EVIDENCE_REFERENCE_CHECK_UNAVAILABLE') from exc
+    return False
 
 
-def list_evidence(status=None, topic=None, source=None, limit=50, offset=0):
-    """列出证据记录"""
-    query = "SELECT * FROM app_evidence_records WHERE 1=1"
-    params = []
-    if status:
-        query += " AND status=?"
-        params.append(status)
-    if topic:
-        query += " AND topic LIKE ?"
-        params.append(f'%{topic}%')
-    if source:
-        query += " AND source=?"
-        params.append(source)
-    query += " ORDER BY id DESC LIMIT ? OFFSET ?"
-    params.extend([limit, offset])
-
-    with _get_db() as conn:
-        rows = conn.execute(query, params).fetchall()
-        total = conn.execute("SELECT COUNT(*) as cnt FROM app_evidence_records WHERE 1=1" +
-                              (" AND status=?" if status else "") +
-                              (" AND topic LIKE ?" if topic else "") +
-                              (" AND source=?" if source else ""),
-                              params[:-2] if params else []).fetchone()
-        return {
-            'records': [_row_to_dict(r) for r in rows],
-            'total': total['cnt'] if total else 0,
-            'limit': limit,
-            'offset': offset
-        }
+def evidence_transition_resource(record_id, status, reason, *, actor=None, scope=None):
+    expected, identity = _authorize(actor, scope, 'write')
+    if not isinstance(reason, str) or not reason.strip() or len(reason) > 2000:
+        raise ManualEvidenceError('EVIDENCE_REASON_REQUIRED')
+    record = get_evidence(record_id, actor=actor, scope=scope)
+    if record is None:
+        raise LookupError('EVIDENCE_NOT_FOUND')
+    return _resource(expected, identity, 'transition', {'record_id':record_id, 'before_digest':record['integrity_digest'],
+                                                      'status':status, 'reason':reason})
 
 
-def update_evidence_status(record_id, status, verified_by=None, notes=None):
-    """更新证据状态（确认/拒绝/Shadow）"""
-    if status not in [STATUS_CONFIRMED, STATUS_REJECTED, STATUS_SHADOW, STATUS_PENDING]:
-        return None, f'不支持的状态: {status}'
+def update_evidence_status(record_id, status, verified_by=None, notes=None, *, actor=None, scope=None, reason=None):
+    if status not in (STATUS_PENDING, STATUS_CONFIRMED, STATUS_REJECTED, STATUS_SHADOW, 'withdrawn'):
+        raise ManualEvidenceError('EVIDENCE_STATUS_INVALID')
+    expected, identity = _authorize(actor, scope, 'write')
+    resource = evidence_transition_resource(record_id, status, reason, actor=actor, scope=scope)
+    current = get_evidence(record_id, actor=actor, scope=scope)
+    if current['status'] == status:
+        # Re-reading an immutable terminal state is not another mutation/grant.
+        return current, None
+    from lumenis.system.security.permission import OperationType
+    operation = OperationType.DATA_DELETE if status == 'withdrawn' else OperationType.DB_WRITE
+    _effect(actor, scope, operation, resource)
+    fence, attempt = _fenced(resource)
+    committed = False
+    try:
+        with get_repository().transaction() as con:
+            _effect(actor, scope, operation, resource, con)
+            before = _read_record(con, record_id, expected)
+            if before is None:
+                raise LookupError('EVIDENCE_NOT_FOUND')
+            actual = _resource(expected, identity, 'transition', {'record_id':record_id,
+                'before_digest':before['integrity_digest'], 'status':status, 'reason':reason})
+            if actual != resource:
+                raise ManualEvidenceError('EVIDENCE_VERSION_CHANGED')
+            if _has_references(con, record_id):
+                raise ManualEvidenceError('EVIDENCE_REFERENCED')
+            if before['status'] == 'withdrawn' and status != STATUS_PENDING:
+                raise ManualEvidenceError('EVIDENCE_RESTORE_TO_PENDING_REQUIRED')
+            if status in (STATUS_CONFIRMED, STATUS_SHADOW) and _file_state(before) not in ('AVAILABLE', 'NOT_APPLICABLE'):
+                raise ManualEvidenceError('EVIDENCE_FILE_UNAVAILABLE')
+            now = _now()
+            con.execute('UPDATE app_evidence_records SET status=?, verified_by=?, verified_at=?, updated_at=? WHERE id=?',
+                        (status, identity, now, now, record_id))
+            evidence_store._sign_evidence_record(con, record_id)
+            history_id = evidence_store.record_evidence(source='manual_lifecycle', feature_id='APP_MANUAL_LIFECYCLE',
+                inputs={'record_id':record_id,'actor':identity,'reason':reason,'resource':resource,
+                        'prior_record':before,'fence_operation_id':attempt.idempotency_key},
+                outputs={'status':status,'file_state':_file_state(before)}, status='recorded', result='RECORDED',
+                **_scope_args(expected), connection=con)
+            _effect(actor, scope, operation, resource, con)
+        committed = True
+        fence.complete(attempt.idempotency_key, success=True)
+    except BaseException:
+        if not committed:
+            fence.complete(attempt.idempotency_key, success=False)
+        raise
+    return get_evidence(record_id, actor=actor, scope=scope), None
 
-    record = get_evidence(record_id)
-    if not record:
-        return None, f'记录不存在: {record_id}'
 
-    now = _now()
-    with _get_db() as conn:
-        conn.execute("""
-            UPDATE app_evidence_records
-            SET status=?, verified_by=?, verified_at=?, notes=COALESCE(?, notes), updated_at=?
-            WHERE id=?
-        """, (status, verified_by, now if status in [STATUS_CONFIRMED, STATUS_SHADOW] else None,
-              notes, now, record_id))
-        conn.commit()
-
-    return get_evidence(record_id), None
-
-
-def delete_evidence(record_id):
-    """删除证据记录（同时删除证据文件）"""
-    record = get_evidence(record_id)
-    if not record:
-        return False, f'记录不存在: {record_id}'
-
-    # 删除证据文件
-    if record.get('evidence_path') and os.path.exists(record['evidence_path']):
-        try:
-            os.remove(record['evidence_path'])
-        except Exception:
-            pass
-
-    with _get_db() as conn:
-        conn.execute("DELETE FROM app_evidence_records WHERE id=?", (record_id,))
-        conn.commit()
-
+def delete_evidence(record_id, *, actor=None, scope=None, reason=None):
+    """Withdraw a record atomically; original bytes and audit history are retained."""
+    update_evidence_status(record_id, 'withdrawn', actor=actor, scope=scope, reason=reason)
     return True, None
 
 
-def get_stats():
-    """获取统计信息"""
-    with _get_db() as conn:
-        total = conn.execute("SELECT COUNT(*) as cnt FROM app_evidence_records").fetchone()['cnt']
-        pending = conn.execute("SELECT COUNT(*) as cnt FROM app_evidence_records WHERE status='pending'").fetchone()['cnt']
-        confirmed = conn.execute("SELECT COUNT(*) as cnt FROM app_evidence_records WHERE status='confirmed'").fetchone()['cnt']
-        rejected = conn.execute("SELECT COUNT(*) as cnt FROM app_evidence_records WHERE status='rejected'").fetchone()['cnt']
-        shadow = conn.execute("SELECT COUNT(*) as cnt FROM app_evidence_records WHERE status='shadow'").fetchone()['cnt']
-        by_source = conn.execute("SELECT source, COUNT(*) as cnt FROM app_evidence_records GROUP BY source").fetchall()
-        by_metric = conn.execute("SELECT metric_name, COUNT(*) as cnt FROM app_evidence_records GROUP BY metric_name").fetchall()
-
-    return {
-        'total': total,
-        'pending': pending,
-        'confirmed': confirmed,
-        'rejected': rejected,
-        'shadow': shadow,
-        'by_source': {r['source']: r['cnt'] for r in by_source},
-        'by_metric': {r['metric_name']: r['cnt'] for r in by_metric},
-        'module_version': MODULE_VERSION,
-        'mode': 'shadow_only'
-    }
+def parse_screenshot_manual(evidence_path, topic=None, metric_name=None, metric_value=None, notes=None, *, actor=None, scope=None):
+    return create_evidence(evidence_path=evidence_path, topic=topic, metric_name=metric_name,
+                           metric_value=metric_value, notes=notes, actor=actor, scope=scope)
 
 
-# ========== OCR 辅助（最小版：先做手动输入，后续接入真正OCR） ==========
-def parse_screenshot_manual(evidence_path, topic=None, metric_name=None, metric_value=None, notes=None):
-    """手动解析截图（最小版：用户手动填写字段，系统只做记录）
-
-    后续可接入：pytesseract / paddleocr / 云端OCR API
-    当前版本：parse_confidence=1.0（用户手动输入，完全可信）
-    """
-    return create_evidence(
-        source='xhs_app',
-        capture_mode='screenshot',
-        topic=topic,
-        metric_name=metric_name,
-        metric_value=metric_value,
-        evidence_path=evidence_path,
-        parse_confidence=1.0,
-        notes=notes or '手动输入解析（OCR待接入）'
-    )
-
-
-# ========== Flask 路由注册 ==========
 def register_app_evidence(app):
-    """注册 App Evidence 路由（Shadow模式，只读+手动上传，不碰App自动化）"""
     init_db()
+    def boundary(call, action='read'):
+        from .api import resolve_evidence_request_scope
+        try:
+            context, error = resolve_evidence_request_scope(action)
+            if error:
+                return error
+            scope = {key:context[key] for key in ('domain_id','subject_id','brand_focus_id','global_scope')}
+            result = call(context['actor'], scope)
+            return jsonify({'ok':True, 'data':result})
+        except (ManualEvidenceError, PermissionError, LookupError) as exc:
+            code = str(exc)
+            status = (403 if isinstance(exc, PermissionError) else 404 if isinstance(exc, LookupError)
+                      else 503 if 'UNAVAILABLE' in code else 409 if code in {'EVIDENCE_REFERENCED','EVIDENCE_VERSION_CHANGED'} else 400)
+            return jsonify({'ok':False,'code':code}), status
+        except Exception:
+            logger.exception('Manual Evidence owner operation failed')
+            return jsonify({'ok':False,'code':'EVIDENCE_OPERATION_UNAVAILABLE'}), 503
 
     @app.route('/api/app_evidence/stats', methods=['GET'])
     def api_evidence_stats():
-        return jsonify({'ok': True, 'data': get_stats()})
+        return boundary(lambda actor,scope:get_stats(actor=actor,scope=scope))
 
     @app.route('/api/app_evidence/list', methods=['GET'])
     def api_evidence_list():
-        status = request.args.get('status')
-        topic = request.args.get('topic')
-        source = request.args.get('source')
-        limit = int(request.args.get('limit', 50))
-        offset = int(request.args.get('offset', 0))
-        result = list_evidence(status=status, topic=topic, source=source, limit=limit, offset=offset)
-        return jsonify({'ok': True, 'data': result})
+        def read(actor,scope):
+            try:
+                limit=int(request.args.get('limit',50))
+                offset=int(request.args.get('offset',0))
+            except ValueError as exc:
+                raise ManualEvidenceError('INVALID_EVIDENCE_QUERY') from exc
+            return list_evidence(status=request.args.get('status'),topic=request.args.get('topic'),
+                source=request.args.get('source'),limit=limit,offset=offset,actor=actor,scope=scope)
+        return boundary(read)
 
     @app.route('/api/app_evidence/<int:record_id>', methods=['GET'])
     def api_evidence_get(record_id):
-        record = get_evidence(record_id)
-        if not record:
-            return jsonify({'ok': False, 'error': '记录不存在'}), 404
-        return jsonify({'ok': True, 'data': record})
+        def read(actor,scope):
+            record=get_evidence(record_id,actor=actor,scope=scope)
+            if record is None: raise LookupError('EVIDENCE_NOT_FOUND')
+            return record
+        return boundary(read)
 
     @app.route('/api/app_evidence/upload', methods=['POST'])
     def api_evidence_upload():
-        """上传证据（截图+手动填写字段）
+        # File staging is authorized before any managed-file write. Store creation
+        # performs the exact material/resource check and cleans failed uploads.
+        def upload(actor,scope):
+            _authorize(actor,scope,'write')
+            from lumenis.system.security.permission import OperationType
+            expected, identity = _authorize(actor,scope,'write')
+            resource='/api/app_evidence/upload'
+            _effect(actor,scope,OperationType.DB_WRITE,resource)
+            fence, attempt=_fenced(resource)
+            path=None
+            try:
+                file=request.files.get('file')
+                if file and file.filename:
+                    ext=Path(file.filename).suffix.lower()
+                    if ext not in EVIDENCE_ALLOWED_EXTENSIONS: raise ManualEvidenceError('EVIDENCE_FILE_TYPE_INVALID')
+                    os.makedirs(EVIDENCE_DIR,exist_ok=True)
+                    path=str(Path(EVIDENCE_DIR)/('evidence_'+os.urandom(16).hex()+ext))
+                    file.save(path)
+                    if os.path.getsize(path)>EVIDENCE_MAX_FILE_SIZE_BYTES: raise ManualEvidenceError('EVIDENCE_FILE_TOO_LARGE')
+                record,error=create_evidence(source=request.form.get('source','xhs_app'),capture_mode=request.form.get('capture_mode','screenshot'),
+                    captured_at=request.form.get('captured_at'),topic=request.form.get('topic'),metric_name=request.form.get('metric_name'),
+                    metric_value=request.form.get('metric_value'),notes=request.form.get('notes'),evidence_path=path,actor=actor,scope=scope)
+                fence.complete(attempt.idempotency_key,success=True)
+                return record
+            except BaseException:
+                _discard_uncommitted_upload(path)
+                fence.complete(attempt.idempotency_key,success=False)
+                raise
+        return boundary(upload,'write')
 
-        Shadow模式：只记录，不进入生产采集
-        禁止：自动登录、自动浏览、私有API、逆向签名、抓包、绕风控
-        """
-        try:
-            source = request.form.get('source', 'xhs_app')
-            capture_mode = request.form.get('capture_mode', 'screenshot')
-            captured_at = request.form.get('captured_at')
-            topic = request.form.get('topic')
-            metric_name = request.form.get('metric_name')
-            metric_value = request.form.get('metric_value')
-            notes = request.form.get('notes')
-
-            if not metric_name or metric_value is None:
-                return jsonify({'ok': False, 'error': 'metric_name 和 metric_value 不能为空'}), 400
-
-            # 处理文件上传
-            evidence_path = None
-            if 'file' in request.files:
-                file = request.files['file']
-                if file.filename:
-                    # 扩展名白名单校验
-                    ext = os.path.splitext(file.filename)[1].lower() or '.png'
-                    if ext not in EVIDENCE_ALLOWED_EXTENSIONS:
-                        return jsonify({'ok': False, 'error': f'不支持的文件格式: {ext}，允许: {sorted(EVIDENCE_ALLOWED_EXTENSIONS)}'}), 400
-                    # 先保存再检查大小（Flask MAX_CONTENT_LENGTH 已在全局拦截，这里二次校验）
-                    filename = f"evidence_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.urandom(4).hex()}{ext}"
-                    os.makedirs(EVIDENCE_DIR, exist_ok=True)
-                    evidence_path = os.path.join(EVIDENCE_DIR, filename)
-                    file.save(evidence_path)
-                    actual_size = os.path.getsize(evidence_path)
-                    if actual_size > EVIDENCE_MAX_FILE_SIZE_BYTES:
-                        os.remove(evidence_path)
-                        return jsonify({'ok': False, 'error': f'文件超过 {EVIDENCE_MAX_FILE_SIZE_MB}MB 限制'}), 400
-
-            record, err = create_evidence(
-                source=source, capture_mode=capture_mode, captured_at=captured_at,
-                topic=topic, metric_name=metric_name, metric_value=metric_value,
-                evidence_path=evidence_path, parse_confidence=1.0, notes=notes
-            )
-            if err:
-                return jsonify({'ok': False, 'error': err}), 400
-            return jsonify({'ok': True, 'data': record, 'message': '证据已上传（Shadow模式，待人工确认）'})
-        except Exception as e:
-            return jsonify({'ok': False, 'error': str(e)}), 500
+    def transition(record_id,status,actor,scope):
+        payload=request.get_json(silent=True) or request.form
+        record,error=update_evidence_status(record_id,status,actor=actor,scope=scope,reason=payload.get('reason'))
+        return record
 
     @app.route('/api/app_evidence/<int:record_id>/confirm', methods=['POST'])
-    def api_evidence_confirm(record_id):
-        """确认证据（人工确认后进入Shadow）"""
-        verified_by = request.form.get('verified_by', 'manual')
-        notes = request.form.get('notes')
-        record, err = update_evidence_status(record_id, STATUS_CONFIRMED, verified_by=verified_by, notes=notes)
-        if err:
-            return jsonify({'ok': False, 'error': err}), 400
-        return jsonify({'ok': True, 'data': record, 'message': '证据已确认（Shadow模式）'})
-
+    def api_evidence_confirm(record_id): return boundary(lambda actor,scope:transition(record_id,STATUS_CONFIRMED,actor,scope),'write')
     @app.route('/api/app_evidence/<int:record_id>/reject', methods=['POST'])
-    def api_evidence_reject(record_id):
-        """拒绝证据"""
-        notes = request.form.get('notes')
-        record, err = update_evidence_status(record_id, STATUS_REJECTED, notes=notes)
-        if err:
-            return jsonify({'ok': False, 'error': err}), 400
-        return jsonify({'ok': True, 'data': record, 'message': '证据已拒绝'})
-
+    def api_evidence_reject(record_id): return boundary(lambda actor,scope:transition(record_id,STATUS_REJECTED,actor,scope),'write')
     @app.route('/api/app_evidence/<int:record_id>/shadow', methods=['POST'])
-    def api_evidence_shadow(record_id):
-        """标记为Shadow（已确认但仅作影子数据，不进入生产）"""
-        verified_by = request.form.get('verified_by', 'manual')
-        record, err = update_evidence_status(record_id, STATUS_SHADOW, verified_by=verified_by)
-        if err:
-            return jsonify({'ok': False, 'error': err}), 400
-        return jsonify({'ok': True, 'data': record, 'message': '证据已标记为Shadow'})
-
+    def api_evidence_shadow(record_id): return boundary(lambda actor,scope:transition(record_id,STATUS_SHADOW,actor,scope),'write')
+    @app.route('/api/app_evidence/<int:record_id>/restore', methods=['POST'])
+    def api_evidence_restore(record_id): return boundary(lambda actor,scope:transition(record_id,STATUS_PENDING,actor,scope),'write')
     @app.route('/api/app_evidence/<int:record_id>', methods=['DELETE'])
-    def api_evidence_delete(record_id):
-        """删除证据"""
-        success, err = delete_evidence(record_id)
-        if not success:
-            return jsonify({'ok': False, 'error': err}), 400
-        return jsonify({'ok': True, 'message': '证据已删除'})
-
-    print(f'[AppEvidence] 模块已注册（v{MODULE_VERSION}，Shadow模式，不碰App自动化）')
+    def api_evidence_delete(record_id): return boundary(lambda actor,scope:transition(record_id,'withdrawn',actor,scope),'write')
     return True
