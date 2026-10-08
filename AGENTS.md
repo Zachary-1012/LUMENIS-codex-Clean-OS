@@ -1766,10 +1766,11 @@ collection stays scoped, budgeted and continuous. Required dimensions stay visib
 with accurate definitions even when no value is available: render “—”, preserve
 null/state/reason and genuine zero, and explain the actual missing-data cause.
 Capability closure requires real same-version acquisition/intake/recovery evidence;
-missing values do not excuse broken code or imply full data coverage. Existing
-source still has the retired literal date in acquisition_plan and prelaunch_baseline;
-C1/C6 must reconcile it in their authorized implementation, with F binding honest
-dimension states. This rule publication did not itself dispatch those windows; the
+missing values do not excuse broken code or imply full data coverage. C1 owns
+task dates/native times; dated findings do not prove current defects.
+A legacy provenance key alone cannot prove an active cutoff.
+F binds honest states when dispatched. Rule publication does not dispatch
+paused windows; the
 latest Product Owner instruction selects one business window at a time with F independent. Actual state follows the
 live ledger, tool receipts, fresh admission and real dependencies.
 

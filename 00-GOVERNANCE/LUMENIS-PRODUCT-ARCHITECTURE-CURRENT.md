@@ -53,7 +53,7 @@ Collector→Canonical→CTH/BMP→SourceBrief→SavedWork/Content Project→Eval
 
 `PUBLISHED_STATE` 与 `LIVE_DISPATCH`、`ELIGIBLE` 与 `RUNNING`、`VERIFIED` 与
 `JOB_CLOSED`、`JOB_CLOSED` 与 `RELEASED`、`RELEASED` 与 `OPERATING` 分别独立。
-治理状态的机器语义继续由 Governance Machine v1.1 定义；采集、队列、AI 与数据状态
+治理状态的机器语义继续由 Governance Machine v1.2.0 定义；采集、队列、AI 与数据状态
 继续由其已有源码/合同定义。发现冲突应修相应边界，不能把某一领域枚举复制为全产品状态权威。
 
 逐项源码证据、兼容词及尚待行为修复项见

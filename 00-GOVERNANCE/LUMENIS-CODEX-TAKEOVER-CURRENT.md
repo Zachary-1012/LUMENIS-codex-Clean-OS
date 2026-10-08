@@ -2,7 +2,7 @@
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 > Latest direct PO state, 2026-10-08: formal real-outcome verification policy is adopted in Governance Machine v1.2.0. Unit/integration and renamed module suites are removed from mandatory gates and may not be created or executed; historical failures remain. Build/static/security/data integrity and actual user E2E/recovery/release remain. M synchronizes this policy and dispatches only C1 for its complete existing data/collection closure using GPT-6 Astra / ultra (current-window override, speed unchanged). F and C2-C6 retain their latest direct pause; topology is not dispatch. Approval: `evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json`.
-> 2026-10-08 latest PO dispatch: M + independent F + one M-selected business window. W6 integration occupies the same business slot; other C windows wait with complete work/Goals preserved. Figma-first is superseded by reuse of existing editable design and an immediate zero-new-cost Flutter/Dart/SVG fallback when the free tool path is limited. All 44 screens, Website families, four surfaces and J/R/U acceptance remain. Authorization does not prove RUNNING, implementation, runtime load or user acceptance. Existing manual model/effort/tier and security boundaries remain.
+> Retained approved topology (not current dispatch): M + independent F + one M-selected business window. W6 integration occupies the same business slot; other C windows wait with complete work/Goals preserved. Figma-first is superseded by reuse of existing editable design and an immediate zero-new-cost Flutter/Dart/SVG fallback when the free tool path is limited. All 44 screens, Website families, four surfaces and J/R/U acceptance remain. Authorization does not prove RUNNING, implementation, runtime load or user acceptance. Existing manual model/effort/tier and security boundaries remain.
 > Direct-build/native-target correction: F builds real frontend immediately from existing contracts without separate design drafts/Figma or M DESIGN_READY coding prerequisite. Later native Desktop targets Windows/macOS only; Mobile targets iOS only. Android/Linux native client delivery requirements are superseded, with existing source/history preserved. Linux server/CI and browser access are separate.
 > Latest surface priority, 2026-10-08: close Public Website and Web Workspace first; defer dedicated Desktop/Mobile design, implementation, packaging and device acceptance until those two surfaces close. Preserve all four-surface requirements and existing work. Web-required Core/SYSTEM dependencies remain in scope. This changes order, not actual capability/acceptance or deployment/cost authority. Approval: `evidence/approvals/PO-20261008-WEBSITE-WEB-FIRST.json`.
 > Published topology: M is the root controller/integrator, F owns frontend/Experience, and C1-C6 are restored as six eligible delivery roles under the current AGENTS.md instruction. This file records the latest published repository state; it is not a live process list. A local window executes only when explicitly dispatched and after current-state admission; explicit Product Owner wait/resume instructions control local scheduling without changing the canonical product scope. Product Architecture and D01-D49 dispositions were approved 2026-10-04; D labels remain separate from R01-R15 requirements.
@@ -11,6 +11,34 @@
 Root `AGENTS.md` is the only repository execution router. [The Product Owner's lightweight AI-native constitution](AI-NATIVE-PRODUCT-CONSTITUTION.md) remains a principle layer. The sole product blueprint is [Product Architecture](LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md); [Experience](LUMENIS-EXPERIENCE-CONSTITUTION.md) owns UI/UX and DESIGN_READY screen specifications. A report is evidence, never another blueprint.
 
 ## 1. Online reader's current-state snapshot
+
+2026-10-08 continuous synchronization correction: accepted source/rule/plan and
+its existing CURRENT/owner evidence are co-published before dependent execution;
+local HEAD, cached/fresh origin and live main are checked separately. Unaccepted
+in-flight C1 changes remain protected local work, not a second current source or
+an excuse to overwrite files. Raw originals, model/media/design history, failed
+receipts, credentials and Production DB retain their existing preservation and
+publication boundaries. Older batch states below are dated provenance, never a
+resume instruction or proof that a current defect still exists.
+
+The current C4 handoff's three production files (video_editing.py, rendering.py,
+episode_runtime.py) match main bytes. They require no duplicate source apply;
+its retained real-media receipts have their original scope, and full media
+user/Artifact/rights acceptance is still OPEN. W6's historical callback package
+has an actual publication receipt at ancestor 09b3bbb4; its old source images
+must not replace subsequent valid main changes. F home/AI archives are compared
+against current screen/permission/lifecycle contracts rather than restored as a
+whole tree. Exact local disposition evidence stays in the existing M record.
+
+C2's four local material helpers now preserve source identities, separate
+retired policy text from CURRENT, and require actual reading/admission evidence
+rather than a path or text length. One existing admission-v3-r2 entry is retained;
+old package bytes are archived, not erased or promoted. Eight previously
+approved original training rows retain their hashes; runtime RAG and new
+curriculum admission remain zero, with held-out/adversarial review distinguished.
+These are corrected local preparation tools, not product inference/training or
+publication of private corpus. Full original research remains OPEN.
+
 
 Material recovery correction (2026-10-08): inspect the existing local original
 packages and C2 continuation records, including the Desktop 20260914 content
@@ -328,9 +356,9 @@ No runtime restart, paid compute, training, network collection, deployment or
 user acceptance was performed. Exact-SHA CI and loaded runtime remain separate.
 
 Machine governance v1.1.0/model-routing and R/J/U acceptance are unchanged.
-The earlier report-only status is historical. That repair did not itself dispatch
-C1-C6/F; all windows obey the newest explicit Product Owner instruction, which
-now dispatches them after fresh admission.
+The earlier report-only status and v1.1.0 observation are historical. That repair
+did not dispatch C1-C6/F. Current activation and verification policy follow the
+latest direct PO state at the start of this file, not this older batch record.
 
 ### Approved D1–D5 convergence — 2026-10-06
 

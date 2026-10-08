@@ -263,3 +263,37 @@ the validator nor relabels the historical failure. Earlier accepted source batch
 `67e26a39` and `fa65267d` retain their own observed successful Product/App receipts.
 Rules, actual code adoption, runtime loading and complete user acceptance remain
 distinct. Full original-material research and non-C1 convergence remain OPEN.
+
+
+## 2026-10-08 continuous synchronization and stale-entry correction
+
+Baseline 69486837219b5fd0739056828a1c5d22214f6dbe is equal across local HEAD,
+origin/main, GitHub API and live refs/heads/main; exact Product/App runs
+37769505216 / 37769505393 succeeded. An initial schannel live-ref read failed;
+the read was recovered using the per-command OpenSSL backend without changing
+persistent Git/account/model/network configuration.
+
+README's old all-window-resume wording now identifies the retained topology,
+not current dispatch. CURRENT likewise labels older batch dispatch/version states
+as historical. Product Architecture's machine-contract pointer now matches the
+actual approved v1.2.0 JSON. The C4 input count is 71, matching the existing
+199-row manifest; none of those counts establish complete original reading.
+AGENTS no longer asserts a current hard 2026-01-01 cutoff from an older source
+observation or sends its repair to C6: C1 owns current task dates and native time.
+A legacy publication_since_2026 metadata key is not evidence of an active filter.
+C1's currently changing source and importer dependency are excluded from this M
+publication. No C1 process/session/DB/startup operation occurs here.
+
+The latest C4 handoff is independently compared with all three current production
+file bytes; no duplicate apply is needed. W6 callback publication 09b3bbb4 is an
+actual ancestor of main, not a new unintegrated tree. Old F candidate behavior is
+reviewed against current screen and lifecycle contracts; metadata differences
+alone are not semantic acceptance. Original source images/patches/receipts remain.
+
+Corrected local C2 helpers retain one admission input and archived original
+packages, with source-preserving dedup relations, no unreviewed CURRENT RAG,
+unchanged eight approved training hashes and explicit held-out review states.
+Their private corpus is not uploaded; no GPU/model/provider or inference executes.
+This batch only corrects existing rules/locators/observations. Full research,
+product source adoption, loaded runtime and real user closure remain independent
+OPEN states. Historical module suites/failures are not run or changed.
