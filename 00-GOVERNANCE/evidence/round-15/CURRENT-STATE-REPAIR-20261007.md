@@ -242,3 +242,24 @@ hash readbacks for ten local DOCX originals (1,018 paragraph nodes) and four PDF
 reading receipts, not corpus-wide completion or production adoption. Two access
 parameter values were removed from published source locators; original private
 locators remain locally protected and are not research/training inputs.
+
+## 2026-10-08 research adoption and publication-state correction
+
+The direct PO clarification requires prompt updates to existing rules/plans for
+product-relevant verified research, especially C1's currently running closure.
+Architecture, Source Owner Index, Global §10 and CURRENT now carry one adopted
+route: original versus partial reading, source-preserving deduplication, native
+time/identity/metric/role facts, explicit research limits and existing downstream
+source/version references. C1 keeps its complete task and necessary dependencies;
+the stale C1/C6 handoff and module-test requirement in Global §10 are replaced
+with actual product-operation acceptance under the already approved policy.
+No C1 source, process, account, production DB or paused delivery window is changed.
+
+Product run `37768238335` for `8850b8cd` actually FAILED: CURRENT had retained
+`PUBLISHED_SOURCE_VERIFIED` despite that increment containing governance/material
+and navigation-tool changes, without product behavior source. The next bounded
+documentation publication records `RULES_ONLY_PUBLICATION`; it neither changes
+the validator nor relabels the historical failure. Earlier accepted source batches
+`67e26a39` and `fa65267d` retain their own observed successful Product/App receipts.
+Rules, actual code adoption, runtime loading and complete user acceptance remain
+distinct. Full original-material research and non-C1 convergence remain OPEN.

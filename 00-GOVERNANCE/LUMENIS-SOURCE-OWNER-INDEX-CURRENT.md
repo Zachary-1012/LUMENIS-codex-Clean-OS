@@ -449,9 +449,12 @@ C5 owns cross-material intake, source/rights/citation/research transfer and the
 receiving-owner handoff record; C3 consumes accepted research/business inputs for
 CTH/BMP outcomes. C1/C2/C6 own their respective data/AI/runtime inputs. Every recovered and newly discovered
 item gets a primary Owner; unread/missing remains an obligation. These are
-responsibility assignments, not activation. M checks completeness and repairs
-current rule conflicts; it does not inspect F's independent materials or redo a
-central full-corpus audit.
+responsibility assignments, not activation. The latest direct PO instruction also
+authorizes M's research assistants to recover and read all unfinished originals,
+including local DeepSeek/ancestor materials and F/C4 references, and to converge
+existing non-C1 work. This does not resume paused delivery windows or transfer
+their architectural ownership. Reuse actual pinned readings; summaries, directory
+counts and unverified authorship do not close the original-material obligation.
 
 Retained video/podcast timeline horizontal interaction maps to C4/F/C6 and J5/J6,
 U14/U15/U23. Developer mode maps to existing SYSTEM settings/security/runtime,
@@ -579,10 +582,19 @@ cross-window completeness/integration rather than replacing those owners.
 For direct materials, the manifest's `primary_owner` is the reading and
 capability-adoption owner; `source_owner_paths` is the existing product route,
 not proof of implementation. Supporting-owner transfer requires receiver ACK.
-The current 191 direct-reference rows are explicitly not the complete material
+The current 199 direct-reference rows are explicitly not the complete material
 universe; secondary references and unrecovered originals stay open under their
-existing owner rather than being silently omitted or assigned to M. F-owned rows
-remain outside M's read/management scope.
+existing owner rather than being silently omitted. The latest explicit PO research
+assignment allows M's assistants to read F-owned originals while F remains paused;
+it does not grant a second Experience authority or automatic frontend acceptance.
+
+Verified improvements are applied promptly through the existing Architecture and
+detailed capability contracts. For the running C1 outcome, Global §10 is the
+single detailed route for original/partial coverage, source-preserving deduplication,
+native time/role/metric facts and downstream source continuity. C1 implements its
+own closure and necessary runtime dependencies without a C6 slot switch. M sends
+one exact published delta for a relevant changed rule, not per-function approvals.
+Do not wait for all research or training before adopting a justified current fix.
 
 | Existing research input | Current code/contract destination | Required product behavior and remaining evidence |
 | --- | --- | --- |

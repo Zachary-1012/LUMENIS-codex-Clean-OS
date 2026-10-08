@@ -74,8 +74,25 @@ not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+
+This publication updates existing execution rules and research-adoption routes.
+It does not re-publish or re-verify product behavior. Source batches `67e26a39`
+and `fa65267d` retain their own successful exact-SHA CI receipts. Product run
+`37768238335` at `8850b8cd` failed because this snapshot incorrectly retained
+the earlier source-publication state; that failure remains historical FAILED.
+Only the current publication's actually executed checks can establish its status.
+
+Latest direct PO clarification: verified product-relevant research improvements
+must update the existing blueprint, owner route and applicable detailed contract
+before dependent execution. Do not wait for all research or GPU training. Global
+§10 now carries the concrete C1 source/coverage/claim rules; its former C1/C6
+handoff and module-test instruction is superseded. C1 continues its own full
+closure and necessary dependencies without pause or a repeated bootstrap. M
+publishes the bounded rule delta and sends its exact revision to C1; receiving
+that delta is not proof of implementation or runtime acceptance. The remaining
+original-material corpus stays OPEN, with actual reading units and gaps retained.
 
 Current bounded source convergence (2026-10-08, parent `9f77d9a1`): M integrates
 the existing non-C1 business/reporting/media/AI/backup/Flutter source and preserved
