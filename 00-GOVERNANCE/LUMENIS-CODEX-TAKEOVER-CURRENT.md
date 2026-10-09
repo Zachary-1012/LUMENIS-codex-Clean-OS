@@ -262,9 +262,11 @@ not a new runtime or a claim of implementation. Evidence:
 
 Implementation publication state: `RULES_ONLY_PUBLICATION`
 
-Latest delta: the six existing governance/README files apply the PO's equal
-platform/public-web source-category weight and existing-data-first workflow rule,
-and reconcile obsolete current-task/serial-window wording. Acquisition proof leads
+Latest delta: the Collector and Global detailed contracts now match the six entry
+files' equal platform/public-web source-category weight and existing-data-first rule
+published in `017adcc5213b549f2f127b011bf1b4bfe6f80a6d`. The old platform-only
+positive-chain prerequisite is replaced with permitted platform or public-web
+source proof. Acquisition proof leads
 to downstream analysis and useful saved/reopened/recoverable results; another
 platform's gap does not block independent admitted-data workflows. Full platform
 scope and source/identity/time/rights guards remain. This rule-only publication

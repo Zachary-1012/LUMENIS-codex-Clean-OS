@@ -763,6 +763,8 @@ Acquire reality
 
 Collector remains SYSTEM-owned infrastructure. Shared Capability consumes canonical outputs and closes the research → creation → evaluation → learning loop. No fifth domain is created.
 
+2026-10-09 Product Owner 更正：所有平台数据和公开网页数据采用相同的来源类别基础权重，详细语义归唯一 Product Architecture。真实采集、原件持久化及刷新/恢复已有适用证明后，优先消费已有获准数据，打通分析、CTH/BMP、Research/SourceBrief、SavedWork/Artifact、修订/重开/恢复及 Evaluation；不因其他平台尚未完善而等待、降权或反复采集。缺口只影响该路径和确实缺少必要证据的结论，完整平台责任和来源质量/身份/时间/权益/未知值保持。已打通的网页工作流不冒充任一社交平台已通过；规则不恢复窗口。
+
 ### 2026-10-08 缺值呈现不替代采集能力验收
 
 所需维度由现有Owner准确定义并保持可见；未取得数值在UI显示“—”，Canonical/API保留null及状态/原因，真实0不变。来源未提供/未采集/权限受限/失败/未知分开。只有真实采集、正式准入、刷新恢复已验后，才能把仍不可得项归为有证据的来源限制；解析Bug或未执行路径必须修复。无须所有数据采全，但不得因此跳过平台/能力闭环或伪造覆盖。时间语义、排序及当前源码迁移入口统一见Global§10，不另建状态或采集真相。
