@@ -262,7 +262,16 @@ not a new runtime or a claim of implementation. Evidence:
 
 Implementation publication state: `RULES_ONLY_PUBLICATION`
 
-Latest delta: the Collector and Global detailed contracts now match the six entry
+Latest delta — 2026-10-09: data analysis must complete its existing deterministic/manual
+business result without AI, GPU or model API; AI enhancement has independent status.
+Architecture/Owner Index/Real Delivery/README and the existing Math adoption record
+now map objective/constraint, denominator, source/time scope, sampling and real-cost
+methods to current analysis/reporting owners. This is rule/method adoption, not an
+algorithm deployment or repair claim. Fresh source confirms the analysis Agent's
+AI-only failure gate and missing useful base computation remain OPEN. No Owner is
+automatically resumed; all original material, rights and product requirements remain.
+
+Previous published delta: the Collector and Global detailed contracts now match the six entry
 files' equal platform/public-web source-category weight and existing-data-first rule
 published in `017adcc5213b549f2f127b011bf1b4bfe6f80a6d`. The old platform-only
 positive-chain prerequisite is replaced with permitted platform or public-web

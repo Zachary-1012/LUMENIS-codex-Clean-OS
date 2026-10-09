@@ -36,8 +36,8 @@ resume conditions, defaults and configuration cannot establish current execution
 Publication dispatches no window. Owner, Permission, rights, data, cost,
 shared-write reservations and real acceptance remain binding.
 
-所有基础业务在没有模型、AI API、GPU 或推理服务时仍须正常完成；AI 不生产
-Canonical 事实。先验无 AI 有用成果，再分别验 AI 收益；Permission/权益/数据保护不变。
+基础业务及数据分析不得依赖 AI/API/GPU。AI 不生产 Canonical 事实；先验无 AI 成果，再验增强。
+数学研究按 Architecture/Math 采用记录落实计算与约束；权限、权益和数据保护不变。
 历史审批 `00-GOVERNANCE/evidence/approvals/PO-20261009-AI-OPTIONAL-PREPARATION-C1-PAUSE.json`
 及其他暂停/恢复/模型回执保留为有日期的事实来源，不再作为现行调度命令。
 
