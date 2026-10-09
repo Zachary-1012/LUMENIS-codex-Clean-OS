@@ -659,6 +659,10 @@ def _verified_general_browser(browser: Optional[str] = None) -> bool:
 
 def _write_general_session_marker(browser: str, profile: str) -> bool:
     try:
+        import cdp_helper
+        if not cdp_helper.is_cdp_profile_running(
+                GENERAL_CDP_PORT, profile, headless=True, browser=browser):
+            return False
         version = _http_json(f"http://127.0.0.1:{GENERAL_CDP_PORT}/json/version")
         websocket_url = str(version.get("webSocketDebuggerUrl") or "")
         browser_version = str(version.get("Browser") or "").casefold()
@@ -674,7 +678,8 @@ def _write_general_session_marker(browser: str, profile: str) -> bool:
                 "websocket_sha256": hashlib.sha256(websocket_url.encode()).hexdigest(),
             }, handle)
         os.replace(temporary, marker)
-        return True
+        return cdp_helper.is_cdp_profile_running(
+            GENERAL_CDP_PORT, profile, headless=True, browser=browser)
     except Exception:
         return False
 
@@ -706,6 +711,16 @@ def ensure_general_browser(force: bool = False) -> dict:
         if _verified_general_browser(browser):
             return {"ok": True, "port": GENERAL_CDP_PORT, "browser": browser,
                     "action": "already_online", "online": True}
+        profile = _general_profile_dir(browser)
+        # A registered background worker may survive its launching process.
+        # Refresh a stale endpoint marker only after exact process ownership;
+        # neither an open port nor an old marker grants browser authority.
+        if (cdp_helper.is_cdp_profile_running(
+                GENERAL_CDP_PORT, profile, headless=True, browser=browser)
+                and _write_general_session_marker(browser, profile)
+                and _verified_general_browser(browser)):
+            return {"ok": True, "port": GENERAL_CDP_PORT, "browser": browser,
+                    "action": "recovered_registered_worker", "online": True}
         return {"ok": False, "code": "UNVERIFIED_BROWSER_SESSION", "online": False}
     profile = _general_profile_dir(browser)
     os.makedirs(profile, exist_ok=True)

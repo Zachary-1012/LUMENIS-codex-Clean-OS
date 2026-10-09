@@ -259,11 +259,12 @@ def _worker_mode_state(spec: dict, *, headless: bool):
 
 
 def _launch_registered_worker(spec: dict, *, mode: str, browser: str | None = None,
-                              task_id: str | None = None) -> dict:
+                              task_id: str | None = None,
+                              actor_ref: str | None = None) -> dict:
     from scripts.start_resident_browsers import _launch_readonly_worker
     result = _launch_readonly_worker(
         spec, mode=mode, browser=browser or spec.get("browser"),
-        task_id=task_id, platform=spec["account"])
+        task_id=task_id, platform=spec["account"], actor_ref=actor_ref)
     headless = mode == "BACKGROUND"
     import cdp_helper
     online = result.get("online") is True and bool(_worker_mode_state(spec, headless=headless))
@@ -272,11 +273,16 @@ def _launch_registered_worker(spec: dict, *, mode: str, browser: str | None = No
 
 
 def _switch_registered_worker_mode(spec: dict, *, target_mode: str,
-                                   task_id: str | None = None) -> dict:
+                                   task_id: str | None = None,
+                                   actor_ref: str | None = None) -> dict:
     """Switch one verified isolated worker gracefully while its task lease is held."""
     target_mode = str(target_mode or "BACKGROUND").upper()
     if target_mode not in {"BACKGROUND", "HUMAN_INTERACTIVE"}:
         raise RuntimeError("BROWSER_MODE_INVALID")
+    if target_mode == "HUMAN_INTERACTIVE":
+        task_platform = _authorize_human_interactive(
+            spec["account"], task_id or "", actor_ref)
+        _require_human_browser_lease(task_id or "", task_platform)
     target_headless = target_mode == "BACKGROUND"
     port, profile = int(spec["port"]), spec["profile"]
     import cdp_helper
@@ -298,7 +304,8 @@ def _switch_registered_worker_mode(spec: dict, *, target_mode: str,
         selected_browser = None
 
     result = _launch_registered_worker(
-        spec, mode=target_mode, browser=selected_browser, task_id=task_id)
+        spec, mode=target_mode, browser=selected_browser, task_id=task_id,
+        actor_ref=actor_ref)
     if not result["online"]:
         raise RuntimeError("READONLY_WORKER_MODE_START_UNVERIFIED")
     return {"online": True, "browser": result["browser"], "action": result["action"]}
@@ -318,7 +325,8 @@ def return_registered_worker_to_background(platform: str, *, task_id: str,
             if acquired is not True:
                 raise RuntimeError("COLLECTOR_MAINTENANCE_ATTEMPT_ACTIVE")
             worker = _switch_registered_worker_mode(
-                spec, target_mode="BACKGROUND", task_id=task_id)
+                spec, target_mode="BACKGROUND", task_id=task_id,
+                actor_ref=actor_ref)
         if not collector_service.update_human_browser_state(
                 task_id, task_platform, "RETURNED_BACKGROUND", release_lease=True):
             raise RuntimeError("HUMAN_INTERACTIVE_TASK_STATE_UPDATE_FAILED")
@@ -437,7 +445,8 @@ def open_readonly_worker_login(platform: str, *, task_id: str,
             transition_started = True
             endpoint = _worker_endpoint(spec)
             worker = _switch_registered_worker_mode(
-                spec, target_mode="HUMAN_INTERACTIVE", task_id=task_id)
+                spec, target_mode="HUMAN_INTERACTIVE", task_id=task_id,
+                actor_ref=actor_ref)
             if not worker["online"]:
                 raise RuntimeError("READONLY_WORKER_HUMAN_MODE_UNAVAILABLE")
             from urllib.parse import urlsplit
@@ -468,7 +477,8 @@ def open_readonly_worker_login(platform: str, *, task_id: str,
                     if acquired is not True:
                         raise RuntimeError("COLLECTOR_MAINTENANCE_ATTEMPT_ACTIVE")
                     _switch_registered_worker_mode(
-                        spec, target_mode="BACKGROUND", task_id=task_id)
+                        spec, target_mode="BACKGROUND", task_id=task_id,
+                        actor_ref=actor_ref)
             collector_service.update_human_browser_state(
                 task_id, task_platform, "BLOCKED", release_lease=True)
         except Exception:

@@ -525,3 +525,20 @@ research-to-existing-product contract adoption, not a new feature or model grant
 实际维护周期18:31:02–18:34:09和18:36:02–18:38:01（北京时间）均真实执行但为PARTIAL/exit1；各观察到3条X/note VERIFIED Canonical更新，具source_id/evidence_ref/raw_ref，同期verified evidence分别14/12。后台路径源码pins未变，最终HUMAN actor局部导入修复仅静态验证。9224–9228为headless；9223 headed未能证明无人工会话，保留未关闭。无新增可归属可见采集实例；短暂无CDP/Profile进程不能归属，未操作。不得宣称绝无弹窗、六平台全通过、HUMAN正向链已验收或完整SYSTEM/用户闭环。
 
 命名任务曾在15:52:37因P0临时禁用，16:39:57恢复Enabled/PT5M；两个冻结后周期沿原调度执行。非P0任务、Cookie/Profile、个人浏览器、生产数据和未提交成果均未清理/覆写。Runtime仍含受保护的C1工作树差异，Core8201不可用；本次不重启无关服务。SOURCE有界发布、RUNTIME观察、DB预期采集变化、USER OUTCOME分别记账；完整P0验收仍OPEN。精确提交/CI由本次Git发布回执确认，旧失败不改写。
+
+### 2026-10-09 现有审计断点修复：来源样本无 AI 成果与精确验收
+
+直接 PO「先解决这些问题」有界修复，父 main `79d384201ff45802b8dc0e2ab400f1095d8da58e`。
+本批修复 HUMAN actor_ref 全链传递、注册无头 worker marker 恢复、无 AI 来源样本统计、
+独立 Owner 成果验证/UNKNOWN 防重复效果和 BMP 有界读取/错误状态；采用已有 SourceBrief 口径候选，
+在现有 CTH-10 中完成真实统计/保存/离开后重开。实测 30 条来源，原生时间已知 28/未知 2，
+平台 douyin 10/public_http 2/x 18；重复 run 同结果/finished_at，跨 CTH→BMP 403。
+
+Core8201已授权恢复并有界加载本地工作树；后台维护仍 PARTIAL，不能把平台缺口写成成功。
+SOURCE 发布、受保护本地 Runtime、DB 获准派生成果、用户样本统计各自记账，
+不证明整个 main Runtime/全候选/六平台/完整 SYSTEM。真实已认证待验证任务 HUMAN 正向、
+CTH/BMP 决策/报告/导出、媒体真实成品、AgentZero worker、AI-01 和全部 44 屏仍按原要求 OPEN。
+不恢复其他窗口，不运行模块测试，不改变模型/费用/权益/Permission，原始候选和失败保留。
+完整源码、操作、静态构建、回滚及开放项见
+[本轮交付回执](M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md)
+的本批段落；证据文件内用同目录相对路径。旧时间采样仍为历史，不作为当前运行禁令。

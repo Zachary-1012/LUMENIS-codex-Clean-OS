@@ -1685,6 +1685,10 @@ def _basic_auth():
         from lumenis_app_api import _internal_pitch_local_access_allowed
         if _internal_pitch_local_access_allowed():
             return None
+    if request.path.startswith('/api/ai/tasks'):
+        from ai_api import _source_brief_task_local_access_allowed
+        if _source_brief_task_local_access_allowed():
+            return None
     # /v4 升级模块使用独立 token/密钥认证（自带登录页），不走现网 HTTP Basic；其余路由维持 Basic 兜底不变
     # /api/auth/config exposes non-sensitive metadata only.
     # P0-R6: CTH 免密浏览态只读 GET 放行（CTH 页面依赖的旧版只读 API，仅 GET，不含 ZBMP 专属接口）

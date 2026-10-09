@@ -136,6 +136,50 @@ final class SourceBriefBusinessAnalysis {
   final List<String> unknowns;
 }
 
+final class SourceBriefQuerySample {
+  SourceBriefQuerySample({
+    this.candidateCount,
+    this.scannedCount,
+    this.rejectedCount,
+    this.returnedCount,
+    this.returnedVerifiedCount,
+    this.withheldCount,
+    this.truncated,
+    Map<String, int>? platformCountsSample,
+    this.countsBasis,
+  }) : platformCountsSample = platformCountsSample == null
+           ? null
+           : Map.unmodifiable(platformCountsSample);
+
+  final int? candidateCount;
+  final int? scannedCount;
+  final int? rejectedCount;
+  final int? returnedCount;
+  final int? returnedVerifiedCount;
+  final int? withheldCount;
+  final bool? truncated;
+  final Map<String, int>? platformCountsSample;
+  final String? countsBasis;
+}
+
+final class SourceBriefAnalysisSample {
+  const SourceBriefAnalysisSample({
+    this.availableBriefCount,
+    this.analyzedSourceCount,
+    this.omittedSourceCount,
+    this.hasTruncatedBodies,
+    this.selection,
+    this.coverage,
+  });
+
+  final int? availableBriefCount;
+  final int? analyzedSourceCount;
+  final int? omittedSourceCount;
+  final bool? hasTruncatedBodies;
+  final String? selection;
+  final String? coverage;
+}
+
 final class SourceBriefResult {
   SourceBriefResult({
     required this.jobId,
@@ -148,6 +192,8 @@ final class SourceBriefResult {
     required this.businessAnalysisState,
     required this.analysis,
     required this.reviewStatus,
+    this.sourceSample,
+    this.analysisSample,
   }) : records = List.unmodifiable(records);
 
   final String jobId;
@@ -160,6 +206,8 @@ final class SourceBriefResult {
   final SourceBriefBusinessAnalysisState businessAnalysisState;
   final SourceBriefBusinessAnalysis? analysis;
   final String reviewStatus;
+  final SourceBriefQuerySample? sourceSample;
+  final SourceBriefAnalysisSample? analysisSample;
 }
 
 class SourceBriefViewModel extends ChangeNotifier {
@@ -177,6 +225,120 @@ class SourceBriefViewModel extends ChangeNotifier {
   SourceBriefTaskState _taskState = SourceBriefTaskState.unknown;
   bool _canResume = false;
   SourceBriefResult? _result;
+  String? statisticsTaskId;
+  String? _statisticsJobId;
+  Map<String, Object?>? sourceStatistics;
+
+  Future<void> analyseSources({String? taskId}) async {
+    if (_disposed || _busy) return;
+    final jobId = _result?.jobId;
+    final priorTaskId = _statisticsJobId == jobId ? statisticsTaskId : null;
+    final operation = _beginOperation();
+    final fresh = await _loadFreshContext(operation);
+    if (fresh == null || !_isCurrent(operation)) return;
+    if (fresh.scopeChanged) {
+      _finish(
+        operation,
+        phase: SourceBriefPhase.ready,
+        errorKind: SourceBriefErrorKind.contextChanged,
+      );
+      return;
+    }
+    try {
+      String? selectedJobId = jobId;
+      String? selectedTaskId = taskId ?? priorTaskId;
+      Map<String, Object?>? task;
+      if (selectedTaskId != null) {
+        final response = await client.sourceStatisticsTask(
+          domainId: _domainId,
+          taskId: selectedTaskId,
+        );
+        if (!_contextStillCurrent(fresh, operation)) return;
+        task = _asMap(response['task']);
+        final taskContext = _asMap(task?['context']);
+        if (response['ok'] != true ||
+            taskContext?['analysis_operation'] != 'source_statistics') {
+          throw const _InvalidSourceBriefResponse();
+        }
+        selectedJobId = _safeIdentifier(taskContext?['source_brief_job_id']);
+      }
+      if (selectedJobId == null) throw const _InvalidSourceBriefResponse();
+      final sourceResponse = await client.sourceBriefJob(
+        domainId: _domainId,
+        jobId: selectedJobId,
+      );
+      if (!_contextStillCurrent(fresh, operation)) return;
+      final source = _asMap(sourceResponse['result']);
+      if (sourceResponse['ok'] != true || source == null) {
+        throw const _InvalidSourceBriefResponse();
+      }
+      final parsed = _parseResult(
+        source,
+        expectedJobId: selectedJobId,
+        expectedContext: fresh.selection,
+      );
+      if (selectedTaskId == null) {
+        final created = await client.createSourceStatistics(
+          domainId: _domainId,
+          jobId: selectedJobId,
+        );
+        if (!_contextStillCurrent(fresh, operation)) return;
+        selectedTaskId = _safeIdentifier(_asMap(created['task'])?['task_id']);
+        if (created['ok'] != true || selectedTaskId == null) {
+          throw const _InvalidSourceBriefResponse();
+        }
+      }
+      statisticsTaskId = selectedTaskId;
+      _statisticsJobId = selectedJobId;
+      if (task?['status'] != 'succeeded') {
+        final response = await client.sourceStatisticsTask(
+          domainId: _domainId,
+          taskId: selectedTaskId,
+          run: true,
+        );
+        if (!_contextStillCurrent(fresh, operation)) return;
+        task = _asMap(response['task']);
+        if (response['ok'] != true) throw const _InvalidSourceBriefResponse();
+      }
+      final result = _asMap(task?['result']);
+      final output = _asMap(result?['output']);
+      final verification = _asMap(result?['verification']);
+      final artifact = _asMap(output?['artifact_outcome']);
+      final statistics = _asMap(output?['base_analysis']);
+      if (task?['task_id'] != selectedTaskId ||
+          task?['status'] != 'succeeded' ||
+          result?['task_outcome'] != 'VERIFIED' ||
+          verification?['verified'] != true ||
+          verification?['verification_scope'] !=
+              'SOURCE_BRIEF_SAMPLE_ANALYSIS' ||
+          output?['source_brief_job_id'] != parsed.jobId ||
+          artifact?['artifact_hash'] != parsed.artifactHash ||
+          output?['base_analysis_status'] != 'completed' ||
+          statistics == null) {
+        throw const _InvalidSourceBriefResponse();
+      }
+      // Re-read the committed task; an execution return alone is insufficient.
+      final reopened = await client.sourceStatisticsTask(
+        domainId: _domainId,
+        taskId: selectedTaskId,
+      );
+      if (!_contextStillCurrent(fresh, operation)) return;
+      final savedTask = _asMap(reopened['task']);
+      if (reopened['ok'] != true ||
+          _contextSignature(savedTask?['result']) !=
+              _contextSignature(result) ||
+          savedTask?['finished_at'] != task?['finished_at']) {
+        throw const _InvalidSourceBriefResponse();
+      }
+      _result = parsed;
+      _jobId = parsed.jobId;
+      sourceStatistics = Map.unmodifiable(statistics);
+      _finish(operation, phase: SourceBriefPhase.ready);
+    } catch (error) {
+      _fail(operation, _errorFor(error), fresh: fresh);
+    }
+  }
+
   SourceBriefErrorKind? _errorKind;
   String? _scopeLabel;
   _CthContextSelection? _selection;
@@ -637,6 +799,7 @@ class SourceBriefViewModel extends ChangeNotifier {
     // Each operation must verify access and the saved artifact again. Keep
     // recovery references, but do not present the previous read as current.
     _result = null;
+    sourceStatistics = null;
     notifyListeners();
     return _generation;
   }
@@ -684,6 +847,9 @@ class SourceBriefViewModel extends ChangeNotifier {
     _taskState = SourceBriefTaskState.unknown;
     _canResume = false;
     _result = null;
+    statisticsTaskId = null;
+    _statisticsJobId = null;
+    sourceStatistics = null;
   }
 
   void _forgetContext() {
@@ -805,6 +971,10 @@ SourceBriefResult _parseResult(
 
   final rawBusiness = _asMap(result['business_analysis']);
   final businessState = _businessAnalysisState(rawBusiness?['state']);
+  final sourceSample = _parseSourceBriefQuerySample(sourceBrief['sample']);
+  final analysisSample = _parseSourceBriefAnalysisSample(
+    rawBusiness?['sample'],
+  );
   final question = _safeText(result['business_question'], maxLength: 1500);
   SourceBriefBusinessAnalysis? analysis;
   if (businessState == SourceBriefBusinessAnalysisState.draft) {
@@ -830,7 +1000,56 @@ SourceBriefResult _parseResult(
     businessAnalysisState: businessState,
     analysis: analysis,
     reviewStatus: reviewStatus,
+    sourceSample: sourceSample,
+    analysisSample: analysisSample,
   );
+}
+
+SourceBriefQuerySample? _parseSourceBriefQuerySample(Object? value) {
+  final raw = _asMap(value);
+  if (raw == null) return null;
+  return SourceBriefQuerySample(
+    candidateCount: _optionalSampleCount(raw['candidate_count']),
+    scannedCount: _optionalSampleCount(raw['scanned_count']),
+    rejectedCount: _optionalSampleCount(raw['rejected_count']),
+    returnedCount: _optionalSampleCount(raw['returned_count']),
+    returnedVerifiedCount: _optionalSampleCount(raw['returned_verified_count']),
+    withheldCount: _optionalSampleCount(raw['withheld_count']),
+    truncated: raw['truncated'] is bool ? raw['truncated'] as bool : null,
+    platformCountsSample: _optionalSampleCounts(raw['platform_counts_sample']),
+    countsBasis: _safeText(raw['counts_basis'], maxLength: 240),
+  );
+}
+
+SourceBriefAnalysisSample? _parseSourceBriefAnalysisSample(Object? value) {
+  final raw = _asMap(value);
+  if (raw == null) return null;
+  return SourceBriefAnalysisSample(
+    availableBriefCount: _optionalSampleCount(raw['available_brief_count']),
+    analyzedSourceCount: _optionalSampleCount(raw['analyzed_source_count']),
+    omittedSourceCount: _optionalSampleCount(raw['omitted_source_count']),
+    hasTruncatedBodies: raw['has_truncated_bodies'] is bool
+        ? raw['has_truncated_bodies'] as bool
+        : null,
+    selection: _safeText(raw['selection'], maxLength: 240),
+    coverage: _safeText(raw['coverage'], maxLength: 80),
+  );
+}
+
+int? _optionalSampleCount(Object? value) =>
+    value is int && value >= 0 ? value : null;
+
+Map<String, int>? _optionalSampleCounts(Object? value) {
+  final raw = _asMap(value);
+  if (raw == null) return null;
+  final counts = <String, int>{};
+  for (final entry in raw.entries) {
+    final key = _safeText(entry.key, maxLength: 80);
+    final count = _optionalSampleCount(entry.value);
+    if (key == null || key != entry.key || count == null) return null;
+    counts[key] = count;
+  }
+  return Map.unmodifiable(counts);
 }
 
 SourceBriefScope? _parseScope(Map<String, Object?>? value) {

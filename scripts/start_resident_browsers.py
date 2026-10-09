@@ -210,14 +210,16 @@ def launch_douyin_readonly(status_only=False):
 
 
 def _launch_readonly_worker(worker, *, status_only=False, mode="BACKGROUND",
-                            task_id=None, platform=None, browser=None):
+                            task_id=None, platform=None, browser=None,
+                            actor_ref=None):
     """Provision or reuse the exact registered profile in an explicit mode."""
     mode = str(mode or "BACKGROUND").upper()
     if mode not in {"BACKGROUND", "HUMAN_INTERACTIVE"}:
         raise ValueError("BROWSER_MODE_INVALID")
     if mode == "HUMAN_INTERACTIVE":
         from lumenis.adapters.human_browser import _authorize_human_interactive
-        task_platform = _authorize_human_interactive(platform or worker["account"], task_id or "")
+        task_platform = _authorize_human_interactive(
+            platform or worker["account"], task_id or "", actor_ref)
         from lumenis.adapters import collector_service
         if not collector_service.human_browser_lease_owned(task_id or "", task_platform):
             raise PermissionError("HUMAN_INTERACTIVE_BROWSER_LEASE_REQUIRED")
@@ -336,7 +338,8 @@ def main():
         print(f"   home    = {row['home']}")
         print(f"   action  = {row['action']}")
         for u in row["pages"][:4]:
-            print(f"   page    = {u[:80]}")
+            parts = urllib.parse.urlsplit(u)
+            print(f"   page    = {parts.scheme}://{parts.hostname or ''}/ [path/query withheld]")
 
     # 通用浏览实例（默认全部启动，或 --account GENERAL_BROWSE 单独启动）
     if not args.account or args.account == "GENERAL_BROWSE":
@@ -349,7 +352,8 @@ def main():
         print(f"   home    = {row['home']}")
         print(f"   action  = {row['action']}")
         for u in row["pages"][:4]:
-            print(f"   page    = {u[:80]}")
+            parts = urllib.parse.urlsplit(u)
+            print(f"   page    = {parts.scheme}://{parts.hostname or ''}/ [path/query withheld]")
 
     print("\n" + "-" * 72)
     ok = all(r["online"] for r in rows)

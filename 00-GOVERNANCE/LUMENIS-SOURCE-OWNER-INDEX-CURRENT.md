@@ -764,13 +764,13 @@ C3/C5/C4原职责复用已有SourceBrief/creation-upstream/SavedWork，补业务
 
 | Existing owner / source | Current bounded adoption | Exact remaining operation |
 |---|---|---|
-| SYSTEM Browser/Collector; M directly authorized P0 through existing C1/C6 source boundaries (`cdp_helper.py`, `human_browser.py`, `collector_automation.py`, Collector service/blueprint, resident/scraper/session, exact app routes/config/Douyin/store/prelaunch regions) | Bounded mainline headless/mode/profile/kernel/port checks and explicit HUMAN actor/task safety; 2 actual maintenance cycles without new attributable visible worker; X persisted; overall PARTIAL | Preserve existing registered identities/Profile and source/DB rights. 9223 headed owner remains unverified and untouched; no HUMAN positive operation or whole Core load proof. Full popup/collection acceptance stays OPEN; no window resume or candidate bulk merge |
+| SYSTEM Browser/Collector; M bounded audit/P0 grant through existing owners | Published headless identity baseline reused; actor_ref now propagates through all HUMAN lower launchers and rollback; registered 9224 marker recovery observed; Core healthy on admitted local tree | Real authenticated pending-task HUMAN transition remains NOT_VERIFIED; current 9223/9224/9225/9226 modes must be read from runtime evidence. Six-platform/whole SYSTEM closure remains OPEN. No other window dispatch |
 | M engineering tools; `.codex/local_workflow.py`, `scripts/local_development.ps1`, `.vscode/` | Deterministic Tasks, scoped static/build/format/recovery and real private receipts | Four-language local completion, syntax/type diagnostic recovery and real Dart definition navigation OBSERVED; editor path/PS host/Dart exclusions repaired; historical App test-source errors retained; tools do not close a product Job |
 | SYSTEM Browser / C6 and F SYS-06; M bounded integration of `ai_browser_runtime.py`, `ai_browser_api.py`, existing Core client/repository/screen/transport | Exclusive short lease and frame/target/revision/viewport binding; manual navigate/history/reload/scroll; server-listed visible-link selection with exact anchor re-resolution and pre-request main-document redirect checks; manual research-note Shared SavedWork save/list/reopen/revise; bounded isolated runtime entry | Server-authored Task/Run and source-use binding, safe remote authenticated Web, full captured-source Artifact/recovery and arbitrary click/input remain OPEN; manual notes are NOT_IMPORTED/NOT_VERIFIED/UNBOUND. Runtime evidence is in the existing M round-15 delivery, not implied by source. Paused Owner windows are not resumed. |
 | Same Browser owner; `lumenis/system/browser/runtime/browser_use_adapter.py` | Disabled optional readiness boundary only; no provider/model fallback | Server-owned Browser Task/Run and captured Source/use producers are absent; Collector queue leases and client task IDs cannot substitute. Then bind the existing typed owned Gateway, BaseChatModel/action bridge and enforced DNS/private-IP/redirect/WebSocket egress; no intelligent execution is accepted. |
 | Existing Agent/Task Runtime; `ai_task_engine.py`, `agent_runtime/agent_zero_gui_executor.py` | Disabled optional injected GUI executor contract; no parallel queue/database/runtime | No startup binder or implementation of its required `/api/lumenis/v1` worker protocol; stock Agent Zero APIs do not satisfy it. Independent manual GUI session and editable-document Artifact intake also remain open. Resource readback: 09:26 Beijing, no host Docker command, WSL Ubuntu stopped, 950 MiB free. No Docker/GUI runtime accepted; that historical observation does not establish current Owner dispatch. |
 | SYSTEM Gateway / C2; `lumenis/system/ai_gateway/core.py` | Explicitly authorized M cleanup: signatures/history retained, retired execution inert; owned functions unchanged | Owned model still NOT_BOUND; no new model/API/training authorization |
-| C2 Task analysis; `_execute_analysis`, `_owned_ai_failure_code` in `ai_task_engine.py` | 2026-10-09 source recheck: analysis result only labels AI-optional and does not compute a useful base result; failure gate still requires AI completion. OPEN, not repaired | Authorized Owner must consume existing scoped CTH/BMP/Shared deterministic results, separate base result/status from typed optional AI state, and prove real task/save/reopen/recovery without inference. Do not merely bypass failure or invent rule-based text |
+| C2 Task / C3-C5 scoped analysis caller; `ai_task_engine.py`, `ai_api.py`, bounded `app.py` auth hook | Typed SourceBrief sample statistics completes without model; exact actor/current Scope/report hash, real sample denominator, dedup/platform/native-date counts, persisted Task/independent readback and same-task replay observed | This repairs the ordinary source-statistics path, not all business analysis. Optional AI is independent and cannot block it; unbound/ungrounded business outcomes stay OPEN |
 | C1/C3/C4/C5/C6/F existing contracts | Seven-domain normal-business no-AI requirement added to Architecture/Real Delivery/Experience | Each existing normal user chain must demonstrate permitted real inputs and results without inference; then separately measure AI gains; preserve all R/J/U scope |
 | C1 Source/Canonical → C3 existing CTH/BMP metrics/decisions → C5 `lumenis/shared/reporting/`, `source_brief_job.py`, SavedWork → C6 task/API composition → F existing ViewModels | Math methods ADAPT into deterministic analysis requirements: objectives/constraints, denominators, scope/time, sample versus population, unknowns and comparable cost; existing paper algorithms remain DEFER where assumptions/benefit do not fit | Reuse existing computations and reporting; preserve equal source-category weight, scoped identity/rights and input/version lineage. AI unavailability cannot block this data-to-analysis-to-useful-outcome chain. Actual implementation and no-AI user acceptance remain OPEN until evidenced; no second engine or implicit dispatch |
 
@@ -793,3 +793,20 @@ Evidence; a dataset label, teacher name, this research or read-only count cannot
 become training eligibility. Preserve unknown upstream/teacher/PII/benchmark and
 dataset revision/hash as REVIEW_REQUIRED/HOLD. No new table/API/provider or
 ordinary paused-owner production modification is granted by this record.
+
+### 2026-10-09 现有审计断点修复：来源样本无 AI 成果与精确验收
+
+直接 PO「先解决这些问题」有界修复，父 main `79d384201ff45802b8dc0e2ab400f1095d8da58e`。
+本批修复 HUMAN actor_ref 全链传递、注册无头 worker marker 恢复、无 AI 来源样本统计、
+独立 Owner 成果验证/UNKNOWN 防重复效果和 BMP 有界读取/错误状态；采用已有 SourceBrief 口径候选，
+在现有 CTH-10 中完成真实统计/保存/离开后重开。实测 30 条来源，原生时间已知 28/未知 2，
+平台 douyin 10/public_http 2/x 18；重复 run 同结果/finished_at，跨 CTH→BMP 403。
+
+Core8201已授权恢复并有界加载本地工作树；后台维护仍 PARTIAL，不能把平台缺口写成成功。
+SOURCE 发布、受保护本地 Runtime、DB 获准派生成果、用户样本统计各自记账，
+不证明整个 main Runtime/全候选/六平台/完整 SYSTEM。真实已认证待验证任务 HUMAN 正向、
+CTH/BMP 决策/报告/导出、媒体真实成品、AgentZero worker、AI-01 和全部 44 屏仍按原要求 OPEN。
+不恢复其他窗口，不运行模块测试，不改变模型/费用/权益/Permission，原始候选和失败保留。
+完整源码、操作、静态构建、回滚及开放项见
+[evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md](evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md)
+的本批段落；证据文件内用同目录相对路径。旧时间采样仍为历史，不作为当前运行禁令。

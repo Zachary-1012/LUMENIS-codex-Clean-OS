@@ -132,11 +132,30 @@ routes remain OFF, dataset upstream/teacher/privacy/benchmark rights stay
 REVIEW_REQUIRED/HOLD, and no dataset revision/bytes or production facts were
 imported. Meta Muse Spark has official API documentation; its actual account,
 region, data tier and zero-cost eligibility remain unverified. That admission
-observation does not decide current window scheduling. The precise C2 analysis gap and all no-AI business outcomes stay OPEN.
+observation does not decide current window scheduling. That dated admission did not repair analysis. The later bounded source-statistics repair below is independently evidenced; other no-AI business outcomes remain OPEN.
 See the existing bounded delivery section 8; this adds no second authority,
 Provider, Source store, approval or user-outcome claim.
 
 ## 1. Online reader's current-state snapshot
+
+### 2026-10-09 现有审计断点修复：来源样本无 AI 成果与精确验收
+
+直接 PO「先解决这些问题」有界修复，父 main `79d384201ff45802b8dc0e2ab400f1095d8da58e`。
+本批修复 HUMAN actor_ref 全链传递、注册无头 worker marker 恢复、无 AI 来源样本统计、
+独立 Owner 成果验证/UNKNOWN 防重复效果和 BMP 有界读取/错误状态；采用已有 SourceBrief 口径候选，
+在现有 CTH-10 中完成真实统计/保存/离开后重开。实测 30 条来源，原生时间已知 28/未知 2，
+平台 douyin 10/public_http 2/x 18；重复 run 同结果/finished_at，跨 CTH→BMP 403。
+
+Core8201已授权恢复并有界加载本地工作树；后台维护仍 PARTIAL，不能把平台缺口写成成功。
+SOURCE 发布、受保护本地 Runtime、DB 获准派生成果、用户样本统计各自记账，
+不证明整个 main Runtime/全候选/六平台/完整 SYSTEM。真实已认证待验证任务 HUMAN 正向、
+CTH/BMP 决策/报告/导出、媒体真实成品、AgentZero worker、AI-01 和全部 44 屏仍按原要求 OPEN。
+不恢复其他窗口，不运行模块测试，不改变模型/费用/权益/Permission，原始候选和失败保留。
+完整源码、操作、静态构建、回滚及开放项见
+[evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md](evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIONAL-DELIVERY.md)
+的本批段落；证据文件内用同目录相对路径。旧时间采样仍为历史，不作为当前运行禁令。
+
+
 
 ### 当前有界目标与已发布治理基线 — 2026-10-09
 

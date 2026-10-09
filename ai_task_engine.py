@@ -875,6 +875,8 @@ class VerificationResult:
     needs_human_confirmation: bool = False     # 是否需人工确认
     human_confirmation_reason: str = ""
     verification_method: str = "rule_based"   # 验证方式
+    verification_scope: str = "EXECUTION_RETURN"
+    outcome_status: str = "NOT_VERIFIED"
     verified_at: str = field(default_factory=lambda: datetime.now().isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
@@ -2863,8 +2865,16 @@ class TaskEngine:
         trace_start = self._now()
 
         try:
+            context = task.get("context") or {}
+            parse_input = task["user_input"]
+            if context.get("analysis_operation") == "source_statistics":
+                # An explicit read-only operation is not a free-form command.
+                # Revalidate its authenticated Owner input before routing it;
+                # the word "publication" must not turn date counts into publishing.
+                self._read_analysis_source(task)
+                parse_input = "统计来源样本"
             parsed = self.parser.parse(
-                task["user_input"],
+                parse_input,
                 context=task.get("context", {}),
                 task_id=task_id,
             )
@@ -2998,7 +3008,10 @@ class TaskEngine:
 
         # Agent 选择
         agent_step = self._db_add_step(task_id, StepPhase.AGENT_SELECT.value, "running")
-        agent = self.agent_registry.select_best_agent(intent, task.get("context", {}))
+        context = task.get("context") or {}
+        agent = (self.agent_registry.get("analysis_agent")
+                 if context.get("analysis_operation") == "source_statistics"
+                 else self.agent_registry.select_best_agent(intent, context))
 
         if agent is None:
             self._db_update_step(agent_step, status="failed",
@@ -3020,7 +3033,8 @@ class TaskEngine:
 
         # Skill 选择
         skill_step = self._db_add_step(task_id, StepPhase.SKILL_SELECT.value, "running")
-        skills = self.agent_registry.select_skills(agent, intent, task.get("context", {}))
+        skills = ([] if context.get("analysis_operation") == "source_statistics"
+                  else self.agent_registry.select_skills(agent, intent, context))
         primary_skill = skills[0] if skills else None
 
         self._db_update_task(task_id, agent_id=agent.agent_id, skill_id=primary_skill)
@@ -3084,7 +3098,7 @@ class TaskEngine:
                 agent_id = task.get("agent_id", "")
                 if "browser" in agent_id:
                     op_type = OperationType.BROWSER_OPERATION
-                elif task.get("intent") == "generate_report":
+                elif task.get("intent") == "generate_report" or agent_id == "analysis_agent":
                     op_type = OperationType.REPORT_GENERATE
                 else:
                     op_type = OperationType.AI_CALL
@@ -3368,20 +3382,36 @@ class TaskEngine:
                 "output": result_data,
                 "verification": verification.to_dict(),
                 "executed_at": self._now(),
+                "task_outcome": verification.outcome_status,
             }
 
-            self._db_update_task(
-                task_id,
-                status=TaskStatus.SUCCEEDED.value,
-                result_json=json.dumps(final_result, ensure_ascii=False, default=str),
-                finished_at=self._now(),
-            )
-            self._db_update_step(step_id, status="succeeded",
-                                 detail=f"Execution succeeded, verified={verification.verified}")
+            completed = verification.verified and verification.success
+            failed = bool(result_data.get("error"))
+            outcome_state = (TaskStatus.SUCCEEDED if completed else
+                             TaskStatus.FAILED if failed else TaskStatus.UNKNOWN)
+
+            serialized = json.dumps(final_result, ensure_ascii=False, default=str)
+            with get_db() as conn:
+                changed = conn.execute(
+                    "UPDATE ai_task SET status=?, result_json=?, error=?, finished_at=?, updated_at=? "
+                    "WHERE task_id=? AND status=?",
+                    (outcome_state.value, serialized,
+                     str(result_data.get("error")) if failed else None if completed else "USER_OUTCOME_NOT_VERIFIED",
+                     self._now(), self._now(), task_id, TaskStatus.RUNNING.value),
+                ).rowcount
+            if changed != 1:
+                self._db_update_step(step_id, status="cancelled", detail="Task state changed before result commit.")
+                return self._db_get_task(task_id)
+            committed = self._db_get_task(task_id)
+            if not committed or committed.get("result") != final_result:
+                raise RuntimeError("TASK_RESULT_COMMITTED_READBACK_MISMATCH")
+            self._db_update_step(step_id, status="succeeded" if completed else "failed" if failed else "unknown",
+                                 detail=f"Execution returned; outcome={verification.outcome_status}")
             self._db_add_trace(
                 task_id, "task.execute",
-                f"Execution succeeded, verified={verification.verified}",
-                "ok", started_at=trace_start, finished_at=self._now(),
+                f"Execution returned; outcome={verification.outcome_status}",
+                "ok" if completed else "error" if failed else "unknown",
+                started_at=trace_start, finished_at=self._now(),
                 metadata={"attempt": attempt, "verification": verification.verified},
             )
             return self._db_get_task(task_id)
@@ -3401,7 +3431,7 @@ class TaskEngine:
         """
         if not isinstance(result_data, dict):
             return None
-        if agent_id == "analysis_agent" and (
+        if agent_id == "analysis_agent" and result_data.get("ai_required") is True and (
             result_data.get("ai_analysis_status") != "completed"
             or result_data.get("ai_analysis") is None
         ):
@@ -3482,30 +3512,102 @@ class TaskEngine:
         return result
 
     def _execute_analysis(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
-        """分析推理：纯内存计算。"""
-        result: Dict[str, Any] = {
-            "analysis_type": intent,
-            "input": task.get("user_input", ""),
-            "method": "rule_based_with_ai_optional",
-        }
-
-        # AI 辅助分析（带降级）
-        ai_analysis = self._try_ai_analyze(task.get("user_input", ""))
-        if ai_analysis and ai_analysis.get("status") == "completed":
-            result["ai_analysis"] = ai_analysis
-            result["analysis_provider"] = ai_analysis.get("provider", "unknown")
-        else:
-            result["ai_analysis"] = None
-            result["analysis_provider"] = (ai_analysis or {}).get("provider", "unknown")
-            result["degradation_note"] = (
-                "AI Gateway did not return a completed model response; "
-                "the analysis remains rule-based."
-            )
-        result["ai_analysis_status"] = (ai_analysis or {}).get("status", "unavailable")
-        if (ai_analysis or {}).get("error"):
-            result["ai_analysis_error"] = ai_analysis["error"]
-
+        """Compute useful statistics over an admitted SourceBrief; AI is opt-in."""
+        operation = (task.get("context") or {}).get("analysis_operation")
+        result = {"analysis_type": intent, "method": "source_brief_statistics/v1",
+                  "analysis_operation": operation,
+                  "ai_required": False, "ai_analysis": None,
+                  "ai_analysis_status": "not_requested", "analysis_provider": "unavailable",
+                  "business_outcome": "NOT_OBSERVED"}
+        try:
+            report = self._read_analysis_source(task)
+            statistics = self._source_statistics(report["source_brief"])
+            result.update(base_analysis=statistics, base_analysis_status="completed",
+                          source_brief_job_id=report["job_id"],
+                          artifact_outcome=report["artifact_outcome"])
+        except (ValueError, PermissionError, LookupError, RuntimeError) as exc:
+            code = str(exc)
+            result.update(base_analysis_status="unavailable",
+                          error=code if re.fullmatch(r"[A-Z_0-9]{1,120}", code) else "ANALYSIS_SOURCE_UNAVAILABLE")
+            return result
+        if (task.get("context") or {}).get("ai_enhancement") is True:
+            # Only reuse the Reporting Owner's already admitted derivative.
+            # A statistics request cannot silently grant AI source use or start
+            # another inference call under REPORT_GENERATE permission.
+            enhancement = report.get("business_analysis") or {}
+            admitted = enhancement.get("state") == "draft"
+            result.update(ai_analysis=enhancement if admitted else None,
+                          ai_analysis_status="admitted_source_brief_derivative" if admitted else "unavailable",
+                          ai_analysis_error=None if admitted else "AI_ENHANCEMENT_NOT_ADMITTED_FOR_SOURCE_VERSION")
         return result
+
+    @staticmethod
+    def _analysis_actor(task: dict[str, Any]):
+        from lumenis.auth.service import get_current_user
+        from lumenis.system.security.permission import resolve_local_workspace_principal
+        actor = resolve_local_workspace_principal(module="reports", action="read")
+        if actor is None:
+            actor = get_current_user()
+        if actor is None:
+            raise PermissionError("ANALYSIS_AUTH_REQUIRED")
+        ref = getattr(actor, "principal_ref", None)
+        if ref is None and isinstance(actor, dict) and type(actor.get("id")) is int:
+            ref = f"actor:{actor['id']}"
+        if ref is None or task.get("created_by") != ref:
+            raise PermissionError("ANALYSIS_TASK_ACTOR_MISMATCH")
+        return actor, ref
+
+    def _read_analysis_source(self, task: dict[str, Any]) -> dict[str, Any]:
+        from experience_runtime import _source_brief_context
+        from lumenis.shared.reporting.source_brief_job import (
+            _scope_material,
+            get_source_brief_job,
+        )
+        context = task.get("context") or {}
+        job_id, expected = context.get("source_brief_job_id"), context.get("source_brief_artifact_hash")
+        if not isinstance(job_id, str) or not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
+            raise ValueError("ANALYSIS_SOURCE_BRIEF_REQUIRED")
+        actor, ref = self._analysis_actor(task)
+        current_ref, _, material = _source_brief_context("read")
+        if current_ref != ref:
+            raise PermissionError("ANALYSIS_TASK_ACTOR_MISMATCH")
+        report = get_source_brief_job(job_id, actor_id=ref, actor=actor,
+                                     expected_scope=_scope_material(**material))
+        if report["artifact_outcome"]["artifact_hash"] != expected:
+            raise RuntimeError("ANALYSIS_SOURCE_VERSION_CHANGED")
+        if not report["source_brief"]["records"]:
+            raise ValueError("ANALYSIS_NO_VERIFIED_SOURCE")
+        return report
+
+    @staticmethod
+    def _source_statistics(brief: dict[str, Any]) -> dict[str, Any]:
+        from collections import Counter
+        records = brief["records"]
+        by_source = {record["source_id"]: record for record in records}
+        dates, unknown_dates = Counter(), 0
+        for record in by_source.values():
+            value = record.get("publish_datetime")
+            try:
+                day = datetime.fromisoformat(value.replace("Z", "+00:00")).date().isoformat()
+            except (ValueError, TypeError, AttributeError):
+                unknown_dates += 1
+            else:
+                dates[day] += 1
+        n = len(by_source)
+        return {"input_count": len(records), "unique_source_count": n,
+                "duplicate_projection_count": len(records) - n,
+                "platform_counts": dict(sorted(Counter(record.get("source_platform") or "UNKNOWN"
+                                                         for record in by_source.values()).items())),
+                "source_type_counts": dict(sorted(Counter(record.get("source_type") or "UNKNOWN"
+                                                            for record in by_source.values()).items())),
+                "publication_day_counts": dict(sorted(dates.items())),
+                "publication_time_known_count": n - unknown_dates,
+                "publication_time_unknown_count": unknown_dates,
+                "publication_time_known_ratio": (n - unknown_dates) / n if n else None,
+                "denominator": "unique verified sources in this SourceBrief sample",
+                "sample": brief["sample"], "scope": brief["scope"],
+                "coverage": "UNKNOWN", "causal_claim": "NOT_ESTABLISHED",
+                "interpretation": "Sample counts and native publication dates only; not market demand, sentiment or platform-wide coverage."}
 
     def _execute_report(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
         """报告生成：只读聚合。"""
@@ -3721,7 +3823,7 @@ class TaskEngine:
         ev_input = self._db_add_evidence(
             task["task_id"], "input",
             f"User input: {task.get('user_input', '')[:500]}",
-            source="user", step_id=step_id, authenticity_score=1.0,
+            source="user", step_id=step_id, authenticity_score=None,
         )
         evidence_ids.append(ev_input)
 
@@ -3729,7 +3831,7 @@ class TaskEngine:
         ev_parse = self._db_add_evidence(
             task["task_id"], "parsed",
             f"Intent={intent}, risk={task.get('risk_level')}, agent={agent_id}",
-            source="task_parser", step_id=step_id, authenticity_score=0.9,
+            source="task_parser", step_id=step_id, authenticity_score=None,
         )
         evidence_ids.append(ev_parse)
 
@@ -3738,12 +3840,12 @@ class TaskEngine:
         ev_result = self._db_add_evidence(
             task["task_id"], "execution_result",
             result_summary, source=agent_id, step_id=execute_step_id,
-            authenticity_score=0.8,
+            authenticity_score=None,
         )
         evidence_ids.append(ev_result)
 
-        # 判定成功
-        success = result_data is not None and not result_data.get("error")
+        # Execution returning is not verification of a useful committed outcome.
+        success, verification_scope = self._verify_owner_outcome(task, result_data)
 
         # 判定是否需人工确认
         needs_human = task.get("risk_level") in ("L3", "L4") or task.get("human_approval_required")
@@ -3755,7 +3857,7 @@ class TaskEngine:
             what_was_called += f", ai_provider={result_data['analysis_provider']}"
 
         verification = VerificationResult(
-            verified=True,
+            verified=bool(success),
             what_was_done=f"Executed {intent} via {agent_id}",
             why=f"Task intent={intent}, risk={task.get('risk_level')}, permission={task.get('permission_result')}",
             what_was_called=what_was_called,
@@ -3764,17 +3866,46 @@ class TaskEngine:
             success=bool(success),
             needs_human_confirmation=bool(needs_human),
             human_confirmation_reason=task.get("risk_reason", "") if needs_human else "",
-            verification_method="rule_based+evidence_chain",
+            verification_method="independent_owner_readback" if success else "execution_return_only",
+            verification_scope=verification_scope,
+            outcome_status="VERIFIED" if success else "FAILED" if result_data.get("error") else "NOT_VERIFIED",
         )
 
-        self._db_update_step(step_id, status="succeeded",
+        self._db_update_step(step_id, status="succeeded" if success else "failed" if result_data.get("error") else "unknown",
                              detail=f"Verified: success={success}, evidence_count={len(evidence_ids)}")
         self._db_add_trace(
             task["task_id"], "task.verify",
             f"Verification complete: success={success}, evidence={len(evidence_ids)}",
-            "ok", metadata={"success": success, "evidence_count": len(evidence_ids)},
+            "ok" if success else "unknown", metadata={"success": success, "evidence_count": len(evidence_ids)},
         )
         return verification
+
+    def _verify_owner_outcome(self, task: dict[str, Any], result: dict[str, Any]):
+        """Consume current canonical Owner readers, never a caller's verified flag."""
+        if not isinstance(result, dict) or result.get("error"):
+            return False, "EXECUTION_RETURN"
+        if task.get("agent_id") == "analysis_agent":
+            try:
+                report = self._read_analysis_source(task)
+                valid = ((task.get("context") or {}).get("analysis_operation") == "source_statistics"
+                         and result.get("analysis_operation") == "source_statistics"
+                         and result.get("base_analysis_status") == "completed"
+                         and result.get("source_brief_job_id") == report["job_id"]
+                         and result.get("artifact_outcome") == report["artifact_outcome"]
+                         and result.get("base_analysis") == self._source_statistics(report["source_brief"]))
+                return valid, "SOURCE_BRIEF_SAMPLE_ANALYSIS"
+            except (ValueError, PermissionError, LookupError, RuntimeError):
+                return False, "SOURCE_BRIEF_SAMPLE_ANALYSIS"
+        if result.get("executor") == "agent_zero_gui":
+            from agent_runtime.agent_zero_gui_executor import (
+                get_agent_zero_gui_executor,
+                is_agent_zero_gui_task,
+            )
+            if is_agent_zero_gui_task(task):
+                executor = get_agent_zero_gui_executor()
+                outcome = executor._verify_outcome(task, executor._outcome_contract_hash(task["task_id"]))
+                return outcome.get("verified_goal_achieved") is True, "BOUND_AGENT_OUTCOME"
+        return False, "EXECUTION_RETURN"
 
     # ──────────────────────────────────────────────────────────
     # 7. 人工审批
@@ -3917,6 +4048,19 @@ class TaskEngine:
             is_agent_zero_gui_task,
         )
         current = self._db_get_task(task_id)
+        if (current and current.get("status") == TaskStatus.UNKNOWN.value
+                and current.get("finished_at") and current.get("result")):
+            # Execution already returned, but its user outcome is unresolved.
+            # Reading/running it again must not repeat possible external effects.
+            return current
+        if current and current.get("status") in {TaskStatus.SUCCEEDED.value, TaskStatus.CANCELLED.value, TaskStatus.RUNNING.value}:
+            if current.get("agent_id") == "analysis_agent" and current.get("status") == TaskStatus.SUCCEEDED.value:
+                stored = current.get("result") or {}
+                valid, _ = self._verify_owner_outcome(current, stored.get("output") or {})
+                if not valid:
+                    return {**current, "status": TaskStatus.UNKNOWN.value,
+                            "error": "ANALYSIS_OWNER_READBACK_NOT_VERIFIED"}
+            return current
         if current and is_agent_zero_gui_task(current):
             record = (current.get("parameters") or {}).get(AGENT_ZERO_TASK_RECORD)
             if (isinstance(record, dict) or current.get("status") in {

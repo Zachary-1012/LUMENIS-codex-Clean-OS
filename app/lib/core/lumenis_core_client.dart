@@ -539,6 +539,41 @@ class LumenisCoreClient {
     }
   }
 
+  Future<Map<String, dynamic>> createSourceStatistics({
+    required String domainId,
+    required String jobId,
+  }) {
+    _validateSourceBriefJobId(jobId);
+    return _request(
+      'POST',
+      '/api/ai/tasks',
+      operationContext: _contentContext(domainId),
+      payload: {
+        'input': '统计已保存来源的发布时间与平台分布',
+        'context': {
+          'analysis_operation': 'source_statistics',
+          'source_brief_job_id': jobId,
+        },
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> sourceStatisticsTask({
+    required String domainId,
+    required String taskId,
+    bool run = false,
+  }) {
+    if (!RegExp(r'^task_[0-9a-f]{16}$').hasMatch(taskId)) {
+      throw const FormatException('Invalid source statistics task identifier.');
+    }
+    return _request(
+      run ? 'POST' : 'GET',
+      '/api/ai/tasks/${Uri.encodeComponent(taskId)}${run ? '/run' : ''}',
+      operationContext: _contentContext(domainId),
+      payload: run ? const <String, Object?>{} : null,
+    );
+  }
+
   static void _validateSourceBriefJobId(String value) {
     if (!RegExp(r'^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$').hasMatch(value)) {
       throw const FormatException('Invalid source brief job identifier.');

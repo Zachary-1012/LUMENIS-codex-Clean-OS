@@ -266,3 +266,28 @@ Context7本次上游资料指向 Browser Use `main` 的 Tools/Agent说明；它�
 执行结论：A0/B0/C0来源与准入准备已经记录，外部路线保持OFF；无AI手动Browser的第9节成果保留。完整 Browser Use/Agent Zero、C2分析无AI修复、七域正常业务验收仍未完成。C1/F/C2-C6保持暂停；现有任务材料与未完成源码保留，不以新增占位代码、UNAVAILABLE回复或一份研究记录代替实现。
 
 发布纠正：本节首个文档提交 `66070a04` 的 Product Gate `37870192239` 失败，原因是 CURRENT 的 publication state 沿用了上批 `PUBLISHED_SOURCE_VERIFIED`，与该提交仅含文档的事实不符。后续纠正为现有 `RULES_ONLY_PUBLICATION`，重新执行相应静态治理门；不删除/降级检查，不改写失败记录，不补入无关源码凑成源码提交。上一批 `d847a28e` 的行为源码与真实操作证据不受本次文档状态错误影响。
+
+### 2026-10-09 现有审计断点修复：来源样本无 AI 成果与精确验收
+
+
+本批沿直接 PO「先解决这些问题」授权，父基线为 `79d384201ff45802b8dc0e2ab400f1095d8da58e`。
+只集成本批 Browser 身份链、Task 分析/成果验证、BMP 读取及已准入 SourceBrief 展示/统计入口；
+不合入其他 C1/F 候选，不恢复其他窗口，不运行单元/集成/换名模块套件，不新增费用/模型/训练/部署。
+原始失败、旧验收、未读材料、原生平台和全部 J/R/U/44 屏要求继续保留。
+
+| 实际范围 | 本批源码及运行结果 | 仍未关闭的边界 |
+|---|---|---|
+| HUMAN Browser 身份链 | 同一服务端 `actor_ref` 已贯穿 switch/registered/readonly launcher、回滚及返回 BACKGROUND；原任务/平台/Permission/独占锁检查保留；无认证上下文 CLI 继续拒绝 | 没有真实用户已认证且待验证的 MANUAL Collector 任务，未进行 HUMAN 登录正向操作；不得造 actor/task 或擅自弹出登录窗。完整人工接管和六平台 P0 仍 OPEN |
+| SYSTEM/Core | 授权的 canonical launcher 恢复 8201，DB dependency healthy；已知自启 Core 在空任务/空 Browser session 时有界重载；9224 正确注册无头 worker 的陈旧 websocket marker 已修复并实际恢复复用 | Runtime 使用受保护本地工作树；entry/hash/boot 已记录，不证明整个 GitHub main、所有共享候选或所有运行能力同版。未执行正式部署 |
+| 无 AI 来源分析 | 明确 `source_statistics` 操作消费已核验 SourceBrief，服务端绑定 actor、当前 Scope 和不可变 report hash；REPORT_GENERATE 正常权限。实际 Web 操作得到 30 条去重来源、douyin 10/public_http 2/x 18、原生发布时间已知 28/未知 2；任务保存、离开后按相同编号重开成功 | 统计分母仅此样本，覆盖 UNKNOWN、因果 NOT_ESTABLISHED；不等于全部商业洞察、业务报告或 J 闭合。AI 增强为独立 unavailable/not_requested，不阻断基础结果 |
+| 通用 Task 验证 | 不再因返回非空且无 error 就 `verified=True`；消费现有独立 Owner reader。统计重算与不可变来源/已提交结果吻合才 VERIFIED；无法证明用户成果的执行返回为 UNKNOWN/NOT_VERIFIED；已返回 UNKNOWN 成果不自动重复可能的外部效果 | 其他任务仍须各自实际 Owner 成果合同；不一概提升所有任务或修改历史失败。AgentZero 原有专用成果校验保留 |
+| Scope/重试 | 实际 Task GET 重新独立读回；重复 run 同结果/同 finished_at；正文伪造 created_by 被忽略，真实 server actor 为 sealed workspace；跨 CTH→BMP 读取返回 403 | 权益撤回、未知任务和具体其他用户身份的全部产品验收仍按适用 Owner 关闭，不用模块模拟补证 |
+| BMP 数据读取 | 单事务分批 `fetchmany(200)`，正式聚合不保存全量 rows 列表；预览 200、品牌预览 100，返回 total/page/truncated；READY/PARTIAL/REJECTED/NOT_COLLECTED/ERROR 区分，读取错误 503/未知值。实际正常读取 491 条，预览 200/truncated | 正常分支实际观测；读取错误/作用域拒绝分支静态审查，未对生产 DB 注入故障。无可比较旧性能基线，不报提升百分比 |
+| SourceBrief 前端 | 采用现有三文件样本口径候选并连接同一 CoreClient；来源查询与模型分析口径分开。现有 CTH-10 来源简报增加无需 AI 的统计/保存/重开操作，中英韩和请求 generation/scope/version 保护保留 | 周期/周报、导出、CTH/BMP 决策最后业务链、AI-01 首页提交、全部 44 屏和原生平台仍 OPEN；不能把这个独立可用入口写成整页已 ACCEPTED |
+
+SOURCE、RUNTIME、DATABASE 和 USER OUTCOME 分开：本批源码已集成；本机真实保存/读回产生获准的
+SourceBrief/Task 派生成果，未手工改表、迁移或重写 Canonical。后台采集继续按原任务运行，真实周期为
+PARTIAL/exit 1，平台身份/范围缺口不可冒充成功。原始 DB/Cookie/Profile/未提交工作保持现有保护。
+静态编译、Ruff 增量、Dart analyze、Flutter Web 构建及既有阻断治理/体验检查独立记账；CI 需读本批精确 SHA。
+上述实证只接受来源简报/样本统计有界成果，不声明整轮 SYSTEM、USER_VERIFIED、RELEASED 或全产品闭环。
+私有原始操作回执和画面留在既有 `work/system-browser-p0-20261009-155157/audit-followup/`，不上传生产正文。

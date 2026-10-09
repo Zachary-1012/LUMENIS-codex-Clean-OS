@@ -646,6 +646,44 @@ def _get_engine():
     return get_task_engine()
 
 
+def _source_brief_task_local_access_allowed():
+    """Open only source-bound tasks for the existing sealed local workspace."""
+    from lumenis.shared.reporting.source_brief_job import get_source_brief_job
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    actor = resolve_local_workspace_principal(module='reports', action='read')
+    if actor is None:
+        return False
+    try:
+        if request.endpoint == 'ai_api.api_ai_tasks' and request.method == 'POST':
+            body = request.get_json(silent=True)
+            if not isinstance(body, dict) or 'task' in body or 'skill_id' in body:
+                return False
+            context = body.get('context')
+        elif request.endpoint in {'ai_api.api_ai_tasks_get', 'ai_api.api_ai_tasks_run'}:
+            expected_method = 'POST' if request.endpoint.endswith('_run') else 'GET'
+            if request.method != expected_method:
+                return False
+            task = _get_engine().get_task((request.view_args or {}).get('task_id', ''))
+            if not task or task.get('created_by') != actor.principal_ref:
+                return False
+            context = task.get('context')
+        else:
+            return False
+        if (not isinstance(context, dict) or context.get('analysis_operation') != 'source_statistics'
+                or not isinstance(context.get('source_brief_job_id'), str)):
+            return False
+        from experience_runtime import _source_brief_context
+        from lumenis.shared.reporting.source_brief_job import _scope_material
+        current_ref, _, material = _source_brief_context('read')
+        if current_ref != actor.principal_ref:
+            return False
+        get_source_brief_job(context['source_brief_job_id'], actor_id=current_ref, actor=actor,
+                             expected_scope=_scope_material(**material))
+        return True
+    except (ValueError, PermissionError, LookupError, RuntimeError):
+        return False
+
+
 @bp.before_request
 def _scoped_report_task_boundary():
     """Report tasks require Reporting's live actor and exact scope checks."""
@@ -653,6 +691,21 @@ def _scoped_report_task_boundary():
     if (path.startswith('/api/ai/tasks/rbrief_')
             or (path == '/api/ai/trace' and request.args.get('task_id', '').startswith('rbrief_'))):
         return jsonify({'ok': False, 'code': 'REPORT_TASK_SCOPED_ROUTE_REQUIRED'}), 403
+    task_id = (request.view_args or {}).get('task_id')
+    if task_id:
+        engine = _get_engine()
+        task = engine.get_task(task_id)
+        if task and (task.get('context') or {}).get('source_brief_job_id'):
+            try:
+                engine._read_analysis_source(task)
+                if task.get('status') == 'succeeded':
+                    stored = task.get('result')
+                    output = stored.get('output') if isinstance(stored, dict) else None
+                    valid, _ = engine._verify_owner_outcome(task, output)
+                    if not valid:
+                        return jsonify({'ok': False, 'code': 'ANALYSIS_OWNER_READBACK_NOT_VERIFIED'}), 409
+            except (ValueError, PermissionError, LookupError, RuntimeError):
+                return jsonify({'ok': False, 'code': 'ANALYSIS_SOURCE_ACCESS_DENIED'}), 403
 
 
 @bp.route('/api/ai/tasks', methods=['GET', 'POST'])
@@ -678,11 +731,45 @@ def api_ai_tasks_create(data=None):
         user_input = data.get('input', '')
         context = data.get('context', {})
         created_by = data.get('created_by', 'system')
+        if not isinstance(context, dict):
+            return jsonify({'ok': False, 'code': 'TASK_CONTEXT_OBJECT_REQUIRED'}), 400
+        if 'source_brief_job_id' in context:
+            if context.get('analysis_operation') != 'source_statistics':
+                return jsonify({'ok': False, 'code': 'EXPLICIT_SOURCE_STATISTICS_OPERATION_REQUIRED'}), 400
+            # The authenticated server principal and immutable Owner version are
+            # bound here; body-supplied actor/hash fields cannot authorize a read.
+            from lumenis.auth.service import get_current_user
+            from lumenis.shared.reporting.source_brief_job import get_source_brief_job
+            from lumenis.system.security.permission import (
+                resolve_local_workspace_principal,
+            )
+            actor = resolve_local_workspace_principal(module='reports', action='read')
+            if actor is None:
+                actor = get_current_user()
+            if actor is None:
+                return jsonify({'ok': False, 'code': 'ANALYSIS_AUTH_REQUIRED'}), 403
+            created_by = getattr(actor, 'principal_ref', None)
+            if created_by is None and isinstance(actor, dict) and type(actor.get('id')) is int:
+                created_by = f"actor:{actor['id']}"
+            if created_by is None:
+                return jsonify({'ok': False, 'code': 'ANALYSIS_AUTH_REQUIRED'}), 403
+            from experience_runtime import _source_brief_context
+            from lumenis.shared.reporting.source_brief_job import _scope_material
+            current_ref, _, material = _source_brief_context('read')
+            if current_ref != created_by:
+                return jsonify({'ok': False, 'code': 'ANALYSIS_TASK_ACTOR_MISMATCH'}), 403
+            report = get_source_brief_job(context['source_brief_job_id'], actor_id=created_by, actor=actor,
+                                         expected_scope=_scope_material(**material))
+            context = {**context, 'source_brief_artifact_hash': report['artifact_outcome']['artifact_hash']}
         if not isinstance(user_input, str) or not user_input.strip():
             return jsonify({'ok': False, 'error': 'input is required'}), 400
         engine = _get_engine()
         task = engine.create_task(user_input, context=context, created_by=created_by)
         return jsonify({'ok': True, 'task': task})
+    except PermissionError:
+        return jsonify({'ok': False, 'code': 'ANALYSIS_SOURCE_PERMISSION_DENIED'}), 403
+    except (ValueError, LookupError):
+        return jsonify({'ok': False, 'code': 'ANALYSIS_SOURCE_INVALID'}), 400
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 

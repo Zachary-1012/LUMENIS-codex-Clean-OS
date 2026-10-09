@@ -100,6 +100,10 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
     final value = _reference.text.trim();
     setState(() => _referenceRequired = value.isEmpty);
     if (value.isEmpty) return;
+    if (value.startsWith('task_')) {
+      await _model.analyseSources(taskId: value);
+      return;
+    }
     if (_taskReference) {
       await _model.openTask(value);
     } else {
@@ -375,6 +379,43 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
         style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.5),
       ),
       const SizedBox(height: 24),
+      _sectionTitle(copy.text('sourceStatistics')),
+      const SizedBox(height: 8),
+      Text(copy.text('sourceStatisticsHint')),
+      const SizedBox(height: 8),
+      FilledButton.tonal(
+        onPressed: _model.busy ? null : () => _model.analyseSources(),
+        child: Text(copy.text('calculateSources')),
+      ),
+      if (_model.sourceStatistics case final statistics?) ...[
+        const SizedBox(height: 12),
+        Semantics(liveRegion: true, child: Text(copy.text('statisticsSaved'))),
+        _line(
+          copy.text('uniqueSourceCount'),
+          statistics['unique_source_count']?.toString() ??
+              copy.text('unknownValue'),
+        ),
+        _line(
+          copy.text('publicationKnown'),
+          statistics['publication_time_known_count']?.toString() ??
+              copy.text('unknownValue'),
+        ),
+        _line(
+          copy.text('publicationUnknown'),
+          statistics['publication_time_unknown_count']?.toString() ??
+              copy.text('unknownValue'),
+        ),
+        if (statistics['platform_counts'] case final Map counts)
+          for (final entry in counts.entries)
+            _line(entry.key.toString(), entry.value.toString()),
+      ],
+      if (_model.statisticsTaskId case final taskId?)
+        TextButton.icon(
+          onPressed: () => _copy(taskId),
+          icon: const Icon(Icons.copy_outlined, size: 16),
+          label: Text('${copy.text('statisticsReference')}: $taskId'),
+        ),
+      const SizedBox(height: 24),
       _sectionTitle(copy.text('review')),
       const SizedBox(height: 8),
       Text(
@@ -399,6 +440,8 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
         }),
         style: const TextStyle(height: 1.6),
       ),
+      const SizedBox(height: 16),
+      _sampleMetadata(copy, result),
       if (result.analysis case final analysis?)
         ReadAloudAction(
           sessionId: 'source-brief:${result.reportId}',
@@ -463,6 +506,123 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
       ],
     ],
   );
+
+  Widget _sampleMetadata(SourceBriefCopy copy, SourceBriefResult result) {
+    final sourceSample = result.sourceSample;
+    final analysisSample = result.analysisSample;
+    final showAnalysisSample =
+        analysisSample != null ||
+        result.businessAnalysisState == SourceBriefBusinessAnalysisState.draft;
+    String count(int? value) => value?.toString() ?? copy.text('unknownValue');
+    String flag(bool? value, {required String yes, required String no}) =>
+        value == null ? copy.text('unknownValue') : copy.text(value ? yes : no);
+
+    final queryCounts = [
+      '${copy.text('candidateCount')}: ${count(sourceSample?.candidateCount)}',
+      '${copy.text('scannedCount')}: ${count(sourceSample?.scannedCount)}',
+      '${copy.text('rejectedCount')}: ${count(sourceSample?.rejectedCount)}',
+      '${copy.text('returnedCount')}: ${count(sourceSample?.returnedCount)}',
+      '${copy.text('withheldCount')}: ${count(sourceSample?.withheldCount)}',
+    ].join(' · ');
+    final platformCounts = sourceSample?.platformCountsSample;
+    final analysisCounts = [
+      '${copy.text('availableBriefCount')}: ${count(analysisSample?.availableBriefCount)}',
+      '${copy.text('analyzedSourceCount')}: ${count(analysisSample?.analyzedSourceCount)}',
+      '${copy.text('omittedSourceCount')}: ${count(analysisSample?.omittedSourceCount)}',
+    ].join(' · ');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionTitle(copy.text('sourceQuerySample')),
+        const SizedBox(height: 8),
+        _line(
+          copy.text('returnedVerifiedCount'),
+          count(sourceSample?.returnedVerifiedCount),
+        ),
+        const SizedBox(height: 8),
+        _line(copy.text('queryCounts'), queryCounts),
+        const SizedBox(height: 8),
+        _line(
+          copy.text('queryTruncation'),
+          flag(sourceSample?.truncated, yes: 'truncatedYes', no: 'truncatedNo'),
+        ),
+        if (platformCounts != null && platformCounts.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _line(
+            copy.text('platformCountsSample'),
+            platformCounts.entries
+                .map((entry) => '${entry.key}: ${entry.value}')
+                .join(' · '),
+          ),
+        ],
+        const SizedBox(height: 8),
+        _line(
+          copy.text('countsBasis'),
+          _countsBasisLabel(copy, sourceSample?.countsBasis),
+        ),
+        if (showAnalysisSample) ...[
+          const SizedBox(height: 16),
+          _sectionTitle(copy.text('analysisInputSample')),
+          const SizedBox(height: 8),
+          _line(copy.text('analysisCounts'), analysisCounts),
+          const SizedBox(height: 8),
+          _line(
+            copy.text('selection'),
+            _selectionLabel(copy, analysisSample?.selection),
+          ),
+          const SizedBox(height: 8),
+          _line(
+            copy.text('analysisBodyTruncation'),
+            flag(
+              analysisSample?.hasTruncatedBodies,
+              yes: 'truncatedYes',
+              no: 'truncatedNo',
+            ),
+          ),
+          const SizedBox(height: 8),
+          _line(
+            copy.text('coverage'),
+            _coverageLabel(copy, analysisSample?.coverage),
+          ),
+        ],
+        const SizedBox(height: 12),
+        Text(
+          copy.text('sampleLimit'),
+          style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.5),
+        ),
+      ],
+    );
+  }
+
+  String _countsBasisLabel(
+    SourceBriefCopy copy,
+    String? value,
+  ) => switch (value) {
+    'returned verified Canonical records only; not coverage or business metrics' =>
+      copy.text('countsBasisValue'),
+    null => copy.text('unknownValue'),
+    _ => value,
+  };
+
+  String _selectionLabel(
+    SourceBriefCopy copy,
+    String? value,
+  ) => switch (value) {
+    'explicit operator-selected verified sources; task-term window up to 1200 characters each' =>
+      copy.text('selectionExplicit'),
+    'latest verified nonempty bodies; at most 8, task-term window up to 1200 characters each' =>
+      copy.text('selectionLatest'),
+    null => copy.text('unknownValue'),
+    _ => value,
+  };
+
+  String _coverageLabel(SourceBriefCopy copy, String? value) => switch (value) {
+    'PARTIAL' => copy.text('coveragePartial'),
+    'UNKNOWN' => copy.text('unknownValue'),
+    null => copy.text('unknownValue'),
+    _ => value,
+  };
 
   String _speechText(
     SourceBriefResult result,

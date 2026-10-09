@@ -3,7 +3,7 @@
 ```yaml
 screen_id: CTH-10
 status: BLOCKED
-revision: 2
+revision: 3
 owner_domain: CTH / Shared Capability Reporting
 binding_ids:
   - BACKEND-GAP-017
@@ -231,3 +231,19 @@ candidate/scanned/rejected/withheld counts and platform/time ranges retain their
 own returned definitions and missing states. Do not fabricate missing metadata,
 infer semantic evaluation from lexical matches, or label a query sample as full
 market coverage. Save/reopen/revision must preserve the same result metadata.
+
+
+## 2026-10-09 来源样本统计：实际无 AI 操作增量
+
+本轮保持 CTH-10 全页 BLOCKED 和周期/周报/导出缺口，不把来源简报增量冒称整页完成。
+在原有已保存简报内增加「统计并保存来源样本」，消费现有 TaskEngine 的显式
+`source_statistics` 操作，复用同一 CoreClient/Scope/Permission/Reporting Owner；没有第二分析器或数据真相。
+服务端确定 actor 与 SourceBrief hash，界面不得自报身份或 verified。客户端重新读取来源和已提交 Task，
+核对同一 Job/hash、`SOURCE_BRIEF_SAMPLE_ANALYSIS` 独立 Owner 结果与 finished_at 后展示统计。
+仅显示本样本去重来源数、平台分布和真实原生发布时间已知/未知计数，不推断情绪、需求、因果或全量覆盖。
+无需 AI；业务解释/AI 增强仍保持各自状态。中英韩、键盘/语义操作、现有 generation/scope/disposal 保护保留。
+
+用户可复制 `task_...` 统计任务编号，在现有「简报或任务编号」输入中重开；无需重新执行已保存统计。
+新 Scope/新版本不能消费旧结果；失败不伪造零值或成功，现有错误/重开途径继续适用。
+实际本机 Web 证明：30 条来源、28 个已知时间、2 个未知，保存后离开页面并重开同一任务。
+完整截图/任务及构建 pins 留在现有私有 work 回执；正式 CI 和整页/跨域用户验收独立记录。

@@ -1654,120 +1654,133 @@ def _zbmp_capture_trend(records: List[Dict[str, Any]], days: int = 14) -> Dict[s
 
 
 def get_zbmp_product_snapshot() -> Dict[str, Any]:
-    """Read the verified ZBMP canonical slice used by API and UI.
+    """Stream the domain slice; distinguish missing data, rejection and read errors.
 
-    The function deliberately treats a missing table, no ZBMP rows, and rows
-    rejected by the domain adapter as NOT_COLLECTED.  It never falls back to
-    the CTH ``notes``/``web_mentions`` tables and never fills missing metrics
-    with fabricated zeros.
+    Aggregates cover all accepted rows. Returned record previews are bounded and
+    carry their own count, so a 200-row preview is never presented as all data.
     """
+    from collections import Counter
+    from datetime import timezone
+
     from canonical_data import PRODUCT_ZBMP
 
     snapshot: Dict[str, Any] = {
-        "data_state": "NOT_COLLECTED",
-        "records": [],
-        "canonical_records": [],
-        "brands": [],
-        "total_records": 0,
-        "errors": [],
+        "data_state": "NOT_COLLECTED", "records": [], "canonical_records": [],
+        "brands": [], "total_records": 0, "errors": [],
+        "page": {"limit": 200, "returned_count": 0, "truncated": False},
+        "rejected_count": 0,
+        "brand_page": {"total_count": 0, "returned_count": 0, "truncated": False},
         "metrics": {
-            "total_notes": 0,
-            "total_web_mentions": 0,
-            "total_canonical_zbmp": 0,
-            "total_engagement": {
-                "likes": None, "comments": None, "collects": None, "shares": None,
-            },
-            "sentiment_distribution": {},
-            "risk_distribution": {},
-            "platform_distribution": {},
-            "latest_capture": "",
+            "total_notes": 0, "total_web_mentions": 0, "total_canonical_zbmp": 0,
+            "total_engagement": {"likes": None, "comments": None, "collects": None, "shares": None},
+            "engagement_known_counts": {}, "sentiment_distribution": {},
+            "risk_distribution": {}, "platform_distribution": {}, "latest_capture": "",
             "capture_trend": {"labels": [], "total": [], "negative": []},
+            "counts_basis": "accepted BMP Canonical rows; capture dates are not publication dates",
         },
     }
-
     conn = None
     try:
         conn = _get_conn()
-        try:
-            rows = conn.execute(
-                "SELECT * FROM canonical_data "
-                "WHERE product_id = ? AND domain_id = ? "
-                "ORDER BY captured_at DESC",
-                (PRODUCT_ZBMP, DOMAIN_ZBMP),
-            ).fetchall()
-        except sqlite3.Error as exc:
-            # A missing canonical table means the domain has not collected
-            # data; it is not an API failure and must not trigger table writes.
-            snapshot["errors"].append(f"canonical_data unavailable: {exc}")
-            return snapshot
-
+        conn.execute("BEGIN")  # one read snapshot, no source writes
+        cursor = conn.execute(
+            "SELECT * FROM canonical_data WHERE product_id=? AND domain_id=? "
+            "ORDER BY captured_at DESC, canonical_id DESC", (PRODUCT_ZBMP, DOMAIN_ZBMP))
         adapter = get_adapter(DOMAIN_ZBMP)
-        safe_records = []
-        rejected = 0
-        for row in rows:
-            safe = _safe_zbmp_record(row, adapter)
-            if safe is None:
-                rejected += 1
-                continue
-            safe_records.append(safe)
-
-        if rejected:
-            snapshot["errors"].append(f"rejected_domain_records={rejected}")
-
-        snapshot["records"] = safe_records
-        snapshot["canonical_records"] = safe_records[:200]
-        snapshot["total_records"] = len(safe_records)
-        snapshot["brands"] = _build_zbmp_brands(safe_records)
-        if not safe_records:
-            return snapshot
-
         metrics = snapshot["metrics"]
-        metrics["total_canonical_zbmp"] = len(safe_records)
-        metrics["total_notes"] = sum(
-            1 for record in safe_records
-            if record.get("source_type") in ("note", "collected_note")
-        )
-        metrics["total_web_mentions"] = sum(
-            1 for record in safe_records if record.get("source_type") == "web_mention"
-        )
-        for field_name, output_name in (
-            ("engagement_likes", "likes"),
-            ("engagement_comments", "comments"),
-            ("engagement_collects", "collects"),
-            ("engagement_shares", "shares"),
-        ):
-            metrics["total_engagement"][output_name] = _sum_optional(
-                [record.get(field_name) for record in safe_records]
-            )
-
-        for record in safe_records:
-            platform = str(record.get("source_platform") or "unknown")
-            metrics["platform_distribution"][platform] = (
-                metrics["platform_distribution"].get(platform, 0) + 1
-            )
-            sentiment = str(record.get("sentiment") or "").strip()
-            if sentiment:
-                metrics["sentiment_distribution"][sentiment] = (
-                    metrics["sentiment_distribution"].get(sentiment, 0) + 1
-                )
-            risk = str(record.get("risk_level") or "").strip()
-            if risk:
-                metrics["risk_distribution"][risk] = (
-                    metrics["risk_distribution"].get(risk, 0) + 1
-                )
-
-        captures = [str(record.get("captured_at") or "") for record in safe_records]
-        captures = [value for value in captures if value]
-        metrics["latest_capture"] = max(captures) if captures else ""
-        metrics["capture_trend"] = _zbmp_capture_trend(safe_records)
-        snapshot["data_state"] = "READY"
+        today = _datetime.now(tz=timezone.utc).astimezone().date()
+        totals, known = Counter(), Counter()
+        captures, negative_captures = Counter(), Counter()
+        brand_groups = {}
+        while True:
+            batch = cursor.fetchmany(200)
+            if not batch:
+                break
+            for row in batch:
+                safe = _safe_zbmp_record(row, adapter)
+                if safe is None:
+                    snapshot["rejected_count"] += 1
+                    continue
+                snapshot["total_records"] += 1
+                if len(snapshot["records"]) < 200:
+                    snapshot["records"].append(safe)
+                source_type = safe.get("source_type")
+                metrics["total_notes"] += source_type in ("note", "collected_note")
+                metrics["total_web_mentions"] += source_type == "web_mention"
+                for output in ("likes", "comments", "collects", "shares"):
+                    value = _optional_int(safe.get("engagement_" + output))
+                    if value is not None:
+                        totals[output] += value
+                        known[output] += 1
+                for field, output in (("source_platform", "platform_distribution"),
+                                      ("sentiment", "sentiment_distribution"),
+                                      ("risk_level", "risk_distribution")):
+                    value = str(safe.get(field) or "UNKNOWN")
+                    metrics[output][value] = metrics[output].get(value, 0) + 1
+                captured = str(safe.get("captured_at") or "")
+                if captured:
+                    metrics["latest_capture"] = max(metrics["latest_capture"], captured)
+                try:
+                    date = _datetime.fromisoformat(captured.replace("Z", "+00:00")).date()
+                except ValueError:
+                    date = None
+                if date is not None and 0 <= (today - date).days < 14:
+                    captures[date.isoformat()] += 1
+                    if str(safe.get("sentiment") or "").lower() == "negative":
+                        negative_captures[date.isoformat()] += 1
+                brand_key = safe.get("brand_key")
+                if brand_key:
+                    item = brand_groups.setdefault(brand_key, {
+                        "brand_key": brand_key, "platforms": set(), "record_count": 0,
+                        "total_likes": None, "total_comments": None, "domain": DOMAIN_ZBMP})
+                    item["record_count"] += 1
+                    if safe.get("source_platform"):
+                        item["platforms"].add(safe["source_platform"])
+                    for key in ("likes", "comments"):
+                        value = _optional_int(safe.get("engagement_" + key))
+                        if value is not None:
+                            item["total_" + key] = (item["total_" + key] or 0) + value
+        metrics["total_canonical_zbmp"] = snapshot["total_records"]
+        for key in metrics["total_engagement"]:
+            metrics["total_engagement"][key] = totals[key] if known[key] else None
+            metrics["engagement_known_counts"][key] = known[key]
+        snapshot["canonical_records"] = list(snapshot["records"])
+        snapshot["page"].update(returned_count=len(snapshot["records"]),
+                                 truncated=snapshot["total_records"] > len(snapshot["records"]))
+        brands = sorted(brand_groups.values(), key=lambda b: (-b["record_count"], b["brand_key"]))
+        for item in brands[:100]:
+            item["platforms"] = sorted(item["platforms"])
+        snapshot["brands"] = brands[:100]
+        snapshot["brand_page"] = {"total_count": len(brands), "returned_count": len(snapshot["brands"]),
+                                  "truncated": len(brands) > 100}
+        if snapshot["total_records"]:
+            snapshot["data_state"] = "PARTIAL" if snapshot["rejected_count"] else "READY"
+            days = [(today - _timedelta(days=n)).isoformat() for n in range(13, -1, -1)]
+            metrics["capture_trend"] = {"labels": [day[5:] for day in days],
+                                        "total": [captures[day] for day in days],
+                                        "negative": [negative_captures[day] for day in days]}
+        elif snapshot["rejected_count"]:
+            snapshot["data_state"] = "REJECTED"
+        if snapshot["rejected_count"]:
+            snapshot["errors"].append("CANONICAL_DOMAIN_ROWS_REJECTED")
         return snapshot
     except Exception as exc:
-        snapshot["errors"].append(str(exc))
+        # Never expose database/path details or turn an exception into empty data.
+        snapshot["data_state"] = "ERROR"
+        snapshot["errors"].append("BMP_CANONICAL_READ_FAILED:" + type(exc).__name__)
+        snapshot["records"] = []
+        snapshot["canonical_records"] = []
+        snapshot["brands"] = []
+        snapshot["total_records"] = None
+        snapshot["page"] = {"limit": 200, "returned_count": 0, "truncated": None}
+        snapshot["brand_page"] = {"total_count": None, "returned_count": 0, "truncated": None}
+        snapshot["rejected_count"] = None
+        snapshot["metrics"] = {key: None for key in snapshot["metrics"]}
         return snapshot
     finally:
         if conn is not None:
             conn.close()
+
 
 
 # ---------------------------------------------------------------------------
@@ -1822,9 +1835,15 @@ def zbmp_overview():
             "by_platform": metrics["platform_distribution"],
             "by_sentiment": metrics["sentiment_distribution"],
             "canonical_records": snapshot["canonical_records"],
+            "page": snapshot["page"],
+            "brand_page": snapshot["brand_page"],
+            "rejected_count": snapshot["rejected_count"],
             "errors": snapshot["errors"],
         }
-        return _api_response(data=data, domain_id=DOMAIN_ZBMP, product_id=PRODUCT_ZBMP)
+        read_error = snapshot["data_state"] == "ERROR"
+        return _api_response(data=data, error="BMP_CANONICAL_READ_FAILED" if read_error else "",
+                             domain_id=DOMAIN_ZBMP, product_id=PRODUCT_ZBMP,
+                             status=503 if read_error else 200)
     except Exception as e:
         return _api_response(error=str(e), domain_id=DOMAIN_ZBMP, product_id=PRODUCT_ZBMP, status=500)
 
@@ -1837,10 +1856,15 @@ def zbmp_brands():
         data = {
             "data_state": snapshot["data_state"],
             "brands": snapshot["brands"],
-            "total_brands": len(snapshot["brands"]),
+            "total_brands": snapshot["brand_page"]["total_count"],
+            "page": snapshot["brand_page"],
+            "rejected_count": snapshot["rejected_count"],
             "errors": snapshot["errors"],
         }
-        return _api_response(data=data, domain_id=DOMAIN_ZBMP, product_id=PRODUCT_ZBMP)
+        read_error = snapshot["data_state"] == "ERROR"
+        return _api_response(data=data, error="BMP_CANONICAL_READ_FAILED" if read_error else "",
+                             domain_id=DOMAIN_ZBMP, product_id=PRODUCT_ZBMP,
+                             status=503 if read_error else 200)
     except Exception as e:
         return _api_response(error=str(e), domain_id=DOMAIN_ZBMP, product_id=PRODUCT_ZBMP, status=500)
 
@@ -1853,7 +1877,10 @@ def zbmp_metrics():
         metrics = dict(snapshot["metrics"])
         metrics["data_state"] = snapshot["data_state"]
         metrics["errors"] = snapshot["errors"]
-        return _api_response(data=metrics, domain_id=DOMAIN_ZBMP, product_id=PRODUCT_ZBMP)
+        read_error = snapshot["data_state"] == "ERROR"
+        return _api_response(data=metrics, error="BMP_CANONICAL_READ_FAILED" if read_error else "",
+                             domain_id=DOMAIN_ZBMP, product_id=PRODUCT_ZBMP,
+                             status=503 if read_error else 200)
     except Exception as e:
         return _api_response(error=str(e), domain_id=DOMAIN_ZBMP, product_id=PRODUCT_ZBMP, status=500)
 
