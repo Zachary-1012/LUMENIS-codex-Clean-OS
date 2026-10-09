@@ -86,6 +86,7 @@ class Sys06BrowserSession {
         }
         if (const {
           'navigate',
+          'open_link',
           'back',
           'forward',
           'reload',
@@ -168,6 +169,7 @@ class Sys06BrowserLease {
         );
       }
       if (const {
+        'open_link',
         'navigate',
         'back',
         'forward',
@@ -224,6 +226,22 @@ abstract interface class Sys06BrowserHumanControlRepository {
     required String leaseToken,
     required LumenisBrowserFrameBinding frameBinding,
     String value = '',
+  });
+}
+
+/// Visible-link discovery and activation are server-issued capabilities bound
+/// to a fresh frame and the active human-control lease.
+abstract interface class Sys06BrowserVisibleLinksRepository {
+  Future<List<LumenisBrowserVisibleLink>> readVisibleLinks({
+    required String sessionId,
+    required String leaseToken,
+    required LumenisBrowserFrameBinding frameBinding,
+  });
+  Future<Sys06BrowserSession> openVisibleLink({
+    required String sessionId,
+    required String leaseToken,
+    required String linkId,
+    required LumenisBrowserFrameBinding frameBinding,
   });
 }
 
@@ -444,6 +462,7 @@ class CoreSys06BrowserRepository
     implements
         Sys06BrowserRepository,
         Sys06BrowserHumanControlRepository,
+        Sys06BrowserVisibleLinksRepository,
         Sys06BrowserResearchRepository {
   CoreSys06BrowserRepository({required this.client});
 
@@ -817,6 +836,64 @@ class CoreSys06BrowserRepository
     if (response['ok'] != true) {
       _requireActionSuccess(response, action: action);
     }
+  }
+
+  @override
+  Future<List<LumenisBrowserVisibleLink>> readVisibleLinks({
+    required String sessionId,
+    required String leaseToken,
+    required LumenisBrowserFrameBinding frameBinding,
+  }) async {
+    final page = await client.browserHumanVisibleLinks(
+      sessionId: sessionId,
+      leaseToken: leaseToken,
+      frameBinding: frameBinding,
+    );
+    return page.links;
+  }
+
+  @override
+  Future<Sys06BrowserSession> openVisibleLink({
+    required String sessionId,
+    required String leaseToken,
+    required String linkId,
+    required LumenisBrowserFrameBinding frameBinding,
+  }) async {
+    final response = await client.openBrowserHumanVisibleLink(
+      sessionId: sessionId,
+      leaseToken: leaseToken,
+      linkId: linkId,
+      frameBinding: frameBinding,
+    );
+    if (response['ok'] != true || response['ai_used'] != false) {
+      if (response['ok'] == true) {
+        throw const LumenisCoreException(
+          'The server did not confirm a non-AI browser navigation.',
+          errorCode: 'BROWSER_LINK_OPEN_UNCONFIRMED',
+        );
+      }
+      _requireActionSuccess(response, action: 'open link');
+    }
+    final expectedRevision = response['page_revision'];
+    final expectedTargetId = response['target_id'];
+    if (expectedRevision is! int ||
+        expectedRevision < 0 ||
+        expectedTargetId is! String ||
+        !RegExp(r'^[A-Za-z0-9_-]{1,180}$').hasMatch(expectedTargetId)) {
+      throw const LumenisCoreException(
+        'The server did not confirm the opened page identity.',
+        errorCode: 'BROWSER_LINK_OPEN_UNCONFIRMED',
+      );
+    }
+    final updated = await readSession(sessionId);
+    if (updated.pageRevision != expectedRevision ||
+        updated.targetId != expectedTargetId) {
+      throw const LumenisCoreException(
+        'The browser session did not read back the opened page.',
+        errorCode: 'BROWSER_LINK_OPEN_UNCONFIRMED',
+      );
+    }
+    return updated;
   }
 
   @override

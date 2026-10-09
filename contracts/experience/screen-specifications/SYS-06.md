@@ -490,3 +490,25 @@ no protected personal account or unauthorized fallback is used. Returning resume
 only the still-permitted source/result action, not a fabricated capture/analysis
 success. Verify this real running Web operation with the data-to-business chain;
 this requirement increment alone is not browser implementation or acceptance.
+
+
+### 2026-10-09 visible-link navigation increment
+
+The current frame can expose up to 40 visible, policy-approved hyperlinks through
+the existing human-control lease. A server-issued opaque link ID binds the
+choice to the session, lease, target, revision and displayed frame. Core
+re-resolves the anchor and validates the destination before using the existing
+navigation action; no DOM click handler, form submission or arbitrary selector
+is executed. Changed page identity, changed links or expired leases require an
+honest refresh. Link selection checks frame/target/revision/viewport and the live
+anchor identity; unrelated animation pixels alone do not invalidate this
+non-coordinate action. Other controls retain their existing strict screenshot
+checks. Main-document redirects are checked before sending the next request;
+this does not claim complete subresource/WebSocket egress isolation.
+
+SYS-06 presents a localized, keyboard-accessible page-link chooser with link text
+and a redacted destination. Opening a link stays in the same product session;
+the existing manual note save/revise/reopen and return controls remain. This
+source increment does not close Task/Source bindings, arbitrary page control,
+remote Web transport, intelligent Browser Use or computer operation. Actual
+operation and limits are recorded in the existing M delivery evidence.

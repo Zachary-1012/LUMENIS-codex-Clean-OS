@@ -495,6 +495,8 @@ def _internal_beta_browser_outcome_request_allowed():
         'ai_browser_runtime.release_human_control': {'POST'},
         'ai_browser_runtime.human_control_navigate': {'POST'},
         'ai_browser_runtime.human_control_action': {'POST'},
+        'ai_browser_runtime.human_control_links': {'POST'},
+        'ai_browser_runtime.human_control_open_link': {'POST'},
         'ai_browser_runtime.observe': {'POST'},
         'ai_browser_runtime.stop_session': {'POST'},
         'ai_browser_runtime.get_evidence': {'GET'},

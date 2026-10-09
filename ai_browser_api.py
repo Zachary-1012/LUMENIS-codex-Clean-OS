@@ -16,6 +16,8 @@ ZBC AI Browser Runtime API — REST Contract
   POST   /api/browser/sessions/<session_id>/human-control/release
   POST   /api/browser/sessions/<session_id>/human-control/navigate
   POST   /api/browser/sessions/<session_id>/human-control/action
+  POST   /api/browser/sessions/<session_id>/human-control/links
+  POST   /api/browser/sessions/<session_id>/human-control/open-link
   GET    /api/browser/sessions/<session_id>/agent/status     智能浏览准入状态（不调用模型）
   POST   /api/browser/sessions/<session_id>/agent/run        未满足准入时明确 UNAVAILABLE
   GET    /api/browser/sessions/<session_id>/evidence        Evidence 列表
@@ -31,6 +33,7 @@ ZBC AI Browser Runtime API — REST Contract
 """
 from __future__ import annotations
 
+import json
 import logging
 import re
 from typing import Any, Dict, Optional
@@ -82,6 +85,7 @@ def register_ai_browser_api(app):
         BrowserFramePending,
         BrowserFrameEmpty,
         BrowserFrameStaleError,
+        BrowserLinkError,
         BrowserHumanControlError,
         BrowserSessionBindingError,
         HUMAN_CONTROL_ACTIONS,
@@ -145,6 +149,21 @@ def register_ai_browser_api(app):
         """Read a JSON object body; lists/scalars are never coerced to empty input."""
         data = request.get_json(silent=True)
         return data if isinstance(data, dict) else None
+
+    def _bounded_json_object_body(max_bytes: int = 4096):
+        """Read a small JSON object without accepting an unbounded link request."""
+        if request.content_length is not None and request.content_length > max_bytes:
+            return None, "too_large"
+        if not request.is_json:
+            return None, "invalid"
+        raw = request.stream.read(max_bytes + 1)
+        if len(raw) > max_bytes:
+            return None, "too_large"
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            return None, "invalid"
+        return (data, None) if isinstance(data, dict) else (None, "invalid")
 
     def _action_result_to_dict(result) -> Dict[str, Any]:
         """将 ActionExecutionResult 转为可序列化 dict（脱敏）。"""
@@ -411,6 +430,84 @@ def register_ai_browser_api(app):
             logger.exception("AI Browser human-control navigation unavailable")
             return jsonify({"ok": False, "error_code": "BROWSER_NAVIGATION_UNAVAILABLE"}), 503
 
+    @bp.route("/api/browser/sessions/<session_id>/human-control/links", methods=["POST"])
+    def human_control_links(session_id: str):
+        """List bounded, visible, policy-approved links for the current frame."""
+        session, err = _get_session_or_404(session_id)
+        if err:
+            return err
+        data, body_error = _bounded_json_object_body()
+        if body_error == "too_large":
+            return jsonify({"ok": False, "error_code": "BROWSER_LINKS_REQUEST_TOO_LARGE"}), 413
+        if (body_error or set(data) != {"frame_binding"}
+                or not isinstance(data.get("frame_binding"), dict)):
+            return jsonify({"ok": False, "error_code": "BROWSER_LINKS_REQUEST_INVALID"}), 400
+        try:
+            result = session.list_human_links(
+                frame_binding=data["frame_binding"],
+                human_control_token=request.headers.get("X-LUMENIS-Human-Control-Lease"),
+            )
+            response = jsonify({
+                "ok": True,
+                "links": result["links"],
+                "frame_binding": result["frame_binding"],
+                "ai_used": False,
+            })
+            response.headers["Cache-Control"] = "no-store, private"
+            response.headers["Pragma"] = "no-cache"
+            return response
+        except (BrowserHumanControlError, BrowserFrameStaleError) as exc:
+            return jsonify({"ok": False, "error_code": exc.code}), 409
+        except BrowserLinkError as exc:
+            status = 409 if exc.code == "BROWSER_SESSION_NOT_RUNNING" else 503
+            return jsonify({"ok": False, "error_code": exc.code}), status
+        except Exception:
+            logger.exception("AI Browser human link listing unavailable", exc_info=False)
+            return jsonify({"ok": False, "error_code": "BROWSER_LINKS_UNAVAILABLE"}), 503
+
+    @bp.route("/api/browser/sessions/<session_id>/human-control/open-link", methods=["POST"])
+    def human_control_open_link(session_id: str):
+        """Open only a server-listed link that still matches the current page."""
+        session, err = _get_session_or_404(session_id)
+        if err:
+            return err
+        data, body_error = _bounded_json_object_body()
+        if body_error == "too_large":
+            return jsonify({"ok": False, "error_code": "BROWSER_OPEN_LINK_REQUEST_TOO_LARGE"}), 413
+        link_id = data.get("link_id") if isinstance(data, dict) else None
+        if (body_error or set(data) != {"frame_binding", "link_id"}
+                or not isinstance(data.get("frame_binding"), dict)
+                or not isinstance(link_id, str)
+                or not re.fullmatch(r"bl_[A-Za-z0-9_-]{16,64}", link_id)):
+            return jsonify({"ok": False, "error_code": "BROWSER_OPEN_LINK_REQUEST_INVALID"}), 400
+        try:
+            result = session.open_human_link(
+                link_id=link_id,
+                frame_binding=data["frame_binding"],
+                human_control_token=request.headers.get("X-LUMENIS-Human-Control-Lease"),
+            )
+            response = jsonify({
+                "ok": result.success,
+                "link_id": link_id,
+                "control_actor": "HUMAN_DIRECT",
+                "ai_used": False,
+                "page_revision": session._page_revision,
+                "target_id": session._target_id,
+                "task_binding_status": session.task_binding_status,
+                "task_binding_verified": False,
+                **_action_result_to_dict(result),
+            })
+            response.headers["Cache-Control"] = "no-store, private"
+            response.headers["Pragma"] = "no-cache"
+            return response
+        except (BrowserHumanControlError, BrowserFrameStaleError, BrowserSessionBindingError) as exc:
+            return jsonify({"ok": False, "error_code": exc.code}), 409
+        except BrowserLinkError as exc:
+            return jsonify({"ok": False, "error_code": exc.code}), 409
+        except Exception:
+            logger.exception("AI Browser human link navigation unavailable", exc_info=False)
+            return jsonify({"ok": False, "error_code": "BROWSER_OPEN_LINK_UNAVAILABLE"}), 503
+
     @bp.route("/api/browser/sessions/<session_id>/human-control/action", methods=["POST"])
     def human_control_action(session_id: str):
         """Execute one existing Action Firewall operation against the pinned frame."""
@@ -425,11 +522,17 @@ def register_ai_browser_api(app):
             action_str = action_value.lower().strip() if isinstance(action_value, str) else ""
             if not action_str:
                 return jsonify({"ok": False, "error_code": "BROWSER_ACTION_REQUIRED"}), 400
+            if action_str == "open_link":
+                return jsonify({
+                    "ok": False,
+                    "error_code": "BROWSER_HUMAN_ACTION_NOT_ALLOWED",
+                    "human_actions": list(HUMAN_CONTROL_ACTIONS),
+                }), 403
             try:
                 action_type = BrowserActionType(action_str)
             except ValueError:
                 return jsonify({"ok": False, "error_code": "BROWSER_ACTION_UNSUPPORTED"}), 400
-            if action_str not in set(HUMAN_CONTROL_ACTIONS) - {"navigate"}:
+            if action_str not in set(HUMAN_CONTROL_ACTIONS) - {"navigate", "open_link"}:
                 return jsonify({
                     "ok": False,
                     "error_code": "BROWSER_HUMAN_ACTION_NOT_ALLOWED",

@@ -177,6 +177,106 @@ class LumenisBrowserFrameBinding {
   };
 }
 
+class LumenisBrowserVisibleLink {
+  const LumenisBrowserVisibleLink({
+    required this.linkId,
+    required this.label,
+    required this.destination,
+  });
+
+  final String linkId;
+  final String label;
+  final String destination;
+}
+
+class LumenisBrowserVisibleLinkPage {
+  const LumenisBrowserVisibleLinkPage({
+    required this.frameBinding,
+    required this.links,
+  });
+
+  final LumenisBrowserFrameBinding frameBinding;
+  final List<LumenisBrowserVisibleLink> links;
+
+  factory LumenisBrowserVisibleLinkPage.fromResponse(
+    Map<String, dynamic> value, {
+    required LumenisBrowserFrameBinding expectedFrameBinding,
+  }) {
+    final rawBinding = value['frame_binding'];
+    final rawLinks = value['links'];
+    if (value['ok'] != true ||
+        value['ai_used'] != false ||
+        !_browserFrameBindingMatches(rawBinding, expectedFrameBinding) ||
+        rawLinks is! List ||
+        rawLinks.length > 40) {
+      throw const FormatException(
+        'The visible-link response is not bound to the current page frame.',
+      );
+    }
+    final ids = <String>{};
+    final links = <LumenisBrowserVisibleLink>[];
+    for (final rawLink in rawLinks) {
+      if (rawLink is! Map) {
+        throw const FormatException('A visible browser link is malformed.');
+      }
+      final linkId = rawLink['link_id'];
+      final rawLabel = rawLink['label'];
+      final destination = rawLink['destination'];
+      final label = rawLabel is String ? rawLabel.trim() : '';
+      final uri = destination is String
+          ? Uri.tryParse(destination.trim())
+          : null;
+      if (linkId is! String ||
+          !RegExp(r'^bl_[A-Za-z0-9_-]{16,64}$').hasMatch(linkId) ||
+          !ids.add(linkId) ||
+          label.isEmpty ||
+          label.runes.length > 160 ||
+          RegExp(r'[\x00-\x1f\x7f]').hasMatch(label) ||
+          destination is! String ||
+          destination.length > 2048 ||
+          destination != destination.trim() ||
+          RegExp(r'[\x00-\x1f\x7f]').hasMatch(destination) ||
+          uri == null ||
+          (uri.scheme != 'http' && uri.scheme != 'https') ||
+          uri.host.isEmpty ||
+          uri.userInfo.isNotEmpty ||
+          uri.hasQuery ||
+          uri.hasFragment) {
+        throw const FormatException('A visible browser link is malformed.');
+      }
+      links.add(
+        LumenisBrowserVisibleLink(
+          linkId: linkId,
+          label: label,
+          destination: uri.toString(),
+        ),
+      );
+    }
+    return LumenisBrowserVisibleLinkPage(
+      frameBinding: expectedFrameBinding,
+      links: List.unmodifiable(links),
+    );
+  }
+}
+
+bool _browserFrameBindingMatches(
+  Object? value,
+  LumenisBrowserFrameBinding expected,
+) {
+  if (value is! Map) return false;
+  final rawViewport = value['viewport'];
+  if (rawViewport is! Map) return false;
+  final viewport = expected.toJson()['viewport'] as Map<String, Object?>;
+  final expectedJson = expected.toJson();
+  return value['frame_id'] == expectedJson['frame_id'] &&
+      value['target_id'] == expectedJson['target_id'] &&
+      value['page_revision'] == expectedJson['page_revision'] &&
+      rawViewport['width'] == viewport['width'] &&
+      rawViewport['height'] == viewport['height'] &&
+      rawViewport['dpr'] is num &&
+      rawViewport['dpr'] == viewport['dpr'];
+}
+
 class LumenisCoreClient {
   LumenisCoreClient({String? baseUrl})
     : baseUrl =
@@ -954,6 +1054,59 @@ class LumenisCoreClient {
         'action': action,
         if (action == 'scroll') 'value': value,
         'frame_binding': frameBinding.toJson(),
+      },
+      withContext: false,
+      requestHeaders: {
+        'Cache-Control': 'no-store',
+        'X-LUMENIS-Human-Control-Lease': leaseToken,
+      },
+      connectionTimeout: const Duration(seconds: 20),
+    );
+  }
+
+  Future<LumenisBrowserVisibleLinkPage> browserHumanVisibleLinks({
+    required String sessionId,
+    required String leaseToken,
+    required LumenisBrowserFrameBinding frameBinding,
+  }) async {
+    _validateBrowserSessionId(sessionId);
+    _validateBrowserLeaseToken(leaseToken);
+    _requireLocalBrowserEndpoint();
+    final response = await _request(
+      'POST',
+      '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/human-control/links',
+      payload: <String, Object?>{'frame_binding': frameBinding.toJson()},
+      withContext: false,
+      requestHeaders: {
+        'Cache-Control': 'no-store',
+        'X-LUMENIS-Human-Control-Lease': leaseToken,
+      },
+      connectionTimeout: const Duration(seconds: 20),
+    );
+    return LumenisBrowserVisibleLinkPage.fromResponse(
+      response,
+      expectedFrameBinding: frameBinding,
+    );
+  }
+
+  Future<Map<String, dynamic>> openBrowserHumanVisibleLink({
+    required String sessionId,
+    required String leaseToken,
+    required String linkId,
+    required LumenisBrowserFrameBinding frameBinding,
+  }) {
+    _validateBrowserSessionId(sessionId);
+    _validateBrowserLeaseToken(leaseToken);
+    if (!RegExp(r'^bl_[A-Za-z0-9_-]{16,64}$').hasMatch(linkId)) {
+      throw const FormatException('Invalid server-issued browser link ID.');
+    }
+    _requireLocalBrowserEndpoint();
+    return _request(
+      'POST',
+      '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/human-control/open-link',
+      payload: <String, Object?>{
+        'frame_binding': frameBinding.toJson(),
+        'link_id': linkId,
       },
       withContext: false,
       requestHeaders: {

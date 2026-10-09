@@ -31,7 +31,18 @@ retired executable transports/discovery/fallback are inert. All seven owned
 binding/execution/status function ASTs are unchanged by that cleanup.
 
 The Browser source adds short-lived exclusive human control and server-frame
-binding; SYS-06 exposes only advertised navigation/history/reload/remote scroll.
+binding; SYS-06 exposes advertised navigation/history/reload/remote scroll and
+bounded visible-link selection. Link choices are server-issued, re-resolved
+against the current page and opened through existing navigation; they do not
+execute DOM click handlers, forms or arbitrary selectors. Unrelated page animation
+does not invalidate a link choice when its page identity and exact anchor remain
+valid. Other human controls retain their existing strict frame checks. Link
+navigation checks main-document redirect destinations during that navigation
+before network dispatch; this is not full network sandboxing. The isolated real
+Web flow opened Bing Images from a server-listed link, saved manual note v1,
+appended revision v2, stopped the session and reopened both versions from a fresh
+browser. Section 9 of the existing delivery record holds exact receipts and the
+unverified security/runtime limits; no whole-screen or product closure is claimed.
 An independent source review found a misplaced CLOSED enum; it was restored before
 publication. A subsequent isolated, real Flutter/Core operation observed an
 allowed public Bing page, manual control, note save/revise, browser stop and

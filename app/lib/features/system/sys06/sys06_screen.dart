@@ -148,7 +148,10 @@ class _Sys06ScreenState extends State<Sys06Screen> {
     } catch (error) {
       actionError = error;
     }
-    if (!_isCurrentSession(generation, repository, session.sessionId)) return;
+    if (!mounted ||
+        !_isCurrentSession(generation, repository, session.sessionId)) {
+      return;
+    }
     final updated = await repository.readSession(session.sessionId);
     if (!_isCurrentSession(generation, repository, session.sessionId)) return;
     if (updated.humanControlActive != true || _isLeaseFailure(actionError)) {
@@ -232,6 +235,121 @@ class _Sys06ScreenState extends State<Sys06Screen> {
       setState(() => _notice = _noticeForError(actionError!));
     }
   });
+
+  Future<void> _openVisibleLinks() => _run((generation, repository) async {
+    if (repository is! Sys06BrowserVisibleLinksRepository) {
+      if (mounted) setState(() => _notice = _Sys06Notice.unavailable);
+      return;
+    }
+    final linksRepository = repository as Sys06BrowserVisibleLinksRepository;
+    final session = _session;
+    final frame = _frame;
+    final lease = _humanLease;
+    if (session == null || frame == null || lease == null) {
+      if (mounted) setState(() => _notice = _Sys06Notice.controlUnavailable);
+      return;
+    }
+    if (!lease.expiresAt.isAfter(DateTime.now())) {
+      await _refreshSessionAfterExpiredLease(generation, repository, session);
+      return;
+    }
+    if (!_canHumanAction(session, lease, 'open_link') ||
+        !_hasFreshBoundFrame(session, frame)) {
+      if (mounted) setState(() => _notice = _Sys06Notice.controlUnavailable);
+      return;
+    }
+    final frameBinding = frame.frame.binding;
+    final List<LumenisBrowserVisibleLink> links;
+    try {
+      links = await linksRepository.readVisibleLinks(
+        sessionId: session.sessionId,
+        leaseToken: lease.token,
+        frameBinding: frameBinding,
+      );
+    } catch (error) {
+      if (_isLeaseFailure(error) &&
+          _isCurrentSession(generation, repository, session.sessionId)) {
+        await _refreshSessionAfterExpiredLease(generation, repository, session);
+        return;
+      }
+      rethrow;
+    }
+    if (!mounted ||
+        !_isCurrentSession(generation, repository, session.sessionId)) {
+      return;
+    }
+    if (!identical(_session, session) ||
+        !identical(_frame, frame) ||
+        !identical(_humanLease, lease) ||
+        !_hasFreshBoundFrame(session, frame) ||
+        !_canHumanAction(session, lease, 'open_link')) {
+      return;
+    }
+    final selected = await showDialog<LumenisBrowserVisibleLink>(
+      context: context,
+      builder: (dialogContext) => _BrowserVisibleLinksDialog(
+        copy: _Sys06Copy.of(dialogContext),
+        links: links,
+      ),
+    );
+    if (selected == null ||
+        !_isCurrentSession(generation, repository, session.sessionId)) {
+      return;
+    }
+    if (!lease.expiresAt.isAfter(DateTime.now())) {
+      await _refreshSessionAfterExpiredLease(generation, repository, session);
+      return;
+    }
+    if (!links.any((link) => link.linkId == selected.linkId) ||
+        !identical(_session, session) ||
+        !identical(_frame, frame) ||
+        !identical(_humanLease, lease) ||
+        !_hasFreshBoundFrame(session, frame) ||
+        !_canHumanAction(session, lease, 'open_link')) {
+      return;
+    }
+    setState(() {
+      _frame = null;
+      _notice = _Sys06Notice.navigating;
+    });
+    late final Sys06BrowserSession updated;
+    try {
+      updated = await linksRepository.openVisibleLink(
+        sessionId: session.sessionId,
+        leaseToken: lease.token,
+        linkId: selected.linkId,
+        frameBinding: frameBinding,
+      );
+    } catch (error) {
+      if (_isLeaseFailure(error) &&
+          _isCurrentSession(generation, repository, session.sessionId)) {
+        _humanLease = null;
+        await _refreshSessionAfterExpiredLease(generation, repository, session);
+        return;
+      }
+      rethrow;
+    }
+    if (!_isCurrentSession(generation, repository, session.sessionId)) return;
+    if (updated.humanControlActive != true) _humanLease = null;
+    _adoptSession(updated, clearFrame: true);
+    await _readFrame(updated, generation, repository);
+  });
+
+  bool _hasFreshBoundFrame(
+    Sys06BrowserSession session,
+    Sys06BrowserFrame frame,
+  ) {
+    final value = frame.frame;
+    return session.isRunning &&
+        session.targetId != null &&
+        value.targetId == session.targetId &&
+        value.pageRevision == session.pageRevision &&
+        value.frameId.isNotEmpty &&
+        value.viewportWidth > 0 &&
+        value.viewportHeight > 0 &&
+        value.devicePixelRatio.isFinite &&
+        value.devicePixelRatio > 0;
+  }
 
   Future<void> _refreshFrame() => _run((generation, repository) async {
     final session = _session;
@@ -586,6 +704,7 @@ class _Sys06ScreenState extends State<Sys06Screen> {
         'BROWSER_HUMAN_ACTION_NOT_ALLOWED' => _Sys06Notice.controlUnavailable,
         'BROWSER_FRAME_BINDING_REQUIRED' ||
         'BROWSER_FRAME_STALE' => _Sys06Notice.framePending,
+        'BROWSER_LINK_STALE' => _Sys06Notice.linkStale,
         'BROWSER_HUMAN_LEASE_REQUIRED' ||
         'BROWSER_HUMAN_LEASE_INVALID' ||
         'BROWSER_HUMAN_LEASE_EXPIRED' => _Sys06Notice.controlUnavailable,
@@ -622,6 +741,7 @@ class _Sys06ScreenState extends State<Sys06Screen> {
               copy: copy,
               addressController: _addressController,
               session: _session,
+              frame: _frame,
               busy: _busy || _stopping,
               stopping: _stopping,
               returning: _returning,
@@ -631,6 +751,7 @@ class _Sys06ScreenState extends State<Sys06Screen> {
               onAcquireControl: _acquireHumanControl,
               onReleaseControl: _releaseHumanControl,
               onHumanAction: _humanAction,
+              onOpenPageLinks: _openVisibleLinks,
               onRefreshFrame: _refreshFrame,
               onStop: _stop,
               onReturn: _returnToTask,
@@ -757,6 +878,7 @@ class _ReaderControls extends StatelessWidget {
     required this.copy,
     required this.addressController,
     required this.session,
+    required this.frame,
     required this.busy,
     required this.stopping,
     required this.returning,
@@ -766,6 +888,7 @@ class _ReaderControls extends StatelessWidget {
     required this.onAcquireControl,
     required this.onReleaseControl,
     required this.onHumanAction,
+    required this.onOpenPageLinks,
     required this.onRefreshFrame,
     required this.onStop,
     required this.onReturn,
@@ -775,6 +898,7 @@ class _ReaderControls extends StatelessWidget {
   final _Sys06Copy copy;
   final TextEditingController addressController;
   final Sys06BrowserSession? session;
+  final Sys06BrowserFrame? frame;
   final bool busy;
   final bool stopping;
   final bool returning;
@@ -784,6 +908,7 @@ class _ReaderControls extends StatelessWidget {
   final VoidCallback onAcquireControl;
   final VoidCallback onReleaseControl;
   final Future<void> Function(String action, {String value}) onHumanAction;
+  final VoidCallback onOpenPageLinks;
   final VoidCallback onRefreshFrame;
   final VoidCallback onStop;
   final VoidCallback onReturn;
@@ -804,6 +929,20 @@ class _ReaderControls extends StatelessWidget {
         active.humanActionsRequireLease &&
         active.humanActions.contains(action) &&
         lease!.humanActions.contains(action);
+    final currentFrame = frame?.frame;
+    final hasFreshFrame =
+        active != null &&
+        active.isRunning &&
+        active.targetId != null &&
+        currentFrame != null &&
+        currentFrame.targetId == active.targetId &&
+        currentFrame.pageRevision == active.pageRevision &&
+        currentFrame.frameId.isNotEmpty &&
+        currentFrame.viewportWidth > 0 &&
+        currentFrame.viewportHeight > 0 &&
+        currentFrame.devicePixelRatio.isFinite &&
+        currentFrame.devicePixelRatio > 0;
+    final canOpenPageLinks = canControl('open_link') && hasFreshFrame;
     final canNavigate = canControl('navigate');
     final canAcquireControl =
         !busy &&
@@ -955,6 +1094,13 @@ class _ReaderControls extends StatelessWidget {
                             icon: const Icon(Icons.refresh_rounded),
                           ),
                         ),
+                      if (canOpenPageLinks)
+                        OutlinedButton.icon(
+                          key: const ValueKey('sys06-page-links'),
+                          onPressed: onOpenPageLinks,
+                          icon: const Icon(Icons.link_rounded),
+                          label: Text(copy.text('pageLinks')),
+                        ),
                       if (canControl('scroll')) ...[
                         OutlinedButton.icon(
                           key: const ValueKey('sys06-human-scroll-up'),
@@ -1005,6 +1151,57 @@ class _ReaderControls extends StatelessWidget {
       ),
     );
   }
+}
+
+class _BrowserVisibleLinksDialog extends StatelessWidget {
+  const _BrowserVisibleLinksDialog({required this.copy, required this.links});
+
+  final _Sys06Copy copy;
+  final List<LumenisBrowserVisibleLink> links;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(copy.text('pageLinks')),
+    content: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 640, maxHeight: 480),
+      child: SizedBox(
+        width: double.maxFinite,
+        child: links.isEmpty
+            ? Align(
+                alignment: Alignment.topLeft,
+                child: Text(copy.text('pageLinksEmpty')),
+              )
+            : ListView.separated(
+                shrinkWrap: true,
+                itemCount: links.length,
+                separatorBuilder: (_, _) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final link = links[index];
+                  return ListTile(
+                    leading: const Icon(Icons.link_rounded),
+                    title: Text(
+                      link.label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      link.destination,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () => Navigator.of(context).pop(link),
+                  );
+                },
+              ),
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: Text(copy.text('cancel')),
+      ),
+    ],
+  );
 }
 
 class _Sys06BrowserNoteLocator {
@@ -1952,6 +2149,7 @@ enum _Sys06Notice {
   reading,
   previewReady,
   framePending,
+  linkStale,
   frameEmpty,
   capacityOccupied,
   accessUnavailable,
@@ -1968,6 +2166,7 @@ enum _Sys06Notice {
 extension on _Sys06Notice {
   bool get isFailure => switch (this) {
     _Sys06Notice.frameEmpty ||
+    _Sys06Notice.linkStale ||
     _Sys06Notice.capacityOccupied ||
     _Sys06Notice.accessUnavailable ||
     _Sys06Notice.localCoreRequired ||
@@ -1980,6 +2179,7 @@ extension on _Sys06Notice {
 
   bool get canRetry => switch (this) {
     _Sys06Notice.framePending ||
+    _Sys06Notice.linkStale ||
     _Sys06Notice.frameEmpty ||
     _Sys06Notice.unavailable => true,
     _ => false,
@@ -2044,7 +2244,11 @@ class _Sys06Copy {
       'forward': '前进',
       'scrollUp': '向上滚动',
       'scrollDown': '向下滚动',
-      'manualActionBoundary': '可用操作由服务端逐项提供并经服务端校验；当前画面不支持点击、键盘输入或坐标控制。',
+      'manualActionBoundary':
+          '操作由服务端逐项提供并校验；页面链接只能从服务端为当前画面列出的链接中选择打开，不支持任意点击、文字输入或坐标控制。',
+      'pageLinks': '页面链接',
+      'pageLinksEmpty': '当前画面没有可打开的链接。',
+      'cancel': '取消',
       'taskBinding.bound': '任务关联：服务端已绑定',
       'taskBinding.unavailable': '任务关联：未验证，不会关联到任务证据',
       'humanActionsUnavailable': '服务端尚未公告可用的手动操作。',
@@ -2083,7 +2287,7 @@ class _Sys06Copy {
       'noteRevise': '保存为新版本',
       'noteRevisionReason': '用户在 SYS-06 中修订浏览器研究笔记。',
       'boundary':
-          '预览只显示当前已授权页面的短暂快照。它不会读取个人浏览器、Cookie、账号、端口或本地路径。后退、前进、重新加载和滚动仅在服务端公告且人工租约有效时开放；点击、输入和坐标控制不可用。',
+          '预览只显示当前已授权页面的短暂快照。它不会读取个人浏览器、Cookie、账号、端口或本地路径。后退、前进、重新加载和滚动仅在服务端公告且人工租约有效时开放；打开链接只能选择服务端为当前画面列出的项目，不提供任意点击、输入或坐标控制。',
       'previewReady': '已更新只读预览',
       'notice.ready': '尚未开启受控会话。',
       'notice.enterAddress': '会话已开启。输入一个允许的公开来源地址。',
@@ -2092,6 +2296,7 @@ class _Sys06Copy {
       'notice.reading': '正在读取已授权页面。',
       'notice.previewReady': '已更新只读预览。',
       'notice.framePending': '页面仍在准备预览，可稍后更新。',
+      'notice.linkStale': '页面已变化；请刷新预览后重新选择链接。',
       'notice.frameEmpty': '页面没有可用的可视预览。',
       'notice.capacityOccupied': '受控浏览容量暂被其他会话占用。',
       'notice.accessUnavailable': '当前工作区没有此浏览权限。',
@@ -2117,6 +2322,8 @@ class _Sys06Copy {
       'empty.previewReady.detail': '当前预览已失效，请重新读取。',
       'empty.framePending.title': '页面仍在准备',
       'empty.framePending.detail': '等待页面绘制后再更新预览。',
+      'empty.linkStale.title': '页面已变化',
+      'empty.linkStale.detail': '请刷新预览后重新选择链接。',
       'empty.frameEmpty.title': '没有可用预览',
       'empty.frameEmpty.detail': '这不代表来源为空或采集完成。',
       'empty.capacityOccupied.title': '受控浏览容量被占用',
@@ -2161,7 +2368,10 @@ class _Sys06Copy {
       'scrollUp': 'Scroll up',
       'scrollDown': 'Scroll down',
       'manualActionBoundary':
-          'Actions are advertised and checked by the server. This view does not support clicking, keyboard input, or coordinate control.',
+          'Actions are advertised and checked by the server. Links can only be opened from the server list for this frame; arbitrary clicks, text entry and coordinate control are unavailable.',
+      'pageLinks': 'Page links',
+      'pageLinksEmpty': 'There are no openable links in this frame.',
+      'cancel': 'Cancel',
       'taskBinding.bound': 'Task binding: verified by server',
       'taskBinding.unavailable':
           'Task association: unverified; no task Evidence link',
@@ -2211,7 +2421,7 @@ class _Sys06Copy {
       'noteRevise': 'Save new version',
       'noteRevisionReason': 'User revised the browser research note in SYS-06.',
       'boundary':
-          'The preview contains only a temporary snapshot of the currently authorized page. It never reads a personal browser, cookies, accounts, ports, or local paths. Back, forward, reload and scroll are available only when advertised by the server and protected by an active human lease; click, typing and coordinate control are unavailable.',
+          'The preview contains only a temporary snapshot of the currently authorized page. It never reads a personal browser, cookies, accounts, ports, or local paths. Back, forward, reload and scroll are available only when advertised by the server and protected by an active human lease. Links can only be opened from the server list for this frame; arbitrary clicks, typing and coordinate control are unavailable.',
       'previewReady': 'Read-only preview updated',
       'notice.ready': 'No controlled session is open.',
       'notice.enterAddress':
@@ -2221,6 +2431,8 @@ class _Sys06Copy {
       'notice.reading': 'Reading the authorized page.',
       'notice.previewReady': 'Read-only preview updated.',
       'notice.framePending': 'The page is still preparing a preview.',
+      'notice.linkStale':
+          'The page changed. Refresh the preview and choose the link again.',
       'notice.frameEmpty': 'The page has no usable visual preview.',
       'notice.capacityOccupied': 'Controlled browsing capacity is occupied.',
       'notice.accessUnavailable': 'This workspace has no browser access.',
@@ -2253,6 +2465,9 @@ class _Sys06Copy {
           'The current preview expired. Read it again.',
       'empty.framePending.title': 'Page is still preparing',
       'empty.framePending.detail': 'Refresh after the page finishes painting.',
+      'empty.linkStale.title': 'The page changed',
+      'empty.linkStale.detail':
+          'Refresh the preview and choose the link again.',
       'empty.frameEmpty.title': 'No usable preview',
       'empty.frameEmpty.detail':
           'This does not mean the source is empty or collection completed.',
@@ -2305,7 +2520,10 @@ class _Sys06Copy {
       'scrollUp': '위로 스크롤',
       'scrollDown': '아래로 스크롤',
       'manualActionBoundary':
-          '동작은 서버가 제공하고 검증합니다. 현재 화면은 클릭, 키보드 입력 또는 좌표 제어를 지원하지 않습니다.',
+          '동작은 서버가 제공하고 검증합니다. 링크는 현재 화면에서 서버가 제공한 목록에서만 열 수 있으며 임의 클릭, 문자 입력 또는 좌표 제어는 지원하지 않습니다.',
+      'pageLinks': '페이지 링크',
+      'pageLinksEmpty': '현재 화면에서 열 수 있는 링크가 없습니다.',
+      'cancel': '취소',
       'taskBinding.bound': '작업 연결: 서버 확인됨',
       'taskBinding.unavailable': '작업 연결: 미검증, 작업 Evidence에 연결되지 않음',
       'humanActionsUnavailable': '서버가 사용 가능한 수동 동작을 제공하지 않았습니다.',
@@ -2346,7 +2564,7 @@ class _Sys06Copy {
       'noteRevise': '새 버전으로 저장',
       'noteRevisionReason': '사용자가 SYS-06에서 브라우저 연구 노트를 수정했습니다.',
       'boundary':
-          '미리보기에는 현재 승인된 페이지의 임시 스냅샷만 표시됩니다. 개인 브라우저, 쿠키, 계정, 포트 또는 로컬 경로를 읽지 않습니다. 뒤로, 앞으로, 새로고침 및 스크롤은 서버가 제공하고 유효한 사람 제어 임대가 있을 때만 사용할 수 있으며 클릭, 입력 및 좌표 제어는 사용할 수 없습니다.',
+          '미리보기에는 현재 승인된 페이지의 임시 스냅샷만 표시됩니다. 개인 브라우저, 쿠키, 계정, 포트 또는 로컬 경로를 읽지 않습니다. 뒤로, 앞으로, 새로고침 및 스크롤은 서버가 제공하고 유효한 사람 제어 임대가 있을 때만 사용할 수 있습니다. 링크는 현재 화면에서 서버가 제공한 목록에서만 열 수 있으며 임의 클릭, 입력 및 좌표 제어는 사용할 수 없습니다.',
       'previewReady': '읽기 전용 미리보기가 갱신되었습니다',
       'notice.ready': '제어된 세션이 열려 있지 않습니다.',
       'notice.enterAddress': '세션이 열렸습니다. 허용된 공개 소스 주소를 입력하세요.',
@@ -2355,6 +2573,7 @@ class _Sys06Copy {
       'notice.reading': '승인된 페이지를 읽고 있습니다.',
       'notice.previewReady': '읽기 전용 미리보기가 갱신되었습니다.',
       'notice.framePending': '페이지가 아직 미리보기를 준비하고 있습니다.',
+      'notice.linkStale': '페이지가 변경되었습니다. 미리보기를 갱신하고 링크를 다시 선택하세요.',
       'notice.frameEmpty': '페이지에 사용할 수 있는 시각 미리보기가 없습니다.',
       'notice.capacityOccupied': '제어된 브라우징 용량이 사용 중입니다.',
       'notice.accessUnavailable': '이 작업 공간에는 브라우저 권한이 없습니다.',
@@ -2381,6 +2600,8 @@ class _Sys06Copy {
       'empty.previewReady.detail': '현재 미리보기가 만료되었습니다. 다시 읽으세요.',
       'empty.framePending.title': '페이지 준비 중',
       'empty.framePending.detail': '페이지가 그려진 후 미리보기를 갱신하세요.',
+      'empty.linkStale.title': '페이지가 변경됨',
+      'empty.linkStale.detail': '미리보기를 갱신하고 링크를 다시 선택하세요.',
       'empty.frameEmpty.title': '사용 가능한 미리보기 없음',
       'empty.frameEmpty.detail': '소스가 비었거나 수집이 완료되었다는 뜻은 아닙니다.',
       'empty.capacityOccupied.title': '제어된 용량 사용 중',

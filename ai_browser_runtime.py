@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import ipaddress
 import json
 import logging
 import math
@@ -56,6 +57,10 @@ DEFAULT_SESSION_IDLE_TIMEOUT = 600      # 空闲 10 分钟自动关闭
 DEFAULT_SESSION_MAX_LIFETIME = 3600     # 最大生命周期 1 小时
 DEFAULT_ACTION_TIMEOUT = 30000           # 单 Action 超时（ms）
 MAX_OBSERVATION_TEXT_LENGTH = 2000
+MAX_HUMAN_LINKS = 40
+MAX_HUMAN_LINK_SCAN = 1000
+MAX_HUMAN_LINK_LABEL_LENGTH = 160
+MAX_HUMAN_LINK_URL_LENGTH = 2048
 
 # Circuit Breaker 配置
 CB_FAILURE_THRESHOLD = 5                 # 连续失败 N 次熔断
@@ -99,7 +104,7 @@ class BrowserActionType(str, Enum):
     STOP = "stop"
 
 
-HUMAN_CONTROL_ACTIONS = ("navigate", "back", "forward", "reload", "scroll")
+HUMAN_CONTROL_ACTIONS = ("navigate", "back", "forward", "reload", "scroll", "open_link")
 
 
 class ActionResult(str, Enum):
@@ -137,6 +142,122 @@ class BrowserFrameStaleError(RuntimeError):
     def __init__(self, code: str = "BROWSER_FRAME_STALE"):
         super().__init__(code)
         self.code = code
+
+
+class BrowserLinkError(RuntimeError):
+    """A server-resolved page link is unavailable or no longer current."""
+
+    def __init__(self, code: str):
+        super().__init__(code)
+        self.code = code
+
+
+_HUMAN_LINK_SNAPSHOT_JS = f"""() => {{
+    const anchors = document.getElementsByTagName('a');
+    const scanLimit = Math.min(anchors.length, {MAX_HUMAN_LINK_SCAN});
+    const links = [];
+    for (let index = 0; index < scanLimit && links.length < {MAX_HUMAN_LINKS}; index++) {{
+        const element = anchors[index];
+        if (!element || !element.hasAttribute('href')) continue;
+        const href = element.href || '';
+        if (!href || href.length > {MAX_HUMAN_LINK_URL_LENGTH}) continue;
+        let parsed;
+        try {{ parsed = new URL(href); }} catch (_) {{ continue; }}
+        if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') ||
+                parsed.username || parsed.password) continue;
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+        const visible = rect.width > 0 && rect.height > 0 && rect.right > 0 &&
+            rect.bottom > 0 && rect.left < window.innerWidth &&
+            rect.top < window.innerHeight && element.getClientRects().length > 0 &&
+            style.display !== 'none' && style.visibility !== 'hidden' &&
+            style.opacity !== '0';
+        if (!visible) continue;
+        const label = (element.innerText || element.getAttribute('aria-label') ||
+            element.getAttribute('title') || element.textContent || '')
+            .replace(/\\s+/g, ' ').trim().slice(0, 500);
+        links.push({{index, href, label}});
+    }}
+    return links;
+}}"""
+
+
+_HUMAN_LINK_RESOLVE_JS = f"""index => {{
+    if (!Number.isInteger(index) || index < 0) return null;
+    const anchors = document.getElementsByTagName('a');
+    if (index >= Math.min(anchors.length, {MAX_HUMAN_LINK_SCAN})) return null;
+    const element = anchors[index];
+    if (!element || !element.hasAttribute('href')) return null;
+    const href = element.href || '';
+    const rect = element.getBoundingClientRect();
+    const style = window.getComputedStyle(element);
+    const visible = rect.width > 0 && rect.height > 0 && rect.right > 0 &&
+        rect.bottom > 0 && rect.left < window.innerWidth &&
+        rect.top < window.innerHeight && element.getClientRects().length > 0 &&
+        style.display !== 'none' && style.visibility !== 'hidden' &&
+        style.opacity !== '0';
+    const label = (element.innerText || element.getAttribute('aria-label') ||
+        element.getAttribute('title') || element.textContent || '')
+        .replace(/\\s+/g, ' ').trim().slice(0, 500);
+    return {{index, href, label, visible}};
+}}"""
+
+
+def _bounded_human_link_text(raw: str) -> str:
+    bounded = []
+    used_units = 0
+    for character in raw:
+        units = 2 if ord(character) > 0xFFFF else 1
+        if used_units + units > MAX_HUMAN_LINK_LABEL_LENGTH:
+            break
+        bounded.append(character)
+        used_units += units
+    return "".join(bounded)
+
+
+def _safe_human_link_label(value: Any, destination: str) -> str:
+    """Return plain, bounded UI text for a page link."""
+    raw = value if isinstance(value, str) else ""
+    raw = sanitize_sensitive(raw)
+    raw = redact_browser_url_queries(raw)
+    raw = re.sub(r"[\x00-\x1f\x7f]", " ", raw)
+    raw = " ".join(raw.split())
+    label = _bounded_human_link_text(raw)
+    return label or _bounded_human_link_text(destination)
+
+
+def _approved_human_link_destination(value: Any) -> str | None:
+    """Return a redacted display URL only when current browser policy allows it."""
+    if (not isinstance(value, str) or not value
+            or len(value) > MAX_HUMAN_LINK_URL_LENGTH
+            or any(ord(char) < 0x20 or ord(char) == 0x7f for char in value)):
+        return None
+    try:
+        parsed = urlsplit(value)
+        if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+                or parsed.username is not None or parsed.password is not None):
+            return None
+        _ = parsed.port
+    except ValueError:
+        return None
+
+    import browser_surface
+
+    host = parsed.hostname
+    if browser_surface._is_platform_internal_host(host):
+        return None
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        pass
+    else:
+        if browser_surface._is_internal_host(host):
+            return None
+
+    policy = browser_surface.evaluate_navigation(value)
+    if not isinstance(policy, dict) or policy.get("allowed") is not True:
+        return None
+    return safe_browser_display_url(value) or None
 
 
 class BrowserSessionBindingError(ValueError):
@@ -230,6 +351,26 @@ def safe_browser_display_url(value: Any) -> str:
         return sanitize_sensitive(urlunsplit((parsed.scheme, netloc, parsed.path, "", "")))
     except ValueError:
         return ""
+
+
+_BROWSER_URL_IN_TEXT = re.compile(r"""https?://[^\s\"'<>]+""", re.IGNORECASE)
+
+
+def redact_browser_url_queries(value: str) -> str:
+    """Remove URL queries/fragments from browser error text before storage/logging."""
+    if not value:
+        return value or ""
+
+    def redact(match: re.Match) -> str:
+        candidate = match.group(0)
+        suffix = ""
+        while candidate and candidate[-1] in ".,;:)]}":
+            suffix = candidate[-1] + suffix
+            candidate = candidate[:-1]
+        display = safe_browser_display_url(candidate)
+        return (display or "[browser URL redacted]") + suffix
+
+    return _BROWSER_URL_IN_TEXT.sub(redact, value)
 
 
 # 敏感 key 列表（用于 sanitize_dict 中按 key 脱敏值）
@@ -1282,6 +1423,8 @@ class AIBrowserRuntime:
         self._page_revision = 0
         self._latest_frame_binding: Optional[Dict[str, Any]] = None
         self._latest_frame_image_sha256: Optional[str] = None
+        # In-memory document identity only; the raw URL is never returned.
+        self._latest_frame_document_url: str | None = None
         self._last_navigation_at = 0.0
         self.engine_label = ""
 
@@ -1291,6 +1434,11 @@ class AIBrowserRuntime:
         self._human_control_token_digest: Optional[str] = None
         self._human_control_expires_at = 0.0
         self._active_control_actions = 0
+        self._human_link_lock = threading.Lock()
+        self._human_link_choices: dict[str, dict[str, Any]] = {}
+        self._human_link_frame_binding: dict[str, Any] | None = None
+        self._human_link_lease_digest: str | None = None
+        self._active_human_link_navigation_guard: dict[str, bool] | None = None
 
         # 组件
         self.verifier = ActionVerifier()
@@ -1445,8 +1593,10 @@ class AIBrowserRuntime:
             with self._control_lock:
                 self._human_control_token_digest = None
                 self._human_control_expires_at = 0.0
+            self._invalidate_human_links()
             self._latest_frame_binding = None
             self._latest_frame_image_sha256 = None
+            self._latest_frame_document_url = None
             try:
                 if self._page:
                     self._page.close()
@@ -1671,6 +1821,7 @@ class AIBrowserRuntime:
             expires_at = datetime.fromtimestamp(
                 self._human_control_expires_at, tz=timezone.utc
             ).isoformat()
+        self._invalidate_human_links()
         return {
             "lease_token": token,
             "lease_ttl_seconds": lease_seconds,
@@ -1693,6 +1844,7 @@ class AIBrowserRuntime:
                 raise BrowserHumanControlError("BROWSER_ACTION_IN_PROGRESS")
             self._human_control_token_digest = None
             self._human_control_expires_at = 0.0
+        self._invalidate_human_links()
         return True
 
     def _resolve_task_trace(
@@ -1754,10 +1906,12 @@ class AIBrowserRuntime:
             raise BrowserFrameStaleError("BROWSER_FRAME_UNAVAILABLE")
         return {"width": width, "height": height, "dpr": round(float(dpr), 3)}
 
-    def assert_current_frame_binding(self, binding: Any) -> None:
+    def assert_current_frame_binding(self, binding: Any, *, verify_image: bool = True) -> None:
         """Reject missing, stale, altered or viewport-mismatched human frame input."""
         if self._browser_worker and threading.get_ident() != self._browser_thread_id:
-            return self._run_on_browser_thread(lambda: self.assert_current_frame_binding(binding))
+            return self._run_on_browser_thread(lambda: self.assert_current_frame_binding(
+                binding, verify_image=verify_image,
+            ))
         if not isinstance(binding, dict):
             raise BrowserFrameStaleError("BROWSER_FRAME_BINDING_REQUIRED")
         viewport = binding.get("viewport")
@@ -1792,13 +1946,386 @@ class AIBrowserRuntime:
                 or expected["page_revision"] != self._page_revision
                 or expected["viewport"] != self._current_viewport()):
             raise BrowserFrameStaleError("BROWSER_FRAME_STALE")
-        current_image = self.screenshot(full_page=False)
-        if (self._latest_frame_image_sha256 is None
-                or not hmac.compare_digest(
-                    hashlib.sha256(current_image).hexdigest(),
-                    self._latest_frame_image_sha256,
-                )):
+        if (self._latest_frame_document_url is None or self._page is None
+                or self._page.url != self._latest_frame_document_url):
             raise BrowserFrameStaleError("BROWSER_FRAME_STALE")
+        if verify_image:
+            current_image = self.screenshot(full_page=False)
+            if (self._latest_frame_image_sha256 is None
+                    or not hmac.compare_digest(
+                        hashlib.sha256(current_image).hexdigest(),
+                        self._latest_frame_image_sha256,
+                    )):
+                raise BrowserFrameStaleError("BROWSER_FRAME_STALE")
+
+    def _invalidate_human_links(self) -> None:
+        """Discard the private link map whenever its frame/action can change."""
+        with self._human_link_lock:
+            self._human_link_choices.clear()
+            self._human_link_frame_binding = None
+            self._human_link_lease_digest = None
+
+    def _current_frame_binding_copy(self) -> dict[str, Any]:
+        binding = self._latest_frame_binding
+        if not isinstance(binding, dict):
+            raise BrowserFrameStaleError("BROWSER_FRAME_STALE")
+        return {
+            "frame_id": binding["frame_id"],
+            "target_id": binding["target_id"],
+            "page_revision": binding["page_revision"],
+            "viewport": dict(binding["viewport"]),
+        }
+
+    def list_human_links(
+        self,
+        *,
+        frame_binding: Any,
+        human_control_token: str | None,
+    ) -> dict[str, Any]:
+        """List policy-approved visible anchors bound to the current human frame."""
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            return self._run_on_browser_thread(lambda: self.list_human_links(
+                frame_binding=frame_binding,
+                human_control_token=human_control_token,
+            ))
+        if self.status != SessionStatus.RUNNING or self._page is None:
+            raise BrowserLinkError("BROWSER_SESSION_NOT_RUNNING")
+        self._begin_control_action(
+            control_mode="human",
+            human_control_token=human_control_token,
+        )
+        try:
+            self._invalidate_human_links()
+            self.assert_current_frame_binding(frame_binding, verify_image=False)
+            binding_copy = self._current_frame_binding_copy()
+            with self._control_lock:
+                self._expire_human_control_locked()
+                lease_digest = self._human_control_token_digest
+            if lease_digest is None:
+                raise BrowserHumanControlError("BROWSER_HUMAN_LEASE_EXPIRED")
+
+            try:
+                from playwright.sync_api import Error as PlaywrightError
+            except ImportError:
+                raise BrowserLinkError("BROWSER_LINKS_UNAVAILABLE") from None
+            try:
+                candidates = self._page.evaluate(_HUMAN_LINK_SNAPSHOT_JS)
+            except PlaywrightError:
+                raise BrowserLinkError("BROWSER_LINKS_UNAVAILABLE") from None
+            if not isinstance(candidates, list):
+                raise BrowserLinkError("BROWSER_LINKS_UNAVAILABLE")
+
+            links: list[dict[str, str]] = []
+            choices: dict[str, dict[str, Any]] = {}
+            for candidate in candidates[:MAX_HUMAN_LINKS]:
+                if not isinstance(candidate, dict):
+                    continue
+                index = candidate.get("index")
+                href = candidate.get("href")
+                if (type(index) is not int or not 0 <= index < MAX_HUMAN_LINK_SCAN
+                        or not isinstance(href, str)):
+                    continue
+                destination = _approved_human_link_destination(href)
+                if destination is None:
+                    continue
+                label = _safe_human_link_label(candidate.get("label"), destination)
+                link_id = f"bl_{secrets.token_urlsafe(24)}"
+                choices[link_id] = {
+                    "frame_binding": binding_copy,
+                    "index": index,
+                    "href": href,
+                    "label": label,
+                    "destination": destination,
+                }
+                links.append({
+                    "link_id": link_id,
+                    "label": label,
+                    "destination": destination,
+                })
+
+            with self._human_link_lock:
+                self._human_link_choices = choices
+                self._human_link_frame_binding = binding_copy
+                self._human_link_lease_digest = lease_digest
+            self.last_activity = time.time()
+            return {"links": links, "frame_binding": binding_copy}
+        finally:
+            self._end_control_action()
+
+    def open_human_link(
+        self,
+        *,
+        link_id: str,
+        frame_binding: Any,
+        human_control_token: str | None,
+    ) -> ActionExecutionResult:
+        """Re-resolve one server-listed anchor, then navigate without DOM activation."""
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            return self._run_on_browser_thread(lambda: self.open_human_link(
+                link_id=link_id,
+                frame_binding=frame_binding,
+                human_control_token=human_control_token,
+            ))
+        if (not isinstance(link_id, str)
+                or not re.fullmatch(r"bl_[A-Za-z0-9_-]{16,64}", link_id)):
+            raise BrowserLinkError("BROWSER_LINK_STALE")
+        if self.status != SessionStatus.RUNNING or self._page is None:
+            raise BrowserLinkError("BROWSER_LINK_STALE")
+        self._begin_control_action(
+            control_mode="human",
+            human_control_token=human_control_token,
+        )
+        try:
+            try:
+                self.assert_current_frame_binding(frame_binding, verify_image=False)
+            except BrowserFrameStaleError:
+                raise BrowserLinkError("BROWSER_LINK_STALE") from None
+            binding_copy = self._current_frame_binding_copy()
+            with self._human_link_lock:
+                choice = self._human_link_choices.get(link_id)
+                stored_binding = self._human_link_frame_binding
+                stored_lease_digest = self._human_link_lease_digest
+                choice = dict(choice) if isinstance(choice, dict) else None
+            with self._control_lock:
+                self._expire_human_control_locked()
+                lease_digest = self._human_control_token_digest
+            if (choice is None or stored_binding != binding_copy
+                    or choice.get("frame_binding") != binding_copy
+                    or stored_lease_digest is None
+                    or stored_lease_digest != lease_digest):
+                raise BrowserLinkError("BROWSER_LINK_STALE")
+
+            index = choice.get("index")
+            if type(index) is not int or not 0 <= index < MAX_HUMAN_LINK_SCAN:
+                raise BrowserLinkError("BROWSER_LINK_STALE")
+            try:
+                from playwright.sync_api import Error as PlaywrightError
+            except ImportError:
+                raise BrowserLinkError("BROWSER_LINK_STALE") from None
+            try:
+                current = self._page.evaluate(_HUMAN_LINK_RESOLVE_JS, index)
+            except PlaywrightError:
+                raise BrowserLinkError("BROWSER_LINK_STALE") from None
+            if (not isinstance(current, dict) or current.get("visible") is not True
+                    or current.get("index") != index
+                    or current.get("href") != choice.get("href")):
+                raise BrowserLinkError("BROWSER_LINK_STALE")
+            destination = _approved_human_link_destination(current.get("href"))
+            label = _safe_human_link_label(current.get("label"), destination or "")
+            if (destination is None or destination != choice.get("destination")
+                    or label != choice.get("label")):
+                raise BrowserLinkError("BROWSER_LINK_STALE")
+
+            resolved_task_id, resolved_run_id = self._resolve_task_trace(None, None)
+            return self._execute_action_impl(
+                action_type=BrowserActionType.NAVIGATE,
+                url=choice["href"],
+                task_id=resolved_task_id,
+                run_id=resolved_run_id,
+                agent_id="human_direct",
+                risk_level="medium",
+                human_link_navigation_guard=True,
+            )
+        finally:
+            self._end_control_action()
+
+    def _run_with_human_link_navigation_guard(
+        self,
+        operation: Callable[[], ActionExecutionResult],
+    ) -> ActionExecutionResult:
+        """Check each main-frame document request, including redirect hops, before send."""
+        if self._context is None or self._page is None:
+            raise BrowserLinkError("BROWSER_NAVIGATION_GUARD_UNAVAILABLE")
+        try:
+            from playwright.sync_api import Error as PlaywrightError
+        except ImportError:
+            raise BrowserLinkError("BROWSER_NAVIGATION_GUARD_UNAVAILABLE") from None
+
+        cdp = None
+        fetch_enable_attempted = False
+        guard_state = {"blocked": False, "guard_failed": False}
+
+        def close_owned_context() -> None:
+            try:
+                if self._context is not None:
+                    self._context.close()
+            except PlaywrightError:
+                pass
+            self._page = None
+            self._context = None
+            self._target_id = None
+            self.status = SessionStatus.ERROR
+            self._latest_frame_binding = None
+            self._latest_frame_image_sha256 = None
+            self._latest_frame_document_url = None
+            self._invalidate_human_links()
+
+        try:
+            cdp = self._context.new_cdp_session(self._page)
+            frame_tree = cdp.send("Page.getFrameTree")
+            tree = frame_tree.get("frameTree") if isinstance(frame_tree, dict) else None
+            main_frame = tree.get("frame") if isinstance(tree, dict) else None
+            main_frame_id = main_frame.get("id") if isinstance(main_frame, dict) else None
+            if not isinstance(main_frame_id, str) or not main_frame_id:
+                raise BrowserLinkError("BROWSER_NAVIGATION_GUARD_UNAVAILABLE")
+
+            def respond(request_id: str, method: str) -> None:
+                try:
+                    if method == "Fetch.failRequest":
+                        cdp.send(method, {
+                            "requestId": request_id,
+                            "errorReason": "BlockedByClient",
+                        })
+                    else:
+                        cdp.send(method, {"requestId": request_id})
+                except PlaywrightError:
+                    guard_state["guard_failed"] = True
+                    close_owned_context()
+
+            def on_request_paused(event: Any) -> None:
+                request_id = event.get("requestId") if isinstance(event, dict) else None
+                resource_type = event.get("resourceType") if isinstance(event, dict) else None
+                frame_id = event.get("frameId") if isinstance(event, dict) else None
+                request = event.get("request") if isinstance(event, dict) else None
+                if not isinstance(request_id, str) or not request_id:
+                    guard_state["blocked"] = True
+                    guard_state["guard_failed"] = True
+                    close_owned_context()
+                    return
+                if resource_type is None:
+                    guard_state["blocked"] = True
+                    guard_state["guard_failed"] = True
+                    close_owned_context()
+                    return
+                if resource_type != "Document":
+                    respond(request_id, "Fetch.continueRequest")
+                    return
+                if not isinstance(frame_id, str) or not frame_id:
+                    guard_state["blocked"] = True
+                    respond(request_id, "Fetch.failRequest")
+                    return
+                if frame_id != main_frame_id:
+                    respond(request_id, "Fetch.continueRequest")
+                    return
+
+                request_url = request.get("url") if isinstance(request, dict) else None
+                try:
+                    approved = _approved_human_link_destination(request_url)
+                except Exception:
+                    logger.exception(
+                        "[AIBrowserRuntime] Human link navigation policy failed closed",
+                        exc_info=False,
+                    )
+                    approved = None
+                if approved is None:
+                    guard_state["blocked"] = True
+                    respond(request_id, "Fetch.failRequest")
+                    return
+                respond(request_id, "Fetch.continueRequest")
+
+            cdp.on("Fetch.requestPaused", on_request_paused)
+            fetch_enable_attempted = True
+            cdp.send("Fetch.enable", {
+                "patterns": [{
+                    "urlPattern": "*",
+                    "resourceType": "Document",
+                    "requestStage": "Request",
+                }],
+            })
+        except BrowserLinkError:
+            cleanup_failed = False
+            if cdp is not None:
+                if fetch_enable_attempted:
+                    try:
+                        cdp.send("Fetch.disable")
+                    except PlaywrightError:
+                        cleanup_failed = True
+                try:
+                    cdp.detach()
+                except PlaywrightError:
+                    cleanup_failed = True
+            if cleanup_failed:
+                close_owned_context()
+            raise
+        except PlaywrightError:
+            cleanup_failed = False
+            if cdp is not None:
+                if fetch_enable_attempted:
+                    try:
+                        cdp.send("Fetch.disable")
+                    except PlaywrightError:
+                        cleanup_failed = True
+                try:
+                    cdp.detach()
+                except PlaywrightError:
+                    cleanup_failed = True
+            if cleanup_failed:
+                close_owned_context()
+            raise BrowserLinkError("BROWSER_NAVIGATION_GUARD_UNAVAILABLE") from None
+        except Exception:
+            cleanup_failed = False
+            if cdp is not None:
+                if fetch_enable_attempted:
+                    try:
+                        cdp.send("Fetch.disable")
+                    except PlaywrightError:
+                        cleanup_failed = True
+                try:
+                    cdp.detach()
+                except PlaywrightError:
+                    cleanup_failed = True
+            if cleanup_failed:
+                close_owned_context()
+            logger.exception(
+                "[AIBrowserRuntime] Human link navigation guard setup failed closed",
+                exc_info=False,
+            )
+            raise BrowserLinkError("BROWSER_NAVIGATION_GUARD_UNAVAILABLE") from None
+
+        self._active_human_link_navigation_guard = guard_state
+        result: ActionExecutionResult | None = None
+        cleanup_failed = False
+        try:
+            result = operation()
+        finally:
+            self._active_human_link_navigation_guard = None
+            if guard_state["guard_failed"]:
+                close_owned_context()
+            else:
+                try:
+                    cdp.send("Fetch.disable")
+                except PlaywrightError:
+                    cleanup_failed = True
+                    close_owned_context()
+                if not cleanup_failed:
+                    try:
+                        cdp.detach()
+                    except PlaywrightError:
+                        cleanup_failed = True
+                        close_owned_context()
+
+        if guard_state["guard_failed"] or cleanup_failed:
+            if result is not None:
+                result.success = False
+                result.result = ActionResult.FAIL
+                result.error = (
+                    "BROWSER_NAVIGATION_GUARD_FAILED" if guard_state["guard_failed"]
+                    else "BROWSER_NAVIGATION_GUARD_CLEANUP_FAILED"
+                )
+                result.human_escalation_required = True
+                result.escalation_reason = result.error
+                return result
+            raise BrowserLinkError("BROWSER_NAVIGATION_GUARD_FAILED")
+
+        if guard_state["blocked"] and result is not None and result.success:
+            result.success = False
+            result.result = ActionResult.FAIL
+            result.error = "BROWSER_LINK_DESTINATION_BLOCKED"
+            result.human_escalation_required = False
+            result.escalation_reason = ""
+        if result is None:
+            raise BrowserLinkError("BROWSER_NAVIGATION_GUARD_FAILED")
+        return result
 
     def execute_action(
         self,
@@ -1870,6 +2397,7 @@ class AIBrowserRuntime:
         agent_id: Optional[str] = None,
         skill_id: Optional[str] = None,
         risk_level: str = "medium",
+        human_link_navigation_guard: bool = False,
     ) -> ActionExecutionResult:
         """执行一个 Browser Action，完整闭环：Firewall → Before → Execute → After → Verify → Recovery → Evidence。
 
@@ -1881,8 +2409,10 @@ class AIBrowserRuntime:
                 task_id, run_id, step_id, agent_id, skill_id, risk_level,
             ))
         self._page_revision += 1
+        self._invalidate_human_links()
         self._latest_frame_binding = None
         self._latest_frame_image_sha256 = None
+        self._latest_frame_document_url = None
         if action_type in {BrowserActionType.NAVIGATE, BrowserActionType.RELOAD,
                            BrowserActionType.BACK, BrowserActionType.FORWARD}:
             self._last_navigation_at = time.monotonic()
@@ -1928,12 +2458,31 @@ class AIBrowserRuntime:
         before_state = self.observe()
 
         # 4. 执行 Action（带 Recovery）
-        execution_result = self._execute_with_recovery(
-            action_type=action_type,
-            target=target, selector=selector, text=text, value=value, url=url,
-            before_state=before_state,
-            expected=expected,
-        )
+        try:
+            def execute_action() -> ActionExecutionResult:
+                return self._execute_with_recovery(
+                    action_type=action_type,
+                    target=target, selector=selector, text=text, value=value, url=url,
+                    before_state=before_state,
+                    expected=expected,
+                )
+
+            if human_link_navigation_guard:
+                execution_result = self._run_with_human_link_navigation_guard(
+                    execute_action,
+                )
+            else:
+                execution_result = execute_action()
+        except BrowserLinkError as error:
+            execution_result = ActionExecutionResult(
+                success=False,
+                action=action_type.value,
+                result=ActionResult.FAIL,
+                before_state=before_state,
+                error=error.code,
+                human_escalation_required=True,
+                escalation_reason=error.code,
+            )
 
         # 5. 记录 Evidence
         evidence_id = self._record_evidence(
@@ -2015,7 +2564,20 @@ class AIBrowserRuntime:
                 return result
 
         except Exception as e:
-            result.error = sanitize_sensitive(str(e)[:500])
+            link_guard = self._active_human_link_navigation_guard
+            if link_guard is not None and (
+                link_guard["blocked"] or link_guard["guard_failed"]
+            ):
+                result.result = ActionResult.FAIL
+                if link_guard["guard_failed"]:
+                    result.error = "BROWSER_NAVIGATION_GUARD_FAILED"
+                    result.human_escalation_required = True
+                    result.escalation_reason = result.error
+                else:
+                    result.error = "BROWSER_LINK_DESTINATION_BLOCKED"
+                return result
+
+            result.error = redact_browser_url_queries(sanitize_sensitive(str(e)[:500]))
             failure_class = self.recovery.classify_failure(e, {"url": url or (self._page.url if self._page else "")})
 
             # 权限拒绝不重试，直接返回
@@ -2147,7 +2709,11 @@ class AIBrowserRuntime:
 
             return False
         except Exception as e:
-            logger.debug(f"[AIBrowserRuntime] Recovery strategy '{strategy}' failed: {e}")
+            logger.debug(
+                "[AIBrowserRuntime] Recovery strategy '%s' failed: %s",
+                strategy,
+                redact_browser_url_queries(sanitize_sensitive(str(e)[:500])),
+            )
             return False
 
     def _find_alternative_selector(
@@ -2359,9 +2925,16 @@ class AIBrowserRuntime:
         """Capture only this session's active page for the authorized product UI."""
         if self._browser_worker and threading.get_ident() != self._browser_thread_id:
             return self._run_on_browser_thread(self.capture_frame)
+        self._invalidate_human_links()
+        self._latest_frame_binding = None
+        self._latest_frame_image_sha256 = None
+        self._latest_frame_document_url = None
         if self.status != SessionStatus.RUNNING or not self._target_id:
             raise RuntimeError("Browser frame has no active authorized target")
+        captured_document_url = self._page.url
         image = self.screenshot(full_page=False)
+        if self._page.url != captured_document_url:
+            raise BrowserFramePending("Browser document changed during frame capture")
         if len(image) < 24 or image[:8] != b"\x89PNG\r\n\x1a\n":
             raise RuntimeError("Browser frame is not a valid PNG")
         width, height = struct.unpack(">II", image[16:24])
@@ -2387,6 +2960,7 @@ class AIBrowserRuntime:
         }
         self._latest_frame_binding = frame_binding
         self._latest_frame_image_sha256 = hashlib.sha256(image).hexdigest()
+        self._latest_frame_document_url = captured_document_url
         return {
             "frame_id": frame_id,
             "target_id": self._target_id,

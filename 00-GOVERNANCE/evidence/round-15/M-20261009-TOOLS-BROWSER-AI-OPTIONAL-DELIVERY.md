@@ -215,3 +215,33 @@ VS Code 负责本地补全、导航、诊断；PowerShell/Python 负责确定性
 固定LICENSE hash：`58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd`；USAGE_POLICY hash：`d6387ef7985019c45db8d9801e6ac5fd9f98f02b9f1c56f8c5af80c3e8f385d0`。[固定模型](https://huggingface.co/openai/gpt-oss-20b/tree/6cee5e81ee83917806bbde320786a8fb61efebee)、[官方模型说明](https://openai.com/index/introducing-gpt-oss/)。官方16GB内存运行描述不是“本机剩余1GB就能训练/常驻”的证明；本次不下载权重、不调用Ollama/LM Studio、不启动GPU。
 
 TRL/vLLM是未来可复用的训练/服务工具文档，不是本轮安装或启用授权；文档中的默认下载/服务命令未执行。[TRL](https://huggingface.co/docs/trl/index)、[vLLM](https://docs.vllm.ai/en/latest/serving/openai_compatible_server/)。准入准备的完成与 SOURCE/运行/DB/用户成果真实闭环分别记录，当前不能标三方案运行 ACCEPTED。
+
+## 9. 无 AI 的页面链接操作增量
+
+基线为 `dc16ab2bea21c7a8250a74078aae29368cce0c41`，本机、fresh origin/main、live main 于2026-10-09 08:54北京一致，divergence 0/0。原有79个tracked dirty及2个untracked仍是受保护未发布工作；不是本批全部成果。M只修改既有Browser、SYS-06、两条隔离验收入口与当前状态说明，不恢复任何暂停窗口。
+
+### 实际发现及修复范围
+
+- 从真实Bing首页取得可见链接列表，但首次打开被 `BROWSER_LINK_STALE` 拒绝；立即刷新再列出也出现 `BROWSER_FRAME_STALE`。运行反馈显示动态页面像素与严格整帧hash比较冲突，不能把拒绝路径当正常成果。
+- 链接操作采用原会话/人工租约/画面身份及服务器生成的不透明ID。重新解析对应链接的索引、地址、文字、可见性；页面身份与捕获时URL仍须一致。仅此明确链接选择不要求无关动画像素完全相等；原有其他操作保持严格画面核查。
+- 公开目标初检不足以阻止重定向到本地/内网。新增的主文档Request阶段检查在该次导航期间逐跳应用原目标策略；不以请求后的检查冒充事前阻止。不执行DOM点击、表单、任意JS或客户端任意selector。子资源、WebSocket及导航完成后的脚本网络隔离不属于本次已实现保证。
+- 运行使用fresh临时数据库和实际Flutter Web构建，端口8326；原8201/PID61948未重启，未修改Production DB。Core基于受保护的工作树，而非纯净main，因此运行收据不冒称纯main同SHA验收。
+
+首次失败操作保存在既有私有证据目录的 `link-navigation/ui-initial-attempts.json`；原始运行日志保留为 `initial-runtime-*.log/json`。构建产物main.dart.js SHA256为 `58988eeda7cdc70107306dac4a8840da48c3d921d0924a0799ee56570ee4162a`，首次launch记录中的旧build hash为启动当时的观察，未被改写成最终构建。
+
+静态与运行证据分别记录。未执行单元/集成/Widget或换名模块套件。本次不改变A0/B0/C0的准备边界、C2暂停、Provider禁用或七域无AI优先原则；完整SYS-06及Browser Use/Agent Zero仍有第5I节所列缺口。
+
+### 修后真实操作结果（2026-10-09 09:04–09:15，北京时间）
+
+| 实际操作 | 结果与证据边界 |
+|---|---|
+| 从Bing首页打开服务器列出的“图片”链接 | 当前画面列出22个链接；选择后显示真实“必应图像”页面，同一session `bs_211bb32d45e8` 的revision从1到2，`ai_used=false`；截图 `01-real-link-destination.png` 与运行请求时间对应 |
+| 人工记录当前观察并保存 | v1 `ART-e7c52608c0104408`，sha256 `5120cc61f48a493e45442c72b720b80df098fa2f896a023c3dccbbda20a65af2`；BMP/ALL下普通SavedWork，不是Source/Evidence/Canonical导入 |
+| 补充观察保存新版本 | v2 `ART-d96b666569fc4b88`，sha256 `0ade779602a20ae7c2afac951d75a32a3514cfc8ce27311474580771e54d5d00`，parent指向v1；本次实际编辑是追加补充，未把它描述为局部文字替换验收 |
+| 结束产品浏览会话、刷新并换全新操作浏览器后重开 | 实际UI读回v2正文与parent/hash，再打开v1确认原文保留；截图 `05-reopened-version-2.png`、`06-old-version-1-preserved.png` 及 `saved-work-reopen-receipts.json`；没有重建已保存结果 |
+| 工具异常恢复 | 一次操作工具等待超时导致REPL重置；保留既有产品成果，用已安装Playwright重新建立独立操作浏览器完成读回。Flutter未聚焦的语义输入值为空，聚焦后能读回实际正文；未将该工具读值当成产品数据丢失 |
+| 停止与保护 | 受控会话由产品“结束会话”关闭；验收操作浏览器关闭；仅停止已核身份的8326隔离Core及其launcher，原8201/PID61948保持 |
+
+固定修后Runtime源码SHA256：`d1dbe57af89d26588c612c006871b837912224f2a35814b0f1ddb2bd3298cd5f`。最终实际构建119.9秒成功；定向Dart分析无诊断。Python AST通过；Ruff与同文件基线比较，API25→25、Runtime216→216，新增诊断0，历史诊断未删。现有AI宪章、Experience权威/anti-template/44屏规格、机器治理静态门通过，不代表整个产品完成。
+
+结论：这个本地无AI链接导航＋人工笔记连续性增量为 **OBSERVED**。Source/Task仍未绑定，Artifact为既有staged/pending状态，未提升为业务事实、模型训练数据或对外发布成果。恶意重定向、跨账号与全面恢复的真实对抗验收仍 **NOT VERIFIED**；本次前置主文档检查有源码审查，不能冒称完整网络隔离已验收。Production Runtime未加载，完整SYS-06/七域业务均不标JOB_CLOSED。
