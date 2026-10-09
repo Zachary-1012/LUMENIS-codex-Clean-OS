@@ -264,3 +264,5 @@ Context7本次上游资料指向 Browser Use `main` 的 Tools/Agent说明；它�
 原Core 8201/PID61948、boot `f176d88a59e8438eb03bd56e38195bf1` 仍健康且未重启；该health只证明进程/DB依赖响应，不证明新源码已加载。81个原有受保护dirty/untracked文件在本轮只读核查与文档修改前冻结hash，交付前再次核对；生产DB未写。
 
 执行结论：A0/B0/C0来源与准入准备已经记录，外部路线保持OFF；无AI手动Browser的第9节成果保留。完整 Browser Use/Agent Zero、C2分析无AI修复、七域正常业务验收仍未完成。C1/F/C2-C6保持暂停；现有任务材料与未完成源码保留，不以新增占位代码、UNAVAILABLE回复或一份研究记录代替实现。
+
+发布纠正：本节首个文档提交 `66070a04` 的 Product Gate `37870192239` 失败，原因是 CURRENT 的 publication state 沿用了上批 `PUBLISHED_SOURCE_VERIFIED`，与该提交仅含文档的事实不符。后续纠正为现有 `RULES_ONLY_PUBLICATION`，重新执行相应静态治理门；不删除/降级检查，不改写失败记录，不补入无关源码凑成源码提交。上一批 `d847a28e` 的行为源码与真实操作证据不受本次文档状态错误影响。

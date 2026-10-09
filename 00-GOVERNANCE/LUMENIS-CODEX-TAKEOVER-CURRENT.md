@@ -242,7 +242,14 @@ not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
+
+Latest delta: the 2026-10-09 Browser/Agent Zero admission readback changes only
+the existing CURRENT/Owner/evidence documents. Accepted source in `d847a28e`
+remains published; this documentation delta introduces no new behavior source.
+The first readback commit `66070a04` failed Product Gate because this field still
+carried the previous source-publication state. That failed CI remains historical;
+this correction restores truthful publication classification, not a weaker gate.
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 Historical protected local-only M icon batch (not integrated; not an execution instruction): this earlier local increment includes the bounded 37-path/102-call historical
@@ -252,8 +259,10 @@ lib analysis and actual Web release build pass. Build/source verification does
 not establish normal user jobs, installed-PWA/readout or complete visual acceptance.
 F/C1/C2-C6 are now paused; the prior independent C1 state is superseded. The preceding whole-product
 rule batch is `274f2742c17550ef421d845c82c066166e2e9826`, with Product run
-`37817302602` and App run `37817302584` both SUCCESS. This source publication
-requires its own exact-SHA CI; historical failed and rule-only receipts are retained.
+`37817302602` and App run `37817302584` both SUCCESS. The current documentation
+publication requires its own applicable exact-SHA CI; historical failed and
+rule-only receipts are retained. A docs-only SHA need not trigger App Gate and
+must not inherit a same-SHA App PASS from an earlier build.
 
 W2's fifteen production paths are preserved in main: five match the frozen
 source and ten have equivalent or stronger successor behavior. The two SH-01
