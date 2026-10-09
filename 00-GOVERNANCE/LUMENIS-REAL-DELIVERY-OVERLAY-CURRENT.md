@@ -1,3 +1,20 @@
+# 序境 / LUMENIS — 五轮架构真实交付验收覆盖
+
+唯一产品轮次归 Product Architecture：SYSTEM → CTH → BMP → Shared → Agent Groups / 自研 AI。
+C1–C6/F/M/W1–W6保留原源码责任、完整J/R/U和44屏；不是六轮产品、单窗口限制或新产品阶段。
+每轮以真实用户操作、实际有用成果、保存修订、重开恢复、来源权限和适用真正E2E退出。
+跨域必要依赖在当前轮关闭；既有REAL DELIVERY CARD记录所属架构轮与原Owner，
+不新增卡片/队列/验收体系。基础无AI链先验，AI增强另验；费用和生产保护不变。
+
+Product Owner decides actual window start, pause, resume, model and reasoning effort.
+GitHub and local CURRENT files record verified observations only; every observation
+includes its verification time and evidence source. Unknown window/model/effort is
+`NOT_VERIFIED`, never inferred from historical PAUSED/RUNNING, resume conditions,
+role defaults or configuration. The existing live ledger is a factual continuity
+record, not an autonomous dispatcher. A current direct PO instruction is required
+for scheduling; publishing this rule starts no window. Owner, Permission, source
+rights, data, cost, shared-write reservations and real acceptance remain binding.
+
 
 ## 2026-10-09 AI 非依赖原则与分层验收
 
@@ -15,13 +32,13 @@
 
 第一优先：真实来源→规范数据→确定性计算/人工操作→有用成果→保存/修订/重开/恢复。第二优先：以同一真实任务证实 AI 增益。第三优先：另获许可的数据、训练、评估和晋升。保留全部批准的增强范围，不把其未完成记作已完成；不能借模型缺失延迟基础任务。现有 REAL DELIVERY CARD 分别记录 no-AI 基础结果和 AI 增强状态，不新增验收体系或第二执行合同。
 
-A0/B0/C0 V2 本轮仅准入准备：外部模型条款/默认关闭设计审阅、数据卡与上游/Teacher 权利审阅、自研 AI 现状及非 AI 任务断点核查。A1 外部 API、B1 数据下载导入、B2 训练及模型部署各需独立授权，C2 未恢复。包内 C1 RUNNING 是旧快照；最新直接 PO 已暂停 C1。A0 方案编号不表示 Agent Zero，也不表示 C1 业务窗口。待核实的 analysis_agent 全任务失败不能靠改状态或规则文字冒称修复。
+A0/B0/C0 V2 本轮仅准入准备：外部模型条款/默认关闭设计审阅、数据卡与上游/Teacher 权利审阅、自研 AI 现状及非 AI 任务断点核查。A1 外部 API、B1 数据下载导入、B2 训练及模型部署各需独立授权；包内 C1 RUNNING 和旧暂停记录只作为日期快照，不决定当前派工。A0 方案编号不表示 Agent Zero，也不表示 C1 业务窗口。待核实的 analysis_agent 全任务失败不能靠改状态或规则文字冒称修复。
 
 > Status: **CURRENT SUBORDINATE REAL-DELIVERY OVERLAY / NOT A SECOND PRODUCT OR EXPERIENCE AUTHORITY**
 
-> 2026-10-08 PO 正式验收策略变更：单元/集成及换名模块自动测试不再是开发、合并、验收或发布条件，Codex 不新建、不执行这些套件；保留历史测试和 FAILED 证据。当前执行真实任务→既有源码→构建运行→实际用户操作→真实结果→保存/修订/重开→恢复→验收→正式集成。适用编译、静态质量、安全/权限、数据一致性及真实产品 E2E 保留；历史材料中的测试命令不构成当前执行义务，真实缺陷仍必须修复。R01–R15/J1–J8/U01–U25 与 Owner/权益/生产数据边界不变；机器合同 v1.2.0 的 verification_policy 记录现行语义。最新直接 PO 已暂停 C1；仅 M 继续当前获批收尾与准备；M/C1 最新当前窗口指定 GPT-6.1 Sol / ultra（不改角色默认/速度，实际执行模型另核），其余窗口暂停状态按最新直接指令保留。
+> 2026-10-08 PO 正式验收策略变更：单元/集成及换名模块自动测试不再是开发、合并、验收或发布条件，Codex 不新建、不执行这些套件；保留历史测试和 FAILED 证据。当前执行真实任务→既有源码→构建运行→实际用户操作→真实结果→保存/修订/重开→恢复→验收→正式集成。适用编译、静态质量、安全/权限、数据一致性及真实产品 E2E 保留；历史材料中的测试命令不构成当前执行义务，真实缺陷仍必须修复。R01–R15/J1–J8/U01–U25 与 Owner/权益/生产数据边界不变；机器合同 v1.2.0 的 verification_policy 记录现行语义。当前窗口/模型/推理档位只记录PO决定与有日期的实际核验，未知为NOT_VERIFIED；历史暂停与模型回执不决定当前执行。
 >
-> Authority boundary: this overlay adds delivery evidence and commercial-readiness gates to the six C1–C6 outcomes and retained R01–R15 acceptance coverage. The historical numbered coverage groups below preserve acceptance provenance, not an execution schedule. This overlay does not create another queue, bypass dependencies, replace Product Architecture/Experience, or erase completed source work.
+> Authority boundary: this overlay adds delivery evidence and commercial-readiness gates to the five architecture outcomes with retained C1–C6 source responsibilities and retained R01–R15 acceptance coverage. The historical numbered coverage groups below preserve acceptance provenance, not an execution schedule. This overlay does not create another queue, bypass dependencies, replace Product Architecture/Experience, or erase completed source work.
 >
 > Canonical path: `00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`.
 
@@ -67,13 +84,12 @@ Use OBSERVED / INFERRED / NOT VERIFIED; only demonstrated applicable user
 acceptance permits ACCEPTED. M integrates exact frozen accepted paths and CURRENT
 with remote readback; publication never implies loaded Runtime or RELEASED.
 Existing R/J/U, three Gate tiers and no-unit/integration policy remain unchanged.
-C1 is now paused by direct PO; M continues authorized integration/preparation. This does not resume F/C2-C6 or cancel M's original
-candidate/material integration. Current window request is Sol 6.1 / ultra;
-manual speed/defaults remain intact.
+C1 and M retain original source/candidate/material responsibilities. This record
+is not current dispatch/model selection; actual PO choice and dated evidence apply.
 
 2026-10-08 最新 PO 顺序：先验收 Public Website + Web Workspace 完整适用成果，再处理 Desktop App/Mobile Companion 专项实现、打包及实机验收。使用原 REAL DELIVERY CARD 与三层 Gate，逐项注明本轮适用表面、真实输入/结果/保存修订重开恢复/Evidence/版本和未完成项。官网内容、演示真实性、可用入口，以及 Web 业务正常成功路径必须实际验证；当前 Web 所需 Core/SYSTEM 不能随原生客户端后置。后置两端保留 OPEN/DEFERRED、原 Owner 和恢复条件（官网/Web 闭环），不得以原生包/设备缺失阻塞本轮表面成果，也不得标 PASS、删除 R/J/U 或宣告四端 Goal/整产品 RELEASED。原部署、费用及外部效果授权不变。后续原生目标仅Windows/macOS桌面和iOS移动；Android/Linux原生客户端不再是待交付项，保留历史源码/回执。前端直接构建，独立设计稿/Figma/M设计审批不作为实现前置；原真实结果与质量门禁不变。
 
-本协议约束 C1–C6。旧编号01–15的验收/依赖覆盖材料由六个C成果承接；它不是新的窗口、派工队列或十五段串行执行计划。
+本协议按五轮架构成果验收，C1–C6保留原工程源码责任。旧编号01–15仅为历史验收/依赖覆盖，映射继续保留；不是新的窗口、派工队列、六轮产品或十五段串行执行计划。
 
 分配只见 AGENTS.md，完整映射只见 Source Owner Index；保留真实依赖、全部能力与现有 Product Architecture。
 它的目的只有一个：
@@ -208,7 +224,7 @@ Acceptance must prove:
 
 The 51 historical package rows are accepted only through the eight existing-owner result packages in Source Owner Index. Historical candidate data stays quarantined with **Production admission = 0** until current rights/source/identity/scope/Permission/freshness/completeness gates pass. A parser pass, stored archive, URL string, row count or old report never grants Current view, metric, report, Learning or MODEL_TRAIN admission.
 
-Implementation order follows actual dependencies: Truth/Safety first; then Collector/durable task; CTH/BMP business and source trace; Shared result continuity; Owned AI; same-SHA release. F continues independently alongside the one M-selected business Owner; W6 integration occupies that business slot. Dependencies determine handoff order without reducing complete outcomes. Each accepted Batch must publish its source, current contract/evidence and CURRENT status together, then prove local HEAD, `origin/main`, live GitHub main and loaded runtime identity. Documentation-only convergence is not product completion.
+Product outcome order is the five Architecture rounds: SYSTEM → CTH → BMP → Shared → Agent Groups / owned AI. Required cross-domain dependencies close within the current round under the original source owners and shared-write reservations; they are not postponed to an engineering window or later product phase. Actual window dispatch/model is the Product Owner's decision, never a single-business-slot restriction inferred from history. Each accepted Batch must publish its applicable source/contract/evidence and CURRENT status together, then verify local HEAD, `origin/main`, live GitHub main and runtime identity separately. Documentation-only convergence is not product completion.
 
 三、统一完成语义
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1241,7 +1257,7 @@ Collector、Browser、AI、Content、Agent、Reporting、Evaluation、Learning �
 ## Product Owner full-scope correction — 2026-10-03
 
 Acceptance remains full C1-C6/R01-R15/J1-J8/U01-U25 plus every unretracted user
-requirement supplied to M, the six delivery roles and F. Optimal execution is the
+requirement supplied to M, the six engineering source roles and F. Optimal execution is the
 best accurate, effective, feasible method for those fixed outcomes, selected from
 current GitHub/official/frontier and real-product evidence before implementation;
 it is not the easiest smaller capability. Reuse valid evidence, avoid unrelated
@@ -1367,19 +1383,19 @@ source transfer; semantic queries in actual capture/refresh/recovery; same-versi
 integration/environment reproduction; and four-surface operation when F's
 separately authorized deliverable is reviewed. These are retained product gates,
 not current task activation commands.
-These are complete outcome obligations, not activation commands. The Product
-Owner has authorized M, independent F and one M-selected business window at a
-time under AGENTS.md; other business windows preserve their full outcomes and wait.
-Actual local dispatch/admission follows the live ledger and real tool receipts;
+These are complete source-owner obligations within the five architecture rounds,
+not activation commands or a business-window concurrency cap. Product Owner
+decides actual dispatch/model, and the existing ledger/tool receipts record
+verified observations with time and evidence;
 each window enters RUNNING only after fresh admission. A real dependency blocks
 only its affected path. When an owner is active, it
 continues the whole outcome rather than safety refusal or per-function reports.
-Original six-window/R/J/U/special exits, global data construction, real
+Original owner/R/J/U/special exits, global data construction, real
 outcome/Evaluation and final human repeat gate remain without shrinking useful
 normal-path standards.
 
 
-### Frontend result acceptance under F's independent authorization
+### Frontend source-owner acceptance (actual dispatch is a PO decision)
 
 Consume the single consolidated mapping in Experience section 38 through F1–F5
 and the existing owners. Each promised surface must prove the real task, input,
@@ -1402,7 +1418,7 @@ external document grants collection or deployment permission.
 
 ## 2026-10-08 双层正常成果验收与成熟基础能力
 
-本节补充现有 REAL DELIVERY CARD，不新建任务编号、验收队列或机器治理状态。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING，再按原完整成果执行本节要求。
+本节补充现有 REAL DELIVERY CARD，不新建任务编号、验收队列或机器治理状态。C1–C6/F/M/W1–W6 保留原源码责任和完整成果；实际开工、暂停、恢复、模型与推理档位由 Product Owner 决定，本文件只记录有时间和证据来源的已核实事实，不设单业务窗口限制；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING，再按原完整成果执行本节要求。
 
 每个原有J1–J8/U01–U25能力行记录 `capability_observation`：`ALREADY_WORKING`（真实操作证据）、`SOURCE_ONLY`、`UI_ONLY`、`PARTIAL`、`MISSING`、`BLOCKED`（确切外部依赖）、`PO_DEFERRED`（明确PO出处）。同时记录当前源码/调用/运行差距、复用或修复对象、材料采用位置和下一动作。该字段描述能力观察，不能代替治理机器合同的 completion ladder 或 LIVE_DISPATCH。旧报告/附件计数和SHA只是其时快照，不能直接标成当前状态。
 
@@ -1423,7 +1439,7 @@ external document grants collection or deployment permission.
 
 ### 2026-10-08 采集验收补正
 
-采集能力完成与数据全部非空分别验收，不要求获取所有客观不可得的数据。保留准确维度，缺值显示“—”并带可查看的现有状态/原因/来源及核验时间，真实0保持0；解析缺陷/未执行/权限失效不因横杠通过。真实授权正常链、正式准入、连续刷新及恢复仍是能力门槛；业务结论必要证据不足仍不可用。取消全局固定历史起点，按话题任务采集、原始出版/事件时间组织、显式时间范围过滤；未知日期单独诚实处理。Global§10为详细合同，已定位旧日期源码由当前C1在其获准闭环调用链内处理，M审阅与集成，C6保持暂停；不把本次规则发布算新运行策略上线。
+采集能力完成与数据全部非空分别验收，不要求获取所有客观不可得的数据。保留准确维度，缺值显示“—”并带可查看的现有状态/原因/来源及核验时间，真实0保持0；解析缺陷/未执行/权限失效不因横杠通过。真实授权正常链、正式准入、连续刷新及恢复仍是能力门槛；业务结论必要证据不足仍不可用。取消全局固定历史起点，按话题任务采集、原始出版/事件时间组织、显式时间范围过滤；未知日期单独诚实处理。Global§10为详细合同，已定位旧日期源码由当前C1在其获准闭环调用链内处理，M审阅与集成，C6当前执行须按PO决定及事实核验；不把本次规则发布算新运行策略上线。
 
 ### 2026-10-08 智能UI的有用分段验收
 

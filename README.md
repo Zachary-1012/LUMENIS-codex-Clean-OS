@@ -79,9 +79,15 @@ External / User Source
 
 原始来源不能被模型分析覆盖；`UNKNOWN` 不能写成 `0`；“配置存在”“测试通过”“模型文件存在”“HTTP 200”都不能单独证明产品闭环。
 
-## 职责拓扑与当前派工（2026-10-08）
+## 五轮产品成果与保留的工程责任
 
-以下是保留的完整职责，不是所有窗口均已复工。最新直接指令由 M 收敛已有非 C1 成果并发布，C1 连续自行完成采集及必要依赖；F、C2–C6 原窗口仍暂停，研究子智能体不改变该状态：
+唯一交付轮次为 **SYSTEM → CTH → BMP → Shared → Agent Groups / 自研 AI**。
+完整成果和退出条件见[唯一产品蓝图](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#五轮架构产品闭环--2026-10-09-product-owner-直接批准)。
+每轮须真实操作、有用成果、保存修订、重开恢复、来源权限及适用真正E2E；必要跨域依赖在本轮关闭。
+C1–C6、F、M、W1–W6保留下表工程源码责任，不是六轮产品交付、单业务窗口限制或新阶段。
+Product Owner 决定实际窗口开工/暂停/恢复及模型/推理档位；GitHub只记录有核验时间和证据来源的事实。
+未知状态/模型记录 `NOT_VERIFIED`；旧审批/PAUSED/RUNNING/恢复条件/默认模型均不自动派工。
+本次只同步六份治理文件，不启动窗口，不修改业务源码。原未完成Goal、候选和研究证据完整保留。
 
 | 角色/窗口 | 当前职责 |
 |---|---|
@@ -94,11 +100,17 @@ External / User Source
 | **C5 / W5 · Importer / Research / Shared** | 资料导入、Research、Citation、Reporting、Artifact、通知、共享偏好和版本化成果。 |
 | **C6 / W6 · Integration / Runtime / Release** | 共享 API 组合、DB 变更协调、Core/Runtime/Supervisor、四端整合、CI、恢复/回滚与最终发布证据。 |
 
-**M + 独立 F + C1–C6 中唯一当前业务窗口。** 六个完整职责均保留，M按真实依赖串行切换，W6共享集成占同一业务席位；F独立推进，但不能因为“窗口已恢复”就盲启：每个任务开工前仍必须核对 fresh `origin/main`、本地 dirty、Owner/调用方、Runtime、DB、Permission、Evidence 以及平台 Session/GPU 等真实前置条件。
+实际开工前核对 fresh `origin/main`、dirty、Owner/调用方、Writer预约、Runtime、
+DB、Permission、Evidence 和真实外部前置条件。源码责任与历史拓扑不能替代当前PO派工。
+共享写入继续按M/W6认领、冻结和有界交接，不同时改同一区域。
 
-这里的“恢复/可执行”只表示角色 **ELIGIBLE**，不是实时派工。历史 M+独立F+唯一业务窗口拓扑保留；当前开工范围必须服从最新直接指令。
-实际派发与准入仍以本地 Live Dispatch ledger 和真实工具回执为准，fresh
-admission 后才进入 RUNNING。不能把 README 的拓扑当作运行状态。
+
+
+`ELIGIBLE` 是角色可承接工作；`RUNNING` 需当前实际派工和准入证据。
+本地Live Dispatch保留为有日期的事实/接续记录，不能让旧等待或恢复条件自动决定新执行。
+配置中的历史模型默认不作为当前指派，不改任何窗口手选模型、effort、速度或账号。
+
+
 
 已接受的有效源码、规则、规划和当前状态在同一交付批次同步发布，并核对本地 HEAD、origin/main 与 GitHub live main。正在修改或尚未验收的工作树单独记录为未发布，不覆盖它来制造一致；私有凭证、生产数据库与原始历史不进入提交。旧候选只保留来源与处置证据，当前实现和执行入口仍唯一指向 main 与 AGENTS/CURRENT。
 
@@ -122,7 +134,7 @@ Owner承接，状态与限制见 [CURRENT](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-
 
 当前 C1 先按真实主体批量采集相关发帖，每批返回立即经原 Source/Evidence/Canonical 数据链处理，词条/主题分析后置，同步采集每帖最多处理一张真实封面；不等完整词库或六个平台结束。图片和视频内容理解保留，由既有后台路径处理真实图片、音轨与时间画面，并以原帖/图位置/时间码和版本供后续任务使用。只取封面、OCR 或状态登记都不等于完成理解；执行器未绑定保持 NOT_RUN。C1 自行落实同一 SYSTEM 权限链的用途绑定，导入、关键词与媒体分析/派生保存分别核验，不冒充业务结论或改写原来源权益。准确范围、原文覆盖、幂等/权益/恢复与未读状态保留，详见 [Global §10](00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md)。
 
-本轮 2026-10-09 全产品数据到业务升级沿现有 Collector/Shared/CTH/BMP/Research/Reporting/Evaluation/SYSTEM 及受影响 Web 接线执行，不只是 C1 说明。合法原始观察保存、来源有效性、权限、身份核验、业务分析分开；待核验原件在原 Source 路径可恢复，但不能成为主体事实。六平台独立保留实际能力/限制/事务与性能口径，至少一个获准平台实证从主体选择、采集到成果保存/关闭重开/修订/来源追溯/中断恢复。完整要求与A–F交付见 Global §10 和 Real Delivery Overlay；不能以规则、原文条数或发布源码宣称闭环。M继续原非C1候选/材料/集成任务，C1原窗口执行，其他暂停不变。M/C1当前指定Sol6.1/ultra，手动速度/默认不改，实际执行设置另核。
+本轮 2026-10-09 全产品数据到业务升级沿现有 Collector/Shared/CTH/BMP/Research/Reporting/Evaluation/SYSTEM 及受影响 Web 接线执行，不只是 C1 说明。合法原始观察保存、来源有效性、权限、身份核验、业务分析分开；待核验原件在原 Source 路径可恢复，但不能成为主体事实。六平台独立保留实际能力/限制/事务与性能口径，至少一个获准平台实证从主体选择、采集到成果保存/关闭重开/修订/来源追溯/中断恢复。完整要求与A–F交付见 Global §10 和 Real Delivery Overlay；不能以规则、原文条数或发布源码宣称闭环。M/C1及其他Owner原候选、材料、集成和采集职责保留；实际窗口状态及模型只据当前PO决定和有日期的核验，不由本段派工。
 
 ## 产品完整闭环职责（不可由 README 摘要缩减）
 
@@ -143,7 +155,7 @@ Owner承接，状态与限制见 [CURRENT](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-
 
 ### 当前执行器
 
-- **Codex / Codex CLI**：当前研发执行器。序境研发角色默认值为 M/F=`GPT-6 Astra / ultra`、C1–C6=`GPT-6.1 Sol / ultra`、任务 Subagent=`GPT-6 Luna / max`；机器合同见 `.codex/model-routing.toml`，Subagent 默认同时写入 Codex 原生 `[agents]` 配置。Product Owner 在任一当前窗口的手动模型、推理强度、速度/服务档位选择始终即时覆盖角色默认；显式 spawn 选择覆盖 Subagent 默认；Hook 不拥有模型选择权。M 有已分配或未闭合工作时执行，无任务时停止待命。
+- **Codex / Codex CLI**：当前研发执行器；Product Owner选择实际窗口模型、推理档位及速度/服务档位。GitHub不固定角色模型；有实际核验才记录模型、时间与证据，否则NOT_VERIFIED。旧配置/启动Profile只是保留的历史数据，Hook不得改变手选设置。M完成获准工作后待命，本次规则更新不启动任何窗口。
 - **OpenCode**：**当前搁置，不属于本轮执行路径，也不是 Codex 额度不足时的自动 fallback。** 已有安装/配置不等于获准执行；除非 Product Owner 以后明确恢复，否则任何窗口都不要把任务派给 OpenCode。
 - TRAE、Apple、ChatGPT 等只在各自既有规则内作为 Experience/研究参考，不拥有序境产品架构或执行权。
 
@@ -152,7 +164,7 @@ Owner承接，状态与限制见 [CURRENT](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-
 README **不固化 current HEAD、Runtime、DB 行数、dirty文件清单或窗口进度**，因为这些会随每次交付变化。每次开工先执行 `git fetch origin main`、读取 `HEAD` / `origin/main` / dirty，再核 Runtime、DB、Permission、Evidence 和真实用户结果；最新逐能力事实、当前缺口和最近证据只记录在 [CURRENT](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)。
 
 - 当前产品身份是 `序境 / LUMENIS`；默认工作宇宙是 `GLOBAL / ALL`。具体运行进程是否已加载这一版本必须现场验证。
-- 当前执行拓扑是 **M 总控 + F 前端/Experience + C1–C6 六个独立交付窗口**；窗口通过准入后持续完成完整结果直到验收或真实阻塞。
+- 产品采用五轮架构成果；M/F/C1–C6保留原工程源码职责。实际窗口由PO决定并现场核验，不从README推断已开工、暂停、模型或并发限制。
 - 本地工作树中的任何 dirty/untracked 都先按 Owner 识别并保护；README 不枚举或推断其完成状态，**不得 reset/clean/覆盖未知工作**。
 - 当前总体阶段是工程闭环执行；只有对应 Product/App/Critical E2E、Runtime、用户结果和Release证据真实成立后，才能分别声明 `USER_VERIFIED`、`RELEASED` 或 `OPERATING`。
 
@@ -246,7 +258,7 @@ LUMENIS原始材料采用仓库根目录 [LICENSE](LICENSE) 中的 **LUMENIS PRO
 ## 贡献、整合与变更规则
 
 - `main` 是唯一当前实现；不要创建第二产品、第二Owner、第二DB/Evidence store、第二AI Gateway或长期并行候选架构。
-- F与当前唯一业务窗口独立工作；共享Owner/文件区域按M/W6认领冻结与交接，不同时写入。
+- 已获当前PO派工的Owner按原源码责任工作；共享Owner/文件区域仍按M/W6认领冻结与交接，不同时写入。
 - 每个窗口对自己Owner内的普通Bug、回归和技术阻塞负责到底：先做一次明确复现并定位Owner/调用链，再查当前官方/标准文档、维护中的上游GitHub和高质量最新实现；必要时比较多种前沿方案，选择对完整能力、正确性、恢复、安全、许可、维护、延迟和实际成本最优的可行方案，直接修复、验证并继续同一窗口闭环。不要把可解决的问题反复抛给M/别的窗口/用户，也不要为同一问题新开重复研究窗口。只有产品决策、权限/凭据、付费资源、安全/数据重大风险或不可控外部依赖才升级。
 - 提交只stage当前交付的精确文件；本地未知dirty/untracked工作必须先归Owner，禁止bulk-stage、`reset --hard`、`clean -fd`或“顺手整理”。
 - 新研究必须落实到已存在的能力、质量标准或真实结果；研究、线框、报告、测试、文档和Mock都不能取代实现/Runtime/User Outcome。
@@ -265,6 +277,8 @@ Core 健康：`http://127.0.0.1:8201/healthz`。Flutter Web 入口由同一 Core
 
 ## 执行与安全边界
 
+以下只定义源码责任及必要条件，全部须另有当前PO实际派工；本段不启动窗口/训练/服务。
+
 - C1 在完成 fresh admission 且真实前置条件满足后可执行真实只读采集，并遵守已有 Scope、Permission、Session、频率与平台规则；一个平台 Blocked 不能伪装成 ACTIVE，也不应暂停其他已满足前置的平台。
 - C2 在完成 fresh admission 后可执行已批准的免费 GPU 训练闭环，但必须先验证真实零成本 GPU、精确 model/recipe/data hash、MODEL_TRAIN Permission、Checkpoint/Evaluation 合同；**不得自动租 GPU、充值或启用付费 fallback**。
 - F 在完成 fresh admission 后执行已批准 Experience 成果；设计状态不等于 Runtime/用户验收。
@@ -275,10 +289,11 @@ Core 健康：`http://127.0.0.1:8201/healthz`。Flutter Web 入口由同一 Core
 ## 验收语义
 
 ```text
-IMPLEMENTED
-→ TESTED
-→ LIVE_VERIFIED
-→ USER_VERIFIED
+DEFINED
+→ IMPLEMENTED
+→ INTEGRATED
+→ VERIFIED
+→ JOB_CLOSED
 → RELEASED
 → OPERATING
 ```
@@ -293,13 +308,13 @@ IMPLEMENTED
 
 智能 UI 采用范围覆盖全部现有能力、44屏及四端，包含研究/业务/创作、设置/通知/恢复。唯一执行依据是[产品蓝图](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)与[Experience §38](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)；[44屏规范索引](contracts/experience/screen-specifications/README.md)逐屏给出实际用户任务和后续采用入口，[既有文字草图](00-GOVERNANCE/evidence/round-15/experience-review-2026-10-06/LUMENIS-44-SCREEN-TEXT-WIREFRAMES-1.5.md)保留历史并同步日期增补。规则/蓝图/草图同步不表示44屏已经实现；授权启动后的实际派发/准入以本地ledger与真实工具回执为准。
 
-2026-10-08 前端审计增补已纳入上述唯一规则：F保留全44屏和官网家族的可编辑设计、四端差异与任务交互，优先复用Figma；免费受限立即用现有Flutter/Dart/变量/SVG继续，不新增费用，不等全部Figma完成才修已有交互；依既有逐屏合同直接构建，必要设计决定随代码记录，不再等待独立设计稿/Figma或M设计审批。原生Figma与可编辑源码分别记录，载体/版本与源码/动作/验收映射详见[ScreenSpec索引](contracts/experience/screen-specifications/README.md)。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；历史等待文字不再构成暂停指令，M待命也不暂停执行窗口。实际派发/准入以当前直接PO指令、本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。规则同步不代表 Figma 工程、智能 UI 实现或用户验收完成。
+2026-10-08 前端审计增补已纳入上述唯一规则：F保留全44屏和官网家族的可编辑设计、四端差异与任务交互，优先复用Figma；免费受限立即用现有Flutter/Dart/变量/SVG继续，不新增费用，不等全部Figma完成才修已有交互；依既有逐屏合同直接构建，必要设计决定随代码记录，不再等待独立设计稿/Figma或M设计审批。原生Figma与可编辑源码分别记录，载体/版本与源码/动作/验收映射详见[ScreenSpec索引](contracts/experience/screen-specifications/README.md)。C1–C6/F/M/W1–W6 保留原源码责任和完整成果；实际开工、暂停、恢复、模型与推理档位由 Product Owner 决定，本文件只记录有时间和证据来源的已核实事实，不设单业务窗口限制；历史等待文字不再构成暂停指令，M待命也不暂停执行窗口。实际派发/准入以当前直接PO指令、本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。规则同步不代表 Figma 工程、智能 UI 实现或用户验收完成。
 
 ### 2026-10-08 成熟基础能力、竞品机制与用户操作期待
 
 两份最新增补已合并进[唯一产品蓝图](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)、[Owner执行映射](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)、[双层真实验收](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)和[Experience §38](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)：先让用户完成成熟软件基础操作，再证明序境的来源、业务、智能、版本与学习连续性。SH-01/BMP-08及原文字草图细化真实剪辑/播放/波形/录音/重开；GPT/Apple/Tesla只贡献适用操作原则。开源选择遵守[组件准入](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)，不重造现有内核。
 
-保留的职责拓扑为 M + 独立 F + 一个业务窗口，不代表当前所有角色已恢复；最新 AGENTS/CURRENT 直接指令控制实际派工，当前 C1 持续执行、其余原暂停窗口不由本段恢复。源码/Goal 与完整 J/R/U 保留；实际派发/准入以本地 ledger 和真实工具回执为准，fresh admission 后才进入 RUNNING。M 仅核对有变化的成果、共享冲突、CI/风险，无实际可处理事项即待命。规则收录不表示能力实现、验收、组件安装或训练许可。最新材料清单为199项（原191+8增补，含电脑/浏览器视频及12项安全核查），不是全部历史资料已读证明。
+M/F/C1–C6保留原工程职责；实际开工、暂停、恢复、模型与推理档位由PO决定，不从历史状态或串行拓扑推断。源码/Goal 与完整 J/R/U 保留；实际派发/准入以本地 ledger 和真实工具回执为准，fresh admission 后才进入 RUNNING。M 仅核对有变化的成果、共享冲突、CI/风险，无实际可处理事项即待命。规则收录不表示能力实现、验收、组件安装或训练许可。最新材料清单为199项（原191+8增补，含电脑/浏览器视频及12项安全核查），不是全部历史资料已读证明。
 
 ### 2026-10-08 采集日期与维度展示更正
 
@@ -311,6 +326,6 @@ IMPLEMENTED
 
 ### 2026-10-08 电脑操作、内置浏览器与派工纠偏
 
-最新直接PO指令覆盖旧全窗恢复/全停调度：M与F继续，C1-C6仅M选定的一窗继续完整目标；窗口转述必须保留PO原话与适用范围，不把局部暂停广播为全局。定期把关继续，无事待命。
+历史全窗恢复/全停、单业务窗口及F调度记录只作有日期的来源。当前PO决定实际派工；窗口转述必须保留原话、日期和范围，不自动扩散暂停/恢复。核验不明为NOT_VERIFIED，本次不启动任何窗口。
 
 序境产品本身须完成授权电脑任务；手机可在任务内查看/接管受控浏览器，Desktop/Web在产品内使用，外部浏览器为明确可选。当前已有受控Browser动作服务，SYS-06前端仍只读、远端绑定及OS executor未闭合，不能声称已完成。[SYS-06](contracts/experience/screen-specifications/SYS-06.md)与[取证及执行映射](00-GOVERNANCE/evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md)记录准确差距。材料清单现198项（原197+本次视频），不是历史资料全部完成阅读或训练准入。

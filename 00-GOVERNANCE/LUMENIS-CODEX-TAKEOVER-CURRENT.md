@@ -1,16 +1,19 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
-> Latest direct PO correction, 2026-10-09: **C1 is paused**; F/C2-C6 remain paused. M continues only the already authorized developer-tool, Browser/AgentZero integration, CURRENT cleanup and A0/B0/C0 preparation. No C2 restart, external model API, corpus acquisition/import, training, provider activation or deployment is granted. All normal business tasks must work without AI; AI-only enhancement may be unavailable without blocking deterministic/manual work. Product Architecture and Real Delivery own the seven-domain requirement. Manual model/effort/tier remains unchanged. Approval: `evidence/approvals/PO-20261009-AI-OPTIONAL-PREPARATION-C1-PAUSE.json`.
-> Retained approved topology (not current dispatch): M + independent F + one M-selected business window. W6 integration occupies the same business slot; other C windows wait with complete work/Goals preserved. Figma-first is superseded by reuse of existing editable design and an immediate zero-new-cost Flutter/Dart/SVG fallback when the free tool path is limited. All 44 screens, Website families, four surfaces and J/R/U acceptance remain. Authorization does not prove RUNNING, implementation, runtime load or user acceptance. Existing manual model/effort/tier and security boundaries remain.
+> 最新直接 PO，2026-10-09：只同步六份治理/README 文件。产品交付唯一为 SYSTEM → CTH → BMP → Shared → Agent Groups / 自研 AI；C1–C6/F/M/W1–W6 保留工程源码责任，不是六轮产品或单窗口调度限制。
+> Product Owner 决定当前窗口开工/暂停/恢复、模型和推理档位。这里仅记录有核验时间和证据来源的事实；未核实为 NOT_VERIFIED。历史暂停、恢复条件和模型默认无现行调度效力。本次不启动窗口、不修改业务源码。
+> 随后直接 PO 另授权一个 Luna/max 智能体处理 SYSTEM 自动采集弹窗 P0。该缺陷沿既有 Browser/Collector Owner、受控进程和唯一维护计划任务修复；不恢复其他研发窗口。它与本次六文件治理提交分开验收及发布，未验证的源码/运行/采集结果不得提前标为完成。
+> 历史 AI 非依赖/暂停审批 `evidence/approvals/PO-20261009-AI-OPTIONAL-PREPARATION-C1-PAUSE.json` 和串行/F审批保持原件，不删除或改写；其中仍有效的权益、安全、费用及无AI基础能力要求保留。
+
 > Direct-build/native-target correction: F builds real frontend immediately from existing contracts without separate design drafts/Figma or M DESIGN_READY coding prerequisite. Later native Desktop targets Windows/macOS only; Mobile targets iOS only. Android/Linux native client delivery requirements are superseded, with existing source/history preserved. Linux server/CI and browser access are separate.
 > Latest surface priority, 2026-10-08: close Public Website and Web Workspace first; defer dedicated Desktop/Mobile design, implementation, packaging and device acceptance until those two surfaces close. Preserve all four-surface requirements and existing work. Web-required Core/SYSTEM dependencies remain in scope. This changes order, not actual capability/acceptance or deployment/cost authority. Approval: `evidence/approvals/PO-20261008-WEBSITE-WEB-FIRST.json`.
-> Published topology: M is the root controller/integrator, F owns frontend/Experience, and C1-C6 are restored as six eligible delivery roles under the current AGENTS.md instruction. This file records the latest published repository state; it is not a live process list. A local window executes only when explicitly dispatched and after current-state admission; explicit Product Owner wait/resume instructions control local scheduling without changing the canonical product scope. Product Architecture and D01-D49 dispositions were approved 2026-10-04; D labels remain separate from R01-R15 requirements.
+> 工程责任：M 总控/集成审查，F 前端/Experience，C1–C6 按原 Source Owner Index 保留源码边界。仅实际 PO 派工和新鲜证据可记录执行状态；历史 D01–D49 不与 R01–R15 混同。
 > current HEAD = READ WITH git fetch + git rev-parse origin/main
 
-Root `AGENTS.md` is the only repository execution router. [The Product Owner's lightweight AI-native constitution](AI-NATIVE-PRODUCT-CONSTITUTION.md) remains a principle layer. The sole product blueprint is [Product Architecture](LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md); [Experience](LUMENIS-EXPERIENCE-CONSTITUTION.md) owns UI/UX and DESIGN_READY screen specifications. A report is evidence, never another blueprint.
+Root `AGENTS.md` is the only repository execution router. [The Product Owner's lightweight AI-native constitution](AI-NATIVE-PRODUCT-CONSTITUTION.md) remains a principle layer. The sole product blueprint is [Product Architecture](LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md); [Experience](LUMENIS-EXPERIENCE-CONSTITUTION.md) owns UI/UX and screen specifications; a historical DESIGN_READY record is not a coding prerequisite. A report is evidence, never another blueprint.
 
-## 2026-10-09 bounded source publication and current limits
+## 2026-10-09 dated bounded-source evidence and remaining capability limits
 
 The existing developer workflow now has portable VS Code Tasks and a PowerShell
 entry backed by `.codex/local_workflow.py`, exact Owner/HEAD/hash reservations,
@@ -110,7 +113,7 @@ bindings: [bounded delivery](evidence/round-15/M-20261009-TOOLS-BROWSER-AI-OPTIO
 
 ### 2026-10-09 root execution-router co-publication
 
-This rules-only increment publishes the latest direct PO pause and whole-product
+That dated rules-only increment recorded the then-PO pause and whole-product
 AI-independent business requirements in root AGENTS.md alongside the existing
 Architecture, Real Delivery, Experience, Owner index and approval receipt. A0/B0/C0
 remain preparation only; no paused Owner, API, corpus, training or deployment is
@@ -128,12 +131,33 @@ This is preparation, not route activation or training admission: all external
 routes remain OFF, dataset upstream/teacher/privacy/benchmark rights stay
 REVIEW_REQUIRED/HOLD, and no dataset revision/bytes or production facts were
 imported. Meta Muse Spark has official API documentation; its actual account,
-region, data tier and zero-cost eligibility remain unverified. C1/F/C2-C6 stay
-paused. The precise C2 analysis gap and all no-AI business outcomes stay OPEN.
+region, data tier and zero-cost eligibility remain unverified. That admission
+observation does not decide current window scheduling. The precise C2 analysis gap and all no-AI business outcomes stay OPEN.
 See the existing bounded delivery section 8; this adds no second authority,
 Provider, Source store, approval or user-outcome claim.
 
 ## 1. Online reader's current-state snapshot
+
+### 本轮治理任务目标及冻结基线 — 2026-10-09
+
+M 当前唯一优先目标：核验并保护本地工作 → 六份现有文件一次性统一五轮架构及窗口/模型事实口径
+→ 文档/机器治理/静态检查 → 精确六路径提交 → 安全推送 main → 固定提交原文和CI回读。
+本次不启动任何窗口或以前未完的源码任务，不把治理发布算作任何产品轮次完成。
+此前工具/Browser/AgentZero、材料蒸馏采用、候选集成、C1和其他Owner未完成Goal完整保留。
+原生 Goal 的当前API仅支持状态更改、不支持改写未完目标；本段更新当前优先执行目标，
+保留原生未完成Goal，不虚报已经改写/完成原生目标。
+
+准入冻结：2026-10-09 15:31:34 +08；local HEAD、fresh origin/main、GitHub live main
+均为 `bb9346f8c7e81faa91bfa8fc035f1a643ffdfde6`，staged=0，79 tracked dirty + 2 untracked。
+六份授权文件准入时均 clean；本地原件hash及保护清单保存在既有私有work证据，不进入GitHub。
+这是有日期的提交前基线；发布后必须重新读取，不能把本段SHA当作未来current HEAD。
+
+窗口核验来源：2026-10-09 16:06:36–16:06:50 +08，Codex app `list_threads`
+实际回读：M“序境12”显示 active，C1–C6 显示 idle。该App状态不等于PO派工、
+准入后的RUNNING、暂停或目标闭合；F当前身份/状态及所有窗口实际模型/推理档位
+均 `NOT_VERIFIED`，历史ledger不得补成当前事实。本机回执保留请求/返回时间区间、
+实际窗口ID和状态；不据此派工或更改模型。
+
 
 2026-10-08 continuous synchronization correction: accepted source/rule/plan and
 its existing CURRENT/owner evidence are co-published before dependent execution;
@@ -150,15 +174,15 @@ route: original media locators -> permitted asynchronous processing through the
 existing queue/Gateway/media owners -> versioned, locatable downstream results.
 OCR, speech, temporal visual analysis, coverage and unavailable execution remain
 distinct. Media executor/job binding is still OPEN, not proved by metadata or this
-rule publication. C1 retains this scope but is paused by the latest direct PO; no paused window is resumed.
+rule publication. C1 retains this source scope; this dated observation grants no current scheduling.
 
 SourceBrief's existing query sample and actual analysis sample have distinct
 denominators. `available_brief_count` currently means returned verified records
 within this limited/filtered query, not a scope-wide total. The CTH-10 specification
 now preserves that meaning and unknown metadata through saved/reopened results.
 Its ViewModel/panel binding remains OPEN; C1 has an exact existing W6 revision-10
-handoff for that affected Web consumer, with F paused and architecture owners
-unchanged. The full-product rule batch at `2f879211` has exact-SHA Product/App
+historical handoff for that affected Web consumer; source owners remain unchanged,
+while actual current writer/dispatch requires fresh readback. The full-product rule batch at `2f879211` has exact-SHA Product/App
 SUCCESS evidence; these source/rule checks do not establish the user outcome.
 
 The current C4 handoff's three production files (video_editing.py, rendering.py,
@@ -208,27 +232,20 @@ engineering and visual/media groups through existing material records. The
 corpus or reading proof. Missing originals and unread pages/frames keep this task
 open. Adopted methods must reach existing source and real user outcomes;
 distillation alone is not implementation or MODEL_TRAIN approval. Protected
-credentials are excluded from research and learning. C1 continues independently;
-original paused F/C2-C6 windows remain paused.
+credentials are excluded from research and learning. That dated research/dispatch
+record does not establish any current window state or start new research agents.
 
 
-Current dispatch: M handles the approved policy/publication and C1 outcome review;
-the latest direct PO instruction additionally assigns M the existing non-C1 local
-candidate and unintegrated-work convergence, repair and formal integration. This
-is not a resume of F/C2-C6 or a transfer of C1's ongoing closure/dependencies.
-C1 is the sole selected business window for existing J1/U01-U05 collection closure.
-C1 also executes the necessary existing Core/runtime, scheduler and server-side
-authorization-binding dependencies itself under the PO's subsequent direct
-correction; it does not pause or switch its work to C6. The existing reservation
-records this bounded implementation handoff without replacing architectural
-owners or expanding Permission/cost/account scope. M reviews results and formal
-integration; the earlier proposed C6 restart is withdrawn. This rule update is
-not evidence that runtime loading, collection or full C1 acceptance has passed.
-F/C2-C6 remain paused until explicitly resumed. The retained M + independent F +
-one business-window topology and Website/Web priority are unchanged. No new cost,
-protected identity access or shared-owner overwrite is authorized. Actual delivery,
-fresh admission and RUNNING are separate local receipts. M heartbeat stays paused.
-Approval: `evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json`.
+Historical 2026-10-08 C1/M handoff provenance:
+`evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json` preserves the
+then-approved necessary Core/runtime/scheduler/authorization dependency handoff to
+C1 and M's non-C1 candidate/material integration duty. These source responsibilities
+and incomplete outcomes remain; the then-single-business/F wait/heartbeat orders
+are superseded as execution commands. Actual PO dispatch decides current work.
+Permission, source rights, shared reservations, no new costs and protected
+identities remain binding. A source/policy publication proves no user acceptance.
+
+
 
 The user also requires product-owned computer operation and in-product browser
 use on Mobile/Desktop/Web, with explicit optional external opening. The supplied
@@ -244,12 +261,13 @@ not a new runtime or a claim of implementation. Evidence:
 
 Implementation publication state: `RULES_ONLY_PUBLICATION`
 
-Latest delta: the 2026-10-09 Browser/Agent Zero admission readback changes only
-the existing CURRENT/Owner/evidence documents. Accepted source in `d847a28e`
-remains published; this documentation delta introduces no new behavior source.
-The first readback commit `66070a04` failed Product Gate because this field still
-carried the previous source-publication state. That failed CI remains historical;
-this correction restores truthful publication classification, not a weaker gate.
+Latest delta: the six approved governance/README files adopt the five Architecture
+product rounds and factual window/model observations. No business source, runtime,
+DB, model/account configuration, CI workflow, machine JSON or approval receipt is
+changed. The published `d847a28e` source and all unfinished local work remain.
+Historical `66070a04` failed Product Gate is retained, not rewritten to success.
+This publication needs its own applicable exact-SHA CI; earlier PASS is not inherited.
+
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 Historical protected local-only M icon batch (not integrated; not an execution instruction): this earlier local increment includes the bounded 37-path/102-call historical
@@ -257,7 +275,7 @@ supported-icon source adoption and existing RC-06 research-method criteria.
 The canonical-only validation copy excludes C1's in-flight changes; its Dart
 lib analysis and actual Web release build pass. Build/source verification does
 not establish normal user jobs, installed-PWA/readout or complete visual acceptance.
-F/C1/C2-C6 are now paused; the prior independent C1 state is superseded. The preceding whole-product
+The pause/resume observation in that historical batch is not current dispatch. The preceding whole-product
 rule batch is `274f2742c17550ef421d845c82c066166e2e9826`, with Product run
 `37817302602` and App run `37817302584` both SUCCESS. The current documentation
 publication requires its own applicable exact-SHA CI; historical failed and
@@ -393,7 +411,7 @@ F continues its existing Goal through direct Website/Web construction and real u
 
 Historical full-window resume provenance is retained in
 `evidence/approvals/PO-20261008-FULL-CLOSURE-RESUME.json`; current selection follows
-the latest single-business/independent-F approval above. Existing outcomes and
+the latest direct PO scheduling decision, not that archived topology. Existing outcomes and
 all completion boundaries remain unchanged. Native Goal updates, message delivery
 and actual admission are separate local receipts; role authorization is not proof
 that every window is RUNNING. M waits between actionable reviews.
@@ -605,7 +623,7 @@ The Product Owner approved the fresh historical-package audit against synchroniz
 
 `contracts/experience/source-target-contract-v1.json` is an approved target contract, not implementation proof. The Experience binding snapshot is generated from accepted source-contract commit `3ebe60f99d0f928bbcc92aaea7ce99225535d65e`; the registry publication commit changes no product source, runtime or acceptance state. Historical package data remains `Production admission = 0`. Current Product/App/Critical E2E, six-platform live collection, Owned AI service binding and user verification remain open. Existing C1/C2/C5 dirty and `work/` stay protected and are not part of this governance/specification Batch.
 
-| Round / window | Placement | Scope | Current evidence and remaining work |
+| Retained source responsibility / window label | Placement provenance | Dated scope | Evidence and still-open work (not current dispatch) |
 |---|---|---|---|
 | C1 / W1 | Local Codex | Data and collection | Purpose-query API and signed Scheduler share Collector/Permission/five-table transaction; original 100-term input is packaged and checked. The latest supplied runtime record (2026-10-05 22:52 +08) reported the approved narrow HK RedNote Guangzhou Taikoo Hui scheduler/resident active with healthy guard/session state and zero observed collections; M did not re-probe that runtime during this repair task. The 23:36 source-only review at main `52cd770c` found the Facebook result-constructor defect, false file/config-only readiness, manual-flag/alias inconsistencies and missing durable/native continuation binding. M fixed result constructors and false readiness: Facebook cookie metadata is `NEED_VERIFY`; the status API preserves cache records as historical/UNKNOWN and skips XHS Cookie lookup. Facebook/X manual flags and XHS config/registry alias resolution are fixed; background `enabled` remains false. The business API now passes its typed query checkpoint into the existing plan executor. Seventeen adapter tests, six isolated status-API tests, three alias/capability tests and eight checkpoint/route tests pass; credential reads and cache writes in these tests are mocked/temp-only. The absence of an in-repo real status producer, caller-supplied checkpoint provenance, native platform pagination, durable end-to-end collection, live six-platform coverage and Source→Evidence→Canonical acceptance remain OPEN. No live platform request or XHS Cookie read occurred. |
 | C2 / W2 | Local Codex | Owned AI and Agent | Single Gateway; approved open weights and free-resource preparation retained. Legacy local/Zhipu compatibility paths are explicitly disabled before discovery, quota mutation or dispatch. User-facing AI compatibility APIs, the integrated AI Hub and the TaskEngine bridge now route inference through the owned Gateway and report unavailable rather than fabricating output; AI-dependent TaskEngine jobs do not become `SUCCEEDED` without an owned answer, while data-only query results retain their separate truth. Default provider fallback no longer advertises or selects retired providers. Existing recipe/checkpoint records are preparation evidence, not a hardware selection or paid-resource approval; existing/free compute is preferred. A new exact-approval remote source-pin preflight verifies the SSH worker root without starting a worker, model or GPU. Production owned inference, semantic quality, live remote binding, training/reload/promotion remain unestablished. |
@@ -616,7 +634,13 @@ The Product Owner approved the fresh historical-package audit against synchroniz
 
 F owns four-surface behavior and design responsibilities through existing Flutter/Website code; that ownership does not assert that the F window is currently running. M handles cross-window architecture/integration review and full outcome acceptance; F owns frontend implementation and interaction quality. Product Owner repeated core jobs remain the final human gate. Runtime/CI/product acceptance are not interchangeable.
 
-## 2. Direct continuation and known blockers
+## 2. Retained continuation requirements and dated history
+
+以下编号条目保留原始要求、修复及历史审批事实，不形成当前窗口派工或模型选择。
+过去“当前/最新/now”、PAUSED/RUNNING、恢复条件、六轮/单窗口与固定模型记录
+均只适用于其有日期的原观察；本轮顶端五轮及事实化规则控制当前解释。
+实际未完成产品要求与已验证源码不因该调度纠偏删除、重验或自动晋升。
+
 
 1. Follow the approved blueprint in the existing Product Architecture and the source paths in `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. No new candidate implementation directories or duplicate task matrices.
 2. At base `be347f03`, the direct repair retained 551 passing isolated checks, two explicit optional skips and a clean-source 87-case source-bound chain; actual Core monitor evidence records TCP listener8201 with health/database OK. These are dated scoped evidence in `evidence/round-15/DIRECT-REPAIR-20261004.md`.
@@ -801,7 +825,7 @@ Seven protected C6 runtime/test paths implement Core entry/launch/boot identity 
 
 This rules revision carries M's final 14-path Website/Web-first, direct-build and native-target correction from `WEB-PRIORITY-DELIVERY.json` (SHA256 `39ebdfd9aab2f93c7db0c1645b9a7024c0dd2fdb7541eab33a461433f8dd30aa`, exact 9b211052 base), plus factual composition in CURRENT and its existing Round record. Runtime/F candidates and the machine semantic contract are excluded. Existing implementation, native platform projects, source materials, models, design/media assets and failure history are preserved. Exact final staged guard and remote readback receipts govern publication; this text alone proves no push, runtime load, release or user acceptance.
 
-Historical dispatch/Goal observation for that earlier C6 batch only: M + F + C6 and its then PAUSED Goal are not current scheduling. Latest direct PO instead authorizes M convergence/research/integration and continuous C1 full data-to-business closure; F/C2-C6 remain paused. The retained topology and Website/Web-first target are unchanged. Current-window M/C1 request is Sol 6.1 / ultra with existing speed; backend settings are SETTINGS_UNVERIFIED. Current native Goal state must be read from its actual API, not this historical receipt. Full C6, USER_VERIFIED, RELEASED and OPERATING remain unaccepted.
+Historical dispatch/Goal observation for the earlier C6 batch: its M/F/C6, PAUSED Goal and M/C1 Sol6.1/ultra request are dated provenance only, not current scheduling or model selection. Current window/model/Goal state requires actual readback; unknowns are NOT_VERIFIED. Website/Web-first and full source responsibilities remain. Full C6, USER_VERIFIED, RELEASED and OPERATING remain unaccepted.
 
 ### 2026-10-09 retained non-C1 research and unpublished source
 
@@ -833,4 +857,4 @@ preceding six-file tool/API repair is `b69b221d031b106abfe76a9f95760707a6b5651c`
 whose Product Gate run `37854315256` is SUCCESS. No same-SHA App Gate was triggered;
 older App success is not promoted. This rules revision requires its own CI.
 Current rule files are synchronized; unrelated dirty source and its raw backups
-remain protected. C1/F/C2-C6 remain paused; no product runtime or DB was changed.
+remain protected. That dated update changed no product runtime or DB and is not a current pause/resume command.

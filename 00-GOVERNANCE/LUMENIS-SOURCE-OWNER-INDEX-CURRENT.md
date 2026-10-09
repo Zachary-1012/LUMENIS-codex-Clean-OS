@@ -1,28 +1,16 @@
 # LUMENIS Source Owner Index — CURRENT
 
-> 2026-10-09 最新直接 PO：C1 暂停，F/C2-C6 保持暂停；M 仅继续已授权工具/Browser/AgentZero收尾、CURRENT收敛及A0/B0/C0准入准备。基础业务无AI独立运行是全产品要求，AI增强单独验收。下文旧C1恢复/连续执行表述保留其职责，实际执行须等待PO恢复；模型/effort/tier不变。来源：现有AI-OPTIONAL-PREPARATION-C1-PAUSE审批回执。
-
-> 2026-10-08 PO 正式验收策略变更：单元/集成及换名模块自动测试不再是开发、合并、验收或发布条件，Codex 不新建、不执行这些套件；保留历史测试和 FAILED 证据。当前执行真实任务→既有源码→构建运行→实际用户操作→真实结果→保存/修订/重开→恢复→验收→正式集成。适用编译、静态质量、安全/权限、数据一致性及真实产品 E2E 保留；历史材料中的测试命令不构成当前执行义务，真实缺陷仍必须修复。R01–R15/J1–J8/U01–U25 与 Owner/权益/生产数据边界不变；机器合同 v1.2.0 的 verification_policy 记录现行语义。历史同轮恢复/Astra指定已被2026-10-09直接PO暂停及其此前手选GPT-6.1 Sol/ultra取代；M仅继续当前已授权工作，C1/F/C2-C6保持暂停，不改变任何窗口的手选模型、effort或速度。
-
-> Status: **CURRENT EXECUTION INDEX / SIX-ROUND DELIVERY / COMPLETE LEGACY COVERAGE**
-
-> 保留的 C1 完整执行职责（当前暂停，须等待直接PO恢复）：恢复后由C1自行完成真实采集闭环及其必需的既有 Core/Runtime、Scheduler、现有授权服务端绑定修复和受控运行操作，不转交C6。旧“不暂停C1”调度已被2026-10-09暂停回执取代，不是当前执行命令。源码的架构 Owner 不变；本次必要调用链的实际执行者为 C1，沿已有 W6 Shared Reservations 记录有界交接并保护原冻结成果和无关工作。进程归属、在途任务、备份恢复、Permission、账号与零新增费用边界不变。M 负责边界同步、成果审核和正式集成，不代做 C1 普通修复。其余窗口继续暂停；不据此声称任何能力已验收。
->
-> 本次 PO 另行指定 M 收敛非 C1 的既有本地候选与未集成源码；沿本索引原 Owner 认领逐项发布，不恢复暂停窗口、不代做 C1。C1 已冻结 F-08/F-09 数据合同作为业务依赖按原哈希吸收，其活动采集源码继续独立保护。源码集成、真实运行和完整用户验收分别记录；入口为既有 Round 15 CURRENT-STATE-REPAIR-20261007.md。
-> 最新 PO 增补要求 M 用研究子智能体完整追回并实际研究未完成的本地/线上原始材料、DeepSeek祖先分析和升级规划，按现有 Owner/源码落实能力；材料索引、摘要、蒸馏包与真实产品采用分别核实，未读/未取得不得结项，训练另行准入。
->
-> Updated: 2026-10-07; earlier baseline tables remain dated provenance
-> Approved ROUND 01 source-audit baseline: `df15a99de6f5ffc3eb85e2c9924afb59c1c3c781` (provenance only; resolve the live `origin/main` before every change)
-
-This file is the fixed repository navigation and delivery index for 序境 / LUMENIS. It classifies current source by owner and tells Codex where to look after the one-time source audit. It is not a second product architecture, Experience authority, progress ledger, or proof that a runtime capability works.
-
-When this index conflicts with current executable source or runtime evidence, current source/runtime wins and this index must be repaired in the same coherent change.
+> 最新直接 PO，2026-10-09：本索引保留 C1–C6/F/M/W1–W6 的工程源码责任；唯一产品交付轮次归 Product Architecture：SYSTEM、CTH、BMP、Shared、Agent Groups / 自研 AI。
+> Status: **CURRENT EXECUTION INDEX / FIVE ARCHITECTURE ROUNDS / COMPLETE LEGACY COVERAGE**
+> 实际窗口开工、暂停、恢复、模型与推理档位由PO决定。本索引不固定窗口数量、单业务席位或模型；只记录有时间和证据的观察，不能核实时 NOT_VERIFIED。历史审批和工作原件保留但无当前派工效力。
+> 本次仅六份治理/README更新，不修改业务源码或唤醒窗口。所有原J/R/U、44屏、权益、Permission/Evidence/Canonical、成本、生产数据及共享写入保护保留。
+> C1保留完整采集闭环和已有必要Core/Runtime/Scheduler/Permission依赖的获准源码范围；M保留原非C1候选、未集成成果及资料采用责任。实际执行须核验当前PO授权及Writer，不能用旧暂停或旧复工代替。禁止单元/集成及换名模块套件，保留静态、安全、数据一致性和真正E2E。
 
 ### 最新 PO 当前成果优先级 — 官网 / Web，2026-10-08
 
 后续直接修正：F直接构建真实前端，不先制作独立设计稿，不等待Figma或M逐屏DESIGN_READY；复用既有44屏和视觉规范并随代码更新。后续原生客户端仅Windows/macOS和iOS，Android/Linux原生客户端要求已被PO替换，不留为待交付；历史资料/源码仍保护。Linux服务端/CI和浏览器跨OS运行不受此限制。
 
-沿现有 Owner/源码表先完成 Public Website 与 Web Workspace；Desktop App/Mobile Companion 专项实现、打包和实机验收后置至前两端闭环，保留全部需求/Goal/设计/源码与未完成记录。F 负责当前两端的完整适用屏幕与官网家族；M 按依赖选择唯一 C 窗口，C6 共享集成占用该席位。业务、研究、数据、媒体与 AI 的当前 Web 必需合同及 Core/SYSTEM 继续完整推进，不把桌面客户端后置解释成停后端或改用模拟结果。Shared Flutter 修改保留兼容，不新增无关 native 工作。既有三层 Gate 按表面验收，完整四端 Release 不因本轮验收自动成立。具体顺序归 AGENTS/Multi-Surface Decision，真实验收归 Overlay；无新增 Owner/队列。
+沿现有 Owner/源码表先完成 Public Website 与 Web Workspace；Desktop App/Mobile Companion 专项实现、打包和实机验收后置至前两端闭环，保留全部需求/Goal/设计/源码与未完成记录。F 负责当前两端的完整适用屏幕与官网家族；实际窗口调度由PO决定，不设单业务席位；共享集成仍按M/W6预约。业务、研究、数据、媒体与 AI 的当前 Web 必需合同及 Core/SYSTEM 继续完整推进，不把桌面客户端后置解释成停后端或改用模拟结果。Shared Flutter 修改保留兼容，不新增无关 native 工作。既有三层 Gate 按表面验收，完整四端 Release 不因本轮验收自动成立。具体顺序归 AGENTS/Multi-Surface Decision，真实验收归 Overlay；无新增 Owner/队列。
 
 ## 1. Retained R01–R15 acceptance coverage and historical audit groups
 
@@ -52,7 +40,7 @@ paths through the capability locator before changing source. Research source,
 limits and decisions are in
 `evidence/round-15/INTELLIGENT-UI-ADOPTION-20261008.md`.
 
-Live dispatch follows the current instruction at the top of AGENTS.md; eligibility/ownership in this index does not assert that a local window is currently running. C1–C6 are the six complete delivery responsibilities; R01–R15 are retained acceptance/dependency requirements mapped into those outcomes. The numbered table below is historical coverage context, not a second execution schedule and not the R01–R15 identifier list. D01–D49 are audit dispositions; their original audit labels are not product requirements. This index does not activate paused windows or create sequential dispatch. Valid evidence may cover multiple IDs. No mapping turns a missing gate into PASS. M accepts complete outcomes; W6 integrates when authorized.
+Live dispatch follows the current instruction at the top of AGENTS.md; eligibility/ownership in this index does not assert that a local window is currently running. C1–C6 are retained engineering source responsibilities, not product rounds; R01–R15 are retained acceptance/dependency requirements mapped into those outcomes. The numbered table below is historical coverage context, not a second execution schedule and not the R01–R15 identifier list. D01–D49 are audit dispositions; their original audit labels are not product requirements. This index does not activate paused windows or create sequential dispatch. Valid evidence may cover multiple IDs. No mapping turns a missing gate into PASS. M accepts complete outcomes; W6 integrates when authorized.
 
 | Historical coverage group | Delivery | Scope | Exit gate |
 | --- | --- | --- | --- |
@@ -74,7 +62,7 @@ Live dispatch follows the current instruction at the top of AGENTS.md; eligibili
 
 ### Historical responsibility coverage map — 2026-10-02
 
-The rows below preserve the approved requirement/role mapping; AGENTS.md owns current activation and environment choice. The former C3/C5 shared continuation relationship and former Cloud handoff are historical provenance only. Under the current AGENTS route, M is the root controller/integrator, while F and C1-C6 are eligible delivery roles. This map assigns ownership and admissible scope; it is not a live scheduler. A role becomes DISPATCHED/RUNNING only under the newest explicit Product Owner instruction for that current/local window and after fresh admission. A Product Owner instruction to wait keeps that role WAITING_DEPENDENCY even though the role remains eligible in this index. Once actually dispatched, no owner waits for unrelated material directories, and dispatch never bypasses real dependencies or shared-writer coordination.
+The rows below preserve the approved requirement/role mapping; AGENTS.md routes source responsibilities; only the Product Owner determines actual activation/model choices. The former C3/C5 shared continuation relationship and former Cloud handoff are historical provenance only. Under the current AGENTS route, M is the root controller/integrator, while F and C1-C6 are eligible delivery roles. This map assigns ownership and admissible scope; it is not a live scheduler. A role becomes DISPATCHED/RUNNING only under the newest explicit Product Owner instruction for that current/local window and after fresh admission. A Product Owner instruction to wait keeps that role WAITING_DEPENDENCY even though the role remains eligible in this index. Once actually dispatched, no owner waits for unrelated material directories, and dispatch never bypasses real dependencies or shared-writer coordination.
 
 | Existing ID | Responsible delivery / support |
 |---|---|
@@ -211,7 +199,7 @@ These are blocking requirements for C1–C6 and mapped checkpoints:
 14. Route every context/data-related round through `LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md`. The product default is `GLOBAL / ALL`; Subject/BrandFocus selection changes focus only and never grants Permission or controls background execution. Report `Global Commercial Coverage`, `Global Brand Coverage` and `Guangzhou Taikoo Hui Reference Coverage` as three acceptance dimensions of the same internal full-universe edition. They must not create separate products, releases or truth stacks. All three `YES` is required for `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=YES`.
 15. Every related round runs the contract's `RANDOM ENTITY DATA ACCEPTANCE` with rotating stratified non-fixture samples and preserves seed/list/version/request/surface/Evidence/result evidence. A covered/mature blank or fabricated sample forces `REWORK`/`BLOCKED`; an unavailable registry is reported as sample count zero and assigned to its owning round, never postponed silently to ROUND 15.
 16. An accepted Batch is not an online delivery until its reviewed source, Round evidence and CURRENT status are coherently committed, pushed and verified against live `origin/main` in the same delivery cycle under `AGENTS.md` §2. Preserve unaccepted work as `LOCAL_ONLY`; a documentation-only push does not make its source visible to GitHub readers.
-17. Six complete C1-C6 delivery responsibilities use six separate local Codex delivery windows. Independent frontend F owns Experience across all six deliveries and executes only when dispatched; controller M retains review/integration/acceptance; W6 retains shared integration/runtime/release ownership. C2 alone owns product GPU training. Historical combined C3/C5 and Cloud W3/W5 handoffs remain provenance only and do not create a second queue. No ten-worker target. Report actual capacity/activity, preserve explicit pauses and genuine dependencies.
+17. C1–C6/W1–W6 retain engineering source assignments across the five Architecture product rounds. F owns Experience, M review/integration/acceptance, W6 shared integration/runtime/release, and C2 owned training source. Roles do not prescribe concurrent window count, product phases or models. Actual execution is the PO decision with dated readback; historical combined C3/C5 and Cloud W3/W5 remain provenance, not another queue.
 18. Chinese, English and Korean are product-surface commitments, not merely Public Website copy. Apply the sole Experience Constitution's per-screen three-language and responsive/accessibility gate to every promised operational surface; unverified Korean UI is an explicit gap, never a silently dropped requirement.
 
 ### Product Owner requirement routing check
@@ -242,9 +230,9 @@ mention alone cannot be marked implemented.
 | Real permitted user E2E, operable page, Evidence Trace/Return and honest failure/recovery every related Round | sole Real Delivery Overlay; Experience Constitution; current Round Charter |
 | Data/source legality, secrets, version compatibility, backup/restore/deletion, tenant lifecycle and commercial operations | Real Delivery Overlay §23; `COMMERCIAL_READY=NO` until its six gates pass |
 | Windows/macOS/iOS native targets after Website/Web closure, clean clone, cross-surface return, rollback, internal beta and release | this index ROUND 15; Real Delivery Overlay release matrix; platform-specific runtime evidence |
-| Codex role defaults: M/F Astra ultra; C1–C6 Sol 6.1 ultra; task Subagent Luna max; Product Owner manual window/spawn selection overrides defaults; M idle waits | Current AGENTS + `.codex/model-routing.toml`; historical workstation/model routing is superseded |
+| Window/model/effort observations, never repository model assignments | Current direct PO choice + actual tool readback with verification time/evidence; unknown = NOT_VERIFIED; historical defaults/config values retained without dispatch authority |
 
-### 2026-10-09 data-to-business upgrade: existing owners, one C1 executor
+### 2026-10-09 data-to-business upgrade: retained source responsibility and dependencies
 
 Global §10 holds the complete direct PO requirement and source/function targets;
 this mapping is navigation, not a second architecture or new window dispatch.
@@ -360,7 +348,7 @@ This disposition freezes where work starts; it does not freeze code. Each delive
 
 ### Current Collector platform-convergence ownership — Product Owner 2026-10-07
 
-2026-10-08定向DDD执行补充：本索引的Owner行和既有caller/contract就是限界上下文与上下文映射入口；不建立新的DDD台账。仅对当前任务实际暴露的名称/身份、规则、映射、越界调用或状态/来源传递问题，由当前唯一业务窗口修复原Owner/兼容层，保留Permission/Evidence/Canonical及全部功能。F消费合同，不在界面重定义业务；M处理跨Owner冲突。正向操作、越界拒绝、身份/版本/来源连续性及不退化沿原Gate验证；无当前成果收益则DEFER。
+2026-10-08定向DDD执行补充：本索引的Owner行和既有caller/contract就是限界上下文与上下文映射入口；不建立新的DDD台账。仅对当前任务实际暴露的名称/身份、规则、映射、越界调用或状态/来源传递问题，由当前实际获准的对应源码Owner修复原Owner/兼容层，保留Permission/Evidence/Canonical及全部功能。F消费合同，不在界面重定义业务；M处理跨Owner冲突。正向操作、越界拒绝、身份/版本/来源连续性及不退化沿原Gate验证；无当前成果收益则DEFER。
 
 The current platform program is not capped at the six primary acceptance platforms. C1 owns universal platform acquisition through the existing one Collector; C6 owns shared runtime/integration/release; F owns the single platform-recovery Experience; M accepts the cross-owner result. The absence of official/partner API authorization before investment/product closure is an explicit current condition and does not lower the required data capability. Product-Owner-authorized owned R&D accounts and managed read-only sessions remain valid development sources under current safety/Permission rules. Future official/partner APIs are provider upgrades behind the same connector.
 
@@ -542,7 +530,7 @@ This section records the Product Owner-approved disposition of the historical re
 | D1 | Preserve platform-native facts and lineage, present them through task-specific LUMENIS composition, provide governed `Trace → Open Original → Return`, and keep ordinary source opening separate from SYS-06 controlled capture. |
 | D2 | The package's 51 rows converge into **EIGHT OWNER RESULT PACKAGES** below; never restore them as 51 parallel features or a historical product. |
 | D3 | Historical notes/comments/brands/relations/cases/web mentions remain immutable evidence, parser/regression, reconciliation or reacquisition inputs. **Production admission = 0** until current rights, source, identity, Scope, Permission, freshness and complete-field gates pass. |
-| D4 | Dependency order is Truth/Safety → Collector/durable task → CTH/BMP business → SourceTarget/Open Original → Shared result continuity → Owned AI → same-SHA release. M selects one business Owner at a time by actual dependency; W6 integration consumes that slot. F proceeds independently within shared-region reservations. This does not change the six outcome owners or impose numeric round order. |
+| D4 | Product outcomes follow the five Architecture rounds: SYSTEM → CTH → BMP → Shared → Agent Groups / owned AI. Required cross-domain source/Permission/runtime/Artifact dependencies close within the current round. C1–C6/F/M/W1–W6 retain source ownership; actual window/model choices belong to the Product Owner, with dated verified observations and shared-region reservations. No single-business-window restriction or extra product phase is imposed. |
 | D5 | Update only the existing Product Architecture, Experience, Source Owner Index, Real Delivery/CURRENT, screen/binding/action contracts and blocking validators. AGENTS remains the sole router and the current Only-One architecture is unchanged. |
 
 ### EIGHT OWNER RESULT PACKAGES
@@ -608,17 +596,17 @@ not proof of implementation. Supporting-owner transfer requires receiver ACK.
 The current 199 direct-reference rows are explicitly not the complete material
 universe; secondary references and unrecovered originals stay open under their
 existing owner rather than being silently omitted. The latest explicit PO research
-assignment allows M's assistants to read F-owned originals while F remains paused;
+dated assignment admitted M's assistants to read F-owned originals; it is not current F dispatch;
 it does not grant a second Experience authority or automatic frontend acceptance.
 
 Verified improvements are applied promptly through the existing Architecture and
 detailed capability contracts. For the running C1 outcome, Global §10 is the
 single detailed route for original/partial coverage, source-preserving deduplication,
 native time/role/metric facts and downstream source continuity. C1 implements its
-own closure and necessary runtime dependencies without a C6 slot switch. M sends
+own closure and necessary runtime dependencies through its approved source scope. M sends
 one exact published delta for a relevant changed rule, not per-function approvals.
 Do not wait for all research or training before adopting a justified current fix.
-Latest direct C1 instruction is subject-led batch acquisition → immediate existing Source/Evidence/Canonical processing → post-intake term analysis, with at most one native cover image per post. Global §10 owns its exact bounded order; full vocabulary/media processing is not a prerequisite, and current owner/identity/rights/coverage/recovery remain enforced. C1 also implements the necessary existing SYSTEM Permission/maintenance-principal internal READ/ANALYZE binding for that post-intake purpose. DATA_IMPORT alone is insufficient; pin each source/hash/version/scope, recheck revocation, preserve original rights, and use existing derived-version/write gates. Reporting/SavedWork business source-use checks are separate consumers and must not be weakened or fed a fabricated user identity. No C6 slot switch or per-function approval is required for this already assigned bounded chain.
+The retained C1 capability instruction is subject-led batch acquisition → immediate existing Source/Evidence/Canonical processing → post-intake term analysis, with at most one native cover image per post. Global §10 owns its exact bounded order; full vocabulary/media processing is not a prerequisite, and current owner/identity/rights/coverage/recovery remain enforced. C1 also implements the necessary existing SYSTEM Permission/maintenance-principal internal READ/ANALYZE binding for that post-intake purpose. DATA_IMPORT alone is insufficient; pin each source/hash/version/scope, recheck revocation, preserve original rights, and use existing derived-version/write gates. Reporting/SavedWork business source-use checks are separate consumers and must not be weakened or fed a fabricated user identity. These responsibilities do not dispatch C1 or C6; PO decides actual work. An admitted, authorized owner needs no per-function approval inside this existing bounded chain.
 
 Local C2 material-helper corrections are reading/admission preparation only;
 the existing current-context/one admission entry selects inputs, while its old
@@ -667,7 +655,7 @@ contracts, not permission to bypass real dependencies or create parallel owners.
 | C5 | Inputs: direct C5/importer/research/shared manifest rows plus second-level references assigned through the material route, approved files/web/audio/video, permitted source refs and versioned constraints. Source: `lumenis/importer/documents.py`, `lumenis/shared/reporting/source_brief_job.py`, `saved_work.py`, `artifact.py`, citation/research/reporting/notification/shared-preference owners and research routes RC01-RC14. | Deliver material import/library/search/precise citation, article-by-article research intake, useful research/report results, versioned Artifact/SavedWork, notifications/preferences and save/revise/reopen/export/rollback with exact source/rights/parent/digest/revocation lineage. The current 199-row manifest (191 original plus 8 supplements) is not the full corpus; official-site 4,797 URL inventory and dated 723+18 unread-body entries remain obligations until actually read/adopted or explicitly disposed. Dependencies: C1 source truth, C2 owned analysis only when bound, C3/C4 consumers and C6 shared Core/API/DB. Acceptance J7, U16/U17/U24 and mapped R gates; unread/unknown-rights/unadopted material remains explicit and cannot be called absorbed. |
 | C4 | Inputs: 71 direct C4 manifest materials, real Brief/inherited Evidence, permitted media and actual resource constraints; keep 12 editing exercises separate. Source: `lumenis/shared/content_creation/`, Timeline/Artifact/render owners and `podcast/`; research routes RC-08/09. | Deliver separate editable pitch, genuinely rendered/editable video and playable/listenable podcast. Read assigned V2/audio/media methods with exact visual/audio read intervals and rights. Verify timeline pan vs seek, ruler/track/playhead, edit/replace/render, save/export/reopen/cancel/recovery, human review and unaffected-part integrity. Dependencies: C3/C5 source inheritance and C6 runtime/FFmpeg/player; F interface work remains F-owned. Acceptance J4–J6/U13–U15, separate normal results for all three. |
 | C6 | Inputs: exact accepted C-owner deltas, source/runtime/DB/API/build/Artifact identity and existing test/runtime receipts. Source: `app.py`, `lumenis_app_api.py`, `experience_runtime.py`, `collector_status_api.py`, `lumenis/blueprint.py`, `lumenis/adapters/collector_service.py`, Shared Database/Evidence, FFmpeg/supervisor and deployment/release owners in §3. | Dependencies: real owner contracts and exact path reservations; preserve dirty/untracked work. Deliver one same-SHA integrated runtime/package with actual API/surface operation, failure/cancel/restart/rollback recovery, required gates and final evidence. For collection, converge existing canonical and V4 callers on one Collector/Task/status/write contract while preserving unique legacy behavior; bind task checkpoints through HTTP and distinguish task query checkpoints from platform-native page cursors. F-reported API-to-Flutter projection/POST issues remain F-owned and were not inspected by M. Developer mode remains user-deferred and recorded, not a blocker. Acceptance J8/U21–U25 and mapped R gates; code/build/health alone cannot prove operation or release. |
-| F | Independent four-surface Experience responsibility; detailed front-end source/input remains F-owned. Sole contract: Experience Constitution section 38 and screen-specific contracts maintained alongside direct implementation. F owns Experience across all six deliveries and, when dispatched, owns existing Flutter/Website implementation, real API binding, screen/interaction/state behavior, responsive composition, zh-CN/en/ko localization and accessibility. | Deliver the complete approved Website/Web/Desktop/Mobile experience for every mapped capability, including loading/empty/error/denied/offline/cancel/retry/recovery states, saved-work continuity and user-operable flows. F does not redefine backend truth, Owner, Permission or business acceptance; its complete output and acceptance remain separately owned and feed M/W6 integration. |
+| F | Independent four-surface Experience responsibility; detailed front-end source/input remains F-owned. Sole contract: Experience Constitution section 38 and screen-specific contracts maintained alongside direct implementation. F owns Experience across the five architecture product rounds and, when dispatched, owns existing Flutter/Website implementation, real API binding, screen/interaction/state behavior, responsive composition, zh-CN/en/ko localization and accessibility. | Deliver the complete approved Website/Web/Desktop/Mobile experience for every mapped capability, including loading/empty/error/denied/offline/cancel/retry/recovery states, saved-work continuity and user-operable flows. F does not redefine backend truth, Owner, Permission or business acceptance; its complete output and acceptance remain separately owned and feed M/W6 integration. |
 
 ### C1/C6 collector source audit — verified repair target, not a new owner
 
@@ -688,7 +676,7 @@ M rechecked these findings against the pinned source `52cd770cde458f73f99e407301
 
 ### 2026-10-08 前端审计与工具维护增补
 
-按最新PO直接构建真实前端，依既有Experience/ScreenSpec/Owner合同随源码更新设计决定与验收证据；不等待独立设计稿/Figma或M逐屏设计审批。原DESIGN_EXPLORATION/DESIGN_READY保留为真实设计审核记录，不再作为强制编码阶段；实现与验收据实记录，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；各窗 fresh admission 后执行既有完整成果，本轮仅同步派工规则，不提升运行或用户验收状态。
+按最新PO直接构建真实前端，依既有Experience/ScreenSpec/Owner合同随源码更新设计决定与验收证据；不等待独立设计稿/Figma或M逐屏设计审批。原DESIGN_EXPLORATION/DESIGN_READY保留为真实设计审核记录，不再作为强制编码阶段；实现与验收据实记录，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。C1–C6/F/M/W1–W6 保留原源码责任和完整成果；实际开工、暂停、恢复、模型与推理档位由 Product Owner 决定，本文件只记录有时间和证据来源的已核实事实，不设单业务窗口限制；各窗 fresh admission 后执行既有完整成果，本轮仅同步派工规则，不提升运行或用户验收状态。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
@@ -713,13 +701,13 @@ M rechecked these findings against the pinned source `52cd770cde458f73f99e407301
 
 ### 2026-10-08 日期与缺值更正的后续落实
 
-C1沿`acquisition_plan.py`和`adapters/scheduling/prelaunch_baseline.py`移除全局固定起点校验/默认/seed生成，复用原时间和计划版本Owner，保留用户显式范围及旧receipt可回读、不重放。C5/Shared Evidence负责原始时间和缺值原因；C3/Metric负责维度定义、单位、范围与可比性；F界面保留维度并显示“—”及可理解原因/最后核验；C2不能据缺值补造事实。这些架构责任不自动恢复暂停窗口。当前C1完成其获准闭环及必要调用方修复，跨Owner区域沿既有M/W6预约交接，M审阅与集成；F/C2–C6保持暂停。具体合同和已定位源码缺口见Global§10；源码、运行和验收仍须各自证据证明。
+C1沿`acquisition_plan.py`和`adapters/scheduling/prelaunch_baseline.py`移除全局固定起点校验/默认/seed生成，复用原时间和计划版本Owner，保留用户显式范围及旧receipt可回读、不重放。C5/Shared Evidence负责原始时间和缺值原因；C3/Metric负责维度定义、单位、范围与可比性；F界面保留维度并显示“—”及可理解原因/最后核验；C2不能据缺值补造事实。这些架构责任不自动恢复暂停窗口。当前C1完成其获准闭环及必要调用方修复，跨Owner区域沿既有M/W6预约交接，M审阅与集成；F/C2–C6当前执行状态需PO决定及事实核验。具体合同和已定位源码缺口见Global§10；源码、运行和验收仍须各自证据证明。
 
 ### 2026-10-08 逐步交付与逻辑接续定位
 
 详细呈现合同唯一归Experience §38；源码取证和J/U覆盖见 `evidence/round-15/PRODUCT-LOGIC-REVIEW-20261008.md`。后续C2/C6/F先接`ai01_repository.dart`/AI-01真实提交与`ai_gateway/core.py`已有服务执行缺口，再沿同一Task增加语义分段和取消/恢复；不能把body收齐后打字动画当作流式结果。C2负责表现提案与准确度，F复用原生组件，C6按实际合同补齐run/块/版本与顺序；不新造组件注册表或运行时。
 
-C3/C5/C4原职责复用已有SourceBrief/creation-upstream/SavedWork，补业务决策成果到制作的固定版本入口和逐条引用；C4补编辑Timeline→实际渲染→Artifact→重开，C5补引用影响与各自Owner的回滚衔接。当前C1自己改旧日期并接持久采集receipt/原生cursor/兼容入口，M只按既有预约处理跨Owner交接、审阅与集成，不切换C6。这些是原完整成果的依赖顺序，不增加另一组任务编号。具体源码行和未验证范围在同一审阅记录；实际派工依AGENTS最新PO路由，当前F/C2–C6仍暂停，架构归属与历史复工记录不构成当前复工。原合并本地窗口现承接C3，新建本地窗口承接C5，精确身份只依AGENTS当前绑定。
+C3/C5/C4原职责复用已有SourceBrief/creation-upstream/SavedWork，补业务决策成果到制作的固定版本入口和逐条引用；C4补编辑Timeline→实际渲染→Artifact→重开，C5补引用影响与各自Owner的回滚衔接。当前C1自己改旧日期并接持久采集receipt/原生cursor/兼容入口，M只按既有预约处理跨Owner交接、审阅与集成，不切换C6。这些是原完整成果的依赖顺序，不增加另一组任务编号。具体源码行和未验证范围在同一审阅记录；实际派工依AGENTS最新PO路由，各窗口当前状态由PO决定并核验，架构归属与历史复工记录不构成当前派工。原合并本地窗口现承接C3，新建本地窗口承接C5，精确身份只依AGENTS当前绑定。
 
 ### 2026-10-08 受控电脑与内置浏览器接续
 
@@ -765,7 +753,7 @@ C3/C5/C4原职责复用已有SourceBrief/creation-upstream/SavedWork，补业务
 | M engineering tools; `.codex/local_workflow.py`, `scripts/local_development.ps1`, `.vscode/` | Deterministic Tasks, scoped static/build/format/recovery and real private receipts | Four-language local completion, syntax/type diagnostic recovery and real Dart definition navigation OBSERVED; editor path/PS host/Dart exclusions repaired; historical App test-source errors retained; tools do not close a product Job |
 | SYSTEM Browser / C6 and F SYS-06; M bounded integration of `ai_browser_runtime.py`, `ai_browser_api.py`, existing Core client/repository/screen/transport | Exclusive short lease and frame/target/revision/viewport binding; manual navigate/history/reload/scroll; server-listed visible-link selection with exact anchor re-resolution and pre-request main-document redirect checks; manual research-note Shared SavedWork save/list/reopen/revise; bounded isolated runtime entry | Server-authored Task/Run and source-use binding, safe remote authenticated Web, full captured-source Artifact/recovery and arbitrary click/input remain OPEN; manual notes are NOT_IMPORTED/NOT_VERIFIED/UNBOUND. Runtime evidence is in the existing M round-15 delivery, not implied by source. Paused Owner windows are not resumed. |
 | Same Browser owner; `lumenis/system/browser/runtime/browser_use_adapter.py` | Disabled optional readiness boundary only; no provider/model fallback | Server-owned Browser Task/Run and captured Source/use producers are absent; Collector queue leases and client task IDs cannot substitute. Then bind the existing typed owned Gateway, BaseChatModel/action bridge and enforced DNS/private-IP/redirect/WebSocket egress; no intelligent execution is accepted. |
-| Existing Agent/Task Runtime; `ai_task_engine.py`, `agent_runtime/agent_zero_gui_executor.py` | Disabled optional injected GUI executor contract; no parallel queue/database/runtime | No startup binder or implementation of its required `/api/lumenis/v1` worker protocol; stock Agent Zero APIs do not satisfy it. Independent manual GUI session and editable-document Artifact intake also remain open. Resource readback: 09:26 Beijing, no host Docker command, WSL Ubuntu stopped, 950 MiB free. No Docker/GUI runtime accepted; paused owners remain paused. |
+| Existing Agent/Task Runtime; `ai_task_engine.py`, `agent_runtime/agent_zero_gui_executor.py` | Disabled optional injected GUI executor contract; no parallel queue/database/runtime | No startup binder or implementation of its required `/api/lumenis/v1` worker protocol; stock Agent Zero APIs do not satisfy it. Independent manual GUI session and editable-document Artifact intake also remain open. Resource readback: 09:26 Beijing, no host Docker command, WSL Ubuntu stopped, 950 MiB free. No Docker/GUI runtime accepted; that historical observation does not establish current Owner dispatch. |
 | SYSTEM Gateway / C2; `lumenis/system/ai_gateway/core.py` | Explicitly authorized M cleanup: signatures/history retained, retired execution inert; owned functions unchanged | Owned model still NOT_BOUND; no new model/API/training authorization |
 | C2 Task analysis; `_execute_analysis`, `_owned_ai_failure_code` in `ai_task_engine.py` | V2 source-only preparation confirms AI-optional label/failure-gate mismatch; no repair claim | On explicit Owner restoration, implement real deterministic/manual analysis result separately from typed source-aware AI enhancement; verify actual task/save/reopen/recovery, not fabricated rule-based text |
 | C1/C3/C4/C5/C6/F existing contracts | Seven-domain normal-business no-AI requirement added to Architecture/Real Delivery/Experience | Each existing normal user chain must demonstrate permitted real inputs and results without inference; then separately measure AI gains; preserve all R/J/U scope |

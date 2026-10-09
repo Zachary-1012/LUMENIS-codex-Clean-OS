@@ -1,5 +1,41 @@
 # LUMENIS Product Architecture — CURRENT
 
+## 五轮架构产品闭环 — 2026-10-09 Product Owner 直接批准
+
+这是唯一产品交付轮次；C1–C6/W1–W6 是保留的工程源码职责，不是六轮产品交付，
+不构成单业务窗口限制或额外产品阶段。五轮也不新增五个 Codex 窗口。
+
+| 产品轮次 | 完整成果 | 保留的工程责任协作 |
+| --- | --- | --- |
+| 第一轮 SYSTEM | Core、Collector、Browser、Scheduler、DB、Evidence、Permission、Runtime 与恢复完整闭环 | C1/C2/C6 原源码责任，F 的实际界面；M 审阅与集成裁决 |
+| 第二轮 CTH | 商业主体监测、分析、事件、风险、决策、行动、结果及报告完整闭环 | C3 业务规则，按原合同消费 C1/C2/C5/C6 和 F |
+| 第三轮 BMP | 品牌、市场、竞品、创作者、传播、Campaign、执行及评价完整闭环 | C3 业务规则，按原合同消费 C1/C2/C4/C5/C6 和 F |
+| 第四轮 Shared | 真实资料导入、研究、提案、视频、播客、Artifact、版本、导出及评价完整闭环 | C4/C5 原制作与资料责任，C1/C2/C3/C6/F 按原边界协作 |
+| 第五轮 Agent Groups / 自研 AI | 在唯一 AI Gateway 与 Agent Runtime 内完成智能增强，并关闭四入口跨领域集成与最终产品验收 | C2 智能责任，C1/C3/C4/C5/C6/F 按原合同集成；M 验收 |
+
+每轮退出必须有真实用户操作、实际有用成果、保存/修订、重开/恢复、来源与权限核验、
+适用的真正产品 E2E；适用 Outcome/Evaluation、三层 Gate 和最终 PO 重复操作保留。
+当前轮的跨域必要依赖必须在当前轮修复，不能以工程 Owner 或后轮名义延期。
+四入口继续指 CTH、BMP、Shared、SYSTEM，不把 Agent Groups 变成第五个产品入口。
+基本业务先证明无 AI 正常链，智能增强收益单独证明；前四轮的可选 AI 缺失不能阻断基础任务，
+第五轮既定智能要求仍须真实兑现，不能借 AI 可选原则取消。
+
+保留 J1–J8、R01–R15、U01–U25、44 屏及原资料/设计/历史证据全部要求。
+Website / Web Workspace 实际业务优先；Windows/macOS Desktop 与 iOS Companion
+专项验收后续完成，不以本次文档提交宣称 SYSTEM、原生端或全产品闭环。
+不新增费用、账号、模型服务、训练或部署；禁止单元/集成及换名模块套件，
+保留编译、静态、安全、数据一致性与真实用户 E2E。
+
+Product Owner decides actual window start, pause, resume, model and reasoning effort.
+GitHub and local CURRENT files record verified observations only; every observation
+includes its verification time and evidence source. Unknown window/model/effort is
+`NOT_VERIFIED`, never inferred from historical PAUSED/RUNNING, resume conditions,
+role defaults or configuration. The existing live ledger is a factual continuity
+record, not an autonomous dispatcher. A current direct PO instruction is required
+for scheduling; publishing this rule starts no window. Owner, Permission, source
+rights, data, cost, shared-write reservations and real acceptance remain binding.
+
+
 > Status: **CANONICAL / SOLE PRODUCT ARCHITECTURE AUTHORITY**
 > Product Owner approved blueprint: 2026-10-04
 > Scope: CTH / BMP / Shared / SYSTEM; one product, four surfaces.
@@ -24,7 +60,7 @@ the existing Agent Runtime and never become another business or security owner.
 Desktop on Windows/macOS, and Mobile on iOS share the same Core.
 Platform availability and acceptance are verified separately from this target.
 
-2026-10-08 最新 PO 顺序：优先闭环 Public Website + Web Workspace；Desktop App/Mobile Companion 专项实现、打包与实机验收后置至前两端闭环以后。保留全部四端/44屏/官网家族及 R/J/U 能力，不删旧成果、不将后置项记为通过。当前 Web 所需业务与 Core/SYSTEM 能力仍完整推进，沿既有 Owner/Permission/Evidence 与真实保存、修改、重开、恢复、评价链验收。既有三层 Gate 按本轮表面记录，四端完整 Goal/Release 不因本轮完成自动关闭。具体表面边界见 Multi-Surface Decision；M+独立F+唯一业务窗口、零新增费用不变。
+2026-10-08 最新 PO 顺序：优先闭环 Public Website + Web Workspace；Desktop App/Mobile Companion 专项实现、打包与实机验收后置至前两端闭环以后。保留全部四端/44屏/官网家族及 R/J/U 能力，不删旧成果、不将后置项记为通过。当前 Web 所需业务与 Core/SYSTEM 能力仍完整推进，沿既有 Owner/Permission/Evidence 与真实保存、修改、重开、恢复、评价链验收。既有三层 Gate 按本轮表面记录，四端完整 Goal/Release 不因本轮完成自动关闭。具体表面边界见 Multi-Surface Decision；零新增费用不变；实际窗口由PO决定，不再固定单业务窗口拓扑。
 
 
 ## 2026-10-09 AI 非依赖原则与分层验收
@@ -43,13 +79,13 @@ Platform availability and acceptance are verified separately from this target.
 
 第一优先：真实来源→规范数据→确定性计算/人工操作→有用成果→保存/修订/重开/恢复。第二优先：以同一真实任务证实 AI 增益。第三优先：另获许可的数据、训练、评估和晋升。保留全部批准的增强范围，不把其未完成记作已完成；不能借模型缺失延迟基础任务。现有 REAL DELIVERY CARD 分别记录 no-AI 基础结果和 AI 增强状态，不新增验收体系或第二执行合同。
 
-A0/B0/C0 V2 本轮仅准入准备：外部模型条款/默认关闭设计审阅、数据卡与上游/Teacher 权利审阅、自研 AI 现状及非 AI 任务断点核查。A1 外部 API、B1 数据下载导入、B2 训练及模型部署各需独立授权，C2 未恢复。包内 C1 RUNNING 是旧快照；最新直接 PO 已暂停 C1。A0 方案编号不表示 Agent Zero，也不表示 C1 业务窗口。待核实的 analysis_agent 全任务失败不能靠改状态或规则文字冒称修复。
+A0/B0/C0 V2 本轮仅准入准备：外部模型条款/默认关闭设计审阅、数据卡与上游/Teacher 权利审阅、自研 AI 现状及非 AI 任务断点核查。A1 外部 API、B1 数据下载导入、B2 训练及模型部署各需独立授权。包内 C1 RUNNING 与旧暂停回执均为有日期的历史快照，不决定当前开工。A0 方案编号不表示 Agent Zero，也不表示 C1 业务窗口。待核实的 analysis_agent 全任务失败不能靠改状态或规则文字冒称修复。
 
 ### 当前语义与兼容边界（2026-10-07 校准）
 
 2026-10-08 PO定向DDD增补：仅对当前真实任务的名称/身份冲突、规则重复矛盾、跨模块映射错误、旧调用越界、状态/结果/来源传递丢失，采用统一领域语言、既有CTH/BMP/Shared/SYSTEM限界上下文及现有接口上下文映射。Subject、BrandFocus、Source、Evidence、Brief、Artifact、Outcome在各当前上下文保持既定含义/身份/状态/行为；兼容名称由原解析器转换，不全仓重命名、迁库或新建统一对象模型。业务规则与状态变更归现有Owner，Flutter/API Controller/DB工具只是调用方。正常代码不因形式重构。
 
-Collector→Canonical→CTH/BMP→SourceBrief→SavedWork/Content Project→Evaluation沿既有合同传递身份、权限、来源用途、状态、版本及错误，不让下游猜测；只修真实受影响调用/适配层。当前唯一业务Owner完成具体问题修复、正常操作恢复、跨界正向/越界回归和原功能保持；M只处理跨Owner冲突及成果验收，F独立消费真实合同。保留原三层Gate；不新建DDD阶段、审计窗口、框架或验收体系。不能直接改善当前结果正确性、可用性或效率的调整按既有规则DEFER。
+Collector→Canonical→CTH/BMP→SourceBrief→SavedWork/Content Project→Evaluation沿既有合同传递身份、权限、来源用途、状态、版本及错误，不让下游猜测；只修真实受影响调用/适配层。当前实际获准的对应源码Owner完成具体问题修复、正常操作恢复、跨界正向/越界回归和原功能保持；M只处理跨Owner冲突及成果验收，F独立消费真实合同。保留原三层Gate；不新建DDD阶段、审计窗口、框架或验收体系。不能直接改善当前结果正确性、可用性或效率的调整按既有规则DEFER。
 
 本节澄清已有产品定义，不迁移存储 ID、增加 Owner 或改变机器治理合同。
 
@@ -198,11 +234,11 @@ P0执行入口裁决已经收敛，不再作为单独待办批次：`AGENTS.md` 
 
 第二批：视频与播客完整正常路径。合并仍在本地的必要媒体实现，解决播放、横向时间轴、实际渲染/试听、版本与Artifact绑定。与F完成对应端的实际操作；不等待自有训练先验证确定性的编辑和恢复。
 
-独立能力链：自有AI实际训练与服务；研发窗口按AGENTS当前唯一业务席位调度。现有/免费资源优先，许可允许的基础权重、自有训练部署、实际step/loss/checkpoint/重载/独立语义评价。以真实CTH/BMP/创作结果验收；Codex Cloud和免费临时GPU不冒充上线推理服务。开发电脑关闭、Codex停止、外部模型API禁用时，承诺的产品运行必须由序境自有运行环境完成；部署与资源可用性要实际证明。
+独立能力链：自有AI实际训练与服务；按五轮架构及必要依赖落实，实际窗口由PO决定，不设固定业务席位。现有/免费资源优先，许可允许的基础权重、自有训练部署、实际step/loss/checkpoint/重载/独立语义评价。以真实CTH/BMP/创作结果验收；Codex Cloud和免费临时GPU不冒充上线推理服务。开发电脑关闭、Codex停止、外部模型API禁用时，承诺的产品运行必须由序境自有运行环境完成；部署与资源可用性要实际证明。
 
 第三批：跨端统一运行与发布。一个同版本成果在承诺的四入口衔接；不要求四端相同布局。验证启动/崩溃/取消/撤权/重试/重开/恢复，完成同SHA Product/App门禁、备份回滚与打包。工程可用后由你重复完成核心任务，记录耗时、成本、正确性、修改成本与人工补救。
 
-此顺序按真实依赖切换唯一业务窗口，F独立继续，不要求先完成全部中国/全球目录才验证业务，也不能用几个代表性任务冒充覆盖完成。
+此顺序按五轮架构成果及真实依赖推进，窗口调度由PO决定；不要求先完成全部中国/全球目录才验证业务，也不能用几个代表性任务冒充覆盖完成。
 
 
 
@@ -377,7 +413,7 @@ LUMENIS production repositories = 1
 
 ### 2026-10-08 前端审计与工具维护增补
 
-按最新PO直接构建真实前端，依既有Experience/ScreenSpec/Owner合同随源码更新设计决定与验收证据；不等待独立设计稿/Figma或M逐屏设计审批。原DESIGN_EXPLORATION/DESIGN_READY保留为真实设计审核记录，不再作为强制编码阶段；实现与验收据实记录，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。本规则更新不提升运行或用户验收状态。
+按最新PO直接构建真实前端，依既有Experience/ScreenSpec/Owner合同随源码更新设计决定与验收证据；不等待独立设计稿/Figma或M逐屏设计审批。原DESIGN_EXPLORATION/DESIGN_READY保留为真实设计审核记录，不再作为强制编码阶段；实现与验收据实记录，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。C1–C6/F/M/W1–W6 保留原源码责任和完整成果；实际开工、暂停、恢复、模型与推理档位由 Product Owner 决定，本文件只记录有时间和证据来源的已核实事实，不设单业务窗口限制；实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING。本规则更新不提升运行或用户验收状态。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
@@ -399,7 +435,7 @@ LUMENIS production repositories = 1
 
 竞品机制沿原Owner增强：多源可比信号/事件关系/解释/预警→C1/C3/C5；创意审阅/版本差异/局部修订/审批复用→C4/C5；文本与真实音视频双向时间定位→C4；按需工具/引用/checkpoint恢复→C2/C5。来源、方法及可证明的任务收益写回现有验收，不把竞品宣传当事实或追平证据。
 
-本次为规则采用；Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位，实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING，并依现有 Owner 与门禁执行。逐项事实状态与两层正常用户任务验收归 Real Delivery Overlay；界面、可编辑设计及 GPT/Apple/Tesla 操作对标归Experience §38。原用户要求/资料/历史失败证据保留，未经明确后置的功能不删除。规则采用和派工均不证明实现、运行或用户验收完成。
+本次为规则采用；C1–C6/F/M/W1–W6 保留原源码责任和完整成果；实际开工、暂停、恢复、模型与推理档位由 Product Owner 决定，本文件只记录有时间和证据来源的已核实事实，不设单业务窗口限制，实际派发/准入以本地ledger和真实工具回执为准，各窗 fresh admission 后才进入 RUNNING，并依现有 Owner 与门禁执行。逐项事实状态与两层正常用户任务验收归 Real Delivery Overlay；界面、可编辑设计及 GPT/Apple/Tesla 操作对标归Experience §38。原用户要求/资料/历史失败证据保留，未经明确后置的功能不删除。规则采用和派工均不证明实现、运行或用户验收完成。
 
 ### 2026-10-08 采集范围与数据可得性
 
@@ -435,6 +471,6 @@ LUMENIS production repositories = 1
 
 Global §10 记录本轮完整直接 PO 命令及原实现落实点：采集授权/原始保留、来源有效性、用途权限、身份候选/确认、业务分析分开，合法未绑定原始观察在原 Source/隔离链持久可恢复，不自动成为主体事实。Shared 保持同一 ID/use/时间/版本/状态；CTH 使用已核验时地关系与反馈，BMP/SH-01 Discover 区分原生热度/样本/推断；Research/Reporting/Evaluation 将可检索引用的真实来源接入同一 SourceBrief/SavedWork/Content Project 的保存、关闭重开、修订、追溯和恢复。SYSTEM 继续原 Scheduler/Runtime/Browser/Permission/Gateway，不因 AI 不可用停止合法确定性工作。
 
-C1 是当前完整业务链的唯一执行窗口；其他架构 Owner 和暂停不变，实际跨 Owner 写入由 M 既有预约有界交接，M 同时继续原非 C1 候选/未集成成果和完整资料采用。仅修数据链影响的现有 Web 消费与状态/来源返回，不重做44屏、不新增架构或队列。六平台各自实证与阻塞分列，至少一个获准平台通过完整真实操作链；同口径吞吐、延迟、覆盖缺失、身份/数据错误、恢复、成果保存重开须有真实数据，无旧基线写 BASELINE NOT VERIFIED。旧逻辑先追有效 caller 再收敛，全部历史/原件/有效兼容保留。
+C1 保留采集链及获准必要依赖的源码责任；当前窗口执行状态不得由本蓝图推断。跨 Owner 写入仍由 M/W6 既有预约有界交接；原非 C1 候选、未集成成果及完整资料采用继续保留，实际执行需当前PO指令。仅修数据链影响的现有 Web 消费与状态/来源返回，不重做44屏、不新增架构或队列。六平台各自实证与阻塞分列，至少一个获准平台通过完整真实操作链；同口径吞吐、延迟、覆盖缺失、身份/数据错误、恢复、成果保存重开须有真实数据，无旧基线写 BASELINE NOT VERIFIED。旧逻辑先追有效 caller 再收敛，全部历史/原件/有效兼容保留。
 
 本规则采用不证明源码已改、运行已加载或用户已验收；最终 A–F 成果、OBSERVED/INFERRED/NOT VERIFIED 和 ACCEPTED 条件归既有 Real Delivery Overlay，保持完整 R/J/U 和当前编译/静态安全数据/真实E2E，不执行模块单元/集成套件。

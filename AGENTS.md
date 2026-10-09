@@ -11,25 +11,32 @@ execution instructions.
 
 ## 1. Authority
 
-### Current PO state — C1 paused; AI-independent business first — 2026-10-09
+### 最新 PO：五轮架构交付与窗口/模型事实化 — 2026-10-09
 
-Latest direct PO: C1 is paused with source/Goal/receipts preserved; F and C2-C6
-remain paused. M continues the already authorized tool/browser integration,
-CURRENT reconciliation and A0/B0/C0 preparation only. Preparation does not resume
-C2, grant external AI APIs, download training corpora, train/deploy a model or
-change the approved foundation/provider policy. Local LIVE_DISPATCH records
-actual scheduling; repository publication is not a running-window claim.
+本次 M 唯一优先任务是同步 PO 批准的六份治理/README 文件；不修改业务源码，
+不启动、暂停或恢复任何研发窗口。此前未完成的工具/浏览器、资料采用、候选收敛、
+采集及其他完整 Goal 保留，不能把本次治理发布算作它们完成，也不据此自动续做源码。
 
-Every normal business workflow must work without any model, AI API, GPU or
-inference service. AI-only actions may be UNAVAILABLE, but cannot block existing
-deterministic computation, manual editing/decisions, save/export/reopen/recovery.
-Verify the no-AI useful business outcome first and AI gains separately through
-the existing R/J/U and Gate structure; preserve rights/Permission/data guards.
-The seven-domain requirements live in Product Architecture and Real Delivery.
-This is a required outcome, not a claim that every current path is fixed.
-Approval: `00-GOVERNANCE/evidence/approvals/PO-20261009-AI-OPTIONAL-PREPARATION-C1-PAUSE.json`.
+产品交付唯一顺序：SYSTEM → CTH → BMP → Shared → Agent Groups / 自研 AI。
+详细完整退出条件归唯一 Product Architecture 的“五轮架构产品闭环”及 Real Delivery；
+C1–C6/F/M/W1–W6 只保留原工程源码责任，不形成六轮产品交付、单窗口限制或额外阶段。
+当前轮需要的跨域依赖须在当前轮关闭，不能推到后轮。
 
-### Retained verification policy and C1 scope (execution waits for PO resume)
+Product Owner decides actual window start, pause, resume, model and reasoning effort.
+GitHub and local CURRENT files record verified observations only; every observation
+includes its verification time and evidence source. Unknown window/model/effort is
+`NOT_VERIFIED`, never inferred from historical PAUSED/RUNNING, resume conditions,
+role defaults or configuration. The existing live ledger is a factual continuity
+record, not an autonomous dispatcher. A current direct PO instruction is required
+for scheduling; publishing this rule starts no window. Owner, Permission, source
+rights, data, cost, shared-write reservations and real acceptance remain binding.
+
+所有基础业务在没有模型、AI API、GPU 或推理服务时仍须正常完成；AI 不生产
+Canonical 事实。先验无 AI 有用成果，再分别验 AI 收益；Permission/权益/数据保护不变。
+历史审批 `00-GOVERNANCE/evidence/approvals/PO-20261009-AI-OPTIONAL-PREPARATION-C1-PAUSE.json`
+及其他暂停/恢复/模型回执保留为有日期的事实来源，不再作为现行调度命令。
+
+### Retained verification policy and C1 source responsibility (not dispatch)
 
 The latest direct Product Owner instruction formally removes unit and integration
 tests from mandatory development, merge, acceptance and release conditions.
@@ -49,37 +56,27 @@ Change/Owner Closure/Release remain distinct under the machine contract; only
 checks actually retained and executed may pass. Earlier unit/integration mandates
 in historical receipts are provenance only, not current instructions.
 
-M continues current policy/tool/browser integration and non-C1 material/source
-convergence. C1 is paused by the latest direct PO, retaining full J1/U01-U05
-and mapped R scope and the manual GPT-6.1 Sol/ultra selection; no default/speed
-change. After an explicit resume, C1 itself closes six-platform collection,
-original content/media intake, Source/Evidence/Canonical, retrieval and
-continuous refresh/recovery, including necessary Core/Scheduler/Permission
-repairs under existing W6 reservations. Do not switch dependencies to C6.
+C1 retains full J1/U01-U05 and mapped R collection responsibilities, including
+necessary Core/Scheduler/Permission dependencies through existing reservations.
 Registry growth, task dates/no universal start date, honest dimensions, cover-only
 intake with later media understanding, Source rights and protected identities
-remain mandatory; detailed behavior is owned by Global §10 and the Collector
-contract. Permission, in-flight/process ownership, rollback and unrelated work
-are protected; no forced unknown processes, fabricated grants or new costs.
-F/C2-C6 remain paused. Website/Web closure is first; Windows/macOS and iOS
-follow. Topology is eligibility, not dispatch: only actual fresh admission and
-tool/ledger evidence establish RUNNING. M's original research/adoption includes
-DeepSeek/ancestor inputs and upgraded plans; training needs its separate grant.
-Earlier resume provenance: `00-GOVERNANCE/evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json`; latest pause/AI-independent correction is above.
+remain mandatory under Global §10 and the Collector contract. Source ownership,
+in-flight/process protection, rollback and unrelated work remain protected.
+Website/Web business closure is first; Windows/macOS and iOS specialist acceptance
+follows. DeepSeek/ancestor inputs, upgraded plans and unfinished material adoption
+remain retained; training/API/corpus/deployment need their existing separate grants.
+Historical C1 resume/pause receipts retain their dates and evidence, not dispatch.
 
-## Current execution topology — M + F + C1-C6 eligible; live dispatch follows Product Owner instruction
+## Engineering responsibilities and factual window observations
 
-The Product Owner's latest 2026-10-08 direct instruction sets **M + independent
-F + one current business window selected from C1-C6**. All six business roles
-retain their complete owned outcomes, protected source and Goals; M selects and
-switches the single business slot by real dependency and safe frozen handoff.
-W6 shared integration consumes that same slot. F continues independently with
-the selected business window, subject to shared-region reservations. No window
-may invent a second owner, architecture, data
-store, model service or acceptance standard. M does not duplicate window work:
-it freezes current truth, resolves cross-window conflicts, reviews/accepts or
-returns outcomes, and controls integration/publication with W6. OpenCode is
-shelved and is not a current execution path or fallback.
+C1–C6, F, M and W1–W6 retain their existing source responsibilities and complete
+requirements. Product outcome rounds are the five Architecture rounds; engineering
+roles are neither rounds nor an automatic concurrency cap. M reviews conflicts,
+integration and acceptance through W6 shared-write reservations. F retains frontend
+ownership without a historical serial/independent dispatch mandate. Do not invent
+another product, owner, data store, model service or acceptance standard.
+Actual scheduling belongs to the Product Owner, with current evidence readback.
+OpenCode remains shelved, not an execution fallback.
 
 ### 2026-10-08 latest surface priority: Website and Web first
 
@@ -87,8 +84,7 @@ The Product Owner now requires **Public Website + Web Workspace closure first**.
 Desktop App and Mobile Companion specific implementation, packaging and
 device acceptance follow after those two surfaces close. Preserve their complete
 requirements, source, editable designs and evidence as deferred work; do not delete
-or mark them accepted. The existing M + independent F + one business window
-schedule and zero-new-cost boundary remain. F and the selected Owner focus their
+or mark them accepted. The zero-new-cost boundary remains. Authorized owners focus their
 existing Goals on the Website/Web result first; no extra task queue or framework.
 
 Complete all approved Website content families and applicable Web screen/workflow
@@ -128,62 +124,35 @@ not removed by this native-client decision. All remaining capabilities, 44 scree
 Website families and applicable R/J/U acceptance continue. Existing historical
 platform lists/design-first instructions are superseded for execution by this rule.
 
-### 2026-10-08 current dispatch: one business window, independent F, zero new cost
+### Cost, integration and historical scheduling provenance
 
-The retained PO topology permits M + independent F + one business Owner, each
-with full J/R/U outcomes. It is not live dispatch: the current top-level PO pause
-controls, and all paused roles retain source/Goal/evidence. An ordinary authorized
-slot switch freezes the previous reservation first; never start a second business
-window for a dependency. No new paid GPU/account/seat/subscription/service or
-recurring infrastructure. Historical topology provenance:
-`00-GOVERNANCE/evidence/approvals/PO-20261008-SERIAL-BUSINESS-INDEPENDENT-F-ZERO-COST.json`.
-Authorization does not set local LIVE_DISPATCH state: use the existing local
-ledger and real Codex tool receipts; ELIGIBLE/DISPATCHED is not RUNNING.
-Each window enters RUNNING only after fresh admission; genuine dependencies,
-Permission, cost boundaries, shared-writer coordination and existing completion
-gates still govern its path. M makes a lightweight check every 30 minutes for
-changed complete outcomes, shared conflicts, CI and risks. When no actionable
-work remains, M waits. This authorization does not change any window's model,
-reasoning effort, speed or service tier and
-does not promote runtime or user-acceptance evidence. It authorizes no new
-product, provider, component installation or paid resource.
+No new paid GPU/account/seat/subscription/service or recurring infrastructure is
+authorized. Permission, dependencies, shared-writer reservations, completion gates
+and exact source/runtime evidence remain binding. Historical topology approval
+`00-GOVERNANCE/evidence/approvals/PO-20261008-SERIAL-BUSINESS-INDEPENDENT-F-ZERO-COST.json`
+is retained as dated provenance; its one-business-slot/F dispatch restriction is
+superseded. This publication starts no product work and changes no model settings.
 
-Existing J1-J8/U01-U25 outcomes retain two acceptance layers: usable mature-software
-operations, then LUMENIS evidence/context/version/intelligence continuity. Reuse
-working source, repair broken callers, adapt a justified missing primitive through
-its existing owner, then verify the differentiated outcome. Exact acceptance and
-capability-observation fields live in Real Delivery Overlay; source/material routes
-live in Source Owner Index; UI behavior lives in Experience §38 and existing specs.
-GPT, Apple and Tesla are task/operation references, never additional product/design
-or security authorities. No paper, component installation or policy update proves
-that its associated capability is implemented or accepted.
+Existing J1-J8/U01-U25 retain mature useful operations and LUMENIS source/context/
+version continuity. Reuse correct source, repair real callers and record actual
+outcomes in Real Delivery. GPT/Apple/Tesla remain operation references, never
+new product/design/security authorities. A document or installation proves no
+associated capability. M performs only authorized meaningful review/work and waits
+when none remains; a historical monitoring schedule does not self-dispatch work.
 
-### Cross-window scheduling provenance — 2026-10-08 correction
+### Cross-window scheduling provenance — dated observations only
 
-Earlier Product Owner corrections rejected an unverified relayed global pause.
-Current activation follows the single-business/independent-F instruction above;
-historical all-window resumes do not dispatch additional business windows.
-A previously admitted, currently selected window
-checks only relevant changes and does not restart unchanged bootstrap or tests.
-F owns frontend, not global dispatch. A relayed pause/resume must identify the
-actual Product Owner instruction, time, source window and applicable roles/tasks.
-Do not present an agent paraphrase as verified Product Owner speech, broaden a
-local pause to other windows, or rebroadcast it as a global order. A direct user
-stop is obeyed immediately. If relay scope is uncertain, preserve the affected
-state while M checks the original instruction; uncertainty does not authorize a
-new global stop. A later direct Product Owner correction controls scheduling.
-This clarifies existing instruction provenance; it creates no new approval owner
-or machine state. M reviews changed complete outcomes every 30 minutes and waits
-when no actionable work remains. The current goal and manual model/tier remain.
+A relayed request must identify the original Product Owner instruction, time,
+source window and exact applicable task/roles. An agent paraphrase, old receipt,
+finished batch or historical Goal cannot pause/resume another window. Direct
+current PO orders control their scope; preserve uncertain state without expanding
+it into a global order. Model/effort/tier selections remain the PO's choice.
 
-F's direct-build/free editable-source route above preserves its complete Goal,
-Figma/Foundation/nodes, 44 screens, Website families, approved surface variants,
-zh/en/ko and accessibility. Five Golden Pages only order work. Source is not
-native Figma; PNG/PPT/screenshots are not editable delivery. Historical/relayed/
-attached/compacted pauses and finished functions/batches/turns are not new PO
-stops. Only an applicable current PO stop or real dependency halts work. For idle
-authorized F, M checks actual Goal/turn and continues; stale RUNNING is not proof.
-M standby does not pause workers. Current direct pauses at the top remain binding.
+Frontend retains editable Figma/Foundation/source, all 44 screens, Website families,
+surface variants, zh/en/ko and accessibility. Direct construction need not wait for
+a separate draft or Figma approval. Five Golden Pages only order design work;
+they are not the five product rounds. Source is not native Figma; screenshots/PPT
+are not editable delivery. Any new frontend execution needs actual PO dispatch.
 
 ### Live dispatch semantics — NON-BYPASS
 
@@ -202,9 +171,15 @@ JOB_CLOSED          = the assigned owner outcome passed its applicable completio
 
 The newest explicit Product Owner instruction addressed to a specific current/local window controls **scheduling, order and the bounded task** for that window. It may tell a window to repair first, wait for another owner, resume later, or work only a named slice without changing the product's canonical scope. Repository `main` remains authoritative for product truth, owners, contracts, red lines and acceptance; a local dispatch instruction does not silently create a new owner, architecture, data truth or reduced product requirement.
 
-Online/current repository text is **PUBLISHED_STATE**, not a live process list. A local Codex window may hold a newer bounded dispatch, wait condition or task priority than the last published status. That local instruction is authoritative for that window's live scheduling until superseded, but it does not become product truth for other windows. Other windows must not infer or copy a local task unless the Product Owner or an explicit M/owner handoff dispatches it to them.
+Online/current repository text is **PUBLISHED_STATE**, not a live process list. A local Codex window may hold a newer bounded dispatch, wait condition or task priority than the last published status. That local instruction is authoritative for that window's live scheduling until superseded, but it does not become product truth for other windows. Other windows must not infer or copy a local task; an M/owner handoff carries source scope only within current explicit Product Owner dispatch.
 
-If the Product Owner says, for example, “M repairs first; F/C1/C2 wait until that repair is accepted, then start”, then M is `RUNNING`, F/C1/C2 are `WAITING_DEPENDENCY` with `resume_condition = M repair accepted`, and other registered roles remain `ELIGIBLE` unless separately dispatched. Once an explicit resume condition is evidenced satisfied, the waiting window may continue the already-dispatched task without asking for a second approval, unless a newer Product Owner instruction supersedes it. Historical/current repository wording that the full topology is restored must never be interpreted as an instruction to start all windows concurrently.
+Only a currently applicable direct PO instruction can define an actual wait/resume
+condition. Evidence must establish that condition and its continuing authority;
+historical conditions never automatically restart work. Record `NOT_VERIFIED` for
+an unverified observation; this is an evidence qualifier, not an invented machine
+dispatch state. Do not equate application `notLoaded`/idle with a verified PO pause.
+
+
 
 The C1-C6 map, all R01-R15/J1-J8/U requirements and existing owner contracts
 remain the complete scope and are eligible delivery responsibilities, not competing
@@ -271,24 +246,20 @@ GPU, new rental, recharge or retired model providers.
    Scope/Permission/session/rate-limit contracts on platforms that are actually
    ready; a blocked identity/source blocks only that path and must never be
    rewritten as ACTIVE.
-6. Use the Product Owner-approved LUMENIS engineering role defaults only when the
-   current window has no newer manual selection: M/controller = `gpt-6-astra` +
-   `ultra`; F/frontend = `gpt-6-astra` + `ultra`; C1-C6 = `gpt-6.1-sol` +
-   `ultra`. Spawned task agents default to `gpt-6-luna` + `max` through
-   Codex's native `[agents]` defaults. A model/reasoning/speed/service-tier choice
-   made manually by the Product Owner in any current Codex/Codex CLI window always
-   wins immediately; an explicit spawn model/effort likewise overrides the task-agent
-   default. Hooks must never mutate model/effort/service tier. Profiles are launch
-   helpers only and may not override a later manual selection. M executes assigned or
-   unresolved controller/integration/review/acceptance work while such work exists;
-   when no assigned or unresolved approved work remains, M stops and waits rather than
-   inventing background research or self-starting new product work. If the executed
-   backend/effort cannot be verified, mark it SETTINGS_UNVERIFIED. OpenCode remains
-   shelved and is never a fallback unless the Product Owner explicitly resumes it.
+6. Product Owner alone selects the actual model, reasoning effort, speed and
+   service tier for each window. Preserve the manual selection; do not apply
+   historical role defaults, launcher/profile pins or Hook changes as a new order.
+   Record the executed model/effort, verification time and evidence only when
+   readback proves them; otherwise `NOT_VERIFIED`. Historical routing/configuration
+   values are retained compatibility data, not current model assignments.
+   M continues authorized unfinished controller work, then waits; no automatic
+   model fallback, new background work or OpenCode execution is authorized.
+
+
 
 M is the root controller and final engineering acceptance/integration authority.
 F is the eligible owner for the approved four-surface Experience/frontend implementation.
-C1-C6 are eligible as six separate delivery roles under the map below; eligibility is not live execution state. W6 owns
+C1-C6 are retained engineering source roles under the map below; eligibility is not live execution state. W6 owns
 accepted shared composition and mainline integration paths; M reviews and
 controls acceptance/publication, while each C-window remains responsible for
 its own source, tests, runtime evidence and complete user outcome. Protect all
@@ -347,8 +318,7 @@ state and behavior), Bounded Context (CTH/BMP/Shared/SYSTEM owner and caller
 boundaries), and Context Mapping (existing interfaces and compatibility resolvers).
 Triggers are conflicting names/identity, duplicated or contradictory business
 rules, incorrect cross-module mappings, legacy calls bypassing business or
-Permission boundaries, and lost state/result/source continuity. The selected
-business Owner repairs only that affected path; M intervenes for cross-owner
+Permission boundaries, and lost state/result/source continuity. The actually authorized source Owner repairs only that affected path; M intervenes for cross-owner
 conflicts and acceptance, while F consumes real contracts independently.
 
 Trace Collector -> Canonical -> CTH/BMP -> SourceBrief -> SavedWork/Content Project
@@ -383,16 +353,17 @@ Raw corrections are research inputs, not promoted prompt memory or training gran
 Algorithmic or statistical guarantees require the paper's actual assumptions and
 a measured matching workload; a citation or test count is not a proof of them.
 Research, implemented adoption, runtime acceptance and model-learning permission
-remain distinct. This bounded M repair did not itself resume paused windows; the
-latest Product Owner authorization covers M, independent F and one M-selected
-business window at a time. Actual local
-dispatch and admission remain evidenced by the live ledger and tool receipts.
+remain distinct. This bounded M repair and any rule publication do not dispatch
+windows. The Product Owner decides actual scheduling; dated ledger/tool readback
+records facts only, with NOT_VERIFIED where current execution cannot be proved.
 
 The machine-readable execution/governance contract is
 `00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json`. It defines the
-canonical role set, live-dispatch states, completion ladder, gate tiers, approval
-receipt requirements, capability-evolution dual outputs and the pre-Internal-Beta
-branch policy. It is a governance contract only and has no authority to redefine
+canonical source-role set, observation vocabulary, completion ladder, gate tiers,
+approval receipts, capability-evolution dual outputs and pre-Internal-Beta branch
+policy. Historical model defaults/dispatch records in structured files do not
+authorize current model selection or window execution under the latest direct PO.
+This six-file change does not mutate those configuration/contract bytes. It is a governance contract only and has no authority to redefine
 Product Architecture, business capability, Experience, Source/Evidence/Canonical
 truth or Permission.
 
@@ -707,10 +678,10 @@ suite would have been called relevant; preserve genuine E2E and all product scop
 An isolated integration copy protecting a dirty tree is not a competing product.
 Reject an incorrect approach without deleting protected data or unknown work.
 
-When product execution is authorized, F and the one M-selected business window
-continue independently. Unselected business windows wait; this is development
-scheduling, not an automatic shutdown of already-authorized product services.
-When C1 is selected, collection and
+When product execution is explicitly authorized, source owners continue their
+assigned outcomes under current PO dispatch and shared-write reservations. A rule
+publication or historical topology does not start/stop product services.
+When C1 is actually dispatched, collection and
 new brand/commercial-entity admission continue through approved sources and
 existing owners; GPU, a different window or completion of the global inventory
 does not pause those paths. A blocked identity/source stops only its own path.
@@ -719,18 +690,20 @@ and MANUAL/AUTO boundaries. Publish a changed canonical rule/status before its
 dependent integration, then notify each affected window with the exact published
 revision and receive a readback. A message or candidate count is not delivery.
 
-### Six-round execution windows and retained acceptance coverage
+### Engineering source responsibilities and retained acceptance coverage
 
-Current delivery runs six complete C1-C6 responsibilities across six local execution windows. The C1-C6 labels organize six
-complete user-outcome deliveries; the current PO instruction selects one business
-window at a time by dependency, not numeric C order. F may proceed independently
-when actual entry dependencies, canonical owners, files, tests, migrations and
-runtime resources permit it. W6 integration is a handoff within the business slot.
-A later C
-delivery cannot make an unmet source, Permission, Evidence, dependency or
-acceptance gate pass.
+Historical locator label (compatibility only, not a heading/route or current rounds):
+`### Six-round execution windows and retained acceptance coverage`.
+Existing guards retain this legacy marker to locate the unchanged C/W source map;
+the only product rounds are SYSTEM / CTH / BMP / Shared / Agent Groups–自研 AI.
 
-| Delivery / window | Execution environment | Responsibility |
+C1–C6/W1–W6 preserve the six engineering source responsibility assignments below.
+They do not define six product deliveries or a single-window limit. F retains the
+frontend owner and M the review/integration role. Actual dispatch/model are PO
+decisions with current readback. Required cross-domain dependencies close inside
+the current Architecture round under existing reservations and gates.
+
+| Source responsibility / window label | Retained engineering environment | Responsibility |
 | --- | --- | --- |
 | **C1 / W1 — Data and Collection** | Local Codex | Existing registry and source owners; 14-country categories and approved candidates; platform-native fields and honest unavailable states; Subject/venue/tenant relationships; approved collection and browser sessions; Source → Evidence → Canonical; refresh, review and recovery. Registration never proves collection coverage. |
 | **C2 / W2 — Owned AI and Agent** | Local Codex using approved open base weights and approved training resources (available/free first; paid resources require the actual approved cost boundary) | The single AI Gateway and existing Agent, Skills, Memory, context, Evaluation and Learning owners; LUMENIS-owned model training and inference; grounded CTH/BMP/creation results; multimodal file understanding; version, held-out evaluation, feedback, controlled promotion and rollback. |
@@ -739,18 +712,20 @@ acceptance gate pass.
 | **C5 / W5 — Importer, Research and Shared Deliverables** | Local Codex — W5 | Existing Importer/Research, citations, Reporting/Artifact, notifications and shared-preference owners; real material → locatable Evidence/citation → saved/versioned result → search, reopen, revise, export and return. No second database, Evidence store or model service. |
 | **C6 / W6 — Integration, Runtime and Release** | Local Codex | Accepted shared API composition and bindings, canonical database-change coordination, Core/runtime/FFmpeg/supervisor, mainline integration, four-surface operation, packaging, CI, recovery/rollback and final evidence bundle. C6 integrates owned capabilities; it does not replace them. |
 
-The separate front-end window F remains independent across all six deliveries; it is not an additional delivery round. It owns existing Flutter and Website interface work,
+F retains frontend source responsibility across all five product rounds; this does not prescribe its current window scheduling. It owns existing Flutter and Website interface work,
 screen-specific direct implementation with in-place contract records, real interface binding, responsive
 composition, Chinese/English/Korean localization and accessibility through all
-six deliveries. Backend windows provide field and behavior contracts; F owns
+five architecture rounds. Backend owners provide field and behavior contracts; F owns
 screen layout and user interaction.
 
-The root controller M retains the independent review and acceptance role. Its
-LUMENIS role default is GPT-6 Astra ultra; a newer Product Owner manual window
-selection overrides that default immediately. M freezes scope, resolves Product
-Architecture/owner/interface conflicts, reviews DESIGN_READY, and accepts or
-returns complete window outcomes. M stops and waits when no assigned or unresolved
-approved work remains. Product Owner human decisions remain separate from M.
+The root controller M retains review, cross-owner integration and acceptance.
+Product Owner chooses its model/effort; repository role labels prescribe no model.
+M freezes scope and resolves architecture/owner/interface conflicts, retains actual
+design-review evidence without a DESIGN_READY coding prerequisite, and accepts or
+returns complete outcomes. When no authorized unfinished work remains, M waits.
+Product Owner human decisions remain distinct.
+
+
 
 W6 is the sole writer for accepted shared composition and mainline integration
 paths, including app.py, lumenis_app_api.py, experience_runtime.py and
@@ -839,7 +814,7 @@ verification.
 Mandatory REAL DELIVERY CARD / 真实用户工作闭环验收 fields: REAL USER JOB, ENTRY, REAL INPUT, END-TO-END PATH, USER-VISIBLE RESULT, FAILURE/RECOVERY, EVIDENCE, ACCEPTANCE ASSERTION and COMMERCIAL OVERLAY IMPACT.
 
 The Real Delivery Overlay is the single content owner for the eight real-delivery
-questions, six-window cards, mapped R-checkpoint constraints, REAL DELIVERY CARD,
+questions, existing owner cards mapped to five product rounds, mapped R-checkpoint constraints, REAL DELIVERY CARD,
 completion semantics, final statuses and commercial-readiness gates.
 
 Every C1–C6 window must define and pass at least one real-user E2E for its
@@ -965,7 +940,7 @@ Source
 
 ### Continuous capability evolution contract
 
-Collection, browser acquisition, creation, AI, agents, reporting, evaluation, learning and every CTH/BMP/Shared/SYSTEM workflow are versioned capabilities, not frozen modules. During the six-window delivery and after release, improve a capability when real Evidence, outcome feedback or evaluation identifies a bounded gap. Reuse its canonical owner and preserve the Product Architecture, workflow meaning, Permission, Evidence lineage and state semantics; never create an alternate owner in order to learn faster.
+Collection, browser acquisition, creation, AI, agents, reporting, evaluation, learning and every CTH/BMP/Shared/SYSTEM workflow are versioned capabilities, not frozen modules. During the five architecture product rounds and after release, improve a capability when real Evidence, outcome feedback or evaluation identifies a bounded gap. Reuse its canonical owner and preserve the Product Architecture, workflow meaning, Permission, Evidence lineage and state semantics; never create an alternate owner in order to learn faster.
 
 Controlled evolution path:
 
@@ -1099,11 +1074,9 @@ Rules:
 
 ### Approved 2026-10-08 addition: capability-specific public acquisition
 
-This bounded M task includes public acquisition and local Read Aloud under the
-existing owners. At approval it did not dispatch other product windows; the later
-latest Product Owner authorization permits M, independent F and one selected
-business window to continue under their existing owner scopes. Actual dispatch and RUNNING status require the live ledger,
-tool receipts and fresh admission. For this batch,
+The dated bounded M task adopted public acquisition and local Read Aloud under
+existing owners. That adoption grants no current window execution. Actual dispatch
+is decided by the Product Owner and recorded only with fresh evidence. For this batch,
 OpenCLI paths requiring login (COOKIE/INTERCEPT/UI/session) are excluded by the
 Product Owner's latest correction. Evaluate only genuinely anonymous PUBLIC
 commands. Keep the product's existing authorized platform sessions, Skill store
@@ -1676,9 +1649,8 @@ inference is unavailable. The sole blueprint, Experience, surface decision,
 Owner index, screen specs, existing text wireframes and README are co-published.
 Historical sketches remain evidence; amendments do not self-promote to
 DESIGN_READY/IMPLEMENTED/ACCEPTED. At publication this update did not itself
-dispatch C1-C6/F; the latest Product Owner instruction authorizes M, independent F and one
-selected business window at a time, with actual dispatch and RUNNING status determined by the live
-ledger, tool receipts and fresh admission. It changes no model settings and installs no
+dispatch C1-C6/F. Current window/model choices belong to the Product Owner;
+verified observations require fresh admission/tool evidence and a verification time. It changes no model settings and installs no
 OpenAI UI SDK.
 
 ### Current frontend implementation routing
@@ -1739,7 +1711,7 @@ does not replace product integration; unread/missing assets remain explicit.
 
 ### 2026-10-08 前端审计与工具维护增补
 
-按最新PO直接构建真实前端，依既有Experience/ScreenSpec/Owner合同随源码更新设计决定与验收证据；不等待独立设计稿/Figma或M逐屏设计审批。原DESIGN_EXPLORATION/DESIGN_READY保留为真实设计审核记录，不再作为强制编码阶段；实现与验收据实记录，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。Product Owner 已授权 M 与独立 F，以及 M 按现有依赖选择的唯一业务窗口继续完整既有成果；其余 C 窗等待并保留源码/Goal，W6集成占用同一业务席位；实际派发/准入状态以本地 ledger 和真实工具回执为准，fresh admission 后才进入 RUNNING。本轮只同步派工规则，不代表 Figma 工程、智能 UI 实现或用户验收完成。
+按最新PO直接构建真实前端，依既有Experience/ScreenSpec/Owner合同随源码更新设计决定与验收证据；不等待独立设计稿/Figma或M逐屏设计审批。原DESIGN_EXPLORATION/DESIGN_READY保留为真实设计审核记录，不再作为强制编码阶段；实现与验收据实记录，不建立第二设计真相。已有Figma可编辑工程和局部节点有本地收据，当前云端版本未核；免费受限时沿Experience§38采用可编辑源码，不等待付费。C1–C6/F/M/W1–W6 保留原源码责任和完整成果；实际开工、暂停、恢复、模型与推理档位由 Product Owner 决定，本文件只记录有时间和证据来源的已核实事实，不设单业务窗口限制；实际派发/准入状态以本地 ledger 和真实工具回执为准，fresh admission 后才进入 RUNNING。本轮只同步派工规则，不代表 Figma 工程、智能 UI 实现或用户验收完成。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
@@ -1756,9 +1728,8 @@ missing values do not excuse broken code or imply full data coverage. C1 owns
 task dates/native times; dated findings do not prove current defects.
 A legacy provenance key alone cannot prove an active cutoff.
 F binds honest states when dispatched. Rule publication does not dispatch
-paused windows; the
-latest Product Owner instruction selects one business window at a time with F independent. Actual state follows the
-live ledger, tool receipts, fresh admission and real dependencies.
+any window. Current PO decisions determine scheduling; the ledger records
+verified observations, never an inferred historical wait/resume/model order.
 
 ### 2026-10-08 useful progressive delivery and logic review
 
