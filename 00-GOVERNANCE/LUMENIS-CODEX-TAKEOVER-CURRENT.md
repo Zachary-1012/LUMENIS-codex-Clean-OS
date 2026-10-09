@@ -1,8 +1,8 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
-> 最新直接 PO，2026-10-09：只同步六份治理/README 文件。产品交付唯一为 SYSTEM → CTH → BMP → Shared → Agent Groups / 自研 AI；C1–C6/F/M/W1–W6 保留工程源码责任，不是六轮产品或单窗口调度限制。
-> Product Owner 决定当前窗口开工/暂停/恢复、模型和推理档位。这里仅记录有核验时间和证据来源的事实；未核实为 NOT_VERIFIED。历史暂停、恢复条件和模型默认无现行调度效力。本次不启动窗口、不修改业务源码。
+> 2026-10-09 五轮治理规则已发布；产品交付唯一为 SYSTEM → CTH → BMP → Shared → Agent Groups / 自研 AI。C1–C6/F/M/W1–W6 保留工程源码责任，不是六轮产品或单窗口调度限制。
+> Product Owner 决定当前窗口开工/暂停/恢复、模型和推理档位。这里只记录有时间和来源的事实，未知为 NOT_VERIFIED；历史暂停、恢复条件和默认无现行调度效力。治理发布不启动窗口；后续源码授权按下面明确范围执行。
 > 随后直接 PO 另授权一个 Luna/max 智能体处理 SYSTEM 自动采集弹窗 P0。该缺陷沿既有 Browser/Collector Owner、受控进程和唯一维护计划任务修复；不恢复其他研发窗口。它与本次六文件治理提交分开验收及发布，未验证的源码/运行/采集结果不得提前标为完成。
 > 历史 AI 非依赖/暂停审批 `evidence/approvals/PO-20261009-AI-OPTIONAL-PREPARATION-C1-PAUSE.json` 和串行/F审批保持原件，不删除或改写；其中仍有效的权益、安全、费用及无AI基础能力要求保留。
 
@@ -138,11 +138,12 @@ Provider, Source store, approval or user-outcome claim.
 
 ## 1. Online reader's current-state snapshot
 
-### 本轮治理任务目标及冻结基线 — 2026-10-09
+### 当前有界目标与已发布治理基线 — 2026-10-09
 
-M 当前唯一优先目标：核验并保护本地工作 → 六份现有文件一次性统一五轮架构及窗口/模型事实口径
-→ 文档/机器治理/静态检查 → 精确六路径提交 → 安全推送 main → 固定提交原文和CI回读。
-本次不启动任何窗口或以前未完的源码任务，不把治理发布算作任何产品轮次完成。
+五轮/窗口事实化六文件治理提交已发布为 `e5138d4023f93e68cff9227d055bd5a27959a020`；
+本次 fresh fetch 与 GitHub main 回读相同（2026-10-09T18:12:56.028622+08:00）。该提交的 Product/App Gate
+均 SUCCESS，仅证明其实际检查；不代表产品轮次完成。M 当前有界工作是另获直接授权的
+SYSTEM 自动浏览器弹窗 P0，以及本次同权来源/已有数据优先工作流规则同步；不恢复其他窗口。
 此前工具/Browser/AgentZero、材料蒸馏采用、候选集成、C1和其他Owner未完成Goal完整保留。
 原生 Goal 的当前API仅支持状态更改、不支持改写未完目标；本段更新当前优先执行目标，
 保留原生未完成Goal，不虚报已经改写/完成原生目标。
@@ -261,10 +262,15 @@ not a new runtime or a claim of implementation. Evidence:
 
 Implementation publication state: `RULES_ONLY_PUBLICATION`
 
-Latest delta: the six approved governance/README files adopt the five Architecture
-product rounds and factual window/model observations. No business source, runtime,
-DB, model/account configuration, CI workflow, machine JSON or approval receipt is
-changed. The published `d847a28e` source and all unfinished local work remain.
+Latest delta: the six existing governance/README files apply the PO's equal
+platform/public-web source-category weight and existing-data-first workflow rule,
+and reconcile obsolete current-task/serial-window wording. Acquisition proof leads
+to downstream analysis and useful saved/reopened/recoverable results; another
+platform's gap does not block independent admitted-data workflows. Full platform
+scope and source/identity/time/rights guards remain. This rule-only publication
+changes no business source, runtime, DB, model/account, CI or machine JSON.
+The separately authorized browser-popup P0 source/runtime work is still local
+and under acceptance; it is not delivered by this documentation commit.
 Historical `66070a04` failed Product Gate is retained, not rewritten to success.
 This publication needs its own applicable exact-SHA CI; earlier PASS is not inherited.
 

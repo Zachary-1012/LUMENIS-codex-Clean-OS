@@ -48,6 +48,14 @@ REAL DELIVERY OVERLAY FOR C1–C6 / R01–R15 ACCEPTANCE COVERAGE
 
 REAL USER WORK E2E ACCEPTANCE remains mandatory for each complete C-window outcome and every applicable mapped requirement.
 
+### 2026-10-09 来源同权与已有资料先贯通验收
+
+所有平台和公开网页的来源类别基础权重相同；不以类别或另一个平台未完善阻止适用且获准的数据进入既有工具流。已实证采集/原件持久化/恢复后，优先以已有真实资料完成工作流、数据分析、CTH/BMP 或 Shared 有用成果、保存/修订/关闭重开、来源追溯、恢复及适用 Evaluation；不把重复采集或等待全部平台作为下游接线前置。
+
+原 REAL DELIVERY CARD 分开记录：A 实际来源及采集/入库/恢复证明；B 同一已获准资料穿过哪些工具和业务调用、产生什么可用结果；C 保存/修订/重开/恢复与版本、权限、引用证明；D 各平台、字段和任务结论的剩余缺口。缺失平台只约束其路径和需要该证据的具体结论，不阻塞独立已有数据成果。公开网页与社交来源均可证明适用正常链，不要求一定以社交平台作唯一正向样本；各平台的完整能力验收仍独立保留，不能互相冒充。
+
+来源类别同权不抹平质量、身份、时间、权益或事实/观点差异。待核验原件仍待核验，摘要不冒充原文，未知值保持未知；缺证据不能给无依据判断，已完成部分应保存并可续接。编译/静态/安全/数据一致性、真实用户 E2E 与原 J/R/U 不降低。本次规则发布不是采集、工作流或产品轮次 ACCEPTED，不自动恢复窗口。
+
 ### 2026-10-09 full data-to-business acceptance increment
 
 The existing C1 REAL DELIVERY CARD adopts Global §10's complete direct PO order,
@@ -56,7 +64,7 @@ not a separate acceptance system. Actual path: permitted subject/focus selection
 -> Evidence/Canonical admission or explicit pending identity -> existing workflow
 analysis/classification -> useful CTH/BMP result -> save -> close -> reopen ->
 revise -> exact source trace -> interruption recovery. At least one permitted
-platform must prove this full running-product path. Each of the six primary
+platform or permitted public-web source must prove this full running-product path. Each of the six primary
 platforms independently records actual task/post/source/use/transaction evidence,
 counts/denominators/time window, demonstrated fields/paging/media/recovery and
 BLOCKED/NOT VERIFIED gaps; aggregate success cannot erase another platform gap.

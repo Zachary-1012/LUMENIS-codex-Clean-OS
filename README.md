@@ -10,7 +10,9 @@
 
 **前端直接构建，不先做设计稿。** 复用已有设计和44屏规范并随源码更新。后续原生客户端只交付 **Windows、macOS 和 iOS**；Android/Linux原生客户端不再是交付目标，保留其历史源码与证据。Linux服务器/CI和Web的跨OS浏览器、窄屏体验不受此限制。
 
-**先闭环官网（Public Website）和 Web Workspace，再推进 Desktop App 与 Mobile Companion。** 后置两端的需求、源码、设计和验收任务完整保留，不当作通过。当前两端的真实业务、来源/权限、成果保存/修改/重开/恢复及适用评价仍须闭环；Web必要的Core/SYSTEM服务继续推进。M + 独立F + 一个业务窗口及零新增付费不变。此顺序不等于四端整体完成或新增部署授权；详见现有[多端决策](00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md)与[真实交付规则](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)。
+**先闭环官网（Public Website）和 Web Workspace，再推进 Desktop App 与 Mobile Companion。** 后置两端的需求、源码、设计和验收任务完整保留，不当作通过。当前两端的真实业务、来源/权限、成果保存/修改/重开/恢复及适用评价仍须闭环；Web必要的Core/SYSTEM服务继续推进。实际窗口由PO决定，保留原Owner/共享写入保护及零新增付费。此顺序不等于四端整体完成或新增部署授权；详见现有[多端决策](00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md)与[真实交付规则](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)。
+
+**所有平台与公开网页的来源类别基础权重相同。** 真实采集、原件入库及恢复能力有证明后，优先用已有获准数据打通分析、业务和创作工具流，形成可保存、修订、重开和恢复的实际成果；不等待全部平台完善或重复采集。来源质量、身份、时间、权益和用途照常核验；平台缺口单列，只影响确实依赖它的路径与结论，完整平台目标不删除。详见[蓝图中的同权与已有数据规则](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md#2026-10-09-来源类别同权与已有数据优先闭环)。
 
 ## 从这里开始
 
@@ -134,7 +136,7 @@ Owner承接，状态与限制见 [CURRENT](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-
 
 当前 C1 先按真实主体批量采集相关发帖，每批返回立即经原 Source/Evidence/Canonical 数据链处理，词条/主题分析后置，同步采集每帖最多处理一张真实封面；不等完整词库或六个平台结束。图片和视频内容理解保留，由既有后台路径处理真实图片、音轨与时间画面，并以原帖/图位置/时间码和版本供后续任务使用。只取封面、OCR 或状态登记都不等于完成理解；执行器未绑定保持 NOT_RUN。C1 自行落实同一 SYSTEM 权限链的用途绑定，导入、关键词与媒体分析/派生保存分别核验，不冒充业务结论或改写原来源权益。准确范围、原文覆盖、幂等/权益/恢复与未读状态保留，详见 [Global §10](00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md)。
 
-本轮 2026-10-09 全产品数据到业务升级沿现有 Collector/Shared/CTH/BMP/Research/Reporting/Evaluation/SYSTEM 及受影响 Web 接线执行，不只是 C1 说明。合法原始观察保存、来源有效性、权限、身份核验、业务分析分开；待核验原件在原 Source 路径可恢复，但不能成为主体事实。六平台独立保留实际能力/限制/事务与性能口径，至少一个获准平台实证从主体选择、采集到成果保存/关闭重开/修订/来源追溯/中断恢复。完整要求与A–F交付见 Global §10 和 Real Delivery Overlay；不能以规则、原文条数或发布源码宣称闭环。M/C1及其他Owner原候选、材料、集成和采集职责保留；实际窗口状态及模型只据当前PO决定和有日期的核验，不由本段派工。
+本轮 2026-10-09 全产品数据到业务升级沿现有 Collector/Shared/CTH/BMP/Research/Reporting/Evaluation/SYSTEM 及受影响 Web 接线执行，不只是 C1 说明。合法原始观察保存、来源有效性、权限、身份核验、业务分析分开；待核验原件在原 Source 路径可恢复，但不能成为主体事实。六平台独立保留实际能力/限制/事务与性能口径，至少一个获准平台或公开网页来源实证从主体选择、采集到成果保存/关闭重开/修订/来源追溯/中断恢复。完整要求与A–F交付见 Global §10 和 Real Delivery Overlay；不能以规则、原文条数或发布源码宣称闭环。M/C1及其他Owner原候选、材料、集成和采集职责保留；实际窗口状态及模型只据当前PO决定和有日期的核验，不由本段派工。
 
 ## 产品完整闭环职责（不可由 README 摘要缩减）
 

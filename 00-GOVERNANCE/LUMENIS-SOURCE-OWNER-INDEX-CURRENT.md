@@ -3,7 +3,7 @@
 > 最新直接 PO，2026-10-09：本索引保留 C1–C6/F/M/W1–W6 的工程源码责任；唯一产品交付轮次归 Product Architecture：SYSTEM、CTH、BMP、Shared、Agent Groups / 自研 AI。
 > Status: **CURRENT EXECUTION INDEX / FIVE ARCHITECTURE ROUNDS / COMPLETE LEGACY COVERAGE**
 > 实际窗口开工、暂停、恢复、模型与推理档位由PO决定。本索引不固定窗口数量、单业务席位或模型；只记录有时间和证据的观察，不能核实时 NOT_VERIFIED。历史审批和工作原件保留但无当前派工效力。
-> 本次仅六份治理/README更新，不修改业务源码或唤醒窗口。所有原J/R/U、44屏、权益、Permission/Evidence/Canonical、成本、生产数据及共享写入保护保留。
+> 六文件治理发布不唤醒窗口；后续直接授权的 SYSTEM 浏览器弹窗 P0 沿既有 Owner 与预约单独执行。原J/R/U、44屏、权益、Permission/Evidence/Canonical、成本、生产数据及共享写入保护保留。
 > C1保留完整采集闭环和已有必要Core/Runtime/Scheduler/Permission依赖的获准源码范围；M保留原非C1候选、未集成成果及资料采用责任。实际执行须核验当前PO授权及Writer，不能用旧暂停或旧复工代替。禁止单元/集成及换名模块套件，保留静态、安全、数据一致性和真正E2E。
 
 ### 最新 PO 当前成果优先级 — 官网 / Web，2026-10-08
@@ -252,6 +252,20 @@ source version/use, native time, state and error semantics pass through actual
 interfaces; no parent DATA_IMPORT receipt or name hit substitutes for later use.
 Only changed Web consumers are repaired; original 44-screen scope remains intact.
 Source/runtime/DB/user acceptance remain separate from this published routing.
+
+### 2026-10-09 来源同权及已有数据工具流接续
+
+所有平台与公开网页采用相同来源类别基础权重；具体完整规则归唯一 Product Architecture 的“来源类别同权与已有数据优先闭环”。来源有效性、身份、时间及用途仍由现有合同核验，不能因网页来源或平台未完善而降低合规材料的工作流优先级。
+
+| 原 Owner | 当前职责中的接续要求（不构成窗口复工） |
+| --- | --- |
+| C1 / SYSTEM Collector | 证明真实采集、原件持久化和恢复后立即交付可消费的已有 Source/Evidence/Canonical 引用；缺口按平台分列，不等待全平台完善。 |
+| C3 / CTH、BMP | 先消费任务适用的已有正式数据，接通确定性分析、业务判断、行动及成果；只让实际缺少的必要证据影响对应结论。 |
+| C5 / Shared Research | 已有来源进入检索、引用、SourceBrief、研究与 SavedWork；不要求重新采集或另造资料库。 |
+| C4 / 内容与媒体 | 接收已有获准 Brief/来源/素材，完成可编辑实际成果及保存、修订、重开、导出与恢复。 |
+| C6 / F / M | 原合同内接通 API、Runtime、Web 和成果版本；M 审查集成与验收。平台未完善不能代替具体接口断点诊断或阻塞独立可用工作流。 |
+
+平台能力、数据覆盖、下游成果分别验收；剩余六平台及其他原范围保留，不把已打通的公开网页任务写成其他平台通过。
 
 ## 3. Fixed source lookup map
 

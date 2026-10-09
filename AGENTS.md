@@ -13,23 +13,28 @@ execution instructions.
 
 ### 最新 PO：五轮架构交付与窗口/模型事实化 — 2026-10-09
 
-本次 M 唯一优先任务是同步 PO 批准的六份治理/README 文件；不修改业务源码，
-不启动、暂停或恢复任何研发窗口。此前未完成的工具/浏览器、资料采用、候选收敛、
-采集及其他完整 Goal 保留，不能把本次治理发布算作它们完成，也不据此自动续做源码。
+The six-file governance publication is delivered; it did not dispatch windows.
+The later direct PO grants M and one Luna/max agent the SYSTEM browser-popup P0
+repair, runtime acceptance and controlled publication. Other work/Goals remain
+protected; this bounded grant resumes no other window.
+
+Latest PO data rule: all platforms and public webpages have equal source-category
+weight. After real acquisition/intake/recovery proof, prioritize existing admitted
+data through analysis and downstream useful workflows. Incomplete platforms block
+only their own paths/coverage claims, never independent ready workflows. Preserve
+source quality, identity, time, rights, unknowns and full platform scope; see Architecture.
 
 产品交付唯一顺序：SYSTEM → CTH → BMP → Shared → Agent Groups / 自研 AI。
 详细完整退出条件归唯一 Product Architecture 的“五轮架构产品闭环”及 Real Delivery；
 C1–C6/F/M/W1–W6 只保留原工程源码责任，不形成六轮产品交付、单窗口限制或额外阶段。
 当前轮需要的跨域依赖须在当前轮关闭，不能推到后轮。
 
-Product Owner decides actual window start, pause, resume, model and reasoning effort.
-GitHub and local CURRENT files record verified observations only; every observation
-includes its verification time and evidence source. Unknown window/model/effort is
-`NOT_VERIFIED`, never inferred from historical PAUSED/RUNNING, resume conditions,
-role defaults or configuration. The existing live ledger is a factual continuity
-record, not an autonomous dispatcher. A current direct PO instruction is required
-for scheduling; publishing this rule starts no window. Owner, Permission, source
-rights, data, cost, shared-write reservations and real acceptance remain binding.
+Product Owner alone decides window start/pause/resume, model and reasoning effort.
+GitHub/CURRENT/live ledger record dated, sourced observations, not autonomous
+dispatch. Unknown settings/state are `NOT_VERIFIED`; historical PAUSED/RUNNING,
+resume conditions, defaults and configuration cannot establish current execution.
+Publication dispatches no window. Owner, Permission, rights, data, cost,
+shared-write reservations and real acceptance remain binding.
 
 所有基础业务在没有模型、AI API、GPU 或推理服务时仍须正常完成；AI 不生产
 Canonical 事实。先验无 AI 有用成果，再分别验 AI 收益；Permission/权益/数据保护不变。
