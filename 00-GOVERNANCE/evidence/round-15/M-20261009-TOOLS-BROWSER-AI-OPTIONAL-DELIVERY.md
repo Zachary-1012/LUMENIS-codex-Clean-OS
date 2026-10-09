@@ -245,3 +245,22 @@ TRL/vLLM是未来可复用的训练/服务工具文档，不是本轮安装或�
 固定修后Runtime源码SHA256：`d1dbe57af89d26588c612c006871b837912224f2a35814b0f1ddb2bd3298cd5f`。最终实际构建119.9秒成功；定向Dart分析无诊断。Python AST通过；Ruff与同文件基线比较，API25→25、Runtime216→216，新增诊断0，历史诊断未删。现有AI宪章、Experience权威/anti-template/44屏规格、机器治理静态门通过，不代表整个产品完成。
 
 结论：这个本地无AI链接导航＋人工笔记连续性增量为 **OBSERVED**。Source/Task仍未绑定，Artifact为既有staged/pending状态，未提升为业务事实、模型训练数据或对外发布成果。恶意重定向、跨账号与全面恢复的真实对抗验收仍 **NOT VERIFIED**；本次前置主文档检查有源码审查，不能冒称完整网络隔离已验收。Production Runtime未加载，完整SYS-06/七域业务均不标JOB_CLOSED。
+
+## 10. 现有连接的执行准入裁决
+
+2026-10-09 09:24–09:26（北京）在 `d847a28e29323c9555bbe9b8ebd04728cc496076` 上定向读取现有连接及依赖；没有再次扫描全仓、运行模块测试或调用模型。该提交的 Product Gate `37869002503`、App Gate `37869002603` 已成功；本节后续发布不继承为 same-SHA PASS。本次只把核实出的具体断点写回既有入口，未新增产品候选或恢复暂停窗口。
+
+| 连接 | 已核实的现有代码 | 当前裁决与继续条件 |
+|---|---|---|
+| Browser → Task/Run | `ai_browser_runtime.py:AIBrowserRuntime.__init__/_resolve_task_trace` 将客户端 task/run 保持 UNVERIFIED；`ai_browser_api.py:create_session` 没有服务端任务解析。Collector TaskQueue 的 run/lease 只属于实际采集任务 | **OBSERVED：通用 Browser 任务解析路径缺失。** 由既有任务 owner 解析真实 actor/task/run/状态后才能绑定；不能套用 Collector lease 或把客户端声明升级成授权 |
+| Browser → Source/use → Gateway | `owned_service.py:OwnedServiceRequest/SourceUseDecision/run_owned_request` 已要求 domain/scope、真实 Evidence refs、来源策略与版本 hash；Browser 会话权限和本地 principal 只是既有浏览访问边界 | **OBSERVED：Browser 的 captured-source/use 决策生产者缺失。** 已存 business Brief 校验器不适用于任意新网页。保留真实 Source/Evidence 及适用使用许可后再调用原 typed Gateway；不得把 URL/正文/状态布尔值当权限 |
+| Browser Use → SYSTEM Action | 当前可选 adapter 仅报告 readiness；没有实例化 Browser Use Agent 或 BaseChatModel/action bridge | **NOT VERIFIED：智能浏览未实现。** 上游 Tools 支持自定义动作，但这不能证明所有动作、观察、网络流量都已受现有 Firewall 控制；当前文档没有给出可直接替换的 pinned 安全桥。保留确定性人工 Browser 路径 |
+| Agent Zero → Worker | `agent_runtime/agent_zero_gui_executor.py` 请求 `/api/lumenis/v1/capabilities` 及 task execute/cancel；未找到该 Worker 实现、`AgentZeroDependencies(...)` 构造绑定或启动时 `configure_agent_zero_gui_executor(...)` 调用 | **OBSERVED：执行器与 stock API 尚未接通。** 不能把原始 `/api_message`、日志/终止/文件 API 当作已满足任务级范围、幂等、取消和成果合同。后续必须沿既有 owner 实现匹配桥与真实回读；不能只安装镜像后宣布可用 |
+| Agent Zero → 人工桌面与成果 | 现有 `_preflight` 要求 owned Gateway；这是 AI 任务执行器。未实现独立人工桌面 session/frame/lease；`_persist_artifacts` 仅 PNG/JPEG/TXT/JSON | **OBSERVED：无AI人工GUI和可编辑文档保存仍缺。** 不移除 AI 任务的模型门来冒充人工路径；需沿 SYSTEM/Artifact 复用现有会话与保存合同，之后实际创建、保存、重开、修改文件验收 |
+| 当前宿主资源 | 09:26:32 主机总内存15,707 MiB，可用950 MiB；host PATH未发现Docker；WSL列出Ubuntu/Stopped/v2 | **RESOURCE_BLOCKED：未具备已核验隔离GUI运行环境。** 本轮没有启动WSL探查其内部Engine，也没有证明任意远端Engine不存在；不得为释放资源强停现有服务或越权安装。无容器/可见桌面/人工操作验收 |
+
+Context7本次上游资料指向 Browser Use `main` 的 Tools/Agent说明；它属于接口研究，不冒称0.13.10逐文件兼容或安装验证。仓库现有pin及许可记录保持，本次没有新增依赖、改变Gateway、启用Provider或下载模型。
+
+原Core 8201/PID61948、boot `f176d88a59e8438eb03bd56e38195bf1` 仍健康且未重启；该health只证明进程/DB依赖响应，不证明新源码已加载。81个原有受保护dirty/untracked文件在本轮只读核查与文档修改前冻结hash，交付前再次核对；生产DB未写。
+
+执行结论：A0/B0/C0来源与准入准备已经记录，外部路线保持OFF；无AI手动Browser的第9节成果保留。完整 Browser Use/Agent Zero、C2分析无AI修复、七域正常业务验收仍未完成。C1/F/C2-C6保持暂停；现有任务材料与未完成源码保留，不以新增占位代码、UNAVAILABLE回复或一份研究记录代替实现。

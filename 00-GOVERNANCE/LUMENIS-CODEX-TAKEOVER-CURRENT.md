@@ -72,10 +72,27 @@ public state and verification records while exact URL comparisons stay in memory
 This is source/static evidence; the production process has not loaded this delta.
 
 Agent Zero is an optional disabled executor on the existing Task Engine; no startup
-binder/worker contract is installed. No Docker service is available and workstation
-memory is insufficient for the proposed GUI image. Permission, attempt claims,
-non-replay, cancellation and outcome validation are required; absence is honest
-UNAVAILABLE/NOT VERIFIED. No container, new model or service was started.
+binder or worker implementation is installed. Its current executor expects
+LUMENIS-scoped `/api/lumenis/v1/capabilities` and task execute/cancel routes, not
+the upstream stock message/log/file APIs. No matching worker exists in this
+repository; installing the stock image alone would not close that source gap.
+At 2026-10-09 09:26 Beijing the host exposed no Docker command, WSL Ubuntu was
+stopped, and available physical memory was 950 MiB. These are bounded host
+observations, not proof about an uninspected WSL filesystem or remote engine.
+Actual isolated GUI runtime remains RESOURCE_BLOCKED/NOT VERIFIED. The existing
+executor governs AI-planned tasks; it does not implement the required independent
+manual desktop session. Its Artifact allowlist also does not yet support editable
+office documents. Permission, attempt claims, non-replay, cancellation and outcome
+validation remain required. No container, model or service was started.
+
+The same source review found no general server-owned Browser Task/Run resolver;
+the Collector queue lease cannot authorize unrelated browser jobs. Browser
+module/session permission also does not authorize sending captured page text to
+AI. The typed owned Gateway requires real scoped Evidence and a source-use
+decision. Those Browser producers are missing, so no client task ID, URL or
+availability flag may be promoted to BOUND. Exact existing interfaces and remaining
+work are recorded in section 10 of the existing delivery record; this does not
+resume C2 or authorize new model calls.
 
 The AI-optional V2 ZIP's five files were fully read as preparation evidence.
 A0/B0/C0 are not C1/C2 window IDs or an Agent Zero activation grant. Source review
