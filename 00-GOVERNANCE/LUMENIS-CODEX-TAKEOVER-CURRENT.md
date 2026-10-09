@@ -260,30 +260,42 @@ not a new runtime or a claim of implementation. Evidence:
 `evidence/round-15/BROWSER-COMPUTER-CONTINUITY-20261008.md`.
 
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 
-Latest delta — 2026-10-09: data analysis must complete its existing deterministic/manual
-business result without AI, GPU or model API; AI enhancement has independent status.
-Architecture/Owner Index/Real Delivery/README and the existing Math adoption record
-now map objective/constraint, denominator, source/time scope, sampling and real-cost
-methods to current analysis/reporting owners. This is rule/method adoption, not an
-algorithm deployment or repair claim. Fresh source confirms the analysis Agent's
-AI-only failure gate and missing useful base computation remain OPEN. No Owner is
-automatically resumed; all original material, rights and product requirements remain.
+Latest bounded source delta — SYSTEM browser-popup P0, 2026-10-09:
+existing automatic Browser/Collector/resident paths are explicitly headless;
+reuse/recovery requires the same registered profile, port, kernel, loopback
+listener PID and mode. Automatic work cannot switch to visible login or focus.
+Explicit HUMAN transitions retain real authenticated task ownership, Permission,
+exclusive platform activity and graceful same-task return; no forced process kill.
+The existing Store's platform lock and prelaunch lock wrapper are included as
+necessary mainline dependencies, preserving main's other claim/finish semantics.
+No C1/F candidate bulk merge, new Runtime, provider, fee or window resume.
 
-Previous published delta: the Collector and Global detailed contracts now match the six entry
-files' equal platform/public-web source-category weight and existing-data-first rule
-published in `017adcc5213b549f2f127b011bf1b4bfe6f80a6d`. The old platform-only
-positive-chain prerequisite is replaced with permitted platform or public-web
-source proof. Acquisition proof leads
-to downstream analysis and useful saved/reopened/recoverable results; another
-platform's gap does not block independent admitted-data workflows. Full platform
-scope and source/identity/time/rights guards remain. This rule-only publication
-changes no business source, runtime, DB, model/account, CI or machine JSON.
-The separately authorized browser-popup P0 source/runtime work is still local
-and under acceptance; it is not delivered by this documentation commit.
-Historical `66070a04` failed Product Gate is retained, not rewritten to success.
-This publication needs its own applicable exact-SHA CI; earlier PASS is not inherited.
+SOURCE: 15 bounded Python paths compile; Ruff introduced-diagnostic delta is
+clear versus main (18 historical app diagnostics retained, not whole-file PASS).
+RUNTIME: unchanged background source pins ran two actual PT5M maintenance cycles
+18:31:02–18:34:09 and 18:36:02–18:38:01 Beijing. Both PARTIAL/exit 1; no new
+attributable visible collection worker observed. 9224–9228 headless; 9223 headed
+with unverified active HUMAN ownership remains untouched. One transient process
+without a CDP/Profile identity was not attributed or stopped. Task restored
+Enabled/PT5M earlier at 16:39:57 after its P0-only pause at 15:52:37; no other
+scheduled task was stopped. Runtime uses the protected dirty C1 working tree,
+not a claim that all product Runtime is identical to clean published main.
+DATABASE: each cycle observed three X/note verified Canonical updates with
+Source/Evidence/raw refs and verified evidence (14 then 12); collection writes
+are expected, readback was read-only. Counts do not imply all platform acceptance.
+USER OUTCOME: background X persistence observed; both cycles still contain scope
+review/risk/partial outcomes. Full six-platform acquisition, HUMAN positive login,
+API load, old visible-worker migration and full P0 acceptance remain OPEN.
+Core 8201 was unavailable at observation; no unrelated service restart performed.
+SOURCE publication does not promote RUNTIME, JOB_CLOSED, RELEASED or USER_VERIFIED.
+
+No-AI analysis/Math methods were published in `b55ecd89`; Product Gate
+37920208081 and App Gate 37920208133 passed at that exact SHA. The current
+source batch needs its own applicable exact-SHA CI; prior successes are not inherited.
+The analysis Agent's actual no-AI computation/failure-gate gap remains OPEN.
+Earlier failures, research originals and unpublished source regions remain protected.
 
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 

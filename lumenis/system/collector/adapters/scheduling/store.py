@@ -7,6 +7,10 @@
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
+import os
+from pathlib import Path
+import re
 import sqlite3
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -48,6 +52,44 @@ class ScheduleDecisionStore:
     def __init__(self, db_path: str):
         self.db_path = db_path
         self._repository = DatabaseRepository(db_path)
+
+    @contextmanager
+    def platform_attempt_lock(self, platform: str):
+        """Keep one baseline worker per platform across processes and restarts.
+
+        This OS lock contains no business data or credentials. The OS releases
+        it when the holder exits, including when its task wrapper has died;
+        another worker cannot treat a still-running orphan as an expired lease.
+        """
+        if not isinstance(platform, str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,39}", platform):
+            raise ValueError("invalid platform lock identity")
+        directory = Path(self.db_path).resolve().parent / "runtime" / "collector-schedule"
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / (platform + ".lock")
+        with path.open("a+b") as handle:
+            if handle.seek(0, os.SEEK_END) == 0:
+                handle.write(b"\0")
+                handle.flush()
+            handle.seek(0)
+            try:
+                if os.name == "nt":
+                    import msvcrt
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except (BlockingIOError, PermissionError):
+                yield False
+                return
+            try:
+                yield True
+            finally:
+                handle.seek(0)
+                if os.name == "nt":
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                else:
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
 
     def _conn(self) -> sqlite3.Connection:
         return self._repository.connect(timeout=15)

@@ -149,12 +149,41 @@ class DouyinAdapter(BasePlatformAdapter):
             from lumenis.adapters.douyin import _configured_browser_worker_url
             from lumenis.adapters.human_browser import is_cdp_url_open
             cdp_url = _configured_browser_worker_url()
-        except Exception:
+        except Exception as exc:
+            profile_unavailable = (
+                isinstance(exc, RuntimeError)
+                and str(exc) in {
+                    "DOUYIN_READONLY worker profile is not bound to the configured loopback port",
+                    "READONLY_WORKER_PROFILE_MODE_OR_KERNEL_UNAVAILABLE",
+                }
+            )
+            if profile_unavailable:
+                return CollectionResult(
+                    status=CollectionStatus.PROVIDER_UNAVAILABLE,
+                    platform=self.platform,
+                    message="抖音远程浏览器工作器不可达",
+                    metadata={"provider": "authorized_browser_worker", "endpoint_configured": True,
+                              "binding_reason": "READONLY_WORKER_PROFILE_MODE_OR_KERNEL_UNAVAILABLE",
+                              "healthcheck_scope": "worker_connectivity"},
+                )
+
+            error_message = str(exc) if isinstance(exc, RuntimeError) else ""
+            boundary_errors = {
+                "DOUYIN_CDP_URL must be a plain worker endpoint URL",
+                "DOUYIN_CDP_URL must identify a remote browser worker",
+                "DOUYIN_CDP_URL loopback is restricted to the opted-in DOUYIN_READONLY worker",
+            }
+            binding_reason = (
+                "READONLY_WORKER_BOUNDARY_INVALID"
+                if error_message in boundary_errors
+                else "READONLY_WORKER_NOT_CONFIGURED"
+            )
             return CollectionResult(
                 status=CollectionStatus.NOT_CONFIGURED,
                 platform=self.platform,
                 message="抖音远程浏览器工作器尚未配置",
                 metadata={"provider": "authorized_browser_worker", "endpoint_configured": False,
+                          "binding_reason": binding_reason,
                           "healthcheck_scope": "configuration_only"},
             )
         if not is_cdp_url_open(cdp_url):

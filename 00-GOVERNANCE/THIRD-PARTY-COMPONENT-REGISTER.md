@@ -325,3 +325,8 @@ receipt contract and requires equivalent signature/expiry/binding tests.
 | Audacity；Dify | MECHANISM_REFERENCE_ONLY；未许可引入其完整代码 | 前者GPL兼容与后者附加许可条件按精确版本核查；不得据公开仓库推断可复制 |
 
 每次采用记录固定version/commit、源/依赖/权重/二进制许可与再分发义务、Windows/macOS/Linux/Android/iOS及Web适用性、维护/漏洞/性能/离线/资源、隔离验证、可替换接口与卸载回退。不得为“免费”无理由全局装大型依赖、增加登录/费用或扩大权限。现有模型、Identity、Permission、Evidence、Artifact及媒体Owner保持唯一。本轮规则更新未安装这些可选组件。
+
+
+### 2026-10-09 development-only Ruff CLI
+
+Ruff 0.16.9 (Astral; MIT) is installed as a local static-analysis/format-preview CLI, matching the existing VS Code bundled version. Official [installation documentation](https://docs.astral.sh/ruff/installation/) and [versioned PyPI metadata](https://pypi.org/project/ruff/0.16.9/) identify the distribution. Windows wheel SHA-256: `6bd40fec8cd4c8a3d4dd589bd8ad4e6320c13c29234159bfd959a40d529d597b`; downloaded bytes were checked before installation. Runtime executable and rollback receipts remain workstation-local. This does not add a shipped LUMENIS dependency, AI provider, account, paid obligation, automatic fixer or product acceptance proof.

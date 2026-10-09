@@ -23,6 +23,9 @@ Secrets, data files, browser sessions, production database writes and unknown lo
 
 ## Local deterministic developer workflow (2026-10-09)
 
+Ruff CLI is a required local static tool when Python paths are checked. This workstation now exposes `ruff --version` through its existing `D:/devtools/bin` entry and pins Ruff 0.16.9 in `D:/devtools/lumenis-engineering/ruff-0.16.9`; the ignored `tools.local.json` binds the exact executable. VS Code keeps its same-version bundled server. On another workstation resolve its installed executable, then use the existing official-source installation authority for a missing tool; do not silently skip a required static check. Record UNAVAILABLE only at a verified permission/resource boundary and continue independent work. Installation hashes/rollback and actual checks stay in protected local receipts; no model calls or production Python dependency changes.
+
+
 Use PowerShell 7.5+ and Python 3.11+; the existing project's Python/type policy remains unchanged. VS Code's native Tasks call `scripts/local_development.ps1`, backed by `.codex/local_workflow.py`. They do not launch Codex, a provider, module suites, product services, commit or push. The official language extensions supply local completion/diagnostics; automatic save fixes, heavy automatic Tasks, test discovery and AI completion are disabled for this workspace.
 
 ```powershell

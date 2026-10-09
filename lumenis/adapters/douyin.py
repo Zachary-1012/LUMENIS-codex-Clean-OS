@@ -70,8 +70,9 @@ def _configured_browser_worker_url() -> str:
         from .cookie_vault import _current_data_dir
         import cdp_helper
         profile_dir = Path(_current_data_dir()) / "private" / "profiles" / "douyin-readonly"
-        if not cdp_helper.is_cdp_profile_running(9225, str(profile_dir)):
-            raise RuntimeError("DOUYIN_READONLY worker profile is not bound to the configured loopback port")
+        if not cdp_helper.registered_cdp_browser_for_port(
+                9225, str(profile_dir), headless=True):
+            raise RuntimeError("READONLY_WORKER_PROFILE_MODE_OR_KERNEL_UNAVAILABLE")
         return "http://127.0.0.1:9225"
     return value
 

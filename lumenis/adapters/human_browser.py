@@ -3,21 +3,20 @@
 共享拟人浏览层（Human Browser Layer）
 =================================================
 定位：面向小红书 / 抖音 / Google 等“强反爬、需真人浏览”的采集源，
-提供统一的、基于 CDP 连接真实 Edge 的拟人化浏览器操作底座。
+提供统一的、基于已注册 CDP Worker 的拟人化浏览器操作底座。
 
 设计原则（结合 GitHub 反检测开源实践 niespodd/browser-fingerprinting、
 nodriver、SeleniumBase 等的共识）：
-  1. 隐蔽性主防线是“真实有头 Edge + 持久化指纹 Profile + connectOverCDP”，
-     而非 playwright 自启的自动化内核——本层只连接由 cdp_helper 拉起的、
-     带固定用户目录的 Edge，保证 IP、指纹、登录态长期稳定一致；
+  1. BACKGROUND 只连接经端口、Profile、内核和 headless 参数核验的无头 Worker；
+     只有带真实 Collector task 和 Permission 的 HUMAN_INTERACTIVE 请求才可切换到可见模式；
   2. JS 层 stealth 注入仅作纵深防御（掩盖 navigator.webdriver 等显性泄漏），
      不把它当作唯一手段；
   3. 行为拟人：贝塞尔鼠标轨迹、人类打字节奏、变速/偶发回滚的滚动、
      高斯随机停顿，替代固定 sleep 与机械滚轮；
   4. 六态严格分离：SUCCESS / EMPTY / BLOCKED / CAPTCHA / AUTH_FAILED /
      NETWORK_ERROR，绝不把被拦或加载失败伪装成“0 条成功”；
-  5. CDP 模式只关闭自己新建的标签页，绝不 browser.close()（否则会连同
-     用户的真实 Edge 一起关掉）。
+  5. CDP 模式只关闭自己新建的标签页，绝不 browser.close()；受控模式切换
+     只通过现有 SYSTEM Worker 的身份核验和 graceful Browser.close 完成。
 
 线程模型：playwright sync_api 需在工作线程内独立创建实例，HumanBrowser
 作为上下文管理器在单次采集任务内创建与释放。
@@ -26,6 +25,8 @@ import time
 import random
 import socket
 import logging
+import os
+from pathlib import Path
 from urllib.parse import urlsplit
 from dataclasses import dataclass
 from typing import Optional, List, Tuple
@@ -105,6 +106,444 @@ def is_cdp_url_open(cdp_url: str, timeout: float = 1.0) -> bool:
         return False
 
 
+def readonly_worker_spec(platform: str, private_data_dir=None) -> dict:
+    """Resolve isolated worker parameters from the existing platform catalog."""
+    from lumenis.system.collector.adapters.config import get_platform_capabilities
+    from .cookie_vault import _current_data_dir
+
+    binding = get_platform_capabilities(platform).get("readonly_worker")
+    if not isinstance(binding, dict):
+        raise RuntimeError("READONLY_WORKER_NOT_REGISTERED")
+    root = (Path(private_data_dir) if private_data_dir is not None
+            else Path(_current_data_dir()) / "private")
+    profiles = (root / "profiles").resolve()
+    profile = (profiles / binding["profile"]).resolve()
+    if profile.parent != profiles or binding["port"] in {9222, 9223, 9224}:
+        raise RuntimeError("READONLY_WORKER_BOUNDARY_INVALID")
+    return {"account": binding["account"], "port": binding["port"],
+            "profile": str(profile), "env_prefix": binding["env_prefix"],
+            "home": "about:blank", "direct": False}
+
+
+def _normalized_profile(path) -> str:
+    return os.path.normcase(os.path.abspath(os.path.normpath(str(path or "")))).rstrip("\\/")
+
+
+def registered_browser_worker_spec(identity: str, *, port: int | None = None,
+                                   profile: str | None = None) -> dict:
+    """Resolve one exact platform account or one exact registered local worker."""
+    from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES
+
+    candidate = str(identity or "").strip()
+    candidate_folded = candidate.casefold()
+    matches = []
+    for platform, config in PLATFORM_CAPABILITIES.items():
+        binding = config.get("readonly_worker") if isinstance(config, dict) else None
+        if not isinstance(binding, dict):
+            continue
+        spec = readonly_worker_spec(platform)
+        if (candidate_folded in {platform.casefold(), str(binding.get("account", "")).casefold()}
+                or (port is not None and int(port) == int(spec["port"])
+                    and (profile is None or _normalized_profile(profile) == _normalized_profile(spec["profile"])) )):
+            matches.append({**spec, "platform": platform})
+
+    # XHS is registered through its existing HK/International account contract,
+    # not PLATFORM_CAPABILITIES.readonly_worker. Mainland identity is excluded.
+    if candidate_folded in {"xhs_retinaut", "xiaohongshu", "xhs"} or port == 9223:
+        try:
+            import xhs_cookie_bridge as bridge
+            account = bridge.XHS_RETINAUT_NAME
+            binding = bridge.ACCOUNT_PROFILES[account]
+            xhs_profile = binding.get("profile") if isinstance(binding, dict) else binding[1]
+            if not os.path.isabs(xhs_profile):
+                xhs_profile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", xhs_profile)
+            xhs_profile = os.path.abspath(xhs_profile)
+            xhs_port = int(bridge.cdp_port_for(account))
+            identity_matches = candidate_folded in {account.casefold(), "xiaohongshu", "xhs"}
+            owner_matches = (port is not None and int(port) == xhs_port
+                             and (profile is None or _normalized_profile(profile) == _normalized_profile(xhs_profile)))
+            if ((identity_matches and candidate_folded != "default") or owner_matches):
+                if xhs_port != 9223:
+                    raise RuntimeError("XHS_HK_WORKER_BINDING_UNAVAILABLE")
+                matches.append({"platform": "xiaohongshu", "account": account,
+                                "port": xhs_port, "profile": xhs_profile,
+                                "env_prefix": "XHS", "home": "about:blank",
+                                "direct": False, "browser": "edge"})
+        except (KeyError, AttributeError, TypeError, ValueError):
+            pass
+
+    unique = {(item["platform"], int(item["port"]), _normalized_profile(item["profile"])): item
+              for item in matches}
+    if len(unique) != 1:
+        raise RuntimeError("BROWSER_PLATFORM_OR_WORKER_BINDING_UNAVAILABLE")
+    spec = next(iter(unique.values()))
+    if port is not None and int(port) != int(spec["port"]):
+        raise RuntimeError("BROWSER_WORKER_PORT_MISMATCH")
+    if profile is not None and _normalized_profile(profile) != _normalized_profile(spec["profile"]):
+        raise RuntimeError("BROWSER_WORKER_PROFILE_MISMATCH")
+    if int(spec["port"]) == 9222:
+        raise RuntimeError("PROTECTED_PROFILE_FORBIDDEN")
+    return spec
+
+
+def _task_result_for_platform(task: dict, platform: str) -> tuple[str, dict] | None:
+    from lumenis.system.collector.adapters.config import resolve_platform_config_key
+
+    requested = resolve_platform_config_key(platform)
+    results = task.get("per_platform") if isinstance(task, dict) else None
+    if not isinstance(results, dict):
+        return None
+    for key, result in results.items():
+        try:
+            if resolve_platform_config_key(str(key)) == requested and isinstance(result, dict):
+                return str(key).casefold(), result
+        except (KeyError, TypeError, ValueError):
+            continue
+    return None
+
+
+def _authorize_human_interactive(identity: str, task_id: str,
+                                 actor_ref: Optional[str] = None) -> str:
+    """Require a completed manual Collector task for the exact registered platform."""
+    task_id = str(task_id or "").strip()
+    if not task_id:
+        raise PermissionError("HUMAN_INTERACTIVE_TASK_ID_REQUIRED")
+    actor_ref = str(actor_ref or "").strip()
+    if not actor_ref:
+        raise PermissionError("HUMAN_INTERACTIVE_AUTHENTICATED_ACTOR_REQUIRED")
+    spec = registered_browser_worker_spec(identity)
+    platform = spec["platform"]
+    try:
+        from lumenis.adapters import collector_service
+        task = collector_service.get_task(task_id)
+        task_owner = collector_service.get_task_owner(task_id)
+    except Exception:
+        task, task_owner = None, None
+    if task_owner != actor_ref:
+        raise PermissionError("HUMAN_INTERACTIVE_TASK_ACTOR_MISMATCH")
+    match = _task_result_for_platform(task, platform) if isinstance(task, dict) else None
+    task_platform, result = match if match else ("", None)
+    allowed_states = {"AUTH_REQUIRED", "CAPTCHA", "NEED_VERIFY"}
+    if (not isinstance(task, dict) or task.get("manual") is not True
+            or task.get("status") != "finished" or not isinstance(result, dict)
+            or str(result.get("state") or "").upper() not in allowed_states):
+        raise PermissionError("HUMAN_INTERACTIVE_COLLECTOR_TASK_UNVERIFIED")
+    from lumenis.system.security import OperationType, get_permission_gate
+    decision = get_permission_gate().check(
+        operation_type=OperationType.BROWSER_OPERATION,
+        resource=f"collector.browser.login:{task_platform}:{task_id}",
+        caller="lumenis.adapters.human_browser.HUMAN_INTERACTIVE",
+        domain_id="system",
+    )
+    if not decision.allowed:
+        raise PermissionError("HUMAN_INTERACTIVE_PERMISSION_DENIED")
+    return task_platform
+
+
+def _require_human_browser_lease(task_id: str, platform: str) -> None:
+    """Require the existing Collector service to hold this task's browser lane."""
+    from lumenis.adapters import collector_service
+    if not collector_service.human_browser_lease_owned(task_id, platform):
+        raise PermissionError("HUMAN_INTERACTIVE_BROWSER_LEASE_REQUIRED")
+
+
+def _worker_mode_state(spec: dict, *, headless: bool):
+    import cdp_helper
+    port, profile = int(spec["port"]), spec["profile"]
+    browser = cdp_helper.registered_cdp_browser_for_port(
+        port, profile, headless=headless)
+    if browser and cdp_helper.is_cdp_profile_running(
+            port, profile, headless=headless, loopback_only=True, browser=browser):
+        return browser
+    return None
+
+
+def _launch_registered_worker(spec: dict, *, mode: str, browser: str | None = None,
+                              task_id: str | None = None) -> dict:
+    from scripts.start_resident_browsers import _launch_readonly_worker
+    result = _launch_readonly_worker(
+        spec, mode=mode, browser=browser or spec.get("browser"),
+        task_id=task_id, platform=spec["account"])
+    headless = mode == "BACKGROUND"
+    import cdp_helper
+    online = result.get("online") is True and bool(_worker_mode_state(spec, headless=headless))
+    return {"online": online, "browser": result.get("browser") or browser,
+            "action": result.get("action") or "worker_unavailable"}
+
+
+def _switch_registered_worker_mode(spec: dict, *, target_mode: str,
+                                   task_id: str | None = None) -> dict:
+    """Switch one verified isolated worker gracefully while its task lease is held."""
+    target_mode = str(target_mode or "BACKGROUND").upper()
+    if target_mode not in {"BACKGROUND", "HUMAN_INTERACTIVE"}:
+        raise RuntimeError("BROWSER_MODE_INVALID")
+    target_headless = target_mode == "BACKGROUND"
+    port, profile = int(spec["port"]), spec["profile"]
+    import cdp_helper
+    desired = _worker_mode_state(spec, headless=target_headless)
+    opposite = _worker_mode_state(spec, headless=not target_headless)
+    if cdp_helper.is_cdp_port_open(port):
+        if desired:
+            if target_mode == "HUMAN_INTERACTIVE":
+                raise RuntimeError("HUMAN_INTERACTIVE_WORKER_OWNER_UNVERIFIED")
+            return {"online": True, "browser": desired, "action": "already_online"}
+        if not opposite:
+            raise RuntimeError("READONLY_WORKER_PORT_IN_USE_UNVERIFIED")
+        closed = cdp_helper.close_cdp_browser(
+            port, profile, headless=not target_headless, browser=opposite)
+        if closed.get("success") is not True or cdp_helper.is_cdp_port_open(port):
+            raise RuntimeError("READONLY_WORKER_GRACEFUL_CLOSE_UNCONFIRMED")
+        selected_browser = opposite
+    else:
+        selected_browser = None
+
+    result = _launch_registered_worker(
+        spec, mode=target_mode, browser=selected_browser, task_id=task_id)
+    if not result["online"]:
+        raise RuntimeError("READONLY_WORKER_MODE_START_UNVERIFIED")
+    return {"online": True, "browser": result["browser"], "action": result["action"]}
+
+
+def return_registered_worker_to_background(platform: str, *, task_id: str,
+                                           actor_ref: Optional[str] = None) -> dict:
+    """Restore the same human task's isolated worker to verified headless mode."""
+    spec = registered_browser_worker_spec(platform)
+    task_platform = _authorize_human_interactive(spec["account"], task_id, actor_ref)
+    from lumenis.adapters import collector_service
+    if not collector_service.begin_background_browser_return(task_id, task_platform):
+        raise PermissionError("HUMAN_INTERACTIVE_TASK_OR_WORKER_NOT_OWNED")
+    try:
+        _worker_endpoint(spec)
+        with collector_service.platform_activity_lock(task_platform) as acquired:
+            if acquired is not True:
+                raise RuntimeError("COLLECTOR_MAINTENANCE_ATTEMPT_ACTIVE")
+            worker = _switch_registered_worker_mode(
+                spec, target_mode="BACKGROUND", task_id=task_id)
+        if not collector_service.update_human_browser_state(
+                task_id, task_platform, "RETURNED_BACKGROUND", release_lease=True):
+            raise RuntimeError("HUMAN_INTERACTIVE_TASK_STATE_UPDATE_FAILED")
+        return {"platform": spec["platform"], "account": spec["account"],
+                "task_id": task_id, "mode": "BACKGROUND",
+                "status": "RETURNED_BACKGROUND", "worker_verified": worker["online"],
+                "session_state": "NEED_VERIFY"}
+    except Exception:
+        collector_service.update_human_browser_state(
+            task_id, task_platform, "BLOCKED", release_lease=False)
+        raise
+
+
+def _worker_endpoint(spec: dict) -> str:
+    expected = f"http://127.0.0.1:{int(spec['port'])}"
+    if spec["platform"] == "xiaohongshu":
+        configured = os.getenv("XHS_CDP_URL", "").strip()
+        if configured and configured != expected:
+            raise RuntimeError("XHS_INTERACTIVE_WORKER_ENDPOINT_MISMATCH")
+        return expected
+    prefix = spec["env_prefix"]
+    configured = os.getenv(prefix + "_CDP_URL", "").strip()
+    enabled = os.getenv(prefix + "_LOCAL_WORKER_ENABLED", "").strip().lower()
+    account = os.getenv(prefix + "_LOCAL_WORKER_ACCOUNT", "").strip().upper()
+    if (configured != expected or enabled not in {"1", "true", "yes"}
+            or account != spec["account"]):
+        raise RuntimeError("READONLY_WORKER_NOT_CONFIGURED")
+    return expected
+
+
+def ensure_registered_browser_worker_background(platform: str) -> dict:
+    """Ensure the exact registered worker is headless; never replace a visible/unknown owner."""
+    spec = registered_browser_worker_spec(platform)
+    _worker_endpoint(spec)
+    import cdp_helper
+    current = _worker_mode_state(spec, headless=True)
+    if current:
+        return {"status": "ALREADY_RUNNING", "worker_verified": True,
+                "platform": spec["platform"], "account": spec["account"]}
+    if cdp_helper.is_cdp_port_open(spec["port"]):
+        return {"status": "BLOCKED", "worker_verified": False,
+                "reason": "READONLY_WORKER_PORT_IN_USE_UNVERIFIED",
+                "platform": spec["platform"], "account": spec["account"]}
+    try:
+        worker = _launch_registered_worker(spec, mode="BACKGROUND")
+    except Exception:
+        return {"status": "UNAVAILABLE", "worker_verified": False,
+                "reason": "READONLY_WORKER_BACKGROUND_START_FAILED",
+                "platform": spec["platform"], "account": spec["account"]}
+    return {"status": "RECOVERED" if worker["online"] else "UNAVAILABLE",
+            "worker_verified": worker["online"],
+            "reason": None if worker["online"] else "READONLY_WORKER_IDENTITY_UNVERIFIED",
+            "platform": spec["platform"], "account": spec["account"]}
+
+
+def configured_readonly_worker_url(platform: str, *, mode: str = "BACKGROUND",
+                                   task_id: Optional[str] = None,
+                                   actor_ref: Optional[str] = None) -> str:
+    """Resolve the exact registered local profile and requested browser mode."""
+    import cdp_helper
+
+    mode = str(mode or "BACKGROUND").upper()
+    if mode not in {"BACKGROUND", "HUMAN_INTERACTIVE"}:
+        raise RuntimeError("BROWSER_MODE_INVALID")
+    if mode == "HUMAN_INTERACTIVE":
+        task_platform = _authorize_human_interactive(platform, task_id or "", actor_ref)
+        _require_human_browser_lease(task_id or "", task_platform)
+    spec = readonly_worker_spec(platform)
+    prefix = spec["env_prefix"]
+    expected_url = f"http://127.0.0.1:{spec['port']}"
+    configured = os.getenv(prefix + "_CDP_URL", "").strip()
+    enabled = os.getenv(prefix + "_LOCAL_WORKER_ENABLED", "").strip().lower()
+    account = os.getenv(prefix + "_LOCAL_WORKER_ACCOUNT", "").strip().upper()
+    if (configured != expected_url or enabled not in {"1", "true", "yes"}
+            or account != spec["account"]):
+        raise RuntimeError("READONLY_WORKER_NOT_CONFIGURED")
+    expected_headless = mode == "BACKGROUND"
+    if not cdp_helper.registered_cdp_browser_for_port(
+            spec["port"], spec["profile"], headless=expected_headless):
+        raise RuntimeError("READONLY_WORKER_PROFILE_MODE_OR_KERNEL_UNAVAILABLE")
+    return expected_url
+
+def open_readonly_worker_login(platform: str, *, task_id: str,
+                               actor_ref: Optional[str] = None) -> dict:
+    """Switch one registered worker to visible mode for an authorized task."""
+    login_urls = {
+        "instagram": "https://www.instagram.com/accounts/login/",
+        "facebook": "https://www.facebook.com/login/",
+        "douyin": "https://www.douyin.com/",
+        "x": "https://x.com/i/flow/login",
+        "xiaohongshu": "https://www.rednote.com/",
+    }
+    spec = registered_browser_worker_spec(platform)
+    platform = spec["platform"]
+    if platform not in login_urls:
+        raise ValueError("no approved readonly login entry")
+    task_platform = _authorize_human_interactive(spec["account"], task_id, actor_ref)
+    from lumenis.adapters import collector_service
+    if not collector_service.begin_human_browser(task_id, task_platform):
+        raise PermissionError("HUMAN_INTERACTIVE_TASK_OR_WORKER_BUSY")
+    transition_started = False
+    try:
+        if not collector_service.human_browser_lease_owned(task_id, task_platform):
+            raise RuntimeError("COLLECTOR_BROWSER_LANE_NOT_RESERVED")
+        with collector_service.platform_activity_lock(task_platform) as acquired:
+            if acquired is not True:
+                raise RuntimeError("COLLECTOR_MAINTENANCE_ATTEMPT_ACTIVE")
+            initial_human_worker = bool(_worker_mode_state(spec, headless=False))
+            initial_headless_worker = bool(_worker_mode_state(spec, headless=True))
+            import cdp_helper
+            if initial_human_worker:
+                raise RuntimeError("HUMAN_INTERACTIVE_WORKER_OWNER_UNVERIFIED")
+            if (cdp_helper.is_cdp_port_open(spec["port"])
+                    and not initial_headless_worker):
+                raise RuntimeError("READONLY_WORKER_PORT_IN_USE_UNVERIFIED")
+            transition_started = True
+            endpoint = _worker_endpoint(spec)
+            worker = _switch_registered_worker_mode(
+                spec, target_mode="HUMAN_INTERACTIVE", task_id=task_id)
+            if not worker["online"]:
+                raise RuntimeError("READONLY_WORKER_HUMAN_MODE_UNAVAILABLE")
+            from urllib.parse import urlsplit
+            from playwright.sync_api import sync_playwright
+            target_host = (urlsplit(login_urls[platform]).hostname or "").lower()
+            opened = False
+            with sync_playwright() as runtime:
+                browser = runtime.chromium.connect_over_cdp(endpoint, timeout=10000)
+                if not browser.contexts:
+                    raise RuntimeError("registered human worker context unavailable")
+                context = browser.contexts[0]
+                page = next((item for item in context.pages
+                             if (urlsplit(item.url).hostname or "").lower() == target_host), None)
+                if page is None:
+                    page = context.new_page()
+                    page.goto(login_urls[platform], wait_until="domcontentloaded", timeout=40000)
+                    opened = True
+                page.bring_to_front()
+        if not collector_service.update_human_browser_state(
+                task_id, task_platform, "ACTIVE", release_lease=False):
+            raise RuntimeError("HUMAN_INTERACTIVE_TASK_STATE_UPDATE_FAILED")
+    except Exception:
+        # If a visible worker was started but login UI setup failed, return it to
+        # BACKGROUND. A failed graceful return keeps the lane leased and blocked.
+        try:
+            if transition_started and not _worker_mode_state(spec, headless=True):
+                with collector_service.platform_activity_lock(task_platform) as acquired:
+                    if acquired is not True:
+                        raise RuntimeError("COLLECTOR_MAINTENANCE_ATTEMPT_ACTIVE")
+                    _switch_registered_worker_mode(
+                        spec, target_mode="BACKGROUND", task_id=task_id)
+            collector_service.update_human_browser_state(
+                task_id, task_platform, "BLOCKED", release_lease=True)
+        except Exception:
+            collector_service.update_human_browser_state(
+                task_id, task_platform, "BLOCKED", release_lease=False)
+        raise
+    return {"platform": platform, "account": spec["account"],
+            "task_id": str(task_id), "mode": "HUMAN_INTERACTIVE",
+            "status": "HUMAN_LOGIN_OPENED" if opened else "HUMAN_LOGIN_REUSED",
+            "login_url": login_urls[platform], "worker_verified": worker["online"],
+            "session_verified": False}
+
+def recover_registered_readonly_worker(platform: str, *, mode: str = "BACKGROUND") -> dict:
+    """Recover only a registered headless worker; never open UI during recovery."""
+    if str(mode or "BACKGROUND").upper() != "BACKGROUND":
+        return {"status": "BLOCKED", "worker_verified": False,
+                "reason": "AUTOMATIC_HUMAN_INTERACTIVE_FORBIDDEN",
+                "session_verified": False}
+    try:
+        configured_readonly_worker_url(platform, mode="BACKGROUND")
+        return {"status": "ALREADY_RUNNING", "worker_verified": True,
+                "session_verified": False}
+    except RuntimeError as exc:
+        code = str(exc)
+        unavailable_codes = {
+            "READONLY_WORKER_PROFILE_OR_MODE_UNAVAILABLE",
+            "READONLY_WORKER_PROFILE_MODE_OR_KERNEL_UNAVAILABLE",
+        }
+        if code not in unavailable_codes:
+            allowed = {"READONLY_WORKER_NOT_REGISTERED", "READONLY_WORKER_NOT_CONFIGURED",
+                       "READONLY_WORKER_BOUNDARY_INVALID"}
+            return {"status": "UNAVAILABLE", "worker_verified": False,
+                    "reason": code if code in allowed else "READONLY_WORKER_CONFIGURATION_ERROR",
+                    "session_verified": False}
+        spec = readonly_worker_spec(platform)
+        import cdp_helper
+        if cdp_helper.is_cdp_port_open(spec["port"]):
+            return {"status": "BLOCKED", "worker_verified": False,
+                    "reason": "READONLY_WORKER_PORT_IN_USE_UNVERIFIED",
+                    "session_verified": False}
+    from scripts.start_resident_browsers import _launch_readonly_worker
+    try:
+        result = _launch_readonly_worker(readonly_worker_spec(platform), mode="BACKGROUND")
+        online = result.get("online") is True
+        action = result.get("action")
+        return {"status": "RECOVERED" if online else "UNAVAILABLE",
+                "worker_verified": online, "session_verified": False,
+                "reason": (None if online else "READONLY_WORKER_IDENTITY_UNVERIFIED"
+                           if action == "port_in_use_unverified" else "READONLY_WORKER_START_FAILED"),
+                "recovery_action": action if action in {"started", "already_online", "port_in_use_unverified"}
+                                   else "FAILED"}
+    except Exception:
+        return {"status": "UNAVAILABLE", "worker_verified": False,
+                "reason": "READONLY_WORKER_START_FAILED", "session_verified": False}
+
+
+def readonly_worker_health(platform: str) -> dict:
+    """Expose connectivity separately from a real platform login or result."""
+    try:
+        endpoint = configured_readonly_worker_url(platform)
+    except (KeyError, RuntimeError):
+        return {"status": "NOT_CONFIGURED", "ready": False,
+                "metadata": {"provider": "authorized_browser_worker",
+                             "healthcheck_scope": "configuration_only",
+                             "worker_binding_registered": False,
+                             "login_and_collection_verified": False}}
+    online = is_cdp_url_open(endpoint)
+    return {"status": "NEED_VERIFY" if online else "PROVIDER_UNAVAILABLE", "ready": False,
+            "metadata": {"provider": "authorized_browser_worker",
+                         "healthcheck_scope": "worker_connectivity",
+                         "worker_binding_registered": True, "endpoint_configured": True,
+                         "session_state": "worker_reachable_unverified" if online else "worker_unavailable",
+                         "login_and_collection_verified": False}}
+
+
 @dataclass
 class HumanConfig:
     """拟人节奏参数（毫秒/秒级，贴近真人分布）。"""
@@ -120,7 +559,7 @@ class HumanConfig:
 
 
 class HumanBrowser:
-    """拟人浏览器：连接已存在的 CDP Edge，提供拟人操作与六态识别。"""
+    """连接已注册 CDP Worker；后台无头，人工可见模式必须有已验证任务与权限。"""
 
     def __init__(self, cdp_url: Optional[str] = None,
                  config: Optional[HumanConfig] = None,
@@ -128,66 +567,113 @@ class HumanBrowser:
                  port: int = 9222, profile_dir: Optional[str] = None,
                  proxy_server: Optional[str] = None,
                  launch_url: str = "about:blank",
-                 browser: str = "edge"):
-        # 允许直接给 cdp_url；否则按端口拼。port/profile/proxy 用于自动拉起对应实例
+                 browser: Optional[str] = None, mode: str = "BACKGROUND",
+                 task_id: Optional[str] = None,
+                 actor_ref: Optional[str] = None):
         self._explicit_cdp_url = bool(cdp_url)
         self.cdp_url = cdp_url or f"http://127.0.0.1:{port}"
         self.port = port
         self.profile_dir = profile_dir
         self.proxy_server = proxy_server
         self.launch_url = launch_url
-        self.browser = (browser or "edge").lower()  # 内核：edge / chrome（firefox/safari 预留）
+        self.browser = str(browser).lower() if browser else (None if cdp_url else "edge")
         self.cfg = config or HumanConfig()
         self.auto_ensure = auto_ensure
+        self.mode = str(mode or "BACKGROUND").upper()
+        self.task_id = str(task_id or "").strip()
+        self.actor_ref = str(actor_ref or "").strip()
+        if self.mode not in {"BACKGROUND", "HUMAN_INTERACTIVE"}:
+            raise ValueError("BROWSER_MODE_INVALID")
+        if self.mode == "HUMAN_INTERACTIVE":
+            parsed = urlsplit(self.cdp_url)
+            if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.hostname.lower() not in {
+                    "127.0.0.1", "localhost", "::1"}:
+                raise PermissionError("HUMAN_INTERACTIVE_WORKER_IDENTITY_UNAVAILABLE")
+            self.port = parsed.port or (443 if parsed.scheme == "https" else 80)
+            if self.port == 9222:
+                raise PermissionError("PROTECTED_PROFILE_FORBIDDEN")
+            import cdp_helper
+            profile = self.profile_dir or cdp_helper.registered_cdp_profile_for_port(
+                self.port, browser=self.browser)
+            if not profile:
+                raise PermissionError("HUMAN_INTERACTIVE_WORKER_IDENTITY_UNAVAILABLE")
+            worker = registered_browser_worker_spec(
+                "", port=self.port, profile=profile)
+            self.profile_dir = worker["profile"]
+            self.platform = worker["platform"]
+            self.human_task_platform = _authorize_human_interactive(
+                worker["account"], self.task_id, self.actor_ref)
+            _require_human_browser_lease(self.task_id, self.human_task_platform)
         self._pw = None
         self._browser = None
         self._context = None
         self._owned_pages: List = []
 
-    # ---------- 生命周期 ----------
     def connect(self):
-        """连接 CDP Edge；auto_ensure 时端口未开则尝试经 cdp_helper 拉起。"""
-        if self._explicit_cdp_url:
-            if not is_cdp_url_open(self.cdp_url):
-                raise RuntimeError("configured browser worker endpoint is unavailable")
-        elif not is_cdp_open(port=self.port):
-            if not self.auto_ensure:
-                raise RuntimeError(f"CDP 浏览器未启动（端口 {self.port}），且 auto_ensure=False")
-            self._ensure_browser()
+        """Attach only to the registered profile and exact requested browser mode."""
+        parsed = urlsplit(self.cdp_url)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise RuntimeError("configured browser worker endpoint is invalid")
+        local = parsed.hostname.lower() in {"127.0.0.1", "localhost", "::1"}
+        if local:
+            self.port = parsed.port or (443 if parsed.scheme == "https" else 80)
+            if self.port == 9222:
+                raise RuntimeError("PROTECTED_PROFILE_FORBIDDEN")
+            import cdp_helper
+            expected_headless = self.mode == "BACKGROUND"
+            if not self.profile_dir:
+                self.profile_dir = cdp_helper.registered_cdp_profile_for_port(
+                    self.port, browser=self.browser)
+            if not self.profile_dir:
+                raise RuntimeError("BROWSER_PROFILE_OWNER_UNAVAILABLE")
+            if self.browser is None:
+                self.browser = cdp_helper.registered_cdp_browser_for_port(
+                    self.port, self.profile_dir, headless=expected_headless)
+                if not self.browser:
+                    raise RuntimeError("BROWSER_WORKER_KERNEL_OR_IDENTITY_UNVERIFIED")
+            exact = cdp_helper.is_cdp_profile_running(
+                self.port, self.profile_dir, headless=expected_headless,
+                loopback_only=True, browser=self.browser)
+            if not exact and self.mode == "HUMAN_INTERACTIVE":
+                _require_human_browser_lease(self.task_id, self.human_task_platform)
+                raise RuntimeError("HUMAN_INTERACTIVE_WORKER_NOT_PREPARED")
+            if not exact and self.auto_ensure and not self._explicit_cdp_url:
+                self._ensure_browser()
+                exact = cdp_helper.is_cdp_profile_running(
+                    self.port, self.profile_dir, headless=expected_headless,
+                    loopback_only=True, browser=self.browser)
+            if not exact:
+                raise RuntimeError("BROWSER_WORKER_PROFILE_OR_MODE_UNAVAILABLE")
+        elif self.auto_ensure:
+            raise RuntimeError("REMOTE_BROWSER_CANNOT_BE_STARTED_BY_LOCAL_WORKER")
         from playwright.sync_api import sync_playwright
-        # The legacy local path may reset stale local targets. An explicitly
-        # configured remote worker is never touched through localhost helpers.
-        if not self._explicit_cdp_url:
-            try:
-                from cdp_helper import reset_cdp_targets
-                reset_cdp_targets(self.port)
-            except Exception:
-                pass
         self._pw = sync_playwright().start()
         self._browser = self._pw.chromium.connect_over_cdp(self.cdp_url)
         if not self._browser.contexts:
             raise RuntimeError("CDP 浏览器没有可用的浏览器上下文")
         self._context = self._browser.contexts[0]
-        logger.info("HumanBrowser 已连接 %s，既有标签页 %d 个",
-                    self.cdp_url, len(self._context.pages))
+        logger.info("HumanBrowser 已连接 %s，既有标签页 %d 个，mode=%s",
+                    self.cdp_url, len(self._context.pages), self.mode)
         return self
 
     def _ensure_browser(self):
-        """通过项目根 cdp_helper 拉起带持久 Profile 的 Edge（可选依赖）。"""
+        """Start only the registered isolated profile in the selected mode."""
+        if self.mode == "HUMAN_INTERACTIVE":
+            _require_human_browser_lease(self.task_id, self.human_task_platform)
         try:
-            from cdp_helper import ensure_cdp_browser
-            kwargs = {"port": self.port, "auto_start": True,
-                      "launch_url": self.launch_url, "browser": self.browser}
-            if self.profile_dir:
-                kwargs["profile_dir"] = self.profile_dir
+            import cdp_helper
+            kwargs = {"port": self.port, "profile_dir": self.profile_dir,
+                      "auto_start": True, "headless": self.mode == "BACKGROUND",
+                      "loopback_only": True, "launch_url": self.launch_url,
+                      "browser": self.browser}
             if self.proxy_server:
                 kwargs["proxy_server"] = self.proxy_server
-            info = ensure_cdp_browser(**kwargs)
-            if not info.get("success") and not info.get("available"):
-                raise RuntimeError(f"无法拉起 CDP Edge：{info.get('message')}")
-            time.sleep(1.5)
+            info = cdp_helper.ensure_cdp_browser(**kwargs)
+            if info.get("available") is not True:
+                raise RuntimeError(f"BROWSER_WORKER_UNAVAILABLE: {info.get('message')}")
+            time.sleep(0.5)
         except ImportError as e:
-            raise RuntimeError("cdp_helper 不可用，无法自动启动 CDP 浏览器") from e
+            raise RuntimeError("cdp_helper 不可用，无法启动CDP浏览器") from e
 
     def new_page(self, stealth: bool = True):
         """新建一个干净标签页并注入反检测脚本；返回 page。"""
@@ -319,7 +805,8 @@ class HumanBrowser:
         命中各风控/登录/网络特征返回对应状态。调用方据此决定熔断或恢复。
         """
         try:
-            url = (page.url() or "").lower()
+            url_value = page.url
+            url = str((url_value() if callable(url_value) else url_value) or "").lower()
         except Exception:
             url = ""
         if url.startswith("about:blank"):

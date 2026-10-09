@@ -17,6 +17,7 @@ import threading
 import uuid
 import time
 import datetime
+from contextlib import ExitStack, contextmanager
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Optional
 
@@ -25,7 +26,8 @@ from . import persist
 from .risk_controller import risk_controller
 
 # 需要真人浏览器（CDP）的平台：统一串行，降低风控风险
-BROWSER_PLATFORMS = {"douyin", "instagram", "google", "xiaohongshu", "weibo", "bilibili"}
+BROWSER_PLATFORMS = {"douyin", "instagram", "google", "xhs", "xiaohongshu", "weibo", "bilibili",
+                    "facebook", "x"}
 
 # 后台任务线程池（一次只跑一个采集任务，避免叠加触发风控）
 _job_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="collect-job")
@@ -37,10 +39,142 @@ _browser_lock = threading.Lock()
 # 内存任务表：task_id -> 任务状态
 _TASKS: Dict[str, dict] = {}
 _TASKS_LOCK = threading.Lock()
+_HUMAN_BROWSER_LEASE: Optional[tuple[str, str]] = None
 
 
 def _now():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def browser_worker_idle() -> bool:
+    """Return whether the shared browser collector lock is currently free."""
+    with _TASKS_LOCK:
+        return not _browser_lock.locked() and _HUMAN_BROWSER_LEASE is None
+
+
+@contextmanager
+def platform_activity_lock(platform: str):
+    """Reuse the scheduler's cross-process attempt lock for this platform.
+
+    The lock covers scheduled baseline acquisition and Collector browser runs;
+    it is an operational mutex only and contains no task, session, or business data.
+    """
+    from lumenis.shared.database import main_db_path
+    from lumenis.system.collector.adapters.platform_naming import normalize_platform
+    from lumenis.system.collector.adapters.scheduling.store import ScheduleDecisionStore
+
+    exact_platform = str(platform or "").strip().casefold()
+    canonical = normalize_platform(exact_platform) or exact_platform
+    if not canonical:
+        raise RuntimeError("COLLECTOR_PLATFORM_LOCK_ID_UNAVAILABLE")
+    lock_ids = {canonical}
+    # Existing purpose-baseline plans use the historical `xhs` key.
+    if canonical == "xiaohongshu":
+        lock_ids.add("xhs")
+    store = ScheduleDecisionStore(main_db_path())
+    with ExitStack() as stack:
+        for lock_id in sorted(lock_ids):
+            acquired = stack.enter_context(store.platform_attempt_lock(lock_id))
+            if acquired is not True:
+                yield False
+                return
+        yield True
+
+
+def human_browser_lease_owned(task_id: str, platform: str) -> bool:
+    """Verify the same live Collector task owns the exclusive human-browser lane."""
+    task_id = str(task_id or "").strip()
+    platform = str(platform or "").strip().casefold()
+    with _TASKS_LOCK:
+        return (_HUMAN_BROWSER_LEASE == (task_id, platform)
+                and _browser_lock.locked()
+                and _verification_task_locked(task_id, platform) is not None)
+
+
+def _verification_task_locked(task_id: str, platform: str) -> dict | None:
+    task = _TASKS.get(str(task_id or "").strip())
+    result = (task.get("per_platform") or {}).get(platform) if isinstance(task, dict) else None
+    if (not isinstance(task, dict) or task.get("manual") is not True
+            or task.get("status") != "finished" or not isinstance(result, dict)
+            or str(result.get("state") or "").upper()
+            not in {"AUTH_REQUIRED", "CAPTCHA", "NEED_VERIFY"}):
+        return None
+    return task
+
+
+def _same_platform(left: str, right: str) -> bool:
+    try:
+        from lumenis.system.collector.adapters.config import resolve_platform_config_key
+        return resolve_platform_config_key(left) == resolve_platform_config_key(right)
+    except (KeyError, TypeError, ValueError):
+        return str(left or "").casefold() == str(right or "").casefold()
+
+
+def begin_human_browser(task_id: str, platform: str) -> bool:
+    """Reserve the existing Collector browser lane for one authorized human step."""
+    global _HUMAN_BROWSER_LEASE
+    task_id = str(task_id or "").strip()
+    platform = str(platform or "").strip().casefold()
+    with _TASKS_LOCK:
+        task = _verification_task_locked(task_id, platform)
+        if task is None or _HUMAN_BROWSER_LEASE is not None:
+            return False
+        for other_id, other in _TASKS.items():
+            if other_id == task_id or other.get("status") != "running":
+                continue
+            if any(_same_platform(str(item), platform)
+                   for item in other.get("platforms", [])):
+                return False
+        if not _browser_lock.acquire(blocking=False):
+            return False
+        state = task.get("human_browser")
+        if isinstance(state, dict) and state.get("status") not in {
+                "RETURNED_BACKGROUND", "BLOCKED"}:
+            _browser_lock.release()
+            return False
+        _HUMAN_BROWSER_LEASE = (task_id, platform)
+        task["human_browser"] = {"platform": platform, "status": "OPENING"}
+        return True
+
+
+def begin_background_browser_return(task_id: str, platform: str) -> bool:
+    """Keep the same task's exclusive browser lane while restoring BACKGROUND."""
+    task_id = str(task_id or "").strip()
+    platform = str(platform or "").strip().casefold()
+    with _TASKS_LOCK:
+        task = _verification_task_locked(task_id, platform)
+        state = task.get("human_browser") if isinstance(task, dict) else None
+        if (_HUMAN_BROWSER_LEASE != (task_id, platform) or task is None
+                or not isinstance(state, dict)
+                or state.get("status") not in {"ACTIVE", "BLOCKED"}):
+            return False
+        state["status"] = "RETURNING_BACKGROUND"
+        return True
+
+
+def update_human_browser_state(task_id: str, platform: str, status: str,
+                               *, release_lease: bool = False) -> bool:
+    """Update the same task's human-browser state without creating another queue."""
+    global _HUMAN_BROWSER_LEASE
+    task_id = str(task_id or "").strip()
+    platform = str(platform or "").strip().casefold()
+    allowed = {"ACTIVE", "RETURNED_BACKGROUND", "BLOCKED"}
+    if status not in allowed:
+        return False
+    with _TASKS_LOCK:
+        task = _verification_task_locked(task_id, platform)
+        if task is None or _HUMAN_BROWSER_LEASE != (task_id, platform):
+            return False
+        state = task.get("human_browser")
+        if not isinstance(state, dict) or state.get("platform") != platform:
+            return False
+        state["status"] = status
+        if status == "RETURNED_BACKGROUND":
+            state["session_state"] = "NEED_VERIFY"
+        if release_lease:
+            _HUMAN_BROWSER_LEASE = None
+            _browser_lock.release()
+        return True
 
 
 def _run_one(platform: str, keyword: str, max_results: int, manual: bool = False) -> dict:
@@ -63,14 +197,26 @@ def _run_one(platform: str, keyword: str, max_results: int, manual: bool = False
     try:
         if locked:
             _browser_lock.acquire()
-        t0 = time.time()
-        result = adapter.collect(keyword, max_results)
-        result.duration_seconds = result.duration_seconds or (time.time() - t0)
-        stats = persist.persist_result(platform, adapter.platform_display, result, keyword)
-        # 六态驱动动态风控状态机
-        risk_controller.report(platform, stats["state"], stats.get("error", ""))
-        stats["risk_level"] = risk_controller._of(platform).level
-        return stats
+        if locked:
+            activity_guard = platform_activity_lock(platform)
+        else:
+            from contextlib import nullcontext
+            activity_guard = nullcontext(True)
+        with activity_guard as activity_acquired:
+            if activity_acquired is not True:
+                return {"platform": platform,
+                        "display": getattr(adapter, "platform_display", platform),
+                        "state": "BLOCKED", "success": False, "skipped": True,
+                        "fetched": 0, "inserted": 0, "updated": 0,
+                        "error": "COLLECTOR_MAINTENANCE_ATTEMPT_ACTIVE", "duration": 0}
+            t0 = time.time()
+            result = adapter.collect(keyword, max_results)
+            result.duration_seconds = result.duration_seconds or (time.time() - t0)
+            stats = persist.persist_result(platform, adapter.platform_display, result, keyword)
+            # 六态驱动动态风控状态机
+            risk_controller.report(platform, stats["state"], stats.get("error", ""))
+            stats["risk_level"] = risk_controller._of(platform).level
+            return stats
     except Exception as e:
         risk_controller.report(platform, persist.STATE_FAIL, str(e))
         return {"platform": platform, "display": getattr(adapter, "platform_display", platform),
@@ -117,7 +263,8 @@ def _job(task_id: str, keyword: str, platforms: List[str], max_results: int, man
 
 
 def start_collect(keyword: str, platforms: Optional[List[str]] = None,
-                  max_results: int = 20, manual: bool = True) -> str:
+                  max_results: int = 20, manual: bool = True,
+                  actor_ref: Optional[str] = None) -> str:
     """启动一次后台采集，返回 task_id。manual=True 为用户手动触发。"""
     if not registry.list_platforms():
         register_default_adapters()
@@ -125,7 +272,10 @@ def start_collect(keyword: str, platforms: Optional[List[str]] = None,
     task_id = uuid.uuid4().hex[:12]
     with _TASKS_LOCK:
         _TASKS[task_id] = {
-            "task_id": task_id, "keyword": keyword, "status": "running",
+            "task_id": task_id, "keyword": keyword, "manual": bool(manual),
+            "_actor_ref": str(actor_ref).strip() if actor_ref else None,
+            "platforms": list(targets),
+            "status": "running",
             "total": len(targets), "done": 0,
             "per_platform": {}, "started_at": _now(), "finished_at": "",
             "total_fetched": 0, "total_inserted": 0, "total_updated": 0,
@@ -138,7 +288,15 @@ def get_task(task_id: str) -> Optional[dict]:
     """查询任务进度（返回副本）。"""
     with _TASKS_LOCK:
         t = _TASKS.get(task_id)
-        return dict(t) if t else None
+        return {key: value for key, value in t.items() if not key.startswith("_")} if t else None
+
+
+def get_task_owner(task_id: str) -> Optional[str]:
+    """Read the authenticated actor bound when this in-memory Collector task was created."""
+    with _TASKS_LOCK:
+        task = _TASKS.get(str(task_id or "").strip())
+        owner = task.get("_actor_ref") if isinstance(task, dict) else None
+        return owner if isinstance(owner, str) and owner else None
 
 
 def _state_from_row(fetched: int, error: str) -> str:

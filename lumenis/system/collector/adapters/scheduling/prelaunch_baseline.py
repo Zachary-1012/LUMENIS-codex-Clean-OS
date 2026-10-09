@@ -263,28 +263,42 @@ def run_due_public_baseline(plan: PublicBaselinePlan, store: Any, *,
         decision = BaselineDueDecision(False, "HMAC_UNAVAILABLE", None, plan.plan_id)
         return {"decision": decision, "attempt_id": None, "result": None,
                 "status": "HMAC_UNAVAILABLE"}
-    attempt_id, decision = store.claim_public_baseline_attempt(plan, now=now)
-    if attempt_id is None:
-        return {"decision": decision, "attempt_id": None, "result": None}
-    try:
-        result = execute()
-        success, status = _verified_source_refresh(result)
-        finished_at = (finish_now or (lambda: datetime.now(tz=now.tzinfo)))()
-        stored = store.finish_public_baseline_attempt(
-            plan, attempt_id, success=success, now=finished_at,
-            error_code=None if success else status[:80],
+    platform_lock = getattr(store, "platform_attempt_lock", None)
+    if not callable(platform_lock):
+        decision = BaselineDueDecision(
+            False, "STORE_PLATFORM_LOCK_UNAVAILABLE", None, plan.plan_id,
         )
-        persisted = stored is True
-        terminal_status = status if persisted else "OUTCOME_PERSISTENCE_FAILED"
-        return {"decision": decision, "attempt_id": attempt_id,
-                "result": result, "persisted": persisted, "status": terminal_status}
-    except Exception as exc:
-        store.finish_public_baseline_attempt(
-            plan, attempt_id, success=False,
-            now=(finish_now or (lambda: datetime.now(tz=now.tzinfo)))(),
-            error_code=type(exc).__name__[:80],
-        )
-        raise
+        return {"decision": decision, "attempt_id": None, "result": None,
+                "status": "STORE_PLATFORM_LOCK_UNAVAILABLE"}
+    with platform_lock(plan.platform) as acquired:
+        if acquired is not True:
+            decision = BaselineDueDecision(
+                False, "PLATFORM_IN_PROGRESS", None, plan.plan_id,
+            )
+            return {"decision": decision, "attempt_id": None, "result": None,
+                    "status": "PLATFORM_IN_PROGRESS"}
+        attempt_id, decision = store.claim_public_baseline_attempt(plan, now=now)
+        if attempt_id is None:
+            return {"decision": decision, "attempt_id": None, "result": None}
+        try:
+            result = execute()
+            success, status = _verified_source_refresh(result)
+            finished_at = (finish_now or (lambda: datetime.now(tz=now.tzinfo)))()
+            stored = store.finish_public_baseline_attempt(
+                plan, attempt_id, success=success, now=finished_at,
+                error_code=None if success else status[:80],
+            )
+            persisted = stored is True
+            terminal_status = status if persisted else "OUTCOME_PERSISTENCE_FAILED"
+            return {"decision": decision, "attempt_id": attempt_id,
+                    "result": result, "persisted": persisted, "status": terminal_status}
+        except Exception as exc:
+            store.finish_public_baseline_attempt(
+                plan, attempt_id, success=False,
+                now=(finish_now or (lambda: datetime.now(tz=now.tzinfo)))(),
+                error_code=type(exc).__name__[:80],
+            )
+            raise
 
 
 class BaselineConfigError(ValueError):

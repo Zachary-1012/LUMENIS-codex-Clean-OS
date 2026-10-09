@@ -263,7 +263,10 @@ def create_v4_blueprint() -> Blueprint:
             return jsonify({"success": False, "error": "关键词不能为空"}), 400
         platforms = data.get("platforms") or None
         max_results = min(int(data.get("max_results", 20) or 20), 50)
-        task_id = collector_service.start_collect(keyword, platforms, max_results)
+        actor = getattr(g, "current_user", None)
+        actor_ref = f"actor:{actor['id']}" if isinstance(actor, dict) and type(actor.get("id")) is int else None
+        task_id = collector_service.start_collect(
+            keyword, platforms, max_results, actor_ref=actor_ref)
         log_audit("adapter_collect", "collection", None,
                   f"后台采集启动 {task_id} 关键词={keyword} 平台={platforms or '全部'}")
         return jsonify({"success": True, "task_id": task_id})

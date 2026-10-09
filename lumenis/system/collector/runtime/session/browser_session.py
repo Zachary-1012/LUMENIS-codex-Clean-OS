@@ -12,7 +12,7 @@ from playwright.sync_api import sync_playwright
 
 @dataclass
 class SessionConfig:
-    headless: bool = False
+    headless: bool = True
     user_data_dir: str = ''
     cdp_url: str = ''
     viewport_width: int = 1440

@@ -279,7 +279,7 @@ class OfficialInfoScraper:
         return results
 
     def _fetch_weibo_via_playwright(self, max_posts=20):
-        """通过Playwright登录态采集微博"""
+        """Fetch public Weibo pages in an anonymous headless context only."""
         try:
             from playwright.sync_api import sync_playwright
         except ImportError:
@@ -287,69 +287,62 @@ class OfficialInfoScraper:
             return []
 
         results = []
-        cdp_url = os.getenv('XHS_CDP_URL', 'http://127.0.0.1:9222')
-
+        browser = None
+        context = None
         try:
             with sync_playwright() as p:
-                # 尝试连接CDP
-                try:
-                    browser = p.chromium.connect_over_cdp(cdp_url)
-                    print(f'[微博] 已连接CDP: {cdp_url}')
-                except:
-                    print('[微博] CDP连接失败，使用持久化Profile')
-                    user_data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'taikoo_browser_profile')
-                    browser = p.chromium.launch_persistent_context(
-                        user_data_dir=user_data_dir,
-                        headless=False,
-                        args=['--disable-blink-features=AutomationControlled']
-                    )
-
-                page = browser.new_page()
-                # 访问微博官方账号
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=['--disable-blink-features=AutomationControlled'],
+                )
+                context = browser.new_context()
+                page = context.new_page()
                 page.goto('https://weibo.com/u/1878001152', wait_until='domcontentloaded', timeout=30000)
                 page.wait_for_timeout(3000)
 
-                # 提取微博内容
                 posts = page.query_selector_all('article[class*="Feed_body"]')
                 if not posts:
                     posts = page.query_selector_all('div[class*="card-wrap"]')
 
-                for i, post in enumerate(posts[:max_posts]):
+                for post in posts[:max_posts]:
                     try:
                         text_elem = post.query_selector('div[class*="txt"]')
-                        text = text_elem.inner_text() if text_elem else ''
-                        if not text or len(text) < 10:
+                        body = text_elem.inner_text() if text_elem else ''
+                        if not body or len(body) < 10:
                             continue
-
-                        # 链接
                         link_elem = post.query_selector('a[href*="/detail/"]')
                         link = link_elem.get_attribute('href') if link_elem else ''
                         if link and not link.startswith('http'):
                             link = 'https://weibo.com' + link
-
-                        # 时间
                         time_elem = post.query_selector('a[class*="time"]')
                         publish_date = time_elem.inner_text() if time_elem else ''
-
                         results.append({
                             'source': 'weibo_official',
                             'source_name': '广州太古汇官方微博',
-                            'title': text[:100],
+                            'title': body[:100],
                             'url': link,
                             'publish_date': publish_date,
-                            'description': text[:300],
-                            'content': text,
+                            'description': body[:300],
+                            'content': body,
                             'category': 'official_weibo',
                             'collected_at': datetime.now().isoformat(),
                         })
-                    except:
+                    except Exception:
                         continue
-
                 print(f'[微博] Playwright采集到 {len(results)} 条')
-                browser.close()
         except Exception as e:
             print(f'[微博] Playwright采集异常: {e}')
-
+        finally:
+            try:
+                if context is not None:
+                    context.close()
+            except Exception:
+                pass
+            try:
+                if browser is not None:
+                    browser.close()
+            except Exception:
+                pass
         return results
 
     def _fetch_weibo_user_timeline(self, uid, max_posts=20):

@@ -516,3 +516,12 @@ a lexical window. The backend pins and three existing Web consumer regions are
 reserved to C1 in W6 revision 10; F is not resumed. SourceBrief UI implementation
 and actual save/reopen/revision acceptance remain NOT VERIFIED. This is a
 research-to-existing-product contract adoption, not a new feature or model grant.
+
+
+### 2026-10-09 SYSTEM 自动浏览器弹窗 P0：有界源码发布与运行范围
+
+本次 direct PO 授权 M + 一个 Luna/max 智能体修复自动浏览器弹窗，不恢复其他窗口。源码沿现有 Browser/Collector/Scheduler Owner：自动启动/恢复强制 BACKGROUND/headless；端口+Profile+内核+监听 PID+模式精确归属；人工登录必须是同一认证 actor 的真实待验证 Collector task，经过 Permission/独占锁并安全返回后台。跨进程平台锁从已有受保护 Store 候选精确采用，保留 main 原有 claim/finish 和其他 C1 业务差异；15 个 Python 路径编译通过，Ruff 相对 main 无新增诊断（历史18项保留）。未执行单元、集成或换名模块测试。
+
+实际维护周期18:31:02–18:34:09和18:36:02–18:38:01（北京时间）均真实执行但为PARTIAL/exit1；各观察到3条X/note VERIFIED Canonical更新，具source_id/evidence_ref/raw_ref，同期verified evidence分别14/12。后台路径源码pins未变，最终HUMAN actor局部导入修复仅静态验证。9224–9228为headless；9223 headed未能证明无人工会话，保留未关闭。无新增可归属可见采集实例；短暂无CDP/Profile进程不能归属，未操作。不得宣称绝无弹窗、六平台全通过、HUMAN正向链已验收或完整SYSTEM/用户闭环。
+
+命名任务曾在15:52:37因P0临时禁用，16:39:57恢复Enabled/PT5M；两个冻结后周期沿原调度执行。非P0任务、Cookie/Profile、个人浏览器、生产数据和未提交成果均未清理/覆写。Runtime仍含受保护的C1工作树差异，Core8201不可用；本次不重启无关服务。SOURCE有界发布、RUNTIME观察、DB预期采集变化、USER OUTCOME分别记账；完整P0验收仍OPEN。精确提交/CI由本次Git发布回执确认，旧失败不改写。

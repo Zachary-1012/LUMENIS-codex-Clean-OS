@@ -116,6 +116,7 @@ class CollectorAutomation:
         # 精确管理本采集器自己启动的浏览器实例（独立 user-data-dir），避免误杀用户日常 Edge
         self.browser_process = None
         self._cdp_profile_dir = None
+        self._browser_mode = "BACKGROUND"
         # 冷却控制：手动一键 20min/冷却1h、自动 30min/冷却1h；force=True 可跳过（测试期）
         self._last_finish_at = {}   # {'manual': ts, 'auto': ts}
         self.cooldown_seconds = 3600
@@ -207,80 +208,96 @@ class CollectorAutomation:
         except Exception:
             return self.cdp_port
 
-    def start_browser(self, account='default', headless=False):
-        """启动Edge浏览器（CDP模式：按账号选独立驻场端口/profile；端口已在线则直接附着复用）"""
-        if not self.edge_path:
-            raise RuntimeError("未找到Edge浏览器，请先安装Microsoft Edge")
-        
-        # 检查浏览器是否已经在运行
-        port = self._port_for(account)
-        self._task_cdp_port = port
-        if self._is_browser_running(port):
-            logger.info(f"驻场浏览器已在线（port={port}），直接附着复用，不重复启动、不关闭驻场窗口")
-            return True
-        
-        profile_dir = self._get_cdp_profile_dir(account)
-        
-        # 构建启动参数
-        args = [
-            self.edge_path,
-            f'--remote-debugging-port={port}',
-            f'--user-data-dir={profile_dir}',
-            '--no-first-run',
-            '--no-default-browser-check',
-            '--disable-popup-blocking',
-            '--disable-extensions',
-            '--disable-gpu',
-            '--disable-dev-shm-usage',
-            '--disable-background-networking',
-            '--disable-component-update',
-            '--remote-allow-origins=*',
-            # 大陆 9222 强制直连（不跟随系统代理，保证国内站稳定）；香港 9223 继承系统/海外代理
-            *(['--no-proxy-server'] if port == self.cdp_port else []),
-            # 起始页固定 about:blank：避免默认 MSN 新标签页的 service-worker/worker target，
-            # 那会让 Playwright connect_over_cdp 在枚举 target 时握手挂起（ws 已连却 30s 超时）。
-            'about:blank',
-        ]
-
-        if headless:
-            args.append('--headless=new')
-        
+    def start_browser(self, account='default', headless=True, *, mode='BACKGROUND', task_id=None,
+                      actor_ref=None):
+        """Start or reuse the exact SYSTEM profile in BACKGROUND or explicit human mode."""
+        mode = str(mode or 'BACKGROUND').upper()
+        if mode not in {'BACKGROUND', 'HUMAN_INTERACTIVE'}:
+            raise ValueError('BROWSER_MODE_INVALID')
+        if mode == 'BACKGROUND' and headless is not True:
+            raise PermissionError('BACKGROUND_REQUIRES_HEADLESS')
+        from lumenis.adapters.human_browser import (
+            ensure_registered_browser_worker_background, open_readonly_worker_login,
+            registered_browser_worker_spec, return_registered_worker_to_background,
+        )
+        registered_spec = None
         try:
-            # 启动浏览器
-            process = subprocess.Popen(
-                args,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
-            )
-            # 记录句柄，关闭时只终止本采集器启动的独立实例，绝不 taskkill 全部 msedge
-            self.browser_process = process
-            self._cdp_profile_dir = profile_dir
-
-            logger.info(f"Edge浏览器已启动，PID: {process.pid} (port={port}, profile={os.path.basename(profile_dir)})")
-            
-            # 等待CDP端口就绪
-            if self._wait_for_cdp_ready(timeout=30, port=port):
-                logger.info("CDP调试端口已就绪")
-                return True
+            registered_spec = registered_browser_worker_spec(str(account or ''))
+        except RuntimeError:
+            if mode == 'HUMAN_INTERACTIVE':
+                raise PermissionError('HUMAN_INTERACTIVE_PLATFORM_OR_ACCOUNT_UNREGISTERED')
+        if registered_spec:
+            if mode == 'HUMAN_INTERACTIVE':
+                if headless is not False or not str(task_id or '').strip():
+                    raise PermissionError('HUMAN_INTERACTIVE_TASK_ID_REQUIRED')
+                if (registered_spec['platform'] == 'xiaohongshu'
+                        and str(account).strip().upper() != 'XHS_RETINAUT'):
+                    raise PermissionError('HUMAN_INTERACTIVE_XHS_HK_ACCOUNT_REQUIRED')
+                if registered_spec['platform'] == 'xiaohongshu' and self.is_running:
+                    raise RuntimeError('COLLECTOR_BUSY')
+                result = open_readonly_worker_login(
+                    str(account), task_id=task_id, actor_ref=actor_ref)
+            elif task_id is not None:
+                result = return_registered_worker_to_background(
+                    str(account), task_id=task_id, actor_ref=actor_ref)
             else:
-                logger.warning("CDP调试端口未就绪，但浏览器已启动")
+                result = ensure_registered_browser_worker_background(
+                    str(account))
+            if result.get('worker_verified') is False:
+                raise RuntimeError(result.get('reason') or result.get('status') or 'BROWSER_WORKER_UNAVAILABLE')
+            self._task_cdp_port = int(registered_spec['port'])
+            self._cdp_profile_dir = registered_spec['profile']
+            self._browser_mode = mode
+            self._human_task_id = str(task_id or '') if mode == 'HUMAN_INTERACTIVE' else ''
+            self._human_actor_ref = str(actor_ref or '') if mode == 'HUMAN_INTERACTIVE' else ''
+            self._browser_identity = registered_spec['account']
+            self.browser_process = None
+            return True
+        if mode == 'HUMAN_INTERACTIVE':
+            if headless is not False or not str(task_id or '').strip():
+                raise PermissionError('HUMAN_INTERACTIVE_TASK_ID_REQUIRED')
+            from lumenis.adapters.human_browser import _authorize_human_interactive
+            _authorize_human_interactive(str(account or ''), task_id, actor_ref)
+
+        port = self._port_for(account)
+        if port == 9222:
+            raise PermissionError('PROTECTED_PROFILE_FORBIDDEN')
+        profile_dir = self._get_cdp_profile_dir(account)
+        self._task_cdp_port = port
+        self._cdp_profile_dir = profile_dir
+        self._browser_mode = mode
+        import cdp_helper
+        exact = cdp_helper.is_cdp_profile_running(
+            port, profile_dir, headless=headless, loopback_only=True, browser='edge')
+        if cdp_helper.is_cdp_port_open(port):
+            if exact:
+                logger.info('Verified %s browser Worker reused (port=%s, profile=%s)',
+                            mode, port, os.path.basename(profile_dir))
                 return True
-                
-        except Exception as e:
-            logger.error(f"启动浏览器失败: {e}")
-            raise
-    
+            raise RuntimeError('PORT_IN_USE_UNVERIFIED: browser identity, profile or mode mismatch')
+
+        result = cdp_helper.start_cdp_browser(
+            port=port, profile_dir=profile_dir, headless=headless,
+            loopback_only=True, launch_url='about:blank', browser='edge')
+        if result.get('success') is not True or not cdp_helper.is_cdp_profile_running(
+                port, profile_dir, headless=headless, loopback_only=True, browser='edge'):
+            raise RuntimeError(result.get('message') or 'BROWSER_WORKER_START_UNVERIFIED')
+        self.browser_process = None
+        logger.info('Verified %s browser Worker started (port=%s, profile=%s)',
+                    mode, port, os.path.basename(profile_dir))
+        return True
+
     def _is_browser_running(self, port=None):
-        """检查浏览器是否在运行（可指定端口；默认用当前任务驻场端口）"""
+        """Return true only for this instance's exact headless profile/port pair."""
         try:
-            import urllib.request
-            _p = port or self._task_cdp_port or self.cdp_port
-            response = urllib.request.urlopen(f'http://127.0.0.1:{_p}/json/version', timeout=3)
-            return response.status == 200
+            import cdp_helper
+            selected_port = int(port or self._task_cdp_port or self.cdp_port)
+            profile = self._cdp_profile_dir
+            return bool(profile and cdp_helper.is_cdp_profile_running(
+                selected_port, profile, headless=True, loopback_only=True, browser='edge'))
         except Exception:
             return False
-    
+
     def _wait_for_cdp_ready(self, timeout=30, port=None):
         """等待CDP端口就绪"""
         start_time = time.time()
@@ -290,46 +307,64 @@ class CollectorAutomation:
             time.sleep(1)
         return False
     
-    def stop_browser(self):
-        """关闭本采集器启动的浏览器实例（只关自己的独立 profile 进程树，不影响用户日常 Edge）"""
-        killed = False
-        try:
-            proc = self.browser_process
-            if proc is not None and proc.poll() is None:
-                pid = proc.pid
-                try:
-                    if sys.platform == 'win32':
-                        # /T 连同该实例派生的子进程一起结束；因使用独立 --user-data-dir，与用户日常 Edge 互不影响
-                        subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'],
-                                       capture_output=True, timeout=15)
-                    else:
-                        proc.terminate()
-                        try:
-                            proc.wait(timeout=8)
-                        except Exception:
-                            proc.kill()
-                    killed = True
-                    logger.info(f"已精确关闭采集浏览器进程树 PID={pid}")
-                except Exception as e:
-                    logger.warning(f"按PID关闭浏览器失败: {e}")
-            # CDP 兜底探测：仅当仍可连接时记录，不做 /IM msedge 全量强杀（避免误关用户窗口）
-            try:
-                if self._is_browser_running():
-                    logger.warning("CDP 端口仍可连接，但已无受控进程句柄；保留用户浏览器，不做全量 taskkill")
-            except Exception:
-                pass
-            self.browser_process = None
-            time.sleep(1)
-            return True if (killed or proc is not None) else False
-
-        except Exception as e:
-            logger.error(f"关闭浏览器失败: {e}")
-            self.browser_process = None
+    def stop_browser(self, *, expected_task_id=None, expected_actor_ref=None):
+        """Gracefully close only this exact idle Worker; never kill a browser process."""
+        state = getattr(self._lifecycle_state, 'value', str(self._lifecycle_state)).lower()
+        if state in {'starting', 'running', 'stopping'}:
+            logger.warning('Browser Worker retained while collection is active (state=%s)', state)
             return False
-    
-    # ------------------------------------------------------------------
-    # Runtime Guardian 生命周期守护方法（旁路接入）
-    # ------------------------------------------------------------------
+        if self._browser_mode == 'HUMAN_INTERACTIVE':
+            task_id = str(getattr(self, '_human_task_id', '') or '').strip()
+            identity = str(getattr(self, '_browser_identity', '') or '').strip()
+            actor_ref = str(getattr(self, '_human_actor_ref', '') or '').strip()
+            if (not task_id or not identity or not actor_ref
+                    or str(expected_task_id or '').strip() != task_id
+                    or str(expected_actor_ref or '').strip() != actor_ref):
+                logger.warning('Human browser retained; its task owner is unavailable')
+                return False
+            try:
+                from lumenis.adapters.human_browser import return_registered_worker_to_background
+                result = return_registered_worker_to_background(
+                    identity, task_id=task_id, actor_ref=actor_ref)
+                self._browser_mode = 'BACKGROUND'
+                self._human_task_id = ''
+                self._human_actor_ref = ''
+                return result.get('worker_verified') is True
+            except Exception as exc:
+                logger.warning('Human browser retained; background return was not verified: %s', exc)
+                return False
+        profile = self._cdp_profile_dir
+        port = int(self._task_cdp_port or self.cdp_port)
+        identity = str(getattr(self, '_browser_identity', '') or '').strip()
+        if not profile or not identity:
+            return False
+        try:
+            from lumenis.adapters.human_browser import registered_browser_worker_spec
+            from lumenis.adapters import collector_service
+            worker = registered_browser_worker_spec(identity, port=port, profile=profile)
+            with collector_service.platform_activity_lock(worker['platform']) as acquired:
+                if acquired is not True:
+                    logger.warning('Browser Worker retained during a platform collection attempt')
+                    return False
+                import cdp_helper
+                exact_browser = cdp_helper.registered_cdp_browser_for_port(
+                    port, profile, headless=self._browser_mode == 'BACKGROUND')
+                if not exact_browser:
+                    logger.warning('Browser Worker retained; registered identity or mode is unverified')
+                    return False
+                result = cdp_helper.close_cdp_browser(
+                    port, profile, headless=self._browser_mode == 'BACKGROUND',
+                    browser=exact_browser)
+            if result.get('success') is True:
+                self.browser_process = None
+                logger.info('Exact browser Worker stopped gracefully (port=%s)', port)
+                return True
+            logger.warning('Browser Worker retained: %s', result.get('code'))
+            return False
+        except Exception as exc:
+            logger.warning('Browser Worker retained; graceful close unavailable: %s', exc)
+            return False
+
     def transition_state(self, new_state, reason=""):
         """显式状态转换：校验合法性并记录，禁止"进程活着但实际停止采集"。"""
         if not isinstance(new_state, CollectorLifecycleState):
@@ -748,12 +783,8 @@ class CollectorAutomation:
                 logger.error(f"任务 {task['id']}: Evidence 写入失败(不影响主流程): {_ev_e}")
 
         finally:
-            # 自动关闭浏览器
-            logger.info(f"任务 {task['id']}: 自动关闭浏览器...")
-            try:
-                self.stop_browser()
-            except Exception as e:
-                logger.error(f"关闭浏览器失败: {e}")
+            # Release this task while retaining the verified isolated Worker.
+            logger.info("Task %s finished; BACKGROUND Worker retained", task['id'])
 
             # Runtime Guardian: 统一清理（停心跳、释放租约、更新 worker 状态）
             self._rg_cleanup(task)
@@ -1038,10 +1069,6 @@ class CollectorAutomation:
             self.transition_state(CollectorLifecycleState.STOPPING, reason='user_stop')
 
             # 停止浏览器会导致采集任务中断
-            try:
-                self.stop_browser()
-            except Exception as e:
-                logger.error(f"停止浏览器失败: {e}")
 
         # 在锁外等待线程退出（避免死锁：_run_collection 的 finally 也会尝试获取 _lock）
         thread = self._collection_thread

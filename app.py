@@ -1794,6 +1794,8 @@ def _pg_resolve_operation_type(path, method):
     # 1. 删除类（最高风险）
     if method == 'DELETE' or '/delete' in p or '/revoke' in p:
         return OperationType.DATA_DELETE
+    if p in {'/api/collector/browser/start', '/api/collector/browser/stop'}:
+        return OperationType.BROWSER_OPERATION
     # 2. 采集启动/停止
     if any(k in p for k in ('/collect', '/rednote/', '/collector/', '/official-info/collect')):
         if any(k in p for k in ('/stop', '/pause', '/cancel')):
@@ -2640,29 +2642,77 @@ def api_ai_governance_status():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+def _collector_browser_actor_ref():
+    from flask import g
+    actor = getattr(g, 'current_user', None)
+    if not isinstance(actor, dict) or type(actor.get('id')) is not int:
+        raise PermissionError('AUTH_REQUIRED')
+    return f"actor:{actor['id']}"
+
+
 @app.route('/api/collector/browser/start', methods=['POST'])
 def api_collector_browser_start():
-    """手动启动浏览器"""
+    """Start a headless BACKGROUND Worker or a permission-gated human session."""
     try:
         data = request.get_json(silent=True) or {}
         account = data.get('account', 'default')
-        headless = data.get('headless', False)
-        
+        mode = str(data.get('mode') or 'BACKGROUND').upper()
+        if mode not in {'BACKGROUND', 'HUMAN_INTERACTIVE'}:
+            return jsonify({'ok': False, 'status': 'BLOCKED', 'code': 'BROWSER_MODE_INVALID'}), 400
+        task_id = str(data.get('task_id') or '').strip() or None
+        actor_ref = None
+        if mode == 'BACKGROUND':
+            if data.get('headless') is False:
+                return jsonify({'ok': False, 'status': 'BLOCKED',
+                                'code': 'BACKGROUND_REQUIRES_HEADLESS'}), 400
+            headless = True
+            if task_id:
+                actor_ref = _collector_browser_actor_ref()
+        else:
+            if not isinstance(account, str) or not account.strip() or account.strip().casefold() == 'default':
+                return jsonify({'ok': False, 'status': 'BLOCKED',
+                                'code': 'HUMAN_INTERACTIVE_REGISTERED_ACCOUNT_REQUIRED'}), 400
+            headless = False
+            if not task_id:
+                return jsonify({'ok': False, 'status': 'BLOCKED',
+                                'code': 'HUMAN_INTERACTIVE_TASK_ID_REQUIRED'}), 400
+            actor_ref = _collector_browser_actor_ref()
         collector = collector_automation.get_collector_automation()
-        collector.start_browser(account=account, headless=headless)
-        return jsonify({'ok': True, 'message': '浏览器已启动'})
+        collector.start_browser(account=account, headless=headless, mode=mode,
+                                task_id=task_id, actor_ref=actor_ref)
+        return jsonify({'ok': True, 'mode': mode,
+                        'status': 'HUMAN_LOGIN_OPENED' if mode == 'HUMAN_INTERACTIVE' else 'BACKGROUND_READY',
+                        'session_verified': False if mode == 'HUMAN_INTERACTIVE' else None,
+                        'message': '请在序境请求的登录窗口中完成验证' if mode == 'HUMAN_INTERACTIVE'
+                                   else '后台浏览器Worker已就绪'})
+    except PermissionError as e:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'error': str(e)}), 403
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE', 'error': str(e)}), 409
 
 @app.route('/api/collector/browser/stop', methods=['POST'])
 def api_collector_browser_stop():
-    """手动关闭浏览器"""
+    """Gracefully stop only an exact idle LUMENIS Worker; never terminate a process."""
     try:
+        data = request.get_json(silent=True) or {}
         collector = collector_automation.get_collector_automation()
-        collector.stop_browser()
-        return jsonify({'ok': True, 'message': '浏览器已关闭'})
+        was_human_interactive = getattr(collector, '_browser_mode', 'BACKGROUND') == 'HUMAN_INTERACTIVE'
+        expected_task_id = str(data.get('task_id') or '').strip() or None
+        expected_actor_ref = _collector_browser_actor_ref() if was_human_interactive else None
+        stopped = collector.stop_browser(
+            expected_task_id=expected_task_id, expected_actor_ref=expected_actor_ref)
+        if not stopped:
+            return jsonify({'ok': False, 'status': 'BLOCKED',
+                            'code': 'WORKER_RETAINED_OR_UNVERIFIED'}), 409
+        if was_human_interactive:
+            return jsonify({'ok': True, 'status': 'RETURNED_BACKGROUND',
+                            'session_verified': False,
+                            'message': '浏览器已安全返回后台；平台登录态仍需采集器验证'})
+        return jsonify({'ok': True, 'status': 'STOPPED', 'message': '后台浏览器Worker已正常退出'})
+    except PermissionError as e:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'error': str(e)}), 403
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE', 'error': str(e)}), 409
 
 
 # ========== Phase4: 采集浏览器模式配置（内部AI浏览器默认，可切外部） ==========
@@ -4060,23 +4110,20 @@ def api_rednote_collect():
     cdp_url = requested_cdp or xhs_cookie_bridge.cdp_url_for(account)
     persist = bool(data.get('persist', True))
 
-    # Resident Browser：对应身份驻场实例不在线才拉起；在线直接附着复用
+    # BACKGROUND requires the exact registered profile and headless process mode.
     auto_started_browser = False
     try:
         import collector_automation
         ca = collector_automation.get_collector_automation()
         _port = xhs_cookie_bridge.cdp_port_for(account)
-        if not ca._is_browser_running(_port):
-            start_result = ca.start_browser(account=account)
-            if start_result:
-                cdp_url = f'http://127.0.0.1:{ca._port_for(account)}'
-                auto_started_browser = True
-                app.logger.info(f'CDP驻场浏览器已启动: account={account} {cdp_url}')
-            else:
-                return jsonify({'ok': False, 'error': 'CDP驻场浏览器启动失败，请用统一驻场启动器或手动启动 Edge 调试模式'}), 500
+        ca.start_browser(account=account, headless=True, mode='BACKGROUND')
+        cdp_url = f'http://127.0.0.1:{_port}'
+        auto_started_browser = True
     except Exception as e:
-        return jsonify({'ok': False, 'error': f'CDP浏览器启动异常: {str(e)}'}), 500
-    
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE',
+                        'code': 'BACKGROUND_BROWSER_WORKER_UNAVAILABLE',
+                        'error': str(e)}), 409
+
     def worker():
         try:
             result = run_rednote_collect(keyword, max_scroll, max_details, cdp_url, account=account)
@@ -5903,23 +5950,24 @@ def api_weibo_login_status():
 
 @app.route('/api/weibo/start-login', methods=['POST'])
 def api_weibo_start_login():
-    """启动微博扫码登录（异步）"""
+    """Route an explicit request through the registered SYSTEM browser worker."""
     try:
-        from weibo_login_manager import get_weibo_manager
-        manager = get_weibo_manager()
-        
-        # 在后台线程中启动登录
-        def login_thread():
-            try:
-                manager.login_with_qrcode(headless=False, timeout=300)
-            except Exception as e:
-                print(f'[WeiboLogin] 登录线程异常: {e}')
-        
-        threading.Thread(target=login_thread, daemon=True, name='weibo_login').start()
-        
-        return jsonify({'ok': True, 'message': '微博登录已启动，请在浏览器中扫码登录', 'timeout': 300})
+        data = request.get_json(silent=True) or {}
+        task_id = str(data.get('task_id') or '').strip()
+        if not task_id:
+            return jsonify({'ok': False, 'status': 'BLOCKED',
+                            'error': 'HUMAN_INTERACTIVE_TASK_ID_REQUIRED'}), 400
+        actor_ref = _weibo_session_metadata_actor()
+        collector = collector_automation.get_collector_automation()
+        collector.start_browser(account='weibo', headless=False,
+                                mode='HUMAN_INTERACTIVE', task_id=task_id,
+                                actor_ref=actor_ref)
+        return jsonify({'ok': True, 'mode': 'HUMAN_INTERACTIVE', 'task_id': task_id,
+                        'message': '已打开经注册的序境浏览器Worker登录入口'})
+    except PermissionError as e:
+        return jsonify({'ok': False, 'status': 'BLOCKED', 'error': str(e)}), 403
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return jsonify({'ok': False, 'status': 'UNAVAILABLE', 'error': type(e).__name__}), 409
 
 @app.route('/api/weibo/clear-login', methods=['POST'])
 def api_weibo_clear_login():

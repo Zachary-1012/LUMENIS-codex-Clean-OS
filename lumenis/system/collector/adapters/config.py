@@ -34,6 +34,7 @@ PLATFORM_CAPABILITIES = {
         "session_cache": True,
         "proxy_pool": True,
         "enable_gate": "managed_remote_worker_plus_authorized_session",
+        "readonly_worker": {'account': 'DOUYIN_READONLY', 'port': 9225, 'profile': 'douyin-readonly', 'env_prefix': 'DOUYIN'},
     },
     "kuaishou": {
         "name": "快手", "enabled": False, "manual_collection_enabled": True,
@@ -138,6 +139,7 @@ PLATFORM_CAPABILITIES = {
         "session_cache": True,
         "proxy_pool": True,
         "enable_gate": "proxy_plus_cookie_configured",
+        "readonly_worker": {'account': 'INSTAGRAM_READONLY', 'port': 9227, 'profile': 'instagram-readonly', 'env_prefix': 'INSTAGRAM_READONLY'},
     },
     "wechat": {
         "name": "微信公众号", "enabled": False, "manual_collection_enabled": True,
@@ -159,6 +161,7 @@ PLATFORM_CAPABILITIES = {
         "session_cache": True,
         "proxy_pool": True,
         "enable_gate": "proxy_plus_cookie_configured",
+        "readonly_worker": {'account': 'FACEBOOK_READONLY', 'port': 9228, 'profile': 'facebook-readonly', 'env_prefix': 'FACEBOOK_READONLY'},
     },
     "x": {
         "name": "X",
@@ -173,6 +176,7 @@ PLATFORM_CAPABILITIES = {
         "session_cache": True,
         "proxy_pool": False,
         "enable_gate": "cookie_plus_browser_engine_verified",
+        "readonly_worker": {'account': 'X_READONLY', 'port': 9226, 'profile': 'x-readonly', 'env_prefix': 'X_READONLY'},
     },
 }
 

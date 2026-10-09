@@ -649,6 +649,9 @@ def _verified_general_browser(browser: Optional[str] = None) -> bool:
             and browser_version.startswith(expected_prefixes)
             and bool(websocket_url)
             and marker.get("websocket_sha256") == hashlib.sha256(websocket_url.encode()).hexdigest()
+            and cdp_helper.is_cdp_profile_running(
+                GENERAL_CDP_PORT, profile, headless=True,
+                loopback_only=True, browser=browser)
         )
     except Exception:
         return False

@@ -81,26 +81,14 @@ RESIDENT_PLAN = [
 
 def douyin_worker_spec(private_data_dir=None):
     """Return the fixed isolated read-only Douyin worker plan without starting it."""
-    base = private_data_dir or bridge.PRIVATE_DATA_DIR
-    return {
-        "account": "DOUYIN_READONLY",
-        "port": 9225,
-        "profile": os.path.join(base, "profiles", "douyin-readonly"),
-        "home": "about:blank",
-        "direct": False,
-    }
+    from lumenis.adapters.human_browser import readonly_worker_spec
+    return readonly_worker_spec("douyin", private_data_dir or bridge.PRIVATE_DATA_DIR)
 
 
 def x_readonly_worker_spec(private_data_dir=None):
     """Return the fixed, isolated X read-only worker plan without starting it."""
-    base = private_data_dir or bridge.PRIVATE_DATA_DIR
-    return {
-        "account": "X_READONLY",
-        "port": 9226,
-        "profile": os.path.join(base, "profiles", "x-readonly"),
-        "home": "about:blank",
-        "direct": False,
-    }
+    from lumenis.adapters.human_browser import readonly_worker_spec
+    return readonly_worker_spec("x", private_data_dir or bridge.PRIVATE_DATA_DIR)
 
 
 def _http_json(url, method="GET", timeout=5):
@@ -152,9 +140,16 @@ def launch_one(account, direct, status_only=False):
     home = bridge.home_url_for(account)
     prof = profile_dir_for(account)
     row = {"account": account, "port": port, "profile": prof, "home": home,
-           "online": port_online(port), "direct": direct, "action": "", "pages": []}
+           "online": False, "direct": direct, "action": "", "pages": [],
+           "mode": "BACKGROUND"}
 
-    if row["online"]:
+    exact_worker = bool(prof and cdp_helper.is_cdp_profile_running(
+        port, prof, headless=True, loopback_only=True, browser="edge"))
+    if port_online(port):
+        if not exact_worker:
+            row["action"] = "port_in_use_unverified"
+            return row
+        row["online"] = True
         row["action"] = "already_online"
         if not status_only:
             row["action"] += ":" + ensure_platform_tab(port, home)
@@ -164,21 +159,27 @@ def launch_one(account, direct, status_only=False):
     if status_only:
         row["action"] = "offline"
         return row
+    if not prof:
+        row["action"] = "profile_unavailable"
+        return row
 
     os.makedirs(prof, exist_ok=True)
     res = cdp_helper.start_cdp_browser(
         port=port,
         profile_dir=prof,
+        headless=True,
+        loopback_only=True,
         launch_url=home,
         direct_connection=direct,
         browser="edge",
     )
-    row["online"] = port_online(port)
-    row["action"] = "started" if res.get("success") else f"failed: {res.get('message')}"
-    row["pages"] = list_page_hosts(port)
+    row["online"] = (res.get("success") is True
+                      and cdp_helper.is_cdp_profile_running(
+                          port, prof, headless=True, loopback_only=True, browser="edge"))
+    row["action"] = "started" if row["online"] else f"failed: {res.get('message')}"
+    if row["online"]:
+        row["pages"] = list_page_hosts(port)
     return row
-
-
 def launch_general(status_only=False):
     """Reuse the product browser owner for startup and verified status."""
     import browser_surface
@@ -205,13 +206,32 @@ def launch_general(status_only=False):
 
 def launch_douyin_readonly(status_only=False):
     """Provision Douyin only through explicit --account; never reuse an unknown port owner."""
-    worker = douyin_worker_spec()
-    browser = cdp_helper.system_default_cdp_browser()
+    return _launch_readonly_worker(douyin_worker_spec(), status_only=status_only)
+
+
+def _launch_readonly_worker(worker, *, status_only=False, mode="BACKGROUND",
+                            task_id=None, platform=None, browser=None):
+    """Provision or reuse the exact registered profile in an explicit mode."""
+    mode = str(mode or "BACKGROUND").upper()
+    if mode not in {"BACKGROUND", "HUMAN_INTERACTIVE"}:
+        raise ValueError("BROWSER_MODE_INVALID")
+    if mode == "HUMAN_INTERACTIVE":
+        from lumenis.adapters.human_browser import _authorize_human_interactive
+        task_platform = _authorize_human_interactive(platform or worker["account"], task_id or "")
+        from lumenis.adapters import collector_service
+        if not collector_service.human_browser_lease_owned(task_id or "", task_platform):
+            raise PermissionError("HUMAN_INTERACTIVE_BROWSER_LEASE_REQUIRED")
     port_open = port_online(worker["port"])
+    headless = mode == "BACKGROUND"
+    browser = (cdp_helper.registered_cdp_browser_for_port(
+        worker["port"], worker["profile"], headless=headless)
+        if port_open else (browser or cdp_helper.system_default_cdp_browser()))
     row = {**worker, "browser": browser, "online": False,
-           "port_open": port_open, "action": "", "pages": []}
+           "port_open": port_open, "action": "", "pages": [], "mode": mode}
     if port_open:
-        if cdp_helper.is_cdp_profile_running(worker["port"], worker["profile"]):
+        if browser and cdp_helper.is_cdp_profile_running(
+                worker["port"], worker["profile"], headless=headless,
+                loopback_only=True, browser=browser):
             row["online"] = True
             row["action"] = "already_online"
         else:
@@ -228,56 +248,48 @@ def launch_douyin_readonly(status_only=False):
     res = cdp_helper.start_cdp_browser(
         port=worker["port"],
         profile_dir=worker["profile"],
+        headless=headless,
         launch_url=worker["home"],
         direct_connection=worker["direct"],
         browser=browser,
         loopback_only=True,
     )
-    row["online"] = bool(res.get("success")) and res.get("pid") is not None and port_online(worker["port"])
+    row["online"] = (res.get("success") is True
+                     and cdp_helper.is_cdp_profile_running(
+                         worker["port"], worker["profile"], headless=headless,
+                         loopback_only=True, browser=browser))
     row["action"] = "started" if row["online"] else f"failed: {res.get('message')}"
     return row
-
 
 def launch_x_readonly(status_only=False):
     """Provision X only through explicit --account; reject unknown port owners."""
-    worker = x_readonly_worker_spec()
-    browser = cdp_helper.system_default_cdp_browser()
-    port_open = port_online(worker["port"])
-    row = {**worker, "browser": browser, "online": False,
-           "port_open": port_open, "action": "", "pages": []}
-    if port_open:
-        if cdp_helper.is_cdp_profile_running(worker["port"], worker["profile"]):
-            row["online"] = True
-            row["action"] = "already_online"
-        else:
-            row["action"] = "port_in_use_unverified"
-        return row
-    if browser not in {"chrome", "edge"}:
-        row["action"] = "unsupported_system_default_browser"
-        return row
-    if status_only:
-        row["action"] = "offline"
-        return row
-
-    os.makedirs(worker["profile"], exist_ok=True)
-    res = cdp_helper.start_cdp_browser(
-        port=worker["port"],
-        profile_dir=worker["profile"],
-        launch_url=worker["home"],
-        direct_connection=worker["direct"],
-        browser=browser,
-        loopback_only=True,
-    )
-    row["online"] = bool(res.get("success")) and res.get("pid") is not None and port_online(worker["port"])
-    row["action"] = "started" if row["online"] else f"failed: {res.get('message')}"
-    return row
+    return _launch_readonly_worker(x_readonly_worker_spec(), status_only=status_only)
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--account", default=None, help="只拉起指定逻辑身份；默认全部")
     ap.add_argument("--status", action="store_true", help="只查看在线状态，不启动")
+    ap.add_argument("--open-login", action="store_true", help="在指定只读 Worker 打开人工登录页")
+    ap.add_argument("--task-id", default=None, help="HUMAN_INTERACTIVE 操作的现有任务身份")
     args = ap.parse_args()
+
+    if args.open_login:
+        from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES
+        from lumenis.adapters.human_browser import readonly_worker_spec, open_readonly_worker_login
+        selected = next((platform for platform, config in PLATFORM_CAPABILITIES.items()
+                         if config.get("readonly_worker", {}).get("account") == args.account), None)
+        if args.status or selected not in {"instagram", "facebook", "douyin", "x"} or not args.task_id:
+            ap.error("--open-login requires a registered account and --task-id")
+        row = _launch_readonly_worker(
+            readonly_worker_spec(selected), mode="HUMAN_INTERACTIVE",
+            task_id=args.task_id, platform=selected)
+        if not row["online"]:
+            print(json.dumps({"account": args.account, "status": "WORKER_UNAVAILABLE",
+                              "reason": row["action"]}, ensure_ascii=False))
+            return 1
+        print(json.dumps(open_readonly_worker_login(selected, task_id=args.task_id), ensure_ascii=False))
+        return 0
 
     plan = [(a, d) for (a, d) in RESIDENT_PLAN if (not args.account or a == args.account)]
     if args.account == "DOUYIN_READONLY":
@@ -299,8 +311,16 @@ def main():
         return 0 if row["online"] else 1
 
     if args.account and args.account != "GENERAL_BROWSE" and not plan:
-        print(f"[FATAL] 未知身份 {args.account}；可选：{[a for a,_ in RESIDENT_PLAN] + ['GENERAL_BROWSE', 'DOUYIN_READONLY', 'X_READONLY']}")
-        return 2
+        from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES
+        from lumenis.adapters.human_browser import readonly_worker_spec
+        selected = next((platform for platform, config in PLATFORM_CAPABILITIES.items()
+                         if config.get("readonly_worker", {}).get("account") == args.account), None)
+        if selected is None:
+            print("[FATAL] 未注册的只读浏览器身份")
+            return 2
+        row = _launch_readonly_worker(readonly_worker_spec(selected), status_only=args.status)
+        print(json.dumps({key: row[key] for key in ("account", "port", "online", "action")}, ensure_ascii=False))
+        return 0 if row["online"] else 1
 
     print("=" * 72)
     print(" 序境 LUMENIS · Resident Browser 驻场启动器（香港采集 + 通用浏览）")
