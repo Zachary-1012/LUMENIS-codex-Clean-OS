@@ -1,0 +1,26 @@
+{
+  "baseline": "01588e9fd9568e3fcaf1e6c3d957bc498436fa48",
+  "machine_evidence_commit": "50fb4b32d1d5ab3fb9558c6a2af0f46a08d29a51",
+  "scope": "Only the listed source ranges were specifically reviewed for the named semantic questions. The complete file-ledger is an inventory, not a claim of complete semantic review.",
+  "local_candidate": "NOT_VERIFIED_REMOTE_AGENT_OFFLINE",
+  "running_product": "NOT_VERIFIED",
+  "product_main_modified": false,
+  "entries": [
+    {"path":"AGENTS.md","ranges":[[1,165]],"observation":"Current branch/testing authority and Website/Web priority re-read; local loaded policy unknown."},
+    {"path":"app.py","ranges":[[525,815],[3625,3718],[4300,4395]],"observation":"Registered aggregation/KOS/security paths traced; event confirmation expands via keyword fallback on zero changed rows; isolated reentry reproduced."},
+    {"path":"content_generation.py","ranges":[[395,454]],"observation":"Empty dict now not evaluated; nonempty objects with blank fields still receive rule quality scores. No real generation executed."},
+    {"path":"kos_professional.py","ranges":[[1,310]],"observation":"Schema, enable, import and reads inspected. account/date uniqueness omits brand; INSERT OR REPLACE collision and all-invalid-row success reproduced in temporary SQLite."},
+    {"path":"lumenis_agg_api.py","ranges":[[320,570]],"observation":"Current registration and professional wrappers inspected; owner NOT_ENABLED remains nested under outer ok true / IMPORTED in controlled function execution."},
+    {"path":"kos_routes.py","ranges":[[2590,2760]],"observation":"Professional route definitions and plain blueprint registration inspected. Different response contracts; actual deployed url_map not inspected."},
+    {"path":"collection_api.py","ranges":[[1,115]],"observation":"Collector status compatibility handler delegates to current shared payload. Duplicate declaration alone is not a separate status truth source."},
+    {"path":"collector_status_api.py","ranges":[[240,285]],"observation":"Collector status handler delegates to same get_collector_status_payload."},
+    {"path":"security_scanner.py","ranges":[[1,450]],"observation":"Scope filtering, sensitive preview, dependency heuristic and overall aggregation reviewed. Full class in temporary root returns pass with no baseline/no requirements/zero scanned files and exposes a synthetic credential marker in preview."},
+    {"path":"system_features_api.py","ranges":[[1,145]],"observation":"Scanner and evaluation handlers registered via blueprint; scanner result returned in JSON. Full authorization/runtime acceptance not inferred."},
+    {"path":"shared_artifacts.py","ranges":[[1521,1577]],"observation":"Generic metadata/path read uses integrity constraints but no actor/scope parameters; protected-kind exclusion does not cover all saved documents."},
+    {"path":"experience_runtime.py","ranges":[[1723,1742],[3250,3283]],"observation":"Training transport correctly uses core_origin keyword; generic artifact handlers call non-actor readers. Deployment/actual download not exercised."},
+    {"path":"ai_task_engine.py","ranges":[[3080,3114]],"observation":"Human-approval branch returns awaiting_approval before consuming prior grant; other default task mapping uses AI_CALL. Whole task runtime not executed."},
+    {"path":"account/compat.py","ranges":[[1,70]],"observation":"Compatibility definitions inspected; final registration and authentication path require further review, not counted as a confirmed bypass."}
+  ],
+  "full_code_semantic_review": "NOT_COMPLETED",
+  "all_current_product_defects_closed": false
+}
