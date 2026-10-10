@@ -1,0 +1,3716 @@
+[
+  {
+    "path": "ad_intelligence/platforms/jiguang.py",
+    "function": "_load_cookies",
+    "line": 83,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "adaptive_engine.py",
+    "function": "_load_status",
+    "line": 116,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "adaptive_engine.py",
+    "function": "_record_history",
+    "line": 167,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "adaptive_engine.py",
+    "function": "can_collect_now",
+    "line": 308,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_boundary.py",
+    "function": "_is_expired",
+    "line": 357,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_capability/skill_upgrade.py",
+    "function": "_upgrade_skill_to_capability",
+    "line": 141,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/episodic.py",
+    "function": "search_cases",
+    "line": 34,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/episodic.py",
+    "function": "get_success_patterns",
+    "line": 68,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/episodic.py",
+    "function": "get_failure_patterns",
+    "line": 89,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/episodic.py",
+    "function": "get_review_experience",
+    "line": 114,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/episodic.py",
+    "function": "get_correction_patterns",
+    "line": 143,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/episodic.py",
+    "function": "_persist_case",
+    "line": 183,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/episodic.py",
+    "function": "stats",
+    "line": 213,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/semantic.py",
+    "function": "search_assets",
+    "line": 32,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/semantic.py",
+    "function": "get_assets_by_library",
+    "line": 86,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/semantic.py",
+    "function": "get_rule_history",
+    "line": 124,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/semantic.py",
+    "function": "stats",
+    "line": 165,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/skill.py",
+    "function": "list_skills",
+    "line": 32,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/skill.py",
+    "function": "get_recent_executions",
+    "line": 109,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/skill.py",
+    "function": "stats",
+    "line": 177,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/task.py",
+    "function": "get_task_steps",
+    "line": 45,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/task.py",
+    "function": "get_task_evidence",
+    "line": 63,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/task.py",
+    "function": "query_tasks",
+    "line": 81,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_memory/task.py",
+    "function": "stats",
+    "line": 138,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_proactive/routes.py",
+    "function": "_build_blueprint",
+    "line": 41,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_proactive/routes.py",
+    "function": "list_signals",
+    "line": 49,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_runtime/loop.py",
+    "function": "_execute_step",
+    "line": 986,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_runtime/observation.py",
+    "function": "observe",
+    "line": 163,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_runtime/planner.py",
+    "function": "plan",
+    "line": 171,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_runtime/state_machine.py",
+    "function": "transition_to",
+    "line": 187,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_runtime/state_machine.py",
+    "function": "cancel",
+    "line": 244,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_runtime/state_machine.py",
+    "function": "fail",
+    "line": 262,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "agent_runtime/state_machine.py",
+    "function": "save",
+    "line": 361,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_browser_runtime.py",
+    "function": "query",
+    "line": 838,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_browser_runtime.py",
+    "function": "start",
+    "line": 1486,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_browser_runtime.py",
+    "function": "_on_console",
+    "line": 1543,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_browser_runtime.py",
+    "function": "_on_page_error",
+    "line": 1553,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_browser_runtime.py",
+    "function": "close",
+    "line": 1577,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_browser_runtime.py",
+    "function": "_execute_with_recovery",
+    "line": 2524,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_browser_runtime.py",
+    "function": "_try_recovery_strategy",
+    "line": 2641,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_browser_runtime.py",
+    "function": "close_session",
+    "line": 3069,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_call_logger.py",
+    "function": "_migrate_schema",
+    "line": 106,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_call_logger.py",
+    "function": "log_ai_call",
+    "line": 287,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_call_logger.py",
+    "function": "query_calls",
+    "line": 394,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_call_logger.py",
+    "function": "get_stats",
+    "line": 448,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_call_logger.py",
+    "function": "get_correction_stats",
+    "line": 507,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_call_logger.py",
+    "function": "decorator",
+    "line": 309,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_call_logger.py",
+    "function": "wrapper",
+    "line": 311,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_resource_packs.py",
+    "function": "_load_stats",
+    "line": 104,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_task_engine.py",
+    "function": "_agent_zero_permission",
+    "line": 1091,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ai_task_engine.py",
+    "function": "execute_task",
+    "line": 3169,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "alert_engine.py",
+    "function": "_record_alert",
+    "line": 212,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "api_dual_domain.py",
+    "function": "system_domains",
+    "line": 2232,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "_force_utf8_stdio",
+    "line": 6,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "_thread_excepthook",
+    "line": 286,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "_hang_watchdog_loop",
+    "line": 303,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "event_graph_events",
+    "line": 970,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "_basic_auth",
+    "line": 1649,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "_permission_gate_write_check",
+    "line": 1858,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "_report_deprecation_headers",
+    "line": 2053,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "_load_alerts",
+    "line": 2320,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "remote_access",
+    "line": 3524,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "api_health",
+    "line": 3572,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "api_system_runtime",
+    "line": 3675,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "api_system_database",
+    "line": 3766,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "api_brand_add",
+    "line": 4737,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "_load_cases",
+    "line": 4901,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "api_stability_heartbeat",
+    "line": 5711,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "api_dashboard_all",
+    "line": 5751,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "get_db",
+    "line": 6180,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "api_collection_logs",
+    "line": 6355,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "search_web_topics",
+    "line": 6470,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "update_web_topics",
+    "line": 6523,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "_mark_deprecated_api_headers",
+    "line": 6841,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "_xhs_ensure_login_panel",
+    "line": 7231,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "_xhs_login_capture",
+    "line": 7290,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "api_xhs_login_save",
+    "line": 7403,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "api_cookies_import",
+    "line": 7589,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "api_cookies_import_raw",
+    "line": 7761,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "doRollover",
+    "line": 7986,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "app.py",
+    "function": "_discover_and_monitor",
+    "line": 4777,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ark_llm.py",
+    "function": "extract_keywords",
+    "line": 216,
+    "flags": [
+      "BROAD_EXCEPTION_PASS",
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "auth_recovery_center.py",
+    "function": "get_pending_tasks",
+    "line": 183,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "auth_recovery_center.py",
+    "function": "_expire_old_tasks",
+    "line": 257,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "auth_recovery_center.py",
+    "function": "_row_to_task",
+    "line": 273,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "auto_recovery.py",
+    "function": "backup_database",
+    "line": 213,
+    "flags": [
+      "REVIEW_SINK:shutil.copy2"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "auto_recovery.py",
+    "function": "get_active_alerts",
+    "line": 466,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "bilibili_login_manager.py",
+    "function": "check_login_status",
+    "line": 25,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "bilibili_login_manager.py",
+    "function": "get_cookies",
+    "line": 59,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "brand_logo_auto.py",
+    "function": "_try_fetch_favicon",
+    "line": 66,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "brand_logo_auto.py",
+    "function": "_load_meta",
+    "line": 147,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "brand_logo_manager.py",
+    "function": "_load_logos",
+    "line": 235,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "brand_propagation.py",
+    "function": "list_entities",
+    "line": 232,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "browser_surface.py",
+    "function": "current_nav_mode",
+    "line": 65,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "browser_surface.py",
+    "function": "_extra_domains",
+    "line": 81,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "browser_surface.py",
+    "function": "_is_platform_internal_host",
+    "line": 136,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "browser_surface.py",
+    "function": "navigate_tab",
+    "line": 361,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "browser_surface.py",
+    "function": "history_tab",
+    "line": 386,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "browser_surface.py",
+    "function": "_eval_fixed",
+    "line": 471,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "browser_surface.py",
+    "function": "_load_json_list",
+    "line": 526,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "browser_surface.py",
+    "function": "stop_general_browser",
+    "line": 743,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "browser_surface.py",
+    "function": "get_nav_config",
+    "line": 777,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "browser_surface.py",
+    "function": "find_in_page",
+    "line": 841,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "browser_surface.py",
+    "function": "stop_find_in_page",
+    "line": 871,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "browser_surface.py",
+    "function": "set_download_behavior",
+    "line": 894,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "browser_surface.py",
+    "function": "_hybrid_screenshot",
+    "line": 953,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "browser_surface.py",
+    "function": "stop",
+    "line": 1163,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "browser_surface.py",
+    "function": "_listen_loop",
+    "line": 1191,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "cache_manager.py",
+    "function": "_load_meta",
+    "line": 28,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "cache_manager.py",
+    "function": "create_snapshot",
+    "line": 41,
+    "flags": [
+      "REVIEW_SINK:shutil.copy2",
+      "REVIEW_SINK:shutil.rmtree"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "cache_manager.py",
+    "function": "_cleanup_expired",
+    "line": 253,
+    "flags": [
+      "REVIEW_SINK:shutil.rmtree"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "cache_manager.py",
+    "function": "delete_snapshot",
+    "line": 284,
+    "flags": [
+      "REVIEW_SINK:shutil.rmtree"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "canonical_data.py",
+    "function": "count_canonical",
+    "line": 1329,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "case_deep_analysis.py",
+    "function": "_row_to_dict",
+    "line": 230,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "cdp_helper.py",
+    "function": "find_edge_path",
+    "line": 301,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "cdp_helper.py",
+    "function": "find_browser_path",
+    "line": 316,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "cdp_helper.py",
+    "function": "start_cdp_browser",
+    "line": 381,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "cdp_helper.py",
+    "function": "reset_cdp_targets",
+    "line": 606,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ci_cd.py",
+    "function": "build_release",
+    "line": 193,
+    "flags": [
+      "REVIEW_SINK:shutil.copy2",
+      "REVIEW_SINK:shutil.rmtree"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "code_quality_report.py",
+    "function": "scan_unused_imports",
+    "line": 106,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "code_quality_report.py",
+    "function": "scan_dead_code",
+    "line": 156,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "code_quality_report.py",
+    "function": "scan_duplicate_code",
+    "line": 227,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "code_quality_report.py",
+    "function": "scan_hidden_side_effects",
+    "line": 257,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "code_quality_report.py",
+    "function": "scan_hardcoded_paths",
+    "line": 385,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "code_quality_report.py",
+    "function": "scan_hardcoded_ports",
+    "line": 401,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "collection_api.py",
+    "function": "register_collection_api",
+    "line": 20,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "collection_api.py",
+    "function": "api_collect_schedule_status",
+    "line": 33,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "collector.py",
+    "function": "_resolve_server_cdp_url",
+    "line": 144,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "collector.py",
+    "function": "collect_all",
+    "line": 602,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "collector_auto_start.py",
+    "function": "find_edge",
+    "line": 37,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "collector_auto_start.py",
+    "function": "update_status",
+    "line": 154,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "collector_auto_start.py",
+    "function": "load_status",
+    "line": 169,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "collector_automation.py",
+    "function": "_record_collection_result",
+    "line": 1153,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "collector_automation.py",
+    "function": "_find_edge_browser",
+    "line": 144,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "collector_automation.py",
+    "function": "_get_cdp_profile_dir",
+    "line": 167,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "collector_browser_mode.py",
+    "function": "get_browser_mode",
+    "line": 29,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "collector_status_api.py",
+    "function": "_load_cache",
+    "line": 65,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "content_generation.py",
+    "function": "_parse_json_output",
+    "line": 374,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "data_quality_gate.py",
+    "function": "batch_quality_to_evaluation",
+    "line": 213,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "database.py",
+    "function": "insert_note",
+    "line": 119,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "dual_account_rotation.py",
+    "function": "_load_state",
+    "line": 49,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "engineering_metrics.py",
+    "function": "engineering_to_evaluation",
+    "line": 394,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "full_self_repair.py",
+    "function": "backup_file",
+    "line": 163,
+    "flags": [
+      "REVIEW_SINK:shutil.copy2"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "full_self_repair.py",
+    "function": "browser_audit",
+    "line": 720,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "full_self_repair.py",
+    "function": "main",
+    "line": 1168,
+    "flags": [
+      "BROAD_EXCEPTION_PASS",
+      "REVIEW_SINK:shutil.copy2"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "function_registry.py",
+    "function": "_load_json",
+    "line": 39,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "import_cookies.py",
+    "function": "_load_cookie_env",
+    "line": 40,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "internal_browser.py",
+    "function": "capture_screenshot",
+    "line": 128,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "internal_browser.py",
+    "function": "navigate",
+    "line": 163,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "internal_browser.py",
+    "function": "evaluate",
+    "line": 187,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "internal_browser.py",
+    "function": "click_at",
+    "line": 207,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "internal_browser.py",
+    "function": "type_text",
+    "line": 224,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "internal_browser.py",
+    "function": "scroll_page",
+    "line": 241,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "internal_browser.py",
+    "function": "history_action",
+    "line": 259,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "internal_browser_adapter.py",
+    "function": "refresh",
+    "line": 158,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "internal_browser_adapter.py",
+    "function": "evaluate_js",
+    "line": 181,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "internal_browser_stream.py",
+    "function": "stop",
+    "line": 67,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "internal_browser_stream.py",
+    "function": "_loop",
+    "line": 145,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "internal_browser_stream.py",
+    "function": "_pump",
+    "line": 169,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ip_risk_state_machine.py",
+    "function": "get_transition_history",
+    "line": 620,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "kol_analysis.py",
+    "function": "top_authors",
+    "line": 54,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "kos_engine.py",
+    "function": "refresh_profiles",
+    "line": 144,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "kos_engine.py",
+    "function": "_load_overrides",
+    "line": 916,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "kos_intel.py",
+    "function": "_load_profile",
+    "line": 119,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "kos_intel.py",
+    "function": "competitor_benchmark",
+    "line": 290,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "kos_interest_graph.py",
+    "function": "load_config",
+    "line": 82,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "kos_metrics.py",
+    "function": "_load_manual",
+    "line": 344,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "kos_ops.py",
+    "function": "_smtp_settings",
+    "line": 46,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "kos_ops.py",
+    "function": "execute_cooperation",
+    "line": 146,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "kos_ops.py",
+    "function": "send_invitation_email",
+    "line": 200,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "kos_paid.py",
+    "function": "execute_paid_plan",
+    "line": 86,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "kos_paid.py",
+    "function": "execute_reward",
+    "line": 177,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "kos_professional.py",
+    "function": "list_accounts",
+    "line": 129,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "kos_professional.py",
+    "function": "get_metrics",
+    "line": 200,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "kos_scenarios.py",
+    "function": "_brand_keywords",
+    "line": 27,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lifecycle_mixin.py",
+    "function": "lifecycle_task",
+    "line": 330,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lifecycle_mixin.py",
+    "function": "_lifecycle_heartbeat_loop",
+    "line": 307,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/auth_recovery.py",
+    "function": "_read_auth_cookies",
+    "line": 236,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/auth_recovery.py",
+    "function": "_capture",
+    "line": 299,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/auth_recovery.py",
+    "function": "_open_and_watch",
+    "line": 327,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/auth_recovery.py",
+    "function": "_refresh_shot",
+    "line": 420,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/cookie_vault.py",
+    "function": "load_cookies",
+    "line": 294,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/doubao_search.py",
+    "function": "_parse_ai_response",
+    "line": 65,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/douyin.py",
+    "function": "_search_browser",
+    "line": 124,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/douyin.py",
+    "function": "_detail_browser",
+    "line": 381,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/douyin.py",
+    "function": "_comments_browser",
+    "line": 432,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/douyin.py",
+    "function": "_creator_browser",
+    "line": 489,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/douyin.py",
+    "function": "_capture",
+    "line": 534,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/dual_pool.py",
+    "function": "_save_cookie",
+    "line": 190,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/dual_pool.py",
+    "function": "_load_from_file",
+    "line": 253,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/dual_pool.py",
+    "function": "report_result",
+    "line": 326,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/facebook.py",
+    "function": "comments",
+    "line": 212,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/google.py",
+    "function": "_search_via_browser",
+    "line": 63,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/google.py",
+    "function": "_final_url",
+    "line": 187,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/human_browser.py",
+    "function": "close",
+    "line": 696,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/human_browser.py",
+    "function": "detect_state",
+    "line": 810,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/instagram.py",
+    "function": "_search_browser",
+    "line": 58,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/instagram.py",
+    "function": "_detail_browser",
+    "line": 213,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/instagram.py",
+    "function": "_comments_browser",
+    "line": 343,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/instagram.py",
+    "function": "_creator_browser",
+    "line": 484,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/jiguang.py",
+    "function": "_search_browser",
+    "line": 62,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/risk_controller.py",
+    "function": "_load",
+    "line": 102,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/risk_controller.py",
+    "function": "_save",
+    "line": 112,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/sogou_search.py",
+    "function": "_load_cookies",
+    "line": 77,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/sogou_wechat.py",
+    "function": "_load_cookies",
+    "line": 66,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/x_platform.py",
+    "function": "_search_browser",
+    "line": 113,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/adapters/x_platform.py",
+    "function": "_close_worker_page",
+    "line": 306,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/importer/service.py",
+    "function": "upload_file",
+    "line": 226,
+    "flags": [
+      "REVIEW_SINK:shutil.rmtree"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/agents/skills/execution.py",
+    "function": "execute_skill",
+    "line": 386,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/agents/skills/execution.py",
+    "function": "ensure_skill_executions_table",
+    "line": 521,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/agents/skills/execution.py",
+    "function": "query_executions",
+    "line": 629,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/agents/skills/execution.py",
+    "function": "run_execution_chain",
+    "line": 697,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/agents/skills/execution.py",
+    "function": "get_skills_light_status",
+    "line": 824,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/agents/skills/registry.py",
+    "function": "_register_builtin_skills",
+    "line": 267,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/content_creation/video_editing.py",
+    "function": "_ffprobe_path",
+    "line": 242,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/database/registry.py",
+    "function": "get_git_info",
+    "line": 237,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/evaluation/ai.py",
+    "function": "get_correction_feedback",
+    "line": 304,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/evaluation/ai.py",
+    "function": "evaluate_provider_health",
+    "line": 330,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/evaluation/dimensions.py",
+    "function": "_safe_query",
+    "line": 86,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/evaluation/trajectory.py",
+    "function": "evaluate",
+    "line": 339,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/evidence/chain.py",
+    "function": "_migrate_evidence_chain",
+    "line": 490,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/evidence/store.py",
+    "function": "_record_write_failure",
+    "line": 525,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/evidence/store.py",
+    "function": "record_evidence",
+    "line": 958,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/evidence/store.py",
+    "function": "record_collection_evidence",
+    "line": 1288,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/learning/collector.py",
+    "function": "get_learning_history",
+    "line": 427,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/learning/collector.py",
+    "function": "scan",
+    "line": 48,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/learning/collector.py",
+    "function": "_save_learning",
+    "line": 392,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/learning/feedback.py",
+    "function": "_load_feedback",
+    "line": 44,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/learning/memory.py",
+    "function": "list_feedback_keywords",
+    "line": 56,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/learning/memory.py",
+    "function": "_get_promoted_samples",
+    "line": 198,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/learning/memory.py",
+    "function": "promote_record",
+    "line": 277,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/learning/memory.py",
+    "function": "get_promoted_rules",
+    "line": 366,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/learning/memory.py",
+    "function": "_persist_learning_record",
+    "line": 417,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/learning/memory.py",
+    "function": "stats",
+    "line": 445,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/reporting/daily.py",
+    "function": "calculate_risk_index",
+    "line": 38,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/reporting/daily.py",
+    "function": "_collection_health",
+    "line": 145,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/reporting/daily.py",
+    "function": "format_daily_report_5sections",
+    "line": 798,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/reporting/engine.py",
+    "function": "generate_domain_report",
+    "line": 287,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/reporting/report_generator.py",
+    "function": "_get_notes_from_db",
+    "line": 100,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/reporting/report_generator.py",
+    "function": "_get_events_from_db",
+    "line": 109,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/reporting/routes.py",
+    "function": "generate_act_strategies",
+    "line": 642,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/shared/reporting/routes.py",
+    "function": "api_record_special_trigger",
+    "line": 748,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/ai_gateway/channel.py",
+    "function": "ensure_env_loaded",
+    "line": 48,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/ai_gateway/channel.py",
+    "function": "channel_health",
+    "line": 237,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/ai_gateway/channel.py",
+    "function": "route_with_fallback",
+    "line": 379,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/ai_gateway/channel.py",
+    "function": "start_24h_heartbeat",
+    "line": 425,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/ai_gateway/channel.py",
+    "function": "reconnect_with_backoff",
+    "line": 612,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/ai_gateway/channel.py",
+    "function": "record_provider_switch",
+    "line": 738,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/ai_gateway/channel.py",
+    "function": "route_with_fallback_v1",
+    "line": 810,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/ai_gateway/channel.py",
+    "function": "_loop",
+    "line": 444,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/ai_gateway/core.py",
+    "function": "_budget_check",
+    "line": 674,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/ai_gateway/core.py",
+    "function": "_budget_record",
+    "line": 684,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/ai_gateway/owned_training_runtime.py",
+    "function": "_launch_remote_managed_training",
+    "line": 607,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/browser/runtime/adapters/playwright_adapter.py",
+    "function": "_cleanup_failed_init",
+    "line": 120,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/browser/runtime/adapters/playwright_adapter.py",
+    "function": "close",
+    "line": 237,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/browser/runtime/adapters/xhs_collector_bridge.py",
+    "function": "probe_xhs_page",
+    "line": 41,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/browser/runtime/adapters/xhs_collector_bridge.py",
+    "function": "collect_keyword_bypass",
+    "line": 124,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/adapters/health_center.py",
+    "function": "_xhs_runtime",
+    "line": 29,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/adapters/multi_platform_import.py",
+    "function": "_to_note_payload",
+    "line": 168,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/guard/checkpoint.py",
+    "function": "_load",
+    "line": 22,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/guard/checkpoint.py",
+    "function": "_save",
+    "line": 33,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/guard/guard.py",
+    "function": "run",
+    "line": 60,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/guard/metrics.py",
+    "function": "record",
+    "line": 41,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/guard/risk_engine.py",
+    "function": "__init__",
+    "line": 85,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/guard/risk_engine.py",
+    "function": "_persist",
+    "line": 118,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/guard/risk_engine.py",
+    "function": "_restore_state",
+    "line": 143,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/guard/task_queue.py",
+    "function": "close",
+    "line": 218,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/runtime/official_info_scraper.py",
+    "function": "fetch_weibo_official",
+    "line": 217,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/runtime/official_info_scraper.py",
+    "function": "_fetch_weibo_via_playwright",
+    "line": 281,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/runtime/pipeline/normalize.py",
+    "function": "normalize_date",
+    "line": 42,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/runtime/pipeline/normalize.py",
+    "function": "is_valid_note",
+    "line": 174,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/runtime/scheduler/collector_job.py",
+    "function": "_load_state",
+    "line": 80,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/runtime/scheduler/collector_job.py",
+    "function": "can_collect",
+    "line": 123,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/runtime/weibo/collector.py",
+    "function": "_parse_weibo_time",
+    "line": 183,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/collector/runtime/xhs/parser.py",
+    "function": "_format_time",
+    "line": 197,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/security/permission.py",
+    "function": "check_skill_metadata_change_permission",
+    "line": 1487,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/system/security/permission.py",
+    "function": "denied",
+    "line": 1496,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/unified_logger.py",
+    "function": "close",
+    "line": 130,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis/version_center/git_manager.py",
+    "function": "load_config",
+    "line": 365,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis_agg_api.py",
+    "function": "system_runtime",
+    "line": 333,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "lumenis_app_api.py",
+    "function": "api_intelligence_evidence",
+    "line": 721,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "memory_optimizer.py",
+    "function": "get_memory_info",
+    "line": 109,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "memory_optimizer.py",
+    "function": "_check_and_cleanup",
+    "line": 171,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "migrations/011_create_agent_learning_records.py",
+    "function": "upgrade",
+    "line": 77,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "module_registry.py",
+    "function": "_load_user_config",
+    "line": 46,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "monitoring.py",
+    "function": "add_alert",
+    "line": 383,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "network_adaptive.py",
+    "function": "_load_health",
+    "line": 40,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "openapi_spec.py",
+    "function": "generate_current_app_contract",
+    "line": 179,
+    "flags": [
+      "REVIEW_SINK:shutil.rmtree"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "p2_memory_governance.py",
+    "function": "is_active",
+    "line": 69,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "populate_empty_tables.py",
+    "function": "populate_web_topics",
+    "line": 19,
+    "flags": [
+      "BROAD_EXCEPTION_PASS",
+      "REVIEW_SINK:eval"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "pr_case_engine.py",
+    "function": "_load_json",
+    "line": 30,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "proxy_pool/adapters.py",
+    "function": "request",
+    "line": 16,
+    "flags": [
+      "NETWORK_TIMEOUT_NOT_EXPLICIT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "proxy_pool/manager.py",
+    "function": "_mask",
+    "line": 146,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "proxy_pool/manager.py",
+    "function": "safe_request",
+    "line": 95,
+    "flags": [
+      "NETWORK_TIMEOUT_NOT_EXPLICIT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "proxy_pool/manager.py",
+    "function": "_direct",
+    "line": 99,
+    "flags": [
+      "NETWORK_TIMEOUT_NOT_EXPLICIT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "public_opinion_cases.py",
+    "function": "get_cases",
+    "line": 1137,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "public_opinion_cases.py",
+    "function": "get_stats",
+    "line": 1169,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "resident_health.py",
+    "function": "_load_state",
+    "line": 372,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "resident_health.py",
+    "function": "_persist_state",
+    "line": 382,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "run_supervised.py",
+    "function": "_force_utf8_stdio",
+    "line": 23,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "run_supervised.py",
+    "function": "log",
+    "line": 67,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "run_supervised.py",
+    "function": "kill_tree",
+    "line": 116,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "run_supervised.py",
+    "function": "acquire_instance_lock",
+    "line": 185,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "runtime_guardian.py",
+    "function": "legacy_global_exception_handler",
+    "line": 1439,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "runtime_guardian.py",
+    "function": "_reaper_loop",
+    "line": 1131,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "runtime_guardian.py",
+    "function": "wrapper",
+    "line": 1445,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "runtime_preflight.py",
+    "function": "check_identity",
+    "line": 67,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "safety_boundary.py",
+    "function": "_load_pending_confirmations",
+    "line": 99,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "safety_boundary.py",
+    "function": "backup_before_operation",
+    "line": 213,
+    "flags": [
+      "REVIEW_SINK:shutil.copy2"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "safety_boundary.py",
+    "function": "_cleanup_old_backups",
+    "line": 261,
+    "flags": [
+      "REVIEW_SINK:shutil.rmtree"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "scripts/ai_gateway.py",
+    "function": "chat",
+    "line": 33,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "scripts/ai_gateway.py",
+    "function": "chat_json",
+    "line": 66,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "scripts/audit_tools/boundary_check.py",
+    "function": "check_pending_assets_production_ref",
+    "line": 429,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "scripts/audit_tools/boundary_check.py",
+    "function": "get_production_tables",
+    "line": 539,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "scripts/audit_tools/new_asset_acceptance_check.py",
+    "function": "check_cookie_vault",
+    "line": 255,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "scripts/backup_db.py",
+    "function": "restore_database",
+    "line": 104,
+    "flags": [
+      "REVIEW_SINK:shutil.copy2"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "scripts/daily_git_sync.py",
+    "function": "log",
+    "line": 30,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "scripts/idea_generator.py",
+    "function": "_node_circles",
+    "line": 673,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "scripts/idea_generator.py",
+    "function": "generate_ideas",
+    "line": 804,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "scripts/marketing_calendar.py",
+    "function": "node_on",
+    "line": 464,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "scripts/migrate_historical_data.py",
+    "function": "migrate_notes",
+    "line": 253,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "scripts/start_resident_browsers.py",
+    "function": "list_page_hosts",
+    "line": 104,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "security_scanner.py",
+    "function": "_load_json",
+    "line": 99,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "self_repair.py",
+    "function": "backup_file",
+    "line": 45,
+    "flags": [
+      "REVIEW_SINK:shutil.copy2"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "settings_module.py",
+    "function": "developer_execute",
+    "line": 288,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "stability_monitor.py",
+    "function": "install_global_hooks",
+    "line": 95,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "stability_monitor.py",
+    "function": "_get_serializable_status",
+    "line": 321,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "stability_monitor.py",
+    "function": "log_event",
+    "line": 365,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "system_creator_ops_api.py",
+    "function": "_read_store",
+    "line": 59,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "system_creator_ops_api.py",
+    "function": "_supervisor_snapshot",
+    "line": 139,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "system_guardian.py",
+    "function": "load_status",
+    "line": 65,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "system_guardian.py",
+    "function": "global_exception_handler",
+    "line": 85,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "system_guardian.py",
+    "function": "health_check",
+    "line": 162,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "system_guardian.py",
+    "function": "get_system_logs",
+    "line": 218,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "system_guardian.py",
+    "function": "wrapper",
+    "line": 88,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "system_health_api.py",
+    "function": "check_collector",
+    "line": 121,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "system_health_api.py",
+    "function": "system_health_summary",
+    "line": 573,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/agent_bridge/test_checkpoint.py",
+    "function": "test_file_backend_creates_directory",
+    "line": 316,
+    "flags": [
+      "REVIEW_SINK:shutil.rmtree"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/agent_memory/conftest.py",
+    "function": "temp_db",
+    "line": 235,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/conftest.py",
+    "function": "_copy_protected_local_seed",
+    "line": 71,
+    "flags": [
+      "REVIEW_SINK:shutil.copy2"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/conftest.py",
+    "function": "_cleanup_pytest_db_root",
+    "line": 183,
+    "flags": [
+      "REVIEW_SINK:shutil.rmtree"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/conftest.py",
+    "function": "_env_full_restore",
+    "line": 273,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/conftest.py",
+    "function": "_global_state_isolation",
+    "line": 332,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/conftest.py",
+    "function": "_thread_leak_guard",
+    "line": 455,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/conftest.py",
+    "function": "_reset_global_state",
+    "line": 360,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_ai_intelligence_boundary.py",
+    "function": "test_ai_is_enhancement_not_truth",
+    "line": 280,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_batch3_cache_manager.py",
+    "function": "test_ensure_dirs_creates_dir",
+    "line": 59,
+    "flags": [
+      "REVIEW_SINK:shutil.rmtree"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_browser_runtime_resident.py",
+    "function": "test_health_recovery_after_failure",
+    "line": 219,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_browser_runtime_resident.py",
+    "function": "test_close_after_recovery",
+    "line": 251,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_content_image_source.py",
+    "function": "test_report_job_analyzes_imported_image_reopens_signed_result_and_never_replays",
+    "line": 59,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_cookies_import_api.py",
+    "function": "client",
+    "line": 22,
+    "flags": [
+      "BROAD_EXCEPTION_PASS",
+      "REVIEW_SINK:shutil.rmtree"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_dual_domain_e2e.py",
+    "function": "temp_db_path",
+    "line": 35,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_evidence_write_failed_health.py",
+    "function": "tearDown",
+    "line": 79,
+    "flags": [
+      "REVIEW_SINK:shutil.rmtree"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_experience_e2e_candidate.py",
+    "function": "candidate_client",
+    "line": 89,
+    "flags": [
+      "REVIEW_SINK:shutil.copy2"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_ic_contracts.py",
+    "function": "_iso_db",
+    "line": 18,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_ic_contracts_p1.py",
+    "function": "_client",
+    "line": 192,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_intelligence_boundary_audit.py",
+    "function": "test_07_outbox_failure_isolated_from_production",
+    "line": 146,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_internal_beta_startup_gate.py",
+    "function": "test_app_acceptance_guard_requires_explicit_loopback_before_import_chain",
+    "line": 11,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_internal_pitch_workflow.py",
+    "function": "client",
+    "line": 229,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_internal_pitch_workflow.py",
+    "function": "test_exact_v1_task_created_with_old_owner_remains_byte_identical_under_new_owner",
+    "line": 424,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_local_content_source_routes.py",
+    "function": "local_client",
+    "line": 21,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_owned_training_phase_http_v2.py",
+    "function": "_actual_app_guards",
+    "line": 86,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_owned_training_review_resource_routes.py",
+    "function": "test_app_write_router_maps_only_exact_preparation_path",
+    "line": 134,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_pitch_caller_routes.py",
+    "function": "route",
+    "line": 21,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_rednote_persistence_unknown_comments.py",
+    "function": "_persist_function",
+    "line": 10,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_report_deprecation.py",
+    "function": "test_deprecation_does_not_alter_body",
+    "line": 68,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_root_api_auth_boundaries.py",
+    "function": "root_boundary",
+    "line": 17,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_root_owner_auth_composition.py",
+    "function": "_compile_functions",
+    "line": 33,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_runtime_domain_identity.py",
+    "function": "guardian",
+    "line": 25,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_runtime_guardian_integration.py",
+    "function": "guardian",
+    "line": 45,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_scheduled_report_context.py",
+    "function": "test_scheduled_reference_job_preserves_callers_context",
+    "line": 18,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_shared_work_owner_routes.py",
+    "function": "route_workspace",
+    "line": 16,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_source_brief_job_routes.py",
+    "function": "client",
+    "line": 19,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_xhs_cdp_native_truth.py",
+    "function": "collector_functions",
+    "line": 18,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tests/test_xhs_live_db_path.py",
+    "function": "test_bypass_uses_current_shared_database_path_for_both_side_writes",
+    "line": 24,
+    "flags": [
+      "REVIEW_SINK:exec"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "topic_campaign.py",
+    "function": "_campaign_in_window",
+    "line": 531,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "topic_note_detail_backfill.py",
+    "function": "extract_note_detail",
+    "line": 43,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "topic_note_detail_backfill.py",
+    "function": "main",
+    "line": 153,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tunnel_guardian.py",
+    "function": "log",
+    "line": 32,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tunnel_guardian.py",
+    "function": "stop_tunnel",
+    "line": 159,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "tunnel_guardian.py",
+    "function": "run",
+    "line": 191,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "ui_data_audit.py",
+    "function": "audit_page",
+    "line": 71,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "update_reference.py",
+    "function": "backup_old",
+    "line": 128,
+    "flags": [
+      "REVIEW_SINK:shutil.copy2"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "viz_api.py",
+    "function": "_parse_params",
+    "line": 75,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "web_discovery.py",
+    "function": "discover_brand_industry",
+    "line": 134,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "web_discovery.py",
+    "function": "get_brand_directory",
+    "line": 237,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "web_discovery.py",
+    "function": "get_industry_stats",
+    "line": 258,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "web_discovery.py",
+    "function": "search_trending_topics",
+    "line": 281,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "web_topic_discovery.py",
+    "function": "save_topics",
+    "line": 118,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "weibo_login_manager.py",
+    "function": "login_with_qrcode",
+    "line": 78,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "weibo_login_manager.py",
+    "function": "check_login_status",
+    "line": 177,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "weibo_login_manager.py",
+    "function": "get_cookies",
+    "line": 228,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "weibo_login_manager.py",
+    "function": "clear_login_data",
+    "line": 284,
+    "flags": [
+      "REVIEW_SINK:shutil.rmtree"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_cdp_collector.py",
+    "function": "move_mouse_human",
+    "line": 185,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_cdp_collector.py",
+    "function": "scroll_human",
+    "line": 217,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_cdp_collector.py",
+    "function": "human_click_note_coords",
+    "line": 289,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_cdp_collector.py",
+    "function": "human_swipe_gallery",
+    "line": 371,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_cdp_collector.py",
+    "function": "human_read_content",
+    "line": 450,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_cdp_collector.py",
+    "function": "collect_human",
+    "line": 1048,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_cdp_collector.py",
+    "function": "collect_direct",
+    "line": 1282,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_collection_optimizer.py",
+    "function": "_load",
+    "line": 200,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_collection_optimizer.py",
+    "function": "should_login_today",
+    "line": 219,
+    "flags": [
+      "EXCEPTION_RETURNS_DEFAULT"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_collection_optimizer.py",
+    "function": "recheck_and_decide",
+    "line": 316,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_collection_optimizer.py",
+    "function": "should_collect",
+    "line": 512,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_cookie_bridge.py",
+    "function": "_load_stats_from_db",
+    "line": 190,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_cookie_bridge.py",
+    "function": "_get_current_user_id",
+    "line": 286,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_cookie_bridge.py",
+    "function": "_run_search",
+    "line": 593,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_cookie_bridge.py",
+    "function": "_trip_circuit",
+    "line": 719,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_cookie_bridge.py",
+    "function": "sync",
+    "line": 816,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_cookie_bridge.py",
+    "function": "create_task",
+    "line": 1056,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_cookie_bridge.py",
+    "function": "worker",
+    "line": 1126,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  },
+  {
+    "path": "xhs_p0_orchestrator.py",
+    "function": "_resident_loop",
+    "line": 233,
+    "flags": [
+      "BROAD_EXCEPTION_PASS"
+    ],
+    "state": "UNTRIAGED_NOT_A_CONFIRMED_DEFECT"
+  }
+]

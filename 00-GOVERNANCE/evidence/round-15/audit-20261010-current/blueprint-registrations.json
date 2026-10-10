@@ -1,0 +1,522 @@
+[
+  {
+    "path": "agent_proactive/routes.py",
+    "line": 225,
+    "callee": "proactive_bp"
+  },
+  {
+    "path": "ai_api.py",
+    "line": 1011,
+    "callee": "bp"
+  },
+  {
+    "path": "ai_browser_api.py",
+    "line": 1012,
+    "callee": "bp"
+  },
+  {
+    "path": "api_dual_domain.py",
+    "line": 2266,
+    "callee": "zbmp_bp"
+  },
+  {
+    "path": "api_dual_domain.py",
+    "line": 2267,
+    "callee": "cth_bp"
+  },
+  {
+    "path": "api_dual_domain.py",
+    "line": 2268,
+    "callee": "system_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 533,
+    "callee": "system_health_api.system_health_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 534,
+    "callee": "system_creator_ops_api.system_creator_ops_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 536,
+    "callee": "architecture_api.architecture_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 537,
+    "callee": "badge_api.badge_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 538,
+    "callee": "system_ai_data_api.system_ai_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 540,
+    "callee": "settings_module.settings_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 542,
+    "callee": "subject_registry.subject_registry_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 544,
+    "callee": "export_api.export_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 546,
+    "callee": "pr_case_integration.pr_case_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 548,
+    "callee": "system_features_api.system_features_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 550,
+    "callee": "auth_recovery_api.auth_recovery_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 552,
+    "callee": "trend_api.trend_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 553,
+    "callee": "report_routes.report_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 554,
+    "callee": "viz_api.viz_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 555,
+    "callee": "data_center_api.data_center_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 556,
+    "callee": "intelligence_library_api.intelligence_library_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 558,
+    "callee": "feature_governance_api.feature_governance_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 6804,
+    "callee": ""
+  },
+  {
+    "path": "app.py",
+    "line": 6818,
+    "callee": "reporting_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 587,
+    "callee": "adaptive_ui_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 641,
+    "callee": "collector_status_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 642,
+    "callee": "lumenis_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 643,
+    "callee": "domain_api_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 6810,
+    "callee": "account_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 6811,
+    "callee": "compat_bp"
+  },
+  {
+    "path": "app.py",
+    "line": 595,
+    "callee": "proactive_bp"
+  },
+  {
+    "path": "app_refactor_blueprint.py",
+    "line": 185,
+    "callee": "notes_bp"
+  },
+  {
+    "path": "app_refactor_blueprint.py",
+    "line": 186,
+    "callee": "events_bp"
+  },
+  {
+    "path": "app_refactor_blueprint.py",
+    "line": 187,
+    "callee": "reports_bp"
+  },
+  {
+    "path": "app_refactor_blueprint.py",
+    "line": 188,
+    "callee": "ai_bp"
+  },
+  {
+    "path": "app_refactor_blueprint.py",
+    "line": 189,
+    "callee": "collection_bp"
+  },
+  {
+    "path": "app_refactor_blueprint.py",
+    "line": 190,
+    "callee": "settings_bp"
+  },
+  {
+    "path": "app_refactor_blueprint.py",
+    "line": 191,
+    "callee": "web_bp"
+  },
+  {
+    "path": "browser_runtime_api.py",
+    "line": 66,
+    "callee": "bp"
+  },
+  {
+    "path": "browser_surface_api.py",
+    "line": 316,
+    "callee": "bp"
+  },
+  {
+    "path": "collection_api.py",
+    "line": 212,
+    "callee": "bp"
+  },
+  {
+    "path": "content_generation.py",
+    "line": 1025,
+    "callee": "content_bp"
+  },
+  {
+    "path": "data_query_api.py",
+    "line": 743,
+    "callee": "bp"
+  },
+  {
+    "path": "experience_runtime.py",
+    "line": 3622,
+    "callee": "experience_bp"
+  },
+  {
+    "path": "ic_routes.py",
+    "line": 103,
+    "callee": "ic_bp"
+  },
+  {
+    "path": "internal_browser.py",
+    "line": 564,
+    "callee": "bp"
+  },
+  {
+    "path": "internal_browser_stream.py",
+    "line": 289,
+    "callee": "bp"
+  },
+  {
+    "path": "kos_routes.py",
+    "line": 2709,
+    "callee": "kos_bp"
+  },
+  {
+    "path": "lumenis/blueprint.py",
+    "line": 36,
+    "callee": "settings_bp"
+  },
+  {
+    "path": "lumenis/blueprint.py",
+    "line": 37,
+    "callee": "collect_bp"
+  },
+  {
+    "path": "lumenis/blueprint.py",
+    "line": 38,
+    "callee": "importer_bp"
+  },
+  {
+    "path": "lumenis/blueprint.py",
+    "line": 39,
+    "callee": "ai_bp"
+  },
+  {
+    "path": "lumenis/blueprint.py",
+    "line": 40,
+    "callee": "console_bp"
+  },
+  {
+    "path": "lumenis/blueprint.py",
+    "line": 41,
+    "callee": "version_bp"
+  },
+  {
+    "path": "lumenis/shared/evidence/api.py",
+    "line": 530,
+    "callee": "bp"
+  },
+  {
+    "path": "lumenis_agg_api.py",
+    "line": 510,
+    "callee": "agg_bp"
+  },
+  {
+    "path": "podcast_routes.py",
+    "line": 214,
+    "callee": "podcast_bp"
+  },
+  {
+    "path": "tests/lumenis_smoke.py",
+    "line": 43,
+    "callee": ""
+  },
+  {
+    "path": "tests/test_ai_intent_permission.py",
+    "line": 50,
+    "callee": "experience_runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_auth_access_key_lockout.py",
+    "line": 84,
+    "callee": ""
+  },
+  {
+    "path": "tests/test_bmp01_scope_viewmodel.py",
+    "line": 68,
+    "callee": "runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_business_work_owner_routes.py",
+    "line": 29,
+    "callee": "lumenis_app_api.domain_api_bp"
+  },
+  {
+    "path": "tests/test_collection_scope_routes.py",
+    "line": 35,
+    "callee": "experience_runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_collector_mode_default.py",
+    "line": 175,
+    "callee": "status_api.collector_status_bp"
+  },
+  {
+    "path": "tests/test_collector_mode_default.py",
+    "line": 179,
+    "callee": "status_api.collector_status_bp"
+  },
+  {
+    "path": "tests/test_collector_transaction_truth.py",
+    "line": 216,
+    "callee": "experience_runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_content_media_inspection.py",
+    "line": 20,
+    "callee": "experience_runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_cth03_scope_viewmodel.py",
+    "line": 58,
+    "callee": "runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_cth_scoped_api.py",
+    "line": 345,
+    "callee": "api.cth_bp"
+  },
+  {
+    "path": "tests/test_domain_api_context_selection.py",
+    "line": 17,
+    "callee": "lumenis_app_api.domain_api_bp"
+  },
+  {
+    "path": "tests/test_experience_runtime.py",
+    "line": 78,
+    "callee": "experience_runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_internal_pitch_workflow.py",
+    "line": 239,
+    "callee": "domain_api_bp"
+  },
+  {
+    "path": "tests/test_kos_subject_ownership.py",
+    "line": 145,
+    "callee": "kos_routes.kos_bp"
+  },
+  {
+    "path": "tests/test_kos_subject_ownership.py",
+    "line": 168,
+    "callee": "kos_routes.kos_bp"
+  },
+  {
+    "path": "tests/test_local_content_source_routes.py",
+    "line": 36,
+    "callee": "experience_runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_lumenis_shared_skills.py",
+    "line": 47,
+    "callee": "experience_runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_owned_training_phase_http_v2.py",
+    "line": 216,
+    "callee": "runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_owned_training_remote_preflight.py",
+    "line": 165,
+    "callee": "runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_owned_training_review_resource_routes.py",
+    "line": 30,
+    "callee": "runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_platform_catalog_schema.py",
+    "line": 88,
+    "callee": "data_center_api.data_center_bp"
+  },
+  {
+    "path": "tests/test_podcast_topic_signal_truth.py",
+    "line": 21,
+    "callee": "podcast_routes.podcast_bp"
+  },
+  {
+    "path": "tests/test_rectification_truth_chain_20261010.py",
+    "line": 272,
+    "callee": "generation.content_bp"
+  },
+  {
+    "path": "tests/test_report_generate_status.py",
+    "line": 10,
+    "callee": "routes.report_bp"
+  },
+  {
+    "path": "tests/test_retired_ai_compatibility.py",
+    "line": 12,
+    "callee": "system_features_api.system_features_bp"
+  },
+  {
+    "path": "tests/test_root_owner_auth_composition.py",
+    "line": 243,
+    "callee": "subject_bp"
+  },
+  {
+    "path": "tests/test_root_owner_auth_composition.py",
+    "line": 259,
+    "callee": "domain_bp"
+  },
+  {
+    "path": "tests/test_round03_b001l_brand_focus_migration.py",
+    "line": 209,
+    "callee": "subject_registry.subject_registry_bp"
+  },
+  {
+    "path": "tests/test_round03_b001l_brand_focus_migration.py",
+    "line": 259,
+    "callee": "subject_registry.subject_registry_bp"
+  },
+  {
+    "path": "tests/test_saved_work_pdf_exports.py",
+    "line": 174,
+    "callee": "reporting_bp"
+  },
+  {
+    "path": "tests/test_saved_work_pdf_exports.py",
+    "line": 184,
+    "callee": "report_bp"
+  },
+  {
+    "path": "tests/test_secondary_collection_surface.py",
+    "line": 180,
+    "callee": "experience_runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_secondary_collection_surface.py",
+    "line": 678,
+    "callee": "experience_runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_secondary_collection_surface.py",
+    "line": 701,
+    "callee": "experience_runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_settings_context_api.py",
+    "line": 93,
+    "callee": "domain_api_bp"
+  },
+  {
+    "path": "tests/test_shared_artifact_flow.py",
+    "line": 37,
+    "callee": "experience_runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_shared_database_entity_relations.py",
+    "line": 45,
+    "callee": "subject_registry.subject_registry_bp"
+  },
+  {
+    "path": "tests/test_shared_work_owner_routes.py",
+    "line": 24,
+    "callee": "experience_runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_shared_work_source_continuity.py",
+    "line": 105,
+    "callee": "experience_bp"
+  },
+  {
+    "path": "tests/test_source_brief_job_routes.py",
+    "line": 40,
+    "callee": "experience_runtime.experience_bp"
+  },
+  {
+    "path": "tests/test_source_brief_tasks.py",
+    "line": 21,
+    "callee": "bp"
+  },
+  {
+    "path": "tests/test_subject_registry.py",
+    "line": 171,
+    "callee": "subject_registry.subject_registry_bp"
+  },
+  {
+    "path": "tests/test_system_creator_ops_api.py",
+    "line": 17,
+    "callee": "ops.system_creator_ops_bp"
+  },
+  {
+    "path": "viz_api.py",
+    "line": 335,
+    "callee": "viz_bp"
+  }
+]

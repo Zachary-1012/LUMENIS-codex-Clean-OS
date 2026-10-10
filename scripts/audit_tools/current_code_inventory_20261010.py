@@ -106,7 +106,7 @@ for raw in rows:
             for n in ast.walk(node):
                 if isinstance(n,ast.ExceptHandler) and (n.type is None or dotted(n.type) in {'Exception','BaseException'}):
                     if any(isinstance(x,ast.Pass) for x in n.body): flags.append('BROAD_EXCEPTION_PASS')
-                    if any(isinstance(x,ast.Return) and literal(x.value) in (True, [], {}) for x in n.body if x.value is not None): flags.append('EXCEPTION_RETURNS_DEFAULT')
+                    if any(isinstance(x,ast.Return) and literal(x.value) in (True, [], {}) for x in n.body if isinstance(x,ast.Return) and x.value is not None): flags.append('EXCEPTION_RETURNS_DEFAULT')
                 if isinstance(n,ast.Call):
                     name=dotted(n.func)
                     if name in {'pickle.loads','pickle.load','eval','exec','shutil.copy2','shutil.rmtree','os.system'}: flags.append('REVIEW_SINK:'+name)

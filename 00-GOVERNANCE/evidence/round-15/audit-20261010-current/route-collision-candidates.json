@@ -1,0 +1,343 @@
+[
+  {
+    "method": "GET",
+    "route": "/api/v4/api-keys",
+    "definitions": [
+      {
+        "path": "account/compat.py",
+        "function": "compat_api_keys_list",
+        "line": 17,
+        "owner": "compat_bp",
+        "route": "/api/v4/api-keys",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "GET"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      },
+      {
+        "path": "app.py",
+        "function": "api_v4_api_keys_list",
+        "line": 7145,
+        "owner": "app",
+        "route": "/api/v4/api-keys",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "GET"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      }
+    ],
+    "state": "UNTRIAGED_REGISTRATION_ORDER_REQUIRED"
+  },
+  {
+    "method": "POST",
+    "route": "/api/v4/api-keys/generate",
+    "definitions": [
+      {
+        "path": "account/compat.py",
+        "function": "compat_api_keys_generate",
+        "line": 29,
+        "owner": "compat_bp",
+        "route": "/api/v4/api-keys/generate",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "POST"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      },
+      {
+        "path": "app.py",
+        "function": "api_v4_api_keys_generate",
+        "line": 7163,
+        "owner": "app",
+        "route": "/api/v4/api-keys/generate",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "POST"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      }
+    ],
+    "state": "UNTRIAGED_REGISTRATION_ORDER_REQUIRED"
+  },
+  {
+    "method": "POST",
+    "route": "/api/v4/api-keys/revoke",
+    "definitions": [
+      {
+        "path": "account/compat.py",
+        "function": "compat_api_keys_revoke",
+        "line": 50,
+        "owner": "compat_bp",
+        "route": "/api/v4/api-keys/revoke",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "POST"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      },
+      {
+        "path": "app.py",
+        "function": "api_v4_api_keys_revoke",
+        "line": 7208,
+        "owner": "app",
+        "route": "/api/v4/api-keys/revoke",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "POST"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      }
+    ],
+    "state": "UNTRIAGED_REGISTRATION_ORDER_REQUIRED"
+  },
+  {
+    "method": "GET",
+    "route": "/api/browser/sessions",
+    "definitions": [
+      {
+        "path": "ai_browser_api.py",
+        "function": "list_sessions",
+        "line": 266,
+        "owner": "bp",
+        "route": "/api/browser/sessions",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "GET"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      },
+      {
+        "path": "app.py",
+        "function": "api_browser_sessions",
+        "line": 2621,
+        "owner": "app",
+        "route": "/api/browser/sessions",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "GET"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      }
+    ],
+    "state": "UNTRIAGED_REGISTRATION_ORDER_REQUIRED"
+  },
+  {
+    "method": "GET",
+    "route": "/api/security/scan",
+    "definitions": [
+      {
+        "path": "app.py",
+        "function": "api_security_scan",
+        "line": 3634,
+        "owner": "app",
+        "route": "/api/security/scan",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "GET"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      },
+      {
+        "path": "system_features_api.py",
+        "function": "security_scan",
+        "line": 33,
+        "owner": "system_features_bp",
+        "route": "/api/security/scan",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "GET"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      }
+    ],
+    "state": "UNTRIAGED_REGISTRATION_ORDER_REQUIRED"
+  },
+  {
+    "method": "GET",
+    "route": "/api/system/runtime",
+    "definitions": [
+      {
+        "path": "app.py",
+        "function": "api_system_runtime",
+        "line": 3675,
+        "owner": "app",
+        "route": "/api/system/runtime",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "GET"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      },
+      {
+        "path": "lumenis_agg_api.py",
+        "function": "system_runtime",
+        "line": 333,
+        "owner": "agg_bp",
+        "route": "/api/system/runtime",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "GET"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      }
+    ],
+    "state": "UNTRIAGED_REGISTRATION_ORDER_REQUIRED"
+  },
+  {
+    "method": "GET",
+    "route": "/api/collector/status",
+    "definitions": [
+      {
+        "path": "collection_api.py",
+        "function": "api_collector_status",
+        "line": 25,
+        "owner": "bp",
+        "route": "/api/collector/status",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "GET"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      },
+      {
+        "path": "collector_status_api.py",
+        "function": "collector_status",
+        "line": 252,
+        "owner": "collector_status_bp",
+        "route": "/api/collector/status",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "GET"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      }
+    ],
+    "state": "UNTRIAGED_REGISTRATION_ORDER_REQUIRED"
+  },
+  {
+    "method": "GET",
+    "route": "/api/kos/professional/status",
+    "definitions": [
+      {
+        "path": "kos_routes.py",
+        "function": "api_professional_status",
+        "line": 2604,
+        "owner": "kos_bp",
+        "route": "/api/kos/professional/status",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "GET"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      },
+      {
+        "path": "lumenis_agg_api.py",
+        "function": "kos_professional_status",
+        "line": 441,
+        "owner": "agg_bp",
+        "route": "/api/kos/professional/status",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "GET"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      }
+    ],
+    "state": "UNTRIAGED_REGISTRATION_ORDER_REQUIRED"
+  },
+  {
+    "method": "POST",
+    "route": "/api/kos/professional/enable",
+    "definitions": [
+      {
+        "path": "kos_routes.py",
+        "function": "api_professional_enable",
+        "line": 2622,
+        "owner": "kos_bp",
+        "route": "/api/kos/professional/enable",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "POST"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      },
+      {
+        "path": "lumenis_agg_api.py",
+        "function": "kos_professional_enable",
+        "line": 458,
+        "owner": "agg_bp",
+        "route": "/api/kos/professional/enable",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "POST"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      }
+    ],
+    "state": "UNTRIAGED_REGISTRATION_ORDER_REQUIRED"
+  },
+  {
+    "method": "POST",
+    "route": "/api/kos/professional/disable",
+    "definitions": [
+      {
+        "path": "kos_routes.py",
+        "function": "api_professional_disable",
+        "line": 2643,
+        "owner": "kos_bp",
+        "route": "/api/kos/professional/disable",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "POST"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      },
+      {
+        "path": "lumenis_agg_api.py",
+        "function": "kos_professional_disable",
+        "line": 475,
+        "owner": "agg_bp",
+        "route": "/api/kos/professional/disable",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "POST"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      }
+    ],
+    "state": "UNTRIAGED_REGISTRATION_ORDER_REQUIRED"
+  },
+  {
+    "method": "POST",
+    "route": "/api/kos/professional/import",
+    "definitions": [
+      {
+        "path": "kos_routes.py",
+        "function": "api_professional_import",
+        "line": 2660,
+        "owner": "kos_bp",
+        "route": "/api/kos/professional/import",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "POST"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      },
+      {
+        "path": "lumenis_agg_api.py",
+        "function": "kos_professional_import",
+        "line": 490,
+        "owner": "agg_bp",
+        "route": "/api/kos/professional/import",
+        "prefix_resolved_locally": true,
+        "methods": [
+          "POST"
+        ],
+        "production_reachability": "REQUIRES_REGISTRATION_REVIEW"
+      }
+    ],
+    "state": "UNTRIAGED_REGISTRATION_ORDER_REQUIRED"
+  }
+]
