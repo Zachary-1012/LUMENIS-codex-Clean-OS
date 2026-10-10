@@ -1,5 +1,41 @@
 # OpenAI Math 定向深读与现有能力应用
 
+## 2026-10-10 v2 源码采用与真实产品操作（当前增补）
+
+用户指定 v2 ZIP SHA-256 `92e0d17982010b55d9043405164e9b5de79cab9ef053bdbb53ede1963d4607aa`，37 个清单文件经完整性核验，23 个 Python 文件已审查/编译；未使用 v1。原件/缓存/失败记录保留在受保护本机证据目录，不进入产品导航或再造候选实现。
+
+本次固定上游 `openai/math@fd4aeeb2ee4fc729c18d98444fed42fd0529eeeb`；12 个直接对应原文/声明源逐一核 Git blob，不把论文标题/引用数当实现。上游 Oct-7 撤回三份 Hodge/Weil/Kuga-Satake 稿件及其他修订已核；选中的九 family 未在该撤回名单中，不等于所有数学结论已由独立审查确认。末尾旧研究按其日期保留，不能覆盖此处当前有限源码状态。
+
+| Family | 本轮真正实现 | 完整主算法未闭合项 |
+| --- | --- | --- |
+| 102 | 精确有限约束满足率，保留重复边 | 困难性归约/主定理，不是优化算法 |
+| 103 | 固定转移表、时钟内的精确有理接受概率 | 一般 log-space 去随机化机器，不声称 L=RL=BPL 已进入产品 |
+| 104 | 给定位置策略对的最终循环平均收益 | 随机准多项式获胜集算法与历史策略量词 |
+| 107 | 除法无关算术程序语义和符号多项式恒等核验 | 9/4 张量提取及实测乘法程序，不替换 BLAS/CUDA |
+| 113 | 有限完美匹配 Gibbs 分布、边际、协方差、数值熵；精确混合边际和原创有理 log 区间 | 一般图匹配 FPRAS、完整面结构/优化；实数定理重放不证明 Python Gibbs 数值等价 |
+| 114 | 两个有效分割拟阵的精确公共基枚举 | 一般独立性 oracle FPRAS 及全随机带资源界 |
+| 115 | 原式有理残差修正/首次成功律/平移/参数成本；有限均匀表枚举包装 | 完整 model-and-graph/signatures/transport/dense/algorithm 链及多项式采样器 |
+| 139 | 有理二次势 I≤A≤2I 的精确合法性、值/梯度；数值密度 | 一般势/oracle 的次多项式查询采样器及独立成本测量 |
+| 140 | 有理 Gram/投影/核与有限精度条件纤维抽样 | 等标签积分/副本恒等与样本-内存下界的实际解答重放，不能推广为 LLM 下界 |
+
+以上是有限/公式实现与原创适配，不是九项主算法结项。精确有理数、数值 exp/log、严格区间和上游正式定理分别记录；113 的下界作用于具有同边际的最大熵，不能套给任意非最大熵分布。区间使用经典 atanh 展开及预先解析余项，明确非 OpenAI 新算法；Decimal Gibbs 概率不冒称得到 Lean 数值等价证明。
+
+### 产品接入与实际证据
+
+复用 Shared Evaluation → Task/API → 已保存 SourceBrief → Permission → SavedWork/Artifact。每次冻结声明问题、变量含义、输入 hash 和 SourceBrief hash；来源不是参数事实授权，情景计算不得写 Canonical。真实 CTH 来源简报包含 30 条核验记录/123 条候选，已截断，不声称全市场或随机代表性。API 已产生 v1 `ART-b005ab4593a14672`、修订 v2 `ART-8df1904fb6d54716`；同请求返回原 Task，旧/新版本可分别读回，JSON 导出 hash `db1a53f3b0f19b29afa27dd1e65ac2bce376c236d5f2d68a55cd208e42f58e62`，异域 BMP 读取 CTH 成果实际 403。AI 未调用。
+
+Web 正常入口产生 `task_b1f7a984c05219ee` / `ART-b1ecdc9c91394d29`，暴露了执行 ACK 8 秒超时。已修为执行最多 60 秒、受权结果读回最多 30 秒，并把任务编号/重新打开移到失败时也保留的区域。原任务在页面刷新后已实际读回；最终修订/界面截图/恢复结果将在同一记录更新。当前 Runtime 入口仍包含受保护的原 C1 dirty，不冒称整个工作树为干净主线。
+
+### 固定正式证明与模型边界
+
+113 正在实际比较 `ComparatorChallenges.MatchingEntropyBounds` 与 `OAI.Combinatorics.MatchingEntropy.Main` 的 `OAI.MatchingEntropyBounds.Refined.pointwise_entropy`。允许公理仅 `propext`、`Quot.sound`、`Classical.choice`。工具为 Lean 4.34.1、Mathlib `d13f23b723b8a846827a245b89c10fc7d3f11612`、Comparator `d03acab154d269c06e60e4de7e4cc85deebff94b`、lean4export `076e8e57707e813375e8f9da8bf989799ace9680`，真实 Landrun 0.1.17，在非 root WSL/systemd AF_UNIX 隔离中运行。WSL Landlock ABI 7 与新版工具 ABI 9 的差异使用显式 best-effort 兼容并单列；不使用 fake-landrun。带 sorry 的 challenge 编译不是证明通过，重放最终日志尚待完成。
+
+小型 Gibbs 参数策略训练的数据已冻结（24/6/8，跨 train/validation/holdout 不同图规模），SHA `aa72a7c3982da6fecfc55be3d06cf4c1041b7603ec7e07f5498d3f4f91dcf1f6`；仅 CPU、最多 120 秒、零费用，精确审批仍待回执，尚未训练。实验不修改/晋升现有 gpt-oss-20b，不把求解器或小型策略收益算成自研通用模型能力。
+
+九项一般主算法、全产品闭环、LLM 训练/新任务增益仍 OPEN。禁止模块测试未执行；保留编译、静态、安全、数学结果核验与实际产品操作。已完成的独立基础任务继续可用，不掩盖完整升级未完成。
+
+
+
 本报告落实用户 2026-10-07 的 A/B/C 合并指令。它是现有 Product Architecture/Owner 的研究证据，不是新权威、模型训练许可或窗口派工。
 固定上游：`openai/math@adc7f1241b42e322a6451854ab7e4b4c146bf78a`；产品取证基线 `f6dac9216cbb331e730329a70513e0c90c306e73`。
 

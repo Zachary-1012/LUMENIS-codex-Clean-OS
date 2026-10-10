@@ -273,7 +273,7 @@ class BaseAdapter(ABC):
     def _is_terminal_provider_state(error: str) -> bool:
         text = str(error or "").lower()
         markers = (
-            "captcha", "验证码", "安全验证", "need_verify", "login", "登录",
+            "captcha", "验证码", "安全验证", "人机验证", "need_verify", "login", "登录",
             "cookie", "session expired", "会话失效", "风控", "risk", "频控",
             "rate limit", "too many requests", "http 429", "http 403", "blocked",
             "封禁", "300012", "-352", "-509",

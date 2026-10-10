@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/lumenis_icon.dart';
+
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
@@ -163,7 +165,7 @@ class _CatalogNotice extends StatelessWidget {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
+        LumenisIcon(
           Icons.verified_outlined,
           color: LumenisTheme.of(context).shared,
           size: 20,
@@ -291,7 +293,7 @@ class _CatalogList extends StatelessWidget {
             controller: filterController,
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search),
+              prefixIcon: const LumenisIcon(Icons.search),
               hintText: _copy(
                 context,
                 zh: '按名称、用途或类别搜索',
@@ -448,7 +450,7 @@ class _SkillDetail extends StatelessWidget {
                   onPressed: item.canRunReadOnly && onRun != null
                       ? () => onRun!(item)
                       : null,
-                  icon: const Icon(Icons.play_arrow_rounded),
+                  icon: const LumenisIcon(Icons.play_arrow_rounded),
                   label: Text(
                     _copy(
                       context,
@@ -622,7 +624,7 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
+          LumenisIcon(
             Icons.inventory_2_outlined,
             color: LumenisTheme.of(context).quiet,
             size: 28,
@@ -751,7 +753,7 @@ class _FailureState extends StatelessWidget {
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
+              icon: const LumenisIcon(Icons.refresh),
               label: Text(context.lumenisL10n.text('common.refresh')),
             ),
           ],

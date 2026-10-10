@@ -188,3 +188,22 @@ def test_nickname_is_not_used_as_author_identity_and_alias_count_is_supported():
     assert note.author_id == ""
     assert note.author_nickname == "visible-name"
     assert note.likes == 12
+
+
+def test_comment_missing_or_invalid_counts_do_not_become_zero_or_drop_original_comments():
+    parser = _load_parser_without_xhs_runtime()
+    counts = [None, "", "1.2万", "unavailable", -1, False, 0, "0", 12]
+    originals = [{"id": f"synthetic-comment-{index}", "content": "Original comment\n" * 32,
+                  "like_count": value, "create_time": "10-03"}
+                 for index, value in enumerate(counts)]
+    comments, cursor, has_more = parser.parse_comments_response({"data": {
+        "comments": originals, "cursor": "native-page-2", "has_more": True,
+    }})
+
+    assert len(comments) == len(originals)
+    assert [comment.likes for comment in comments] == [None, None, None, None, None, None, 0, 0, 12]
+    assert cursor == "native-page-2" and has_more is True
+    for comment, original in zip(comments, originals):
+        assert comment.content == original["content"]
+        assert comment.raw_data == original
+        assert comment.publish_time == ""  # An undated literal cannot acquire a year.

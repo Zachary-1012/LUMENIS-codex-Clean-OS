@@ -185,7 +185,7 @@ class XHSParser:
                 content=item.get('content', '') or '',
                 author_id=user_info.get('user_id', '') or '',
                 author_nickname=user_info.get('nickname', '') or '',
-                likes=int(item.get('like_count', 0) or 0),
+                likes=_optional_interaction_count(item.get('like_count')),
                 publish_time=XHSParser._format_time(item.get('create_time', '')),
                 ip_location=item.get('ip_location', '') or '',
                 raw_data=item,

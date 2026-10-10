@@ -6,6 +6,7 @@ The caller must supply the durable attempt history from the existing run store.
 """
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 import hashlib
@@ -21,8 +22,41 @@ from urllib.parse import parse_qsl, urlsplit
 
 
 MAX_DUE_ATTEMPTS_PER_TICK = 8
+PUBLIC_POLICY = "public-read-only-exact-import-v1"
 PURPOSE_POLICY = "purpose-query-read-only-exact-import-v1"
+BASELINE_POLICIES = frozenset({PUBLIC_POLICY, PURPOSE_POLICY})
 PURPOSE_PLATFORMS = frozenset({"xhs", "douyin", "x", "instagram", "facebook", "wechat"})
+POST_INTAKE_KEYWORD_POLICY = {
+    "policy_id": "internal-collected-keyword-candidates-v1",
+    "processing_version": "deterministic-collector-keywords:v1",
+    "authority_ref": "00-GOVERNANCE/evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json#/scope_manifest/C1_subject_batch_postanalysis_single_cover/post_intake_purpose_implementation",
+    "purpose": "INTERNAL_KEYWORD_TOPIC_CANDIDATES",
+    "actions": ("READ", "ANALYZE", "DERIVED_SAVE"),
+}
+
+
+def _validated_post_intake_policy(value: Any, *, baseline_policy: str) -> Optional[dict]:
+    """Accept only the exact signed internal keyword-candidate use policy."""
+    if value is None:
+        return None
+    if baseline_policy != PURPOSE_POLICY or type(value) is not dict:
+        raise ValueError("post-intake policy is unsupported for this baseline")
+    expected_keys = set(POST_INTAKE_KEYWORD_POLICY)
+    if set(value) != expected_keys:
+        raise ValueError("post-intake policy fields are invalid")
+    for key in ("policy_id", "processing_version", "authority_ref", "purpose"):
+        if type(value.get(key)) is not str or value[key] != POST_INTAKE_KEYWORD_POLICY[key]:
+            raise ValueError("post-intake policy value is invalid")
+    actions = value.get("actions")
+    if type(actions) is not list or tuple(actions) != POST_INTAKE_KEYWORD_POLICY["actions"]:
+        raise ValueError("post-intake policy actions are invalid")
+    return {
+        "policy_id": POST_INTAKE_KEYWORD_POLICY["policy_id"],
+        "processing_version": POST_INTAKE_KEYWORD_POLICY["processing_version"],
+        "authority_ref": POST_INTAKE_KEYWORD_POLICY["authority_ref"],
+        "purpose": POST_INTAKE_KEYWORD_POLICY["purpose"],
+        "actions": list(POST_INTAKE_KEYWORD_POLICY["actions"]),
+    }
 
 
 @dataclass(frozen=True)
@@ -45,10 +79,11 @@ class PublicBaselinePlan:
     brand_focus_id: Optional[str] = None
     max_results: int = 20
     plan_version: str = "1"
-    policy_id: str = "public-read-only-exact-import-v1"
+    policy_id: str = PUBLIC_POLICY
     _signed_config_digest: str = field(default="", repr=False, compare=False)
     purpose_query: Optional[dict] = None
     internal_auto_opt_in: bool = False
+    post_intake_policy: Optional[dict] = None
 
     def __post_init__(self) -> None:
         for name in ("source_key", "source_version", "exact_scope", "scope_version",
@@ -66,8 +101,12 @@ class PublicBaselinePlan:
             raise ValueError("cadence_seconds must be between one minute and 31 days")
         if self.end_user_auto:
             raise ValueError("prelaunch baseline must not enable end-user AUTO")
-        if self.policy_id not in {"public-read-only-exact-import-v1", PURPOSE_POLICY}:
+        if self.policy_id not in BASELINE_POLICIES:
             raise ValueError("unsupported baseline permission policy")
+        post_intake_policy = _validated_post_intake_policy(
+            self.post_intake_policy, baseline_policy=self.policy_id,
+        )
+        object.__setattr__(self, "post_intake_policy", post_intake_policy)
         purpose = self.policy_id == PURPOSE_POLICY
         if purpose:
             if self.platform not in PURPOSE_PLATFORMS or self.internal_auto_opt_in is not True:
@@ -145,11 +184,20 @@ def _purpose_query(value):
     return AcquisitionQuery(**{name: value[name] for name in names if name in value})
 
 
-def round_robin_due(evaluated, limit=MAX_DUE_ATTEMPTS_PER_TICK):
-    """Use durable oldest-due ordering while rotating platforms within a tick."""
+def round_robin_due(evaluated, limit=MAX_DUE_ATTEMPTS_PER_TICK, *, last_attempts=None):
+    """Rotate platforms and use durable least-recent attempts for query fairness."""
     from collections import deque
     groups = {}
-    for row in sorted(evaluated, key=lambda r: (r[0], r[1], r[2])):
+    # A failed query's overdue retry must not perpetually precede every query
+    # whose first due time is this tick. Eligibility/backoff is unchanged.
+    def order(row):
+        if last_attempts is None:
+            return (row[0], row[1], row[2])
+        attempted = last_attempts.get(row[1])
+        return (attempted is not None, attempted.timestamp() if attempted else 0,
+                row[0], row[1], row[2])
+
+    for row in sorted(evaluated, key=order):
         groups.setdefault(row[3].platform, deque()).append(row)
     selected = []
     while any(groups.values()) and len(selected) < limit:
@@ -168,6 +216,8 @@ class BaselineRunHistory:
     last_success_at: Optional[datetime] = None
     consecutive_failures: int = 0
     attempt_in_progress: bool = False
+    last_failure_status: Optional[str] = None
+    last_progress_at: Optional[datetime] = None
 
 
 @dataclass(frozen=True)
@@ -198,6 +248,16 @@ def evaluate_baseline_due(
         return BaselineDueDecision(False, "ATTEMPT_IN_PROGRESS", None, pid)
     if retry_base_seconds < 1 or retry_cap_seconds < retry_base_seconds:
         raise ValueError("invalid retry backoff bounds")
+
+    # A partial batch with committed Source originals is useful progress, while
+    # its unresolved rows still keep the attempt FAILED. Continue at the signed
+    # cadence instead of exponentially delaying the remaining acquisition.
+    if (history.last_progress_at is not None
+            and history.last_progress_at == history.last_failure_at):
+        due_at = history.last_progress_at + timedelta(seconds=plan.cadence_seconds)
+        return BaselineDueDecision(
+            now >= due_at, "PARTIAL_PROGRESS_DUE" if now >= due_at
+            else "PARTIAL_PROGRESS_CADENCE", due_at, pid)
 
     # A failure is retried from last_attempt using capped exponential backoff.
     if history.consecutive_failures:
@@ -251,6 +311,38 @@ def _verified_source_refresh(result: Any) -> tuple[bool, str]:
     return True, str(result.get("status") or "SUCCESS")
 
 
+def _verified_partial_source_progress(result: Any) -> int:
+    """Count committed originals without promoting a partial task to success."""
+    if (not isinstance(result, dict) or result.get("status") not in {
+            "PARTIAL_SCOPE_REVIEW_REQUIRED", "PARTIAL_ACQUISITION_PENDING",
+            "PARTIAL_SOURCE_INTAKE_PENDING"}
+            or result.get("evidence_recorded") is not True
+            or not isinstance(result.get("source_intake_outcome_ref"), str)
+            or re.fullmatch(r"app_evidence_records:[1-9][0-9]*",
+                            result["source_intake_outcome_ref"]) is None):
+        return 0
+    intake = result.get("source_intake")
+    rows = result.get("live_original_refs")
+    if not isinstance(intake, dict) or not isinstance(rows, list):
+        return 0
+    saved = intake.get("originals_saved")
+    canonical = result.get("canonical_synced")
+    if (type(saved) is not int or saved <= 0 or type(canonical) is not int
+            or canonical < saved):
+        return 0
+    verified = [row for row in rows if isinstance(row, dict)
+                and row.get("status") == "SAVED"
+                and row.get("evidence_integrity_verified") is True
+                and row.get("evidence_assurance") == "writer-authenticated"
+                and row.get("source_evidence_version") == "collected-native-source:live-v1"
+                and isinstance(row.get("source_evidence_ref"), str)
+                and re.fullmatch(r"app_evidence_records:[1-9][0-9]*",
+                                 row["source_evidence_ref"])
+                and isinstance(row.get("source_artifact_ref"), str)
+                and bool(row["source_artifact_ref"])]
+    return saved if len(verified) == saved else 0
+
+
 def run_due_public_baseline(plan: PublicBaselinePlan, store: Any, *,
                             now: datetime, execute: Callable[[], Any],
                             finish_now: Optional[Callable[[], datetime]] = None):
@@ -287,6 +379,7 @@ def run_due_public_baseline(plan: PublicBaselinePlan, store: Any, *,
             stored = store.finish_public_baseline_attempt(
                 plan, attempt_id, success=success, now=finished_at,
                 error_code=None if success else status[:80],
+                partial_saved_count=0 if success else _verified_partial_source_progress(result),
             )
             persisted = stored is True
             terminal_status = status if persisted else "OUTCOME_PERSISTENCE_FAILED"
@@ -325,6 +418,13 @@ class PrelaunchMaintenanceAuthorization:
     authorization_ref: str
     policy_id: str
     signature_verified: bool = field(default=False, repr=False)
+    post_intake_policy: Optional[dict] = None
+
+    def __post_init__(self) -> None:
+        policy = _validated_post_intake_policy(
+            self.post_intake_policy, baseline_policy=self.policy_id,
+        )
+        object.__setattr__(self, "post_intake_policy", policy)
 
     def matches(self, plan: PublicBaselinePlan, *, source_url: str,
                 platform: str, scope: dict) -> bool:
@@ -342,6 +442,7 @@ class PrelaunchMaintenanceAuthorization:
             and self.cadence_seconds == plan.cadence_seconds
             and self.authorization_ref == plan.authorization_ref
             and self.policy_id == plan.policy_id
+            and self.post_intake_policy == plan.post_intake_policy
         )
 
     def matches_request(self, *, source_url: str, platform: str, scope: dict) -> bool:
@@ -355,7 +456,7 @@ class PrelaunchMaintenanceAuthorization:
             and self.subject_id == scope.get("subject_id")
             and self.brand_focus_id == scope.get("brand_focus_id")
             and bool(self.source_version and self.scope_version and self.authorization_ref)
-            and self.policy_id in {"public-read-only-exact-import-v1", PURPOSE_POLICY}
+            and self.policy_id in BASELINE_POLICIES
             and 60 <= self.cadence_seconds <= 31 * 24 * 60 * 60
         )
 
@@ -387,13 +488,21 @@ def load_prelaunch_baseline_config(path: Optional[str] = None, *,
         return {"status": "DISABLED", "plans": []}
     if config.get("end_user_auto") is not False:
         raise BaselineConfigError("END_USER_AUTO_MUST_REMAIN_OFF")
-    if config.get("policy_id") not in {"public-read-only-exact-import-v1", PURPOSE_POLICY}:
+    if config.get("policy_id") not in BASELINE_POLICIES:
         raise BaselineConfigError("POLICY_UNSUPPORTED")
-    if config.get("policy_id") == PURPOSE_POLICY and config.get("internal_auto_opt_in") is not True:
-        raise BaselineConfigError("INTERNAL_AUTO_OPT_IN_REQUIRED")
     sources = config.get("sources")
     if not isinstance(sources, list) or not sources:
         raise BaselineConfigError("SOURCE_SET_INVALID")
+    source_policies = []
+    for source in sources:
+        if not isinstance(source, dict):
+            raise BaselineConfigError("SOURCE_ENTRY_INVALID")
+        source_policy = source.get("policy_id", config["policy_id"])
+        if not isinstance(source_policy, str) or source_policy not in BASELINE_POLICIES:
+            raise BaselineConfigError("POLICY_UNSUPPORTED")
+        if source_policy == PURPOSE_POLICY and config.get("internal_auto_opt_in") is not True:
+            raise BaselineConfigError("INTERNAL_AUTO_OPT_IN_REQUIRED")
+        source_policies.append(source_policy)
     key = hmac_key if hmac_key is not None else os.environ.get("LUMENIS_PRELAUNCH_BASELINE_HMAC_KEY", "")
     signature = config.get("hmac")
     if not key or not isinstance(signature, dict):
@@ -407,11 +516,20 @@ def load_prelaunch_baseline_config(path: Optional[str] = None, *,
     if not isinstance(version, str) or not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", version):
         raise BaselineConfigError("PLAN_VERSION_INVALID")
     digest = hashlib.sha256(_canonical_config(config)).hexdigest()
+    post_intake_policies = []
+    for source, source_policy in zip(sources, source_policies):
+        policy_value = (source["post_intake_policy"] if "post_intake_policy" in source
+                        else config.get("post_intake_policy"))
+        try:
+            post_intake_policies.append(_validated_post_intake_policy(
+                policy_value, baseline_policy=source_policy,
+            ))
+        except (TypeError, ValueError):
+            raise BaselineConfigError("POST_INTAKE_POLICY_INVALID") from None
     plans = []
     seen = set()
-    for source in sources:
-        if not isinstance(source, dict):
-            raise BaselineConfigError("SOURCE_ENTRY_INVALID")
+    for source, source_policy, post_intake_policy in zip(
+            sources, source_policies, post_intake_policies):
         source_plan_version = source.get("plan_version", version)
         if not isinstance(source_plan_version, str) or not re.fullmatch(
                 r"[A-Za-z0-9._-]{1,64}", source_plan_version):
@@ -435,10 +553,14 @@ def load_prelaunch_baseline_config(path: Optional[str] = None, *,
                 brand_focus_id=source.get("brand_focus_id"),
                 max_results=source.get("max_results", 20),
                 plan_version=source_plan_version,
-                policy_id=config["policy_id"],
+                policy_id=source_policy,
                 _signed_config_digest=digest,
                 purpose_query=source.get("purpose_query"),
-                internal_auto_opt_in=config.get("internal_auto_opt_in", False),
+                internal_auto_opt_in=(
+                    source_policy == PURPOSE_POLICY
+                    and config.get("internal_auto_opt_in") is True
+                ),
+                post_intake_policy=post_intake_policy,
             )
         except (KeyError, TypeError, ValueError):
             raise BaselineConfigError("SOURCE_ENTRY_INVALID") from None
@@ -459,7 +581,7 @@ def maintenance_authorization(plan: PublicBaselinePlan) -> PrelaunchMaintenanceA
         brand_focus_id=plan.brand_focus_id, source_version=plan.source_version,
         scope_version=plan.scope_version, cadence_seconds=plan.cadence_seconds,
         authorization_ref=plan.authorization_ref, policy_id=plan.policy_id,
-        signature_verified=True,
+        signature_verified=True, post_intake_policy=plan.post_intake_policy,
     )
 
 
@@ -486,12 +608,21 @@ def run_due_prelaunch_baseline(*, now: Optional[datetime] = None,
         collect = collect_search
     now = now or datetime.now().astimezone()
     evaluated = []
+    last_attempts = {}
     not_due = []
     purpose_platform_backoff = {}
     for order, plan in enumerate(loaded["plans"]):
         history = store.public_baseline_history(plan)
+        last_attempts[plan.plan_id] = history.last_attempt_at
         decision = evaluate_baseline_due(plan, history, now=now)
-        if plan.policy_id == PURPOSE_POLICY and decision.reason == "RETRY_BACKOFF":
+        # A query's relevance/time/intake failure must not cool down every other
+        # topic on the platform. Only a durable platform access failure does so.
+        if (plan.policy_id == PURPOSE_POLICY and decision.reason == "RETRY_BACKOFF"
+                and history.last_failure_status in {
+                    "NEED_VERIFY", "BLOCKED", "RISK_WARNING", "SESSION_EXPIRED",
+                    "AUTH_REQUIRED", "NOT_CONFIGURED", "COOLING_DOWN", "RATE_LIMITED",
+                    "PROVIDER_UNAVAILABLE",
+                }):
             purpose_platform_backoff[plan.platform] = max(
                 purpose_platform_backoff.get(plan.platform, now), decision.due_at or now)
         expired_claim = (history.attempt_in_progress and history.last_attempt_at is not None
@@ -505,51 +636,46 @@ def run_due_prelaunch_baseline(*, now: Optional[datetime] = None,
     # Bound actual source attempts per scheduler tick, while allowing the signed
     # baseline to cover the full approved inventory. Oldest due sources go first.
     evaluated.sort(key=lambda row: (row[0], row[1], row[2]))
-    selected = round_robin_due(evaluated)
+    selected = round_robin_due(evaluated, last_attempts=last_attempts)
     selected_ids = {row[1] for row in selected}
     results = []
     blocked_platforms = set(purpose_platform_backoff)
     selected_order = {row[1]: i for i, row in enumerate(selected)}
-    for decision_at, plan_id, order, plan, decision in sorted(
-            evaluated, key=lambda row: selected_order.get(row[1], len(selected))):
-        if plan.policy_id == PURPOSE_POLICY and plan.platform in blocked_platforms:
-            results.append({"plan_id": plan.plan_id, "attempt_id": None,
-                            "status": "PLATFORM_BACKOFF", "platform": plan.platform})
-            continue
-        if plan_id not in selected_ids:
-            results.append({"decision": decision, "attempt_id": None,
-                            "status": "BATCH_DEFERRED"})
-            continue
+
+    def execute_selected(row):
+        _, plan_id, _, plan, decision = row
         scope = {"domain_id": plan.domain_id, "subject_id": plan.subject_id,
                  "brand_focus_id": plan.brand_focus_id}
-        auth = maintenance_authorization(plan)
-        def execute(plan=plan, scope=scope, auth=auth):
-            def collect_once():
-                options = {}
-                if plan.policy_id == PURPOSE_POLICY:
-                    options["business_query"] = _purpose_query(plan.purpose_query)
-                return collect(
-                    plan.platform, plan.source_url, max_results=plan.max_results,
-                    operator="prelaunch_maintenance", scope=scope,
-                    prelaunch_local_import=True, prelaunch_authorization=auth,
-                    **options,
-                )
-
-            result = collect_once()
-            if (isinstance(result, dict)
-                    and result.get("status") == "RATE_LIMITED"
-                    and result.get("error_type") == "LOCAL_RATE_LIMIT"
-                    and result.get("network_attempted") is not True
-                    and result.get("persistence_attempted") is not True):
-                wait_seconds = result.get("wait_seconds")
-                if (isinstance(wait_seconds, (int, float))
-                        and not isinstance(wait_seconds, bool)
-                        and 0 < wait_seconds <= 60
-                        and math.isfinite(wait_seconds)):
-                    time.sleep(wait_seconds + 0.1)
-                    return collect_once()
-            return result
         try:
+            auth = maintenance_authorization(plan)
+
+            def execute(plan=plan, scope=scope, auth=auth):
+                def collect_once():
+                    options = {}
+                    if plan.policy_id == PURPOSE_POLICY:
+                        options["business_query"] = _purpose_query(plan.purpose_query)
+                    return collect(
+                        plan.platform, plan.source_url, max_results=plan.max_results,
+                        operator="prelaunch_maintenance", scope=scope,
+                        prelaunch_local_import=True, prelaunch_authorization=auth,
+                        **options,
+                    )
+
+                result = collect_once()
+                if (isinstance(result, dict)
+                        and result.get("status") == "RATE_LIMITED"
+                        and result.get("error_type") == "LOCAL_RATE_LIMIT"
+                        and result.get("network_attempted") is not True
+                        and result.get("persistence_attempted") is not True):
+                    wait_seconds = result.get("wait_seconds")
+                    if (isinstance(wait_seconds, (int, float))
+                            and not isinstance(wait_seconds, bool)
+                            and 0 < wait_seconds <= 60
+                            and math.isfinite(wait_seconds)):
+                        time.sleep(wait_seconds + 0.1)
+                        return collect_once()
+                return result
+
             item = run_due_public_baseline(
                 plan, store, now=now, execute=execute, finish_now=finish_now,
             )
@@ -561,20 +687,110 @@ def run_due_prelaunch_baseline(*, now: Optional[datetime] = None,
                 result = item.get("result")
                 success, status = _verified_source_refresh(result)
                 item["status"] = "SUCCESS" if success else status
-            if (plan.policy_id == PURPOSE_POLICY and item.get("status") in {
-                    "NEED_VERIFY", "BLOCKED", "RISK_WARNING", "SESSION_EXPIRED",
-                    "AUTH_REQUIRED", "NOT_CONFIGURED", "COOLING_DOWN", "RATE_LIMITED"}):
-                blocked_platforms.add(plan.platform)
-            results.append(item)
+            return item
         except Exception as exc:
-            results.append({"plan_id": plan.plan_id, "status": "FAILED",
-                            "error_type": type(exc).__name__})
+            return {"plan_id": plan_id, "status": "FAILED",
+                    "error_type": type(exc).__name__}
+
+    terminal_platform_statuses = {
+        "NEED_VERIFY", "BLOCKED", "RISK_WARNING", "SESSION_EXPIRED",
+        "AUTH_REQUIRED", "NOT_CONFIGURED", "COOLING_DOWN", "RATE_LIMITED",
+    }
+
+    def run_platform_group(platform, rows):
+        # Each platform owns its block state; no worker mutates shared scheduler state.
+        purpose_blocked = platform in purpose_platform_backoff
+        platform_stop_status = None
+        group_results = {}
+        for row in rows:
+            plan_id, plan = row[1], row[3]
+            if plan.policy_id == PURPOSE_POLICY and purpose_blocked:
+                group_results[plan_id] = {
+                    "plan_id": plan_id, "attempt_id": None,
+                    "status": "PLATFORM_BACKOFF", "platform": platform,
+                }
+                continue
+            if platform_stop_status is not None:
+                group_results[plan_id] = {
+                    "plan_id": plan_id, "attempt_id": None,
+                    "status": platform_stop_status, "platform": platform,
+                }
+                continue
+            item = execute_selected(row)
+            group_results[plan_id] = item
+            status = item.get("status")
+            if status in {"PLATFORM_IN_PROGRESS", "STORE_PLATFORM_LOCK_UNAVAILABLE"}:
+                platform_stop_status = status
+            elif (plan.policy_id == PURPOSE_POLICY
+                    and status in terminal_platform_statuses):
+                purpose_blocked = True
+        return group_results, purpose_blocked, platform_stop_status
+
+    platform_groups = {}
+    for row in selected:
+        plan = row[3]
+        if plan.policy_id == PURPOSE_POLICY and plan.platform in purpose_platform_backoff:
+            continue
+        platform_groups.setdefault(plan.platform, []).append(row)
+
+    execution_results = {}
+    platform_stop_statuses = {}
+    if platform_groups:
+        with ThreadPoolExecutor(
+                max_workers=min(len(platform_groups), MAX_DUE_ATTEMPTS_PER_TICK),
+                thread_name_prefix="prelaunch-baseline") as executor:
+            futures = {
+                platform: executor.submit(run_platform_group, platform, rows)
+                for platform, rows in platform_groups.items()
+            }
+            for platform, future in futures.items():
+                try:
+                    group_results, platform_blocked, platform_stop_status = future.result()
+                except Exception as exc:
+                    group_results = {
+                        row[1]: {"plan_id": row[1], "status": "FAILED",
+                                 "error_type": type(exc).__name__}
+                        for row in platform_groups[platform]
+                    }
+                    platform_blocked = False
+                    platform_stop_status = None
+                execution_results.update(group_results)
+                if platform_blocked:
+                    blocked_platforms.add(platform)
+                if platform_stop_status is not None:
+                    platform_stop_statuses[platform] = platform_stop_status
+
+    for _, plan_id, _, plan, decision in sorted(
+            evaluated, key=lambda row: selected_order.get(row[1], len(selected))):
+        if plan.policy_id == PURPOSE_POLICY and plan.platform in purpose_platform_backoff:
+            results.append({"plan_id": plan.plan_id, "attempt_id": None,
+                            "status": "PLATFORM_BACKOFF", "platform": plan.platform})
+            continue
+        if plan_id not in selected_ids:
+            platform_stop_status = platform_stop_statuses.get(plan.platform)
+            if platform_stop_status is not None:
+                results.append({"plan_id": plan.plan_id, "attempt_id": None,
+                                "status": platform_stop_status, "platform": plan.platform})
+            elif plan.policy_id == PURPOSE_POLICY and plan.platform in blocked_platforms:
+                results.append({"plan_id": plan.plan_id, "attempt_id": None,
+                                "status": "PLATFORM_BACKOFF", "platform": plan.platform})
+            else:
+                results.append({"decision": decision, "attempt_id": None,
+                                "status": "BATCH_DEFERRED"})
+            continue
+        item = execution_results.get(plan_id)
+        if item is None:
+            item = {"plan_id": plan_id, "status": "FAILED",
+                    "error_type": "EXECUTION_RESULT_MISSING"}
+        results.append(item)
+
     results.extend({"plan_id": plan.plan_id, "decision": decision,
                     "attempt_id": None, "status": decision.reason}
                    for plan, decision in not_due)
     statuses = [str(item.get("status") or "FAILED") for item in results]
     deferred_statuses = {"NOT_DUE", "ATTEMPT_IN_PROGRESS", "RETRY_BACKOFF",
-                         "BATCH_DEFERRED", "PLATFORM_BACKOFF", "FIRST_RUN", "DISABLED"}
+                         "BATCH_DEFERRED", "PLATFORM_BACKOFF", "PLATFORM_IN_PROGRESS",
+                         "FIRST_RUN", "DISABLED", "PARTIAL_PROGRESS_CADENCE"}
     deferred = sum(status in deferred_statuses for status in statuses)
     failed = sum(status != "SUCCESS" and status not in deferred_statuses
                  for status in statuses)
@@ -630,7 +846,7 @@ def purpose_baseline_config(query_pages, *, source_version, scope_version,
             source_entries.append({
                 name:getattr(plan,name) for name in (
                     "source_key","source_version","scope_version","cadence_seconds",
-                    "authorization_ref","platform","source_url","domain_id",
+                    "authorization_ref","platform","source_url","domain_id","policy_id",
                     "subject_id","brand_focus_id","max_results","plan_version","purpose_query")
             })
     if not source_entries:

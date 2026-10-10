@@ -140,6 +140,75 @@ def _extract_keywords(text: str, context_keywords: List[str] = None) -> List[str
     return keywords[:10]
 
 
+def extract_source_keyword_candidates(
+    text: str, context_keywords: List[str] = None,
+) -> List[Dict]:
+    """Return deterministic, source-located keyword candidates without inference.
+
+    Terms retain their exact spelling from the body. These are derived text
+    candidates, not platform-native topics, popularity signals, or admissions.
+    """
+    if not isinstance(text, str) or not text:
+        return []
+
+    supplied_terms = (
+        [term for term in context_keywords if isinstance(term, str) and term.strip()]
+        if isinstance(context_keywords, (list, tuple)) else []
+    )
+    candidates = {}
+
+    def add_candidate(term, kind, spans):
+        if not isinstance(term, str) or not term or not spans:
+            return
+        current = candidates.get(term)
+        if current is None or kind == "VERBATIM_BODY_HASHTAG_LITERAL":
+            candidates[term] = {"kind": kind, "spans": spans}
+
+    for term in _extract_keywords(text, supplied_terms):
+        spans = [match.span() for match in re.finditer(re.escape(term), text)]
+        add_candidate(term, "DERIVED_TEXT_KEYWORD", spans)
+
+    hashtag_spans = {}
+    for match in re.finditer(r"(?<!#)#[\w]+", text, flags=re.UNICODE):
+        hashtag_spans.setdefault(match.group(0), []).append(match.span())
+    for term, spans in hashtag_spans.items():
+        add_candidate(term, "VERBATIM_BODY_HASHTAG_LITERAL", spans)
+
+    english_terms = {}
+    english_pattern = re.compile(r"(?<![A-Za-z0-9])([A-Za-z][A-Za-z0-9]*)(?![A-Za-z0-9])")
+    for match in english_pattern.finditer(text):
+        term = match.group(1)
+        if sum(char.isascii() and char.isalpha() for char in term) >= 2:
+            english_terms.setdefault(term, []).append(match.span(1))
+    frequent_english = sorted(
+        ((term, spans) for term, spans in english_terms.items() if len(spans) >= 2),
+        key=lambda item: (-len(item[1]), item[1][0][0]),
+    )
+    for term, spans in frequent_english:
+        add_candidate(term, "DERIVED_TEXT_KEYWORD", spans)
+
+    results = []
+    for term, candidate in list(candidates.items())[:20]:
+        spans = candidate["spans"]
+        results.append({
+            "term": term,
+            "kind": candidate["kind"],
+            "body_locators": [
+                {"unit": "source-body", "json_path": "$.body", "start": start,
+                 "end": end, "offset_unit": "unicode-codepoint"}
+                for start, end in spans[:5]
+            ],
+            "occurrence_count": len(spans),
+            "platform_heat": None,
+            "representative_demand": None,
+            "admitted": False,
+            "automatic_adoption": False,
+            "owned_inference": "NOT_RUN",
+            "algorithm_version": "deterministic-collector-keywords:v1",
+        })
+    return results
+
+
 def match_existing_topics(notes: List[AnalyzedNote], topics: List[str]) -> Dict[str, List[int]]:
     """将分析后的笔记关联到已有话题"""
     matches = {t: [] for t in topics}

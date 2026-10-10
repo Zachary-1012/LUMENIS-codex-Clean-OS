@@ -16,6 +16,13 @@ $functionAst = $ast.Find({
 if (-not $functionAst) { throw 'Test-Http function not found' }
 
 . ([scriptblock]::Create($functionAst.Extent.Text))
+$decisionAst = $ast.Find({
+    param($node)
+    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+        $node.Name -eq 'Get-CoreStartupDecision'
+}, $true)
+if (-not $decisionAst) { throw 'Get-CoreStartupDecision function not found' }
+. ([scriptblock]::Create($decisionAst.Extent.Text))
 $script:MockHealth = $null
 $script:MockTransportFailure = $false
 function Invoke-RestMethod {
@@ -32,6 +39,34 @@ $script:MockHealth = [pscustomobject]@{
 if (-not (Test-Http 'http://127.0.0.1:8201/healthz' 1)) {
     throw 'Healthy canonical response was rejected'
 }
+
+$launchId = 'a' * 32
+$entryHash = 'b' * 64
+if (Test-Http 'http://127.0.0.1:8201/healthz' -ExpectedLaunchId $launchId -ExpectedEntrySha256 $entryHash) {
+    throw 'Old healthy Core without an attempt identity was accepted as a new launch'
+}
+$script:MockHealth | Add-Member -NotePropertyName core_instance -NotePropertyValue ([pscustomobject]@{
+    launch_id = $launchId
+    boot_id = 'c' * 32
+    entry_sha256 = $entryHash
+})
+if (-not (Test-Http 'http://127.0.0.1:8201/healthz' -ExpectedLaunchId $launchId -ExpectedEntrySha256 $entryHash)) {
+    throw 'Matching fresh Core launch was rejected'
+}
+$script:MockHealth.core_instance.launch_id = 'd' * 32
+if (Test-Http 'http://127.0.0.1:8201/healthz' -ExpectedLaunchId $launchId -ExpectedEntrySha256 $entryHash) {
+    throw 'A previous launch was accepted as the requested launch'
+}
+$script:MockHealth.core_instance.launch_id = $launchId
+$script:MockHealth.core_instance.entry_sha256 = 'e' * 64
+if (Test-Http 'http://127.0.0.1:8201/healthz' -ExpectedLaunchId $launchId -ExpectedEntrySha256 $entryHash) {
+    throw 'Different Core entry bytes were accepted'
+}
+if ((Get-CoreStartupDecision $true $false 1) -ne 'BLOCKED_SOURCE_IDENTITY') { throw 'Healthy unknown source was allowed to restart' }
+if ((Get-CoreStartupDecision $true $true 0) -ne 'BLOCKED_PROCESS_OWNERSHIP') { throw 'Healthy unowned Core was allowed to restart' }
+if ((Get-CoreStartupDecision $true $true 2) -ne 'BLOCKED_PROCESS_OWNERSHIP') { throw 'Duplicate ownership was accepted' }
+if ((Get-CoreStartupDecision $true $true 1) -ne 'REUSE_MATCHING_CORE_ENTRY') { throw 'Matching owned Core could not be reused' }
+if ((Get-CoreStartupDecision $false $false 0) -ne 'CONVERGE_OWNED_STALE_PROCESS') { throw 'Unhealthy recovery path was lost' }
 
 $script:MockHealth = [pscustomobject]@{
     ok = $false

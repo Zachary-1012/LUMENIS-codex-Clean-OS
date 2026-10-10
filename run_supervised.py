@@ -7,6 +7,7 @@ process whose health endpoint is unavailable. Historical Z-Brand/CTH-POMS names
 do not define the current product identity.
 """
 import errno
+import hashlib
 import os
 import subprocess
 import sys
@@ -16,6 +17,7 @@ import signal
 import socket
 import threading
 import urllib.request
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -86,7 +88,8 @@ def write_state(**kw):
         return False
 
 
-def http_health(port, timeout=3):
+def http_health(port, timeout=3, *, expected_launch_id=None,
+                expected_boot_id=None, expected_entry_sha256=None):
     """只接受 Product Core 的真实 healthy + database-ok 响应。"""
     try:
         with urllib.request.urlopen(f'http://127.0.0.1:{port}/healthz', timeout=timeout) as response:
@@ -99,9 +102,32 @@ def http_health(port, timeout=3):
             and payload.get('status') == 'healthy'
             and isinstance(dependencies, dict)
             and dependencies.get('database') == 'ok'
+            and _matches_core_identity(
+                payload,
+                expected_launch_id=expected_launch_id,
+                expected_boot_id=expected_boot_id,
+                expected_entry_sha256=expected_entry_sha256,
+            )
         )
     except Exception:
         return False
+
+
+def _matches_core_identity(payload, *, expected_launch_id=None,
+                           expected_boot_id=None, expected_entry_sha256=None):
+    expected = {
+        'launch_id': expected_launch_id,
+        'boot_id': expected_boot_id,
+        'entry_sha256': expected_entry_sha256,
+    }
+    expected = {key: value for key, value in expected.items() if value is not None}
+    if not expected:
+        return True
+    core_instance = payload.get('core_instance')
+    return (
+        isinstance(core_instance, dict)
+        and all(core_instance.get(key) == value for key, value in expected.items())
+    )
 
 
 def port_listening(port):
@@ -162,16 +188,69 @@ def kill_tree(proc, timeout=CHILD_SHUTDOWN_TIMEOUT):
         return False
 
 
-def spawn(app, host, port):
+def _normalize_launch_id(value=None):
+    try:
+        return uuid.uuid4().hex if value is None else uuid.UUID(str(value)).hex
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise ValueError('launch_id must be a valid UUID') from exc
+
+
+def _resolve_core_entry(app):
+    root = Path(ROOT).resolve()
+    requested = Path(app)
+    if not requested.is_absolute():
+        requested = root / requested
+    try:
+        entry = requested.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise ValueError('Core entry must exist within the runtime root') from exc
+    if not entry.is_file():
+        raise ValueError('Core entry must be a file within the runtime root')
+    root_path = os.path.normcase(str(root))
+    entry_path = os.path.normcase(str(entry))
+    try:
+        inside_root = os.path.commonpath((root_path, entry_path)) == root_path
+    except ValueError:
+        inside_root = False
+    if not inside_root:
+        raise ValueError('Core entry must resolve within the runtime root')
+    return entry
+
+
+def _process_identity(proc):
+    return {
+        'launch_id': proc.launch_id,
+        'boot_id': proc.boot_id,
+        'entry_sha256': proc.entry_sha256,
+    }
+
+
+def spawn(app, host, port, launch_id=None):
+    launch_id = _normalize_launch_id(launch_id)
+    entry = _resolve_core_entry(app)
+    # This identifies the exact entry file and spawn attempt, not the full runtime tree.
+    entry_sha256 = hashlib.sha256(entry.read_bytes()).hexdigest()
+    boot_id = uuid.uuid4().hex
     creationflags = 0x08000000 if sys.platform == 'win32' else 0
     APP_OUT.parent.mkdir(parents=True, exist_ok=True)
-    env = {**os.environ, 'PYTHONUTF8': '1', 'PYTHONIOENCODING': 'utf-8'}
+    env = {
+        **os.environ,
+        'PYTHONUTF8': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'LUMENIS_CORE_LAUNCH_ID': launch_id,
+        'LUMENIS_CORE_BOOT_ID': boot_id,
+        'LUMENIS_CORE_ENTRY_SHA256': entry_sha256,
+    }
     with open(APP_OUT, 'a', encoding='utf-8') as out:
-        return subprocess.Popen(
-            [sys.executable, '-X', 'utf8', '-u', app, '--host', host, '--port', str(port)],
+        proc = subprocess.Popen(
+            [sys.executable, '-X', 'utf8', '-u', str(entry), '--host', host, '--port', str(port)],
             cwd=str(ROOT), stdout=out, stderr=subprocess.STDOUT,
             creationflags=creationflags, env=env,
         )
+    proc.launch_id = launch_id
+    proc.boot_id = boot_id
+    proc.entry_sha256 = entry_sha256
+    return proc
 
 
 def _is_lock_contention(exc):
@@ -242,7 +321,9 @@ def main():
     ap.add_argument('--app', default='app.py')
     ap.add_argument('--host', default='0.0.0.0')
     ap.add_argument('--port', default='8201')
+    ap.add_argument('--launch-id', type=uuid.UUID, default=None)
     args = ap.parse_args()
+    launch_id = _normalize_launch_id(args.launch_id)
 
     # ===== 单实例保护：意外锁错误必须 fail closed；只有已持锁才作为重复实例正常退出 =====
     _lock = ROOT / 'data' / f'supervisor_{args.port}.lock'
@@ -309,14 +390,15 @@ def main():
             signal.signal(signal.SIGTERM, _sig)
 
         log(f'Supervisor 启动(常驻+健康探测)，目标: {sys.executable} {args.app} --host {args.host} --port {args.port}')
-        proc = spawn(args.app, args.host, args.port)
+        proc = spawn(args.app, args.host, args.port, launch_id=launch_id)
         child_started = True
         started = time.time()
         health_fails = 0
         last_health = 0.0
         write_state(app=args.app, host=args.host, port=args.port,
                     started_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    restarts=0, status='starting', pid=proc.pid, fast_crashes=0)
+                    restarts=0, status='starting', pid=proc.pid, fast_crashes=0,
+                    **_process_identity(proc))
 
         while not stopping:
             rc = proc.poll()
@@ -334,16 +416,18 @@ def main():
                     backoff = step
                     log(f'快速崩溃 {len(crash_times)} 次，冷却 {backoff}s 再拉起，避免空转刷进程')
                     write_state(status='backoff', pid=proc.pid, fast_crashes=len(crash_times),
-                                last_exit_code=rc, backoff_seconds=backoff)
+                                last_exit_code=rc, backoff_seconds=backoff,
+                                **_process_identity(proc))
                 if _wait_or_stop(stop_event, lambda: stopping, RESTART_GRACE + backoff):
                     break
                 log('拉起 app.py 子进程 ...')
-                proc = spawn(args.app, args.host, args.port)
+                proc = spawn(args.app, args.host, args.port, launch_id=launch_id)
                 started = time.time()
                 health_fails = 0
                 last_health = 0.0
                 write_state(status='starting', pid=proc.pid, restarts=len(crash_times),
-                            fast_crashes=len(crash_times), last_exit_code=rc)
+                            fast_crashes=len(crash_times), last_exit_code=rc,
+                            **_process_identity(proc))
                 continue
 
             # —— 分支2：进程在，但端口/健康探测（抓 multiprocessing worker 崩溃的“假活”）——
@@ -352,12 +436,18 @@ def main():
                 last_health = now
                 # 给新启动留 25s 宽限，避免启动慢被误杀
                 if time.time() - started > 25:
-                    if http_health(args.port):
+                    if http_health(
+                        args.port,
+                        expected_launch_id=proc.launch_id,
+                        expected_boot_id=proc.boot_id,
+                        expected_entry_sha256=proc.entry_sha256,
+                    ):
                         if health_fails:
                             log(f'健康探测恢复（此前连续失败 {health_fails} 次）')
                         health_fails = 0
                         write_state(status='running', pid=proc.pid, restarts=len(crash_times),
-                                    fast_crashes=len(crash_times))
+                                    fast_crashes=len(crash_times),
+                                    **_process_identity(proc))
                     else:
                         health_fails += 1
                         log(f'健康探测失败 {health_fails}/{HEALTH_FAIL_THRESHOLD}（进程 PID={proc.pid} 在，端口不通）')
@@ -367,17 +457,19 @@ def main():
                                 restart_failure = 'restart_failed'
                                 write_state(status=restart_failure, pid=proc.pid,
                                             restarts=len(crash_times), fast_crashes=len(crash_times),
-                                            note='worker假活进程树未能确认退出；未启动替代进程')
+                                            note='worker假活进程树未能确认退出；未启动替代进程',
+                                            **_process_identity(proc))
                                 break
                             if _wait_or_stop(stop_event, lambda: stopping, 2):
                                 break
                             crash_times.append(time.time())
-                            proc = spawn(args.app, args.host, args.port)
+                            proc = spawn(args.app, args.host, args.port, launch_id=launch_id)
                             started = time.time()
                             health_fails = 0
                             last_health = 0.0
                             write_state(status='restart_after_zombie', pid=proc.pid,
-                                        restarts=len(crash_times), note='worker假活杀树重启')
+                                        restarts=len(crash_times), note='worker假活杀树重启',
+                                        **_process_identity(proc))
             if _wait_or_stop(stop_event, lambda: stopping, POLL_INTERVAL):
                 break
     finally:
@@ -390,6 +482,7 @@ def main():
                 status=final_status,
                 child_cleanup='confirmed' if cleanup_confirmed else 'failed',
                 restarts=len(crash_times), fast_crashes=len(crash_times),
+                **_process_identity(proc),
             )
             if not state_saved:
                 log(f'无法保存监督器终态 status={final_status}')

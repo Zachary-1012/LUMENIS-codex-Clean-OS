@@ -19,6 +19,7 @@ import time
 import sys
 import hashlib
 import json
+import os
 import getpass
 import re
 import unicodedata
@@ -953,6 +954,10 @@ def _write_prelaunch_evidence(platform: str, keyword: str, result: Dict[str, Any
                   "unassigned_review_candidates": _credential_free_observations(review_candidates or [])}
         if observations:
             from lumenis.shared.database.platform_content import _stable_observation
+            # Preserve the observed native material even when a later access
+            # failure prevents Canonical admission. Hash-only continuity cannot
+            # recover an accepted detail body that never reached the importer.
+            inputs["source_observation_records"] = _credential_free_observations(observations)
             inputs["source_observations"] = [{
                 "source_id": record.get("content_id"),
                 "platform": platform,
@@ -968,7 +973,8 @@ def _write_prelaunch_evidence(platform: str, keyword: str, result: Dict[str, Any
             source="collector", project="LUMENIS", product="ZBMP" if bmp else "CTH",
             feature_id=f"{prefix}_{platform.upper()}_COLLECT", level="L8",
             version=("approved-public-raw-source-v1" if
-                     (result.get("provenance") or {}).get("provider") == "approved_original_public_raw" else ""),
+                     (result.get("provenance") or {}).get("provider") == "approved_original_public_raw"
+                     else "collector-native-observation:v2"),
             test_name=f"{prefix.lower()}_collection_{platform}",
             result="PASS" if result.get("ok") else "FAIL", started_at=started,
             inputs=inputs,
@@ -1774,6 +1780,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         }
     started_at = _now()
     started_monotonic = time.monotonic()
+    worker_recovery = None
     try:
         with _last_action_lock:
             previous = _last_action[platform] or None
@@ -1786,6 +1793,18 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                     "external_write": False, "error_type": "LOCAL_RATE_LIMIT",
                 }
             _last_action[platform] = time.monotonic()
+
+        if (maintenance_operator and raw_capture is None and native_capture is None
+                and prelaunch_scope is not None
+                and platform in {"douyin", "x", "instagram", "facebook"}):
+            if not _authorize_prelaunch_public(
+                    prelaunch_scope, keyword, platform,
+                    maintenance_authorization=prelaunch_authorization,
+                    business_query=business_query, max_results=max_results):
+                return {"ok": False, "status": "SCOPE_UNAUTHORIZED", "platform": platform,
+                        "keyword": keyword, "read_only": True, "external_write": False}
+            from lumenis.adapters.human_browser import recover_registered_readonly_worker
+            worker_recovery = recover_registered_readonly_worker(platform, mode="BACKGROUND")
 
         health = ({"status": "LOCAL_CAPTURE_INPUT", "can_attempt": True,
                    "healthcheck_scope": "local_original_capture_only"} if raw_capture is not None or native_capture is not None else (
@@ -1807,14 +1826,25 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 "external_write": False, "publish_authority": "human_manual_only",
                 "duration_ms": int((time.monotonic() - started_monotonic) * 1000),
             }
-            if manual_scope is not None:
+            result["provenance"] = _credential_free_observations(health.get("metadata") or {})
+            if worker_recovery is not None:
+                result["provenance"]["worker_recovery"] = worker_recovery
+            if maintenance_operator:
+                result["provenance"].update(
+                    maintenance_plan_id=prelaunch_authorization.plan_id,
+                    authorization_ref=prelaunch_authorization.authorization_ref,
+                    source_version=prelaunch_authorization.source_version,
+                    scope_version=prelaunch_authorization.scope_version,
+                )
+            if prelaunch_scope is not None:
                 evidence_id = _write_prelaunch_evidence(
                     platform, keyword, result, started=started_at,
-                    scope=manual_scope, source_ids=[], manual=True,
+                    scope=prelaunch_scope, source_ids=[], manual=manual_scope is not None,
                 )
             else:
                 evidence_id = _write_evidence(platform, keyword, result, started=started_at)
             result["evidence_recorded"] = evidence_id is not None
+            result["evidence_id"] = evidence_id
             if evidence_id is None:
                 result.update({
                     "ok": False,
@@ -1827,10 +1857,30 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             return result
 
         collection = None
+        acquisition_fingerprint = None
         try:
             search_kwargs = {"max_results": max_results}
             if max_scroll is not None:
                 search_kwargs["max_scroll"] = max_scroll
+            if platform == "instagram" and business_query is not None:
+                native_topic_reference = business_query.business_context.get("user_seed_topic_ref")
+                if isinstance(native_topic_reference, dict):
+                    # The platform adapter revalidates the original reviewed
+                    # native tag; a free-text query never becomes a hashtag.
+                    search_kwargs["native_topic_reference"] = dict(native_topic_reference)
+            if (platform == "xiaohongshu" and maintenance_operator
+                    and prelaunch_scope is not None and business_query is not None):
+                search_kwargs["detail_media_mode"] = "cover_only"
+            if platform in {"xiaohongshu", "x"} and business_query is not None:
+                # This operational binding distinguishes task-selected source
+                # checkpoints; it grants neither identity nor collection scope.
+                binding = {"query": business_query.to_dict(),
+                           "scope": prelaunch_scope or manual_scope,
+                           "plan_id": getattr(prelaunch_authorization, "plan_id", None)}
+                acquisition_fingerprint = hashlib.sha256(
+                    json.dumps(binding, ensure_ascii=False, sort_keys=True,
+                                separators=(",", ":")).encode("utf-8")).hexdigest()
+                search_kwargs["acquisition_fingerprint"] = acquisition_fingerprint
             collection = (_native_capture_collection(native_capture) if native_capture is not None else
                           _public_raw_collection(raw_capture) if raw_capture is not None
                           else _get_runtime_adapter(platform).search(keyword, **search_kwargs))
@@ -1877,8 +1927,13 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         status = _canonical_status(collection)
         items = [item for item in (collection.items or []) if isinstance(item, dict)]
         captured_at = (native_value["capture_observation_native"] if native_capture is not None else
-                       raw_capture.captured_at if raw_capture is not None else _now())
+                       raw_capture.captured_at if raw_capture is not None else
+                       datetime.now().astimezone().isoformat(timespec="seconds"))
         records = [_native_record(item, platform, keyword, captured_at) for item in items]
+        # Keep the observed originals independently of lexical/identity review.
+        # These records are still subject to current import authorization and
+        # source validation; they never establish an entity binding by themselves.
+        original_observation_records = list(records)
         business_reviews = []
         business_observed_at = None
         if business_query is not None:
@@ -1937,6 +1992,8 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             }
         metadata = collection.metadata if isinstance(collection.metadata, dict) else {}
         provenance = dict(collection.provenance) if isinstance(collection.provenance, dict) else {}
+        if worker_recovery is not None:
+            provenance["worker_recovery"] = worker_recovery
         actual_provider = metadata.get("provider") or metadata.get("engine")
         if actual_provider:
             provenance.setdefault("provider", str(actual_provider)[:100])
@@ -1953,6 +2010,12 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             provenance["native_publication_state"] = native_value.get("publication_since_2026")
         if metadata.get("error_type"):
             provenance["error_type"] = str(metadata["error_type"])[:80]
+        if isinstance(metadata.get("detail"), dict):
+            # Preserve the adapter's observed per-post work separately from
+            # source-scope admission and the query's final result.
+            provenance["native_detail_observation"] = _credential_free_observations(metadata["detail"])
+        if isinstance(metadata.get("continuation"), dict):
+            provenance["native_acquisition_continuation"] = _credential_free_observations(metadata["continuation"])
         if business_query is not None:
             provenance['planned_business_query'] = business_query.to_dict()
             provenance['business_source_reviews'] = business_reviews
@@ -1965,6 +2028,65 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             provenance["scope_version"] = prelaunch_authorization.scope_version
 
         import database as db
+        # Fetch one observed cover for each eligible original observation,
+        # including posts that remain pending entity assignment. Network work
+        # stays outside the DB writer and under the exact current authorization.
+        live_covers = {}
+        if (maintenance_operator and prelaunch_scope is not None
+                and original_observation_records and collection.ok is True
+                and status in {"SUCCESS", "NO_NEW_DATA"} and platform in {
+                    "xiaohongshu", "douyin", "x", "instagram", "facebook", "wechat"}):
+            if _authorize_prelaunch_public(
+                    prelaunch_scope, keyword, platform,
+                    maintenance_authorization=prelaunch_authorization,
+                    business_query=business_query, max_results=max_results):
+                from concurrent.futures import ThreadPoolExecutor
+                from .public_source import fetch_observed_post_cover
+                from .platform_naming import normalize_content_id
+                excluded_statuses = {
+                    "EXCLUDED_TASK_BOUNDARY", "OUTSIDE_REQUESTED_PUBLICATION_PERIOD"}
+                excluded_native_ids = set()
+                for review in business_reviews:
+                    if not isinstance(review, dict) or review.get("status") not in excluded_statuses:
+                        continue
+                    review_id = normalize_content_id(platform, review.get("platform_content_id"))
+                    if review_id:
+                        excluded_native_ids.add(str(review_id))
+                cover_candidates = []
+                seen_native_ids = set()
+                for record in original_observation_records[:max_results]:
+                    try:
+                        native_id, _ = _verified_live_native_observation(platform, record)
+                    except (TypeError, ValueError):
+                        continue
+                    if native_id in excluded_native_ids or native_id in seen_native_ids:
+                        continue
+                    seen_native_ids.add(native_id)
+                    cover_candidates.append((native_id, record))
+                    if len(cover_candidates) >= max_results:
+                        break
+
+                def fetch_cover(candidate):
+                    native_id, record = candidate
+                    try:
+                        cover = fetch_observed_post_cover(platform, record)
+                    except Exception:
+                        cover = {"status": "NULL", "reason": "COVER_FETCH_UNAVAILABLE"}
+                    return native_id, cover
+
+                # Each helper call owns its public session. Keep the existing
+                # two-worker cap and map every receipt to its verified native ID.
+                try:
+                    with ThreadPoolExecutor(max_workers=2, thread_name_prefix="collector-cover") as executor:
+                        for native_id, cover in executor.map(fetch_cover, cover_candidates):
+                            live_covers[native_id] = cover
+                except Exception:
+                    for native_id, _ in cover_candidates:
+                        live_covers.setdefault(
+                            native_id, {"status": "NULL", "reason": "COVER_FETCH_UNAVAILABLE"})
+        staged_source_paths = []
+        source_files_committed = False
+        result = None
         try:
             # Reserve the writer before checking either source owner. Every
             # scoped write below uses this connection and commits only after
@@ -2008,7 +2130,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 canonical_failed = False
                 final_status = ("SCOPE_CONFLICT" if prelaunch_scope_conflict else
                                 "CANONICAL_SYNC_FAILED" if canonical_failed else status)
-                if review_pending and not records:
+                if review_pending and not records and collection.ok:
                     final_status = "SCOPE_REVIEW_REQUIRED"
                 if (not prelaunch_scope_conflict and not canonical_failed and collection.ok
                         and (import_result.get("failed") or prelaunch_import_incomplete)):
@@ -2212,6 +2334,36 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                         "body_sha256":native_value["body_sha256"],"source_lineage":native_value["source_lineage"],
                         "approval_resource_keyword":permission_keyword,"signature_verified":True,
                         "per_use_admission":{"DATA_IMPORT":"CURRENT_CALLER_APPROVED","READ_ANALYZE_SAVE_EXPORT":"CHECK_EACH_CURRENT_USE","MODEL_TRAIN":"NOT_GRANTED"}}
+                    # Original preservation is a source-specific side write, not
+                    # another Canonical import. Its own failure stays visible
+                    # without erasing the already admitted primary observation.
+                    conn.execute("SAVEPOINT collected_native_original")
+                    source_path_start = len(staged_source_paths)
+                    try:
+                        from lumenis.shared.reporting.saved_work import authorize
+                        source_context = authorize(actor, manual_scope, action="write", connection=conn)
+                        original = _persist_native_source_original(
+                            conn, capture=native_capture, source_id=note_ids[0],
+                            collection_evidence_id=evidence_id, context=source_context,
+                            staged_paths=staged_source_paths,
+                        )
+                        _bind_native_source_original(conn, note_ids[0], source_context, original)
+                        conn.execute("RELEASE SAVEPOINT collected_native_original")
+                        result["native_original_refs"]["original_source"] = original
+                    except Exception as exc:
+                        conn.execute("ROLLBACK TO SAVEPOINT collected_native_original")
+                        conn.execute("RELEASE SAVEPOINT collected_native_original")
+                        cleanup_ok = _cleanup_collected_source_paths(staged_source_paths[source_path_start:])
+                        del staged_source_paths[source_path_start:]
+                        result["native_original_refs"]["original_source"] = {
+                            "status": "UNAVAILABLE", "source_artifact_ref": None,
+                            "source_evidence_ref": None, "source_evidence_version": None,
+                            "source_signature_verified": False,
+                            "reason": str(exc) if isinstance(exc, (ValueError, NativeCaptureError))
+                                      else "COLLECTED_SOURCE_WRITE_FAILED",
+                            "cleanup_status": "COMPLETE" if cleanup_ok else "FAILED",
+                            "media_original_status": "NOT_VERIFIED", "media_asset_refs": None,
+                        }
                 if manual_scope is not None:
                     _, denial = _manual_collection_guard(
                         actor, manual_scope, platform, permission_keyword, max_results,
@@ -2232,6 +2384,222 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                         raise _CollectionWriteRejected({"ok": False, "status": "SCOPE_UNAUTHORIZED",
                             "platform": platform, "keyword": keyword,
                             "read_only": True, "external_write": False})
+                if (maintenance_operator and prelaunch_scope is not None and note_ids
+                        and result.get("ok") and platform in {
+                            "xiaohongshu", "douyin", "x", "instagram", "facebook", "wechat"}):
+                    source_context = {
+                        **prelaunch_scope,
+                        "domain_id": "zbmp" if prelaunch_scope["domain_id"] == "bmp" else "cth",
+                        "global_scope": False,
+                        "collector_plan_id": prelaunch_authorization.plan_id,
+                        "collector_authorization_ref": prelaunch_authorization.authorization_ref,
+                    }
+                    originals = []
+                    from .platform_naming import get_platform_fields, normalize_content_id
+                    spec = get_platform_fields(platform)
+                    records_by_id = {
+                        (normalize_content_id(platform, record.get(spec.content_id) if spec else None)
+                         or normalize_content_id(platform, record.get("content_id"))): record
+                        for record in records
+                    }
+                    for source_id in note_ids:
+                        conn.execute("SAVEPOINT collected_live_original")
+                        source_path_start = len(staged_source_paths)
+                        try:
+                            record = records_by_id.get(str(source_id))
+                            if record is None:
+                                raise ValueError("COLLECTED_SOURCE_NATIVE_ID_MISMATCH")
+                            original = _persist_live_source_original(
+                                conn, platform=platform, record=record, source_id=source_id,
+                                collection_evidence_id=evidence_id, context=source_context,
+                                staged_paths=staged_source_paths, scope=prelaunch_scope,
+                                keyword=keyword, authorization=prelaunch_authorization,
+                                business_query=business_query, max_results=max_results,
+                            )
+                            cover = live_covers.get(str(source_id))
+                            cover_refs = {"status": "NULL", "reason": "NO_OBSERVED_COVER",
+                                          "media_asset_refs": None}
+                            if isinstance(cover, dict):
+                                cover_refs["reason"] = cover.get("reason")
+                                if cover.get("status") == "AVAILABLE":
+                                    conn.execute("SAVEPOINT collected_post_cover")
+                                    cover_path_start = len(staged_source_paths)
+                                    try:
+                                        cover_refs = _persist_live_post_cover(
+                                            conn, cover=cover, platform=platform, source_id=source_id,
+                                            context=source_context, body_original=original,
+                                            staged_paths=staged_source_paths,
+                                            authorization_resource="collector-cover:" + prelaunch_authorization.plan_id,
+                                        )
+                                        conn.execute("RELEASE SAVEPOINT collected_post_cover")
+                                    except Exception:
+                                        conn.execute("ROLLBACK TO SAVEPOINT collected_post_cover")
+                                        conn.execute("RELEASE SAVEPOINT collected_post_cover")
+                                        cleanup_ok = _cleanup_collected_source_paths(staged_source_paths[cover_path_start:])
+                                        del staged_source_paths[cover_path_start:]
+                                        cover_refs = {"status": "NULL", "reason": "COVER_INTAKE_FAILED",
+                                                      "media_asset_refs": None,
+                                                      "cleanup_status": "COMPLETE" if cleanup_ok else "FAILED"}
+                            original["cover"] = cover_refs
+                            # One saved cover is partial media intake. It does
+                            # not establish video acquisition or understanding.
+                            original["media_original_status"] = (
+                                "PARTIAL_COVER_ONLY" if cover_refs["status"] == "SAVED"
+                                else "NOT_VERIFIED")
+                            original["media_asset_refs"] = cover_refs.get("media_asset_refs")
+                            original["media_understanding"] = {
+                                "required": True, "state": "NOT_RUN",
+                                "reason": "POST_INTAKE_MEDIA_JOB_BINDING_NOT_IMPLEMENTED",
+                                "native_media_locator": {
+                                    "source_artifact_ref": original["source_artifact_ref"],
+                                    "source_evidence_ref": original["source_evidence_ref"],
+                                    "source_fingerprint": original["source_fingerprint"],
+                                    "json_path": "$.native_record",
+                                    "representation": "OBSERVED_NATIVE_METADATA"},
+                                "image_input_refs": cover_refs.get("media_asset_refs"),
+                                "image_analysis_ref": None, "video_analysis_ref": None,
+                                "speech_transcript_ref": None,
+                                "full_post_media_coverage": "UNKNOWN",
+                                "job_enqueued": False,
+                                "per_use_admission": "CHECK_CURRENT_MEDIA_ANALYSIS_USE",
+                            }
+                            _bind_native_source_original(conn, source_id, source_context, original)
+                            conn.execute("RELEASE SAVEPOINT collected_live_original")
+                            originals.append({"source_id": source_id, **original})
+                        except Exception as exc:
+                            conn.execute("ROLLBACK TO SAVEPOINT collected_live_original")
+                            conn.execute("RELEASE SAVEPOINT collected_live_original")
+                            cleanup_ok = _cleanup_collected_source_paths(staged_source_paths[source_path_start:])
+                            del staged_source_paths[source_path_start:]
+                            originals.append({"source_id": source_id, "status": "UNAVAILABLE",
+                                "source_artifact_ref": None, "source_evidence_ref": None,
+                                "source_evidence_version": None, "source_signature_verified": False,
+                                "reason": str(exc) if isinstance(exc, (ValueError, NativeCaptureError))
+                                          and re.fullmatch(r"[A-Z][A-Z0-9_]{0,100}", str(exc))
+                                          else "COLLECTED_SOURCE_WRITE_FAILED",
+                                "cleanup_status": "COMPLETE" if cleanup_ok else "FAILED"})
+                    result["live_original_refs"] = originals
+                    # Commit originals before processing. The existing resident
+                    # Source backlog performs current use checks and derivative
+                    # writes on its next pass; no second queue is introduced.
+                    analyses = []
+                    for original in originals:
+                        if original.get("status") != "SAVED":
+                            continue
+                        analyses.append({
+                            "source_id": original["source_id"], "status": "PENDING",
+                            "keyword_evidence_ref": None, "keyword_artifact_ref": None,
+                            "reason": "PERSISTED_SOURCE_BACKLOG_PENDING",
+                            "source_evidence_ref": original["source_evidence_ref"],
+                            "source_artifact_ref": original["source_artifact_ref"],
+                            "source_fingerprint": original["source_fingerprint"],
+                            "processing_owner": "process_prelaunch_keyword_backlog",
+                            "job_enqueued": False,
+                        })
+                    result["post_intake_keyword_refs"] = analyses
+                    source_saved = sum(row.get("status") == "SAVED" for row in originals)
+                    analyses_saved = sum(row.get("status") == "SAVED" for row in analyses)
+                    result["source_intake"] = {
+                        "admitted_posts": len(note_ids), "originals_saved": source_saved,
+                        "originals_pending": len(note_ids) - source_saved,
+                        "covers_saved": sum(row.get("cover", {}).get("status") == "SAVED"
+                                            for row in originals),
+                        "max_cover_images_per_post": 1,
+                        "keyword_analysis": "SAVED" if analyses_saved == source_saved and source_saved
+                                            else "PENDING",
+                        "keyword_analyses_saved": analyses_saved,
+                        "keyword_analyses_pending": source_saved - analyses_saved,
+                        "owned_inference": "NOT_RUN",
+                        "keyword_analysis_blocks_collection": False,
+                        "keyword_processing_mode": "POST_COMMIT_SOURCE_BACKLOG",
+                        "extra_images_processed": False, "video_processing": False,
+                        "media_understanding_required": True,
+                        "media_understanding_state": "NOT_RUN",
+                        "media_understanding_reason": "POST_INTAKE_MEDIA_JOB_BINDING_NOT_IMPLEMENTED",
+                    }
+                    if source_saved != len(note_ids):
+                        result.update(ok=False, status="PARTIAL_SOURCE_INTAKE_PENDING",
+                                      error_type="SOURCE_ORIGINAL_INCOMPLETE", refresh_verified=False)
+                    from lumenis.shared.evidence import store as source_outcome_store
+                    # Persist per-item outcomes after intake, rather than losing
+                    # failed Source/cover refs in a scheduler summary. This is
+                    # derivative execution evidence, never new source content.
+                    conn.execute("SAVEPOINT collected_intake_outcome")
+                    try:
+                        source_outcome_id = source_outcome_store.record_evidence(
+                            connection=conn, source="collector", project="LUMENIS",
+                            product="CTH" if source_context["domain_id"] == "cth" else "ZBMP",
+                            feature_id="COLLECTOR_SOURCE_INTAKE_OUTCOME",
+                            asset_id=prelaunch_authorization.plan_id, version="collector-source-intake:v3",
+                            capture_mode="live_native_intake_outcome", captured_at=_now(),
+                            inputs={"source_ids": note_ids,
+                                    "collection_evidence_ref": "app_evidence_records:" + str(evidence_id),
+                                    "authorization_ref": prelaunch_authorization.authorization_ref},
+                            outputs={"source_intake": result["source_intake"], "original_refs": originals,
+                                     "post_intake_keyword_refs": analyses},
+                            collection_metadata={"kind": "DERIVATIVE_EXECUTION_OUTCOME",
+                                                 "native_platform_signature_provided": False},
+                            result="PASS" if source_saved == len(note_ids) else "FAIL",
+                            actual="SOURCE_ORIGINALS_SAVED" if source_saved == len(note_ids)
+                                   else "PARTIAL_SOURCE_INTAKE_PENDING",
+                            provider="collector-source-intake",
+                            domain_id=source_context["domain_id"], subject_id=source_context["subject_id"],
+                            brand_focus_id=source_context["brand_focus_id"], global_scope=False,
+                        )
+                        conn.execute("RELEASE SAVEPOINT collected_intake_outcome")
+                        result["source_intake_outcome_ref"] = "app_evidence_records:" + str(source_outcome_id)
+                    except Exception:
+                        conn.execute("ROLLBACK TO SAVEPOINT collected_intake_outcome")
+                        conn.execute("RELEASE SAVEPOINT collected_intake_outcome")
+                        result["source_intake_outcome_ref"] = None
+                        result["source_intake_outcome_state"] = "OUTCOME_EVIDENCE_WRITE_FAILED"
+                    if not _authorize_prelaunch_public(
+                            prelaunch_scope, keyword, platform,
+                            maintenance_authorization=prelaunch_authorization,
+                            business_query=business_query, max_results=max_results):
+                        raise _CollectionWriteRejected({"ok": False, "status": "SCOPE_UNAUTHORIZED",
+                            "platform": platform, "keyword": keyword,
+                            "read_only": True, "external_write": False})
+                if (maintenance_operator and prelaunch_scope is not None
+                        and original_observation_records and result.get("evidence_recorded")
+                        and not prelaunch_scope_conflict and platform in {
+                            "xiaohongshu", "douyin", "x", "instagram", "facebook", "wechat"}):
+                    source_context = {
+                        **prelaunch_scope,
+                        "domain_id": "zbmp" if prelaunch_scope["domain_id"] == "bmp" else "cth",
+                        "global_scope": False,
+                        "collector_plan_id": prelaunch_authorization.plan_id,
+                        "collector_authorization_ref": prelaunch_authorization.authorization_ref,
+                    }
+                    pending_intake = _persist_pending_live_observations(
+                        conn, platform=platform, records=original_observation_records,
+                        collection_evidence_id=evidence_id, context=source_context,
+                        staged_paths=staged_source_paths, scope=prelaunch_scope,
+                        keyword=keyword, authorization=prelaunch_authorization,
+                        business_query=business_query, max_results=max_results,
+                        reviews=business_reviews, covers=live_covers,
+                        saved_ids={str(row["source_id"]) for row in result.get("live_original_refs", [])
+                                   if row.get("status") == "SAVED"},
+                    )
+                    result["pending_original_refs"] = pending_intake["original_refs"]
+                    result["pending_source_intake"] = pending_intake["summary"]
+                    result["pending_source_intake_outcome_ref"] = pending_intake["outcome_ref"]
+                    if not _authorize_prelaunch_public(
+                            prelaunch_scope, keyword, platform,
+                            maintenance_authorization=prelaunch_authorization,
+                            business_query=business_query, max_results=max_results):
+                        raise _CollectionWriteRejected({"ok": False, "status": "SCOPE_UNAUTHORIZED",
+                            "platform": platform, "keyword": keyword,
+                            "read_only": True, "external_write": False})
+                continuation = metadata.get("continuation")
+                if isinstance(continuation, dict):
+                    result["acquisition_continuation"] = _credential_free_observations(continuation)
+                    if continuation.get("continuation_required") is True and result.get("ok"):
+                        # Commit useful admitted observations, but never close a
+                        # task whose native detail checkpoint still has work.
+                        result.update(ok=False, status="PARTIAL_ACQUISITION_PENDING",
+                                      error_type="NATIVE_ACQUISITION_CONTINUATION_REQUIRED",
+                                      refresh_verified=False)
                 # The signed success above covers only admitted source_ids. Keep the
                 # overall request partial when other returned items still need review.
                 if review_pending and result["ok"]:
@@ -2241,13 +2609,67 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                         "error": _status_message("PARTIAL_SCOPE_REVIEW_REQUIRED"),
                         "scope_status": "PARTIAL", "refresh_verified": False,
                     })
+            source_files_committed = True
+            # The operational checkpoint follows the actual Source transaction.
+            # Observed/skipped cards and rejected IDs cannot count as committed.
+            if platform == "x" and acquisition_fingerprint:
+                checkpoint_key = "scope:" + acquisition_fingerprint
+                continuation = metadata.get("continuation")
+                source_ids_saved = [str(row["source_id"]) for row in
+                                    result.get("live_original_refs", []) + result.get("pending_original_refs", [])
+                                    if row.get("status") == "SAVED"]
+                if (isinstance(continuation, dict)
+                        and continuation.get("seen_checkpoint_key") == checkpoint_key and source_ids_saved):
+                    try:
+                        from lumenis.system.collector.guard.checkpoint import Checkpoint
+                        saved = Checkpoint("x").mark_seen(checkpoint_key, source_ids_saved)
+                        result["committed_post_checkpoint"] = {
+                            "status": "SAVED" if saved is True else "UNAVAILABLE",
+                            "acquisition_fingerprint": acquisition_fingerprint,
+                            "committed_id_count": len(source_ids_saved) if saved is True else None,
+                            "native_cursor": None, "pagination_exhausted": None,
+                            "coverage_complete": False,
+                        }
+                    except Exception:
+                        result["committed_post_checkpoint"] = {
+                            "status": "UNAVAILABLE", "committed_id_count": None,
+                            "native_cursor": None, "pagination_exhausted": None,
+                            "coverage_complete": False}
         except _CollectionWriteRejected as rejected:
-            result = dict(rejected.result)
+            rejected_result = dict(rejected.result)
+            result = dict(rejected_result)
             result.update(imported=0, updated=0, canonical_synced=0,
                           native_fields_synced=0, evidence_recorded=False, refresh_verified=False)
-            result.pop("evidence_ref", None)
-            result.pop("approved_raw_refs", None)
+            for stale_key in (
+                "evidence_ref", "approved_raw_refs", "native_original_refs",
+                "live_original_refs", "pending_original_refs", "source_intake",
+                "source_intake_outcome_ref", "source_intake_outcome_state",
+                "post_intake_keyword_refs", "pending_source_intake",
+                "pending_source_intake_outcome_ref", "original_preservation",
+                "source_recovery_outcome_ref", "source_recovery_refs",
+            ):
+                result.pop(stale_key, None)
+            for stale_key in (
+                "source_saved_count", "source_originals_saved", "source_originals_pending",
+                "keyword_analyses_saved", "keyword_analyses_pending", "covers_saved",
+            ):
+                result.pop(stale_key, None)
             result.pop("scope_status", None)
+            if (maintenance_operator and prelaunch_scope is not None
+                    and prelaunch_authorization is not None
+                    and business_query is not None
+                    and collection.ok is True and status in {"SUCCESS", "NO_NEW_DATA"}
+                    and original_observation_records
+                    and result.get("status") in {
+                        "CANONICAL_SYNC_FAILED", "IMPORT_FAILED", "EVIDENCE_WRITE_FAILED"}):
+                result["original_preservation"] = _preserve_prelaunch_originals_after_rollback(
+                    platform=platform, keyword=keyword, scope=prelaunch_scope,
+                    authorization=prelaunch_authorization, business_query=business_query,
+                    max_results=max_results, observations=original_observation_records,
+                    reviews=business_reviews, original_result=rejected_result,
+                    started=started_at, acquisition_ok=collection.ok,
+                    acquisition_status=status, covers=live_covers,
+                )
             if result.get("status") not in {"AUTH_REQUIRED", "APPROVAL_REQUIRED",
                     "SCOPE_UNAUTHORIZED", "PERMISSION_UNAVAILABLE"}:
                 try:
@@ -2260,12 +2682,17 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                     result["run_log_recorded"] = False
             return result
         except Exception:
-            return {"ok": False, "status": "COLLECTION_WRITE_FAILED",
+            result = {"ok": False, "status": "COLLECTION_WRITE_FAILED",
                     "error_type": "COLLECTION_WRITE_FAILED", "platform": platform,
                     "keyword": keyword, "imported": 0, "updated": 0,
                     "canonical_synced": 0, "native_fields_synced": 0,
                     "evidence_recorded": False, "refresh_verified": False,
                     "read_only": True, "external_write": False}
+            return result
+        finally:
+            if not source_files_committed and not _cleanup_collected_source_paths(staged_source_paths):
+                if isinstance(result, dict):
+                    result["original_source_cleanup_status"] = "FAILED"
         accepted_count = int(result.get("canonical_synced", 0) or 0)
         fetched_count = _observed_raw_count(collection, source_item_count)
         read_completed = collection.ok or source_item_count > 0
@@ -2567,14 +2994,21 @@ def _native_capture_record(capture):
     if type(capture) is not NativePublicCapture or capture.platform not in {
             "xiaohongshu", "douyin", "x", "instagram", "facebook", "wechat"}:
         raise ValueError("explicit supported native observation required")
-    if type(capture.content) is not bytes or not 1 <= len(capture.content) <= 2 * 1024 * 1024:
+    return _validate_native_source_bytes(capture.platform, capture.content, capture.sha256)
+
+
+def _validate_native_source_bytes(platform, content, sha256):
+    """Pure source reader shared by frozen input and live observation intake."""
+    if platform not in {"xiaohongshu", "douyin", "x", "instagram", "facebook", "wechat"}:
+        raise ValueError("explicit supported native observation required")
+    if type(content) is not bytes or not 1 <= len(content) <= 2 * 1024 * 1024:
         raise ValueError("bounded native observation bytes required")
-    if hashlib.sha256(capture.content).hexdigest() != capture.sha256:
+    if hashlib.sha256(content).hexdigest() != sha256:
         raise ValueError("native observation bytes changed")
-    value = json.loads(capture.content)
-    if (not isinstance(value, dict) or value.get("platform") != capture.platform
+    value = json.loads(content)
+    if (not isinstance(value, dict) or value.get("platform") != platform
             or not isinstance(value.get("native_id"), str)
-            or value.get("stable_source_key") != capture.platform + ":" + value["native_id"]
+            or value.get("stable_source_key") != platform + ":" + value["native_id"]
             or not isinstance(value.get("body"), str) or not value["body"].strip()
             or hashlib.sha256(value["body"].encode("utf-8")).hexdigest() != value.get("body_sha256")
             or not isinstance(value.get("source_lineage"), list) or not value["source_lineage"]
@@ -2600,10 +3034,10 @@ def _native_capture_record(capture):
         "facebook": {"www.facebook.com", "facebook.com"},
         "wechat": {"mp.weixin.qq.com"},
     }
-    if parts.scheme != "https" or parts.hostname not in allowed[capture.platform] or parts.username or parts.password:
+    if parts.scheme != "https" or parts.hostname not in allowed[platform] or parts.username or parts.password:
         raise ValueError("approved public platform source URL required")
     from .platform_naming import get_platform_fields
-    spec = get_platform_fields(capture.platform)
+    spec = get_platform_fields(platform)
     native_id = value["native_record"].get(spec.content_id) if spec else None
     if native_id is not None and str(native_id) != value["native_id"]:
         raise ValueError("post identity differs from original native record")
@@ -2613,6 +3047,1350 @@ def native_capture_permission_keyword(capture):
     """Existing manual DATA_IMPORT approval includes the complete observed bytes."""
     _native_capture_record(capture)
     return "native-original:" + capture.platform + ":" + capture.sha256
+
+
+def _cleanup_collected_source_paths(paths):
+    """Remove only immutable files returned by this attempt's Artifact writer."""
+    cleaned = True
+    for path in paths:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            cleaned = False
+    return cleaned
+
+
+def _persist_native_source_original(connection, *, capture, source_id,
+                                    collection_evidence_id, context, staged_paths):
+    """Retain exact approved native bytes under the existing Source/Artifact owner.
+
+    The Collector caller owns the surrounding savepoint, final authorization,
+    commit and file rollback. This JSON source is not an image/video asset and
+    its declared rights never grant read, quote, export or training admission.
+    """
+    value = _native_capture_record(capture)
+    return _persist_collected_source_original(
+        connection, value=value, source_bytes=capture.content,
+        source_fingerprint=capture.sha256, source_id=source_id,
+        collection_evidence_id=collection_evidence_id, context=context,
+        staged_paths=staged_paths, capture_mode="frozen_native_original_intake",
+        source_version="collected-native-source:v1",
+        authorization_resource=native_capture_permission_keyword(capture),
+    )
+
+
+def _verified_live_native_observation(platform, observed):
+    """Return only an exactly identified native detail body from one observation."""
+    if not isinstance(observed, dict):
+        raise ValueError("COLLECTED_SOURCE_OBSERVATION_INVALID")
+    body = observed.get("content")
+    raw = observed.get("source_raw")
+    raw = raw if isinstance(raw, dict) else observed
+    detail = raw.get("detail_observation")
+    detail = detail if isinstance(detail, dict) else {}
+    if platform == "xiaohongshu":
+        native_detail = (observed.get("detail_fetched") is True
+                         and observed.get("detail_identity_verified") is True)
+    else:
+        native_detail = (detail.get("status") in {"SUCCESS", "REUSED_SAME_NATIVE_ID"}
+                         and detail.get("body_kind") in {"NATIVE_POST_BODY", "NATIVE_CAPTION",
+                                                         "native_post_text", "caption", "native_caption"}
+                         and detail.get("body") == body)
+    if not native_detail or not isinstance(body, str) or not body.strip():
+        raise ValueError("LIVE_NATIVE_BODY_NOT_VERIFIED")
+    from .platform_naming import get_platform_fields, normalize_content_id
+    spec = get_platform_fields(platform)
+    native_id = normalize_content_id(platform, observed.get(spec.content_id) if spec else None)
+    native_id = native_id or normalize_content_id(platform, observed.get("content_id"))
+    if not native_id:
+        raise ValueError("COLLECTED_SOURCE_NATIVE_ID_MISSING")
+    return str(native_id), body
+
+
+def _persist_live_source_original(connection, *, platform, record, source_id,
+                                  collection_evidence_id, context, staged_paths,
+                                  scope, keyword, authorization, business_query,
+                                  max_results):
+    """Preserve an admitted live observation under its actual DATA_IMPORT caller.
+
+    This is Source intake, not SavedWork creation or a frozen manual capture.
+    Every other use remains subject to its own rights and Permission checks.
+    """
+    if not _authorize_prelaunch_public(
+            scope, keyword, platform, maintenance_authorization=authorization,
+            business_query=business_query, max_results=max_results):
+        raise ValueError("COLLECTED_SOURCE_IMPORT_PERMISSION_DENIED")
+    from lumenis.shared.evidence import store
+    parent = connection.execute("SELECT * FROM app_evidence_records WHERE id=?",
+                                (collection_evidence_id,)).fetchone()
+    parent = dict(parent) if parent else {}
+    integrity = store.classify_evidence_integrity(parent)
+    if (integrity.get("verified") is not True or integrity.get("assurance") != "writer-authenticated"
+            or parent.get("result") != "PASS" or parent.get("status") != "verified"):
+        raise ValueError("COLLECTED_SOURCE_PARENT_INVALID")
+    parent_inputs = json.loads(parent.get("inputs_json") or "{}")
+    source_id = str(source_id)
+    if source_id not in [str(value) for value in parent_inputs.get("source_ids", [])]:
+        raise ValueError("COLLECTED_SOURCE_PARENT_INVALID")
+    observed = _credential_free_observations(record)
+    source_observations = parent_inputs.get("source_observation_records")
+    if not isinstance(source_observations, list):
+        raise ValueError("COLLECTED_SOURCE_OBSERVATION_MISSING")
+    matched = [i for i, value in enumerate(source_observations) if value == observed]
+    if len(matched) != 1:
+        raise ValueError("COLLECTED_SOURCE_OBSERVATION_AMBIGUOUS")
+    native_id, body = _verified_live_native_observation(platform, observed)
+    if source_id != native_id:
+        # The existing notes importer stores the normalized native ID directly.
+        # Never bind an observation to a different source merely by list order.
+        raise ValueError("COLLECTED_SOURCE_NATIVE_ID_MISMATCH")
+    canonical = connection.execute(
+        "SELECT content,publish_datetime,captured_at FROM canonical_data WHERE source_table='notes' "
+        "AND source_id=? AND product_id=? AND domain_id=? "
+        "AND NULLIF(subject_id,'') IS ? AND NULLIF(brand_focus_id,'') IS ?",
+        (source_id, "CTH" if context["domain_id"] == "cth" else "ZBMP", context["domain_id"],
+         context["subject_id"], context["brand_focus_id"])).fetchall()
+    if len(canonical) != 1 or canonical[0]["content"] != body:
+        raise ValueError("COLLECTED_SOURCE_CANONICAL_BODY_MISMATCH")
+    captured_at = observed.get("captured_at")
+    if not isinstance(captured_at, str) or not captured_at:
+        raise ValueError("COLLECTED_SOURCE_CAPTURE_TIME_MISSING")
+    observation_bytes = json.dumps(observed, ensure_ascii=False, sort_keys=True,
+                                   separators=(",", ":")).encode("utf-8")
+    parent_ref = "app_evidence_records:" + str(collection_evidence_id)
+    value = {
+        "platform": platform, "native_id": native_id,
+        "stable_source_key": platform + ":" + native_id,
+        "source_url": observed.get("url"), "body": body,
+        "body_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+        "body_state": "NATIVE_DETAIL_OBSERVED_COMPLETENESS_UNKNOWN",
+        "native_record": observed,
+        "capture_observation_native": captured_at,
+        "publication": {"published_at_utc": canonical[0]["publish_datetime"] or None,
+                        "native_time": observed.get("publish_datetime") or None,
+                        "normalization_owner": "Canonical publication owner",
+                        "timezone_inferred": None},
+        "claim_type": "ISSUER_OR_PLATFORM_USER_STATEMENT",
+        "rights": {"status": "UNREVIEWED", "allowed_uses": [],
+                   "intake_authorization_ref": authorization.authorization_ref,
+                   "intake_purpose": "SOURCE_PRESERVATION",
+                   "third_party_rights_granted": False},
+        "source_lineage": [{"sha256": hashlib.sha256(observation_bytes).hexdigest(),
+                            "locator": parent_ref + ":inputs.source_observation_records[" + str(matched[0]) + "]",
+                            "kind": "SIGNED_NATIVE_OBSERVATION_JSON",
+                            "transport_original": False}],
+    }
+    # The immutable bytes are explicitly a native observation JSON envelope;
+    # they are not raw HTML, media bytes or an unmodified HTTP response.
+    source_bytes = json.dumps(value, ensure_ascii=False, sort_keys=True,
+                              separators=(",", ":")).encode("utf-8")
+    fingerprint = hashlib.sha256(source_bytes).hexdigest()
+    _validate_native_source_bytes(platform, source_bytes, fingerprint)
+    return _persist_collected_source_original(
+        connection, value=value, source_bytes=source_bytes, source_fingerprint=fingerprint,
+        source_id=source_id, collection_evidence_id=collection_evidence_id,
+        context=context, staged_paths=staged_paths, capture_mode="live_native_observation_intake",
+        source_version="collected-native-source:live-v1",
+        authorization_resource="collector-source-preservation:" + authorization.plan_id + ":" + fingerprint,
+    )
+
+
+def _persist_pending_live_source_original(connection, *, platform, record, source_id,
+                                          collection_evidence_id, context, staged_paths,
+                                          scope, keyword, authorization, business_query,
+                                          max_results, reason):
+    """Preserve an authorized native observation pending business-entity assignment."""
+    if not _authorize_prelaunch_public(
+            scope, keyword, platform, maintenance_authorization=authorization,
+            business_query=business_query, max_results=max_results):
+        raise ValueError("COLLECTED_SOURCE_IMPORT_PERMISSION_DENIED")
+    if not isinstance(reason, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{0,100}", reason):
+        raise ValueError("PENDING_SOURCE_REASON_INVALID")
+    if not isinstance(context, Mapping):
+        raise ValueError("PENDING_SOURCE_SCOPE_INVALID")
+    from lumenis.shared.evidence import store
+    parent = connection.execute("SELECT * FROM app_evidence_records WHERE id=?",
+                                (collection_evidence_id,)).fetchone()
+    parent = dict(parent) if parent else {}
+    integrity = store.classify_evidence_integrity(parent)
+    if (integrity.get("verified") is not True
+            or integrity.get("assurance") != "writer-authenticated"
+            or parent.get("source") != "collector"
+            or parent.get("status") != "verified"
+            or parent.get("result") not in {"PASS", "FAIL"}
+            or parent.get("version") != "collector-native-observation:v2"
+            or parent.get("feature_id") != "PRELAUNCH_" + str(platform).upper() + "_COLLECT"):
+        raise ValueError("PENDING_SOURCE_PARENT_INVALID")
+    try:
+        parent_inputs = json.loads(parent.get("inputs_json") or "{}")
+        parent_metadata = json.loads(parent.get("collection_metadata") or "{}")
+    except (TypeError, ValueError) as exc:
+        raise ValueError("PENDING_SOURCE_PARENT_INVALID") from exc
+    if not isinstance(parent_inputs, dict) or not isinstance(parent_metadata, dict):
+        raise ValueError("PENDING_SOURCE_PARENT_INVALID")
+    plan_id = getattr(authorization, "plan_id", None)
+    if (not isinstance(plan_id, str) or not plan_id
+            or parent_metadata.get("maintenance_plan_id") != plan_id
+            or context.get("collector_plan_id") != plan_id):
+        raise ValueError("PENDING_SOURCE_PARENT_PLAN_MISMATCH")
+    try:
+        expected_scope = store._normalize_record_evidence_scope(
+            product="CTH" if context.get("domain_id") == "cth" else "ZBMP",
+            domain_id=context.get("domain_id"),
+            subject_id=context.get("subject_id"),
+            brand_focus_id=context.get("brand_focus_id"),
+            global_scope=context.get("global_scope"),
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError("PENDING_SOURCE_SCOPE_INVALID") from exc
+    if (expected_scope is None
+            or parent_inputs.get("_lumenis_scope") != expected_scope):
+        raise ValueError("PENDING_SOURCE_SCOPE_MISMATCH")
+
+    observed = _credential_free_observations(record)
+    source_observations = parent_inputs.get("source_observation_records")
+    if not isinstance(observed, dict) or not isinstance(source_observations, list):
+        raise ValueError("COLLECTED_SOURCE_OBSERVATION_MISSING")
+    matched = [i for i, value in enumerate(source_observations) if value == observed]
+    if len(matched) != 1:
+        raise ValueError("COLLECTED_SOURCE_OBSERVATION_AMBIGUOUS")
+    native_id, body = _verified_live_native_observation(platform, observed)
+    source_id = str(source_id)
+    if source_id != native_id:
+        raise ValueError("COLLECTED_SOURCE_NATIVE_ID_MISMATCH")
+    captured_at = observed.get("captured_at")
+    if not isinstance(captured_at, str) or "T" not in captured_at:
+        raise ValueError("COLLECTED_SOURCE_CAPTURE_TIME_MISSING")
+    try:
+        datetime.fromisoformat(captured_at.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("COLLECTED_SOURCE_CAPTURE_TIME_INVALID") from exc
+
+    observation_bytes = json.dumps(observed, ensure_ascii=False, sort_keys=True,
+                                   separators=(",", ":")).encode("utf-8")
+    parent_ref = "app_evidence_records:" + str(collection_evidence_id)
+    body_sha256 = hashlib.sha256(body.encode("utf-8")).hexdigest()
+    value = {
+        "platform": platform, "native_id": native_id,
+        "stable_source_key": platform + ":" + native_id,
+        "source_url": observed.get("url"), "body": body,
+        "body_sha256": body_sha256,
+        "body_state": "NATIVE_DETAIL_OBSERVED_COMPLETENESS_UNKNOWN",
+        "native_record": observed,
+        "capture_observation_native": captured_at,
+        "publication": {"published_at_utc": None,
+                        "native_time": observed.get("publish_datetime") or None,
+                        "normalization_owner": None,
+                        "timezone_inferred": None},
+        "claim_type": "ISSUER_OR_PLATFORM_USER_STATEMENT",
+        "rights": {"status": "UNREVIEWED", "allowed_uses": [],
+                   "intake_authorization_ref": authorization.authorization_ref,
+                   "intake_purpose": "SOURCE_PRESERVATION",
+                   "third_party_rights_granted": False},
+        "source_lineage": [{"sha256": hashlib.sha256(observation_bytes).hexdigest(),
+                            "locator": parent_ref + ":inputs.source_observation_records[" + str(matched[0]) + "]",
+                            "kind": "SIGNED_NATIVE_OBSERVATION_JSON",
+                            "transport_original": False}],
+        "entity_assignment": {
+            "state": "PENDING", "subject_id": None, "brand_focus_id": None,
+            "canonical_ref": None, "context_role": "ACQUISITION_PERMISSION_CONTEXT_ONLY",
+            "reason": reason,
+        },
+    }
+    source_bytes = json.dumps(value, ensure_ascii=False, sort_keys=True,
+                              separators=(",", ":")).encode("utf-8")
+    fingerprint = hashlib.sha256(source_bytes).hexdigest()
+    _validate_native_source_bytes(platform, source_bytes, fingerprint)
+    return _persist_collected_source_original(
+        connection, value=value, source_bytes=source_bytes,
+        source_fingerprint=fingerprint, source_id=source_id,
+        collection_evidence_id=collection_evidence_id, context=context,
+        staged_paths=staged_paths, capture_mode="live_pending_observation_intake",
+        source_version="collected-native-source:pending-v1",
+        authorization_resource="collector-source-preservation:" + plan_id + ":" + fingerprint,
+    )
+
+
+def _persist_collected_source_original(connection, *, value, source_bytes,
+                                       source_fingerprint, source_id,
+                                       collection_evidence_id, context, staged_paths,
+                                      capture_mode, source_version, authorization_resource):
+    """Shared immutable Source writer; callers provide their actual admission."""
+    from lumenis.shared.evidence import store
+    from lumenis.shared.reporting.saved_work import _stage_bytes, staging_write
+    from lumenis.importer.documents import _source_bytes, source_boundaries
+    # The retained public source cannot carry transport credentials. Never
+    # sanitize approved original bytes and then claim the same source hash.
+    if _credential_free_observations(value) != value:
+        raise ValueError("COLLECTED_SOURCE_TRANSPORT_CREDENTIALS_FORBIDDEN")
+    source_id = str(source_id)
+    parent_ref = "app_evidence_records:" + str(collection_evidence_id)
+    owner = {key: val for key, val in context.items()
+             if key not in {"domain_id", "subject_id", "brand_focus_id", "global_scope"}}
+    binding = {"platform": value["platform"], "native_id": value["native_id"],
+               "stable_source_key": value["stable_source_key"], "source_id": source_id,
+               "body_sha256": value["body_sha256"], "collection_evidence_ref": parent_ref}
+    locator = {"unit": "native-post-body", "json_path": "$.body", "start": 0,
+               "end": len(value["body"]), "offset_unit": "unicode-codepoint"}
+    entity_assignment = value.get("entity_assignment")
+    if entity_assignment is not None and not isinstance(entity_assignment, dict):
+        raise ValueError("COLLECTED_SOURCE_ENTITY_ASSIGNMENT_INVALID")
+
+    def refs(evidence, metadata, artifact, *, replayed):
+        result = {"status": "SAVED", "source_artifact_ref": artifact["artifact_id"],
+                  "source_evidence_ref": "app_evidence_records:" + str(evidence["id"]),
+                  "source_evidence_version": evidence["version"],
+                  "source_signature_verified": False,
+                  "source_signature_state": "NATIVE_SIGNATURE_NOT_PROVIDED",
+                  "evidence_integrity_verified": True,
+                  "evidence_assurance": "writer-authenticated", "replayed": replayed,
+                  "source_fingerprint": source_fingerprint, "source_size_bytes": len(source_bytes),
+                  "source_kind": "collected_source", "locators": metadata["locators"],
+                  "rights": metadata["provenance"]["rights"],
+                  "per_use_admission": {"DATA_IMPORT": "CURRENT_CALLER_APPROVED",
+                      "READ_ANALYZE_SAVE_EXPORT": "CHECK_EACH_CURRENT_USE", "MODEL_TRAIN": "NOT_GRANTED"},
+                  "media_original_status": "NOT_VERIFIED", "media_asset_refs": None}
+        if isinstance(metadata.get("entity_assignment"), dict):
+            result.update(entity_assignment=metadata["entity_assignment"],
+                          scope_status="UNASSIGNED", canonical_ref=None)
+        return result
+
+    for row in connection.execute(
+            "SELECT * FROM app_evidence_records WHERE source='collector' AND feature_id='COLLECTED_SOURCE' "
+            "AND asset_id=? AND content_hash=? ORDER BY id DESC", (source_id, value["body_sha256"])):
+        evidence = dict(row)
+        try:
+            metadata = json.loads(evidence["collection_metadata"])
+        except (TypeError, ValueError):
+            continue
+        if (not isinstance(metadata, dict) or metadata.get("source_fingerprint") != source_fingerprint
+                or metadata.get("context") != context or metadata.get("native_source_binding") != binding
+                or metadata.get("entity_assignment") != entity_assignment):
+            continue
+        integrity = store.classify_evidence_integrity(evidence)
+        if (integrity.get("verified") is not True or integrity.get("assurance") != "writer-authenticated"
+                or evidence.get("status") != "verified" or evidence.get("result") != "PASS"):
+            raise ValueError("COLLECTED_SOURCE_INTEGRITY_FAILED")
+        raw, artifact = _source_bytes(connection, {**evidence, "provenance": metadata})
+        if raw != source_bytes:
+            raise ValueError("COLLECTED_SOURCE_REPLAY_CONFLICT")
+        return refs(evidence, metadata, artifact, replayed=True)
+
+    publication = value.get("publication") or {}
+    provenance = {"source_url": value["source_url"],
+                  "published_at": publication.get("published_at_utc"),
+                  "captured_at": value["capture_observation_native"],
+                  "rights": value.get("rights"), "intended_use": "source_preservation",
+                  "title": value["native_record"].get("title"),
+                  "content_origin": {"kind": "publisher-material", "claim_type": "source_statement"}}
+    metadata = {"context": dict(context), "owner": owner, "provenance": provenance,
+                "source_url": value["source_url"], "source_fingerprint": source_fingerprint,
+                "parsed_text": value["body"], "source_kind": "collected_source",
+                "native_source_binding": binding, "locators": [locator],
+                "native_claim_type": value.get("claim_type"),
+                "native_publication": publication, "source_lineage": value["source_lineage"],
+                "capture_mode": capture_mode,
+                "autonomous_collection": False if capture_mode == "frozen_native_original_intake" else None,
+                "autonomous_execution_verification": "SCHEDULER_RECEIPT_REQUIRED",
+                **source_boundaries(provenance)}
+    if entity_assignment is not None:
+        metadata["entity_assignment"] = entity_assignment
+    child_inputs = {"source_ids": [source_id], "collection_evidence_ref": parent_ref,
+                    "source_intake_resource": authorization_resource}
+    if entity_assignment is not None:
+        child_inputs["entity_assignment"] = entity_assignment
+    with staging_write(authorization_resource):
+        artifact, path = _stage_bytes(
+            connection, raw=source_bytes, context=context, kind="collected_source",
+            source_execution_id=source_id, extension=".json", media_type="application/json")
+        staged_paths.append(path)
+        metadata["source_artifact_ref"] = artifact["artifact_id"]
+        evidence_id = store.record_evidence(
+            connection=connection, source="collector", project="LUMENIS",
+            product="CTH" if context["domain_id"] == "cth" else "ZBMP",
+            feature_id="COLLECTED_SOURCE", asset_id=source_id, version=source_version,
+            capture_mode=capture_mode, captured_at=value["capture_observation_native"],
+            inputs=child_inputs,
+            outputs={"source_artifact_ref": artifact["artifact_id"],
+                     "native_body_sha256": value["body_sha256"], "source_fingerprint": source_fingerprint},
+            raw_content=value["body"], collection_metadata=metadata,
+            publish_datetime=publication.get("published_at_utc") or "", provider="collector-native-original",
+            domain_id=context["domain_id"], subject_id=context["subject_id"],
+            brand_focus_id=context["brand_focus_id"], global_scope=context["global_scope"])
+        connection.execute("UPDATE lumenis_shared_artifacts SET note_id=?,evidence_id=? WHERE artifact_id=?",
+                           (source_id, str(evidence_id), artifact["artifact_id"]))
+        evidence = dict(connection.execute("SELECT * FROM app_evidence_records WHERE id=?", (evidence_id,)).fetchone())
+        integrity = store.classify_evidence_integrity(evidence)
+        if integrity.get("verified") is not True or integrity.get("assurance") != "writer-authenticated":
+            raise ValueError("COLLECTED_SOURCE_INTEGRITY_FAILED")
+        raw, artifact = _source_bytes(connection, {**evidence, "provenance": metadata})
+        if raw != source_bytes:
+            raise ValueError("COLLECTED_SOURCE_ORIGINAL_INVALID")
+        return refs(evidence, metadata, artifact, replayed=False)
+
+
+def _persist_pending_live_observations(connection, *, platform, records,
+                                       collection_evidence_id, context, staged_paths,
+                                       scope, keyword, authorization, business_query,
+                                       max_results, reviews, saved_ids, covers=None):
+    """Preserve reviewed/unbound native originals without assigning entity facts."""
+    from .platform_naming import get_platform_fields, normalize_content_id
+    from lumenis.shared.evidence import store
+    spec = get_platform_fields(platform)
+    review_by_id = {}
+    for review in reviews:
+        if isinstance(review, dict):
+            review_by_id.setdefault(str(review.get("platform_content_id")), []).append(review)
+    originals = []
+    for record in records[:max_results]:
+        source_id = (normalize_content_id(platform, record.get(spec.content_id) if spec else None)
+                     or normalize_content_id(platform, record.get("content_id")))
+        if source_id and str(source_id) in saved_ids:
+            continue
+        reviews_for_source = review_by_id.get(str(source_id), [])
+        excluded = next((review for review in reviews_for_source if review.get("status") in {
+            "EXCLUDED_TASK_BOUNDARY", "OUTSIDE_REQUESTED_PUBLICATION_PERIOD"}), None)
+        if excluded is not None:
+            originals.append({"source_id": source_id, "status": "EXCLUDED",
+                "reason": excluded["status"], "source_evidence_ref": None,
+                "source_artifact_ref": None, "canonical_ref": None,
+                "original_observation_ref": "app_evidence_records:" + str(collection_evidence_id),
+                "entity_assignment": "NOT_ADMITTED"})
+            continue
+        source_path_start = len(staged_paths)
+        connection.execute("SAVEPOINT pending_live_original")
+        try:
+            original = _persist_pending_live_source_original(
+                connection, platform=platform, record=record, source_id=source_id,
+                collection_evidence_id=collection_evidence_id, context=context,
+                staged_paths=staged_paths, scope=scope, keyword=keyword,
+                authorization=authorization, business_query=business_query,
+                max_results=max_results, reason="SOURCE_ENTITY_IDENTITY_UNCONFIRMED")
+            if isinstance(covers, Mapping):
+                cover_refs = {"status": "NULL", "reason": "NO_OBSERVED_COVER",
+                              "media_asset_refs": None}
+                cover_path_start = len(staged_paths)
+                cover_savepoint_open = False
+                try:
+                    cover = covers.get(str(source_id))
+                    if isinstance(cover, dict):
+                        cover_status = cover.get("status")
+                        if cover_status == "AVAILABLE":
+                            connection.execute("SAVEPOINT pending_live_cover")
+                            cover_savepoint_open = True
+                            cover_refs = _persist_live_post_cover(
+                                connection, cover=cover, platform=platform, source_id=source_id,
+                                context=context, body_original=original, staged_paths=staged_paths,
+                                authorization_resource="collector-cover:" + authorization.plan_id,
+                            )
+                            connection.execute("RELEASE SAVEPOINT pending_live_cover")
+                            cover_savepoint_open = False
+                        else:
+                            reason = cover.get("reason")
+                            cover_refs = {"status": "NULL",
+                                          "reason": reason if isinstance(reason, str)
+                                                    and re.fullmatch(r"[A-Z][A-Z0-9_]{0,100}", reason) else
+                                                    "COVER_FETCH_UNAVAILABLE",
+                                          "media_asset_refs": None}
+                except Exception as cover_error:
+                    if cover_savepoint_open:
+                        connection.execute("ROLLBACK TO SAVEPOINT pending_live_cover")
+                        connection.execute("RELEASE SAVEPOINT pending_live_cover")
+                    cleaned = _cleanup_collected_source_paths(staged_paths[cover_path_start:])
+                    del staged_paths[cover_path_start:]
+                    reason = (str(cover_error) if isinstance(cover_error, ValueError)
+                              and re.fullmatch(r"[A-Z][A-Z0-9_]{0,100}", str(cover_error))
+                              else "COVER_INTAKE_FAILED")
+                    cover_refs = {"status": "NULL", "reason": reason,
+                                  "media_asset_refs": None,
+                                  "cleanup_status": "COMPLETE" if cleaned else "FAILED"}
+                original["cover"] = cover_refs
+                original["media_original_status"] = (
+                    "PARTIAL_COVER_ONLY" if cover_refs.get("status") == "SAVED"
+                    else "NOT_VERIFIED")
+                original["media_asset_refs"] = cover_refs.get("media_asset_refs")
+                original["media_understanding"] = {
+                    "required": True, "state": "NOT_RUN",
+                    "reason": "POST_INTAKE_MEDIA_JOB_BINDING_NOT_IMPLEMENTED",
+                    "native_media_locator": {
+                        "source_artifact_ref": original["source_artifact_ref"],
+                        "source_evidence_ref": original["source_evidence_ref"],
+                        "source_fingerprint": original["source_fingerprint"],
+                        "json_path": "$.native_record",
+                        "representation": "OBSERVED_NATIVE_METADATA"},
+                    "image_input_refs": cover_refs.get("media_asset_refs"),
+                    "image_analysis_ref": None, "video_analysis_ref": None,
+                    "speech_transcript_ref": None,
+                    "full_post_media_coverage": "UNKNOWN",
+                    "job_enqueued": False,
+                    "per_use_admission": "CHECK_CURRENT_MEDIA_ANALYSIS_USE",
+                }
+            connection.execute("RELEASE SAVEPOINT pending_live_original")
+            originals.append({"source_id": source_id, **original,
+                              "keyword_analysis_state": "PENDING",
+                              "media_understanding_state": "NOT_RUN", "job_enqueued": False})
+        except Exception as exc:
+            connection.execute("ROLLBACK TO SAVEPOINT pending_live_original")
+            connection.execute("RELEASE SAVEPOINT pending_live_original")
+            cleaned = _cleanup_collected_source_paths(staged_paths[source_path_start:])
+            del staged_paths[source_path_start:]
+            originals.append({"source_id": source_id, "status": "UNAVAILABLE",
+                "reason": str(exc) if isinstance(exc, ValueError)
+                    and re.fullmatch(r"[A-Z][A-Z0-9_]{0,100}", str(exc))
+                    else "PENDING_SOURCE_PRESERVATION_UNAVAILABLE",
+                "source_evidence_ref": None, "source_artifact_ref": None,
+                "canonical_ref": None, "scope_status": "UNASSIGNED",
+                "cleanup_status": "COMPLETE" if cleaned else "FAILED"})
+    saved = sum(row["status"] == "SAVED" for row in originals)
+    summary = {"observed_records": len(records), "formal_saved_records_skipped": len(saved_ids),
+               "unassigned_originals_saved": saved,
+               "unassigned_originals_unavailable": sum(row["status"] == "UNAVAILABLE" for row in originals),
+               "excluded_observations": sum(row["status"] == "EXCLUDED" for row in originals),
+               "observations_beyond_authorized_batch": max(0, len(records) - max_results),
+               "canonical_rows_created": 0, "entity_assignment": "PENDING",
+               "keyword_processing_mode": "POST_COMMIT_SOURCE_BACKLOG",
+               "media_understanding_state": "NOT_RUN", "job_enqueued": False}
+    if isinstance(covers, Mapping):
+        summary["covers_saved"] = sum(
+            row.get("cover", {}).get("status") == "SAVED" for row in originals)
+        summary["covers_null"] = sum(
+            row.get("cover", {}).get("status") == "NULL" for row in originals)
+        summary["max_cover_images_per_post"] = 1
+    outcome_ref = None
+    if originals:
+        connection.execute("SAVEPOINT pending_source_outcome")
+        try:
+            outcome_id = store.record_evidence(
+                connection=connection, source="collector", project="LUMENIS",
+                product="CTH" if context["domain_id"] == "cth" else "ZBMP",
+                feature_id="COLLECTOR_PENDING_SOURCE_INTAKE_OUTCOME",
+                asset_id=authorization.plan_id, version="collector-pending-source-intake:v1",
+                capture_mode="live_pending_source_intake_outcome", captured_at=_now(),
+                inputs={"collection_evidence_ref": "app_evidence_records:" + str(collection_evidence_id),
+                        "authorization_ref": authorization.authorization_ref},
+                outputs={"summary": summary, "original_refs": originals},
+                collection_metadata={"kind": "DERIVATIVE_EXECUTION_OUTCOME",
+                                     "context_role": "ACQUISITION_PERMISSION_CONTEXT_ONLY"},
+                result="PASS" if saved == len(originals) else "FAIL",
+                actual="PENDING_ORIGINALS_PRESERVED" if saved == len(originals)
+                       else "PARTIAL_PENDING_SOURCE_PRESERVATION",
+                provider="collector-source-intake", domain_id=context["domain_id"],
+                subject_id=context["subject_id"], brand_focus_id=context["brand_focus_id"],
+                global_scope=False)
+            connection.execute("RELEASE SAVEPOINT pending_source_outcome")
+            outcome_ref = "app_evidence_records:" + str(outcome_id)
+        except Exception:
+            connection.execute("ROLLBACK TO SAVEPOINT pending_source_outcome")
+            connection.execute("RELEASE SAVEPOINT pending_source_outcome")
+    return {"original_refs": originals, "summary": summary, "outcome_ref": outcome_ref}
+
+
+def _preserve_prelaunch_originals_after_rollback(*, platform, keyword, scope,
+                                                 authorization, business_query,
+                                                 max_results, observations, reviews,
+                                                 original_result, started,
+                                                 acquisition_ok, acquisition_status,
+                                                 covers=None):
+    """Save only verified native originals in a new authorized transaction.
+
+    This recovery preserves permitted observations after an allowlisted primary
+    write failure. It never retries the failed Canonical import or marks the
+    original collection result successful.
+    """
+    allowed_platforms = {"xiaohongshu", "douyin", "x", "instagram", "facebook", "wechat"}
+    allowed_failures = {"CANONICAL_SYNC_FAILED", "IMPORT_FAILED", "EVIDENCE_WRITE_FAILED"}
+    failure_status = original_result.get("status") if isinstance(original_result, dict) else None
+    staged_paths = []
+    parent_ref = None
+    pending = None
+    committed = False
+
+    def unavailable(reason, *, refs=None, cleanup_status=None):
+        safe_refs = refs if isinstance(refs, list) else []
+        if not safe_refs:
+            for observed in observations if isinstance(observations, list) else []:
+                try:
+                    source_id, _ = _verified_live_native_observation(platform, observed)
+                except (TypeError, ValueError):
+                    source_id = None
+                safe_refs.append({
+                    "source_id": source_id, "status": "UNAVAILABLE",
+                    "source_evidence_ref": None, "source_artifact_ref": None,
+                    "canonical_ref": None, "reason": reason,
+                })
+        else:
+            safe_refs = [{
+                "source_id": row.get("source_id"), "status": "UNAVAILABLE",
+                "source_evidence_ref": None, "source_artifact_ref": None,
+                "canonical_ref": None, "reason": reason,
+            } for row in safe_refs if isinstance(row, dict)]
+        return {
+            "status": "UNAVAILABLE", "error_type": reason,
+            "parent_evidence_ref": None,
+            "pending_source_intake_outcome_ref": None,
+            "original_refs": safe_refs,
+            "source_originals_saved": 0,
+            "source_originals_unavailable": len(safe_refs),
+            "canonical_rows_created": 0,
+            "cleanup_status": cleanup_status,
+        }
+
+    if (platform not in allowed_platforms or failure_status not in allowed_failures
+            or acquisition_ok is not True or acquisition_status not in {"SUCCESS", "NO_NEW_DATA"}
+            or not isinstance(observations, list) or not observations):
+        return unavailable("ORIGINAL_PRESERVATION_NOT_ELIGIBLE")
+    try:
+        from ..acquisition_plan import AcquisitionQuery
+        from .platform_naming import normalize_platform
+        from .scheduling.prelaunch_baseline import (
+            PURPOSE_POLICY, PrelaunchMaintenanceAuthorization,
+        )
+        if (not isinstance(authorization, PrelaunchMaintenanceAuthorization)
+                or authorization.signature_verified is not True
+                or authorization.policy_id != PURPOSE_POLICY
+                or type(business_query) is not AcquisitionQuery
+                or business_query.keyword != keyword
+                or not isinstance(business_query.business_context, Mapping)
+                or normalize_platform(business_query.business_context.get("platform")) != platform
+                or type(max_results) is not int or not 1 <= max_results <= MAX_RESULTS):
+            return unavailable("ORIGINAL_PRESERVATION_AUTHORIZATION_UNAVAILABLE")
+        exact_scope = _prelaunch_scope(scope)
+        if not authorization.matches_request(
+                source_url=keyword, platform=platform, scope=exact_scope):
+            return unavailable("ORIGINAL_PRESERVATION_SCOPE_MISMATCH")
+        provenance = original_result.get("provenance") if isinstance(original_result, dict) else None
+        provenance = _credential_free_observations(provenance) if isinstance(provenance, dict) else {}
+        if (provenance.get("maintenance_plan_id") != authorization.plan_id
+                or provenance.get("authorization_ref") != authorization.authorization_ref
+                or provenance.get("source_version") != authorization.source_version
+                or provenance.get("scope_version") != authorization.scope_version
+                or provenance.get("planned_business_query") != business_query.to_dict()):
+            return unavailable("ORIGINAL_PRESERVATION_PROVENANCE_MISMATCH")
+        if not _authorize_prelaunch_public(
+                exact_scope, keyword, platform,
+                maintenance_authorization=authorization,
+                business_query=business_query, max_results=max_results):
+            return unavailable("ORIGINAL_PRESERVATION_PERMISSION_UNAVAILABLE")
+
+        import database as db
+        from .platform_naming import normalize_platform as _normalize_platform
+
+        source_context = {
+            **exact_scope,
+            "domain_id": "zbmp" if exact_scope["domain_id"] == "bmp" else "cth",
+            "global_scope": False,
+            "collector_plan_id": authorization.plan_id,
+            "collector_authorization_ref": authorization.authorization_ref,
+        }
+        clean_observations = _credential_free_observations(observations)
+        if (not isinstance(clean_observations, list)
+                or _credential_free_observations(clean_observations) != clean_observations):
+            return unavailable("ORIGINAL_PRESERVATION_OBSERVATION_INVALID")
+        if _normalize_platform(authorization.platform) != platform:
+            return unavailable("ORIGINAL_PRESERVATION_PLATFORM_MISMATCH")
+        failure_error_type = original_result.get("error_type")
+        if failure_error_type not in allowed_failures:
+            failure_error_type = failure_status
+
+        failed_parent_result = {
+            "ok": False, "status": failure_status, "raw_count": original_result.get("raw_count"),
+            "imported": 0, "updated": 0, "failed": 0,
+            "canonical_synced": 0, "native_fields_synced": 0,
+            "entity_mentions": [],
+            "provenance": {
+                **provenance,
+                "original_write_failure": {
+                    "status": failure_status,
+                    "error_type": failure_error_type,
+                    "duration_ms": (original_result.get("duration_ms")
+                                    if type(original_result.get("duration_ms")) is int
+                                    and original_result.get("duration_ms") >= 0 else None),
+                    "native_observed_count": len(clean_observations),
+                },
+                "preservation_mode": "ORIGINALS_ONLY_NO_CANONICAL",
+                "source_acquisition_status": acquisition_status,
+            },
+        }
+        with db.get_db() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            _validate_prelaunch_registry(exact_scope, connection=connection)
+            if not _authorize_prelaunch_public(
+                    exact_scope, keyword, platform,
+                    maintenance_authorization=authorization,
+                    business_query=business_query, max_results=max_results):
+                raise PermissionError("ORIGINAL_PRESERVATION_PERMISSION_UNAVAILABLE")
+            parent_id = _write_prelaunch_evidence(
+                platform, keyword, failed_parent_result, started=started,
+                scope=exact_scope, source_ids=[], review_candidates=clean_observations,
+                manual=False, observations=clean_observations, connection=connection,
+            )
+            if type(parent_id) is not int or parent_id <= 0:
+                raise ValueError("ORIGINAL_PRESERVATION_PARENT_EVIDENCE_FAILED")
+            parent_ref = "app_evidence_records:" + str(parent_id)
+            clean_reviews = _credential_free_observations(reviews if isinstance(reviews, list) else [])
+            pending = _persist_pending_live_observations(
+                connection, platform=platform, records=clean_observations,
+                collection_evidence_id=parent_id, context=source_context,
+                staged_paths=staged_paths, scope=exact_scope, keyword=keyword,
+                authorization=authorization, business_query=business_query,
+                max_results=max_results, reviews=clean_reviews, saved_ids=set(),
+                covers=covers,
+            )
+            if not _authorize_prelaunch_public(
+                    exact_scope, keyword, platform,
+                    maintenance_authorization=authorization,
+                    business_query=business_query, max_results=max_results):
+                raise PermissionError("ORIGINAL_PRESERVATION_PERMISSION_UNAVAILABLE")
+
+        committed = True
+        refs = pending.get("original_refs", []) if isinstance(pending, dict) else []
+        refs = [row for row in refs if isinstance(row, dict)]
+        eligible_refs = [row for row in refs if row.get("status") != "EXCLUDED"]
+        saved_count = sum(row.get("status") == "SAVED" for row in eligible_refs)
+        unavailable_count = sum(row.get("status") == "UNAVAILABLE" for row in eligible_refs)
+        recovery_status = (
+            "UNAVAILABLE" if saved_count == 0 else
+            "SAVED" if saved_count == len(eligible_refs) and eligible_refs else "PARTIAL"
+        )
+        return {
+            "status": recovery_status,
+            "error_type": None if recovery_status == "SAVED" else
+                          "ORIGINAL_PRESERVATION_PARTIAL" if recovery_status == "PARTIAL" else
+                          "NO_SOURCE_ORIGINAL_SAVED",
+            "parent_evidence_ref": parent_ref,
+            "pending_source_intake_outcome_ref": pending.get("outcome_ref"),
+            "original_refs": refs,
+            "source_originals_saved": saved_count,
+            "source_originals_unavailable": unavailable_count,
+            "source_originals_excluded": sum(row.get("status") == "EXCLUDED" for row in refs),
+            "canonical_rows_created": 0,
+            "summary": pending.get("summary"),
+        }
+    except Exception:
+        if committed:
+            # A response-construction failure cannot revoke committed Source
+            # artifacts or claim that their transaction was rolled back.
+            return {
+                "status": "READBACK_REQUIRED", "parent_evidence_ref": parent_ref,
+                "error_type": "ORIGINAL_PRESERVATION_RECEIPT_UNAVAILABLE",
+                "pending_source_intake_outcome_ref": None, "original_refs": [],
+                "source_originals_saved": None, "canonical_rows_created": 0,
+                "source_commit_state": "COMMITTED", "cleanup_status": "NOT_APPLICABLE",
+            }
+        cleanup_ok = _cleanup_collected_source_paths(staged_paths)
+        return unavailable(
+            "ORIGINAL_PRESERVATION_TRANSACTION_FAILED",
+            refs=(pending.get("original_refs", []) if isinstance(pending, dict) else None),
+            cleanup_status="COMPLETE" if cleanup_ok else "FAILED",
+        )
+
+
+def recover_prelaunch_pending_sources(*, limit=40):
+    """Recover permitted originals from retained observations, never recollect."""
+    from lumenis.shared.database import get_repository
+    from lumenis.shared.evidence import store
+    from lumenis.importer.documents import _source_bytes
+    from .scheduling.prelaunch_baseline import (
+        PURPOSE_POLICY, _purpose_query, load_prelaunch_baseline_config, maintenance_authorization,
+    )
+    if type(limit) is not int or not 1 <= limit <= 40:
+        raise ValueError("PENDING_SOURCE_RECOVERY_LIMIT_INVALID")
+    loaded = load_prelaunch_baseline_config(os.environ.get("LUMENIS_PRELAUNCH_BASELINE_CONFIG") or None)
+    plans = {p.plan_id: p for p in loaded.get("plans", []) if p.policy_id == PURPOSE_POLICY}
+    con = get_repository().connect(timeout=10)
+    outcomes, scanned, deferred = [], 0, 0
+    try:
+        preserved = set()
+        for row in con.execute("SELECT * FROM app_evidence_records WHERE feature_id='COLLECTED_SOURCE' "
+                               "AND source='collector' AND result='PASS' AND status='verified'"):
+            source = dict(row)
+            try:
+                meta = json.loads(source["collection_metadata"])
+                if store.classify_evidence_integrity(source).get("assurance") != "writer-authenticated":
+                    continue
+                _source_bytes(con, {**source, "provenance": meta})
+                binding = meta["native_source_binding"]
+                preserved.add((binding["collection_evidence_ref"], binding["native_id"]))
+            except Exception:
+                continue
+        parents = con.execute(
+            "SELECT * FROM app_evidence_records WHERE source='collector' "
+            "AND version='collector-native-observation:v2' ORDER BY id").fetchall()
+        for row in parents:
+            if len(outcomes) >= limit:
+                break
+            parent = dict(row)
+            try:
+                metadata = json.loads(parent["collection_metadata"] or "{}")
+                plan = plans.get(metadata.get("maintenance_plan_id"))
+                if plan is None:
+                    continue
+                inputs = json.loads(parent["inputs_json"] or "{}")
+                observations = inputs.get("source_observation_records")
+                integrity = store.classify_evidence_integrity(parent)
+                if (not isinstance(observations, list) or integrity.get("verified") is not True
+                        or integrity.get("assurance") != "writer-authenticated"):
+                    continue
+                query = _purpose_query(plan.purpose_query)
+                scope = {"domain_id": plan.domain_id, "subject_id": plan.subject_id,
+                         "brand_focus_id": plan.brand_focus_id}
+                context = {**scope, "domain_id": "zbmp" if plan.domain_id == "bmp" else "cth",
+                           "global_scope": False, "collector_plan_id": plan.plan_id,
+                           "collector_authorization_ref": plan.authorization_ref}
+                authorization = maintenance_authorization(plan)
+                parent_ref = "app_evidence_records:" + str(parent["id"])
+                eligible = []
+                for observation in observations[:plan.max_results]:
+                    scanned += 1
+                    try:
+                        native_id, _ = _verified_live_native_observation(plan.platform, observation)
+                    except (TypeError, ValueError):
+                        deferred += 1
+                        continue
+                    if (parent_ref, native_id) not in preserved:
+                        eligible.append(observation)
+                if not eligible:
+                    continue
+                # Use the actual observation cutoff in the retained parent.
+                # No current capture timestamp supplies a missing publication year.
+                reviews = _business_source_reviews(
+                    eligible, query, metadata.get("actual_response_observation_utc"))
+                permitted = [(observation, review) for observation, review in zip(eligible, reviews)
+                             if review.get("status") not in {
+                                 "EXCLUDED_TASK_BOUNDARY", "OUTSIDE_REQUESTED_PUBLICATION_PERIOD"}]
+                permitted = permitted[:limit - len(outcomes)]
+                eligible = [item[0] for item in permitted]
+                reviews = [item[1] for item in permitted]
+                if not eligible:
+                    continue
+            except (TypeError, ValueError, KeyError):
+                continue
+            paths, committed = [], False
+            try:
+                con.execute("BEGIN IMMEDIATE")
+                result = _persist_pending_live_observations(
+                    con, platform=plan.platform, records=eligible,
+                    collection_evidence_id=parent["id"], context=context, staged_paths=paths,
+                    scope=scope, keyword=plan.source_url, authorization=authorization,
+                    business_query=query, max_results=plan.max_results, reviews=reviews, saved_ids=set())
+                if not _authorize_prelaunch_public(
+                        scope, plan.source_url, plan.platform, maintenance_authorization=authorization,
+                        business_query=query, max_results=plan.max_results):
+                    raise ValueError("COLLECTED_SOURCE_IMPORT_PERMISSION_DENIED")
+                con.commit()
+                committed = True
+                for item in result["original_refs"]:
+                    outcomes.append({"collection_evidence_ref": parent_ref,
+                                     "outcome_ref": result["outcome_ref"], **item})
+                    if item.get("status") == "SAVED":
+                        preserved.add((parent_ref, str(item["source_id"])))
+            except Exception:
+                con.rollback()
+                outcomes.append({"collection_evidence_ref": parent_ref, "status": "UNAVAILABLE",
+                                 "reason": "PENDING_SOURCE_RECOVERY_UNAVAILABLE"})
+            finally:
+                if not committed:
+                    _cleanup_collected_source_paths(paths)
+        saved = sum(r.get("status") == "SAVED" for r in outcomes)
+        return {"status": "PARTIAL" if any(r.get("status") == "UNAVAILABLE" for r in outcomes)
+                else "COMPLETED", "processed": len(outcomes), "saved": saved,
+                "observations_scanned": scanned, "native_detail_unavailable": deferred,
+                "canonical_rows_created": 0, "network_collection": False,
+                "scope_status": "UNASSIGNED", "results": outcomes}
+    finally:
+        con.close()
+
+
+def process_prelaunch_keyword_backlog(*, limit=40):
+    """Resume post-intake work from persisted Sources, without recollection.
+
+    The existing resident maintenance entry calls this on every tick. Its
+    backlog is the Source/Evidence already in the sole production database;
+    there is no second queue or keyword store. Per-source failure is isolated.
+    """
+    from lumenis.shared.database import get_repository
+    from lumenis.shared.evidence import store
+    from lumenis.system.collector.adapters.scheduling.prelaunch_baseline import (
+        PURPOSE_POLICY, POST_INTAKE_KEYWORD_POLICY,
+        load_prelaunch_baseline_config, maintenance_authorization,
+    )
+    if type(limit) is not int or not 1 <= limit <= 40:
+        raise ValueError("POST_INTAKE_BACKLOG_LIMIT_INVALID")
+    loaded = load_prelaunch_baseline_config(os.environ.get("LUMENIS_PRELAUNCH_BASELINE_CONFIG") or None)
+    plans = {plan.plan_id: plan for plan in loaded.get("plans", [])
+             if plan.policy_id == PURPOSE_POLICY and plan.post_intake_policy}
+    if not plans:
+        return {"status": "DISABLED", "processed": 0, "saved": 0, "pending": 0}
+    repository = get_repository()
+    connection = repository.connect(timeout=10)
+    outcomes = []
+    try:
+        # Metadata is a navigation index only. Actual content/use/lineage is
+        # checked afresh by Permission and the Source reader in each operation.
+        completed = set()
+        for row in connection.execute(
+                "SELECT * FROM app_evidence_records WHERE feature_id='COLLECTED_KEYWORD_CANDIDATES' "
+                "AND version=? AND result='PASS' AND status='verified' ORDER BY id DESC",
+                (POST_INTAKE_KEYWORD_POLICY["processing_version"],)):
+            evidence = dict(row)
+            try:
+                metadata = json.loads(evidence.get("collection_metadata") or "{}")
+                source_inputs = metadata.get("source_inputs") or {}
+                if (source_inputs.get("plan_id") in plans
+                        and source_inputs.get("policy") == plans[source_inputs["plan_id"]].post_intake_policy
+                        and source_inputs.get("extraction_context") == _post_intake_extraction_context(
+                            plans[source_inputs["plan_id"]])
+                        and store.classify_evidence_integrity(evidence).get("verified") is True):
+                    _keyword_candidate_bytes(connection, evidence)
+                    canonical = connection.execute("SELECT raw_ref FROM canonical_data WHERE canonical_id=?",
+                                                   (source_inputs.get("canonical_ref"),)).fetchone()
+                    refs = json.loads(canonical["raw_ref"] or "{}") if canonical else {}
+                    if (refs.get("content_evidence_ref") != source_inputs.get("source_evidence_ref")
+                            or (refs.get("keyword_candidates") or {}).get("keyword_evidence_ref") ==
+                            "app_evidence_records:" + str(evidence["id"])):
+                        completed.add(source_inputs.get("source_evidence_ref"))
+            except Exception:
+                continue
+        source_rows = connection.execute(
+            "SELECT * FROM app_evidence_records WHERE source='collector' AND feature_id='COLLECTED_SOURCE' "
+            "AND version IN ('collected-native-source:live-v1','collected-native-source:pending-v1') "
+            "AND result='PASS' AND status='verified' "
+            "ORDER BY id").fetchall()
+        for row in source_rows:
+            if len(outcomes) >= limit:
+                break
+            evidence = dict(row)
+            source_ref = "app_evidence_records:" + str(evidence["id"])
+            if source_ref in completed:
+                continue
+            try:
+                metadata = json.loads(evidence.get("collection_metadata") or "{}")
+                context = metadata.get("context") or {}
+                plan = plans.get(context.get("collector_plan_id"))
+                if plan is None:
+                    continue
+                authorization = maintenance_authorization(plan)
+                scope = {"domain_id": plan.domain_id, "subject_id": plan.subject_id,
+                         "brand_focus_id": plan.brand_focus_id}
+                original = {"source_evidence_ref": source_ref,
+                            "source_fingerprint": metadata.get("source_fingerprint"),
+                            "source_evidence_version": evidence["version"]}
+            except Exception:
+                continue
+            paths = []
+            committed = False
+            try:
+                connection.execute("BEGIN IMMEDIATE")
+                result = _persist_post_intake_keyword_candidates(
+                    connection, original=original, context=context, scope=scope,
+                    authorization=authorization, staged_paths=paths)
+                connection.commit()
+                committed = True
+                outcomes.append({"source_evidence_ref": source_ref, **result})
+            except Exception as exc:
+                connection.rollback()
+                outcomes.append({"source_evidence_ref": source_ref, "status": "PENDING",
+                    "keyword_evidence_ref": None, "keyword_artifact_ref": None,
+                    "reason": str(exc) if isinstance(exc, ValueError)
+                        and re.fullmatch(r"[A-Z][A-Z0-9_]{0,100}", str(exc))
+                        else "POST_INTAKE_PROCESSING_UNAVAILABLE"})
+            finally:
+                if not committed and not _cleanup_collected_source_paths(paths):
+                    outcomes[-1]["cleanup_status"] = "FAILED"
+        saved = sum(row.get("status") == "SAVED" for row in outcomes)
+        return {"status": "COMPLETED" if saved == len(outcomes) else "PARTIAL",
+                "processed": len(outcomes), "saved": saved, "pending": len(outcomes) - saved,
+                "owned_inference": "NOT_RUN", "results": outcomes}
+    finally:
+        connection.close()
+
+
+def _keyword_candidate_bytes(connection, evidence):
+    """Read back a derivative through the existing Artifact/Evidence owners."""
+    import shared_artifacts
+    from lumenis.shared.evidence import store
+    metadata = json.loads(evidence.get("collection_metadata") or "{}")
+    integrity = store.classify_evidence_integrity(evidence)
+    row = connection.execute(
+        "SELECT * FROM lumenis_shared_artifacts WHERE artifact_id=? AND kind=?",
+        (metadata.get("keyword_artifact_ref"), "collected_keyword_candidates")).fetchone()
+    if (row is None or evidence.get("feature_id") != "COLLECTED_KEYWORD_CANDIDATES"
+            or evidence.get("status") != "verified" or evidence.get("result") != "PASS"
+            or integrity.get("verified") is not True
+            or integrity.get("assurance") != "writer-authenticated"):
+        raise ValueError("POST_INTAKE_DERIVATIVE_INTEGRITY_FAILED")
+    artifact = dict(row)
+    root = shared_artifacts.artifact_root().resolve()
+    path = (root / artifact["relative_path"]).resolve()
+    if (not path.is_relative_to(root) or not path.is_file()
+            or not 0 < artifact["size_bytes"] <= 8 * 1024 * 1024
+            or artifact["source_execution_id"] != evidence["asset_id"]
+            or artifact["evidence_id"] != str(evidence["id"])
+            or artifact["domain_id"] != evidence["domain_id"]):
+        raise ValueError("POST_INTAKE_DERIVATIVE_ARTIFACT_INVALID")
+    with path.open("rb") as handle:
+        raw = handle.read(8 * 1024 * 1024 + 1)
+    if (len(raw) != artifact["size_bytes"]
+            or hashlib.sha256(raw).hexdigest() != artifact["sha256"]
+            or artifact["sha256"] != metadata.get("derivative_sha256")):
+        raise ValueError("POST_INTAKE_DERIVATIVE_ARTIFACT_INVALID")
+    return raw, artifact
+
+
+def _persist_post_intake_keyword_candidates(connection, *, original, context, scope,
+                                             authorization, staged_paths):
+    """Append deterministic candidates after separately authorized Source use.
+
+    No model, source-rights promotion, native-topic assertion or automatic query
+    adoption occurs here. The surrounding caller owns transaction and cleanup.
+    """
+    from lumenis.importer.analyzer import extract_source_keyword_candidates
+    from lumenis.importer.documents import _source_bytes
+    from lumenis.system.security import get_permission_gate
+    from lumenis.system.collector.acquisition_plan import build_observed_topic_catalog
+    from lumenis.system.collector.adapters.scheduling.prelaunch_baseline import (
+        POST_INTAKE_KEYWORD_POLICY, load_prelaunch_baseline_config,
+    )
+    from lumenis.shared.evidence import store
+    from lumenis.shared.reporting.saved_work import _stage_bytes, staging_write
+    policy = authorization.post_intake_policy
+    if not policy:
+        raise ValueError("POST_INTAKE_POLICY_REVOKED_OR_MISSING")
+    source_ref = original.get("source_evidence_ref")
+    if not isinstance(source_ref, str) or not re.fullmatch(r"app_evidence_records:[1-9][0-9]*", source_ref):
+        raise ValueError("POST_INTAKE_SOURCE_REFERENCE_INVALID")
+    row = connection.execute("SELECT * FROM app_evidence_records WHERE id=?",
+                             (int(source_ref.split(":")[1]),)).fetchone()
+    if row is None:
+        raise ValueError("POST_INTAKE_SOURCE_UNAVAILABLE")
+    evidence = dict(row)
+    source_metadata = json.loads(evidence.get("collection_metadata") or "{}")
+    binding = source_metadata.get("native_source_binding") or {}
+    processing_version = POST_INTAKE_KEYWORD_POLICY["processing_version"]
+    use_binding = {
+        "source_evidence_ref": source_ref,
+        "source_fingerprint": original.get("source_fingerprint"),
+        "source_version": original.get("source_evidence_version"),
+        "body_sha256": binding.get("body_sha256"),
+        "processing_version": processing_version, "scope": scope,
+    }
+    gate = get_permission_gate()
+    use_receipts = {}
+
+    def admit(action):
+        decision = gate.check_prelaunch_post_intake(
+            authorization, action=action, connection=connection, **use_binding)
+        if not decision.allowed or not decision.audit_id:
+            raise ValueError(decision.reason)
+        use_receipts[action] = decision.to_dict()
+        return decision
+
+    admit("READ")
+    raw, source_artifact = _source_bytes(connection, {**evidence, "provenance": source_metadata})
+    source = json.loads(raw)
+    pending_source = evidence["version"] == "collected-native-source:pending-v1"
+    canonical_ref = None
+    if not pending_source:
+        canonical_rows = connection.execute(
+            "SELECT canonical_id FROM canonical_data WHERE source_table='notes' AND source_id=? "
+            "AND domain_id=? AND NULLIF(subject_id,'') IS ? AND NULLIF(brand_focus_id,'') IS ?",
+            (str(evidence["asset_id"]), context["domain_id"], scope["subject_id"], scope["brand_focus_id"])).fetchall()
+        if len(canonical_rows) != 1:
+            raise ValueError("POST_INTAKE_CANONICAL_SOURCE_UNAVAILABLE")
+        canonical_ref = canonical_rows[0]["canonical_id"]
+    current = load_prelaunch_baseline_config(os.environ.get("LUMENIS_PRELAUNCH_BASELINE_CONFIG") or None)
+    plans = [plan for plan in current.get("plans", []) if authorization.matches(
+        plan, source_url=authorization.source_url, platform=authorization.platform, scope=scope)]
+    if len(plans) != 1:
+        raise ValueError("POST_INTAKE_POLICY_REVOKED_OR_MISSING")
+    extraction_context = _post_intake_extraction_context(plans[0])
+    source_inputs = {
+        **use_binding, "source_artifact_ref": source_artifact["artifact_id"],
+        "canonical_ref": canonical_ref, "plan_id": authorization.plan_id,
+        "policy": policy, "source_rights": source["rights"],
+        "extraction_context": extraction_context,
+    }
+    if pending_source:
+        source_inputs["entity_assignment"] = source["entity_assignment"]
+    derivation_id = hashlib.sha256(json.dumps(
+        source_inputs, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    admit("ANALYZE")
+    saved = connection.execute(
+        "SELECT * FROM app_evidence_records WHERE source='collector' AND feature_id=? "
+        "AND asset_id=? AND version=? ORDER BY id DESC",
+        ("COLLECTED_KEYWORD_CANDIDATES", derivation_id, processing_version)).fetchone()
+    if saved is not None:
+        prior = dict(saved)
+        prior_raw, artifact = _keyword_candidate_bytes(connection, prior)
+        payload = json.loads(prior_raw)
+        if payload.get("source_inputs") != source_inputs:
+            raise ValueError("POST_INTAKE_DERIVATIVE_REPLAY_CONFLICT")
+        admit("DERIVED_SAVE")
+        use_evidence_ref = _persist_internal_source_use_receipts(
+            connection, source_inputs=source_inputs, receipts=use_receipts, context=context)
+        binding_state = "UNASSIGNED_SOURCE_ONLY" if pending_source else _bind_keyword_candidate_ref(
+            connection, canonical_ref=canonical_ref, source_ref=source_ref,
+            keyword_ref="app_evidence_records:" + str(prior["id"]),
+            keyword_artifact_ref=artifact["artifact_id"], processing_version=processing_version)
+        return {"status": "SAVED", "replayed": True, "keyword_artifact_ref": artifact["artifact_id"],
+                "keyword_evidence_ref": "app_evidence_records:" + str(prior["id"]),
+                "processing_version": processing_version, "derivative_sha256": artifact["sha256"],
+                "candidate_count": len(payload["candidates"]), "owned_inference": "NOT_RUN",
+                "admitted": False, "automatic_adoption": False, "current_use_receipts": use_receipts,
+                "current_use_evidence_ref": use_evidence_ref, "canonical_binding": binding_state}
+    candidates = extract_source_keyword_candidates(
+        source["body"], context_keywords=extraction_context["entity_aliases"])
+    publication = source.get("publication") or {}
+    query = authorization.source_url
+    observation = {
+        "platform": source["platform"], "platform_content_id": source["native_id"],
+        "source_url": source["source_url"],
+        "native_publication": publication.get("published_at_utc"),
+        "capture_observation_utc": source["capture_observation_native"],
+        "native_raw_ref": {"path": source_artifact["artifact_id"],
+                           "sha256": original["source_fingerprint"]},
+        "source_body": source["body"], "body_sha256": source["body_sha256"],
+        "derived_topics": candidates, "rights": source["rights"], "planned_task": query,
+        "formal_refs": {"source_evidence_ref": source_ref,
+                        "source_artifact_ref": source_artifact["artifact_id"],
+                        "source_evidence_version": evidence["version"], "canonical_ref": canonical_ref,
+                        "read_audit_ref": use_receipts["READ"]["audit_id"],
+                        "analyze_audit_ref": use_receipts["ANALYZE"]["audit_id"]},
+    }
+    query_context = (plans[0].purpose_query or {}).get("business_context") or {}
+    # The task period is already checked on Source admission. Preserve native
+    # time again in the catalog; capture time never supplies a missing year.
+    catalog = build_observed_topic_catalog(
+        [observation], candidate_origin="DERIVED_SOURCE_BODY",
+        publication_since=query_context.get("publication_since"),
+        publication_until=query_context.get("publication_until"))
+    write_decision = admit("DERIVED_SAVE")
+    use_evidence_ref = _persist_internal_source_use_receipts(
+        connection, source_inputs=source_inputs, receipts=use_receipts, context=context)
+    for node in catalog["terms"]:
+        for source_observation in node["observations"]:
+            refs = source_observation.get("source_evidence_canonical_use_refs") or {}
+            refs["read_audit_ref"] = use_evidence_ref + ":outputs.permission_receipts.READ"
+            refs["analyze_audit_ref"] = use_evidence_ref + ":outputs.permission_receipts.ANALYZE"
+            refs["derived_save_audit_ref"] = use_evidence_ref + ":outputs.permission_receipts.DERIVED_SAVE"
+            source_observation["source_use_refs"] = dict(refs)
+            node["source_use_ref"] = use_evidence_ref
+    payload = {
+        "version": "collector.post-intake-keyword-candidates.v1",
+        "source_inputs": source_inputs, "candidates": candidates, "topic_catalog": catalog,
+        "processing_version": processing_version, "purpose": policy["purpose"],
+        "use_receipts": use_receipts, "use_evidence_ref": use_evidence_ref, "owned_inference": "NOT_RUN",
+        "admitted": False, "automatic_adoption": False,
+        "platform_heat": None, "representative_demand": None,
+        "source_rights_unchanged": True, "commercial_reporting_authorized": False,
+    }
+    derivative = json.dumps(payload, ensure_ascii=False, sort_keys=True,
+                            separators=(",", ":")).encode("utf-8")
+    digest = hashlib.sha256(derivative).hexdigest()
+    with staging_write(write_decision.resource):
+        artifact, path = _stage_bytes(
+            connection, raw=derivative, context=context, kind="collected_keyword_candidates",
+            source_execution_id=derivation_id, extension=".json", media_type="application/json")
+        staged_paths.append(path)
+        metadata = {
+            "kind": "DERIVED_SOURCE_KEYWORD_CANDIDATES", "context": dict(context),
+            "source_inputs": source_inputs, "use_receipts": use_receipts,
+            "use_evidence_ref": use_evidence_ref,
+            "keyword_artifact_ref": artifact["artifact_id"], "derivative_sha256": digest,
+            "processing_version": processing_version, "owned_inference": "NOT_RUN",
+            "native_platform_signature_provided": False, "admitted": False,
+        }
+        evidence_id = store.record_evidence(
+            connection=connection, source="collector", project="LUMENIS",
+            product="CTH" if context["domain_id"] == "cth" else "ZBMP",
+            feature_id="COLLECTED_KEYWORD_CANDIDATES", asset_id=derivation_id,
+            version=processing_version, capture_mode="deterministic_post_intake",
+            captured_at=datetime.now().astimezone().isoformat(),
+            inputs=source_inputs, outputs={"keyword_artifact_ref": artifact["artifact_id"],
+                "candidate_count": len(candidates), "admitted": False},
+            raw_content=derivative.decode("utf-8"), collection_metadata=metadata,
+            provider="collector-deterministic-keywords", result="PASS",
+            actual="INTERNAL_CANDIDATES_SAVED", domain_id=context["domain_id"],
+            subject_id=context["subject_id"], brand_focus_id=context["brand_focus_id"], global_scope=False)
+        connection.execute("UPDATE lumenis_shared_artifacts SET note_id=?,evidence_id=? WHERE artifact_id=?",
+                           (str(evidence["asset_id"]), str(evidence_id), artifact["artifact_id"]))
+        saved_evidence = dict(connection.execute(
+            "SELECT * FROM app_evidence_records WHERE id=?", (evidence_id,)).fetchone())
+        reopened, artifact = _keyword_candidate_bytes(connection, saved_evidence)
+        if reopened != derivative:
+            raise ValueError("POST_INTAKE_DERIVATIVE_READBACK_MISMATCH")
+        # Revocation/scope/source changes stop this write before its savepoint
+        # returns to the Collector's commit boundary.
+        admit("DERIVED_SAVE")
+        binding_state = "UNASSIGNED_SOURCE_ONLY" if pending_source else _bind_keyword_candidate_ref(
+            connection, canonical_ref=canonical_ref, source_ref=source_ref,
+            keyword_ref="app_evidence_records:" + str(evidence_id),
+            keyword_artifact_ref=artifact["artifact_id"], processing_version=processing_version)
+    return {"status": "SAVED", "replayed": False, "keyword_artifact_ref": artifact["artifact_id"],
+            "keyword_evidence_ref": "app_evidence_records:" + str(evidence_id),
+            "processing_version": processing_version, "derivative_sha256": digest,
+            "candidate_count": len(candidates), "owned_inference": "NOT_RUN",
+            "admitted": False, "automatic_adoption": False, "current_use_receipts": use_receipts,
+            "current_use_evidence_ref": use_evidence_ref, "canonical_binding": binding_state}
+
+
+def _post_intake_extraction_context(plan):
+    """Freeze actual signed Registry aliases as processing inputs, not output."""
+    context = (plan.purpose_query or {}).get("business_context") or {}
+    aliases = context.get("entity_aliases") or []
+    return {"version": "signed-registry-alias-context:v1",
+            "entity_aliases": list(dict.fromkeys(alias for alias in aliases
+                                                  if isinstance(alias, str) and alias.strip()))}
+
+
+def _bind_keyword_candidate_ref(connection, *, canonical_ref, source_ref, keyword_ref,
+                                keyword_artifact_ref, processing_version):
+    """Link a current Source's derivative without changing any factual field."""
+    from dataclasses import fields
+    from canonical_data import CanonicalRecord, persist_canonical
+    row = connection.execute("SELECT * FROM canonical_data WHERE canonical_id=?",
+                             (canonical_ref,)).fetchone()
+    if row is None:
+        raise ValueError("POST_INTAKE_CANONICAL_SOURCE_UNAVAILABLE")
+    row = dict(row)
+    raw_ref = json.loads(row.get("raw_ref") or "{}")
+    if raw_ref.get("content_evidence_ref") != source_ref:
+        return "HISTORICAL_SOURCE_VERSION_ONLY"
+    raw_ref["keyword_candidates"] = {
+        "source_evidence_ref": source_ref, "keyword_evidence_ref": keyword_ref,
+        "keyword_artifact_ref": keyword_artifact_ref, "processing_version": processing_version,
+        "admitted": False, "automatic_adoption": False,
+    }
+    record = CanonicalRecord(**{item.name: row[item.name] for item in fields(CanonicalRecord)
+                                if item.name in row})
+    record.raw_ref = json.dumps(raw_ref, ensure_ascii=False, sort_keys=True)
+    persist_canonical(connection, record)
+    return "CURRENT_SOURCE_LINKED"
+
+
+def _persist_internal_source_use_receipts(connection, *, source_inputs, receipts, context):
+    """Persist the actual Permission decisions as writer-authenticated Evidence.
+
+    This is an audit of separately granted internal actions, not source rights,
+    an approval issuer or a new Permission store. The caller holds the actual
+    DERIVED_SAVE grant and its transaction; failures roll back that derivative.
+    """
+    from lumenis.shared.evidence import store
+    if set(receipts) != {"READ", "ANALYZE", "DERIVED_SAVE"} or any(
+            value.get("allowed") is not True or not value.get("audit_id")
+            or value.get("caller") != "prelaunch_baseline_maintenance"
+            for value in receipts.values()):
+        raise ValueError("POST_INTAKE_USE_RECEIPTS_INVALID")
+    evidence_id = store.record_evidence(
+        connection=connection, source="collector", project="LUMENIS",
+        product="CTH" if context["domain_id"] == "cth" else "ZBMP",
+        feature_id="COLLECTOR_INTERNAL_SOURCE_USE", asset_id=source_inputs["source_evidence_ref"],
+        version="collector-internal-source-use:v1", capture_mode="internal_source_use_audit",
+        captured_at=datetime.now().astimezone().isoformat(), inputs=source_inputs,
+        outputs={"permission_receipts": receipts},
+        raw_content=json.dumps(receipts, ensure_ascii=False, sort_keys=True),
+        collection_metadata={"kind": "PERMISSION_ACTION_RECEIPTS", "source_rights_unchanged": True,
+                             "native_platform_signature_provided": False},
+        provider="system-permission-audit", result="PASS", actual="INTERNAL_USE_GRANTED",
+        domain_id=context["domain_id"], subject_id=context["subject_id"],
+        brand_focus_id=context["brand_focus_id"], global_scope=False)
+    evidence = dict(connection.execute("SELECT * FROM app_evidence_records WHERE id=?", (evidence_id,)).fetchone())
+    integrity = store.classify_evidence_integrity(evidence)
+    if integrity.get("verified") is not True or integrity.get("assurance") != "writer-authenticated":
+        raise ValueError("POST_INTAKE_USE_RECEIPT_INTEGRITY_FAILED")
+    return "app_evidence_records:" + str(evidence_id)
+
+
+def _persist_live_post_cover(connection, *, cover, platform, source_id, context,
+                             body_original, staged_paths, authorization_resource):
+    """Preserve one cover in the existing Artifact/Evidence owners, without decoding."""
+    from lumenis.shared.reporting.saved_work import _stage_bytes, staging_write
+    from lumenis.shared.evidence import store
+    raw = cover.get("raw_bytes")
+    if (not isinstance(raw, bytes) or not 0 < len(raw) <= 2 * 1024 * 1024
+            or len(raw) != cover.get("size_bytes")
+            or hashlib.sha256(raw).hexdigest() != cover.get("sha256")):
+        raise ValueError("COLLECTED_COVER_BYTES_INVALID")
+    metadata = {key: val for key, val in cover.items() if key != "raw_bytes"}
+    metadata.update(context=dict(context), source_kind="collected_post_cover",
+                    native_id=str(source_id), platform=platform,
+                    parent_body_evidence_ref=body_original["source_evidence_ref"],
+                    rights=body_original["rights"], processing="ORIGINAL_BYTES_ONLY",
+                    source_signature_state="NATIVE_SIGNATURE_NOT_PROVIDED")
+    entity_assignment = body_original.get("entity_assignment")
+    if entity_assignment is not None:
+        if not isinstance(entity_assignment, dict):
+            raise ValueError("COLLECTED_COVER_ENTITY_ASSIGNMENT_INVALID")
+        metadata["entity_assignment"] = entity_assignment
+    with staging_write(authorization_resource + ":" + str(source_id) + ":" + cover["sha256"]):
+        artifact, path = _stage_bytes(
+            connection, raw=raw, context=context, kind="collected_post_cover",
+            source_execution_id=str(source_id), extension=cover["extension"],
+            media_type=cover["content_type"])
+        staged_paths.append(path)
+        metadata["source_artifact_ref"] = artifact["artifact_id"]
+        child_inputs = {"source_ids": [str(source_id)],
+                        "body_evidence_ref": body_original["source_evidence_ref"],
+                        "source_intake_resource": authorization_resource}
+        if entity_assignment is not None:
+            child_inputs["entity_assignment"] = entity_assignment
+        evidence_id = store.record_evidence(
+            connection=connection, source="collector", project="LUMENIS",
+            product="CTH" if context["domain_id"] == "cth" else "ZBMP",
+            feature_id="COLLECTED_POST_COVER", asset_id=str(source_id), version="collected-post-cover:v1",
+            capture_mode="live_native_cover_intake", captured_at=cover["captured_at"],
+            inputs=child_inputs,
+            outputs={"source_artifact_ref": artifact["artifact_id"],
+                     "cover_sha256": cover["sha256"], "cover_size_bytes": len(raw)},
+            raw_content=json.dumps({"sha256": cover["sha256"], "size_bytes": len(raw)}, sort_keys=True),
+            collection_metadata=metadata, provider="collector-native-cover",
+            domain_id=context["domain_id"], subject_id=context["subject_id"],
+            brand_focus_id=context["brand_focus_id"], global_scope=False)
+        connection.execute("UPDATE lumenis_shared_artifacts SET note_id=?,evidence_id=? WHERE artifact_id=?",
+                           (str(source_id), str(evidence_id), artifact["artifact_id"]))
+        evidence = dict(connection.execute("SELECT * FROM app_evidence_records WHERE id=?", (evidence_id,)).fetchone())
+        if store.classify_evidence_integrity(evidence).get("verified") is not True:
+            raise ValueError("COLLECTED_COVER_INTEGRITY_FAILED")
+        stored = path.read_bytes()
+        if stored != raw or hashlib.sha256(stored).hexdigest() != cover["sha256"]:
+            raise ValueError("COLLECTED_COVER_READBACK_FAILED")
+    return {"status": "SAVED", "reason": None,
+            "media_asset_refs": [{"artifact_ref": artifact["artifact_id"],
+                "evidence_ref": "app_evidence_records:" + str(evidence_id),
+                "evidence_version": "collected-post-cover:v1", "sha256": cover["sha256"],
+                "size_bytes": len(raw), "native_locator": cover["native_locator"],
+                "captured_at": cover["captured_at"], "rights": body_original["rights"]}],
+            "other_images_processed": False, "image_ocr": False, "video_processing": False}
+
+
+def _bind_native_source_original(connection, source_id, context, original):
+    """Add an explicit body reference without treating scope proof as content."""
+    from dataclasses import fields
+    from canonical_data import CanonicalRecord, persist_canonical
+
+    product = "CTH" if context["domain_id"] == "cth" else "ZBMP"
+    rows = connection.execute(
+        "SELECT * FROM canonical_data WHERE source_table='notes' AND source_id=? AND product_id=?",
+        (str(source_id), product)).fetchall()
+    if len(rows) != 1:
+        raise ValueError("COLLECTED_SOURCE_CANONICAL_BINDING_INVALID")
+    row = dict(rows[0])
+    if (row.get("domain_id") != context["domain_id"]
+            or (row.get("subject_id") or None) != context["subject_id"]
+            or (row.get("brand_focus_id") or None) != context["brand_focus_id"]):
+        raise ValueError("COLLECTED_SOURCE_CANONICAL_BINDING_INVALID")
+    raw_ref = json.loads(row.get("raw_ref") or "{}")
+    if not isinstance(raw_ref, dict):
+        raise ValueError("COLLECTED_SOURCE_CANONICAL_REFERENCE_INVALID")
+    raw_ref["content_evidence_ref"] = original["source_evidence_ref"]
+    if "cover" in original:
+        raw_ref["cover_original"] = original["cover"]
+    if "media_understanding" in original:
+        raw_ref["media_understanding"] = original["media_understanding"]
+    record = CanonicalRecord(**{field.name: row[field.name] for field in fields(CanonicalRecord)
+                                if field.name in row})
+    record.raw_ref = json.dumps(raw_ref, ensure_ascii=False, sort_keys=True)
+    persist_canonical(connection, record)
 
 def _native_capture_collection(capture):
     value = _native_capture_record(capture)

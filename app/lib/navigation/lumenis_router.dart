@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../core/lumenis_icon.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/lumenis_core_client.dart';
@@ -154,7 +156,7 @@ class LumenisRouteBoundary extends StatelessWidget {
                         context.go(LumenisWorkspaceRoutes.root);
                       }
                     },
-                    icon: const Icon(Icons.arrow_back_rounded),
+                    icon: const LumenisIcon(Icons.arrow_back_rounded),
                     label: Text(copy.text('workspace.route.return')),
                   ),
                 ],

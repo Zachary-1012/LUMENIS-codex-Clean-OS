@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
@@ -380,7 +382,7 @@ class _FeedbackRow extends StatelessWidget {
           children: [
             Padding(
               padding: EdgeInsets.only(top: 3),
-              child: Icon(
+              child: LumenisIcon(
                 Icons.flag_outlined,
                 size: 17,
                 color: LumenisTheme.of(context).danger,
@@ -431,7 +433,7 @@ class _FeedbackRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
+            LumenisIcon(
               Icons.chevron_right_rounded,
               color: LumenisTheme.of(context).quiet,
             ),

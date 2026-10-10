@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
@@ -413,7 +415,7 @@ class _PageReadTime extends StatelessWidget {
           width: width,
           child: Row(
             children: [
-              Icon(
+              LumenisIcon(
                 Icons.schedule_rounded,
                 size: 17,
                 color: LumenisTheme.of(context).muted,
@@ -499,7 +501,7 @@ class _ChannelPanel extends StatelessWidget {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(
+                                LumenisIcon(
                                   Icons.radio_button_checked_rounded,
                                   size: 17,
                                   color: LumenisTheme.of(context).cth,

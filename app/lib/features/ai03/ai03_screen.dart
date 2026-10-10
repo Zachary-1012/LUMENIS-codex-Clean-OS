@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/lumenis_icon.dart';
+
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
@@ -225,7 +227,7 @@ class _ThreadEntry extends StatelessWidget {
               for (final citation in entry.citations)
                 OutlinedButton.icon(
                   onPressed: () => viewModel.selectCitation(citation.id),
-                  icon: const Icon(Icons.link, size: 16),
+                  icon: const LumenisIcon(Icons.link, size: 16),
                   label: Text(citation.id),
                 ),
             ],
@@ -415,7 +417,7 @@ class _BindingNotice extends StatelessWidget {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
+        LumenisIcon(
           Icons.info_outline,
           color: LumenisTheme.of(context).quiet,
           size: 19,
@@ -575,7 +577,7 @@ class _FailureState extends StatelessWidget {
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
+              icon: const LumenisIcon(Icons.refresh),
               label: Text(context.lumenisL10n.text('common.refresh')),
             ),
           ],

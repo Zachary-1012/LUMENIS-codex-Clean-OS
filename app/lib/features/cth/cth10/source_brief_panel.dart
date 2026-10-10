@@ -14,9 +14,11 @@ class SourceBriefPanel extends StatefulWidget {
   const SourceBriefPanel({
     required this.client,
     required this.onReturn,
+    this.domainId = 'CTH',
     super.key,
   });
 
+  final String domainId;
   final LumenisCoreClient client;
   final VoidCallback onReturn;
 
@@ -26,7 +28,7 @@ class SourceBriefPanel extends StatefulWidget {
 
 class _SourceBriefPanelState extends State<SourceBriefPanel>
     with WidgetsBindingObserver {
-  late final _model = SourceBriefViewModel(client: widget.client);
+  late final _model = SourceBriefViewModel(client: widget.client, domainId: widget.domainId);
   final _reference = TextEditingController();
   final _scroll = ScrollController();
   Timer? _poll;

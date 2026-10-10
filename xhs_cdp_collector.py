@@ -447,9 +447,12 @@ def human_watch_video(page, depth=0.5):
         return False
 
 
-def human_read_content(page, depth=0.5):
+def human_read_content(page, depth=0.5, *, one_scroll=False):
     """滚动阅读正文：分 2~4 次小幅向下滚动，每次高斯停留（模拟阅读）。"""
     try:
+        if one_scroll:
+            page.mouse.wheel(0, 150)
+            return
         base = max(1, round(1 + 3*depth))
         rounds = random.randint(base, min(5, base+1)) if base > 1 else 1
         for _ in range(rounds):
@@ -459,12 +462,14 @@ def human_read_content(page, depth=0.5):
         pass
 
 
-def human_read_comments(page, depth=0.5):
+def human_read_comments(page, depth=0.5, *, loaded_only=False):
     """滚动阅读评论区：先定位评论区，再分 2~5 次小幅滚动，随机停留阅读。"""
     try:
         cnt = page.locator(_COMMENT_ITEM_SEL).count()
         if cnt == 0:
             return 0
+        if loaded_only:
+            return cnt
         if depth < 0.3 and random.random() < 0.6:
             return 0   # 浅读多数不展开评论
         rounds = min(max(cnt, 1 if depth < 0.3 else 2), max(2, round(1+4*depth)))
@@ -491,25 +496,28 @@ def human_reading_profile():
     return 'deep', round(random.uniform(0.78, 1.0), 2)   # 仔细阅读
 
 
-def human_consume_detail(page, profile, depth):
+def human_consume_detail(page, profile, depth, detail_media_mode='legacy'):
     """按行为画像编排一次详情阅读，返回过程证据；全程只被动浏览，不产生任何互动。"""
-    t0 = time.time(); is_video=False; img_swiped=0; comment_seen=0
+    if not isinstance(detail_media_mode, str) or detail_media_mode not in {'legacy', 'cover_only'}:
+        raise ValueError('INVALID_DETAIL_MEDIA_MODE')
+    t0 = time.time(); video_watched=False; img_swiped=0; comment_seen=0
     try:
         if profile == 'skip':
             # 秒退：仅短暂扫视封面/标题即离开，不滑图、不读评论
             gauss_sleep(1.0, 0.5, 0.7)
             time.sleep(random.uniform(0.4, 1.4))
         else:
-            is_video = human_watch_video(page, depth)
-            if not is_video:
-                img_swiped = human_swipe_gallery(page, depth)
-            human_read_content(page, depth)
-            comment_seen = human_read_comments(page, depth)
+            if detail_media_mode == 'legacy':
+                video_watched = human_watch_video(page, depth)
+                if not video_watched:
+                    img_swiped = human_swipe_gallery(page, depth)
+            human_read_content(page, depth, one_scroll=detail_media_mode == 'cover_only')
+            comment_seen = human_read_comments(page, depth, loaded_only=detail_media_mode == 'cover_only')
     except Exception as e:
         log(f'真人阅读阶段异常(不影响采集): {e}')
-    return {'profile': profile, 'depth': depth, 'is_video': is_video,
+    return {'profile': profile, 'depth': depth, 'video_watched': video_watched,
             'images_swiped': img_swiped, 'comments_seen': comment_seen,
-            'dwell_sec': round(time.time()-t0, 1)}
+            'dwell_sec': round(time.time()-t0, 1), 'detail_media_mode': detail_media_mode}
 
 
 def parse_count(s):
@@ -556,7 +564,7 @@ def _identity_fingerprint():
     return hashlib.sha256(expected.encode('utf-8')).hexdigest() if expected else ''
 
 
-def _load_resume_checkpoint(path, keyword):
+def _load_resume_checkpoint(path, keyword, acquisition_fingerprint=None):
     if not path:
         return None
     with open(path, encoding='utf-8') as source:
@@ -565,6 +573,8 @@ def _load_resume_checkpoint(path, keyword):
         raise RuntimeError('RESUME_INPUT_MISMATCH')
     checkpoint = previous.get('checkpoint') or {}
     if (previous.get('keyword') != keyword or checkpoint.get('source_host') != COLLECTION_HOST
+            or previous.get('acquisition_fingerprint') != acquisition_fingerprint
+            or checkpoint.get('acquisition_fingerprint') != acquisition_fingerprint
             or not _identity_fingerprint()
             or checkpoint.get('verified_identity_fingerprint') != _identity_fingerprint()
             or previous.get('identity_verified') is not True):
@@ -648,8 +658,10 @@ def _update_detail_progress(result):
     completed.update(result['summary'].get('resumed_note_ids', []))
     pending = [card['note_id'] for card in result.get('discovered_cards', [])
                if card.get('note_id') and card['note_id'] not in completed]
-    result['summary'].update({'pending_note_ids': list(dict.fromkeys(pending)),
-                              'pagination_exhausted': False})
+    pending = list(dict.fromkeys(pending))
+    result['summary'].update({'pending_note_ids': pending,
+                              'pagination_exhausted': False,
+                              'continuation_required': bool(pending)})
 
 
 def _write_checkpoint(output, result, run_id, *, complete=False, checkpoint_override=None):
@@ -666,6 +678,8 @@ def _write_checkpoint(output, result, run_id, *, complete=False, checkpoint_over
                                   'complete': complete,
                                   'verified_identity_fingerprint': _identity_fingerprint() if result.get('identity_verified') else '',
                                   'written_at': datetime.now().astimezone().isoformat()}
+        if result.get('acquisition_fingerprint'):
+            snapshot['checkpoint']['acquisition_fingerprint'] = result['acquisition_fingerprint']
     else:
         snapshot['checkpoint'] = dict(checkpoint_override)
     temporary = None
@@ -685,14 +699,51 @@ def _write_checkpoint(output, result, run_id, *, complete=False, checkpoint_over
     return snapshot['checkpoint']
 
 
-def _budget_reached(result, deadline):
+def _budget_reached(result, deadline, budget_kind='worker_chunk'):
     if deadline is None or time.monotonic() < deadline:
         return False
-    result['ok'] = False
     result['partial'] = True
-    result['error'] = result.get('error') or 'CDP_TIME_BUDGET_PARTIAL'
-    result['summary']['time_budget_reached'] = True
+    summary = result.setdefault('summary', {})
+    if budget_kind == 'worker_chunk':
+        summary['worker_chunk_budget_reached'] = True
+        _update_detail_progress(result)
+        summary['continuation_required'] = True
+        has_verified_detail = result.get('identity_verified') is True and any(
+            isinstance(note, dict) and note.get('detail_fetched') is True
+            for note in result.get('notes', []))
+        if has_verified_detail and not result.get('error'):
+            result['ok'] = True
+        else:
+            result['ok'] = False
+            result['error'] = result.get('error') or 'CDP_CHUNK_BUDGET_NO_VERIFIED_DETAIL'
+    else:
+        result['ok'] = False
+        result['error'] = result.get('error') or 'CDP_TIME_BUDGET_PARTIAL'
+        summary['time_budget_reached'] = True
     return True
+
+
+def _terminal_detail_failure_code(exc):
+    """Stop this acquisition chunk after identity or transport failures."""
+    message = str(exc).strip()
+    identity_codes = {
+        'DETAIL_IDENTITY_UNVERIFIED',
+        'DETAIL_IDENTITY_MISMATCH',
+        'DETAIL_SOURCE_UNVERIFIED',
+    }
+    if message in identity_codes:
+        return message
+    name = type(exc).__name__.lower()
+    lowered = message.lower()
+    if name in {'targetclosederror', 'browserclosederror', 'connectionerror'}:
+        return 'COLLECTOR_PROVIDER_FAILURE'
+    if any(marker in lowered for marker in (
+            'net::err_', 'connection refused', 'connection reset', 'socket hang up',
+            'target closed', 'browser has been closed', 'page crashed', 'protocol error')):
+        return 'COLLECTOR_PROVIDER_FAILURE'
+    if name in {'timeouterror', 'playwrighttimeout'}:
+        return 'COLLECTOR_PROVIDER_FAILURE'
+    return ''
 
 
 def normalize_publish_time(raw):
@@ -893,15 +944,15 @@ def _risk_check(page, result):
         return False
     kind, hit = classify_page(text)
     if kind == 'session_expired':
-        result['summary'] = {'session_expired': True, 'matched': hit}
+        result.setdefault('summary', {}).update({'session_expired': True, 'matched': hit})
         result['error'] = 'SESSION_EXPIRED'
         return True
     if kind == 'ip':
-        result['summary'] = {'ip_blocked': True, 'matched': hit}
+        result.setdefault('summary', {}).update({'ip_blocked': True, 'matched': hit})
         result['error'] = 'IP_RISK_OR_300012'
         return True
     if kind == 'verify':
-        result['summary'] = {'verification_required': True, 'matched': hit}
+        result.setdefault('summary', {}).update({'verification_required': True, 'matched': hit})
         result['error'] = 'NEED_VERIFY'
         return True
     return False
@@ -1014,7 +1065,7 @@ def _search_failure_code(observation):
     return 'EMPTY_LIST_UNCLASSIFIED'
 
 
-def _await_search_ready(page, keyword, result, progress=None, deadline=None):
+def _await_search_ready(page, keyword, result, progress=None, deadline=None, budget_kind='worker_chunk'):
     """Wait for this exact query and a visible native card, within one time budget."""
     from urllib.parse import parse_qs, quote
     started = time.monotonic()
@@ -1029,13 +1080,15 @@ def _await_search_ready(page, keyword, result, progress=None, deadline=None):
                 and parsed.path.startswith('/search_result')
                 and parse_qs(parsed.query).get('keyword') in ([keyword], [quote(keyword, safe="~()*!.'")]))
     try:
-        if _budget_reached(result, deadline):
+        if _budget_reached(result, deadline, budget_kind):
             return False
         page.wait_for_url(matches, wait_until='domcontentloaded', timeout=max(1, int((end-time.monotonic())*1000)))
         page.locator('section.note-item').first.wait_for(state='visible', timeout=max(1, int((end-time.monotonic())*1000)))
     except Exception as exc:
         observation = _snapshot_search_state(page, keyword, result, 'search_wait_failed', progress, error_type=type(exc).__name__)
         if _risk_check(page, result):
+            return False
+        if _budget_reached(result, deadline, budget_kind):
             return False
         result['error'] = _search_failure_code(observation)
         return False
@@ -1045,10 +1098,15 @@ def _await_search_ready(page, keyword, result, progress=None, deadline=None):
         return False
     return True
 
-def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progress=None, deadline=None, resume_ids=None, resume_cards=None):
+def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progress=None, deadline=None,
+                  resume_ids=None, resume_cards=None, budget_kind='worker_chunk',
+                  detail_media_mode='legacy'):
+    if not isinstance(detail_media_mode, str) or detail_media_mode not in {'legacy', 'cover_only'}:
+        raise ValueError('INVALID_DETAIL_MEDIA_MODE')
     _assert_collection_host()
     from playwright.sync_api import sync_playwright
-    result = {'ok': False, 'keyword': keyword, 'mode': 'human', 'notes': [], 'summary': {}, 'human_trace': []}
+    result = {'ok': False, 'keyword': keyword, 'mode': 'human', 'detail_media_mode': detail_media_mode,
+              'notes': [], 'summary': {}, 'human_trace': []}
     result['summary']['resumed_note_ids'] = sorted(resume_ids or ())
     trace = result['human_trace']
     with sync_playwright() as p:
@@ -1056,6 +1114,8 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progre
         result['identity_verified'] = True
         page = ctx.new_page()
         try:
+            if _budget_reached(result, deadline, budget_kind):
+                return result
             from urllib.parse import quote
             # 先稳落探索页（无 keyword 的 search_result 冷导航易挂起；explore 实测稳定），
             # 再由真人键盘输入关键词触发结果页，更像真人且更稳
@@ -1063,8 +1123,14 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progre
             log('真人模式：打开探索页')
             robust_goto(page, landing)
             _snapshot_search_state(page, keyword, result, 'landing', progress)
+            if _risk_check(page, result):
+                return result
+            if _budget_reached(result, deadline, budget_kind):
+                return result
             human_sleep(2.4, 3.8)
             if _risk_check(page, result):
+                return result
+            if _budget_reached(result, deadline, budget_kind):
                 return result
             # 1) 真实键盘输入关键词
             try:
@@ -1073,13 +1139,13 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progre
                 # 兜底：键盘输入失败时退回 URL 直达（仍继续真人浏览，不中断采集）
                 log(f'键盘输入失败，回退URL直达: {e}')
                 robust_goto(page, f'{COLLECTION_ORIGIN}/search_result/?keyword={quote(keyword)}&source=web_explore_feed&type=51')
-            if not _await_search_ready(page, keyword, result, progress, deadline):
+            if not _await_search_ready(page, keyword, result, progress, deadline, budget_kind):
                 return result
             human_sleep(1.2, 2.2)
 
             # Browse only the confirmed exact-query list.
             for i in range(int(max_scroll)):
-                if _budget_reached(result, deadline):
+                if _budget_reached(result, deadline, budget_kind):
                     return result
                 scroll_human(page, total_px=random.randint(700, 1100), rounds=random.randint(2, 4))
                 gauss_sleep(1.4, 0.5, 0.8)
@@ -1110,13 +1176,17 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progre
             ok_detail = 0
             seen_ids = set(resume_ids or ())
             for i in range(actual):
-                if _budget_reached(result, deadline):
+                if _budget_reached(result, deadline, budget_kind):
                     return result
                 # 每 4 篇长休息一次（真人刷累了停顿）
                 if i > 0 and i % 4 == 0:
                     long_break = random.uniform(15, 32)
                     log(f'模拟真人长休息 {long_break:.0f}s')
                     time.sleep(long_break)
+                    if _risk_check(page, result):
+                        return result
+                    if _budget_reached(result, deadline, budget_kind):
+                        return result
 
                 # Keep the pending identity queue stable across live-list refreshes.
                 observation = _snapshot_search_state(page, keyword, result, 'before_detail_select', progress)
@@ -1158,14 +1228,24 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progre
                         page.wait_for_selector(_DETAIL_READY_SEL, timeout=10000)
                     except Exception:
                         pass
+                    if _risk_check(page, result):
+                        return result
+                    if _budget_reached(result, deadline, budget_kind):
+                        return result
                     human_sleep(1.6, 2.8)
                     if _risk_check(page, result):
+                        return result
+                    if _budget_reached(result, deadline, budget_kind):
                         return result
 
                     # 4) 真人阅读：按行为画像(秒退/浅读/正常/深读)差异化停留，每次时长不一
                     profile, depth = human_reading_profile()
-                    consume = human_consume_detail(page, profile, depth)
-                    is_video = consume['is_video']; img_swiped = consume['images_swiped']
+                    consume = human_consume_detail(page, profile, depth, detail_media_mode)
+                    if _risk_check(page, result):
+                        return result
+                    if _budget_reached(result, deadline, budget_kind):
+                        return result
+                    video_watched = consume['video_watched']; img_swiped = consume['images_swiped']
                     comment_seen = consume['comments_seen']
 
                     d = page.evaluate(_DETAIL_JS)
@@ -1191,13 +1271,14 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progre
                         'tag_list': d.get('tag_list', []),
                         'likes': likes, 'collects': collects, 'comments': comments, 'shares': shares,
                         'comment_list': d.get('comment_list', []), 'comment_count': d.get('comment_count', comment_seen),
-                        'is_video': bool(d.get('is_video') or is_video),
+                        'is_video': bool(d.get('is_video') or d.get('video_list') or video_watched),
+                        'detail_media_mode': detail_media_mode,
                         'image_count': d.get('image_count'),
                         'cover': target.get('cover', ''), 'url': page.url if opened_by_click else target['url'],
                         'human_view': {'opened_by': 'click' if opened_by_click else 'goto',
                                        'profile': profile, 'depth': depth,
                                        'dwell_sec': consume['dwell_sec'],
-                                       'video_watched': is_video, 'images_swiped': img_swiped,
+                                        'video_watched': video_watched, 'images_swiped': img_swiped,
                                        'comments_seen': comment_seen},
                         'detail_fetched': True, 'collected_at': datetime.now().astimezone().isoformat(),
                         'source_note_ids': d.get('source_note_ids'), 'source_page_url': d.get('source_page_url'),
@@ -1237,8 +1318,23 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progre
                 except Exception as e:
                     if isinstance(e, RawCheckpointError):
                         raise
+                    if _risk_check(page, result):
+                        _update_detail_progress(result)
+                        if progress:
+                            progress(result)
+                        return result
+                    terminal_code = _terminal_detail_failure_code(e)
+                    if terminal_code:
+                        result['ok'] = False
+                        result['error'] = terminal_code
+                        result['partial'] = True
+                        _update_detail_progress(result)
+                        if progress:
+                            progress(result)
+                        return result
                     log(f'详情失败 {i+1}: {e}')
                     result['notes'].append({**target, 'detail_fetched': False, 'error': str(e)[:160],
+                                            'detail_media_mode': detail_media_mode,
                                             'desc': '', 'likes': parse_count(target.get('likes_raw')),
                                             'collects': None, 'comments': None, 'shares': None,
                                             'time_raw': target.get('time_raw', ''),
@@ -1279,7 +1375,8 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progre
 # ============================================================
 # 旧直连流程（--human=0 回退用，保留稳定基线）
 # ============================================================
-def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progress=None, deadline=None, resume_ids=None, resume_cards=None):
+def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progress=None, deadline=None,
+                   resume_ids=None, resume_cards=None, budget_kind='worker_chunk'):
     _assert_collection_host()
     from playwright.sync_api import sync_playwright
     result = {'ok': False, 'keyword': keyword, 'mode': 'direct', 'notes': [], 'summary': {}}
@@ -1289,35 +1386,45 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progr
         result['identity_verified'] = True
         page = ctx.new_page()
         try:
+            if _budget_reached(result, deadline, budget_kind):
+                return result
             from urllib.parse import quote
             url = f'{COLLECTION_ORIGIN}/search_result/?keyword={quote(keyword)}&source=web_explore_feed&type=51'
             log(f'导航搜索: {keyword}')
             page.goto(url, wait_until='commit', timeout=30000)
             _snapshot_search_state(page, keyword, result, 'landing', progress)
+            if _risk_check(page, result):
+                return result
+            if _budget_reached(result, deadline, budget_kind):
+                return result
             human_sleep(3.0, 4.5)
 
             text = page.evaluate("() => document.body ? document.body.innerText : ''") or ''
             kind, hit = classify_page(text)
             if kind == 'session_expired':
-                result['summary'] = {'session_expired': True, 'matched': hit}
+                result.setdefault('summary', {}).update({'session_expired': True, 'matched': hit})
                 result['error'] = 'SESSION_EXPIRED'
                 return result
             if kind == 'ip':
-                result['summary'] = {'ip_blocked': True, 'matched': hit}
+                result.setdefault('summary', {}).update({'ip_blocked': True, 'matched': hit})
                 result['error'] = 'IP_RISK_OR_300012'
                 return result
             if kind == 'verify':
-                result['summary'] = {'verification_required': True, 'matched': hit}
+                result.setdefault('summary', {}).update({'verification_required': True, 'matched': hit})
                 result['error'] = 'NEED_VERIFY'
                 return result
 
-            if not _await_search_ready(page, keyword, result, progress, deadline):
+            if not _await_search_ready(page, keyword, result, progress, deadline, budget_kind):
                 return result
             for i in range(int(max_scroll)):
-                if _budget_reached(result, deadline):
+                if _budget_reached(result, deadline, budget_kind):
                     return result
                 page.mouse.wheel(0, random.randint(500, 950))
                 human_sleep(1.4, 2.6)
+                if _risk_check(page, result):
+                    return result
+                if _budget_reached(result, deadline, budget_kind):
+                    return result
             human_sleep(0.8, 1.4)
 
             observation = _snapshot_search_state(page, keyword, result, 'before_list_parse', progress)
@@ -1336,12 +1443,12 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progr
                 t2 = page.evaluate("() => document.body ? document.body.innerText : ''") or ''
                 kind, hit = classify_page(t2)
                 if kind == 'session_expired':
-                    result['summary'] = {'session_expired': True, 'matched': hit}
+                    result.setdefault('summary', {}).update({'session_expired': True, 'matched': hit})
                     result['error'] = 'SESSION_EXPIRED'; return result
                 if kind == 'ip':
-                    result['summary'] = {'ip_blocked': True, 'matched': hit}; result['error'] = 'IP_RISK_OR_300012'; return result
+                    result.setdefault('summary', {}).update({'ip_blocked': True, 'matched': hit}); result['error'] = 'IP_RISK_OR_300012'; return result
                 if kind == 'verify':
-                    result['summary'] = {'verification_required': True, 'matched': hit}; result['error'] = 'NEED_VERIFY'; return result
+                    result.setdefault('summary', {}).update({'verification_required': True, 'matched': hit}); result['error'] = 'NEED_VERIFY'; return result
                 result['error'] = _search_failure_code(_snapshot_search_state(page, keyword, result, 'empty_list', progress))
                 return result
 
@@ -1349,7 +1456,7 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progr
             actual = len(cards) if int(max_details) == 0 else min(int(max_details), len(cards))
             ok_detail = 0
             for i in range(actual):
-                if _budget_reached(result, deadline):
+                if _budget_reached(result, deadline, budget_kind):
                     return result
                 c = cards[i]
                 try:
@@ -1358,8 +1465,14 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progr
                         page.wait_for_selector('#detail-desc, #detail-title, .note-content .desc', timeout=10000)
                     except Exception:
                         pass
+                    if _risk_check(page, result):
+                        return result
+                    if _budget_reached(result, deadline, budget_kind):
+                        return result
                     human_sleep(2.2, 3.4)
                     if _risk_check(page, result):
+                        return result
+                    if _budget_reached(result, deadline, budget_kind):
                         return result
                     d = page.evaluate(_DETAIL_JS)
                     _require_detail_observation(d)
@@ -1401,6 +1514,20 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progr
                 except Exception as e:
                     if isinstance(e, RawCheckpointError):
                         raise
+                    if _risk_check(page, result):
+                        _update_detail_progress(result)
+                        if progress:
+                            progress(result)
+                        return result
+                    terminal_code = _terminal_detail_failure_code(e)
+                    if terminal_code:
+                        result['ok'] = False
+                        result['error'] = terminal_code
+                        result['partial'] = True
+                        _update_detail_progress(result)
+                        if progress:
+                            progress(result)
+                        return result
                     log(f'详情失败 {i+1}: {e}')
                     result['notes'].append({**c, 'detail_fetched': False, 'error': str(e)[:160],
                                             'desc': '', 'likes': parse_count(c.get('likes_raw')),
@@ -1431,14 +1558,23 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progr
                 progress(result)
 
 
-def collect(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, human=1, progress=None, deadline=None, resume_ids=None, resume_cards=None):
+def collect(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, human=1, progress=None, deadline=None,
+            resume_ids=None, resume_cards=None, budget_kind='worker_chunk', detail_media_mode='legacy'):
     """统一入口：human=1 真人浏览链路（默认），human=0 旧直连。"""
+    if not isinstance(detail_media_mode, str) or detail_media_mode not in {'legacy', 'cover_only'}:
+        return {'ok': False, 'keyword': keyword, 'notes': [], 'summary': {},
+                'error': 'INVALID_DETAIL_MEDIA_MODE'}
+    if detail_media_mode == 'cover_only' and int(human) == 0:
+        return {'ok': False, 'keyword': keyword, 'notes': [], 'summary': {},
+                'detail_media_mode': detail_media_mode, 'error': 'COVER_ONLY_REQUIRES_HUMAN_MODE'}
     if not cdp_url:
         return {'ok': False, 'keyword': keyword, 'notes': [], 'summary': {},
                 'error': 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'}
     if int(human) == 0:
-        return collect_direct(keyword, max_scroll, max_details, cdp_url, progress, deadline, resume_ids, resume_cards)
-    return collect_human(keyword, max_scroll, max_details, cdp_url, progress, deadline, resume_ids, resume_cards)
+        return collect_direct(keyword, max_scroll, max_details, cdp_url, progress, deadline,
+                              resume_ids, resume_cards, budget_kind)
+    return collect_human(keyword, max_scroll, max_details, cdp_url, progress, deadline,
+                         resume_ids, resume_cards, budget_kind, detail_media_mode)
 
 
 def main():
@@ -1450,34 +1586,71 @@ def main():
     ap.add_argument('--cdp-url', default=CDP_URL)
     ap.add_argument('--human', type=int, default=1, help='1=真人浏览链路(默认) 0=旧直连')
     ap.add_argument('--run-id', default='')
-    ap.add_argument('--time-budget', type=float, default=None, help='Optional positive total seconds; omitted means unlimited')
+    ap.add_argument('--time-budget', type=float, default=None,
+                    help='Optional positive caller task budget; omitted means no global task deadline')
+    ap.add_argument('--worker-chunk-seconds', type=float, default=300,
+                    help='Finite per-invocation worker chunk cap (maximum 300 seconds)')
+    ap.add_argument('--acquisition-fingerprint', default='',
+                    help='Optional exact purpose/query binding supplied by the SYSTEM caller')
+    ap.add_argument('--detail-media-mode', choices=('legacy', 'cover_only'), default='legacy',
+                    help='Detail read mode; cover_only skips media watch/swipe waits while preserving native clues')
     ap.add_argument('--resume-from', default='')
     args = ap.parse_args()
-    import math
     if args.time_budget is not None and (not math.isfinite(args.time_budget) or args.time_budget <= 0):
-        ap.error('--time-budget must be a finite positive number; omit it for unlimited')
+        ap.error('--time-budget must be a finite positive number when supplied')
+    if (not math.isfinite(args.worker_chunk_seconds)
+            or args.worker_chunk_seconds <= 0 or args.worker_chunk_seconds > 300):
+        ap.error('--worker-chunk-seconds must be finite, positive, and no more than 300')
+    if args.detail_media_mode == 'cover_only' and args.human == 0:
+        ap.error('--detail-media-mode cover_only requires --human 1')
+    acquisition_fingerprint = args.acquisition_fingerprint or None
+    if (acquisition_fingerprint is not None
+            and re.fullmatch(r'[0-9a-f]{64}', acquisition_fingerprint) is None):
+        ap.error('--acquisition-fingerprint must be a lowercase SHA-256 hex string')
     if args.resume_from and args.output and os.path.normcase(os.path.abspath(args.resume_from)) == os.path.normcase(os.path.abspath(args.output)):
         ap.error('--resume-from and --output must name distinct Raw artifacts')
     t0 = time.time()
     if not args.run_id:
         from uuid import uuid4
         args.run_id = uuid4().hex
-    deadline = None if args.time_budget is None else time.monotonic() + args.time_budget
-    progress = lambda value: _write_checkpoint(args.output, value, args.run_id)
-    initial = {'ok': False, 'keyword': args.keyword, 'notes': [], 'summary': {'phase': 'starting'},
+    effective_budget = args.worker_chunk_seconds
+    budget_kind = 'worker_chunk'
+    if args.time_budget is not None and args.time_budget <= effective_budget:
+        effective_budget = args.time_budget
+        budget_kind = 'time_budget'
+    deadline = time.monotonic() + effective_budget
+
+    def progress(value):
+        value.setdefault('detail_media_mode', args.detail_media_mode)
+        if acquisition_fingerprint is not None:
+            value['acquisition_fingerprint'] = acquisition_fingerprint
+        else:
+            value.pop('acquisition_fingerprint', None)
+        return _write_checkpoint(args.output, value, args.run_id)
+
+    initial = {'ok': False, 'keyword': args.keyword, 'detail_media_mode': args.detail_media_mode,
+               'notes': [], 'summary': {'phase': 'starting'},
                'search_diagnostics': {'version': 'xhs-search-state-v1', 'observations': []}}
+    if acquisition_fingerprint is not None:
+        initial['acquisition_fingerprint'] = acquisition_fingerprint
     terminal_replay = False
     previous = None
     try:
-        previous = _load_resume_checkpoint(args.resume_from, args.keyword)
+        previous = _load_resume_checkpoint(args.resume_from, args.keyword, acquisition_fingerprint)
         if previous is not None and (previous.get('checkpoint') or {}).get('complete') is True:
             res = previous
             terminal_replay = True
         else:
+            if previous is not None:
+                previous_mode = previous.get('detail_media_mode', 'legacy')
+                if previous_mode != args.detail_media_mode:
+                    raise RuntimeError('RESUME_MEDIA_MODE_MISMATCH')
             progress(initial)
             resume_ids = _completed_detail_ids(previous)
             resume_options = {'resume_cards': _resume_pending_cards(previous, resume_ids)} if previous is not None else {}
-            res = collect(args.keyword, args.max_scroll, args.max_details, args.cdp_url, args.human, progress, deadline, resume_ids, **resume_options)
+            res = collect(args.keyword, args.max_scroll, args.max_details, args.cdp_url, args.human,
+                          progress, deadline, resume_ids, budget_kind=budget_kind,
+                          detail_media_mode=args.detail_media_mode, **resume_options)
     except Exception as e:
         res = initial
         if args.output:
@@ -1492,8 +1665,20 @@ def main():
         code = str(e) if re.fullmatch(r'[A-Z][A-Z0-9_]{0,100}', str(e)) else type(e).__name__
         res.update({'ok': False, 'partial': True, 'error': f'CDP_EXCEPTION: {code}'})
     if not terminal_replay:
+        res.setdefault('detail_media_mode', args.detail_media_mode)
         res['elapsed'] = round(time.time() - t0, 1)
         res['partial'] = bool(res.get('error') or res.get('partial'))
+        if acquisition_fingerprint is not None:
+            res['acquisition_fingerprint'] = acquisition_fingerprint
+        else:
+            res.pop('acquisition_fingerprint', None)
+        summary = res.setdefault('summary', {})
+        pending = summary.get('pending_note_ids', [])
+        if not isinstance(pending, list):
+            pending = []
+        summary['pagination_exhausted'] = False
+        summary['continuation_required'] = bool(
+            pending or summary.get('worker_chunk_budget_reached') or res.get('partial'))
     if args.output:
         if terminal_replay:
             _write_checkpoint(args.output, res, args.run_id,

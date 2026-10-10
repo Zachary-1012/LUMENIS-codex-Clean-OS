@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
@@ -394,7 +396,7 @@ class _PageHeader extends StatelessWidget {
             IconButton(
               tooltip: context.lumenisL10n.text('sys01.refresh.tooltip'),
               onPressed: onRefresh,
-              icon: const Icon(Icons.refresh_rounded),
+              icon: const LumenisIcon(Icons.refresh_rounded),
               color: LumenisTheme.of(context).system,
             ),
           ],

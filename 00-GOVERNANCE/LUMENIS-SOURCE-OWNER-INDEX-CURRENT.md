@@ -1,5 +1,17 @@
 # LUMENIS Source Owner Index — CURRENT
 
+## 2026-10-10 v2 数学能力源码定位（原责任不变）
+
+| 现有 Owner/调用者 | 当前唯一路径 | 采用与未闭边界 |
+| --- | --- | --- |
+| Shared Evaluation / C5，C3 消费 | `lumenis/shared/evaluation/openai_math_papers/` | 九 family 的有限/公式计算、输入预算、provenance；一般主算法逐项仍 OPEN。 |
+| SYSTEM Task/API / C2/C6，M 本次有界授权 | `agent_runtime/openai_math_paper_handler.py`、`ai_task_engine.py`、`ai_api.py` | 同 actor/scope/来源版本、请求幂等、既有 Artifact 事务、独立读回与终态 CAS；不更改其他 Owner 的事实。 |
+| F 现有 CTH-10/BMP-04 调用面 | `source_brief_*`、`lumenis_core_client.dart`、`bmp04_screen.dart` | 明确情景输入、实际计算、修订/原任务重开、来源返回；F 原有 dirty 保护，非全屏验收。 |
+| C2 既有 Learning / 模型研究 | `lumenis/system/ai_gateway/research/openai_math_papers/` | 小型 Gibbs 参数实验与现有 gpt-oss 是不同对象；精确训练准入/重载/独立 held-out 后才记录实验收益，无生产晋升授权。 |
+
+当前状态及固定来源/公式/回执见现有 `evidence/round-15/OPENAI-MATH-ADOPTION-20261007.{md,json}` 的 v2 增补。历史研究结论保留日期，不把先前未实现/未重放描述当作本轮当前事实；也不把新有限实现称为完整论文算法或模型能力。
+
+
 > 最新直接 PO，2026-10-09：本索引保留 C1–C6/F/M/W1–W6 的工程源码责任；唯一产品交付轮次归 Product Architecture：SYSTEM、CTH、BMP、Shared、Agent Groups / 自研 AI。
 > Status: **CURRENT EXECUTION INDEX / FIVE ARCHITECTURE ROUNDS / COMPLETE LEGACY COVERAGE**
 > 实际窗口开工、暂停、恢复、模型与推理档位由PO决定。本索引不固定窗口数量、单业务席位或模型；只记录有时间和证据的观察，不能核实时 NOT_VERIFIED。历史审批和工作原件保留但无当前派工效力。

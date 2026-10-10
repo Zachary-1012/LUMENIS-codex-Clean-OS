@@ -105,13 +105,82 @@ class XAdapter(BaseAdapter):
         """经 cookie_vault 加载 X cookie 字符串。"""
         return to_cookie_string("x")
 
-    def search(self, keyword: str, max_results: int = 20) -> AdapterResult:
+    @staticmethod
+    def _normalize_skip_tweet_ids(skip_tweet_ids):
+        if skip_tweet_ids is None:
+            return None
+        if (isinstance(skip_tweet_ids, (str, bytes))
+                or not isinstance(skip_tweet_ids, (list, tuple, set, frozenset))
+                or len(skip_tweet_ids) > 5000
+                or any(not isinstance(tweet_id, str)
+                       or re.fullmatch(r"[0-9]+", tweet_id) is None
+                       for tweet_id in skip_tweet_ids)):
+            raise ValueError("X seen-ID checkpoint must contain at most 5000 numeric string IDs")
+        return frozenset(skip_tweet_ids)
+
+    def search(self, keyword: str, max_results: int = 20, *,
+               skip_tweet_ids=None) -> AdapterResult:
         if not keyword or not keyword.strip():
             return AdapterResult(success=False, error="关键词为空")
-        return self._search_browser(keyword, max_results)
+        try:
+            skip_tweet_ids = self._normalize_skip_tweet_ids(skip_tweet_ids)
+        except ValueError as exc:
+            return AdapterResult(success=False, error=str(exc))
+        return self._search_browser(
+            keyword, max_results, skip_tweet_ids=skip_tweet_ids,
+        )
 
-    def _search_browser(self, keyword: str, max_results: int) -> AdapterResult:
-        """Collect search results only through the opted-in isolated X worker."""
+    def _search_browser(self, keyword: str, max_results: int, *,
+                        skip_tweet_ids=None) -> AdapterResult:
+        """Collect one bounded batch through the opted-in isolated X worker."""
+        try:
+            result_limit = min(20, max(0, int(max_results)))
+        except (TypeError, ValueError, OverflowError):
+            return AdapterResult(success=False, error="X search result limit is invalid")
+        try:
+            skip_tweet_ids = self._normalize_skip_tweet_ids(skip_tweet_ids)
+        except ValueError as exc:
+            return AdapterResult(success=False, error=str(exc))
+        checkpoint_used = skip_tweet_ids is not None
+        skipped_ids = skip_tweet_ids or frozenset()
+        notes = []
+        visited_tweet_ids = set()
+        native_id_list_limit = 1000
+
+        def bounded_native_ids(values):
+            if len(values) > native_id_list_limit:
+                return None, "LIMIT_EXCEEDED_LIST_OMITTED"
+
+            def numeric_key(value):
+                normalized = value.lstrip("0") or "0"
+                return len(normalized), normalized, value
+            return sorted(values, key=numeric_key), "OBSERVED_SET_RETURNED"
+
+        def attach_continuation_metadata(result):
+            observed_native_ids, observed_native_ids_state = bounded_native_ids(visited_tweet_ids)
+            committed_skipped_ids, committed_skipped_ids_state = bounded_native_ids(
+                visited_tweet_ids.intersection(skipped_ids)
+            )
+            result.metadata = {
+                "continuation": {
+                    "seen_checkpoint_used": checkpoint_used,
+                    "seen_checkpoint_id_count": len(skipped_ids),
+                    "committed_id_count": 0,
+                    "bounded_observed_id_count": len(visited_tweet_ids),
+                    "bounded_observed_native_ids": observed_native_ids,
+                    "bounded_observed_native_ids_state": observed_native_ids_state,
+                    "committed_skip_id_count": len(visited_tweet_ids.intersection(skipped_ids)),
+                    "committed_skipped_native_ids": committed_skipped_ids,
+                    "committed_skipped_native_ids_state": committed_skipped_ids_state,
+                    "native_id_list_limit": native_id_list_limit,
+                    "new_id_count": len(result.notes or []),
+                    "native_cursor": None,
+                    "pagination_exhausted": None,
+                    "coverage_complete": False,
+                }
+            }
+            return result
+
         hb = None
         page = None
         try:
@@ -126,7 +195,9 @@ class XAdapter(BaseAdapter):
                 page.goto(url, wait_until="domcontentloaded", timeout=30000)
             except Exception as exc:
                 message = _x_page_failure("", "", str(exc)) or f"X network error: {exc}"
-                return AdapterResult(success=False, error=message)
+                return attach_continuation_metadata(
+                    AdapterResult(success=False, error=message),
+                )
             hb.pause(5.0, 5.0)
 
             page_url = str(getattr(page, "url", "") or "")
@@ -136,33 +207,81 @@ class XAdapter(BaseAdapter):
                 page_title = ""
             failure = _x_page_failure(page_url, title=page_title)
             if failure:
-                return AdapterResult(success=False, error=failure)
+                return attach_continuation_metadata(
+                    AdapterResult(success=False, error=failure),
+                )
 
-            for _ in range(2):
+            def collect_visible_tweets():
+                added = 0
+                for tweet in page.query_selector_all("article"):
+                    if len(notes) >= result_limit:
+                        break
+                    try:
+                        note = self._parse_x_tweet(tweet)
+                    except Exception:
+                        continue
+                    if note is None:
+                        continue
+                    raw_data = getattr(note, "raw_data", None)
+                    tweet_id = raw_data.get("tweet_id") if isinstance(raw_data, dict) else None
+                    if (not isinstance(tweet_id, str)
+                            or re.fullmatch(r"[0-9]+", tweet_id) is None
+                            or tweet_id in visited_tweet_ids):
+                        continue
+                    visited_tweet_ids.add(tweet_id)
+                    added += 1
+                    if tweet_id in skipped_ids:
+                        continue
+                    notes.append(note)
+                return added
+
+            collect_visible_tweets()
+            no_new_scroll_rounds = 0
+            scroll_rounds = 0
+            while (len(notes) < result_limit and scroll_rounds < 8
+                   and no_new_scroll_rounds < 2):
                 page.mouse.wheel(0, 2000)
                 hb.pause(1.5, 1.5)
-
-            # 解析推文（X 使用 article 标签）
-            tweets = page.query_selector_all("article")
-            notes = []
-            for tweet in tweets:
-                if len(notes) >= max_results:
-                    break
+                scroll_rounds += 1
+                page_url = str(getattr(page, "url", "") or "")
                 try:
-                    note = self._parse_x_tweet(tweet)
-                    if note:
-                        notes.append(note)
+                    page_title = page.title()
                 except Exception:
-                    continue
+                    page_title = ""
+                failure = _x_page_failure(page_url, title=page_title)
+                if failure:
+                    return attach_continuation_metadata(
+                        AdapterResult(success=False, notes=notes, error=failure,
+                                      raw_count=len(visited_tweet_ids)),
+                    )
+                added = collect_visible_tweets()
+                no_new_scroll_rounds = 0 if added else no_new_scroll_rounds + 1
 
             if notes:
-                return AdapterResult(success=True, notes=notes, raw_count=len(notes))
-            return AdapterResult(success=False, error="X search returned no verifiable posts")
+                return attach_continuation_metadata(
+                    AdapterResult(success=True, notes=notes,
+                                  raw_count=len(visited_tweet_ids)),
+                )
+            if (checkpoint_used and visited_tweet_ids
+                    and visited_tweet_ids.issubset(skipped_ids)):
+                return attach_continuation_metadata(
+                    AdapterResult(success=True, notes=[],
+                                  raw_count=len(visited_tweet_ids)),
+                )
+            return attach_continuation_metadata(
+                AdapterResult(success=False,
+                              error="X search returned no verifiable posts",
+                              raw_count=len(visited_tweet_ids)),
+            )
 
         except Exception as e:
             logger.exception("X 浏览器采集异常")
             failure = _x_page_failure("", "", str(e))
-            return AdapterResult(success=False, error=failure or f"X collection error: {e}")
+            return attach_continuation_metadata(
+                AdapterResult(success=False, notes=notes,
+                              error=failure or f"X collection error: {e}",
+                              raw_count=len(visited_tweet_ids)),
+            )
         finally:
             if page is not None:
                 try:
@@ -175,38 +294,40 @@ class XAdapter(BaseAdapter):
                 except Exception:
                     pass
 
-    def _parse_x_tweet(self, tweet) -> CollectedNote | None:
+    def _parse_x_tweet(self, tweet, expected_tweet_id: str | None = None) -> CollectedNote | None:
         """解析单个 X 推文。"""
-        # 推文文本
-        text_el = tweet.query_selector('[data-testid="tweetText"]')
+        primary = self._primary_timestamp_permalink(tweet)
+        tweet_id = primary.get("tweet_id") if primary else None
+        url = primary.get("url") if primary else ""
+        if expected_tweet_id is not None and tweet_id != expected_tweet_id:
+            return None
+
+        # Main-post text only. Quoted-post text remains a separate native post
+        # and must never become this article's caption/body.
+        text_el = None
+        for candidate in tweet.query_selector_all('[data-testid="tweetText"]'):
+            if not self._inside_quoted_post(candidate):
+                text_el = candidate
+                break
         content = text_el.inner_text().strip() if text_el else ""
+        caption_locator = 'article [data-testid="tweetText"] outside quote container' if text_el else None
 
         # 作者
-        author_el = tweet.query_selector('[data-testid="User-Name"] a, [data-testid="User-Names"] a')
+        author_el = next((candidate for candidate in tweet.query_selector_all(
+            '[data-testid="User-Name"] a, [data-testid="User-Names"] a'
+        ) if not self._inside_quoted_post(candidate)), None)
         author = author_el.inner_text().strip() if author_el else ""
 
         # 作者ID（@handle）
         handle = ""
         handle_els = tweet.query_selector_all('[data-testid="User-Name"] span')
         for hel in handle_els:
+            if self._inside_quoted_post(hel):
+                continue
             t = hel.inner_text().strip()
             if t.startswith("@"):
                 handle = t
                 break
-
-        # 链接
-        url = ""
-        tweet_id = None
-        link_el = tweet.query_selector('a[href*="/status/"]')
-        if link_el:
-            href = link_el.get_attribute("href") or ""
-            if href.startswith("/"):
-                url = "https://x.com" + href
-            elif href:
-                url = href
-            status_match = re.search(r"/status/(\d+)(?:/|$)", urlsplit(href).path)
-            if status_match:
-                tweet_id = status_match.group(1)
 
         # 互动数据
         likes, likes_display = self._extract_metric_observation(tweet, '[data-testid="like"]')
@@ -216,11 +337,8 @@ class XAdapter(BaseAdapter):
             tweet, '[data-testid="app-text-transition-container"]',
         )
 
-        # 发布时间
-        publish_date = ""
-        time_el = tweet.query_selector("time")
-        if time_el:
-            publish_date = time_el.get_attribute("datetime") or ""
+        publish_date = primary.get("publish_datetime", "") if primary else ""
+        media_hints = self._extract_post_media_hints(tweet)
 
         # 标题取推文前80字
         title = content[:80].replace("\n", " ") if content else "X 推文"
@@ -230,7 +348,7 @@ class XAdapter(BaseAdapter):
 
         return CollectedNote(
             title=title[:200],
-            content=content[:500],
+            content=content,
             url=url,
             author=author or handle,
             author_id=handle,
@@ -243,18 +361,186 @@ class XAdapter(BaseAdapter):
             source_platform="x",
             raw_data={
                 "tweet_id": tweet_id,
+                "tweet_id_locator": primary.get("tweet_id_locator") if primary else None,
+                "native_time_locator": primary.get("native_time_locator") if primary else None,
+                "caption_locator": caption_locator,
                 "handle": handle,
                 "views": None,
                 "unclassified_counter_display": views_display,
+                "unclassified_counter_locator": ('[data-testid="app-text-transition-container"]'
+                                                   if views_display else None),
                 "url": url,
+                "native_identity": {
+                    "tweet_id": tweet_id,
+                    "locator": primary.get("tweet_id_locator") if primary else None,
+                    "status": "OBSERVED" if tweet_id else "NOT_OBSERVED",
+                },
+                "metrics": {"likes": likes, "comments": comments, "shares": shares, "views": None},
                 "metric_display": {
                     "likes": likes_display,
                     "comments": comments_display,
                     "shares": shares_display,
                     "views": None,
                 },
+                "metric_locators": {
+                    "likes": '[data-testid="like"]',
+                    "comments": '[data-testid="reply"]',
+                    "shares": '[data-testid="retweet"]',
+                },
+                "media_hints": media_hints,
+                "media_state": "URL_HINTS_OBSERVED" if media_hints else "NOT_OBSERVED",
+                "media_bytes_saved": False,
+                "artifact_created": False,
             },
         )
+
+    @staticmethod
+    def _status_id_from_url(value: str) -> str | None:
+        if not isinstance(value, str):
+            return None
+        try:
+            parts = urlsplit(value)
+            port = parts.port
+        except (TypeError, ValueError):
+            return None
+        if (parts.scheme.lower() != "https"
+                or parts.hostname not in {"x.com", "www.x.com"}
+                or port not in (None, 443)
+                or parts.username or parts.password):
+            return None
+        match = re.search(r"(?:^|/)status/([0-9]+)(?:/|$)", parts.path)
+        return match.group(1) if match else None
+
+    @classmethod
+    def _canonical_post_permalink(cls, href: str) -> tuple[str | None, str | None]:
+        if not isinstance(href, str) or not href:
+            return None, None
+        value = href if not href.startswith("//") else "https:" + href
+        try:
+            parts = urlsplit(value)
+            port = parts.port
+        except (TypeError, ValueError):
+            return None, None
+        if parts.scheme:
+            if (parts.scheme.lower() != "https"
+                    or parts.hostname not in {"x.com", "www.x.com"}
+                    or port not in (None, 443)
+                    or parts.username or parts.password):
+                return None, None
+            path = parts.path
+        else:
+            if parts.netloc or not parts.path.startswith("/"):
+                return None, None
+            path = parts.path
+        match = re.search(r"(?:^|/)status/([0-9]+)(?:/|$)", path)
+        if not match:
+            return None, None
+        return "https://x.com" + path, match.group(1)
+
+    @staticmethod
+    def _inside_quoted_post(element) -> bool:
+        try:
+            return bool(element.evaluate("el => !!el.closest('[data-testid=quoteTweet]')"))
+        except Exception:
+            return False
+
+    def _primary_timestamp_permalink(self, tweet) -> dict | None:
+        """Use the post's own timestamp anchor, excluding quoted-post timestamps."""
+        for anchor in tweet.query_selector_all('a[href*="/status/"]'):
+            time_el = anchor.query_selector("time[datetime]")
+            if not time_el or self._inside_quoted_post(anchor):
+                continue
+            permalink, tweet_id = self._canonical_post_permalink(anchor.get_attribute("href") or "")
+            if not permalink or not tweet_id:
+                continue
+            publish_datetime = time_el.get_attribute("datetime") or ""
+            return {
+                "tweet_id": tweet_id,
+                "url": permalink,
+                "publish_datetime": publish_datetime,
+                "tweet_id_locator": "article a[href*='/status/'] time[datetime] (primary, outside quote container)",
+                "native_time_locator": "article a[href*='/status/'] time[datetime] (datetime attribute)",
+            }
+        return None
+
+    @staticmethod
+    def _sanitize_media_hint_url(value: str) -> str | None:
+        if not isinstance(value, str) or not value:
+            return None
+        url_value = value if not value.startswith("//") else "https:" + value
+        try:
+            parts = urlsplit(url_value)
+            port = parts.port
+        except (TypeError, ValueError):
+            return None
+        host = (parts.hostname or "").lower()
+        if (parts.scheme.lower() != "https"
+                or (host != "twimg.com" and not host.endswith(".twimg.com"))
+                or port not in (None, 443)
+                or parts.username or parts.password):
+            return None
+        return f"https://{host}{parts.path}"
+
+    def _extract_post_media_hints(self, tweet) -> list[dict]:
+        hints = []
+        seen = set()
+
+        def add(element, kind, src):
+            safe_url = self._sanitize_media_hint_url(src)
+            if not safe_url:
+                return
+            try:
+                locator = element.evaluate("""el => {
+                    const parts=[];
+                    while (el && el.tagName.toLowerCase() !== 'article') {
+                        const tag=el.tagName.toLowerCase(); let n=1, prev=el.previousElementSibling;
+                        while (prev) { if (prev.tagName === el.tagName) n++; prev=prev.previousElementSibling; }
+                        parts.unshift(`${tag}:nth-of-type(${n})`); el=el.parentElement;
+                    }
+                    return 'article' + (parts.length ? ' > ' + parts.join(' > ') : '');
+                }""")
+            except Exception:
+                locator = None
+            key = (kind, safe_url)
+            if key not in seen:
+                seen.add(key)
+                hints.append({"kind": kind, "url_hint": safe_url, "locator": locator})
+
+        for image in tweet.query_selector_all("img[src]"):
+            if self._inside_quoted_post(image):
+                continue
+            alt = (image.get_attribute("alt") or "").lower()
+            try:
+                is_avatar = bool(image.evaluate(
+                    "el => !!(el.closest('[data-testid=Tweet-User-Avatar]') || el.closest('[data-testid=UserAvatar-Container]'))"
+                ))
+            except Exception:
+                is_avatar = False
+            if is_avatar or any(marker in alt for marker in ("profile picture", "avatar", "头像")):
+                continue
+            try:
+                src = image.evaluate("el => el.currentSrc || el.src || el.getAttribute('src') || ''")
+            except Exception:
+                src = image.get_attribute("src") or ""
+            add(image, "image", src)
+
+        for video in tweet.query_selector_all("video"):
+            if self._inside_quoted_post(video):
+                continue
+            try:
+                src = video.evaluate("el => el.currentSrc || el.src || el.getAttribute('src') || ''")
+            except Exception:
+                src = video.get_attribute("src") or ""
+            add(video, "video", src)
+            poster = video.get_attribute("poster") or ""
+            add(video, "image", poster)
+            for source in video.query_selector_all("source[src]"):
+                try:
+                    src = source.evaluate("el => el.src || el.getAttribute('src') || ''")
+                except Exception:
+                    src = source.get_attribute("src") or ""
+                add(source, "video", src)
+        return hints
 
     @staticmethod
     def _parse_exact_metric(value: str) -> int | None:
@@ -268,7 +554,8 @@ class XAdapter(BaseAdapter):
     def _extract_metric_observation(cls, tweet, selector: str) -> tuple[int | None, dict | None]:
         """Keep the observed label while returning only exact counts as metrics."""
         try:
-            el = tweet.query_selector(selector)
+            el = next((candidate for candidate in tweet.query_selector_all(selector)
+                       if not cls._inside_quoted_post(candidate)), None)
             if not el:
                 return None, None
             aria_label = el.get_attribute("aria-label")
@@ -279,6 +566,8 @@ class XAdapter(BaseAdapter):
                 key: value for key, value in (("aria_label", aria_label), ("text", text))
                 if value
             } or None
+            if display is not None:
+                display["locator"] = selector
             count = cls._parse_exact_metric(aria_label) if aria_label else None
             if count is None and text:
                 count = cls._parse_exact_metric(text)
@@ -293,14 +582,12 @@ class XAdapter(BaseAdapter):
 
     @staticmethod
     def _canonical_status_url(tweet_id: str) -> str | None:
-        value = str(tweet_id or "").strip()
-        if value.isdigit():
-            return f"https://x.com/i/web/status/{value}"
-        parsed = urlsplit(value)
-        if parsed.scheme != "https" or parsed.hostname not in {"x.com", "www.x.com"}:
+        if not isinstance(tweet_id, str):
             return None
-        match = re.search(r"/status/(\d+)(?:/|$)", parsed.path)
-        return f"https://x.com/i/web/status/{match.group(1)}" if match else None
+        if re.fullmatch(r"[0-9]+", tweet_id):
+            return f"https://x.com/i/web/status/{tweet_id}"
+        observed_id = XAdapter._status_id_from_url(tweet_id)
+        return f"https://x.com/i/web/status/{observed_id}" if observed_id else None
 
     @staticmethod
     def _close_worker_page(worker, page) -> None:
@@ -338,16 +625,42 @@ class XAdapter(BaseAdapter):
         url = self._canonical_status_url(tweet_id)
         if not url:
             return AdapterResult(success=False, error="X detail requires a numeric post ID or canonical x.com status URL")
+        requested_tweet_id = self._status_id_from_url(url)
+        if not requested_tweet_id:
+            return AdapterResult(success=False, error="X detail requires the exact observed numeric post ID")
         worker, page, failure = self._open_readonly_page(url, 4.0)
         if failure:
             self._close_worker_page(worker, page)
             return AdapterResult(success=False, error=failure)
         try:
-            article = page.query_selector("article")
-            note = self._parse_x_tweet(article) if article else None
-            if note:
-                return AdapterResult(success=True, notes=[note], raw_count=1)
-            return AdapterResult(success=False, error="X detail returned no verifiable post")
+            final_url = str(getattr(page, "url", "") or "")
+            final_tweet_id = self._status_id_from_url(final_url)
+            if final_tweet_id != requested_tweet_id:
+                return AdapterResult(success=False, error="X detail identity mismatch: final official URL does not match requested post ID")
+
+            matching_notes = []
+            for article in page.query_selector_all("article"):
+                note = self._parse_x_tweet(article, expected_tweet_id=requested_tweet_id)
+                if not note:
+                    continue
+                raw = dict(note.raw_data or {})
+                permalink_id = self._status_id_from_url(note.url)
+                if raw.get("tweet_id") != requested_tweet_id or permalink_id != requested_tweet_id:
+                    continue
+                raw["native_identity"] = {
+                    "tweet_id": requested_tweet_id,
+                    "requested_tweet_id": requested_tweet_id,
+                    "final_tweet_id": final_tweet_id,
+                    "final_url_path": urlsplit(final_url).path,
+                    "tweet_id_locator": raw.get("tweet_id_locator"),
+                    "status": "OBSERVED_MATCH",
+                }
+                note.raw_data = raw
+                matching_notes.append(note)
+
+            if len(matching_notes) == 1:
+                return AdapterResult(success=True, notes=matching_notes, raw_count=1)
+            return AdapterResult(success=False, error="X detail identity mismatch: target article was not unique by timestamp permalink ID")
         except Exception as exc:
             failure = _x_page_failure(str(getattr(page, "url", "") or ""), "", str(exc))
             return AdapterResult(success=False, error=failure or "X detail collection failed")

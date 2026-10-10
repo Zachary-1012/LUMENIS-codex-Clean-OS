@@ -528,6 +528,7 @@ class LumenisCoreClient {
       'GET',
       '/api/experience/reports/source-brief/jobs/${Uri.encodeComponent(jobId)}',
       operationContext: _contentContext(domainId),
+      connectionTimeout: const Duration(seconds: 30),
     );
   }
 
@@ -571,6 +572,11 @@ class LumenisCoreClient {
       '/api/ai/tasks/${Uri.encodeComponent(taskId)}${run ? '/run' : ''}',
       operationContext: _contentContext(domainId),
       payload: run ? const <String, Object?>{} : null,
+      // Execution includes source/Permission revalidation and Artifact commit.
+      // A lost acknowledgement is recovered through the same task identifier.
+      connectionTimeout: run
+          ? const Duration(seconds: 60)
+          : const Duration(seconds: 30),
     );
   }
 

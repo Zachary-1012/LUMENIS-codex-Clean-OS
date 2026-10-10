@@ -517,6 +517,32 @@ reserved to C1 in W6 revision 10; F is not resumed. SourceBrief UI implementatio
 and actual save/reopen/revision acceptance remain NOT VERIFIED. This is a
 research-to-existing-product contract adoption, not a new feature or model grant.
 
+#### Historical frontend and original-method adoption — 2026-10-09
+
+At exact main 274f2742, the three protected Home/AI patches were compared by
+actual behavior. AI-01 read-model postimages already match main; old draft hunks
+remove stale-controller/draft protections and lifecycle overlays omit current
+client/scope rebind, dialog cleanup and shared-draft contracts. Reject these
+regressions, preserve originals and keep task submission OPEN. Do not replay
+whole files or count old screenshots/builds as current E2E.
+
+The icon-only pass reuses the existing renderer and native fallback. Of 107
+unique supported literal callsites, M adopts 102 on 37 clean current paths;
+five CTH-10 calls stay deferred to protect C1. Arguments, accessible controls,
+layout and business behavior are retained. Ambiguous/dynamic or missing calls
+stay explicit, never guessed; this is not complete 44-screen acceptance. Old
+binary Double-C branding is retained as history, not restored over the current
+mark. M operates no C1 file/runtime/session/DB or paused owner.
+
+Actually read MOE/SNU course and publisher statistical material strengthen
+existing Source Owner RC-06: business question, observed unit, sampling,
+measurement, real denominator/comparability, fact versus interpretation and
+causal limits, same-task source/result revision continuity. Full books, unread
+originals, source rights, model-learning permission and real product/runtime
+acceptance remain separately recorded. Course/tool choices create no workflow,
+product authority or mandatory presentation template. Historical module suites
+are not run; compilation/static/security/data and user-operation evidence stay distinct.
+
 
 ### 2026-10-09 SYSTEM 自动浏览器弹窗 P0：有界源码发布与运行范围
 

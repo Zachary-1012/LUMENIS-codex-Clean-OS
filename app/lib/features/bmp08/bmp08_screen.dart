@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/lumenis_icon.dart';
+
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
@@ -1463,12 +1465,12 @@ class _ActionRail extends StatelessWidget {
           children: [
             FilledButton.icon(
               onPressed: () => onAction('BMP-08.gen-script', 'podcast:draft'),
-              icon: const Icon(Icons.edit_note_rounded),
+              icon: const LumenisIcon(Icons.edit_note_rounded),
               label: Text(copy.generateScript),
             ),
             OutlinedButton.icon(
               onPressed: () => onAction('BMP-08.render', 'podcast:render'),
-              icon: const Icon(Icons.movie_creation_outlined),
+              icon: const LumenisIcon(Icons.movie_creation_outlined),
               label: Text(copy.render),
             ),
           ],
