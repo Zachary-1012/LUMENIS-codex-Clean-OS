@@ -11,11 +11,14 @@ permissions:
 jobs:
   source-snapshot:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
       - name: Export tracked source without executing product code
         shell: bash
         run: |
@@ -23,7 +26,13 @@ jobs:
           mkdir -p "$RUNNER_TEMP/rectification-source"
           git rev-parse HEAD > "$RUNNER_TEMP/rectification-source/commit.txt"
           git ls-tree -rz HEAD > "$RUNNER_TEMP/rectification-source/tree.bin"
-          git ls-files -z | python3 -c 'import pathlib, subprocess, sys, tarfile; paths=sys.stdin.buffer.read().decode().split("\0"); out=pathlib.Path(sys.argv[1]); suffixes={".ttf", ".otf", ".woff", ".woff2", ".jar", ".png", ".jpg", ".jpeg", ".pdf", ".docx", ".xlsx", ".pptx"}; t=tarfile.open(out,"w:gz"); [t.add(p,arcname=p,recursive=False) for p in paths if p and pathlib.Path(p).is_file() and pathlib.Path(p).suffix.lower() not in suffixes]; t.close()' "$RUNNER_TEMP/rectification-source/source.tar.gz"
+          git ls-files -z | python3 -c 'import pathlib, sys, tarfile; paths=sys.stdin.buffer.read().decode().split("\0"); out=pathlib.Path(sys.argv[1]); suffixes={".ttf", ".otf", ".woff", ".woff2", ".jar", ".png", ".jpg", ".jpeg", ".pdf", ".docx", ".xlsx", ".pptx"}; t=tarfile.open(out,"w:gz"); [t.add(p,arcname=p,recursive=False) for p in paths if p and pathlib.Path(p).is_file() and pathlib.Path(p).suffix.lower() not in suffixes]; t.close()' "$RUNNER_TEMP/rectification-source/source.tar.gz"
+      - name: Download minimal wheels for offline regression workspace
+        run: >-
+          python -m pip download --disable-pip-version-check --retries 2 --timeout 20
+          --only-binary=:all: --dest '${{ runner.temp }}/rectification-source/wheels'
+          Flask Flask-Cors Flask-Limiter APScheduler waitress schedule
+          tenacity python-dotenv requests httpx pytest pytest-timeout
       - uses: actions/upload-artifact@v4
         with:
           name: rectification-source
