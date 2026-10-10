@@ -5,6 +5,20 @@
 > Source of truth for presence: current manifests/source, not historical docs.
 > License rule: `VERIFY_BEFORE_RELEASE` means the repository has not yet recorded verified license evidence here; do not guess.
 
+## 0. Source license and retained third-party rights — 2026-10-10
+
+Original LUMENIS software and accompanying original technical documentation now
+use the unmodified root Apache-2.0 LICENSE. This does not relicense dependencies,
+vendored source, fonts, model weights, datasets or customer materials. See
+[licensing scope](../LICENSING.md), [attribution](../NOTICE) and the
+[third-party notice index](../THIRD_PARTY_NOTICES.md).
+
+Existing VERIFY_BEFORE_RELEASE / NOT VERIFIED entries remain unresolved for the
+specific third-party material and actual distribution concerned. They are not
+converted to PASS, and they do not invalidate the owner's Apache-2.0 grant for
+original LUMENIS software. Source licensing, shipped-package clearance, historical
+secret/privacy review and runtime/user-outcome acceptance are separate decisions.
+
 ## 1. Policy
 
 Third-party software may accelerate delivery but must remain bounded and replaceable where practical.
@@ -182,7 +196,7 @@ dependency graph shipped on each target.
 | Component | Current workstation state | Product boundary | License / release treatment |
 | --- | --- | --- | --- |
 | OpenCode CLI/server | 1.18.34 installed locally; current execution route is **SHELVED** by Product Owner | Development tool only; not SYSTEM AI Gateway, not product inference, not a C1-C6 Owner and not a Codex fallback | Not part of the product distribution by current design. If any OpenCode binary/source is ever bundled or redistributed, verify the exact upstream license/notices for that shipped version before release. |
-| Codex / Codex CLI | External engineering runtime selected manually by Product Owner | Development/control tooling only; never LUMENIS-owned product AI or Product Truth | Tool/service terms are separate from LUMENIS proprietary materials and third-party product dependencies; do not infer model-weight rights from CLI/tool licensing. |
+| Codex / Codex CLI | External engineering runtime selected manually by Product Owner | Development/control tooling only; never LUMENIS-owned product AI or Product Truth | Tool/service terms are separate from the Apache-2.0 license for original LUMENIS software and from third-party product dependencies; do not infer model-weight rights from CLI/tool licensing. |
 
 ## 6. Built-in / platform dependencies
 

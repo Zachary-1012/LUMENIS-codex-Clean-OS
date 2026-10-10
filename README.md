@@ -248,12 +248,13 @@ Product Gate、App Gate、Critical E2E、真实Runtime和User Outcome仍需按�
 
 ## License、知识产权与第三方声明
 
-LUMENIS原始材料采用仓库根目录 [LICENSE](LICENSE) 中的 **LUMENIS PROPRIETARY LICENSE NOTICE**：除特定文件或组件另有声明外，序境/LUMENIS的原创源码、文档、产品逻辑、架构、设计、Schema、Workflow、Prompt、Dataset、配置及其他原创材料均为专有材料，`Copyright (c) 2026 Zachary-1012. All rights reserved.`。访问私有仓库、参与开发或看到源码**不自动授予复制、分发、再许可、销售、公开部署或商业利用权**；相关许可需仓库所有者明确书面授权。
+LUMENIS 的原创软件及随附原创技术文档采用标准 **Apache License 2.0**，完整条款见根目录 [LICENSE](LICENSE)，版权署名见 [NOTICE](NOTICE)。允许依许可证使用、修改、分发及商业使用；不增加“仅限非商业”、禁止竞争或额外使用审批条款。具体自有软件、第三方材料、数据和商标边界见 [LICENSING.md](LICENSING.md)。本版本覆盖的自有作品不再适用旧的整体专有许可声明；Git 历史保留。
 
 第三方/开源软件、模型、字体、图标、数据集、工具和资产**不被LUMENIS重新许可或主张所有权**，继续受其各自License、Attribution、Notice、Usage Policy和分发义务约束。当前规范登记入口为：
 
 - [Third-Party / Open-Source Component Register](00-GOVERNANCE/THIRD-PARTY-COMPONENT-REGISTER.md)
 - [LICENSE](LICENSE)
+- [NOTICE](NOTICE) / [Licensing scope](LICENSING.md) / [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 登记册中的 `VERIFY_BEFORE_RELEASE` / `NOT VERIFIED` 是真实Release阻塞，不允许根据“常见许可证”自行猜测。每次Release前必须重新对齐实际 shipped dependency graph、锁文件、二进制、字体/图标、模型/权重、FFmpeg构建和相应Notice/Source义务。
 
