@@ -1727,7 +1727,7 @@ def execute_owned_training_phase_task(task_id):
                      "X-Lumenis-Context-Mode", "X-Lumenis-Action"):
             if name in request.headers:
                 session.headers[name] = request.headers[name]
-        phase_transport = OwnedTrainingPhaseHTTPTransport("http://127.0.0.1:8201",
+        phase_transport = OwnedTrainingPhaseHTTPTransport(core_origin="http://127.0.0.1:8201",
             session=session, pinned_public_key=pin)
         invocation = copy.deepcopy(profile["local_invocation"])
         call = {"client": client, "phase_transport": phase_transport,
