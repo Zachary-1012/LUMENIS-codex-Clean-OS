@@ -11,6 +11,9 @@ execution instructions.
 
 ## 1. Authority
 
+**2026-10-10 PO precedence:** Unit and integration tests are reinstated. All older bans and no-execution instructions for these tests elsewhere in this file are superseded; real user E2E remains a separate mandatory outcome standard. No live collection, paid operation, training or deployment is authorized by this testing change.
+
+
 ### 最新 PO：五轮架构交付与窗口/模型事实化 — 2026-10-09
 
 The six-file governance publication is delivered; it did not dispatch windows.
