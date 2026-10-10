@@ -1,0 +1,21 @@
+{
+  "baseline": "01588e9fd9568e3fcaf1e6c3d957bc498436fa48",
+  "observed_at": "2026-10-10T20:29:04.200406+08:00",
+  "source_blob": "1b5ed7d205f9f14a112d485894054c7d2ea2d25e",
+  "boundary": "FULL_CLASS_IN_DISPOSABLE_FIXTURE_ROOT_NOT_PRODUCT_E2E",
+  "source_modified": false,
+  "production_data_accessed": false,
+  "results": {
+    "empty_scan": {
+      "integrity_status": "no_baseline",
+      "dependency_status": "no_requirements",
+      "scanned_files": 0,
+      "overall_status": "pass",
+      "overall_risk": "low"
+    },
+    "dart_in_scan": false,
+    "py_in_scan": true,
+    "synthetic_credential_returned_in_preview": true,
+    "actual_credentials_read": false
+  }
+}
