@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/lumenis_icon.dart';
+
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
@@ -234,7 +236,7 @@ class _TaskEditor extends StatelessWidget {
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: actionConnected ? onStart : null,
-                icon: const Icon(Icons.play_arrow_rounded),
+                icon: const LumenisIcon(Icons.play_arrow_rounded),
                 label: Text(
                   _copy(context, zh: '开始任务', en: 'Start task', ko: '작업 시작'),
                 ),
@@ -400,7 +402,7 @@ class _EvidenceRef extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 7),
     child: Row(
       children: [
-        Icon(Icons.link, size: 16, color: LumenisTheme.of(context).accent),
+        LumenisIcon(Icons.link, size: 16, color: LumenisTheme.of(context).accent),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -599,7 +601,7 @@ class _FailureState extends StatelessWidget {
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
+              icon: const LumenisIcon(Icons.refresh),
               label: Text(context.lumenisL10n.text('common.refresh')),
             ),
           ],

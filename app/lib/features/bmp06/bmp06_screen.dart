@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/lumenis_icon.dart';
+
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
@@ -249,7 +251,7 @@ class _ContextLine extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 12),
           child: Row(
             children: [
-              Icon(
+              LumenisIcon(
                 Icons.local_offer_outlined,
                 color: LumenisTheme.of(context).bmp,
               ),
@@ -675,7 +677,7 @@ class _EmptyProduction extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Row(
           children: [
-            Icon(
+            LumenisIcon(
               Icons.inbox_outlined,
               color: LumenisTheme.of(context).bmp,
               size: 28,
@@ -745,19 +747,19 @@ class _ActionRail extends StatelessWidget {
               children: [
                 FilledButton.icon(
                   onPressed: () => onAction('BMP-06.new', 'content:draft'),
-                  icon: const Icon(Icons.add_rounded),
+                  icon: const LumenisIcon(Icons.add_rounded),
                   label: Text(copy.newContent),
                 ),
                 OutlinedButton.icon(
                   onPressed: () =>
                       onAction('BMP-06.submit-review', 'content:submit'),
-                  icon: const Icon(Icons.rate_review_outlined),
+                  icon: const LumenisIcon(Icons.rate_review_outlined),
                   label: Text(copy.submitReview),
                 ),
                 OutlinedButton.icon(
                   onPressed: () =>
                       onAction('BMP-06.publish', 'content:publish'),
-                  icon: const Icon(Icons.outbox_outlined),
+                  icon: const LumenisIcon(Icons.outbox_outlined),
                   label: Text(copy.publish),
                 ),
               ],

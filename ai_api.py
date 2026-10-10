@@ -7,6 +7,7 @@ explicit retired compatibility surface and cannot create canonical events.
 """
 from __future__ import annotations
 import json
+import re
 import threading
 from flask import Blueprint, jsonify, request
 
@@ -669,7 +670,7 @@ def _source_brief_task_local_access_allowed():
             context = task.get('context')
         else:
             return False
-        if (not isinstance(context, dict) or context.get('analysis_operation') != 'source_statistics'
+        if (not isinstance(context, dict) or context.get('analysis_operation') not in {'source_statistics', 'openai_math'}
                 or not isinstance(context.get('source_brief_job_id'), str)):
             return False
         from experience_runtime import _source_brief_context
@@ -734,7 +735,7 @@ def api_ai_tasks_create(data=None):
         if not isinstance(context, dict):
             return jsonify({'ok': False, 'code': 'TASK_CONTEXT_OBJECT_REQUIRED'}), 400
         if 'source_brief_job_id' in context:
-            if context.get('analysis_operation') != 'source_statistics':
+            if context.get('analysis_operation') not in {'source_statistics', 'openai_math'}:
                 return jsonify({'ok': False, 'code': 'EXPLICIT_SOURCE_STATISTICS_OPERATION_REQUIRED'}), 400
             # The authenticated server principal and immutable Owner version are
             # bound here; body-supplied actor/hash fields cannot authorize a read.
@@ -761,10 +762,28 @@ def api_ai_tasks_create(data=None):
             report = get_source_brief_job(context['source_brief_job_id'], actor_id=created_by, actor=actor,
                                          expected_scope=_scope_material(**material))
             context = {**context, 'source_brief_artifact_hash': report['artifact_outcome']['artifact_hash']}
+            if context.get('analysis_operation') == 'openai_math':
+                from lumenis.shared.evaluation.openai_math_papers.product_outcome import freeze_problem
+                problem, declaration, frozen_hash = freeze_problem(
+                    context.get('openai_math_problem'), context.get('openai_math_declaration'))
+                parent = context.get('openai_math_parent_artifact_id')
+                if parent is not None and (not isinstance(parent, str)
+                                          or not re.fullmatch(r'ART-[0-9a-f]{16}', parent)):
+                    return jsonify({'ok': False, 'code': 'MATHEMATICAL_PARENT_INVALID'}), 400
+                # Freeze server-owned identity, not a body-supplied trusted hash.
+                context = {**context, 'openai_math_problem': problem,
+                           'openai_math_declaration': declaration,
+                           'openai_math_problem_sha256': frozen_hash,
+                           'openai_math_source_scope': _scope_material(**material)}
         if not isinstance(user_input, str) or not user_input.strip():
             return jsonify({'ok': False, 'error': 'input is required'}), 400
         engine = _get_engine()
-        task = engine.create_task(user_input, context=context, created_by=created_by)
+        if context.get('analysis_operation') == 'openai_math':
+            if 'source_brief_job_id' not in context:
+                return jsonify({'ok': False, 'code': 'ANALYSIS_SOURCE_REQUIRED'}), 400
+            task = engine.create_mathematical_task(user_input, context, created_by=created_by)
+        else:
+            task = engine.create_task(user_input, context=context, created_by=created_by)
         return jsonify({'ok': True, 'task': task})
     except PermissionError:
         return jsonify({'ok': False, 'code': 'ANALYSIS_SOURCE_PERMISSION_DENIED'}), 403

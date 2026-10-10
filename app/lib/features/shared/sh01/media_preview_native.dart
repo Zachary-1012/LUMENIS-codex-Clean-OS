@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../l10n/lumenis_localizations.dart';
 import 'native_media_preview_controller.dart';
@@ -168,7 +170,7 @@ class _WindowsMediaPreviewState extends State<WindowsMediaPreview>
                   minimumSize: const Size(48, 48),
                 ),
                 onPressed: () => unawaited(_controller.retry()),
-                icon: const Icon(Icons.refresh_rounded),
+                icon: const LumenisIcon(Icons.refresh_rounded),
                 label: Text(_copy('retry')),
               ),
             ],
@@ -285,7 +287,7 @@ class _WindowsMediaPreviewState extends State<WindowsMediaPreview>
                       Expanded(
                         child: Center(
                           child: player.value.size.isEmpty
-                              ? Icon(
+                              ? LumenisIcon(
                                   Icons.audiotrack_rounded,
                                   size: 48,
                                   color: Theme.of(

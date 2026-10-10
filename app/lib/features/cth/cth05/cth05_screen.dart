@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
@@ -339,12 +341,12 @@ class _ViewSwitch extends StatelessWidget {
         ButtonSegment(
           value: false,
           label: Text(copy.text('common.all')),
-          icon: const Icon(Icons.calendar_month_rounded),
+          icon: const LumenisIcon(Icons.calendar_month_rounded),
         ),
         ButtonSegment(
           value: true,
           label: Text(copy.text('common.view_all')),
-          icon: const Icon(Icons.view_list_rounded),
+          icon: const LumenisIcon(Icons.view_list_rounded),
         ),
       ],
       selected: {listMode},
@@ -550,7 +552,7 @@ class _DayList extends StatelessWidget {
               subtitle: Text(
                 '${copy.text('cth01.metric.negative_voice')} ${days[index].negative} · ${copy.text('cth01.severity.high')} ${days[index].highRisk}',
               ),
-              trailing: const Icon(Icons.chevron_right_rounded),
+              trailing: const LumenisIcon(Icons.chevron_right_rounded),
             ),
           ),
       ],

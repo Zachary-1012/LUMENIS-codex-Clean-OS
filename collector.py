@@ -10,8 +10,10 @@ import re
 import sys
 import time
 import ipaddress
+import hashlib
 from datetime import datetime
 from urllib.parse import urlsplit
+from uuid import uuid4
 
 # Runtime Guardian 旁路接入（ZBC-PHASE2-RUNTIME-GUARDIAN Shard B）
 try:
@@ -48,6 +50,139 @@ def _resolve_search_script():
     return os.path.join(SCRIPT_DIR, 'xhs_search_v2.js')  # 保留原名以便错误可定位
 SEARCH_SCRIPT = _resolve_search_script()
 INSTANCE_NAME = 'taikoo'
+
+_XHS_RAW_CHECKPOINT_SUBDIR = os.path.join('collector_raw', 'xhs')
+_XHS_SOURCE_HOST = 'www.rednote.com'
+_XHS_MAX_WORKER_CHUNK_SECONDS = 300.0
+
+
+def _xhs_raw_checkpoint_root(*, create=False):
+    """Resolve the existing private data root used for immutable XHS raw chunks."""
+    from xhs_cookie_bridge import PRIVATE_DATA_DIR
+
+    private_root = os.path.realpath(os.path.abspath(PRIVATE_DATA_DIR))
+    raw_root = os.path.realpath(os.path.join(private_root, _XHS_RAW_CHECKPOINT_SUBDIR))
+    try:
+        if os.path.normcase(os.path.commonpath((private_root, raw_root))) != os.path.normcase(private_root):
+            raise ValueError('XHS_CHECKPOINT_ROOT_INVALID')
+    except (OSError, ValueError):
+        raise ValueError('XHS_CHECKPOINT_ROOT_INVALID')
+    if create:
+        os.makedirs(raw_root, exist_ok=True)
+        raw_root = os.path.realpath(raw_root)
+        try:
+            if os.path.normcase(os.path.commonpath((private_root, raw_root))) != os.path.normcase(private_root):
+                raise ValueError('XHS_CHECKPOINT_ROOT_INVALID')
+        except (OSError, ValueError):
+            raise ValueError('XHS_CHECKPOINT_ROOT_INVALID')
+    return raw_root
+
+
+def validate_xhs_raw_checkpoint_path(path, *, must_exist=False, must_be_new=False):
+    """Accept only JSON raw checkpoints within the canonical XHS private directory."""
+    if not isinstance(path, str) or not path or not os.path.isabs(path):
+        raise ValueError('XHS_CHECKPOINT_PATH_INVALID')
+    root = _xhs_raw_checkpoint_root(create=False)
+    candidate = os.path.realpath(os.path.abspath(path))
+    try:
+        if os.path.normcase(os.path.commonpath((root, candidate))) != os.path.normcase(root):
+            raise ValueError('XHS_CHECKPOINT_PATH_INVALID')
+    except (OSError, ValueError):
+        raise ValueError('XHS_CHECKPOINT_PATH_INVALID')
+    if os.path.splitext(candidate)[1].lower() != '.json':
+        raise ValueError('XHS_CHECKPOINT_PATH_INVALID')
+    if must_exist and not os.path.isfile(candidate):
+        raise ValueError('XHS_CHECKPOINT_MISSING')
+    if must_be_new and os.path.exists(candidate):
+        raise ValueError('XHS_CHECKPOINT_PATH_REUSED')
+    return candidate
+
+
+def new_xhs_raw_checkpoint_path(acquisition_fingerprint, keyword):
+    """Allocate one unique private raw artifact for an exact purpose/query chunk."""
+    if (not isinstance(acquisition_fingerprint, str)
+            or re.fullmatch(r'[0-9a-f]{64}', acquisition_fingerprint) is None
+            or not isinstance(keyword, str) or not keyword):
+        raise ValueError('XHS_CHECKPOINT_BINDING_INVALID')
+    task_token = hashlib.sha256(
+        (acquisition_fingerprint + '\0' + keyword).encode('utf-8')
+    ).hexdigest()[:24]
+    root = _xhs_raw_checkpoint_root(create=True)
+    return os.path.join(root, f'{task_token}_{uuid4().hex}.json')
+
+
+def inspect_xhs_raw_checkpoint(path):
+    """Read only safe continuation metadata and a digest from one private raw chunk."""
+    resolved = validate_xhs_raw_checkpoint_path(path, must_exist=True)
+    try:
+        with open(resolved, 'rb') as source:
+            payload = source.read()
+        data = json.loads(payload.decode('utf-8'))
+    except (OSError, UnicodeError, ValueError, TypeError):
+        raise ValueError('XHS_CHECKPOINT_INVALID')
+    if not isinstance(data, dict):
+        raise ValueError('XHS_CHECKPOINT_INVALID')
+    detail_media_mode = data.get('detail_media_mode', 'legacy')
+    if detail_media_mode not in {'legacy', 'cover_only'}:
+        raise ValueError('XHS_CHECKPOINT_MEDIA_MODE_INVALID')
+    checkpoint = data.get('checkpoint')
+    summary = data.get('summary')
+    if not isinstance(checkpoint, dict) or not isinstance(summary, dict):
+        raise ValueError('XHS_CHECKPOINT_INVALID')
+    pending = summary.get('pending_note_ids', [])
+    if (not isinstance(pending, list)
+            or any(not isinstance(note_id, str)
+                   or re.fullmatch(r'[0-9a-fA-F]{24}', note_id) is None
+                   for note_id in pending)):
+        raise ValueError('XHS_CHECKPOINT_INVALID')
+    fingerprint = checkpoint.get('verified_identity_fingerprint')
+    if (not isinstance(fingerprint, str)
+            or re.fullmatch(r'[0-9a-f]{64}', fingerprint) is None):
+        raise ValueError('XHS_CHECKPOINT_IDENTITY_UNVERIFIED')
+    run_id = checkpoint.get('run_id')
+    if not isinstance(run_id, str) or not run_id:
+        raise ValueError('XHS_CHECKPOINT_INVALID')
+    partial = bool(data.get('partial'))
+    complete = checkpoint.get('complete') is True
+    terminal_error = bool(data.get('error'))
+    continuation_required = bool(partial or pending)
+    return {
+        'raw_path': resolved,
+        'raw_sha256': hashlib.sha256(payload).hexdigest(),
+        'keyword': data.get('keyword'),
+        'task_binding': data.get('acquisition_fingerprint'),
+        'source_host': checkpoint.get('source_host'),
+        'identity_verified': data.get('identity_verified') is True,
+        'identity_fingerprint': fingerprint,
+        'run_id': run_id,
+        'complete': complete,
+        'partial': partial,
+        'detail_media_mode': detail_media_mode,
+        'terminal_error': terminal_error,
+        'pending_note_ids': list(pending),
+        'pagination_exhausted': False,
+        'continuation_required': continuation_required,
+        'captured_at': checkpoint.get('written_at'),
+    }
+
+
+def verify_xhs_raw_checkpoint_reference(descriptor, *, acquisition_fingerprint, keyword):
+    """Verify exact task, query, identity and immutable raw-file hash before resume."""
+    if not isinstance(descriptor, dict):
+        raise ValueError('XHS_CHECKPOINT_REFERENCE_INVALID')
+    if (descriptor.get('task_binding') != acquisition_fingerprint
+            or descriptor.get('keyword') != keyword
+            or descriptor.get('source_host') != _XHS_SOURCE_HOST):
+        raise ValueError('XHS_CHECKPOINT_BINDING_MISMATCH')
+    snapshot = inspect_xhs_raw_checkpoint(descriptor.get('raw_path'))
+    for name in ('task_binding', 'keyword', 'source_host', 'identity_fingerprint',
+                 'raw_sha256', 'run_id', 'complete', 'pending_note_ids',
+                 'terminal_error', 'pagination_exhausted', 'continuation_required', 'captured_at'):
+        if snapshot.get(name) != descriptor.get(name):
+            raise ValueError('XHS_CHECKPOINT_REFERENCE_MISMATCH')
+    if snapshot.get('identity_verified') is not True:
+        raise ValueError('XHS_CHECKPOINT_IDENTITY_UNVERIFIED')
+    return snapshot
 
 # Legacy default keywords are deliberately non-authoritative.
 # Runtime collection scope is resolved from the canonical Subject/BrandFocus registry.
@@ -116,6 +251,22 @@ def _collection_env(account=None, region='intl', cdp_url=None):
     env['PYTHONIOENCODING'] = 'utf-8'
     env['PYTHONUTF8'] = '1'
     return env
+
+
+def xhs_expected_identity_fingerprint(account=None, region='intl'):
+    """Return a comparison-only hash for the registered XHS identity, never its value."""
+    gate = _collection_policy_gate(region=region or 'intl', account=account)
+    if not gate.get('ok'):
+        raise ValueError('XHS_COLLECTION_POLICY_BLOCKED')
+    selected_account = gate.get('account') or account
+    try:
+        env = _collection_env(account=selected_account, region=gate.get('region') or region or 'intl')
+    except Exception as exc:
+        raise ValueError('XHS_APPROVED_IDENTITY_UNAVAILABLE') from exc
+    expected = str(env.get('XHS_EXPECTED_COLLECTION_USER_ID') or '').strip()
+    if not expected:
+        raise ValueError('XHS_APPROVED_IDENTITY_UNAVAILABLE')
+    return hashlib.sha256(expected.encode('utf-8')).hexdigest()
 
 
 def _approved_local_profile_contract(account=None, region=None):
@@ -381,6 +532,8 @@ def _norm_cdp_note(rec):
         'tag_list': rec.get('tag_list', []),
         'author_url': rec.get('author_url', ''),
         'detail_fetched': rec.get('detail_fetched'),
+        'human_view': rec.get('human_view', {}),
+        'detail_media_mode': rec.get('detail_media_mode', 'legacy'),
         'native_metrics_raw': rec.get('native_metrics_raw', {}),
         'source_note_ids': rec.get('source_note_ids'),
         'source_page_url': rec.get('source_page_url'),
@@ -390,9 +543,31 @@ def _norm_cdp_note(rec):
     }
 
 
-def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=None, region=None, account=None, resume_path=None, time_budget=None):
+def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=None, region=None, account=None,
+                    resume_path=None, time_budget=None, worker_chunk_seconds=300,
+                    acquisition_fingerprint=None, detail_media_mode='legacy'):
     """Use the configured server browser worker with the existing XHS collector."""
     import math
+    if not isinstance(detail_media_mode, str) or detail_media_mode not in {'legacy', 'cover_only'}:
+        return {'keyword': keyword, 'notes': [], 'total': 0,
+                'error': 'INVALID_DETAIL_MEDIA_MODE', 'channel': 'cdp'}
+    if isinstance(worker_chunk_seconds, bool):
+        return {'keyword': keyword, 'notes': [], 'total': 0,
+                'error': 'INVALID_WORKER_CHUNK_SECONDS', 'channel': 'cdp'}
+    try:
+        worker_chunk_seconds = float(worker_chunk_seconds)
+    except (ValueError, TypeError, OverflowError):
+        return {'keyword': keyword, 'notes': [], 'total': 0,
+                'error': 'INVALID_WORKER_CHUNK_SECONDS', 'channel': 'cdp'}
+    if (not math.isfinite(worker_chunk_seconds) or worker_chunk_seconds <= 0
+            or worker_chunk_seconds > _XHS_MAX_WORKER_CHUNK_SECONDS):
+        return {'keyword': keyword, 'notes': [], 'total': 0,
+                'error': 'INVALID_WORKER_CHUNK_SECONDS', 'channel': 'cdp'}
+    if (acquisition_fingerprint is not None
+            and (not isinstance(acquisition_fingerprint, str)
+                 or re.fullmatch(r'[0-9a-f]{64}', acquisition_fingerprint) is None)):
+        return {'keyword': keyword, 'notes': [], 'total': 0,
+                'error': 'INVALID_ACQUISITION_FINGERPRINT', 'channel': 'cdp'}
     if time_budget is not None:
         if isinstance(time_budget, bool):
             return {'keyword': keyword, 'notes': [], 'total': 0, 'error': 'INVALID_TIME_BUDGET', 'channel': 'cdp'}
@@ -402,6 +577,16 @@ def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=No
             return {'keyword': keyword, 'notes': [], 'total': 0, 'error': 'INVALID_TIME_BUDGET', 'channel': 'cdp'}
         if not math.isfinite(time_budget) or time_budget <= 0:
             return {'keyword': keyword, 'notes': [], 'total': 0, 'error': 'INVALID_TIME_BUDGET', 'channel': 'cdp'}
+    if acquisition_fingerprint is not None:
+        try:
+            output_path = validate_xhs_raw_checkpoint_path(output_path, must_be_new=True)
+            if resume_path:
+                resume_path = validate_xhs_raw_checkpoint_path(resume_path, must_exist=True)
+                if os.path.normcase(resume_path) == os.path.normcase(output_path):
+                    raise ValueError('XHS_CHECKPOINT_PATH_REUSED')
+        except (OSError, ValueError):
+            return {'keyword': keyword, 'notes': [], 'total': 0,
+                    'error': 'XHS_CHECKPOINT_PATH_INVALID', 'channel': 'cdp'}
     _cdp, endpoint_error = _resolve_server_cdp_url(
         cdp_url, account=account, region=region or 'intl')
     if endpoint_error:
@@ -412,21 +597,34 @@ def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=No
     py = sys.executable or 'python'
     cmd = [py, CDP_SCRIPT, '--keyword', keyword, '--output', output_path,
            '--max-scroll', str(max_scroll), '--max-details', str(max_details), '--cdp-url', _cdp,
-           '--run-id', run_id]
+           '--run-id', run_id, '--worker-chunk-seconds', str(worker_chunk_seconds),
+           '--detail-media-mode', detail_media_mode]
     if time_budget is not None:
         cmd.extend(['--time-budget', str(time_budget)])
+    if acquisition_fingerprint is not None:
+        cmd.extend(['--acquisition-fingerprint', acquisition_fingerprint])
     if resume_path:
         cmd.extend(['--resume-from', str(resume_path)])
+    invocation_budget = min(worker_chunk_seconds, time_budget) if time_budget is not None else worker_chunk_seconds
     try:
-        p = subprocess.run(cmd, cwd=SCRIPT_DIR, capture_output=True, text=True, encoding='utf-8', timeout=None if time_budget is None else time_budget + 60, env=env)
+        p = subprocess.run(cmd, cwd=SCRIPT_DIR, capture_output=True, text=True, encoding='utf-8',
+                           timeout=invocation_budget + 60, env=env)
     except subprocess.TimeoutExpired:
-        # Recover only this invocation's atomic checkpoint, never an older file.
+        # Recover only this invocation's atomically-written, identity-verified checkpoint.
         try:
             with open(output_path, encoding='utf-8') as source:
                 data = json.load(source)
             checkpoint = data.get('checkpoint') or {}
+            expected_identity = str(env.get('XHS_EXPECTED_COLLECTION_USER_ID') or '').strip()
+            expected_identity_fingerprint = hashlib.sha256(
+                expected_identity.encode('utf-8')).hexdigest() if expected_identity else ''
             if (checkpoint.get('run_id') != run_id or data.get('keyword') != keyword
                     or checkpoint.get('source_host') != 'www.rednote.com'
+                    or data.get('identity_verified') is not True
+                    or not expected_identity_fingerprint
+                    or checkpoint.get('verified_identity_fingerprint') != expected_identity_fingerprint
+                    or data.get('acquisition_fingerprint') != acquisition_fingerprint
+                    or checkpoint.get('acquisition_fingerprint') != acquisition_fingerprint
                     or not isinstance(data.get('notes'), list)
                     or not all(isinstance(note, dict) for note in data['notes'])
                     or not isinstance(data.get('summary'), dict)):
@@ -435,10 +633,13 @@ def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=No
             return {'keyword': keyword, 'total': 0, 'notes': [], 'ok': False,
                     'error': 'CDP_TIMEOUT_NO_CHECKPOINT', 'channel': 'cdp',
                     'summary': {'timed_out': True, 'checkpoint_recovered': False}}
-        data['ok'] = False
-        data['partial'] = True
         data.setdefault('summary', {}).update({'timed_out': True, 'checkpoint_recovered': True})
-        data['error'] = data.get('error') or 'CDP_TIMEOUT_PARTIAL'
+        if checkpoint.get('complete') is not True:
+            data['ok'] = False
+            data['partial'] = True
+            data['error'] = 'CDP_TIMEOUT_PARTIAL'
+        else:
+            data['summary']['timed_out_after_complete_checkpoint'] = True
     else:
         out = p.stdout or ''
         marker = '---RESULT_JSON---'
@@ -468,6 +669,8 @@ def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=No
     return {'keyword': keyword, 'total': len(notes), 'notes': notes, 'error': err,
             'channel': 'cdp', 'summary': summ, 'ok': bool(data.get('ok')),
             'partial': bool(data.get('partial')), 'checkpoint': data.get('checkpoint', {}),
+            'detail_media_mode': data.get('detail_media_mode', 'legacy'),
+            'identity_verified': data.get('identity_verified') is True,
             'search_diagnostics': data.get('search_diagnostics', {})}
 
 
@@ -516,11 +719,16 @@ def _is_noise_keyword(k):
 
 
 def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
-                        region=None, cdp_port=None, kos_only=False, account=None, resume_path=None, time_budget=None):
+                        region=None, cdp_port=None, kos_only=False, account=None, resume_path=None,
+                        time_budget=None, worker_chunk_seconds=300, acquisition_fingerprint=None,
+                        detail_media_mode='legacy'):
     """多通道搜索 RedNote：仅走香港/国际账号与 9223 入口。
     返回 dict: {keyword,total,notes,error,channel,region}。风控态显式返回，不当作普通0条。
     region: 当前生产值为 'intl'；'cn' 明确返回策略阻断，不触发任何下游进程。
     """
+    if not isinstance(detail_media_mode, str) or detail_media_mode not in {'legacy', 'cover_only'}:
+        return {'keyword': keyword, 'total': 0, 'notes': [],
+                'error': 'INVALID_DETAIL_MEDIA_MODE', 'channel': 'policy'}
     policy_gate = _collection_policy_gate(region=region or 'intl', account=account)
     if not policy_gate.get('ok'):
         return {
@@ -540,6 +748,12 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
             'channel': 'policy', 'region': 'intl', 'cdp_port': cdp_port,
             'policy': gate,
         }
+    if (acquisition_fingerprint is not None
+            and (not isinstance(acquisition_fingerprint, str)
+                 or re.fullmatch(r'[0-9a-f]{64}', acquisition_fingerprint) is None)):
+        return {'keyword': keyword, 'total': 0, 'notes': [],
+                'error': 'INVALID_ACQUISITION_FINGERPRINT', 'channel': 'policy',
+                'region': 'intl'}
     region = 'intl'
     cdp_port = 9223  # legacy policy identity only; it is not a host-local endpoint
     selected_account = policy_gate.get('account') or account
@@ -562,8 +776,26 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
                 'channel': 'policy', 'region': region,
                 'policy': {'ok': False, 'code': 'runtime_data_dir_unavailable'},
             }
-        output_path = os.path.join(_private_data_dir,
-                                   f'search_{int(datetime.now().timestamp())}.json')
+        if acquisition_fingerprint is not None:
+            try:
+                output_path = new_xhs_raw_checkpoint_path(acquisition_fingerprint, keyword)
+            except (OSError, ValueError):
+                return {'keyword': keyword, 'total': 0, 'notes': [],
+                        'error': 'XHS_CHECKPOINT_PATH_INVALID', 'channel': 'policy',
+                        'region': region}
+        else:
+            output_path = os.path.join(_private_data_dir, f'search_{uuid4().hex}.json')
+    if acquisition_fingerprint is not None:
+        try:
+            output_path = validate_xhs_raw_checkpoint_path(output_path, must_be_new=True)
+            if resume_path:
+                resume_path = validate_xhs_raw_checkpoint_path(resume_path, must_exist=True)
+                if os.path.normcase(resume_path) == os.path.normcase(output_path):
+                    raise ValueError('XHS_CHECKPOINT_PATH_REUSED')
+        except (OSError, ValueError):
+            return {'keyword': keyword, 'total': 0, 'notes': [],
+                    'error': 'XHS_CHECKPOINT_PATH_INVALID', 'channel': 'policy',
+                    'region': region}
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     # 选择器只返回当前允许的香港/国际入口；不再轮换或回落到大陆。
@@ -578,7 +810,10 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
                 'channel': 'worker', 'region': region}
     result = _search_via_cdp(keyword, max_scroll, output_path, max_details=max_details,
                              cdp_url=cdp_url, region=region, account=selected_account,
-                             resume_path=resume_path, time_budget=time_budget)
+                             resume_path=resume_path, time_budget=time_budget,
+                             worker_chunk_seconds=worker_chunk_seconds,
+                             acquisition_fingerprint=acquisition_fingerprint,
+                             detail_media_mode=detail_media_mode)
     result['region'] = region
     result['channel'] = 'authorized_browser_worker'
     return result

@@ -299,6 +299,8 @@ class OperationType(str, Enum):
     COLLECTOR_START = "collector_start"          # 采集器启动
     COLLECTOR_STOP = "collector_stop"            # 采集器停止
     DATA_IMPORT = "data_import"                  # 数据导入
+    COLLECTOR_SOURCE_READ = "collector_source_read"
+    COLLECTOR_SOURCE_ANALYZE = "collector_source_analyze"
     DATA_EXPORT = "data_export"                  # 数据导出
     REPORT_GENERATE = "report_generate"          # 报告生成
     REPORT_REVIEW = "report_review"              # 既有报告的追加审核意见
@@ -371,6 +373,12 @@ _OPERATION_REGISTRY: Dict[OperationType, OperationSpec] = {
     OperationType.DATA_IMPORT: OperationSpec(
         PermissionLevel.COMMIT, RiskLevel.HIGH,
         "数据导入（批量写入，需人工审批）", auto_allow=False),
+    OperationType.COLLECTOR_SOURCE_READ: OperationSpec(
+        PermissionLevel.READ, RiskLevel.LOW,
+        "读取精确收集原文供获准的内部采后处理", auto_allow=False),
+    OperationType.COLLECTOR_SOURCE_ANALYZE: OperationSpec(
+        PermissionLevel.ANALYZE, RiskLevel.LOW,
+        "精确收集原文的内部关键词候选分析", auto_allow=False),
     OperationType.DATA_EXPORT: OperationSpec(
         PermissionLevel.VERIFY, RiskLevel.MEDIUM,
         "数据导出（可能含敏感数据，需权限达标）", auto_allow=True),
@@ -2593,6 +2601,186 @@ class PermissionGate:
             permission_required="signed_prelaunch_service_grant", caller=caller,
             domain_id=domain,
         )
+
+    def check_prelaunch_post_intake(
+        self, authorization, *, action: str, source_evidence_ref: str,
+        source_fingerprint: str, source_version: str, body_sha256: str,
+        processing_version: str, scope: Dict[str, Any], connection,
+    ) -> PermissionResult:
+        """Authorize one current internal use, independently from DATA_IMPORT.
+
+        The maintenance principal is the server-held, revocable signed plan;
+        it is not a user account or Reporting/third-party rights grant. Each
+        action reloads that plan and verifies the immutable physical Source and
+        live Registry/Canonical binding. No cached allow result authorizes a
+        subsequent read, analysis or derivative write.
+        """
+        operations = {
+            "READ": OperationType.COLLECTOR_SOURCE_READ,
+            "ANALYZE": OperationType.COLLECTOR_SOURCE_ANALYZE,
+            "DERIVED_SAVE": OperationType.DB_WRITE,
+        }
+        operation = operations.get(action if type(action) is str else None,
+                                   OperationType.COLLECTOR_SOURCE_ANALYZE)
+        risk = RiskLevel.HIGH if action == "DERIVED_SAVE" else RiskLevel.LOW
+        allowed = False
+        reason = "POST_INTAKE_CURRENT_USE_DENIED"
+        resource = "collector-post-intake:invalid"
+        domain = scope.get("domain_id") if isinstance(scope, dict) else None
+        try:
+            from lumenis.system.collector.adapters.scheduling.prelaunch_baseline import (
+                PURPOSE_POLICY, POST_INTAKE_KEYWORD_POLICY,
+                PrelaunchMaintenanceAuthorization, load_prelaunch_baseline_config,
+            )
+            from lumenis.system.collector.adapters.platform_naming import normalize_platform
+            from lumenis.importer.documents import _source_bytes
+            from lumenis.shared.evidence import store
+
+            if (is_testing_bypass_enabled() or self is not get_permission_gate()
+                    or not self.fail_closed or type(action) is not str or action not in operations
+                    or type(authorization) is not PrelaunchMaintenanceAuthorization
+                    or authorization.policy_id != PURPOSE_POLICY
+                    or processing_version != POST_INTAKE_KEYWORD_POLICY["processing_version"]
+                    or type(scope) is not dict or set(scope) != {
+                        "domain_id", "subject_id", "brand_focus_id"}
+                    or not re.fullmatch(r"app_evidence_records:[1-9][0-9]*", source_evidence_ref)
+                    or not re.fullmatch(r"[0-9a-f]{64}", source_fingerprint)
+                    or not re.fullmatch(r"[0-9a-f]{64}", body_sha256)
+                    or source_version not in {"collected-native-source:live-v1",
+                                              "collected-native-source:pending-v1"}):
+                raise ValueError("POST_INTAKE_REQUEST_INVALID")
+            loaded = load_prelaunch_baseline_config(
+                os.environ.get("LUMENIS_PRELAUNCH_BASELINE_CONFIG") or None)
+            plans = [plan for plan in loaded.get("plans", []) if authorization.matches(
+                plan, source_url=authorization.source_url,
+                platform=authorization.platform, scope=scope)]
+            if len(plans) != 1 or not plans[0].post_intake_policy:
+                raise ValueError("POST_INTAKE_POLICY_REVOKED_OR_MISSING")
+            plan = plans[0]
+            policy = plan.post_intake_policy
+            if action not in policy["actions"]:
+                raise ValueError("POST_INTAKE_ACTION_NOT_GRANTED")
+            con = _require_canonical_scope_connection(connection)
+            if not _registered_resource_scope_exists(
+                    scope["domain_id"], subject_id=scope["subject_id"],
+                    brand_focus_id=scope["brand_focus_id"],
+                    connection=con):
+                raise ValueError("POST_INTAKE_REGISTRY_SCOPE_UNAVAILABLE")
+            row = con.execute("SELECT * FROM app_evidence_records WHERE id=?",
+                              (int(source_evidence_ref.split(":")[1]),)).fetchone()
+            if row is None:
+                raise ValueError("POST_INTAKE_SOURCE_UNAVAILABLE")
+            evidence = dict(row)
+            metadata = json.loads(evidence.get("collection_metadata") or "{}")
+            context = metadata.get("context") or {}
+            native_binding = metadata.get("native_source_binding") or {}
+            source_rights = (metadata.get("provenance") or {}).get("rights") or {}
+            integrity = store.classify_evidence_integrity(evidence)
+            if (evidence.get("feature_id") != "COLLECTED_SOURCE"
+                    or evidence.get("status") != "verified" or evidence.get("result") != "PASS"
+                    or integrity.get("verified") is not True
+                    or integrity.get("assurance") != "writer-authenticated"
+                    or evidence.get("version") != source_version
+                    or metadata.get("source_fingerprint") != source_fingerprint
+                    or native_binding.get("body_sha256") != body_sha256
+                    or context.get("collector_plan_id") != plan.plan_id
+                    or context.get("collector_authorization_ref") != plan.authorization_ref
+                    or context.get("global_scope") is not False
+                    or context.get("domain_id") != ("zbmp" if scope["domain_id"] == "bmp" else "cth")
+                    or (context.get("subject_id") or None) != scope["subject_id"]
+                    or (context.get("brand_focus_id") or None) != scope["brand_focus_id"]
+                    or normalize_platform(native_binding.get("platform")) != normalize_platform(plan.platform)
+                    or source_rights.get("status") not in {
+                        "UNREVIEWED", "owner-approved", "public-reference-only"}):
+                raise ValueError("POST_INTAKE_SOURCE_BINDING_INVALID")
+            # There is no general Source privacy enum yet. Explicit restrictions
+            # on the actual Source stop this narrow use; absent fields never
+            # become a claim of privacy review or broader third-party permission.
+            for material in (metadata, metadata.get("provenance") or {}, source_rights):
+                if (any(material.get(name) is True for name in (
+                        "revoked", "private", "restricted", "confidential", "use_prohibited"))
+                        or material.get("privacy_status") in {"PRIVATE", "RESTRICTED", "CONFIDENTIAL"}
+                        or material.get("use_status") in {"DENIED", "REVOKED", "WITHDRAWN"}):
+                    raise ValueError("POST_INTAKE_SOURCE_RESTRICTED")
+            raw, artifact = _source_bytes(con, {**evidence, "provenance": metadata})
+            original = json.loads(raw)
+            body = original.get("body")
+            if (hashlib.sha256(raw).hexdigest() != source_fingerprint
+                    or not isinstance(body, str) or not body.strip()
+                    or hashlib.sha256(body.encode("utf-8")).hexdigest() != body_sha256
+                    or original.get("rights") != (metadata.get("provenance") or {}).get("rights")):
+                raise ValueError("POST_INTAKE_PHYSICAL_SOURCE_INVALID")
+            original_rights = original.get("rights") or {}
+            if (any(original_rights.get(name) is True for name in (
+                    "revoked", "private", "restricted", "confidential", "use_prohibited"))
+                    or original_rights.get("privacy_status") in {"PRIVATE", "RESTRICTED", "CONFIDENTIAL"}
+                    or original_rights.get("use_status") in {"DENIED", "REVOKED", "WITHDRAWN"}):
+                raise ValueError("POST_INTAKE_SOURCE_RESTRICTED")
+            pending = source_version == "collected-native-source:pending-v1"
+            assignment = metadata.get("entity_assignment")
+            canonical_ref = None
+            if pending:
+                # The exact signed acquisition context grants this internal
+                # Source use; it does not assign the observed post to that
+                # entity. The Source reader verifies its separate pending
+                # parent/observation contract before any analysis or write.
+                if (not isinstance(assignment, dict)
+                        or assignment != original.get("entity_assignment")
+                        or assignment.get("state") != "PENDING"
+                        or assignment.get("context_role") != "ACQUISITION_PERMISSION_CONTEXT_ONLY"
+                        or any(assignment.get(key) is not None for key in
+                               ("subject_id", "brand_focus_id", "canonical_ref"))):
+                    raise ValueError("POST_INTAKE_SOURCE_BINDING_INVALID")
+            else:
+                from dataclasses import fields
+                from canonical_data import CanonicalRecord, _validate_canonical_scope
+                canonical = con.execute(
+                    "SELECT * FROM canonical_data WHERE source_table='notes' AND source_type='note' "
+                    "AND source_id=? AND domain_id=? AND NULLIF(subject_id,'') IS ? "
+                    "AND NULLIF(brand_focus_id,'') IS ? AND product_id=? AND scope_status='VERIFIED'",
+                    (str(evidence["asset_id"]), context["domain_id"], scope["subject_id"],
+                     scope["brand_focus_id"], "CTH" if context["domain_id"] == "cth" else "ZBMP")).fetchall()
+                if len(canonical) != 1 or canonical[0]["content"] != body:
+                    raise ValueError("POST_INTAKE_CANONICAL_SOURCE_UNAVAILABLE")
+                canonical_row = dict(canonical[0])
+                record = CanonicalRecord(**{field.name: canonical_row[field.name]
+                                            for field in fields(CanonicalRecord)
+                                            if field.name in canonical_row})
+                try:
+                    if _validate_canonical_scope(con, record) is None:
+                        raise ValueError("canonical source is not verified")
+                except (TypeError, ValueError, RuntimeError) as exc:
+                    raise ValueError("POST_INTAKE_CANONICAL_SOURCE_UNAVAILABLE") from exc
+                canonical_ref = canonical[0]["canonical_id"]
+            use = {
+                "action": action, "plan_id": plan.plan_id, "scope": scope,
+                "source_evidence_ref": source_evidence_ref, "source_version": source_version,
+                "source_fingerprint": source_fingerprint, "body_sha256": body_sha256,
+                "source_artifact_ref": artifact["artifact_id"],
+                "canonical_ref": canonical_ref, "policy": policy,
+                "principal": "prelaunch_baseline_maintenance",
+            }
+            if pending:
+                use["entity_assignment"] = assignment
+            digest = hashlib.sha256(json.dumps(
+                use, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+            resource = "collector-post-intake:" + action + ":" + digest
+            allowed = True
+            reason = "SIGNED_INTERNAL_POST_INTAKE_USE:SOURCE_RIGHTS_UNCHANGED"
+        except Exception as exc:
+            if isinstance(exc, ValueError) and re.fullmatch(r"POST_INTAKE_[A-Z_]+", str(exc)):
+                reason = str(exc)
+        caller = "prelaunch_baseline_maintenance"
+        audit_id = self._write_audit(
+            operation_type=operation.value, resource=resource, risk_level=risk.value,
+            permission_required="signed_internal_post_intake_" + str(action), caller=caller,
+            result="allowed" if allowed else "denied", reason=reason,
+            operation_id=None, approval_token=None)
+        return PermissionResult(
+            allowed=allowed, reason=reason, requires_approval=not allowed,
+            audit_id=audit_id, operation_type=operation.value, resource=resource,
+            risk_level=risk.value, permission_required="signed_internal_post_intake_" + str(action),
+            caller=caller, domain_id=domain)
 
     def check(
         self,

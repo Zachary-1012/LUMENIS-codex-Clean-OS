@@ -293,6 +293,86 @@ def _exact_nonempty_text(value: Any) -> Optional[str]:
     return None
 
 
+def _native_media_url_observation(value: Any) -> Optional[Dict[str, Any]]:
+    """Project one native media clue, keeping an unavailable URL explicitly unknown."""
+    if isinstance(value, str):
+        url = _exact_nonempty_text(value)
+        return {"url": url} if url is not None else None
+    if not isinstance(value, dict):
+        return None
+    url = _exact_nonempty_text(value.get("url"))
+    if url is None:
+        url = _exact_nonempty_text(value.get("display_uri"))
+    media_clue_fields = (
+        "media_id", "id", "pk", "media_type", "product_type", "alt",
+        "type", "width", "height", "mime_type", "content_type",
+    )
+    has_media_clue = any(
+        _exact_nonempty_text(value.get(key)) is not None
+        or (isinstance(value.get(key), int) and not isinstance(value.get(key), bool))
+        for key in media_clue_fields
+    )
+    if url is None and not has_media_clue:
+        return None
+    observation = dict(value)
+    observation["url"] = url
+    return observation
+
+
+def _instagram_media_observations(raw_record: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
+    """Map observed Instagram media clues to the existing media_list shape."""
+    observations: List[Dict[str, Any]] = []
+    children = raw_record.get("children")
+    children_explicitly_empty = isinstance(children, list) and not children
+
+    if isinstance(children, list):
+        for child in children:
+            observation = _native_media_url_observation(child)
+            child_versions = child.get("video_versions") if isinstance(child, dict) else None
+            version_observations = []
+            if isinstance(child_versions, list):
+                for version in child_versions:
+                    version_observation = _native_media_url_observation(version)
+                    if version_observation is None:
+                        continue
+                    for native_key in ("media_id", "id", "pk", "media_type", "product_type"):
+                        if native_key in child:
+                            version_observation.setdefault(native_key, child[native_key])
+                    version_observations.append(version_observation)
+            if observation is not None and (observation.get("url") is not None or not version_observations):
+                observations.append(observation)
+            observations.extend(version_observations)
+
+    display_observation = _native_media_url_observation(raw_record.get("display_uri"))
+    if display_observation is not None:
+        observations.append(display_observation)
+
+    versions = raw_record.get("video_versions")
+    if isinstance(versions, list):
+        for version in versions:
+            observation = _native_media_url_observation(version)
+            if observation is not None:
+                observations.append(observation)
+
+    if observations:
+        return observations
+    return [] if children_explicitly_empty else None
+
+
+def _wechat_media_observations(raw_record: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
+    """Map public article image URL/alt observations to the existing media_list."""
+    images = raw_record.get("images")
+    if not isinstance(images, list):
+        return None
+    observations = [
+        observation for image in images
+        if (observation := _native_media_url_observation(image)) is not None
+    ]
+    if observations:
+        return observations
+    return [] if not images else None
+
+
 def _normalize_author_identity(value: Any) -> Optional[str]:
     """Keep author IDs as exact text without coercing lossy or ambiguous types.
 
@@ -713,6 +793,10 @@ def map_raw_to_normalized(raw_record: Dict[str, Any], platform: Optional[str] = 
             normalized["content"] = raw_record["content"]
         if "captured_at" in raw_record:
             normalized["collected_at"] = canonical["captured_at"]
+    if plat == "instagram":
+        normalized["media_list"] = _instagram_media_observations(raw_record)
+    elif plat == "wechat":
+        normalized["media_list"] = _wechat_media_observations(raw_record)
     if plat:
         normalized["author_id"] = _normalize_author_identity(normalized["author_id"])
         if plat == "instagram" and normalized["platform_content_id"] in (None, ""):

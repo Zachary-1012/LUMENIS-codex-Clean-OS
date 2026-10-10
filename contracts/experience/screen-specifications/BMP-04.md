@@ -1,5 +1,10 @@
 # BMP-04 — 品牌传播路径
 
+## 2026-10-10 v2 数学情景与来源范围增补
+
+现有市场研究页的「整理来源简报」消费同一 SourceBriefPanel，显式 domain=BMP / compatibility product=ZBMP，保留 GLOBAL 或当前真实 BrandFocus；不能继承 CTH Subject 作为隐式品牌参考。该入口提供相同的声明问题、有限数学计算、Artifact 保存/修订/重开及诚实数值/来源限制。没有模型仍可执行；一般论文算法、模型增益与完整 BMP 屏幕验收保持独立未闭项。不重做原页面，不覆盖原 F 工作；当前构建来源与未发布差异单列。
+
+
 ```yaml
 screen_id: BMP-04
 status: BLOCKED

@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
@@ -252,7 +254,7 @@ class _OperationsEntries extends StatelessWidget {
               leading: Icon(entry.$3, color: LumenisTheme.of(context).cth),
               title: Text(context.lumenisL10n.text(entry.$1)),
               subtitle: Text(context.lumenisL10n.text('screen.${entry.$2}')),
-              trailing: const Icon(Icons.arrow_outward_rounded, size: 18),
+              trailing: const LumenisIcon(Icons.arrow_outward_rounded, size: 18),
               onTap: () => onNavigate(entry.$2),
             ),
           ),

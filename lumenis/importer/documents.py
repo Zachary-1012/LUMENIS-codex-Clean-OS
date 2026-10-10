@@ -467,9 +467,14 @@ def _verify_collected_source(con, evidence, raw, record):
     """
     signed = evidence['provenance']
     binding = signed.get('native_source_binding')
+    try:
+        child_inputs = json.loads(evidence.get('inputs_json') or "")
+    except (TypeError, ValueError) as exc:
+        raise SavedWorkError('COLLECTED_SOURCE_BINDING_INVALID') from exc
     if (evidence.get('feature_id') != 'COLLECTED_SOURCE'
             or evidence.get('source') != 'collector'
             or signed.get('source_kind') != 'collected_source'
+            or not isinstance(child_inputs, dict)
             or not isinstance(binding, dict)
             or set(binding) != {'platform','native_id','stable_source_key','source_id',
                                'body_sha256','collection_evidence_ref'}
@@ -507,6 +512,56 @@ def _verify_collected_source(con, evidence, raw, record):
     ref = binding['collection_evidence_ref']
     if not isinstance(ref, str) or not re.fullmatch(r'app_evidence_records:[1-9]\d*', ref):
         raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+    if child_inputs.get('collection_evidence_ref') != ref:
+        raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+    source_context = signed.get('context')
+    if not isinstance(source_context, dict):
+        raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+    capture_mode = signed.get('capture_mode')
+    evidence_version = evidence.get('version')
+    live_mode = capture_mode == 'live_native_observation_intake'
+    pending_mode = capture_mode == 'live_pending_observation_intake'
+    live_version = evidence_version == 'collected-native-source:live-v1'
+    pending_version = evidence_version == 'collected-native-source:pending-v1'
+    if (live_mode != live_version or pending_mode != pending_version
+            or (pending_version and not pending_mode)):
+        raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+    if pending_mode:
+        assignment = signed.get('entity_assignment')
+        assignment_keys = {'state', 'subject_id', 'brand_focus_id', 'canonical_ref',
+                           'context_role', 'reason'}
+        if (not isinstance(assignment, dict) or set(assignment) != assignment_keys
+                or assignment.get('state') != 'PENDING'
+                or assignment.get('subject_id') is not None
+                or assignment.get('brand_focus_id') is not None
+                or assignment.get('canonical_ref') is not None
+                or assignment.get('context_role') != 'ACQUISITION_PERMISSION_CONTEXT_ONLY'
+                or not isinstance(assignment.get('reason'), str)
+                or re.fullmatch(r'[A-Z][A-Z0-9_]{0,100}', assignment.get('reason')) is None
+                or child_inputs.get('entity_assignment') != assignment
+                or original.get('entity_assignment') != assignment):
+            raise SavedWorkError('COLLECTED_SOURCE_BINDING_INVALID')
+    domain_id = source_context.get('domain_id')
+    if not isinstance(domain_id, str):
+        raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+    product = {'cth': 'CTH', 'bmp': 'ZBMP', 'zbmp': 'ZBMP'}.get(domain_id)
+    if product is None:
+        raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+    try:
+        expected_scope = evidence_store._normalize_record_evidence_scope(
+            product=product,
+            domain_id=domain_id,
+            subject_id=source_context.get('subject_id'),
+            brand_focus_id=source_context.get('brand_focus_id'),
+            global_scope=source_context.get('global_scope'),
+        )
+    except (TypeError, ValueError) as exc:
+        raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID') from exc
+    if expected_scope is None or child_inputs.get('_lumenis_scope') != expected_scope:
+        raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+    if pending_mode and (not isinstance(source_context.get('collector_plan_id'), str)
+                         or not source_context.get('collector_plan_id')):
+        raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
     parent = con.execute('SELECT * FROM app_evidence_records WHERE id=?', (int(ref.split(':')[1]),)).fetchone()
     if parent is None:
         raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
@@ -517,10 +572,89 @@ def _verify_collected_source(con, evidence, raw, record):
         raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID') from exc
     integrity = evidence_store.classify_evidence_integrity(parent)
     if (integrity.get('verified') is not True or integrity.get('assurance') != 'writer-authenticated'
-            or parent.get('status') != 'verified' or parent.get('result') != 'PASS'
-            or parent_inputs.get('_lumenis_scope') != json.loads(evidence['inputs_json']).get('_lumenis_scope')
-            or binding['source_id'] not in [str(value) for value in parent_inputs.get('source_ids', [])]):
+            or parent.get('status') != 'verified'
+            or parent_inputs.get('_lumenis_scope') != child_inputs.get('_lumenis_scope')):
         raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+    if pending_mode:
+        try:
+            parent_collection_metadata = json.loads(parent.get('collection_metadata') or '')
+        except (TypeError, ValueError) as exc:
+            raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID') from exc
+        expected_parent_feature = 'PRELAUNCH_' + binding['platform'].upper() + '_COLLECT'
+        if (parent.get('source') != 'collector'
+                or parent.get('feature_id') != expected_parent_feature
+                or parent.get('version') != 'collector-native-observation:v2'
+                or parent.get('result') not in {'PASS', 'FAIL'}
+                or not isinstance(parent_collection_metadata, dict)
+                or parent_collection_metadata.get('maintenance_plan_id')
+                    != source_context.get('collector_plan_id')):
+            raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+    elif (parent.get('result') != 'PASS'
+          or binding['source_id'] not in [str(value) for value in parent_inputs.get('source_ids', [])]):
+        raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+
+    if live_mode or pending_mode:
+        lineage = original.get('source_lineage')
+        if (signed.get('source_lineage') != lineage or not isinstance(lineage, list)
+                or len(lineage) != 1 or not isinstance(lineage[0], dict)
+                or set(lineage[0]) != {'sha256', 'locator', 'kind', 'transport_original'}
+                or lineage[0].get('kind') != 'SIGNED_NATIVE_OBSERVATION_JSON'
+                or lineage[0].get('transport_original') is not False):
+            raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+        observations = parent_inputs.get('source_observation_records')
+        locator = lineage[0].get('locator')
+        locator_match = (re.fullmatch(
+            re.escape(ref) + r':inputs\.source_observation_records\[(0|[1-9]\d*)\]',
+            locator) if isinstance(locator, str) else None)
+        if not isinstance(observations, list) or locator_match is None:
+            raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+        index_text = locator_match.group(1)
+        if len(index_text) > len(str(len(observations))):
+            raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+        observation_index = int(index_text)
+        if observation_index >= len(observations):
+            raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+        observation = observations[observation_index]
+        if not isinstance(observation, dict):
+            raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+        observation_bytes = json.dumps(
+            observation, ensure_ascii=False, sort_keys=True, separators=(',', ':')
+        ).encode('utf-8')
+        if (lineage[0].get('locator') !=
+                ref + ':inputs.source_observation_records[' + str(observation_index) + ']'
+                or lineage[0].get('sha256') != hashlib.sha256(observation_bytes).hexdigest()
+                or original.get('native_record') != observation
+                or original.get('body') != observation.get('content')
+                or original.get('source_url') != observation.get('url')):
+            raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+        if pending_mode:
+            try:
+                from lumenis.system.collector.adapters.secondary_collection import (
+                    _verified_live_native_observation,
+                )
+                observed_native_id, observed_body = _verified_live_native_observation(
+                    original.get('platform'), observation)
+            except (ImportError, TypeError, ValueError, KeyError) as exc:
+                raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID') from exc
+            if (not isinstance(observed_native_id, str) or not observed_native_id
+                    or not isinstance(observed_body, str)
+                    or observed_native_id != original.get('native_id')
+                    or observed_native_id != str(evidence.get('asset_id'))
+                    or observed_body != original.get('body')
+                    or observed_body != body):
+                raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+        else:
+            from lumenis.system.collector.adapters.platform_naming import get_platform_fields, normalize_content_id
+            platform_fields = get_platform_fields(original.get('platform'))
+            observed_native_id = normalize_content_id(
+                original.get('platform'),
+                observation.get(platform_fields.content_id) if platform_fields else None,
+            )
+            if not observed_native_id:
+                observed_native_id = normalize_content_id(original.get('platform'), observation.get('content_id'))
+            if (not observed_native_id or observed_native_id != original.get('native_id')
+                    or str(evidence.get('asset_id')) != observed_native_id):
+                raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
 
 
 def reopen_imported_source(evidence_id: int, *, actor: Any, scope: Mapping) -> dict:
@@ -529,13 +663,18 @@ def reopen_imported_source(evidence_id: int, *, actor: Any, scope: Mapping) -> d
         evidence = _verified_evidence(con, evidence_id, context, actor)
         raw, record = _source_bytes(con, evidence)
     _check_effect(actor, scope, OperationType.DATA_EXPORT, "document-source-read:v1:" + record["sha256"])
-    original = evidence["provenance"]["context"]
-    authorize(actor, {k: original[k] for k in ("domain_id", "subject_id", "brand_focus_id", "global_scope")}, action="read")
-    return {"content":raw, "artifact_ref":record["artifact_id"], "sha256":record["sha256"],
-            "size_bytes":record["size_bytes"], "filename":record["filename"],
-            "source_id":evidence["asset_id"], "evidence_id":evidence_id,
-            "source_origin":evidence["provenance"]["provenance"].get("source_origin"),
-            "scope":{k: original[k] for k in ("domain_id", "subject_id", "brand_focus_id", "global_scope")}}
+    source_context = evidence["provenance"]["context"]
+    authorize(actor, {k: source_context[k] for k in ("domain_id", "subject_id", "brand_focus_id", "global_scope")}, action="read")
+    result = {"content":raw, "artifact_ref":record["artifact_id"], "sha256":record["sha256"],
+              "size_bytes":record["size_bytes"], "filename":record["filename"],
+              "source_id":evidence["asset_id"], "evidence_id":evidence_id,
+              "source_origin":evidence["provenance"]["provenance"].get("source_origin"),
+              "scope":{k: source_context[k] for k in ("domain_id", "subject_id", "brand_focus_id", "global_scope")}}
+    if (evidence["provenance"].get("capture_mode") == "live_pending_observation_intake"
+            and evidence.get("version") == "collected-native-source:pending-v1"):
+        result.update(entity_assignment=evidence["provenance"].get("entity_assignment"),
+                      scope_status="UNASSIGNED", canonical_ref=None)
+    return result
 
 def _result(con, source_id, evidence_id, parsed, scope, product, *, replayed,
             source_replayed=False,

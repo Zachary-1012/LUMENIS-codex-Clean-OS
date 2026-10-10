@@ -27,7 +27,7 @@ import datetime
 import urllib.parse
 import ipaddress
 import os
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 from .base import BaseAdapter, AdapterResult, optional_int
 from .human_browser import HumanBrowser, PageState
 from .cookie_vault import inject_into_context
@@ -254,8 +254,9 @@ class DouyinAdapter(BaseAdapter):
                 ai = item.get("aweme_info")
                 if not ai:
                     continue
-                wid = str(ai.get("aweme_id") or "").strip()
-                if not wid or wid in seen:
+                wid = ai.get("aweme_id")
+                if (not isinstance(wid, str) or not wid or wid != wid.strip()
+                        or wid in seen):
                     continue
                 seen.add(wid)
                 desc = re.sub(r"\s+", " ", (ai.get("desc") or "").strip())
@@ -370,13 +371,79 @@ class DouyinAdapter(BaseAdapter):
 
     # ── detail: 视频详情（浏览器打开视频页，拦截 aweme/detail 接口）──
     def detail(self, aweme_id: str, **kwargs) -> AdapterResult:
-        if not aweme_id or not str(aweme_id).strip():
+        if (not isinstance(aweme_id, str) or not aweme_id
+                or aweme_id != aweme_id.strip()):
             return AdapterResult(success=False, error="aweme_id 为空")
+        if not self.rate_limiter.acquire(timeout=10.0):
+            if self.metrics:
+                self.metrics.record_call(False, 0, error="rate_limit_wait_timeout",
+                                         rate_limited=True)
+            return AdapterResult(success=False, error="rate limit wait timed out")
         try:
-            return self._detail_browser(str(aweme_id).strip())
+            return self._detail_browser(aweme_id)
         except Exception as e:
             logger.exception("抖音详情采集异常")
             return AdapterResult(success=False, error=f"抖音详情异常: {e}")
+
+    @staticmethod
+    def _detail_media_hints(aweme, source_root="$.aweme_detail"):
+        """Return typed, credential-free URL hints; no media bytes are fetched."""
+        hints = []
+        seen = set()
+
+        def add_urls(kind, source_path, value):
+            if isinstance(value, dict):
+                values = value.get("url_list")
+                if not isinstance(values, (list, tuple)):
+                    values = [value.get("url")]
+            elif isinstance(value, (list, tuple)):
+                values = value
+            else:
+                values = [value]
+            for candidate in values or []:
+                if not isinstance(candidate, str) or not candidate.strip():
+                    continue
+                try:
+                    parsed = urlsplit(candidate.strip())
+                except ValueError:
+                    continue
+                if (parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname
+                        or parsed.username or parsed.password):
+                    continue
+                # Native media URLs can carry short-lived query credentials. Keep
+                # a location hint without persisting those values or claiming bytes.
+                safe_url = urlunsplit((parsed.scheme.lower(), parsed.netloc,
+                                       parsed.path, "", ""))
+                identity = (kind, safe_url)
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                hints.append({"kind": kind, "url": safe_url, "locator": source_path})
+                if len(hints) >= 16:
+                    return
+
+        video = aweme.get("video") if isinstance(aweme, dict) else None
+        if isinstance(video, dict):
+            for field, kind in (
+                ("play_addr", "video_play"),
+                ("download_addr", "video_download"),
+                ("cover", "video_cover"),
+                ("origin_cover", "video_origin_cover"),
+                ("dynamic_cover", "video_dynamic_cover"),
+            ):
+                add_urls(kind, f"{source_root}.video.{field}", video.get(field))
+                if len(hints) >= 16:
+                    return hints
+        images = aweme.get("images") if isinstance(aweme, dict) else None
+        if isinstance(images, list):
+            for index, image in enumerate(images[:12]):
+                if not isinstance(image, dict):
+                    continue
+                add_urls("image", f"{source_root}.images[{index}].url_list",
+                         image.get("url_list") or image.get("url"))
+                if len(hints) >= 16:
+                    break
+        return hints
 
     def _detail_browser(self, aweme_id) -> AdapterResult:
         hb = _new_browser_worker()
@@ -385,34 +452,91 @@ class DouyinAdapter(BaseAdapter):
         detail_bags = []
         page = None
         try:
-            page = hb.new_page()
-            page.on("response", lambda resp: self._capture(resp, "aweme/detail", detail_bags))
-            page.goto(f"https://www.douyin.com/video/{aweme_id}", wait_until="domcontentloaded", timeout=30000)
-            hb.pause(2.0, 3.5)
+            page = hb.new_page(stealth=False)
+            def capture_finished(request):
+                try:
+                    if ("aweme/detail" not in request.url
+                            or request.resource_type not in {"xhr", "fetch"}):
+                        return
+                    response = request.response()
+                    if response is not None:
+                        self._capture(response, "aweme/detail", detail_bags)
+                except Exception:
+                    return
+            page.on("requestfinished", capture_finished)
+            # A response event carries headers, not a completed body. Waiting
+            # through Playwright also keeps its dispatcher processing events;
+            # a Python sleep followed by reading this list can miss them all.
+            from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+            try:
+                with page.expect_event(
+                    "requestfinished",
+                    predicate=lambda request: "aweme/detail" in request.url
+                    and request.resource_type in {"xhr", "fetch"},
+                    timeout=15000,
+                ):
+                    page.goto(f"https://www.douyin.com/video/{aweme_id}",
+                              wait_until="domcontentloaded", timeout=30000)
+            except PlaywrightTimeoutError:
+                # A missing response is not evidence of a login/risk failure.
+                pass
             for bag in detail_bags:
-                ai = (bag.get("aweme_detail") or bag.get("aweme") or {})
-                if not ai:
+                if not isinstance(bag, dict):
                     continue
-                st = ai.get("statistics") or {}
+                ai = (bag.get("aweme_detail") or bag.get("aweme") or {})
+                if not isinstance(ai, dict):
+                    continue
+                response_id = ai.get("aweme_id")
+                if not isinstance(response_id, str) or response_id != aweme_id:
+                    continue
+                st = ai.get("statistics")
+                st_fields = st if isinstance(st, dict) else {}
                 au = ai.get("author") or {}
-                desc = re.sub(r"\s+", " ", (ai.get("desc") or "").strip())
+                desc = ai.get("desc") if isinstance(ai.get("desc"), str) else ""
+                detail_root = "$.aweme_detail" if isinstance(bag.get("aweme_detail"), dict) else "$.aweme"
+                metrics = dict(st) if isinstance(st, dict) else None
+                media_hints = self._detail_media_hints(ai, detail_root)
+                cover_hint = next((hint["url"] for hint in media_hints
+                                   if hint["kind"] in {"video_cover", "video_origin_cover",
+                                                        "video_dynamic_cover", "image"}), "")
                 note = self._make_note(
-                    title=desc[:80] or f"抖音 {aweme_id}",
+                    title=desc[:80],
                     content=desc,
                     url=f"https://www.douyin.com/video/{aweme_id}",
                     author=(au.get("nickname") or "抖音用户").strip(),
                     author_id=str(au.get("uid") or au.get("short_id") or ""),
                     publish_date=self._ts_to_date(ai.get("create_time")),
-                    likes=self._to_int(st.get("digg_count")),
-                    comments=self._to_int(st.get("comment_count")),
-                    collects=self._to_int(st.get("collect_count")),
-                    shares=self._to_int(st.get("share_count")),
-                    cover="",
+                    likes=self._to_int(st_fields.get("digg_count")),
+                    comments=self._to_int(st_fields.get("comment_count")),
+                    collects=self._to_int(st_fields.get("collect_count")),
+                    shares=self._to_int(st_fields.get("share_count")),
+                    cover=cover_hint,
                     source_platform=self.platform_name,
-                    raw_data={"engine": "douyin_detail_api", "aweme_id": aweme_id, "create_time": ai.get("create_time")},
+                    raw_data={
+                        "engine": "douyin_detail_api",
+                        "aweme_id": response_id,
+                        "create_time": ai.get("create_time"),
+                        "native_time_locator": f"{detail_root}.create_time",
+                        "body_kind": "caption",
+                        "body_locator": f"{detail_root}.desc",
+                        "author_locator": f"{detail_root}.author",
+                        "metrics": metrics,
+                        "metrics_locator": f"{detail_root}.statistics",
+                        "media_hints": media_hints,
+                        "media_state": "URL_HINTS_OBSERVED" if media_hints else "NO_URL_HINTS_IN_DETAIL_RESPONSE",
+                        "media_bytes_saved": False,
+                        "artifact_created": False,
+                    },
                 )
                 return AdapterResult(success=True, notes=[note], raw_count=1)
-            return AdapterResult(success=False, error="抖音详情接口未返回数据（可能需登录或风控）")
+            state = hb.detect_state(page, success_selector="video")
+            failure = {
+                PageState.AUTH_FAILED: "抖音登录态失效",
+                PageState.CAPTCHA: "抖音详情需要人工安全验证",
+                PageState.BLOCKED: "抖音详情出现平台风控",
+                PageState.NETWORK_ERROR: "Douyin detail network unavailable",
+            }.get(state, "Douyin detail provider unavailable: native response not observed")
+            return AdapterResult(success=False, error=failure)
         finally:
             if page:
                 try: page.close()

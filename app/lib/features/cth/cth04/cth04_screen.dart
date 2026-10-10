@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
@@ -349,7 +351,7 @@ class _GraphNode extends StatelessWidget {
         width: 28,
         child: Column(
           children: [
-            Icon(Icons.circle, size: 12, color: LumenisTheme.of(context).cth),
+            LumenisIcon(Icons.circle, size: 12, color: LumenisTheme.of(context).cth),
             if (!isLast)
               Container(
                 width: 1,
@@ -462,7 +464,7 @@ class _EventRow extends StatelessWidget {
             children: [
               Padding(
                 padding: EdgeInsets.only(top: 4),
-                child: Icon(
+                child: LumenisIcon(
                   Icons.radio_button_checked_rounded,
                   size: 15,
                   color: LumenisTheme.of(context).cth,
@@ -599,7 +601,7 @@ class _EventInspection extends StatelessWidget {
           const SizedBox(height: 16),
           TextButton.icon(
             onPressed: onReturn,
-            icon: const Icon(Icons.arrow_back_rounded),
+            icon: const LumenisIcon(Icons.arrow_back_rounded),
             label: Text(copy.text('common.back')),
           ),
         ],

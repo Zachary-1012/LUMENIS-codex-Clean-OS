@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/lumenis_icon.dart';
+
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
@@ -417,7 +419,7 @@ class _EmptyState extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
+        LumenisIcon(
           Icons.data_exploration_outlined,
           color: LumenisTheme.of(context).quiet,
           size: 27,
@@ -537,7 +539,7 @@ class _FailureState extends StatelessWidget {
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
+              icon: const LumenisIcon(Icons.refresh),
               label: Text(context.lumenisL10n.text('common.refresh')),
             ),
           ],

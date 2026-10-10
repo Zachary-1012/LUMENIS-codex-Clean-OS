@@ -322,6 +322,161 @@ def test_weibo_missing_user_id_does_not_promote_post_idstr_to_author():
     assert normalized["author_id"] is None
 
 
+def test_instagram_native_media_urls_project_without_losing_post_or_child_identity():
+    repeated_image_url = "https://cdn.example.test/media/carousel-image.jpg"
+    raw = {
+        "platform": "instagram",
+        "media_id": "ig-post-42",
+        "shortcode": "AbC_42",
+        "media_type": "carousel",
+        "permalink": "https://www.instagram.com/p/AbC_42/",
+        "caption": "Original caption body",
+        "like_count": 18,
+        "display_uri": "https://cdn.example.test/media/post-cover.jpg",
+        "video_versions": [{
+            "type": "video/mp4",
+            "url": "https://cdn.example.test/media/post-video.mp4",
+            "width": 720,
+            "height": 1280,
+        }],
+        "children": [
+            {"media_id": "ig-child-1", "media_type": "image", "display_uri": repeated_image_url},
+            {"media_id": "ig-child-2", "media_type": "video", "video_versions": [{
+                "type": "video/mp4",
+                "url": "https://cdn.example.test/media/child-video.mp4",
+                "width": 1080,
+                "height": 1920,
+            }]},
+            {"media_id": "ig-child-3", "media_type": "image", "url": repeated_image_url},
+        ],
+    }
+    original = deepcopy(raw)
+
+    normalized = map_raw_to_normalized(raw, "instagram")
+
+    media = normalized["media_list"]
+    assert [item["url"] for item in media] == [
+        repeated_image_url,
+        "https://cdn.example.test/media/child-video.mp4",
+        repeated_image_url,
+        "https://cdn.example.test/media/post-cover.jpg",
+        "https://cdn.example.test/media/post-video.mp4",
+    ]
+    assert media[0]["media_id"] == "ig-child-1"
+    assert media[1]["media_id"] == "ig-child-2"
+    assert media[1]["media_type"] == "video"
+    assert media[2]["media_id"] == "ig-child-3"
+    assert media[3] == {"url": "https://cdn.example.test/media/post-cover.jpg"}
+    assert media[4]["width"] == 720
+    assert normalized["platform_content_id"] == "ig-post-42"
+    assert normalized["url"] == raw["permalink"]
+    assert normalized["content"] == "Original caption body"
+    assert normalized["like_count"] == 18
+    assert normalized["raw_data"] is raw
+    assert raw == original
+
+
+def test_instagram_media_missing_invalid_and_explicit_empty_states_stay_distinct():
+    assert map_raw_to_normalized(
+        {"platform": "instagram", "media_id": "ig-missing", "caption": "body"}
+    )["media_list"] is None
+    assert map_raw_to_normalized(
+        {"platform": "instagram", "media_id": "ig-empty", "children": []}
+    )["media_list"] == []
+
+    invalid = {
+        "platform": "instagram",
+        "media_id": "ig-invalid",
+        "children": [None, 7, {"unrelated": "no media clue"}, {"display_uri": "   "}],
+        "display_uri": 42,
+        "video_versions": [None, {"url": ""}, {"quality": 720}],
+    }
+    normalized = map_raw_to_normalized(invalid)
+    assert normalized["media_list"] is None
+    assert normalized["raw_data"] is invalid
+
+
+def test_media_metadata_without_url_is_preserved_as_an_unknown_url_observation():
+    instagram_raw = {
+        "platform": "instagram",
+        "media_id": "ig-post-with-media-clues",
+        "children": [
+            {"media_id": "ig-child-no-url", "media_type": "image"},
+            {"media_id": "ig-child-video", "media_type": "video", "video_versions": [
+                {"type": "video/mp4", "width": 720, "height": 1280},
+            ]},
+        ],
+    }
+    instagram_original = deepcopy(instagram_raw)
+    instagram = map_raw_to_normalized(instagram_raw, "instagram")
+
+    assert instagram["media_list"] == [
+        {"media_id": "ig-child-no-url", "media_type": "image", "url": None},
+        {
+            "type": "video/mp4", "width": 720, "height": 1280,
+            "media_id": "ig-child-video", "media_type": "video", "url": None,
+        },
+    ]
+    assert instagram["media_list"] is not None
+    assert map_raw_to_normalized(
+        {"platform": "instagram", "media_id": "ig-post-without-media-observation"}
+    )["media_list"] is None
+    assert instagram["raw_data"] is instagram_raw
+    assert instagram_raw == instagram_original
+
+    wechat_raw = {
+        "platform": "wechat",
+        "article_id": "biz-1|mid-media-clue",
+        "images": [{"alt": "Observed chart description", "type": "image"}],
+    }
+    wechat_original = deepcopy(wechat_raw)
+    wechat = map_raw_to_normalized(wechat_raw, "wechat")
+    assert wechat["media_list"] == [
+        {"alt": "Observed chart description", "type": "image", "url": None},
+    ]
+    assert wechat["raw_data"] is wechat_raw
+    assert wechat_raw == wechat_original
+
+
+def test_wechat_image_urls_keep_alt_and_body_and_distinguish_empty_or_invalid():
+    image_url = "https://mmbiz.example.test/article/image.jpg"
+    raw = {
+        "platform": "wechat",
+        "article_id": "biz-1|mid-2|idx-1|sn-abc",
+        "url": "https://mp.weixin.qq.com/s/article-token",
+        "title": "Article title",
+        "content": "Original article body",
+        "images": [
+            {"url": image_url, "alt": "Article diagram"},
+            {"url": "   ", "alt": "Observed image description with unavailable URL"},
+            {"url": image_url, "alt": "Repeated source URL"},
+        ],
+    }
+    original = deepcopy(raw)
+
+    normalized = map_raw_to_normalized(raw, "wechat")
+
+    assert normalized["media_list"] == [
+        {"url": image_url, "alt": "Article diagram"},
+        {"url": None, "alt": "Observed image description with unavailable URL"},
+        {"url": image_url, "alt": "Repeated source URL"},
+    ]
+    assert normalized["platform_content_id"] == raw["article_id"]
+    assert normalized["url"] == raw["url"]
+    assert normalized["content"] == "Original article body"
+    assert normalized["raw_data"] is raw
+    assert raw == original
+    assert map_raw_to_normalized(
+        {"platform": "wechat", "article_id": "biz-1|mid-3", "images": []}
+    )["media_list"] == []
+    assert map_raw_to_normalized(
+        {"platform": "wechat", "article_id": "biz-1|mid-4"}
+    )["media_list"] is None
+    assert map_raw_to_normalized(
+        {"platform": "wechat", "article_id": "biz-1|mid-5", "images": [None, 3, {}, {"url": " ", "alt": "  "}]}
+    )["media_list"] is None
+
+
 def test_native_platform_without_full_mapping_uses_known_core_fields():
     raw = {
         "content_id": "rss-item-1",

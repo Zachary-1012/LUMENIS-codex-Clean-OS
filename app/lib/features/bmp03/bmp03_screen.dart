@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import '../../core/lumenis_icon.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/lumenis_core_client.dart';
@@ -337,7 +339,7 @@ class _FocusBand extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
+          LumenisIcon(
             Icons.center_focus_strong,
             size: 16,
             color: LumenisTheme.of(context).muted,

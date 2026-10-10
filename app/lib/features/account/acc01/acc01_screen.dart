@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
@@ -132,7 +134,7 @@ class _ReadyState extends StatelessWidget {
                 width: double.infinity,
                 child: FilledButton.icon(
                   onPressed: onContinue,
-                  icon: const Icon(Icons.arrow_forward_rounded),
+                  icon: const LumenisIcon(Icons.arrow_forward_rounded),
                   label: Text(
                     _copy(
                       context,
@@ -505,7 +507,7 @@ class _FailureState extends StatelessWidget {
                 const SizedBox(height: 16),
                 FilledButton.icon(
                   onPressed: onRetry,
-                  icon: const Icon(Icons.refresh),
+                  icon: const LumenisIcon(Icons.refresh),
                   label: Text(context.lumenisL10n.text('common.refresh')),
                 ),
               ],

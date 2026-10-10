@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/lumenis_icon.dart';
+
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
@@ -237,7 +239,7 @@ class _FocusLine extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Icon(Icons.insights_outlined, color: LumenisTheme.of(context).bmp),
+          LumenisIcon(Icons.insights_outlined, color: LumenisTheme.of(context).bmp),
           const SizedBox(width: 10),
           Text(
             scopeLabel,
@@ -564,7 +566,7 @@ class _ReportAction extends StatelessWidget {
         ],
         FilledButton.icon(
           onPressed: onGenerateReport,
-          icon: const Icon(Icons.assignment_outlined),
+          icon: const LumenisIcon(Icons.assignment_outlined),
           label: Text(copy.generateReport),
         ),
         const SizedBox(height: 9),

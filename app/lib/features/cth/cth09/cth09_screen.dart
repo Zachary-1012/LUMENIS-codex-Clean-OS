@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/lumenis_icon.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/lumenis_core_client.dart';
@@ -402,7 +404,7 @@ class _PageHeader extends StatelessWidget {
       IconButton(
         tooltip: copy.text('cth09.action.retry'),
         onPressed: onRetry,
-        icon: const Icon(Icons.refresh_rounded),
+        icon: const LumenisIcon(Icons.refresh_rounded),
       ),
     ],
   );
@@ -761,7 +763,7 @@ class _DecisionRow extends StatelessWidget {
                   '${decision.actionLabel} · ${copy.text('cth09.action.unavailable')}',
               child: OutlinedButton.icon(
                 onPressed: null,
-                icon: const Icon(Icons.lock_outline_rounded, size: 17),
+                icon: const LumenisIcon(Icons.lock_outline_rounded, size: 17),
                 label: Text(copy.text('cth09.action.unavailable')),
               ),
             ),

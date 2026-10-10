@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../core/transport/lumenis_http_transport.dart';
@@ -743,7 +745,7 @@ class SysPageHeader extends StatelessWidget {
           IconButton(
             tooltip: SysSystemCopy.text(context, 'sys.common.refresh'),
             onPressed: onRefresh,
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const LumenisIcon(Icons.refresh_rounded),
           ),
       ],
     );
@@ -771,7 +773,7 @@ class SysStatusBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.circle, size: 7, color: color),
+            LumenisIcon(Icons.circle, size: 7, color: color),
             const SizedBox(width: 7),
             Text(
               label,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/lumenis_icon.dart';
+
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
@@ -145,7 +147,7 @@ class _RangeLine extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Icon(Icons.public_rounded, color: LumenisTheme.of(context).bmp),
+          LumenisIcon(Icons.public_rounded, color: LumenisTheme.of(context).bmp),
           const SizedBox(width: 10),
           Text(label, style: TextStyle(color: LumenisTheme.of(context).quiet)),
           const SizedBox(width: 8),
@@ -829,13 +831,13 @@ class _ActionRail extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: () =>
                       onAction('BMP-07.add-content', 'campaign:write'),
-                  icon: const Icon(Icons.add_to_photos_outlined),
+                  icon: const LumenisIcon(Icons.add_to_photos_outlined),
                   label: Text(copy.addContent),
                 ),
                 OutlinedButton.icon(
                   onPressed: () =>
                       onAction('BMP-07.end-campaign', 'campaign:close'),
-                  icon: const Icon(Icons.stop_circle_outlined),
+                  icon: const LumenisIcon(Icons.stop_circle_outlined),
                   label: Text(copy.endCampaign),
                 ),
               ],

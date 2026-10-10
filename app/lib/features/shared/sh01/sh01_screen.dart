@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
@@ -184,7 +186,7 @@ class _Sh01ScreenState extends State<Sh01Screen> {
                     child: OutlinedButton.icon(
                       key: const Key('sh01-open-video-editor'),
                       onPressed: () => setState(() => _editing = true),
-                      icon: const Icon(Icons.video_collection_outlined),
+                      icon: const LumenisIcon(Icons.video_collection_outlined),
                       label: Text(context.lumenisL10n.text('sh01.media.open')),
                     ),
                   ),

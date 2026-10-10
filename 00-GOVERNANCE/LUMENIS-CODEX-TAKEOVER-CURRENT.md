@@ -1,5 +1,12 @@
 # 序境 / LUMENIS — Codex Takeover CURRENT
 
+## 2026-10-10 OpenAI Math v2 本次交付边界
+
+精确 v2 输入和 `fd4aeeb2ee4fc729c18d98444fed42fd0529eeeb` 原文已进入现有 Math 采用记录；16 个有限类型化计算接入现有 SourceBrief → Task → SavedWork/Artifact，而不是另建候选产品。真实来源 scope/rights 与声明数学情景分开，无 AI 可计算、保存、父版本修订、导出与重开。编译/静态结果、正式证明、用户操作与模型收益各自记账。
+
+产品 API 的实际 v1/v2、幂等读回、JSON 导出与跨域拒绝已有本机回执；Web 的 ACK 超时已定位并修复为有界等待及原任务重开，界面与证明最终状态以现有 Math 采用记录为准。整轮 SYSTEM、九项完整主算法、四端及 gpt-oss 模型增强仍不得宣称关闭。私人原帖/平台会话/实验数据/WSL 工具缓存不提交。已有其他 dirty 工作保留；本次授权不启停其他窗口。
+
+
 > Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 > 2026-10-09 五轮治理规则已发布；产品交付唯一为 SYSTEM → CTH → BMP → Shared → Agent Groups / 自研 AI。C1–C6/F/M/W1–W6 保留工程源码责任，不是六轮产品或单窗口调度限制。
 > Product Owner 决定当前窗口开工/暂停/恢复、模型和推理档位。这里只记录有时间和来源的事实，未知为 NOT_VERIFIED；历史暂停、恢复条件和默认无现行调度效力。治理发布不启动窗口；后续源码授权按下面明确范围执行。

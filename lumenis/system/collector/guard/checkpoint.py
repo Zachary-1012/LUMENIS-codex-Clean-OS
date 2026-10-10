@@ -5,8 +5,10 @@
 只存 ID/时间等元数据，不存正文隐私内容。"""
 import json
 import os
+import re
 import threading
 import time
+from copy import deepcopy
 
 from lumenis.shared.database.registry import get_data_dir
 
@@ -38,8 +40,9 @@ class Checkpoint:
             with open(tmp, 'w', encoding='utf-8') as f:
                 json.dump(self._data, f, ensure_ascii=False)
             os.replace(tmp, self.path)
+            return True
         except Exception:
-            pass  # 断点只影响效率，绝不因落盘失败阻断采集
+            return False  # 断点只影响效率，绝不因落盘失败阻断采集
 
     def _kw(self, keyword):
         with self._lock:
@@ -62,7 +65,20 @@ class Checkpoint:
                 k['scroll_index'] = int(scroll_index)
             if note_ids:
                 k['last_note_id'] = note_ids[-1]
-            self._save()
+            return self._save()
+
+    def seen_ids(self, keyword):
+        """Return an immutable snapshot of the IDs already recorded for a key."""
+        if not isinstance(keyword, str) or not keyword:
+            return ()
+        with self._lock:
+            entry = self._data.get('keywords', {}).get(keyword)
+            if not isinstance(entry, dict):
+                return ()
+            seen = entry.get('seen', ())
+            if not isinstance(seen, (list, tuple)):
+                return ()
+            return tuple(note_id for note_id in seen if isinstance(note_id, str))
 
     def filter_new(self, keyword, note_ids):
         with self._lock:
@@ -79,6 +95,79 @@ class Checkpoint:
             else:
                 self._data['keywords'] = {}
             self._save()
+
+    @staticmethod
+    def _valid_task_binding(task_binding):
+        return (isinstance(task_binding, str)
+                and re.fullmatch(r'[0-9a-f]{64}', task_binding) is not None)
+
+    def get_operational_resume(self, keyword, task_binding):
+        """Return only this exact task/query's private raw-checkpoint descriptor."""
+        if not isinstance(keyword, str) or not keyword or not self._valid_task_binding(task_binding):
+            return None
+        with self._lock:
+            entry = self._data.get('keywords', {}).get(keyword)
+            if not isinstance(entry, dict):
+                return None
+            descriptors = entry.get('operational_resume')
+            if not isinstance(descriptors, dict):
+                return None
+            descriptor = descriptors.get(task_binding)
+            return deepcopy(descriptor) if isinstance(descriptor, dict) else None
+
+    def save_operational_resume(self, keyword, task_binding, descriptor):
+        """Persist a bounded metadata-only continuation pointer, never note content."""
+        if (not isinstance(keyword, str) or not keyword
+                or not self._valid_task_binding(task_binding)
+                or not isinstance(descriptor, dict)):
+            return False
+        pending_ids = descriptor.get('pending_note_ids')
+        if (descriptor.get('task_binding') != task_binding
+                or descriptor.get('keyword') != keyword
+                or descriptor.get('source_host') != 'www.rednote.com'
+                or not isinstance(descriptor.get('raw_path'), str)
+                or not isinstance(descriptor.get('raw_sha256'), str)
+                or re.fullmatch(r'[0-9a-f]{64}', descriptor['raw_sha256']) is None
+                or not isinstance(descriptor.get('identity_fingerprint'), str)
+                or re.fullmatch(r'[0-9a-f]{64}', descriptor['identity_fingerprint']) is None
+                or not isinstance(descriptor.get('run_id'), str)
+                or not descriptor['run_id']
+                or not isinstance(pending_ids, list)
+                or any(not isinstance(note_id, str)
+                       or re.fullmatch(r'[0-9a-fA-F]{24}', note_id) is None
+                       for note_id in pending_ids)
+                or type(descriptor.get('complete')) is not bool
+                or type(descriptor.get('terminal_error')) is not bool
+                or type(descriptor.get('continuation_required')) is not bool
+                or (descriptor.get('pagination_exhausted') is not False
+                    and descriptor.get('pagination_exhausted') is not None)
+                or (descriptor.get('captured_at') is not None
+                    and (not isinstance(descriptor.get('captured_at'), str)
+                         or len(descriptor['captured_at']) > 80))):
+            return False
+        safe = {
+            'task_binding': task_binding,
+            'keyword': keyword,
+            'source_host': 'www.rednote.com',
+            'identity_fingerprint': descriptor['identity_fingerprint'],
+            'raw_path': descriptor['raw_path'],
+            'raw_sha256': descriptor['raw_sha256'],
+            'run_id': descriptor['run_id'],
+            'complete': descriptor['complete'],
+            'terminal_error': descriptor['terminal_error'],
+            'pending_note_ids': list(pending_ids),
+            'pagination_exhausted': False,
+            'continuation_required': descriptor['continuation_required'],
+            'captured_at': descriptor.get('captured_at'),
+            'updated_at': time.time(),
+        }
+        with self._lock:
+            entry = self._kw(keyword)
+            descriptors = entry.setdefault('operational_resume', {})
+            if not isinstance(descriptors, dict):
+                return False
+            descriptors[task_binding] = safe
+            return self._save()
 
 
 def re_safe(name):

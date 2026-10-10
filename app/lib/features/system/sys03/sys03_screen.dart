@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../sys02/sys_system_foundation.dart';
@@ -367,7 +369,7 @@ class _ChainStage extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
+        LumenisIcon(
           Icons.radio_button_checked_rounded,
           color: sysStatusColor(stage.state, palette: LumenisTheme.of(context)),
           size: 26,

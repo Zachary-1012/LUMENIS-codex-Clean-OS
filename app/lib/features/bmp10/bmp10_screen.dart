@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/lumenis_icon.dart';
+
 import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
@@ -241,7 +243,7 @@ class _FocusLine extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Icon(Icons.shield_outlined, color: LumenisTheme.of(context).bmp),
+          LumenisIcon(Icons.shield_outlined, color: LumenisTheme.of(context).bmp),
           const SizedBox(width: 10),
           Text(
             scopeLabel,
@@ -434,7 +436,7 @@ class _EventRow extends StatelessWidget {
           width: 22,
           child: Column(
             children: [
-              Icon(Icons.circle, size: 9, color: LumenisTheme.of(context).bmp),
+              LumenisIcon(Icons.circle, size: 9, color: LumenisTheme.of(context).bmp),
               if (!last)
                 Expanded(
                   child: VerticalDivider(
@@ -599,13 +601,13 @@ class _ActionRail extends StatelessWidget {
           children: [
             FilledButton.icon(
               onPressed: () => onAction('BMP-10.hold-creator', 'creator:hold'),
-              icon: const Icon(Icons.pause_circle_outline_rounded),
+              icon: const LumenisIcon(Icons.pause_circle_outline_rounded),
               label: Text(copy.holdCreator),
             ),
             OutlinedButton.icon(
               onPressed: () =>
                   onAction('BMP-10.draft-response', 'response:draft'),
-              icon: const Icon(Icons.edit_note_rounded),
+              icon: const LumenisIcon(Icons.edit_note_rounded),
               label: Text(copy.draftResponse),
             ),
           ],

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/lumenis_icon.dart';
+
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
@@ -128,7 +130,7 @@ class _Workspace extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: OutlinedButton.icon(
                     onPressed: viewModel.refresh,
-                    icon: const Icon(Icons.refresh_rounded),
+                    icon: const LumenisIcon(Icons.refresh_rounded),
                     label: Text(_copy(context, '重新读取', 'Read again', '다시 읽기')),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(48, 48),
@@ -202,7 +204,7 @@ class _ScopeBanner extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
+            LumenisIcon(
               Icons.tune_rounded,
               color: LumenisTheme.of(context).system,
               size: 19,
@@ -249,7 +251,7 @@ class _MetricNavigator extends StatelessWidget {
           onChanged: viewModel.setQuery,
           decoration: InputDecoration(
             labelText: _copy(context, '搜索指标', 'Search metrics', '지표 검색'),
-            prefixIcon: const Icon(Icons.search_rounded),
+            prefixIcon: const LumenisIcon(Icons.search_rounded),
             border: const OutlineInputBorder(),
           ),
         ),
@@ -329,7 +331,7 @@ class _MetricRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(
+              LumenisIcon(
                 Icons.chevron_right_rounded,
                 color: LumenisTheme.of(context).quiet,
                 size: 18,

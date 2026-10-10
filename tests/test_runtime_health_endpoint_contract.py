@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 from unittest.mock import patch
 from pathlib import Path
@@ -49,6 +50,7 @@ def test_healthz_requires_existing_canonical_notes_schema_and_read_only_connecti
         'dependencies': {'database': 'ok'},
         'version': product_core.APP_VERSION,
         'service': 'lumenis-core',
+        'core_instance': dict(product_core._CORE_INSTANCE),
     }
     assert repository.options == {'read_only': True, 'wal': False}
     assert repository.connection_value.sql == (
@@ -120,3 +122,55 @@ def test_supervisor_rejects_non_200_and_incomplete_or_unhealthy_payloads():
     for status, payload, expected in cases:
         with patch.object(run_supervised.urllib.request, 'urlopen', return_value=_HTTPResponse(status, payload)):
             assert run_supervised.http_health(8201) is expected
+
+
+def test_core_entry_identity_is_frozen_and_rejects_a_changed_startup_target(tmp_path):
+    import pytest
+
+    entry = tmp_path / 'app.py'
+    original = b'print("original")\n'
+    entry.write_bytes(original)
+    expected = hashlib.sha256(original).hexdigest()
+    identity = product_core._core_instance_identity(entry, {
+        'LUMENIS_CORE_LAUNCH_ID': 'a' * 32,
+        'LUMENIS_CORE_BOOT_ID': 'b' * 32,
+        'LUMENIS_CORE_ENTRY_SHA256': expected,
+    })
+    assert dict(identity) == {
+        'launch_id': 'a' * 32,
+        'boot_id': 'b' * 32,
+        'entry_sha256': expected,
+    }
+    entry.write_bytes(b'print("changed")\n')
+    assert identity['entry_sha256'] == expected
+    with pytest.raises(TypeError):
+        identity['entry_sha256'] = 'c' * 64
+    with pytest.raises(RuntimeError, match='does not match'):
+        product_core._core_instance_identity(entry, {'LUMENIS_CORE_ENTRY_SHA256': expected})
+
+
+def test_core_entry_identity_rejects_malformed_attempt_identifiers(tmp_path):
+    import pytest
+
+    entry = tmp_path / 'app.py'
+    entry.write_bytes(b'pass\n')
+    for field in ('LUMENIS_CORE_LAUNCH_ID', 'LUMENIS_CORE_BOOT_ID'):
+        with pytest.raises(RuntimeError, match='Invalid Core startup'):
+            product_core._core_instance_identity(entry, {field: 'invalid/private/path'})
+
+
+def test_supervisor_health_is_bound_to_current_launch_boot_and_entry():
+    identity = {'launch_id': 'a' * 32, 'boot_id': 'b' * 32, 'entry_sha256': 'c' * 64}
+    expected = {
+        'expected_launch_id': identity['launch_id'],
+        'expected_boot_id': identity['boot_id'],
+        'expected_entry_sha256': identity['entry_sha256'],
+    }
+    healthy = {'ok': True, 'status': 'healthy', 'dependencies': {'database': 'ok'}}
+    cases = [({}, False), (identity, True)]
+    for field in identity:
+        cases.append(({**identity, field: 'd' * len(identity[field])}, False))
+    for observed, accepted in cases:
+        payload = {**healthy, 'core_instance': observed}
+        with patch.object(run_supervised.urllib.request, 'urlopen', return_value=_HTTPResponse(200, payload)):
+            assert run_supervised.http_health(8201, **expected) is accepted

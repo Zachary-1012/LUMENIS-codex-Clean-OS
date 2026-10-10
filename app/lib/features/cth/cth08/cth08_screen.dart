@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/lumenis_icon.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/lumenis_core_client.dart';
@@ -404,7 +406,7 @@ class _PageHeader extends StatelessWidget {
               label: copy.text('cth08.action.unavailable'),
               child: FilledButton.icon(
                 onPressed: null,
-                icon: const Icon(Icons.add_rounded),
+                icon: const LumenisIcon(Icons.add_rounded),
                 label: Text(copy.text('cth08.action.new_case')),
               ),
             ),
@@ -413,7 +415,7 @@ class _PageHeader extends StatelessWidget {
           IconButton(
             tooltip: copy.text('cth08.action.retry'),
             onPressed: onRetry,
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const LumenisIcon(Icons.refresh_rounded),
           ),
         ],
       ),
@@ -445,7 +447,7 @@ class _ScopeBanner extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
+            LumenisIcon(
               Icons.adjust_rounded,
               size: 17,
               color: LumenisTheme.of(context).cth,

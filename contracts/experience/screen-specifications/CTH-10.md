@@ -1,5 +1,12 @@
 # CTH-10 — 报告与运营简报工作台
 
+## 2026-10-10 v2 数学情景增补（完整屏幕仍未 ACCEPTED）
+
+既有来源简报增加「数学分析与方案比较」：用户声明真实用途、对象/位置和对数权重；高级模式只接受当前 16 个类型化 operation 及明确参数/变量含义。范围来自服务端当前 context 和已保存 SourceBrief，不由客户端猜测。数值配对概率注明是声明情景，不代表真实市场发生率；完整计算、论文适用范围与数值/精确限制可展开查看。
+
+计算通过既有 `/api/ai/tasks` 正式 Task、Permission 和 Shared Artifact 事务保存。修订带精确父 Artifact，旧成果保留；同请求重试不得重复创建。成功必须 independently read back committed owner receipt；失败/ACK 丢失保留任务编号并提供「重新打开此数学任务」，不靠重新整理来源或重新计算恢复。执行等待最多 60 秒，读回最多 30 秒，超时不是失败终态证明。刷新/离开后通过已有编号重开；scope 变化立即清除当前结果，跨域读取仍拒绝。中/英/韩文本与可访问控件随源码更新，采用原 Experience，无独立设计稿前置。全周报/报告目录及完整屏幕仍 OPEN。
+
+
 ```yaml
 screen_id: CTH-10
 status: BLOCKED
