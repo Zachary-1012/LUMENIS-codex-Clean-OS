@@ -1,5 +1,9 @@
 # LUMENIS Product Architecture — CURRENT
 
+## 2026-10-10 Product Owner amendment — testing reinstated
+
+Unit tests and integration tests are authorized again for defect reproduction and regression verification. Earlier 2026-10-08 prohibitions against creating, running or requiring these test types, including statements retained below for historical provenance, are **SUPERSEDED**. These tests are engineering evidence, not substitutes for real end-to-end user acceptance, running-service verification, production data, or user outcomes. Testing authorization does not authorize live collection, external model calls, GPU training, spending, deployment, or destructive database operations.
+
 ## 五轮架构产品闭环 — 2026-10-09 Product Owner 直接批准
 
 这是唯一产品交付轮次；C1–C6/W1–W6 是保留的工程源码职责，不是六轮产品交付，
