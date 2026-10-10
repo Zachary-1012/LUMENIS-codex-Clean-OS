@@ -6,6 +6,7 @@ on:
       - .github/workflows/current-code-audit-20261010.yml
       - scripts/audit_tools/current_code_inventory_20261010.py
       - scripts/audit_tools/current_code_probes_20261010.py
+      - scripts/audit_tools/current_security_probes_20261010.py
 permissions:
   contents: write
 concurrency:
@@ -40,6 +41,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -I control/scripts/audit_tools/current_code_probes_20261010.py source control/00-GOVERNANCE/evidence/round-15/audit-20261010-current
+          python3 -I control/scripts/audit_tools/current_security_probes_20261010.py source control/00-GOVERNANCE/evidence/round-15/audit-20261010-current
       - name: Preserve sanitized audit ledger on audit branch only
         shell: bash
         working-directory: control
@@ -50,5 +52,5 @@ jobs:
           git config user.email 'lumenis-audit@users.noreply.github.com'
           git add -- 00-GOVERNANCE/evidence/round-15/audit-20261010-current
           git diff --cached --check
-          git commit -m 'audit: record full-source traversal and exact-function mechanisms; not E2E'
+          git commit -m 'audit: record full-source traversal and isolated mechanisms; not E2E'
           git push origin HEAD:refs/heads/audit/20261010-current-code-convergence
