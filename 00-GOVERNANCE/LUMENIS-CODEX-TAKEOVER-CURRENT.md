@@ -924,3 +924,13 @@ remain protected. That dated update changed no product runtime or DB and is not 
 ### 本批追加：合法未知发布时间的等价表示
 
 真实文档导入将未知 `publish_datetime` 存为 `""`，签名来源记录为 `None`。BusinessBrief原先逐字比较使这种合法未知提前被拒绝。本批只统一这两种未知表示，不补造时间，不将0、False、空格或任意日期视为合法等价。相关Typed Owned单元/集成回归使用合成Gateway响应；不声明实际模型推理质量或部署可用。
+
+## 2026-10-10 resumed branch verification
+
+The repair candidate is published on `repair/20261010-truth-chain-and-governance`.
+Current review repaired README's ordered bootstrap and bilingual domain definitions,
+retained the unit-versus-E2E warning, and made the constitution validator consume
+machine `verification_policy.run_unit_integration_allowed` instead of an obsolete
+unconditional ban. All other constitution, source, permission and release guards
+remain blocking. Static and regression verification are rerun; branch publication
+is not main integration, runtime deployment, or full-product closure.

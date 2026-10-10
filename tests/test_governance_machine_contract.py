@@ -97,5 +97,58 @@ class GovernanceMachineSemanticTests(unittest.TestCase):
             validate_model_routing(changed)
 
 
+class ConstitutionTestAuthorizationTests(unittest.TestCase):
+    """Run the real validator against an isolated copy of its declared inputs."""
+
+    def _check(self, allowed):
+        import json
+        from pathlib import Path
+        import shutil
+        import subprocess
+        import sys
+        import tempfile
+        root = CONTRACT_PATH.parents[1]
+        paths = [
+            "AGENTS.md", "README.md",
+            "00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md",
+            "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+            "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
+            ".github/workflows/platform-verify.yml", ".github/workflows/app-verify.yml",
+            "tests/test_report_audit.py", "tests/CI_TEST_TIERS.md",
+            "scripts/audit_tools/verify_ai_native_constitution.py",
+        ]
+        with tempfile.TemporaryDirectory(prefix="lumenis-policy-regression-") as directory:
+            target = Path(directory)
+            for relative in paths:
+                dest = target / relative
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(root / relative, dest)
+            machine_path = target / "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json"
+            machine = json.loads(machine_path.read_text(encoding="utf-8"))
+            machine["verification_policy"]["run_unit_integration_allowed"] = allowed
+            machine_path.write_text(json.dumps(machine), encoding="utf-8")
+            workflow = target / ".github/workflows/platform-verify.yml"
+            with workflow.open("a", encoding="utf-8") as out:
+                out.write("\n      - name: isolated test command fixture\n        run: python -m pytest tests/example.py\n")
+            return subprocess.run(
+                [sys.executable, "-I", "-X", "utf8", str(target / paths[-1])],
+                cwd=target, capture_output=True, text=True, encoding="utf-8", timeout=20,
+            )
+
+    def test_restored_authorization_allows_explicit_unit_command(self):
+        result = self._check(True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_explicitly_revoked_authorization_blocks_unit_command(self):
+        result = self._check(False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("suite execution violates", result.stdout)
+
+    def test_malformed_machine_authorization_is_not_treated_as_grant(self):
+        result = self._check("true")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing or invalid machine contract", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

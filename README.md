@@ -22,6 +22,11 @@ Android and Linux native clients are not active delivery targets. Linux remains 
 
 ## Architecture
 
+**CTH · 商业运营** is Subject-first: place, events, risk and operating decisions.
+**BMP · 品牌市场** is Brand/Market-first: brands, creators, propagation and campaigns.
+The **Shared Capability** layer supplies evidence, research, creation and saved work;
+SYSTEM supplies their single runtime and permission boundaries.
+
 ```text
 Public Website / Web Workspace / Desktop / Mobile
                        |
@@ -69,6 +74,17 @@ Areas requiring independent product-level verification include:
 These are **audit and verification areas**, not a statement that every affected path is currently failing. Consult the current source and reproducible evidence before assigning severity or declaring a fix.
 
 ## Repository guide
+
+Contributor reading order (execution authority remains in AGENTS.md):
+
+```text
+AGENTS.md
+→ 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
+→ 00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md
+→ 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md
+→ 00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md
+→ the current owner, source and acceptance evidence
+```
 
 | Path | Purpose |
 | --- | --- |

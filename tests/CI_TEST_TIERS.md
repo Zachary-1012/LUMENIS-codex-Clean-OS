@@ -35,3 +35,5 @@ not repair an observed product defect; reproduce and repair the actual user
 failure through the existing owner and real product operation.
 
 Use explicit reviewed regression selections. Do not expand quarantine or weaken assertions to obtain green; no artificial coverage quota is required. The prior policy is preserved in Git history, including b90fce808959de09e889ed178973a49f0fa8148d.
+
+Renaming module suites does not make them real user E2E.
