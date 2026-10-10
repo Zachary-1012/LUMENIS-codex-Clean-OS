@@ -1,0 +1,32 @@
+name: Rectification source snapshot
+
+on:
+  push:
+    branches: [repair/product-closure-20261010]
+    paths: [.github/workflows/rectification-source-snapshot.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  source-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Export tracked source without executing product code
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/rectification-source"
+          git rev-parse HEAD > "$RUNNER_TEMP/rectification-source/commit.txt"
+          git ls-tree -rz HEAD > "$RUNNER_TEMP/rectification-source/tree.bin"
+          git ls-files -z | python3 -c 'import pathlib, subprocess, sys, tarfile; paths=sys.stdin.buffer.read().decode().split("\0"); out=pathlib.Path(sys.argv[1]); suffixes={".ttf", ".otf", ".woff", ".woff2", ".jar", ".png", ".jpg", ".jpeg", ".pdf", ".docx", ".xlsx", ".pptx"}; t=tarfile.open(out,"w:gz"); [t.add(p,arcname=p,recursive=False) for p in paths if p and pathlib.Path(p).is_file() and pathlib.Path(p).suffix.lower() not in suffixes]; t.close()' "$RUNNER_TEMP/rectification-source/source.tar.gz"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rectification-source
+          path: ${{ runner.temp }}/rectification-source/
+          retention-days: 2
+          if-no-files-found: error
