@@ -1,0 +1,55 @@
+name: Native Dart function behavior audit
+on:
+  push:
+    branches: [audit/20261010-current-code-convergence]
+    paths:
+      - .github/workflows/dart-function-review-20261011.yml
+      - scripts/audit_tools/dart_semantic_ir_20261011.dart
+permissions:
+  contents: read
+jobs:
+  dart-audit:
+    if: github.repository == 'Zachary-1012/LUMENIS-codex-Clean-OS' && github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: control
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          path: source
+          ref: 01588e9fd9568e3fcaf1e6c3d957bc498436fa48
+          persist-credentials: false
+      - name: Install the source-declared SDK for parser-only analysis
+        timeout-minutes: 6
+        shell: bash
+        run: |
+          set -euo pipefail
+          v="$(python3 -c "import json;print(json.load(open('source/app/toolchain.json'))['flutter_version'])")"
+          git clone --depth 1 --branch "$v" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter-audit"
+          echo "$RUNNER_TEMP/flutter-audit/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/flutter-audit/bin/dart" --version
+      - name: Resolve audit parser outside the product
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          mkdir -p parser/bin output
+          printf 'name: lumenis_audit_parser\nenvironment:\n  sdk: ">=3.12.0 <4.0.0"\ndependencies:\n  analyzer: any\n' > parser/pubspec.yaml
+          cp control/scripts/audit_tools/dart_semantic_ir_20261011.dart parser/bin/audit.dart
+          cd parser
+          dart pub get
+      - name: Extract every Dart function body, not product acceptance
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          cd parser
+          dart run bin/audit.dart ../source ../output/dart-native-functions.json
+          cp pubspec.lock ../output/audit-parser-pubspec.lock
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dart-native-function-ir-01588e9f
+          path: output/*
+          retention-days: 3
+          if-no-files-found: error
