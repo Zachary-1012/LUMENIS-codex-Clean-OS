@@ -572,6 +572,9 @@ class _CoreStub {
         ..headers.set('X-LUMENIS-Page-Revision', '1')
         ..headers.set('X-LUMENIS-Captured-At', '2026-10-05T10:00:00Z')
         ..headers.set('X-LUMENIS-Frame-Width', '1')
+        ..headers.set('X-LUMENIS-Viewport-Width', '1280')
+        ..headers.set('X-LUMENIS-Viewport-Height', '720')
+        ..headers.set('X-LUMENIS-Viewport-DPR', '1')
         ..headers.set('X-LUMENIS-Frame-Height', '1')
         ..add(_browserPng);
       await request.response.close();
