@@ -50,7 +50,7 @@ def load_json(path: Path) -> dict:
 
 def changed_paths() -> set[str]:
     proc = subprocess.run(
-        ["git", "diff-tree", "--root", "--first-parent", "--no-commit-id", "--name-only", "-r", "HEAD"],
+        ["git", "diff-tree", "--root", "--first-parent", "--diff-merges=first-parent", "--no-commit-id", "--name-only", "-r", "HEAD"],
         cwd=ROOT,
         capture_output=True,
         text=True,

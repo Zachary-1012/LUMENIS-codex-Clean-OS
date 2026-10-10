@@ -934,3 +934,13 @@ machine `verification_policy.run_unit_integration_allowed` instead of an obsolet
 unconditional ban. All other constitution, source, permission and release guards
 remain blocking. Static and regression verification are rerun; branch publication
 is not main integration, runtime deployment, or full-product closure.
+
+### PR merge-aware publication checks
+
+PR #10 exposed a real execution-policy gap: `git diff-tree --first-parent`
+without an explicit merge-diff mode returned no paths for GitHub's merge commit.
+Both publication validators now request `--diff-merges=first-parent`, so the
+entire reviewed batch is compared to target main; CURRENT and PO receipt guards
+remain effective. Real temporary Git merge regressions cover both valid
+co-publication and rejection of a product merge missing CURRENT. The initial
+failed GitHub run is retained; it is not a product acceptance failure or a pass.

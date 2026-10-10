@@ -150,5 +150,60 @@ class ConstitutionTestAuthorizationTests(unittest.TestCase):
         self.assertIn("missing or invalid machine contract", result.stdout)
 
 
+class PublicationMergeDiffTests(unittest.TestCase):
+    """Exercise actual divergent Git merges, not fabricated changed-path lists."""
+
+    def _exercise(self, include_current):
+        from pathlib import Path
+        import subprocess
+        import tempfile
+        from unittest.mock import patch
+        import scripts.audit_tools.verify_governance_machine_contract as machine
+        import scripts.audit_tools.verify_codex_takeover_governance as takeover
+        current = "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md"
+        with tempfile.TemporaryDirectory(prefix="lumenis-merge-regression-") as folder:
+            root = Path(folder)
+            def git(*args):
+                result = subprocess.run(["git", "-C", str(root), *args],
+                    capture_output=True, text=True, encoding="utf-8", timeout=15)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                return result.stdout
+            git("init", "-q", "--initial-branch=main")
+            git("config", "user.name", "Isolated merge regression")
+            git("config", "user.email", "test@example.invalid")
+            git("config", "commit.gpgsign", "false")
+            (root/"seed.txt").write_text("base", encoding="utf-8")
+            git("add", "seed.txt")
+            git("commit", "-qm", "initial")
+            git("switch", "-qc", "repair")
+            (root/"business.py").write_text("value = 1\n", encoding="utf-8")
+            git("add", "business.py")
+            if include_current:
+                (root/current).parent.mkdir(parents=True, exist_ok=True)
+                (root/current).write_text("current evidence", encoding="utf-8")
+                git("add", current)
+            git("commit", "-qm", "repair")
+            git("switch", "-q", "main")
+            (root/"unrelated.txt").write_text("main-only", encoding="utf-8")
+            git("add", "unrelated.txt")
+            git("commit", "-qm", "main advances independently")
+            git("merge", "--no-ff", "-qm", "reviewed merge", "repair")
+            with patch.object(machine, "ROOT", root), patch.object(takeover, "ROOT", root):
+                paths = machine.changed_paths()
+                self.assertEqual(paths, takeover._publication_changed_paths())
+            expected = {"business.py", current} if include_current else {"business.py"}
+            self.assertEqual(paths, expected)
+            return paths
+
+    def test_complete_merge_is_checked_against_first_parent(self):
+        paths = self._exercise(True)
+        validate_publication_policy(load_json(CONTRACT_PATH), paths)
+
+    def test_merge_without_current_is_still_rejected(self):
+        paths = self._exercise(False)
+        with self.assertRaisesRegex(AssertionError, "CURRENT co-publication"):
+            validate_publication_policy(load_json(CONTRACT_PATH), paths)
+
+
 if __name__ == "__main__":
     unittest.main()

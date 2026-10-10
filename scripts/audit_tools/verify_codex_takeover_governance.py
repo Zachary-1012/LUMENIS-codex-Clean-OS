@@ -169,7 +169,7 @@ CURRENT_RUNTIME_STATES = {"NOT_LOADED_OR_NOT_VERIFIED", "LOADED_AND_VERIFIED"}
 
 def _publication_changed_paths(*, staged: bool = False) -> set[str]:
     command = (["git", "diff", "--cached", "--name-only", "HEAD"] if staged else
-               ["git", "diff-tree", "--root", "--first-parent", "--no-commit-id", "--name-only", "-r", "HEAD"])
+               ["git", "diff-tree", "--root", "--first-parent", "--diff-merges=first-parent", "--no-commit-id", "--name-only", "-r", "HEAD"])
     proc = subprocess.run(
         command,
         cwd=ROOT,
