@@ -43,13 +43,15 @@ shared-write reservations and real acceptance remain binding.
 
 ### Retained verification policy and C1 source responsibility (not dispatch)
 
-The latest direct Product Owner instruction formally removes unit and integration
-tests from mandatory development, merge, acceptance and release conditions.
-Do not create or execute module-level automated tests, including renamed contract,
-functional or scenario suites; do not pursue test coverage or relabel the same
-tests as E2E. Preserve all historical test files, assertions and failed receipts.
-Known real defects still require repair. This is an explicit policy change, not
-permission to fabricate a green result or hide defects.
+Product Owner update (2026-10-10): unit tests and integration tests are
+permitted again for targeted defect reproduction, regression verification and
+engineering quality. The previous prohibition on creating or running these
+tests is superseded. Keep unit, integration and real user E2E evidence distinct:
+a passing isolated test never proves a complete user task or production outcome.
+Preserve historical tests and receipts; use existing owners, safe isolated data,
+and the current approved source, runtime and permission boundaries.
+Do not invoke live collectors, model training, paid resources or deployment
+merely because testing is now allowed.
 
 Use real task -> existing-source repair -> build/run -> actual user operation ->
 real result -> save/revise/reopen -> recovery -> acceptance -> formal integration.
