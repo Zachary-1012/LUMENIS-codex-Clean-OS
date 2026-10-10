@@ -45,7 +45,7 @@ void main() {
     await tester.pumpWidget(_app(client));
     await tester.pumpAndSettle();
 
-    expect(find.text('经营主体信息暂不可用'), findsOneWidget);
+    expect(find.text('当前范围的信息暂不可用'), findsOneWidget);
     expect(find.textContaining('当前经营主体暂不可用'), findsOneWidget);
     expect(client.identityCalls, 0);
     expect(client.screenCalls, 0);
@@ -62,7 +62,7 @@ void main() {
     );
     await tester.pumpWidget(_app(otherProduct));
     await tester.pumpAndSettle();
-    expect(find.text('经营主体信息暂不可用'), findsOneWidget);
+    expect(find.text('当前范围的信息暂不可用'), findsOneWidget);
     expect(otherProduct.screenCalls, 0);
 
     final unbound = _ContractClient(
@@ -70,7 +70,7 @@ void main() {
     );
     await tester.pumpWidget(_app(unbound));
     await tester.pumpAndSettle();
-    expect(find.text('经营主体信息暂不可用'), findsOneWidget);
+    expect(find.text('当前范围的信息暂不可用'), findsOneWidget);
     expect(find.textContaining('页面尚未接入所选范围的数据'), findsOneWidget);
     expect(unbound.screenCalls, 1);
     expect(tester.takeException(), isNull);

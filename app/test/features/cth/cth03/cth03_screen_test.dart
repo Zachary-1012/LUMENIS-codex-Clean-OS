@@ -308,7 +308,7 @@ void main() {
       const Cth03ContextUnavailable(Cth03BlockReason.focusNotBound),
     );
     await tester.pumpAndSettle();
-    expect(find.text('经营主体信息暂不可用'), findsOneWidget);
+    expect(find.text('当前范围的信息暂不可用'), findsOneWidget);
     expect(find.text('线上服务反馈'), findsNothing);
     expect(find.textContaining('页面尚未接入所选范围的数据'), findsOneWidget);
     _expectNoInternalCopy(tester);
