@@ -50,7 +50,7 @@ def load_json(path: Path) -> dict:
 
 def changed_paths() -> set[str]:
     proc = subprocess.run(
-        ["git", "diff-tree", "--root", "--first-parent", "--no-commit-id", "--name-only", "-r", "HEAD"],
+        ["git", "diff-tree", "--root", "--first-parent", "--diff-merges=first-parent", "--no-commit-id", "--name-only", "-r", "HEAD"],
         cwd=ROOT,
         capture_output=True,
         text=True,
@@ -158,7 +158,7 @@ def validate_contract() -> dict:
     c = load_json(CONTRACT_PATH)
     if c.get("schema") != "lumenis.governance-machine-contract/v1":
         fail("unexpected governance contract schema")
-    if c.get("contract_id") != "lumenis-governance-machine" or c.get("contract_version") != "1.2.0":
+    if c.get("contract_id") != "lumenis-governance-machine" or c.get("contract_version") != "1.3.0":
         fail("unexpected governance contract identity/version")
     if c.get("status") != "ACTIVE" or c.get("scope") != "GOVERNANCE_ONLY":
         fail("governance machine contract must remain ACTIVE and GOVERNANCE_ONLY")
@@ -236,12 +236,13 @@ def validate_contract() -> dict:
     if set(gates) != {"change_gate", "owner_closure_gate", "release_gate"}:
         fail("governance requires exactly Change/Owner Closure/Release gate semantics")
     policy = c.get("verification_policy", {})
-    for key in ("unit_integration_required", "create_unit_integration_allowed",
-                "run_unit_integration_allowed", "renamed_module_suites_allowed",
-                "mock_fixture_http_success_is_acceptance", "gate_pass_is_product_closure"):
+    for key in ("unit_integration_required", "mock_fixture_http_success_is_acceptance",
+                "gate_pass_is_product_closure"):
         if policy.get(key) is not False:
             fail(f"PO verification policy drift: {key}")
-    for key in ("historical_tests_and_failures_preserved", "known_real_defects_must_be_repaired"):
+    for key in ("create_unit_integration_allowed", "run_unit_integration_allowed",
+                "renamed_module_suites_allowed", "affected_regressions_required",
+                "historical_tests_and_failures_preserved", "known_real_defects_must_be_repaired"):
         if policy.get(key) is not True:
             fail(f"verification integrity missing: {key}")
     required_checks = {"compilation", "static_quality", "security_permission", "data_consistency",
@@ -252,7 +253,7 @@ def validate_contract() -> dict:
     if receipt.get("approved_by") != "Product Owner" or receipt.get("status") != "APPROVED":
         fail("verification policy lacks actual PO receipt")
     requirements = set(gates["change_gate"].get("requires", []))
-    if "affected_tests" in requirements or not {
+    if "affected_tests" not in requirements or not {
         "applicable_build_static_security_data_checks", "applicable_real_operation_evidence",
         "mandatory_blocking_guards"}.issubset(requirements):
         fail("Change Gate does not implement current real-outcome policy")
@@ -283,8 +284,18 @@ def validate_contract() -> dict:
         fail("unexpected branch-governance phase")
     if branch.get("platform_branch_protection_required_now") is not False:
         fail("pre-beta closure should not silently force PR/branch-protection workflow")
-    if branch.get("direct_main_allowed") is not True or branch.get("force_push_allowed") is not False:
-        fail("current direct-main/no-force-push policy drift")
+    if branch.get("direct_main_allowed") is not False or branch.get("force_push_allowed") is not False:
+        fail("reviewed branch integration/no-force-push policy drift")
+    for key in ("working_branches_allowed", "pull_requests_allowed", "merge_requires_current_head_review"):
+        if branch.get(key) is not True:
+            fail(f"PO branch authorization missing: {key}")
+    if branch.get("default_workflow") != "BRANCH_VERIFY_REVIEW_MERGE_MAIN":
+        fail("branch verification/review/merge workflow drift")
+    if branch.get("active_branch_auto_cleanup_allowed") is not False:
+        fail("active branches may not be deleted automatically")
+    branch_receipt = load_json(ROOT / branch["approval_receipt"])
+    if branch_receipt.get("status") != "APPROVED" or branch_receipt.get("approved_by") != "Product Owner":
+        fail("branch workflow lacks PO approval receipt")
     if branch.get("harden_at") != "INTERNAL_BETA_ENTRY":
         fail("branch hardening trigger drift")
 

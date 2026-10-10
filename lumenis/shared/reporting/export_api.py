@@ -110,19 +110,12 @@ def filter_notes_by_period(period, date_str=None, require_negative_confirmed=Fal
             end = datetime.strptime(end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
         except ValueError:
             pass
-    conn = get_db()
-    c = conn.cursor()
-
-    # 基础查询（ZBC Phase 9: 强制主体过滤，与 database._verified_base 同口径）
-    try:
-        from subject_rules import subject_sql_and_values
-        _clause, _sp = subject_sql_and_values()
-        query = f"SELECT * FROM notes WHERE is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_clause}"
-        params = list(_sp)
-    except Exception:
-        # subject_rules 不可用时退化为 verified 过滤（仍比全表扫描安全）
-        query = "SELECT * FROM notes WHERE is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant'"
-        params = []
+    from subject_rules import subject_sql_and_values
+    _clause, _sp = subject_sql_and_values()
+    if not isinstance(_clause, str) or not _clause.strip():
+        raise PermissionError("EXPORT_SOURCE_SCOPE_UNAVAILABLE")
+    query = f"SELECT * FROM notes WHERE is_taikoo_verified=1 AND COALESCE(relevance_status,'relevant')!='irrelevant' AND {_clause}"
+    params = list(_sp)
 
     # 显式自定义范围 或 非日报周期：按发布日期落在区间
     if start_date or end_date or period != 'daily':
@@ -140,10 +133,11 @@ def filter_notes_by_period(period, date_str=None, require_negative_confirmed=Fal
 
     query += " ORDER BY collected_at DESC"
 
-    c.execute(query, params)
-    notes = [dict(row) for row in c.fetchall()]
-    conn.close()
-
+    conn = get_db()
+    try:
+        notes = [dict(row) for row in conn.execute(query, params).fetchall()]
+    finally:
+        conn.close()
     return notes, start, end
 
 

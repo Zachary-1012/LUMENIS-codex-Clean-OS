@@ -21,7 +21,7 @@ class GovernanceMachineSemanticTests(unittest.TestCase):
 
     def test_current_machine_contract_and_structured_model_routing_validate(self) -> None:
         contract = validate_contract()
-        self.assertEqual(contract["contract_version"], "1.1.0")
+        self.assertEqual(contract["contract_version"], "1.3.0")
         validate_model_routing(contract)
         validate_approval_receipts(contract)
 
@@ -95,6 +95,114 @@ class GovernanceMachineSemanticTests(unittest.TestCase):
         changed["model_routing"]["role_defaults"]["C2"]["model"] = "invalid-model"
         with self.assertRaisesRegex(AssertionError, "C2"):
             validate_model_routing(changed)
+
+
+class ConstitutionTestAuthorizationTests(unittest.TestCase):
+    """Run the real validator against an isolated copy of its declared inputs."""
+
+    def _check(self, allowed):
+        import json
+        from pathlib import Path
+        import shutil
+        import subprocess
+        import sys
+        import tempfile
+        root = CONTRACT_PATH.parents[1]
+        paths = [
+            "AGENTS.md", "README.md",
+            "00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md",
+            "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md",
+            "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json",
+            ".github/workflows/platform-verify.yml", ".github/workflows/app-verify.yml",
+            "tests/test_report_audit.py", "tests/CI_TEST_TIERS.md",
+            "scripts/audit_tools/verify_ai_native_constitution.py",
+        ]
+        with tempfile.TemporaryDirectory(prefix="lumenis-policy-regression-") as directory:
+            target = Path(directory)
+            for relative in paths:
+                dest = target / relative
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(root / relative, dest)
+            machine_path = target / "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json"
+            machine = json.loads(machine_path.read_text(encoding="utf-8"))
+            machine["verification_policy"]["run_unit_integration_allowed"] = allowed
+            machine_path.write_text(json.dumps(machine), encoding="utf-8")
+            workflow = target / ".github/workflows/platform-verify.yml"
+            with workflow.open("a", encoding="utf-8") as out:
+                out.write("\n      - name: isolated test command fixture\n        run: python -m pytest tests/example.py\n")
+            return subprocess.run(
+                [sys.executable, "-I", "-X", "utf8", str(target / paths[-1])],
+                cwd=target, capture_output=True, text=True, encoding="utf-8", timeout=20,
+            )
+
+    def test_restored_authorization_allows_explicit_unit_command(self):
+        result = self._check(True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_explicitly_revoked_authorization_blocks_unit_command(self):
+        result = self._check(False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("suite execution violates", result.stdout)
+
+    def test_malformed_machine_authorization_is_not_treated_as_grant(self):
+        result = self._check("true")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing or invalid machine contract", result.stdout)
+
+
+class PublicationMergeDiffTests(unittest.TestCase):
+    """Exercise actual divergent Git merges, not fabricated changed-path lists."""
+
+    def _exercise(self, include_current):
+        from pathlib import Path
+        import subprocess
+        import tempfile
+        from unittest.mock import patch
+        import scripts.audit_tools.verify_governance_machine_contract as machine
+        import scripts.audit_tools.verify_codex_takeover_governance as takeover
+        current = "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md"
+        with tempfile.TemporaryDirectory(prefix="lumenis-merge-regression-") as folder:
+            root = Path(folder)
+            def git(*args):
+                result = subprocess.run(["git", "-C", str(root), *args],
+                    capture_output=True, text=True, encoding="utf-8", timeout=15)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                return result.stdout
+            git("init", "-q", "--initial-branch=main")
+            git("config", "user.name", "Isolated merge regression")
+            git("config", "user.email", "test@example.invalid")
+            git("config", "commit.gpgsign", "false")
+            (root/"seed.txt").write_text("base", encoding="utf-8")
+            git("add", "seed.txt")
+            git("commit", "-qm", "initial")
+            git("switch", "-qc", "repair")
+            (root/"business.py").write_text("value = 1\n", encoding="utf-8")
+            git("add", "business.py")
+            if include_current:
+                (root/current).parent.mkdir(parents=True, exist_ok=True)
+                (root/current).write_text("current evidence", encoding="utf-8")
+                git("add", current)
+            git("commit", "-qm", "repair")
+            git("switch", "-q", "main")
+            (root/"unrelated.txt").write_text("main-only", encoding="utf-8")
+            git("add", "unrelated.txt")
+            git("commit", "-qm", "main advances independently")
+            git("merge", "--no-ff", "-qm", "reviewed merge", "repair")
+            with patch.object(machine, "ROOT", root), patch.object(takeover, "ROOT", root):
+                paths = machine.changed_paths()
+                self.assertEqual(paths, takeover._publication_changed_paths())
+            expected = {"business.py", current} if include_current else {"business.py"}
+            self.assertEqual(paths, expected)
+            return paths
+
+    def test_complete_merge_is_checked_against_first_parent(self):
+        paths = self._exercise(True)
+        validate_publication_policy(load_json(CONTRACT_PATH), paths)
+
+    def test_merge_without_current_is_still_rejected(self):
+        paths = self._exercise(False)
+        with self.assertRaisesRegex(AssertionError, "CURRENT co-publication"):
+            validate_publication_policy(load_json(CONTRACT_PATH), paths)
 
 
 if __name__ == "__main__":

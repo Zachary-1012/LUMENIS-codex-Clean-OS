@@ -11,7 +11,7 @@ execution instructions.
 
 ## 1. Authority
 
-**2026-10-10 PO precedence:** Unit and integration tests are reinstated. All older bans and no-execution instructions for these tests elsewhere in this file are superseded; real user E2E remains a separate mandatory outcome standard. No live collection, paid operation, training or deployment is authorized by this testing change.
+**2026-10-10 PO precedence:** Task/feature/repair branches and pull requests are permitted for all subsequent work. The default is branch -> scoped tests/review -> merge into `main`; main remains the integration and release reference, not the only writable branch. Unit and integration tests are reinstated. Historical branch/test prohibitions are superseded. Preserve unknown dirty work, source rights and all Permission/Evidence/Canonical boundaries; no force-push or automatic branch deletion. This instruction does not authorize live collection, external models, training, spending or deployment. Exact PO provenance: `00-GOVERNANCE/evidence/approvals/PO-20261010-BRANCHES-AND-TESTING.json`.
 
 
 ### 最新 PO：五轮架构交付与窗口/模型事实化 — 2026-10-09
@@ -462,7 +462,7 @@ or `BLOCKED`; product/commercial choices that belong to the Product Owner are
 
 Non-bypass red lines:
 
-- never delete, skip, weaken, quarantine or rewrite historical failures solely to obtain green; the explicit PO policy removes unit/integration execution requirements while preserving their files and known defects;
+- never delete, skip, weaken, quarantine or rewrite historical failures solely to obtain green; targeted unit/integration regression tests are restored, while historical results and known defects remain preserved;
 - never turn a blocking gate into advisory / informational or add `continue-on-error` solely to bypass a failure;
 - never convert missing/unknown/uncollected data to zero, fabricate HTTP success, or use Mock/fixture/demo data as production acceptance;
 - never bypass the current Permission, Evidence, Canonical owner, Effect Fence or approval boundary to complete a task;
@@ -484,7 +484,7 @@ Expected repository:
 Zachary-1012/LUMENIS-codex-Clean-OS
 ```
 
-`main` is the only writable development, integration and production-candidate branch.
+`main` is the canonical integration/release branch; scoped working branches are allowed and verified before merge.
 
 Start every engineering session with:
 
@@ -534,15 +534,14 @@ safe work, but do not tell an online reader that the Batch or Round is delivered
 Never bulk-stage a dirty tree to satisfy this gate: classify and protect every
 unrelated or unverified path, including credentials, Cookies and production DBs.
 
-### Single-mainline hard rules
+### Branch development and mainline integration
 
-- do not create routine task/feature/codex/production/integration/handoff/research branches;
-- do not open routine PRs as an intermediate development path;
-- do not force-push `main`;
-- historical side branches are read-only evidence only;
-- if an old branch has unique valid work, compare it once, absorb only the unique valid implementation into `main`, then continue on `main`.
-- before and after a delivery, run `git fetch origin --prune`, inspect `git branch --format="%(refname:short)"`, `git branch -r --format="%(refname:short)"`, and `git ls-remote --heads origin`; accepted inventory is exactly local `main`, `origin/main`, and live `refs/heads/main`;
-- if any side branch exists, inspect its unique commits and paths, preserve valid capability on `main`, delete only verified redundant branches, and repeat the live check; cached refs alone are not branch-cleanup evidence.
+- Create task/feature/repair branches from a freshly verified base; a working branch is not a second product.
+- Preserve unknown dirty/untracked work in the existing checkout; use an isolated worktree when needed.
+- Stage exact paths, run applicable unit/integration regressions and build/static/security checks, and review the complete diff before merging a PR into `main`.
+- Recheck the PR head, current main, required CI and conflicts before merge. Do not force-push main or use a merge to overwrite unrelated work.
+- Keep branch/source/runtime/DB/user-outcome evidence distinct. A merged repair does not establish whole-product release.
+- Branch inventories may contain active feature/repair branches; do not automatically delete them or absorb unreviewed work merely to obtain a single-branch inventory.
 
 ## 3. Execution mode
 
@@ -588,7 +587,7 @@ Before a capability change, run
 `python scripts/audit_tools/locate_capability_context.py --capability <existing-family> --query <specific-task-term>`
 or `--path <source-path> --query <specific-task-term>` for an unambiguous owner.
 Read only that pinned rule/owner/caller/contract/source/runtime/document/research
-slice and preserved historical evidence; do not run banned module tests. The
+slice and preserved historical evidence; run the applicable isolated regression tests. The
 locator cannot promote old plans/research/candidates to Production Truth. Resolve
 ambiguous ownership in `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md` first;
 record missing historical inputs without narrowing capability. Its structural
@@ -683,8 +682,8 @@ surfaces. Do not choose a minimum viable subset, tiny patch, easier substitute o
 narrower product merely to finish sooner. Execute the full owned outcome through
 the complete real user result and stop only at a genuine external blocker or a
 completed acceptance boundary. Reuse valid pinned evidence. Run applicable build/static/security/data checks and actual complete user operations.
-The formal PO ban excludes unit/integration execution even when a renamed module
-suite would have been called relevant; preserve genuine E2E and all product scope.
+Run applicable isolated unit/integration tests under the 2026-10-10 PO authorization;
+keep test types explicit and preserve genuine E2E and all product scope.
 An isolated integration copy protecting a dirty tree is not a competing product.
 Reject an incorrect approach without deleting protected data or unknown work.
 
@@ -807,8 +806,8 @@ credentials, Cookies, private sessions, browser state or a complete production
 database. Do not expose personal workstation configuration; attach only the
 exact repository rules and approved task inputs needed for the work.
 
-Cloud workers must not create a branch, open a PR, directly push main or
-deploy. They return an exact patch with its fixed base SHA, changed-file list
+Cloud workers may create scoped branches and PRs when repository access is granted;
+they must not directly push main or deploy. They return an exact patch with its fixed base SHA, changed-file list
 and hashes, diff, scoped verification, runtime evidence when applicable, and
 blockers. W6 checks the candidate base SHA, allowed scope and conflicts; applies
 it in an isolated validation workspace; runs affected regression and the local
@@ -1389,19 +1388,19 @@ current Experience and product contracts.
 
 ## 14. Real product verification policy
 
-The formal 2026-10-08 PO policy replaces the previous unit/integration progression.
-Do not create, run or require unit/integration suites, coverage quotas, Flutter
-widget test suites or equivalent renamed module checks. Historical test files,
-failure evidence and known product defects remain intact. A failing historical
-test does not block current development by itself; a real unresolved defect
-still blocks the affected useful result, safety or release requirement.
+The 2026-10-10 PO instruction restores unit, integration and widget regressions
+for safe defect reproduction and change verification. Use isolated data and
+bounded commands; inspect tests before execution for network, collection, model,
+training or deployment effects. Historical failed results remain failed until
+fresh evidence demonstrates the relevant repair. Do not delete legitimate
+assertions or rename module tests as real user E2E.
 
 Work from one real user task through existing source, build/run, actual operation,
 useful output, save/revise/reopen and recovery. Use applicable static quality,
 security, permission and data-consistency guards, and genuine full-product E2E
 with allowed real inputs. No mock, fixture, isolated service assertion, HTTP 200
-or screenshot substitutes for a complete actual result. Do not rename retired
-module suites and run them under an E2E/contract/scenario label.
+or screenshot substitutes for a complete actual result. Keep unit/integration/contract tests identified by their actual scope; do not
+relabel them as real user E2E.
 
 Change Gate checks the bounded change's applicable build/static/security/data and
 real-operation result; Owner Closure retains full mapped R/J/U, normal operation,
@@ -1500,7 +1499,7 @@ Public adapters such as ChatGPT/MCP must use allowlisted/versioned internal cont
 
 ## 20. Git discipline
 
-- `main` is the only writable development, integration and production-candidate branch;
+- use scoped branches and reviewed PRs; `main` remains the canonical integration/release branch;
 - preserve unknown/uncommitted local work before synchronizing;
 - use coherent-purpose commits;
 - do not force-push `main`;

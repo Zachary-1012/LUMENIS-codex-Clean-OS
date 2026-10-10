@@ -341,9 +341,11 @@ class BusinessDecisionWorkflow:
 
     @staticmethod
     def _canonical_source(connection, source_id, scope):
+        from canonical_data import CANONICAL_SOURCE_LEVEL_PREDICATE
         rows = connection.execute(
             "SELECT * FROM canonical_data WHERE source_id=? AND product_id=? AND domain_id=? "
-            "AND COALESCE(subject_id,'')=? AND COALESCE(brand_focus_id,'')=? AND scope_status='VERIFIED'",
+            "AND COALESCE(subject_id,'')=? AND COALESCE(brand_focus_id,'')=? AND scope_status='VERIFIED' "
+            "AND " + CANONICAL_SOURCE_LEVEL_PREDICATE,
             (source_id, scope["product_id"], scope["domain_id"], scope.get("subject_id") or "", scope.get("brand_focus_id") or ""),
         ).fetchall()
         if len(rows) != 1:

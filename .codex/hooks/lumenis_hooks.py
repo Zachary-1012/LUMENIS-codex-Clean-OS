@@ -166,7 +166,9 @@ def verification_kind(text: str) -> str | None:
     start = r"(?:^|[;\n]|&&)\s*(?:&\s*)?"
     py = r"(?:(?:[A-Za-z]:)?[^\s;&|\"']*[\\/])?(?:python(?:3|\.exe)?|py(?:\s+-3)?)(?:\s+-X\s+utf8)?"
     if re.search(start + r"(?:flutter(?:\.bat)?\s+build\b|dart\s+compile\b|" + py + r"\s+-m\s+compileall\b)", text, re.I): return "compile"
-    if re.search(start + r"(?:git\s+diff\s+--check\b|(?:flutter|dart)(?:\.bat)?\s+analyze\b|" + py + r"\s+-m\s+py_compile\b|codex\s+doctor\b)", text, re.I): return "static"
+    if re.search(start + r"git\s+diff\s+--check\b", text, re.I): return "diff"
+    if re.search(start + r"(?:pytest(?:\.exe)?\b|" + py + r"\s+-m\s+(?:pytest|unittest)\b|flutter(?:\.bat)?\s+test\b)", text, re.I): return "test"
+    if re.search(start + r"(?:(?:flutter|dart)(?:\.bat)?\s+analyze\b|" + py + r"\s+-m\s+py_compile\b|codex\s+doctor\b)", text, re.I): return "static"
     return None
 
 def route_prompt(prompt: str) -> list[str]:
@@ -263,18 +265,15 @@ def handle(event: dict, root: Path, state: dict) -> dict:
         if not state.get("mutation_observed"): return {}
         now = snapshot(root); baseline = state.get("baseline", {}).get("files", {})
         policy = load_verification_policy(root)
-        policy_explicitly_prohibits_suites = bool(
-            policy
-            and policy.get("unit_integration_required") is False
-            and policy.get("create_unit_integration_allowed") is False
-            and policy.get("run_unit_integration_allowed") is False
-            and policy.get("renamed_module_suites_allowed") is False
-        )
-        if not policy_explicitly_prohibits_suites:
+        policy_known = isinstance(policy, dict) and all(
+            type(policy.get(key)) is bool for key in (
+                "unit_integration_required", "create_unit_integration_allowed",
+                "run_unit_integration_allowed", "renamed_module_suites_allowed"))
+        if not policy_known:
             state["verification_status"] = "BLOCKED_VERIFICATION_POLICY_UNAVAILABLE"
-            reason = "The current machine verification_policy is unavailable or does not explicitly prohibit unit/integration suites; no suite will be run. Reconcile policy before claiming completion."
+            reason = "The machine verification_policy is missing or invalid; reconcile its approved values before claiming completion. Hooks never start a test suite."
             if event.get("stop_hook_active"):
-                return {"continue": False, "stopReason": reason, "systemMessage": "LUMENIS verification policy is unavailable; stopped without running a suite."}
+                return {"continue": False, "stopReason": reason, "systemMessage": "LUMENIS verification policy is unavailable; no suite was started."}
             return {"decision": "block", "reason": reason}
         retained = set(policy.get("retained_checks", []))
         if not retained.intersection({"compilation", "static_quality"}):
@@ -283,11 +282,22 @@ def handle(event: dict, root: Path, state: dict) -> dict:
             if event.get("stop_hook_active"):
                 return {"continue": False, "stopReason": reason, "systemMessage": "LUMENIS verification policy is incomplete; stopped without running a suite."}
             return {"decision": "block", "reason": reason}
-        current = [r for r in state.get("receipts", []) if r["fingerprint"] == now["fingerprint"] and r["kind"] in {"compile", "static"}]
-        good = bool(current) and current[-1]["exit_code"] == 0
+        code_changed = any(Path(path).suffix.lower() in CODE
+                           and baseline.get(path) != value for path, value in now["files"].items())
+        current = [r for r in state.get("receipts", []) if r["fingerprint"] == now["fingerprint"]]
+        quality_kinds = {"compile", "static"} if code_changed else {"compile", "static", "diff"}
+        quality = [r for r in current if r["kind"] in quality_kinds]
+        tests = [r for r in current if r["kind"] == "test"]
+        tests_required = code_changed and policy.get("affected_regressions_required") is True
+        tests_allowed = policy.get("run_unit_integration_allowed") is True
+        good = bool(quality) and quality[-1]["exit_code"] == 0
+        if tests_allowed and tests:
+            good = good and tests[-1]["exit_code"] == 0
+        if tests_required:
+            good = good and tests_allowed and bool(tests) and tests[-1]["exit_code"] == 0
         state["verification_status"] = "SCOPED_CHECK_OBSERVED" if good else "BLOCKED_MISSING_SUCCESSFUL_CHECK"
         if good: return {}
-        reason = "No successful current-snapshot compilation/static result was recorded. Unit/integration test modules are prohibited and cannot satisfy this gate. Run the retained compile/static check; report genuine blockers honestly. Applicable security, data-consistency, recovery, and real-user E2E evidence remain separate acceptance requirements."
+        reason = "Current-snapshot compilation/static quality and applicable authorized regression evidence are missing or failed. A diff check alone cannot verify code. Hooks never start suites. Security, source rights, data consistency, recovery and real user E2E remain separate acceptance requirements."
         if event.get("stop_hook_active"):
             return {"continue": False, "stopReason": reason, "systemMessage": "LUMENIS verification is BLOCKED; stopped without an unbounded retry loop."}
         return {"decision": "block", "reason": reason}

@@ -30,5 +30,26 @@
     "app/assets/fonts/NotoSansKR-OFL.txt": "babcfe66c8a098b2fa279bc724a3a342f8124f77ce18941fbcc1bbb39823cded",
     "app/assets/fonts/NotoColorEmoji-OFL.txt": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
   },
-  "verification_boundary": "License/publication change only; no product runtime, production database, full-history secret audit, package redistribution or user-outcome acceptance claimed."
+  "verification_boundary": "License/publication change only; no product runtime, production database, full-history secret audit, package redistribution or user-outcome acceptance claimed.",
+  "schema": "lumenis.po-approval-receipt/v1",
+  "approval_id": "PO-20261010-APACHE-2.0",
+  "approved_by": "Product Owner",
+  "approved_at": "2026-10-10",
+  "approval_source_type": "direct_product_owner_instruction",
+  "status": "APPROVED",
+  "scope_manifest": {
+    "license": "Apache-2.0",
+    "original_scope": "Original LUMENIS software and accompanying original technical documentation; standard text unchanged",
+    "base_commit": "83fdfbb1739a28d49dbff73be38719265489d8b7",
+    "exclusions": [
+      "Third-party software/assets and their original notices",
+      "User/customer data, acquired sources, private databases and credentials",
+      "Model weights and training datasets governed by separate rights",
+      "Trademarks except as provided in Apache-2.0 section 6"
+    ]
+  },
+  "constraints": [
+    "License/publication change only; no product runtime, production database, full-history secret audit, package redistribution or user-outcome acceptance claimed.",
+    "Preserve original third-party notices and licensing evidence; no new licensing decision is made by this schema normalization."
+  ]
 }

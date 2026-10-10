@@ -7,6 +7,7 @@ or commercial gate has passed.
 """
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -131,8 +132,18 @@ require(workflow, "Validate Shared Database authority (BLOCKING)", "Product Gate
 require(workflow, "Prepare product schema and media tools (BLOCKING)", "Product Gate")
 require(app_workflow, "run: flutter analyze", "App Gate")
 require(app_workflow, "run: flutter build web --release", "App Gate")
+# Test execution follows the same structured PO policy as the execution hooks.
+# Reinstating tests does not turn their results into product E2E or a release.
+try:
+    machine = json.loads((ROOT / "00-GOVERNANCE" / "LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json").read_text(encoding="utf-8"))
+    suites_allowed = machine["verification_policy"]["run_unit_integration_allowed"]
+    if type(suites_allowed) is not bool:
+        raise ValueError("test execution policy must be boolean")
+except (OSError, ValueError, KeyError, TypeError):
+    suites_allowed = False
+    errors.append("test execution policy: missing or invalid machine contract")
 for name, body in (("Product Gate", workflow), ("App Gate", app_workflow)):
-    if re.search(r"(?m)^\s*(?:run:\s*(?:>-)?\s*)?(?:python(?:3)? -m (?:pytest|unittest)|flutter test|dart test)\b", body):
+    if not suites_allowed and re.search(r"(?m)^\s*(?:run:\s*(?:>-)?\s*)?(?:python(?:3)? -m (?:pytest|unittest)|flutter test|dart test)\b", body):
         errors.append(f"{name}: unit/integration suite execution violates formal PO policy")
 require(
     app_workflow,

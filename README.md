@@ -22,6 +22,11 @@ Android and Linux native clients are not active delivery targets. Linux remains 
 
 ## Architecture
 
+**CTH · 商业运营** is Subject-first: place, events, risk and operating decisions.
+**BMP · 品牌市场** is Brand/Market-first: brands, creators, propagation and campaigns.
+The **Shared Capability** layer supplies evidence, research, creation and saved work;
+SYSTEM supplies their single runtime and permission boundaries.
+
 ```text
 Public Website / Web Workspace / Desktop / Mobile
                        |
@@ -70,6 +75,17 @@ These are **audit and verification areas**, not a statement that every affected 
 
 ## Repository guide
 
+Contributor reading order (execution authority remains in AGENTS.md):
+
+```text
+AGENTS.md
+→ 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
+→ 00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md
+→ 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md
+→ 00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md
+→ the current owner, source and acceptance evidence
+```
+
 | Path | Purpose |
 | --- | --- |
 | [`AGENTS.md`](AGENTS.md) | Sole execution router for coding agents and permitted changes |
@@ -83,6 +99,13 @@ These are **audit and verification areas**, not a statement that every affected 
 | [`lumenis/`](lumenis/) | Shared product domains and system implementation |
 
 **Authority:** The README is orientation, not an execution approval or an alternative to `AGENTS.md` and the named governance contracts. Historical reports and prior chat summaries are not current runtime evidence.
+
+## Contribution workflow
+
+Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)。
+Repository: `Zachary-1012/LUMENIS-codex-Clean-OS`.
+Read the [AI-native Product Constitution](00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md) before the architecture and owner contracts.
+Create a scoped branch, verify the change with applicable isolated unit/integration and static/build checks, review a PR, then merge into main. Preserve unrelated local changes; never force-push main or automatically delete active branches. CI and real user acceptance remain separate.
 
 ## Local development
 

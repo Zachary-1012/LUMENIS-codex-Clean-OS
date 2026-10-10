@@ -78,6 +78,10 @@ def registry():
 def engine():
     reset_task_engine()
     init_task_engine_db()
+    from database import get_db
+    with get_db() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS notes (note_id TEXT PRIMARY KEY)")
+        conn.execute("CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY)")
     return get_task_engine()
 
 
@@ -322,16 +326,22 @@ class TestTaskEngine:
     def test_execute_task_query(self, engine):
         created = engine.create_task("查一下数据统计")
         result = engine.run_task(created["task_id"])
-        assert result["status"] == TaskStatus.SUCCEEDED.value
+        # Database execution is observed, but this generic query has no independent Owner Outcome.
+        assert result["status"] == TaskStatus.UNKNOWN.value
+        assert result["result"]["output"]["query_success"] is True
+        assert result["error"] == "USER_OUTCOME_NOT_VERIFIED"
         assert result["result_json"] is not None
 
     def test_full_call_chain_case1(self, engine):
-        """Case1: 信息搜索 — 完整调用链闭环"""
+        """Isolated routing trace; deliberately not complete user acceptance."""
         created = engine.create_task("帮我查一下今天太古汇的舆情量统计", context={"current_page": "/dashboard"})
         result = engine.run_task(created["task_id"])
 
-        # 状态成功
-        assert result["status"] == TaskStatus.SUCCEEDED.value
+        # Routing/permission/execution records do not establish a user outcome.
+        assert result["status"] == TaskStatus.UNKNOWN.value
+        assert result["result"]["output"]["query_success"] is True
+        assert result["result"]["verification"]["verified"] is False
+        assert result["error"] == "USER_OUTCOME_NOT_VERIFIED"
         # Intent正确
         assert result["intent"] == "query_data"
         # Agent正确

@@ -1,7 +1,7 @@
 {
   "schema": "lumenis.governance-machine-contract/v1",
   "contract_id": "lumenis-governance-machine",
-  "contract_version": "1.2.0",
+  "contract_version": "1.3.0",
   "status": "ACTIVE",
   "scope": "GOVERNANCE_ONLY",
   "product_semantics_may_change": false,
@@ -174,7 +174,8 @@
       "requires": [
         "applicable_build_static_security_data_checks",
         "applicable_real_operation_evidence",
-        "mandatory_blocking_guards"
+        "mandatory_blocking_guards",
+        "affected_tests"
       ]
     },
     "owner_closure_gate": {
@@ -272,7 +273,7 @@
   "branch_policy": {
     "phase": "PRE_INTERNAL_BETA_CLOSURE",
     "platform_branch_protection_required_now": false,
-    "direct_main_allowed": true,
+    "direct_main_allowed": false,
     "force_push_allowed": false,
     "branch_delete_allowed": false,
     "harden_at": "INTERNAL_BETA_ENTRY",
@@ -283,7 +284,13 @@
       "require_Product_Gate",
       "require_App_Gate",
       "preserve_same_sha_release_policy"
-    ]
+    ],
+    "approval_receipt": "00-GOVERNANCE/evidence/approvals/PO-20261010-BRANCHES-AND-TESTING.json",
+    "working_branches_allowed": true,
+    "pull_requests_allowed": true,
+    "default_workflow": "BRANCH_VERIFY_REVIEW_MERGE_MAIN",
+    "merge_requires_current_head_review": true,
+    "active_branch_auto_cleanup_allowed": false
   },
   "execution_policy": {
     "full_outcome_required": true,
@@ -427,11 +434,11 @@
     ]
   },
   "verification_policy": {
-    "approval_receipt": "00-GOVERNANCE/evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json",
+    "approval_receipt": "00-GOVERNANCE/evidence/approvals/PO-20261010-BRANCHES-AND-TESTING.json",
     "unit_integration_required": false,
-    "create_unit_integration_allowed": false,
-    "run_unit_integration_allowed": false,
-    "renamed_module_suites_allowed": false,
+    "create_unit_integration_allowed": true,
+    "run_unit_integration_allowed": true,
+    "renamed_module_suites_allowed": true,
     "historical_tests_and_failures_preserved": true,
     "known_real_defects_must_be_repaired": true,
     "retained_checks": [
@@ -441,7 +448,9 @@
       "data_consistency",
       "real_user_e2e",
       "recovery",
-      "release_verification"
+      "release_verification",
+      "unit_regression",
+      "integration_regression"
     ],
     "real_e2e_requires": [
       "running_product",
@@ -453,6 +462,7 @@
       "evidence_evaluation"
     ],
     "mock_fixture_http_success_is_acceptance": false,
-    "gate_pass_is_product_closure": false
+    "gate_pass_is_product_closure": false,
+    "affected_regressions_required": true
   }
 }

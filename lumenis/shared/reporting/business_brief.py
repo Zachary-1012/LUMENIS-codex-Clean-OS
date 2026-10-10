@@ -175,7 +175,13 @@ def _source_use_material(material, actor, *, connection):
                         else 'approved_research_document')
         else:
             platform = 'UNKNOWN'
-        if (source.get('publish_datetime') != published or source.get('source_platform') != platform
+        # Canonical document imports retain unknown publication as an empty
+        # string; signed provenance uses None. Both mean UNKNOWN, not zero or
+        # a fabricated date. All actual timestamps and platform facts still match.
+        source_published = source.get('publish_datetime')
+        if source_published == '':
+            source_published = None
+        if (source_published != published or source.get('source_platform') != platform
                 or ('captured_at' in source and source['captured_at'] != captured)):
             raise ValueError('BUSINESS_BRIEF_SOURCE_METADATA_MISMATCH')
         bindings.append({'source_id':source['source_id'],

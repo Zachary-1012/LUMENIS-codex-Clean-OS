@@ -1093,7 +1093,8 @@ def prepare_xhs_observations(notes, *, keyword, captured_at=None):
                     return raw[key]
             return None
         publication = known("time", "source_published_at", "detail_source_published_at",
-                            "pub_time", "publish_datetime")
+                            "pub_time", "publish_datetime", "detail_publish_time",
+                            "publish_time", "publish_date")
         record.update({
             "platform": "xiaohongshu", "source_platform": "xiaohongshu",
             "content_id": raw.get("note_id"), "note_id": raw.get("note_id"),
@@ -2286,20 +2287,19 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
 
 def _business_source_reviews(records, query, observed_at):
     """Review live native time and task scope without altering source observations."""
-    from datetime import timezone
     from ..acquisition_plan import assess_query_relevance
-    from .platform_naming import get_platform_fields
+    from .platform_naming import get_platform_fields, normalize_platform
+    from .multi_platform_import import _normalize_source_publication
     spec = get_platform_fields(query.business_context['platform'])
     reviewed = []
     for record in records:
         native = record.get(spec.published_at) if spec else None
         if native in (None, ''):
             native = record.get('publish_datetime')
-        if isinstance(native, (int, float)) and not isinstance(native, bool):
-            try:
-                native = datetime.fromtimestamp(native, timezone.utc).isoformat()
-            except (ValueError, OverflowError, OSError):
-                native = None
+        # Reuse the native-platform unit authority: XHS milliseconds are not
+        # seconds, and capture/update time never repairs unknown publication.
+        native = _normalize_source_publication(
+            native, normalize_platform(query.business_context['platform'])) or None
         observation = {'native_id': record.get('content_id'), 'source_url': record.get('url'),
                        'title': record.get('title'), 'content': record.get('content'),
                        'published_at': native, 'capture_observation_utc': observed_at}

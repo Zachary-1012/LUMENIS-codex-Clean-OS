@@ -27,6 +27,14 @@ class EngineeringTests(unittest.TestCase):
         (self.root / "sample.py").write_text("value = 1\n", "utf-8")
         self.git("add", "AGENTS.md", "sample.py")
         self.git("commit", "-qm", "isolated fixture")
+        policy_path = self.root / h.VERIFICATION_POLICY_PATH
+        policy_path.parent.mkdir(parents=True, exist_ok=True)
+        policy_path.write_text(json.dumps({"verification_policy": {
+            "unit_integration_required": False, "create_unit_integration_allowed": True,
+            "run_unit_integration_allowed": True, "renamed_module_suites_allowed": True,
+            "affected_regressions_required": True, "retained_checks": ["compilation", "static_quality"]}}), "utf-8")
+        self.git("add", str(h.VERIFICATION_POLICY_PATH))
+        self.git("commit", "-qm", "isolated approved policy fixture")
         self.state = {}
         self.handle("SessionStart", source="startup")
 
@@ -46,6 +54,8 @@ class EngineeringTests(unittest.TestCase):
         self.handle("PostToolUse", tool_name="apply_patch", tool_input={"command": "patch"}, tool_response={"exit_code": 0})
 
     def verify(self, code=0, command="python -m unittest discover", **extra):
+        if command == "python -m unittest discover":
+            self.handle("PostToolUse", tool_name="Bash", tool_input={"command": "python -m py_compile sample.py"}, tool_response={"exit_code": 0})
         self.handle("PostToolUse", tool_name="Bash", tool_input={"command": command}, tool_response={"exit_code": code, **extra})
 
     def test_unicode_root(self):
@@ -182,7 +192,7 @@ class EngineeringTests(unittest.TestCase):
                 re.compile(pattern, re.I)
         routes = eng.route_task("Flutter 页面 bug 阻塞，需要研究依赖和修复", ["app/lib/main.dart"])["routes"]
         self.assertTrue(any(item["skill"] == "lumenis-flutter-runtime" for item in routes))
-        self.assertTrue(any(item["skill"] == "lumenis-testing-evidence" for item in routes))
+        self.assertTrue(any(item["skill"] == "lumenis-testing" for item in routes))
 
     def test_engineering_mcp_has_no_hidden_workstation_helper(self):
         text = ENGINEERING.read_text("utf-8")

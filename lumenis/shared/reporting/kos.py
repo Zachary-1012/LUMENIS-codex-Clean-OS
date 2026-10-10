@@ -215,13 +215,28 @@ def _collect_data(brand_name: str = "广州太古汇") -> dict:
 
 
 
+def _html_display(value):
+    """Encode source values for HTML text/quoted attributes; preserve raw data."""
+    from html import escape
+    if isinstance(value, str):
+        return escape(value, quote=True)
+    if isinstance(value, dict):
+        return {_html_display(key): _html_display(item) for key, item in value.items()}
+    if isinstance(value, (tuple, list)):
+        return [_html_display(item) for item in value]
+    return value
+
+
 def _render_html(data: dict) -> str:
 
 
     """渲染动态 HTML 报告（单文件，CSS/JS 内嵌，无外部依赖）。"""
 
 
+    data = _html_display(data)
     d = json.dumps(data, ensure_ascii=False, default=str)
+    d = d.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    d = d.replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
 
 
     tier_colors = {"S": "#e74c3c", "A": "#f39c12", "B": "#3498db", "C": "#95a5a6"}
@@ -1263,10 +1278,11 @@ render();
 
 
 def _render_channel_roi(ch: dict) -> str:
-    """多渠道 ROI 对比卡片（KM-06）：各渠道 CPL/CPC/预算/vs 基准。静态 HTML，无 JS 依赖。"""
+    """多渠道获客成本对比卡片（KM-06）：各渠道 CPL/CPC/预算/vs 基准。静态 HTML，无 JS 依赖。"""
+    ch = _html_display(ch)
     channels = ch.get("channels", []) if isinstance(ch, dict) else []
     if not channels:
-        return '<section class="card" style="padding:20px;margin-bottom:20px;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)"><h3 style="margin:0 0 8px">多渠道 ROI 对比</h3><p style="color:#999;font-size:13px;margin:0">暂无数据（请在 KOS 后台回填 Boosting/WeCom/进线数据）</p></section>'
+        return '<section class="card" style="padding:20px;margin-bottom:20px;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)"><h3 style="margin:0 0 8px">多渠道获客成本对比</h3><p style="color:#999;font-size:13px;margin:0">暂无数据（请在 KOS 后台回填 Boosting/WeCom/进线数据）</p></section>'
     rows = ""
     for c in channels:
         cpl = c.get("cpl")
@@ -1287,7 +1303,7 @@ def _render_channel_roi(ch: dict) -> str:
             c.get("budget", 0), c.get("inquiry", 0), c.get("wecom", 0),
             cpl if cpl is not None else "--", ref_txt)
     return ('<section class="card" style="padding:20px;margin-bottom:20px;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)">'
-            '<h3 style="margin:0 0 12px">多渠道 ROI 对比（KM-06）</h3>'
+            '<h3 style="margin:0 0 12px">多渠道获客成本对比（KM-06）</h3>'
             '<table style="width:100%;border-collapse:collapse;font-size:13px">'
             '<thead><tr style="color:#999;text-align:left"><th style="padding:8px 12px;border-bottom:2px solid #f0f0f0">渠道</th>'
             '<th style="padding:8px 12px;border-bottom:2px solid #f0f0f0">预算(¥)</th>'

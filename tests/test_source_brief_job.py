@@ -190,7 +190,8 @@ def test_document_and_selected_row_share_one_source_brief_record_and_reopen_by_c
     assert records[0]["scope_evidence_ref"] == str(evidence_id)
     assert result["source_brief"]["sample"]["returned_verified_count"] == 1
     assert result["source_brief"]["sample"]["candidate_count"] == 1
-    assert result["business_analysis"]["state"] == "draft"
+    assert result["business_analysis"]["state"] == "unavailable"
+    assert result["business_analysis"]["reason"] == "BUSINESS_BRIEF_RETIRED_OR_UNAVAILABLE_PROVIDER"
     assert len(research_calls) == 1
     assert research_calls[0]["sources"][0]["source_id"] == source_id
     assert "Private source body" in "".join(research_calls[0]["sources"][0]["excerpts"])
