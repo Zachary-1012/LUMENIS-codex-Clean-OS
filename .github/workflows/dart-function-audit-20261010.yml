@@ -1,0 +1,49 @@
+name: Dart function contracts (static audit only)
+on:
+  push:
+    branches: [audit/20261010-current-code-convergence]
+    paths:
+      - .github/workflows/dart-function-audit-20261010.yml
+      - scripts/audit_tools/dart_function_review_20261010.dart
+permissions:
+  contents: read
+jobs:
+  dart-functions:
+    if: github.repository == 'Zachary-1012/LUMENIS-codex-Clean-OS' && github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          path: source
+          ref: 01588e9fd9568e3fcaf1e6c3d957bc498436fa48
+          persist-credentials: false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          path: control
+          ref: audit/20261010-current-code-convergence
+          persist-credentials: false
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d
+        with:
+          sdk: '3.13.4'
+      - name: Install parser in disposable helper only
+        timeout-minutes: 2
+        run: |
+          mkdir -p helper/bin dart-review
+          cp control/scripts/audit_tools/dart_function_review_20261010.dart helper/bin/review.dart
+          printf 'name: lumenis_semantic_audit_helper\npublish_to: none\nenvironment:\n  sdk: ">=3.9.0 <4.0.0"\ndependencies:\n  analyzer: 9.0.0\n' > helper/pubspec.yaml
+          cd helper
+          dart pub get
+          dart --version
+      - name: Enumerate function bodies and contracts
+        timeout-minutes: 2
+        run: |
+          cd helper
+          dart run bin/review.dart ../source ../dart-review
+          cp pubspec.lock ../dart-review/audit-parser-pubspec.lock
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: frozen-dart-function-contracts
+          path: dart-review/*
+          if-no-files-found: error
+          retention-days: 1
