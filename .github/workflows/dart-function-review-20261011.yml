@@ -5,6 +5,7 @@ on:
     paths:
       - .github/workflows/dart-function-review-20261011.yml
       - scripts/audit_tools/dart_semantic_ir_20261011.dart
+      - scripts/audit_tools/transport_semantic_probe_20261011.dart
 permissions:
   contents: read
 jobs:
@@ -22,7 +23,7 @@ jobs:
           path: source
           ref: 01588e9fd9568e3fcaf1e6c3d957bc498436fa48
           persist-credentials: false
-      - name: Install the source-declared SDK for parser-only analysis
+      - name: Install the source-declared SDK for audit-only analysis
         timeout-minutes: 6
         shell: bash
         run: |
@@ -36,8 +37,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p parser/bin output
-          printf 'name: lumenis_audit_parser\nenvironment:\n  sdk: ">=3.12.0 <4.0.0"\ndependencies:\n  analyzer: any\n' > parser/pubspec.yaml
+          printf 'name: lumenis_audit_parser\nenvironment:\n  sdk: ">=3.12.0 <4.0.0"\ndependencies:\n  analyzer: any\n  http: any\n' > parser/pubspec.yaml
           cp control/scripts/audit_tools/dart_semantic_ir_20261011.dart parser/bin/audit.dart
+          cp control/scripts/audit_tools/transport_semantic_probe_20261011.dart parser/bin/transport_probe.dart
           cd parser
           dart pub get
       - name: Extract every Dart function body, not product acceptance
@@ -47,6 +49,12 @@ jobs:
           cd parser
           dart run bin/audit.dart ../source ../output/dart-native-functions.json
           cp pubspec.lock ../output/audit-parser-pubspec.lock
+      - name: Probe only transport functions against disposable loopback server
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          cd parser
+          timeout 20s dart run bin/transport_probe.dart ../output/transport-semantics-probes.json
       - uses: actions/upload-artifact@v4
         with:
           name: dart-native-function-ir-01588e9f
