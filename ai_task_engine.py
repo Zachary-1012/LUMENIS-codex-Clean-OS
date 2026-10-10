@@ -4113,7 +4113,8 @@ class TaskEngine:
     ) -> List[Dict[str, Any]]:
         query = (
             "SELECT * FROM ai_task WHERE substr(task_id, 1, 7) <> ? "
-            "AND substr(task_id, 1, ?) <> ?"
+            "AND substr(task_id, 1, ?) <> ? "
+            "AND task_id NOT LIKE 'task-pitch-%'"
         )
         params: List[Any] = [
             _MANAGED_REPORT_TASK_PREFIX, len(_TRAINING_RECEIPT_TASK_PREFIX),
