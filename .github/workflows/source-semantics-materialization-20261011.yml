@@ -1,0 +1,64 @@
+name: Frozen source materialization for function review
+on:
+  push:
+    branches: [audit/20261010-current-code-convergence]
+    paths: [.github/workflows/source-semantics-materialization-20261011.yml]
+permissions:
+  contents: read
+concurrency:
+  group: lumenis-function-review-source-20261011
+  cancel-in-progress: false
+jobs:
+  source:
+    if: github.repository == 'Zachary-1012/LUMENIS-codex-Clean-OS' && github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: 01588e9fd9568e3fcaf1e6c3d957bc498436fa48
+          path: source
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Copy exact tracked text without importing or running product code
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          python3 -I - <<'PY'
+          import subprocess, pathlib, hashlib, json, zipfile, datetime
+          root=pathlib.Path('source'); out=pathlib.Path('review-source'); out.mkdir()
+          baseline='01588e9fd9568e3fcaf1e6c3d957bc498436fa48'
+          head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip()
+          assert head==baseline
+          rows=subprocess.check_output(['git','ls-tree','-rz','--full-tree',baseline],cwd=root).split(b'\0')
+          manifest=[]
+          with zipfile.ZipFile(out/'frozen-source-text.zip','w',zipfile.ZIP_DEFLATED) as z:
+              for item in rows:
+                  if not item: continue
+                  info,p=item.split(b'\t',1); mode,kind,sha=info.decode().split(); path=p.decode('utf-8')
+                  rec={'path':path,'mode':mode,'object_type':kind,'git_blob_sha':sha}
+                  if kind!='blob':
+                      rec['materialized']=False; rec['reason']='NON_BLOB';manifest.append(rec);continue
+                  data=subprocess.check_output(['git','cat-file','blob',sha],cwd=root)
+                  assert hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()==sha
+                  rec.update(size_bytes=len(data),sha256=hashlib.sha256(data).hexdigest())
+                  try:
+                      text=data.decode('utf-8-sig'); textual=b'\0' not in data
+                  except UnicodeDecodeError:
+                      textual=False
+                  name=pathlib.PurePosixPath(path).name.lower()
+                  sensitive=name in {'auth.json','credentials.json','.env','.env.local','.env.production','cookies.json','cookies.txt'}
+                  if textual and not sensitive and mode not in {'120000','160000'}:
+                      z.writestr('source/'+path,data); rec['materialized']=True
+                  else:
+                      rec['materialized']=False;rec['reason']='BINARY_OR_PROTECTED_CONFIGURATION_OR_LINK'
+                  manifest.append(rec)
+              z.writestr('manifest.json',json.dumps({'baseline':baseline,'observed_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'tree':subprocess.check_output(['git','rev-parse','HEAD^{tree}'],cwd=root,text=True).strip(),'files':manifest},ensure_ascii=False,indent=2))
+          print(json.dumps({'baseline':baseline,'tracked_objects':len(manifest),'text_materialized':sum(x.get('materialized',False) for x in manifest),'runtime_started':False,'database_accessed':False,'models_called':False}))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frozen-source-text-01588e9f
+          path: review-source/frozen-source-text.zip
+          retention-days: 3
+          if-no-files-found: error
