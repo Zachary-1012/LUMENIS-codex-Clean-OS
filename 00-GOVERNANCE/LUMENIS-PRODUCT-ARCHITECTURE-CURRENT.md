@@ -1,10 +1,9 @@
 # LUMENIS Product Architecture — CURRENT
 
-<<<<<<< HEAD
 ## 2026-10-10 Product Owner amendment — branches and testing reinstated
 
 Scoped development branches and PRs are permitted globally; validate and review before merging into main. This does not create another product or change release authority. Unit tests and integration tests are authorized again for defect reproduction and regression verification. Earlier 2026-10-08 prohibitions against creating, running or requiring these test types, including statements retained below for historical provenance, are **SUPERSEDED**. These tests are engineering evidence, not substitutes for real end-to-end user acceptance, running-service verification, production data, or user outcomes. Testing authorization does not authorize live collection, external model calls, GPU training, spending, deployment, or destructive database operations.
-=======
+
 ## 2026-10-10：v2 数学能力在五轮内的采用边界
 
 复用用户指定 v2 包与固定 `openai/math@fd4aeeb2ee4fc729c18d98444fed42fd0529eeeb`。现有 Shared Evaluation 内的 16 个类型化计算入口经唯一 Task/API 与 SourceBrief、Permission、SavedWork/Artifact 接入，不建立第二个分析引擎、数据库或 Agent Runtime。现有 Math 采用记录列明逐篇公式、适用假设、有限实现与完整主算法的未闭合项。
@@ -19,7 +18,6 @@ Scoped development branches and PRs are permitted globally; validate and review 
 
 基础任务无需 AI。精确有理数恒等式、有限枚举、数值 exp/log、原创有理区间适配和固定 theorem 的 Lean 重放分别验收。完整一般算法保持未完成，不因一个有限计算或编译成功而缩减原要求。115 的理论大常数须先算成本，不能调小常数继承原概率保证；107 没有实测乘法瓶颈和生成程序时不得替换 BLAS/CUDA。官方上游撤回/修订记录属于版本准入，非全部论文正确性认证。
 
->>>>>>> backup/zack-wip-20261011-045004
 
 ## 五轮架构产品闭环 — 2026-10-09 Product Owner 直接批准
 
