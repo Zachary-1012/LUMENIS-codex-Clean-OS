@@ -75,13 +75,23 @@ class FunctionFacts extends RecursiveAstVisitor<void> {
   final String path, content;
   final int Function(int) location;
   final List<Map<String, Object?>> functions = [];
+  String? declaredName(AstNode n, String keyword) {
+    var token = n.beginToken;
+    while (token.offset < n.end && !token.isEof) {
+      if (token.lexeme == keyword) return token.next?.lexeme;
+      final next = token.next;
+      if (next == null || identical(next, token)) break;
+      token = next;
+    }
+    return null;
+  }
   String? owner(AstNode n) {
     AstNode? p = n.parent;
     while (p != null) {
-      if (p is ClassDeclaration) return p.name.lexeme;
+      if (p is ClassDeclaration) return declaredName(p, 'class');
       if (p is MixinDeclaration) return p.name.lexeme;
       if (p is ExtensionDeclaration) return p.name?.lexeme;
-      if (p is EnumDeclaration) return p.name.lexeme;
+      if (p is EnumDeclaration) return declaredName(p, 'enum');
       p = p.parent;
     }
     return null;
@@ -113,7 +123,7 @@ class FunctionFacts extends RecursiveAstVisitor<void> {
   }
   @override
   void visitConstructorDeclaration(ConstructorDeclaration n) {
-    add(n, n.returnType.toSource() + (n.name == null ? '' : '.${n.name!.lexeme}'),
+    add(n, '<constructor>' + (n.name == null ? '' : '.${n.name!.lexeme}'),
       n.body, n.parameters.toSource(), null, 'constructor',
       initialization: n.initializers.map((x) => x.toSource()).join(', '));
     super.visitConstructorDeclaration(n);
