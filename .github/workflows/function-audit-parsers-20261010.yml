@@ -1,0 +1,31 @@
+name: Offline parsers for function review (not product dependencies)
+on:
+  push:
+    branches: [audit/20261010-current-code-convergence]
+    paths: [.github/workflows/function-audit-parsers-20261010.yml]
+permissions:
+  contents: read
+jobs:
+  parsers:
+    if: github.repository == 'Zachary-1012/LUMENIS-codex-Clean-OS' && github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Download pinned audit-only parser wheels
+        timeout-minutes: 2
+        run: |
+          python3 -m pip download --disable-pip-version-check --retries 2 --timeout 20 --only-binary=:all: --dest parser-wheels --platform manylinux2014_x86_64 --python-version 313 --implementation cp --abi cp313 --abi abi3 tree-sitter-language-pack==0.13.0 tree-sitter==0.25.2
+          python3 -I - <<'PY'
+          import pathlib,hashlib,json
+          p=pathlib.Path('parser-wheels')
+          hashes={f.name:hashlib.sha256(f.read_bytes()).hexdigest() for f in p.glob('*.whl')}
+          assert hashes['tree_sitter_language_pack-0.13.0-cp310-abi3-manylinux2014_x86_64.whl']=='0d4f261fce387ae040dae7e4d1c1aca63d84c88320afcc0961c123bec0be8377'
+          assert hashes['tree_sitter-0.25.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl']=='b878e296e63661c8e124177cc3084b041ba3f5936b43076d57c487822426f614'
+          (p/'sha256.json').write_text(json.dumps(hashes,indent=2))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: offline-function-review-parsers
+          path: parser-wheels/*
+          retention-days: 1
+          if-no-files-found: error
