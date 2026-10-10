@@ -1,0 +1,54 @@
+name: Frozen current-code audit (not product acceptance)
+on:
+  push:
+    branches: [audit/20261010-current-code-convergence]
+    paths:
+      - .github/workflows/current-code-audit-20261010.yml
+      - scripts/audit_tools/current_code_inventory_20261010.py
+permissions:
+  contents: write
+concurrency:
+  group: lumenis-current-code-audit-20261010
+  cancel-in-progress: false
+jobs:
+  inventory:
+    if: github.repository == 'Zachary-1012/LUMENIS-codex-Clean-OS' && github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: control
+          ref: audit/20261010-current-code-convergence
+          fetch-depth: 1
+      - uses: actions/checkout@v5
+        with:
+          path: source
+          ref: 01588e9fd9568e3fcaf1e6c3d957bc498436fa48
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Full Git blob traversal and Python syntax/index only
+        timeout-minutes: 4
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          p=pathlib.Path('control/scripts/audit_tools/current_code_inventory_20261010.py')
+          text=p.read_text(encoding='utf-8')
+          text=text.replace('for x in n.body if x.value is not None', 'for x in n.body if isinstance(x,ast.Return) and x.value is not None')
+          p.write_text(text,encoding='utf-8')
+          PY
+          python3 -I control/scripts/audit_tools/current_code_inventory_20261010.py source control/00-GOVERNANCE/evidence/round-15/audit-20261010-current
+      - name: Preserve sanitized audit ledger on audit branch only
+        shell: bash
+        working-directory: control
+        run: |
+          set -euo pipefail
+          test "$(git branch --show-current)" = 'audit/20261010-current-code-convergence'
+          git config user.name 'LUMENIS audit evidence'
+          git config user.email 'lumenis-audit@users.noreply.github.com'
+          git add -- scripts/audit_tools/current_code_inventory_20261010.py 00-GOVERNANCE/evidence/round-15/audit-20261010-current
+          git diff --cached --check
+          git commit -m 'audit: record frozen-source inventory; semantic and runtime acceptance remain unverified'
+          git push origin HEAD:refs/heads/audit/20261010-current-code-convergence
