@@ -21,7 +21,7 @@ class GovernanceMachineSemanticTests(unittest.TestCase):
 
     def test_current_machine_contract_and_structured_model_routing_validate(self) -> None:
         contract = validate_contract()
-        self.assertEqual(contract["contract_version"], "1.1.0")
+        self.assertEqual(contract["contract_version"], "1.3.0")
         validate_model_routing(contract)
         validate_approval_receipts(contract)
 

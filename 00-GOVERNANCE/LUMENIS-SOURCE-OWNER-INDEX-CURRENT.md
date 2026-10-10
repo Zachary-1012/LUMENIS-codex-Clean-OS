@@ -4,7 +4,7 @@
 > Status: **CURRENT EXECUTION INDEX / FIVE ARCHITECTURE ROUNDS / COMPLETE LEGACY COVERAGE**
 > 实际窗口开工、暂停、恢复、模型与推理档位由PO决定。本索引不固定窗口数量、单业务席位或模型；只记录有时间和证据的观察，不能核实时 NOT_VERIFIED。历史审批和工作原件保留但无当前派工效力。
 > 六文件治理发布不唤醒窗口；后续直接授权的 SYSTEM 浏览器弹窗 P0 沿既有 Owner 与预约单独执行。原J/R/U、44屏、权益、Permission/Evidence/Canonical、成本、生产数据及共享写入保护保留。
-> C1保留完整采集闭环和已有必要Core/Runtime/Scheduler/Permission依赖的获准源码范围；M保留原非C1候选、未集成成果及资料采用责任。实际执行须核验当前PO授权及Writer，不能用旧暂停或旧复工代替。禁止单元/集成及换名模块套件，保留静态、安全、数据一致性和真正E2E。
+> C1保留完整采集闭环和已有必要Core/Runtime/Scheduler/Permission依赖的获准源码范围；M保留原非C1候选、未集成成果及资料采用责任。实际执行须核验当前PO授权及Writer，不能用旧暂停或旧复工代替。按2026-10-10 PO批准恢复隔离单元/集成回归，保留静态、安全、数据一致性和真正E2E。
 
 ### 最新 PO 当前成果优先级 — 官网 / Web，2026-10-08
 

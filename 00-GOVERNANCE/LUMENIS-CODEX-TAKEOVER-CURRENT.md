@@ -13,6 +13,20 @@
 
 Root `AGENTS.md` is the only repository execution router. [The Product Owner's lightweight AI-native constitution](AI-NATIVE-PRODUCT-CONSTITUTION.md) remains a principle layer. The sole product blueprint is [Product Architecture](LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md); [Experience](LUMENIS-EXPERIENCE-CONSTITUTION.md) owns UI/UX and screen specifications; a historical DESIGN_READY record is not a coding prerequisite. A report is evidence, never another blueprint.
 
+## 2026-10-10 branch-based rectification and historical addendum
+
+Latest direct PO authorizes scoped working branches/PRs and isolated unit/integration tests. The default is branch -> tests/review -> merge into main; old main-only and test prohibitions are superseded globally. Main remains integration/release authority, not a second product. Receipt: `evidence/approvals/PO-20261010-BRANCHES-AND-TESTING.json`. Machine contract `LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json` v1.3.0, current engineering routes/hooks/skills and Product Gate implement this policy together. Installed workstation Hook trust/registration is not changed by publishing source.
+
+Source base: `97d934088acb1b3c508d8418ea7eb6641be5b60b`. Work is isolated from the original dirty Windows checkout. Observed original checkout at 2026-10-10 13:58 +08:00: HEAD/cached origin-main `6efc9ced81ef198f1617147d65e25b8349bebd69`, live remote main `97d934...`; 112 dirty/untracked files were hashed and protected. Cached 0/0 divergence did not establish live synchronization.
+
+The failed App Gate on the base stopped at the missing README product-constitution link, before Flutter steps. This batch restores that exact bootstrap link, normalizes the already-approved Apache license receipt into the existing receipt schema without relicensing again, and co-publishes CURRENT rather than bypassing governance.
+
+Implemented bounded source changes: native XHS time projection and platform units; shared Canonical document-parent/row source identity; export scope failure before data access; terminal-preserving compare-and-set cancellation; fail-closed approval issuance; explicit handler-error and durable-trace failure semantics; absent-output quality remains unmeasured; safe source text/keys in KOS HTML. Source, unit/integration, static/CI and user-outcome evidence stay separate. The first 26 focused isolated regressions reproduced 18 failures before the product patch and passed after it; expanded compatibility runs preserve their failed receipts and are rerun against the final branch revision. This paragraph is not an advance CI or release claim.
+
+Historical addendum: [`RECTIFICATION-20261010-HISTORY-ADDENDUM.md`](evidence/round-15/RECTIFICATION-20261010-HISTORY-ADDENDUM.md) preserves all eight PO-provided historical lead categories. The reported 119 historical commits/285 file changes were not independently rereviewed by this repair batch. The currently observed training transport already uses `core_origin=...`; that old claim is not reintroduced as a current repair.
+
+Still OPEN: full screen/backend contract reconciliation, actual persistent Campaign/podcast actions, approver identity and object-level access across all legacy routes, business metric definitions/scope/time, current platform supply and scheduled recovery, complete professional media/proposal quality, actual owned-model business outcomes and full user E2E. No production runtime/DB, live collection, model/GPU training, paid resource, deployment or history rewrite is performed by this batch. A merged engineering repair does not imply RELEASED/OPERATING or full-product closure.
+
 ## 2026-10-09 dated bounded-source evidence and remaining capability limits
 
 The existing developer workflow now has portable VS Code Tasks and a PowerShell
@@ -906,3 +920,7 @@ whose Product Gate run `37854315256` is SUCCESS. No same-SHA App Gate was trigge
 older App success is not promoted. This rules revision requires its own CI.
 Current rule files are synchronized; unrelated dirty source and its raw backups
 remain protected. That dated update changed no product runtime or DB and is not a current pause/resume command.
+
+### 本批追加：合法未知发布时间的等价表示
+
+真实文档导入将未知 `publish_datetime` 存为 `""`，签名来源记录为 `None`。BusinessBrief原先逐字比较使这种合法未知提前被拒绝。本批只统一这两种未知表示，不补造时间，不将0、False、空格或任意日期视为合法等价。相关Typed Owned单元/集成回归使用合成Gateway响应；不声明实际模型推理质量或部署可用。

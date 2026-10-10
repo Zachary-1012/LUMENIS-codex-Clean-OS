@@ -204,7 +204,7 @@ class TestCapabilityRouter:
         })
         monkeypatch.setattr(execution, "build_evidence", lambda ctx: {"ok": True})
         monkeypatch.setattr(execution, "evaluate_execution", lambda ctx: {"status": "ok"})
-        monkeypatch.setattr(execution, "write_trace", lambda *args, **kwargs: None)
+        # Keep the real SQLite write_trace owner: returning None is not durable evidence.
 
         router = CapabilityRouter(
             enabled=True,

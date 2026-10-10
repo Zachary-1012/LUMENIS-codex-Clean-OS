@@ -1,8 +1,8 @@
 # LUMENIS Product Architecture — CURRENT
 
-## 2026-10-10 Product Owner amendment — testing reinstated
+## 2026-10-10 Product Owner amendment — branches and testing reinstated
 
-Unit tests and integration tests are authorized again for defect reproduction and regression verification. Earlier 2026-10-08 prohibitions against creating, running or requiring these test types, including statements retained below for historical provenance, are **SUPERSEDED**. These tests are engineering evidence, not substitutes for real end-to-end user acceptance, running-service verification, production data, or user outcomes. Testing authorization does not authorize live collection, external model calls, GPU training, spending, deployment, or destructive database operations.
+Scoped development branches and PRs are permitted globally; validate and review before merging into main. This does not create another product or change release authority. Unit tests and integration tests are authorized again for defect reproduction and regression verification. Earlier 2026-10-08 prohibitions against creating, running or requiring these test types, including statements retained below for historical provenance, are **SUPERSEDED**. These tests are engineering evidence, not substitutes for real end-to-end user acceptance, running-service verification, production data, or user outcomes. Testing authorization does not authorize live collection, external model calls, GPU training, spending, deployment, or destructive database operations.
 
 ## 五轮架构产品闭环 — 2026-10-09 Product Owner 直接批准
 
@@ -27,7 +27,7 @@ Unit tests and integration tests are authorized again for defect reproduction an
 保留 J1–J8、R01–R15、U01–U25、44 屏及原资料/设计/历史证据全部要求。
 Website / Web Workspace 实际业务优先；Windows/macOS Desktop 与 iOS Companion
 专项验收后续完成，不以本次文档提交宣称 SYSTEM、原生端或全产品闭环。
-不新增费用、账号、模型服务、训练或部署；禁止单元/集成及换名模块套件，
+不新增费用、账号、模型服务、训练或部署；按2026-10-10批准恢复隔离单元/集成回归，
 保留编译、静态、安全、数据一致性与真实用户 E2E。
 
 Product Owner decides actual window start, pause, resume, model and reasoning effort.
@@ -387,7 +387,7 @@ These paths are the current owners for production callers. A route or compatibil
 | Business / Canonical Production Truth | `lumenis/shared/database/` | `data/monitor.db` selected through the single compatibility override `ZBC_DB_PATH` remains the only CTH/BMP/Shared business-truth database; all business schema/version ownership stays in the Shared Database migrations. |
 | SYSTEM durable task queue | `lumenis/system/collector/guard/task_queue.py` through `DatabaseRepository` | Existing `data/task_queue.db` holds only operational queue/lease state, never Canonical Data, Evidence or business outcomes. Preserve its durable records and replay semantics; any future move requires an explicit data migration verified for data preservation and actual recovery. No new module-local SQLite sidecar is allowed without an architecture entry, recovery/retention owner and acceptance evidence. |
 
-The production import gate parses Python import nodes and rejects exact retired owners. It excludes tests, audit prose and comments from the production dependency decision, while actual migrated behavior, preserved data and recovery require real runtime evidence under the existing owner. The formal 2026-10-08 PO policy retains compilation/static/security/data checks and real product E2E, and forbids creating/running unit/integration or renamed module suites; historical tests/failures remain preserved.
+The production import gate parses Python import nodes and rejects exact retired owners. It excludes tests, audit prose and comments from the production dependency decision, while actual migrated behavior, preserved data and recovery require real runtime evidence under the existing owner. The 2026-10-10 PO instruction restores isolated unit/integration regressions, alongside compilation/static/security/data checks and real product E2E; historical tests/failures remain preserved.
 
 ## 9. Convergence disposition
 
@@ -496,4 +496,4 @@ Global §10 记录本轮完整直接 PO 命令及原实现落实点：采集授�
 
 C1 保留采集链及获准必要依赖的源码责任；当前窗口执行状态不得由本蓝图推断。跨 Owner 写入仍由 M/W6 既有预约有界交接；原非 C1 候选、未集成成果及完整资料采用继续保留，实际执行需当前PO指令。仅修数据链影响的现有 Web 消费与状态/来源返回，不重做44屏、不新增架构或队列。六平台各自实证与阻塞分列，至少一个获准平台或公开网页来源通过完整真实操作链；同口径吞吐、延迟、覆盖缺失、身份/数据错误、恢复、成果保存重开须有真实数据，无旧基线写 BASELINE NOT VERIFIED。旧逻辑先追有效 caller 再收敛，全部历史/原件/有效兼容保留。
 
-本规则采用不证明源码已改、运行已加载或用户已验收；最终 A–F 成果、OBSERVED/INFERRED/NOT VERIFIED 和 ACCEPTED 条件归既有 Real Delivery Overlay，保持完整 R/J/U 和当前编译/静态安全数据/真实E2E，不执行模块单元/集成套件。
+本规则采用不证明源码已改、运行已加载或用户已验收；最终 A–F 成果、OBSERVED/INFERRED/NOT VERIFIED 和 ACCEPTED 条件归既有 Real Delivery Overlay，保持完整 R/J/U 和当前编译/静态安全数据/真实E2E，按当前批准执行相关隔离单元/集成回归，结果不替代真实用户验收。

@@ -1,14 +1,10 @@
 # LUMENIS Verification and Historical Test Inventory
 
-## Current formal Product Owner policy — 2026-10-08
+## Current formal Product Owner policy — 2026-10-10
 
-Authority: `AGENTS.md`, Governance Machine v1.2.0 and
-`00-GOVERNANCE/evidence/approvals/PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME.json`.
-
-Unit/integration tests are no longer development, merge, acceptance or release
-requirements. Codex must not create or run these module suites, add coverage-only
-tests, or rename them contract/functional/scenario tests to keep executing them.
-Renaming module suites does not make them real user E2E.
+Authority: AGENTS.md, Governance Machine v1.3.0 and
+`00-GOVERNANCE/evidence/approvals/PO-20261010-BRANCHES-AND-TESTING.json`.
+Unit and integration tests are authorized for isolated defect reproduction and regression verification. Relevant regressions accompany scoped changes and run before merge. Inspect historical tests for live collection, credentials, network and training effects before selecting them; do not blindly execute all scripts. Preserve historical assertions and failed receipts. Unit/integration results never substitute for real user E2E.
 
 ## Retained blocking checks
 
@@ -38,5 +34,4 @@ Historical FAILED remains FAILED. Removing a suite from the current gate does
 not repair an observed product defect; reproduce and repair the actual user
 failure through the existing owner and real product operation.
 
-No current unit/integration selector, quarantine expansion or coverage target is
-required. The prior policy is preserved in Git history, including b90fce808959de09e889ed178973a49f0fa8148d.
+Use explicit reviewed regression selections. Do not expand quarantine or weaken assertions to obtain green; no artificial coverage quota is required. The prior policy is preserved in Git history, including b90fce808959de09e889ed178973a49f0fa8148d.

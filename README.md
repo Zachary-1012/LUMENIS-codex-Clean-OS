@@ -84,6 +84,13 @@ These are **audit and verification areas**, not a statement that every affected 
 
 **Authority:** The README is orientation, not an execution approval or an alternative to `AGENTS.md` and the named governance contracts. Historical reports and prior chat summaries are not current runtime evidence.
 
+## Contribution workflow
+
+Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)。
+Repository: `Zachary-1012/LUMENIS-codex-Clean-OS`.
+Read the [AI-native Product Constitution](00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md) before the architecture and owner contracts.
+Create a scoped branch, verify the change with applicable isolated unit/integration and static/build checks, review a PR, then merge into main. Preserve unrelated local changes; never force-push main or automatically delete active branches. CI and real user acceptance remain separate.
+
 ## Local development
 
 The documented Windows workspace is `D:\\LUMENIS_REBUILD\\序\\序境`. Do not assume this path exists on other machines.

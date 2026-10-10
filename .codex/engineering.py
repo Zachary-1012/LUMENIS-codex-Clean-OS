@@ -19,6 +19,7 @@ VERIFICATION_POLICY = ROOT / "00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-
 TEXT_SOURCE = {".py", ".dart", ".md", ".toml", ".yaml", ".yml", ".json", ".js", ".ts", ".txt", ".ps1", ".cmd", ".rules"}
 DENY_SOURCE = re.compile(r"(^|/)(\.git|\.env[^/]*|auth\.json|credentials[^/]*|[^/]*cookies?[^/]*|[^/]*profile[^/]*|[^/]*secrets?[^/]*)(/|$)", re.I)
 ROUTES = [
+    ("testing", r"test|bug|fix|测试|回归|修复", "approved isolated unit/integration regressions; actual user E2E remains separate"),
     ("current-docs", r"api|sdk|package|dependenc|library|framework|\u6587\u6863|\u4f9d\u8d56|\u7248\u672c", "Context7 / openaiDeveloperDocs / official docs"),
     ("source-navigation", r"refactor|implement|source|code|owner|\u4ee3\u7801|\u5b9e\u73b0|\u91cd\u6784|\u5f00\u53d1", "git / rg / engineering"),
     ("database-integrity", r"database|sqlite|migration|repository|\u6570\u636e\u5e93|\u8fc1\u79fb|\u6301\u4e45\u5316", "canonical database owner; safe data-consistency and recovery evidence"),
@@ -26,7 +27,7 @@ ROUTES = [
     ("flutter-runtime", r"flutter|dart|widget|app/|mobile|desktop|\u79fb\u52a8|\u684c\u9762|\u9875\u9762", "Dart/Flutter analysis and target build; actual promised surface acceptance"),
     ("browser-debug", r"browser|web|console|network|playwright|\u6d4f\u89c8\u5668|\u7f51\u9875|\u524d\u7aef", "verified browser/chrome/playwright tooling"),
     ("security-effects", r"permission|auth|cookie|secret|security|publish|\u6743\u9650|\u8ba4\u8bc1|\u5b89\u5168|\u53d1\u5e03", "Codex Security; Permission/effect owner"),
-    ("release-completion", r"test|accept|e2e|bug|fix|\u6d4b\u8bd5|\u9a8c\u6536|\u4fee\u590d|\u62a5\u9519", "retained compile/static/security/data/recovery checks and real-user E2E; module suites prohibited by machine policy"),
+    ("release-completion", r"test|accept|e2e|bug|fix|\u6d4b\u8bd5|\u9a8c\u6536|\u4fee\u590d|\u62a5\u9519", "retained compile/static/security/data/recovery checks and real-user E2E; isolated unit/integration regressions follow current machine policy"),
     ("release-ci", r"release|deploy|ci\b|workflow|\u4e0a\u7ebf|\u90e8\u7f72|\u6d41\u6c34\u7ebf", "GitHub; approved deployment provider"),
     ("research-adoption", r"research|compare|oss|license|\u7814\u7a76|\u6bd4\u8f83|\u5f00\u6e90|\u9009\u578b", "current primary sources; licenses"),
     ("review-delegation", r"review|audit|agent|\u5ba1\u8ba1|\u5ba1\u67e5|\u5e76\u884c", "bounded native subagents/reviewer"),

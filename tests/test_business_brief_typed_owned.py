@@ -266,7 +266,7 @@ def test_typed_owned_business_brief_saves_and_reopens_complete_lineage(workspace
     monkeypatch.setattr(brief.gateway, "run_owned_request", run)
     result = _analyze(workspace, source)
 
-    assert result["state"] == "draft"
+    assert result["state"] == "draft", {"result": result, "source": source}
     assert result["provider"] == "owned"
     assert result["real_input_bound"] is True
     assert len(result["analysis"]["proposed_actions"]) == 2
@@ -569,3 +569,17 @@ def test_legacy_signed_version_seven_ollama_record_reopens_without_provider_call
     assert reopened["provider"] == "ollama"
     assert reopened["analysis"] == analysis
     assert reopened["review_status"] == "HUMAN_PENDING"
+
+
+@pytest.mark.parametrize('forged_time', [False, 0, '2026-10-02T00:00:00Z', ' '])
+def test_unknown_publication_does_not_authorize_a_fabricated_value(workspace, monkeypatch, forged_time):
+    _wire_repositories(workspace, monkeypatch)
+    source, _ = _seed_source(workspace)
+    assert source['publish_datetime'] in (None, '')
+    source['publish_datetime'] = forged_time
+    calls = []
+    monkeypatch.setattr(brief.gateway, 'run_owned_request', lambda request: calls.append(request))
+    result = _analyze(workspace, source)
+    assert result['state'] == 'unavailable'
+    assert 'SOURCE_METADATA_MISMATCH' in result['reason']
+    assert calls == []

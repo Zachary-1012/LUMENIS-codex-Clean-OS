@@ -397,6 +397,10 @@ def _parse_json_output(text: str) -> Optional[Dict]:
 # ============================================================
 def evaluate_content(output: Dict, input_data: Dict, content_type: str, model: str = "") -> Dict[str, Any]:
     """4维度内容质量评估：相关性/创意性/品牌契合度/平台适配度。"""
+    if not isinstance(output, dict) or not output:
+        return {"scores": {key: None for key in ("relevance", "creativity", "brand_fit", "platform_fit")},
+                "overall": None, "method": "not_evaluated", "status": "NOT_EVALUATED",
+                "reason": "CONTENT_OUTPUT_UNAVAILABLE", "model": model, "evaluated_at": _now_iso()}
     scores = {}
     # 规则基线分
     text_content = json.dumps(output, ensure_ascii=False) if output else ""
@@ -483,6 +487,8 @@ def record_evidence(
 
 def record_evaluation(evidence_id: str, eval_result: Dict, human_rating: float = None, feedback: str = "") -> str:
     """记录Evaluation评分。"""
+    if eval_result.get("status") == "NOT_EVALUATED":
+        raise ValueError("CONTENT_OUTPUT_NOT_EVALUABLE")
     eval_id = _gen_id("CEV")
     scores = eval_result.get("scores", {})
     conn = _get_conn()
@@ -494,9 +500,9 @@ def record_evaluation(evidence_id: str, eval_result: Dict, human_rating: float =
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
     """, (
         eval_id, evidence_id,
-        scores.get("relevance", 0), scores.get("creativity", 0),
-        scores.get("brand_fit", 0), scores.get("platform_fit", 0),
-        eval_result.get("overall", 0),
+        scores.get("relevance"), scores.get("creativity"),
+        scores.get("brand_fit"), scores.get("platform_fit"),
+        eval_result.get("overall"),
         eval_result.get("method", "rule_baseline"),
         eval_result.get("model", ""),
         feedback, human_rating, _now_iso(),
@@ -593,7 +599,8 @@ def generate_content(
 
     # 5. Evaluation
     eval_result = evaluate_content(output_json or {}, input_data, content_type, model=model)
-    eval_id = record_evaluation(evidence_id, eval_result)
+    eval_id = (record_evaluation(evidence_id, eval_result)
+               if eval_result.get("status") != "NOT_EVALUATED" else None)
 
     return {
         "ok": bool(output_json),
@@ -722,6 +729,13 @@ def api_content_types():
     return jsonify({"ok": True, "types": {k: {"label": v["label"], "level": v["level"]} for k, v in CONTENT_TYPES.items()}})
 
 
+def _generation_http_status(result):
+    """Transport success must not hide unavailable/invalid generation."""
+    if result.get("ok") is True:
+        return 200
+    return 503 if result.get("meta", {}).get("status") in {"failed", "partial"} else 400
+
+
 @content_bp.route("/generate", methods=["POST"])
 def api_generate():
     """统一内容生成入口。"""
@@ -740,7 +754,7 @@ def api_generate():
         product_id=data.get("product_id", "ZBMP"),
         domain_id=data.get("domain_id", "zbmp"),
     )
-    return jsonify(result), (200 if result["ok"] else 200)
+    return jsonify(result), _generation_http_status(result)
 
 
 @content_bp.route("/generate/<content_type>", methods=["POST"])
@@ -758,7 +772,7 @@ def api_generate_typed(content_type):
         product_id=data.get("product_id", "ZBMP"),
         domain_id=data.get("domain_id", "zbmp"),
     )
-    return jsonify(result)
+    return jsonify(result), _generation_http_status(result)
 
 
 @content_bp.route("/feedback", methods=["POST"])
@@ -770,7 +784,7 @@ def api_feedback():
     if not eid or not feedback:
         return jsonify({"ok": False, "error": "evidence_id 和 feedback 必填"}), 400
     result = regenerate_with_feedback(eid, feedback)
-    return jsonify(result)
+    return jsonify(result), _generation_http_status(result)
 
 
 @content_bp.route("/evidence/<evidence_id>", methods=["GET"])
@@ -999,7 +1013,7 @@ def api_podcast_research():
         style=data.get("style", ""),
         extra_input={"topic": topic, "research": research[:500]},
     )
-    return jsonify(result)
+    return jsonify(result), _generation_http_status(result)
 
 
 def register_content_api(app):

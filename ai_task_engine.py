@@ -3926,18 +3926,16 @@ class TaskEngine:
         if task.get("status") != TaskStatus.AWAITING_APPROVAL.value:
             return {"error": f"Task not in awaiting_approval state: {task.get('status')}"}
 
-        # 生成审批令牌（通过 PermissionGate）
-        approval_token = None
-        if self.permission_gate is not None:
-            try:
-                approval_token = self.permission_gate.grant_approval(
-                    operation="ai_task_execution",
-                    duration_minutes=30,
-                    resource=f"ai_task:{task_id}",
-                    granted_by=approved_by,
-                )
-            except Exception as e:
-                logger.warning(f"[TaskEngine] PermissionGate grant_approval failed: {e}")
+        if self.permission_gate is None:
+            raise PermissionError("TASK_APPROVAL_ISSUER_UNAVAILABLE")
+        try:
+            approval_token = self.permission_gate.grant_approval(
+                operation="ai_task_execution", duration_minutes=30,
+                resource=f"ai_task:{task_id}", granted_by=approved_by)
+        except Exception as exc:
+            raise PermissionError("TASK_APPROVAL_ISSUANCE_FAILED") from exc
+        if not isinstance(approval_token, str) or not approval_token.strip():
+            raise PermissionError("TASK_APPROVAL_ISSUANCE_FAILED")
 
         self._db_update_task(
             task_id,
@@ -4027,11 +4025,19 @@ class TaskEngine:
         if is_agent_zero_gui_task(task):
             return self._cancel_agent_zero_task(task_id, reason)
 
+        terminal = {TaskStatus.SUCCEEDED.value, TaskStatus.CANCELLED.value,
+                    TaskStatus.UNKNOWN.value, TaskStatus.FAILED.value, TaskStatus.DLQ.value}
+        if task.get("status") in terminal:
+            return task
+        with get_db() as conn:
+            changed = conn.execute(
+                "UPDATE ai_task SET status=?, error=?, finished_at=?, updated_at=? "
+                "WHERE task_id=? AND status=?",
+                (TaskStatus.CANCELLED.value, reason, self._now(), self._now(), task_id, task["status"]),
+            ).rowcount
+        if changed != 1:
+            return self._db_get_task(task_id)
         self._cancelled.add(task_id)
-        self._db_update_task(
-            task_id, status=TaskStatus.CANCELLED.value,
-            error=reason, finished_at=self._now(),
-        )
         self._db_add_step(task_id, StepPhase.ERROR.value, "cancelled", detail=reason)
         self._db_add_trace(task_id, "task.cancel", reason, "cancelled")
         return self._db_get_task(task_id)

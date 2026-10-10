@@ -39,6 +39,19 @@ from .formation import (FormationError, FormedCall, canonical_bytes, digest,
 logger = logging.getLogger(__name__)
 
 
+def _normalize_handler_result(data):
+    """Respect both existing result vocabularies without using dict truthiness."""
+    if isinstance(data, dict):
+        flags = [data[key] for key in ("success", "ok") if key in data]
+        if any(type(flag) is not bool for flag in flags):
+            return {"success": False, "error": "TOOL_HANDLER_STATUS_INVALID", "result": data}
+        if any(flag is False for flag in flags) or data.get("error"):
+            return {**data, "success": False, "error": data.get("error") or "TOOL_HANDLER_FAILED"}
+        if "success" in data:
+            return data
+    return {"success": True, "result": data, "source": "tool_handler"}
+
+
 def _serialized_dispatch(method):
     @wraps(method)
     def dispatch(self, *args, **kwargs):
@@ -475,9 +488,7 @@ class CapabilityRouter:
                 data = handler(**captured_step.params)
                 # A real handler error remains an error, including uncertain
                 # effects; dictionary truthiness is not completion evidence.
-                if isinstance(data, dict) and "success" in data:
-                    return data
-                return {"success": True, "result": data, "source": "tool_handler"}
+                return _normalize_handler_result(data)
 
             return FormedCall(step=step, context=context, identity=identity, invoke=invoke,
                               lock=self._dispatch_lock, expected=expected)
@@ -768,28 +779,34 @@ class CapabilityRouter:
         except Exception as e:
             result.error = f"execution error: {e}"
 
-        # 7. Evidence
+        # 7. Evidence: execution may already have happened; do not replay it.
         try:
             ctx.evidence = build_evidence(ctx)
             ctx.evaluation = evaluate_execution(ctx)
             result.evidence = ctx.evidence
         except Exception:
-            pass
+            result.success = False
+            result.reconciliation_required = True
+            result.error = "TOOL_EVIDENCE_UNAVAILABLE"
 
-        # 8. Trace 写入（复用 skill_executions 表）
+        # 8. The existing trace owner returns False on persistence failure.
         try:
             ctx.status = (ctx.status.__class__.COMPLETED if result.success
                           else ctx.status.__class__.FAILED)
+            ctx.error = result.error
             duration = int((time.time() - start) * 1000)
-            write_trace(ctx, duration_ms=duration)
+            if write_trace(ctx, duration_ms=duration) is not True:
+                raise RuntimeError("TOOL_TRACE_NOT_COMMITTED")
         except Exception:
-            pass
+            result.success = False
+            result.reconciliation_required = True
+            result.error = result.error or "TOOL_TRACE_NOT_COMMITTED"
 
         result.duration_ms = int((time.time() - start) * 1000)
         self._execution_history.append(result)
 
         # 更新 Skill Memory 反馈
-        if self.skill_memory:
+        if self.skill_memory and not result.reconciliation_required:
             self.skill_memory.record_feedback(tool_id, result.success, result.duration_ms)
 
         return result
@@ -799,8 +816,10 @@ class CapabilityRouter:
         """无 skill_execution_chain 时的直接执行 fallback。"""
         try:
             if tool.handler:
-                result.data = tool.handler(**params)
-                result.success = True
+                returned = _normalize_handler_result(tool.handler(**params))
+                result.success = returned.get("success") is True
+                result.data = returned.get("result") if result.success else None
+                result.error = None if result.success else returned.get("error", "TOOL_HANDLER_FAILED")
             else:
                 result.error = f"no handler for tool {tool.tool_id} (skill_execution_chain unavailable)"
         except Exception as e:

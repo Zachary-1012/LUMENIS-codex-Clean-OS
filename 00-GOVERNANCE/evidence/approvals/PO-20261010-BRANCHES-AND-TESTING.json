@@ -1,0 +1,27 @@
+{
+  "schema": "lumenis.po-approval-receipt/v1",
+  "approval_id": "PO-20261010-BRANCHES-AND-TESTING",
+  "status": "APPROVED",
+  "approved_by": "Product Owner",
+  "approved_at": "2026-10-10",
+  "approval_source_type": "direct_product_owner_instruction",
+  "source_quotes": [
+    "单元测试和集成测试可以进行恢复，可以进行测试。",
+    "继续推进，取消分支是整体以后允许创建分支ok后再合并进主main"
+  ],
+  "scope_manifest": {
+    "allowed": [
+      "create task/feature/repair branches and pull requests",
+      "merge validated reviewed changes into main",
+      "restore isolated unit and integration tests",
+      "repair the existing approved product defects and CI without reducing product scope"
+    ],
+    "default_workflow": "branch -> scoped verification and review -> PR -> main"
+  },
+  "constraints": [
+    "preserve uncommitted local work and historical evidence",
+    "no force push or automatic deletion of branches",
+    "do not weaken Permission/Evidence/Canonical or user-outcome acceptance",
+    "no live collection, external model calls, GPU training, paid resources or production deployment under this grant"
+  ]
+}
