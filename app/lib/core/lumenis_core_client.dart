@@ -478,6 +478,20 @@ class LumenisCoreClient {
   Future<Map<String, dynamic>> screen(String screenId) =>
       _get('/api/experience/screen/${Uri.encodeComponent(screenId)}');
 
+  /// AI-01 intent submission. Only the task text and the low-risk `ANALYZE`
+  /// action are sent: the actor, domain, product and skill are never supplied
+  /// by the client (the server's PermissionGate owns them). The timeout covers
+  /// the whole synchronous execution; an elapsed timeout means the outcome is
+  /// unknown and the caller must not resubmit automatically.
+  Future<Map<String, dynamic>> submitAiIntent({required String task}) {
+    return _request(
+      'POST',
+      '/api/experience/ai/intent',
+      payload: {'task': task, 'action_type': 'ANALYZE'},
+      connectionTimeout: const Duration(minutes: 2),
+    );
+  }
+
   Future<Map<String, dynamic>> startSourceBriefTask({
     required String domainId,
     int limit = 30,
