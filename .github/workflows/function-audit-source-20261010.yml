@@ -1,0 +1,61 @@
+name: Frozen function-audit source transfer (not acceptance)
+on:
+  push:
+    branches: [audit/20261010-current-code-convergence]
+    paths: [.github/workflows/function-audit-source-20261010.yml]
+permissions:
+  contents: read
+jobs:
+  source:
+    if: github.repository == 'Zachary-1012/LUMENIS-codex-Clean-OS' && github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          path: source
+          ref: 01588e9fd9568e3fcaf1e6c3d957bc498436fa48
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Package tracked UTF-8 source for authorized review only
+        timeout-minutes: 3
+        run: |
+          python3 -I - <<'PY'
+          import pathlib, subprocess, hashlib, json, tarfile, io
+          root=pathlib.Path('source'); out=pathlib.Path('review-transfer'); out.mkdir()
+          sha='01588e9fd9568e3fcaf1e6c3d957bc498436fa48'
+          def git(*args): return subprocess.check_output(['git','-C',str(root),*args],timeout=45)
+          assert git('rev-parse','HEAD').decode().strip()==sha
+          rows=git('ls-tree','-rz','--full-tree',sha).split(b'\0')
+          manifest=[]
+          with tarfile.open(out/'frozen-text-source.tar.gz','w:gz') as archive:
+              for row in rows:
+                  if not row: continue
+                  meta,pathraw=row.split(b'\t',1); mode,kind,blob=meta.decode().split(); path=pathraw.decode()
+                  if kind!='blob':
+                      manifest.append({'path':path,'kind':kind,'sha':blob,'transfer':'NOT_TEXT'}); continue
+                  data=git('cat-file','blob',blob)
+                  assert hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()==blob
+                  record={'path':path,'blob':blob,'bytes':len(data),'mode':mode}
+                  try:
+                      text=data.decode('utf-8-sig')
+                      if '\0' in text: raise UnicodeError()
+                  except UnicodeError:
+                      record['transfer']='BINARY_NOT_TRANSFERRED';manifest.append(record);continue
+                  # Never copy actual environment/credential/session files into an artifact.
+                  p=pathlib.PurePosixPath(path)
+                  if p.name in {'.env','auth.json','credentials.json','cookies.json'} or any(x in p.parts for x in ('.git','private','profiles')):
+                      record['transfer']='SENSITIVE_PATH_NOT_TRANSFERRED';manifest.append(record);continue
+                  info=tarfile.TarInfo(path);info.size=len(data);info.mode=0o600
+                  archive.addfile(info,io.BytesIO(data));record['transfer']='FULL_BYTES'
+                  manifest.append(record)
+          (out/'manifest.json').write_text(json.dumps({'baseline':sha,'tree':git('rev-parse','HEAD^{tree}').decode().strip(),'files':manifest},ensure_ascii=False,indent=2))
+          print('verified_files',len(manifest),'text_transferred',sum(r['transfer']=='FULL_BYTES' for r in manifest))
+          print('product_execution=NOT_PERFORMED; no model, collector, database or production environment accessed')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: frozen-source-for-authorized-function-review
+          path: review-transfer/*
+          if-no-files-found: error
+          retention-days: 1
