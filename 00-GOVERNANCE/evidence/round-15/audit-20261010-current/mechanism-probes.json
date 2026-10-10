@@ -1,0 +1,138 @@
+{
+  "baseline": "01588e9fd9568e3fcaf1e6c3d957bc498436fa48",
+  "observed_at": "2026-10-10T20:25:43.329127+08:00",
+  "boundary": "EXACT_SOURCE_FUNCTIONS_WITH_CONTROLLED_DEPENDENCIES",
+  "source_blobs": {
+    "content_generation.py": "88e542477a667bd3744188692743755ff1f3ec8c",
+    "app.py": "e0aa339a8b356b2d3d61916a02e02924ff01e95c",
+    "kos_professional.py": "cdc643b9fc175fb426ab3b06eb8c7ec464b27ddd",
+    "lumenis_agg_api.py": "2efdc3c21f7d27a77e069cefc8c7d7305d3cadf4"
+  },
+  "production_db_accessed": false,
+  "external_effects": false,
+  "model_calls": false,
+  "source_modified": false,
+  "results": [
+    {
+      "probe": "content_without_substantive_work",
+      "case": "empty_object",
+      "overall": null,
+      "method": "not_evaluated",
+      "scores": {
+        "relevance": null,
+        "creativity": null,
+        "brand_fit": null,
+        "platform_fit": null
+      }
+    },
+    {
+      "probe": "content_without_substantive_work",
+      "case": "blank_title",
+      "overall": 5.2,
+      "method": "rule_baseline",
+      "scores": {
+        "relevance": 5.0,
+        "creativity": 3.7,
+        "brand_fit": 6.0,
+        "platform_fit": 6.0
+      }
+    },
+    {
+      "probe": "content_without_substantive_work",
+      "case": "null_body",
+      "overall": 5.2,
+      "method": "rule_baseline",
+      "scores": {
+        "relevance": 5.0,
+        "creativity": 3.7,
+        "brand_fit": 6.0,
+        "platform_fit": 6.0
+      }
+    },
+    {
+      "probe": "content_without_substantive_work",
+      "case": "empty_segments",
+      "overall": 5.2,
+      "method": "rule_baseline",
+      "scores": {
+        "relevance": 5.0,
+        "creativity": 3.7,
+        "brand_fit": 6.0,
+        "platform_fit": 6.0
+      }
+    },
+    {
+      "probe": "content_without_substantive_work",
+      "case": "thirty_blank_fields",
+      "overall": 6.8,
+      "method": "rule_baseline",
+      "scores": {
+        "relevance": 5.0,
+        "creativity": 10.0,
+        "brand_fit": 6.0,
+        "platform_fit": 6.0
+      }
+    },
+    {
+      "probe": "event_confirmation_reentry",
+      "first": {
+        "events": 1,
+        "notes": 1
+      },
+      "second": {
+        "events": 1,
+        "notes": 1
+      },
+      "unlinked_other_subject_before_second": 0,
+      "unlinked_other_subject_after_second": 1,
+      "global_http_auth_exercised": false
+    },
+    {
+      "probe": "professional_metric_identity_collision",
+      "first_import": {
+        "ok": true,
+        "imported": 1,
+        "failed": 0
+      },
+      "second_import": {
+        "ok": true,
+        "imported": 1,
+        "failed": 0
+      },
+      "retained_rows": [
+        {
+          "brand_id": "BRAND-B",
+          "account_id": "same-account",
+          "metric_date": "2026-10-10",
+          "impressions": 202
+        }
+      ]
+    },
+    {
+      "probe": "professional_route_masks_owner_refusal",
+      "owner_result": {
+        "ok": false,
+        "error": "专业号接入未开启",
+        "code": "NOT_ENABLED"
+      },
+      "route_result": {
+        "ok": true,
+        "state": "IMPORTED",
+        "result": {
+          "ok": false,
+          "error": "专业号接入未开启",
+          "code": "NOT_ENABLED"
+        }
+      },
+      "http_middleware_exercised": false
+    },
+    {
+      "probe": "all_metric_rows_invalid",
+      "owner_result": {
+        "ok": true,
+        "imported": 0,
+        "failed": 1
+      }
+    }
+  ]
+}
