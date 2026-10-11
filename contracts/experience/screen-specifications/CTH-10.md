@@ -6,7 +6,7 @@
 
 默认界面不得要求用户挑论文/operation、输入对数权重、粘贴内部 Task ID 或先跑数学情景才能取得报告。业务预算/资源/约束可编辑；计算方法、参数来源、样本和误差可展开核对。AI 可辅助解释与写作，但无 AI 时确定性分析、人工判断、报告编辑及保存/修订/重开/恢复必须可用。
 
-来源详情按 Experience 的真实资料呈现，并支持 Trace → Open Original（产品内浏览器）→ Return。2026-10-10“数学分析与方案比较”表单增补已被本次直接 PO 更正取代；保留其算法、既有成果、源码与历史证据，不能把改规则或隐藏入口当作后端分析已完成。当前前端纠偏尚未实现/验收，F 仍暂停；本屏完整出口保持 OPEN。
+来源详情按 Experience 的真实资料呈现，并支持 Trace → Open Original（默认在产品内 SYS-06 打开实际网页；用户可明确选择外部浏览器）→ Return。2026-10-10“数学分析与方案比较”表单增补已被本次直接 PO 更正取代；保留其算法、既有成果、源码与历史证据，不能把改规则或隐藏入口当作后端分析已完成。当前前端纠偏尚未实现/验收；本屏完整出口保持 OPEN。
 
 ```yaml
 screen_id: CTH-10
@@ -204,7 +204,7 @@ full C3, native surfaces, Product Owner repeat operation and release remain open
 
 ### 可编辑设计到源码映射（2026-10-08 审计采用）
 
-F 在 Product Owner 明确恢复后，在本屏现有规范中补齐同一条链；本轮只更新规则，不创建或修改 Figma 工程：
+本屏设计/源码映射沿用现有 Experience 与 ScreenSpec 合同；本段不改变设计、实现或验收状态：
 
 - **设计资产：** Figma file key / node ID / revision / 可编辑访问状态 = `NOT_VERIFIED`（本轮未连接核实，不能推断不存在）。复用获授权既有工程；需要新建时先取得必要访问及 PO 认可，不上传私有生产资料。
 - **源码与动作：** 本屏原有 Flutter Screen/Component → Repository/ViewModel → Action → Core/Permission/状态；逐项回读真实路径，不复制旧绑定表里的状态。

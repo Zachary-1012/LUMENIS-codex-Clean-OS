@@ -1,22 +1,22 @@
-# LUMENIS 前端最终目标与执行蓝图
-## 全产品操作方案与文字视觉草图 · Product Owner 审核稿 1.6
+# LUMENIS 全产品用户操作与视觉参考
+## 从属现有 Product Architecture / Experience · 文字视觉参考 1.7
 
 初版日期：2026-10-06
-当前收敛日期：2026-10-07
+当前参考校准日期：2026-10-11；原1.6收敛日期：2026-10-07
 1.6 审阅输入基线：本轮最终交叉核对前，main、origin/main 与 live refs/heads/main 均为 `bbe3310f095b788448a480c4615481bc5da029f8`；Universal Platform Acquisition 规则来源提交为 `3be8298a3ae853b98fde90b2fda943a5c9462a58`。该 SHA 是审阅输入，不是永久 current 指针；实现/验收必须 fresh resolve 当前 main。
-审核状态：FINAL_TARGET_CONVERGENCE_APPROVED / 仍不等于实现或用户验收
-本文件沿用原 1.5 路径以避免制造第二份前端蓝图；内部修订号 1.6 取代其中与当前权威冲突的 1.5 目标描述。
+历史1.6审核记录：FINAL_TARGET_CONVERGENCE_APPROVED / 不等于实现或用户验收。1.7按已批准产品规则校正参考，不自动晋升设计或实现状态。
+沿用原1.5文件路径；1.7只校正参考动线、原生范围及原件/派生呈现边界。唯一产品蓝图归Product Architecture，唯一视觉 authority 归Experience及其ScreenSpec，本文件不定义第二套执行规则。
 本轮范围：研究综合、全产品最终目标态、操作流程、页面规格、五位架构角色视觉体系、文字视觉草图、当前状态与缺口映射，以及 2026-10-06—10-07 新批准的 SourceTarget、Universal Platform Acquisition、PlatformSession/Recovery、durable task 和 same-release evidence 规则。
 本轮没有做：修改产品代码、正式视觉制作、产品构建/运行验收或部署。产品实现状态与最终目标继续分开记录。
 
-> 这份蓝图画的是：当前批准的序境完整产品范围全部实现并形成真实工作闭环之后，用户能够看见并使用的目标体验。它不是当前产品已全部完成的声明，也不是最终视觉定稿。
+> 这份从属视觉参考画的是：当前批准的序境完整产品范围全部实现并形成真实工作闭环之后，用户能够看见并使用的目标体验。它不是当前产品已全部完成的声明，也不是最终视觉定稿。
 >
 > 本文同时标出已有源码、候选/局部实现、尚缺接入、未验证和明确后置。没有数据、后端或接口的目标功能仍保留在蓝图中，但标成未完成或未知；不会用样例数值、动画或 AI 文案伪造已完成。
 
 ### 文档读法：最终目标与当前实现永远分开
 
 - **FINAL PRODUCT TARGET**：描述完整产品闭环后用户应该看见和完成什么。除非 Product Owner 改变产品方向，它不因今天某个 API/模型/平台暂未接通而缩水。
-- **CURRENT IMPLEMENTATION DELTA**：描述当前 main 已实现、部分实现、Blocked/Unverified 的真实状态。它可以随开发更新，但不得反向删除已经批准的终态。
+- **CURRENT IMPLEMENTATION DELTA**：描述当前 main 已实现、部分实现、Blocked/Unverified 的真实状态。历史快照不代表此刻状态；每次实现须核对当前源码/运行，不能反向删除已经批准的终态。
 - 原 1.5 中以 `0c9394ef` 为基线的源码/运行观察仍是 dated provenance；若与当前 main、Current Screen Spec 或本 1.6 收敛段冲突，以当前权威和 fresh evidence 为准。
 - 文字视觉草图只定义用户可见结构、状态、动作与 Return；PlatformManifest、attempt token、lease、Cookie、CDP 等内部实现词不得直接变成普通用户界面。
 
@@ -98,29 +98,24 @@
 
 ### 1.3 用户工作连续性
 
-统一用户感知的工作链：
+用户从工作主页选择一条适合当前目标的路径；下列链路可组合，但不构成每个任务都必须经过的统一流水线：
 
 ~~~
-当前问题/目标
-   ↓
-真实材料与来源
-   ↓
-可核查 Evidence / 口径
-   ↓
-分析、Case、决策或 Brief
-   ↓
-可编辑内容 / 视频 / 播客 / 报告
-   ↓
-保存 Artifact 版本、重开、修订或导出
-   ↓
-真实 Action 与 Outcome
-   ↓
-Evaluation / 经审核的 Learning Asset
-   ↓
-回到下一项工作
+ACC-03 · 选择一项工作
+   ├─ CTH/BMP 商业任务：业务问题 + 可选Subject/BrandFocus + 适用来源
+   │    → 后端分析/证据核验 → 用户判断/决策/行动 → 保存与Outcome评价
+   ├─ Shared 独立研究：网页/文件/图片/音视频/个人笔记
+   │    → 阅读/比较/引用 → 可用研究笔记/报告 → 保存、重开、修订
+   ├─ Shared 直接创作：空白/用户自写要求/获准素材
+   │    → 提案/文稿/视频/播客编辑 → 预览/导出 → 保存、重开、修订
+   └─ 产品内浏览器：从当前Task/Source进入真实网页 → 支持的页面操作
+        → 停止或人工接管 → 返回原Task与已保存成果
+
+跨路径连接为用户选择的可选接续：研究/CTH/BMP资料 ↔ Brief/作品；
+接续时沿用已选来源、scope和版本，不强制每条路径汇合。
 ~~~
 
-每个跨模块链接带回原任务/筛选/被选对象。需要变化时，先告诉用户哪些下游产物受影响，提供“保留旧版本 / 基于新要求生成版本 / 取消”路径；不会静默覆盖来源、事实、成果或已发布记录。
+每个跨模块链接带回原任务/筛选/被选对象。需要变化时，先告诉用户哪些下游产物受影响，提供“保留旧版本 / 基于新要求生成版本 / 取消”路径；不会静默覆盖来源、事实、成果或已发布记录。提案、文稿、视频或播客可以从空白、自写创作要求或获准素材独立开始；CTH/BMP分析、Research、Subject/BrandFocus与SourceBrief仅在用户选择联动时进入。
 
 ### 1.4 当前实现/部分实现/未验证状态账本
 
@@ -134,7 +129,7 @@ Evaluation / 经审核的 Learning Asset
 | CTH-03 采集与单帖阅读 | 当前 Screen GET 返回最多 100 条 canonical 记录和平台状态行；人工确认只读搜索 POST 已存在，但 Flutter 源码没有调用者 | GLOBAL/ALL 下手动指定平台与查询条件，显式确认只读后发起；列表保留稳定平台 ID、来源、发布/采集时间和 Evidence 定位；单帖详情按平台原生内容形态呈现 | 当前 CTH row 的 `source_url`、`captured_at`、`projection/Evidence` 未进入 Dart row/UI；平台行缺 row projection 却被客户端按该投影筛选；标题关键词预填广州太古汇。正文、媒体、原生互动不在当前 CTH row schema 中，不能先画成已接入 |
 | 采集运维与浏览器 | SYS-02 Screen Spec 是 Collector 状态只读面；SYS-06 是受控浏览器来源/会话边界；BMP-03/SH-02 是消费侧 | SYS-02 看真实任务状态与可恢复节点；SYS-06 只在授权/当前任务许可内读来源；SH-02 阅读有 lineage 的 Source/Evidence；BMP-03 解释有样本边界的市场信号 | 状态页不是启动/取消 API；浏览器会话不等于采集权限；单篇原帖不等于市场总体；每个页面仍按各自 Screen Spec 与真实运行证据验收 |
 | AI 与 Agent | AI-01..05 源码与规范存在；AI-01..05 规范为 `BLOCKED`，AI-05 当前有诊断 fallback | AI能在可执行时提供可核对任务结果，在不可用时准确恢复/回退 | 当前屏幕 contract 记录 BACKEND-GAP-029/-030 等边界；AI真实结果、引用、Artifact保存/重开和评价仍未作用户 E2E |
-| Shared / Discover / 视频 / 分镜 | SH-01当前安全能力目录；ScreenSpec `IMPLEMENTED_CATALOG_ONLY_EVIDENCE_SCOPE_BLOCKED`；媒体预览/TL与操作分镜分别已有源/设计合同 | 同一SH-01承接有来源的Discover→现有Brief；叙事任务可从脚本继续进入完整ShotPlan/线稿/彩稿/逐镜确认；素材任务进入全屏宽视频Timeline | Discover bindings和ShotPlan/媒体验收分开；来源许可/Evidence、媒体导入/渲染/版本/重开、逐镜确认变更失效等未通过真实任务前均未验收 |
+| Shared / Discover / 视频 / 分镜 | SH-01当前安全能力目录；ScreenSpec `IMPLEMENTED_CATALOG_ONLY_EVIDENCE_SCOPE_BLOCKED`；媒体预览/TL与操作分镜分别已有源/设计合同 | Discover/Research 可选；提案、文稿、视频或播客可从空白、自写要求或许可素材直接开始；只有用户选择联动时才进入 Discover/Source→Brief→Artifact；叙事任务按需进入完整ShotPlan/线稿/彩稿/逐镜确认，素材任务进入全屏宽视频Timeline | Discover bindings和ShotPlan/媒体验收分开；来源许可/Evidence、媒体导入/渲染/版本/重开、逐镜确认变更失效等未通过真实任务前均未验收 |
 | 播客 | BMP-08 有脚本/渲染相关 UI 源码，screen spec `OWNER_REVIEW` | 文件音频导入、理解、编辑、播放/试听、保存/渲染/重开；实时麦克风后置 | 文字脚本不能代替真实声音；文件级播放/混音/渲染/重开仍待真实 E2E |
 | 外观/图标 | SYS-05 规范为 `DESIGN_READY`；`crimson-sunset.jpg` 与 `cobalt-dusk.jpg` 已随 app assets 捆绑，已有局部 Web/Windows 证据 | 线性功能 icon + 原创手绘色彩身份图标；强色壁纸上对比自适应，偏好留在当前设备 | Web 选择/重载/删除及若干外观检查有局部 PASS；这两张图在所有端/字号/裁切下的真实用户复核、原生材质渲染仍未全验 |
 | 证据/绑定清单 | current binding registry 文件存在 | 每个输入/字段与 owner、权限、来源、口径和任务结果一致 | registry 生成于旧 HEAD 76fbe1af…，比当前快照早，不能代表当前完整绑定分布；后续须按当前源生成/readback |
@@ -360,6 +355,8 @@ Evaluation / 经审核的 Learning Asset
 | 从真实材料出发 | Start with real materials | 실제 자료에서 시작합니다 |
 | 把来源、判断与行动连成可复核的工作 | Connect sources, decisions, and actions in work you can review | 출처, 판단, 행동을 검토 가능한 작업으로 연결합니다 |
 | 一次真实工作怎样走完 | Follow one real task from start to finish | 실제 작업이 처음부터 끝까지 이어지는 과정 |
+| 从空白开始创作：提案、文稿、视频或播客 | Create a proposal, document, video, or podcast from a blank start | 빈 화면에서 제안서, 문서, 영상 또는 팟캐스트 만들기 |
+| 研究与业务联动是可选路径 | Connect research to business work when it helps | 필요할 때 조사 결과를 비즈니스 작업에 연결 |
 | 常见问题 | Frequently asked questions | 자주 묻는 질문 |
 | 进入工作区 | Enter the workspace | 작업 공간으로 이동 |
 | 播放演示 | Play the demonstration | 시연 재생 |
@@ -741,7 +738,7 @@ ShotPlan只用于确有逐镜构思的故事/广告任务，不强塞给纯素�
 #### 流程 G：播客制作与交付
 
 ~~~text
-研究/Brief → 脚本段落和出处 → 导入已有音频文件
+用户自写创作要求/已有文字或获准素材（可空白直接开始；研究/业务Brief可选带入）→ 脚本段落和出处（若适用）→ 导入已有音频文件
 → 脚本/波形对齐 → 多轨剪辑/淡入淡出/混音/监听
 → AI 建议（可选并逐项确认）→ 预听
 → 保存项目版本 → Render/导出 → 重开音频与脚本
@@ -857,7 +854,8 @@ CTH-02主体目录 / BMP-02品牌组合里的“新增” → 不放进ACC-02焦
 #### 流程 L：原创提案、资源选项和预算变化影响
 
 ~~~text
-研究结果/参考材料 → 生成可编辑 Brief（目标、受众、范围、材料、来源）
+用户创作目标/自写 Brief（可空白开始；研究结果、参考材料或CTH/BMP内容可选带入）
+ → 生成可编辑 Brief（目标、受众、范围、材料、来源）
  → 多个真实策略概念/说明（用户可编辑，不以AI结论当事实）
  → 预算/人力/时间等资源备选（字段由现有owner返回，来源和假设可追）
  → 完整可编辑成稿/方案 → 用户审阅/批注/修改 → 新版本
@@ -899,8 +897,8 @@ CTH-02主体目录 / BMP-02品牌组合里的“新增” → 不放进ACC-02焦
 |---|---|---|
 | Public Website（窄屏/宽屏浏览器） | 长叙事章节、产品/业务解释、真实操作视频、帮助/FAQ/联系/已发布下载；网站导航与Workspace入口独立 | Anchor与浏览器Back返回原章节；视频字幕/静音/Reduced Motion/失败文字回退；不读取生产Core、文件系统或User scope |
 | Web Workspace（浏览器） | 浏览器内完成研究、Brief、来源阅读和可授权编辑；≥1120逻辑像素可并列Reader/Inspector/TL，760–1119收窄成可逆抽屉，<760转任务列表→全屏详情 | 使用已绑定的浏览器文件/选择接口，不猜客户端路径、不具备Desktop CDP/本地模型/本机目录能力；刷新/Back恢复route、Task、筛选、Selection |
-| Desktop App（Windows/macOS/Linux） | 宽屏多源对照，长时间线/多轨/检查器，获准的本机文件与专业编辑；在窄窗口时折叠导航/Inspector而保留主工作面 | 每个OS用其实际键盘菜单习惯（如Ctrl/Cmd）映射到相同行为；只用现有native picker/路径owner；标题栏关闭、任务退出和媒体路径失效按实际host状态恢复 |
-| Mobile Companion（Android/iOS） | 通知/真实任务/审核/来源Reader/单镜预览/轻操作；平板可以双区比较，手机一次集中一个任务 | Android系统返回/iOS导航、键盘弹起和分享/文件选择只按真实Flutter能力适配；竖屏/横屏保存焦点与timecode；完整多轨编排转续到Web/Desktop，不伪称手机是完整桌面剪辑台 |
+| Desktop App（Windows/macOS） | Website/Web完成后进入原生专项；宽屏多源对照，长时间线/多轨/检查器，获准的本机文件与专业编辑；在窄窗口时折叠导航/Inspector而保留主工作面 | Windows/macOS按各自实际键盘菜单习惯（如Ctrl/Cmd）映射到相同行为；只用现有native picker/路径owner；标题栏关闭、任务退出和媒体路径失效按实际host状态恢复 |
+| Mobile Companion（iOS） | Website/Web完成后进入原生专项；通知/真实任务/审核/来源Reader/单镜预览/轻操作；平板可以双区比较，手机一次集中一个任务 | iOS导航、键盘弹起和分享/文件选择只按真实Flutter能力适配；竖屏/横屏保存焦点与timecode；完整多轨编排转续到Web/Desktop，不伪称手机是完整桌面剪辑台 |
 
 | 参考尺寸 | 推荐核对的构图变化（各Screen仍保留自己的构图） |
 |---|---|
@@ -912,6 +910,8 @@ CTH-02主体目录 / BMP-02品牌组合里的“新增” → 不放进ACC-02焦
 四个用户桌面快捷入口是Host的启动方式，不等于上述四种产品Surface。每个入口须保留真实已验证的destination/deep link；若有该快捷入口的接受目标，全部更新到同一最新Desktop build，但不可把所有不同任务深链强制改成ACC-03。当前未在OS运行核对四个快捷方式名和目标；后续验收逐个记录其原目标、实际结果和失败恢复，不凭入口图标猜功能。
 
 系统读屏顺序、200%字号、键盘焦点与Escape/Back恢复、44×44或平台允许的实际触控目标、减少动效、横竖屏/窄窗均映射到每个目标端。以上是终态设计与验收路径，不表示本轮已跑过8种宽度或多个OS。
+
+Android/Linux原生客户端不属于当前交付目标；Linux服务端/CI、Linux或Android设备上的支持浏览器访问以及窄屏Web测试仍适用。Website + Web Workspace先闭环，之后才进行Windows/macOS Desktop与iOS Mobile专项实现、打包和设备验收；本行目标不表示这些原生端已实现或已验收。
 
 ## 5. 采集结果进入产品后的单帖呈现与跨屏闭环
 
@@ -1017,7 +1017,7 @@ AUTO全局产品自有公开基线依当前批准Global合同单独标识；普�
 | X / 原语言文字与媒体片段 | 原始语言正文优先；翻译/平台翻译可切换且标注来源；每条真实视频片段有独立时长、播放状态、帖子/回复关系和按观测版本记录的互动 | 只得poster时明确“片段未播放”；不得拼贴多个海报冒充播放内容；不同时间指标不覆盖原值，不把平台显示时间改成采集时间 | `ORIGINAL_LANGUAGE_DETAIL_OBSERVED`；参考帖三个短片只读了poster，片段未完整观看 |
 | Facebook / 帖子与附件 | owner返回完整授权帖子时，正常Reader展示全文、媒体/附件、作者/时间、原生互动/回复和来源版本，不借其他站点资料补字段 | 只有OpenGraph/meta时明确“仅公开预览”；正文、媒体、时间或互动分别缺失；原站403/撤权显示来源不可读并可回列表，不能永远以预览态当正常全帖布局 | `PUBLIC_META_PREVIEW_ONLY; FULL_POST_UNAVAILABLE`；当前样本正文、媒体、时间、互动均未取得 |
 
-上述完整正常布局是目标状态，允许字段必须来自当次真实Source/Evidence/平台返回；样本表最后一栏是研究观察，不是批准的内容集/商业素材。其它已经批准来源按相同的**原生内容类型**（长文、图集、视频、音频、讨论串、listing）选阅读器，不排除它们，也不复制社交平台Feed模板或新增平台中心。
+上述完整正常布局是目标状态，允许字段必须来自当次真实Source/Evidence/平台返回；样本表最后一栏是研究观察，不是批准的内容集/商业素材。Reader差异只反映原生内容结构，不给平台或公开网页来源类别排高低；类别基础权重相同，具体Source质量、身份、时间、权益与用途仍按同一标准逐条核验。其它已经批准来源按相同的**原生内容类型**（长文、图集、视频、音频、讨论串、listing）选阅读器，不排除它们，也不复制社交平台Feed模板或新增平台中心。
 
 完整单帖阅读参考位于 六平台单帖字符草图-v3.md（LOCAL_ONLY：`work/c1-w1-20261002/current-purpose-collection-outcome/per-post-character-sketches-v3/六平台单帖字符草图-v3.md`；未随本次归档发布），其索引 SHA256 为 `7ec2fbed1d85b8168170d2517bef274df896bf78aa9388fda0f13af1ff78e3e0`。该材料的六个文件各仅含一帖，`source_scope=UNASSIGNED`、正式 Source/Evidence/Canonical 引用为空、商业使用权 `UNKNOWN`、`TRAIN=NOT_GRANTED`、设计状态为 `DESIGN_EXPLORATION`、前端未实现。它只获准作为内部结构研究参考；本蓝图不复制其中原帖正文/账号信息，不把它们放进官网演示、生产结果或训练集。
 
@@ -1028,10 +1028,10 @@ AUTO全局产品自有公开基线依当前批准Global合同单独标识；普�
 | CTH-03 | 用户任务里的显式人工只读检索、来源流、Scope/平台过滤、单帖入口及返回业务链 | 不把打开页面当采集；不把100条上限当全量；不将平台状态当 Evidence；未绑定正文/媒体时不伪造详情 |
 | SYS-02 | 目标态显示PlatformManifest投影、PlatformSession、真实计划/手动run、逐来源lane、durable task receipt、query continuation与native cursor，并在真实callable存在时提供pause/cancel/resume/recovery | 当前实现仍可read-only；declared/registered/configured/session-verified/live-verified分开，终态动作不因当前未绑定而从蓝图删除；一个来源失败不阻断其它可用lane |
 | SYS-06 | 在授权范围内查看受控来源；当RecoverySheet的当前恢复项需要LOGIN_FORM/VERIFY时提供受控Browser交互并返回Session owner | Browser打开/表单完成不等于Session恢复；必须PlatformSession健康回读后才续原Task；QR与BLOCKED/COOLDOWN不强行进入Browser；隐藏Cookie/token/profile/CDP且不触碰个人Mainland XHS账号 |
-| SH-02 | 查看已登记Source/Evidence、原件/文本可用性、引用定位、版本/来源时间；按原生内容类型进入Reader；同一row可用时走SourceTarget→Open Original→Return | 不补造缺失原文、不另建Evidence、不暴露裸URL；Open Original不启动采集/登录/Evidence写入，Return恢复原筛选/选中/位置 |
+| SH-02 | 查看已登记Source/Evidence、原件/文本可用性、引用定位、版本/来源时间；按原生内容类型进入Reader；同一row可用时在LUMENIS Browser内Open Original→Return | 不补造缺失原文、不另建Evidence、不暴露裸URL；外部打开由用户明确选择，不启动采集/登录/Evidence写入，Return恢复原筛选/选中/位置 |
 | BMP-03 | 从已有来源做品牌/市场研究，以样本/范围/期间/指标定义解释主题，逐条回 CTH/SH-02 Source | 不发起另一个采集器；单帖不能代表市场或消费者总体；没有可比时间序列不称趋势 |
 
-完成态的用户闭环为：明确任务与 GLOBAL/可选 Focus → 输入来源条件 → 服务端照常校验 Permission → 确认只读并由 CTH Collector 执行 → 真实 Source/Evidence/Canonical 回执 → 打开原帖 → 加入有范围的 BMP/CTH/Research/Brief → 保存、重开、修改与回溯同一 Source。授权失效、限速/挑战、部分接受、拒绝归属、媒体缺失和撤权分别显示原因/已保留内容/可恢复动作；绝不重复外部效果或把“下载到文件”当成正式入库。
+CTH-03来源检索路径的闭环为：明确任务与 GLOBAL/可选 Focus → 输入来源条件 → 服务端照常校验 Permission → 确认只读并由 CTH Collector 执行 → 真实 Source/Evidence/Canonical 回执 → 在LUMENIS Browser内打开原帖（或由用户明确选择外部打开）→ 可选加入有范围的 BMP/CTH/Research/Brief → 保存、重开、修改与回溯同一 Source。授权失效、限速/挑战、部分接受、拒绝归属、媒体缺失和撤权分别显示原因/已保留内容/可恢复动作；绝不重复外部效果或把“下载到文件”当成正式入库。研究、文稿、视频、播客等独立路径不要求先经过此采集链。
 
 未来验收最少覆盖：GLOBAL 下不选 Subject 仍可完成手动搜索；不自动填太古汇；六平台 stable ID 筛选与显示别名一致；每条记录来源、发布/采集时间与 Evidence 投影可追；平台来源行通过正确 Scope 合同而不绕过现有 projection 校验；结果详情 Back 能恢复过滤/列表位置；限速/授权失败/部分结果/失效会话不清除既有证据；帖子样本不被显示成市场覆盖或消费者总体。方案阶段未执行这些操作或产品验收。
 
@@ -1045,7 +1045,7 @@ AUTO全局产品自有公开基线依当前批准Global合同单独标识；普�
 |---|---|---|---|---|
 | ACC-01 | 当前不呈现产品账户/登录界面；启动后直接到ACC-03，是否重规划留待闭环后由Product Owner另行决定 | 不绘制账户表单、OAuth按钮、角色选择、找回流程或占位入口 | LaunchSurface→开放工作区；真实底层能力异常时在原位置就地恢复 | 旧 Screen Spec 的 `DESIGN_READY` 仅作为既有规范状态；当前用户方向明确暂缓账户UI，不作为当前设计/实现 |
 | ACC-02 | 可选选择现有 Subject 与 BMP BrandFocus，显示合法对象来源/名称 | 搜索→对象列表→一个对象关系细节；Default GLOBAL 保持第一选择 | 选取后确认焦点；取消/清空回 GLOBAL；跨域不改身份 | 源码存在；主体选择不得变成入口限制 |
-| ACC-03 | 真实待处理任务、待确认动作、重要变化、上次工作（需真有记录）、任务起点 | 上方任务入口；中段是有意义的工作路径/真实任务条；不做四个大卡和侧边状态栏 | 开始 AI-01、打开任务或去 CTH/BMP/Shared；返回保留当前真实任务 | 源码存在但现有首屏内容和 CTH-01 默认与目标冲突，需重组 |
+| ACC-03 | 真实待处理任务、待确认动作、重要变化、上次工作（需真有记录）、任务起点 | 上方任务入口；中段是有意义的工作路径/真实任务条；不做四个大卡和侧边状态栏 | 开始 AI-01、打开任务，或进入 CTH/BMP 业务、Shared 研究/直接创作；返回保留当前真实任务 | 源码存在但现有首屏内容和 CTH-01 默认与目标冲突，需重组 |
 | ACC-04 | 某项任务/读取失败时说明对象、影响和真实恢复动作 | 原任务中的局部恢复提示；不跳转到登录/通用权限页面 | 仅在owner许可时重试；否则返回/改用现有可用路径；恢复后回原任务 | 服务端真实拒绝仍不可伪造通过；产品账户与通用权限配置UI暂缓 |
 
 ### 6.2 CTH — 商业运营（10 屏）
@@ -1419,19 +1419,21 @@ Desktop / Web — 16:9 宽屏，Timeline使用下方完整工作宽度
 ### 7.8 网站操作视频章节
 
 ~~~text
-Public Website Header  [序境]  [产品]  [案例]  [资源/帮助]  [进入工作区]
+Public Website Header  [序境]  [产品]  [工作方式]  [创作]  [案例]  [资源/帮助]  [进入工作区]
 
-Web section：一次真实工作怎样走完
+Web section：选择一条真实工作路径；章节可独立播放，不把路径串成必经流程
 
-[原始材料在左]   [操作视频中部]    [结果/引文在右]
-  来源与时间       实际光标操作          Evidence list
-  状态与范围       暂停/逐段播放          可编辑 Artifact
+[商业运营] [品牌市场] [独立研究] [直接创作：提案/文稿/视频/播客]
+               ↓ 用户选择一条路径
+[当前任务/目标] [实际操作视频/字幕] [真实结果/来源与版本]
+  路径相关输入      暂停/章节/文字步骤     只显示实际可得的Evidence/Artifact
 
-段落 1  选择材料和范围
-段落 2  看原始 Evidence 和缺失项
-段落 3  开始一次有能力支持的任务
-段落 4  编辑真实返回的草稿
-段落 5  查看保存/版本/返回路径
+段落 1  选择业务任务、独立研究或直接创作
+段落 2  显示该路径所需输入；创作可从空白/自写要求/获准素材开始
+段落 3  按需查看原始 Evidence、时间、范围与缺失状态
+段落 4  查看真实分析结果或真实可编辑作品
+段落 5  编辑所选内容并保留用户修改
+段落 6  查看真实保存/版本/重开/返回路径
 
 视频下方：
 “本演示对应序境在 [版本/日期] 实际可操作能力。”
@@ -1439,22 +1441,22 @@ Web section：一次真实工作怎样走完
 [打开工作区]
 ~~~
 
-导演/剪辑稿要以实际 build 捕获画面；若页面文案对应的 capability 未实现，片子要显示正在研发/未启用或删去声明，不能预录一段假的成功画面。
+本图是官网视频的目标视觉与交互参考，不是已制作成片或当前派工状态。实际影片只能以当前真实可运行版本现场采集；若页面文案对应的能力尚未可用，片中要标出实际状态或删去声明，不能预录假的成功画面。
 
-用户已把官网操作影片的策划、录制、剪辑交给本任务的前端负责人。**当前只输出脚本/分镜，不制作成片**；解除开发暂停并经你审核之后，再按真实产品操作采屏、剪成官网影片、补字幕/无障碍/播放器回退，并逐条对照线上可用能力。导航不显示账号入口、登录或占位；“进入工作区”直达开放产品，不得跳进登录墙。
+导航不显示账号入口、登录或占位；“进入工作区”直达开放产品，不得跳进登录墙。业务路径与独立研究/创作路径可分别进入和观看，演示不暗示全部用户都要先做商业分析或来源采集。
 
 官网影片分镜预估（目标 60–75 秒，可随真实可用功能调整；绝不为凑镜头发明功能）：
 
 | 时段 | 原创画面与文案 | 要拍的真实用户动作 |
 |---|---|---|
-| 0–4s | 点与开放轨迹形成序境自有标记，短句“从真实材料出发” | 仅品牌动效；无商业数据 |
-| 4–10s | 真实 ACC-03 工作主页，进入一项真实任务 | 按实际默认 GLOBAL/ALL 开始，不选主体也能进入 |
-| 10–19s | 选一份真正有权读取的来源或成果文件 | 看到原始标题/时间/Evidence；允许退出或替换 |
-| 19–29s | 切到实际 CTH 或 BMP 的来源/关系画面 | 选择真实事件/品牌主题，点开来源证明 |
-| 29–39s | 引用进入已有 Brief/分析任务 | 展示来源字段、可核查结论和未知项，不配伪数字 |
-| 39–51s | 进入一段可真实编辑的视频或播客内容 | 改一个真实片段/脚本字段，Inspector与预览同步 |
+| 0–4s | 手绘点线形成序境原创标记，短句“从真实目标开始” | 仅品牌动效；无商业数据 |
+| 4–10s | 真实 ACC-03 工作主页，展示商业、研究、直接创作入口 | GLOBAL/ALL可开始；不强制选择主体或品牌 |
+| 10–19s | 明确选一条实际可用路线及其真实输入 | 业务/研究路线按需选Source；创作路线可用空白、自写要求或获准素材 |
+| 19–29s | 展示该示例路线对应的真实阅读/编辑页面 | 仅在业务示例中显示CTH/BMP；独立研究/创作不被重定向到业务页 |
+| 29–39s | 展示该路线真实分析结果或真实作品 | 来源、原生/采集时间、缺失值与版本按实际状态显示；不配伪数字 |
+| 39–51s | 编辑示例中的真实报告、文稿、视频或播客片段 | 展示相应编辑器实际返回的变化，不强制所有类型串行 |
 | 51–62s | 保存一个新版本并重新打开 | 只在得到存储/打开回执后显示“已保存/已打开” |
-| 62–72s | 给出后续操作和“进入工作区” | 回到原任务或成果列表，明确返回位置 |
+| 62–72s | 展示同一路线下一步与“进入工作区” | 回到原任务或成果列表，明确返回位置 |
 
 如果其中一项在当前 build 中尚未可用，该分镜延期到对应能力实际可操作后拍摄，不以画面、模型或人工音画合成假装上线。
 
@@ -1605,27 +1607,28 @@ Trace / 查看来源
 Public Website · 首页叙事
 Header: 序境字标 | 产品 | 工作方式 | 创作 | 案例 | 资源与帮助 | 语言 | [进入工作区]
 01 Hero：一句产品任务主张 + [真实操作视频播放] + [进入工作区]
-02 工作对象：商业运营 / 品牌市场 / 研究与资料 / 视频和播客创作
-03 工作怎么接续：来源→证据→判断/Brief→行动或成品→结果/复盘
+02 工作入口：商业运营 / 品牌市场 / 独立研究 / 直接创作（提案/文稿/视频/播客）
+03 可选择的工作路径：CTH/BMP问题分析；Shared资料研究；Shared从空白/自写要求/获准素材直接创作
+   业务来源、CTH/BMP研究与SourceBrief仅在用户选择联动时进入创作路径
 04 按任务展示的实际操作影片：字幕/分段/暂停/静音/文字步骤
-05 四端职责：Web工作、Desktop专业本地操作、Mobile接续、官网解释
+05 四端职责：官网解释；Website/Web优先承载当前闭环；后续Windows/macOS Desktop与iOS Mobile专项接续
 06 真实案例/应用：仅显示已获公开许可且可追溯版本的案例
 07 资源与帮助：使用指南、能力/兼容范围、数据状态说明、FAQ
 08 联系/试用入口和下载区：只接已配置的正规Destination
 Footer：正式隐私/条款/支持链接与版本日期；不出现注册/登录占位
 ```
 
-每页章节都由产品任务组织，而非堆“功能卡”：Home负责主张/导航，Product与Workflows分别解释CTH/BMP/Shared/System如何完成真实工作，Creator/Video/Podcast展示操作而不做孤立生成按钮，Resources/Help提供可读说明和当前能力范围，Stories/Case只展示许可证据。点击章节能定位到实际内容并支持键盘/浏览器Back；“进入工作区”直达开放产品，不经过账号墙。
+每页章节都由产品任务组织，而非堆“功能卡”：Home负责主张/导航；Product与Workflows分别说明CTH/BMP商业工作、Shared独立研究和Shared直接创作，创作可从空白、用户Brief/文字或获准素材开始，不要求先完成商业分析；Creator/Video/Podcast展示相应操作而不做孤立生成按钮；Resources/Help提供可读说明和当前能力范围，Stories/Case只展示许可证据。业务分析链与独立研究/创作链并列呈现，箭头只表示用户选择的可选联动，不画成人人必经流程。点击章节能定位到实际内容并支持键盘/浏览器Back；“进入工作区”直达开放产品，不经过账号墙。
 
 | 站点模块 | 目标布局/用户动作 | 正常结果与当前状态 |
 |---|---|---|
 | Hero / 产品介绍 | 左侧一句任务主张/关键行动，另一侧为原创对象/实际操作视频；视频下有静态说明与章节入口 | 不写不经证据支持的市场领导/准确率/ROI；版本/日期仅在真实录屏能力可核验时显示 |
-| 产品与行业流程 | CTH/BMP/Shared任务章节，内容以真实场景任务为导航，点击后解释输入/动作/结果/边界 | 官网只读解释，不能创建Subject/Case/Campaign/Artifact或调用Collector |
+| 产品与行业流程 | CTH/BMP业务任务、Shared独立研究、Shared直接创作以并列章节呈现；说明各自输入/动作/结果/边界及可选联动 | 官网只读解释，不能创建Subject/Case/Campaign/Artifact或调用Collector；不暗示所有创作都先有业务任务/SourceBrief |
 | 操作演示 | Video player + 可跳段目录 + 字幕/转录 + Mute/Play/Pause + [查看文字步骤] | 播放失败/Reduced Motion/离线时仍可读文字步骤和产品边界；无真实产品操作录像时不冒充实拍 |
 | 案例/作品 | 卡片及详细来源、Scope、版本/授权说明 | 仅公布有明确展示权和来源状态的真实案例；否则整体隐藏该案例区，不用用户历史社交帖子填版 |
 | Resources / Help / FAQ | 目录/搜索/问题分组；答案可展开并链接对应产品操作 | 文字完整、可键盘展开、状态留在当前问题；深链接返回原章节 |
 | Contact / Trial | 联系/申请入口说明要处理什么需求和将发生什么 | 链接/表单Destination由现有Website owner提供；当前未配置就显示“联系入口暂不可用”及公开帮助路径，不收集未授权字段，也不转成账号墙 |
-| Download / Platform | Web Workspace直达；Desktop/Mobile只列实际签名/发布的版本与支持OS | 当前无对应包显示未发布/暂不可下载；不得伪造安装文件、扫码入口或支持版本 |
+| Download / Platform | Web Workspace直达；原生包仅列实际签名/发布的Windows/macOS Desktop与iOS Mobile版本；其他支持OS按浏览器兼容性进入Website/Web | 当前无对应包显示未发布/暂不可下载；Android/Linux原生包不属于交付目标；不得伪造安装文件、扫码入口或支持版本 |
 | Workspace entry unavailable | “工作区暂不可达，官网内容仍可浏览” + 真正安全的重试/返回 | 不把Web入口失败解释为需要注册/购买/选主体；状态和可继续访问范围准确 |
 
 #### 官网FAQ实际文案（zh-CN / en / ko-KR）
@@ -1633,6 +1636,8 @@ Footer：正式隐私/条款/支持链接与版本日期；不出现注册/登�
 | 问题/答复 | English | 한국어 |
 |---|---|---|
 | 序境帮助我完成什么？｜把经许可的商业/品牌资料、团队判断和创作成果连成可追溯、可继续的工作。 | What does LUMENIS help me do? It connects permitted business and brand material, team decisions, and creative deliverables into work you can trace and continue. | LUMENIS는 어떤 일을 돕나요? 사용이 허가된 비즈니스·브랜드 자료, 팀의 판단, 창작 결과물을 추적하고 이어갈 수 있는 작업 흐름으로 연결합니다. |
+| 必须先完成商业分析才能创作吗？｜不必。可在Shared从空白、自写创作要求或获准素材直接开始提案、文稿、视频或播客；研究和CTH/BMP内容只在你选择时接入。 | Do I have to finish a business analysis before creating? No. Start a proposal, document, video, or podcast in Shared from a blank page, your own brief, or permitted materials. Research and CTH/BMP work connect only when you choose. | 창작 전에 비즈니스 분석을 끝내야 하나요? 아니요. Shared에서 빈 화면, 직접 작성한 요구사항 또는 허가된 자료로 제안서, 문서, 영상, 팟캐스트를 바로 시작할 수 있습니다. 조사와 CTH/BMP 작업은 원할 때만 연결됩니다. |
+| 没有AI时还能继续工作吗？｜可以。可用的阅读、筛选、确定性分析、手动编辑、保存和恢复继续按各自路径工作；只有依赖AI的具体动作显示真实不可用状态。 | Can I keep working without AI? Yes. Available reading, filtering, deterministic analysis, manual editing, saving, and recovery continue on their own paths. Only a specific AI-dependent action shows its actual unavailable state. | AI를 사용할 수 없어도 계속 작업할 수 있나요? 네. 사용 가능한 읽기, 필터링, 결정론적 분석, 수동 편집, 저장, 복구는 각 경로에서 계속할 수 있습니다. AI에 의존하는 작업만 실제 사용할 수 없는 상태로 표시합니다. |
 | 必须先选主体或品牌吗？｜不必。可从全部范围开始；具体任务需要时再聚焦。聚焦不等于获得权限，也不会自动开始采集。 | Do I have to choose an entity or brand first? No. Start in the all-available scope and narrow only when a task needs it. A focus selection grants no permission and starts no collection. | 먼저 사업체나 브랜드를 선택해야 하나요? 아니요. 전체 범위에서 시작하고 작업에 필요할 때만 범위를 좁히면 됩니다. 초점 선택은 권한을 부여하거나 수집을 시작하지 않습니다. |
 | 数据代表整个市场吗？｜不一定。页面会按实际来源、范围、时间和样本覆盖说明观测；未取得字段保持未知，不推成消费者总体。 | Does the data represent the whole market? Not automatically. Observations are labeled with their actual source, scope, time, and coverage; missing fields remain unknown rather than becoming a population claim. | 데이터가 시장 전체를 대표하나요? 자동으로 그렇지는 않습니다. 관측은 실제 출처, 범위, 시간, 표본 범위와 함께 표시하며, 없는 값은 소비자 전체에 대한 주장으로 바꾸지 않고 미확인으로 둡니다. |
 | AI会替我作最终决定或发布吗？｜AI可在实际接通的任务里协助整理、分析和创作；用户审阅来源、修改结果并决定后续动作，外部影响仍需现有审批。 | Does AI make the final decision or publish for me? AI can assist with connected research and creation tasks. You review sources, edit results, and choose next steps; external effects retain their existing approval gates. | AI가 최종 결정을 내리거나 게시하나요? 연결된 조사와 제작 작업에서 AI가 도울 수 있지만, 출처를 검토하고 결과를 수정하며 다음 단계를 결정하는 것은 사용자입니다. 외부 효과에는 기존 승인 절차가 적용됩니다. |
@@ -1928,7 +1933,7 @@ F-01—F-12对应 `Frontend_Delivery_Audit.md` 的原12项发现；F-13—F-18�
 |---|---|---|
 | ACC-01 | 确认内部工作区入口可用并继续宿主指定目标 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/ACC-01.md#intelligent-ui-逐屏采用项2026-10-08) |
 | ACC-02 | 查看当前GLOBAL_ALL或明确选择一个可访问Subject视角 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/ACC-02.md#intelligent-ui-逐屏采用项2026-10-08) |
-| ACC-03 | 从首页开始真实工作或继续原任务 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/ACC-03.md#intelligent-ui-逐屏采用项2026-10-08) |
+| ACC-03 | 从首页开始 CTH/BMP 业务、Shared 研究或直接创作，或继续原任务 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/ACC-03.md#intelligent-ui-逐屏采用项2026-10-08) |
 | ACC-04 | 理解一项真实阻断并沿已有恢复路径返回 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/ACC-04.md#intelligent-ui-逐屏采用项2026-10-08) |
 | AI-01 | 把用户目标、当前资料与约束组成可检查的执行意图 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/AI-01.md#intelligent-ui-逐屏采用项2026-10-08) |
 | AI-02 | 跟踪真实任务阶段与持久化产物 | [打开逐屏规范](../../../../contracts/experience/screen-specifications/AI-02.md#intelligent-ui-逐屏采用项2026-10-08) |
@@ -1981,13 +1986,13 @@ F-01—F-12对应 `Frontend_Delivery_Audit.md` 的原12项发现；F-13—F-18�
 
 ### 2026-10-08 前端审计与工具维护增补
 
-采用用户本轮前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本本轮 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。其余窗口待 Product Owner 确认后执行，本轮只由 M 收敛规则、处理已授权修复/工具维护和同步。
+采用用户当时前端审计中的可编辑设计→屏幕规范→真实源码→验收证据链，细则归 Experience §38 及原44份ScreenSpec/README。保持原 Blueprint、Owner、DESIGN_EXPLORATION→DESIGN_READY→IMPLEMENTED→ACCEPTED，不建立第二设计真相。Figma实际文件/节点/版本在该日期 NOT_VERIFIED；不以本地无 .fig 推断云端无工程。此 dated review 不记录或决定当前窗口的派发、开工、暂停或恢复；本稿不是实时调度来源。
 
 工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
 
 ### 2026-10-08 两份成熟能力增补的审阅落点
 
-本审阅草图继续从唯一Product Architecture和Experience§38派生，不成为第二蓝图。44屏原智能交互输入复用，本次只对SH-01视频制作与BMP-08播客的真实编辑/播放/波形/录音/保存重开动线细化（见原44屏文字草图对应增补）。其他J1–J8基础操作与序境特色按Real Delivery Overlay双层验收，GPT/Apple/Tesla启发的任务适配、反馈、可撤回和偏好恢复适用于原有屏幕。新组件仅条件评估，Figma/美术稿未因本文更新自动完成。所有后续窗口实施等待Product Owner确认。
+本审阅草图继续从唯一Product Architecture和Experience§38派生，不成为第二蓝图。该日期的44屏智能交互输入复用，并对SH-01视频制作与BMP-08播客的真实编辑/播放/波形/录音/保存重开动线作了细化（见原44屏文字草图对应增补）。其他J1–J8基础操作与序境特色按Real Delivery Overlay双层验收，GPT/Apple/Tesla启发的任务适配、反馈、可撤回和偏好恢复适用于原有屏幕。新组件仅条件评估，Figma/美术稿未因本文更新自动完成。本段记录历史审阅范围，不定义当前窗口派发或实施状态。
 
 ## 2026-10-08 逐步呈现动线补充（文字设计输入）
 

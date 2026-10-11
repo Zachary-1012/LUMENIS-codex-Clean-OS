@@ -1,0 +1,36 @@
+{
+  "schema": "lumenis.po-approval-receipt/v1",
+  "approval_id": "PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE",
+  "status": "APPROVED",
+  "approved_by": "Product Owner",
+  "approved_at": "2026-10-11",
+  "approval_source_type": "direct_product_owner_instruction",
+  "source_quotes": [
+    "前端可以恢复，你是不是忘了前端是要整体升级优化的，我要的标准都没有达到，记住所有外来的东西都要重新视觉呈现，再更新，还有前端的视觉草图，要更新的你都要更新啊，不要我提到什么你就更新什么，然后窗口停工不应是放在线上的只是我要求你就暂停，懂？",
+    "还有采集的所有东西，还有我说过的采集权重都一样，你是不是都忘了，我说有没有是我不确定，不是让你就直接想都不想就新加了，这样重复的事情不就越来越多了吗",
+    "不止前端，是我整个产品"
+  ],
+  "scope_manifest": {
+    "approved": [
+      "Whole-product existing-requirement and implementation reuse before any addition; repair evidenced conflicts, add only verified missing behavior in existing owners",
+      "Retain existing equal source-category policy across acquisition, analysis, CTH/BMP, Shared deliverables and Evaluation; preserve record-specific quality, identity, time and rights",
+      "Complete existing frontend visual and interaction scope, all 44 screen requirements and Website families, current specifications and existing visual references",
+      "Adapt external capabilities and product presentation to LUMENIS while preserving original source content, webpages, evidence, rights and existing owners",
+      "Published product rules must not act as current window pause/resume commands; direct PO scheduling and current observations belong in the local ledger"
+    ],
+    "pending_review": [
+      "Remaining owner execution order and scope beyond any separately explicit direct PO dispatch"
+    ],
+    "preservation": [
+      "All unretracted R/J/U, current native target boundaries, materials and protected local work",
+      "Dated historical receipts, source owners, Permission, Evidence, Canonical and all real acceptance requirements"
+    ]
+  },
+  "constraints": [
+    "This receipt records dated PO provenance, not a permanent or automatic window start/pause order",
+    "No business-source implementation or product acceptance is claimed by this documentation publication",
+    "No new architecture, collector, weight system, design system, product, paid service, external model, account, training or deployment authorization",
+    "No change of selected model, effort, tier, credentials or protected identity",
+    "Runtime, database and user outcomes require their own current evidence"
+  ]
+}

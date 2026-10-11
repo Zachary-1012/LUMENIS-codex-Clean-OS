@@ -6,7 +6,7 @@
 
 既有 SYSTEM worker 执行网页；Core 核验 actor/task/scope/session、每次动作和来源用途；SYS-06只呈现真实画面与可用操作。不得用iframe失败、静态截图、raw CDP前端直连或另开桌面应用替代。方法参考公开浏览器会话/动作与画面原理，具体安全传输必须真实实现，不能宣称已复制GPT私有架构。
 
-通用操作系统、任意本机软件/键鼠与远程电脑控制已经撤出产品范围。历史AgentZero/OS代码保留，不再要求GUI worker才能完成本屏。既有浏览器任务绑定、支持的网页动作、受控文件传输、权限、来源保存与重开恢复缺口仍需实际验收；文档更正不能将其记为通过。F继续暂停。
+通用操作系统、任意本机软件/键鼠与远程电脑控制已经撤出产品范围。历史AgentZero/OS代码保留，不再要求GUI worker才能完成本屏。既有浏览器任务绑定、支持的网页动作、受控文件传输、权限、来源保存与重开恢复缺口仍需实际验收；文档更正不能将其记为通过。本规格不声明当前窗口派工状态。
 
 ```yaml
 screen_id: SYS-06
@@ -479,7 +479,7 @@ than this document, determine promotion and delivery.
 
 ### 可编辑设计到源码映射（2026-10-08 审计采用）
 
-F 在 Product Owner 明确恢复后，在本屏现有规范中补齐同一条链；本轮只更新规则，不创建或修改 Figma 工程：
+本屏设计/源码映射沿用现有 Experience 与 ScreenSpec 合同；本段不改变设计、实现或验收状态：
 
 - **设计资产：** Figma file key / node ID / revision / 可编辑访问状态 = `NOT_VERIFIED`（本轮未连接核实，不能推断不存在）。复用获授权既有工程；需要新建时先取得必要访问及 PO 认可，不上传私有生产资料。
 - **源码与动作：** 本屏原有 Flutter Screen/Component → Repository/ViewModel → Action → Core/Permission/状态；逐项回读真实路径，不复制旧绑定表里的状态。

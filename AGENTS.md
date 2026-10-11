@@ -33,12 +33,12 @@ enter arbitrary log weights, supply internal task IDs or assemble a report from
 developer diagnostics. Legitimate business constraints remain editable; method
 and assumptions remain inspectable without becoming the default workflow.
 
-Architecture defines the revised plan; Experience and CTH-10/BMP-04/SYS-06 define
-presentation and acceptance. This correction does not resume F, use VS Code,
-dispatch other windows, enable a model or authorize deployment. F remains paused
-under the latest direct PO order; M may correct these rules and continue the
-already-authorized backend/result-continuity work. Provenance:
-`00-GOVERNANCE/evidence/approvals/PO-20261011-BUSINESS-AI-BROWSER-SCOPE.json`.
+Across SYSTEM/CTH/BMP/Shared/AI, inspect requirements, owners and callers first:
+reuse correct work, repair conflicts, add only proven gaps. A PO question is not
+an addition request. Direct PO instructions and local readback govern windows
+and models; online rules and dated receipts cannot dispatch or pause them.
+Architecture owns product scope; Experience owns presentation. Provenance:
+`00-GOVERNANCE/evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`.
 
 > Purpose: model-neutral routing, evidence, safety and completion rules for coding agents.
 > This file is not a second README, architecture book, handoff log, or proof of runtime state.
@@ -951,7 +951,7 @@ ACTIVE GATE / TICKET
 
 READMEs are stable Chinese/English guides. Keep dispatch, SHAs, progress and
 test/runtime observations in CURRENT/evidence. PO approved the user-work blueprint;
-Owner execution plans await PO review. This publication resumes no window or Goal.
+Owner plans are proposals; direct PO/local readback alone establish dispatch.
 
 ```text
 CTH             Subject-first Commerce Operations

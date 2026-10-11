@@ -135,7 +135,8 @@ Do not turn any local-storage failure into a successful server save. Do not send
 | Mobile 390×844 at 18 px with no horizontal overflow | `PASS` | This viewport only |
 | Windows build | `PASS` | Build evidence only; it does not prove the OS rendered system material |
 | Windows native material effect | `UNVERIFIED` | Requires actual native visual verification |
-| macOS, iOS and Android runtime | `UNVERIFIED` | No platform runtime result is claimed |
+| macOS and iOS native runtime | `UNVERIFIED` | No platform runtime result is claimed |
+| Android native runtime (historical, outside current target) | `UNVERIFIED` | Historical status retained; it is not a current native delivery gate |
 | Appearance-modal readability and live black/light adaptation | `PASS` | Final Web build inspected; near-opaque modal surface keeps workspace text from interfering |
 
 ### R14 mobile and desktop composition review — 2026-09-27
@@ -172,7 +173,7 @@ Do not turn any local-storage failure into a successful server save. Do not send
 
 ### 可编辑设计到源码映射（2026-10-08 审计采用）
 
-F 在 Product Owner 明确恢复后，在本屏现有规范中补齐同一条链；本轮只更新规则，不创建或修改 Figma 工程：
+本屏设计/源码映射沿用现有 Experience 与 ScreenSpec 合同；本段不改变设计、实现或验收状态：
 
 - **设计资产：** Figma file key / node ID / revision / 可编辑访问状态 = `NOT_VERIFIED`（本轮未连接核实，不能推断不存在）。复用获授权既有工程；需要新建时先取得必要访问及 PO 认可，不上传私有生产资料。
 - **源码与动作：** 本屏原有 Flutter Screen/Component → Repository/ViewModel → Action → Core/Permission/状态；逐项回读真实路径，不复制旧绑定表里的状态。

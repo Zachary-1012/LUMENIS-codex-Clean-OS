@@ -4,8 +4,8 @@ This folder holds the reviewed implementation specification for each canonical A
 
 ## Rules
 
-- Follow the current authorization and actual live dispatch/admission state in root AGENTS.md and its local-ledger/tool-receipt evidence; each window is RUNNING only after fresh admission. This index defines screen-specification requirements and does not assign execution windows.
-- Reuse the existing `<SCREEN-ID>.md` and update it alongside implementation. F directly constructs from the Experience and real owner contracts; no separate design draft/Figma or M DESIGN_READY prerequisite. A specification file or design status alone never proves acceptance.
+- This index and the screen specifications define Experience requirements; they do not assign work or record current window state. Current dispatch/pause/resume is established by the latest direct Product Owner instruction and the local live ledger/tool receipts, not by published rules or historical notes.
+- Reuse the existing `<SCREEN-ID>.md` and update it alongside implementation. Direct implementation does not require a separate design draft/Figma or M DESIGN_READY prerequisite. A specification file or design status alone never proves acceptance.
 - Use `contracts/experience/lumenis_app_binding_registry.json` as the binding inventory. Update it only from current source/runtime evidence; never treat historical `BOUND`, task assignee or ViewModel labels as proof.
 - Keep CTH Subject-first, BMP Brand/Market-first, Shared lineage and SYSTEM infrastructure boundaries intact.
 - Do not copy screen layouts into a shared renderer. Shared tokens and semantic interaction primitives may be referenced, while each specification must define its own information hierarchy, composition and task choreography.
@@ -13,23 +13,27 @@ This folder holds the reviewed implementation specification for each canonical A
 - PDFs, taskbooks, screenshots, wireframes, Figma frames, fixtures and generated visual proposals are non-authoritative references. List their disposition in the spec; never copy them directly or infer approval from visual polish.
 - A repeated audit sketch frame does not authorize a shared renderer, universal card grid or substituted-title screen. Direct implementation is authorized by the latest PO and current contracts; unbound/fabricated behavior or generic repeated layouts remain REWORK.
 - Set `APPROVED` only after the product owner or delegated design owner has reviewed the specification and its open questions. Record reviewer, date and the accepted change/review reference. A batch approval must list every covered screen ID and cannot silently approve unreviewed exceptions.
-- Implementation, test and runtime status must cite current artifacts. A spec approval is not implementation acceptance.
+- Implementation, test and runtime status must cite current artifacts. A spec approval is not implementation acceptance; editing a rule does not change any existing design, implementation, runtime, or user-acceptance status.
 
 ## Status lifecycle
 
 `DESIGN_EXPLORATION` → `OWNER_REVIEW` → `DESIGN_READY` → `IMPLEMENTED` → `ACCEPTED`
 
-Use `BLOCKED` when a verified owner, contract, authorization or acceptance dependency is missing. Design-review states record actual historical review and are no longer a mandatory coding sequence. F builds directly under the latest PO instruction and maintains existing specifications with source. Do not fabricate DESIGN_READY or infer acceptance from code presence.
+Use `BLOCKED` when a verified owner, contract, authorization or acceptance dependency is missing. Design-review states record actual review and are not a mandatory coding sequence. Maintain each screen's existing specification with source changes. Do not fabricate DESIGN_READY or infer acceptance from code presence.
 
 ## Delivery order
 
-最新PO补充：直接前端构建，不先交独立设计稿/Figma、不等待M逐屏DESIGN_READY审批；现有规格随代码更新。官网/Web优先；后续原生Desktop仅Windows/macOS，Mobile仅iOS。Android/Linux原生客户端从目标移除，保留历史源码证据；浏览器跨OS/窄屏与Linux服务端/CI不受影响。
+2026-10-08 PO surface order: close Public Website and Web Workspace first; dedicated native Desktop/Mobile work follows that closure. Preserve all 44 screen specifications, existing Website content families, original references, and the distinct surface requirements. Native targets are Windows/macOS Desktop and iOS Mobile; Android/Linux native-client source remains historical, while browser coverage across operating systems and Linux server/CI remain in scope. Direct construction needs no separate design draft/Figma or M DESIGN_READY approval.
 
-2026-10-08 最新直接 PO：官网与 Web Workspace 优先完整闭环；Desktop/Mobile 专项工作后置。完整44屏、官网家族、四端规格/原始参考与现有可编辑工程保留；本轮先填实 Web 的实际绑定、操作、来源、保存/修改/重开/恢复及三语言/无障碍/宽窄屏证据，后置端保持 OPEN/DEFERRED，不删除要求、不用 Widget 或构建代替真实结果。F 与唯一业务窗口并行，按 Experience 的当前顺序持续推进。
-
-After the overall product plan is accepted, resolve source bindings and detailed specifications for one end-to-end workflow slice at a time. Apply the latest PO surface order: review and implement the applicable Website/Web composition and accept that real slice before dependent screens; keep Desktop/Mobile specifications and defer their dedicated implementation, packaging and device acceptance until Website/Web closure. Native completeness is not this milestone prerequisite and is not marked PASS. Begin with the five proposed Golden Pages (AI-01, CTH-01, BMP-01, SH-01 and SYS-01) only when their bindings and user tasks are verified; this order does not override owner boundaries or authorize a generic shell.
+The full visual and interaction scope covers all 44 App screens and the existing Public Website content families. Golden Pages and workflow sequencing order implementation only; they do not cap or replace the complete screen/site scope. Website/Web is the first surface acceptance boundary; native completeness is later and remains OPEN until evidenced. This paragraph records product scope and surface order, not a current window dispatch state.
 
 ## Intelligent UI 全屏语义映射（2026-10-08）
+
+All 44 screens and the existing Website families receive a product-wide, task-specific visual and interaction upgrade under the sole Experience Constitution. Present externally sourced content and capabilities through LUMENIS's existing Experience and owners. Keep original source material, evidence, works, and provenance unchanged; any excerpt or derived presentation stays identifiable as such.
+
+Apply the Product Architecture's `2026-10-09 来源类别同权与已有数据优先闭环`: public webpages and platform sources have equal source-category base weight. Evaluate each record's quality, identity, time, rights, and permitted use on its own; equal category weight does not merge those dimensions.
+
+Reuse the current Architecture and Experience corrections for the shared product boundaries: CTH/BMP remain business domains; Shared creation can start from the user's own brief or permitted assets without a CTH/BMP task, Subject, Case, Campaign, or SourceBrief prerequisite; AI enhances product-wide paths while ordinary business work remains useful without a model; analysis and mathematics return backend-produced business results rather than requiring users to choose paper operations. SYS-06 covers the controlled in-product browser only; external opening is an explicit choice and general OS/computer control is withdrawn.
 
 当前已绑定动作限定本轮可执行范围，不限定已批准的产品终态。任何尚未接通的既有能力必须列为现有 Owner 的 OPEN 依赖，补齐合同、真实正常结果与恢复验收；不得因接口暂缺把完整交互目标缩减成只读页，也不得用未绑定按钮假装已实现。
 
@@ -53,7 +57,7 @@ After the overall product plan is accepted, resolve source bindings and detailed
 | [BMP-05](BMP-05.md) | 比较创作者匹配度和风险依据；按已返回KOS/KOL/KOC/UGC类别呈列表和来源档案 | 指标定义、时间、BrandFocus、来源及评估版本进入后续任务；Web/Desktop列表与档案；Mobile先理由后样本；官网仅授权案例 |
 | [BMP-06](BMP-06.md) | 把授权素材和内容想法推进为可审阅版本；Draft→Review→Approved→Delivered专属编辑流程，来源/rights贴近正文 | 继承同Brief/Evidence/品牌/语言；修改保存子版本和受影响片段；Web/Desktop正文与证据并读；Mobile聚焦待审与修订；官网不编辑内部稿件 |
 | [BMP-07](BMP-07.md) | 连接活动目标、预算、里程碑和实际结果；目标→受众→渠道→预算→Outcome时间线；估算/承诺/实支各自分层 | 预算/日期变化定位受影响活动段、素材、资源和日程，父版可回滚；Web/Desktop编辑计划和影响预览；Mobile逐项审预算；官网仅公开示例 |
-| [BMP-08](BMP-08.md) | 把授权来源变成可审阅脚本及可编辑播客音轨；脚本、来源、rights、音轨和发布状态分层；横向拖动时间轴 | 同Brief/来源/audio version连续；本地Read Aloud不等于成片；Web/Desktop脚本与音轨并列；Mobile分段查看；官网只放授权成片 |
+| [BMP-08](BMP-08.md) | 从自有创作Brief/手写脚本/获准音频独立制作可审阅播客；授权业务来源是可选输入，脚本、来源、rights、音轨和发布状态分层；横向拖动时间轴 | 独立路径沿用自有Brief/audio version；选用业务来源时才连续绑定SourceBrief/Evidence/rights；本地Read Aloud不等于成片；Web/Desktop脚本与音轨并列；Mobile分段查看；官网只放授权成片 |
 | [BMP-09](BMP-09.md) | 理解品牌评估变化、置信和覆盖情况；维度、真实Outcome、置信、分母和方法并列，文本意见不冒充分数 | 绑定原Outcome/Evidence/评估方法与版本，不改写源事实；Web/Desktop可比较维度和周期；Mobile逐维度和来源；官网只发布审核结果 |
 | [BMP-10](BMP-10.md) | 按严重性、扩散和时效处理有证据的品牌风险；风险队列、原始依据、派生判断、后续状态分开 | 绑定品牌scope、Evidence、判断版本与决策receipt；Web/Desktop队列和详情；Mobile先风险依据和原文；官网不呈私有风险 |
 | [BMP-11](BMP-11.md) | 在口径一致时比较品牌基准；先展示币种/期间/口径/分母，再显示可比矩阵和差距 | 每格保留定义、币种、样本、来源、范围、计算版本；Web/Desktop多品牌矩阵；Mobile逐项查看口径；官网不公开客户比较 |
@@ -67,7 +71,7 @@ After the overall product plan is accepted, resolve source bindings and detailed
 | [CTH-08](CTH-08.md) | 追踪真实Case到Outcome并区分复用知识；Case→Insight→Decision→Action→Outcome泳道；知识独立显示审阅状态 | 所有节点绑定同一canonical Case/scope/来源和版本；知识不覆盖事实；Web/Desktop全链和知识并看；Mobile逐阶段返回；官网不露私有Case |
 | [CTH-09](CTH-09.md) | 区分风险依据、决策状态、审批和实际动作；风险、Decision ledger、Action receipt分区显示提案到执行状态 | 沿用已有Actor/scope/approval/effect ID，不为风险创建平行任务；Web/Desktop并列风险与账本；Mobile先状态再依据；官网不露内部审批 |
 | [CTH-10](CTH-10.md) | 创建或重开有来源的运营简报并检查结论；正文/方法/引用/Action-Outcome分页阅读；从同一SourceBrief Job重开 | 沿用job/report/hash/brief/evidence/scope/父版；源失效局部复核；Web/Desktop正文与来源栏；Mobile逐页返回；官网仅审批公开版；朗读限当前绑定文本 |
-| [SH-01](SH-01.md) | 发现共享能力并进入当前研究/创作/媒体工作；当前Task→已绑定能力→原生Reader/编辑器；Timeline/ShotPlan保留专用工作区 | 沿用Brief/SourceTarget/Evidence/Artifact/timeline版本，目录本身不执行；Web/Desktop承担并读与复杂编辑；Mobile任务摘要后打开素材；官网只列已证能力 |
+| [SH-01](SH-01.md) | 从自有Brief/获准素材直接开始独立创作，或由现有Task进入研究/创作/媒体工作；已绑定能力→专属Reader/编辑器，Timeline/ShotPlan保留专用工作区 | 独立创作沿用自有Brief/Content Project；采用业务来源时才带入SourceTarget/Evidence/Artifact/timeline版本；目录本身不执行；Web/Desktop承担并读与复杂编辑；Mobile任务摘要后打开素材；官网只列已证能力 |
 | [SH-02](SH-02.md) | 检索并阅读同一组有来源研究材料；按平台原生形态组合图文/长文/短视频/线程/音频Reader | 保留Source/Evidence/platform ID/scope/time/rights；进入Brief不重搜；Web/Desktop列表与Reader并行；Mobile搜索→列表→单篇→原位返回；官网不载内部资料 |
 | [SH-03](SH-03.md) | 理解Canonical指标定义、成熟度和Source链；Schema/Metric树加逐级lineage，不展示原始DB表/路径 | 查询沿用GLOBAL/FOCUS读权，Metric版本和Evidence引用可带入分析；Web/Desktop树+关系；Mobile搜索→定义→来源；官网仅展示公开核准口径 |
 | [SH-04](SH-04.md) | 重开真实Artifact、比较版本并回到原Task；类型化Viewer和版本序列展示父版、来源、局部diff | Artifact ID/hash、父Brief/Task、scope、source refs保持一致；本地朗读只读READY重开文本；Web/Desktop专属Viewer；Mobile成果→差异→原任务；官网不提供私有Artifact |
@@ -91,7 +95,7 @@ After the overall product plan is accepted, resolve source bindings and detailed
 
 ### 可编辑设计工程与源码同步 — 2026-10-08 审计增补
 
-既有 F 保留全部44屏、官网家族和四端范围，当前先独立构建官网/Web真实界面与交互，不要求先交设计稿，Desktop/Mobile专项工作后置，M 审查，当前唯一业务窗口按 Owner 合同衔接，C6 协调共享绑定。最新 PO 已取消强制 Figma-first：保留现有工程/Foundation/节点，免费路径受限时立即用现有 Flutter/Dart、变量、SVG/矢量和本地免费工具继续；不等待充值，不因业务窗口轮换暂停 F。
+既有前端责任覆盖全部44屏、官网家族和四端范围；Website/Web用户成果优先，Desktop/Mobile专项交付后置，C6协调既有共享绑定。此为来源责任与表面顺序，不表示任何窗口当前已派工或正在运行。保留可用的现有工程/Foundation/节点；无需Figma-first或等待逐屏DESIGN_READY后才编码，也不新增费用。
 
 现有映射为 `Screen ID → 设计规格 → 可编辑载体/路径/版本 → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence`。Figma 保留 file/node/revision；源码载体保留 Dart/Token/SVG 路径、版本、编辑和预览方式，不能称为原生 Figma。工具受限单独记录；禁止 PNG、PPT、静态截图、假 .fig 替代完整可编辑交付，不重复创建设计文件或新增收费服务。Experience仍是唯一设计权威。
 
@@ -103,6 +107,6 @@ After the overall product plan is accepted, resolve source bindings and detailed
 
 ### 2026-10-08 有用分段与直接操作补充
 
-应用唯一Experience §38“智能UI的逐步交付与组件选择合同”：本屏明确首个有用块、后续补充/更正、Task/run/输入与结果版本、可用组件及动作、保存回执和恢复。采用原组件保持稳定布局/焦点/选区，旧响应不覆盖用户编辑；事实和引用一致、缺值维度保留、纯文本可用。普通确定性操作不等待模型；按本屏任务决定是否需要动态UI，不能为了统一而套通用卡片。状态仍为原实现/设计状态，新增设计待本屏审阅，未派工。
+应用唯一Experience §38“智能UI的逐步交付与组件选择合同”：本屏明确首个有用块、后续补充/更正、Task/run/输入与结果版本、可用组件及动作、保存回执和恢复。采用原组件保持稳定布局/焦点/选区，旧响应不覆盖用户编辑；事实和引用一致、缺值维度保留、纯文本可用。普通确定性操作不等待模型；按本屏任务决定是否需要动态UI，不能为了统一而套通用卡片。现有实现、设计及验收状态保留；逐屏设计评审记录只按实际评审更新，不构成编码前置，也不声明当前窗口派工状态。
 
-2026-10-08：SYS-06 revision 5 补充用户视频对应的手机受控电脑/浏览器、Desktop/Web内置使用、明确外部打开选择与真实接管/停止/任务返回要求。旧只读reader为当前实现事实，不再是能力上限；新交互与OS executor的绑定/运行仍OPEN。精确规范归SYS-06及Experience，沿原验收关闭。
+2026-10-08 SYS-06 revision 5 retained a general computer/OS executor target as historical source material. The direct PO correction on 2026-10-11 withdrew general OS/computer control from product requirements. Preserve its code and evidence as history; current SYS-06 covers the controlled in-product browser, authorized page actions, human takeover/stop, task return and saved-result continuity. Its external-browser option is explicit. The withdrawn OS-executor target is not an active requirement or acceptance gate; the current browser acceptance status remains as recorded in its existing evidence.
