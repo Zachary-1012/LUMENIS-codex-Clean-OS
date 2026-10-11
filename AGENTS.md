@@ -896,13 +896,13 @@ ACTIVE GATE / TICKET
 → inspect exact source owner / caller / contract / tests
 → verify existing capability before adding dependencies
 → reuse / adapt / bind
-→ implement on main
+→ implement on a scoped branch
 → applicable build / static security and data checks
 → actual affected user operation
 → runtime / E2E when required
 → evidence
 → coherent commit
-→ push origin main when safe
+→ reviewed PR merge into main when safe
 → main CI when required
 → next dependent gate
 ```
@@ -1517,7 +1517,7 @@ Public adapters such as ChatGPT/MCP must use allowlisted/versioned internal cont
 
 ```text
 IMPLEMENTED = code exists
-TESTED      = historical automated-test evidence only; not a current required stage
+TESTED      = isolated automated verification at its recorded scope; not real user closure
 VERIFIED    = runtime/E2E evidence proves behavior
 RELEASED    = required production/security/recovery/rollback gates pass
 OPERATING   = real operation produces required live/scheduled evidence

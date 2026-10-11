@@ -1,6 +1,7 @@
 """Native browser observations and interrupted Raw recovery; no live identity."""
 import ast
 from datetime import datetime
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -13,14 +14,22 @@ import pytest
 import xhs_cdp_collector as worker
 
 ROOT = Path(__file__).resolve().parents[1]
+_TEST_COLLECTION_USER_ID = 'synthetic-xhs-test-user'
+_TEST_COLLECTION_IDENTITY_FINGERPRINT = hashlib.sha256(
+    _TEST_COLLECTION_USER_ID.encode('utf-8')).hexdigest()
 
 
 def collector_functions():
     """Execute the real functions without collector's runtime/DB import effects."""
     tree = ast.parse((ROOT / 'collector.py').read_text('utf-8'))
-    selected = [node for node in tree.body if isinstance(node, ast.FunctionDef)
-                and node.name in {'_norm_cdp_note', '_search_via_cdp'}]
-    namespace = {'re': re, 'datetime': datetime, 'subprocess': subprocess,
+    selected = [node for node in tree.body
+                if (isinstance(node, ast.FunctionDef)
+                    and node.name in {'_norm_cdp_note', '_search_via_cdp'})
+                or (isinstance(node, ast.Assign)
+                    and any(isinstance(target, ast.Name)
+                            and target.id == '_XHS_MAX_WORKER_CHUNK_SECONDS'
+                            for target in node.targets))]
+    namespace = {'re': re, 'datetime': datetime, 'hashlib': hashlib, 'subprocess': subprocess,
                  'os': os, 'sys': sys, 'json': json, 'SCRIPT_DIR': str(ROOT),
                  'CDP_SCRIPT': str(ROOT / 'xhs_cdp_collector.py'),
                  '_resolve_server_cdp_url': lambda *a, **k: ('https://worker.example', ''),
@@ -128,13 +137,15 @@ def test_atomic_checkpoint_retains_full_previous_observation_on_write_failure(tm
 
 @pytest.mark.parametrize('mismatch', [None, 'run_id', 'keyword', 'source_host', 'missing', 'invalid'])
 def test_parent_timeout_recovers_only_exact_current_checkpoint(tmp_path, monkeypatch, mismatch):
+    monkeypatch.setenv('XHS_EXPECTED_COLLECTION_USER_ID', _TEST_COLLECTION_USER_ID)
     output = tmp_path / 'raw.json'
 
     def timed_out(command, **kwargs):
         run_id = command[command.index('--run-id') + 1]
-        raw = {'keyword': 'query', 'ok': False,
+        raw = {'keyword': 'query', 'identity_verified': True, 'ok': False,
                'notes': [{'note_id': 'n1', 'desc': 'saved body', 'likes': None, 'collected_at': '2026-10-03T01:00:00Z'}],
-               'summary': {}, 'checkpoint': {'run_id': run_id, 'source_host': 'www.rednote.com'}}
+               'summary': {}, 'checkpoint': {'run_id': run_id, 'source_host': 'www.rednote.com',
+                   'verified_identity_fingerprint': _TEST_COLLECTION_IDENTITY_FINGERPRINT}}
         if mismatch == 'run_id':
             raw['checkpoint']['run_id'] = 'old invocation'
         if mismatch == 'keyword':
@@ -162,12 +173,15 @@ def test_parent_timeout_recovers_only_exact_current_checkpoint(tmp_path, monkeyp
 
 
 def test_risk_status_takes_precedence_over_partial_timeout(tmp_path, monkeypatch):
+    monkeypatch.setenv('XHS_EXPECTED_COLLECTION_USER_ID', _TEST_COLLECTION_USER_ID)
     output = tmp_path / 'raw.json'
     def timed_out(command, **kwargs):
         run_id = command[command.index('--run-id') + 1]
-        output.write_text(json.dumps({'keyword': 'query', 'ok': False, 'notes': [],
+        output.write_text(json.dumps({'keyword': 'query', 'identity_verified': True,
+            'ok': False, 'notes': [],
             'summary': {'verification_required': True},
-            'checkpoint': {'run_id': run_id, 'source_host': 'www.rednote.com'}}), encoding='utf-8')
+            'checkpoint': {'run_id': run_id, 'source_host': 'www.rednote.com',
+                'verified_identity_fingerprint': _TEST_COLLECTION_IDENTITY_FINGERPRINT}}), encoding='utf-8')
         raise subprocess.TimeoutExpired(command, kwargs['timeout'])
     monkeypatch.setattr(subprocess, 'run', timed_out)
     assert collector_functions()._search_via_cdp('query', 3, str(output))['error'] == 'NEED_VERIFY'
@@ -175,7 +189,10 @@ def test_risk_status_takes_precedence_over_partial_timeout(tmp_path, monkeypatch
 
 def test_worker_exception_reopens_saved_body_instead_of_emptying_raw(tmp_path, monkeypatch, capsys):
     output = tmp_path / 'raw.json'
-    def interrupted(keyword, max_scroll, max_details, cdp_url, human, progress, deadline, resume_ids):
+    def interrupted(keyword, max_scroll, max_details, cdp_url, human, progress, deadline, resume_ids,
+                    resume_cards=None, budget_kind='worker_chunk', detail_media_mode='legacy'):
+        assert budget_kind == 'worker_chunk'
+        assert detail_media_mode == 'legacy'
         progress({'keyword': keyword, 'ok': False, 'notes': [{'note_id': 'n1', 'desc': 'full body'}], 'summary': {}})
         raise RuntimeError('COLLECTOR_IDENTITY_MISMATCH')
     monkeypatch.setattr(worker, 'collect', interrupted)
@@ -192,7 +209,7 @@ def test_worker_exception_reopens_saved_body_instead_of_emptying_raw(tmp_path, m
 
 def test_time_budget_preserves_collected_body_and_explicit_partial_state():
     result = {'ok': True, 'notes': [{'note_id': 'n1', 'desc': 'saved'}], 'summary': {}}
-    assert worker._budget_reached(result, 0) is True
+    assert worker._budget_reached(result, 0, budget_kind='time_budget') is True
     assert result['notes'][0]['desc'] == 'saved'
     assert result['partial'] is True
     assert result['ok'] is False
@@ -358,11 +375,14 @@ def test_partial_resume_preserves_pending_native_card_and_completed_ids(
     calls = []
 
     def fake_collect(keyword, max_scroll, max_details, cdp_url, human, progress,
-                     deadline, resume_ids, resume_cards=None):
+                     deadline, resume_ids, resume_cards=None, budget_kind='worker_chunk',
+                     detail_media_mode='legacy'):
         calls.append({
             'keyword': keyword,
             'resume_ids': set(resume_ids),
             'resume_cards': resume_cards,
+            'budget_kind': budget_kind,
+            'detail_media_mode': detail_media_mode,
         })
         return {
             'keyword': keyword, 'identity_verified': True, 'ok': True, 'partial': False,
@@ -383,6 +403,8 @@ def test_partial_resume_preserves_pending_native_card_and_completed_ids(
         'keyword': 'query',
         'resume_ids': {completed_id, 'd' * 24},
         'resume_cards': [pending_card],
+        'budget_kind': 'worker_chunk',
+        'detail_media_mode': 'legacy',
     }]
     assert json.loads(resume_from.read_text('utf-8'))['checkpoint'] == original_receipt
     assert resume_from.read_bytes() == original_bytes
